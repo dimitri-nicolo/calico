@@ -1,7 +1,5 @@
-1. If you are pulling from Tigera's private registry, skip to the next step. If you
-   are pulling from another private registry, use the following commands to: set an environment
-   variable called `REGISTRY` containing the location of the private registry and
-   replace the paths in the manifest to refer to the private registry.
+1. Use the following commands to set an environment variable called `REGISTRY` containing
+   the location of your private registry and replace the paths in the manifest to refer to it.
 
    ```bash
    REGISTRY=my-registry.com \

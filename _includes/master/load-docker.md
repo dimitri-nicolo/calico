@@ -1,6 +1,6 @@
-### Pulling the images from another private registry
-
-**Prerequisite**: Ensure that you have the [`config.json` file with the private Tigera registry credentials](/{{page.version}}/getting-started/#obtain-the-private-registry-credentials).
+{% if include.yaml == "calico" %}
+## Setting up access to the required images
+{% endif %}
 
 1. From a terminal prompt, use the following command to either create or open the `~/.docker/config.json` file.
 

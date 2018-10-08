@@ -22,11 +22,6 @@ with another solution, such as:
 - Ensure that you have the [private registry credentials](../../../getting-started/#obtain-the-private-registry-credentials)
   and a [license key](../../../getting-started/#obtain-a-license-key).
 
-
-{% include {{page.version}}/load-docker-intro.md %}
-
-{% include {{page.version}}/load-docker-our-reg.md yaml="calico" %}
-
 {% include {{page.version}}/load-docker.md yaml="calico" orchestrator="kubernetes" %}
 
 ## <a name="install-cnx"></a>Installing {{site.prodname}} for policy only
