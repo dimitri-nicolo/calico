@@ -16,7 +16,8 @@ metadata:
 rules:
 - apiGroups: [""]
   resources: ["services/proxy"]
-  verbs: ["get"]
+  resourceNames: ["https:cnx-api:8080", "calico-node-prometheus:9090", "https:elasticsearch-tigera-elasticsearch:8443", "elasticsearch-tigera-elasticsearch:9200"]
+  verbs: ["get","create"]
 
 ---
 
