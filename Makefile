@@ -40,7 +40,7 @@ ifeq ($(ARCH),x86_64)
 endif
 
 ###############################################################################
-GO_BUILD_VER?=v0.17
+GO_BUILD_VER?=v0.18
 
 # Select which release branch to test.
 RELEASE_BRANCH?=master
@@ -271,6 +271,14 @@ bin/typha:
 	  test -e $@ && \
 	  touch $@
 	-docker rm -f confd-typha
+
+foss-checks: vendor
+	@echo Running $@...
+	@docker run --rm -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
+	  -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+	  -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
+	  -w /go/src/$(PACKAGE_NAME) \
+	  $(CALICO_BUILD) /usr/local/bin/fossa
 
 ###############################################################################
 # CI
