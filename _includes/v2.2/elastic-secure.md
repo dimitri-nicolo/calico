@@ -46,5 +46,5 @@
    ```
 1. Restart {{site.prodname}} Manager pod
    ```
-   kubectl delete po -n kube-system -l k8s-app=cnx-manager
+   kubectl delete pod -n kube-system -l k8s-app=cnx-manager
    ```
