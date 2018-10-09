@@ -234,6 +234,26 @@
    ```
    oc replace -n calico-monitoring -f master-tigera-elasticsearch-storage.yaml
    ```
+
+1. Reconfigure the Elasticsearch sysctl operator. The following will save the current configuration to
+   `elasticsearch-operator-sysctl.yaml`.
+
+   ```
+   oc get ds elasticsearch-operator-sysctl -n default -o yaml --export > elasticsearch-operator-sysctl.yaml
+   ```
+
+   Run the following command which will fix the configuration for pods to start properly in OpenShift.
+
+   ```
+   sed -i '/hostPID/d' elasticsearch-operator-sysctl.yaml
+   ```
+
+   Replace the running DaemonSet
+
+   ```
+   oc replace -n default -f elasticsearch-operator-sysctl.yaml
+   ```
+
 {% endif %}
 {% endif %}
 
