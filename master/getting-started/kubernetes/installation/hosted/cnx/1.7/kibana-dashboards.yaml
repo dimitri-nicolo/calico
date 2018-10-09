@@ -4,7 +4,7 @@ layout: null
 #
 # Manifest to auto inject index, visualization and dashboards into Kibana
 #
-# Note: to create the api-kibana-dashboard.json you must use the Kibana export API to extract the json
+# Note: to create the api-kibana-dashboard.json you must use the export API to extract the json
 # For example:  $curl -X GET \
 # 'http://192.168.189.183:5601/api/kibana/dashboards/export?dashboard=a2a864b0-c1c-11e8-b274-fbb68ba254a6&dashboard=c66e42c0-c11c-11e8-b274-fbb68ba254a6' \
 # -H 'kbn-xsrf: true' > api-kibana-dashboard.json
@@ -67,7 +67,7 @@ spec:
       labels:
         app: kibana-import
     spec:
-      serviceAccountName: tigera-kibana-job 
+      serviceAccountName: tigera-kibana-job
       initContainers:
       - name: wait-for-endpoints
         image: giantswarm/tiny-tools
@@ -76,7 +76,7 @@ spec:
         args: ["monitoring", "kibana"]
       containers:
       - name: kibana-import
-        image: giantswarm/tiny-tools
+        image: giantswarm/tiny-tools:{{site.data.versions[page.version].first.components["tiny-tools"].version}}
         command: ["/bin/sh", "-c"]
         args:
           - >
@@ -84,7 +84,7 @@ spec:
               if [ -e "$file" ] ; then
                 echo "importing $file" &&
                 curl -v \
-                  http://kibana-tigera-elasticsearch/api/kibana/dashboards/import \
+                  http://kibana-tigera-elasticsearch:5601/api/kibana/dashboards/import \
                   --header "Content-Type: application/json" \
                   --header 'kbn-xsrf: true' \
                   --data-binary "@$file" ;
@@ -99,4 +99,3 @@ spec:
       - name: kibana-dashboards
         configMap:
           name: kibana-dashboards
-

@@ -67,7 +67,7 @@ spec:
       labels:
         app: kibana-import
     spec:
-      serviceAccountName: tigera-kibana-job 
+      serviceAccountName: tigera-kibana-job
       initContainers:
       - name: wait-for-endpoints
         image: giantswarm/tiny-tools
@@ -76,7 +76,7 @@ spec:
         args: ["monitoring", "kibana"]
       containers:
       - name: kibana-import
-        image: giantswarm/tiny-tools
+        image: giantswarm/tiny-tools:{{site.data.versions[page.version].first.components["tiny-tools"].version}}
         command: ["/bin/sh", "-c"]
         args:
           - >
@@ -99,4 +99,3 @@ spec:
       - name: kibana-dashboards
         configMap:
           name: kibana-dashboards
-

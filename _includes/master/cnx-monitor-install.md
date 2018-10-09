@@ -275,8 +275,17 @@
    {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/kibana-dashboard.json
    ```
 
+1. If your cluster is connected to the internet, skip to the next step. Otherwise, use the following commands
+   to set an environment variable called `REGISTRY` containing the location of the private registry and replace
+   the paths in the manifest to refer to the private registry.
+
+   ```bash
+   REGISTRY=my-registry.com \
+   sed -i -e "s?giantswarm?$REGISTRY/giantswarm?g" operator.yaml
+   ```
+
 1. Open the **Management** -> **Saved Objects** pane in Kibana and click **Import**. To complete the import, follow the
-   [Kibana documentation][](https://www.elastic.co/guide/en/kibana/current/managing-saved-objects.html#_import_objects).
+   [Kibana documentation](https://www.elastic.co/guide/en/kibana/current/managing-saved-objects.html#_import_objects).
 
 {% endif %}
 
