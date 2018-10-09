@@ -18,7 +18,7 @@ a [supported method]({{site.baseurl}}/{{page.version}}/reference/cnx/authenticat
 From Elasticsearch's perspective all queries will come from the `tigera-ee-manager` user.
 
 Because there's an authenticating proxy inside {{site.prodname}}, any {{name}} user
-given permission to access `services/proxy/calico-monitoring/elasticsearch-tigera-elasticsearch`
+given permission to access `services/calico-monitoring/elasticsearch-tigera-elasticsearch/proxy`
 will be able to send queries to Elasticsearch as the `tigera-ee-manager` user.
 
 ## Before you begin
@@ -32,6 +32,6 @@ To complete the following procedure, you'll need:
 - An Elasticsearch cluster that meets the [requirements]({{site.baseurl}}/{{page.version}}/getting-started/{{path}}/requirements#elasticsearch-requirements).
 - A `tigera-ee-fluentd` user with permission to send documents to Elasticsearch.
 - A `tigera-ee-manager` user with permission to issue queries to Elasticsearch.
-- The CA certificate for the cluster.
+- The CA certificate for the Elasticsearch cluster.
 - Any users who are going to use the Kibana dashboards will need to be given appropriate
   credentials.

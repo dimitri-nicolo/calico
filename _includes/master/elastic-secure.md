@@ -5,38 +5,44 @@
 {% endif %}
 
 1. Set up secret with username and password for `Fluentd` to authenticate with Elasticsearch.
+   Replace `<fluentd-elasticsearch-password>` with the password.
    ```
    {{cli}} create secret generic elastic-fluentd-user \
-   --from-literal=username=<elastic-search-user> \
-   --from-literal=password=<elastic-search-user-password> \
+   --from-literal=username=tigera-ee-fluentd \
+   --from-literal=password=<fluentd-elasticsearch-password> \
    -n calico-monitoring
    ```
 
 1. Set up configmap with the certificate authority certificate to authenticate Elasticsearch.
+   Replace `<ElasticsearchCA.pem>` with the path to your Elasticsearch CA certificate.
 
    ```bash
-   cp <ElasticSearchCA.pem> ca.pem
+   cp <ElasticsearchCA.pem> ca.pem
    {{cli}} create configmap -n calico-monitoring elastic-ca-config --from-file=ca.pem
    ```
 
 1. Create a Secret containing
    * TLS certificate and the private key used to sign it enable TLS connection from the kube-apiserver to the es-proxy
    * certificate authority certificate to authenticate Elasticsearch backend
-   * Base64 encoded <username>:<password> for the es-proxy to authenticate with Elasticsearch
+   * Base64 encoded `<username>:<password>` for the es-proxy to authenticate with Elasticsearch
+
+   Replace `<ee-manager-elasticsearch-password>` with the password.
 
    ```
    {{cli}} create secret generic tigera-es-proxy \
    --from-file=frontend.crt=frontend-server.crt \
    --from-file=frontend.key=frontend-server.key \
    --from-file=backend-ca.crt=ElasticSearchCA.pem \
-   --from-literal=backend.authHeader=authHeader=$(echo -n <username>:<password> | base64) \
+   --from-literal=backend.authHeader=authHeader=$(echo -n tigera-ee-manager:<ee-manager-elasticsearch-password> | base64) \
    -n calico-monitoring
    ```
 
-1. Create a configmap with information on how to reach the Elasticsearch cluster
+1. Create a configmap with information on how to reach the Elasticsearch cluster.
+   Replace `<elasticsearch-host>` with the hostname (or IP) {{site.prodname}} should access Elasticsearch through.
+   If your cluster is listening on a port other than `9200`, replace that too.
    ```
    {{cli}} create configmap tigera-es-proxy \
-   --from-literal=elasticsearch.backend.host="elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local" \
+   --from-literal=elasticsearch.backend.host="<elasticsearch-host>" \
    --from-literal=elasticsearch.backend.port="9200" \
    -n calico-monitoring
    ```
