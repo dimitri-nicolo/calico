@@ -24,6 +24,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	"github.com/projectcalico/libcalico-go/lib/apis/v3"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
@@ -42,8 +43,8 @@ type ipPoolAccessor struct {
 	pools map[string]bool
 }
 
-func (i *ipPoolAccessor) GetEnabledPools(ipVersion int) ([]cnet.IPNet, error) {
-	sorted := []string{}
+func (i *ipPoolAccessor) GetEnabledPools(ipVersion int) ([]v3.IPPool, error) {
+	sorted := make([]string, 0)
 	// Get a sorted list of enabled pool CIDR strings.
 	for p, e := range i.pools {
 		if e {
@@ -55,17 +56,23 @@ func (i *ipPoolAccessor) GetEnabledPools(ipVersion int) ([]cnet.IPNet, error) {
 	// Convert to IPNets and sort out the correct IP versions.  Sorting the results
 	// mimics more closely the behavior of etcd and allows the tests to be
 	// deterministic.
-	cidrs := []cnet.IPNet{}
+	pools := make([]v3.IPPool, 0)
 	for _, p := range sorted {
 		c := cnet.MustParseCIDR(p)
 		if c.Version() == ipVersion {
-			cidrs = append(cidrs, c)
+			pool := v3.IPPool{Spec: v3.IPPoolSpec{CIDR: p}}
+			if ipVersion == 4 {
+				pool.Spec.BlockSize = 26
+			} else {
+				pool.Spec.BlockSize = 122
+			}
+			pools = append(pools, pool)
 		}
 	}
 
-	log.Infof("GetEnabledPools returns: %s", cidrs)
+	log.Infof("GetEnabledPools returns: %s", pools)
 
-	return cidrs, nil
+	return pools, nil
 }
 
 var (
@@ -146,7 +153,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreEtcdV3, 
 
 				p, _ := ipPools.GetEnabledPools(4)
 				Expect(len(p)).To(Equal(1))
-				Expect(p[0].String()).To(Equal(pool2.String()))
+				Expect(p[0].Spec.CIDR).To(Equal(pool2.String()))
 				p, _ = ipPools.GetEnabledPools(6)
 				Expect(len(p)).To(BeZero())
 
@@ -274,6 +281,35 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreEtcdV3, 
 			v4, _, outErr := ic.AutoAssign(context.Background(), args)
 			Expect(outErr).NotTo(HaveOccurred())
 			Expect(block2.IPNet.Contains(v4[0].IP)).To(BeTrue())
+		})
+
+		It("should have strict IP pool affinity", func() {
+			// Assign the rest of the addresses in pool2.
+			// A /24 has 256 addresses. We've assigned 2 already, so assign 254 more.
+			args := AutoAssignArgs{
+				Num4:      254,
+				Num6:      0,
+				Hostname:  host,
+				IPv4Pools: []cnet.IPNet{pool2},
+			}
+
+			By("allocating the rest of the IPs in the pool", func() {
+				v4, _, outErr := ic.AutoAssign(context.Background(), args)
+				Expect(outErr).NotTo(HaveOccurred())
+				Expect(len(v4)).To(Equal(254))
+
+				// Expect all the IPs to be in pool2.
+				for _, a := range v4 {
+					Expect(pool2.IPNet.Contains(a.IP)).To(BeTrue(), fmt.Sprintf("%s not in pool %s", a.IP, pool2))
+				}
+			})
+
+			By("attempting to allocate an IP when there are no more left in the pool", func() {
+				args.Num4 = 1
+				v4, _, outErr := ic.AutoAssign(context.Background(), args)
+				Expect(outErr).NotTo(HaveOccurred())
+				Expect(len(v4)).To(Equal(0))
+			})
 		})
 	})
 
