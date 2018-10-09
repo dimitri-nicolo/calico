@@ -145,22 +145,24 @@ Enable metrics in {{site.prodname}} for OpenShift by updating the global `FelixC
 
 With metrics enabled, you are ready to monitor `{{site.nodecontainer}}` by scraping the endpoint on each node
 in the cluster. If you do not have your own Prometheus, the following commands will launch a Prometheus
-Operator, Prometheus, and Alertmanager instances for you. They will also deploy Elasticsearch, Fluentd, and
-Kibana in order to enable logs.
+Operator, Prometheus, and Alertmanager instances for you. They will also deploy Fluentd, and
+optionally Elasticsearch and Kibana in order to enable logs.
+
+1. For production installs, we recommend using your own Elasticsearch cluster. If you are performing a
+   production install, do not complete any more steps on this page. Instead, refer to
+   [Using your own Elasticsearch for logs](byo-elasticsearch) for the final steps.
+
+   For demonstration or proof of concept installs, you can use the bundled
+   [Elasticsearch operator](https://github.com/upmc-enterprises/elasticsearch-operator). Continue to the
+   next step to complete a demonstration or proof of concept install.
+
+   > **Important**: The bundled Elasticsearch operator does not provide reliable persistent storage
+   of logs or authenticate access to Kibana.
+   {: .alert .alert-danger}
 
 {% include {{page.version}}/cnx-monitor-install.md orch="openshift" elasticsearch="operator" %}
 
 Once running, access Prometheus and Alertmanager using the NodePort from the created service.
 See the [Metrics](../../usage/metrics/) section for more information.
 
-### Policy query with calicoq
-
-Once {{site.prodname}} is installed in OpenShift, each node is automatically configured with
-a `calicoctl.cfg` (owned by the root user) which is used by {{site.prodname}} to locate and authenticate requests to etcd.
-
-We recommend installing `calicoq` as a container in OpenShift. Refer to [Installing calicoq as a container on a single host](../../usage/calicoq/#installing-calicoq-as-a-container-on-a-single-host) for instructions.
-
-> **Note**: Ensure that your configuration takes into account TLS-enabled etcd in OpenShift.
-{: .alert .alert-info}
-
-See the [calicoq reference section](../../reference/calicoq/) for more information on using `calicoq`.
+{% include {{page.version}}/gs-openshift-next-steps.md %}

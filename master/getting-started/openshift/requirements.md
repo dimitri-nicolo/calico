@@ -17,3 +17,5 @@ Refer to the OpenShift documentation for additional requirements.
 - [OpenShift Container Platform](https://docs.openshift.com/container-platform/latest/install/prerequisites.html)
 
 {% include {{page.version}}/reqs-kernel.md %}
+
+{% include {{page.version}}/reqs-byo-es.md %}

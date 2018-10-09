@@ -57,6 +57,8 @@ toc:
     path: /getting-started/openshift/installation
   - title: Connecting to a dedicated etcd cluster (optional)
     path: /getting-started/openshift/dedicated-etcd
+  - title: Using your own Elasticsearch for logs
+    path: /getting-started/openshift/byo-elasticsearch
 
 - title: Host Protection
   section:

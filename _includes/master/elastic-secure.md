@@ -1,7 +1,12 @@
+{% if include.orch != "openshift" %}
+  {% assign cli = "kubectl" %}
+{% else %}
+  {% assign cli = "oc" %}
+{% endif %}
 
 1. Set up secret with username and password for `Fluentd` to authenticate with Elasticsearch.
    ```
-   kubectl create secret generic elastic-fluentd-user \
+   {{cli}} create secret generic elastic-fluentd-user \
    --from-literal=username=<elastic-search-user> \
    --from-literal=password=<elastic-search-user-password> \
    -n calico-monitoring
@@ -11,7 +16,7 @@
 
    ```bash
    cp <ElasticSearchCA.pem> ca.pem
-   kubectl create configmap -n calico-monitoring elastic-ca-config --from-file=ca.pem
+   {{cli}} create configmap -n calico-monitoring elastic-ca-config --from-file=ca.pem
    ```
 
 1. Create a Secret containing
@@ -20,7 +25,7 @@
    * Base64 encoded <username>:<password> for the es-proxy to authenticate with Elasticsearch
 
    ```
-   kubectl create secret generic tigera-es-proxy \
+   {{cli}} create secret generic tigera-es-proxy \
    --from-file=frontend.crt=frontend-server.crt \
    --from-file=frontend.key=frontend-server.key \
    --from-file=backend-ca.crt=ElasticSearchCA.pem \
@@ -30,7 +35,7 @@
 
 1. Create a configmap with information on how to reach the Elasticsearch cluster
    ```
-   kubectl create configmap tigera-es-proxy \
+   {{cli}} create configmap tigera-es-proxy \
    --from-literal=elasticsearch.backend.host="elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local" \
    --from-literal=elasticsearch.backend.port="9200" \
    -n calico-monitoring
@@ -42,7 +47,7 @@
     ```
 1. Apply the configmap patch.
    ```
-   kubectl patch configmap tigera-cnx-manager-config -n kube-system -p "$(cat patch-cnx-manager-configmap.yaml)"
+   {{cli}} patch configmap tigera-cnx-manager-config -n kube-system -p "$(cat patch-cnx-manager-configmap.yaml)"
    ```
 1. Restart {{site.prodname}} Manager pod
    ```

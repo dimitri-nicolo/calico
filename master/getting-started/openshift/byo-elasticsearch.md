@@ -2,7 +2,7 @@
 title: Using your own Elasticsearch for logs
 ---
 
-{% include {{page.version}}/byo-intro.md %}
+{% include {{page.version}}/byo-intro.md orch="openshift" %}
 
 ## Completing a production install using your own Elasticsearch
 
@@ -21,10 +21,10 @@ title: Using your own Elasticsearch for logs
 
 ### Set up access to your cluster from Kubernetes
 
-{% include {{page.version}}/elastic-secure.md %}
+{% include {{page.version}}/elastic-secure.md orch="openshift" %}
 
 ### Installing Prometheus, Alertmanager, and Fluentd
 
-{% include {{page.version}}/cnx-monitor-install.md elasticsearch="external" %}
+{% include {{page.version}}/cnx-monitor-install.md orch="openshift" elasticsearch="external" %}
 
-{% include {{page.version}}/gs-next-steps.md %}
+{% include {{page.version}}/gs-openshift-next-steps.md %}
