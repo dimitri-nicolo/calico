@@ -237,6 +237,18 @@ $(NODE_CONTAINER_BINARY): vendor $(SRCFILES)
 		-w /go/src/$(PACKAGE_NAME) \
 		$(CALICO_BUILD) go build -v -o $@ $(LDFLAGS) ./cmd/calico-node/main.go
 
+$(NODE_CONTAINER_BINARY).exe: vendor
+	docker run --rm \
+		-e GOARCH=$(ARCH) \
+		-e GOOS=windows \
+		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+		-v $(CURDIR)/.go-pkg-cache:/go-cache/:rw \
+		-e GOCACHE=/go-cache \
+		-v $(CURDIR):/go/src/$(PACKAGE_NAME) \
+		$(LOCAL_BUILD_MOUNTS) \
+		-w /go/src/$(PACKAGE_NAME) \
+		$(CALICO_BUILD) go build -v -o $@ $(LDFLAGS) ./cmd/calico-node/main.go
+
 ###############################################################################
 # Building the image
 ###############################################################################
