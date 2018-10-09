@@ -238,9 +238,9 @@ func (s *PolicySets) convertPolicyToRules(policyId string, inboundRules []*proto
 // protoRulesToHnsRules converts a set of proto rules into HNS rules.
 func (s *PolicySets) protoRulesToHnsRules(policyId string, protoRules []*proto.Rule, isInbound bool) (rules []*hns.ACLPolicy) {
 	log.WithField("policyId", policyId).Debug("protoRulesToHnsRules")
-
+	const ipPortsPerRule = 4000
 	for _, protoRule := range protoRules {
-		hnsRules, err := s.protoRuleToHnsRules(policyId, protoRule, isInbound)
+		hnsRules, err := s.protoRuleToHnsRules(policyId, protoRule, isInbound, ipPortsPerRule)
 		if err != nil {
 			switch err {
 			case ErrNotSupported:
@@ -264,9 +264,9 @@ func (s *PolicySets) protoRulesToHnsRules(policyId string, protoRules []*proto.R
 // there are a few limitations to be aware of:
 //
 // The following types of rules are not supported in this release and will be logged+skipped:
-// Rules with: Negative match criteria, Actions other than 'allow' or 'deny', Port ranges, and ICMP type/codes.
+// Rules with: Negative match criteria, Actions other than 'allow' or 'deny'and ICMP type/codes.
 //
-func (s *PolicySets) protoRuleToHnsRules(policyId string, pRule *proto.Rule, isInbound bool) ([]*hns.ACLPolicy, error) {
+func (s *PolicySets) protoRuleToHnsRules(policyId string, pRule *proto.Rule, isInbound bool, ipPortsPerRule int) ([]*hns.ACLPolicy, error) {
 	log.WithField("policyId", policyId).Debug("protoRuleToHnsRules")
 
 	// Check IpVersion
@@ -278,12 +278,6 @@ func (s *PolicySets) protoRuleToHnsRules(policyId string, pRule *proto.Rule, isI
 	// Skip rules with negative match criteria, these are not supported in this version
 	if ruleHasNegativeMatches(pRule) {
 		log.WithField("rule", pRule).Info("Skipping rule because it contains negative matches (currently unsupported).")
-		return nil, ErrNotSupported
-	}
-
-	// Skip rules with port ranges, only a single port is supported in this version
-	if portsContainRanges(pRule.SrcPorts) || portsContainRanges(pRule.DstPorts) {
-		log.WithField("rule", pRule).Info("Skipping rule because it contains port ranges (currently unsupported).")
 		return nil, ErrNotSupported
 	}
 
@@ -345,39 +339,6 @@ func (s *PolicySets) protoRuleToHnsRules(policyId string, pRule *proto.Rule, isI
 		logCxt.WithField("action", ruleCopy.Action).Panic("Unknown rule action")
 	}
 
-	//
-	// Source ports
-	//
-	if len(ruleCopy.SrcPorts) > 0 {
-		// Windows RS3 limitation, single port
-		ports := uint16(ruleCopy.SrcPorts[0].First)
-
-		if isInbound {
-			aclPolicy.RemotePort = ports
-			logCxt.WithField("RemotePort", aclPolicy.RemotePort).Debug("Adding Source Ports as RemotePort condition")
-		} else {
-			aclPolicy.LocalPort = ports
-			logCxt.WithField("LocalPort", aclPolicy.LocalPort).Debug("Adding Source Ports as LocalPort condition")
-		}
-	}
-
-	//
-	// Destination Ports
-	//
-	if len(ruleCopy.DstPorts) > 0 {
-		// Windows RS3 limitation, single port (start port)
-		ports := uint16(ruleCopy.DstPorts[0].First)
-
-		if isInbound {
-			aclPolicy.LocalPort = ports
-			logCxt.WithField("LocalPort", aclPolicy.LocalPort).Debug("Adding Destination Ports as LocalPort condition")
-		} else {
-			aclPolicy.RemotePort = ports
-			logCxt.WithField("RemotePort", aclPolicy.RemotePort).Debug("Adding Destination Ports as RemotePort condition")
-		}
-	}
-
-	//
 	// Protocol
 	//
 	if ruleCopy.Protocol != nil {
@@ -394,8 +355,8 @@ func (s *PolicySets) protoRuleToHnsRules(policyId string, pRule *proto.Rule, isI
 	//
 	// Source Neworks and IPSets
 	//
-	localAddresses := []string{""} // ensures slice always has at least one value
-	remoteAddresses := []string{""}
+	var localAddresses []string
+	var remoteAddresses []string
 
 	srcAddresses := ruleCopy.SrcNet
 
@@ -466,33 +427,119 @@ func (s *PolicySets) protoRuleToHnsRules(policyId string, pRule *proto.Rule, isI
 		}
 	}
 
-	// For Windows RS3 only, there is a dataplane restriction of a single address/cidr per
-	// source or destination condition. The behavior below will be removed in
-	// the next iteration, but for now we have to break up the source and destination
-	// ip address combinations and represent them using multiple rules
+	// Windows RS4+ supports multiple CIDRs and port ranges in a rule but Microsoft recommended
+	// limiting the number of entries per rule to a few thousand(say 4000 for now).
+	// Break up larger sets of ports/CIDRs into chunks and render one rule for each combination
+	var remotePortChunks [][]*proto.PortRange
+	var localPortChunks [][]*proto.PortRange
 	i := 0
 	debug := log.GetLevel() >= log.DebugLevel
-	for _, localAddr := range localAddresses {
-		for _, remoteAddr := range remoteAddresses {
-			newPolicy := *aclPolicy
 
-			// Give each sub-rule a unique ID.
-			if s.supportedFeatures.Acl.AclRuleId {
-				newPolicy.Id = fmt.Sprintf("%s-%s-%d", policyId, ruleCopy.RuleId, i)
-				i++
-			}
+	localAddrChunks := SplitIPList(localAddresses, ipPortsPerRule)
+	remoteAddrChunks := SplitIPList(remoteAddresses, ipPortsPerRule)
+	//assign src/dstPortsChunks based on traffic direction
+	if isInbound {
+		remotePortChunks = SplitPortList(pRule.SrcPorts, ipPortsPerRule)
+		localPortChunks = SplitPortList(pRule.DstPorts, ipPortsPerRule)
+	} else {
+		localPortChunks = SplitPortList(pRule.SrcPorts, ipPortsPerRule)
+		remotePortChunks = SplitPortList(pRule.DstPorts, ipPortsPerRule)
+	}
 
-			newPolicy.LocalAddresses = localAddr
-			newPolicy.RemoteAddresses = remoteAddr
-			// Add this rule to the rules being returned
-			if debug {
-				log.WithField("rule", newPolicy).Debug("Expanded rule for local/remote addr.")
+	for _, localAddr := range localAddrChunks {
+		localAddrs := strings.Join(localAddr, ",")
+
+		//iterate loop for each chunk of source port and append them in aclpolicy
+		for _, lPorts := range localPortChunks {
+			localPorts := appendPortsinList(lPorts)
+
+			for _, remoteAddr := range remoteAddrChunks {
+				remoteAddrs := strings.Join(remoteAddr, ",")
+
+				//iterate loop for each chunk of destination port and append them in aclpolicy
+				for _, rPorts := range remotePortChunks {
+					remotePorts := appendPortsinList(rPorts)
+
+					newPolicy := *aclPolicy
+					// Give each sub-rule a unique ID.
+					if s.supportedFeatures.Acl.AclRuleId {
+						newPolicy.Id = fmt.Sprintf("%s-%s-%d", policyId, ruleCopy.RuleId, i)
+						i++
+					}
+					//assign ports chunks in aclpolicy
+					newPolicy.LocalPorts = localPorts
+					newPolicy.RemotePorts = remotePorts
+					//assign addresses chunks in aclpolicy
+					newPolicy.LocalAddresses = localAddrs
+					newPolicy.RemoteAddresses = remoteAddrs
+					// Add this rule to the rules being returned
+					if debug {
+						log.WithField("rule", newPolicy).Debug("Expanded rule for local/remote addr.")
+					}
+					aclPolicies = append(aclPolicies, &newPolicy)
+				}
 			}
-			aclPolicies = append(aclPolicies, &newPolicy)
 		}
 	}
 
 	return aclPolicies, nil
+}
+
+func appendPortsinList(dPorts []*proto.PortRange) (listPorts string) {
+	dstPorts := make([]string, len(dPorts))
+	for ii, port := range dPorts {
+		dstPorts[ii] = protoPortToHCSPort(port)
+	}
+	listPorts = strings.Join(dstPorts, ",")
+	return
+}
+
+//convert proto.PortRange format port into HCS format port
+func protoPortToHCSPort(port *proto.PortRange) string {
+	portNum := ""
+	if port.First == port.Last {
+		portNum = fmt.Sprintf("%d", port.First)
+	} else {
+		portNum = fmt.Sprintf("%d-%d", port.First, port.Last)
+	}
+	return portNum
+}
+
+//This function will create chunks of ports/ports range with chunksize
+func SplitPortList(ports []*proto.PortRange, chunkSize int) (splits [][]*proto.PortRange) {
+
+	if len(ports) == 0 {
+		splits = append(splits, []*proto.PortRange{})
+	}
+	for i := 0; i < len(ports); i += chunkSize {
+		last := i + chunkSize
+
+		if last > len(ports) {
+			last = len(ports)
+		}
+
+		splits = append(splits, ports[i:last])
+	}
+	return
+}
+
+//This function will create chunks of IP addresses/Cidr with chunksize
+func SplitIPList(ipAddrs []string, chunkSize int) (splits [][]string) {
+
+	if len(ipAddrs) == 0 {
+		splits = append(splits, []string{})
+	}
+	for i := 0; i < len(ipAddrs); i += chunkSize {
+		last := i + chunkSize
+
+		if last > len(ipAddrs) {
+			last = len(ipAddrs)
+		}
+
+		splits = append(splits, ipAddrs[i:last])
+	}
+
+	return
 }
 
 func ruleHasNegativeMatches(pRule *proto.Rule) bool {
@@ -513,19 +560,6 @@ func ruleHasNegativeMatches(pRule *proto.Rule) bool {
 	}
 	if pRule.NotIcmp != nil {
 		return true
-	}
-	return false
-}
-
-func portsContainRanges(ports []*proto.PortRange) bool {
-	if len(ports) > 1 {
-		return true
-	}
-
-	for _, portRange := range ports {
-		if portRange.First != portRange.Last {
-			return true
-		}
 	}
 	return false
 }
