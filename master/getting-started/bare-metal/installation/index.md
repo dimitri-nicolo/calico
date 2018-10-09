@@ -1,5 +1,6 @@
 ---
 title: Installing Tigera Secure EE on host endpoints
+canonical_url: https://docs.tigera.io/v2.1/getting-started/bare-metal/installation/
 ---
 
 You can use any of the following methods to install Felix on bare metal.

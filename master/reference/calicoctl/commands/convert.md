@@ -1,5 +1,6 @@
 ---
 title: calicoctl convert
+canonical_url: https://docs.tigera.io/v2.1/reference/calicoctl/commands/convert
 ---
 
 This sections describes the `calicoctl convert` command.

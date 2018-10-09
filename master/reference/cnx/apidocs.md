@@ -1,5 +1,6 @@
 ---
 title: Tigera Secure EE API endpoints
+canonical_url: https://docs.tigera.io/v2.2/reference/cnx/apidocs
 layout: swagger
 ---
 

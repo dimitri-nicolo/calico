@@ -1,5 +1,6 @@
 ---
 title: calicoctl user reference
+canonical_url: https://docs.tigera.io/v2.1/reference/calicoctl/
 ---
 
 The command line tool, `calicoctl`, makes it easy to manage {{site.prodname}} network and security policy, as well as other

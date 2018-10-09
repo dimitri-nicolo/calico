@@ -1,5 +1,6 @@
 ---
 title: Configuring calicoctl
+canonical_url: https://docs.tigera.io/v2.1/usage/calicoctl/configure/
 ---
 
 {% include {{page.version}}/cli-config-intro.md cli="calicoctl" %}
