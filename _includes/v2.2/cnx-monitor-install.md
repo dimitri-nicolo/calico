@@ -39,6 +39,16 @@
    oc adm policy add-scc-to-user anyuid system:serviceaccount:calico-monitoring:prometheus
    ```
 
+{% if include.elasticsearch == "external" %}
+
+1. Allow Elasticsearch proxy to configure and use a security context.
+
+   ```
+   oc adm policy add-scc-to-user anyuid system:serviceaccount:calico-monitoring:tigera-es-proxy
+   ```
+
+{% endif %}
+
 1. Allow sleep pod to run with host networking.
 
    ```
