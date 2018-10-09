@@ -86,6 +86,11 @@ spec:
 | ipsecESPAlgorithm          | IPsec ESP algorithm. Default is NIST suite B recommendation.| string  | string | `aes128gcm16-ecp256`
 | ipsecLogLevel              | Controls log level for IPsec components. Set to `None` for no logging. | None,Notice,Info,Debug,Verbose | string | `Info` |
 | ipsecPSKFile               | The path to the pre shared key file for IPsec. | string | string | `""` |
+| flowLogsFileEnabled   | Set to `true`, enables flow logs. If set to `false` no flow logging will occur. Flow logs are written to a file `flows.log` and sent to Elasticsearch. The location of this file can be configured using the `flowLogsFileDirectory` field. File rotation settings for this `flows.log` file can be configured using the fields `flowLogsFileMaxFiles` and `flowLogsFileMaxFileSizeMB`. Note that flow log exports to Elasticsearch are dependent on flow logs getting written to this file. Setting this parameter to `false` will disable flow logs. | `true` `false` | boolean | `false` |
+| flowLogsFileDirectory | Set the directory where flow logs files are stored. This parameter only takes effect when `flowLogsFileEnabled` is set to `true`. | string | string | `/var/log/calico/flowlogs` |
+| flowLogsFileMaxFiles  | Set the number of log files to keep. This parameter only takes effect when `flowLogsFileEnabled` is set to `true`. | int | int | `5` |
+| flowLogsFileMaxFileSizeMB | Set the max size in MB of flow logs files before rotation. This parameter only takes effect when `flowLogsFileEnabled` is set to `true`. | int | int | `100` |
+| flowLogsFlushInterval | The period, in seconds, at which Felix exports the flow logs. | int | int | `300` |
 
 \* When `dropActionOverride` is set to `LogAndDrop` or `LogAndAccept`, the `syslog` entries look something like the following.
    ```
