@@ -451,4 +451,4 @@ foss-checks: vendor
 	  -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
 	  -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
 	  -w /go/src/$(CAPI_PKG) \
-	  $(GO_BUILD_CONTAINER) /usr/local/bin/fossa
+	  $(CALICO_BUILD) /usr/local/bin/fossa
