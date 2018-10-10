@@ -63,6 +63,11 @@ data:
   tigera.cnx-manager.query-api-url: "/api/v1/namespaces/kube-system/services/https:cnx-api:8080/proxy"
   # Elasticsearch service resource path
   tigera.cnx-manager.elasticsearch-api-url: "/api/v1/namespaces/calico-monitoring/services/elasticsearch-tigera-elasticsearch:9200/proxy"
+  # Path to Kibana.  The default is for a port forwarded to the NodePort included with the operator based install.
+  # Replace this with the URL of your Kibana if you installed it yourself or are accessing it differently.
+  tigera.cnx-manager.kibana-url: "http://127.0.0.1:30601"
+  # Whether sentry.io automatic error reporting of client side UI bugs is enabled.
+  tigera.cnx-manager.error-tracking: "false"
   # Enable ALP support in the UI
   tigera.cnx-manager.alp-support: "false"
 
@@ -536,6 +541,16 @@ spec:
               configMapKeyRef:
                 name: tigera-cnx-manager-config
                 key: tigera.cnx-manager.elasticsearch-api-url
+          - name: CNX_ELASTICSEARCH_KIBANA_URL
+            valueFrom:
+              configMapKeyRef:
+                name: tigera-cnx-manager-config
+                key: tigera.cnx-manager.kibana-url
+          - name: CNX_ENABLE_ERROR_TRACKING
+            valueFrom:
+              configMapKeyRef:
+                name: tigera-cnx-manager-config
+                key: tigera.cnx-manager.error-tracking
           - name: CNX_ALP_SUPPORT
             valueFrom:
               configMapKeyRef:

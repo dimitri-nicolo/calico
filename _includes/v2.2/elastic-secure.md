@@ -51,6 +51,8 @@
     ```
     curl --compressed -O {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/secure-es/patch-cnx-manager-configmap.yaml
     ```
+    Edit the Kibana URL in the patch file to point to your Kibana.
+
 1. Apply the configmap patch.
    ```
    {{cli}} patch configmap tigera-cnx-manager-config -n kube-system -p "$(cat patch-cnx-manager-configmap.yaml)"
