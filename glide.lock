@@ -1,5 +1,5 @@
-hash: ff15b781ed3fae60a3c307689b2da0df83a01e991cfbc60b07157d9fe2ac2c73
-updated: 2018-10-09T05:14:31.810445241Z
+hash: 56d2fb7627ed3f7ccfe0b69b8d2e64d89934b3817effefce0d52a2dd9a1d0a00
+updated: 2018-10-10T05:08:22.305484873Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -244,7 +244,7 @@ imports:
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
 - name: github.com/projectcalico/felix
-  version: fdaff7eb01edc5e30267f4bea965e18ca52ce47c
+  version: 0a5de61c409b8d4b61ac9024aa1b7e88e4c8ccb4
   repo: git@github.com:tigera/felix-private.git
   subpackages:
   - buildinfo

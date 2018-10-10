@@ -15,7 +15,7 @@ import:
   - pkg/run
 - package: github.com/projectcalico/felix
   repo: git@github.com:tigera/felix-private.git
-  version: fdaff7eb01edc5e30267f4bea965e18ca52ce47c
+  version: 0a5de61c409b8d4b61ac9024aa1b7e88e4c8ccb4
   subpackages:
   - daemon
 - package: github.com/projectcalico/libcalico-go
