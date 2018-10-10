@@ -150,32 +150,6 @@ windows-packaging/tigera-confd.exe: $(SRC_FILES) vendor
 		( ldd $@ 2>&1 | grep -q "Not a valid dynamic program" || \
 		( echo "Error: $@ was not statically linked"; false ) )'
 
-%.url: % utils/make-azure-blob.sh
-	utils/make-azure-blob.sh $< $(notdir $(basename $<))-$(GIT_SHORT_COMMIT)$(suffix $<) \
-	    felix-test-uploads felixtestuploads felixtestuploads > $@.tmp
-	mv $@.tmp $@
-
-windows-confd-url: bin/tigera-confd.exe.url
-	@echo
-	@echo tigera-confd.exe download link:
-	@cat $<
-	@echo
-	@echo Powershell download command:
-	@echo "Invoke-WebRequest '`cat $<`' -O tigera-confd-$(GIT_SHORT_COMMIT).exe"
-
-windows-zip-url:
-ifndef VERSION
-	$(MAKE) windows-zip-url VERSION=dev
-else
-	$(MAKE) $(WINDOWS_ARCHIVE).url VERSION=dev
-	@echo
-	@echo $(WINDOWS_ARCHIVE) download link:
-	@cat $(WINDOWS_ARCHIVE).url
-	@echo
-	@echo Powershell download command:
-	@echo "Invoke-WebRequest '`cat $(WINDOWS_ARCHIVE).url`' -O tigera-confd.zip"
-endif
-
 ###############################################################################
 # Static checks
 ###############################################################################
