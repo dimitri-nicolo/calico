@@ -268,30 +268,37 @@
 {% endif %}
 
 {% if include.elasticsearch == "operator" %}
-1. Create a `ConfigMap` and start a job that will install the {{site.prodname}} Kibana indexes, views, and dashboards
-   when the Kibana service endpoints come up.
+1.  Download the `kibana-dashboards.yaml` manifest.
 
-   ```bash
-   {{cli}} apply -f \
+    ```bash
+    curl --compressed -O \
    {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/kibana-dashboards.yaml
-   ```
+    ```
 
-{% else %}
-
-1. Download the following JSON file containing the {[site.prodname}} Kibana indexes, views, and dashboards.
-
-   ```bash
-   curl --compressed -O \
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/kibana-dashboard.json
-   ```
-
-1. If your cluster is connected to the internet, skip to the next step. Otherwise, use the following commands
+1. Use the following commands
    to set an environment variable called `REGISTRY` containing the location of the private registry and replace
    the paths in the manifest to refer to the private registry.
 
    ```bash
    REGISTRY=my-registry.com \
-   sed -i -e "s?giantswarm?$REGISTRY/giantswarm?g" operator.yaml
+   sed -i -e "s?giantswarm?$REGISTRY/giantswarm?g" kibana-dashboards.yaml
+   ```
+
+1. Create a `ConfigMap` and start a job that will install the {{site.prodname}} Kibana indexes, views, and dashboards
+   when the Kibana service endpoints come up.
+
+   ```bash
+   {{cli}} apply -f kibana-dashboards.yaml
+   ```
+
+{% else %}
+
+1. Download the following JSON file containing the {[site.prodname}} Kibana indexes, views, and dashboards
+   to your computer.
+
+   ```bash
+   curl --compressed -O \
+   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/kibana-dashboard.json
    ```
 
 1. Open the **Management** -> **Saved Objects** pane in Kibana and click **Import**. To complete the import, follow the
