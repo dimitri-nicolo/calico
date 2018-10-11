@@ -208,12 +208,6 @@ test-etcd: bin/confd bin/etcdctl bin/bird bin/bird6 bin/calico-node bin/calicoct
 		-v $$SSH_AUTH_SOCK:/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent \
 		$(CALICO_BUILD) /tests/test_suite_etcd.sh
 
-.PHONY: test-windows
-## Test the Windows templates on Linux
-test-windows: bin/confd bin/etcdctl bin/calicoctl run-etcd
-	DATASTORE_TYPE=etcdv3 ETCD_ENDPOINTS=http://127.0.0.2:2379 \
-	    NODENAME=kube-master bin/confd -confdir=windows-packaging
-
 ## Etcd is used by the kubernetes
 # NOTE: https://quay.io/repository/coreos/etcd is available *only* for the following archs with the following tags:
 # amd64: 3.2.5
