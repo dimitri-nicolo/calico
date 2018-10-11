@@ -428,11 +428,11 @@ func TestRuleRendering(t *testing.T) {
 	//Updates all the policies using the ipset a
 	ps.ProcessIpSetUpdate("a")
 
-	Expect(ps.GetPolicySetRules([]string{"selector-cp"}, true)).To(Equal([]*hns.ACLPolicy{
+	Expect(ps.GetPolicySetRules([]string{"selector-ipsets"}, true)).To(Equal([]*hns.ACLPolicy{
 		// We expect the policy should reflect the updated ipset
 		{
 			Type: hns.ACL, Action: hns.Allow, Direction: hns.In, RuleType: hns.Switch, Priority: 1000, Protocol: 256,
-			Id: "selector-cp-rule-1-0", LocalAddresses: "10.1.0.1,10.1.0.2", RemoteAddresses: "10.0.0.1,10.0.0.2,10.0.0.3",
+			Id: "selector-ipsets-rule-1-0", LocalAddresses: "10.1.0.1,10.1.0.2", RemoteAddresses: "10.0.0.1,10.0.0.2,10.0.0.3",
 		},
 		// Default deny rule.
 		{Type: hns.ACL, Protocol: 256, Action: hns.Block, Direction: hns.In, RuleType: hns.Switch, Priority: 1001},
