@@ -447,8 +447,8 @@ kubeadm:
 # Run fossa.io license checks
 foss-checks: vendor
 	@echo Running $@...
-	@docker run --rm -v $(CURDIR):/go/src/$(CAPI_PKG):rw \
-	  -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+	@docker run --rm -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
+	  -e LOCAL_USER_ID=$(MY_UID) \
 	  -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
-	  -w /go/src/$(CAPI_PKG) \
+	  -w /go/src/$(PACKAGE_NAME) \
 	  $(CALICO_BUILD) /usr/local/bin/fossa
