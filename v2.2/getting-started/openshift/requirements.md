@@ -7,15 +7,10 @@ canonical_url: https://docs.tigera.io/v2.1/getting-started/openshift/requirement
 
 ## OpenShift requirements
 
-{{site.prodname}} {{page.version}} supports:
+{{site.prodname}} {{page.version}} supports OpenShift Container Platform 3.10.
 
-- OpenShift Kubernetes Distribution 3.10
-- OpenShift Container Platform 3.10
-
-Refer to the OpenShift documentation for additional requirements.
-
-- [OpenShift Kubernetes Distribution](https://docs.openshift.org/latest/install/prerequisites.html)
-- [OpenShift Container Platform](https://docs.openshift.com/container-platform/latest/install/prerequisites.html)
+Refer to the [OpenShift Container Platform documentation](https://docs.openshift.com/container-platform/latest/install/prerequisites.html)
+for additional requirements.
 
 {% include {{page.version}}/reqs-kernel.md %}
 
