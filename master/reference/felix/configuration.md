@@ -135,6 +135,11 @@ The Kubernetes API datastore driver reads its configuration from Kubernetes-prov
 | `IPSecESPAlgorithm`          | `FELIX_IPSECESPALGORITHM`          | `aes128gcm16-ecp256`             | IPsec ESP algorithm. Default is NIST suite B recommendation.|
 | `IPSecLogLevel`              | `FELIX_IPSECLOGLEVEL`              | `Info`  | Controls log level for IPsec components. Set to `None` for no logging. Other valid values are `Notice`, `Info`, `Debug` and `Verbose`. |
 | `IPSecPSKFile`               | `FELIX_IPSECPSKFILE`               | None    | The path to the pre shared key file for IPsec. |
+| `FlowLogsFileEnabled`        | `FELIX_FLOWLOGSFILEENABLED`        | `false` | Set to `true`, enables flow logs. If set to `false` no flow logging will occur. Flow logs are written to a file `flows.log` and sent to Elasticsearch. The location of this file can be configured using the `FlowLogsFileDirectory` field. File rotation settings for this `flows.log` file can be configured using the fields `FlowLogsFileMaxFiles` and `FlowLogsFileMaxFileSizeMB`. Note that flow log exports to Elasticsearch are dependent on flow logs getting written to this file. Setting this parameter to `false` will disable flow logs. |
+| `FlowLogsFileDirectory`      | `FELIX_FLOWLOGSFILEDIRECTORY`      | `/var/log/calico/flowlogs` | The directory where flow logs files are stored. This parameter only takes effect when `FlowLogsFileEnabled` is set to `true`. |
+| `FlowLogsFileMaxFiles`       | `FELIX_FLOWLOGSFILEMAXFILES`       | `5`     | The number of files to keep when rotating flow log files. This parameter only takes effect when `FlowLogsFileEnabled` is set to `true`. |
+| `FlowLogsFileMaxFileSizeMB`  | `FELIX_FLOWLOGSFILEMAXFILESIZEMB`  | `100`   | The max size in MB of flow logs files before rotation. This parameter only takes effect when `FlowLogsFileEnabled` is set to `true`.|
+| `FlowLogsFlushInterval`      | `FELIX_FLOWLOGSFLUSHINTERVAL`      | `300`   | The period, in seconds, at which Felix exports the flow logs. |
 
 DropActionOverride controls what happens to each packet that is denied by
 the current {{site.prodname}} policy - i.e. by the ordered combination of all the
