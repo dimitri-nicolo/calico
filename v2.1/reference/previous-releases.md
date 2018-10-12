@@ -1,6 +1,6 @@
 ---
 title: Previous releases
-canonical_url: https://docs.tigera.io/v2.1/reference/previous-releases
+canonical_url: https://docs.tigera.io/v2.2/reference/previous-releases
 ---
 
 

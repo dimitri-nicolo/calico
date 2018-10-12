@@ -1,6 +1,6 @@
 ---
 title: Configuring encryption and authentication
-canonical_url: https://docs.tigera.io/v2.1/usage/encrypt-comms
+canonical_url: https://docs.tigera.io/v2.2/usage/encrypt-comms
 ---
 
 ## etcd connections

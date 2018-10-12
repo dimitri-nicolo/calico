@@ -1,7 +1,7 @@
 ---
 title: Troubleshooting
 redirect_from: latest/usage/troubleshooting/
-canonical_url: https://docs.tigera.io/v2.1/usage/troubleshooting/
+canonical_url: https://docs.tigera.io/v2.2/usage/troubleshooting/
 ---
 
 * TOC
