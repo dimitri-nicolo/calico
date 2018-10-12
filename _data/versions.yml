@@ -1,3 +1,85 @@
+v2.2:
+- title: v2.2.0
+  note: |
+    12 October 2018
+
+  dockerRepo: quay.io
+  components:
+    cnx-manager:
+      version: v2.2.0
+      url: ""
+    cnx-manager-proxy:
+      version: v2.2.0
+      url: ""
+    cnx-apiserver:
+      version: v2.2.0
+      url: ""
+    cnx-queryserver:
+      version: v2.2.0
+      url: ""
+    cnx-kube-controllers:
+      version: v2.2.0
+      url: ""
+    calicoq:
+      version: v2.2.0
+      url: ""
+    typha:
+      version: v2.2.0
+      url: ""
+    calicoctl:
+      version: v2.2.0
+      url: ""
+      download_url: ""
+    cnx-node:
+      version: v2.2.0
+      url: ""
+    calico/cni:
+      version: v3.2.1
+      url: ""
+      download_calico_url: https://github.com/projectcalico/cni-plugin/releases/download/v3.2.1/calico
+      download_calico_ipam_url: https://github.com/projectcalico/cni-plugin/releases/download/v3.2.1/calico-ipam
+    calico/routereflector:
+      version: v0.6.3
+      url: ""
+    calico:
+      version: v3.2.1
+      url: https://github.com/projectcalico/calico/releases/tag/v3.2.1
+    prometheus-operator:
+      version: v0.18.1
+      url: ""
+    prometheus:
+      version: v2.2.1
+      url: ""
+    alertmanager:
+      version: v0.14.0
+      url: ""
+    prometheus-config-reloader:
+      version: v0.0.3
+      url: ""
+    configmap-reload:
+      version: v0.0.1
+      url: ""
+    dikastes:
+      version: v2.2.0
+    flexvol:
+      version: v3.2.1
+    fluentd:
+      version: v2.2.0
+    es-proxy:
+      version: v2.2.0
+    elasticsearch-operator:
+      version: 0.2.0
+      url: ""
+    kibana:
+      version: 6.4.1
+      url: ""
+    elasticsearch:
+      version: 6.4.1
+      url: ""
+    tiny-tools:
+      version: 0.3.0
+      url: ""
+
 v2.1:
 - title: v2.1.1
   note: |
@@ -58,88 +140,6 @@ v2.1:
       url: ""
     configmap-reload:
       version: v0.0.1
-      url: ""
-
-v2.2:
-- title: v2.2.0-rc1
-  note: |
-    10 September 2018
-
-  dockerRepo: gcr.io/unique-caldron-775/cnx
-  components:
-    cnx-manager:
-      version: release-v2.2
-      url: ""
-    cnx-manager-proxy:
-      version: release-v2.2
-      url: ""
-    cnx-apiserver:
-      version: release-v2.2
-      url: ""
-    cnx-queryserver:
-      version: release-v2.2
-      url: ""
-    cnx-kube-controllers:
-      version: release-v2.2
-      url: ""
-    calicoq:
-      version: release-v2.2
-      url: ""
-    typha:
-      version: release-v2.2
-      url: ""
-    calicoctl:
-      version: release-v2.2
-      url: ""
-      download_url: ""
-    cnx-node:
-      version: release-v2.2
-      url: ""
-    calico/cni:
-      version: v3.2.1
-      url: ""
-      download_calico_url: https://github.com/projectcalico/cni-plugin/releases/download/v3.2.1/calico
-      download_calico_ipam_url: https://github.com/projectcalico/cni-plugin/releases/download/v3.2.1/calico-ipam
-    calico/routereflector:
-      version: v0.6.3
-      url: ""
-    calico:
-      version: v3.2.1
-      url: https://github.com/projectcalico/calico/releases/tag/v3.2.1
-    prometheus-operator:
-      version: v0.18.1
-      url: ""
-    prometheus:
-      version: v2.2.1
-      url: ""
-    alertmanager:
-      version: v0.14.0
-      url: ""
-    prometheus-config-reloader:
-      version: v0.0.3
-      url: ""
-    configmap-reload:
-      version: v0.0.1
-      url: ""
-    dikastes:
-      version: release-v2.2
-    flexvol:
-      version: v3.2.1
-    fluentd:
-      version: release-v2.2
-    es-proxy:
-      version: release-v2.2
-    elasticsearch-operator:
-      version: 0.2.0
-      url: ""
-    kibana:
-      version: 6.4.1
-      url: ""
-    elasticsearch:
-      version: 6.4.1
-      url: ""
-    tiny-tools:
-      version: 0.3.0
       url: ""
 
 - title: v2.1.0
