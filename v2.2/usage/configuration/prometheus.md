@@ -1,5 +1,6 @@
 ---
 title: Configuring Prometheus
+redirect_from: latest/usage/configuration/prometheus
 canonical_url: https://docs.tigera.io/v2.1/usage/configuration/prometheus
 ---
 

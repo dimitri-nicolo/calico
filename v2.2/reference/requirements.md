@@ -1,5 +1,6 @@
 ---
 title: Tigera Secure EE System Requirements
+redirect_from: latest/reference/requirements
 canonical_url: https://docs.tigera.io/v2.1/reference/requirements
 ---
 

@@ -1,5 +1,6 @@
 ---
 title: Configuring Elasticsearch
+redirect_from: latest/usage/logs/configure-elastic
 canonical_url: https://docs.tigera.io/v2.2/usage/logs/configure-elastic
 ---
 

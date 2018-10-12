@@ -1,6 +1,5 @@
 ---
 title: Configuring Conntrack
-redirect_from: latest/usage/configuration/conntrack
 canonical_url: https://docs.tigera.io/v2.1/usage/configuration/conntrack
 ---
 

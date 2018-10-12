@@ -1,5 +1,6 @@
 ---
 title: Component logs
+redirect_from: latest/usage/logs/component
 canonical_url: https://docs.tigera.io/v2.2/usage/logs/component
 ---
 

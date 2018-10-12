@@ -1,6 +1,5 @@
 ---
 title: Policy monitoring and reporting
-redirect_from: latest/reference/cnx/policy-violations
 canonical_url: https://docs.tigera.io/v2.1/reference/cnx/policy-violations
 ---
 

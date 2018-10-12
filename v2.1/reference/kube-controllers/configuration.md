@@ -1,6 +1,5 @@
 ---
 title: Configuring the Calico Kubernetes controllers
-redirect_from: latest/reference/kube-controllers/configuration
 canonical_url: https://docs.tigera.io/v2.1/reference/kube-controllers/configuration
 ---
 

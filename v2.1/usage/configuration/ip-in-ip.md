@@ -1,6 +1,5 @@
 ---
 title: Configuring IP-in-IP
-redirect_from: latest/usage/configuration/ip-in-ip
 canonical_url: https://docs.tigera.io/v2.1/usage/configuration/ip-in-ip
 ---
 

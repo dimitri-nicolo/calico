@@ -1,5 +1,6 @@
 ---
 title: Creating policy for basic connectivity
+redirect_from: latest/getting-started/bare-metal/policy/
 canonical_url: https://docs.tigera.io/v2.1/getting-started/bare-metal/policy/
 ---
 

@@ -1,5 +1,6 @@
 ---
 title: Configuring Alertmanager
+redirect_from: latest/usage/configuration/alertmanager
 canonical_url: https://docs.tigera.io/v2.1/usage/configuration/alertmanager
 ---
 

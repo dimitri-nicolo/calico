@@ -1,6 +1,5 @@
 ---
 title: Installing Tigera Secure EE on OpenShift
-redirect_from: latest/getting-started/openshift/installation
 canonical_url: https://docs.tigera.io/v2.1/getting-started/openshift/installation
 ---
 
