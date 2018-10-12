@@ -1,6 +1,6 @@
 ---
 title: Conntrack
-canonical_url: https://docs.tigera.io/v2.1/getting-started/bare-metal/policy/conntrack
+canonical_url: https://docs.tigera.io/v2.2/getting-started/bare-metal/policy/conntrack
 ---
 
 
