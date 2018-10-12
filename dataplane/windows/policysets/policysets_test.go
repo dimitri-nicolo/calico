@@ -5,6 +5,8 @@ package policysets
 import (
 	"testing"
 
+	log "github.com/sirupsen/logrus"
+
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/felix/dataplane/windows/hns"
@@ -20,14 +22,10 @@ func TestRuleRendering(t *testing.T) {
 	h.SupportedFeatures.Acl.AclRuleId = true
 	h.SupportedFeatures.Acl.AclNoHostRulePriority = true
 
+	log.SetLevel(log.DebugLevel)
+
 	ipsc := mockIPSetCache{
-		IPSets: map[string][]string{
-			"a": {"10.0.0.1", "10.0.0.2"},
-			"b": {"10.0.0.2", "10.0.0.3"},
-			"d": {"10.1.0.1", "10.1.0.2"},
-			"e": {"10.1.0.2", "10.1.0.3"},
-			"f": {"10.0.0.3", "10.1.0.1"},
-		},
+		IPSets: map[string][]string{},
 	}
 
 	ps := NewPolicySets(&h, []IPSetCache{&ipsc})
@@ -119,118 +117,122 @@ func TestRuleRendering(t *testing.T) {
 		{Type: hns.ACL, Protocol: 256, Action: hns.Allow, Direction: hns.In, RuleType: hns.Host},
 	}), "unexpected rules returned for basic policy")
 
-	// Tests that look up an IP set.
-	ps.AddOrReplacePolicySet("selector", &proto.Policy{
-		InboundRules: []*proto.Rule{
-			{
-				Action:      "Allow",
-				SrcIpSetIds: []string{"a", "b"},
-				RuleId:      "rule-1",
-			},
-			{
-				Action:      "Allow",
-				DstIpSetIds: []string{"d"},
-				RuleId:      "rule-2",
-			},
-		},
+	// Tests for Profile
+	// Empty profile should return no rules (apart from the default drop).
+	ps.AddOrReplacePolicySet("empty-profile", &proto.Profile{
+		InboundRules:  []*proto.Rule{},
 		OutboundRules: []*proto.Rule{},
 	})
-	//check multi ips hns rules should be created using ipsets
-	Expect(ps.GetPolicySetRules([]string{"selector"}, true)).To(Equal([]*hns.ACLPolicy{
-		{
-			Type: hns.ACL, Action: hns.Allow, Direction: hns.In, RuleType: hns.Switch, Priority: 1000, Protocol: 256,
-			Id: "selector-rule-1-0", RemoteAddresses: "10.0.0.1,10.0.0.2,10.0.0.2,10.0.0.3",
-		},
-		{
-			Type: hns.ACL, Action: hns.Allow, Direction: hns.In, RuleType: hns.Switch, Priority: 1000, Protocol: 256,
-			Id: "selector-rule-2-0", LocalAddresses: "10.1.0.1,10.1.0.2",
-		},
+
+	Expect(ps.GetPolicySetRules([]string{"empty-profile"}, true)).To(Equal([]*hns.ACLPolicy{
 		// Default deny rule.
 		{Type: hns.ACL, Protocol: 256, Action: hns.Block, Direction: hns.In, RuleType: hns.Switch, Priority: 1001},
 		// Default host/pod rule.
 		{Type: hns.ACL, Protocol: 256, Action: hns.Allow, Direction: hns.In, RuleType: hns.Host},
-	}), "unexpected rules returned for selector multi ips policy")
+	}), "unexpected rules returned for empty profile")
 
-	// Source and dest IP sets should be converted into hns rule with multi ips.
-	ps.AddOrReplacePolicySet("selector-ipsets", &proto.Policy{
+	// Test for Rule with profile
+	ps.AddOrReplacePolicySet("rule-with-profile", &proto.Profile{
 		InboundRules: []*proto.Rule{
 			{
-				Action:      "Allow",
-				SrcIpSetIds: []string{"a"},
-				DstIpSetIds: []string{"d"},
-				RuleId:      "rule-1",
+				Action: "Allow",
+				RuleId: "rule-1",
 			},
 		},
 		OutboundRules: []*proto.Rule{},
 	})
 
-	Expect(ps.GetPolicySetRules([]string{"selector-ipsets"}, true)).To(Equal([]*hns.ACLPolicy{
-		// We expect the source/dest IP sets to be expressed as the cross product.
+	Expect(ps.GetPolicySetRules([]string{"rule-with-profile"}, true)).To(Equal([]*hns.ACLPolicy{
 		{
 			Type: hns.ACL, Action: hns.Allow, Direction: hns.In, RuleType: hns.Switch, Priority: 1000, Protocol: 256,
-			Id: "selector-ipsets-rule-1-0", LocalAddresses: "10.1.0.1,10.1.0.2", RemoteAddresses: "10.0.0.1,10.0.0.2",
+			Id: "rule-with-profile-rule-1-0",
 		},
 		// Default deny rule.
 		{Type: hns.ACL, Protocol: 256, Action: hns.Block, Direction: hns.In, RuleType: hns.Switch, Priority: 1001},
 		// Default host/pod rule.
 		{Type: hns.ACL, Protocol: 256, Action: hns.Allow, Direction: hns.In, RuleType: hns.Host},
-	}), "unexpected rules returned for selector ipset multi ips")
+	}), "unexpected rules returned for profile")
 
-	// The source IP set should be intersected with the source CIDR.
-	ps.AddOrReplacePolicySet("selector-cidr", &proto.Policy{
+	//Test with Mixed CIDR to filterout IpV4
+	ps.AddOrReplacePolicySet("mixed-cidr", &proto.Policy{
 		InboundRules: []*proto.Rule{
 			{
-				Action:      "Allow",
-				SrcIpSetIds: []string{"a", "f"},
-				SrcNet:      []string{"10.0.0.0/24"},
-				RuleId:      "rule-1",
+				Action:    "Allow",
+				SrcNet:    []string{"0:0:0:0:0:ffff:af4:301"},
+				IpVersion: 4,
+				RuleId:    "rule-1",
 			},
 			{
-				Action:      "Allow",
-				SrcIpSetIds: []string{"a", "f"},
-				SrcNet:      []string{"10.1.0.0/24"},
-				RuleId:      "rule-2",
+				Action:    "Allow",
+				DstNet:    []string{"0:0:0:0:0:ffff:af4:301"},
+				IpVersion: 4,
+				RuleId:    "rule-2",
 			},
 			{
-				Action:      "Allow",
-				SrcIpSetIds: []string{"a", "f"},
-				SrcNet:      []string{"10.0.0.0/24", "10.1.0.0/24"},
-				RuleId:      "rule-3",
+				Action:    "Allow",
+				NotSrcNet: []string{"0:0:0:0:0:ffff:af4:301"},
+				IpVersion: 4,
+				RuleId:    "rule-3",
 			},
 			{
-				Action:      "Allow",
-				SrcIpSetIds: []string{"a", "f"},
-				SrcNet:      []string{"12.0.0.0/24"},
-				RuleId:      "rule-4",
+				Action:    "Allow",
+				NotDstNet: []string{"0:0:0:0:0:ffff:af4:301"},
+				IpVersion: 4,
+				RuleId:    "rule-4",
 			},
 		},
 		OutboundRules: []*proto.Rule{},
 	})
 
-	Expect(ps.GetPolicySetRules([]string{"selector-cidr"}, true)).To(Equal([]*hns.ACLPolicy{
-		// Intersection with first CIDR, picks up some IPs from each IP set.
-		{
-			Type: hns.ACL, Action: hns.Allow, Direction: hns.In, RuleType: hns.Switch, Priority: 1000, Protocol: 256,
-			Id: "selector-cidr-rule-1-0", RemoteAddresses: "10.0.0.1/32,10.0.0.2/32,10.0.0.3/32",
-		},
-		// Intersection with second CIDr picks up only one IP.
-		{
-			Type: hns.ACL, Action: hns.Allow, Direction: hns.In, RuleType: hns.Switch, Priority: 1000, Protocol: 256,
-			Id: "selector-cidr-rule-2-0", RemoteAddresses: "10.1.0.1/32",
-		},
-
-		// Intersection with both picks up everything.
-		{
-			Type: hns.ACL, Action: hns.Allow, Direction: hns.In, RuleType: hns.Switch, Priority: 1000, Protocol: 256,
-			Id: "selector-cidr-rule-3-0", RemoteAddresses: "10.0.0.1/32,10.0.0.2/32,10.0.0.3/32,10.1.0.1/32",
-		},
-		// Rule 4 becomes a no-op since intersection is empty.
-
+	// We expect the rules to be skipped as there isn't any ip of type Ipv4
+	Expect(ps.GetPolicySetRules([]string{"mixed-cidr"}, true)).To(Equal([]*hns.ACLPolicy{
 		// Default deny rule.
 		{Type: hns.ACL, Protocol: 256, Action: hns.Block, Direction: hns.In, RuleType: hns.Switch, Priority: 1001},
 		// Default host/pod rule.
 		{Type: hns.ACL, Protocol: 256, Action: hns.Allow, Direction: hns.In, RuleType: hns.Host},
-	}), "unexpected rules returned for selector CIDR filtering policy")
+	}), "unexpected rules returned for mixed-cidr")
+
+	//Outbound policy with SrcNet
+	ps.AddOrReplacePolicySet("out-srcnet", &proto.Policy{
+		InboundRules: []*proto.Rule{},
+		OutboundRules: []*proto.Rule{
+			{
+				Action: "Allow",
+				SrcNet: []string{"10.0.0.0/24"},
+				RuleId: "rule-1",
+			},
+		},
+	})
+
+	Expect(ps.GetPolicySetRules([]string{"out-srcnet"}, false)).To(Equal([]*hns.ACLPolicy{
+		{
+			Type: hns.ACL, Action: hns.Allow, Direction: hns.Out, RuleType: hns.Switch, Priority: 1000, Protocol: 256,
+			Id:             "out-srcnet-rule-1-0",
+			LocalAddresses: "10.0.0.0/24",
+		},
+		// Default deny rule.
+		{Type: hns.ACL, Protocol: 256, Action: hns.Block, Direction: hns.Out, RuleType: hns.Switch, Priority: 1001},
+		// Default host/pod rule.
+		{Type: hns.ACL, Protocol: 256, Action: hns.Allow, Direction: hns.Out, RuleType: hns.Host},
+	}), "unexpected rules returned for outbound policy with SrcNet")
+
+}
+
+func TestNegativeTestCases(t *testing.T) {
+
+	RegisterTestingT(t)
+
+	h := mockHNS{}
+
+	// Windows 1803/RS4
+	h.SupportedFeatures.Acl.AclRuleId = true
+	h.SupportedFeatures.Acl.AclNoHostRulePriority = true
+
+	ipsc := mockIPSetCache{
+		IPSets: map[string][]string{},
+	}
+
+	ps := NewPolicySets(&h, []IPSetCache{&ipsc})
 
 	//Test Negative scenarios
 	//look up ip set that doesn't exist.
@@ -366,42 +368,6 @@ func TestRuleRendering(t *testing.T) {
 		{Type: hns.ACL, Protocol: 256, Action: hns.Allow, Direction: hns.In, RuleType: hns.Host},
 	}), "unexpected rule with Negative match")
 
-	// Tests for Profile
-	// Empty profile should return no rules (apart from the default drop).
-	ps.AddOrReplacePolicySet("empty-profile", &proto.Profile{
-		InboundRules:  []*proto.Rule{},
-		OutboundRules: []*proto.Rule{},
-	})
-
-	Expect(ps.GetPolicySetRules([]string{"empty-profile"}, true)).To(Equal([]*hns.ACLPolicy{
-		// Default deny rule.
-		{Type: hns.ACL, Protocol: 256, Action: hns.Block, Direction: hns.In, RuleType: hns.Switch, Priority: 1001},
-		// Default host/pod rule.
-		{Type: hns.ACL, Protocol: 256, Action: hns.Allow, Direction: hns.In, RuleType: hns.Host},
-	}), "unexpected rules returned for empty profile")
-
-	// Test for Rule with profile
-	ps.AddOrReplacePolicySet("rule-with-profile", &proto.Profile{
-		InboundRules: []*proto.Rule{
-			{
-				Action: "Allow",
-				RuleId: "rule-1",
-			},
-		},
-		OutboundRules: []*proto.Rule{},
-	})
-
-	Expect(ps.GetPolicySetRules([]string{"rule-with-profile"}, true)).To(Equal([]*hns.ACLPolicy{
-		{
-			Type: hns.ACL, Action: hns.Allow, Direction: hns.In, RuleType: hns.Switch, Priority: 1000, Protocol: 256,
-			Id: "rule-with-profile-rule-1-0",
-		},
-		// Default deny rule.
-		{Type: hns.ACL, Protocol: 256, Action: hns.Block, Direction: hns.In, RuleType: hns.Switch, Priority: 1001},
-		// Default host/pod rule.
-		{Type: hns.ACL, Protocol: 256, Action: hns.Allow, Direction: hns.In, RuleType: hns.Host},
-	}), "unexpected rules returned for profile")
-
 	//Test with invalid argument to AddOrReplacePolicySet (Other than Profile/Policy)
 	ps.AddOrReplacePolicySet("invalid-arg", &proto.ProfileID{
 		Name: "abc",
@@ -414,95 +380,53 @@ func TestRuleRendering(t *testing.T) {
 		{Type: hns.ACL, Protocol: 256, Action: hns.Allow, Direction: hns.In, RuleType: hns.Host},
 	}), "unexpected rules returned when invalid argument is passed to addOrReplacePolicySet function")
 
-	//Complete coverage of IPSetUpdate
-	ipsc = mockIPSetCache{
-		IPSets: map[string][]string{
-			"a": {"10.0.0.1", "10.0.0.2", "10.0.0.3"},
-			"b": {"10.0.0.2", "10.0.0.3"},
-			"d": {"10.1.0.1", "10.1.0.2"},
-			"e": {"10.1.0.2", "10.1.0.3"},
-			"f": {"10.0.0.3", "10.1.0.1"},
-		},
-	}
+	//Negative test for protoRuleToHnsRules
+	chunkSize := 2
 
-	//Updates all the policies using the ipset a
-	ps.ProcessIpSetUpdate("a")
+	var aclPolicy []*hns.ACLPolicy
+	//Negative test: Policy with NotSrcNet
+	aclPolicy, _ = ps.protoRuleToHnsRules("policy-with-NotSrcNet",
+		&proto.Rule{
+			Action:    "Allow",
+			NotSrcNet: []string{"10.0.0.0/24"},
+			RuleId:    "rule-1",
+		}, true, chunkSize)
 
-	Expect(ps.GetPolicySetRules([]string{"selector-ipsets"}, true)).To(Equal([]*hns.ACLPolicy{
-		// We expect the policy should reflect the updated ipset
-		{
-			Type: hns.ACL, Action: hns.Allow, Direction: hns.In, RuleType: hns.Switch, Priority: 1000, Protocol: 256,
-			Id: "selector-ipsets-rule-1-0", LocalAddresses: "10.1.0.1,10.1.0.2", RemoteAddresses: "10.0.0.1,10.0.0.2,10.0.0.3",
-		},
-		// Default deny rule.
-		{Type: hns.ACL, Protocol: 256, Action: hns.Block, Direction: hns.In, RuleType: hns.Switch, Priority: 1001},
-		// Default host/pod rule.
-		{Type: hns.ACL, Protocol: 256, Action: hns.Allow, Direction: hns.In, RuleType: hns.Host},
-	}), "unexpected rules returned for ipsetupdate")
+	//Rule should be skipped
+	Expect(aclPolicy).To(Equal([]*hns.ACLPolicy(nil)), "incorrect rules returned for policy with NotSrcNet")
 
-	// Test for the ProcessIpSetUpdate while applying policy after updating the ipset
-	ps.AddOrReplacePolicySet("ipset-update", &proto.Policy{
-		InboundRules: []*proto.Rule{
-			{
-				Action:      "Allow",
-				SrcIpSetIds: []string{"i"},
-				RuleId:      "rule-1",
-			},
-		},
-		OutboundRules: []*proto.Rule{},
-	})
+	//Negative test: Policy with NotDstNet
+	aclPolicy, _ = ps.protoRuleToHnsRules("policy-with-NotDstNet",
+		&proto.Rule{
+			Action:    "Allow",
+			NotDstNet: []string{"10.0.0.0/24"},
+			RuleId:    "rule-1",
+		}, true, chunkSize)
 
-	Expect(ps.GetPolicySetRules([]string{"ipset-update"}, true)).To(Equal([]*hns.ACLPolicy{
-		// Rule should be skipped
-		// Only the Default rules should exist.
-		// Default deny rule.
-		{Type: hns.ACL, Protocol: 256, Action: hns.Block, Direction: hns.In, RuleType: hns.Switch, Priority: 1001},
-		// Default host/pod rule.
-		{Type: hns.ACL, Protocol: 256, Action: hns.Allow, Direction: hns.In, RuleType: hns.Host},
-	}), "unexpected rules returned for ipset-update")
+	//Rule should be skipped
+	Expect(aclPolicy).To(Equal([]*hns.ACLPolicy(nil)), "incorrect rules returned for NotDstNet")
 
-	//Updating the ipset
-	ipsc = mockIPSetCache{
-		IPSets: map[string][]string{
-			"a": {"10.0.0.1", "10.0.0.2", "10.0.0.3"},
-			"b": {"10.0.0.2", "10.0.0.3"},
-			"d": {"10.1.0.1", "10.1.0.2"},
-			"e": {"10.1.0.2", "10.1.0.3"},
-			"f": {"10.0.0.3", "10.1.0.1"},
-			"i": {"10.0.0.3", "10.1.0.4"},
-		},
-	}
+	//Negative test: Policy where Action is pass/next-tier/log
+	aclPolicy, _ = ps.protoRuleToHnsRules("policy-with-unsupported-action",
+		&proto.Rule{
+			Action:    "pass",
+			NotDstNet: []string{"10.0.0.0/24"},
+			RuleId:    "rule-1",
+		}, true, chunkSize)
 
-	ps.ProcessIpSetUpdate("i")
+	// Rule should be skipped
+	Expect(aclPolicy).To(Equal([]*hns.ACLPolicy(nil)), "incorrect rules returned for Policy with unsupported action")
 
-	ps.AddOrReplacePolicySet("ipset-update", &proto.Policy{
-		InboundRules: []*proto.Rule{
-			{
-				Action:      "Allow",
-				SrcIpSetIds: []string{"i"},
-				RuleId:      "rule-1",
-			},
-		},
-		OutboundRules: []*proto.Rule{},
-	})
+	//Negative test: Policy with invalid Action
+	aclPolicy, _ = ps.protoRuleToHnsRules("policy-with-invalid-action",
+		&proto.Rule{
+			Action:    "abc",
+			NotDstNet: []string{"10.0.0.0/24"},
+			RuleId:    "rule-1",
+		}, true, chunkSize)
 
-	Expect(ps.GetPolicySetRules([]string{"ipset-update"}, true)).To(Equal([]*hns.ACLPolicy{
-		//We expect the ipset updates would reflect in the rule
-		{
-			Type:            hns.ACL,
-			Id:              "ipset-update-rule-1-0",
-			Protocol:        256,
-			Action:          hns.Allow,
-			Direction:       hns.In,
-			RemoteAddresses: "10.0.0.3,10.1.0.4",
-			RuleType:        hns.Switch,
-			Priority:        1000,
-		},
-		// Default deny rule.
-		{Type: hns.ACL, Protocol: 256, Action: hns.Block, Direction: hns.In, RuleType: hns.Switch, Priority: 1001},
-		// Default host/pod rule.
-		{Type: hns.ACL, Protocol: 256, Action: hns.Allow, Direction: hns.In, RuleType: hns.Host},
-	}), "unexpected rules returned for ipset-update")
+	//Rule should be skipped
+	Expect(aclPolicy).To(Equal([]*hns.ACLPolicy(nil)), "incorrect rules returned for Policy with invalid action")
 
 }
 
@@ -516,7 +440,13 @@ func TestMultiIpPortChunks(t *testing.T) {
 	h.SupportedFeatures.Acl.AclNoHostRulePriority = true
 
 	ipsc := mockIPSetCache{
-		IPSets: map[string][]string{},
+		IPSets: map[string][]string{
+			"a": {"10.0.0.1", "10.0.0.2"},
+			"b": {"10.0.0.2", "10.0.0.3"},
+			"d": {"10.1.0.1", "10.1.0.2"},
+			"e": {"10.1.0.2", "10.1.0.3"},
+			"f": {"10.0.0.3", "10.1.0.1"},
+		},
 	}
 
 	ps := NewPolicySets(&h, []IPSetCache{&ipsc})
@@ -760,70 +690,242 @@ func TestMultiIpPortChunks(t *testing.T) {
 	},
 	), "incorrect hns rules returned for multi IPs with outbound policy")
 
-}
+	// Tests that look up an IP set.
+	ps.AddOrReplacePolicySet("selector", &proto.Policy{
+		InboundRules: []*proto.Rule{
+			{
+				Action:      "Allow",
+				SrcIpSetIds: []string{"a", "b"},
+				RuleId:      "rule-1",
+			},
+			{
+				Action:      "Allow",
+				DstIpSetIds: []string{"d"},
+				RuleId:      "rule-2",
+			},
+		},
+		OutboundRules: []*proto.Rule{},
+	})
 
-func TestProtoRuleToHnsRules(t *testing.T) {
-	h := mockHNS{}
+	//check multi ips hns rules should be created using ipsets
+	Expect(ps.GetPolicySetRules([]string{"selector"}, true)).To(Equal([]*hns.ACLPolicy{
+		{
+			Type: hns.ACL, Action: hns.Allow, Direction: hns.In, RuleType: hns.Switch, Priority: 1000, Protocol: 256,
+			Id: "selector-rule-1-0", RemoteAddresses: "10.0.0.1,10.0.0.2,10.0.0.2,10.0.0.3",
+		},
+		{
+			Type: hns.ACL, Action: hns.Allow, Direction: hns.In, RuleType: hns.Switch, Priority: 1000, Protocol: 256,
+			Id: "selector-rule-2-0", LocalAddresses: "10.1.0.1,10.1.0.2",
+		},
+		// Default deny rule.
+		{Type: hns.ACL, Protocol: 256, Action: hns.Block, Direction: hns.In, RuleType: hns.Switch, Priority: 1001},
+		// Default host/pod rule.
+		{Type: hns.ACL, Protocol: 256, Action: hns.Allow, Direction: hns.In, RuleType: hns.Host},
+	}), "unexpected rules returned for selector multi ips policy")
 
-	// Windows 1803/RS4
-	h.SupportedFeatures.Acl.AclRuleId = true
-	h.SupportedFeatures.Acl.AclNoHostRulePriority = true
+	// Source and dest IP sets should be converted into hns rule with multi ips.
+	ps.AddOrReplacePolicySet("selector-ipsets", &proto.Policy{
+		InboundRules: []*proto.Rule{
+			{
+				Action:      "Allow",
+				SrcIpSetIds: []string{"a"},
+				DstIpSetIds: []string{"d"},
+				RuleId:      "rule-1",
+			},
+		},
+		OutboundRules: []*proto.Rule{},
+	})
 
-	RegisterTestingT(t)
-	ipsc := mockIPSetCache{
-		IPSets: map[string][]string{},
+	Expect(ps.GetPolicySetRules([]string{"selector-ipsets"}, true)).To(Equal([]*hns.ACLPolicy{
+		// We expect the source/dest IP sets to be expressed as the cross product.
+		{
+			Type: hns.ACL, Action: hns.Allow, Direction: hns.In, RuleType: hns.Switch, Priority: 1000, Protocol: 256,
+			Id: "selector-ipsets-rule-1-0", LocalAddresses: "10.1.0.1,10.1.0.2", RemoteAddresses: "10.0.0.1,10.0.0.2",
+		},
+		// Default deny rule.
+		{Type: hns.ACL, Protocol: 256, Action: hns.Block, Direction: hns.In, RuleType: hns.Switch, Priority: 1001},
+		// Default host/pod rule.
+		{Type: hns.ACL, Protocol: 256, Action: hns.Allow, Direction: hns.In, RuleType: hns.Host},
+	}), "unexpected rules returned for selector ipset multi ips")
+
+	// The source IP set should be intersected with the source CIDR.
+	ps.AddOrReplacePolicySet("selector-cidr", &proto.Policy{
+		InboundRules: []*proto.Rule{
+			{
+				Action:      "Allow",
+				SrcIpSetIds: []string{"a", "f"},
+				SrcNet:      []string{"10.0.0.0/24"},
+				RuleId:      "rule-1",
+			},
+			{
+				Action:      "Allow",
+				SrcIpSetIds: []string{"a", "f"},
+				SrcNet:      []string{"10.1.0.0/24"},
+				RuleId:      "rule-2",
+			},
+			{
+				Action:      "Allow",
+				SrcIpSetIds: []string{"a", "f"},
+				SrcNet:      []string{"10.0.0.0/24", "10.1.0.0/24"},
+				RuleId:      "rule-3",
+			},
+			{
+				Action:      "Allow",
+				SrcIpSetIds: []string{"a", "f"},
+				SrcNet:      []string{"12.0.0.0/24"},
+				RuleId:      "rule-4",
+			},
+		},
+		OutboundRules: []*proto.Rule{},
+	})
+
+	Expect(ps.GetPolicySetRules([]string{"selector-cidr"}, true)).To(Equal([]*hns.ACLPolicy{
+		// Intersection with first CIDR, picks up some IPs from each IP set.
+		{
+			Type: hns.ACL, Action: hns.Allow, Direction: hns.In, RuleType: hns.Switch, Priority: 1000, Protocol: 256,
+			Id: "selector-cidr-rule-1-0", RemoteAddresses: "10.0.0.1/32,10.0.0.2/32,10.0.0.3/32",
+		},
+		// Intersection with second CIDr picks up only one IP.
+		{
+			Type: hns.ACL, Action: hns.Allow, Direction: hns.In, RuleType: hns.Switch, Priority: 1000, Protocol: 256,
+			Id: "selector-cidr-rule-2-0", RemoteAddresses: "10.1.0.1/32",
+		},
+
+		// Intersection with both picks up everything.
+		{
+			Type: hns.ACL, Action: hns.Allow, Direction: hns.In, RuleType: hns.Switch, Priority: 1000, Protocol: 256,
+			Id: "selector-cidr-rule-3-0", RemoteAddresses: "10.0.0.1/32,10.0.0.2/32,10.0.0.3/32,10.1.0.1/32",
+		},
+		// Rule 4 becomes a no-op since intersection is empty.
+
+		// Default deny rule.
+		{Type: hns.ACL, Protocol: 256, Action: hns.Block, Direction: hns.In, RuleType: hns.Switch, Priority: 1001},
+		// Default host/pod rule.
+		{Type: hns.ACL, Protocol: 256, Action: hns.Allow, Direction: hns.In, RuleType: hns.Host},
+	}), "unexpected rules returned for selector CIDR filtering policy")
+
+	//Complete coverage of IPSetUpdate
+	ipsc = mockIPSetCache{
+		IPSets: map[string][]string{
+			"a": {"10.0.0.1", "10.0.0.2", "10.0.0.3"},
+			"b": {"10.0.0.2", "10.0.0.3"},
+			"d": {"10.1.0.1", "10.1.0.2"},
+			"e": {"10.1.0.2", "10.1.0.3"},
+			"f": {"10.0.0.3", "10.1.0.1"},
+		},
 	}
 
-	ps := NewPolicySets(&h, []IPSetCache{&ipsc})
+	//Updates the policies those use ipset a
+	ps.ProcessIpSetUpdate("a")
 
-	chunkSize := 2
+	Expect(ps.GetPolicySetRules([]string{"selector-ipsets"}, true)).To(Equal([]*hns.ACLPolicy{
+		// We expect the policy to reflect the updated ipset
+		{
+			Type: hns.ACL, Action: hns.Allow, Direction: hns.In, RuleType: hns.Switch, Priority: 1000, Protocol: 256,
+			Id: "selector-ipsets-rule-1-0", LocalAddresses: "10.1.0.1,10.1.0.2", RemoteAddresses: "10.0.0.1,10.0.0.2,10.0.0.3",
+		},
+		// Default deny rule.
+		{Type: hns.ACL, Protocol: 256, Action: hns.Block, Direction: hns.In, RuleType: hns.Switch, Priority: 1001},
+		// Default host/pod rule.
+		{Type: hns.ACL, Protocol: 256, Action: hns.Allow, Direction: hns.In, RuleType: hns.Host},
+	}), "unexpected rules returned after ipset update")
 
-	var aclPolicy []*hns.ACLPolicy
-	//Negative test: Policy with NotSrcNet
-	aclPolicy, _ = ps.protoRuleToHnsRules("policy-with-NotSrcNet",
-		&proto.Rule{
-			Action:    "Allow",
-			NotSrcNet: []string{"10.0.0.0/24"},
-			RuleId:    "rule-1",
-		}, true, chunkSize)
+	// Test for the ProcessIpSetUpdate while applying policy after updating the ipset
+	ps.AddOrReplacePolicySet("ipset-update", &proto.Policy{
+		InboundRules: []*proto.Rule{
+			{
+				Action:      "Allow",
+				SrcIpSetIds: []string{"i"},
+				RuleId:      "rule-1",
+			},
+		},
+		OutboundRules: []*proto.Rule{},
+	})
 
-	//Rule should be skipped
-	Expect(aclPolicy).To(Equal([]*hns.ACLPolicy(nil)), "incorrect rules returned for policy with NotSrcNet")
+	Expect(ps.GetPolicySetRules([]string{"ipset-update"}, true)).To(Equal([]*hns.ACLPolicy{
+		// Rule should be skipped
+		// Only the Default rules should exist.
+		// Default deny rule.
+		{Type: hns.ACL, Protocol: 256, Action: hns.Block, Direction: hns.In, RuleType: hns.Switch, Priority: 1001},
+		// Default host/pod rule.
+		{Type: hns.ACL, Protocol: 256, Action: hns.Allow, Direction: hns.In, RuleType: hns.Host},
+	}), "unexpected rules returned for ipset-update")
 
-	//Negative test: Policy with NotDstNet
-	aclPolicy, _ = ps.protoRuleToHnsRules("policy-with-NotDstNet",
-		&proto.Rule{
-			Action:    "Allow",
-			NotDstNet: []string{"10.0.0.0/24"},
-			RuleId:    "rule-1",
-		}, true, chunkSize)
+	//Updating the ipset
+	ipsc = mockIPSetCache{
+		IPSets: map[string][]string{
+			"a": {"10.0.0.1", "10.0.0.2", "10.0.0.3"},
+			"b": {"10.0.0.2", "10.0.0.3"},
+			"d": {"10.1.0.1", "10.1.0.2"},
+			"e": {"10.1.0.2", "10.1.0.3"},
+			"f": {"10.0.0.3", "10.1.0.1"},
+			"i": {"10.0.0.3", "10.1.0.4"},
+			"k": {"10.0.0.5", "10.1.0.6"},
+		},
+	}
 
-	//Rule should be skipped
-	Expect(aclPolicy).To(Equal([]*hns.ACLPolicy(nil)), "incorrect rules returned for NotDstNet")
+	ps.AddOrReplacePolicySet("ipset-update", &proto.Policy{
+		InboundRules: []*proto.Rule{
+			{
+				Action:      "Allow",
+				SrcIpSetIds: []string{"i"},
+				RuleId:      "rule-1",
+			},
+		},
+		OutboundRules: []*proto.Rule{},
+	})
 
-	//Negative test: Policy with Action is pass/next-tier/log
-	aclPolicy, _ = ps.protoRuleToHnsRules("policy-with-unsupported-action",
-		&proto.Rule{
-			Action:    "pass",
-			NotDstNet: []string{"10.0.0.0/24"},
-			RuleId:    "rule-1",
-		}, true, chunkSize)
+	Expect(ps.GetPolicySetRules([]string{"ipset-update"}, true)).To(Equal([]*hns.ACLPolicy{
+		//We expect the ipset updates would reflect in the rule
+		{
+			Type:            hns.ACL,
+			Id:              "ipset-update-rule-1-0",
+			Protocol:        256,
+			Action:          hns.Allow,
+			Direction:       hns.In,
+			RemoteAddresses: "10.0.0.3,10.1.0.4",
+			RuleType:        hns.Switch,
+			Priority:        1000,
+		},
+		// Default deny rule.
+		{Type: hns.ACL, Protocol: 256, Action: hns.Block, Direction: hns.In, RuleType: hns.Switch, Priority: 1001},
+		// Default host/pod rule.
+		{Type: hns.ACL, Protocol: 256, Action: hns.Allow, Direction: hns.In, RuleType: hns.Host},
+	}), "unexpected rules returned for ipset-update")
 
-	// Rule should be skipped
-	Expect(aclPolicy).To(Equal([]*hns.ACLPolicy(nil)), "incorrect rules returned for Policy with unsupported action")
+	//Test where ProcessIpSetUpdate() receives an ipset-Id that doesn't have any policies linked
+	//We expect the ProcessIpSetUpdate() should return nil
+	Expect(ps.ProcessIpSetUpdate("k")).To(Equal([]string(nil)), "Unexpected result returned by ProcessIpSetUpdate")
 
-	//Negative test: Policy with invalid Action
-	aclPolicy, _ = ps.protoRuleToHnsRules("policy-with-invalid-action",
-		&proto.Rule{
-			Action:    "abc",
-			NotDstNet: []string{"10.0.0.0/24"},
-			RuleId:    "rule-1",
-		}, true, chunkSize)
+	//No overlapping as between SrcIpSetId and SrcNet & DstIpSetId and DstNet
+	ps.AddOrReplacePolicySet("no-overlapping", &proto.Policy{
+		InboundRules: []*proto.Rule{
+			{
+				Action:      "Allow",
+				SrcNet:      []string{"10.5.5.5"},
+				SrcIpSetIds: []string{"b"},
+				RuleId:      "rule-1",
+			},
+			{
+				Action:      "Allow",
+				DstNet:      []string{"10.5.5.6"},
+				DstIpSetIds: []string{"d"},
+				RuleId:      "rule-2",
+			},
+		},
+		OutboundRules: []*proto.Rule{},
+	})
 
-	//Rule should be skipped
-	Expect(aclPolicy).To(Equal([]*hns.ACLPolicy(nil)), "incorrect rules returned for Policy with invalid action")
+	Expect(ps.GetPolicySetRules([]string{"no-overlapping"}, true)).To(Equal([]*hns.ACLPolicy{
+		// We expect the rules to be skipped as no overlapping exist
+		// Default deny rule.
+		{Type: hns.ACL, Protocol: 256, Action: hns.Block, Direction: hns.In, RuleType: hns.Switch, Priority: 1001},
+		// Default host/pod rule.
+		{Type: hns.ACL, Protocol: 256, Action: hns.Allow, Direction: hns.In, RuleType: hns.Host},
+	}), "unexpected rules returned for no-overlapping")
 
 }
+
 func TestPolicyOrdering(t *testing.T) {
 	RegisterTestingT(t)
 
