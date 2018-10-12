@@ -84,7 +84,7 @@ spec:
               if [ -e "$file" ] ; then
                 echo "importing $file" &&
                 curl -v \
-                  http://kibana-tigera-elasticsearch:5601/api/kibana/dashboards/import \
+                  http://kibana-tigera-elasticsearch/api/kibana/dashboards/import \
                   --header "Content-Type: application/json" \
                   --header 'kbn-xsrf: true' \
                   --data-binary "@$file" ;
