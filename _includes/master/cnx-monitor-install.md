@@ -64,45 +64,32 @@
 {% endif %}
 
 
-1. If your cluster is connected to the internet, use the following command to apply the
-   `operator.yaml` manifest.
+1. Download the `operator.yaml` manifest.
+
    ```bash
-   {{cli}} apply -f \
+   curl --compressed -O \
    {{docpath}}{{secure}}/operator.yaml
    ```
 
-   > **Note**: You can also
-   > [view the manifest in a new tab]({{docpath}}{{secure}}/operator.yaml){:target="_blank"}.
-   {: .alert .alert-info}
+1. Use the following commands to set an environment variable called `REGISTRY` containing the
+   location of the private registry and replace the paths in the manifest to refer to
+   the private registry.
 
-   > For offline installs, complete the following steps instead.
-   >
-   > 1. Download the `operator.yaml` manifest.
-   >
-   >    ```bash
-   >    curl --compressed -O \
-   >    {{docpath}}{{secure}}/operator.yaml
-   >    ```
-   >
-   > 1. Use the following commands to set an environment variable called `REGISTRY` containing the
-   >    location of the private registry and replace the paths in the manifest to refer to
-   >    the private registry.
-   >
-   >    ```bash
-   >    REGISTRY=my-registry.com \
-   >    sed -i -e "s?quay.io?$REGISTRY?g" operator.yaml {% if include.elasticsearch == "operator" %}\
-   >    sed -i -e "s?upmcenterprises?$REGISTRY/upmcenterprises?g" operator.yaml{% endif %}
-   >    ```
-   >
-   >    **Tip**: If you're hosting your own private registry, you may need to include
-   >    a port number. For example, `my-registry.com:5000`.
-   >    {: .alert .alert-success}
-   >    
-   > 1. Apply the manifest.
-   >    
-   >    ```bash
-   >    {{cli}} apply -f operator.yaml
-   >    ```
+    ```bash
+    REGISTRY=my-registry.com \
+    sed -i -e "s?quay.io?$REGISTRY?g" operator.yaml {% if include.elasticsearch == "operator" %}\
+    sed -i -e "s?upmcenterprises?$REGISTRY/upmcenterprises?g" operator.yaml{% endif %}
+    ```
+
+    > **Tip**: If you're hosting your own private registry, you may need to include
+    > a port number. For example, `my-registry.com:5000`.
+    {: .alert .alert-success}
+
+1. Apply the manifest.
+
+   ```bash
+   {{cli}} apply -f operator.yaml
+   ```
 
 {% if include.elasticsearch == "operator" %}
 1. Wait for the `alertmanagers.monitoring.coreos.com`, `prometheuses.monitoring.coreos.com`, `servicemonitors.monitoring.coreos.com`,
