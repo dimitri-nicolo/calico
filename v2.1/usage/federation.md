@@ -1,6 +1,5 @@
 ---
 title: Federated Endpoint Identity for Kubernetes
-redirect_from: latest/usage/federation
 canonical_url: https://docs.tigera.io/v2.1/usage/federation
 ---
 

@@ -1,5 +1,6 @@
 ---
 title: Overview
+redirect_from: latest/usage/federation/
 canonical_url: https://docs.tigera.io/v2.2/usage/federation/
 ---
 

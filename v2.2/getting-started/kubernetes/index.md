@@ -1,5 +1,6 @@
 ---
 title: Quickstart for Tigera Secure EE on Kubernetes
+redirect_from: latest/getting-started/kubernetes/
 canonical_url: https://docs.tigera.io/v2.1/getting-started/kubernetes/
 ---
 

@@ -1,5 +1,6 @@
 ---
 title: Enabling IPVS in Kubernetes
+redirect_from: latest/usage/enabling-ipvs
 canonical_url: https://docs.tigera.io/v2.1/usage/enabling-ipvs
 ---
 

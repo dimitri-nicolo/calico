@@ -1,5 +1,6 @@
 ---
 title: Running cnx-node with an init system
+redirect_from: latest/usage/configuration/as-service
 canonical_url: https://docs.tigera.io/v2.1/usage/configuration/as-service
 ---
 

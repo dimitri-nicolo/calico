@@ -1,5 +1,6 @@
 ---
 title: Using your own Elasticsearch cluster
+redirect_from: latest/usage/logs/byo-elastic
 canonical_url: https://docs.tigera.io/v2.2/usage/logs/byo-elastic
 ---
 

@@ -1,5 +1,6 @@
 ---
 title: Using etcd RBAC to segment Kubernetes and Tigera Secure EE
+redirect_from: latest/reference/advanced/etcd-rbac/kubernetes
 canonical_url: https://docs.tigera.io/v2.1/reference/advanced/etcd-rbac/kubernetes
 ---
 

@@ -1,5 +1,6 @@
 ---
 title: Configuring BIRD as a BGP Route Reflector
+redirect_from: latest/usage/routereflector/bird-rr-config
 canonical_url: https://docs.tigera.io/v2.1/usage/routereflector/bird-rr-config
 ---
 

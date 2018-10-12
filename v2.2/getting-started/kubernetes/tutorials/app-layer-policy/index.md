@@ -1,5 +1,6 @@
 ---
 title: Application layer policy tutorial
+redirect_from: latest/getting-started/kubernetes/tutorials/app-layer-policy/
 canonical_url: https://docs.tigera.io/v2.2/getting-started/kubernetes/tutorials/app-layer-policy/
 ---
 

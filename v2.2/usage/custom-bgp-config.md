@@ -1,5 +1,6 @@
 ---
 title: Custom BGP Configuration
+redirect_from: latest/usage/custom-bgp-config
 canonical_url: https://docs.tigera.io/v2.2/usage/custom-bgp-config
 ---
 

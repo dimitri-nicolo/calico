@@ -1,6 +1,5 @@
 ---
 title: Tigera Secure EE Resource Auditing with Kubernetes
-redirect_from: latest/reference/cnx/auditing
 canonical_url: https://docs.tigera.io/v2.1/reference/cnx/auditing
 ---
 

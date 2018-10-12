@@ -1,6 +1,5 @@
 ---
 title: Calico BIRD Route Reflector container
-redirect_from: latest/usage/routereflector/calico-routereflector
 canonical_url: https://docs.tigera.io/v2.1/usage/routereflector/calico-routereflector
 ---
 

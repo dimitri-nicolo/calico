@@ -1,5 +1,6 @@
 ---
 title: Changing IP pools
+redirect_from: latest/usage/changing-ip-pools
 canonical_url: https://docs.tigera.io/v2.1/usage/changing-ip-pools
 ---
 

@@ -1,6 +1,5 @@
 ---
 title: BGP Peer Resource (BGPPeer)
-redirect_from: latest/reference/calicoctl/resources/bgppeer
 canonical_url: https://docs.tigera.io/v2.1/reference/calicoctl/resources/bgppeer
 ---
 

@@ -1,5 +1,6 @@
 ---
 title: Querying remote clusters with calicoq
+redirect_from: latest/usage/federation/calicoq
 ---
 
 You can use `calicoq` to query endpoints in remote clusters. The output from `calicoq` will

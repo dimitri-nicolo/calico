@@ -1,6 +1,5 @@
 ---
 title: Installing Tigera Secure EE for policy and networking (recommended)
-redirect_from: latest/getting-started/kubernetes/installation/calico
 canonical_url: https://docs.tigera.io/v2.1/getting-started/kubernetes/installation/calico
 ---
 

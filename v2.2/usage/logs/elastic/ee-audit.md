@@ -1,5 +1,6 @@
 ---
 title: Audit logs
+redirect_from: latest/usage/logs/elastic/ee-audit
 canonical_url: https://docs.tigera.io/v2.2/usage/logs/elastic/ee-audit
 ---
 

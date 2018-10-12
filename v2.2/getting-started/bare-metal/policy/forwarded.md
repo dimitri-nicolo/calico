@@ -1,5 +1,6 @@
 ---
 title: Apply on forwarded traffic
+redirect_from: latest/getting-started/bare-metal/policy/forwarded
 canonical_url: https://docs.tigera.io/v2.1/getting-started/bare-metal/policy/forwarded
 ---
 

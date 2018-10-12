@@ -1,5 +1,6 @@
 ---
 title: External Connectivity
+redirect_from: latest/usage/external-connectivity
 canonical_url: https://docs.tigera.io/v2.1/usage/external-connectivity
 ---
 
