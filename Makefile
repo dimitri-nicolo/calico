@@ -56,6 +56,7 @@ ETCD_VER?=v3.3.7
 BIRD_VER=v0.3.1
 LOCAL_IP_ENV?=$(shell ip route get 8.8.8.8 | head -1 | awk '{print $$7}')
 
+GIT_SHORT_COMMIT:=$(shell git rev-parse --short HEAD || echo '<unknown>')
 GIT_DESCRIPTION:=$(shell git describe --tags || echo '<unknown>')
 LDFLAGS=-ldflags "-X $(PACKAGE_NAME)/pkg/buildinfo.GitVersion=$(GIT_DESCRIPTION)"
 
@@ -71,6 +72,11 @@ PACKAGE_NAME?=github.com/kelseyhightower/confd
 
 # All go files.
 SRC_FILES:=$(shell find . -name '*.go' -not -path "./vendor/*" )
+
+# Files to include in the Windows ZIP archive.
+WINDOWS_BUILT_FILES := windows-packaging/tigera-confd.exe
+# Name of the Windows release ZIP archive.
+WINDOWS_ARCHIVE := dist/tigera-confd-windows-$(VERSION).zip
 
 DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
                    docker run --rm \
@@ -134,6 +140,15 @@ bin/confd: bin/confd-$(ARCH)
 ifeq ($(ARCH),amd64)
 	ln -f bin/confd-$(ARCH) bin/confd
 endif
+
+# Cross-compile confd for Windows
+windows-packaging/tigera-confd.exe: $(SRC_FILES) vendor
+	@echo Building confd for Windows...
+	mkdir -p bin
+	$(DOCKER_GO_BUILD) \
+           sh -c 'GOOS=windows go build -v -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)" && \
+		( ldd $@ 2>&1 | grep -q "Not a valid dynamic program" || \
+		( echo "Error: $@ was not statically linked"; false ) )'
 
 ###############################################################################
 # Static checks
@@ -296,6 +311,7 @@ GIT_VERSION?=$(shell git describe --tags --dirty)
 ## Tags and builds a release from start to finish.
 release: release-prereqs
 	$(MAKE) VERSION=$(VERSION) release-tag
+	$(MAKE) VERSION=$(VERSION) release-windows-archive
 
 ## Produces a git tag for the release.
 release-tag: release-prereqs release-notes
@@ -327,6 +343,12 @@ release-prereqs:
 ifndef VERSION
 	$(error VERSION is undefined - run using make release VERSION=vX.Y.Z)
 endif
+
+## Produces the Windows ZIP archive for the release.
+release-windows-archive $(WINDOWS_ARCHIVE): release-prereqs $(WINDOWS_BUILT_FILES)
+	-rm -f $(WINDOWS_ARCHIVE)
+	mkdir -p dist
+	cd windows-packaging && zip -r ../$(WINDOWS_ARCHIVE) .
 
 ###############################################################################
 # Developer helper scripts (not used by build or test)
