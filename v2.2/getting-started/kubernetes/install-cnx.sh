@@ -501,12 +501,22 @@ getAuthToken() {
 createImagePullSecretYaml() {
   SECRET=$(getAuthToken)
 
+  # Need the pull secret in both kube-system and calico-monitoring
   cat > ${CNX_PULL_SECRET_FILENAME} <<EOF
 apiVersion: v1
 kind: Secret
 metadata:
   name: cnx-pull-secret
   namespace: kube-system
+type: kubernetes.io/dockerconfigjson
+data:
+  .dockerconfigjson: ${SECRET}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cnx-pull-secret
+  namespace: calico-monitoring
 type: kubernetes.io/dockerconfigjson
 data:
   .dockerconfigjson: ${SECRET}
@@ -519,6 +529,7 @@ EOF
 createImagePullSecret() {
   if [ $CALICO_REGISTRY == "gcr.io" ]; then
     kubectl create secret docker-registry cnx-pull-secret --namespace=kube-system --docker-server=https://gcr.io --docker-username=_json_key --docker-email=user@example.com --docker-password="$(cat $CREDENTIALS_FILE)"
+    kubectl create secret docker-registry cnx-pull-secret --namespace=calico-monitoring --docker-server=https://gcr.io --docker-username=_json_key --docker-email=user@example.com --docker-password="$(cat $CREDENTIALS_FILE)"
 
     return
   fi
