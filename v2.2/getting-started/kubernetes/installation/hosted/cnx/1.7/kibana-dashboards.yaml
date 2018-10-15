@@ -70,7 +70,7 @@ spec:
       serviceAccountName: tigera-kibana-job
       initContainers:
       - name: wait-for-endpoints
-        image: giantswarm/tiny-tools
+        image: giantswarm/tiny-tools:{{site.data.versions[page.version].first.components["tiny-tools"].version}}
         imagePullPolicy: IfNotPresent
         command: ["fish", "-c", "echo \"waiting for endpoints...\"; while true; set endpoints (curl -s --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt --header \"Authorization: Bearer \"(cat /var/run/secrets/kubernetes.io/serviceaccount/token) https://kubernetes.default.svc/api/v1/namespaces/calico-monitoring/endpoints/kibana-tigera-elasticsearch); echo $endpoints | jq \".\"; if test (echo $endpoints | jq -r \".subsets[].addresses | length\") -gt 0; exit 0; end; echo \"waiting...\";sleep 1; end"]
         args: ["monitoring", "kibana"]
@@ -80,21 +80,15 @@ spec:
         command: ["/bin/sh", "-c"]
         args:
           - >
-            for file in /opt/dashboards/*-dashboard.json ; do
-              if [ -e "$file" ] ; then
-                echo "importing $file" &&
-                curl -v \
-                  http://kibana-tigera-elasticsearch/api/kibana/dashboards/import \
-                  --header "Content-Type: application/json" \
-                  --header 'kbn-xsrf: true' \
-                  --data-binary "@$file" ;
-                echo "" ;
-              fi
-            done;
+            curl -v \
+              http://kibana-tigera-elasticsearch/api/kibana/dashboards/import \
+              --header "Content-Type: application/json" \
+              --header 'kbn-xsrf: true' \
+              --data-binary "@/opt/dashboards/kibana-dashboard.json" 
         volumeMounts:
         - name: kibana-dashboards
           mountPath: /opt/dashboards
-      restartPolicy: Never
+      restartPolicy: OnFailure
       volumes:
       - name: kibana-dashboards
         configMap:

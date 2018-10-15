@@ -1243,6 +1243,8 @@ applyMonitorCalicoManifest() {
   echo -n "Applying \"monitor-calico.yaml\" manifest: "
   run kubectl apply -f monitor-calico.yaml
   blockUntilPodIsReady "app=prometheus" 180 "prometheus-calico-node"      # Block until prometheus-calico-nod pod is running & ready
+  blockUntilPodIsReady "name=es-client-tigera-elasticsearch" 180 "elasticsearch-client"      # Block until elasticsearch-client pod is running & ready
+  blockUntilPodIsReady "name=kibana-tigera-elasticsearch" 180 "kibana"    # Block until kibana pod is running & ready
   run kubectl apply -f kibana-dashboards.yaml
 }
 
