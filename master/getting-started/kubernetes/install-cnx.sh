@@ -527,6 +527,8 @@ EOF
 # createImagePullSecret() {
 #
 createImagePullSecret() {
+  kubectl create namespace calico-monitoring
+
   if [ $CALICO_REGISTRY == "gcr.io" ]; then
     kubectl create secret docker-registry cnx-pull-secret --namespace=kube-system --docker-server=https://gcr.io --docker-username=_json_key --docker-email=user@example.com --docker-password="$(cat $CREDENTIALS_FILE)"
     kubectl create secret docker-registry cnx-pull-secret --namespace=calico-monitoring --docker-server=https://gcr.io --docker-username=_json_key --docker-email=user@example.com --docker-password="$(cat $CREDENTIALS_FILE)"
@@ -544,12 +546,15 @@ createImagePullSecret() {
 deleteImagePullSecret() {
   if [ $CALICO_REGISTRY == "gcr.io" ]; then
     runIgnoreErrors kubectl delete secret cnx-pull-secret --namespace=kube-system
+    runIgnoreErrors kubectl delete secret cnx-pull-secret --namespace=calico-monitoring
+    runIgnoreErrors kubectl delete namespace calico-monitoring
 
     return
   fi
 
   createImagePullSecretYaml       # always recreate the pull secret
   runIgnoreErrors kubectl delete -f "${CNX_PULL_SECRET_FILENAME}"
+  runIgnoreErrors kubectl delete namespace calico-monitoring
 }
 
 #
