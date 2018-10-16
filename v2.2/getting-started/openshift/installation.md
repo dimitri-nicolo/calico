@@ -73,15 +73,10 @@ To check if your Ansible scripts include the required {{site.prodname}} changes,
 grep -Fq "calico_binary_checks" /usr/share/ansible/openshift-ansible/roles/calico_master/templates/calicov3.yml.j2 && echo "updated" || echo "needs updates"
 ```
 
-If the above command responds with `needs updates`, update the packaged installer by running the following.
+If the above command responds with `needs updates`, contact your Tigera sales representative for steps on how to update your ansible playbooks.
 
-```bash
-git clone git@github.com:openshift/openshift-ansible.git -b release-3.10
-sudo cp -r openshift-ansible/* /usr/share/ansible/openshift-ansible/.
-```
-
-> **Note**: The commands given above assume that your OpenShift Ansible scripts exist at `/usr/share/ansible/openshift-ansible/`. If your
-> scripts are stored elsewhere, replace that path in the above commands.
+> **Note**: The command given above assumes that your OpenShift Ansible scripts exist at `/usr/share/ansible/openshift-ansible/`. If your
+> scripts are stored elsewhere, replace that path in the above command.
 {: .alert .alert-info}
 
 ### Execute Ansible provisioning script
