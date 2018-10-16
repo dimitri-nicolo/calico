@@ -195,6 +195,7 @@ rules:
       - nodes
       - namespaces
       - pods
+      - serviceaccounts
     verbs:
       - get
       - list
@@ -208,6 +209,7 @@ rules:
       - hostendpoints
       - licensekeys
       - globalnetworksets
+      - profiles
     verbs:
       - "*"
 
