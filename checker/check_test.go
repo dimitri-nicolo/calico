@@ -36,6 +36,7 @@ func TestActionFromString(t *testing.T) {
 	Expect(actionFromString("Pass")).To(Equal(PASS))
 	Expect(actionFromString("log")).To(Equal(LOG))
 	Expect(actionFromString("Log")).To(Equal(LOG))
+	Expect(actionFromString("next-tier")).To(Equal(PASS))
 	Expect(func() { actionFromString("no_match") }).To(Panic())
 }
 
@@ -314,7 +315,7 @@ func TestCheckStorePass(t *testing.T) {
 	store.PolicyByID[proto.PolicyID{Tier: "tier1", Name: "policy1"}] = &proto.Policy{
 		InboundRules: []*proto.Rule{
 			{
-				Action:    "pass",
+				Action:    "next-tier",
 				HttpMatch: &proto.HTTPMatch{Methods: []string{"GET"}},
 			},
 		},
@@ -416,7 +417,7 @@ func TestCheckStoreWithInvalidData(t *testing.T) {
 	Expect(status.Code).To(Equal(INVALID_ARGUMENT))
 }
 
-// Check multiple tiers with pass to next tier and match the action on the matched rule in the next tier is the result.
+// Check multiple tiers with next-tier (pass) to next tier and match the action on the matched rule in the next tier is the result.
 func TestCheckStorePolicyMultiTierMatch(t *testing.T) {
 	RegisterTestingT(t)
 
@@ -436,7 +437,7 @@ func TestCheckStorePolicyMultiTierMatch(t *testing.T) {
 	store.PolicyByID[proto.PolicyID{Tier: "tier1", Name: "policy1"}] = &proto.Policy{
 		InboundRules: []*proto.Rule{
 			{
-				Action:    "pass",
+				Action:    "next-tier",
 				HttpMatch: &proto.HTTPMatch{Methods: []string{"GET", "HEAD"}},
 			},
 		},
@@ -484,7 +485,7 @@ func TestCheckStorePolicyMultiTierMatch(t *testing.T) {
 	Expect(status.Code).To(Equal(PERMISSION_DENIED))
 }
 
-// Check multiple tiers with pass or deny in first tier and an allow in next tier.
+// Check multiple tiers with next-tier (pass) or deny in first tier and an allow in next tier.
 func TestCheckStorePolicyMultiTierDiffTierMatch(t *testing.T) {
 	RegisterTestingT(t)
 
@@ -512,7 +513,7 @@ func TestCheckStorePolicyMultiTierDiffTierMatch(t *testing.T) {
 	store.PolicyByID[proto.PolicyID{Tier: "tier1", Name: "policy2"}] = &proto.Policy{
 		InboundRules: []*proto.Rule{
 			{
-				Action:    "pass",
+				Action:    "next-tier",
 				HttpMatch: &proto.HTTPMatch{Methods: []string{"GET"}},
 			},
 		},
