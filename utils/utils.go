@@ -1,4 +1,4 @@
-// Copyright 2015 Tigera Inc
+// Copyright 2015-2018 Tigera Inc
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,14 +23,11 @@ import (
 	"os"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/containernetworking/cni/pkg/skel"
 	cnitypes "github.com/containernetworking/cni/pkg/types"
 	"github.com/containernetworking/cni/pkg/types/current"
-	"github.com/containernetworking/plugins/pkg/ip"
 	"github.com/containernetworking/plugins/pkg/ipam"
-	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/projectcalico/cni-plugin/types"
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
@@ -39,7 +36,6 @@ import (
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/sirupsen/logrus"
-	"github.com/vishvananda/netlink"
 )
 
 func Min(a, b int) int {
@@ -95,51 +91,6 @@ func CreateOrUpdate(ctx context.Context, client client.Interface, wep *api.Workl
 	}
 
 	return client.WorkloadEndpoints().Create(ctx, wep, options.SetOptions{})
-}
-
-// CleanUpNamespace deletes the devices in the network namespace.
-func CleanUpNamespace(args *skel.CmdArgs, logger *logrus.Entry) error {
-	// Only try to delete the device if a namespace was passed in.
-	if args.Netns != "" {
-		logger.WithFields(logrus.Fields{
-			"netns": args.Netns,
-			"iface": args.IfName,
-		}).Debug("Checking namespace & device exist.")
-		devErr := ns.WithNetNSPath(args.Netns, func(_ ns.NetNS) error {
-			_, err := netlink.LinkByName(args.IfName)
-			return err
-		})
-
-		if devErr == nil {
-			fmt.Fprintf(os.Stderr, "Calico CNI deleting device in netns %s\n", args.Netns)
-			// Deleting the veth has been seen to hang on some kernel version. Timeout the command if it takes too long.
-			ch := make(chan error, 1)
-
-			go func() {
-				err := ns.WithNetNSPath(args.Netns, func(_ ns.NetNS) error {
-					_, err := ip.DelLinkByNameAddr(args.IfName, netlink.FAMILY_V4)
-					return err
-				})
-
-				ch <- err
-			}()
-
-			select {
-			case err := <-ch:
-				if err != nil {
-					return err
-				} else {
-					fmt.Fprintf(os.Stderr, "Calico CNI deleted device in netns %s\n", args.Netns)
-				}
-			case <-time.After(5 * time.Second):
-				return fmt.Errorf("Calico CNI timed out deleting device in netns %s", args.Netns)
-			}
-		} else {
-			logger.WithField("ifName", args.IfName).Info("veth does not exist, no need to clean up.")
-		}
-	}
-
-	return nil
 }
 
 // CleanUpIPAM calls IPAM plugin to release the IP address.
@@ -521,14 +472,39 @@ func ConfigureLogging(logLevel string) {
 	logrus.SetOutput(os.Stderr)
 }
 
-// Takes as array of IPv4 or IPv6 pools and parses them into an array of IPnet's
-func ParsePools(pools []string, isv4 bool) ([]cnet.IPNet, error) {
+// ResolvePools takes an array of CIDRs or IP Pool names and resolves it to a slice of pool CIDRs.
+func ResolvePools(ctx context.Context, c client.Interface, pools []string, isv4 bool) ([]cnet.IPNet, error) {
+	// First, query all IP pools. We need these so we can resolve names to CIDRs.
+	pl, err := c.IPPools().List(ctx, options.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	// Iterate through the provided pools. If it parses as a CIDR, just use that.
+	// If it does not parse as a CIDR, then attempt to lookup an IP pool with a matching name.
 	result := []cnet.IPNet{}
 	for _, p := range pools {
 		_, cidr, err := net.ParseCIDR(p)
 		if err != nil {
-			return nil, fmt.Errorf("error parsing pool %q: %s", p, err)
+			// Didn't parse as a CIDR - check if it's the name
+			// of a configured IP pool.
+			for _, ipp := range pl.Items {
+				if ipp.Name == p {
+					// Found a match. Use the CIDR from the matching pool.
+					_, cidr, err = net.ParseCIDR(ipp.Spec.CIDR)
+					if err != nil {
+						return nil, fmt.Errorf("failed to parse IP pool cidr: %s", err)
+					}
+					logrus.Infof("Resolved pool name %s to cidr %s", ipp.Name, cidr)
+				}
+			}
+
+			if cidr == nil {
+				// Unable to resolve this pool to a CIDR - return an error.
+				return nil, fmt.Errorf("error parsing pool %q: %s", p, err)
+			}
 		}
+
 		ip := cidr.IP
 		if isv4 && ip.To4() == nil {
 			return nil, fmt.Errorf("%q isn't a IPv4 address", ip)

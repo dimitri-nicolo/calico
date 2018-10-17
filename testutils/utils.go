@@ -18,10 +18,12 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 
+	"github.com/containernetworking/cni/pkg/invoke"
 	"github.com/containernetworking/cni/pkg/types"
 	"github.com/containernetworking/cni/pkg/types/020"
 	"github.com/containernetworking/cni/pkg/types/current"
 	"github.com/containernetworking/plugins/pkg/ns"
+	"github.com/containernetworking/plugins/pkg/testutils"
 	"github.com/mcuadros/go-version"
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega/gexec"
@@ -75,7 +77,7 @@ func WipeEtcd() {
 }
 
 // MustCreateNewIPPool creates a new Calico IPAM IP Pool.
-func MustCreateNewIPPool(c client.Interface, cidr string, ipip, natOutgoing, ipam bool) {
+func MustCreateNewIPPool(c client.Interface, cidr string, ipip, natOutgoing, ipam bool) string {
 	log.SetLevel(log.DebugLevel)
 
 	log.SetOutput(os.Stderr)
@@ -101,9 +103,24 @@ func MustCreateNewIPPool(c client.Interface, cidr string, ipip, natOutgoing, ipa
 	if err != nil {
 		panic(err)
 	}
+	return pool.Name
 }
 
-// GetResultForCurrent takes the session output with cniVersion and returns the Result in current.Result format.
+func MustDeleteIPPool(c client.Interface, cidr string) {
+	log.SetLevel(log.DebugLevel)
+	log.SetOutput(os.Stderr)
+
+	name := strings.Replace(cidr, ".", "-", -1)
+	name = strings.Replace(name, ":", "-", -1)
+	name = strings.Replace(name, "/", "-", -1)
+
+	_, err := c.IPPools().Delete(context.Background(), name, options.DeleteOptions{})
+	if err != nil {
+		panic(err)
+	}
+}
+
+// GetResultForCurrent takes the output with cniVersion and returns the Result in current.Result format.
 func GetResultForCurrent(session *gexec.Session, cniVersion string) (*current.Result, error) {
 
 	// Check if the version is older than 0.3.0.
@@ -112,7 +129,8 @@ func GetResultForCurrent(session *gexec.Session, cniVersion string) (*current.Re
 		r020 := types020.Result{}
 
 		if err := json.Unmarshal(session.Out.Contents(), &r020); err != nil {
-			log.Fatalf("Error unmarshaling session output to Result: %v\n", err)
+			log.Errorf("Error unmarshaling output to Result: %v\n", err)
+			return nil, err
 		}
 
 		rCurrent, err := current.NewResultFromResult(&r020)
@@ -126,10 +144,10 @@ func GetResultForCurrent(session *gexec.Session, cniVersion string) (*current.Re
 	r := current.Result{}
 
 	if err := json.Unmarshal(session.Out.Contents(), &r); err != nil {
-		log.Fatalf("Error unmarshaling session output to Result: %v\n", err)
+		log.Errorf("Error unmarshaling output to Result: %v\n", err)
+		return nil, err
 	}
 	return &r, nil
-
 }
 
 // Delete all K8s pods from the "test" namespace
@@ -213,7 +231,8 @@ func RunIPAMPlugin(netconf, command, args, cniVersion string) (*current.Result, 
 		if command == "ADD" {
 			result, err = GetResultForCurrent(session, cniVersion)
 			if err != nil {
-				log.Fatalf("Error getting result from the session: %v \n %v\n", session, err)
+				log.Errorf("Error getting result from the session: %v \n %v\n", session, err)
+				panic(err)
 			}
 		}
 	} else {
@@ -226,7 +245,7 @@ func RunIPAMPlugin(netconf, command, args, cniVersion string) (*current.Result, 
 }
 
 func CreateContainerNamespace() (containerNs ns.NetNS, containerId string, err error) {
-	containerNs, err = ns.NewNS()
+	containerNs, err = testutils.NewNS()
 	if err != nil {
 		return nil, "", err
 	}
@@ -245,21 +264,20 @@ func CreateContainerNamespace() (containerNs ns.NetNS, containerId string, err e
 	return
 }
 
-func CreateContainer(netconf, podName, podNamespace string, ip string) (containerID string, session *gexec.Session, contVeth netlink.Link, contAddr []netlink.Addr, contRoutes []netlink.Route, targetNs ns.NetNS, err error) {
+func CreateContainer(netconf, podName, podNamespace, ip string) (containerID string, result *current.Result, contVeth netlink.Link, contAddr []netlink.Addr, contRoutes []netlink.Route, targetNs ns.NetNS, err error) {
 	targetNs, containerID, err = CreateContainerNamespace()
 	if err != nil {
 		return "", nil, nil, nil, nil, nil, err
 	}
 
-	session, contVeth, contAddr, contRoutes, err = RunCNIPluginWithId(netconf, podName, podNamespace, ip, containerID, "", targetNs)
-
+	result, contVeth, contAddr, contRoutes, err = RunCNIPluginWithId(netconf, podName, podNamespace, ip, containerID, "", targetNs)
 	return
 }
 
 // Create container with the giving containerId when containerId is not empty
 //
 // Deprecated: Please call CreateContainerNamespace and then RunCNIPluginWithID directly.
-func CreateContainerWithId(netconf, podName, podNamespace, ip, overrideContainerID string) (containerID string, session *gexec.Session, contVeth netlink.Link, contAddr []netlink.Addr, contRoutes []netlink.Route, targetNs ns.NetNS, err error) {
+func CreateContainerWithId(netconf, podName, podNamespace, ip, overrideContainerID string) (containerID string, result *current.Result, contVeth netlink.Link, contAddr []netlink.Addr, contRoutes []netlink.Route, targetNs ns.NetNS, err error) {
 	targetNs, containerID, err = CreateContainerNamespace()
 	if err != nil {
 		return "", nil, nil, nil, nil, nil, err
@@ -269,9 +287,17 @@ func CreateContainerWithId(netconf, podName, podNamespace, ip, overrideContainer
 		containerID = overrideContainerID
 	}
 
-	session, contVeth, contAddr, contRoutes, err = RunCNIPluginWithId(netconf, podName, podNamespace, ip, containerID, "", targetNs)
-
+	result, contVeth, contAddr, contRoutes, err = RunCNIPluginWithId(netconf, podName, podNamespace, ip, containerID, "", targetNs)
 	return
+}
+
+// Used for passing arguments to the CNI plugin.
+type cniArgs struct {
+	Env []string
+}
+
+func (c *cniArgs) AsEnv() []string {
+	return c.Env
 }
 
 // RunCNIPluginWithId calls CNI plugin with a containerID and targetNs passed to it.
@@ -285,7 +311,7 @@ func RunCNIPluginWithId(
 	ifName string,
 	targetNs ns.NetNS,
 ) (
-	session *gexec.Session,
+	result *current.Result,
 	contVeth netlink.Link,
 	contAddr []netlink.Addr,
 	contRoutes []netlink.Route,
@@ -315,36 +341,45 @@ func RunCNIPluginWithId(
 		fmt.Sprintf("CNI_NETNS=%s", targetNs.Path()),
 		k8sEnv,
 	}
+	args := &cniArgs{env}
 
+	// Invoke the CNI plugin, returning any errors to the calling code to handle.
 	log.Debugf("Calling CNI plugin with the following env vars: %v", env)
-
-	// Run the CNI plugin passing in the supplied netconf
-	// TODO - Get rid of this PLUGIN thing and use netconf instead
-	subProcess := exec.Command(fmt.Sprintf("%s/%s", os.Getenv("BIN"), os.Getenv("PLUGIN")), netconf)
-	subProcess.Env = env
-	stdin, err := subProcess.StdinPipe()
+	var r types.Result
+	pluginPath := fmt.Sprintf("%s/%s", os.Getenv("BIN"), os.Getenv("PLUGIN"))
+	r, err = invoke.ExecPluginWithResult(pluginPath, []byte(netconf), args, nil)
 	if err != nil {
-		panic("some error found")
+		return
 	}
 
-	_, err = io.WriteString(stdin, netconf)
-	if err != nil {
-		panic(err)
-	}
-	_, err = io.WriteString(stdin, "\n")
-	if err != nil {
+	// Extract the target CNI version from the provided network config.
+	var nc types.NetConf
+	if err = json.Unmarshal([]byte(netconf), &nc); err != nil {
 		panic(err)
 	}
 
-	err = stdin.Close()
-	if err != nil {
-		panic(err)
-	}
+	// Parse the result as the target CNI version.
+	if version.Compare(nc.CNIVersion, "0.3.0", "<") {
+		// Special case for older CNI verisons.
+		var out []byte
+		out, err = json.Marshal(r)
+		log.Infof("CNI output: %s", out)
+		r020 := types020.Result{}
+		if err = json.Unmarshal(out, &r020); err != nil {
+			log.Errorf("Error unmarshaling output to Result: %v\n", err)
+			return
+		}
 
-	session, err = gexec.Start(subProcess, ginkgo.GinkgoWriter, ginkgo.GinkgoWriter)
-	session.Wait(5)
-	if err != nil {
-		panic(err)
+		result, err = current.NewResultFromResult(&r020)
+		if err != nil {
+			return
+		}
+
+	} else {
+		result, err = current.GetResult(r)
+		if err != nil {
+			return
+		}
 	}
 
 	err = targetNs.Do(func(_ ns.NetNS) error {
