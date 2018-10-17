@@ -57,10 +57,6 @@ func newBlock(cidr cnet.IPNet) allocationBlock {
 	// time only. The clean-up would be done in empty()/ release()function
 	// IPs : x.0, x.1, x.2 and x.bcastAddr (e.g. x.255 for /24 subnet)
 	if runtime.GOOS == "windows" {
-		if numAddresses < 3 {
-			log.Errorf("Only %d numAddresses to assign is not possible", numAddresses)
-			return allocationBlock{&b}
-		}
 		log.Debugf("Block %s reserving IPs for windows", b.CIDR.String())
 		// nil attributes
 		winAttrs := make(map[string]string)
@@ -155,26 +151,20 @@ func (b *allocationBlock) assign(address cnet.IP, handleID *string, attrs map[st
 // windows specific code to check for
 // addresseses left are 0, 1, 2 and last address
 // and the handleID contains windows-reserved-IP-handle
-func (b *allocationBlock) checkReservedContents() bool {
-	if len(b.Attributes) > 1 {
-		return false
+// return index of Attribute value windows-reserved-IP-handle
+func (b *allocationBlock) containsOnlyReservedIPs() (int, bool) {
+	found := 0
+	for _, attrIdx := range b.Allocations {
+		if attrIdx == nil {
+			continue
+		}
+		attrs := b.Attributes[*attrIdx]
+		if attrs.AttrPrimary == nil || *attrs.AttrPrimary != windowsReservedHandle {
+			return *attrIdx, false
+		}
+		found = *attrIdx
 	}
-	handleID := b.Attributes[0].AttrPrimary
-	if *handleID != windowsReservedHandle {
-		return false
-	}
-	if len(b.Allocations) > 1 {
-		return false
-	}
-	attrIndex := b.Allocations[0]
-	if *attrIndex != 0 {
-		return false
-	}
-	rem := b.numFreeAddresses() - b.numAddresses()
-	if rem != windowsReservedIPs {
-		return false
-	}
-	return true
+	return found, true
 }
 
 // hostAffinityMatches checks if the provided host matches the provided affinity.
@@ -188,13 +178,7 @@ func (b allocationBlock) numFreeAddresses() int {
 
 func (b allocationBlock) empty() bool {
 	if runtime.GOOS == "windows" {
-		if b.checkReservedContents() == true {
-			ordinals := []int{0, 1, 2, b.numAddresses() - 1}
-			b.Allocations[0] = nil
-			b.Attributes[0].AttrPrimary = nil
-			for _, ordinal := range ordinals {
-				b.Unallocated = append(b.Unallocated, ordinal)
-			}
+		if _, ok := b.containsOnlyReservedIPs(); ok {
 			return true
 		}
 	}
@@ -210,6 +194,17 @@ func (b *allocationBlock) release(addresses []cnet.IP) ([]cnet.IP, map[string]in
 	var ordinals []int
 	delRefCounts := map[int]int{}
 	attrsToDelete := []int{}
+
+	if runtime.GOOS == "windows" {
+		if count, ok := b.containsOnlyReservedIPs(); ok {
+			b.Allocations[count] = nil
+			b.Attributes[count].AttrPrimary = nil
+			ordinals := []int{0, 1, 2, b.numAddresses() - 1}
+			for _, ordinal := range ordinals {
+				b.Unallocated = append(b.Unallocated, ordinal)
+			}
+		}
+	}
 
 	// Determine the ordinals that need to be released and the
 	// attributes that need to be cleaned up.
@@ -327,6 +322,18 @@ func (b allocationBlock) attributeIndexesByHandle(handleID string) []int {
 }
 
 func (b *allocationBlock) releaseByHandle(handleID string) int {
+
+	if runtime.GOOS == "windows" {
+		if count, ok := b.containsOnlyReservedIPs(); ok {
+			b.Allocations[count] = nil
+			b.Attributes[count].AttrPrimary = nil
+			ordinals := []int{0, 1, 2, b.numAddresses() - 1}
+			for _, ordinal := range ordinals {
+				b.Unallocated = append(b.Unallocated, ordinal)
+			}
+		}
+	}
+
 	attrIndexes := b.attributeIndexesByHandle(handleID)
 	log.Debugf("Attribute indexes to release: %v", attrIndexes)
 	if len(attrIndexes) == 0 {

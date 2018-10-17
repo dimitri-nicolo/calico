@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"runtime"
 
 	"github.com/projectcalico/libcalico-go/lib/apis/v3"
 	log "github.com/sirupsen/logrus"
@@ -211,7 +212,17 @@ func (c ipamClient) determinePools(requestedPoolNets []net.IPNet, version int) (
 		log.Debugf("requested IPPools: %v", requestedPoolNets)
 		// Build a map so we can lookup existing pools.
 		pm := map[string]v3.IPPool{}
+		var compare int
+		if version == 4 {
+			compare = 30
+		} else {
+			compare = 126
+		}
 		for _, p := range enabledPools {
+			if runtime.GOOS == "windows" && p.Spec.BlockSize >= compare {
+				log.Warningf("skipping pool %v for windows due to blockSize", p)
+				continue
+			}
 			pm[p.Spec.CIDR] = p
 		}
 
