@@ -43,7 +43,7 @@ resource and adding a Global/NetworkPolicy to that tier, refer to the
 ### Permissions required for {{site.prodname}} UI
 
 All of the RBAC examples below require the user to be specified (by replacing the
-text '<USER>').  Consult the Kubernetes documentation for more information on
+text `<USER>`).  Consult the Kubernetes documentation for more information on
 [how to identify users based on your chosen authentication method](https://kubernetes.io/docs/admin/authentication/),
 and [how to use the RBAC resources](https://kubernetes.io/docs/admin/authorization/rbac/).
 
