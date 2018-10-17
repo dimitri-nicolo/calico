@@ -212,14 +212,19 @@ func (c ipamClient) determinePools(requestedPoolNets []net.IPNet, version int) (
 		log.Debugf("requested IPPools: %v", requestedPoolNets)
 		// Build a map so we can lookup existing pools.
 		pm := map[string]v3.IPPool{}
-		var compare int
+
+		// For windows OS, IPs x.0, x.1, x.2 and x.<bcast> are
+		// reserved. so, minimum 4 IPs are needed for network
+		// creation. As a result, don't allow a block size
+		// 30, 31, 32 (for IPv4) and 126, 127, 128 (for IPv6).
+		var maxWindowsBlockSize int
 		if version == 4 {
-			compare = 30
+			maxWindowsBlockSize = 30
 		} else {
-			compare = 126
+			maxWindowsBlockSize = 126
 		}
 		for _, p := range enabledPools {
-			if runtime.GOOS == "windows" && p.Spec.BlockSize >= compare {
+			if runtime.GOOS == "windows" && p.Spec.BlockSize >= maxWindowsBlockSize {
 				log.Warningf("skipping pool %v for windows due to blockSize", p)
 				continue
 			}

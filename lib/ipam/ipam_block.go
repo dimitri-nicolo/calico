@@ -54,7 +54,7 @@ func newBlock(cidr cnet.IPNet) allocationBlock {
 
 	// For windows OS, the following IP addresses of the block are
 	// reserved. This is done by pre-allocating them during initialization
-	// time only. The clean-up would be done in empty()/ release()function
+	// time only.
 	// IPs : x.0, x.1, x.2 and x.bcastAddr (e.g. x.255 for /24 subnet)
 	if runtime.GOOS == "windows" {
 		log.Debugf("Block %s reserving IPs for windows", b.CIDR.String())
@@ -65,6 +65,9 @@ func newBlock(cidr cnet.IPNet) allocationBlock {
 		b.Unallocated = b.Unallocated[3 : numAddresses-1]
 		attrIndex := len(b.Attributes)
 		b.Allocations[0] = &attrIndex
+		b.Allocations[1] = &attrIndex
+		b.Allocations[2] = &attrIndex
+		b.Allocations[numAddresses-1] = &attrIndex
 
 		// Create slice of IPs and perform the allocations.
 		log.Debugf("Reserving allocation attribute: %#v handle %s", winAttrs, windowsReservedHandle)
@@ -195,17 +198,6 @@ func (b *allocationBlock) release(addresses []cnet.IP) ([]cnet.IP, map[string]in
 	delRefCounts := map[int]int{}
 	attrsToDelete := []int{}
 
-	if runtime.GOOS == "windows" {
-		if count, ok := b.containsOnlyReservedIPs(); ok {
-			b.Allocations[count] = nil
-			b.Attributes[count].AttrPrimary = nil
-			ordinals := []int{0, 1, 2, b.numAddresses() - 1}
-			for _, ordinal := range ordinals {
-				b.Unallocated = append(b.Unallocated, ordinal)
-			}
-		}
-	}
-
 	// Determine the ordinals that need to be released and the
 	// attributes that need to be cleaned up.
 	for _, ip := range addresses {
@@ -322,18 +314,6 @@ func (b allocationBlock) attributeIndexesByHandle(handleID string) []int {
 }
 
 func (b *allocationBlock) releaseByHandle(handleID string) int {
-
-	if runtime.GOOS == "windows" {
-		if count, ok := b.containsOnlyReservedIPs(); ok {
-			b.Allocations[count] = nil
-			b.Attributes[count].AttrPrimary = nil
-			ordinals := []int{0, 1, 2, b.numAddresses() - 1}
-			for _, ordinal := range ordinals {
-				b.Unallocated = append(b.Unallocated, ordinal)
-			}
-		}
-	}
-
 	attrIndexes := b.attributeIndexesByHandle(handleID)
 	log.Debugf("Attribute indexes to release: %v", attrIndexes)
 	if len(attrIndexes) == 0 {
