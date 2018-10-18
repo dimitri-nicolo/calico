@@ -1056,6 +1056,9 @@ deleteTigeraFederationSecretManifest() {
 applyCalicoManifest() {
   echo -n "Applying \"calico.yaml\" ("$DATASTORE") manifest: "
   run kubectl apply -f calico.yaml
+  if [ "$DEPLOYMENT_TYPE" == "typha" ] || [ "$DEPLOYMENT_TYPE" == "federation" ]; then
+    updateTyphaReplicas 1 # Set the number of replicas of the typha deployment to 1
+  fi
   blockUntilPodIsReady "k8s-app=calico-node" 180 "calico-node" # Block until calico-node pod is running & ready
   blockUntilPodIsReady "k8s-app=kube-dns" 180 "kube-dns"       # Block until kube-dns pod is running & ready
 }
@@ -1066,6 +1069,16 @@ applyCalicoManifest() {
 deleteCalicoManifest() {
   runIgnoreErrors kubectl delete -f calico.yaml
   countDownSecs 5 "Deleting calico.yaml manifest"
+}
+
+#
+# updateTyphaReplicas()
+#
+updateTyphaReplicas() {
+  local replicas="$1"
+  echo "Scaling deployment/calico-typha replicas to ${replicas}"
+  run kubectl scale deployment/calico-typha --replicas=${replicas} --namespace=kube-system
+  blockUntilPodIsReady "k8s-app=calico-typha" 180 "calico-typha"
 }
 
 #
