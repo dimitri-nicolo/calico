@@ -9,7 +9,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gexec"
 	"github.com/projectcalico/cni-plugin/testutils"
 	"github.com/projectcalico/cni-plugin/utils"
 	k8sconversion "github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
@@ -105,14 +104,13 @@ var _ = Describe("CalicoCni Private", func() {
 				if err != nil {
 					panic(err)
 				}
-				_, session, _, _, _, contNs, err := testutils.CreateContainer(netconf, name, "test2", "")
+				_, _, _, _, _, contNs, err := testutils.CreateContainer(netconf, name, "test2", "")
 				defer func() {
 					_, err = testutils.DeleteContainer(netconf, contNs.Path(), name, "test2")
 					Expect(err).ShouldNot(HaveOccurred())
 				}()
 
 				Expect(err).ShouldNot(HaveOccurred())
-				Eventually(session).Should(gexec.Exit())
 
 				// The endpoint is created
 				endpoints, err := calicoClient.WorkloadEndpoints().List(ctx, options.ListOptions{})
