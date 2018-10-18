@@ -137,10 +137,9 @@ for each [remote cluster](../../../usage/federation/index#terminology). Ensure t
    ```
 
 1. Ensure that the Kubernetes controller manager has the following flags set:<br>
-   - `--cluster-cidr=<cidr>`: Ensure that the `<cidr>` value matches or includes the IPV4 pool
-     (`CALICO_IPV4POOL_CIDR`) in the manifest and does not overlap with the IPV4 pools of any other
-     federated clusters. Example: `--cluster-cidr=192.168.0.0/16`
-     - `--allocate-node-cidrs=true`
+   `--cluster-cidr=<cidr>`: Ensure that the `<cidr>` value matches or includes the IPV4 pool
+   (`CALICO_IPV4POOL_CIDR`) in the manifest and does not overlap with the IPV4 pools of any other
+   federated clusters. Example: `--cluster-cidr=192.168.0.0/16 --allocate-node-cidrs=true`
 
    > **Tip**: On kubeadm, you can pass `--pod-network-cidr=<cidr>`
    > to kubeadm to set both Kubernetes controller flags.
