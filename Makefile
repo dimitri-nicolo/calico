@@ -64,6 +64,7 @@ join_platforms = $(subst $(space),$(comma),$(call prefix_linux,$(strip $1)))
 
 ###############################################################################
 GO_BUILD_VER ?= v0.17
+FOSSA_GO_BUILD_VER ?= v0.18
 
 SRCFILES=calico.go $(wildcard utils/*.go) $(wildcard k8s/*.go) ipam/calico-ipam.go
 TEST_SRCFILES=$(wildcard test_utils/*.go) $(wildcard calico_cni_*.go)
@@ -90,6 +91,9 @@ BIN=bin/$(ARCH)
 # Ensure that the bin directory is always created
 MAKE_SURE_BIN_EXIST := $(shell mkdir -p $(BIN))
 CALICO_BUILD?=$(BUILD_IMAGE_ORG)/go-build:$(GO_BUILD_VER)
+# Special go-build version for fossa license checks.
+# This is a workaround for failing static-checks that need to be fixed with v0.18.
+FOSSA_CALICO_BUILD?=$(BUILD_IMAGE_ORG)/go-build:$(FOSSA_GO_BUILD_VER)
 
 PACKAGE_NAME?=github.com/projectcalico/cni-plugin
 
@@ -305,6 +309,14 @@ fix:
 ## Install Git hooks
 install-git-hooks:
 	./install-git-hooks
+
+foss-checks: vendor
+	@echo Running $@...
+	@docker run --rm -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
+	  -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+	  -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
+	  -w /go/src/$(PACKAGE_NAME) \
+	  $(FOSSA_CALICO_BUILD) /usr/local/bin/fossa
 
 ###############################################################################
 # Unit Tests
