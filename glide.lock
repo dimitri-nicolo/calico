@@ -1,5 +1,5 @@
-hash: 7db0503b8cb84e9f6ccc26d836101893d929d0c6093ca76b6c27af3648068812
-updated: 2018-09-21T19:13:12.044080237Z
+hash: 07cef9beda6b8cc0e0cc50435bf07074830e31a598a705ef011a7509c5b798f8
+updated: 2018-10-17T18:16:18.03043738+01:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -18,7 +18,7 @@ imports:
   subpackages:
   - quantile
 - name: github.com/containernetworking/cni
-  version: a2da8f8d7fd8e6dc25f336408a8ac86f050fbd88
+  version: e67bb289cccfcad352b92c5234a1610b105846e0
   subpackages:
   - pkg/invoke
   - pkg/skel
@@ -27,12 +27,14 @@ imports:
   - pkg/types/current
   - pkg/version
 - name: github.com/containernetworking/plugins
-  version: 7480240de9749f9a0a5c8614b17f1f03e0c06ab9
+  version: 646dbbace1b1000b2bcda2f9c66bda384555b57e
   subpackages:
   - pkg/ip
   - pkg/ipam
   - pkg/ns
+  - pkg/testutils
   - pkg/utils/hwaddr
+  - pkg/utils/sysctl
 - name: github.com/coreos/etcd
   version: 33245c6b5b49130ca99280408fadfab01aac0e48
   subpackages:
@@ -46,7 +48,7 @@ imports:
   - pkg/transport
   - pkg/types
 - name: github.com/coreos/go-iptables
-  version: 259c8e6a4275d497442c721fa52204d7a58bde8b
+  version: b5b1876b170881a8259f036445ee89c8669db386
   subpackages:
   - iptables
 - name: github.com/davecgh/go-spew
@@ -64,7 +66,7 @@ imports:
 - name: github.com/go-openapi/jsonpointer
   version: 46af16f9f7b149af66e5d1bd010e3574dc06de98
 - name: github.com/go-openapi/jsonreference
-  version: 1c6a3fa339f2743b7b0fd2b842fc455eca2fa9eb
+  version: 3fb327e6747da3043567ee86abd02bb6376b6be2
 - name: github.com/go-openapi/spec
   version: 384415f06ee238aae1df5caad877de6ceac3a5c4
 - name: github.com/go-openapi/swag
@@ -182,7 +184,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: ee5bbe1739c678367b21fbadd204473cf22b84b4
+  version: 9cca3a95d79ee9501139600a3ca269f631348c52
   repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib/apiconfig
@@ -215,7 +217,7 @@ imports:
   - lib/validator/v3
   - lib/watch
 - name: github.com/prometheus/client_golang
-  version: e637cec7d9c8990247098639ebc6d43dd34ddd49
+  version: 773f5027234d0b08adf766be34f55df2f312abf7
   subpackages:
   - prometheus
   - prometheus/internal
@@ -237,6 +239,8 @@ imports:
   version: 8a290539e2e8629dbc4e6bad948158f790ec31f4
 - name: github.com/PuerkitoBio/urlesc
   version: 5bd2802263f21d8788851d5305584c82a5c75d7e
+- name: github.com/safchain/ethtool
+  version: 7ff1ba29eca231991280817541cb3903f6be15d1
 - name: github.com/satori/go.uuid
   version: f58768cc1a7a7e77a3bd49e98cdd21419399b6a3
 - name: github.com/sirupsen/logrus
@@ -250,23 +254,20 @@ imports:
 - name: github.com/vishvananda/netns
   version: 54f0e4339ce73702a0607f49922aaa1e749b418d
 - name: golang.org/x/crypto
-  version: 49796115aa4b964c318aad4f3084fdb41e9aa067
+  version: 94eea52f7b742c7cbe0b03b22f0c4c8631ece122
   subpackages:
   - ssh/terminal
 - name: golang.org/x/net
-  version: 1c05540f6879653db88113bc4a2b70aec4bd491f
+  version: 4dfa2610cdf3b287375bbba5b8f2a14d3b01d8de
   subpackages:
   - context
   - context/ctxhttp
-  - html
-  - html/atom
+  - http/httpguts
   - http2
   - http2/hpack
   - idna
   - internal/timeseries
-  - lex/httplex
   - trace
-  - websocket
 - name: golang.org/x/oauth2
   version: a6bd8cefa1811bd24b86f8902872e4e8225f74c4
   subpackages:
@@ -298,7 +299,7 @@ imports:
   subpackages:
   - rate
 - name: google.golang.org/appengine
-  version: ae0ab99deb4dc413a2b4bd6c8bdd0eb67f1e4d06
+  version: 4216e58b9158e5f1c906f1aca75162a46a2ec88a
   subpackages:
   - internal
   - internal/app_identity

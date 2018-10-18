@@ -61,7 +61,9 @@ func main() {
 		os.Exit(0)
 	}
 
-	skel.PluginMain(cmdAdd, cmdDel, cniSpecVersion.All)
+	skel.PluginMain(cmdAdd, nil, cmdDel,
+		cniSpecVersion.PluginSupports("0.1.0", "0.2.0", "0.3.0", "0.3.1"),
+		"Calico CNI IPAM "+VERSION)
 }
 
 type ipamArgs struct {
@@ -164,12 +166,12 @@ func cmdAdd(args *skel.CmdArgs) error {
 
 		fmt.Fprintf(os.Stderr, "Calico CNI IPAM request count IPv4=%d IPv6=%d\n", num4, num6)
 
-		v4pools, err := utils.ParsePools(conf.IPAM.IPv4Pools, true)
+		v4pools, err := utils.ResolvePools(ctx, calicoClient, conf.IPAM.IPv4Pools, true)
 		if err != nil {
 			return err
 		}
 
-		v6pools, err := utils.ParsePools(conf.IPAM.IPv6Pools, false)
+		v6pools, err := utils.ResolvePools(ctx, calicoClient, conf.IPAM.IPv6Pools, false)
 		if err != nil {
 			return err
 		}
