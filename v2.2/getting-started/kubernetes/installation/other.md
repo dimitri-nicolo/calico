@@ -33,7 +33,9 @@ The installation procedure differs according to whether or not you want to
 [federate clusters](../../../usage/federation/index). Refer to the section that matches your
 configuration.
 
-- [Without federation](#install-ee-nofed)
+- [Without federation, 50 nodes or less](#install-ee-nofed)
+
+- [Without federation, more than 50 nodes](#install-ee-typha-nofed)
 
 - [With federation](#install-ee-fed)
 
@@ -41,7 +43,7 @@ configuration.
 > to install {{site.prodname}} for policy only using the etcd datastore type, contact Tigera support.
 {: .alert .alert-danger}
 
-### <a name="install-ee-nofed"></a>Installing {{site.prodname}} for policy only without federation
+### <a name="install-ee-nofed"></a>Installing {{site.prodname}} for policy only without federation, 50 nodes or less
 
 1. Ensure that the Kubernetes controller manager has the following flags
    set: <br>
@@ -81,8 +83,56 @@ configuration.
 
 {% include {{page.version}}/cnx-cred-sed.md yaml="calico" %}
 
-1. If your cluster contains more than 50 nodes, modify the replica count in the `Deployment` named `calico-typha`
-   to the desired number of replicas.
+1. Apply the manifest using the following command.
+
+   ```bash
+   kubectl apply -f calico.yaml
+   ```
+
+1. Continue to [Applying your license key](#applying-your-license-key).
+
+### <a name="install-ee-typha-nofed"></a>Installing {{site.prodname}} for policy only without federation, more than 50 nodes
+
+1. Ensure that the Kubernetes controller manager has the following flags
+   set: <br>
+   `--cluster-cidr={your pod CIDR}` and `--allocate-node-cidrs=true`.
+
+   > **Tip**: On kubeadm, you can pass `--pod-network-cidr={your pod CIDR}`
+   > to kubeadm to set both Kubernetes controller flags.
+   {: .alert .alert-success}
+
+1. If your cluster has RBAC enabled, issue the following command to
+   configure the roles and bindings that {{site.prodname}} requires.
+
+   ```
+   kubectl apply -f \
+   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/rbac-kdd.yaml
+   ```
+   > **Note**: You can also
+   > [view the manifest in your browser](hosted/rbac-kdd.yaml){:target="_blank"}.
+   {: .alert .alert-info}
+
+1. Download the {{site.prodname}} policy-only manifest for the Kubernetes API datastore that matches your
+   networking method.
+
+   - **AWS VPC CNI plugin**
+     ```bash
+     curl \
+     {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only-ecs/1.7/calico-typha.yaml \
+     -O
+     ```
+
+   - **All others**
+     ```bash
+     curl \
+     {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only/1.7/calico-typha.yaml \
+     -O
+     ```
+
+{% include {{page.version}}/cnx-cred-sed.md yaml="calico" %}
+
+1. Open the manifest in your favorite editor and modify the replica count in the
+   `Deployment` named `calico-typha` to the desired number of replicas.
 
    ```yaml
    apiVersion: apps/v1beta1
@@ -99,10 +149,10 @@ configuration.
    20 replicas. In production, we recommend a minimum of three replicas to reduce
    the impact of rolling upgrades and failures.
 
-   > **Tip**: If you set `typha_service_name` without increasing the replica
+   > **Warning**: If you do not increase the replica
    > count from its default of `0` Felix will try to connect to Typha, find no
    > Typha instances to connect to, and fail to start.
-   {: .alert .alert-success}
+   {: .alert .alert-danger}
 
 1. Apply the manifest using the following command.
 
