@@ -218,7 +218,7 @@ DOCKER_BUILD_ARGS:= \
 $(BIN)/calico $(BIN)/calico-ipam: $(SRCFILES) vendor
 	-mkdir -p .go-pkg-cache
 	-mkdir -p $(BIN)
-	docker run $(DOCKER_BUILD_ARGS)$(CALICO_BUILD) sh -c '\
+	docker run $(DOCKER_BUILD_ARGS) $(CALICO_BUILD) sh -c '\
 			go build -v -o $(BIN)/calico $(GO_BUILD_ARGS) calico.go && \
             go build -v -o $(BIN)/calico-ipam $(GO_BUILD_ARGS) ipam/calico-ipam.go'
 
