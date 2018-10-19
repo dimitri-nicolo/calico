@@ -110,7 +110,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalNetworkPolicy tests", testutils.Da
 					Spec:       tierSpec,
 				}, options.SetOptions{})
 				Expect(resErr).NotTo(HaveOccurred())
-				testutils.ExpectResource(tierRes, apiv3.KindTier, testutils.ExpectNoNamespace, tier, tierSpec)
+				Expect(tierRes).To(MatchResource(apiv3.KindTier, testutils.ExpectNoNamespace, tier, tierSpec))
 			}
 
 			By("Updating the GlobalNetworkPolicy before it is created")
