@@ -49,7 +49,7 @@ func summaryTestQueryData() []testQueryData {
 				NumNodesWithNoEndpoints:           0,
 				NumNodesWithNoWorkloadEndpoints:   0,
 				NumNodesWithNoHostEndpoints:       1,
-				NamespaceCounts:                   map[string]client.QueryClusterNamespaceCounts{
+				NamespaceCounts: map[string]client.QueryClusterNamespaceCounts{
 					"namespace-1": {
 						NumNetworkPolicies:              0,
 						NumWorkloadEndpoints:            1,
@@ -101,7 +101,7 @@ func summaryTestQueryData() []testQueryData {
 				NumNodesWithNoEndpoints:           0,
 				NumNodesWithNoWorkloadEndpoints:   0,
 				NumNodesWithNoHostEndpoints:       0,
-				NamespaceCounts:                   map[string]client.QueryClusterNamespaceCounts{
+				NamespaceCounts: map[string]client.QueryClusterNamespaceCounts{
 					"namespace-2": {
 						NumNetworkPolicies:              1,
 						NumWorkloadEndpoints:            0,
@@ -156,7 +156,7 @@ func summaryTestQueryData() []testQueryData {
 				NumNodesWithNoEndpoints:           0,
 				NumNodesWithNoWorkloadEndpoints:   1,
 				NumNodesWithNoHostEndpoints:       1,
-				NamespaceCounts:                   map[string]client.QueryClusterNamespaceCounts{
+				NamespaceCounts: map[string]client.QueryClusterNamespaceCounts{
 					"namespace-1": {
 						NumNetworkPolicies:              0,
 						NumWorkloadEndpoints:            2,
@@ -196,7 +196,7 @@ func summaryTestQueryData() []testQueryData {
 				NumNodesWithNoEndpoints:           1,
 				NumNodesWithNoWorkloadEndpoints:   1,
 				NumNodesWithNoHostEndpoints:       4,
-				NamespaceCounts:                   map[string]client.QueryClusterNamespaceCounts{
+				NamespaceCounts: map[string]client.QueryClusterNamespaceCounts{
 					"namespace-1": {
 						NumNetworkPolicies:              1,
 						NumWorkloadEndpoints:            2,
@@ -244,7 +244,7 @@ func summaryTestQueryData() []testQueryData {
 			[]resourcemgr.ResourceObject{},
 			client.QueryClusterReq{},
 			&client.QueryClusterResp{
-				NamespaceCounts:                   map[string]client.QueryClusterNamespaceCounts{},
+				NamespaceCounts: map[string]client.QueryClusterNamespaceCounts{},
 			},
 		},
 	}

@@ -11,6 +11,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"fmt"
+
 	"github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
@@ -100,6 +102,12 @@ func (q *query) Endpoints(w http.ResponseWriter, r *http.Request) {
 	if len(policies) > 0 {
 		policy = policies[0]
 	}
+	page, err := q.getPage(r)
+	if err != nil {
+		q.writeError(w, err, http.StatusBadRequest)
+		return
+	}
+
 	q.runQuery(w, r, client.QueryEndpointsReq{
 		Selector:            selector,
 		Policy:              policy,
@@ -109,7 +117,7 @@ func (q *query) Endpoints(w http.ResponseWriter, r *http.Request) {
 		RuleEntity:          r.URL.Query().Get(QueryRuleEntity),
 		RuleNegatedSelector: q.getBool(r, QueryRuleNegatedSelector),
 		Unlabelled:          q.getBool(r, QueryUnlabelled),
-		Page:                q.getPage(r),
+		Page:                page,
 		Sort:                q.getSort(r),
 		Node:                r.URL.Query().Get(QueryNode),
 	}, false)
@@ -158,13 +166,18 @@ func (q *query) Policies(w http.ResponseWriter, r *http.Request) {
 		networkset = networksets[0]
 	}
 
+	page, err := q.getPage(r)
+	if err != nil {
+		q.writeError(w, err, http.StatusBadRequest)
+		return
+	}
 	q.runQuery(w, r, client.QueryPoliciesReq{
 		Tier:       r.URL.Query().Get(QueryTier),
 		Labels:     q.getLabels(r),
 		Endpoint:   endpoint,
 		NetworkSet: networkset,
 		Unmatched:  unmatched,
-		Page:       q.getPage(r),
+		Page:       page,
 		Sort:       q.getSort(r),
 	}, false)
 }
@@ -186,8 +199,13 @@ func (q *query) Policy(w http.ResponseWriter, r *http.Request) {
 }
 
 func (q *query) Nodes(w http.ResponseWriter, r *http.Request) {
+	page, err := q.getPage(r)
+	if err != nil {
+		q.writeError(w, err, http.StatusBadRequest)
+		return
+	}
 	q.runQuery(w, r, client.QueryNodesReq{
-		Page: q.getPage(r),
+		Page: page,
 		Sort: q.getSort(r),
 	}, false)
 }
@@ -208,6 +226,8 @@ func (q *query) Node(w http.ResponseWriter, r *http.Request) {
 	}, true)
 }
 
+// Convert a query parameter to a uint. We are pretty relaxed about what we accept, using the
+// default or min value when the requested value is bogus.
 func (q *query) getInt(r *http.Request, queryParm string, def int) int {
 	qp := r.URL.Query().Get(queryParm)
 	if len(qp) == 0 {
@@ -217,6 +237,7 @@ func (q *query) getInt(r *http.Request, queryParm string, def int) int {
 	if err != nil {
 		return def
 	}
+
 	return int(val)
 }
 
@@ -384,14 +405,25 @@ func (q *query) writeError(w http.ResponseWriter, err error, code int) {
 	http.Error(w, "Error: "+err.Error(), code)
 }
 
-func (q *query) getPage(r *http.Request) *client.Page {
+func (q *query) getPage(r *http.Request) (*client.Page, error) {
 	if r.URL.Query().Get(QueryPageNum) == AllResults {
-		return nil
+		return nil, nil
 	}
+	// We perform as much sanity checking as we can without performing an actual query.
+	pageNum := q.getInt(r, QueryPageNum, 0)
+	numPerPage := q.getInt(r, QueryNumPerPage, resultsPerPage)
+
+	if pageNum < 0 {
+		return nil, fmt.Errorf("page number should be an integer >=0, requested number: %d", pageNum)
+	}
+	if numPerPage <= 0 {
+		return nil, fmt.Errorf("number of results must be >0, requested number: %d", numPerPage)
+	}
+
 	return &client.Page{
-		PageNum:    q.getInt(r, QueryPageNum, 0),
-		NumPerPage: q.getInt(r, QueryNumPerPage, resultsPerPage),
-	}
+		PageNum:    pageNum,
+		NumPerPage: numPerPage,
+	}, nil
 }
 
 func (q *query) getSort(r *http.Request) *client.Sort {

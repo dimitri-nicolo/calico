@@ -61,8 +61,8 @@ var _ = testutils.E2eDatastoreDescribe("Query tests", testutils.DatastoreEtcdV3,
 
 				By(fmt.Sprintf("Running query for test: %s", tqd.description))
 				queryFn := getQueryFunction(tqd, addr, netClient)
-				Eventually(queryFn).Should(Equal(tqd.response))
-				Consistently(queryFn).Should(Equal(tqd.response))
+				Eventually(queryFn).Should(Equal(tqd.response), tqd.description)
+				Consistently(queryFn).Should(Equal(tqd.response), tqd.description)
 
 				if crossCheck != nil {
 					By("Running a cross-check query")
@@ -102,6 +102,12 @@ func getQueryFunction(tqd testQueryData, addr string, netClient *http.Client) fu
 				text: strings.TrimSpace(bodyString),
 				code: r.StatusCode,
 			}
+		}
+
+		if _, ok := tqd.response.(errorResponse); ok {
+			// We are expecting an error but didn't get one, we'll have to return an error containing
+			// the raw json.
+			return fmt.Errorf("expecting error but command was successful: %s", bodyString)
 		}
 
 		// The response body should be json and the same type as the expected response object.

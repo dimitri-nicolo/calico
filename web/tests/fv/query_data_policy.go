@@ -10,7 +10,14 @@ import (
 	"github.com/tigera/calicoq/web/pkg/querycache/client"
 )
 
+const (
+	// Get the maximum value of an int - we use this for some high limit testing.
+	maxUint = ^uint(0)
+	maxInt  = int(maxUint >> 1)
+)
+
 func policyTestQueryData() []testQueryData {
+
 	// Create the query Policy resources for the tier 1 policies that have some selectors in the rules.  We create them
 	// and tweak the rule counts to adjust for the selectors that are not all().
 	qcPolicy_gnp2_t1_all_res := qcPolicy(gnp2_t1_o4, 4, 4, 0, 0)
@@ -186,7 +193,7 @@ func policyTestQueryData() []testQueryData {
 			},
 		},
 		{
-			"multiple gnps and nps, no endpoints - query all of them - page 0 of 2",
+			"multiple gnps and nps, no endpoints - query 5 - page 0 of 2",
 			[]resourcemgr.ResourceObject{
 				tier1, np1_t1_o1_ns1, np2_t1_o2_ns2, gnp1_t1_o3, gnp2_t1_o4,
 				tier2, np1_t2_o1_ns1, np2_t2_o2_ns2, gnp1_t2_o3, gnp2_t2_o4,
@@ -207,7 +214,7 @@ func policyTestQueryData() []testQueryData {
 			},
 		},
 		{
-			"multiple gnps and nps, no endpoints - query all of them - page 1 of 2",
+			"multiple gnps and nps, no endpoints - query 5 - page 1 of 2",
 			[]resourcemgr.ResourceObject{
 				tier1, np1_t1_o1_ns1, np2_t1_o2_ns2, gnp1_t1_o3, gnp2_t1_o4,
 				tier2, np1_t2_o1_ns1, np2_t2_o2_ns2, gnp1_t2_o3, gnp2_t2_o4,
@@ -227,7 +234,7 @@ func policyTestQueryData() []testQueryData {
 			},
 		},
 		{
-			"multiple gnps and nps, no endpoints - query all of them - page 0 of 2",
+			"multiple gnps and nps, no endpoints - query 5 - page 3 of 2",
 			[]resourcemgr.ResourceObject{
 				tier1, np1_t1_o1_ns1, np2_t1_o2_ns2, gnp1_t1_o3, gnp2_t1_o4,
 				tier2, np1_t2_o1_ns1, np2_t2_o2_ns2, gnp1_t2_o3, gnp2_t2_o4,
@@ -241,6 +248,74 @@ func policyTestQueryData() []testQueryData {
 			&client.QueryPoliciesResp{
 				Count: 8,
 				Items: []client.Policy{},
+			},
+		},
+		{
+			"multiple gnps and nps, no endpoints - testing large page num",
+			[]resourcemgr.ResourceObject{
+				tier1, np1_t1_o1_ns1, np2_t1_o2_ns2, gnp1_t1_o3, gnp2_t1_o4,
+				tier2, np1_t2_o1_ns1, np2_t2_o2_ns2, gnp1_t2_o3, gnp2_t2_o4,
+			},
+			client.QueryPoliciesReq{
+				Page: &client.Page{
+					PageNum:    maxInt,
+					NumPerPage: maxInt,
+				},
+			},
+			&client.QueryPoliciesResp{
+				Count: 8,
+				Items: []client.Policy{},
+			},
+		},
+		{
+			"multiple gnps and nps, no endpoints - testing negative page number",
+			[]resourcemgr.ResourceObject{
+				tier1, np1_t1_o1_ns1, np2_t1_o2_ns2, gnp1_t1_o3, gnp2_t1_o4,
+				tier2, np1_t2_o1_ns1, np2_t2_o2_ns2, gnp1_t2_o3, gnp2_t2_o4,
+			},
+			client.QueryPoliciesReq{
+				Page: &client.Page{
+					PageNum:    -1,
+					NumPerPage: 2,
+				},
+			},
+			errorResponse{
+				text: "Error: page number should be an integer >=0, requested number: -1",
+				code: http.StatusBadRequest,
+			},
+		},
+		{
+			"multiple gnps and nps, no endpoints - requesting zero results per page",
+			[]resourcemgr.ResourceObject{
+				tier1, np1_t1_o1_ns1, np2_t1_o2_ns2, gnp1_t1_o3, gnp2_t1_o4,
+				tier2, np1_t2_o1_ns1, np2_t2_o2_ns2, gnp1_t2_o3, gnp2_t2_o4,
+			},
+			client.QueryPoliciesReq{
+				Page: &client.Page{
+					PageNum:    0,
+					NumPerPage: 0,
+				},
+			},
+			errorResponse{
+				text: "Error: number of results must be >0, requested number: 0",
+				code: http.StatusBadRequest,
+			},
+		},
+		{
+			"multiple gnps and nps, no endpoints - requesting negative results per page",
+			[]resourcemgr.ResourceObject{
+				tier1, np1_t1_o1_ns1, np2_t1_o2_ns2, gnp1_t1_o3, gnp2_t1_o4,
+				tier2, np1_t2_o1_ns1, np2_t2_o2_ns2, gnp1_t2_o3, gnp2_t2_o4,
+			},
+			client.QueryPoliciesReq{
+				Page: &client.Page{
+					PageNum:    10,
+					NumPerPage: -10,
+				},
+			},
+			errorResponse{
+				text: "Error: number of results must be >0, requested number: -10",
+				code: http.StatusBadRequest,
 			},
 		},
 		{
@@ -685,7 +760,11 @@ func policyTestQueryData() []testQueryData {
 		startIdx := 0
 		qpreq := tqd.query.(client.QueryPoliciesReq)
 		if qpreq.Page != nil {
-			startIdx = qpreq.Page.PageNum * qpreq.Page.NumPerPage
+			if qpreq.Page.PageNum < 0 {
+				startIdx = 0
+			} else {
+				startIdx = qpreq.Page.PageNum * qpreq.Page.NumPerPage
+			}
 		}
 		qpr, ok := tqd.response.(*client.QueryPoliciesResp)
 		if !ok {
@@ -902,6 +981,29 @@ func policyTestQueryData() []testQueryData {
 					qcPolicyWithIdx(np2_t1_o2_ns2, 1, 0, 2, 0, 0), qcPolicyWithIdx(np2_t2_o2_ns2, 5, 0, 2, 0, 0),
 					qcPolicyWithIdx(gnp1_t2_o3, 6, 1, 1, 0, 0), qcPolicyWithIdx(gnp1_t1_o3, 2, 1, 3, 0, 0),
 					qcPolicy_gnp2_t1_all_res_with_index, qcPolicyWithIdx(gnp2_t2_o4, 7, 4, 4, 0, 0),
+				},
+			},
+		},
+		{
+			"multiple gnps and nps, endpoints - sort by tier and some bogus columns",
+			[]resourcemgr.ResourceObject{
+				tier1, np1_t1_o1_ns1, np2_t1_o2_ns2, gnp1_t1_o3, gnp2_t1_o4,
+				tier2, np1_t2_o1_ns1, np2_t2_o2_ns2, gnp1_t2_o3, gnp2_t2_o4,
+				hep2_n3, hep3_n4, hep1_n2, hep4_n4_unlabelled, wep4_n2_ns1, wep3_n1_ns2, profile_rack_001, wep1_n1_ns1,
+				wep5_n3_ns2_unlabelled, wep2_n1_ns1_filtered_out,
+			},
+			client.QueryPoliciesReq{
+				Sort: &client.Sort{
+					SortBy: []string{"bazbarfoo", "tier", "foobarbaz"},
+				},
+			},
+			&client.QueryPoliciesResp{
+				Count: 8,
+				Items: []client.Policy{
+					qcPolicyWithIdx(np1_t2_o1_ns1, 4, 0, 1, 0, 0), qcPolicyWithIdx(np2_t2_o2_ns2, 5, 0, 2, 0, 0),
+					qcPolicyWithIdx(gnp1_t2_o3, 6, 1, 1, 0, 0), qcPolicyWithIdx(gnp2_t2_o4, 7, 4, 4, 0, 0),
+					qcPolicyWithIdx(np1_t1_o1_ns1, 0, 0, 1, 0, 0), qcPolicyWithIdx(np2_t1_o2_ns2, 1, 0, 2, 0, 0),
+					qcPolicyWithIdx(gnp1_t1_o3, 2, 1, 3, 0, 0), qcPolicy_gnp2_t1_all_res_with_index,
 				},
 			},
 		},
