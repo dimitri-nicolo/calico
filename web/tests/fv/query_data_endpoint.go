@@ -414,6 +414,78 @@ func endpointTestQueryData() []testQueryData {
 			},
 		},
 		{
+			"multiple weps and heps, tier1 policy - endpoints matching gnp2-t1-o4;egress;idx=0;source;notSelector - testing negative rule index",
+			[]resourcemgr.ResourceObject{
+				hep2_n3, hep3_n4, hep1_n2, hep4_n4_unlabelled, wep4_n2_ns1, wep3_n1_ns2, profile_rack_001, wep1_n1_ns1,
+				wep5_n3_ns2_unlabelled, tier1, np1_t1_o1_ns1, np2_t1_o2_ns2, gnp1_t1_o3, gnp2_t1_o4,
+			},
+			client.QueryEndpointsReq{
+				Policy:              resourceKey(gnp2_t1_o4),
+				RuleDirection:       "egress",
+				RuleIndex:           -1,
+				RuleEntity:          "source",
+				RuleNegatedSelector: true,
+			},
+			errorResponse{
+				text: "Error: rule index out of range, expected: 0-1; requested index: -1",
+				code: http.StatusBadRequest,
+			},
+		},
+		{
+			"multiple weps and heps, tier1 policy - endpoints matching gnp2-t1-o4;egress;idx=0;source;notSelector - high rule index",
+			[]resourcemgr.ResourceObject{
+				hep2_n3, hep3_n4, hep1_n2, hep4_n4_unlabelled, wep4_n2_ns1, wep3_n1_ns2, profile_rack_001, wep1_n1_ns1,
+				wep5_n3_ns2_unlabelled, tier1, np1_t1_o1_ns1, np2_t1_o2_ns2, gnp1_t1_o3, gnp2_t1_o4,
+			},
+			client.QueryEndpointsReq{
+				Policy:              resourceKey(gnp2_t1_o4),
+				RuleDirection:       "egress",
+				RuleIndex:           1000000,
+				RuleEntity:          "source",
+				RuleNegatedSelector: true,
+			},
+			errorResponse{
+				text: "Error: rule index out of range, expected: 0-1; requested index: 1000000",
+				code: http.StatusBadRequest,
+			},
+		},
+		{
+			"multiple weps and heps, tier1 policy - endpoints matching gnp2-t1-o4;egress;idx=0;source;notSelector - testing bad rule direction",
+			[]resourcemgr.ResourceObject{
+				hep2_n3, hep3_n4, hep1_n2, hep4_n4_unlabelled, wep4_n2_ns1, wep3_n1_ns2, profile_rack_001, wep1_n1_ns1,
+				wep5_n3_ns2_unlabelled, tier1, np1_t1_o1_ns1, np2_t1_o2_ns2, gnp1_t1_o3, gnp2_t1_o4,
+			},
+			client.QueryEndpointsReq{
+				Policy:              resourceKey(gnp2_t1_o4),
+				RuleDirection:       "foobarbaz",
+				RuleIndex:           0,
+				RuleEntity:          "source",
+				RuleNegatedSelector: true,
+			},
+			errorResponse{
+				text: "Error: rule direction not valid: foobarbaz",
+				code: http.StatusBadRequest,
+			},
+		},
+		{
+			"multiple weps and heps, tier1 policy - endpoints matching gnp2-t1-o4;egress;idx=0;source;notSelector - testing bad rule entity",
+			[]resourcemgr.ResourceObject{
+				hep2_n3, hep3_n4, hep1_n2, hep4_n4_unlabelled, wep4_n2_ns1, wep3_n1_ns2, profile_rack_001, wep1_n1_ns1,
+				wep5_n3_ns2_unlabelled, tier1, np1_t1_o1_ns1, np2_t1_o2_ns2, gnp1_t1_o3, gnp2_t1_o4,
+			},
+			client.QueryEndpointsReq{
+				Policy:              resourceKey(gnp2_t1_o4),
+				RuleDirection:       "egress",
+				RuleIndex:           0,
+				RuleEntity:          "foobarbaz",
+				RuleNegatedSelector: true,
+			},
+			errorResponse{
+				text: "Error: rule entity not valid: foobarbaz",
+				code: http.StatusBadRequest,
+			},
+		},
+		{
 			"multiple weps and heps, tier1 policy - endpoints matching gnp2-t1-o4;egress;idx=1;source;selector",
 			[]resourcemgr.ResourceObject{
 				hep2_n3, hep3_n4, hep1_n2, hep4_n4_unlabelled, wep4_n2_ns1, wep3_n1_ns2, profile_rack_001, wep1_n1_ns1,
@@ -550,7 +622,7 @@ func endpointTestQueryData() []testQueryData {
 				RuleNegatedSelector: true,
 			},
 			errorResponse{
-				text: "Error: rule parameters request is not valid: GlobalNetworkPolicy(ccc-tier1.gnp2-t1-o4)",
+				text: "Error: rule index out of range, expected: 0-0; requested index: 1",
 				code: http.StatusBadRequest,
 			},
 		},
@@ -893,6 +965,26 @@ func endpointTestQueryData() []testQueryData {
 			client.QueryEndpointsReq{
 				Sort: &client.Sort{
 					SortBy: []string{"numPolicies"},
+				},
+			},
+			&client.QueryEndpointsResp{
+				Count: 8,
+				Items: []client.Endpoint{
+					qcEndpoint(hep4_n4_unlabelled, 1, 0), qcEndpoint(hep3_n4, 1, 0), qcEndpoint(hep2_n3, 1, 0),
+					qcEndpoint(wep4_n2_ns1, 2, 0), qcEndpoint(hep1_n2, 2, 0), qcEndpoint(wep5_n3_ns2_unlabelled, 1, 1),
+					qcEndpoint(wep1_n1_ns1, 2, 1), qcEndpoint(wep3_n1_ns2, 2, 1),
+				},
+			},
+		},
+		{
+			"multiple weps and heps, tier1 policy - query all of them; sort by numPolicies and some bogus columns",
+			[]resourcemgr.ResourceObject{
+				hep2_n3, hep3_n4, hep1_n2, hep4_n4_unlabelled, wep4_n2_ns1, wep3_n1_ns2, profile_rack_001, wep1_n1_ns1,
+				wep5_n3_ns2_unlabelled, tier1, np1_t1_o1_ns1, np2_t1_o2_ns2, gnp1_t1_o3, gnp2_t1_o4,
+			},
+			client.QueryEndpointsReq{
+				Sort: &client.Sort{
+					SortBy: []string{"bazbarfoo", "numPolicies", "foobarbaz"},
 				},
 			},
 			&client.QueryEndpointsResp{

@@ -2,10 +2,11 @@
 package client
 
 import (
-	"fmt"
 	"sort"
 	"strconv"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // compareStringSlice compares a slice of strings. Each item in the slice is compared side by side.
@@ -84,13 +85,15 @@ func expBySquare64(n, exp int64) int64 {
 }
 
 // sortNodes sorts the nodes based on the order requirements specified in the Page request.
-func sortNodes(items []Node, s *Sort) error {
+func sortNodes(items []Node, s *Sort) {
 	ns := nodeSorter{items: items}
 	if s != nil {
 		for _, sb := range s.SortBy {
 			ndf, ok := nodeDiffFuncs[sb]
 			if !ok {
-				return fmt.Errorf("invalid sort field specified in query: %s", sb)
+				// Skip any sort column that is not valid.
+				log.WithField("column", sb).Debug("Invalid node sort column - skipping")
+				continue
 			}
 			ns.diff = append(ns.diff, ndf)
 		}
@@ -100,7 +103,6 @@ func sortNodes(items []Node, s *Sort) error {
 
 	// Sort the entries using the specified sort columns.
 	sort.Sort(ns)
-	return nil
 }
 
 type nodeDiffFunc func(p, q *Node) int
@@ -143,13 +145,15 @@ func (s nodeSorter) Swap(i, j int) {
 }
 
 // sortEndpoints sorts the Endpoints based on the order requirements specified in the Page request.
-func sortEndpoints(items []Endpoint, s *Sort) error {
+func sortEndpoints(items []Endpoint, s *Sort) {
 	ns := endpointSorter{items: items}
 	if s != nil {
 		for _, sb := range s.SortBy {
 			ndf, ok := endpointDiffFuncs[sb]
 			if !ok {
-				return fmt.Errorf("invalid sort field specified in query: %s", sb)
+				// Skip any sort column that is not valid.
+				log.WithField("column", sb).Debug("Invalid endpoints sort column - skipping")
+				continue
 			}
 			ns.diff = append(ns.diff, ndf)
 		}
@@ -159,7 +163,6 @@ func sortEndpoints(items []Endpoint, s *Sort) error {
 
 	// Sort the entries using the specified sort columns.
 	sort.Sort(ns)
-	return nil
 }
 
 type endpointDiffFunc func(p, q *Endpoint) int
@@ -210,13 +213,15 @@ func (s endpointSorter) Swap(i, j int) {
 }
 
 // sortPolicies sorts the Policies based on the order requirements specified in the Page request.
-func sortPolicies(items []Policy, s *Sort) error {
+func sortPolicies(items []Policy, s *Sort) {
 	ns := policySorter{items: items}
 	if s != nil {
 		for _, sb := range s.SortBy {
 			ndf, ok := policyDiffFuncs[sb]
 			if !ok {
-				return fmt.Errorf("invalid sort field specified in query: %s", sb)
+				// Skip any sort column that is not valid.
+				log.WithField("column", sb).Debug("Invalid policies sort column - skipping")
+				continue
 			}
 			ns.diff = append(ns.diff, ndf)
 		}
@@ -226,7 +231,6 @@ func sortPolicies(items []Policy, s *Sort) error {
 
 	// Sort the entries using the specified sort columns.
 	sort.Sort(ns)
-	return nil
 }
 
 type policyDiffFunc func(p, q *Policy) int

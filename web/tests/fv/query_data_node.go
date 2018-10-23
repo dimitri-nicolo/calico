@@ -276,6 +276,24 @@ func nodeTestQueryData() []testQueryData {
 			},
 		},
 		{
+			"multiple nodes, weps, heps - sort by numEndpoints and some bogus columns",
+			[]resourcemgr.ResourceObject{
+				node1, node2, hep2_n3, hep3_n4, hep1_n2, hep4_n4_unlabelled, wep4_n2_ns1, wep3_n1_ns2,
+				wep1_n1_ns1,
+			},
+			client.QueryNodesReq{
+				Sort: &client.Sort{
+					SortBy: []string{"foobarbaz", "numEndpoints", "bazbarfoo"},
+				},
+			},
+			&client.QueryNodesResp{
+				Count: 4,
+				Items: []client.Node{
+					qcNode(hep2_n3, 1, 0), qcNode(hep3_n4, 2, 0), qcNode(node1, 0, 2), qcNode(node2, 1, 1),
+				},
+			},
+		},
+		{
 			"reset by removing all nodes, weps and heps",
 			[]resourcemgr.ResourceObject{},
 			client.QueryNodesReq{},

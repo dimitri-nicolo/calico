@@ -278,14 +278,9 @@ func (c *cachedQuery) runQueryEndpoints(cxt context.Context, req QueryEndpointsR
 
 	count := len(items)
 	if req.Page != nil {
-		perPage := req.Page.NumPerPage
-		fromIdx := req.Page.PageNum * perPage
-		toIdx := fromIdx + perPage
-		if fromIdx > count {
-			fromIdx = count
-		}
-		if toIdx > count {
-			toIdx = count
+		fromIdx, toIdx, err := getPageFromToIdx(req.Page, count)
+		if err != nil {
+			return nil, err
 		}
 		items = items[fromIdx:toIdx]
 	}
@@ -421,14 +416,9 @@ func (c *cachedQuery) runQueryPolicies(cxt context.Context, req QueryPoliciesReq
 	// If we are paging results then return the required page-worths of results.
 	count := len(items)
 	if req.Page != nil {
-		perPage := req.Page.NumPerPage
-		fromIdx := req.Page.PageNum * perPage
-		toIdx := fromIdx + perPage
-		if fromIdx > count {
-			fromIdx = count
-		}
-		if toIdx > count {
-			toIdx = count
+		fromIdx, toIdx, err := getPageFromToIdx(req.Page, count)
+		if err != nil {
+			return nil, err
 		}
 		items = items[fromIdx:toIdx]
 	}
@@ -500,21 +490,17 @@ func (c *cachedQuery) runQueryNodes(cxt context.Context, req QueryNodesReq) (*Qu
 	sortNodes(items, req.Sort)
 
 	// If we are paging the results then only keep the required page worth of results.
+	count := len(nodes)
 	if req.Page != nil {
-		perPage := req.Page.NumPerPage
-		fromIdx := req.Page.PageNum * perPage
-		toIdx := fromIdx + perPage
-		if fromIdx > len(nodes) {
-			fromIdx = len(nodes)
-		}
-		if toIdx > len(nodes) {
-			toIdx = len(nodes)
+		fromIdx, toIdx, err := getPageFromToIdx(req.Page, count)
+		if err != nil {
+			return nil, err
 		}
 		items = items[fromIdx:toIdx]
 	}
 
 	return &QueryNodesResp{
-		Count: len(nodes),
+		Count: count,
 		Items: items,
 	}, nil
 }
@@ -670,6 +656,8 @@ func (c *cachedQuery) getPolicySelector(key model.Key, direction string, index i
 		return "", fmt.Errorf("unable to process resource: %s", key.String())
 	}
 
+	// Extract selector from the indexed rule. This safely handles bad input parameters since they
+	// are provided over the API.
 	pv1 := converted.Value.(*model.Policy)
 	var rd []model.Rule
 	switch direction {
@@ -679,26 +667,67 @@ func (c *cachedQuery) getPolicySelector(key model.Key, direction string, index i
 		rd = pv1.InboundRules
 	case RuleDirectionEgress:
 		rd = pv1.OutboundRules
+	default:
+		return "", fmt.Errorf("rule direction not valid: %s", direction)
 	}
 
-	if rd != nil && index >= 0 && index < len(rd) {
-		r := rd[index]
-		switch entity {
-		case RuleEntitySource:
-			switch negatedSelector {
-			case false:
-				return r.SrcSelector, nil
-			case true:
-				return r.NotSrcSelector, nil
-			}
-		case RuleEntityDestination:
-			switch negatedSelector {
-			case false:
-				return r.DstSelector, nil
-			case true:
-				return r.NotDstSelector, nil
-			}
+	if len(rd) == 0 {
+		return "", fmt.Errorf("there are no %s rules configured", direction)
+	}
+
+	if index < 0 || index >= len(rd) {
+		return "", fmt.Errorf("rule index out of range, expected: 0-%d; requested index: %d", len(rd)-1, index)
+	}
+
+	r := rd[index]
+	switch entity {
+	case RuleEntitySource:
+		switch negatedSelector {
+		case false:
+			return r.SrcSelector, nil
+		case true:
+			return r.NotSrcSelector, nil
+		}
+	case RuleEntityDestination:
+		switch negatedSelector {
+		case false:
+			return r.DstSelector, nil
+		case true:
+			return r.NotDstSelector, nil
 		}
 	}
-	return "", fmt.Errorf("rule parameters request is not valid: %s", key.String())
+	return "", fmt.Errorf("rule entity not valid: %s", entity)
+}
+
+func getPageFromToIdx(p *Page, numItems int) (int, int, error) {
+	// Perform simple policing of the page number and num per page. This should already be policed
+	// by the HTTP server, but we'll police here to be safe.
+	perPage := p.NumPerPage
+	pageNum := p.PageNum
+	if perPage <= 0 {
+		return 0, 0, fmt.Errorf("number of results must be >0, requested number: %d", perPage)
+	}
+	if pageNum < 0 {
+		return 0, 0, fmt.Errorf("page number should be an integer >=0, requested number: %d", pageNum)
+	}
+
+	// Check if the requested page number is out of range, we can only do this once we collate our results.
+	// We don't treat this as an error since it could be a timing window where the number of results has
+	// changed. Also, by returning a valid response the consumer is able to find out how any results there
+	// are.
+	maxPageNum := (numItems - 1) / perPage
+	if pageNum > maxPageNum {
+		return 0, 0, nil
+	}
+
+	// Calculate the from and to indexes from our page number and per page.
+	fromIdx := p.PageNum * perPage
+	toIdx := fromIdx + perPage
+
+	// Ensure the toIdx does not exceed the length of the slice, capping at numItems if it does.
+	if toIdx > numItems {
+		toIdx = numItems
+	}
+
+	return fromIdx, toIdx, nil
 }
