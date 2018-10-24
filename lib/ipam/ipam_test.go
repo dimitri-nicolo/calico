@@ -123,7 +123,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreEtcdV3, 
 					Hostname: hostA,
 				}
 
-				v4, _, outErr := ic.AutoAssign(context.Background(), args)
+				v4, _, outErr := ic.AutoAssign(context.Background(), args, false)
 
 				blocks := getAffineBlocks(bc, hostA)
 				for _, b := range blocks {
@@ -142,7 +142,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreEtcdV3, 
 					Hostname: hostA,
 				}
 
-				v4, _, outErr := ic.AutoAssign(context.Background(), args)
+				v4, _, outErr := ic.AutoAssign(context.Background(), args, false)
 				Expect(outErr).NotTo(HaveOccurred())
 				Expect(block.IPNet.Contains(v4[0].IP)).To(BeTrue())
 			})
@@ -162,7 +162,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreEtcdV3, 
 					Num6:     0,
 					Hostname: hostB,
 				}
-				v4, _, outErr := ic.AutoAssign(context.Background(), args)
+				v4, _, outErr := ic.AutoAssign(context.Background(), args, false)
 				Expect(outErr).NotTo(HaveOccurred())
 				Expect(pool2.IPNet.Contains(v4[0].IP)).To(BeTrue())
 			})
@@ -173,7 +173,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreEtcdV3, 
 					Num6:     0,
 					Hostname: hostA,
 				}
-				v4, _, outErr := ic.AutoAssign(context.Background(), args)
+				v4, _, outErr := ic.AutoAssign(context.Background(), args, false)
 				Expect(outErr).NotTo(HaveOccurred())
 				Expect(pool2.IPNet.Contains(v4[0].IP)).To(BeTrue())
 			})
@@ -194,14 +194,14 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreEtcdV3, 
 			applyPool("10.0.0.0/24", true)
 			applyPool("20.0.0.0/24", true)
 
-			v4, _, outErr := ic.AutoAssign(context.Background(), args)
+			v4, _, outErr := ic.AutoAssign(context.Background(), args, false)
 			Expect(outErr).NotTo(HaveOccurred())
 			Expect(len(v4) == 1).To(BeTrue())
 		})
 
 		// Call again to trigger an assignment from the newly created block.
 		It("should have assigned an IP address with no error", func() {
-			v4, _, outErr := ic.AutoAssign(context.Background(), args)
+			v4, _, outErr := ic.AutoAssign(context.Background(), args, false)
 			Expect(outErr).NotTo(HaveOccurred())
 			Expect(len(v4)).To(Equal(1))
 		})
@@ -226,7 +226,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreEtcdV3, 
 				IPv4Pools: []cnet.IPNet{pool1},
 			}
 
-			v4, _, outErr := ic.AutoAssign(context.Background(), args)
+			v4, _, outErr := ic.AutoAssign(context.Background(), args, false)
 			blocks := getAffineBlocks(bc, host)
 			for _, b := range blocks {
 				if pool1.Contains(b.IPNet.IP) {
@@ -246,7 +246,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreEtcdV3, 
 				IPv4Pools: []cnet.IPNet{pool2},
 			}
 
-			v4, _, outErr := ic.AutoAssign(context.Background(), args)
+			v4, _, outErr := ic.AutoAssign(context.Background(), args, false)
 			blocks := getAffineBlocks(bc, host)
 			for _, b := range blocks {
 				if pool2.Contains(b.IPNet.IP) {
@@ -265,7 +265,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreEtcdV3, 
 				Hostname:  host,
 				IPv4Pools: []cnet.IPNet{pool1},
 			}
-			v4, _, outErr := ic.AutoAssign(context.Background(), args)
+			v4, _, outErr := ic.AutoAssign(context.Background(), args, false)
 			Expect(outErr).NotTo(HaveOccurred())
 			Expect(block1.IPNet.Contains(v4[0].IP)).To(BeTrue())
 		})
@@ -278,7 +278,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreEtcdV3, 
 				IPv4Pools: []cnet.IPNet{pool2},
 			}
 
-			v4, _, outErr := ic.AutoAssign(context.Background(), args)
+			v4, _, outErr := ic.AutoAssign(context.Background(), args, false)
 			Expect(outErr).NotTo(HaveOccurred())
 			Expect(block2.IPNet.Contains(v4[0].IP)).To(BeTrue())
 		})
@@ -294,7 +294,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreEtcdV3, 
 			}
 
 			By("allocating the rest of the IPs in the pool", func() {
-				v4, _, outErr := ic.AutoAssign(context.Background(), args)
+				v4, _, outErr := ic.AutoAssign(context.Background(), args, false)
 				Expect(outErr).NotTo(HaveOccurred())
 				Expect(len(v4)).To(Equal(254))
 
@@ -306,7 +306,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreEtcdV3, 
 
 			By("attempting to allocate an IP when there are no more left in the pool", func() {
 				args.Num4 = 1
-				v4, _, outErr := ic.AutoAssign(context.Background(), args)
+				v4, _, outErr := ic.AutoAssign(context.Background(), args, false)
 				Expect(outErr).NotTo(HaveOccurred())
 				Expect(len(v4)).To(Equal(0))
 			})
@@ -334,7 +334,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreEtcdV3, 
 			applyPool(pool2.String(), true)
 			applyPool(pool3.String(), false)
 			applyPool(pool4_v6.String(), true)
-			_, _, outErr := ic.AutoAssign(context.Background(), args)
+			_, _, outErr := ic.AutoAssign(context.Background(), args, false)
 			Expect(outErr).To(HaveOccurred())
 		})
 
@@ -345,7 +345,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreEtcdV3, 
 				Hostname:  host,
 				IPv6Pools: []cnet.IPNet{pool4_v6, pool1},
 			}
-			_, _, outErr := ic.AutoAssign(context.Background(), args)
+			_, _, outErr := ic.AutoAssign(context.Background(), args, false)
 			Expect(outErr).To(HaveOccurred())
 		})
 
@@ -356,7 +356,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreEtcdV3, 
 				Hostname:  host,
 				IPv4Pools: []cnet.IPNet{pool1, pool2},
 			}
-			v4, _, outErr := ic.AutoAssign(context.Background(), args)
+			v4, _, outErr := ic.AutoAssign(context.Background(), args, false)
 			log.Println("IPAM returned: %v", v4)
 
 			Expect(outErr).NotTo(HaveOccurred())
@@ -371,7 +371,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreEtcdV3, 
 				Hostname:  host,
 				IPv4Pools: []cnet.IPNet{pool1, pool2},
 			}
-			v4, _, outErr := ic.AutoAssign(context.Background(), args)
+			v4, _, outErr := ic.AutoAssign(context.Background(), args, false)
 			log.Println("v4: %d IPs", len(v4))
 
 			Expect(outErr).NotTo(HaveOccurred())
@@ -385,7 +385,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreEtcdV3, 
 				Hostname:  host,
 				IPv4Pools: []cnet.IPNet{pool1, pool2},
 			}
-			v4, _, outErr := ic.AutoAssign(context.Background(), args)
+			v4, _, outErr := ic.AutoAssign(context.Background(), args, false)
 			log.Println("v4: %d IPs", len(v4))
 
 			// Expect 211 entries since we have a total of 512, we requested 1 + 300 already.
@@ -400,7 +400,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreEtcdV3, 
 				Hostname:  host,
 				IPv4Pools: []cnet.IPNet{pool1, pool5_doesnot_exist},
 			}
-			v4, _, err := ic.AutoAssign(context.Background(), args)
+			v4, _, err := ic.AutoAssign(context.Background(), args, false)
 			log.Println("v4: %d IPs", len(v4))
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).Should(Equal("the given pool (40.0.0.0/24) does not exist, or is not enabled"))
@@ -409,7 +409,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreEtcdV3, 
 	})
 
 	DescribeTable("AutoAssign: requested IPs vs returned IPs",
-		func(host string, cleanEnv bool, pool []string, usePool string, inv4, inv6, expv4, expv6 int, expError error) {
+		func(host string, cleanEnv bool, pool []string, usePool string, inv4, inv6, expv4, expv6 int, expError error, windowsHost bool) {
 			if cleanEnv {
 				bc.Clean()
 				deleteAllPools()
@@ -426,7 +426,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreEtcdV3, 
 				IPv4Pools: []cnet.IPNet{fromPool},
 			}
 
-			outv4, outv6, outErr := ic.AutoAssign(context.Background(), args)
+			outv4, outv6, outErr := ic.AutoAssign(context.Background(), args, windowsHost)
 			if expError != nil {
 				Expect(outErr).To(HaveOccurred())
 			} else {
@@ -437,30 +437,30 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreEtcdV3, 
 		},
 
 		// Test 1: AutoAssign 1 IPv4, 1 IPv6 - expect one of each to be returned.
-		Entry("1 v4 1 v6", "testHost", true, []string{"192.168.1.0/24", "fd80:24e2:f998:72d6::/120"}, "192.168.1.0/24", 1, 1, 1, 1, nil),
+		Entry("1 v4 1 v6", "testHost", true, []string{"192.168.1.0/24", "fd80:24e2:f998:72d6::/120"}, "192.168.1.0/24", 1, 1, 1, 1, nil, false),
 
 		// Test 2: AutoAssign 256 IPv4, 256 IPv6 - expect 256 IPv4 + IPv6 addresses.
-		Entry("256 v4 256 v6", "testHost", true, []string{"192.168.1.0/24", "fd80:24e2:f998:72d6::/120"}, "192.168.1.0/24", 256, 256, 256, 256, nil),
+		Entry("256 v4 256 v6", "testHost", true, []string{"192.168.1.0/24", "fd80:24e2:f998:72d6::/120"}, "192.168.1.0/24", 256, 256, 256, 256, nil, false),
 
 		// Test 3: AutoAssign 257 IPv4, 0 IPv6 - expect 256 IPv4 addresses, no IPv6, and no error.
-		Entry("257 v4 0 v6", "testHost", true, []string{"192.168.1.0/24", "fd80:24e2:f998:72d6::/120"}, "192.168.1.0/24", 257, 0, 256, 0, nil),
+		Entry("257 v4 0 v6", "testHost", true, []string{"192.168.1.0/24", "fd80:24e2:f998:72d6::/120"}, "192.168.1.0/24", 257, 0, 256, 0, nil, false),
 
 		// Test 4: AutoAssign 0 IPv4, 257 IPv6 - expect 256 IPv6 addresses, no IPv6, and no error.
-		Entry("0 v4 257 v6", "testHost", true, []string{"192.168.1.0/24", "fd80:24e2:f998:72d6::/120"}, "192.168.1.0/24", 0, 257, 0, 256, nil),
+		Entry("0 v4 257 v6", "testHost", true, []string{"192.168.1.0/24", "fd80:24e2:f998:72d6::/120"}, "192.168.1.0/24", 0, 257, 0, 256, nil, false),
 
 		// Test 5: (use pool of size /25 so only two blocks are contained):
 		// - Assign 1 address on host A (Expect 1 address).
-		Entry("1 v4 0 v6 host-A", "host-A", true, []string{"10.0.0.0/25", "fd80:24e2:f998:72d6::/121"}, "10.0.0.0/25", 1, 0, 1, 0, nil),
+		Entry("1 v4 0 v6 host-A", "host-A", true, []string{"10.0.0.0/25", "fd80:24e2:f998:72d6::/121"}, "10.0.0.0/25", 1, 0, 1, 0, nil, false),
 
 		// - Assign 1 address on host B (Expect 1 address, different block).
-		Entry("1 v4 0 v6 host-B", "host-B", false, []string{"10.0.0.0/25", "fd80:24e2:f998:72d6::/121"}, "10.0.0.0/25", 1, 0, 1, 0, nil),
+		Entry("1 v4 0 v6 host-B", "host-B", false, []string{"10.0.0.0/25", "fd80:24e2:f998:72d6::/121"}, "10.0.0.0/25", 1, 0, 1, 0, nil, false),
 
 		// - Assign 64 more addresses on host A (Expect 63 addresses from host A's block, 1 address from host B's block).
-		Entry("64 v4 0 v6 host-A", "host-A", false, []string{"10.0.0.0/25", "fd80:24e2:f998:72d6::/121"}, "10.0.0.0/25", 64, 0, 64, 0, nil),
+		Entry("64 v4 0 v6 host-A", "host-A", false, []string{"10.0.0.0/25", "fd80:24e2:f998:72d6::/121"}, "10.0.0.0/25", 64, 0, 64, 0, nil, false),
 	)
 
 	DescribeTable("AssignIP: requested IP vs returned error",
-		func(inIP net.IP, host string, cleanEnv bool, pool []string, expError error) {
+		func(inIP net.IP, host string, cleanEnv bool, pool []string, expError error, windowsHost bool) {
 			args := AssignIPArgs{
 				IP:       cnet.IP{inIP},
 				Hostname: host,
@@ -473,7 +473,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreEtcdV3, 
 				applyPool(v, true)
 			}
 
-			outError := ic.AssignIP(context.Background(), args)
+			outError := ic.AssignIP(context.Background(), args, windowsHost)
 			if expError != nil {
 				Expect(outError).To(HaveOccurred())
 				Expect(outError).To(Equal(expError))
@@ -483,20 +483,20 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreEtcdV3, 
 		},
 
 		// Test 1: Assign 1 IPv4 from a configured pool - expect no error returned.
-		Entry("Assign 1 IPv4 from a configured pool", net.ParseIP("192.168.1.0"), "testHost", true, []string{"192.168.1.0/24", "fd80:24e2:f998:72d6::/120"}, nil),
+		Entry("Assign 1 IPv4 from a configured pool", net.ParseIP("192.168.1.0"), "testHost", true, []string{"192.168.1.0/24", "fd80:24e2:f998:72d6::/120"}, nil, false),
 
 		// Test 2: Assign 1 IPv6 from a configured pool - expect no error returned.
-		Entry("Assign 1 IPv6 from a configured pool", net.ParseIP("fd80:24e2:f998:72d6::"), "testHost", true, []string{"192.168.1.0/24", "fd80:24e2:f998:72d6::/120"}, nil),
+		Entry("Assign 1 IPv6 from a configured pool", net.ParseIP("fd80:24e2:f998:72d6::"), "testHost", true, []string{"192.168.1.0/24", "fd80:24e2:f998:72d6::/120"}, nil, false),
 
 		// Test 3: Assign 1 IPv4 from a non-configured pool - expect an error returned.
-		Entry("Assign 1 IPv4 from a non-configured pool", net.ParseIP("1.1.1.1"), "testHost", true, []string{"192.168.1.0/24", "fd80:24e2:f998:72d6::/120"}, errors.New("The provided IP address is not in a configured pool\n")),
+		Entry("Assign 1 IPv4 from a non-configured pool", net.ParseIP("1.1.1.1"), "testHost", true, []string{"192.168.1.0/24", "fd80:24e2:f998:72d6::/120"}, errors.New("The provided IP address is not in a configured pool\n"), false),
 
 		// Test 4: Assign 1 IPv4 from a configured pool twice:
 		// - Expect no error returned while assigning the IP for the first time.
-		Entry("Assign 1 IPv4 from a configured pool twice (first time)", net.ParseIP("192.168.1.0"), "testHost", true, []string{"192.168.1.0/24", "fd80:24e2:f998:72d6::/120"}, nil),
+		Entry("Assign 1 IPv4 from a configured pool twice (first time)", net.ParseIP("192.168.1.0"), "testHost", true, []string{"192.168.1.0/24", "fd80:24e2:f998:72d6::/120"}, nil, false),
 
 		// - Expect an error returned while assigning the SAME IP again.
-		Entry("Assign 1 IPv4 from a configured pool twice (second time)", net.ParseIP("192.168.1.0"), "testHost", false, []string{"192.168.1.0/24", "fd80:24e2:f998:72d6::/120"}, errors.New("Address already assigned in block")),
+		Entry("Assign 1 IPv4 from a configured pool twice (second time)", net.ParseIP("192.168.1.0"), "testHost", false, []string{"192.168.1.0/24", "fd80:24e2:f998:72d6::/120"}, errors.New("Address already assigned in block"), false),
 	)
 
 	DescribeTable("ReleaseIPs: requested IPs to be released vs actual unallocated IPs",
@@ -515,7 +515,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreEtcdV3, 
 			if len(assignIP) != 0 {
 				err := ic.AssignIP(context.Background(), AssignIPArgs{
 					IP: cnet.IP{assignIP},
-				})
+				}, false)
 				if err != nil {
 					Fail(fmt.Sprintf("Error assigning IP %s", assignIP))
 				}
@@ -530,12 +530,12 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreEtcdV3, 
 			if autoAssignNumIPv4 != 0 {
 				assignedIPv4, _, err := ic.AutoAssign(context.Background(), AutoAssignArgs{
 					Num4: autoAssignNumIPv4,
-				})
+				}, false)
 				Expect(err).ToNot(HaveOccurred())
 				inIPs = assignedIPv4
 			}
 
-			unallocatedIPs, outErr := ic.ReleaseIPs(context.Background(), inIPs)
+			unallocatedIPs, outErr := ic.ReleaseIPs(context.Background(), inIPs, false)
 			if outErr != nil {
 				log.Println(outErr)
 			}
@@ -588,9 +588,9 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreEtcdV3, 
 				applyPool(v, true)
 			}
 
-			assignIPutil(ic, args.assignIP, "Host-A")
+			assignIPutil(ic, args.assignIP, "Host-A", false)
 
-			outClaimed, outFailed, outError := ic.ClaimAffinity(context.Background(), inIPNet, args.host)
+			outClaimed, outFailed, outError := ic.ClaimAffinity(context.Background(), inIPNet, args.host, false)
 			log.Println("Claimed IP blocks: ", outClaimed)
 			log.Println("Failed to claim IP blocks: ", outFailed)
 
@@ -629,12 +629,12 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreEtcdV3, 
 })
 
 // assignIPutil is a utility function to help with assigning a single IP address to a hostname passed in.
-func assignIPutil(ic Interface, assignIP net.IP, host string) {
+func assignIPutil(ic Interface, assignIP net.IP, host string, windowsHost bool) {
 	if len(assignIP) != 0 {
 		err := ic.AssignIP(context.Background(), AssignIPArgs{
 			IP:       cnet.IP{assignIP},
 			Hostname: host,
-		})
+		}, windowsHost)
 		log.Printf("Assigning IP: %s\n", assignIP)
 		if err != nil {
 			Fail(fmt.Sprintf("Error assigning IP %s", assignIP))
