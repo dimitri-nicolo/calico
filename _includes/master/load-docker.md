@@ -2,8 +2,11 @@
 ## Setting up access to the required images
 {% endif %}
 
-**Prerequisite**: These instructions assume that you have your own private registry and
-its credentials stored in a local `~/.docker/config.json` file.
+> **Note**: These instructions assume that you have your own private registry,
+> its credentials in a local `~/.docker/config.json` file, and
+> [root privileges](https://docs.docker.com/install/linux/linux-postinstall/).
+> If your user is not root or in the `docker` group, add `sudo` to the `docker` commands that follow.
+{: .alert .alert-info}
 
 1. From a terminal prompt, open the `~/.docker/config.json` file in your favorite editor.
 
