@@ -2,7 +2,10 @@
 ## Setting up access to the required images
 {% endif %}
 
-1. From a terminal prompt, use the following command to either create or open the `~/.docker/config.json` file.
+**Prerequisite**: These instructions assume that you have your own private registry and
+its credentials stored in a local `~/.docker/config.json` file.
+
+1. From a terminal prompt, open the `~/.docker/config.json` file in your favorite editor.
 
    ```bash
    vi ~/.docker/config.json
@@ -10,9 +13,7 @@
 
 1. Depending on the existing contents of the file, edit it in one of the following ways.
 
-   - **New file**: Paste in the entire contents of the `config.json` file from Tigera.
-
-   - **Existing file without quay.io object**: Add the following lines from the `config.json` inside the `"auth"` object.
+   - **No quay.io object**: Add the following lines from the `config.json` inside the `"auth"` object.
 
      ```json
      "quay.io": {
@@ -21,7 +22,7 @@
      }
      ```
 
-   - **Existing file with quay.io object**: Add the following lines from the `config.json` inside the `"quay.io"` object.
+   - **Existing quay.io object**: Add the following lines from the `config.json` inside the `"quay.io"` object.
 
      ```json
      "auth": "<ROBOT-TOKEN-VALUE>",
@@ -141,8 +142,57 @@
 
 {% if include.orchestrator == "kubernetes" and include.yaml == "calico" %}
 
-1. Push the credentials of your private repository up to Kubernetes as a [secret](https://kubernetes.io/docs/concepts/containers/images/#creating-a-secret-with-a-docker-config)
-named `cnx-pull-secret` in the `kube-system` namespace.
+1. Issue the following command to create the `calico-monitoring` namespace.
+
+   ```bash
+   kubectl create namespace calico-monitoring
+   ```
+
+1. Strip the spaces, tabs, carriage returns, and newlines from the `config.json`
+   file; base64 encode the string; and save it as an environment variable called `SECRET`.
+   If you're on Linux, you can use the following command.
+
+   ```bash
+   SECRET=$(cat ~/.docker/config.json | tr -d '\n\r\t ' | base64 -w 0)
+   ```
+
+1. Use the following command to create a YML file called `cnx-pull-secret.yml`
+   containing the base-64 encoded string.
+
+   ```bash
+   cat > cnx-pull-secret.yml <<EOF
+   apiVersion: v1
+   kind: Secret
+   metadata:
+     name: cnx-pull-secret
+     namespace: kube-system
+   data:
+     .dockerconfigjson: ${SECRET}
+   type: kubernetes.io/dockerconfigjson
+   ---
+   apiVersion: v1
+   kind: Secret
+   metadata:
+     name: cnx-pull-secret
+     namespace: calico-monitoring
+   data:
+     .dockerconfigjson: ${SECRET}
+   type: kubernetes.io/dockerconfigjson
+   EOF
+   ```
+
+1. Use the following command to add the secret to Kubernetes.
+
+   ```bash
+   kubectl create -f cnx-pull-secret.yml
+   ```
+
+   It should return the following.
+
+   ```bash
+   secret "cnx-pull-secret" created
+   secret "cnx-pull-secret" created
+   ```
 
 1. Continue to [Installing {{site.prodname}}](#install-cnx).
 

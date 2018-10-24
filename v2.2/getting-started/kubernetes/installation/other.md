@@ -20,7 +20,7 @@ with another solution, such as:
   [system requirements](../requirements) and can [network](#overview). If you don't, follow the steps in
   [Using kubeadm to create a cluster](http://kubernetes.io/docs/getting-started-guides/kubeadm/).
 
-- Ensure that you have the [private registry credentials](../../../getting-started/#obtain-the-private-registry-credentials)
+- Ensure that you have the [credentials for the Tigera private registry](../../../getting-started/#obtain-the-private-registry-credentials)
   and a [license key](../../../getting-started/#obtain-a-license-key).
 
 {% include {{page.version}}/load-docker.md yaml="calico" orchestrator="kubernetes" %}
