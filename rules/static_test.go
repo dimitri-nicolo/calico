@@ -1211,15 +1211,15 @@ var _ = Describe("Static", func() {
 		expInputChainIPIP := &Chain{
 			Name: "cali-INPUT",
 			Rules: []Rule{
-				{Match: Match().MarkSingleBitSet(0x10),
-					Action: AcceptAction{}},
-
 				// Per-prefix workload jump rules.  Note use of goto so that we
 				// don't return here.
 				{Match: Match().InInterface("cali+"),
 					Action: GotoAction{Target: "cali-wl-to-host"}},
 				{Match: Match().InInterface("tap+"),
 					Action: GotoAction{Target: "cali-wl-to-host"}},
+
+				{Match: Match().MarkSingleBitSet(0x10),
+					Action: AcceptAction{}},
 
 				// Non-workload through-traffic, pass to host endpoint chains.
 				{Action: ClearMarkAction{Mark: 0xf0}},

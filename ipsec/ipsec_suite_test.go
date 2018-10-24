@@ -19,6 +19,6 @@ func init() {
 
 func TestConfig(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("junit.xml")
+	junitReporter := reporters.NewJUnitReporter("../report/ipsec_suite.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "IPSec Suite", []Reporter{junitReporter})
 }

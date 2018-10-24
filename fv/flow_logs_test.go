@@ -111,10 +111,8 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 	)
 
 	BeforeEach(func() {
-		var err error
 		useInvalidLicense = false
-		infra, err = getInfra()
-		Expect(err).NotTo(HaveOccurred())
+		infra = getInfra()
 		opts = infrastructure.DefaultTopologyOptions()
 		opts.IPIPEnabled = false
 
@@ -141,8 +139,7 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 		}
 
 		// Install a default profile that allows all ingress and egress, in the absence of any Policy.
-		err := infra.AddDefaultAllow()
-		Expect(err).NotTo(HaveOccurred())
+		infra.AddDefaultAllow()
 
 		// Create workloads on host 1.
 		for ii := range wlHost1 {
@@ -174,7 +171,7 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 		ns.Labels = map[string]string{
 			"ips-for": "host1",
 		}
-		_, err = client.GlobalNetworkSets().Create(utils.Ctx, ns, utils.NoOptions)
+		_, err := client.GlobalNetworkSets().Create(utils.Ctx, ns, utils.NoOptions)
 		Expect(err).NotTo(HaveOccurred())
 
 		// Create a HostEndpoint for host 2, with apply-on-forward ingress policy

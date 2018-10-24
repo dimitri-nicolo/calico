@@ -103,7 +103,7 @@ type NflogAction struct {
 	SizeEnabled bool
 }
 
-func (n NflogAction) ToFragment() string {
+func (n NflogAction) ToFragment(features *Features) string {
 	if n.SizeEnabled {
 		return fmt.Sprintf("--jump NFLOG --nflog-group %d --nflog-prefix %s --nflog-size 80", n.Group, n.Prefix)
 	} else {

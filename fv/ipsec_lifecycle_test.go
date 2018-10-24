@@ -34,10 +34,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec lifecycle tests", []apiconfig.Da
 	)
 
 	BeforeEach(func() {
-		var err error
-
-		infra, err = getInfra()
-		Expect(err).NotTo(HaveOccurred())
+		infra = getInfra()
 		topologyOptions := infrastructure.DefaultTopologyOptions()
 
 		// Enable IPsec.
@@ -51,8 +48,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec lifecycle tests", []apiconfig.Da
 		felixes, client = infrastructure.StartNNodeTopology(2, topologyOptions, infra)
 
 		// Install a default profile that allows all ingress and egress, in the absence of any Policy.
-		err = infra.AddDefaultAllow()
-		Expect(err).NotTo(HaveOccurred())
+		infra.AddDefaultAllow()
 
 		// Create workloads, using that profile.  One on each "host".
 		for ii := range w {

@@ -32,9 +32,7 @@ var _ = infrastructure.DatastoreDescribe("CloudWatch metrics tests", []apiconfig
 	)
 
 	BeforeEach(func() {
-		var err error
-		infra, err = getInfra()
-		Expect(err).NotTo(HaveOccurred())
+		infra = getInfra()
 		opts = infrastructure.DefaultTopologyOptions()
 		felix, client = infrastructure.StartSingleNodeTopology(opts, infra)
 
