@@ -83,6 +83,17 @@ ifeq ($(ARCH),x86_64)
     override ARCH=amd64
 endif
 
+# Build mounts for running in "local build" mode. Mount in libcalico, but null out
+# the vendor directory. This allows an easy build using local development code,
+# assuming that there is a local checkout of libcalico in the same directory as this repo.
+LOCAL_BUILD_MOUNTS ?=
+ifeq ($(LOCAL_BUILD),true)
+LOCAL_BUILD_MOUNTS = -v $(CURDIR)/../libcalico-go:/go/src/$(PACKAGE_NAME)/vendor/github.com/projectcalico/libcalico-go:ro \
+	-v $(CURDIR)/.empty:/go/src/$(PACKAGE_NAME)/vendor/github.com/projectcalico/libcalico-go/vendor:ro \
+	-v $(CURDIR)/../typha:/go/src/$(PACKAGE_NAME)/vendor/github.com/projectcalico/typha:ro \
+	-v $(CURDIR)/.empty:/go/src/$(PACKAGE_NAME)/vendor/github.com/projectcalico/typha/vendor:ro
+endif
+
 # we want to be able to run the same recipe on multiple targets keyed on the image name
 # to do that, we would use the entire image name, e.g. calico/node:abcdefg, as the stem, or '%', in the target
 # however, make does **not** allow the usage of invalid filename characters - like / and : - in a stem, and thus errors out
@@ -111,7 +122,6 @@ register:
 ifneq ($(BUILDARCH),$(ARCH))
 	docker run --rm --privileged multiarch/qemu-user-static:register || true
 endif
-
 
 # list of arches *not* to build when doing *-all
 #    until s390x works correctly
@@ -172,7 +182,10 @@ FV_SLOW_SPEC_THRESH=90
 GIT_COMMIT:=$(shell git rev-parse HEAD || echo '<unknown>')
 GIT_SHORT_COMMIT:=$(shell git rev-parse --short HEAD || echo '<unknown>')
 BUILD_ID:=$(shell git rev-parse HEAD || uuidgen | sed 's/-//g')
-GIT_DESCRIPTION:=$(shell git describe --tags || echo '<unknown>')
+GIT_DESCRIPTION:=$(shell git describe --tags --dirty --always || echo '<unknown>')
+ifeq ($(LOCAL_BUILD),true)
+	GIT_DESCRIPTION = $(shell git describe --tags --dirty --always || echo '<unknown>')-dev-build
+endif
 
 # Calculate a timestamp for any build artefacts.
 DATE:=$(shell date -u +'%FT%T%z')
@@ -215,7 +228,7 @@ endif
 ifdef SSH_AUTH_SOCK
   EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
 endif
-DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
+DOCKER_RUN := mkdir -p .go-pkg-cache && \
                    docker run --rm \
                               --net=host \
                               $(EXTRA_DOCKER_ARGS) \
@@ -224,8 +237,7 @@ DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
                               -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
                               -v $(CURDIR)/.go-pkg-cache:/gocache:rw \
                               -w /go/src/$(PACKAGE_NAME) \
-                              -e GOARCH=$(ARCH) \
-                              $(CALICO_BUILD)
+                              -e GOARCH=$(ARCH)
 
 .PHONY: clean
 clean:
@@ -263,7 +275,7 @@ VENDOR_REMADE := false
 .PHONY: update-vendor
 update-vendor glide.lock:
 	mkdir -p $$HOME/.glide
-	$(DOCKER_GO_BUILD) glide up --strip-vendor
+	$(DOCKER_RUN) $(CALICO_BUILD) glide up --strip-vendor
 	touch vendor/.up-to-date
 	# Optimization: since glide up does the job of glide install, flag to the
 	# vendor target that it doesn't need to do anything.
@@ -274,7 +286,7 @@ update-vendor glide.lock:
 vendor vendor/.up-to-date: glide.lock
 	if ! $(VENDOR_REMADE); then \
 	  mkdir -p $$HOME/.glide && \
-	  $(DOCKER_GO_BUILD) glide install --strip-vendor && \
+	  $(DOCKER_RUN) $(CALICO_BUILD) glide install --strip-vendor && \
 	  touch vendor/.up-to-date; \
 	fi
 
@@ -284,7 +296,7 @@ TYPHA_VERSION?=$(shell git ls-remote git@github.com:tigera/typha-private master 
 
 ## Update typha pin in glide.yaml
 update-typha:
-	    $(DOCKER_GO_BUILD) sh -c '\
+	    $(DOCKER_RUN) $(CALICO_BUILD) sh -c '\
         echo "Updating typha to $(TYPHA_VERSION) from $(TYPHA_REPO)"; \
         export OLD_VER=$$(grep --after 50 typha glide.yaml |grep --max-count=1 --only-matching --perl-regexp "version:\s*\K[^\s]+") ;\
         echo "Old version: $$OLD_VER";\
@@ -301,7 +313,7 @@ bin/calico-felix: bin/calico-felix-$(ARCH)
 bin/calico-felix-$(ARCH): $(SRC_FILES) vendor/.up-to-date
 	@echo Building felix for $(ARCH) on $(BUILDARCH)
 	mkdir -p bin
-	$(DOCKER_GO_BUILD) \
+	$(DOCKER_RUN) $(LOCAL_BUILD_MOUNTS) $(CALICO_BUILD) \
 	   sh -c 'go build -v -i -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/calico-felix" && \
 		( ldd $@ 2>&1 | grep -q -e "Not a valid dynamic program" \
 		-e "not a dynamic executable" || \
@@ -311,7 +323,7 @@ bin/calico-felix-$(ARCH): $(SRC_FILES) vendor/.up-to-date
 bin/calico-felix.exe: $(SRC_FILES) vendor/.up-to-date
 	@echo Building felix for Windows...
 	mkdir -p bin
-	$(DOCKER_GO_BUILD) \
+	$(DOCKER_RUN) $(LOCAL_BUILD_MOUNTS) $(CALICO_BUILD) \
            sh -c 'GOOS=windows go build -v -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/calico-felix" && \
 		( ldd $@ 2>&1 | grep -q "Not a valid dynamic program" || \
 		( echo "Error: $@ was not statically linked"; false ) )'
@@ -504,22 +516,22 @@ static-checks:
 	$(MAKE) check-typha-pins go-meta-linter check-licenses
 
 bin/check-licenses: $(SRC_FILES)
-	$(DOCKER_GO_BUILD) go build -v -i -o $@ "$(PACKAGE_NAME)/check-licenses"
+	$(DOCKER_RUN) $(LOCAL_BUILD_MOUNTS) $(CALICO_BUILD) go build -v -i -o $@ "$(PACKAGE_NAME)/check-licenses"
 
 .PHONY: check-licenses
 check-licenses: check-licenses/dependency-licenses.txt bin/check-licenses
 	@echo Checking dependency licenses
-	$(DOCKER_GO_BUILD) bin/check-licenses
+	$(DOCKER_RUN) $(CALICO_BUILD) bin/check-licenses
 
 check-licenses/dependency-licenses.txt: vendor/.up-to-date
-	$(DOCKER_GO_BUILD) sh -c 'licenses ./cmd/calico-felix > check-licenses/dependency-licenses.txt'
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c 'licenses ./cmd/calico-felix > check-licenses/dependency-licenses.txt'
 
 .PHONY: go-meta-linter
 go-meta-linter: vendor/.up-to-date $(GENERATED_GO_FILES)
 	# Run staticcheck stand-alone since gometalinter runs concurrent copies, which
 	# uses a lot of RAM.
-	$(DOCKER_GO_BUILD) sh -c 'glide nv | xargs -n 3 staticcheck'
-	$(DOCKER_GO_BUILD) gometalinter --deadline=300s \
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c 'glide nv | xargs -n 3 staticcheck'
+	$(DOCKER_RUN) $(CALICO_BUILD) gometalinter --deadline=300s \
 	                                --disable-all \
 	                                --enable=goimports \
 	                                --vendor ./...
@@ -527,10 +539,9 @@ go-meta-linter: vendor/.up-to-date $(GENERATED_GO_FILES)
 # Run go fmt on all our go files.
 .PHONY: go-fmt goimports fix
 fix go-fmt goimports:
-	$(DOCKER_GO_BUILD) sh -c 'glide nv -x | \
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c 'glide nv -x | \
       grep -v -e "^\\.$$" | \
       xargs goimports -w -local github.com/projectcalico/'
-
 
 .PHONY: check-typha-pins
 check-typha-pins: vendor/.up-to-date
@@ -549,7 +560,7 @@ check-typha-pins: vendor/.up-to-date
 
 .PHONY: pre-commit
 pre-commit:
-	$(DOCKER_GO_BUILD) git-hooks/pre-commit-in-container
+	$(DOCKER_RUN) $(CALICO_BUILD) git-hooks/pre-commit-in-container
 
 .PHONY: install-git-hooks
 ## Install Git hooks
@@ -570,7 +581,7 @@ foss-checks: vendor
 .PHONY: ut
 ut combined.coverprofile: vendor/.up-to-date $(SRC_FILES)
 	@echo Running Go UTs.
-	$(DOCKER_GO_BUILD) ./utils/run-coverage $(GINKGO_ARGS)
+	$(DOCKER_RUN) $(LOCAL_BUILD_MOUNTS) $(CALICO_BUILD) ./utils/run-coverage $(GINKGO_ARGS)
 
 ###############################################################################
 # FV Tests
@@ -578,7 +589,7 @@ ut combined.coverprofile: vendor/.up-to-date $(SRC_FILES)
 fv/fv.test: vendor/.up-to-date $(SRC_FILES)
 	# We pre-build the FV test binaries so that we can run them
 	# outside a container and allow them to interact with docker.
-	$(DOCKER_GO_BUILD) go test ./$(shell dirname $@) -c --tags fvtests -o $@
+	$(DOCKER_RUN) $(LOCAL_BUILD_MOUNTS) $(CALICO_BUILD) go test ./$(shell dirname $@) -c --tags fvtests -o $@
 
 .PHONY: fv
 # runs all of the fv tests
@@ -652,7 +663,7 @@ k8sfv-test-existing-felix: bin/k8sfv.test
 
 bin/k8sfv.test: $(K8SFV_GO_FILES) vendor/.up-to-date
 	@echo Building $@...
-	$(DOCKER_GO_BUILD) \
+	$(DOCKER_RUN) $(LOCAL_BUILD_MOUNTS) $(CALICO_BUILD) \
 	    sh -c 'go test -c -o $@ ./k8sfv && \
 		( ldd $@ 2>&1 | grep -q -e "Not a valid dynamic program" \
 		-e "not a dynamic executable" || \
@@ -693,19 +704,19 @@ stop-grafana:
 bin/iptables-locker: $(SRC_FILES) vendor/.up-to-date
 	@echo Building iptables-locker...
 	mkdir -p bin
-	$(DOCKER_GO_BUILD) \
+	$(DOCKER_RUN) $(LOCAL_BUILD_MOUNTS) $(CALICO_BUILD) \
 	    sh -c 'go build -v -i -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/fv/iptables-locker"'
 
 bin/test-workload: $(SRC_FILES) vendor/.up-to-date
 	@echo Building test-workload...
 	mkdir -p bin
-	$(DOCKER_GO_BUILD) \
+	$(DOCKER_RUN) $(LOCAL_BUILD_MOUNTS) $(CALICO_BUILD) \
 	    sh -c 'go build -v -i -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/fv/test-workload"'
 
 bin/test-connection: $(SRC_FILES) vendor/.up-to-date
 	@echo Building test-connection...
 	mkdir -p bin
-	$(DOCKER_GO_BUILD) \
+	$(DOCKER_RUN) $(LOCAL_BUILD_MOUNTS) $(CALICO_BUILD) \
 	    sh -c 'go build -v -i -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/fv/test-connection"'
 
 ###############################################################################
@@ -733,7 +744,6 @@ ifndef BRANCH_NAME
 endif
 	$(MAKE) tag-images-all push-all push-manifests push-non-manifests IMAGETAG=$(BRANCH_NAME) EXCLUDEARCH="$(EXCLUDEARCH)"
 	$(MAKE) tag-images-all push-all push-manifests push-non-manifests IMAGETAG=$(shell git describe --tags --dirty --always --long) EXCLUDEARCH="$(EXCLUDEARCH)"
-
 
 ###############################################################################
 # Release
@@ -795,9 +805,6 @@ release-verify: release-prereqs
 	  fi \
 	done; \
 
-	# Run FV tests against the produced image. We only run the subset tagged as release tests.
-	$(MAKE) BUILD_IMAGE=$(BUILD_IMAGE):$(VERSION) GINKGO_FOCUS="Release" fv
-
 ## Generates release notes based on commits in this version.
 release-notes: release-prereqs
 	mkdir -p dist
@@ -847,6 +854,9 @@ release-prereqs:
 ifndef VERSION
 	$(error VERSION is undefined - run using make release VERSION=vX.Y.Z)
 endif
+ifdef LOCAL_BUILD
+	$(error LOCAL_BUILD must not be set for a release)
+endif
 
 ###############################################################################
 # Developer helper scripts (not used by build or test)
@@ -854,12 +864,12 @@ endif
 .PHONY: ut-no-cover
 ut-no-cover: vendor/.up-to-date $(SRC_FILES)
 	@echo Running Go UTs without coverage.
-	$(DOCKER_GO_BUILD) ginkgo -r -skipPackage fv,k8sfv,windows $(GINKGO_ARGS)
+	$(DOCKER_RUN) $(CALICO_BUILD) ginkgo -r -skipPackage fv,k8sfv,windows $(GINKGO_ARGS)
 
 .PHONY: ut-watch
 ut-watch: vendor/.up-to-date $(SRC_FILES)
 	@echo Watching go UTs for changes...
-	$(DOCKER_GO_BUILD) ginkgo watch -r -skipPackage fv,k8sfv,windows $(GINKGO_ARGS)
+	$(DOCKER_RUN) $(CALICO_BUILD) ginkgo watch -r -skipPackage fv,k8sfv,windows $(GINKGO_ARGS)
 
 # Launch a browser with Go coverage stats for the whole project.
 .PHONY: cover-browser
@@ -873,23 +883,23 @@ cover-report: combined.coverprofile
 	@echo
 	@echo ======== All coverage =========
 	@echo
-	@$(DOCKER_GO_BUILD) sh -c 'go tool cover -func combined.coverprofile | \
+	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c 'go tool cover -func combined.coverprofile | \
 	                           sed 's=$(PACKAGE_NAME)/==' | \
 	                           column -t'
 	@echo
 	@echo ======== Missing coverage only =========
 	@echo
-	@$(DOCKER_GO_BUILD) sh -c "go tool cover -func combined.coverprofile | \
+	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c "go tool cover -func combined.coverprofile | \
 	                           sed 's=$(PACKAGE_NAME)/==' | \
 	                           column -t | \
 	                           grep -v '100\.0%'"
 
 bin/calico-felix.transfer-url: bin/calico-felix
-	$(DOCKER_GO_BUILD) sh -c 'curl --upload-file bin/calico-felix https://transfer.sh/calico-felix > $@'
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c 'curl --upload-file bin/calico-felix https://transfer.sh/calico-felix > $@'
 
 .PHONY: patch-script
 patch-script: bin/calico-felix.transfer-url
-	$(DOCKER_GO_BUILD) bash -c 'utils/make-patch-script.sh $$(cat bin/calico-felix.transfer-url)'
+	$(DOCKER_RUN) $(CALICO_BUILD) bash -c 'utils/make-patch-script.sh $$(cat bin/calico-felix.transfer-url)'
 
 # Generate a diagram of Felix's internal calculation graph.
 docs/calc.pdf: docs/calc.dot
