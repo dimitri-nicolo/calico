@@ -1,5 +1,5 @@
-hash: 63e5c327e1923fb6916bafd775b5fe665031e819c16946f582cf41648d25b76a
-updated: 2018-09-24T17:42:58.278752605Z
+hash: 052e00a4b25b1c91de694b447d5569234f7f35a5206f7870bb1a50ef47b71605
+updated: 2018-10-25T09:37:58.866675176Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -46,7 +46,7 @@ imports:
 - name: github.com/go-openapi/jsonpointer
   version: 46af16f9f7b149af66e5d1bd010e3574dc06de98
 - name: github.com/go-openapi/jsonreference
-  version: 1c6a3fa339f2743b7b0fd2b842fc455eca2fa9eb
+  version: 8483a886a90412cd6858df4ea3483dce9c8e35a3
 - name: github.com/go-openapi/spec
   version: 384415f06ee238aae1df5caad877de6ceac3a5c4
 - name: github.com/go-openapi/swag
@@ -130,7 +130,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: ee5bbe1739c678367b21fbadd204473cf22b84b4
+  version: 63c70a878ec7855cb2fc1dc08bb47581c271bc5c
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
@@ -166,14 +166,14 @@ imports:
   - lib/validator/v3
   - lib/watch
 - name: github.com/projectcalico/typha
-  version: 9fcc9d66bbeea7938a3f0e204144cb2c1f324efe
+  version: 9ac91b546227bc3143a139219ee6077aef09936f
   repo: git@github.com:tigera/typha-private.git
   subpackages:
   - pkg/syncclient
   - pkg/syncproto
   - pkg/tlsutils
 - name: github.com/prometheus/client_golang
-  version: f69c853d21c15596929fa9126ba211247e7dca95
+  version: 16f375c74db6ccf880e1cd9c6c6087a6d58e5d12
   subpackages:
   - prometheus
   - prometheus/internal
@@ -182,7 +182,7 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: c7de2306084e37d54b8be01f3541a8464345e9a5
+  version: 7e9e6cabbd393fc208072eedef99188d0ce788b6
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
@@ -202,7 +202,7 @@ imports:
 - name: github.com/spf13/pflag
   version: 583c0c0531f06d5278b7d917446061adc344b5cd
 - name: golang.org/x/crypto
-  version: 0e37d006457bf46f9e6692014ba72ef82c33022c
+  version: 49796115aa4b964c318aad4f3084fdb41e9aa067
   subpackages:
   - ssh/terminal
 - name: golang.org/x/net
