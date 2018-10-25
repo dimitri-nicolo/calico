@@ -27,16 +27,16 @@ type Interface interface {
 	// in order to satisfy the assignment.  An error will be returned if the IP address
 	// is already assigned, or if StrictAffinity is enabled and the address is within
 	// a block that does not have affinity for the given host.
-	AssignIP(ctx context.Context, args AssignIPArgs, windowsHost bool) error
+	AssignIP(ctx context.Context, args AssignIPArgs) error
 
 	// AutoAssign automatically assigns one or more IP addresses as specified by the
 	// provided AutoAssignArgs.  AutoAssign returns the list of the assigned IPv4 addresses,
 	// and the list of the assigned IPv6 addresses.
-	AutoAssign(ctx context.Context, args AutoAssignArgs, windowsHost bool) ([]cnet.IP, []cnet.IP, error)
+	AutoAssign(ctx context.Context, args AutoAssignArgs) ([]cnet.IP, []cnet.IP, error)
 
 	// ReleaseIPs releases any of the given IP addresses that are currently assigned,
 	// so that they are available to be used in another assignment.
-	ReleaseIPs(ctx context.Context, ips []cnet.IP, windowsHost bool) ([]cnet.IP, error)
+	ReleaseIPs(ctx context.Context, ips []cnet.IP) ([]cnet.IP, error)
 
 	// GetAssignmentAttributes returns the attributes stored with the given IP address
 	// upon assignment.
@@ -49,26 +49,26 @@ type Interface interface {
 	// ReleaseByHandle releases all IP addresses that have been assigned
 	// using the provided handle.  Returns an error if no addresses
 	// are assigned with the given handle.
-	ReleaseByHandle(ctx context.Context, handleID string, windowsHost bool) error
+	ReleaseByHandle(ctx context.Context, handleID string) error
 
 	// ClaimAffinity claims affinity to the given host for all blocks
 	// within the given CIDR.  The given CIDR must fall within a configured
 	// pool. If an empty string is passed as the host, then the value returned by os.Hostname is used.
-	ClaimAffinity(ctx context.Context, cidr cnet.IPNet, host string, windowsHost bool) ([]cnet.IPNet, []cnet.IPNet, error)
+	ClaimAffinity(ctx context.Context, cidr cnet.IPNet, host string) ([]cnet.IPNet, []cnet.IPNet, error)
 
 	// ReleaseAffinity releases affinity for all blocks within the given CIDR
 	// on the given host.  If an empty string is passed as the host, then the
 	// value returned by os.Hostname will be used.
-	ReleaseAffinity(ctx context.Context, cidr cnet.IPNet, host string, windowsHost bool) error
+	ReleaseAffinity(ctx context.Context, cidr cnet.IPNet, host string) error
 
 	// ReleaseHostAffinities releases affinity for all blocks that are affine
 	// to the given host.  If an empty string is passed as the host, the value returned by
 	// os.Hostname will be used.
-	ReleaseHostAffinities(ctx context.Context, host string, windowsHost bool) error
+	ReleaseHostAffinities(ctx context.Context, host string) error
 
 	// ReleasePoolAffinities releases affinity for all blocks within
 	// the specified pool across all hosts.
-	ReleasePoolAffinities(ctx context.Context, pool cnet.IPNet, windowsHost bool) error
+	ReleasePoolAffinities(ctx context.Context, pool cnet.IPNet) error
 
 	// GetIPAMConfig returns the global IPAM configuration.  If no IPAM configuration
 	// has been set, returns a default configuration with StrictAffinity disabled
@@ -83,5 +83,5 @@ type Interface interface {
 	// and removes all host-specific IPAM data from the datastore.
 	// RemoveIPAMHost does not release any IP addresses claimed on the given host.
 	// If an empty string is passed as the host then the value returned by os.Hostname is used.
-	RemoveIPAMHost(ctx context.Context, host string, windowsHost bool) error
+	RemoveIPAMHost(ctx context.Context, host string) error
 }
