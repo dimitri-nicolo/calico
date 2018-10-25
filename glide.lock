@@ -1,5 +1,5 @@
-hash: 56d2fb7627ed3f7ccfe0b69b8d2e64d89934b3817effefce0d52a2dd9a1d0a00
-updated: 2018-10-10T05:08:22.305484873Z
+hash: 3fd3e793e461f5004008f5ab7ac6a410fd83f3a83f0ca82687b4cdcc23ea3b21
+updated: 2018-10-25T10:46:40.493381447Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -94,7 +94,7 @@ imports:
 - name: github.com/go-openapi/jsonpointer
   version: 46af16f9f7b149af66e5d1bd010e3574dc06de98
 - name: github.com/go-openapi/jsonreference
-  version: 1c6a3fa339f2743b7b0fd2b842fc455eca2fa9eb
+  version: 3fb327e6747da3043567ee86abd02bb6376b6be2
 - name: github.com/go-openapi/spec
   version: 384415f06ee238aae1df5caad877de6ceac3a5c4
 - name: github.com/go-openapi/swag
@@ -139,6 +139,8 @@ imports:
   version: 787624de3eb7bd915c329cba748687a3b22666a6
   subpackages:
   - diskcache
+- name: github.com/hashicorp/go-version
+  version: b5a281d3160aa11950a6182bd9a9dc2cb1e02d50
 - name: github.com/hashicorp/golang-lru
   version: a0d98a5f288019575c6d1f4bb1573fef2d1fcdc4
   subpackages:
@@ -159,7 +161,7 @@ imports:
 - name: github.com/kardianos/osext
   version: ae77be60afb1dcacde03767a8c37337fad28ac14
 - name: github.com/kelseyhightower/confd
-  version: 6bc3fef5750f6d10ffadd683722ae13889e5f10f
+  version: ed25523facbdb0863c5a49eb03c9c280bd2cb4c2
   repo: git@github.com:tigera/confd-private.git
   subpackages:
   - pkg/backends
@@ -170,7 +172,7 @@ imports:
   - pkg/resource/template
   - pkg/run
 - name: github.com/kelseyhightower/envconfig
-  version: dd1402a4d99de9ac2f396cd6fcb957bc2c695ec1
+  version: f611eb38b3875cc3bd991ca91c51d06446afa14c
 - name: github.com/kelseyhightower/memkv
   version: 892bfd468afa0fa476556e7bd7734a087cda08b3
 - name: github.com/mailru/easyjson
@@ -244,7 +246,7 @@ imports:
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
 - name: github.com/projectcalico/felix
-  version: 0a5de61c409b8d4b61ac9024aa1b7e88e4c8ccb4
+  version: ee2df11cf90714fc88af95a61547a0ada5fd7c6d
   repo: git@github.com:tigera/felix-private.git
   subpackages:
   - buildinfo
@@ -291,7 +293,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: c884251be2b5c37f3abe7f0bfdf9933a408d1931
+  version: 63c70a878ec7855cb2fc1dc08bb47581c271bc5c
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
@@ -345,7 +347,7 @@ imports:
   subpackages:
   - binder
 - name: github.com/projectcalico/typha
-  version: 9fcc9d66bbeea7938a3f0e204144cb2c1f324efe
+  version: 9ac91b546227bc3143a139219ee6077aef09936f
   repo: git@github.com:tigera/typha-private.git
   subpackages:
   - pkg/syncclient
@@ -471,7 +473,7 @@ imports:
   subpackages:
   - rate
 - name: google.golang.org/appengine
-  version: ae0ab99deb4dc413a2b4bd6c8bdd0eb67f1e4d06
+  version: b1f26356af11148e710935ed1ac8a7f5702c7612
   subpackages:
   - internal
   - internal/app_identity

@@ -39,6 +39,19 @@ ifeq ($(ARCH),x86_64)
     override ARCH=amd64
 endif
 
+# Build mounts for running in "local build" mode. Mount in libcalico, confd, and felix but null out
+# their respective vendor directories. This allows an easy build of calico/node using local development code,
+# assuming that there is a local checkout of felix, confd, and libcalico in the same directory as the node repo.
+LOCAL_BUILD_MOUNTS ?=
+ifeq ($(LOCAL_BUILD),true)
+LOCAL_BUILD_MOUNTS = -v $(CURDIR)/../libcalico-go:/go/src/$(PACKAGE_NAME)/vendor/github.com/projectcalico/libcalico-go:ro \
+	-v $(CURDIR)/.empty:/go/src/$(PACKAGE_NAME)/vendor/github.com/projectcalico/libcalico-go/vendor:ro \
+	-v $(CURDIR)/../confd:/go/src/$(PACKAGE_NAME)/vendor/github.com/projectcalico/confd:ro \
+	-v $(CURDIR)/.empty:/go/src/$(PACKAGE_NAME)/vendor/github.com/projectcalico/confd/vendor:ro \
+	-v $(CURDIR)/../felix:/go/src/$(PACKAGE_NAME)/vendor/github.com/projectcalico/felix:ro \
+	-v $(CURDIR)/.empty:/go/src/$(PACKAGE_NAME)/vendor/github.com/projectcalico/felix/vendor:ro
+endif
+
 # we want to be able to run the same recipe on multiple targets keyed on the image name
 # to do that, we would use the entire image name, e.g. calico/node:abcdefg, as the stem, or '%', in the target
 # however, make does **not** allow the usage of invalid filename characters - like / and : - in a stem, and thus errors out
@@ -91,8 +104,11 @@ CALICO_BUILD?=calico/go-build:$(GO_BUILD_VER)
 DOCKER_CONFIG ?= $(HOME)/.docker/config.json
 
 # Version of this repository as reported by git.
-CALICO_GIT_VER=v3.2.0
+CALICO_GIT_VER=v3.3.0
 CNX_GIT_VER := $(shell git describe --tags --dirty --always)
+ifeq ($(LOCAL_BUILD),true)
+	CNX_GIT_VER = $(shell git describe --tags --dirty --always)-dev-build
+endif
 
 # Versions and location of dependencies used in the build.
 BIRD_VER?=v0.3.2-13-g17d14e60
@@ -172,12 +188,15 @@ vendor: glide.lock
 		$(CALICO_BUILD) glide install -strip-vendor
 
 ## Default the repos and versions but allow them to be overridden
+LIBCALICO_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
 LIBCALICO_REPO?=github.com/tigera/libcalico-go-private
-LIBCALICO_VERSION?=$(shell git ls-remote git@github.com:tigera/libcalico-go-private master 2>/dev/null | cut -f 1)
+LIBCALICO_VERSION?=$(shell git ls-remote git@github.com:tigera/libcalico-go-private $(LIBCALICO_BRANCH) 2>/dev/null | cut -f 1)
+FELIX_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
 FELIX_REPO?=github.com/tigera/felix-private
-FELIX_VERSION?=$(shell git ls-remote git@github.com:tigera/felix-private master 2>/dev/null | cut -f 1)
+FELIX_VERSION?=$(shell git ls-remote git@github.com:tigera/felix-private $(FELIX_BRANCH) 2>/dev/null | cut -f 1)
+CONFD_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
 CONFD_REPO?=github.com/tigera/confd-private
-CONFD_VERSION?=$(shell git ls-remote git@github.com:tigera/confd-private master 2>/dev/null | cut -f 1)
+CONFD_VERSION?=$(shell git ls-remote git@github.com:tigera/confd-private $(CONFD_BRANCH) 2>/dev/null | cut -f 1)
 
 ### Update pins in glide.yaml
 update-felix-confd-libcalico:
@@ -206,7 +225,7 @@ update-felix-confd-libcalico:
             if ! grep "\[WARN\]" $$OUTPUT; then true; else false; fi; \
           fi'
 
-$(NODE_CONTAINER_BINARY): vendor
+$(NODE_CONTAINER_BINARY): vendor $(SRCFILES)
 	docker run --rm \
 		-e GOARCH=$(ARCH) \
 		-e GOOS=linux \
@@ -214,6 +233,7 @@ $(NODE_CONTAINER_BINARY): vendor
 		-v $(CURDIR)/.go-pkg-cache:/go-cache/:rw \
 		-e GOCACHE=/go-cache \
 		-v $(CURDIR):/go/src/$(PACKAGE_NAME) \
+		$(LOCAL_BUILD_MOUNTS) \
 		-w /go/src/$(PACKAGE_NAME) \
 		$(CALICO_BUILD) go build -v -o $@ $(LDFLAGS) ./cmd/calico-node/main.go
 
@@ -323,6 +343,7 @@ foss-checks: vendor
 fv: vendor run-k8s-apiserver
 	docker run --rm \
 	-v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
+	$(LOCAL_BUILD_MOUNTS) \
 	-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
 	-e ETCD_ENDPOINTS=http://$(LOCAL_IP_ENV):2379 \
 	--net=host \
@@ -533,7 +554,7 @@ endif
 ## Verifies the release artifacts produces by `make release-build` are correct.
 release-verify: release-prereqs
 	# Check the reported version is correct for each release artifact.
-	if ! docker run $(BUILD_IMAGE):$(VERSION)-$(ARCH) versions | grep 'node $(VERSION)'; then echo "Reported version:" `docker run $(BUILD_IMAGE):$(VERSION)-$(ARCH) versions` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
+	if ! docker run $(BUILD_IMAGE):$(VERSION)-$(ARCH) versions | grep '$(VERSION)'; then echo "Reported version:" `docker run $(BUILD_IMAGE):$(VERSION)-$(ARCH) versions` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
 
 ## Generates release notes based on commits in this version.
 release-notes: release-prereqs
@@ -579,6 +600,9 @@ node-test-at: release-prereqs
 release-prereqs:
 ifndef VERSION
 	$(error VERSION is undefined - run using make release VERSION=vX.Y.Z)
+endif
+ifdef LOCAL_BUILD
+	$(error LOCAL_BUILD must not be set for a release)
 endif
 
 ###############################################################################
