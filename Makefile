@@ -30,12 +30,35 @@ VERSION_FLAGS=-X $(PACKAGE_NAME)/calicoq/commands.VERSION=$(CALICOQ_VERSION) \
 BUILD_LDFLAGS=-ldflags "$(VERSION_FLAGS)"
 RELEASE_LDFLAGS=-ldflags "$(VERSION_FLAGS) -s -w"
 
-vendor:
-	glide install --strip-vendor
+# Allow libcalico-go and the ssh auth sock to be mapped into the build container.
+ifdef LIBCALICOGO_PATH
+  EXTRA_DOCKER_ARGS += -v $(LIBCALICOGO_PATH):/go/src/github.com/projectcalico/libcalico-go:ro
+endif
+ifdef SSH_AUTH_SOCK
+  EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
+endif
+
+DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
+                   docker run --rm \
+                              --net=host \
+                              $(EXTRA_DOCKER_ARGS) \
+                              -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+                              -v $${PWD}:/go/src/$(PACKAGE_NAME):rw \
+                              -v $${PWD}/.go-pkg-cache:/go/pkg:rw \
+                              -w /go/src/$(PACKAGE_NAME) \
+                              $(GO_BUILD)
+
+.PHONY: vendor
+vendor vendor/.up-to-date: glide.lock
+	mkdir -p $$HOME/.glide
+	$(DOCKER_GO_BUILD) glide install --strip-vendor
+	touch vendor/.up-to-date
 
 .PHONY: update-vendor
 update-vendor:
-	glide up --strip-vendor
+	mkdir -p $$HOME/.glide
+	$(DOCKER_GO_BUILD) glide up --strip-vendor
+	touch vendor/.up-to-date
 
 foss-checks: vendor
 	@echo Running $@...
