@@ -83,9 +83,9 @@ func DoNetworking(
 	if desiredVethName != "" {
 		hostVethName = desiredVethName
 	}
-
-	contVethMAC = "00:15:5D:01:02:03"
-	conf.IPAM.Subnet = "10.244.194.192/26"
+	_, subNet,_ := net.ParseCIDR(result.IPs[0].Address.String())
+	logger.Infof("DEBUG: Inside utils/network_windows.go: DoNetworking: Network: %v subnet.IP = %v IP in result: %v and Mask: %v", subNet, subNet.IP, result.IPs[0].Address.IP, result.IPs[0].Address.Mask)
+	conf.IPAM.Subnet = subNet.String()
 
 	n, _, err := loadNetConf(args.StdinData)
 	if err != nil {
@@ -98,11 +98,12 @@ func DoNetworking(
 	/* checking if HNS network exists.*/
 	createNetwork := true
 	addressPrefix  := conf.IPAM.Subnet
-	gatewayAddress := GetPodGW(conf.IPAM.Subnet)
+	gatewayAddress := GetGW (subNet)
+	logger.Infof("DEBUG: addressPrefix: %v gatewayAddress %v, conf.IPAM.Subnet= %s",addressPrefix, gatewayAddress, conf.IPAM.Subnet)
 	hnsNetwork,err := hcsshim.GetHNSNetworkByName(networkName)
 	if hnsNetwork != nil {
 		for _, subnet := range hnsNetwork.Subnets {
-			if subnet.AddressPrefix == addressPrefix && subnet.GatewayAddress == gatewayAddress {
+			if subnet.AddressPrefix == addressPrefix && subnet.GatewayAddress == string(gatewayAddress) {
                                 createNetwork = false
                                 logger.Infof("Found existing HNS network [%+v]", hnsNetwork)
                                 break
@@ -138,7 +139,7 @@ func DoNetworking(
 			return hostVethName, contVethMAC, err
 		}
 
-		logger.Infof("Attempting to create HNS network, request: %v", string(reqStr))
+		logger.Infof("DEBUG: Attempting to create HNS network, request: %v", string(reqStr))
 		if hnsNetwork, err = hcsshim.HNSNetworkRequest("POST", "", string(reqStr)); err != nil {
 			fmt.Errorf("unable to create network [%v], error: %v", networkName, err)
 			return hostVethName, contVethMAC, err
@@ -149,10 +150,11 @@ func DoNetworking(
 	epName := networkName + "_ep"
 	var endpointToAttach *hcsshim.HNSEndpoint
 	createEndpoint := true
-	podGatewayAddress := "10.244.194.194"
+	podGatewayAddress := GetGW(subNet)
+	logger.Infof("DEBUG: podGatewayAddress = %v", podGatewayAddress)
 	/* checking if HNS Endpoint exists.*/
 	hnsEndpoint,err := hcsshim.GetHNSEndpointByName(epName)
-	if hnsEndpoint != nil && hnsEndpoint.IPAddress.String() == podGatewayAddress {
+	if hnsEndpoint != nil && hnsEndpoint.IPAddress.String() == string(podGatewayAddress) {
 		endpointToAttach = hnsEndpoint
 		createEndpoint = false
 		logger.Infof("Endpoint exists %v ", hnsEndpoint)
@@ -178,17 +180,17 @@ func DoNetworking(
 		/* create new endpoint */
 		hnsEndpoint = &hcsshim.HNSEndpoint{
 			Name:           epName,
-			IPAddress:      net.ParseIP("10.244.194.194"),
+			IPAddress:      podGatewayAddress,
 			VirtualNetwork: hnsNetwork.Id,
 		}
 
-		logger.Infof("Attempting to create bridge endpoint [%+v]", hnsEndpoint)
+		logger.Infof("DEBUG: Attempting to create bridge endpoint [%+v]", hnsEndpoint)
 		hnsEndpoint, err = hnsEndpoint.Create()
 		if err != nil {
 			fmt.Errorf("unable to create bridge endpoint [%v], error: %v", epName, err)
 			return hostVethName, contVethMAC, err
 		}
-		logger.Infof("Created bridge endpoint [%v] as %+v",epName, hnsEndpoint)
+		logger.Infof("DEBUG: Created bridge endpoint [%v] as %+v",epName, hnsEndpoint)
 
 		/* Attach endpoint to host */
 		endpointToAttach = hnsEndpoint
@@ -196,7 +198,7 @@ func DoNetworking(
                         fmt.Errorf("unable to hot attach bridge endpoint [%v] to host compartment, error: %v", epName, err)
                         return hostVethName, contVethMAC, err
                 }
-                logger.Infof("Attached bridge endpoint [%v] to host", epName)
+                logger.Infof("DEBUG:Attached bridge endpoint [%v] to host", epName)
 	}
 
 	netHelper := netsh.New(nil)
@@ -247,7 +249,7 @@ func DoNetworking(
 	/* Create endpoint for container */
 	//endpointName := hns.ConstructEndpointName(args.ContainerID, args.Netns, n.Name)
 	endpointName := n.Name + "_container"
-	logger.Infof("Attempting to create HNS endpoint name : %s for container", endpointName)
+	logger.Infof("DEBUG:Attempting to create HNS endpoint name : %s for container", endpointName)
 	hnsEndpoint_cont, err := hns.ProvisionEndpoint(endpointName, hnsNetwork.Id, args.ContainerID, func() (*hcsshim.HNSEndpoint, error) {
 		if len(n.IPMasqNetwork) != 0 {
 			n.ApplyOutboundNatPolicy(n.IPMasqNetwork)
@@ -256,17 +258,21 @@ func DoNetworking(
 		hnsEP := &hcsshim.HNSEndpoint{
 			Name:           endpointName,
 			VirtualNetwork: hnsNetwork.Id,
-			GatewayAddress: "10.244.194.194",
-			IPAddress:      net.ParseIP("10.244.194.200"),
+			GatewayAddress: podGatewayAddress.String(),
+			IPAddress:      result.IPs[0].Address.IP,
 		}
 		return hnsEP, nil
 	})
 	logger.Infof("Endpoint to container created! %v", hnsEndpoint_cont)
+	contVethMAC = hnsEndpoint_cont.MacAddress
 	return hostVethName, contVethMAC, err
 }
 
-func GetPodGW(PodCIDR string) string {
-	return "10.244.194.193"
+func GetGW(PodCIDR *net.IPNet) net.IP {
+        gwaddr := PodCIDR.IP.To4()
+        gwaddr[3]++
+        fmt.Printf("DEBUG: returning  gwaddr = %v",gwaddr)
+        return gwaddr
 }
 
 // SetupRoutes sets up the routes for the host side of the veth pair.

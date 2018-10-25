@@ -196,7 +196,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 			if len(assignedV4) != num4 {
 				return fmt.Errorf("failed to request %d IPv4 addresses. IPAM allocated only %d", num4, len(assignedV4))
 			}
-			ipV4Network := net.IPNet{IP: assignedV4[0].IP, Mask: net.CIDRMask(32, 32)}
+			ipV4Network := net.IPNet{IP: assignedV4[0].IP, Mask: assignedV4[0].Mask}
 			r.IPs = append(r.IPs, &current.IPConfig{
 				Version: "4",
 				Address: ipV4Network,
@@ -207,7 +207,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 			if len(assignedV6) != num6 {
 				return fmt.Errorf("failed to request %d IPv6 addresses. IPAM allocated only %d", num6, len(assignedV6))
 			}
-			ipV6Network := net.IPNet{IP: assignedV6[0].IP, Mask: net.CIDRMask(128, 128)}
+			ipV6Network := net.IPNet{IP: assignedV6[0].IP, Mask: assignedV6[0].Mask}
 			r.IPs = append(r.IPs, &current.IPConfig{
 				Version: "6",
 				Address: ipV6Network,
