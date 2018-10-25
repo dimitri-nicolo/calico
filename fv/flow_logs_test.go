@@ -811,6 +811,7 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 			expectation.labels = false
 			expectation.aggregationForAllowed = ByPodPrefix
 			expectation.aggregationForDenied = BySourcePort
+			expectation.policies = false
 		})
 
 		Context("with custom log group name", func() {
