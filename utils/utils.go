@@ -14,6 +14,7 @@
 package utils
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -22,6 +23,7 @@ import (
 	"net"
 	"os"
 	"regexp"
+	"runtime"
 	"strings"
 
 	"github.com/containernetworking/cni/pkg/skel"
@@ -196,7 +198,7 @@ func ReplaceHostLocalIPAMPodCIDRs(logger *logrus.Entry, stdinData map[string]int
 }
 
 func replaceHostLocalIPAMPodCIDR(logger *logrus.Entry, rawIpamData interface{}, getPodCidr func() (string, error)) error {
-	logrus.WithField("ipamData", rawIpamData).Debug("Examining IPAM data for usePodCidr")
+	logrus.WithField("ipamData", rawIpamData).Debug("Examining IPAM data")
 	ipamData, ok := rawIpamData.(map[string]interface{})
 	if !ok {
 		return fmt.Errorf("failed to parse host-local IPAM data; was expecting a dict, not: %v", rawIpamData)
@@ -211,9 +213,125 @@ func replaceHostLocalIPAMPodCIDR(logger *logrus.Entry, rawIpamData interface{}, 
 		}
 		logger.WithField("podCidr", podCidr).Info("Fetched podCidr")
 		ipamData["subnet"] = podCidr
+		subnet = podCidr
 		fmt.Fprintf(os.Stderr, "Calico CNI passing podCidr to host-local IPAM: %s\n", podCidr)
 	}
+
+	if runtime.GOOS == "windows" {
+		fmt.Fprint(os.Stderr, "Updating host-local IPAM configuration to reserve IPs for Windows bridge \n")
+		if len(subnet) > 0 {
+			err := UpdateHostLocalIPAMDataForWindows(subnet, ipamData)
+			if err != nil {
+				return err
+			}
+		}
+	}
 	return nil
+}
+
+//This function will update host-local Ipam data based on input from cni.conf
+func UpdateHostLocalIPAMDataForWindows(subnet string, ipamData map[string]interface{}) error {
+	//Checks whether the ip is valid or not
+	ip, ipnet, err := net.ParseCIDR(subnet)
+	if err != nil {
+		return err
+	}
+	//process only if we have ipv4 subnet
+	if ip.To4() != nil {
+		//get Expected start and end range for given CIDR
+		expStartRange, expEndRange := getIPRanges(ip, ipnet)
+		//validate ranges given in cni.conf
+		rangeStart, _ := ipamData["rangeStart"].(string)
+		startRange, err := validateRangeOrSetDefault(rangeStart, expStartRange, ipnet, true)
+		if err != nil {
+			return err
+		}
+		ipamData["rangeStart"] = startRange
+
+		rangeEnd, _ := ipamData["rangeEnd"].(string)
+		endRange, err := validateRangeOrSetDefault(rangeEnd, expEndRange, ipnet, false)
+		if err != nil {
+			return err
+		}
+		ipamData["rangeEnd"] = endRange
+	}
+	return nil
+}
+
+func getIPRanges(ip net.IP, ipnet *net.IPNet) (string, string) {
+
+	ip = ip.To4()
+	// Mask the address
+	ip.Mask(ipnet.Mask)
+	// OR in the start address.
+	ip[len(ip)-1] |= 3
+	startRange := ip.String()
+	// Now find the broadbcast address and decrement by 1 to get endRange
+	for i := 0; i < len(ip); i++ {
+		ip[i] |= (^ipnet.Mask[i])
+	}
+	ip[len(ip)-1] -= 1
+
+	endRange := ip.String()
+	return startRange, endRange
+}
+
+func validateStartRange(startRange net.IP, expStartRange net.IP) (net.IP, error) {
+	//check if we have ipv4 ip address
+	startRange = startRange.To4()
+	expStartRange = expStartRange.To4()
+	if startRange == nil || expStartRange == nil {
+		return nil, fmt.Errorf("Invalid ip address")
+	}
+	if bytes.Compare([]byte(startRange), []byte(expStartRange)) < 0 {
+		//if ip is not in given range,return default
+		return expStartRange, nil
+	}
+	return startRange, nil
+
+}
+
+func validateEndRange(endRange net.IP, expEndRange net.IP) (net.IP, error) {
+	//check if we have ipv4 ip address
+	endRange = endRange.To4()
+	expEndRange = expEndRange.To4()
+	if endRange == nil || expEndRange == nil {
+		return nil, fmt.Errorf("Invalid ip address")
+	}
+	if bytes.Compare([]byte(endRange), []byte(expEndRange)) > 0 {
+		//if ip is not in given range,return default
+		return expEndRange, nil
+	}
+	return endRange, nil
+}
+
+// This function will validate and return an ip within expected start/end range
+func validateRangeOrSetDefault(rangeData string, expRange string, ipnet *net.IPNet, isRangeStart bool) (string, error) {
+	var parsedIP *cnet.IP
+	var expRangeIP *cnet.IP
+	var ip net.IP
+	//Parse IP and convert into 4 bytes address
+	if expRangeIP = cnet.ParseIP(expRange); expRangeIP == nil {
+		return "", fmt.Errorf("expRange contains invalid ip")
+	}
+	if len(rangeData) > 0 {
+		//Checks whether the ip is valid or not
+		if parsedIP = cnet.ParseIP(rangeData); parsedIP == nil {
+			return "", fmt.Errorf("range contains invalid ip")
+		} else if ipnet.Contains(parsedIP.IP) { //Checks whether the ip belongs to subnet
+			if isRangeStart {
+				//check if Startrange should be in expected limit
+				ip, _ = validateStartRange(parsedIP.IP, expRangeIP.IP)
+			} else {
+				//check if Endrange exceeds expected limit
+				ip, _ = validateEndRange(parsedIP.IP, expRangeIP.IP)
+			}
+			return ip.String(), nil
+		}
+	}
+	//return default range
+	return expRangeIP.IP.String(), nil
+
 }
 
 // ValidateNetworkName checks that the network name meets felix's expectations
