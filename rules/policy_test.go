@@ -462,7 +462,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			iptRules := renderer.ProtoRuleToIptablesRules(&pRule, 4, RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false)
 			rendered := []string{}
 			for _, ir := range iptRules {
-				s := ir.RenderAppend("test", "")
+				s := ir.RenderAppend("test", "", &iptables.Features{})
 				rendered = append(rendered, s)
 			}
 			Expect(rendered).To(Equal(expected))
@@ -588,7 +588,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			iptRules := renderer.ProtoRuleToIptablesRules(&pRule, 4, RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false)
 			rendered := []string{}
 			for _, ir := range iptRules {
-				s := ir.RenderAppend("test", "")
+				s := ir.RenderAppend("test", "", &iptables.Features{})
 				rendered = append(rendered, s)
 			}
 			Expect(rendered).To(Equal(expected))

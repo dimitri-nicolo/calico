@@ -44,17 +44,13 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 	)
 
 	BeforeEach(func() {
-		var err error
-
-		infra, err = getInfra()
-		Expect(err).NotTo(HaveOccurred())
+		infra = getInfra()
 
 		topologyOptions := ipSecTopologyOptions()
 		felixes, client = infrastructure.StartNNodeTopology(2, topologyOptions, infra)
 
 		// Install a default profile that allows all ingress and egress, in the absence of any Policy.
-		err = infra.AddDefaultAllow()
-		Expect(err).NotTo(HaveOccurred())
+		infra.AddDefaultAllow()
 
 		// Start tcpdump inside each host container.  Dumping inside the container means that we'll see a lot less
 		// noise from the rest of the system.
@@ -504,8 +500,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec initially disabled tests", []api
 	BeforeEach(func() {
 		var err error
 
-		infra, err = getInfra()
-		Expect(err).NotTo(HaveOccurred())
+		infra = getInfra()
 
 		topologyOptions := ipSecTopologyOptions()
 
@@ -518,8 +513,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec initially disabled tests", []api
 		felixes, client = infrastructure.StartNNodeTopology(2, topologyOptions, infra)
 
 		// Install a default profile that allows all ingress and egress, in the absence of any Policy.
-		err = infra.AddDefaultAllow()
-		Expect(err).NotTo(HaveOccurred())
+		infra.AddDefaultAllow()
 
 		for _, f := range felixes {
 			f.TriggerDelayedStart()
@@ -601,16 +595,12 @@ var _ = infrastructure.DatastoreDescribe("IPsec 3-node tests", []apiconfig.Datas
 	)
 
 	BeforeEach(func() {
-		var err error
-
-		infra, err = getInfra()
-		Expect(err).NotTo(HaveOccurred())
+		infra = getInfra()
 
 		felixes, client = infrastructure.StartNNodeTopology(3, ipSecTopologyOptions(), infra)
 
 		// Install a default profile that allows all ingress and egress, in the absence of any Policy.
-		err = infra.AddDefaultAllow()
-		Expect(err).NotTo(HaveOccurred())
+		infra.AddDefaultAllow()
 
 		// Start tcpdump inside each host container.  Dumping inside the container means that we'll see a lot less
 		// noise from the rest of the system.

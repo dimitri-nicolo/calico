@@ -65,7 +65,7 @@ import:
   - lib/validator/v1
 - package: github.com/projectcalico/typha
   repo:    git@github.com:tigera/typha-private
-  version: 8edd281910641dd983e7f91f228ba336b77228b5
+  version: 9ac91b546227bc3143a139219ee6077aef09936f
   subpackages:
   - pkg/syncclient
   - pkg/tlsutils
@@ -122,6 +122,10 @@ import:
 - package: github.com/Microsoft/hcsshim
   version: 4a468a6f7ae547974bc32911395c51fb1862b7df
 - package: github.com/davecgh/go-spew
+  subpackages:
+  - spew
+- package: github.com/hashicorp/go-version
+  version: ^1.0.0
 # Everything above here should closely match open source - other than
 # 1) repo line for libcalico-go
 # 2) repo and version lines for typha

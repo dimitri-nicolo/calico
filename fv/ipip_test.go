@@ -50,14 +50,11 @@ var _ = infrastructure.DatastoreDescribe("IPIP topology before adding host IPs t
 	)
 
 	BeforeEach(func() {
-		var err error
-		infra, err = getInfra()
-		Expect(err).NotTo(HaveOccurred())
+		infra = getInfra()
 		felixes, client = infrastructure.StartNNodeTopology(2, infrastructure.DefaultTopologyOptions(), infra)
 
 		// Install a default profile that allows all ingress and egress, in the absence of any Policy.
-		err = infra.AddDefaultAllow()
-		Expect(err).NotTo(HaveOccurred())
+		infra.AddDefaultAllow()
 
 		// Wait until the tunl0 device appears; it is created when felix inserts the ipip module
 		// into the kernel.
@@ -111,6 +108,15 @@ var _ = infrastructure.DatastoreDescribe("IPIP topology before adding host IPs t
 			infra.DumpErrorData()
 		}
 		infra.Stop()
+	})
+
+	It("should use the --random-fully flag in the MASQUERADE rules", func() {
+		for _, felix := range felixes {
+			Eventually(func() string {
+				out, _ := felix.ExecOutput("iptables-save", "-c")
+				return out
+			}, "10s", "100ms").Should(ContainSubstring("--random-fully"))
+		}
 	})
 
 	It("should have workload to workload connectivity", func() {

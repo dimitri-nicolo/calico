@@ -93,8 +93,10 @@ func TearDownK8sInfra(kds *K8sDatastoreInfra) {
 	}
 }
 
-func createK8sDatastoreInfra() (DatastoreInfra, error) {
-	return GetK8sDatastoreInfra()
+func createK8sDatastoreInfra() DatastoreInfra {
+	infra, err := GetK8sDatastoreInfra()
+	Expect(err).NotTo(HaveOccurred())
+	return infra
 }
 
 func GetK8sDatastoreInfra() (*K8sDatastoreInfra, error) {
@@ -208,6 +210,7 @@ func setupK8sDatastoreInfra() (*K8sDatastoreInfra, error) {
 	}
 	log.Info("Added role binding.")
 
+	start = time.Now()
 	for {
 		_, err := kds.K8sClient.CoreV1().Namespaces().List(metav1.ListOptions{})
 		if err == nil {
@@ -516,8 +519,8 @@ func (kds *K8sDatastoreInfra) AddAllowToDatastore(selector string) error {
 	return err
 }
 
-func (kds *K8sDatastoreInfra) AddDefaultAllow() error {
-	return nil
+func (kds *K8sDatastoreInfra) AddDefaultAllow() {
+	return
 }
 
 func (kds *K8sDatastoreInfra) AddDefaultDeny() error {
