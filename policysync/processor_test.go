@@ -31,6 +31,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
+	"github.com/projectcalico/felix/config"
 	"github.com/projectcalico/felix/policysync"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/pod2daemon/binder"
@@ -42,18 +43,22 @@ const TierName = "testtier"
 const PolicyName = "testpolicy"
 
 var _ = Describe("Processor", func() {
+	var configParams *config.Config
 	var uut *policysync.Processor
 	var updates chan interface{}
 	var updateServiceAccount func(name, namespace string)
 	var removeServiceAccount func(name, namespace string)
 	var updateNamespace func(name string)
 	var removeNamespace func(name string)
-	var join func(w string, jid uint64) (chan proto.ToDataplane, policysync.JoinMetadata)
+	var join func(sr proto.SyncRequest, w string, jid uint64) (chan proto.ToDataplane, policysync.JoinMetadata)
 	var leave func(jm policysync.JoinMetadata)
 
 	BeforeEach(func() {
 		updates = make(chan interface{})
-		uut = policysync.NewProcessor(updates)
+		configParams = &config.Config{
+			DropActionOverride: "LogAndDrop",
+		}
+		uut = policysync.NewProcessor(configParams, updates)
 
 		updateServiceAccount = func(name, namespace string) {
 			msg := &proto.ServiceAccountUpdate{
@@ -79,14 +84,14 @@ var _ = Describe("Processor", func() {
 			}
 			updates <- msg
 		}
-		join = func(w string, jid uint64) (chan proto.ToDataplane, policysync.JoinMetadata) {
+		join = func(sr proto.SyncRequest, w string, jid uint64) (chan proto.ToDataplane, policysync.JoinMetadata) {
 			// Buffer outputs so that Processor won't block.
 			output := make(chan proto.ToDataplane, 100)
 			joinMeta := policysync.JoinMetadata{
 				EndpointID: testId(w),
 				JoinUID:    jid,
 			}
-			jr := policysync.JoinRequest{JoinMetadata: joinMeta, C: output}
+			jr := policysync.JoinRequest{JoinMetadata: joinMeta, SyncRequest: sr, C: output}
 			uut.JoinUpdates <- jr
 			return output, joinMeta
 		}
@@ -126,7 +131,7 @@ var _ = Describe("Processor", func() {
 					var accounts [3]proto.ServiceAccountID
 
 					BeforeEach(func() {
-						output, _ = join("test", 1)
+						output, _ = join(proto.SyncRequest{}, "test", 1)
 						for i := 0; i < 3; i++ {
 							msg := <-output
 							accounts[i] = *msg.GetServiceAccountUpdate().Id
@@ -167,7 +172,7 @@ var _ = Describe("Processor", func() {
 					for i := 0; i < 2; i++ {
 						w := fmt.Sprintf("test%d", i)
 						d := testId(w)
-						output[i], _ = join(w, uint64(i))
+						output[i], _ = join(proto.SyncRequest{}, w, uint64(i))
 
 						// Ensure the joins are completed by sending a workload endpoint for each.
 						updates <- &proto.WorkloadEndpointUpdate{
@@ -180,40 +185,81 @@ var _ = Describe("Processor", func() {
 
 				It("should forward updates to both endpoints", func() {
 					updateServiceAccount("t23", "t2")
-					Eventually(output[0]).Should(Receive(&proto.ToDataplane{
+					Eventually(output[0]).Should(Receive(Equal(proto.ToDataplane{
 						Payload: &proto.ToDataplane_ServiceAccountUpdate{
 							&proto.ServiceAccountUpdate{
 								Id: &proto.ServiceAccountID{Name: "t23", Namespace: "t2"},
 							},
 						},
-					}))
-					Eventually(output[1]).Should(Receive(&proto.ToDataplane{
+					})))
+					Eventually(output[1]).Should(Receive(Equal(proto.ToDataplane{
 						Payload: &proto.ToDataplane_ServiceAccountUpdate{
 							&proto.ServiceAccountUpdate{
 								Id: &proto.ServiceAccountID{Name: "t23", Namespace: "t2"},
 							},
 						},
-					}))
+					})))
 				})
 
 				It("should forward removes to both endpoints", func() {
 					removeServiceAccount("t23", "t2")
-					Eventually(output[0]).Should(Receive(&proto.ToDataplane{
+					Eventually(output[0]).Should(Receive(Equal(proto.ToDataplane{
 						Payload: &proto.ToDataplane_ServiceAccountRemove{
 							&proto.ServiceAccountRemove{
 								Id: &proto.ServiceAccountID{Name: "t23", Namespace: "t2"},
 							},
 						},
-					}))
-					Eventually(output[1]).Should(Receive(&proto.ToDataplane{
+					})))
+					Eventually(output[1]).Should(Receive(Equal(proto.ToDataplane{
 						Payload: &proto.ToDataplane_ServiceAccountRemove{
 							&proto.ServiceAccountRemove{
 								Id: &proto.ServiceAccountID{Name: "t23", Namespace: "t2"},
 							},
 						},
-					}))
+					})))
+				})
+			})
+
+			Context("with two joined endpoints each with different drop action override settings", func() {
+				var output [2]chan proto.ToDataplane
+
+				BeforeEach(func() {
+					sr := [2]proto.SyncRequest{{SupportsDropActionOverride: true}, {}}
+
+					for i := 0; i < 2; i++ {
+						w := fmt.Sprintf("test%d", i)
+						output[i], _ = join(sr[i], w, uint64(i))
+
+						// Ensure the joins are completed by sending service account updates.
+						updateServiceAccount("t23", "t2")
+					}
 				})
 
+				It("should forward a config update to endpoint 0 only, followed by SA updates to both endpoints", func() {
+					Eventually(output[0]).Should(Receive(Equal(proto.ToDataplane{
+						Payload: &proto.ToDataplane_ConfigUpdate{
+							&proto.ConfigUpdate{
+								Config: map[string]string{
+									"DropActionOverride": "LogAndDrop",
+								},
+							},
+						},
+					})))
+					Eventually(output[0]).Should(Receive(Equal(proto.ToDataplane{
+						Payload: &proto.ToDataplane_ServiceAccountUpdate{
+							&proto.ServiceAccountUpdate{
+								Id: &proto.ServiceAccountID{Name: "t23", Namespace: "t2"},
+							},
+						},
+					})))
+					Eventually(output[1]).Should(Receive(Equal(proto.ToDataplane{
+						Payload: &proto.ToDataplane_ServiceAccountUpdate{
+							&proto.ServiceAccountUpdate{
+								Id: &proto.ServiceAccountID{Name: "t23", Namespace: "t2"},
+							},
+						},
+					})))
+				})
 			})
 		})
 
@@ -241,7 +287,7 @@ var _ = Describe("Processor", func() {
 					var accounts [3]proto.NamespaceID
 
 					BeforeEach(func() {
-						output, _ = join("test", 1)
+						output, _ = join(proto.SyncRequest{}, "test", 1)
 						for i := 0; i < 3; i++ {
 							msg := <-output
 							accounts[i] = *msg.GetNamespaceUpdate().Id
@@ -275,7 +321,7 @@ var _ = Describe("Processor", func() {
 					for i := 0; i < 2; i++ {
 						w := fmt.Sprintf("test%d", i)
 						d := testId(w)
-						output[i], _ = join(w, uint64(i))
+						output[i], _ = join(proto.SyncRequest{}, w, uint64(i))
 
 						// Ensure the joins are completed by sending a workload endpoint for each.
 						updates <- &proto.WorkloadEndpointUpdate{
@@ -288,30 +334,30 @@ var _ = Describe("Processor", func() {
 
 				It("should forward updates to both endpoints", func() {
 					updateNamespace("t23")
-					Eventually(output[0]).Should(Receive(&proto.ToDataplane{
+					Eventually(output[0]).Should(Receive(Equal(proto.ToDataplane{
 						Payload: &proto.ToDataplane_NamespaceUpdate{
 							&proto.NamespaceUpdate{Id: &proto.NamespaceID{Name: "t23"}},
 						},
-					}))
-					Eventually(output[1]).Should(Receive(&proto.ToDataplane{
+					})))
+					Eventually(output[1]).Should(Receive(Equal(proto.ToDataplane{
 						Payload: &proto.ToDataplane_NamespaceUpdate{
 							&proto.NamespaceUpdate{Id: &proto.NamespaceID{Name: "t23"}},
 						},
-					}))
+					})))
 				})
 
 				It("should forward removes to both endpoints", func() {
 					removeNamespace("t23")
-					Eventually(output[0]).Should(Receive(&proto.ToDataplane{
+					Eventually(output[0]).Should(Receive(Equal(proto.ToDataplane{
 						Payload: &proto.ToDataplane_NamespaceRemove{
 							&proto.NamespaceRemove{Id: &proto.NamespaceID{Name: "t23"}},
 						},
-					}))
-					Eventually(output[1]).Should(Receive(&proto.ToDataplane{
+					})))
+					Eventually(output[1]).Should(Receive(Equal(proto.ToDataplane{
 						Payload: &proto.ToDataplane_NamespaceRemove{
 							&proto.NamespaceRemove{Id: &proto.NamespaceID{Name: "t23"}},
 						},
-					}))
+					})))
 				})
 
 			})
@@ -330,9 +376,9 @@ var _ = Describe("Processor", func() {
 
 				BeforeEach(func(done Done) {
 					refdId = testId("refd")
-					refdOutput, _ = join("refd", 1)
+					refdOutput, _ = join(proto.SyncRequest{}, "refd", 1)
 					unrefdId = testId("unrefd")
-					unrefdOutput, _ = join("unrefd", 2)
+					unrefdOutput, _ = join(proto.SyncRequest{}, "unrefd", 2)
 
 					// Ensure the joins are completed by sending a workload endpoint for each.
 					refUpd := &proto.WorkloadEndpointUpdate{
@@ -884,7 +930,7 @@ var _ = Describe("Processor", func() {
 					for i := 0; i < 2; i++ {
 						w := fmt.Sprintf("test%d", i)
 						wepID[i] = testId(w)
-						output[i], _ = join(w, uint64(i))
+						output[i], _ = join(proto.SyncRequest{}, w, uint64(i))
 
 						// Ensure the joins are completed by sending a workload endpoint for each.
 						assertNoUpdate(i)
@@ -1122,7 +1168,7 @@ var _ = Describe("Processor", func() {
 				})
 
 				It("should sync profile & wep when wep joins", func(done Done) {
-					output, _ := join("test", 1)
+					output, _ := join(proto.SyncRequest{}, "test", 1)
 
 					g := <-output
 					Expect(&g).To(HavePayload(proUpdate))
@@ -1134,7 +1180,7 @@ var _ = Describe("Processor", func() {
 				})
 
 				It("should resync profile & wep", func(done Done) {
-					output, jm := join("test", 1)
+					output, jm := join(proto.SyncRequest{}, "test", 1)
 					g := <-output
 					Expect(&g).To(HavePayload(proUpdate))
 					g = <-output
@@ -1143,7 +1189,7 @@ var _ = Describe("Processor", func() {
 					// Leave
 					leave(jm)
 
-					output, jm = join("test", 2)
+					output, jm = join(proto.SyncRequest{}, "test", 2)
 					g = <-output
 					Expect(&g).To(HavePayload(proUpdate))
 					g = <-output
@@ -1153,7 +1199,7 @@ var _ = Describe("Processor", func() {
 				})
 
 				It("should not resync removed profile", func(done Done) {
-					output, jm := join("test", 1)
+					output, jm := join(proto.SyncRequest{}, "test", 1)
 					g := <-output
 					Expect(&g).To(HavePayload(proUpdate))
 					g = <-output
@@ -1169,7 +1215,7 @@ var _ = Describe("Processor", func() {
 					}
 					updates <- wepUpd2
 
-					output, jm = join("test", 2)
+					output, jm = join(proto.SyncRequest{}, "test", 2)
 					g = <-output
 					Expect(&g).To(HavePayload(wepUpd2))
 
@@ -1202,7 +1248,7 @@ var _ = Describe("Processor", func() {
 				})
 
 				It("should sync policy & wep when wep joins", func(done Done) {
-					output, _ := join("test", 1)
+					output, _ := join(proto.SyncRequest{}, "test", 1)
 
 					g := <-output
 					Expect(&g).To(HavePayload(polUpd))
@@ -1214,7 +1260,7 @@ var _ = Describe("Processor", func() {
 				})
 
 				It("should resync policy & wep", func(done Done) {
-					output, jm := join("test", 1)
+					output, jm := join(proto.SyncRequest{}, "test", 1)
 					g := <-output
 					Expect(&g).To(HavePayload(polUpd))
 					g = <-output
@@ -1223,7 +1269,7 @@ var _ = Describe("Processor", func() {
 					// Leave
 					leave(jm)
 
-					output, jm = join("test", 2)
+					output, jm = join(proto.SyncRequest{}, "test", 2)
 					g = <-output
 					Expect(&g).To(HavePayload(polUpd))
 					g = <-output
@@ -1233,7 +1279,7 @@ var _ = Describe("Processor", func() {
 				})
 
 				It("should not resync removed policy", func(done Done) {
-					output, jm := join("test", 1)
+					output, jm := join(proto.SyncRequest{}, "test", 1)
 					g := <-output
 					Expect(&g).To(HavePayload(polUpd))
 					g = <-output
@@ -1248,7 +1294,7 @@ var _ = Describe("Processor", func() {
 					}
 					updates <- wepUpd2
 
-					output, jm = join("test", 2)
+					output, jm = join(proto.SyncRequest{}, "test", 2)
 					g = <-output
 					Expect(&g).To(HavePayload(wepUpd2))
 
@@ -1271,11 +1317,11 @@ var _ = Describe("Processor", func() {
 				})
 
 				It("should close old channel on new join", func(done Done) {
-					oldChan, _ := join("test", 1)
+					oldChan, _ := join(proto.SyncRequest{}, "test", 1)
 					g := <-oldChan
 					Expect(&g).To(HavePayload(wepUpd))
 
-					newChan, _ := join("test", 2)
+					newChan, _ := join(proto.SyncRequest{}, "test", 2)
 					g = <-newChan
 					Expect(&g).To(HavePayload(wepUpd))
 
@@ -1285,11 +1331,11 @@ var _ = Describe("Processor", func() {
 				})
 
 				It("should ignore stale leave requests", func(done Done) {
-					oldChan, oldMeta := join("test", 1)
+					oldChan, oldMeta := join(proto.SyncRequest{}, "test", 1)
 					g := <-oldChan
 					Expect(&g).To(HavePayload(wepUpd))
 
-					newChan, _ := join("test", 2)
+					newChan, _ := join(proto.SyncRequest{}, "test", 2)
 					g = <-newChan
 					Expect(&g).To(HavePayload(wepUpd))
 
@@ -1304,7 +1350,7 @@ var _ = Describe("Processor", func() {
 				})
 
 				It("should close active connection on clean leave", func(done Done) {
-					c, m := join("test", 1)
+					c, m := join(proto.SyncRequest{}, "test", 1)
 
 					g := <-c
 					Expect(&g).To(HavePayload(wepUpd))
@@ -1323,7 +1369,7 @@ var _ = Describe("Processor", func() {
 			})
 
 			It("should handle join & leave without WEP update", func() {
-				c, m := join("test", 1)
+				c, m := join(proto.SyncRequest{}, "test", 1)
 				leave(m)
 				Eventually(c).Should(BeClosed())
 			})
@@ -1333,7 +1379,7 @@ var _ = Describe("Processor", func() {
 			It("should send InSync on all open outputs", func(done Done) {
 				var c [2]chan proto.ToDataplane
 				for i := 0; i < 2; i++ {
-					c[i], _ = join(fmt.Sprintf("test%d", i), uint64(i))
+					c[i], _ = join(proto.SyncRequest{}, fmt.Sprintf("test%d", i), uint64(i))
 				}
 				is := &proto.InSync{}
 				updates <- is
