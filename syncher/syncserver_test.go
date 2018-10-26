@@ -764,6 +764,84 @@ func TestSyncServerCancelBeforeInSync(t *testing.T) {
 	Eventually(syncDone).Should(BeClosed())
 }
 
+// processUpdate handles ConfigUpdate DropActionOverride values.
+func TestConfigUpdateDropActionOverride(t *testing.T) {
+	RegisterTestingT(t)
+
+	store := policystore.NewPolicyStore()
+	inSync := make(chan struct{})
+
+	// Check defaulted value.
+	Expect(store.DropActionOverride).To(Equal(policystore.DROP))
+
+	update := &proto.ToDataplane{
+		Payload: &proto.ToDataplane_ConfigUpdate{ConfigUpdate: &proto.ConfigUpdate{
+			Config: map[string]string{
+				"DropActionOverride": "ThisIsABadValue",
+			},
+		}},
+	}
+	Expect(func() { processUpdate(store, inSync, update) }).ToNot(Panic())
+	Expect(store.DropActionOverride).To(Equal(policystore.DROP))
+
+	update = &proto.ToDataplane{
+		Payload: &proto.ToDataplane_ConfigUpdate{ConfigUpdate: &proto.ConfigUpdate{
+			Config: map[string]string{
+				"DropActionOverride": "ThisIsABadValue",
+			},
+		}},
+	}
+	Expect(func() { processUpdate(store, inSync, update) }).ToNot(Panic())
+	Expect(store.DropActionOverride).To(Equal(policystore.DROP))
+
+	update = &proto.ToDataplane{
+		Payload: &proto.ToDataplane_ConfigUpdate{ConfigUpdate: &proto.ConfigUpdate{
+			Config: map[string]string{
+				"DropActionOverride": "ALLOW",
+			},
+		}},
+	}
+	Expect(func() { processUpdate(store, inSync, update) }).ToNot(Panic())
+	Expect(store.DropActionOverride).To(Equal(policystore.ALLOW))
+
+	update = &proto.ToDataplane{
+		Payload: &proto.ToDataplane_ConfigUpdate{ConfigUpdate: &proto.ConfigUpdate{
+			Config: map[string]string{
+				"DropActionOverride": "LOGandALLOW",
+			},
+		}},
+	}
+	Expect(func() { processUpdate(store, inSync, update) }).ToNot(Panic())
+	Expect(store.DropActionOverride).To(Equal(policystore.LOG_AND_ALLOW))
+
+	update = &proto.ToDataplane{
+		Payload: &proto.ToDataplane_ConfigUpdate{ConfigUpdate: &proto.ConfigUpdate{
+			Config: map[string]string{
+				"DropActionOverride": "LOGandDROP",
+			},
+		}},
+	}
+	Expect(func() { processUpdate(store, inSync, update) }).ToNot(Panic())
+	Expect(store.DropActionOverride).To(Equal(policystore.LOG_AND_DROP))
+}
+
+// processUpdate handles ConfigUpdate with unknown config.
+func TestConfigUpdateUnknownConfig(t *testing.T) {
+	RegisterTestingT(t)
+
+	store := policystore.NewPolicyStore()
+	inSync := make(chan struct{})
+
+	update := &proto.ToDataplane{
+		Payload: &proto.ToDataplane_ConfigUpdate{ConfigUpdate: &proto.ConfigUpdate{
+			Config: map[string]string{
+				"ThisIsNotValid": "AndAnArbitraryValue",
+			},
+		}},
+	}
+	Expect(func() { processUpdate(store, inSync, update) }).ToNot(Panic())
+}
+
 type testSyncServer struct {
 	context    context.Context
 	updates    chan proto.ToDataplane

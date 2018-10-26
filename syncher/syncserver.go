@@ -22,6 +22,8 @@ import (
 	"github.com/projectcalico/app-policy/policystore"
 	"github.com/projectcalico/app-policy/proto"
 
+	"strings"
+
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 )
@@ -91,7 +93,10 @@ func (s *syncClient) syncStore(cxt context.Context, store *policystore.PolicySto
 	log.Info("Successfully connected to Policy Sync server")
 	defer conn.Close()
 	client := proto.NewPolicySyncClient(conn)
-	stream, err := client.Sync(cxt, &proto.SyncRequest{})
+	// Send a sync request indicating which features we support.
+	stream, err := client.Sync(cxt, &proto.SyncRequest{
+		SupportsDropActionOverride: true,
+	})
 	if err != nil {
 		log.Warnf("failed to synchronize with Policy Sync server: %v", err)
 		return
@@ -140,6 +145,8 @@ func processUpdate(store *policystore.PolicyStore, inSync chan<- struct{}, updat
 		processNamespaceUpdate(store, payload.NamespaceUpdate)
 	case *proto.ToDataplane_NamespaceRemove:
 		processNamespaceRemove(store, payload.NamespaceRemove)
+	case *proto.ToDataplane_ConfigUpdate:
+		processConfigUpdate(store, payload.ConfigUpdate)
 	default:
 		panic(fmt.Sprintf("unknown payload %v", update.String()))
 	}
@@ -148,6 +155,31 @@ func processUpdate(store *policystore.PolicyStore, inSync chan<- struct{}, updat
 func processInSync(store *policystore.PolicyStore, inSync *proto.InSync) {
 	log.Debug("Processing InSync")
 	return
+}
+
+func processConfigUpdate(store *policystore.PolicyStore, update *proto.ConfigUpdate) {
+	log.WithFields(log.Fields{
+		"config": update.Config,
+	}).Debug("Processing ConfigUpdate")
+
+	// Update the DropActionOverride setting if it is available.
+	if val, ok := update.Config["DropActionOverride"]; ok {
+		var psVal policystore.DropActionOverride
+		switch strings.ToLower(val) {
+		case "drop":
+			psVal = policystore.DROP
+		case "allow":
+			psVal = policystore.ALLOW
+		case "loganddrop":
+			psVal = policystore.LOG_AND_DROP
+		case "logandallow":
+			psVal = policystore.LOG_AND_ALLOW
+		default:
+			log.Errorf("Unknown DropActionOverride value: %s", val)
+			psVal = policystore.DROP
+		}
+		store.DropActionOverride = psVal
+	}
 }
 
 func processIPSetUpdate(store *policystore.PolicyStore, update *proto.IPSetUpdate) {
