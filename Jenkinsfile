@@ -83,7 +83,7 @@ pipeline {
         stage('Checkout process') {
             steps {
                 dir('process') {
-                    git(url: 'git@github.com:tigera/process.git', branch: 'song-win', credentialsId: 'marvin-tigera-ssh-key')
+                    git(url: 'git@github.com:tigera/process.git', branch: 'master', credentialsId: 'marvin-tigera-ssh-key')
                 }
             }
         }
