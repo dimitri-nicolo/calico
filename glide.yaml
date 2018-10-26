@@ -58,3 +58,31 @@ import:
 # needs a more recent version than the default that gets selected.
 - package: golang.org/x/net
   version: 4dfa2610cdf3b287375bbba5b8f2a14d3b01d8de
+- package: github.com/buger/jsonparser
+  version: f4dd9f5a6b441265aefc1d44872a6f8c10f42b37
+- package: github.com/juju/errors
+  version: 22422dad46e14561a0854ad42497a75af9b61909
+- package: github.com/Microsoft/go-winio
+  version: 97e4973ce50b2ff5f09635a57e2b88a037aae829
+- package: github.com/Microsoft/hcsshim
+  version: 548046cb2f0495eb2acd7682a0035d465bf05ea9
+  subpackages:
+  - internal/guid
+  - internal/hcs
+  - internal/hcserror
+  - internal/hns
+  - internal/interop
+  - internal/longpath
+  - internal/mergemaps
+  - internal/safefile
+  - internal/schema1
+  - internal/timeout
+  - internal/wclayer
+- package: github.com/rakelkar/gonetsh
+  version: 758b1f7c9d1ca5acaca0b909f06ff9ed9fe35de1
+  subpackages:
+  - netsh
+- package: k8s.io/utils
+  version: cd34563cd63c2bd7c6fe88a73c4dcf34ed8a67cb
+  subpackages:
+  - exec
