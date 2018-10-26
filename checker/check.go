@@ -42,9 +42,30 @@ const (
 	NO_MATCH // Indicates policy did not match request. Cannot be assigned to rule.
 )
 
-// checkStore applies the policy in the given store and returns OK if the check passes, or PERMISSION_DENIED if the
-// check fails. Note, if no policy matches, the default is PERMISSION_DENIED.
+// checkStore applies the tiered policy plus any config based corrections and returns OK if the check passes or
+// PERMISSION_DENIED if the check fails.
 func checkStore(store *policystore.PolicyStore, req *authz.CheckRequest) (s rpc.Status) {
+	// Check using the configured policy
+	s = checkTiers(store, req)
+
+	// If the result from the policy check will result in a drop, check if we are overriding the drop
+	// action, and if so modify the result.
+	if s.Code != OK {
+		switch store.DropActionOverride {
+		case policystore.DROP, policystore.LOG_AND_DROP:
+			// Leave action unchanged, packet will be dropped.
+		case policystore.ALLOW, policystore.LOG_AND_ALLOW:
+			// Convert action that would result in a drop into an allow.
+			log.Info("Invoking DropActionOverride: Converting drop action to allow")
+			s.Code = OK
+		}
+	}
+	return
+}
+
+// checkTiers applies the tiered policy in the given store and returns OK if the check passes, or PERMISSION_DENIED if
+// the check fails. Note, if no policy matches, the default is PERMISSION_DENIED.
+func checkTiers(store *policystore.PolicyStore, req *authz.CheckRequest) (s rpc.Status) {
 	s = rpc.Status{Code: PERMISSION_DENIED}
 	ep := store.Endpoint
 	if ep == nil {

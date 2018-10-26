@@ -21,6 +21,17 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// DropActionOverride is an enumeration of the available values for the DropActionOverride
+// configuration option.
+type DropActionOverride int
+
+const (
+	ALLOW DropActionOverride = iota
+	DROP
+	LOG_AND_ALLOW
+	LOG_AND_DROP
+)
+
 // PolicyStore is a data store that holds Calico policy information.
 type PolicyStore struct {
 	// The RWMutex protects the entire contents of the PolicyStore. No one should read from or write to the PolicyStore
@@ -28,6 +39,10 @@ type PolicyStore struct {
 	// Helper methods Write() and Read() encapsulate the correct locking logic.
 	RWMutex sync.RWMutex
 
+	// Config settings
+	DropActionOverride DropActionOverride
+
+	// Cache data
 	PolicyByID         map[proto.PolicyID]*proto.Policy
 	ProfileByID        map[proto.ProfileID]*proto.Profile
 	IPSetByID          map[string]IPSet
@@ -39,6 +54,7 @@ type PolicyStore struct {
 func NewPolicyStore() *PolicyStore {
 	return &PolicyStore{
 		RWMutex:            sync.RWMutex{},
+		DropActionOverride: DROP,
 		IPSetByID:          make(map[string]IPSet),
 		ProfileByID:        make(map[proto.ProfileID]*proto.Profile),
 		PolicyByID:         make(map[proto.PolicyID]*proto.Policy),
