@@ -797,22 +797,22 @@ func TestConfigUpdateDropActionOverride(t *testing.T) {
 	update = &proto.ToDataplane{
 		Payload: &proto.ToDataplane_ConfigUpdate{ConfigUpdate: &proto.ConfigUpdate{
 			Config: map[string]string{
-				"DropActionOverride": "ALLOW",
+				"DropActionOverride": "ACCEPT",
 			},
 		}},
 	}
 	Expect(func() { processUpdate(store, inSync, update) }).ToNot(Panic())
-	Expect(store.DropActionOverride).To(Equal(policystore.ALLOW))
+	Expect(store.DropActionOverride).To(Equal(policystore.ACCEPT))
 
 	update = &proto.ToDataplane{
 		Payload: &proto.ToDataplane_ConfigUpdate{ConfigUpdate: &proto.ConfigUpdate{
 			Config: map[string]string{
-				"DropActionOverride": "LOGandALLOW",
+				"DropActionOverride": "LOGandACCEPT",
 			},
 		}},
 	}
 	Expect(func() { processUpdate(store, inSync, update) }).ToNot(Panic())
-	Expect(store.DropActionOverride).To(Equal(policystore.LOG_AND_ALLOW))
+	Expect(store.DropActionOverride).To(Equal(policystore.LOG_AND_ACCEPT))
 
 	update = &proto.ToDataplane{
 		Payload: &proto.ToDataplane_ConfigUpdate{ConfigUpdate: &proto.ConfigUpdate{
