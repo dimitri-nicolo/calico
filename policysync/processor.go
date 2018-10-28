@@ -19,6 +19,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/felix/config"
 	"github.com/projectcalico/felix/proto"
 )
 
@@ -39,12 +40,14 @@ type Processor struct {
 	serviceAccountByID map[proto.ServiceAccountID]*proto.ServiceAccountUpdate
 	namespaceByID      map[proto.NamespaceID]*proto.NamespaceUpdate
 	ipSetsByID         map[string]*ipSetInfo
+	config             *config.Config
 	receivedInSync     bool
 }
 
 type EndpointInfo struct {
 	// The channel to send updates for this workload to.
 	output         chan<- proto.ToDataplane
+	syncRequest    proto.SyncRequest
 	currentJoinUID uint64
 	endpointUpd    *proto.WorkloadEndpointUpdate
 	syncedPolicies map[proto.PolicyID]bool
@@ -59,9 +62,13 @@ type JoinMetadata struct {
 }
 
 // JoinRequest is sent to the Processor when a new socket connection is accepted by the GRPC server,
-// it provides the channel used to send sync messages back to the server goroutine.
+// it provides the requested sync config and the channel used to send sync messages back to the server
+// goroutine.
 type JoinRequest struct {
 	JoinMetadata
+	// The sync request that initiated the join. This contains details of the features supported by
+	// the consumer.
+	SyncRequest proto.SyncRequest
 	// C is the channel to send updates to the policy sync client.  Processor closes the channel when the
 	// workload endpoint is removed, or when a new JoinRequest is received for the same endpoint.  If nil, indicates
 	// the client wants to stop receiving updates.
@@ -72,7 +79,7 @@ type LeaveRequest struct {
 	JoinMetadata
 }
 
-func NewProcessor(updates <-chan interface{}) *Processor {
+func NewProcessor(config *config.Config, updates <-chan interface{}) *Processor {
 	return &Processor{
 		// Updates from the calculation graph.
 		Updates: updates,
@@ -84,6 +91,7 @@ func NewProcessor(updates <-chan interface{}) *Processor {
 		serviceAccountByID: make(map[proto.ServiceAccountID]*proto.ServiceAccountUpdate),
 		namespaceByID:      make(map[proto.NamespaceID]*proto.NamespaceUpdate),
 		ipSetsByID:         make(map[string]*ipSetInfo),
+		config:             config,
 	}
 }
 
@@ -133,7 +141,9 @@ func (p *Processor) handleJoin(joinReq JoinRequest) {
 	ei.syncedPolicies = map[proto.PolicyID]bool{}
 	ei.syncedProfiles = map[proto.ProfileID]bool{}
 	ei.syncedIPSets = map[string]bool{}
+	ei.syncRequest = joinReq.SyncRequest
 
+	p.maybeSendStartOfDayConfigUpdate(ei)
 	p.maybeSyncEndpoint(ei)
 
 	// Any updates to service accounts will be synced, but the endpoint needs to know about any existing service
@@ -527,6 +537,25 @@ func (p *Processor) syncRemovedProfiles(ei *EndpointInfo) {
 		ei.output <- proto.ToDataplane{Payload: &proto.ToDataplane_ActiveProfileRemove{
 			&proto.ActiveProfileRemove{Id: &polID},
 		}}
+	}
+}
+
+// maybeSendStartOfDayConfigUpdate will send a ConfigUpdate message only if the endpoint supports
+// features that require certain config parameters. The initial syncRequest will indicate which
+// features are supported.
+func (p *Processor) maybeSendStartOfDayConfigUpdate(ei *EndpointInfo) {
+	clog := log.WithFields(log.Fields{
+		"endpoint": ei.endpointUpd.GetEndpoint(),
+	})
+	cu := make(map[string]string, 0)
+	if ei.syncRequest.SupportsDropActionOverride {
+		clog.Debug("Endpoint supports DropActionOverride")
+		cu["DropActionOverride"] = p.config.DropActionOverride
+	}
+
+	if len(cu) > 0 {
+		clog.Debug("Sending ConfigUpdate")
+		ei.output <- proto.ToDataplane{Payload: &proto.ToDataplane_ConfigUpdate{&proto.ConfigUpdate{cu}}}
 	}
 }
 

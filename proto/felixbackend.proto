@@ -18,10 +18,18 @@ service PolicySync {
   //  - ServiceAccountRemove
   //  - NamespaceUpdate
   //  - NamespaceRemove
+  //  - ConfigUpdate
+  //
+  // The ConfigUpdate payload is only sent if the receiver has features enabled that
+  // require it. Furthermore, the ConfigUpdate message will only contain the configuration
+  // parameters required for those features.
   rpc Sync(SyncRequest) returns (stream ToDataplane);
 }
 
 message SyncRequest {
+  // Whether the sync consumer supports the DropActionOverride feature. If set to true,
+  // the dropActionOverride value will be supplied in a ConfigUpdate message.
+  bool supportsDropActionOverride = 1;
 }
 
 // Rationale for having explicit Remove messages rather than sending and update

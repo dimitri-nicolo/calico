@@ -53,7 +53,7 @@ func (s *Server) RegisterGrpc(g *grpc.Server) {
 	proto.RegisterPolicySyncServer(g, s)
 }
 
-func (s *Server) Sync(_ *proto.SyncRequest, stream proto.PolicySync_SyncServer) error {
+func (s *Server) Sync(syncRequest *proto.SyncRequest, stream proto.PolicySync_SyncServer) error {
 	log.Info("New policy sync connection")
 
 	// Extract the workload ID from the request.
@@ -87,6 +87,7 @@ func (s *Server) Sync(_ *proto.SyncRequest, stream proto.PolicySync_SyncServer) 
 	}
 	s.JoinUpdates <- JoinRequest{
 		JoinMetadata: joinMeta,
+		SyncRequest:  *syncRequest,
 		C:            updates,
 	}
 

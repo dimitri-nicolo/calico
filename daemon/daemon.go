@@ -378,7 +378,7 @@ configRetry:
 			"Policy sync API enabled.  Creating the policy sync server.")
 		toPolicySync := make(chan interface{})
 		policySyncUIDAllocator := policysync.NewUIDAllocator()
-		policySyncProcessor = policysync.NewProcessor(toPolicySync)
+		policySyncProcessor = policysync.NewProcessor(configParams, toPolicySync)
 		policySyncServer = policysync.NewServer(
 			policySyncProcessor.JoinUpdates,
 			policySyncUIDAllocator.NextUID,
