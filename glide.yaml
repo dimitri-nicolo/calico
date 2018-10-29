@@ -25,7 +25,7 @@ import:
   - gexec
 - package: github.com/projectcalico/libcalico-go
   repo:    git@github.com:tigera/libcalico-go-private
-  version: 1042946ed81e7152a66a661e37e92f159a318e10
+  version: calsoft-cni
   subpackages:
   - lib/apiconfig
   - lib/apis/v3
