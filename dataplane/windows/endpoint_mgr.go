@@ -17,7 +17,7 @@ package windataplane
 import (
 	"errors"
 	"os"
-	"strings"
+	"regexp"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -40,7 +40,7 @@ const (
 	envNetworkName = "KUBE_NETWORK"
 	// the default hns network name to use if the envNetworkName environment
 	// variable does not resolve to a value
-	defaultNetworkName = "l2bridge"
+	defaultNetworkName = "(?i)calico.*"
 )
 
 var (
@@ -53,7 +53,7 @@ var (
 // responsible for orchestrating a refresh of all impacted endpoints after a IPSet update.
 type endpointManager struct {
 	// the name of the hns network for which we will be managing endpoint policies.
-	hnsNetworkName string
+	hnsNetworkRegexp *regexp.Regexp
 	// the policysets dataplane to be used when looking up endpoint policies/profiles.
 	policysetsDataplane policysets.PolicySetsDataplane
 	// pendingWlEpUpdates stores any pending updates to be performed per endpoint.
@@ -77,10 +77,16 @@ func newEndpointManager(hns hns.API, policysets policysets.PolicySetsDataplane) 
 		networkName = defaultNetworkName
 		log.WithField("NetworkName", networkName).Info("No Network Name environment variable was found, using default name")
 	}
+	networkNameRegexp, err := regexp.Compile(networkName)
+	if err != nil {
+		log.WithError(err).Panicf(
+			"Supplied value (%s) for %s environment variable not a valid regular expression.",
+			networkName, envNetworkName)
+	}
 
 	return &endpointManager{
 		hns:                 hns,
-		hnsNetworkName:      networkName,
+		hnsNetworkRegexp:    networkNameRegexp,
 		policysetsDataplane: policysets,
 		addressToEndpointId: make(map[string]string),
 		activeWlEndpoints:   map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint{},
@@ -135,11 +141,11 @@ func (m *endpointManager) RefreshHnsEndpointCache(forceRefresh bool) error {
 			}
 			continue
 		}
-		if strings.ToLower(endpoint.VirtualNetworkName) != strings.ToLower(m.hnsNetworkName) {
+		if !m.hnsNetworkRegexp.MatchString(endpoint.VirtualNetworkName) {
 			if debug {
 				log.WithFields(log.Fields{
 					"id":          endpoint.Id,
-					"ourNet":      m.hnsNetworkName,
+					"ourNet":      m.hnsNetworkRegexp.String(),
 					"endpointNet": endpoint.VirtualNetworkName,
 				}).Debug("Skipping endpoint on other HNS network")
 			}
