@@ -1933,6 +1933,20 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								},
 							},
 						},
+						"nodeSelector": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Selector for the nodes that should have this peering.  When this is set, the Node field must be empty.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"peerSelector": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Selector for the remote nodes to peer with.  When this is set, the PeerIP and ASNumber fields must be empty.  For each peering between the local node and selected remote nodes, we configure an IPv4 peering if both ends have NodeBGPSpec.IPv4Address specified, and an IPv6 peering if both ends have NodeBGPSpec.IPv6Address specified.  The remote AS number comes from the remote node’s NodeBGPSpec.ASNumber, or the global default if that is not set.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
 					},
 					Required: []string{"peerIP", "asNumber"},
 				},
@@ -2838,6 +2852,13 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Format:      "",
 							},
 						},
+						"flowLogsEnableNetworkSets": {
+							SchemaProps: spec.SchemaProps{
+								Description: "FlowLogsEnableNetworkSets enables Flow logs reporting for GlobalNetworkSets.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
+						},
 						"cloudWatchLogsReporterEnabled": {
 							SchemaProps: spec.SchemaProps{
 								Description: "Enable Flow logs reporting to AWS CloudWatch.",
@@ -2868,6 +2889,13 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 						"cloudWatchLogsIncludeLabels": {
 							SchemaProps: spec.SchemaProps{
 								Description: "CloudWatchLogsIncludeLabels is used to configure if endpoint labels are included in a Flow log entry.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
+						},
+						"cloudWatchLogsIncludePolicies": {
+							SchemaProps: spec.SchemaProps{
+								Description: "CloudWatchLogsIncludePolicies is used to configure if policy information are included in a Flow log entry.",
 								Type:        []string{"boolean"},
 								Format:      "",
 							},
@@ -2971,6 +2999,13 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 						"flowLogsFileIncludeLabels": {
 							SchemaProps: spec.SchemaProps{
 								Description: "FlowLogsFileIncludeLabels is used to configure if endpoint labels are included in a Flow log entry written to file.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
+						},
+						"flowLogsFileIncludePolicies": {
+							SchemaProps: spec.SchemaProps{
+								Description: "FlowLogsFileIncludePolicies is used to configure if policy information are included in a Flow log entry written to file.",
 								Type:        []string{"boolean"},
 								Format:      "",
 							},
@@ -3440,7 +3475,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 						},
 						"interfaceName": {
 							SchemaProps: spec.SchemaProps{
-								Description: "The name of the linux interface to apply policy to; for example “eth0”. If \"InterfaceName\" is not present then at least one expected IP must be specified.",
+								Description: "Either \"*\", or the name of a specific Linux interface to apply policy to; or empty.  \"*\" indicates that this HostEndpoint governs all traffic to, from or through the default network namespace of the host named by the \"Node\" field; entering and leaving that namespace via any interface, including those from/to non-host-networked local workloads.\n\nIf InterfaceName is not \"*\", this HostEndpoint only governs traffic that enters or leaves the host through the specific interface named by InterfaceName, or - when InterfaceName is empty - through the specific interface that has one of the IPs in ExpectedIPs. Therefore, when InterfaceName is empty, at least one expected IP must be specified.  Only external interfaces (such as “eth0”) are supported here; it isn't possible for a HostEndpoint to protect traffic through a specific local workload interface.\n\nNote: Only some kinds of policy are implemented for \"*\" HostEndpoints; initially just pre-DNAT policy.  Please check Calico documentation for the latest position.",
 								Type:        []string{"string"},
 								Format:      "",
 							},
@@ -3652,6 +3687,13 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Description: "When disabled is true, Calico IPAM will not assign addresses from this pool.",
 								Type:        []string{"boolean"},
 								Format:      "",
+							},
+						},
+						"blockSize": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The block size to use for IP address assignments from this pool. Defaults to 26 for IPv4 and 112 for IPv6.",
+								Type:        []string{"integer"},
+								Format:      "int32",
 							},
 						},
 						"ipip": {
@@ -4054,6 +4096,13 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 						"ipv4IPIPTunnelAddr": {
 							SchemaProps: spec.SchemaProps{
 								Description: "IPv4IPIPTunnelAddr is the IPv4 address of the IP in IP tunnel.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"routeReflectorClusterID": {
+							SchemaProps: spec.SchemaProps{
+								Description: "RouteReflectorClusterID enables this node as a route reflector within the given cluster.",
 								Type:        []string{"string"},
 								Format:      "",
 							},
