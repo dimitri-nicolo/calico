@@ -228,9 +228,9 @@ var _ = testutils.E2eDatastoreDescribe("BGP syncer tests", testutils.DatastoreAl
 				})
 
 				ips1 := make([]net.IP, 0, 0)
-				for _, ipnet := range ipV4Nets1{
+				for _, ipnet := range ipV4Nets1 {
 					IP, _, _ := net.ParseCIDR(ipnet.String())
-                                        ips1 = append(ips1, *IP)
+					ips1 = append(ips1, *IP)
 				}
 				Expect(err).NotTo(HaveOccurred())
 
@@ -258,10 +258,10 @@ var _ = testutils.E2eDatastoreDescribe("BGP syncer tests", testutils.DatastoreAl
 				})
 
 				ips2 := make([]net.IP, 0, 0)
-                                for _, ipnet := range ipV4Nets2{
-                                        IP, _, _ := net.ParseCIDR(ipnet.String())
-                                        ips2 = append(ips2, *IP)
-                                }
+				for _, ipnet := range ipV4Nets2 {
+					IP, _, _ := net.ParseCIDR(ipnet.String())
+					ips2 = append(ips2, *IP)
+				}
 
 				Expect(err).NotTo(HaveOccurred())
 				syncTester.ExpectCacheSize(expectedCacheSize)
