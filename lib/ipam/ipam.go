@@ -370,7 +370,7 @@ func (c ipamClient) autoAssign(ctx context.Context, num int, handleID *string, a
 
 				// Claim successful.  Assign addresses from the new block.
 				logCtx.Infof("Claimed new block %v - assigning %d addresses", b, rem)
-				newIPs, err = c.assignFromExistingBlock(ctx, b, rem, handleID, attrs, host, config.StrictAffinity)
+				newIPs, err := c.assignFromExistingBlock(ctx, b, rem, handleID, attrs, host, config.StrictAffinity)
 				if err != nil {
 					if _, ok := err.(cerrors.ErrorResourceUpdateConflict); ok {
 						log.WithError(err).Debug("CAS Error assigning from new block - retry")
@@ -432,7 +432,7 @@ func (c ipamClient) autoAssign(ctx context.Context, num int, handleID *string, a
 
 					// Attempt to assign from the block.
 					logCtx.Infof("Attempting to assign IPs from non-affine block %s", blockCIDR.String())
-					newIPs, err = c.assignFromExistingBlock(ctx, b, rem, handleID, attrs, host, false)
+					newIPs, err := c.assignFromExistingBlock(ctx, b, rem, handleID, attrs, host, false)
 					if err != nil {
 						if _, ok := err.(cerrors.ErrorResourceUpdateConflict); ok {
 							logCtx.WithError(err).Debug("CAS error assigning from non-affine block - retry")
