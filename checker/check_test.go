@@ -377,7 +377,7 @@ func TestCheckStoreInitFails(t *testing.T) {
 	}}
 
 	//Check that we get PERMISSION_DENIED for DROP and LOG_AND_DROP values
-	// for DropActionOverride, and OK for ALLOW and LOG_AND_ALLOW. Default
+	// for DropActionOverride, and OK for ACCEPT and LOG_AND_ACCEPT. Default
 	// value is DROP.
 	Expect(store.DropActionOverride).To(Equal(policystore.DROP))
 	status := checkStore(store, req)
@@ -387,11 +387,11 @@ func TestCheckStoreInitFails(t *testing.T) {
 	status = checkStore(store, req)
 	Expect(status.Code).To(Equal(PERMISSION_DENIED))
 
-	store.DropActionOverride = policystore.ALLOW
+	store.DropActionOverride = policystore.ACCEPT
 	status = checkStore(store, req)
 	Expect(status.Code).To(Equal(OK))
 
-	store.DropActionOverride = policystore.LOG_AND_ALLOW
+	store.DropActionOverride = policystore.LOG_AND_ACCEPT
 	status = checkStore(store, req)
 	Expect(status.Code).To(Equal(OK))
 }
@@ -431,7 +431,7 @@ func TestCheckStoreWithInvalidData(t *testing.T) {
 	}}
 
 	// Check that we get INVALID_ARGUMENT for DROP and LOG_AND_DROP values
-	// for DropActionOverride, and OK for ALLOW and LOG_AND_ALLOW.
+	// for DropActionOverride, and OK for ACCEPT and LOG_AND_ACCEPT.
 	Expect(store.DropActionOverride).To(Equal(policystore.DROP))
 	status := checkStore(store, req)
 	Expect(status.Code).To(Equal(INVALID_ARGUMENT))
@@ -440,11 +440,11 @@ func TestCheckStoreWithInvalidData(t *testing.T) {
 	status = checkStore(store, req)
 	Expect(status.Code).To(Equal(INVALID_ARGUMENT))
 
-	store.DropActionOverride = policystore.ALLOW
+	store.DropActionOverride = policystore.ACCEPT
 	status = checkStore(store, req)
 	Expect(status.Code).To(Equal(OK))
 
-	store.DropActionOverride = policystore.LOG_AND_ALLOW
+	store.DropActionOverride = policystore.LOG_AND_ACCEPT
 	status = checkStore(store, req)
 	Expect(status.Code).To(Equal(OK))
 }
@@ -516,17 +516,17 @@ func TestCheckStorePolicyMultiTierMatch(t *testing.T) {
 	status = checkStore(store, req)
 	Expect(status.Code).To(Equal(OK))
 
-	store.DropActionOverride = policystore.ALLOW
+	store.DropActionOverride = policystore.ACCEPT
 	status = checkStore(store, req)
 	Expect(status.Code).To(Equal(OK))
 
-	store.DropActionOverride = policystore.LOG_AND_ALLOW
+	store.DropActionOverride = policystore.LOG_AND_ACCEPT
 	status = checkStore(store, req)
 	Expect(status.Code).To(Equal(OK))
 
 	// Change to a bad path, and check that we get PERMISSION_DENIED for
 	// DROP and LOG_AND_DROP values for DropActionOverride, and OK for
-	// ALLOW and LOG_AND_ALLOW.
+	// ACCEPT and LOG_AND_ACCEPT.
 	http := req.GetAttributes().GetRequest().GetHttp()
 	http.Path = "/bad"
 
@@ -538,11 +538,11 @@ func TestCheckStorePolicyMultiTierMatch(t *testing.T) {
 	status = checkStore(store, req)
 	Expect(status.Code).To(Equal(PERMISSION_DENIED))
 
-	store.DropActionOverride = policystore.ALLOW
+	store.DropActionOverride = policystore.ACCEPT
 	status = checkStore(store, req)
 	Expect(status.Code).To(Equal(OK))
 
-	store.DropActionOverride = policystore.LOG_AND_ALLOW
+	store.DropActionOverride = policystore.LOG_AND_ACCEPT
 	status = checkStore(store, req)
 	Expect(status.Code).To(Equal(OK))
 }

@@ -26,9 +26,9 @@ import (
 type DropActionOverride int
 
 const (
-	ALLOW DropActionOverride = iota
+	ACCEPT DropActionOverride = iota
 	DROP
-	LOG_AND_ALLOW
+	LOG_AND_ACCEPT
 	LOG_AND_DROP
 )
 

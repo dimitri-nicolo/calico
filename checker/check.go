@@ -54,8 +54,8 @@ func checkStore(store *policystore.PolicyStore, req *authz.CheckRequest) (s rpc.
 		switch store.DropActionOverride {
 		case policystore.DROP, policystore.LOG_AND_DROP:
 			// Leave action unchanged, packet will be dropped.
-		case policystore.ALLOW, policystore.LOG_AND_ALLOW:
-			// Convert action that would result in a drop into an allow.
+		case policystore.ACCEPT, policystore.LOG_AND_ACCEPT:
+			// Convert action that would result in a drop into an accept.
 			log.Info("Invoking DropActionOverride: Converting drop action to allow")
 			s.Code = OK
 		}

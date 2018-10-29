@@ -160,7 +160,7 @@ func processInSync(store *policystore.PolicyStore, inSync *proto.InSync) {
 func processConfigUpdate(store *policystore.PolicyStore, update *proto.ConfigUpdate) {
 	log.WithFields(log.Fields{
 		"config": update.Config,
-	}).Debug("Processing ConfigUpdate")
+	}).Info("Processing ConfigUpdate")
 
 	// Update the DropActionOverride setting if it is available.
 	if val, ok := update.Config["DropActionOverride"]; ok {
@@ -168,12 +168,12 @@ func processConfigUpdate(store *policystore.PolicyStore, update *proto.ConfigUpd
 		switch strings.ToLower(val) {
 		case "drop":
 			psVal = policystore.DROP
-		case "allow":
-			psVal = policystore.ALLOW
+		case "accept":
+			psVal = policystore.ACCEPT
 		case "loganddrop":
 			psVal = policystore.LOG_AND_DROP
-		case "logandallow":
-			psVal = policystore.LOG_AND_ALLOW
+		case "logandaccept":
+			psVal = policystore.LOG_AND_ACCEPT
 		default:
 			log.Errorf("Unknown DropActionOverride value: %s", val)
 			psVal = policystore.DROP
