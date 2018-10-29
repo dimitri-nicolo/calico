@@ -33,6 +33,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/testutils"
 	"github.com/projectcalico/libcalico-go/lib/watch"
+	"github.com/projectcalico/libcalico-go/lib/net"
 )
 
 var _ = testutils.E2eDatastoreDescribe("IPPool tests", testutils.DatastoreAll, func(config apiconfig.CalicoAPIConfig) {
@@ -831,7 +832,13 @@ var _ = testutils.E2eDatastoreDescribe("IPPool tests", testutils.DatastoreEtcdV3
 			Expect(err).NotTo(HaveOccurred())
 
 			// Allocate an IP so that a block is allocated
-			assigned, _, err := c.IPAM().AutoAssign(ctx, ipam.AutoAssignArgs{Num4: 1})
+			assignedV4, _, err := c.IPAM().AutoAssign(ctx, ipam.AutoAssignArgs{Num4: 1})
+			assigned := make([]net.IP, 0, 0)
+                        for _, ipnet := range assignedV4{
+                               IP, _, _ := net.ParseCIDR(ipnet.String())
+                               assigned = append(assigned, *IP)
+                        }
+
 			Expect(err).NotTo(HaveOccurred())
 			Expect(assigned).To(HaveLen(1))
 
