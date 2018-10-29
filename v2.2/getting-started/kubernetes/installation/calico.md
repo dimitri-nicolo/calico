@@ -353,7 +353,7 @@ for each [remote cluster](../../../usage/federation/index#terminology). Ensure t
 
 {% include {{page.version}}/apply-license.md %}
 
-{% include {{page.version}}/cnx-mgr-install.md init="kubernetes" %}
+{% include {{page.version}}/cnx-mgr-install.md init="kubernetes" net="calico" %}
 
 1. For production installs, we recommend using your own Elasticsearch cluster. If you are performing a
    production install, do not complete any more steps on this page. Instead, refer to

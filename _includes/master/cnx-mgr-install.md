@@ -77,7 +77,7 @@
 
 {% endif %}
 
-{% if include.init != "openshift" %}
+{% if include.init != "openshift" and include.net == "calico" %}
 
 1. Download the manifest that corresponds to your datastore type and save the file
    as cnx.yaml. That is how we will refer to it in later steps.
@@ -94,7 +94,21 @@
      {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-kdd.yaml
      ```
 
-{% else %}
+{% endif %}
+
+{% if include.init != "openshift" and include.net == "other" %}
+
+1. Download the networking manifest for the Kubernetes API datastore and save the file
+   as cnx.yaml. That is how we will refer to it in later steps.
+
+   ```bash
+   curl --compressed -o cnx.yaml \
+   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-kdd.yaml
+   ```
+
+{% endif %}
+
+{% if include.init == "openshift" %}
 
 1. Download the {{site.prodname}} manifest for etcd and save the file as cnx.yaml. That is how we will refer to it in later steps:
 

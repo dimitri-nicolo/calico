@@ -258,7 +258,7 @@ for each [remote cluster](../../../usage/federation/index#terminology). Ensure t
 
 {% include {{page.version}}/apply-license.md %}
 
-{% include {{page.version}}/cnx-mgr-install.md init="kubernetes" %}
+{% include {{page.version}}/cnx-mgr-install.md init="kubernetes" net="other" %}
 
 1. For production installs, follow the instructions [here](byo-elasticsearch) to configure {{site.prodname}}
    to use your own Elasticsearch cluster.  For demo / proof of concept installs using the bundled Elasticsearch
