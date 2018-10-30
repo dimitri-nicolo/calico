@@ -20,7 +20,6 @@ import (
 	"math/big"
 	"net"
 	"reflect"
-	"runtime"
 
 	"github.com/projectcalico/libcalico-go/lib/apis/v3"
 	log "github.com/sirupsen/logrus"
@@ -38,7 +37,7 @@ type allocationBlock struct {
 	*model.AllocationBlock
 }
 
-func newBlock(cidr cnet.IPNet) allocationBlock {
+func newBlock(cidr cnet.IPNet, windowsHost bool) allocationBlock {
 	ones, size := cidr.Mask.Size()
 	numAddresses := 2 << uint(size-ones-1)
 	b := model.AllocationBlock{}
@@ -56,7 +55,7 @@ func newBlock(cidr cnet.IPNet) allocationBlock {
 	// reserved. This is done by pre-allocating them during initialization
 	// time only.
 	// IPs : x.0, x.1, x.2 and x.bcastAddr (e.g. x.255 for /24 subnet)
-	if runtime.GOOS == "windows" {
+	if windowsHost {
 		log.Debugf("Block %s reserving IPs for windows", b.CIDR.String())
 		// nil attributes
 		winAttrs := make(map[string]string)
@@ -176,8 +175,8 @@ func (b allocationBlock) numFreeAddresses() int {
 	return len(b.Unallocated)
 }
 
-func (b allocationBlock) empty() bool {
-	if runtime.GOOS == "windows" && b.containsOnlyReservedIPs() {
+func (b allocationBlock) empty(windowsHost bool) bool {
+	if windowsHost && b.containsOnlyReservedIPs() {
 		return true
 	}
 	return b.numFreeAddresses() == b.numAddresses()

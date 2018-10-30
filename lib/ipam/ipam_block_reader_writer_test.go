@@ -495,7 +495,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM affine block allocation tests", tes
 			)
 
 			By("setting up the client for the test", func() {
-				b := newBlock(*net)
+				b := newBlock(*net, false)
 				blockKVP = model.KVPair{
 					Key:   model.BlockKey{CIDR: *net},
 					Value: &b,
@@ -588,7 +588,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM affine block allocation tests", tes
 
 			// Creation function for the actual block - should return an error indicating the block
 			// was already taken by another host.
-			b := newBlock(*net)
+			b := newBlock(*net, false)
 			b.Affinity = &affStrA
 			b.StrictAffinity = false
 			blockKVP := &model.KVPair{
@@ -596,7 +596,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM affine block allocation tests", tes
 				Value: b.AllocationBlock,
 			}
 
-			b2 := newBlock(*net)
+			b2 := newBlock(*net, false)
 			b2.Affinity = &affStrB
 			b2.StrictAffinity = false
 			blockKVP2 := &model.KVPair{
