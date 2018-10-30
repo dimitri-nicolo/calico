@@ -54,13 +54,13 @@ ci: $(ES_PROXY_CREATED)
 
 
 cd: 
-#ifndef VERSION
-#        $(error VERSION is undefined - run using make release VERSION=v.X.Y.Z)
-#endif        
-	#@echo pushing $(VERSION)
+ifndef VERSION
+        $(error VERSION is undefined - run using make cd VERSION=v.X.Y.Z)
+endif        
+	@echo pushing $(VERSION)
 	#gcloud auth configure-docker
-	sudo docker tag tigera/es-proxy:latest $(ES_PROXY_IMAGE):latest
-	sudo docker push $(ES_PROXY_IMAGE):latest
+	sudo docker tag tigera/es-proxy:latest $(ES_PROXY_IMAGE):$(VERSION)
+	sudo docker push $(ES_PROXY_IMAGE):$(VERSION)
 
 
 .PHONY: clean
