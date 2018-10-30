@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Microsoft/hcsshim"
@@ -87,42 +88,43 @@ func DoNetworking(
 
 	n, _, err := loadNetConf(args.StdinData)
 	if err != nil {
-		logger.Infof("Error loading args")
-		return hostVethName, contVethMAC, err
+		logger.Errorf("Error loading args")
+		return "", "", err
 	}
 
 	// Create hns network
-	networkName := n.Name
+	//networkName := n.Name
+	networkName := CreateNetworkName(subNet)
 	hnsNetwork, err := EnsureNetworkExists(networkName, subNet, logger)
-	if hnsNetwork == nil && err != nil {
-		logger.Infof("Unable to create hns network %s", networkName)
-		return hostVethName, contVethMAC, err
+	if err != nil {
+		logger.Errorf("Unable to create hns network %s", networkName)
+		return "", "", err
 	}
 
 	// Create host hns endpoint
 	epName := networkName + "_ep"
 	hnsEndpoint, err := CreateAndAttachHostEP(epName, hnsNetwork, subNet, logger)
-	if hnsEndpoint == nil && err != nil {
-		logger.Infof("Unable to create host hns endpoint %s", epName)
-		return hostVethName, contVethMAC, err
+	if err != nil {
+		logger.Errorf("Unable to create host hns endpoint %s", epName)
+		return "", "", err
 	}
 
 	// Check for management ip getting assigned to the network, interface with the management ip
 	// and then enable forwarding on management interface as well as endpoint
 	err = ChkMgmtIPandEnableForwarding(networkName, hnsEndpoint, logger)
 	if err != nil {
-		logger.Infof("Failed to enable forwarding : %v", err)
-		return hostVethName, contVethMAC, err
+		logger.Errorf("Failed to enable forwarding : %v", err)
+		return "", "", err
 	}
 
 	// Create endpoint for container
-	hnsEndpoint_cont, err := CreateAndAttachContainerEP(args, hnsNetwork, subNet, result, n.Name, logger)
+	hnsEndpointCont, err := CreateAndAttachContainerEP(args, hnsNetwork, subNet, result, n.Name, logger)
 	if err != nil {
-		logger.Infof("Unable to create container hns endpoint %s", epName)
-		return hostVethName, contVethMAC, err
+		logger.Errorf("Unable to create container hns endpoint %s", epName)
+		return "", "", err
 	}
 
-	contVethMAC = hnsEndpoint_cont.MacAddress
+	contVethMAC = hnsEndpointCont.MacAddress
 	return hostVethName, contVethMAC, err
 }
 
@@ -149,7 +151,7 @@ func EnsureNetworkExists(networkName string, subNet *net.IPNet, logger *logrus.E
 		// Delete stale network
 		if hnsNetwork != nil {
 			if _, err := hnsNetwork.Delete(); err != nil {
-				logger.Infof("unable to delete existing network [%v], error: %v", hnsNetwork.Name, err)
+				logger.Errorf("Unable to delete existing network [%v], error: %v", hnsNetwork.Name, err)
 				return nil, err
 			}
 			logger.Infof("Deleted stale HNS network [%v]")
@@ -168,13 +170,13 @@ func EnsureNetworkExists(networkName string, subNet *net.IPNet, logger *logrus.E
 		}
 		reqStr, err := json.Marshal(req)
 		if err != nil {
-			logger.Infof("error in converting to json format")
+			logger.Errorf("Error in converting to json format")
 			return nil, err
 		}
 
-		logger.Infof("DEBUG: Attempting to create HNS network, request: %v", string(reqStr))
+		logger.Infof("Attempting to create HNS network, request: %v", string(reqStr))
 		if hnsNetwork, err = hcsshim.HNSNetworkRequest("POST", "", string(reqStr)); err != nil {
-			logger.Infof("unable to create network [%v], error: %v", networkName, err)
+			logger.Errorf("unable to create network [%v], error: %v", networkName, err)
 			return nil, err
 		}
 		logger.Infof("Created HNS network [%v] as %+v", networkName, hnsNetwork)
@@ -183,36 +185,28 @@ func EnsureNetworkExists(networkName string, subNet *net.IPNet, logger *logrus.E
 }
 
 func CreateAndAttachHostEP(epName string, hnsNetwork *hcsshim.HNSNetwork, subNet *net.IPNet, logger *logrus.Entry) (*hcsshim.HNSEndpoint, error) {
-	var endpointToAttach *hcsshim.HNSEndpoint
 	var err error
-	createEndpoint := true
 	podGatewayAddress := GetGW(subNet)
+	attachEndpoint := true
 
 	// Checking if HNS Endpoint exists.
 	hnsEndpoint, _ := hcsshim.GetHNSEndpointByName(epName)
-	if hnsEndpoint != nil && hnsEndpoint.IPAddress.String() == podGatewayAddress.String() {
-		endpointToAttach = hnsEndpoint
-		createEndpoint = false
-		logger.Infof("Endpoint exists %v ", hnsEndpoint)
-		if endpointToAttach.VirtualNetwork != hnsNetwork.Id {
-			if err = endpointToAttach.HostAttach(1); err != nil {
-				logger.Infof("unable to hot attach bridge endpoint [%v] to host compartment, error: %v", epName, err)
-				return nil, err
-			}
-			logger.Infof("Attached bridge endpoint [%v] to host", epName)
-		}
-	}
-
-	if createEndpoint {
-		// Delete stale endpoint
-		if hnsEndpoint != nil {
+	if hnsEndpoint != nil {
+		if !hnsEndpoint.IPAddress.Equal(podGatewayAddress) {
+			// IPAddress does not match. Delete stale endpoint
 			if _, err = hnsEndpoint.Delete(); err != nil {
-				logger.Infof("unable to delete existing bridge endpoint [%v], error: %v", epName, err)
+				logger.Errorf("Unable to delete existing bridge endpoint [%v], error: %v", epName, err)
 				return nil, err
 			}
 			logger.Infof("Deleted stale bridge endpoint [%v]")
+			hnsEndpoint = nil
+		} else if hnsEndpoint.VirtualNetwork == hnsNetwork.Id {
+			// Endpoint exists for correct network. No processing required
+			attachEndpoint = false
 		}
+	}
 
+	if hnsEndpoint == nil {
 		// Create new endpoint
 		hnsEndpoint = &hcsshim.HNSEndpoint{
 			Name:           epName,
@@ -220,21 +214,22 @@ func CreateAndAttachHostEP(epName string, hnsNetwork *hcsshim.HNSNetwork, subNet
 			VirtualNetwork: hnsNetwork.Id,
 		}
 
-		logger.Infof("DEBUG: Attempting to create bridge endpoint [%+v]", hnsEndpoint)
+		logger.Infof("Attempting to create bridge endpoint [%+v]", hnsEndpoint)
 		hnsEndpoint, err = hnsEndpoint.Create()
 		if err != nil {
-			logger.Infof("unable to create bridge endpoint [%v], error: %v", epName, err)
+			logger.Errorf("Unable to create bridge endpoint [%v], error: %v", epName, err)
 			return nil, err
 		}
-		logger.Infof("DEBUG: Created bridge endpoint [%v] as %+v", epName, hnsEndpoint)
+		logger.Infof("Created bridge endpoint [%v] as %+v", epName, hnsEndpoint)
+	}
 
+	if attachEndpoint == true {
 		// Attach endpoint to host
-		endpointToAttach = hnsEndpoint
-		if err = endpointToAttach.HostAttach(1); err != nil {
-			logger.Infof("unable to hot attach bridge endpoint [%v] to host compartment, error: %v", epName, err)
+		if err = hnsEndpoint.HostAttach(1); err != nil {
+			logger.Errorf("Unable to hot attach bridge endpoint [%v] to host compartment, error: %v", epName, err)
 			return nil, err
 		}
-		logger.Infof("DEBUG:Attached bridge endpoint [%v] to host", epName)
+		logger.Infof("Attached bridge endpoint [%v] to host", epName)
 	}
 	return hnsEndpoint, err
 }
@@ -248,7 +243,7 @@ func ChkMgmtIPandEnableForwarding(networkName string, hnsEndpoint *hcsshim.HNSEn
 	for {
 		Network, err = hcsshim.GetHNSNetworkByName(networkName)
 		if err != nil {
-			logger.Infof("Unable to get hns network %s after creation, error: %v", networkName, err)
+			logger.Errorf("Unable to get hns network %s after creation, error: %v", networkName, err)
 			return err
 		}
 
@@ -274,7 +269,7 @@ func ChkMgmtIPandEnableForwarding(networkName string, hnsEndpoint *hcsshim.HNSEn
 	for _, interfaceIpAddress := range []string{Network.ManagementIP, hnsEndpoint.IPAddress.String()} {
 		netInterface, err := netHelper.GetInterfaceByIP(interfaceIpAddress)
 		if err != nil {
-			logger.Infof("Unable to find interface for IP Addess [%v], error: %v", interfaceIpAddress, err)
+			logger.Infof("Unable to find interface for IP Address [%v], error: %v", interfaceIpAddress, err)
 			return err
 		}
 
@@ -297,8 +292,8 @@ func CreateAndAttachContainerEP(args *skel.CmdArgs,
 	logger *logrus.Entry) (*hcsshim.HNSEndpoint, error) {
 
 	endpointName := hns.ConstructEndpointName(args.ContainerID, args.Netns, Name)
-	logger.Infof("DEBUG:Attempting to create HNS endpoint name : %s for container", endpointName)
-	hnsEndpoint_cont, err := hns.ProvisionEndpoint(endpointName, hnsNetwork.Id, args.ContainerID, func() (*hcsshim.HNSEndpoint, error) {
+	logger.Infof("Attempting to create HNS endpoint name : %s for container", endpointName)
+	hnsEndpointCont, err := hns.ProvisionEndpoint(endpointName, hnsNetwork.Id, args.ContainerID, func() (*hcsshim.HNSEndpoint, error) {
 		hnsEP := &hcsshim.HNSEndpoint{
 			Name:           endpointName,
 			VirtualNetwork: hnsNetwork.Id,
@@ -307,14 +302,21 @@ func CreateAndAttachContainerEP(args *skel.CmdArgs,
 		}
 		return hnsEP, nil
 	})
-	logger.Infof("Endpoint to container created! %v", hnsEndpoint_cont)
-	return hnsEndpoint_cont, err
+	logger.Infof("Endpoint to container created! %v", hnsEndpointCont)
+	return hnsEndpointCont, err
 }
 
 func GetGW(PodCIDR *net.IPNet) net.IP {
 	gwaddr := PodCIDR.IP.To4()
 	gwaddr[3]++
 	return gwaddr
+}
+
+func CreateNetworkName(subnet *net.IPNet) string {
+	str := subnet.IP.String()
+	network := strings.Replace(str, ".", "-", -1)
+	name := "Calico-" + network
+	return name
 }
 
 // SetupRoutes sets up the routes for the host side of the veth pair.
@@ -329,7 +331,7 @@ func SetupRoutes(hostVeth interface{}, result *current.Result) error {
 
 // CleanUpNamespace deletes the devices in the network namespace.
 func CleanUpNamespace(args *skel.CmdArgs, logger *logrus.Entry) error {
-	logger.Warn("DEBUG: Cleaning up endpoint")
+	logger.Infof("Cleaning up endpoint")
 
 	n, _, err := loadNetConf(args.StdinData)
 	if err != nil {
@@ -337,7 +339,7 @@ func CleanUpNamespace(args *skel.CmdArgs, logger *logrus.Entry) error {
 	}
 
 	epName := hns.ConstructEndpointName(args.ContainerID, args.Netns, n.Name)
-	logger.Infof("DEBUG:Attempting to delete HNS endpoint name : %s for container", epName)
+	logger.Infof("Attempting to delete HNS endpoint name : %s for container", epName)
 
 	return hns.DeprovisionEndpoint(epName, args.Netns, args.ContainerID)
 }

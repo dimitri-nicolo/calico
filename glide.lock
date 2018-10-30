@@ -17,8 +17,6 @@ imports:
   version: 3a771d992973f24aa725d07868b467d1ddfceafb
   subpackages:
   - quantile
-- name: github.com/buger/jsonparser
-  version: f4dd9f5a6b441265aefc1d44872a6f8c10f42b37
 - name: github.com/containernetworking/cni
   version: e67bb289cccfcad352b92c5234a1610b105846e0
   subpackages:
