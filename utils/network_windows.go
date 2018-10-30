@@ -78,12 +78,12 @@ func DoNetworking(
 	routes []*net.IPNet,
 ) (hostVethName, contVethMAC string, err error) {
 	// Select the first 11 characters of the containerID for the host veth.
-	hostVethName = "cali" + args.ContainerID[:Min(11, len(args.ContainerID))]
+	hostVethName = ""
 
 	// If a desired veth name was passed in, use that instead.
-	if desiredVethName != "" {
-		hostVethName = desiredVethName
-	}
+	//if desiredVethName != "" {
+	//	hostVethName = desiredVethName
+	//}
 	_, subNet, _ := net.ParseCIDR(result.IPs[0].Address.String())
 
 	n, _, err := loadNetConf(args.StdinData)
