@@ -21,10 +21,10 @@ $(ES_PROXY_CREATED): Dockerfile haproxy.cfg rsyslog.conf
 
 .PHONY: release ci cd clean
 release: clean ci cd	
-ifndef VERSION
-	$(error VERSION is undefined - run using make release VERSION=v.X.Y.Z)
-endif
-	@	
+#ifndef VERSION
+#	$(error VERSION is undefined - run using make release VERSION=v.X.Y.Z)
+#endif
+	
 	#git tag $(VERSION)
 
 	# Check to make sure the tag isn't "dirty"
@@ -50,16 +50,16 @@ endif
 	#@echo "docker push $(ES_PROXY_IMAGE):latest"
 
 ci: $(ES_PROXY_CREATED)
-	@
+	
 
 cd: ci
-ifndef VERSION
-        $(error VERSION is undefined - run using make release VERSION=v.X.Y.Z)
-endif        
+#ifndef VERSION
+#        $(error VERSION is undefined - run using make release VERSION=v.X.Y.Z)
+#endif        
 	#@echo pushing $(VERSION)
 	#gcloud auth configure-docker
-	docker tag tigera/es-proxy:latest $(ES_PROXY_IMAGE):$(VERSION)
-	docker push $(ES_PROXY_IMAGE):$(VERSION)
+	docker tag tigera/es-proxy:latest $(ES_PROXY_IMAGE):latest
+	docker push $(ES_PROXY_IMAGE):latest
 
 #.PHONY: clean
 clean:
