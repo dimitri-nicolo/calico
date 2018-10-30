@@ -125,7 +125,7 @@ func EnsureNetworkExists(networkName string, subNet *net.IPNet, logger *logrus.E
 	var err error
 	createNetwork := true
 	addressPrefix := subNet.String()
-	gatewayAddress := GetGW(subNet)
+	gatewayAddress := GetNthIP(subNet, 1)
 
 	// Checking if HNS network exists
 	hnsNetwork, _ := hcsshim.GetHNSNetworkByName(networkName)
@@ -179,13 +179,13 @@ func EnsureNetworkExists(networkName string, subNet *net.IPNet, logger *logrus.E
 
 func CreateAndAttachHostEP(epName string, hnsNetwork *hcsshim.HNSNetwork, subNet *net.IPNet, logger *logrus.Entry) (*hcsshim.HNSEndpoint, error) {
 	var err error
-	EndpointAddress := EndpointIP(subNet)
+	endpointAddress := GetNthIP(subNet, 2)
 	attachEndpoint := true
 
 	// Checking if HNS Endpoint exists.
 	hnsEndpoint, _ := hcsshim.GetHNSEndpointByName(epName)
 	if hnsEndpoint != nil {
-		if !hnsEndpoint.IPAddress.Equal(EndpointAddress) {
+		if !hnsEndpoint.IPAddress.Equal(endpointAddress) {
 			// IPAddress does not match. Delete stale endpoint
 			if _, err = hnsEndpoint.Delete(); err != nil {
 				logger.Errorf("Unable to delete existing bridge endpoint [%v], error: %v", epName, err)
@@ -203,7 +203,7 @@ func CreateAndAttachHostEP(epName string, hnsNetwork *hcsshim.HNSNetwork, subNet
 		// Create new endpoint
 		hnsEndpoint = &hcsshim.HNSEndpoint{
 			Name:           epName,
-			IPAddress:      EndpointAddress,
+			IPAddress:      endpointAddress,
 			VirtualNetwork: hnsNetwork.Id,
 		}
 
@@ -229,37 +229,37 @@ func CreateAndAttachHostEP(epName string, hnsNetwork *hcsshim.HNSNetwork, subNet
 
 func ChkMgmtIPandEnableForwarding(networkName string, hnsEndpoint *hcsshim.HNSEndpoint, logger *logrus.Entry) error {
 	netHelper := netsh.New(nil)
-	var Network *hcsshim.HNSNetwork
+	var network *hcsshim.HNSNetwork
 	var err error
 
 	// Wait for the network to populate Management IP.
 	for {
-		Network, err = hcsshim.GetHNSNetworkByName(networkName)
+		network, err = hcsshim.GetHNSNetworkByName(networkName)
 		if err != nil {
 			logger.Errorf("Unable to get hns network %s after creation, error: %v", networkName, err)
 			return err
 		}
 
-		if len(Network.ManagementIP) > 0 {
-			logger.Infof("Got managementIP %s", Network.ManagementIP)
+		if len(network.ManagementIP) > 0 {
+			logger.Infof("Got managementIP %s", network.ManagementIP)
 			break
 		}
 		time.Sleep(1 * time.Second)
-		logger.Infof("Checking ManagementIP with HnsNetwork[%v]", Network)
+		logger.Infof("Checking ManagementIP with HnsNetwork[%v]", network)
 	}
 
 	//Wait for the interface with the management IP
 	for {
-		if _, err = netHelper.GetInterfaceByIP(Network.ManagementIP); err != nil {
+		if _, err = netHelper.GetInterfaceByIP(network.ManagementIP); err != nil {
 			time.Sleep(1 * time.Second)
-			logger.Infof("Checking interface with ip %s, err %v", Network.ManagementIP, err)
+			logger.Infof("Checking interface with ip %s, err %v", network.ManagementIP, err)
 			continue
 		}
 		break
 	}
 
 	// Enable forwarding on the host interface and endpoint
-	for _, interfaceIpAddress := range []string{Network.ManagementIP, hnsEndpoint.IPAddress.String()} {
+	for _, interfaceIpAddress := range []string{network.ManagementIP, hnsEndpoint.IPAddress.String()} {
 		netInterface, err := netHelper.GetInterfaceByIP(interfaceIpAddress)
 		if err != nil {
 			logger.Infof("Unable to find interface for IP Address [%v], error: %v", interfaceIpAddress, err)
@@ -284,7 +284,7 @@ func CreateAndAttachContainerEP(args *skel.CmdArgs,
 	Name string,
 	logger *logrus.Entry) (*hcsshim.HNSEndpoint, error) {
 
-	gatewayAddress := EndpointIP(subNet).String()
+	gatewayAddress := GetNthIP(subNet, 2).String()
 
 	endpointName := hns.ConstructEndpointName(args.ContainerID, args.Netns, Name)
 	logger.Infof("Attempting to create HNS endpoint name : %s for container", endpointName)
@@ -301,24 +301,19 @@ func CreateAndAttachContainerEP(args *skel.CmdArgs,
 	return hnsEndpointCont, err
 }
 
-// This func increments the subnet IP address by 2 to get the host
-// endpoint IP and container's gateway IP
-func EndpointIP(PodCIDR *net.IPNet) net.IP {
+// This func increments the subnet IP address by n depending on
+// endpoint IP or gateway IP
+func GetNthIP(PodCIDR *net.IPNet, n int) net.IP {
 	gwaddr := PodCIDR.IP.To4()
 	buffer := make([]byte, len(gwaddr))
 	copy(buffer, gwaddr)
-	buffer[3]++
-	buffer[3]++
+	if n == 1 {
+		buffer[3]++
+	} else if n == 2 {
+		buffer[3]++
+		buffer[3]++
+	}
 	return buffer
-}
-
-// This function increments the subnet IP address by 1 
-func GetGW(PodCIDR *net.IPNet) net.IP {
-        gwaddr := PodCIDR.IP.To4()
-        buffer := make([]byte, len(gwaddr))
-        copy(buffer, gwaddr)
-        buffer[3]++
-        return buffer
 }
 
 func CreateNetworkName(subnet *net.IPNet) string {
