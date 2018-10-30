@@ -4,7 +4,7 @@
 #MY_GID:=$(shell id -g)
 
 VERSION?=master
-#DOCKER_RUN_RM:=docker run --rm --user $(MY_UID):$(MY_GID) -v $${PWD}:/code -w /code
+DOCKER_RUN_RM:=docker run --rm --user $(MY_UID):$(MY_GID) -v $${PWD}:/code -w /code
 #DOCKER_TOKEN:=$(shell gcloud auth print-access-token)
 # Constants used in tests and test setup.
 
@@ -16,7 +16,7 @@ ES_PROXY_CREATED?=.es-proxy.created
 #$(ES_PROXY_CONTAINER_NAME): $(ES_PROXY_CREATED) ## Create the es-proxy container
 
 $(ES_PROXY_CREATED): Dockerfile haproxy.cfg rsyslog.conf
-	docker build -f Dockerfile -t tigera/es-proxy:latest .
+	sudo docker build -f Dockerfile -t tigera/es-proxy:latest .
 	touch $@
 
 .PHONY: release
@@ -34,7 +34,7 @@ endif
 	$(MAKE) image
 
 	# Retag images with correct version and registry prefix
-	docker tag tigera/es-proxy:latest $(ES_PROXY_IMAGE):$(VERSION)
+	sudo docker tag tigera/es-proxy:latest $(ES_PROXY_IMAGE):$(VERSION)
 
 	# Check that image were created recently and that the IDs of the versioned and latest image match
 	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" tigera/es-proxy:latest
@@ -56,8 +56,8 @@ cd:
 #endif        
 	#@echo pushing $(VERSION)
 	#gcloud auth configure-docker
-	docker tag tigera/es-proxy:latest $(ES_PROXY_IMAGE):latest
-	docker push $(ES_PROXY_IMAGE):latest
+	sudo docker tag tigera/es-proxy:latest $(ES_PROXY_IMAGE):latest
+	sudo docker push $(ES_PROXY_IMAGE):latest
 
 
 ci: $(ES_PROXY_CREATED) cd
