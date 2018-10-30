@@ -50,6 +50,9 @@ endif
 	@echo "docker push $(ES_PROXY_IMAGE):latest"
 
 
+ci: $(ES_PROXY_CREATED)
+
+
 cd: 
 #ifndef VERSION
 #        $(error VERSION is undefined - run using make release VERSION=v.X.Y.Z)
@@ -58,9 +61,6 @@ cd:
 	#gcloud auth configure-docker
 	sudo docker tag tigera/es-proxy:latest $(ES_PROXY_IMAGE):latest
 	sudo docker push $(ES_PROXY_IMAGE):latest
-
-
-ci: $(ES_PROXY_CREATED) cd
 
 
 .PHONY: clean
