@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"runtime"
 
 	"github.com/projectcalico/libcalico-go/lib/apis/v3"
 	log "github.com/sirupsen/logrus"
@@ -199,7 +200,7 @@ func (c ipamClient) getBlockFromAffinity(ctx context.Context, aff *model.KVPair)
 // determinePools compares a list of requested pools with the enabled pools
 // and returns the intersect. If any requested pool does not exist, or is not enabled, an error is returned.
 // If no pools are requested, all enabled pools are returned.
-func (c ipamClient) determinePools(requestedPoolNets []net.IPNet, version int, windowsHost bool) ([]v3.IPPool, error) {
+func (c ipamClient) determinePools(requestedPoolNets []net.IPNet, version int) ([]v3.IPPool, error) {
 	enabledPools, err := c.pools.GetEnabledPools(version)
 	if err != nil {
 		log.WithError(err).Errorf("Error reading configured pools")
@@ -223,7 +224,7 @@ func (c ipamClient) determinePools(requestedPoolNets []net.IPNet, version int, w
 			maxWindowsBlockSize = 126
 		}
 		for _, p := range enabledPools {
-			if windowsHost && p.Spec.BlockSize >= maxWindowsBlockSize {
+			if runtime.GOOS == "windows" && p.Spec.BlockSize >= maxWindowsBlockSize {
 				log.Warningf("skipping pool %v for windows due to blockSize", p)
 				continue
 			}
@@ -248,9 +249,8 @@ func (c ipamClient) determinePools(requestedPoolNets []net.IPNet, version int, w
 }
 
 func (c ipamClient) autoAssign(ctx context.Context, num int, handleID *string, attrs map[string]string, requestedPools []net.IPNet, version int, host string) ([]net.IP, error) {
-	windowsHost := ctx.Value("windowsHost").(bool)
 	// Start by sanitizing the requestedPools.
-	pools, err := c.determinePools(requestedPools, version, windowsHost)
+	pools, err := c.determinePools(requestedPools, version)
 	if err != nil {
 		return nil, err
 	}
@@ -620,7 +620,6 @@ func (c ipamClient) ReleaseIPs(ctx context.Context, ips []net.IP) ([]net.IP, err
 }
 
 func (c ipamClient) releaseIPsFromBlock(ctx context.Context, ips []net.IP, blockCIDR net.IPNet) ([]net.IP, error) {
-	windowsHost := ctx.Value("windowsHost").(bool)
 	logCtx := log.WithField("cidr", blockCIDR)
 	for i := 0; i < ipamEtcdRetries; i++ {
 		logCtx.Info("Getting block so we can release IPs")
@@ -655,7 +654,7 @@ func (c ipamClient) releaseIPsFromBlock(ctx context.Context, ips []net.IP, block
 		// the Value since we have updated the structure pointed to in the
 		// KVPair.
 		var updateErr error
-		if b.empty(windowsHost) && b.Affinity == nil {
+		if b.empty() && b.Affinity == nil {
 			logCtx.Info("Deleting non-affine block")
 			_, updateErr = c.client.Delete(ctx, obj.Key, obj.Revision)
 		} else {
@@ -1050,7 +1049,6 @@ func (c ipamClient) ReleaseByHandle(ctx context.Context, handleID string) error 
 }
 
 func (c ipamClient) releaseByHandle(ctx context.Context, handleID string, blockCIDR net.IPNet) error {
-	windowsHost := ctx.Value("windowsHost").(bool)
 	logCtx := log.WithFields(log.Fields{"handle": handleID, "cidr": blockCIDR})
 	for i := 0; i < ipamEtcdRetries; i++ {
 		logCtx.Info("Querying block so we can release IPs by handle")
@@ -1075,7 +1073,7 @@ func (c ipamClient) releaseByHandle(ctx context.Context, handleID string, blockC
 		}
 		logCtx.Infof("Block has %d IPs with the given handle", num)
 
-		if block.empty(windowsHost) && block.Affinity == nil {
+		if block.empty() && block.Affinity == nil {
 			logCtx.Info("Deleting block because it is now empty and has no affinity")
 			_, err = c.client.Delete(ctx, model.BlockKey{blockCIDR}, obj.Revision)
 			if err != nil {
