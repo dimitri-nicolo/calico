@@ -1,5 +1,5 @@
-hash: b288af79b80ead551ea78386b32aca88de9d369b7aa0ee0a0ada4ec641ffa51f
-updated: 2018-10-29T12:19:14.444133376Z
+hash: fcff699a796822a17aa7d09dbf38411c5dcec8118daf37cf1082328e61d0adcf
+updated: 2018-10-30T13:46:47.212108552Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -17,6 +17,8 @@ imports:
   version: 3a771d992973f24aa725d07868b467d1ddfceafb
   subpackages:
   - quantile
+- name: github.com/buger/jsonparser
+  version: f4dd9f5a6b441265aefc1d44872a6f8c10f42b37
 - name: github.com/containernetworking/cni
   version: e67bb289cccfcad352b92c5234a1610b105846e0
   subpackages:

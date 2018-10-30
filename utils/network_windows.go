@@ -77,13 +77,7 @@ func DoNetworking(
 	desiredVethName string,
 	routes []*net.IPNet,
 ) (hostVethName, contVethMAC string, err error) {
-	// Select the first 11 characters of the containerID for the host veth.
-	hostVethName = ""
 
-	// If a desired veth name was passed in, use that instead.
-	//if desiredVethName != "" {
-	//	hostVethName = desiredVethName
-	//}
 	_, subNet, _ := net.ParseCIDR(result.IPs[0].Address.String())
 
 	n, _, err := loadNetConf(args.StdinData)
@@ -93,7 +87,6 @@ func DoNetworking(
 	}
 
 	// Create hns network
-	//networkName := n.Name
 	networkName := CreateNetworkName(subNet)
 	hnsNetwork, err := EnsureNetworkExists(networkName, subNet, logger)
 	if err != nil {
@@ -186,13 +179,13 @@ func EnsureNetworkExists(networkName string, subNet *net.IPNet, logger *logrus.E
 
 func CreateAndAttachHostEP(epName string, hnsNetwork *hcsshim.HNSNetwork, subNet *net.IPNet, logger *logrus.Entry) (*hcsshim.HNSEndpoint, error) {
 	var err error
-	podGatewayAddress := GetGW(subNet)
+	EndpointAddress := EndpointIP(subNet)
 	attachEndpoint := true
 
 	// Checking if HNS Endpoint exists.
 	hnsEndpoint, _ := hcsshim.GetHNSEndpointByName(epName)
 	if hnsEndpoint != nil {
-		if !hnsEndpoint.IPAddress.Equal(podGatewayAddress) {
+		if !hnsEndpoint.IPAddress.Equal(EndpointAddress) {
 			// IPAddress does not match. Delete stale endpoint
 			if _, err = hnsEndpoint.Delete(); err != nil {
 				logger.Errorf("Unable to delete existing bridge endpoint [%v], error: %v", epName, err)
@@ -210,7 +203,7 @@ func CreateAndAttachHostEP(epName string, hnsNetwork *hcsshim.HNSNetwork, subNet
 		// Create new endpoint
 		hnsEndpoint = &hcsshim.HNSEndpoint{
 			Name:           epName,
-			IPAddress:      podGatewayAddress,
+			IPAddress:      EndpointAddress,
 			VirtualNetwork: hnsNetwork.Id,
 		}
 
@@ -223,7 +216,7 @@ func CreateAndAttachHostEP(epName string, hnsNetwork *hcsshim.HNSNetwork, subNet
 		logger.Infof("Created bridge endpoint [%v] as %+v", epName, hnsEndpoint)
 	}
 
-	if attachEndpoint == true {
+	if attachEndpoint {
 		// Attach endpoint to host
 		if err = hnsEndpoint.HostAttach(1); err != nil {
 			logger.Errorf("Unable to hot attach bridge endpoint [%v] to host compartment, error: %v", epName, err)
@@ -291,13 +284,15 @@ func CreateAndAttachContainerEP(args *skel.CmdArgs,
 	Name string,
 	logger *logrus.Entry) (*hcsshim.HNSEndpoint, error) {
 
+	gatewayAddress := EndpointIP(subNet).String()
+
 	endpointName := hns.ConstructEndpointName(args.ContainerID, args.Netns, Name)
 	logger.Infof("Attempting to create HNS endpoint name : %s for container", endpointName)
 	hnsEndpointCont, err := hns.ProvisionEndpoint(endpointName, hnsNetwork.Id, args.ContainerID, func() (*hcsshim.HNSEndpoint, error) {
 		hnsEP := &hcsshim.HNSEndpoint{
 			Name:           endpointName,
 			VirtualNetwork: hnsNetwork.Id,
-			GatewayAddress: GetGW(subNet).String(),
+			GatewayAddress: gatewayAddress,
 			IPAddress:      result.IPs[0].Address.IP,
 		}
 		return hnsEP, nil
@@ -306,10 +301,24 @@ func CreateAndAttachContainerEP(args *skel.CmdArgs,
 	return hnsEndpointCont, err
 }
 
-func GetGW(PodCIDR *net.IPNet) net.IP {
+// This func increments the subnet IP address by 2 to get the host
+// endpoint IP and container's gateway IP
+func EndpointIP(PodCIDR *net.IPNet) net.IP {
 	gwaddr := PodCIDR.IP.To4()
-	gwaddr[3]++
-	return gwaddr
+	buffer := make([]byte, len(gwaddr))
+	copy(buffer, gwaddr)
+	buffer[3]++
+	buffer[3]++
+	return buffer
+}
+
+// This function increments the subnet IP address by 1 
+func GetGW(PodCIDR *net.IPNet) net.IP {
+        gwaddr := PodCIDR.IP.To4()
+        buffer := make([]byte, len(gwaddr))
+        copy(buffer, gwaddr)
+        buffer[3]++
+        return buffer
 }
 
 func CreateNetworkName(subnet *net.IPNet) string {
