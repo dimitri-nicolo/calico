@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"runtime"
 
 	"github.com/projectcalico/libcalico-go/lib/apis/v3"
 	log "github.com/sirupsen/logrus"
@@ -196,10 +197,19 @@ func (c ipamClient) getBlockFromAffinity(ctx context.Context, aff *model.KVPair)
 	return b, nil
 }
 
+// function to check if context has associated OS parameter
+// fallback to GOOS in other case
+func detectOS(ctx context.Context) string {
+	if osOverride := ctx.Value("windowsHost"); osOverride != nil {
+		return osOverride.(string)
+	}
+	return runtime.GOOS
+}
+
 // determinePools compares a list of requested pools with the enabled pools
 // and returns the intersect. If any requested pool does not exist, or is not enabled, an error is returned.
 // If no pools are requested, all enabled pools are returned.
-func (c ipamClient) determinePools(requestedPoolNets []net.IPNet, version int) ([]v3.IPPool, error) {
+func (c ipamClient) determinePools(ctx context.Context, requestedPoolNets []net.IPNet, version int) ([]v3.IPPool, error) {
 	enabledPools, err := c.pools.GetEnabledPools(version)
 	if err != nil {
 		log.WithError(err).Errorf("Error reading configured pools")
@@ -211,7 +221,22 @@ func (c ipamClient) determinePools(requestedPoolNets []net.IPNet, version int) (
 		log.Debugf("requested IPPools: %v", requestedPoolNets)
 		// Build a map so we can lookup existing pools.
 		pm := map[string]v3.IPPool{}
+
+		// For windows OS, IPs x.0, x.1, x.2 and x.<bcast> are
+		// reserved. so, minimum 4 IPs are needed for network
+		// creation. As a result, don't allow a block size
+		// 30, 31, 32 (for IPv4) and 126, 127, 128 (for IPv6).
+		var maxWindowsBlockSize int
+		if version == 4 {
+			maxWindowsBlockSize = 30
+		} else {
+			maxWindowsBlockSize = 126
+		}
 		for _, p := range enabledPools {
+			if detectOS(ctx) == "windows" && p.Spec.BlockSize >= maxWindowsBlockSize {
+				log.Warningf("skipping pool %v for windows due to blockSize", p)
+				continue
+			}
 			pm[p.Spec.CIDR] = p
 		}
 
@@ -234,7 +259,7 @@ func (c ipamClient) determinePools(requestedPoolNets []net.IPNet, version int) (
 
 func (c ipamClient) autoAssign(ctx context.Context, num int, handleID *string, attrs map[string]string, requestedPools []net.IPNet, version int, host string) ([]net.IP, error) {
 	// Start by sanitizing the requestedPools.
-	pools, err := c.determinePools(requestedPools, version)
+	pools, err := c.determinePools(ctx, requestedPools, version)
 	if err != nil {
 		return nil, err
 	}
@@ -604,6 +629,7 @@ func (c ipamClient) ReleaseIPs(ctx context.Context, ips []net.IP) ([]net.IP, err
 }
 
 func (c ipamClient) releaseIPsFromBlock(ctx context.Context, ips []net.IP, blockCIDR net.IPNet) ([]net.IP, error) {
+	windowsHost := detectOS(ctx) == "windows"
 	logCtx := log.WithField("cidr", blockCIDR)
 	for i := 0; i < ipamEtcdRetries; i++ {
 		logCtx.Info("Getting block so we can release IPs")
@@ -638,7 +664,7 @@ func (c ipamClient) releaseIPsFromBlock(ctx context.Context, ips []net.IP, block
 		// the Value since we have updated the structure pointed to in the
 		// KVPair.
 		var updateErr error
-		if b.empty() && b.Affinity == nil {
+		if b.empty(windowsHost) && b.Affinity == nil {
 			logCtx.Info("Deleting non-affine block")
 			_, updateErr = c.client.Delete(ctx, obj.Key, obj.Revision)
 		} else {
@@ -1033,6 +1059,7 @@ func (c ipamClient) ReleaseByHandle(ctx context.Context, handleID string) error 
 }
 
 func (c ipamClient) releaseByHandle(ctx context.Context, handleID string, blockCIDR net.IPNet) error {
+	windowsHost := detectOS(ctx) == "windows"
 	logCtx := log.WithFields(log.Fields{"handle": handleID, "cidr": blockCIDR})
 	for i := 0; i < ipamEtcdRetries; i++ {
 		logCtx.Info("Querying block so we can release IPs by handle")
@@ -1057,7 +1084,7 @@ func (c ipamClient) releaseByHandle(ctx context.Context, handleID string, blockC
 		}
 		logCtx.Infof("Block has %d IPs with the given handle", num)
 
-		if block.empty() && block.Affinity == nil {
+		if block.empty(windowsHost) && block.Affinity == nil {
 			logCtx.Info("Deleting block because it is now empty and has no affinity")
 			_, err = c.client.Delete(ctx, model.BlockKey{blockCIDR}, obj.Revision)
 			if err != nil {

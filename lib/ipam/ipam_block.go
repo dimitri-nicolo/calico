@@ -28,13 +28,15 @@ import (
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
 )
 
+const windowsReservedHandle = "windows-reserved-IPAM-handle"
+
 // Wrap the backend AllocationBlock struct so that we can
 // attach methods to it.
 type allocationBlock struct {
 	*model.AllocationBlock
 }
 
-func newBlock(cidr cnet.IPNet) allocationBlock {
+func newBlock(cidr cnet.IPNet, windowsHost bool) allocationBlock {
 	ones, size := cidr.Mask.Size()
 	numAddresses := 2 << uint(size-ones-1)
 	if numAddresses == 0 {
@@ -50,6 +52,29 @@ func newBlock(cidr cnet.IPNet) allocationBlock {
 	// Initialize unallocated ordinals.
 	for i := 0; i < numAddresses; i++ {
 		b.Unallocated[i] = i
+	}
+
+	// For windows OS, the following IP addresses of the block are
+	// reserved. This is done by pre-allocating them during initialization
+	// time only.
+	// IPs : x.0, x.1, x.2 and x.bcastAddr (e.g. x.255 for /24 subnet)
+	if windowsHost {
+		log.Debugf("Block %s reserving IPs for windows", b.CIDR.String())
+		// nil attributes
+		winAttrs := make(map[string]string)
+		handleID := windowsReservedHandle
+		// use first 3 Unallocated values which are 0,1,2 by default
+		b.Unallocated = b.Unallocated[3 : numAddresses-1]
+		attrIndex := len(b.Attributes)
+		b.Allocations[0] = &attrIndex
+		b.Allocations[1] = &attrIndex
+		b.Allocations[2] = &attrIndex
+		b.Allocations[numAddresses-1] = &attrIndex
+
+		// Create slice of IPs and perform the allocations.
+		log.Debugf("Reserving allocation attribute: %#v handle %s", winAttrs, windowsReservedHandle)
+		attr := model.AllocationAttribute{&handleID, winAttrs}
+		b.Attributes = append(b.Attributes, attr)
 	}
 
 	return allocationBlock{&b}
@@ -128,6 +153,22 @@ func (b *allocationBlock) assign(address cnet.IP, handleID *string, attrs map[st
 	return nil
 }
 
+// windows specific code to check for
+// addresseses left are 0, 1, 2 and last address
+// and the handleID contains windows-reserved-IP-handle
+func (b *allocationBlock) containsOnlyReservedIPs() bool {
+	for _, attrIdx := range b.Allocations {
+		if attrIdx == nil {
+			continue
+		}
+		attrs := b.Attributes[*attrIdx]
+		if attrs.AttrPrimary == nil || *attrs.AttrPrimary != windowsReservedHandle {
+			return false
+		}
+	}
+	return true
+}
+
 // hostAffinityMatches checks if the provided host matches the provided affinity.
 func hostAffinityMatches(host string, block *model.AllocationBlock) bool {
 	return *block.Affinity == "host:"+host
@@ -137,7 +178,10 @@ func (b allocationBlock) numFreeAddresses() int {
 	return len(b.Unallocated)
 }
 
-func (b allocationBlock) empty() bool {
+func (b allocationBlock) empty(windowsHost bool) bool {
+	if windowsHost && b.containsOnlyReservedIPs() {
+		return true
+	}
 	return b.numFreeAddresses() == b.numAddresses()
 }
 
