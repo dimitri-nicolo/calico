@@ -29,7 +29,6 @@ import (
 )
 
 const windowsReservedHandle = "windows-reserved-IPAM-handle"
-const windowsReservedIPs = 4
 
 // Wrap the backend AllocationBlock struct so that we can
 // attach methods to it.
