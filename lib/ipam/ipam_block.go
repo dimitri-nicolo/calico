@@ -81,7 +81,7 @@ func newBlock(cidr cnet.IPNet, windowsHost bool) allocationBlock {
 }
 
 func (b *allocationBlock) autoAssign(
-	num int, handleID *string, host string, attrs map[string]string, affinityCheck bool) ([]cnet.IP, error) {
+	num int, handleID *string, host string, attrs map[string]string, affinityCheck bool) ([]cnet.IPNet, error) {
 
 	// Determine if we need to check for affinity.
 	checkAffinity := b.StrictAffinity || affinityCheck
@@ -105,11 +105,13 @@ func (b *allocationBlock) autoAssign(
 	}
 
 	// Create slice of IPs and perform the allocations.
-	ips := []cnet.IP{}
+	ips := []cnet.IPNet{}
 	for _, o := range ordinals {
 		attrIndex := b.findOrAddAttribute(handleID, attrs)
 		b.Allocations[o] = &attrIndex
-		ips = append(ips, incrementIP(cnet.IP{b.CIDR.IP}, big.NewInt(int64(o))))
+		ipNet := b.CIDR
+		ipNet.IP = incrementIP(cnet.IP{b.CIDR.IP}, big.NewInt(int64(o))).IP
+		ips = append(ips, ipNet)
 	}
 
 	log.Debugf("Block %s returned ips: %v", b.CIDR.String(), ips)
