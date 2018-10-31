@@ -222,18 +222,6 @@ func (rs *resourceStore) WatchList(ctx context.Context, key string, resourceVers
 	return rs.watchResource(ctx, resourceVersion, p, name, ns)
 }
 
-func (rs *resourceStore) watchResource(ctx context.Context, resourceVersion string,
-	p storage.SelectionPredicate, name, namespace string) (k8swatch.Interface, error) {
-	opts := options.ListOptions{Name: name, Namespace: namespace, ResourceVersion: resourceVersion}
-	lWatch, err := rs.watch(ctx, rs.client, opts)
-	if err != nil {
-		return nil, err
-	}
-	wc := createWatchChan(ctx, lWatch, p)
-	go wc.run()
-	return wc, nil
-}
-
 // Get unmarshals json found at key into objPtr. On a not found error, will either
 // return a zero object of the requested type, or an error, depending on ignoreNotFound.
 // Treats empty responses and nil response nodes exactly like a not found error.

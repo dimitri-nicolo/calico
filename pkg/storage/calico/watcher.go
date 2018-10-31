@@ -19,10 +19,12 @@ package calico
 import (
 	"context"
 
+	"github.com/projectcalico/libcalico-go/lib/options"
 	cwatch "github.com/projectcalico/libcalico-go/lib/watch"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
+	k8swatch "k8s.io/apimachinery/pkg/watch"
 	"k8s.io/apiserver/pkg/storage"
 )
 
@@ -35,14 +37,23 @@ type watchChan struct {
 	cancel     context.CancelFunc
 }
 
-func createWatchChan(ctx context.Context, w cwatch.Interface, pred storage.SelectionPredicate) *watchChan {
+func (rs *resourceStore) watchResource(ctx context.Context, resourceVersion string,
+	p storage.SelectionPredicate, name, namespace string) (k8swatch.Interface, error) {
+	opts := options.ListOptions{Name: name, Namespace: namespace, ResourceVersion: resourceVersion}
+	ctx, cancel := context.WithCancel(ctx)
+	lWatch, err := rs.watch(ctx, rs.client, opts)
+	if err != nil {
+		return nil, err
+	}
 	wc := &watchChan{
 		resultChan: make(chan watch.Event),
-		pred:       pred,
-		watcher:    w,
+		pred:       p,
+		watcher:    lWatch,
+		ctx:        ctx,
+		cancel:     cancel,
 	}
-	wc.ctx, wc.cancel = context.WithCancel(ctx)
-	return wc
+	go wc.run()
+	return wc, nil
 }
 
 func (wc *watchChan) convertEvent(ce cwatch.Event) (res *watch.Event) {
@@ -95,9 +106,23 @@ func (wc *watchChan) convertEvent(ce cwatch.Event) (res *watch.Event) {
 			}
 		}
 	case cwatch.Error:
+		select {
+		case <-wc.ctx.Done():
+			// Any error received after we have cancelled this watcher should be ignored.
+			return nil
+		default:
+			// Fall through if we have not cancelled this watcher.
+		}
+		var msg string
+		if ce.Error != nil {
+			msg = ce.Error.Error()
+		}
 		res = &watch.Event{
-			Type:   watch.Error,
-			Object: &metav1.Status{Reason: metav1.StatusReasonInternalError},
+			Type: watch.Error,
+			Object: &metav1.Status{
+				Reason:  metav1.StatusReasonInternalError,
+				Message: msg,
+			},
 		}
 	}
 	return res
@@ -130,7 +155,7 @@ func (wc *watchChan) acceptAll() bool {
 }
 
 func (wc *watchChan) Stop() {
-	wc.watcher.Stop()
+	wc.cancel()
 }
 
 func (wc *watchChan) ResultChan() <-chan watch.Event {
