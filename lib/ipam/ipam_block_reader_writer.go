@@ -156,6 +156,7 @@ func (rw blockReaderWriter) getPendingAffinity(ctx context.Context, host string,
 // claimAffineBlock claims the provided block using the given pending affinity. If successful, it will confirm the affinity. If another host
 // steals the block, claimAffineBlock will attempt to delete the provided pending affinity.
 func (rw blockReaderWriter) claimAffineBlock(ctx context.Context, aff *model.KVPair, config IPAMConfig) (*model.KVPair, error) {
+	windowsHost := detectOS(ctx) == "windows"
 	// Pull out relevant fields.
 	subnet := aff.Key.(model.BlockAffinityKey).CIDR
 	host := aff.Key.(model.BlockAffinityKey).Host
@@ -163,7 +164,7 @@ func (rw blockReaderWriter) claimAffineBlock(ctx context.Context, aff *model.KVP
 
 	// Create the new block.
 	affinityKeyStr := "host:" + host
-	block := newBlock(subnet)
+	block := newBlock(subnet, windowsHost)
 	block.Affinity = &affinityKeyStr
 	block.StrictAffinity = config.StrictAffinity
 
@@ -247,6 +248,7 @@ func (rw blockReaderWriter) confirmAffinity(ctx context.Context, aff *model.KVPa
 // releaseBlockAffinity releases the host's affinity to the given block, and returns an affinityClaimedError if
 // the host does not claim an affinity for the block.
 func (rw blockReaderWriter) releaseBlockAffinity(ctx context.Context, host string, blockCIDR cnet.IPNet) error {
+	windowsHost := detectOS(ctx) == "windows"
 	// Make sure hostname is not empty.
 	if host == "" {
 		log.Errorf("Hostname can't be empty")
@@ -291,7 +293,7 @@ func (rw blockReaderWriter) releaseBlockAffinity(ctx context.Context, host strin
 		return err
 	}
 
-	if b.empty() {
+	if b.empty(windowsHost) {
 		// If the block is empty, we can delete it.
 		logCtx.Debug("Block is empty - delete it")
 		_, err := rw.client.Delete(ctx, model.BlockKey{CIDR: b.CIDR}, obj.Revision)
