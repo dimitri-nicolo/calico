@@ -20,7 +20,8 @@ pipeline {
         TF_VAR_master_disk_size = '20'
         TF_VAR_num_nodes = '0'
 
-        // Terraform kubernetes settings
+        // Terraform kubernetes settings. Use the minimum supported version of Kubernetes to determine the
+        // API.
         TF_VAR_kubernetes_version = "stable-1.9"
         USE_EXTERNAL_ETCD = ""
 
@@ -31,12 +32,16 @@ pipeline {
 
         // install-cnx.sh settings
         DATASTORE = "kubernetes"
+
+        // The docs version that we are updating.
+        DOCS_VERSION = "master"
     }
 
     stages {
         stage('Checkout') {
             steps {
                 dir('_cp') {
+                  // All docs versions are contained within the master git branch - this is what we need to update.
                   git(url: 'git@github.com:tigera/calico-private.git', branch: 'master', credentialsId: 'marvin-tigera-ssh-key')
                 }
             }
@@ -71,8 +76,8 @@ pipeline {
                     // install script requires 'jq'
                     sh '$(terraform output master_connect_command) "sudo apt-get install -y jq"'
 
-                    // download the installer script fromm docs in master branch
-                    sh '$(terraform output master_connect_command) "curl --compressed -O https://docs.tigera.io/master/getting-started/kubernetes/install-cnx.sh"'
+                    // download the installer script from the appropriate docs version
+                    sh '$(terraform output master_connect_command) "curl --compressed -O https://docs.tigera.io/${DOCS_VERSION}/getting-started/kubernetes/install-cnx.sh"'
 
                     sh '$(terraform output master_connect_command) "chmod +x ./install-cnx.sh"'
 
@@ -90,8 +95,9 @@ pipeline {
                         sh "rm -f license.yaml"
                     }
 
-                    // Start installation process of 'master' branch, don't prompt the user
-                    sh '$(terraform output master_connect_command) "DATASTORE=$DATASTORE ./install-cnx.sh -v master -q -l license.yaml"'
+                    // Start installation process, don't prompt the user. Since we download the appropriate version of
+                    // the installer, there is no need to explicitly specify the version on the CLI.
+                    sh '$(terraform output master_connect_command) "DATASTORE=$DATASTORE ./install-cnx.sh -q -l license.yaml"'
                 }
             }
             post {
@@ -144,12 +150,12 @@ pipeline {
                         '''
 
                         script {
-                            env.BRANCH_EXISTS = sh(returnStatus: true, script: 'GIT_SSH_COMMAND=\"ssh -i ${KEY}\" git ls-remote | grep JENKINS-master-swagger-build') == 0
+                            env.BRANCH_EXISTS = sh(returnStatus: true, script: 'GIT_SSH_COMMAND=\"ssh -i ${KEY}\" git ls-remote | grep JENKINS-${DOCS_VERSION}-swagger-build') == 0
                             echo "Branch exists: ${env.BRANCH_EXISTS}"
                             if (env.BRANCH_EXISTS == "true") {
-                                sh(script:'''GIT_SSH_COMMAND="ssh -i ${KEY}" git checkout JENKINS-master-swagger-build''')
+                                sh(script:'''GIT_SSH_COMMAND="ssh -i ${KEY}" git checkout JENKINS-${DOCS_VERSION}-swagger-build''')
                             } else {
-                                sh(script:'''GIT_SSH_COMMAND="ssh -i ${KEY}" git checkout -b JENKINS-master-swagger-build''')
+                                sh(script:'''GIT_SSH_COMMAND="ssh -i ${KEY}" git checkout -b JENKINS-${DOCS_VERSION}-swagger-build''')
                             }
                         }
                     }
@@ -160,7 +166,7 @@ pipeline {
         stage('Push branch if updated'){
             steps{
                 // Copy across the updated swagger file.
-                sh 'cp _crc/kubeadm/1.6/calico-swagger.json _cp/calico-swagger.json'
+                sh 'cp _crc/kubeadm/1.6/calico-swagger.json _cp/${DOCS_VERSION}/calico-swagger.json'
 
                 dir('_cp') {
                     withCredentials([sshUserPrivateKey(credentialsId: 'marvin-tigera-ssh-key', keyFileVariable: 'KEY', passphraseVariable: 'PHRASE', usernameVariable: 'USER')]) {
@@ -171,7 +177,7 @@ pipeline {
                             env.SWAGGER_CHANGED = sh(returnStatus: true, script: 'git diff --exit-code') != 0
                             echo "Swagger file modified: ${env.SWAGGER_CHANGED}"
                             if (env.SWAGGER_CHANGED == "true") {
-                                sh(script:'''git add . && git commit -m "calico-swagger.json update" && GIT_SSH_COMMAND="ssh -i ${KEY}" git push -f --set-upstream origin JENKINS-master-swagger-build''')
+                                sh(script:'''git add . && git commit -m "${DOCS_VERSION} calico-swagger.json update" && GIT_SSH_COMMAND="ssh -i ${KEY}" git push -f --set-upstream origin JENKINS-${DOCS_VERSION}-swagger-build''')
                             }
                         }
                     }
@@ -201,7 +207,7 @@ pipeline {
                         // If creating a PR use the downloaded hub binary to assist with the PR creation
                         script {
                             if (env.CREATE_PR == "true") {
-                                sh(script: "GITHUB_TOKEN=${TOKEN} ../_pr/hub-linux-amd64-2.4.0/bin/hub pull-request -b tigera/calico-private:master -F - <<EOF\nJENKINS master: automatic swagger update\n\nThis is an automated PR generated by a Jenkins job.\nEOF")
+                                sh(script: "GITHUB_TOKEN=${TOKEN} ../_pr/hub-linux-amd64-2.4.0/bin/hub pull-request -b tigera/calico-private:master -F - <<EOF\nJENKINS ${DOCS_VERSION}: automatic swagger update\n\nThis is an automated PR generated by a Jenkins job.\nEOF")
                             }
                         }
                     }
