@@ -227,7 +227,7 @@ var _ = testutils.E2eDatastoreDescribe("BGP syncer tests", testutils.DatastoreAl
 					Hostname: "127.0.0.1",
 				})
 
-				ips1 := make([]net.IP, 0, 0)
+				var ips1 []net.IP
 				for _, ipnet := range ipV4Nets1 {
 					ips1 = append(ips1, net.IP{ipnet.IP})
 				}
@@ -256,7 +256,7 @@ var _ = testutils.E2eDatastoreDescribe("BGP syncer tests", testutils.DatastoreAl
 					Hostname: "not-this-host",
 				})
 
-				ips2 := make([]net.IP, 0, 0)
+				var ips2 []net.IP
 				for _, ipnet := range ipV4Nets2 {
 					ips2 = append(ips2, net.IP{ipnet.IP})
 				}
