@@ -81,14 +81,12 @@ func (b *allocationBlock) autoAssign(
 
 	// Create slice of IPs and perform the allocations.
 	ips := []cnet.IPNet{}
-	_, mask, _ := cnet.ParseCIDR(b.CIDR.String())
-
 	for _, o := range ordinals {
 		attrIndex := b.findOrAddAttribute(handleID, attrs)
 		b.Allocations[o] = &attrIndex
-		ipNets := cnet.IPNet(*mask)
-		ipNets.IP = incrementIP(cnet.IP{b.CIDR.IP}, big.NewInt(int64(o))).IP
-		ips = append(ips, ipNets)
+		ipNet := b.CIDR
+		ipNet.IP = incrementIP(cnet.IP{b.CIDR.IP}, big.NewInt(int64(o))).IP
+		ips = append(ips, ipNet)
 	}
 
 	log.Debugf("Block %s returned ips: %v", b.CIDR.String(), ips)
