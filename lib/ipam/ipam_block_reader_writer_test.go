@@ -158,7 +158,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM affine block allocation tests", tes
 			hostA = "hostA"
 			hostB = "hostB"
 
-			pools = &ipPoolAccessor{pools: map[string]bool{"10.0.0.0/26": true}}
+			pools = &ipPoolAccessor{pools: map[string]pool{"10.0.0.0/26": {enabled: true}}}
 
 			ctx = context.Background()
 
@@ -169,7 +169,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM affine block allocation tests", tes
 		It("should handle multiple racing block affinity claims from different hosts", func() {
 			By("setting up the client for the test", func() {
 				// Pool has room for 16 blocks.
-				pls := &ipPoolAccessor{pools: map[string]bool{"10.0.0.0/22": true}}
+				pls := &ipPoolAccessor{pools: map[string]pool{"10.0.0.0/22": {enabled: true}}}
 				rw = blockReaderWriter{client: bc, pools: pls}
 				ic = &ipamClient{
 					client:            bc,
@@ -256,7 +256,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM affine block allocation tests", tes
 		It("should handle multiple racing block affinity claims from the same host", func() {
 			By("setting up the client for the test", func() {
 				// Pool has room for 16 blocks.
-				pls := &ipPoolAccessor{pools: map[string]bool{"10.0.0.0/25": true}}
+				pls := &ipPoolAccessor{pools: map[string]pool{"10.0.0.0/25": {enabled: true}}}
 				rw = blockReaderWriter{client: bc, pools: pls}
 				ic = &ipamClient{
 					client:            bc,
@@ -318,7 +318,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM affine block allocation tests", tes
 		It("should handle multiple racing claims for the same affinity", func() {
 			By("setting up the client for the test", func() {
 				// Pool has room for 16 blocks.
-				pls := &ipPoolAccessor{pools: map[string]bool{"10.0.0.0/22": true}}
+				pls := &ipPoolAccessor{pools: map[string]pool{"10.0.0.0/22": {enabled: true}}}
 				rw = blockReaderWriter{client: bc, pools: pls}
 				ic = &ipamClient{
 					client:            bc,
@@ -742,7 +742,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM affine block allocation tests", tes
 				client: bc,
 				pools:  p,
 			}
-			p = &ipPoolAccessor{pools: map[string]bool{}}
+			p = &ipPoolAccessor{pools: map[string]pool{}}
 			ctx = context.Background()
 
 			_, net, err = cnet.ParseCIDR("10.1.0.0/26")

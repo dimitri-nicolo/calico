@@ -81,8 +81,7 @@ var _ = testutils.E2eDatastoreDescribe("ClusterInformation tests", testutils.Dat
 			res, err := c.ClusterInformation().Get(ctx, name, options.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(res.Spec.ClusterGUID).To(MatchRegexp("^[a-f0-9]{32}$"))
-			testutils.ExpectResource(
-				res,
+			Expect(res).To(MatchResource(
 				apiv3.KindClusterInformation, testutils.ExpectNoNamespace,
 				name,
 				apiv3.ClusterInformationSpec{
@@ -91,7 +90,7 @@ var _ = testutils.E2eDatastoreDescribe("ClusterInformation tests", testutils.Dat
 					CalicoVersion:  "v0.0.0",
 					CNXVersion:     "v0.0.1",
 					DatastoreReady: &readyTrue,
-				})
+				}))
 		})
 
 		It("should be idempotent", func() {
@@ -104,8 +103,7 @@ var _ = testutils.E2eDatastoreDescribe("ClusterInformation tests", testutils.Dat
 
 			res, err = c.ClusterInformation().Get(ctx, name, options.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
-			testutils.ExpectResource(
-				res,
+			Expect(res).To(MatchResource(
 				apiv3.KindClusterInformation, testutils.ExpectNoNamespace,
 				name,
 				apiv3.ClusterInformationSpec{
@@ -114,7 +112,7 @@ var _ = testutils.E2eDatastoreDescribe("ClusterInformation tests", testutils.Dat
 					CalicoVersion:  "v0.0.0",
 					CNXVersion:     "v0.0.1",
 					DatastoreReady: &readyTrue,
-				})
+				}))
 		})
 
 		It("should merge cluster types", func() {
@@ -134,32 +132,32 @@ var _ = testutils.E2eDatastoreDescribe("ClusterInformation tests", testutils.Dat
 				CNXVersion:     "v0.0.1",
 				DatastoreReady: &readyTrue,
 			}
-			testutils.ExpectResource(res, apiv3.KindClusterInformation, testutils.ExpectNoNamespace,
-				name, spec)
+			Expect(res).To(MatchResource(apiv3.KindClusterInformation, testutils.ExpectNoNamespace,
+				name, spec))
 
 			By("ignoring idempotent update 'test'")
 			err = c.EnsureInitialized(ctx, "v0.0.0", "v0.0.1", "test")
 			Expect(err).NotTo(HaveOccurred())
 			res, err = c.ClusterInformation().Get(ctx, name, options.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
-			testutils.ExpectResource(res, apiv3.KindClusterInformation, testutils.ExpectNoNamespace,
-				name, spec)
+			Expect(res).To(MatchResource(apiv3.KindClusterInformation, testutils.ExpectNoNamespace,
+				name, spec))
 
 			By("ignoring idempotent update 'test2'")
 			err = c.EnsureInitialized(ctx, "v0.0.0", "v0.0.1", "test2")
 			Expect(err).NotTo(HaveOccurred())
 			res, err = c.ClusterInformation().Get(ctx, name, options.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
-			testutils.ExpectResource(res, apiv3.KindClusterInformation, testutils.ExpectNoNamespace,
-				name, spec)
+			Expect(res).To(MatchResource(apiv3.KindClusterInformation, testutils.ExpectNoNamespace,
+				name, spec))
 
 			By("ignoring idempotent update ''")
 			err = c.EnsureInitialized(ctx, "", "", "")
 			Expect(err).NotTo(HaveOccurred())
 			res, err = c.ClusterInformation().Get(ctx, name, options.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
-			testutils.ExpectResource(res, apiv3.KindClusterInformation, testutils.ExpectNoNamespace,
-				name, spec)
+			Expect(res).To(MatchResource(apiv3.KindClusterInformation, testutils.ExpectNoNamespace,
+				name, spec))
 		})
 
 		It("should overwrite version", func() {
@@ -179,8 +177,8 @@ var _ = testutils.E2eDatastoreDescribe("ClusterInformation tests", testutils.Dat
 				CNXVersion:     "v0.0.2",
 				DatastoreReady: &readyTrue,
 			}
-			testutils.ExpectResource(res, apiv3.KindClusterInformation, testutils.ExpectNoNamespace,
-				name, spec)
+			Expect(res).To(MatchResource(apiv3.KindClusterInformation, testutils.ExpectNoNamespace,
+				name, spec))
 		})
 
 		Describe("after disabling ready flag", func() {
@@ -258,7 +256,7 @@ var _ = testutils.E2eDatastoreDescribe("ClusterInformation tests", testutils.Dat
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).NotTo(HaveOccurred())
-			testutils.ExpectResource(res1, apiv3.KindClusterInformation, testutils.ExpectNoNamespace, name, spec1)
+			Expect(res1).To(MatchResource(apiv3.KindClusterInformation, testutils.ExpectNoNamespace, name, spec1))
 
 			// Track the version of the original data for name.
 			rv1_1 := res1.ResourceVersion
@@ -274,20 +272,21 @@ var _ = testutils.E2eDatastoreDescribe("ClusterInformation tests", testutils.Dat
 			By("Getting ClusterInformation (name) and comparing the output against spec1")
 			res, outError := c.ClusterInformation().Get(ctx, name, options.GetOptions{})
 			Expect(outError).NotTo(HaveOccurred())
-			testutils.ExpectResource(res, apiv3.KindClusterInformation, testutils.ExpectNoNamespace, name, spec1)
+			Expect(res).To(MatchResource(apiv3.KindClusterInformation, testutils.ExpectNoNamespace, name, spec1))
 			Expect(res.ResourceVersion).To(Equal(res1.ResourceVersion))
 
 			By("Listing all the ClusterInformation, expecting a single result with name/spec1")
 			outList, outError := c.ClusterInformation().List(ctx, options.ListOptions{})
 			Expect(outError).NotTo(HaveOccurred())
-			Expect(outList.Items).To(HaveLen(1))
-			testutils.ExpectResource(&outList.Items[0], apiv3.KindClusterInformation, testutils.ExpectNoNamespace, name, spec1)
+			Expect(outList.Items).To(ConsistOf(
+				testutils.Resource(apiv3.KindClusterInformation, testutils.ExpectNoNamespace, name, spec1),
+			))
 
 			By("Updating ClusterInformation name with spec2")
 			res1.Spec = spec2
 			res1, outError = c.ClusterInformation().Update(ctx, res1, options.SetOptions{})
 			Expect(outError).NotTo(HaveOccurred())
-			testutils.ExpectResource(res1, apiv3.KindClusterInformation, testutils.ExpectNoNamespace, name, spec2)
+			Expect(res1).To(MatchResource(apiv3.KindClusterInformation, testutils.ExpectNoNamespace, name, spec2))
 
 			By("Attempting to update the ClusterInformation without a Creation Timestamp")
 			res, outError = c.ClusterInformation().Update(ctx, &apiv3.ClusterInformation{
@@ -328,29 +327,31 @@ var _ = testutils.E2eDatastoreDescribe("ClusterInformation tests", testutils.Dat
 				By("Getting ClusterInformation (name) with the original resource version and comparing the output against spec1")
 				res, outError = c.ClusterInformation().Get(ctx, name, options.GetOptions{ResourceVersion: rv1_1})
 				Expect(outError).NotTo(HaveOccurred())
-				testutils.ExpectResource(res, apiv3.KindClusterInformation, testutils.ExpectNoNamespace, name, spec1)
+				Expect(res).To(MatchResource(apiv3.KindClusterInformation, testutils.ExpectNoNamespace, name, spec1))
 				Expect(res.ResourceVersion).To(Equal(rv1_1))
 			}
 
 			By("Getting ClusterInformation (name) with the updated resource version and comparing the output against spec2")
 			res, outError = c.ClusterInformation().Get(ctx, name, options.GetOptions{ResourceVersion: rv1_2})
 			Expect(outError).NotTo(HaveOccurred())
-			testutils.ExpectResource(res, apiv3.KindClusterInformation, testutils.ExpectNoNamespace, name, spec2)
+			Expect(res).To(MatchResource(apiv3.KindClusterInformation, testutils.ExpectNoNamespace, name, spec2))
 			Expect(res.ResourceVersion).To(Equal(rv1_2))
 
 			if config.Spec.DatastoreType != apiconfig.Kubernetes {
 				By("Listing ClusterInformation with the original resource version and checking for a single result with name/spec1")
 				outList, outError = c.ClusterInformation().List(ctx, options.ListOptions{ResourceVersion: rv1_1})
 				Expect(outError).NotTo(HaveOccurred())
-				Expect(outList.Items).To(HaveLen(1))
-				testutils.ExpectResource(&outList.Items[0], apiv3.KindClusterInformation, testutils.ExpectNoNamespace, name, spec1)
+				Expect(outList.Items).To(ConsistOf(
+					testutils.Resource(apiv3.KindClusterInformation, testutils.ExpectNoNamespace, name, spec1),
+				))
 			}
 
 			By("Listing ClusterInformation with the latest resource version and checking for one result with name/spec2")
 			outList, outError = c.ClusterInformation().List(ctx, options.ListOptions{})
 			Expect(outError).NotTo(HaveOccurred())
-			Expect(outList.Items).To(HaveLen(1))
-			testutils.ExpectResource(&outList.Items[0], apiv3.KindClusterInformation, testutils.ExpectNoNamespace, name, spec2)
+			Expect(outList.Items).To(ConsistOf(
+				testutils.Resource(apiv3.KindClusterInformation, testutils.ExpectNoNamespace, name, spec2),
+			))
 
 			if config.Spec.DatastoreType != apiconfig.Kubernetes {
 				By("Deleting ClusterInformation (name) with the old resource version")
@@ -362,7 +363,7 @@ var _ = testutils.E2eDatastoreDescribe("ClusterInformation tests", testutils.Dat
 			By("Deleting ClusterInformation (name) with the new resource version")
 			dres, outError := c.ClusterInformation().Delete(ctx, name, options.DeleteOptions{ResourceVersion: rv1_2})
 			Expect(outError).NotTo(HaveOccurred())
-			testutils.ExpectResource(dres, apiv3.KindClusterInformation, testutils.ExpectNoNamespace, name, spec2)
+			Expect(dres).To(MatchResource(apiv3.KindClusterInformation, testutils.ExpectNoNamespace, name, spec2))
 
 			By("Listing all ClusterInformation and expecting no items")
 			outList, outError = c.ClusterInformation().List(ctx, options.ListOptions{})

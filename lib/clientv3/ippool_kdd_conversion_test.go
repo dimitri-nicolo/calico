@@ -44,6 +44,7 @@ var _ = testutils.E2eDatastoreDescribe("IPPool KDD v1 to v3 migration tests", te
 		CIDR:        "1.2.3.0/24",
 		NATOutgoing: true,
 		IPIPMode:    apiv3.IPIPModeCrossSubnet,
+		BlockSize:   26,
 	}
 	kvp1 := &model.KVPair{
 		Key: model.ResourceKey{
@@ -66,6 +67,7 @@ var _ = testutils.E2eDatastoreDescribe("IPPool KDD v1 to v3 migration tests", te
 					Enabled: true,
 					Mode:    ipip.CrossSubnet,
 				},
+				BlockSize: 26,
 			},
 		},
 	}
@@ -105,6 +107,7 @@ var _ = testutils.E2eDatastoreDescribe("IPPool KDD v1 to v3 migration tests", te
 		CIDR:        "1.1.1.0/24",
 		NATOutgoing: false,
 		IPIPMode:    apiv3.IPIPModeAlways,
+		BlockSize:   26,
 	}
 	kvp3 := &model.KVPair{
 		Key: model.ResourceKey{
@@ -125,6 +128,7 @@ var _ = testutils.E2eDatastoreDescribe("IPPool KDD v1 to v3 migration tests", te
 				IPIP: &apiv1.IPIPConfiguration{
 					Enabled: true,
 				},
+				BlockSize: 26,
 			},
 		},
 	}
@@ -133,6 +137,7 @@ var _ = testutils.E2eDatastoreDescribe("IPPool KDD v1 to v3 migration tests", te
 		CIDR:        "1.2.3.0/24",
 		NATOutgoing: true,
 		IPIPMode:    apiv3.IPIPModeAlways,
+		BlockSize:   26,
 	}
 	kvp5 := &model.KVPair{
 		Key: model.ResourceKey{
@@ -156,6 +161,7 @@ var _ = testutils.E2eDatastoreDescribe("IPPool KDD v1 to v3 migration tests", te
 				},
 				NATOutgoing:   true,
 				NATOutgoingV1: false,
+				BlockSize:     26,
 			},
 		},
 	}
@@ -164,6 +170,7 @@ var _ = testutils.E2eDatastoreDescribe("IPPool KDD v1 to v3 migration tests", te
 		CIDR:        "1.2.3.0/24",
 		NATOutgoing: true,
 		IPIPMode:    apiv3.IPIPModeCrossSubnet,
+		BlockSize:   26,
 	}
 	kvp6 := &model.KVPair{
 		Key: model.ResourceKey{
@@ -185,6 +192,7 @@ var _ = testutils.E2eDatastoreDescribe("IPPool KDD v1 to v3 migration tests", te
 				IPIP:          nil,
 				NATOutgoing:   false,
 				NATOutgoingV1: true,
+				BlockSize:     26,
 			},
 		},
 	}
@@ -224,8 +232,9 @@ var _ = testutils.E2eDatastoreDescribe("IPPool KDD v1 to v3 migration tests", te
 			By("Listing all the IPPools, expecting a single result with name1/spec_v1")
 			outList, outError := c.IPPools().List(ctx, options.ListOptions{})
 			Expect(outError).NotTo(HaveOccurred())
-			Expect(outList.Items).To(HaveLen(1))
-			testutils.ExpectResource(&outList.Items[0], apiv3.KindIPPool, testutils.ExpectNoNamespace, name1, spec_v3)
+			Expect(outList.Items).To(ConsistOf(
+				testutils.Resource(apiv3.KindIPPool, testutils.ExpectNoNamespace, name1, spec_v3),
+			))
 
 			By("Creating a new IPPool with name2/spec_v3")
 
@@ -245,10 +254,10 @@ var _ = testutils.E2eDatastoreDescribe("IPPool KDD v1 to v3 migration tests", te
 			By("Listing all the IPPools, expecting a two results with name1/spec_v1 and name2/spec_v3")
 			outList, outError = c.IPPools().List(ctx, options.ListOptions{})
 			Expect(outError).NotTo(HaveOccurred())
-			Expect(outList.Items).To(HaveLen(2))
-			testutils.ExpectResource(&outList.Items[0], apiv3.KindIPPool, testutils.ExpectNoNamespace, name1, spec_v3)
-			testutils.ExpectResource(&outList.Items[1], apiv3.KindIPPool, testutils.ExpectNoNamespace, name2, spec_v3)
-
+			Expect(outList.Items).To(ConsistOf(
+				testutils.Resource(apiv3.KindIPPool, testutils.ExpectNoNamespace, name1, spec_v3),
+				testutils.Resource(apiv3.KindIPPool, testutils.ExpectNoNamespace, name2, spec_v3),
+			))
 		},
 
 		Entry("IPv4 IPPool CRD with v1 IPIP field and IPIP Enabled set to true and Mode CrossSubnet", name1, name2, spec1_v3, kvp1),

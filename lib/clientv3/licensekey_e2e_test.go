@@ -95,7 +95,7 @@ var _ = testutils.E2eDatastoreDescribe("LicenseKey tests", testutils.DatastoreAl
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).NotTo(HaveOccurred())
-			testutils.ExpectResource(res1, apiv3.KindLicenseKey, testutils.ExpectNoNamespace, name, spec1)
+			Expect(res1).To(MatchResource(apiv3.KindLicenseKey, testutils.ExpectNoNamespace, name, spec1))
 
 			// Track the version of the original data for name.
 			rv1_1 := res1.ResourceVersion
@@ -111,20 +111,20 @@ var _ = testutils.E2eDatastoreDescribe("LicenseKey tests", testutils.DatastoreAl
 			By("Getting LicenseKey (name) and comparing the output against spec1")
 			res, outError := c.LicenseKey().Get(ctx, name, options.GetOptions{})
 			Expect(outError).NotTo(HaveOccurred())
-			testutils.ExpectResource(res, apiv3.KindLicenseKey, testutils.ExpectNoNamespace, name, spec1)
+			Expect(res).To(MatchResource(apiv3.KindLicenseKey, testutils.ExpectNoNamespace, name, spec1))
 			Expect(res.ResourceVersion).To(Equal(res1.ResourceVersion))
 
 			By("Listing all the LicenseKey, expecting a single result with name/spec1")
 			outList, outError := c.LicenseKey().List(ctx, options.ListOptions{})
 			Expect(outError).NotTo(HaveOccurred())
 			Expect(outList.Items).To(HaveLen(1))
-			testutils.ExpectResource(&outList.Items[0], apiv3.KindLicenseKey, testutils.ExpectNoNamespace, name, spec1)
+			Expect(&outList.Items[0]).To(MatchResource(apiv3.KindLicenseKey, testutils.ExpectNoNamespace, name, spec1))
 
 			By("Updating LicenseKey name with spec2")
 			res1.Spec = spec2
 			res1, outError = c.LicenseKey().Update(ctx, res1, options.SetOptions{})
 			Expect(outError).NotTo(HaveOccurred())
-			testutils.ExpectResource(res1, apiv3.KindLicenseKey, testutils.ExpectNoNamespace, name, spec2)
+			Expect(res1).To(MatchResource(apiv3.KindLicenseKey, testutils.ExpectNoNamespace, name, spec2))
 
 			By("Attempting to update the LicenseKey without a Creation Timestamp")
 			res, outError = c.LicenseKey().Update(ctx, &apiv3.LicenseKey{
@@ -165,14 +165,14 @@ var _ = testutils.E2eDatastoreDescribe("LicenseKey tests", testutils.DatastoreAl
 				By("Getting LicenseKey (name) with the original resource version and comparing the output against spec1")
 				res, outError = c.LicenseKey().Get(ctx, name, options.GetOptions{ResourceVersion: rv1_1})
 				Expect(outError).NotTo(HaveOccurred())
-				testutils.ExpectResource(res, apiv3.KindLicenseKey, testutils.ExpectNoNamespace, name, spec1)
+				Expect(res).To(MatchResource(apiv3.KindLicenseKey, testutils.ExpectNoNamespace, name, spec1))
 				Expect(res.ResourceVersion).To(Equal(rv1_1))
 			}
 
 			By("Getting LicenseKey (name) with the updated resource version and comparing the output against spec2")
 			res, outError = c.LicenseKey().Get(ctx, name, options.GetOptions{ResourceVersion: rv1_2})
 			Expect(outError).NotTo(HaveOccurred())
-			testutils.ExpectResource(res, apiv3.KindLicenseKey, testutils.ExpectNoNamespace, name, spec2)
+			Expect(res).To(MatchResource(apiv3.KindLicenseKey, testutils.ExpectNoNamespace, name, spec2))
 			Expect(res.ResourceVersion).To(Equal(rv1_2))
 
 			if config.Spec.DatastoreType != apiconfig.Kubernetes {
@@ -180,14 +180,14 @@ var _ = testutils.E2eDatastoreDescribe("LicenseKey tests", testutils.DatastoreAl
 				outList, outError = c.LicenseKey().List(ctx, options.ListOptions{ResourceVersion: rv1_1})
 				Expect(outError).NotTo(HaveOccurred())
 				Expect(outList.Items).To(HaveLen(1))
-				testutils.ExpectResource(&outList.Items[0], apiv3.KindLicenseKey, testutils.ExpectNoNamespace, name, spec1)
+				Expect(&outList.Items[0]).To(MatchResource(apiv3.KindLicenseKey, testutils.ExpectNoNamespace, name, spec1))
 			}
 
 			By("Listing LicenseKey with the latest resource version and checking for one result with name/spec2")
 			outList, outError = c.LicenseKey().List(ctx, options.ListOptions{})
 			Expect(outError).NotTo(HaveOccurred())
 			Expect(outList.Items).To(HaveLen(1))
-			testutils.ExpectResource(&outList.Items[0], apiv3.KindLicenseKey, testutils.ExpectNoNamespace, name, spec2)
+			Expect(&outList.Items[0]).To(MatchResource(apiv3.KindLicenseKey, testutils.ExpectNoNamespace, name, spec2))
 
 			if config.Spec.DatastoreType != apiconfig.Kubernetes {
 				By("Deleting LicenseKey (name) with the old resource version")
@@ -199,7 +199,7 @@ var _ = testutils.E2eDatastoreDescribe("LicenseKey tests", testutils.DatastoreAl
 			By("Deleting LicenseKey (name) with the new resource version")
 			dres, outError := c.LicenseKey().Delete(ctx, name, options.DeleteOptions{ResourceVersion: rv1_2})
 			Expect(outError).NotTo(HaveOccurred())
-			testutils.ExpectResource(dres, apiv3.KindLicenseKey, testutils.ExpectNoNamespace, name, spec2)
+			Expect(dres).To(MatchResource(apiv3.KindLicenseKey, testutils.ExpectNoNamespace, name, spec2))
 
 			By("Listing all LicenseKey and expecting no items")
 			outList, outError = c.LicenseKey().List(ctx, options.ListOptions{})

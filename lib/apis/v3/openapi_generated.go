@@ -3806,7 +3806,7 @@ func schema_libcalico_go_lib_apis_v3_HostEndpointSpec(ref common.ReferenceCallba
 					},
 					"interfaceName": {
 						SchemaProps: spec.SchemaProps{
-							Description: "The name of the linux interface to apply policy to; for example “eth0”. If \"InterfaceName\" is not present then at least one expected IP must be specified.",
+							Description: "Either \"*\", or the name of a specific Linux interface to apply policy to; or empty.  \"*\" indicates that this HostEndpoint governs all traffic to, from or through the default network namespace of the host named by the \"Node\" field; entering and leaving that namespace via any interface, including those from/to non-host-networked local workloads.\n\nIf InterfaceName is not \"*\", this HostEndpoint only governs traffic that enters or leaves the host through the specific interface named by InterfaceName, or - when InterfaceName is empty - through the specific interface that has one of the IPs in ExpectedIPs. Therefore, when InterfaceName is empty, at least one expected IP must be specified.  Only external interfaces (such as “eth0”) are supported here; it isn't possible for a HostEndpoint to protect traffic through a specific local workload interface.\n\nNote: Only some kinds of policy are implemented for \"*\" HostEndpoints; initially just pre-DNAT policy.  Please check Calico documentation for the latest position.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
