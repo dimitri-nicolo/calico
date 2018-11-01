@@ -470,7 +470,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 					regexp.QuoteMeta("169.254.1.1 dev eth0 scope link"),
 				},
 				expectedV6Routes: []string{
-					"dead:beef::[0-9a-f]* dev eth0  metric 256",
+					"dead:beef::[0-9a-f]*/96 dev eth0  metric 256",
 					"fe80::/64 dev eth0  metric 256",
 					"default via fe80::ecee:eeff:feee:eeee dev eth0  metric 1024",
 					"ff00::/8 dev eth0  metric 256",
@@ -532,7 +532,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 					regexp.QuoteMeta("169.254.1.1 dev eth0 scope link"),
 				},
 				expectedV6Routes: []string{
-					"dead:beef::. dev eth0  metric 256",
+					"dead:beef::/96 dev eth0  metric 256",
 					"dead:beef::/96 via fe80::ecee:eeff:feee:eeee dev eth0  metric 1024",
 					"fe80::/64 dev eth0  metric 256",
 					"ff00::/8 dev eth0  metric 256",
@@ -594,7 +594,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 					regexp.QuoteMeta("169.254.1.1 dev eth0 scope link"),
 				},
 				expectedV6Routes: []string{
-					"dead:beef::. dev eth0  metric 256",
+					"dead:beef::/96 dev eth0  metric 256",
 					"dead:beef::/96 via fe80::ecee:eeff:feee:eeee dev eth0  metric 1024",
 					"fe80::/64 dev eth0  metric 256",
 					"ff00::/8 dev eth0  metric 256",

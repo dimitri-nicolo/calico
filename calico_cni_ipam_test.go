@@ -45,11 +45,11 @@ var _ = Describe("Calico IPAM Tests", func() {
 					}
 
 					if expectedIPv4 {
-						Expect(ip4Mask).Should(Equal("ffffffff"))
+						Expect(ip4Mask).Should(Equal("ffffffc0"))
 					}
 
 					if expectedIPv6 {
-						Expect(ip6Mask).Should(Equal("ffffffffffffffffffffffffffffffff"))
+						Expect(ip6Mask).Should(Equal("ffffffffffffffffffffffffffffffc0"))
 					}
 
 					_, _, exitCode := testutils.RunIPAMPlugin(netconf, "DEL", "", cniVersion)
