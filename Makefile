@@ -53,7 +53,7 @@ endif
 ci: $(ES_PROXY_CREATED)
 
 
-cd: 
+cd: ci
 ifndef VERSION
         $(error VERSION is undefined - run using make cd VERSION=v.X.Y.Z)
 endif        
