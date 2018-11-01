@@ -111,7 +111,7 @@ func DoNetworking(
 	}
 
 	// Create endpoint for container
-	hnsEndpointCont, err := CreateAndAttachContainerEP(args, hnsNetwork, subNet, result, n.Name, logger)
+	hnsEndpointCont, err := CreateAndAttachContainerEP(args, hnsNetwork, subNet, result, n, logger)
 	if err != nil {
 		logger.Errorf("Unable to create container hns endpoint %s", epName)
 		return "", "", err
@@ -281,12 +281,17 @@ func CreateAndAttachContainerEP(args *skel.CmdArgs,
 	hnsNetwork *hcsshim.HNSNetwork,
 	subNet *net.IPNet,
 	result *current.Result,
-	Name string,
+	n *NetConf,
 	logger *logrus.Entry) (*hcsshim.HNSEndpoint, error) {
+
+	// NAT based on the the configured cluster network
+	if len(n.IPMasqNetwork) != 0 {
+		n.ApplyOutboundNatPolicy(n.IPMasqNetwork)
+	}
 
 	gatewayAddress := GetNthIP(subNet, 2).String()
 
-	endpointName := hns.ConstructEndpointName(args.ContainerID, args.Netns, Name)
+	endpointName := hns.ConstructEndpointName(args.ContainerID, args.Netns, n.Name)
 	logger.Infof("Attempting to create HNS endpoint name : %s for container", endpointName)
 	hnsEndpointCont, err := hns.ProvisionEndpoint(endpointName, hnsNetwork.Id, args.ContainerID, func() (*hcsshim.HNSEndpoint, error) {
 		hnsEP := &hcsshim.HNSEndpoint{
@@ -294,6 +299,7 @@ func CreateAndAttachContainerEP(args *skel.CmdArgs,
 			VirtualNetwork: hnsNetwork.Id,
 			GatewayAddress: gatewayAddress,
 			IPAddress:      result.IPs[0].Address.IP,
+			Policies:       n.MarshalPolicies(),
 		}
 		return hnsEP, nil
 	})
