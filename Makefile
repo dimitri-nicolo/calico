@@ -1,6 +1,6 @@
 .SUFFIXES:
 
-VERSION:=git describe --tags --dirty --always --long
+VERSION:=$(shell git describe --tags --dirty --always --long)
 
 ES_PROXY_IMAGE?=gcr.io/unique-caldron-775/cnx/tigera/es-proxy
 ES_PROXY_CREATED?=.es-proxy.created
