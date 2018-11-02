@@ -463,8 +463,10 @@ func cmdDel(args *skel.CmdArgs) error {
 	// Clean up namespace by removing the interfaces.
 	err = utils.CleanUpNamespace(args, logger)
 	if err != nil {
+		logger.WithError(err).Error("Failed to clean up namespace")
 		return err
 	}
+	logger.Info("Cleaned up namespace")
 
 	// Return the IPAM error if there was one. The IPAM error will be lost if there was also an error in cleaning up
 	// the device or endpoint, but crucially, the user will know the overall operation failed.

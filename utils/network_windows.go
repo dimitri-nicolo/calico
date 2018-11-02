@@ -335,5 +335,10 @@ func CleanUpNamespace(args *skel.CmdArgs, logger *logrus.Entry) error {
 	epName := hns.ConstructEndpointName(args.ContainerID, args.Netns, n.Name)
 	logger.Infof("Attempting to delete HNS endpoint name : %s for container", epName)
 
-	return hns.DeprovisionEndpoint(epName, args.Netns, args.ContainerID)
+	err = hns.DeprovisionEndpoint(epName, args.Netns, args.ContainerID)
+	if err != nil && strings.Contains(err.Error(), "not found") {
+		logger.WithError(err).Warn("Endpoint not found during delete, assuming it's already been cleaned up")
+		return nil
+	}
+	return err
 }
