@@ -1,30 +1,19 @@
 .SUFFIXES:
 
-#MY_UID:=$(shell id -u)
-#MY_GID:=$(shell id -g)
-
-VERSION?=master
-DOCKER_RUN_RM:=docker run --rm --user $(MY_UID):$(MY_GID) -v $${PWD}:/code -w /code
-#DOCKER_TOKEN:=$(shell gcloud auth print-access-token)
-# Constants used in tests and test setup.
+VERSION:=git describe --tags --dirty --always --long
 
 ES_PROXY_IMAGE?=gcr.io/unique-caldron-775/cnx/tigera/es-proxy
-#ES_PROXY_CONTAINER_NAME?=es-proxy
 ES_PROXY_CREATED?=.es-proxy.created
 
 
-#$(ES_PROXY_CONTAINER_NAME): $(ES_PROXY_CREATED) ## Create the es-proxy container
 
 $(ES_PROXY_CREATED): Dockerfile haproxy.cfg rsyslog.conf
-	sudo docker build -f Dockerfile -t tigera/es-proxy:latest .
+	docker build -f Dockerfile -t tigera/es-proxy:latest .
 	touch $@
 
 .PHONY: release
-release: clean 	
-ifndef VERSION
-	$(error VERSION is undefined - run using make release VERSION=v.X.Y.Z)
-endif
-	
+release: clean
+
 	git tag $(VERSION)
 
 	# Check to make sure the tag isn't "dirty"
@@ -34,7 +23,7 @@ endif
 	$(MAKE) image
 
 	# Retag images with correct version and registry prefix
-	sudo docker tag tigera/es-proxy:latest $(ES_PROXY_IMAGE):$(VERSION)
+	docker tag tigera/es-proxy:latest $(ES_PROXY_IMAGE):$(VERSION)
 
 	# Check that image were created recently and that the IDs of the versioned and latest image match
 	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" tigera/es-proxy:latest
@@ -50,17 +39,17 @@ endif
 	@echo "docker push $(ES_PROXY_IMAGE):latest"
 
 
-ci: $(ES_PROXY_CREATED)
+.PHONY: image
+image: $(ES_PROXY_CREATED)
+
+
+ci: image
 
 
 cd:
-ifndef VERSION
-        $(error VERSION is undefined - run using make cd VERSION=v.X.Y.Z)
-endif        
 	@echo pushing $(VERSION)
-	#gcloud auth configure-docker
-	sudo docker tag tigera/es-proxy:latest $(ES_PROXY_IMAGE):$(VERSION)
-	sudo docker push $(ES_PROXY_IMAGE):$(VERSION)
+	docker tag tigera/es-proxy:latest $(ES_PROXY_IMAGE):$(VERSION)
+	docker push $(ES_PROXY_IMAGE):$(VERSION)
 
 
 .PHONY: clean
