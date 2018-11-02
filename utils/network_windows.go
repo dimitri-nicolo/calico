@@ -54,14 +54,8 @@ func init() {
 	}
 }
 
-type NetConf struct {
-	hns.NetConf
-
-	IPMasqNetwork string `json:"ipMasqNetwork,omitempty"`
-}
-
-func loadNetConf(bytes []byte) (*NetConf, string, error) {
-	n := &NetConf{}
+func loadNetConf(bytes []byte) (*hns.NetConf, string, error) {
+	n := &hns.NetConf{}
 	if err := json.Unmarshal(bytes, n); err != nil {
 		return nil, "", fmt.Errorf("failed to load netconf: %v", err)
 	}
@@ -281,7 +275,7 @@ func createAndAttachContainerEP(args *skel.CmdArgs,
 	hnsNetwork *hcsshim.HNSNetwork,
 	subNet *net.IPNet,
 	result *current.Result,
-	n *NetConf,
+	n *hns.NetConf,
 	logger *logrus.Entry) (*hcsshim.HNSEndpoint, error) {
 
 	gatewayAddress := getNthIP(subNet, 2).String()
