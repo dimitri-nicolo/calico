@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -1233,18 +1233,31 @@ func (c ipamClient) GetAssignmentAttributes(ctx context.Context, addr net.IP) (m
 // GetIPAMConfig returns the global IPAM configuration.  If no IPAM configuration
 // has been set, returns a default configuration with StrictAffinity disabled
 // and AutoAllocateBlocks enabled.
-func (c ipamClient) GetIPAMConfig(ctx context.Context) (*IPAMConfig, error) {
+func (c ipamClient) GetIPAMConfig(ctx context.Context) (config *IPAMConfig, err error) {
 	obj, err := c.client.Get(ctx, model.IPAMConfigKey{}, "")
 	if err != nil {
 		if _, ok := err.(cerrors.ErrorResourceDoesNotExist); ok {
 			// IPAMConfig has not been explicitly set.  Return
 			// a default IPAM configuration.
-			return &IPAMConfig{AutoAllocateBlocks: true, StrictAffinity: false}, nil
+			config = &IPAMConfig{AutoAllocateBlocks: true, StrictAffinity: false}
+			err = nil
+		} else {
+			log.Errorf("Error getting IPAMConfig: %v", err)
+			return nil, err
 		}
-		log.Errorf("Error getting IPAMConfig: %v", err)
-		return nil, err
+	} else {
+		config = c.convertBackendToIPAMConfig(obj.Value.(*model.IPAMConfig))
 	}
-	return c.convertBackendToIPAMConfig(obj.Value.(*model.IPAMConfig)), nil
+	if detectOS(ctx) == "windows" {
+		// When a Windows node owns a block, it creates a local /26 subnet object and as far as we know, it can't
+		// do a longest-prefix-match between the subnet CIDR and a remote /32.  This means that we can't allow
+		// remote hosts to borrow IPs from a Windows-owned block; and Windows hosts can't borrow IPs either.
+		// Force Windows nodes to always behave as if StrictAffinity is enabled.  This means that they won't borrow
+		// and they'll mark any blocks that they allocate as Strict so others can't borrow from them.
+		log.Info("On Windows, forcing IPAM StrictAffinity.")
+		config.StrictAffinity = true
+	}
+	return
 }
 
 // SetIPAMConfig sets global IPAM configuration.  This can only
