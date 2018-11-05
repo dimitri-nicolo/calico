@@ -343,7 +343,7 @@ func waitForConnection(ctx context.Context, c client.Interface) {
 
 // writeNodeConfig writes out the this node's configuration to disk for use by other components.
 // Specifically, it creates:
-// - nodenameFileName() - used to persist the determined node name to disk for future use.
+// - /var/lib/calico/nodename - used to persist the determined node name to disk for future use.
 func writeNodeConfig(nodeName string) {
 	filename := nodenameFileName()
 	log.Debugf("Writing %s to "+filename, nodeName)
