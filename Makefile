@@ -1,6 +1,7 @@
 .SUFFIXES:
 
-VERSION:=$(shell git describe --tags --dirty --always --long)
+VERSION?=master
+IMAGETAG:=$(shell git describe --tags --dirty --always --long)
 
 ES_PROXY_IMAGE?=gcr.io/unique-caldron-775/cnx/tigera/es-proxy
 ES_PROXY_CREATED?=.es-proxy.created
@@ -13,7 +14,9 @@ $(ES_PROXY_CREATED): Dockerfile haproxy.cfg rsyslog.conf
 
 .PHONY: release
 release: clean
-
+ifndef VERSION
+	$(error VERSION is undefined - run using make release VERSION=v.X.Y.Z) 
+endif
 	git tag $(VERSION)
 
 	# Check to make sure the tag isn't "dirty"
@@ -47,9 +50,9 @@ ci: image
 
 
 cd:
-	@echo pushing $(VERSION)
-	docker tag tigera/es-proxy:latest $(ES_PROXY_IMAGE):$(VERSION)
-	docker push $(ES_PROXY_IMAGE):$(VERSION)
+	@echo pushing $(IMAGETAG)
+	docker tag tigera/es-proxy:latest $(ES_PROXY_IMAGE):$(IMAGETAG)
+	docker push $(ES_PROXY_IMAGE):$(IMAGETAG)
 
 
 .PHONY: clean
