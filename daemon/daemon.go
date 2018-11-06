@@ -42,6 +42,7 @@ import (
 
 	"github.com/projectcalico/felix/buildinfo"
 	"github.com/projectcalico/felix/calc"
+	"github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/felix/config"
 	_ "github.com/projectcalico/felix/config"
 	dp "github.com/projectcalico/felix/dataplane"
@@ -330,11 +331,14 @@ configRetry:
 		"Successfully loaded configuration.")
 
 	var lookupsCache *calc.LookupsCache
+	var dpStatsCollector collector.Collector
 	if runtime.GOOS != "windows" {
 		// Initialzed the lookup cache here and pass it along to both the calc_graph
 		// as well as dataplane driver, which actually uses this for lookups.
 		lookupsCache = calc.NewLookupsCache()
 
+		// Start the stats collector which also depends on the lookups cache.
+		dpStatsCollector = collector.StartDataplaneStatsCollector(configParams, lookupsCache, healthAggregator)
 	} else {
 		// For windows OS, make lookupsCache nil and rest of all lookupCache
 		// should handle the nil pointer
@@ -353,7 +357,7 @@ configRetry:
 	dpDriver, dpDriverCmd = dp.StartDataplaneDriver(
 		configParams,
 		healthAggregator,
-		lookupsCache,
+		dpStatsCollector,
 		configChangedRestartCallback,
 		childExitedRestartCallback,
 	)
@@ -383,6 +387,7 @@ configRetry:
 		policySyncProcessor = policysync.NewProcessor(configParams, toPolicySync)
 		policySyncServer = policysync.NewServer(
 			policySyncProcessor.JoinUpdates,
+			dpStatsCollector,
 			policySyncUIDAllocator.NextUID,
 		)
 		policySyncAPIBinder = binder.NewBinder(configParams.PolicySyncPathPrefix)

@@ -71,6 +71,13 @@ var _ = Describe("Flow log aggregator tests", func() {
 		}
 		return
 	}
+	calculateHTTPRequestStats := func(mus ...MetricUpdate) (allowed, denied int) {
+		for _, mu := range mus {
+			allowed += mu.inMetric.deltaAllowedHTTPRequests
+			denied += mu.inMetric.deltaDeniedHTTPRequests
+		}
+		return
+	}
 	extractFlowPolicies := func(mus ...MetricUpdate) FlowPolicies {
 		fp := make(FlowPolicies)
 		for _, mu := range mus {
@@ -374,7 +381,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 				Namespace: "default",
 				Name:      "nginx-412354-5123451",
 			}
-			// The labels should have been intersected right.
+			// The labels should have been intersected correctly.
 			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut := calculatePacketStats(muNoConn1Rule1AllowUpdateWithEndpointMetaCopy)
 			expectFlowLog(message, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogReporterDst,
 				expectedPacketsIn*2, expectedPacketsOut, expectedBytesIn*2, expectedBytesOut, srcMeta, dstMeta, map[string]string{"test-app": "true"}, map[string]string{}, nil)
@@ -430,7 +437,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 				Namespace: "default",
 				Name:      "nginx-412354-5123451",
 			}
-			// The labels should have beein intersected right.
+			// The labels should have been intersected right.
 			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut = calculatePacketStats(muNoConn1Rule1AllowUpdateWithEndpointMetaCopy)
 			expectFlowLog(message, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogReporterDst,
 				expectedPacketsIn*2, expectedPacketsOut, expectedBytesIn*2, expectedBytesOut, srcMeta, dstMeta, nil, nil, nil) // nil & nil for Src and Dst Labels respectively.
@@ -465,6 +472,24 @@ var _ = Describe("Flow log aggregator tests", func() {
 			Expect(len(messages)).Should(Equal(0))
 		})
 
+	})
+
+	Context("Flow log aggregator http request countes", func() {
+		It("Aggregates HTTP allowed and denied packets", func() {
+			By("Feeding in two updates containing HTTP request counts")
+			ca := NewFlowLogAggregator().ForAction(rules.RuleActionAllow).(*flowLogAggregator)
+			ca.FeedUpdate(muConn1Rule1HTTPReqAllowUpdate)
+			ca.FeedUpdate(muConn1Rule1HTTPReqAllowUpdate)
+			messages := ca.Get()
+			Expect(len(messages)).Should(Equal(1))
+			// StartedFlowRefs count should be 1
+			flowLog := messages[0]
+			Expect(flowLog.NumFlowsStarted).Should(Equal(1))
+
+			hra, hrd := calculateHTTPRequestStats(muConn1Rule1HTTPReqAllowUpdate, muConn1Rule1HTTPReqAllowUpdate)
+			Expect(flowLog.HTTPRequestsAllowedIn).To(Equal(hra))
+			Expect(flowLog.HTTPRequestsDeniedIn).To(Equal(hrd))
+		})
 	})
 
 	Context("Flow log aggregator flowstore lifecycle", func() {
@@ -597,6 +622,5 @@ var _ = Describe("Flow log aggregator tests", func() {
 			Expect(flowLog.PacketsOut).Should(Equal(3))
 			Expect(flowLog.BytesOut).Should(Equal(33))
 		})
-
 	})
 })

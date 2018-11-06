@@ -15,11 +15,13 @@
 package policysync
 
 import (
+	"context"
 	"errors"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/pod2daemon/binder"
 
@@ -38,12 +40,18 @@ const OutputQueueLen = 100
 // credentials present in the gRPC request.
 type Server struct {
 	JoinUpdates chan<- interface{}
+	stats       chan<- *proto.DataplaneStats
 	nextJoinUID func() uint64
 }
 
-func NewServer(joins chan<- interface{}, allocUID func() uint64) *Server {
+func NewServer(joins chan<- interface{}, collector collector.Collector, allocUID func() uint64) *Server {
+	var stats chan<- *proto.DataplaneStats
+	if collector != nil {
+		stats = collector.ReportingChannel()
+	}
 	return &Server{
 		JoinUpdates: joins,
+		stats:       stats,
 		nextJoinUID: allocUID,
 	}
 }
@@ -126,6 +134,18 @@ func (s *Server) Sync(syncRequest *proto.SyncRequest, stream proto.PolicySync_Sy
 		}
 	}
 	return nil
+}
+
+func (s *Server) Report(ctx context.Context, d *proto.DataplaneStats) (*proto.ReportResult, error) {
+	if s.stats == nil {
+		return &proto.ReportResult{Successful: false}, nil
+	}
+	select {
+	case s.stats <- d:
+		return &proto.ReportResult{Successful: true}, nil
+	case <-ctx.Done():
+		return &proto.ReportResult{Successful: false}, ctx.Err()
+	}
 }
 
 type UIDAllocator struct {

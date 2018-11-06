@@ -127,6 +127,5 @@ func (c *flowLogAggregator) calibrateFlowStore(flowMeta FlowMeta) {
 	}
 
 	// reset flow stats for the next interval
-	resetFlowStats := c.flowStore[flowMeta].reset()
-	c.flowStore[flowMeta] = resetFlowStats
+	c.flowStore[flowMeta] = c.flowStore[flowMeta].reset()
 }

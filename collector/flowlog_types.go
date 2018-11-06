@@ -162,10 +162,9 @@ func (f FlowSpec) reset() FlowSpec {
 	f.flowsStartedRefs = NewTupleSet()
 	f.flowsCompletedRefs = NewTupleSet()
 	f.flowsRefs = f.flowsRefsActive.Copy()
-	f.PacketsIn = 0
-	f.BytesIn = 0
-	f.PacketsOut = 0
-	f.BytesOut = 0
+	f.FlowReportedStats = FlowReportedStats{
+		NumFlows: f.flowsRefs.Len(),
+	}
 
 	return f
 }
@@ -241,21 +240,31 @@ type FlowStats struct {
 
 // FlowReportedStats are the statistics we actually report out in flow logs.
 type FlowReportedStats struct {
-	PacketsIn         int `json:"packetsIn"`
-	PacketsOut        int `json:"packetsOut"`
-	BytesIn           int `json:"bytesIn"`
-	BytesOut          int `json:"bytesOut"`
-	NumFlows          int `json:"numFlows"`
-	NumFlowsStarted   int `json:"numFlowsStarted"`
-	NumFlowsCompleted int `json:"numFlowsCompleted"`
+	PacketsIn             int `json:"packetsIn"`
+	PacketsOut            int `json:"packetsOut"`
+	BytesIn               int `json:"bytesIn"`
+	BytesOut              int `json:"bytesOut"`
+	HTTPRequestsAllowedIn int `json:"httpRequestsAllowedIn"`
+	HTTPRequestsDeniedIn  int `json:"httpRequestsDeniedIn"`
+	NumFlows              int `json:"numFlows"`
+	NumFlowsStarted       int `json:"numFlowsStarted"`
+	NumFlowsCompleted     int `json:"numFlowsCompleted"`
 }
 
 // flowReferences are internal only stats used for computing numbers of flows
 type flowReferences struct {
-	flowsRefs          tupleSet
-	flowsStartedRefs   tupleSet
+	// The set of unique flows that were started within the reporting interval. This is added to when a new flow
+	// (i.e. one that is not currently active) is reported during the reporting interval. It is reset when the
+	// flow data is reported.
+	flowsStartedRefs tupleSet
+	// The set of unique flows that were completed within the reporting interval. This is added to when a flow
+	// termination is reported during the reporting interval. It is reset when the flow data is reported.
 	flowsCompletedRefs tupleSet
-	flowsRefsActive    tupleSet
+	// The current set of active flows. The set may increase and decrease during the reporting interval.
+	flowsRefsActive tupleSet
+	// The set of unique flows that have been active at any point during the reporting interval. This is added
+	// to during the reporting interval, and is reset to the set of active flows when the flow data is reported.
+	flowsRefs tupleSet
 }
 
 func NewFlowStats(mu MetricUpdate) FlowStats {
@@ -275,13 +284,15 @@ func NewFlowStats(mu MetricUpdate) FlowStats {
 
 	return FlowStats{
 		FlowReportedStats: FlowReportedStats{
-			NumFlows:          flowsRefs.Len(),
-			NumFlowsStarted:   flowsStartedRefs.Len(),
-			NumFlowsCompleted: flowsCompletedRefs.Len(),
-			PacketsIn:         mu.inMetric.deltaPackets,
-			BytesIn:           mu.inMetric.deltaBytes,
-			PacketsOut:        mu.outMetric.deltaPackets,
-			BytesOut:          mu.outMetric.deltaBytes,
+			NumFlows:              flowsRefs.Len(),
+			NumFlowsStarted:       flowsStartedRefs.Len(),
+			NumFlowsCompleted:     flowsCompletedRefs.Len(),
+			PacketsIn:             mu.inMetric.deltaPackets,
+			BytesIn:               mu.inMetric.deltaBytes,
+			PacketsOut:            mu.outMetric.deltaPackets,
+			BytesOut:              mu.outMetric.deltaBytes,
+			HTTPRequestsAllowedIn: mu.inMetric.deltaAllowedHTTPRequests,
+			HTTPRequestsDeniedIn:  mu.inMetric.deltaDeniedHTTPRequests,
 		},
 		flowReferences: flowReferences{
 			// flowsRefs track the flows that were tracked
@@ -306,12 +317,7 @@ func (f *FlowStats) aggregateFlowStats(mu MetricUpdate) {
 		f.flowsCompletedRefs.Add(mu.tuple)
 		f.flowsRefsActive.Discard(mu.tuple)
 	}
-
-	// If this is the first time we are seeing this tuple.
-	if !f.flowsRefs.Contains(mu.tuple) || (mu.updateType == UpdateTypeReport && f.flowsCompletedRefs.Contains(mu.tuple)) {
-		f.flowsRefs.Add(mu.tuple)
-	}
-
+	f.flowsRefs.Add(mu.tuple)
 	f.NumFlows = f.flowsRefs.Len()
 	f.NumFlowsStarted = f.flowsStartedRefs.Len()
 	f.NumFlowsCompleted = f.flowsCompletedRefs.Len()
@@ -319,6 +325,8 @@ func (f *FlowStats) aggregateFlowStats(mu MetricUpdate) {
 	f.BytesIn += mu.inMetric.deltaBytes
 	f.PacketsOut += mu.outMetric.deltaPackets
 	f.BytesOut += mu.outMetric.deltaBytes
+	f.HTTPRequestsAllowedIn += mu.inMetric.deltaAllowedHTTPRequests
+	f.HTTPRequestsDeniedIn += mu.inMetric.deltaDeniedHTTPRequests
 }
 
 func (f FlowStats) getActiveFlowsCount() int {

@@ -21,11 +21,10 @@ import (
 	"net"
 	"os/exec"
 	"runtime/debug"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/felix/calc"
+	"github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/felix/config"
 	"github.com/projectcalico/felix/dataplane/external"
 	"github.com/projectcalico/felix/dataplane/linux"
@@ -39,7 +38,7 @@ import (
 
 func StartDataplaneDriver(configParams *config.Config,
 	healthAggregator *health.HealthAggregator,
-	cache *calc.LookupsCache,
+	collector collector.Collector,
 	configChangedRestartCallback func(),
 	childExitedRestartCallback func()) (DataplaneDriver, *exec.Cmd) {
 	if configParams.UseInternalDataplaneDriver {
@@ -158,63 +157,19 @@ func StartDataplaneDriver(configParams *config.Config,
 				NATPortRange: configParams.NATPortRange,
 			},
 
-			NfNetlinkBufSize:            configParams.NfNetlinkBufSize,
-			StatsDumpFilePath:           configParams.StatsDumpFilePath,
-			PrometheusReporterEnabled:   configParams.PrometheusReporterEnabled,
-			PrometheusReporterPort:      configParams.PrometheusReporterPort,
-			PrometheusReporterCertFile:  configParams.PrometheusReporterCertFile,
-			PrometheusReporterKeyFile:   configParams.PrometheusReporterKeyFile,
-			PrometheusReporterCAFile:    configParams.PrometheusReporterCAFile,
-			SyslogReporterNetwork:       configParams.SyslogReporterNetwork,
-			SyslogReporterAddress:       configParams.SyslogReporterAddress,
-			DeletedMetricsRetentionSecs: configParams.DeletedMetricsRetentionSecs,
-
-			// Deal with deprecated CloudWatchLogsFlushInterval by taking max
-			FlowLogsFlushInterval: maxDuration(configParams.CloudWatchLogsFlushInterval, configParams.FlowLogsFlushInterval),
-
-			// Deal with deprecated CloudWatchLogsEnableHostEndpoint by combining with new field name.
-			FlowLogsEnableHostEndpoint: configParams.CloudWatchLogsEnableHostEndpoint || configParams.FlowLogsEnableHostEndpoint,
-			FlowLogsEnableNetworkSets:  configParams.FlowLogsEnableNetworkSets,
-
-			CloudWatchLogsReporterEnabled:           configParams.CloudWatchLogsReporterEnabled,
-			CloudWatchLogsLogGroupName:              configParams.CloudWatchLogsLogGroupName,
-			CloudWatchLogsLogStreamName:             configParams.CloudWatchLogsLogStreamName,
-			CloudWatchLogsAggregationKindForAllowed: configParams.CloudWatchLogsAggregationKindForAllowed,
-			CloudWatchLogsAggregationKindForDenied:  configParams.CloudWatchLogsAggregationKindForDenied,
-			CloudWatchLogsRetentionDays:             configParams.CloudWatchLogsRetentionDays,
-			CloudWatchLogsIncludeLabels:             configParams.CloudWatchLogsIncludeLabels,
-			CloudWatchLogsIncludePolicies:           configParams.CloudWatchLogsIncludePolicies,
-			CloudWatchLogsEnabledForAllowed:         configParams.CloudWatchLogsEnabledForAllowed,
-			CloudWatchLogsEnabledForDenied:          configParams.CloudWatchLogsEnabledForDenied,
-			DebugCloudWatchLogsFile:                 configParams.DebugCloudWatchLogsFile,
-
-			FlowLogsFileEnabled:                   configParams.FlowLogsFileEnabled,
-			FlowLogsFileDirectory:                 configParams.FlowLogsFileDirectory,
-			FlowLogsFileMaxFiles:                  configParams.FlowLogsFileMaxFiles,
-			FlowLogsFileMaxFileSizeMB:             configParams.FlowLogsFileMaxFileSizeMB,
-			FlowLogsFileAggregationKindForAllowed: configParams.FlowLogsFileAggregationKindForAllowed,
-			FlowLogsFileAggregationKindForDenied:  configParams.FlowLogsFileAggregationKindForDenied,
-			FlowLogsFileIncludeLabels:             configParams.FlowLogsFileIncludeLabels,
-			FlowLogsFileIncludePolicies:           configParams.FlowLogsFileIncludePolicies,
-			FlowLogsFileEnabledForAllowed:         configParams.FlowLogsFileEnabledForAllowed,
-			FlowLogsFileEnabledForDenied:          configParams.FlowLogsFileEnabledForDenied,
-
-			IPIPMTU:                           configParams.IpInIpMtu,
-			IptablesRefreshInterval:           configParams.IptablesRefreshInterval,
-			RouteRefreshInterval:              configParams.RouteRefreshInterval,
-			IPSetsRefreshInterval:             configParams.IpsetsRefreshInterval,
-			IptablesPostWriteCheckInterval:    configParams.IptablesPostWriteCheckIntervalSecs,
-			IptablesInsertMode:                configParams.ChainInsertMode,
-			IptablesLockFilePath:              configParams.IptablesLockFilePath,
-			IptablesLockTimeout:               configParams.IptablesLockTimeoutSecs,
-			IptablesLockProbeInterval:         configParams.IptablesLockProbeIntervalMillis,
-			MaxIPSetSize:                      configParams.MaxIpsetSize,
-			IgnoreLooseRPF:                    configParams.IgnoreLooseRPF,
-			IPv6Enabled:                       configParams.Ipv6Support,
-			StatusReportingInterval:           configParams.ReportingIntervalSecs,
-			CloudWatchMetricsReporterEnabled:  configParams.CloudWatchMetricsReporterEnabled,
-			CloudWatchMetricsPushIntervalSecs: configParams.CloudWatchMetricsPushIntervalSecs,
-			ClusterGUID:                       configParams.ClusterGUID,
+			IPIPMTU:                        configParams.IpInIpMtu,
+			IptablesRefreshInterval:        configParams.IptablesRefreshInterval,
+			RouteRefreshInterval:           configParams.RouteRefreshInterval,
+			IPSetsRefreshInterval:          configParams.IpsetsRefreshInterval,
+			IptablesPostWriteCheckInterval: configParams.IptablesPostWriteCheckIntervalSecs,
+			IptablesInsertMode:             configParams.ChainInsertMode,
+			IptablesLockFilePath:           configParams.IptablesLockFilePath,
+			IptablesLockTimeout:            configParams.IptablesLockTimeoutSecs,
+			IptablesLockProbeInterval:      configParams.IptablesLockProbeIntervalMillis,
+			MaxIPSetSize:                   configParams.MaxIpsetSize,
+			IgnoreLooseRPF:                 configParams.IgnoreLooseRPF,
+			IPv6Enabled:                    configParams.Ipv6Support,
+			StatusReportingInterval:        configParams.ReportingIntervalSecs,
 
 			NetlinkTimeout: configParams.NetlinkTimeoutSecs,
 
@@ -245,8 +200,9 @@ func StartDataplaneDriver(configParams *config.Config,
 			DebugUseShortPollIntervals:      configParams.DebugUseShortPollIntervals,
 			FelixHostname:                   configParams.FelixHostname,
 			ExternalNodesCidrs:              configParams.ExternalNodesCIDRList,
+			Collector:                       collector,
 		}
-		intDP := intdataplane.NewIntDataplaneDriver(cache, dpConfig)
+		intDP := intdataplane.NewIntDataplaneDriver(dpConfig)
 		intDP.Start()
 
 		return intDP, nil
@@ -256,12 +212,4 @@ func StartDataplaneDriver(configParams *config.Config,
 
 		return extdataplane.StartExtDataplaneDriver(configParams.DataplaneDriver)
 	}
-}
-
-// maxDuration returns the maximum between to durations
-func maxDuration(d1, d2 time.Duration) time.Duration {
-	if d1 > d2 {
-		return d1
-	}
-	return d2
 }

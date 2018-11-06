@@ -36,12 +36,15 @@ func (ut UpdateType) String() string {
 }
 
 type MetricValue struct {
-	deltaPackets int
-	deltaBytes   int
+	deltaPackets             int
+	deltaBytes               int
+	deltaAllowedHTTPRequests int
+	deltaDeniedHTTPRequests  int
 }
 
 func (mv MetricValue) String() string {
-	return fmt.Sprintf("deltaPackets=%v deltaBytes=%v", mv.deltaPackets, mv.deltaBytes)
+	return fmt.Sprintf("delta=%v deltaBytes=%v deltaAllowedHTTPReq=%v deltaDeniedHTTPReq=%v",
+		mv.deltaPackets, mv.deltaBytes, mv.deltaAllowedHTTPRequests, mv.deltaDeniedHTTPRequests)
 }
 
 type MetricUpdate struct {
@@ -60,6 +63,7 @@ type MetricUpdate struct {
 	// Rules identification
 	ruleIDs []*calc.RuleID
 
+	// Inbound/Outbound packet/byte counts.
 	inMetric  MetricValue
 	outMetric MetricValue
 }

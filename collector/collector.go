@@ -1,4 +1,5 @@
 // Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
+// +build !windows
 
 package collector
 
@@ -6,9 +7,11 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"os/signal"
 	"path"
+	"strings"
 	"syscall"
 	"time"
 
@@ -20,6 +23,7 @@ import (
 
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/jitter"
+	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/felix/rules"
 )
 
@@ -42,10 +46,13 @@ type Config struct {
 	EnableNetworkSets     bool
 }
 
-// A Collector (a StatsManager really) collects StatUpdates from data sources
+// A collector (a StatsManager really) collects StatUpdates from data sources
 // and stores them as a Data object in a map keyed by Tuple.
-// All data source channels must be specified when creating the collector.
-type Collector struct {
+// All data source channels must be specified when creating the
+//
+// Note that the dataplane statistics channel (ds) is currently just used for the
+// policy syncer but will eventually also include NFLOG stats as well.
+type collector struct {
 	luc            *calc.LookupsCache
 	nfIngressC     chan *nfnetlink.NflogPacketAggregate
 	nfEgressC      chan *nfnetlink.NflogPacketAggregate
@@ -58,28 +65,38 @@ type Collector struct {
 	config         *Config
 	dumpLog        *log.Logger
 	reporterMgr    *ReporterManager
+	ds             chan *proto.DataplaneStats
 }
 
-func NewCollector(lc *calc.LookupsCache, rm *ReporterManager, config *Config) *Collector {
-	return &Collector{
+// newCollector instantiates a new collector. The StartDataplaneStatsCollector function is the only public
+// function for collector instantiation.
+func newCollector(lc *calc.LookupsCache, rm *ReporterManager, cfg *Config) Collector {
+	return &collector{
 		luc:            lc,
 		nfIngressC:     make(chan *nfnetlink.NflogPacketAggregate, 1000),
 		nfEgressC:      make(chan *nfnetlink.NflogPacketAggregate, 1000),
 		nfIngressDoneC: make(chan struct{}),
 		nfEgressDoneC:  make(chan struct{}),
 		epStats:        make(map[Tuple]*Data),
-		poller:         jitter.NewTicker(config.ConntrackPollingInterval, config.ConntrackPollingInterval/10),
-		ticker:         jitter.NewTicker(config.ExportingInterval, config.ExportingInterval/10),
+		poller:         jitter.NewTicker(cfg.ConntrackPollingInterval, cfg.ConntrackPollingInterval/10),
+		ticker:         jitter.NewTicker(cfg.ExportingInterval, cfg.ExportingInterval/10),
 		sigChan:        make(chan os.Signal, 1),
-		config:         config,
+		config:         cfg,
 		dumpLog:        log.New(),
 		reporterMgr:    rm,
+		ds:             make(chan *proto.DataplaneStats, 1000),
 	}
 }
 
-func (c *Collector) Start() {
-	go c.startStatsCollectionAndReporting()
-	c.setupStatsDumping()
+// ReportingChannel returns the channel used to report dataplane statistics.
+func (c *collector) ReportingChannel() chan<- *proto.DataplaneStats {
+	return c.ds
+}
+
+// SubscribeToNflog should only be called by the internal dataplane driver to subscribe this collector
+// to NFLog stats.
+// TODO: This will be removed when NFLOG and Conntrack handling is moved to the int_dataplane.
+func (c *collector) SubscribeToNflog() {
 	err := subscribeToNflog(c.config.IngressGroup, c.config.NfNetlinkBufSize, c.nfIngressC, c.nfIngressDoneC)
 	if err != nil {
 		log.Errorf("Error when subscribing to NFLOG: %v", err)
@@ -92,7 +109,12 @@ func (c *Collector) Start() {
 	}
 }
 
-func (c *Collector) startStatsCollectionAndReporting() {
+func (c *collector) Start() {
+	go c.startStatsCollectionAndReporting()
+	c.setupStatsDumping()
+}
+
+func (c *collector) startStatsCollectionAndReporting() {
 	// When a collector is started, we respond to the following events:
 	// 1. StatUpdates for incoming datasources (chan c.mux).
 	// 2. A signal handler that will dump logs on receiving SIGUSR2.
@@ -109,11 +131,13 @@ func (c *Collector) startStatsCollectionAndReporting() {
 			c.checkEpStats()
 		case <-c.sigChan:
 			c.dumpStats()
+		case ds := <-c.ds:
+			c.convertDataplaneStatsAndApplyUpdate(ds)
 		}
 	}
 }
 
-func (c *Collector) setupStatsDumping() {
+func (c *collector) setupStatsDumping() {
 	// TODO (doublek): This may not be the best place to put this. Consider
 	// moving the signal handler and logging to file logic out of the collector
 	// and simply out to appropriate sink on different messages.
@@ -138,7 +162,7 @@ func (c *Collector) setupStatsDumping() {
 
 // getData returns a pointer to the data structure keyed off the supplied tuple.  If there
 // is no entry one is created.
-func (c *Collector) getData(tuple Tuple, createIfMissing bool) *Data {
+func (c *collector) getData(tuple Tuple, createIfMissing bool) *Data {
 	data, ok := c.epStats[tuple]
 	if !ok && createIfMissing {
 		// The entry does not exist. Go ahead and create a new one and add it to the map.
@@ -148,14 +172,14 @@ func (c *Collector) getData(tuple Tuple, createIfMissing bool) *Data {
 	return data
 }
 
-// applyConnTrackStatUpdate applies a stats update from a conn track poll.
+// applyConntrackStatUpdate applies a stats update from a conn track poll.
 // If entryExpired is set then, this means that the update is for a recently
 // expired entry. One of the following will be done:
 // - If we already track the tuple, then the stats will be updated and will
 //   then be expired from epStats.
 // - If we don't track the tuple, this call will be a no-op as this update
 //   is just waiting for the conntrack entry to timeout.
-func (c *Collector) applyConnTrackStatUpdate(
+func (c *collector) applyConntrackStatUpdate(
 	tuple Tuple, packets int, bytes int, reversePackets int, reverseBytes int, entryExpired bool,
 ) {
 	createIfMissing := true
@@ -168,8 +192,8 @@ func (c *Collector) applyConnTrackStatUpdate(
 	data := c.getData(tuple, createIfMissing)
 
 	if data != nil {
-		data.SetCounters(packets, bytes)
-		data.SetCountersReverse(reversePackets, reverseBytes)
+		data.SetConntrackCounters(packets, bytes)
+		data.SetConntrackCountersReverse(reversePackets, reverseBytes)
 	}
 
 	if entryExpired && data != nil {
@@ -185,7 +209,7 @@ func (c *Collector) applyConnTrackStatUpdate(
 }
 
 // applyNflogStatUpdate applies a stats update from an NFLOG.
-func (c *Collector) applyNflogStatUpdate(tuple Tuple, ruleID *calc.RuleID, srcEp, dstEp *calc.EndpointData, tierIdx, numPkts, numBytes int) {
+func (c *collector) applyNflogStatUpdate(tuple Tuple, ruleID *calc.RuleID, srcEp, dstEp *calc.EndpointData, tierIdx, numPkts, numBytes int) {
 	//TODO: RLB: What happens if we get an NFLOG metric update while we *think* we have a connection up?
 	data := c.getData(tuple, true)
 	if srcEp != nil {
@@ -206,13 +230,14 @@ func (c *Collector) applyNflogStatUpdate(tuple Tuple, ruleID *calc.RuleID, srcEp
 		}
 
 		data.ResetConntrackCounters()
+		data.ResetApplicationCounters()
 		if ok = data.ReplaceRuleID(ruleID, tierIdx, numPkts, numBytes); !ok {
 			log.Warning("Unable to update rule trace point in metrics")
 		}
 	}
 }
 
-func (c *Collector) checkEpStats() {
+func (c *collector) checkEpStats() {
 	// For each entry
 	// - report metrics
 	// - check age and expire the entry if needed.
@@ -228,15 +253,15 @@ func (c *Collector) checkEpStats() {
 	}
 }
 
-func (c *Collector) reportMetrics(data *Data) {
+func (c *collector) reportMetrics(data *Data) {
 	data.Report(c.reporterMgr.ReportChan, false)
 }
 
-func (c *Collector) expireMetrics(data *Data) {
+func (c *collector) expireMetrics(data *Data) {
 	data.Report(c.reporterMgr.ReportChan, true)
 }
 
-func (c *Collector) expireData(data *Data) {
+func (c *collector) expireData(data *Data) {
 	c.expireMetrics(data)
 	delete(c.epStats, data.Tuple)
 }
@@ -253,7 +278,7 @@ func (c *Collector) expireData(data *Data) {
 // process the conntrack entry after we figure out the connection's original
 // destination IP address before DNAT modified the connections' destination
 // IP/port.
-func (c *Collector) handleCtEntry(ctEntry nfnetlink.CtEntry) {
+func (c *collector) handleCtEntry(ctEntry nfnetlink.CtEntry) {
 	var (
 		ctTuple nfnetlink.CtTuple
 		err     error
@@ -296,14 +321,14 @@ func (c *Collector) handleCtEntry(ctEntry nfnetlink.CtEntry) {
 		entryExpired = true
 	}
 
-	c.applyConnTrackStatUpdate(tuple,
+	c.applyConntrackStatUpdate(tuple,
 		ctEntry.OriginalCounters.Packets, ctEntry.OriginalCounters.Bytes,
 		ctEntry.ReplyCounters.Packets, ctEntry.ReplyCounters.Bytes,
 		entryExpired)
 	return
 }
 
-func (c *Collector) convertNflogPktAndApplyUpdate(dir rules.RuleDir, nPktAggr *nfnetlink.NflogPacketAggregate) error {
+func (c *collector) convertNflogPktAndApplyUpdate(dir rules.RuleDir, nPktAggr *nfnetlink.NflogPacketAggregate) error {
 	var (
 		numPkts, numBytes     int
 		localEp, srcEp, dstEp *calc.EndpointData
@@ -391,6 +416,40 @@ func (c *Collector) convertNflogPktAndApplyUpdate(dir rules.RuleDir, nPktAggr *n
 	return nil
 }
 
+// convertDataplaneStatsAndApplyUpdate merges the proto.DataplaneStatistics into the current
+// data stored for the specific connection tuple.
+func (c *collector) convertDataplaneStatsAndApplyUpdate(d *proto.DataplaneStats) {
+	// Create a Tuple representing the DataplaneStats.
+	t, err := extractTupleFromDataplaneStats(d)
+	if err != nil {
+		log.Errorf("unable to extract 5-tuple from DataplaneStats: %v", err)
+		return
+	}
+
+	// Locate the data for this connection, creating if not yet available (it's possible to get an update
+	// from the dataplane before nflogs or conntrack).
+	data := c.getData(t, true)
+
+	for _, s := range d.Stats {
+		if s.Kind != proto.Statistic_HTTP_REQUESTS {
+			// Currently we only expect delta HTTP requests from the dataplane statistics API.
+			log.WithField("kind", s.Kind.String()).Warnf("Received a statistic from the dataplane that Felix cannot process")
+			continue
+		}
+		if s.Relativity != proto.Statistic_DELTA {
+			// Currently we only expect delta HTTP requests from the dataplane statistics API.
+			log.WithField("relativity", s.Relativity.String()).Warning("Received a statistic from the dataplane that Felix cannot process")
+			continue
+		}
+		switch s.Action {
+		case proto.Action_ALLOWED:
+			data.IncreaseHTTPRequestAllowedCounter(int(s.Value))
+		case proto.Action_DENIED:
+			data.IncreaseHTTPRequestDeniedCounter(int(s.Value))
+		}
+	}
+}
+
 func subscribeToNflog(gn int, nlBufSiz int, nflogChan chan *nfnetlink.NflogPacketAggregate, nflogDoneChan chan struct{}) error {
 	return nfnetlink.NflogSubscribe(gn, nlBufSiz, nflogChan, nflogDoneChan)
 }
@@ -419,10 +478,46 @@ func extractTupleFromCtEntryTuple(ctTuple nfnetlink.CtTuple) Tuple {
 	return *NewTuple(ctTuple.Src, ctTuple.Dst, ctTuple.ProtoNum, l4Src, l4Dst)
 }
 
+func extractTupleFromDataplaneStats(d *proto.DataplaneStats) (Tuple, error) {
+	var protocol int32
+	switch n := d.Protocol.GetNumberOrName().(type) {
+	case *proto.Protocol_Number:
+		protocol = n.Number
+	case *proto.Protocol_Name:
+		switch strings.ToLower(n.Name) {
+		case "tcp":
+			protocol = 6
+		case "udp":
+			protocol = 17
+		default:
+			return Tuple{}, fmt.Errorf("unhandled protocol: %s", n)
+		}
+	}
+
+	// Use the standard go net library to parse the IP since this always returns IPs as 16 bytes.
+	srcIP := net.ParseIP(d.SrcIp)
+	if srcIP == nil {
+		return Tuple{}, fmt.Errorf("bad source IP: %s", d.SrcIp)
+	}
+	dstIP := net.ParseIP(d.DstIp)
+	if dstIP == nil {
+		return Tuple{}, fmt.Errorf("bad destination IP: %s", d.DstIp)
+	}
+
+	// But invoke the To16() just to be sure.
+	var srcArray, dstArray [16]byte
+	copy(srcArray[:], srcIP.To16())
+	copy(dstArray[:], dstIP.To16())
+
+	// Locate the data for this connection, creating if not yet available (it's possible to get an update
+	// before nflogs or conntrack).
+	return *NewTuple(srcArray, dstArray, int(protocol), int(d.SrcPort), int(d.DstPort)), nil
+}
+
 // Write stats to file pointed by Config.StatsDumpFilePath.
 // When called, clear the contents of the file Config.StatsDumpFilePath before
 // writing the stats to it.
-func (c *Collector) dumpStats() {
+func (c *collector) dumpStats() {
 	log.Debugf("Dumping Stats to %v", c.config.StatsDumpFilePath)
 
 	os.Truncate(c.config.StatsDumpFilePath, 0)

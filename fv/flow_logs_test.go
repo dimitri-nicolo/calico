@@ -264,16 +264,19 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 		cc.CheckConnectivity()
 		cc.CheckConnectivity()
 		cc.CheckConnectivity()
+
+		// Allow 6 seconds for the Felixes to poll conntrack.  (This is conntrack polling time plus 20%, which gives us
+		// 10% leeway over the polling jitter of 10%)
+		time.Sleep(6 * time.Second)
+
+		// Delete conntrack state so that we don't keep seeing 0-metric copies of the logs.  This will allow the flows
+		// to expire quickly.
+		for ii := range felixes {
+			felixes[ii].Exec("conntrack", "-F")
+		}
 	})
 
 	checkFlowLogs := func(flowLogsOutput string) {
-		// Allow 5 seconds for the Felixes to poll conntrack.
-		time.Sleep(5 * time.Second)
-
-		// Delete conntrack state so that we don't keep seeing 0-metric copies of the logs.
-		felixes[0].Exec("conntrack", "-F")
-		felixes[1].Exec("conntrack", "-F")
-
 		// Here, by way of illustrating what we need to check for, are the allow
 		// flow logs that we actually see for this test, as grouped and logged by
 		// the code below that includes "started:" and "completed:".

@@ -1,4 +1,5 @@
 // Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// +build !windows
 
 package collector
 
@@ -71,7 +72,7 @@ func NewSyslogReporter(network, address string) *SyslogReporter {
 }
 
 func (sr *SyslogReporter) Start() {
-	log.Info("Staring SyslogReporter")
+	log.Info("Starting SyslogReporter")
 }
 
 func (sr *SyslogReporter) Report(mu MetricUpdate) error {

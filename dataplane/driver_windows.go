@@ -19,7 +19,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/felix/calc"
+	"github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/felix/config"
 	"github.com/projectcalico/felix/dataplane/windows"
 	"github.com/projectcalico/felix/dataplane/windows/hns"
@@ -28,7 +28,7 @@ import (
 
 func StartDataplaneDriver(configParams *config.Config,
 	healthAggregator *health.HealthAggregator,
-	cache *calc.LookupsCache,
+	collector collector.Collector,
 	configChangedRestartCallback func(),
 	childExitedRestartCallback func()) (DataplaneDriver, *exec.Cmd) {
 	log.Info("Using Windows dataplane driver.")

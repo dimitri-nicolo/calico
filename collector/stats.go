@@ -44,86 +44,6 @@ func ruleDirToTrafficDir(r rules.RuleDir) TrafficDirection {
 	return TrafficDirOutbound
 }
 
-// Counter stores packet and byte statistics. It also maintains a delta of
-// changes made until a `ResetDeltas()` is called.
-type Counter struct {
-	packets      int
-	bytes        int
-	deltaPackets int
-	deltaBytes   int
-}
-
-func NewCounter(packets int, bytes int) *Counter {
-	return &Counter{packets, bytes, packets, bytes}
-}
-
-// Values returns packet and bytes stored in a Counter object.
-func (c *Counter) Values() (packets, bytes int) {
-	return c.packets, c.bytes
-}
-
-// DeltaValues returns the packet and byte deltas since the last `ResetDeltas()`.
-func (c *Counter) DeltaValues() (packets, bytes int) {
-	return c.deltaPackets, c.deltaBytes
-}
-
-// Set packet and byte values to `packets` and `bytes`. Returns true if value
-// was changed and false otherwise.
-func (c *Counter) Set(packets int, bytes int) bool {
-	if packets == c.packets && bytes != c.bytes {
-		return false
-	}
-
-	dp := packets - c.packets
-	db := bytes - c.bytes
-	if dp < 0 || db < 0 {
-		// There has been a reset event.  Best we can do is assume the counters were
-		// reset and therefore our delta counts should be incremented by the new
-		// values.
-		c.deltaPackets += packets
-		c.deltaBytes += bytes
-	} else {
-		// The counters are higher than before so assuming there has been no intermediate
-		// reset event, increment our deltas by the deltas of the new and previous counts.
-		c.deltaPackets += dp
-		c.deltaBytes += db
-	}
-	c.packets = packets
-	c.bytes = bytes
-	return true
-}
-
-// Increase packet and byte values by `packets` and `bytes`. Always returns
-// true.
-func (c *Counter) Increase(packets int, bytes int) (changed bool) {
-	c.Set(c.packets+packets, c.bytes+bytes)
-	changed = true
-	return
-}
-
-// Reset does a full reset of delta and absolute values tracked by this counter.
-func (c *Counter) Reset() {
-	c.packets = 0
-	c.bytes = 0
-	c.deltaPackets = 0
-	c.deltaBytes = 0
-}
-
-// ResetDeltas sets the delta packet and byte values to zero. Absolute counters are left
-// unchanged.
-func (c *Counter) ResetDeltas() {
-	c.deltaPackets = 0
-	c.deltaBytes = 0
-}
-
-func (c *Counter) IsZero() bool {
-	return (c.packets == 0 && c.bytes == 0)
-}
-
-func (c *Counter) String() string {
-	return fmt.Sprintf("packets=%v bytes=%v", c.packets, c.bytes)
-}
-
 const RuleTraceInitLen = 10
 
 // RuleTrace represents the list of rules (i.e, a Trace) that a packet hits.
@@ -134,9 +54,10 @@ type RuleTrace struct {
 	path   []*calc.RuleID
 	action rules.RuleAction
 
-	// Counter to store the packets and byte counts for the RuleTrace
-	ctr   Counter
-	dirty bool
+	// Counters to store the packets and byte counts for the RuleTrace
+	pktsCtr  Counter
+	bytesCtr Counter
+	dirty    bool
 
 	// Stores the Index of the RuleID that has a RuleAction Allow or Deny
 	verdictIdx int
@@ -163,7 +84,10 @@ func (t *RuleTrace) String() string {
 		}
 		rtParts = append(rtParts, fmt.Sprintf("(%s)", tp))
 	}
-	return fmt.Sprintf("path=[%v], action=%v ctr={%v}", strings.Join(rtParts, ", "), t.Action(), t.ctr.String())
+	return fmt.Sprintf(
+		"path=[%v], action=%v ctr={packets=%v bytes=%v}",
+		strings.Join(rtParts, ", "), t.Action(), t.pktsCtr.Absolute(), t.bytesCtr.Absolute(),
+	)
 }
 
 func (t *RuleTrace) Len() int {
@@ -195,12 +119,14 @@ func (t *RuleTrace) Action() rules.RuleAction {
 	return ruleID.Action
 }
 
-func (t *RuleTrace) Counters() Counter {
-	return t.ctr
-}
-
 func (t *RuleTrace) IsDirty() bool {
 	return t.dirty
+}
+
+// FoundVerdict returns true if the verdict rule has been found, that is the rule that contains
+// the final allow or deny action.
+func (t *RuleTrace) FoundVerdict() bool {
+	return t.verdictIdx >= 0
 }
 
 // VerdictRuleID returns the RuleID that contains either ActionAllow or
@@ -215,7 +141,8 @@ func (t *RuleTrace) VerdictRuleID() *calc.RuleID {
 
 func (t *RuleTrace) ClearDirtyFlag() {
 	t.dirty = false
-	t.ctr.ResetDeltas()
+	t.pktsCtr.ResetDelta()
+	t.bytesCtr.ResetDelta()
 }
 
 func (t *RuleTrace) addRuleID(rid *calc.RuleID, tierIdx, numPkts, numBytes int) bool {
@@ -238,7 +165,8 @@ func (t *RuleTrace) addRuleID(rid *calc.RuleID, tierIdx, numPkts, numBytes int) 
 		}
 	}
 	if rid.Action != rules.RuleActionPass {
-		t.ctr.Increase(numPkts, numBytes)
+		t.pktsCtr.Increase(numPkts)
+		t.bytesCtr.Increase(numBytes)
 		t.verdictIdx = tierIdx
 	}
 	t.dirty = true
@@ -252,46 +180,10 @@ func (t *RuleTrace) replaceRuleID(rid *calc.RuleID, tierIdx, numPkts, numBytes i
 	}
 	// New tracepoint is not a next-Tier action truncate at this Index.
 	t.path[tierIdx] = rid
-	t.ctr = *NewCounter(numPkts, numBytes)
+	t.pktsCtr = *NewCounter(numPkts)
+	t.bytesCtr = *NewCounter(numBytes)
 	t.dirty = true
 	t.verdictIdx = tierIdx
-}
-
-// ToMetricUpdate converts the RuleTrace to a MetricUpdate used by the reporter.
-func (rt *RuleTrace) ToMetricUpdate(ut UpdateType, t Tuple, srcEp, dstEp *calc.EndpointData, td TrafficDirection, ctr *Counter, ctrRev *Counter) MetricUpdate {
-	var (
-		dp, db, dpRev, dbRev int
-		isConn               bool
-	)
-	if ctr != nil && ctrRev != nil {
-		dp, db = ctr.DeltaValues()
-		dpRev, dbRev = ctrRev.DeltaValues()
-		isConn = true
-	} else {
-		dp, db = rt.ctr.DeltaValues()
-		isConn = false
-	}
-	mu := MetricUpdate{
-		updateType:   ut,
-		tuple:        t,
-		srcEp:        srcEp,
-		dstEp:        dstEp,
-		ruleIDs:      rt.Path(),
-		isConnection: isConn,
-	}
-	switch td {
-	case TrafficDirInbound:
-		mu.inMetric = MetricValue{dp, db}
-		if isConn {
-			mu.outMetric = MetricValue{dpRev, dbRev}
-		}
-	case TrafficDirOutbound:
-		mu.outMetric = MetricValue{dp, db}
-		if isConn {
-			mu.inMetric = MetricValue{dpRev, dbRev}
-		}
-	}
-	return mu
 }
 
 // Tuple represents a 5-Tuple value that identifies a connection/flow of packets
@@ -339,8 +231,7 @@ func (t *Tuple) GetDestPort() int {
 // workload endpoint. The EgressRuleTrace and the IngressRuleTrace record the
 // policies that this tuple can hit - egress from the workload that is the
 // source of this connection and ingress into a workload that terminated this.
-// - 2 counters - connTrackCtr for the originating Direction of the connection
-// and connTrackCtrReverse for the reverse/reply of this connection.
+// - Connection based counters (e.g, for conntrack packets/bytes and HTTP requests).
 type Data struct {
 	Tuple Tuple
 
@@ -353,9 +244,13 @@ type Data struct {
 	// Indicates if this is a connection
 	isConnection bool
 
-	// These are the counts from conntrack
-	connTrackCtr        Counter
-	connTrackCtrReverse Counter
+	// Connection related counters.
+	conntrackPktsCtr         Counter
+	conntrackPktsCtrReverse  Counter
+	conntrackBytesCtr        Counter
+	conntrackBytesCtrReverse Counter
+	httpReqAllowedCtr        Counter
+	httpReqDeniedCtr         Counter
 
 	// These contain the aggregated counts per tuple per rule.
 	IngressRuleTrace RuleTrace
@@ -392,8 +287,11 @@ func (d *Data) String() string {
 	} else {
 		dstName = "<unknown>"
 	}
-	return fmt.Sprintf("tuple={%v}, srcEp={%v} dstEp={%v} connTrackCtr={%v}, connTrackCtrReverse={%v}, updatedAt=%v ingressRuleTrace={%v} egressRuleTrace={%v}",
-		&(d.Tuple), srcName, dstName, d.connTrackCtr.String(), d.connTrackCtrReverse.String(), d.updatedAt, d.IngressRuleTrace, d.EgressRuleTrace)
+	return fmt.Sprintf(
+		"tuple={%v}, srcEp={%v} dstEp={%v} connTrackCtr={packets=%v bytes=%v}, "+
+			"connTrackCtrReverse={packets=%v bytes=%v}, updatedAt=%v ingressRuleTrace={%v} egressRuleTrace={%v}",
+		&(d.Tuple), srcName, dstName, d.conntrackPktsCtr.Absolute(), d.conntrackBytesCtr.Absolute(),
+		d.conntrackPktsCtrReverse.Absolute(), d.conntrackBytesCtrReverse.Absolute(), d.updatedAt, d.IngressRuleTrace, d.EgressRuleTrace)
 }
 
 func (d *Data) touch() {
@@ -406,8 +304,12 @@ func (d *Data) setDirtyFlag() {
 
 func (d *Data) clearDirtyFlag() {
 	d.dirty = false
-	d.connTrackCtr.ResetDeltas()
-	d.connTrackCtrReverse.ResetDeltas()
+	d.httpReqAllowedCtr.ResetDelta()
+	d.httpReqDeniedCtr.ResetDelta()
+	d.conntrackPktsCtr.ResetDelta()
+	d.conntrackBytesCtr.ResetDelta()
+	d.conntrackPktsCtrReverse.ResetDelta()
+	d.conntrackBytesCtrReverse.ResetDelta()
 	d.IngressRuleTrace.ClearDirtyFlag()
 	d.EgressRuleTrace.ClearDirtyFlag()
 }
@@ -442,49 +344,67 @@ func (d *Data) EgressAction() rules.RuleAction {
 	return d.EgressRuleTrace.Action()
 }
 
-func (d *Data) Counters() Counter {
-	return d.connTrackCtr
+func (d *Data) ConntrackPacketsCounter() Counter {
+	return d.conntrackPktsCtr
 }
 
-func (d *Data) CountersReverse() Counter {
-	return d.connTrackCtrReverse
+func (d *Data) ConntrackBytesCounter() Counter {
+	return d.conntrackBytesCtr
 }
 
-// Add packets and bytes to the Counters' values. Use the IncreaseCounters*
-// methods when the source of packets/bytes are delta values.
-func (d *Data) IncreaseCounters(packets int, bytes int) {
-	d.connTrackCtr.Increase(packets, bytes)
-	d.setDirtyFlag()
-	d.touch()
+func (d *Data) ConntrackPacketsCounterReverse() Counter {
+	return d.conntrackPktsCtrReverse
 }
 
-// Add packets and bytes to the Reverse Counters' values. Use the IncreaseCounters*
-// methods when the source of packets/bytes are delta values.
-func (d *Data) IncreaseCountersReverse(packets int, bytes int) {
-	d.connTrackCtrReverse.Increase(packets, bytes)
-	d.setDirtyFlag()
-	d.touch()
+func (d *Data) ConntrackBytesCounterReverse() Counter {
+	return d.conntrackBytesCtrReverse
 }
 
-// Set In Counters' values to packets and bytes. Use the SetCounters* methods
+func (d *Data) HTTPRequestsAllowed() Counter {
+	return d.httpReqAllowedCtr
+}
+
+func (d *Data) HTTPRequestsDenied() Counter {
+	return d.httpReqDeniedCtr
+}
+
+// Set In Counters' values to packets and bytes. Use the SetConntrackCounters* methods
 // when the source if packets/bytes are absolute values.
-func (d *Data) SetCounters(packets int, bytes int) {
-	changed := d.connTrackCtr.Set(packets, bytes)
-	if changed {
+func (d *Data) SetConntrackCounters(packets int, bytes int) {
+	if d.conntrackPktsCtr.Set(packets) && d.conntrackBytesCtr.Set(bytes) {
 		d.setDirtyFlag()
 	}
 	d.isConnection = true
 	d.touch()
 }
 
-// Set In Counters' values to packets and bytes. Use the SetCounters* methods
+// Set In Counters' values to packets and bytes. Use the SetConntrackCounters* methods
 // when the source if packets/bytes are absolute values.
-func (d *Data) SetCountersReverse(packets int, bytes int) {
-	changed := d.connTrackCtrReverse.Set(packets, bytes)
-	if changed {
+func (d *Data) SetConntrackCountersReverse(packets int, bytes int) {
+	if d.conntrackPktsCtrReverse.Set(packets) && d.conntrackBytesCtrReverse.Set(bytes) {
 		d.setDirtyFlag()
 	}
 	d.isConnection = true
+	d.touch()
+}
+
+// Increment the HTTP Request allowed count.
+func (d *Data) IncreaseHTTPRequestAllowedCounter(delta int) {
+	if delta == 0 {
+		return
+	}
+	d.httpReqAllowedCtr.Increase(delta)
+	d.setDirtyFlag()
+	d.touch()
+}
+
+// Increment the HTTP Request denied count.
+func (d *Data) IncreaseHTTPRequestDeniedCounter(delta int) {
+	if delta == 0 {
+		return
+	}
+	d.httpReqDeniedCtr.Increase(delta)
+	d.setDirtyFlag()
 	d.touch()
 }
 
@@ -492,8 +412,16 @@ func (d *Data) SetCountersReverse(packets int, bytes int) {
 // the data.
 func (d *Data) ResetConntrackCounters() {
 	d.isConnection = false
-	d.connTrackCtr.Reset()
-	d.connTrackCtrReverse.Reset()
+	d.conntrackPktsCtr.Reset()
+	d.conntrackBytesCtr.Reset()
+	d.conntrackPktsCtrReverse.Reset()
+	d.conntrackBytesCtrReverse.Reset()
+}
+
+// ResetApplicationCounters resets the counters associated with application layer statistics.
+func (d *Data) ResetApplicationCounters() {
+	d.httpReqAllowedCtr.Reset()
+	d.httpReqDeniedCtr.Reset()
 }
 
 func (d *Data) SetSourceEndpointData(sep *calc.EndpointData) {
@@ -538,26 +466,112 @@ func (d *Data) Report(c chan<- MetricUpdate, expired bool) {
 	if expired {
 		ut = UpdateTypeExpire
 	}
-	if ((d.EgressRuleTrace.Action() == rules.RuleActionDeny || d.EgressRuleTrace.Action() == rules.RuleActionAllow) && (expired || d.EgressRuleTrace.IsDirty())) ||
-		(!expired && d.EgressRuleTrace.Action() == rules.RuleActionAllow && d.isConnection && d.IsDirty()) {
-		if d.isConnection {
-			c <- d.EgressRuleTrace.ToMetricUpdate(ut, d.Tuple, d.srcEp, d.dstEp, TrafficDirOutbound, &d.connTrackCtr, &d.connTrackCtrReverse)
-		} else {
-			c <- d.EgressRuleTrace.ToMetricUpdate(ut, d.Tuple, d.srcEp, d.dstEp, TrafficDirOutbound, nil, nil)
+	if d.isConnection {
+		// For connections, we only send ingress and egress updates if:
+		// -  There is something to report, i.e.
+		//    -  flow is expired, or
+		//    -  connection related stats are dirty
+		// -  The policy verdict rule is an Allow (since Deny would suggest either an old connection or policy
+		//    updates that have not yet filtered up through NFLogs).
+		if expired || d.IsDirty() {
+			if d.EgressRuleTrace.Action() == rules.RuleActionAllow {
+				c <- d.metricUpdateEgressConn(ut)
+			}
+			if d.IngressRuleTrace.Action() == rules.RuleActionAllow {
+				c <- d.metricUpdateIngressConn(ut)
+			}
 		}
-	}
-	if ((d.IngressRuleTrace.Action() == rules.RuleActionDeny || d.IngressRuleTrace.Action() == rules.RuleActionAllow) && (expired || d.IngressRuleTrace.IsDirty())) ||
-		(!expired && d.IngressRuleTrace.Action() == rules.RuleActionAllow && d.isConnection && d.IsDirty()) {
-		if d.isConnection {
-			c <- d.IngressRuleTrace.ToMetricUpdate(ut, d.Tuple, d.srcEp, d.dstEp, TrafficDirInbound, &d.connTrackCtr, &d.connTrackCtrReverse)
-		} else {
-			c <- d.IngressRuleTrace.ToMetricUpdate(ut, d.Tuple, d.srcEp, d.dstEp, TrafficDirInbound, nil, nil)
+	} else {
+		// For non-connections, we only send ingress and egress updates if:
+		// -  There is something to report, i.e.
+		//    -  flow is expired, or
+		//    -  rule trace related stats are dirty
+		// -  The policy verdict rule has been determined.
+		if (expired || d.EgressRuleTrace.IsDirty()) && d.EgressRuleTrace.FoundVerdict() {
+			c <- d.metricUpdateEgressNoConn(ut)
+		}
+		if (expired || d.IngressRuleTrace.IsDirty()) && d.IngressRuleTrace.FoundVerdict() {
+			c <- d.metricUpdateIngressNoConn(ut)
 		}
 	}
 
 	// Metrics have been reported, so acknowledge the stored data by resetting the dirty
 	// flag and resetting the delta counts.
 	d.clearDirtyFlag()
+}
+
+// metricUpdateIngressConn creates a metric update for Inbound connection traffic
+func (d *Data) metricUpdateIngressConn(ut UpdateType) MetricUpdate {
+	return MetricUpdate{
+		updateType:   ut,
+		tuple:        d.Tuple,
+		srcEp:        d.srcEp,
+		dstEp:        d.dstEp,
+		ruleIDs:      d.IngressRuleTrace.Path(),
+		isConnection: d.isConnection,
+		inMetric: MetricValue{
+			deltaPackets:             d.conntrackPktsCtr.Delta(),
+			deltaBytes:               d.conntrackBytesCtr.Delta(),
+			deltaAllowedHTTPRequests: d.httpReqAllowedCtr.Delta(),
+			deltaDeniedHTTPRequests:  d.httpReqDeniedCtr.Delta(),
+		},
+		outMetric: MetricValue{
+			deltaPackets: d.conntrackPktsCtrReverse.Delta(),
+			deltaBytes:   d.conntrackBytesCtrReverse.Delta(),
+		},
+	}
+}
+
+// metricUpdateEgressConn creates a metric update for Outbound connection traffic
+func (d *Data) metricUpdateEgressConn(ut UpdateType) MetricUpdate {
+	return MetricUpdate{
+		updateType:   ut,
+		tuple:        d.Tuple,
+		srcEp:        d.srcEp,
+		dstEp:        d.dstEp,
+		ruleIDs:      d.EgressRuleTrace.Path(),
+		isConnection: d.isConnection,
+		inMetric: MetricValue{
+			deltaPackets: d.conntrackPktsCtrReverse.Delta(),
+			deltaBytes:   d.conntrackBytesCtrReverse.Delta(),
+		},
+		outMetric: MetricValue{
+			deltaPackets: d.conntrackPktsCtr.Delta(),
+			deltaBytes:   d.conntrackBytesCtr.Delta(),
+		},
+	}
+}
+
+// metricUpdateIngressNoConn creates a metric update for Inbound non-connection traffic
+func (d *Data) metricUpdateIngressNoConn(ut UpdateType) MetricUpdate {
+	return MetricUpdate{
+		updateType:   ut,
+		tuple:        d.Tuple,
+		srcEp:        d.srcEp,
+		dstEp:        d.dstEp,
+		ruleIDs:      d.IngressRuleTrace.Path(),
+		isConnection: d.isConnection,
+		inMetric: MetricValue{
+			deltaPackets: d.IngressRuleTrace.pktsCtr.Delta(),
+			deltaBytes:   d.IngressRuleTrace.bytesCtr.Delta(),
+		},
+	}
+}
+
+// metricUpdateEgressNoConn creates a metric update for Outbound non-connection traffic
+func (d *Data) metricUpdateEgressNoConn(ut UpdateType) MetricUpdate {
+	return MetricUpdate{
+		updateType:   ut,
+		tuple:        d.Tuple,
+		srcEp:        d.srcEp,
+		dstEp:        d.dstEp,
+		ruleIDs:      d.EgressRuleTrace.Path(),
+		isConnection: d.isConnection,
+		outMetric: MetricValue{
+			deltaPackets: d.EgressRuleTrace.pktsCtr.Delta(),
+			deltaBytes:   d.EgressRuleTrace.bytesCtr.Delta(),
+		},
+	}
 }
 
 // endpointName is a convenience function to return a printable name for an endpoint.

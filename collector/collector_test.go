@@ -1,4 +1,5 @@
 // Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// +build !windows
 package collector
 
 import (
@@ -15,6 +16,7 @@ import (
 	"github.com/tigera/nfnetlink/nfnl"
 
 	"github.com/projectcalico/felix/calc"
+	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/net"
@@ -28,9 +30,11 @@ const (
 )
 
 var (
-	localIp1     = ipStrTo16Byte("10.0.0.1")
+	localIp1Str  = "10.0.0.1"
+	localIp1     = ipStrTo16Byte(localIp1Str)
 	localIp2     = ipStrTo16Byte("10.0.0.2")
-	remoteIp1    = ipStrTo16Byte("20.0.0.1")
+	remoteIp1Str = "20.0.0.1"
+	remoteIp1    = ipStrTo16Byte(remoteIp1Str)
 	remoteIp2    = ipStrTo16Byte("20.0.0.2")
 	localIp1DNAT = ipStrTo16Byte("192.168.0.1")
 	localIp2DNAT = ipStrTo16Byte("192.168.0.2")
@@ -270,7 +274,7 @@ var localPkt = &nfnetlink.NflogPacketAggregate{
 var _ = Describe("NFLOG Datasource", func() {
 	Describe("NFLOG Incoming Packets", func() {
 		// Inject info nflogChan
-		var c *Collector
+		var c *collector
 		conf := &Config{
 			StatsDumpFilePath:        "/tmp/qwerty",
 			NfNetlinkBufSize:         65535,
@@ -295,7 +299,7 @@ var _ = Describe("NFLOG Datasource", func() {
 			}
 
 			lm := newMockLookupsCache(epMap, nflogMap)
-			c = NewCollector(lm, rm, conf)
+			c = newCollector(lm, rm, conf).(*collector)
 			go c.startStatsCollectionAndReporting()
 		})
 		Describe("Test local destination", func() {
@@ -336,6 +340,34 @@ var inCtEntry = nfnetlink.CtEntry{
 	OriginalCounters: nfnetlink.CtCounters{Packets: 1, Bytes: 100},
 	ReplyCounters:    nfnetlink.CtCounters{Packets: 2, Bytes: 250},
 	ProtoInfo:        nfnetlink.CtProtoInfo{State: nfnl.TCP_CONNTRACK_ESTABLISHED},
+}
+
+var alpEntryHTTPReqAllowed = 12
+var alpEntryHTTPReqDenied = 130
+var inALPEntry = proto.DataplaneStats{
+	SrcIp:   remoteIp1Str,
+	DstIp:   localIp1Str,
+	SrcPort: int32(srcPort),
+	DstPort: int32(dstPort),
+	Protocol: &proto.Protocol{
+		NumberOrName: &proto.Protocol_Number{proto_tcp},
+	},
+	Stats: []*proto.Statistic{
+		{
+			Direction:  proto.Statistic_IN,
+			Relativity: proto.Statistic_DELTA,
+			Kind:       proto.Statistic_HTTP_REQUESTS,
+			Action:     proto.Action_ALLOWED,
+			Value:      int64(alpEntryHTTPReqAllowed),
+		},
+		{
+			Direction:  proto.Statistic_IN,
+			Relativity: proto.Statistic_DELTA,
+			Kind:       proto.Statistic_HTTP_REQUESTS,
+			Action:     proto.Action_DENIED,
+			Value:      int64(alpEntryHTTPReqDenied),
+		},
+	},
 }
 
 var outCtEntry = nfnetlink.CtEntry{
@@ -432,7 +464,7 @@ var localCtEntryWithDNAT = nfnetlink.CtEntry{
 }
 
 var _ = Describe("Conntrack Datasource", func() {
-	var c *Collector
+	var c *collector
 	conf := &Config{
 		StatsDumpFilePath:        "/tmp/qwerty",
 		NfNetlinkBufSize:         65535,
@@ -458,7 +490,7 @@ var _ = Describe("Conntrack Datasource", func() {
 		}
 
 		lm := newMockLookupsCache(epMap, nflogMap)
-		c = NewCollector(lm, rm, conf)
+		c = newCollector(lm, rm, conf).(*collector)
 	})
 	Describe("Test local destination", func() {
 		It("should create a single entry in inbound direction", func() {
@@ -466,8 +498,10 @@ var _ = Describe("Conntrack Datasource", func() {
 			c.handleCtEntry(inCtEntry)
 			Expect(c.epStats).Should(HaveKey(*t))
 			data := c.epStats[*t]
-			Expect(data.Counters()).Should(Equal(*NewCounter(inCtEntry.OriginalCounters.Packets, inCtEntry.OriginalCounters.Bytes)))
-			Expect(data.CountersReverse()).Should(Equal(*NewCounter(inCtEntry.ReplyCounters.Packets, inCtEntry.ReplyCounters.Bytes)))
+			Expect(data.ConntrackPacketsCounter()).Should(Equal(*NewCounter(inCtEntry.OriginalCounters.Packets)))
+			Expect(data.ConntrackPacketsCounterReverse()).Should(Equal(*NewCounter(inCtEntry.ReplyCounters.Packets)))
+			Expect(data.ConntrackBytesCounter()).Should(Equal(*NewCounter(inCtEntry.OriginalCounters.Bytes)))
+			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*NewCounter(inCtEntry.ReplyCounters.Bytes)))
 		})
 	})
 	Describe("Test local source", func() {
@@ -476,8 +510,10 @@ var _ = Describe("Conntrack Datasource", func() {
 			c.handleCtEntry(outCtEntry)
 			Expect(c.epStats).Should(HaveKey(*t))
 			data := c.epStats[*t]
-			Expect(data.Counters()).Should(Equal(*NewCounter(outCtEntry.OriginalCounters.Packets, outCtEntry.OriginalCounters.Bytes)))
-			Expect(data.CountersReverse()).Should(Equal(*NewCounter(outCtEntry.ReplyCounters.Packets, outCtEntry.ReplyCounters.Bytes)))
+			Expect(data.ConntrackPacketsCounter()).Should(Equal(*NewCounter(outCtEntry.OriginalCounters.Packets)))
+			Expect(data.ConntrackPacketsCounterReverse()).Should(Equal(*NewCounter(outCtEntry.ReplyCounters.Packets)))
+			Expect(data.ConntrackBytesCounter()).Should(Equal(*NewCounter(outCtEntry.OriginalCounters.Bytes)))
+			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*NewCounter(outCtEntry.ReplyCounters.Bytes)))
 		})
 	})
 	Describe("Test local source to local destination", func() {
@@ -486,8 +522,10 @@ var _ = Describe("Conntrack Datasource", func() {
 			c.handleCtEntry(localCtEntry)
 			Expect(c.epStats).Should(HaveKey(Equal(*t1)))
 			data := c.epStats[*t1]
-			Expect(data.Counters()).Should(Equal(*NewCounter(localCtEntry.OriginalCounters.Packets, localCtEntry.OriginalCounters.Bytes)))
-			Expect(data.CountersReverse()).Should(Equal(*NewCounter(localCtEntry.ReplyCounters.Packets, localCtEntry.ReplyCounters.Bytes)))
+			Expect(data.ConntrackPacketsCounter()).Should(Equal(*NewCounter(localCtEntry.OriginalCounters.Packets)))
+			Expect(data.ConntrackPacketsCounterReverse()).Should(Equal(*NewCounter(localCtEntry.ReplyCounters.Packets)))
+			Expect(data.ConntrackBytesCounter()).Should(Equal(*NewCounter(localCtEntry.OriginalCounters.Bytes)))
+			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*NewCounter(localCtEntry.ReplyCounters.Bytes)))
 		})
 	})
 	Describe("Test local destination with DNAT", func() {
@@ -496,8 +534,10 @@ var _ = Describe("Conntrack Datasource", func() {
 			c.handleCtEntry(inCtEntryWithDNAT)
 			Expect(c.epStats).Should(HaveKey(Equal(*t)))
 			data := c.epStats[*t]
-			Expect(data.Counters()).Should(Equal(*NewCounter(inCtEntryWithDNAT.OriginalCounters.Packets, inCtEntryWithDNAT.OriginalCounters.Bytes)))
-			Expect(data.CountersReverse()).Should(Equal(*NewCounter(inCtEntryWithDNAT.ReplyCounters.Packets, inCtEntryWithDNAT.ReplyCounters.Bytes)))
+			Expect(data.ConntrackPacketsCounter()).Should(Equal(*NewCounter(inCtEntryWithDNAT.OriginalCounters.Packets)))
+			Expect(data.ConntrackPacketsCounterReverse()).Should(Equal(*NewCounter(inCtEntryWithDNAT.ReplyCounters.Packets)))
+			Expect(data.ConntrackBytesCounter()).Should(Equal(*NewCounter(inCtEntryWithDNAT.OriginalCounters.Bytes)))
+			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*NewCounter(inCtEntryWithDNAT.ReplyCounters.Bytes)))
 		})
 	})
 	Describe("Test local source to local destination with DNAT", func() {
@@ -506,8 +546,10 @@ var _ = Describe("Conntrack Datasource", func() {
 			c.handleCtEntry(localCtEntryWithDNAT)
 			Expect(c.epStats).Should(HaveKey(Equal(*t1)))
 			data := c.epStats[*t1]
-			Expect(data.Counters()).Should(Equal(*NewCounter(localCtEntryWithDNAT.OriginalCounters.Packets, localCtEntryWithDNAT.OriginalCounters.Bytes)))
-			Expect(data.CountersReverse()).Should(Equal(*NewCounter(localCtEntryWithDNAT.ReplyCounters.Packets, localCtEntryWithDNAT.ReplyCounters.Bytes)))
+			Expect(data.ConntrackPacketsCounter()).Should(Equal(*NewCounter(localCtEntryWithDNAT.OriginalCounters.Packets)))
+			Expect(data.ConntrackPacketsCounterReverse()).Should(Equal(*NewCounter(localCtEntryWithDNAT.ReplyCounters.Packets)))
+			Expect(data.ConntrackBytesCounter()).Should(Equal(*NewCounter(localCtEntryWithDNAT.OriginalCounters.Bytes)))
+			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*NewCounter(localCtEntryWithDNAT.ReplyCounters.Bytes)))
 		})
 	})
 	Describe("Test conntrack TCP Protoinfo State", func() {
@@ -517,8 +559,10 @@ var _ = Describe("Conntrack Datasource", func() {
 			c.handleCtEntry(inCtEntry)
 			Expect(c.epStats).Should(HaveKey(*t))
 			data := c.epStats[*t]
-			Expect(data.Counters()).Should(Equal(*NewCounter(inCtEntry.OriginalCounters.Packets, inCtEntry.OriginalCounters.Bytes)))
-			Expect(data.CountersReverse()).Should(Equal(*NewCounter(inCtEntry.ReplyCounters.Packets, inCtEntry.ReplyCounters.Bytes)))
+			Expect(data.ConntrackPacketsCounter()).Should(Equal(*NewCounter(inCtEntry.OriginalCounters.Packets)))
+			Expect(data.ConntrackPacketsCounterReverse()).Should(Equal(*NewCounter(inCtEntry.ReplyCounters.Packets)))
+			Expect(data.ConntrackBytesCounter()).Should(Equal(*NewCounter(inCtEntry.OriginalCounters.Bytes)))
+			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*NewCounter(inCtEntry.ReplyCounters.Bytes)))
 
 			By("handling a conntrack update with updated counters")
 			inCtEntryUpdatedCounters := inCtEntry
@@ -529,8 +573,10 @@ var _ = Describe("Conntrack Datasource", func() {
 			c.handleCtEntry(inCtEntryUpdatedCounters)
 			Expect(c.epStats).Should(HaveKey(*t))
 			data = c.epStats[*t]
-			Expect(data.Counters()).Should(Equal(*NewCounter(inCtEntryUpdatedCounters.OriginalCounters.Packets, inCtEntryUpdatedCounters.OriginalCounters.Bytes)))
-			Expect(data.CountersReverse()).Should(Equal(*NewCounter(inCtEntryUpdatedCounters.ReplyCounters.Packets, inCtEntryUpdatedCounters.ReplyCounters.Bytes)))
+			Expect(data.ConntrackPacketsCounter()).Should(Equal(*NewCounter(inCtEntryUpdatedCounters.OriginalCounters.Packets)))
+			Expect(data.ConntrackPacketsCounterReverse()).Should(Equal(*NewCounter(inCtEntryUpdatedCounters.ReplyCounters.Packets)))
+			Expect(data.ConntrackBytesCounter()).Should(Equal(*NewCounter(inCtEntryUpdatedCounters.OriginalCounters.Bytes)))
+			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*NewCounter(inCtEntryUpdatedCounters.ReplyCounters.Bytes)))
 
 			By("handling a conntrack update with TCP CLOSE_WAIT")
 			inCtEntryStateCloseWait := inCtEntryUpdatedCounters
@@ -540,8 +586,10 @@ var _ = Describe("Conntrack Datasource", func() {
 			c.handleCtEntry(inCtEntryStateCloseWait)
 			Expect(c.epStats).Should(HaveKey(*t))
 			data = c.epStats[*t]
-			Expect(data.Counters()).Should(Equal(*NewCounter(inCtEntryStateCloseWait.OriginalCounters.Packets, inCtEntryStateCloseWait.OriginalCounters.Bytes)))
-			Expect(data.CountersReverse()).Should(Equal(*NewCounter(inCtEntryStateCloseWait.ReplyCounters.Packets, inCtEntryStateCloseWait.ReplyCounters.Bytes)))
+			Expect(data.ConntrackPacketsCounter()).Should(Equal(*NewCounter(inCtEntryStateCloseWait.OriginalCounters.Packets)))
+			Expect(data.ConntrackPacketsCounterReverse()).Should(Equal(*NewCounter(inCtEntryStateCloseWait.ReplyCounters.Packets)))
+			Expect(data.ConntrackBytesCounter()).Should(Equal(*NewCounter(inCtEntryStateCloseWait.OriginalCounters.Bytes)))
+			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*NewCounter(inCtEntryStateCloseWait.ReplyCounters.Bytes)))
 
 			By("handling a conntrack update with TCP TIME_WAIT")
 			inCtEntryStateTimeWait := inCtEntry
@@ -550,7 +598,27 @@ var _ = Describe("Conntrack Datasource", func() {
 			Expect(c.epStats).ShouldNot(HaveKey(*t))
 		})
 	})
+	Describe("Test local destination combined with ALP stats", func() {
+		It("should create a single entry in inbound direction", func() {
+			By("Sending a conntrack update and a dataplane stats update and checking for combined values")
+			t := NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
+			c.convertDataplaneStatsAndApplyUpdate(&inALPEntry)
+			c.handleCtEntry(inCtEntry)
+			Expect(c.epStats).Should(HaveKey(*t))
+			data := c.epStats[*t]
+			Expect(data.ConntrackPacketsCounter()).Should(Equal(*NewCounter(inCtEntry.OriginalCounters.Packets)))
+			Expect(data.ConntrackPacketsCounterReverse()).Should(Equal(*NewCounter(inCtEntry.ReplyCounters.Packets)))
+			Expect(data.ConntrackBytesCounter()).Should(Equal(*NewCounter(inCtEntry.OriginalCounters.Bytes)))
+			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*NewCounter(inCtEntry.ReplyCounters.Bytes)))
+			Expect(data.HTTPRequestsAllowed()).Should(Equal(*NewCounter(alpEntryHTTPReqAllowed)))
+			Expect(data.HTTPRequestsDenied()).Should(Equal(*NewCounter(alpEntryHTTPReqDenied)))
 
+			By("Sending in another dataplane stats update and check for incremented counter")
+			c.convertDataplaneStatsAndApplyUpdate(&inALPEntry)
+			Expect(data.HTTPRequestsAllowed()).Should(Equal(*NewCounter(2 * alpEntryHTTPReqAllowed)))
+			Expect(data.HTTPRequestsDenied()).Should(Equal(*NewCounter(2 * alpEntryHTTPReqDenied)))
+		})
+	})
 })
 
 func policyIDStrToRuleIDParts(r *calc.RuleID) [64]byte {
@@ -575,7 +643,7 @@ func policyIDStrToRuleIDParts(r *calc.RuleID) [64]byte {
 }
 
 var _ = Describe("Reporting Metrics", func() {
-	var c *Collector
+	var c *collector
 	const (
 		ageTimeout        = time.Duration(3) * time.Second
 		reportingDelay    = time.Duration(2) * time.Second
@@ -610,7 +678,7 @@ var _ = Describe("Reporting Metrics", func() {
 
 		lm := newMockLookupsCache(epMap, nflogMap)
 		rm.Start()
-		c = NewCollector(lm, rm, conf)
+		c = newCollector(lm, rm, conf).(*collector)
 		go c.startStatsCollectionAndReporting()
 	})
 	Describe("Report Denied Packets", func() {
@@ -790,7 +858,7 @@ func BenchmarkNflogPktToStat(b *testing.B) {
 	}
 	rm := NewReporterManager()
 	lm := newMockLookupsCache(epMap, nflogMap)
-	c := NewCollector(lm, rm, conf)
+	c := newCollector(lm, rm, conf).(*collector)
 	b.ResetTimer()
 	b.ReportAllocs()
 	for n := 0; n < b.N; n++ {
@@ -822,7 +890,7 @@ func BenchmarkApplyStatUpdate(b *testing.B) {
 	}
 	rm := NewReporterManager()
 	lm := newMockLookupsCache(epMap, nflogMap)
-	c := NewCollector(lm, rm, conf)
+	c := newCollector(lm, rm, conf).(*collector)
 	var tuples []Tuple
 	MaxSrcPort := 1000
 	MaxDstPort := 1000

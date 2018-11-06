@@ -142,8 +142,7 @@ func (c *FlowLogsReporter) canPublishFlowLogs() bool {
 	for name, d := range c.dispatchers {
 		err := d.Initialize()
 		if err != nil {
-			log.
-				WithError(err).
+			log.WithError(err).
 				WithField("name", name).
 				Error("dispatcher unable to initialize")
 			return false
