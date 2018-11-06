@@ -84,3 +84,5 @@ import:
   version: cd34563cd63c2bd7c6fe88a73c4dcf34ed8a67cb
   subpackages:
   - exec
+- package: github.com/juju/mutex
+- package: github.com/juju/clock

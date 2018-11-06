@@ -25,6 +25,8 @@ import (
 	"github.com/containernetworking/cni/pkg/skel"
 	"github.com/containernetworking/cni/pkg/types/current"
 	"github.com/containernetworking/plugins/pkg/hns"
+	"github.com/juju/clock"
+	"github.com/juju/mutex"
 	"github.com/projectcalico/cni-plugin/types"
 	netsh "github.com/rakelkar/gonetsh/netsh"
 	"github.com/sirupsen/logrus"
@@ -62,6 +64,22 @@ func loadNetConf(bytes []byte) (*hns.NetConf, string, error) {
 	return n, n.CNIVersion, nil
 }
 
+func acquireLock(name string) (mutex.Releaser, error) {
+	spec := mutex.Spec{
+		Name:  name,
+		Clock: clock.WallClock,
+		Delay: 10000 * time.Millisecond,
+	}
+	logrus.Infof("Trying to acquire lock %v", spec)
+	m, err := mutex.Acquire(spec)
+	if err != nil {
+		logrus.Errorf("Error acquiring lock %v", spec)
+		return nil, err
+	}
+	logrus.Infof("Acquired lock %v", spec)
+	return m, nil
+}
+
 // DoNetworking performs the networking for the given config and IPAM result
 func DoNetworking(
 	args *skel.CmdArgs,
@@ -80,8 +98,16 @@ func DoNetworking(
 		return "", "", err
 	}
 
+	// Acquire mutex lock
+	m, err := acquireLock(n.Name)
+	if err != nil {
+		logger.Errorf("Unable to acquiring lock")
+		return "", "", err
+	}
+	defer m.Release()
+
 	// Create hns network
-	networkName := createNetworkName(subNet)
+	networkName := createNetworkName(n.Name, subNet)
 	hnsNetwork, err := ensureNetworkExists(networkName, subNet, logger)
 	if err != nil {
 		logger.Errorf("Unable to create hns network %s", networkName)
@@ -306,10 +332,10 @@ func getNthIP(PodCIDR *net.IPNet, n int) net.IP {
 	return buffer
 }
 
-func createNetworkName(subnet *net.IPNet) string {
+func createNetworkName(netName string, subnet *net.IPNet) string {
 	str := subnet.IP.String()
 	network := strings.Replace(str, ".", "-", -1)
-	name := "Calico-" + network
+	name := netName + "-" + network
 	return name
 }
 

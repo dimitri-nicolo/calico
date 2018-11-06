@@ -137,8 +137,10 @@ func DoNetworking(
 		for _, addr := range result.IPs {
 			if addr.Version == "4" {
 				hasIPv4 = true
+				addr.Address.Mask = net.CIDRMask(32, 32)
 			} else if addr.Version == "6" {
 				hasIPv6 = true
+				addr.Address.Mask = net.CIDRMask(128, 128)
 			}
 		}
 
@@ -272,18 +274,12 @@ func SetupRoutes(hostVeth netlink.Link, result *current.Result) error {
 
 	// Go through all the IPs and add routes for each IP in the result.
 	for _, ipAddr := range result.IPs {
-		if ipAddr.Version == "4" {
-			ipAddr.Address.Mask = net.CIDRMask(32, 32)
-		} else if ipAddr.Version == "6" {
-			ipAddr.Address.Mask = net.CIDRMask(128, 128)
-		}
 		route := netlink.Route{
 			LinkIndex: hostVeth.Attrs().Index,
 			Scope:     netlink.SCOPE_LINK,
 			Dst:       &ipAddr.Address,
 		}
 		err := netlink.RouteAdd(&route)
-
 		if err != nil {
 			switch err {
 

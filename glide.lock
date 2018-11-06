@@ -1,5 +1,5 @@
-hash: 4a9ec2e89b6d1f2ea9e3eccee3a5431cc3c4c8ac45d2f132475287db31acb770
-updated: 2018-11-01T11:51:31.405732636Z
+hash: a240825cee819a460ecabc8ebddcb8164c7701d03f53dea33a1f84459bc79299
+updated: 2018-11-05T14:19:54.798478105Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -122,8 +122,12 @@ imports:
   version: 6633656539c1639d9d78127b7d47c622b5d7b6dc
 - name: github.com/json-iterator/go
   version: f2b4162afba35581b6d4a50d3b8f34e33c144682
+- name: github.com/juju/clock
+  version: bab88fc672997ef02d03f85310182d97a93dee21
 - name: github.com/juju/errors
   version: 22422dad46e14561a0854ad42497a75af9b61909
+- name: github.com/juju/mutex
+  version: d21b13acf4bfd8a8b0482a3a78e44d98880b40d3
 - name: github.com/kelseyhightower/envconfig
   version: dd1402a4d99de9ac2f396cd6fcb957bc2c695ec1
 - name: github.com/mailru/easyjson
