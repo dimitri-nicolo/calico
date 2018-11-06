@@ -57,9 +57,10 @@ const (
 	DatastorePerHost
 	ConfigFile
 	EnvironmentVariable
+	DisabledByLicenseCheck
 )
 
-var SourcesInDescendingOrder = []Source{EnvironmentVariable, ConfigFile, DatastorePerHost, DatastoreGlobal}
+var SourcesInDescendingOrder = []Source{DisabledByLicenseCheck, EnvironmentVariable, ConfigFile, DatastorePerHost, DatastoreGlobal}
 
 func (source Source) String() string {
 	switch source {
@@ -73,6 +74,8 @@ func (source Source) String() string {
 		return "config file"
 	case EnvironmentVariable:
 		return "environment variable"
+	case DisabledByLicenseCheck:
+		return "license check"
 	}
 	return fmt.Sprintf("<unknown(%v)>", uint8(source))
 }
@@ -382,9 +385,9 @@ func (config *Config) resolve() (changed bool, err error) {
 	for _, source := range SourcesInDescendingOrder {
 	valueLoop:
 		for rawName, rawValue := range config.sourceToRawConfig[source] {
-			currentSource := nameToSource[rawName]
 			param, ok := knownParams[strings.ToLower(rawName)]
 			if !ok {
+				currentSource := nameToSource[rawName]
 				if source >= currentSource {
 					// Stash the raw value in case it's useful for
 					// a plugin.  Since we don't know the canonical
@@ -442,6 +445,7 @@ func (config *Config) resolve() (changed bool, err error) {
 
 			log.Infof("Parsed value for %v: %v (from %v)",
 				name, value, source)
+			currentSource := nameToSource[name]
 			if source < currentSource {
 				log.Infof("Skipping config value for %v from %v; "+
 					"already have a value from %v", name,

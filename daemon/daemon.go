@@ -295,6 +295,26 @@ configRetry:
 		exitWithCustomRC(configChangedRC, "Restarting to avoid leaking datastore connections")
 	}
 
+	// Create the license monitor, which we'll use to monitor the state of the license.
+	licenseMonitor := monitor.New(backendClient)
+	lCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	err := licenseMonitor.RefreshLicense(lCtx)
+	cancel()
+	if err != nil {
+		log.WithError(err).Error("Failed to get license from datastore; continuing without a license")
+	}
+	if configParams.DebugUseShortPollIntervals {
+		log.Info("Using short license poll interval for FV")
+		licenseMonitor.SetPollInterval(1 * time.Second)
+	}
+	// Get the license status before we adjust the config so that we can spot if the license status
+	// changes below.  (If we did this read after config adjustment, we might read that the license was expired
+	// after the config adjustment decided that it was valid and we'd miss the transition.)
+	licenseStatus := licenseMonitor.GetLicenseStatus()
+
+	// Correct the config based on licensed features.
+	removeUnlicensedFeaturesFromConfig(configParams, licenseMonitor)
+
 	// We're now both live and ready.
 	healthAggregator.Report(healthName, &health.HealthReport{Live: true, Ready: true})
 
@@ -330,26 +350,8 @@ configRetry:
 	configChangedRestartCallback := func() { failureReportChan <- reasonConfigChanged }
 	childExitedRestartCallback := func() { failureReportChan <- reasonChildExited }
 
-	// Create the license monitor, which we'll use to monitor the state of the license.
-	licenseMonitor := monitor.New(backendClient)
-	lCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	err := licenseMonitor.RefreshLicense(lCtx)
-	cancel()
-	if err != nil {
-		log.WithError(err).Error("Failed to get license from datastore; continuing without a license")
-	}
-	if configParams.DebugUseShortPollIntervals {
-		log.Info("Using short license poll interval for FV")
-		licenseMonitor.SetPollInterval(1 * time.Second)
-	}
-	// Get the license status before the dataplane driver does its checks so that we can spot if the license status
-	// changes below.  (If we did this read after the dataplane driver, we might read that the license was expired
-	// after the dataplane driver reads that it was valid and we'd miss the transition.)
-	licenseStatus := licenseMonitor.GetLicenseStatus()
-
 	dpDriver, dpDriverCmd = dp.StartDataplaneDriver(
 		configParams,
-		licenseMonitor,
 		healthAggregator,
 		lookupsCache,
 		configChangedRestartCallback,
@@ -593,11 +595,6 @@ configRetry:
 
 	// If CloudWatch node health reporting is enabled then start a goroutine to monitor
 	// Felix health and report to CloudWatch.
-	if configParams.CloudWatchNodeHealthStatusEnabled && !licenseMonitor.GetFeatureStatus(features.AWSCloudwatchMetrics) {
-		log.Warn("Not licensed for CloudWatch Metrics feature. License either invalid or expired. " +
-			"Contact Tigera support or email licensing@tigera.io")
-		configParams.CloudWatchNodeHealthStatusEnabled = false
-	}
 	if configParams.CloudWatchNodeHealthStatusEnabled {
 		log.Info(HealthReporterStartupLog)
 		go felixHealthToCloudWatchReporter(configParams.CloudWatchNodeHealthPushIntervalSecs, configParams.ClusterGUID, healthAggregator, ctx)
@@ -1253,4 +1250,88 @@ func discoverTyphaAddr(configParams *config.Config) (string, error) {
 	}
 	log.Error("Didn't find Typha service port.")
 	return "", ErrServiceNotReady
+}
+
+type featureChecker interface {
+	GetFeatureStatus(feature string) bool
+	GetLicenseStatus() lclient.LicenseStatus
+}
+
+// removeUnlicensedFeaturesFromConfig modifies the requested Config depending on licensed features. Values overridden
+// due to license have a higher priority than other methods of config injection and therefore cannot
+// be adjusted by the user.
+func removeUnlicensedFeaturesFromConfig(configParams *config.Config, licenseMonitor featureChecker) {
+	licenseOverrides := make(map[string]string)
+
+	if configParams.UseInternalDataplaneDriver {
+		// Check license status of various features and disable them via config if they're not allowed.
+		// Furthermore, if the features are enabled through config, raise a warning log.
+		if configParams.IPSecEnabled() {
+			if !licenseMonitor.GetFeatureStatus(features.IPSec) {
+				log.Warn("Not licensed for IPsec feature. License either invalid or expired. " +
+					"Contact Tigera support or email licensing@tigera.io")
+				licenseOverrides["IPSecMode"] = "none"
+			} else if licenseMonitor.GetLicenseStatus() == lclient.InGracePeriod {
+				log.Warn("License for IPsec feature is in grace period, forcing IPsec into allow-unsecured " +
+					"traffic mode. Contact Tigera support or email licensing@tigera.io")
+				licenseOverrides["IPSecAllowUnsecuredTraffic"] = "true"
+			}
+		}
+		if configParams.PrometheusReporterEnabled &&
+			!licenseMonitor.GetFeatureStatus(features.PrometheusMetrics) {
+			log.Warn("Not licensed for Prometheus Metrics feature. License either invalid or expired. " +
+				"Contact Tigera support or email licensing@tigera.io")
+
+			// Set Prometheus metrics process and reporting configs to false.
+			licenseOverrides["PrometheusReporterEnabled"] = "false"
+		}
+
+		// If DropActionOverride is set to non-default "DROP" and license is not applied or valid then throw a warning message.
+		if configParams.DropActionOverride != "DROP" &&
+			!licenseMonitor.GetFeatureStatus(features.DropActionOverride) {
+			log.Warn("Not licensed for DropActionOverride feature. License either invalid or expired. " +
+				"Contact Tigera support or email licensing@tigera.io")
+
+			// Set DropActionOverride to "DROP".
+			licenseOverrides["DropActionOverride"] = "DROP"
+		}
+
+		// If CloudWatchLogsReporterEnabled is set to true and license isn't applied or valid then throw a warning message.
+		if configParams.CloudWatchLogsReporterEnabled &&
+			!licenseMonitor.GetFeatureStatus(features.AWSCloudwatchFlowLogs) {
+			log.Warn("Not licensed for CloudWatch flow logs feature. License either invalid or expired. " +
+				"Contact Tigera support or email licensing@tigera.io")
+
+			// Set Cloudwatch flow logs reporting configs to false.
+			licenseOverrides["CloudWatchLogsReporterEnabled"] = "false"
+		}
+
+		// If CloudWatchMetricsReporterEnabled is set to true and license isn't applied or valid then throw a warning message.
+		if !licenseMonitor.GetFeatureStatus(features.AWSCloudwatchMetrics) {
+			if configParams.CloudWatchMetricsReporterEnabled {
+				log.Warn("Not licensed for CloudWatch Metrics feature. License either invalid or expired. " +
+					"Contact Tigera support or email licensing@tigera.io")
+
+				// Set CloudWatchMetricsReporterEnabled to false.
+				licenseOverrides["CloudWatchMetricsReporterEnabled"] = "false"
+			}
+
+			if configParams.CloudWatchNodeHealthStatusEnabled {
+				log.Warn("Not licensed for CloudWatch Metrics feature. License either invalid or expired. " +
+					"Contact Tigera support or email licensing@tigera.io")
+				licenseOverrides["CloudWatchNodeHealthStatusEnabled"] = "false"
+			}
+		}
+
+		if configParams.FlowLogsFileEnabled && !licenseMonitor.GetFeatureStatus(features.FileOutputFlowLogs) {
+			log.Warn("Not licensed for Flow Logs File Output feature. License either invalid or expired. " +
+				"Contact Tigera support or email licensing@tigera.io")
+			licenseOverrides["FlowLogsFileEnabled"] = "false"
+		}
+	}
+
+	if len(licenseOverrides) > 0 {
+		log.Debug("Updating config with license check overrides")
+		configParams.UpdateFrom(licenseOverrides, config.DisabledByLicenseCheck)
+	}
 }
