@@ -64,11 +64,12 @@ func loadNetConf(bytes []byte) (*hns.NetConf, string, error) {
 	return n, n.CNIVersion, nil
 }
 
-func acquireLock(name string) (mutex.Releaser, error) {
+func acquireLock() (mutex.Releaser, error) {
 	spec := mutex.Spec{
-		Name:  name,
-		Clock: clock.WallClock,
-		Delay: 10000 * time.Millisecond,
+		Name:    "TigeraCalicoCNINetworkMutex",
+		Clock:   clock.WallClock,
+		Delay:   50 * time.Millisecond,
+		Timeout: 90000 * time.Millisecond,
 	}
 	logrus.Infof("Trying to acquire lock %v", spec)
 	m, err := mutex.Acquire(spec)
@@ -99,7 +100,7 @@ func DoNetworking(
 	}
 
 	// Acquire mutex lock
-	m, err := acquireLock(n.Name)
+	m, err := acquireLock()
 	if err != nil {
 		logger.Errorf("Unable to acquiring lock")
 		return "", "", err
