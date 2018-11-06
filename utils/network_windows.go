@@ -1,4 +1,4 @@
-// Copyright 2018 Tigera Inc
+// Copyright (c) 2018 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,11 +14,21 @@
 package utils
 
 import (
+	"encoding/json"
+	"fmt"
 	"net"
+	"strconv"
+	"strings"
+	"time"
 
+	"github.com/Microsoft/hcsshim"
 	"github.com/containernetworking/cni/pkg/skel"
 	"github.com/containernetworking/cni/pkg/types/current"
+	"github.com/containernetworking/plugins/pkg/hns"
+	"github.com/juju/clock"
+	"github.com/juju/mutex"
 	"github.com/projectcalico/cni-plugin/types"
+	netsh "github.com/rakelkar/gonetsh/netsh"
 	"github.com/sirupsen/logrus"
 )
 
@@ -46,6 +56,31 @@ func init() {
 	}
 }
 
+func loadNetConf(bytes []byte) (*hns.NetConf, string, error) {
+	n := &hns.NetConf{}
+	if err := json.Unmarshal(bytes, n); err != nil {
+		return nil, "", fmt.Errorf("failed to load netconf: %v", err)
+	}
+	return n, n.CNIVersion, nil
+}
+
+func acquireLock() (mutex.Releaser, error) {
+	spec := mutex.Spec{
+		Name:    "TigeraCalicoCNINetworkMutex",
+		Clock:   clock.WallClock,
+		Delay:   50 * time.Millisecond,
+		Timeout: 90000 * time.Millisecond,
+	}
+	logrus.Infof("Trying to acquire lock %v", spec)
+	m, err := mutex.Acquire(spec)
+	if err != nil {
+		logrus.Errorf("Error acquiring lock %v", spec)
+		return nil, err
+	}
+	logrus.Infof("Acquired lock %v", spec)
+	return m, nil
+}
+
 // DoNetworking performs the networking for the given config and IPAM result
 func DoNetworking(
 	args *skel.CmdArgs,
@@ -55,17 +90,254 @@ func DoNetworking(
 	desiredVethName string,
 	routes []*net.IPNet,
 ) (hostVethName, contVethMAC string, err error) {
-	// Select the first 11 characters of the containerID for the host veth.
-	hostVethName = "cali" + args.ContainerID[:Min(11, len(args.ContainerID))]
 
-	// If a desired veth name was passed in, use that instead.
-	if desiredVethName != "" {
-		hostVethName = desiredVethName
+	_, subNet, _ := net.ParseCIDR(result.IPs[0].Address.String())
+
+	n, _, err := loadNetConf(args.StdinData)
+	if err != nil {
+		logger.Errorf("Error loading args")
+		return "", "", err
 	}
 
-	logger.Infof("STUB: Networking, veth name would be %s", hostVethName)
+	// Acquire mutex lock
+	m, err := acquireLock()
+	if err != nil {
+		logger.Errorf("Unable to acquiring lock")
+		return "", "", err
+	}
+	defer m.Release()
 
+	// Create hns network
+	networkName := createNetworkName(n.Name, subNet)
+	hnsNetwork, err := ensureNetworkExists(networkName, subNet, logger)
+	if err != nil {
+		logger.Errorf("Unable to create hns network %s", networkName)
+		return "", "", err
+	}
+
+	// Create host hns endpoint
+	epName := networkName + "_ep"
+	hnsEndpoint, err := createAndAttachHostEP(epName, hnsNetwork, subNet, logger)
+	if err != nil {
+		logger.Errorf("Unable to create host hns endpoint %s", epName)
+		return "", "", err
+	}
+
+	// Check for management ip getting assigned to the network, interface with the management ip
+	// and then enable forwarding on management interface as well as endpoint
+	err = chkMgmtIPandEnableForwarding(networkName, hnsEndpoint, logger)
+	if err != nil {
+		logger.Errorf("Failed to enable forwarding : %v", err)
+		return "", "", err
+	}
+
+	// Create endpoint for container
+	hnsEndpointCont, err := createAndAttachContainerEP(args, hnsNetwork, subNet, result, n, logger)
+	if err != nil {
+		logger.Errorf("Unable to create container hns endpoint %s", epName)
+		return "", "", err
+	}
+
+	contVethMAC = hnsEndpointCont.MacAddress
 	return hostVethName, contVethMAC, err
+}
+
+func ensureNetworkExists(networkName string, subNet *net.IPNet, logger *logrus.Entry) (*hcsshim.HNSNetwork, error) {
+	var err error
+	createNetwork := true
+	addressPrefix := subNet.String()
+	gatewayAddress := getNthIP(subNet, 1)
+
+	// Checking if HNS network exists
+	hnsNetwork, _ := hcsshim.GetHNSNetworkByName(networkName)
+	if hnsNetwork != nil {
+		for _, subnet := range hnsNetwork.Subnets {
+			if subnet.AddressPrefix == addressPrefix && subnet.GatewayAddress == gatewayAddress.String() {
+				createNetwork = false
+				logger.Infof("Found existing HNS network [%+v]", hnsNetwork)
+				break
+			}
+
+		}
+	}
+
+	if createNetwork {
+		// Delete stale network
+		if hnsNetwork != nil {
+			if _, err := hnsNetwork.Delete(); err != nil {
+				logger.Errorf("Unable to delete existing network [%v], error: %v", hnsNetwork.Name, err)
+				return nil, err
+			}
+			logger.Infof("Deleted stale HNS network [%v]")
+		}
+
+		// Create new hnsNetwork
+		req := map[string]interface{}{
+			"Name": networkName,
+			"Type": "L2Bridge",
+			"Subnets": []interface{}{
+				map[string]interface{}{
+					"AddressPrefix":  addressPrefix,
+					"GatewayAddress": gatewayAddress,
+				},
+			},
+		}
+		reqStr, err := json.Marshal(req)
+		if err != nil {
+			logger.Errorf("Error in converting to json format")
+			return nil, err
+		}
+
+		logger.Infof("Attempting to create HNS network, request: %v", string(reqStr))
+		if hnsNetwork, err = hcsshim.HNSNetworkRequest("POST", "", string(reqStr)); err != nil {
+			logger.Errorf("unable to create network [%v], error: %v", networkName, err)
+			return nil, err
+		}
+		logger.Infof("Created HNS network [%v] as %+v", networkName, hnsNetwork)
+	}
+	return hnsNetwork, err
+}
+
+func createAndAttachHostEP(epName string, hnsNetwork *hcsshim.HNSNetwork, subNet *net.IPNet, logger *logrus.Entry) (*hcsshim.HNSEndpoint, error) {
+	var err error
+	endpointAddress := getNthIP(subNet, 2)
+	attachEndpoint := true
+
+	// Checking if HNS Endpoint exists.
+	hnsEndpoint, _ := hcsshim.GetHNSEndpointByName(epName)
+	if hnsEndpoint != nil {
+		if !hnsEndpoint.IPAddress.Equal(endpointAddress) {
+			// IPAddress does not match. Delete stale endpoint
+			if _, err = hnsEndpoint.Delete(); err != nil {
+				logger.Errorf("Unable to delete existing bridge endpoint [%v], error: %v", epName, err)
+				return nil, err
+			}
+			logger.Infof("Deleted stale bridge endpoint [%v]")
+			hnsEndpoint = nil
+		} else if hnsEndpoint.VirtualNetwork == hnsNetwork.Id {
+			// Endpoint exists for correct network. No processing required
+			attachEndpoint = false
+		}
+	}
+
+	if hnsEndpoint == nil {
+		// Create new endpoint
+		hnsEndpoint = &hcsshim.HNSEndpoint{
+			Name:           epName,
+			IPAddress:      endpointAddress,
+			VirtualNetwork: hnsNetwork.Id,
+		}
+
+		logger.Infof("Attempting to create bridge endpoint [%+v]", hnsEndpoint)
+		hnsEndpoint, err = hnsEndpoint.Create()
+		if err != nil {
+			logger.Errorf("Unable to create bridge endpoint [%v], error: %v", epName, err)
+			return nil, err
+		}
+		logger.Infof("Created bridge endpoint [%v] as %+v", epName, hnsEndpoint)
+	}
+
+	if attachEndpoint {
+		// Attach endpoint to host
+		if err = hnsEndpoint.HostAttach(1); err != nil {
+			logger.Errorf("Unable to hot attach bridge endpoint [%v] to host compartment, error: %v", epName, err)
+			return nil, err
+		}
+		logger.Infof("Attached bridge endpoint [%v] to host", epName)
+	}
+	return hnsEndpoint, err
+}
+
+func chkMgmtIPandEnableForwarding(networkName string, hnsEndpoint *hcsshim.HNSEndpoint, logger *logrus.Entry) error {
+	netHelper := netsh.New(nil)
+	var network *hcsshim.HNSNetwork
+	var err error
+
+	// Wait for the network to populate Management IP.
+	for {
+		network, err = hcsshim.GetHNSNetworkByName(networkName)
+		if err != nil {
+			logger.Errorf("Unable to get hns network %s after creation, error: %v", networkName, err)
+			return err
+		}
+
+		if len(network.ManagementIP) > 0 {
+			logger.Infof("Got managementIP %s", network.ManagementIP)
+			break
+		}
+		time.Sleep(1 * time.Second)
+		logger.Infof("Checking ManagementIP with HnsNetwork[%v]", network)
+	}
+
+	//Wait for the interface with the management IP
+	for {
+		if _, err = netHelper.GetInterfaceByIP(network.ManagementIP); err != nil {
+			time.Sleep(1 * time.Second)
+			logger.Infof("Checking interface with ip %s, err %v", network.ManagementIP, err)
+			continue
+		}
+		break
+	}
+
+	// Enable forwarding on the host interface and endpoint
+	for _, interfaceIpAddress := range []string{network.ManagementIP, hnsEndpoint.IPAddress.String()} {
+		netInterface, err := netHelper.GetInterfaceByIP(interfaceIpAddress)
+		if err != nil {
+			logger.Infof("Unable to find interface for IP Address [%v], error: %v", interfaceIpAddress, err)
+			return err
+		}
+
+		logger.Infof("Found Interface with IP[%s]: %v", interfaceIpAddress, netInterface)
+		interfaceIdx := strconv.Itoa(netInterface.Idx)
+		if err = netHelper.EnableForwarding(interfaceIdx); err != nil {
+			logger.Infof("Unable to enable forwarding on [%v] index [%v], error: %v", netInterface.Name, interfaceIdx, err)
+			return err
+		}
+		logger.Infof("Enabled forwarding on [%v] index [%v]", netInterface.Name, interfaceIdx)
+	}
+	return nil
+}
+
+func createAndAttachContainerEP(args *skel.CmdArgs,
+	hnsNetwork *hcsshim.HNSNetwork,
+	subNet *net.IPNet,
+	result *current.Result,
+	n *hns.NetConf,
+	logger *logrus.Entry) (*hcsshim.HNSEndpoint, error) {
+
+	gatewayAddress := getNthIP(subNet, 2).String()
+
+	endpointName := hns.ConstructEndpointName(args.ContainerID, args.Netns, n.Name)
+	logger.Infof("Attempting to create HNS endpoint name : %s for container", endpointName)
+	hnsEndpointCont, err := hns.ProvisionEndpoint(endpointName, hnsNetwork.Id, args.ContainerID, func() (*hcsshim.HNSEndpoint, error) {
+		hnsEP := &hcsshim.HNSEndpoint{
+			Name:           endpointName,
+			VirtualNetwork: hnsNetwork.Id,
+			GatewayAddress: gatewayAddress,
+			IPAddress:      result.IPs[0].Address.IP,
+			Policies:       n.MarshalPolicies(),
+		}
+		return hnsEP, nil
+	})
+	logger.Infof("Endpoint to container created! %v", hnsEndpointCont)
+	return hnsEndpointCont, err
+}
+
+// This func increments the subnet IP address by n depending on
+// endpoint IP or gateway IP
+func getNthIP(PodCIDR *net.IPNet, n int) net.IP {
+	gwaddr := PodCIDR.IP.To4()
+	buffer := make([]byte, len(gwaddr))
+	copy(buffer, gwaddr)
+	buffer[3] += byte(n)
+	return buffer
+}
+
+func createNetworkName(netName string, subnet *net.IPNet) string {
+	str := subnet.IP.String()
+	network := strings.Replace(str, ".", "-", -1)
+	name := netName + "-" + network
+	return name
 }
 
 // SetupRoutes sets up the routes for the host side of the veth pair.
@@ -80,6 +352,20 @@ func SetupRoutes(hostVeth interface{}, result *current.Result) error {
 
 // CleanUpNamespace deletes the devices in the network namespace.
 func CleanUpNamespace(args *skel.CmdArgs, logger *logrus.Entry) error {
-	logger.Warn("STUB: Clean up namespace")
-	return nil
+	logger.Infof("Cleaning up endpoint")
+
+	n, _, err := loadNetConf(args.StdinData)
+	if err != nil {
+		return err
+	}
+
+	epName := hns.ConstructEndpointName(args.ContainerID, args.Netns, n.Name)
+	logger.Infof("Attempting to delete HNS endpoint name : %s for container", epName)
+
+	err = hns.DeprovisionEndpoint(epName, args.Netns, args.ContainerID)
+	if err != nil && strings.Contains(err.Error(), "not found") {
+		logger.WithError(err).Warn("Endpoint not found during delete, assuming it's already been cleaned up")
+		return nil
+	}
+	return err
 }

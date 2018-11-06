@@ -412,18 +412,20 @@ func CreateResultFromEndpoint(wep *api.WorkloadEndpoint) (*current.Result, error
 // PopulateEndpointNets takes a WorkloadEndpoint and a CNI Result, extracts IP address and mask
 // and populates that information into the WorkloadEndpoint.
 func PopulateEndpointNets(wep *api.WorkloadEndpoint, result *current.Result) error {
+	var copyIpNet net.IPNet
 	if len(result.IPs) == 0 {
 		return errors.New("IPAM plugin did not return any IP addresses")
 	}
 
 	for _, ipNet := range result.IPs {
+		copyIpNet = net.IPNet{IP: ipNet.Address.IP, Mask: ipNet.Address.Mask}
 		if ipNet.Version == "4" {
-			ipNet.Address.Mask = net.CIDRMask(32, 32)
+			copyIpNet.Mask = net.CIDRMask(32, 32)
 		} else {
-			ipNet.Address.Mask = net.CIDRMask(128, 128)
+			copyIpNet.Mask = net.CIDRMask(128, 128)
 		}
 
-		wep.Spec.IPNetworks = append(wep.Spec.IPNetworks, ipNet.Address.String())
+		wep.Spec.IPNetworks = append(wep.Spec.IPNetworks, copyIpNet.String())
 	}
 
 	return nil

@@ -1,5 +1,5 @@
-hash: 90453524cf4eaab23c0dfb25a1132010503d4437d66fb28ea68e6bb093cd1744
-updated: 2018-10-25T12:51:25.565686773Z
+hash: a240825cee819a460ecabc8ebddcb8164c7701d03f53dea33a1f84459bc79299
+updated: 2018-11-05T14:19:54.798478105Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -17,6 +17,8 @@ imports:
   version: 3a771d992973f24aa725d07868b467d1ddfceafb
   subpackages:
   - quantile
+- name: github.com/buger/jsonparser
+  version: f4dd9f5a6b441265aefc1d44872a6f8c10f42b37
 - name: github.com/containernetworking/cni
   version: e67bb289cccfcad352b92c5234a1610b105846e0
   subpackages:
@@ -29,6 +31,7 @@ imports:
 - name: github.com/containernetworking/plugins
   version: 646dbbace1b1000b2bcda2f9c66bda384555b57e
   subpackages:
+  - pkg/hns
   - pkg/ip
   - pkg/ipam
   - pkg/ns
@@ -119,8 +122,14 @@ imports:
   version: 6633656539c1639d9d78127b7d47c622b5d7b6dc
 - name: github.com/json-iterator/go
   version: f2b4162afba35581b6d4a50d3b8f34e33c144682
+- name: github.com/juju/clock
+  version: bab88fc672997ef02d03f85310182d97a93dee21
+- name: github.com/juju/errors
+  version: 22422dad46e14561a0854ad42497a75af9b61909
+- name: github.com/juju/mutex
+  version: d21b13acf4bfd8a8b0482a3a78e44d98880b40d3
 - name: github.com/kelseyhightower/envconfig
-  version: f611eb38b3875cc3bd991ca91c51d06446afa14c
+  version: dd1402a4d99de9ac2f396cd6fcb957bc2c695ec1
 - name: github.com/mailru/easyjson
   version: 03f2033d19d5860aef995fe360ac7d395cd8ce65
   subpackages:
@@ -133,6 +142,22 @@ imports:
   - pbutil
 - name: github.com/mcuadros/go-version
   version: 6d5863ca60fa6fe914b5fd43ed8533d7567c5b0b
+- name: github.com/Microsoft/go-winio
+  version: 97e4973ce50b2ff5f09635a57e2b88a037aae829
+- name: github.com/Microsoft/hcsshim
+  version: 548046cb2f0495eb2acd7682a0035d465bf05ea9
+  subpackages:
+  - internal/guid
+  - internal/hcs
+  - internal/hcserror
+  - internal/hns
+  - internal/interop
+  - internal/longpath
+  - internal/mergemaps
+  - internal/safefile
+  - internal/schema1
+  - internal/timeout
+  - internal/wclayer
 - name: github.com/modern-go/concurrent
   version: bacd9c7ef1dd9b15be4a9909b8ac7a4e313eec94
 - name: github.com/modern-go/reflect2
@@ -184,7 +209,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 1042946ed81e7152a66a661e37e92f159a318e10
+  version: 4640aa066a9a4b7c1036333038f3a2c11e66db44
   repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib/apiconfig
@@ -239,6 +264,10 @@ imports:
   version: 8a290539e2e8629dbc4e6bad948158f790ec31f4
 - name: github.com/PuerkitoBio/urlesc
   version: 5bd2802263f21d8788851d5305584c82a5c75d7e
+- name: github.com/rakelkar/gonetsh
+  version: 758b1f7c9d1ca5acaca0b909f06ff9ed9fe35de1
+  subpackages:
+  - netsh
 - name: github.com/safchain/ethtool
   version: 7ff1ba29eca231991280817541cb3903f6be15d1
 - name: github.com/satori/go.uuid
@@ -299,7 +328,7 @@ imports:
   subpackages:
   - rate
 - name: google.golang.org/appengine
-  version: b1f26356af11148e710935ed1ac8a7f5702c7612
+  version: 4216e58b9158e5f1c906f1aca75162a46a2ec88a
   subpackages:
   - internal
   - internal/app_identity
@@ -485,4 +514,8 @@ imports:
   version: 91cfa479c814065e420cee7ed227db0f63a5854e
   subpackages:
   - pkg/common
+- name: k8s.io/utils
+  version: cd34563cd63c2bd7c6fe88a73c4dcf34ed8a67cb
+  subpackages:
+  - exec
 testImports: []
