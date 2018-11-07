@@ -42,9 +42,6 @@ endif
 ###############################################################################
 GO_BUILD_VER?=v0.18
 
-# Select which release branch to test.
-RELEASE_BRANCH?=master
-
 CALICO_BUILD = calico/go-build:$(GO_BUILD_VER)
 
 CALICOCTL_VER=master
@@ -84,6 +81,7 @@ DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
                               $(EXTRA_DOCKER_ARGS) \
                               -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
                               -e GOARCH=$(ARCH) \
+                              -v $(HOME)/.glide:/home/user/.glide:rw \
                               -v ${CURDIR}:/go/src/$(PACKAGE_NAME):rw \
                               -v ${CURDIR}/.go-pkg-cache:/go/pkg:rw \
                               -v $$SSH_AUTH_SOCK:/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent \
@@ -124,9 +122,7 @@ update-typha:
             if [ $(TYPHA_REPO) != "github.com/tigera/typha-private" ]; then \
               glide mirror set https://github.com/tigera/typha-private $(TYPHA_REPO) --vcs git; glide mirror list; \
             fi;\
-          OUTPUT=`mktemp`;\
-          glide up --strip-vendor; glide up --strip-vendor 2>&1 | tee $$OUTPUT; \
-          if ! grep "\[WARN\]" $$OUTPUT; then true; else false; fi; \
+          glide up --strip-vendor || glide up --strip-vendor; \
         fi'
 
 bin/confd-$(ARCH): $(SRC_FILES) vendor
@@ -179,10 +175,11 @@ UPDATE_EXPECTED_DATA?=false
 .PHONY: test-kdd
 ## Run template tests against KDD
 test-kdd: bin/confd bin/kubectl bin/bird bin/bird6 bin/calico-node bin/calicoctl bin/typha run-k8s-apiserver
+	-git clean -fx etc/calico/confd
 	docker run --rm --net=host \
 		-v $(CURDIR)/tests/:/tests/ \
 		-v $(CURDIR)/bin:/calico/bin/ \
-		-e RELEASE_BRANCH=$(RELEASE_BRANCH) \
+		-v $(CURDIR)/etc/calico:/etc/calico/ \
 		-e LOCAL_USER_ID=0 \
 		-v $$SSH_AUTH_SOCK:/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent \
 		-e FELIX_TYPHAADDR=127.0.0.1:5473 \
@@ -202,18 +199,21 @@ test-kdd: bin/confd bin/kubectl bin/bird bin/bird6 bin/calico-node bin/calicoctl
 	    echo; \
             false; \
         }
+	-git clean -fx etc/calico/confd
 
 .PHONY: test-etcd
 ## Run template tests against etcd
 test-etcd: bin/confd bin/etcdctl bin/bird bin/bird6 bin/calico-node bin/calicoctl run-etcd
+	-git clean -fx etc/calico/confd
 	docker run --rm --net=host \
 		-v $(CURDIR)/tests/:/tests/ \
 		-v $(CURDIR)/bin:/calico/bin/ \
-		-e RELEASE_BRANCH=$(RELEASE_BRANCH) \
+		-v $(CURDIR)/etc/calico:/etc/calico/ \
 		-e LOCAL_USER_ID=0 \
 		-v $$SSH_AUTH_SOCK:/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent \
 		-e UPDATE_EXPECTED_DATA=$(UPDATE_EXPECTED_DATA) \
 		$(CALICO_BUILD) /tests/test_suite_etcd.sh
+	-git clean -fx etc/calico/confd
 
 ## Etcd is used by the kubernetes
 # NOTE: https://quay.io/repository/coreos/etcd is available *only* for the following archs with the following tags:

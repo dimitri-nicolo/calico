@@ -22,8 +22,7 @@ execute_test_suite() {
     rm $LOGPATH/log* || true
     rm $LOGPATH/rendered/*.cfg || true
 
-    # Download the templates from calico and build the tomls based on $NODENAME
-    download_templates_from_calico
+    # Build the tomls based on $NODENAME.
     build_tomls_for_node
 
     if [ "$DATASTORE_TYPE" = etcdv3 ]; then
@@ -351,12 +350,12 @@ run_edited_individual_test() {
     testStatement=$2
 
     # Edit the confd template for bird.cfg to add an extensions field that should be picked up by confd
-    echo $testStatement >> ${repo_dir}/filesystem/etc/calico/confd/templates/bird.cfg.template
+    echo $testStatement >> /etc/calico/confd/templates/bird.cfg.template
 
     run_individual_test $testdir
 
     # Unedit the template
-    head -n -1 ${repo_dir}/filesystem/etc/calico/confd/templates/bird.cfg.template > temp; mv temp ${repo_dir}/filesystem/etc/calico/confd/templates/bird.cfg.template
+    head -n -1 /etc/calico/confd/templates/bird.cfg.template > temp; mv temp /etc/calico/confd/templates/bird.cfg.template
 }
 
 # Run an individual test using oneshot mode:
@@ -402,12 +401,12 @@ run_edited_individual_test_oneshot() {
     testStatement=$2
 
     # Edit the confd template for bird.cfg to add an extensions field that should be picked up by confd
-    echo $testStatement >> ${repo_dir}/filesystem/etc/calico/confd/templates/bird.cfg.template
+    echo $testStatement >> /etc/calico/confd/templates/bird.cfg.template
 
     run_individual_test_oneshot $testdir
 
     # Unedit the template
-    head -n -1 ${repo_dir}/filesystem/etc/calico/confd/templates/bird.cfg.template > temp; mv temp ${repo_dir}/filesystem/etc/calico/confd/templates/bird.cfg.template
+    head -n -1 /etc/calico/confd/templates/bird.cfg.template > temp; mv temp /etc/calico/confd/templates/bird.cfg.template
 }
 
 start_typha() {
@@ -437,16 +436,6 @@ start_typha() {
 kill_typha() {
     echo "Killing Typha"
     kill -9 $TYPHA_PID 2>/dev/null
-}
-
-# get_templates attempts to grab the latest templates from the calico repo
-download_templates_from_calico() {
-    repo_dir="/node-repo"
-    if [ ! -d ${repo_dir} ]; then
-        echo "Getting latest confd templates from tigera/node-private, branch=${RELEASE_BRANCH}"
-        git clone git@github.com:tigera/node-private.git ${repo_dir} -b ${RELEASE_BRANCH}
-        ln -s ${repo_dir}/filesystem/etc/calico/ /etc/calico
-    fi
 }
 
 build_tomls_for_node() {
