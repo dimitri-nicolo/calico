@@ -9,8 +9,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-
-
 func TestCalculateEndpointPolicies(t *testing.T) {
 	RegisterTestingT(t)
 

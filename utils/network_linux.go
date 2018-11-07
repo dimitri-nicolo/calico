@@ -27,6 +27,7 @@ import (
 	"github.com/containernetworking/plugins/pkg/ip"
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/projectcalico/cni-plugin/types"
+	calicoclient "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 )

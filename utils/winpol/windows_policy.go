@@ -73,7 +73,7 @@ func CalculateEndpointPolicies(
 			exceptions = append(exceptions, poolCIDR.String())
 		}
 		dict := map[string]interface{}{
-			"Type": "OutBoundNAT",
+			"Type":          "OutBoundNAT",
 			"ExceptionList": exceptions,
 		}
 		encoded, err := json.Marshal(dict)
