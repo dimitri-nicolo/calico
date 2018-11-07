@@ -55,21 +55,13 @@ imports:
   version: 33245c6b5b49130ca99280408fadfab01aac0e48
   subpackages:
   - auth/authpb
-  - client
   - clientv3
   - etcdserver/api/v3rpc/rpctypes
   - etcdserver/etcdserverpb
   - mvcc/mvccpb
-  - pkg/pathutil
-  - pkg/srv
   - pkg/tlsutil
   - pkg/transport
   - pkg/types
-  - version
-- name: github.com/coreos/go-semver
-  version: 8ab6407b697782a06568d4b7f1db25550ec2e4c6
-  subpackages:
-  - semver
 - name: github.com/davecgh/go-spew
   version: 782f4967f2dc4564575ca782fe2d04090b5faca8
   subpackages:
@@ -135,6 +127,8 @@ imports:
   version: 787624de3eb7bd915c329cba748687a3b22666a6
   subpackages:
   - diskcache
+- name: github.com/hashicorp/go-version
+  version: b5a281d3160aa11950a6182bd9a9dc2cb1e02d50
 - name: github.com/hashicorp/golang-lru
   version: a0d98a5f288019575c6d1f4bb1573fef2d1fcdc4
   subpackages:
@@ -171,7 +165,7 @@ imports:
 - name: github.com/modern-go/concurrent
   version: bacd9c7ef1dd9b15be4a9909b8ac7a4e313eec94
 - name: github.com/modern-go/reflect2
-  version: 05fbef0ca5da472bbf96c9322b84a53edc03c9fd
+  version: 94122c33edd36123c84d5368cfb2b69df93a0ec8
 - name: github.com/onsi/ginkgo
   version: 3774a09d95489ccaa16032e0770d08ea77ba6184
   subpackages:
@@ -315,7 +309,7 @@ imports:
 - name: github.com/satori/go.uuid
   version: f58768cc1a7a7e77a3bd49e98cdd21419399b6a3
 - name: github.com/sirupsen/logrus
-  version: f006c2ac4710855cf0f916dd6b77acf6b048dc6e
+  version: d682213848ed68c0a260ca37d6dd5ace8423f5ba
 - name: github.com/spf13/pflag
   version: e57e3eeb33f795204c1ca35f56c44f83227c6e66
 - name: github.com/tigera/licensing
@@ -542,8 +536,6 @@ imports:
   subpackages:
   - pkg/storage
   - pkg/storage/etcd
-  - pkg/storage/etcd/metrics
-  - pkg/storage/etcd/util
   - pkg/storage/etcd3
   - pkg/storage/value
   - pkg/util/trace

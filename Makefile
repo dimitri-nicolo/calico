@@ -35,7 +35,16 @@ ifeq ($(ARCH),aarch64)
         override ARCH=arm64
 endif
 ifeq ($(ARCH),x86_64)
-    override ARCH=amd64
+        override ARCH=amd64
+endif
+
+# Build mounts for running in "local build" mode. Mount in libcalico, but null out
+# the vendor directory. This allows an easy build using local development code,
+# assuming that there is a local checkout of libcalico in the same directory as this repo.
+LOCAL_BUILD_MOUNTS ?=
+ifeq ($(LOCAL_BUILD),true)
+LOCAL_BUILD_MOUNTS = -v $(CURDIR)/../libcalico-go:/go/src/$(PACKAGE_NAME)/vendor/github.com/projectcalico/libcalico-go:ro \
+	-v $(CURDIR)/.empty:/go/src/$(PACKAGE_NAME)/vendor/github.com/projectcalico/libcalico-go/vendor:ro
 endif
 
 # we want to be able to run the same recipe on multiple targets keyed on the image name
@@ -52,7 +61,6 @@ space +=
 comma := ,
 prefix_linux = $(addprefix linux/,$(strip $1))
 join_platforms = $(subst $(space),$(comma),$(call prefix_linux,$(strip $1)))
-
 
 # list of arches *not* to build when doing *-all
 #    until s390x works correctly
@@ -99,16 +107,11 @@ LIBCALICOGO_PATH?=none
 LOCAL_USER_ID?=$(shell id -u $$USER)
 
 # Get version from git.
-GIT_VERSION?=$(shell git describe --tags --dirty)
+GIT_VERSION?=$(shell git describe --tags --dirty --always)
+ifeq ($(LOCAL_BUILD),true)
+	GIT_VERSION = $(shell git describe --tags --dirty --always)-dev-build
+endif
 
-DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
-                   docker run --rm \
-                              --net=host \
-                              -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-                              -v $${PWD}:/go/src/$(PACKAGE_NAME):rw \
-                              -v $${PWD}/.go-pkg-cache:/go/pkg:rw \
-                              -w /go/src/$(PACKAGE_NAME) \
-                              $(CALICO_BUILD)
 SRCFILES=cmd/kube-controllers/main.go $(shell find pkg -name '*.go')
 
 ## Removes all build artifacts.
@@ -116,6 +119,7 @@ clean:
 	rm -rf bin image.created-$(ARCH)
 	-docker rmi $(BUILD_IMAGE)
 	rm -f tests/fv/fv.test
+	rm -f report/*.xml
 
 ###############################################################################
 # Building the binary
@@ -172,9 +176,7 @@ update-felix update-libcalico:
             if [ $(FELIX_REPO) != "github.com/tigera/felix-private" ]; then \
               glide mirror set https://github.com/tigera/felix-private $(FELIX_REPO) --vcs git; glide mirror list; \
             fi;\
-          OUTPUT=`mktemp`;\
-          glide up --strip-vendor; glide up --strip-vendor 2>&1 | tee $$OUTPUT; \
-          if ! grep "\[WARN\]" $$OUTPUT; then true; else false; fi; \
+          glide up --strip-vendor || glide up --strip-vendor; \
         fi'
 
 bin/kube-controllers-linux-$(ARCH): vendor $(SRCFILES)
@@ -187,7 +189,8 @@ bin/kube-controllers-linux-$(ARCH): vendor $(SRCFILES)
 	  -w /go/src/$(PACKAGE_NAME) \
 	  -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
 	  -v $(CURDIR)/.go-pkg-cache:/go-cache/:rw \
-      -e GOCACHE=/go-cache \
+	  $(LOCAL_BUILD_MOUNTS) \
+	  -e GOCACHE=/go-cache \
 	  $(CALICO_BUILD) go build -v -o bin/kube-controllers-$(OS)-$(ARCH) -ldflags "-X main.VERSION=$(GIT_VERSION)" ./cmd/kube-controllers/
 
 bin/check-status-linux-$(ARCH): vendor $(SRCFILES)
@@ -200,7 +203,8 @@ bin/check-status-linux-$(ARCH): vendor $(SRCFILES)
 	  -w /go/src/$(PACKAGE_NAME) \
 	  -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
 	  -v $(CURDIR)/.go-pkg-cache:/go-cache/:rw \
-      -e GOCACHE=/go-cache \
+	  $(LOCAL_BUILD_MOUNTS) \
+	  -e GOCACHE=/go-cache \
 	  $(CALICO_BUILD) go build -v -o bin/check-status-$(OS)-$(ARCH) -ldflags "-X main.VERSION=$(GIT_VERSION)" ./cmd/check-status/
 
 ###############################################################################
@@ -252,7 +256,6 @@ else
 	$(NOECHO) $(NOOP)
 endif
 
-
 ## tag images of one arch
 tag-images: imagetag $(addprefix sub-single-tag-images-arch-,$(call escapefs,$(PUSH_IMAGES))) $(addprefix sub-single-tag-images-non-manifest-,$(call escapefs,$(PUSH_NONMANIFEST_IMAGES)))
 sub-single-tag-images-arch-%:
@@ -266,13 +269,10 @@ else
 	$(NOECHO) $(NOOP)
 endif
 
-
-
 ## tag images of all archs
 tag-images-all: imagetag $(addprefix sub-tag-images-,$(VALIDARCHES))
 sub-tag-images-%:
 	$(MAKE) tag-images ARCH=$* IMAGETAG=$(IMAGETAG)
-
 
 ###############################################################################
 # Static checks
@@ -302,14 +302,6 @@ install-git-hooks:
 check-copyright:
 	./check-copyrights.sh
 
-foss-checks: vendor
-	@echo Running $@...
-	@docker run --rm -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
-	  -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-	  -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
-	  -w /go/src/$(PACKAGE_NAME) \
-	  $(FOSSA_CALICO_BUILD) /usr/local/bin/fossa
-
 ###############################################################################
 # Tests
 ###############################################################################
@@ -320,20 +312,28 @@ ut: vendor
 		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
 		-v $(CURDIR)/.go-pkg-cache:/go/pkg/:rw \
 		-v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
+		$(LOCAL_BUILD_MOUNTS) \
 		-w /go/src/$(PACKAGE_NAME) \
-		$(CALICO_BUILD) sh -c 'WHAT=$(WHAT) SKIP=$(SKIP) ./run-uts'
+		$(CALICO_BUILD) sh -c 'WHAT=$(WHAT) SKIP=$(SKIP) GINKGO_ARGS="$(GINKGO_ARGS)" ./run-uts'
 
 .PHONY: fv
 ## Build and run the FV tests.
-GINKGO_FOCUS?=.*
 fv: tests/fv/fv.test image
 	@echo Running Go FVs.
-	cd tests/fv && ETCD_IMAGE=$(ETCD_IMAGE) HYPERKUBE_IMAGE=$(HYPERKUBE_IMAGE) CONTAINER_NAME=$(BUILD_IMAGE):latest-$(ARCH) PRIVATE_KEY=`pwd`/private.key ./fv.test -ginkgo.slowSpecThreshold 30 -ginkgo.focus $(GINKGO_FOCUS)
+	cd tests/fv && ETCD_IMAGE=$(ETCD_IMAGE) HYPERKUBE_IMAGE=$(HYPERKUBE_IMAGE) CONTAINER_NAME=$(BUILD_IMAGE):latest-$(ARCH) PRIVATE_KEY=`pwd`/private.key ./fv.test $(GINKGO_ARGS) -ginkgo.slowSpecThreshold 30
 
 tests/fv/fv.test: $(shell find ./tests -type f -name '*.go' -print)
 	# We pre-build the test binary so that we can run it outside a container and allow it
 	# to interact with docker.
-	$(DOCKER_GO_BUILD) go test ./tests/fv -c --tags fvtests -o tests/fv/fv.test
+	mkdir -p .go-pkg-cache && \
+		docker run --rm \
+		--net=host \
+		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+		-v $${PWD}:/go/src/$(PACKAGE_NAME):rw \
+		-v $${PWD}/.go-pkg-cache:/go/pkg:rw \
+		$(LOCAL_BUILD_MOUNTS) \
+		-w /go/src/$(PACKAGE_NAME) \
+		$(CALICO_BUILD) go test ./tests/fv -c --tags fvtests -o tests/fv/fv.test
 
 ###############################################################################
 # CI
@@ -411,7 +411,7 @@ release-publish: release-prereqs
 	git push origin $(VERSION)
 
 	# Push images.
-	$(MAKE) push-all IMAGETAG=$(VERSION)
+	$(MAKE) push-all push-manifests push-non-manifests IMAGETAG=$(VERSION)
 
 	@echo "Finalize the GitHub release based on the pushed tag."
 	@echo ""
@@ -429,14 +429,16 @@ release-publish-latest: release-prereqs
 	# Check latest versions match.
 	if ! docker run $(BUILD_IMAGE):latest -v | grep '^$(VERSION)$$'; then echo "Reported version:" `docker run $(BUILD_IMAGE):latest -v` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
 
-	$(MAKE) push-all IMAGETAG=latest
+	$(MAKE) push-all push-manifests push-non-manifests IMAGETAG=latest
 
 # release-prereqs checks that the environment is configured properly to create a release.
 release-prereqs:
 ifndef VERSION
 	$(error VERSION is undefined - run using make release VERSION=vX.Y.Z)
 endif
-
+ifdef LOCAL_BUILD
+	$(error LOCAL_BUILD must not be set for a release)
+endif
 
 ###############################################################################
 # Developer helper scripts (not used by build or test)
