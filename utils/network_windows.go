@@ -127,7 +127,14 @@ func DoNetworking(
 	defer m.Release()
 
 	// Create hns network
-	networkName := createNetworkName(n.Name, subNet)
+	var networkName string
+	if conf.WindowsUseSingleNetwork {
+		logger.WithField("name", conf.Name).Info(
+			"Overriding network name, only a single IPAM block will be supported on this host")
+		networkName = conf.Name
+	} else {
+		networkName = createNetworkName(n.Name, subNet)
+	}
 	hnsNetwork, err := ensureNetworkExists(networkName, subNet, logger)
 	if err != nil {
 		logger.Errorf("Unable to create hns network %s", networkName)

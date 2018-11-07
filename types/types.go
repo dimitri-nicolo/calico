@@ -92,6 +92,8 @@ type NetConf struct {
 	ContainerSettings    ContainerSettings `json:"container_settings,omitempty"`
 	IncludeDefaultRoutes bool              `json:"include_default_routes,omitempty"`
 
+	WindowsUseSingleNetwork bool `json:"windows_use_single_network,omitempty"`
+
 	// Options below here are deprecated.
 	EtcdAuthority string `json:"etcd_authority"`
 	Hostname      string `json:"hostname"`
