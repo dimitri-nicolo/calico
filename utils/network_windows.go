@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package utils
 
 import (
@@ -29,6 +30,7 @@ import (
 	"github.com/juju/clock"
 	"github.com/juju/mutex"
 	"github.com/projectcalico/cni-plugin/types"
+	"github.com/projectcalico/cni-plugin/utils/winpol"
 	calicoclient "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/rakelkar/gonetsh/netsh"
@@ -362,7 +364,7 @@ func createAndAttachContainerEP(args *skel.CmdArgs,
 
 	gatewayAddress := getNthIP(affineBlockSubnet, 2).String()
 
-	pols, err := calculateEndpointPolicies(n, allIPAMPools, natOutgoing, logger)
+	pols, err := winpol.CalculateEndpointPolicies(n, allIPAMPools, natOutgoing, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -381,62 +383,6 @@ func createAndAttachContainerEP(args *skel.CmdArgs,
 	})
 	logger.Infof("Endpoint to container created! %v", hnsEndpointCont)
 	return hnsEndpointCont, err
-}
-
-type policyMarshaller interface {
-	MarshalPolicies() []json.RawMessage
-}
-
-// calculateEndpointPolicies augments the hns.Netconf policies with NAT exceptions for our IPAM blocks.
-func calculateEndpointPolicies(
-	n policyMarshaller,
-	allIPAMPools []*net.IPNet,
-	natOutgoing bool,
-	logger *logrus.Entry,
-) ([]json.RawMessage, error) {
-	inputPols := n.MarshalPolicies()
-	var outputPols []json.RawMessage
-	for _, inPol := range inputPols {
-		// Decode the raw policy as a dict so we can inspect it without losing any fields.
-		decoded := map[string]interface{}{}
-		err := json.Unmarshal(inPol, decoded)
-		if err != nil {
-			logger.WithError(err).Error("MarshalPolicies() returned bad JSON")
-			return nil, err
-		}
-
-		// We're looking for an entry like this:
-		//
-		// {
-		//   "Type":  "OutBoundNAT",
-		//   "ExceptionList":  [
-		//     "10.96.0.0/12"
-		//   ]
-		// }
-		// We'll add the other IPAM pools to the list.
-		outPol := inPol
-		if strings.EqualFold(decoded["Type"].(string), "OutBoundNAT") {
-			if !natOutgoing {
-				logger.Info("NAT-outgoing disabled for this IP pool, ignoring OutBoundNAT policy from NetConf.")
-				continue
-			}
-
-			excList, _ := decoded["ExceptionList"].([]interface{})
-			for _, poolCIDR := range allIPAMPools {
-				excList = append(excList, poolCIDR.String())
-			}
-			decoded["ExceptionList"] = excList
-			outPol, err = json.Marshal(decoded)
-			if err != nil {
-				logger.WithError(err).Error("Failed to add outbound NAT exclusion.")
-				return nil, err
-			}
-			logger.WithField("policy", string(outPol)).Debug(
-				"Updated OutBoundNAT policy to add Calico IP pools.")
-		}
-		outputPols = append(outputPols, outPol)
-	}
-	return outputPols, nil
 }
 
 // This func increments the subnet IP address by n depending on
