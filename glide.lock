@@ -1,5 +1,5 @@
-hash: a240825cee819a460ecabc8ebddcb8164c7701d03f53dea33a1f84459bc79299
-updated: 2018-11-05T14:19:54.798478105Z
+hash: f16e5a931b54fcecf7d84a536ea0418dfc57d67d8902b38430a541cd07b2ff6b
+updated: 2018-11-07T14:03:56.045021754Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -129,7 +129,7 @@ imports:
 - name: github.com/juju/mutex
   version: d21b13acf4bfd8a8b0482a3a78e44d98880b40d3
 - name: github.com/kelseyhightower/envconfig
-  version: dd1402a4d99de9ac2f396cd6fcb957bc2c695ec1
+  version: f611eb38b3875cc3bd991ca91c51d06446afa14c
 - name: github.com/mailru/easyjson
   version: 03f2033d19d5860aef995fe360ac7d395cd8ce65
   subpackages:
@@ -211,7 +211,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 4640aa066a9a4b7c1036333038f3a2c11e66db44
+  version: ada7fa770fab634eb75e3228f1ea059ab95227f3
   repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib/apiconfig
