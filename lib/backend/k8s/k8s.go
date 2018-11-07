@@ -236,7 +236,6 @@ func NewKubeClient(ca *apiconfig.CalicoAPIConfigSpec) (api.Client, error) {
 
 func CreateKubernetesClientset(ca *apiconfig.CalicoAPIConfigSpec) (*rest.Config, *kubernetes.Clientset, error) {
 	// Use the kubernetes client code to load the kubeconfig file and combine it with the overrides.
-	log.Debugf("Building client for config: %+v", ca)
 	configOverrides := &clientcmd.ConfigOverrides{}
 	var overridesMap = []struct {
 		variable *string
@@ -265,7 +264,6 @@ func CreateKubernetesClientset(ca *apiconfig.CalicoAPIConfigSpec) (*rest.Config,
 	if ca.K8sInsecureSkipTLSVerify {
 		configOverrides.ClusterInfo.InsecureSkipTLSVerify = true
 	}
-	log.Debugf("Config overrides: %+v", configOverrides)
 
 	// A kubeconfig file was provided.  Use it to load a config, passing through
 	// any overrides.
@@ -280,7 +278,6 @@ func CreateKubernetesClientset(ca *apiconfig.CalicoAPIConfigSpec) (*rest.Config,
 	if err != nil {
 		return nil, nil, resources.K8sErrorToCalico(err, nil)
 	}
-	log.Debugf("Created k8s ClientSet: %+v", cs)
 	return config, cs, nil
 }
 

@@ -281,6 +281,9 @@ stop-etcd:
 ## Run what CI runs
 ci: clean check-glide-warnings static-checks test
 
+# Branch to use when building repos. Default to the current branch.
+RELEASE_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
+
 # The list of repos that use libcalico (that support being tests in this way)
 LIBCALICO_REPOS=cni-plugin calicoctl typha kube-controllers
 
@@ -288,7 +291,7 @@ LIBCALICO_REPOS=cni-plugin calicoctl typha kube-controllers
 DIRS := $(addprefix checkouts/,$(LIBCALICO_REPOS))
 $(DIRS):
 	@mkdir -p $(@D)
-	git clone -b master --single-branch git@github.com:projectcalico/$(@F).git $@
+	git clone -b $(RELEASE_BRANCH) --single-branch git@github.com:projectcalico/$(@F).git $@
 
 ## Build all projects that depend on libcalico-go using this version of libcalico-go
 build-libcalico-users: $(addsuffix -libcalico-build, $(DIRS))
