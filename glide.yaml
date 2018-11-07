@@ -65,7 +65,7 @@ import:
   - lib/validator/v1
 - package: github.com/projectcalico/typha
   repo:    git@github.com:tigera/typha-private
-  version: 9ac91b546227bc3143a139219ee6077aef09936f
+  version: a5444024b267b266e3cee68ba2b92459f09d193a
   subpackages:
   - pkg/syncclient
   - pkg/tlsutils
