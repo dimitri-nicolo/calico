@@ -66,7 +66,7 @@ join_platforms = $(subst $(space),$(comma),$(call prefix_linux,$(strip $1)))
 GO_BUILD_VER ?= v0.17
 FOSSA_GO_BUILD_VER ?= v0.18
 
-SRCFILES=calico.go $(wildcard utils/*.go) $(wildcard k8s/*.go) ipam/calico-ipam.go $(wildcard utils/winpol/*.go)
+SRCFILES=calico.go $(wildcard utils/*.go) $(wildcard k8s/*.go) $(wildcard azure/*.go) ipam/calico-ipam.go $(wildcard utils/winpol/*.go)
 TEST_SRCFILES=$(wildcard test_utils/*.go) $(wildcard calico_cni_*.go)
 LOCAL_IP_ENV?=$(shell ip route get 8.8.8.8 | head -1 | awk '{print $$7}')
 
@@ -196,9 +196,7 @@ update-libcalico:
             if [ $(LIBCALICO_REPO) != "github.com/tigera/libcalico-go-private" ]; then \
               glide mirror set https://github.com/tigera/libcalico-go-private $(LIBCALICO_REPO) --vcs git; glide mirror list; \
             fi;\
-          OUTPUT=`mktemp`;\
-          glide up --strip-vendor; glide up --strip-vendor 2>&1 | grep -v "golang.org/x/sys" | tee $$OUTPUT; \
-          if ! grep "\[WARN\]" $$OUTPUT; then true; else false; fi; \
+          glide up --strip-vendor || glide up --strip-vendor; \
         fi'
 
 GO_BUILD_ARGS:=-ldflags "-X main.VERSION=$(GIT_VERSION) -s -w"
