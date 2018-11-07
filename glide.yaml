@@ -17,4 +17,4 @@ import:
   version: v1.0.4
 - package: github.com/projectcalico/typha
   repo: git@github.com:tigera/typha-private.git
-  version: 9ac91b546227bc3143a139219ee6077aef09936f
+  version: a5444024b267b266e3cee68ba2b92459f09d193a
