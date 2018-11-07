@@ -2005,7 +2005,7 @@ class InvalidData(TestBase):
                            'ipipMode': 'Always',
                            'cidr': "10.0.250.0"}  # no mask
                    }, "error with field IPpool.CIDR = '10.0.250.0/32' "
-                      "(IP pool size is too small (min /26) for use with Calico IPAM)"),
+                      "(IP pool size is too small for use with Calico IPAM. It must be equal to or greater than the block size.)"),
                    ("pool-invalidNet4", {
                        'apiVersion': API_VERSION,
                        'kind': 'IPPool',
@@ -2033,7 +2033,7 @@ class InvalidData(TestBase):
                        }
                        # nothing
                    }, "error with field IPpool.CIDR = '::/128' "
-                      "(IP pool size is too small (min /122) for use with Calico IPAM)"),
+                      "(IP pool size is too small for use with Calico IPAM. It must be equal to or greater than the block size.)"),
                    ("pool-invalidNet7", {
                        'apiVersion': API_VERSION,
                        'kind': 'IPPool',
@@ -2041,7 +2041,7 @@ class InvalidData(TestBase):
                        'spec': {
                            'cidr': "192.168.0.0/27"}  # invalid mask
                    }, "error with field IPpool.CIDR = '192.168.0.0/27' "
-                      "(IP pool size is too small (min /26) for use with Calico IPAM)"),
+                      "(IP pool size is too small for use with Calico IPAM. It must be equal to or greater than the block size.)"),
                    ("pool-invalidNet8", {
                        'apiVersion': API_VERSION,
                        'kind': 'IPPool',
