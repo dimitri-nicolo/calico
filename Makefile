@@ -302,6 +302,14 @@ install-git-hooks:
 check-copyright:
 	./check-copyrights.sh
 
+foss-checks: vendor
+	@echo Running $@...
+	@docker run --rm -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
+	  -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+	  -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
+	  -w /go/src/$(PACKAGE_NAME) \
+	  $(FOSSA_CALICO_BUILD) /usr/local/bin/fossa
+
 ###############################################################################
 # Tests
 ###############################################################################
@@ -397,7 +405,7 @@ endif
 ## Verifies the release artifacts produces by `make release-build` are correct.
 release-verify: release-prereqs
 	# Check the reported version is correct for each release artifact.
-	if ! docker run $(BUILD_IMAGE):$(VERSION) -v | grep '^$(VERSION)$$'; then echo "Reported version:" `docker run $(BUILD_IMAGE):$(VERSION) -v` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
+	if ! docker run $(BUILD_IMAGE):$(VERSION)-$(ARCH) -v | grep '^$(VERSION)$$'; then echo "Reported version:" `docker run $(BUILD_IMAGE):$(VERSION)-$(ARCH) -v` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
 
 ## Generates release notes based on commits in this version.
 release-notes: release-prereqs
