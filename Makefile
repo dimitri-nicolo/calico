@@ -81,6 +81,7 @@ DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
                               $(EXTRA_DOCKER_ARGS) \
                               -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
                               -e GOARCH=$(ARCH) \
+                              -v $(HOME)/.glide:/home/user/.glide:rw \
                               -v ${CURDIR}:/go/src/$(PACKAGE_NAME):rw \
                               -v ${CURDIR}/.go-pkg-cache:/go/pkg:rw \
                               -v $$SSH_AUTH_SOCK:/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent \
@@ -121,9 +122,7 @@ update-typha:
             if [ $(TYPHA_REPO) != "github.com/tigera/typha-private" ]; then \
               glide mirror set https://github.com/tigera/typha-private $(TYPHA_REPO) --vcs git; glide mirror list; \
             fi;\
-          OUTPUT=`mktemp`;\
-          glide up --strip-vendor; glide up --strip-vendor 2>&1 | tee $$OUTPUT; \
-          if ! grep "\[WARN\]" $$OUTPUT; then true; else false; fi; \
+          glide up --strip-vendor || glide up --strip-vendor; \
         fi'
 
 bin/confd-$(ARCH): $(SRC_FILES) vendor
