@@ -177,7 +177,7 @@ imports:
 - name: github.com/kelseyhightower/envconfig
   version: dd1402a4d99de9ac2f396cd6fcb957bc2c695ec1
 - name: github.com/libp2p/go-reuseport
-  version: dd0c37d7767bc38280bd9813145b65f8bd560629
+  version: 8cfd5f2973c8e2476813120b9a516d9a82eb7c7a
   subpackages:
   - poll
   - singlepoll
@@ -442,7 +442,7 @@ imports:
   subpackages:
   - rate
 - name: google.golang.org/appengine
-  version: ae0ab99deb4dc413a2b4bd6c8bdd0eb67f1e4d06
+  version: 4a4468ece617fc8205e99368fa2200e9d1fad421
   subpackages:
   - internal
   - internal/app_identity
@@ -454,7 +454,7 @@ imports:
   - internal/urlfetch
   - urlfetch
 - name: google.golang.org/genproto
-  version: 94acd270e44e65579b9ee3cdab25034d33fed608
+  version: c830210a61dfaa790e1920f8d0470fc27bc2efbe
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc

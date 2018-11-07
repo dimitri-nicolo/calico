@@ -52,3 +52,5 @@ htmlcov/
 
 .semaphore-cache/
 /fv/cwlogs
+/rpm/felix.spec
+/debian/changelog
