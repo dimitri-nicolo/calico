@@ -350,12 +350,12 @@ run_edited_individual_test() {
     testStatement=$2
 
     # Edit the confd template for bird.cfg to add an extensions field that should be picked up by confd
-    echo $testStatement >> ${repo_dir}/filesystem/etc/calico/confd/templates/bird.cfg.template
+    echo $testStatement >> /etc/calico/confd/templates/bird.cfg.template
 
     run_individual_test $testdir
 
     # Unedit the template
-    head -n -1 ${repo_dir}/filesystem/etc/calico/confd/templates/bird.cfg.template > temp; mv temp ${repo_dir}/filesystem/etc/calico/confd/templates/bird.cfg.template
+    head -n -1 /etc/calico/confd/templates/bird.cfg.template > temp; mv temp /etc/calico/confd/templates/bird.cfg.template
 }
 
 # Run an individual test using oneshot mode:
@@ -401,12 +401,12 @@ run_edited_individual_test_oneshot() {
     testStatement=$2
 
     # Edit the confd template for bird.cfg to add an extensions field that should be picked up by confd
-    echo $testStatement >> ${repo_dir}/filesystem/etc/calico/confd/templates/bird.cfg.template
+    echo $testStatement >> /etc/calico/confd/templates/bird.cfg.template
 
     run_individual_test_oneshot $testdir
 
     # Unedit the template
-    head -n -1 ${repo_dir}/filesystem/etc/calico/confd/templates/bird.cfg.template > temp; mv temp ${repo_dir}/filesystem/etc/calico/confd/templates/bird.cfg.template
+    head -n -1 /etc/calico/confd/templates/bird.cfg.template > temp; mv temp /etc/calico/confd/templates/bird.cfg.template
 }
 
 start_typha() {
