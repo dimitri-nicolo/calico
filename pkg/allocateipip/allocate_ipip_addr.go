@@ -196,7 +196,7 @@ func assignHostTunnelAddr(ctx context.Context, c client.Interface, nodename stri
 	// and release the IP if there was an error.
 	if updateError != nil {
 		// We hit an error, so release the IP address before exiting.
-		_, err := c.IPAM().ReleaseIPs(ctx, []net.IP{{IP:ipv4Addrs[0].IP}})
+		_, err := c.IPAM().ReleaseIPs(ctx, []net.IP{{IP: ipv4Addrs[0].IP}})
 		if err != nil {
 			log.WithError(err).WithField("IP", ipv4Addrs[0].IP.String()).Errorf("Error releasing IP address on failure")
 		}
