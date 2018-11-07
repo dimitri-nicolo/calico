@@ -289,7 +289,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 
 			// 3) Set up the veth
 			hostVethName, contVethMac, err := utils.DoNetworking(
-				args, conf, result, logger, "", utils.DefaultRoutes)
+				ctx, calicoClient, args, conf, result, logger, "", utils.DefaultRoutes)
 			if err != nil {
 				// Cleanup IP allocation and return the error.
 				utils.ReleaseIPAllocation(logger, conf.IPAM.Type, args.StdinData)
