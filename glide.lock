@@ -1,5 +1,5 @@
-hash: 7945fd3514a16d68c8f24cd3ce7a398fdd03a975e538dbef4b4527e0ff378b0f
-updated: 2018-10-24T14:43:30.234278563Z
+hash: 162da72e99131022547a4542ca3498b17c2e992961365b38b50fc8b07bc5cbe8
+updated: 2018-11-07T14:33:22.893451165Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -88,11 +88,11 @@ imports:
 - name: github.com/ghodss/yaml
   version: 73d445a93680fa1a78ae23a5839bad48f32ba1ee
 - name: github.com/go-ini/ini
-  version: 9c8236e659b76e87bf02044d06fde8683008ff3e
+  version: 5cf292cae48347c2490ac1a58fe36735fb78df7e
 - name: github.com/go-openapi/jsonpointer
   version: 46af16f9f7b149af66e5d1bd010e3574dc06de98
 - name: github.com/go-openapi/jsonreference
-  version: 8483a886a90412cd6858df4ea3483dce9c8e35a3
+  version: 3fb327e6747da3043567ee86abd02bb6376b6be2
 - name: github.com/go-openapi/spec
   version: 384415f06ee238aae1df5caad877de6ceac3a5c4
 - name: github.com/go-openapi/swag
@@ -163,7 +163,7 @@ imports:
   - tracer/wire
   - writer
 - name: github.com/jbenet/go-reuseport
-  version: dd0c37d7767bc38280bd9813145b65f8bd560629
+  version: 8cfd5f2973c8e2476813120b9a516d9a82eb7c7a
 - name: github.com/jbenet/go-sockaddr
   version: 2e7ea655c10e4d4d73365f0f073b81b39cb08ee1
   subpackages:
@@ -175,9 +175,9 @@ imports:
 - name: github.com/kardianos/osext
   version: ae77be60afb1dcacde03767a8c37337fad28ac14
 - name: github.com/kelseyhightower/envconfig
-  version: dd1402a4d99de9ac2f396cd6fcb957bc2c695ec1
+  version: f611eb38b3875cc3bd991ca91c51d06446afa14c
 - name: github.com/libp2p/go-reuseport
-  version: dd0c37d7767bc38280bd9813145b65f8bd560629
+  version: 8cfd5f2973c8e2476813120b9a516d9a82eb7c7a
   subpackages:
   - poll
   - singlepoll
@@ -273,7 +273,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 63c70a878ec7855cb2fc1dc08bb47581c271bc5c
+  version: ada7fa770fab634eb75e3228f1ea059ab95227f3
   repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib/apiconfig
@@ -318,25 +318,25 @@ imports:
   subpackages:
   - binder
 - name: github.com/projectcalico/typha
-  version: 9ac91b546227bc3143a139219ee6077aef09936f
+  version: a5444024b267b266e3cee68ba2b92459f09d193a
   repo: git@github.com:tigera/typha-private
   subpackages:
   - pkg/syncclient
   - pkg/syncproto
   - pkg/tlsutils
 - name: github.com/prometheus/client_golang
-  version: 16f375c74db6ccf880e1cd9c6c6087a6d58e5d12
+  version: 773f5027234d0b08adf766be34f55df2f312abf7
   subpackages:
   - prometheus
   - prometheus/internal
   - prometheus/promhttp
   - prometheus/push
 - name: github.com/prometheus/client_model
-  version: 5c3871d89910bfb32f5fcab2aa4b9ec68e65a99f
+  version: 6f3806018612930941127f2a7c6c453ba2c527d2
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 7e9e6cabbd393fc208072eedef99188d0ce788b6
+  version: e3fb1a1acd7605367a2b378bc2e2f893c05174b7
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
@@ -376,7 +376,7 @@ imports:
   subpackages:
   - nl
 - name: github.com/vishvananda/netns
-  version: 8ba1072b58e0c2a240eb5f6120165c7776c3e7b8
+  version: 54f0e4339ce73702a0607f49922aaa1e749b418d
 - name: github.com/whyrusleeping/go-logging
   version: 0457bb6b88fc1973573aaf6b5145d8d3ae972390
 - name: golang.org/x/crypto
@@ -442,7 +442,7 @@ imports:
   subpackages:
   - rate
 - name: google.golang.org/appengine
-  version: ae0ab99deb4dc413a2b4bd6c8bdd0eb67f1e4d06
+  version: b1f26356af11148e710935ed1ac8a7f5702c7612
   subpackages:
   - internal
   - internal/app_identity
@@ -454,7 +454,7 @@ imports:
   - internal/urlfetch
   - urlfetch
 - name: google.golang.org/genproto
-  version: 94acd270e44e65579b9ee3cdab25034d33fed608
+  version: 09f6ed296fc66555a25fe4ce95173148778dfa85
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
@@ -486,7 +486,7 @@ imports:
 - name: gopkg.in/natefinch/lumberjack.v2
   version: a96e63847dc3c67d17befa69c303767e2f84e54f
 - name: gopkg.in/square/go-jose.v2
-  version: ef984e69dd356202fd4e4910d4d9c24468bdf0b8
+  version: 8254d6c783765f38c8675fae4427a1fe73fbd09d
   subpackages:
   - cipher
   - json
