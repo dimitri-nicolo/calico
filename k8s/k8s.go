@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"runtime"
 	"strings"
 
 	"github.com/containernetworking/cni/pkg/skel"
@@ -58,7 +59,8 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 	})
 
 	logger.Info("Extracted identifiers for CmdAddK8s")
-	if conf.RuntimeConfig.LookupOnly {
+	if conf.RuntimeConfig.LookupOnly ||
+		(runtime.GOOS == "windows" && endpoint != nil && len(endpoint.Spec.IPNetworks) > 0) {
 		// Windows special-case: Kubelet is doing a probe to get the pod status.  We explicitly do not want to
 		// network the endpoint in this case.
 		logger.Info("Handling lookupOnly request")

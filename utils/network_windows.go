@@ -177,7 +177,7 @@ func lookupIPAMPools(
 	natOutgoing bool,
 	err error,
 ) {
-	ctx, cancel := context.WithTimeout(ctx, 10 * time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	pools, err := calicoClient.IPPools().List(ctx, options.ListOptions{})
