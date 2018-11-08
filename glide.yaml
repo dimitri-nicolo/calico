@@ -25,7 +25,7 @@ import:
   - gexec
 - package: github.com/projectcalico/libcalico-go
   repo:    git@github.com:tigera/libcalico-go-private
-  version: ada7fa770fab634eb75e3228f1ea059ab95227f3
+  version: 5e05209688ae1fb40a2916e40dc17f9c22e7b556
   subpackages:
   - lib/apiconfig
   - lib/apis/v3
