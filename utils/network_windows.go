@@ -101,7 +101,7 @@ func DoNetworking(
 	_ = conf
 	_ = desiredVethName
 	if len(routes) > 0 {
-		logrus.WithField("routes", routes).Warn("Ignoring in-container routes; not supported on Windows.")
+		logrus.WithField("routes", routes).Debug("Ignoring in-container routes; not supported on Windows.")
 	}
 
 	podIP, subNet, _ := net.ParseCIDR(result.IPs[0].Address.String())
@@ -123,7 +123,7 @@ func DoNetworking(
 	// Acquire mutex lock
 	m, err := acquireLock()
 	if err != nil {
-		logger.Errorf("Unable to acquiring lock")
+		logger.Errorf("Unable to acquire lock")
 		return "", "", err
 	}
 	defer m.Release()
@@ -177,6 +177,9 @@ func lookupIPAMPools(
 	natOutgoing bool,
 	err error,
 ) {
+	ctx, cancel := context.WithTimeout(ctx, 10 * time.Second)
+	defer cancel()
+
 	pools, err := calicoClient.IPPools().List(ctx, options.ListOptions{})
 	if err != nil {
 		return

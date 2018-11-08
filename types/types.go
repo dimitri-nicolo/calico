@@ -94,10 +94,15 @@ type NetConf struct {
 	IncludeDefaultRoutes bool              `json:"include_default_routes,omitempty"`
 
 	WindowsUseSingleNetwork bool `json:"windows_use_single_network,omitempty"`
+	RuntimeConfig RuntimeConfig
 
 	// Options below here are deprecated.
 	EtcdAuthority string `json:"etcd_authority"`
 	Hostname      string `json:"hostname"`
+}
+
+type RuntimeConfig struct {
+	LookupOnly bool `json:"lookupOnly"`
 }
 
 // ContainerSettings gcontains configuration options

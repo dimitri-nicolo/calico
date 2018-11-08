@@ -58,6 +58,14 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 	})
 
 	logger.Info("Extracted identifiers for CmdAddK8s")
+	if conf.RuntimeConfig.LookupOnly {
+		// Windows special-case: Kubelet is doing a probe to get the pod status.  We explicitly do not want to
+		// network the endpoint in this case.
+		logger.Info("Handling lookupOnly request")
+		result, err := utils.CreateResultFromEndpoint(endpoint)
+		logger.WithField("result", result).WithError(err).Info("lookupOnly result")
+		return result, err
+	}
 
 	// Allocate the IP and update/create the endpoint. Do this even if the endpoint already exists and has an IP
 	// allocation. The kubelet will send a DEL call for any old containers and we'll clean up the old IPs then.
