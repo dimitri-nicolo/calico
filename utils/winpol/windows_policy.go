@@ -67,7 +67,7 @@ func CalculateEndpointPolicies(
 		}
 		outputPols = append(outputPols, outPol)
 	}
-	if !found {
+	if !found && natOutgoing {
 		var exceptions []string
 		for _, poolCIDR := range allIPAMPools {
 			exceptions = append(exceptions, poolCIDR.String())

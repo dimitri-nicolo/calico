@@ -46,6 +46,13 @@ func TestCalculateEndpointPolicies(t *testing.T) {
 		json.RawMessage(`{"Type": "SomethingElse"}`),
 		json.RawMessage(`{"ExceptionList":["10.0.1.0/24","10.0.2.0/24"],"Type":"OutBoundNAT"}`),
 	}))
+
+	t.Log("With NAT disabled, and no OutBoundNAT stanza, OutBoundNAT should not be added")
+	pols, err = CalculateEndpointPolicies(marshaller, []*net.IPNet{net1, net2}, false, logger)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(pols).To(Equal([]json.RawMessage{
+		json.RawMessage(`{"Type": "SomethingElse"}`),
+	}))
 }
 
 func newMockPolMarshaller(pols ...string) mockPolMarshaller {
