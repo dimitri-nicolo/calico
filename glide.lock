@@ -1,5 +1,5 @@
-hash: fe16755f5efc6566ccb3b56ca3ac4a5c6757122a7cb41088c1711a0620ede706
-updated: 2018-09-06T15:45:15.765240439-07:00
+hash: 6bd7326ccc0ed39b2f2c75a0ae1b835c42f7ee7f71f3554f2ba43d66b858b089
+updated: 2018-11-08T08:24:55.533542-08:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -36,7 +36,7 @@ imports:
 - name: github.com/dgrijalva/jwt-go
   version: 01aeca54ebda6e0fbfafd0a524d234159c05ec20
 - name: github.com/docopt/docopt-go
-  version: ee0de3bc6815ee19d4a46c7eb90f829db0e014b1
+  version: 784ddc588536785e7299f7272f39101f7faccc3f
 - name: github.com/emicklei/go-restful
   version: ff4f55a206334ef123e4f79bbf348980da81ca46
   subpackages:
@@ -44,11 +44,11 @@ imports:
 - name: github.com/ghodss/yaml
   version: 73d445a93680fa1a78ae23a5839bad48f32ba1ee
 - name: github.com/go-ini/ini
-  version: 5cf292cae48347c2490ac1a58fe36735fb78df7e
+  version: 9c8236e659b76e87bf02044d06fde8683008ff3e
 - name: github.com/go-openapi/jsonpointer
-  version: 52eb3d4b47c6a51ce2693c8e614a15a07c1af435
+  version: 46af16f9f7b149af66e5d1bd010e3574dc06de98
 - name: github.com/go-openapi/jsonreference
-  version: 1c6a3fa339f2743b7b0fd2b842fc455eca2fa9eb
+  version: 3fb327e6747da3043567ee86abd02bb6376b6be2
 - name: github.com/go-openapi/spec
   version: 384415f06ee238aae1df5caad877de6ceac3a5c4
 - name: github.com/go-openapi/swag
@@ -148,7 +148,7 @@ imports:
   - reporters/stenographer/support/go-isatty
   - types
 - name: github.com/onsi/gomega
-  version: b6ea1ea48f981d0f615a154a45eabb9dd466556d
+  version: 7615b9433f86a8bdf29709bf288bc4fd0636a369
   subpackages:
   - format
   - internal/assertion
@@ -166,7 +166,7 @@ imports:
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
 - name: github.com/projectcalico/calicoctl
-  version: 6adb16534198dbf74bf2aa88327f5c7ea987425e
+  version: 4ea5c484b4d8de4fdc40cbbd8a75bd16034b4eaf
   subpackages:
   - calicoctl/commands/argutils
   - calicoctl/resourcemgr
@@ -198,7 +198,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: e4e192845ab7f6f1e9ece73b5c5ba0be08804b39
+  version: 5e05209688ae1fb40a2916e40dc17f9c22e7b556
   repo: git@github.com:tigera/libcalico-go-private.git
   vcs: git
   subpackages:
@@ -239,12 +239,11 @@ imports:
   - lib/validator/v3
   - lib/watch
 - name: github.com/prometheus/client_golang
-  version: 3525612fea19680dd3d49c768802ec082ca853b2
+  version: 5cec1d0429b02e4323e042eb04dafdb079ddf568
   subpackages:
   - prometheus
-  - prometheus/internal
 - name: github.com/prometheus/client_model
-  version: 5c3871d89910bfb32f5fcab2aa4b9ec68e65a99f
+  version: 6f3806018612930941127f2a7c6c453ba2c527d2
   subpackages:
   - go
 - name: github.com/prometheus/common
@@ -339,7 +338,7 @@ imports:
   subpackages:
   - rate
 - name: google.golang.org/appengine
-  version: 03cac3b07182cfb08c0d0c0b6ee72a1ceb151c92
+  version: 4216e58b9158e5f1c906f1aca75162a46a2ec88a
   subpackages:
   - internal
   - internal/app_identity
@@ -381,7 +380,7 @@ imports:
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: gopkg.in/square/go-jose.v2
-  version: 8254d6c783765f38c8675fae4427a1fe73fbd09d
+  version: ef984e69dd356202fd4e4910d4d9c24468bdf0b8
   subpackages:
   - cipher
   - json
@@ -531,7 +530,7 @@ imports:
   - util/jsonpath
   - util/retry
 - name: k8s.io/kube-openapi
-  version: e3762e86a74c878ffed47484592986685639c2cd
+  version: 91cfa479c814065e420cee7ed227db0f63a5854e
   subpackages:
   - pkg/common
 testImports: []
