@@ -628,3 +628,44 @@ spec:
         secret:
           secretName: cnx-manager-tls
 ---
+
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: tigera-ui-user
+rules:
+# "list" requests that the Tigera EE Manager needs
+- apiGroups: ["projectcalico.org","networking.k8s.io","extensions",""]
+  resources: ["tiers","networkpolicies","globalnetworkpolicies","namespaces","globalnetworksets"]
+  verbs: ["watch","list"]
+# Access to flow logs, audit logs, and statistics
+- apiGroups: [""]
+  resources: ["services/proxy"]
+  resourceNames: ["https:cnx-api:8080", "calico-node-prometheus:9090", "https:elasticsearch-tigera-elasticsearch:8443", "elasticsearch-tigera-elasticsearch:9200"]
+  verbs: ["get","create"]
+# Access to policies in the default tier
+- apiGroups: ["projectcalico.org"]
+  resources: ["tiers"]
+  resourceNames: ["default"]
+  verbs: ["get"]
+---
+
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: network-admin
+rules:
+# Full access to all network policies
+- apiGroups: ["projectcalico.org","networking.k8s.io","extensions"]
+  resources: ["tiers","networkpolicies","globalnetworkpolicies","globalnetworksets"]
+  verbs: ["create","update","delete","patch","get","watch","list"]
+# Additional "list" requests that the Tigera EE Manager needs
+- apiGroups: [""]
+  resources: ["namespaces"]
+  verbs: ["watch","list"]
+# Access to flow logs, audit logs, and statistics
+- apiGroups: [""]
+  resources: ["services/proxy"]
+  resourceNames: ["https:cnx-api:8080", "calico-node-prometheus:9090", "https:elasticsearch-tigera-elasticsearch:8443", "elasticsearch-tigera-elasticsearch:9200"]
+  verbs: ["get","create"]
+---
