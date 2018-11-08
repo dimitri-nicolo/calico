@@ -11,9 +11,11 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package utils
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -28,7 +30,10 @@ import (
 	"github.com/juju/clock"
 	"github.com/juju/mutex"
 	"github.com/projectcalico/cni-plugin/types"
-	netsh "github.com/rakelkar/gonetsh/netsh"
+	"github.com/projectcalico/cni-plugin/utils/winpol"
+	calicoclient "github.com/projectcalico/libcalico-go/lib/clientv3"
+	"github.com/projectcalico/libcalico-go/lib/options"
+	"github.com/rakelkar/gonetsh/netsh"
 	"github.com/sirupsen/logrus"
 )
 
@@ -83,6 +88,8 @@ func acquireLock() (mutex.Releaser, error) {
 
 // DoNetworking performs the networking for the given config and IPAM result
 func DoNetworking(
+	ctx context.Context,
+	calicoClient calicoclient.Interface,
 	args *skel.CmdArgs,
 	conf types.NetConf,
 	result *current.Result,
@@ -90,12 +97,26 @@ func DoNetworking(
 	desiredVethName string,
 	routes []*net.IPNet,
 ) (hostVethName, contVethMAC string, err error) {
+	// Not used on Windows.
+	_ = conf
+	_ = desiredVethName
+	if len(routes) > 0 {
+		logrus.WithField("routes", routes).Warn("Ignoring in-container routes; not supported on Windows.")
+	}
 
-	_, subNet, _ := net.ParseCIDR(result.IPs[0].Address.String())
+	podIP, subNet, _ := net.ParseCIDR(result.IPs[0].Address.String())
 
 	n, _, err := loadNetConf(args.StdinData)
 	if err != nil {
 		logger.Errorf("Error loading args")
+		return "", "", err
+	}
+
+	// We need to know the IPAM pools to program the correct NAT exclusion list.  Look those up
+	// before we take the global lock.
+	allIPAMPools, natOutgoing, err := lookupIPAMPools(ctx, podIP, calicoClient)
+	if err != nil {
+		logger.WithError(err).Error("Failed to look up IPAM pools")
 		return "", "", err
 	}
 
@@ -108,7 +129,14 @@ func DoNetworking(
 	defer m.Release()
 
 	// Create hns network
-	networkName := createNetworkName(n.Name, subNet)
+	var networkName string
+	if conf.WindowsUseSingleNetwork {
+		logger.WithField("name", conf.Name).Info(
+			"Overriding network name, only a single IPAM block will be supported on this host")
+		networkName = conf.Name
+	} else {
+		networkName = createNetworkName(n.Name, subNet)
+	}
 	hnsNetwork, err := ensureNetworkExists(networkName, subNet, logger)
 	if err != nil {
 		logger.Errorf("Unable to create hns network %s", networkName)
@@ -132,7 +160,7 @@ func DoNetworking(
 	}
 
 	// Create endpoint for container
-	hnsEndpointCont, err := createAndAttachContainerEP(args, hnsNetwork, subNet, result, n, logger)
+	hnsEndpointCont, err := createAndAttachContainerEP(args, hnsNetwork, subNet, allIPAMPools, natOutgoing, result, n, logger)
 	if err != nil {
 		logger.Errorf("Unable to create container hns endpoint %s", epName)
 		return "", "", err
@@ -140,6 +168,33 @@ func DoNetworking(
 
 	contVethMAC = hnsEndpointCont.MacAddress
 	return hostVethName, contVethMAC, err
+}
+
+func lookupIPAMPools(
+	ctx context.Context, podIP net.IP, calicoClient calicoclient.Interface,
+) (
+	cidrs []*net.IPNet,
+	natOutgoing bool,
+	err error,
+) {
+	pools, err := calicoClient.IPPools().List(ctx, options.ListOptions{})
+	if err != nil {
+		return
+	}
+	natOutgoing = true
+	for _, p := range pools.Items {
+		_, ipNet, err := net.ParseCIDR(p.Spec.CIDR)
+		if err != nil {
+			logrus.WithError(err).WithField("rawCIDR", p.Spec.CIDR).Warn("IP pool contained bad CIDR, ignoring")
+			continue
+		}
+		cidrs = append(cidrs, ipNet)
+		if ipNet.Contains(podIP) {
+			logrus.WithField("pool", p.Spec).Debug("Found pool containing pod IP")
+			natOutgoing = p.Spec.NATOutgoing
+		}
+	}
+	return
 }
 
 func ensureNetworkExists(networkName string, subNet *net.IPNet, logger *logrus.Entry) (*hcsshim.HNSNetwork, error) {
@@ -269,7 +324,7 @@ func chkMgmtIPandEnableForwarding(networkName string, hnsEndpoint *hcsshim.HNSEn
 		logger.Infof("Checking ManagementIP with HnsNetwork[%v]", network)
 	}
 
-	//Wait for the interface with the management IP
+	// Wait for the interface with the management IP
 	for {
 		if _, err = netHelper.GetInterfaceByIP(network.ManagementIP); err != nil {
 			time.Sleep(1 * time.Second)
@@ -300,12 +355,19 @@ func chkMgmtIPandEnableForwarding(networkName string, hnsEndpoint *hcsshim.HNSEn
 
 func createAndAttachContainerEP(args *skel.CmdArgs,
 	hnsNetwork *hcsshim.HNSNetwork,
-	subNet *net.IPNet,
+	affineBlockSubnet *net.IPNet,
+	allIPAMPools []*net.IPNet,
+	natOutgoing bool,
 	result *current.Result,
 	n *hns.NetConf,
 	logger *logrus.Entry) (*hcsshim.HNSEndpoint, error) {
 
-	gatewayAddress := getNthIP(subNet, 2).String()
+	gatewayAddress := getNthIP(affineBlockSubnet, 2).String()
+
+	pols, err := winpol.CalculateEndpointPolicies(n, allIPAMPools, natOutgoing, logger)
+	if err != nil {
+		return nil, err
+	}
 
 	endpointName := hns.ConstructEndpointName(args.ContainerID, args.Netns, n.Name)
 	logger.Infof("Attempting to create HNS endpoint name : %s for container", endpointName)
@@ -315,7 +377,7 @@ func createAndAttachContainerEP(args *skel.CmdArgs,
 			VirtualNetwork: hnsNetwork.Id,
 			GatewayAddress: gatewayAddress,
 			IPAddress:      result.IPs[0].Address.IP,
-			Policies:       n.MarshalPolicies(),
+			Policies:       pols,
 		}
 		return hnsEP, nil
 	})

@@ -54,13 +54,18 @@ func cmdAdd(args *skel.CmdArgs) error {
 
 	utils.ConfigureLogging(conf.LogLevel)
 
+	nodeNameFile := "/var/lib/calico/nodename"
+	if conf.NodenameFile != "" {
+		nodeNameFile = conf.NodenameFile
+	}
+
 	if !conf.NodenameFileOptional {
 		// Configured to wait for the nodename file - don't start until it exists.
-		if _, err := os.Stat("/var/lib/calico/nodename"); err != nil {
+		if _, err := os.Stat(nodeNameFile); err != nil {
 			s := "%s: check that the calico/node container is running and has mounted /var/lib/calico/"
 			return fmt.Errorf(s, err)
 		}
-		logrus.Debug("/var/lib/calico/nodename exists")
+		logrus.Debugf("%s exists", nodeNameFile)
 	}
 
 	// Determine which node name to use.
@@ -288,7 +293,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 
 			// 3) Set up the veth
 			hostVethName, contVethMac, err := utils.DoNetworking(
-				args, conf, result, logger, "", utils.DefaultRoutes)
+				ctx, calicoClient, args, conf, result, logger, "", utils.DefaultRoutes)
 			if err != nil {
 				// Cleanup IP allocation and return the error.
 				utils.ReleaseIPAllocation(logger, conf, args)
@@ -392,13 +397,18 @@ func cmdDel(args *skel.CmdArgs) error {
 
 	utils.ConfigureLogging(conf.LogLevel)
 
+	nodeNameFile := "/var/lib/calico/nodename"
+	if conf.NodenameFile != "" {
+		nodeNameFile = conf.NodenameFile
+	}
+
 	if !conf.NodenameFileOptional {
 		// Configured to wait for the nodename file - don't start until it exists.
-		if _, err := os.Stat("/var/lib/calico/nodename"); err != nil {
+		if _, err := os.Stat(nodeNameFile); err != nil {
 			s := "%s: check that the calico/node container is running and has mounted /var/lib/calico/"
 			return fmt.Errorf(s, err)
 		}
-		logrus.Debug("/var/lib/calico/nodename exists")
+		logrus.Debugf("%s exists", nodeNameFile)
 	}
 
 	// Determine which node name to use.

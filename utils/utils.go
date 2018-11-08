@@ -58,7 +58,7 @@ func DetermineNodename(conf types.NetConf) string {
 		nodename = conf.Hostname
 		logrus.Warn("Configuration option 'hostname' is deprecated, use 'nodename' instead.")
 	}
-	if nff := nodenameFromFile(); nff != "" {
+	if nff := nodenameFromFile(conf.NodenameFile); nff != "" {
 		logrus.Debugf("Read node name from file: %s", nff)
 		nodename = nff
 	}
@@ -72,15 +72,18 @@ func DetermineNodename(conf types.NetConf) string {
 
 // nodenameFromFile reads the /var/lib/calico/nodename file if it exists and
 // returns the nodename within.
-func nodenameFromFile() string {
-	data, err := ioutil.ReadFile("/var/lib/calico/nodename")
+func nodenameFromFile(filename string) string {
+	if filename == "" {
+		filename = "/var/lib/calico/nodename"
+	}
+	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		if os.IsNotExist(err) {
 			// File doesn't exist, return empty string.
-			logrus.Info("File /var/lib/calico/nodename does not exist")
+			logrus.Infof("File %s does not exist", filename)
 			return ""
 		}
-		logrus.WithError(err).Error("Failed to read /var/lib/calico/nodename")
+		logrus.WithError(err).Errorf("Failed to read %s", filename)
 		return ""
 	}
 	return string(data)

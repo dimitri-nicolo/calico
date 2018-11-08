@@ -14,6 +14,7 @@
 package utils
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net"
@@ -26,6 +27,7 @@ import (
 	"github.com/containernetworking/plugins/pkg/ip"
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/projectcalico/cni-plugin/types"
+	calicoclient "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 )
@@ -56,6 +58,8 @@ func init() {
 
 // DoNetworking performs the networking for the given config and IPAM result
 func DoNetworking(
+	ctx context.Context,
+	calicoClient calicoclient.Interface,
 	args *skel.CmdArgs,
 	conf types.NetConf,
 	result *current.Result,
@@ -63,6 +67,9 @@ func DoNetworking(
 	desiredVethName string,
 	routes []*net.IPNet,
 ) (hostVethName, contVethMAC string, err error) {
+	// Not used on Linux
+	_ = ctx
+
 	// Select the first 11 characters of the containerID for the host veth.
 	hostVethName = "cali" + args.ContainerID[:Min(11, len(args.ContainerID))]
 	contVethName := args.IfName

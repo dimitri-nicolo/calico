@@ -78,6 +78,7 @@ type NetConf struct {
 	Args                 Args              `json:"args"`
 	MTU                  int               `json:"mtu"`
 	Nodename             string            `json:"nodename"`
+	NodenameFile         string            `json:"nodename_file"`
 	NodenameFileOptional bool              `json:"nodename_file_optional"`
 	DatastoreType        string            `json:"datastore_type"`
 	EtcdEndpoints        string            `json:"etcd_endpoints"`
@@ -91,6 +92,8 @@ type NetConf struct {
 	EtcdCaCertFile       string            `json:"etcd_ca_cert_file"`
 	ContainerSettings    ContainerSettings `json:"container_settings,omitempty"`
 	IncludeDefaultRoutes bool              `json:"include_default_routes,omitempty"`
+
+	WindowsUseSingleNetwork bool `json:"windows_use_single_network,omitempty"`
 
 	// Options below here are deprecated.
 	EtcdAuthority string `json:"etcd_authority"`
