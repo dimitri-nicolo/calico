@@ -135,6 +135,51 @@ TEST_CONTAINER_FILES=$(shell find tests/ -type f ! -name '*.created')
 NODE_CONTAINER_CREATED=.calico_node.created-$(ARCH)
 NODE_CONTAINER_BIN_DIR=./dist/bin/
 NODE_CONTAINER_BINARY = $(NODE_CONTAINER_BIN_DIR)/calico-node-$(ARCH)
+WINDOWS_BINARY = $(NODE_CONTAINER_BIN_DIR)/tigera-calico.exe
+
+# Variables for the Windows packaging.
+# Name of the Windows release ZIP archive.
+WINDOWS_ARCHIVE_ROOT := windows-packaging/TigeraCalico
+WINDOWS_ARCHIVE_BINARY := $(WINDOWS_ARCHIVE_ROOT)/tigera-calico.exe
+WINDOWS_ARCHIVE_TAG?=$(CNX_GIT_VER)
+WINDOWS_ARCHIVE := dist/tigera-calico-windows-$(WINDOWS_ARCHIVE_TAG).zip
+# Version of NSSM to download.
+WINDOWS_NSSM_VERSION=2.24
+# Explicit list of files that we copy in from the vendor directory.  This is required because
+# the copying rules we use are pattern-based and they only work with an explicit rule of the
+# form "$(WINDOWS_VENDORED_FILES): vendor" (otherwise, make has no way to know that the vendor
+# target produces the files we need).
+WINDOWS_VENDORED_FILES := \
+    vendor/github.com/kelseyhightower/confd/windows-packaging/config-bgp.ps1 \
+    vendor/github.com/kelseyhightower/confd/windows-packaging/config-bgp.psm1 \
+    vendor/github.com/kelseyhightower/confd/windows-packaging/conf.d/blocks.toml \
+    vendor/github.com/kelseyhightower/confd/windows-packaging/conf.d/peerings.toml \
+    vendor/github.com/kelseyhightower/confd/windows-packaging/templates/blocks.ps1.template \
+    vendor/github.com/kelseyhightower/confd/windows-packaging/templates/peerings.ps1.template \
+    vendor/github.com/kelseyhightower/confd/windows-packaging/config-bgp.ps1 \
+    vendor/github.com/kelseyhightower/confd/windows-packaging/config-bgp.psm1 \
+    vendor/github.com/Microsoft/SDN/Kubernetes/windows/hns.psm1 \
+    vendor/github.com/Microsoft/SDN/License.txt
+# Files to include in the Windows ZIP archive.  We need to list some of these explicitly
+# because we need to force them to be built/copied into place.
+WINDOWS_ARCHIVE_FILES := \
+    $(WINDOWS_ARCHIVE_BINARY) \
+    $(WINDOWS_ARCHIVE_ROOT)/README.txt \
+    $(WINDOWS_ARCHIVE_ROOT)/*.ps1 \
+    $(WINDOWS_ARCHIVE_ROOT)/node/node-service.ps1 \
+    $(WINDOWS_ARCHIVE_ROOT)/felix/felix-service.ps1 \
+    $(WINDOWS_ARCHIVE_ROOT)/confd/confd-service.ps1 \
+    $(WINDOWS_ARCHIVE_ROOT)/confd/config-bgp.ps1 \
+    $(WINDOWS_ARCHIVE_ROOT)/confd/config-bgp.psm1 \
+    $(WINDOWS_ARCHIVE_ROOT)/confd/conf.d/blocks.toml \
+    $(WINDOWS_ARCHIVE_ROOT)/confd/conf.d/peerings.toml \
+    $(WINDOWS_ARCHIVE_ROOT)/confd/templates/blocks.ps1.template \
+    $(WINDOWS_ARCHIVE_ROOT)/confd/templates/peerings.ps1.template \
+    $(WINDOWS_ARCHIVE_ROOT)/cni/calico.exe \
+    $(WINDOWS_ARCHIVE_ROOT)/cni/calico-ipam.exe \
+    $(WINDOWS_ARCHIVE_ROOT)/libs/hns/hns.psm1 \
+    $(WINDOWS_ARCHIVE_ROOT)/libs/hns/License.txt \
+    $(WINDOWS_ARCHIVE_ROOT)/libs/calico/calico.psm1
 
 # Variables used by the tests
 CRD_PATH=$(CURDIR)/vendor/github.com/projectcalico/libcalico-go/test/
@@ -149,6 +194,7 @@ NODE_CONTAINER_FILES=$(shell find ./filesystem -type f)
 SRCFILES=$(shell find ./pkg -name '*.go')
 LOCAL_USER_ID?=$(shell id -u $$USER)
 LDFLAGS=-ldflags "-X github.com/projectcalico/node/pkg/startup.CNXVERSION=$(CNX_GIT_VER) -X github.com/projectcalico/node/pkg/startup.CALICOVERSION=$(CALICO_GIT_VER) \
+                  -X main.VERSION=$(CALICO_GIT_VER) \
                   -X github.com/projectcalico/node/vendor/github.com/projectcalico/felix/buildinfo.GitVersion=$(CALICO_GIT_VER) \
                   -X github.com/projectcalico/node/vendor/github.com/projectcalico/felix/buildinfo.GitRevision=$(shell git rev-parse HEAD || echo '<unknown>')"
 PACKAGE_NAME?=github.com/projectcalico/node
@@ -159,7 +205,13 @@ clean:
 	find . -name '*.created' -exec rm -f {} +
 	find . -name '*.pyc' -exec rm -f {} +
 	rm -rf certs *.tar vendor $(NODE_CONTAINER_BIN_DIR)
-
+	rm -f $(WINDOWS_ARCHIVE_BINARY) $(WINDOWS_BINARY)
+	rm -f $(WINDOWS_ARCHIVE_ROOT)/confd/config-bgp*
+	rm -f $(WINDOWS_ARCHIVE_ROOT)/confd/conf.d/*
+	rm -f $(WINDOWS_ARCHIVE_ROOT)/confd/templates/*
+	rm -f $(WINDOWS_ARCHIVE_ROOT)/libs/hns/hns.psm1
+	rm -f $(WINDOWS_ARCHIVE_ROOT)/libs/hns/License.txt
+	rm -rf windows-packaging/nssm-*
 	# Delete images that we built in this repo
 	docker rmi $(BUILD_IMAGE):latest-$(ARCH) || true
 	docker rmi $(TEST_CONTAINER_NAME) || true
@@ -188,15 +240,19 @@ vendor: glide.lock
 		$(CALICO_BUILD) glide install -strip-vendor
 
 ## Default the repos and versions but allow them to be overridden
-LIBCALICO_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
+MY_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
+LIBCALICO_BRANCH?=$(MY_BRANCH)
 LIBCALICO_REPO?=github.com/tigera/libcalico-go-private
 LIBCALICO_VERSION?=$(shell git ls-remote git@github.com:tigera/libcalico-go-private $(LIBCALICO_BRANCH) 2>/dev/null | cut -f 1)
-FELIX_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
+FELIX_BRANCH?=$(MY_BRANCH)
 FELIX_REPO?=github.com/tigera/felix-private
 FELIX_VERSION?=$(shell git ls-remote git@github.com:tigera/felix-private $(FELIX_BRANCH) 2>/dev/null | cut -f 1)
-CONFD_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
+CONFD_BRANCH?=$(MY_BRANCH)
 CONFD_REPO?=github.com/tigera/confd-private
 CONFD_VERSION?=$(shell git ls-remote git@github.com:tigera/confd-private $(CONFD_BRANCH) 2>/dev/null | cut -f 1)
+CNI_PLUGIN_BRANCH?=$(MY_BRANCH)
+CNI_PLUGIN_REPO?=github.com/tigera/cni-plugin-private
+CNI_PLUGIN_VERSION?=$(shell git ls-remote git@github.com:tigera/cni-plugin-private $(CNI_PLUGIN_BRANCH) 2>/dev/null | cut -f 1)
 
 ### Update pins in glide.yaml
 update-felix-confd-libcalico:
@@ -210,16 +266,24 @@ update-felix-confd-libcalico:
           echo "Updating libcalico to $(LIBCALICO_VERSION) from $(LIBCALICO_REPO)"; \
           echo "Updating felix to $(FELIX_VERSION) from $(FELIX_REPO)"; \
           echo "Updating confd to $(CONFD_VERSION) from $(CONFD_REPO)"; \
+          echo "Updating cni-plugin to $(CNI_PLUGIN_VERSION) from $(CNI_PLUGIN_REPO)"; \
           export OLD_LIBCALICO_VER=$$(grep --after 50 libcalico glide.yaml |grep --max-count=1 --only-matching --perl-regexp "version:\s*\K[\.0-9a-z]+") ;\
           export OLD_FELIX_VER=$$(grep --after 50 felix glide.yaml |grep --max-count=1 --only-matching --perl-regexp "version:\s*\K[\.0-9a-z]+") ;\
           export OLD_CONFD_VER=$$(grep --after 50 confd glide.yaml |grep --max-count=1 --only-matching --perl-regexp "version:\s*\K[\.0-9a-z]+") ;\
+          export OLD_CNI_PLUGIN_VER=$$(grep --after 50 cni-plugin glide.yaml |grep --max-count=1 --only-matching --perl-regexp "version:\s*\K[\.0-9a-z]+") ;\
           echo "Old libcalico version: $$OLD_LIBCALICO_VER";\
           echo "Old felix version: $$OLD_FELIX_VER";\
           echo "Old confd version: $$OLD_CONFD_VER";\
-          if [ $(LIBCALICO_VERSION) != $$OLD_LIBCALICO_VER ] || [ $(FELIX_VERSION) != $$OLD_FELIX_VER ] || [ $(CONFD_VERSION) != $$OLD_CONFD_VER ]; then \
+          echo "Old cni-plugin version: $$OLD_CNI_PLUGIN_VER";\
+          if [ $(LIBCALICO_VERSION) != $$OLD_LIBCALICO_VER ] || \
+             [ $(FELIX_VERSION) != $$OLD_FELIX_VER ] || \
+             [ $(CONFD_VERSION) != $$OLD_CONFD_VER ] || \
+             [ $(CNI_PLUGIN_VERSION) != $$OLD_CNI_PLUGIN_VER ]; \
+          then \
             sed -i "s/$$OLD_LIBCALICO_VER/$(LIBCALICO_VERSION)/" glide.yaml && \
             sed -i "s/$$OLD_FELIX_VER/$(FELIX_VERSION)/" glide.yaml && \
             sed -i "s/$$OLD_CONFD_VER/$(CONFD_VERSION)/" glide.yaml && \
+            sed -i "s/$$OLD_CNI_PLUGIN_VER/$(CNI_PLUGIN_VERSION)/" glide.yaml && \
             glide up --strip-vendor || glide up --strip-vendor; \
           fi'
 
@@ -235,7 +299,7 @@ $(NODE_CONTAINER_BINARY): vendor $(SRCFILES)
 		-w /go/src/$(PACKAGE_NAME) \
 		$(CALICO_BUILD) go build -v -o $@ $(LDFLAGS) ./cmd/calico-node/main.go
 
-$(NODE_CONTAINER_BINARY).exe: vendor
+$(WINDOWS_BINARY): vendor
 	docker run --rm \
 		-e GOARCH=$(ARCH) \
 		-e GOOS=windows \
@@ -246,6 +310,30 @@ $(NODE_CONTAINER_BINARY).exe: vendor
 		$(LOCAL_BUILD_MOUNTS) \
 		-w /go/src/$(PACKAGE_NAME) \
 		$(CALICO_BUILD) go build -v -o $@ $(LDFLAGS) ./cmd/calico-node/main.go
+
+$(WINDOWS_ARCHIVE_ROOT)/cni/calico.exe: glide.lock vendor
+	docker run --rm \
+		-e GOARCH=$(ARCH) \
+		-e GOOS=windows \
+		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+		-v $(CURDIR)/.go-pkg-cache:/go-cache/:rw \
+		-e GOCACHE=/go-cache \
+		-v $(CURDIR):/go/src/$(PACKAGE_NAME) \
+		$(LOCAL_BUILD_MOUNTS) \
+		-w /go/src/$(PACKAGE_NAME) \
+		$(CALICO_BUILD) go build -v -o $@ $(LDFLAGS) ./vendor/github.com/projectcalico/cni-plugin/calico.go
+
+$(WINDOWS_ARCHIVE_ROOT)/cni/calico-ipam.exe: glide.lock vendor
+	docker run --rm \
+		-e GOARCH=$(ARCH) \
+		-e GOOS=windows \
+		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+		-v $(CURDIR)/.go-pkg-cache:/go-cache/:rw \
+		-e GOCACHE=/go-cache \
+		-v $(CURDIR):/go/src/$(PACKAGE_NAME) \
+		$(LOCAL_BUILD_MOUNTS) \
+		-w /go/src/$(PACKAGE_NAME) \
+		$(CALICO_BUILD) go build -v -o $@ $(LDFLAGS) ./vendor/github.com/projectcalico/cni-plugin/ipam/calico-ipam.go
 
 ###############################################################################
 # Building the image
@@ -320,6 +408,51 @@ endif
 tag-images-all: imagetag $(addprefix sub-tag-images-,$(VALIDARCHES))
 sub-tag-images-%:
 	$(MAKE) tag-images ARCH=$* IMAGETAG=$(IMAGETAG)
+
+###############################################################################
+# Windows packaging
+###############################################################################
+
+# Pull the BGP configuration scripts and templates from the confd repo.
+$(WINDOWS_VENDORED_FILES): vendor
+
+$(WINDOWS_ARCHIVE_ROOT)/confd/config-bgp%: vendor/github.com/kelseyhightower/confd/windows-packaging/config-bgp%
+	cp $< $@
+
+$(WINDOWS_ARCHIVE_ROOT)/confd/conf.d/%: vendor/github.com/kelseyhightower/confd/windows-packaging/conf.d/%
+	cp $< $@
+
+$(WINDOWS_ARCHIVE_ROOT)/confd/templates/%: vendor/github.com/kelseyhightower/confd/windows-packaging/templates/%
+	cp $< $@
+
+$(WINDOWS_ARCHIVE_ROOT)/libs/hns/hns.psm1: ./vendor/github.com/Microsoft/SDN/Kubernetes/windows/hns.psm1
+	cp $< $@
+
+$(WINDOWS_ARCHIVE_ROOT)/libs/hns/License.txt: ./vendor/github.com/Microsoft/SDN/License.txt
+	cp $< $@
+
+## Download NSSM.
+windows-packaging/nssm-$(WINDOWS_NSSM_VERSION).zip:
+	wget -O windows-packaging/nssm-$(WINDOWS_NSSM_VERSION).zip https://nssm.cc/release/nssm-$(WINDOWS_NSSM_VERSION).zip
+
+build-windows-archive: $(WINDOWS_ARCHIVE_FILES) windows-packaging/nssm-$(WINDOWS_NSSM_VERSION).zip
+	# To be as atomic as possible, we re-do work like unpacking NSSM here.
+	-rm -f "$(WINDOWS_ARCHIVE)"
+	-rm -rf $(WINDOWS_ARCHIVE_ROOT)/nssm-$(WINDOWS_NSSM_VERSION)
+	mkdir -p dist
+	cd windows-packaging && \
+	sha256sum --check nssm.sha256sum && \
+	cd TigeraCalico && \
+	unzip  ../nssm-$(WINDOWS_NSSM_VERSION).zip \
+	       -x 'nssm-$(WINDOWS_NSSM_VERSION)/src/*' && \
+	cd .. && \
+	zip -r "../$(WINDOWS_ARCHIVE)" TigeraCalico -x '*.git*'
+	@echo
+	@echo "Windows archive built at $(WINDOWS_ARCHIVE)"
+
+$(WINDOWS_ARCHIVE_BINARY): $(WINDOWS_BINARY)
+	cp $< $@
+
 
 ###############################################################################
 # Static checks
@@ -510,7 +643,7 @@ st: dist/calicoctl busybox.tar cnx-node.tar workload.tar run-etcd calico_test.cr
 ###############################################################################
 .PHONY: ci
 ## Run what CI runs
-ci: static-checks fv image-all st
+ci: static-checks fv image-all build-windows-archive st
 
 ## Deploys images to registry
 cd:
@@ -560,6 +693,10 @@ endif
 	$(MAKE) tag-images-all RELEASE=true IMAGETAG=$(VERSION)
 	# Generate the `latest` images.
 	$(MAKE) tag-images-all RELEASE=true IMAGETAG=latest
+
+## Produces the Windows ZIP archive for the release.
+release-windows-archive $(WINDOWS_ARCHIVE): release-prereqs
+	$(MAKE) build-windows-archive WINDOWS_ARCHIVE_TAG=$(VERSION)
 
 ## Verifies the release artifacts produces by `make release-build` are correct.
 release-verify: release-prereqs

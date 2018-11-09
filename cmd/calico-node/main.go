@@ -48,6 +48,8 @@ var felixReady = flagSet.Bool("felix-ready", false, "Run felix readiness checks"
 var runConfd = flagSet.Bool("confd", false, "Run confd")
 var confdRunOnce = flagSet.Bool("confd-run-once", false, "Run confd in oneshot mode")
 var confdKeep = flagSet.Bool("confd-keep-stage-file", false, "Keep stage file when running confd")
+var confdConfDir = flagSet.String("confd-confdir","/etc/calico/confd", "Confd configuration directory.")
+var confdCalicoConfig = flagSet.String("confd-calicoconfig","", "Calico configuration file.")
 
 func main() {
 	// Set up logging formatting.
@@ -94,9 +96,10 @@ func main() {
 		startup.Run()
 	} else if *runConfd {
 		cfg, err := confdConfig.InitConfig(true)
-		cfg.ConfDir = "/etc/calico/confd"
+		cfg.ConfDir = *confdConfDir
 		cfg.KeepStageFile = *confdKeep
 		cfg.Onetime = *confdRunOnce
+		cfg.CalicoConfig = *confdCalicoConfig
 		if err != nil {
 			panic(err)
 		}
