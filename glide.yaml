@@ -65,7 +65,7 @@ import:
   - lib/validator/v1
 - package: github.com/projectcalico/typha
   repo:    git@github.com:tigera/typha-private
-  version: a5444024b267b266e3cee68ba2b92459f09d193a
+  version: 7dc12688b2a5f85efa5a5169ded75529c4fcfcc1
   subpackages:
   - pkg/syncclient
   - pkg/tlsutils
@@ -98,7 +98,10 @@ import:
   version: 1b2967e3c290b7c545b3db0deeda16e9be4f98a2
   subpackages:
   - unix
+# Newer grpc packages have changed their directory structure causing issues with glide not
+# being able to update this package properly. Pin to this specific version.
 - package: google.golang.org/grpc
+  version: 5b3c4e850e90a4cf6a20ebd46c8b32a0a3afcb9e
   subpackages:
   - credentials
   - peer
