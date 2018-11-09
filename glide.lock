@@ -1,5 +1,5 @@
-hash: 16985a6eb3b7c40f785ab4aaeee74d0c129b2cadb1ba776d692517b2dc411cec
-updated: 2018-08-14T11:47:51.591585794-07:00
+hash: d6b092459024971631aa116784b8cc4fd465412885601d4da9c20e5d2ac5563b
+updated: 2018-11-09T05:06:00.273908849Z
 imports:
 - name: github.com/docopt/docopt-go
   version: 784ddc588536785e7299f7272f39101f7faccc3f
@@ -22,10 +22,12 @@ imports:
   version: b4deda0973fb4c70b50d226b1af49f3da59f5265
   subpackages:
   - proto
+- name: github.com/konsorten/go-windows-terminal-sequences
+  version: 5c8c8bd35d3832f5d134ae1e1e375b69a4d25242
 - name: github.com/lyft/protoc-gen-validate
   version: 930a67cf7ba41b9d9436ad7a1be70a5d5ff6e1fc
 - name: github.com/onsi/gomega
-  version: b6ea1ea48f981d0f615a154a45eabb9dd466556d
+  version: 7615b9433f86a8bdf29709bf288bc4fd0636a369
   subpackages:
   - format
   - internal/assertion
@@ -39,7 +41,7 @@ imports:
   - matchers/support/goraph/util
   - types
 - name: github.com/projectcalico/libcalico-go
-  version: 7a59700fd067ea4ff1423b33f2516bf3bff5dcdb
+  version: 5e05209688ae1fb40a2916e40dc17f9c22e7b556
   repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib/apis/v3
@@ -49,9 +51,9 @@ imports:
   - lib/selector/parser
   - lib/selector/tokenizer
 - name: github.com/sirupsen/logrus
-  version: 3e01752db0189b9157070a0e1668a620f9a85da2
+  version: bcd833dfe83d3cebad139e4a29ed79cb2318bf95
 - name: golang.org/x/crypto
-  version: a49355c7e3f8fe157a85be2f77e6e269a0f89602
+  version: 9419663f5a44be8b34ca85f08abc5fe1be11f8a3
   subpackages:
   - ssh/terminal
 - name: golang.org/x/net
