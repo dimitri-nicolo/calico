@@ -1,5 +1,5 @@
 hash: 0be3a3fb41ce28b8aa0be50435b6d36976270f4cdcd3ef6054e23e094b7ae594
-updated: 2018-11-07T14:41:01.994686938Z
+updated: 2018-11-08T11:44:42.956959-08:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -14,11 +14,11 @@ imports:
   - autorest/azure
   - autorest/date
 - name: github.com/beorn7/perks
-  version: 3a771d992973f24aa725d07868b467d1ddfceafb
+  version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
   subpackages:
   - quantile
 - name: github.com/BurntSushi/toml
-  version: a368813c5e648fee92e5f6c30e3944ff9d5e8895
+  version: 3012a1dbe2e4bd1391d42b32f0577cb7bbc7f005
 - name: github.com/coreos/etcd
   version: 33245c6b5b49130ca99280408fadfab01aac0e48
   subpackages:
@@ -46,7 +46,7 @@ imports:
 - name: github.com/go-openapi/jsonpointer
   version: 46af16f9f7b149af66e5d1bd010e3574dc06de98
 - name: github.com/go-openapi/jsonreference
-  version: 3fb327e6747da3043567ee86abd02bb6376b6be2
+  version: 8483a886a90412cd6858df4ea3483dce9c8e35a3
 - name: github.com/go-openapi/spec
   version: 384415f06ee238aae1df5caad877de6ceac3a5c4
 - name: github.com/go-openapi/swag
@@ -100,7 +100,7 @@ imports:
 - name: github.com/json-iterator/go
   version: f2b4162afba35581b6d4a50d3b8f34e33c144682
 - name: github.com/kelseyhightower/envconfig
-  version: f611eb38b3875cc3bd991ca91c51d06446afa14c
+  version: dd1402a4d99de9ac2f396cd6fcb957bc2c695ec1
 - name: github.com/kelseyhightower/memkv
   version: 892bfd468afa0fa476556e7bd7734a087cda08b3
 - name: github.com/mailru/easyjson
@@ -173,22 +173,21 @@ imports:
   - pkg/syncproto
   - pkg/tlsutils
 - name: github.com/prometheus/client_golang
-  version: 773f5027234d0b08adf766be34f55df2f312abf7
+  version: e7e903064f5e9eb5da98208bae10b475d4db0f8c
   subpackages:
   - prometheus
-  - prometheus/internal
 - name: github.com/prometheus/client_model
-  version: 6f3806018612930941127f2a7c6c453ba2c527d2
+  version: fa8ad6fec33561be4280a8f0514318c79d7f6cb6
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: e3fb1a1acd7605367a2b378bc2e2f893c05174b7
+  version: 13ba4ddd0caa9c28ca7b7bffe1dfa9ed8d5ef207
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: a6e9df898b1336106c743392c48ee0b71f5c4efa
+  version: 65c1f6f8f0fc1e2185eb9863a3bc751496404259
   subpackages:
   - xfs
 - name: github.com/PuerkitoBio/purell
@@ -250,7 +249,7 @@ imports:
   subpackages:
   - rate
 - name: google.golang.org/appengine
-  version: b1f26356af11148e710935ed1ac8a7f5702c7612
+  version: 4a4468ece617fc8205e99368fa2200e9d1fad421
   subpackages:
   - internal
   - internal/app_identity
