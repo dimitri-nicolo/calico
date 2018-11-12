@@ -93,8 +93,16 @@ type NetConf struct {
 	ContainerSettings    ContainerSettings `json:"container_settings,omitempty"`
 	IncludeDefaultRoutes bool              `json:"include_default_routes,omitempty"`
 
+	// Windows-specific configuration.
+
+	// WindowsUseSingleNetwork disables the use of multiple IPAM blocks on a single host and forces
+	// a static HNS network name.
 	WindowsUseSingleNetwork bool `json:"windows_use_single_network,omitempty"`
-	RuntimeConfig           RuntimeConfig
+	// WindowsDisableHostSubnetNATExclusion disables our attempt to add an outbound NAT exclusion for the host's
+	// subnet.  The NAT exclusion is generally required for pod-to-host communication but that communication can also
+	// be enabled by manually setting an exclusion or by creating a dummy IP pool.
+	WindowsDisableHostSubnetNATExclusion bool `json:"windows_disable_host_subnet_nat_exclusion,omitempty"`
+	RuntimeConfig                        RuntimeConfig
 
 	// Options below here are deprecated.
 	EtcdAuthority string `json:"etcd_authority"`

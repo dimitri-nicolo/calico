@@ -19,8 +19,9 @@ type PolicyMarshaller interface {
 // CalculateEndpointPolicies augments the hns.Netconf policies with NAT exceptions for our IPAM blocks.
 func CalculateEndpointPolicies(
 	n PolicyMarshaller,
-	allIPAMPools []*net.IPNet,
+	extraNATExceptions []*net.IPNet,
 	natOutgoing bool,
+	mgmtIP net.IP,
 	logger *logrus.Entry,
 ) ([]json.RawMessage, error) {
 	inputPols := n.MarshalPolicies()
@@ -35,7 +36,7 @@ func CalculateEndpointPolicies(
 			return nil, err
 		}
 
-		// We're looking for an entry like this:
+		// For NAT outgoing, we're looking for an entry like this (we'll add the other IPAM pools to the list):
 		//
 		// {
 		//   "Type":  "OutBoundNAT",
@@ -43,7 +44,6 @@ func CalculateEndpointPolicies(
 		//     "10.96.0.0/12"
 		//   ]
 		// }
-		// We'll add the other IPAM pools to the list.
 		outPol := inPol
 		if strings.EqualFold(decoded["Type"].(string), "OutBoundNAT") {
 			found = true
@@ -53,9 +53,7 @@ func CalculateEndpointPolicies(
 			}
 
 			excList, _ := decoded["ExceptionList"].([]interface{})
-			for _, poolCIDR := range allIPAMPools {
-				excList = append(excList, poolCIDR.String())
-			}
+			excList = appendCIDRs(excList, extraNATExceptions)
 			decoded["ExceptionList"] = excList
 			outPol, err = json.Marshal(decoded)
 			if err != nil {
@@ -68,10 +66,7 @@ func CalculateEndpointPolicies(
 		outputPols = append(outputPols, outPol)
 	}
 	if !found && natOutgoing {
-		var exceptions []string
-		for _, poolCIDR := range allIPAMPools {
-			exceptions = append(exceptions, poolCIDR.String())
-		}
+		exceptions := appendCIDRs(nil, extraNATExceptions)
 		dict := map[string]interface{}{
 			"Type":          "OutBoundNAT",
 			"ExceptionList": exceptions,
@@ -84,5 +79,32 @@ func CalculateEndpointPolicies(
 
 		outputPols = append(outputPols, json.RawMessage(encoded))
 	}
+
+	// Add an entry to force encap to the management IP.  We think this is required for node ports.  The encap is
+	// local to the host so there's no real vxlan going on here.
+	dict := map[string]interface{}{
+		"Type":              "ROUTE",
+		"DestinationPrefix": mgmtIP.String() + "/32",
+		"NeedEncap":         true,
+	}
+	encoded, err := json.Marshal(dict)
+	if err != nil {
+		logger.WithError(err).Error("Failed to add outbound NAT exclusion.")
+		return nil, err
+	}
+
+	outputPols = append(outputPols, json.RawMessage(encoded))
+
 	return outputPols, nil
+}
+
+func appendCIDRs(excList []interface{}, extraNATExceptions []*net.IPNet) []interface{} {
+	for _, cidr := range extraNATExceptions {
+		maskedCIDR := &net.IPNet{
+			IP:   cidr.IP.Mask(cidr.Mask),
+			Mask: cidr.Mask,
+		}
+		excList = append(excList, maskedCIDR.String())
+	}
+	return excList
 }

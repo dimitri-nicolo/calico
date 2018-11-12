@@ -160,7 +160,7 @@ func DoNetworking(
 	}
 
 	// Create endpoint for container
-	hnsEndpointCont, err := createAndAttachContainerEP(args, hnsNetwork, subNet, allIPAMPools, natOutgoing, result, n, logger)
+	hnsEndpointCont, err := createAndAttachContainerEP(args, hnsNetwork, subNet, allIPAMPools, natOutgoing, result, &conf, n, logger)
 	if err != nil {
 		logger.Errorf("Unable to create container hns endpoint %s", epName)
 		return "", "", err
@@ -362,12 +362,34 @@ func createAndAttachContainerEP(args *skel.CmdArgs,
 	allIPAMPools []*net.IPNet,
 	natOutgoing bool,
 	result *current.Result,
+	ourNetconf *types.NetConf,
 	n *hns.NetConf,
 	logger *logrus.Entry) (*hcsshim.HNSEndpoint, error) {
 
 	gatewayAddress := getNthIP(affineBlockSubnet, 2).String()
 
-	pols, err := winpol.CalculateEndpointPolicies(n, allIPAMPools, natOutgoing, logger)
+	natExclusions := allIPAMPools
+
+	mgmtIP := net.ParseIP(hnsNetwork.ManagementIP)
+	if len(mgmtIP) == 0 {
+		// We just checked the management IP so we shouldn't lose it again.
+		return nil, fmt.Errorf("HNS network lost its management IP")
+	}
+
+	if natOutgoing {
+		logger.Debug("Looking up management subnet to add outgoing NAT exclusion.")
+		mgmtNet, err := lookupManagementAddr(mgmtIP, logger)
+		if err != nil {
+			return nil, err
+		}
+		if !ourNetconf.WindowsDisableHostSubnetNATExclusion {
+			natExclusions = make([]*net.IPNet, len(allIPAMPools)+1)
+			copy(natExclusions, allIPAMPools)
+			natExclusions[len(natExclusions)-1] = mgmtNet
+		}
+	}
+
+	pols, err := winpol.CalculateEndpointPolicies(n, natExclusions, natOutgoing, mgmtIP, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -386,6 +408,31 @@ func createAndAttachContainerEP(args *skel.CmdArgs,
 	})
 	logger.Infof("Endpoint to container created! %v", hnsEndpointCont)
 	return hnsEndpointCont, err
+}
+
+func lookupManagementAddr(mgmtIP net.IP, logger *logrus.Entry) (*net.IPNet, error) {
+	interfaces, err := net.Interfaces()
+	if err != nil {
+		logger.WithError(err).Error("Failed to look up host interfaces")
+		return nil, err
+	}
+
+	for _, iface := range interfaces {
+		addrs, err := iface.Addrs()
+		if err != nil {
+			logger.WithError(err).WithField("iface", iface.Name).Error(
+				"Failed to look up host interface addresses")
+			return nil, err
+		}
+		for _, addr := range addrs {
+			if ipAddr, ok := addr.(*net.IPNet); ok {
+				if ipAddr.Contains(mgmtIP) {
+					return ipAddr, nil
+				}
+			}
+		}
+	}
+	return nil, fmt.Errorf("couldn't find an interface matching management IP %s", mgmtIP.String())
 }
 
 // This func increments the subnet IP address by n depending on
