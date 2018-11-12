@@ -485,6 +485,9 @@ func AddIgnoreUnknownArgs() error {
 // CreateResultFromEndpoint takes a WorkloadEndpoint, extracts IP information
 // and populates that into a CNI Result.
 func CreateResultFromEndpoint(wep *api.WorkloadEndpoint) (*current.Result, error) {
+	if wep == nil {
+		return nil, fmt.Errorf("endpoint not found")
+	}
 	result := &current.Result{}
 	for _, v := range wep.Spec.IPNetworks {
 		parsedIPConfig := current.IPConfig{}
