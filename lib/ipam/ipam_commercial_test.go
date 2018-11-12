@@ -104,10 +104,10 @@ var _ = testutils.E2eDatastoreDescribe("Windows: IPAM tests", testutils.Datastor
 	}
 	ic := NewIPAMClient(bc, ipPoolsWindows)
 
-        //Request for 256 IPs from a pool, say "10.0.0.0/24", with a blocksize of 26, allocates only 240 IPs as
-        //the pool of 256 IPs is splitted into 4 blocks of 64 IPs each and 4 IPs, i.e,
-        //gateway IP, the first IP of the block, the second IP of the block and the broadcast IP are reserved.
-        //So 256 - (4 * 4) = 240.
+	//Request for 256 IPs from a pool, say "10.0.0.0/24", with a blocksize of 26, allocates only 240 IPs as
+	//the pool of 256 IPs is splitted into 4 blocks of 64 IPs each and 4 IPs, i.e,
+	//gateway IP, the first IP of the block, the second IP of the block and the broadcast IP are reserved.
+	//So 256 - (4 * 4) = 240.
 
 	//Test Case: Reserved IPs should not be allocated
 	//           test case is only written for IPv4
@@ -535,7 +535,6 @@ var _ = testutils.E2eDatastoreDescribe("Windows: IPAM tests", testutils.Datastor
 			Expect(outv6).To(HaveLen(expv6))
 		},
 
-
 		// Test 1: AutoAssign 256 IPv4, 256 IPv6 - expect 240 IPv4 + IPv6 addresses.
 		Entry("256 v4 256 v6", "testHost", true, []poolWindows{{"192.168.1.0/24", 26, true}, {"fd80:24e2:f998:72d6::/120", 128, true}}, "192.168.1.0/24", 256, 256, 240, 240, nil),
 
@@ -544,7 +543,6 @@ var _ = testutils.E2eDatastoreDescribe("Windows: IPAM tests", testutils.Datastor
 
 		// Test 3: AutoAssign 0 IPv4, 257 IPv6 - expect 240 IPv6 addresses, no IPv4, and no error.
 		Entry("0 v4 257 v6", "testHost", true, []poolWindows{{"192.168.1.0/24", 26, true}, {"fd80:24e2:f998:72d6::/120", 128, true}}, "192.168.1.0/24", 0, 257, 0, 240, nil),
-
 	)
 
 })
