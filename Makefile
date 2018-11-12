@@ -66,8 +66,8 @@ join_platforms = $(subst $(space),$(comma),$(call prefix_linux,$(strip $1)))
 GO_BUILD_VER ?= v0.17
 FOSSA_GO_BUILD_VER ?= v0.18
 
-SRCFILES=calico.go $(wildcard utils/*.go) $(wildcard k8s/*.go) $(wildcard azure/*.go) ipam/calico-ipam.go $(wildcard utils/winpol/*.go)
-TEST_SRCFILES=$(wildcard test_utils/*.go) $(wildcard calico_cni_*.go)
+SRCFILES=$(shell find pkg cmd internal -name '*.go')
+TEST_SRCFILES=$(shell find tests -name '*.go')
 LOCAL_IP_ENV?=$(shell ip route get 8.8.8.8 | head -1 | awk '{print $$7}')
 
 # fail if unable to download
@@ -158,7 +158,7 @@ vendor: glide.yaml
 
 	# To build without Docker just run "glide install -strip-vendor"
 	if [ "$(LIBCALICOGO_PATH)" != "none" ]; then \
-          EXTRA_DOCKER_BIND="-v $(LIBCALICOGO_PATH):/go/src/github.com/projectcalico/libcalico-go:ro"; \
+	  EXTRA_DOCKER_BIND="-v $(LIBCALICOGO_PATH):/go/src/github.com/projectcalico/libcalico-go:ro"; \
 	fi; \
 	if [ -n "$(SSH_AUTH_SOCK)" ]; then \
 		EXTRA_DOCKER_ARGS="-v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent"; \
@@ -194,10 +194,10 @@ update-libcalico:
         if [ $(LIBCALICO_VERSION) != $$OLD_VER ]; then \
             sed -i "s/$$OLD_VER/$(LIBCALICO_VERSION)/" glide.yaml && \
             if [ $(LIBCALICO_REPO) != "github.com/tigera/libcalico-go-private" ]; then \
-              glide mirror set https://github.com/tigera/libcalico-go-private $(LIBCALICO_REPO) --vcs git; glide mirror list; \
-            fi;\
-          glide up --strip-vendor || glide up --strip-vendor; \
-        fi'
+	          glide mirror set https://github.com/tigera/libcalico-go-private $(LIBCALICO_REPO) --vcs git; glide mirror list; \
+	        fi;\
+	      glide up --strip-vendor || glide up --strip-vendor; \
+	    fi'
 
 GO_BUILD_ARGS:=-ldflags "-X main.VERSION=$(GIT_VERSION) -s -w"
 DOCKER_BUILD_ARGS:= \
@@ -217,16 +217,16 @@ $(BIN)/calico $(BIN)/calico-ipam: $(SRCFILES) vendor
 	-mkdir -p .go-pkg-cache
 	-mkdir -p $(BIN)
 	docker run $(DOCKER_BUILD_ARGS) $(CALICO_BUILD) sh -c '\
-			go build -v -o $(BIN)/calico $(GO_BUILD_ARGS) calico.go && \
-            go build -v -o $(BIN)/calico-ipam $(GO_BUILD_ARGS) ipam/calico-ipam.go'
+			go build -v -o $(BIN)/calico $(GO_BUILD_ARGS) ./cmd/calico && \
+            go build -v -o $(BIN)/calico-ipam $(GO_BUILD_ARGS) ./cmd/calico-ipam'
 
 ## Build the Calico network plugin and ipam plugins for Windows
 $(BIN)/calico.exe $(BIN)/calico-ipam.exe: $(SRCFILES) vendor
 	-mkdir -p .go-pkg-cache
 	-mkdir -p $(BIN)
 	docker run -e GOOS=windows $(DOCKER_BUILD_ARGS) $(CALICO_BUILD) sh -c '\
-	  go build -v -o $(BIN)/calico.exe $(GO_BUILD_ARGS) calico.go && \
-	  go build -v -o $(BIN)/calico-ipam.exe $(GO_BUILD_ARGS) ipam/calico-ipam.go'
+	  go build -v -o $(BIN)/calico.exe $(GO_BUILD_ARGS) ./cmd/calico && \
+	  go build -v -o $(BIN)/calico-ipam.exe $(GO_BUILD_ARGS) ./cmd/calico-ipam'
 
 ###############################################################################
 # Building the image
@@ -343,7 +343,7 @@ ut: run-k8s-controller build $(BIN)/host-local
 	-e LOCAL_USER_ID=0 \
 	-e ARCH=$(ARCH) \
 	-e PLUGIN=calico \
-	-e BIN=$(BIN) \
+	-e BIN=/go/src/$(PACKAGE_NAME)/$(BIN) \
 	-e CNI_SPEC_VERSION=$(CNI_SPEC_VERSION) \
 	-e DATASTORE_TYPE=$(DATASTORE_TYPE) \
 	-e ETCD_ENDPOINTS=http://$(LOCAL_IP_ENV):2379 \
@@ -366,10 +366,10 @@ test-cni-versions:
 run-k8s-apiserver: stop-k8s-apiserver run-etcd
 	docker run --detach --net=host \
 	  --name calico-k8s-apiserver \
-	  -v `pwd`/testutils/private.key:/private.key \
+	  -v `pwd`/internal/pkg/testutils/private.key:/private.key \
 	  gcr.io/google_containers/hyperkube-$(ARCH):$(K8S_VERSION) \
 	  /hyperkube apiserver \
-            --etcd-servers=http://$(LOCAL_IP_ENV):2379 \
+	    --etcd-servers=http://$(LOCAL_IP_ENV):2379 \
 	    --service-cluster-ip-range=10.101.0.0/16 \
 	    --service-account-key-file=/private.key
 
@@ -377,10 +377,10 @@ run-k8s-apiserver: stop-k8s-apiserver run-etcd
 run-k8s-controller: stop-k8s-controller run-k8s-apiserver
 	docker run --detach --net=host \
 	  --name calico-k8s-controller \
-	  -v `pwd`/testutils/private.key:/private.key \
+	  -v `pwd`/internal/pkg/testutils/private.key:/private.key \
 	  gcr.io/google_containers/hyperkube-$(ARCH):$(K8S_VERSION) \
 	  /hyperkube controller-manager \
-            --master=127.0.0.1:8080 \
+	    --master=127.0.0.1:8080 \
 	    --min-resync-period=3m \
 	    --allocate-node-cidrs=true \
 	    --cluster-cidr=192.168.0.0/16 \
@@ -398,11 +398,11 @@ stop-k8s-controller:
 ## Etcd is used by the tests
 run-etcd: stop-etcd
 	docker run --detach \
-	-p 2379:2379 \
-	--name calico-etcd $(ETCD_CONTAINER) \
-	etcd \
-	--advertise-client-urls "http://$(LOCAL_IP_ENV):2379,http://127.0.0.1:2379,http://$(LOCAL_IP_ENV):4001,http://127.0.0.1:4001" \
-	--listen-client-urls "http://0.0.0.0:2379,http://0.0.0.0:4001"
+	  -p 2379:2379 \
+	  --name calico-etcd $(ETCD_CONTAINER) \
+	  etcd \
+	  --advertise-client-urls "http://$(LOCAL_IP_ENV):2379,http://127.0.0.1:2379,http://$(LOCAL_IP_ENV):4001,http://127.0.0.1:4001" \
+	  --listen-client-urls "http://0.0.0.0:2379,http://0.0.0.0:4001"
 
 ## Stops calico-etcd containers
 stop-etcd:

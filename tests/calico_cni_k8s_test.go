@@ -19,9 +19,9 @@ import (
 	cnitestutils "github.com/containernetworking/plugins/pkg/testutils"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/projectcalico/cni-plugin/testutils"
-	"github.com/projectcalico/cni-plugin/types"
-	"github.com/projectcalico/cni-plugin/utils"
+	"github.com/projectcalico/cni-plugin/internal/pkg/testutils"
+	"github.com/projectcalico/cni-plugin/internal/pkg/utils"
+	"github.com/projectcalico/cni-plugin/pkg/types"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	k8sconversion "github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
@@ -395,6 +395,83 @@ var _ = Describe("Kubernetes CNI tests", func() {
 
 				_, err = testutils.DeleteContainer(netconf, contNs.Path(), name, testutils.K8S_TEST_NS)
 				Expect(err).ShouldNot(HaveOccurred())
+			})
+		})
+
+		Context("when calico-config contains a custom mtu", func() {
+			mtuNetconfTemplate := `
+			{
+			  "cniVersion": "%s",
+			  "name": "net1",
+			  "type": "calico",
+			  "etcd_endpoints": "http://%s:2379",
+			  "datastore_type": "%s",
+			  "mtu": %d,
+			  "ipam": {
+			    "type": "host-local",
+			    "subnet": "10.0.0.0/8"
+			  },
+			  "kubernetes": {
+			    "k8s_api_root": "http://127.0.0.1:8080"
+			  },
+			  "policy": {"type": "k8s"},
+			  "nodename_file_optional": true,
+			  "log_level":"info"
+			}`
+
+			It("creates pods with the new mtu", func() {
+				config, err := clientcmd.DefaultClientConfig.ClientConfig()
+				Expect(err).NotTo(HaveOccurred())
+
+				clientset, err := kubernetes.NewForConfig(config)
+				Expect(err).NotTo(HaveOccurred())
+
+				// Create a K8s pod/container with non-default MTU
+				name1 := fmt.Sprintf("mtutest%d", rand.Uint32())
+				mtuNetconf1 := fmt.Sprintf(mtuNetconfTemplate, cniVersion, os.Getenv("ETCD_IP"), os.Getenv("DATASTORE_TYPE"), 3000)
+
+				_, err = clientset.CoreV1().Pods(testutils.K8S_TEST_NS).Create(&v1.Pod{
+					ObjectMeta: metav1.ObjectMeta{Name: name1},
+					Spec: v1.PodSpec{
+						Containers: []v1.Container{{
+							Name:  name1,
+							Image: "ignore",
+						}},
+						NodeName: hostname,
+					},
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				_, _, contVeth1, _, _, contNs1, err := testutils.CreateContainer(mtuNetconf1, name1, testutils.K8S_TEST_NS, "")
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(contVeth1.Attrs().MTU).Should(Equal(3000))
+
+				// Create another K8s pod/container with a different non-default MTU
+				name2 := fmt.Sprintf("mtutest2%d", rand.Uint32())
+				mtuNetconf2 := fmt.Sprintf(mtuNetconfTemplate, cniVersion, os.Getenv("ETCD_IP"), os.Getenv("DATASTORE_TYPE"), 4000)
+
+				_, err = clientset.CoreV1().Pods(testutils.K8S_TEST_NS).Create(&v1.Pod{
+					ObjectMeta: metav1.ObjectMeta{Name: name2},
+					Spec: v1.PodSpec{
+						Containers: []v1.Container{{
+							Name:  name2,
+							Image: "ignore",
+						}},
+						NodeName: hostname,
+					},
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				_, _, contVeth2, _, _, contNs2, err := testutils.CreateContainer(mtuNetconf2, name2, testutils.K8S_TEST_NS, "")
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(contVeth2.Attrs().MTU).Should(Equal(4000))
+
+				// Cleanup
+				_, err = testutils.DeleteContainer(mtuNetconf1, contNs1.Path(), name1, testutils.K8S_TEST_NS)
+				Expect(err).ShouldNot(HaveOccurred())
+				_, err = testutils.DeleteContainer(mtuNetconf2, contNs2.Path(), name2, testutils.K8S_TEST_NS)
+				Expect(err).ShouldNot(HaveOccurred())
+
 			})
 		})
 

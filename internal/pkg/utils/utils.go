@@ -31,7 +31,7 @@ import (
 	"github.com/containernetworking/cni/pkg/types/current"
 	"github.com/containernetworking/plugins/pkg/ipam"
 	"github.com/projectcalico/cni-plugin/internal/pkg/azure"
-	"github.com/projectcalico/cni-plugin/types"
+	"github.com/projectcalico/cni-plugin/pkg/types"
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
@@ -49,9 +49,10 @@ func Min(a, b int) int {
 }
 
 // DetermineNodename gets the node name, in order of priority:
-// 1. Hostname field in NetConf (DEPRECATED).
-// 2. Nodename field in NetConf.
-// 3. OS Hostname.
+// 1. Nodename field in NetConf
+// 2. Nodename from the file /var/lib/calico/nodename
+// 3. Hostname field in NetConf (DEPRECATED).
+// 4. OS Hostname.
 func DetermineNodename(conf types.NetConf) string {
 	nodename, _ := names.Hostname()
 	if conf.Hostname != "" {

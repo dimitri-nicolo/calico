@@ -94,7 +94,7 @@ pipeline {
                     withCredentials([file(credentialsId: 'cnx-license-key', variable: 'KEY')]) {
                          sh "cp $KEY license.yaml"
                          sh "cp ~/docker_auth.json docker_auth.json"
-                         sh "cp ${env.WORKSPACE}/testutils/private.key private.key"
+                         sh "cp ${env.WORKSPACE}/internal/pkg/testutils/private.key private.key"
                          sh "cp ${env.WORKSPACE}/bin/amd64/*.exe ."
                          sh "echo pemfile : ${WINDOWS_PEM_FILE}"
                          sh "echo ppkfile ${WINDOWS_PPK_FILE}"
