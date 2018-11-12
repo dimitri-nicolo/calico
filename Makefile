@@ -321,7 +321,7 @@ $(WINDOWS_ARCHIVE_ROOT)/cni/calico.exe: glide.lock vendor
 		-v $(CURDIR):/go/src/$(PACKAGE_NAME) \
 		$(LOCAL_BUILD_MOUNTS) \
 		-w /go/src/$(PACKAGE_NAME) \
-		$(CALICO_BUILD) go build -v -o $@ $(LDFLAGS) ./vendor/github.com/projectcalico/cni-plugin/calico.go
+		$(CALICO_BUILD) go build -v -o $@ $(LDFLAGS) ./cmd/calico
 
 $(WINDOWS_ARCHIVE_ROOT)/cni/calico-ipam.exe: glide.lock vendor
 	docker run --rm \
@@ -333,7 +333,7 @@ $(WINDOWS_ARCHIVE_ROOT)/cni/calico-ipam.exe: glide.lock vendor
 		-v $(CURDIR):/go/src/$(PACKAGE_NAME) \
 		$(LOCAL_BUILD_MOUNTS) \
 		-w /go/src/$(PACKAGE_NAME) \
-		$(CALICO_BUILD) go build -v -o $@ $(LDFLAGS) ./vendor/github.com/projectcalico/cni-plugin/ipam/calico-ipam.go
+		$(CALICO_BUILD) go build -v -o $@ $(LDFLAGS) ./cmd/calico-ipam
 
 ###############################################################################
 # Building the image

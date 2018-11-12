@@ -1,5 +1,5 @@
-hash: 8737ff28f6422bd1a8906b8b77d75e0f8f305d4c455097bea10d94480a7fa6fa
-updated: 2018-11-09T14:44:05.753895886Z
+hash: a7ab06968ba572e0e177d3830428d73e27ce5728d17e23b925ac4fa532cfb986
+updated: 2018-11-12T14:26:35.181154243Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -61,6 +61,7 @@ imports:
 - name: github.com/containernetworking/cni
   version: e67bb289cccfcad352b92c5234a1610b105846e0
   subpackages:
+  - pkg/invoke
   - pkg/skel
   - pkg/types
   - pkg/types/020
@@ -69,9 +70,12 @@ imports:
 - name: github.com/containernetworking/plugins
   version: 646dbbace1b1000b2bcda2f9c66bda384555b57e
   subpackages:
+  - pkg/hns
   - pkg/ip
   - pkg/ipam
   - pkg/ns
+  - pkg/utils/hwaddr
+  - pkg/utils/sysctl
 - name: github.com/coreos/etcd
   version: 33245c6b5b49130ca99280408fadfab01aac0e48
   subpackages:
@@ -87,6 +91,10 @@ imports:
   - pkg/transport
   - pkg/types
   - version
+- name: github.com/coreos/go-iptables
+  version: b5b1876b170881a8259f036445ee89c8669db386
+  subpackages:
+  - iptables
 - name: github.com/coreos/go-semver
   version: e214231b295a8ea9479f11b70b35d5acf3556d9b
   subpackages:
@@ -108,7 +116,7 @@ imports:
 - name: github.com/go-ini/ini
   version: 9c8236e659b76e87bf02044d06fde8683008ff3e
 - name: github.com/go-openapi/jsonpointer
-  version: ef5f0afec364d3b9396b7b77b43dbe26bf1f8004
+  version: 46af16f9f7b149af66e5d1bd010e3574dc06de98
 - name: github.com/go-openapi/jsonreference
   version: 8483a886a90412cd6858df4ea3483dce9c8e35a3
 - name: github.com/go-openapi/spec
@@ -207,8 +215,6 @@ imports:
   version: c12348ce28de40eed0136aa2b644d0ee0650e56c
   subpackages:
   - pbutil
-- name: github.com/mcuadros/go-version
-  version: 6d5863ca60fa6fe914b5fd43ed8533d7567c5b0b
 - name: github.com/Microsoft/go-winio
   version: 97e4973ce50b2ff5f09635a57e2b88a037aae829
 - name: github.com/Microsoft/hcsshim
@@ -275,8 +281,16 @@ imports:
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
 - name: github.com/projectcalico/cni-plugin
-  version: e27f9bffaff3a625d5c2c6bd9d9fbb6b3ee7c498
+  version: 15b9ace856172c697100c002577c603d50d74b5b
   repo: git@github.com:tigera/cni-plugin-private.git
+  subpackages:
+  - internal/pkg/azure
+  - internal/pkg/utils
+  - internal/pkg/utils/winpol
+  - pkg/ipamplugin
+  - pkg/k8s
+  - pkg/plugin
+  - pkg/types
 - name: github.com/projectcalico/felix
   version: 0af26ee230a5a16491bd8cf03b2b8070dd9c9a27
   repo: git@github.com:tigera/felix-private.git
@@ -392,11 +406,11 @@ imports:
   - prometheus/internal
   - prometheus/promhttp
 - name: github.com/prometheus/client_model
-  version: 5c3871d89910bfb32f5fcab2aa4b9ec68e65a99f
+  version: 6f3806018612930941127f2a7c6c453ba2c527d2
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 7e9e6cabbd393fc208072eedef99188d0ce788b6
+  version: e3fb1a1acd7605367a2b378bc2e2f893c05174b7
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
@@ -413,6 +427,8 @@ imports:
   version: 758b1f7c9d1ca5acaca0b909f06ff9ed9fe35de1
   subpackages:
   - netsh
+- name: github.com/safchain/ethtool
+  version: 7ff1ba29eca231991280817541cb3903f6be15d1
 - name: github.com/satori/go.uuid
   version: f58768cc1a7a7e77a3bd49e98cdd21419399b6a3
 - name: github.com/sirupsen/logrus
@@ -444,9 +460,9 @@ imports:
   subpackages:
   - nl
 - name: github.com/vishvananda/netns
-  version: 13995c7128ccc8e51e9a6bd2b551020a27180abd
+  version: 54f0e4339ce73702a0607f49922aaa1e749b418d
 - name: golang.org/x/crypto
-  version: 49796115aa4b964c318aad4f3084fdb41e9aa067
+  version: 94eea52f7b742c7cbe0b03b22f0c4c8631ece122
   subpackages:
   - ed25519
   - ed25519/internal/edwards25519
@@ -702,7 +718,7 @@ imports:
   - util/jsonpath
   - util/retry
 - name: k8s.io/kube-openapi
-  version: 72693cb1fadd73ae2742f6fe29af77d1aecdd8cd
+  version: 91cfa479c814065e420cee7ed227db0f63a5854e
   subpackages:
   - pkg/common
 - name: k8s.io/utils
