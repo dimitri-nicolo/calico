@@ -9,8 +9,8 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/projectcalico/cni-plugin/testutils"
-	"github.com/projectcalico/cni-plugin/utils"
+	"github.com/projectcalico/cni-plugin/internal/pkg/testutils"
+	"github.com/projectcalico/cni-plugin/internal/pkg/utils"
 	k8sconversion "github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/logutils"
