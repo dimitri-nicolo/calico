@@ -102,15 +102,10 @@ type NetConf struct {
 	// subnet.  The NAT exclusion is generally required for pod-to-host communication but that communication can also
 	// be enabled by manually setting an exclusion or by creating a dummy IP pool.
 	WindowsDisableHostSubnetNATExclusion bool `json:"windows_disable_host_subnet_nat_exclusion,omitempty"`
-	RuntimeConfig                        RuntimeConfig
 
 	// Options below here are deprecated.
 	EtcdAuthority string `json:"etcd_authority"`
 	Hostname      string `json:"hostname"`
-}
-
-type RuntimeConfig struct {
-	LookupOnly bool `json:"lookupOnly"`
 }
 
 // ContainerSettings gcontains configuration options
