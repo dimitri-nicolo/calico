@@ -1,5 +1,5 @@
-hash: a7ab06968ba572e0e177d3830428d73e27ce5728d17e23b925ac4fa532cfb986
-updated: 2018-11-12T14:26:35.181154243Z
+hash: 3c77a7f30f33c272d9ea3b02d052aa70bf51f083d343ff0dd2a6d2ebbe8d06ec
+updated: 2018-11-13T05:14:55.798294324Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -281,7 +281,7 @@ imports:
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
 - name: github.com/projectcalico/cni-plugin
-  version: 15b9ace856172c697100c002577c603d50d74b5b
+  version: 889ebc850fa3d3435c5ebb05e3c40f5fa2dc9d75
   repo: git@github.com:tigera/cni-plugin-private.git
   subpackages:
   - internal/pkg/azure
