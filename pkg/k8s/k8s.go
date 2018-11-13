@@ -59,14 +59,38 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 	})
 
 	logger.Info("Extracted identifiers for CmdAddK8s")
-	if conf.RuntimeConfig.LookupOnly ||
-		(runtime.GOOS == "windows" && endpoint != nil && len(endpoint.Spec.IPNetworks) > 0) {
-		// Windows special-case: Kubelet is doing a probe to get the pod status.  We explicitly do not want to
-		// network the endpoint in this case.
-		logger.Info("Handling lookupOnly request")
-		result, err := utils.CreateResultFromEndpoint(endpoint)
-		logger.WithField("result", result).WithError(err).Info("lookupOnly result")
-		return result, err
+	if runtime.GOOS == "windows" {
+		// Windows special case: Kubelet has a hacky implementation of GetPodNetworkStatus() that uses a
+		// CNI ADD to check the status of the pod.  Detect such spurious adds and return early, avoiding trying to
+		// network the pod multiple times.
+		lookupRequest := false
+		const pauseContainerNetNS = "none"
+		if args.Netns == "" {
+			// Defensive: this case should be blocked by CNI validation.
+			logger.Info("No network namespace supplied, assuming a lookup-only request.")
+			lookupRequest = true
+		} else if args.Netns != pauseContainerNetNS {
+			// When kubelet really wants to network the pod, it passes us the netns of the "pause" container, which
+			// is a static value.  The other requests come from checks on the other containers, which we ignore.
+			logger.Info("Non-pause container specified, doing a lookup-only request.")
+			lookupRequest = true
+		} else if endpoint != nil && len(endpoint.Spec.IPNetworks) > 0 {
+			// Defensive: datastore says the pod is already networked.  This check isn't sufficient on its own because
+			// GetPodNetworkStatus() can race with a CNI DEL operation, making it look like the pod has no network.
+			logger.Info("Endpoint already networked, doing a lookup-only request.")
+			lookupRequest = true
+		}
+
+		if lookupRequest {
+			result, err := utils.CreateResultFromEndpoint(endpoint)
+			if err == nil {
+				logger.WithField("result", result).Info("Status lookup result")
+			} else {
+				// For example, endpoint not found (which is expected if we're racing with a CNI DEL).
+				logger.WithError(err).Warn("Failed to look up pod status")
+			}
+			return result, err
+		}
 	}
 
 	// Allocate the IP and update/create the endpoint. Do this even if the endpoint already exists and has an IP
