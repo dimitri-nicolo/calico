@@ -91,7 +91,6 @@ func createClientFromConfig() clientv3.Interface {
 		os.Exit(1)
 	}
 
-	glog.Infof("Client: %v", c)
 	return c
 }
 
