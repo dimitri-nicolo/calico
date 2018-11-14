@@ -52,6 +52,11 @@ There are a number of ports defined via _Services_. Ensure that they are updated
 to match your environment and also update any _NetworkPolicy_ that
 have the same ports.
 
+For example, if you want the {{site.prodname}} Manager to listen on a port other than
+30003 or you plan to set up a load balancer in front of it, edit the
+`Service` object named `cnx-manager` as required. In this paticular case, there are no 
+network policies to update for this service.
+
 ## Node Selectors
 
 There are 3 places where `nodeSelectors` can be customized. Ensure to update

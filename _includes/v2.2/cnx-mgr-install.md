@@ -156,10 +156,6 @@
 
 {% endif %}
 
-1. If you want the {{site.prodname}} Manager to listen on a port other than
-   30003 or you plan to set up a load balancer in front of it, edit the
-   `Service` object named `cnx-manager` as needed.  
-
 1. Create a secret containing a TLS certificate and the private key used to
    sign it. The following commands use a self-signed certificate and key
    found in many deployments for a quick start.
