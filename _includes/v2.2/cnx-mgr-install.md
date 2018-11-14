@@ -178,6 +178,9 @@
      ```
 
    - **kops deployments**
+     
+     Run the following command on the master node.
+     
      ```bash
      kubectl create secret generic cnx-manager-tls \
      --from-file=cert=/srv/kubernetes/server.cert \
