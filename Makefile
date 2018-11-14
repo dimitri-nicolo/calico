@@ -5,7 +5,7 @@ default: build
 all: build
 
 ## Run the tests for the current platform/architecture
-test: fv st
+test: ut fv st
 
 ###############################################################################
 # Both native and cross architecture builds are supported.
@@ -480,6 +480,19 @@ foss-checks: vendor
 	  $(CALICO_BUILD) /usr/local/bin/fossa
 
 ###############################################################################
+# Unit tests
+###############################################################################
+## Run the ginkgo UTs.
+ut: vendor
+	docker run --rm \
+	-v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
+	$(LOCAL_BUILD_MOUNTS) \
+	-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+	--net=host \
+	-w /go/src/$(PACKAGE_NAME) \
+	$(CALICO_BUILD) ginkgo -cover -r cmd/calico $(GINKGO_ARGS)
+
+###############################################################################
 # FV Tests
 ###############################################################################
 ## Run the ginkgo FVs
@@ -643,7 +656,7 @@ st: dist/calicoctl busybox.tar cnx-node.tar workload.tar run-etcd calico_test.cr
 ###############################################################################
 .PHONY: ci
 ## Run what CI runs
-ci: static-checks fv image-all build-windows-archive st
+ci: static-checks ut fv image-all build-windows-archive st
 
 ## Deploys images to registry
 cd:
