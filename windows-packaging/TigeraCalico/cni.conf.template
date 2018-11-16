@@ -1,5 +1,7 @@
 {
   "name": "Calico",
+  "windows_use_single_network": true,
+
   "cniVersion": "0.3.0",
   "type": "calico",
   "policy": {
