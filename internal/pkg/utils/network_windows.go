@@ -405,10 +405,10 @@ func createAndAttachContainerEP(args *skel.CmdArgs,
 		}
 		return hnsEP, nil
 	})
-       if err != nil {
-               logger.Errorf("Error creating endpoint : %v", err)
-               return nil, err
-       }
+	if err != nil {
+		logger.Errorf("Error creating endpoint : %v", err)
+		return nil, err
+	}
 	logger.Infof("Endpoint to container created! %v", hnsEndpointCont)
 	return hnsEndpointCont, nil
 }
