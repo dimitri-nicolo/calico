@@ -582,3 +582,100 @@ var _ = DescribeTable("CloudWatchLogs config validation",
 		"CloudWatchLogsEnabledForDenied":  "true",
 	}, true),
 )
+
+var _ = Describe("CloudWatch deprecated config fields", func() {
+	var c *Config
+
+	BeforeEach(func() {
+		c = New()
+	})
+
+	It("should take the maximum value of CloudWatchLogsFlushInterval and FlowLogsFlushInterval", func() {
+		By("setting no values and checking maximum default value is applied")
+		_, err := c.UpdateFrom(map[string]string{}, EnvironmentVariable)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(c.CloudWatchLogsFlushInterval).To(Equal(300 * time.Second))
+		Expect(c.FlowLogsFlushInterval).To(Equal(300 * time.Second))
+
+		By("setting FlowLogsFlushInterval > CloudWatchLogsFlushInterval and checking for max value")
+		changed, err := c.UpdateFrom(map[string]string{
+			"CloudWatchLogsFlushInterval": "600",
+			"FlowLogsFlushInterval":       "700",
+		}, EnvironmentVariable)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(c.CloudWatchLogsFlushInterval).To(Equal(700 * time.Second))
+		Expect(c.FlowLogsFlushInterval).To(Equal(700 * time.Second))
+		Expect(changed).To(BeTrue())
+
+		By("setting CloudWatchLogsFlushInterval to a lower value and checking unchanged")
+		changed, err = c.UpdateFrom(map[string]string{
+			"CloudWatchLogsFlushInterval": "500",
+			"FlowLogsFlushInterval":       "700",
+		}, EnvironmentVariable)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(c.CloudWatchLogsFlushInterval).To(Equal(700 * time.Second))
+		Expect(c.FlowLogsFlushInterval).To(Equal(700 * time.Second))
+		Expect(changed).To(BeFalse())
+
+		By("setting CloudWatchLogsFlushInterval to a lower value and checking unchanged")
+		changed, err = c.UpdateFrom(map[string]string{
+			"CloudWatchLogsFlushInterval": "500",
+			"FlowLogsFlushInterval":       "700",
+		}, EnvironmentVariable)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(c.CloudWatchLogsFlushInterval).To(Equal(700 * time.Second))
+		Expect(c.FlowLogsFlushInterval).To(Equal(700 * time.Second))
+		Expect(changed).To(BeFalse())
+
+		By("setting swapping the values around and checking unchanged")
+		changed, err = c.UpdateFrom(map[string]string{
+			"CloudWatchLogsFlushInterval": "700",
+			"FlowLogsFlushInterval":       "500",
+		}, EnvironmentVariable)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(c.CloudWatchLogsFlushInterval).To(Equal(700 * time.Second))
+		Expect(c.FlowLogsFlushInterval).To(Equal(700 * time.Second))
+		Expect(changed).To(BeFalse())
+
+		By("setting CloudWatchLogsFlushInterval to a higher value and checking for new max value")
+		changed, err = c.UpdateFrom(map[string]string{
+			"CloudWatchLogsFlushInterval": "800",
+			"FlowLogsFlushInterval":       "500",
+		}, EnvironmentVariable)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(c.CloudWatchLogsFlushInterval).To(Equal(800 * time.Second))
+		Expect(c.FlowLogsFlushInterval).To(Equal(800 * time.Second))
+		Expect(changed).To(BeTrue())
+	})
+
+	It("should combine the value of CloudWatchLogsEnableHostEndpoint and FlowLogsEnableHostEndpoint", func() {
+		By("setting both to false and checking computed values are false")
+		_, err := c.UpdateFrom(map[string]string{
+			"CloudWatchLogsEnableHostEndpoint": "false",
+			"FlowLogsEnableHostEndpoint":       "false",
+		}, EnvironmentVariable)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(c.CloudWatchLogsEnableHostEndpoint).To(BeFalse())
+		Expect(c.FlowLogsEnableHostEndpoint).To(BeFalse())
+
+		By("setting CloudWatchLogsEnableHostEndpoint to true and checking computed values are true")
+		changed, err := c.UpdateFrom(map[string]string{
+			"CloudWatchLogsEnableHostEndpoint": "true",
+			"FlowLogsEnableHostEndpoint":       "false",
+		}, EnvironmentVariable)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(c.CloudWatchLogsEnableHostEndpoint).To(BeTrue())
+		Expect(c.FlowLogsEnableHostEndpoint).To(BeTrue())
+		Expect(changed).To(BeTrue())
+
+		By("switching the two values and checking corrected values unchanged")
+		changed, err = c.UpdateFrom(map[string]string{
+			"CloudWatchLogsEnableHostEndpoint": "false",
+			"FlowLogsEnableHostEndpoint":       "true",
+		}, EnvironmentVariable)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(c.CloudWatchLogsEnableHostEndpoint).To(BeTrue())
+		Expect(c.FlowLogsEnableHostEndpoint).To(BeTrue())
+		Expect(changed).To(BeFalse())
+	})
+})

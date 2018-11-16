@@ -44,13 +44,15 @@ type FlowLogJSONOutput struct {
 
 	Policies *FlowLogPoliciesJSONOutput `json:"policies"`
 
-	BytesIn           int64 `json:"bytes_in"`
-	BytesOut          int64 `json:"bytes_out"`
-	NumFlows          int64 `json:"num_flows"`
-	NumFlowsStarted   int64 `json:"num_flows_started"`
-	NumFlowsCompleted int64 `json:"num_flows_completed"`
-	PacketsIn         int64 `json:"packets_in"`
-	PacketsOut        int64 `json:"packets_out"`
+	BytesIn               int64 `json:"bytes_in"`
+	BytesOut              int64 `json:"bytes_out"`
+	NumFlows              int64 `json:"num_flows"`
+	NumFlowsStarted       int64 `json:"num_flows_started"`
+	NumFlowsCompleted     int64 `json:"num_flows_completed"`
+	PacketsIn             int64 `json:"packets_in"`
+	PacketsOut            int64 `json:"packets_out"`
+	HTTPRequestsAllowedIn int64 `json:"http_requests_allowed_in"`
+	HTTPRequestsDeniedIn  int64 `json:"http_requests_denied_in"`
 }
 
 type FlowLogLabelsJSONOutput struct {
@@ -130,6 +132,8 @@ func toOutput(l *FlowLog) FlowLogJSONOutput {
 	out.NumFlows = int64(l.NumFlows)
 	out.NumFlowsCompleted = int64(l.NumFlowsCompleted)
 	out.NumFlowsStarted = int64(l.NumFlowsStarted)
+	out.HTTPRequestsAllowedIn = int64(l.HTTPRequestsAllowedIn)
+	out.HTTPRequestsDeniedIn = int64(l.HTTPRequestsDeniedIn)
 	return out
 }
 

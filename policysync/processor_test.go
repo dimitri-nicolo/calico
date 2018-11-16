@@ -25,6 +25,7 @@ import (
 	"time"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 	"golang.org/x/net/context"
@@ -739,7 +740,7 @@ var _ = Describe("Processor", func() {
 
 				BeforeEach(func() {
 					uidAllocator := policysync.NewUIDAllocator()
-					syncServer = policysync.NewServer(uut.JoinUpdates, uidAllocator.NextUID)
+					syncServer = policysync.NewServer(uut.JoinUpdates, nil, uidAllocator.NextUID)
 
 					gRPCServer = grpc.NewServer(grpc.Creds(testCreds{}))
 					proto.RegisterPolicySyncServer(gRPCServer, syncServer)
@@ -1393,6 +1394,139 @@ var _ = Describe("Processor", func() {
 	})
 })
 
+var _ = DescribeTable("Config negotiation tests",
+	func(req proto.SyncRequest, configParams config.Config, expected map[string]string) {
+		updates := make(chan interface{})
+		uut := policysync.NewProcessor(&configParams, updates)
+		uut.Start()
+		join := func(sr proto.SyncRequest, w string, jid uint64) (chan proto.ToDataplane, policysync.JoinMetadata) {
+			// Buffer outputs so that Processor won't block.
+			output := make(chan proto.ToDataplane, 100)
+			joinMeta := policysync.JoinMetadata{
+				EndpointID: testId(w),
+				JoinUID:    jid,
+			}
+			jr := policysync.JoinRequest{JoinMetadata: joinMeta, SyncRequest: sr, C: output}
+			uut.JoinUpdates <- jr
+			return output, joinMeta
+		}
+
+		c, _ := join(req, "test", 1)
+		cfg := <-c
+		Expect(&cfg).To(HavePayload(&proto.ConfigUpdate{Config: expected}))
+	},
+
+	Entry("Supports DropActionOverride",
+		proto.SyncRequest{SupportsDropActionOverride: true},
+		config.Config{DropActionOverride: "LOGandACCEPT"},
+		map[string]string{"DropActionOverride": "LOGandACCEPT"},
+	),
+
+	Entry("Supports DataplaneStats and DropActionOverride",
+		proto.SyncRequest{SupportsDataplaneStats: true, SupportsDropActionOverride: true},
+		config.Config{DropActionOverride: "LOGandACCEPT"},
+		map[string]string{
+			"DropActionOverride":              "LOGandACCEPT",
+			"DataplaneStatsEnabledForAllowed": "false",
+			"DataplaneStatsEnabledForDenied":  "false",
+		},
+	),
+
+	Entry("Supports DataplaneStats (FlowLogFile allowed/denied enabled, but overall disabled)",
+		proto.SyncRequest{SupportsDataplaneStats: true},
+		config.Config{
+			FlowLogsFileEnabled:           false,
+			FlowLogsFileEnabledForAllowed: true,
+			FlowLogsFileEnabledForDenied:  true,
+		},
+		map[string]string{
+			"DataplaneStatsEnabledForAllowed": "false",
+			"DataplaneStatsEnabledForDenied":  "false",
+		},
+	),
+
+	Entry("Supports DataplaneStats (FlowLogFile enabled; allowed enabled, denied disabled)",
+		proto.SyncRequest{SupportsDataplaneStats: true},
+		config.Config{
+			FlowLogsFileEnabled:           true,
+			FlowLogsFileEnabledForAllowed: true,
+			FlowLogsFileEnabledForDenied:  false,
+		},
+		map[string]string{
+			"DataplaneStatsEnabledForAllowed": "true",
+			"DataplaneStatsEnabledForDenied":  "false",
+		},
+	),
+
+	Entry("Supports DataplaneStats (FlowLogFile enabled; allowed disabled, denied enabled)",
+		proto.SyncRequest{SupportsDataplaneStats: true},
+		config.Config{
+			FlowLogsFileEnabled:           true,
+			FlowLogsFileEnabledForAllowed: false,
+			FlowLogsFileEnabledForDenied:  true,
+		},
+		map[string]string{
+			"DataplaneStatsEnabledForAllowed": "false",
+			"DataplaneStatsEnabledForDenied":  "true",
+		},
+	),
+
+	Entry("Supports DataplaneStats (CloudWatch allowed/denied enabled, but overall disabled)",
+		proto.SyncRequest{SupportsDataplaneStats: true},
+		config.Config{
+			CloudWatchLogsReporterEnabled:   false,
+			CloudWatchLogsEnabledForAllowed: true,
+			CloudWatchLogsEnabledForDenied:  true,
+		},
+		map[string]string{
+			"DataplaneStatsEnabledForAllowed": "false",
+			"DataplaneStatsEnabledForDenied":  "false",
+		},
+	),
+
+	Entry("Supports DataplaneStats (CloudWatch enabled; allowed enabled, denied disabled)",
+		proto.SyncRequest{SupportsDataplaneStats: true},
+		config.Config{
+			CloudWatchLogsReporterEnabled:   true,
+			CloudWatchLogsEnabledForAllowed: true,
+			CloudWatchLogsEnabledForDenied:  false,
+		},
+		map[string]string{
+			"DataplaneStatsEnabledForAllowed": "true",
+			"DataplaneStatsEnabledForDenied":  "false",
+		},
+	),
+
+	Entry("Supports DataplaneStats (CloudWatch enabled; allowed disabled, denied enabled)",
+		proto.SyncRequest{SupportsDataplaneStats: true},
+		config.Config{
+			CloudWatchLogsReporterEnabled:   true,
+			CloudWatchLogsEnabledForAllowed: false,
+			CloudWatchLogsEnabledForDenied:  true,
+		},
+		map[string]string{
+			"DataplaneStatsEnabledForAllowed": "false",
+			"DataplaneStatsEnabledForDenied":  "true",
+		},
+	),
+
+	Entry("Supports DataplaneStats (Cloudwatch enabled allowed, Files enabled denied)",
+		proto.SyncRequest{SupportsDataplaneStats: true},
+		config.Config{
+			FlowLogsFileEnabled:             true,
+			FlowLogsFileEnabledForAllowed:   false,
+			FlowLogsFileEnabledForDenied:    true,
+			CloudWatchLogsReporterEnabled:   true,
+			CloudWatchLogsEnabledForAllowed: true,
+			CloudWatchLogsEnabledForDenied:  false,
+		},
+		map[string]string{
+			"DataplaneStatsEnabledForAllowed": "true",
+			"DataplaneStatsEnabledForDenied":  "true",
+		},
+	),
+)
+
 func testId(w string) proto.WorkloadEndpointID {
 	return proto.WorkloadEndpointID{
 		OrchestratorId: policysync.OrchestratorId,
@@ -1509,7 +1643,7 @@ type payloadMatcher struct {
 func (p *payloadMatcher) Match(actual interface{}) (success bool, err error) {
 	td, ok := actual.(*proto.ToDataplane)
 	if !ok {
-		return false, fmt.Errorf("HasPayload expects a *proto.ToDataplane")
+		return false, fmt.Errorf("HasPayload expects a *proto.ToDataplane, got %v", reflect.TypeOf(actual))
 	}
 	p.payload = reflect.ValueOf(td.Payload).Elem().Field(0).Interface()
 	return p.equal.Match(p.payload)

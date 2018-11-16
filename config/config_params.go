@@ -467,6 +467,25 @@ func (config *Config) resolve() (changed bool, err error) {
 		delete(newRawValues, "IpInIpTunnelAddr")
 	}
 
+	// Handle the deprecated CloudWatchLogsFlushInterval by taking the maximum of the old and equivalent new field
+	// setting, and configuring both with the same value.
+	if config.CloudWatchLogsFlushInterval > config.FlowLogsFlushInterval {
+		log.Info("Using deprecated CloudWatchLogsFlushInterval value for FlowLogsFlushInterval")
+		config.FlowLogsFlushInterval = config.CloudWatchLogsFlushInterval
+		newRawValues["FlowLogsFlushInterval"] = newRawValues["CloudWatchLogsFlushInterval"]
+	} else {
+		config.CloudWatchLogsFlushInterval = config.FlowLogsFlushInterval
+		newRawValues["CloudWatchLogsFlushInterval"] = newRawValues["FlowLogsFlushInterval"]
+	}
+
+	// Handle the deprecated CloudWatchLogsEnableHostEndpoint field by combining with the equivalent new field
+	// settings, and configuring both with the same value.
+	fle := config.CloudWatchLogsEnableHostEndpoint || config.FlowLogsEnableHostEndpoint
+	config.CloudWatchLogsEnableHostEndpoint = fle
+	config.FlowLogsEnableHostEndpoint = fle
+	newRawValues["CloudWatchLogsEnableHostEndpoint"] = strconv.FormatBool(fle)
+	newRawValues["FlowLogsEnableHostEndpoint"] = strconv.FormatBool(fle)
+
 	changed = !reflect.DeepEqual(newRawValues, config.rawValues)
 	config.rawValues = newRawValues
 	return

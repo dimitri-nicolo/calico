@@ -218,6 +218,22 @@ var (
 			deltaBytes:   0,
 		},
 	}
+	muConn1Rule1HTTPReqAllowUpdate = MetricUpdate{
+		updateType:   UpdateTypeReport,
+		tuple:        tuple1,
+		ruleIDs:      []*calc.RuleID{ingressRule1Allow},
+		isConnection: true,
+		inMetric: MetricValue{
+			deltaPackets:             200,
+			deltaBytes:               22000,
+			deltaAllowedHTTPRequests: 20,
+			deltaDeniedHTTPRequests:  5,
+		},
+		outMetric: MetricValue{
+			deltaPackets: 300,
+			deltaBytes:   33000,
+		},
+	}
 )
 
 // Common RuleAggregateKey definitions

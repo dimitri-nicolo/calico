@@ -20,20 +20,29 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/projectcalico/felix/calc"
+	"github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/felix/config"
 	"github.com/projectcalico/felix/dataplane/linux"
 	"github.com/projectcalico/felix/ifacemonitor"
 	"github.com/projectcalico/felix/ipsets"
+	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/libcalico-go/lib/health"
 )
+
+type mockCollector struct{}
+
+func (_ *mockCollector) ReportingChannel() chan<- *proto.DataplaneStats { return nil }
+
+func (_ *mockCollector) SubscribeToNflog() {}
+
+func (_ *mockCollector) Start() {}
 
 var _ = Describe("Constructor test", func() {
 	var configParams *config.Config
 	var dpConfig intdataplane.Config
 	var healthAggregator *health.HealthAggregator
-	var lookupsCache *calc.LookupsCache
+	var col collector.Collector
 
 	JustBeforeEach(func() {
 		configParams = config.New()
@@ -79,12 +88,12 @@ var _ = Describe("Constructor test", func() {
 			},
 			IPIPMTU:          configParams.IpInIpMtu,
 			HealthAggregator: healthAggregator,
+			Collector:        col,
 		}
-		lookupsCache = calc.NewLookupsCache()
 	})
 
 	It("should be constructable", func() {
-		var dp = intdataplane.NewIntDataplaneDriver(lookupsCache, dpConfig)
+		var dp = intdataplane.NewIntDataplaneDriver(dpConfig)
 		Expect(dp).ToNot(BeNil())
 	})
 
@@ -95,7 +104,19 @@ var _ = Describe("Constructor test", func() {
 		})
 
 		It("should be constructable", func() {
-			var dp = intdataplane.NewIntDataplaneDriver(lookupsCache, dpConfig)
+			var dp = intdataplane.NewIntDataplaneDriver(dpConfig)
+			Expect(dp).ToNot(BeNil())
+		})
+	})
+
+	Context("with collector", func() {
+
+		BeforeEach(func() {
+			col = &mockCollector{}
+		})
+
+		It("should be constructable", func() {
+			var dp = intdataplane.NewIntDataplaneDriver(dpConfig)
 			Expect(dp).ToNot(BeNil())
 		})
 	})

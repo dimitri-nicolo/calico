@@ -16,6 +16,7 @@ package policysync
 
 import (
 	"reflect"
+	"strconv"
 
 	log "github.com/sirupsen/logrus"
 
@@ -551,6 +552,19 @@ func (p *Processor) maybeSendStartOfDayConfigUpdate(ei *EndpointInfo) {
 	if ei.syncRequest.SupportsDropActionOverride {
 		clog.Debug("Endpoint supports DropActionOverride")
 		cu["DropActionOverride"] = p.config.DropActionOverride
+	}
+
+	if ei.syncRequest.SupportsDataplaneStats {
+		clog.Debug("Endpoint supports FlowLogs")
+		enabledForAllowed :=
+			(p.config.FlowLogsFileEnabled && p.config.FlowLogsFileEnabledForAllowed) ||
+				(p.config.CloudWatchLogsReporterEnabled && p.config.CloudWatchLogsEnabledForAllowed)
+		cu["DataplaneStatsEnabledForAllowed"] = strconv.FormatBool(enabledForAllowed)
+
+		enabledForDenied :=
+			(p.config.FlowLogsFileEnabled && p.config.FlowLogsFileEnabledForDenied) ||
+				(p.config.CloudWatchLogsReporterEnabled && p.config.CloudWatchLogsEnabledForDenied)
+		cu["DataplaneStatsEnabledForDenied"] = strconv.FormatBool(enabledForDenied)
 	}
 
 	if len(cu) > 0 {

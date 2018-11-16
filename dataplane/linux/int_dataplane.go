@@ -25,13 +25,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aws/aws-sdk-go/service/cloudwatchlogs/cloudwatchlogsiface"
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/collector"
-	"github.com/projectcalico/felix/collector/testutil"
 	"github.com/projectcalico/felix/ifacemonitor"
 	"github.com/projectcalico/felix/ipsec"
 	"github.com/projectcalico/felix/ipsets"
@@ -53,9 +51,6 @@ const (
 
 	// Interface name used by kube-proxy to bind service ips.
 	KubeIPVSInterface = "kube-ipvs0"
-
-	CloudWatchLogsDispatcherName = "cloudwatch"
-	FlowLogsFileDispatcherName   = "file"
 )
 
 var (
@@ -106,52 +101,6 @@ type Config struct {
 	IPIPMTU              int
 	IgnoreLooseRPF       bool
 
-	NfNetlinkBufSize  int
-	StatsDumpFilePath string
-
-	DeletedMetricsRetentionSecs time.Duration
-
-	PrometheusReporterEnabled  bool
-	PrometheusReporterPort     int
-	PrometheusReporterCertFile string
-	PrometheusReporterKeyFile  string
-	PrometheusReporterCAFile   string
-
-	FlowLogsFlushInterval      time.Duration
-	FlowLogsEnableHostEndpoint bool
-
-	CloudWatchLogsReporterEnabled           bool
-	CloudWatchLogsLogGroupName              string
-	CloudWatchLogsLogStreamName             string
-	CloudWatchLogsIncludeLabels             bool
-	CloudWatchLogsIncludePolicies           bool
-	CloudWatchLogsAggregationKindForAllowed int
-	CloudWatchLogsAggregationKindForDenied  int
-	CloudWatchLogsRetentionDays             int
-	CloudWatchLogsEnabledForAllowed         bool
-	CloudWatchLogsEnabledForDenied          bool
-
-	DebugCloudWatchLogsFile string
-
-	CloudWatchMetricsReporterEnabled  bool
-	CloudWatchMetricsPushIntervalSecs time.Duration
-
-	FlowLogsFileEnabled                   bool
-	FlowLogsFileDirectory                 string
-	FlowLogsFileMaxFiles                  int
-	FlowLogsFileMaxFileSizeMB             int
-	FlowLogsFileAggregationKindForAllowed int
-	FlowLogsFileAggregationKindForDenied  int
-	FlowLogsFileIncludeLabels             bool
-	FlowLogsFileIncludePolicies           bool
-	FlowLogsFileEnabledForAllowed         bool
-	FlowLogsFileEnabledForDenied          bool
-
-	ClusterGUID string
-
-	SyslogReporterNetwork string
-	SyslogReporterAddress string
-
 	MaxIPSetSize int
 
 	IPSetsRefreshInterval          time.Duration
@@ -196,8 +145,8 @@ type Config struct {
 	IPSecLogLevel              string
 	IPSecRekeyTime             time.Duration
 
-	// FlowLogsEnableNetworkSets controls whether network sets appear in flow log reporting.
-	FlowLogsEnableNetworkSets bool
+	// Optional stats collector
+	Collector collector.Collector
 }
 
 // InternalDataplane implements an in-process Felix dataplane driver based on iptables
@@ -289,7 +238,7 @@ const (
 	healthInterval = 10 * time.Second
 )
 
-func NewIntDataplaneDriver(cache *calc.LookupsCache, config Config) *InternalDataplane {
+func NewIntDataplaneDriver(config Config) *InternalDataplane {
 	log.WithField("config", config).Info("Creating internal dataplane driver.")
 	ruleRenderer := config.RuleRendererOverride
 	if ruleRenderer == nil {
@@ -414,7 +363,6 @@ func NewIntDataplaneDriver(cache *calc.LookupsCache, config Config) *InternalDat
 		config.RulesConfig.WorkloadIfacePrefixes,
 		dp.endpointStatusCombiner.OnEndpointStatusUpdate))
 	dp.RegisterManager(newFloatingIPManager(natTableV4, ruleRenderer, 4))
-	dp.lookupCache = cache
 	dp.RegisterManager(newMasqManager(ipSetsV4, natTableV4, ruleRenderer, config.MaxIPSetSize, 4))
 	if config.RulesConfig.IPIPEnabled {
 		// Create and maintain the IPIP tunnel device
@@ -561,6 +509,12 @@ func NewIntDataplaneDriver(cache *calc.LookupsCache, config Config) *InternalDat
 		dp.debugHangC = time.After(config.DebugSimulateDataplaneHangAfter)
 	}
 
+	// If required, subscribe to NFLog collection.
+	if config.Collector != nil {
+		log.Debug("Stats collection is required, subscribe to nflogs")
+		config.Collector.SubscribeToNflog()
+	}
+
 	return dp
 }
 
@@ -587,168 +541,6 @@ func (d *InternalDataplane) Start() {
 	go d.loopUpdatingDataplane()
 	go d.loopReportingStatus()
 	go d.ifaceMonitor.MonitorInterfaces()
-
-	// TODO (Matt): This isn't really in keeping with the surrounding code.
-	const (
-		DefaultAgeTimeout               = time.Duration(10) * time.Second
-		DefaultInitialReportingDelay    = time.Duration(5) * time.Second
-		DefaultExportingInterval        = time.Duration(1) * time.Second
-		DefaultConntrackPollingInterval = time.Duration(5) * time.Second
-	)
-	collectorConfig := &collector.Config{
-		StatsDumpFilePath:        d.config.StatsDumpFilePath,
-		NfNetlinkBufSize:         d.config.NfNetlinkBufSize,
-		IngressGroup:             1,
-		EgressGroup:              2,
-		AgeTimeout:               DefaultAgeTimeout,
-		InitialReportingDelay:    DefaultInitialReportingDelay,
-		ExportingInterval:        DefaultExportingInterval,
-		ConntrackPollingInterval: DefaultConntrackPollingInterval,
-		EnableNetworkSets:        d.config.FlowLogsEnableNetworkSets,
-	}
-	rm := collector.NewReporterManager()
-	if d.config.PrometheusReporterEnabled {
-		pr := collector.NewPrometheusReporter(d.config.PrometheusReporterPort,
-			d.config.DeletedMetricsRetentionSecs,
-			d.config.PrometheusReporterCertFile,
-			d.config.PrometheusReporterKeyFile,
-			d.config.PrometheusReporterCAFile)
-		pr.AddAggregator(collector.NewPolicyRulesAggregator(d.config.DeletedMetricsRetentionSecs, d.config.FelixHostname))
-		pr.AddAggregator(collector.NewDeniedPacketsAggregator(d.config.DeletedMetricsRetentionSecs, d.config.FelixHostname))
-		rm.RegisterMetricsReporter(pr)
-	}
-	log.Debugf("CloudWatchLogsReporterEnabled %v", d.config.CloudWatchLogsReporterEnabled)
-	dispatchers := map[string]collector.FlowLogDispatcher{}
-	if d.config.CloudWatchLogsReporterEnabled {
-		logGroupName := strings.Replace(
-			d.config.CloudWatchLogsLogGroupName,
-			"<cluster-guid>",
-			d.config.ClusterGUID,
-			1,
-		)
-		logStreamName := strings.Replace(
-			d.config.CloudWatchLogsLogStreamName,
-			"<felix-hostname>",
-			d.config.FelixHostname,
-			1,
-		)
-		var cwl cloudwatchlogsiface.CloudWatchLogsAPI
-		if d.config.DebugCloudWatchLogsFile != "" {
-			log.Info("Creating Debug CloudWatchLogsAPI")
-			// Allow CloudWatch logging to be FV tested without incurring AWS
-			// costs, by calling a mock AWS API instead of the real one.
-			cwl = testutil.NewDebugCloudWatchLogsFile(logGroupName, d.config.DebugCloudWatchLogsFile)
-		}
-		log.Info("Creating Flow Logs CloudWatchDispatcher")
-		cwd := collector.NewCloudWatchDispatcher(logGroupName, logStreamName, d.config.CloudWatchLogsRetentionDays, cwl)
-		dispatchers[CloudWatchLogsDispatcherName] = cwd
-	}
-	if d.config.FlowLogsFileEnabled {
-		log.WithFields(log.Fields{
-			"directory": d.config.FlowLogsFileDirectory,
-			"max_size":  d.config.FlowLogsFileMaxFileSizeMB,
-			"max_files": d.config.FlowLogsFileMaxFiles,
-		}).Info("Creating Flow Logs FileDispatcher")
-		fd := collector.NewFileDispatcher(
-			d.config.FlowLogsFileDirectory,
-			d.config.FlowLogsFileMaxFileSizeMB,
-			d.config.FlowLogsFileMaxFiles,
-		)
-		dispatchers[FlowLogsFileDispatcherName] = fd
-	}
-	if len(dispatchers) > 0 {
-		log.Info("Creating Flow Logs Reporter")
-		cw := collector.NewFlowLogsReporter(dispatchers, d.config.FlowLogsFlushInterval, d.config.HealthAggregator, d.config.FlowLogsEnableHostEndpoint)
-		configureFlowAggregation(d.config, cw)
-		rm.RegisterMetricsReporter(cw)
-	}
-
-	if d.config.CloudWatchMetricsReporterEnabled {
-		cwm := collector.NewCloudWatchMetricsReporter(d.config.CloudWatchMetricsPushIntervalSecs, d.config.ClusterGUID)
-		rm.RegisterMetricsReporter(cwm)
-	}
-
-	syslogReporter := collector.NewSyslogReporter(d.config.SyslogReporterNetwork, d.config.SyslogReporterAddress)
-	if syslogReporter != nil {
-		rm.RegisterMetricsReporter(syslogReporter)
-	}
-	rm.Start()
-	statsCollector := collector.NewCollector(d.lookupCache, rm, collectorConfig)
-	statsCollector.Start()
-}
-
-// configureFlowAggregation adds appropriate aggregators to the FlowLogsReporter, depending on configuration.
-func configureFlowAggregation(config Config, cw *collector.FlowLogsReporter) {
-	addedFileAllow := false
-	addedFileDeny := false
-	if config.CloudWatchLogsReporterEnabled {
-		if config.CloudWatchLogsEnabledForAllowed {
-			log.Info("Creating Flow Logs Aggregator for allowed")
-			caa := collector.NewFlowLogAggregator().
-				AggregateOver(collector.AggregationKind(config.CloudWatchLogsAggregationKindForAllowed)).
-				IncludeLabels(config.CloudWatchLogsIncludeLabels).
-				IncludePolicies(config.CloudWatchLogsIncludePolicies).
-				ForAction(rules.RuleActionAllow)
-
-			// Can we use the same aggregator for file logging?
-			if config.FlowLogsFileEnabled &&
-				config.FlowLogsFileEnabledForAllowed &&
-				config.FlowLogsFileAggregationKindForAllowed == config.CloudWatchLogsAggregationKindForAllowed &&
-				config.FlowLogsFileIncludeLabels == config.CloudWatchLogsIncludeLabels &&
-				config.FlowLogsFileIncludePolicies == config.CloudWatchLogsIncludePolicies {
-				log.Info("Adding Flow Logs Aggregator (allowed) for CloudWatch and File logs")
-				cw.AddAggregator(caa, []string{CloudWatchLogsDispatcherName, FlowLogsFileDispatcherName})
-				addedFileAllow = true
-			} else {
-				log.Info("Adding Flow Logs Aggregator (allowed) for CloudWatch logs")
-				cw.AddAggregator(caa, []string{CloudWatchLogsDispatcherName})
-			}
-		}
-		if config.CloudWatchLogsEnabledForDenied {
-			log.Info("Creating Flow Logs Aggregator for denied")
-			cad := collector.NewFlowLogAggregator().
-				AggregateOver(collector.AggregationKind(config.CloudWatchLogsAggregationKindForDenied)).
-				IncludeLabels(config.CloudWatchLogsIncludeLabels).
-				IncludePolicies(config.CloudWatchLogsIncludePolicies).
-				ForAction(rules.RuleActionDeny)
-			// Can we use the same aggregator for file logging?
-			if config.FlowLogsFileEnabled &&
-				config.FlowLogsFileEnabledForDenied &&
-				config.FlowLogsFileAggregationKindForDenied == config.CloudWatchLogsAggregationKindForDenied &&
-				config.FlowLogsFileIncludeLabels == config.CloudWatchLogsIncludeLabels &&
-				config.FlowLogsFileIncludePolicies == config.CloudWatchLogsIncludePolicies {
-				log.Info("Adding Flow Logs Aggregator (denied) for CloudWatch and File logs")
-				cw.AddAggregator(cad, []string{CloudWatchLogsDispatcherName, FlowLogsFileDispatcherName})
-				addedFileDeny = true
-			} else {
-				log.Info("Adding Flow Logs Aggregator (denied) for CloudWatch logs")
-				cw.AddAggregator(cad, []string{CloudWatchLogsDispatcherName})
-			}
-		}
-	}
-
-	if config.FlowLogsFileEnabled {
-		if !addedFileAllow && config.FlowLogsFileEnabledForAllowed {
-			log.Info("Creating Flow Logs Aggregator for allowed")
-			caa := collector.NewFlowLogAggregator().
-				AggregateOver(collector.AggregationKind(config.FlowLogsFileAggregationKindForAllowed)).
-				IncludeLabels(config.FlowLogsFileIncludeLabels).
-				IncludePolicies(config.FlowLogsFileIncludePolicies).
-				ForAction(rules.RuleActionAllow)
-			log.Info("Adding Flow Logs Aggregator (allowed) for File logs")
-			cw.AddAggregator(caa, []string{FlowLogsFileDispatcherName})
-		}
-		if !addedFileDeny && config.FlowLogsFileEnabledForDenied {
-			log.Info("Creating Flow Logs Aggregator for denied")
-			cad := collector.NewFlowLogAggregator().
-				AggregateOver(collector.AggregationKind(config.FlowLogsFileAggregationKindForDenied)).
-				IncludeLabels(config.FlowLogsFileIncludeLabels).
-				IncludePolicies(config.FlowLogsFileIncludePolicies).
-				ForAction(rules.RuleActionDeny)
-			log.Info("Adding Flow Logs Aggregator (denied) for File logs")
-			cw.AddAggregator(cad, []string{FlowLogsFileDispatcherName})
-		}
-	}
 }
 
 // onIfaceStateChange is our interface monitor callback.  It gets called from the monitor's thread.
