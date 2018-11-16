@@ -152,8 +152,9 @@ func DoNetworking(
 	}
 
 	// Check for management ip getting assigned to the network, interface with the management ip
-	// and then enable forwarding on management interface as well as endpoint
-	err = chkMgmtIPandEnableForwarding(networkName, hnsEndpoint, logger)
+	// and then enable forwarding on management interface as well as endpoint.
+	// Update the hnsNetwork variable with management ip
+	hnsNetwork, err = chkMgmtIPandEnableForwarding(networkName, hnsEndpoint, logger)
 	if err != nil {
 		logger.Errorf("Failed to enable forwarding : %v", err)
 		return "", "", err
@@ -306,17 +307,15 @@ func createAndAttachHostEP(epName string, hnsNetwork *hcsshim.HNSNetwork, subNet
 	return hnsEndpoint, err
 }
 
-func chkMgmtIPandEnableForwarding(networkName string, hnsEndpoint *hcsshim.HNSEndpoint, logger *logrus.Entry) error {
+func chkMgmtIPandEnableForwarding(networkName string, hnsEndpoint *hcsshim.HNSEndpoint, logger *logrus.Entry) (network *hcsshim.HNSNetwork, err error) {
 	netHelper := netsh.New(nil)
-	var network *hcsshim.HNSNetwork
-	var err error
 
 	// Wait for the network to populate Management IP.
 	for {
 		network, err = hcsshim.GetHNSNetworkByName(networkName)
 		if err != nil {
 			logger.Errorf("Unable to get hns network %s after creation, error: %v", networkName, err)
-			return err
+			return nil, err
 		}
 
 		if len(network.ManagementIP) > 0 {
@@ -342,18 +341,18 @@ func chkMgmtIPandEnableForwarding(networkName string, hnsEndpoint *hcsshim.HNSEn
 		netInterface, err := netHelper.GetInterfaceByIP(interfaceIpAddress)
 		if err != nil {
 			logger.Infof("Unable to find interface for IP Address [%v], error: %v", interfaceIpAddress, err)
-			return err
+			return nil, err
 		}
 
 		logger.Infof("Found Interface with IP[%s]: %v", interfaceIpAddress, netInterface)
 		interfaceIdx := strconv.Itoa(netInterface.Idx)
 		if err = netHelper.EnableForwarding(interfaceIdx); err != nil {
 			logger.Infof("Unable to enable forwarding on [%v] index [%v], error: %v", netInterface.Name, interfaceIdx, err)
-			return err
+			return nil, err
 		}
 		logger.Infof("Enabled forwarding on [%v] index [%v]", netInterface.Name, interfaceIdx)
 	}
-	return nil
+	return network, nil
 }
 
 func createAndAttachContainerEP(args *skel.CmdArgs,
@@ -406,8 +405,12 @@ func createAndAttachContainerEP(args *skel.CmdArgs,
 		}
 		return hnsEP, nil
 	})
+	if err != nil {
+		logger.Errorf("Error creating endpoint : %v", err)
+		return nil, err
+	}
 	logger.Infof("Endpoint to container created! %v", hnsEndpointCont)
-	return hnsEndpointCont, err
+	return hnsEndpointCont, nil
 }
 
 func lookupManagementAddr(mgmtIP net.IP, logger *logrus.Entry) (*net.IPNet, error) {
