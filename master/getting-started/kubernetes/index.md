@@ -19,7 +19,6 @@ To deploy a cluster suitable for production, refer to [Installation](/{{page.ver
 - 7.5GB RAM
 - 20GB free disk space
 - Ubuntu Server 16.04
-- [jq](https://stedolan.github.io/jq/download/){:target="_blank"}
 - Internet access
 - [Sufficient virtual memory](https://www.elastic.co/guide/en/elasticsearch/reference/current/vm-max-map-count.html){:target="_blank"}
 
