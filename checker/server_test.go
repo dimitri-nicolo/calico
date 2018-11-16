@@ -20,10 +20,12 @@ import (
 
 	. "github.com/onsi/gomega"
 
-	authz "github.com/envoyproxy/data-plane-api/envoy/service/auth/v2alpha"
 	"github.com/projectcalico/app-policy/policystore"
 	"github.com/projectcalico/app-policy/proto"
+	"github.com/projectcalico/app-policy/statscache"
 
+	"github.com/envoyproxy/data-plane-api/envoy/api/v2/core"
+	authz "github.com/envoyproxy/data-plane-api/envoy/service/auth/v2alpha"
 	"github.com/gogo/googleapis/google/rpc"
 )
 
@@ -33,7 +35,8 @@ func TestCheckNoStore(t *testing.T) {
 	defer cancel()
 
 	stores := make(chan *policystore.PolicyStore)
-	uut := NewServer(ctx, stores)
+	dpStats := make(chan statscache.DPStats, 10)
+	uut := NewServer(ctx, stores, dpStats)
 
 	req := &authz.CheckRequest{}
 	resp, err := uut.Check(ctx, req)
@@ -41,13 +44,14 @@ func TestCheckNoStore(t *testing.T) {
 	Expect(resp.GetStatus().GetCode()).To(Equal(UNAVAILABLE))
 }
 
-func TestCheckStore(t *testing.T) {
+func TestCheckStoreNoHTTP(t *testing.T) {
 	RegisterTestingT(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	stores := make(chan *policystore.PolicyStore)
-	uut := NewServer(ctx, stores)
+	dpStats := make(chan statscache.DPStats, 10)
+	uut := NewServer(ctx, stores, dpStats)
 
 	store := policystore.NewPolicyStore()
 	store.Write(func(s *policystore.PolicyStore) {
@@ -60,6 +64,7 @@ func TestCheckStore(t *testing.T) {
 	})
 	stores <- store
 
+	// Send in request with no HTTP data. Request should pass, we should have no stats updates for this request.
 	req := &authz.CheckRequest{Attributes: &authz.AttributeContext{
 		Source: &authz.AttributeContext_Peer{
 			Principal: "spiffe://cluster.local/ns/default/sa/steve",
@@ -68,11 +73,177 @@ func TestCheckStore(t *testing.T) {
 			Principal: "spiffe://cluster.local/ns/default/sa/sammy",
 		},
 	}}
-
 	chk := func() *authz.CheckResponse {
 		rsp, err := uut.Check(ctx, req)
 		Expect(err).ToNot(HaveOccurred())
 		return rsp
 	}
 	Eventually(chk).Should(Equal(&authz.CheckResponse{Status: &rpc.Status{Code: OK}}))
+	Consistently(dpStats, "200ms", "50ms").ShouldNot(Receive())
+}
+
+func TestCheckStoreHTTPAllowed(t *testing.T) {
+	RegisterTestingT(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	stores := make(chan *policystore.PolicyStore)
+	dpStats := make(chan statscache.DPStats, 10)
+	uut := NewServer(ctx, stores, dpStats)
+
+	store := policystore.NewPolicyStore()
+	store.Write(func(s *policystore.PolicyStore) {
+		s.Endpoint = &proto.WorkloadEndpoint{
+			ProfileIds: []string{"default"},
+		}
+		s.ProfileByID[proto.ProfileID{Name: "default"}] = &proto.Profile{
+			InboundRules: []*proto.Rule{{Action: "Allow"}},
+		}
+	})
+	stores <- store
+
+	// Send in request with no HTTP data. Request should pass, we should have no stats updates for this request.
+	req := &authz.CheckRequest{Attributes: &authz.AttributeContext{
+		Source: &authz.AttributeContext_Peer{
+			Address: &core.Address{
+				Address: &core.Address_SocketAddress{
+					SocketAddress: &core.SocketAddress{
+						Address:       "1.2.3.4",
+						PortSpecifier: &core.SocketAddress_PortValue{PortValue: 1000},
+						Protocol:      core.TCP,
+					},
+				},
+			},
+			Principal: "spiffe://cluster.local/ns/default/sa/steve",
+		},
+		Destination: &authz.AttributeContext_Peer{
+			Address: &core.Address{
+				Address: &core.Address_SocketAddress{
+					SocketAddress: &core.SocketAddress{
+						Address:       "11.22.33.44",
+						PortSpecifier: &core.SocketAddress_PortValue{PortValue: 2000},
+						Protocol:      core.TCP,
+					},
+				},
+			},
+			Principal: "spiffe://cluster.local/ns/default/sa/sammy",
+		},
+		Request: &authz.AttributeContext_Request{
+			Http: &authz.AttributeContext_HttpRequest{Method: "GET", Path: "/foo"},
+		},
+	}}
+
+	// Check request is allowed and that we don't get any stats updates (stats are not yet enabled).
+	chk := func() *authz.CheckResponse {
+		rsp, err := uut.Check(ctx, req)
+		Expect(err).ToNot(HaveOccurred())
+		return rsp
+	}
+	Eventually(chk).Should(Equal(&authz.CheckResponse{Status: &rpc.Status{Code: OK}}))
+	Consistently(dpStats, "200ms", "50ms").ShouldNot(Receive())
+
+	// Enable stats, re-run the request and this time check we do get stats updates.
+	store.DataplaneStatsEnabledForAllowed = true
+	chk = func() *authz.CheckResponse {
+		rsp, err := uut.Check(ctx, req)
+		Expect(err).ToNot(HaveOccurred())
+		return rsp
+	}
+	Eventually(chk).Should(Equal(&authz.CheckResponse{Status: &rpc.Status{Code: OK}}))
+	Eventually(dpStats).Should(Receive(Equal(statscache.DPStats{
+		Tuple: statscache.Tuple{
+			SrcIp:    "1.2.3.4",
+			DstIp:    "11.22.33.44",
+			SrcPort:  1000,
+			DstPort:  2000,
+			Protocol: "TCP",
+		},
+		Values: statscache.Values{
+			HTTPRequestsAllowed: 1,
+			HTTPRequestsDenied:  0,
+		},
+	})))
+}
+
+func TestCheckStoreHTTPDenied(t *testing.T) {
+	RegisterTestingT(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	stores := make(chan *policystore.PolicyStore)
+	dpStats := make(chan statscache.DPStats, 10)
+	uut := NewServer(ctx, stores, dpStats)
+
+	store := policystore.NewPolicyStore()
+	store.Write(func(s *policystore.PolicyStore) {
+		s.Endpoint = &proto.WorkloadEndpoint{
+			ProfileIds: []string{"default"},
+		}
+		s.ProfileByID[proto.ProfileID{Name: "default"}] = &proto.Profile{
+			InboundRules: []*proto.Rule{{Action: "Deny"}},
+		}
+	})
+	stores <- store
+
+	// Send in request with no HTTP data. Request should pass, we should have no stats updates for this request.
+	req := &authz.CheckRequest{Attributes: &authz.AttributeContext{
+		Source: &authz.AttributeContext_Peer{
+			Address: &core.Address{
+				Address: &core.Address_SocketAddress{
+					SocketAddress: &core.SocketAddress{
+						Address:       "1.2.3.4",
+						PortSpecifier: &core.SocketAddress_PortValue{PortValue: 1000},
+						Protocol:      core.TCP,
+					},
+				},
+			},
+			Principal: "spiffe://cluster.local/ns/default/sa/steve",
+		},
+		Destination: &authz.AttributeContext_Peer{
+			Address: &core.Address{
+				Address: &core.Address_SocketAddress{
+					SocketAddress: &core.SocketAddress{
+						Address:       "11.22.33.44",
+						PortSpecifier: &core.SocketAddress_PortValue{PortValue: 2000},
+						Protocol:      core.TCP,
+					},
+				},
+			},
+			Principal: "spiffe://cluster.local/ns/default/sa/sammy",
+		},
+		Request: &authz.AttributeContext_Request{
+			Http: &authz.AttributeContext_HttpRequest{Method: "GET", Path: "/foo"},
+		},
+	}}
+
+	// Check request is denied and that we don't get any stats updates (stats are not yet enabled).
+	chk := func() *authz.CheckResponse {
+		rsp, err := uut.Check(ctx, req)
+		Expect(err).ToNot(HaveOccurred())
+		return rsp
+	}
+	Eventually(chk).Should(Equal(&authz.CheckResponse{Status: &rpc.Status{Code: PERMISSION_DENIED}}))
+	Consistently(dpStats, "200ms", "50ms").ShouldNot(Receive())
+
+	// Enable stats, re-run the request and this time check we do get stats updates.
+	store.DataplaneStatsEnabledForDenied = true
+	chk = func() *authz.CheckResponse {
+		rsp, err := uut.Check(ctx, req)
+		Expect(err).ToNot(HaveOccurred())
+		return rsp
+	}
+	Eventually(chk).Should(Equal(&authz.CheckResponse{Status: &rpc.Status{Code: PERMISSION_DENIED}}))
+	Eventually(dpStats).Should(Receive(Equal(statscache.DPStats{
+		Tuple: statscache.Tuple{
+			SrcIp:    "1.2.3.4",
+			DstIp:    "11.22.33.44",
+			SrcPort:  1000,
+			DstPort:  2000,
+			Protocol: "TCP",
+		},
+		Values: statscache.Values{
+			HTTPRequestsAllowed: 0,
+			HTTPRequestsDenied:  1,
+		},
+	})))
 }

@@ -40,7 +40,9 @@ type PolicyStore struct {
 	RWMutex sync.RWMutex
 
 	// Config settings
-	DropActionOverride DropActionOverride
+	DropActionOverride              DropActionOverride
+	DataplaneStatsEnabledForAllowed bool
+	DataplaneStatsEnabledForDenied  bool
 
 	// Cache data
 	PolicyByID         map[proto.PolicyID]*proto.Policy

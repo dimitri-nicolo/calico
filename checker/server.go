@@ -15,22 +15,26 @@
 package checker
 
 import (
-	"github.com/projectcalico/app-policy/policystore"
+	"context"
 
+	"github.com/projectcalico/app-policy/policystore"
+	"github.com/projectcalico/app-policy/statscache"
+
+	"github.com/envoyproxy/data-plane-api/envoy/api/v2/core"
 	authz "github.com/envoyproxy/data-plane-api/envoy/service/auth/v2alpha"
 	"github.com/gogo/googleapis/google/rpc"
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/net/context"
 )
 
 type authServer struct {
-	stores <-chan *policystore.PolicyStore
-	Store  *policystore.PolicyStore
+	stores  <-chan *policystore.PolicyStore
+	dpStats chan<- statscache.DPStats
+	Store   *policystore.PolicyStore
 }
 
 // NewServer creates a new authServer and returns a pointer to it.
-func NewServer(ctx context.Context, stores <-chan *policystore.PolicyStore) *authServer {
-	s := &authServer{stores, nil}
+func NewServer(ctx context.Context, stores <-chan *policystore.PolicyStore, dpStats chan<- statscache.DPStats) *authServer {
+	s := &authServer{stores: stores, dpStats: dpStats}
 	go s.updateStores(ctx)
 	return s
 }
@@ -40,6 +44,7 @@ func (as *authServer) Check(ctx context.Context, req *authz.CheckRequest) (*auth
 	log.Debugf("Check(%v, %v)", ctx, req)
 	resp := authz.CheckResponse{Status: &rpc.Status{Code: INTERNAL}}
 	var st rpc.Status
+	var statsEnabledForAllowed, statsEnabledForDenied bool
 
 	// Ensure that we only access as.Store once per Check call. The authServer can be updated to point to a different
 	// store asynchronously with this call, so we use a local variable to reference the PolicyStore for the duration of
@@ -50,7 +55,18 @@ func (as *authServer) Check(ctx context.Context, req *authz.CheckRequest) (*auth
 		resp.Status.Code = UNAVAILABLE
 		return &resp, nil
 	}
-	store.Read(func(ps *policystore.PolicyStore) { st = checkStore(ps, req) })
+	store.Read(func(ps *policystore.PolicyStore) {
+		st = checkStore(ps, req)
+		statsEnabledForAllowed = ps.DataplaneStatsEnabledForAllowed
+		statsEnabledForDenied = ps.DataplaneStatsEnabledForDenied
+	})
+
+	// If we are reporting stats for allowed and response is OK, or we are reporting stats for denied and
+	// the response is not OK then report the stats.
+	if (statsEnabledForAllowed && st.Code == OK) || (statsEnabledForDenied && st.Code != OK) {
+		as.reportStats(ctx, st, req)
+	}
+
 	resp.Status = &st
 	log.WithFields(log.Fields{
 		"Request":  req,
@@ -59,15 +75,48 @@ func (as *authServer) Check(ctx context.Context, req *authz.CheckRequest) (*auth
 	return &resp, nil
 }
 
+// reportStats creates a statistics for this request and reports it to the client.
+func (as *authServer) reportStats(ctx context.Context, st rpc.Status, req *authz.CheckRequest) {
+	if req.GetAttributes().GetDestination().GetAddress().GetSocketAddress().GetProtocol() != core.TCP {
+		log.Debug("No statistics to report for non-TCP request")
+		return
+	}
+	if req.GetAttributes().GetRequest().GetHttp() == nil {
+		log.Debug("No statistics to report for non-HTTP request")
+		return
+	}
+
+	dpStats := statscache.DPStats{
+		Tuple: statscache.Tuple{
+			SrcIp:    req.GetAttributes().GetSource().GetAddress().GetSocketAddress().GetAddress(),
+			DstIp:    req.GetAttributes().GetDestination().GetAddress().GetSocketAddress().GetAddress(),
+			SrcPort:  int32(req.GetAttributes().GetSource().GetAddress().GetSocketAddress().GetPortValue()),
+			DstPort:  int32(req.GetAttributes().GetDestination().GetAddress().GetSocketAddress().GetPortValue()),
+			Protocol: "TCP",
+		},
+	}
+
+	if st.Code == OK {
+		dpStats.Values.HTTPRequestsAllowed = 1
+	} else {
+		dpStats.Values.HTTPRequestsDenied = 1
+	}
+
+	select {
+	case as.dpStats <- dpStats:
+	case <-ctx.Done():
+	}
+}
+
 // updateStores pulls PolicyStores off the channel and assigns them.
 func (as *authServer) updateStores(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		// Variable assignment is atomic, so this is threadsafe as long as each check call accesses authServer.Store
-		// only once.
 		case as.Store = <-as.stores:
+			// Variable assignment is atomic, so this is threadsafe as long as each check call accesses authServer.Store
+			// only once.
 			log.Info("Switching to new in-sync policy store.")
 			continue
 		}
