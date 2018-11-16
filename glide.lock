@@ -1,5 +1,5 @@
-hash: 9adfd527de19dcd9336f2e18b8a8faebe9dd7336b8660838c83ce0ab2180ed01
-updated: 2018-11-16T05:09:11.134331739Z
+hash: 6e0a8bd3c1a380a72a5c9f61f93da4c450b1982b03448f930ccd178c9a50cc24
+updated: 2018-11-16T13:31:02.490766432Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -202,7 +202,7 @@ imports:
   - pkg/resource/template
   - pkg/run
 - name: github.com/kelseyhightower/envconfig
-  version: dd1402a4d99de9ac2f396cd6fcb957bc2c695ec1
+  version: f611eb38b3875cc3bd991ca91c51d06446afa14c
 - name: github.com/kelseyhightower/memkv
   version: 892bfd468afa0fa476556e7bd7734a087cda08b3
 - name: github.com/mailru/easyjson
@@ -281,7 +281,7 @@ imports:
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
 - name: github.com/projectcalico/cni-plugin
-  version: 6f3890a88d5bd85c1187dbfed89a4cee47fc4ec1
+  version: 010ce7ba304c9879af3eb5baf27f9f176cde354c
   repo: git@github.com:tigera/cni-plugin-private.git
   subpackages:
   - internal/pkg/azure
@@ -524,7 +524,7 @@ imports:
   subpackages:
   - rate
 - name: google.golang.org/appengine
-  version: 4a4468ece617fc8205e99368fa2200e9d1fad421
+  version: b1f26356af11148e710935ed1ac8a7f5702c7612
   subpackages:
   - internal
   - internal/app_identity
