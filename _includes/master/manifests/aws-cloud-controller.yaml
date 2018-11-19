@@ -91,7 +91,7 @@ spec:
           operator: Exists
       containers:
         - name: tigera-cloud-controllers
-          image: {{site.imageNames["awsCloudController"]}}:{{site.data.versions[page.version].first.components["calico/awsCloudController"].version}}
+          image: {{site.imageNames["cloudController"]}}:{{site.data.versions[page.version].first.components["cnx-cloud-controller"].version}}
           readinessProbe:
             exec:
               command:

@@ -646,3 +646,5 @@ master:
     tiny-tools:
       version: 0.3.0
       url: ""
+    cnx-cloud-controller:
+      version: master
