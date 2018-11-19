@@ -1,0 +1,5 @@
+---
+layout: null
+---
+{% include {{page.version}}/manifests/aws-cloud-controller.yaml datastore="kdd" network="calico" %}
+
