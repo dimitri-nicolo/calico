@@ -1,6 +1,6 @@
 ---
 title: Policy monitoring and reporting
-canonical_url: https://docs.tigera.io/v2.2/reference/cnx/policy-violations
+canonical_url: https://docs.tigera.io/v2.2/usage/metrics/metrics
 ---
 
 {{site.prodname}} adds the ability to monitor effects of policies configured in your cluster.
