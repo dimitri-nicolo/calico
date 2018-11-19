@@ -46,6 +46,10 @@ func (c ipamClientWindows) GetAssignmentBlockCIDR(ctx context.Context, addr cnet
 	return blockCIDR
 }
 
+var (
+        ipPoolsWindows = &ipPoolAccessor{pools: map[string]pool{}}
+)
+
 type testArgsClaimAff1 struct {
 	inNet, host                 string
 	cleanEnv                    bool
@@ -63,7 +67,7 @@ var _ = testutils.E2eDatastoreDescribe("Windows: IPAM tests", testutils.Datastor
 	if err != nil {
 		panic(err)
 	}
-	ic := NewIPAMClient(bc, ipPools)
+	ic := NewIPAMClient(bc, ipPoolsWindows)
 
 	// Request for 256 IPs from a pool, say "10.0.0.0/24", with a blocksize of 26, allocates only 240 IPs as
 	// the pool of 256 IPs is splitted into 4 blocks of 64 IPs each and 4 IPs, i.e,
@@ -80,7 +84,7 @@ var _ = testutils.E2eDatastoreDescribe("Windows: IPAM tests", testutils.Datastor
 			}
 
 			for _, v := range pools {
-				ipPools.pools[v.cidr] = pool{cidr: v.cidr, enabled: v.enabled, blockSize: v.blockSize}
+				ipPoolsWindows.pools[v.cidr] = pool{cidr: v.cidr, enabled: v.enabled, blockSize: v.blockSize}
 			}
 
 			fromPool := cnet.MustParseNetwork(usePool)
@@ -133,7 +137,7 @@ var _ = testutils.E2eDatastoreDescribe("Windows: IPAM tests", testutils.Datastor
 			bc.Clean()
 			deleteAllPoolsWindows()
 
-			ipPools.pools["100.0.0.0/24"] = pool{cidr: "100.0.0.0/24", enabled: true, blockSize: 26}
+			ipPoolsWindows.pools["100.0.0.0/24"] = pool{cidr: "100.0.0.0/24", enabled: true, blockSize: 26}
 
 			fromPool := cnet.MustParseNetwork("100.0.0.0/24")
 
@@ -232,21 +236,21 @@ var _ = testutils.E2eDatastoreDescribe("Windows: IPAM tests", testutils.Datastor
 		// Call once in order to assign an IP address and create a block.
 		It("Windows: should have assigned an IP address with no error", func() {
 			deleteAllPoolsWindows()
-			ipPools.pools["100.0.0.0/24"] = pool{cidr: "100.0.0.0/24", enabled: true, blockSize: 26}
-			ipPools.pools["200.0.0.0/24"] = pool{cidr: "200.0.0.0/24", enabled: true, blockSize: 26}
+			ipPoolsWindows.pools["100.0.0.0/24"] = pool{cidr: "100.0.0.0/24", enabled: true, blockSize: 26}
+			ipPoolsWindows.pools["200.0.0.0/24"] = pool{cidr: "200.0.0.0/24", enabled: true, blockSize: 26}
 			ctx := context.WithValue(context.Background(), "windowsHost", "windows")
 			v4, _, outErr := ic.AutoAssign(ctx, args)
 			Expect(outErr).NotTo(HaveOccurred())
 			Expect(len(v4) == 1).To(BeTrue())
 			Expect(checkWindowsValidIP(v4[0].IP, 26)).To(BeTrue())
-			Expect(isValidWindowsHandle(bc, ipPools, v4[0].IP, ctx)).To(BeTrue())
+			Expect(isValidWindowsHandle(bc, ipPoolsWindows, v4[0].IP, ctx)).To(BeTrue())
 
 			By("Calling again to trigger an assignment from the newly created block.")
 			v4_next, _, outErr := ic.AutoAssign(ctx, args)
 			Expect(outErr).NotTo(HaveOccurred())
 			Expect(len(v4_next)).To(Equal(1))
 			Expect(checkWindowsValidIP(v4_next[0].IP, 26)).To(BeTrue())
-			Expect(isValidWindowsHandle(bc, ipPools, v4_next[0].IP, ctx)).To(BeTrue())
+			Expect(isValidWindowsHandle(bc, ipPoolsWindows, v4_next[0].IP, ctx)).To(BeTrue())
 		})
 
 	})
@@ -345,7 +349,7 @@ var _ = testutils.E2eDatastoreDescribe("Windows: IPAM tests", testutils.Datastor
 				deleteAllPoolsWindows()
 			}
 			for _, v := range pools {
-				ipPools.pools[v.cidr] = pool{cidr: v.cidr, enabled: v.enabled, blockSize: v.blockSize}
+				ipPoolsWindows.pools[v.cidr] = pool{cidr: v.cidr, enabled: v.enabled, blockSize: v.blockSize}
 			}
 
 			fromPool := cnet.MustParseNetwork(usePool)
@@ -381,12 +385,12 @@ var _ = testutils.E2eDatastoreDescribe("Windows: IPAM tests", testutils.Datastor
 
 func deleteAllPoolsWindows() {
 	log.Infof("Windows: Deleting all pools")
-	ipPools.pools = map[string]pool{}
+	ipPoolsWindows.pools = map[string]pool{}
 }
 
 func applyPoolWindows(cidr string, enabled bool) {
 	log.Infof("Windows: Adding pool: %s, enabled: %v", cidr, enabled)
-	ipPools.pools[cidr] = pool{enabled: enabled}
+	ipPoolsWindows.pools[cidr] = pool{enabled: enabled}
 }
 
 // checkWindowsIP() receives an IP and block size and returns bool -
@@ -415,13 +419,13 @@ func checkWindowsValidIP(ip net.IP, blockSize uint) bool {
 }
 
 // Return boolean after checking if the valid handle is allocated
-func isValidWindowsHandle(backend bapi.Client, ipPools *ipPoolAccessor, ip net.IP, ctx context.Context) bool {
+func isValidWindowsHandle(backend bapi.Client, ipPoolsWindows *ipPoolAccessor, ip net.IP, ctx context.Context) bool {
 	c := &ipamClientWindows{
 		client: backend,
-		pools:  *ipPools,
+		pools:  *ipPoolsWindows,
 		blockReaderWriter: blockReaderWriter{
 			client: backend,
-			pools:  ipPools,
+			pools:  ipPoolsWindows,
 		},
 	}
 
