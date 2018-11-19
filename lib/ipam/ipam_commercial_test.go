@@ -28,7 +28,6 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend"
 	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
-	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/projectcalico/libcalico-go/lib/testutils"
 )
@@ -47,6 +46,10 @@ func (c ipamClientWindows) GetAssignmentBlockCIDR(ctx context.Context, addr cnet
 	return blockCIDR
 }
 
+var (
+	ipPoolsWindows = &ipPoolAccessor{pools: map[string]pool{}}
+)
+
 type testArgsClaimAff1 struct {
 	inNet, host                 string
 	cleanEnv                    bool
@@ -64,7 +67,7 @@ var _ = testutils.E2eDatastoreDescribe("Windows: IPAM tests", testutils.Datastor
 	if err != nil {
 		panic(err)
 	}
-	ic := NewIPAMClient(bc, ipPools)
+	ic := NewIPAMClient(bc, ipPoolsWindows)
 
 	// Request for 256 IPs from a pool, say "10.0.0.0/24", with a blocksize of 26, allocates only 240 IPs as
 	// the pool of 256 IPs is splitted into 4 blocks of 64 IPs each and 4 IPs, i.e,
@@ -81,7 +84,7 @@ var _ = testutils.E2eDatastoreDescribe("Windows: IPAM tests", testutils.Datastor
 			}
 
 			for _, v := range pools {
-				ipPools.pools[v.cidr] = pool{cidr: v.cidr, enabled: v.enabled, blockSize: v.blockSize}
+				ipPoolsWindows.pools[v.cidr] = pool{cidr: v.cidr, enabled: v.enabled, blockSize: v.blockSize}
 			}
 
 			fromPool := cnet.MustParseNetwork(usePool)
@@ -134,7 +137,7 @@ var _ = testutils.E2eDatastoreDescribe("Windows: IPAM tests", testutils.Datastor
 			bc.Clean()
 			deleteAllPoolsWindows()
 
-			ipPools.pools["100.0.0.0/24"] = pool{cidr: "100.0.0.0/24", enabled: true, blockSize: 26}
+			ipPoolsWindows.pools["100.0.0.0/24"] = pool{cidr: "100.0.0.0/24", enabled: true, blockSize: 26}
 
 			fromPool := cnet.MustParseNetwork("100.0.0.0/24")
 
@@ -233,23 +236,21 @@ var _ = testutils.E2eDatastoreDescribe("Windows: IPAM tests", testutils.Datastor
 		// Call once in order to assign an IP address and create a block.
 		It("Windows: should have assigned an IP address with no error", func() {
 			deleteAllPoolsWindows()
-			// applyPoolWindows("100.0.0.0/24", true)
-			// applyPoolWindows("200.0.0.0/24", true)
-			ipPools.pools["100.0.0.0/24"] = pool{cidr: "100.0.0.0/24", enabled: true, blockSize: 26}
-			ipPools.pools["200.0.0.0/24"] = pool{cidr: "200.0.0.0/24", enabled: true, blockSize: 26}
+			ipPoolsWindows.pools["100.0.0.0/24"] = pool{cidr: "100.0.0.0/24", enabled: true, blockSize: 26}
+			ipPoolsWindows.pools["200.0.0.0/24"] = pool{cidr: "200.0.0.0/24", enabled: true, blockSize: 26}
 			ctx := context.WithValue(context.Background(), "windowsHost", "windows")
 			v4, _, outErr := ic.AutoAssign(ctx, args)
 			Expect(outErr).NotTo(HaveOccurred())
 			Expect(len(v4) == 1).To(BeTrue())
 			Expect(checkWindowsValidIP(v4[0].IP, 26)).To(BeTrue())
-			Expect(isValidWindowsHandle(bc, ipPools, v4[0].IP, ctx)).To(BeTrue())
+			Expect(isValidWindowsHandle(bc, ipPoolsWindows, v4[0].IP, ctx)).To(BeTrue())
 
 			By("Calling again to trigger an assignment from the newly created block.")
 			v4_next, _, outErr := ic.AutoAssign(ctx, args)
 			Expect(outErr).NotTo(HaveOccurred())
 			Expect(len(v4_next)).To(Equal(1))
 			Expect(checkWindowsValidIP(v4_next[0].IP, 26)).To(BeTrue())
-			Expect(isValidWindowsHandle(bc, ipPools, v4_next[0].IP, ctx)).To(BeTrue())
+			Expect(isValidWindowsHandle(bc, ipPoolsWindows, v4_next[0].IP, ctx)).To(BeTrue())
 		})
 
 	})
@@ -275,7 +276,7 @@ var _ = testutils.E2eDatastoreDescribe("Windows: IPAM tests", testutils.Datastor
 
 			ctx := context.WithValue(context.Background(), "windowsHost", "windows")
 			v4_1, _, outErr := ic.AutoAssign(ctx, args_1)
-			blocks := getAffineBlocksWindows(bc, host)
+			blocks := getAffineBlocks(bc, host)
 			for _, b := range blocks {
 				if pool1.Contains(b.IPNet.IP) {
 					block1 = b
@@ -295,7 +296,7 @@ var _ = testutils.E2eDatastoreDescribe("Windows: IPAM tests", testutils.Datastor
 			}
 
 			v4_2, _, outErr := ic.AutoAssign(ctx, args_2)
-			blocks = getAffineBlocksWindows(bc, host)
+			blocks = getAffineBlocks(bc, host)
 			for _, b := range blocks {
 				if pool2.Contains(b.IPNet.IP) {
 					block2 = b
@@ -348,7 +349,7 @@ var _ = testutils.E2eDatastoreDescribe("Windows: IPAM tests", testutils.Datastor
 				deleteAllPoolsWindows()
 			}
 			for _, v := range pools {
-				ipPools.pools[v.cidr] = pool{cidr: v.cidr, enabled: v.enabled, blockSize: v.blockSize}
+				ipPoolsWindows.pools[v.cidr] = pool{cidr: v.cidr, enabled: v.enabled, blockSize: v.blockSize}
 			}
 
 			fromPool := cnet.MustParseNetwork(usePool)
@@ -374,7 +375,7 @@ var _ = testutils.E2eDatastoreDescribe("Windows: IPAM tests", testutils.Datastor
 		Entry("256 v4 256 v6", "testHost", true, []pool{{"192.168.1.0/24", 26, true}, {"fd80:24e2:f998:72d6::/120", 122, true}}, "192.168.1.0/24", 256, 256, 240, 240, nil),
 
 		// Test 2: AutoAssign 257 IPv4, 0 IPv6 - expect 240 IPv4 addresses, no IPv6, and no error.
-		Entry("257 v4 0 v6", "testHost", true, []pool{{"192.168.1.0/24", 26, true} /*, {"fd80:24e2:f998:72d6::/120", 128, true}*/}, "192.168.1.0/24", 257, 0, 240, 0, nil),
+		Entry("257 v4 0 v6", "testHost", true, []pool{{"192.168.1.0/24", 26, true}}, "192.168.1.0/24", 257, 0, 240, 0, nil),
 
 		// Test 3: AutoAssign 0 IPv4, 257 IPv6 - expect 240 IPv6 addresses, no IPv4, and no error.
 		Entry("0 v4 257 v6", "testHost", true, []pool{{"192.168.1.0/24", 26, true}, {"fd80:24e2:f998:72d6::/120", 122, true}}, "192.168.1.0/24", 0, 257, 0, 240, nil),
@@ -382,35 +383,14 @@ var _ = testutils.E2eDatastoreDescribe("Windows: IPAM tests", testutils.Datastor
 
 })
 
-// getAffineBlocksWindows gets all the blocks affined to the host passed in.
-func getAffineBlocksWindows(backend bapi.Client, host string) []cnet.IPNet {
-	opts := model.BlockAffinityListOptions{Host: host, IPVersion: 4}
-	datastoreObjs, err := backend.List(context.Background(), opts, "")
-	if err != nil {
-		if _, ok := err.(cerrors.ErrorResourceDoesNotExist); ok {
-			log.Printf("Windows: No affined blocks found")
-		} else {
-			Expect(err).NotTo(HaveOccurred(), "Windows: Error getting affine blocks: %v", err)
-		}
-	}
-
-	// Iterate through and extract the block CIDRs.
-	blocks := []cnet.IPNet{}
-	for _, o := range datastoreObjs.KVPairs {
-		k := o.Key.(model.BlockAffinityKey)
-		blocks = append(blocks, k.CIDR)
-	}
-	return blocks
-}
-
 func deleteAllPoolsWindows() {
 	log.Infof("Windows: Deleting all pools")
-	ipPools.pools = map[string]pool{}
+	ipPoolsWindows.pools = map[string]pool{}
 }
 
 func applyPoolWindows(cidr string, enabled bool) {
 	log.Infof("Windows: Adding pool: %s, enabled: %v", cidr, enabled)
-	ipPools.pools[cidr] = pool{enabled: enabled}
+	ipPoolsWindows.pools[cidr] = pool{enabled: enabled}
 }
 
 // checkWindowsIP() receives an IP and block size and returns bool -
@@ -439,13 +419,13 @@ func checkWindowsValidIP(ip net.IP, blockSize uint) bool {
 }
 
 // Return boolean after checking if the valid handle is allocated
-func isValidWindowsHandle(backend bapi.Client, ipPools *ipPoolAccessor, ip net.IP, ctx context.Context) bool {
+func isValidWindowsHandle(backend bapi.Client, ipPoolsWindows *ipPoolAccessor, ip net.IP, ctx context.Context) bool {
 	c := &ipamClientWindows{
 		client: backend,
-		pools:  *ipPools,
+		pools:  *ipPoolsWindows,
 		blockReaderWriter: blockReaderWriter{
 			client: backend,
-			pools:  ipPools,
+			pools:  ipPoolsWindows,
 		},
 	}
 
