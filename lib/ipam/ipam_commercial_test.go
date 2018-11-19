@@ -47,7 +47,7 @@ func (c ipamClientWindows) GetAssignmentBlockCIDR(ctx context.Context, addr cnet
 }
 
 var (
-        ipPoolsWindows = &ipPoolAccessor{pools: map[string]pool{}}
+	ipPoolsWindows = &ipPoolAccessor{pools: map[string]pool{}}
 )
 
 type testArgsClaimAff1 struct {
