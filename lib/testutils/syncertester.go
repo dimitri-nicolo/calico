@@ -379,9 +379,13 @@ func (st *SyncerTester) ExpectUpdatesSanitized(expected []api.Update, checkOrder
 	}
 
 	if checkOrder {
-		Expect(sanitized).To(Equal(expected))
+		ExpectWithOffset(1, sanitized).To(Equal(expected))
 	} else {
-		Expect(sanitized).To(ConsistOf(expected))
+		var asIface []interface{}
+		for _, u := range expected {
+			asIface = append(asIface, u)
+		}
+		ExpectWithOffset(1, sanitized).To(ConsistOf(asIface...))
 	}
 }
 
