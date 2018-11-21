@@ -24,6 +24,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/projectcalico/libcalico-go/lib/backend/k8s"
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/felixsyncer"
+	"github.com/projectcalico/libcalico-go/lib/testutils"
 
 	log "github.com/sirupsen/logrus"
 
@@ -296,7 +297,7 @@ func CreateClientAndSyncer(cfg apiconfig.KubeConfig) (*k8s.KubeClient, *cb, api.
 	return c.(*k8s.KubeClient), &callback, syncer
 }
 
-var _ = Describe("Test Syncer API for Kubernetes backend", func() {
+var _ = testutils.E2eDatastoreDescribe("Test Syncer API for Kubernetes backend", testutils.DatastoreK8s, func(cfg apiconfig.CalicoAPIConfig) {
 	var (
 		c      *k8s.KubeClient
 		cb     *cb
@@ -1780,7 +1781,7 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 	})
 })
 
-var _ = Describe("Test Watch support", func() {
+var _ = testutils.E2eDatastoreDescribe("Test Watch support", testutils.DatastoreK8s, func(cfg apiconfig.CalicoAPIConfig) {
 	var (
 		c   *k8s.KubeClient
 		ctx context.Context
@@ -1788,8 +1789,7 @@ var _ = Describe("Test Watch support", func() {
 
 	BeforeEach(func() {
 		// Create a client
-		cfg := apiconfig.CalicoAPIConfigSpec{KubeConfig: apiconfig.KubeConfig{K8sAPIEndpoint: "http://localhost:8080"}}
-		client, err := k8s.NewKubeClient(&cfg)
+		client, err := k8s.NewKubeClient(&cfg.Spec)
 		Expect(err).NotTo(HaveOccurred())
 		c = client.(*k8s.KubeClient)
 
