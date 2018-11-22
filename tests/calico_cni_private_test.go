@@ -2,15 +2,18 @@ package main_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"os"
 	"time"
 
+	"github.com/containernetworking/plugins/pkg/ns"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/projectcalico/cni-plugin/internal/pkg/testutils"
 	"github.com/projectcalico/cni-plugin/internal/pkg/utils"
+	"github.com/projectcalico/cni-plugin/pkg/types"
 	k8sconversion "github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/logutils"
@@ -120,6 +123,130 @@ var _ = Describe("CalicoCni Private", func() {
 				Expect(endpoints.Items[0].Labels).Should(
 					HaveKeyWithValue(k8sconversion.SecurityGroupLabelPrefix+"/sg-test", ""))
 			})
+		})
+	})
+})
+
+var _ = Describe("CalicoCNI Private Kubernetes CNI tests", func() {
+	// Create a random seed
+	rand.Seed(time.Now().UTC().UnixNano())
+	log.SetFormatter(&logutils.Formatter{})
+	log.AddHook(&logutils.ContextHook{})
+	log.SetOutput(GinkgoWriter)
+	log.SetLevel(log.InfoLevel)
+	hostname, _ := names.Hostname()
+	calicoClient, err := client.NewFromEnv()
+	if err != nil {
+		panic(err)
+	}
+
+	BeforeEach(func() {
+		testutils.WipeK8sPods()
+		testutils.WipeEtcd()
+	})
+
+	utils.ConfigureLogging("info")
+	cniVersion := os.Getenv("CNI_SPEC_VERSION")
+
+	Context("with WindowsUseSingleNetwork: true", func() {
+		var nc types.NetConf
+		var netconf string
+		var pool1 = "50.60.0.0/24"
+		var clientset *kubernetes.Clientset
+		BeforeEach(func() {
+			// Build the network config for this set of tests.
+			nc = types.NetConf{
+				CNIVersion:              cniVersion,
+				Name:                    "calico-uts",
+				Type:                    "calico",
+				EtcdEndpoints:           fmt.Sprintf("http://%s:2379", os.Getenv("ETCD_IP")),
+				DatastoreType:           os.Getenv("DATASTORE_TYPE"),
+				Kubernetes:              types.Kubernetes{K8sAPIRoot: "http://127.0.0.1:8080"},
+				Policy:                  types.Policy{PolicyType: "k8s"},
+				NodenameFileOptional:    true,
+				LogLevel:                "info",
+				WindowsUseSingleNetwork: true,
+			}
+			nc.IPAM.Type = "calico-ipam"
+			ncb, err := json.Marshal(nc)
+			Expect(err).NotTo(HaveOccurred())
+			netconf = string(ncb)
+
+			// Create IP Pools.
+			testutils.MustCreateNewIPPoolBlockSize(calicoClient, pool1, false, false, true, 31)
+
+			// Set up clients.
+			config, err := clientcmd.DefaultClientConfig.ClientConfig()
+			Expect(err).NotTo(HaveOccurred())
+			clientset, err = kubernetes.NewForConfig(config)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		AfterEach(func() {
+			// Delete the IP Pools.
+			testutils.MustDeleteIPPool(calicoClient, pool1)
+		})
+
+		It("should fail to assign an IP when single allowed IPAM block is full", func() {
+			// Create the Namespace.
+			testNS := fmt.Sprintf("run%d", rand.Uint32())
+			_, err = clientset.CoreV1().Namespaces().Create(&v1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: testNS,
+					Annotations: map[string]string{
+						"cni.projectcalico.org/ipv4pools": "[\"50.60.0.0/24\"]",
+					},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			type container struct {
+				contNS ns.NetNS
+				name   string
+			}
+			var containers []container
+
+			defer func() {
+				for _, c := range containers {
+					// Delete the container.
+					_, err = testutils.DeleteContainer(netconf, c.contNS.Path(), c.name, testNS)
+					Expect(err).ShouldNot(HaveOccurred())
+				}
+			}()
+
+			for i := 0; i < 3; i++ {
+				// Now create a K8s pod.
+				name := fmt.Sprintf("run-%d-%d", i, rand.Uint32())
+				pod, err := clientset.CoreV1().Pods(testNS).Create(&v1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:        name,
+						Annotations: map[string]string{},
+					},
+					Spec: v1.PodSpec{
+						Containers: []v1.Container{{
+							Name:  name,
+							Image: "ignore",
+						}},
+						NodeName: hostname,
+					},
+				})
+				Expect(err).NotTo(HaveOccurred())
+				log.Infof("Created POD object: %v", pod)
+
+				// Expect an error when invoking the CNI plugin for the last pod.
+				_, _, _, _, _, contNs, err := testutils.CreateContainer(netconf, name, testNS, "")
+				if err == nil {
+					containers = append(containers, container{
+						contNS: contNs,
+						name:   name,
+					})
+				}
+				if i < 2 {
+					Expect(err).NotTo(HaveOccurred())
+				} else {
+					Expect(err).To(HaveOccurred())
+				}
+			}
 		})
 	})
 })
