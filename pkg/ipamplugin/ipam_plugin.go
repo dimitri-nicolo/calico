@@ -174,13 +174,21 @@ func cmdAdd(args *skel.CmdArgs) error {
 		}
 
 		fmt.Fprintf(os.Stderr, "Calico CNI IPAM handle=%s\n", handleID)
+		var maxBlocks int
+		if conf.WindowsUseSingleNetwork {
+			// When running in single-network mode (for kube-proxy compatibility), limit the
+			// number of blocks we're allowed to create.
+			fmt.Fprintf(os.Stderr, "Running in single-HNS-network mode, limiting number of IPAM blocks to 1.\n")
+			maxBlocks = 1
+		}
 		assignArgs := ipam.AutoAssignArgs{
-			Num4:      num4,
-			Num6:      num6,
-			HandleID:  &handleID,
-			Hostname:  nodename,
-			IPv4Pools: v4pools,
-			IPv6Pools: v6pools,
+			Num4:             num4,
+			Num6:             num6,
+			HandleID:         &handleID,
+			Hostname:         nodename,
+			IPv4Pools:        v4pools,
+			IPv6Pools:        v6pools,
+			MaxBlocksPerHost: maxBlocks,
 		}
 		logger.WithField("assignArgs", assignArgs).Info("Auto assigning IP")
 		assignedV4, assignedV6, err := calicoClient.IPAM().AutoAssign(ctx, assignArgs)

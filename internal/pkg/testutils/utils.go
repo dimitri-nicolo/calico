@@ -78,6 +78,11 @@ func WipeEtcd() {
 
 // MustCreateNewIPPool creates a new Calico IPAM IP Pool.
 func MustCreateNewIPPool(c client.Interface, cidr string, ipip, natOutgoing, ipam bool) string {
+	return MustCreateNewIPPoolBlockSize(c, cidr, ipip, natOutgoing, ipam, 0)
+}
+
+// MustCreateNewIPPoolBlockSize creates a new Calico IPAM IP Pool with support for setting the block size.
+func MustCreateNewIPPoolBlockSize(c client.Interface, cidr string, ipip, natOutgoing, ipam bool, blockSize int) string {
 	log.SetLevel(log.DebugLevel)
 
 	log.SetOutput(os.Stderr)
@@ -98,6 +103,7 @@ func MustCreateNewIPPool(c client.Interface, cidr string, ipip, natOutgoing, ipa
 	pool.Spec.NATOutgoing = natOutgoing
 	pool.Spec.Disabled = !ipam
 	pool.Spec.IPIPMode = mode
+	pool.Spec.BlockSize = blockSize
 
 	_, err := c.IPPools().Create(context.Background(), pool, options.SetOptions{})
 	if err != nil {
