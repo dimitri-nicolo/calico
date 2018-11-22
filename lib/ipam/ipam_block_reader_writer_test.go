@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -189,7 +189,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM affine block allocation tests", tes
 						defer GinkgoRecover()
 
 						testhost := fmt.Sprintf("host-%d", j)
-						ips, err := ic.autoAssign(ctx, 1, &testhost, nil, nil, 4, testhost)
+						ips, err := ic.autoAssign(ctx, 1, &testhost, nil, nil, 4, testhost, 0)
 						if err != nil {
 							log.WithError(err).Errorf("Auto assign failed for host %s", testhost)
 							testErr = err
@@ -275,7 +275,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM affine block allocation tests", tes
 						defer GinkgoRecover()
 
 						testhost := "single-host"
-						ips, err := ic.autoAssign(ctx, 1, nil, nil, nil, 4, testhost)
+						ips, err := ic.autoAssign(ctx, 1, nil, nil, nil, 4, testhost, 0)
 						if err != nil {
 							log.WithError(err).Errorf("Auto assign failed for host %s", testhost)
 							testErr = err
@@ -664,7 +664,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM affine block allocation tests", tes
 			}
 
 			By("attempting to claim the block on multiple hosts at the same time", func() {
-				ips, err := ic.autoAssign(ctx, 1, nil, nil, nil, 4, hostA)
+				ips, err := ic.autoAssign(ctx, 1, nil, nil, nil, 4, hostA, 0)
 
 				// Shouldn't return an error.
 				Expect(err).NotTo(HaveOccurred())
@@ -694,7 +694,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM affine block allocation tests", tes
 			})
 
 			By("attempting to claim another address", func() {
-				ips, err := ic.autoAssign(ctx, 1, nil, nil, nil, 4, hostA)
+				ips, err := ic.autoAssign(ctx, 1, nil, nil, nil, 4, hostA, 0)
 
 				// Shouldn't return an error.
 				Expect(err).NotTo(HaveOccurred())

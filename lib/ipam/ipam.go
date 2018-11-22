@@ -37,6 +37,10 @@ const (
 	ipamKeyErrRetries = 3
 )
 
+var (
+	ErrBlockLimit = errors.New("cannot allocate new block due to per host block limit")
+)
+
 // NewIPAMClient returns a new ipamClient, which implements Interface.
 // Consumers of the Calico API should not create this directly, but should
 // access IPAM through the main client IPAM accessor (e.g. clientv3.IPAM())
@@ -61,6 +65,8 @@ type ipamClient struct {
 // AutoAssign automatically assigns one or more IP addresses as specified by the
 // provided AutoAssignArgs.  AutoAssign returns the list of the assigned IPv4 addresses,
 // and the list of the assigned IPv6 addresses.
+//
+// In case of error, returns the IPs allocated so far along with the error.
 func (c ipamClient) AutoAssign(ctx context.Context, args AutoAssignArgs) ([]net.IPNet, []net.IPNet, error) {
 	// Determine the hostname to use - prefer the provided hostname if
 	// non-nil, otherwise use the hostname reported by os.
@@ -80,10 +86,10 @@ func (c ipamClient) AutoAssign(ctx context.Context, args AutoAssignArgs) ([]net.
 				return nil, nil, fmt.Errorf("provided IPv4 IPPools list contains one or more IPv6 IPPools")
 			}
 		}
-		v4list, err = c.autoAssign(ctx, args.Num4, args.HandleID, args.Attrs, args.IPv4Pools, 4, hostname)
+		v4list, err = c.autoAssign(ctx, args.Num4, args.HandleID, args.Attrs, args.IPv4Pools, 4, hostname, args.MaxBlocksPerHost)
 		if err != nil {
 			log.Errorf("Error assigning IPV4 addresses: %v", err)
-			return nil, nil, err
+			return v4list, nil, err
 		}
 	}
 
@@ -95,10 +101,10 @@ func (c ipamClient) AutoAssign(ctx context.Context, args AutoAssignArgs) ([]net.
 				return nil, nil, fmt.Errorf("provided IPv6 IPPools list contains one or more IPv4 IPPools")
 			}
 		}
-		v6list, err = c.autoAssign(ctx, args.Num6, args.HandleID, args.Attrs, args.IPv6Pools, 6, hostname)
+		v6list, err = c.autoAssign(ctx, args.Num6, args.HandleID, args.Attrs, args.IPv6Pools, 6, hostname, args.MaxBlocksPerHost)
 		if err != nil {
 			log.Errorf("Error assigning IPV6 addresses: %v", err)
-			return nil, nil, err
+			return v4list, v6list, err
 		}
 	}
 
@@ -257,7 +263,7 @@ func (c ipamClient) determinePools(ctx context.Context, requestedPoolNets []net.
 	return enabledPools, nil
 }
 
-func (c ipamClient) autoAssign(ctx context.Context, num int, handleID *string, attrs map[string]string, requestedPools []net.IPNet, version int, host string) ([]net.IPNet, error) {
+func (c ipamClient) autoAssign(ctx context.Context, num int, handleID *string, attrs map[string]string, requestedPools []net.IPNet, version int, host string, maxNumBlocks int) ([]net.IPNet, error) {
 	// Start by sanitizing the requestedPools.
 	pools, err := c.determinePools(ctx, requestedPools, version)
 	if err != nil {
@@ -284,6 +290,9 @@ func (c ipamClient) autoAssign(ctx context.Context, num int, handleID *string, a
 	logCtx.Debugf("Found %d affine IPv%d blocks for host: %v", len(affBlocks), version, affBlocks)
 	ips := []net.IPNet{}
 	newIPs := []net.IPNet{}
+
+	// Record how many blocks we own so we can check against the limit later.
+	numBlocksOwned := len(affBlocks)
 
 	for len(ips) < num {
 		if len(affBlocks) == 0 {
@@ -345,6 +354,12 @@ func (c ipamClient) autoAssign(ctx context.Context, num int, handleID *string, a
 		rem := num - len(ips)
 		retries := ipamEtcdRetries
 		for rem > 0 && retries > 0 {
+			if maxNumBlocks > 0 && numBlocksOwned >= maxNumBlocks {
+				log.Warnf("Unable to allocate a new IPAM block; host already has %v blocks but "+
+					"blocks per host limit is %v", numBlocksOwned, maxNumBlocks)
+				return ips, ErrBlockLimit
+			}
+
 			// Claim a new block.
 			logCtx.Infof("No more affine blocks, but need to allocate %d more addresses - allocate another block", rem)
 			retries = retries - 1
@@ -395,6 +410,7 @@ func (c ipamClient) autoAssign(ctx context.Context, num int, handleID *string, a
 
 				// Claim successful.  Assign addresses from the new block.
 				logCtx.Infof("Claimed new block %v - assigning %d addresses", b, rem)
+				numBlocksOwned++
 				newIPs, err := c.assignFromExistingBlock(ctx, b, rem, handleID, attrs, host, config.StrictAffinity)
 				if err != nil {
 					if _, ok := err.(cerrors.ErrorResourceUpdateConflict); ok {

@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -34,6 +34,8 @@ type Interface interface {
 	// and the list of the assigned IPv6 addresses in IPNet format.
 	// The returned IPNet represents the allocation block from which the IP was allocated,
 	// which is useful for dataplanes that need to know the subnet (such as Windows).
+	//
+	// In case of error, returns the IPs allocated so far along with the error.
 	AutoAssign(ctx context.Context, args AutoAssignArgs) ([]cnet.IPNet, []cnet.IPNet, error)
 
 	// ReleaseIPs releases any of the given IP addresses that are currently assigned,

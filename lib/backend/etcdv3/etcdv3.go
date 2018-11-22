@@ -324,7 +324,7 @@ func (c *etcdV3Client) Get(ctx context.Context, k model.Key, revision string) (*
 	logCxt.Debug("Calling Get on etcdv3 client")
 	resp, err := c.etcdClient.Get(ctx, key, ops...)
 	if err != nil {
-		logCxt.WithError(err).Info("Error returned from etcdv3 client")
+		logCxt.WithError(err).Debug("Error returned from etcdv3 client")
 		return nil, cerrors.ErrorDatastoreError{Err: err}
 	}
 	if len(resp.Kvs) == 0 {
@@ -381,7 +381,7 @@ func (c *etcdV3Client) List(ctx context.Context, l model.ListInterface, revision
 	logCxt.Debug("Calling Get on etcdv3 client")
 	resp, err := c.etcdClient.Get(ctx, key, ops...)
 	if err != nil {
-		logCxt.WithError(err).Info("Error returned from etcdv3 client")
+		logCxt.WithError(err).Debug("Error returned from etcdv3 client")
 		return nil, cerrors.ErrorDatastoreError{Err: err}
 	}
 	logCxt.WithField("numResults", len(resp.Kvs)).Debug("Processing response from etcdv3")
@@ -427,7 +427,7 @@ func (c *etcdV3Client) IsClean() (bool, error) {
 	log.Debug("Calling Get on etcdv3 client")
 	resp, err := c.etcdClient.Get(context.Background(), "/calico/", clientv3.WithPrefix())
 	if err != nil {
-		log.WithError(err).Info("Error returned from etcdv3 client")
+		log.WithError(err).Debug("Error returned from etcdv3 client")
 		return false, cerrors.ErrorDatastoreError{Err: err}
 	}
 
@@ -487,7 +487,7 @@ func getKeyValueStrings(d *model.KVPair) (string, string, error) {
 func parseRevision(revs string) (int64, error) {
 	rev, err := strconv.ParseInt(revs, 10, 64)
 	if err != nil {
-		log.WithField("Revision", revs).Info("Unable to parse Revision")
+		log.WithField("Revision", revs).Debug("Unable to parse Revision")
 		return 0, cerrors.ErrorValidation{
 			ErroredFields: []cerrors.ErroredField{
 				{
