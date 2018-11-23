@@ -112,6 +112,9 @@ func DoNetworking(
 		return "", "", err
 	}
 
+	// Assigning DNS details read from cni.conf to result
+	result.DNS = n.DNS
+
 	// We need to know the IPAM pools to program the correct NAT exclusion list.  Look those up
 	// before we take the global lock.
 	allIPAMPools, natOutgoing, err := lookupIPAMPools(ctx, podIP, calicoClient)
@@ -137,7 +140,7 @@ func DoNetworking(
 	} else {
 		networkName = createNetworkName(n.Name, subNet)
 	}
-	hnsNetwork, err := ensureNetworkExists(networkName, subNet, logger)
+	hnsNetwork, err := ensureNetworkExists(networkName, subNet, result, logger)
 	if err != nil {
 		logger.Errorf("Unable to create hns network %s", networkName)
 		return "", "", err
@@ -145,7 +148,7 @@ func DoNetworking(
 
 	// Create host hns endpoint
 	epName := networkName + "_ep"
-	hnsEndpoint, err := createAndAttachHostEP(epName, hnsNetwork, subNet, logger)
+	hnsEndpoint, err := createAndAttachHostEP(epName, hnsNetwork, subNet, result, logger)
 	if err != nil {
 		logger.Errorf("Unable to create host hns endpoint %s", epName)
 		return "", "", err
@@ -201,7 +204,7 @@ func lookupIPAMPools(
 	return
 }
 
-func ensureNetworkExists(networkName string, subNet *net.IPNet, logger *logrus.Entry) (*hcsshim.HNSNetwork, error) {
+func ensureNetworkExists(networkName string, subNet *net.IPNet, result *current.Result, logger *logrus.Entry) (*hcsshim.HNSNetwork, error) {
 	var err error
 	createNetwork := true
 	addressPrefix := subNet.String()
@@ -240,7 +243,10 @@ func ensureNetworkExists(networkName string, subNet *net.IPNet, logger *logrus.E
 					"GatewayAddress": gatewayAddress,
 				},
 			},
+			"DNSServerList": strings.Join(result.DNS.Nameservers, ","),
+			"DNSSuffix":     strings.Join(result.DNS.Search, ","),
 		}
+
 		reqStr, err := json.Marshal(req)
 		if err != nil {
 			logger.Errorf("Error in converting to json format")
@@ -257,7 +263,7 @@ func ensureNetworkExists(networkName string, subNet *net.IPNet, logger *logrus.E
 	return hnsNetwork, err
 }
 
-func createAndAttachHostEP(epName string, hnsNetwork *hcsshim.HNSNetwork, subNet *net.IPNet, logger *logrus.Entry) (*hcsshim.HNSEndpoint, error) {
+func createAndAttachHostEP(epName string, hnsNetwork *hcsshim.HNSNetwork, subNet *net.IPNet, result *current.Result, logger *logrus.Entry) (*hcsshim.HNSEndpoint, error) {
 	var err error
 	endpointAddress := getNthIP(subNet, 2)
 	attachEndpoint := true
@@ -399,6 +405,8 @@ func createAndAttachContainerEP(args *skel.CmdArgs,
 		hnsEP := &hcsshim.HNSEndpoint{
 			Name:           endpointName,
 			VirtualNetwork: hnsNetwork.Id,
+			DNSServerList:  strings.Join(result.DNS.Nameservers, ","),
+			DNSSuffix:      strings.Join(result.DNS.Search, ","),
 			GatewayAddress: gatewayAddress,
 			IPAddress:      result.IPs[0].Address.IP,
 			Policies:       pols,
