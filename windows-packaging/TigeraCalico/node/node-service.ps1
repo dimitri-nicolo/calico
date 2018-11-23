@@ -23,7 +23,11 @@ if($env:CALICO_NETWORKING_BACKEND -EQ "windows-bgp") {
 
 # Run the startup script to create our Node resource.
 $env:CALICO_NODENAME_FILE=".\nodename"
-.\tigera-calico.exe -startup
+do
+{
+    .\tigera-calico.exe -startup
+    Start-Sleep 1
+} while ($LastExitCode -NE 0)
 
 # Since the startup script is a one-shot; sleep forever so the service appears up.
 while($True) {
