@@ -85,7 +85,7 @@ type ActiveRulesCalculator struct {
 	RuleScanner           ruleScanner
 	PolicyMatchListener   PolicyMatchListener
 	PolicyLookupCache     ruleScanner
-	OnPolicyCountsChanged func(numTiers, numPolicies, numProfiles, numALPPolicies int)
+	OnPolicyCountsChanged func(numTiers, numPolicies, numProfiles, numALPPolicies, numALPEndpoints int)
 }
 
 func NewActiveRulesCalculator() *ActiveRulesCalculator {
@@ -244,7 +244,17 @@ func (arc *ActiveRulesCalculator) updateStats() {
 	if arc.OnPolicyCountsChanged == nil {
 		return
 	}
-	arc.OnPolicyCountsChanged(len(arc.allTiers), len(arc.allPolicies), len(arc.allProfileRules), arc.allALPPolicies.Len())
+
+	// Get the set of all endpoints matching ALP Policy
+	endpoints := set.New()
+	arc.allALPPolicies.Iter(func(polID interface{}) error {
+		arc.policyIDToEndpointKeys.Iter(polID, func(epKey interface{}) {
+			endpoints.Add(epKey)
+		})
+		return nil
+	})
+
+	arc.OnPolicyCountsChanged(len(arc.allTiers), len(arc.allPolicies), len(arc.allProfileRules), arc.allALPPolicies.Len(), endpoints.Len())
 }
 
 func (arc *ActiveRulesCalculator) OnStatusUpdate(status api.SyncStatus) {
