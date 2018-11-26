@@ -74,7 +74,7 @@ func (t *ConfigTree) AddOneKV(key, value string) error {
 	length := len(slice)
 	if length < 2 {
 		// No dot in key name
-		return fmt.Errorf("No dot in key for configTree. Len %d, slice %v", key, length, slice)
+		return fmt.Errorf("No dot in key for configTree. Len %d, slice %v", length, slice)
 	}
 	realKey := slice[length-1]
 	sections := slice[:length-1]
