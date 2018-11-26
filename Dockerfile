@@ -9,6 +9,8 @@ RUN apk add --update --virtual .build-deps \
  && apk del .build-deps \
  && rm -rf /var/cache/apk/* \
            /home/fluent/.gem/ruby/2.3.0/cache/*.gem
+RUN apk add --no-cache curl
+RUN apk add --no-cache jq
 
 ADD elastic_mapping_flows.template /fluentd/etc/elastic_mapping_flows.template
 
@@ -18,6 +20,9 @@ ENV ELASTIC_PORT=9200
 ENV ELASTIC_FLUSH_INTERVAL=5s
 ENV KUBE_AUDIT_LOG=/var/log/calico/audit/kube-audit.log
 ENV KUBE_AUDIT_POS=/var/log/calico/audit/kube-audit.log.pos
+
+COPY readiness.sh /bin/
+RUN chmod +x /bin/readiness.sh
 
 COPY ee_entrypoint.sh /bin/
 RUN chmod +x /bin/ee_entrypoint.sh
