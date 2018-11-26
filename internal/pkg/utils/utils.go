@@ -57,7 +57,7 @@ func DetermineNodename(conf types.NetConf) (nodename string) {
 	if conf.Nodename != "" {
 		logrus.Debugf("Read node name from CNI conf: %s", conf.Nodename)
 		nodename = conf.Nodename
-	} else if nff := nodenameFromFile(); nff != "" {
+	} else if nff := nodenameFromFile(conf.NodenameFile); nff != "" {
 		logrus.Debugf("Read node name from file: %s", nff)
 		nodename = nff
 	} else if conf.Hostname != "" {
