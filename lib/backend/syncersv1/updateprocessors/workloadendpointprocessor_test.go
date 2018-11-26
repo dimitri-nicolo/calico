@@ -444,9 +444,9 @@ var _ = Describe("Test the WorkloadEndpoint update processor", func() {
 		res.Labels = map[string]string{
 			"projectcalico.org/namespace":    ns1,
 			"projectcalico.org/orchestrator": oid1,
-			nsLabel: "ns1",
-			saLabel: "sa1",
-			"k1":    "v1",
+			nsLabel:                          "ns1",
+			saLabel:                          "sa1",
+			"k1":                             "v1",
 		}
 		res.Spec.Node = hn1
 		res.Spec.Orchestrator = oid1
@@ -473,7 +473,7 @@ var _ = Describe("Test the WorkloadEndpoint update processor", func() {
 				Labels: map[string]string{
 					"projectcalico.org/namespace":    ns1,
 					"projectcalico.org/orchestrator": oid1,
-					"k1": "v1",
+					"k1":                             "v1",
 				},
 				IPv4Nets: []cnet.IPNet{expectedIPv4Net},
 			},
