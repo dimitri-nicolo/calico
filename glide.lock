@@ -1,5 +1,5 @@
-hash: 1f8cea8c170bf8c9f5621733a5c051c85a5178821579a0e00bf3f9d0ee104608
-updated: 2018-11-24T05:07:05.701929855Z
+hash: f6b23f6b0d4f4a43168e014b7dd4ad9f3c90c04f9835b66ed287b5f87e676fe4
+updated: 2018-11-26T17:40:25.771591418Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -48,7 +48,7 @@ imports:
   - autorest/azure
   - autorest/date
 - name: github.com/beorn7/perks
-  version: 3a771d992973f24aa725d07868b467d1ddfceafb
+  version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
   subpackages:
   - quantile
 - name: github.com/bronze1man/goStrongswanVici
@@ -57,7 +57,7 @@ imports:
 - name: github.com/buger/jsonparser
   version: f4dd9f5a6b441265aefc1d44872a6f8c10f42b37
 - name: github.com/BurntSushi/toml
-  version: 3012a1dbe2e4bd1391d42b32f0577cb7bbc7f005
+  version: a368813c5e648fee92e5f6c30e3944ff9d5e8895
 - name: github.com/containernetworking/cni
   version: e67bb289cccfcad352b92c5234a1610b105846e0
   subpackages:
@@ -114,9 +114,9 @@ imports:
 - name: github.com/ghodss/yaml
   version: 73d445a93680fa1a78ae23a5839bad48f32ba1ee
 - name: github.com/go-ini/ini
-  version: 9c8236e659b76e87bf02044d06fde8683008ff3e
+  version: 5cf292cae48347c2490ac1a58fe36735fb78df7e
 - name: github.com/go-openapi/jsonpointer
-  version: 3a0015ad55fa9873f41605d3e8f28cd279c32ab2
+  version: 46af16f9f7b149af66e5d1bd010e3574dc06de98
 - name: github.com/go-openapi/jsonreference
   version: 3fb327e6747da3043567ee86abd02bb6376b6be2
 - name: github.com/go-openapi/spec
@@ -191,7 +191,7 @@ imports:
 - name: github.com/kardianos/osext
   version: ae77be60afb1dcacde03767a8c37337fad28ac14
 - name: github.com/kelseyhightower/confd
-  version: 5ecf48ef139c6f35f4fd66cf4b899befaba4ba5c
+  version: 3a875764000f6f359f61c77eb76eaa0d525d127c
   repo: git@github.com:tigera/confd-private.git
   subpackages:
   - pkg/backends
@@ -281,7 +281,7 @@ imports:
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
 - name: github.com/projectcalico/cni-plugin
-  version: 6eda9599152da28ffc28aea3f474ce7704b7190c
+  version: e190531ffe41aeaf47f377ea560407ae6c36327b
   repo: git@github.com:tigera/cni-plugin-private.git
   subpackages:
   - internal/pkg/azure
@@ -292,7 +292,7 @@ imports:
   - pkg/plugin
   - pkg/types
 - name: github.com/projectcalico/felix
-  version: ff5ddb1fb9866d426cfe27d8846b52c05b94b561
+  version: 80872ff3fffe830556295b9423f3b7f977117fcb
   repo: git@github.com:tigera/felix-private.git
   subpackages:
   - buildinfo
@@ -339,7 +339,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 5ea5771cd22166d12e510463e1cdea7125cbbebd
+  version: 62b0caa50dc18ed3a402a924a35c25636fd45513
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
@@ -393,7 +393,7 @@ imports:
   subpackages:
   - binder
 - name: github.com/projectcalico/typha
-  version: a5444024b267b266e3cee68ba2b92459f09d193a
+  version: 61adc9691f472cc0f291ecb774413b5d1dc8de30
   repo: git@github.com:tigera/typha-private.git
   subpackages:
   - pkg/syncclient
@@ -466,7 +466,6 @@ imports:
   subpackages:
   - ed25519
   - ed25519/internal/edwards25519
-  - pbkdf2
   - ssh/terminal
 - name: golang.org/x/net
   version: 4dfa2610cdf3b287375bbba5b8f2a14d3b01d8de
@@ -568,7 +567,7 @@ imports:
 - name: gopkg.in/natefinch/lumberjack.v2
   version: a96e63847dc3c67d17befa69c303767e2f84e54f
 - name: gopkg.in/square/go-jose.v2
-  version: ef984e69dd356202fd4e4910d4d9c24468bdf0b8
+  version: 89060dee6a84df9a4dae49f676f0c755037834f1
   subpackages:
   - cipher
   - json

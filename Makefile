@@ -97,7 +97,7 @@ EXCLUDE_MANIFEST_REGISTRIES ?= quay.io/
 PUSH_MANIFEST_IMAGES=$(PUSH_IMAGES:$(EXCLUDE_MANIFEST_REGISTRIES)%=)
 PUSH_NONMANIFEST_IMAGES=$(filter-out $(PUSH_MANIFEST_IMAGES),$(PUSH_IMAGES))
 
-GO_BUILD_VER?=v0.18
+GO_BUILD_VER?=v0.20
 CALICO_BUILD?=calico/go-build:$(GO_BUILD_VER)
 
 # location of docker credentials to push manifests
@@ -111,7 +111,7 @@ ifeq ($(LOCAL_BUILD),true)
 endif
 
 # Versions and location of dependencies used in the build.
-BIRD_VER?=v0.3.2-13-g17d14e60
+BIRD_VER?=v0.3.3-0-g1e8dd375
 BIRD_IMAGE ?= calico/bird:$(BIRD_VER)-$(ARCH)
 
 # Versions and locations of dependencies used in tests.
