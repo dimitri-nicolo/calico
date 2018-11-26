@@ -31,6 +31,7 @@ import (
 	logutils "github.com/kelseyhightower/confd/pkg/log"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/kelseyhightower/confd/pkg/resource/template"
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
@@ -129,8 +130,7 @@ func NewCalicoClient(confdConfig *config.Config) (*client, error) {
 	// monitor all nodes.  If this setting changes (which we will monitor in the OnUpdates
 	// callback) then we terminate confd - the calico/node init process will restart the
 	// confd process.
-	nodeName := os.Getenv("NODENAME")
-	c.nodeLogKey = fmt.Sprintf("/calico/bgp/v1/host/%s/loglevel", nodeName)
+	c.nodeLogKey = fmt.Sprintf("/calico/bgp/v1/host/%s/loglevel", template.NodeName)
 	c.nodeV1Processor = updateprocessors.NewBGPNodeUpdateProcessor()
 
 	typhaAddr, err := discoverTyphaAddr(&confdConfig.Typha)
@@ -143,7 +143,7 @@ func NewCalicoClient(confdConfig *config.Config) (*client, error) {
 		typhaConnection := syncclient.New(
 			typhaAddr,
 			buildinfo.GitVersion,
-			nodeName,
+			template.NodeName,
 			fmt.Sprintf("confd %s", buildinfo.GitVersion),
 			c,
 			&syncclient.Options{
@@ -167,10 +167,22 @@ func NewCalicoClient(confdConfig *config.Config) (*client, error) {
 		}()
 	} else {
 		// Use the syncer locally.
-		c.syncer = bgpsyncer.New(c.client, c, nodeName)
+		c.syncer = bgpsyncer.New(c.client, c, template.NodeName)
 		c.syncer.Start()
 	}
 
+	// Create and start route generator.
+	clusterCIDR := os.Getenv(envAdvertiseClusterIPs)
+	if len(clusterCIDR) > 0 {
+		if rg, err := NewRouteGenerator(c, clusterCIDR); err != nil {
+			log.WithError(err).Fatal("Failed to start route generator")
+		} else {
+			rg.Start()
+		}
+	} else {
+		log.Info(envAdvertiseClusterIPs + " not specified, no cluster ips will be advertised")
+		c.OnInSync(SourceRouteGenerator)
+	}
 	return c, nil
 }
 
@@ -222,6 +234,11 @@ func discoverTyphaAddr(typhaConfig *config.TyphaConfig) (string, error) {
 	return "", ErrServiceNotReady
 }
 
+var (
+	SourceSyncer         string = "SourceSyncer"
+	SourceRouteGenerator string = "SourceRouteGenerator"
+)
+
 // client implements the StoreClient interface for confd, and also implements the
 // Calico api.SyncerCallbacks and api.SyncerParseFailCallbacks interfaces for the
 // BGP Syncer.
@@ -235,9 +252,11 @@ type client struct {
 	nodeLabels      map[string]map[string]string
 	bgpPeers        map[string]*apiv3.BGPPeer
 
-	// Whether we have received the in-sync notification from the syncer.  We cannot
-	// start rendering until we are in-sync, so we block calls to GetValues until we
-	// have synced.
+	// Readiness signals for individual data sources.
+	syncerReady, rgReady bool
+
+	// Indicates whether all data sources have synced. We cannot start rendering until
+	// all sources have synced, so we block calls to GetValues until this is true.
 	synced      bool
 	waitForSync sync.WaitGroup
 
@@ -285,6 +304,27 @@ func (c *client) OnStatusUpdated(status api.SyncStatus) {
 	// We should only get a single in-sync status update.  When we do, unblock the GetValues
 	// calls.
 	if status == api.InSync {
+		c.OnInSync(SourceSyncer)
+	}
+}
+
+// OnInSync handles multiplexing in-sync messages from multiple data sources
+// into a single representation of readiness.
+func (c *client) OnInSync(source string) {
+	switch source {
+	case SourceSyncer:
+		log.Info("Calico Syncer has indicated it is in sync")
+		c.syncerReady = true
+	case SourceRouteGenerator:
+		log.Info("RouteGenerator has indicated it is in sync")
+		c.rgReady = true
+	default:
+		log.Errorf("InSync message from unknown source: %s", source)
+		return
+	}
+
+	if c.syncerReady && c.rgReady {
+		// All data sources are ready.
 		c.cacheLock.Lock()
 		defer c.cacheLock.Unlock()
 		c.synced = true
@@ -587,7 +627,7 @@ func (c *client) OnUpdates(updates []api.Update) {
 	needUpdatePeersV1 := false
 
 	for _, u := range updates {
-		log.Infof("Update: %#v", u)
+		log.Debugf("Update: %#v", u)
 
 		// confd now receives Nodes and BGPPeers as v3 resources.
 		//
@@ -840,5 +880,58 @@ func (c *client) updateLogLevel() {
 		logutils.SetLevel(globalLogLevel)
 	} else {
 		logutils.SetLevel("info")
+	}
+}
+
+var routeKeyPrefix = "/calico/staticroutes/"
+var rejectKeyPrefix = "/calico/rejectcidrs/"
+
+// AddRejectCIDRs rejects routes from being programmed into the data plane if
+// they are within the given CIDRs.
+func (c *client) AddRejectCIDRs(cidrs []string) {
+	c.cacheLock.Lock()
+	defer c.cacheLock.Unlock()
+
+	for _, cidr := range cidrs {
+		k := rejectKeyPrefix + strings.Replace(cidr, "/", "-", 1)
+		c.cache[k] = cidr
+		c.keyUpdated(k)
+	}
+}
+
+// DeleteRejectCIDRs removes the config to reject routes within the given CIDRs.
+func (c *client) DeleteRejectCIDRs(cidrs []string) {
+	c.cacheLock.Lock()
+	defer c.cacheLock.Unlock()
+
+	for _, cidr := range cidrs {
+		k := rejectKeyPrefix + strings.Replace(cidr, "/", "-", 1)
+		delete(c.cache, k)
+		c.keyUpdated(k)
+	}
+}
+
+// AddStaticRoutes adds the given CIDRs as static routes to be advertised from this node.
+func (c *client) AddStaticRoutes(cidrs []string) {
+	c.cacheLock.Lock()
+	defer c.cacheLock.Unlock()
+
+	for _, cidr := range cidrs {
+		k := routeKeyPrefix + strings.Replace(cidr, "/", "-", 1)
+		c.cache[k] = cidr
+		c.keyUpdated(k)
+	}
+}
+
+// DeleteStaticRoutes withdraws the given CIDRs from the set of static routes advertised
+// from this node.
+func (c *client) DeleteStaticRoutes(cidrs []string) {
+	c.cacheLock.Lock()
+	defer c.cacheLock.Unlock()
+
+	for _, cidr := range cidrs {
+		k := routeKeyPrefix + strings.Replace(cidr, "/", "-", 1)
+		delete(c.cache, k)
+		c.keyUpdated(k)
 	}
 }

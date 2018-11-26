@@ -49,7 +49,7 @@ type TemplateResource struct {
 	Src           string
 	StageFile     *os.File
 	Uid           int
-	PrefixedKeys  []string
+	ExpandedKeys  []string
 	funcMap       map[string]interface{}
 	keepStageFile bool
 	noop          bool
@@ -100,6 +100,9 @@ func NewTemplateResource(path string, config Config) (*TemplateResource, error) 
 		tr.Prefix = "/" + tr.Prefix
 	}
 
+	// Replace "NODENAME" in the prefix by the actual node name.
+	tr.Prefix = strings.Replace(tr.Prefix, "//NODENAME", "/"+NodeName, 1)
+
 	if tr.Src == "" {
 		return nil, ErrEmptySrc
 	}
@@ -113,7 +116,7 @@ func NewTemplateResource(path string, config Config) (*TemplateResource, error) 
 	}
 
 	// Calculate the set of keys including the prefix.
-	tr.PrefixedKeys = appendPrefix(tr.Prefix, tr.Keys)
+	tr.ExpandedKeys = expandKeys(tr.Prefix, tr.Keys)
 
 	tr.Src = filepath.Join(config.TemplateDir, tr.Src)
 	return tr, nil
@@ -125,7 +128,7 @@ func (t *TemplateResource) setVars() error {
 	log.Debug("Retrieving keys from store")
 	log.Debug("Key prefix set to " + t.Prefix)
 
-	result, err := t.storeClient.GetValues(appendPrefix(t.Prefix, t.Keys))
+	result, err := t.storeClient.GetValues(t.ExpandedKeys)
 	if err != nil {
 		return err
 	}
