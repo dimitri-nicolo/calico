@@ -401,10 +401,10 @@ func (arc *ActiveRulesCalculator) sendPolicyUpdate(policyKey model.PolicyKey) {
 }
 
 func (arc *ActiveRulesCalculator) isALPPolicy(policy *model.Policy) bool {
-	// Policy is a ALP policy if HTTPMatch rule or service account selector exists.
+	// Policy is a ALP policy if HTTPMatch rule exists.
 	checkRules := func(rules []model.Rule) bool {
 		for _, rule := range rules {
-			if rule.HTTPMatch != nil || rule.OriginalSrcServiceAccountSelector != "" || rule.OriginalDstServiceAccountSelector != "" {
+			if rule.HTTPMatch != nil {
 				return true
 			}
 		}
