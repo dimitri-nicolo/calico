@@ -70,7 +70,7 @@ VALIDARCHES = $(filter-out $(EXCLUDEARCH),$(ARCHES))
 # Determine which OS.
 OS?=$(shell uname -s | tr A-Z a-z)
 ###############################################################################
-GO_BUILD_VER?=v0.17
+GO_BUILD_VER?=v0.20
 FOSSA_GO_BUILD_VER?=v0.18
 
 K8S_VERSION?=v1.11.3
@@ -292,6 +292,7 @@ fix goimports:
 	goimports -l -w ./pkg
 	goimports -l -w ./cmd/kube-controllers/main.go
 	goimports -l -w ./cmd/check-status/main.go
+	goimports -l -w ./tests
 
 .PHONY: install-git-hooks
 ## Install Git hooks
