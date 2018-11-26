@@ -1,5 +1,5 @@
-hash: f415d9c44a86681c57466810bda2ce31abd1efe1cfd9e649f25ba79f5b994d67
-updated: 2018-11-08T08:28:17.67541-08:00
+hash: 92c9fa9fc61147ed73e8793e950bbeb5b838b959fed6ee925ebbfe58f0989a6e
+updated: 2018-11-26T15:30:06.507596518Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -16,7 +16,7 @@ imports:
   - autorest/azure
   - autorest/date
 - name: github.com/beorn7/perks
-  version: 3a771d992973f24aa725d07868b467d1ddfceafb
+  version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
   subpackages:
   - quantile
 - name: github.com/coreos/etcd
@@ -128,14 +128,14 @@ imports:
   - models
   - pkg/escape
 - name: github.com/influxdata/platform
-  version: 49ce84df53f438a74c988059076c234d7ca19dd8
+  version: cc1070fc1c2f8011895a041f28b6b8aee028ea71
   subpackages:
   - models
   - pkg/escape
 - name: github.com/json-iterator/go
   version: f2b4162afba35581b6d4a50d3b8f34e33c144682
 - name: github.com/kelseyhightower/envconfig
-  version: dd1402a4d99de9ac2f396cd6fcb957bc2c695ec1
+  version: f611eb38b3875cc3bd991ca91c51d06446afa14c
 - name: github.com/magiconair/properties
   version: c2353362d570a7bfa228149c62842019201cfb71
 - name: github.com/mailru/easyjson
@@ -223,7 +223,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 5e05209688ae1fb40a2916e40dc17f9c22e7b556
+  version: 62b0caa50dc18ed3a402a924a35c25636fd45513
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
@@ -324,13 +324,12 @@ imports:
   subpackages:
   - nl
 - name: github.com/vishvananda/netns
-  version: 13995c7128ccc8e51e9a6bd2b551020a27180abd
+  version: 54f0e4339ce73702a0607f49922aaa1e749b418d
 - name: golang.org/x/crypto
-  version: 9419663f5a44be8b34ca85f08abc5fe1be11f8a3
+  version: 49796115aa4b964c318aad4f3084fdb41e9aa067
   subpackages:
   - ed25519
   - ed25519/internal/edwards25519
-  - pbkdf2
   - ssh/terminal
 - name: golang.org/x/net
   version: 1c05540f6879653db88113bc4a2b70aec4bd491f
@@ -389,7 +388,7 @@ imports:
   subpackages:
   - rate
 - name: google.golang.org/appengine
-  version: 4216e58b9158e5f1c906f1aca75162a46a2ec88a
+  version: b1f26356af11148e710935ed1ac8a7f5702c7612
   subpackages:
   - internal
   - internal/app_identity
@@ -429,7 +428,7 @@ imports:
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: gopkg.in/square/go-jose.v2
-  version: ef984e69dd356202fd4e4910d4d9c24468bdf0b8
+  version: 89060dee6a84df9a4dae49f676f0c755037834f1
   subpackages:
   - cipher
   - json
