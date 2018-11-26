@@ -17,7 +17,6 @@ import (
 	"github.com/projectcalico/felix/fv/utils"
 	"github.com/projectcalico/felix/fv/workload"
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
-	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 )
 
 var _ = infrastructure.DatastoreDescribe("IPsec lifecycle tests", []apiconfig.DatastoreType{apiconfig.EtcdV3, apiconfig.Kubernetes}, func(getInfra infrastructure.InfraFactory) {
@@ -25,7 +24,6 @@ var _ = infrastructure.DatastoreDescribe("IPsec lifecycle tests", []apiconfig.Da
 	var (
 		infra   infrastructure.DatastoreInfra
 		felixes []*infrastructure.Felix
-		client  client.Interface
 		// w[n] is a simulated workload for host n.  It has its own network namespace (as if it was a container).
 		w [2]*workload.Workload
 		// hostW[n] is a simulated host networked workload for host n.  It runs in felix's network namespace.
