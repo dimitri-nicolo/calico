@@ -11,7 +11,7 @@ test: ut fv
 #######################
 K8S_VERSION      ?= v1.11.3
 ETCD_VERSION     ?= v3.3.7
-GO_BUILD_VER     ?= v0.17
+GO_BUILD_VER     ?= v0.20
 CALICO_BUILD     ?= calico/go-build:$(GO_BUILD_VER)
 PACKAGE_NAME     ?= projectcalico/libcalico-go
 LOCAL_USER_ID    ?= $(shell id -u $$USER)
@@ -47,15 +47,6 @@ clean:
 	rm -rf $(BINDIR)
 	rm -rf checkouts
 
-.PHONY: clean-gen-files
-## Convenience target for devs to remove generated files and related utilities
-clean-gen-files:
-	rm -f $(BINDIR)/deepcopy-gen
-	rm -f ./lib/apis/v3/zz_generated.deepcopy.go
-	rm -f ./lib/upgrade/migrator/clients/v1/k8s/custom/zz_generated.deepcopy.go \
-	      ./lib/apis/v3/openapi_generated.go \
-	      ./lib/numorstring/openapi_generated.go
-
 ###############################################################################
 # Building the binary
 ###############################################################################
@@ -66,22 +57,26 @@ vendor: glide.lock
 	mkdir -p $(HOME)/.glide
 	$(DOCKER_GO_BUILD) glide install --strip-vendor
 
-.PHONY: gen-files
-## Build generated-go utilities (e.g. deepcopy_gen) and generated files
-gen-files: $(BINDIR)/deepcopy-gen  $(BINDIR)/openapi-gen \
-           ./lib/apis/v3/zz_generated.deepcopy.go \
+GENERATED_FILES:=./lib/apis/v3/zz_generated.deepcopy.go \
            ./lib/upgrade/migrator/clients/v1/k8s/custom/zz_generated.deepcopy.go \
-           ./lib/apis/v3/openapi_generated.go
+           ./lib/apis/v3/openapi_generated.go \
+           ./lib/numorstring/openapi_generated.go
 
 $(BINDIR)/openapi-gen:
 	$(DOCKER_GO_BUILD) \
 		sh -c 'go build -o $@ $(LIBCALICO-GO_PKG)/vendor/k8s.io/code-generator/cmd/openapi-gen'
 
+.PHONY: gen-files
+## Force rebuild generated go utilities (e.g. deepcopy-gen) and generated files
+gen-files:
+	rm -rf $(GENERATED_FILES)
+	$(MAKE) $(GENERATED_FILES)
+
 $(BINDIR)/deepcopy-gen: vendor
 	$(DOCKER_GO_BUILD) \
 		sh -c 'go build -o $@ $(LIBCALICO-GO_PKG)/vendor/k8s.io/code-generator/cmd/deepcopy-gen'
 
-./lib/upgrade/migrator/clients/v1/k8s/custom/zz_generated.deepcopy.go: $(UPGRADE_SRCS)
+./lib/upgrade/migrator/clients/v1/k8s/custom/zz_generated.deepcopy.go: $(UPGRADE_SRCS) $(BINDIR)/deepcopy-gen
 	$(DOCKER_GO_BUILD) \
 		sh -c '$(BINDIR)/deepcopy-gen \
 			--v 1 --logtostderr \
@@ -90,7 +85,7 @@ $(BINDIR)/deepcopy-gen: vendor
 			--bounding-dirs "github.com/projectcalico/libcalico-go" \
 			--output-file-base zz_generated.deepcopy'
 
-./lib/apis/v3/zz_generated.deepcopy.go: $(APIS_SRCS)
+./lib/apis/v3/zz_generated.deepcopy.go: $(APIS_SRCS) $(BINDIR)/deepcopy-gen
 	$(DOCKER_GO_BUILD) \
 		sh -c '$(BINDIR)/deepcopy-gen \
 			--v 1 --logtostderr \
@@ -99,7 +94,7 @@ $(BINDIR)/deepcopy-gen: vendor
 			--bounding-dirs "github.com/projectcalico/libcalico-go" \
 			--output-file-base zz_generated.deepcopy'
 
-./lib/apis/v3/openapi_generated.go: $(APIS_SRCS)
+./lib/apis/v3/openapi_generated.go: $(APIS_SRCS) $(BINDIR)/openapi-gen
 	# Generate OpenAPI spec
 	$(DOCKER_GO_BUILD) \
 	   sh -c '$(BINDIR)/openapi-gen \
@@ -133,8 +128,8 @@ $(BINDIR)/deepcopy-gen: vendor
 static-checks: check-format check-gen-files
 
 .PHONY: check-gen-files
-check-gen-files: gen-files
-	git diff --exit-code || (echo "The generated targets changed, please 'make gen-files' and commit the results"; exit 1)
+check-gen-files: $(GENERATED_FILES)
+	git diff --exit-code -- $(GENERATED_FILES) || (echo "The generated targets changed, please 'make gen-files' and commit the results"; exit 1)
 
 .PHONY: check-format
 # Depends on the vendor directory because goimports needs to be able to resolve the imports.
@@ -179,6 +174,9 @@ check-glide-warnings:
 ut-cover: vendor
 	./run-uts
 
+WHAT?=.
+GINKGO_FOCUS?=.*
+
 .PHONY:ut
 ## Run the fast set of unit tests in a container.
 ut: vendor
@@ -188,7 +186,7 @@ ut: vendor
 		-v $(CURDIR):/go/src/github.com/$(PACKAGE_NAME):rw \
 		-v $(CURDIR)/.go-pkg-cache:/go-cache/:rw \
 		-e GOCACHE=/go-cache \
-		$(CALICO_BUILD) sh -c 'cd /go/src/github.com/$(PACKAGE_NAME) && ginkgo -r --skipPackage vendor -skip "\[Datastore\]" $(GINKGO_ARGS) .'
+		$(CALICO_BUILD) sh -c 'cd /go/src/github.com/$(PACKAGE_NAME) && ginkgo -r --skipPackage vendor -skip "\[Datastore\]" -focus="$(GINKGO_FOCUS)" $(GINKGO_ARGS) $(WHAT)'
 
 
 .PHONY:fv
@@ -200,7 +198,7 @@ fv: vendor run-etcd run-kubernetes-master
 		-v $(CURDIR):/go/src/github.com/$(PACKAGE_NAME):rw \
 		-v $(CURDIR)/.go-pkg-cache:/go-cache/:rw \
 		-e GOCACHE=/go-cache \
-		$(CALICO_BUILD) sh -c 'cd /go/src/github.com/$(PACKAGE_NAME) && ginkgo -r --skipPackage vendor -focus "\[Datastore\]" $(GINKGO_ARGS) .'
+		$(CALICO_BUILD) sh -c 'cd /go/src/github.com/$(PACKAGE_NAME) && ginkgo -r --skipPackage vendor -focus "$(GINKGO_FOCUS).*\[Datastore\]|\[Datastore\].*$(GINKGO_FOCUS)" $(GINKGO_ARGS) $(WHAT)'
 
 ## Run etcd as a container (calico-etcd)
 run-etcd: stop-etcd

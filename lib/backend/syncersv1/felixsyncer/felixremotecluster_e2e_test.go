@@ -674,14 +674,13 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests", testutils.
 	var localBackend api.Client
 	var syncer api.Syncer
 	var syncTester *testutils.SyncerTester
-	var remoteClient clientv3.Interface
 
 	testutils.E2eDatastoreDescribe("Deletion of remote cluster", testutils.DatastoreEtcdV3, func(remoteConfig apiconfig.CalicoAPIConfig) {
 		BeforeEach(func() {
 			// Create the v3 clients for the local and remote clusters.
 			localClient, err = clientv3.New(localConfig)
 			Expect(err).NotTo(HaveOccurred())
-			remoteClient, err = clientv3.New(remoteConfig)
+			_, err = clientv3.New(remoteConfig)
 			Expect(err).NotTo(HaveOccurred())
 
 			// Create the local backend client to clean the datastore and obtain a syncer interface.
@@ -830,14 +829,13 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests", testutils.
 	var localBackend api.Client
 	var syncer api.Syncer
 	var syncTester *testutils.SyncerTester
-	var remoteClient clientv3.Interface
 
 	testutils.E2eDatastoreDescribe("Reconfiguration of remote cluster", testutils.DatastoreEtcdV3, func(remoteConfig apiconfig.CalicoAPIConfig) {
 		BeforeEach(func() {
 			// Create the v3 clients for the local and remote clusters.
 			localClient, err = clientv3.New(localConfig)
 			Expect(err).NotTo(HaveOccurred())
-			remoteClient, err = clientv3.New(remoteConfig)
+			_, err = clientv3.New(remoteConfig)
 			Expect(err).NotTo(HaveOccurred())
 
 			// Create the local backend client to clean the datastore and obtain a syncer interface.
