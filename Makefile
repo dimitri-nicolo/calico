@@ -18,7 +18,6 @@ ARCHES=$(patsubst Dockerfile.%,%,$(wildcard Dockerfile.*))
 # ARCH is the target architecture
 # we need to keep track of them separately
 BUILDARCH ?= $(shell uname -m)
-BUILDOS ?= $(shell uname -s | tr A-Z a-z)
 
 # canonicalized names for host architecture
 ifeq ($(BUILDARCH),aarch64)
@@ -72,7 +71,7 @@ VALIDARCHES = $(filter-out $(EXCLUDEARCH),$(ARCHES))
 OS := $(shell uname -s | tr A-Z a-z)
 
 ###############################################################################
-GO_BUILD_VER?=v0.18
+GO_BUILD_VER?=v0.20
 ETCD_VER?=v3.3.7
 
 BUILD_IMAGE?=tigera/calicoctl
@@ -156,6 +155,7 @@ vendor: glide.yaml
           glide install -strip-vendor'
 
 # Default the libcalico repo and version but allow them to be overridden
+LIBCALICO_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
 LIBCALICO_REPO?=github.com/tigera/libcalico-go-private
 LIBCALICO_VERSION?=$(shell git ls-remote git@github.com:tigera/libcalico-go-private master 2>/dev/null | cut -f 1)
 
@@ -191,7 +191,7 @@ bin/calicoctl-linux-%: OS=linux
 bin/calicoctl-%: $(CALICOCTL_FILES) vendor
 	mkdir -p bin
 	-mkdir -p .go-pkg-cache
-	docker run --rm -ti \
+	docker run --rm \
 	  -e OS=$(OS) -e ARCH=$(ARCH) \
 	  -e GOOS=$(OS) -e GOARCH=$(ARCH) \
 	  -e CALICOCTL_GIT_REVISION=$(CALICOCTL_GIT_REVISION) \
@@ -464,19 +464,17 @@ release-publish: release-prereqs
 	# Push images.
 	$(MAKE) push-all push-manifests push-non-manifests IMAGETAG=$(VERSION)
 
-	@echo "Finalize the GitHub release based on the pushed tag."
+	# Push binaries to GitHub release.
+	# Requires ghr: https://github.com/tcnksm/ghr
+	# Requires GITHUB_TOKEN environment variable set.
+	ghr -r calicoctl \
+		-b "Release notes can be found at https://docs.projectcalico.org" \
+		-n $(VERSION) \
+		$(VERSION) ./bin/
+
+	@echo "Confirm that the release was published at the following URL."
 	@echo ""
 	@echo "  https://$(PACKAGE_NAME)/releases/tag/$(VERSION)"
-	@echo ""
-	@echo "Attach the following binaries to the release."
-	@echo ""
-	@echo "- bin/calicoctl"
-	@echo "- bin/calicoctl-linux-amd64"
-	@echo "- bin/calicoctl-linux-arm64"
-	@echo "- bin/calicoctl-linux-ppc64le"
-	@echo "- bin/calicoctl-linux-s390x"
-	@echo "- bin/calicoctl-darwin-amd64"
-	@echo "- bin/calicoctl-windows-amd64.exe"
 	@echo ""
 	@echo "If this is the latest stable release, then run the following to push 'latest' images."
 	@echo ""
@@ -504,6 +502,12 @@ ifndef VERSION
 endif
 ifdef LOCAL_BUILD
 	$(error LOCAL_BUILD must not be set for a release)
+endif
+ifndef GITHUB_TOKEN
+	$(error GITHUB_TOKEN must be set for a release)
+endif
+ifeq (, $(shell which ghr))
+	$(error Unable to find `ghr` in PATH, run this: go get -u github.com/tcnksm/ghr)
 endif
 
 ###############################################################################
