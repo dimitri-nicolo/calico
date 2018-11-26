@@ -5,7 +5,7 @@ default: build
 all: build
 
 ## Run the tests for the current platform/architecture
-test: test-kdd test-etcd
+test: ut test-kdd test-etcd
 
 ###############################################################################
 # Both native and cross architecture builds are supported.
@@ -40,7 +40,7 @@ ifeq ($(ARCH),x86_64)
 endif
 
 ###############################################################################
-GO_BUILD_VER?=v0.18
+GO_BUILD_VER?=v0.20
 
 CALICO_BUILD = calico/go-build:$(GO_BUILD_VER)
 
@@ -108,8 +108,9 @@ vendor: glide.lock
 	$(DOCKER_GO_BUILD) glide install -strip-vendor
 
 # Default the typha repo and version but allow them to be overridden
+TYPHA_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
 TYPHA_REPO?=github.com/tigera/typha-private
-TYPHA_VERSION?=$(shell git ls-remote git@github.com:tigera/typha-private master 2>/dev/null | cut -f 1)
+TYPHA_VERSION?=$(shell git ls-remote git@github.com:tigera/typha-private $(TYPHA_BRANCH) 2>/dev/null | cut -f 1)
 
 ## Update typha pin in glide.yaml
 update-typha:
@@ -203,7 +204,7 @@ test-kdd: bin/confd bin/kubectl bin/bird bin/bird6 bin/calico-node bin/calicoctl
 
 .PHONY: test-etcd
 ## Run template tests against etcd
-test-etcd: bin/confd bin/etcdctl bin/bird bin/bird6 bin/calico-node bin/calicoctl run-etcd
+test-etcd: bin/confd bin/etcdctl bin/bird bin/bird6 bin/calico-node bin/kubectl bin/calicoctl run-etcd run-k8s-apiserver
 	-git clean -fx etc/calico/confd
 	docker run --rm --net=host \
 		-v $(CURDIR)/tests/:/tests/ \
@@ -214,6 +215,17 @@ test-etcd: bin/confd bin/etcdctl bin/bird bin/bird6 bin/calico-node bin/calicoct
 		-e UPDATE_EXPECTED_DATA=$(UPDATE_EXPECTED_DATA) \
 		$(CALICO_BUILD) /tests/test_suite_etcd.sh
 	-git clean -fx etc/calico/confd
+
+.PHONY: ut
+## Run the fast set of unit tests in a container.
+ut: vendor
+	-mkdir -p .go-pkg-cache
+	docker run --rm -t --privileged --net=host \
+		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+		-v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
+		-v $(CURDIR)/.go-pkg-cache:/go-cache/:rw \
+		-e GOCACHE=/go-cache \
+		$(CALICO_BUILD) sh -c 'cd /go/src/$(PACKAGE_NAME) && ginkgo -r --skipPackage vendor $(GINKGO_ARGS) .'
 
 ## Etcd is used by the kubernetes
 # NOTE: https://quay.io/repository/coreos/etcd is available *only* for the following archs with the following tags:
@@ -244,6 +256,8 @@ run-k8s-apiserver: stop-k8s-apiserver run-etcd
 	gcr.io/google_containers/hyperkube-$(ARCH):$(K8S_VERSION) \
 		  /hyperkube apiserver --etcd-servers=http://$(LOCAL_IP_ENV):2379 \
 		  --service-cluster-ip-range=10.101.0.0/16
+	# Wait until the apiserver is accepting requests.
+	while ! docker exec calico-k8s-apiserver kubectl get nodes; do echo "Waiting for apiserver to come up..."; sleep 2; done
 
 ## Stop Kubernetes apiserver
 stop-k8s-apiserver:
