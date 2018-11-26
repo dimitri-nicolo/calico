@@ -8,6 +8,15 @@
     "type": "k8s"
   },
 
+  "DNS":  {
+    "Nameservers":  [
+      "10.96.0.10"
+    ],
+    "Search":  [
+      "svc.cluster.local"
+    ]
+  },
+
   "nodename_file": "__NODENAME_FILE__",
 
   "datastore_type": "__DATASTORE_TYPE__",
