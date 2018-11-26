@@ -10,6 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs/cloudwatchlogsiface"
+
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/collector/testutil"
 	"github.com/projectcalico/felix/config"

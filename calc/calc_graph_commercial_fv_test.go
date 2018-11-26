@@ -788,7 +788,7 @@ var commercialTests = []StateList{
 	{localEp1With3NodesSharingIPAndRemoteEp},
 	{localEp1With3NodesSharingIP, localEp1With3NodesSharingIPAndRemoteEp, localEp1WithNode},
 	{
-		localEp1WithNode,                             // Start with a local endpoint with some bindings.
+		localEp1WithNode, // Start with a local endpoint with some bindings.
 		localAndRemoteEndpointsWithMissingRemoteNode, // Add remote endpoint but no remote node.  Shouldn't change.
 		localEp1With3NodesSharingIPAndRemoteEp,       // Add in remote nodes, bindings now ambiguous.
 		localEp1WithNode,                             // Remote the remote nodes again, bindings go back to local endpoint.

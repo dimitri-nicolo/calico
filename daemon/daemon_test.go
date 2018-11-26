@@ -3,8 +3,9 @@
 package daemon
 
 import (
-	"github.com/projectcalico/felix/config"
 	lclient "github.com/tigera/licensing/client"
+
+	"github.com/projectcalico/felix/config"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
