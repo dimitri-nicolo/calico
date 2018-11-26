@@ -49,6 +49,17 @@ kubectl apply -f \
 
 - **{{site.prodname}} for policy only**:
 
+   - **AWS VPC CNI plugin**
+  ```bash
+kubectl apply -f \
+{{site.url}}/{{page.version}}/getting-started/kubernetes/installation/manifests/app-layer-policy/kubernetes-datastore/policy-only-ecs/calico-node.yaml
+	```
+
+	> **Note**: You can also
+	> [view the manifest in your browser](manifests/app-layer-policy/kubernetes-datastore/policy-only-ecs/calico-node.yaml){:target="_blank"}.
+	{: .alert .alert-info}
+
+    - **All others**
   ```bash
 kubectl apply -f \
 {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/manifests/app-layer-policy/kubernetes-datastore/policy-only/calico-node.yaml
