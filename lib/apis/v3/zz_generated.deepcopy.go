@@ -19,7 +19,7 @@
 package v3
 
 import (
-	apis_v1 "github.com/projectcalico/libcalico-go/lib/apis/v1"
+	apisv1 "github.com/projectcalico/libcalico-go/lib/apis/v1"
 	numorstring "github.com/projectcalico/libcalico-go/lib/numorstring"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -90,21 +90,13 @@ func (in *BGPConfigurationSpec) DeepCopyInto(out *BGPConfigurationSpec) {
 	*out = *in
 	if in.NodeToNodeMeshEnabled != nil {
 		in, out := &in.NodeToNodeMeshEnabled, &out.NodeToNodeMeshEnabled
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(bool)
-			**out = **in
-		}
+		*out = new(bool)
+		**out = **in
 	}
 	if in.ASNumber != nil {
 		in, out := &in.ASNumber, &out.ASNumber
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(numorstring.ASNumber)
-			**out = **in
-		}
+		*out = new(numorstring.ASNumber)
+		**out = **in
 	}
 	if in.Extensions != nil {
 		in, out := &in.Extensions, &out.Extensions
@@ -274,12 +266,8 @@ func (in *ClusterInformationSpec) DeepCopyInto(out *ClusterInformationSpec) {
 	*out = *in
 	if in.DatastoreReady != nil {
 		in, out := &in.DatastoreReady, &out.DatastoreReady
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(bool)
-			**out = **in
-		}
+		*out = new(bool)
+		**out = **in
 	}
 	return
 }
@@ -336,12 +324,8 @@ func (in *EntityRule) DeepCopyInto(out *EntityRule) {
 	}
 	if in.ServiceAccounts != nil {
 		in, out := &in.ServiceAccounts, &out.ServiceAccounts
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(ServiceAccountMatch)
-			(*in).DeepCopyInto(*out)
-		}
+		*out = new(ServiceAccountMatch)
+		(*in).DeepCopyInto(*out)
 	}
 	return
 }
@@ -437,658 +421,374 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 	*out = *in
 	if in.UseInternalDataplaneDriver != nil {
 		in, out := &in.UseInternalDataplaneDriver, &out.UseInternalDataplaneDriver
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(bool)
-			**out = **in
-		}
+		*out = new(bool)
+		**out = **in
 	}
 	if in.IPv6Support != nil {
 		in, out := &in.IPv6Support, &out.IPv6Support
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(bool)
-			**out = **in
-		}
+		*out = new(bool)
+		**out = **in
 	}
 	if in.IgnoreLooseRPF != nil {
 		in, out := &in.IgnoreLooseRPF, &out.IgnoreLooseRPF
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(bool)
-			**out = **in
-		}
+		*out = new(bool)
+		**out = **in
 	}
 	if in.RouteRefreshInterval != nil {
 		in, out := &in.RouteRefreshInterval, &out.RouteRefreshInterval
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(v1.Duration)
-			**out = **in
-		}
+		*out = new(v1.Duration)
+		**out = **in
 	}
 	if in.IptablesRefreshInterval != nil {
 		in, out := &in.IptablesRefreshInterval, &out.IptablesRefreshInterval
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(v1.Duration)
-			**out = **in
-		}
+		*out = new(v1.Duration)
+		**out = **in
 	}
 	if in.IptablesPostWriteCheckInterval != nil {
 		in, out := &in.IptablesPostWriteCheckInterval, &out.IptablesPostWriteCheckInterval
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(v1.Duration)
-			**out = **in
-		}
+		*out = new(v1.Duration)
+		**out = **in
 	}
 	if in.IptablesLockTimeout != nil {
 		in, out := &in.IptablesLockTimeout, &out.IptablesLockTimeout
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(v1.Duration)
-			**out = **in
-		}
+		*out = new(v1.Duration)
+		**out = **in
 	}
 	if in.IptablesLockProbeInterval != nil {
 		in, out := &in.IptablesLockProbeInterval, &out.IptablesLockProbeInterval
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(v1.Duration)
-			**out = **in
-		}
+		*out = new(v1.Duration)
+		**out = **in
 	}
 	if in.IpsetsRefreshInterval != nil {
 		in, out := &in.IpsetsRefreshInterval, &out.IpsetsRefreshInterval
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(v1.Duration)
-			**out = **in
-		}
+		*out = new(v1.Duration)
+		**out = **in
 	}
 	if in.MaxIpsetSize != nil {
 		in, out := &in.MaxIpsetSize, &out.MaxIpsetSize
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(int)
-			**out = **in
-		}
+		*out = new(int)
+		**out = **in
 	}
 	if in.NetlinkTimeout != nil {
 		in, out := &in.NetlinkTimeout, &out.NetlinkTimeout
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(v1.Duration)
-			**out = **in
-		}
+		*out = new(v1.Duration)
+		**out = **in
 	}
 	if in.MetadataPort != nil {
 		in, out := &in.MetadataPort, &out.MetadataPort
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(int)
-			**out = **in
-		}
+		*out = new(int)
+		**out = **in
 	}
 	if in.LogDropActionOverride != nil {
 		in, out := &in.LogDropActionOverride, &out.LogDropActionOverride
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(bool)
-			**out = **in
-		}
+		*out = new(bool)
+		**out = **in
 	}
 	if in.IPIPEnabled != nil {
 		in, out := &in.IPIPEnabled, &out.IPIPEnabled
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(bool)
-			**out = **in
-		}
+		*out = new(bool)
+		**out = **in
 	}
 	if in.IPIPMTU != nil {
 		in, out := &in.IPIPMTU, &out.IPIPMTU
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(int)
-			**out = **in
-		}
+		*out = new(int)
+		**out = **in
 	}
 	if in.ReportingInterval != nil {
 		in, out := &in.ReportingInterval, &out.ReportingInterval
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(v1.Duration)
-			**out = **in
-		}
+		*out = new(v1.Duration)
+		**out = **in
 	}
 	if in.ReportingTTL != nil {
 		in, out := &in.ReportingTTL, &out.ReportingTTL
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(v1.Duration)
-			**out = **in
-		}
+		*out = new(v1.Duration)
+		**out = **in
 	}
 	if in.EndpointReportingEnabled != nil {
 		in, out := &in.EndpointReportingEnabled, &out.EndpointReportingEnabled
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(bool)
-			**out = **in
-		}
+		*out = new(bool)
+		**out = **in
 	}
 	if in.EndpointReportingDelay != nil {
 		in, out := &in.EndpointReportingDelay, &out.EndpointReportingDelay
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(v1.Duration)
-			**out = **in
-		}
+		*out = new(v1.Duration)
+		**out = **in
 	}
 	if in.IptablesMarkMask != nil {
 		in, out := &in.IptablesMarkMask, &out.IptablesMarkMask
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(uint32)
-			**out = **in
-		}
+		*out = new(uint32)
+		**out = **in
 	}
 	if in.DisableConntrackInvalidCheck != nil {
 		in, out := &in.DisableConntrackInvalidCheck, &out.DisableConntrackInvalidCheck
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(bool)
-			**out = **in
-		}
+		*out = new(bool)
+		**out = **in
 	}
 	if in.HealthEnabled != nil {
 		in, out := &in.HealthEnabled, &out.HealthEnabled
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(bool)
-			**out = **in
-		}
+		*out = new(bool)
+		**out = **in
 	}
 	if in.HealthHost != nil {
 		in, out := &in.HealthHost, &out.HealthHost
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(string)
-			**out = **in
-		}
+		*out = new(string)
+		**out = **in
 	}
 	if in.HealthPort != nil {
 		in, out := &in.HealthPort, &out.HealthPort
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(int)
-			**out = **in
-		}
+		*out = new(int)
+		**out = **in
 	}
 	if in.PrometheusMetricsEnabled != nil {
 		in, out := &in.PrometheusMetricsEnabled, &out.PrometheusMetricsEnabled
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(bool)
-			**out = **in
-		}
+		*out = new(bool)
+		**out = **in
 	}
 	if in.PrometheusMetricsPort != nil {
 		in, out := &in.PrometheusMetricsPort, &out.PrometheusMetricsPort
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(int)
-			**out = **in
-		}
+		*out = new(int)
+		**out = **in
 	}
 	if in.PrometheusGoMetricsEnabled != nil {
 		in, out := &in.PrometheusGoMetricsEnabled, &out.PrometheusGoMetricsEnabled
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(bool)
-			**out = **in
-		}
+		*out = new(bool)
+		**out = **in
 	}
 	if in.PrometheusProcessMetricsEnabled != nil {
 		in, out := &in.PrometheusProcessMetricsEnabled, &out.PrometheusProcessMetricsEnabled
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(bool)
-			**out = **in
-		}
+		*out = new(bool)
+		**out = **in
 	}
 	if in.FailsafeInboundHostPorts != nil {
 		in, out := &in.FailsafeInboundHostPorts, &out.FailsafeInboundHostPorts
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new([]ProtoPort)
-			if **in != nil {
-				in, out := *in, *out
-				*out = make([]ProtoPort, len(*in))
-				copy(*out, *in)
-			}
+		*out = new([]ProtoPort)
+		if **in != nil {
+			in, out := *in, *out
+			*out = make([]ProtoPort, len(*in))
+			copy(*out, *in)
 		}
 	}
 	if in.FailsafeOutboundHostPorts != nil {
 		in, out := &in.FailsafeOutboundHostPorts, &out.FailsafeOutboundHostPorts
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new([]ProtoPort)
-			if **in != nil {
-				in, out := *in, *out
-				*out = make([]ProtoPort, len(*in))
-				copy(*out, *in)
-			}
+		*out = new([]ProtoPort)
+		if **in != nil {
+			in, out := *in, *out
+			*out = make([]ProtoPort, len(*in))
+			copy(*out, *in)
 		}
 	}
 	if in.KubeNodePortRanges != nil {
 		in, out := &in.KubeNodePortRanges, &out.KubeNodePortRanges
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new([]numorstring.Port)
-			if **in != nil {
-				in, out := *in, *out
-				*out = make([]numorstring.Port, len(*in))
-				copy(*out, *in)
-			}
+		*out = new([]numorstring.Port)
+		if **in != nil {
+			in, out := *in, *out
+			*out = make([]numorstring.Port, len(*in))
+			copy(*out, *in)
 		}
 	}
 	if in.UsageReportingEnabled != nil {
 		in, out := &in.UsageReportingEnabled, &out.UsageReportingEnabled
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(bool)
-			**out = **in
-		}
+		*out = new(bool)
+		**out = **in
 	}
 	if in.UsageReportingInitialDelay != nil {
 		in, out := &in.UsageReportingInitialDelay, &out.UsageReportingInitialDelay
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(v1.Duration)
-			**out = **in
-		}
+		*out = new(v1.Duration)
+		**out = **in
 	}
 	if in.UsageReportingInterval != nil {
 		in, out := &in.UsageReportingInterval, &out.UsageReportingInterval
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(v1.Duration)
-			**out = **in
-		}
+		*out = new(v1.Duration)
+		**out = **in
 	}
 	if in.NATPortRange != nil {
 		in, out := &in.NATPortRange, &out.NATPortRange
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(numorstring.Port)
-			**out = **in
-		}
+		*out = new(numorstring.Port)
+		**out = **in
 	}
 	if in.ExternalNodesCIDRList != nil {
 		in, out := &in.ExternalNodesCIDRList, &out.ExternalNodesCIDRList
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new([]string)
-			if **in != nil {
-				in, out := *in, *out
-				*out = make([]string, len(*in))
-				copy(*out, *in)
-			}
+		*out = new([]string)
+		if **in != nil {
+			in, out := *in, *out
+			*out = make([]string, len(*in))
+			copy(*out, *in)
 		}
 	}
 	if in.PrometheusReporterEnabled != nil {
 		in, out := &in.PrometheusReporterEnabled, &out.PrometheusReporterEnabled
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(bool)
-			**out = **in
-		}
+		*out = new(bool)
+		**out = **in
 	}
 	if in.PrometheusReporterPort != nil {
 		in, out := &in.PrometheusReporterPort, &out.PrometheusReporterPort
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(int)
-			**out = **in
-		}
+		*out = new(int)
+		**out = **in
 	}
 	if in.DeletedMetricsRetentionSecs != nil {
 		in, out := &in.DeletedMetricsRetentionSecs, &out.DeletedMetricsRetentionSecs
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(int)
-			**out = **in
-		}
+		*out = new(int)
+		**out = **in
 	}
 	if in.DebugDisableLogDropping != nil {
 		in, out := &in.DebugDisableLogDropping, &out.DebugDisableLogDropping
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(bool)
-			**out = **in
-		}
+		*out = new(bool)
+		**out = **in
 	}
 	if in.DebugSimulateCalcGraphHangAfter != nil {
 		in, out := &in.DebugSimulateCalcGraphHangAfter, &out.DebugSimulateCalcGraphHangAfter
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(v1.Duration)
-			**out = **in
-		}
+		*out = new(v1.Duration)
+		**out = **in
 	}
 	if in.DebugSimulateDataplaneHangAfter != nil {
 		in, out := &in.DebugSimulateDataplaneHangAfter, &out.DebugSimulateDataplaneHangAfter
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(v1.Duration)
-			**out = **in
-		}
+		*out = new(v1.Duration)
+		**out = **in
 	}
 	if in.IPSecAllowUnsecuredTraffic != nil {
 		in, out := &in.IPSecAllowUnsecuredTraffic, &out.IPSecAllowUnsecuredTraffic
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(bool)
-			**out = **in
-		}
+		*out = new(bool)
+		**out = **in
 	}
 	if in.IPSecPolicyRefreshInterval != nil {
 		in, out := &in.IPSecPolicyRefreshInterval, &out.IPSecPolicyRefreshInterval
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(v1.Duration)
-			**out = **in
-		}
+		*out = new(v1.Duration)
+		**out = **in
 	}
 	if in.FlowLogsFlushInterval != nil {
 		in, out := &in.FlowLogsFlushInterval, &out.FlowLogsFlushInterval
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(v1.Duration)
-			**out = **in
-		}
+		*out = new(v1.Duration)
+		**out = **in
 	}
 	if in.FlowLogsEnableHostEndpoint != nil {
 		in, out := &in.FlowLogsEnableHostEndpoint, &out.FlowLogsEnableHostEndpoint
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(bool)
-			**out = **in
-		}
+		*out = new(bool)
+		**out = **in
 	}
 	if in.FlowLogsEnableNetworkSets != nil {
 		in, out := &in.FlowLogsEnableNetworkSets, &out.FlowLogsEnableNetworkSets
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(bool)
-			**out = **in
-		}
+		*out = new(bool)
+		**out = **in
 	}
 	if in.CloudWatchLogsReporterEnabled != nil {
 		in, out := &in.CloudWatchLogsReporterEnabled, &out.CloudWatchLogsReporterEnabled
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(bool)
-			**out = **in
-		}
+		*out = new(bool)
+		**out = **in
 	}
 	if in.CloudWatchLogsFlushInterval != nil {
 		in, out := &in.CloudWatchLogsFlushInterval, &out.CloudWatchLogsFlushInterval
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(v1.Duration)
-			**out = **in
-		}
+		*out = new(v1.Duration)
+		**out = **in
 	}
 	if in.CloudWatchLogsIncludeLabels != nil {
 		in, out := &in.CloudWatchLogsIncludeLabels, &out.CloudWatchLogsIncludeLabels
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(bool)
-			**out = **in
-		}
+		*out = new(bool)
+		**out = **in
 	}
 	if in.CloudWatchLogsIncludePolicies != nil {
 		in, out := &in.CloudWatchLogsIncludePolicies, &out.CloudWatchLogsIncludePolicies
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(bool)
-			**out = **in
-		}
+		*out = new(bool)
+		**out = **in
 	}
 	if in.CloudWatchLogsAggregationKindForAllowed != nil {
 		in, out := &in.CloudWatchLogsAggregationKindForAllowed, &out.CloudWatchLogsAggregationKindForAllowed
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(int)
-			**out = **in
-		}
+		*out = new(int)
+		**out = **in
 	}
 	if in.CloudWatchLogsAggregationKindForDenied != nil {
 		in, out := &in.CloudWatchLogsAggregationKindForDenied, &out.CloudWatchLogsAggregationKindForDenied
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(int)
-			**out = **in
-		}
+		*out = new(int)
+		**out = **in
 	}
 	if in.CloudWatchLogsRetentionDays != nil {
 		in, out := &in.CloudWatchLogsRetentionDays, &out.CloudWatchLogsRetentionDays
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(int)
-			**out = **in
-		}
+		*out = new(int)
+		**out = **in
 	}
 	if in.CloudWatchLogsEnableHostEndpoint != nil {
 		in, out := &in.CloudWatchLogsEnableHostEndpoint, &out.CloudWatchLogsEnableHostEndpoint
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(bool)
-			**out = **in
-		}
+		*out = new(bool)
+		**out = **in
 	}
 	if in.CloudWatchLogsEnabledForAllowed != nil {
 		in, out := &in.CloudWatchLogsEnabledForAllowed, &out.CloudWatchLogsEnabledForAllowed
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(bool)
-			**out = **in
-		}
+		*out = new(bool)
+		**out = **in
 	}
 	if in.CloudWatchLogsEnabledForDenied != nil {
 		in, out := &in.CloudWatchLogsEnabledForDenied, &out.CloudWatchLogsEnabledForDenied
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(bool)
-			**out = **in
-		}
+		*out = new(bool)
+		**out = **in
 	}
 	if in.CloudWatchMetricsReporterEnabled != nil {
 		in, out := &in.CloudWatchMetricsReporterEnabled, &out.CloudWatchMetricsReporterEnabled
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(bool)
-			**out = **in
-		}
+		*out = new(bool)
+		**out = **in
 	}
 	if in.CloudWatchMetricsPushInterval != nil {
 		in, out := &in.CloudWatchMetricsPushInterval, &out.CloudWatchMetricsPushInterval
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(v1.Duration)
-			**out = **in
-		}
+		*out = new(v1.Duration)
+		**out = **in
 	}
 	if in.CloudWatchNodeHealthStatusEnabled != nil {
 		in, out := &in.CloudWatchNodeHealthStatusEnabled, &out.CloudWatchNodeHealthStatusEnabled
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(bool)
-			**out = **in
-		}
+		*out = new(bool)
+		**out = **in
 	}
 	if in.CloudWatchNodeHealthPushIntervalSecs != nil {
 		in, out := &in.CloudWatchNodeHealthPushIntervalSecs, &out.CloudWatchNodeHealthPushIntervalSecs
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(v1.Duration)
-			**out = **in
-		}
+		*out = new(v1.Duration)
+		**out = **in
 	}
 	if in.FlowLogsFileEnabled != nil {
 		in, out := &in.FlowLogsFileEnabled, &out.FlowLogsFileEnabled
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(bool)
-			**out = **in
-		}
+		*out = new(bool)
+		**out = **in
 	}
 	if in.FlowLogsFileMaxFiles != nil {
 		in, out := &in.FlowLogsFileMaxFiles, &out.FlowLogsFileMaxFiles
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(int)
-			**out = **in
-		}
+		*out = new(int)
+		**out = **in
 	}
 	if in.FlowLogsFileMaxFileSizeMB != nil {
 		in, out := &in.FlowLogsFileMaxFileSizeMB, &out.FlowLogsFileMaxFileSizeMB
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(int)
-			**out = **in
-		}
+		*out = new(int)
+		**out = **in
 	}
 	if in.FlowLogsFileDirectory != nil {
 		in, out := &in.FlowLogsFileDirectory, &out.FlowLogsFileDirectory
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(string)
-			**out = **in
-		}
+		*out = new(string)
+		**out = **in
 	}
 	if in.FlowLogsFileIncludeLabels != nil {
 		in, out := &in.FlowLogsFileIncludeLabels, &out.FlowLogsFileIncludeLabels
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(bool)
-			**out = **in
-		}
+		*out = new(bool)
+		**out = **in
 	}
 	if in.FlowLogsFileIncludePolicies != nil {
 		in, out := &in.FlowLogsFileIncludePolicies, &out.FlowLogsFileIncludePolicies
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(bool)
-			**out = **in
-		}
+		*out = new(bool)
+		**out = **in
 	}
 	if in.FlowLogsFileAggregationKindForAllowed != nil {
 		in, out := &in.FlowLogsFileAggregationKindForAllowed, &out.FlowLogsFileAggregationKindForAllowed
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(int)
-			**out = **in
-		}
+		*out = new(int)
+		**out = **in
 	}
 	if in.FlowLogsFileAggregationKindForDenied != nil {
 		in, out := &in.FlowLogsFileAggregationKindForDenied, &out.FlowLogsFileAggregationKindForDenied
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(int)
-			**out = **in
-		}
+		*out = new(int)
+		**out = **in
 	}
 	if in.FlowLogsFileEnabledForAllowed != nil {
 		in, out := &in.FlowLogsFileEnabledForAllowed, &out.FlowLogsFileEnabledForAllowed
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(bool)
-			**out = **in
-		}
+		*out = new(bool)
+		**out = **in
 	}
 	if in.FlowLogsFileEnabledForDenied != nil {
 		in, out := &in.FlowLogsFileEnabledForDenied, &out.FlowLogsFileEnabledForDenied
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(bool)
-			**out = **in
-		}
+		*out = new(bool)
+		**out = **in
 	}
 	return
 }
@@ -1168,12 +868,8 @@ func (in *GlobalNetworkPolicySpec) DeepCopyInto(out *GlobalNetworkPolicySpec) {
 	*out = *in
 	if in.Order != nil {
 		in, out := &in.Order, &out.Order
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(float64)
-			**out = **in
-		}
+		*out = new(float64)
+		**out = **in
 	}
 	if in.Ingress != nil {
 		in, out := &in.Ingress, &out.Ingress
@@ -1426,21 +1122,13 @@ func (in *ICMPFields) DeepCopyInto(out *ICMPFields) {
 	*out = *in
 	if in.Type != nil {
 		in, out := &in.Type, &out.Type
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(int)
-			**out = **in
-		}
+		*out = new(int)
+		**out = **in
 	}
 	if in.Code != nil {
 		in, out := &in.Code, &out.Code
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(int)
-			**out = **in
-		}
+		*out = new(int)
+		**out = **in
 	}
 	return
 }
@@ -1536,12 +1224,8 @@ func (in *IPPoolSpec) DeepCopyInto(out *IPPoolSpec) {
 	*out = *in
 	if in.IPIP != nil {
 		in, out := &in.IPIP, &out.IPIP
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(apis_v1.IPIPConfiguration)
-			**out = **in
-		}
+		*out = new(apisv1.IPIPConfiguration)
+		**out = **in
 	}
 	return
 }
@@ -1713,12 +1397,8 @@ func (in *NetworkPolicySpec) DeepCopyInto(out *NetworkPolicySpec) {
 	*out = *in
 	if in.Order != nil {
 		in, out := &in.Order, &out.Order
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(float64)
-			**out = **in
-		}
+		*out = new(float64)
+		**out = **in
 	}
 	if in.Ingress != nil {
 		in, out := &in.Ingress, &out.Ingress
@@ -1784,12 +1464,8 @@ func (in *NodeBGPSpec) DeepCopyInto(out *NodeBGPSpec) {
 	*out = *in
 	if in.ASNumber != nil {
 		in, out := &in.ASNumber, &out.ASNumber
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(numorstring.ASNumber)
-			**out = **in
-		}
+		*out = new(numorstring.ASNumber)
+		**out = **in
 	}
 	return
 }
@@ -1842,12 +1518,8 @@ func (in *NodeSpec) DeepCopyInto(out *NodeSpec) {
 	*out = *in
 	if in.BGP != nil {
 		in, out := &in.BGP, &out.BGP
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(NodeBGPSpec)
-			(*in).DeepCopyInto(*out)
-		}
+		*out = new(NodeBGPSpec)
+		(*in).DeepCopyInto(*out)
 	}
 	if in.OrchRefs != nil {
 		in, out := &in.OrchRefs, &out.OrchRefs
@@ -2079,59 +1751,35 @@ func (in *Rule) DeepCopyInto(out *Rule) {
 	*out = *in
 	if in.IPVersion != nil {
 		in, out := &in.IPVersion, &out.IPVersion
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(int)
-			**out = **in
-		}
+		*out = new(int)
+		**out = **in
 	}
 	if in.Protocol != nil {
 		in, out := &in.Protocol, &out.Protocol
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(numorstring.Protocol)
-			**out = **in
-		}
+		*out = new(numorstring.Protocol)
+		**out = **in
 	}
 	if in.ICMP != nil {
 		in, out := &in.ICMP, &out.ICMP
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(ICMPFields)
-			(*in).DeepCopyInto(*out)
-		}
+		*out = new(ICMPFields)
+		(*in).DeepCopyInto(*out)
 	}
 	if in.NotProtocol != nil {
 		in, out := &in.NotProtocol, &out.NotProtocol
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(numorstring.Protocol)
-			**out = **in
-		}
+		*out = new(numorstring.Protocol)
+		**out = **in
 	}
 	if in.NotICMP != nil {
 		in, out := &in.NotICMP, &out.NotICMP
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(ICMPFields)
-			(*in).DeepCopyInto(*out)
-		}
+		*out = new(ICMPFields)
+		(*in).DeepCopyInto(*out)
 	}
 	in.Source.DeepCopyInto(&out.Source)
 	in.Destination.DeepCopyInto(&out.Destination)
 	if in.HTTP != nil {
 		in, out := &in.HTTP, &out.HTTP
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(HTTPMatch)
-			(*in).DeepCopyInto(*out)
-		}
+		*out = new(HTTPMatch)
+		(*in).DeepCopyInto(*out)
 	}
 	return
 }
@@ -2232,12 +1880,8 @@ func (in *TierSpec) DeepCopyInto(out *TierSpec) {
 	*out = *in
 	if in.Order != nil {
 		in, out := &in.Order, &out.Order
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(float64)
-			**out = **in
-		}
+		*out = new(float64)
+		**out = **in
 	}
 	return
 }
