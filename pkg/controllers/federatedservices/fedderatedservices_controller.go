@@ -489,8 +489,8 @@ func (c *federatedServicesController) OnUpdates(updates []bapi.Update) {
 				// Error parsing federation config. If this is on the local cluster then warn the user that we will
 				// not be updating the endpoints for this service.
 				if entry.federationConfigErr != nil && id.cluster == "" {
-					log.WithError(entry.federationConfigErr).Warningf("Unable to parse federation config; " +
-						"the Service '%s' will not be included in CNX federation")
+					log.WithError(entry.federationConfigErr).Warningf("Unable to parse federation config; "+
+						"the Service '%v' will not be included in CNX federation", entry.service.Name)
 				}
 			}
 
