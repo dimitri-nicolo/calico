@@ -147,7 +147,7 @@ PUSH_NONMANIFEST_IMAGES=$(filter-out $(PUSH_MANIFEST_IMAGES),$(PUSH_IMAGES))
 # location of docker credentials to push manifests
 DOCKER_CONFIG ?= $(HOME)/.docker/config.json
 
-GO_BUILD_VER?=v0.18
+GO_BUILD_VER?=v0.20
 # For building, we use the go-build image for the *host* architecture, even if the target is different
 # the one for the host should contain all the necessary cross-compilation tools
 # we do not need to use the arch since go-build:v0.15 now is multi-arch manifest
@@ -292,8 +292,9 @@ vendor vendor/.up-to-date: glide.lock
 	fi
 
 # Default the typha repo and version but allow them to be overridden
+TYPHA_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
 TYPHA_REPO?=github.com/tigera/typha-private
-TYPHA_VERSION?=$(shell git ls-remote git@github.com:tigera/typha-private master 2>/dev/null | cut -f 1)
+TYPHA_VERSION?=$(shell git ls-remote git@github.com:tigera/typha-private $(TYPHA_BRANCH) 2>/dev/null | cut -f 1)
 
 ## Update typha pin in glide.yaml
 update-typha:
@@ -539,8 +540,8 @@ go-meta-linter: vendor/.up-to-date $(GENERATED_GO_FILES)
 .PHONY: go-fmt goimports fix
 fix go-fmt goimports:
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -c 'glide nv -x | \
-      grep -v -e "^\\.$$" | \
-      xargs goimports -w -local github.com/projectcalico/'
+	      grep -v -e "^\\.$$" | \
+	      xargs goimports -w -local github.com/projectcalico/'
 
 .PHONY: check-typha-pins
 check-typha-pins: vendor/.up-to-date
@@ -819,7 +820,15 @@ release-publish: release-prereqs
 	# Disabling for now since no-one is consuming the images.
 	# $(MAKE) push-all IMAGETAG=$(VERSION)
 
-	@echo "Finalize the GitHub release based on the pushed tag."
+	# Push binaries to GitHub release.
+	# Requires ghr: https://github.com/tcnksm/ghr
+	# Requires GITHUB_TOKEN environment variable set.
+	ghr -r felix \
+		-b "Release notes can be found at https://docs.projectcalico.org" \
+		-n $(VERSION) \
+		$(VERSION) ./bin/
+
+	@echo "Confirm that the release was published at the following URL."
 	@echo ""
 	@echo "  https://$(PACKAGE_NAME)/releases/tag/$(VERSION)"
 	@echo ""
@@ -855,6 +864,12 @@ ifndef VERSION
 endif
 ifdef LOCAL_BUILD
 	$(error LOCAL_BUILD must not be set for a release)
+endif
+ifndef GITHUB_TOKEN
+	$(error GITHUB_TOKEN must be set for a release)
+endif
+ifeq (, $(shell which ghr))
+	$(error Unable to find `ghr` in PATH, run this: go get -u github.com/tcnksm/ghr)
 endif
 
 ###############################################################################
