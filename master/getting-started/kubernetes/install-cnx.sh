@@ -705,7 +705,7 @@ dockerLogin() {
   fi
 
   echo -n "Logging in to ${CALICO_REGISTRY} ... "
-  docker login --username=${username} --password="${token}" ${CALICO_REGISTRY}
+  sudo -E docker login --username=${username} --password="${token}" ${CALICO_REGISTRY}
   echo "done."
 }
 
