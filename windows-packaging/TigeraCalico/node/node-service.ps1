@@ -14,8 +14,13 @@ if($env:CALICO_NETWORKING_BACKEND -EQ "windows-bgp") {
     {
         Write-Host "`nStart creating vSwitch. Note: Connection may get lost for RDP, please reconnect...`n"
         New-HNSNetwork -Type L2Bridge -AddressPrefix "192.168.255.0/30" -Gateway "192.168.255.1" -Name "External" -Verbose
+
+        # Wait for the management IP to show up and then give an extra grace period for
+        # the networking stack to settle down.
         $mgmtIP = Wait-ForManagementIP "External"
         Write-Host "Management IP detected on vSwitch: $mgmtIP."
+        Start-Sleep 10
+
         Write-Host "Restarting BGP service to pick up any interface renumbering..."
         Restart-Service RemoteAccess
     }
