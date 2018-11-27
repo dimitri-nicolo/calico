@@ -83,6 +83,14 @@ rules:
       - list
       - update
       - watch
+  - apiGroups: [""]
+    resources:
+      - nodes/status
+    verbs:
+      # Needed for clearing NodeNetworkUnavailable flag.
+      - patch
+      # Calico stores some configuration information in node annotations.
+      - update
 
 ---
 

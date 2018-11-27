@@ -73,6 +73,12 @@ rules:
     verbs:
       - get
       - list
+  - apiGroups: [""]
+    resources:
+      - nodes/status
+    verbs:
+      # Needed for clearing NodeNetworkUnavailable flag.
+      - patch
 
 ---
 
