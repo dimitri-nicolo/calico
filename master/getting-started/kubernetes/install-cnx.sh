@@ -357,10 +357,16 @@ determineInstallerType() {
 }
 
 #
+# jq container replacement
+#
+function jq-container() {
+  sudo docker run -i quay.io/bcreane/jq:latest "$@"
+}
+
+#
 # checkRequirementsInstalled() - check package dependencies
 #
 checkRequirementsInstalled() {
-  programIsInstalled jq || fatalError "Please install \"jq\" and re-run $(basename $0)".
   programIsInstalled sed || fatalError "Please install \"sed\" and re-run $(basename "$0")".
   programIsInstalled base64 || fatalError "Please install \"base64\" and re-run $(basename "$0")".
   programIsInstalled ip || fatalError "Please install \"ip\" and re-run $(basename "$0")".
@@ -442,7 +448,7 @@ checkRequiredFilesPresent() {
 #
 function podStatus() {
   label="$1"
-  status=$(kubectl get pods --selector="${label}" -o json --all-namespaces | jq -r '.items[] | .status.containerStatuses[]? | [.name, .image, .ready|tostring] |join(":")')
+  status=$(kubectl get pods --selector="${label}" -o json --all-namespaces | jq-container -r '.items[] | .status.containerStatuses[]? | [.name, .image, .ready|tostring] |join(":")')
   echo "${status}"
 }
 
@@ -480,7 +486,7 @@ getAuthToken() {
   fi
 
   # Ensure the credentials file contains valid json
-  jq -e '.' "$CREDENTIALS_FILE" >/dev/null 2>&1
+  cat "$CREDENTIALS_FILE" | jq-container --exit-status >/dev/null 2>&1
   if [ $? -ne 0 ]; then
     fatalError Please verify \'"$CREDENTIALS_FILE"\' contains valid json credentials.
   fi
@@ -699,7 +705,7 @@ dockerLogin() {
     username="_json_key"
     token=$(cat "${CREDENTIALS_FILE}")
   else
-    dockerCredentials=$(cat "${CREDENTIALS_FILE}" | jq --raw-output '.auths[].auth' | base64 -d)
+    dockerCredentials=$(cat "${CREDENTIALS_FILE}" | jq-container --raw-output '.auths[].auth' | base64 -d)
     username=$(echo -n $dockerCredentials | awk -F ":" '{print $1}')
     token=$(echo -n $dockerCredentials | awk -F ":" '{print $2}')
   fi
