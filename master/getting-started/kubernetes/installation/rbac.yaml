@@ -59,6 +59,12 @@ rules:
       - namespaces
     verbs:
       - get
+  - apiGroups: [""]
+    resources:
+      - nodes/status
+    verbs:
+      # Needed for clearing NodeNetworkUnavailable flag.
+      - patch
 
 ---
 
