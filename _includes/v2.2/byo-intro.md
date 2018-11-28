@@ -30,8 +30,43 @@ the install instructions from that point (inclusive) onwards.
 To complete the following procedure, you'll need:
 
 - An Elasticsearch cluster that meets the [requirements]({{site.baseurl}}/{{page.version}}/getting-started/{{path}}/requirements#elasticsearch-requirements).
-- A `tigera-ee-fluentd` user with permission to send documents to Elasticsearch.
-- A `tigera-ee-manager` user with permission to issue queries to Elasticsearch.
+- A `tigera-ee-fluentd` user with permission to send documents to Elasticsearch (see below).
+- A `tigera-ee-manager` user with permission to issue queries to Elasticsearch (see below).
 - The CA certificate for the Elasticsearch cluster.
 - Any users who are going to use the Kibana dashboards will need to be given appropriate
   credentials.
+
+### Setting up Elasticsearch roles
+
+If you're using the Elasticsearch X-Pack security then you may wish to use the following roles -
+documentation on setting up users / roles with X-Pack security is [here](https://www.elastic.co/guide/en/elastic-stack-overview/6.4/authorization.html).
+
+They may also be useful as a reference for defining alternative security configuration.
+
+1. fluentd role for creating indices and sending logs to Elasticsearch
+
+   ```json
+   {
+     "cluster": [ "monitor", "manage_index_templates" ],
+     "indices": [
+       {
+         "names": [ "tigera_secure_ee_*" ],
+         "privileges": [ "create_index", "write" ]
+       }
+     ]
+   }
+   ```
+
+1. {{site.prodname}} Manager role for querying Elasticsearch
+
+   ```json
+   {
+     "cluster": [ "monitor" ],
+     "indices": [
+       {
+         "names": [ "tigera_secure_ee_*" ],
+         "privileges": [ "read"]
+       }
+     ]
+   }
+   ```
