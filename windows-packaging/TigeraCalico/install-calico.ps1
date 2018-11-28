@@ -22,7 +22,7 @@ Start-Service TigeraNode
 # Wait for the management IP to show up and then give an extra grace period for
 # the networking stack to settle down.
 Wait-ForManagementIP "External"
-Start-Sleep 5
+Start-Sleep 10 
 
 Start-Service TigeraFelix
 
