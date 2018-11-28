@@ -78,7 +78,7 @@ var withServiceAccountPolicy = initialisedStore.withKVUpdates(
 	KVPair{Key: PolicyKey{Name: "pol-1"}, Value: &policy1_order20_src_service_account},
 	KVPair{Key: PolicyKey{Name: "pol-2"}, Value: &policy1_order20_dst_service_account},
 ).withTotalALPPolicies(
-	2,
+	0,
 ).withName("with service-account policy")
 
 // withNonALPPolicy adds a non ALP policy.
