@@ -302,7 +302,7 @@ func (d *Data) setDirtyFlag() {
 	d.dirty = true
 }
 
-func (d *Data) clearDirtyFlag() {
+func (d *Data) clearConnDirtyFlag() {
 	d.dirty = false
 	d.httpReqAllowedCtr.ResetDelta()
 	d.httpReqDeniedCtr.ResetDelta()
@@ -310,8 +310,6 @@ func (d *Data) clearDirtyFlag() {
 	d.conntrackBytesCtr.ResetDelta()
 	d.conntrackPktsCtrReverse.ResetDelta()
 	d.conntrackBytesCtrReverse.ResetDelta()
-	d.IngressRuleTrace.ClearDirtyFlag()
-	d.EgressRuleTrace.ClearDirtyFlag()
 }
 
 func (d *Data) IsDirty() bool {
@@ -466,38 +464,45 @@ func (d *Data) Report(c chan<- MetricUpdate, expired bool) {
 	if expired {
 		ut = UpdateTypeExpire
 	}
+	// For connections and non-connections, we only send ingress and egress updates if:
+	// -  There is something to report, i.e.
+	//    -  flow is expired, or
+	//    -  associated stats are dirty
+	// -  The policy verdict rule has been determined. Note that for connections the policy verdict may be "Deny" due
+	//    to DropActionOverride setting (e.g. if set to ALLOW, then we'll get connection stats, but the metrics will
+	//    indicate Denied).
+	// Only clear the associated stats and dirty flag once the metrics are reported.
 	if d.isConnection {
-		// For connections, we only send ingress and egress updates if:
-		// -  There is something to report, i.e.
-		//    -  flow is expired, or
-		//    -  connection related stats are dirty
-		// -  The policy verdict rule is an Allow (since Deny would suggest either an old connection or policy
-		//    updates that have not yet filtered up through NFLogs).
+		// Report connection stats.
 		if expired || d.IsDirty() {
-			if d.EgressRuleTrace.Action() == rules.RuleActionAllow {
+			if d.EgressRuleTrace.FoundVerdict() {
 				c <- d.metricUpdateEgressConn(ut)
 			}
-			if d.IngressRuleTrace.Action() == rules.RuleActionAllow {
+			if d.IngressRuleTrace.FoundVerdict() {
 				c <- d.metricUpdateIngressConn(ut)
 			}
+
+			// Clear the connection dirty flag once the stats have been reported. Note that we also clear the
+			// rule trace stats here too since any data stored in them has been superceded by the connection
+			// stats.
+			d.clearConnDirtyFlag()
+			d.EgressRuleTrace.ClearDirtyFlag()
+			d.IngressRuleTrace.ClearDirtyFlag()
 		}
 	} else {
-		// For non-connections, we only send ingress and egress updates if:
-		// -  There is something to report, i.e.
-		//    -  flow is expired, or
-		//    -  rule trace related stats are dirty
-		// -  The policy verdict rule has been determined.
+		// Report rule trace stats.
 		if (expired || d.EgressRuleTrace.IsDirty()) && d.EgressRuleTrace.FoundVerdict() {
 			c <- d.metricUpdateEgressNoConn(ut)
+			d.EgressRuleTrace.ClearDirtyFlag()
 		}
 		if (expired || d.IngressRuleTrace.IsDirty()) && d.IngressRuleTrace.FoundVerdict() {
 			c <- d.metricUpdateIngressNoConn(ut)
+			d.IngressRuleTrace.ClearDirtyFlag()
 		}
-	}
 
-	// Metrics have been reported, so acknowledge the stored data by resetting the dirty
-	// flag and resetting the delta counts.
-	d.clearDirtyFlag()
+		// We do not need to clear the connection stats here. Connection stats are fully reset if the Data moves
+		// from a connection to non-connection state.
+	}
 }
 
 // metricUpdateIngressConn creates a metric update for Inbound connection traffic
