@@ -26,8 +26,9 @@ $env:CALICO_NODENAME_FILE=".\nodename"
 do
 {
     .\tigera-calico.exe -startup
+    $retValue = $LastExitCode
     Start-Sleep 1
-} while ($LastExitCode -NE 0)
+} while ($retValue -NE 0)
 
 # Since the startup script is a one-shot; sleep forever so the service appears up.
 while($True) {
