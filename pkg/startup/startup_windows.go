@@ -1,6 +1,9 @@
 package startup
 
-import "github.com/sirupsen/logrus"
+import (
+	"github.com/sirupsen/logrus"
+	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
+)
 
 const defaultNodenameFile = `c:\TigeraCalico\nodename`
 
@@ -19,4 +22,9 @@ func ensureFilesystemAsExpected() {
 
 func ipv6Supported() bool {
 	return false
+}
+
+// configureCloudOrchRef does not do anything for windows
+func configureCloudOrchRef(node *api.Node) {
+	logrus.Debug("configureCloudOrchRef called on Windows; nothing to do.")
 }

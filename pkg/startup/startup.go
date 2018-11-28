@@ -186,16 +186,6 @@ func configureNodeRef(node *api.Node) {
 	node.Spec.OrchRefs = []api.OrchRef{api.OrchRef{NodeName: nodeRef, Orchestrator: orchestrator}}
 }
 
-// configureCloudOrchRef attempts to connect to a cloud provider metadata service to discover
-// the instance ID and add this to the OrchRefs on the node.
-func configureCloudOrchRef(node *api.Node) {
-	ref, err := autodetection.GetCloudOrchRef()
-	if err != nil {
-		return
-	}
-	node.Spec.OrchRefs = append(node.Spec.OrchRefs, ref)
-}
-
 // CreateOrUpdate creates the Node if ResourceVersion is not specified,
 // or Update if it's specified.
 func CreateOrUpdate(ctx context.Context, client client.Interface, node *api.Node) (*api.Node, error) {
