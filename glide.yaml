@@ -12,7 +12,7 @@ import:
 - package: github.com/patrickmn/go-cache
 - package: github.com/projectcalico/felix
   repo:    git@github.com:tigera/felix-private
-  version: ba99850ad9d8bcd139430688740370eb66ec44a0
+  version: 80872ff3fffe830556295b9423f3b7f977117fcb
   subpackages:
   - fv/containers
 - package: github.com/projectcalico/libcalico-go
