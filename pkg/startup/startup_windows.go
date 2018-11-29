@@ -1,8 +1,8 @@
 package startup
 
 import (
-	"github.com/sirupsen/logrus"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	"github.com/sirupsen/logrus"
 )
 
 const defaultNodenameFile = `c:\TigeraCalico\nodename`

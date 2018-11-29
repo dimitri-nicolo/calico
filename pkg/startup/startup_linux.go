@@ -4,9 +4,9 @@ import (
 	"os"
 	"strings"
 
+	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/node/pkg/startup/autodetection"
 	log "github.com/sirupsen/logrus"
-	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 )
 
 // Default interfaces to exclude for any logic following the first-found
@@ -85,9 +85,9 @@ func ipv6Supported() bool {
 // configureCloudOrchRef attempts to connect to a cloud provider metadata service to discover
 // the instance ID and add this to the OrchRefs on the node.
 func configureCloudOrchRef(node *api.Node) {
-        ref, err := autodetection.GetCloudOrchRef()
-        if err != nil {
-                return
-        }
-        node.Spec.OrchRefs = append(node.Spec.OrchRefs, ref)
+	ref, err := autodetection.GetCloudOrchRef()
+	if err != nil {
+		return
+	}
+	node.Spec.OrchRefs = append(node.Spec.OrchRefs, ref)
 }
