@@ -6,11 +6,12 @@
 ipmo .\libs\calico\calico.psm1
 ipmo .\libs\hns\hns.psm1
 
-if($env:CALICO_NETWORKING_BACKEND -EQ "windows-bgp") {
+if ($env:CALICO_NETWORKING_BACKEND -EQ "windows-bgp")
+{
     Write-Host "Calico Windows BGP networking enabled."
 
     # Create a L2Bridge to trigger a vSwitch creation. Do this only once
-    if(!(Get-HnsNetwork | ? Name -EQ "External"))
+    if (!(Get-HnsNetwork | ? Name -EQ "External"))
     {
         Write-Host "`nStart creating vSwitch. Note: Connection may get lost for RDP, please reconnect...`n"
         New-HNSNetwork -Type L2Bridge -AddressPrefix "192.168.255.0/30" -Gateway "192.168.255.1" -Name "External" -Verbose
@@ -26,33 +27,39 @@ if($env:CALICO_NETWORKING_BACKEND -EQ "windows-bgp") {
     }
 }
 
-# Run the startup script to create our Node resource.
-$env:CALICO_NODENAME_FILE=".\nodename"
-do
-{
-    .\tigera-calico.exe -startup
-    $retValue = $LastExitCode
-    Start-Sleep 1
-} while ($retValue -NE 0)
+$env:CALICO_NODENAME_FILE = ".\nodename"
 
-# Since the startup script is a one-shot; sleep forever so the service appears up.
+# Run the startup script whenever kubelet (re)starts. This makes sure that we refresh our Node annotations if
+# kubelet recreates the Node resource.
 $kubeletPid = -1
-while($True) {
+while ($True)
+{
     try
     {
         # Run tigera-calico.exe if kubelet starts/restarts
         $currentKubeletPid = (Get-Process -Name kubelet -ErrorAction Stop).id
-        if( !($currentKubeletPid -EQ $kubeletPid) )
+        if ($currentKubeletPid -NE $kubeletPid)
         {
-            Write-Host "Re-Started tigera-calico.exe"
+            Write-Host "Kubelet has (re)started, (re)initialising the node..."
             $kubeletPid = $currentKubeletPid
-            .\tigera-calico.exe -startup
-        }
+            while ($true)
+            {
+                .\tigera-calico.exe -startup
+                if ($LastExitCode -EQ 0)
+                {
+                    Write-Host "Calico node initialisation succeeded; monitoring kubelet for restarts..."
+                    break
+                }
 
+                Write-Host "Calico node initialisation failed, will retry..."
+                Start-Sleep 1
+            }
+        }
     }
     catch
     {
-        Write-Host "Kubelet is not running."
+        Write-Host "Kubelet not running, waiting for Kubelet to start..."
+        $kubeletPid = -1
     }
     Start-Sleep 10
 }
