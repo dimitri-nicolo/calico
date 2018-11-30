@@ -36,6 +36,23 @@ do
 } while ($retValue -NE 0)
 
 # Since the startup script is a one-shot; sleep forever so the service appears up.
+$kubeletPid = -1
 while($True) {
+    try
+    {
+        # Run tigera-calico.exe if kubelet starts/restarts
+        $currentKubeletPid = (Get-Process -Name kubelet -ErrorAction Stop).id
+        if( !($currentKubeletPid -EQ $kubeletPid) )
+        {
+            Write-Host "Re-Started tigera-calico.exe"
+            $kubeletPid = $currentKubeletPid
+            .\tigera-calico.exe -startup
+        }
+
+    }
+    catch
+    {
+        Write-Host "Kubelet is not running."
+    }
     Start-Sleep 10
 }
