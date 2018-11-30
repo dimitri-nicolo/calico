@@ -211,7 +211,6 @@ clean:
 	rm -f $(WINDOWS_ARCHIVE_ROOT)/confd/templates/*
 	rm -f $(WINDOWS_ARCHIVE_ROOT)/libs/hns/hns.psm1
 	rm -f $(WINDOWS_ARCHIVE_ROOT)/libs/hns/License.txt
-	rm -rf windows-packaging/nssm-*
 	# Delete images that we built in this repo
 	docker rmi $(BUILD_IMAGE):latest-$(ARCH) || true
 	docker rmi $(TEST_CONTAINER_NAME) || true
