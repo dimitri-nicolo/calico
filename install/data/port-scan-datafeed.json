@@ -1,0 +1,18 @@
+{
+  "datafeed_id": "datafeed-port_scan",
+  "job_id": "port_scan",
+  "query_delay": "63900ms",
+  "indices": [
+    "tigera_secure_ee_flows*"
+  ],
+  "types": [],
+  "query": {
+    "match_all": {
+      "boost": 1
+    }
+  },
+  "scroll_size": 1000,
+  "chunking_config": {
+    "mode": "auto"
+  }
+}

@@ -1,0 +1,3 @@
+elasticsearch:
+  - ["PUT", "_xpack/ml/anomaly_detectors/port_scan", "./data/port-scan-job.json"]
+  - ["PUT", "_xpack/ml/datafeeds/datafeed-port_scan", "./data/port-scan-datafeed.json"]

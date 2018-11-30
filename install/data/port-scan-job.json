@@ -1,0 +1,37 @@
+{
+  "job_id": "port_scan",
+  "job_type": "anomaly_detector",
+  "job_version": "6.4.3",
+  "groups": [
+    "recon"
+  ],
+  "description": "Port scan",
+  "analysis_config": {
+    "bucket_span": "1h",
+    "detectors": [
+      {
+        "detector_description": "distinct_count(dest_port) over source_name",
+        "function": "distinct_count",
+        "field_name": "dest_port",
+        "over_field_name": "source_name",
+        "detector_index": 0
+      }
+    ],
+    "influencers": [
+      "source_name"
+    ]
+  },
+  "analysis_limits": {
+    "model_memory_limit": "1024mb",
+    "categorization_examples_limit": 4
+  },
+  "data_description": {
+    "time_field": "start_time",
+    "time_format": "epoch_ms"
+  },
+  "model_snapshot_retention_days": 1,
+  "custom_settings": {
+    "created_by": "population-wizard"
+  },
+  "results_index_name": "shared"
+}
