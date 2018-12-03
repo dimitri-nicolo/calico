@@ -461,6 +461,22 @@ spec:
             - name: elastic-ca-cert-volume
               mountPath: /etc/fluentd/elastic/ca.pem
 {%- endif %}
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - /bin/readiness.sh
+            initialDelaySeconds: 60
+            periodSeconds: 60
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - /usr/bin/fluentd -c /fluentd/etc/fluent.conf -p /fluentd/plugins --dry-run && curl -s http://localhost:24220/api/plugins.json
+            initialDelaySeconds: 60
+            periodSeconds: 60
       volumes:
         - name: var-log-calico
           hostPath:
