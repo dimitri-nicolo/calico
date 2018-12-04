@@ -50,6 +50,12 @@ BUILD_IMAGE?=tigera/intrusion-detection-job-installer
 PUSH_IMAGES?=gcr.io/unique-caldron-775/cnx/$(BUILD_IMAGE)
 RELEASE_IMAGES?=
 
+GO_BUILD_VER?=v0.20
+# For building, we use the go-build image for the *host* architecture, even if the target is different
+# the one for the host should contain all the necessary cross-compilation tools
+# we do not need to use the arch since go-build:v0.15 now is multi-arch manifest
+CALICO_BUILD=calico/go-build:$(GO_BUILD_VER)
+
 # If this is a release, also tag and push additional images.
 ifeq ($(RELEASE),true)
 PUSH_IMAGES+=$(RELEASE_IMAGES)
