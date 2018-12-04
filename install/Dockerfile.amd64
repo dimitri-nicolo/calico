@@ -1,0 +1,12 @@
+FROM amd64/python:3-alpine
+
+WORKDIR /usr/src/app
+
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY install.py ./
+COPY data ./data
+COPY config.yaml ./
+
+ENTRYPOINT ["python", "install.py"]
