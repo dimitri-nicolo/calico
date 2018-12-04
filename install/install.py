@@ -1,21 +1,10 @@
 import yaml
 import requests
-from docopt import docopt
+import os
+import sys
 
-doc = """Elastic Job Installer
-
-Usage:
-  installer.py <elastic_url> <kibana_url> [options]
-
-Options:
-  <elastic_url>             Elasticsearch base URL, e.g. https://elasticsearch.mydomain:9200
-  <kibana_url>              Kibana base URL, e.g. https://kibana.mydomain:5601
-  -u --user=<user>          User name for authentication with Elastic / Kibana
-  -p --password=<password>  Password for authentication with Elastic / Kibana
-  -c --ca-cert=<ca-cert>    Path to certificate authority root certificate. Use if Elastic / Kibana are HTTPS, but don't use a public root of trust.
-  -f --config=<config>      Path to the config file [default: ./config.yaml].
-  -h --help                 Print this screen.
-"""
+class RESTError(Exception):
+    pass
 
 class RESTClient:
     headers = {"Content-Type": "application/json"}
@@ -36,12 +25,22 @@ class RESTClient:
             if response.status_code == 200:
                 print(method, path, "- 200 OK")
             else:
-                print(method, path, "-", response.status_code, response.text)
+                raise RESTError("%s %s - %s %s" % (method, path, response.status_code, response.text))
 
 if __name__ == '__main__':
-    arguments = docopt(doc, help=True)
-    elastic = RESTClient(arguments["<elastic_url>"], arguments["--user"], arguments["--password"], arguments["--ca-cert"])
-    with open(arguments["--config"]) as f:
+
+    elastic_url = os.environ["ELASTIC_URL"]
+    user = os.getenv("USER", None)
+    password = os.getenv("PASSWORD", None)
+    ca_cert = os.getenv("CA_CERT", None)
+
+    elastic = RESTClient(elastic_url, user, password, ca_cert)
+    with open("./config.yaml") as f:
         cfg = yaml.load(f)
-    for l in cfg["elasticsearch"]:
-        elastic.exec(l[0], l[1], l[2])
+    try:
+        for l in cfg["elasticsearch"]:
+            elastic.exec(l[0], l[1], l[2])
+    except RESTError as e:
+        print("Failed to install")
+        print(e)
+        sys.exit(1)
