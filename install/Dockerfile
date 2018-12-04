@@ -1,4 +1,5 @@
 FROM python:3-alpine
+ARG version=dirty
 
 WORKDIR /usr/src/app
 
@@ -8,5 +9,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY install.py ./
 COPY data ./data
 COPY config.yaml ./
+RUN echo $version > ./version.txt
 
 ENTRYPOINT ["python", "install.py"]

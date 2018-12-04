@@ -28,6 +28,10 @@ class RESTClient:
                 raise RESTError("%s %s - %s %s" % (method, path, response.status_code, response.text))
 
 if __name__ == '__main__':
+    if len(sys.argv) == 2 and sys.argv[1] == "--version":
+        with open("./version.txt") as f:
+            print("Version: ", f.read())
+            sys.exit(0)
 
     elastic_url = "https://%s:%s" % (os.environ["ELASTIC_HOST"], os.getenv("ELASTIC_PORT", "9200"))
     user = os.getenv("USER", None)
