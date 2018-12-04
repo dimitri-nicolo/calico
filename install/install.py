@@ -29,7 +29,7 @@ class RESTClient:
 
 if __name__ == '__main__':
 
-    elastic_url = os.environ["ELASTIC_URL"]
+    elastic_url = "https://%s:%s" % (os.environ["ELASTIC_HOST"], os.getenv("ELASTIC_PORT", "9200"))
     user = os.getenv("USER", None)
     password = os.getenv("PASSWORD", None)
     ca_cert = os.getenv("CA_CERT", None)
