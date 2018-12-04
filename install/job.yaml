@@ -6,7 +6,7 @@ metadata:
 spec:
   template:
     spec:
-      restartPolicy: Never
+      restartPolicy: OnFailure
       containers:
       - name: install
         image: gcr.io/tigera-dev/cnx/tigera/intrusion-detection-job-installer:latest
