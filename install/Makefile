@@ -48,7 +48,7 @@ join_platforms = $(subst $(space),$(comma),$(call prefix_linux,$(strip $1)))
 ###############################################################################
 BUILD_IMAGE?=tigera/intrusion-detection-job-installer
 PUSH_IMAGES?=gcr.io/unique-caldron-775/cnx/$(BUILD_IMAGE)
-RELEASE_IMAGES?=
+RELEASE_IMAGES?=quay.io/$(BUILD_IMAGE)
 
 GO_BUILD_VER?=v0.20
 # For building, we use the go-build image for the *host* architecture, even if the target is different
@@ -72,6 +72,9 @@ DOCKER_CONFIG ?= $(HOME)/.docker/config.json
 ###############################################################################
 # Building the image
 ###############################################################################
+.PHONY: clean
+clean:
+
 # Build the docker image.
 .PHONY: $(BUILD_IMAGE) $(BUILD_IMAGE)-$(ARCH)
 
@@ -81,10 +84,11 @@ image-all: $(addprefix sub-image-,$(ARCHES))
 sub-image-%:
 	$(MAKE) image ARCH=$*
 
+
 image: $(BUILD_IMAGE)
 $(BUILD_IMAGE): $(BUILD_IMAGE)-$(ARCH)
-$(BUILD_IMAGE)-$(ARCH): 
-	docker build --pull -t $(BUILD_IMAGE):latest-$(ARCH) --file ./Dockerfile.$(ARCH) .
+$(BUILD_IMAGE)-$(ARCH):
+	docker build --pull -t $(BUILD_IMAGE):latest-$(ARCH) --build-arg version=$(BUILD_VERSION) --file ./Dockerfile.$(ARCH) .
 ifeq ($(ARCH),amd64)
 	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(BUILD_IMAGE):latest
 endif
@@ -158,4 +162,77 @@ ifndef BRANCH_NAME
 endif
 	$(MAKE) tag-images-all push-all push-manifests push-non-manifests IMAGETAG=$(BRANCH_NAME) EXCLUDEARCH="$(EXCLUDEARCH)"
 	$(MAKE) tag-images-all push-all push-manifests push-non-manifests IMAGETAG=$(shell git describe --tags --dirty --always --long) EXCLUDEARCH="$(EXCLUDEARCH)"
+
+###############################################################################
+# Release
+###############################################################################
+PREVIOUS_RELEASE=$(shell git describe --tags --abbrev=0)
+GIT_VERSION?=$(shell git describe --tags --dirty)
+ifndef VERSION
+	BUILD_VERSION = $(GIT_VERSION)
+else
+	BUILD_VERSION = $(VERSION)
+endif
+
+## Tags and builds a release from start to finish.
+release: release-prereqs
+	$(MAKE) VERSION=$(VERSION) release-tag
+	$(MAKE) VERSION=$(VERSION) release-build
+	$(MAKE) VERSION=$(VERSION) release-verify
+
+	@echo ""
+	@echo "Release build complete. Next, push the produced images."
+	@echo ""
+	@echo "  make IMAGETAG=$(VERSION) RELEASE=true push-all"
+	@echo ""
+
+## Produces a git tag for the release.
+release-tag: release-prereqs release-notes
+	git tag $(VERSION) -F release-notes-$(VERSION)
+	@echo ""
+	@echo "Now you can build the release:"
+	@echo ""
+	@echo "  make VERSION=$(VERSION) release-build"
+	@echo ""
+
+## Produces a clean build of release artifacts at the specified version.
+release-build: release-prereqs clean
+# Check that the correct code is checked out.
+ifneq ($(VERSION), $(GIT_VERSION))
+	$(error Attempt to build $(VERSION) from $(GIT_VERSION))
+endif
+
+	$(MAKE) image-all 
+	$(MAKE) tag-images-all IMAGETAG=$(VERSION) RELEASE=true
+	# Generate the `latest` images.
+	$(MAKE) tag-images-all IMAGETAG=latest RELEASE=true
+
+## Verifies the release artifacts produces by `make release-build` are correct.
+release-verify: release-prereqs
+	# Check the reported version is correct for each release artifact.
+	for img in quay.io/$(BUILD_IMAGE):$(VERSION)-$(ARCH); do \
+	  if docker run $$img --version | grep -q '$(VERSION)$$'; \
+	  then \
+	    echo "Check successful. ($$img)"; \
+	  else \
+	    echo "Incorrect version in docker image $$img!"; \
+	    result=false; \
+	  fi \
+	done; \
+
+## Generates release notes based on commits in this version.
+release-notes: release-prereqs
+	mkdir -p dist
+	echo "# Changelog" > release-notes-$(VERSION)
+	sh -c "git cherry -v $(PREVIOUS_RELEASE) | cut '-d ' -f 2- | sed 's/^/- /' >> release-notes-$(VERSION)"
+
+# release-prereqs checks that the environment is configured properly to create a release.
+release-prereqs:
+ifndef VERSION
+	$(error VERSION is undefined - run using make release VERSION=vX.Y.Z)
+endif
+ifdef LOCAL_BUILD
+	$(error LOCAL_BUILD must not be set for a release)
+endif
+
 
