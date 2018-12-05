@@ -59,6 +59,8 @@ toc:
     path: /getting-started/openshift/dedicated-etcd
   - title: Using your own Elasticsearch for logs
     path: /getting-started/openshift/byo-elasticsearch
+  - title: Upgrade to Tigera Secure EE
+    path: /getting-started/openshift/upgrade-ee
 
 - title: Host Protection
   section:
