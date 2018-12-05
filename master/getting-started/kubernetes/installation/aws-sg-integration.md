@@ -7,12 +7,18 @@ canonical_url: https://docs.tigera.io/master/getting-started/kubernetes/installa
 
 Your Kubernetes cluster must meet the following specifications:
 
-- Exists in a single VPC.
-- Has the Kubernetes AWS cloud provider enabled.
-- Networking provider is [Amazon VPC Networking]({{site.url}}/{{page.version}}/reference/public-cloud/aws#using-aws-networking).
+- Exists within a single VPC.
+- The Kubernetes AWS cloud provider is enabled.
+- Networking provider is
+  [Amazon VPC Networking]({{site.url}}/{{page.version}}/reference/public-cloud/aws#using-aws-networking).
+  (You must be using the [AWS CNI Plugin](https://github.com/aws/amazon-vpc-cni-k8s).)
 - You have already installed
   [Tigera Secure EE for policy]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/other#installing-tigera-secure-ee-for-policy-only)
-  on your cluster.
+  on your cluster. The AWS security group integration requires the Kubernetes API datastore.
+- You have not created any
+  [host endpoints]({{site.url}}/{{page.version}}/reference/calicoctl/resources/hostendpoint)
+  that have a `spec.node` value that matches any of your Kubernetes nodes.
+  {% comment %}I expect to add a link here when the AWS Integration features are documented (CNX-5374){% endcomment% %}
 
 You will need a host equipped with the following:
 
