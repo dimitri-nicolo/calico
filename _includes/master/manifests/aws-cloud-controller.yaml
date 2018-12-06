@@ -135,6 +135,8 @@ spec:
 {%- endif %}
             - name: LICENSE_REFRESH_ENABLED
               value: "true"
+            - name: HEALTH_REPORTING_ENABLED
+              value: "false"
             - name: LOG_LEVEL
               value: "info"
             - name: VPCS
