@@ -18,12 +18,7 @@ Write-Host "Starting Calico..."
 Write-Host "This may take several seconds if the vSwitch needs to be created."
 
 Start-Service TigeraNode
-
-# Wait for the management IP to show up and then give an extra grace period for
-# the networking stack to settle down.
-Wait-ForManagementIP "External"
-Start-Sleep 10 
-
+Wait-ForCalicoInit
 Start-Service TigeraFelix
 
 if ($env:CALICO_NETWORKING_BACKEND -EQ "windows-bgp")
