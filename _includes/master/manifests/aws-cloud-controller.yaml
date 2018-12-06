@@ -133,9 +133,8 @@ spec:
                   name: {{include.variant_name | downcase}}-config
                   key: etcd_cert
 {%- endif %}
-            - name: LICENSE_REFRESH_ENABLED
-              value: "true"
-            - name: HEALTH_REPORTING_ENABLED
+            # Enabling health reporting requires additional IAM permissions for tigera-cloud-controllers
+            - name: CLOUDWATCH_HEALTHREPORTING_ENABLED
               value: "false"
             - name: LOG_LEVEL
               value: "info"
