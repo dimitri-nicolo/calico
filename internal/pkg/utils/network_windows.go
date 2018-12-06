@@ -138,9 +138,9 @@ func DoNetworking(
 			"Overriding network name, only a single IPAM block will be supported on this host")
 		networkName = conf.Name
 	} else {
-		networkName = createNetworkName(n.Name, subNet)
+		networkName = CreateNetworkName(n.Name, subNet)
 	}
-	hnsNetwork, err := ensureNetworkExists(networkName, subNet, result, logger)
+	hnsNetwork, err := EnsureNetworkExists(networkName, subNet, result, logger)
 	if err != nil {
 		logger.Errorf("Unable to create hns network %s", networkName)
 		return "", "", err
@@ -148,7 +148,7 @@ func DoNetworking(
 
 	// Create host hns endpoint
 	epName := networkName + "_ep"
-	hnsEndpoint, err := createAndAttachHostEP(epName, hnsNetwork, subNet, result, logger)
+	hnsEndpoint, err := CreateAndAttachHostEP(epName, hnsNetwork, subNet, result, logger)
 	if err != nil {
 		logger.Errorf("Unable to create host hns endpoint %s", epName)
 		return "", "", err
@@ -204,7 +204,7 @@ func lookupIPAMPools(
 	return
 }
 
-func ensureNetworkExists(networkName string, subNet *net.IPNet, result *current.Result, logger *logrus.Entry) (*hcsshim.HNSNetwork, error) {
+func EnsureNetworkExists(networkName string, subNet *net.IPNet, result *current.Result, logger *logrus.Entry) (*hcsshim.HNSNetwork, error) {
 	var err error
 	createNetwork := true
 	addressPrefix := subNet.String()
@@ -263,7 +263,7 @@ func ensureNetworkExists(networkName string, subNet *net.IPNet, result *current.
 	return hnsNetwork, err
 }
 
-func createAndAttachHostEP(epName string, hnsNetwork *hcsshim.HNSNetwork, subNet *net.IPNet, result *current.Result, logger *logrus.Entry) (*hcsshim.HNSEndpoint, error) {
+func CreateAndAttachHostEP(epName string, hnsNetwork *hcsshim.HNSNetwork, subNet *net.IPNet, result *current.Result, logger *logrus.Entry) (*hcsshim.HNSEndpoint, error) {
 	var err error
 	endpointAddress := getNthIP(subNet, 2)
 	attachEndpoint := true
@@ -456,7 +456,7 @@ func getNthIP(PodCIDR *net.IPNet, n int) net.IP {
 	return buffer
 }
 
-func createNetworkName(netName string, subnet *net.IPNet) string {
+func CreateNetworkName(netName string, subnet *net.IPNet) string {
 	str := subnet.IP.String()
 	network := strings.Replace(str, ".", "-", -1)
 	name := netName + "-" + network

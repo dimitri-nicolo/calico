@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"os/exec"
 	"strings"
@@ -15,7 +16,9 @@ import (
 	rest "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
+	"github.com/Microsoft/hcsshim"
 	"github.com/containernetworking/cni/pkg/invoke"
+	"github.com/containernetworking/cni/pkg/skel"
 	"github.com/containernetworking/cni/pkg/types"
 	"github.com/containernetworking/cni/pkg/types/020"
 	"github.com/containernetworking/cni/pkg/types/current"
@@ -26,6 +29,8 @@ import (
 	"github.com/mcuadros/go-version"
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega/gexec"
+	"github.com/projectcalico/cni-plugin/internal/pkg/utils"
+	plugintypes "github.com/projectcalico/cni-plugin/pkg/types"
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend"
@@ -36,6 +41,7 @@ import (
 
 const K8S_TEST_NS = "test"
 const TEST_DEFAULT_NS = "default"
+const K8S_NONE_NS = "none"
 
 // Delete everything under /calico from etcd.
 func WipeEtcd() {
@@ -269,7 +275,7 @@ func RunCNIPluginWithId(
 	// Set up the env for running the CNI plugin
 	k8sEnv := ""
 	if podName != "" {
-		k8sEnv = fmt.Sprintf("CNI_ARGS=K8S_POD_NAME=%s;K8S_POD_NAMESPACE=%s;K8S_POD_INFRA_CONTAINER_ID=whatever", podName, podNamespace)
+		k8sEnv = fmt.Sprintf("CNI_ARGS=K8S_POD_NAME=%s;K8S_POD_NAMESPACE=%s;K8S_POD_INFRA_CONTAINER_ID=whatever", podName, K8S_NONE_NS)
 
 		// Append IP=<ip> to CNI_ARGS only if it's not an empty string.
 		if ip != "" {
@@ -287,7 +293,7 @@ func RunCNIPluginWithId(
 		fmt.Sprintf("CNI_IFNAME=%s", ifName),
 		fmt.Sprintf("CNI_PATH=%s", os.Getenv("BIN")),
 		fmt.Sprintf("CNI_CONTAINERID=%s", containerId),
-		fmt.Sprintf("CNI_NETNS=%s", "none"),
+		fmt.Sprintf("CNI_NETNS=%s", podNamespace),
 		k8sEnv,
 	}...)
 	log.WithField("env", env).Info("AKHILESH")
@@ -297,7 +303,7 @@ func RunCNIPluginWithId(
 	// Invoke the CNI plugin, returning any errors to the calling code to handle.
 	log.Debugf("Calling CNI plugin with the following env vars: %v", env)
 	var r types.Result
-	pluginPath := fmt.Sprintf("%s/%s", os.Getenv("BIN"), os.Getenv("PLUGIN"))
+	pluginPath := fmt.Sprintf("%s\\%s", os.Getenv("BIN"), os.Getenv("PLUGIN"))
 	//pluginPath := fmt.Sprintf("%s\\%s", "C:\\k", "calico")
 	log.Debugf("pluginPath: %v", pluginPath)
 	r, err = invoke.ExecPluginWithResult(pluginPath, []byte(netconf), args, nil)
@@ -355,7 +361,7 @@ func DeleteContainerWithId(netconf, podName, podNamespace, containerId string) (
 func DeleteContainerWithIdAndIfaceName(netconf, podName, podNamespace, containerId, ifaceName string) (exitCode int, err error) {
 	k8sEnv := ""
 	if podName != "" {
-		k8sEnv = fmt.Sprintf("CNI_ARGS=K8S_POD_NAME=%s;K8S_POD_NAMESPACE=%s;K8S_POD_INFRA_CONTAINER_ID=whatever", podName, podNamespace)
+		k8sEnv = fmt.Sprintf("CNI_ARGS=K8S_POD_NAME=%s;K8S_POD_NAMESPACE=%s;K8S_POD_INFRA_CONTAINER_ID=whatever", podName, K8S_NONE_NS)
 	}
 
 	// Set up the env for running the CNI plugin
@@ -363,7 +369,7 @@ func DeleteContainerWithIdAndIfaceName(netconf, podName, podNamespace, container
 	env = append(env, []string{
 		"CNI_COMMAND=DEL",
 		fmt.Sprintf("CNI_CONTAINERID=%s", containerId),
-		fmt.Sprintf("CNI_NETNS=%s", "none"),
+		fmt.Sprintf("CNI_NETNS=%s", podNamespace),
 		"CNI_IFNAME=" + ifaceName,
 		fmt.Sprintf("CNI_PATH=%s", os.Getenv("BIN")),
 		k8sEnv,
@@ -440,4 +446,108 @@ func DeleteWindowsContainer(containerId string) error {
 	}
 	log.Infof("delete successful")
 	return nil
+}
+
+func NetworkPod(
+	netconf string,
+	podName string,
+	ip string,
+	ctx context.Context,
+	calicoClient client.Interface,
+	result *current.Result,
+	containerID string,
+	netns string,
+) (err error) {
+
+	k8sEnv := ""
+	if podName != "" {
+		k8sEnv = fmt.Sprintf("CNI_ARGS=K8S_POD_NAME=%s;K8S_POD_NAMESPACE=%s;K8S_POD_INFRA_CONTAINER_ID=whatever", podName, K8S_NONE_NS)
+		// Append IP=<ip> to CNI_ARGS only if it's not an empty string.
+		if ip != "" {
+			k8sEnv = fmt.Sprintf("%s;IP=%s", k8sEnv, ip)
+		}
+	}
+
+	var args *skel.CmdArgs
+	args = &skel.CmdArgs{
+		ContainerID: containerID,
+		Netns:       netns,
+		IfName:      "eth0",
+		Args:        k8sEnv,
+		Path:        os.Getenv("BIN"),
+		StdinData:   []byte(netconf),
+	}
+	conf := plugintypes.NetConf{}
+	if err := json.Unmarshal(args.StdinData, &conf); err != nil {
+		return fmt.Errorf("failed to load netconf: %v", err)
+	}
+
+	var logger *log.Entry
+
+	logger = log.WithFields(log.Fields{
+		"ContainerID": containerID,
+		"Pod":         podName,
+		"Namespace":   netns,
+	})
+	_, _, err = utils.DoNetworking(ctx, calicoClient, args, conf, result, logger, "", nil)
+	return err
+}
+
+func CheckNetwork(netconf string) (*hcsshim.HNSNetwork, error) {
+	var conf plugintypes.NetConf
+	if err := json.Unmarshal([]byte(netconf), &conf); err != nil {
+		log.Errorf("unmarshal err: ", err)
+		panic(err)
+	}
+
+	result := &current.Result{}
+
+	_, subNet, _ := net.ParseCIDR(conf.IPAM.Subnet)
+
+	var logger *log.Entry
+	logger = log.WithFields(log.Fields{
+		"Name": conf.Name,
+	})
+
+	var networkName string
+	if conf.WindowsUseSingleNetwork {
+		logger.WithField("name", conf.Name).Info("Overriding network name, only a single IPAM block will be supported on this host")
+		networkName = conf.Name
+	} else {
+		networkName = utils.CreateNetworkName(conf.Name, subNet)
+	}
+
+	hnsNetwork, err := utils.EnsureNetworkExists(networkName, subNet, result, logger)
+	if err != nil {
+		logger.Errorf("Unable to create hns network %s", networkName)
+		return nil, err
+	}
+
+	return hnsNetwork, nil
+}
+
+func CheckEndpoint(hnsNetwork *hcsshim.HNSNetwork, netconf string) (*hcsshim.HNSEndpoint, error) {
+	var conf plugintypes.NetConf
+	if err := json.Unmarshal([]byte(netconf), &conf); err != nil {
+		log.Errorf("unmarshal err: ", err)
+		panic(err)
+	}
+
+	var result *current.Result
+
+	_, subNet, _ := net.ParseCIDR(conf.IPAM.Subnet)
+
+	var logger *log.Entry
+	logger = log.WithFields(log.Fields{
+		"Name": conf.Name,
+	})
+
+	epName := hnsNetwork.Name + "_ep"
+	hnsEndpoint, err := utils.CreateAndAttachHostEP(epName, hnsNetwork, subNet, result, logger)
+	if err != nil {
+		logger.Errorf("Unable to create host hns endpoint %s", epName)
+		return nil, err
+	}
+
+	return hnsEndpoint, nil
 }
