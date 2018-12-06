@@ -25,7 +25,19 @@ class RESTClient:
             if response.status_code == 200:
                 print(method, path, "- 200 OK")
             else:
-                raise RESTError("%s %s - %s %s" % (method, path, response.status_code, response.text))
+                # Check if the resource already exists
+                resource_exists = False
+                try:
+                    for cause in response.json()["error"]["root_cause"]:
+                        if cause["type"] == "resource_already_exists_exception":
+                            resource_exists = True
+                except (KeyError, ValueError):
+                    pass
+
+                if resource_exists:
+                    print(method, path, "- Already Exists!")
+                else:
+                    raise RESTError("%s %s - %s %s" % (method, path, response.status_code, response.text))
 
 if __name__ == '__main__':
     if len(sys.argv) == 2 and sys.argv[1] == "--version":
