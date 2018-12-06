@@ -120,7 +120,7 @@ func DoNetworking(
 		result.DNS.Search = conf.RuntimeConfig.DNS.Search
 		result.DNS.Options = conf.RuntimeConfig.DNS.Options
 	} else {
-	        result.DNS = n.DNS
+		result.DNS = n.DNS
 	}
 
 	// We need to know the IPAM pools to program the correct NAT exclusion list.  Look those up

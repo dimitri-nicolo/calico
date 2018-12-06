@@ -118,10 +118,10 @@ type RuntimeConfig struct {
 // DNS entry for RuntimeConfig DNS
 // The JSON entries for RuntimeConfig.DNS and default DNS have different parameter names
 type RuntimeConfigDNS struct {
-        Nameservers []string `json:"servers,omitempty"`
-        Domain      string   `json:"domain,omitempty"`
-        Search      []string `json:"searches,omitempty"`
-        Options     []string `json:"options,omitempty"`
+	Nameservers []string `json:"servers,omitempty"`
+	Domain      string   `json:"domain,omitempty"`
+	Search      []string `json:"searches,omitempty"`
+	Options     []string `json:"options,omitempty"`
 }
 
 // ContainerSettings gcontains configuration options
