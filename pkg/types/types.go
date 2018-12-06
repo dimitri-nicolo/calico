@@ -103,9 +103,25 @@ type NetConf struct {
 	// be enabled by manually setting an exclusion or by creating a dummy IP pool.
 	WindowsDisableHostSubnetNATExclusion bool `json:"windows_disable_host_subnet_nat_exclusion,omitempty"`
 
+	RuntimeConfig RuntimeConfig
+
 	// Options below here are deprecated.
 	EtcdAuthority string `json:"etcd_authority"`
 	Hostname      string `json:"hostname"`
+}
+
+// Runtime Config is provided by kubernetes
+type RuntimeConfig struct {
+	DNS RuntimeConfigDNS
+}
+
+// DNS entry for RuntimeConfig DNS
+// The JSON entries for RuntimeConfig.DNS and default DNS have different parameter names
+type RuntimeConfigDNS struct {
+        Nameservers []string `json:"servers,omitempty"`
+        Domain      string   `json:"domain,omitempty"`
+        Search      []string `json:"searches,omitempty"`
+        Options     []string `json:"options,omitempty"`
 }
 
 // ContainerSettings gcontains configuration options
