@@ -20,7 +20,7 @@ if ($env:CALICO_NETWORKING_BACKEND -EQ "windows-bgp")
         if ((Get-HNSNetwork | ? Type -NE nat))
         {
             Write-Host "First time Calico has run since boot up, cleaning out any old network state."
-            Get-HNSNetwork | Remove-HNSNetwork
+            Get-HNSNetwork | ? Type -NE nat | Remove-HNSNetwork
             do
             {
                 Write-Host "Waiting for network deletion to complete."
@@ -34,7 +34,7 @@ if ($env:CALICO_NETWORKING_BACKEND -EQ "windows-bgp")
     while (!(Get-HnsNetwork | ? Name -EQ "External"))
     {
         $result = New-HNSNetwork -Type L2Bridge -AddressPrefix "192.168.255.0/30" -Gateway "192.168.255.1" -Name "External" -Verbose
-        if ($result.Error) {
+        if ($result.Error -OR (!$result.Success)) {
             Write-Host "Failed to create network, retrying..."
             Start-Sleep 1
         } else {
