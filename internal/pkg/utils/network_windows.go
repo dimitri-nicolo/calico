@@ -219,7 +219,6 @@ func ensureNetworkExists(networkName string, subNet *net.IPNet, result *current.
 				logger.Infof("Found existing HNS network [%+v]", hnsNetwork)
 				break
 			}
-
 		}
 	}
 
@@ -316,49 +315,70 @@ func createAndAttachHostEP(epName string, hnsNetwork *hcsshim.HNSNetwork, subNet
 func chkMgmtIPandEnableForwarding(networkName string, hnsEndpoint *hcsshim.HNSEndpoint, logger *logrus.Entry) (network *hcsshim.HNSNetwork, err error) {
 	netHelper := netsh.New(nil)
 
-	// Wait for the network to populate Management IP.
+	startTime := time.Now()
+	logCxt := logger.WithField("network", networkName)
+
+	// Wait for the network to populate Management IP and for it to match one of the host interfaces.
 	for {
+		// Look up the network afresh each time, in case the management IP changes.
 		network, err = hcsshim.GetHNSNetworkByName(networkName)
 		if err != nil {
 			logger.Errorf("Unable to get hns network %s after creation, error: %v", networkName, err)
 			return nil, err
 		}
 
-		if len(network.ManagementIP) > 0 {
-			logger.Infof("Got managementIP %s", network.ManagementIP)
-			break
+		if time.Since(startTime) > 30*time.Second {
+			return nil, fmt.Errorf(
+				"timed out waiting for interface matching the management IP (%v) of network %s",
+				network.ManagementIP, networkName)
 		}
-		time.Sleep(1 * time.Second)
-		logger.Infof("Checking ManagementIP with HnsNetwork[%v]", network)
-	}
 
-	// Wait for the interface with the management IP
-	for {
-		if _, err = netHelper.GetInterfaceByIP(network.ManagementIP); err != nil {
+		if len(network.ManagementIP) == 0 {
+			logCxt.Info("Waiting for management IP...")
 			time.Sleep(1 * time.Second)
-			logger.Infof("Checking interface with ip %s, err %v", network.ManagementIP, err)
 			continue
 		}
+
+		if mgmtIface, err := netHelper.GetInterfaceByIP(network.ManagementIP); err != nil {
+			logCxt.WithField("ip", network.ManagementIP).WithError(err).Warn(
+				"Waiting for interface matching management IP...")
+			time.Sleep(1 * time.Second)
+			continue
+		} else {
+			err := enableForwarding(netHelper, mgmtIface, logger)
+			if err != nil {
+				return nil, err
+			}
+		}
+
 		break
 	}
 
-	// Enable forwarding on the host interface and endpoint
-	for _, interfaceIpAddress := range []string{network.ManagementIP, hnsEndpoint.IPAddress.String()} {
-		netInterface, err := netHelper.GetInterfaceByIP(interfaceIpAddress)
-		if err != nil {
-			logger.Infof("Unable to find interface for IP Address [%v], error: %v", interfaceIpAddress, err)
-			return nil, err
-		}
-
-		logger.Infof("Found Interface with IP[%s]: %v", interfaceIpAddress, netInterface)
-		interfaceIdx := strconv.Itoa(netInterface.Idx)
-		if err = netHelper.EnableForwarding(interfaceIdx); err != nil {
-			logger.Infof("Unable to enable forwarding on [%v] index [%v], error: %v", netInterface.Name, interfaceIdx, err)
-			return nil, err
-		}
-		logger.Infof("Enabled forwarding on [%v] index [%v]", netInterface.Name, interfaceIdx)
+	ourEpAddr := hnsEndpoint.IPAddress.String()
+	netInterface, err := netHelper.GetInterfaceByIP(ourEpAddr)
+	if err != nil {
+		logger.WithError(err).Errorf("Unable to find interface matching our host endpoint [%v]", ourEpAddr)
+		return nil, err
 	}
+
+	logger.Infof("Found Interface with IP[%s]: %v", ourEpAddr, netInterface)
+	err = enableForwarding(netHelper, netInterface, logger)
+	if err != nil {
+		return nil, err
+	}
+
 	return network, nil
+}
+
+func enableForwarding(netHelper netsh.Interface, netInterface netsh.Ipv4Interface, logger *logrus.Entry) error {
+	interfaceIdx := strconv.Itoa(netInterface.Idx)
+	if err := netHelper.EnableForwarding(interfaceIdx); err != nil {
+		logger.WithError(err).Errorf("Unable to enable forwarding on [%v] index [%v]",
+			netInterface.Name, interfaceIdx)
+		return err
+	}
+	logger.Infof("Enabled forwarding on [%v] index [%v]", netInterface.Name, interfaceIdx)
+	return nil
 }
 
 func createAndAttachContainerEP(args *skel.CmdArgs,
