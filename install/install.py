@@ -45,7 +45,7 @@ if __name__ == '__main__':
             print("Version: ", f.read())
             sys.exit(0)
 
-    elastic_url = "https://%s:%s" % (os.environ["ELASTIC_HOST"], os.getenv("ELASTIC_PORT", "9200"))
+    elastic_url = "%s://%s:%s" % (os.getenv("ELASTIC_SCHEME", "https"), os.environ["ELASTIC_HOST"], os.getenv("ELASTIC_PORT", "9200"))
     user = os.getenv("USER", None)
     password = os.getenv("PASSWORD", None)
     ca_cert = os.getenv("CA_CERT", None)
