@@ -23,7 +23,7 @@ import (
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/mcuadros/go-version"
-	"github.com/onsi/ginkgo"
+	//"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega/gexec"
 	"github.com/projectcalico/cni-plugin/internal/pkg/utils"
 	plugintypes "github.com/projectcalico/cni-plugin/pkg/types"
@@ -101,12 +101,12 @@ func CreateWindowsContainer() (string, error) {
 	return resp.ID, nil
 }
 
-func CreateContainer(netconf, podName, podNamespace, ip string) (containerID string, result *current.Result, contVeth string, contAddr []string, contRoutes []string, err error) {
+func CreateContainer(netconf, podName, podNamespace, ip, k8sNs string) (containerID string, result *current.Result, contVeth string, contAddr []string, contRoutes []string, err error) {
 	containerID, err = CreateWindowsContainer()
 	if err != nil {
 		return "", nil, "", []string{}, []string{}, err
 	}
-	result, contVeth, contAddr, contRoutes, err = RunCNIPluginWithId(netconf, podName, podNamespace, ip, containerID, "")
+	result, contVeth, contAddr, contRoutes, err = RunCNIPluginWithId(netconf, podName, podNamespace, ip, containerID, "", k8sNs)
 	if err != nil {
 		fmt.Println("Error: ", err)
 		return "", nil, "", []string{}, []string{}, err
@@ -117,14 +117,14 @@ func CreateContainer(netconf, podName, podNamespace, ip string) (containerID str
 // Create container with the giving containerId when containerId is not empty
 //
 // Deprecated: Please call CreateContainerNamespace and then RunCNIPluginWithID directly.
-func CreateContainerWithId(netconf, podName, podNamespace, ip, overrideContainerID string) (containerID string, result *current.Result, contVeth string, contAddr []string, contRoutes []string, err error) {
+func CreateContainerWithId(netconf, podName, podNamespace, ip, overrideContainerID, k8sNs string) (containerID string, result *current.Result, contVeth string, contAddr []string, contRoutes []string, err error) {
 	containerID, err = CreateWindowsContainer()
 	if err != nil {
 		return "", nil, "", []string{}, []string{}, err
 	}
 
 	log.WithField("containerID", containerID).Info("calling  RunCNIPluginWithId with:")
-	result, contVeth, contAddr, contRoutes, err = RunCNIPluginWithId(netconf, podName, podNamespace, ip, containerID, "")
+	result, contVeth, contAddr, contRoutes, err = RunCNIPluginWithId(netconf, podName, podNamespace, ip, containerID, "", k8sNs)
 	if err != nil {
 		fmt.Println("Error: ", err)
 		return "", nil, "", []string{}, []string{}, err
@@ -140,7 +140,8 @@ func RunCNIPluginWithId(
 	podNamespace,
 	ip,
 	containerId,
-	ifName string,
+	ifName,
+	k8sNs string,
 	//targetNs ns.NetNS,
 ) (
 	result *current.Result,
@@ -153,7 +154,7 @@ func RunCNIPluginWithId(
 	// Set up the env for running the CNI plugin
 	k8sEnv := ""
 	if podName != "" {
-		k8sEnv = fmt.Sprintf("CNI_ARGS=K8S_POD_NAME=%s;K8S_POD_NAMESPACE=%s;K8S_POD_INFRA_CONTAINER_ID=whatever", podName, K8S_NONE_NS)
+		k8sEnv = fmt.Sprintf("CNI_ARGS=K8S_POD_NAME=%s;K8S_POD_NAMESPACE=%s;K8S_POD_INFRA_CONTAINER_ID=whatever", podName, k8sNs)
 
 		// Append IP=<ip> to CNI_ARGS only if it's not an empty string.
 		if ip != "" {
@@ -225,21 +226,21 @@ func RunCNIPluginWithId(
 }
 
 // Executes the Calico CNI plugin and return the error code of the command.
-func DeleteContainer(netconf, podName, podNamespace string) (exitCode int, err error) {
-	return DeleteContainerWithId(netconf, podName, podNamespace, "")
+func DeleteContainer(netconf, podName, podNamespace, k8sNs string) (exitCode int, err error) {
+	return DeleteContainerWithId(netconf, podName, podNamespace, "", k8sNs)
 }
 
 //func DeleteContainerWithId(netconf, netnspath, podName, podNamespace, containerId string) (exitCode int, err error) {
-func DeleteContainerWithId(netconf, podName, podNamespace, containerId string) (exitCode int, err error) {
+func DeleteContainerWithId(netconf, podName, podNamespace, containerId, k8sNs string) (exitCode int, err error) {
 	//return DeleteContainerWithIdAndIfaceName(netconf, netnspath, podName, podNamespace, containerId, "eth0")
-	return DeleteContainerWithIdAndIfaceName(netconf, podName, podNamespace, containerId, "eth0")
+	return DeleteContainerWithIdAndIfaceName(netconf, podName, podNamespace, containerId, "eth0", k8sNs)
 }
 
 //func DeleteContainerWithIdAndIfaceName(netconf, netnspath, podName, podNamespace, containerId, ifaceName string) (exitCode int, err error) {
-func DeleteContainerWithIdAndIfaceName(netconf, podName, podNamespace, containerId, ifaceName string) (exitCode int, err error) {
+func DeleteContainerWithIdAndIfaceName(netconf, podName, podNamespace, containerId, ifaceName, k8sNs string) (exitCode int, err error) {
 	k8sEnv := ""
 	if podName != "" {
-		k8sEnv = fmt.Sprintf("CNI_ARGS=K8S_POD_NAME=%s;K8S_POD_NAMESPACE=%s;K8S_POD_INFRA_CONTAINER_ID=whatever", podName, K8S_NONE_NS)
+		k8sEnv = fmt.Sprintf("CNI_ARGS=K8S_POD_NAME=%s;K8S_POD_NAMESPACE=%s;K8S_POD_INFRA_CONTAINER_ID=whatever", podName, k8sNs)
 	}
 
 	// Set up the env for running the CNI plugin
@@ -277,13 +278,14 @@ func DeleteContainerWithIdAndIfaceName(netconf, podName, podNamespace, container
 		return 1, err
 	}
 
-	session, err := gexec.Start(subProcess, ginkgo.GinkgoWriter, ginkgo.GinkgoWriter)
+	//session, err := gexec.Start(subProcess, ginkgo.GinkgoWriter, ginkgo.GinkgoWriter)
+	session, err := gexec.Start(subProcess, os.Stdout, os.Stderr)
 	if err != nil {
 		return
 	}
 
 	// Call the plugin. Will force a test failure if it hangs longer than 10s.
-	session.Wait(10)
+	session.Wait(30)
 	//Expect(session).Should(gexec.Exit())
 	exitCode = session.ExitCode()
 	//now delete the container
@@ -334,11 +336,12 @@ func NetworkPod(
 	result *current.Result,
 	containerID string,
 	netns string,
+	k8sNs string,
 ) (err error) {
 
 	k8sEnv := ""
 	if podName != "" {
-		k8sEnv = fmt.Sprintf("CNI_ARGS=K8S_POD_NAME=%s;K8S_POD_NAMESPACE=%s;K8S_POD_INFRA_CONTAINER_ID=whatever", podName, K8S_NONE_NS)
+		k8sEnv = fmt.Sprintf("CNI_ARGS=K8S_POD_NAME=%s;K8S_POD_NAMESPACE=%s;K8S_POD_INFRA_CONTAINER_ID=whatever", podName, k8sNs)
 		// Append IP=<ip> to CNI_ARGS only if it's not an empty string.
 		if ip != "" {
 			k8sEnv = fmt.Sprintf("%s;IP=%s", k8sEnv, ip)
