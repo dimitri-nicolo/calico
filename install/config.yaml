@@ -1,5 +1,7 @@
 elasticsearch:
   - ["PUT", "_xpack/ml/anomaly_detectors/port_scan", "./data/port-scan-job.json"]
   - ["PUT", "_xpack/ml/datafeeds/datafeed-port_scan", "./data/port-scan-datafeed.json"]
+  - ["PUT", "_xpack/ml/anomaly_detectors/ip_sweep", "./data/ip-sweep-job.json"]
+  - ["PUT", "_xpack/ml/datafeeds/datafeed-ip_sweep", "./data/ip-sweep-datafeed.json"]
 kibana:
   - ["POST", "api/saved_objects/_bulk_create", "./data/api-kibana-dashboard.json"]
