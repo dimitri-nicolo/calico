@@ -112,8 +112,16 @@ func DoNetworking(
 		return "", "", err
 	}
 
-	// Assigning DNS details read from cni.conf to result
-	result.DNS = n.DNS
+	// Assigning DNS details read from RuntimeConfig or cni.conf to result
+	// If DNS details is present in the RuntimeConfig, then DNS details of RuntimeConfig will take precedence over cni.conf DNS
+	if len(conf.RuntimeConfig.DNS.Nameservers) >= 1 {
+		result.DNS.Nameservers = conf.RuntimeConfig.DNS.Nameservers
+		result.DNS.Domain = conf.RuntimeConfig.DNS.Domain
+		result.DNS.Search = conf.RuntimeConfig.DNS.Search
+		result.DNS.Options = conf.RuntimeConfig.DNS.Options
+	} else {
+		result.DNS = n.DNS
+	}
 
 	// We need to know the IPAM pools to program the correct NAT exclusion list.  Look those up
 	// before we take the global lock.
