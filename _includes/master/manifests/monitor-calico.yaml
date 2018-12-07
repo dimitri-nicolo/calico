@@ -488,7 +488,55 @@ spec:
           configMap:
             name: elastic-ca-config
 {%- endif %}
+---
 
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: intrusion-detection-job-installer
+  namespace: calico-monitoring
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: install
+        image: {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["intrusion-detection-job-installer"]}}:{{site.data.versions[page.version].first.components["intrusion-detection-job-installer"].version}}
+        env:
+          - name: ELASTIC_HOST
+            valueFrom: 
+              configMapKeyRef:
+                name: tigera-es-proxy
+                key: elasticsearch.backend.host
+          - name: ELASTIC_PORT
+            valueFrom: 
+              configMapKeyRef:
+                name: tigera-es-proxy
+                key: elasticsearch.backend.port
+{%- if include.secure_es == "true" %}
+          - name: USER
+            valueFrom: 
+              secretKeyRef:
+                name: elastic-ee-installer
+                key: username
+          - name: PASSWORD
+            valueFrom: 
+              secretKeyRef:
+                name: elastic-ee-installer
+                key: password
+          - name: CA_CERT
+            value: /certs/ca.pem
+        volumeMounts:
+          - name: certs
+            mountPath: /certs
+      volumes:
+        - name: certs
+          configMap:
+            name: elastic-ca-config
+{%- else %}
+          - name: ELASTIC_SCHEME
+            value: "http" 
+{%- endif %}
 ---
 
 # Network set for the K8s API Server's IP addresses.
@@ -505,7 +553,8 @@ spec:
 
 {%- if include.elasticsearch == "operator" %}
 ---
-# Allow access to Elasticsearch client nodes from Kibana and fluentd
+# Allow access to Elasticsearch client nodes from Kibana, fluentd, and the 
+# intrusion dection installer
 apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
@@ -528,6 +577,12 @@ spec:
     protocol: TCP
     source:
       selector: name == 'kibana-tigera-elasticsearch'
+    destination:
+      ports: [9200]
+  - action: Allow
+    protocol: TCP
+    source:
+      selector: job-name == 'intrusion-detection-job-installer'
     destination:
       ports: [9200]
 
