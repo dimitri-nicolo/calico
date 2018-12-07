@@ -119,6 +119,8 @@ function Install-NodeService()
 {
     Write-Host "Installing node startup service..."
 
+    ensureRegistryKey
+
     & $NSSMPath install TigeraNode $powerShellPath
     & $NSSMPath set TigeraNode AppParameters $baseDir\node\node-service.ps1
     & $NSSMPath set TigeraNode AppDirectory $baseDir
@@ -256,7 +258,63 @@ function Wait-ForManagementIP($NetworkName)
     return (Get-HnsNetwork | ? Name -EQ $NetworkName).ManagementIP
 }
 
+function Get-LastBootTime()
+{
+    $bootTime = (Get-WmiObject win32_operatingsystem | select @{LABEL='LastBootUpTime';EXPRESSION={$_.lastbootuptime}}).LastBootUpTime
+    if (($bootTime -EQ $null) -OR ($bootTime.length -EQ 0))
+    {
+        throw "Failed to get last boot time"
+    }
+    return $bootTime
+}
+
+$tigeraRegistryKey = "HKLM:\Software\Tigera"
+$calicoRegistryKey = $tigeraRegistryKey + "\Calico"
+
+function ensureRegistryKey()
+{
+    if (! (Test-Path $tigeraRegistryKey))
+    {
+        New-Item $tigeraRegistryKey
+    }
+    if (! (Test-Path $calicoRegistryKey))
+    {
+        New-Item $calicoRegistryKey
+    }
+}
+
+function Get-StoredLastBootTime()
+{
+    try
+    {
+        return (Get-ItemProperty $calicoRegistryKey -ErrorAction Ignore).LastBootTime
+    }
+    catch
+    {
+        return ""
+    }
+}
+
+function Set-StoredLastBootTime($lastBootTime)
+{
+    ensureRegistryKey
+
+    return Set-ItemProperty $calicoRegistryKey -Name LastBootTime -Value $lastBootTime
+}
+
+function Wait-ForCalicoInit()
+{
+    Write-Host "Waiting for Calico initialisation to finish..."
+    while ((Get-StoredLastBootTime) -NE (Get-LastBootTime)) {
+        Write-Host "Waiting for Calico initialisation to finish..."
+        Start-Sleep 1
+    }
+    Write-Host "Calico initialisation finished."
+}
+
 Export-ModuleMember -Function 'Test-*'
 Export-ModuleMember -Function 'Install-*'
 Export-ModuleMember -Function 'Remove-*'
 Export-ModuleMember -Function 'Wait-*'
+Export-ModuleMember -Function 'Get-*'
+Export-ModuleMember -Function 'Set-*'

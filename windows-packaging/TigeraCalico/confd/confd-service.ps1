@@ -7,8 +7,7 @@ ipmo .\libs\calico\calico.psm1 -Force
 
 if($env:CALICO_NETWORKING_BACKEND = "windows-bgp")
 {
-  Write-Host "Waiting for the first HNS network to be initialised..."
-  Wait-ForManagementIP "External"
+  Wait-ForCalicoInit
   Write-Host "Windows BGP is enabled, running confd..."
 
   cd "$PSScriptRoot"
