@@ -8,13 +8,9 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	"strings"
 
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 	rest "k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
+        //. "github.com/onsi/gomega"
 
 	"github.com/Microsoft/hcsshim"
 	"github.com/containernetworking/cni/pkg/invoke"
@@ -31,90 +27,12 @@ import (
 	"github.com/onsi/gomega/gexec"
 	"github.com/projectcalico/cni-plugin/internal/pkg/utils"
 	plugintypes "github.com/projectcalico/cni-plugin/pkg/types"
-	"github.com/projectcalico/libcalico-go/lib/apiconfig"
-	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
-	"github.com/projectcalico/libcalico-go/lib/backend"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
-	"github.com/projectcalico/libcalico-go/lib/options"
 	log "github.com/sirupsen/logrus"
 )
 
-const K8S_TEST_NS = "test"
-const TEST_DEFAULT_NS = "default"
 const K8S_NONE_NS = "none"
 
-// Delete everything under /calico from etcd.
-func WipeEtcd() {
-	be, err := backend.NewClient(apiconfig.CalicoAPIConfig{
-		Spec: apiconfig.CalicoAPIConfigSpec{
-			DatastoreType: apiconfig.EtcdV3,
-			EtcdConfig: apiconfig.EtcdConfig{
-				EtcdEndpoints: os.Getenv("ETCD_ENDPOINTS"),
-			},
-		},
-	})
-	if err != nil {
-		panic(err)
-	}
-	_ = be.Clean()
-
-	// Set the ready flag so calls to the CNI plugin can proceed
-	calicoClient, _ := client.NewFromEnv()
-	newClusterInfo := api.NewClusterInformation()
-	newClusterInfo.Name = "default"
-	datastoreReady := true
-	newClusterInfo.Spec.DatastoreReady = &datastoreReady
-	ci, err := calicoClient.ClusterInformation().Create(context.Background(), newClusterInfo, options.SetOptions{})
-	if err != nil {
-		panic(err)
-	}
-	log.Printf("Set ClusterInformation: %v %v\n", ci, *ci.Spec.DatastoreReady)
-}
-
-// MustCreateNewIPPool creates a new Calico IPAM IP Pool.
-func MustCreateNewIPPool(c client.Interface, cidr string, ipip, natOutgoing, ipam bool, blocksize int) string {
-	log.SetLevel(log.DebugLevel)
-
-	log.SetOutput(os.Stderr)
-
-	name := strings.Replace(cidr, ".", "-", -1)
-	name = strings.Replace(name, ":", "-", -1)
-	name = strings.Replace(name, "/", "-", -1)
-	var mode api.IPIPMode
-	if ipip {
-		mode = api.IPIPModeAlways
-	} else {
-		mode = api.IPIPModeNever
-	}
-
-	pool := api.NewIPPool()
-	pool.Name = name
-	pool.Spec.CIDR = cidr
-	pool.Spec.NATOutgoing = natOutgoing
-	pool.Spec.Disabled = !ipam
-	pool.Spec.IPIPMode = mode
-	pool.Spec.BlockSize = blocksize
-
-	_, err := c.IPPools().Create(context.Background(), pool, options.SetOptions{})
-	if err != nil {
-		panic(err)
-	}
-	return pool.Name
-}
-
-func MustDeleteIPPool(c client.Interface, cidr string) {
-	log.SetLevel(log.DebugLevel)
-	log.SetOutput(os.Stderr)
-
-	name := strings.Replace(cidr, ".", "-", -1)
-	name = strings.Replace(name, ":", "-", -1)
-	name = strings.Replace(name, "/", "-", -1)
-
-	_, err := c.IPPools().Delete(context.Background(), name, options.DeleteOptions{})
-	if err != nil {
-		panic(err)
-	}
-}
 func SetCertFilePath(config *rest.Config) *rest.Config {
 	log.WithField("config:", config).Info("AKHILESH")
 	config.TLSClientConfig.CertFile = os.Getenv("CERT_DIR") + "\\client.crt"
@@ -122,37 +40,6 @@ func SetCertFilePath(config *rest.Config) *rest.Config {
 	config.TLSClientConfig.CAFile = os.Getenv("CERT_DIR") + "\\ca.crt"
 	log.WithField("config:", config).Info("AKHILESH")
 	return config
-}
-
-// Delete all K8s pods from the "test" namespace
-func WipeK8sPods() {
-	config, err := clientcmd.DefaultClientConfig.ClientConfig()
-	if err != nil {
-		panic(err)
-	}
-	config = SetCertFilePath(config)
-	clientset, err := kubernetes.NewForConfig(config)
-
-	if err != nil {
-		panic(err)
-	}
-	log.WithField("clientset:", clientset).Info("AKHILESH")
-	pods, err := clientset.CoreV1().Pods(K8S_TEST_NS).List(metav1.ListOptions{})
-	if err != nil {
-		panic(err)
-	}
-
-	for _, pod := range pods.Items {
-		err = clientset.CoreV1().Pods(K8S_TEST_NS).Delete(pod.Name, &metav1.DeleteOptions{})
-
-		if err != nil {
-			if kerrors.IsNotFound(err) {
-				continue
-			}
-			panic(err)
-		}
-	}
-	log.Info("WipeK8sPods Sucess")
 }
 
 func CreateContainerUsingDocker() (string, error) {
@@ -245,15 +132,6 @@ func CreateContainerWithId(netconf, podName, podNamespace, ip, overrideContainer
 	return
 }
 
-// Used for passing arguments to the CNI plugin.
-type cniArgs struct {
-	Env []string
-}
-
-func (c *cniArgs) AsEnv() []string {
-	return c.Env
-}
-
 // RunCNIPluginWithId calls CNI plugin with a containerID and targetNs passed to it.
 // This is for when you want to call CNI for an existing container.
 func RunCNIPluginWithId(
@@ -308,7 +186,7 @@ func RunCNIPluginWithId(
 	log.Debugf("pluginPath: %v", pluginPath)
 	r, err = invoke.ExecPluginWithResult(pluginPath, []byte(netconf), args, nil)
 	if err != nil {
-		log.Errorf("iinvoke.ExecPluginWithResult %v", err)
+		log.Errorf("invoke.ExecPluginWithResult %v", err)
 		return
 	}
 
@@ -404,11 +282,10 @@ func DeleteContainerWithIdAndIfaceName(netconf, podName, podNamespace, container
 		return
 	}
 
-	// Call the plugin. Will force a test failure if it hangs longer than 5s.
+	// Call the plugin. Will force a test failure if it hangs longer than 10s.
 	session.Wait(10)
-
+	//Expect(session).Should(gexec.Exit())
 	exitCode = session.ExitCode()
-	log.Infof("retuning from DeleteContainerWithIdAndIfaceName")
 	//now delete the container
 	if containerId != "" {
 		log.Infof("\ncalling DeleteWindowsContainer ")

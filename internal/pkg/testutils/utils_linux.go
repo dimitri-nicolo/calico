@@ -2,7 +2,6 @@ package testutils
 
 import (
 	"bufio"
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,11 +12,6 @@ import (
 	"strings"
 	"syscall"
 
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
-
 	"github.com/containernetworking/cni/pkg/invoke"
 	"github.com/containernetworking/cni/pkg/types"
 	"github.com/containernetworking/cni/pkg/types/020"
@@ -27,103 +21,17 @@ import (
 	"github.com/mcuadros/go-version"
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega/gexec"
-	"github.com/projectcalico/libcalico-go/lib/apiconfig"
-	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
-	"github.com/projectcalico/libcalico-go/lib/backend"
 	k8sconversion "github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
-	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/names"
-	"github.com/projectcalico/libcalico-go/lib/options"
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 )
-
-const K8S_TEST_NS = "test"
-const TEST_DEFAULT_NS = "default"
 
 func min(a, b int) int {
 	if a < b {
 		return a
 	}
 	return b
-}
-
-// Delete everything under /calico from etcd.
-func WipeEtcd() {
-	be, err := backend.NewClient(apiconfig.CalicoAPIConfig{
-		Spec: apiconfig.CalicoAPIConfigSpec{
-			DatastoreType: apiconfig.EtcdV3,
-			EtcdConfig: apiconfig.EtcdConfig{
-				EtcdEndpoints: "http://127.0.0.1:2379",
-			},
-		},
-	})
-	if err != nil {
-		panic(err)
-	}
-	_ = be.Clean()
-
-	// Set the ready flag so calls to the CNI plugin can proceed
-	calicoClient, _ := client.NewFromEnv()
-	newClusterInfo := api.NewClusterInformation()
-	newClusterInfo.Name = "default"
-	datastoreReady := true
-	newClusterInfo.Spec.DatastoreReady = &datastoreReady
-	ci, err := calicoClient.ClusterInformation().Create(context.Background(), newClusterInfo, options.SetOptions{})
-	if err != nil {
-		panic(err)
-	}
-	log.Printf("Set ClusterInformation: %v %v\n", ci, *ci.Spec.DatastoreReady)
-}
-
-// MustCreateNewIPPool creates a new Calico IPAM IP Pool.
-func MustCreateNewIPPool(c client.Interface, cidr string, ipip, natOutgoing, ipam bool) string {
-	return MustCreateNewIPPoolBlockSize(c, cidr, ipip, natOutgoing, ipam, 0)
-}
-
-// MustCreateNewIPPoolBlockSize creates a new Calico IPAM IP Pool with support for setting the block size.
-func MustCreateNewIPPoolBlockSize(c client.Interface, cidr string, ipip, natOutgoing, ipam bool, blockSize int) string {
-	log.SetLevel(log.DebugLevel)
-
-	log.SetOutput(os.Stderr)
-
-	name := strings.Replace(cidr, ".", "-", -1)
-	name = strings.Replace(name, ":", "-", -1)
-	name = strings.Replace(name, "/", "-", -1)
-	var mode api.IPIPMode
-	if ipip {
-		mode = api.IPIPModeAlways
-	} else {
-		mode = api.IPIPModeNever
-	}
-
-	pool := api.NewIPPool()
-	pool.Name = name
-	pool.Spec.CIDR = cidr
-	pool.Spec.NATOutgoing = natOutgoing
-	pool.Spec.Disabled = !ipam
-	pool.Spec.IPIPMode = mode
-	pool.Spec.BlockSize = blockSize
-
-	_, err := c.IPPools().Create(context.Background(), pool, options.SetOptions{})
-	if err != nil {
-		panic(err)
-	}
-	return pool.Name
-}
-
-func MustDeleteIPPool(c client.Interface, cidr string) {
-	log.SetLevel(log.DebugLevel)
-	log.SetOutput(os.Stderr)
-
-	name := strings.Replace(cidr, ".", "-", -1)
-	name = strings.Replace(name, ":", "-", -1)
-	name = strings.Replace(name, "/", "-", -1)
-
-	_, err := c.IPPools().Delete(context.Background(), name, options.DeleteOptions{})
-	if err != nil {
-		panic(err)
-	}
 }
 
 // GetResultForCurrent takes the output with cniVersion and returns the Result in current.Result format.
@@ -154,34 +62,6 @@ func GetResultForCurrent(session *gexec.Session, cniVersion string) (*current.Re
 		return nil, err
 	}
 	return &r, nil
-}
-
-// Delete all K8s pods from the "test" namespace
-func WipeK8sPods() {
-	config, err := clientcmd.DefaultClientConfig.ClientConfig()
-	if err != nil {
-		panic(err)
-	}
-	clientset, err := kubernetes.NewForConfig(config)
-
-	if err != nil {
-		panic(err)
-	}
-	pods, err := clientset.CoreV1().Pods(K8S_TEST_NS).List(metav1.ListOptions{})
-	if err != nil {
-		panic(err)
-	}
-
-	for _, pod := range pods.Items {
-		err = clientset.CoreV1().Pods(K8S_TEST_NS).Delete(pod.Name, &metav1.DeleteOptions{})
-
-		if err != nil {
-			if kerrors.IsNotFound(err) {
-				continue
-			}
-			panic(err)
-		}
-	}
 }
 
 // RunIPAMPlugin sets ENV vars required then calls the IPAM plugin
@@ -295,15 +175,6 @@ func CreateContainerWithId(netconf, podName, podNamespace, ip, overrideContainer
 
 	result, contVeth, contAddr, contRoutes, err = RunCNIPluginWithId(netconf, podName, podNamespace, ip, containerID, "", targetNs)
 	return
-}
-
-// Used for passing arguments to the CNI plugin.
-type cniArgs struct {
-	Env []string
-}
-
-func (c *cniArgs) AsEnv() []string {
-	return c.Env
 }
 
 // RunCNIPluginWithId calls CNI plugin with a containerID and targetNs passed to it.

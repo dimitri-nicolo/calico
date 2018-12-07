@@ -127,13 +127,23 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			}
 
 			// Create the Namespace before the tests
-			var period int64
-			period = 10
 			log.Infof("Creating new namespace")
-			_ = clientset.CoreV1().Namespaces().Delete(testutils.K8S_NONE_NS, &metav1.DeleteOptions{
-				GracePeriodSeconds: &period,
-			})
-			time.Sleep(10000 * time.Millisecond)
+                        _ = clientset.CoreV1().Namespaces().Delete(testutils.K8S_NONE_NS,&metav1.DeleteOptions{})
+			//time.Sleep(10000 * time.Millisecond)
+			i := 0
+			for i < 30 {
+				ns,err := clientset.CoreV1().Namespaces().Get(testutils.K8S_NONE_NS, metav1.GetOptions{})
+				log.Infof("\nns = %v\nerr = %v\n", ns, err)
+				if errors.IsNotFound(err)  {
+					break
+				}
+				time.Sleep(1000 * time.Millisecond)
+				i++
+			}
+			if i >= 30 {
+				log.Errorf("Namespace \"none\" not terminated for 30secs")
+				panic(err)
+			}
 
 			_, err = clientset.CoreV1().Namespaces().Create(&v1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
@@ -164,9 +174,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			log.Infof("Creating container")
 			containerID, result, contVeth, contAddresses, contRoutes, err := testutils.CreateContainer(netconf, name, testutils.K8S_NONE_NS, "")
 			Expect(err).ShouldNot(HaveOccurred())
-			if err != nil {
-				log.Debugf("containerID :%v , result: %v ,icontVeth : %v , contAddresses : %v ,contRoutes : %v \n", containerID, result, contVeth, contAddresses, contRoutes)
-			}
+			log.Debugf("containerID :%v , result: %v ,icontVeth : %v , contAddresses : %v ,contRoutes : %v \n", containerID, result, contVeth, contAddresses, contRoutes)
 
 			Expect(len(result.IPs)).Should(Equal(1))
 			ip := result.IPs[0].Address.IP.String()
@@ -362,7 +370,20 @@ var _ = Describe("Kubernetes CNI tests", func() {
 
                                 _ = clientset.CoreV1().Namespaces().Delete(testutils.K8S_NONE_NS,&metav1.DeleteOptions{})
                                 log.Infof("Namespace deleted. Sleeping for 10 seconds to complete deletion.")
-                                time.Sleep(10000 * time.Millisecond)
+				i := 0
+				for i < 30 {
+					ns,err := clientset.CoreV1().Namespaces().Get(testutils.K8S_NONE_NS, metav1.GetOptions{})
+				log.Infof("\nns = %v\nerr = %v\n", ns, err)
+					if errors.IsNotFound(err) {
+						break
+					}
+					time.Sleep(1000 * time.Millisecond)
+					i++
+				}
+				if i >= 30 {
+					log.Errorf("Namespace \"none\" not terminated for 30secs")
+					panic(err)
+				}
 
                                 // Create the Namespace before the tests
                                 log.Infof("\nrosh:: creating new namespace\n")
@@ -512,7 +533,20 @@ var _ = Describe("Kubernetes CNI tests", func() {
                                 _ = clientset.CoreV1().Namespaces().Delete(testutils.K8S_NONE_NS,&metav1.DeleteOptions{})
 
                                 log.Infof("Namespace deleted, sleeping for 10 secs to complete deletion")
-                                time.Sleep(10000 * time.Millisecond)
+				i := 0
+				for i < 30 {
+					ns,err := clientset.CoreV1().Namespaces().Get(testutils.K8S_NONE_NS, metav1.GetOptions{})
+				log.Infof("\nns = %v\nerr = %v\n", ns, err)
+					if errors.IsNotFound(err) {
+						break
+					}
+					time.Sleep(1000 * time.Millisecond)
+					i++
+				}
+				if i >= 30 {
+					log.Errorf("Namespace \"none\" not terminated for 30secs")
+					panic(err)
+				}
 
                                 // Create the Namespace before the tests
                                 log.Infof("Creating new namespace")
@@ -656,7 +690,21 @@ var _ = Describe("Kubernetes CNI tests", func() {
                                 _ = clientset.CoreV1().Namespaces().Delete(testutils.K8S_NONE_NS,&metav1.DeleteOptions{})
 
                                 log.Infof("Namespace deleted, sleeping for 10 secs to complete deletion")
-                                time.Sleep(10000 * time.Millisecond)
+
+				i := 0
+                                for i < 30 {
+                                        ns,err := clientset.CoreV1().Namespaces().Get(testutils.K8S_NONE_NS, metav1.GetOptions{})
+				log.Infof("\nns = %v\nerr = %v\n", ns, err)
+                                        if errors.IsNotFound(err) {
+                                                break
+                                        }
+                                        time.Sleep(1000 * time.Millisecond)
+                                        i++
+                                }
+                                if i >= 30 {
+                                        log.Errorf("Namespace \"none\" not terminated for 30secs")
+                                        panic(err)
+                                }
 
                                 // Create the Namespace before the tests
                                 log.Infof("Creating new namespace")
@@ -716,7 +764,20 @@ var _ = Describe("Kubernetes CNI tests", func() {
                                 _ = clientset.CoreV1().Namespaces().Delete(testutils.K8S_NONE_NS,&metav1.DeleteOptions{})
 
                                 log.Infof("Namespace deleted, sleeping for 10 secs to complete deletion")
-                                time.Sleep(10000 * time.Millisecond)
+				i := 0
+                                for i < 30 {
+                                        ns,err := clientset.CoreV1().Namespaces().Get(testutils.K8S_NONE_NS, metav1.GetOptions{})
+				log.Infof("\nns = %v\nerr = %v\n", ns, err)
+                                        if errors.IsNotFound(err) {
+                                                break
+                                        }
+                                        time.Sleep(1000 * time.Millisecond)
+                                        i++
+                                }
+                                if i >= 30 {
+                                        log.Errorf("Namespace \"none\" not terminated for 30secs")
+                                        panic(err)
+                                }
                                 // Create the Namespace before the tests
                                 log.Infof("Creating new namespace")
                                 _, err = clientset.CoreV1().Namespaces().Create(&v1.Namespace{
@@ -903,7 +964,20 @@ var _ = Describe("Kubernetes CNI tests", func() {
                                 _ = clientset.CoreV1().Namespaces().Delete(testutils.K8S_NONE_NS,&metav1.DeleteOptions{})
 
                                 log.Infof("Namespace deleted, sleeping for 10 secs to complete deletion")
-                                time.Sleep(10000 * time.Millisecond)
+				i := 0
+                                for i < 30 {
+                                        ns,err := clientset.CoreV1().Namespaces().Get(testutils.K8S_NONE_NS, metav1.GetOptions{})
+				log.Infof("\nns = %v\nerr = %v\n", ns, err)
+                                        if errors.IsNotFound(err) {
+                                                break
+                                        }
+                                        time.Sleep(1000 * time.Millisecond)
+                                        i++
+                                }
+                                if i >= 30 {
+                                        log.Errorf("Namespace \"none\" not terminated for 30secs")
+                                        panic(err)
+                                }
 
                                 // Create the Namespace before the tests
                                 log.Infof("Creating new namespace")
@@ -1172,7 +1246,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 		BeforeEach(func() {
 			time.Sleep(30000 * time.Millisecond)
 			// Create a new ipPool.
-			testutils.MustCreateNewIPPool(calicoClient, "10.0.0.0/24", false, false, true, 26)
+			testutils.MustCreateNewIPPoolBlockSize(calicoClient, "10.0.0.0/24", false, false, true, 26)
 
 			// Create a network config.
 			nc = types.NetConf{
@@ -1263,7 +1337,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 
 			// The IP addresses shouldn't be the same, since we'll reassign one.
 			log.Infof("resultSecondAdd.IPs: %v and result.IPs: %v ", resultSecondAdd.IPs, result.IPs)
-			Expect(resultSecondAdd.IPs).ShouldNot(Equal(result.IPs))
+			Expect(resultSecondAdd.IPs[0].Address.IP).Should(Equal(result.IPs[0].Address.IP))
 
 			// Otherwise, they should be the same.
 			resultSecondAdd.IPs = nil
@@ -1299,7 +1373,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 		It("with windows single network flag set,should successfully network 4 pods but reject networking 5th", func() {
 			// Create a new ipPool.
 			time.Sleep(30000 * time.Millisecond)
-			testutils.MustCreateNewIPPool(calicoClient, "10.0.0.0/26", false, false, true, 29)
+			testutils.MustCreateNewIPPoolBlockSize(calicoClient, "10.0.0.0/26", false, false, true, 29)
 
 			config, err := clientcmd.DefaultClientConfig.ClientConfig()
 			Expect(err).NotTo(HaveOccurred())
@@ -1392,7 +1466,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 		It("with windows single network flag not set,should successfully network 4 pods and sucessfully create new network for 5th", func() {
 			// Create a new ipPool.
 			time.Sleep(30000 * time.Millisecond)
-			testutils.MustCreateNewIPPool(calicoClient, "10.0.0.0/26", false, false, true, 29)
+			testutils.MustCreateNewIPPoolBlockSize(calicoClient, "10.0.0.0/26", false, false, true, 29)
 
 			config, err := clientcmd.DefaultClientConfig.ClientConfig()
 			Expect(err).NotTo(HaveOccurred())
@@ -1437,7 +1511,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 		It("create 4 pods; delete 3 pods; create 3 pods, should still have only one network", func() {
 			// Create a new ipPool.
 			time.Sleep(30000 * time.Millisecond)
-			testutils.MustCreateNewIPPool(calicoClient, "10.0.0.0/26", false, false, true, 29)
+			testutils.MustCreateNewIPPoolBlockSize(calicoClient, "10.0.0.0/26", false, false, true, 29)
 
 			config, err := clientcmd.DefaultClientConfig.ClientConfig()
 			Expect(err).NotTo(HaveOccurred())
@@ -1557,7 +1631,20 @@ var _ = Describe("Kubernetes CNI tests", func() {
                                 _ = clientset.CoreV1().Namespaces().Delete(testutils.K8S_NONE_NS,&metav1.DeleteOptions{})
 
                                 log.Infof("Namespace deleted, sleeping for 10 secs to complete deletion")
-                                time.Sleep(10000 * time.Millisecond)
+				i := 0
+                                for i < 30 {
+                                        ns,err := clientset.CoreV1().Namespaces().Get(testutils.K8S_NONE_NS, metav1.GetOptions{})
+				log.Infof("\nns = %v\nerr = %v\n", ns, err)
+                                        if errors.IsNotFound(err) {
+                                                break
+                                        }
+                                        time.Sleep(1000 * time.Millisecond)
+                                        i++
+                                }
+                                if i >= 30 {
+                                        log.Errorf("Namespace \"none\" not terminated for 30secs")
+                                        panic(err)
+                                }
 
                                 // Create the Namespace before the tests
                                 log.Infof("Creating new namespace")
