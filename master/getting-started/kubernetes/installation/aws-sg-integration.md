@@ -195,22 +195,29 @@ We've provided info below on how to gather the above info in common Kubernetes e
     --from-literal=trust_sg=$TRUST_SG
     ```
 
+1. **Restart the {{site.prodname}} components.**
+
+   If your cluster does not have production workloads yet feel free to restart
+   all the components without concern. If your cluster has production workloads
+   active then you should ensure that one pod is restarted at a time and
+   it becomes healthy before restarting the next.
+   The components that need restarting are:
+
+   * {{site.noderunning}}
+   * calico-typha
+   * cnx-apiserver
+   * calicoq (if running as a pod)
+
+   > **Note**: Kubernetes does not support a rolling update without a change
+   > to the DaemonSet. So to initiate a rolling update of the
+   > {{site.noderunning}} DaemonSet a dummy annotation can be added to the
+   > DaemonSet with a command like the following.
+   > ```kubectl patch -n kube-system daemonset calico-node -p "{\"spec\":{\"template\":{\"metadata\":{\"annotations\":{\"restart_annotation\":\"`date +'%s'`\"}}}}}"```
+   {: .alert .alert-info}
+
 1.  **Install Kubernetes components.**
 
     ```bash
     kubectl apply -f {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/manifests/aws-sg-integration/cloud-controller.yaml
     ```
-
-1. **Update {{site.noderunning}}, {{site.prodname}} API server, and {{site.prodname}} queryserver.**
-   Edit the deployments for {{site.noderunning}} and cnx-apiserver and add the following
-   environment variables to the {{site.noderunning}}, cnx-apiserver, and cnx-queryserver
-   containers.
-
-   | Key | Value (from specified environment variable) |
-   |---|---|
-   | `TIGERA_ENFORCED_GROUP_ID` | $TRUST_SG |
-   | `TIGERA_TRUST_ENFORCED_GROUP_ID` | $ENFORCED_SG |
-
-   **Note:** This step should be removed when components are updated to read
-   these values from the datastore.
 
