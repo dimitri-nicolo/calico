@@ -37,6 +37,15 @@
    -n calico-monitoring
    ```
 
+1. Set up secret with username and password for the {{site.prodname}} job installer to authenticate with Elasticsearch.
+   Replace `<installer-password>` with the password.
+   ```
+   {{cli}} create secret generic elastic-ee-installer \
+   --from-literal=username=tigera-ee-installer \
+   --from-literal=password=<installer-password> \
+   -n calico-monitoring
+   ```
+
 1. Create a configmap with information on how to reach the Elasticsearch cluster.
    Replace `<elasticsearch-host>` with the hostname (or IP) {{site.prodname}} should access Elasticsearch through.
    If your cluster is listening on a port other than `9200`, replace that too.

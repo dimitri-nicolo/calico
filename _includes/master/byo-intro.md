@@ -32,14 +32,16 @@ To complete the following procedure, you'll need:
 - An Elasticsearch cluster that meets the [requirements]({{site.baseurl}}/{{page.version}}/getting-started/{{path}}/requirements#elasticsearch-requirements).
 - A `tigera-ee-fluentd` user with permission to send documents to Elasticsearch (see below).
 - A `tigera-ee-manager` user with permission to issue queries to Elasticsearch (see below).
+- A `tigera-ee-installer` user with permission to install machine learning jobs, and configure Kibana dashboards
 - The CA certificate for the Elasticsearch cluster.
 - Any users who are going to use the Kibana dashboards will need to be given appropriate
   credentials.
 
 ### Setting up Elasticsearch roles
 
-If you're using the Elasticsearch X-Pack security then you may wish to use the following roles -
-documentation on setting up users / roles with X-Pack security is [here](https://www.elastic.co/guide/en/elastic-stack-overview/6.4/authorization.html).
+If you're using the Elasticsearch X-Pack security then you may wish to use the following roles. You should
+use the [Kibana Role Management API](https://www.elastic.co/guide/en/kibana/current/role-management-api.html),
+since some roles include permissions on both Kibana and Elasticsearch.
 
 They may also be useful as a reference for defining alternative security configuration.
 
@@ -47,13 +49,15 @@ They may also be useful as a reference for defining alternative security configu
 
    ```json
    {
-     "cluster": [ "monitor", "manage_index_templates" ],
-     "indices": [
-       {
-         "names": [ "tigera_secure_ee_*" ],
-         "privileges": [ "create_index", "write" ]
-       }
-     ]
+     "elasticsearch": {
+       "cluster": [ "monitor", "manage_index_templates" ],
+       "indices": [
+         {
+           "names": [ "tigera_secure_ee_*" ],
+           "privileges": [ "create_index", "write" ]
+         }
+       ]
+     }
    }
    ```
 
@@ -61,12 +65,33 @@ They may also be useful as a reference for defining alternative security configu
 
    ```json
    {
-     "cluster": [ "monitor" ],
-     "indices": [
-       {
-         "names": [ "tigera_secure_ee_*" ],
-         "privileges": [ "read"]
-       }
-     ]
+     "elasticsearch": {
+       "cluster": [ "monitor" ],
+       "indices": [
+         {
+           "names": [ "tigera_secure_ee_*" ],
+           "privileges": [ "read"]
+         }
+       ]
+     }
+   }
+   ```
+
+1. {{site.prodname}} role for installing machine learning jobs, Watcher jobs, and Kibana dashboards
+
+   ```json
+   {
+     "elasticsearch": {
+       "cluster": [ "manage_ml", "manage_watcher" ],
+       "indices": [
+         {
+           "names": [ "tigera_secure_ee_*" ],
+           "privileges": [ "read"]
+         }
+       ]
+     },
+     "kibana": {
+       "global": ["all"]
+     }
    }
    ```
