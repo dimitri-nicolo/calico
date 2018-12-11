@@ -131,11 +131,12 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			panic(err)
 		}
 
-		nsName := fmt.Sprintf("ns%d", rand.Uint32())
-                name := fmt.Sprintf("run%d", rand.Uint32())
+		var nsName, name string
 
 		BeforeEach(func() {
                         time.Sleep(10000 * time.Millisecond)
+			nsName = fmt.Sprintf("ns%d", rand.Uint32())
+	                name = fmt.Sprintf("run%d", rand.Uint32())
 
 			// Create namespace
 			ensureNamespace(clientset, nsName)
@@ -250,17 +251,41 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			Expect(containerEP.VirtualNetworkName).Should(Equal(hnsNetwork.Name))
 
 			log.Infof("Container Delete  call")
-			_, err = testutils.DeleteContainerWithId(netconf, name, testutils.K8S_NONE_NS, containerID, nsName)
-			Expect(err).ShouldNot(HaveOccurred())
+			defer func() {
+				_, err = testutils.DeleteContainerWithId(netconf, name, testutils.K8S_NONE_NS, containerID, nsName)
+				Expect(err).ShouldNot(HaveOccurred())
 
-			// Make sure there are no endpoints anymore
-			endpoints, err = calicoClient.WorkloadEndpoints().List(ctx, options.ListOptions{})
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(endpoints.Items).Should(HaveLen(0))
+				// Make sure there are no endpoints anymore
+				endpoints, err = calicoClient.WorkloadEndpoints().List(ctx, options.ListOptions{})
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(endpoints.Items).Should(HaveLen(0))
+			}()
 		})
 
 		Context("when a named port is set", func() {
 			It("it is added to the workload endpoint", func() {
+                                name := fmt.Sprintf("run%d", rand.Uint32())
+
+                                // Create a K8s pod w/o any special params
+                                _, err = clientset.CoreV1().Pods(nsName).Create(&v1.Pod{
+                                        ObjectMeta: metav1.ObjectMeta{Name: name},
+                                        Spec: v1.PodSpec{
+                                                Containers: []v1.Container{{
+                                                        Name:  fmt.Sprintf("container-%s", name),
+                                                        Image: "ignore",
+                                                        Ports: []v1.ContainerPort{{
+                                                                Name:          "anamedport",
+                                                                ContainerPort: 555,
+                                                        }},
+                                                }},
+                                                NodeName: hostname,
+                                        },
+                                })
+                                if err != nil {
+                                        panic(err)
+                                }
+				defer clientset.CoreV1().Pods(nsName).Delete(name, &metav1.DeleteOptions{})
+
 				containerID, result, contVeth, _, _, err := testutils.CreateContainer(netconf, name, testutils.K8S_NONE_NS, "", nsName)
 				Expect(err).ShouldNot(HaveOccurred())
 				log.Infof("contVeth %v ", contVeth)
@@ -283,7 +308,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				}
 
 				wrkload, err := ids.CalculateWorkloadEndpointName(false)
-				interfaceName := k8sconversion.VethNameForWorkload(testutils.K8S_NONE_NS, name)
+				interfaceName := k8sconversion.VethNameForWorkload(nsName, name)
 				Expect(err).NotTo(HaveOccurred())
 				log.Infof("interfaceName : %v", interfaceName)
 
@@ -406,13 +431,15 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				Expect(containerEP.VirtualNetworkName).Should(Equal(hnsNetwork.Name))
 
 				log.Infof("Container Delete  call")
-				_, err = testutils.DeleteContainerWithId(netconf, name, testutils.K8S_NONE_NS, containerID, nsName)
-				Expect(err).ShouldNot(HaveOccurred())
+				defer func() {
+					_, err := testutils.DeleteContainerWithId(netconf, name, testutils.K8S_NONE_NS, containerID, nsName)
+					Expect(err).ShouldNot(HaveOccurred())
 
-				// Make sure there are no endpoints anymore
-				endpoints, err = calicoClient.WorkloadEndpoints().List(ctx, options.ListOptions{})
-				Expect(err).ShouldNot(HaveOccurred())
-				Expect(endpoints.Items).Should(HaveLen(0))
+					// Make sure there are no endpoints anymore
+					endpoints, err = calicoClient.WorkloadEndpoints().List(ctx, options.ListOptions{})
+					Expect(err).ShouldNot(HaveOccurred())
+					Expect(endpoints.Items).Should(HaveLen(0))
+				}()
 			})
 		})
 
@@ -492,14 +519,15 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				Expect(ip2).Should(Equal(ip))
 
 				log.Infof("Container Delete  call")
-				_, err = testutils.DeleteContainerWithId(netconf, name, testutils.K8S_NONE_NS, containerID, nsName)
-				log.Infof("Container Delete  returned with :", err)
-				Expect(err).ShouldNot(HaveOccurred())
+				defer func() {
+					_, err := testutils.DeleteContainerWithId(netconf, name, testutils.K8S_NONE_NS, containerID, nsName)
+					Expect(err).ShouldNot(HaveOccurred())
 
-				// Make sure there are no endpoints anymore
-				endpoints, err = calicoClient.WorkloadEndpoints().List(ctx, options.ListOptions{})
-				Expect(err).ShouldNot(HaveOccurred())
-				Expect(endpoints.Items).Should(HaveLen(0))
+					// Make sure there are no endpoints anymore
+					endpoints, err = calicoClient.WorkloadEndpoints().List(ctx, options.ListOptions{})
+					Expect(err).ShouldNot(HaveOccurred())
+					Expect(endpoints.Items).Should(HaveLen(0))
+				}()
 			})
 		})
 
@@ -633,13 +661,15 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				Expect(containerEP.VirtualNetworkName).Should(Equal(hnsNetwork.Name))
 
 				log.Infof("Container Delete  call")
-				_, err = testutils.DeleteContainerWithId(netconf, name, testutils.K8S_NONE_NS, containerID, nsName)
-				Expect(err).ShouldNot(HaveOccurred())
+				defer func() {
+					_, err := testutils.DeleteContainerWithId(netconf, name, testutils.K8S_NONE_NS, containerID, nsName)
+					Expect(err).ShouldNot(HaveOccurred())
 
-				// Make sure there are no endpoints anymore
-				endpoints, err = calicoClient.WorkloadEndpoints().List(ctx, options.ListOptions{})
-				Expect(err).ShouldNot(HaveOccurred())
-				Expect(endpoints.Items).Should(HaveLen(0))
+					// Make sure there are no endpoints anymore
+					endpoints, err = calicoClient.WorkloadEndpoints().List(ctx, options.ListOptions{})
+					Expect(err).ShouldNot(HaveOccurred())
+					Expect(endpoints.Items).Should(HaveLen(0))
+				}()
 			})
 
 			It("Network exists but missing management endpoint, should be added", func() {
@@ -731,13 +761,15 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				Expect(containerEP.VirtualNetworkName).Should(Equal(hnsNetwork.Name))
 
 				log.Infof("Container Delete  call")
-				_, err = testutils.DeleteContainerWithId(netconf, name, testutils.K8S_NONE_NS, containerID, nsName)
-				Expect(err).ShouldNot(HaveOccurred())
+				defer func() {
+					testutils.DeleteContainerWithId(netconf, name, testutils.K8S_NONE_NS, containerID, nsName)
+					Expect(err).ShouldNot(HaveOccurred())
 
-				// Make sure there are no endpoints anymore
-				endpoints, err = calicoClient.WorkloadEndpoints().List(ctx, options.ListOptions{})
-				Expect(err).ShouldNot(HaveOccurred())
-				Expect(endpoints.Items).Should(HaveLen(0))
+					// Make sure there are no endpoints anymore
+					endpoints, err = calicoClient.WorkloadEndpoints().List(ctx, options.ListOptions{})
+					Expect(err).ShouldNot(HaveOccurred())
+					Expect(endpoints.Items).Should(HaveLen(0))
+				}()
 			})
 		})
 
@@ -773,7 +805,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			It("should successfully assign IP both times and successfully release it in the middle", func() {
 				netconfHostLocalIPAM := fmt.Sprintf(hostLocalIPAMConfigs[0].config, hostLocalIPAMConfigs[0].cniVersion, os.Getenv("ETCD_ENDPOINTS"), os.Getenv("DATASTORE_TYPE"), os.Getenv("KUBERNETES_MASTER"))
 
-				requestedIP := "10.0.0.70"
+				requestedIP := "10.0.0.250"
 				expectedIP := requestedIP
 
 				containerID, result, _, _, _, err := testutils.CreateContainer(netconfHostLocalIPAM, name, testutils.K8S_NONE_NS, requestedIP, nsName)
@@ -915,13 +947,15 @@ var _ = Describe("Kubernetes CNI tests", func() {
 					Expect(containerEP.DNSServerList).Should(Equal("10.96.0.10"))
 
 					log.Infof("Container Delete  call")
-					_, err = testutils.DeleteContainerWithId(netconf, name, testutils.K8S_NONE_NS, containerID, nsName)
-					Expect(err).ShouldNot(HaveOccurred())
+					defer func() {
+						testutils.DeleteContainerWithId(netconf, name, testutils.K8S_NONE_NS, containerID, nsName)
+						Expect(err).ShouldNot(HaveOccurred())
 
-					// Make sure there are no endpoints anymore
-					endpoints, err = calicoClient.WorkloadEndpoints().List(ctx, options.ListOptions{})
-					Expect(err).ShouldNot(HaveOccurred())
-					Expect(endpoints.Items).Should(HaveLen(0))
+						// Make sure there are no endpoints anymore
+						endpoints, err = calicoClient.WorkloadEndpoints().List(ctx, options.ListOptions{})
+						Expect(err).ShouldNot(HaveOccurred())
+						Expect(endpoints.Items).Should(HaveLen(0))
+					}()
 				})
 			})
 		})

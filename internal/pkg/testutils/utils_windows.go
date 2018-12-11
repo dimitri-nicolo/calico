@@ -109,7 +109,7 @@ func CreateContainer(netconf, podName, podNamespace, ip, k8sNs string) (containe
 	result, contVeth, contAddr, contRoutes, err = RunCNIPluginWithId(netconf, podName, podNamespace, ip, containerID, "", k8sNs)
 	if err != nil {
 		fmt.Println("Error: ", err)
-		return "", nil, "", []string{}, []string{}, err
+		return containerID, nil, "", []string{}, []string{}, err
 	}
 	return
 }
@@ -127,7 +127,7 @@ func CreateContainerWithId(netconf, podName, podNamespace, ip, overrideContainer
 	result, contVeth, contAddr, contRoutes, err = RunCNIPluginWithId(netconf, podName, podNamespace, ip, containerID, "", k8sNs)
 	if err != nil {
 		fmt.Println("Error: ", err)
-		return "", nil, "", []string{}, []string{}, err
+		return containerID, nil, "", []string{}, []string{}, err
 	}
 	return
 }
