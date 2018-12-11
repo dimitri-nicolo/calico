@@ -22,6 +22,8 @@ toc:
       path: /getting-started/kubernetes/installation/other
     - title: Enabling application layer policy (optional)
       path: /getting-started/kubernetes/installation/app-layer-policy
+    - title: Enabling integration with AWS security groups (optional)
+      path: /getting-started/kubernetes/installation/aws-sg-integration
     - title: Customizing the Calico manifests (advanced)
       path: /getting-started/kubernetes/installation/config-options
     - title: Customizing the Tigera Secure EE manifests (advanced)

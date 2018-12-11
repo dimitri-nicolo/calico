@@ -201,6 +201,29 @@ We've provided info below on how to gather the above info in common Kubernetes e
     --from-literal=trust_sg=$TRUST_SG
     ```
 
+1. **Configure failsafes for Kubernetes API access.**
+
+   The `{{site.noderunning}}` DaemonSet should be updated to include the follow
+   environment variables and values:
+
+   | Variable Name | Value |
+   |---|---|
+   | `FELIX_FAILSAFEINBOUNDHOSTPORTS` | tcp:22,udp:68,tcp:179,tcp:443,tcp:5473,tcp:6443 |
+   | `FELIX_FAILSAFEOUTBOUNDHOSTPORTS` | udp:53,udp:67,tcp:179,tcp:443,tcp:5473,tcp:6443 |
+
+   Use one of the following approaches to add the above environment variables
+   to the `{{site.noderunning}}` DaemonSet's environment variables:
+   * Edit the manifest that was used to install {{site.noderunning}} then
+     reapply the manifest. After editing the file use something like the
+     following to reapply the manifest:
+     `kubectl apply -f <updated manifest>`
+   * Directly update the DaemonSet using the following command:
+     `kubectl -n kube-system edit daemonset calico-node`
+
+   > **Note:** See [Configuring Felix]({{site.url}}/{{page.version}}/reference/felix/configuration)
+   > for more information on the configuration options.
+   {: .alert .alert-info}
+
 1. **Restart the {{site.prodname}} components.**
 
    If your cluster does not have production workloads yet feel free to restart
@@ -209,10 +232,10 @@ We've provided info below on how to gather the above info in common Kubernetes e
    it becomes healthy before restarting the next.
    The components that need restarting are:
 
-   * {{site.noderunning}}
-   * calico-typha
-   * cnx-apiserver
-   * calicoq (if running as a pod)
+   * `calico-typha`
+   * `cnx-apiserver`
+   * `calicoq` (if running as a pod)
+   * `{{site.noderunning}}` (only needed if the previous step was skipped)
 
    > **Note**: Kubernetes does not support a rolling update without a change
    > to the DaemonSet. So to initiate a rolling update of the
