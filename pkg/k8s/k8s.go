@@ -72,7 +72,9 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 		} else if args.Netns != pauseContainerNetNS {
 			// When kubelet really wants to network the pod, it passes us the netns of the "pause" container, which
 			// is a static value.  The other requests come from checks on the other containers, which we ignore.
+			// Application containers should be networked with the pause container endpoint to reflect DNS details.
 			logger.Info("Non-pause container specified, doing a lookup-only request.")
+			err = utils.NetworkApplicationContainer(args)
 			lookupRequest = true
 		} else if endpoint != nil && len(endpoint.Spec.IPNetworks) > 0 {
 			// Defensive: datastore says the pod is already networked.  This check isn't sufficient on its own because
@@ -82,12 +84,16 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 		}
 
 		if lookupRequest {
-			result, err := utils.CreateResultFromEndpoint(endpoint)
 			if err == nil {
-				logger.WithField("result", result).Info("Status lookup result")
+				result, err = utils.CreateResultFromEndpoint(endpoint)
+				if err == nil {
+					logger.WithField("result", result).Info("Status lookup result")
+				} else {
+					// For example, endpoint not found (which is expected if we're racing with a CNI DEL).
+					logger.WithError(err).Warn("Failed to look up pod status")
+				}
 			} else {
-				// For example, endpoint not found (which is expected if we're racing with a CNI DEL).
-				logger.WithError(err).Warn("Failed to look up pod status")
+				logger.WithError(err).Warn("Failed to network container with pause container endpoint.")
 			}
 			return result, err
 		}

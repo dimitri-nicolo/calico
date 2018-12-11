@@ -520,3 +520,24 @@ func CleanUpNamespace(args *skel.CmdArgs, logger *logrus.Entry) error {
 	}
 	return err
 }
+
+// NetworkApplicationContainer takes the endpoint and returns the hnsendpoint corresponding to the workload endpoint.
+// This is done so that the DNS details are reflected in the container.
+func NetworkApplicationContainer(args *skel.CmdArgs) error {
+
+	n, _, err := loadNetConf(args.StdinData)
+	hnsEndpointName := hns.ConstructEndpointName(args.ContainerID, args.Netns, n.Name)
+
+	hnsEndpoint, err := hcsshim.GetHNSEndpointByName(hnsEndpointName)
+	if err != nil {
+		logrus.Errorf("Endpoint does not exist with hns endpoint name: %v\n ", hnsEndpointName)
+		return err
+	}
+
+	if err = hcsshim.HotAttachEndpoint(args.ContainerID, hnsEndpoint.Id); err != nil {
+		logrus.Errorf("Failed to attach hns endpoint: %s to container: %v\n ", hnsEndpoint, args.ContainerID)
+		return err
+	}
+
+	return nil
+}

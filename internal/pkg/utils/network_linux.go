@@ -469,3 +469,8 @@ func CleanUpNamespace(args *skel.CmdArgs, logger *logrus.Entry) error {
 
 	return nil
 }
+
+// This is a dummy function required for Windows
+func NetworkApplicationContainer(args *skel.CmdArgs) error {
+	return nil
+}
