@@ -10,7 +10,7 @@ import (
 	"os/exec"
 
 	rest "k8s.io/client-go/rest"
-        //. "github.com/onsi/gomega"
+	//. "github.com/onsi/gomega"
 
 	"github.com/Microsoft/hcsshim"
 	"github.com/containernetworking/cni/pkg/invoke"
@@ -34,43 +34,23 @@ import (
 const K8S_NONE_NS = "none"
 
 func SetCertFilePath(config *rest.Config) *rest.Config {
-	log.WithField("config:", config).Info("AKHILESH")
 	config.TLSClientConfig.CertFile = os.Getenv("CERT_DIR") + "\\client.crt"
 	config.TLSClientConfig.KeyFile = os.Getenv("CERT_DIR") + "\\client.key"
 	config.TLSClientConfig.CAFile = os.Getenv("CERT_DIR") + "\\ca.crt"
-	log.WithField("config:", config).Info("AKHILESH")
 	return config
 }
 
-func CreateContainerUsingDocker() (string, error) {
-	cmd := exec.Command("powershell.exe", "docker run --net none -d -i microsoft/powershell:nanoserver pwsh")
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		log.Fatal(err)
-		return "", err
-	}
-
-	temp := out[:len(out)-1]
-	fmt.Printf("container ID:\n%s\n", string(temp))
-	return string(temp), nil
-}
-
 func CreateWindowsContainer() (string, error) {
-	fmt.Printf("\nEntered func")
 	ctx := context.Background()
 	cli, err := dockerclient.NewEnvClient()
 	if err != nil {
-		fmt.Printf("\nError creating client")
 		return "", err
 	}
-	fmt.Printf("\nClient created")
 
 	_, err = cli.ImagePull(ctx, "microsoft/powershell:nanoserver", dockertypes.ImagePullOptions{})
 	if err != nil {
-		fmt.Printf("\nError pulling image")
 		return "", err
 	}
-	fmt.Printf("\nImage pulled")
 
 	resp, err := cli.ContainerCreate(ctx, &container.Config{
 		Image:           "microsoft/powershell:nanoserver",
@@ -79,25 +59,19 @@ func CreateWindowsContainer() (string, error) {
 		//StopTimeout: &timeout,
 	}, nil, nil, "")
 	if err != nil {
-		fmt.Printf("\nError creating container")
 		return "", err
 	}
-	fmt.Printf("\nContainer created")
 
 	if err := cli.ContainerStart(ctx, resp.ID, dockertypes.ContainerStartOptions{}); err != nil {
-		fmt.Printf("\nError starting container")
 		return "", err
 	}
-	fmt.Printf("\nContainer started")
 
 	out, err := cli.ContainerLogs(ctx, resp.ID, dockertypes.ContainerLogsOptions{ShowStdout: true})
 	if err != nil {
-		fmt.Printf("\nError getting logs")
 		return "", err
 	}
 
 	stdcopy.StdCopy(os.Stdout, os.Stderr, out)
-	fmt.Printf("\nExiting func")
 	return resp.ID, nil
 }
 
@@ -108,7 +82,6 @@ func CreateContainer(netconf, podName, podNamespace, ip, k8sNs string) (containe
 	}
 	result, contVeth, contAddr, contRoutes, err = RunCNIPluginWithId(netconf, podName, podNamespace, ip, containerID, "", k8sNs)
 	if err != nil {
-		fmt.Println("Error: ", err)
 		return containerID, nil, "", []string{}, []string{}, err
 	}
 	return
@@ -123,10 +96,9 @@ func CreateContainerWithId(netconf, podName, podNamespace, ip, overrideContainer
 		return "", nil, "", []string{}, []string{}, err
 	}
 
-	log.WithField("containerID", containerID).Info("calling  RunCNIPluginWithId with:")
 	result, contVeth, contAddr, contRoutes, err = RunCNIPluginWithId(netconf, podName, podNamespace, ip, containerID, "", k8sNs)
 	if err != nil {
-		fmt.Println("Error: ", err)
+		log.Errorf("Error: ", err)
 		return containerID, nil, "", []string{}, []string{}, err
 	}
 	return
@@ -150,7 +122,6 @@ func RunCNIPluginWithId(
 	contRoutes []string,
 	err error,
 ) {
-	log.Infof("Inside RunCNIPluginWithId")
 	// Set up the env for running the CNI plugin
 	k8sEnv := ""
 	if podName != "" {
@@ -175,19 +146,15 @@ func RunCNIPluginWithId(
 		fmt.Sprintf("CNI_NETNS=%s", podNamespace),
 		k8sEnv,
 	}...)
-	log.WithField("env", env).Info("AKHILESH")
 	args := &cniArgs{env}
-	log.WithField("args", args).Info("AKHILESH")
 
 	// Invoke the CNI plugin, returning any errors to the calling code to handle.
-	log.Debugf("Calling CNI plugin with the following env vars: %v", env)
 	var r types.Result
 	pluginPath := fmt.Sprintf("%s\\%s", os.Getenv("BIN"), os.Getenv("PLUGIN"))
-	//pluginPath := fmt.Sprintf("%s\\%s", "C:\\k", "calico")
 	log.Debugf("pluginPath: %v", pluginPath)
 	r, err = invoke.ExecPluginWithResult(pluginPath, []byte(netconf), args, nil)
 	if err != nil {
-		log.Errorf("invoke.ExecPluginWithResult %v", err)
+		log.Errorf("error from invoke.ExecPluginWithResult %v", err)
 		return
 	}
 
@@ -197,7 +164,6 @@ func RunCNIPluginWithId(
 		log.Errorf("unmarshal err: ", err)
 		panic(err)
 	}
-	log.Infof("compare CNI VERSION")
 	// Parse the result as the target CNI version.
 	if version.Compare(nc.CNIVersion, "0.3.0", "<") {
 		// Special case for older CNI verisons.
@@ -290,7 +256,7 @@ func DeleteContainerWithIdAndIfaceName(netconf, podName, podNamespace, container
 	exitCode = session.ExitCode()
 	//now delete the container
 	if containerId != "" {
-		log.Infof("\ncalling DeleteWindowsContainer ")
+		log.Debugf("\n calling DeleteWindowsContainer with ContainerID %v", containerId)
 		err = DeleteWindowsContainer(containerId)
 		if err != nil {
 			log.Errorf("Error deleting container %s", containerId)
@@ -303,12 +269,8 @@ func DeleteWindowsContainer(containerId string) error {
 	ctx := context.Background()
 	cli, err := dockerclient.NewEnvClient()
 	if err != nil {
-		log.Infof("\nError creating client")
 		return err
 	}
-	log.Infof("\nClient created")
-
-	log.Infof("\ncontainer : %s", containerId)
 	err = cli.ContainerStop(ctx, containerId, nil)
 	if err != nil {
 		log.Errorf("Error stopping container %s: %v", containerId, err)
@@ -323,7 +285,6 @@ func DeleteWindowsContainer(containerId string) error {
 		log.Errorf("Error removing container %s: %v", containerId, err)
 		return err
 	}
-	log.Infof("delete successful")
 	return nil
 }
 
