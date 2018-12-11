@@ -34,7 +34,7 @@ type FlowLogJSONOutput struct {
 	DestIP          *string                  `json:"dest_ip"`
 	DestName        string                   `json:"dest_name"`
 	DestNamespace   string                   `json:"dest_namespace"`
-	DestPort        int64                    `json:"dest_port"`
+	DestPort        *int64                   `json:"dest_port"`
 	DestType        string                   `json:"dest_type"`
 	DestLabels      *FlowLogLabelsJSONOutput `json:"dest_labels"`
 	Proto           string                   `json:"proto"`
@@ -74,7 +74,9 @@ func toOutput(l *FlowLog) FlowLogJSONOutput {
 		s := ip.String()
 		out.SourceIP = &s
 	}
-	if l.Tuple.l4Src != unsetIntField {
+	if l.Tuple.proto == 1 || l.Tuple.l4Src == unsetIntField {
+		out.SourcePort = nil
+	} else {
 		t := int64(l.Tuple.l4Src)
 		out.SourcePort = &t
 	}
@@ -94,8 +96,11 @@ func toOutput(l *FlowLog) FlowLogJSONOutput {
 		s := ip.String()
 		out.DestIP = &s
 	}
-	if l.Tuple.l4Dst != unsetIntField {
-		out.DestPort = int64(l.Tuple.l4Dst)
+	if l.Tuple.proto == 1 || l.Tuple.l4Dst == unsetIntField {
+		out.DestPort = nil
+	} else {
+		t := int64(l.Tuple.l4Dst)
+		out.DestPort = &t
 	}
 	out.DestName = l.DstMeta.Name
 	out.DestNamespace = l.DstMeta.Namespace
@@ -168,11 +173,14 @@ func (o FlowLogJSONOutput) ToFlowLog() (FlowLog, error) {
 		dip = ipStrTo16Byte(*o.DestIP)
 	}
 	p := stringToProto(o.Proto)
-	var sPort int
+	var sPort, dPort int
 	if o.SourcePort != nil {
 		sPort = int(*o.SourcePort)
 	}
-	fl.Tuple = *NewTuple(sip, dip, p, sPort, int(o.DestPort))
+	if o.DestPort != nil {
+		dPort = int(*o.DestPort)
+	}
+	fl.Tuple = *NewTuple(sip, dip, p, sPort, dPort)
 
 	var srcType, dstType FlowLogEndpointType
 	switch o.SourceType {
