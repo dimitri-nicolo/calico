@@ -521,7 +521,8 @@ func CleanUpNamespace(args *skel.CmdArgs, logger *logrus.Entry) error {
 	return err
 }
 
-// NetworkApplicationContainer takes the endpoint and returns the hnsendpoint corresponding to the workload endpoint.
+// NetworkApplicationContainer tries to attach the application container to the endpoint that is attached to its pause container.
+// On failure, it returns the error.
 // This is done so that the DNS details are reflected in the container.
 func NetworkApplicationContainer(args *skel.CmdArgs) error {
 
