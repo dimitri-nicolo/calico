@@ -727,7 +727,7 @@ master:
     tiny-tools:
       version: 0.3.0
       url: ""
-    cnx-cloud-controller:
+    cloud-controllers:
       version: master
     intrusion-detection-job-installer:
       version: master

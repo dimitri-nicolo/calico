@@ -79,7 +79,7 @@ We've provided info below on how to gather the above info in common Kubernetes e
 
 #### Procedure
 
-1.  **Install AWS per-account resources.**
+1.  Install AWS per-account resources.
 
     The per-account resources must be applied once per AWS account. Use the
     following command to see if `tigera-cloudtrail` has already been applied:
@@ -100,7 +100,7 @@ We've provided info below on how to gather the above info in common Kubernetes e
     aws cloudformation wait stack-create-complete --stack-name tigera-cloudtrail
     ```
 
-1.  **Install AWS per-VPC resources.**
+1.  Install AWS per-VPC resources.
 
     The per-VPC CloudFormation must be created once on a VPC that contains (or will contain) clusters.
     Run the following command to see if this VPC has had the per-VPC stack applied:
@@ -122,7 +122,7 @@ We've provided info below on how to gather the above info in common Kubernetes e
     aws cloudformation wait stack-create-complete --stack-name tigera-vpc-$VPC_ID
     ```
 
-1.  **Install AWS per-cluster resources.**
+1.  Install AWS per-cluster resources.
 
     ```bash
     aws cloudformation create-stack \
@@ -136,7 +136,7 @@ We've provided info below on how to gather the above info in common Kubernetes e
     aws cloudformation wait stack-create-complete --stack-name tigera-cluster-$CLUSTER_NAME
     ```
 
-1.  **Add the controller IAM user secrets in Kubernetes.**
+1.  Add the controller IAM user secrets in Kubernetes.
 
     ```bash
     # First, get the name of the created IAM user, which is an output field in your Cluster CF stack
@@ -162,7 +162,7 @@ We've provided info below on how to gather the above info in common Kubernetes e
     rm -f controller-secrets.txt
     ```
 
-1.  **Configure AWS Security Group Integration.**
+1.  Configure AWS Security Group Integration.
 
     ```bash
     # Get the SQS URL
@@ -201,7 +201,7 @@ We've provided info below on how to gather the above info in common Kubernetes e
     --from-literal=trust_sg=$TRUST_SG
     ```
 
-1. **Configure failsafes for Kubernetes API access.**
+1. Configure failsafes for Kubernetes API access.
 
    The `{{site.noderunning}}` DaemonSet should be updated to include the follow
    environment variables and values:
@@ -224,7 +224,7 @@ We've provided info below on how to gather the above info in common Kubernetes e
    > for more information on the configuration options.
    {: .alert .alert-info}
 
-1. **Restart the {{site.prodname}} components.**
+1. Restart the {{site.prodname}} components.
 
    If your cluster does not have production workloads yet feel free to restart
    all the components without concern. If your cluster has production workloads
@@ -244,9 +244,18 @@ We've provided info below on how to gather the above info in common Kubernetes e
    > ```kubectl patch -n kube-system daemonset calico-node -p "{\"spec\":{\"template\":{\"metadata\":{\"annotations\":{\"restart_annotation\":\"`date +'%s'`\"}}}}}"```
    {: .alert .alert-info}
 
-1.  **Install Kubernetes components.**
+1.  Download the Cloud Controller manifest.
 
     ```bash
-    kubectl apply -f {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/manifests/aws-sg-integration/cloud-controller.yaml
+    curl \
+    {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/manifests/aws-sg-integration/cloud-controller.yaml
+    -O
     ```
 
+{% include {{page.version}}/cnx-cred-sed.md yaml="calico" %}
+
+1. Apply the manifest using the following command.
+
+   ```bash
+   kubectl apply -f cloud-controller.yaml
+   ```
