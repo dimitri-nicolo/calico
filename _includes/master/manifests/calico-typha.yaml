@@ -145,6 +145,20 @@ spec:
 {%- endif %}
           - name: TYPHA_HEALTHENABLED
             value: "true"
+          # Sets Default Security Groups if tigera-aws-config exists
+          - name: TIGERA_DEFAULT_SECURITY_GROUPS
+            valueFrom:
+              configMapKeyRef:
+                name: tigera-aws-config
+                key: default_sgs
+                optional: true
+          # Sets Pod Security Group if tigera-aws-config exists
+          - name: TIGERA_POD_SECURITY_GROUP
+            valueFrom:
+              configMapKeyRef:
+                name: tigera-aws-config
+                key: pod_sg
+                optional: true
           # Uncomment these lines to enable prometheus metrics.  Since Typha is host-networked,
           # this opens a port on the host, which may need to be secured.
           #- name: TYPHA_PROMETHEUSMETRICSENABLED
