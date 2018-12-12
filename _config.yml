@@ -41,7 +41,7 @@ imageNames:
   flexvol: quay.io/calico/pod2daemon-flexvol
   fluentd: tigera/fluentd
   es-proxy: tigera/es-proxy
-  cloudController: tigera/cloud-controller
+  cloudControllers: tigera/cloud-controllers
   intrusion-detection-job-installer: tigera/intrusion-detection-job-installer
 
 # List of files to exclude. These files won't get included in the deployed site.

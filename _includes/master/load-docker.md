@@ -51,6 +51,7 @@
    docker pull {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["es-proxy"]}}:{{site.data.versions[page.version].first.components["es-proxy"].version}}
    docker pull {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["fluentd"]}}:{{site.data.versions[page.version].first.components["fluentd"].version}}
    docker pull {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["kubeControllers"]}}:{{site.data.versions[page.version].first.components["cnx-kube-controllers"].version}}
+   docker pull {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["cloudControllers"]}}:{{site.data.versions[page.version].first.components["cloud-controllers"].version}}
    docker pull {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["typha"]}}:{{site.data.versions[page.version].first.components["typha"].version}}
    docker pull quay.io/coreos/configmap-reload:{{site.data.versions[page.version].first.components["configmap-reload"].version}}
    docker pull quay.io/coreos/prometheus-config-reloader:{{site.data.versions[page.version].first.components["prometheus-config-reloader"].version}}
@@ -76,6 +77,7 @@
    docker tag {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["es-proxy"]}}:{{site.data.versions[page.version].first.components["cnx-queryserver"].version}} <YOUR-REGISTRY>/{{site.imageNames["es-proxy"]}}:{{site.data.versions[page.version].first.components["es-proxy"].version}}
    docker tag {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["fluentd"]}}:{{site.data.versions[page.version].first.components["fluentd"].version}} <YOUR-REGISTRY>/{{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["fluentd"]}}:{{site.data.versions[page.version].first.components["fluentd"].version}}
    docker tag {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["kubeControllers"]}}:{{site.data.versions[page.version].first.components["cnx-kube-controllers"].version}} <YOUR-REGISTRY>/{{site.imageNames["kubeControllers"]}}:{{site.data.versions[page.version].first.components["cnx-kube-controllers"].version}}
+   docker tag {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["cloudControllers"]}}:{{site.data.versions[page.version].first.components["cloud-controllers"].version}} <YOUR-REGISTRY>/{{site.imageNames["cloudControllers"]}}:{{site.data.versions[page.version].first.components["cloud-controllers"].version}}
    docker tag {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["typha"]}}:{{site.data.versions[page.version].first.components["typha"].version}} <YOUR-REGISTRY>/{{site.imageNames["typha"]}}:{{site.data.versions[page.version].first.components["typha"].version}}
    docker tag quay.io/coreos/configmap-reload:{{site.data.versions[page.version].first.components["configmap-reload"].version}} <YOUR-REGISTRY>/coreos/configmap-reload:{{site.data.versions[page.version].first.components["configmap-reload"].version}}
    docker tag quay.io/coreos/prometheus-config-reloader:{{site.data.versions[page.version].first.components["prometheus-config-reloader"].version}} <YOUR-REGISTRY>/coreos/prometheus-config-reloader:{{site.data.versions[page.version].first.components["prometheus-config-reloader"].version}}
@@ -104,6 +106,7 @@
    docker push <YOUR-REGISTRY>/{{site.imageNames["es-proxy"]}}:{{site.data.versions[page.version].first.components["es-proxy"].version}}
    docker push <YOUR-REGISTRY>/{{site.imageNames["fluentd"]}}:{{site.data.versions[page.version].first.components["fluentd"].version}}
    docker push <YOUR-REGISTRY>/tigera/kube-controllers:{{site.data.versions[page.version].first.components["cnx-kube-controllers"].version}}
+   docker push <YOUR-REGISTRY>/tigera/cloud-controllers:{{site.data.versions[page.version].first.components["cloud-controllers"].version}}
    docker push <YOUR-REGISTRY>/tigera/typha:{{site.data.versions[page.version].first.components["typha"].version}}
    docker push <YOUR-REGISTRY>/coreos/configmap-reload:{{site.data.versions[page.version].first.components["configmap-reload"].version}}
    docker push <YOUR-REGISTRY>/coreos/prometheus-config-reloader:{{site.data.versions[page.version].first.components["prometheus-config-reloader"].version}}
