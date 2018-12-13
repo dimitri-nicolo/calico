@@ -10,7 +10,6 @@ import (
 	"os/exec"
 
 	rest "k8s.io/client-go/rest"
-	//. "github.com/onsi/gomega"
 
 	"github.com/Microsoft/hcsshim"
 	"github.com/containernetworking/cni/pkg/invoke"
@@ -23,7 +22,6 @@ import (
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/mcuadros/go-version"
-	//"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega/gexec"
 	"github.com/projectcalico/cni-plugin/internal/pkg/utils"
 	plugintypes "github.com/projectcalico/cni-plugin/pkg/types"
@@ -56,7 +54,6 @@ func CreateWindowsContainer() (string, error) {
 		Image:           "microsoft/powershell:nanoserver",
 		Cmd:             []string{"pwsh.exe", "while(1){}"},
 		NetworkDisabled: true,
-		//StopTimeout: &timeout,
 	}, nil, nil, "")
 	if err != nil {
 		return "", err
@@ -114,7 +111,6 @@ func RunCNIPluginWithId(
 	containerId,
 	ifName,
 	k8sNs string,
-	//targetNs ns.NetNS,
 ) (
 	result *current.Result,
 	contVeth string,
@@ -172,7 +168,7 @@ func RunCNIPluginWithId(
 		log.Infof("CNI output: %s", out)
 		r020 := types020.Result{}
 		if err = json.Unmarshal(out, &r020); err != nil {
-			log.Errorf("Error unmarshaling output to Result: %v\n", err)
+			log.Errorf("Error unmarshaling output to Result: %v", err)
 			return
 		}
 
@@ -198,7 +194,6 @@ func DeleteContainer(netconf, podName, podNamespace, k8sNs string) (exitCode int
 
 //func DeleteContainerWithId(netconf, netnspath, podName, podNamespace, containerId string) (exitCode int, err error) {
 func DeleteContainerWithId(netconf, podName, podNamespace, containerId, k8sNs string) (exitCode int, err error) {
-	//return DeleteContainerWithIdAndIfaceName(netconf, netnspath, podName, podNamespace, containerId, "eth0")
 	return DeleteContainerWithIdAndIfaceName(netconf, podName, podNamespace, containerId, "eth0", k8sNs)
 }
 
@@ -221,6 +216,14 @@ func DeleteContainerWithIdAndIfaceName(netconf, podName, podNamespace, container
 	}...)
 
 	log.Infof("Deleting container with ID %v CNI plugin with the following env vars: %v", containerId, env)
+	//now delete the container
+	if containerId != "" {
+		log.Debugf(" calling DeleteWindowsContainer with ContainerID %v", containerId)
+		err = DeleteWindowsContainer(containerId)
+		if err != nil {
+			log.Errorf("Error deleting container %s", containerId)
+		}
+	}
 
 	// Run the CNI plugin passing in the supplied netconf
 	subProcess := exec.Command(fmt.Sprintf("%s\\%s", os.Getenv("BIN"), os.Getenv("PLUGIN")), netconf)
@@ -234,7 +237,7 @@ func DeleteContainerWithIdAndIfaceName(netconf, podName, podNamespace, container
 	if err != nil {
 		return 1, err
 	}
-	_, err = io.WriteString(stdin, "\n")
+	_, err = io.WriteString(stdin, "")
 	if err != nil {
 		return 1, err
 	}
@@ -244,24 +247,14 @@ func DeleteContainerWithIdAndIfaceName(netconf, podName, podNamespace, container
 		return 1, err
 	}
 
-	//session, err := gexec.Start(subProcess, ginkgo.GinkgoWriter, ginkgo.GinkgoWriter)
 	session, err := gexec.Start(subProcess, os.Stdout, os.Stderr)
 	if err != nil {
 		return
 	}
 
-	// Call the plugin. Will force a test failure if it hangs longer than 10s.
+	// Call the plugin. Will force a test failure if it hangs longer than 30s.
 	session.Wait(30)
-	//Expect(session).Should(gexec.Exit())
 	exitCode = session.ExitCode()
-	//now delete the container
-	if containerId != "" {
-		log.Debugf("\n calling DeleteWindowsContainer with ContainerID %v", containerId)
-		err = DeleteWindowsContainer(containerId)
-		if err != nil {
-			log.Errorf("Error deleting container %s", containerId)
-		}
-	}
 	return
 }
 
@@ -334,7 +327,7 @@ func NetworkPod(
 	return err
 }
 
-func CheckNetwork(netconf string) (*hcsshim.HNSNetwork, error) {
+func CreateNetwork(netconf string) (*hcsshim.HNSNetwork, error) {
 	var conf plugintypes.NetConf
 	if err := json.Unmarshal([]byte(netconf), &conf); err != nil {
 		log.Errorf("unmarshal err: ", err)
@@ -367,7 +360,7 @@ func CheckNetwork(netconf string) (*hcsshim.HNSNetwork, error) {
 	return hnsNetwork, nil
 }
 
-func CheckEndpoint(hnsNetwork *hcsshim.HNSNetwork, netconf string) (*hcsshim.HNSEndpoint, error) {
+func CreateEndpoint(hnsNetwork *hcsshim.HNSNetwork, netconf string) (*hcsshim.HNSEndpoint, error) {
 	var conf plugintypes.NetConf
 	if err := json.Unmarshal([]byte(netconf), &conf); err != nil {
 		log.Errorf("unmarshal err: ", err)
