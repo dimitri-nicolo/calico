@@ -27,12 +27,14 @@ type FlowLogJSONOutput struct {
 	// Having such values as pointers ensures that json marshalling will render it as such.
 	SourceIP        *string                  `json:"source_ip"`
 	SourceName      string                   `json:"source_name"`
+	SourceNameAggr  string                   `json:"source_name_aggr"`
 	SourceNamespace string                   `json:"source_namespace"`
 	SourcePort      *int64                   `json:"source_port"`
 	SourceType      string                   `json:"source_type"`
 	SourceLabels    *FlowLogLabelsJSONOutput `json:"source_labels"`
 	DestIP          *string                  `json:"dest_ip"`
 	DestName        string                   `json:"dest_name"`
+	DestNameAggr    string                   `json:"dest_name_aggr"`
 	DestNamespace   string                   `json:"dest_namespace"`
 	DestPort        *int64                   `json:"dest_port"`
 	DestType        string                   `json:"dest_type"`
@@ -81,6 +83,7 @@ func toOutput(l *FlowLog) FlowLogJSONOutput {
 		out.SourcePort = &t
 	}
 	out.SourceName = l.SrcMeta.Name
+	out.SourceNameAggr = l.SrcMeta.AggregatedName
 	out.SourceNamespace = l.SrcMeta.Namespace
 	out.SourceType = string(l.SrcMeta.Type)
 	if l.SrcLabels == nil {
@@ -103,6 +106,7 @@ func toOutput(l *FlowLog) FlowLogJSONOutput {
 		out.DestPort = &t
 	}
 	out.DestName = l.DstMeta.Name
+	out.DestNameAggr = l.DstMeta.AggregatedName
 	out.DestNamespace = l.DstMeta.Namespace
 	out.DestType = string(l.DstMeta.Type)
 	if l.DstLabels == nil {
@@ -195,9 +199,10 @@ func (o FlowLogJSONOutput) ToFlowLog() (FlowLog, error) {
 	}
 
 	fl.SrcMeta = EndpointMetadata{
-		Type:      srcType,
-		Namespace: o.SourceNamespace,
-		Name:      o.SourceName,
+		Type:           srcType,
+		Namespace:      o.SourceNamespace,
+		Name:           o.SourceName,
+		AggregatedName: o.SourceNameAggr,
 	}
 	if o.SourceLabels == nil {
 		fl.SrcLabels = nil
@@ -217,9 +222,10 @@ func (o FlowLogJSONOutput) ToFlowLog() (FlowLog, error) {
 	}
 
 	fl.DstMeta = EndpointMetadata{
-		Type:      dstType,
-		Namespace: o.DestNamespace,
-		Name:      o.DestName,
+		Type:           dstType,
+		Namespace:      o.DestNamespace,
+		Name:           o.DestName,
+		AggregatedName: o.DestNameAggr,
 	}
 	if o.DestLabels == nil {
 		fl.DstLabels = nil

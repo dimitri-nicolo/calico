@@ -27,8 +27,8 @@ var (
 )
 
 var (
-	pvtMeta = EndpointMetadata{Type: FlowLogEndpointTypeNet, Namespace: "-", Name: "pvt"}
-	pubMeta = EndpointMetadata{Type: FlowLogEndpointTypeNet, Namespace: "-", Name: "pub"}
+	pvtMeta = EndpointMetadata{Type: FlowLogEndpointTypeNet, Namespace: "-", Name: "-", AggregatedName: "pvt"}
+	pubMeta = EndpointMetadata{Type: FlowLogEndpointTypeNet, Namespace: "-", Name: "-", AggregatedName: "pub"}
 )
 
 const CWDispatcher = "cloudwatch"
@@ -287,8 +287,8 @@ var _ = Describe("FlowLog Reporter verification", func() {
 			expectedNumFlowsStarted := 1
 			expectedNumFlowsCompleted := 0
 			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut := calculatePacketStats(muConn1Rule1AllowUpdateCopy)
-			expectedSrcMeta := EndpointMetadata{Type: FlowLogEndpointTypeHep, Namespace: "-", Name: "eth1"}
-			expectedDstMeta := EndpointMetadata{Type: FlowLogEndpointTypeHep, Namespace: "-", Name: "eth1"}
+			expectedSrcMeta := EndpointMetadata{Type: FlowLogEndpointTypeHep, Namespace: "-", Name: "eth1", AggregatedName: "localhost"}
+			expectedDstMeta := EndpointMetadata{Type: FlowLogEndpointTypeHep, Namespace: "-", Name: "eth1", AggregatedName: "remotehost"}
 			expectedFP := extractFlowPolicies(muConn1Rule1AllowUpdateCopy)
 			expectFlowLogsInEventStream(newExpectedFlowLog(tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogReporterDst,
 				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, expectedSrcMeta, expectedDstMeta, nil, nil, expectedFP))

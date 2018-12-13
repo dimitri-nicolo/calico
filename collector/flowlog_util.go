@@ -103,23 +103,33 @@ func getFlowLogEndpointMetadata(ed *calc.EndpointData) (EndpointMetadata, error)
 		if err != nil {
 			return EndpointMetadata{}, err
 		}
+		v := ed.Endpoint.(*model.WorkloadEndpoint)
+		var aggName string
+		if v.GenerateName != "" {
+			aggName = fmt.Sprintf("%s*", v.GenerateName)
+		} else {
+			aggName = name
+		}
 		em = EndpointMetadata{
-			Type:      FlowLogEndpointTypeWep,
-			Name:      name,
-			Namespace: ns,
+			Type:           FlowLogEndpointTypeWep,
+			Name:           name,
+			AggregatedName: aggName,
+			Namespace:      ns,
 		}
 	case model.HostEndpointKey:
 		em = EndpointMetadata{
-			Type:      FlowLogEndpointTypeHep,
-			Name:      k.EndpointID,
-			Namespace: flowLogNamespaceGlobal,
+			Type:           FlowLogEndpointTypeHep,
+			Name:           k.EndpointID,
+			AggregatedName: k.Hostname,
+			Namespace:      flowLogNamespaceGlobal,
 		}
 	case model.NetworkSetKey:
 		// No Endpoint was found so instead, a NetworkSet was returned.
 		em = EndpointMetadata{
-			Type:      FlowLogEndpointTypeNs,
-			Namespace: flowLogFieldNotIncluded,
-			Name:      k.Name,
+			Type:           FlowLogEndpointTypeNs,
+			Namespace:      flowLogFieldNotIncluded,
+			AggregatedName: k.Name,
+			Name:           k.Name,
 		}
 	default:
 		return EndpointMetadata{}, fmt.Errorf("Unknown key %#v of type %v", ed.Key, reflect.TypeOf(ed.Key))

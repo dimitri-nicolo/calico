@@ -21,9 +21,10 @@ type FlowLogReporter string
 type FlowLogSubnetType string
 
 type EndpointMetadata struct {
-	Type      FlowLogEndpointType `json:"type"`
-	Namespace string              `json:"namespace"`
-	Name      string              `json:"name"`
+	Type           FlowLogEndpointType `json:"type"`
+	Namespace      string              `json:"namespace"`
+	Name           string              `json:"name"`
+	AggregatedName string              `json:"aggregated_name"`
 }
 
 type FlowMeta struct {
@@ -52,8 +53,9 @@ func newFlowMeta(mu MetricUpdate) (FlowMeta, error) {
 		}
 	} else {
 		srcMeta = EndpointMetadata{Type: FlowLogEndpointTypeNet,
-			Namespace: flowLogFieldNotIncluded,
-			Name:      string(getSubnetType(mu.tuple.src)),
+			Namespace:      flowLogFieldNotIncluded,
+			Name:           flowLogFieldNotIncluded,
+			AggregatedName: string(getSubnetType(mu.tuple.src)),
 		}
 	}
 	if mu.dstEp != nil {
@@ -63,8 +65,9 @@ func newFlowMeta(mu MetricUpdate) (FlowMeta, error) {
 		}
 	} else {
 		dstMeta = EndpointMetadata{Type: FlowLogEndpointTypeNet,
-			Namespace: flowLogFieldNotIncluded,
-			Name:      string(getSubnetType(mu.tuple.dst)),
+			Namespace:      flowLogFieldNotIncluded,
+			Name:           flowLogFieldNotIncluded,
+			AggregatedName: string(getSubnetType(mu.tuple.dst)),
 		}
 	}
 
@@ -103,19 +106,8 @@ func newFlowMetaWithPrefixNameAggregation(mu MetricUpdate) (FlowMeta, error) {
 	f.Tuple.src = [16]byte{}
 	f.Tuple.l4Src = unsetIntField
 	f.Tuple.dst = [16]byte{}
-
-	if mu.srcEp != nil {
-		prefixName := getEndpointNamePrefix(mu.srcEp)
-		if prefixName != "" {
-			f.SrcMeta.Name = prefixName + "*"
-		}
-	}
-	if mu.dstEp != nil {
-		prefixName := getEndpointNamePrefix(mu.dstEp)
-		if prefixName != "" {
-			f.DstMeta.Name = prefixName + "*"
-		}
-	}
+	f.SrcMeta.Name = flowLogFieldNotIncluded
+	f.DstMeta.Name = flowLogFieldNotIncluded
 
 	return f, nil
 }
@@ -376,7 +368,7 @@ func (f *FlowLog) Deserialize(fl string) error {
 	// Format is
 	// startTime endTime srcType srcNamespace srcName srcLabels dstType dstNamespace dstName dstLabels srcIP dstIP proto srcPort dstPort numFlows numFlowsStarted numFlowsCompleted flowReporter packetsIn packetsOut bytesIn bytesOut action policies
 	// Sample entry with no aggregation and no labels.
-	// 1529529591 1529529892 wep policy-demo nginx-7d98456675-2mcs4 - wep kube-system kube-dns-7cc87d595-pxvxb - 192.168.224.225 192.168.135.53 17 36486 53 1 1 1 in 1 1 73 119 allow ["0|tier|namespace/tier.policy|allow"]
+	// 1529529591 1529529892 wep policy-demo nginx-7d98456675-2mcs4 nginx-7d98456675-* - wep kube-system kube-dns-7cc87d595-pxvxb kube-dns-7cc87d595-* - 192.168.224.225 192.168.135.53 17 36486 53 1 1 1 in 1 1 73 119 allow ["0|tier|namespace/tier.policy|allow"]
 
 	var (
 		srcType, dstType FlowLogEndpointType
@@ -399,13 +391,14 @@ func (f *FlowLog) Deserialize(fl string) error {
 	}
 
 	f.SrcMeta = EndpointMetadata{
-		Type:      srcType,
-		Namespace: parts[3],
-		Name:      parts[4],
+		Type:           srcType,
+		Namespace:      parts[3],
+		Name:           parts[4],
+		AggregatedName: parts[5],
 	}
-	f.SrcLabels = stringToLabels(parts[5])
+	f.SrcLabels = stringToLabels(parts[6])
 
-	switch parts[6] {
+	switch parts[7] {
 	case "wep":
 		dstType = FlowLogEndpointTypeWep
 	case "hep":
@@ -417,41 +410,42 @@ func (f *FlowLog) Deserialize(fl string) error {
 	}
 
 	f.DstMeta = EndpointMetadata{
-		Type:      dstType,
-		Namespace: parts[7],
-		Name:      parts[8],
+		Type:           dstType,
+		Namespace:      parts[8],
+		Name:           parts[9],
+		AggregatedName: parts[10],
 	}
-	f.DstLabels = stringToLabels(parts[9])
+	f.DstLabels = stringToLabels(parts[11])
 
 	var sip, dip [16]byte
-	if parts[10] != "-" {
-		sip = ipStrTo16Byte(parts[10])
+	if parts[12] != "-" {
+		sip = ipStrTo16Byte(parts[12])
 	}
-	if parts[11] != "-" {
-		dip = ipStrTo16Byte(parts[11])
+	if parts[13] != "-" {
+		dip = ipStrTo16Byte(parts[13])
 	}
-	p, _ := strconv.Atoi(parts[12])
-	sp, _ := strconv.Atoi(parts[13])
-	dp, _ := strconv.Atoi(parts[14])
+	p, _ := strconv.Atoi(parts[14])
+	sp, _ := strconv.Atoi(parts[15])
+	dp, _ := strconv.Atoi(parts[16])
 	f.Tuple = *NewTuple(sip, dip, p, sp, dp)
 
-	f.NumFlows, _ = strconv.Atoi(parts[15])
-	f.NumFlowsStarted, _ = strconv.Atoi(parts[16])
-	f.NumFlowsCompleted, _ = strconv.Atoi(parts[17])
+	f.NumFlows, _ = strconv.Atoi(parts[17])
+	f.NumFlowsStarted, _ = strconv.Atoi(parts[18])
+	f.NumFlowsCompleted, _ = strconv.Atoi(parts[19])
 
-	switch parts[18] {
+	switch parts[20] {
 	case "src":
 		f.Reporter = FlowLogReporterSrc
 	case "dst":
 		f.Reporter = FlowLogReporterDst
 	}
 
-	f.PacketsIn, _ = strconv.Atoi(parts[19])
-	f.PacketsOut, _ = strconv.Atoi(parts[20])
-	f.BytesIn, _ = strconv.Atoi(parts[21])
-	f.BytesOut, _ = strconv.Atoi(parts[22])
+	f.PacketsIn, _ = strconv.Atoi(parts[21])
+	f.PacketsOut, _ = strconv.Atoi(parts[22])
+	f.BytesIn, _ = strconv.Atoi(parts[23])
+	f.BytesOut, _ = strconv.Atoi(parts[24])
 
-	switch parts[23] {
+	switch parts[25] {
 	case "allow":
 		f.Action = FlowLogActionAllow
 	case "deny":
@@ -459,11 +453,11 @@ func (f *FlowLog) Deserialize(fl string) error {
 	}
 
 	// Parse policies, empty ones are just -
-	if parts[24] == "-" {
+	if parts[26] == "-" {
 		f.FlowPolicies = make(FlowPolicies)
-	} else if len(parts[24]) > 1 {
+	} else if len(parts[26]) > 1 {
 		f.FlowPolicies = make(FlowPolicies)
-		polParts := strings.Split(parts[24][1:len(parts[24])-1], ",")
+		polParts := strings.Split(parts[26][1:len(parts[26])-1], ",")
 		for _, p := range polParts {
 			f.FlowPolicies[p] = emptyValue
 		}

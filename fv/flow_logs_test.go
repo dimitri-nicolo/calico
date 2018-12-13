@@ -626,7 +626,7 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 			switch expectation.aggregationForAllowed {
 			case None:
 				for _, source := range wlHost1 {
-					err = expect("wep default "+source.Name, source.IP, "wep default "+wlHost2[0].Name, wlHost2[0].IP, 3, 1,
+					err = expect("wep default "+source.Name+" "+source.WorkloadEndpoint.GenerateName+"*", source.IP, "wep default "+wlHost2[0].Name+" "+wlHost2[0].WorkloadEndpoint.GenerateName+"*", wlHost2[0].IP, 3, 1,
 						[]expectedPolicy{
 							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
 							{"dst", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
@@ -634,7 +634,7 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 					if err != nil {
 						return err
 					}
-					err = expect("wep default "+source.Name, source.IP, "wep default "+wlHost2[1].Name, wlHost2[1].IP, 3, 1,
+					err = expect("wep default "+source.Name+" "+source.WorkloadEndpoint.GenerateName+"*", source.IP, "wep default "+wlHost2[1].Name+" "+wlHost2[1].WorkloadEndpoint.GenerateName+"*", wlHost2[1].IP, 3, 1,
 						[]expectedPolicy{
 							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
 							{}, // ""
@@ -643,7 +643,7 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 						return err
 					}
 				}
-				err = expect("wep default "+wlHost1[0].Name, wlHost1[0].IP, "hep - host2-eth0", felixes[1].IP, 3, 1,
+				err = expect("wep default "+wlHost1[0].Name+" "+wlHost1[0].WorkloadEndpoint.GenerateName+"*", wlHost1[0].IP, "hep - host2-eth0 "+felixes[1].Hostname, felixes[1].IP, 3, 1,
 					[]expectedPolicy{
 						{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
 						{"dst", "allow", []string{"0|default|default.gnp-1|allow"}},
@@ -652,13 +652,13 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 					return err
 				}
 				if networkSetIPsSupported {
-					err = expect("wep default "+wlHost2[0].Name, wlHost2[0].IP, "ns - ns-1", felixes[0].IP, 3, 1,
+					err = expect("wep default "+wlHost2[0].Name+" "+wlHost2[0].WorkloadEndpoint.GenerateName+"*", wlHost2[0].IP, "ns - ns-1 ns-1", felixes[0].IP, 3, 1,
 						[]expectedPolicy{
 							{}, // ""
 							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
 						})
 				} else {
-					err = expect("wep default "+wlHost2[0].Name, wlHost2[0].IP, "net - pvt", felixes[0].IP, 3, 1,
+					err = expect("wep default "+wlHost2[0].Name+" "+wlHost2[0].WorkloadEndpoint.GenerateName+"*", wlHost2[0].IP, "net - - pvt", felixes[0].IP, 3, 1,
 						[]expectedPolicy{
 							{}, // ""
 							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
@@ -669,7 +669,7 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 				}
 			case BySourcePort:
 				for _, source := range wlHost1 {
-					err = expect("wep default "+source.Name, source.IP, "wep default "+wlHost2[0].Name, wlHost2[0].IP, 1, 3,
+					err = expect("wep default "+source.Name+" "+source.WorkloadEndpoint.GenerateName+"*", source.IP, "wep default "+wlHost2[0].Name+" "+wlHost2[0].WorkloadEndpoint.GenerateName+"*", wlHost2[0].IP, 1, 3,
 						[]expectedPolicy{
 							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
 							{"dst", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
@@ -677,7 +677,7 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 					if err != nil {
 						return err
 					}
-					err = expect("wep default "+source.Name, source.IP, "wep default "+wlHost2[1].Name, wlHost2[1].IP, 1, 3,
+					err = expect("wep default "+source.Name+" "+source.WorkloadEndpoint.GenerateName+"*", source.IP, "wep default "+wlHost2[1].Name+" "+wlHost2[1].WorkloadEndpoint.GenerateName+"*", wlHost2[1].IP, 1, 3,
 						[]expectedPolicy{
 							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
 							{},
@@ -686,7 +686,7 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 						return err
 					}
 				}
-				err = expect("wep default "+wlHost1[0].Name, wlHost1[0].IP, "hep - host2-eth0", felixes[1].IP, 1, 3,
+				err = expect("wep default "+wlHost1[0].Name+" "+wlHost1[0].WorkloadEndpoint.GenerateName+"*", wlHost1[0].IP, "hep - host2-eth0 "+felixes[1].Hostname, felixes[1].IP, 1, 3,
 					[]expectedPolicy{
 						{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
 						{"dst", "allow", []string{"0|default|default.gnp-1|allow"}},
@@ -695,13 +695,13 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 					return err
 				}
 				if networkSetIPsSupported {
-					err = expect("wep default "+wlHost2[0].Name, wlHost2[0].IP, "ns - ns-1", felixes[0].IP, 1, 3,
+					err = expect("wep default "+wlHost2[0].Name+" "+wlHost2[0].WorkloadEndpoint.GenerateName+"*", wlHost2[0].IP, "ns - ns-1 ns-1", felixes[0].IP, 1, 3,
 						[]expectedPolicy{
 							{}, // ""
 							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
 						})
 				} else {
-					err = expect("wep default "+wlHost2[0].Name, wlHost2[0].IP, "net - pvt", felixes[0].IP, 1, 3,
+					err = expect("wep default "+wlHost2[0].Name+" "+wlHost2[0].WorkloadEndpoint.GenerateName+"*", wlHost2[0].IP, "net - - pvt", felixes[0].IP, 1, 3,
 						[]expectedPolicy{
 							{}, // ""
 							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
@@ -711,7 +711,7 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 					return err
 				}
 			case ByPodPrefix:
-				err = expect("wep default wl-host1-*", "", "wep default wl-host2-*", "", 1, 24,
+				err = expect("wep default - wl-host1-*", "", "wep default - wl-host2-*", "", 1, 24,
 					[]expectedPolicy{
 						{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
 						{}, // ""
@@ -719,7 +719,7 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 				if err != nil {
 					return err
 				}
-				err = expect("wep default wl-host1-*", "", "wep default wl-host2-*", "", 1, 12,
+				err = expect("wep default - wl-host1-*", "", "wep default - wl-host2-*", "", 1, 12,
 					[]expectedPolicy{
 						{}, // ""
 						{"dst", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
@@ -727,7 +727,7 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 				if err != nil {
 					return err
 				}
-				err = expect("wep default wl-host1-*", "", "hep - host2-eth0", "", 1, 3,
+				err = expect("wep default - wl-host1-*", "", "hep - - "+felixes[1].Hostname, "", 1, 3,
 					[]expectedPolicy{
 						{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
 						{"dst", "allow", []string{"0|default|default.gnp-1|allow"}},
@@ -736,13 +736,13 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 					return err
 				}
 				if networkSetIPsSupported {
-					err = expect("wep default wl-host2-*", "", "ns - ns-1", "", 1, 3,
+					err = expect("wep default - wl-host2-*", "", "ns - - ns-1", "", 1, 3,
 						[]expectedPolicy{
 							{}, // ""
 							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
 						})
 				} else {
-					err = expect("wep default wl-host2-*", "", "net - pvt", "", 1, 3,
+					err = expect("wep default - wl-host2-*", "", "net - - pvt", "", 1, 3,
 						[]expectedPolicy{
 							{}, // ""
 							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
@@ -756,7 +756,7 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 			switch expectation.aggregationForDenied {
 			case None:
 				for _, source := range wlHost1 {
-					err = expect("wep default "+source.Name, source.IP, "wep default "+wlHost2[1].Name, wlHost2[1].IP, 3, 1,
+					err = expect("wep default "+source.Name+" "+source.WorkloadEndpoint.GenerateName+"*", source.IP, "wep default "+wlHost2[1].Name+" "+wlHost2[1].WorkloadEndpoint.GenerateName+"*", wlHost2[1].IP, 3, 1,
 						[]expectedPolicy{
 							{}, // ""
 							{"dst", "deny", []string{"0|default|default/default.np-1|deny"}},
@@ -767,7 +767,7 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 				}
 			case BySourcePort:
 				for _, source := range wlHost1 {
-					err = expect("wep default "+source.Name, source.IP, "wep default "+wlHost2[1].Name, wlHost2[1].IP, 1, 3,
+					err = expect("wep default "+source.Name+" "+source.WorkloadEndpoint.GenerateName+"*", source.IP, "wep default "+wlHost2[1].Name+" "+wlHost2[1].WorkloadEndpoint.GenerateName+"*", wlHost2[1].IP, 1, 3,
 						[]expectedPolicy{
 							{}, // ""
 							{"dst", "deny", []string{"0|default|default/default.np-1|deny"}},
@@ -777,7 +777,7 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 					}
 				}
 			case ByPodPrefix:
-				err = expect("wep default wl-host1-*", "", "wep default wl-host2-*", "", 1, 12,
+				err = expect("wep default - wl-host1-*", "", "wep default - wl-host2-*", "", 1, 12,
 					[]expectedPolicy{
 						{}, // ""
 						{"dst", "deny", []string{"0|default|default/default.np-1|deny"}},
