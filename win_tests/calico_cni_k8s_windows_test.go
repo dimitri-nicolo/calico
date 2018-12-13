@@ -142,15 +142,13 @@ var _ = Describe("Kubernetes CNI tests", func() {
                         }
                         // Delete node
                         _ = clientset.CoreV1().Nodes().Delete(hostname, &metav1.DeleteOptions{})
-                        // Delete namespace
-                        deleteNamespace(clientset, nsName)
 		}
 
 		BeforeEach(func() {
-			cleanup()
-			time.Sleep(10000 * time.Millisecond)
 			nsName = fmt.Sprintf("ns%d", rand.Uint32())
 			name = fmt.Sprintf("run%d", rand.Uint32())
+			cleanup()
+			time.Sleep(10000 * time.Millisecond)
 
 			// Create namespace
 			ensureNamespace(clientset, nsName)
@@ -180,6 +178,8 @@ var _ = Describe("Kubernetes CNI tests", func() {
 
 		AfterEach(func() {
 			cleanup()
+                        // Delete namespace
+                        deleteNamespace(clientset, nsName)
 		})
 
 		It("successfully networks the namespace", func() {
