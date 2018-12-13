@@ -43,9 +43,10 @@ across both, it is OK to set `$CONTROL_PLANE_SG` and `$K8S_NODE_SGS` to the same
 
 We've provided info below on how to gather the above info in common Kubernetes environments on AWS.
 
-- **EKS cluster**
+- **EKS cluster created with eksctl**
 
-   The following commands gather the necessary information of a particular EKS cluster with name `$CLUSTER_NAME`:
+   The following commands gather the necessary information of a particular EKS
+   cluster with name `$CLUSTER_NAME` that was created with [`eksctl`](https://github.com/weaveworks/eksctl){:target="_blank"}:
 
    ```
    VPC_ID=$(aws eks describe-cluster --name $CLUSTER_NAME --query 'cluster.resourcesVpcConfig.vpcId' --output text)
@@ -203,7 +204,7 @@ We've provided info below on how to gather the above info in common Kubernetes e
 
 1. Configure failsafes for Kubernetes API access.
 
-   The `{{site.noderunning}}` DaemonSet should be updated to include the follow
+   The `{{site.noderunning}}` DaemonSet should be updated to include the following
    environment variables and values:
 
    | Variable Name | Value |
@@ -235,14 +236,6 @@ We've provided info below on how to gather the above info in common Kubernetes e
    * `calico-typha`
    * `cnx-apiserver`
    * `calicoq` (if running as a pod)
-   * `{{site.noderunning}}` (only needed if the previous step was skipped)
-
-   > **Note**: Kubernetes does not support a rolling update without a change
-   > to the DaemonSet. So to initiate a rolling update of the
-   > {{site.noderunning}} DaemonSet a dummy annotation can be added to the
-   > DaemonSet with a command like the following.
-   > ```kubectl patch -n kube-system daemonset calico-node -p "{\"spec\":{\"template\":{\"metadata\":{\"annotations\":{\"restart_annotation\":\"`date +'%s'`\"}}}}}"```
-   {: .alert .alert-info}
 
 1.  Download the Cloud Controller manifest.
 

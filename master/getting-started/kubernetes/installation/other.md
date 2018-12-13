@@ -268,6 +268,6 @@ for each [remote cluster](../../../usage/federation/index#terminology). Ensure t
    of logs or authenticate access to Kibana.
    {: .alert .alert-danger}
 
-{% include {{page.version}}/cnx-monitor-install.md elasticsearch="operator" %}
+{% include {{page.version}}/cnx-monitor-install.md elasticsearch="operator" type="policy-only" %}
 
 {% include {{page.version}}/gs-next-steps.md %}

@@ -297,5 +297,16 @@
    default pattern. Refer to the [Kibana documentation](https://www.elastic.co/guide/en/kibana/current/index-patterns.html#set-default-pattern)
    for more details.
 
+{% if include.type == "policy-only" %}
+1. Optionally enable either or both of the following:
+   * To enforce application layer policies and secure workload-to-workload
+    communications with mutually-authenticated TLS, continue to
+	[Enabling application layer policy]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/app-layer-policy).
+
+   * If you are using the AWS CNI plugin and want to enforce granular access
+    control between pods and AWS VPC resources, continue to
+    [Enabling integration with AWS security groups]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/aws-sg-integration).
+{% else %}
 1. If you wish to enforce application layer policies and secure workload-to-workload
    communications with mutually-authenticated TLS, continue to [Enabling application layer policy]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/app-layer-policy) (optional).
+{% endif %}
