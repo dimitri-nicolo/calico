@@ -116,7 +116,8 @@ var _ = Describe("Kubernetes CNI tests", func() {
 	   				"subnet": "10.254.112.0/20"
 	   			},
 	   			"kubernetes": {
-	   				"k8s_api_root": "%s"
+	   				"k8s_api_root": "%s",
+					"kubeconfig": "C:\k\config"
 	   			},
 	   			"policy": {"type": "k8s"},
 	   			"nodename_file_optional": true,
@@ -135,13 +136,13 @@ var _ = Describe("Kubernetes CNI tests", func() {
 
 		cleanup := func() {
 			// Cleanup hns network
-                        hnsNetwork, _ := hcsshim.GetHNSNetworkByName("net1")
-                        if hnsNetwork != nil {
-                                _, err := hnsNetwork.Delete()
-                                Expect(err).NotTo(HaveOccurred())
-                        }
-                        // Delete node
-                        _ = clientset.CoreV1().Nodes().Delete(hostname, &metav1.DeleteOptions{})
+			hnsNetwork, _ := hcsshim.GetHNSNetworkByName("net1")
+			if hnsNetwork != nil {
+				_, err := hnsNetwork.Delete()
+				Expect(err).NotTo(HaveOccurred())
+			}
+			// Delete node
+			_ = clientset.CoreV1().Nodes().Delete(hostname, &metav1.DeleteOptions{})
 		}
 
 		BeforeEach(func() {
@@ -178,8 +179,8 @@ var _ = Describe("Kubernetes CNI tests", func() {
 
 		AfterEach(func() {
 			cleanup()
-                        // Delete namespace
-                        deleteNamespace(clientset, nsName)
+			// Delete namespace
+			deleteNamespace(clientset, nsName)
 		})
 
 		It("successfully networks the namespace", func() {
@@ -630,7 +631,8 @@ var _ = Describe("Kubernetes CNI tests", func() {
 	   						"subnet": "20.0.0.0/8"
 	   					},
 	   					"kubernetes": {
-	   						"k8s_api_root": "%s"
+	   						"k8s_api_root": "%s",
+							"kubeconfig": "C:\k\config"
 	   					},
 	   					"policy": {"type": "k8s"},
 	   					"nodename_file_optional": true,
@@ -783,7 +785,8 @@ var _ = Describe("Kubernetes CNI tests", func() {
 	   						"subnet": "usePodCidr"
 	   					},
 	   					"kubernetes": {
-	   						"k8s_api_root": "%s"
+	   						"k8s_api_root": "%s",
+							"kubeconfig": "C:\k\config"
 	   					},
 	   					"policy": {"type": "k8s"},
 	   					"log_level":"debug"
@@ -825,7 +828,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				containerID, result, _, _, _, err = testutils.CreateContainer(netconfHostLocalIPAM, name2, testutils.K8S_NONE_NS, requestedIP, nsName)
-				defer func(){
+				defer func() {
 					_, err = testutils.DeleteContainerWithId(netconfHostLocalIPAM, name2, testutils.K8S_NONE_NS, containerID, nsName)
 					Expect(err).ShouldNot(HaveOccurred())
 				}()
@@ -850,7 +853,8 @@ var _ = Describe("Kubernetes CNI tests", func() {
 	   					"subnet": "10.254.112.0/20"
 	   				},
 	   				"kubernetes": {
-	   					"k8s_api_root": "%s"
+	   					"k8s_api_root": "%s",
+						"kubeconfig": "C:\k\config"
 	   				},
 	   				"policy": {"type": "k8s"},
 	   				"nodename_file_optional": true,
@@ -977,7 +981,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			Type:                 "calico",
 			EtcdEndpoints:        os.Getenv("ETCD_ENDPOINTS"),
 			DatastoreType:        os.Getenv("DATASTORE_TYPE"),
-			Kubernetes:           types.Kubernetes{K8sAPIRoot: os.Getenv("KUBERNETES_MASTER")},
+			Kubernetes:           types.Kubernetes{K8sAPIRoot: os.Getenv("KUBERNETES_MASTER"), Kubeconfig: "C:\\k\\config"},
 			Policy:               types.Policy{PolicyType: "k8s"},
 			NodenameFileOptional: true,
 			LogLevel:             "info",
@@ -1070,14 +1074,14 @@ var _ = Describe("Kubernetes CNI tests", func() {
 		})
 
 		AfterEach(func() {
-                        // Cleanup hns network
-                        hnsNetwork, _ := hcsshim.GetHNSNetworkByName("calico-uts-10-0-0-128")
-                        if hnsNetwork != nil {
-                                _, err := hnsNetwork.Delete()
-                                Expect(err).NotTo(HaveOccurred())
-                        }
-                        // Delete node
-                        _ = clientset.CoreV1().Nodes().Delete(hostname, &metav1.DeleteOptions{})
+			// Cleanup hns network
+			hnsNetwork, _ := hcsshim.GetHNSNetworkByName("calico-uts-10-0-0-128")
+			if hnsNetwork != nil {
+				_, err := hnsNetwork.Delete()
+				Expect(err).NotTo(HaveOccurred())
+			}
+			// Delete node
+			_ = clientset.CoreV1().Nodes().Delete(hostname, &metav1.DeleteOptions{})
 			_, err = testutils.DeleteContainerWithId(netconf, name, testutils.K8S_NONE_NS, containerID, nsName)
 			Expect(err).ShouldNot(HaveOccurred())
 			deleteNamespace(clientset, nsName)
@@ -1123,7 +1127,8 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				"type": "calico-ipam"
 			},
 			"kubernetes": {
-				"k8s_api_root": "%s"
+				"k8s_api_root": "%s",
+				"kubeconfig": "C:\k\config"
 			},
 			"policy": {"type": "k8s"}
 		}`, cniVersion, networkName, os.Getenv("ETCD_ENDPOINTS"), os.Getenv("DATASTORE_TYPE"), os.Getenv("KUBERNETES_MASTER"))
@@ -1172,7 +1177,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			var containerid []string
 			var podName []string
 			defer func() {
-				log.Debugf("containerid range : %v", containerid)
 				for i, id := range containerid {
 					time.Sleep(30000 * time.Millisecond)
 					_, err := testutils.DeleteContainerWithId(netconf, podName[i], testutils.K8S_NONE_NS, id, nsName)
@@ -1252,7 +1256,8 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				"type": "calico-ipam"
 			},
 			"kubernetes": {
-				"k8s_api_root": "%s"
+				"k8s_api_root": "%s",
+				"kubeconfig": "C:\k\config"
 			},
 			"policy": {"type": "k8s"}
 		}`, cniVersion, networkName, os.Getenv("ETCD_ENDPOINTS"), os.Getenv("DATASTORE_TYPE"), os.Getenv("KUBERNETES_MASTER"))
@@ -1303,7 +1308,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			var podName []string
 			// Make sure the pod gets cleaned up, whether we fail or not.
 			defer func() {
-					log.Infof("containerid range 1 : %v", containerid)
 				for i, id := range containerid {
 					_, err := testutils.DeleteContainerWithId(netconf, podName[i], testutils.K8S_NONE_NS, id, nsName)
 					Expect(err).ShouldNot(HaveOccurred())
@@ -1349,7 +1353,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			containerid := []string{}
 			name := ""
 			defer func() {
-				log.Infof("containerid range 2 : %v", containerid)
 				for i, id := range containerid {
 					_, err := testutils.DeleteContainerWithId(netconf, podName[i], testutils.K8S_NONE_NS, id, nsName)
 					Expect(err).ShouldNot(HaveOccurred())
@@ -1431,5 +1434,4 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			}
 		})
 	})
-
 })

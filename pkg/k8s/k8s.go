@@ -805,13 +805,6 @@ func newK8sClient(conf types.NetConf, logger *logrus.Entry) (*kubernetes.Clients
 	if err != nil {
 		return nil, err
 	}
-	//Adding below line only for FV test
-	//This piecce of code will be removed once ,kubeconfig cert issue resolved
-	if runtime.GOOS == "windows" {
-		config.TLSClientConfig.CertFile = os.Getenv("CERT_DIR") + "\\client.crt"
-		config.TLSClientConfig.KeyFile = os.Getenv("CERT_DIR") + "\\client.key"
-		config.TLSClientConfig.CAFile = os.Getenv("CERT_DIR") + "\\ca.crt"
-	}
 	// Create the clientset
 	return kubernetes.NewForConfig(config)
 }

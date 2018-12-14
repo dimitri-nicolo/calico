@@ -67,7 +67,7 @@ GO_BUILD_VER ?= v0.17
 FOSSA_GO_BUILD_VER ?= v0.18
 
 SRCFILES=$(shell find pkg cmd internal -name '*.go')
-TEST_SRCFILES=$(shell find tests -name '*.go')
+TEST_SRCFILES=$(shell find tests win_tests -name '*.go')
 LOCAL_IP_ENV?=$(shell ip route get 8.8.8.8 | head -1 | awk '{print $$7}')
 
 # fail if unable to download

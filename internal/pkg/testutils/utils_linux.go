@@ -25,6 +25,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/names"
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
+	rest "k8s.io/client-go/rest"
 )
 
 func min(a, b int) int {
@@ -32,6 +33,10 @@ func min(a, b int) int {
 		return a
 	}
 	return b
+}
+
+func SetCertFilePath(config *rest.Config) *rest.Config {
+	return config
 }
 
 // GetResultForCurrent takes the output with cniVersion and returns the Result in current.Result format.
