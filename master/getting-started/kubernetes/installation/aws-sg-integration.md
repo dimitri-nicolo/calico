@@ -241,14 +241,14 @@ We've provided info below on how to gather the above info in common Kubernetes e
 
     ```bash
     curl \
-    {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/manifests/aws-sg-integration/cloud-controller.yaml
+    {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/manifests/aws-sg-integration/cloud-controllers.yaml \
     -O
     ```
 
-{% include {{page.version}}/cnx-cred-sed.md yaml="calico" %}
+{% include {{page.version}}/cnx-cred-sed.md yaml="cloud-controllers" %}
 
 1. Apply the manifest using the following command.
 
    ```bash
-   kubectl apply -f cloud-controller.yaml
+   kubectl apply -f cloud-controllers.yaml
    ```
