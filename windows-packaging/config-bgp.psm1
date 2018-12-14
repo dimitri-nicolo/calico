@@ -69,6 +69,7 @@ FUNCTION ProcessBgpPeers ($Peerings, $LocalIp)
 {
     $current_peers = Get-BgpPeer
     $unused_peers = [System.Collections.ArrayList]$current_peers
+    $new_peers = New-Object System.Collections.ArrayList
 
     # Add peerings. We try to minimize calling to BGP daemon.
     foreach ($peering in $Peerings)
@@ -94,10 +95,10 @@ FUNCTION ProcessBgpPeers ($Peerings, $LocalIp)
                 {
                     # Peer exists but differ
                     Remove-BgpPeer -Name $current_peer.PeerName -Force
-
-                    Add-BgpPeer -Name $peering.Name -LocalIPAddress $LocalIp -PeerIPAddress $peering.IP -PeerASN $peering.AS
-
-                    Write-Output "Update on ", $current_peer.PeerName
+                    # Defer the Add-BgpPeer call since it may conflict with another peering that we're about to
+                    # delete.  For example if it is being renamed.
+                    $new_peers.Add($peering)
+                    Write-Output "Peering updated: ", $current_peer.PeerName
                 }
 
                 $done = $True
@@ -111,18 +112,24 @@ FUNCTION ProcessBgpPeers ($Peerings, $LocalIp)
 
         if (-not $done)
         {
-            Add-BgpPeer -Name $peering.Name -LocalIPAddress $LocalIp -PeerIPAddress $peering.IP -PeerASN $peering.AS
-
-            Write-Output "Add peer ", $peering.Name
+            Write-Output "New peering detected: ", $peering.Name
+            # Defer the Add-BgpPeer call since it may conflict with another peering that we're about to
+            # delete.  For example if it is being renamed.
+            $new_peers.Add($peering)
         }
     }
 
-    # Remove unused peering
+    # Remove unused peerings first, in case a peering has been renamed.
     foreach ($unused_peer in $unused_peers)
     {
+        Write-Output "Removing unused peer ", $unused_peer.PeerName
         Remove-BgpPeer -Name $unused_peer.PeerName -Force
+    }
 
-        Write-Output "Remove unused peer ", $unused_peer.PeerName
+    foreach ($peering in $new_peers)
+    {
+        Write-Output "Adding peer ", $peering.Name
+        Add-BgpPeer -Name $peering.Name -LocalIPAddress $LocalIp -PeerIPAddress $peering.IP -PeerASN $peering.AS
     }
 }
 

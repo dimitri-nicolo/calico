@@ -1,5 +1,5 @@
  ## Ensure the function is available
-ipmo .\config-bgp.psm1
+ipmo .\config-bgp.psm1 -Force
 
 describe 'BGP Router' {
 
@@ -159,6 +159,23 @@ describe 'BGP peerings' {
         ProcessBgpPeers -Peerings $peerings -LocalIp $local_ip
 
         CheckPeers -Peers $peerings
-    }   
+    }
+
+    $peerings_a =
+        @{ Name = "Mesh_10_10_10_1"; IP = "10.10.10.1"; AS = 64512 },
+        @{ Name = "Mesh_10_10_10_2"; IP = "10.10.10.2"; AS = 64512 }
+
+    $peerings_b =
+        @{ Name = "Mesh_10_10_10_1"; IP = "10.10.10.1"; AS = 64512 },
+        @{ Name = "Something_10_10_10_2"; IP = "10.10.10.2"; AS = 64512 }
+
+    it 'should handle renamed peer' {
+        Ensure-NewRouter
+        ProcessBgpPeers -Peerings $peerings_a -LocalIp $local_ip
+        CheckPeers -Peers $peerings_a
+
+        ProcessBgpPeers -Peerings $peerings_b -LocalIp $local_ip
+        CheckPeers -Peers $peerings_b
+    }
 }
 
