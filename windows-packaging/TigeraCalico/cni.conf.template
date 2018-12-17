@@ -8,6 +8,8 @@
     "type": "k8s"
   },
 
+  "capabilities": {"dns": true},
+
   "DNS":  {
     "Nameservers":  [
       "10.96.0.10"
