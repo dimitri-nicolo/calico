@@ -94,9 +94,18 @@
      {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-kdd.yaml
      ```
 
-{% endif %}
+{% elsif include.platform == "eks" %}
 
-{% if include.init != "openshift" and include.net == "other" %}
+1. Download the EKS {{site.prodname}} manifest and save the file
+   as cnx.yaml. That is how we will refer to it in later steps.
+
+   ```bash
+   curl --compressed -o cnx.yaml \
+   {{site.url}}/{{page.version}}
+   /getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only-ecs/cnx-kdd-eks.yaml
+   ```
+
+{% elsif include.init != "openshift" and include.net == "other" %}
 
 1. Download the networking manifest for the Kubernetes API datastore and save the file
    as cnx.yaml. That is how we will refer to it in later steps.
@@ -106,9 +115,7 @@
    {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-kdd.yaml
    ```
 
-{% endif %}
-
-{% if include.init == "openshift" %}
+{% elsif include.init == "openshift" %}
 
 1. Download the {{site.prodname}} manifest for etcd and save the file as cnx.yaml. That is how we will refer to it in later steps:
 
@@ -129,7 +136,7 @@
 
        sed -i -e 's?tigera.cnx-manager.oauth-authority:.*$?tigera.cnx-manager.oauth-authority: "https://master.openshift.example.com:8443/oauth/authorize"?g' cnx.yaml
 
-{% else %}
+{% elsif include.platform != "eks" %}
 
 1. Refer to the bullet that corresponds to your chosen authentication method.
 
@@ -196,19 +203,9 @@
 
 1. Apply the manifest to install the {{site.prodname}} Manager and the {{site.prodname}} API server.
 
-{% if include.init == "openshift" %}
-
    ```
-   oc apply -f cnx.yaml
+   {{cli}} apply -f cnx.yaml
    ```
-
-{% else %}
-
-   ```
-   kubectl apply -f cnx.yaml
-   ```
-
-{% endif %}
 
 {% if include.init == "openshift" %}
 
@@ -237,6 +234,28 @@
    > **Note**: You can also
    > [view the manifest in a new tab]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml){:target="_blank"}.
    {: .alert .alert-info}
+
+{% if include.platform == "eks" %}
+
+## Create credentials for signing into {{site.prodname}} manager
+
+To log into {{site.prodname}} Manager running in EKS, you'll need a token for a user
+with appropriate permissions on the cluster.
+
+1. The easiest way to create such a token is to create a service account, assign it permissions
+   and get a token for it to use for login.  Update `TIGERA_UI_USER` to change the name to give
+   to the service account.
+
+   ```bash
+   export TIGERA_UI_USER=tigera-user
+   {{cli}} create serviceaccount -n kube-system $TIGERA_UI_USER
+   kubectl get secret -n kube-system -o jsonpath='{.data.token}' $(kubectl -n kube-system get secret | grep $TIGERA_UI_USER | awk '{print $1}') | base64 --decode
+   ```
+
+   Save the token - you'll use it to log in to {{site.prodname}} Manager.  Next we'll assign permissions to do so
+   to it.  Use the value of `$TIGERA_UI_USER` as `<USER>` in the following step.
+
+{% endif %}
 
 1. Grant permission to access the {{site.prodname}} Manager to users in your cluster. Issue one of the following
    commands, replacing `<USER>` with the name of the user you wish to grant access.

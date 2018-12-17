@@ -5,6 +5,7 @@ cnx.yaml acccepts the following include flags:
 |------------------|--------------------------|
 | orch             | openshift                |
 | datastore        | kdd, etcd                |
+| platform         | eks                      |
 
 {% endcomment -%}
 {%- if include.datastore == "kdd" %}
@@ -45,6 +46,8 @@ data:
   # Authentication type.  Must be set to "OIDC", "Basic", "Token", or "OAuth".
 {%- if include.orch == "openshift" %}
   tigera.cnx-manager.authentication-type: "OAuth"
+{%- elsif include.platform == "eks" %}
+  tigera.cnx-manager.authentication-type: "Token"
 {%- else %}
   tigera.cnx-manager.authentication-type: "Basic"
 {%- endif %}
@@ -71,6 +74,7 @@ data:
   # Enable ALP support in the UI
   tigera.cnx-manager.alp-support: "false"
 
+{%- if include.platform != "eks" %}
 ---
 
 # Optionally update this ConfigMap to enable TLS with certificate verification when {{site.prodname}} API
@@ -88,7 +92,7 @@ data:
   # should be base64 encoded strings of the entire contents of each file.
   #apiserver.key:
   #apiserver.crt:
-
+{%- endif %}
 ---
 
 # Optionally update this Service to change how {{site.prodname}} Manager is accessed.
@@ -314,6 +318,10 @@ spec:
         image: {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
         args:
           - "--secure-port=5443"
+{%- if include.platform == "eks" %}
+          - "--authentication-skip-lookup=true"
+          - "--requestheader-client-ca-file=/code/certificates/requestheader-client-ca-file"
+{%- endif %}
           - "--audit-policy-file=/etc/tigera/audit/policy.conf"
           - "--audit-log-path=/var/log/calico/audit/tsee-audit.log"
         env:
@@ -344,22 +352,22 @@ spec:
                 name: calico-config
                 key: etcd_cert
         volumeMounts:
-          - mountPath: /var/log/calico/audit
-            name: var-log-calico-audit
-          - mountPath: /etc/tigera/audit
-            name: audit-policy-ee
           - mountPath: /calico-secrets
             name: etcd-certs
-          # - mountPath: /code/apiserver.local.config/certificates
-          #   name: apiserver-certs
 {%- elsif include.datastore == "kdd" %}
           - name: DATASTORE_TYPE
             value: "kubernetes"
         volumeMounts:
+{%- endif %}
           - mountPath: /var/log/calico/audit
             name: var-log-calico-audit
           - mountPath: /etc/tigera/audit
             name: audit-policy-ee
+{%- if include.platform == "eks" %}
+          - mountPath: /code/certificates/requestheader-client-ca-file
+            name: apiserver-certs
+            subPath: requestheader-client-ca-file
+{%- else %}
           # - mountPath: /code/apiserver.local.config/certificates
           #   name: apiserver-certs
 {%- endif %}
@@ -439,20 +447,12 @@ spec:
         - name: etcd-certs
           secret:
             secretName: calico-etcd-secrets
-  {%- if include.orch == "openshift" %}
-        # If you're using TLS with certificate verification then
-        # uncomment the following.
-        # - name: apiserver-certs
-        #   secret:
-        #     secretName: cnx-apiserver-certs
-  {%- else %}
-        # If you're using TLS with certificate verification then
-        # uncomment the following.
-        # - name: apiserver-certs
-        #   secret:
-        #     secretName: cnx-apiserver-certs
-  {%- endif %}
-{%- elsif include.datastore == "kdd" %}
+{%- endif %}
+{%- if include.platform == "eks" %}
+        - name: apiserver-certs
+          configMap:
+            name: extension-apiserver-authentication
+{%- else %}
         # If you're using TLS with certificate verification then
         # uncomment the following.
         # - name: apiserver-certs
