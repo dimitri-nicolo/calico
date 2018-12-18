@@ -21,7 +21,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
-	"github.com/mcuadros/go-version"
+	version "github.com/mcuadros/go-version"
 	"github.com/onsi/gomega/gexec"
 	"github.com/projectcalico/cni-plugin/internal/pkg/utils"
 	"github.com/projectcalico/cni-plugin/pkg/k8s"

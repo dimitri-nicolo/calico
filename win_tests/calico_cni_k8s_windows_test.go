@@ -1375,6 +1375,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			// Now create a K8s pod.
 			podName := []string{}
 			containerid := []string{}
+			nwsName = []string{}
 			name := ""
 			defer func() {
 				for i, id := range containerid {

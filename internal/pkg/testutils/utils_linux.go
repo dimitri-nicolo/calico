@@ -11,7 +11,6 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"runtime"
 	"strings"
 	"syscall"
 
@@ -46,9 +45,6 @@ func WipeK8sPods() {
 	config, err := clientcmd.DefaultClientConfig.ClientConfig()
 	if err != nil {
 		panic(err)
-	}
-	if runtime.GOOS == "windows" {
-		config = SetCertFilePath(config)
 	}
 	clientset, err := kubernetes.NewForConfig(config)
 
