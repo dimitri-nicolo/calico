@@ -1,3 +1,5 @@
+// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+
 package testutils
 
 import (
@@ -8,8 +10,6 @@ import (
 	"net"
 	"os"
 	"os/exec"
-
-	rest "k8s.io/client-go/rest"
 
 	"github.com/Microsoft/hcsshim"
 	"github.com/containernetworking/cni/pkg/invoke"
@@ -24,18 +24,47 @@ import (
 	"github.com/mcuadros/go-version"
 	"github.com/onsi/gomega/gexec"
 	"github.com/projectcalico/cni-plugin/internal/pkg/utils"
+	"github.com/projectcalico/cni-plugin/pkg/k8s"
 	plugintypes "github.com/projectcalico/cni-plugin/pkg/types"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	log "github.com/sirupsen/logrus"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const K8S_NONE_NS = "none"
+const HnsNoneNs = "none"
 
-func SetCertFilePath(config *rest.Config) *rest.Config {
-	config.TLSClientConfig.CertFile = os.Getenv("CERT_DIR") + "\\client.crt"
-	config.TLSClientConfig.KeyFile = os.Getenv("CERT_DIR") + "\\client.key"
-	config.TLSClientConfig.CAFile = os.Getenv("CERT_DIR") + "\\ca.crt"
-	return config
+// Delete all K8s pods from the "test" namespace
+func WipeK8sPods(netconf string) {
+	conf := plugintypes.NetConf{}
+	if err := json.Unmarshal([]byte(netconf), &conf); err != nil {
+		panic(err)
+	}
+	logger := log.WithFields(log.Fields{
+		"Namespace": HnsNoneNs,
+	})
+	clientset, err := k8s.NewK8sClient(conf, logger)
+	if err != nil {
+		panic(err)
+	}
+
+	log.WithField("clientset:", clientset).Info("DEBUG")
+	pods, err := clientset.CoreV1().Pods(K8S_TEST_NS).List(metav1.ListOptions{})
+	if err != nil {
+		panic(err)
+	}
+
+	for _, pod := range pods.Items {
+		err = clientset.CoreV1().Pods(K8S_TEST_NS).Delete(pod.Name, &metav1.DeleteOptions{})
+
+		if err != nil {
+			if kerrors.IsNotFound(err) {
+				continue
+			}
+			panic(err)
+		}
+	}
+	log.Info("WipeK8sPods Sucess")
 }
 
 func CreateWindowsContainer() (string, error) {
@@ -151,6 +180,7 @@ func RunCNIPluginWithId(
 	r, err = invoke.ExecPluginWithResult(pluginPath, []byte(netconf), args, nil)
 	if err != nil {
 		log.Errorf("error from invoke.ExecPluginWithResult %v", err)
+		_ = DeleteWindowsContainer(containerId)
 		return
 	}
 

@@ -1,9 +1,10 @@
+// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+
 package testutils
 
 import (
 	"context"
 	"os"
-	"runtime"
 	"strings"
 
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
@@ -12,10 +13,6 @@ import (
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	log "github.com/sirupsen/logrus"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 const K8S_TEST_NS = "test"
@@ -97,39 +94,6 @@ func MustCreateNewIPPoolBlockSize(c client.Interface, cidr string, ipip, natOutg
 		panic(err)
 	}
 	return pool.Name
-}
-
-// Delete all K8s pods from the "test" namespace
-func WipeK8sPods() {
-	config, err := clientcmd.DefaultClientConfig.ClientConfig()
-	if err != nil {
-		panic(err)
-	}
-	if runtime.GOOS == "windows" {
-		config = SetCertFilePath(config)
-	}
-	clientset, err := kubernetes.NewForConfig(config)
-
-	if err != nil {
-		panic(err)
-	}
-	log.WithField("clientset:", clientset).Info("AKHILESH")
-	pods, err := clientset.CoreV1().Pods(K8S_TEST_NS).List(metav1.ListOptions{})
-	if err != nil {
-		panic(err)
-	}
-
-	for _, pod := range pods.Items {
-		err = clientset.CoreV1().Pods(K8S_TEST_NS).Delete(pod.Name, &metav1.DeleteOptions{})
-
-		if err != nil {
-			if kerrors.IsNotFound(err) {
-				continue
-			}
-			panic(err)
-		}
-	}
-	log.Info("WipeK8sPods Sucess")
 }
 
 // Used for passing arguments to the CNI plugin.

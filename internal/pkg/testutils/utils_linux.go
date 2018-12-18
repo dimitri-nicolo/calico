@@ -1,3 +1,5 @@
+// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+
 package testutils
 
 import (
@@ -9,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"runtime"
 	"strings"
 	"syscall"
 
@@ -25,7 +28,10 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/names"
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
-	rest "k8s.io/client-go/rest"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 func min(a, b int) int {
@@ -35,8 +41,37 @@ func min(a, b int) int {
 	return b
 }
 
-func SetCertFilePath(config *rest.Config) *rest.Config {
-	return config
+// Delete all K8s pods from the "test" namespace
+func WipeK8sPods() {
+	config, err := clientcmd.DefaultClientConfig.ClientConfig()
+	if err != nil {
+		panic(err)
+	}
+	if runtime.GOOS == "windows" {
+		config = SetCertFilePath(config)
+	}
+	clientset, err := kubernetes.NewForConfig(config)
+
+	if err != nil {
+		panic(err)
+	}
+	log.WithField("clientset:", clientset).Info("DEBUG")
+	pods, err := clientset.CoreV1().Pods(K8S_TEST_NS).List(metav1.ListOptions{})
+	if err != nil {
+		panic(err)
+	}
+
+	for _, pod := range pods.Items {
+		err = clientset.CoreV1().Pods(K8S_TEST_NS).Delete(pod.Name, &metav1.DeleteOptions{})
+
+		if err != nil {
+			if kerrors.IsNotFound(err) {
+				continue
+			}
+			panic(err)
+		}
+	}
+	log.Info("WipeK8sPods Sucess")
 }
 
 // GetResultForCurrent takes the output with cniVersion and returns the Result in current.Result format.
