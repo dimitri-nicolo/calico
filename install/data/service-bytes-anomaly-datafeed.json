@@ -1,0 +1,26 @@
+{
+  "datafeed_id": "datafeed-service_bytes_anomaly",
+  "job_id": "service_bytes_anomaly",
+  "query_delay": "63900ms",
+  "indices": [
+    "tigera_secure_ee_flows*"
+  ],
+  "types": ["_doc"],
+  "query": {
+    "match_all": {
+      "boost": 1
+    }
+  },
+  "script_fields": {
+    "namespace_dest_name_aggr": {
+      "script": {
+				"lang": "painless",
+				"inline": "doc['namespace'].value + '/' + doc['dest_name_aggr'].value"
+      }
+    }
+  },
+  "scroll_size": 1000,
+  "chunking_config": {
+    "mode": "auto"
+  }
+}
