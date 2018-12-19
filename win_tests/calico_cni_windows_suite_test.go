@@ -13,6 +13,6 @@ import (
 
 func TestCalicoCni(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../report/cni_windows_suite.xml")
+	junitReporter := reporters.NewJUnitReporter("./report/result.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "CalicoCni windows Suite", []Reporter{junitReporter})
 }
