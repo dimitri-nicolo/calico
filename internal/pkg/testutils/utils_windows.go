@@ -6,10 +6,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net"
 	"os"
-	"os/exec"
 
 	"github.com/Microsoft/hcsshim"
 	"github.com/containernetworking/cni/pkg/invoke"
@@ -22,7 +20,6 @@ import (
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
 	version "github.com/mcuadros/go-version"
-	"github.com/onsi/gomega/gexec"
 	"github.com/projectcalico/cni-plugin/internal/pkg/utils"
 	"github.com/projectcalico/cni-plugin/pkg/k8s"
 	plugintypes "github.com/projectcalico/cni-plugin/pkg/types"
@@ -256,35 +253,15 @@ func DeleteContainerWithIdAndIfaceName(netconf, podName, podNamespace, container
 	}
 
 	// Run the CNI plugin passing in the supplied netconf
-	subProcess := exec.Command(fmt.Sprintf("%s\\%s", os.Getenv("BIN"), os.Getenv("PLUGIN")), netconf)
-	subProcess.Env = env
-	stdin, err := subProcess.StdinPipe()
+	args := &cniArgs{env}
+	pluginPath := fmt.Sprintf("%s\\%s", os.Getenv("BIN"), os.Getenv("PLUGIN"))
+	log.Debugf("pluginPath: %v", pluginPath)
+	err = invoke.ExecPluginWithoutResult(pluginPath, []byte(netconf), args, nil)
 	if err != nil {
+		log.Errorf("error from invoke.ExecPluginWithoutResult %v", err)
 		return
 	}
 
-	_, err = io.WriteString(stdin, netconf)
-	if err != nil {
-		return 1, err
-	}
-	_, err = io.WriteString(stdin, "")
-	if err != nil {
-		return 1, err
-	}
-
-	err = stdin.Close()
-	if err != nil {
-		return 1, err
-	}
-
-	session, err := gexec.Start(subProcess, os.Stdout, os.Stderr)
-	if err != nil {
-		return
-	}
-
-	// Call the plugin. Will force a test failure if it hangs longer than 30s.
-	session.Wait(30)
-	exitCode = session.ExitCode()
 	return
 }
 

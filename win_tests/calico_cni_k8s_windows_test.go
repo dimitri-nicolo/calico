@@ -1317,7 +1317,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			deleteNamespace(clientset, nsName)
 			clientset.CoreV1().Nodes().Delete(hostname, &metav1.DeleteOptions{})
 			for i := 0; i < len(nwsName); i++ {
-				// Ensure network is created
+				// Ensure network is deleted
 				log.Debugf("Deleting Network : %v", nwsName[i])
 				hnsNetwork, err := hcsshim.GetHNSNetworkByName(nwsName[i])
 				Expect(err).ShouldNot(HaveOccurred())
@@ -1332,6 +1332,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			var podName []string
 			// Make sure the pod gets cleaned up, whether we fail or not.
 			defer func() {
+				log.Debugf("containerid = %v", containerid)
 				for i, id := range containerid {
 					_, err := testutils.DeleteContainerWithId(netconf, podName[i], testutils.HnsNoneNs, id, nsName)
 					Expect(err).ShouldNot(HaveOccurred())
@@ -1378,6 +1379,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			nwsName = []string{}
 			name := ""
 			defer func() {
+				log.Debugf("containerid = %v", containerid)
 				for i, id := range containerid {
 					_, err := testutils.DeleteContainerWithId(netconf, podName[i], testutils.HnsNoneNs, id, nsName)
 					Expect(err).ShouldNot(HaveOccurred())
@@ -1441,7 +1443,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 					})
 
 				Expect(err).NotTo(HaveOccurred())
-				podName = append(podName, name)
+				podName[i] = name
 
 				// Create the container, which will call CNI and by default it will create the container with interface name 'eth0'.
 				containerID, result, _, _, _, err := testutils.CreateContainer(netconf, name, testutils.HnsNoneNs, "", nsName)
