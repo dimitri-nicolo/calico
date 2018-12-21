@@ -13,6 +13,7 @@
 # limitations under the License.
 import json
 import logging
+import re
 import subprocess
 import time
 
@@ -511,13 +512,24 @@ class TestFelixOnGateway(TestBase):
         }
         self._apply_resources(host_endpoint_data, self.gateway)
 
-    @staticmethod
-    def _apply_resources(resources, host):
-        # Apply new resources.
-        host.writefile("resources",
-                       yaml.dump(resources, default_flow_style=False))
-        host.calicoctl("apply -f resources")
+    @classmethod
+    def _apply_resources(cls, resources, host):
+        cls._exec_calicoctl("apply", resources, host)
 
+    @staticmethod
+    def _exec_calicoctl(action, data, host):
+        # Delete creationTimestamp fields from the data that we're going to
+        # write.
+        for obj in data.get('items', []):
+            if 'creationTimestamp' in obj['metadata']:
+                del obj['metadata']['creationTimestamp']
+        if 'metadata' in data and 'creationTimestamp' in data['metadata']:
+            del data['metadata']['creationTimestamp']
+
+        # Use calicoctl with the modified data.
+        host.writejson("new_data", data)
+        host.calicoctl("%s -f new_data" % action)
+        
     def assert_host_can_curl_ext(self):
         try:
             self.host.execute("curl -m 2 %s" % self.ext_server_ip)
