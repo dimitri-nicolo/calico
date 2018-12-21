@@ -162,15 +162,15 @@ parseOptions() {
   usage() {
     cat <<HELP_USAGE
 Usage: $(basename "$0")
+          [-a cluster_name]    # Install AWS Security Group Integration using Cluster Name
           [-l license.yaml]    # Specify the path to the Tigera Secure EE license file; default "license.yaml". Note license is required.
           [-c config.json]     # Docker authentication config file (from Tigera); default: "config.json"
           [-d docs_location]   # Tigera Secure EE documentation location; default: "https://docs.tigera.io"
           [-e etcd_endpoints]  # etcd endpoint address, e.g. ("http://10.0.0.1:2379"); default: take from manifest automatically
           [-k datastore]       # Specify the datastore ("etcdv3"|"kubernetes"); default: "etcdv3"
+          [-n networking]      # Specify the networking ("calico"|"other"|"aws"); default "calico"
           [-s elastic_storage] # Specify the elasticsearch storage to use ("none"|"local"); default: "local"
           [-t deployment_type] # Specify the deployment type ("basic"|"typha"|"federation"); default "basic"
-          [-n networking]      # Specify the networking ("calico"|"other"|"aws"); default "calico"
-          [-a cluster_name]    # Install AWS Security Group Integration using Cluster Name
           [-v version]         # Tigera Secure EE version; default: "v2.1"
           [-u]                 # Uninstall Tigera Secure EE
           [-q]                 # Quiet (don't prompt)
@@ -183,17 +183,17 @@ HELP_USAGE
   }
 
   local OPTIND
-  while getopts "c:d:e:hk:l:mpqs:t:n:a:v:ux" opt; do
+  while getopts "a:c:d:e:hk:l:mn:pqs:t:v:ux" opt; do
     case ${opt} in
+      a )  INSTALL_AWS_SG=true; CLUSTER_NAME=$OPTARG;;
       c )  CREDENTIALS_FILE=$OPTARG;;
       d )  DOCS_LOCATION=$OPTARG;;
       e )  ETCD_ENDPOINTS=$OPTARG;;
       k )  DATASTORE=$OPTARG;;
       l )  LICENSE_FILE=$OPTARG;;
+      n )  NETWORKING=$OPTARG;;
       s )  ELASTIC_STORAGE=$OPTARG;;
       t )  DEPLOYMENT_TYPE=$OPTARG;;
-      n )  NETWORKING=$OPTARG;;
-      a )  INSTALL_AWS_SG=true; CLUSTER_NAME=$OPTARG;;
       v )  VERSION=$OPTARG;;
       x )  set -x;;
       q )  QUIET=1;;
@@ -226,6 +226,9 @@ validateSettings() {
 
   # Validate $DEPLOYMENT_TYPE is not "typha" if datastore is "etcdv3"
   [ "$DEPLOYMENT_TYPE" == "typha" ] && [ "$DATASTORE" == "etcdv3" ] && fatalError "Deployment type \"$DEPLOYMENT_TYPE\" is not valid for Datastore \"$DATASTORE\"."
+
+  # Validate $NETWORKING is either "calico", "other", or "aws"
+  [ "$NETWORKING" == "calico" ] || [ "$NETWORKING" == "other" ] || [ "$NETWORKING" == "aws" ] || fatalError "Networking type \"$NETWORKING\" is not valid, must be either \"calico\" or \"other\" or \"aws\"."
 
   # If we're installing, confirm user specified a readable license file
   if [ "$CLEANUP" -eq 0 ]; then
@@ -462,15 +465,20 @@ checkRequiredFilesPresent() {
 
 #
 # podStatus() - takes a selector as argument, e.g. "k8s-app=kube-dns"
-# and returns the pod "ready" status as a bool string ("true"). Note that if
-# the pod is in the "pending" state, there is no containerStatus yet, so
-# podStatus() returns an empty string. Success means seeing the "true"
-# substring, but failure can be "false" or an empty string.
+# and returns a line for each container in the selected pods with
+# the container "ready" status as a bool string ("true" or "false").
 #
 function podStatus() {
   label="$1"
-  status=$(kubectl get pods --selector="${label}" -o json --all-namespaces | jq-container -r '.items[] | .status.containerStatuses[]? | [.name, .image, .ready|tostring] |join(":")')
-  echo "${status}"
+  pod_info=$(kubectl get pods --selector="${label}" -o json --all-namespaces)
+  echo $pod_info | jq-container -r '.items[] | "\(.metadata.name) \(.spec.containers[] | .name)"' \
+  | while read pod_name container_name; do
+    status=$(echo $pod_info | jq-container -r ".items[] | select(.metadata.name == \"$pod_name\") | .status.containerStatuses[] | select(.name == \"$container_name\") | if .ready then \"\(.ready|tostring)\" else \"false\" end ")
+    if [ -z "$status" ]; then
+      status="false"
+    fi
+    echo $pod_name:$container_name:$status
+  done
 }
 
 #
@@ -986,7 +994,6 @@ downloadManifests() {
     downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/manifests/aws-sg-integration/vpc-cf.yaml"
     downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/manifests/aws-sg-integration/cluster-cf.yaml"
     downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/manifests/aws-sg-integration/cloud-controllers.yaml"
-
   fi
 
   if [ "${DOWNLOAD_MANIFESTS_ONLY}" -eq 1 ]; then
@@ -1670,8 +1677,8 @@ determineInstallerType          # Set INSTALL_TYPE to "KOPS" or "KUBEADM" or "AC
 validateSettings                # Check for missing files/dirs
 
 if [ "$CLEANUP" -eq 1 ]; then
-  checkSettings uninstall        # Verify settings are correct with user
-  validateDatastore uninstall    # Warn if there's etcd manifest, but we're doing kdd uninstall (and vice versa)
+  checkSettings uninstall       # Verify settings are correct with user
+  validateDatastore uninstall   # Warn if there's etcd manifest, but we're doing kdd uninstall (and vice versa)
 
   if "$INSTALL_AWS_SG"; then
     uninstallAwsSg              # Removes the AWS SG integration
@@ -1680,8 +1687,8 @@ if [ "$CLEANUP" -eq 1 ]; then
     uninstallCNX                # Remove Tigera Secure EE, cleanup related files
   fi
 else
-  checkSettings install           # Verify settings are correct with user
-  validateDatastore install       # Warn if there's etcd manifest, but we're doing kdd install (and vice versa)
+  checkSettings install         # Verify settings are correct with user
+  validateDatastore install     # Warn if there's etcd manifest, but we're doing kdd install (and vice versa)
 
   if ! "$SKIP_EE_INSTALLATION"; then
     installCNX                  # Install Tigera Secure EE
@@ -1690,6 +1697,5 @@ else
     installAwsSg                # Install AWS SG integration, depends on EE already being installed
   fi
 
-  reportSuccess                   # Tell user how to login
+  reportSuccess                 # Tell user how to login
 fi
-
