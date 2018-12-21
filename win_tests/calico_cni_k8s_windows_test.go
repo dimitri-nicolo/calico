@@ -821,6 +821,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				expectedIP := requestedIP
 
 				containerID, result, _, _, _, err := testutils.CreateContainer(netconfHostLocalIPAM, name, testutils.HnsNoneNs, requestedIP, nsName)
+				defer testutils.DeleteWindowsContainer(containerID)
 				Expect(err).NotTo(HaveOccurred())
 
 				podIP := result.IPs[0].Address.IP.String()
@@ -1246,7 +1247,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 					if strings.Contains(err.Error(), "compute system") {
 						log.Debugf("RETRYING!!!")
 						_, err = testutils.DeleteContainerWithId(netconf, name, testutils.HnsNoneNs, containerID, nsName)
-		                                Expect(err).ShouldNot(HaveOccurred())
+						Expect(err).ShouldNot(HaveOccurred())
 						time.Sleep(20000 * time.Millisecond)
 						containerID, _, _, _, _, err = testutils.CreateContainer(netconf, name, testutils.HnsNoneNs, "", nsName)
 					}
@@ -1400,7 +1401,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 					if strings.Contains(err.Error(), "compute system") {
 						log.Debugf("RETRYING!!!")
 						_, err = testutils.DeleteContainerWithId(netconf, name, testutils.HnsNoneNs, containerID, nsName)
-		                                Expect(err).ShouldNot(HaveOccurred())
+						Expect(err).ShouldNot(HaveOccurred())
 						time.Sleep(20000 * time.Millisecond)
 						containerID, result, _, _, _, err = testutils.CreateContainer(netconf, name, testutils.HnsNoneNs, "", nsName)
 					}
@@ -1461,7 +1462,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 					if strings.Contains(err.Error(), "compute system") {
 						log.Debugf("RETRYING!!!")
 						_, err = testutils.DeleteContainerWithId(netconf, name, testutils.HnsNoneNs, containerID, nsName)
-		                                Expect(err).ShouldNot(HaveOccurred())
+						Expect(err).ShouldNot(HaveOccurred())
 						time.Sleep(20000 * time.Millisecond)
 						containerID, result, _, _, _, err = testutils.CreateContainer(netconf, name, testutils.HnsNoneNs, "", nsName)
 					}
@@ -1471,7 +1472,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				Expect(err).ShouldNot(HaveOccurred())
 				_, subNet, _ := net.ParseCIDR(result.IPs[0].Address.String())
 				nwName = utils.CreateNetworkName(networkName, subNet)
-				log.Debugf("nwName = %s lastNWName = %s nwsName = %v",nwName,lastNWName,nwsName)
+				log.Debugf("nwName = %s lastNWName = %s nwsName = %v", nwName, lastNWName, nwsName)
 				if nwName != lastNWName {
 					lastNWName = nwName
 					nwsName = append(nwsName, nwName)
@@ -1485,7 +1486,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				clientset.CoreV1().Pods(nsName).Delete(podName[i], nil)
 				Expect(err).ShouldNot(HaveOccurred())
 			}
-				log.Debugf("containerid = %v", containerid)
+			log.Debugf("containerid = %v", containerid)
 			for i := 0; i < 3; i++ {
 				name = fmt.Sprintf("run%d", rand.Uint32())
 				_, err := clientset.CoreV1().Pods(nsName).Create(
@@ -1511,7 +1512,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 					if strings.Contains(err.Error(), "compute system") {
 						log.Debugf("RETRYING!!!")
 						_, err = testutils.DeleteContainerWithId(netconf, name, testutils.HnsNoneNs, containerID, nsName)
-		                                Expect(err).ShouldNot(HaveOccurred())
+						Expect(err).ShouldNot(HaveOccurred())
 						time.Sleep(20000 * time.Millisecond)
 						containerID, result, _, _, _, err = testutils.CreateContainer(netconf, name, testutils.HnsNoneNs, "", nsName)
 					}
@@ -1521,7 +1522,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				Expect(err).ShouldNot(HaveOccurred())
 				_, subNet, _ := net.ParseCIDR(result.IPs[0].Address.String())
 				podNwName := utils.CreateNetworkName(networkName, subNet)
-				log.Debugf("podNwName = %s lastNWName = %s nwsName = %v",podNwName,lastNWName,nwsName)
+				log.Debugf("podNwName = %s lastNWName = %s nwsName = %v", podNwName, lastNWName, nwsName)
 				if podNwName != lastNWName {
 					lastNWName = podNwName
 					nwsName = append(nwsName, podNwName)
