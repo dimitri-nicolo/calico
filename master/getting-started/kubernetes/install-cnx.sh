@@ -61,9 +61,12 @@ DOWNLOAD_MANIFESTS_ONLY=${DOWNLOAD_MANIFESTS_ONLY:=0}
 # A deployment type of "typha" is only valid for kubernetes datastore.
 DEPLOYMENT_TYPE=${DEPLOYMENT_TYPE:="basic"}
 
-# when set to 1, install policy-only manifest
+# Can be "calico", "aws", or "other"
+# when set to calico, install manifest with calico networking
+# when set to "aws", install manifest with no CNI plugin or configuration
+# when set to "other", install manifest with Calico CNI that uses host-local IPAM
 # Only used for the kubernetes datastore.
-POLICY_ONLY=${POLICY_ONLY:=0}
+NETWORKING=${NETWORKING:="calico"}
 
 # cleanup Tigera Secure EE installation
 CLEANUP=0
@@ -85,6 +88,10 @@ KUBE_CONTROLLER_MANIFEST=${KUBE_CONTROLLER_MANIFEST:="/etc/kubernetes/manifests/
 
 # Kubernetes installer type - "KOPS" or "KUBEADM" or "ACS-ENGINE"
 INSTALL_TYPE=${INSTALL_TYPE:="KUBEADM"}
+
+INSTALL_AWS_SG=${INSTALL_AWS_SG:=false}
+
+SKIP_EE_INSTALLATION=${SKIP_EE_INSTALLATION:=false}
 
 #
 # promptToContinue()
@@ -125,6 +132,7 @@ checkSettings() {
   echo '  REGISTRY='${CALICO_REGISTRY}
   echo '  DATASTORE='${DATASTORE}
   echo '  DEPLOYMENT_TYPE='${DEPLOYMENT_TYPE}
+  echo '  NETWORKING='${NETWORKING}
   echo '  LICENSE_FILE='${LICENSE_FILE}
   echo '  INSTALL_TYPE='${INSTALL_TYPE}
   echo '  ELASTIC_STORAGE='${ELASTIC_STORAGE}
@@ -154,11 +162,13 @@ parseOptions() {
   usage() {
     cat <<HELP_USAGE
 Usage: $(basename "$0")
+          [-a cluster_name]    # Install AWS Security Group Integration using Cluster Name
           [-l license.yaml]    # Specify the path to the Tigera Secure EE license file; default "license.yaml". Note license is required.
           [-c config.json]     # Docker authentication config file (from Tigera); default: "config.json"
           [-d docs_location]   # Tigera Secure EE documentation location; default: "https://docs.tigera.io"
           [-e etcd_endpoints]  # etcd endpoint address, e.g. ("http://10.0.0.1:2379"); default: take from manifest automatically
           [-k datastore]       # Specify the datastore ("etcdv3"|"kubernetes"); default: "etcdv3"
+          [-n networking]      # Specify the networking ("calico"|"other"|"aws"); default "calico"
           [-s elastic_storage] # Specify the elasticsearch storage to use ("none"|"local"); default: "local"
           [-t deployment_type] # Specify the deployment type ("basic"|"typha"|"federation"); default "basic"
           [-v version]         # Tigera Secure EE version; default: "v2.1"
@@ -173,13 +183,15 @@ HELP_USAGE
   }
 
   local OPTIND
-  while getopts "c:d:e:hk:l:mpqs:t:v:ux" opt; do
+  while getopts "a:c:d:e:hk:l:mn:pqs:t:v:ux" opt; do
     case ${opt} in
+      a )  INSTALL_AWS_SG=true; CLUSTER_NAME=$OPTARG;;
       c )  CREDENTIALS_FILE=$OPTARG;;
       d )  DOCS_LOCATION=$OPTARG;;
       e )  ETCD_ENDPOINTS=$OPTARG;;
       k )  DATASTORE=$OPTARG;;
       l )  LICENSE_FILE=$OPTARG;;
+      n )  NETWORKING=$OPTARG;;
       s )  ELASTIC_STORAGE=$OPTARG;;
       t )  DEPLOYMENT_TYPE=$OPTARG;;
       v )  VERSION=$OPTARG;;
@@ -215,6 +227,9 @@ validateSettings() {
   # Validate $DEPLOYMENT_TYPE is not "typha" if datastore is "etcdv3"
   [ "$DEPLOYMENT_TYPE" == "typha" ] && [ "$DATASTORE" == "etcdv3" ] && fatalError "Deployment type \"$DEPLOYMENT_TYPE\" is not valid for Datastore \"$DATASTORE\"."
 
+  # Validate $NETWORKING is either "calico", "other", or "aws"
+  [ "$NETWORKING" == "calico" ] || [ "$NETWORKING" == "other" ] || [ "$NETWORKING" == "aws" ] || fatalError "Networking type \"$NETWORKING\" is not valid, must be either \"calico\" or \"other\" or \"aws\"."
+
   # If we're installing, confirm user specified a readable license file
   if [ "$CLEANUP" -eq 0 ]; then
     [ -z "$LICENSE_FILE" ] && fatalError "Must specify the location of a Tigera Secure EE license file, e.g. '-l license.yaml'"
@@ -229,6 +244,10 @@ validateSettings() {
   # If it's set, validate that ETCD_ENDPOINTS is of the form "http[s]://ipv4:port"
   if [ ! -z "$ETCD_ENDPOINTS" ]; then
     [[ "$ETCD_ENDPOINTS" =~ ^http(s)?://.*:[0-9]+$ ]] || fatalError "Invalid ETCD_ENDPOINTS=\"${ETCD_ENDPOINTS}\", expect \"http(s)://ipv4:port\""
+  fi
+
+  if "$INSTALL_AWS_SG" ; then
+    checkAwsIntegration
   fi
 }
 
@@ -352,7 +371,7 @@ determineInstallerType() {
   if [[ -d "/etc/kubernetes/" && -e "/etc/kubernetes/azure.json" ]]; then
     INSTALL_TYPE="ACS-ENGINE"
     DATASTORE="kubernetes"
-    POLICY_ONLY=1
+    NETWORKING="other"
   fi
 }
 
@@ -378,6 +397,11 @@ checkRequirementsInstalled() {
   sed --version 2>&1 | grep -q GNU
   if [ $? -ne 0 ]; then
     fatalError Please install gnu-sed. On MacOS, \'brew install gnu-sed --with-default-names \'
+  fi
+
+  if "$INSTALL_AWS_SG" ; then
+    # This verifies AWS is installed and that credentials are configured
+    run aws iam get-user
   fi
 }
 
@@ -441,15 +465,20 @@ checkRequiredFilesPresent() {
 
 #
 # podStatus() - takes a selector as argument, e.g. "k8s-app=kube-dns"
-# and returns the pod "ready" status as a bool string ("true"). Note that if
-# the pod is in the "pending" state, there is no containerStatus yet, so
-# podStatus() returns an empty string. Success means seeing the "true"
-# substring, but failure can be "false" or an empty string.
+# and returns a line for each container in the selected pods with
+# the container "ready" status as a bool string ("true" or "false").
 #
 function podStatus() {
   label="$1"
-  status=$(kubectl get pods --selector="${label}" -o json --all-namespaces | jq-container -r '.items[] | .status.containerStatuses[]? | [.name, .image, .ready|tostring] |join(":")')
-  echo "${status}"
+  pod_info=$(kubectl get pods --selector="${label}" -o json --all-namespaces)
+  echo $pod_info | jq-container -r '.items[] | "\(.metadata.name) \(.spec.containers[] | .name)"' \
+  | while read pod_name container_name; do
+    status=$(echo $pod_info | jq-container -r ".items[] | select(.metadata.name == \"$pod_name\") | .status.containerStatuses[] | select(.name == \"$container_name\") | if .ready then \"\(.ready|tostring)\" else \"false\" end ")
+    if [ -z "$status" ]; then
+      status="false"
+    fi
+    echo $pod_name:$container_name:$status
+  done
 }
 
 #
@@ -463,7 +492,7 @@ function blockUntilPodIsReady() {
   friendlyPodName="$3"
 
   echo -n "waiting up to ${secs} seconds for \"${friendlyPodName}\" to be ready: "
-  until [[ $(podStatus "${label}") =~ "true" ]]; do
+  while [[ $(podStatus "${label}") =~ "false" ]]; do
     if [ "$secs" -eq 0 ]; then
       fatalError "\"${friendlyPodName}\" never stabilized."
     fi
@@ -934,10 +963,14 @@ downloadManifests() {
       downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calico-networking/federation/calico.yaml"
     elif [ "$DEPLOYMENT_TYPE" == "typha" ]; then
       downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calico-networking/typha/calico.yaml"
-    elif [ "${POLICY_ONLY}" -eq 1 ]; then
-      downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only/1.7/calico.yaml"
     else
-      downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calico-networking/1.7/calico.yaml"
+      if [ "${NETWORKING}" == "other" ]; then
+        downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only/1.7/calico.yaml"
+      elif [ "${NETWORKING}" == "aws" ]; then
+        downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only-ecs/1.7/calico.yaml"
+      else
+        downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calico-networking/1.7/calico.yaml"
+      fi
     fi
 
     downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-kdd.yaml"
@@ -955,6 +988,12 @@ downloadManifests() {
   # Download appropriate elasticsearch storage manifest
   if [ "${ELASTIC_STORAGE}" != "none" ]; then
     downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/elastic-storage-${ELASTIC_STORAGE}.yaml"
+  fi
+
+  if "$INSTALL_AWS_SG" ; then
+    downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/manifests/aws-sg-integration/vpc-cf.yaml"
+    downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/manifests/aws-sg-integration/cluster-cf.yaml"
+    downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/manifests/aws-sg-integration/cloud-controllers.yaml"
   fi
 
   if [ "${DOWNLOAD_MANIFESTS_ONLY}" -eq 1 ]; then
@@ -1305,6 +1344,242 @@ deleteCNXManagerSecret() {
 }
 
 #
+# checkAwsIntegration() - Check
+#
+checkAwsIntegration() {
+    fetchAwsVpcId
+    checkAwsIntegrationSgEnvVars
+    checkAwsIntegrationCloudTrail
+}
+
+#
+# fetchAwsVpcId() - Fetch the VPC ID from the metadata
+#
+fetchAwsVpcId() {
+    mac=`runGetOutput curl -s http://169.254.169.254/latest/meta-data/network/interfaces/macs/`
+
+    VPC_ID=`runGetOutput curl -s http://169.254.169.254/latest/meta-data/network/interfaces/macs/${mac}vpc-id`
+}
+
+#
+# checkAwsIntegrationSgEnvVars() - Check Env vars for AWS SG installation
+#
+checkAwsIntegrationSgEnvVars() {
+  prefix="Failed pre-condition for AWS Security Group Integration:"
+  [ -z "$VPC_ID" ] && fatalError "$prefix No VPC_ID is set."
+  [ -z "$CONTROL_PLANE_SG" ] && fatalError "$prefix No CONTROL_PLANE_SG is set."
+  [ -z "$K8S_NODE_SGS" ] && fatalError "$prefix No K8S_NODE_SGS is set."
+}
+
+#
+# checkAwsIntegrationCloudTrail() - Check AWS account CloudTrail exists
+#
+checkAwsIntegrationCloudTrail() {
+  echo "Checking that 'tigera-cloudtrail' CloudStack is created for the account"
+  run aws cloudformation describe-stacks --stack-name tigera-cloudtrail
+}
+
+#
+# createAwsSgCloudStacks() - Create the CloudStacks that are needed for each VPC/cluster
+#
+createAwsSgCloudStacks() {
+  echo -n"Creating Cloudformation stacks ... "
+  run aws cloudformation create-stack \
+    --stack-name tigera-vpc-$VPC_ID \
+    --parameters ParameterKey=VpcId,ParameterValue=$VPC_ID \
+    --capabilities CAPABILITY_IAM \
+    --template-body file://vpc-cf.yaml
+
+  run aws cloudformation create-stack \
+    --stack-name tigera-cluster-$CLUSTER_NAME \
+    --parameters ParameterKey=VpcId,ParameterValue=$VPC_ID \
+    ParameterKey=KubernetesHostDefaultSGId,ParameterValue=$K8S_NODE_SGS \
+    ParameterKey=KubernetesControlPlaneSGId,ParameterValue=$CONTROL_PLANE_SG \
+    --template-body file://cluster-cf.yaml
+
+  run aws cloudformation wait stack-create-complete --stack-name tigera-vpc-$VPC_ID
+  run aws cloudformation wait stack-create-complete --stack-name tigera-cluster-$CLUSTER_NAME
+  echo "done"
+}
+
+#
+# createAwsSgControllerSecret() - Fetch the needed information then create the access
+#    key for the controller then load that into a K8s secret
+createAwsSgControllerSecret() {
+  # First, get the name of the created IAM user, which is an output field in your Cluster CF stack
+  CONTROLLER_USERNAME=$(runGetOutput aws cloudformation describe-stacks \
+      --stack-name tigera-vpc-$VPC_ID \
+      --output text \
+      --query "Stacks[0].Outputs[?OutputKey=='TigeraControllerUserName'][OutputValue]")
+
+  echo "Creating access key for controller user $CONTROLLER_USERNAME"
+  # Then create an access key for that role
+  runGetOutput aws iam create-access-key \
+      --user-name $CONTROLLER_USERNAME \
+      --output text \
+      --query "AccessKey.{Key:SecretAccessKey,ID:AccessKeyId}" > controller-secrets.txt
+
+  echo "Creating secret to store cloud controller user credentials"
+  # Add the key as a k8s secret
+  cat controller-secrets.txt | xargs bash -c \
+      'kubectl create secret generic tigera-cloud-controllers-credentials \
+      -n kube-system \
+      --from-literal=aws_access_key_id=$0 \
+      --from-literal=aws_secret_access_key=$1'
+
+  # Check that the credentials were created
+  run kubectl get secret tigera-cloud-controllers-credentials -n kube-system
+
+  # Delete local copy of the secret
+  rm -f controller-secrets.txt
+}
+
+#
+# createAwsSgConfigMap() - Gather the needed information and then create the
+#   tigera-aws-config ConfigMap
+createAwsSgConfigMap() {
+  # Get the SQS URL
+  SQS_URL=$(runGetOutput aws cloudformation describe-stacks \
+      --stack-name tigera-vpc-$VPC_ID \
+      --output text \
+      --query "Stacks[0].Outputs[?OutputKey=='QueueURL'][OutputValue]")
+
+  # Get the default pod SG
+  POD_SG=$(runGetOutput aws cloudformation describe-stacks \
+      --stack-name tigera-cluster-$CLUSTER_NAME \
+      --output text \
+      --query "Stacks[0].Outputs[?OutputKey=='TigeraDefaultPodSG'][OutputValue]")
+
+  # Get the SG for enforced nodes
+  ENFORCED_SG=$(runGetOutput aws cloudformation describe-stacks \
+      --stack-name tigera-vpc-$VPC_ID \
+      --output text \
+      --query "Stacks[0].Outputs[?OutputKey=='TigeraEnforcedSG'][OutputValue]")
+
+  # Get the SG for enforced nodes
+  TRUST_SG=$(runGetOutput aws cloudformation describe-stacks \
+      --stack-name tigera-vpc-$VPC_ID \
+      --output text \
+      --query "Stacks[0].Outputs[?OutputKey=='TigeraTrustEnforcedSG'][OutputValue]")
+
+  REGION=`runGetOutput curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r '.region'`
+
+  echo "Creating tigera-aws-config"
+  # Store both in a new configmap
+  run kubectl create configmap tigera-aws-config \
+      -n kube-system \
+      --from-literal=aws_region=$REGION \
+      --from-literal=vpcs=$VPC_ID \
+      --from-literal=sqs_url=$SQS_URL \
+      --from-literal=pod_sg=$POD_SG \
+      --from-literal=default_sgs=$K8S_NODE_SGS \
+      --from-literal=enforced_sg=$ENFORCED_SG \
+      --from-literal=trust_sg=$TRUST_SG
+}
+
+#
+# restartAwsConfigDependentPods() - Restart the tigera pods that depend on the
+#   tigera-aws-config ConfigMap since updating it does not cause them to restart
+restartAwsConfigDependentPods() {
+  echo "Restarting components that reference tigera-aws-config ConfigMap ... "
+  for podLabel in calico-typha cnx-apiserver calico-node; do
+    runIgnoreErrors kubectl -n kube-system delete pod -l k8s-app=$podLabel
+  done
+
+  blockUntilPodIsReady "k8s-app in (calico-typha, cnx-apiserver, calico-node)" 120 AWSConfigDependentPods
+}
+
+#
+# removeAwsSgIntegrationSgsFromAwsResources() - Remove the Tigera Security Groups
+#   from the AWS resources so the Security Groups can be deleted, when the
+#   CloudStacks are deleted.
+removeAwsSgIntegrationSgsFromAwsResources() {
+  # Get the SG for enforced nodes
+  ENFORCED_SG=$(runGetOutput aws cloudformation describe-stacks \
+      --stack-name tigera-vpc-$VPC_ID \
+      --output text \
+      --query "Stacks[0].Outputs[?OutputKey=='TigeraEnforcedSG'][OutputValue]")
+
+  # Get the SG for enforced nodes
+  TRUST_SG=$(runGetOutput aws cloudformation describe-stacks \
+      --stack-name tigera-vpc-$VPC_ID \
+      --output text \
+      --query "Stacks[0].Outputs[?OutputKey=='TigeraTrustEnforcedSG'][OutputValue]")
+
+  # Remove the tigera security groups from all instances.
+  # This needs to be done so the delete-stacks below will succeed.
+  # This could be further improved to remove them from RDS and LoadBalancers
+  for sg in $ENFORCED_SG $TRUST_SG; do
+    aws ec2 describe-network-interfaces --filters Name=group-id,Values=$sg \
+    | jq -r '.NetworkInterfaces[] | .NetworkInterfaceId' | while read interface ;
+    do
+        sgs=$(aws ec2 describe-network-interfaces --network-interface-ids $interface \
+            | jq -r '.NetworkInterfaces[] | .Groups[].GroupId' \
+            | sed -e "s/$sg//")
+        aws ec2 modify-network-interface-attribute --network-interface $interface --groups $sgs
+    done
+  done
+}
+
+#
+# deleteAwsSgCrdResources() - Clean up the AWS Security Group integration resources
+#
+deleteAwsSgIntegrationResources() {
+  echo "Deleting all resources associated with the AWS Security Group Integration"
+  kubectl delete globalnetworkpolicies -l 'projectcalico.org/tier in (sg-local, sg-remote, metadata)'
+  kubectl delete hostendpoints -l tigera.io/managed-hep
+}
+
+#
+# installAwsSg() - install AWS SG integration
+#
+installAwsSg() {
+  createAwsSgCloudStacks
+
+  createAwsSgControllerSecret
+
+  createAwsSgConfigMap
+
+  # Update calico-node with failsafes
+  # We could do this to exactly copy the installation directions but it is
+  # not necessary.
+
+  # Restart components
+  restartAwsConfigDependentPods
+
+  # Install cloud-controller
+  echo -n "Applying \"cloud-controllers.yaml\" manifest: "
+  run kubectl apply -f cloud-controllers.yaml
+  # Block until cloud-controllers pod is running & ready
+  blockUntilPodIsReady "k8s-app=tigera-cloud-controllers" 180 "cloud-controllers"
+}
+
+#
+# uninstallAwsSg() - uninstall AWS SG integration
+#
+uninstallAwsSg() {
+  runIgnoreErrors kubectl delete -f cloud-controllers.yaml
+  countDownSecs 5 "Deleting cloud-controllers.yaml manifest"
+
+  removeAwsSgIntegrationSgsFromAwsResources
+
+  runIgnoreErrors kubectl delete configmap tigera-aws-config -n kube-system
+
+  deleteAwsSgIntegrationResources
+
+  restartAwsConfigDependentPods
+
+  runIgnoreErrors aws cloudformation delete-stack \
+    --stack-name tigera-vpc-$VPC_ID
+
+  runIgnoreErrors aws cloudformation delete-stack \
+    --stack-name tigera-cluster-$CLUSTER_NAME
+
+  runIgnoreErrors kubectl delete secret tigera-cloud-controllers-credentials \
+      -n kube-system
+}
+
+#
 # reportSuccess() - tell user how to login
 #
 reportSuccess() {
@@ -1327,9 +1602,6 @@ reportSuccess() {
 # installCNX() - install Tigera Secure EE
 #
 installCNX() {
-  checkSettings install           # Verify settings are correct with user
-  validateDatastore install       # Warn if there's etcd manifest, but we're doing kdd install (and vice versa)
-
   checkNumberOfCores              # Warn user if insufficient processor cores are present (>= 2).
   checkRequiredFilesPresent       # Validate kubernetes files are present
   checkNetworkManager             # Warn user if NetworkMgr is enabled w/o "cali" interface exception
@@ -1363,8 +1635,6 @@ installCNX() {
     applyElasticStorageManifest   # Apply elastic-storage.yaml
     applyMonitorCalicoManifest    # Apply monitor-calico.yaml
   fi
-
-  reportSuccess                   # Tell user how to login
 }
 
 #
@@ -1372,8 +1642,6 @@ installCNX() {
 # Ignore errors.
 #
 uninstallCNX() {
-  checkSettings uninstall        # Verify settings are correct with user
-  validateDatastore uninstall    # Warn if there's etcd manifest, but we're doing kdd uninstall (and vice versa)
   deleteCalicoBinaries           # delete /etc/calico/calicoct.cfg, calicoctl, and calicoq
 
   downloadManifests              # Download all manifests
@@ -1402,14 +1670,32 @@ uninstallCNX() {
 #
 # main()
 #
+parseOptions "$@"               # Set up variables based on args
 checkRequirementsInstalled      # Validate that all required programs are installed
 
 determineInstallerType          # Set INSTALL_TYPE to "KOPS" or "KUBEADM" or "ACS-ENGINE"
-parseOptions "$@"               # Set up variables based on args
 validateSettings                # Check for missing files/dirs
 
 if [ "$CLEANUP" -eq 1 ]; then
-  uninstallCNX                  # Remove Tigera Secure EE, cleanup related files
+  checkSettings uninstall       # Verify settings are correct with user
+  validateDatastore uninstall   # Warn if there's etcd manifest, but we're doing kdd uninstall (and vice versa)
+
+  if "$INSTALL_AWS_SG"; then
+    uninstallAwsSg              # Removes the AWS SG integration
+  fi
+  if ! "$SKIP_EE_INSTALLATION"; then
+    uninstallCNX                # Remove Tigera Secure EE, cleanup related files
+  fi
 else
-  installCNX                    # Install Tigera Secure EE
+  checkSettings install         # Verify settings are correct with user
+  validateDatastore install     # Warn if there's etcd manifest, but we're doing kdd install (and vice versa)
+
+  if ! "$SKIP_EE_INSTALLATION"; then
+    installCNX                  # Install Tigera Secure EE
+  fi
+  if "$INSTALL_AWS_SG"; then
+    installAwsSg                # Install AWS SG integration, depends on EE already being installed
+  fi
+
+  reportSuccess                 # Tell user how to login
 fi

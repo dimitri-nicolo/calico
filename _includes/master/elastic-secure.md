@@ -33,7 +33,7 @@
    --from-file=frontend.crt=frontend-server.crt \
    --from-file=frontend.key=frontend-server.key \
    --from-file=backend-ca.crt=ElasticSearchCA.pem \
-   --from-literal=backend.authHeader=authHeader=$(echo -n tigera-ee-manager:<ee-manager-elasticsearch-password> | base64) \
+   --from-literal=backend.authHeader=$(echo -n tigera-ee-manager:<ee-manager-elasticsearch-password> | base64) \
    -n calico-monitoring
    ```
 
