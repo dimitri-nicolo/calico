@@ -75,6 +75,12 @@ func (s *statsCache) Aggregated() <-chan map[Tuple]Values {
 	return s.aggregated
 }
 
+// NewTicker is a wrapper around time.NewTicker, and allows us to mock out the tick channel for testing
+// purposes.
+var NewTicker = func(d time.Duration) *time.Ticker {
+	return time.NewTicker(d)
+}
+
 type statsCache struct {
 	flushInterval time.Duration
 	stats         map[Tuple]Values
@@ -84,7 +90,7 @@ type statsCache struct {
 // run is the main loop that pulls stats from the dsStats channel and periodically reports aggregated
 // stats through the aggregated channel.
 func (s *statsCache) run(cxt context.Context, dpStats <-chan DPStats) {
-	flushStatsTicker := time.NewTicker(s.flushInterval)
+	flushStatsTicker := NewTicker(s.flushInterval)
 	defer flushStatsTicker.Stop()
 
 	for {

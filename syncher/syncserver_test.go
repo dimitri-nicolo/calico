@@ -666,28 +666,13 @@ func TestSyncRestart(t *testing.T) {
 	go uut.Start(cCtx, stores, dpStats)
 
 	server.SendInSync()
-	select {
-	case <-time.After(1 * time.Second):
-		t.Error("Failed to get sync'd PolicyStore")
-	case <-stores:
-		// pass
-	}
+	Eventually(stores).Should(Receive())
 
 	server.Restart()
-	select {
-	case <-stores:
-		t.Error("New PolicyStore should wait for inSync")
-	case <-time.After(100 * time.Millisecond):
-		// pass
-	}
+	Consistently(stores).ShouldNot(Receive())
 
 	server.SendInSync()
-	select {
-	case <-time.After(1 * time.Second):
-		t.Error("Failed to get sync'd PolicyStore")
-	case <-stores:
-		// pass
-	}
+	Eventually(stores).Should(Receive())
 }
 
 func TestSyncCancelBeforeInSync(t *testing.T) {
@@ -732,12 +717,8 @@ func TestSyncCancelAfterInSync(t *testing.T) {
 	}()
 
 	server.SendInSync()
-	select {
-	case <-time.After(1 * time.Second):
-		t.Error("Failed to get sync'd PolicyStore")
-	case <-stores:
-		// pass
-	}
+	Eventually(stores).Should(Receive())
+
 	cCancel()
 	Eventually(syncDone).Should(BeClosed())
 }
@@ -775,7 +756,7 @@ func TestDPStatsAfterConnection(t *testing.T) {
 	defer server.Shutdown()
 	server.Start()
 
-	uut := NewClient(server.GetTarget(), uds.GetDialOptions(), ClientOptions{StatsFlushInterval: 500 * time.Millisecond})
+	uut := NewClient(server.GetTarget(), uds.GetDialOptions(), ClientOptions{StatsFlushInterval: 100 * time.Millisecond})
 	stores := make(chan *policystore.PolicyStore)
 	dpStats := make(chan statscache.DPStats, 10)
 
@@ -790,46 +771,23 @@ func TestDPStatsAfterConnection(t *testing.T) {
 
 	// Wait for in sync, so that we can be sure we've connected.
 	server.SendInSync()
-	select {
-	case <-time.After(1 * time.Second):
-		t.Error("Failed to get sync'd PolicyStore")
-	case <-stores:
-		// pass
-	}
+	Eventually(stores).Should(Receive())
 
-	// Send a bunch of DPStats update and check we have the corresponding aggregated protobuf stored. Allow enough time
-	// for the flush interval and the reconnection time.
-	for i := 0; i < 3; i++ {
-		dpStats <- statscache.DPStats{
-			Tuple: statscache.Tuple{
-				SrcIp:    "1.2.3.4",
-				DstIp:    "11.22.33.44",
-				SrcPort:  1000,
-				DstPort:  2000,
-				Protocol: "TCP",
-			},
-			Values: statscache.Values{
-				HTTPRequestsAllowed: 1,
-				HTTPRequestsDenied:  0,
-			},
-		}
+	// Send a DPStats update (allowed packets) and check we have the corresponding aggregated protobuf stored.
+	dpStats <- statscache.DPStats{
+		Tuple: statscache.Tuple{
+			SrcIp:    "1.2.3.4",
+			DstIp:    "11.22.33.44",
+			SrcPort:  1000,
+			DstPort:  2000,
+			Protocol: "TCP",
+		},
+		Values: statscache.Values{
+			HTTPRequestsAllowed: 3,
+			HTTPRequestsDenied:  0,
+		},
 	}
-	for i := 0; i < 15; i++ {
-		dpStats <- statscache.DPStats{
-			Tuple: statscache.Tuple{
-				SrcIp:    "1.2.3.4",
-				DstIp:    "11.22.33.44",
-				SrcPort:  1000,
-				DstPort:  2000,
-				Protocol: "TCP",
-			},
-			Values: statscache.Values{
-				HTTPRequestsAllowed: 0,
-				HTTPRequestsDenied:  1,
-			},
-		}
-	}
-	Eventually(server.GetDataplaneStats, "700ms", "50ms").Should(Equal([]*proto.DataplaneStats{
+	Eventually(server.GetDataplaneStats, "150ms", "50ms").Should(Equal([]*proto.DataplaneStats{
 		{
 			SrcIp:    "1.2.3.4",
 			DstIp:    "11.22.33.44",
@@ -844,12 +802,54 @@ func TestDPStatsAfterConnection(t *testing.T) {
 					Action:     proto.Action_ALLOWED,
 					Value:      3,
 				},
+			},
+		},
+	}))
+
+	// Send a DPStats update (denied packets) and check we have the corresponding aggregated protobuf stored.
+	dpStats <- statscache.DPStats{
+		Tuple: statscache.Tuple{
+			SrcIp:    "1.2.3.4",
+			DstIp:    "11.22.33.44",
+			SrcPort:  1000,
+			DstPort:  2000,
+			Protocol: "TCP",
+		},
+		Values: statscache.Values{
+			HTTPRequestsAllowed: 0,
+			HTTPRequestsDenied:  5,
+		},
+	}
+	Eventually(server.GetDataplaneStats, "150ms", "50ms").Should(Equal([]*proto.DataplaneStats{
+		{
+			SrcIp:    "1.2.3.4",
+			DstIp:    "11.22.33.44",
+			SrcPort:  1000,
+			DstPort:  2000,
+			Protocol: &proto.Protocol{&proto.Protocol_Name{Name: "TCP"}},
+			Stats: []*proto.Statistic{
+				{
+					Direction:  proto.Statistic_IN,
+					Relativity: proto.Statistic_DELTA,
+					Kind:       proto.Statistic_HTTP_REQUESTS,
+					Action:     proto.Action_ALLOWED,
+					Value:      3,
+				},
+			},
+		},
+		{
+			SrcIp:    "1.2.3.4",
+			DstIp:    "11.22.33.44",
+			SrcPort:  1000,
+			DstPort:  2000,
+			Protocol: &proto.Protocol{&proto.Protocol_Name{Name: "TCP"}},
+			Stats: []*proto.Statistic{
 				{
 					Direction:  proto.Statistic_IN,
 					Relativity: proto.Statistic_DELTA,
 					Kind:       proto.Statistic_HTTP_REQUESTS,
 					Action:     proto.Action_DENIED,
-					Value:      15,
+					Value:      5,
 				},
 			},
 		},
@@ -899,12 +899,7 @@ func TestDPStatsBeforeConnection(t *testing.T) {
 
 	// Wait for in sync to complete since that guarantees we are connected.
 	server.SendInSync()
-	select {
-	case <-time.After(1 * time.Second):
-		t.Error("Failed to get sync'd PolicyStore")
-	case <-stores:
-		// pass
-	}
+	Eventually(stores).Should(Receive())
 	Consistently(server.GetDataplaneStats, "100ms", "10ms").Should(HaveLen(0))
 
 	cCancel()
@@ -933,12 +928,7 @@ func TestDPStatsReportReturnsError(t *testing.T) {
 
 	// Wait for in sync, so that we can be sure we've connected.
 	server.SendInSync()
-	select {
-	case <-time.After(1 * time.Second):
-		t.Error("Failed to get sync'd PolicyStore")
-	case <-stores:
-		// pass
-	}
+	Eventually(stores).Should(Receive())
 
 	// Stop the server and then send in the stats. We should not receive any updates.
 	server.Stop()
@@ -966,12 +956,7 @@ func TestDPStatsReportReturnsError(t *testing.T) {
 	// We will have triggered reconnection processing, wait for the in-sync again so that
 	// we know we are connected.
 	server.SendInSync()
-	select {
-	case <-time.After(3 * time.Second):
-		t.Error("Failed to get sync'd PolicyStore")
-	case <-stores:
-		// pass
-	}
+	Eventually(stores).Should(Receive())
 
 	// Send in another stat and this time, check that we do eventually get it reported.
 	dpStats <- statscache.DPStats{
@@ -1035,12 +1020,7 @@ func TestDPStatsReportReturnsUnsuccessful(t *testing.T) {
 
 	// Wait for in sync to complete since that guarantees we are connected.
 	server.SendInSync()
-	select {
-	case <-time.After(1 * time.Second):
-		t.Error("Failed to get sync'd PolicyStore")
-	case <-stores:
-		// pass
-	}
+	Eventually(stores).Should(Receive())
 
 	// Tell the Report fn to return unsuccessful (which can occur if the remote end is no longer expecting statistics
 	// to be sent to it) and then send in the stats. We should not receive any updates.

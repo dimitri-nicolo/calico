@@ -39,11 +39,13 @@ var (
 		DstPort:  20020,
 		Protocol: "TCP",
 	}
+
+	originalNewTicker = statscache.NewTicker
 )
 
 func setup(flush time.Duration) (statscache.StatsCache, chan statscache.DPStats, func()) {
 	sc := statscache.New(flush)
-	in := make(chan statscache.DPStats, 5)
+	in := make(chan statscache.DPStats)
 	cxt, cancel := context.WithCancel(context.Background())
 
 	sc.Start(cxt, in)
@@ -52,30 +54,25 @@ func setup(flush time.Duration) (statscache.StatsCache, chan statscache.DPStats,
 
 func TestDuration(t *testing.T) {
 	RegisterTestingT(t)
-	sc, in, cancel := setup(3 * time.Second)
 
-	// Send in a couple of stats for the same tuple.
-	in <- statscache.DPStats{
-		Tuple: tuple1,
-		Values: statscache.Values{
+	sc, in, cancel := setup(50 * time.Millisecond)
+
+	// Send in stats and check we receive them in an aggregated stats update. We send the stats after a short
+	// delay to ensure we are ready to receive the aggregated stats.
+	go func() {
+		time.Sleep(20 * time.Millisecond)
+		in <- statscache.DPStats{
+			Tuple: tuple1,
+			Values: statscache.Values{
+				HTTPRequestsAllowed: 1,
+				HTTPRequestsDenied:  3,
+			},
+		}
+	}()
+	shouldReceiveAggregated(sc, 120*time.Millisecond, map[statscache.Tuple]statscache.Values{
+		tuple1: {
 			HTTPRequestsAllowed: 1,
 			HTTPRequestsDenied:  3,
-		},
-	}
-	in <- statscache.DPStats{
-		Tuple: tuple1,
-		Values: statscache.Values{
-			HTTPRequestsAllowed: 1,
-			HTTPRequestsDenied:  2,
-		},
-	}
-
-	// Check that we get data after 3s (10% jitter), but not before.
-	shouldNotReceiveAggregated(sc, 2*time.Second)
-	shouldReceiveAggregated(sc, 1400*time.Millisecond, map[statscache.Tuple]statscache.Values{
-		tuple1: {
-			HTTPRequestsAllowed: 2,
-			HTTPRequestsDenied:  5,
 		},
 	})
 
@@ -85,7 +82,11 @@ func TestDuration(t *testing.T) {
 
 func TestMultipleFlushes(t *testing.T) {
 	RegisterTestingT(t)
-	sc, in, cancel := setup(500 * time.Millisecond)
+
+	// Mock out the flush ticker so that we can control when we flush.
+	ticks := mockoutNewTicker(3 * time.Millisecond)
+	defer reinstateNewTicker()
+	sc, in, cancel := setup(3 * time.Millisecond)
 
 	// Send in a couple of stats with the same tuple.
 	in <- statscache.DPStats{
@@ -101,7 +102,13 @@ func TestMultipleFlushes(t *testing.T) {
 		},
 	}
 
-	shouldReceiveAggregated(sc, time.Second, map[statscache.Tuple]statscache.Values{
+	// Check that we receive aggregated stats once the ticker has ticked.
+	go func() {
+		// Pause before sending the tick to ensure we are reading from the Aggregated stats channel.
+		time.Sleep(20 * time.Millisecond)
+		ticks <- time.Now()
+	}()
+	shouldReceiveAggregated(sc, 100*time.Millisecond, map[statscache.Tuple]statscache.Values{
 		tuple1: {
 			HTTPRequestsAllowed: 1,
 			HTTPRequestsDenied:  3,
@@ -122,7 +129,14 @@ func TestMultipleFlushes(t *testing.T) {
 			HTTPRequestsAllowed: 15,
 		},
 	}
-	shouldReceiveAggregated(sc, time.Second, map[statscache.Tuple]statscache.Values{
+
+	// Check that we receive aggregated stats once the ticker has ticked.
+	go func() {
+		// Pause before sending the tick to ensure we are reading from the Aggregated stats channel.
+		time.Sleep(20 * time.Millisecond)
+		ticks <- time.Now()
+	}()
+	shouldReceiveAggregated(sc, 100*time.Millisecond, map[statscache.Tuple]statscache.Values{
 		tuple1: {
 			HTTPRequestsAllowed: 10,
 			HTTPRequestsDenied:  33,
@@ -139,35 +153,40 @@ func TestMultipleFlushes(t *testing.T) {
 
 func TestNoData(t *testing.T) {
 	RegisterTestingT(t)
-	sc, in, cancel := setup(500 * time.Millisecond)
 
-	// Send in no data.
-	shouldNotReceiveAggregated(sc, 550*time.Millisecond)
+	// Mockout the flush ticker so that we can control when we flush.
+	ticks := mockoutNewTicker(7 * time.Millisecond)
+	defer reinstateNewTicker()
+	sc, in, cancel := setup(7 * time.Millisecond)
 
-	// Send in some stats.
-	in <- statscache.DPStats{
-		Tuple: tuple1,
-		Values: statscache.Values{
-			HTTPRequestsAllowed: 12,
-		},
-	}
-	shouldReceiveAggregated(sc, time.Second, map[statscache.Tuple]statscache.Values{
-		tuple1: {
-			HTTPRequestsAllowed: 12,
-		},
-	})
+	// Do multiple ticks without sending in any data. We should not receive any empty
+	// aggregated stats.
+	go func() {
+		// Pause before sending the tick to ensure we are reading from the Aggregated stats channel.
+		time.Sleep(20 * time.Millisecond)
 
-	// Send in no data.
-	shouldNotReceiveAggregated(sc, 550*time.Millisecond)
+		// Send multiple ticks (since the channel is blocking, we can guarantee that the previous ticks
+		// have been processed.
+		ticks <- time.Now()
+		ticks <- time.Now()
+		ticks <- time.Now()
+	}()
+	shouldNotReceiveAggregated(sc, 200*time.Millisecond)
 
-	// Send in some stats.
+	// Send in some stats now. (The call to shouldNotReceiveAggregated is long enough for all previous ticks to
+	// have bee processed).
 	in <- statscache.DPStats{
 		Tuple: tuple2,
 		Values: statscache.Values{
 			HTTPRequestsDenied: 13,
 		},
 	}
-	shouldReceiveAggregated(sc, time.Second, map[statscache.Tuple]statscache.Values{
+	go func() {
+		// Pause before sending the tick to ensure we are reading from the Aggregated stats channel.
+		time.Sleep(20 * time.Millisecond)
+		ticks <- time.Now()
+	}()
+	shouldReceiveAggregated(sc, 100*time.Millisecond, map[statscache.Tuple]statscache.Values{
 		tuple2: {
 			HTTPRequestsDenied: 13,
 		},
@@ -180,6 +199,71 @@ func TestNoData(t *testing.T) {
 	cancel()
 }
 
+func TestNoReceiver(t *testing.T) {
+	RegisterTestingT(t)
+
+	// Mockout the flush ticker so that we can control when we flush.
+	ticks := mockoutNewTicker(7 * time.Millisecond)
+	defer reinstateNewTicker()
+	sc, in, cancel := setup(7 * time.Millisecond)
+
+	// Send in some stats whilst no one is ready to receive.
+	in <- statscache.DPStats{
+		Tuple: tuple1,
+		Values: statscache.Values{
+			HTTPRequestsAllowed: 12,
+		},
+	}
+
+	// Send multiple ticks to ensure the agregated stats have been flushed.
+	ticks <- time.Now()
+	ticks <- time.Now()
+	shouldNotReceiveAggregated(sc, 100*time.Millisecond)
+
+	// Send in some stats now. (The call to shouldNotReceiveAggregated is long enough for all previous ticks to
+	// have bee processed).
+	in <- statscache.DPStats{
+		Tuple: tuple2,
+		Values: statscache.Values{
+			HTTPRequestsDenied: 13,
+		},
+	}
+	go func() {
+		// Pause before sending in some stats and another flush tick. We should receive these stats.
+		time.Sleep(20 * time.Millisecond)
+		ticks <- time.Now()
+	}()
+	shouldReceiveAggregated(sc, 100*time.Millisecond, map[statscache.Tuple]statscache.Values{
+		tuple2: {
+			HTTPRequestsDenied: 13,
+		},
+	})
+
+	// Cancel the context to stop the cache.
+	cancel()
+}
+
+// mockoutNewTicker replaces the statscache.NewTicker helper method with one that allows us
+// direct access to the tick channel. Timer ticks are then controlled by the test code.
+func mockoutNewTicker(expectedDuration time.Duration) chan<- time.Time {
+	mockTicker := time.NewTicker(time.Hour)
+	ticks := make(chan time.Time)
+	mockTicker.C = ticks
+	statscache.NewTicker = func(d time.Duration) *time.Ticker {
+		Expect(d).To(Equal(expectedDuration))
+		return mockTicker
+	}
+	return ticks
+}
+
+// reinstateNewTicker reinstates the original statscache.NewTicker helper method.
+func reinstateNewTicker() {
+	statscache.NewTicker = originalNewTicker
+}
+
+// shouldNotReceiveAggregated checks that nothing is received over the Aggregated stats channel.
+// It is not possible to use the ginkgo methods for testing since they perform polled checks on
+// the channel and the statscache will drop aggregated stats if there is noone to receive them.
 func shouldNotReceiveAggregated(sc statscache.StatsCache, timeout time.Duration) {
 	select {
 	case a := <-sc.Aggregated():
@@ -188,6 +272,9 @@ func shouldNotReceiveAggregated(sc statscache.StatsCache, timeout time.Duration)
 	}
 }
 
+// shouldReceiveAggregated checks that something is received over the Aggregated stats channel.
+// It is not possible to use the ginkgo methods for testing since they perform polled checks on
+// the channel and the statscache will drop aggregated stats if there is noone to receive them.
 func shouldReceiveAggregated(sc statscache.StatsCache, timeout time.Duration, expected map[statscache.Tuple]statscache.Values) {
 	select {
 	case a := <-sc.Aggregated():
