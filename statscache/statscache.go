@@ -19,7 +19,7 @@ import (
 	"time"
 )
 
-// Tuple encapsulatest the 5-tuple connection information.
+// Tuple encapsulates the 5-tuple connection information.
 type Tuple struct {
 	SrcIp    string
 	DstIp    string
@@ -48,33 +48,42 @@ type DPStats struct {
 }
 
 // The statscache interface.
-type Interface interface {
-	Start(cxt context.Context, dpStats <-chan DPStats, aggregated chan<- map[Tuple]Values)
+type StatsCache interface {
+	Start(cxt context.Context, dpStats <-chan DPStats)
+	Aggregated() <-chan map[Tuple]Values
 }
 
 // New() creates a new statscache.
-func New(flushInterval time.Duration) Interface {
+func New(flushInterval time.Duration) StatsCache {
 	return &statsCache{
 		flushInterval: flushInterval,
 		stats:         make(map[Tuple]Values),
+		aggregated:    make(chan map[Tuple]Values),
 	}
 }
 
 // Start starts the statscache collection, aggregation and reporting.
 // Statistics are fed in through the dpStats channel, and the aggregated statistics are reported through
 // the aggregated channel with a flush interval defined by `flushInterval`.
-func (s *statsCache) Start(cxt context.Context, dpStats <-chan DPStats, aggregated chan<- map[Tuple]Values) {
-	go s.run(cxt, dpStats, aggregated)
+func (s *statsCache) Start(cxt context.Context, dpStats <-chan DPStats) {
+	go s.run(cxt, dpStats)
+}
+
+// Aggregated returns the aggregated stats channel. If no goroutine is actively reading from this channel
+// when the stats are flushed, the stats will be dropped.
+func (s *statsCache) Aggregated() <-chan map[Tuple]Values {
+	return s.aggregated
 }
 
 type statsCache struct {
 	flushInterval time.Duration
 	stats         map[Tuple]Values
+	aggregated    chan map[Tuple]Values
 }
 
 // run is the main loop that pulls stats from the dsStats channel and periodically reports aggregated
 // stats through the aggregated channel.
-func (s *statsCache) run(cxt context.Context, dpStats <-chan DPStats, aggregated chan<- map[Tuple]Values) {
+func (s *statsCache) run(cxt context.Context, dpStats <-chan DPStats) {
 	flushStatsTicker := time.NewTicker(s.flushInterval)
 	defer flushStatsTicker.Stop()
 
@@ -83,7 +92,9 @@ func (s *statsCache) run(cxt context.Context, dpStats <-chan DPStats, aggregated
 		case d := <-dpStats:
 			s.add(d)
 		case <-flushStatsTicker.C:
-			s.flush(aggregated)
+			s.flush()
+		case <-cxt.Done():
+			return
 		}
 	}
 }
@@ -101,13 +112,18 @@ func (s *statsCache) add(d DPStats) {
 }
 
 // flush sends the current aggregated cache, and creates a new empty cache.
-func (s *statsCache) flush(aggregated chan<- map[Tuple]Values) {
+func (s *statsCache) flush() {
 	if len(s.stats) == 0 {
 		// No stats, so nothing to report.
 		return
 	}
 
 	// Report the current set of stats, and create a new empty stats cache.
-	aggregated <- s.stats
+	select {
+	case s.aggregated <- s.stats:
+		// Aggregated stats successfully received by remote end.
+	default:
+		// No go-routine waiting on the stats. Drop them.
+	}
 	s.stats = make(map[Tuple]Values)
 }

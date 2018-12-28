@@ -41,19 +41,18 @@ var (
 	}
 )
 
-func setup(flush time.Duration) (chan statscache.DPStats, chan map[statscache.Tuple]statscache.Values, func()) {
+func setup(flush time.Duration) (statscache.StatsCache, chan statscache.DPStats, func()) {
 	sc := statscache.New(flush)
 	in := make(chan statscache.DPStats, 5)
-	out := make(chan map[statscache.Tuple]statscache.Values, 1)
 	cxt, cancel := context.WithCancel(context.Background())
 
-	sc.Start(cxt, in, out)
-	return in, out, cancel
+	sc.Start(cxt, in)
+	return sc, in, cancel
 }
 
 func TestDuration(t *testing.T) {
 	RegisterTestingT(t)
-	in, out, cancel := setup(3 * time.Second)
+	sc, in, cancel := setup(3 * time.Second)
 
 	// Send in a couple of stats for the same tuple.
 	in <- statscache.DPStats{
@@ -72,14 +71,13 @@ func TestDuration(t *testing.T) {
 	}
 
 	// Check that we get data after 3s (10% jitter), but not before.
-	Consistently(out, "1s", "100ms").ShouldNot(Receive())
-	Consistently(out, "1s", "100ms").ShouldNot(Receive())
-	Eventually(out, "1.4s", "100ms").Should(Receive(Equal(map[statscache.Tuple]statscache.Values{
+	shouldNotReceiveAggregated(sc, 2*time.Second)
+	shouldReceiveAggregated(sc, 1400*time.Millisecond, map[statscache.Tuple]statscache.Values{
 		tuple1: {
 			HTTPRequestsAllowed: 2,
 			HTTPRequestsDenied:  5,
 		},
-	})))
+	})
 
 	// Cancel the context to stop the cache.
 	cancel()
@@ -87,7 +85,7 @@ func TestDuration(t *testing.T) {
 
 func TestMultipleFlushes(t *testing.T) {
 	RegisterTestingT(t)
-	in, out, cancel := setup(500 * time.Millisecond)
+	sc, in, cancel := setup(500 * time.Millisecond)
 
 	// Send in a couple of stats with the same tuple.
 	in <- statscache.DPStats{
@@ -102,12 +100,13 @@ func TestMultipleFlushes(t *testing.T) {
 			HTTPRequestsDenied: 3,
 		},
 	}
-	Eventually(out).Should(Receive(Equal(map[statscache.Tuple]statscache.Values{
+
+	shouldReceiveAggregated(sc, time.Second, map[statscache.Tuple]statscache.Values{
 		tuple1: {
 			HTTPRequestsAllowed: 1,
 			HTTPRequestsDenied:  3,
 		},
-	})))
+	})
 
 	// Send in more stats with different tuples.
 	in <- statscache.DPStats{
@@ -123,7 +122,7 @@ func TestMultipleFlushes(t *testing.T) {
 			HTTPRequestsAllowed: 15,
 		},
 	}
-	Eventually(out).Should(Receive(Equal(map[statscache.Tuple]statscache.Values{
+	shouldReceiveAggregated(sc, time.Second, map[statscache.Tuple]statscache.Values{
 		tuple1: {
 			HTTPRequestsAllowed: 10,
 			HTTPRequestsDenied:  33,
@@ -132,7 +131,7 @@ func TestMultipleFlushes(t *testing.T) {
 			HTTPRequestsAllowed: 15,
 			HTTPRequestsDenied:  0,
 		},
-	})))
+	})
 
 	// Cancel the context to stop the cache.
 	cancel()
@@ -140,10 +139,10 @@ func TestMultipleFlushes(t *testing.T) {
 
 func TestNoData(t *testing.T) {
 	RegisterTestingT(t)
-	in, out, cancel := setup(500 * time.Millisecond)
+	sc, in, cancel := setup(500 * time.Millisecond)
 
 	// Send in no data.
-	Consistently(out, "550ms", "100ms").ShouldNot(Receive())
+	shouldNotReceiveAggregated(sc, 550*time.Millisecond)
 
 	// Send in some stats.
 	in <- statscache.DPStats{
@@ -152,14 +151,14 @@ func TestNoData(t *testing.T) {
 			HTTPRequestsAllowed: 12,
 		},
 	}
-	Eventually(out).Should(Receive(Equal(map[statscache.Tuple]statscache.Values{
+	shouldReceiveAggregated(sc, time.Second, map[statscache.Tuple]statscache.Values{
 		tuple1: {
 			HTTPRequestsAllowed: 12,
 		},
-	})))
+	})
 
 	// Send in no data.
-	Consistently(out, "550ms", "100ms").ShouldNot(Receive())
+	shouldNotReceiveAggregated(sc, 550*time.Millisecond)
 
 	// Send in some stats.
 	in <- statscache.DPStats{
@@ -168,15 +167,32 @@ func TestNoData(t *testing.T) {
 			HTTPRequestsDenied: 13,
 		},
 	}
-	Eventually(out).Should(Receive(Equal(map[statscache.Tuple]statscache.Values{
+	shouldReceiveAggregated(sc, time.Second, map[statscache.Tuple]statscache.Values{
 		tuple2: {
 			HTTPRequestsDenied: 13,
 		},
-	})))
+	})
 
 	// Send in no data.
-	Consistently(out, "550ms", "100ms").ShouldNot(Receive())
+	shouldNotReceiveAggregated(sc, 550*time.Millisecond)
 
 	// Cancel the context to stop the cache.
 	cancel()
+}
+
+func shouldNotReceiveAggregated(sc statscache.StatsCache, timeout time.Duration) {
+	select {
+	case a := <-sc.Aggregated():
+		Expect(a).To(BeNil())
+	case <-time.After(timeout):
+	}
+}
+
+func shouldReceiveAggregated(sc statscache.StatsCache, timeout time.Duration, expected map[statscache.Tuple]statscache.Values) {
+	select {
+	case a := <-sc.Aggregated():
+		Expect(a).To(Equal(expected))
+	case <-time.After(timeout):
+		Expect(nil).To(Equal(expected))
+	}
 }

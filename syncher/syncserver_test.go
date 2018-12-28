@@ -15,7 +15,6 @@ package syncher
 
 import (
 	"context"
-	"errors"
 	"io/ioutil"
 	"net"
 	"os"
@@ -776,7 +775,7 @@ func TestDPStatsAfterConnection(t *testing.T) {
 	defer server.Shutdown()
 	server.Start()
 
-	uut := NewClient(server.GetTarget(), uds.GetDialOptions(), ClientOptions{StatsFlushInterval: 100 * time.Millisecond})
+	uut := NewClient(server.GetTarget(), uds.GetDialOptions(), ClientOptions{StatsFlushInterval: 500 * time.Millisecond})
 	stores := make(chan *policystore.PolicyStore)
 	dpStats := make(chan statscache.DPStats, 10)
 
@@ -798,20 +797,37 @@ func TestDPStatsAfterConnection(t *testing.T) {
 		// pass
 	}
 
-	// Send an aggregated DPStats update and check we have the corresponding protobuf stored. Allow enough time
+	// Send a bunch of DPStats update and check we have the corresponding aggregated protobuf stored. Allow enough time
 	// for the flush interval and the reconnection time.
-	dpStats <- statscache.DPStats{
-		Tuple: statscache.Tuple{
-			SrcIp:    "1.2.3.4",
-			DstIp:    "11.22.33.44",
-			SrcPort:  1000,
-			DstPort:  2000,
-			Protocol: "TCP",
-		},
-		Values: statscache.Values{
-			HTTPRequestsAllowed: 1,
-			HTTPRequestsDenied:  3,
-		},
+	for i := 0; i < 3; i++ {
+		dpStats <- statscache.DPStats{
+			Tuple: statscache.Tuple{
+				SrcIp:    "1.2.3.4",
+				DstIp:    "11.22.33.44",
+				SrcPort:  1000,
+				DstPort:  2000,
+				Protocol: "TCP",
+			},
+			Values: statscache.Values{
+				HTTPRequestsAllowed: 1,
+				HTTPRequestsDenied:  0,
+			},
+		}
+	}
+	for i := 0; i < 15; i++ {
+		dpStats <- statscache.DPStats{
+			Tuple: statscache.Tuple{
+				SrcIp:    "1.2.3.4",
+				DstIp:    "11.22.33.44",
+				SrcPort:  1000,
+				DstPort:  2000,
+				Protocol: "TCP",
+			},
+			Values: statscache.Values{
+				HTTPRequestsAllowed: 0,
+				HTTPRequestsDenied:  1,
+			},
+		}
 	}
 	Eventually(server.GetDataplaneStats, "700ms", "50ms").Should(Equal([]*proto.DataplaneStats{
 		{
@@ -826,14 +842,14 @@ func TestDPStatsAfterConnection(t *testing.T) {
 					Relativity: proto.Statistic_DELTA,
 					Kind:       proto.Statistic_HTTP_REQUESTS,
 					Action:     proto.Action_ALLOWED,
-					Value:      1,
+					Value:      3,
 				},
 				{
 					Direction:  proto.Statistic_IN,
 					Relativity: proto.Statistic_DELTA,
 					Kind:       proto.Statistic_HTTP_REQUESTS,
 					Action:     proto.Action_DENIED,
-					Value:      3,
+					Value:      15,
 				},
 			},
 		},
@@ -843,7 +859,7 @@ func TestDPStatsAfterConnection(t *testing.T) {
 	Eventually(syncDone).Should(BeClosed())
 }
 
-func TestDPStatsBeforeConnectionNoAggregation(t *testing.T) {
+func TestDPStatsBeforeConnection(t *testing.T) {
 	RegisterTestingT(t)
 
 	server := newTestSyncServer()
@@ -862,157 +878,34 @@ func TestDPStatsBeforeConnectionNoAggregation(t *testing.T) {
 		close(syncDone)
 	}()
 
-	// Before starting the server send in 2*MaxStatsCaches updates, pausing in between to allow each update to be
-	// in an aggregated stats flush. This should build up stats sets in the syncserver, and should start aging out
-	// the oldest sets, so that only the last MaxStatsCaches remain.
-	for i := uint(0); i < 2*MaxStatsCaches; i++ {
-		dpStats <- statscache.DPStats{
-			Tuple: statscache.Tuple{
-				SrcIp:    "1.2.3.4",
-				DstIp:    "11.22.33.44",
-				SrcPort:  1000,
-				DstPort:  2000,
-				Protocol: "TCP",
-			},
-			Values: statscache.Values{
-				HTTPRequestsAllowed: 0,
-				HTTPRequestsDenied:  1 << i,
-			},
-		}
-		Consistently(server.GetDataplaneStats, "100ms", "10ms").Should(HaveLen(0))
-	}
-
-	// Start the server. This should allow the connection to complete, and we should receive the last
-	// `MaxStatsCaches` stats as individual unaggregated stats.
-	server.Start()
-
-	// Wait for in sync to complete since that guarantees we are connected.
-	server.SendInSync()
-	select {
-	case <-time.After(1 * time.Second):
-		t.Error("Failed to get sync'd PolicyStore")
-	case <-stores:
-		// pass
-	}
-
-	expected := []*proto.DataplaneStats{}
-	for i := uint(MaxStatsCaches); i < 2*MaxStatsCaches; i++ {
-		expected = append(expected, &proto.DataplaneStats{
+	dpStats <- statscache.DPStats{
+		Tuple: statscache.Tuple{
 			SrcIp:    "1.2.3.4",
 			DstIp:    "11.22.33.44",
 			SrcPort:  1000,
 			DstPort:  2000,
-			Protocol: &proto.Protocol{&proto.Protocol_Name{Name: "TCP"}},
-			Stats: []*proto.Statistic{
-				{
-					Direction:  proto.Statistic_IN,
-					Relativity: proto.Statistic_DELTA,
-					Kind:       proto.Statistic_HTTP_REQUESTS,
-					Action:     proto.Action_DENIED,
-					Value:      1 << i,
-				},
-			},
-		})
-	}
-	Eventually(server.GetDataplaneStats, "500ms", "50ms").Should(Equal(expected))
-
-	cCancel()
-	Eventually(syncDone).Should(BeClosed())
-}
-
-func TestDPStatsBeforeConnectionAggregation(t *testing.T) {
-	RegisterTestingT(t)
-
-	server := newTestSyncServer()
-	defer server.Shutdown()
-
-	uut := NewClient(server.GetTarget(), uds.GetDialOptions(), ClientOptions{StatsFlushInterval: 50 * time.Millisecond})
-	stores := make(chan *policystore.PolicyStore)
-
-	// To avoid timing windows where the stats cache flushes, fill the channel before creating the server.
-	dpStats := make(chan statscache.DPStats, 4*MaxStatsCaches)
-	var totalAllowed int64
-	var totalDenied int64
-	for i := uint(0); i < 2*MaxStatsCaches; i++ {
-		dpStats <- statscache.DPStats{
-			Tuple: statscache.Tuple{
-				SrcIp:    "1.2.3.4",
-				DstIp:    "11.22.33.44",
-				SrcPort:  1000,
-				DstPort:  2000,
-				Protocol: "TCP",
-			},
-			Values: statscache.Values{
-				HTTPRequestsAllowed: 1<<i + 1,
-				HTTPRequestsDenied:  0,
-			},
-		}
-		dpStats <- statscache.DPStats{
-			Tuple: statscache.Tuple{
-				SrcIp:    "1.2.3.4",
-				DstIp:    "11.22.33.44",
-				SrcPort:  1000,
-				DstPort:  2000,
-				Protocol: "TCP",
-			},
-			Values: statscache.Values{
-				HTTPRequestsAllowed: 0,
-				HTTPRequestsDenied:  1 << i,
-			},
-		}
-		totalAllowed += 1<<i + 1
-		totalDenied += 1 << i
-		Consistently(server.GetDataplaneStats, "100ms", "10ms").Should(HaveLen(0))
-	}
-
-	cCtx, cCancel := context.WithCancel(context.Background())
-	defer cCancel()
-	syncDone := make(chan struct{})
-	go func() {
-		uut.Start(cCtx, stores, dpStats)
-		close(syncDone)
-	}()
-
-	// Start the server. This should allow the connection to complete, and we should receive one aggregated
-	// statistic.
-	server.Start()
-
-	// Wait for in sync to complete since that guarantees we are connected.
-	server.SendInSync()
-	select {
-	case <-time.After(1 * time.Second):
-		t.Error("Failed to get sync'd PolicyStore")
-	case <-stores:
-		// pass
-	}
-
-	expected := []*proto.DataplaneStats{
-		{
-			SrcIp:    "1.2.3.4",
-			DstIp:    "11.22.33.44",
-			SrcPort:  1000,
-			DstPort:  2000,
-			Protocol: &proto.Protocol{&proto.Protocol_Name{Name: "TCP"}},
-			Stats: []*proto.Statistic{
-				{
-					Direction:  proto.Statistic_IN,
-					Relativity: proto.Statistic_DELTA,
-					Kind:       proto.Statistic_HTTP_REQUESTS,
-					Action:     proto.Action_ALLOWED,
-					Value:      totalAllowed,
-				},
-				{
-					Direction:  proto.Statistic_IN,
-					Relativity: proto.Statistic_DELTA,
-					Kind:       proto.Statistic_HTTP_REQUESTS,
-					Action:     proto.Action_DENIED,
-					Value:      totalDenied,
-				},
-			},
+			Protocol: "TCP",
+		},
+		Values: statscache.Values{
+			HTTPRequestsAllowed: 0,
+			HTTPRequestsDenied:  1,
 		},
 	}
-	Eventually(server.GetDataplaneStats, "500ms", "50ms").Should(Equal(expected))
-	Consistently(server.GetDataplaneStats, "500ms", "50ms").Should(Equal(expected))
+	Consistently(server.GetDataplaneStats, "100ms", "10ms").Should(HaveLen(0))
+
+	// Start the server. This should allow the connection to complete - we expect the stats to have been
+	// dropped while there was no connection, so we should receive no stats.
+	server.Start()
+
+	// Wait for in sync to complete since that guarantees we are connected.
+	server.SendInSync()
+	select {
+	case <-time.After(1 * time.Second):
+		t.Error("Failed to get sync'd PolicyStore")
+	case <-stores:
+		// pass
+	}
+	Consistently(server.GetDataplaneStats, "100ms", "10ms").Should(HaveLen(0))
 
 	cCancel()
 	Eventually(syncDone).Should(BeClosed())
@@ -1022,12 +915,13 @@ func TestDPStatsReportReturnsError(t *testing.T) {
 	RegisterTestingT(t)
 
 	server := newTestSyncServer()
+	server.Start()
 	defer server.Shutdown()
 
 	uut := NewClient(server.GetTarget(), uds.GetDialOptions(), ClientOptions{StatsFlushInterval: 50 * time.Millisecond})
 	stores := make(chan *policystore.PolicyStore)
 
-	dpStats := make(chan statscache.DPStats, 4*MaxStatsCaches)
+	dpStats := make(chan statscache.DPStats, 10)
 
 	cCtx, cCancel := context.WithCancel(context.Background())
 	defer cCancel()
@@ -1037,12 +931,19 @@ func TestDPStatsReportReturnsError(t *testing.T) {
 		close(syncDone)
 	}()
 
-	// Start the server. This should allow the connection to complete, and we should receive one aggregated
-	// statistic.
-	server.Start()
+	// Wait for in sync, so that we can be sure we've connected.
+	server.SendInSync()
+	select {
+	case <-time.After(1 * time.Second):
+		t.Error("Failed to get sync'd PolicyStore")
+	case <-stores:
+		// pass
+	}
 
-	// Tell the Report fn to return an error and then send in the stats. We should not receive any updates.
-	server.SetReportReturnValues(false, errors.New("foobarbaz"))
+	// Stop the server and then send in the stats. We should not receive any updates.
+	server.Stop()
+	Consistently(server.GetDataplaneStats).Should(HaveLen(0))
+
 	dpStats <- statscache.DPStats{
 		Tuple: statscache.Tuple{
 			SrcIp:    "1.2.3.4",
@@ -1056,8 +957,37 @@ func TestDPStatsReportReturnsError(t *testing.T) {
 			HTTPRequestsDenied:  0,
 		},
 	}
+	Consistently(server.GetDataplaneStats).Should(HaveLen(0))
 
-	expected := []*proto.DataplaneStats{
+	// Restart the test server, the stats should have been dropped, so we should still not receive them.
+	server.Start()
+	Consistently(server.GetDataplaneStats).Should(HaveLen(0))
+
+	// We will have triggered reconnection processing, wait for the in-sync again so that
+	// we know we are connected.
+	server.SendInSync()
+	select {
+	case <-time.After(3 * time.Second):
+		t.Error("Failed to get sync'd PolicyStore")
+	case <-stores:
+		// pass
+	}
+
+	// Send in another stat and this time, check that we do eventually get it reported.
+	dpStats <- statscache.DPStats{
+		Tuple: statscache.Tuple{
+			SrcIp:    "1.2.3.4",
+			DstIp:    "11.22.33.44",
+			SrcPort:  1000,
+			DstPort:  2000,
+			Protocol: "TCP",
+		},
+		Values: statscache.Values{
+			HTTPRequestsAllowed: 7,
+			HTTPRequestsDenied:  0,
+		},
+	}
+	Eventually(server.GetDataplaneStats, "3s").Should(Equal([]*proto.DataplaneStats{
 		{
 			SrcIp:    "1.2.3.4",
 			DstIp:    "11.22.33.44",
@@ -1070,16 +1000,11 @@ func TestDPStatsReportReturnsError(t *testing.T) {
 					Relativity: proto.Statistic_DELTA,
 					Kind:       proto.Statistic_HTTP_REQUESTS,
 					Action:     proto.Action_ALLOWED,
-					Value:      15,
+					Value:      7,
 				},
 			},
 		},
-	}
-	Consistently(server.GetDataplaneStats).Should(HaveLen(0))
-
-	// Tell the Report fn to succeed and check we get our stats.
-	server.SetReportReturnValues(true, nil)
-	Eventually(server.GetDataplaneStats).Should(Equal(expected))
+	}))
 
 	cCancel()
 	Eventually(syncDone).Should(BeClosed())
@@ -1094,7 +1019,7 @@ func TestDPStatsReportReturnsUnsuccessful(t *testing.T) {
 	uut := NewClient(server.GetTarget(), uds.GetDialOptions(), ClientOptions{StatsFlushInterval: 50 * time.Millisecond})
 	stores := make(chan *policystore.PolicyStore)
 
-	dpStats := make(chan statscache.DPStats, 4*MaxStatsCaches)
+	dpStats := make(chan statscache.DPStats, 10)
 
 	cCtx, cCancel := context.WithCancel(context.Background())
 	defer cCancel()
@@ -1119,7 +1044,7 @@ func TestDPStatsReportReturnsUnsuccessful(t *testing.T) {
 
 	// Tell the Report fn to return unsuccessful (which can occur if the remote end is no longer expecting statistics
 	// to be sent to it) and then send in the stats. We should not receive any updates.
-	server.SetReportReturnValues(false, errors.New("foobarbaz"))
+	server.SetReportSuccessful(false)
 	dpStats <- statscache.DPStats{
 		Tuple: statscache.Tuple{
 			SrcIp:    "1.2.3.4",
@@ -1137,7 +1062,7 @@ func TestDPStatsReportReturnsUnsuccessful(t *testing.T) {
 
 	// Tell the Report fn to succeed and check we still don't get the stats - they should have been dropped at this
 	// point.
-	server.SetReportReturnValues(true, nil)
+	server.SetReportSuccessful(true)
 	Consistently(server.GetDataplaneStats).Should(HaveLen(0))
 
 	cCancel()
@@ -1223,17 +1148,16 @@ func TestConfigUpdateUnknownConfig(t *testing.T) {
 }
 
 type testSyncServer struct {
-	cxt        context.Context
-	cancel     func()
-	updates    chan proto.ToDataplane
-	path       string
-	gRPCServer *grpc.Server
-	listener   net.Listener
-	cLock      sync.Mutex
-	cancelFns  []func()
-	dpStats    []*proto.DataplaneStats
-	reportErr  error
-	reportRet  bool
+	cxt              context.Context
+	cancel           func()
+	updates          chan proto.ToDataplane
+	path             string
+	gRPCServer       *grpc.Server
+	listener         net.Listener
+	cLock            sync.Mutex
+	cancelFns        []func()
+	dpStats          []*proto.DataplaneStats
+	reportSuccessful bool
 }
 
 func newTestSyncServer() *testSyncServer {
@@ -1242,7 +1166,7 @@ func newTestSyncServer() *testSyncServer {
 	socketPath := path.Join(socketDir, ListenerSocket)
 	ss := &testSyncServer{
 		cxt: cxt, cancel: cancel, updates: make(chan proto.ToDataplane), path: socketPath, gRPCServer: grpc.NewServer(),
-		reportRet: true,
+		reportSuccessful: true,
 	}
 	proto.RegisterPolicySyncServer(ss.gRPCServer, ss)
 	return ss
@@ -1291,17 +1215,18 @@ func (ss *testSyncServer) Sync(_ *proto.SyncRequest, stream proto.PolicySync_Syn
 			stream.Send(&update)
 		}
 	}
+	return nil
 }
 
 func (ss *testSyncServer) Report(_ context.Context, d *proto.DataplaneStats) (*proto.ReportResult, error) {
 	ss.cLock.Lock()
 	defer ss.cLock.Unlock()
 
-	if ss.reportErr != nil || !ss.reportRet {
-		// Returning error, so don't store the stats.
+	if !ss.reportSuccessful {
+		// Mimicking unsuccessful report, don't store the stats - exit returning unsuccessful.
 		return &proto.ReportResult{
-			Successful: ss.reportRet,
-		}, ss.reportErr
+			Successful: false,
+		}, nil
 	}
 
 	// Store the stats and return success.
@@ -1327,11 +1252,10 @@ func (ss *testSyncServer) GetDataplaneStats() []*proto.DataplaneStats {
 	return s
 }
 
-func (ss *testSyncServer) SetReportReturnValues(ret bool, err error) {
+func (ss *testSyncServer) SetReportSuccessful(ret bool) {
 	ss.cLock.Lock()
 	defer ss.cLock.Unlock()
-	ss.reportRet = ret
-	ss.reportErr = err
+	ss.reportSuccessful = ret
 }
 
 func (ss *testSyncServer) listen() {

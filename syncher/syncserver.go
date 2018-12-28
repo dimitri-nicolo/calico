@@ -31,16 +31,14 @@ import (
 )
 
 const (
-	DefaultStatsFlushInterval = 1 * time.Minute
+	DefaultStatsFlushInterval = 30 * time.Second
 	PolicySyncRetryTime       = 500 * time.Millisecond
-	MaxStatsCaches            = 5
 )
 
 type syncClient struct {
-	target     string
-	dialOpts   []grpc.DialOption
-	stats      statscache.Interface
-	unreported []map[statscache.Tuple]statscache.Values
+	target   string
+	dialOpts []grpc.DialOption
+	stats    statscache.StatsCache
 }
 
 type SyncClient interface {
@@ -65,20 +63,16 @@ func NewClient(target string, dialOpts []grpc.DialOption, clientOpts ClientOptio
 }
 
 func (s *syncClient) Start(cxt context.Context, stores chan<- *policystore.PolicyStore, dpStats <-chan statscache.DPStats) {
-	aggregatedStats := make(chan map[statscache.Tuple]statscache.Values, MaxStatsCaches)
-	s.stats.Start(cxt, dpStats, aggregatedStats)
+	s.stats.Start(cxt, dpStats)
 	for {
 		select {
 		case <-cxt.Done():
 			return
-		case a := <-aggregatedStats:
-			// Aggregated stats are available. Queue them, but don't report them since we aren't connected.
-			s.queueAggregatedStats(a)
 		default:
 			store := policystore.NewPolicyStore()
 			inSync := make(chan struct{})
 			done := make(chan struct{})
-			go s.connect(cxt, store, inSync, aggregatedStats, done)
+			go s.connect(cxt, store, inSync, done)
 
 			// Block until we receive InSync message, or cancelled.
 			select {
@@ -104,9 +98,8 @@ func (s *syncClient) Start(cxt context.Context, stores chan<- *policystore.Polic
 	}
 }
 
-func (s *syncClient) connect(cxt context.Context,
-	store *policystore.PolicyStore, inSync chan<- struct{},
-	aggregatedStats <-chan map[statscache.Tuple]statscache.Values, done chan<- struct{},
+func (s *syncClient) connect(
+	cxt context.Context, store *policystore.PolicyStore, inSync chan<- struct{}, done chan<- struct{},
 ) {
 	defer close(done)
 	conn, err := grpc.Dial(s.target, s.dialOpts...)
@@ -132,7 +125,7 @@ func (s *syncClient) connect(cxt context.Context,
 	// Start the DataplaneStats reporting go routine.
 	wg.Add(1)
 	go func() {
-		s.sendStats(cxt, client, aggregatedStats)
+		s.sendStats(cxt, client)
 		cancel()
 		wg.Done()
 	}()
@@ -166,65 +159,23 @@ func (s *syncClient) syncStore(cxt context.Context, client proto.PolicySyncClien
 }
 
 // sendStats is the main stats reporting loop.
-func (s *syncClient) sendStats(
-	cxt context.Context, client proto.PolicySyncClient,
-	aggregatedStats <-chan map[statscache.Tuple]statscache.Values,
-) {
+func (s *syncClient) sendStats(cxt context.Context, client proto.PolicySyncClient) {
 	log.Info("Starting sending DataplaneStats to Policy Sync server")
-
-	// If there are some statistics that were queued while we were connecting, then send them now.
-	if err := s.maybeReportStats(cxt, client); err != nil {
-		// Error reporting stats, exit now to start reconnction processing.
-		log.WithError(err).Info("Error reporting stats")
-		return
-	}
 
 	for {
 		select {
-		case a := <-aggregatedStats:
-			// Aggregated stats are available, queue them and report immediately.
-			s.queueAggregatedStats(a)
-			if err := s.maybeReportStats(cxt, client); err != nil {
-				// Error reporting stats, exit now to start reconnction processing.
-				log.WithError(err).Info("Error reporting stats")
-				return
+		case a := <-s.stats.Aggregated():
+			for t, v := range a {
+				if err := s.report(cxt, client, t, v); err != nil {
+					// Error reporting stats, exit now to start reconnction processing.
+					log.WithError(err).Warning("Error reporting stats")
+					return
+				}
 			}
 		case <-cxt.Done():
 			return
 		}
 	}
-}
-
-// queueAggregatedStats appends the supplied set of aggregated stats to the backlog of unreported stats sets.
-// Only a certain number of stats sets are maintained, which means we hold on to a minumum period of data until
-// it is reported. The stored data may refer to a longer time period than the minimum since we don't get any
-// data sets for reporting periods that generate no data.
-func (s *syncClient) queueAggregatedStats(aggregatedStats map[statscache.Tuple]statscache.Values) {
-	s.unreported = append(s.unreported, aggregatedStats)
-	if len(s.unreported) > MaxStatsCaches {
-		log.Warning("Dropping old unreported statistics")
-		s.unreported = s.unreported[len(s.unreported)-MaxStatsCaches:]
-	}
-}
-
-// maybeReportStats reports any queued sets of statistics to Felix. Any error hit when reporting the statistics
-// will result in reconnection processing.
-func (s *syncClient) maybeReportStats(cxt context.Context, client proto.PolicySyncClient) error {
-	for len(s.unreported) > 0 {
-		// Iterate through the stats in the oldest set, reporting each stat and then removing the stat from the
-		// set. If we hit an error, exit - we'll continue reporting this stats set when connection is reestablished
-		// (unless the stats set is aged-out by newer sets).
-		log.Info("Reporting aggregated statistics")
-		for t, v := range s.unreported[0] {
-			if err := s.report(cxt, client, t, v); err != nil {
-				return err
-			}
-			delete(s.unreported[0], t)
-		}
-
-		s.unreported = s.unreported[1:]
-	}
-	return nil
 }
 
 // report converts the statscache formatted stats and reports it as a proto.DataplaneStats to Felix.
@@ -257,13 +208,12 @@ func (s *syncClient) report(cxt context.Context, client proto.PolicySyncClient, 
 
 	if r, err := client.Report(cxt, d); err != nil {
 		// Error sending stats, must be a connection issue, so exit now to force a reconnect.
-		log.Warnf("Error sending DataplaneStats: %v", err)
 		return err
 	} else if !r.Successful {
 		// If the remote end indicates unsuccessful then the remote end is likely transitioning from having
 		// stats enabled to having stats disabled. This should be transient, so log a warning, but otherwise
 		// treat as a successful report.
-		log.Warning("Remote end indicates DataplaneStats not processed successfully")
+		log.Warning("Remote end indicates dataplane statistics not processed successfully")
 		return nil
 	}
 	return nil
