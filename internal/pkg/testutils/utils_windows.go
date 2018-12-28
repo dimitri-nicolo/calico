@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"os/exec"
 
 	"github.com/Microsoft/hcsshim"
 	"github.com/containernetworking/cni/pkg/invoke"
@@ -15,10 +16,6 @@ import (
 	"github.com/containernetworking/cni/pkg/types"
 	"github.com/containernetworking/cni/pkg/types/020"
 	"github.com/containernetworking/cni/pkg/types/current"
-	dockertypes "github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	dockerclient "github.com/docker/docker/client"
-	"github.com/docker/docker/pkg/stdcopy"
 	version "github.com/mcuadros/go-version"
 	"github.com/projectcalico/cni-plugin/internal/pkg/utils"
 	"github.com/projectcalico/cni-plugin/pkg/k8s"
@@ -64,42 +61,41 @@ func WipeK8sPods(netconf string) {
 	log.Info("WipeK8sPods Sucess")
 }
 
-func CreateWindowsContainer() (string, error) {
-	ctx := context.Background()
-	cli, err := dockerclient.NewEnvClient()
+func CreateContainerUsingDocker() (string, error) {
+	cmd := exec.Command("powershell.exe", "docker run --net none -d -i microsoft/powershell:nanoserver pwsh")
+	out, err := cmd.CombinedOutput()
 	if err != nil {
+		log.Fatal(err)
 		return "", err
 	}
 
-	_, err = cli.ImagePull(ctx, "microsoft/powershell:nanoserver", dockertypes.ImagePullOptions{})
+	temp := out[:len(out)-1]
+	log.Debugf("container ID:\n%s\n", string(temp))
+	return string(temp), nil
+}
+
+func DeleteContainerUsingDocker(containerId string) error {
+	command := fmt.Sprintf("docker stop %s", containerId)
+	cmd := exec.Command("powershell.exe", command)
+	_, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", err
+		log.Errorf("error %v", err)
+		//return err
 	}
 
-	resp, err := cli.ContainerCreate(ctx, &container.Config{
-		Image:           "microsoft/powershell:nanoserver",
-		Cmd:             []string{"pwsh.exe", "while(1){}"},
-		NetworkDisabled: true,
-	}, nil, nil, "")
+	command = fmt.Sprintf("docker rm %s", containerId)
+	cmd = exec.Command("powershell.exe", command)
+	_, err = cmd.CombinedOutput()
 	if err != nil {
-		return "", err
+		log.Errorf("error %v", err)
+		//return err
 	}
 
-	if err := cli.ContainerStart(ctx, resp.ID, dockertypes.ContainerStartOptions{}); err != nil {
-		return "", err
-	}
-
-	out, err := cli.ContainerLogs(ctx, resp.ID, dockertypes.ContainerLogsOptions{ShowStdout: true})
-	if err != nil {
-		return "", err
-	}
-
-	stdcopy.StdCopy(os.Stdout, os.Stderr, out)
-	return resp.ID, nil
+	return nil
 }
 
 func CreateContainer(netconf, podName, podNamespace, ip, k8sNs string) (containerID string, result *current.Result, contVeth string, contAddr []string, contRoutes []string, err error) {
-	containerID, err = CreateWindowsContainer()
+	containerID, err = CreateContainerUsingDocker()
 	if err != nil {
 		return "", nil, "", []string{}, []string{}, err
 	}
@@ -114,7 +110,7 @@ func CreateContainer(netconf, podName, podNamespace, ip, k8sNs string) (containe
 //
 // Deprecated: Please call CreateContainerNamespace and then RunCNIPluginWithID directly.
 func CreateContainerWithId(netconf, podName, podNamespace, ip, overrideContainerID, k8sNs string) (containerID string, result *current.Result, contVeth string, contAddr []string, contRoutes []string, err error) {
-	containerID, err = CreateWindowsContainer()
+	containerID, err = CreateContainerUsingDocker()
 	if err != nil {
 		return "", nil, "", []string{}, []string{}, err
 	}
@@ -177,7 +173,7 @@ func RunCNIPluginWithId(
 	r, err = invoke.ExecPluginWithResult(pluginPath, []byte(netconf), args, nil)
 	if err != nil {
 		log.Errorf("error from invoke.ExecPluginWithResult %v", err)
-		_ = DeleteWindowsContainer(containerId)
+		_ = DeleteContainerUsingDocker(containerId)
 		return
 	}
 
@@ -245,8 +241,8 @@ func DeleteContainerWithIdAndIfaceName(netconf, podName, podNamespace, container
 	log.Infof("Deleting container with ID %v CNI plugin with the following env vars: %v", containerId, env)
 	//now delete the container
 	if containerId != "" {
-		log.Debugf(" calling DeleteWindowsContainer with ContainerID %v", containerId)
-		err = DeleteWindowsContainer(containerId)
+		log.Debugf(" calling DeleteContainerUsingDocker with ContainerID %v", containerId)
+		err = DeleteContainerUsingDocker(containerId)
 		if err != nil {
 			log.Errorf("Error deleting container %s", containerId)
 		}
@@ -263,29 +259,6 @@ func DeleteContainerWithIdAndIfaceName(netconf, podName, podNamespace, container
 	}
 
 	return
-}
-
-func DeleteWindowsContainer(containerId string) error {
-	ctx := context.Background()
-	cli, err := dockerclient.NewEnvClient()
-	if err != nil {
-		return err
-	}
-	err = cli.ContainerStop(ctx, containerId, nil)
-	if err != nil {
-		log.Errorf("Error stopping container %s: %v", containerId, err)
-		return err
-	}
-
-	err = cli.ContainerRemove(ctx, containerId, dockertypes.ContainerRemoveOptions{
-		RemoveVolumes: true,
-		Force:         true,
-	})
-	if err != nil {
-		log.Errorf("Error removing container %s: %v", containerId, err)
-		return err
-	}
-	return nil
 }
 
 func NetworkPod(

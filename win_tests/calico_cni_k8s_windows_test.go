@@ -169,7 +169,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			nsName = fmt.Sprintf("ns%d", rand.Uint32())
 			name = fmt.Sprintf("run%d", rand.Uint32())
 			cleanup()
-			time.Sleep(5000 * time.Millisecond)
 
 			// Create namespace
 			ensureNamespace(clientset, nsName)
@@ -821,7 +820,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				expectedIP := requestedIP
 
 				containerID, result, _, _, _, err := testutils.CreateContainer(netconfHostLocalIPAM, name, testutils.HnsNoneNs, requestedIP, nsName)
-				defer testutils.DeleteWindowsContainer(containerID)
+				defer testutils.DeleteContainerUsingDocker(containerID)
 				Expect(err).NotTo(HaveOccurred())
 
 				podIP := result.IPs[0].Address.IP.String()
@@ -1030,7 +1029,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			}
 
 			// Now create a K8s pod.
-			//time.Sleep(5000 * time.Millisecond)
 			// Create a new ipPool.
 			testutils.MustCreateNewIPPoolBlockSize(calicoClient, "10.0.0.0/24", false, false, true, 26)
 
@@ -1094,7 +1092,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			log.Debugf("endpointSpec: %v", endpointSpec)
 			Expect(endpointSpec.ContainerID).Should(Equal(containerID))
 			checkIPAMReservation()
-			//time.Sleep(5000 * time.Millisecond)
 		})
 
 		AfterEach(func() {
@@ -1112,7 +1109,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 		})
 
 		It("a second ADD for the same container shouldn't work, returning already assigned IP", func() {
-			//time.Sleep(5000 * time.Millisecond)
 			resultSecondAdd, _, _, _, err := testutils.RunCNIPluginWithId(netconf, name, testutils.HnsNoneNs, "", "new-container-id", "eth0", nsName)
 			log.Debugf("resultSecondAdd: %v", resultSecondAdd)
 			Expect(err).NotTo(HaveOccurred())
@@ -1129,7 +1125,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 
 			// IPAM reservation should still be in place.
 			checkIPAMReservation()
-			//time.Sleep(5000 * time.Millisecond)
 		})
 	})
 
@@ -1158,7 +1153,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 
 		BeforeEach(func() {
 			testutils.WipeK8sPods(netconf)
-			//time.Sleep(5000 * time.Millisecond)
 			// Create a new ipPool.
 			testutils.MustCreateNewIPPoolBlockSize(calicoClient, "10.0.0.0/26", false, false, true, 29)
 
@@ -1216,12 +1210,10 @@ var _ = Describe("Kubernetes CNI tests", func() {
 					}
 					clientset.CoreV1().Pods(nsName).Delete(podName[i], nil)
 					Expect(err).ShouldNot(HaveOccurred())
-					//time.Sleep(5000 * time.Millisecond)
 				}
 				Expect(cni_err).Should(BeNil())
 			}()
 			for i := 0; i < 4; i++ {
-				//time.Sleep(5000 * time.Millisecond)
 				name = fmt.Sprintf("run%d", rand.Uint32())
 				pod, err := clientset.CoreV1().Pods(nsName).Create(
 					&v1.Pod{
@@ -1243,19 +1235,9 @@ var _ = Describe("Kubernetes CNI tests", func() {
 
 				// Create the container, which will call CNI and by default it will create the container with interface name 'eth0'.
 				containerID, _, _, _, _, err := testutils.CreateContainer(netconf, name, testutils.HnsNoneNs, "", nsName)
-				if err != nil {
-					if strings.Contains(err.Error(), "compute system") {
-						log.Debugf("RETRYING!!!")
-						_, err = testutils.DeleteContainerWithId(netconf, name, testutils.HnsNoneNs, containerID, nsName)
-						Expect(err).ShouldNot(HaveOccurred())
-						time.Sleep(20000 * time.Millisecond)
-						containerID, _, _, _, _, err = testutils.CreateContainer(netconf, name, testutils.HnsNoneNs, "", nsName)
-					}
-				}
 				containerid = append(containerid, containerID)
 				log.Debugf("containerid = %v", containerid)
 				Expect(err).ShouldNot(HaveOccurred())
-				//time.Sleep(5000 * time.Millisecond)
 			}
 			name = fmt.Sprintf("run%d", rand.Uint32())
 			pod, err := clientset.CoreV1().Pods(nsName).Create(
@@ -1310,7 +1292,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 		BeforeEach(func() {
 			testutils.WipeK8sPods(netconf)
 			// Create a new ipPool.
-			//time.Sleep(5000 * time.Millisecond)
 			testutils.MustCreateNewIPPoolBlockSize(calicoClient, "10.0.0.0/26", false, false, true, 29)
 
 			conf := types.NetConf{}
@@ -1371,13 +1352,11 @@ var _ = Describe("Kubernetes CNI tests", func() {
 					}
 					clientset.CoreV1().Pods(nsName).Delete(podName[i], nil)
 					Expect(err).ShouldNot(HaveOccurred())
-					//time.Sleep(5000 * time.Millisecond)
 				}
 				Expect(cni_err).Should(BeNil())
 			}()
 
 			for i := 0; i < 5; i++ {
-				//time.Sleep(5000 * time.Millisecond)
 				name = fmt.Sprintf("run%d", rand.Uint32())
 				_, err := clientset.CoreV1().Pods(nsName).Create(
 					&v1.Pod{
@@ -1397,15 +1376,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				podName = append(podName, name)
 				// Create the container, which will call CNI and by default it will create the container with interface name 'eth0'.
 				containerID, result, _, _, _, err := testutils.CreateContainer(netconf, name, testutils.HnsNoneNs, "", nsName)
-				if err != nil {
-					if strings.Contains(err.Error(), "compute system") {
-						log.Debugf("RETRYING!!!")
-						_, err = testutils.DeleteContainerWithId(netconf, name, testutils.HnsNoneNs, containerID, nsName)
-						Expect(err).ShouldNot(HaveOccurred())
-						time.Sleep(20000 * time.Millisecond)
-						containerID, result, _, _, _, err = testutils.CreateContainer(netconf, name, testutils.HnsNoneNs, "", nsName)
-					}
-				}
 				containerid = append(containerid, containerID)
 				log.Debugf("containerid = %v", containerid)
 				Expect(err).ShouldNot(HaveOccurred())
@@ -1458,15 +1428,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 
 				// Create the container, which will call CNI and by default it will create the container with interface name 'eth0'.
 				containerID, result, _, _, _, err := testutils.CreateContainer(netconf, name, testutils.HnsNoneNs, "", nsName)
-				if err != nil {
-					if strings.Contains(err.Error(), "compute system") {
-						log.Debugf("RETRYING!!!")
-						_, err = testutils.DeleteContainerWithId(netconf, name, testutils.HnsNoneNs, containerID, nsName)
-						Expect(err).ShouldNot(HaveOccurred())
-						time.Sleep(20000 * time.Millisecond)
-						containerID, result, _, _, _, err = testutils.CreateContainer(netconf, name, testutils.HnsNoneNs, "", nsName)
-					}
-				}
 				containerid = append(containerid, containerID)
 				log.Debugf("containerid = %v", containerid)
 				Expect(err).ShouldNot(HaveOccurred())
@@ -1477,10 +1438,8 @@ var _ = Describe("Kubernetes CNI tests", func() {
 					lastNWName = nwName
 					nwsName = append(nwsName, nwName)
 				}
-				//time.Sleep(5000 * time.Millisecond)
 			}
 			for i := 0; i < 3; i++ {
-				//time.Sleep(5000 * time.Millisecond)
 				_, err := testutils.DeleteContainerWithId(netconf, podName[i], testutils.HnsNoneNs, containerid[i], nsName)
 				Expect(err).ShouldNot(HaveOccurred())
 				clientset.CoreV1().Pods(nsName).Delete(podName[i], nil)
@@ -1508,15 +1467,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 
 				// Create the container, which will call CNI and by default it will create the container with interface name 'eth0'.
 				containerID, result, _, _, _, err := testutils.CreateContainer(netconf, name, testutils.HnsNoneNs, "", nsName)
-				if err != nil {
-					if strings.Contains(err.Error(), "compute system") {
-						log.Debugf("RETRYING!!!")
-						_, err = testutils.DeleteContainerWithId(netconf, name, testutils.HnsNoneNs, containerID, nsName)
-						Expect(err).ShouldNot(HaveOccurred())
-						time.Sleep(20000 * time.Millisecond)
-						containerID, result, _, _, _, err = testutils.CreateContainer(netconf, name, testutils.HnsNoneNs, "", nsName)
-					}
-				}
 				containerid[i] = containerID
 				log.Debugf("containerid = %v", containerid)
 				Expect(err).ShouldNot(HaveOccurred())
@@ -1529,7 +1479,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				}
 				//Network should  be same
 				Expect(nwName).Should(Equal(podNwName))
-				//time.Sleep(5000 * time.Millisecond)
 			}
 		})
 	})
