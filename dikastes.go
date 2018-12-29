@@ -24,6 +24,7 @@ import (
 
 	"github.com/projectcalico/app-policy/checker"
 	"github.com/projectcalico/app-policy/policystore"
+	"github.com/projectcalico/app-policy/statscache"
 	"github.com/projectcalico/app-policy/syncher"
 	"github.com/projectcalico/app-policy/uds"
 
@@ -49,7 +50,9 @@ Options:
 
 var VERSION string
 
-const NODE_NAME_ENV = "K8S_NODENAME"
+const (
+	maxPendingDataplaneStats = 100
+)
 
 func main() {
 	arguments, err := docopt.Parse(usage, nil, true, VERSION, false)
@@ -101,13 +104,14 @@ func runServer(arguments map[string]interface{}) {
 	// Check server
 	gs := grpc.NewServer()
 	stores := make(chan *policystore.PolicyStore)
-	checkServer := checker.NewServer(ctx, stores)
+	dpStats := make(chan statscache.DPStats, maxPendingDataplaneStats)
+	checkServer := checker.NewServer(ctx, stores, dpStats)
 	authz.RegisterAuthorizationServer(gs, checkServer)
 
-	// Synchronize the policy store
+	// Synchronize the policy store and start reporting stats.
 	opts := uds.GetDialOptions()
-	syncClient := syncher.NewClient(dial, opts)
-	go syncClient.Sync(ctx, stores)
+	syncClient := syncher.NewClient(dial, opts, syncher.ClientOptions{})
+	go syncClient.Start(ctx, stores, dpStats)
 
 	// Run gRPC server on separate goroutine so we catch any signals and clean up.
 	go func() {

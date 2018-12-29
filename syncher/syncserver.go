@@ -17,38 +17,53 @@ package syncher
 import (
 	"context"
 	"fmt"
-	"time"
-
-	"github.com/projectcalico/app-policy/policystore"
-	"github.com/projectcalico/app-policy/proto"
-
+	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
+
+	"github.com/projectcalico/app-policy/policystore"
+	"github.com/projectcalico/app-policy/proto"
+	"github.com/projectcalico/app-policy/statscache"
 )
 
-const PolicySyncRetryTime = 500 * time.Millisecond
+const (
+	DefaultStatsFlushInterval = 30 * time.Second
+	PolicySyncRetryTime       = 500 * time.Millisecond
+)
 
 type syncClient struct {
 	target   string
 	dialOpts []grpc.DialOption
+	stats    statscache.StatsCache
 }
 
 type SyncClient interface {
+	// Start connects to the Policy Sync API server, processes policy updates from it and sends DataplaneStats to it.
+	// It collates and maintains policy updates in a PolicyStore which it sends over the channel when they are ready
+	// for enforcement.  Each time we disconnect and resync with the Policy Sync API a new PolicyStore is created
+	// and the previous one should be discarded.
+	Start(ctx context.Context, stores chan<- *policystore.PolicyStore, dpStats <-chan statscache.DPStats)
+}
 
-	// Sync connects to the Policy Sync API server and processes updates from it.  It sends PolicyStores over the
-	// channel when they are ready for enforcement.  Each time we disconnect and resync with the Policy Sync API a new
-	// PolicyStore is created.
-	Sync(ctx context.Context, stores chan<- *policystore.PolicyStore)
+type ClientOptions struct {
+	StatsFlushInterval time.Duration
 }
 
 // NewClient creates a new syncClient.
-func NewClient(target string, opts []grpc.DialOption) SyncClient {
-	return &syncClient{target: target, dialOpts: opts}
+func NewClient(target string, dialOpts []grpc.DialOption, clientOpts ClientOptions) SyncClient {
+	statsFlushInterval := DefaultStatsFlushInterval
+	if clientOpts.StatsFlushInterval != 0 {
+		statsFlushInterval = clientOpts.StatsFlushInterval
+	}
+	return &syncClient{target: target, dialOpts: dialOpts, stats: statscache.New(statsFlushInterval)}
 }
 
-func (s *syncClient) Sync(cxt context.Context, stores chan<- *policystore.PolicyStore) {
+func (s *syncClient) Start(cxt context.Context, stores chan<- *policystore.PolicyStore, dpStats <-chan statscache.DPStats) {
+	s.stats.Start(cxt, dpStats)
 	for {
 		select {
 		case <-cxt.Done():
@@ -57,7 +72,7 @@ func (s *syncClient) Sync(cxt context.Context, stores chan<- *policystore.Policy
 			store := policystore.NewPolicyStore()
 			inSync := make(chan struct{})
 			done := make(chan struct{})
-			go s.syncStore(cxt, store, inSync, done)
+			go s.connect(cxt, store, inSync, done)
 
 			// Block until we receive InSync message, or cancelled.
 			select {
@@ -83,7 +98,9 @@ func (s *syncClient) Sync(cxt context.Context, stores chan<- *policystore.Policy
 	}
 }
 
-func (s *syncClient) syncStore(cxt context.Context, store *policystore.PolicyStore, inSync chan<- struct{}, done chan<- struct{}) {
+func (s *syncClient) connect(
+	cxt context.Context, store *policystore.PolicyStore, inSync chan<- struct{}, done chan<- struct{},
+) {
 	defer close(done)
 	conn, err := grpc.Dial(s.target, s.dialOpts...)
 	if err != nil {
@@ -93,14 +110,42 @@ func (s *syncClient) syncStore(cxt context.Context, store *policystore.PolicySto
 	log.Info("Successfully connected to Policy Sync server")
 	defer conn.Close()
 	client := proto.NewPolicySyncClient(conn)
+
+	cxt, cancel := context.WithCancel(cxt)
+	wg := sync.WaitGroup{}
+
+	// Start the store sync go routine.
+	wg.Add(1)
+	go func() {
+		s.syncStore(cxt, client, store, inSync)
+		cancel()
+		wg.Done()
+	}()
+
+	// Start the DataplaneStats reporting go routine.
+	wg.Add(1)
+	go func() {
+		s.sendStats(cxt, client)
+		cancel()
+		wg.Done()
+	}()
+
+	// Wait for both go routines to complete before exiting, since we don't want to close the connection
+	// whilst it may be being accessed.
+	wg.Wait()
+}
+
+func (s *syncClient) syncStore(cxt context.Context, client proto.PolicySyncClient, store *policystore.PolicyStore, inSync chan<- struct{}) {
 	// Send a sync request indicating which features we support.
 	stream, err := client.Sync(cxt, &proto.SyncRequest{
 		SupportsDropActionOverride: true,
+		SupportsDataplaneStats:     true,
 	})
 	if err != nil {
 		log.Warnf("failed to synchronize with Policy Sync server: %v", err)
 		return
 	}
+
 	log.Info("Starting synchronization with Policy Sync server")
 	for {
 		update, err := stream.Recv()
@@ -111,6 +156,67 @@ func (s *syncClient) syncStore(cxt context.Context, store *policystore.PolicySto
 		log.WithFields(log.Fields{"proto": update}).Debug("Received sync API Update")
 		store.Write(func(ps *policystore.PolicyStore) { processUpdate(ps, inSync, update) })
 	}
+}
+
+// sendStats is the main stats reporting loop.
+func (s *syncClient) sendStats(cxt context.Context, client proto.PolicySyncClient) {
+	log.Info("Starting sending DataplaneStats to Policy Sync server")
+
+	for {
+		select {
+		case a := <-s.stats.Aggregated():
+			for t, v := range a {
+				if err := s.report(cxt, client, t, v); err != nil {
+					// Error reporting stats, exit now to start reconnction processing.
+					log.WithError(err).Warning("Error reporting stats")
+					return
+				}
+			}
+		case <-cxt.Done():
+			return
+		}
+	}
+}
+
+// report converts the statscache formatted stats and reports it as a proto.DataplaneStats to Felix.
+func (s *syncClient) report(cxt context.Context, client proto.PolicySyncClient, t statscache.Tuple, v statscache.Values) error {
+	d := &proto.DataplaneStats{
+		SrcIp:    t.SrcIp,
+		DstIp:    t.DstIp,
+		SrcPort:  t.SrcPort,
+		DstPort:  t.DstPort,
+		Protocol: &proto.Protocol{&proto.Protocol_Name{t.Protocol}},
+	}
+	if v.HTTPRequestsAllowed > 0 {
+		d.Stats = append(d.Stats, &proto.Statistic{
+			Direction:  proto.Statistic_IN,
+			Relativity: proto.Statistic_DELTA,
+			Kind:       proto.Statistic_HTTP_REQUESTS,
+			Action:     proto.Action_ALLOWED,
+			Value:      v.HTTPRequestsAllowed,
+		})
+	}
+	if v.HTTPRequestsDenied > 0 {
+		d.Stats = append(d.Stats, &proto.Statistic{
+			Direction:  proto.Statistic_IN,
+			Relativity: proto.Statistic_DELTA,
+			Kind:       proto.Statistic_HTTP_REQUESTS,
+			Action:     proto.Action_DENIED,
+			Value:      v.HTTPRequestsDenied,
+		})
+	}
+
+	if r, err := client.Report(cxt, d); err != nil {
+		// Error sending stats, must be a connection issue, so exit now to force a reconnect.
+		return err
+	} else if !r.Successful {
+		// If the remote end indicates unsuccessful then the remote end is likely transitioning from having
+		// stats enabled to having stats disabled. This should be transient, so log a warning, but otherwise
+		// treat as a successful report.
+		log.Warning("Remote end indicates dataplane statistics not processed successfully")
+		return nil
+	}
+	return nil
 }
 
 // Update the PolicyStore with the information passed over the Sync API.
@@ -164,6 +270,7 @@ func processConfigUpdate(store *policystore.PolicyStore, update *proto.ConfigUpd
 
 	// Update the DropActionOverride setting if it is available.
 	if val, ok := update.Config["DropActionOverride"]; ok {
+		log.Debug("DropActionOverride is present in config")
 		var psVal policystore.DropActionOverride
 		switch strings.ToLower(val) {
 		case "drop":
@@ -180,6 +287,22 @@ func processConfigUpdate(store *policystore.PolicyStore, update *proto.ConfigUpd
 		}
 		store.DropActionOverride = psVal
 	}
+
+	// Extract the flow logs settings, defaulting to false if not present.
+	store.DataplaneStatsEnabledForAllowed = getBoolFromConfig(update.Config, "DataplaneStatsEnabledForAllowed", false)
+	store.DataplaneStatsEnabledForDenied = getBoolFromConfig(update.Config, "DataplaneStatsEnabledForDenied", false)
+}
+
+func getBoolFromConfig(m map[string]string, name string, def bool) bool {
+	b := def
+	if v, ok := m[name]; ok {
+		log.Debugf("%s is present in config", name)
+		if p, err := strconv.ParseBool(v); err != nil {
+			log.Debugf("Parsed value from Felix config: %s=%v", name, p)
+			b = p
+		}
+	}
+	return b
 }
 
 func processIPSetUpdate(store *policystore.PolicyStore, update *proto.IPSetUpdate) {
