@@ -33,7 +33,10 @@ serving on port 30003, but you may wish to set up connectivity differently.
    - Note down the client ID.
 
 2. [Configure the Kubernetes API server to use it](https://kubernetes.io/docs/admin/authentication/#configuring-the-api-server).
-   - Example command: `sed -i "/- kube-apiserver/a\    - --oidc-issuer-url=https://accounts.google.com\n    - --oidc-username-claim=email\n    - --oidc-client-id==<client_ID_from_above>" /etc/kubernetes/manifests/kube-apiserver.yaml`
+   - Example command:
+    ```
+    sed -i "/- kube-apiserver/a\    - --oidc-issuer-url=https://accounts.google.com\n    - --oidc-username-claim=email\n    - --oidc-client-id=<client_ID_from_above>" /etc/kubernetes/manifests/kube-apiserver.yaml
+    ```
 
 3. Configure {{site.prodname}} Manager to use it
    - Set the client ID in the `tigera-cnx-manager-config` ConfigMap (referenced
