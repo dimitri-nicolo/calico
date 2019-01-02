@@ -1,18 +1,18 @@
 {
-  "job_id": "port_scan",
+  "job_id": "ip_sweep",
   "job_type": "anomaly_detector",
   "job_version": "6.4.3",
   "groups": [
     "recon"
   ],
-  "description": "Port Scan",
+  "description": "IP Sweep",
   "analysis_config": {
     "bucket_span": "10m",
     "detectors": [
       {
-        "detector_description": "distinct_count(dest_port) over source_name",
+        "detector_description": "distinct_count(dest_ip) over source_name",
         "function": "distinct_count",
-        "field_name": "dest_port",
+        "field_name": "dest_ip",
         "over_field_name": "source_name",
         "detector_index": 0
       }

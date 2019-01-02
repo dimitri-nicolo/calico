@@ -1,6 +1,6 @@
 {
-  "datafeed_id": "datafeed-port_scan",
-  "job_id": "port_scan",
+  "datafeed_id": "datafeed-ip_sweep",
+  "job_id": "ip_sweep",
   "query_delay": "5m",
   "indices": [
     "tigera_secure_ee_flows*"
