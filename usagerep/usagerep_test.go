@@ -31,7 +31,7 @@ import (
 	"github.com/projectcalico/felix/calc"
 )
 
-const expectedNumberOfURLParams = 14
+const expectedNumberOfURLParams = 15
 
 // These tests start a local HTTP server on a random port and tell the usage reporter to
 // connect to it.  Then we can check that it correctly makes HTTP requests at the right times.
@@ -105,6 +105,7 @@ var _ = Describe("UsageReporter with mocked URL and short interval", func() {
 					NumPolicies:          4,
 					NumProfiles:          5,
 					NumALPPolicies:       6,
+					NumALPEndpoints:      1,
 				}
 			}
 
@@ -138,6 +139,7 @@ var _ = Describe("UsageReporter with mocked URL and short interval", func() {
 				Expect(q.Get("policies")).To(Equal("4"))
 				Expect(q.Get("profiles")).To(Equal("5"))
 				Expect(q.Get("alp_policies")).To(Equal("6"))
+				Expect(q.Get("alp_endpoints")).To(Equal("1"))
 
 				By("checking in again")
 				Eventually(httpHandler.GetRequestURIs, "2s", "100ms").Should(HaveLen(2))
@@ -169,6 +171,7 @@ var _ = Describe("UsageReporter with mocked URL and short interval", func() {
 						NumPolicies:          40,
 						NumProfiles:          50,
 						NumALPPolicies:       60,
+						NumALPEndpoints:      5,
 					}
 					configUpdateC <- map[string]string{
 						"ClusterGUID":          "someguid2",
@@ -201,6 +204,7 @@ var _ = Describe("UsageReporter with mocked URL and short interval", func() {
 					Expect(q.Get("policies")).To(Equal("40"))
 					Expect(q.Get("profiles")).To(Equal("50"))
 					Expect(q.Get("alp_policies")).To(Equal("60"))
+					Expect(q.Get("alp_endpoints")).To(Equal("5"))
 				})
 			})
 		})
