@@ -19,65 +19,26 @@ operate.
 
 ## Enabling application layer policy
 
-**Prerequisite**: [{{site.prodname}} installed]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/).
+**Prerequisite**: [{{site.prodname}} installed]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/) 
+using the standard installation manifests.
 
-Locate the manifest below that matches your installation method and apply it. After applying
-the manifest, your `{{site.nodecontainer}}` containers will restart.
+Enable application layer policy support for the `calico/node` pod 
 
-- **{{site.prodname}} for policy and networking with the etcd datastore**:
-
-  ```bash
-kubectl apply -f \
-{{site.url}}/{{page.version}}/getting-started/kubernetes/installation/manifests/app-layer-policy/etcd/calico-networking/calico-node.yaml
-	```
-
-	> **Note**: You can also
-	> [view the manifest in your browser](manifests/app-layer-policy/etcd/calico-networking/calico-node.yaml){:target="_blank"}.
-	{: .alert .alert-info}
-
-- **{{site.prodname}} for policy and networking with the Kubernetes API datastore**:
+- Set `FELIX_POLICYSYNCPATHPREFIX` environment to `"/var/run/nodeagent"` in the `calico-node` DaemonSet.
 
   ```bash
-kubectl apply -f \
-{{site.url}}/{{page.version}}/getting-started/kubernetes/installation/manifests/app-layer-policy/kubernetes-datastore/calico-networking/calico-node.yaml
-	```
-
-	> **Note**: You can also
-	> [view the manifest in your browser]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/manifests/app-layer-policy/kubernetes-datastore/calico-networking/calico-node.yaml){:target="_blank"}.
-	{: .alert .alert-info}
-
-- **{{site.prodname}} for policy only**:
-
-   - **AWS VPC CNI plugin**
-  ```bash
-kubectl apply -f \
-{{site.url}}/{{page.version}}/getting-started/kubernetes/installation/manifests/app-layer-policy/kubernetes-datastore/policy-only-ecs/calico-node.yaml
-	```
-
-	> **Note**: You can also
-	> [view the manifest in your browser](manifests/app-layer-policy/kubernetes-datastore/policy-only-ecs/calico-node.yaml){:target="_blank"}.
-	{: .alert .alert-info}
-
-   - **All others**
-  ```bash
-kubectl apply -f \
-{{site.url}}/{{page.version}}/getting-started/kubernetes/installation/manifests/app-layer-policy/kubernetes-datastore/policy-only/calico-node.yaml
-	```
-
-	> **Note**: You can also
-	> [view the manifest in your browser](manifests/app-layer-policy/kubernetes-datastore/policy-only/calico-node.yaml){:target="_blank"}.
-	{: .alert .alert-info}
+  kubectl edit daemonset -n kube-system calico-node
+  ```
 
 Enable application layer policy in the {{site.prodname}} user interface
 
 - Set `tigera.cnx-manager.alp-support: "true"` in your `tigera-cnx-manager-config` ConfigMap
 
-    ```bash
-kubectl edit configmap -n kube-system tigera-cnx-manager-config
-## Restart the manager
-kubectl delete pod -n kube-system -l "k8s-app=cnx-manager"
-	```
-
+  ```bash
+  kubectl edit configmap -n kube-system tigera-cnx-manager-config
+  ## Restart the manager
+  kubectl delete pod -n kube-system -l "k8s-app=cnx-manager"
+  ```
 
 ## Installing Istio
 

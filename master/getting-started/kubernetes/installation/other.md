@@ -116,14 +116,14 @@ configuration.
 
    - **AWS VPC CNI plugin**
      ```bash
-     curl \
+     curl -o calico.yaml \
      {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only-ecs/1.7/calico-typha.yaml \
      -O
      ```
 
    - **All others**
      ```bash
-     curl \
+     curl -o calico.yaml \
      {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only/1.7/calico-typha.yaml \
      -O
      ```
@@ -211,15 +211,15 @@ for each [remote cluster](../../../usage/federation/index#terminology). Ensure t
 
    - **AWS VPC CNI plugin**
      ```bash
-     curl \
-     {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only-ecs/1.7/calico.yaml \
+     curl -o calico.yaml \
+     {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only-ecs/1.7/calico-federation.yaml \
      -O
      ```
 
    - **All others**
      ```bash
-     curl \
-     {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only/1.7/calico.yaml \
+     curl -o calico.yaml \
+     {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only/1.7/calico-federation.yaml \
      -O
      ```
 

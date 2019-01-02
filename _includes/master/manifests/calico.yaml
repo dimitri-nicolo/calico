@@ -9,7 +9,7 @@ calico.yaml acccepts the following include flags:
 | calico_ipam      | true, false                   |
 | disable_ipip     | true, false                   |
 | variant_name     | Calico, Canal                 |
-| app_layer_policy | true, false                   |
+| app_layer_policy | true, disabled, false         |
 | federation       | true, false                   |
 
 {% endcomment -%}

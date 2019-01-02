@@ -1,4 +1,4 @@
 ---
 layout: null
 ---
-{% include {{page.version}}/manifests/calico.yaml datastore="kdd" %}
+{% include {{page.version}}/manifests/calico.yaml datastore="kdd" app_layer_policy="disabled" %}

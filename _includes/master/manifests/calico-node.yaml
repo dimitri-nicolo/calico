@@ -8,7 +8,7 @@ calico-node.yaml acccepts the following include flags:
 | network          | calico, flannel, ecs, <unset> |
 | disable_ipip     | true, false                   |
 | variant_name     | Calico, Canal                 |
-| app_layer_policy | true, false                   |
+| app_layer_policy | true, disabled, false         |
 
 {% endcomment -%}
 {% capture objname %}{% if include.network == "flannel" and include.datastore == "etcd" %}canal-node{% elsif include.network == "flannel" %}canal{% else %}calico-node{% endif %}{% endcapture -%}
@@ -61,13 +61,12 @@ spec:
       terminationGracePeriodSeconds: 0
       imagePullSecrets:
         - name: cnx-pull-secret
-{%- if include.app_layer_policy == "true" %}
+{%- if include.app_layer_policy == "true" or include.app_layer_policy == "disabled" %}
       # Adds a Flex Volume Driver that creates a per-pod Unix Domain Socket to allow Dikastes
       # to communicate with Felix over the Policy Sync API.
       initContainers:
       - name: flexvol-driver
         image: {{site.imageNames["flexvol"]}}:{{site.data.versions[page.version].first.components["flexvol"].version}}
-        imagePullPolicy: Always
         volumeMounts:
         - name: flexvol-driver-host
           mountPath: /host/driver
@@ -216,6 +215,11 @@ spec:
             # Enable the Policy Sync API between Felix and Dikastes
             - name: FELIX_POLICYSYNCPATHPREFIX
               value: "/var/run/nodeagent"
+{%- elsif include.app_layer_policy == "disabled" %}
+            # To enable the Policy Sync API between Felix and Dikastes, set the value to
+            # "/var/run/nodeagent"
+            - name: FELIX_POLICYSYNCPATHPREFIX
+              value: ""
 {%- endif %}
             # Sets Default Security Groups if tigera-aws-config exists
             - name: TIGERA_DEFAULT_SECURITY_GROUPS
@@ -280,7 +284,7 @@ spec:
             - mountPath: /calico-secrets
               name: etcd-certs
 {%- endif %}
-{%- if include.app_layer_policy == "true" %}
+{%- if include.app_layer_policy == "true" or include.app_layer_policy == "disabled" %}
             - name: policysync
               mountPath: /var/run/nodeagent
 {%- endif %}
@@ -504,7 +508,7 @@ spec:
             secretName: calico-etcd-secrets
             defaultMode: 0400
 {%- endif %}
-{%- if include.app_layer_policy %}
+{%- if include.app_layer_policy == "true" or include.app_layer_policy == "disabled" %}
         # Used to create per-pod Unix Domain Sockets
         - name: policysync
           hostPath:
