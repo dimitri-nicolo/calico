@@ -11,7 +11,7 @@
     "detectors": [
       {
         "detector_description": "Input bytes spike for a pod within a replica set",
-        "function": "non_null_sum",
+        "function": "sum",
         "field_name": "bytes_in",
 	"over_field_name": "dest_name",
         "partition_field_name": "namespace_dest_name_aggr",
@@ -26,7 +26,7 @@
       },
       {
         "detector_description": "Output bytes spike for a pod within a replica set",
-        "function": "non_null_sum",
+        "function": "sum",
         "field_name": "bytes_out",
 	"over_field_name": "dest_name",
         "partition_field_name": "namespace_dest_name_aggr",
