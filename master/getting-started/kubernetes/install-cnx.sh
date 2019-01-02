@@ -476,15 +476,19 @@ checkRequiredFilesPresent() {
 #
 function podStatus() {
   label="$1"
-  pod_info=$(kubectl get pods --selector="${label}" -o json --all-namespaces)
+  pod_info=$(kubectl get pods --selector="${label}" -o json --all-namespaces 2> /dev/null)
   echo $pod_info | jq-container -r '.items[] | "\(.metadata.name) \(.spec.containers[] | .name)"' \
   | while read pod_name container_name; do
-    status=$(echo $pod_info | jq-container -r ".items[] | select(.metadata.name == \"$pod_name\") | .status.containerStatuses[] | select(.name == \"$container_name\") | if .ready then \"\(.ready|tostring)\" else \"false\" end ")
+    status=$(echo $pod_info | jq-container -r ".items[] | select(.metadata.name == \"$pod_name\") | .status | if .containerStatuses then .containerStatuses[] | select(.name == \"$container_name\") | if .ready then \"\(.ready|tostring)\" else \"false\" end else \"false\" end")
     if [ -z "$status" ]; then
       status="false"
     fi
     echo $pod_name:$container_name:$status
   done
+  # If there are no pods then there is not one running
+  if [ -z "$(kubectl get pods --selector="${label}" --all-namespaces 2> /dev/null)" ]; then
+    echo "${label}:false"
+  fi
 }
 
 #
@@ -508,7 +512,9 @@ function blockUntilPodIsReady() {
     sleep 1
   done
 
-  echo " \"${friendlyPodName}\" is ready."
+  echo " \"${friendlyPodName}\" is ready. $secs"
+  podStatus "${label}"
+  kubectl get pods --selector="${label}" -o wide --all-namespaces
 }
 
 #
