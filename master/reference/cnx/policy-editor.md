@@ -68,48 +68,18 @@ on tiers is tantamount to full administrative control of all network policy.  Th
 to update a tier or create tiers allows that user to place their tier first
 and take control before other policy.
 
-The following roles and role bindings allow the `netsec` group to manage the contents of
-the `netsec` tier.
-
-```
-kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: edit-netsec
-rules:
-- apiGroups: ["projectcalico.org"]
-  resources: ["tiers"]
-  resourceNames: ["netsec"]
-  verbs: ["get", "list", "watch"]
----
-kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: netsec-edit-netsec
-subjects:
-- kind: Group
-  name: netsec
-  apiGroup: rbac.authorization.k8s.io
-roleRef:
-  kind: ClusterRole
-  name: edit-netsec
-  apiGroup: rbac.authorization.k8s.io
-```
-
-Note that the `NetworkPolicy` and `GlobalNetworkPolicy` resources in each tier have RBAC
-applied in the usual Kubernetes way in addition to the `GET` tier requirement.
-That is, to edit a policy, the user needs to be able to edit that policy, _and_
-`GET` the tier that it belongs to.
+The ability to manage NetworkPolicy and GlobalNetworkPolicy in the Web UI requires GET access to any tier
+the user can view/manage, plus the required access to the tiered policy resources. See 
+[Configuring {{site.prodname}} RBAC]({{site.url}}/{{page.version}}/reference/cnx/rbac-tiered-policies)
+for more details and example configurations.
 
 ### The Default Tier
 
-Typically, all users should be able to `GET` the default (last) tier, and therefore
-manage policies in it.  Policies created by the orchestrator integration are
+Policies created by the orchestrator integration are
 created in this tier, such as [Kubernetes network policy resources](https://kubernetes.io/docs/concepts/services-networking/network-policies/).
 
-Note that policies in the default tier are generally created by the
-orchestrator integration, and it is best to edit the original Kubernetes
-`NetworkPolicy` resources instead.
+Kubernetes resources should be managed directly, rather than modifying the Calico policies created by the 
+controller.
 
 ## Secure HTTPS
 

@@ -126,6 +126,13 @@
 
 {% endif %}
 
+   > **Note**: If you are upgrading from {{site.prodname}} v2.2 or earlier you will need to make some modifications prior
+   > to upgrade to ensure RBAC behavior for tiered policy is unchanged. Please refer to the instructions in the comments for 
+   > `ClusterRole "ee-calico-tiered-policy-passthru"` in the `cnx.yaml` manifest, or the 
+   > [Configuring {{site.prodname}} RBAC]({{site.url}}/{{page.version}}/reference/cnx/rbac-tiered-policies) documentation
+   > for more details.
+   {: .alert .alert-info}
+
 {% include {{page.version}}/cnx-cred-sed.md yaml="cnx" %}
 
 {% if include.init == "openshift" %}

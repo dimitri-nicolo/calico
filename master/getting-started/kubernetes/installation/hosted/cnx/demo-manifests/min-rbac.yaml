@@ -3,8 +3,11 @@ apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
   name: ui-needed-listers
 rules:
-- apiGroups: ["projectcalico.org","networking.k8s.io","extensions",""]
-  resources: ["tiers","networkpolicies","globalnetworkpolicies","namespaces","globalnetworksets"]
+- apiGroups: ["networking.k8s.io","extensions",""]
+  resources: ["networkpolicies","namespaces"]
+  verbs: ["watch","list"]
+- apiGroups: ["projectcalico.org"]
+  resources: ["tiers","tier.networkpolicies","tier.globalnetworkpolicies","globalnetworksets"]
   verbs: ["watch","list"]
 
 ---
@@ -24,24 +27,44 @@ rules:
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
-  name: default-tier-reader
+  name: default-tier-policy-cruder
 rules:
+# To access Calico policy in a tier, the user requires get access to that tier.
 - apiGroups: ["projectcalico.org"]
   resources: ["tiers"]
   resourceNames: ["default"]
   verbs: ["get"]
+# This allows configuration of the kubernetes NetworkPolicy resources (these are always in the default tier).
+# This is required if the user needs to be able to modify the Calico-rendered Kubernetes resources in the UI.
+- apiGroups: ["networking.k8s.io", "extensions"]
+  resources: ["networkpolicies"]
+  verbs: ["*"]
+# This allows configuration of the Calico NetworkPolicy resources in the default tier.
+- apiGroups: ["projectcalico.org"]
+  resources: ["tier.networkpolicies"]
+  resourceNames: ["default.*"]
+  verbs: ["*"]
 
 ---
 
-kind: Role
+kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
-  namespace: default
-  name: default-namespace-policy-cruder
+  name: all-tier-policy-reader
 rules:
-- apiGroups: ["projectcalico.org","networking.k8s.io", "extensions"]
+# To access Calico policy in a tier, the user requires get access to that tier. This provides get
+# access to all tiers.
+- apiGroups: ["projectcalico.org"]
+  resources: ["tiers"]
+  verbs: ["get"]
+# This allows read access of the kubernetes NetworkPolicy resources (these are always in the default tier).
+- apiGroups: ["networking.k8s.io", "extensions"]
   resources: ["networkpolicies"]
-  verbs: ["create","update","delete","patch","get","watch","list"]
+  verbs: ["get","watch","list"]
+# This allows read access of the Calico NetworkPolicy and GlobalNetworkPolicy resources in all tiers.
+- apiGroups: ["projectcalico.org"]
+  resources: ["tier.networkpolicies","tier.globalnetworkpolicies"]
+  verbs: ["get","watch","list"]
 
 ---
 
@@ -75,30 +98,34 @@ roleRef:
 
 ---
 
+# This allows the user read access to all Calico and Kubernetes policy resources across all tiers and namespaces.
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
-  name: <USER>-default-tier-reader
+  name: <USER>-all-tier-policy-reader
 subjects:
 - kind: User
   name: <USER>
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
-  name: default-tier-reader
+  name: all-tier-policy-reader
   apiGroup: rbac.authorization.k8s.io
 
 ---
 
+# This allows the user full read/write access to Calico and Kubernetes NetworkPolicy resources in the
+# default tier and default namespace.
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
-  name: <USER>-default-namespace-policy-cruder
+  name: <USER>-default-namespace-and-tier-policy-cruder
+  namespace: default
 subjects:
 - kind: User
   name: <USER>
   apiGroup: rbac.authorization.k8s.io
 roleRef:
-  kind: Role
-  name: default-namespace-policy-cruder
+  kind: ClusterRole
+  name: default-tier-policy-cruder
   apiGroup: rbac.authorization.k8s.io
