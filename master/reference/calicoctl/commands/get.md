@@ -107,6 +107,7 @@ Description:
   for the golang template definitions) and the valid column names (required for
   the custom-columns option).
 ```
+{: .no-select-button}
 
 ### Options
 ```
@@ -125,6 +126,7 @@ Description:
                              cluster-specific information. This flag will be ignored
                              if the resource name is not specified.
 ```
+{: .no-select-button}
 
 ### General options
 
@@ -133,6 +135,7 @@ Description:
                              configuration in YAML or JSON format.
                              [default: /etc/calico/calicoctl.cfg]
 ```
+{: .no-select-button}
 
 ### Output options
 
@@ -144,13 +147,18 @@ uniquely identify the resource.
 The headings displayed for each resource type is fixed.  However, wee `wide` option for displaying additional
 columns, and `custom-columns` for selecting which columns to display.
 
-Example
+Example:
 ```
-$ calicoctl get hostEndpoint
+calicoctl get hostEndpoint
+```
+
+Response:
+```bash
 NAME          NODE
 endpoint1     host1
 myhost-eth0   myhost
 ```
+{: .no-select-button}
 
 #### `wide`
 
@@ -158,13 +166,18 @@ Similar to the `ps` format, the `wide` option displays output in ps-style table 
 
 The headings displayed for each resource type is fixed.  See `custom-columns` for selecting which columns to display.
 
-Example
+Example:
 ```
-$ calicoctl get hostEndpoint --output=wide
+calicoctl get hostEndpoint --output=wide
+```
+
+Response:
+```bash
 NAME           NODE     INTERFACE   IPS                PROFILES
 endpoint1      host1                1.2.3.4,0:bb::aa   prof1,prof2
 myhost-eth0    myhost                                  profile1
 ```
+{: .no-select-button}
 
 #### `custom-columns`
 
@@ -172,13 +185,18 @@ Similar to the `ps` format, the `custom-columns` option displays output in ps-st
 to specify and ordered, comma-separated list of columns to display in the output.  The valid heading names for each
 resource type is documented in the [Resources]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/) guide.
 
-Example
+Example:
 ```
-$ calicoctl get hostEndpoint --output=custom-columns=NAME,IPS
+calicoctl get hostEndpoint --output=custom-columns=NAME,IPS
+```
+
+Response:
+```
 NAME        IPS
 endpoint1   1.2.3.4,0:bb::aa
 myhost-eth0
 ```
+{: .no-select-button}
 
 #### `yaml / json`
 
@@ -187,9 +205,13 @@ resource type are documented in the [Resources]({{site.baseurl}}/{{page.version}
 
 The output from either of these formats may be used as input for all of the resource management commands.
 
-Example
+Example:
+```bash
+calicoctl get hostEndpoint --output=yaml
 ```
-$ calicoctl get hostEndpoint --output=yaml
+
+Response:
+```yaml
 - apiVersion: projectcalico.org/v3
   kind: HostEndpoint
   metadata:
@@ -213,6 +235,7 @@ $ calicoctl get hostEndpoint --output=yaml
     profiles:
     - profile1
 ```
+{: .no-select-button}
 
 #### `go-template / go-template-file`
 
@@ -224,10 +247,10 @@ each resource type.  A resource-list contains an Items field which is itself a s
 the "Name" field from the supplied data, it is necessary to enumerate over the slice of resource-lists and the items
 within that list.
 
-Example
+Example:
 {% raw %}
 ```
-$ bin/calicoctl get hostEndpoint --output=go-template="{{range .}}{{range .Items}}{{.ObjectMeta.Name}},{{end}}{{end}}"
+bin/calicoctl get hostEndpoint --output=go-template="{{range .}}{{range .Items}}{{.ObjectMeta.Name}},{{end}}{{end}}"
 endpoint1,eth0,
 ```
 {% endraw %}

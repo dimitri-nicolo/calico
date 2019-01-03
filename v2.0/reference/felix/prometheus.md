@@ -1,5 +1,6 @@
 ---
 title: Felix Prometheus Statistics
+canonical_url: https://docs.tigera.io/v2.2/reference/felix/prometheus
 ---
 
 Felix can be configured to report a number of metrics through Prometheus.  See the

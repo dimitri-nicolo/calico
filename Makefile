@@ -2,6 +2,7 @@ CALICO_DIR=$(shell git rev-parse --show-toplevel)
 VERSIONS_FILE?=$(CALICO_DIR)/_data/versions.yml
 JEKYLL_VERSION=pages
 JEKYLL_UID?=`id -u`
+HP_VERSION=v0.2
 DEV?=false
 CONFIG=--config _config.yml
 ifeq ($(DEV),true)
@@ -11,6 +12,9 @@ endif
 # Determine whether there's a local yaml installed or use dockerized version.
 # Note in order to install local (faster) yaml: "go get github.com/mikefarah/yaml"
 YAML_CMD:=$(shell which yaml || echo docker run --rm -i calico/yaml)
+
+# Local directories to ignore when running htmlproofer
+HP_IGNORE_LOCAL_DIRS="/v2.0/"
 
 ##############################################################################
 # Version information used for cutting a release.
@@ -64,14 +68,15 @@ kubeval: clean _site
 	! grep -C3 -P "invalid|\t\*" filtered.out
 	rm filtered.out
 
-htmlproofer-all:
-	# Run htmlproofer across _all_ files. This is not part of CI.
-	echo "Running a soft check across all files"
-	docker run -ti -e JEKYLL_UID=`id -u` --rm -v $(pwd)/_site:/_site/ quay.io/calico/htmlproofer:${HP_VERSION} /_site --assume-extension --check-html --empty-alt-ignore --url-ignore "#"
-
 ###############################################################################
 # Docs automation
 ###############################################################################
+
+# URLs to ignore when checking external links.
+HP_IGNORE_URLS=/docs.openshift.org/
+
+check_external_links: _site
+	docker run -ti -e JEKYLL_UID=`id -u` --rm -v $(PWD)/_site:/_site/ quay.io/calico/htmlproofer:$(HP_VERSION) /_site --external_only --file-ignore $(HP_IGNORE_LOCAL_DIRS) --assume-extension --url-ignore $(HP_IGNORE_URLS) --internal_domains "docs.tigera.io"
 
 strip_redirects:
 	find \( -name '*.md' -o -name '*.html' \) -exec sed -i'' '/redirect_from:/d' '{}' \;
@@ -149,7 +154,9 @@ endif
 		echo "Expected CALICO_VER $(CALICO_VER) to equal NODE_VER $(NODE_VER)"; \
 		exit 1; fi
 
-RELEASE_DIR?=_output/release-$(CALICO_VER)
+OUTPUT_DIR?=_output
+RELEASE_DIR_NAME?=release-$(CALICO_VER)
+RELEASE_DIR?=$(OUTPUT_DIR)/$(RELEASE_DIR_NAME)
 RELEASE_DIR_K8S_MANIFESTS?=$(RELEASE_DIR)/k8s-manifests
 RELEASE_DIR_IMAGES?=$(RELEASE_DIR)/images
 RELEASE_DIR_BIN?=$(RELEASE_DIR)/bin
@@ -159,7 +166,7 @@ MANIFEST_SRC ?= ./_site/$(RELEASE_STREAM)/getting-started/kubernetes/installatio
 release-archive: release-prereqs $(RELEASE_DIR).tgz
 
 $(RELEASE_DIR).tgz: $(RELEASE_DIR) $(RELEASE_DIR_K8S_MANIFESTS) $(RELEASE_DIR_IMAGES) $(RELEASE_DIR_BIN) $(RELEASE_DIR)/README
-	tar -czvf $(RELEASE_DIR).tgz $(RELEASE_DIR)/*
+	tar -czvf $(RELEASE_DIR).tgz -C $(OUTPUT_DIR) $(RELEASE_DIR_NAME)
 
 $(RELEASE_DIR_IMAGES): $(RELEASE_DIR_IMAGES)/calico-node.tar $(RELEASE_DIR_IMAGES)/calico-typha.tar $(RELEASE_DIR_IMAGES)/calico-cni.tar $(RELEASE_DIR_IMAGES)/calico-kube-controllers.tar
 $(RELEASE_DIR_BIN): $(RELEASE_DIR_BIN)/calicoctl $(RELEASE_DIR_BIN)/calicoctl-windows-amd64.exe $(RELEASE_DIR_BIN)/calicoctl-darwin-amd64

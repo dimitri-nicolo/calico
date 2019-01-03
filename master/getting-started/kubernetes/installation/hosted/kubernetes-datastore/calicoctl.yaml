@@ -52,6 +52,7 @@ rules:
   - apiGroups: [""]
     resources:
       - pods
+      - serviceaccounts
     verbs:
       - get
       - list

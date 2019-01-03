@@ -1,5 +1,6 @@
 ---
 title: Troubleshooting
+canonical_url: https://docs.tigera.io/v2.2/usage/troubleshooting/
 ---
 
 ## Running `sudo calicoctl ...` with Environment Variables

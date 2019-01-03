@@ -1,5 +1,6 @@
 ---
 title: Installing Felix as a static binary
+canonical_url: https://docs.tigera.io/v2.2/getting-started/bare-metal/installation/
 ---
 
 These instructions will take you through a first-time install of

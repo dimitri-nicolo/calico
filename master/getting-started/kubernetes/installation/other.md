@@ -52,17 +52,6 @@ configuration.
    > to kubeadm to set both Kubernetes controller flags.
    {: .alert .alert-success}
 
-1. If your cluster has RBAC enabled, issue the following command to
-   configure the roles and bindings that {{site.prodname}} requires.
-
-   ```
-   kubectl apply -f \
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/rbac-kdd.yaml
-   ```
-   > **Note**: You can also
-   > [view the manifest in your browser](hosted/rbac-kdd.yaml){:target="_blank"}.
-   {: .alert .alert-info}
-
 1. Download the {{site.prodname}} policy-only manifest for the Kubernetes API datastore that matches your
    networking method.
 
@@ -99,17 +88,6 @@ configuration.
    > **Tip**: On kubeadm, you can pass `--pod-network-cidr={your pod CIDR}`
    > to kubeadm to set both Kubernetes controller flags.
    {: .alert .alert-success}
-
-1. If your cluster has RBAC enabled, issue the following command to
-   configure the roles and bindings that {{site.prodname}} requires.
-
-   ```
-   kubectl apply -f \
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/rbac-kdd.yaml
-   ```
-   > **Note**: You can also
-   > [view the manifest in your browser](hosted/rbac-kdd.yaml){:target="_blank"}.
-   {: .alert .alert-info}
 
 1. Download the {{site.prodname}} policy-only manifest for the Kubernetes API datastore that matches your
    networking method.
@@ -195,17 +173,6 @@ for each [remote cluster](../../../usage/federation/index#terminology). Ensure t
    > to kubeadm to set both Kubernetes controller flags.
    {: .alert .alert-success}
 
-1. If the local cluster has RBAC enabled, issue the following command to
-   configure the roles and bindings that {{site.prodname}} requires.
-
-   ```
-   kubectl apply -f \
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/rbac-kdd.yaml
-   ```
-   > **Note**: You can also
-   > [view the manifest in your browser](hosted/rbac-kdd.yaml){:target="_blank"}.
-   {: .alert .alert-info}
-
 1. Download the {{site.prodname}} policy-only manifest for the Kubernetes API datastore that matches your
    networking method.
 
@@ -222,6 +189,7 @@ for each [remote cluster](../../../usage/federation/index#terminology). Ensure t
      {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only/1.7/calico-federation.yaml \
      -O
      ```
+     {: .no-select-button}
 
 1. Open the manifest in your favorite editor and modify the replica count in the
    `Deployment` named `calico-typha` to the desired number of replicas.

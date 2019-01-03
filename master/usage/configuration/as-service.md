@@ -8,7 +8,7 @@ systemd, inside either of the following container types:
 - [Docker](#running-cnx-node-in-a-docker-container)
 - [rkt](#running-cnx-node-in-a-rkt-container)
 
-## Running `{{site.nodecontainer}}` in a Docker container
+## Running {{site.nodecontainer}} in a Docker container
 
 This section describes how to run `{{site.nodecontainer}}` as a Docker container.
 
@@ -63,8 +63,7 @@ ETCD_ENDPOINTS to point at the correct etcd cluster endpoints.
 > it will reconfigure any value currently set through the node resource.
 >
 > The `CALICO_NETWORKING_BACKEND` defaults to use BIRD as the routing daemon.
-> This may also be set to `gobgp` (to use GoBGP as the routing daemon, but note
-> that this does not support IP-in-IP), or `none` (if routing is handled by an
+> This may also be set to `none` (if routing is handled by an
 > alternative mechanism).
 {: .alert .alert-info}
 
@@ -124,7 +123,7 @@ The script will also stop the `{{site.nodecontainer}}` container when the servic
 {: .alert .alert-info}
 
 
-## Running `{{site.nodecontainer}}` in a rkt container
+## Running {{site.nodecontainer}} in a rkt container
 
 Each {{site.prodname}}-rkt enabled node requires the `{{site.nodecontainer}}` container to be running.
 
@@ -150,10 +149,16 @@ sudo rkt run --stage1-path=/usr/share/rkt/stage1-fly.aci \
 > environment may contain a comma separated list of endpoints of your etcd cluster.
 {: .alert .alert-info}
 
-You can check that it's running using `sudo rkt list`.
+Check that it's running.
 
 ```shell
-$ sudo rkt list
+sudo rkt list
+```
+
+An example response follows.
+
+```bash
 UUID      APP	IMAGE NAME                  STATE   CREATED         STARTED         NETWORKS
 b52bba11  node  {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["node"]}}:{{site.data.versions[page.version].first.title}}  running 10 seconds ago  10 seconds ago
 ```
+{: .no-select-button}

@@ -1,5 +1,6 @@
 ---
 title: Quickstart for Tigera CNX on Kubernetes
+canonical_url: https://docs.tigera.io/v2.2/getting-started/kubernetes/
 ---
 
 ### Overview

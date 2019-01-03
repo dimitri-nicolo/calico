@@ -1,5 +1,6 @@
 ---
 title: External Connectivity
+canonical_url: https://docs.tigera.io/v2.2/usage/external-connectivity
 ---
 
 {{site.prodname}} creates a routed network on which your containers look like normal IP

@@ -1,5 +1,6 @@
 ---
 title: Standard Hosted Install
+canonical_url: https://docs.tigera.io/v2.2/getting-started/kubernetes/installation/
 ---
 
 The following steps install {{site.prodname}} as a Kubernetes add-on using your own etcd cluster.

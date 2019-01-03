@@ -36,10 +36,13 @@ Verify that the application pods have been created and are ready.
 
 When the demo application has come up, you will see three pods.
 
-    NAME                        READY     STATUS    RESTARTS   AGE
-    customer-2809159614-qqfnx   3/3       Running   0          21h
-    database-1601951801-m4w70   3/3       Running   0          21h
-    summary-2817688950-g1b3n    3/3       Running   0          21h
+```bash
+NAME                        READY     STATUS    RESTARTS   AGE
+customer-2809159614-qqfnx   3/3       Running   0          21h
+database-1601951801-m4w70   3/3       Running   0          21h
+summary-2817688950-g1b3n    3/3       Running   0          21h
+```
+{: .no-select-button}
 
 View the Kubernetes ServiceAccounts created by the manifest.
 
@@ -47,11 +50,14 @@ View the Kubernetes ServiceAccounts created by the manifest.
 
 You should see a Kubernetes ServiceAccount for each microservice in the application (in addition to the `default` account).
 
-    NAME       SECRETS   AGE
-    customer   1         21h
-    database   1         21h
-    default    1         21h
-    summary    1         21h
+```bash
+NAME       SECRETS   AGE
+customer   1         21h
+database   1         21h
+default    1         21h
+summary    1         21h
+```
+{: .no-select-button}
 
 Examine the Kubernetes Secrets.
 
@@ -59,15 +65,18 @@ Examine the Kubernetes Secrets.
 
 You should see output similar to the following.
 
-    NAME                   TYPE                                  DATA      AGE
-    customer-token-mgb8w   kubernetes.io/service-account-token   3         21h
-    database-token-nb5xp   kubernetes.io/service-account-token   3         21h
-    default-token-wwml6    kubernetes.io/service-account-token   3         21h
-    istio.customer         istio.io/key-and-cert                 3         21h
-    istio.database         istio.io/key-and-cert                 3         21h
-    istio.default          istio.io/key-and-cert                 3         21h
-    istio.summary          istio.io/key-and-cert                 3         21h
-    summary-token-8kpt1    kubernetes.io/service-account-token   3         21h
+```bash
+NAME                   TYPE                                  DATA      AGE
+customer-token-mgb8w   kubernetes.io/service-account-token   3         21h
+database-token-nb5xp   kubernetes.io/service-account-token   3         21h
+default-token-wwml6    kubernetes.io/service-account-token   3         21h
+istio.customer         istio.io/key-and-cert                 3         21h
+istio.database         istio.io/key-and-cert                 3         21h
+istio.default          istio.io/key-and-cert                 3         21h
+istio.summary          istio.io/key-and-cert                 3         21h
+summary-token-8kpt1    kubernetes.io/service-account-token   3         21h
+```
+{: .no-select-button}
 
 Notice that Istio CA will have created a secret of type `istio.io/key-and-cert` for each
 service account.  These keys and X.509 certificates are used to cryptographically authenticate
@@ -91,6 +100,7 @@ You will use the `istio-ingressgateway` service to access the YAO Bank applicati
    NAME                   TYPE           CLUSTER-IP       EXTERNAL-IP     PORT(S)                                      AGE
    istio-ingressgateway   LoadBalancer   172.21.109.129   130.211.10.121  80:31380/TCP,443:31390/TCP,31400:31400/TCP   17h
    ```
+   {: .no-select-button}
 
    The address of the ingressgateway service is the external IP of the `istio-ingressgateway`, followed by port 80:
 
@@ -103,7 +113,9 @@ node, along with the NodePort, to access the ingress. The IP & port can be obtai
 of the following command:
 
    ```bash
-   export GATEWAY_URL=$(kubectl get po -n istio-system -l istio=ingressgateway -o 'jsonpath={.items[0].status.hostIP}'):$(kubectl get svc istio-ingressgateway -n istio-system -o 'jsonpath={.spec.ports[0].nodePort}')
+   export GATEWAY_URL=$(kubectl get pod -n istio-system -l istio=ingressgateway -o \
+   'jsonpath={.items[0].status.hostIP}'):$(kubectl get svc istio-ingressgateway -n istio-system -o \
+   'jsonpath={.spec.ports[0].nodePort}')
    ```
 
 Point your browser to `http://$GATEWAY_URL/` to confirm the YAO Bank application is functioning
@@ -184,7 +196,8 @@ the `summary` service, even though this pod is not run as that service account. 
 Now, we will attack the database.  Instead of listing the contents like we did before, let's try
 something more malicious, like changing the account balance with a `PUT` command.
 
-    curl -k https://database:2379/v2/keys/accounts/519940/balance -d value="10000.00" -XPUT --key /etc/certs/key.pem --cert /etc/certs/cert-chain.pem
+    curl -k https://database:2379/v2/keys/accounts/519940/balance -d value="10000.00" \
+    -XPUT --key /etc/certs/key.pem --cert /etc/certs/cert-chain.pem
 
 Unlike when we did this with the customer web pod, we do not have Envoy to handle encryption, so we
 have to pass an `https` URL, the `--key` and `--cert` parameters to `curl` to do the cryptography.
@@ -205,54 +218,63 @@ We can mitigate both of the above deficiencies with a {{site.prodname}} policy.
 Let's examine this policy piece by piece.  It consists of three policy objects, one for each
 microservice.
 
-    apiVersion: projectcalico.org/v3
-    kind: GlobalNetworkPolicy
-    metadata:
-      name: customer
-    spec:
-      selector: app == 'customer'
-      ingress:
-        - action: Allow
-          http:
-            methods: ["GET"]
-      egress:
-        - action: Allow
+```yaml
+apiVersion: projectcalico.org/v3
+kind: GlobalNetworkPolicy
+metadata:
+  name: customer
+spec:
+  selector: app == 'customer'
+  ingress:
+   - action: Allow
+     http:
+       methods: ["GET"]
+  egress:
+    - action: Allow
+```
+{: .no-select-button}
 
 This policy protects the customer web app.  Since this application is customer facing, we do not
 restrict what can communicate with it.  We do, however, restrict its communications to HTTP `GET`
 requests.
 
-    apiVersion: projectcalico.org/v3
-    kind: GlobalNetworkPolicy
-    metadata:
-      name: summary
-    spec:
-      selector: app == 'summary'
-      ingress:
-        - action: Allow
-          source:
-            serviceAccounts:
-              names: ["customer"]
-      egress:
-        - action: Allow
+```yaml
+apiVersion: projectcalico.org/v3
+kind: GlobalNetworkPolicy
+metadata:
+  name: summary
+spec:
+  selector: app == 'summary'
+  ingress:
+    - action: Allow
+      source:
+        serviceAccounts:
+          names: ["customer"]
+  egress:
+    - action: Allow
+```
+{: .no-select-button}
 
 The second policy protects the account summary microservice.  We know the only consumer of this
 service is the customer web app, so we restrict the source of incoming connections to the service
 account for the customer web app.
 
-    apiVersion: projectcalico.org/v3
-    kind: GlobalNetworkPolicy
-    metadata:
-      name: database
-    spec:
-      selector: app == 'database'
-      ingress:
-        - action: Allow
-          source:
-            serviceAccounts:
-              names: ["summary"]
-      egress:
-        - action: Allow
+```yaml
+apiVersion: projectcalico.org/v3
+kind: GlobalNetworkPolicy
+metadata:
+  name: database
+spec:
+  selector: app == 'database'
+    ingress:
+      - action: Allow
+        source:
+          serviceAccounts:
+            names: ["summary"]
+    egress:
+      - action: Allow
+```
+{: .no-select-button}
 
 The third policy protects the database.  Only the summary microservice should have direct access to
 the database.
@@ -280,7 +302,10 @@ Finally, let's return to the attack pod that simulated stealing secret keys.
 Let's repeat our attack with stolen keys. We'll further increase the account balance to highlight
 whether it succeeds.
 
-    curl -k --connect-timeout 3 https://database:2379/v2/keys/account/519940/balance -d value="99999.99" -XPUT --key /etc/certs/key.pem --cert /etc/certs/cert-chain.pem
+```bash
+curl -k --connect-timeout 3 https://database:2379/v2/keys/account/519940/balance -d \
+value="99999.99" -XPUT --key /etc/certs/key.pem --cert /etc/certs/cert-chain.pem
+```
 
 You should get no response, and refreshing your browser should not show an increased balance.
 

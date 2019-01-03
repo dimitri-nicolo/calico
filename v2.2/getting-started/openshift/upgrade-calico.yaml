@@ -1,3 +1,4 @@
+{% raw %}
 ---
 layout: null
 ---
@@ -25,3 +26,4 @@ layout: null
   roles:
   - role: calico
     when: openshift_use_calico | default(false) | bool
+{% endraw %}

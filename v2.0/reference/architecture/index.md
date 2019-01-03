@@ -1,5 +1,6 @@
 ---
 title: CNX Architecture
+canonical_url: https://docs.tigera.io/v2.2/reference/architecture/
 ---
 
 This document discusses the various pieces of {{site.prodname}}'s architecture,
@@ -159,10 +160,6 @@ into the network.
 
 {{site.prodname}} deploys a BGP client on every node that also hosts a [Felix](#felix). The role of the BGP client is to read routing state that [Felix](#felix) programs into the kernel and
 distribute it around the data center.
-
-In Calico, this BGP component is most commonly
-[BIRD](http://bird.network.cz/), though any BGP client, such as [GoBGP](https://github.com/osrg/gobgp) that can draw
-routes from the kernel and distribute them is suitable in this role.
 
 The BGP client is responsible for performing the following task:
 

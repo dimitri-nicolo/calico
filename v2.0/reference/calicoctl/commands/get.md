@@ -1,5 +1,6 @@
 ---
 title: calicoctl get
+canonical_url: https://docs.tigera.io/v2.2/reference/calicoctl/commands/get
 ---
 
 This sections describes the `calicoctl get` command.

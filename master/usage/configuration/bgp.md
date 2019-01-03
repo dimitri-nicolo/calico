@@ -3,14 +3,13 @@ title: Configuring BGP Peers
 canonical_url: https://docs.tigera.io/v2.2/usage/configuration/bgp
 ---
 
-This document describes the commands available in `calicoctl` for managing BGP.  It
-is intended primarily for users who are running on private cloud
-and would like to peer {{site.prodname}} with their underlying infrastructure.
-
-This document covers configuration of:
+This document describes the commands available in `calicoctl` for managing BGP.  It covers
+configuration of:
 
 -  Global default node AS Number
 -  The full node-to-node mesh
+-  Route reflector function
+-  BGP peers in general
 -  Global BGP Peers
 -  Node-specific BGP peers
 
@@ -22,6 +21,16 @@ The global default node AS number is the AS number used by the BGP agent on a
 {{site.prodname}} node when it has not been explicitly specified.  Setting this value
 simplifies configuration when your network topology allows all of your {{site.prodname}}
 nodes to use the same AS number.
+
+The AS number for a {{site.prodname}} node is determined:
+
+-  by the
+   [Node's]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/node)
+   `spec.bgp.asNumber`, if that is defined;
+-  otherwise by the `spec.asNumber` of the default [BGPConfiguration
+   resource]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/bgpconfig),
+   if that is defined;
+-  otherwise, is 64512 (which is in the IANA range for private use).
 
 **Node-to-node mesh**
 
@@ -40,22 +49,53 @@ BGP topology (e.g., peering with ToR switches) the full node-to-node mesh should
 disabled and explicit BGP peers configured for your {{site.prodname}} nodes.  A BGP peer may
 be configured in your {{site.prodname}} network as a global BGP peer or a per-node BGP peer.
 
+**Route reflector function**
+
+A {{site.prodname}} node can be configured to act as a route reflector for other
+{{site.prodname}} nodes, at the same time as originating routes for its own workloads.  This
+is enabled by setting the
+[Node's]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/node)
+`spec.bgp.routeReflectorClusterID`.  Normally you will also add a label to identify that node
+as a route reflector, to make it easy to configure peerings from other {{site.prodname}}
+nodes.
+
+It is also possible for {{site.prodname}} nodes to peer with a route reflector outside the
+cluster.
+
+**BGP peers in general**
+
+The {{site.prodname}} [BGPPeer
+resource]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/bgppeer) provides
+several ways to say that some set of {{site.prodname}} nodes should peer with other
+{{site.prodname}} nodes, or with other BGP speakers identified by IP.  These configurations
+can be used in addition to the full node-to-node mesh, or instead of it.  A BGPPeer can
+specify that all {{site.prodname}} nodes should have certain peerings, or just one specific
+{{site.prodname}} node, or the {{site.prodname}} nodes whose labels match a specified [label
+selector]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/networkpolicy#selector).
+The peers to connect to can be just one peer specified by its IP, or the set of
+{{site.prodname}} nodes that match a given label selector.
+
 **Global BGP peers**
+
+This is the case where a BGPPeer's `spec.node` and `spec.nodeSelector` fields are both empty.
 
 A global BGP peer is a BGP agent that peers with every {{site.prodname}} node in the
 network.  A typical use case for a global peer might be a mid-scale
 deployment where all of the {{site.prodname}} nodes are on the same L2 network and are
 each peering with the same route reflector (or set of route reflectors).
 
-**Per-node BGP peers**
+**Node-specific BGP peers**
 
-At scale, different network topologies come in to play.  For example, in the
-[AS per Rack model]({{site.baseurl}}/{{page.version}}/reference/private-cloud/l3-interconnect-fabric#the-as-per-rack-model)
-discussed in the reference material, each {{site.prodname}} node peers with
-a route reflector in the Top of Rack (ToR) switch.  In this case the BGP
-peerings are configured on a per-node basis (i.e., these are node-specific
-peers).  In the AS-per-rack model, each {{site.prodname}} node in a rack will be
-configured with a node-specific peering to the ToR route reflector.
+This is the case where a BGPPeer's `spec.node` or `spec.nodeSelector` field is non-empty.
+
+At scale, different network topologies come in to play.  For example, in the [AS per Rack
+model]({{site.baseurl}}/{{page.version}}/reference/private-cloud/l3-interconnect-fabric#the-as-per-rack-model)
+discussed in the reference material, each {{site.prodname}} node peers with a route reflector
+in the Top of Rack (ToR) switch.  In this case the BGP peerings are configured on a per-node
+basis, or for a set of nodes as identified by a given [label
+selector]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/networkpolicy#selector)
+(i.e., these are node-specific peers).  In the AS-per-rack model, each {{site.prodname}} node
+in a rack will be configured with a node-specific peering to the ToR route reflector.
 
 ### Configuring the default node AS number
 
@@ -131,7 +171,7 @@ the following steps.
    to a file.
 
     ```
-    calicoctl get bgpconfig default -o yaml > bgp.yaml
+    calicoctl get bgpconfig default --export -o yaml > bgp.yaml
     ```
 
 1. Open the bgpconfig settings file in your favorite editor, modify
@@ -192,6 +232,7 @@ It should return something like the following.
 NAME                  PEERIP         NODE      ASN
 bgppeer-global-3040   192.20.30.40   (global)  64567
 ```
+{: .no-select-button}
 
 To remove the global BGP peer that you just created run the following command.
 
@@ -244,6 +285,7 @@ You should see your new BGP peer resource listed in the response.
 NAME                 PEERIP      NODE    ASN
 bgppeer-node-aabbff  aa:bb::ff   node1   64514
 ```
+{: .no-select-button}
 
 To remove the BGP peer run the following command.
 
@@ -293,3 +335,89 @@ IPv6 BGP status
 | aa:bb::ff    | node-to-node mesh | up    | 16:17:26 | Established |
 +--------------+-------------------+-------+----------+-------------+
 ```
+{: .no-select-button}
+
+### Configuring in-cluster route reflectors
+
+For a larger deployment you can [disable the full node-to-node
+mesh](#disabling-the-full-node-to-node-bgp-mesh) and configure some of the nodes to provide
+in-cluster route reflection.  Then every node will still get all workload routes, but using a
+much smaller number of BGP connections.
+
+1.  Identify one or more {{site.prodname}} nodes to act as route reflectors.  Only one is
+    needed so long as that node stays up, but we recommend choosing two or three so that
+    correct route propagation can continue if some of them require down time for maintenance.
+
+1.  Modify the [Node
+    resource]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/node) for each
+    of those nodes, to:
+
+    -  set the node's `spec.bgp.routeReflectorClusterID` to a non-empty cluster ID such as
+       `224.0.0.1`
+
+    -  add a label indicating that the node is a route reflector.
+
+    For example:
+
+    ```
+    calicoctl get node <node_name> --export -o yaml > node.yml
+    ```
+
+    Edit node.yml so that it includes:
+
+    ```
+    metadata:
+      labels:
+        i-am-a-route-reflector: true
+    spec:
+      bgp:
+        routeReflectorClusterID: 224.0.0.1
+    ```
+
+    Then apply the updated YAML.
+
+    ```
+    calicoctl apply -f node.yml
+    ```
+
+    > **Note**: For a simple deployment, all the route reflector nodes should have the same
+    > cluster ID.
+    {: .alert .alert-info}
+
+1.  Configure a [BGPPeer
+    resource]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/bgppeer) to tell
+    the other {{site.prodname}} nodes to peer with the route reflector nodes:
+
+    ```
+    calicoctl apply -f - <<EOF
+    kind: BGPPeer
+    apiVersion: projectcalico.org/v3
+    metadata:
+      name: peer-to-rrs
+    spec:
+      nodeSelector: !has(i-am-a-route-reflector)
+      peerSelector: has(i-am-a-route-reflector)
+    EOF
+    ```
+
+1.  Configure a [BGPPeer
+    resource]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/bgppeer) to tell
+    the route reflector nodes to peer with each other:
+
+    ```
+    calicoctl apply -f - <<EOF
+    kind: BGPPeer
+    apiVersion: projectcalico.org/v3
+    metadata:
+      name: rr-mesh
+    spec:
+      nodeSelector: has(i-am-a-route-reflector)
+      peerSelector: has(i-am-a-route-reflector)
+    EOF
+    ```
+
+    > **Note**: This full mesh between the route reflectors allows this example to be complete
+    > on its own, in the sense of propagating all workload routes to all nodes.  Alternatively
+    > the route reflectors might not peer with each other directly, but via some upstream
+    > devices such as Top of Rack routers.
+    {: .alert .alert-info}

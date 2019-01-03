@@ -19,17 +19,21 @@ All logging is done using [svlogd](http://smarden.org/runit/svlogd.8.html).
 Each component can be configured by dropping a file named `config` into that
 component's logging directory.
 
-e.g. to configure bird to only log 4 files of 10KB each
+svlogd can be configured to forward logs to syslog, to prefix each line
+and to filter logs.
+See the [documentation](http://smarden.org/runit/svlogd.8.html) for further details.
 
+e.g. to configure bird to only log 4 files of 10KB each, create a file called `config` in the `/var/log/calico/bird` directory containing
 ```shell
 #/var/log/calico/bird/config
 s10000
 n4
 ```
 
-svlogd can also be configured to forward logs to syslog, to prefix each line
-and to filter logs. See the [documentation](http://smarden.org/runit/svlogd.8.html)
-for further details.
+e.g. to configure bird to drop logs with the suffix `Netlink: File exists`, create a file called `config` in the `/var/log/calico/bird` directory containing
+```shell
+-*Netlink: File exists
+```
 
 See the following subsections for details on configuring the log level for
 each `{{site.nodecontainer}}` component.
@@ -40,21 +44,35 @@ Bird and Bird6 are used for distributing IPv4 and IPv6 routes between {{site.pro
 enabled hosts.  The logs are output in the `bird` and `bird6` sub-directories
 of the `{{site.nodecontainer}}` logging directory.
 
+* The Debug level enables "debug all" logging for bird.
+* The Info level (default) only enabled "debug {states}" logging. This is for protocol state changes (protocol going up, down, starting, stopping etc.)
+* The Warning, Error and Fatal levels all turn off bird debug logging completely.
+
 See [BGP Configuration Resource](/{{page.version}}/reference/calicoctl/resources/bgpconfig)
 for details on how to modify the logging level. For example:
 
-```
-# Get the current bgpconfig settings
-$ calicoctl get bgpconfig -o yaml > bgp.yaml
 
-# Modify logSeverityScreen to none, debug, info, etc.
-#   Global change: set name to "default"
-#   Node-specific change: set name to the node name, e.g. "{{site.prodname}}-Node-1"
-$ vim bgp.yaml
+1. Get the current bgpconfig settings.
 
-# Replace the current bgpconfig settings
-$ calicoctl replace -f bgp.yaml
-```
+   ```bash
+   calicoctl get bgpconfig -o yaml > bgp.yaml
+   ```
+
+1. Modify logSeverityScreen to desired value.
+
+   ```bash
+   vim bgp.yaml
+   ```
+
+   > **Tip**: For a global change set the name to "default".
+   > For a node-specific change set the name to the node name, e.g., "node-1".
+   {: .alert .alert-success}
+
+1. Replace the current bgpconfig settings.
+
+   ```bash
+   calicoctl replace -f bgp.yaml
+   ```
 
 ### Felix
 
@@ -63,18 +81,27 @@ endpoints.  Felix is responsible for the programming of iptables rules on the
 host.  The logs are output in the `felix` sub-directory of the `{{site.nodecontainer}}`
 logging directory.
 
-```
-# Get the current felixconfig settings
-$ calicoctl get felixconfig -o yaml > felix.yaml
+1. Get the current felixconfig settings.
 
-# Modify logSeverityScreen to none, debug, info, etc.
-#   Global change: set name to "default"
-#   Node-specific change: set name to the node name, e.g. "{{site.prodname}}-Node-1"
-$ vim felix.yaml
+   ```bash
+   calicoctl get felixconfig -o yaml > felix.yaml
+   ```
 
-# Replace the current felixconfig settings
-$ calicoctl replace -f felix.yaml
-```
+1. Modify logSeverityScreen to desired value.
+
+   ```bash
+   vim felix.yaml
+   ```
+
+   > **Tip**: For a global change set the name to "default".
+   > For a node-specific change set the name to the node name, e.g., "{{site.prodname}}-Node-1".
+   {: .alert .alert-success}
+
+1. Replace the current felixconfig settings.
+
+   ```bash
+   calicoctl replace -f felix.yaml
+   ```
 
 ### confd
 

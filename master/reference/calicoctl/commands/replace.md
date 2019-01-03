@@ -74,20 +74,34 @@ Description:
   When replacing a resource, the complete resource spec must be provided, it is
   not sufficient to supply only the fields that are being updated.
 ```
+{: .no-select-button}
 
 ### Examples
 
-```
-# Replace a set of resources (of mixed type) using the data in resources.yaml.
-# Results indicate that 8 resources were successfully replaced.
-$ calicoctl replace -f ./resources.yaml
-Successfully replaced 8 resource(s)
+1. Replace a set of resources (of mixed type) using the data in resources.yaml.
 
-# Replace a policy based on the JSON passed into stdin.
-# Results indicate the policy does not exist.
-$ cat policy.json | calicoctl replace -f -
-Failed to replace any 'policy' resources: resource does not exist: Policy(name=dbPolicy)
-```
+   ```bash
+   calicoctl replace -f ./resources.yaml
+   ```
+
+   Results indicate that 8 resources were successfully replaced.
+
+   ```bash
+   Successfully replaced 8 resource(s)
+   ```
+   {: .no-select-button}
+
+1. Replace a policy based on the JSON passed into stdin.
+
+   ```bash
+   cat policy.json | calicoctl replace -f -
+   ```
+   Results indicate the policy does not exist.
+
+   ```bash
+   Failed to replace any 'policy' resources: resource does not exist: Policy(name=dbPolicy)
+   ```
+   {: .no-select-button}
 
 ### Options
 
@@ -95,6 +109,7 @@ Failed to replace any 'policy' resources: resource does not exist: Policy(name=d
 -f --filename=<FILENAME>   Filename to use to replace the resource.  If set
                            to "-" loads from stdin.
 ```
+{: .no-select-button}
 
 ### General options
 
@@ -103,6 +118,7 @@ Failed to replace any 'policy' resources: resource does not exist: Policy(name=d
                            configuration in YAML or JSON format.
                            [default: /etc/calico/calicoctl.cfg]
 ```
+{: .no-select-button}
 
 ## See also
 

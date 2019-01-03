@@ -33,6 +33,7 @@ Description:
 
   See 'calicoctl node <command> --help' to read about a specific subcommand.
 ```
+{: .no-select-button}
 
 ## Node specific commands
 

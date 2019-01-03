@@ -4,7 +4,7 @@ redirect_from: latest/getting-started/bare-metal/installation/
 canonical_url: https://docs.tigera.io/v2.2/getting-started/bare-metal/installation/
 ---
 
-You can use any of the following methods to install Felix on bare metal.
+You will need to install calicoctl and configure it to connect to your etcd datastore.
 
 - [Binary](binary): Install Felix as a binary.
 

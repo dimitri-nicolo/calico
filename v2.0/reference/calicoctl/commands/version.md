@@ -1,5 +1,6 @@
 ---
 title: calicoctl version
+canonical_url: https://docs.tigera.io/v2.2/reference/calicoctl/commands/version
 ---
 
 This sections describes the `calicoctl version` command.

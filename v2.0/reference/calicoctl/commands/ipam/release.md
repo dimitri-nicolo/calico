@@ -1,5 +1,6 @@
 ---
 title: calicoctl ipam
+canonical_url: https://docs.tigera.io/v2.2/reference/calicoctl/commands/ipam/release
 ---
 
 This section describes the `calicoctl ipam release` command.

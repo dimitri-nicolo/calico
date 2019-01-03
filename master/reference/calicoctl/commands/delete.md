@@ -87,19 +87,35 @@ Description:
   failure deleting a specific resource it is possible to work out which
   resource failed based on the number of resources successfully deleted.
 ```
+{: .no-select-button}
 
 ### Examples
 
-```
-# Delete a set of resources (of mixed type) using the data in resources.yaml.
-# Results indicate that 8 resources were successfully deleted.
-$ calicoctl delete -f ./resources.yaml
-Successfully deleted 8 resource(s)
+1. Delete a set of resources (of mixed type) using the data in resources.yaml.
 
-# Delete a policy resource by name.  The policy is called "policy1".
-$ bin/calicoctl delete policy policy1
-Successfully deleted 1 'policy' resource(s)
-```
+   ```bash
+   calicoctl delete -f ./resources.yaml
+   ```
+
+   Results indicate that 8 resources were successfully deleted.
+
+   ```bash
+   Successfully deleted 8 resource(s)
+   ```
+   {: .no-select-button}
+
+1. Delete a policy resource by name.  The policy is called "policy1".
+
+   ```bash
+   bin/calicoctl delete policy policy1
+   ```
+
+   Results indicate success.
+
+   ```bash
+   Successfully deleted 1 'policy' resource(s)
+   ```
+   {: .no-select-button}
 
 ### Options
 
@@ -112,6 +128,7 @@ Successfully deleted 1 'policy' resource(s)
                           Only applicable to NetworkPolicy and WorkloadEndpoint.
                           Uses the default namespace if not specified.
 ```
+{: .no-select-button}
 
 ### General options
 
@@ -120,6 +137,7 @@ Successfully deleted 1 'policy' resource(s)
                           configuration in YAML or JSON format.
                           [default: /etc/calico/calicoctl.cfg]
 ```
+{: .no-select-button}
 
 ## See also
 

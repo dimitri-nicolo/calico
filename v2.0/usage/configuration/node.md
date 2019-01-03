@@ -1,5 +1,6 @@
 ---
 title: Configuring a Node IP Address and Subnet
+canonical_url: https://docs.tigera.io/v2.2/usage/configuration/node
 ---
 
 By default, {{site.prodname}} automatically detects each Node's IP address and subnet.  In most cases,

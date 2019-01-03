@@ -23,3 +23,4 @@ Should you wish to modify the manifests before applying them, refer to
 
 If you prefer not to use Kubernetes to start the {{site.prodname}} services, refer to the
 [Integration guide](integration).
+

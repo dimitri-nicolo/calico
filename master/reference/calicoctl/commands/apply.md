@@ -77,19 +77,35 @@ Description:
   must be provided, it is not sufficient to supply only the fields that are
   being updated.
 ```
+{: .no-select-button}
 
 ### Examples
 
-```
-# Apply a set of resources (of mixed type) using the data in resources.yaml.
-# Results indicate that 8 resources were successfully applied
-$ calicoctl apply -f ./resources.yaml
-Successfully applied 8 resource(s)
+1. Apply a set of resources (of mixed type) using the data in resources.yaml.
 
-# Apply two policy resources based on the JSON passed into stdin.
-$ cat policy.json | calicoctl apply -f -
-Successfully applied 2 'policy' resource(s)
-```
+   ```bash
+   calicoctl apply -f ./resources.yaml
+   ```
+
+   Results indicate that 8 resources were successfully applied
+
+   ```bash
+   Successfully applied 8 resource(s)
+   ```
+   {: .no-select-button}
+
+1. Apply two policy resources based on the JSON passed into stdin.
+
+   ```bash
+   cat policy.json | calicoctl apply -f -
+   ```
+
+   Results indicate success.
+
+   ```bash
+   Successfully applied 2 'policy' resource(s)
+   ```
+   {: .no-select-button}
 
 ### Options
 
@@ -100,6 +116,7 @@ Successfully applied 2 'policy' resource(s)
                           Only applicable to NetworkPolicy and WorkloadEndpoint.
                           Uses the default namespace if not specified.
 ```
+{: .no-select-button}
 
 ### General options
 
@@ -108,6 +125,7 @@ Successfully applied 2 'policy' resource(s)
                           configuration in YAML or JSON format.
                           [default: /etc/calico/calicoctl.cfg]
 ```
+{: .no-select-button}
 
 ## See also
 

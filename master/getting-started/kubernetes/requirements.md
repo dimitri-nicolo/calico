@@ -21,11 +21,13 @@ Application Layer Policy requires Kubernetes 1.9 or later.
 
 #### {{site.prodname}} networking requirements
 
-- {{site.prodname}} is installed as a CNI plugin. The kubelet must be configured
+{{site.prodname}} is installed as a CNI plugin. The kubelet must be configured
 to use CNI networking by passing the `--network-plugin=cni` argument. (On
 kubeadm, this is the default.)
 
-- {{site.prodname}} must be the only network provider in each cluster. We do
+#### Other network providers
+
+{{site.prodname}} must be the only network provider in each cluster. We do
 not currently support migrating a cluster with another network provider to
 use {{site.prodname}} networking.
 

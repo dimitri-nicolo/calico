@@ -14,11 +14,19 @@ Releases of this repository still serve several important purposes. Namely, they
 
 ## Prerequisites
 
+To release Calico, you need the following permissions:
+
+- Write access to the core repositories in the projectcalico/ GitHub organization.
+- Push access to the Calico DockerHub repositories.
+- Push access to the Calico quay.io repositories.
+- Push access to the gcr.io/projectcalico-org repositories.
+
 Before attempting to create a Calico release you must do the following.
 
 1. Choose a Calico version number, e.g. `v3.2.0`.
 
-1. Select the appropriate component version numbers, and create any necessary releases.
+1. Select the appropriate component version numbers, and create any necessary releases. Follow the instructions
+   in each repository for further information.
 
    The following components _must_ use the same version number as the Calico version number
    chosen above, and thus must be re-released for every Calico release.
@@ -32,10 +40,10 @@ Before attempting to create a Calico release you must do the following.
    - [calico/dikastes](https://github.com/projectcalico/app-policy/releases)
    - [calico/pod2daemon-flexvol](https://github.com/projectcalico/pod2daemon/releases)
 
-   The following components do not yet use the same versioning as the Calico repo, and
-   so the version to include may differ.
+   The following components _must_ use the same minor revision number as the Calico version number above, but
+   do not always need to be released for every patch. They must be cut as part of a minor release of Calico.
 
-   - [networking-calico](https://github.com/projectcalico/networking-calico)
+   - [networking-calico](https://github.com/openstack/networking-calico)
 
    The following components do not share a version with the Calico release, but are included in the documentation.
 
@@ -52,6 +60,7 @@ Before attempting to create a Calico release you must do the following.
    ```
 
 Your next steps depend on the type of release:
+
 - [Creating a new major/minor release](#major-minor)
 - [Promoting a release candidate](#promoting)
 - [Creating a patch release](#patch)
@@ -135,14 +144,6 @@ be a release candidate.
    Once reviewed and CI is passing, merge the PR. This will cause the
    live docs site to be updated (after a few minutes).
 
-
-1. Edit the [Calico Docs Custom Search Engine](https://cse.google.com/).
-   1. Navigate to: search engine -> Search Features -> Refinements -> Add
-   1. Add a new refinement name: vX.Y
-   1. Navigate to: Setup -> Basics
-   1. Under "Sites to search", select "Add", for the url use `docs.projectcalico.org/vX.Y`
-   1. Choose vX.Y from the "Label" dropdown.
-
 1. Edit `_config_dev.yml` to exclude the previous release.
 
 If the release is not a release candidate but in fact a stable release, then you must also
@@ -159,11 +160,16 @@ release in the documentation. Perform these steps on a branch off of master.
 
 1. Modify the redirect in `/index.html` to point to your new release.
 
-1. Move the section for the release in `_data/versions.yml` to the top of the file so that it will be the 'Latest Release'.
+1. Move the section for the release in `_data/versions.yml` to the top of the file so that it will be
+   the 'Latest Release', and remove any release candidates from the section.
 
 1. Run `make add_redirects_for_latest VERSION=vX.Y` to update the redirects.
 
-1. Commit your changes and open a pull request, make sure it passes CI and get it reviewed.
+1. Commit your current changes.
+
+1. Update `sitemap-latest.xml` in the root of the repository. This is still a manual process. Use `_site/sitemap.xml` as a guide.
+
+1. Commit the sitemap changes as a new commit and open a pull request, make sure it passes CI and get it reviewed.
 
    Once reviewed and CI has passed, merge the PR. This will cause the live docs site to be updated (after a few minutes).
 
@@ -194,6 +200,15 @@ release in the documentation. Perform these steps on a branch off of master.
    >       Modify the `canonical_url` metadata of the pages that error out so that they point to valid locations. If the
    >       page was deleted, adjust the version number of the canonical URLs to the final copy of the page.
    >       If the page was renamed, update the canonical URLs to the new path.
+
+### Update the custom search engine
+
+1. Go to the [Calico Docs Custom Search Engine](https://cse.google.com/).
+1. Navigate to: search engine -> Search Features -> Refinements -> Add
+1. Add a new refinement name: vX.Y
+1. Navigate to: Setup -> Basics
+1. Under "Sites to search", select "Add", for the url use `docs.tigera.io/vX.Y`
+1. Choose vX.Y from the "Label" dropdown.
 
 ## <a name="patch"></a> Performing a "patch" release
 

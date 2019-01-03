@@ -26,6 +26,7 @@ Options:
 Description:
   Display the version of calicoctl.
 ```
+{: .no-select-button}
 
 ### Example
 

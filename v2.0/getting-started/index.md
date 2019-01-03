@@ -1,5 +1,6 @@
 ---
 title: Getting started with CNX
+canonical_url: https://docs.tigera.io/v2.2/getting-started/
 ---
 
 ## Obtain the private binaries and images

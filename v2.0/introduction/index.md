@@ -2,6 +2,7 @@
 title: Tigera CNX
 description: Home
 layout: docwithnav
+canonical_url: https://docs.tigera.io/v2.2/introduction/
 ---
 
 {{site.prodname}} adds complementary monitoring and policy management

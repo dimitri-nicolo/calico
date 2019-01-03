@@ -62,6 +62,7 @@ spec:
 | ipv4Address | The IPv4 address and subnet exported as the next-hop for the {{site.prodname}} endpoints on the host | The IPv4 address must be specified if BGP is enabled. | string |
 | ipv6Address | The IPv6 address and subnet exported as the next-hop for the {{site.prodname}} endpoints on the host | Optional | string |
 | ipv4IPIPTunnelAddr | IPv4 address of the IP-in-IP tunnel | Optional IPv4 address | string |
+| routeReflectorClusterID | Enables this node as a route reflector within the given cluster | Optional IPv4 address | string |
 
 ### Supported operations
 

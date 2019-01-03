@@ -1,5 +1,6 @@
 ---
 title: calicoctl node diags
+canonical_url: https://docs.tigera.io/v2.2/reference/calicoctl/commands/node/diags
 ---
 
 This section describes the `calicoctl node diags` command.

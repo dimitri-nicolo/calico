@@ -86,6 +86,7 @@ This example shows how to limit access to the {{site.nodecontainer}} Prometheus 
    kubeadm-master
    kubeadm-node-0
    ```
+   {: .no-select-button}
 
 1. Create host endpoints for each {{site.prodname}} node.
 
@@ -272,6 +273,7 @@ The basic process is as follows:
    kubeadm-master
    kubeadm-node-0
    ```
+   {: .no-select-button}
 
 1. Create host endpoints for each {{site.prodname}} node.
 

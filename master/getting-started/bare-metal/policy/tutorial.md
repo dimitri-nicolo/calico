@@ -172,9 +172,8 @@ EOF
 If you wanted to make that NodePort accessible only through particular nodes, you could achieve that by giving those nodes a particular `host-endpoint` label:
 
 ```
-      host-endpoint: <special-value>
+host-endpoint: <special-value>
 ```
 
 and then using `host-endpoint=='<special-value>'` as the selector of the
 `allow-nodeport` policy, instead of `has(host-endpoint)`.
-

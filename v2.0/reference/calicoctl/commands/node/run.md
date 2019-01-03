@@ -1,5 +1,6 @@
 ---
 title: calicoctl node run
+canonical_url: https://docs.tigera.io/v2.2/reference/calicoctl/commands/node/run
 ---
 
 This sections describes the `calicoctl node run` command.
@@ -20,7 +21,7 @@ Usage:
                      [--ip6-autodetection-method=<IP6_AUTODETECTION_METHOD>]
                      [--log-dir=<LOG_DIR>]
                      [--node-image=<DOCKER_IMAGE_NAME>]
-                     [--backend=(bird|gobgp|none)]
+                     [--backend=(bird|none)]
                      [--config=<CONFIG>]
                      [--no-default-ippools]
                      [--dryrun]
@@ -87,11 +88,9 @@ Options:
      --node-image=<DOCKER_IMAGE_NAME>
                            Docker image to use for Calico's per-node container.
                            [default: {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["node"]}}:latest]
-     --backend=(bird|gobgp|none)
+     --backend=(bird|none)
                            Specify which networking backend to use.  When set
                            to "none", Calico node runs in policy only mode.
-                           The option to run with gobgp is currently
-                           experimental.
                            [default: bird]
      --dryrun              Output the appropriate command, without starting the
                            container.
@@ -312,11 +311,9 @@ terminating `,` character does not need to be specified for those cases.
    --node-image=<DOCKER_IMAGE_NAME>
                          Docker image to use for Calico's per-node container.
                          [default: {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["node"]}}:latest]
-   --backend=(bird|gobgp|none)
+   --backend=(bird|none)
                          Specify which networking backend to use.  When set
                          to "none", Calico node runs in policy only mode.
-                         The option to run with gobgp is currently
-                         experimental.
                          [default: bird]
    --dryrun              Output the appropriate command, without starting the
                          container.

@@ -1,5 +1,6 @@
 ---
 title: calicoctl node status
+canonical_url: https://docs.tigera.io/v2.2/reference/calicoctl/commands/node/status
 ---
 
 This sections describes the `calicoctl node status` command.

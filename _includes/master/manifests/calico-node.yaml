@@ -61,15 +61,88 @@ spec:
       terminationGracePeriodSeconds: 0
       imagePullSecrets:
         - name: cnx-pull-secret
-{%- if include.app_layer_policy == "true" or include.app_layer_policy == "disabled" %}
-      # Adds a Flex Volume Driver that creates a per-pod Unix Domain Socket to allow Dikastes
-      # to communicate with Felix over the Policy Sync API.
       initContainers:
-      - name: flexvol-driver
-        image: {{site.imageNames["flexvol"]}}:{{site.data.versions[page.version].first.components["flexvol"].version}}
-        volumeMounts:
-        - name: flexvol-driver-host
-          mountPath: /host/driver
+{%-  if include.network != "ecs" %}
+        # This container installs the {{site.prodname}} CNI binaries
+        # and CNI network config file on each node.
+        - name: install-cni
+          image: {{site.imageNames["cni"]}}:{{site.data.versions[page.version].first.components["calico/cni"].version}}
+          command: ["/install-cni.sh"]
+          env:
+            # Name of the CNI config file to create.
+            - name: CNI_CONF_NAME
+              value: "10-{{include.variant_name | downcase}}.conflist"
+            # The CNI network config to install on each node.
+            - name: CNI_NETWORK_CONFIG
+              valueFrom:
+                configMapKeyRef:
+                  name: {{include.variant_name | downcase}}-config
+                  key: cni_network_config
+{%- if include.datastore == "etcd" %}
+            # The location of the {{site.prodname}} etcd cluster.
+            - name: ETCD_ENDPOINTS
+              valueFrom:
+                configMapKeyRef:
+                  name: {{include.variant_name | downcase}}-config
+                  key: etcd_endpoints
+  {%- if include.network == "flannel" %}
+            # Location of the CA certificate for etcd.
+            - name: ETCD_CA_CERT_FILE
+              valueFrom:
+                configMapKeyRef:
+                  name: canal-config
+                  key: etcd_ca
+            # Location of the client key for etcd.
+            - name: ETCD_KEY_FILE
+              valueFrom:
+                configMapKeyRef:
+                  name: canal-config
+                  key: etcd_key
+            # Location of the client certificate for etcd.
+            - name: ETCD_CERT_FILE
+              valueFrom:
+                configMapKeyRef:
+                  name: canal-config
+                  key: etcd_cert
+  {%- endif %}
+{%- elsif include.datastore == "kdd" %}
+            # Set the hostname based on the k8s node name.
+            - name: KUBERNETES_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+{%- endif %}
+{%-  if include.network == "calico" %}
+            # CNI MTU Config variable
+            - name: CNI_MTU
+              valueFrom:
+                configMapKeyRef:
+                  name: {{include.variant_name | downcase}}-config
+                  key: veth_mtu
+{%- endif %}
+            # Prevents the container from sleeping forever.
+            - name: SLEEP
+              value: "false"
+          volumeMounts:
+            - mountPath: /host/opt/cni/bin
+              name: cni-bin-dir
+            - mountPath: /host/etc/cni/net.d
+              name: cni-net-dir
+{%- if include.datastore == "etcd" %}
+            - mountPath: /calico-secrets
+              name: etcd-certs
+{%- endif %}
+{%- if include.app_layer_policy == "true" or include.app_layer_policy == "disabled" %}
+        # Adds a Flex Volume Driver that creates a per-pod Unix Domain Socket to allow Dikastes
+        # to communicate with Felix over the Policy Sync API.
+        - name: flexvol-driver
+          image: {{site.imageNames["flexvol"]}}:{{site.data.versions[page.version].first.components["flexvol"].version}}
+          imagePullPolicy: Always
+          volumeMounts:
+          - name: flexvol-driver-host
+            mountPath: /host/driver
+{%- endif %}
+
 {%- endif %}
       containers:
         # Runs {{site.nodecontainer}} container on each Kubernetes node.  This
@@ -271,6 +344,9 @@ spec:
             - mountPath: /lib/modules
               name: lib-modules
               readOnly: true
+            - mountPath: /run/xtables.lock
+              name: xtables-lock
+              readOnly: false
             - mountPath: /var/run/calico
               name: var-run-calico
               readOnly: false
@@ -287,74 +363,6 @@ spec:
 {%- if include.app_layer_policy == "true" or include.app_layer_policy == "disabled" %}
             - name: policysync
               mountPath: /var/run/nodeagent
-{%- endif %}
-{%-  if include.network != "ecs" %}
-        # This container installs the {{site.prodname}} CNI binaries
-        # and CNI network config file on each node.
-        - name: install-cni
-          image: {{site.imageNames["cni"]}}:{{site.data.versions[page.version].first.components["calico/cni"].version}}
-          command: ["/install-cni.sh"]
-          env:
-            # Name of the CNI config file to create.
-            - name: CNI_CONF_NAME
-              value: "10-{{include.variant_name | downcase}}.conflist"
-{%- if include.datastore == "etcd" %}
-            # The location of the {{site.prodname}} etcd cluster.
-            - name: ETCD_ENDPOINTS
-              valueFrom:
-                configMapKeyRef:
-                  name: {{include.variant_name | downcase}}-config
-                  key: etcd_endpoints
-  {%- if include.network == "flannel" %}
-            # Location of the CA certificate for etcd.
-            - name: ETCD_CA_CERT_FILE
-              valueFrom:
-                configMapKeyRef:
-                  name: canal-config
-                  key: etcd_ca
-            # Location of the client key for etcd.
-            - name: ETCD_KEY_FILE
-              valueFrom:
-                configMapKeyRef:
-                  name: canal-config
-                  key: etcd_key
-            # Location of the client certificate for etcd.
-            - name: ETCD_CERT_FILE
-              valueFrom:
-                configMapKeyRef:
-                  name: canal-config
-                  key: etcd_cert
-  {%- endif %}
-{%- elsif include.datastore == "kdd" %}
-            # Set the hostname based on the k8s node name.
-            - name: KUBERNETES_NODE_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: spec.nodeName
-{%- endif %}
-           # The CNI network config to install on each node.
-            - name: CNI_NETWORK_CONFIG
-              valueFrom:
-                configMapKeyRef:
-                  name: {{include.variant_name | downcase}}-config
-                  key: cni_network_config
-{%-  if include.network == "calico" %}
-            # CNI MTU Config variable
-            - name: CNI_MTU
-              valueFrom:
-                configMapKeyRef:
-                  name: {{include.variant_name | downcase}}-config
-                  key: veth_mtu
-{%- endif %}
-          volumeMounts:
-            - mountPath: /host/opt/cni/bin
-              name: cni-bin-dir
-            - mountPath: /host/etc/cni/net.d
-              name: cni-net-dir
-{%- if include.datastore == "etcd" %}
-            - mountPath: /calico-secrets
-              name: etcd-certs
-{%- endif %}
 {%- endif %}
 {%- if include.network == "flannel" %}
   {%- if include.datastore == "kdd" %}
@@ -385,8 +393,9 @@ spec:
                   name: canal-config
                   key: masquerade
           volumeMounts:
-          - name: run
-            mountPath: /run
+          - mountPath: /run/xtables.lock
+            name: xtables-lock
+            readOnly: false
           - name: flannel-cfg
             mountPath: /etc/kube-flannel/
   {%- elsif include.datastore == "etcd" %}
@@ -474,11 +483,12 @@ spec:
         - name: var-lib-calico
           hostPath:
             path: /var/lib/calico
+        - name: xtables-lock
+          hostPath:
+            path: /run/xtables.lock
+            type: FileOrCreate
 {%- if include.network == "flannel" and include.datastore == "kdd" %}
         # Used by flannel.
-        - name: run
-          hostPath:
-            path: /run
         - name: flannel-cfg
           configMap:
             name: canal-config
@@ -546,7 +556,7 @@ roleRef:
   name: canal
 subjects:
 - kind: ServiceAccount
-  name: canal
+  name: canal-node
   namespace: kube-system
 
 ---

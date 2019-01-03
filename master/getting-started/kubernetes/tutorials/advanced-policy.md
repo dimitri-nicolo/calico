@@ -41,21 +41,32 @@ Open up a second shell session which has `kubectl` connectivity to the Kubernete
 kubectl run --namespace=advanced-policy-demo access --rm -ti --image busybox /bin/sh
 ```
 
-When the pod is ready, you should see the following output.
+This should open up a shell session inside the `access` pod, as shown below.
+
+```bash
+Waiting for pod advanced-policy-demo/access-472357175-y0m47 to be running, status is Pending, pod ready: false
 
 ```
 If you don't see a command prompt, try pressing enter.
 / #
 ```
+{: .no-select-button}
 
-Now from within the busybox "access" pod execute the following commands to test access.
+Now from within the busybox "access" pod execute the following command to test access to the nginx service.
 
 ```shell
-/ # wget -q --timeout=5 nginx -O -
-/ # wget -q --timeout=5 google.com -O -
+wget -q --timeout=5 nginx -O -
+```
+It should return the HTML of the nginx welcome page.
+
+Still within the busybox "access" pod, issue the following command to test access to google.com.
+
+```bash
+wget -q --timeout=5 google.com -O -
 ```
 
-Both of the commands should respond with raw HTML response data from the nginx and google.com website.
+It should return the HTML of the google.com home page.
+
 
 ### 2. Deny all ingress traffic
 
@@ -83,26 +94,28 @@ Because all pods in the namespace are now selected, any ingress traffic which is
 We can see that this is the case by switching over to our "access" pod in the namespace and attempting to access the nginx service.
 
 ```shell
-/ # wget -q --timeout=5 nginx -O -
+wget -q --timeout=5 nginx -O -
 ```
 
-You should see the following output.
+It should return:
 
-```
+```bash
 wget: download timed out
 ```
+{: .no-select-button}
 
-Attempt to access google.com.
+Next, try to access google.com.
 
+```bash
+wget -q --timeout=5 google.com -O -
 ```
-/ # wget -q --timeout=5 google.com -O -
-```
 
-You should see output similar to the following.
+It should return:
 
-```
+```bash
 <!doctype html><html itemscope="" item....
 ```
+{: .no-select-button}
 
 We can see that the ingress access to the nginx service is denied while egress access to outbound internet is still allowed.
 
@@ -133,17 +146,18 @@ EOF
 Now ingress traffic to nginx will be allowed.  We can see that this is the case by switching over to our "access" pod in the namespace and attempting to access the nginx service.
 
 ```shell
-/ # wget -q --timeout=5 nginx -O -
+wget -q --timeout=5 nginx -O -
 ```
 
-You should now see something similar to the following output.
+It should return:
 
-```
+```bash
 <!DOCTYPE html>
 <html>
 <head>
 <title>Welcome to nginx!</title>...
 ```
+{: .no-select-button}
 
 After creating the policy, we can now access the nginx service.
 
@@ -174,30 +188,31 @@ We can see that this is the case by switching over to our "access" pod in the
 namespace and attempting to `nslookup` nginx or `wget` google.com.
 
 ```shell
-/ # nslookup nginx
+nslookup nginx
 ```
 
-You should see the following output
+It should return something like the following.
 
-```
+```bash
 Server:    10.96.0.10
 Address 1: 10.96.0.10
 
-
 nslookup: can't resolve 'nginx'
 ```
+{: .no-select-button}
 
-Attempt to access google.com.
+Next, try to access google.com.
 
+```bash
+wget -q --timeout=5 google.com -O -
 ```
-/ # wget -q --timeout=5 google.com -O -
-```
 
-You should see the following output.
+It should return:
 
-```
+```bash
 wget: bad address 'google.com'
 ```
+{: .no-select-button}
 
 > **Note**: The `nslookup` command can take a minute or more to timeout.
 {: .alert .alert-info}
@@ -239,29 +254,31 @@ Now egress traffic to DNS will be allowed.
 We can see that this is the case by switching over to our "access" pod in the namespace and attempting to lookup nginx and google.com.
 
 ```shell
-/ # nslookup nginx
+nslookup nginx
 ```
 
-You should now see the following output.
+It should return something like the following.
 
-```
+```bash
 Server:    10.0.0.10
 Address 1: 10.0.0.10 kube-dns.kube-system.svc.cluster.local
 ```
+{: .no-select-button}
 
-Attempt to lookup google.com.
+Next, try to look up google.com.
 
+```bash
+nslookup google.com
 ```
-/ # nslookup google.com
-```
 
-You should now see the following output.
+It should return something like the following.
 
-```
+```bash
 Name:      google.com
 Address 1: 2607:f8b0:4005:807::200e sfo07s16-in-x0e.1e100.net
 Address 2: 216.58.195.78 sfo07s16-in-f14.1e100.net
 ```
+{: .no-select-button}
 
 Even though DNS egress traffic is now working, all other egress traffic from all pods in the advanced-policy-demo namespace is still blocked.  Therefore the HTTP egress traffic from the `wget` calls will still fail.
 
@@ -295,29 +312,31 @@ We can see that this is the case by switching over to our "access" pod in the
 namespace and attempting to access `nginx`.
 
 ```shell
-/ # wget -q --timeout=5 nginx -O -
+wget -q --timeout=5 nginx -O -
 ```
 
-You should now see output similar to the following.
+It should return the HTML of the nginx welcome page.
 
-```
+```bash
 <!DOCTYPE html>
 <html>
 <head>
 <title>Welcome to nginx!</title>...
 ```
+{: .no-select-button}
 
-Now, if you attempt to access google.com
+Next, try to retrieve the home page of google.com.
 
+```bash
+wget -q --timeout=5 google.com -O -
 ```
-/ # wget -q --timeout=5 google.com -O -
-```
 
-you should see the following output.
+It should return:
 
-```
+```bash
 wget: download timed out
 ```
+{: .no-select-button}
 
 Access to `google.com` times out because it can resolve DNS but has no egress access to anything other than pods with labels matching `run: nginx` in the `advanced-policy-demo` namespace.
 

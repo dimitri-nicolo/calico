@@ -49,5 +49,5 @@ See [GlobalNetworkPolicy spec]({{site.baseurl}}/{{page.version}}/reference/calic
 > between a host endpoint and a workload endpoint on the same host is regarded as
 > `forwarded traffic`.
 >
-> ![]({{site.baseurl}}/images/bare-metal-packet-flows-AOF.png)
+> ![]({{site.baseurl}}/images/bare-metal-packet-flows.svg)
 {: .alert .alert-info}

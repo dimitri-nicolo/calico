@@ -1,5 +1,6 @@
 ---
 title: Releases
+canonical_url: https://docs.tigera.io/v2.2/releases/
 ---
 
 The following table shows component versioning for CNX  **{{ page.version }}**.

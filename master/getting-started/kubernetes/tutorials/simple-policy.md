@@ -15,45 +15,52 @@ This guide will deploy pods in a Kubernetes namespaces.  Let's create the `Names
 kubectl create ns policy-demo
 ```
 
-### Create demo Pods
+### Create demo pods
 
-We'll use Kubernetes `Deployment` objects to easily create pods in the `Namespace`.
+We'll use Kubernetes `Deployment` objects to easily create pods in the namespace.
 
-1) Create some nginx pods in the `policy-demo` namespace, and expose them through a service.
+1. Create some nginx pods in the `policy-demo` namespace.
 
-Run the pods.
+   ```shell
+   kubectl run --namespace=policy-demo nginx --replicas=2 --image=nginx
+   ```
 
-```shell
-kubectl run --namespace=policy-demo nginx --replicas=2 --image=nginx
-```
+1. Expose them through a service.
 
-Create the service.
+   ```bash
+   kubectl expose --namespace=policy-demo deployment nginx --port=80
+   ```
 
-```
-kubectl expose --namespace=policy-demo deployment nginx --port=80
-```
+1. Ensure the nginx service is accessible.
 
-2) Ensure the nginx service is accessible.
+   ```bash
+   kubectl run --namespace=policy-demo access --rm -ti --image busybox /bin/sh
+   ```
 
-Run a pod within the `policy-demo` namespace.
+   This should open up a shell session inside the `access` pod, as shown below.
 
-```
-kubectl run --namespace=policy-demo access --rm -ti --image busybox /bin/sh
-```
+   ```bash
+   Waiting for pod policy-demo/access-472357175-y0m47 to be running, status is Pending, pod ready: false
 
-Attempt to connect to the nginx service.
+   If you don't see a command prompt, try pressing enter.
 
-```
-If you don't see a command prompt, try pressing enter.
+   / #
+   ```
+   {: .no-select-button}
 
-/ # wget -q nginx -O -
-```
+1. From inside the `access` pod, attempt to reach the `nginx` service.
 
-You should see a response from `nginx`.  Great! Our service is accessible.  You can exit the pod now.
+   ```bash
+   wget -q nginx -O -
+   ```
+
+
+   You should see a response from `nginx`.  Great! Our service is accessible.  You can exit the pod now.
+
 
 ### Enable isolation
 
-Let's turn on isolation in our policy-demo namespace.  {{site.prodname}} will then prevent connections to pods in this namespace.
+Let's turn on isolation in our `policy-demo` namespace.  {{site.prodname}} will then prevent connections to pods in this namespace.
 
 Running the following command creates a NetworkPolicy which implements a default deny behavior for all pods in the `policy-demo` namespace.
 
@@ -74,25 +81,33 @@ EOF
 
 This will prevent all access to the nginx service.  We can see the effect by trying to access the service again.
 
-Run a pod in the `policy-demo` namespace.
-
 ```
 kubectl run --namespace=policy-demo access --rm -ti --image busybox /bin/sh
 ```
 
-Attempt to access the nginx service again.
+This should open up a shell session inside the `access` pod, as shown below.
+
+```bash
+Waiting for pod policy-demo/access-472357175-y0m47 to be running, status is Pending, pod ready: false
 
 ```
 If you don't see a command prompt, try pressing enter.
+/ #
+```
+{: .no-select-button}
 
-/ # wget -q --timeout=5 nginx -O -
+Now from within the busybox `access` pod execute the following command to test access to the nginx service.
+
+```bash
+wget -q --timeout=5 nginx -O -
 ```
 
-After 5 seconds, the request should time out and you should see the following output.
+The request should time out after 5 seconds.
 
-```
+```bash
 wget: download timed out
 ```
+{: .no-select-button}
 
 By enabling isolation on the namespace, we've prevented access to the service.
 
@@ -122,9 +137,9 @@ spec:
 EOF
 ```
 
-> **Note**: The NetworkPolicy allows traffic from pods with
-> the label `run: access` to pods with the label `run: nginx`. These
-> are the labels automatically added to pods started via `kubectl run`
+> **Note**: The NetworkPolicy allows traffic from Pods with
+> the label `run: access` to Pods with the label `run: nginx`. These
+> are the labels automatically added to Pods started via `kubectl run`
 > based on the name of the `Deployment`.
 {: .alert .alert-info}
 
@@ -136,37 +151,58 @@ Run a pod in the `policy-demo` namespace.
 kubectl run --namespace=policy-demo access --rm -ti --image busybox /bin/sh
 ```
 
+This should open up a shell session inside the `access` pod, as shown below.
+
+```bash
+Waiting for pod policy-demo/access-472357175-y0m47 to be running, status is Pending, pod ready: false
+
 Attempt to access the nginx service.
 
 ```
 If you don't see a command prompt, try pressing enter.
 
-/ # wget -q --timeout=5 nginx -O -
+/ #
+```
+{: .no-select-button}
+
+Now from within the busybox `access` pod execute the following command to test access to the nginx service.
+
+```bash
+wget -q --timeout=5 nginx -O -
 ```
 
-However, we still cannot access the service from a pod without the label `run: access`:
+However, we still cannot access the service from a pod without the label `run: access`.
+We can verify this as follows.
 
-Run a pod in the `policy-demo` namespace with a different label.
-
-```
+```bash
 kubectl run --namespace=policy-demo cant-access --rm -ti --image busybox /bin/sh
 ```
 
-Attempt to connect to the nginx service.
+This should open up a shell session inside the `cant-access` pod, as shown below.
 
+```bash
+Waiting for pod policy-demo/cant-access-472357175-y0m47 to be running, status is Pending, pod ready: false
 ```
 If you don't see a command prompt, try pressing enter.
 
-/ # wget -q --timeout=5 nginx -O -
+/ #
+```
+{: .no-select-button}
+
+Now from within the busybox `cant-access` pod execute the following command to test access to the nginx service.
+
+```bash
+wget -q --timeout=5 nginx -O -
 ```
 
-After 5 seconds, you should see the following output.
+The request should time out.
 
 ```
 wget: download timed out
 ```
+{: .no-select-button}
 
-You can clean up the demo by deleting the demo namespace:
+You can clean up the demo by deleting the demo namespace.
 
 ```shell
 kubectl delete ns policy-demo
@@ -175,4 +211,4 @@ kubectl delete ns policy-demo
 This was just a simple example of the Kubernetes NetworkPolicy API and how {{site.prodname}} can secure your Kubernetes cluster.  For more
 information on network policy in Kubernetes, see the [Kubernetes user-guide](http://kubernetes.io/docs/user-guide/networkpolicies/).
 
-For a slightly more detailed demonstration of Policy, check out the [stars demo](stars-policy/).
+For a slightly more detailed demonstration of policy, check out the [stars demo](stars-policy).

@@ -43,6 +43,7 @@ Description:
 
   See 'calicoctl <command> --help' to read about a specific subcommand.
 ```
+{: .no-select-button}
 
 ## Top level command line options
 

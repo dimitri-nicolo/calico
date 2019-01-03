@@ -1,5 +1,6 @@
 ---
 title: CNX Kubernetes Hosted Install
+canonical_url: https://docs.tigera.io/v2.2/getting-started/kubernetes/installation/
 ---
 
 CNX is installed on a cluster by configuring and applying Kubernetes manifests.

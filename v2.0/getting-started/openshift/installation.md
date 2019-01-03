@@ -1,5 +1,6 @@
 ---
 title: Installing CNX on OpenShift
+canonical_url: https://docs.tigera.io/v2.2/getting-started/openshift/installation
 ---
 
 Installation of {{site.prodname}} in OpenShift is integrated in openshift-ansible v3.6.

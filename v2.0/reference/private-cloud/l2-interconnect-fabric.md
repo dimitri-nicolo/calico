@@ -1,6 +1,7 @@
 ---
 subtitle: 'At scale, and no, we''re not joking'
 title: CNX over an Ethernet interconnect fabric
+canonical_url: https://docs.tigera.io/v2.2/reference/private-cloud/l2-interconnect-fabric
 ---
 
 

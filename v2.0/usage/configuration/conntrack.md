@@ -1,5 +1,6 @@
 ---
 title: Configuring Conntrack
+canonical_url: https://docs.tigera.io/v2.2/usage/configuration/conntrack
 ---
 
 A common problem on Linux systems is running out of space in the

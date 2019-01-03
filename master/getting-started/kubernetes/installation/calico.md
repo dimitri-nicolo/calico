@@ -37,16 +37,6 @@ and your datastore type. Refer to the section that matches your configuration.
 
 ### Installing without federation, using etcd
 
-1. If your cluster has RBAC enabled, issue the following command to
-   configure the roles and bindings that {{site.prodname}} requires.
-
-   ```
-   kubectl apply -f \
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/rbac.yaml
-   ```
-   > **Note**: You can also [view the manifest in your browser](rbac.yaml){:target="_blank"}.
-   {: .alert .alert-info}
-
 1. Download the {{site.prodname}} networking manifest for etcd.
 
    ```bash
@@ -60,6 +50,8 @@ and your datastore type. Refer to the section that matches your configuration.
 
    > **Tip**: You can specify more than one using commas as delimiters.
    {: .alert .alert-success}
+
+{% include {{page.version}}/cnx-pod-cidr-sed.md yaml="calico" %}
 
 {% include {{page.version}}/cnx-cred-sed.md yaml="calico" %}
 
@@ -75,22 +67,11 @@ and your datastore type. Refer to the section that matches your configuration.
 
 1. Ensure that the Kubernetes controller manager has the following flags
    set: <br>
-   `--cluster-cidr=192.168.0.0/16` and `--allocate-node-cidrs=true`.
+   `--cluster-cidr=<your-pod-cidr>` and `--allocate-node-cidrs=true`.
 
-   > **Tip**: On kubeadm, you can pass `--pod-network-cidr=192.168.0.0/16`
+   > **Tip**: On kubeadm, you can pass `--pod-network-cidr=<your-pod-cidr>`
    > to kubeadm to set both Kubernetes controller flags.
    {: .alert .alert-success}
-
-1. If your cluster has RBAC enabled, issue the following command to
-   configure the roles and bindings that {{site.prodname}} requires.
-
-   ```
-   kubectl apply -f \
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/rbac-kdd.yaml
-   ```
-   > **Note**: You can also
-   > [view the manifest in your browser](hosted/rbac-kdd.yaml){:target="_blank"}.
-   {: .alert .alert-info}
 
 1. Download the {{site.prodname}} networking manifest for the Kubernetes API datastore.
 
@@ -99,6 +80,8 @@ and your datastore type. Refer to the section that matches your configuration.
    {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calico-networking/1.7/calico.yaml \
    -O
    ```
+
+{% include {{page.version}}/cnx-pod-cidr-sed.md yaml="calico" %}
 
 {% include {{page.version}}/cnx-cred-sed.md yaml="calico" %}
 
@@ -112,23 +95,13 @@ and your datastore type. Refer to the section that matches your configuration.
 
 ### Installing without federation, using Kubernetes API datastore, more than 50 nodes
 
-1. Ensure that the Kubernetes controller manager has the following flags set:<br>
-   `--cluster-cidr=192.168.0.0/16` and `--allocate-node-cidrs=true`.
+1. Ensure that the Kubernetes controller manager has the following flags
+   set: <br>
+   `--cluster-cidr=<your-pod-cidr>` and `--allocate-node-cidrs=true`.
 
-   > **Tip**: On kubeadm, you can pass `--pod-network-cidr=192.168.0.0/16`
+   > **Tip**: On kubeadm, you can pass `--pod-network-cidr=<your-pod-cidr>`
    > to kubeadm to set both Kubernetes controller flags.
    {: .alert .alert-success}
-
-1. If your cluster has RBAC enabled, issue the following command to
-   configure the roles and bindings that {{site.prodname}} requires.
-
-   ```
-   kubectl apply -f \
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/rbac-kdd.yaml
-   ```
-   > **Note**: You can also
-   > [view the manifest in your browser](hosted/rbac-kdd.yaml){:target="_blank"}.
-   {: .alert .alert-info}
 
 1. Download the {{site.prodname}} networking manifest for the Kubernetes API datastore.
 
@@ -137,6 +110,8 @@ and your datastore type. Refer to the section that matches your configuration.
    {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calico-networking/typha/calico.yaml \
    -O
    ```
+
+{% include {{page.version}}/cnx-pod-cidr-sed.md yaml="calico" %}
 
 1. Modify the replica count in the`Deployment` named `calico-typha`
    to the desired number of replicas.
@@ -151,6 +126,7 @@ and your datastore type. Refer to the section that matches your configuration.
      ...
      replicas: <number of replicas>
    ```
+   {: .no-select-button}
 
    We recommend at least one replica for every 200 nodes and no more than
    20 replicas. In production, we recommend a minimum of three replicas to reduce
@@ -197,18 +173,6 @@ for each [remote cluster](../../../usage/federation/index#terminology). Ensure t
    --namespace=kube-system
    ```
 
-1. If the local cluster has RBAC enabled, issue the following command to
-   configure the roles and bindings that {{site.prodname}} requires on the local cluster.
-
-   ```
-   kubectl apply -f \
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/rbac-etcd-typha.yaml
-   ```
-
-   > **Note**: You can also
-   > [view the manifest in your browser](rbac-etcd-typha.yaml){:target="_blank"}.
-   {: .alert .alert-info}
-
 1. Download the {{site.prodname}} networking manifest for etcd.
 
    ```bash
@@ -217,8 +181,10 @@ for each [remote cluster](../../../usage/federation/index#terminology). Ensure t
    -O
    ```
 
+{% include {{page.version}}/cnx-pod-cidr-sed.md yaml="calico" %}
+
 1. In the `ConfigMap` named `calico-config`, set the value of
-      `etcd_endpoints` to the IP address and port of your etcd server.
+   `etcd_endpoints` to the IP address and port of your etcd server.
 
    > **Tip**: You can specify more than one using commas as delimiters.
    {: .alert .alert-success}
@@ -250,7 +216,7 @@ for each [remote cluster](../../../usage/federation/index#terminology). Ensure t
 
 {% include {{page.version}}/cnx-cred-sed.md yaml="calico" %}
 
-1. Apply the manifest.
+1. Apply the manifest using the following command.
 
    ```bash
    kubectl apply -f calico.yaml
@@ -293,18 +259,6 @@ for each [remote cluster](../../../usage/federation/index#terminology). Ensure t
    > **Tip**: On kubeadm, you can pass `--pod-network-cidr=<cidr>`
    > to kubeadm to set both Kubernetes controller flags.
    {: .alert .alert-success}
-
-1. If the local cluster has RBAC enabled, issue the following command to
-   configure the roles and bindings that {{site.prodname}} requires.
-
-   ```
-   kubectl apply -f \
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/rbac-kdd.yaml
-   ```
-
-   > **Note**: You can also
-   > [view the manifest in your browser](hosted/rbac-kdd.yaml){:target="_blank"}.
-   {: .alert .alert-info}
 
 1. Download the {{site.prodname}} networking manifest for the Kubernetes API datastore.
 

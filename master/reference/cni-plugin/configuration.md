@@ -100,8 +100,8 @@ By default, {{site.prodname}} IPAM will assign IP addresses from all the availab
 
 Optionally, the list of possible IPv4 and IPv6 pools can also be specified via the following properties:
 
-* `ipv4_pools`: An array of CIDR strings (e.g. `"ipv4_pools": ["10.0.0.0/24", "20.0.0.0/16"]`)
-* `ipv6_pools`: An array of CIDR strings (e.g. `"ipv6_pools": ["2001:db8::1/120"]`)
+* `ipv4_pools`: An array of CIDR strings or pool names. (e.g., `"ipv4_pools": ["10.0.0.0/24", "20.0.0.0/16", "default-ipv4-ippool"]`)
+* `ipv6_pools`: An array of CIDR strings or pool names.  (e.g., `"ipv6_pools": ["2001:db8::1/120", "namedpool"]`)
 
 Example CNI config:
 
@@ -114,8 +114,8 @@ Example CNI config:
         "type": "calico-ipam",
         "assign_ipv4": "true",
         "assign_ipv6": "true",
-        "ipv4_pools": ["10.0.0.0/24", "20.0.0.0/16"],
-        "ipv6_pools": ["2001:db8::1/120"]
+        "ipv4_pools": ["10.0.0.0/24", "20.0.0.0/16", "default-ipv4-ippool"],
+        "ipv6_pools": ["2001:db8::1/120", "default-ipv6-ippool"]
     }
 }
 ```
@@ -254,9 +254,9 @@ When making use of the `usePodCidr` option, the {{site.prodname}} CNI plugin req
 
 ### IPAM Manipulation with Kubernetes Annotations
 
-#### Specifying IP pools on a per-Pod basis
+#### Specifying IP pools on a per-namespace or per-pod basis
 
-In addition to specifying IP pools in the CNI config as discussed above, {{site.prodname}} IPAM supports specifying IP pools per-Pod using the following [Kubernetes annotations](https://kubernetes.io/docs/user-guide/annotations/).
+In addition to specifying IP pools in the CNI config as discussed above, {{site.prodname}} IPAM supports specifying IP pools per-namespace or per-pod using the following [Kubernetes annotations](https://kubernetes.io/docs/user-guide/annotations/).
 
 - `cni.projectcalico.org/ipv4pools`: A list of configured IPv4 Pools from which to choose an address for the pod.
 
@@ -264,7 +264,7 @@ In addition to specifying IP pools in the CNI config as discussed above, {{site.
 
    ```yaml
    annotations:
-      "cni.projectcalico.org/ipv4pools": "[\"192.168.0.0/16\"]"
+      "cni.projectcalico.org/ipv4pools": "[\"default-ipv4-ippool\"]"
    ```
 
 - `cni.projectcalico.org/ipv6pools`: A list of configured IPv6 pools from which to choose an address for the pod.
@@ -278,11 +278,16 @@ In addition to specifying IP pools in the CNI config as discussed above, {{site.
 
 If provided, these IP pools will override any IP pools specified in the CNI config.
 
-
 > **Note**: This requires the IP pools to exist before `ipv4pools` or
 > `ipv6pools` annotations are used. Requesting a subset of an IP pool
 > is not supported. IP pools requested in the annotations must exactly
 > match a configured [IPPool]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/ippool) resource.
+{: .alert .alert-info}
+
+> **Note**: The {{site.prodname}} CNI plugin supports specifying an annotation per namespace.
+> If both the namespace and the pod have this annotation, the pod information will be used. 
+> Otherwise, if only the namespace has the annotation the annotation of the namespace will 
+> be used for each pod in it.
 {: .alert .alert-info}
 
 
@@ -335,3 +340,40 @@ There are two annotations to request a specific IP address:
 > - You can only specify one IPv4/IPv6 or one IPv4 and one IPv6 address with these annotations.
 > - When `ipAddrs` or `ipAddrsNoIpam` is used with `ipv4pools` or `ipv6pools`, `ipAddrs` / `ipAddrsNoIpam` take priority.
 {: .alert .alert-info}
+
+#### Requesting a floating IP
+
+You can request a floating IP address for a pod through [Kubernetes annotations](https://kubernetes.io/docs/user-guide/annotations/) with {{site.prodname}}.
+
+> **Note**:
+> The specified address must belong to an IP Pool for advertisement to work properly.
+{: .alert .alert-info}
+
+- `cni.projectcalico.org/floatingIPs`: A list of floating IPs which will be assigned to the pod's workload endpoint.
+
+  Example:
+
+   ```yaml
+   annotations:
+        "cni.projectcalico.org/floatingIPs": "[\"10.0.0.1\"]"
+   ```
+
+   The floatingIPs feature is disabled by default. It can be enabled in the feature_control section of the CNI network config:
+
+   ```json
+   {
+        "name": "any_name",
+        "cniVersion": "0.1.0",
+        "type": "calico",
+        "ipam": {
+            "type": "calico-ipam"
+        },
+       "feature_control": {
+           "floating_ips": true
+       }
+   }
+   ```
+
+   > **Warning**: This feature can allow pods to receive traffic which may not have been intended for that pod.
+   > Users should make sure the proper admission control is in place to prevent users from selecting arbitrary floating IP addresses.
+   {: .alert .alert-danger}

@@ -1,5 +1,6 @@
 ---
 title: Anatomy of a cnx-node container
+canonical_url: https://docs.tigera.io/v2.2/reference/architecture/components
 ---
 
 `{{site.nodecontainer}}` can be regarded as a helper container that bundles together the

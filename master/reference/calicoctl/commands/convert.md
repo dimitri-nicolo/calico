@@ -47,18 +47,24 @@ Description:
 
   The default output will be printed to stdout in YAML format.
 ```
+{: .no-select-button}
 
 ### Examples
 
-```
-# Convert a set of resources (of mixed type) from Calico v1 to v3 APIs using the data in resources.yaml.
-# By default convert command outputs the converted resources to stdout, but it can be redirected to a file.
-$ calicoctl convert -f multi-resource-v1.yaml -o yaml > multi-resource-v3.yaml
+1. Convert a set of resources (of mixed type) from Calico v1 to v3 APIs using the data in resources.yaml.
 
-# Convert a policy based on the JSON passed into stdin.
-# Result will be printed to stdout.
-$ cat policy.json | calicoctl convert -f -
-```
+   ```bash
+   calicoctl convert -f multi-resource-v1.yaml -o yaml > multi-resource-v3.yaml
+   ```
+   > **Tip**: By default convert command outputs the converted resources to stdout, but it can be redirected to a file.
+   {: .alert .alert-success}
+
+1. Convert a policy based on the JSON passed into stdin.
+
+   ```bash
+   cat policy.json | calicoctl convert -f -
+   ```
+   Result will be printed to stdout.
 
 ### Options
 
@@ -69,6 +75,7 @@ $ cat policy.json | calicoctl convert -f -
                               [Default: yaml]
 --ignore-validation           Skip validation on the converted manifest.
 ```
+{: .no-select-button}
 
 
 ## See also

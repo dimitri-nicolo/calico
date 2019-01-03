@@ -41,6 +41,8 @@ spec:
 | node     | If specified, the scope is node level, otherwise the scope is global. | The hostname of the node to which this peer applies. | string | |
 | peerIP   | The IP address of this peer. | Valid IPv4 or IPv6 address.  | string | |
 | asNumber | The remote AS Number of the peer. | A valid AS Number, may be specified in dotted notation. | integer/string |
+| nodeSelector | Selector for the nodes that should have this peering.  When this is set, the `node` field must be empty. | | [selector](networkpolicy#selector) |
+| peerSelector | Selector for the remote nodes to peer with.  When this is set, the `peerIP` and `asNumber` fields must be empty. | | [selector](networkpolicy#selector) |
 | extensions | Additional mapping of keys and values. Used for setting values in custom BGP configurations. | valid strings for both keys and values | map | |
 
 > **Tip**: the cluster-wide default local AS number used when speaking with a peer is controlled by the
@@ -55,14 +57,14 @@ determines which `{{site.nodecontainer}}` will attempt to establish a BGP sessio
 
 #### Global Peer
 
-To assign a BGP peer a global scope, omit the `node` field. All nodes in
+To assign a BGP peer a global scope, omit the `node` and `nodeSelector` fields. All nodes in
 the cluster will attempt to establish BGP connections with it
 
-#### Node Peer
+#### Node-specific Peer
 
-A BGP peer can also be added at the node scope. When the node field is included, only the specified node
-will peer with it. BGP peer resources of this nature must specify a `node` to inform {{site.prodname}} which node
-this peer is targeting.
+A BGP peer can also be node-specific. When the `node` field is included, only the specified node
+will peer with it. When the `nodeSelector` field is included, the nodes with labels that match that selector
+will peer with it.
 
 ### Supported operations
 

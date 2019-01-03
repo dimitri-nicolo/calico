@@ -1,5 +1,6 @@
 ---
 title: Node Resource (Node)
+canonical_url: https://docs.tigera.io/v2.2/reference/calicoctl/resources/node
 ---
 
 A node resource (`Node`) represents a node running {{site.prodname}}.  When adding a host

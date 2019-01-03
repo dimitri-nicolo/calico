@@ -34,11 +34,17 @@ Description:
   This command must be run on the specific Calico node that you are gathering
   diagnostics for.
 ```
+{: .no-select-button}
 
 ### Examples
 
 ```
-$ sudo calicoctl node diags
+sudo calicoctl node diags
+```
+
+An example response follows.
+
+```bash
 Collecting diagnostics
 Using temp dir: /tmp/calico676127473
 Dumping netstat
@@ -61,6 +67,7 @@ such as transfer.sh using curl or similar.  For example:
 
     curl --upload-file /tmp/calico676127473/diags-20170522_151219.tar.gz https://transfer.sh//tmp/calico676127473/diags-20170522_151219.tar.gz
 ```
+{: .no-select-button}
 
 ### Options
 
@@ -68,3 +75,4 @@ such as transfer.sh using curl or similar.  For example:
   --log-dir=<LOG_DIR>  The directory containing Calico logs.
                        [default: /var/log/calico]
 ```
+{: .no-select-button}

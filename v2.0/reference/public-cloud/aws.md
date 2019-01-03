@@ -1,5 +1,6 @@
 ---
 title: Deploying CNX on AWS
+canonical_url: https://docs.tigera.io/v2.2/reference/public-cloud/aws
 ---
 
 {{site.prodname}} provides the following advantages when running in AWS:

@@ -1,5 +1,6 @@
 ---
 title: Command Reference
+canonical_url: https://docs.tigera.io/v2.2/reference/calicoctl/commands/
 ---
 
 The command line tool, `calicoctl`, makes it easy to manage {{site.prodname}} network

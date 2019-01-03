@@ -1,7 +1,7 @@
 1. Log into the host, open a terminal prompt, and navigate to the location where
 you want to install the binary.
 
-   > **Tip**: Navigate to a location that's in your `PATH`. For example,
+   > **Tip**: Consider navigating to a location that's in your `PATH`. For example,
    > `/usr/local/bin/`.
    {: .alert .alert-success}
 

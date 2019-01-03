@@ -32,10 +32,10 @@ To deploy a cluster suitable for production, refer to [Installation](/{{page.ver
 
 - [Follow the Kubernetes instructions to install kubeadm](https://kubernetes.io/docs/setup/independent/install-kubeadm/){:target="_blank"}.
 
-> **Note**: After installing kubeadm, do not power down or restart
-the host. Instead, continue directly to the
-[next section to create your cluster](#create-a-single-host-kubernetes-cluster).
-{: .alert .alert-info}
+   > **Note**: After installing kubeadm, do not power down or restart
+   the host. Instead, continue directly to the
+   [next section to create your cluster](#create-a-single-host-kubernetes-cluster).
+   {: .alert .alert-info}
 
 ### Create a single-host Kubernetes cluster
 
@@ -49,8 +49,12 @@ the host. Instead, continue directly to the
    --apiserver-cert-extra-sans=127.0.0.1
    ```
 
-1. Execute the commands to configure kubectl as returned by
-   `kubeadm init`. Most likely they will be as follows:
+   > **Note**: If 192.168.0.0/16 is already in use within your network you must select a different pod network
+   > CIDR, replacing 192.168.0.0/16 in the above command as well as in any manifests applied below.
+   {: .alert .alert-info}
+
+1. Execute the following commands to configure kubectl (also returned by
+   `kubeadm init`).
 
    ```bash
    mkdir -p $HOME/.kube
@@ -73,14 +77,16 @@ the host. Instead, continue directly to the
    with your customer name.
 
    **Command**
-   ```
+   ```bash
    ./install-cnx.sh -l <customer-name>-license.yaml
    ```
+   {: .no-select-button}
 
    **Example**
-   ```
+   ```bash
    ./install-cnx.sh -l awesome-corp-license.yaml
    ```
+   {: .no-select-button}
 
 1. Launch a browser and type `https://127.0.0.1:30003` in the address bar.
 
