@@ -3,5 +3,9 @@ elasticsearch:
   - ["PUT", "_xpack/ml/datafeeds/datafeed-port_scan", "./data/port-scan-datafeed.json"]
   - ["PUT", "_xpack/ml/anomaly_detectors/ip_sweep", "./data/ip-sweep-job.json"]
   - ["PUT", "_xpack/ml/datafeeds/datafeed-ip_sweep", "./data/ip-sweep-datafeed.json"]
+  - ["PUT", "_xpack/ml/anomaly_detectors/inbound_connection_spike", "./data/inbound-connection-spike-job.json"]
+  - ["PUT", "_xpack/ml/datafeeds/datafeed-inbound_connection_spike", "./data/inbound-connection-spike-datafeed.json"]
+  - ["PUT", "_xpack/ml/anomaly_detectors/service_bytes_anomaly", "./data/service-bytes-anomaly-job.json"]
+  - ["PUT", "_xpack/ml/datafeeds/datafeed-service_bytes_anomaly", "./data/service-bytes-anomaly-datafeed.json"]
 kibana:
   - ["POST", "api/saved_objects/_bulk_create", "./data/api-kibana-dashboard.json"]
