@@ -459,7 +459,7 @@ spec:
               mountPath: /var/log/calico
 {%- if include.secure_es == "true" %}
             - name: elastic-ca-cert-volume
-              mountPath: /etc/fluentd/elastic/ca.pem
+              mountPath: /etc/fluentd/elastic
 {%- endif %}
       volumes:
         - name: var-log-calico
