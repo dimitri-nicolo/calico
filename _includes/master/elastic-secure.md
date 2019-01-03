@@ -13,8 +13,8 @@
    -n calico-monitoring
    ```
 
-1. Set up configmap with the certificate authority certificate to authenticate Elasticsearch.
-   Replace `<ElasticsearchCA.pem>` with the path to your Elasticsearch CA certificate.
+1. Set up configmap with the certificate authority certificate to authenticate Elasticsearch & Kibana.
+   Replace `<ElasticsearchCA.pem>` with the path to your Elasticsearch/Kibana CA certificate.
 
    ```bash
    cp <ElasticsearchCA.pem> ca.pem
@@ -49,10 +49,14 @@
 1. Create a configmap with information on how to reach the Elasticsearch cluster.
    Replace `<elasticsearch-host>` with the hostname (or IP) {{site.prodname}} should access Elasticsearch through.
    If your cluster is listening on a port other than `9200`, replace that too.
+   Replace `<kibana-host>` with the hostname (or IP) {{site.prodname}} should access Kibana through. If Kibana
+   is listening on a port other than `5601`, replace that too.
    ```
    {{cli}} create configmap tigera-es-proxy \
    --from-literal=elasticsearch.backend.host="<elasticsearch-host>" \
    --from-literal=elasticsearch.backend.port="9200" \
+   --from-literal=kibana.backend.host="<kibana-host>" \
+   --from-literal=kibana.backend.port="5601" \
    -n calico-monitoring
    ```
 

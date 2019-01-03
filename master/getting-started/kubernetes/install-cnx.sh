@@ -935,7 +935,6 @@ downloadManifests() {
   downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml"
   downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/operator.yaml"
   downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/monitor-calico.yaml"
-  downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/kibana-dashboards.yaml"
 
   # Irrespective of datastore type, for federation we'll need to create a federation secret since the manifests assume
   # this exists.
@@ -1303,14 +1302,12 @@ applyMonitorCalicoManifest() {
   blockUntilPodIsReady "app=prometheus" 180 "prometheus-calico-node"      # Block until prometheus-calico-nod pod is running & ready
   blockUntilPodIsReady "name=es-client-tigera-elasticsearch" 180 "elasticsearch-client"      # Block until elasticsearch-client pod is running & ready
   blockUntilPodIsReady "name=kibana-tigera-elasticsearch" 180 "kibana"    # Block until kibana pod is running & ready
-  run kubectl apply -f kibana-dashboards.yaml
 }
 
 #
 # deleteMonitorCalicoManifest()
 #
 deleteMonitorCalicoManifest() {
-  runIgnoreErrors kubectl delete -f kibana-dashboards.yaml
   runIgnoreErrors kubectl delete -f monitor-calico.yaml
   countDownSecs 5 "Deleting \"monitor-calico.yaml\" manifest"
 }

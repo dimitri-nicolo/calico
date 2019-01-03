@@ -503,6 +503,7 @@ spec:
       - name: install
         image: {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["intrusion-detection-job-installer"]}}:{{site.data.versions[page.version].first.components["intrusion-detection-job-installer"].version}}
         env:
+{%- if include.secure_es == "true" %}
           - name: ELASTIC_HOST
             valueFrom: 
               configMapKeyRef:
@@ -513,7 +514,16 @@ spec:
               configMapKeyRef:
                 name: tigera-es-proxy
                 key: elasticsearch.backend.port
-{%- if include.secure_es == "true" %}
+          - name: KIBANA_HOST
+            valueFrom: 
+              configMapKeyRef:
+                name: tigera-es-proxy
+                key: kibana.backend.host
+          - name: KIBANA_PORT
+            valueFrom: 
+              configMapKeyRef:
+                name: tigera-es-proxy
+                key: kibana.backend.port
           - name: USER
             valueFrom: 
               secretKeyRef:
@@ -534,8 +544,18 @@ spec:
           configMap:
             name: elastic-ca-config
 {%- else %}
+          - name: ELASTIC_HOST
+            value: elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local
+          - name: ELASTIC_PORT
+            value: "9200" 
+          - name: KIBANA_HOST
+            value: kibana-tigera-elasticsearch.calico-monitoring.svc.cluster.local 
+          - name: KIBANA_PORT
+            value: "5601" 
           - name: ELASTIC_SCHEME
             value: "http" 
+          - name: KIBANA_SCHEME
+            value: "http"
 {%- endif %}
 ---
 
@@ -651,6 +671,13 @@ spec:
       # Narrow this down to your management network or remove this
       # policy to block access to Kibana.
       nets: ["0.0.0.0/0"]
+    destination:
+      ports: [5601]
+  - action: Allow
+    protocol: TCP
+    source:
+      # Allow the installer to access Kibana
+      selector: job-name == 'intrusion-detection-job-installer'
     destination:
       ports: [5601]
 {%- endif %}

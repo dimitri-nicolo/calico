@@ -254,45 +254,6 @@
 {% endif %}
 {% endif %}
 
-{% if include.elasticsearch == "operator" %}
-1.  Download the `kibana-dashboards.yaml` manifest.
-
-    ```bash
-    curl --compressed -O \
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/kibana-dashboards.yaml
-    ```
-
-1. Use the following commands
-   to set an environment variable called `REGISTRY` containing the location of the private registry and replace
-   the paths in the manifest to refer to the private registry.
-
-   ```bash
-   REGISTRY=my-registry.com \
-   sed -i -e "s?giantswarm?$REGISTRY/giantswarm?g" kibana-dashboards.yaml
-   ```
-
-1. Create a `ConfigMap` and start a job that will install the {{site.prodname}} Kibana indexes, views, and dashboards
-   when the Kibana service endpoints come up.
-
-   ```bash
-   {{cli}} apply -f kibana-dashboards.yaml
-   ```
-
-{% else %}
-
-1. Download the following JSON file containing the {[site.prodname}} Kibana indexes, views, and dashboards
-   to your computer.
-
-   ```bash
-   curl --compressed -O \
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/kibana-dashboard.json
-   ```
-
-1. Open the **Management** -> **Saved Objects** pane in Kibana and click **Import**. To complete the import, follow the
-   [Kibana documentation](https://www.elastic.co/guide/en/kibana/current/managing-saved-objects.html#_import_objects).
-
-{% endif %}
-
 1. Open the **Management** -> **Index Patterns** pane in Kibana, select one of the imported index patterns and click the star to set it as the
    default pattern. Refer to the [Kibana documentation](https://www.elastic.co/guide/en/kibana/current/index-patterns.html#set-default-pattern)
    for more details.

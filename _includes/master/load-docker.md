@@ -58,7 +58,6 @@
    docker pull quay.io/coreos/prometheus-operator:{{site.data.versions[page.version].first.components["prometheus-operator"].version}}
    docker pull quay.io/prometheus/alertmanager:{{site.data.versions[page.version].first.components["alertmanager"].version}}
    docker pull quay.io/prometheus/prometheus:{{site.data.versions[page.version].first.components["prometheus"].version}}
-   docker pull giantswarm/tiny-tools:{{site.data.versions[page.version].first.components["tiny-tools"].version}}
    docker pull upmcenterprises/elasticsearch-operator:{{site.data.versions[page.version].first.components["elasticsearch-operator"].version}}
    ```
 
@@ -84,7 +83,6 @@
    docker tag quay.io/coreos/prometheus-operator:{{site.data.versions[page.version].first.components["prometheus-operator"].version}} <YOUR-REGISTRY>/coreos/prometheus-operator:{{site.data.versions[page.version].first.components["prometheus-operator"].version}}
    docker tag quay.io/prometheus/alertmanager:{{site.data.versions[page.version].first.components["alertmanager"].version}} <YOUR-REGISTRY>/prometheus/alertmanager:{{site.data.versions[page.version].first.components["alertmanager"].version}}
    docker tag quay.io/prometheus/prometheus:{{site.data.versions[page.version].first.components["prometheus"].version}} <YOUR-REGISTRY>/prometheus/prometheus:{{site.data.versions[page.version].first.components["prometheus"].version}}
-   docker tag giantswarm/tiny-tools:{{site.data.versions[page.version].first.components["tiny-tools"].version}} <YOUR-REGISTRY>/giantswarm/tiny-tools:{{site.data.versions[page.version].first.components["tiny-tools"].version}}
    docker tag upmcenterprises/elasticsearch-operator:{{site.data.versions[page.version].first.components["elasticsearch-operator"].version}} <YOUR-REGISTRY>/upmcenterprises/elasticsearch-operator:{{site.data.versions[page.version].first.components["elasticsearch-operator"].version}}
    ```
    > **Note**: We recommend changing just the name of the registry (`<YOUR-REGISTRY>`)
@@ -113,7 +111,6 @@
    docker push <YOUR-REGISTRY>/coreos/prometheus-operator:{{site.data.versions[page.version].first.components["prometheus-operator"].version}}
    docker push <YOUR-REGISTRY>/prometheus/alertmanager:{{site.data.versions[page.version].first.components["alertmanager"].version}}
    docker push <YOUR-REGISTRY>/prometheus/prometheus:{{site.data.versions[page.version].first.components["prometheus"].version}}
-   docker push <YOUR-REGISTRY>/giantswarm/tiny-tools:{{site.data.versions[page.version].first.components["tiny-tools"].version}}
    docker push <YOUR-REGISTRY>/upmcenterprises/elasticsearch-operator:{{site.data.versions[page.version].first.components["elasticsearch-operator"].version}}
    ```
 

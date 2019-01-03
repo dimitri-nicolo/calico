@@ -724,9 +724,6 @@ master:
     elasticsearch:
       version: 6.4.1
       url: ""
-    tiny-tools:
-      version: 0.3.0
-      url: ""
     cloud-controllers:
       version: master
     intrusion-detection-job-installer:
