@@ -156,6 +156,16 @@ rules:
     verbs:
       - create
       - update
+  # Keep TSEE CRDs separate to facilitate easier merges from projectcalico/calico
+  - apiGroups: ["crd.projectcalico.org"]
+    resources:
+      - licensekeys
+      - remoteclusterconfigurations
+      - tiers
+    verbs:
+      - get
+      - list
+      - watch
 {%- endif %}
 ---
 apiVersion: rbac.authorization.k8s.io/v1beta1

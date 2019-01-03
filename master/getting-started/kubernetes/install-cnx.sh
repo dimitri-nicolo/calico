@@ -973,7 +973,6 @@ downloadManifests() {
     fi
 
     downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-kdd.yaml"
-    downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/rbac-kdd.yaml"
 
     # Grab calicoctl and calicoq manifests in order to extract the container url when we install the binaries
     downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calicoctl.yaml"
@@ -1005,11 +1004,7 @@ downloadManifests() {
 # applyRbacManifest() - apply appropriate rbac manifest based on datastore.
 #
 applyRbacManifest() {
-  if [ "$DATASTORE" == "kubernetes" ]; then
-    # Apply rbac for kdd datastore
-    run kubectl apply -f rbac-kdd.yaml
-    countDownSecs 5 "Applying \"rbac-kdd.yaml\" manifest: "
-  elif [ "$DATASTORE" == "etcdv3" ]; then
+  if [ "$DATASTORE" == "etcdv3" ]; then
     if [ "$DEPLOYMENT_TYPE" == "federation" ]; then
       # Apply rbac for etcdv3 datastore with typha (currently only required for federation)
       run kubectl apply -f rbac-etcd-typha.yaml
@@ -1026,11 +1021,7 @@ applyRbacManifest() {
 # deleteRbacManifest() - delete appropriate rbac manifest based on datastore.
 #
 deleteRbacManifest() {
-  if [ "$DATASTORE" == "kubernetes" ]; then
-    # Delete rbac for kdd datastore
-    runIgnoreErrors kubectl delete -f rbac-kdd.yaml
-    countDownSecs 5 "Deleting \"rbac-kdd.yaml\" manifest: "
-  elif [ "$DATASTORE" == "etcdv3" ]; then
+  if [ "$DATASTORE" == "etcdv3" ]; then
     if [ "$DEPLOYMENT_TYPE" == "federation" ]; then
       # Delete rbac for etcdv3 datastore with typha (currently only required for federation)
       runIgnoreErrors kubectl delete -f rbac-etcd-typha.yaml
