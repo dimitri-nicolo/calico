@@ -52,31 +52,6 @@ func deleteNamespace(clientset *kubernetes.Clientset, name string) {
 	}
 }
 
-func createExternalNetwork() {
-	req := map[string]interface{}{
-		"Name": "External",
-		"Type": "L2Bridge",
-		"Subnets": []interface{}{
-			map[string]interface{}{
-				"AddressPrefix":  "172.10.20.192/26",
-				"GatewayAddress": "172.10.20.193",
-			},
-		},
-	}
-
-	reqStr, err := json.Marshal(req)
-	if err != nil {
-		log.Errorf("Error in converting to json format")
-		panic(err)
-	}
-
-	log.Infof("Attempting to create HNS network, request: %v", string(reqStr))
-	_, err = hcsshim.HNSNetworkRequest("POST", "", string(reqStr))
-	if err != nil {
-		log.Infof("Failed to create external network :%v", err)
-	}
-}
-
 var _ = Describe("Kubernetes CNI tests", func() {
 	var hostname string
 	networkName := "calico-fv"
@@ -94,8 +69,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				Expect(err).NotTo(HaveOccurred())
 			}
 		}
-		// Create dummy external network
-		createExternalNetwork()
 		// Create a random seed
 		rand.Seed(time.Now().UTC().UnixNano())
 		log.SetFormatter(&logutils.Formatter{})
