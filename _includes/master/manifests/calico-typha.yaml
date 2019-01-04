@@ -199,7 +199,7 @@ spec:
       - name: etcd-certs
         secret:
           secretName: calico-etcd-secrets
-{%- endif -%}
+{%- endif %}
 
 ---
 
