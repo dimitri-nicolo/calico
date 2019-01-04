@@ -7,7 +7,7 @@
   ],
   "description": "Inbound connection spike",
   "analysis_config": {
-    "bucket_span": "1h",
+    "bucket_span": "10m",
     "detectors": [
       {
         "detector_description": "Inbound connection spike for a pod within a replica set",

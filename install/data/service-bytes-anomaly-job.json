@@ -7,7 +7,7 @@
   ],
   "description": "Service bytes anomaly",
   "analysis_config": {
-    "bucket_span": "1h",
+    "bucket_span": "10m",
     "detectors": [
       {
         "detector_description": "Input bytes spike for a pod within a replica set",
