@@ -948,7 +948,6 @@ downloadManifests() {
       downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/rbac-etcd-typha.yaml"
     else
       downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/calico.yaml"
-      downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/rbac.yaml"
     fi
 
     downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/etcd.yaml"
@@ -1009,10 +1008,6 @@ applyRbacManifest() {
       # Apply rbac for etcdv3 datastore with typha (currently only required for federation)
       run kubectl apply -f rbac-etcd-typha.yaml
       countDownSecs 5 "Applying \"rbac-etcd-typha.yaml\" manifest: "
-    else
-      # Apply rbac for etcdv3 datastore
-      run kubectl apply -f rbac.yaml
-      countDownSecs 5 "Applying \"rbac.yaml\" manifest: "
     fi
   fi
 }
@@ -1026,10 +1021,6 @@ deleteRbacManifest() {
       # Delete rbac for etcdv3 datastore with typha (currently only required for federation)
       runIgnoreErrors kubectl delete -f rbac-etcd-typha.yaml
       countDownSecs 5 "Deleting \"rbac-etcd-typha.yaml\" manifest: "
-    else
-      # Delete rbac for etcdv3 datastore
-      runIgnoreErrors kubectl delete -f rbac.yaml
-      countDownSecs 5 "Deleting \"rbac.yaml\" manifest: "
     fi
   fi
 }
