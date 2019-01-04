@@ -28,7 +28,7 @@
     "influencers": [
       "dest_name",
       "dest_name_aggr",
-      "namespace"
+      "dest_namespace"
     ]
   },
   "analysis_limits": {
