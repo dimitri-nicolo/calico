@@ -15,7 +15,7 @@
     "namespace_dest_name_aggr": {
       "script": {
         "lang": "painless",
-        "inline": "doc['dest_namespace'].value + '/' + doc['dest_name_aggr'].value"
+        "source": "doc['dest_namespace'].value + '/' + doc['dest_name_aggr'].value"
       }
     }
   },
