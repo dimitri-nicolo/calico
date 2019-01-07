@@ -81,6 +81,7 @@ func DeleteContainerUsingDocker(containerId string) error {
 	_, err := cmd.CombinedOutput()
 	if err != nil {
 		log.WithError(err).WithField("id", containerId).Error("Failed to stop docker container")
+		return err
 	}
 	return nil
 }
