@@ -9,6 +9,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/Microsoft/hcsshim"
 	"github.com/containernetworking/cni/pkg/invoke"
@@ -69,28 +70,18 @@ func CreateContainerUsingDocker() (string, error) {
 		return "", err
 	}
 
-	temp := out[:len(out)-1]
-	log.Debugf("container ID:\n%s\n", string(temp))
-	return string(temp), nil
+	temp := strings.TrimSpace(string(out))
+	log.Debugf("container ID: %s", temp)
+	return temp, nil
 }
 
 func DeleteContainerUsingDocker(containerId string) error {
-	command := fmt.Sprintf("docker stop %s", containerId)
+	command := fmt.Sprintf("docker rm -f %s", containerId)
 	cmd := exec.Command("powershell.exe", command)
 	_, err := cmd.CombinedOutput()
 	if err != nil {
-		log.Errorf("error %v", err)
-		//return err
+		log.WithError(err).WithField("id", containerId).Error("Failed to stop docker container")
 	}
-
-	command = fmt.Sprintf("docker rm %s", containerId)
-	cmd = exec.Command("powershell.exe", command)
-	_, err = cmd.CombinedOutput()
-	if err != nil {
-		log.Errorf("error %v", err)
-		//return err
-	}
-
 	return nil
 }
 
