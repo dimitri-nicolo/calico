@@ -22,7 +22,7 @@
         "function": "non_null_sum",
         "field_name": "bytes_in",
         "partition_field_name": "namespace_dest_name_aggr",
-        "detector_index": 0
+        "detector_index": 1
       },
       {
         "detector_description": "Output bytes spike for a pod within a replica set",
