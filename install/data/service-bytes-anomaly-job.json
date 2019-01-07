@@ -1,28 +1,43 @@
 {
-  "job_id": "inbound_connection_spike",
+  "job_id": "service_bytes_anomaly",
   "job_type": "anomaly_detector",
   "job_version": "6.4.3",
   "groups": [
     "dos"
   ],
-  "description": "Inbound connection spike",
+  "description": "Service bytes anomaly",
   "analysis_config": {
     "bucket_span": "10m",
     "detectors": [
       {
-        "detector_description": "Inbound connection spike for a pod within a replica set",
+        "detector_description": "Input bytes spike for a pod within a replica set",
         "function": "sum",
-        "field_name": "num_flows_started",
+        "field_name": "bytes_in",
         "over_field_name": "dest_name",
         "partition_field_name": "namespace_dest_name_aggr",
         "detector_index": 0
       },
       {
-        "detector_description": "Inbound connection spike over a whole replica set",
+        "detector_description": "Input bytes spike for over a whole replica set",
         "function": "non_null_sum",
-        "field_name": "num_flows_started",
+        "field_name": "bytes_in",
         "partition_field_name": "namespace_dest_name_aggr",
         "detector_index": 1
+      },
+      {
+        "detector_description": "Output bytes spike for a pod within a replica set",
+        "function": "sum",
+        "field_name": "bytes_out",
+        "over_field_name": "dest_name",
+        "partition_field_name": "namespace_dest_name_aggr",
+        "detector_index": 2
+      },
+      {
+        "detector_description": "Output bytes spike for over a whole replica set",
+        "function": "non_null_sum",
+        "field_name": "bytes_out",
+        "partition_field_name": "namespace_dest_name_aggr",
+        "detector_index": 3
       }
     ],
     "influencers": [
