@@ -60,34 +60,29 @@ resources above.
 - `NetworkPolicy` (Kubernetes/OpenShift)
 
 You may wish to audit resources beyond those involved in network policy.  Consult the [Kubernetes docs](https://kubernetes.io/docs/tasks/debug-application-cluster/audit/#audit-policy), or
-look at [this function](https://github.com/kubernetes/kubernetes/blob/master/cluster/gce/gci/configure-helper.sh#L758
+look at [this function](https://github.com/kubernetes/kubernetes/blob/cc67ccfd7f4f0bc96d7f1c8e5fe8577821757d03/cluster/gce/gci/configure-helper.sh#L752)
 which generates the GKE audit policy for inspiration.  Here is the sample policy which audits changes to `pods`,
 `namespaces`, `serviceaccounts` and `NetworkPolicies`.
 
 ```yaml
 apiVersion: audit.k8s.io/v1beta1
 kind: Policy
-rules:
-- level: RequestResponse
 omitStages:
 - RequestReceived
-verbs:
-- create
-- patch
-- update
-- delete
-resources:
-- group: ""
+rules:
+  - level: RequestResponse
+    verbs:
+      - create
+      - patch
+      - update
+      - delete
     resources:
-    - pods
-    - namespaces
-    - serviceaccounts
-- group: networking.k8s.io
-    resources:
-    - networkpolicies
-- group: extensions
-    resources:
-    - networkpolicies
+    - group: networking.k8s.io
+      resources: ["networkpolicies"]
+    - group: extensions
+      resources: ["networkpolicies"]
+    - group: ""
+      resources: ["pods", "namespaces", "serviceaccounts"]
 ```
 
 #### Kubernetes
@@ -139,7 +134,7 @@ For more details on configuration parameters and their values, please reference 
    ```
    auditConfig:
      enabled: true
-     auditFilePath: "/var/log/calico/audit/kube-audit"
+     auditFilePath: "/var/log/calico/audit/kube-audit.log"
      policyFile: "/etc/origin/master/audit.yaml"
      logFormat: "json"
    ```
