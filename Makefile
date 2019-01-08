@@ -68,6 +68,7 @@ FOSSA_GO_BUILD_VER ?= v0.18
 
 SRCFILES=$(shell find pkg cmd internal -name '*.go')
 TEST_SRCFILES=$(shell find tests win_tests -name '*.go')
+WINFV_SRCFILES=$(shell find win_tests -name '*.go')
 LOCAL_IP_ENV?=$(shell ip route get 8.8.8.8 | head -1 | awk '{print $$7}')
 
 # fail if unable to download
@@ -449,7 +450,7 @@ endif
 
 
 ## Build fv binary for Windows
-$(BIN)/win-fv.exe: vendor
+$(BIN)/win-fv.exe: $(WINFV_SRCFILES) vendor
 	docker run -e GOOS=windows $(DOCKER_BUILD_ARGS) $(CALICO_BUILD) sh -c '\
 	  go test ./win_tests -c -o $(BIN)/win-fv.exe'
 
