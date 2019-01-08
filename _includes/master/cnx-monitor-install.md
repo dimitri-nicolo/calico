@@ -149,6 +149,15 @@
    kubectl apply -f monitor-calico.yaml
    ```
 
+1. Edit the `tigera-cnx-manager-config` ConfigMap to update the URL Kibana is accessed at.  By default a NodePort is
+   installed that serves Kibana on port 30601, so use the address of a node (for example a master).
+
+   Either edit the `tigera.cnx-manager.kibana-url` field in the `cnx.yaml` manifest and reapply, or use the following patch:
+
+   ```bash
+   kubectl patch configmap -n kube-system tigera-cnx-manager-config 'data:\n  tigera.cnx-manager.kibana-url: "http://<insert-node-address-here>:30601"'
+   ```
+   
 {% if include.orch == "openshift" %}
 {% if include.elasticsearch == "operator" %}
 
@@ -253,7 +262,7 @@
 
 {% endif %}
 {% endif %}
-
+   
 1. Open the **Management** -> **Index Patterns** pane in Kibana, select one of the imported index patterns and click the star to set it as the
    default pattern. Refer to the [Kibana documentation](https://www.elastic.co/guide/en/kibana/current/index-patterns.html#set-default-pattern)
    for more details.
