@@ -1,7 +1,3 @@
----
-title: Application layer policy tutorial
-canonical_url: https://docs.tigera.io/v2.2/getting-started/kubernetes/tutorials/app-layer-policy/
----
 
 The included demo sets up a microservices application, then demonstrates the use of application
 layer policy to mitigate some common threats.
@@ -12,6 +8,13 @@ To create a Kubernetes cluster which supports application layer policy, follow
 one of our [getting started guides]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes),
 and [enable application layer policy]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/app-layer-policy).
 
+### Create a test namespace and enable istio injection
+
+```bash
+kubectl create namespace yaobank
+kubectl label namespace yaobank istio-injection=enabled
+```
+
 ### Install the demo application
 
 We will use a simple microservice application to demonstrate {{site.prodname}} application layer
@@ -19,18 +22,20 @@ policy.  The [YAO Bank] application creates a customer-facing web application, a
 serves up account summaries, and an [etcd] datastore.
 
 ```bash
-kubectl apply -f \
-{{site.url}}/{{page.version}}/getting-started/kubernetes/tutorials/app-layer-policy/manifests/10-yaobank.yaml
+kubectl apply -n yaobank -f \
+{{site.url}}/{{page.version}}/manifests/tutorials/app-layer-policy/10-yaobank.yaml
 ```
 
 > **Note**: You can also
-> [view the manifest in your browser](manifests/10-yaobank.yaml){:target="_blank"}.
+> [view the manifest in your browser](/{{page.version}}/manifests/tutorials/app-layer-policy/10-yaobank.yaml){:target="_blank"}.
 {: .alert .alert-info}
 
 
 Verify that the application pods have been created and are ready.
 
-    kubectl get pods
+```bash
+kubectl get pods -n yaobank
+```
 
 When the demo application has come up, you will see three pods.
 
@@ -44,7 +49,9 @@ summary-2817688950-g1b3n    3/3       Running   0          21h
 
 View the Kubernetes ServiceAccounts created by the manifest.
 
-    kubectl get serviceaccount
+```bash
+kubectl get serviceaccount -n yaobank
+```
 
 You should see a Kubernetes ServiceAccount for each microservice in the application (in addition to the `default` account).
 
@@ -59,7 +66,9 @@ summary    1         21h
 
 Examine the Kubernetes Secrets.
 
-    kubectl get secret
+```bash
+kubectl get secret -n yaobank
+```
 
 You should see output similar to the following.
 
@@ -153,11 +162,19 @@ people's financial information.
 Imagine what would happen if an attacker were to gain control of the customer web pod in our
 application. Let's simulate this by executing a remote shell inside that pod.
 
-    kubectl exec -ti customer-<fill in pod ID> -c customer bash
+```bash
+# Determine customer pod name
+CUSTOMER_POD=$(kubectl get pod -l app=customer -n yaobank -o jsonpath='{.items[0].metadata.name}')
+
+# Execute bash command in customer container
+kubectl exec -ti $CUSTOMER_POD -n yaobank -c customer bash
+```
 
 Notice that from here, we get direct access to the backend database.  For example, we can list all the entries in the database like this:
 
-    curl http://database:2379/v2/keys?recursive=true | python -m json.tool
+```bash
+curl http://database:2379/v2/keys?recursive=true | python -m json.tool
+```
 
 (Piping to `python -m json.tool` nicely formats the output.)
 
@@ -181,21 +198,29 @@ If you still have your shell open in the customer pod, exit out or open a new te
 return to the customer pod later).
 
 ```bash
-kubectl apply -f \
-{{site.url}}/{{page.version}}/getting-started/kubernetes/tutorials/app-layer-policy/manifests/20-attack-pod.yaml
+kubectl apply -n yaobank -f \
+{{site.url}}/{{page.version}}/manifests/tutorials/app-layer-policy/20-attack-pod.yaml
 ```
 
-Take a look at the [`20-attack-pod.yaml` manifest in your browser](manifests/20-attack-pod.yaml).
+Take a look at the [`20-attack-pod.yaml` manifest in your browser](/{{page.version}}/manifests/tutorials/app-layer-policy/20-attack-pod.yaml).
 It creates a pod and mounts `istio.summary` secret.  This will allow us to masquerade as if we were
 the `summary` service, even though this pod is not run as that service account.  Let's try this out.  First, `exec` into the pod.
 
-    kubectl exec -ti attack-<fill in pod ID> bash
+```bash
+# Determine attack pod name
+ATTACK_POD=$(kubectl get pod -l app=attack -n yaobank -o jsonpath='{.items[0].metadata.name}')
+
+# Execute bash command in attack container
+kubectl exec -ti $ATTACK_POD -n yaobank bash
+```
 
 Now, we will attack the database.  Instead of listing the contents like we did before, let's try
 something more malicious, like changing the account balance with a `PUT` command.
 
-    curl -k https://database:2379/v2/keys/accounts/519940/balance -d value="10000.00" \
-    -XPUT --key /etc/certs/key.pem --cert /etc/certs/cert-chain.pem
+```bash
+curl -k https://database:2379/v2/keys/accounts/519940/balance -d value="10000.00" \
+-XPUT --key /etc/certs/key.pem --cert /etc/certs/cert-chain.pem
+```
 
 Unlike when we did this with the customer web pod, we do not have Envoy to handle encryption, so we
 have to pass an `https` URL, the `--key` and `--cert` parameters to `curl` to do the cryptography.
@@ -204,13 +229,16 @@ Return to your web browser and refresh to confirm the new balance.
 
 #### Policy
 
-We can mitigate both of the above deficiencies with a {{site.prodname}} policy.
+We can mitigate both of the above deficiencies with a {{site.prodname}} policy (if you still have your shell open in 
+the attack pod, first exit out or open a new terminal tab)
 
-    wget {{site.url}}/{{page.version}}/getting-started/kubernetes/tutorials/app-layer-policy/manifests/30-policy.yaml
-    kubectl create -f 30-policy.yaml
+```bash
+wget {{site.url}}/{{page.version}}/manifests/tutorials/app-layer-policy/30-policy.yaml
+kubectl create -n yaobank -f 30-policy.yaml
+```
 
 > **Note**: You can also
-> [view the manifest in your browser](manifests/30-policy.yaml){:target="_blank"}.
+> [view the manifest in your browser](/{{page.version}}/manifests/tutorials/app-layer-policy/30-policy.yaml){:target="_blank"}.
 {: .alert .alert-info}
 
 Let's examine this policy piece by piece.  It consists of three policy objects, one for each
@@ -218,10 +246,11 @@ microservice.
 
 ```yaml
 apiVersion: projectcalico.org/v3
-kind: GlobalNetworkPolicy
+kind: NetworkPolicy
 metadata:
-  name: customer
+  name: default.customer
 spec:
+  tier: default
   selector: app == 'customer'
   ingress:
    - action: Allow
@@ -238,10 +267,11 @@ requests.
 
 ```yaml
 apiVersion: projectcalico.org/v3
-kind: GlobalNetworkPolicy
+kind: NetworkPolicy
 metadata:
-  name: summary
+  name: default.summary
 spec:
+  tier: default
   selector: app == 'summary'
   ingress:
     - action: Allow
@@ -259,10 +289,11 @@ account for the customer web app.
 
 ```yaml
 apiVersion: projectcalico.org/v3
-kind: GlobalNetworkPolicy
+kind: NetworkPolicy
 metadata:
-  name: database
+  name: default.database
 spec:
+  tier: default
   selector: app == 'database'
     ingress:
       - action: Allow
@@ -283,19 +314,26 @@ ensure policy enforcement has not broken the application.
 Next, return to the customer web app.  Recall that we simulated an attacker gaining control of that
 pod by executing a remote shell inside it.
 
-    kubectl exec -ti customer-<fill in pod ID> -c customer bash
+```bash
+kubectl exec -ti $CUSTOMER_POD -n yaobank -c customer bash
+```
 
 Repeat our attempt to access the database.
 
-    curl -I http://database:2379/v2/keys?recursive=true
+```bash
+curl -I http://database:2379/v2/keys?recursive=true
+```
 
 We have left out the JSON formatting because we do not expect to get a valid JSON response. This
 time we should get a `403 Forbidden` response.  Only the account summary microservice has database
 access according to our policy.
 
-Finally, let's return to the attack pod that simulated stealing secret keys.
+Finally, let's return to the attack pod that simulated stealing secret keys (again, if you still have your shell open in 
+the customer pod, exit out or open a new terminal tab).
 
-    kubectl exec -ti attack-<fill in pod ID> bash
+```bash
+kubectl exec -ti $ATTACK_POD -n yaobank bash
+```
 
 Let's repeat our attack with stolen keys. We'll further increase the account balance to highlight
 whether it succeeds.
@@ -314,7 +352,7 @@ authorization checks.  Although our attack pod had the keys to fool the X.509 ce
 service accounts.  Since our attack pod has an IP not associated with the account summary service
 account we disallow the connection.
 
- [yao bank]: https://github.com/spikecurtis/yaobank
+ [yao bank]: https://github.com/projectcalico/yaobank
  [etcd]: https://github.com/coreos/etcd
  [struts cve]: https://nvd.nist.gov/vuln/detail/CVE-2017-5638
  [heartbleed]: http://heartbleed.com/

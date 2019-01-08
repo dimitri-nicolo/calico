@@ -1,6 +1,5 @@
 ---
 title: Installing Tigera Secure EE on OpenShift
-canonical_url: https://docs.tigera.io/v2.2/getting-started/openshift/installation
 ---
 
 Installation of {{site.prodname}} in OpenShift is integrated in openshift-ansible.
@@ -9,10 +8,10 @@ The information below explains the variables which must be set during the standa
 
 ## Before you begin
 
-- Ensure that you meet the {{site.prodname}} [system requirements](requirements).
+- Ensure that you meet the {{site.prodname}} [system requirements](/{{page.version}}/getting-started/openshift/requirements).
 
-- Ensure that you have the [private registry credentials](../../getting-started/#obtain-the-private-registry-credentials)
-  and a [license key](../../getting-started/#obtain-a-license-key).
+- Ensure that you have the [private registry credentials](/{{page.version}}/getting-started/#obtain-the-private-registry-credentials)
+  and a [license key](/{{page.version}}/getting-started/#obtain-a-license-key).
 
 {% include {{page.version}}/load-docker.md orchestrator="openshift" yaml="calico" %}
 
@@ -29,8 +28,10 @@ inventory file:
   - `calico_node_image=<YOUR-REGISTRY>/{{site.imageNames["cnx-node"]}}:{{site.data.versions[page.version].first.components["cnx-node"].version}}`
   - `calico_url_policy_controller=<YOUR-REGISTRY>/{{site.imageNames["kubeControllers"]}}:{{site.data.versions[page.version].first.components["cnx-kube-controllers"].version}}`
   - `calico_cni_image={{site.imageNames["cni"]}}:{{site.data.versions[page.version].first.components["calico/cni"].version}}`
-
-Also ensure that you have an explicitly defined host in the `[etcd]` group. A sample inventory file follows.
+  
+Also ensure that you have an explicitly defined host in the `[etcd]` group.
+ 
+A sample inventory file follows.
 
 ```
 [OSEv3:children]
@@ -69,7 +70,7 @@ etcd1
 To check if your Ansible scripts include the required {{site.prodname}} changes, run the following.
 
 ```bash
-grep -Fq "calico_binary_checks" /usr/share/ansible/openshift-ansible/roles/calico_master/templates/calicov3.yml.j2 && echo "updated" || echo "needs updates"
+grep -Fq "calico_binary_checks" /usr/share/ansible/openshift-ansible/roles/calico/templates/calicov3.yml.j2 && echo "updated" || echo "needs updates"
 ```
 
 If the above command responds with `needs updates`, contact your Tigera sales representative for steps on how to update your ansible playbooks.
@@ -120,7 +121,7 @@ such that {{site.prodname}} connects to an etcd you have already set up by follo
 
 Below, we'll cover how to enable metrics in {{site.prodname}} and how to launch Prometheus using Prometheus-Operator.
 
-**Prerequisite**: `calicoctl` [installed](../../usage/calicoctl/install) and [configured](../../usage/calicoctl/configure/). We recommend [installing](../../usage/calicoctl/install#installing-calicoctl-as-a-container-on-a-single-host) calicoctl as a container in OpenShift.
+**Prerequisite**: `calicoctl` [installed](/{{page.version}}/usage/calicoctl/install) and [configured](/{{page.version}}/usage/calicoctl/configure/). We recommend [installing](/{{page.version}}/usage/calicoctl/install#installing-calicoctl-as-a-container-on-a-single-host) calicoctl as a container in OpenShift.
 
 Enable metrics in {{site.prodname}} for OpenShift by updating the global `FelixConfiguration` resource (`default`) and opening up the necessary port on the host.
 
@@ -154,6 +155,6 @@ optionally Elasticsearch and Kibana in order to enable logs.
 {% include {{page.version}}/cnx-monitor-install.md orch="openshift" elasticsearch="operator" %}
 
 Once running, access Prometheus and Alertmanager using the NodePort from the created service.
-See the [Metrics](../../usage/metrics/) section for more information.
+See the [Metrics](/{{page.version}}/usage/metrics/) section for more information.
 
 {% include {{page.version}}/gs-openshift-next-steps.md %}

@@ -47,10 +47,10 @@ toc:
     - title: Tiered Policy Demo
       path: /getting-started/cnx/tiered-policy-cnx/
     - title: Application layer policy
-      path: /getting-started/kubernetes/tutorials/app-layer-policy/
+      path: /getting-started/kubernetes/tutorials/app-layer-policy
   - title: Troubleshooting / FAQ
     path: /getting-started/kubernetes/troubleshooting
-  - title: Upgrade from an earlier release to Tigera Secure EE
+  - title: Upgrade Tigera Secure EE from an earlier release
     path: /getting-started/kubernetes/upgrade/upgrade-tsee
   - title: Upgrade from Calico to Tigera Secure EE
     path: /getting-started/kubernetes/upgrade/upgrade-to-tsee
@@ -60,11 +60,13 @@ toc:
   - title: Requirements
     path: /getting-started/openshift/requirements
   - title: Installation
-    path: /getting-started/openshift/installation
-  - title: Connecting to a dedicated etcd cluster (optional)
-    path: /getting-started/openshift/dedicated-etcd
-  - title: Using your own Elasticsearch for logs
-    path: /getting-started/openshift/byo-elasticsearch
+    section:
+    - title: Installing Tigera Secure EE
+      path: /getting-started/openshift/installation/
+    - title: Connecting to a dedicated etcd cluster (optional)
+      path: /getting-started/openshift/installation/dedicated-etcd
+    - title: Using your own Elasticsearch for logs
+      path: /getting-started/openshift/installation/byo-elasticsearch
   - title: Upgrade to Tigera Secure EE
     path: /getting-started/openshift/upgrade-ee
 
