@@ -1,5 +1,5 @@
 ---
-title: Configuring {{site.prodname}} RBAC for tiered Policies
+title: Configuring Tigera Secure EE RBAC for tiered policies
 canonical_url: https://docs.tigera.io/v2.2/reference/cnx/rbac-tiered-policies
 ---
 
