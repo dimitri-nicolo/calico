@@ -447,6 +447,12 @@ endif
 	$(MAKE) tag-images-all push-all push-manifests push-non-manifests  IMAGETAG=${BRANCH_NAME} EXCLUDEARCH="$(EXCLUDEARCH)"
 	$(MAKE) tag-images-all push-all push-manifests push-non-manifests  IMAGETAG=$(shell git describe --tags --dirty --always --long) EXCLUDEARCH="$(EXCLUDEARCH)"
 
+
+## Build fv binary for Windows
+$(BIN)/win-fv.exe: vendor
+	docker run -e GOOS=windows $(DOCKER_BUILD_ARGS) $(CALICO_BUILD) sh -c '\
+	  go test ./win_tests -c -o $(BIN)/win-fv.exe'
+
 ###############################################################################
 # Release
 ###############################################################################

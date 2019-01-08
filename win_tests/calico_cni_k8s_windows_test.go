@@ -311,7 +311,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				endpoints, err := calicoClient.WorkloadEndpoints().List(ctx, options.ListOptions{})
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(endpoints.Items).Should(HaveLen(1))
-				log.Debugf("workload endpoints :", endpoints)
+				log.Debugf("workload endpoints : %v", endpoints)
 
 				Expect(endpoints.Items[0].Name).Should(Equal(wrkload))
 				Expect(endpoints.Items[0].Namespace).Should(Equal(nsName))
