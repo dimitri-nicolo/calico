@@ -1,6 +1,9 @@
 #!groovy
 pipeline {
     agent { label 'slave'}
+    options{
+        timeout(time: 2, unit: 'HOURS')
+    }
     triggers{
         pollSCM('H/5 * * * *')
         cron('H H(0-7) * * 1-5')
@@ -17,21 +20,36 @@ pipeline {
         WINDOWS_PEM_FILE="/home/jenkins/.ssh/wavetank.pem"
         WINDOWS_PPK_FILE="/home/jenkins/.ssh/wavetank.ppk"
         RDP_SOURCE_CIDR="0.0.0.0/0"
+        FV_TIMEOUT="1800"
     }
     stages {
         stage('Checkout') {
             steps {
-                checkout scm
                 script {
+                    checkout scm
+
                     currentBuild.description = """
                     BRANCH_NAME=${env.BRANCH_NAME}
                     JOB_NAME=${env.JOB_NAME}
                     IMAGE_NAME=${env.IMAGE_NAME}:${env.BRANCH_NAME}
                     BUILD_INFO=${env.RUN_DISPLAY_URL}""".stripIndent()
+
+                    env.LAST_COMMIT_MSG=sh(returnStdout: true, script: "git log -n 1 --oneline").trim()
+                    echo "Last commit message < ${env.LAST_COMMIT_MSG} >"
+                    if ( "$env.LAST_COMMIT_MSG".contains("windows") ){
+                            env.WINDOWS_BRANCH = "YES"
+                            echo "--- Are we building a windows branch? ${env.WINDOWS_BRANCH} ---"
+                            return
+                    }
+                    echo "--- Are we building a windows branch? NO ---"
+                    echo "--- Skip windows FV ---"
                 }
             }
         }
         stage('Get vendored files') {
+            when {
+                expression { env.WINDOWS_BRANCH == "YES" }
+            }
             steps {
                 withCredentials([sshUserPrivateKey(credentialsId: 'marvin-tigera-ssh-key', keyFileVariable: 'SSH_KEY', passphraseVariable: '', usernameVariable: '')]) {
                     ansiColor('xterm') {
@@ -43,12 +61,19 @@ pipeline {
             }
         }
         stage('Clean artifacts, build') {
+            when {
+                expression { env.WINDOWS_BRANCH == "YES" }
+            }
             steps {
                 echo 'build binary'
                 sh 'make build'
+                sh 'make bin/amd64/win-fv.exe'
             }
         }
         stage('Initialization') {
+            when {
+                expression { env.WINDOWS_BRANCH == "YES" }
+            }
             steps {
                 script {
                     withCredentials([file(credentialsId: 'aws-credentials-key', variable: 'AWS_CREDS'),
@@ -81,6 +106,9 @@ pipeline {
         }
 
         stage('Checkout process') {
+            when {
+                expression { env.WINDOWS_BRANCH == "YES" }
+            }
             steps {
                 dir('process') {
                     git(url: 'git@github.com:tigera/process.git', branch: 'master', credentialsId: 'marvin-tigera-ssh-key')
@@ -89,6 +117,9 @@ pipeline {
         }
 
         stage('Create FV cluster') {
+            when {
+                expression { env.WINDOWS_BRANCH == "YES" }
+            }
             steps {
                 dir('process/testing/winfv') {
                     withCredentials([file(credentialsId: 'cnx-license-key', variable: 'KEY')]) {
@@ -104,7 +135,10 @@ pipeline {
             }
         }
 
-        stage('Run e2e\'s') {
+        stage('Run Windows FV\'s') {
+            when {
+                expression { env.WINDOWS_BRANCH == "YES" }
+            }
             steps {
                  ansiColor('xterm') {
                      dir('process/testing/winfv') {
@@ -115,11 +149,10 @@ pipeline {
                                 SCP_CMD=$(echo scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/.ssh/wavetank.pem)
 
                                 ${SSH_CMD} ls -ltr /home/ubuntu
-                                ${SSH_CMD} cat /home/ubuntu/run-fv.ps1
+                                ${SSH_CMD} ls -ltr /home/ubuntu/winfv
                                 ${SSH_CMD} touch /home/ubuntu/file-ready
-                                ${SSH_CMD} time /home/ubuntu/wait-report.sh
+                                ${SSH_CMD} time /home/ubuntu/winfv/wait-report.sh
                                 ${SSH_CMD} ls -ltr /home/ubuntu/report
-
                              '''
                      }
                  }
@@ -132,23 +165,29 @@ pipeline {
         }
 
         always {
+            script {
+                if (env.WINDOWS_BRANCH != "YES" ) {
+                    return
+                }
 
-             sh '''
-                #!/bin/bash
-                MASTER_IP=$(aws ec2 describe-instances --filters Name=tag-value,Values=win-${NAME_PREFIX}-fv-linux --query "Reservations[0].Instances[0].PublicIpAddress" --output text)
-                SSH_CMD=$(echo ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/.ssh/wavetank.pem ubuntu@${MASTER_IP})
-                SCP_CMD=$(echo scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/.ssh/wavetank.pem)
-                ${SSH_CMD} bash -c \\"sudo chown -R ubuntu:ubuntu *\\" || true
-                ${SCP_CMD} -r ubuntu@${MASTER_IP}:/home/ubuntu/report . || true
-                ls -ltr .
-                ls -ltr ./report
-            '''
-            junit allowEmptyResults: true, testResults: 'report/*.xml'
-            dir('process/testing/winfv') {
                 sh '''
                     #!/bin/bash
-                    ./setup-fv.sh -u -q
+                    MASTER_IP=$(aws ec2 describe-instances --filters Name=tag-value,Values=win-${NAME_PREFIX}-fv-linux --query "Reservations[0].Instances[0].PublicIpAddress" --output text)
+                    SSH_CMD=$(echo ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/.ssh/wavetank.pem ubuntu@${MASTER_IP})
+                    SCP_CMD=$(echo scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/.ssh/wavetank.pem)
+                    ${SSH_CMD} bash -c \\"sudo chown -R ubuntu:ubuntu *\\" || true
+                    ${SCP_CMD} -r ubuntu@${MASTER_IP}:/home/ubuntu/report . || true
+                    ls -ltr .
+                    ls -ltr ./report
+                    cat ./report/result.xml
                 '''
+                junit allowEmptyResults: true, testResults: 'report/*.xml'
+                dir('process/testing/winfv') {
+                    sh '''
+                       #!/bin/bash
+                       ./setup-fv.sh -u -q
+                    '''
+               }
             }
         }
 
