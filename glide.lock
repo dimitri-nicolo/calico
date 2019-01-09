@@ -1,5 +1,5 @@
-hash: ba3f9e34beb7c77ad23c5d6daf3390e35063a7a4eb20390890e0bfb40823e2c2
-updated: 2019-01-03T05:15:20.810793874Z
+hash: 3caf740f237051b34dd3f3e6835343e38a46851e6e474b0452ab36e558f20a29
+updated: 2019-01-09T05:15:51.824646653Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -164,7 +164,7 @@ imports:
   subpackages:
   - diskcache
 - name: github.com/hashicorp/go-version
-  version: b5a281d3160aa11950a6182bd9a9dc2cb1e02d50
+  version: d40cf49b3a77bba84a7afdbd7f1dc295d114efb1
 - name: github.com/hashicorp/golang-lru
   version: a0d98a5f288019575c6d1f4bb1573fef2d1fcdc4
   subpackages:
@@ -281,7 +281,7 @@ imports:
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
 - name: github.com/projectcalico/cni-plugin
-  version: 54171fe46853e375473477e3268da35f75d9b5a9
+  version: 0cc32bdcf463f172effdf5aebdd4954c2b7083c9
   repo: git@github.com:tigera/cni-plugin-private.git
   subpackages:
   - internal/pkg/azure
