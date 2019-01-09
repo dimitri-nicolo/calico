@@ -72,22 +72,18 @@ defaults:
       path: master
     values:
       version: master
-      sitemap: false
   -
     scope:
       path: v2.0
     values:
       version: v2.0
-      sitemap: false
   -
     scope:
       path: v2.1
     values:
       version: v2.1
-      sitemap: false
   -
     scope:
       path: v2.2
     values:
       version: v2.2
-      sitemap: true
