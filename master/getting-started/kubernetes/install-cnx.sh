@@ -177,13 +177,16 @@ Usage: $(basename "$0")
           [-m]                 # Download manifests (then quit)
           [-h]                 # Print usage
           [-x]                 # Enable verbose mode
+          [-0 vpc_id]          # VPC id for AWS Security Group Integration
+          [-1 control_sg]      # Control plane SG for AWS Security Group Integration
+          [-2 node_sg]         # Node SG for AWS Security Group Integration
 
 HELP_USAGE
     exit 1
   }
 
   local OPTIND
-  while getopts "a:c:d:e:hk:l:mn:pqs:t:v:ux" opt; do
+  while getopts "a:c:d:e:hk:l:mn:pqs:t:v:ux0:1:2:" opt; do
     case ${opt} in
       a )  INSTALL_AWS_SG=true; CLUSTER_NAME=$OPTARG;;
       c )  CREDENTIALS_FILE=$OPTARG;;
@@ -202,6 +205,9 @@ HELP_USAGE
       u )  CLEANUP=1;;
       h )  usage;;
       \? ) usage;;
+      0 )  VPC_ID=$OPTARG;;
+      1 )  CONTROL_PLANE_SG=$OPTARG;;
+      2 )  K8S_NODE_SGS=$OPTARG;;
     esac
   done
   shift $((OPTIND -1))
@@ -401,7 +407,7 @@ checkRequirementsInstalled() {
 
   if "$INSTALL_AWS_SG" ; then
     # This verifies AWS is installed and that credentials are configured
-    run aws iam get-user
+    run aws sts get-caller-identity
   fi
 }
 
@@ -470,15 +476,19 @@ checkRequiredFilesPresent() {
 #
 function podStatus() {
   label="$1"
-  pod_info=$(kubectl get pods --selector="${label}" -o json --all-namespaces)
+  pod_info=$(kubectl get pods --selector="${label}" -o json --all-namespaces 2> /dev/null)
   echo $pod_info | jq-container -r '.items[] | "\(.metadata.name) \(.spec.containers[] | .name)"' \
   | while read pod_name container_name; do
-    status=$(echo $pod_info | jq-container -r ".items[] | select(.metadata.name == \"$pod_name\") | .status.containerStatuses[] | select(.name == \"$container_name\") | if .ready then \"\(.ready|tostring)\" else \"false\" end ")
+    status=$(echo $pod_info | jq-container -r ".items[] | select(.metadata.name == \"$pod_name\") | .status | if .containerStatuses then .containerStatuses[] | select(.name == \"$container_name\") | if .ready then \"\(.ready|tostring)\" else \"false\" end else \"false\" end")
     if [ -z "$status" ]; then
       status="false"
     fi
     echo $pod_name:$container_name:$status
   done
+  # If there are no pods then there is not one running
+  if [ -z "$(kubectl get pods --selector="${label}" --all-namespaces 2> /dev/null)" ]; then
+    echo "${label}:false"
+  fi
 }
 
 #
@@ -502,7 +512,9 @@ function blockUntilPodIsReady() {
     sleep 1
   done
 
-  echo " \"${friendlyPodName}\" is ready."
+  echo " \"${friendlyPodName}\" is ready. $secs"
+  podStatus "${label}"
+  kubectl get pods --selector="${label}" -o wide --all-namespaces
 }
 
 #
@@ -1326,18 +1338,20 @@ deleteCNXManagerSecret() {
 # checkAwsIntegration() - Check
 #
 checkAwsIntegration() {
-    fetchAwsVpcId
-    checkAwsIntegrationSgEnvVars
-    checkAwsIntegrationCloudTrail
+  fetchAwsVpcId
+  checkAwsIntegrationSgEnvVars
+  checkAwsIntegrationCloudTrail
 }
 
 #
 # fetchAwsVpcId() - Fetch the VPC ID from the metadata
 #
 fetchAwsVpcId() {
-    mac=`runGetOutput curl -s http://169.254.169.254/latest/meta-data/network/interfaces/macs/`
+  if [ -z "$VPC_ID" ]; then
+    mac=`runGetOutput curl -s http://169.254.169.254/latest/meta-data/network/interfaces/macs/ | head -1`
 
     VPC_ID=`runGetOutput curl -s http://169.254.169.254/latest/meta-data/network/interfaces/macs/${mac}vpc-id`
+  fi
 }
 
 #
@@ -1346,8 +1360,11 @@ fetchAwsVpcId() {
 checkAwsIntegrationSgEnvVars() {
   prefix="Failed pre-condition for AWS Security Group Integration:"
   [ -z "$VPC_ID" ] && fatalError "$prefix No VPC_ID is set."
-  [ -z "$CONTROL_PLANE_SG" ] && fatalError "$prefix No CONTROL_PLANE_SG is set."
-  [ -z "$K8S_NODE_SGS" ] && fatalError "$prefix No K8S_NODE_SGS is set."
+  # If cleaning up we do not need the control plane and node SGs
+  if [ "$CLEANUP" -ne 1 ]; then
+    [ -z "$CONTROL_PLANE_SG" ] && fatalError "$prefix No CONTROL_PLANE_SG is set."
+    [ -z "$K8S_NODE_SGS" ] && fatalError "$prefix No K8S_NODE_SGS is set."
+  fi
 }
 
 #
@@ -1441,7 +1458,7 @@ createAwsSgConfigMap() {
       --output text \
       --query "Stacks[0].Outputs[?OutputKey=='TigeraTrustEnforcedSG'][OutputValue]")
 
-  REGION=`runGetOutput curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r '.region'`
+  REGION=`runGetOutput curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq-container -r '.region'`
 
   echo "Creating tigera-aws-config"
   # Store both in a new configmap
@@ -1474,13 +1491,13 @@ restartAwsConfigDependentPods() {
 #   CloudStacks are deleted.
 removeAwsSgIntegrationSgsFromAwsResources() {
   # Get the SG for enforced nodes
-  ENFORCED_SG=$(runGetOutput aws cloudformation describe-stacks \
+  ENFORCED_SG=$(runGetOutputIgnoreErrors aws cloudformation describe-stacks \
       --stack-name tigera-vpc-$VPC_ID \
       --output text \
       --query "Stacks[0].Outputs[?OutputKey=='TigeraEnforcedSG'][OutputValue]")
 
   # Get the SG for enforced nodes
-  TRUST_SG=$(runGetOutput aws cloudformation describe-stacks \
+  TRUST_SG=$(runGetOutputIgnoreErrors aws cloudformation describe-stacks \
       --stack-name tigera-vpc-$VPC_ID \
       --output text \
       --query "Stacks[0].Outputs[?OutputKey=='TigeraTrustEnforcedSG'][OutputValue]")
@@ -1490,10 +1507,10 @@ removeAwsSgIntegrationSgsFromAwsResources() {
   # This could be further improved to remove them from RDS and LoadBalancers
   for sg in $ENFORCED_SG $TRUST_SG; do
     aws ec2 describe-network-interfaces --filters Name=group-id,Values=$sg \
-    | jq -r '.NetworkInterfaces[] | .NetworkInterfaceId' | while read interface ;
+    | jq-container -r '.NetworkInterfaces[] | .NetworkInterfaceId' | while read interface ;
     do
         sgs=$(aws ec2 describe-network-interfaces --network-interface-ids $interface \
-            | jq -r '.NetworkInterfaces[] | .Groups[].GroupId' \
+            | jq-container -r '.NetworkInterfaces[] | .Groups[].GroupId' \
             | sed -e "s/$sg//")
         aws ec2 modify-network-interface-attribute --network-interface $interface --groups $sgs
     done
@@ -1505,8 +1522,8 @@ removeAwsSgIntegrationSgsFromAwsResources() {
 #
 deleteAwsSgIntegrationResources() {
   echo "Deleting all resources associated with the AWS Security Group Integration"
-  kubectl delete globalnetworkpolicies -l 'projectcalico.org/tier in (sg-local, sg-remote, metadata)'
-  kubectl delete hostendpoints -l tigera.io/managed-hep
+  runIgnoreErrors kubectl delete globalnetworkpolicies -l 'projectcalico.org/tier in (sg-local, sg-remote, metadata)'
+  runIgnoreErrors kubectl delete hostendpoints -l tigera.io/managed-hep
 }
 
 #
@@ -1530,7 +1547,7 @@ installAwsSg() {
   echo -n "Applying \"cloud-controllers.yaml\" manifest: "
   run kubectl apply -f cloud-controllers.yaml
   # Block until cloud-controllers pod is running & ready
-  blockUntilPodIsReady "k8s-app=tigera-cloud-controllers" 180 "cloud-controllers"
+  blockUntilPodIsReady "k8s-app=tigera-cloud-controllers" 300 "cloud-controllers"
 }
 
 #
@@ -1538,13 +1555,13 @@ installAwsSg() {
 #
 uninstallAwsSg() {
   runIgnoreErrors kubectl delete -f cloud-controllers.yaml
-  countDownSecs 5 "Deleting cloud-controllers.yaml manifest"
+  countDownSecs 10 "Deleting cloud-controllers.yaml manifest"
+
+  deleteAwsSgIntegrationResources
 
   removeAwsSgIntegrationSgsFromAwsResources
 
   runIgnoreErrors kubectl delete configmap tigera-aws-config -n kube-system
-
-  deleteAwsSgIntegrationResources
 
   restartAwsConfigDependentPods
 
