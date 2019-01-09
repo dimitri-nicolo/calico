@@ -215,9 +215,8 @@
    - **etcd**
 
      ```
-     curl \
-     {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/{{include.yaml}}.yaml \
-     -O
+     curl -O \
+     {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/{{include.yaml}}.yaml
      ```
 
      > **Note**: You can also
@@ -227,9 +226,8 @@
    - **Kubernetes API datastore**
 
      ```
-     curl \
+     curl -O \
      {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/{{include.yaml}}.yaml
-     -O
      ```
 
      > **Note**: You can also
