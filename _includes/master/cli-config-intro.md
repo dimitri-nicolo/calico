@@ -49,5 +49,29 @@ an error for that cluster.
 > into the container at the correct location within the container.
 {: .alert .alert-info}
 
+#### {{site.prodname}} AWS Security Group Integration
+
+If you are using
+[{{site.prodname}} AWS Security Group Integration](/{{page.version}}/getting-started/kubernetes/installation/aws-sg-integration)
+some additional environment variables need to be provided to `{{include.cli}}`
+to ensure endpoints have the proper labels when they are evaluated.
+
+If you are using the
+[Kubernetes pod method](/{{page.version}}/usage/calicoq/#installing-calicoq-as-a-kubernetes-pod)
+for running `{{include.cli}}` these environment variables will be read from a
+ConfigMap so there is no additional configuration necessary.
+
+If you are running `{{install.cli}}` as a binary or container on a single host
+you will need to ensure the following environment variables are set with the
+appropriate values from the `tigera-aws-config` ConfigMap.
+
+| Environment variable              | ConfigMap Key |
+| --------------------------------- | ------------- |
+| `TIGERA_DEFAULT_SECURITY_GROUPS`  | `default_sgs` |
+| `TIGERA_POD_SECURITY_GROUP`       | `pod_sg`      |
+
+> **Note**: Retrieving the values from the ConfigMap must be done after installing
+> the AWS Security Group Integration as the ConfigMap will not exist before installation.
+{: .alert .alert-info}
 {% endif %}
 
