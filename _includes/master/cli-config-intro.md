@@ -61,7 +61,7 @@ If you are using the
 for running `{{include.cli}}` these environment variables will be read from a
 ConfigMap so there is no additional configuration necessary.
 
-If you are running `{{install.cli}}` as a binary or container on a single host
+If you are running `{{include.cli}}` as a binary or container on a single host
 you will need to ensure the following environment variables are set with the
 appropriate values from the `tigera-aws-config` ConfigMap.
 
