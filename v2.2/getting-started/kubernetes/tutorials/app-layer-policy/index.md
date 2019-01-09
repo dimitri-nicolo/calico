@@ -13,8 +13,6 @@ To create a Kubernetes cluster which supports application layer policy, follow
 one of our [getting started guides]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes),
 and [enable application layer policy]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/app-layer-policy).
 
-You will also need the [calicoctl]({{site.baseurl}}/{{page.version}}/usage/calicoctl/install) command line tool.
-
 ### Install the demo application
 
 We will use a simple microservice application to demonstrate {{site.prodname}} application layer
@@ -197,7 +195,7 @@ Return to your web browser and refresh to confirm the new balance.
 We can mitigate both of the above deficiencies with a {{site.prodname}} policy.
 
     wget {{site.url}}/{{page.version}}/getting-started/kubernetes/tutorials/app-layer-policy/manifests/30-policy.yaml
-    calicoctl create -f 30-policy.yaml
+    kubectl create -f 30-policy.yaml
 
 > **Note**: You can also
 > [view the manifest in your browser](manifests/30-policy.yaml){:target="_blank"}.
