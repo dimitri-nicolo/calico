@@ -1,0 +1,4 @@
+---
+layout: null
+---
+{% include {{page.version}}/manifests/operator.yaml orch="openshift" elasticsearch="operator" %}
