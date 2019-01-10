@@ -78,7 +78,7 @@ We've provided info below on how to gather the above info in common Kubernetes e
        | head -1)
    ```
 
-#### Procedure
+### Procedure
 
 1.  Install AWS per-account resources.
 

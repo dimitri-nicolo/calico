@@ -15,8 +15,8 @@ section at the end of this document.
 ### Policy and tier RBAC
 
 In {{site.prodname}}, `GlobalNetworkPolicy` and `NetworkPolicy` resources
-are associated with a specific tier. Access control for these resources can 
-be configured using standard Kubernetes `Role` and `ClusterRole` resource types, and may be 
+are associated with a specific tier. Access control for these resources can
+be configured using standard Kubernetes `Role` and `ClusterRole` resource types, and may be
 configured differently for each tier.
 
 For example, it is possible to allow a user to have read-only access to all policy
@@ -25,13 +25,17 @@ a specific tier and namespace.
 
 To allow a non-admin user to perform *any* operations on either Calico GlobalNetworkPolicy and
 NetworkPolicy resources, you must give them the 'get' permission on the tier(s) they are allowed to
-manage policies in. They must also have permission for the action (not necessarily 'get') on the 
+manage policies in. They must also have permission for the action (not necessarily 'get') on the
 appropriate policy resources within the required tiers.
+
+For all users of the {{site.prodname}} UI, 'watch' and 'list' permissions are required
+for tiers. The {{site.prodname}} UI will only display tiers for which the user has 'get'
+permission for.
 
 For example, to 'create' a network policy in the default tier, a user must have
 'create' permission for NetworkPolicies in the default tier and in the namespace they specify on
 the resource, and 'get' permission on the default tier.
-  
+
 Permission to write (create, update, delete, etc) any tiers is approximately
 equal to complete control of all network policies: we recommend non-admin users
 not be given any write permissions on tiers.
@@ -43,7 +47,7 @@ are placed in the `default` tier.
 
 {{site.prodname}} `NetworkPolicy` resources that are derived from the Kubernetes `NetworkPolicy` resources
 will have a prefix `knp.` added to the name. These are not directly configurable through `kubectl`
-although you may use it to view the derived resources. Modification of these resources is handled through 
+although you may use it to view the derived resources. Modification of these resources is handled through
 the actual Kubernetes resources, and RBAC configuration for managing these resources is specified using the
 actual Kubernetes resource types.
 
@@ -56,25 +60,25 @@ types.
 The per-tier RBAC for the Calico policy resources is specified using pseudo resource kinds and names in the
 `Role` and `ClusterRole` definitions.
 
--  For the `resources` field use the kinds `tier.globalnetworkpolicies` and `tier.networkpolicies` for the 
+-  For the `resources` field use the kinds `tier.globalnetworkpolicies` and `tier.networkpolicies` for the
    Calico resources.
 -  For the `resourceNames` field use the format:
   -  Leave blank to mean any policy of the specified kind across all tiers
   -  `<tiername>.*` to mean any policy of the specified kind within the named tier
   -  `<policyname>` to mean a specific policy of the specified kind (note that since the policy name is prefixed
      with the tier name then this also specifies the tier).
-     
-Refer to the [Example fine-grained permissions](#examples) section below for a worked example. Also see the 
-[Non-admin users](#non-admin-users) section below for an example manifest that provides specific access control for 
+
+Refer to the [Example fine-grained permissions](#examples) section below for a worked example. Also see the
+[Non-admin users](#non-admin-users) section below for an example manifest that provides specific access control for
 a user using the UI.
-     
+
 > **Note**: This is different from the pre-v2.3 RBAC configuration which used the real resource Calico kinds of
 > `networkpolicies` and `globalnetworkpolicies`, and did not allow the wildcard format (`<tiername>.*`) for the
 > policy names. The wildcard format is only supported for the pseudo-resource types and is interpreted by the
 > {{site.prodname}} Aggregated API Server. It is the wildcard name format that allows per-tier granularity of the
 > policy RBAC configuration.
 {: .alert .alert-info}
-     
+
 ### Associating a resource with a tier
 
 For details on creating a [tier]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/tier)
@@ -240,6 +244,25 @@ roleRef:
 
 #### Additional examples
 
+##### Displaying only the net-sec tier
+
+The following ClusterRole can be used to provide 'get' access to the net-sec
+tier. This has the effect of making the net-sec tier visible in the
+{{site.prodname}} UI. Additional RBAC permissions are required in order to modify
+or view policies within the net-sec tier.
+
+```yaml
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: net-sec-tier-visible
+rules:
+- apiGroups: ["projectcalico.org"]
+  resources: ["tiers"]
+  verbs: ["get"]
+  resourceNames: ["net-sec"]
+```
+
 ##### Read all policies across all tiers
 
 The following ClusterRole can be used to provide read access to all policy resource types across all tiers.
@@ -307,10 +330,10 @@ resource types in the net-sec tier.
 -  If this is bound to a user using a RoleBinding, then the user will have full access of these
    policies within a specific namespace.  (This is useful because you only need this one ClusterRole to be
    defined, but it can be "reused" for users in different namespaces using a RoleBinding).
-   
+
 > **Note**: The Kubernetes NetworkPolicy resources are bound to the default tier, and so this ClusterRole
 > does not contain any Kubernetes resource types.
-{: .alert .alert-info} 
+{: .alert .alert-info}
 
 ```yaml
 kind: ClusterRole
@@ -339,11 +362,11 @@ configuration model.
 
 #### Maintaining the pre-v2.3 behavior
 
-Pre-v2.3, the user would have the same access permissions for Calico GlobalNetworkPolicies and NetworkPolicies 
+Pre-v2.3, the user would have the same access permissions for Calico GlobalNetworkPolicies and NetworkPolicies
 in any tier that they had `get` access to, and no access at all for policy in other tiers. It was not possible
 have different access permissions between two tiers (e.g. read only for one tier and full access for another).
 
-If you wish to maintain the pre-v2.3 configuration model, then modify `ClusterRole "ee-calico-tiered-policy-passthru"` in 
+If you wish to maintain the pre-v2.3 configuration model, then modify `ClusterRole "ee-calico-tiered-policy-passthru"` in
 the `cnx.yaml` installation manifest to specify the resource kinds `tier.networkpolicies` and `tier.globalnetworkpolicies`.
 The resource definition should be:
 
@@ -358,7 +381,7 @@ rules:
   verbs: ["*"]
 ```
 
-This modified ClusterRole bypasses the per-tier policy for the psuedo-resource kinds (`tier.networkpolicies` and 
+This modified ClusterRole bypasses the per-tier policy for the psuedo-resource kinds (`tier.networkpolicies` and
 `tier.globlalnetworkpolicies`). RBAC for the tiered policy is then configured as per pre-v2.3 using the real resource
 kinds `networkpolicies` and `globalnetworkpolicies`.
 
@@ -370,7 +393,7 @@ perform the following migration steps:
 ##### Before upgrading to {{site.prodname}} {{page.version}}
 
 To ensure continuity of RBAC permissions across upgrade, modify any `Role` and `ClusterRole` that refer to Calico
-policy resource types. Update the resources to include the real Calico resource type (`networkpolicies` and 
+policy resource types. Update the resources to include the real Calico resource type (`networkpolicies` and
 `globalnetworkpolicies`) *and* the associated pseudo-resource types (`tier.networkpolicies` and `tier.globalnetworkpolicies`).
 
 For example, the following ClusterRole:
@@ -410,7 +433,7 @@ After upgrade, RBAC for Calico policy will be determined using the psuedo-resour
 `tier.networkpolicies`. At this point it is possible to update your RBAC definitions to utilize the per-tier granularity
 that is available using the tier-wildcard format of the resource names (`<tiername>.*`).
 
-You may optionally remove the real resource kinds from the `Role` and `ClusterRole` definitions. For example, the previous 
+You may optionally remove the real resource kinds from the `Role` and `ClusterRole` definitions. For example, the previous
 `ClusterRole` example may be further updated as follows to remove the resource kind `globalnetworkpolicies`:
 
 ```yaml
