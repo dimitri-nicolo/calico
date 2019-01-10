@@ -43,27 +43,29 @@ to connect to, we provide instructions in the [installation documentation](./ins
 
 Ensure that your hosts and firewalls allow the necessary traffic based on your configuration.
 
-| Configuration                                                | Host(s)              | Connection type | Port/protocol |
-|--------------------------------------------------------------|----------------------|-----------------|---------------|
-| {{site.prodname}} networking (BGP)                           | All                 | Bidirectional   | TCP 179 |
-| {{site.prodname}} networking in IP-in-IP mode (default mode) | All                 | Bidirectional   | IP-in-IP, often represented by its protocol number `4` |
+| Configuration                                                | Host(s)              | Connection type | Port/protocol
+|--------------------------------------------------------------|----------------------|-----------------|---------------
+| {{site.prodname}} networking (BGP)                           | All                  | Bidirectional   | TCP 179
+| {{site.prodname}} networking in IP-in-IP mode (default mode) | All                  | Bidirectional   | IP-in-IP, often represented by its protocol number `4`
 {%- if include.orch == "Kubernetes" %}
-| etcd datastore                                               | etcd hosts          | Incoming        | [Officially](http://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.txt) TCP 2379 but can vary |
-| {{site.prodname}} networking with Typha enabled              | Typha agent hosts    | Incoming        | TCP 5473 (default) |
-| All                                                          | kube-apiserver host  | Incoming        | Often TCP 443 or 6443\* |
-{%- else %}
-| All                                                          | etcd hosts          | Incoming        | [Officially](http://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.txt) TCP 2379 but can vary |
+| etcd datastore                                               | etcd hosts           | Incoming        | [Officially](http://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.txt) TCP 2379 but can vary
+| {{site.prodname}} networking with Typha enabled              | Typha agent hosts    | Incoming        | TCP 5473 (default)
+| All                                                          | kube-apiserver host  | Incoming        | Often TCP 443 or 6443\*
 {%- endif %}
 {%- if include.orch == "OpenShift" %}
-| All                                                          | kube-apiserver host  | Incoming        | Often TCP 443 or 8443\* |
+| All                                                          | kube-apiserver host  | Incoming        | Often TCP 443 or 8443\*
 {%- endif %}
 {%- if include.orch == "Kubernetes" or include.orch == "OpenShift" %}
-| All                                                          | {{site.prodname}} API server hosts | Incoming | TCP 8080 and 5443 (default)                           |
-| All                                                          | agent hosts         | Incoming        | TCP 9081 (default)                                            |
-| All                                                          | Prometheus hosts    | Incoming        | TCP 9090 (default)                                            |
-| All                                                          | Alertmanager hosts  | Incoming        | TCP 9093 (default)                                            |
-| All                                                          | {{site.prodname}} Manager host | Incoming | TCP 30003 and 9443 (defaults)                             |
+| All                                                          | {{site.prodname}} API server hosts | Incoming | TCP 8080 and 5443 (default)                           
+| All                                                          | agent hosts         | Incoming        | TCP 9081 (default)                                            
+| All                                                          | Prometheus hosts    | Incoming        | TCP 9090 (default)                                            
+| All                                                          | Alertmanager hosts  | Incoming        | TCP 9093 (default)                                            
+| All                                                          | {{site.prodname}} Manager host | Incoming | TCP 30003 and 9443 (defaults)
 {%- endif %}
+{%- if include.orch != "Kubernetes" %}
+| All                                                          | etcd hosts           | Incoming        | [Officially](http://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.txt) TCP 2379 but can vary
+
+{% endif %}
 
 {%- if include.orch == "Kubernetes" or include.orch == "OpenShift" %}
 
@@ -74,6 +76,7 @@ Ensure that your hosts and firewalls allow the necessary traffic based on your c
 
 \* _If your compute hosts connect directly and don't use IP-in-IP, you don't need to allow IP-in-IP traffic._
 {% endif -%}
+
 
 ## Privileges
 

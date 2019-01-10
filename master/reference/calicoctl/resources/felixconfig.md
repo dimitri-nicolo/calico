@@ -96,6 +96,7 @@ spec:
    ```
    May 18 18:42:44 ubuntu kernel: [ 1156.246182] calico-drop: IN=tunl0 OUT=cali76be879f658 MAC= SRC=192.168.128.30 DST=192.168.157.26 LEN=60 TOS=0x00 PREC=0x00 TTL=62 ID=56743 DF PROTO=TCP SPT=56248 DPT=80 WINDOW=29200 RES=0x00 SYN URGP=0 MARK=0xa000000
    ```
+   {: .no-select-button}
 
 \*\* Duration is denoted by the numerical amount followed by the unit of time. Valid units of time include nanoseconds (ns), microseconds (µs), milliseconds (ms), seconds (s), minutes (m), and hours (h). Units of time can also be used together e.g. `3m30s` to represent 3 minutes and 30 seconds. Any amounts of time that can be converted into larger units of time will be converted e.g. `90s` will become `1m30s`.
 

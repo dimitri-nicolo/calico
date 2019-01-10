@@ -43,6 +43,7 @@
    REPOSITORY                TAG               IMAGE ID       CREATED         SIZE
    {{site.imageNames[include.cli]}}    {{site.data.versions[page.version].first.components[include.cli].version}}            e07d59b0eb8a   2 minutes ago   42MB
    ```
+   {: .no-select-button}
 
 **Next step**:
 [Configure `{{include.cli}}` to connect to your datastore](/{{page.version}}/usage/{{include.cli}}/configure/).

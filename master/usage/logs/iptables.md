@@ -42,6 +42,7 @@ syslog, with an entry like this:
 ```
 May 18 18:42:44 ubuntu kernel: [ 1156.246182] calico-drop: IN=tunl0 OUT=cali76be879f658 MAC= SRC=192.168.128.30 DST=192.168.157.26 LEN=60 TOS=0x00 PREC=0x00 TTL=62 ID=56743 DF PROTO=TCP SPT=56248 DPT=80 WINDOW=29200 RES=0x00 SYN URGP=0 MARK=0xa000000
 ```
+{: .no-select-button}
 
 Note that [Denied Packet Metrics]({{site.baseurl}}/{{page.version}}/usage/metrics/metrics) are independent of the `DropActionOverride`
 setting.  Specifically, if packets that would normally be denied are being
@@ -51,9 +52,10 @@ still contribute to the denied packet metrics as normal.
 One way to configure `DropActionOverride`, would be to use the [calicoctl replace]({{site.baseurl}}/{{page.version}}/reference/calicoctl/commands/replace)
 command. For example, to set a `DropActionOverride` for `myhost` to log then drop denied packets:
 
+Get current felix configuration for the node and save it to a file.
+
 ```
-# Get current felix configuration for the node and save it to a file.
-$ calicoctl get felixconfig node.myhost -o yaml | tee node-myhost-felixconfig.yaml
+calicoctl get felixconfig node.myhost -o yaml | tee node-myhost-felixconfig.yaml
 apiVersion: projectcalico.org/v3
 kind: FelixConfiguration
 metadata:
@@ -63,10 +65,13 @@ metadata:
   uid: 191ead36-dec3-11e7-911b-08002767d9b9
 spec:
   defaultEndpointToHostAction: Return
+```
 
-# Edit the node-myhost-felixconfig file and add the "dropActionOverride" key.
-# Note that we are adding the new parameter keeping all the other existing fields as-is.
-$ cat node-myhost-felixconfig.yaml
+Edit the node-myhost-felixconfig file and add the "dropActionOverride" key.
+Note that we are adding the new parameter keeping all the other existing fields as-is.
+
+```
+cat node-myhost-felixconfig.yaml
 apiVersion: projectcalico.org/v3
 kind: FelixConfiguration
 metadata:
@@ -75,9 +80,12 @@ spec:
   defaultEndpointToHostAction: Return
   dropActionOverride: LogAndDrop
 EOF
+```
 
-# Replace the FelixConfiguration of the "myhost" node.
-$ cat node-myhost-felixconfig.yaml | calicoctl replace -f -
+Replace the FelixConfiguration of the "myhost" node.
+
+```
+cat node-myhost-felixconfig.yaml | calicoctl replace -f -
 ```
 
 For a global setting, modify the `default` FelixConfiguration resource.

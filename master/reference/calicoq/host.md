@@ -22,12 +22,17 @@ each `<endpoint-id>` that is hosted on `<hostname>`.
 -o <OUTPUT> --output=<OUTPUT>  Set the output format. Should be one of yaml, json, or
                                ps. If nothing is set, defaults to ps.
 ```
+{: .no-select-button}
 
 ## Example
 
 ```
-$ DATASTORE_TYPE=kubernetes KUBECONFIG=/home/user/.kube/config calicoq host tigera-kubetest-01
+DATASTORE_TYPE=kubernetes KUBECONFIG=/home/user/.kube/config calicoq host tigera-kubetest-01
+```
 
+Sample output follows.
+
+```
 Policies and profiles for each endpoint on host "tigera-kubetest-01":
 
 Workload endpoint k8s/calico-monitoring.alertmanager-calico-node-alertmanager-0/eth0
@@ -47,6 +52,7 @@ Workload endpoint k8s/policy-demo.nginx-2371676037-j2vmh/eth0
   Rule matches:
     Policy "policy-demo/abcdefghijklmnopqrstuvwxyz" outbound rule 1 destination match; selector "projectcalico.org/namespace == 'policy-demo'"
 ```
+{: .no-select-button}
 
 ## See also
 

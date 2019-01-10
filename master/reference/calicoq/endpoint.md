@@ -33,15 +33,23 @@ as `<host-name>/<orchestrator>/<workload-name>/<endpoint-name>`.
 -o <OUTPUT> --output=<OUTPUT>  Set the output format. Should be one of yaml, json, or
                                ps. If nothing is set, defaults to ps.
 ```
+{: .no-select-button}
 
 ## Examples
 
 Here is an example with three workloads in a namespace, named with a prefix that
 specifies the namespace; so `calicoq endpoint` with that prefix returns information
 about all three endpoints.
-```
-$ calicoq endpoint ns1
 
+To retrieve the policies and profiles for endpoint `ns1`:
+
+```
+calicoq endpoint ns1
+```
+
+Sample output follows.
+
+```
 Policies and profiles for endpoints matching "ns1":
 
 Workload endpoint k8s/namespace1.ns1wep1/eth0
@@ -68,13 +76,19 @@ Workload endpoint k8s/namespace1.ns1wep3/eth0
   Rule matches:
     Policy "namespace1/policy1" outbound rule 1 destination match; selector "(projectcalico.org/namespace == 'namespace1') && (projectcalico.org/namespace == 'namespace1')"
 ```
+{: .no-select-button}
 
 Here is an example of a workload to which both normal and untracked policy
 applies.  The untracked policy is listed first because {{site.prodname}} enforces
 untracked policies before normal ones.
-```
-$ calicoq endpoint tigera-lwr-kubetest-02 --hide-rule-matches
 
+```
+calicoq endpoint tigera-lwr-kubetest-02 --hide-rule-matches
+```
+
+Sample output follows.
+
+```
 Policies and profiles for endpoints matching "tigera-lwr-kubetest-02":
 
 Workload endpoint k8s/advanced-policy-demo.nginx-2371676037-bk6v2/eth0
@@ -86,6 +100,7 @@ Workload endpoint k8s/advanced-policy-demo.nginx-2371676037-bk6v2/eth0
   Rule matches:
     Policy "advanced-policy-demo/abcdefghijklmnopqrstuvwxyz" outbound rule 1 destination match; selector "(projectcalico.org/namespace == 'advanced-policy-demo') && (projectcalico.org/namespace == 'advanced-policy-demo')"
 ```
+{: .no-select-button}
 
 ## See also
 

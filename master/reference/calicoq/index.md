@@ -46,9 +46,14 @@ as intended.
 
 ## Overview of usage and options
 
+To access the help:
 ```
-$ calicoq -h
+calicoq -h
+```
 
+The help output follows.
+
+```
 Calico query tool.
 
 Usage:

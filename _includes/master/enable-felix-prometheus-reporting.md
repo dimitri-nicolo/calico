@@ -17,6 +17,7 @@
      logSeverityScreen: Info
      reportingInterval: 0s
    ```
+   {: .no-select-button}
 
 1. Update `default-felixconfig.yaml` and append the lines `prometheusReporterEnabled: true` and `prometheusReporterPort: 9081`.
 
@@ -39,6 +40,7 @@
      prometheusReporterEnabled: true
      prometheusReporterPort: 9081
    ```
+   {: .no-select-button}
 
 1. Use the `calicoctl replace` command to update the `default` FelixConfiguration resource with the new fields for enabling metrics.
 
@@ -50,3 +52,4 @@
    ```
    Successfully replaced 1 'FelixConfiguration' resource(s)
    ```
+   {: .no-select-button}

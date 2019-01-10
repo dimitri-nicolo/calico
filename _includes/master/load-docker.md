@@ -196,6 +196,7 @@
    secret "cnx-pull-secret" created
    secret "cnx-pull-secret" created
    ```
+   {: .no-select-button}
 
 1. Continue to [Installing {{site.prodname}}](#install-cnx).
 

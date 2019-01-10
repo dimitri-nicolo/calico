@@ -130,3 +130,4 @@ then the following changes will ensure IPv6 operation.
   --probe=kubedns,127.0.0.1:10053,kubernetes.default.svc.cluster.local,5,SRV
   --probe=dnsmasq,127.0.0.1:53,kubernetes.default.svc.cluster.local,5,SRV
   ```
+  {: .no-select-button}

@@ -136,15 +136,33 @@ up RBAC for your users according to your specific security requirements.
 ```
 
 User 'jane' is forbidden from reading policies in any tier (default, and
-net-sec in this case):
+net-sec in this case).
+
+When Jane issues the following command:
 
 ```
-# kubectl get networkpolicies.p
-Error from server (Forbidden): networkpolicies.projectcalico.org is forbidden: User "jane" cannot list networkpolicies.projectcalico.org in tier "default" and namespace "default" (user cannot get tier)
+kubectl get networkpolicies.p
+```
 
-# kubectl get networkpolicies.p -l projectcalico.org/tier==net-sec
+It returns:
+
+```
+Error from server (Forbidden): networkpolicies.projectcalico.org is forbidden: User "jane" cannot list networkpolicies.projectcalico.org in tier "default" and namespace "default" (user cannot get tier)
+```
+{: .no-select-button}
+
+Similarly, when Jane issues this command:
+
+```
+kubectl get networkpolicies.p -l projectcalico.org/tier==net-sec
+```
+
+It returns:
+
+```
 Error from server (Forbidden): networkpolicies.projectcalico.org is forbidden: User "jane" cannot list networkpolicies.projectcalico.org in tier "net-sec" and namespace "default" (user cannot get tier)
 ```
+{: .no-select-button}
 
 > **Note**: The appended '.p' with the networkpolicies resource in the kubectl
   command. That is short for "networkpolicies.projectcalico.org" and is needed
@@ -195,15 +213,30 @@ roleRef:
 ```
 
 With the above user jane is able to read NetworkPolicy resources in default tier
+
 ```bash
-# kubectl get networkpolicies.p
+kubectl get networkpolicies.p
+```
+
+If no NetworkPolicy resources exist it returns:
+
+```
 No resources found.
 ```
-But still not net-sec
+{: .no-select-button}
+
+But Jane still cannot access net-sec.
+
 ```bash
-# kubectl get networkpolicies.p -l projectcalico.org/tier==net-sec
+kubectl get networkpolicies.p -l projectcalico.org/tier==net-sec
+```
+
+This returns:
+
+```
 Error from server (Forbidden): networkpolicies.projectcalico.org is forbidden: User "jane" cannot list networkpolicies.projectcalico.org in tier "net-sec" and namespace "default" (user cannot get tier)
 ```
+{: .no-select-button}
 
 To provide permission to user 'jane' to read policies under 'net-sec' tier,
 use the following clusterrole and clusterrolebindings.

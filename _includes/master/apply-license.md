@@ -34,6 +34,7 @@
    ```
    calicoctl apply -f - < awesome-corp-license.yaml
    ```
+   {: .no-select-button}
 
 1. Confirm that the license was applied:
 
