@@ -15,13 +15,13 @@ The process of updating rules is the same as for user created rules (documented 
   - Save the current alert rule:
 
     ```
-    $ kubectl -n calico-monitoring get configmap calico-prometheus-dp-rate -o yaml > calico-prometheus-alert-rule-dp.yaml
+    kubectl -n calico-monitoring get configmap calico-prometheus-dp-rate -o yaml > calico-prometheus-alert-rule-dp.yaml
     ```
 
   - Make necessary edits to the alerting rules then apply the updated configmap.
 
     ```
-    $ kubectl apply -f calico-prometheus-alert-rule-dp.yaml
+    kubectl apply -f calico-prometheus-alert-rule-dp.yaml
     ```
 
 Your changes should be applied in a few seconds by the prometheus-config-reloader
@@ -30,7 +30,7 @@ container inside the prometheus pod launched by the prometheus-operator
 
 As an example, the range query in this _ConfigMap_ is 10 seconds.
 
-```
+```yaml
 {% raw %}
 apiVersion: v1
 kind: ConfigMap
@@ -55,7 +55,7 @@ data:
 To update this alerting rule, to say, execute the query with a range of
 20 seconds modify the manifest to this:
 
-```
+```yaml
 {% raw %}
 apiVersion: v1
 kind: ConfigMap
@@ -94,7 +94,7 @@ _Prometheus_ manifest.
 As an example, to fire a alert when a {{site.noderunning}} instance has been down for
 more than 5 minutes, save the following to a file, say `calico-node-down-alert.yaml`
 
-```
+```yaml
 {% raw %}
 apiVersion: v1
 kind: ConfigMap
@@ -120,7 +120,7 @@ data:
 Then _create_/_apply_ this config map in kubernetes.
 
 ```
-$ kubectl apply -f calico-node-down-alert.yaml
+kubectl apply -f calico-node-down-alert.yaml
 ```
 
 Your changes should be applied in a few seconds by the prometheus-config-reloader
@@ -153,6 +153,7 @@ and this query will return results something along the lines of:
 {endpoint="calico-metrics-port",instance="10.240.0.81:9081",job="calico-node-metrics",namespace="kube-system",pod="calico-node-hn0kl",policy="profile/k8s_ns.test/0/deny",service="calico-node-metrics",srcIP="192.168.252.157"}	0.6
 {endpoint="calico-metrics-port",instance="10.240.0.84:9081",job="calico-node-metrics",namespace="kube-system",pod="calico-node-97m3g",policy="profile/k8s_ns.test/0/deny",service="calico-node-metrics",srcIP="192.168.167.159"}	0.6
 ```
+{: .no-select-button}
 
 We can modify this query to find out all packets dropped by different policies
 on every node.
@@ -170,6 +171,7 @@ query will return results like so:
 {instance="10.240.0.84:9081",policy="profile/k8s_ns.test/0/deny"}	2
 {instance="10.240.0.81:9081",policy="profile/k8s_ns.test/0/deny"}	2.8
 ```
+{: .no-select-button}
 
 To include the pod name in these results, add the label `pod` to the labels
 listed in the `by` expression like so:
@@ -178,12 +180,13 @@ listed in the `by` expression like so:
 (sum by (instance,pod,policy) (rate(calico_denied_packets[10s])))
 ```
 
-which will the following results:
+which will return the following results:
 
 ```
 {instance="10.240.0.84:9081",pod="calico-node-97m3g",policy="profile/k8s_ns.test/0/deny"}	2
 {instance="10.240.0.81:9081",pod="calico-node-hn0kl",policy="profile/k8s_ns.test/0/deny"}	2.8
 ```
+{: .no-select-button}
 
 An interesting use case is when a rogue _Pod_ is using tools such as _nmap_ to
 scan a subnet for open ports. To do this, we have to execute a query that will
@@ -203,6 +206,7 @@ which will return results, different source IP address:
 {srcIP="192.168.167.175"}	0.4
 {srcIP="192.168.252.157"}	1.0000000000000002
 ```
+{: .no-select-button}
 
 To use these queries as Alerting Rules, follow the instructions defined in the
 [Creating a new Alerting Rule](#creating-a-new-alerting-rule) section and create
@@ -225,7 +229,7 @@ supports defining a _StorageClass_
 As an example, to use GCE Persistent Disks for Prometheus storage, define a
 _StorageClass_ spec, like so:
 
-```
+```yaml
 kind: StorageClass
 apiVersion: storage.k8s.io/v1
 metadata:
@@ -238,7 +242,7 @@ parameters:
 
 Then add the `storage` field to the _Prometheus_ manifest.
 
-```
+```yaml
 apiVersion: monitoring.coreos.com/v1alpha1
 kind: Prometheus
 metadata:
@@ -289,14 +293,14 @@ Increasing the interval reduces load on Prometheus and the amount of storage req
   - Save the current _ServiceMonitor_ manifest:
 
     ```
-    $ kubectl -n calico-monitoring get servicemonitor calico-node-monitor -o yaml > calico-node-monitor.yaml
+    kubectl -n calico-monitoring get servicemonitor calico-node-monitor -o yaml > calico-node-monitor.yaml
     ```
 
   - Update the `interval` field under `endpoints` to desired settings and
    _apply_ the updated manifest.
 
     ```
-    $ kubectl apply -f calico-node-monitor.yaml
+    kubectl apply -f calico-node-monitor.yaml
     ```
 
 Your changes should be applied in a few seconds by the prometheus-config-reloader
@@ -306,7 +310,7 @@ container inside the prometheus pod launched by the prometheus-operator
 As an example on what to update, the interval in this _ServiceMonitor_ manifest
 is 5 seconds (`5s`).
 
-```
+```yaml
 apiVersion: monitoring.coreos.com/v1alpha1
 kind: ServiceMonitor
 metadata:
@@ -326,10 +330,10 @@ spec:
     interval: 5s
 ```
 
-To update calico Prometheus' scrape interval to 10 seconds modify the manifest
+To update {{site.prodname}} Prometheus' scrape interval to 10 seconds modify the manifest
 to this:
 
-```
+```yaml
 apiVersion: monitoring.coreos.com/v1alpha1
 kind: ServiceMonitor
 metadata:
@@ -356,13 +360,13 @@ Check config reloader logs to see if they detected any recent activity.
   - For prometheus run:
 
     ```
-    $ kubectl -n calico-monitoring logs prometheus-<your-prometheus-name> prometheus-config-reloader
+    kubectl -n calico-monitoring logs prometheus-<your-prometheus-name> prometheus-config-reloader
     ```
 
   - For alertmanager run:
 
     ```
-    $ kubectl -n calico-monitoring logs alertmanager-<your-prometheus-name> config-reloader
+    kubectl -n calico-monitoring logs alertmanager-<your-prometheus-name> config-reloader
     ```
 
 The config-reloaders watch each pods file-system for updated config from

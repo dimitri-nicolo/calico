@@ -23,6 +23,7 @@ Endpoints matching selector all():
   Workload endpoint host-a/k8s/kube-system.kube-dns-5fbcb4d67b-7wbhv/eth0
   Workload endpoint host-b/k8s/kube-system.cnx-manager-66c4dbc5b7-6ghsm/eth0
 ```
+{: .no-select-button}
 
 If a remote cluster is inaccessible, for example due to network failure or due to a misconfiguration,
 the `calicoq` output includes details about the error. For example, the following output describes
@@ -37,3 +38,4 @@ The following problems were encountered connecting to the remote clusters
 which may have resulted in incomplete data:
 -  RemoteClusterConfiguration(remote-cluster-1): connection to remote cluster failed: stat /etc/remote-cluster-1/kubeconfig: no such file or directory
 ```
+{: .no-select-button}

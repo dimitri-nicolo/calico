@@ -202,6 +202,7 @@ for each [remote cluster](../../../usage/federation/index#terminology). Ensure t
      ...
      replicas: <number of replicas>
    ```
+   {: .no-select-button}
 
    We recommend at least one replica for every 200 nodes and no more than
    20 replicas. In production, we recommend a minimum of three replicas to reduce
@@ -281,6 +282,7 @@ for each [remote cluster](../../../usage/federation/index#terminology). Ensure t
      ...
      replicas: <number of replicas>
    ```
+   {: .no-select-button}
 
    We recommend at least one replica for every 200 nodes and no more than
    20 replicas. In production, we recommend a minimum of three replicas to reduce

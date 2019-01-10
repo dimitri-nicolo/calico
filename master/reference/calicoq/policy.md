@@ -36,15 +36,21 @@ the `source` or `destination` of the policy's rules.
 -o <OUTPUT> --output=<OUTPUT>  Set the output format. Should be one of yaml, json, or
                                ps. If nothing is set, defaults to ps.
 ```
+{: .no-select-button}
 
 ## Examples
 
 In this example there are three endpoints in one namespace "namespace1".  Policy "policy1"
 applies to all of the endpoints in the namespace, and its rules reference
 them as possible (allowed or denied) sources or destinations:
-```
-$ calicoq policy namespace1/policy1
 
+```
+calicoq policy namespace1/policy1
+```
+
+Sample output follows.
+
+```
 Policy "namespace1/policy1" applies to these endpoints:
   Workload endpoint host1/k8s/namespace1.ns1wep1/eth0; selector "(projectcalico.org/namespace == 'namespace1') && projectcalico.org/namespace == 'namespace1'"
   Workload endpoint host1/k8s/namespace1.ns1wep2/eth0; selector "(projectcalico.org/namespace == 'namespace1') && projectcalico.org/namespace == 'namespace1'"
@@ -58,11 +64,16 @@ Endpoints matching Policy "namespace1/policy1" rules:
   Workload endpoint host1/k8s/namespace1.ns1wep3/eth0
     outbound rule 1 destination match; selector "(projectcalico.org/namespace == 'namespace1') && (projectcalico.org/namespace == 'namespace1')"
 ```
+{: .no-select-button}
 
 You can simplify that output by specifying `--hide-selectors`:
 ```
-$ calicoq policy namespace1/policy1 --hide-selectors
+calicoq policy namespace1/policy1 --hide-selectors
+```
 
+Sample output follows.
+
+```
 Policy "namespace1/policy1" applies to these endpoints:
   Workload endpoint host1/k8s/namespace1.ns1wep1/eth0
   Workload endpoint host1/k8s/namespace1.ns1wep2/eth0
@@ -76,18 +87,25 @@ Endpoints matching Policy "namespace1/policy1" rules:
   Workload endpoint host1/k8s/namespace1.ns1wep3/eth0
     outbound rule 1 destination match
 ```
+{: .no-select-button}
 
 If you only wanted to know the endpoints whose ingress or egress traffic is
 policed according to that policy, you could simplify the output further by
 adding `--hide-rule-matches`:
-```
-$ calicoq policy namespace1/policy1 --hide-rule-matches --hide-selectors
 
+```
+calicoq policy namespace1/policy1 --hide-rule-matches --hide-selectors
+```
+
+Sample output follows.
+
+```
 Policy "namespace1/policy1" applies to these endpoints:
   Workload endpoint host1/k8s/namespace1.ns1wep1/eth0
   Workload endpoint host1/k8s/namespace1.ns1wep2/eth0
   Workload endpoint host1/k8s/namespace1.ns1wep3/eth0
 ```
+{: .no-select-button}
 
 ## See also
 

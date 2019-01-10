@@ -67,13 +67,22 @@ by running a pod within the namespace.
 kubectl run --namespace=policy-demo access --rm -ti --image busybox /bin/sh
 ```
 
-Now access the `nginx` service with the following commands.
+This should open a shell within the `access` pod, as shown below.
 
 ```
 If you don't see a command prompt, try pressing enter.
-/ # wget -q nginx.policy-demo -O -
-/ # wget -q nginx.external-demo -O -
+
+/ #
 ```
+{: .no-select-button}
+
+From inside the `access` pod, attempt to access the `nginx` services with the following commands.
+
+```
+wget -q nginx.policy-demo -O -
+wget -q nginx.external-demo -O -
+```
+
 You should see a response from both `nginx` services.
 
 Now enable isolation in the `policy-demo` Namespace.
@@ -94,15 +103,24 @@ EOF
 Now, let's check if the `nginx` service in the `policy-demo` namespace is
 accessible. We can do this by running a pod and trying to access the `nginx`
 service in the `policy-demo` namespace.
+
 ```
 kubectl run --namespace=policy-demo access --rm -ti --image busybox /bin/sh
 ```
 
-Once your pod is running, use `wget` to try and access the `nginx` service.
+This should open a shell within the `access` pod, as shown below.
 
 ```
 If you don't see a command prompt, try pressing enter.
-/ # wget -q --timeout=5 nginx.policy-demo -O -
+
+/ #
+```
+{: .no-select-button}
+
+From inside the `access` pod, use `wget` to try and access the `nginx` service.
+
+```
+wget -q --timeout=5 nginx.policy-demo -O -
 ```
 
 Since you have isolated the `policy-demo` namespace, you should see
@@ -111,6 +129,7 @@ the following output.
 ```
 wget: download timed out
 ```
+{: .no-select-button}
 
 ### Examine the Policy Resource
 
@@ -125,9 +144,10 @@ calicoctl get networkpolicy --namespace policy-demo
 This should return the following output.
 
 ```
-NAMESPACE	NAME                                              TIER
+NAMESPACE	NAME                                            TIER
 policy-demo	knp.default.default-deny                        default
 ```
+{: .no-select-button}
 
 Note that there is a new `TIER` column. This means that the
 `default-deny` policy in the `policy-demo` namespace exists under the
@@ -161,6 +181,7 @@ spec:
   types:
   - Ingress
 ```
+{: .no-select-button}
 
 Note that the policy resource includes the information about the tier in the
 prefix to the `metadata.name` field as well as the `spec` field. Also, note the
@@ -187,6 +208,7 @@ Policy "policy-demo/knp.default.default-deny" applies to these endpoints:
 
 Endpoints matching Policy "policy-demo/knp.default.default-deny" rules:
 ```
+{: .no-select-button}
 
 You can also get a list of all current tiers that exist by running:
 
@@ -201,6 +223,7 @@ NAME      ORDER
 allow-cnx 100
 default   <nil>
 ```
+{: .no-select-button}
 
 ### Working with Tiers and Tiered Policies
 
@@ -235,6 +258,7 @@ allow-cnx 100
 netops    100
 default   <nil>
 ```
+{: .no-select-button}
 
 Notice that the order value of the netops tier is lower than the value of the
 `default` tier since `<nil>` is treated as "infinite". Lower order values have
@@ -250,11 +274,19 @@ Launch a pod in the `policy-demo` Namespace to test DNS connectivity to 8.8.8.8 
 kubectl run --namespace=policy-demo access --rm -ti --image busybox /bin/sh
 ```
 
-Test DNS connectivity within your pod. This should resolve `tigera.io` using the DNS server at 8.8.8.8 .
+This should open a shell within the `access` pod, as shown below.
 
 ```
 If you don't see a command prompt, try pressing enter.
-/ # nslookup tigera.io 8.8.8.8
+
+/ #
+```
+{: .no-select-button}
+
+From inside the `access` pod, test DNS connectivity within your pod. This should resolve `tigera.io` using the DNS server at 8.8.8.8 .
+
+```
+nslookup tigera.io 8.8.8.8
 ```
 
 This should return the following output.
@@ -268,6 +300,7 @@ Address 1: 2620:12a:8000::2
 Address 2: 2620:12a:8001::2
 Address 3: 23.185.0.2
 ```
+{: .no-select-button}
 
 To add a GlobalNetworkPolicy to a tier, specify the name of the tier you want to add
 it to, under `metadata`. The YAML sample below adds the
@@ -332,18 +365,27 @@ Tier "netops" Policy "netops.no-public-dns-for-policy-demo" applies to these end
 
 Endpoints matching Tier "netops" Policy "netops.no-public-dns-for-policy-demo" rules:
 ```
+{: .no-select-button}
 
-Launch a pod in the `policy-demo` Namespace for testing DNS connectivity to 8.8.8.8
+Launch a pod in the `policy-demo` Namespace for testing DNS connectivity to 8.8.8.8.
 
 ```
 kubectl run --namespace=policy-demo access --rm -ti --image busybox /bin/sh
 ```
 
-Test the DNS connectivity to 8.8.8.8
+This should open a shell within the `access` pod, as shown below.
 
 ```
 If you don't see a command prompt, try pressing enter.
-/ # nslookup tigera.io 8.8.8.8
+
+/ #
+```
+{: .no-select-button}
+
+From inside the `access` pod, test the DNS connectivity to 8.8.8.8.
+
+```
+nslookup tigera.io 8.8.8.8
 ```
 
 No results should be returned and the query should eventually time out.
@@ -355,6 +397,7 @@ Address 1: 8.8.8.8
 
 nslookup: can't resolve 'tigera.io'
 ```
+{: .no-select-button}
 
 We can create additional tiered policies to police `Pass`-ed traffic from the
 `netops.no-public-dns-for-policy-demo` GlobalNetworkPolicy.
@@ -427,6 +470,7 @@ Endpoints matching Tier "devops" Policy "devops.policy-demo-isolation" rules:
   ...
 
 ```
+{: .no-select-button}
 
 ### Allow Access using a NetworkPolicy and the default Tier
 
@@ -465,10 +509,11 @@ calicoctl get networkpolicy --namespace policy-demo
 You should see the following output.
 
 ```
-NAMESPACE	NAME                                              TIER
-policy-demo	knp.default.access-nginx                          default
-policy-demo	knp.default.default-deny                          default
+NAMESPACE	NAME                                            TIER
+policy-demo	knp.default.access-nginx                        default
+policy-demo	knp.default.default-deny                        default
 ```
+{: .no-select-button}
 
 Start another pod to test our `access-nginx` policy and leave it running temporarily.
 
@@ -476,11 +521,19 @@ Start another pod to test our `access-nginx` policy and leave it running tempora
 kubectl run --namespace=policy-demo access --rm -ti --image busybox /bin/sh
 ```
 
-We should now be able to access the service from the access pod.
+This should open a shell within the `access` pod, as shown below.
 
 ```
 If you don't see a command prompt, try pressing enter.
-/ # wget -q --timeout=5 nginx -O -
+
+/ #
+```
+{: .no-select-button}
+
+From inside the `access` pod, try to access the `nginx` service.
+
+```
+wget -q --timeout=5 nginx -O -
 ```
 
 From another terminal, we should now be able to see all the endpoints our `access-nginx` policy applies
@@ -502,10 +555,11 @@ Endpoints matching Policy "policy-demo/knp.default.access-nginx" rules:
   Workload endpoint host1/k8s/policy-demo.access-79f4758b79-6q8qs/eth0
     inbound rule 1 source match; selector "(projectcalico.org/namespace == 'policy-demo') && (projectcalico.org/orchestrator == 'k8s' && run == 'access')"
 ```
+{: .no-select-button}
 
 ### Cleaning up
 
-You can clean up the demo by deleting the demo Namespace:
+You can clean up the demo by deleting the demo Namespace.
 
 ```
 kubectl delete ns policy-demo

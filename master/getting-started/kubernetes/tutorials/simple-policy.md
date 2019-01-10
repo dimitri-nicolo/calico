@@ -90,8 +90,8 @@ This should open up a shell session inside the `access` pod, as shown below.
 ```bash
 Waiting for pod policy-demo/access-472357175-y0m47 to be running, status is Pending, pod ready: false
 
-```
 If you don't see a command prompt, try pressing enter.
+
 / #
 ```
 {: .no-select-button}
@@ -156,9 +156,6 @@ This should open up a shell session inside the `access` pod, as shown below.
 ```bash
 Waiting for pod policy-demo/access-472357175-y0m47 to be running, status is Pending, pod ready: false
 
-Attempt to access the nginx service.
-
-```
 If you don't see a command prompt, try pressing enter.
 
 / #
@@ -182,7 +179,7 @@ This should open up a shell session inside the `cant-access` pod, as shown below
 
 ```bash
 Waiting for pod policy-demo/cant-access-472357175-y0m47 to be running, status is Pending, pod ready: false
-```
+
 If you don't see a command prompt, try pressing enter.
 
 / #

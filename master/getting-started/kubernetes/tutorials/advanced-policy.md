@@ -46,8 +46,8 @@ This should open up a shell session inside the `access` pod, as shown below.
 ```bash
 Waiting for pod advanced-policy-demo/access-472357175-y0m47 to be running, status is Pending, pod ready: false
 
-```
 If you don't see a command prompt, try pressing enter.
+
 / #
 ```
 {: .no-select-button}

@@ -80,7 +80,6 @@ To deploy a cluster suitable for production, refer to [Installation](/{{page.ver
    ```bash
    ./install-cnx.sh -l <customer-name>-license.yaml
    ```
-   {: .no-select-button}
 
    **Example**
    ```bash

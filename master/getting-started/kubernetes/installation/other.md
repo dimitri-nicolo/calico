@@ -121,6 +121,7 @@ configuration.
      ...
      replicas: <number of replicas>
    ```
+   {: .no-select-button}
 
    We recommend at least one replica for every 200 nodes and no more than
    20 replicas. In production, we recommend a minimum of three replicas to reduce
@@ -189,7 +190,6 @@ for each [remote cluster](../../../usage/federation/index#terminology). Ensure t
      {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only/1.7/calico-federation.yaml \
      -O
      ```
-     {: .no-select-button}
 
 1. Open the manifest in your favorite editor and modify the replica count in the
    `Deployment` named `calico-typha` to the desired number of replicas.
@@ -204,6 +204,7 @@ for each [remote cluster](../../../usage/federation/index#terminology). Ensure t
      ...
      replicas: <number of replicas>
    ```
+   {: .no-select-button}
 
    We recommend at least one replica for every 200 nodes and no more than
    20 replicas. In production, we recommend a minimum of three replicas to reduce

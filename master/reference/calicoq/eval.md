@@ -10,26 +10,47 @@ canonical_url: https://docs.tigera.io/v2.2/reference/calicoq/eval
 
 To find all endpoints that match the `role=='frontend'` selector, i.e. that
 have a `role` label with value `frontend`:
+
 ```
-$ calicoq eval "role=='frontend'"
+calicoq eval "role=='frontend'"
+```
+
+Sample output follows.
+
+```
 Endpoints matching selector role=='frontend':
   Host endpoint webserver1/eth0
   Host endpoint webserver2/eth0
 ```
+{: .no-select-button}
 
 To find all endpoints that have an `app` label (with any value):
+
 ```
-$ calicoq eval "has(app)"
+calicoq eval "has(app)"
+```
+
+Sample output follows.
+
+```
 Endpoints matching selector has(app):
   Workload endpoint rack1-host1/k8s/default.frontend-5gs43/eth0
 ```
+{: .no-select-button}
+
 (In this case the answer is a Kubernetes pod.)
 
-In case the specified selector did not match any endpoints, you would see:
+To find endpoint for a selector that does not match any endpoints:
 ```
-$ calicoq eval "role=='endfront'"
+calicoq eval "role=='endfront'"
+```
+
+Sample output follows.
+
+```
 Endpoints matching selector role=='endfront':
 ```
+{: .no-select-button}
 
 ## See also
 

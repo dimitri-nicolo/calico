@@ -48,6 +48,7 @@ Before installing {{site.prodname}}, you must complete the following steps on ea
    Tokens:              tigera-federation-remote-cluster-wzdgp
    Events:              <none>
    ```
+   {: .no-select-button}
 
    The value of `Tokens` is the name of the secret containing the service account's token.
 
@@ -74,6 +75,7 @@ Before installing {{site.prodname}}, you must complete the following steps on ea
    namespace:  11 bytes
    token:      eyJhbGciOiJSUzI1NiIsImtpZCI6IiJ9.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJrdWJlLXN5c3RlbSIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VjcmV0Lm5hbWUiOiJyZW1vdGUtY2x1c3Rlci10b2tlbi13emRncCIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VydmljZS1hY2NvdW50Lm5hbWUiOiJyZW1vdGUtY2x1c3RlciIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VydmljZS1hY2NvdW50LnVpZCI6ImIzMDQ0ZDIzLTk2YjUtMTFlOC1hYzliLTQyMDEwYTgwMDAwZSIsInN1YiI6InN5c3RlbTpzZXJ2aWNlYWNjb3VudDprdWJlLXN5c3RlbTpyZW1vdGUtY2x1c3RlciJ9.h8ngEwzjzHLMnaRANiXoqrSAWGxycVqq7cO54RM56qyyy_KlAbLpjbhHiaQBNAqJ_LTvjSZ23r2vZn-ZUbTDcoHninD4N2GXKygyVxoBeBzBJinbHWTPp6BYnLvM1pifnj5QNrQanqb0Nwy_p9T1CBMr7NmTsJ5HvRHASCMImjLToCC251kL5oIVM6MWdty_dKGvCzO1rUQhCqcwQyq4Bg6cTFNCLejFpgH0p7XdVcqSsd2uYUpPeS85q5paEKza630Dxg8jdwa5VhYAb_LZfklPOVwHAgNx9OT-z_ZRLYfWoBVlkgazXiiEz9kDweK8hESGLQdW7996C0vdeVx21A
    ```
+   {: .no-select-button}
 
 1. Save the `token` value for later steps.
 
@@ -106,6 +108,7 @@ Before installing {{site.prodname}}, you must complete the following steps on ea
        client-certificate-data: ...
        client-key-data: ...
    ```
+   {: .no-select-button}
 
 1. Save the `certificate-authority-data` and the `server` values for the next step.
 

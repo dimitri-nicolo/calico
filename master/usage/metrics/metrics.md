@@ -37,6 +37,7 @@ alerts when it exceeds configured thresholds.
                              Configure alerting rules.      notifications to different
                                                             alert receivers.
 ```
+{: .no-select-button}
 
 Policy inspection and reporting is accomplished using four key pieces:
 

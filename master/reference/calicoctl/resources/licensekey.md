@@ -11,14 +11,14 @@ provided by Tigera support, and must be applied to the cluster to enable
 
 #### Applying or updating a license key
 
-When you add {{site.prodname}} to an existing Kubernetes cluster or create a 
+When you add {{site.prodname}} to an existing Kubernetes cluster or create a
 new OpenShift cluster, you must apply your license key to complete the installation
-and gain access to the full set of {{site.prodname}} features. 
+and gain access to the full set of {{site.prodname}} features.
 
 When your license key expires, you must update it to continue using {{site.prodname}}.
 
-To apply or update a license key use the following command, replacing `<customer-name>` 
-with the customer name in the file sent to you by Tigera. 
+To apply or update a license key use the following command, replacing `<customer-name>`
+with the customer name in the file sent to you by Tigera.
 
 **Command**
 ```
@@ -44,6 +44,7 @@ This is an example of the output of that command.
 LICENSEID    EXPIRATION                      NODES   FEATURES
 <UUID>       1999-03-14 23:59:59 -0700 PDT   999     [cnx all]
 ```
+{: .no-select-button}
 
 ### Sample YAML
 
