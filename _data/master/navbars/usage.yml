@@ -108,6 +108,8 @@ toc:
   path: /usage/decommissioning-a-node
 - title: Configuring Conntrack
   path: /usage/configuration/conntrack
+- title: AWS security group integration
+  path: /usage/aws-security-group-integration
 - title: Troubleshooting
   path: /usage/troubleshooting/
 - title: Frequently Asked Questions
