@@ -1,0 +1,4 @@
+data:
+  # Edit this field with the URL of your Kibana instance.
+  tigera.cnx-manager.kibana-url: https://your-kibana-url:5601
+  tigera.cnx-manager.elasticsearch-api-url: /api/v1/namespaces/calico-monitoring/services/https:elasticsearch-tigera-elasticsearch:8443/proxy

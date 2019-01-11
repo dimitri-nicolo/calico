@@ -1,0 +1,29 @@
+# This manifest includes some additional resources required for the
+# new kube-controllers (policy-controller) to function in OpenShift
+---
+apiVersion: authorization.openshift.io/v1
+kind: ClusterRole
+metadata:
+  name: calico-policy-controller-patch
+rules:
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - networkpolicies
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: authorization.openshift.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: calico-policy-controller-patch
+roleRef:
+  name: calico-policy-controller-patch
+subjects:
+- kind: ServiceAccount
+  name: calico
+  namespace: kube-system
+userNames:
+- system:serviceaccount:kube-system:calico

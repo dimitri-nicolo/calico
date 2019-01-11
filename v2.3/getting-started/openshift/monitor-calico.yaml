@@ -1,0 +1,4 @@
+---
+layout: null
+---
+{% include {{page.version}}/manifests/monitor-calico.yaml secure_es="false" orch="openshift" elasticsearch="operator" %}

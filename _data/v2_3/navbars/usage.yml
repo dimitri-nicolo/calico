@@ -1,0 +1,114 @@
+bigheader: "Usage"
+abstract: "How to configure and troubleshoot Tigera Secure EE systems"
+path: /usage
+order: 2
+toc:
+- title: Using Tigera Secure EE
+  path: /usage/
+- title: calicoctl
+  section:
+  - title: Installing calicoctl
+    path: /usage/calicoctl/install
+  - title: Configuring calicoctl
+    section:
+    - title: Overview
+      path: /usage/calicoctl/configure/
+    - title: etcd datastore options
+      path: /usage/calicoctl/configure/etcd
+    - title: Kubernetes API datastore options
+      path: /usage/calicoctl/configure/kdd
+- title: calicoq
+  section:
+  - title: Installing calicoq
+    path: /usage/calicoq/
+  - title: Configuring calicoq
+    section:
+    - title: Overview
+      path: /usage/calicoq/configure/
+    - title: etcd datastore options
+      path: /usage/calicoq/configure/etcd
+    - title: Kubernetes API datastore options
+      path: /usage/calicoq/configure/kdd
+- title: Securing Tigera Secure EE communications
+  section:
+  - title: Scheduling to well-known nodes
+    path: /usage/reduce-nodes
+  - title: Configuring encryption and authentication
+    path: /usage/encrypt-comms
+  - title: Securing endpoints with Tigera Secure EE policy
+    path: /usage/policy/secure-metrics
+
+- title: Logs
+  section:
+  - title: Elasticsearch
+    section:
+    - title: Overview
+      path: /usage/logs/elastic/
+    - title: Flow logs
+      path: /usage/logs/elastic/flow
+    - title: Audit logs
+      path: /usage/logs/elastic/ee-audit
+    - title: Accessing logs
+      path: /usage/logs/elastic/view
+    - title: Configuring Elasticsearch
+      path: /usage/logs/configure-elastic
+  - title: iptables
+    path: /usage/logs/iptables
+  - title: Component
+    section:
+    - title: Overview
+      path: /usage/logs/component
+    - title: Logging
+      path: /usage/troubleshooting/logging
+- title: Metrics
+  section:
+  - title: Overview
+    path: /usage/metrics/
+  - title: Policy metrics in Prometheus
+    path: /usage/metrics/metrics
+  - title: Configuring Prometheus
+    path: /usage/configuration/prometheus
+  - title: Configuring Alertmanager
+    path: /usage/configuration/alertmanager
+- title: Federation (Kubernetes only)
+  section:
+  - title: Overview
+    path: /usage/federation/
+  - title: Creating kubeconfig files
+    path: /usage/federation/kubeconfig
+  - title: Configuring access to remote clusters
+    path: /usage/federation/configure-rcc
+  - title: Configuring federated services
+    path: /usage/federation/services-controller
+  - title: Example AWS configuration
+    path: /usage/federation/aws
+  - title: Querying remote clusters with calicoq
+    path: /usage/federation/calicoq
+- title: Running cnx-node with an init system
+  path: /usage/configuration/as-service
+- title: Configuring BGP Peers
+  path: /usage/configuration/bgp
+- title: Custom BGP Configuration
+  path: /usage/custom-bgp-config
+- title: Changing IP Pools
+  path: /usage/changing-ip-pools
+- title: Route Reflectors
+  path: /usage/routereflector
+- title: Enabling IPv6 Support
+  path: /usage/ipv6
+- title: External Connectivity
+  path: /usage/external-connectivity
+- title: Configuring IP-in-IP
+  path: /usage/configuration/ip-in-ip
+- title: Configuring a Node IP Address and Subnet
+  path: /usage/configuration/node
+- title: Configuring MTU
+  path: /usage/configuration/mtu
+- title: Decommissioning a Node
+  path: /usage/decommissioning-a-node
+- title: Configuring Conntrack
+  path: /usage/configuration/conntrack
+- title: Troubleshooting
+  path: /usage/troubleshooting/
+- title: Frequently Asked Questions
+  path: /usage/troubleshooting/faq

@@ -1,0 +1,4 @@
+---
+layout: null
+---
+{% include {{page.version}}/manifests/calico.yaml datastore="kdd" network="calico" disable_ipip="true" typha="true" federation="true" app_layer_policy="disabled" %}
