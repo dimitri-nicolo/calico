@@ -17,8 +17,8 @@ This information should assist you in constructing queries.
 | `bytes_in`            | long              | Number of incoming bytes since the last export. |
 | `bytes_out`           | long              | Number of outgoing bytes since the last export. |
 | `dest_ip`             | ip                | The IP address of the destination pod. |
-| `dest_name`           | keyword           | Name of the destination pod. A hyphen indicates aggregation. Check the `dest_name_aggr` field for the aggregated name. |
-| `dest_name_aggr`      | keyword           | {::nomarkdown}<p>&#x25cf;&nbsp;Aggregated name of the destination pod.<br>&#x25cf;&nbsp;<code>pvt</code>: a destination IP address in a private network<br>&#x25cf;&nbsp;<code>pub</code>: a destination IP address in a public network, e.g., the internet</p>{:/} |
+| `dest_name`           | keyword           | {::nomarkdown}<p>This field contains one of the following values:<br>&#x25cf;&nbsp;The name of the destination pod.<br>&#x25cf;&nbsp;<code>-</code>: the name of the pod was aggregated or the endpoint is not a pod. Check <code>dest_name_aggr</code> for more information, such as the name of the pod if it was aggregated.</p>{:/} |
+| `dest_name_aggr`      | keyword           | {::nomarkdown}<p>This field contains one of the following values:<br>&#x25cf;&nbsp;The name of the destination pod after aggregation.<br>&#x25cf;&nbsp;<code>pvt</code>: the endpoint is not a pod. Its IP address belongs to a private subnet.<br>&#x25cf;&nbsp;<code>pub</code>: the endpoint is not a pod. Its IP address does not belong to a private subnet. It is probably an endpoint on the public internet.</p>{:/} |
 | `dest_namespace`      | keyword           | Namespace of the destination pod. |
 | `dest_port`           | long              | The destination port. |
 | `dest_type`           | keyword           | Destination endpoint type: wep: pod net: not a pod |
@@ -32,8 +32,9 @@ This information should assist you in constructing queries.
 | `proto`               | keyword           | Protocol. |
 | `policies`            | array of keywords | The policy or policies that allowed or denied this flow. |
 | `source_ip`           | ip                | The IP address of the source pod. A hyphen indicates aggregation. |
-| `source_name`         | keyword           | Name of the source pod. A hyphen indicates aggregation. Check the `source_name_aggr` field for the aggregated name. |
+| `source_name`         | keyword           | {::nomarkdown}<p>This field contains one of the following values:<br>&#x25cf;&nbsp;The name of the source pod.<br>&#x25cf;&nbsp;<code>-</code>: the name of the pod was aggregated or the endpoint is not a pod. Check <code>dest_name_aggr</code> for more information, such as the name of the pod if it was aggregated.</p>{:/} |
 | `source_name_aggr`    | keyword           | {::nomarkdown}<p>&#x25cf;&nbsp;Aggregated name of the source pod.<br>&#x25cf;&nbsp;<code>pvt</code>: a source IP address in a private network<br>&#x25cf;&nbsp;<code>pub</code>: a source IP address in a public network, e.g., the internet</p>{:/} |
+| `source_name_aggr`    | keyword           | {::nomarkdown}<p>This field contains one of the following values:<br>&#x25cf;&nbsp;The name of the source pod after aggregation.<br>&#x25cf;&nbsp;<code>pvt</code>: the endpoint is not a pod. Its IP address belongs to a private subnet.<br>&#x25cf;&nbsp;<code>pub</code>: the endpoint is not a pod. Its IP address does not belong to a private subnet. It is probably an endpoint on the public internet.</p>{:/} |
 | `source_namespace`    | keyword           | Namespace of the source pod. |
 | `source_port`         | long              | The source port. |
 | `source_type`         | keyword           | Source endpoint type:wep: podnet: not a pod |
