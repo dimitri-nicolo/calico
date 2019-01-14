@@ -40,7 +40,7 @@ To complete the following procedure, you'll need:
 ### Setting up Elasticsearch roles
 
 If you're using the Elasticsearch X-Pack security then you may wish to use the following roles. You should
-use the [Kibana Role Management API](https://www.elastic.co/guide/en/kibana/current/role-management-api.html),
+use the [Kibana Role Management API](https://www.elastic.co/guide/en/kibana/6.4/role-management-api.html),
 since some roles include permissions on both Kibana and Elasticsearch.
 
 They may also be useful as a reference for defining alternative security configuration.
@@ -90,8 +90,10 @@ They may also be useful as a reference for defining alternative security configu
          }
        ]
      },
-     "kibana": {
-       "global": ["all"]
-     }
+     "kibana": [
+       {
+         "privileges": ["all"]
+       }
+     ]
    }
    ```
