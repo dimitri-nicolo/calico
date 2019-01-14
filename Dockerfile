@@ -13,6 +13,7 @@ RUN apk add --no-cache curl
 RUN apk add --no-cache jq
 
 ADD elastic_mapping_flows.template /fluentd/etc/elastic_mapping_flows.template
+COPY fluent_s3.conf /fluentd/etc/fluent_s3.conf
 
 ENV FLOW_LOG_FILE=/var/log/calico/flowlogs/flows.log
 ENV POS_DIR=/var/log/calico
@@ -21,6 +22,8 @@ ENV ELASTIC_PORT=9200
 ENV ELASTIC_FLUSH_INTERVAL=5s
 ENV KUBE_AUDIT_LOG=/var/log/calico/audit/kube-audit.log
 ENV KUBE_AUDIT_POS=${POS_DIR}/kube-audit.log.pos
+ENV S3_FLUSH_INTERVAL=5s
+ENV S3_STORAGE=false
 
 COPY readiness.sh /bin/
 RUN chmod +x /bin/readiness.sh
