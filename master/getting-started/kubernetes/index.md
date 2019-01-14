@@ -87,6 +87,8 @@ To deploy a cluster suitable for production, refer to [Installation](/{{page.ver
    ```
    {: .no-select-button}
 
+1. Save the username and password printed out at the end of a successful install.
+
 1. Launch a browser and type `https://127.0.0.1:30003` in the address bar.
 
    > **Note**: Your browser will warn you of an insecure connection due to
@@ -94,7 +96,8 @@ To deploy a cluster suitable for production, refer to [Installation](/{{page.ver
    > {{site.prodname}} Manager.
    {: .alert .alert-info}
 
-1. Type **jane** in the **Login** box and **welc0me** in the **Password** box.
+1. In the **Login** and **Password** box enter the username and password
+   printed at the end of the install.
    Then click **Sign In**.
 
 Congratulations! You now have a single-host Kubernetes cluster

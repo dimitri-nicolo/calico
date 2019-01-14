@@ -89,6 +89,8 @@ To deploy a cluster suitable for production, refer to [Installation](/{{page.ver
    ./install-cnx.sh -l awesome-corp-license.yaml
    ```
 
+1. Save the username and password printed out at the end of a successful install.
+
 1. Launch a browser and type `https://127.0.0.1:30003` in the address bar.
 
    > **Note**: Your browser will warn you of an insecure connection due to
@@ -96,7 +98,8 @@ To deploy a cluster suitable for production, refer to [Installation](/{{page.ver
    > {{site.prodname}} Manager.
    {: .alert .alert-info}
 
-1. Type **jane** in the **Login** box and **welc0me** in the **Password** box.
+1. Type the saved username and password into the  **Login** and **Password**
+   boxes respectively.
    Then click **Sign In**.
 
 Congratulations! You now have a single-host Kubernetes cluster
