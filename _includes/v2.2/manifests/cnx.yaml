@@ -569,16 +569,16 @@ spec:
                 name: tigera-cnx-manager-config
                 key: tigera.cnx-manager.oauth-client-id
 {%- endif %}
+        # Use the same liveness check as the proxy since
+        # the static content is only served over the localhost
+        # interface. Liveness check hits the static content through the proxy.
         livenessProbe:
           httpGet:
             path: /
-            port: 8443
+            port: 9443
             scheme: HTTPS
           initialDelaySeconds: 90
           periodSeconds: 10
-        volumeMounts:
-        - mountPath: /etc/cnx-manager-web-tls
-          name: cnx-manager-tls
       - name: cnx-manager-proxy
         image: {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["cnxManagerProxy"]}}:{{site.data.versions[page.version].first.components["cnx-manager-proxy"].version}}
         env:
