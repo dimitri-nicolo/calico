@@ -11,3 +11,4 @@ _site
 Gemfile.lock
 publish-cnx-docs.yaml
 _output/
+/*.out
