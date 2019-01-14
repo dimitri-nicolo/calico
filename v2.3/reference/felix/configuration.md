@@ -140,6 +140,9 @@ The Kubernetes API datastore driver reads its configuration from Kubernetes-prov
 | `FlowLogsFileMaxFiles`       | `FELIX_FLOWLOGSFILEMAXFILES`       | `5`     | The number of files to keep when rotating flow log files. This parameter only takes effect when `FlowLogsFileEnabled` is set to `true`. |
 | `FlowLogsFileMaxFileSizeMB`  | `FELIX_FLOWLOGSFILEMAXFILESIZEMB`  | `100`   | The max size in MB of flow logs files before rotation. This parameter only takes effect when `FlowLogsFileEnabled` is set to `true`.|
 | `FlowLogsFlushInterval`      | `FELIX_FLOWLOGSFLUSHINTERVAL`      | `300`   | The period, in seconds, at which Felix exports the flow logs. |
+| `FlowLogsEnableNetworkSets`  | `FELIX_FLOWLOGSENABLENETWORKSETS`  | `false` | Whether to specify the network set a flow log originates from. |
+| `FlowLogsFileAggregationKindForAllowed` | `FELIX_FLOWLOGSFILEAGGREGATIONKINDFORALLOWED` | `2` | How much to aggregate the flow logs sent to Elasticsearch for allowed traffic.  Bear in mind that changing this value may have a dramatic impact on the volume of flow logs sent to Elasticsearch.  `0` means no aggregation, `1` means aggregate all flows that share a source port on each node, and `2` means aggregate all flows that share source ports or have the same name prefix. |
+| `FlowLogsFileAggregationKindForDenied` | `FELIX_FLOWLOGSFILEAGGREGATIONKINDFORDENIED` | `1` | How much to aggregate the flow logs sent to Elasticsearch for denied traffic.  Bear in mind that changing this value may have a dramatic impact on the volume of flow logs sent to Elasticsearch.  `0` means no aggregation, `1` means aggregate all flows that share a source port on each node, and `2` means aggregate all flows that share source ports or have the same name prefix. |
 
 DropActionOverride controls what happens to each packet that is denied by
 the current {{site.prodname}} policy - i.e. by the ordered combination of all the
