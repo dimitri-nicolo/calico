@@ -34,7 +34,7 @@ class RESTClient:
                     for cause in response.json()["error"]["root_cause"]:
                         if cause["type"] == "resource_already_exists_exception":
                             resource_exists = True
-                except (KeyError, ValueError):
+                except (KeyError, ValueError, TypeError):
                     pass
 
                 if resource_exists:
