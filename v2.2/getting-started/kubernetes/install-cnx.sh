@@ -558,14 +558,24 @@ deleteImagePullSecret() {
 }
 
 #
+# createPassword() - create a simple password and save it to cnx_jane_pw
+#
+createPassword() {
+  if [ ! -f cnx_jane_pw ]; then
+    cat /dev/urandom | tr -dc A-Za-z0-9 | head -c16 > cnx_jane_pw
+  fi
+}
+
+#
 # setupBasicAuthKubeadm() - specialized function for Kubeadm-based kubernetes
 # clusters
 #
 setupBasicAuthKubeadm() {
+  createPassword
 
   # Create basic auth csv file
     cat > basic_auth.csv <<EOF
-welc0me,jane,1
+`cat cnx_jane_pw`,jane,1
 EOF
 
   runAsRoot mv basic_auth.csv /etc/kubernetes/pki/basic_auth.csv
@@ -594,10 +604,11 @@ EOF
 # clusters
 #
 setupBasicAuthAcsEngine() {
+  createPassword
 
   # Create basic auth csv file
     cat > basic_auth.csv <<EOF
-welc0me,jane,1
+`cat cnx_jane_pw`,jane,1
 EOF
 
   runAsRoot mkdir -p /etc/kubernetes/pki
@@ -1311,7 +1322,7 @@ reportSuccess() {
   echo
 
   if [ "$INSTALL_TYPE" == "KUBEADM" ]; then
-    echo "Login credentials: username=\"jane\", password=\"welc0me\""
+    echo "Login credentials: username=\"jane\", password=\"`cat cnx_jane_pw`\""
   elif [ "$INSTALL_TYPE" == "KOPS" ]; then
     echo "Login credentials: username=\"admin\", password=\`kops get secrets kube -o plaintext\`"
   fi
@@ -1330,7 +1341,7 @@ installCNX() {
 
   downloadManifests               # Download all manifests, if they're not already present in current dir
   createImagePullSecret           # Create the image pull secret
-  setupBasicAuth                  # Create 'jane/welc0me' account w/cluster admin privs
+  setupBasicAuth                  # Create 'jane/******' account w/cluster admin privs
 
   setupEtcdEndpoints              # Determine etcd endpoints, set ${ETCD_ENDPOINTS}
 
