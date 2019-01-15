@@ -58,5 +58,5 @@
   "custom_settings": {
     "created_by": "population-wizard"
   },
-  "results_index_name": "shared"
+  "results_index_name": "service_bytes_anomaly"
 }

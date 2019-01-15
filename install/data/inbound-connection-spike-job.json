@@ -43,5 +43,5 @@
   "custom_settings": {
     "created_by": "population-wizard"
   },
-  "results_index_name": "shared"
+  "results_index_name": "inbound_connection_spike"
 }

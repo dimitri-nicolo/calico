@@ -1,24 +1,24 @@
 {
-  "job_id": "ip_sweep",
+  "job_id": "port_scan_external",
   "job_type": "anomaly_detector",
   "job_version": "6.4.3",
   "groups": [
     "recon"
   ],
-  "description": "IP Sweep",
+  "description": "Port Scan - External",
   "analysis_config": {
     "bucket_span": "10m",
     "detectors": [
       {
-        "detector_description": "distinct_count(dest_ip) over source_name",
+        "detector_description": "Count of destination ports compared with all external IPs",
         "function": "distinct_count",
-        "field_name": "dest_ip",
-        "over_field_name": "source_name",
+        "field_name": "dest_port",
+        "over_field_name": "source_ip",
         "detector_index": 0
       }
     ],
     "influencers": [
-      "source_name"
+      "source_ip"
     ]
   },
   "analysis_limits": {
@@ -33,5 +33,5 @@
   "custom_settings": {
     "created_by": "population-wizard"
   },
-  "results_index_name": "shared"
+  "results_index_name": "port_scan_external"
 }
