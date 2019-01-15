@@ -1,21 +1,28 @@
 {
-  "job_id": "pod_outlier_ip_activity",
+  "job_id": "ip_sweep_pods",
   "job_type": "anomaly_detector",
   "job_version": "6.4.3",
   "groups": [
-    "beacon"
+    "recon"
   ],
-  "description": "Outlier IP Activity - Pods",
+  "description": "IP Sweep - Pods",
   "analysis_config": {
     "bucket_span": "10m",
     "detectors": [
       {
-        "detector_description": "Unexpected IP connection for a pod within a replica set",
-        "function": "rare",
-        "by_field_name": "dest_ip",
+        "detector_description": "Count of dest. IPs compared with all pods",
+        "function": "distinct_count",
+        "field_name": "dest_ip",
+        "over_field_name": "source_name",
+        "detector_index": 0
+      },
+      {
+        "detector_description": "Count of dest. IPs compared with replica set",
+        "function": "distinct_count",
+        "field_name": "dest_ip",
         "over_field_name": "source_name",
         "partition_field_name": "namespace_source_name_aggr",
-        "detector_index": 0
+        "detector_index": 1
       }
     ],
     "influencers": [
@@ -36,5 +43,5 @@
   "custom_settings": {
     "created_by": "population-wizard"
   },
-  "results_index_name": "pod_outlier_ip_activity"
+  "results_index_name": "ip_sweep_pods"
 }
