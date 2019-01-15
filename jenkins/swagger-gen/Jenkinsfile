@@ -20,14 +20,13 @@ pipeline {
         TF_VAR_master_disk_size = '20'
         TF_VAR_num_nodes = '0'
 
-        // Terraform kubernetes settings. Use the minimum supported version of Kubernetes to determine the
-        // API.
-        TF_VAR_kubernetes_version = "stable-1.9"
+        // Use the minimum supported version of Kubernetes to determine the API.
+        K8S_RELEASE = "stable-1.10"
         USE_EXTERNAL_ETCD = ""
 
         // Slack message params
         BUILD_INFO = "https://wavetank.tigera.io/blue/organizations/jenkins/${env.JOB_NAME}/detail/${env.JOB_NAME}/${env.BUILD_NUMBER}/pipeline"
-        SLACK_MSG = "${BUILD_INFO}\n- *k8s-version:* ${TF_VAR_kubernetes_version}\n"
+        SLACK_MSG = "${BUILD_INFO}\n"
         slack_alert_channel = 'ci-notifications-cnx'
 
         // install-cnx.sh settings
@@ -43,6 +42,29 @@ pipeline {
                 dir('_cp') {
                   // All docs versions are contained within the master git branch - this is what we need to update.
                   git(url: 'git@github.com:tigera/calico-private.git', branch: 'master', credentialsId: 'marvin-tigera-ssh-key')
+                }
+            }
+        }
+
+        stage('Initialize') {
+            steps {
+                dir('_process') {
+                    git(url: 'git@github.com:tigera/process.git', branch: 'master', credentialsId: 'marvin-tigera-ssh-key')
+                    script {
+                        def status = sh (returnStatus: true, script: "./k8s_version.sh ${K8S_RELEASE} > k8s_version")
+                        if ( status == 1 ){
+                            currentBuild.result = "UNSTABLE"
+                            echo "Current build status: ${currentBuild.result}"
+                            return
+                        }
+                        env.TF_VAR_kubernetes_version = readFile('k8s_version').trim()
+                    }
+                }
+                script {
+                    currentBuild.description = """\
+                    K8S_RELEASE=${K8S_RELEASE}
+                    TF_VAR_kubernetes_version=${env.TF_VAR_kubernetes_version}
+                    BUILD_INFO=${env.BUILD_INFO}""".stripIndent()
                 }
             }
         }
