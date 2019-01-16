@@ -59,6 +59,12 @@
         "num_flows_started": {
             "type": "long"
         },
+        "http_requests_allowed_in": {
+            "type": "long"
+        },
+        "http_requests_denied_in": {
+            "type": "long"
+        },
         "packets_in": {
             "type": "long"
         },
