@@ -23,24 +23,28 @@ class RESTClient:
 
 
     def exec(self, method, path, filename):
-        with open(filename) as data:
-            response = self.session.request(method, self.base_url + path, data=data, headers=self.headers)
-            if response.status_code == 200:
-                print(method, path, "- 200 OK")
-            else:
-                # Check if the resource already exists
-                resource_exists = False
-                try:
-                    for cause in response.json()["error"]["root_cause"]:
-                        if cause["type"] == "resource_already_exists_exception":
-                            resource_exists = True
-                except (KeyError, ValueError, TypeError):
-                    pass
+        if filename is not "":
+            with open(filename) as data:
+                response = self.session.request(method, self.base_url + path, data=data, headers=self.headers)
+        else:
+            response = self.session.request(method, self.base_url + path, headers=self.headers)
 
-                if resource_exists:
-                    print(method, path, "- Already Exists!")
-                else:
-                    raise RESTError("%s %s - %s %s" % (method, path, response.status_code, response.text))
+        if response.status_code == 200:
+            print(method, path, "- 200 OK")
+        else:
+            # Check if the resource already exists
+            resource_exists = False
+            try:
+                for cause in response.json()["error"]["root_cause"]:
+                    if cause["type"] == "resource_already_exists_exception":
+                        resource_exists = True
+            except (KeyError, ValueError, TypeError):
+                pass
+
+            if resource_exists:
+                print(method, path, "- Already Exists!")
+            else:
+                raise RESTError("%s %s - %s %s" % (method, path, response.status_code, response.text))
 
 if __name__ == '__main__':
     if len(sys.argv) == 2 and sys.argv[1] == "--version":
@@ -55,6 +59,12 @@ if __name__ == '__main__':
     ca_cert = os.getenv("CA_CERT", None)
 
     elastic = RESTClient(elastic_url, user, password, ca_cert)
+
+    # Optionally, start the X-Pack trial (an XPack license is required for the ML jobs.)
+    install_trial = os.getenv("START_XPACK_TRIAL", "false").lower()
+    if install_trial in ["true", "enable", "yes", "on"]:
+        elastic.exec("POST", "_xpack/license/start_trial?acknowledge=true", "")
+
     # Kibana requires kbn-xsrf header to mitigate cross-site request forgery
     kibana = RESTClient(kibana_url, user, password, ca_cert, {"kbn-xsrf": "reporting"})
     with open("./config.yaml") as f:
