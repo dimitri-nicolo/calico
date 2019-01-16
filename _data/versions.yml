@@ -797,14 +797,14 @@ v2.3:
       version: 0.2.0
       url: ""
     kibana:
-      version: 6.4.1
+      version: 6.4.3
       url: ""
     elasticsearch:
-      version: 6.4.1
+      version: 6.4.3
       url: ""
     cloud-controllers:
       version: release-v2.3
-    intrusion-detection-job-installer:
+    elastic-tsee-installer:
       version: release-v2.3
 
 # The master release stream is used to generate the master version of the docs,
@@ -881,12 +881,12 @@ master:
       version: 0.2.0
       url: ""
     kibana:
-      version: 6.4.1
+      version: 6.4.3
       url: ""
     elasticsearch:
-      version: 6.4.1
+      version: 6.4.3
       url: ""
     cloud-controllers:
       version: master
-    intrusion-detection-job-installer:
+    elastic-tsee-installer:
       version: master

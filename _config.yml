@@ -42,7 +42,7 @@ imageNames:
   fluentd: tigera/fluentd
   es-proxy: tigera/es-proxy
   cloudControllers: tigera/cloud-controllers
-  intrusion-detection-job-installer: tigera/intrusion-detection-job-installer
+  elastic-tsee-installer: tigera/intrusion-detection-job-installer
 
 # List of files to exclude. These files won't get included in the deployed site.
 exclude:
