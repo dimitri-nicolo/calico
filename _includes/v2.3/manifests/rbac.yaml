@@ -166,6 +166,15 @@ rules:
       - get
       - list
       - watch
+{%- if include.typha == "true" %}
+  # Typha needs to be able to create tiers
+  - apiGroups: ["crd.projectcalico.org"]
+    resources:
+      - tiers
+    verbs:
+      - update
+      - create
+{%- endif %}
 {%- endif %}
 ---
 apiVersion: rbac.authorization.k8s.io/v1beta1
