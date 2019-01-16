@@ -27,6 +27,8 @@ This information should assist you in constructing queries.
 | `num_flows`           | long              | The number of flows aggregated into this entry during this export interval. |
 | `num_flows_completed` | long              | The number of flows that were completed during the export interval. |
 | `num_flows_started`   | long              | The number of flows that were started during the export interval. |
+| `http_requests_allowed_in` | long         | The number of allowed incoming HTTP requests during the export interval. Only [application layer policy](../../../getting-started/kubernetes/installation/app-layer-policy) enabled flows are counted. |
+| `http_requests_denied_in` | long         | The number of denied incoming HTTP requests during the export interval. Only [application layer policy](../../../getting-started/kubernetes/installation/app-layer-policy) enabled flows are counted. |
 | `packets_in`          | long              | Number of incoming packets since the last export. |
 | `packets_out`         | long              | Number of outgoing packets since the last export. |
 | `proto`               | keyword           | Protocol. |
