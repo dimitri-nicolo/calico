@@ -63,8 +63,8 @@ if __name__ == '__main__':
     # Optionally, start the X-Pack trial (an XPack license is required for the ML jobs.)
     install_trial = os.getenv("START_XPACK_TRIAL", "false").lower()
     if install_trial in ["true", "enable", "yes", "on"]:
-        elastic.exec("POST", "_xpack/license/start_trial?acknowledge=true")
-    
+        elastic.exec("POST", "_xpack/license/start_trial?acknowledge=true", "")
+
     # Kibana requires kbn-xsrf header to mitigate cross-site request forgery
     kibana = RESTClient(kibana_url, user, password, ca_cert, {"kbn-xsrf": "reporting"})
     with open("./config.yaml") as f:
