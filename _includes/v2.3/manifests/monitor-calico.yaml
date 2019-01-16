@@ -493,7 +493,7 @@ spec:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: intrusion-detection-job-installer
+  name: elastic-tsee-installer
   namespace: calico-monitoring
 spec:
   template:
@@ -501,7 +501,7 @@ spec:
       restartPolicy: OnFailure
       containers:
       - name: install
-        image: {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["intrusion-detection-job-installer"]}}:{{site.data.versions[page.version].first.components["intrusion-detection-job-installer"].version}}
+        image: {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["elastic-tsee-installer"]}}:{{site.data.versions[page.version].first.components["elastic-tsee-installer"].version}}
         env:
 {%- if include.secure_es == "true" %}
           - name: ELASTIC_HOST
@@ -551,11 +551,13 @@ spec:
           - name: KIBANA_HOST
             value: kibana-tigera-elasticsearch.calico-monitoring.svc.cluster.local 
           - name: KIBANA_PORT
-            value: "5601" 
+            value: "80" 
           - name: ELASTIC_SCHEME
             value: "http" 
           - name: KIBANA_SCHEME
             value: "http"
+          - name: START_XPACK_TRIAL
+            value: "true"
 {%- endif %}
 ---
 
@@ -602,7 +604,7 @@ spec:
   - action: Allow
     protocol: TCP
     source:
-      selector: job-name == 'intrusion-detection-job-installer'
+      selector: job-name == 'elastic-tsee-installer'
     destination:
       ports: [9200]
 
@@ -677,7 +679,7 @@ spec:
     protocol: TCP
     source:
       # Allow the installer to access Kibana
-      selector: job-name == 'intrusion-detection-job-installer'
+      selector: job-name == 'elastic-tsee-installer'
     destination:
       ports: [5601]
 {%- endif %}

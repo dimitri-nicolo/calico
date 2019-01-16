@@ -804,7 +804,7 @@ v2.3:
       url: ""
     cloud-controllers:
       version: release-v2.3
-    intrusion-detection-job-installer:
+    elastic-tsee-installer:
       version: release-v2.3
 
 # The master release stream is used to generate the master version of the docs,
@@ -888,5 +888,5 @@ master:
       url: ""
     cloud-controllers:
       version: master
-    intrusion-detection-job-installer:
+    elastic-tsee-installer:
       version: master
