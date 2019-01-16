@@ -13,15 +13,13 @@
         "detector_description": "Unexpected IP connection for a pod within a replica set",
         "function": "rare",
         "by_field_name": "dest_ip",
-        "over_field_name": "source_name",
         "partition_field_name": "namespace_source_name_aggr",
         "detector_index": 0
       }
     ],
     "influencers": [
       "source_name",
-      "source_name_aggr",
-      "source_namespace"
+      "dest_ip"
     ]
   },
   "analysis_limits": {

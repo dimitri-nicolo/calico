@@ -7,8 +7,17 @@
   ],
   "types": [],
   "query": {
-    "match_all": {
-      "boost": 1
+    "bool": {
+      "must": [
+        {
+          "term": {"dest_name": "-"}
+        }
+      ],
+      "must_not": [
+	{
+          "term": {"source_name": "-"}
+	}
+      ]
     }
   },
   "script_fields": {
