@@ -797,10 +797,10 @@ v2.3:
       version: 0.2.0
       url: ""
     kibana:
-      version: 6.4.1
+      version: 6.4.3
       url: ""
     elasticsearch:
-      version: 6.4.1
+      version: 6.4.3
       url: ""
     cloud-controllers:
       version: release-v2.3
@@ -881,10 +881,10 @@ master:
       version: 0.2.0
       url: ""
     kibana:
-      version: 6.4.1
+      version: 6.4.3
       url: ""
     elasticsearch:
-      version: 6.4.1
+      version: 6.4.3
       url: ""
     cloud-controllers:
       version: master

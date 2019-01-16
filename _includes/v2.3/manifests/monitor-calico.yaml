@@ -12,8 +12,8 @@ monitor-calico.yaml acccepts the following include flags:
 #   quay.io/prometheus/prometheus:{{site.data.versions[page.version].first.components["prometheus"].version}}
 #   quay.io/prometheus/alertmanager:{{site.data.versions[page.version].first.components["alertmanager"].version}}
 {%- if include.elasticsearch == "operator" %}
-#   docker.elastic.co/elasticsearch/elasticsearch-oss:{{site.data.versions[page.version].first.components["elasticsearch"].version}}
-#   docker.elastic.co/kibana/kibana-oss:{{site.data.versions[page.version].first.components["kibana"].version}}
+#   docker.elastic.co/elasticsearch/elasticsearch:{{site.data.versions[page.version].first.components["elasticsearch"].version}}
+#   docker.elastic.co/kibana/kibana:{{site.data.versions[page.version].first.components["kibana"].version}}
 {%- endif %}
 #
 # This manifest installs the Service which gets traffic to the calico-node metrics
@@ -327,8 +327,8 @@ spec:
     # If necessary, uncomment the line below and edit key:value pair with appropriate value for your environment.
     #node.role: infrastructure
   kibana:
-    image: docker.elastic.co/kibana/kibana-oss:{{site.data.versions[page.version].first.components["kibana"].version}}
-  elastic-search-image: docker.elastic.co/elasticsearch/elasticsearch-oss:{{site.data.versions[page.version].first.components["elasticsearch"].version}}
+    image: docker.elastic.co/kibana/kibana:{{site.data.versions[page.version].first.components["kibana"].version}}
+  elastic-search-image: docker.elastic.co/elasticsearch/elasticsearch:{{site.data.versions[page.version].first.components["elasticsearch"].version}}
   # For production deployments, modify the number of elasticsearch replicas accordingly
   client-node-replicas: 1
   master-node-replicas: 1
