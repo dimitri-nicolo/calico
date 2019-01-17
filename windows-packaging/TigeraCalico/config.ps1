@@ -33,6 +33,10 @@ $env:ETCD_CA_CERT_FILE = ""
 # The NODENAME variable should be set to match the Kubernetes Node name of this host.
 # The default uses this node's hostname (which is the same as kubelet).
 $env:NODENAME = $(hostname).ToLower()
+# Similarly, CALICO_K8S_NODE_REF should be set to the Kubernetes Node name.  When using etcd,
+# the Calico kube-controllers pod will clean up Calico node objects if the corresponding Kubernetes Node is
+# cleaned up.
+$env:CALICO_K8S_NODE_REF = $env:NODENAME
 
 # BGP configuration.
 
