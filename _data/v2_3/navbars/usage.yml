@@ -37,7 +37,6 @@ toc:
     path: /usage/encrypt-comms
   - title: Securing endpoints with Tigera Secure EE policy
     path: /usage/policy/secure-metrics
-
 - title: Logs
   section:
   - title: Elasticsearch
@@ -84,6 +83,22 @@ toc:
     path: /usage/federation/aws
   - title: Querying remote clusters with calicoq
     path: /usage/federation/calicoq
+- title: AWS security group integration
+  section:
+  - title: Overview
+    path: /usage/aws-security-group-integration/
+  - title: Interconnecting your VPC and cluster
+    path: /usage/aws-security-group-integration/interconnection
+  - title: Enabling pods to access VPC members
+    path: /usage/aws-security-group-integration/pod-access
+  - title: Enabling VPC members to access pods
+    path: /usage/aws-security-group-integration/vpc-member-access
+  - title: Enabling access to AWS metadata 
+    path: /usage/aws-security-group-integration/metadata-access
+  - title: Managing the tiers associated with security group integration
+    path: /usage/aws-security-group-integration/tier-management
+  - title: Host endpoints
+    path: /usage/aws-security-group-integration/host-endpoints
 - title: Running cnx-node with an init system
   path: /usage/configuration/as-service
 - title: Configuring BGP Peers
@@ -108,8 +123,6 @@ toc:
   path: /usage/decommissioning-a-node
 - title: Configuring Conntrack
   path: /usage/configuration/conntrack
-- title: AWS security group integration
-  path: /usage/aws-security-group-integration
 - title: Troubleshooting
   path: /usage/troubleshooting/
 - title: Frequently Asked Questions
