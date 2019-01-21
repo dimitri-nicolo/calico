@@ -417,9 +417,9 @@ spec:
           env:
             - name: ELASTIC_INDEX_SUFFIX
               valueFrom:
-              configMapKeyRef:
-                name: tigera-cnx-manager-config
-                key: tigera.cnx-manager.cluster-name
+                configMapKeyRef:
+                  name: tigera-cnx-manager-config
+                  key: tigera.cnx-manager.cluster-name
             - name: FLOW_LOG_FILE
               value: /var/log/calico/flowlogs/flows.log
 {%- if include.secure_es == "true" %}
