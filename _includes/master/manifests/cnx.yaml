@@ -74,6 +74,9 @@ data:
   tigera.cnx-manager.error-tracking: "false"
   # Enable ALP support in the UI
   tigera.cnx-manager.alp-support: "false"
+  # The name of the cluster.  This field is used as part of the index name of Elasticsearch logs, and is intended
+  # to allow multiple clusters to share one Elasticsearch cluster.
+  tigera.cnx-manager.cluster-name: "cluster"
 
 {%- if include.platform != "eks" %}
 ---
@@ -640,6 +643,11 @@ spec:
               configMapKeyRef:
                 name: tigera-cnx-manager-config
                 key: tigera.cnx-manager.alp-support
+          - name: CNX_CLUSTER_NAME
+            valueFrom:
+              configMapKeyRef:
+                name: tigera-cnx-manager-config
+                key: tigera.cnx-manager.cluster-name
 {%- if include.datastore == "etcd" %}
           - name: CNX_WEB_OAUTH_AUTHORITY
             valueFrom:
