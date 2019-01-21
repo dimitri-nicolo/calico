@@ -19,6 +19,19 @@ a combination of NetworkPolicy and Kubernetes RBAC.
   based on the API path.  The [sample RBAC configuration](../../reference/cnx/rbac-tiered-policies)
   grants the required access for web interface users.
 
+## Customizing the index names when sharing Elasticsearch clusters
+
+The index names include a configurable cluster name.  The default value is `cluster`.  This should be customized
+if you're using multiple Kubernetes or OpenShift clusters with a single shared Elasticsearch cluster.
+
+The index names used are:
+- `tigera_secure_ee_flows.<cluster name>.<date>`
+- `tigera_secure_ee_audit_ee.<cluster name>.<date>`
+- `tigera_secure_ee_audit_kube.<cluster name>.<date>`
+
+The cluster name can be changed by editing the `tigera.cnx-manager.cluster-name` field in the `tigera-cnx-manager-config` ConfigMap.
+This ConfigMap can be found in the `monitor-calico.yaml` manifest. 
+
 ## Configuring the operator created cluster
 
 An `elasticsearchcluster` resource is defined in [monitor-calico.yaml](../../getting-started/kubernetes/installation/hosted/cnx/1.7/monitor-calico.yaml).
