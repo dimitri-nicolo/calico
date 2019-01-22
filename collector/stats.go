@@ -289,9 +289,10 @@ func (d *Data) String() string {
 	}
 	return fmt.Sprintf(
 		"tuple={%v}, srcEp={%v} dstEp={%v} connTrackCtr={packets=%v bytes=%v}, "+
-			"connTrackCtrReverse={packets=%v bytes=%v}, updatedAt=%v ingressRuleTrace={%v} egressRuleTrace={%v}",
+			"connTrackCtrReverse={packets=%v bytes=%v}, httpPkts={allowed=%v, denied=%v}, updatedAt=%v ingressRuleTrace={%v} egressRuleTrace={%v}",
 		&(d.Tuple), srcName, dstName, d.conntrackPktsCtr.Absolute(), d.conntrackBytesCtr.Absolute(),
-		d.conntrackPktsCtrReverse.Absolute(), d.conntrackBytesCtrReverse.Absolute(), d.updatedAt, d.IngressRuleTrace, d.EgressRuleTrace)
+		d.conntrackPktsCtrReverse.Absolute(), d.conntrackBytesCtrReverse.Absolute(), d.httpReqAllowedCtr.Delta(),
+		d.httpReqDeniedCtr.Delta(), d.updatedAt, d.IngressRuleTrace, d.EgressRuleTrace)
 }
 
 func (d *Data) touch() {
