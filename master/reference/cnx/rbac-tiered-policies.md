@@ -9,7 +9,7 @@ access to {{site.prodname}} resources using Kubernetes RBAC
 Authorization APIs.
 
 If you are upgrading from a pre-v2.3 release of {{site.prodname}}, or you want to maintain the
-pre-v2.3 RBAC behavior, please refer to the [Upgrading from a pre-v2.3 release of {{site.prodname}}](/{{page.version}}/getting-started/kubernetes/upgrade-cnx#)
+pre-v2.3 RBAC behavior, please refer to the [Upgrading from a pre-v2.3 release of {{site.prodname}}](/{{page.version}}/getting-started/kubernetes/upgrade/upgrade-tsee#upgrading-pre23)
 guide.
 
 ### Policy and tier RBAC
