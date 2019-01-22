@@ -108,6 +108,8 @@ equipped with {{site.prodname}}.
 
 **[Experiment with non-admin users and the {{site.prodname}} manager](/{{page.version}}/reference/cnx/rbac-tiered-policies)**
 
+**[Enable audit logs for Kubernetes `NetworkPolicy` and send them to Elasticsearch](/{{page.version}}/usage/logs/elastic/ee-audit#enabling-auditing-for-other-resources)**
+
 **[Secure a simple application using the Kubernetes `NetworkPolicy` API](tutorials/simple-policy)**
 
 **[Control ingress and egress traffic using the Kubernetes `NetworkPolicy` API](tutorials/advanced-policy)**
