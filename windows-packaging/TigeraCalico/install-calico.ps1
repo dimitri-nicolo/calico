@@ -1,5 +1,16 @@
 # Copyright (c) 2018 Tigera, Inc. All rights reserved.
 
+# Force powershell to run in 64-bit mode .
+if ($env:PROCESSOR_ARCHITEW6432 -eq "AMD64") {
+    write-warning "This script requires PowerShell 64-bit, relaunching..."
+    if ($myInvocation.Line) {
+        &"$env:SystemRoot\sysnative\windowspowershell\v1.0\powershell.exe" -NonInteractive -NoProfile $myInvocation.Line
+    }else{
+        &"$env:SystemRoot\sysnative\windowspowershell\v1.0\powershell.exe" -NonInteractive -NoProfile -file "$($myInvocation.InvocationName)" $args
+    }
+    exit $lastexitcode
+}
+
 ipmo "$PSScriptRoot\libs\calico\calico.psm1" -Force
 
 . $PSScriptRoot\config.ps1
