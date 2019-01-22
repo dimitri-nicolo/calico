@@ -29,8 +29,14 @@ The index names used are:
 - `tigera_secure_ee_audit_ee.<cluster name>.<date>`
 - `tigera_secure_ee_audit_kube.<cluster name>.<date>`
 
-The cluster name can be changed by editing the `tigera.cnx-manager.cluster-name` field in the `tigera-cnx-manager-config` ConfigMap.
-This ConfigMap can be found in the `monitor-calico.yaml` manifest. 
+Edit the cluster name by following this procedure.
+
+1. Edit the `tigera.cnx-manager.cluster-name` field in the `tigera-cnx-manager-config` ConfigMap.
+   This ConfigMap can be found in the `cnx-[etcd|kdd].yaml` manifest.
+
+1. Edit the `ELASTIC_INDEX_SUFFIX` field in the `tigera-fluentd-node` DaemonSet.  This DaemonSet
+   can be found in the `monitor-calico.yaml` manifest.  The two values must match for
+   {{site.prodname}} Manager to be able to read the correct logs from Elasticsearch.
 
 ## Configuring the operator created cluster
 

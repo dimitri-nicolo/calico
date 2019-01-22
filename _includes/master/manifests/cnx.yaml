@@ -75,7 +75,8 @@ data:
   # Enable ALP support in the UI
   tigera.cnx-manager.alp-support: "false"
   # The name of the cluster.  This field is used as part of the index name of Elasticsearch logs, and is intended
-  # to allow multiple clusters to share one Elasticsearch cluster.
+  # to allow multiple clusters to share one Elasticsearch cluster.  The value of this field must match that of 
+  # ELASTIC_INDEX_SUFFIX in tigera-fluentd-node.
   tigera.cnx-manager.cluster-name: "cluster"
 
 {%- if include.platform != "eks" %}
