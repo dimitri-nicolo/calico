@@ -1,6 +1,7 @@
 # Copyright (c) 2018 Tigera, Inc. All rights reserved.
 
-$powerShellPath = "$PsHome\powershell.exe"
+# We require the 64-bit version of Powershell, which should live at the following path.
+$powerShellPath = "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe"
 $baseDir = "$PSScriptRoot\..\.."
 $NSSMPath = "$baseDir\nssm-2.24\win64\nssm.exe"
 
