@@ -99,6 +99,18 @@ toc:
     path: /usage/aws-security-group-integration/tier-management
   - title: Host endpoints
     path: /usage/aws-security-group-integration/host-endpoints
+- title: Intrusion detection
+  section:
+  - title: Overview
+    path: /usage/intrusion-detection/
+  - title: Enabling intrusion detection
+    path: /usage/intrusion-detection/enabling
+  - title: Viewing anomalies
+    path: /usage/intrusion-detection/viewing-anomalies
+  - title: Job descriptions
+    path: /usage/intrusion-detection/job-descriptions
+  - title: Customizing
+    path: /usage/intrusion-detection/customizing
 - title: Running cnx-node with an init system
   path: /usage/configuration/as-service
 - title: Configuring BGP Peers
