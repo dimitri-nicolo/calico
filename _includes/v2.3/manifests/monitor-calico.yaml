@@ -622,6 +622,8 @@ spec:
   template:
     spec:
       restartPolicy: OnFailure
+      imagePullSecrets:
+        - name: cnx-pull-secret
       containers:
       - name: install
         image: {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["elastic-tsee-installer"]}}:{{site.data.versions[page.version].first.components["elastic-tsee-installer"].version}}
