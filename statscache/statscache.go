@@ -16,7 +16,10 @@ package statscache
 
 import (
 	"context"
+	"fmt"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // Tuple encapsulates the 5-tuple connection information.
@@ -28,10 +31,18 @@ type Tuple struct {
 	Protocol string
 }
 
+func (t Tuple) String() string {
+	return fmt.Sprintf("Stats(%s %s:%d to %s:%d)", t.Protocol, t.SrcIp, t.SrcPort, t.DstIp, t.DstPort)
+}
+
 // Values contains a set of statistic values that can be aggregated.
 type Values struct {
 	HTTPRequestsAllowed int64
 	HTTPRequestsDenied  int64
+}
+
+func (v Values) String() string {
+	return fmt.Sprintf("{DeltaHTTPReqAllowed: %d; DeltaHTTPReqDenied: %d}", v.HTTPRequestsAllowed, v.HTTPRequestsDenied)
 }
 
 func (v Values) add(v2 Values) Values {
@@ -45,6 +56,10 @@ func (v Values) add(v2 Values) Values {
 type DPStats struct {
 	Tuple  Tuple
 	Values Values
+}
+
+func (d DPStats) String() string {
+	return fmt.Sprintf("%v=%v", d.Tuple, d.Values)
 }
 
 // The statscache interface.
@@ -90,6 +105,7 @@ type statsCache struct {
 // run is the main loop that pulls stats from the dsStats channel and periodically reports aggregated
 // stats through the aggregated channel.
 func (s *statsCache) run(cxt context.Context, dpStats <-chan DPStats) {
+	log.Debug("Starting statistics consolidation and reporting")
 	flushStatsTicker := NewTicker(s.flushInterval)
 	defer flushStatsTicker.Stop()
 
@@ -108,6 +124,7 @@ func (s *statsCache) run(cxt context.Context, dpStats <-chan DPStats) {
 // add adds the supplied DPStats to the current cache, either creating a new entry, or aggregating
 // into the existing entry.
 func (s *statsCache) add(d DPStats) {
+	log.Debugf("Caching statistic: %v", d)
 	if v, ok := s.stats[d.Tuple]; ok {
 		// Entry already exists in cache, increment stats in existing entry.
 		s.stats[d.Tuple] = v.add(d.Values)
@@ -119,6 +136,7 @@ func (s *statsCache) add(d DPStats) {
 
 // flush sends the current aggregated cache, and creates a new empty cache.
 func (s *statsCache) flush() {
+	log.Debug("Reporting cached statistics and flushing cache")
 	if len(s.stats) == 0 {
 		// No stats, so nothing to report.
 		return
