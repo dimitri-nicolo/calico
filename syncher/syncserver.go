@@ -31,8 +31,11 @@ import (
 )
 
 const (
-	DefaultStatsFlushInterval = 30 * time.Second
-	PolicySyncRetryTime       = 500 * time.Millisecond
+	// The stats reporting and flush interval. Currently set to half the hardcoded expiration time of cache entries in
+	// the Felix stats collector component.
+	DefaultStatsFlushInterval = 5 * time.Second
+
+	PolicySyncRetryTime = 500 * time.Millisecond
 )
 
 type syncClient struct {
@@ -180,6 +183,8 @@ func (s *syncClient) sendStats(cxt context.Context, client proto.PolicySyncClien
 
 // report converts the statscache formatted stats and reports it as a proto.DataplaneStats to Felix.
 func (s *syncClient) report(cxt context.Context, client proto.PolicySyncClient, t statscache.Tuple, v statscache.Values) error {
+	log.Debugf("Reporting statistic to Felix: %s=%s", t, v)
+
 	d := &proto.DataplaneStats{
 		SrcIp:    t.SrcIp,
 		DstIp:    t.DstIp,
@@ -297,9 +302,11 @@ func getBoolFromConfig(m map[string]string, name string, def bool) bool {
 	b := def
 	if v, ok := m[name]; ok {
 		log.Debugf("%s is present in config", name)
-		if p, err := strconv.ParseBool(v); err != nil {
+		if p, err := strconv.ParseBool(v); err == nil {
 			log.Debugf("Parsed value from Felix config: %s=%v", name, p)
 			b = p
+		} else {
+			log.Errorf("Unknown %s boolean value: %s", name, v)
 		}
 	}
 	return b

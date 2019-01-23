@@ -152,13 +152,13 @@ func matchLabels(selectorStr string, labels map[string]string) bool {
 	log.WithFields(log.Fields{
 		"selector": selectorStr,
 		"labels":   labels,
-	}).Debug("Matching labels.")
+	}).Debug("Matching labels")
 	sel, err := selector.Parse(selectorStr)
 	if err != nil {
 		log.Warnf("Could not parse label selector %v, %v", selectorStr, err)
 		return false
 	}
-	log.Debugf("Parsed selector.", sel)
+	log.Debugf("Parsed selector: %v", sel)
 	return sel.Evaluate(labels)
 }
 
