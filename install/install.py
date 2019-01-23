@@ -41,6 +41,13 @@ class RESTClient:
             except (KeyError, ValueError, TypeError):
                 pass
 
+            # X-Pack trial license variant of "already exists"
+            try:
+                if response.json()["error_message"] == "Operation failed: Trial was already activated.":
+                    resource_exists = True
+            except (KeyError, ValueError, TypeError):
+                pass
+
             if resource_exists:
                 print(method, path, "- Already Exists!")
             else:
