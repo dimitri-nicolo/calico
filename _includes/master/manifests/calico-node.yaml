@@ -132,6 +132,7 @@ spec:
             - mountPath: /calico-secrets
               name: etcd-certs
 {%- endif %}
+{%- endif %}
 {%- if include.app_layer_policy == "true" or include.app_layer_policy == "disabled" %}
         # Adds a Flex Volume Driver that creates a per-pod Unix Domain Socket to allow Dikastes
         # to communicate with Felix over the Policy Sync API.
@@ -141,8 +142,6 @@ spec:
           volumeMounts:
           - name: flexvol-driver-host
             mountPath: /host/driver
-{%- endif %}
-
 {%- endif %}
       containers:
         # Runs {{site.nodecontainer}} container on each Kubernetes node.  This
