@@ -29,14 +29,26 @@ The index names used are:
 - `tigera_secure_ee_audit_ee.<cluster name>.<date>`
 - `tigera_secure_ee_audit_kube.<cluster name>.<date>`
 
-Edit the cluster name by following this procedure.
+Edit the cluster name by following this procedure.  The two values must match for
+   {{site.prodname}} Manager to be able to read the correct logs from Elasticsearch.
 
 1. Edit the `tigera.cnx-manager.cluster-name` field in the `tigera-cnx-manager-config` ConfigMap.
-   This ConfigMap can be found in the `cnx-[etcd|kdd].yaml` manifest.
+   This ConfigMap can be found in `cnx-[etcd|kdd].yaml`.
 
-1. Edit the `ELASTIC_INDEX_SUFFIX` field in the `tigera-fluentd-node` DaemonSet.  This DaemonSet
-   can be found in the `monitor-calico.yaml` manifest.  The two values must match for
-   {{site.prodname}} Manager to be able to read the correct logs from Elasticsearch.
+1. Edit the `tigera.elasticsearch.cluster-name` field in `tigera-es-config` ConfigMap.  This ConfigMap
+   can be found in the `monitor-calico.yaml`.
+
+## Configuring retention periods for Elasticsearch logs
+
+{{site.prodname}} includes a [Curator](https://www.elastic.co/guide/en/elasticsearch/client/curator/current/about.html)
+deployment that deletes old indices.  By default flow logs are removed after 7 days,
+and audit logs after 365 days.
+
+These time periods can be configured by editing the `tigera-es-config` ConfigMap,
+found in `monitor-calico.yaml`.
+
+If you don't wish to run Curator, you can delete the `tigera-es-curator` Deployment
+from `monitor-calico.yaml`.
 
 ## Configuring the operator created cluster
 

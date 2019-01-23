@@ -43,6 +43,7 @@ imageNames:
   es-proxy: tigera/es-proxy
   cloudControllers: tigera/cloud-controllers
   elastic-tsee-installer: tigera/intrusion-detection-job-installer
+  es-curator: tigera/es-curator
 
 # List of files to exclude. These files won't get included in the deployed site.
 exclude:

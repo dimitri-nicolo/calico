@@ -4,12 +4,21 @@
   {% assign cli = "oc" %}
 {% endif %}
 
-1. Set up secret with username and password for `Fluentd` to authenticate with Elasticsearch.
+1. Set up secret with username and password for Fluentd to authenticate with Elasticsearch.
    Replace `<fluentd-elasticsearch-password>` with the password.
    ```
    {{cli}} create secret generic elastic-fluentd-user \
    --from-literal=username=tigera-ee-fluentd \
    --from-literal=password=<fluentd-elasticsearch-password> \
+   -n calico-monitoring
+   ```
+
+1. Set up secret with username and password for Curator to authenticate with Elasticsearch.
+   Replace `<curator-elasticsearch-password>` with the password.
+   ```
+   {{cli}} create secret generic elastic-curator-user \
+   --from-literal=username=tigera-ee-curator \
+   --from-literal=password=<curator-elasticsearch-password> \
    -n calico-monitoring
    ```
 

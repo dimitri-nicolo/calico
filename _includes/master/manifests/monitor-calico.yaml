@@ -15,7 +15,25 @@ monitor-calico.yaml acccepts the following include flags:
 #   docker.elastic.co/elasticsearch/elasticsearch:{{site.data.versions[page.version].first.components["elasticsearch"].version}}
 #   docker.elastic.co/kibana/kibana:{{site.data.versions[page.version].first.components["kibana"].version}}
 {%- endif %}
-#
+
+# This ConfigMap contains customizations for Elasticsearch and Curator.
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: tigera-es-config
+  namespace: calico-monitoring
+data:
+  # The name of the cluster.  This field is used as part of the index name of Elasticsearch logs, and is intended
+  # to allow multiple clusters to share one Elasticsearch cluster.  The value of this field must match that of 
+  # tigera.cnx-manager.cluster-name in tigera-cnx-manager-config.
+  tigera.elasticsearch.cluster-name: "cluster"
+  # The retention period for flow logs, in days.
+  tigera.elasticsearch.flow-retention: "7"
+  # The retention period for audit logs, in days.
+  tigera.elasticsearch.audit-retention: "366"
+
+---
+
 # This manifest installs the Service which gets traffic to the calico-node metrics
 # reporting endpoint.
 apiVersion: v1
@@ -415,11 +433,11 @@ spec:
         - name: fluentd
           image: {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["fluentd"]}}:{{site.data.versions[page.version].first.components["fluentd"].version}}
           env:
-            # The name of the cluster.  This field is used as part of the index name of Elasticsearch logs, and is intended
-            # to allow multiple clusters to share one Elasticsearch cluster.  The value of this field must match that of 
-            # tigera.cnx-manager.cluster-name in tigera-cnx-manager-config.
             - name: ELASTIC_INDEX_SUFFIX
-              value: cluster
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-es-config
+                  key: tigera.elasticsearch.cluster-name
             - name: FLOW_LOG_FILE
               value: /var/log/calico/flowlogs/flows.log
 {%- if include.secure_es == "true" %}
@@ -492,6 +510,106 @@ spec:
         - name: elastic-ca-cert-volume
           configMap:
             name: elastic-ca-config
+{%- endif %}
+---
+
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: tigera-es-curator
+  namespace: calico-monitoring
+  labels:
+    k8s-app: es-curator
+spec:
+  schedule: "@daily"
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          name: tigera-es-curator
+          namespace: calico-monitoring
+          labels:
+            k8s-app: es-curator
+        spec:
+          restartPolicy: OnFailure
+          nodeSelector:
+            beta.kubernetes.io/os: linux
+          tolerations:
+            - key: node-role.kubernetes.io/master
+              effect: NoSchedule
+          imagePullSecrets:
+            - name: cnx-pull-secret      
+          containers:
+            - name: tigera-es-curator
+              image: {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["es-curator"]}}:{{site.data.versions[page.version].first.components["es-curator"].version}}
+              env:
+                - name: ELASTIC_INDEX_SUFFIX
+                  valueFrom:
+                    configMapKeyRef:
+                      name: tigera-es-config
+                      key: tigera.elasticsearch.cluster-name
+                - name: EE_FLOWS_INDEX_RETENTION_PERIOD
+                  valueFrom:
+                    configMapKeyRef:
+                      name: tigera-es-config
+                      key: tigera.elasticsearch.flow-retention
+                - name: EE_AUDIT_INDEX_RETENTION_PERIOD
+                  valueFrom:
+                    configMapKeyRef:
+                      name: tigera-es-config
+                      key: tigera.elasticsearch.audit-retention
+{%- if include.secure_es == "true" %}
+                - name: ELASTIC_HOST
+                  valueFrom:
+                    configMapKeyRef:
+                      name: tigera-es-proxy
+                      key: elasticsearch.backend.host
+                - name: ELASTIC_PORT
+                  valueFrom:
+                    configMapKeyRef:
+                      name: tigera-es-proxy
+                      key: elasticsearch.backend.port
+                - name: ELASTIC_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: elastic-curator-user
+                      key: username
+                - name: ELASTIC_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: elastic-curator-user
+                      key: password
+                - name: ELASTIC_SSL_VERIFY
+                  value: "true"
+                - name: ES_CURATOR_BACKEND_CERT
+                  value: /etc/curator/elastic/ca.pem
+{%- else %}
+                - name: ELASTIC_HOST
+                  value: elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local
+                - name: ELASTIC_PORT
+                  value: "9200"
+                - name: ELASTIC_SSL_VERIFY
+                  value: "false"
+{%- endif %}
+{%- if include.secure_es == "true" %}
+              volumeMounts:
+                - name: elastic-ca-cert-volume
+                  mountPath: /etc/curator/elastic
+{%- endif %}
+              livenessProbe:
+                exec:
+                  command:
+                    - sh
+                    - -c
+                    - /usr/bin/curator --config /curator/curator_config.yaml --dry-run /curator/curator_action.yaml
+                initialDelaySeconds: 60
+                periodSeconds: 60
+{%- if include.secure_es == "true" %}
+          volumes:
+            # Should be created during installation process.
+            - name: elastic-ca-cert-volume
+              configMap:
+                name: elastic-ca-config
 {%- endif %}
 ---
 
@@ -610,6 +728,12 @@ spec:
     protocol: TCP
     source:
       selector: job-name == 'elastic-tsee-installer'
+    destination:
+      ports: [9200]
+  - action: Allow
+    protocol: TCP
+    source:
+      selector: k8s-app == 'es-curator'
     destination:
       ports: [9200]
 

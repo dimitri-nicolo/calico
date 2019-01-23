@@ -806,6 +806,8 @@ v2.3:
       version: release-v2.3
     elastic-tsee-installer:
       version: release-v2.3
+    es-curator:
+      version: release-v2.3
 
 # The master release stream is used to generate the master version of the docs,
 # as well as for builds of `calico/node:master` via CI.  Submit PRs to update the
@@ -889,4 +891,6 @@ master:
     cloud-controllers:
       version: master
     elastic-tsee-installer:
+      version: master
+    es-curator:
       version: master
