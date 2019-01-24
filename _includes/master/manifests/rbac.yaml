@@ -77,7 +77,7 @@ rules:
       # Used to discover service IPs for advertisement.
       - watch
       - list
-{%- if include.datastore == "kdd" %}
+{%- if include.typha == "true" %}
       # Used to discover Typhas.
       - get
 {%- endif %}
