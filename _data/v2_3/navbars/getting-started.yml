@@ -50,8 +50,10 @@ toc:
       path: /getting-started/kubernetes/tutorials/app-layer-policy/
   - title: Troubleshooting / FAQ
     path: /getting-started/kubernetes/troubleshooting
-  - title: Upgrade to Tigera Secure EE
-    path: /getting-started/kubernetes/upgrade-cnx
+  - title: Upgrade from an earlier release to Tigera Secure EE
+    path: /getting-started/kubernetes/upgrade/upgrade-tsee
+  - title: Upgrade from Calico to Tigera Secure EE
+    path: /getting-started/kubernetes/upgrade/upgrade-to-tsee
 
 - title: OpenShift
   section:

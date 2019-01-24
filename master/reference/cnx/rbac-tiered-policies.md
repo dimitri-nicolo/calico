@@ -9,8 +9,8 @@ access to {{site.prodname}} resources using Kubernetes RBAC
 Authorization APIs.
 
 If you are upgrading from a pre-v2.3 release of {{site.prodname}}, or you want to maintain the
-pre-v2.3 RBAC behavior, please refer to the [Upgrading from a pre-v2.3 {{site.prodname}} release](#upgrading-pre23)
-section at the end of this document.
+pre-v2.3 RBAC behavior, please refer to the [Upgrading from a pre-v2.3 release of {{site.prodname}}](/{{page.version}}/getting-started/kubernetes/upgrade/upgrade-tsee#upgrading-pre23)
+guide.
 
 ### Policy and tier RBAC
 
@@ -131,14 +131,14 @@ up RBAC for your users according to your specific security requirements.
 
 ```
 # Users:
-- jane (non-admin)
+- john (non-admin)
 - kubernetes-admin (admin)
 ```
 
-User 'jane' is forbidden from reading policies in any tier (default, and
+User 'john' is forbidden from reading policies in any tier (default, and
 net-sec in this case).
 
-When Jane issues the following command:
+When John issues the following command:
 
 ```
 kubectl get networkpolicies.p
@@ -147,11 +147,11 @@ kubectl get networkpolicies.p
 It returns:
 
 ```
-Error from server (Forbidden): networkpolicies.projectcalico.org is forbidden: User "jane" cannot list networkpolicies.projectcalico.org in tier "default" and namespace "default" (user cannot get tier)
+Error from server (Forbidden): networkpolicies.projectcalico.org is forbidden: User "john" cannot list networkpolicies.projectcalico.org in tier "default" and namespace "default" (user cannot get tier)
 ```
 {: .no-select-button}
 
-Similarly, when Jane issues this command:
+Similarly, when John issues this command:
 
 ```
 kubectl get networkpolicies.p -l projectcalico.org/tier==net-sec
@@ -160,7 +160,7 @@ kubectl get networkpolicies.p -l projectcalico.org/tier==net-sec
 It returns:
 
 ```
-Error from server (Forbidden): networkpolicies.projectcalico.org is forbidden: User "jane" cannot list networkpolicies.projectcalico.org in tier "net-sec" and namespace "default" (user cannot get tier)
+Error from server (Forbidden): networkpolicies.projectcalico.org is forbidden: User "john" cannot list networkpolicies.projectcalico.org in tier "net-sec" and namespace "default" (user cannot get tier)
 ```
 {: .no-select-button}
 
@@ -179,7 +179,7 @@ Error from server (Forbidden): networkpolicies.projectcalico.org is forbidden: U
   on for the purpose.
 {: .alert .alert-info}
 
-Give user 'jane' permission to read tier 'default':
+Give user 'john' permission to read tier 'default':
 
 ```yaml
 kind: ClusterRole
@@ -204,7 +204,7 @@ metadata:
   name: read-tier-default-global
 subjects:
 - kind: User
-  name: jane
+  name: john
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
@@ -212,7 +212,7 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
 ```
 
-With the above user jane is able to read NetworkPolicy resources in default tier
+With the above user john is able to read NetworkPolicy resources in default tier
 
 ```bash
 kubectl get networkpolicies.p
@@ -225,7 +225,7 @@ No resources found.
 ```
 {: .no-select-button}
 
-But Jane still cannot access net-sec.
+But John still cannot access net-sec.
 
 ```bash
 kubectl get networkpolicies.p -l projectcalico.org/tier==net-sec
@@ -234,14 +234,14 @@ kubectl get networkpolicies.p -l projectcalico.org/tier==net-sec
 This returns:
 
 ```
-Error from server (Forbidden): networkpolicies.projectcalico.org is forbidden: User "jane" cannot list networkpolicies.projectcalico.org in tier "net-sec" and namespace "default" (user cannot get tier)
+Error from server (Forbidden): networkpolicies.projectcalico.org is forbidden: User "john" cannot list networkpolicies.projectcalico.org in tier "net-sec" and namespace "default" (user cannot get tier)
 ```
 {: .no-select-button}
 
-To provide permission to user 'jane' to read policies under 'net-sec' tier,
+To provide permission to user 'john' to read policies under 'net-sec' tier,
 use the following clusterrole and clusterrolebindings.
 
-kubernetes-admin gives user 'jane' the permission to read tier 'net-sec':
+kubernetes-admin gives user 'john' the permission to read tier 'net-sec':
 
 ```yaml
 kind: ClusterRole
@@ -267,7 +267,7 @@ metadata:
   name: read-tier-net-sec-global
 subjects:
 - kind: User
-  name: jane
+  name: john
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
@@ -386,96 +386,3 @@ rules:
   verbs: ["*"]
 ```
 
-### <a name="upgrading-pre23"></a>Upgrading from a pre-v2.3 {{site.prodname}} release
-
-The RBAC configuration model has changed between the v2.2 and v2.3 releases of {{site.prodname}}.
-The instructions below indicate how to either maintain the pre-v2.3 behavior when installing or
-upgrading, or the one-time updates required to update existing user configuration to work with the new
-configuration model.
-
-#### Maintaining the pre-v2.3 behavior
-
-Pre-v2.3, the user would have the same access permissions for Calico GlobalNetworkPolicies and NetworkPolicies
-in any tier that they had `get` access to, and no access at all for policy in other tiers. It was not possible
-have different access permissions between two tiers (e.g. read only for one tier and full access for another).
-
-If you wish to maintain the pre-v2.3 configuration model, then modify `ClusterRole "ee-calico-tiered-policy-passthru"` in
-the `cnx.yaml` installation manifest to specify the resource kinds `tier.networkpolicies` and `tier.globalnetworkpolicies`.
-The resource definition should be:
-
-```yaml
-kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1beta1
-metadata:
-  name: ee-calico-tiered-policy-passthru
-rules:
-- apiGroups: ["projectcalico.org"]
-  resources: ["tier.networkpolicies","tier.globalnetworkpolicies"]
-  verbs: ["*"]
-```
-
-This modified ClusterRole bypasses the per-tier policy for the psuedo-resource kinds (`tier.networkpolicies` and
-`tier.globlalnetworkpolicies`). RBAC for the tiered policy is then configured as per pre-v2.3 using the real resource
-kinds `networkpolicies` and `globalnetworkpolicies`.
-
-#### Migrating to the new tier-granularity RBAC
-
-If you are upgrading from pre-v2.3 and you wish to start using the new per-tier granularity RBAC for Calico policy,
-perform the following migration steps:
-
-##### Before upgrading to {{site.prodname}} {{page.version}}
-
-To ensure continuity of RBAC permissions across upgrade, modify any `Role` and `ClusterRole` that refer to Calico
-policy resource types. Update the resources to include the real Calico resource type (`networkpolicies` and
-`globalnetworkpolicies`) *and* the associated pseudo-resource types (`tier.networkpolicies` and `tier.globalnetworkpolicies`).
-
-For example, the following ClusterRole:
-
-```yaml
-kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1beta1
-metadata:
-  name: read-only-globalnetworkpolicy
-rules:
-- apiGroups: ["projectcalico.org"]
-  resources: ["globalnetworkpolicies"]
-  verbs: ["get","list","watch"]
-```
-
-would have the `resources` updated to include both `globalnetworkpolicies` and `tier.globalnetworkpolicies`:
-
-```yaml
-kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1beta1
-metadata:
-  name: read-only-globalnetworkpolicy
-rules:
-- apiGroups: ["projectcalico.org"]
-  resources: ["globalnetworkpolicies","tier.globalnetworkpolicies"]
-  verbs: ["get","list","watch"]
-```
-
-##### Upgrading
-
-When upgrading, ensure the cnx.yaml manifest has the {{page.version}} default settings for the `ClusterRole "ee-calico-tiered-policy-passthru"`.
-This resource should have the `resources` set to include only the real resource kinds `networkpolicies` and `globalnetworkpolicies`.
-
-##### Post upgrade
-
-After upgrade, RBAC for Calico policy will be determined using the psuedo-resource kinds `tier.globalnetworkpolicies` and
-`tier.networkpolicies`. At this point it is possible to update your RBAC definitions to utilize the per-tier granularity
-that is available using the tier-wildcard format of the resource names (`<tiername>.*`).
-
-You may optionally remove the real resource kinds from the `Role` and `ClusterRole` definitions. For example, the previous
-`ClusterRole` example may be further updated as follows to remove the resource kind `globalnetworkpolicies`:
-
-```yaml
-kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1beta1
-metadata:
-  name: read-only-globalnetworkpolicy
-rules:
-- apiGroups: ["projectcalico.org"]
-  resources: ["tier.globalnetworkpolicies"]
-  verbs: ["get","list","watch"]
-```
