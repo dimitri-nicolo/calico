@@ -8,5 +8,8 @@ COPY rsyslog.conf /etc/rsyslog.conf
 
 RUN apk update && apk add rsyslog
 
+COPY liveness.sh /bin/
+RUN chmod +x /bin/liveness.sh
+
 # Hack to launch rsyslogd as well as haproxy in the same container.
 CMD ["sh", "-c", "/usr/sbin/rsyslogd && /usr/local/sbin/haproxy -W -db -f /usr/local/etc/haproxy/haproxy.cfg"]
