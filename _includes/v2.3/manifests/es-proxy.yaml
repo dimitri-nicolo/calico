@@ -85,11 +85,17 @@ spec:
               secretKeyRef:
                 name: tigera-es-proxy
                 key: backend.authHeader
+          - name: ELASTIC_INDEX_SUFFIX
+            valueFrom:
+              configMapKeyRef:
+                name: tigera-es-config
+                key: tigera.elasticsearch.cluster-name
         livenessProbe:
-          httpGet:
-            path: /tigera_secure_ee_flows/_search?size=0
-            port: 8443
-            scheme: HTTPS
+          exec:
+            command:
+              - sh
+              - -c
+              - /bin/liveness.sh
           initialDelaySeconds: 90
           periodSeconds: 10
         volumeMounts:
