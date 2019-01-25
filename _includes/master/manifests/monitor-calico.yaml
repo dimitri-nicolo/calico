@@ -473,6 +473,48 @@ spec:
             - name: FLUENTD_ES_SECURE
               value: "false"
 {%- endif %}
+            - name: AWS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: tigera-s3-archiving
+                  key: aws.key.id
+                  optional: true
+            - name: AWS_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: tigera-s3-archiving
+                  key: aws.secret.key
+                  optional: true
+            - name: S3_STORAGE
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-s3-archiving
+                  key: s3.storage
+                  optional: true
+            - name: S3_BUCKET_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-s3-archiving
+                  key: s3.bucket.name
+                  optional: true
+            - name: AWS_REGION
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-s3-archiving
+                  key: aws.region
+                  optional: true
+            - name: S3_BUCKET_PATH
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-s3-archiving
+                  key: s3.bucket.path
+                  optional: true
+            - name: S3_FLUSH_INTERVAL
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-s3-archiving
+                  key: s3.flush-interval
+                  optional: true
 {%- if include.orch == "openshift" %}
           securityContext:
             privileged: true
