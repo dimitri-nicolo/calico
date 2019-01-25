@@ -10,7 +10,7 @@ Tigera **highly** recommends that you customize copies of the Tigera-designed jo
 rather than modify them in place.  Modification in place may result in loss of those customizations if
 you reinstall or upgrade {{site.prodname}}.  To make a copy of a job:
 
-1. Access Kibana by clicking the "Flows" icon along the left side of {{site.prodname}} Manager, or by visting
+1. Access Kibana by clicking the "Kibana" icon along the left side of {{site.prodname}} Manager, or by visting
    the Kibana URL provided by your Elasticsearch admin.
 1. If necessary, log into Kibana. Note that your Kibana credentials may not be the same as you use to access
    {{site.prodname}}; if you don't know your Kibana credentials, contact your Elasticsearch admin.
