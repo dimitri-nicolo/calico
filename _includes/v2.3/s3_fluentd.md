@@ -1,3 +1,5 @@
+{% assign cli = "kubectl" %}
+
 In order to redirect the flow/audit logs to Amazon S3 cloud object storage(along with elastic search), the following configuration is needed:
 
 1. Create an AWS bucket that will store your logs, noting the bucket name, region, key,
@@ -10,9 +12,12 @@ In order to redirect the flow/audit logs to Amazon S3 cloud object storage(along
     --from-literal=s3.bucket.name=<S3-bucket-name> \
     --from-literal=aws.region=<S3-bucket region> \
     --from-literal=s3.bucket.path=<path-in-S3-bucket> \
-    --from=literal=s3.flush-interval="30" \
+    --from-literal=s3.flush-interval="30" \
     -n calico-monitoring
     ```
+
+    > **Note**: `s3.flush-interval` is in seconds.
+    {: .alert .alert-info}
 
     The [fluentd documentation for the S3 output plugin]( https://docs.fluentd.org/v0.12/articles/out_s3#parameters) has more information on these options.
 
@@ -26,6 +31,6 @@ In order to redirect the flow/audit logs to Amazon S3 cloud object storage(along
 
 1. Force a rolling update of fluentd by patching the DaemonSet.
    ```bash
-   kubectl patch daemonset -n calico-monitoring tigera-fluentd-node -p \
+   {{cli}} patch daemonset -n calico-monitoring tigera-fluentd-node -p \
      "{\"spec\":{\"template\":{\"metadata\":{\"labels\":{\"update-date\":\"`date +'%s'`\"}}}}}"
    ```
