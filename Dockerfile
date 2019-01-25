@@ -4,7 +4,7 @@ MAINTAINER spike@tigera.io
 RUN apk add --update --virtual .build-deps \
         sudo build-base ruby-dev \
  && sudo gem install \
-        fluent-plugin-elasticsearch \
+        fluent-plugin-elasticsearch fluent-plugin-s3 \
  && sudo gem sources --clear-all \
  && apk del .build-deps \
  && rm -rf /var/cache/apk/* \
