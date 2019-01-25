@@ -112,4 +112,3 @@ They may also be useful as a reference for defining alternative security configu
      }
    }
    ```
-
