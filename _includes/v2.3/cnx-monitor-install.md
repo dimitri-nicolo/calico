@@ -155,7 +155,7 @@
    Either edit the `tigera.cnx-manager.kibana-url` field in the `cnx.yaml` manifest and reapply, or use the following patch:
 
    ```bash
-   kubectl patch configmap -n kube-system tigera-cnx-manager-config 'data:\n  tigera.cnx-manager.kibana-url: "http://<insert-node-address-here>:30601"'
+   kubectl patch configmap -n kube-system tigera-cnx-manager-config -p $'data:\n  tigera.cnx-manager.kibana-url: http://<insert-node-address-here>:30601'
    ```
    
 {% if include.orch == "openshift" %}
