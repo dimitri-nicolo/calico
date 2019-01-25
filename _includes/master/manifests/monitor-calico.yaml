@@ -31,6 +31,24 @@ data:
   tigera.elasticsearch.flow-retention: "7"
   # The retention period for audit logs, in days.
   tigera.elasticsearch.audit-retention: "366"
+  # Whether to include the custom flow filters defined below in the fluentd config
+  # file.  Value must be "true" or "false".
+  tigera.elasticsearch.flow-filtering: "false"
+  # Flow filtering additional fluentd configuration.  This field is only used when
+  # tigera.elasticsearch-flow-filtering is set to "true".  The example here filters
+  # out all flows to/from the dev namespace.
+  tigera.elasticsearch.flow-filters.conf: |-
+    <filter flows>
+      @type grep
+      <exclude>
+        key source_namespace
+        pattern dev
+      </exclude>
+      <exclude>
+        key dest_namespace
+        pattern dev
+      </exclude>
+    </filter>
 
 ---
 
@@ -438,6 +456,11 @@ spec:
                 configMapKeyRef:
                   name: tigera-es-config
                   key: tigera.elasticsearch.cluster-name
+            - name: FLUENTD_FLOW_FILTERS
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-es-config
+                  key: tigera.elasticsearch.flow-filtering
             - name: FLOW_LOG_FILE
               value: /var/log/calico/flowlogs/flows.log
 {%- if include.secure_es == "true" %}
@@ -522,6 +545,9 @@ spec:
           volumeMounts:
             - name: var-log-calico
               mountPath: /var/log/calico
+            - name: es-config
+              mountPath: /etc/fluentd/flow-filters.conf
+              subPath: tigera.elasticsearch.flow-filters.conf
 {%- if include.secure_es == "true" %}
             - name: elastic-ca-cert-volume
               mountPath: /etc/fluentd/elastic
@@ -547,6 +573,9 @@ spec:
           hostPath:
             type: DirectoryOrCreate
             path: /var/log/calico
+        - name: es-config
+          configMap:
+            name: tigera-es-config
 {%- if include.secure_es == "true" %}
         # Should be created during installation process.
         - name: elastic-ca-cert-volume

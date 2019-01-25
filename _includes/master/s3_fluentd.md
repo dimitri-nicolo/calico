@@ -24,7 +24,7 @@ In order to redirect the flow/audit logs to Amazon S3 cloud object storage(along
     -n calico-monitoring
     ```
 
-1. Force a rolling update of fluentd by patching the deployment.
+1. Force a rolling update of fluentd by patching the DaemonSet.
    ```bash
    kubectl patch daemonset -n calico-monitoring tigera-fluentd-node -p \
      "{\"spec\":{\"template\":{\"metadata\":{\"labels\":{\"update-date\":\"`date +'%s'`\"}}}}}"
