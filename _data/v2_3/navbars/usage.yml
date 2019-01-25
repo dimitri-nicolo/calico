@@ -51,6 +51,8 @@ toc:
       path: /usage/logs/elastic/view
     - title: Configuring Elasticsearch
       path: /usage/logs/configure-elastic
+    - title: Archiving logs to S3
+      path: /usage/logs/elastic/s3-archive
   - title: iptables
     path: /usage/logs/iptables
   - title: Component
