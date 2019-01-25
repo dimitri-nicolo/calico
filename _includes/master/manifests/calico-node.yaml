@@ -138,7 +138,6 @@ spec:
         # to communicate with Felix over the Policy Sync API.
         - name: flexvol-driver
           image: {{site.imageNames["flexvol"]}}:{{site.data.versions[page.version].first.components["flexvol"].version}}
-          imagePullPolicy: Always
           volumeMounts:
           - name: flexvol-driver-host
             mountPath: /host/driver
@@ -283,15 +282,13 @@ spec:
             - name: FELIX_HEALTHENABLED
               value: "true"
 {% include {{page.version}}/extra-felix-config-12sp.yaml %}
-{%- if include.app_layer_policy == "true" %}
-            # Enable the Policy Sync API between Felix and Dikastes
+{%- if include.app_layer_policy == "true" or include.app_layer_policy == "disabled" %}
             - name: FELIX_POLICYSYNCPATHPREFIX
-              value: "/var/run/nodeagent"
-{%- elsif include.app_layer_policy == "disabled" %}
-            # To enable the Policy Sync API between Felix and Dikastes, set the value to
-            # "/var/run/nodeagent"
-            - name: FELIX_POLICYSYNCPATHPREFIX
-              value: ""
+              valueFrom:
+                configMapKeyRef:
+                  name: {{include.variant_name | downcase}}-config
+                  key: felix-policy-sync-path-prefix
+                  optional: true
 {%- endif %}
             # Sets Default Security Groups if tigera-aws-config exists
             - name: TIGERA_DEFAULT_SECURITY_GROUPS

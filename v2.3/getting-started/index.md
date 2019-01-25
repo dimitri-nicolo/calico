@@ -52,7 +52,7 @@ was Awesome Corp, the file would be named `awesome-corp-license.yaml`.
     </a>
   </div>
   <div class="col-xs-6 col-md-3">
-    <a href="/{{page.version}}/getting-started/openshift/installation" class="thumbnail">
+    <a href="/{{page.version}}/getting-started/openshift/installation/" class="thumbnail">
       <img src="{{site.baseurl}}/images/openshift-button.svg" alt="OpenShift" width="35%">
     </a>
   </div>

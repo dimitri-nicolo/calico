@@ -1,13 +1,14 @@
 {% comment %}
 calico-config.yaml acccepts the following include flags:
 
-| Name         | Accepted Values               |
-|--------------|-------------------------------|
-| datastore    | kdd, etcd                     |
-| typha        | true, false                   |
-| network      | calico, flannel, ecs, <unset> |
-| calico_ipam  | true, false                   |
-| variant_name | Calico, Canal                 |
+| Name             | Accepted Values               |
+|------------------|-------------------------------|
+| datastore        | kdd, etcd                     |
+| typha            | true, false                   |
+| network          | calico, flannel, ecs, <unset> |
+| calico_ipam      | true, false                   |
+| variant_name     | Calico, Canal                 |
+| app_layer_policy | true, disabled, false         |
 
 {% endcomment -%}
 # This ConfigMap is used to configure a self-hosted {{include.variant_name}} installation.
@@ -145,4 +146,12 @@ data:
         "Type": "vxlan"
       }
     }
+{%- endif %}
+{%- if include.app_layer_policy == "true" %}
+  # Enable the Policy Sync API between Felix and Dikastes
+  felix-policy-sync-path-prefix: "/var/run/nodeagent"
+{%- elsif include.app_layer_policy == "disabled" %}
+  # To enable the Policy Sync API between Felix and Dikastes, set the value to
+  # "/var/run/nodeagent"
+  felix-policy-sync-path-prefix: ""
 {%- endif %}
