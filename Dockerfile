@@ -13,7 +13,10 @@ RUN apk add --no-cache curl
 RUN apk add --no-cache jq
 
 ADD elastic_mapping_flows.template /fluentd/etc/elastic_mapping_flows.template
-COPY fluent_s3.conf /fluentd/etc/fluent_s3.conf
+COPY fluent_sources.conf /fluentd/etc/fluent_sources.conf
+COPY fluent_transforms.conf /fluentd/etc/fluent_transforms.conf
+COPY fluent_output.conf /fluentd/etc/fluent_output.conf
+COPY fluent_output_s3.conf /fluentd/etc/fluent_output_s3.conf
 
 ENV FLOW_LOG_FILE=/var/log/calico/flowlogs/flows.log
 ENV POS_DIR=/var/log/calico
