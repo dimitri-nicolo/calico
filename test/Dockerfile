@@ -1,0 +1,13 @@
+FROM python:3-alpine
+ARG version=dirty
+
+WORKDIR /usr/src/app
+
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY run-tests.py ./
+COPY config.json ./
+RUN echo $version > ./version.txt
+
+ENTRYPOINT ["python", "run-tests.py"]
