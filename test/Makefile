@@ -74,6 +74,7 @@ DOCKER_CONFIG ?= $(HOME)/.docker/config.json
 ###############################################################################
 .PHONY: clean
 clean:
+	rm -f config.json
 
 # Build the docker image.
 .PHONY: $(BUILD_IMAGE) $(BUILD_IMAGE)-$(ARCH)
@@ -85,9 +86,9 @@ sub-image-%:
 	$(MAKE) image ARCH=$*
 
 
-image: $(BUILD_IMAGE) config.json
+image: $(BUILD_IMAGE)
 $(BUILD_IMAGE): $(BUILD_IMAGE)-$(ARCH)
-$(BUILD_IMAGE)-$(ARCH):
+$(BUILD_IMAGE)-$(ARCH): config.json
 	docker build --pull -t $(BUILD_IMAGE):latest-$(ARCH) --build-arg version=$(BUILD_VERSION) --file ./Dockerfile.$(ARCH) .
 ifeq ($(ARCH),amd64)
 	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(BUILD_IMAGE):latest
