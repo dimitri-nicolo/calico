@@ -27,10 +27,12 @@ data:
   # to allow multiple clusters to share one Elasticsearch cluster.  The value of this field must match that of 
   # tigera.cnx-manager.cluster-name in tigera-cnx-manager-config.
   tigera.elasticsearch.cluster-name: "cluster"
-  # The retention period for flow logs, in days.
-  tigera.elasticsearch.flow-retention: "7"
-  # The retention period for audit logs, in days.
-  tigera.elasticsearch.audit-retention: "366"
+  # The retention period for flow logs, in days.  Logs written on a day that started at least this long ago are
+  # removed.  To keep logs for at least x days, use a retention period of x+1.
+  tigera.elasticsearch.flow-retention: "8"
+  # The retention period for audit logs, in days.  Logs written on a day that started at least this long ago are
+  # removed.  To keep logs for at least x days, use a retention period of x+1.
+  tigera.elasticsearch.audit-retention: "367"
   # Whether to include the custom flow filters defined below in the fluentd config
   # file.  Value must be "true" or "false".
   tigera.elasticsearch.flow-filtering: "false"
