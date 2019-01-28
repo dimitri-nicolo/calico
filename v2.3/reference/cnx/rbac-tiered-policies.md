@@ -105,27 +105,54 @@ kubectl create clusterrolebinding permissive-binding \
 
 #### Non-admin users
 
-We provide an example manifest to give a non-admin user permission to use the
-{{site.prodname}} UI and manage policies in the default tier and default
+All users of the UI require a minimum set of permissions in addition to the specific set of permissions
+to access the various policy resources and tiers.
+
+We provide two sample manifests for users of the UI. The first is the minimum set of permissions required
+for *all* users of the UI. These minimum permissions will not allow the user to view or modify any policies.
+The second manifest gives a non-admin user permission to fully manage policies in the default tier and default
 namespace, and to provide read-only access for all other tiers.
 
-1. Download the [`min-rbac.yaml` manifest]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/demo-manifests/min-rbac.yaml).
+##### Minimum permissions for all UI users
+
+1. Download the [`min-ui-user-rbac.yaml` manifest]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/demo-manifests/min-ui-user-rbac.yaml).
 
 1. Run the following command to replace `<USER>` with the `name or email` of
    the user you are providing permissions to:
 
    ```
-   sed -i -e 's/<USER>/<name or email>/g' min-rbac.yaml
+   sed -i -e 's/<USER>/<name or email>/g' min-ui-user-rbac.yaml
    ```
 
 1. Use the following command to install the bindings:
 
    ```
-   kubectl apply -f min-rbac.yaml
+   kubectl apply -f min-ui-user-rbac.yaml
    ```
 
-The roles and bindings in that file should provide a starting point for setting
-up RBAC for your users according to your specific security requirements.
+The roles and bindings in this file provide a minimum starting point for setting up RBAC for your users according to your 
+specific security requirements. 
+
+##### UI user can view all policies and can modify policies in the default namespace and tier
+
+1. Download the [`read-all-crud-default-rbac.yaml` manifest]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/demo-manifests/read-all-crud-default-rbac.yaml).
+
+1. Run the following command to replace `<USER>` with the `name or email` of
+   the user you are providing permissions to:
+
+   ```
+   sed -i -e 's/<USER>/<name or email>/g' read-all-crud-default-rbac.yaml
+   ```
+
+1. Use the following command to install the bindings:
+
+   ```
+   kubectl apply -f read-all-crud-default-rbac.yaml
+   ```
+
+The roles and bindings in this file provide the permissions to read all policies across all tiers and to fully manage
+policies in the default tier and default namespace. This file includes the minimum required `ClusterRole` and `ClusterRoleBinding` 
+definitions for all UI users (see `min-ui-user-rbac.yaml` above).
 
 ### <a name="examples"></a>Example fine-grained permissions
 
