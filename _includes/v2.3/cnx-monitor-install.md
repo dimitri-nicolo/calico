@@ -280,3 +280,27 @@
 1. If you wish to enforce application layer policies and secure workload-to-workload
    communications with mutually-authenticated TLS, continue to [Enabling application layer policy]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/app-layer-policy) (optional).
 {% endif %}
+
+1. By default, {{site.prodname}} Manager is made accessible via a NodePort listening on port 30003.
+   You can edit the `cnx.yaml` manifest if you want to change how {{site.prodname}} Manager is
+   exposed.  You may need to create an ssh tunnel if the node is not accessible - for example:
+
+   ```bash
+   ssh <jumpbox> -L 127.0.0.1:30003:<kubernetes node>:30003
+   ```
+
+   Sign in by navigating to `https://<address of a Kubernetes node or 127.0.0.1 for ssh tunnel>:30003` and login.
+
+{% if include.platform == "eks" %}
+   Log in to {{site.prodname}} Manager using the token you created earlier in the process.
+{% endif %}
+
+1. Kibana is made available similarly, on port 30601.
+
+{% if include.elasticsearch == "operator" %}
+   You may need to create an ssh tunnel if the node is not accessible - for example:
+
+   ```bash
+   ssh <jumpbox> -L 127.0.0.1:30601:<kubernetes node>:30601
+   ```
+{% endif %}

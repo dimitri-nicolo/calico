@@ -30,7 +30,7 @@ This guide covers installing {{site.prodname}} for policy enforcement on Amazon 
    ```bash
    curl \
    {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only-ecs/1.7/calico-typha.yaml \
-   -O
+   -o calico.yaml
    ```
 
 {% include {{page.version}}/cnx-cred-sed.md yaml="calico" %}
@@ -79,6 +79,6 @@ This guide covers installing {{site.prodname}} for policy enforcement on Amazon 
    of logs or authenticate access to Kibana.
    {: .alert .alert-danger}
 
-{% include {{page.version}}/cnx-monitor-install.md elasticsearch="operator" %}
+{% include {{page.version}}/cnx-monitor-install.md elasticsearch="operator" platform="eks" %}
 
 {% include {{page.version}}/gs-next-steps.md %}
