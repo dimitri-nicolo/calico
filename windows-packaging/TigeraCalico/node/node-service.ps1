@@ -8,6 +8,8 @@ ipmo .\libs\hns\hns.psm1
 
 $lastBootTime = Get-LastBootTime
 
+$timeout = $env:STARTUP_VALID_IP_TIMEOUT
+
 if ($env:CALICO_NETWORKING_BACKEND -EQ "windows-bgp")
 {
     Write-Host "Calico Windows BGP networking enabled."
@@ -26,6 +28,35 @@ if ($env:CALICO_NETWORKING_BACKEND -EQ "windows-bgp")
                 Write-Host "Waiting for network deletion to complete."
                 Start-Sleep 1
             } while ((Get-HNSNetwork | ? Type -NE nat))
+        }
+
+        # After deletion of all hns networks, wait for an interface to have an IP that is not a 169.254.0.0/16 (or 127.0.0.0/8) address,
+        # before creation of External network.
+        if (!(Get-HnsNetwork | ? Name -EQ "External"))
+        {
+            $isValidIP = 0
+            $IPRegEx1='(^127\.0\.0\.)'
+            $IPRegEx2='(^169\.254\.)'
+            while(!($isValidIP) -AND ($timeout -gt 0))
+            {
+                $IPAddress = (Get-NetIPAddress -AddressFamily IPv4).IPAddress
+                Write-Host "`nTimeout Remaining: $timeout sec"
+                Write-Host "List of IP Address before External Network creation: $IPAddress"
+                Foreach ($ip in $IPAddress)
+                {
+                    if (($ip -NotMatch $IPRegEx1) -AND ($ip -NotMatch $IPRegEx2))
+                    {
+                        $isValidIP = 1
+                        Write-Host "`nFound valid IP: $ip"
+                        break
+                    }
+                }
+                if (!($isValidIP))
+                {
+                    Start-Sleep -s 5
+                    $timeout = $timeout - 5
+                }
+            }
         }
     }
 
