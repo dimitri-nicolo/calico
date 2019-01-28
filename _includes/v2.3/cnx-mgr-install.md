@@ -181,6 +181,29 @@
    --from-file=key=/etc/origin/master/master.server.key -n kube-system
    ```
 
+{% elsif include.platform == "eks" %}
+
+   ```bash
+   openssl req -out cnxmanager.csr -newkey rsa:2048 -nodes -keyout cnxmanager.key -subj "/CN=cnxmanager.cluster.local"
+   cat <<EOF | kubectl create -f -
+   apiVersion: certificates.k8s.io/v1beta1
+   kind: CertificateSigningRequest
+   metadata:
+     name: cnxmanager.kube-system
+   spec:
+     groups:
+     - system:authenticated
+     request: $(cat cnxmanager.csr | base64 | tr -d '\n')
+     usages:
+     - digital signature
+     - key encipherment
+     - server auth
+   EOF
+   kubectl certificate approve cnxmanager.kube-system
+   kubectl get csr cnxmanager.kube-system -o jsonpath='{.status.certificate}' | base64 --decode > cnxmanager.crt
+   kubectl create secret generic cnx-manager-tls --from-file=cert=./cnxmanager.crt --from-file=key=./cnxmanager.key -n kube-system
+   ```
+
 {% else %}
 
    - **kubeadm deployments**
