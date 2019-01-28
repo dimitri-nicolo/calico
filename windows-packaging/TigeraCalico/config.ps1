@@ -37,7 +37,7 @@ $env:NODENAME = $(hostname).ToLower()
 # the Calico kube-controllers pod will clean up Calico node objects if the corresponding Kubernetes Node is
 # cleaned up.
 $env:CALICO_K8S_NODE_REF = $env:NODENAME
-# The time out to wait for a valid IP of an interface to be assigned before creation of External network
+# The time out to wait for a valid IP of an interface to be assigned before initialising Calico
 # after a reboot.
 $env:STARTUP_VALID_IP_TIMEOUT = 90
 
