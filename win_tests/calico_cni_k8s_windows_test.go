@@ -1559,7 +1559,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				deleteNamespace(clientset, nsName)
 			})
 
-			It("should network the pod but fall back on DNS values from Runtime Config", func() {
+			It("should network the pod with DNS values from Runtime Config", func() {
 				log.Infof("Creating container")
 				containerID, result, contVeth, contAddresses, contRoutes, err := testutils.CreateContainer(netconf, name, testutils.HnsNoneNs, "", nsName)
 				Expect(err).ShouldNot(HaveOccurred())
@@ -1587,24 +1587,18 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				// Ensure network is created and has DNS RuntimeConfig values
 				hnsNetwork, err := hcsshim.GetHNSNetworkByName(networkName)
 				Expect(err).ShouldNot(HaveOccurred())
-				Expect(hnsNetwork.DNSSuffix).ShouldNot(Equal("pod.cluster.local"))
-				Expect(hnsNetwork.DNSServerList).ShouldNot(Equal("10.96.0.10"))
 				Expect(hnsNetwork.DNSSuffix).Should(Equal("svc.cluster.local"))
 				Expect(hnsNetwork.DNSServerList).Should(Equal("10.96.0.11"))
 
 				// Ensure host endpoints are created and has DNS RuntimeConfig values
 				hostEP, err := hcsshim.GetHNSEndpointByName("calico-fv_ep")
 				Expect(err).ShouldNot(HaveOccurred())
-				Expect(hostEP.DNSSuffix).ShouldNot(Equal("pod.cluster.local"))
-				Expect(hostEP.DNSServerList).ShouldNot(Equal("10.96.0.10"))
 				Expect(hostEP.DNSSuffix).Should(Equal("svc.cluster.local"))
 				Expect(hostEP.DNSServerList).Should(Equal("10.96.0.11"))
 
 				// Ensure container endpoints are created and has DNS RuntimeConfig values
 				containerEP, err := hcsshim.GetHNSEndpointByName(containerID + "_calico-fv")
 				Expect(err).ShouldNot(HaveOccurred())
-				Expect(containerEP.DNSSuffix).ShouldNot(Equal("pod.cluster.local"))
-				Expect(containerEP.DNSServerList).ShouldNot(Equal("10.96.0.10"))
 				Expect(containerEP.DNSSuffix).Should(Equal("svc.cluster.local"))
 				Expect(containerEP.DNSServerList).Should(Equal("10.96.0.11"))
 
