@@ -1455,4 +1455,154 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			}
 		})
 	})
+
+	Context("With DNS capability in Runtime Config", func() {
+		var nsName, name string
+		var clientset *kubernetes.Clientset
+		netconf := fmt.Sprintf(`
+                        {
+                                "cniVersion": "%s",
+                                "name": "%s",
+                                "type": "calico",
+                                "etcd_endpoints": "%s",
+                                "datastore_type": "%s",
+                                "windows_use_single_network":true,
+                                "ipam": {
+                                        "type": "host-local",
+                                        "subnet": "10.254.112.0/20"
+                                },
+                                "kubernetes": {
+                                        "k8s_api_root": "%s",
+                                        "kubeconfig": "C:\\k\\config"
+                                },
+                                "policy": {"type": "k8s"},
+                                "nodename_file_optional": true,
+                                "log_level":"debug",
+                                "DNS":  {
+                                        "Nameservers":  [
+                                        "10.96.0.10"
+                                        ],
+                                        "Search":  [
+                                        "pod.cluster.local"
+                                        ]
+                                },
+                                "RuntimeConfig": {
+                                                 "DNS": {
+                                                        "servers":  [
+                                                        "10.96.0.11"
+                                                        ],
+                                                        "searches":  [
+                                                        "svc.cluster.local"
+                                                        ]
+                                                 }
+                                }
+                        }`, cniVersion, networkName, os.Getenv("ETCD_ENDPOINTS"), os.Getenv("DATASTORE_TYPE"), os.Getenv("KUBERNETES_MASTER"))
+		Context("and has RuntimeConfig entry", func() {
+			cleanup := func() {
+				// Cleanup hns network
+				hnsNetwork, _ := hcsshim.GetHNSNetworkByName(networkName)
+				if hnsNetwork != nil {
+					_, err := hnsNetwork.Delete()
+					Expect(err).NotTo(HaveOccurred())
+				}
+				// Delete node
+				_ = clientset.CoreV1().Nodes().Delete(hostname, &metav1.DeleteOptions{})
+			}
+
+			BeforeEach(func() {
+				testutils.WipeK8sPods(netconf)
+				conf := types.NetConf{}
+				if err := json.Unmarshal([]byte(netconf), &conf); err != nil {
+					panic(err)
+				}
+				logger := log.WithFields(log.Fields{
+					"Namespace": testutils.HnsNoneNs,
+				})
+				clientset, err = k8s.NewK8sClient(conf, logger)
+				if err != nil {
+					panic(err)
+				}
+
+				nsName = fmt.Sprintf("ns%d", rand.Uint32())
+				name = fmt.Sprintf("run%d", rand.Uint32())
+				cleanup()
+
+				// Create namespace
+				ensureNamespace(clientset, nsName)
+
+				// Create a K8s Node object with PodCIDR and name equal to hostname.
+				_, err = clientset.CoreV1().Nodes().Create(&v1.Node{
+					ObjectMeta: metav1.ObjectMeta{Name: hostname},
+					Spec: v1.NodeSpec{
+						PodCIDR: "10.0.0.0/24",
+					},
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				// Create a K8s pod w/o any special params
+				_, err = clientset.CoreV1().Pods(nsName).Create(&v1.Pod{
+					ObjectMeta: metav1.ObjectMeta{Name: name},
+					Spec: v1.PodSpec{
+						Containers: []v1.Container{{
+							Name:  name,
+							Image: "ignore",
+						}},
+						NodeName: hostname,
+					},
+				})
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			AfterEach(func() {
+				cleanup()
+				// Delete namespace
+				deleteNamespace(clientset, nsName)
+			})
+
+			It("should network the pod with DNS values from Runtime Config", func() {
+				log.Infof("Creating container")
+				containerID, result, contVeth, contAddresses, contRoutes, err := testutils.CreateContainer(netconf, name, testutils.HnsNoneNs, "", nsName)
+				Expect(err).ShouldNot(HaveOccurred())
+				defer func() {
+					log.Infof("Container Delete  call")
+					_, err := testutils.DeleteContainerWithId(netconf, name, testutils.HnsNoneNs, containerID, nsName)
+					Expect(err).ShouldNot(HaveOccurred())
+
+					// Make sure there are no endpoints anymore
+					endpoints, err := calicoClient.WorkloadEndpoints().List(ctx, options.ListOptions{})
+					Expect(err).ShouldNot(HaveOccurred())
+					Expect(endpoints.Items).Should(HaveLen(0))
+				}()
+				log.Debugf("containerID :%v , result: %v ,icontVeth : %v , contAddresses : %v ,contRoutes : %v ", containerID, result, contVeth, contAddresses, contRoutes)
+
+				Expect(len(result.IPs)).Should(Equal(1))
+				ip := result.IPs[0].Address.IP.String()
+				log.Debugf("ip is %v ", ip)
+
+				// The endpoint is created
+				endpoints, err := calicoClient.WorkloadEndpoints().List(ctx, options.ListOptions{})
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(endpoints.Items).Should(HaveLen(1))
+
+				// Ensure network is created and has DNS RuntimeConfig values
+				hnsNetwork, err := hcsshim.GetHNSNetworkByName(networkName)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(hnsNetwork.DNSSuffix).Should(Equal("svc.cluster.local"))
+				Expect(hnsNetwork.DNSServerList).Should(Equal("10.96.0.11"))
+
+				// Ensure host endpoints are created and has DNS RuntimeConfig values
+				hostEP, err := hcsshim.GetHNSEndpointByName("calico-fv_ep")
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(hostEP.DNSSuffix).Should(Equal("svc.cluster.local"))
+				Expect(hostEP.DNSServerList).Should(Equal("10.96.0.11"))
+
+				// Ensure container endpoints are created and has DNS RuntimeConfig values
+				containerEP, err := hcsshim.GetHNSEndpointByName(containerID + "_calico-fv")
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(containerEP.DNSSuffix).Should(Equal("svc.cluster.local"))
+				Expect(containerEP.DNSServerList).Should(Equal("10.96.0.11"))
+
+			})
+		})
+	})
 })
