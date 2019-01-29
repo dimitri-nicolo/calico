@@ -16,12 +16,12 @@
 
 {% else %}
 
-1. [Install calicoctl]({{site.baseurl}}/{{page.version}}/usage/calicoctl/install).
+1. Install `calicoctl`.  We recommend installing `calicoctl` as a pod -
+   follow [these instructions]({{site.baseurl}}/{{page.version}}/usage/calicoctl/install) to do so.
+
+   If you are not running `calicoctl` as a pod, [configure it to connect to your datastore]({{site.baseurl}}/{{page.version}}/usage/calicoctl/configure).
 
 {% endif %}
-
-1. If you are not running `calicoctl` as a pod,
-   [configure it to connect to your datastore]({{site.baseurl}}/{{page.version}}/usage/calicoctl/configure).
 
 1. Use the following command to apply your [license key]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/licensekey).
 
