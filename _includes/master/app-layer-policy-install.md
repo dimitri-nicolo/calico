@@ -44,7 +44,7 @@ kubectl patch configmap calico-config -n kube-system -p '{"data":{"felix-policy-
 kubectl patch daemonset calico-node -n kube-system -p '{"spec":{"template":{"metadata":{"labels":{"projectcalico.org/application-layer-support":"true"}}}}}'
 
 # Update the tigera-cnx-manager-config ConfigMap to enabled application layer policy support in the UI.
-kubectl patch configmap tigera-cnx-manager-config -n kube-system -p '{"data":{"tigera.cnx-manager.alp-support":true}}'
+kubectl patch configmap tigera-cnx-manager-config -n kube-system -p '{"data":{"tigera.cnx-manager.alp-support":"true"}}'
 
 # Restart the CNX manager pods to pick up the new config
 kubectl delete pod -n kube-system -l "k8s-app=cnx-manager"
@@ -115,14 +115,6 @@ layer policy in a namespace, add the label `istio-injection=enabled`.
 
 ```bash
 kubectl label namespace <your namespace name> istio-injection=enabled
-```
-
-Pods within this namespace currently require privileged access. This means the Service Account associated with
-the Pod must have privileged Security Context Constraints, this can be configured using the `oc adm policy add-scc-to-user` command. For example, this permits privileged 
-access for service account `database` in the namespace `yaobank`:
-
-```bash
-oc adm policy add-scc-to-user privileged -z database -n yaobank3
 ```
 
 If the namespace already has pods in it, you will have to recreate them for this
