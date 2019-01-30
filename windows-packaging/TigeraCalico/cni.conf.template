@@ -8,6 +8,8 @@
     "type": "k8s"
   },
 
+  "log_level": "info",
+
   "capabilities": {"dns": true},
 
   "DNS":  {
