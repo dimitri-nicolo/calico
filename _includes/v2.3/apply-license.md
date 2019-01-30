@@ -21,6 +21,10 @@
 
    If you are not running `calicoctl` as a pod, [configure it to connect to your datastore]({{site.baseurl}}/{{page.version}}/usage/calicoctl/configure).
 
+{% if include.platform == "eks" %}
+   Please note that the EKS installation uses the Kubernetes Datastore Driver.
+{% endif %}
+
 {% endif %}
 
 1. Use the following command to apply your [license key]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/licensekey).

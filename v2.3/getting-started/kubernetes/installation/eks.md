@@ -66,7 +66,7 @@ This guide covers installing {{site.prodname}} for policy enforcement on Amazon 
 
 1. Continue to [Applying your license key](#applying-your-license-key).
 
-{% include {{page.version}}/apply-license.md %}
+{% include {{page.version}}/apply-license.md platform="eks" %}
 
 {% include {{page.version}}/cnx-mgr-install.md init="kubernetes" net="other" platform="eks" %}
 
