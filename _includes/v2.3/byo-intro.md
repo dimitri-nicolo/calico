@@ -32,7 +32,8 @@ To complete the following procedure, you'll need:
 - An Elasticsearch cluster that meets the [requirements]({{site.baseurl}}/{{page.version}}/getting-started/{{path}}/requirements#elasticsearch-requirements).
 - A `tigera-ee-fluentd` user with permission to send documents to Elasticsearch (see below).
 - A `tigera-ee-manager` user with permission to issue queries to Elasticsearch (see below).
-- A `tigera-ee-installer` user with permission to install machine learning jobs, and configure Kibana dashboards
+- A `tigera-ee-installer` user with permission to install machine learning jobs, and configure Kibana dashboards (see below).
+- A `tigera-ee-curator` user with permission to delete indices in Elasticsearch (see below).
 - The CA certificate for the Elasticsearch cluster.
 - Any users who are going to use the Kibana dashboards will need to be given appropriate
   credentials.
@@ -92,6 +93,22 @@ They may also be useful as a reference for defining alternative security configu
      },
      "kibana": {
        "global": ["all"]
+     }
+   }
+   ```
+
+1. {{site.prodname}} Curator role for deleting indices older than retention period in Elasticsearch
+
+   ```json
+   {
+     "elasticsearch": {
+       "cluster": [ "monitor", "manage_index_templates" ],
+       "indices": [
+         {
+           "names": [ "tigera_secure_ee_*" ],
+           "privileges": [ "all"]
+         }
+       ]
      }
    }
    ```
