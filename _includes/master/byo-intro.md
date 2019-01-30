@@ -108,7 +108,7 @@ They may also be useful as a reference for defining alternative security configu
        "indices": [
          {
            "names": [ "tigera_secure_ee_*" ],
-           "privileges": [ "monitor", "delete_index"]
+           "privileges": [ "all"]
          }
        ]
      }
