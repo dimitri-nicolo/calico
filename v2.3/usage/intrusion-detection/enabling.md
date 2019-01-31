@@ -28,7 +28,7 @@ walk through the process of enabling jobs using Kibana.  Refer to the
 1. Click "Machine Learning" in the left-hand menu.
 
 From this view, you can see the overview of all the intrusion detection jobs installed. See 
-[Job Descriptions](job-descriptions) for a full explanation of what each job does.
+[Job Descriptions][jobs] for a full explanation of what each job does.
 
 To enable an intrusion detection job
 
