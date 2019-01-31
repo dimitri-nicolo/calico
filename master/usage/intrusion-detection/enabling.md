@@ -3,6 +3,19 @@ title: Enabling intrusion detection
 canonical_url: https://docs.tigera.io/v2.3/usage/intrusion-detection/enabling
 ---
 
+## Flow Log Aggregation
+
+By default, {{site.prodname}} aggregates flow logs so that flows to and from
+pods in the same replica set are summarized if the flows are accepted (denied
+flows are not aggregated this way by default).  However, some of the [intrusion
+detection jobs][jobs] look for pods that are behaving anomalously with respect to
+other pods in their replica set.
+
+If you choose to use these jobs you will need to turn down the level of aggregation.  To do so,
+set the value of `flowLogsFileAggregationKindForAllowed` to 1 using a [FelixConfiguration][felixconfig]
+
+## Enabling intrusion detection jobs
+
 Intrusion detection jobs are included as part of standard {{site.prodname}} installation. You can control
 their operation either using the Kibana UI, or using the [Elasticsearch REST API].  This section will briefly 
 walk through the process of enabling jobs using Kibana.  Refer to the 
@@ -34,3 +47,5 @@ Keep in mind that each job you enable will use CPU and memory on your Elasticsea
 
 [Elasticsearch REST API]: https://www.elastic.co/guide/en/elasticsearch/reference/6.4/ml-apis.html
 [Elasticsearch machine learning documentation]: https://www.elastic.co/guide/en/elastic-stack-overview/6.4/xpack-ml.html
+[felixconfig]: ../../reference/calicoctl/resources/felixconfig
+[jobs]: ./job-descriptions

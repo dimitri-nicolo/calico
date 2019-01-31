@@ -91,6 +91,8 @@ spec:
 | flowLogsFileMaxFiles  | Set the number of log files to keep. This parameter only takes effect when `flowLogsFileEnabled` is set to `true`. | int | int | `5` |
 | flowLogsFileMaxFileSizeMB | Set the max size in MB of flow logs files before rotation. This parameter only takes effect when `flowLogsFileEnabled` is set to `true`. | int | int | `100` |
 | flowLogsFlushInterval | The period, in seconds, at which Felix exports the flow logs. | int | int | `300` |
+| flowLogsFileAggregationKindForAllowed | How much to aggregate the flow logs sent to Elasticsearch for allowed traffic.  Bear in mind that changing this value may have a dramatic impact on the volume of flow logs sent to Elasticsearch. | 0-2 | [AggregationKind](#aggregationkind) | 2 |
+| flowLogsFileAggregationKindForDenied | How much to aggregate the flow logs sent to Elasticsearch for denied traffic.  Bear in mind that changing this value may have a dramatic impact on the volume of flow logs sent to Elasticsearch. | 0-2 | [AggregationKind](#aggregationkind) | 1 |
 
 \* When `dropActionOverride` is set to `LogAndDrop` or `LogAndAccept`, the `syslog` entries look something like the following.
    ```
@@ -107,6 +109,14 @@ spec:
 |----------|----------------------|-------------------|--------|
 | port     | The exact port match | 0-65535           | int    |
 | protocol | The protocol match   | tcp, udp          | string |
+
+#### AggregationKind
+
+| Value | Description |
+|-------|-------------|
+| 0     | No aggregation |
+| 1     | Aggregate all flows that share a source port on each node |
+| 2     | Aggregate all flows that share source ports or are from the same ReplicaSet on each node |
 
 ### Supported operations
 
