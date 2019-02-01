@@ -1,6 +1,9 @@
 #!/usr/bin/dumb-init /bin/sh
 set -e
 
+# Set the number of shards for index tigera_secure_ee_flows
+sed -i 's|"number_of_shards": \d*|"number_of_shards": '"$ELASTIC_FLOWS_INDEX_SHARDS"'|g' /fluentd/etc/elastic_mapping_flows.template
+
 # Build the fluentd configuration file bit by bit, because order is important.
 # Add the sources.
 cat /fluentd/etc/fluent_sources.conf >> /fluentd/etc/fluent.conf

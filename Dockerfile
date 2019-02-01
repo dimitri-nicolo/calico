@@ -28,6 +28,7 @@ ENV KUBE_AUDIT_POS=${POS_DIR}/kube-audit.log.pos
 ENV ELASTIC_INDEX_SUFFIX=cluster
 ENV S3_FLUSH_INTERVAL=5s
 ENV S3_STORAGE=false
+ENV ELASTIC_FLOWS_INDEX_SHARDS=5
 
 COPY readiness.sh /bin/
 RUN chmod +x /bin/readiness.sh

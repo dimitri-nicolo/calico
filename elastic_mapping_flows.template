@@ -1,5 +1,8 @@
 {
   "template": "tigera_secure_ee_flows*",
+  "settings": {
+    "number_of_shards": 5
+  },
   "mappings": {
     "_default_": {
       "properties" : {
