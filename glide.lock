@@ -1,5 +1,5 @@
-hash: cf2ca8066dccd2c8ae1a941ada4a2dcebf3d56c71fa56fc8e276d68e8e30f18d
-updated: 2018-11-08T08:30:00.887276-08:00
+hash: d8ecfaf80d866fc9d02bfb5683c26ef061f0d682499b9b5e7cda099a46483f4d
+updated: 2019-02-01T20:48:46.007862897Z
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -117,7 +117,7 @@ imports:
 - name: github.com/kelseyhightower/envconfig
   version: dd1402a4d99de9ac2f396cd6fcb957bc2c695ec1
 - name: github.com/kubernetes/repo-infra
-  version: f2459dc75fc429b813d92c0622b408fd7f0d4cac
+  version: 9ddd2bf9f38fdcb24709aaa84561de19f0a75cab
 - name: github.com/mailru/easyjson
   version: 2f5df55504ebc322e4d52d34df6a1f5b503bf26d
   subpackages:
@@ -141,7 +141,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 5e05209688ae1fb40a2916e40dc17f9c22e7b556
+  version: d1267d21afe7f3e83ac84eeeb910c3730275634e
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
@@ -255,11 +255,11 @@ imports:
   subpackages:
   - rate
 - name: golang.org/x/tools
-  version: a434f64ace81347eff0fb4a32bc80a235e0ad762
+  version: 0e05534988fece6d00407fef91bec542a7859d8e
   subpackages:
   - import
 - name: google.golang.org/appengine
-  version: 4216e58b9158e5f1c906f1aca75162a46a2ec88a
+  version: 2d2298565d5a399bdfec98dbc259d6393e3cf8ba
   subpackages:
   - internal
   - internal/app_identity
