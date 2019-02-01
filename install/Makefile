@@ -235,4 +235,10 @@ ifdef LOCAL_BUILD
 	$(error LOCAL_BUILD must not be set for a release)
 endif
 
-
+foss-checks:
+	@echo Running $@...
+	@docker run --rm -v $(CURDIR):/code/$(PACKAGE_NAME):rw \
+	  -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+	  -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
+	  -w /code/$(PACKAGE_NAME) \
+	  $(CALICO_BUILD) /usr/local/bin/fossa
