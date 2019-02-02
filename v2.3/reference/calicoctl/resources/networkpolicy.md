@@ -65,7 +65,7 @@ spec:
 | Field    | Description                                                                                         | Accepted Values | Schema                | Default |
 |----------|-----------------------------------------------------------------------------------------------------|-----------------|-----------------------|---------|
 | order    | Controls the order of precedence. {{site.prodname}} applies the policy with the lowest value first. |                 | float                 |         |
-| tier               | Name of the [tier]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/tier) this policy belongs to.                                                   |                 | string                 |  `default` |
+| tier     | Name of the [tier]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/tier) this policy belongs to.                                                   |                 | string                 |  `default` |
 | selector | Selects the endpoints to which this policy applies.                                                 |                 | [selector](#selector) | all()   |
 | types    | Applies the policy based on the direction of the traffic. To apply the policy to inbound traffic, set to `Ingress`. To apply the policy to outbound traffic, set to `Egress`. To apply the policy to both, set to `Ingress, Egress`. | `Ingress`, `Egress` | List of strings | Depends on presence of ingress/egress rules\* |
 | ingress  | Ordered list of ingress rules applied by policy.                                                    |                 | List of [Rule](#rule) |         |
@@ -125,4 +125,7 @@ in order to use the following match criteria.
 | Datastore type           | Create/Delete | Update | Get/List | Notes
 |--------------------------|---------------|--------|----------|------
 | etcdv3                   | Yes           | Yes    | Yes      |
-| Kubernetes API datastore | No            | No     | Yes      | `NetworkPolicy` is determined from Kubernetes `NetworkPolicy` resources.
+| Kubernetes API datastore | Yes           | Yes    | Yes      |
+
+> **Note**: {{site.prodname}} `NetworkPolicy` resources with `knp.` prefixed names are determined from Kubernetes `NetworkPolicy` 
+> resources and are read-only through `calicoctl`.

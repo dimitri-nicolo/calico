@@ -28,6 +28,10 @@ inventory file:
   - `calico_node_image=<YOUR-REGISTRY>/{{site.imageNames["cnx-node"]}}:{{site.data.versions[page.version].first.components["cnx-node"].version}}`
   - `calico_url_policy_controller=<YOUR-REGISTRY>/{{site.imageNames["kubeControllers"]}}:{{site.data.versions[page.version].first.components["cnx-kube-controllers"].version}}`
   - `calico_cni_image={{site.imageNames["cni"]}}:{{site.data.versions[page.version].first.components["calico/cni"].version}}`
+
+For OpenShift Container Platform 3.11 also specify the following variables: 
+  - `oreg_auth_user`
+  - `oreg_auth_password`
   
 Also ensure that you have an explicitly defined host in the `[etcd]` group.
  
@@ -58,20 +62,6 @@ node1 ansible_host=127.0.0.1 openshift_schedulable=true openshift_node_group_nam
 [etcd]
 etcd1
 ```
-
-### Update Ansible provisioning script
-
-> Note that the current Ansible installation scripts for OpenShift v3.11 may require some additional changes when installing
-> {{site.prodname}} networking. The following command works around the possible omission in the ansible script. 
-{: .alert .alert-info}
-
-```bash
-sudo sed -i '/when: "ansible_hostname == groups.oo_first_master.0"/c\  when: "inventory_hostname == groups.oo_first_master.0"' /usr/share/ansible/openshift-ansible/roles/calico/tasks/main.yml
-```
-
-> **Note**: The command given above assumes that your OpenShift Ansible scripts exist at `/usr/share/ansible/openshift-ansible/`. If your
-> scripts are stored elsewhere, replace that path in the above command.
-{: .alert .alert-info}
 
 ### Execute Ansible provisioning script
 
