@@ -147,7 +147,7 @@
 1. Apply the manifest.
 
    ```bash
-   kubectl apply -f monitor-calico.yaml
+   {{cli}} apply -f monitor-calico.yaml
    ```
 
 1. Edit the `tigera-cnx-manager-config` ConfigMap to update the URL Kibana is accessed at.  By default a NodePort is
@@ -156,7 +156,7 @@
    Either edit the `tigera.cnx-manager.kibana-url` field in the `cnx.yaml` manifest and reapply, or use the following patch:
 
    ```bash
-   kubectl patch configmap -n kube-system tigera-cnx-manager-config -p $'data:\n  tigera.cnx-manager.kibana-url: http://<insert-node-address-here>:30601'
+   {{cli}} patch configmap -n kube-system tigera-cnx-manager-config -p $'data:\n  tigera.cnx-manager.kibana-url: http://<insert-node-address-here>:30601'
    ```
 
 {% if include.orch == "openshift" %}

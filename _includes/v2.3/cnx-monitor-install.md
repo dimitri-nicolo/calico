@@ -136,6 +136,7 @@
      nets:
      - <Kubernetes API server IP address CIDR>
    ```
+   {: .no-select-button}
 
    > **Note**: You may need to list all the IP addresses on that host including the IP address of `tunl0`
    > if running in IPIP mode.
@@ -146,7 +147,7 @@
 1. Apply the manifest.
 
    ```bash
-   kubectl apply -f monitor-calico.yaml
+   {{cli}} apply -f monitor-calico.yaml
    ```
 
 1. Edit the `tigera-cnx-manager-config` ConfigMap to update the URL Kibana is accessed at.  By default a NodePort is
@@ -155,9 +156,9 @@
    Either edit the `tigera.cnx-manager.kibana-url` field in the `cnx.yaml` manifest and reapply, or use the following patch:
 
    ```bash
-   kubectl patch configmap -n kube-system tigera-cnx-manager-config -p $'data:\n  tigera.cnx-manager.kibana-url: http://<insert-node-address-here>:30601'
+   {{cli}} patch configmap -n kube-system tigera-cnx-manager-config -p $'data:\n  tigera.cnx-manager.kibana-url: http://<insert-node-address-here>:30601'
    ```
-   
+
 {% if include.orch == "openshift" %}
 {% if include.elasticsearch == "operator" %}
 
@@ -196,6 +197,7 @@
    es-client-tigera-elasticsearch-759997fcbb   1         1         1         19m
    kibana-tigera-elasticsearch-6cb8879697      1         1         1         3h
    ```
+   {: .no-select-button}
 
    Remove the chosen ReplicaSet with the following command.
 
@@ -262,7 +264,7 @@
 
 {% endif %}
 {% endif %}
-   
+
 1. Open the **Management** -> **Index Patterns** pane in Kibana, select one of the imported index patterns and click the star to set it as the
    default pattern. Refer to the [Kibana documentation](https://www.elastic.co/guide/en/kibana/current/index-patterns.html#set-default-pattern)
    for more details.

@@ -140,7 +140,9 @@
 
    Example: If OpenShift master were at `https://master.openshift.example.com:8443`, then the following command could be used to set up the parameter.
 
-       sed -i -e 's?tigera.cnx-manager.oauth-authority:.*$?tigera.cnx-manager.oauth-authority: "https://master.openshift.example.com:8443/oauth/authorize"?g' cnx.yaml
+   ```bash
+   sed -i -e 's?tigera.cnx-manager.oauth-authority:.*$?tigera.cnx-manager.oauth-authority: "https://master.openshift.example.com:8443/oauth/authorize"?g' cnx.yaml
+   ```
 
 {% elsif include.platform != "eks" %}
 
@@ -232,7 +234,7 @@
 
 1. Apply the manifest to install the {{site.prodname}} Manager and the {{site.prodname}} API server.
 
-   ```
+   ```bash
    {{cli}} apply -f cnx.yaml
    ```
 
@@ -240,13 +242,15 @@
 
 1. Allow the {{site.prodname}} Manager to run as root:
 
-       oc adm policy add-scc-to-user anyuid system:serviceaccount:kube-system:cnx-manager
+   ```bash
+   oc adm policy add-scc-to-user anyuid system:serviceaccount:kube-system:cnx-manager
+   ```
 
 {% endif %}
 
 1. Confirm that all of the pods are running with the following command.
 
-   ```
+   ```bash
    watch {{cli}} get pods --all-namespaces
    ```
 
@@ -291,24 +295,28 @@ with appropriate permissions on the cluster.
 
    The ClusterRole `tigera-manager-user` grants permission to use the {{site.prodname}} Manager UI, view flow 
    logs, audit logs, and network statistics, and access the default policy tier.
+
    ```
 {%- if include.init == "openshift" %}
-   oc adm add-cluster-role-to-user tigera-manager-user <USER>
+   oc adm policy add-cluster-role-to-user tigera-manager-user <USER>
 {%- else %}
    kubectl create clusterrolebinding <USER>-tigera \
      --clusterrole=tigera-manager-user \
      --user=<USER>
 {%- endif %}
    ```
+
    The ClusterRole `network-admin` grants permission to use the {{site.prodname}} Manager UI, view flow 
    logs, audit logs, and network statistics, and administer all network policies and tiers.
+
    ```
 {%- if include.init == "openshift" %}
-   oc adm add-cluster-role-to-user network-admin <USER>
+   oc adm policy add-cluster-role-to-user network-admin <USER>
 {%- else %}
    kubectl create clusterrolebinding <USER>-network-admin \
      --clusterrole=network-admin \
      --user=<USER>
 {%- endif %}
    ```
+   
    To grant access to additional tiers, or create your own roles consult the [RBAC documentation]({{site.url}}/{{page.version}}/reference/cnx/rbac-tiered-policies){:target="_blank"}.

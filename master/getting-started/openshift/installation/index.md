@@ -61,19 +61,13 @@ etcd1
 
 ### Update Ansible provisioning script
 
-> Note that the current Ansible installation scripts for OpenShift v3.10 may require some additional changes when installing
-> {{site.prodname}} networking. These changes may not have not yet made it into the version of the packaged installer and so these additional
-> steps will allow you to check and update the packaged installation scripts if necessary. When these changes are in the upstream
-> packages, these steps can be ignored.
+> Note that the current Ansible installation scripts for OpenShift v3.11 may require some additional changes when installing
+> {{site.prodname}} networking. The following command works around the possible omission in the ansible script. 
 {: .alert .alert-info}
 
-To check if your Ansible scripts include the required {{site.prodname}} changes, run the following.
-
 ```bash
-grep -Fq "calico_binary_checks" /usr/share/ansible/openshift-ansible/roles/calico/templates/calicov3.yml.j2 && echo "updated" || echo "needs updates"
+sudo sed -i '/when: "ansible_hostname == groups.oo_first_master.0"/c\  when: "inventory_hostname == groups.oo_first_master.0"' /usr/share/ansible/openshift-ansible/roles/calico/tasks/main.yml
 ```
-
-If the above command responds with `needs updates`, contact your Tigera sales representative for steps on how to update your ansible playbooks.
 
 > **Note**: The command given above assumes that your OpenShift Ansible scripts exist at `/usr/share/ansible/openshift-ansible/`. If your
 > scripts are stored elsewhere, replace that path in the above command.
@@ -90,10 +84,10 @@ such that {{site.prodname}} connects to an etcd you have already set up by follo
 
 {% include {{page.version}}/cnx-mgr-install.md init="openshift" %}
 
-1. Download [oauth-client.yaml](oauth-client.yaml).
+1. Download [oauth-client.yaml](/{{page.version}}/getting-started/openshift/installation/oauth-client.yaml).
 
    ```bash
-   curl {{site.url}}/{{page.version}}/getting-started/openshift/oauth-client.yaml -O
+   curl {{site.url}}/{{page.version}}/getting-started/openshift/installation/oauth-client.yaml -O
    ```
 
 1. To make the following commands easier to copy and paste, set an environment variable called
@@ -107,13 +101,15 @@ such that {{site.prodname}} connects to an etcd you have already set up by follo
 1. Use the following command to replace the value of `<CNX_MANAGER_ADDR>` in `oauth-client.yaml`
    with the address of your cnx-manager service.
 
-   ```shell
+   ```bash
    sed -i -e "s?<CNX_MANAGER_ADDR>?$CNX_MANAGER_ADDR?g" oauth-client.yaml
    ```
 
 1. Apply it:
 
-       oc apply -f ./oauth-client.yaml
+   ```bash
+   oc apply -f oauth-client.yaml
+   ```
 
 ## Installing metrics and logs
 
