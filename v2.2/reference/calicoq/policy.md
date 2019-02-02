@@ -1,7 +1,7 @@
 ---
 title: calicoq policy
 redirect_from: latest/reference/calicoq/policy
-canonical_url: https://docs.tigera.io/v2.2/reference/calicoq/policy
+canonical_url: https://docs.tigera.io/v2.3/reference/calicoq/policy
 ---
 
 `calicoq policy <policy-name>` shows the endpoints that are relevant to the

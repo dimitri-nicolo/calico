@@ -1,6 +1,6 @@
 ---
 title: Using your own Elasticsearch for logs
-canonical_url: https://docs.tigera.io/v2.2/getting-started/kubernetes/installation/byo-elasticsearch
+canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/installation/byo-elasticsearch
 ---
 
 {% include {{page.version}}/byo-intro.md %}

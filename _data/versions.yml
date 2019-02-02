@@ -1,3 +1,87 @@
+v2.3:
+- title: v2.3.0
+  note: |
+    01 February 2019
+  dockerRepo: quay.io
+  components:
+    cnx-manager:
+      version: v2.3.0
+      url: ""
+    cnx-manager-proxy:
+      version: v2.3.0
+      url: ""
+    cnx-apiserver:
+      version: v2.3.0
+      url: ""
+    cnx-queryserver:
+      version: v2.3.0
+      url: ""
+    cnx-kube-controllers:
+      version: v2.3.0
+      url: ""
+    calicoq:
+      version: v2.3.0
+      url: ""
+    typha:
+      version: v2.3.0
+      url: ""
+    calicoctl:
+      version: v2.3.0
+      url: ""
+      download_url: ""
+    cnx-node:
+      version: v2.3.0
+      url: ""
+    calico/cni:
+      version: v2.3.0
+      url: ""
+      download_calico_url: ""
+      download_calico_ipam_url: ""
+    calico/routereflector:
+      version: v0.6.1
+      url: ""
+    calico:
+      version: v3.4.0
+      url: https://github.com/projectcalico/calico/releases/tag/v3.4.0
+    prometheus-operator:
+      version: v0.18.1
+      url: ""
+    prometheus:
+      version: v2.2.1
+      url: ""
+    alertmanager:
+      version: v0.14.0
+      url: ""
+    prometheus-config-reloader:
+      version: v0.0.3
+      url: ""
+    configmap-reload:
+      version: v0.0.1
+      url: ""
+    dikastes:
+      version: v2.3.0
+    flexvol:
+      version: v3.4.0
+    fluentd:
+      version: v2.3.0
+    es-proxy:
+      version: v2.3.0
+    elasticsearch-operator:
+      version: 0.2.0
+      url: ""
+    kibana:
+      version: 6.4.3
+      url: ""
+    elasticsearch:
+      version: 6.4.3
+      url: ""
+    cloud-controllers:
+      version: v2.3.0
+    elastic-tsee-installer:
+      version: v2.3.0
+    es-curator:
+      version: v2.3.0
+
 v2.2:
 - title: v2.2.3
   note: |
@@ -725,89 +809,6 @@ v2.0:
     calico:
       version: v3.0.1
       url: https://github.com/projectcalico/calico/releases/tag/v3.0.1
-
-v2.3:
-- title: v2.3.0
-  note: "Pre-release"
-  dockerRepo: gcr.io/unique-caldron-775/cnx
-  components:
-    cnx-manager:
-      version: release-v2.3
-      url: ""
-    cnx-manager-proxy:
-      version: release-v2.3
-      url: ""
-    cnx-apiserver:
-      version: release-v2.3
-      url: ""
-    cnx-queryserver:
-      version: release-v2.3
-      url: ""
-    cnx-kube-controllers:
-      version: release-v2.3
-      url: ""
-    calicoq:
-      version: release-v2.3
-      url: ""
-    typha:
-      version: release-v2.3
-      url: ""
-    calicoctl:
-      version: release-v2.3
-      url: ""
-      download_url: ""
-    cnx-node:
-      version: release-v2.3
-      url: ""
-    calico/cni:
-      version: v3.4.0
-      url: ""
-      download_calico_url: https://github.com/projectcalico/cni-plugin/releases/download/v3.4.0/calico
-      download_calico_ipam_url: https://github.com/projectcalico/cni-plugin/releases/download/v3.4.0/calico-ipam
-    calico/routereflector:
-      version: v0.6.1
-      url: ""
-    calico:
-      version: v3.4.0
-      url: https://github.com/projectcalico/calico/releases/tag/v3.4.0
-    prometheus-operator:
-      version: v0.18.1
-      url: ""
-    prometheus:
-      version: v2.2.1
-      url: ""
-    alertmanager:
-      version: v0.14.0
-      url: ""
-    prometheus-config-reloader:
-      version: v0.0.3
-      url: ""
-    configmap-reload:
-      version: v0.0.1
-      url: ""
-    dikastes:
-      version: release-v2.3
-    flexvol:
-      version: v3.4.0
-    fluentd:
-      version: release-v2.3
-    es-proxy:
-      version: release-v2.3
-    elasticsearch-operator:
-      version: 0.2.0
-      url: ""
-    kibana:
-      version: 6.4.3
-      url: ""
-    elasticsearch:
-      version: 6.4.3
-      url: ""
-    cloud-controllers:
-      version: release-v2.3
-    elastic-tsee-installer:
-      version: release-v2.3
-    es-curator:
-      version: release-v2.3
 
 # The master release stream is used to generate the master version of the docs,
 # as well as for builds of `calico/node:master` via CI.  Submit PRs to update the

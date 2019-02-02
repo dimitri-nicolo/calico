@@ -1,6 +1,6 @@
 ---
 title: Installing Tigera Secure EE on OpenShift
-canonical_url: https://docs.tigera.io/v2.2/getting-started/openshift/installation
+canonical_url: https://docs.tigera.io/v2.3/getting-started/openshift/installation
 ---
 
 Installation of {{site.prodname}} in OpenShift is integrated in openshift-ansible.

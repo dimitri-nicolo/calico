@@ -1,7 +1,7 @@
 ---
 title: Felix Configuration Resource (FelixConfiguration)
 redirect_from: latest/reference/calicoctl/resources/felixconfig
-canonical_url: https://docs.tigera.io/v2.2/reference/calicoctl/resources/felixconfig
+canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/resources/felixconfig
 ---
 
 A [Felix]({{site.baseurl}}/{{page.version}}/reference/architecture/#felix) configuration resource (`FelixConfiguration`) represents Felix configuration options for the cluster.

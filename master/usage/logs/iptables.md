@@ -1,6 +1,6 @@
 ---
 title: iptables logs
-canonical_url: https://docs.tigera.io/v2.2/usage/logs/iptables
+canonical_url: https://docs.tigera.io/v2.3/usage/logs/iptables
 ---
 
 ## About iptables logs

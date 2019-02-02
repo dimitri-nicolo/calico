@@ -1,7 +1,7 @@
 ---
 title: Stars Policy Demo
 redirect_from: latest/getting-started/kubernetes/tutorials/stars-policy/
-canonical_url: https://docs.tigera.io/v2.2/getting-started/kubernetes/tutorials/stars-policy/
+canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/tutorials/stars-policy/
 ---
 The included demo sets up a frontend and backend service, as well as a client service, all
 running on Kubernetes.  It then configures network policy on each service.

@@ -1,7 +1,7 @@
 ---
 title: Resource Definitions
 redirect_from: latest/reference/calicoctl/resources/
-canonical_url: https://docs.tigera.io/v2.2/reference/calicoctl/resources/
+canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/resources/
 ---
 
 This section describes the set of valid resource types that can be managed

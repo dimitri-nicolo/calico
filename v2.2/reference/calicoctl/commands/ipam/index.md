@@ -1,7 +1,7 @@
 ---
 title: calicoctl ipam
 redirect_from: latest/reference/calicoctl/commands/ipam/
-canonical_url: https://docs.tigera.io/v2.2/reference/calicoctl/commands/ipam/
+canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/commands/ipam/
 ---
 
 This section describes the `calicoctl ipam` commands.

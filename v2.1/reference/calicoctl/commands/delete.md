@@ -1,6 +1,6 @@
 ---
 title: calicoctl delete
-canonical_url: https://docs.tigera.io/v2.2/reference/calicoctl/commands/delete
+canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/commands/delete
 ---
 
 This sections describes the `calicoctl delete` command.

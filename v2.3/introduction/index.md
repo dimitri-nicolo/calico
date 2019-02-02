@@ -1,6 +1,6 @@
 ---
 title: About Tigera Secure Enterprise Edition (EE)
-canonical_url: https://docs.tigera.io/v2.2/introduction/
+canonical_url: https://docs.tigera.io/v2.3/introduction/
 description: Home
 layout: docwithnav
 ---

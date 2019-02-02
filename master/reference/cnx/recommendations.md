@@ -1,6 +1,6 @@
 ---
 title: Deploying Tigera Secure EE Manager
-canonical_url: https://docs.tigera.io/v2.2/reference/cnx/recommendations
+canonical_url: https://docs.tigera.io/v2.3/reference/cnx/recommendations
 ---
 
 This document contains recommendations and limits for deploying {{site.prodname}} Manager in production, particularly at high scale.

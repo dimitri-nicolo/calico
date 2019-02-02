@@ -1,6 +1,6 @@
 ---
 title: Configuring Alertmanager
-canonical_url: https://docs.tigera.io/v2.2/usage/configuration/alertmanager
+canonical_url: https://docs.tigera.io/v2.3/usage/configuration/alertmanager
 ---
 
 Alertmanager is used by {{site.prodname}} to route alerts from Prometheus to the administrators.

@@ -1,6 +1,6 @@
 ---
 title: calicoctl create
-canonical_url: https://docs.tigera.io/v2.2/reference/calicoctl/commands/create
+canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/commands/create
 ---
 
 This sections describes the `calicoctl create` command.

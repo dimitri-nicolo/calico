@@ -1,7 +1,7 @@
 ---
 title: calicoctl get
 redirect_from: latest/reference/calicoctl/commands/get
-canonical_url: https://docs.tigera.io/v2.2/reference/calicoctl/commands/get
+canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/commands/get
 ---
 
 This sections describes the `calicoctl get` command.

@@ -1,6 +1,6 @@
 ---
 title: calicoctl apply
-canonical_url: https://docs.tigera.io/v2.2/reference/calicoctl/commands/apply
+canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/commands/apply
 ---
 
 This sections describes the `calicoctl apply` command.

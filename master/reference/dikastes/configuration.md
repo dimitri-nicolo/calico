@@ -1,6 +1,6 @@
 ---
 title: Configuring Dikastes
-canonical_url: https://docs.tigera.io/v2.2/reference/dikastes/configuration
+canonical_url: https://docs.tigera.io/v2.3/reference/dikastes/configuration
 ---
 
 Configuration for Dikastes is read from the command line arguments passed. The command line options

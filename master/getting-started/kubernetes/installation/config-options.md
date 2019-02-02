@@ -1,6 +1,6 @@
 ---
 title: Customizing the manifests
-canonical_url: https://docs.tigera.io/v2.2/getting-started/kubernetes/installation/config-options
+canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/installation/config-options
 ---
 
 ## About customizing manifests

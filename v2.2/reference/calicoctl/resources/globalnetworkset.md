@@ -1,7 +1,7 @@
 ---
 title: Global Network Set Resource (GlobalNetworkSet)
 redirect_from: latest/reference/calicoctl/resources/globalnetworkset
-canonical_url: https://docs.tigera.io/v2.2/reference/calicoctl/resources/globalnetworkset
+canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/resources/globalnetworkset
 ---
 
 A global network set resource (GlobalNetworkSet) represents an arbitrary set of IP subnetworks/CIDRs, 

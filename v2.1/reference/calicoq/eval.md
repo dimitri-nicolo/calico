@@ -1,6 +1,6 @@
 ---
 title: calicoq eval
-canonical_url: https://docs.tigera.io/v2.2/reference/calicoq/eval
+canonical_url: https://docs.tigera.io/v2.3/reference/calicoq/eval
 ---
 
 `calicoq eval <selector>` is used to display the endpoints that are matched by

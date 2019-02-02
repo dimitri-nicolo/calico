@@ -1,6 +1,6 @@
 ---
 title: Logging
-canonical_url: https://docs.tigera.io/v2.2/usage/troubleshooting/logging
+canonical_url: https://docs.tigera.io/v2.3/usage/troubleshooting/logging
 ---
 
 ## The {{site.nodecontainer}} container

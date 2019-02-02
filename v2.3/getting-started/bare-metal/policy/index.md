@@ -1,6 +1,6 @@
 ---
 title: Creating policy for basic connectivity
-canonical_url: https://docs.tigera.io/v2.2/getting-started/bare-metal/policy/
+canonical_url: https://docs.tigera.io/v2.3/getting-started/bare-metal/policy/
 ---
 
 

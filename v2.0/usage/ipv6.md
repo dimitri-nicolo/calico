@@ -1,6 +1,6 @@
 ---
 title: IPv6 Support
-canonical_url: https://docs.tigera.io/v2.2/usage/ipv6
+canonical_url: https://docs.tigera.io/v2.3/usage/ipv6
 ---
 
 {{site.prodname}} supports connectivity over IPv6, between compute hosts, and

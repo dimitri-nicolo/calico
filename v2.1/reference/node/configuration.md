@@ -1,6 +1,6 @@
 ---
 title: Configuring cnx-node
-canonical_url: https://docs.tigera.io/v2.2/reference/node/configuration
+canonical_url: https://docs.tigera.io/v2.3/reference/node/configuration
 ---
 
 The `{{site.nodecontainer}}` container is primarily configured through environment variables.

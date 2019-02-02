@@ -1,7 +1,7 @@
 ---
 title: calicoctl node
 redirect_from: latest/reference/calicoctl/commands/node/
-canonical_url: https://docs.tigera.io/v2.2/reference/calicoctl/commands/node/
+canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/commands/node/
 ---
 
 This section describes the `calicoctl node` commands.

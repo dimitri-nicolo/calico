@@ -1,6 +1,6 @@
 ---
 title: Configuring MTU
-canonical_url: https://docs.tigera.io/v2.2/usage/configuration/mtu
+canonical_url: https://docs.tigera.io/v2.3/usage/configuration/mtu
 ---
 
 Depending on the environment {{site.prodname}} is being deployed into it may be

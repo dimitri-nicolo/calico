@@ -1,6 +1,6 @@
 ---
 title: Releases
-canonical_url: https://docs.tigera.io/v2.2/releases/
+canonical_url: https://docs.tigera.io/v2.3/releases/
 ---
 
 The following table shows component versioning for {{site.prodname}}  **{{ page.version }}**.

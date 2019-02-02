@@ -1,6 +1,6 @@
 ---
 title: Example AWS configuration
-canonical_url: https://docs.tigera.io/v2.2/usage/federation/aws
+canonical_url: https://docs.tigera.io/v2.3/usage/federation/aws
 ---
 
 ## Overview

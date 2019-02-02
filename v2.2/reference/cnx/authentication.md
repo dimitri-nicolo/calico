@@ -1,7 +1,7 @@
 ---
 title: Configuring user authentication to Tigera Secure EE Manager
 redirect_from: latest/reference/cnx/authentication
-canonical_url: https://docs.tigera.io/v2.2/reference/cnx/authentication
+canonical_url: https://docs.tigera.io/v2.3/reference/cnx/authentication
 ---
 
 This document describes the authentication methods supported by {{site.prodname}}

@@ -1,6 +1,6 @@
 ---
 title: Installing Calico on host endpoints
-canonical_url: https://docs.tigera.io/v2.2/getting-started/bare-metal/installation/
+canonical_url: https://docs.tigera.io/v2.3/getting-started/bare-metal/installation/
 ---
 
 You can use any of the following methods to install Felix on bare metal.

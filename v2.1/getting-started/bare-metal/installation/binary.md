@@ -1,6 +1,6 @@
 ---
 title: Binary install without package manager
-canonical_url: https://docs.tigera.io/v2.2/getting-started/bare-metal/installation/binary
+canonical_url: https://docs.tigera.io/v2.3/getting-started/bare-metal/installation/binary
 ---
 
 ## Prerequisites

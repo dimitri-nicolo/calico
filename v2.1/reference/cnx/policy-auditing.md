@@ -1,6 +1,6 @@
 ---
 title: Policy Audit Mode
-canonical_url: https://docs.tigera.io/v2.2/usage/logs/iptables
+canonical_url: https://docs.tigera.io/v2.3/usage/logs/iptables
 ---
 
 {{site.prodname}} adds a Felix option DropActionOverride that configures how the

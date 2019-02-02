@@ -1,6 +1,6 @@
 ---
 title: calicoq and selectors
-canonical_url: https://docs.tigera.io/v2.2/reference/calicoq/selectors
+canonical_url: https://docs.tigera.io/v2.3/reference/calicoq/selectors
 ---
 
 The queries that you can make with `calicoq` all involve computing the matches

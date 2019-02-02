@@ -1,7 +1,7 @@
 ---
 title: Scheduling to well-known nodes
 redirect_from: latest/usage/reduce-nodes
-canonical_url: https://docs.tigera.io/v2.2/usage/reduce-nodes
+canonical_url: https://docs.tigera.io/v2.3/usage/reduce-nodes
 ---
 
 The following {{site.prodname}} components must accept connections on

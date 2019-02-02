@@ -1,6 +1,6 @@
 ---
 title: Release notes
-canonical_url: https://docs.tigera.io/v2.2/releases/
+canonical_url: https://docs.tigera.io/v2.3/releases/
 ---
 
 

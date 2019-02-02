@@ -1,6 +1,6 @@
 ---
 title: Generating Certificates for etcd RBAC
-canonical_url: https://docs.tigera.io/v2.2/reference/advanced/etcd-rbac/certificate-generation
+canonical_url: https://docs.tigera.io/v2.3/reference/advanced/etcd-rbac/certificate-generation
 ---
 
 The etcd datastore has the concept of users that are linked to roles, where

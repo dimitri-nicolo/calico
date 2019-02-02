@@ -1,6 +1,6 @@
 ---
 title: calicoq endpoint
-canonical_url: https://docs.tigera.io/v2.2/reference/calicoq/endpoint
+canonical_url: https://docs.tigera.io/v2.3/reference/calicoq/endpoint
 ---
 
 `calicoq endpoint <substring>` shows you the {{site.prodname}} policies and profiles that

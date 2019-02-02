@@ -1,6 +1,6 @@
 ---
 title: calicoctl node run
-canonical_url: https://docs.tigera.io/v2.2/reference/calicoctl/commands/node/run
+canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/commands/node/run
 ---
 
 This sections describes the `calicoctl node run` command.

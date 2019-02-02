@@ -1,6 +1,6 @@
 ---
 title: Tigera Secure EE for Kubernetes Demo
-canonical_url: https://docs.tigera.io/v2.2/getting-started/cnx/simple-policy-cnx/
+canonical_url: https://docs.tigera.io/v2.3/getting-started/cnx/simple-policy-cnx/
 ---
 
 This guide is a variation of the simple policy demo intended to introduce the extra features of {{site.prodname}} to people already familiar with Project Calico for Kubernetes.

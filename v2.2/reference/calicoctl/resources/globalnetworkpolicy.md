@@ -1,7 +1,7 @@
 ---
 title: Global Network Policy Resource (GlobalNetworkPolicy)
 redirect_from: latest/reference/calicoctl/resources/globalnetworkpolicy
-canonical_url: https://docs.tigera.io/v2.2/reference/calicoctl/resources/globalnetworkpolicy
+canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/resources/globalnetworkpolicy
 ---
 
 A global network policy resource (`GlobalNetworkPolicy`) represents an ordered set of rules which are applied

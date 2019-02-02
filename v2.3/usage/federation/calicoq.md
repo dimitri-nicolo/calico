@@ -1,6 +1,6 @@
 ---
 title: Querying remote clusters with calicoq
-canonical_url: https://docs.tigera.io/v2.2/usage/federation/calicoq
+canonical_url: https://docs.tigera.io/v2.3/usage/federation/calicoq
 ---
 
 You can use `calicoq` to query endpoints in remote clusters. The output from `calicoq` will

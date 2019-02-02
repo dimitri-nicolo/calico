@@ -1,6 +1,6 @@
 ---
 title: 'The CNX Data Path: IP Routing and iptables'
-canonical_url: https://docs.tigera.io/v2.2/reference/architecture/data-path
+canonical_url: https://docs.tigera.io/v2.3/reference/architecture/data-path
 ---
 
 

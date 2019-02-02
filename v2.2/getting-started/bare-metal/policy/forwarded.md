@@ -1,7 +1,7 @@
 ---
 title: Apply on forwarded traffic
 redirect_from: latest/getting-started/bare-metal/policy/forwarded
-canonical_url: https://docs.tigera.io/v2.2/getting-started/bare-metal/policy/forwarded
+canonical_url: https://docs.tigera.io/v2.3/getting-started/bare-metal/policy/forwarded
 ---
 
 If `applyOnForward` is `false`, the host endpoint policy applies to traffic to/from

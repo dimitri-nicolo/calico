@@ -1,6 +1,6 @@
 ---
 title: Configuring the Calico Kubernetes controllers
-canonical_url: https://docs.tigera.io/v2.2/reference/kube-controllers/configuration
+canonical_url: https://docs.tigera.io/v2.3/reference/kube-controllers/configuration
 ---
 
 The {{site.prodname}} Kubernetes controllers are primarily configured through environment variables. When running

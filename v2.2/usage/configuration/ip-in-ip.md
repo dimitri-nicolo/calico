@@ -1,7 +1,7 @@
 ---
 title: Configuring IP-in-IP
 redirect_from: latest/usage/configuration/ip-in-ip
-canonical_url: https://docs.tigera.io/v2.2/usage/configuration/ip-in-ip
+canonical_url: https://docs.tigera.io/v2.3/usage/configuration/ip-in-ip
 ---
 
 If your network fabric performs source/destination address checks

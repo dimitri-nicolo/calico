@@ -1,7 +1,7 @@
 ---
 title: Securing Tigera Secure EE's Prometheus endpoints
 redirect_from: latest/usage/policy/secure-metrics
-canonical_url: https://docs.tigera.io/v2.2/usage/policy/secure-metrics
+canonical_url: https://docs.tigera.io/v2.3/usage/policy/secure-metrics
 ---
 
 ## About securing access to {{site.prodname}}'s metrics endpoints

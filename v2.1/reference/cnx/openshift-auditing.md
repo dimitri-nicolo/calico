@@ -1,6 +1,6 @@
 ---
 title: Tigera Secure EE Resource Auditing in OpenShift
-canonical_url: https://docs.tigera.io/v2.2/usage/logs/elastic/ee-audit
+canonical_url: https://docs.tigera.io/v2.3/usage/logs/elastic/ee-audit
 ---
 
 This document describes how to set up audit logging for {{site.prodname}}

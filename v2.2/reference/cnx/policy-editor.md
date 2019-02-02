@@ -1,7 +1,7 @@
 ---
 title: Tigera Secure EE Manager Policy Editor
 redirect_from: latest/reference/cnx/policy-editor
-canonical_url: https://docs.tigera.io/v2.2/reference/cnx/policy-editor
+canonical_url: https://docs.tigera.io/v2.3/reference/cnx/policy-editor
 ---
 
 {{site.prodname}} Manager includes a web client for viewing and editing

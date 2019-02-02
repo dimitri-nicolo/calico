@@ -1,6 +1,6 @@
 ---
 title: Installing CNX on Kubernetes
-canonical_url: https://docs.tigera.io/v2.2/getting-started/kubernetes/installation/
+canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/installation/
 ---
 
 {{site.prodname}} can be installed on a Kubernetes cluster in a number of configurations.  This document

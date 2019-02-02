@@ -1,6 +1,6 @@
 ---
 title: Policy metrics in Prometheus
-canonical_url: https://docs.tigera.io/v2.2/usage/metrics/metrics
+canonical_url: https://docs.tigera.io/v2.3/usage/metrics/metrics
 ---
 
 {{site.prodname}} adds the ability to monitor effects of policies configured in your cluster.

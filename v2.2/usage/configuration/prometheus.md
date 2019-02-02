@@ -1,7 +1,7 @@
 ---
 title: Configuring Prometheus
 redirect_from: latest/usage/configuration/prometheus
-canonical_url: https://docs.tigera.io/v2.2/usage/configuration/prometheus
+canonical_url: https://docs.tigera.io/v2.3/usage/configuration/prometheus
 ---
 
 Note: This document assumes that Prometheus and Alertmanager have been setup

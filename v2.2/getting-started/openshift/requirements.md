@@ -1,7 +1,7 @@
 ---
 title: System requirements
 redirect_from: latest/getting-started/openshift/requirements
-canonical_url: https://docs.tigera.io/v2.2/getting-started/openshift/requirements
+canonical_url: https://docs.tigera.io/v2.3/getting-started/openshift/requirements
 ---
 
 {% include {{page.version}}/reqs-sys.md orch="OpenShift" %}

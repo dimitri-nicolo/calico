@@ -1,6 +1,6 @@
 ---
 title: Host Endpoint Resource (HostEndpoint)
-canonical_url: https://docs.tigera.io/v2.2/reference/calicoctl/resources/hostendpoint
+canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/resources/hostendpoint
 ---
 
 A host endpoint resource (`HostEndpoint`) represents one or more real or virtual interfaces

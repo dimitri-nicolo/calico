@@ -1,7 +1,7 @@
 ---
 title: Amazon Web Services (AWS)
 redirect_from: latest/reference/public-cloud/aws
-canonical_url: https://docs.tigera.io/v2.2/reference/public-cloud/aws
+canonical_url: https://docs.tigera.io/v2.3/reference/public-cloud/aws
 ---
 
 ## Overview

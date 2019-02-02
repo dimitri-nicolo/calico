@@ -1,6 +1,6 @@
 ---
 title: Configuring the Tigera Secure EE CNI plugins
-canonical_url: https://docs.tigera.io/v2.2/reference/cni-plugin/configuration
+canonical_url: https://docs.tigera.io/v2.3/reference/cni-plugin/configuration
 ---
 
 The {{site.prodname}} CNI plugin is configured through the standard CNI

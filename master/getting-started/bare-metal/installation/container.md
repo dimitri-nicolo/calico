@@ -1,6 +1,6 @@
 ---
 title: Container install
-canonical_url: https://docs.tigera.io/v2.2/getting-started/bare-metal/installation/container
+canonical_url: https://docs.tigera.io/v2.3/getting-started/bare-metal/installation/container
 ---
 
 If you want to run under Docker, you can use `calicoctl node run --node-image={{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["node"]}}:{{site.data.versions[page.version].first.title}}`

@@ -1,7 +1,7 @@
 ---
 title: Selector-based policy
 redirect_from: latest/getting-started/bare-metal/policy/selector
-canonical_url: https://docs.tigera.io/v2.2/getting-started/bare-metal/policy/selector
+canonical_url: https://docs.tigera.io/v2.3/getting-started/bare-metal/policy/selector
 ---
 
 

@@ -1,6 +1,6 @@
 ---
 title: Tutorial
-canonical_url: https://docs.tigera.io/v2.2/getting-started/bare-metal/policy/tutorial
+canonical_url: https://docs.tigera.io/v2.3/getting-started/bare-metal/policy/tutorial
 ---
 
 Imagine that the administrator of a Kubernetes cluster wants to secure it as much as

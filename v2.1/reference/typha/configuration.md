@@ -1,6 +1,6 @@
 ---
 title: Configuring Typha
-canonical_url: https://docs.tigera.io/v2.2/reference/typha/configuration
+canonical_url: https://docs.tigera.io/v2.3/reference/typha/configuration
 ---
 
 Configuration for Typha is read from one of two possible locations, in

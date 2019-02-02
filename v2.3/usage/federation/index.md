@@ -1,6 +1,6 @@
 ---
 title: Overview
-canonical_url: https://docs.tigera.io/v2.2/usage/federation/
+canonical_url: https://docs.tigera.io/v2.3/usage/federation/
 ---
 
 ## About federation

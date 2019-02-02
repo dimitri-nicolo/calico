@@ -1,6 +1,6 @@
 ---
 title: Upgrading Tigera Secure EE from an earlier release
-canonical_url: https://docs.tigera.io/v2.2/getting-started/kubernetes/upgrade-cnx
+canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/upgrade-cnx
 ---
 
 ## Prerequisite

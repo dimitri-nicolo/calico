@@ -1,7 +1,7 @@
 ---
 title: Using Tigera Secure EE to Secure Host Interfaces
 redirect_from: latest/getting-started/bare-metal/bare-metal
-canonical_url: https://docs.tigera.io/v2.2/getting-started/bare-metal/bare-metal
+canonical_url: https://docs.tigera.io/v2.3/getting-started/bare-metal/bare-metal
 ---
 
 This guide describes how to use {{site.prodname}} to secure the network interfaces

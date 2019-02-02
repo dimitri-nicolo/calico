@@ -1,6 +1,6 @@
 ---
 title: Component logs
-canonical_url: https://docs.tigera.io/v2.2/usage/logs/component
+canonical_url: https://docs.tigera.io/v2.3/usage/logs/component
 ---
 
 The {{site.prodname}} components normally run as pods; their logs can be accessed as usual for pod logs (`kubectl logs` etc).  The [Kubernetes](https://kubernetes.io/docs/concepts/cluster-administration/logging/) and

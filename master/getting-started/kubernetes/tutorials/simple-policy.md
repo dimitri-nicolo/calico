@@ -1,6 +1,6 @@
 ---
 title: Simple Policy Demo
-canonical_url: https://docs.tigera.io/v2.2/getting-started/kubernetes/tutorials/simple-policy
+canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/tutorials/simple-policy
 ---
 
 This guide provides a simple way to try out Kubernetes NetworkPolicy with {{site.prodname}}.  It requires a Kubernetes cluster configured with {{site.prodname}} networking, and expects that you have `kubectl` configured to interact with the cluster.

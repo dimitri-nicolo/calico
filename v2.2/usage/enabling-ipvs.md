@@ -1,7 +1,7 @@
 ---
 title: Enabling IPVS in Kubernetes
 redirect_from: latest/usage/enabling-ipvs
-canonical_url: https://docs.tigera.io/v2.2/usage/enabling-ipvs
+canonical_url: https://docs.tigera.io/v2.3/usage/enabling-ipvs
 ---
 
 {{site.prodname}} has support for `kube-proxy`'s `ipvs` proxy mode.

@@ -1,6 +1,6 @@
 ---
 title: Configuring calicoctl to connect to an etcd datastore
-canonical_url: https://docs.tigera.io/v2.2/usage/calicoctl/configure/etcd
+canonical_url: https://docs.tigera.io/v2.3/usage/calicoctl/configure/etcd
 ---
 
 {% include {{page.version}}/cli-config-etcd.md cli="calicoctl" %}
