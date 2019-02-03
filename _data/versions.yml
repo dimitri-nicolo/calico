@@ -33,7 +33,7 @@ v2.3:
       version: v2.3.0
       url: ""
     calico/cni:
-      version: v2.3.0
+      version: v3.4.0
       url: ""
       download_calico_url: ""
       download_calico_ipam_url: ""
