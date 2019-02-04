@@ -28,7 +28,7 @@ data:
   # tigera.cnx-manager.cluster-name in tigera-cnx-manager-config.
   tigera.elasticsearch.cluster-name: "cluster"
   # The number of shards for index tigera_secure_ee_flows.
-  tigera.elasticsearch.flows-index-shards: 5
+  tigera.elasticsearch.flows-index-shards: "5"
   # The retention period for flow logs, in days.  Logs written on a day that started at least this long ago are
   # removed.  To keep logs for at least x days, use a retention period of x+1.
   tigera.elasticsearch.flow-retention: "8"
