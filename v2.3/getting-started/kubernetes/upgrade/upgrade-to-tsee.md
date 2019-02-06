@@ -1,6 +1,6 @@
 ---
 title: Upgrading from Calico to Tigera Secure EE
-canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/upgrade-cnx
+canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/upgrade/upgrade-to-tsee
 ---
 
 ## Prerequisite

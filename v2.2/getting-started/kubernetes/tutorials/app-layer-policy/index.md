@@ -1,7 +1,7 @@
 ---
 title: Application layer policy tutorial
 redirect_from: latest/getting-started/kubernetes/tutorials/app-layer-policy/
-canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/tutorials/app-layer-policy/
+canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/tutorials/app-layer-policy
 ---
 
 The included demo sets up a microservices application, then demonstrates the use of application

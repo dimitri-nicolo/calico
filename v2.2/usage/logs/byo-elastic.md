@@ -1,7 +1,7 @@
 ---
 title: Using your own Elasticsearch cluster
 redirect_from: latest/usage/logs/byo-elastic
-canonical_url: https://docs.tigera.io/v2.3/usage/logs/byo-elastic
+canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/installation/byo-elasticsearch
 ---
 
 This page describes how to use a separate Elasticsearch cluster for {{site.prodname}} logs.

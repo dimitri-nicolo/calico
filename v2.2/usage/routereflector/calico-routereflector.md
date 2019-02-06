@@ -1,7 +1,6 @@
 ---
 title: Tigera Secure EE BIRD Route Reflector container
-redirect_from: latest/usage/routereflector/calico-routereflector
-canonical_url: https://docs.tigera.io/v2.3/usage/routereflector/calico-routereflector
+canonical_url: https://docs.tigera.io/v2.3/usage/routereflector
 ---
 
 For many {{site.prodname}} deployments, the use of a Route Reflector is not required.
