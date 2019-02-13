@@ -536,6 +536,11 @@ func NetworkApplicationContainer(args *skel.CmdArgs) error {
 	}
 
 	if err = hcsshim.HotAttachEndpoint(args.ContainerID, hnsEndpoint.Id); err != nil {
+		if err == hcsshim.ErrComputeSystemDoesNotExist {
+			// kubelet Windows uses ADD CmdArgs to get pod status. It is possible for Calico CNI to recieve an ADD after application container has completed and been removed from runtime.
+			// In that case, return nil to allow Calico CNI to return good pod status to kubelet.
+			return nil
+		}
 		logrus.Errorf("Failed to attach hns endpoint: %s to container: %v\n ", hnsEndpoint, args.ContainerID)
 		return err
 	}
