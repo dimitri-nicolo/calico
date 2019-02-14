@@ -99,7 +99,7 @@ toc:
     path: /usage/aws-security-group-integration/pod-access
   - title: Enabling VPC members to access pods
     path: /usage/aws-security-group-integration/vpc-member-access
-  - title: Enabling access to AWS metadata 
+  - title: Enabling access to AWS metadata
     path: /usage/aws-security-group-integration/metadata-access
   - title: Managing the tiers associated with security group integration
     path: /usage/aws-security-group-integration/tier-management
@@ -117,6 +117,8 @@ toc:
     path: /usage/intrusion-detection/job-descriptions
   - title: Customizing
     path: /usage/intrusion-detection/customizing
+- title: Admin policy using domain names
+  path: /usage/domain-based-policy
 - title: Running cnx-node with an init system
   path: /usage/configuration/as-service
 - title: Configuring BGP Peers
