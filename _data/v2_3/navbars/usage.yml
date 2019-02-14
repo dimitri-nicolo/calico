@@ -117,7 +117,7 @@ toc:
     path: /usage/intrusion-detection/job-descriptions
   - title: Customizing
     path: /usage/intrusion-detection/customizing
-- title: Admin policy using domain names
+- title: Use domain names in policy rules
   path: /usage/domain-based-policy
 - title: Running cnx-node with an init system
   path: /usage/configuration/as-service

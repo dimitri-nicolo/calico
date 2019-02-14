@@ -1,5 +1,5 @@
 ---
-title: Admin policy using domain names
+title: Use domain names in policy rules
 canonical_url: 'https://docs.projectcalico.org/master/security/domain-based-policy'
 ---
 
@@ -14,17 +14,18 @@ AWS's RDS - by its domain name instead of its IP.
 
 > **Note**: Similarly, in order to address endpoints and services
 > *within* the cluster, we apply Kubernetes labels to convey their
-> roles, and then select on those labels in Calico policy, rather than
-> addressing those endpoints and services directly by IP.  So using
-> domain names for external resources is somewhat analogous to using
-> labels for internal ones.  Using domain names for services *within*
-> the cluster is not supported by the feature described on this page,
-> because Kubernetes labels can and should be used for those instead.
+> roles, and then select on those labels in {{site.prodname}} policy,
+> rather than addressing those endpoints and services directly by IP.
+> So using domain names for external resources is somewhat analogous
+> to using labels for internal ones.  Using domain names for services
+> *within* the cluster is not supported by the feature described on
+> this page, because Kubernetes labels can and should be used for
+> those instead.
 {: .alert .alert-info}
 
 Specifically, a GlobalNetworkPolicy can have egress rules with
-`action: Allow` and a `domains` field specifying the possible domain
-names to which egress traffic is allowed.
+`action: Allow` and an `allowedEgressDomains` field specifying the
+possible domain names to which egress traffic is allowed.
 
 > **Note**: This makes sense when egress traffic from the workloads
 > concerned (i.e. that the policy applies to) is denied by default.
@@ -34,15 +35,12 @@ names to which egress traffic is allowed.
 
 There are two ways for a rule to specify allowed domain names:
 
-1.  By listing those domain names directly in `domains.names`.
+1.  By listing those domain names directly in `allowedEgressDomains`.
 
-2.  By creating a
-    [GlobalDomainSet]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy)
-    resource - which groups together a set of domain names that you
-    want to label in the same way - and using `domains.selector` to
-    select GlobalDomainSets by their labels.  The effect then is to
-    allow egress to all of the domain names listed in all of the
-    selected GlobalDomainSets.
+2.  With a `destination.selector` that matches a
+    [GlobalNetworkSet]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkset)
+    resource that includes domain names in its `allowedEgressDomains`
+    field.
 
 ### Understanding which domain names will work
 
