@@ -57,6 +57,11 @@ type Rule struct {
 	Source EntityRule `json:"source,omitempty" validate:"omitempty"`
 	// Destination contains the match criteria that apply to destination entity.
 	Destination EntityRule `json:"destination,omitempty" validate:"omitempty"`
+	// AllowedEgressDomains is an optional field, valid for Allow rules only, that restricts the
+	// rule to apply only to traffic to one of the specified domains.  If this field is
+	// specified, Action must be Allow, and Destination.Nets and Destination.Selector must both
+	// be left empty.
+	AllowedEgressDomains []string `json:"allowedEgressDomains,omitempty" validate:"omitempty,dive,name"`
 
 	// HTTP contains match criteria that apply to HTTP requests.
 	HTTP *HTTPMatch `json:"http,omitempty" validate:"omitempty"`
