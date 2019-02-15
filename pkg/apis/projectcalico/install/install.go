@@ -30,7 +30,7 @@ func Install(groupFactoryRegistry announced.APIGroupFactoryRegistry, registry *r
 	if err := announced.NewGroupMetaFactory(
 		&announced.GroupMetaFactoryArgs{
 			GroupName:                  projectcalico.GroupName,
-			RootScopedKinds:            sets.NewString("Tier", "GlobalNetworkPolicy", "GlobalNetworkSet"),
+			RootScopedKinds:            sets.NewString("Tier", "GlobalNetworkPolicy", "GlobalNetworkSet", "LicenseKey"),
 			VersionPreferenceOrder:     []string{v3.SchemeGroupVersion.Version},
 			AddInternalObjectsToScheme: projectcalico.AddToScheme,
 		},

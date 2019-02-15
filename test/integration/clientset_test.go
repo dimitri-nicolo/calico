@@ -499,3 +499,52 @@ func testGlobalNetworkSetClient(client calicoclient.Interface, name string) erro
 
 	return nil
 }
+
+
+// TestLicenseKeyClient exercises the LicenseKey client.
+func TestLicenseKeyClient(t *testing.T) {
+	const name = "default"
+	rootTestFunc := func() func(t *testing.T) {
+		return func(t *testing.T) {
+			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+				return &projectcalico.GlobalNetworkSet{}
+			})
+			defer shutdownServer()
+			if err := testLicenseKeyClient(client, name); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	if !t.Run(name, rootTestFunc()) {
+		t.Errorf("test-licensekey test failed")
+	}
+}
+
+func testLicenseKeyClient(client calicoclient.Interface, name string) error {
+	licenseKeyClient := client.ProjectcalicoV3().LicenseKeys()
+	licenseKey := &v3.LicenseKey{ObjectMeta: metav1.ObjectMeta{Name: name}}
+
+	licenseKeys, err := licenseKeyClient.List(metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing licenseKeys (%s)", err)
+	}
+	if licenseKeys.Items == nil {
+		return fmt.Errorf("items field should not be set to nil")
+	}
+
+	licenseKeyServer, err := licenseKeyClient.Create(licenseKey)
+	if nil != err {
+		return fmt.Errorf("error creating the licenseKey '%v' (%v)", licenseKey, err)
+	}
+	if name != licenseKeyServer.Name {
+		return fmt.Errorf("didn't get the same licenseKey back from the server \n%+v\n%+v", licenseKey, licenseKeyServer)
+	}
+
+	err = licenseKeyClient.Delete(name, &metav1.DeleteOptions{})
+	if nil != err {
+		return fmt.Errorf("licenseKey should be deleted (%s)", err)
+	}
+
+	return nil
+}

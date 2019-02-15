@@ -106,3 +106,25 @@ type GlobalNetworkSet struct {
 
 	Spec calico.GlobalNetworkSetSpec
 }
+
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// LicenseKeyList is a list of LicenseKey objects.
+type LicenseKeyList struct {
+	metav1.TypeMeta
+	metav1.ListMeta
+
+	Items []LicenseKey
+}
+
+// +genclient
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type LicenseKey struct {
+	metav1.TypeMeta
+	metav1.ObjectMeta
+
+	Spec calico.LicenseKeySpec
+}

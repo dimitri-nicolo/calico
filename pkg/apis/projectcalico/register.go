@@ -56,6 +56,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&GlobalNetworkPolicyList{},
 		&GlobalNetworkSet{},
 		&GlobalNetworkSetList{},
+		&LicenseKey{},
+		&LicenseKeyList{},
 	)
 	return nil
 }

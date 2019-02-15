@@ -18,6 +18,7 @@ package rest
 
 import (
 	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
+	calicolicensekey "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/licensekey"
 	calicognetworkset "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/globalnetworkset"
 	calicogpolicy "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/globalpolicy"
 	calicopolicy "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/networkpolicy"
@@ -130,11 +131,33 @@ func (p RESTStorageProvider) NewV3Storage(
 		authorizer,
 	)
 
+	licenseKeyRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("licensekeys"))
+	if err != nil {
+		return nil, err
+	}
+	licenseKeysSetOpts := server.NewOptions(
+		etcd.Options{
+			RESTOptions:   licenseKeyRESTOptions,
+			Capacity:      10,
+			ObjectType:    calicolicensekey.EmptyObject(),
+			ScopeStrategy: calicolicensekey.NewStrategy(scheme),
+			NewListFunc:   calicolicensekey.NewList,
+			GetAttrsFunc:  calicolicensekey.GetAttrs,
+			Trigger:       storage.NoTriggerPublisher,
+		},
+		calicostorage.Options{
+			RESTOptions: licenseKeyRESTOptions,
+		},
+		p.StorageType,
+		authorizer,
+	)
+
 	storage := map[string]rest.Storage{}
 	storage["networkpolicies"] = calicopolicy.NewREST(scheme, *policyOpts)
 	storage["tiers"] = calicotier.NewREST(scheme, *tierOpts)
 	storage["globalnetworkpolicies"] = calicogpolicy.NewREST(scheme, *gpolicyOpts)
 	storage["globalnetworksets"] = calicognetworkset.NewREST(scheme, *gNetworkSetOpts)
+	storage["licensekeys"] = calicolicensekey.NewREST(scheme, *licenseKeysSetOpts)
 
 	return storage, nil
 }
