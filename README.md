@@ -29,6 +29,7 @@ docker image (`make tigera/cnx-apiserver`) has been built.
 9. kubectl create -f artifacts/policies/tier.yaml <-- Creating a Tier
 10. kubectl create -f artifacts/policies/globalpolicy.yaml <-- Creating a GlobalNetworkPolicy
 11. kubectl create -f artifacts/calico/globalnetworkset.yaml <-- Creating a GlobalNetworkSet
+12. kubectl create -f artifacts/calico/iwantcake5-license.yaml <-- Creating a licenseKey
 .
 .
 .
@@ -54,6 +55,7 @@ docker image (`make tigera/cnx-apiserver`) has been built.
 9. kubectl create -f artifacts/policies/tier.yaml <-- Creating a Tier
 10. kubectl create -f artifacts/policies/globalpolicy.yaml <-- Creating a GlobalNetworkPolicy
 11. kubectl create -f artifacts/calico/globalnetworkset.yaml <-- Creating a GlobalNetworkSet
+12. kubectl create -f artifacts/calico/iwantcake5-license.yaml <-- Creating a licenseKey
 .
 .
 .
@@ -155,6 +157,11 @@ GlobalNetworkSets - APIVersion: projectcalico.org/v3 Kind: GlobalNetworkSet
 
 GlobalNetworkPolicies with Application Layer rules
 20. Create globalnetworkpolicies with application layer rule: -XPOST -d @app-policy.yaml -H "Content-type:application/yaml" https://10.0.2.15:6443/apis/projectcalico.org/v3/globalnetworkpolicies
+
+LicenseKeys - APIVersion: projectcalico.org/v3 Kind: LicenseKeys
+21. Listing licenseKey: https://10.0.2.15:6443/apis/projectcalico.org/v3/licensekeys
+22. Getting a licenseKey: https://10.0.2.15:6443/apis/projectcalico.org/v3/licensekeys/default
+
 ``` 
 
 ## Testing
