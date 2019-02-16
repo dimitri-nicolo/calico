@@ -77,7 +77,7 @@ func NewREST(scheme *runtime.Scheme, opts server.Options) *REST {
 		ObjectNameFunc: func(obj runtime.Object) (string, error) {
 			return obj.(*calico.LicenseKey).Name, nil
 		},
-		PredicateFunc:            MatchNetworkSet,
+		PredicateFunc:            MatchLicenseKey,
 		DefaultQualifiedResource: calico.Resource("licensekeys"),
 
 		CreateStrategy:          strategy,

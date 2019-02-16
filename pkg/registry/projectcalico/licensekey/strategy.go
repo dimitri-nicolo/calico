@@ -78,9 +78,9 @@ func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, bool, error) {
 	return labels.Set(apiserver.ObjectMeta.Labels), LicenseKeyToSelectableFields(apiserver), apiserver.Initializers != nil, nil
 }
 
-// MatchNetworkSet is the filter used by the generic etcd backend to watch events
+// MatchLicenseKey is the filter used by the generic etcd backend to watch events
 // from etcd to clients of the apiserver only interested in specific labels/fields.
-func MatchNetworkSet(label labels.Selector, field fields.Selector) storage.SelectionPredicate {
+func MatchLicenseKey(label labels.Selector, field fields.Selector) storage.SelectionPredicate {
 	return storage.SelectionPredicate{
 		Label:    label,
 		Field:    field,
