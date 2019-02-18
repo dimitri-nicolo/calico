@@ -5,8 +5,16 @@ monitor-calico.yaml acccepts the following include flags:
 |---------------|-----------------------------|
 | secure_es     | true, false                 |
 | elasticsearch | operator, external          |
+| platform      | gke, <unset>                |
 
 {% endcomment -%}
+{%- capture node_name -%}
+  {%- if include.platform == "gke" -%}
+    calico-node-ee
+  {%- else -%}
+    calico-node
+  {%- endif -%}
+{%- endcapture -%}
 ---
 # This manifest includes the following component versions:
 #   quay.io/prometheus/prometheus:{{site.data.versions[page.version].first.components["prometheus"].version}}
@@ -64,10 +72,10 @@ metadata:
   namespace: kube-system
   name: calico-node-metrics
   labels:
-    k8s-app: calico-node
+    k8s-app: {{ node_name }}
 spec:
   selector:
-    k8s-app: calico-node
+    k8s-app: {{ node_name }}
   type: ClusterIP
   clusterIP: None
   ports:
@@ -192,7 +200,7 @@ metadata:
 spec:
   selector:
     matchLabels:
-      k8s-app: calico-node
+      k8s-app: {{ node_name }}
   namespaceSelector:
     matchNames:
     - kube-system
