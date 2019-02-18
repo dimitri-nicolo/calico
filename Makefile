@@ -86,6 +86,14 @@ ADDRESS=$(ENVOY_API)/envoy/api/v2/core/address
 V2_BASE=$(ENVOY_API)/envoy/api/v2/core/base
 HTTP_STATUS=$(ENVOY_API)/envoy/type/http_status
 
+# Always install the git hooks to prevent publishing closed source code to a non-private repo.
+hooks_installed:=$(shell ./install-git-hooks)
+
+.PHONY: install-git-hooks
+## Install Git hooks
+install-git-hooks:
+	./install-git-hooks
+
 .PHONY: clean
 ## Clean enough that a new release build will be clean
 clean:
