@@ -321,6 +321,9 @@ static-checks: vendor
 fix:
 	goimports -w $(SRCFILES) $(TEST_SRCFILES)
 
+# Always install the git hooks to prevent publishing closed source code to a non-private repo.
+hooks_installed:=$(shell ./install-git-hooks)
+
 .PHONY: install-git-hooks
 ## Install Git hooks
 install-git-hooks:
