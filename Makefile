@@ -147,6 +147,9 @@ check-format: vendor
 goimports go-fmt format-code fix: vendor
 	$(DOCKER_GO_BUILD) goimports -w lib
 
+# Always install the git hooks to prevent publishing closed source code to a non-private repo.
+hooks_installed:=$(shell ./install-git-hooks)
+
 .PHONY: install-git-hooks
 ## Install Git hooks
 install-git-hooks:
