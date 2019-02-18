@@ -200,6 +200,14 @@ LDFLAGS=-ldflags "-X github.com/projectcalico/node/pkg/startup.CNXVERSION=$(CNX_
 PACKAGE_NAME?=github.com/projectcalico/node
 LIBCALICOGO_PATH?=none
 
+# Always install the git hooks to prevent publishing closed source code to a non-private repo.
+hooks_installed:=$(shell ./install-git-hooks)
+
+.PHONY: install-git-hooks
+## Install Git hooks
+install-git-hooks:
+	./install-git-hooks
+
 ## Clean enough that a new release build will be clean
 clean:
 	find . -name '*.created' -exec rm -f {} +
