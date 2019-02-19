@@ -82,6 +82,29 @@ We've provided info below on how to gather the above info in common Kubernetes e
 
 ### Procedure
 
+1.  Ensure you have satisfied the [requirements](#requirements) above.
+
+    * Verify the Kubernetes AWS cloud provider is enabled by confirming each node has a ProviderId:
+       ```bash
+       kubectl get node -o=jsonpath='{range .items[*]}{.metadata.name}{"\tProviderId: "}{.spec.providerID}{"\n"}{end}'
+       ```
+
+    * Verify the Amazon VPC Networking and CNI plugin is being used by confirming that
+       an `aws-node` pod exists for each node:
+       ```bash
+       kubectl get pod -n kube-system -l k8s-app=aws-node -o wide
+       ```
+
+    * Verify TSEE has been installed by confirming that cnx-manager is running:
+       ```bash
+       kubectl get pod -n kube-system -l k8s-app=cnx-manager
+       ```
+
+    * Verify that no Host Endpoints have been created by verifying that no entries are returned by:
+       ```bash
+       kubectl get hostendpoints
+       ```
+
 1.  Install AWS per-account resources.
 
     The per-account resources must be applied once per AWS account. Use the
