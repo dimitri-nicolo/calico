@@ -13,8 +13,7 @@ pipeline {
         WAVETANK_SERVICE_ACCT = "wavetank@unique-caldron-775.iam.gserviceaccount.com"
         AWS_REGION="us-west-2"
 
-        NAME="${env.SANE_JOB_NAME}-${env.BUILD_NUMBER}"
-        NAME_PREFIX="win-${env.SANE_JOB_NAME}-${env.BUILD_NUMBER}"
+        NAME_PREFIX="win-${env.BRANCH_NAME}-${env.BUILD_NUMBER}"
         KUBE_VERSION = "1.11.2"
         WINDOWS_KEYPAIR_NAME="wavetank"
         WINDOWS_PEM_FILE="/home/jenkins/.ssh/wavetank.pem"
@@ -34,21 +33,14 @@ pipeline {
                     IMAGE_NAME=${env.IMAGE_NAME}:${env.BRANCH_NAME}
                     BUILD_INFO=${env.RUN_DISPLAY_URL}""".stripIndent()
 
-                    env.LAST_COMMIT_MSG=sh(returnStdout: true, script: "git log -n 1 --oneline").trim()
-                    echo "Last commit message < ${env.LAST_COMMIT_MSG} >"
-                    if ( "$env.LAST_COMMIT_MSG".contains("windows") ){
-                            env.WINDOWS_BRANCH = "YES"
-                            echo "--- Are we building a windows branch? ${env.WINDOWS_BRANCH} ---"
-                            return
-                    }
-                    echo "--- Are we building a windows branch? NO ---"
-                    echo "--- Skip windows FV ---"
+                    echo "Checkout complete. Start to run windows FV."
+                    env.RUN_WINDOWS_FV = "YES"
                 }
             }
         }
         stage('Get vendored files') {
             when {
-                expression { env.WINDOWS_BRANCH == "YES" }
+                expression { env.RUN_WINDOWS_FV == "YES" }
             }
             steps {
                 withCredentials([sshUserPrivateKey(credentialsId: 'marvin-tigera-ssh-key', keyFileVariable: 'SSH_KEY', passphraseVariable: '', usernameVariable: '')]) {
@@ -62,7 +54,7 @@ pipeline {
         }
         stage('Clean artifacts, build') {
             when {
-                expression { env.WINDOWS_BRANCH == "YES" }
+                expression { env.RUN_WINDOWS_FV == "YES" }
             }
             steps {
                 echo 'build binary'
@@ -72,7 +64,7 @@ pipeline {
         }
         stage('Initialization') {
             when {
-                expression { env.WINDOWS_BRANCH == "YES" }
+                expression { env.RUN_WINDOWS_FV == "YES" }
             }
             steps {
                 script {
@@ -107,7 +99,7 @@ pipeline {
 
         stage('Checkout process') {
             when {
-                expression { env.WINDOWS_BRANCH == "YES" }
+                expression { env.RUN_WINDOWS_FV == "YES" }
             }
             steps {
                 dir('process') {
@@ -118,7 +110,7 @@ pipeline {
 
         stage('Create FV cluster') {
             when {
-                expression { env.WINDOWS_BRANCH == "YES" }
+                expression { env.RUN_WINDOWS_FV == "YES" }
             }
             steps {
                 dir('process/testing/winfv') {
@@ -137,7 +129,7 @@ pipeline {
 
         stage('Run Windows FV\'s') {
             when {
-                expression { env.WINDOWS_BRANCH == "YES" }
+                expression { env.RUN_WINDOWS_FV == "YES" }
             }
             steps {
                  ansiColor('xterm') {
@@ -166,7 +158,7 @@ pipeline {
 
         always {
             script {
-                if (env.WINDOWS_BRANCH != "YES" ) {
+                if (env.RUN_WINDOWS_FV != "YES" ) {
                     return
                 }
 
