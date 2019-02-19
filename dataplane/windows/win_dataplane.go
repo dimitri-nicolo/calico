@@ -155,7 +155,7 @@ func NewWinDataplaneDriver(hns hns.API, config Config) *WindowsDataplane {
 
 	dp.RegisterManager(newIPSetsManager(ipSetsV4))
 	dp.RegisterManager(newPolicyManager(dp.policySets))
-	dp.RegisterManager(newEndpointManager(hns, dp.policySets, config.NodeIP))
+	dp.RegisterManager(newEndpointManager(hns, dp.policySets))
 
 	// Register that we will report liveness and readiness.
 	if config.HealthAggregator != nil {

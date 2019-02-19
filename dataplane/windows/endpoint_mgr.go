@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"regexp"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -57,10 +58,10 @@ type endpointManager struct {
 	hns             hns.API
 
 	// nodeIP is the IP of this node.
-	nodeIP net.IP
+	nodeIPs []net.IP
 }
 
-func newEndpointManager(hns hns.API, policysets policysets.PolicySetsDataplane, nodeIP net.IP) *endpointManager {
+func newEndpointManager(hns hns.API, policysets policysets.PolicySetsDataplane) *endpointManager {
 	var networkName string
 	if os.Getenv(envNetworkName) != "" {
 		networkName = os.Getenv(envNetworkName)
@@ -83,7 +84,6 @@ func newEndpointManager(hns hns.API, policysets policysets.PolicySetsDataplane, 
 		addressToEndpointId: make(map[string]string),
 		activeWlEndpoints:   map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint{},
 		pendingWlEpUpdates:  map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint{},
-		nodeIP:              nodeIP,
 	}
 }
 
@@ -304,10 +304,18 @@ func (m *endpointManager) applyRules(workloadId proto.WorkloadEndpointID, endpoi
 	}).Info("Applying endpoint rules")
 
 	var rules []*hns.ACLPolicy
-	if len(m.nodeIP) > 0 {
-		log.WithField("nodeIP", m.nodeIP).Debug("Adding node->endpoint allow rule")
-		rules = append(rules, m.nodeToEndpointRule())
+
+	ifaceAddrs, err := net.InterfaceAddrs()
+	if err != nil {
+		panic(err)
 	}
+
+	log.WithField("ifaceAddrs", ifaceAddrs).Debug("Adding node->endpoint allow rule")
+	nodeToEp := m.nodeToEndpointRule(ifaceAddrs)
+	if nodeToEp != nil {
+		rules = append(rules, nodeToEp)
+	}
+	
 	rules = append(rules, m.policysetsDataplane.GetPolicySetRules(inboundPolicyIds, true)...)
 	rules = append(rules, m.policysetsDataplane.GetPolicySetRules(outboundPolicyIds, false)...)
 
@@ -335,10 +343,26 @@ func (m *endpointManager) applyRules(workloadId proto.WorkloadEndpointID, endpoi
 }
 
 // nodeToEndpointRule creates a HNS rule that allows traffic from the node IP to the endpoint.
-func (m *endpointManager) nodeToEndpointRule() *hns.ACLPolicy {
+func (m *endpointManager) nodeToEndpointRule(addrs []net.Addr) *hns.ACLPolicy {
+	var ips []string
+
+	for _, a := range addrs {
+		switch a := a.(type){
+		case *net.IPNet:
+			ips = append(ips, a.IP.String())
+		case *net.IPAddr:
+			ips = append(ips, a.IP.String())
+		}
+	}
+
+	if len(ips) == 0 {
+		return nil
+	}
+
 	aclPolicy := m.policysetsDataplane.NewRule(true, policysets.HostToEndpointRulePriority)
 	aclPolicy.Action = hns.Allow
-	aclPolicy.RemoteAddresses = m.nodeIP.String()
+	aclPolicy.RemoteAddresses = strings.Join(ips, ",")
+	aclPolicy.Id = "allow-host-to-endpoint"
 	return aclPolicy
 }
 
