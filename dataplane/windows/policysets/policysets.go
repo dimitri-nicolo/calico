@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 
 package policysets
 
@@ -102,7 +102,7 @@ func (s *PolicySets) RemovePolicySet(setId string) {
 // specified direction.
 func (s *PolicySets) GetPolicySetRules(setIds []string, isInbound bool) (rules []*hns.ACLPolicy) {
 	// Rules from the first set will receive the default rule priority
-	currentPriority := rulePriority
+	currentPriority := PolicyRuleBasePriority
 
 	direction := hns.Out
 	if isInbound {
@@ -322,7 +322,7 @@ func (s *PolicySets) protoRuleToHnsRules(policyId string, pRule *proto.Rule, isI
 
 	// Start with a new empty hns aclPolicy (rule)
 	var aclPolicies []*hns.ACLPolicy
-	aclPolicy := s.NewRule(isInbound, rulePriority)
+	aclPolicy := s.NewRule(isInbound, PolicyRuleBasePriority)
 
 	//
 	// Action

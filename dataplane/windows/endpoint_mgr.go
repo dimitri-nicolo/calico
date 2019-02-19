@@ -1,21 +1,10 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 
 package windataplane
 
 import (
 	"errors"
+	"net"
 	"os"
 	"regexp"
 	"time"
@@ -66,9 +55,12 @@ type endpointManager struct {
 	// lastCacheUpdate records the last time that the addressToEndpointId map was refreshed.
 	lastCacheUpdate time.Time
 	hns             hns.API
+
+	// nodeIP is the IP of this node.
+	nodeIP net.IP
 }
 
-func newEndpointManager(hns hns.API, policysets policysets.PolicySetsDataplane) *endpointManager {
+func newEndpointManager(hns hns.API, policysets policysets.PolicySetsDataplane, nodeIP net.IP) *endpointManager {
 	var networkName string
 	if os.Getenv(envNetworkName) != "" {
 		networkName = os.Getenv(envNetworkName)
@@ -91,6 +83,7 @@ func newEndpointManager(hns hns.API, policysets policysets.PolicySetsDataplane) 
 		addressToEndpointId: make(map[string]string),
 		activeWlEndpoints:   map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint{},
 		pendingWlEpUpdates:  map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint{},
+		nodeIP:              nodeIP,
 	}
 }
 
@@ -311,6 +304,10 @@ func (m *endpointManager) applyRules(workloadId proto.WorkloadEndpointID, endpoi
 	}).Info("Applying endpoint rules")
 
 	var rules []*hns.ACLPolicy
+	if len(m.nodeIP) > 0 {
+		log.WithField("nodeIP", m.nodeIP).Debug("Adding node->endpoint allow rule")
+		rules = append(rules, m.nodeToEndpointRule())
+	}
 	rules = append(rules, m.policysetsDataplane.GetPolicySetRules(inboundPolicyIds, true)...)
 	rules = append(rules, m.policysetsDataplane.GetPolicySetRules(outboundPolicyIds, false)...)
 
@@ -335,6 +332,14 @@ func (m *endpointManager) applyRules(workloadId proto.WorkloadEndpointID, endpoi
 	}
 
 	return nil
+}
+
+// nodeToEndpointRule creates a HNS rule that allows traffic from the node IP to the endpoint.
+func (m *endpointManager) nodeToEndpointRule() *hns.ACLPolicy {
+	aclPolicy := m.policysetsDataplane.NewRule(true, policysets.HostToEndpointRulePriority)
+	aclPolicy.Action = hns.Allow
+	aclPolicy.RemoteAddresses = m.nodeIP.String()
+	return aclPolicy
 }
 
 // getHnsEndpointId retrieves the hns endpoint id for the given ip address. First, a cache lookup

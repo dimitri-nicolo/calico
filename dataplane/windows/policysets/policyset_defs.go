@@ -1,16 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 
 package policysets
 
@@ -25,9 +13,10 @@ const (
 	// the ip family of this policy set, currently set to V4.
 	// V6 will be added once dataplane support is available.
 	ipVersion uint8 = 4
-	// default dataplane rule priority for any rules generated
-	// from a Policy set.
-	rulePriority uint16 = 1000
+	// Priority used for rule that allows host to endpoint traffic.
+	HostToEndpointRulePriority uint16 = 900
+	// Start of range of priorities used for policy set rules.
+	PolicyRuleBasePriority uint16 = 1000
 	// prefix to use for all policy names
 	PolicyNamePrefix string = "policy-"
 	// prefix to use for all profile names
