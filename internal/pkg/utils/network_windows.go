@@ -428,25 +428,91 @@ func createAndAttachContainerEP(args *skel.CmdArgs,
 	}
 
 	endpointName := hns.ConstructEndpointName(args.ContainerID, args.Netns, n.Name)
-	logger.Infof("Attempting to create HNS endpoint name : %s for container", endpointName)
-	hnsEndpointCont, err := hns.ProvisionEndpoint(endpointName, hnsNetwork.Id, args.ContainerID, func() (*hcsshim.HNSEndpoint, error) {
-		hnsEP := &hcsshim.HNSEndpoint{
-			Name:           endpointName,
-			VirtualNetwork: hnsNetwork.Id,
-			DNSServerList:  strings.Join(result.DNS.Nameservers, ","),
-			DNSSuffix:      strings.Join(result.DNS.Search, ","),
-			GatewayAddress: gatewayAddress,
-			IPAddress:      result.IPs[0].Address.IP,
-			Policies:       pols,
+	epIP := result.IPs[0].Address.IP
+
+	attempts := 3
+	for {
+		logger.Infof("Attempting to create HNS endpoint name : %s for container", endpointName)
+		hnsEndpointCont, err := hns.ProvisionEndpoint(endpointName, hnsNetwork.Id, args.ContainerID, func() (*hcsshim.HNSEndpoint, error) {
+			hnsEP := &hcsshim.HNSEndpoint{
+				Name:           endpointName,
+				VirtualNetwork: hnsNetwork.Id,
+				DNSServerList:  strings.Join(result.DNS.Nameservers, ","),
+				DNSSuffix:      strings.Join(result.DNS.Search, ","),
+				GatewayAddress: gatewayAddress,
+				IPAddress:      epIP,
+				Policies:       pols,
+			}
+			return hnsEP, nil
+		})
+		if err != nil {
+			logger.WithError(err).Error("Error provisioning endpoint, checking if we need to clean it up.")
+
+			// If a previous call failed here, before cleaning up, it may have left an orphaned endpoint.  Check for that
+			// and clean up.
+			cleanupErr := cleanUpEndpointByIP(epIP, logger)
+			if cleanupErr != nil {
+				logger.WithError(err).Error("Failed to clean up (by IP) after failure.")
+			} else {
+				logger.Info("Cleanup (by IP) succeeded.")
+			}
+
+			// If provision endpoint fails at the attach stage, we can be left with an orphaned endpoint.  Check for
+			// that and clean it up.
+			cleanupErr = cleanUpEndpointByName(endpointName, logger)
+			if cleanupErr != nil {
+				logger.WithError(err).Error("Failed to clean up (by name) after failure.")
+			} else {
+				logger.Info("Cleanup (by name) succeeded.")
+			}
+
+			if attempts > 0 {
+				// Cleanup may have unblocked another attempt, see if we can retry...
+				logger.Info("Retrying...")
+				attempts--
+				time.Sleep(time.Second)
+				continue
+			}
+			return nil, err
 		}
-		return hnsEP, nil
-	})
-	if err != nil {
-		logger.Errorf("Error creating endpoint : %v", err)
-		return nil, err
+
+		logger.Infof("Endpoint to container created! %v", hnsEndpointCont)
+		return hnsEndpointCont, nil
 	}
-	logger.Infof("Endpoint to container created! %v", hnsEndpointCont)
-	return hnsEndpointCont, nil
+}
+
+func cleanUpEndpointByIP(IP net.IP, logger *logrus.Entry) error {
+	endpoints, err := hcsshim.HNSListEndpointRequest()
+	if err != nil {
+		logger.WithError(err).Error("Failed to list endpoints")
+		return err
+	}
+	for _, ep := range endpoints {
+		if ep.IPAddress.Equal(IP) {
+			logger.WithField("conflictingEndpoint", ep).Error("Found pre-existing conflicting endpoint.")
+			_, err := ep.Delete()
+			if err != nil {
+				logger.WithError(err).Error("Failed to delete old endpoint")
+			}
+			return err // Exit early since there can be only one endpoint with the same IP.
+		}
+	}
+	return nil
+}
+
+func cleanUpEndpointByName(endpointName string, logger *logrus.Entry) error {
+	hnsEndpoint, err := hcsshim.GetHNSEndpointByName(endpointName)
+	if hcsshim.IsNotExist(err) {
+		logger.Debug("Endpoint already gone.  Nothing to do.")
+		return nil
+	}
+	if err != nil {
+		logger.WithError(err).Error("Failed to get endpoint for cleanup.")
+		return err
+	}
+
+	_, err = hnsEndpoint.Delete()
+	return err
 }
 
 func lookupManagementAddr(mgmtIP net.IP, logger *logrus.Entry) (*net.IPNet, error) {
