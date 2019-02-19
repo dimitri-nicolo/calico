@@ -512,7 +512,7 @@ function blockUntilPodIsReady() {
     sleep 1
   done
 
-  echo " \"${friendlyPodName}\" is ready. $secs"
+  echo " \"${friendlyPodName}\" is ready."
   podStatus "${label}"
   kubectl get pods --selector="${label}" -o wide --all-namespaces
 }
@@ -1078,7 +1078,7 @@ deleteEtcdDeployment() {
 applyLicenseManifest() {
   if [ "$LICENSE_FILE" ]; then
     echo -n "Applying license file: ${LICENSE_FILE} "
-    run "${CALICO_UTILS_INSTALL_DIR}/calicoctl apply -f ${LICENSE_FILE}"
+    run "kubectl apply -f ${LICENSE_FILE}"
     echo "done."
   fi
 }
@@ -1630,11 +1630,11 @@ installCNX() {
   applyEtcdDeployment             # Install a single-node etcd (etcd datastore only)
   applyCalicoManifest             # Apply calico.yaml
 
-  applyLicenseManifest            # If the user specified a license file, apply it
-
   removeMasterTaints              # Remove master taints
   createCNXManagerSecret          # Create cnx-manager-tls to enable manager/apiserver communication
   applyCNXManifest                # Apply cnx-[etcd|kdd].yaml
+
+  applyLicenseManifest            # If the user specified a license file, apply it
 
   if [ "${SKIP_MONITORING}" -eq 0 ]; then
     applyCNXPolicyManifest        # Apply cnx-policy.yaml
