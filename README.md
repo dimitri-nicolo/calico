@@ -180,7 +180,7 @@ e.g.:
 
     $ make test
 
-## General approach for adding new resources to cnx-apiserver
+## Adding resources to cnx-apiserver
 
 The cnx-apiserver uses client-go code generation tools to fill out golang
 code for activities such as deep copy of structs, openapi interfaces, and more.
@@ -215,10 +215,11 @@ as well as non-namespaced (e.g. globalnetworkset) resources:
   	Spec calico.LicenseKeySpec
   }
   ```
-  Pay particular attention the `genclient` metadata - in particular the above
-  example is for a non-namespaced resource.
 
-* Add the k8s-facing resource types to pkg/apis/projectcalico/v3/types.go. This
+  Pay particular attention the `genclient` metadata - the above example is for
+  a non-namespaced resource.
+
+* Add the k8s-facing resource types to `pkg/apis/projectcalico/v3/types.go`. This
   will be similar to the types above, except the metadata fields indicate how to
   pack/unpack json data. The contents will essentially the Calico v3 resource
   type. For example:
@@ -249,7 +250,7 @@ as well as non-namespaced (e.g. globalnetworkset) resources:
   ```
 
 * Once you have these type declarations, add the resource and resource list types
-  to `addKnownTypes()` in pkg/apis/projectcalico/register.go. For example:
+  to `addKnownTypes()` in `pkg/apis/projectcalico/register.go`. For example:
 
   ```
   ...
@@ -265,8 +266,8 @@ as well as non-namespaced (e.g. globalnetworkset) resources:
   RootScopedKinds: sets.NewString(..., "LicenseKey"),
   ```
 
-* Register the field label conversion anonymous function in
-  `addConversionFuncs()` in   pkg/apis/projectcalico/v3/conversion.go. For example:
+* Register the field label conversion anonymous function in `addConversionFuncs()`
+  in `pkg/apis/projectcalico/v3/conversion.go`. For example:
 
   ```
   err = scheme.AddFieldLabelConversionFunc("projectcalico.org/v3", "LicenseKey",
@@ -289,11 +290,11 @@ as well as non-namespaced (e.g. globalnetworkset) resources:
   associated directory), and then modify the types to point to your resource
   declarations from the first couple of steps. For example:
 
-  * pkg/registry/projectcalico/licensekey/storage.go
-  * pkg/registry/projectcalico/licensekey/strategy.go
+  * `pkg/registry/projectcalico/licensekey/storage.go`
+  * `pkg/registry/projectcalico/licensekey/strategy.go`
 
 * Add a reference to your storage strategy created in the previous steps to
-  pkg/registry/projectcalico/rest/storage_calico.go. This registers a callback
+  `pkg/registry/projectcalico/rest/storage_calico.go`. This registers a callback
   for RESTapi calls for your resource type. For example:
 
   ```
@@ -326,7 +327,7 @@ as well as non-namespaced (e.g. globalnetworkset) resources:
   )
   ```
 
-  Update the storage map (also in pkg/registry/projectcalico/rest/storage_calico.go)
+  Update the storage map (also in `pkg/registry/projectcalico/rest/storage_calico.go`)
   for your resource key with the associated REST api type, for example:
 
   ```
@@ -335,8 +336,8 @@ as well as non-namespaced (e.g. globalnetworkset) resources:
   ...
   ```
 
-* Write and register your conversion routines in pkg/registry/projectcalico/rest/storage_calico.go.
-  For example:
+* Write and register your conversion routines in
+  `pkg/registry/projectcalico/rest/storage_calico.go`. For example:
 
   ```
   convertToAAPI() {
@@ -367,11 +368,11 @@ as well as non-namespaced (e.g. globalnetworkset) resources:
   ```
 
 * Create a factory function to create a resource storage implementation. Use
-  pkg/storage/calico/licenseKey_storage.go as a model for your work - this is
+  `pkg/storage/calico/licenseKey_storage.go` as a model for your work - this is
   basically a copy/paste and then update the resource type declarations.
 
-* Add your factory function to `NewStorage()` function in pkg/storage/calico/storage_interface.go,
-  for example:
+* Add your factory function to `NewStorage()` function in
+  `pkg/storage/calico/storage_interface.go`. For example:
 
   ```
   func NewStorage(...) {
@@ -384,7 +385,7 @@ as well as non-namespaced (e.g. globalnetworkset) resources:
   ```
 
 * Lastly, add a clientset test for functional verification tests to
-  test/integration/clientset_test.go. Take a look at the `TestLicenseKeyClient()`
+  `test/integration/clientset_test.go`. Take a look at the `TestLicenseKeyClient()`
   and `testLicenseKeyClient()` functions as an example.
 
 * In order to regenerate the generated code, run:
@@ -393,15 +394,15 @@ as well as non-namespaced (e.g. globalnetworkset) resources:
   make .generated_files
   ```
 
-  This will update and newly create a large number of files, all of which needed
+  This updates (and creates) a large number of files, all of which need
   to be part of your commit.
 
-* In order to rebuild the docker:
+* In order to rebuild the container image:
 
   ```
   make tigera/cnx-apiserver
 
-  # In order to test, you can:
+  # In order to test:
   docker tag tigera/cnx-apiserver:latest quay.io/bcreane/cnx-apiserver:latest
   docker push quay.io/bcreane/cnx-apiserver:latest
 
@@ -420,12 +421,12 @@ as well as non-namespaced (e.g. globalnetworkset) resources:
 
   ```
 
-* Verify you can view, modifiy, create your resource via  `kubectl`, for example:
+* Verify you can view, modify, and create your resource via  `kubectl`, for example:
 
 ```
-kubectl get LicenseKeys
-kubectl delete licensekey default
-kubectl apply -f artifacts/calico/iwantcake5-license.yaml
+  kubectl get LicenseKeys
+  kubectl delete licensekey default
+  kubectl apply -f artifacts/calico/iwantcake5-license.yaml
 ```
 
 * For an example pull request that contains all these changes (plus all the
