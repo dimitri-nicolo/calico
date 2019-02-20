@@ -1,23 +1,15 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 
 package windataplane
 
 import (
 	"errors"
+	"net"
 	"os"
+	"reflect"
 	"regexp"
+	"sort"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -66,6 +58,11 @@ type endpointManager struct {
 	// lastCacheUpdate records the last time that the addressToEndpointId map was refreshed.
 	lastCacheUpdate time.Time
 	hns             hns.API
+
+	// pendingHostAddrs is either nil if no update is pending for the host addresses, or it contains the new set of IPs.
+	pendingHostAddrs []string
+	// hostAddrs contains the list of IPs detected on the host.
+	hostAddrs []string
 }
 
 func newEndpointManager(hns hns.API, policysets policysets.PolicySetsDataplane) *endpointManager {
@@ -84,6 +81,14 @@ func newEndpointManager(hns hns.API, policysets policysets.PolicySetsDataplane) 
 			networkName, envNetworkName)
 	}
 
+	hostAddrs, err := net.InterfaceAddrs()
+	if err != nil {
+		log.WithError(err).Panic("Failed to load host interface addresses.")
+	}
+
+	hostIPv4s := extractUnicastIPv4Addrs(hostAddrs)
+	sort.Strings(hostIPv4s)
+
 	return &endpointManager{
 		hns:                 hns,
 		hnsNetworkRegexp:    networkNameRegexp,
@@ -91,7 +96,12 @@ func newEndpointManager(hns hns.API, policysets policysets.PolicySetsDataplane) 
 		addressToEndpointId: make(map[string]string),
 		activeWlEndpoints:   map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint{},
 		pendingWlEpUpdates:  map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint{},
+		hostAddrs:           hostIPv4s,
 	}
+}
+
+func (m *endpointManager) OnHostAddrsUpdate(hostAddrs []string) {
+	m.pendingHostAddrs = hostAddrs
 }
 
 // OnUpdate is called by the main dataplane driver loop during the first phase. It processes
@@ -226,6 +236,23 @@ func (m *endpointManager) ProcessIpSetUpdate(ipSetId string) {
 // have already been processed by the various managers and we should now have a complete picture
 // of the policy/rules to be applied for each pending endpoint.
 func (m *endpointManager) CompleteDeferredWork() error {
+	if m.pendingHostAddrs != nil {
+		log.WithField("update", m.pendingHostAddrs).Debug("Pending host addrs update")
+		// Defensive: sort before comparison.  We do this in the poll loop too but just in case we add another source of
+		// updates later.
+		sort.Strings(m.pendingHostAddrs)
+		sort.Strings(m.hostAddrs)
+		if !reflect.DeepEqual(m.pendingHostAddrs, m.hostAddrs) {
+			log.WithField("newAddresses", m.pendingHostAddrs).Info(
+				"Host interface addresses changed, updating host to workload rules.")
+			m.hostAddrs = m.pendingHostAddrs
+			m.markAllEndpointForRefresh()
+		} else {
+			log.Debug("No change to host addresses")
+		}
+		m.pendingHostAddrs = nil
+	}
+
 	if len(m.pendingWlEpUpdates) > 0 {
 		m.RefreshHnsEndpointCache(false)
 	}
@@ -301,6 +328,45 @@ func (m *endpointManager) CompleteDeferredWork() error {
 	return nil
 }
 
+// extractUnicastIPv4Addrs examines the raw input addresses and returns any IPv4 addresses found.
+func extractUnicastIPv4Addrs(addrs []net.Addr) []string {
+	var ips []string
+
+	for _, a := range addrs {
+		var ip net.IP
+
+		switch a := a.(type) {
+		case *net.IPNet:
+			ip = a.IP
+		case *net.IPAddr:
+			ip = a.IP
+		}
+
+		if ip == nil || len(ip.To4()) == 0 {
+			// Windows dataplane doesn't support IPv6 yet.
+			continue
+		}
+		if ip.IsLoopback() {
+			// Skip 127.0.0.1.
+			continue
+		}
+		ips = append(ips, ip.String()+"/32")
+	}
+
+	return ips
+}
+
+// markAllEndpointForRefresh queues a pending update for each endpoint that doesn't already have one.
+func (m *endpointManager) markAllEndpointForRefresh() {
+	for k, v := range m.activeWlEndpoints {
+		if _, ok := m.pendingWlEpUpdates[k]; ok {
+			// Endpoint already has a pending update, make sure we don't overwrite it.
+			continue
+		}
+		m.pendingWlEpUpdates[k] = v
+	}
+}
+
 // applyRules gathers all of the rules for the specified policies and sends them to hns
 // as an endpoint policy update (this actually applies the rules to the dataplane).
 func (m *endpointManager) applyRules(workloadId proto.WorkloadEndpointID, endpointId string, inboundPolicyIds []string, outboundPolicyIds []string) error {
@@ -311,6 +377,11 @@ func (m *endpointManager) applyRules(workloadId proto.WorkloadEndpointID, endpoi
 	}).Info("Applying endpoint rules")
 
 	var rules []*hns.ACLPolicy
+
+	if nodeToEp := m.nodeToEndpointRule(); nodeToEp != nil {
+		log.WithField("hostAddrs", m.hostAddrs).Debug("Adding node->endpoint allow rule")
+		rules = append(rules, nodeToEp)
+	}
 	rules = append(rules, m.policysetsDataplane.GetPolicySetRules(inboundPolicyIds, true)...)
 	rules = append(rules, m.policysetsDataplane.GetPolicySetRules(outboundPolicyIds, false)...)
 
@@ -335,6 +406,19 @@ func (m *endpointManager) applyRules(workloadId proto.WorkloadEndpointID, endpoi
 	}
 
 	return nil
+}
+
+// nodeToEndpointRule creates a HNS rule that allows traffic from the node IP to the endpoint.
+func (m *endpointManager) nodeToEndpointRule() *hns.ACLPolicy {
+	if len(m.hostAddrs) == 0 {
+		log.Warn("Didn't detect any IPs on the host; host-to-pod traffic may be blocked.")
+		return nil
+	}
+	aclPolicy := m.policysetsDataplane.NewRule(true, policysets.HostToEndpointRulePriority)
+	aclPolicy.Action = hns.Allow
+	aclPolicy.RemoteAddresses = strings.Join(m.hostAddrs, ",")
+	aclPolicy.Id = "allow-host-to-endpoint"
+	return aclPolicy
 }
 
 // getHnsEndpointId retrieves the hns endpoint id for the given ip address. First, a cache lookup
@@ -370,4 +454,26 @@ func prependAll(prefix string, in []string) (out []string) {
 		out = append(out, prefix+s)
 	}
 	return
+}
+
+// loopPollingForInterfaceAddrs periodically checks the IP addresses on the host and sends updates on the channel
+// when the IPs change.
+func loopPollingForInterfaceAddrs(c chan []string) {
+	var lastSortedUpdate []string
+	for range time.NewTicker(10 * time.Second).C {
+		addrs, err := net.InterfaceAddrs()
+		if err != nil {
+			log.WithError(err).Panic("Failed to get host interface addresses")
+		}
+
+		ipv4s := extractUnicastIPv4Addrs(addrs)
+		sort.Strings(ipv4s)
+
+		if reflect.DeepEqual(lastSortedUpdate, ipv4s) {
+			continue
+		}
+
+		log.WithField("update", ipv4s).Debug("Interface addresses updated.")
+		c <- ipv4s
+	}
 }

@@ -1,16 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 
 package windataplane
 
@@ -86,8 +74,11 @@ type WindowsDataplane struct {
 	toDataplane chan interface{}
 	// the channel used to send messages from the dataplane to felix
 	fromDataplane chan interface{}
+	// ifaceAddrUpdates is a channel used to signal when the host's IPs change.
+	ifaceAddrUpdates chan []string
 	// stores all of the managers which will be processing  the various updates from felix.
 	allManagers []Manager
+	endpointMgr *endpointManager
 	// each IPSets manages a whole "plane" of IP sets, i.e. all the IPv4 sets, or all the IPv6
 	// IP sets.
 	ipSets []*ipsets.IPSets
@@ -147,10 +138,11 @@ func NewWinDataplaneDriver(hns hns.API, config Config) *WindowsDataplane {
 	ipSetsV4 := ipsets.NewIPSets(ipSetsConfigV4)
 
 	dp := &WindowsDataplane{
-		toDataplane:   make(chan interface{}, msgPeekLimit),
-		fromDataplane: make(chan interface{}, 100),
-		config:        config,
-		applyThrottle: throttle.New(10),
+		toDataplane:      make(chan interface{}, msgPeekLimit),
+		fromDataplane:    make(chan interface{}, 100),
+		ifaceAddrUpdates: make(chan []string, 1),
+		config:           config,
+		applyThrottle:    throttle.New(10),
 	}
 
 	dp.applyThrottle.Refill() // Allow the first apply() immediately.
@@ -165,7 +157,8 @@ func NewWinDataplaneDriver(hns hns.API, config Config) *WindowsDataplane {
 
 	dp.RegisterManager(newIPSetsManager(ipSetsV4))
 	dp.RegisterManager(newPolicyManager(dp.policySets))
-	dp.RegisterManager(newEndpointManager(hns, dp.policySets))
+	dp.endpointMgr = newEndpointManager(hns, dp.policySets)
+	dp.RegisterManager(dp.endpointMgr)
 
 	// Register that we will report liveness and readiness.
 	if config.HealthAggregator != nil {
@@ -183,6 +176,7 @@ func NewWinDataplaneDriver(hns hns.API, config Config) *WindowsDataplane {
 // Starts the driver.
 func (d *WindowsDataplane) Start() {
 	go d.loopUpdatingDataplane()
+	go loopPollingForInterfaceAddrs(d.ifaceAddrUpdates)
 }
 
 // Called by someone to put a message into our channel so that the loop will pick it up
@@ -251,6 +245,8 @@ func (d *WindowsDataplane) loopUpdatingDataplane() {
 				}
 			}
 			d.dataplaneNeedsSync = true
+		case upd := <-d.ifaceAddrUpdates:
+			d.endpointMgr.OnHostAddrsUpdate(upd)
 		case <-throttleC:
 			d.applyThrottle.Refill()
 		case <-healthTicks:
