@@ -270,12 +270,10 @@
 
 {% if include.platform == "eks" %}
 
-## Create credentials for signing into {{site.prodname}} manager
+1. To log into {{site.prodname}} Manager running in EKS, you'll need a token for a user
+   with appropriate permissions on the cluster.
 
-To log into {{site.prodname}} Manager running in EKS, you'll need a token for a user
-with appropriate permissions on the cluster.
-
-1. The easiest way to create such a token is to create a service account, assign it permissions
+   The easiest way to create such a token is to create a service account, assign it permissions
    and get a token for it to use for login.  Update `TIGERA_UI_USER` to change the name to give
    to the service account.
 
