@@ -3,7 +3,6 @@
 package windataplane
 
 import (
-	"net"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -40,7 +39,6 @@ func init() {
 type Config struct {
 	IPv6Enabled      bool
 	HealthAggregator *health.HealthAggregator
-	NodeIP           net.IP
 }
 
 // winDataplane implements an in-process Felix dataplane driver capable of applying network policy

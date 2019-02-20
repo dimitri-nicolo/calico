@@ -24,7 +24,6 @@ func StartDataplaneDriver(configParams *config.Config,
 	dpConfig := windataplane.Config{
 		IPv6Enabled:      configParams.Ipv6Support,
 		HealthAggregator: healthAggregator,
-		NodeIP:           configParams.NodeIP,
 	}
 
 	winDP := windataplane.NewWinDataplaneDriver(hns.API{}, dpConfig)

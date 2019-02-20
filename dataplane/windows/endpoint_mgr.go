@@ -410,6 +410,10 @@ func (m *endpointManager) applyRules(workloadId proto.WorkloadEndpointID, endpoi
 
 // nodeToEndpointRule creates a HNS rule that allows traffic from the node IP to the endpoint.
 func (m *endpointManager) nodeToEndpointRule() *hns.ACLPolicy {
+	if len(m.hostAddrs) == 0 {
+		log.Warn("Didn't detect any IPs on the host; host-to-pod traffic may be blocked.")
+		return nil
+	}
 	aclPolicy := m.policysetsDataplane.NewRule(true, policysets.HostToEndpointRulePriority)
 	aclPolicy.Action = hns.Allow
 	aclPolicy.RemoteAddresses = strings.Join(m.hostAddrs, ",")
