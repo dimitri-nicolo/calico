@@ -154,6 +154,10 @@ func (c client) RemoteClusterConfigurations() RemoteClusterConfigurationInterfac
 	return remoteClusterConfiguration{client: c}
 }
 
+func (c client) GlobalThreatFeeds() GlobalThreatFeedInterface {
+	return globalThreatFeeds{client: c}
+}
+
 type poolAccessor struct {
 	client *client
 }

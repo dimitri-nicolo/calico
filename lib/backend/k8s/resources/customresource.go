@@ -72,7 +72,7 @@ func (c *customK8sResourceClient) Create(ctx context.Context, kvp *model.KVPair)
 	// Convert the KVPair to the K8s resource.
 	resIn, err := c.convertKVPairToResource(kvp)
 	if err != nil {
-		logContext.WithError(err).Debug("Error creating resource")
+		logContext.WithError(err).Debug("Error converting to k8s resource")
 		return nil, err
 	}
 

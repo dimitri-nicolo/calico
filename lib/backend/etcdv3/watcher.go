@@ -211,6 +211,7 @@ func (wc *watcher) sendEvent(e *api.WatchEvent) {
 	}
 	select {
 	case wc.resultChan <- *e:
+		log.WithField("event", e).Debug("sending watch event")
 	case <-wc.ctx.Done():
 	}
 }

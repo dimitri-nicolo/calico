@@ -141,6 +141,11 @@ func init() {
 		"k8s-endpoints",
 		reflect.TypeOf(kapiv1.Endpoints{}),
 	)
+	registerResourceInfo(
+		apiv3.KindGlobalThreatFeed,
+		"globalthreatfeeds",
+		reflect.TypeOf(apiv3.GlobalThreatFeed{}),
+	)
 }
 
 type ResourceKey struct {

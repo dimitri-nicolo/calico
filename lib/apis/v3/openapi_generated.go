@@ -98,8 +98,15 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkSet":               schema_libcalico_go_lib_apis_v3_GlobalNetworkSet(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkSetList":           schema_libcalico_go_lib_apis_v3_GlobalNetworkSetList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkSetSpec":           schema_libcalico_go_lib_apis_v3_GlobalNetworkSetSpec(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkSetSync":           schema_libcalico_go_lib_apis_v3_GlobalNetworkSetSync(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeed":               schema_libcalico_go_lib_apis_v3_GlobalThreatFeed(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeedList":           schema_libcalico_go_lib_apis_v3_GlobalThreatFeedList(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeedSpec":           schema_libcalico_go_lib_apis_v3_GlobalThreatFeedSpec(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPHeader":                     schema_libcalico_go_lib_apis_v3_HTTPHeader(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPHeaderSource":               schema_libcalico_go_lib_apis_v3_HTTPHeaderSource(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPMatch":                      schema_libcalico_go_lib_apis_v3_HTTPMatch(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPPath":                       schema_libcalico_go_lib_apis_v3_HTTPPath(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPPull":                       schema_libcalico_go_lib_apis_v3_HTTPPull(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.HostEndpoint":                   schema_libcalico_go_lib_apis_v3_HostEndpoint(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.HostEndpointList":               schema_libcalico_go_lib_apis_v3_HostEndpointList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.HostEndpointSpec":               schema_libcalico_go_lib_apis_v3_HostEndpointSpec(ref),
@@ -133,6 +140,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ProfileList":                    schema_libcalico_go_lib_apis_v3_ProfileList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ProfileSpec":                    schema_libcalico_go_lib_apis_v3_ProfileSpec(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ProtoPort":                      schema_libcalico_go_lib_apis_v3_ProtoPort(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.Pull":                           schema_libcalico_go_lib_apis_v3_Pull(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.RemoteClusterConfiguration":     schema_libcalico_go_lib_apis_v3_RemoteClusterConfiguration(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.RemoteClusterConfigurationList": schema_libcalico_go_lib_apis_v3_RemoteClusterConfigurationList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.RemoteClusterConfigurationSpec": schema_libcalico_go_lib_apis_v3_RemoteClusterConfigurationSpec(ref),
@@ -3821,6 +3829,205 @@ func schema_libcalico_go_lib_apis_v3_GlobalNetworkSetSpec(ref common.ReferenceCa
 	}
 }
 
+func schema_libcalico_go_lib_apis_v3_GlobalNetworkSetSync(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Properties: map[string]spec.Schema{
+					"labels": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_GlobalThreatFeed(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "GlobalThreatFeed is a source of intel for possible threats to the cluster. This object configures how Tigera components communicate with the feed and update detection jobs or policy based on the intel.",
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Standard object's metadata.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Specification of the NetworkSet.",
+							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeedSpec"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeedSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_GlobalThreatFeedList(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "GlobalThreatFeedList contains a list of NetworkSet resources.",
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						},
+					},
+					"items": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeed"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"metadata", "items"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeed", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_GlobalThreatFeedSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "GlobalThreatFeedSpec contains the specification of a GlobalThreatFeed resource.",
+				Properties: map[string]spec.Schema{
+					"content": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Content describes the kind of data the data feed provides.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"globalNetworkSetSync": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkSetSync"),
+						},
+					},
+					"pull": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.Pull"),
+						},
+					},
+				},
+				Required: []string{"content"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkSetSync", "github.com/projectcalico/libcalico-go/lib/apis/v3.Pull"},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_HTTPHeader(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"value": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"valueFrom": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPHeaderSource"),
+						},
+					},
+				},
+				Required: []string{"name"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPHeaderSource"},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_HTTPHeaderSource(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Properties: map[string]spec.Schema{
+					"configMapKeyRef": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Selects a key of a ConfigMap.",
+							Ref:         ref("k8s.io/api/core/v1.ConfigMapKeySelector"),
+						},
+					},
+					"secretKeyRef": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Selects a key of a secret in the pod's namespace",
+							Ref:         ref("k8s.io/api/core/v1.SecretKeySelector"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/api/core/v1.ConfigMapKeySelector", "k8s.io/api/core/v1.SecretKeySelector"},
+	}
+}
+
 func schema_libcalico_go_lib_apis_v3_HTTPMatch(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -3884,6 +4091,44 @@ func schema_libcalico_go_lib_apis_v3_HTTPPath(ref common.ReferenceCallback) comm
 			},
 		},
 		Dependencies: []string{},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_HTTPPull(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Properties: map[string]spec.Schema{
+					"format": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"url": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"headers": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPHeader"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"format", "url"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPHeader"},
 	}
 }
 
@@ -5340,6 +5585,31 @@ func schema_libcalico_go_lib_apis_v3_ProtoPort(ref common.ReferenceCallback) com
 			},
 		},
 		Dependencies: []string{},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_Pull(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Properties: map[string]spec.Schema{
+					"period": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"http": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPPull"),
+						},
+					},
+				},
+				Required: []string{"http"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPPull"},
 	}
 }
 

@@ -53,6 +53,8 @@ type Interface interface {
 	RemoteClusterConfigurations() RemoteClusterConfigurationInterface
 	// LicenseKey returns an interface for managing the license key resource.
 	LicenseKey() LicenseKeyInterface
+	// GlobalThreatFeeds returns an interface for managing the Threat feed resources.
+	GlobalThreatFeeds() GlobalThreatFeedInterface
 
 	// EnsureInitialized is used to ensure the backend datastore is correctly
 	// initialized for use by Calico.  This method may be called multiple times, and
