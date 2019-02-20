@@ -1,49 +1,28 @@
-## Applying your license key
-
-{% if include.init == "openshift" %}
-
-1. [Install calicoctl]({{site.baseurl}}/{{page.version}}/usage/calicoctl/install#installing-calicoctl-as-a-kubernetes-pod).
-
-   > **Note**: We highly recommend you install calicoctl as a Kubernetes pod in OpenShift.
-   This ensures that you are using the latest version of calicoctl and its accompanying configuration.
-   If you choose to [install calicoctl as a binary on a single host]({{site.baseurl}}/{{page.version}}/usage/calicoctl/install#installing-calicoctl-as-a-binary-on-a-single-host),
-   we recommend you uninstall any versions of calicoctl that may have shipped alongside OpenShift with the following commands.
-   ```
-   rm /usr/local/bin/calicoctl
-   rm /etc/calico/calicoctl.cfg
-   ```
-   {: .alert .alert-info}
-
+{% if include.init != "openshift" %}
+  {% assign cli = "kubectl" %}
 {% else %}
-
-1. Install `calicoctl`.  We recommend installing `calicoctl` as a pod -
-   follow [these instructions]({{site.baseurl}}/{{page.version}}/usage/calicoctl/install) to do so.
-
-   If you are not running `calicoctl` as a pod, [configure it to connect to your datastore]({{site.baseurl}}/{{page.version}}/usage/calicoctl/configure).
-
-{% if include.platform == "eks" %}
-   Please note that the EKS installation uses the Kubernetes Datastore Driver.
+  {% assign cli = "oc" %}
 {% endif %}
 
-{% endif %}
+## Applying your license key
 
 1. Use the following command to apply your [license key]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/licensekey).
 
    **Command**
    ```
-   calicoctl apply -f - < <customer-name>-license.yaml
+   {{cli}} apply -f - < <customer-name>-license.yaml
    ```
 
    **Example**
    ```
-   calicoctl apply -f - < awesome-corp-license.yaml
+   {{cli}} apply -f - < awesome-corp-license.yaml
    ```
    {: .no-select-button}
 
 1. Confirm that the license was applied:
 
    ```
-   calicoctl get license
+   {{cli}} get licensekey
    ```
 
-1. Continue to [Installing the {{site.prodname}} Manager](#install-cnx-mgr).
+1. Continue to [Installing metrics and logs](#installing-metrics-and-logs)

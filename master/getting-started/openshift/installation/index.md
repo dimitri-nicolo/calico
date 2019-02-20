@@ -70,8 +70,6 @@ You are now ready to execute the Ansible provision which will install {{site.pro
 certs to each node. If you would prefer {{site.prodname}} not connect to the same etcd as OpenShift, you may modify the install
 such that {{site.prodname}} connects to an etcd you have already set up by following the [dedicated etcd install guide](dedicated-etcd).
 
-{% include {{page.version}}/apply-license.md init="openshift" %}
-
 {% include {{page.version}}/cnx-mgr-install.md init="openshift" %}
 
 1. Download [oauth-client.yaml](/{{page.version}}/getting-started/openshift/installation/oauth-client.yaml).
@@ -101,42 +99,9 @@ such that {{site.prodname}} connects to an etcd you have already set up by follo
    oc apply -f oauth-client.yaml
    ```
 
-## Installing metrics and logs
+1. Continue to [Applying your license key](#applying-your-license-key).
 
-### Enable Metrics
-
-Below, we'll cover how to enable metrics in {{site.prodname}} and how to launch Prometheus using Prometheus-Operator.
-
-**Prerequisite**: `calicoctl` [installed](/{{page.version}}/usage/calicoctl/install) and [configured](/{{page.version}}/usage/calicoctl/configure/). We recommend [installing](/{{page.version}}/usage/calicoctl/install#installing-calicoctl-as-a-container-on-a-single-host) calicoctl as a container in OpenShift.
-
-Enable metrics in {{site.prodname}} for OpenShift by updating the global `FelixConfiguration` resource (`default`) and opening up the necessary port on the host.
-
-{% include {{page.version}}/enable-felix-prometheus-reporting.md %}
-
-1. Allow Prometheus to scrape the metrics by opening up the port on each host:
-
-   ```
-   iptables -I INPUT -p tcp --dport 9081 -j ACCEPT
-   ```
-
-### Configure metrics and logs
-
-With metrics enabled, you are ready to monitor `{{site.nodecontainer}}` by scraping the endpoint on each node
-in the cluster. If you do not have your own Prometheus, the following commands will launch a Prometheus
-Operator, Prometheus, and Alertmanager instances for you. They will also deploy Fluentd, and
-optionally Elasticsearch and Kibana in order to enable logs.
-
-1. For production installs, we recommend using your own Elasticsearch cluster. If you are performing a
-   production install, do not complete any more steps on this page. Instead, refer to
-   [Using your own Elasticsearch for logs](byo-elasticsearch) for the final steps.
-
-   For demonstration or proof of concept installs, you can use the bundled
-   [Elasticsearch operator](https://github.com/upmc-enterprises/elasticsearch-operator). Continue to the
-   next step to complete a demonstration or proof of concept install.
-
-   > **Important**: The bundled Elasticsearch operator does not provide reliable persistent storage
-   of logs or authenticate access to Kibana.
-   {: .alert .alert-danger}
+{% include {{page.version}}/apply-license.md init="openshift" %}
 
 {% include {{page.version}}/cnx-monitor-install.md orch="openshift" elasticsearch="operator" %}
 
