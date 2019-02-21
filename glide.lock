@@ -1,5 +1,5 @@
-hash: 5dad7a0b9cc297153d33cb6b0b71f699905298b150d94a99e3fe10712df8733a
-updated: 2019-02-20T05:24:29.152388801Z
+hash: 8fbf8aad5a028d1586c9cb594d9e63bce4f69e26cb318c87437e0157e3daf722
+updated: 2019-02-21T11:41:42.980517532Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -292,7 +292,7 @@ imports:
   - pkg/plugin
   - pkg/types
 - name: github.com/projectcalico/felix
-  version: 7a998a52d3a29c90996eaf49ffb36534154856fb
+  version: 9b03e692054eac5efba48c353bab1893ac683b86
   repo: git@github.com:tigera/felix-private.git
   subpackages:
   - buildinfo
@@ -406,7 +406,7 @@ imports:
   - prometheus/internal
   - prometheus/promhttp
 - name: github.com/prometheus/client_model
-  version: 99fa1f4be8e564e8a6b613da7fa6f46c9edafc6c
+  version: 6f3806018612930941127f2a7c6c453ba2c527d2
   subpackages:
   - go
 - name: github.com/prometheus/common
@@ -524,7 +524,7 @@ imports:
   subpackages:
   - rate
 - name: google.golang.org/appengine
-  version: 0a24098c0ec68416ec050f567f75df563d6b231e
+  version: 4a4468ece617fc8205e99368fa2200e9d1fad421
   subpackages:
   - internal
   - internal/app_identity
@@ -718,7 +718,7 @@ imports:
   - util/jsonpath
   - util/retry
 - name: k8s.io/kube-openapi
-  version: 91cfa479c814065e420cee7ed227db0f63a5854e
+  version: 0c329704159e3b051aafac400b15baacf2a94a04
   subpackages:
   - pkg/common
 - name: k8s.io/utils
