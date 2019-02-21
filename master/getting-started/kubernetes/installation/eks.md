@@ -65,19 +65,13 @@ This guide covers installing {{site.prodname}} for policy enforcement on Amazon 
    kubectl apply -f calico.yaml
    ```
 
-1. Continue to [Applying your license key](#applying-your-license-key).
-
-{% include {{page.version}}/apply-license.md platform="eks" %}
+1. Continue to [Installing the {{site.prodname}} Manager and API Server](#install-cnx-mgr)
 
 {% include {{page.version}}/cnx-mgr-install.md init="kubernetes" net="other" platform="eks" %}
 
-1. For production installs, follow the instructions [here](byo-elasticsearch) to configure {{site.prodname}}
-   to use your own Elasticsearch cluster.  For demo / proof of concept installs using the bundled Elasticsearch
-   operator continue to the next step instead.
+1. Continue to [Applying your license key](#applying-your-license-key).
 
-   > **Important**: The bundled Elasticsearch operator does not provide reliable persistent storage
-   of logs or authenticate access to Kibana.
-   {: .alert .alert-danger}
+{% include {{page.version}}/apply-license.md platform="eks" %}
 
 {% include {{page.version}}/cnx-monitor-install.md elasticsearch="operator" platform="eks" %}
 

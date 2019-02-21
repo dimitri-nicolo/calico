@@ -61,7 +61,7 @@ and your datastore type. Refer to the section that matches your configuration.
    kubectl apply -f calico.yaml
    ```
 
-1. Continue to [Applying your license key](#applying-your-license-key).
+1. Continue to [Installing the {{site.prodname}} Manager and API Server](#install-cnx-mgr)
 
 ### Installing without federation, using Kubernetes API datastore, 50 nodes or less
 
@@ -91,7 +91,7 @@ and your datastore type. Refer to the section that matches your configuration.
    kubectl apply -f calico.yaml
    ```
 
-1. Continue to [Applying your license key](#applying-your-license-key).
+1. Continue to [Installing the {{site.prodname}} Manager and API Server](#install-cnx-mgr)
 
 ### Installing without federation, using Kubernetes API datastore, more than 50 nodes
 
@@ -145,7 +145,7 @@ and your datastore type. Refer to the section that matches your configuration.
    kubectl apply -f calico.yaml
    ```
 
-1. Continue to [Applying your license key](#applying-your-license-key).
+1. Continue to [Installing the {{site.prodname}} Manager and API Server](#install-cnx-mgr)
 
 
 ### Installing with federation, using etcd
@@ -223,7 +223,7 @@ for each [remote cluster](../../../usage/federation/index#terminology). Ensure t
    kubectl apply -f calico.yaml
    ```
 
-1. Continue to [Applying your license key](#applying-your-license-key).
+1. Continue to [Installing the {{site.prodname}} Manager and API Server](#install-cnx-mgr)
 
 
 ### Installing with federation, using Kubernetes API datastore
@@ -303,24 +303,13 @@ for each [remote cluster](../../../usage/federation/index#terminology). Ensure t
    kubectl apply -f calico.yaml
    ```
 
-1. Continue to [Applying your license key](#applying-your-license-key).
-
-
-{% include {{page.version}}/apply-license.md %}
+1. Continue to [Installing the {{site.prodname}} Manager and API Server](#install-cnx-mgr)
 
 {% include {{page.version}}/cnx-mgr-install.md init="kubernetes" net="calico" %}
 
-1. For production installs, we recommend using your own Elasticsearch cluster. If you are performing a
-   production install, do not complete any more steps on this page. Instead, refer to
-   [Using your own Elasticsearch for logs](byo-elasticsearch) for the final steps.
+1. Continue to [Applying your license key](#applying-your-license-key).
 
-   For demonstration or proof of concept installs, you can use the bundled
-   [Elasticsearch operator](https://github.com/upmc-enterprises/elasticsearch-operator). Continue to the
-   next step to complete a demonstration or proof of concept install.
-
-   > **Important**: The bundled Elasticsearch operator does not provide reliable persistent storage
-   of logs or authenticate access to Kibana.
-   {: .alert .alert-danger}
+{% include {{page.version}}/apply-license.md %}
 
 {% include {{page.version}}/cnx-monitor-install.md elasticsearch="operator"%}
 

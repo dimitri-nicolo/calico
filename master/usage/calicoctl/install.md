@@ -24,6 +24,15 @@ corresponds to your desired deployment.
 
 - [As a Kubernetes pod](#installing-calicoctl-as-a-kubernetes-pod)
 
+> **Note**: We highly recommend you install calicoctl as a Kubernetes pod in OpenShift.
+This ensures that you are using the latest version of calicoctl and its accompanying configuration.
+If you choose to [install calicoctl as a binary on a single host](#installing-calicoctl-as-a-binary-on-a-single-host),
+we recommend you uninstall any versions of calicoctl that may have shipped alongside OpenShift with the following commands.
+```
+rm /usr/local/bin/calicoctl
+rm /etc/calico/calicoctl.cfg
+```
+{: .alert .alert-info}
 
 ## Installing calicoctl as a binary on a single host
 
