@@ -1,6 +1,4 @@
-/*
-Copyright 2016 Tigera Inc.
-*/
+// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
 
 package calico
 

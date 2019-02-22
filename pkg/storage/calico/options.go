@@ -1,3 +1,5 @@
+// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+
 package calico
 
 import "k8s.io/apiserver/pkg/registry/generic"
