@@ -1,3 +1,5 @@
+// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+
 package calico
 
 import (
@@ -122,7 +124,6 @@ func convertToAAPIGlobalNetworkSet(netset *aapi.GlobalNetworkSet, libcalicoNetwo
 	netset.TypeMeta = libcalicoNetworkSet.TypeMeta
 	netset.ObjectMeta = libcalicoNetworkSet.ObjectMeta
 }
-
 
 func convertToLibcalicoLicenseKey(netset *aapi.LicenseKey, libcalicoLicenseKey *libcalicoapi.LicenseKey) {
 	libcalicoLicenseKey.TypeMeta = netset.TypeMeta
