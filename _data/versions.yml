@@ -858,16 +858,16 @@ master:
       version: v3.1.0
       url: https://github.com/projectcalico/calico/releases/tag/v3.1.0
     prometheus-operator:
-      version: v0.18.1
+      version: v0.28.0
       url: ""
     prometheus:
-      version: v2.2.1
+      version: v2.7.1
       url: ""
     alertmanager:
-      version: v0.14.0
+      version: v0.16.1
       url: ""
     prometheus-config-reloader:
-      version: v0.0.3
+      version: v0.28.0
       url: ""
     configmap-reload:
       version: v0.0.1

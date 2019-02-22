@@ -139,10 +139,10 @@ optionally Elasticsearch and Kibana in order to enable logs.
 
 {% if include.elasticsearch == "operator" %}
 1. Wait for the `alertmanagers.monitoring.coreos.com`, `prometheuses.monitoring.coreos.com`, `servicemonitors.monitoring.coreos.com`,
-   and `elasticsearchclusters.enterprises.upmc.com` custom resource definitions to be created. Check by running:
+   `prometheusrules.monitoring.coreos.com` and `elasticsearchclusters.enterprises.upmc.com` custom resource definitions to be created. Check by running:
 {% else %}
-1. Wait for the `alertmanagers.monitoring.coreos.com`, `prometheuses.monitoring.coreos.com`, and `servicemonitors.monitoring.coreos.com`
-   custom resource definitions to be created. Check by running:
+1. Wait for the `alertmanagers.monitoring.coreos.com`, `prometheuses.monitoring.coreos.com`, `prometheusrules.monitoring.coreos.com`
+   and `servicemonitors.monitoring.coreos.com` custom resource definitions to be created. Check by running:
 {% endif %}
 
    ```

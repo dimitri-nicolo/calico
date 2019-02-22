@@ -15,10 +15,10 @@ The process of updating rules is the same as for user created rules (documented 
   - Save the current alert rule:
 
     ```
-    kubectl -n calico-monitoring get configmap calico-prometheus-dp-rate -o yaml > calico-prometheus-alert-rule-dp.yaml
+    kubectl -n calico-monitoring get prometheusrule -o yaml > calico-prometheus-alert-rule-dp.yaml
     ```
 
-  - Make necessary edits to the alerting rules then apply the updated configmap.
+  - Make necessary edits to the alerting rules then apply the updated manifest.
 
     ```
     kubectl apply -f calico-prometheus-alert-rule-dp.yaml
@@ -28,27 +28,29 @@ Your changes should be applied in a few seconds by the prometheus-config-reloade
 container inside the prometheus pod launched by the prometheus-operator
 (usually named `prometheus-<your-prometheus-instance-name>`).
 
-As an example, the range query in this _ConfigMap_ is 10 seconds.
+As an example, the range query in this _Manifest_ is 10 seconds.
 
 ```yaml
 {% raw %}
-apiVersion: v1
-kind: ConfigMap
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
 metadata:
   name: calico-prometheus-dp-rate
   namespace: calico-monitoring
   labels:
     role: calico-prometheus-rules
     prometheus: calico-node-prometheus
-data:
-  calico.rules: |
-    ALERT DeniedPacketsRate
-      IF rate(calico_denied_packets[10s]) > 50
-      LABELS { severity = "critical" }
-      ANNOTATIONS {
-         summary = "Instance {{$labels.instance}} - Large rate of packets denied",
-         description = "{{$labels.instance}} with calico-node pod {{$labels.pod}} has been denying packets at a fast rate {{$labels.sourceIp}} by policy {{$labels.policy}}."
-      }
+spec:
+  groups:
+  - name: calico.rules
+    rules:
+      ALERT DeniedPacketsRate
+        IF rate(calico_denied_packets[10s]) > 50
+        LABELS { severity = "critical" }
+        ANNOTATIONS {
+           summary = "Instance {{$labels.instance}} - Large rate of packets denied",
+           description = "{{$labels.instance}} with calico-node pod {{$labels.pod}} has been denying packets at a fast rate {{$labels.sourceIp}} by policy {{$labels.policy}}."
+        }
 {% endraw %}
 ```
 
@@ -57,23 +59,25 @@ To update this alerting rule, to say, execute the query with a range of
 
 ```yaml
 {% raw %}
-apiVersion: v1
-kind: ConfigMap
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
 metadata:
   name: calico-prometheus-dp-rate
   namespace: calico-monitoring
   labels:
     role: calico-prometheus-rules
     prometheus: calico-node-prometheus
-data:
-  calico.rules: |
-    ALERT DeniedPacketsRate
-      IF rate(calico_denied_packets[20s]) > 50
-      LABELS { severity = "critical" }
-      ANNOTATIONS {
-         summary = "Instance {{$labels.instance}} - Large rate of packets denied",
-         description = "{{$labels.instance}} with calico-node pod {{$labels.pod}} has been denying packets at a fast rate {{$labels.sourceIp}} by policy {{$labels.policy}}."
-      }
+spec:
+  groups:
+  - name: calico.rules
+    rules:
+      ALERT DeniedPacketsRate
+        IF rate(calico_denied_packets[20s]) > 50
+        LABELS { severity = "critical" }
+        ANNOTATIONS {
+           summary = "Instance {{$labels.instance}} - Large rate of packets denied",
+           description = "{{$labels.instance}} with calico-node pod {{$labels.pod}} has been denying packets at a fast rate {{$labels.sourceIp}} by policy {{$labels.policy}}."
+        }
 {% endraw %}
 ```
 
@@ -85,7 +89,7 @@ rules](https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules
 and [Queries](https://prometheus.io/docs/querying/examples/) for more
 information.
 
-To add the new alerting rule to our Prometheus instance, define a _ConfigMap_
+To add the new alerting rule to our Prometheus instance, define a _PrometheusRule_ manifest
 in the `calico-monitoring` namespace with the labels
 `role: calico-prometheus-rules` and `prometheus: calico-node-prometheus`. The
 labels should match the labels defined by the `ruleSelector` field of the
@@ -96,28 +100,30 @@ more than 5 minutes, save the following to a file, say `calico-node-down-alert.y
 
 ```yaml
 {% raw %}
-apiVersion: v1
-kind: ConfigMap
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
 metadata:
   name: calico-prometheus-calico-node-down
   namespace: calico-monitoring
   labels:
     role: calico-prometheus-rules
     prometheus: calico-node-prometheus
-data:
-  instance.rules: |
-    ALERT CalicoNodeInstanceDown
-      IF up == 0
-      FOR 5m
-      LABELS { severity = "warning" }
-      ANNOTATIONS {
+spec:
+  groups:
+  - name: calico.rules
+    rules:
+      ALERT CalicoNodeInstanceDown
+        IF up == 0
+        FOR 5m
+        LABELS { severity = "warning" }
+        ANNOTATIONS {
          summary = "Instance {{$labels.instance}} Pod: {{$labels.pod}} is down",
          description = "{{$labels.instance}} of job {{$labels.job}} has been down for more than 5 minutes"
-      }
+        }
 {% endraw %}
 ```
 
-Then _create_/_apply_ this config map in kubernetes.
+Then _create_/_apply_ this manifest in kubernetes.
 
 ```
 kubectl apply -f calico-node-down-alert.yaml
