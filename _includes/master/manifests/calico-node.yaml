@@ -11,6 +11,10 @@ calico-node.yaml acccepts the following include flags:
 | app_layer_policy | true, disabled, false         |
 | platform         | gke, <unset>                  |
 
+Notes:
+
+- platform=gke expects datastore=kdd and network=<unset>
+
 {% endcomment -%}
 {%- capture objname -%}
   {%- if include.platform == "gke" -%}
@@ -525,11 +529,11 @@ spec:
         # Used to install CNI.
         - name: cni-bin-dir
           hostPath:
-            {%- if include.platform == "gke" %}
+{%- if include.platform == "gke" %}
             path: /home/kubernetes/bin
-            {%- else %}
+{%- else %}
             path: /opt/cni/bin
-            {%- endif %}
+{%- endif %}
         - name: cni-net-dir
           hostPath:
             path: /etc/cni/net.d
@@ -552,11 +556,11 @@ spec:
         - name: flexvol-driver-host
           hostPath:
             type: DirectoryOrCreate
-            {%- if include.platform == "gke" %}
+{%- if include.platform == "gke" %}
             path: /home/kubernetes/flexvolume/nodeagent~uds
-            {%- else %}
+{%- else %}
             path: /usr/libexec/kubernetes/kubelet-plugins/volume/exec/nodeagent~uds
-            {%- endif %}
+{%- endif %}
 {%- endif %}
         # Used for calico logs
         - name: var-log-calico
