@@ -14,10 +14,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const IPSetIndex = ".phulax.ipset"
+const IPSetIndex = ".tigera.ipset"
 const StandardType = "_doc"
 const FlowLogIndex = "tigera_secure_ee_flows*"
-const EventIndex = ".phulax.event"
+const EventIndex = "tigera_secure_ee_events"
 
 const ipSetMapping = `{
   "mappings": {

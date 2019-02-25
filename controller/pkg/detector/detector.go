@@ -6,7 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/tigera/intrusion-detection/phulax/pkg/db"
+	"github.com/tigera/intrusion-detection/controller/pkg/db"
 )
 
 type Detector interface {

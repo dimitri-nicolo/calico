@@ -8,12 +8,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/tigera/intrusion-detection/phulax/pkg/detector"
+	"github.com/tigera/intrusion-detection/controller/pkg/detector"
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/tigera/intrusion-detection/phulax/pkg/db"
-	"github.com/tigera/intrusion-detection/phulax/pkg/feed"
+	"github.com/tigera/intrusion-detection/controller/pkg/db"
+	"github.com/tigera/intrusion-detection/controller/pkg/feed"
 )
 
 func main() {
