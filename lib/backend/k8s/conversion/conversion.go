@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2017,2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -710,8 +710,14 @@ func (c Converter) ServiceAccountToProfile(sa *kapiv1.ServiceAccount) (*model.KV
 		CreationTimestamp: sa.CreationTimestamp,
 		UID:               sa.UID,
 	}
-	profile.Spec = apiv3.ProfileSpec{
-		LabelsToApply: labels,
+
+	// Only set labels to apply when there are actually labels. This makes the
+	// result of this function consistent with the struct as loaded directly
+	// from etcd, which uses nil for the empty map.
+	if len(labels) != 0 {
+		profile.Spec.LabelsToApply = labels
+	} else {
+		profile.Spec.LabelsToApply = nil
 	}
 
 	// Embed the profile in a KVPair.

@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,31 +16,35 @@ package resources
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
 	kapiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
-	"github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
 )
 
 const (
-	nodeBgpIpv4AddrAnnotation = "projectcalico.org/IPv4Address"
-	nodeBgpIpv6AddrAnnotation = "projectcalico.org/IPv6Address"
-	nodeBgpAsnAnnotation      = "projectcalico.org/ASNumber"
-	nodeBgpCIDAnnotation      = "projectcalico.org/RouteReflectorClusterID"
-	k8sOrchestratorName       = "k8s"
-	providerIDSep             = "://"
+	nodeBgpIpv4AddrAnnotation           = "projectcalico.org/IPv4Address"
+	nodeBgpIpv4IPIPTunnelAddrAnnotation = "projectcalico.org/IPv4IPIPTunnelAddr"
+	nodeBgpIpv6AddrAnnotation           = "projectcalico.org/IPv6Address"
+	nodeBgpAsnAnnotation                = "projectcalico.org/ASNumber"
+	nodeBgpCIDAnnotation                = "projectcalico.org/RouteReflectorClusterID"
+	nodeK8sLabelAnnotation              = "projectcalico.org/kube-labels"
+	k8sOrchestratorName                 = "k8s"
+	providerIDSep                       = "://"
 )
 
 func NewNodeClient(c *kubernetes.Clientset) K8sResourceClient {
@@ -90,7 +94,11 @@ func (c *nodeClient) Update(ctx context.Context, kvp *model.KVPair) (*model.KVPa
 	return newCalicoNode, nil
 }
 
-func (c *nodeClient) Delete(ctx context.Context, key model.Key, revision string) (*model.KVPair, error) {
+func (c *nodeClient) DeleteKVP(ctx context.Context, kvp *model.KVPair) (*model.KVPair, error) {
+	return c.Delete(ctx, kvp.Key, kvp.Revision, kvp.UID)
+}
+
+func (c *nodeClient) Delete(ctx context.Context, key model.Key, revision string, uid *types.UID) (*model.KVPair, error) {
 	log.Warn("Operation Delete is not supported on Node type")
 	return nil, cerrors.ErrorOperationNotSupported{
 		Identifier: key,
@@ -199,6 +207,13 @@ func K8sNodeToCalico(k8sNode *kapiv1.Node) (*model.KVPair, error) {
 	calicoNode.ObjectMeta.Name = k8sNode.Name
 	SetCalicoMetadataFromK8sAnnotations(calicoNode, k8sNode)
 
+	// Calico Nodes inherit labels from Kubernetes nodes, do that merge.
+	err := mergeCalicoAndK8sLabels(calicoNode, k8sNode)
+	if err != nil {
+		log.WithError(err).Error("Failed to merge Calico and Kubernetes labels.")
+		return nil, err
+	}
+
 	// Extract the BGP configuration stored in the annotations.
 	bgpSpec := &apiv3.NodeBGPSpec{}
 	annotations := k8sNode.ObjectMeta.Annotations
@@ -214,20 +229,9 @@ func K8sNodeToCalico(k8sNode *kapiv1.Node) (*model.KVPair, error) {
 			bgpSpec.ASNumber = &asn
 		}
 	}
-
-	if k8sNode.Spec.PodCIDR != "" {
-		_, cidr, err := net.ParseCIDR(k8sNode.Spec.PodCIDR)
-		if err != nil {
-			log.WithError(err).Errorf("PodCIDR %s did not parse successfully", k8sNode.Spec.PodCIDR)
-			return nil, errors.New("Invalid PodCIDR")
-		} else if cidr.Version() == 4 {
-			// For back compatibility with v2.6.x, always generate a tunnel address if we have the pod
-			// CIDR.
-			bgpSpec.IPv4IPIPTunnelAddr = getTunnelIp(k8sNode)
-		}
-		calicoNode.Spec.BGP = bgpSpec
-	} else if bgpSpec.IPv4Address != "" || bgpSpec.IPv6Address != "" || bgpSpec.ASNumber != nil {
-		log.Debugf("Node %s does not have podCIDR to use to calculate the IPIP Tunnel Address", k8sNode.Name)
+	bgpSpec.IPv4IPIPTunnelAddr = annotations[nodeBgpIpv4IPIPTunnelAddrAnnotation]
+	// Only set the BGP spec if it is not empty.
+	if !reflect.DeepEqual(*bgpSpec, apiv3.NodeBGPSpec{}) {
 		calicoNode.Spec.BGP = bgpSpec
 	}
 
@@ -257,16 +261,25 @@ func K8sNodeToCalico(k8sNode *kapiv1.Node) (*model.KVPair, error) {
 	}, nil
 }
 
-// mergeCalicoNodeIntoK8sNode takes a k8s node and a Calico node and push the values from the Calico
+// mergeCalicoNodeIntoK8sNode takes a k8s node and a Calico node and puts the values from the Calico
 // node into the k8s node.
 func mergeCalicoNodeIntoK8sNode(calicoNode *apiv3.Node, k8sNode *kapiv1.Node) (*kapiv1.Node, error) {
-	// Set the k8s annotations from the Calico node metadata.  This ensures the k8s annotations
-	// is initialized.
+	// Nodes inherit labels from Kubernetes, but we also have our own set of labels that are stored in an annotation.
+	// For nodes that are being updated, we want to avoid writing k8s labels that we inherited into our annotation
+	// and we don't want to touch the k8s labels directly.  Take a copy of the node resource and update its labels
+	// to match what we want to store in our annotation only.
+	calicoNode, err := restoreCalicoLabels(calicoNode)
+	if err != nil {
+		return nil, err
+	}
+
+	// Set the k8s annotations from the Calico node metadata.
 	SetK8sAnnotationsFromCalicoMetadata(k8sNode, calicoNode)
 
 	if calicoNode.Spec.BGP == nil {
 		// If it is a empty NodeBGPSpec, remove all annotations.
 		delete(k8sNode.Annotations, nodeBgpIpv4AddrAnnotation)
+		delete(k8sNode.Annotations, nodeBgpIpv4IPIPTunnelAddrAnnotation)
 		delete(k8sNode.Annotations, nodeBgpIpv6AddrAnnotation)
 		delete(k8sNode.Annotations, nodeBgpAsnAnnotation)
 		delete(k8sNode.Annotations, nodeBgpCIDAnnotation)
@@ -277,6 +290,12 @@ func mergeCalicoNodeIntoK8sNode(calicoNode *apiv3.Node, k8sNode *kapiv1.Node) (*
 		k8sNode.Annotations[nodeBgpIpv4AddrAnnotation] = calicoNode.Spec.BGP.IPv4Address
 	} else {
 		delete(k8sNode.Annotations, nodeBgpIpv4AddrAnnotation)
+	}
+
+	if calicoNode.Spec.BGP.IPv4IPIPTunnelAddr != "" {
+		k8sNode.Annotations[nodeBgpIpv4IPIPTunnelAddrAnnotation] = calicoNode.Spec.BGP.IPv4IPIPTunnelAddr
+	} else {
+		delete(k8sNode.Annotations, nodeBgpIpv4IPIPTunnelAddrAnnotation)
 	}
 
 	if calicoNode.Spec.BGP.IPv6Address != "" {
@@ -300,23 +319,82 @@ func mergeCalicoNodeIntoK8sNode(calicoNode *apiv3.Node, k8sNode *kapiv1.Node) (*
 	return k8sNode, nil
 }
 
-// Calculate the IPIP Tunnel IP address to use for a given Node.  We use the first IP in the
-// node CIDR for our tunnel address.  If an IPv4 address cannot be picked from the given
-// CIDR then an empty string will be returned.
-func getTunnelIp(n *kapiv1.Node) string {
-	ip, _, err := net.ParseCIDR(n.Spec.PodCIDR)
-	if err != nil {
-		log.Warnf("Invalid podCIDR for HostConfig: %s, %s", n.Name, n.Spec.PodCIDR)
-		return ""
+// mergeCalicoAndK8sLabels merges the Kubernetes labels (from k8sNode.Labels) with those that are already present in
+// calicoNode (which were loaded from our annotation).  Kubernetes labels take precedence.  To make the operation
+// reversible (so that we can support write back of a Calico node that was read from Kubernetes), we also store the
+// complete set of Kubernetes labels in an annotation.
+//
+// Note: if a Kubernetes label shadows a Calico label, the Calico label will be lost when the resource is written
+// back to the datastore.  This is consistent with kube-controllers' behavior.
+func mergeCalicoAndK8sLabels(calicoNode *apiv3.Node, k8sNode *kapiv1.Node) error {
+	// Now, copy the Kubernetes Node labels over.  Note: this may overwrite Calico labels of the same name, but that's
+	// consistent with the kube-controllers behavior.
+	for k, v := range k8sNode.Labels {
+		if calicoNode.Labels == nil {
+			calicoNode.Labels = map[string]string{}
+		}
+		calicoNode.Labels[k] = v
 	}
-	// We need to get the IP for the podCIDR and increment it to the
-	// first IP in the CIDR.
-	tunIp := ip.To4()
-	if tunIp == nil {
-		log.WithField("podCIDR", n.Spec.PodCIDR).Infof("Cannot pick an IPv4 tunnel address from the given CIDR")
-		return ""
-	}
-	tunIp[3]++
 
-	return tunIp.String()
+	// For consistency with kube-controllers, and so we can correctly round-trip labels, we stash the kubernetes labels
+	// in an annotation.
+	if calicoNode.Annotations == nil {
+		calicoNode.Annotations = map[string]string{}
+	}
+	bytes, err := json.Marshal(k8sNode.Labels)
+	if err != nil {
+		log.WithError(err).Errorf("Error marshalling node labels")
+		return err
+	}
+	calicoNode.Annotations[nodeK8sLabelAnnotation] = string(bytes)
+	return nil
+}
+
+// restoreCalicoLabels tries to undo the transformation done by mergeCalicoLabels.  If no changes are needed, it
+// returns the input value; otherwise, it returns a copy.
+func restoreCalicoLabels(calicoNode *apiv3.Node) (*apiv3.Node, error) {
+	rawLabels := calicoNode.Annotations[nodeK8sLabelAnnotation]
+	if rawLabels == "" {
+		return calicoNode, nil
+	}
+
+	// We're about to update the labels and annotations on the node, take a copy.
+	calicoNode = calicoNode.DeepCopy()
+
+	// We stashed the k8s labels in an annotation, extract them so we can compare with the combined labels.
+	k8sLabels := map[string]string{}
+	if err := json.Unmarshal([]byte(rawLabels), &k8sLabels); err != nil {
+		log.WithError(err).Error("Failed to unmarshal k8s node labels from " +
+			nodeK8sLabelAnnotation + " annotation")
+		return nil, err
+	}
+
+	// Now remove any labels that match the k8s ones.
+	if log.GetLevel() >= log.DebugLevel {
+		log.WithField("k8s", k8sLabels).Debug("Loaded label annotations")
+	}
+	for k, k8sVal := range k8sLabels {
+		if calVal, ok := calicoNode.Labels[k]; ok && calVal != k8sVal {
+			log.WithFields(log.Fields{
+				"label":    k,
+				"newValue": calVal,
+				"k8sValue": k8sVal,
+			}).Warn("Update to label that is shadowed by a Kubernetes label will be ignored.")
+		}
+
+		// The k8s value was inherited and there was no old Calico value, drop the label so that we don't copy
+		// it to the Calico annotation.
+		if log.GetLevel() >= log.DebugLevel {
+			log.WithField("key", k).Debug("Removing inherited k8s label")
+		}
+		delete(calicoNode.Labels, k)
+	}
+
+	// Filter out our bookkeeping annotation, which is only used for round-tripping labels correctly.
+	delete(calicoNode.Annotations, nodeK8sLabelAnnotation)
+	if len(calicoNode.Annotations) == 0 {
+		calicoNode.Annotations = nil
+	}
+
+	return calicoNode, nil
 }

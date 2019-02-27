@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -80,10 +80,6 @@ var defaultKubernetesResource = []model.KVPair{
 			OutboundRules: []model.Rule{{Action: "allow"}},
 		},
 	},
-	{
-		Key:   model.HostConfigKey{Hostname: "127.0.0.1", Name: "IpInIpTunnelAddr"},
-		Value: "10.10.10.1",
-	},
 }
 
 var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.DatastoreAll, func(config apiconfig.CalicoAPIConfig) {
@@ -140,14 +136,27 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 			if config.Spec.DatastoreType == apiconfig.Kubernetes {
 				// For Kubernetes, update the existing node config to have some BGP configuration.
 				By("Configuring a node with an IP address")
-				node, err = c.Nodes().Get(ctx, "127.0.0.1", options.GetOptions{})
-				Expect(err).NotTo(HaveOccurred())
-				node.Spec.BGP = &apiv3.NodeBGPSpec{
-					IPv4Address: "1.2.3.4/24",
-					IPv6Address: "aa:bb::cc/120",
+				for i := 0; i < 5; i++ {
+					// This can fail due to an update conflict, so we allow a few retries.
+					node, err = c.Nodes().Get(ctx, "127.0.0.1", options.GetOptions{})
+					Expect(err).NotTo(HaveOccurred())
+					node.Spec.BGP = &apiv3.NodeBGPSpec{
+						IPv4Address:        "1.2.3.4/24",
+						IPv6Address:        "aa:bb::cc/120",
+						IPv4IPIPTunnelAddr: "10.10.10.1",
+					}
+					node, err = c.Nodes().Update(ctx, node, options.SetOptions{})
+					if err == nil {
+						break
+					}
 				}
-				node, err = c.Nodes().Update(ctx, node, options.SetOptions{})
 				Expect(err).NotTo(HaveOccurred())
+
+				syncTester.ExpectData(model.KVPair{
+					Key:   model.HostConfigKey{Hostname: "127.0.0.1", Name: "IpInIpTunnelAddr"},
+					Value: "10.10.10.1",
+				})
+				expectedCacheSize += 1
 			} else {
 				// For non-Kubernetes, add a new node with valid BGP configuration.
 				By("Creating a node with an IP address")

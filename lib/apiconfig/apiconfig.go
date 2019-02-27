@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2017,2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -55,6 +55,12 @@ type EtcdConfig struct {
 	EtcdKeyFile    string `json:"etcdKeyFile" envconfig:"ETCD_KEY_FILE"`
 	EtcdCertFile   string `json:"etcdCertFile" envconfig:"ETCD_CERT_FILE"`
 	EtcdCACertFile string `json:"etcdCACertFile" envconfig:"ETCD_CA_CERT_FILE"`
+
+	// These config file parameters are to support inline certificates, keys and CA / Trusted certificate.
+	// There are no corresponding environment variables to avoid accidental exposure.
+	EtcdKey    string `json:"etcdKey" ignored:"true"`
+	EtcdCert   string `json:"etcdCert" ignored:"true"`
+	EtcdCACert string `json:"etcdCACert" ignored:"true"`
 }
 
 type KubeConfig struct {
@@ -63,7 +69,7 @@ type KubeConfig struct {
 	K8sKeyFile               string `json:"k8sKeyFile" envconfig:"K8S_KEY_FILE" default:""`
 	K8sCertFile              string `json:"k8sCertFile" envconfig:"K8S_CERT_FILE" default:""`
 	K8sCAFile                string `json:"k8sCAFile" envconfig:"K8S_CA_FILE" default:""`
-	K8sAPIToken              string `json:"k8sAPIToken" envconfig:"K8S_API_TOKEN" default:""`
+	K8sAPIToken              string `json:"k8sAPIToken" ignore:"true"`
 	K8sInsecureSkipTLSVerify bool   `json:"k8sInsecureSkipTLSVerify" envconfig:"K8S_INSECURE_SKIP_TLS_VERIFY" default:""`
 	K8sDisableNodePoll       bool   `json:"k8sDisableNodePoll" envconfig:"K8S_DISABLE_NODE_POLL" default:""`
 }

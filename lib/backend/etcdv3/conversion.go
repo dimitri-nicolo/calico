@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2017,2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -44,7 +44,7 @@ func convertListResponse(ekv *mvccpb.KeyValue, l model.ListInterface) *model.KVP
 // convertWatchEvent converts an etcdv3 watch event to an api.WatchEvent, or nil if the
 // event did not correspond to an event that we are interested in.
 func convertWatchEvent(e *clientv3.Event, l model.ListInterface) (*api.WatchEvent, error) {
-	log.WithField("etcdv3-etcdKey", e.Kv.Key).Debug("Processing etcdv3 event")
+	log.WithField("etcdv3-etcdKey", string(e.Kv.Key)).Debug("Processing etcdv3 event")
 
 	var eventType api.WatchEventType
 	switch {
@@ -71,6 +71,9 @@ func convertWatchEvent(e *clientv3.Event, l model.ListInterface) (*api.WatchEven
 				return nil, err
 			}
 		}
+	} else {
+		log.WithField("key", string(e.Kv.Key)).Debug("key filtered")
+		return nil, nil
 	}
 
 	return &api.WatchEvent{

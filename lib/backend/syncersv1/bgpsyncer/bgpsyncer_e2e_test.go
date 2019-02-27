@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017,2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -68,20 +68,15 @@ var _ = testutils.E2eDatastoreDescribe("BGP syncer tests", testutils.DatastoreAl
 			syncTester.ExpectCacheSize(expectedCacheSize)
 			syncTester.ExpectStatusUpdate(api.ResyncInProgress)
 			if config.Spec.DatastoreType == apiconfig.Kubernetes {
-				expectedCacheSize += 2
+				expectedCacheSize += 1
 			}
 			syncTester.ExpectCacheSize(expectedCacheSize)
 			syncTester.ExpectStatusUpdate(api.InSync)
 			syncTester.ExpectCacheSize(expectedCacheSize)
 
-			// For Kubernetes test the two entries already in the cache - one
-			// affinity block and one node.
+			// For Kubernetes test one entry already in the cache for the node.
 			if config.Spec.DatastoreType == apiconfig.Kubernetes {
 				syncTester.ExpectPath("/calico/resources/v3/projectcalico.org/nodes/127.0.0.1")
-				syncTester.ExpectData(model.KVPair{
-					Key:   model.BlockAffinityKey{Host: "127.0.0.1", CIDR: net.MustParseCIDR("10.10.10.0/24")},
-					Value: &model.BlockAffinity{State: model.StateConfirmed},
-				})
 			}
 
 			By("Disabling node to node mesh and adding a default ASNumber")
@@ -251,9 +246,15 @@ var _ = testutils.E2eDatastoreDescribe("BGP syncer tests", testutils.DatastoreAl
 				By("Allocating an IP address on a different host and checking for no updates")
 				// The syncer only monitors affine blocks for one host, so IP allocations for a different
 				// host should not result in updates.
+				hostname := "not-this-host"
+				node, err = c.Nodes().Create(ctx, &apiv3.Node{ObjectMeta: metav1.ObjectMeta{Name: hostname}}, options.SetOptions{})
+				Expect(err).NotTo(HaveOccurred())
+				expectedCacheSize += 1
+				syncTester.ExpectCacheSize(expectedCacheSize)
+
 				ipV4Nets2, _, err := c.IPAM().AutoAssign(ctx, ipam.AutoAssignArgs{
 					Num4:     1,
-					Hostname: "not-this-host",
+					Hostname: hostname,
 				})
 
 				var ips2 []net.IP

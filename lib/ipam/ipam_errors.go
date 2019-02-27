@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2017,2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -52,6 +52,16 @@ func (e errBlockClaimConflict) Error() string {
 		return fmt.Sprintf("%v already claimed by %v", e.Block.CIDR, *e.Block.Affinity)
 	}
 	return fmt.Sprintf("%v already claimed", e.Block.CIDR)
+}
+
+// errBlockNotEmpty indicates that a given block has already
+// been claimed by another host.
+type errBlockNotEmpty struct {
+	Block allocationBlock
+}
+
+func (e errBlockNotEmpty) Error() string {
+	return fmt.Sprintf("block '%v' is not empty", e.Block.CIDR)
 }
 
 // errStaleAffinity indicates to the calling code that the given affinity

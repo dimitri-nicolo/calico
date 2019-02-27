@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 
 package ipam
 
@@ -29,7 +29,7 @@ type ipamClientWindows struct {
 
 //Returns the block CIDR for the given IP
 func (c ipamClientWindows) GetAssignmentBlockCIDR(ctx context.Context, addr cnet.IP) cnet.IPNet {
-	pool := c.blockReaderWriter.getPoolForIP(addr)
+	pool := c.blockReaderWriter.getPoolForIP(addr, nil)
 	blockCIDR := getBlockCIDRForAddress(addr, pool)
 	return blockCIDR
 }
@@ -114,7 +114,7 @@ var _ = testutils.E2eDatastoreDescribe("Windows: IPAM tests", testutils.Datastor
 		//	   					      100.0.0.64, 100.0.0.65, 100.0.0.66, 100.0.0.127,
 		//                                                    100.0.0.128, 100.0.0.129, 100.0.0.130, 100.0.0.191,
 		//                                                    100.0.0.192, 100.0.0.193, 100.0.0.194, 100.0.0.255 IPs.
-		Entry("256 v4 ", "testHost", true, []pool{{"100.0.0.0/24", 26, true}}, "100.0.0.0/24", 256, 240, nil, "windows"),
+		Entry("256 v4 ", "testHost", true, []pool{{cidr: "100.0.0.0/24", blockSize: 26, enabled: true}}, "100.0.0.0/24", 256, 240, nil, "windows"),
 	)
 
 	// This test is to check if Windows host runs out of IPs from the block with which it has affinity, then IPs from other blocks should not be assigned.
@@ -364,13 +364,19 @@ var _ = testutils.E2eDatastoreDescribe("Windows: IPAM tests", testutils.Datastor
 		},
 
 		// Test 1: AutoAssign 256 IPv4, 256 IPv6 - expect 240 IPv4 + IPv6 addresses.
-		Entry("256 v4 256 v6", "testHost", true, []pool{{"192.168.1.0/24", 26, true}, {"fd80:24e2:f998:72d6::/120", 122, true}}, "192.168.1.0/24", 256, 256, 240, 240, nil),
+		Entry("256 v4 256 v6", "testHost", true, []pool{
+			{cidr: "192.168.1.0/24", blockSize: 26, enabled: true},
+			{cidr: "fd80:24e2:f998:72d6::/120", blockSize: 122, enabled: true},
+		}, "192.168.1.0/24", 256, 256, 240, 240, nil),
 
 		// Test 2: AutoAssign 257 IPv4, 0 IPv6 - expect 240 IPv4 addresses, no IPv6, and no error.
-		Entry("257 v4 0 v6", "testHost", true, []pool{{"192.168.1.0/24", 26, true}}, "192.168.1.0/24", 257, 0, 240, 0, nil),
+		Entry("257 v4 0 v6", "testHost", true, []pool{{cidr: "192.168.1.0/24", blockSize: 26, enabled: true}}, "192.168.1.0/24", 257, 0, 240, 0, nil),
 
 		// Test 3: AutoAssign 0 IPv4, 257 IPv6 - expect 240 IPv6 addresses, no IPv4, and no error.
-		Entry("0 v4 257 v6", "testHost", true, []pool{{"192.168.1.0/24", 26, true}, {"fd80:24e2:f998:72d6::/120", 122, true}}, "192.168.1.0/24", 0, 257, 0, 240, nil),
+		Entry("0 v4 257 v6", "testHost", true, []pool{
+			{cidr: "192.168.1.0/24", blockSize: 26, enabled: true},
+			{cidr: "fd80:24e2:f998:72d6::/120", blockSize: 122, enabled: true},
+		}, "192.168.1.0/24", 0, 257, 0, 240, nil),
 	)
 
 })

@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -964,6 +964,10 @@ func (c *fakeClient) Update(ctx context.Context, object *model.KVPair) (*model.K
 	return nil, nil
 }
 func (c *fakeClient) Apply(ctx context.Context, object *model.KVPair) (*model.KVPair, error) {
+	panic("should not be called")
+	return nil, nil
+}
+func (c *fakeClient) DeleteKVP(ctx context.Context, kvp *model.KVPair) (*model.KVPair, error) {
 	panic("should not be called")
 	return nil, nil
 }

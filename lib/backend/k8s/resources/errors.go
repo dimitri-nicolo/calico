@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016,2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
 package resources
 
 import (
+	"strings"
+
 	"github.com/projectcalico/libcalico-go/lib/errors"
 
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -45,6 +47,13 @@ func K8sErrorToCalico(ke error, id interface{}) error {
 		}
 	}
 	if kerrors.IsConflict(ke) {
+		// Treat precondition errors as not found.
+		if strings.Contains(ke.Error(), "UID in precondition") {
+			return errors.ErrorResourceDoesNotExist{
+				Err:        ke,
+				Identifier: id,
+			}
+		}
 		return errors.ErrorResourceUpdateConflict{
 			Err:        ke,
 			Identifier: id,

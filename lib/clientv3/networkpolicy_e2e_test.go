@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -464,7 +464,7 @@ var _ = testutils.E2eDatastoreDescribe("NetworkPolicy tests", testutils.Datastor
 
 			// Only etcdv3 supports watching a specific instance of a resource.
 			if config.Spec.DatastoreType == apiconfig.EtcdV3 {
-				By("Starting a watcher from rev0 watching name1 - this should get all events for name1")
+				By("Starting a watcher from rev0 watching namespace1/name1 - this should get all events for name1")
 				w, err = c.NetworkPolicies().Watch(ctx, options.ListOptions{Namespace: namespace1, Name: name1, ResourceVersion: rev0})
 				Expect(err).NotTo(HaveOccurred())
 				testWatcher2_1 := testutils.NewTestResourceWatch(config.Spec.DatastoreType, w)
@@ -480,6 +480,23 @@ var _ = testutils.E2eDatastoreDescribe("NetworkPolicy tests", testutils.Datastor
 					},
 				})
 				testWatcher2_1.Stop()
+
+				By("Starting a watcher from rev0 watching name1 - this should get all events for name1")
+				w, err = c.NetworkPolicies().Watch(ctx, options.ListOptions{Name: name1, ResourceVersion: rev0})
+				Expect(err).NotTo(HaveOccurred())
+				testWatcher2_2 := testutils.NewTestResourceWatch(config.Spec.DatastoreType, w)
+				defer testWatcher2_2.Stop()
+				testWatcher2_2.ExpectEvents(apiv3.KindNetworkPolicy, []watch.Event{
+					{
+						Type:   watch.Added,
+						Object: outRes1,
+					},
+					{
+						Type:     watch.Deleted,
+						Previous: outRes1,
+					},
+				})
+				testWatcher2_2.Stop()
 			}
 
 			By("Starting a watcher not specifying a rev - expect the current snapshot")

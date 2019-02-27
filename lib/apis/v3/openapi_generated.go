@@ -73,12 +73,16 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v1.WorkloadEndpointList":           schema_libcalico_go_lib_apis_v1_WorkloadEndpointList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v1.WorkloadEndpointMetadata":       schema_libcalico_go_lib_apis_v1_WorkloadEndpointMetadata(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v1.WorkloadEndpointSpec":           schema_libcalico_go_lib_apis_v1_WorkloadEndpointSpec(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.AllocationAttribute":            schema_libcalico_go_lib_apis_v3_AllocationAttribute(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.BGPConfiguration":               schema_libcalico_go_lib_apis_v3_BGPConfiguration(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.BGPConfigurationList":           schema_libcalico_go_lib_apis_v3_BGPConfigurationList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.BGPConfigurationSpec":           schema_libcalico_go_lib_apis_v3_BGPConfigurationSpec(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.BGPPeer":                        schema_libcalico_go_lib_apis_v3_BGPPeer(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.BGPPeerList":                    schema_libcalico_go_lib_apis_v3_BGPPeerList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.BGPPeerSpec":                    schema_libcalico_go_lib_apis_v3_BGPPeerSpec(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.BlockAffinity":                  schema_libcalico_go_lib_apis_v3_BlockAffinity(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.BlockAffinityList":              schema_libcalico_go_lib_apis_v3_BlockAffinityList(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.BlockAffinitySpec":              schema_libcalico_go_lib_apis_v3_BlockAffinitySpec(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ClusterInformation":             schema_libcalico_go_lib_apis_v3_ClusterInformation(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ClusterInformationList":         schema_libcalico_go_lib_apis_v3_ClusterInformationList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ClusterInformationSpec":         schema_libcalico_go_lib_apis_v3_ClusterInformationSpec(ref),
@@ -100,6 +104,15 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.HostEndpointList":               schema_libcalico_go_lib_apis_v3_HostEndpointList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.HostEndpointSpec":               schema_libcalico_go_lib_apis_v3_HostEndpointSpec(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ICMPFields":                     schema_libcalico_go_lib_apis_v3_ICMPFields(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMBlock":                      schema_libcalico_go_lib_apis_v3_IPAMBlock(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMBlockList":                  schema_libcalico_go_lib_apis_v3_IPAMBlockList(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMBlockSpec":                  schema_libcalico_go_lib_apis_v3_IPAMBlockSpec(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMConfig":                     schema_libcalico_go_lib_apis_v3_IPAMConfig(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMConfigList":                 schema_libcalico_go_lib_apis_v3_IPAMConfigList(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMConfigSpec":                 schema_libcalico_go_lib_apis_v3_IPAMConfigSpec(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMHandle":                     schema_libcalico_go_lib_apis_v3_IPAMHandle(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMHandleList":                 schema_libcalico_go_lib_apis_v3_IPAMHandleList(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMHandleSpec":                 schema_libcalico_go_lib_apis_v3_IPAMHandleSpec(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPNAT":                          schema_libcalico_go_lib_apis_v3_IPNAT(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPPool":                         schema_libcalico_go_lib_apis_v3_IPPool(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPPoolList":                     schema_libcalico_go_lib_apis_v3_IPPoolList(ref),
@@ -1943,6 +1956,38 @@ func schema_libcalico_go_lib_apis_v1_WorkloadEndpointSpec(ref common.ReferenceCa
 	}
 }
 
+func schema_libcalico_go_lib_apis_v3_AllocationAttribute(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Properties: map[string]spec.Schema{
+					"handle_id": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"secondary": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"handle_id", "secondary"},
+			},
+		},
+		Dependencies: []string{},
+	}
+}
+
 func schema_libcalico_go_lib_apis_v3_BGPConfiguration(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -2220,6 +2265,130 @@ func schema_libcalico_go_lib_apis_v3_BGPPeerSpec(ref common.ReferenceCallback) c
 					},
 				},
 				Required: []string{"peerIP", "asNumber"},
+			},
+		},
+		Dependencies: []string{},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_BlockAffinity(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "BlockAffinity maintains a block affinity's state",
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Standard object's metadata.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Specification of the BlockAffinity.",
+							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.BlockAffinitySpec"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.BlockAffinitySpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_BlockAffinityList(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "BlockAffinityList contains a list of BlockAffinity resources.",
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						},
+					},
+					"items": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.BlockAffinity"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"metadata", "items"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.BlockAffinity", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_BlockAffinitySpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "BlockAffinitySpec contains the specification for a BlockAffinity resource.",
+				Properties: map[string]spec.Schema{
+					"state": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"node": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"cidr": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"deleted": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+				},
+				Required: []string{"state", "node", "cidr", "deleted"},
 			},
 		},
 		Dependencies: []string{},
@@ -2725,6 +2894,13 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							Format:      "int32",
 						},
 					},
+					"openstackRegion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "OpenstackRegion is the name of the region that a particular Felix belongs to. In a multi-region Calico/OpenStack deployment, this must be configured somehow for each Felix (here in the datamodel, or in felix.cfg or the environment on each compute node), and must match the [calico] openstack_region value configured in neutron.conf on each node. [Default: Empty]",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 					"interfacePrefix": {
 						SchemaProps: spec.SchemaProps{
 							Description: "InterfacePrefix is the interface name prefix that identifies workload endpoints and so distinguishes them from host endpoint interfaces. Note: in environments other than bare metal, the orchestrators configure this appropriately. For example our Kubernetes and Docker integrations set the ‘cali’ value, and our OpenStack integration sets the ‘tap’ value. [Default: cali]",
@@ -3082,6 +3258,12 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 					"debugSimulateDataplaneHangAfter": {
 						SchemaProps: spec.SchemaProps{
 							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"iptablesNATOutgoingInterfaceFilter": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
 						},
 					},
 					"syslogReporterNetwork": {
@@ -3887,6 +4069,400 @@ func schema_libcalico_go_lib_apis_v3_ICMPFields(ref common.ReferenceCallback) co
 	}
 }
 
+func schema_libcalico_go_lib_apis_v3_IPAMBlock(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "IPAMBlock contains information about a block for IP address assignment.",
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Standard object's metadata.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Specification of the IPAMBlock.",
+							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMBlockSpec"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMBlockSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_IPAMBlockList(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "IPAMBlockList contains a list of IPAMBlock resources.",
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						},
+					},
+					"items": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMBlock"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"metadata", "items"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMBlock", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_IPAMBlockSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "IPAMBlockSpec contains the specification for a IPAMBlock resource.",
+				Properties: map[string]spec.Schema{
+					"cidr": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"affinity": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"strictAffinity": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"boolean"},
+							Format: "",
+						},
+					},
+					"allocations": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"integer"},
+										Format: "int32",
+									},
+								},
+							},
+						},
+					},
+					"unallocated": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"integer"},
+										Format: "int32",
+									},
+								},
+							},
+						},
+					},
+					"attributes": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.AllocationAttribute"),
+									},
+								},
+							},
+						},
+					},
+					"Deleted": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"boolean"},
+							Format: "",
+						},
+					},
+				},
+				Required: []string{"cidr", "affinity", "strictAffinity", "allocations", "unallocated", "attributes", "Deleted"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.AllocationAttribute"},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_IPAMConfig(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "IPAMConfig contains information about a block for IP address assignment.",
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Standard object's metadata.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Specification of the IPAMConfig.",
+							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMConfigSpec"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMConfigSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_IPAMConfigList(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "IPAMConfigList contains a list of IPAMConfig resources.",
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						},
+					},
+					"items": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMConfig"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"metadata", "items"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMConfig", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_IPAMConfigSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "IPAMConfigSpec contains the specification for a IPAMConfig resource.",
+				Properties: map[string]spec.Schema{
+					"strictAffinity": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"boolean"},
+							Format: "",
+						},
+					},
+					"autoAllocateBlocks": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"boolean"},
+							Format: "",
+						},
+					},
+				},
+				Required: []string{"strictAffinity", "autoAllocateBlocks"},
+			},
+		},
+		Dependencies: []string{},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_IPAMHandle(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "IPAMHandle contains information about a IPAMHandle resource.",
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Standard object's metadata.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Specification of the IPAMHandle.",
+							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMHandleSpec"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMHandleSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_IPAMHandleList(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "IPAMHandleList contains a list of IPAMHandle resources.",
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						},
+					},
+					"items": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMHandle"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"metadata", "items"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMHandle", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_IPAMHandleSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "IPAMHandleSpec contains the specification for a IPAMHandle resource.",
+				Properties: map[string]spec.Schema{
+					"handleID": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"block": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"integer"},
+										Format: "int32",
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"handleID", "block"},
+			},
+		},
+		Dependencies: []string{},
+	}
+}
+
 func schema_libcalico_go_lib_apis_v3_IPNAT(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -4040,6 +4616,13 @@ func schema_libcalico_go_lib_apis_v3_IPPoolSpec(ref common.ReferenceCallback) co
 							Description: "The block size to use for IP address assignments from this pool. Defaults to 26 for IPv4 and 112 for IPv6.",
 							Type:        []string{"integer"},
 							Format:      "int32",
+						},
+					},
+					"nodeSelector": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Allows IPPool to allocate for a specific node by label selector.",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 					"ipip": {
