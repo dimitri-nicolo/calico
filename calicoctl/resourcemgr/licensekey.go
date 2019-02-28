@@ -49,11 +49,23 @@ func init() {
 			}
 
 			// Validate the license before applying.
-			if err = licClaims.Validate(); err != nil {
+			licStatus := licClaims.Validate()
+			if licStatus == licClient.NoLicenseLoaded {
+				// License is empty or invalid. Don't apply it.
+				return nil, fmt.Errorf("the license you're trying to create is empty or invalid")
+			}
+			if licStatus == licClient.Expired {
 				// License is already expired. Don't apply it.
 				return nil, fmt.Errorf("the license you're trying to create expired on %s", licClaims.Expiry.Time().Local())
 			}
-			log.Debug("License is valid")
+			if licStatus == licClient.InGracePeriod {
+				// License is already expired but in grace period.
+				expiryTime = licClaims.Expiry.Time()
+				gracePeriodExpiryTime = expiryTime.Add(time.Duration(licClaims.GracePeriod) * time.Hour * 24)
+				log.Warning("The license you're trying to create is expired on %s but in grace period till %s", expiryTime.Local(), gracePeriodExpiryTime.Local())
+			} else {
+				log.Debug("License is valid")
+			}
 
 			// License is not corrupt or expired, so we create it.
 			return client.LicenseKey().Create(ctx, r, options.SetOptions{})
