@@ -11,10 +11,12 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	"github.com/projectcalico/libcalico-go/lib/backend"
 	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
+	"github.com/projectcalico/libcalico-go/lib/backend/k8s"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/projectcalico/libcalico-go/lib/testutils"
@@ -50,6 +52,7 @@ type testArgsClaimAff1 struct {
 var _ = testutils.E2eDatastoreDescribe("Windows: IPAM tests", testutils.DatastoreEtcdV3, func(config apiconfig.CalicoAPIConfig) {
 	var bc bapi.Client
 	var ic Interface
+	var kc *kubernetes.Clientset
 
 	BeforeEach(func() {
 		// Create a new backend client and an IPAM Client using the IP Pools Accessor.
@@ -59,6 +62,12 @@ var _ = testutils.E2eDatastoreDescribe("Windows: IPAM tests", testutils.Datastor
 		bc, err = backend.NewClient(config)
 		Expect(err).NotTo(HaveOccurred())
 		ic = NewIPAMClient(bc, ipPoolsWindows)
+
+		// If running in KDD mode, extract the k8s clientset.
+		if config.Spec.DatastoreType == "kubernetes" {
+			kc = bc.(*k8s.KubeClient).ClientSet
+		}
+
 	})
 
 	// Request for 256 IPs from a pool, say "10.0.0.0/24", with a blocksize of 26, allocates only 240 IPs as
@@ -78,6 +87,11 @@ var _ = testutils.E2eDatastoreDescribe("Windows: IPAM tests", testutils.Datastor
 			for _, v := range pools {
 				ipPoolsWindows.pools[v.cidr] = pool{cidr: v.cidr, enabled: v.enabled, blockSize: v.blockSize}
 			}
+
+			// Host must exist before trying to autoassign to it
+			err := applyNode(bc, kc, host, nil)
+			Expect(err).NotTo(HaveOccurred())
+			defer deleteNode(bc, kc, host)
 
 			fromPool := cnet.MustParseNetwork(usePool)
 			args := AutoAssignArgs{
@@ -125,10 +139,28 @@ var _ = testutils.E2eDatastoreDescribe("Windows: IPAM tests", testutils.Datastor
 	// Request for another 100 IPs by the other Linux host, created initially, will not get all 100 IPs as all the IPs exhausted.
 	Describe("Windows: IPAM AutoAssign should not assign IPs from non-affine block for Windows", func() {
 
-		It("Windows: Should not be able to assign IPs from non-affine block for Windows but should be able to allocate from non-affine blocks for Linux", func() {
+		BeforeEach(func() {
 			bc.Clean()
 			deleteAllPoolsWindows()
+			// Hosts must exist before trying to autoassign
+			err := applyNode(bc, kc, "Windows-TestHost-1", nil)
+			Expect(err).NotTo(HaveOccurred())
+			err = applyNode(bc, kc, "Windows-TestHost-2", nil)
+			Expect(err).NotTo(HaveOccurred())
+			err = applyNode(bc, kc, "Linux-TestHost-1", nil)
+			Expect(err).NotTo(HaveOccurred())
+			err = applyNode(bc, kc, "Linux-TestHost-2", nil)
+			Expect(err).NotTo(HaveOccurred())
+		})
 
+		AfterEach(func() {
+			deleteNode(bc, kc, "Windows-TestHost-1")
+			deleteNode(bc, kc, "Windows-TestHost-2")
+			deleteNode(bc, kc, "Linux-TestHost-1")
+			deleteNode(bc, kc, "Linux-TestHost-2")
+		})
+
+		It("Windows: Should not be able to assign IPs from non-affine block for Windows but should be able to allocate from non-affine blocks for Linux", func() {
 			ipPoolsWindows.pools["100.0.0.0/24"] = pool{cidr: "100.0.0.0/24", enabled: true, blockSize: 26}
 
 			fromPool := cnet.MustParseNetwork("100.0.0.0/24")
@@ -225,6 +257,17 @@ var _ = testutils.E2eDatastoreDescribe("Windows: IPAM tests", testutils.Datastor
 			Num6:     0,
 			Hostname: "test-host",
 		}
+
+		BeforeEach(func() {
+			// Hosts must exist before trying to autoassign
+			err := applyNode(bc, kc, "test-host", nil)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		AfterEach(func() {
+			deleteNode(bc, kc, "test-host")
+		})
+
 		// Call once in order to assign an IP address and create a block.
 		It("Windows: should have assigned an IP address with no error", func() {
 			deleteAllPoolsWindows()
@@ -253,11 +296,22 @@ var _ = testutils.E2eDatastoreDescribe("Windows: IPAM tests", testutils.Datastor
 		pool2 := cnet.MustParseNetwork("200.0.0.0/24")
 		var block1, block2 cnet.IPNet
 
-		It("Windows: Should get an IP from pool1 when explicitly requesting from that pool", func() {
+		BeforeEach(func() {
 			bc.Clean()
 			deleteAllPoolsWindows()
 			applyPoolWindows("100.0.0.0/24", true)
 			applyPoolWindows("200.0.0.0/24", true)
+
+			// Hosts must exist before trying to autoassign
+			err := applyNode(bc, kc, host, nil)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		AfterEach(func() {
+			deleteNode(bc, kc, host)
+		})
+
+		It("Windows: Should get an IP from pool1 when explicitly requesting from that pool", func() {
 
 			args_1 := AutoAssignArgs{
 				Num4:      1,
@@ -343,6 +397,11 @@ var _ = testutils.E2eDatastoreDescribe("Windows: IPAM tests", testutils.Datastor
 			for _, v := range pools {
 				ipPoolsWindows.pools[v.cidr] = pool{cidr: v.cidr, enabled: v.enabled, blockSize: v.blockSize}
 			}
+
+			// Host must exist before trying to autoassign to it
+			err := applyNode(bc, kc, host, nil)
+			Expect(err).NotTo(HaveOccurred())
+			defer deleteNode(bc, kc, host)
 
 			fromPool := cnet.MustParseNetwork(usePool)
 			args := AutoAssignArgs{
