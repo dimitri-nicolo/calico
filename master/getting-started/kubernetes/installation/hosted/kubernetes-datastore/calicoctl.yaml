@@ -61,6 +61,13 @@ rules:
       - pods/status
     verbs:
       - update
+  - apiGroups: ["networking.k8s.io"]
+    resources:
+      - networkpolicies
+    verbs:
+      - watch
+      - list
+      - get
   - apiGroups: ["crd.projectcalico.org"]
     resources:
       - bgppeers
