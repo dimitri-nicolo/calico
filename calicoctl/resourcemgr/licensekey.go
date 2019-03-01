@@ -17,6 +17,7 @@ package resourcemgr
 import (
 	"context"
 	"fmt"
+	"time"
 
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
@@ -60,8 +61,8 @@ func init() {
 			}
 			if licStatus == licClient.InGracePeriod {
 				// License is already expired but in grace period.
-				expiryTime = licClaims.Expiry.Time()
-				gracePeriodExpiryTime = expiryTime.Add(time.Duration(licClaims.GracePeriod) * time.Hour * 24)
+				expiryTime := licClaims.Expiry.Time()
+				gracePeriodExpiryTime := expiryTime.Add(time.Duration(licClaims.GracePeriod) * time.Hour * 24)
 				log.Warning("The license you're trying to create is expired on %s but in grace period till %s", expiryTime.Local(), gracePeriodExpiryTime.Local())
 			} else {
 				log.Debug("License is valid")
@@ -91,8 +92,8 @@ func init() {
 			}
 			if licStatus == licClient.InGracePeriod {
 				// License is already expired but in grace period.
-				expiryTime = licClaims.Expiry.Time()
-				gracePeriodExpiryTime = expiryTime.Add(time.Duration(licClaims.GracePeriod) * time.Hour * 24)
+				expiryTime := licClaims.Expiry.Time()
+				gracePeriodExpiryTime := expiryTime.Add(time.Duration(licClaims.GracePeriod) * time.Hour * 24)
 				log.Warning("The license you're trying to create is expired on %s but in grace period till %s", expiryTime.Local(), gracePeriodExpiryTime.Local())
 			} else {
 				log.Debug("License is valid")
