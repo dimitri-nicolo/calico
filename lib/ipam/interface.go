@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -62,13 +62,17 @@ type Interface interface {
 
 	// ReleaseAffinity releases affinity for all blocks within the given CIDR
 	// on the given host.  If an empty string is passed as the host, then the
-	// value returned by os.Hostname will be used.
-	ReleaseAffinity(ctx context.Context, cidr cnet.IPNet, host string) error
+	// value returned by os.Hostname will be used. If mustBeEmpty is true, then an error
+	// will be returned if any blocks within the CIDR are not empty - in this case, this
+	// function may release some but not all blocks within the given CIDR.
+	ReleaseAffinity(ctx context.Context, cidr cnet.IPNet, host string, mustBeEmpty bool) error
 
 	// ReleaseHostAffinities releases affinity for all blocks that are affine
 	// to the given host.  If an empty string is passed as the host, the value returned by
-	// os.Hostname will be used.
-	ReleaseHostAffinities(ctx context.Context, host string) error
+	// os.Hostname will be used. If mustBeEmpty is true, then an error
+	// will be returned if any blocks within the CIDR are not empty - in this case, this
+	// function may release some but not all blocks attached to this host.
+	ReleaseHostAffinities(ctx context.Context, host string, mustBeEmpty bool) error
 
 	// ReleasePoolAffinities releases affinity for all blocks within
 	// the specified pool across all hosts.

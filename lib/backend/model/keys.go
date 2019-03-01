@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/net"
 	log "github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 // RawString is used a value type to indicate that the value is a bare non-JSON string
@@ -92,6 +93,7 @@ type KVPair struct {
 	Key      Key
 	Value    interface{}
 	Revision string
+	UID      *types.UID
 	TTL      time.Duration // For writes, if non-zero, key has a TTL.
 }
 
@@ -293,6 +295,14 @@ func KeyFromDefaultPath(path string) Key {
 	} else if k := (ResourceListOptions{Kind: v3.KindNode}).KeyFromDefaultPath(path); k != nil {
 		return k
 	} else if k := (ResourceListOptions{Kind: v3.KindBGPPeer}).KeyFromDefaultPath(path); k != nil {
+		return k
+	} else if k := (HostEndpointStatusListOptions{}).KeyFromDefaultPath(path); k != nil {
+		return k
+	} else if k := (WorkloadEndpointStatusListOptions{}).KeyFromDefaultPath(path); k != nil {
+		return k
+	} else if k := (ActiveStatusReportListOptions{}).KeyFromDefaultPath(path); k != nil {
+		return k
+	} else if k := (LastStatusReportListOptions{}).KeyFromDefaultPath(path); k != nil {
 		return k
 	} else {
 		log.Debugf("Path is unknown: %v", path)

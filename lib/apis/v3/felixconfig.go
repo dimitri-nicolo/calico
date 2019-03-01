@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -91,6 +91,12 @@ type FelixConfigurationSpec struct {
 	// not ‘None’), is used to set up a NAT rule, from 169.254.169.254:80 to MetadataAddr:MetadataPort.
 	// In most cases this should not need to be changed [Default: 8775].
 	MetadataPort *int `json:"metadataPort,omitempty"`
+
+	// OpenstackRegion is the name of the region that a particular Felix belongs to. In a multi-region
+	// Calico/OpenStack deployment, this must be configured somehow for each Felix (here in the datamodel,
+	// or in felix.cfg or the environment on each compute node), and must match the [calico]
+	// openstack_region value configured in neutron.conf on each node. [Default: Empty]
+	OpenstackRegion string `json:"openstackRegion,omitempty"`
 
 	// InterfacePrefix is the interface name prefix that identifies workload endpoints and so distinguishes
 	// them from host endpoint interfaces. Note: in environments other than bare metal, the orchestrators
@@ -231,6 +237,8 @@ type FelixConfigurationSpec struct {
 	DebugDisableLogDropping         *bool            `json:"debugDisableLogDropping,omitempty"`
 	DebugSimulateCalcGraphHangAfter *metav1.Duration `json:"debugSimulateCalcGraphHangAfter,omitempty" configv1timescale:"seconds"`
 	DebugSimulateDataplaneHangAfter *metav1.Duration `json:"debugSimulateDataplaneHangAfter,omitempty" configv1timescale:"seconds"`
+
+	IptablesNATOutgoingInterfaceFilter string `json:"iptablesNATOutgoingInterfaceFilter,omitempty" validate:"omitempty,ifaceFilter"`
 
 	SyslogReporterNetwork string `json:"syslogReporterNetwork,omitempty"`
 	SyslogReporterAddress string `json:"syslogReporterAddress,omitempty"`

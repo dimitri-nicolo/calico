@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -75,7 +75,7 @@ type Client interface {
 	// information filled-in.  Revision information is ignored on an Apply.
 	Apply(ctx context.Context, object *model.KVPair) (*model.KVPair, error)
 
-	// Delete removes the object specified by the KVPair.  If the KVPair
+	// Delete removes the object specified by the key.  If the call
 	// contains revision information, the delete only succeeds if the
 	// revision is still current.
 	//
@@ -88,6 +88,18 @@ type Client interface {
 	// For example, deleting the last WorkloadEndpoint in a Workload will
 	// also remove the Workload.
 	Delete(ctx context.Context, key model.Key, revision string) (*model.KVPair, error)
+
+	// DeleteKVP removes the object specified by the KVPair.  If the KVPair
+	// contains revision information, the delete only succeeds if the
+	// revision is still current.
+	//
+	// Some keys are hierarchical, and Delete is a recursive operation.
+	//
+	// Any objects that were implicitly added by a Create operation should
+	// also be removed when deleting the objects that implicitly created it.
+	// For example, deleting the last WorkloadEndpoint in a Workload will
+	// also remove the Workload.
+	DeleteKVP(ctx context.Context, object *model.KVPair) (*model.KVPair, error)
 
 	// Get returns the object identified by the given key as a KVPair with
 	// revision information.

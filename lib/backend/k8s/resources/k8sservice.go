@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 
 package resources
 
@@ -10,6 +10,7 @@ import (
 	kapiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
@@ -52,8 +53,12 @@ func (c *serviceClient) Update(ctx context.Context, kvp *model.KVPair) (*model.K
 	}
 }
 
+func (c *serviceClient) DeleteKVP(ctx context.Context, kvp *model.KVPair) (*model.KVPair, error) {
+	return c.Delete(ctx, kvp.Key, kvp.Revision, kvp.UID)
+}
+
 // Delete is not supported.
-func (c *serviceClient) Delete(ctx context.Context, key model.Key, revision string) (*model.KVPair, error) {
+func (c *serviceClient) Delete(ctx context.Context, key model.Key, revision string, uid *types.UID) (*model.KVPair, error) {
 	log.Warn("Operation Delete is not supported on Kubernetes Service type")
 	return nil, cerrors.ErrorOperationNotSupported{
 		Identifier: key,
