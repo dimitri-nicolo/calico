@@ -63,7 +63,7 @@ func init() {
 				// License is already expired but in grace period.
 				expiryTime := licClaims.Expiry.Time()
 				gracePeriodExpiryTime := expiryTime.Add(time.Duration(licClaims.GracePeriod) * time.Hour * 24)
-				log.Warning("The license you're trying to create is expired on %s but in grace period till %v", expiryTime.Local(), gracePeriodExpiryTime.Local())i
+				log.Warning("The license you're trying to create is expired on %s but in grace period till %v", expiryTime.Local(), gracePeriodExpiryTime.Local())
 			} else {
 				log.Debug("License is valid")
 			}
