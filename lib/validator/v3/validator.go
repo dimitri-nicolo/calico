@@ -20,9 +20,11 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/go-playground/validator.v9"
+	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
 
@@ -190,6 +192,10 @@ func init() {
 	registerStructValidator(validate, validateNetworkPolicy, api.NetworkPolicy{})
 	registerStructValidator(validate, validateGlobalNetworkPolicy, api.GlobalNetworkPolicy{})
 	registerStructValidator(validate, validateGlobalNetworkSet, api.GlobalNetworkSet{})
+	registerStructValidator(validate, validatePull, api.Pull{})
+	registerStructValidator(validate, validateHTTPHeader, api.HTTPHeader{})
+	registerStructValidator(validate, validateConfigMapKeyRef, k8sv1.ConfigMapKeySelector{})
+	registerStructValidator(validate, validateSecretKeyRef, k8sv1.SecretKeySelector{})
 }
 
 // reason returns the provided error reason prefixed with an identifier that
@@ -1191,6 +1197,89 @@ func validateGlobalNetworkPolicy(structLevel validator.StructLevel) {
 				structLevel.ReportError(v, f, "", reason("not allowed in egress rules"), "")
 			}
 		}
+	}
+}
+
+func validatePull(structLevel validator.StructLevel) {
+	p := structLevel.Current().Interface().(api.Pull)
+	if p.Period == "" {
+		// Allow empty, which means default.
+		return
+	}
+	d, err := time.ParseDuration(p.Period)
+	if err != nil {
+		structLevel.ReportError(
+			reflect.ValueOf(p.Period),
+			"Period",
+			"",
+			reason("invalid duration string"),
+			"")
+		return
+	}
+	if d < api.MinPullPeriod {
+		structLevel.ReportError(
+			reflect.ValueOf(p.Period),
+			"Period",
+			"",
+			reason("Period cannot be shorter than 5m"),
+			"")
+	}
+	return
+}
+
+func validateHTTPHeader(structLevel validator.StructLevel) {
+	h := structLevel.Current().Interface().(api.HTTPHeader)
+	if h.Value != "" && h.ValueFrom != nil {
+		structLevel.ReportError(
+			reflect.ValueOf(h.Value),
+			"Value",
+			"",
+			reason("Value cannot be used when ValueFrom is used"),
+			"")
+	}
+}
+
+func validateConfigMapKeyRef(structLevel validator.StructLevel) {
+	c := structLevel.Current().Interface().(k8sv1.ConfigMapKeySelector)
+	for _, errStr := range k8svalidation.IsQualifiedName(c.Name) {
+		structLevel.ReportError(
+			reflect.ValueOf(c.Name),
+			"ConfigMapKeyRef.Name",
+			"",
+			reason(errStr),
+			"",
+		)
+	}
+	for _, errStr := range k8svalidation.IsConfigMapKey(c.Key) {
+		structLevel.ReportError(
+			reflect.ValueOf(c.Name),
+			"ConfigMapKeyRef.Key",
+			"",
+			reason(errStr),
+			"",
+		)
+	}
+}
+
+func validateSecretKeyRef(structLevel validator.StructLevel) {
+	c := structLevel.Current().Interface().(k8sv1.SecretKeySelector)
+	for _, errStr := range k8svalidation.IsQualifiedName(c.Name) {
+		structLevel.ReportError(
+			reflect.ValueOf(c.Name),
+			"SecretKeyRef.Name",
+			"",
+			reason(errStr),
+			"",
+		)
+	}
+	for _, errStr := range k8svalidation.IsConfigMapKey(c.Key) {
+		structLevel.ReportError(
+			reflect.ValueOf(c.Name),
+			"SecretKeyRef.Key",
+			"",
+			reason(errStr),
+			"",
+		)
 	}
 }
 

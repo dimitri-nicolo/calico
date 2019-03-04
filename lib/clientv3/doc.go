@@ -32,6 +32,7 @@ The client has a number of methods that return interfaces for managing:
 	-  Profile resources
 	-  Tier resources
 	-  IP Address Management (IPAM)
+	-  Global threat feed resources
 
 See [resource definitions](http://docs.projectcalico.org/latest/reference/calicoctl/resources/) for details about the set of management commands for each
 resource type.

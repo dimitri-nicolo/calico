@@ -17,6 +17,7 @@ package v3_test
 import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	k8sv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	apiv1 "github.com/projectcalico/libcalico-go/lib/apis/v1"
@@ -1813,6 +1814,455 @@ func init() {
 		),
 		Entry("disallow HTTP Method with duplicate match clause",
 			&api.HTTPMatch{Methods: []string{"GET", "GET", "Foo"}},
+			false,
+		),
+
+		// GlobalThreatFeed
+		Entry("disallow GlobalThreatFeed with invalid K8s name",
+			&api.GlobalThreatFeed{
+				ObjectMeta: v1.ObjectMeta{Name: "~gtf"},
+				Spec:       api.GlobalThreatFeedSpec{Content: api.ThreatFeedContentIPset},
+			},
+			false,
+		),
+		Entry("allow GlobalThreatFeed with valid K8s name",
+			&api.GlobalThreatFeed{
+				ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
+				Spec:       api.GlobalThreatFeedSpec{Content: api.ThreatFeedContentIPset},
+			},
+			true,
+		),
+		Entry("allow GlobalThreatFeed with missing Content",
+			&api.GlobalThreatFeed{
+				ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
+				Spec:       api.GlobalThreatFeedSpec{},
+			},
+			true,
+		),
+		Entry("disallow GlobalThreatFeed with invalid Content",
+			&api.GlobalThreatFeed{
+				ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
+				Spec:       api.GlobalThreatFeedSpec{Content: "arandocontent"},
+			},
+			false,
+		),
+		Entry("allow GlobalThreatFeed with gns labels",
+			&api.GlobalThreatFeed{
+				ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
+				Spec: api.GlobalThreatFeedSpec{
+					Content: api.ThreatFeedContentIPset,
+					GlobalNetworkSet: &api.GlobalNetworkSetSync{
+						Labels: map[string]string{"foo": "bar", "biz": "baz"},
+					},
+				},
+			},
+			true,
+		),
+		Entry("disallow GlobalThreatFeed with invalid gns labels",
+			&api.GlobalThreatFeed{
+				ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
+				Spec: api.GlobalThreatFeedSpec{
+					Content: api.ThreatFeedContentIPset,
+					GlobalNetworkSet: &api.GlobalNetworkSetSync{
+						Labels: map[string]string{",,foo": "bar", "biz": "~baz"},
+					},
+				},
+			},
+			false,
+		),
+		Entry("allow GlobalThreatFeed with Pull stanza",
+			&api.GlobalThreatFeed{
+				ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
+				Spec: api.GlobalThreatFeedSpec{
+					Content: api.ThreatFeedContentIPset,
+					GlobalNetworkSet: &api.GlobalNetworkSetSync{
+						Labels: map[string]string{"foo": "bar", "biz": "baz"},
+					},
+					Pull: &api.Pull{
+						Period: "12h",
+						HTTP: &api.HTTPPull{
+							URL:    "http://tigera.io",
+							Format: api.ThreatFeedFormatNewlineDelimited,
+						},
+					},
+				},
+			},
+			true,
+		),
+		Entry("allow GlobalThreatFeed without Pull.Period",
+			&api.GlobalThreatFeed{
+				ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
+				Spec: api.GlobalThreatFeedSpec{
+					Content: api.ThreatFeedContentIPset,
+					GlobalNetworkSet: &api.GlobalNetworkSetSync{
+						Labels: map[string]string{"foo": "bar", "biz": "baz"},
+					},
+					Pull: &api.Pull{
+						HTTP: &api.HTTPPull{
+							URL:    "http://tigera.io",
+							Format: api.ThreatFeedFormatNewlineDelimited,
+						},
+					},
+				},
+			},
+			true,
+		),
+		Entry("disallow GlobalThreatFeed with too short of period",
+			&api.GlobalThreatFeed{
+				ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
+				Spec: api.GlobalThreatFeedSpec{
+					Content: api.ThreatFeedContentIPset,
+					GlobalNetworkSet: &api.GlobalNetworkSetSync{
+						Labels: map[string]string{"foo": "bar", "biz": "baz"},
+					},
+					Pull: &api.Pull{
+						Period: "4m",
+						HTTP: &api.HTTPPull{
+							URL:    "http://tigera.io",
+							Format: api.ThreatFeedFormatNewlineDelimited,
+						},
+					},
+				},
+			},
+			false,
+		),
+		Entry("disallow GlobalThreatFeed with invalid period",
+			&api.GlobalThreatFeed{
+				ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
+				Spec: api.GlobalThreatFeedSpec{
+					Content: api.ThreatFeedContentIPset,
+					GlobalNetworkSet: &api.GlobalNetworkSetSync{
+						Labels: map[string]string{"foo": "bar", "biz": "baz"},
+					},
+					Pull: &api.Pull{
+						Period: "twenty hours",
+						HTTP: &api.HTTPPull{
+							URL:    "http://tigera.io",
+							Format: api.ThreatFeedFormatNewlineDelimited,
+						},
+					},
+				},
+			},
+			false,
+		),
+		Entry("disallow GlobalThreatFeed without pull URI",
+			&api.GlobalThreatFeed{
+				ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
+				Spec: api.GlobalThreatFeedSpec{
+					Content: api.ThreatFeedContentIPset,
+					GlobalNetworkSet: &api.GlobalNetworkSetSync{
+						Labels: map[string]string{"foo": "bar", "biz": "baz"},
+					},
+					Pull: &api.Pull{
+						Period: "12h",
+						HTTP: &api.HTTPPull{
+							Format: api.ThreatFeedFormatNewlineDelimited,
+						},
+					},
+				},
+			},
+			false,
+		),
+		Entry("disallow GlobalThreatFeed with invalid URL",
+			&api.GlobalThreatFeed{
+				ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
+				Spec: api.GlobalThreatFeedSpec{
+					Content: api.ThreatFeedContentIPset,
+					GlobalNetworkSet: &api.GlobalNetworkSetSync{
+						Labels: map[string]string{"foo": "bar", "biz": "baz"},
+					},
+					Pull: &api.Pull{
+						Period: "12h",
+						HTTP: &api.HTTPPull{
+							URL:    "somethingdotcom",
+							Format: api.ThreatFeedFormatNewlineDelimited,
+						},
+					},
+				},
+			},
+			false,
+		),
+		Entry("allow GlobalThreatFeed with missing format",
+			&api.GlobalThreatFeed{
+				ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
+				Spec: api.GlobalThreatFeedSpec{
+					Content: api.ThreatFeedContentIPset,
+					GlobalNetworkSet: &api.GlobalNetworkSetSync{
+						Labels: map[string]string{"foo": "bar", "biz": "baz"},
+					},
+					Pull: &api.Pull{
+						Period: "12h",
+						HTTP: &api.HTTPPull{
+							URL: "http://tigera.io/threats",
+						},
+					},
+				},
+			},
+			true,
+		),
+		Entry("disallow GlobalThreatFeed with invalid format",
+			&api.GlobalThreatFeed{
+				ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
+				Spec: api.GlobalThreatFeedSpec{
+					Content: api.ThreatFeedContentIPset,
+					GlobalNetworkSet: &api.GlobalNetworkSetSync{
+						Labels: map[string]string{"foo": "bar", "biz": "baz"},
+					},
+					Pull: &api.Pull{
+						Period: "12h",
+						HTTP: &api.HTTPPull{
+							URL:    "http://tigera.io/threats",
+							Format: "haiku",
+						},
+					},
+				},
+			},
+			false,
+		),
+		Entry("allow GlobalThreatFeed with HTTP Headers",
+			&api.GlobalThreatFeed{
+				ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
+				Spec: api.GlobalThreatFeedSpec{
+					Content: api.ThreatFeedContentIPset,
+					GlobalNetworkSet: &api.GlobalNetworkSetSync{
+						Labels: map[string]string{"foo": "bar", "biz": "baz"},
+					},
+					Pull: &api.Pull{
+						Period: "12h",
+						HTTP: &api.HTTPPull{
+							URL:    "http://tigera.io/threats",
+							Format: api.ThreatFeedFormatNewlineDelimited,
+							Headers: []api.HTTPHeader{
+								{Name: "Key", Value: "opensesame"},
+							},
+						},
+					},
+				},
+			},
+			true,
+		),
+		Entry("disallow GlobalThreatFeed with invalid HTTP Headers",
+			&api.GlobalThreatFeed{
+				ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
+				Spec: api.GlobalThreatFeedSpec{
+					Content: api.ThreatFeedContentIPset,
+					GlobalNetworkSet: &api.GlobalNetworkSetSync{
+						Labels: map[string]string{"foo": "bar", "biz": "baz"},
+					},
+					Pull: &api.Pull{
+						Period: "12h",
+						HTTP: &api.HTTPPull{
+							URL:    "http://tigera.io/threats",
+							Format: api.ThreatFeedFormatNewlineDelimited,
+							Headers: []api.HTTPHeader{
+								{Name: "Key\xbd", Value: "zoo"},
+							},
+						},
+					},
+				},
+			},
+			false,
+		),
+		Entry("disallow GlobalThreatFeed with unicode HTTP Headers",
+			&api.GlobalThreatFeed{
+				ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
+				Spec: api.GlobalThreatFeedSpec{
+					Content: api.ThreatFeedContentIPset,
+					GlobalNetworkSet: &api.GlobalNetworkSetSync{
+						Labels: map[string]string{"foo": "bar", "biz": "baz"},
+					},
+					Pull: &api.Pull{
+						Period: "12h",
+						HTTP: &api.HTTPPull{
+							URL:    "http://tigera.io/threats",
+							Format: api.ThreatFeedFormatNewlineDelimited,
+							Headers: []api.HTTPHeader{
+								{Name: "Frappé", Value: "yum"},
+							},
+						},
+					},
+				},
+			},
+			false,
+		),
+		Entry("allow GlobalThreatFeed with HTTP Header value from configmap",
+			&api.GlobalThreatFeed{
+				ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
+				Spec: api.GlobalThreatFeedSpec{
+					Content: api.ThreatFeedContentIPset,
+					GlobalNetworkSet: &api.GlobalNetworkSetSync{
+						Labels: map[string]string{"foo": "bar", "biz": "baz"},
+					},
+					Pull: &api.Pull{
+						Period: "12h",
+						HTTP: &api.HTTPPull{
+							URL:    "http://tigera.io/threats",
+							Format: api.ThreatFeedFormatNewlineDelimited,
+							Headers: []api.HTTPHeader{
+								{Name: "Key", ValueFrom: &api.HTTPHeaderSource{
+									ConfigMapKeyRef: &k8sv1.ConfigMapKeySelector{
+										LocalObjectReference: k8sv1.LocalObjectReference{Name: "configo"},
+										Key:                  "my-key",
+									},
+								}},
+							},
+						},
+					},
+				},
+			},
+			true,
+		),
+		Entry("disallow GlobalThreatFeed with HTTP Header Value and ValueFrom",
+			&api.GlobalThreatFeed{
+				ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
+				Spec: api.GlobalThreatFeedSpec{
+					Content: api.ThreatFeedContentIPset,
+					GlobalNetworkSet: &api.GlobalNetworkSetSync{
+						Labels: map[string]string{"foo": "bar", "biz": "baz"},
+					},
+					Pull: &api.Pull{
+						Period: "12h",
+						HTTP: &api.HTTPPull{
+							URL:    "http://tigera.io/threats",
+							Format: api.ThreatFeedFormatNewlineDelimited,
+							Headers: []api.HTTPHeader{
+								{
+									Name:  "Key",
+									Value: "opensesame",
+									ValueFrom: &api.HTTPHeaderSource{
+										ConfigMapKeyRef: &k8sv1.ConfigMapKeySelector{
+											LocalObjectReference: k8sv1.LocalObjectReference{Name: "configo"},
+											Key:                  "my-key",
+										},
+									}},
+							},
+						},
+					},
+				},
+			},
+			false,
+		),
+		Entry("disallow GlobalThreatFeed with bad config-map name",
+			&api.GlobalThreatFeed{
+				ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
+				Spec: api.GlobalThreatFeedSpec{
+					Content: api.ThreatFeedContentIPset,
+					GlobalNetworkSet: &api.GlobalNetworkSetSync{
+						Labels: map[string]string{"foo": "bar", "biz": "baz"},
+					},
+					Pull: &api.Pull{
+						Period: "12h",
+						HTTP: &api.HTTPPull{
+							URL:    "http://tigera.io/threats",
+							Format: api.ThreatFeedFormatNewlineDelimited,
+							Headers: []api.HTTPHeader{
+								{Name: "Key", ValueFrom: &api.HTTPHeaderSource{
+									ConfigMapKeyRef: &k8sv1.ConfigMapKeySelector{
+										LocalObjectReference: k8sv1.LocalObjectReference{Name: "~configo"},
+										Key:                  "my-key",
+									},
+								}},
+							},
+						},
+					},
+				},
+			},
+			false,
+		),
+		Entry("disallow GlobalThreatFeed with bad config-map key",
+			&api.GlobalThreatFeed{
+				ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
+				Spec: api.GlobalThreatFeedSpec{
+					Content: api.ThreatFeedContentIPset,
+					GlobalNetworkSet: &api.GlobalNetworkSetSync{
+						Labels: map[string]string{"foo": "bar", "biz": "baz"},
+					},
+					Pull: &api.Pull{
+						Period: "12h",
+						HTTP: &api.HTTPPull{
+							URL:    "http://tigera.io/threats",
+							Format: api.ThreatFeedFormatNewlineDelimited,
+							Headers: []api.HTTPHeader{
+								{Name: "Key", ValueFrom: &api.HTTPHeaderSource{
+									ConfigMapKeyRef: &k8sv1.ConfigMapKeySelector{
+										LocalObjectReference: k8sv1.LocalObjectReference{Name: "configo"},
+										Key:                  "$$$my-key",
+									},
+								}},
+							},
+						},
+					},
+				},
+			},
+			false,
+		),
+		Entry("allow GlobalThreatFeed with HTTP Header value from secret",
+			&api.GlobalThreatFeed{
+				ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
+				Spec: api.GlobalThreatFeedSpec{
+					Content: api.ThreatFeedContentIPset,
+					GlobalNetworkSet: &api.GlobalNetworkSetSync{
+						Labels: map[string]string{"foo": "bar", "biz": "baz"},
+					},
+					Pull: &api.Pull{
+						Period: "12h",
+						HTTP: &api.HTTPPull{
+							URL:    "http://tigera.io/threats",
+							Format: api.ThreatFeedFormatNewlineDelimited,
+							Headers: []api.HTTPHeader{
+								{Name: "Key", ValueFrom: &api.HTTPHeaderSource{
+									SecretKeyRef: &k8sv1.SecretKeySelector{
+										LocalObjectReference: k8sv1.LocalObjectReference{Name: "configo"},
+										Key:                  "my-key",
+									},
+								}},
+							},
+						},
+					},
+				},
+			},
+			true,
+		),
+		Entry("disallow GlobalThreatFeed with bad secret name",
+			&api.GlobalThreatFeed{
+				ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
+				Spec: api.GlobalThreatFeedSpec{
+					Pull: &api.Pull{
+						HTTP: &api.HTTPPull{
+							URL: "http://tigera.io/threats",
+							Headers: []api.HTTPHeader{
+								{Name: "Key", ValueFrom: &api.HTTPHeaderSource{
+									SecretKeyRef: &k8sv1.SecretKeySelector{
+										LocalObjectReference: k8sv1.LocalObjectReference{Name: "~configo"},
+										Key:                  "my-key",
+									},
+								}},
+							},
+						},
+					},
+				},
+			},
+			false,
+		),
+		Entry("disallow GlobalThreatFeed with bad secret key",
+			&api.GlobalThreatFeed{
+				ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
+				Spec: api.GlobalThreatFeedSpec{
+					Pull: &api.Pull{
+						HTTP: &api.HTTPPull{
+							URL: "http://tigera.io/threats",
+							Headers: []api.HTTPHeader{
+								{Name: "Key", ValueFrom: &api.HTTPHeaderSource{
+									SecretKeyRef: &k8sv1.SecretKeySelector{
+										LocalObjectReference: k8sv1.LocalObjectReference{Name: "configo"},
+										Key:                  "$$$my-key",
+									},
+								}},
+							},
+						},
+					},
+				},
+			},
 			false,
 		),
 	)
