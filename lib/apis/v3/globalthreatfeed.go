@@ -45,7 +45,7 @@ type GlobalThreatFeed struct {
 type GlobalThreatFeedSpec struct {
 	// Content describes the kind of data the data feed provides.
 	Content          ThreatFeedContent     `json:"content" validate:"omitempty,eq=IPSet"`
-	GlobalNetworkSet *GlobalNetworkSetSync `json:"globalNetworkSetSync,omitempty"`
+	GlobalNetworkSet *GlobalNetworkSetSync `json:"globalNetworkSet,omitempty"`
 	Pull             *Pull                 `json:"pull,omitempty"`
 }
 

@@ -3953,7 +3953,7 @@ func schema_libcalico_go_lib_apis_v3_GlobalThreatFeedSpec(ref common.ReferenceCa
 							Format:      "",
 						},
 					},
-					"globalNetworkSetSync": {
+					"globalNetworkSet": {
 						SchemaProps: spec.SchemaProps{
 							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkSetSync"),
 						},
