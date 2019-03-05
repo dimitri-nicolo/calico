@@ -1,4 +1,4 @@
-package feed
+package puller
 
 import (
 	"bufio"
@@ -14,7 +14,7 @@ import (
 
 const CommentPrefix = "#"
 
-// httpPuller is a feed that periodically pulls IPSetPuller sets from a URL
+// httpPuller is a feed that periodically pulls FeedPuller sets from a URL
 type httpPuller struct {
 	name      string
 	namespace string
@@ -23,7 +23,7 @@ type httpPuller struct {
 	header    http.Header
 }
 
-func NewHTTPPuller(name, namespace string, u *url.URL, period time.Duration, header http.Header) IPSetPuller {
+func NewHTTPPuller(name, namespace string, u *url.URL, period time.Duration, header http.Header) FeedPuller {
 	return &httpPuller{
 		name:      name,
 		namespace: namespace,
@@ -77,7 +77,7 @@ func (h *httpPuller) query(snapshots chan<- []string) {
 		return
 	}
 
-	// Response format is one IPSetPuller address per line.
+	// Response format is one FeedPuller address per line.
 	s := bufio.NewScanner(resp.Body)
 	var snapshot []string
 	var n = 0

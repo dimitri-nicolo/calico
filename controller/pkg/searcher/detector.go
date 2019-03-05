@@ -1,4 +1,4 @@
-package detector
+package searcher
 
 import (
 	"context"
@@ -9,41 +9,40 @@ import (
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
 )
 
-type Detector interface {
-	RunIPSet(ctx context.Context, name string, period time.Duration)
+type FlowSearcher interface {
+	Run(ctx context.Context, name string, period time.Duration)
 }
 
-type detector struct {
+type flowSearcher struct {
 	q db.SuspiciousIP
 	p db.Events
 }
 
-func NewDetector(q db.SuspiciousIP, p db.Events) Detector {
-	return &detector{q, p}
+func NewFlowSearcher(q db.SuspiciousIP, p db.Events) FlowSearcher {
+	return &flowSearcher{q, p}
 }
 
-func (d *detector) RunIPSet(ctx context.Context, name string, period time.Duration) {
-	d.doIPSet(name)
+func (d *flowSearcher) Run(ctx context.Context, name string, period time.Duration) {
 	t := time.NewTicker(period)
 	for {
+		d.doIPSet(ctx, name)
 		select {
 		case <-ctx.Done():
 			return
 		case <-t.C:
 			// continue
 		}
-		d.doIPSet(name)
 	}
 }
 
-func (d *detector) doIPSet(name string) {
-	flows, err := d.q.QueryIPSet(name)
+func (d *flowSearcher) doIPSet(ctx context.Context, name string) {
+	flows, err := d.q.QueryIPSet(ctx, name)
 	if err != nil {
 		log.WithError(err).Error("suspicious IP query failed")
 	}
 	log.WithField("num", len(flows)).Info("got flows")
 	for _, flow := range flows {
-		err := d.p.PutFlowLog(flow)
+		err := d.p.PutFlowLog(ctx, flow)
 		if err != nil {
 			log.WithError(err).Error("failed to store suspicious flow")
 		}
