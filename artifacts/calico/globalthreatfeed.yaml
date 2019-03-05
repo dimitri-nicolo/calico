@@ -1,0 +1,27 @@
+apiVersion: projectcalico.org/v3
+kind: GlobalThreatFeed
+metadata:
+  name: sample-global-threat-feed
+spec:
+  # allows support of additional types of threat feeds, e.g. domains
+  content: IPSet
+  globalNetworkSet:
+    # labels to set on the GNS
+    labels:
+      level: high
+  pull:
+    # accepts time in golang duration format
+    period: 24h
+    http:
+      # we may support additional formats in future, e.g. JSON, snort
+      format: NewlineDelimited
+      url: https://api.abuseipdb.com/api/v2/blacklist
+      headers:
+        - name: "Accept"
+          value: "text/plain"
+        - name: "Key"
+          valueFrom:
+            # also accepts ConfigMapKeyRef
+            secretKeyRef:
+              name: "abuseipdb"
+              key: "apikey"

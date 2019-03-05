@@ -337,7 +337,7 @@ as well as non-namespaced (e.g. globalnetworkset) resources:
   ```
 
 * Write and register your conversion routines in
-  `pkg/registry/projectcalico/rest/storage_calico.go`. For example:
+  `pkg/storage/calico/<your_resource>_storage.go`. For example:
 
   ```
   convertToAAPI() {
@@ -391,7 +391,7 @@ as well as non-namespaced (e.g. globalnetworkset) resources:
 * In order to regenerate the generated code, run:
 
   ```
-  make .generated_files
+  make .generate_files
   ```
 
   This updates (and creates) a large number of files, all of which need

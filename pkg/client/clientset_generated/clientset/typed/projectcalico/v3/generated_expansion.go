@@ -8,6 +8,8 @@ type GlobalNetworkPolicyExpansion interface{}
 
 type GlobalNetworkSetExpansion interface{}
 
+type GlobalThreatFeedExpansion interface{}
+
 type LicenseKeyExpansion interface{}
 
 type NetworkPolicyExpansion interface{}

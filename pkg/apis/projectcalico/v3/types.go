@@ -114,3 +114,25 @@ type LicenseKey struct {
 
 	Spec calico.LicenseKeySpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
 }
+
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// GlobalThreatFeedList is a list of GlobalThreatFeed objects.
+type GlobalThreatFeedList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
+	Items []GlobalThreatFeed `json:"items" protobuf:"bytes,2,rep,name=items"`
+}
+
+// +genclient
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type GlobalThreatFeed struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
+	Spec calico.GlobalThreatFeedSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
+}

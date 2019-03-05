@@ -22,6 +22,10 @@ func (c *FakeProjectcalicoV3) GlobalNetworkSets() v3.GlobalNetworkSetInterface {
 	return &FakeGlobalNetworkSets{c}
 }
 
+func (c *FakeProjectcalicoV3) GlobalThreatFeeds() v3.GlobalThreatFeedInterface {
+	return &FakeGlobalThreatFeeds{c}
+}
+
 func (c *FakeProjectcalicoV3) LicenseKeys() v3.LicenseKeyInterface {
 	return &FakeLicenseKeys{c}
 }

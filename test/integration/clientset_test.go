@@ -548,3 +548,68 @@ func testLicenseKeyClient(client calicoclient.Interface, name string) error {
 
 	return nil
 }
+
+// TestGlobalThreatFeedClient exercises the GlobalThreatFeed client.
+func TestGlobalThreatFeedClient(t *testing.T) {
+	const name = "test-globalthreatfeed"
+	rootTestFunc := func() func(t *testing.T) {
+		return func(t *testing.T) {
+			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+				return &projectcalico.GlobalThreatFeed{}
+			})
+			defer shutdownServer()
+			if err := testGlobalThreatFeedClient(client, name); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	if !t.Run(name, rootTestFunc()) {
+		t.Errorf("test-globalthreatfeed test failed")
+	}
+}
+
+func testGlobalThreatFeedClient(client calicoclient.Interface, name string) error {
+	globalThreatFeedClient := client.ProjectcalicoV3().GlobalThreatFeeds()
+	globalThreatFeed := &v3.GlobalThreatFeed{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+	}
+
+	// start from scratch
+	globalThreatFeeds, err := globalThreatFeedClient.List(metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing globalThreatFeeds (%s)", err)
+	}
+	if globalThreatFeeds.Items == nil {
+		return fmt.Errorf("Items field should not be set to nil")
+	}
+
+	globalThreatFeedServer, err := globalThreatFeedClient.Create(globalThreatFeed)
+	if nil != err {
+		return fmt.Errorf("error creating the globalThreatFeed '%v' (%v)", globalThreatFeed, err)
+	}
+	if name != globalThreatFeedServer.Name {
+		return fmt.Errorf("didn't get the same globalThreatFeed back from the server \n%+v\n%+v", globalThreatFeed, globalThreatFeedServer)
+	}
+
+	globalThreatFeeds, err = globalThreatFeedClient.List(metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing globalThreatFeeds (%s)", err)
+	}
+
+	globalThreatFeedServer, err = globalThreatFeedClient.Get(name, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("error getting globalThreatFeed %s (%s)", name, err)
+	}
+	if name != globalThreatFeedServer.Name &&
+		globalThreatFeed.ResourceVersion == globalThreatFeedServer.ResourceVersion {
+		return fmt.Errorf("didn't get the same globalThreatFeed back from the server \n%+v\n%+v", globalThreatFeed, globalThreatFeedServer)
+	}
+
+	err = globalThreatFeedClient.Delete(name, &metav1.DeleteOptions{})
+	if nil != err {
+		return fmt.Errorf("globalThreatFeed should be deleted (%s)", err)
+	}
+
+	return nil
+}
