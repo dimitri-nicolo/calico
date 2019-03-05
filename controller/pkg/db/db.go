@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"github.com/tigera/intrusion-detection/controller/pkg/feed"
 )
 
@@ -28,4 +29,8 @@ type FlowLog struct {
 	DestName   string `json:"dest_name"`
 	StartTime  int    `json:"start_time"`
 	EndTime    int    `json:"end_time"`
+}
+
+func (f FlowLog) ID() string {
+	return fmt.Sprintf("%d-%s-%s-%s", f.StartTime, f.SourceIP, f.SourceName, f.DestIP)
 }

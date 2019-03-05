@@ -5,13 +5,12 @@ import (
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/intrusion-detection/controller/pkg/watcher"
+	"github.com/tigera/intrusion-detection/controller/pkg/elastic"
 	"net/url"
 	"os"
 	"os/signal"
 	"strconv"
 	"syscall"
-
-	"github.com/tigera/intrusion-detection/controller/pkg/db"
 )
 
 const (
@@ -66,7 +65,7 @@ func main() {
 	}
 	pass := os.Getenv("ELASTIC_PASSWORD")
 	ca := os.Getenv("ELASTIC_CA")
-	e := db.NewElastic(u, user, pass, ca)
+	e := elastic.NewElastic(u, user, pass, ca)
 
 	s := watcher.NewWatcher(e, e, e)
 	s.Run(context.Background())

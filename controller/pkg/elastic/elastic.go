@@ -1,4 +1,4 @@
-package db
+package elastic
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
+	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/feed"
 	"io/ioutil"
 	"net/http"
@@ -220,7 +221,7 @@ func (e *Elastic) GetIPSet(name string) ([]string, error) {
 	return nil, nil
 }
 
-func (e *Elastic) QueryIPSet(ctx context.Context, name string) ([]FlowLog, error) {
+func (e *Elastic) QueryIPSet(ctx context.Context, name string) ([]db.FlowLog, error) {
 	q := elastic.NewTermsQuery("source_ip").TermsLookup(
 		elastic.NewTermsLookup().
 			Index(IPSetIndex).
@@ -232,9 +233,9 @@ func (e *Elastic) QueryIPSet(ctx context.Context, name string) ([]FlowLog, error
 		return nil, err
 	}
 	log.WithField("hits", r.TotalHits()).Info("elastic query returned")
-	var flows []FlowLog
+	var flows []db.FlowLog
 	for _, hit := range r.Hits.Hits {
-		var flow FlowLog
+		var flow db.FlowLog
 		err := json.Unmarshal(*hit.Source, &flow)
 		if err != nil {
 			log.WithError(err).WithField("raw", *hit.Source).Error("could not unmarshal")
@@ -244,16 +245,12 @@ func (e *Elastic) QueryIPSet(ctx context.Context, name string) ([]FlowLog, error
 	return flows, nil
 }
 
-func (e *Elastic) PutFlowLog(ctx context.Context, f FlowLog) error {
+func (e *Elastic) PutFlowLog(ctx context.Context, f db.FlowLog) error {
 	err := e.ensureIndexExists(ctx, EventIndex, eventMapping)
 	if err != nil {
 		return err
 	}
 
-	_, err = e.c.Index().Index(EventIndex).Type(StandardType).Id(f.id()).BodyJson(f).Do(ctx)
+	_, err = e.c.Index().Index(EventIndex).Type(StandardType).Id(f.ID()).BodyJson(f).Do(ctx)
 	return err
-}
-
-func (f FlowLog) id() string {
-	return fmt.Sprintf("%d-%s-%s-%s", f.StartTime, f.SourceIP, f.SourceName, f.DestIP)
 }
