@@ -3,6 +3,7 @@ package puller
 import (
 	"bufio"
 	"context"
+	"github.com/tigera/intrusion-detection/controller/pkg/feed"
 	"net"
 	"net/http"
 	"net/url"
@@ -14,49 +15,55 @@ import (
 
 const CommentPrefix = "#"
 
-// httpPuller is a feed that periodically pulls FeedPuller sets from a URL
+// httpPuller is a feed that periodically pulls Puller sets from a URL
 type httpPuller struct {
+	feed      feed.Feed
 	name      string
 	namespace string
 	period    time.Duration
 	url       *url.URL
 	header    http.Header
+	cancel    context.CancelFunc
 }
 
-func NewHTTPPuller(name, namespace string, u *url.URL, period time.Duration, header http.Header) FeedPuller {
+func NewHTTPPuller(feed feed.Feed, u *url.URL, period time.Duration, header http.Header) Puller {
 	return &httpPuller{
-		name:      name,
-		namespace: namespace,
-		url:       u,
-		period:    period,
-		header:    header,
+		feed:   feed,
+		url:    u,
+		period: period,
+		header: header,
 	}
 }
 
-func (h *httpPuller) Run(ctx context.Context) <-chan []string {
-	snapshots := make(chan []string)
+func (h *httpPuller) Run(ctx context.Context) <-chan feed.IPSet {
+	snapshots := make(chan feed.IPSet)
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	ctx, h.cancel = context.WithCancel(ctx)
 
 	go h.mainloop(ctx, snapshots)
 
 	return snapshots
 }
 
+func (h *httpPuller) Close() {
+	h.cancel()
+}
+
 func (h *httpPuller) Name() string {
-	return h.name
+	return h.feed.Name()
 }
 
 func (h *httpPuller) Namespace() string {
-	return h.namespace
+	return h.feed.Namespace()
 }
 
-func (h *httpPuller) mainloop(ctx context.Context, snapshots chan<- []string) {
-
-	// do one query at start of day to make sure we have data
-	h.query(snapshots)
-
+func (h *httpPuller) mainloop(ctx context.Context, snapshots chan<- feed.IPSet) {
 	// Query on a timer until the context is cancelled.
 	t := time.NewTicker(h.period)
 	for {
+		h.query(ctx, snapshots)
 		select {
 		case <-ctx.Done():
 			t.Stop()
@@ -64,20 +71,20 @@ func (h *httpPuller) mainloop(ctx context.Context, snapshots chan<- []string) {
 		case <-t.C:
 			// proceed
 		}
-		h.query(snapshots)
 	}
 }
 
-func (h *httpPuller) query(snapshots chan<- []string) {
+func (h *httpPuller) query(ctx context.Context, snapshots chan<- feed.IPSet) {
 	c := http.Client{}
 	req := &http.Request{Method: "GET", Header: h.header, URL: h.url}
+	req = req.WithContext(ctx)
 	resp, err := c.Do(req)
 	if err != nil {
 		log.WithError(err).Error("failed to query ")
 		return
 	}
 
-	// Response format is one FeedPuller address per line.
+	// Response format is one Puller address per line.
 	s := bufio.NewScanner(resp.Body)
 	var snapshot []string
 	var n = 0

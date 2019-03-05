@@ -3,17 +3,13 @@ package main
 import (
 	"context"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"github.com/tigera/intrusion-detection/controller/pkg/watcher"
 	"net/url"
 	"os"
 	"os/signal"
 	"strconv"
 	"syscall"
-	"time"
-
-	"github.com/tigera/intrusion-detection/controller/pkg/searcher"
-
-	log "github.com/sirupsen/logrus"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
 )
@@ -72,14 +68,11 @@ func main() {
 	ca := os.Getenv("ELASTIC_CA")
 	e := db.NewElastic(u, user, pass, ca)
 
-	s := watcher.NewFeedWatcher(e)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	s.Run(ctx)
-	log.Info("synching started")
+	s := watcher.NewFeedWatcher(e, e, e)
+	s.Run(context.Background())
+	defer s.Close()
+	log.Info("Watcher started")
 
-	d := searcher.NewFlowSearcher(e, e)
-	d.Run(ctx, "abuseipdb", 1*time.Minute)
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 	<-sig

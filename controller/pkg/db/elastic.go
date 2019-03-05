@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
+	"github.com/tigera/intrusion-detection/controller/pkg/feed"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -139,9 +140,8 @@ const eventMapping = `{
   }
 }`
 
-
 type ipSetDoc struct {
-	IPs []string `json:"ips"`
+	IPs feed.IPSet `json:"ips"`
 }
 
 type Elastic struct {
@@ -184,7 +184,7 @@ func NewElastic(url *url.URL, username, password, pathToCA string) *Elastic {
 	return &Elastic{c}
 }
 
-func (e *Elastic) PutIPSet(ctx context.Context, name string, set []string) error {
+func (e *Elastic) PutIPSet(ctx context.Context, name string, set feed.IPSet) error {
 	err := e.ensureIndexExists(ctx, IPSetIndex, ipSetMapping)
 	if err != nil {
 		return err
