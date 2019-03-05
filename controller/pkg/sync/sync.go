@@ -10,23 +10,22 @@ import (
 )
 
 type Syncer interface {
-	Run(context.Context)
+	Run(context.Context, <-chan feed.IPSet)
 	Close()
 }
 
 type syncer struct {
 	feed   feed.Feed
-	c      <-chan feed.IPSet
 	ipSet  db.IPSet
 	cancel context.CancelFunc
 	once   sync.Once
 }
 
-func NewSyncer(feed feed.Feed, c <-chan feed.IPSet, ipSet db.IPSet) Syncer {
-	return &syncer{feed: feed, c: c, ipSet: ipSet}
+func NewSyncer(feed feed.Feed, ipSet db.IPSet) Syncer {
+	return &syncer{feed: feed, ipSet: ipSet}
 }
 
-func (s *syncer) Run(ctx context.Context) {
+func (s *syncer) Run(ctx context.Context, c <-chan feed.IPSet) {
 	s.once.Do(func() {
 		if ctx == nil {
 			ctx = context.Background()
@@ -38,7 +37,7 @@ func (s *syncer) Run(ctx context.Context) {
 				select {
 				case <-ctx.Done():
 					return
-				case set, ok := <-s.c:
+				case set, ok := <-c:
 					if ok {
 						err := s.ipSet.PutIPSet(ctx, s.feed.Name(), set)
 						if err != nil {

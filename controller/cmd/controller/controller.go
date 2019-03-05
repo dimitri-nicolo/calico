@@ -68,7 +68,7 @@ func main() {
 	ca := os.Getenv("ELASTIC_CA")
 	e := db.NewElastic(u, user, pass, ca)
 
-	s := watcher.NewFeedWatcher(e, e, e)
+	s := watcher.NewWatcher(e, e, e)
 	s.Run(context.Background())
 	defer s.Close()
 	log.Info("Watcher started")
