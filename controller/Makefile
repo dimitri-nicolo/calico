@@ -149,7 +149,10 @@ DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
 # Some will have dedicated targets to make it easier to type, for example
 # "controller" instead of "$(BINDIR)/controller".
 #########################################################################
-controller: $(BINDIR)/controller-$(ARCH)
+controller: $(BINDIR)/controller
+
+$(BINDIR)/controller: $(BINDIR)/controller-amd64
+	cd $(BINDIR) && ln -s -T controller-$(ARCH) controller
 
 $(BINDIR)/controller-$(ARCH): $(GO_FILES)
 ifndef RELEASE_BUILD
@@ -163,9 +166,6 @@ endif
 	    sh -c 'go build -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/controller" && \
                ( ldd $(BINDIR)/controller-$(ARCH) 2>&1 | grep -q "Not a valid dynamic program" || \
 	             ( echo "Error: $(BINDIR)/controller-$(ARCH) was not statically linked"; false ) )'
-ifeq ($(ARCH),amd64)
-	cd $(BINDIR) && ln -s -T controller-$(ARCH) controller
-endif
 
 # Build the docker image.
 .PHONY: $(BUILD_IMAGE) $(BUILD_IMAGE)-$(ARCH)
@@ -259,6 +259,25 @@ clean-build-image:
 clean-bin:
 	rm -rf $(BINDIR) \
 			docker-image/bin
+
+###############################################################################
+# CI/CD
+###############################################################################
+.PHONY: ci cd
+
+## run CI cycle - build, test, etc.
+ci: test image-all
+
+## Deploy images to registry
+cd:
+ifndef CONFIRM
+	$(error CONFIRM is undefined - run using make <target> CONFIRM=true)
+endif
+ifndef BRANCH_NAME
+	$(error BRANCH_NAME is undefined - run using make <target> BRANCH_NAME=var or set an environment variable)
+endif
+	$(MAKE) tag-images-all push-all push-manifests push-non-manifests IMAGETAG=$(BRANCH_NAME) EXCLUDEARCH="$(EXCLUDEARCH)"
+	$(MAKE) tag-images-all push-all push-manifests push-non-manifests IMAGETAG=$(shell git describe --tags --dirty --always --long) EXCLUDEARCH="$(EXCLUDEARCH)"
 
 ##############################################################################
 # Release
