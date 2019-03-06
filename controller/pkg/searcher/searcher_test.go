@@ -31,17 +31,22 @@ func TestDoIPSet(t *testing.T) {
 			EndTime:    3,
 		},
 	}
-	runTest(t, true, expected, -1, -1)
+	runTest(t, true, expected, nil, -1, -1)
 }
 
 // TestDoIPSetNoResults tests the case where no results are returned
 func TestDoIPSetNoResults(t *testing.T) {
 	expected := []db.FlowLog{}
-	runTest(t, true, expected, -1, -1)
+	runTest(t, true, expected, nil, -1, -1)
 }
 
 // TestDoIPSetSuspiciousIPFails tests the case where suspiciousIP fails after the first result
 func TestDoIPSetSuspiciousIPFails(t *testing.T) {
+	expected := []db.FlowLog{}
+	runTest(t, false, expected, errors.New("fail"), -1, -1)
+}
+
+func TestDoIPSetSuspiciousIPIterationFails(t *testing.T) {
 	expected := []db.FlowLog{
 		{
 			SourceIP:   "1.2.3.4",
@@ -60,7 +65,7 @@ func TestDoIPSetSuspiciousIPFails(t *testing.T) {
 			EndTime:    3,
 		},
 	}
-	runTest(t, false, expected, 1, -1)
+	runTest(t, false, expected, nil, 1, -1)
 }
 
 // TestDoIPSetEventsFails tests the case where the first call to events.PutFlowLog fails but the second does not
@@ -83,12 +88,12 @@ func TestDoIPSetEventsFails(t *testing.T) {
 			EndTime:    3,
 		},
 	}
-	runTest(t, false, expected, -1, 0)
+	runTest(t, false, expected, nil, -1, 0)
 }
 
-func runTest(t *testing.T, successful bool, expected []db.FlowLog, suspiciousErrorIdx, eventsErrorIdx int) {
+func runTest(t *testing.T, successful bool, expected []db.FlowLog, err error, suspiciousErrorIdx, eventsErrorIdx int) {
 	feed := feed.NewFeed("test", "test-namespace")
-	suspiciousIP := &mockDB{errorIdx: suspiciousErrorIdx, flowLogs: expected}
+	suspiciousIP := &mockDB{err: err, errorIdx: suspiciousErrorIdx, flowLogs: expected}
 	events := &mockDB{errorIdx: eventsErrorIdx}
 	searcher := NewFlowSearcher(feed, 0, suspiciousIP, events).(*flowSearcher)
 
@@ -135,6 +140,7 @@ func runTest(t *testing.T, successful bool, expected []db.FlowLog, suspiciousErr
 }
 
 type mockDB struct {
+	err error
 	errorIdx      int
 	errorReturned bool
 	flowLogs      []db.FlowLog
@@ -142,7 +148,7 @@ type mockDB struct {
 }
 
 func (m *mockDB) QueryIPSet(ctx context.Context, name string) (db.FlowLogIterator, error) {
-	return m, nil
+	return m, m.err
 }
 
 func (m *mockDB) Next() bool {
