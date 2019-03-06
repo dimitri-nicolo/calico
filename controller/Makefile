@@ -181,7 +181,7 @@ $(BUILD_IMAGE): $(BUILD_IMAGE)-$(ARCH)
 $(BUILD_IMAGE)-$(ARCH): $(BINDIR)/controller-$(ARCH)
 	rm -rf docker-image/bin
 	mkdir -p docker-image/bin
-	cp $(BINDIR)/controller docker-image/bin/
+	cp $(BINDIR)/controller-$(ARCH) docker-image/bin/
 	docker build --pull -t $(BUILD_IMAGE):latest-$(ARCH) --file ./docker-image/Dockerfile.$(ARCH) docker-image
 ifeq ($(ARCH),amd64)
 	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(BUILD_IMAGE):latest
