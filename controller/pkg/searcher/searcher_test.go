@@ -3,12 +3,13 @@ package searcher
 import (
 	"context"
 	"errors"
-	"github.com/tigera/intrusion-detection/controller/pkg/db"
-	"github.com/tigera/intrusion-detection/controller/pkg/feed"
-	"github.com/tigera/intrusion-detection/controller/pkg/statser"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/tigera/intrusion-detection/controller/pkg/db"
+	"github.com/tigera/intrusion-detection/controller/pkg/feed"
+	"github.com/tigera/intrusion-detection/controller/pkg/statser"
 )
 
 // TestDoIPSet tests the case where everything is working
@@ -92,15 +93,15 @@ func TestDoIPSetEventsFails(t *testing.T) {
 }
 
 func runTest(t *testing.T, successful bool, expected []db.FlowLog, err error, suspiciousErrorIdx, eventsErrorIdx int) {
-	feed := feed.NewFeed("test", "test-namespace")
+	f := feed.NewFeed("test", "test-namespace")
 	suspiciousIP := &mockDB{err: err, errorIdx: suspiciousErrorIdx, flowLogs: expected}
 	events := &mockDB{errorIdx: eventsErrorIdx}
-	searcher := NewFlowSearcher(feed, 0, suspiciousIP, events).(*flowSearcher)
+	searcher := NewFlowSearcher(f, 0, suspiciousIP, events).(*flowSearcher)
 
 	ctx := context.TODO()
-	statser := statser.NewStatser()
+	s := statser.NewStatser()
 
-	searcher.doIPSet(ctx, statser)
+	searcher.doIPSet(ctx, s)
 
 	if successful {
 		if !reflect.DeepEqual(expected, events.flowLogs) && !(len(expected) == 0 && len(events.flowLogs) == 0) {
@@ -118,7 +119,7 @@ func runTest(t *testing.T, successful bool, expected []db.FlowLog, err error, su
 		}
 	}
 
-	status := statser.Status()
+	status := s.Status()
 	if !status.LastSuccessfulSync.Equal(time.Time{}) {
 		t.Errorf("Sync was marked as successful when it should not have been.")
 	}
@@ -140,7 +141,7 @@ func runTest(t *testing.T, successful bool, expected []db.FlowLog, err error, su
 }
 
 type mockDB struct {
-	err error
+	err           error
 	errorIdx      int
 	errorReturned bool
 	flowLogs      []db.FlowLog
