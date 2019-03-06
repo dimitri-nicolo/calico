@@ -43,6 +43,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&GlobalNetworkSetList{},
 		&LicenseKey{},
 		&LicenseKeyList{},
+		&GlobalThreatFeed{},
+		&GlobalThreatFeedList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil

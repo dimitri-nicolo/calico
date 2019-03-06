@@ -15,6 +15,7 @@ type ProjectcalicoV3Interface interface {
 	RESTClient() rest.Interface
 	GlobalNetworkPoliciesGetter
 	GlobalNetworkSetsGetter
+	GlobalThreatFeedsGetter
 	LicenseKeysGetter
 	NetworkPoliciesGetter
 	TiersGetter
@@ -31,6 +32,10 @@ func (c *ProjectcalicoV3Client) GlobalNetworkPolicies() GlobalNetworkPolicyInter
 
 func (c *ProjectcalicoV3Client) GlobalNetworkSets() GlobalNetworkSetInterface {
 	return newGlobalNetworkSets(c)
+}
+
+func (c *ProjectcalicoV3Client) GlobalThreatFeeds() GlobalThreatFeedInterface {
+	return newGlobalThreatFeeds(c)
 }
 
 func (c *ProjectcalicoV3Client) LicenseKeys() LicenseKeyInterface {
