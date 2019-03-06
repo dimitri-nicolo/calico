@@ -1,3 +1,5 @@
 .*.swp
 /test/config.json
 /install/intrusion-detection-job-installer
+/.idea/
+/controller/cmd/controller/controller
