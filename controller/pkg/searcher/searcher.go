@@ -42,7 +42,7 @@ func (d *flowSearcher) Run(ctx context.Context, statser statser.Statser) {
 		go func() {
 			t := time.NewTicker(d.period)
 			for {
-				d.doIPSet(ctx, d.feed.Name(), statser)
+				d.doIPSet(ctx, statser)
 				select {
 				case <-ctx.Done():
 					t.Stop()
@@ -59,22 +59,29 @@ func (d *flowSearcher) Close() {
 	d.cancel()
 }
 
-func (d *flowSearcher) doIPSet(ctx context.Context, name string, statser statser.Statser) {
-	flows, err := d.suspiciousIP.QueryIPSet(ctx, name)
+func (d *flowSearcher) doIPSet(ctx context.Context, statser statser.Statser) {
+	flowIterator, err := d.suspiciousIP.QueryIPSet(ctx, d.feed.Name())
 	if err != nil {
 		log.WithError(err).Error("suspicious IP query failed")
 		statser.Error(statserType, err)
 		return
 	}
-	log.WithField("num", len(flows)).Info("got flows")
+	c := 0
 	var clean = true
-	for _, flow := range flows {
-		err := d.events.PutFlowLog(ctx, flow)
+	for flowIterator.Next() {
+		c++
+		err := d.events.PutFlowLog(ctx, flowIterator.Value())
 		if err != nil {
 			clean = false
 			statser.Error(statserType, err)
 			log.WithError(err).Error("failed to store suspicious flow")
 		}
+	}
+	log.WithField("num", c).Info("got flows")
+	if flowIterator.Err() != nil {
+		log.WithError(flowIterator.Err()).Error("suspicious IP iteration failed")
+		statser.Error(statserType, flowIterator.Err())
+		return
 	}
 	if clean {
 		statser.ClearError(statserType)

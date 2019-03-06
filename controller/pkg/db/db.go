@@ -15,7 +15,13 @@ type IPSet interface {
 }
 
 type SuspiciousIP interface {
-	QueryIPSet(ctx context.Context, name string) ([]FlowLog, error)
+	QueryIPSet(ctx context.Context, name string) (FlowLogIterator, error)
+}
+
+type FlowLogIterator interface {
+	Next() bool
+	Value() FlowLog
+	Err() error
 }
 
 type Events interface {
