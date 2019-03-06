@@ -3,7 +3,7 @@
 # The target architecture is select by setting the ARCH variable.
 # When ARCH is undefined it is set to the detected host architecture.
 # When ARCH differs from the host architecture a crossbuild will be performed.
-ARCHES=$(patsubst Dockerfile.%,%,$(wildcard Dockerfile.*))
+ARCHES=$(patsubst docker-image/Dockerfile.%,%,$(wildcard docker-image/Dockerfile.*))
 
 # BUILDARCH is the host architecture
 # ARCH is the target architecture
@@ -46,15 +46,10 @@ prefix_linux = $(addprefix linux/,$(strip $1))
 join_platforms = $(subst $(space),$(comma),$(call prefix_linux,$(strip $1)))
 
 ###############################################################################
-BUILD_IMAGE?=tigera/intrusion-detection-job-installer
+BUILD_IMAGE?=tigera/intrusion-detection-controller
 PUSH_IMAGES?=gcr.io/unique-caldron-775/cnx/$(BUILD_IMAGE)
 RELEASE_IMAGES?=quay.io/$(BUILD_IMAGE)
-
-GO_BUILD_VER?=v0.20
-# For building, we use the go-build image for the *host* architecture, even if the target is different
-# the one for the host should contain all the necessary cross-compilation tools
-# we do not need to use the arch since go-build:v0.15 now is multi-arch manifest
-CALICO_BUILD=calico/go-build:$(GO_BUILD_VER)
+PACKAGE_NAME?=github.com/tigera/intrusion-detection/controller
 
 # If this is a release, also tag and push additional images.
 ifeq ($(RELEASE),true)
@@ -66,14 +61,111 @@ EXCLUDE_MANIFEST_REGISTRIES ?= quay.io/
 PUSH_MANIFEST_IMAGES=$(PUSH_IMAGES:$(EXCLUDE_MANIFEST_REGISTRIES)%=)
 PUSH_NONMANIFEST_IMAGES=$(filter-out $(PUSH_MANIFEST_IMAGES),$(PUSH_IMAGES))
 
-# location of docker credentials to push manifests
-DOCKER_CONFIG ?= $(HOME)/.docker/config.json
+GO_BUILD_VER?=v0.20
+# For building, we use the go-build image for the *host* architecture, even if the target is different
+# the one for the host should contain all the necessary cross-compilation tools
+# we do not need to use the arch since go-build:v0.15 now is multi-arch manifest
+CALICO_BUILD=calico/go-build:$(GO_BUILD_VER)
 
-###############################################################################
-# Building the image
-###############################################################################
-.PHONY: clean
-clean:
+help:
+	@echo "Tigera Intrusion Detection Controller Makefile"
+	@echo "Builds:"
+	@echo
+	@echo "  make all                                   Build all the binary packages."
+	@echo "  make tigera/intrusion-detection-contoller  Build $(BUILD_IMAGE) docker image."
+	@echo
+	@echo "Tests:"
+	@echo
+	@echo "  make test                Run Tests."
+	@echo
+	@echo "Maintenance:"
+	@echo
+	@echo "  make clean         Remove binary files."
+# Disable make's implicit rules, which are not useful for golang, and slow down the build
+# considerably.
+.SUFFIXES:
+
+all: $(BUILD_IMAGE)
+test: ut fv
+
+# Some env vars that devs might find useful:
+#  TEST_DIRS=   : only run the unit tests from the specified dirs
+#  UNIT_TESTS=  : only run the unit tests matching the specified regexp
+
+# Define some constants
+#######################
+K8S_VERSION    = v1.10.0
+BINDIR        ?= bin
+BUILD_DIR     ?= build
+TOP_SRC_DIRS   = pkg
+SRC_DIRS       = $(shell sh -c "find $(TOP_SRC_DIRS) -name \\*.go \
+                   -exec dirname {} \\; | sort | uniq")
+TEST_DIRS     ?= $(shell sh -c "find $(TOP_SRC_DIRS) -name \\*_test.go \
+                   -exec dirname {} \\; | sort | uniq")
+GO_FILES       = $(shell sh -c "find pkg cmd -name \\*.go")
+ifeq ($(shell uname -s),Darwin)
+STAT           = stat -f '%c %N'
+else
+STAT           = stat -c '%Y %n'
+endif
+ifdef UNIT_TESTS
+	UNIT_TEST_FLAGS=-run $(UNIT_TESTS) -v
+endif
+
+CONTROLLER_VERSION?=$(shell git describe --tags --dirty --always)
+CONTROLLER_BUILD_DATE?=$(shell date -u +'%FT%T%z')
+CONTROLLER_GIT_REVISION?=$(shell git rev-parse --short HEAD)
+CONTROLLER_GIT_DESCRIPTION?=$(shell git describe --tags)
+
+VERSION_FLAGS=-X main.VERSION=$(CONTROLLER_VERSION) \
+	-X main.BUILD_DATE=$(CONTROLLER_BUILD_DATE) \
+	-X main.GIT_DESCRIPTION=$(CONTROLLER_GIT_DESCRIPTION) \
+	-X main.GIT_REVISION=$(CONTROLLER_GIT_REVISION)
+BUILD_LDFLAGS=-ldflags "$(VERSION_FLAGS)"
+RELEASE_LDFLAGS=-ldflags "$(VERSION_FLAGS) -s -w"
+
+# Figure out the users UID/GID.  These are needed to run docker containers
+# as the current user and ensure that files built inside containers are
+# owned by the current user.
+MY_UID:=$(shell id -u)
+MY_GID:=$(shell id -g)
+
+
+DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
+                   mkdir -p .go-build-cache && \
+                   docker run --rm \
+                              --net=host \
+                              $(EXTRA_DOCKER_ARGS) \
+                              -e LOCAL_USER_ID=$(MY_UID) \
+                              -e GOARCH=$(ARCH) \
+                              -v $${PWD}:/intrusion-detection/controller:rw \
+                              -v $${PWD}/.go-pkg-cache:/go/pkg:rw \
+                              -v $${PWD}/.go-build-cache:/home/user/.cache/go-build:rw \
+                              -w /intrusion-detection/controller \
+                              $(CALICO_BUILD)
+
+
+# This section builds the output binaries.
+# Some will have dedicated targets to make it easier to type, for example
+# "controller" instead of "$(BINDIR)/controller".
+#########################################################################
+controller: $(BINDIR)/controller
+
+$(BINDIR)/controller: $(BINDIR)/controller-amd64
+	cd $(BINDIR) && ln -s -T controller-$(ARCH) controller
+
+$(BINDIR)/controller-$(ARCH): $(GO_FILES)
+ifndef RELEASE_BUILD
+	$(eval LDFLAGS:=$(RELEASE_LDFLAGS))
+else
+	$(eval LDFLAGS:=$(BUILD_LDFLAGS))
+endif
+	@echo Building controller...
+	mkdir -p bin
+	$(DOCKER_GO_BUILD) \
+	    sh -c 'go build -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/controller" && \
+               ( ldd $(BINDIR)/controller-$(ARCH) 2>&1 | grep -q "Not a valid dynamic program" || \
+	             ( echo "Error: $(BINDIR)/controller-$(ARCH) was not statically linked"; false ) )'
 
 # Build the docker image.
 .PHONY: $(BUILD_IMAGE) $(BUILD_IMAGE)-$(ARCH)
@@ -84,11 +176,13 @@ image-all: $(addprefix sub-image-,$(ARCHES))
 sub-image-%:
 	$(MAKE) image ARCH=$*
 
-
 image: $(BUILD_IMAGE)
 $(BUILD_IMAGE): $(BUILD_IMAGE)-$(ARCH)
-$(BUILD_IMAGE)-$(ARCH):
-	docker build --pull -t $(BUILD_IMAGE):latest-$(ARCH) --build-arg version=$(BUILD_VERSION) --file ./Dockerfile.$(ARCH) .
+$(BUILD_IMAGE)-$(ARCH): $(BINDIR)/controller-$(ARCH)
+	rm -rf docker-image/bin
+	mkdir -p docker-image/bin
+	cp $(BINDIR)/controller docker-image/bin/
+	docker build --pull -t $(BUILD_IMAGE):latest-$(ARCH) --file ./docker-image/Dockerfile.$(ARCH) docker-image
 ifeq ($(ARCH),amd64)
 	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(BUILD_IMAGE):latest
 endif
@@ -144,13 +238,35 @@ tag-images-all: imagetag $(addprefix sub-tag-images-,$(ARCHES))
 sub-tag-images-%:
 	$(MAKE) tag-images ARCH=$* IMAGETAG=$(IMAGETAG)
 
+##########################################################################
+# Testing
+##########################################################################
+.PHONY: ut
+ut:
+	$(DOCKER_GO_BUILD) \
+		sh -c 'go test $(UNIT_TEST_FLAGS) \
+			$(addprefix $(PACKAGE_NAME)/,$(TEST_DIRS))'
+
+.PHONY: fv
+fv:
+	echo "FV not implemented yet"
+
+.PHONY: clean
+clean: clean-bin clean-build-image
+clean-build-image:
+	docker rmi -f $(BUILD_IMAGE) > /dev/null 2>&1 || true
+
+clean-bin:
+	rm -rf $(BINDIR) \
+			docker-image/bin
+
 ###############################################################################
 # CI/CD
 ###############################################################################
 .PHONY: ci cd
 
 ## run CI cycle - build, test, etc.
-ci: image-all
+ci: test image-all
 
 ## Deploy images to registry
 cd:
@@ -163,9 +279,9 @@ endif
 	$(MAKE) tag-images-all push-all push-manifests push-non-manifests IMAGETAG=$(BRANCH_NAME) EXCLUDEARCH="$(EXCLUDEARCH)"
 	$(MAKE) tag-images-all push-all push-manifests push-non-manifests IMAGETAG=$(shell git describe --tags --dirty --always --long) EXCLUDEARCH="$(EXCLUDEARCH)"
 
-###############################################################################
+##############################################################################
 # Release
-###############################################################################
+##############################################################################
 PREVIOUS_RELEASE=$(shell git describe --tags --abbrev=0)
 GIT_VERSION?=$(shell git describe --tags --dirty)
 ifndef VERSION
@@ -209,10 +325,12 @@ ifdef LOCAL_BUILD
 	$(error LOCAL_BUILD must not be set for a release)
 endif
 
+
+# Run fossa.io license checks
 foss-checks:
 	@echo Running $@...
-	@docker run --rm -v $(CURDIR):/code/$(PACKAGE_NAME):rw \
-	  -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+	@docker run --rm -v $(CURDIR):/code/:rw \
+	  -e LOCAL_USER_ID=$(MY_UID) \
 	  -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
-	  -w /code/$(PACKAGE_NAME) \
+	  -w /code/ \
 	  $(CALICO_BUILD) /usr/local/bin/fossa

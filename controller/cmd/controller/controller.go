@@ -2,15 +2,18 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
-	log "github.com/sirupsen/logrus"
-	"github.com/tigera/intrusion-detection/controller/pkg/watcher"
-	"github.com/tigera/intrusion-detection/controller/pkg/elastic"
 	"net/url"
 	"os"
 	"os/signal"
 	"strconv"
 	"syscall"
+
+	log "github.com/sirupsen/logrus"
+
+	"github.com/tigera/intrusion-detection/controller/pkg/elastic"
+	"github.com/tigera/intrusion-detection/controller/pkg/watcher"
 )
 
 const (
@@ -21,6 +24,14 @@ const (
 )
 
 func main() {
+	var ver bool
+	flag.BoolVar(&ver, "version", false, "Print version information")
+	flag.Parse()
+
+	if ver {
+		Version()
+		return
+	}
 	var u *url.URL
 	uri := os.Getenv("ELASTIC_URI")
 	if uri != "" {

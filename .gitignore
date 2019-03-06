@@ -1,5 +1,9 @@
 .*.swp
 /test/config.json
 /install/intrusion-detection-job-installer
-/.idea/
+.idea/
+/controller/bin
+/controller/.go-build-cache
+/controller/.go-pkg-cache
+/controller/docker-image/bin
 /controller/cmd/controller/controller
