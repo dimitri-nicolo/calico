@@ -2,16 +2,17 @@ package watcher
 
 import (
 	"context"
+	"net/http"
+	"net/url"
+	goSync "sync"
+	"time"
+
 	"github.com/tigera/intrusion-detection/controller/pkg/feed"
 	"github.com/tigera/intrusion-detection/controller/pkg/gc"
 	"github.com/tigera/intrusion-detection/controller/pkg/puller"
 	"github.com/tigera/intrusion-detection/controller/pkg/searcher"
 	"github.com/tigera/intrusion-detection/controller/pkg/statser"
 	"github.com/tigera/intrusion-detection/controller/pkg/sync"
-	"net/http"
-	"net/url"
-	goSync "sync"
-	"time"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
 )
@@ -61,14 +62,12 @@ func (s *watcher) Run(ctx context.Context) {
 		s.ctx, s.cancel = context.WithCancel(ctx)
 
 		// hardcode pullers for now
-		abuseipdbAPIKey := "5427761c0994c123fef64b5e9c973d1d24eb2035b59ac5f00cfdf0c41f88b4139ed331d7ee1576f7"
-		abuseipdbUrl, _ := url.Parse("https://api.abuseipdb.com/api/v2/blacklist")
+		testUrl, _ := url.Parse("https://test.test/blacklist")
 		headers := http.Header{}
-		headers.Add("Key", abuseipdbAPIKey)
 		headers.Add("Accept", "text/plain")
 
-		feed := feed.NewFeed("abuseipdb", "calico-monitoring")
-		puller := puller.NewHTTPPuller(feed, abuseipdbUrl, 24*time.Hour, headers)
+		feed := feed.NewFeed("test", "calico-monitoring")
+		puller := puller.NewHTTPPuller(feed, testUrl, 24*time.Hour, headers)
 
 		s.startFeed(feed, puller)
 	})
