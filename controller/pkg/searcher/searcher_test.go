@@ -3,9 +3,10 @@ package searcher
 import (
 	"context"
 	"errors"
-	"reflect"
 	"testing"
 	"time"
+
+	. "github.com/onsi/gomega"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/feed"
@@ -93,9 +94,11 @@ func TestDoIPSetEventsFails(t *testing.T) {
 }
 
 func runTest(t *testing.T, successful bool, expected []db.FlowLog, err error, suspiciousErrorIdx, eventsErrorIdx int) {
+	g := NewGomegaWithT(t)
+
 	f := feed.NewFeed("test", "test-namespace")
 	suspiciousIP := &mockDB{err: err, errorIdx: suspiciousErrorIdx, flowLogs: expected}
-	events := &mockDB{errorIdx: eventsErrorIdx}
+	events := &mockDB{errorIdx: eventsErrorIdx, flowLogs: []db.FlowLog{}}
 	searcher := NewFlowSearcher(f, 0, suspiciousIP, events).(*flowSearcher)
 
 	ctx := context.TODO()
@@ -104,39 +107,25 @@ func runTest(t *testing.T, successful bool, expected []db.FlowLog, err error, su
 	searcher.doIPSet(ctx, s)
 
 	if successful {
-		if !reflect.DeepEqual(expected, events.flowLogs) && !(len(expected) == 0 && len(events.flowLogs) == 0) {
-			t.Errorf("Logs in DB mismatch: %v != %v", expected, events.flowLogs)
-		}
-		if len(suspiciousIP.flowLogs) != 0 {
-			t.Errorf("Did not consume all flowLogs from suspiciousIP: %v", suspiciousIP.flowLogs)
-		}
+		g.Expect(events.flowLogs).Should(Equal(expected), "Logs in DB should match expected")
+		g.Expect(suspiciousIP.flowLogs).Should(HaveLen(0), "All flowLogs from suspiciousIP were consumed")
 	} else {
-		if eventsErrorIdx >= 0 && len(events.flowLogs) != len(expected)-1 {
-			t.Errorf("Logs in DB mismatch: %v (skip %d) != %v", expected, eventsErrorIdx, events.flowLogs)
+		if eventsErrorIdx >= 0 {
+			g.Expect(events.flowLogs).Should(HaveLen(len(expected)-1), "Logs in DB should have skipped 1 from input")
 		}
-		if suspiciousErrorIdx >= 0 && len(events.flowLogs) != suspiciousErrorIdx {
-			t.Errorf("Logs in DB mismatch: %v != %v", expected[:suspiciousErrorIdx], events.flowLogs)
+		if suspiciousErrorIdx >= 0 {
+			g.Expect(events.flowLogs).Should(HaveLen(suspiciousErrorIdx), "Logs in DB should stop at the first error")
 		}
 	}
 
 	status := s.Status()
-	if !status.LastSuccessfulSync.Equal(time.Time{}) {
-		t.Errorf("Sync was marked as successful when it should not have been.")
-	}
+	g.Expect(status.LastSuccessfulSync).Should(Equal(time.Time{}), "Sync should not be marked as successful")
 	if successful {
-		if status.LastSuccessfulSearch.Equal(time.Time{}) {
-			t.Errorf("Search was not marked as successful.")
-		}
-		if len(status.ErrorConditions) > 0 {
-			t.Errorf("Status errors reported: %v", status.ErrorConditions)
-		}
+		g.Expect(status.LastSuccessfulSearch).ShouldNot(Equal(time.Time{}), "Search should be marked as successful")
+		g.Expect(status.ErrorConditions).Should(HaveLen(0), "No errors should be reported")
 	} else {
-		if !status.LastSuccessfulSearch.Equal(time.Time{}) {
-			t.Errorf("Search was marked as successful when it should not have been.")
-		}
-		if len(status.ErrorConditions) == 0 {
-			t.Errorf("No status errors reported.")
-		}
+		g.Expect(status.LastSuccessfulSearch).Should(Equal(time.Time{}), "Search should be not marked as successful")
+		g.Expect(status.ErrorConditions).ShouldNot(HaveLen(0), "Errors should be reported")
 	}
 }
 
