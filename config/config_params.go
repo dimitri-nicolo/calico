@@ -467,24 +467,29 @@ func (config *Config) resolve() (changed bool, err error) {
 		delete(newRawValues, "IpInIpTunnelAddr")
 	}
 
-	// Handle the deprecated CloudWatchLogsFlushInterval by taking the maximum of the old and equivalent new field
-	// setting, and configuring both with the same value.
-	if config.CloudWatchLogsFlushInterval > config.FlowLogsFlushInterval {
-		log.Info("Using deprecated CloudWatchLogsFlushInterval value for FlowLogsFlushInterval")
-		config.FlowLogsFlushInterval = config.CloudWatchLogsFlushInterval
-		newRawValues["FlowLogsFlushInterval"] = newRawValues["CloudWatchLogsFlushInterval"]
-	} else {
+	// Preferentially use the new FlowLogsFlushInterval if explicitly set or if the deprecated
+	// CloudWatchLogsFlushInterval is not explicitly set, otherwise use the explicitly set CloudWatchLogsFlushInterval
+	// value.
+	if nameToSource["FlowLogsFlushInterval"] != Default || nameToSource["CloudWatchLogsFlushInterval"] == Default {
 		config.CloudWatchLogsFlushInterval = config.FlowLogsFlushInterval
 		newRawValues["CloudWatchLogsFlushInterval"] = newRawValues["FlowLogsFlushInterval"]
+	} else {
+		log.Warning("Using deprecated CloudWatchLogsFlushInterval value for FlowLogsFlushInterval")
+		config.FlowLogsFlushInterval = config.CloudWatchLogsFlushInterval
+		newRawValues["FlowLogsFlushInterval"] = newRawValues["CloudWatchLogsFlushInterval"]
 	}
 
-	// Handle the deprecated CloudWatchLogsEnableHostEndpoint field by combining with the equivalent new field
-	// settings, and configuring both with the same value.
-	fle := config.CloudWatchLogsEnableHostEndpoint || config.FlowLogsEnableHostEndpoint
-	config.CloudWatchLogsEnableHostEndpoint = fle
-	config.FlowLogsEnableHostEndpoint = fle
-	newRawValues["CloudWatchLogsEnableHostEndpoint"] = strconv.FormatBool(fle)
-	newRawValues["FlowLogsEnableHostEndpoint"] = strconv.FormatBool(fle)
+	// Preferentially use the new FlowLogsEnableHostEndpoint if explicitly set or if the deprecated
+	// CloudWatchLogsEnableHostEndpoint is not explicitly set, otherwise use the explicitly set
+	// CloudWatchLogsEnableHostEndpoint value.
+	if nameToSource["FlowLogsEnableHostEndpoint"] != Default || nameToSource["CloudWatchLogsEnableHostEndpoint"] == Default {
+		config.CloudWatchLogsEnableHostEndpoint = config.FlowLogsEnableHostEndpoint
+		newRawValues["CloudWatchLogsEnableHostEndpoint"] = newRawValues["FlowLogsEnableHostEndpoint"]
+	} else {
+		log.Warning("Using deprecated CloudWatchLogsEnableHostEndpoint value for FlowLogsEnableHostEndpoint")
+		config.FlowLogsEnableHostEndpoint = config.CloudWatchLogsEnableHostEndpoint
+		newRawValues["FlowLogsEnableHostEndpoint"] = newRawValues["CloudWatchLogsEnableHostEndpoint"]
+	}
 
 	changed = !reflect.DeepEqual(newRawValues, config.rawValues)
 	config.rawValues = newRawValues
