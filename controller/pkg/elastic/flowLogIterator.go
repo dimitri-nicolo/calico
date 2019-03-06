@@ -3,14 +3,19 @@ package elastic
 import (
 	"context"
 	"encoding/json"
+	"io"
+
 	"github.com/olivere/elastic"
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
-	"io"
 )
 
+type Scroller interface {
+	Do(context.Context) (*elastic.SearchResult, error)
+}
+
 type elasticFlowLogIterator struct {
-	scroll *elastic.ScrollService
+	scroll Scroller
 	ctx    context.Context
 	hits   []*elastic.SearchHit
 	val    db.FlowLog
