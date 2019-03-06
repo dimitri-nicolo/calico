@@ -56,9 +56,6 @@ func NewWatcher(ipSet db.IPSet, suspiciousIP db.SuspiciousIP, events db.Events) 
 
 func (s *watcher) Run(ctx context.Context) {
 	s.once.Do(func() {
-		if ctx == nil {
-			ctx = context.Background()
-		}
 		s.ctx, s.cancel = context.WithCancel(ctx)
 
 		// hardcode pullers for now

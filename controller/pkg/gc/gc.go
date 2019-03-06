@@ -28,9 +28,6 @@ func NewGarbageCollector(feed feed.Feed, period time.Duration) GarbageCollector 
 
 func (g *garbageCollector) Run(ctx context.Context, statser statser.Statser) {
 	g.once.Do(func() {
-		if ctx == nil {
-			ctx = context.Background()
-		}
 		ctx, g.cancel = context.WithCancel(ctx)
 
 		go func() {

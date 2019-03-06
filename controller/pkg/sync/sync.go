@@ -30,9 +30,6 @@ func NewSyncer(feed feed.Feed, ipSet db.IPSet) Syncer {
 
 func (s *syncer) Run(ctx context.Context, c <-chan feed.IPSet, statser statser.Statser) {
 	s.once.Do(func() {
-		if ctx == nil {
-			ctx = context.Background()
-		}
 		ctx, s.cancel = context.WithCancel(ctx)
 
 		go func() {

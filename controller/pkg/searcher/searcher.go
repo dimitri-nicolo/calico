@@ -34,9 +34,6 @@ func NewFlowSearcher(feed feed.Feed, period time.Duration, suspiciousIP db.Suspi
 
 func (d *flowSearcher) Run(ctx context.Context, statser statser.Statser) {
 	d.once.Do(func() {
-		if ctx == nil {
-			ctx = context.Background()
-		}
 		ctx, d.cancel = context.WithCancel(ctx)
 
 		go func() {
