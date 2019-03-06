@@ -29,6 +29,8 @@ import (
 	"k8s.io/apiserver/pkg/storage/names"
 
 	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
+	licClient "github.com/tigera/licensing/client"
+	libcalicoapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
 )
 
 type apiServerStrategy struct {
@@ -52,7 +54,7 @@ func (apiServerStrategy) PrepareForUpdate(ctx genericapirequest.Context, obj, ol
 }
 
 func (apiServerStrategy) Validate(ctx genericapirequest.Context, obj runtime.Object) field.ErrorList {
-	return field.ErrorList{}
+	return validateLicenseKey(obj)
 }
 
 func (apiServerStrategy) AllowCreateOnUpdate() bool {
@@ -67,7 +69,7 @@ func (apiServerStrategy) Canonicalize(obj runtime.Object) {
 }
 
 func (apiServerStrategy) ValidateUpdate(ctx genericapirequest.Context, obj, old runtime.Object) field.ErrorList {
-	return field.ErrorList{}
+	return validateLicenseKey(obj)
 }
 
 func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, bool, error) {
@@ -91,4 +93,37 @@ func MatchLicenseKey(label labels.Selector, field fields.Selector) storage.Selec
 // NetworkSetToSelectableFields returns a field set that represents the object.
 func LicenseKeyToSelectableFields(obj *calico.LicenseKey) fields.Set {
 	return generic.ObjectMetaFieldsSet(&obj.ObjectMeta, true)
+}
+
+// Convert from aggregated api server runtime object to libcalico-go's licensekey structure
+func convertToLibcalico(aapiObj runtime.Object) *libcalicoapi.LicenseKey {
+	aapiLicenseKey := aapiObj.(*calico.LicenseKey)
+	lcgLicenseKey := &libcalicoapi.LicenseKey{}
+	lcgLicenseKey.TypeMeta = aapiLicenseKey.TypeMeta
+	lcgLicenseKey.ObjectMeta = aapiLicenseKey.ObjectMeta
+	lcgLicenseKey.Spec = aapiLicenseKey.Spec
+	return lcgLicenseKey
+}
+
+// Ensure licenseKey is decodable and valid (not expired)
+func validateLicenseKey(aapiObj runtime.Object) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	lcgLicenseKey := convertToLibcalico(aapiObj)
+
+	// Decode the license to make sure it's not corrupt.
+	licClaims, err := licClient.Decode(*lcgLicenseKey)
+	if err != nil {
+		allErrs = append(allErrs, field.InternalError(field.NewPath("LicenseKeySpec").Child("license"),
+			fmt.Errorf("license is corrupted: %s", err)))
+	}
+
+	// Validate the license before applying.
+	validStatus := licClaims.Validate()
+	if validStatus != licClient.Valid {
+		allErrs = append(allErrs, field.InternalError(field.NewPath("LicenseKeySpec").Child("token"),
+			fmt.Errorf("the license you're trying to create expired on %s", licClaims.Expiry.Time().Local())))
+	}
+
+	return allErrs
 }
