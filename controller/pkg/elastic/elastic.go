@@ -5,11 +5,12 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"github.com/tigera/intrusion-detection/controller/pkg/db"
-	"github.com/tigera/intrusion-detection/controller/pkg/feed"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+
+	"github.com/tigera/intrusion-detection/controller/pkg/db"
+	"github.com/tigera/intrusion-detection/controller/pkg/feed"
 
 	"github.com/olivere/elastic"
 	log "github.com/sirupsen/logrus"
@@ -101,7 +102,6 @@ func (e *Elastic) GetIPSet(name string) ([]string, error) {
 	return nil, nil
 }
 
-
 func (e *Elastic) QueryIPSet(ctx context.Context, name string) (db.FlowLogIterator, error) {
 	q := elastic.NewTermsQuery("source_ip").TermsLookup(
 		elastic.NewTermsLookup().
@@ -112,7 +112,7 @@ func (e *Elastic) QueryIPSet(ctx context.Context, name string) (db.FlowLogIterat
 
 	return &elasticFlowLogIterator{
 		scroll: e.c.Scroll(FlowLogIndex).SortBy(elastic.SortByDoc{}).Query(q).Size(QuerySize),
-		ctx: ctx,
+		ctx:    ctx,
 	}, nil
 }
 
@@ -122,6 +122,6 @@ func (e *Elastic) PutFlowLog(ctx context.Context, f db.FlowLog) error {
 		return err
 	}
 
-	_, err = e.c.Index().Index(EventIndex).Type(StandardType).Id(f.ID()).BodyJson(f).Do(ctx)
+	_, err = e.c.Index().Index(EventIndex).Type(StandardType).Id(f.ID).BodyJson(f).Do(ctx)
 	return err
 }

@@ -7,6 +7,8 @@ import (
 	"io"
 	"testing"
 
+	"github.com/tigera/intrusion-detection/controller/pkg/util"
+
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
 
 	"github.com/olivere/elastic"
@@ -20,30 +22,24 @@ func TestElasticFlowLogIterator(t *testing.T) {
 	input := [][]db.FlowLog{
 		{
 			{
-				SourceIP:   "1.2.3.4",
-				SourceName: "source",
-				DestIP:     "2.3.4.5",
-				DestName:   "dest",
-				StartTime:  1,
-				EndTime:    2,
+				SourceIP:   util.Sptr("1.2.3.4"),
+				SourceName: util.Sptr("source"),
+				DestIP:     util.Sptr("2.3.4.5"),
+				DestName:   util.Sptr("dest"),
 			},
 			{
-				SourceIP:   "5.6.7.8",
-				SourceName: "source",
-				DestIP:     "2.3.4.5",
-				DestName:   "dest",
-				StartTime:  2,
-				EndTime:    3,
+				SourceIP:   util.Sptr("5.6.7.8"),
+				SourceName: util.Sptr("source"),
+				DestIP:     util.Sptr("2.3.4.5"),
+				DestName:   util.Sptr("dest"),
 			},
 		},
 		{
 			{
-				SourceIP:   "9.10.11.12",
-				SourceName: "source",
-				DestIP:     "2.3.4.5",
-				DestName:   "dest",
-				StartTime:  3,
-				EndTime:    4,
+				SourceIP:   util.Sptr("9.10.11.12"),
+				SourceName: util.Sptr("source"),
+				DestIP:     util.Sptr("2.3.4.5"),
+				DestName:   util.Sptr("dest"),
 			},
 		},
 	}

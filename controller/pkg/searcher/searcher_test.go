@@ -11,26 +11,23 @@ import (
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/feed"
 	"github.com/tigera/intrusion-detection/controller/pkg/statser"
+	"github.com/tigera/intrusion-detection/controller/pkg/util"
 )
 
 // TestDoIPSet tests the case where everything is working
 func TestDoIPSet(t *testing.T) {
 	expected := []db.FlowLog{
 		{
-			SourceIP:   "1.2.3.4",
-			SourceName: "source",
-			DestIP:     "2.3.4.5",
-			DestName:   "dest",
-			StartTime:  1,
-			EndTime:    2,
+			SourceIP:   util.Sptr("1.2.3.4"),
+			SourceName: util.Sptr("source"),
+			DestIP:     util.Sptr("2.3.4.5"),
+			DestName:   util.Sptr("dest"),
 		},
 		{
-			SourceIP:   "5.6.7.8",
-			SourceName: "source",
-			DestIP:     "2.3.4.5",
-			DestName:   "dest",
-			StartTime:  2,
-			EndTime:    3,
+			SourceIP:   util.Sptr("5.6.7.8"),
+			SourceName: util.Sptr("source"),
+			DestIP:     util.Sptr("2.3.4.5"),
+			DestName:   util.Sptr("dest"),
 		},
 	}
 	runTest(t, true, expected, nil, -1, -1)
@@ -51,20 +48,16 @@ func TestDoIPSetSuspiciousIPFails(t *testing.T) {
 func TestDoIPSetSuspiciousIPIterationFails(t *testing.T) {
 	expected := []db.FlowLog{
 		{
-			SourceIP:   "1.2.3.4",
-			SourceName: "source",
-			DestIP:     "2.3.4.5",
-			DestName:   "dest",
-			StartTime:  1,
-			EndTime:    2,
+			SourceIP:   util.Sptr("1.2.3.4"),
+			SourceName: util.Sptr("source"),
+			DestIP:     util.Sptr("2.3.4.5"),
+			DestName:   util.Sptr("dest"),
 		},
 		{
-			SourceIP:   "5.6.7.8",
-			SourceName: "source",
-			DestIP:     "2.3.4.5",
-			DestName:   "dest",
-			StartTime:  2,
-			EndTime:    3,
+			SourceIP:   util.Sptr("5.6.7.8"),
+			SourceName: util.Sptr("source"),
+			DestIP:     util.Sptr("2.3.4.5"),
+			DestName:   util.Sptr("dest"),
 		},
 	}
 	runTest(t, false, expected, nil, 1, -1)
@@ -74,20 +67,16 @@ func TestDoIPSetSuspiciousIPIterationFails(t *testing.T) {
 func TestDoIPSetEventsFails(t *testing.T) {
 	expected := []db.FlowLog{
 		{
-			SourceIP:   "1.2.3.4",
-			SourceName: "source",
-			DestIP:     "2.3.4.5",
-			DestName:   "dest",
-			StartTime:  1,
-			EndTime:    2,
+			SourceIP:   util.Sptr("1.2.3.4"),
+			SourceName: util.Sptr("source"),
+			DestIP:     util.Sptr("2.3.4.5"),
+			DestName:   util.Sptr("dest"),
 		},
 		{
-			SourceIP:   "5.6.7.8",
-			SourceName: "source",
-			DestIP:     "2.3.4.5",
-			DestName:   "dest",
-			StartTime:  2,
-			EndTime:    3,
+			SourceIP:   util.Sptr("5.6.7.8"),
+			SourceName: util.Sptr("source"),
+			DestIP:     util.Sptr("2.3.4.5"),
+			DestName:   util.Sptr("dest"),
 		},
 	}
 	runTest(t, false, expected, nil, -1, 0)

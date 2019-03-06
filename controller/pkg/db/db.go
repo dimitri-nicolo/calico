@@ -2,7 +2,7 @@ package db
 
 import (
 	"context"
-	"fmt"
+
 	"github.com/tigera/intrusion-detection/controller/pkg/feed"
 )
 
@@ -29,14 +29,22 @@ type Events interface {
 }
 
 type FlowLog struct {
-	SourceIP   string `json:"source_ip"`
-	SourceName string `json:"source_name"`
-	DestIP     string `json:"dest_ip"`
-	DestName   string `json:"dest_name"`
-	StartTime  int    `json:"start_time"`
-	EndTime    int    `json:"end_time"`
-}
-
-func (f FlowLog) ID() string {
-	return fmt.Sprintf("%d-%s-%s-%s", f.StartTime, f.SourceIP, f.SourceName, f.DestIP)
+	Time             int      `json:"time"`
+	Type             string   `json:"type"`
+	Description      string   `json:"description"`
+	Severity         int      `json:"severity"`
+	ID               string   `json:"id"`
+	FlowLogIndex     *string  `json:"flow_log_index"`
+	FlowLogID        *string  `json:"flow_log_id"`
+	Protocol         *string  `json:"protocol"`
+	SourceIP         *string  `json:"source_ip"`
+	SourcePort       *int     `json:"source_port"`
+	SourceNamespace  *string  `json:"source_namespace"`
+	SourceName       *string  `json:"source_name"`
+	DestIP           *string  `json:"dest_ip"`
+	DestPort         *int     `json:"dest_port"`
+	DestName         *string  `json:"dest_name"`
+	FlowAction       *string  `json:"flow_action"`
+	Feeds            []string `json:"feeds,omitempty"`
+	SuspiciousPrefix *string  `json:"suspicious_prefix"`
 }

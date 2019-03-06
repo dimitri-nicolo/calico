@@ -42,10 +42,12 @@ func (i *elasticFlowLogIterator) Next() bool {
 			hit := i.hits[0]
 			i.hits = i.hits[1:]
 
-			err := json.Unmarshal(*hit.Source, &i.val)
+			var val db.FlowLog
+			err := json.Unmarshal(*hit.Source, &val)
 			if err != nil {
 				log.WithError(err).WithField("raw", *hit.Source).Error("could not unmarshal")
 			} else {
+				i.val = val
 				return true
 			}
 		}
