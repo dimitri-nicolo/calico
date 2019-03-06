@@ -3,6 +3,7 @@ package searcher
 import (
 	"context"
 	"github.com/tigera/intrusion-detection/controller/pkg/feed"
+	"github.com/tigera/intrusion-detection/controller/pkg/statser"
 	"sync"
 	"time"
 
@@ -11,8 +12,10 @@ import (
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
 )
 
+const statserType = "SearchFailed"
+
 type FlowSearcher interface {
-	Run(ctx context.Context)
+	Run(context.Context, statser.Statser)
 	Close()
 }
 
@@ -29,7 +32,7 @@ func NewFlowSearcher(feed feed.Feed, period time.Duration, suspiciousIP db.Suspi
 	return &flowSearcher{feed: feed, period: period, suspiciousIP: suspiciousIP, events: events}
 }
 
-func (d *flowSearcher) Run(ctx context.Context) {
+func (d *flowSearcher) Run(ctx context.Context, statser statser.Statser) {
 	d.once.Do(func() {
 		if ctx == nil {
 			ctx = context.Background()
@@ -39,7 +42,7 @@ func (d *flowSearcher) Run(ctx context.Context) {
 		go func() {
 			t := time.NewTicker(d.period)
 			for {
-				d.doIPSet(ctx, d.feed.Name())
+				d.doIPSet(ctx, d.feed.Name(), statser)
 				select {
 				case <-ctx.Done():
 					t.Stop()
@@ -56,16 +59,25 @@ func (d *flowSearcher) Close() {
 	d.cancel()
 }
 
-func (d *flowSearcher) doIPSet(ctx context.Context, name string) {
+func (d *flowSearcher) doIPSet(ctx context.Context, name string, statser statser.Statser) {
 	flows, err := d.suspiciousIP.QueryIPSet(ctx, name)
 	if err != nil {
 		log.WithError(err).Error("suspicious IP query failed")
+		statser.Error(statserType, err)
+		return
 	}
 	log.WithField("num", len(flows)).Info("got flows")
+	var clean = true
 	for _, flow := range flows {
 		err := d.events.PutFlowLog(ctx, flow)
 		if err != nil {
+			clean = false
+			statser.Error(statserType, err)
 			log.WithError(err).Error("failed to store suspicious flow")
 		}
+	}
+	if clean {
+		statser.ClearError(statserType)
+		statser.SuccessfulSearch()
 	}
 }

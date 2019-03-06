@@ -6,6 +6,7 @@ import (
 	"github.com/tigera/intrusion-detection/controller/pkg/gc"
 	"github.com/tigera/intrusion-detection/controller/pkg/puller"
 	"github.com/tigera/intrusion-detection/controller/pkg/searcher"
+	"github.com/tigera/intrusion-detection/controller/pkg/statser"
 	"github.com/tigera/intrusion-detection/controller/pkg/sync"
 	"net/http"
 	"net/url"
@@ -39,6 +40,7 @@ type feedWatcher struct {
 	syncer           sync.Syncer
 	garbageCollector gc.GarbageCollector
 	searcher         searcher.FlowSearcher
+	statser          statser.Statser
 }
 
 func NewWatcher(ipSet db.IPSet, suspiciousIP db.SuspiciousIP, events db.Events) Watcher {
@@ -79,13 +81,14 @@ func (s *watcher) startFeed(feed feed.Feed, puller puller.Puller) {
 		syncer:           sync.NewSyncer(feed, s.ipSet),
 		garbageCollector: gc.NewGarbageCollector(feed, time.Hour),
 		searcher:         searcher.NewFlowSearcher(feed, time.Minute, s.suspiciousIP, s.events),
+		statser:          statser.NewStatser(),
 	}
 
 	s.feeds[feed.Name()] = fw
-	c := puller.Run(s.ctx)
-	fw.syncer.Run(s.ctx, c)
-	fw.garbageCollector.Run(s.ctx)
-	fw.searcher.Run(s.ctx)
+	c := puller.Run(s.ctx, fw.statser)
+	fw.syncer.Run(s.ctx, c, fw.statser)
+	fw.garbageCollector.Run(s.ctx, fw.statser)
+	fw.searcher.Run(s.ctx, fw.statser)
 }
 
 func (s *watcher) Close() {

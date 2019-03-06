@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"github.com/tigera/intrusion-detection/controller/pkg/feed"
+	"github.com/tigera/intrusion-detection/controller/pkg/statser"
 	"net"
 	"net/http"
 	"net/url"
@@ -35,14 +36,14 @@ func NewHTTPPuller(feed feed.Feed, u *url.URL, period time.Duration, header http
 	}
 }
 
-func (h *httpPuller) Run(ctx context.Context) <-chan feed.IPSet {
+func (h *httpPuller) Run(ctx context.Context, statser statser.Statser) <-chan feed.IPSet {
 	snapshots := make(chan feed.IPSet)
 	if ctx == nil {
 		ctx = context.Background()
 	}
 	ctx, h.cancel = context.WithCancel(ctx)
 
-	go h.mainloop(ctx, snapshots)
+	go h.mainloop(ctx, snapshots, statser)
 
 	return snapshots
 }
@@ -59,11 +60,11 @@ func (h *httpPuller) Namespace() string {
 	return h.feed.Namespace()
 }
 
-func (h *httpPuller) mainloop(ctx context.Context, snapshots chan<- feed.IPSet) {
+func (h *httpPuller) mainloop(ctx context.Context, snapshots chan<- feed.IPSet, statser statser.Statser) {
 	// Query on a timer until the context is cancelled.
 	t := time.NewTicker(h.period)
 	for {
-		h.query(ctx, snapshots)
+		h.query(ctx, snapshots, statser)
 		select {
 		case <-ctx.Done():
 			t.Stop()
@@ -74,13 +75,14 @@ func (h *httpPuller) mainloop(ctx context.Context, snapshots chan<- feed.IPSet) 
 	}
 }
 
-func (h *httpPuller) query(ctx context.Context, snapshots chan<- feed.IPSet) {
+func (h *httpPuller) query(ctx context.Context, snapshots chan<- feed.IPSet, statser statser.Statser) {
 	c := http.Client{}
 	req := &http.Request{Method: "GET", Header: h.header, URL: h.url}
 	req = req.WithContext(ctx)
 	resp, err := c.Do(req)
 	if err != nil {
 		log.WithError(err).Error("failed to query ")
+		statser.Error(statserType, err)
 		return
 	}
 
@@ -112,4 +114,5 @@ func (h *httpPuller) query(ctx context.Context, snapshots chan<- feed.IPSet) {
 		snapshot = append(snapshot, s.Text())
 	}
 	snapshots <- snapshot
+	statser.ClearError(statserType)
 }
