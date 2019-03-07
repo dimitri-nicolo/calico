@@ -9,6 +9,7 @@ import (
 
 // RunLoop periodically executes f
 func RunLoop(ctx context.Context, f func(), period time.Duration) error {
+	// The channel is closed within RunLoop
 	return runLoop(ctx, func() {}, f, period, make(chan struct{}), func() {}, 0)
 }
 
@@ -20,6 +21,7 @@ type RescheduleFunc func() error
 
 // RunLoopWithReschedule returns a RunFuncWithReschedule and RescheduleFunc tuple. It does not execute a run loop.
 func RunLoopWithReschedule() (RunFuncWithReschedule, RescheduleFunc) {
+	// Closed within runLoop
 	ch := make(chan struct{})
 	var started bool
 
@@ -52,6 +54,10 @@ func RunLoopWithReschedule() (RunFuncWithReschedule, RescheduleFunc) {
 func runLoop(ctx context.Context, initFunc func(), f func(), period time.Duration, rescheduleCh chan struct{}, rescheduleFunc func(), reschedulePeriod time.Duration) error {
 	t := time.NewTicker(period)
 	defer t.Stop()
+
+	// We close the rescheduleCh here on the receiver side so that the RescheduleFunc is able to know that the
+	// RunLoop has terminated and that the job could not be successfully rescheduled. This is not idiomatic Go and
+	// there may be a better way to implement this communication method.
 	defer close(rescheduleCh)
 
 	initFunc()
