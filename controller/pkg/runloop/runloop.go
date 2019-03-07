@@ -94,7 +94,6 @@ func runLoop(ctx context.Context, initFunc func(), f func(), period time.Duratio
 				case <-rescheduleCh:
 					// nothing
 				case <-sleep:
-					break sleeping
 					// drain t.C so that we don't run again immediately
 				drain:
 					for {
@@ -105,6 +104,7 @@ func runLoop(ctx context.Context, initFunc func(), f func(), period time.Duratio
 							break drain
 						}
 					}
+					break sleeping
 					// continue
 				}
 			}
