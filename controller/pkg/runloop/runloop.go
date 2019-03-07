@@ -49,7 +49,9 @@ func RunLoopWithReschedule() (RunFuncWithReschedule, RescheduleFunc) {
 
 func runLoop(ctx context.Context, initFunc func(), f func(), period time.Duration, rescheduleCh chan struct{}, rescheduleFunc func(), reschedulePeriod time.Duration) error {
 	t := time.NewTicker(period)
-	defer t.Stop()
+	defer func() {
+		t.Stop()
+	}()
 
 	// We close the rescheduleCh here on the receiver side so that the RescheduleFunc is able to know that the
 	// RunLoop has terminated and that the job could not be successfully rescheduled. This is not idiomatic Go and
@@ -94,16 +96,8 @@ func runLoop(ctx context.Context, initFunc func(), f func(), period time.Duratio
 				case <-rescheduleCh:
 					// nothing
 				case <-sleep:
-					// drain t.C so that we don't run again immediately
-				drain:
-					for {
-						select {
-						case <-t.C:
-							// nothing
-						default:
-							break drain
-						}
-					}
+					t.Stop()
+					t = time.NewTicker(period)
 					break sleeping
 					// continue
 				}
