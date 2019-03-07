@@ -7,9 +7,9 @@ import (
 	"io"
 	"testing"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/util"
+	"github.com/tigera/intrusion-detection/controller/pkg/flows"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/db"
+	"github.com/tigera/intrusion-detection/controller/pkg/util"
 
 	"github.com/olivere/elastic"
 
@@ -19,31 +19,31 @@ import (
 func TestElasticFlowLogIterator(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	input := [][]db.FlowLog{
+	input := [][]flows.FlowLogJSONOutput{
 		{
 			{
 				SourceIP:   util.Sptr("1.2.3.4"),
-				SourceName: util.Sptr("source"),
+				SourceName: "source",
 				DestIP:     util.Sptr("2.3.4.5"),
-				DestName:   util.Sptr("dest"),
+				DestName:   "dest",
 			},
 			{
 				SourceIP:   util.Sptr("5.6.7.8"),
-				SourceName: util.Sptr("source"),
+				SourceName: "source",
 				DestIP:     util.Sptr("2.3.4.5"),
-				DestName:   util.Sptr("dest"),
+				DestName:   "dest",
 			},
 		},
 		{
 			{
 				SourceIP:   util.Sptr("9.10.11.12"),
-				SourceName: util.Sptr("source"),
+				SourceName: "source",
 				DestIP:     util.Sptr("2.3.4.5"),
-				DestName:   util.Sptr("dest"),
+				DestName:   "dest",
 			},
 		},
 	}
-	var expected []db.FlowLog
+	var expected []flows.FlowLogJSONOutput
 	var results []*elastic.SearchResult
 	for _, logs := range input {
 		r := &elastic.SearchResult{
@@ -83,13 +83,16 @@ func TestElasticFlowLogIterator(t *testing.T) {
 		ctx:    context.TODO(),
 	}
 
-	var actual []db.FlowLog
+	var actual []flows.FlowLog
 	for i.Next() {
 		actual = append(actual, i.Value())
 	}
 	g.Expect(i.Err()).ShouldNot(HaveOccurred())
 
-	g.Expect(actual).Should(Equal(expected), "Events are retrieved in order")
+	g.Expect(actual).Should(HaveLen(len(expected)), "All events are retrieved.")
+	for idx := range actual {
+		g.Expect(actual[idx].SourceIP).Should(Equal(expected[idx].SourceIP), "Events are retrieved in order.")
+	}
 }
 
 type mockScroller struct {

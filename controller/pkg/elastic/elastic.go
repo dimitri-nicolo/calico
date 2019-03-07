@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/tigera/intrusion-detection/controller/pkg/flows"
+
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/feed"
 
@@ -113,10 +115,11 @@ func (e *Elastic) QueryIPSet(ctx context.Context, name string) (db.FlowLogIterat
 	return &elasticFlowLogIterator{
 		scroll: e.c.Scroll(FlowLogIndex).SortBy(elastic.SortByDoc{}).Query(q).Size(QuerySize),
 		ctx:    ctx,
+		name:   name,
 	}, nil
 }
 
-func (e *Elastic) PutFlowLog(ctx context.Context, f db.FlowLog) error {
+func (e *Elastic) PutFlowLog(ctx context.Context, f flows.FlowLog) error {
 	err := e.ensureIndexExists(ctx, EventIndex, eventMapping)
 	if err != nil {
 		return err

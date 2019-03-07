@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"io"
 
+	"github.com/tigera/intrusion-detection/controller/pkg/flows"
+
 	"github.com/olivere/elastic"
 	log "github.com/sirupsen/logrus"
-	"github.com/tigera/intrusion-detection/controller/pkg/db"
 )
 
 type Scroller interface {
@@ -17,8 +18,9 @@ type Scroller interface {
 type elasticFlowLogIterator struct {
 	scroll Scroller
 	ctx    context.Context
+	name   string
 	hits   []*elastic.SearchHit
-	val    db.FlowLog
+	val    flows.FlowLog
 	err    error
 }
 
@@ -42,19 +44,21 @@ func (i *elasticFlowLogIterator) Next() bool {
 			hit := i.hits[0]
 			i.hits = i.hits[1:]
 
-			var val db.FlowLog
-			err := json.Unmarshal(*hit.Source, &val)
+			var flowLog flows.FlowLogJSONOutput
+			err := json.Unmarshal(*hit.Source, &flowLog)
 			if err != nil {
 				log.WithError(err).WithField("raw", *hit.Source).Error("could not unmarshal")
-			} else {
-				i.val = val
-				return true
+				continue
 			}
+
+			i.val = flows.ConvertFlowLog(flowLog, hit, i.name)
+
+			return true
 		}
 	}
 }
 
-func (i *elasticFlowLogIterator) Value() db.FlowLog {
+func (i *elasticFlowLogIterator) Value() flows.FlowLog {
 	return i.val
 }
 
