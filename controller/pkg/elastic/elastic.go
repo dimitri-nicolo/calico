@@ -84,12 +84,20 @@ func (e *Elastic) GetIPSet(name string) ([]string, error) {
 }
 
 func (e *Elastic) QueryIPSet(ctx context.Context, name string) (db.FlowLogIterator, error) {
-	q := elastic.NewTermsQuery("source_ip").TermsLookup(
-		elastic.NewTermsLookup().
-			Index(IPSetIndex).
-			Type(StandardType).
-			Id(name).
-			Path("ips"))
+	q := elastic.NewDisMaxQuery().Query(
+		elastic.NewTermsQuery("source_ip").TermsLookup(
+			elastic.NewTermsLookup().
+				Index(IPSetIndex).
+				Type(StandardType).
+				Id(name).
+				Path("ips")),
+		elastic.NewTermsQuery("dest_ip").TermsLookup(
+			elastic.NewTermsLookup().
+				Index(IPSetIndex).
+				Type(StandardType).
+				Id(name).
+				Path("ips")),
+	)
 
 	return &elasticFlowLogIterator{
 		scroll: e.c.Scroll(FlowLogIndex).SortBy(elastic.SortByDoc{}).Query(q).Size(QuerySize),
