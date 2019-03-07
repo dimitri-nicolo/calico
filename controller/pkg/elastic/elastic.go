@@ -124,6 +124,6 @@ func (e *Elastic) PutFlowLog(ctx context.Context, f events.SecurityEvent) error 
 		return err
 	}
 
-	_, err = e.c.Index().Index(EventIndex).Type(StandardType).Id(f.ID).BodyJson(f).Do(ctx)
+	_, err = e.c.Index().Index(EventIndex).Type(StandardType).Id(f.ID()).BodyJson(f).Do(ctx)
 	return err
 }

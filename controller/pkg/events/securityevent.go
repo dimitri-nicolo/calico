@@ -1,11 +1,16 @@
 package events
 
+import (
+	"fmt"
+
+	"github.com/tigera/intrusion-detection/controller/pkg/util"
+)
+
 type SecurityEvent struct {
 	Time             int64    `json:"time"`
 	Type             string   `json:"type"`
 	Description      string   `json:"description"`
 	Severity         int      `json:"severity"`
-	ID               string   `json:"id"`
 	FlowLogIndex     string   `json:"flow_log_index"`
 	FlowLogID        string   `json:"flow_log_id"`
 	Protocol         string   `json:"protocol"`
@@ -20,4 +25,15 @@ type SecurityEvent struct {
 	FlowAction       string   `json:"flow_action"`
 	Feeds            []string `json:"feeds,omitempty"`
 	SuspiciousPrefix *string  `json:"suspicious_prefix"`
+}
+
+func (s SecurityEvent) ID() string {
+	return fmt.Sprintf("%d-%s-%s-%s-%s-%s",
+		s.Time,
+		s.Protocol,
+		util.StringPtrWrapper{s.SourceIP},
+		util.Int64PtrWrapper{s.SourcePort},
+		util.StringPtrWrapper{s.DestIP},
+		util.Int64PtrWrapper{s.DestPort},
+	)
 }

@@ -58,7 +58,6 @@ func TestConvertFlowLog(t *testing.T) {
 		Type:             SuspiciousFlow,
 		Description:      "Pod test/source-foo connected to suspicious IP from list testfeed",
 		Severity:         Severity,
-		ID:               "123-tcp-1.2.3.4-443-2.3.4.5-80",
 		FlowLogIndex:     "test_flows_index",
 		FlowLogID:        "111-222-333",
 		Protocol:         "tcp",
@@ -78,4 +77,5 @@ func TestConvertFlowLog(t *testing.T) {
 	actual := ConvertFlowLog(tc, hit, expected.Feeds...)
 
 	g.Expect(actual).Should(Equal(expected), "Generated SecurityEvent matches expectations")
+	g.Expect(actual.ID()).Should(Equal("123-tcp-1.2.3.4-443-2.3.4.5-80"))
 }
