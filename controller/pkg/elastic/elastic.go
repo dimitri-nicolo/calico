@@ -2,10 +2,7 @@ package elastic
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 
@@ -31,25 +28,8 @@ type Elastic struct {
 	c *elastic.Client
 }
 
-func NewElastic(url *url.URL, username, password, pathToCA string) *Elastic {
-	ca, err := x509.SystemCertPool()
-	if err != nil {
-		panic(err)
-	}
-	if pathToCA != "" {
-		cert, err := ioutil.ReadFile(pathToCA)
-		if err != nil {
-			panic(err)
-		}
-		ok := ca.AppendCertsFromPEM(cert)
-		if !ok {
-			panic("failed to add CA")
-		}
-	}
-	h := &http.Client{}
-	if url.Scheme == "https" {
-		h.Transport = &http.Transport{TLSClientConfig: &tls.Config{RootCAs: ca}}
-	}
+func NewElastic(h *http.Client, url *url.URL, username, password string) *Elastic {
+
 	options := []elastic.ClientOptionFunc{
 		elastic.SetURL(url.String()),
 		elastic.SetHttpClient(h),

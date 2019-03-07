@@ -2,8 +2,12 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"flag"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"net/url"
 	"os"
 	"os/signal"
@@ -75,8 +79,27 @@ func main() {
 		user = DefaultElasticUser
 	}
 	pass := os.Getenv("ELASTIC_PASSWORD")
-	ca := os.Getenv("ELASTIC_CA")
-	e := elastic.NewElastic(u, user, pass, ca)
+	pathToCA := os.Getenv("ELASTIC_CA")
+
+	ca, err := x509.SystemCertPool()
+	if err != nil {
+		panic(err)
+	}
+	if pathToCA != "" {
+		cert, err := ioutil.ReadFile(pathToCA)
+		if err != nil {
+			panic(err)
+		}
+		ok := ca.AppendCertsFromPEM(cert)
+		if !ok {
+			panic("failed to add CA")
+		}
+	}
+	h := &http.Client{}
+	if u.Scheme == "https" {
+		h.Transport = &http.Transport{TLSClientConfig: &tls.Config{RootCAs: ca}}
+	}
+	e := elastic.NewElastic(h, u, user, pass)
 
 	s := watcher.NewWatcher(e, e, e)
 	s.Run(context.Background())
