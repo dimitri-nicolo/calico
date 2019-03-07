@@ -272,6 +272,7 @@ rules:
       - hostendpoints
       - licensekeys
       - globalnetworksets
+      - globalthreatfeeds
     verbs:
       - "*"
 
