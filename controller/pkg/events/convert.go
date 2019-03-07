@@ -1,4 +1,4 @@
-package flows
+package events
 
 import (
 	"fmt"
@@ -13,7 +13,7 @@ const (
 	Severity       = 100
 )
 
-func ConvertFlowLog(flowLog FlowLogJSONOutput, hit *elastic.SearchHit, feeds ...string) FlowLog {
+func ConvertFlowLog(flowLog FlowLogJSONOutput, hit *elastic.SearchHit, feeds ...string) SecurityEvent {
 	description := fmt.Sprintf("Pod %s/%s connected to suspicious IP from list %s", flowLog.SourceNamespace, flowLog.SourceName, strings.Join(feeds, ", "))
 
 	id := fmt.Sprintf("%d-%s-%s-%s-%s-%s",
@@ -25,7 +25,7 @@ func ConvertFlowLog(flowLog FlowLogJSONOutput, hit *elastic.SearchHit, feeds ...
 		util.Int64PtrWrapper{flowLog.DestPort},
 	)
 
-	return FlowLog{
+	return SecurityEvent{
 		Time:             flowLog.StartTime,
 		Type:             SuspiciousFlow,
 		Description:      description,

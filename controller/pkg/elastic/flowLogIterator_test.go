@@ -7,7 +7,7 @@ import (
 	"io"
 	"testing"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/flows"
+	"github.com/tigera/intrusion-detection/controller/pkg/events"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/util"
 
@@ -19,7 +19,7 @@ import (
 func TestElasticFlowLogIterator(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	input := [][]flows.FlowLogJSONOutput{
+	input := [][]events.FlowLogJSONOutput{
 		{
 			{
 				SourceIP:   util.Sptr("1.2.3.4"),
@@ -43,7 +43,7 @@ func TestElasticFlowLogIterator(t *testing.T) {
 			},
 		},
 	}
-	var expected []flows.FlowLogJSONOutput
+	var expected []events.FlowLogJSONOutput
 	var results []*elastic.SearchResult
 	for _, logs := range input {
 		r := &elastic.SearchResult{
@@ -83,7 +83,7 @@ func TestElasticFlowLogIterator(t *testing.T) {
 		ctx:    context.TODO(),
 	}
 
-	var actual []flows.FlowLog
+	var actual []events.SecurityEvent
 	for i.Next() {
 		actual = append(actual, i.Value())
 	}

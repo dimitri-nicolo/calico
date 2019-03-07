@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/flows"
+	"github.com/tigera/intrusion-detection/controller/pkg/events"
 
 	. "github.com/onsi/gomega"
 
@@ -18,7 +18,7 @@ import (
 
 // TestDoIPSet tests the case where everything is working
 func TestDoIPSet(t *testing.T) {
-	expected := []flows.FlowLog{
+	expected := []events.SecurityEvent{
 		{
 			SourceIP:   util.Sptr("1.2.3.4"),
 			SourceName: "source",
@@ -37,18 +37,18 @@ func TestDoIPSet(t *testing.T) {
 
 // TestDoIPSetNoResults tests the case where no results are returned
 func TestDoIPSetNoResults(t *testing.T) {
-	expected := []flows.FlowLog{}
+	expected := []events.SecurityEvent{}
 	runTest(t, true, expected, nil, -1, -1)
 }
 
 // TestDoIPSetSuspiciousIPFails tests the case where suspiciousIP fails after the first result
 func TestDoIPSetSuspiciousIPFails(t *testing.T) {
-	expected := []flows.FlowLog{}
+	expected := []events.SecurityEvent{}
 	runTest(t, false, expected, errors.New("fail"), -1, -1)
 }
 
 func TestDoIPSetSuspiciousIPIterationFails(t *testing.T) {
-	expected := []flows.FlowLog{
+	expected := []events.SecurityEvent{
 		{
 			SourceIP:   util.Sptr("1.2.3.4"),
 			SourceName: "source",
@@ -67,7 +67,7 @@ func TestDoIPSetSuspiciousIPIterationFails(t *testing.T) {
 
 // TestDoIPSetEventsFails tests the case where the first call to events.PutFlowLog fails but the second does not
 func TestDoIPSetEventsFails(t *testing.T) {
-	expected := []flows.FlowLog{
+	expected := []events.SecurityEvent{
 		{
 			SourceIP:   util.Sptr("1.2.3.4"),
 			SourceName: "source",
@@ -84,12 +84,12 @@ func TestDoIPSetEventsFails(t *testing.T) {
 	runTest(t, false, expected, nil, -1, 0)
 }
 
-func runTest(t *testing.T, successful bool, expected []flows.FlowLog, err error, suspiciousErrorIdx, eventsErrorIdx int) {
+func runTest(t *testing.T, successful bool, expected []events.SecurityEvent, err error, suspiciousErrorIdx, eventsErrorIdx int) {
 	g := NewGomegaWithT(t)
 
 	f := feed.NewFeed("test", "test-namespace")
 	suspiciousIP := &mockDB{err: err, errorIdx: suspiciousErrorIdx, flowLogs: expected}
-	events := &mockDB{errorIdx: eventsErrorIdx, flowLogs: []flows.FlowLog{}}
+	events := &mockDB{errorIdx: eventsErrorIdx, flowLogs: []events.SecurityEvent{}}
 	searcher := NewFlowSearcher(f, 0, suspiciousIP, events).(*flowSearcher)
 
 	ctx := context.TODO()
@@ -124,8 +124,8 @@ type mockDB struct {
 	err           error
 	errorIdx      int
 	errorReturned bool
-	flowLogs      []flows.FlowLog
-	value         flows.FlowLog
+	flowLogs      []events.SecurityEvent
+	value         events.SecurityEvent
 }
 
 func (m *mockDB) QueryIPSet(ctx context.Context, name string) (db.FlowLogIterator, error) {
@@ -144,7 +144,7 @@ func (m *mockDB) Next() bool {
 	return false
 }
 
-func (m *mockDB) Value() flows.FlowLog {
+func (m *mockDB) Value() events.SecurityEvent {
 	return m.value
 }
 
@@ -155,7 +155,7 @@ func (m *mockDB) Err() error {
 	return nil
 }
 
-func (m *mockDB) PutFlowLog(ctx context.Context, l flows.FlowLog) error {
+func (m *mockDB) PutFlowLog(ctx context.Context, l events.SecurityEvent) error {
 	if len(m.flowLogs) == m.errorIdx && !m.errorReturned {
 		m.errorReturned = true
 		return errors.New("PutFlowLog error")

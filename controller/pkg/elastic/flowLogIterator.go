@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"io"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/flows"
+	"github.com/tigera/intrusion-detection/controller/pkg/events"
 
 	"github.com/olivere/elastic"
 	log "github.com/sirupsen/logrus"
@@ -20,7 +20,7 @@ type elasticFlowLogIterator struct {
 	ctx    context.Context
 	name   string
 	hits   []*elastic.SearchHit
-	val    flows.FlowLog
+	val    events.SecurityEvent
 	err    error
 }
 
@@ -44,21 +44,21 @@ func (i *elasticFlowLogIterator) Next() bool {
 			hit := i.hits[0]
 			i.hits = i.hits[1:]
 
-			var flowLog flows.FlowLogJSONOutput
+			var flowLog events.FlowLogJSONOutput
 			err := json.Unmarshal(*hit.Source, &flowLog)
 			if err != nil {
 				log.WithError(err).WithField("raw", *hit.Source).Error("could not unmarshal")
 				continue
 			}
 
-			i.val = flows.ConvertFlowLog(flowLog, hit, i.name)
+			i.val = events.ConvertFlowLog(flowLog, hit, i.name)
 
 			return true
 		}
 	}
 }
 
-func (i *elasticFlowLogIterator) Value() flows.FlowLog {
+func (i *elasticFlowLogIterator) Value() events.SecurityEvent {
 	return i.val
 }
 

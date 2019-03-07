@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/flows"
+	"github.com/tigera/intrusion-detection/controller/pkg/events"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/feed"
@@ -119,7 +119,7 @@ func (e *Elastic) QueryIPSet(ctx context.Context, name string) (db.FlowLogIterat
 	}, nil
 }
 
-func (e *Elastic) PutFlowLog(ctx context.Context, f flows.FlowLog) error {
+func (e *Elastic) PutFlowLog(ctx context.Context, f events.SecurityEvent) error {
 	err := e.ensureIndexExists(ctx, EventIndex, eventMapping)
 	if err != nil {
 		return err

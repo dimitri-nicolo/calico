@@ -62,7 +62,7 @@ func (d *flowSearcher) doIPSet(ctx context.Context, statser statser.Statser) {
 			log.WithError(err).Error("failed to store suspicious flow")
 		}
 	}
-	log.WithField("num", c).Debug("got flows")
+	log.WithField("num", c).Debug("got events")
 	if flowIterator.Err() != nil {
 		log.WithError(flowIterator.Err()).Error("suspicious IP iteration failed")
 		statser.Error(statserType, flowIterator.Err())

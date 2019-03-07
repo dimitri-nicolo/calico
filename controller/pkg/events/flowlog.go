@@ -1,6 +1,6 @@
-package flows
+package events
 
-type FlowLog struct {
+type SecurityEvent struct {
 	Time             int64    `json:"time"`
 	Type             string   `json:"type"`
 	Description      string   `json:"description"`

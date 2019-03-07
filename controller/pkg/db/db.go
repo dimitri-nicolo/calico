@@ -3,7 +3,7 @@ package db
 import (
 	"context"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/flows"
+	"github.com/tigera/intrusion-detection/controller/pkg/events"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/feed"
 )
@@ -22,10 +22,10 @@ type SuspiciousIP interface {
 
 type FlowLogIterator interface {
 	Next() bool
-	Value() flows.FlowLog
+	Value() events.SecurityEvent
 	Err() error
 }
 
 type Events interface {
-	PutFlowLog(context.Context, flows.FlowLog) error
+	PutFlowLog(context.Context, events.SecurityEvent) error
 }

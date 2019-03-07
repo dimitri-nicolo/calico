@@ -1,4 +1,4 @@
-package flows
+package events
 
 import (
 	"testing"
@@ -53,7 +53,7 @@ func TestConvertFlowLog(t *testing.T) {
 		HTTPRequestsAllowedIn: 8,
 		HTTPRequestsDeniedIn:  9,
 	}
-	expected := FlowLog{
+	expected := SecurityEvent{
 		Time:             123,
 		Type:             SuspiciousFlow,
 		Description:      "Pod test/source-foo connected to suspicious IP from list testfeed",
@@ -77,5 +77,5 @@ func TestConvertFlowLog(t *testing.T) {
 
 	actual := ConvertFlowLog(tc, hit, expected.Feeds...)
 
-	g.Expect(actual).Should(Equal(expected), "Generated FlowLog matches expectations")
+	g.Expect(actual).Should(Equal(expected), "Generated SecurityEvent matches expectations")
 }

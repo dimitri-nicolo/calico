@@ -1,4 +1,4 @@
-package flows
+package events
 
 // From github.com/tigera/felix-private/convert/json_serializer.go
 
