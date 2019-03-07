@@ -895,3 +895,5 @@ master:
       version: master
     es-curator:
       version: master
+    intrusion-detection-controller:
+      version: master

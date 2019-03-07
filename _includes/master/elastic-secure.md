@@ -22,6 +22,15 @@
    -n calico-monitoring
    ```
 
+1. Set up secret with username and password for {{site.prodname}} intrusion detection controller to authenticate with Elasticsearch.
+   Replace `<intrusion-detection-password>` with the password.
+   ```
+   {{cli}} create secret generic elastic-ee-intrusion-detection \
+   --from-literal=username=tigera-ee-intrusion-detection \
+   --from-literal=password=<intrusion-detection-password> \
+   -n calico-monitoring
+   ```
+
 1. Set up configmap with the certificate authority certificate to authenticate Elasticsearch & Kibana.
    Replace `<ElasticsearchCA.pem>` with the path to your Elasticsearch/Kibana CA certificate.
 

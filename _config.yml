@@ -21,6 +21,7 @@ noderunning: calico-node
 # Some of these omit the repo: when used they must be prefixed with the repo path
 # like site.data.versions[page.version].first.dockerRepo/site.imageNames[component]:version.
 # Node is duplicated because documentation refers to it using both names. At least one needs to match the version in versions.yaml
+# IMPORTANT - When updating this list, also update _includes/<version>/load-docker.md
 imageNames:
   node: tigera/cnx-node
   cnx-node: tigera/cnx-node
@@ -43,6 +44,7 @@ imageNames:
   es-proxy: tigera/es-proxy
   cloudControllers: tigera/cloud-controllers
   elastic-tsee-installer: tigera/intrusion-detection-job-installer
+  intrusion-detection-controller: tigera/intrusion-detection-controller
   es-curator: tigera/es-curator
 
 # List of files to exclude. These files won't get included in the deployed site.
