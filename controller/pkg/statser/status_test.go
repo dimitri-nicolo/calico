@@ -1,12 +1,16 @@
 package statser
 
 import (
-	"reflect"
+	"errors"
 	"testing"
 	"time"
+
+	. "github.com/onsi/gomega"
 )
 
 func TestStatusClearError(t *testing.T) {
+	g := NewGomegaWithT(t)
+
 	expected := []ErrorCondition{
 		{
 			Type:    "keep",
@@ -14,34 +18,29 @@ func TestStatusClearError(t *testing.T) {
 		},
 	}
 	status := &Status{
-		ErrorConditions:      append(expected, ErrorCondition{"remove", "should not be kept"}),
+		ErrorConditions: expected,
 	}
-
+	status.Error("remove", errors.New("should not be kept"))
 	status.ClearError("remove")
 
-	if !reflect.DeepEqual(expected, status.ErrorConditions) {
-		t.Errorf("Output mismatch: %v != %v", expected, status.ErrorConditions)
-	}
+	g.Expect(status.ErrorConditions).Should(Equal(expected), "Only expected error conditions should be kept")
 }
 
 func TestStatusSuccessfulSearch(t *testing.T) {
+	g := NewGomegaWithT(t)
+
 	status := &Status{}
 	status.SuccessfulSearch()
-	if status.LastSuccessfulSearch.Equal(time.Time{}) {
-		t.Errorf("LastSuccessfulSearch not set")
-	}
-	if !status.LastSuccessfulSync.Equal(time.Time{}) {
-		t.Errorf("LastSuccessfulSync set to %v", status.LastSuccessfulSync)
-	}
+	g.Expect(status.LastSuccessfulSearch).ShouldNot(Equal(time.Time{}), "LastSuccessfulSearch set")
+	g.Expect(status.LastSuccessfulSync).Should(Equal(time.Time{}), "LastSuccessfulSync not set")
 }
 
 func TestStatusSuccessfulSync(t *testing.T) {
+	g := NewGomegaWithT(t)
+
 	status := &Status{}
 	status.SuccessfulSync()
-	if status.LastSuccessfulSync.Equal(time.Time{}) {
-		t.Errorf("LastSuccessfulSync not set")
-	}
-	if !status.LastSuccessfulSearch.Equal(time.Time{}) {
-		t.Errorf("LastSuccessfulSearch set to %v", status.LastSuccessfulSearch)
-	}
+
+	g.Expect(status.LastSuccessfulSync).ShouldNot(Equal(time.Time{}), "LastSuccessfulSync set")
+	g.Expect(status.LastSuccessfulSearch).Should(Equal(time.Time{}), "LastSuccessfulSearch not set")
 }
