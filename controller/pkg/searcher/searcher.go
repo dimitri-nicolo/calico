@@ -2,10 +2,12 @@ package searcher
 
 import (
 	"context"
-	"github.com/tigera/intrusion-detection/controller/pkg/feed"
-	"github.com/tigera/intrusion-detection/controller/pkg/statser"
 	"sync"
 	"time"
+
+	"github.com/tigera/intrusion-detection/controller/pkg/feed"
+	"github.com/tigera/intrusion-detection/controller/pkg/runloop"
+	"github.com/tigera/intrusion-detection/controller/pkg/statser"
 
 	log "github.com/sirupsen/logrus"
 
@@ -34,21 +36,7 @@ func NewFlowSearcher(feed feed.Feed, period time.Duration, suspiciousIP db.Suspi
 
 func (d *flowSearcher) Run(ctx context.Context, statser statser.Statser) {
 	d.once.Do(func() {
-		ctx, d.cancel = context.WithCancel(ctx)
-
-		go func() {
-			t := time.NewTicker(d.period)
-			for {
-				d.doIPSet(ctx, statser)
-				select {
-				case <-ctx.Done():
-					t.Stop()
-					return
-				case <-t.C:
-					// continue
-				}
-			}
-		}()
+		runloop.RunLoop(ctx, func() { d.doIPSet(ctx, statser) }, d.period)
 	})
 }
 
