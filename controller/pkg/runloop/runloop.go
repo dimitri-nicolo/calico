@@ -40,12 +40,8 @@ func RunLoopWithReschedule() (RunFuncWithReschedule, RescheduleFunc) {
 				err = errors.New("RunFunc has terminated")
 			}
 		}()
-		select {
-		case ch <- struct{}{}:
-			return nil
-		default:
-			return errors.New("RunFunc is not currently reschedulable")
-		}
+		ch <- struct{}{}
+		return nil
 	}
 
 	return runFunc, rescheduleFunc
@@ -60,37 +56,63 @@ func runLoop(ctx context.Context, initFunc func(), f func(), period time.Duratio
 	// there may be a better way to implement this communication method.
 	defer close(rescheduleCh)
 
+	var done bool
+	cond := sync.NewCond(&sync.Mutex{})
+	// This ensures that the f();wait loop always terminates.
+	defer func() {
+		done = true
+		cond.L.Lock()
+		cond.Broadcast()
+		cond.L.Unlock()
+	}()
+
 	initFunc()
-	wg := sync.WaitGroup{}
-	for {
-		wg.Wait()
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	go func() {
+		for {
+			if done {
+				return
+			}
 			f()
-		}()
+			cond.L.Lock()
+			cond.Wait()
+			cond.L.Unlock()
+		}
+	}()
+
+	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-rescheduleCh:
 			rescheduleFunc()
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			case <-time.After(reschedulePeriod):
-				// drain t.C so that we don't run again immediately
-				for done := false; !done; {
-					select {
-					case <-t.C:
-						// nothing
-					default:
-						done = true
+			sleep := time.After(reschedulePeriod)
+		sleeping:
+			for {
+				select {
+				case <-ctx.Done():
+					return ctx.Err()
+				case <-rescheduleCh:
+					// nothing
+				case <-sleep:
+					break sleeping
+					// drain t.C so that we don't run again immediately
+				drain:
+					for {
+						select {
+						case <-t.C:
+							// nothing
+						default:
+							break drain
+						}
 					}
+					// continue
 				}
-				// continue
 			}
 		case <-t.C:
 			// continue
 		}
+		cond.L.Lock()
+		cond.Signal()
+		cond.L.Unlock()
 	}
 }

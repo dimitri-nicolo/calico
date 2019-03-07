@@ -94,7 +94,8 @@ func TestRunLoopWithReschedule(t *testing.T) {
 	cond.Wait()
 	t0 := time.Now()
 	g.Expect(reschedule()).ShouldNot(HaveOccurred(), "Reschedule runs successfully")
-	g.Expect(reschedule()).Should(HaveOccurred(), "Reschedule fails")
+	// This must not cause rescheduleFunc to be called again. Tested at the bottom where we check that rc=2
+	g.Expect(reschedule()).ShouldNot(HaveOccurred(), "Reschedule runs successfully")
 	cond.L.Unlock()
 
 	cond.L.Lock()
@@ -160,7 +161,7 @@ func TestRunLoopWithRescheduleLongRunningFunction(t *testing.T) {
 
 	cond.L.Lock()
 	cond.Wait()
-	g.Expect(reschedule()).Should(HaveOccurred(), "Reschedule fails")
+	g.Expect(reschedule()).ShouldNot(HaveOccurred(), "Reschedule succeeds")
 	cond.L.Unlock()
 
 	wg.Wait()
