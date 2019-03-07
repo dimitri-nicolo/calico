@@ -33,15 +33,18 @@ func RunLoopWithReschedule() (RunFuncWithReschedule, RescheduleFunc) {
 	}
 	rescheduleFunc := func() (err error) {
 		if !started {
-			return errors.New("RunFunc has not yet started")
+			err = errors.New("RunFunc has not yet started")
+			return
 		}
+		// runLoop closes the channel when it exits. When we write to it
+		// below, this will panic, which we reinterpret as a simple error.
 		defer func() {
 			if r := recover(); r != nil {
 				err = errors.New("RunFunc has terminated")
 			}
 		}()
 		ch <- struct{}{}
-		return nil
+		return
 	}
 
 	return runFunc, rescheduleFunc
