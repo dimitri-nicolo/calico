@@ -155,7 +155,7 @@ func TestRunLoopWithRescheduleLongRunningFunction(t *testing.T) {
 	// Make sure that we can reschedule once while the long-running function is executing, but not twice
 	cond.L.Lock()
 	cond.Wait()
-	g.Expect(reschedule()).ShouldNot(HaveOccurred(), "Reschedule fails")
+	g.Expect(reschedule()).ShouldNot(HaveOccurred(), "Reschedule succeeds")
 	cond.L.Unlock()
 
 	cond.L.Lock()

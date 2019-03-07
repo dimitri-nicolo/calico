@@ -7,13 +7,18 @@ import (
 	"time"
 )
 
+// RunLoop periodically executes f
 func RunLoop(ctx context.Context, f func(), period time.Duration) error {
 	return runLoop(ctx, func() {}, f, period, make(chan struct{}), func() {}, 0)
 }
 
-type RunFuncWithReschedule func(context.Context, func(), time.Duration, func(), time.Duration) error
+// RunFuncWithReschedule periodically executes f, or executes rescheduleFunc, sleeps for reschedulePeriod and then executes f
+type RunFuncWithReschedule func(ctx context.Context, f func(), period time.Duration, rescheduleFunc func(), reschedulePeriod time.Duration) error
+
+// RescheduleFunc triggers a reschedule event in RunFuncWithReschedule
 type RescheduleFunc func() error
 
+// RunLoopWithReschedule returns a RunFuncWithReschedule and RescheduleFunc tuple. It does not execute a run loop.
 func RunLoopWithReschedule() (RunFuncWithReschedule, RescheduleFunc) {
 	ch := make(chan struct{})
 	var started bool
