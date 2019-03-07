@@ -109,7 +109,7 @@ func TestRunLoopWithReschedule(t *testing.T) {
 
 	wg.Wait()
 	g.Expect(res).Should(Equal(context.DeadlineExceeded))
-	g.Expect(c).Should(BeNumerically("~", maxDuration/period, 1+rc))
+	g.Expect(c).Should(BeNumerically("~", maxDuration/period, 1+rc*int(reschedulePeriod)))
 
 	g.Expect(reschedule()).Should(HaveOccurred(), "Reschedule function returns an error after the RunLoop terminates and does not panic")
 	g.Expect(rc).Should(Equal(2))
