@@ -9,9 +9,8 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/events"
-
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
+	"github.com/tigera/intrusion-detection/controller/pkg/events"
 	"github.com/tigera/intrusion-detection/controller/pkg/feed"
 
 	"github.com/olivere/elastic"

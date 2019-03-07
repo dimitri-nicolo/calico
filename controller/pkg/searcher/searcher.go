@@ -5,13 +5,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/feed"
 	"github.com/tigera/intrusion-detection/controller/pkg/runloop"
 	"github.com/tigera/intrusion-detection/controller/pkg/statser"
 
 	log "github.com/sirupsen/logrus"
-
-	"github.com/tigera/intrusion-detection/controller/pkg/db"
 )
 
 const statserType = "SearchFailed"
