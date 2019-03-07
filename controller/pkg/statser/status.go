@@ -18,7 +18,11 @@ type ErrorCondition struct {
 }
 
 func (s *Status) Status() *Status {
-	return s
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	sCopy := *s
+	sCopy.lock = sync.Mutex{}
+	return &sCopy
 }
 
 func (s *Status) SuccessfulSync() {
