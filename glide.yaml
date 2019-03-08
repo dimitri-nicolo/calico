@@ -21,7 +21,6 @@ import:
   vcs: git
   subpackages:
   - client
-  - monitor
 - package: gopkg.in/square/go-jose.v2
   subpackages:
   - jwt
