@@ -61,7 +61,7 @@ EXCLUDE_MANIFEST_REGISTRIES ?= quay.io/
 PUSH_MANIFEST_IMAGES=$(PUSH_IMAGES:$(EXCLUDE_MANIFEST_REGISTRIES)%=)
 PUSH_NONMANIFEST_IMAGES=$(filter-out $(PUSH_MANIFEST_IMAGES),$(PUSH_IMAGES))
 
-GO_BUILD_VER?=v0.20
+GO_BUILD_VER?=v0.21
 # For building, we use the go-build image for the *host* architecture, even if the target is different
 # the one for the host should contain all the necessary cross-compilation tools
 # we do not need to use the arch since go-build:v0.15 now is multi-arch manifest
@@ -329,8 +329,8 @@ endif
 # Run fossa.io license checks
 foss-checks:
 	@echo Running $@...
-	@docker run --rm -v $(CURDIR):/code/:rw \
+	@docker run --rm -v $(CURDIR)/../:/code/:rw \
 	  -e LOCAL_USER_ID=$(MY_UID) \
 	  -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
-	  -w /code/ \
+	  -w /code/controller/ \
 	  $(CALICO_BUILD) /usr/local/bin/fossa
