@@ -76,8 +76,9 @@ func TestElasticFlowLogIterator(t *testing.T) {
 		results: results,
 	}
 
+	expectedKey := "source_ip"
 	i := elasticFlowLogIterator{
-		scrollers: []Scroller{scroll},
+		scrollers: map[string]Scroller{expectedKey: scroll},
 		ctx:       context.TODO(),
 	}
 
@@ -112,12 +113,87 @@ func TestElasticFlowLogIteratorWithError(t *testing.T) {
 
 	scroll := &mockScrollerError{}
 	i := elasticFlowLogIterator{
-		scrollers: []Scroller{scroll},
+		scrollers: map[string]Scroller{"dest_ip": scroll},
 		ctx:       context.TODO(),
 	}
 
 	g.Expect(i.Next()).Should(BeFalse(), "Iterator stops immediately")
 	g.Expect(i.Err()).Should(HaveOccurred())
+}
+
+func TestElasticFlowLogIteratorWithTwoScrollers(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	source_log := events.FlowLogJSONOutput{
+		SourceIP:   util.Sptr("1.2.3.4"),
+		SourceName: "source",
+		DestIP:     util.Sptr("2.3.4.5"),
+		DestName:   "dest",
+	}
+	b, err := json.Marshal(&source_log)
+	g.Expect(err).ShouldNot(HaveOccurred())
+	source_msg := json.RawMessage(b)
+
+	dest_log := events.FlowLogJSONOutput{
+		SourceIP:   util.Sptr("3.4.5.6"),
+		SourceName: "source",
+		DestIP:     util.Sptr("4.5.6.7"),
+		DestName:   "dest",
+	}
+	b, err = json.Marshal(&dest_log)
+	g.Expect(err).ShouldNot(HaveOccurred())
+	dest_msg := json.RawMessage(b)
+
+	scrollers := map[string]Scroller{
+		"source_ip": &mockScroller{
+			[]*elastic.SearchResult{
+				{
+					Hits: &elastic.SearchHits{
+						Hits: []*elastic.SearchHit{
+							{
+								Source: &source_msg,
+							},
+						},
+					},
+				},
+			},
+		},
+		"dest_ip": &mockScroller{
+			[]*elastic.SearchResult{
+				{
+					Hits: &elastic.SearchHits{
+						Hits: []*elastic.SearchHit{
+							{
+								Source: &dest_msg,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	i := elasticFlowLogIterator{
+		scrollers: scrollers,
+		ctx:       context.TODO(),
+		name:      "test",
+	}
+
+	var results []events.SecurityEvent
+	for i.Next() {
+		results = append(results, i.Value())
+	}
+	g.Expect(i.Err()).ShouldNot(HaveOccurred(), "No errors from the iterator")
+	g.Expect(results).Should(HaveLen(2), "Should have gotten back two results")
+	g.Expect(results[0].SourceIP).ShouldNot(Equal(results[1].SourceIP), "Both have different source IPs")
+
+	// Order is random. Swap them to make the tests simpler.
+	if results[0].SourceIP == dest_log.SourceIP {
+		results[1], results[0] = results[0], results[1]
+	}
+
+	g.Expect(results[0].Description).Should(Equal("Suspicious IP 1.2.3.4 from list test connected to pod /source"))
+	g.Expect(results[1].Description).Should(Equal("Pod /dest connected to suspicious IP 4.5.6.7 from list test"))
 }
 
 type mockScrollerError struct{}

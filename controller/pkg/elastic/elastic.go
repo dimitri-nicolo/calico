@@ -95,7 +95,7 @@ func (e *Elastic) QueryIPSet(ctx context.Context, name string) (db.FlowLogIterat
 	}
 
 	return &elasticFlowLogIterator{
-		scrollers: []Scroller{f("source_ip"), f("dest_ip")},
+		scrollers: map[string]Scroller{"source_ip": f("source_ip"), "dest_ip": f("dest_ip")},
 		ctx:       ctx,
 		name:      name,
 	}, nil

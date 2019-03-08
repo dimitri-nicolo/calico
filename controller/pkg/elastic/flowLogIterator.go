@@ -16,10 +16,11 @@ type Scroller interface {
 }
 
 type elasticFlowLogIterator struct {
-	scrollers []Scroller
+	scrollers map[string]Scroller
 	ctx       context.Context
 	name      string
 	hits      []*elastic.SearchHit
+	key       string
 	val       events.SecurityEvent
 	err       error
 }
@@ -27,9 +28,16 @@ type elasticFlowLogIterator struct {
 func (i *elasticFlowLogIterator) Next() bool {
 	for len(i.scrollers) > 0 {
 		if len(i.hits) == 0 {
-			r, err := i.scrollers[0].Do(i.ctx)
+			var scroller Scroller
+
+			// Get a random scroller for results
+			for i.key, scroller = range i.scrollers {
+				break
+			}
+
+			r, err := scroller.Do(i.ctx)
 			if err == io.EOF {
-				i.scrollers = i.scrollers[1:]
+				delete(i.scrollers, i.key)
 				continue
 			}
 			if err != nil {
@@ -52,7 +60,7 @@ func (i *elasticFlowLogIterator) Next() bool {
 				continue
 			}
 
-			i.val = events.ConvertFlowLog(flowLog, hit, i.name)
+			i.val = events.ConvertFlowLog(flowLog, i.key, hit, i.name)
 
 			return true
 		}
