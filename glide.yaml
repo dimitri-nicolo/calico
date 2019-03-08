@@ -45,7 +45,6 @@ import:
   version: c9432e3124d3f9da2f3e34a703d815b072f6b0b4
   subpackages:
   - client
-  - monitor
 - package: k8s.io/apimachinery
   subpackages:
   - pkg/apis/meta/v1
