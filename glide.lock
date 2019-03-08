@@ -1,5 +1,5 @@
-hash: 46992c1f5fd063e16b881a741bc2b010a13a21399c27b6f2d31c8ba49613cf28
-updated: 2019-03-05T20:05:21.237631167Z
+hash: 71d3ea5ffdc4a4a95ee83b5840859da2a4d929dd7a60bb6fe5bf461699718db1
+updated: 2019-03-07T04:06:29.220324308Z
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -210,6 +210,14 @@ imports:
   version: f62e98d28ab7ad31d707ba837a966378465c7b57
 - name: github.com/spf13/pflag
   version: 4c012f6dcd9546820e378d0bdda4d8fc772cdfea
+- name: github.com/tigera/licensing
+  version: c9432e3124d3f9da2f3e34a703d815b072f6b0b4
+  repo: git@github.com:tigera/licensing
+  vcs: git
+  subpackages:
+  - client
+  - client/features
+  - crypto
 - name: github.com/ugorji/go
   version: ded73eae5db7e7a0ef6f55aace87a2873c5d2b74
   subpackages:
@@ -217,6 +225,8 @@ imports:
 - name: golang.org/x/crypto
   version: 81e90905daefcd6fd217b62423c0908922eadb30
   subpackages:
+  - ed25519
+  - ed25519/internal/edwards25519
   - ssh/terminal
 - name: golang.org/x/net
   version: 1c05540f6879653db88113bc4a2b70aec4bd491f
@@ -263,7 +273,7 @@ imports:
   subpackages:
   - rate
 - name: golang.org/x/tools
-  version: f8c04913dfb7b2339a756441456bdbe0af6eb508
+  version: 69e0dcfa1121488c38c3c8f9624f7de769003896
   subpackages:
   - import
 - name: google.golang.org/appengine
@@ -309,6 +319,12 @@ imports:
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: gopkg.in/natefinch/lumberjack.v2
   version: 20b71e5b60d756d3d2f80def009790325acc2b23
+- name: gopkg.in/square/go-jose.v2
+  version: f8f38de21b4dcd69d0413faf231983f5fd6634b1
+  subpackages:
+  - cipher
+  - json
+  - jwt
 - name: gopkg.in/yaml.v2
   version: 670d4cfef0544295bc27a114dbac37980d83185a
 - name: k8s.io/api

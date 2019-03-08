@@ -19,6 +19,12 @@ import:
   - lib/errors
   - lib/options
   - lib/watch
+- package: github.com/tigera/licensing
+  version: c9432e3124d3f9da2f3e34a703d815b072f6b0b4
+  repo: git@github.com:tigera/licensing
+  vcs: git
+  subpackages:
+  - client
 - package: k8s.io/apiserver
   version: kubernetes-1.10.0
 - package: k8s.io/kubernetes
