@@ -521,9 +521,11 @@ func TestLicenseKeyClient(t *testing.T) {
 	}
 }
 
+
 func testLicenseKeyClient(client calicoclient.Interface, name string) error {
 	licenseKeyClient := client.ProjectcalicoV3().LicenseKeys()
-	licenseKey := &v3.LicenseKey{ObjectMeta: metav1.ObjectMeta{Name: name}}
+
+	emptyLicenseKey := &v3.LicenseKey{ObjectMeta: metav1.ObjectMeta{Name: name}}
 
 	licenseKeys, err := licenseKeyClient.List(metav1.ListOptions{})
 	if err != nil {
@@ -533,20 +535,65 @@ func testLicenseKeyClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("items field should not be set to nil")
 	}
 
-	licenseKeyServer, err := licenseKeyClient.Create(licenseKey)
-	if nil != err {
-		return fmt.Errorf("error creating the licenseKey '%v' (%v)", licenseKey, err)
-	}
-	if name != licenseKeyServer.Name {
-		return fmt.Errorf("didn't get the same licenseKey back from the server \n%+v\n%+v", licenseKey, licenseKeyServer)
+	_, err = licenseKeyClient.Create(emptyLicenseKey)
+	if err == nil {
+		return fmt.Errorf("expected creating the emptyLicenseKey")
 	}
 
-	err = licenseKeyClient.Delete(name, &metav1.DeleteOptions{})
-	if nil != err {
-		return fmt.Errorf("licenseKey should be deleted (%s)", err)
+	expiredLicenseKey := getExpiredLicenseKey(name)
+	_, err = licenseKeyClient.Create(expiredLicenseKey )
+	if err == nil {
+		return fmt.Errorf("expected creating the expiredLicenseKey")
+	} else if err.Error() != "LicenseKey.projectcalico.org \"default\" is invalid: LicenseKeySpec.token: Internal error: the license you're trying to create expired on 2019-02-08 07:59:59 +0000 UTC" {
+		fmt.Printf("Incorrect error: %+v\n", err)
 	}
 
 	return nil
+}
+
+const expiredLicenseCertificate = `-----BEGIN CERTIFICATE-----
+MIIFxjCCA66gAwIBAgIQVq3rz5D4nQF1fIgMEh71DzANBgkqhkiG9w0BAQsFADCB
+tTELMAkGA1UEBhMCVVMxEzARBgNVBAgTCkNhbGlmb3JuaWExFjAUBgNVBAcTDVNh
+biBGcmFuY2lzY28xFDASBgNVBAoTC1RpZ2VyYSwgSW5jMSIwIAYDVQQLDBlTZWN1
+cml0eSA8c2lydEB0aWdlcmEuaW8+MT8wPQYDVQQDEzZUaWdlcmEgRW50aXRsZW1l
+bnRzIEludGVybWVkaWF0ZSBDZXJ0aWZpY2F0ZSBBdXRob3JpdHkwHhcNMTgwNDA1
+MjEzMDI5WhcNMjAxMDA2MjEzMDI5WjCBnjELMAkGA1UEBhMCVVMxEzARBgNVBAgT
+CkNhbGlmb3JuaWExFjAUBgNVBAcTDVNhbiBGcmFuY2lzY28xFDASBgNVBAoTC1Rp
+Z2VyYSwgSW5jMSIwIAYDVQQLDBlTZWN1cml0eSA8c2lydEB0aWdlcmEuaW8+MSgw
+JgYDVQQDEx9UaWdlcmEgRW50aXRsZW1lbnRzIENlcnRpZmljYXRlMIIBojANBgkq
+hkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAwg3LkeHTwMi651af/HEXi1tpM4K0LVqb
+5oUxX5b5jjgi+LHMPzMI6oU+NoGPHNqirhAQqK/k7W7r0oaMe1APWzaCAZpHiMxE
+MlsAXmLVUrKg/g+hgrqeije3JDQutnN9h5oZnsg1IneBArnE/AKIHH8XE79yMG49
+LaKpPGhpF8NoG2yoWFp2ekihSohvqKxa3m6pxoBVdwNxN0AfWxb60p2SF0lOi6B3
+hgK6+ILy08ZqXefiUs+GC1Af4qI1jRhPkjv3qv+H1aQVrq6BqKFXwWIlXCXF57CR
+hvUaTOG3fGtlVyiPE4+wi7QDo0cU/+Gx4mNzvmc6lRjz1c5yKxdYvgwXajSBx2pw
+kTP0iJxI64zv7u3BZEEII6ak9mgUU1CeGZ1KR2Xu80JiWHAYNOiUKCBYHNKDCUYl
+RBErYcAWz2mBpkKyP6hbH16GjXHTTdq5xENmRDHabpHw5o+21LkWBY25EaxjwcZa
+Y3qMIOllTZ2iRrXu7fSP6iDjtFCcE2bFAgMBAAGjZzBlMA4GA1UdDwEB/wQEAwIF
+oDATBgNVHSUEDDAKBggrBgEFBQcDAjAdBgNVHQ4EFgQUIY7LzqNTzgyTBE5efHb5
+kZ71BUEwHwYDVR0jBBgwFoAUxZA5kifzo4NniQfGKb+4wruTIFowDQYJKoZIhvcN
+AQELBQADggIBAAK207LaqMrnphF6CFQnkMLbskSpDZsKfqqNB52poRvUrNVUOB1w
+3dSEaBUjhFgUU6yzF+xnuH84XVbjD7qlM3YbdiKvJS9jrm71saCKMNc+b9HSeQAU
+DGY7GPb7Y/LG0GKYawYJcPpvRCNnDLsSVn5N4J1foWAWnxuQ6k57ymWwcddibYHD
+OPakOvO4beAnvax3+K5dqF0bh2Np79YolKdIgUVzf4KSBRN4ZE3AOKlBfiKUvWy6
+nRGvu8O/8VaI0vGaOdXvWA5b61H0o5cm50A88tTm2LHxTXynE3AYriHxsWBbRpoM
+oFnmDaQtGY67S6xGfQbwxrwCFd1l7rGsyBQ17cuusOvMNZEEWraLY/738yWKw3qX
+U7KBxdPWPIPd6iDzVjcZrS8AehUEfNQ5yd26gDgW+rZYJoAFYv0vydMEyoI53xXs
+cpY84qV37ZC8wYicugidg9cFtD+1E0nVgOLXPkHnmc7lIDHFiWQKfOieH+KoVCbb
+zdFu3rhW31ygphRmgszkHwApllCTBBMOqMaBpS8eHCnetOITvyB4Kiu1/nKvVxhY
+exit11KQv8F3kTIUQRm0qw00TSBjuQHKoG83yfimlQ8OazciT+aLpVaY8SOrrNnL
+IJ8dHgTpF9WWHxx04DDzqrT7Xq99F9RzDzM7dSizGxIxonoWcBjiF6n5
+-----END CERTIFICATE-----`
+
+const expiredLicenseToken = `eyJhbGciOiJBMTI4R0NNS1ciLCJjdHkiOiJKV1QiLCJlbmMiOiJBMTI4R0NNIiwiaXYiOiI5WGxaNTlIb3FfTXRkU25oIiwidGFnIjoiSng5SnJFWEpidThYTktBRTFkNF9odyIsInR5cCI6IkpXVCJ9.3aOzJ8CseHdknq4-5iyyVQ.Ajhfz-axov0_Fb64.0YE2hNz_KvgatHKB8hJCgemy09n8zJDc6haiFLkYGh9L96MXEhCUXg9V9iLioi311BtLT6RWXLuQspTNHLDvdIJLyPoNR3OvIYcHTz7kHhaX61lGutAEUBDdByPczoLVkkZccaKgIP8xho4XWmkjDMWXvhMXcTilN3cgeAEdQILXWL1pDPf-h0u-a7Esw5d0O8Ok1CBjFLrthgGnCVtMH5t7l3kBiWbzmAVo7Nz9Eegki0bmOqVSzBxmpDspNitbZFxzYWV23Km6Lmx_FWsEsTtx4nLyBARuxBQsf_l2UjqwowXUlK26Lw7Vqt6e8Upbw4sUrMjIZQzBbKwbAfPFm14QwgXmOfkcMwpeqz8v4oVml3WDIK4Ree6K-Z-ae-cMRGGCTHdp6XDidwykYAQXYC4pbdm-Hm86qO6AYODP_v8lvorXJQgfC0L4Mf5_7uM3daYxIa_80ZlNF9Ffa4YPsB4CuJFbHEEhSStDUlxCNTh5W1SnhgYgelVttnwaYCCVHlyqP4vCCGYgQIkoy01RKCq5dqXl2JPqpUt1bJZ_ywDlhi1xTKrO4uA6qfvKR_tNC1eYPrNmAR7sXMTj8gbUpklvh00edn-sHaR0yTj7ShMbAkK0o9WKUmElsMa_cpjTQ7dVEw6E1hoxjIdEI9kL87ex8uPRQ5383Df-NxO8I093Ef1RXVROeQp3Sass38ewkBuAM32AHUNfY8eP3aaw1ntGzeh93sa015Ob158t5W4ExsVp25RvM0RaV7UBhX0rkbCIVclJR87PkoSAfxtH5E1pkyBJB7rwGHKhWo0kO7U0QFLhAE2_l77pLME_QaHXLogUdLgGbloH2igxFLzboNfTs2yTc2JHeJDiPZDJBs-hbOEdJDD_JX_BcSWw_ZKFxeqA36RZl8LHvXOIS0C4LXmG9qAJvIabIlSIkVRNoSPWL8iXfCwkGHLl3uFc0_0USnunVIELwtEiaf2RUUv2-W1oHBBkrmkW2vxtwMB7GMItUs4l2oR024Qgqm4w9aIVBHvpz9f9QBKcUiWOyMvrqwCLUPDApQdU9bETwEngZOYtSZdX5G5qU-WbpVH91Y7ta81mJEm7Dtj55S5Vyx0NXyeO49M.BWNb4Ddh5iAoVq9eA8Vo_w`
+
+func getExpiredLicenseKey(name string) *v3.LicenseKey {
+	expiredLicenseKey := &v3.LicenseKey{ObjectMeta: metav1.ObjectMeta{Name: name}}
+
+	expiredLicenseKey.Spec.Certificate = expiredLicenseCertificate
+	expiredLicenseKey.Spec.Token = expiredLicenseToken
+
+	return expiredLicenseKey
 }
 
 // TestGlobalThreatFeedClient exercises the GlobalThreatFeed client.

@@ -108,7 +108,6 @@ func convertToLibcalico(aapiObj runtime.Object) *libcalicoapi.LicenseKey {
 // Ensure licenseKey is decodable and valid (not expired)
 func validateLicenseKey(aapiObj runtime.Object) field.ErrorList {
 	allErrs := field.ErrorList{}
-
 	lcgLicenseKey := convertToLibcalico(aapiObj)
 
 	// Decode the license to make sure it's not corrupt.
@@ -116,13 +115,12 @@ func validateLicenseKey(aapiObj runtime.Object) field.ErrorList {
 	if err != nil {
 		allErrs = append(allErrs, field.InternalError(field.NewPath("LicenseKeySpec").Child("license"),
 			fmt.Errorf("license is corrupted: %s", err)))
-	}
-
-	// Validate the license before applying.
-	validStatus := licClaims.Validate()
-	if validStatus != licClient.Valid {
-		allErrs = append(allErrs, field.InternalError(field.NewPath("LicenseKeySpec").Child("token"),
-			fmt.Errorf("the license you're trying to create expired on %s", licClaims.Expiry.Time().Local())))
+	} else {
+		// Check if the license is expired
+		if licClaims.Validate() != licClient.Valid {
+			allErrs = append(allErrs, field.InternalError(field.NewPath("LicenseKeySpec").Child("token"),
+				fmt.Errorf("the license you're trying to create expired on %s", licClaims.Expiry.Time().Local())))
+		}
 	}
 
 	return allErrs
