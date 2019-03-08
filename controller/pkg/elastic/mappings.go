@@ -5,7 +5,7 @@ const ipSetMapping = `{
     "_doc": {
       "properties": {
         "ips": {
-            "type": "ip"
+            "type": "ip_range"
         }
       }
     }
