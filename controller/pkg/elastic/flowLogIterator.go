@@ -16,20 +16,21 @@ type Scroller interface {
 }
 
 type elasticFlowLogIterator struct {
-	scroll Scroller
-	ctx    context.Context
-	name   string
-	hits   []*elastic.SearchHit
-	val    events.SecurityEvent
-	err    error
+	scrollers []Scroller
+	ctx       context.Context
+	name      string
+	hits      []*elastic.SearchHit
+	val       events.SecurityEvent
+	err       error
 }
 
 func (i *elasticFlowLogIterator) Next() bool {
-	for {
+	for len(i.scrollers) > 0 {
 		if len(i.hits) == 0 {
-			r, err := i.scroll.Do(i.ctx)
+			r, err := i.scrollers[0].Do(i.ctx)
 			if err == io.EOF {
-				return false
+				i.scrollers = i.scrollers[1:]
+				continue
 			}
 			if err != nil {
 				i.err = err
@@ -56,6 +57,8 @@ func (i *elasticFlowLogIterator) Next() bool {
 			return true
 		}
 	}
+
+	return false
 }
 
 func (i *elasticFlowLogIterator) Value() events.SecurityEvent {

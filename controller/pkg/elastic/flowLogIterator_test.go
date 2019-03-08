@@ -79,8 +79,8 @@ func TestElasticFlowLogIterator(t *testing.T) {
 	}
 
 	i := elasticFlowLogIterator{
-		scroll: scroll,
-		ctx:    context.TODO(),
+		scrollers: []Scroller{scroll},
+		ctx:       context.TODO(),
 	}
 
 	var actual []events.SecurityEvent
@@ -114,8 +114,8 @@ func TestElasticFlowLogIteratorWithError(t *testing.T) {
 
 	scroll := &mockScrollerError{}
 	i := elasticFlowLogIterator{
-		scroll: scroll,
-		ctx:    context.TODO(),
+		scrollers: []Scroller{scroll},
+		ctx:       context.TODO(),
 	}
 
 	g.Expect(i.Next()).Should(BeFalse(), "Iterator stops immediately")
