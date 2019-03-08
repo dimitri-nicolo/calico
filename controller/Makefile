@@ -61,6 +61,9 @@ EXCLUDE_MANIFEST_REGISTRIES ?= quay.io/
 PUSH_MANIFEST_IMAGES=$(PUSH_IMAGES:$(EXCLUDE_MANIFEST_REGISTRIES)%=)
 PUSH_NONMANIFEST_IMAGES=$(filter-out $(PUSH_MANIFEST_IMAGES),$(PUSH_IMAGES))
 
+# location of docker credentials to push manifests
+DOCKER_CONFIG ?= $(HOME)/.docker/config.json
+
 GO_BUILD_VER?=v0.21
 # For building, we use the go-build image for the *host* architecture, even if the target is different
 # the one for the host should contain all the necessary cross-compilation tools
