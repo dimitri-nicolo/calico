@@ -525,8 +525,6 @@ func TestLicenseKeyClient(t *testing.T) {
 func testLicenseKeyClient(client calicoclient.Interface, name string) error {
 	licenseKeyClient := client.ProjectcalicoV3().LicenseKeys()
 
-	emptyLicenseKey := &v3.LicenseKey{ObjectMeta: metav1.ObjectMeta{Name: name}}
-
 	licenseKeys, err := licenseKeyClient.List(metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing licenseKeys (%s)", err)
@@ -535,11 +533,15 @@ func testLicenseKeyClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("items field should not be set to nil")
 	}
 
-	_, err = licenseKeyClient.Create(emptyLicenseKey)
+	// Validate that a license not encrypted with production key is rejected
+	corruptLicenseKey := &v3.LicenseKey{ObjectMeta: metav1.ObjectMeta{Name: name}}
+
+	_, err = licenseKeyClient.Create(corruptLicenseKey)
 	if err == nil {
 		return fmt.Errorf("expected creating the emptyLicenseKey")
 	}
 
+	// Confirm that valid, but expired licenses, are rejected
 	expiredLicenseKey := getExpiredLicenseKey(name)
 	_, err = licenseKeyClient.Create(expiredLicenseKey )
 	if err == nil {
