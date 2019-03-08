@@ -7,14 +7,13 @@ import (
 	goSync "sync"
 	"time"
 
+	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/feed"
 	"github.com/tigera/intrusion-detection/controller/pkg/gc"
 	"github.com/tigera/intrusion-detection/controller/pkg/puller"
 	"github.com/tigera/intrusion-detection/controller/pkg/searcher"
 	"github.com/tigera/intrusion-detection/controller/pkg/statser"
 	"github.com/tigera/intrusion-detection/controller/pkg/sync"
-
-	"github.com/tigera/intrusion-detection/controller/pkg/db"
 )
 
 // Watcher accepts updates from threat pullers and synchronizes them to the

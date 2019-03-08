@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/events"
-
 	"github.com/tigera/intrusion-detection/controller/pkg/feed"
 )
 

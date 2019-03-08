@@ -7,13 +7,11 @@ import (
 	"io"
 	"testing"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/events"
-
-	"github.com/tigera/intrusion-detection/controller/pkg/util"
-
 	"github.com/olivere/elastic"
-
 	. "github.com/onsi/gomega"
+
+	"github.com/tigera/intrusion-detection/controller/pkg/events"
+	"github.com/tigera/intrusion-detection/controller/pkg/util"
 )
 
 func TestElasticFlowLogIterator(t *testing.T) {

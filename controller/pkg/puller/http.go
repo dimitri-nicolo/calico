@@ -3,8 +3,6 @@ package puller
 import (
 	"bufio"
 	"context"
-	"github.com/tigera/intrusion-detection/controller/pkg/feed"
-	"github.com/tigera/intrusion-detection/controller/pkg/statser"
 	"net"
 	"net/http"
 	"net/url"
@@ -12,6 +10,9 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+
+	"github.com/tigera/intrusion-detection/controller/pkg/feed"
+	"github.com/tigera/intrusion-detection/controller/pkg/statser"
 )
 
 const CommentPrefix = "#"

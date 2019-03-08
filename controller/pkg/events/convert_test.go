@@ -3,10 +3,10 @@ package events
 import (
 	"testing"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/util"
-
 	"github.com/olivere/elastic"
 	. "github.com/onsi/gomega"
+
+	"github.com/tigera/intrusion-detection/controller/pkg/util"
 )
 
 func TestConvertFlowLog(t *testing.T) {

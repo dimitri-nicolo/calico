@@ -6,11 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/events"
-
 	. "github.com/onsi/gomega"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
+	"github.com/tigera/intrusion-detection/controller/pkg/events"
 	"github.com/tigera/intrusion-detection/controller/pkg/feed"
 	"github.com/tigera/intrusion-detection/controller/pkg/statser"
 	"github.com/tigera/intrusion-detection/controller/pkg/util"

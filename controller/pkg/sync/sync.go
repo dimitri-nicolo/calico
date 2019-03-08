@@ -2,12 +2,13 @@ package sync
 
 import (
 	"context"
-	"github.com/tigera/intrusion-detection/controller/pkg/db"
-	"github.com/tigera/intrusion-detection/controller/pkg/feed"
-	"github.com/tigera/intrusion-detection/controller/pkg/statser"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
+
+	"github.com/tigera/intrusion-detection/controller/pkg/db"
+	"github.com/tigera/intrusion-detection/controller/pkg/feed"
+	"github.com/tigera/intrusion-detection/controller/pkg/statser"
 )
 
 const statserType = "ElasticSyncFailed"

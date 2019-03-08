@@ -2,10 +2,11 @@ package gc
 
 import (
 	"context"
-	"github.com/tigera/intrusion-detection/controller/pkg/feed"
-	"github.com/tigera/intrusion-detection/controller/pkg/statser"
 	"sync"
 	"time"
+
+	"github.com/tigera/intrusion-detection/controller/pkg/feed"
+	"github.com/tigera/intrusion-detection/controller/pkg/statser"
 )
 
 const statserType = "GarbageCollectionFailed"

@@ -6,12 +6,12 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/olivere/elastic"
+	log "github.com/sirupsen/logrus"
+
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/events"
 	"github.com/tigera/intrusion-detection/controller/pkg/feed"
-
-	"github.com/olivere/elastic"
-	log "github.com/sirupsen/logrus"
 )
 
 const IPSetIndex = ".tigera.ipset"

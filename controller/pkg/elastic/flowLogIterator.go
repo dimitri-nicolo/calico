@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"io"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/events"
-
 	"github.com/olivere/elastic"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/tigera/intrusion-detection/controller/pkg/events"
 )
 
 type Scroller interface {
