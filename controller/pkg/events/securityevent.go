@@ -2,6 +2,7 @@ package events
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/util"
 )
@@ -28,7 +29,12 @@ type SecurityEvent struct {
 }
 
 func (s SecurityEvent) ID() string {
-	return fmt.Sprintf("%d-%s-%s-%s-%s-%s",
+	feed := "unknown"
+	if len(s.Feeds) > 0 {
+		feed = strings.Join(s.Feeds, "-")
+	}
+	return fmt.Sprintf("%s-%d-%s-%s-%s-%s-%s",
+		feed,
 		s.Time,
 		s.Protocol,
 		util.StringPtrWrapper{s.SourceIP},
