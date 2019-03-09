@@ -54,7 +54,7 @@ func (d *flowSearcher) doIPSet(ctx context.Context, statser statser.Statser) {
 	var clean = true
 	for flowIterator.Next() {
 		c++
-		err := d.events.PutFlowLog(ctx, flowIterator.Value())
+		err := d.events.PutSecurityEvent(ctx, flowIterator.Value())
 		if err != nil {
 			clean = false
 			statser.Error(statserType, err)

@@ -83,7 +83,7 @@ func (e *Elastic) GetIPSet(name string) ([]string, error) {
 	return nil, nil
 }
 
-func (e *Elastic) QueryIPSet(ctx context.Context, name string) (db.FlowLogIterator, error) {
+func (e *Elastic) QueryIPSet(ctx context.Context, name string) (db.SecurityEventIterator, error) {
 	f := func(name string) *elastic.ScrollService {
 		q := elastic.NewTermsQuery(name).TermsLookup(
 			elastic.NewTermsLookup().
@@ -101,7 +101,7 @@ func (e *Elastic) QueryIPSet(ctx context.Context, name string) (db.FlowLogIterat
 	}, nil
 }
 
-func (e *Elastic) PutFlowLog(ctx context.Context, f events.SecurityEvent) error {
+func (e *Elastic) PutSecurityEvent(ctx context.Context, f events.SecurityEvent) error {
 	err := e.ensureIndexExists(ctx, EventIndex, eventMapping)
 	if err != nil {
 		return err

@@ -64,7 +64,7 @@ func TestDoIPSetSuspiciousIPIterationFails(t *testing.T) {
 	runTest(t, false, expected, nil, 1, -1)
 }
 
-// TestDoIPSetEventsFails tests the case where the first call to events.PutFlowLog fails but the second does not
+// TestDoIPSetEventsFails tests the case where the first call to events.PutSecurityEvent fails but the second does not
 func TestDoIPSetEventsFails(t *testing.T) {
 	expected := []events.SecurityEvent{
 		{
@@ -127,7 +127,7 @@ type mockDB struct {
 	value         events.SecurityEvent
 }
 
-func (m *mockDB) QueryIPSet(ctx context.Context, name string) (db.FlowLogIterator, error) {
+func (m *mockDB) QueryIPSet(ctx context.Context, name string) (db.SecurityEventIterator, error) {
 	return m, m.err
 }
 
@@ -154,10 +154,10 @@ func (m *mockDB) Err() error {
 	return nil
 }
 
-func (m *mockDB) PutFlowLog(ctx context.Context, l events.SecurityEvent) error {
+func (m *mockDB) PutSecurityEvent(ctx context.Context, l events.SecurityEvent) error {
 	if len(m.flowLogs) == m.errorIdx && !m.errorReturned {
 		m.errorReturned = true
-		return errors.New("PutFlowLog error")
+		return errors.New("PutSecurityEvent error")
 	}
 	m.flowLogs = append(m.flowLogs, l)
 	return nil
