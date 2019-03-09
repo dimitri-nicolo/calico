@@ -49,5 +49,9 @@ import:
   - util/workqueue
 - package: github.com/onsi/ginkgo
 - package: github.com/tigera/licensing
+  version: c9432e3124d3f9da2f3e34a703d815b072f6b0b4
   repo: git@github.com:tigera/licensing
   vcs: git
+  subpackages:
+  - client
+  - monitor
