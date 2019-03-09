@@ -70,11 +70,7 @@ const eventMapping = `{
             "type": "keyword"
         },
         "feeds": {
-                /* This is an array of keywords. It is not necessary to declare this as an array. Elastic will automatically accept a list of strings here */
-                "type": "nested",
-                "properties": {
-                        "labels": {"type": "keyword"}
-                }
+            "type": "keyword"
         },
         "suspicious_prefix": {
             "type": "keyword"
