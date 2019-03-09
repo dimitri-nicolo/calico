@@ -2,7 +2,8 @@ package db
 
 import (
 	"context"
-	"fmt"
+
+	"github.com/tigera/intrusion-detection/controller/pkg/events"
 	"github.com/tigera/intrusion-detection/controller/pkg/feed"
 )
 
@@ -15,22 +16,15 @@ type IPSet interface {
 }
 
 type SuspiciousIP interface {
-	QueryIPSet(ctx context.Context, name string) ([]FlowLog, error)
+	QueryIPSet(ctx context.Context, name string) (SecurityEventIterator, error)
+}
+
+type SecurityEventIterator interface {
+	Next() bool
+	Value() events.SecurityEvent
+	Err() error
 }
 
 type Events interface {
-	PutFlowLog(context.Context, FlowLog) error
-}
-
-type FlowLog struct {
-	SourceIP   string `json:"source_ip"`
-	SourceName string `json:"source_name"`
-	DestIP     string `json:"dest_ip"`
-	DestName   string `json:"dest_name"`
-	StartTime  int    `json:"start_time"`
-	EndTime    int    `json:"end_time"`
-}
-
-func (f FlowLog) ID() string {
-	return fmt.Sprintf("%d-%s-%s-%s", f.StartTime, f.SourceIP, f.SourceName, f.DestIP)
+	PutSecurityEvent(context.Context, events.SecurityEvent) error
 }

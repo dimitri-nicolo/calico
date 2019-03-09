@@ -2,6 +2,7 @@ package puller
 
 import (
 	"context"
+
 	"github.com/tigera/intrusion-detection/controller/pkg/feed"
 	"github.com/tigera/intrusion-detection/controller/pkg/statser"
 )

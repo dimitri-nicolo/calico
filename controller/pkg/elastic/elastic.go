@@ -2,24 +2,23 @@ package elastic
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
-	"encoding/json"
 	"fmt"
-	"github.com/tigera/intrusion-detection/controller/pkg/db"
-	"github.com/tigera/intrusion-detection/controller/pkg/feed"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 
 	"github.com/olivere/elastic"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/tigera/intrusion-detection/controller/pkg/db"
+	"github.com/tigera/intrusion-detection/controller/pkg/events"
+	"github.com/tigera/intrusion-detection/controller/pkg/feed"
 )
 
 const IPSetIndex = ".tigera.ipset"
 const StandardType = "_doc"
 const FlowLogIndex = "tigera_secure_ee_flows*"
 const EventIndex = "tigera_secure_ee_events"
+const QuerySize = 1000
 
 type ipSetDoc struct {
 	IPs feed.IPSet `json:"ips"`
@@ -29,25 +28,8 @@ type Elastic struct {
 	c *elastic.Client
 }
 
-func NewElastic(url *url.URL, username, password, pathToCA string) *Elastic {
-	ca, err := x509.SystemCertPool()
-	if err != nil {
-		panic(err)
-	}
-	if pathToCA != "" {
-		cert, err := ioutil.ReadFile(pathToCA)
-		if err != nil {
-			panic(err)
-		}
-		ok := ca.AppendCertsFromPEM(cert)
-		if !ok {
-			panic("failed to add CA")
-		}
-	}
-	h := &http.Client{}
-	if url.Scheme == "https" {
-		h.Transport = &http.Transport{TLSClientConfig: &tls.Config{RootCAs: ca}}
-	}
+func NewElastic(h *http.Client, url *url.URL, username, password string) *Elastic {
+
 	options := []elastic.ClientOptionFunc{
 		elastic.SetURL(url.String()),
 		elastic.SetHttpClient(h),
@@ -101,31 +83,25 @@ func (e *Elastic) GetIPSet(name string) ([]string, error) {
 	return nil, nil
 }
 
-func (e *Elastic) QueryIPSet(ctx context.Context, name string) ([]db.FlowLog, error) {
-	q := elastic.NewTermsQuery("source_ip").TermsLookup(
-		elastic.NewTermsLookup().
-			Index(IPSetIndex).
-			Type(StandardType).
-			Id(name).
-			Path("ips"))
-	r, err := e.c.Search().Index(FlowLogIndex).Query(q).Size(1000).Do(ctx)
-	if err != nil {
-		return nil, err
+func (e *Elastic) QueryIPSet(ctx context.Context, name string) (db.SecurityEventIterator, error) {
+	f := func(name string) *elastic.ScrollService {
+		q := elastic.NewTermsQuery(name).TermsLookup(
+			elastic.NewTermsLookup().
+				Index(IPSetIndex).
+				Type(StandardType).
+				Id(name).
+				Path("ips"))
+		return e.c.Scroll(FlowLogIndex).SortBy(elastic.SortByDoc{}).Query(q).Size(QuerySize)
 	}
-	log.WithField("hits", r.TotalHits()).Info("elastic query returned")
-	var flows []db.FlowLog
-	for _, hit := range r.Hits.Hits {
-		var flow db.FlowLog
-		err := json.Unmarshal(*hit.Source, &flow)
-		if err != nil {
-			log.WithError(err).WithField("raw", *hit.Source).Error("could not unmarshal")
-		}
-		flows = append(flows, flow)
-	}
-	return flows, nil
+
+	return &elasticFlowLogIterator{
+		scrollers: map[string]Scroller{"source_ip": f("source_ip"), "dest_ip": f("dest_ip")},
+		ctx:       ctx,
+		name:      name,
+	}, nil
 }
 
-func (e *Elastic) PutFlowLog(ctx context.Context, f db.FlowLog) error {
+func (e *Elastic) PutSecurityEvent(ctx context.Context, f events.SecurityEvent) error {
 	err := e.ensureIndexExists(ctx, EventIndex, eventMapping)
 	if err != nil {
 		return err

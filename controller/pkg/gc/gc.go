@@ -2,10 +2,11 @@ package gc
 
 import (
 	"context"
-	"github.com/tigera/intrusion-detection/controller/pkg/feed"
-	"github.com/tigera/intrusion-detection/controller/pkg/statser"
 	"sync"
 	"time"
+
+	"github.com/tigera/intrusion-detection/controller/pkg/feed"
+	"github.com/tigera/intrusion-detection/controller/pkg/statser"
 )
 
 const statserType = "GarbageCollectionFailed"
@@ -28,9 +29,6 @@ func NewGarbageCollector(feed feed.Feed, period time.Duration) GarbageCollector 
 
 func (g *garbageCollector) Run(ctx context.Context, statser statser.Statser) {
 	g.once.Do(func() {
-		if ctx == nil {
-			ctx = context.Background()
-		}
 		ctx, g.cancel = context.WithCancel(ctx)
 
 		go func() {

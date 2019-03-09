@@ -3,8 +3,6 @@ package puller
 import (
 	"bufio"
 	"context"
-	"github.com/tigera/intrusion-detection/controller/pkg/feed"
-	"github.com/tigera/intrusion-detection/controller/pkg/statser"
 	"net"
 	"net/http"
 	"net/url"
@@ -12,6 +10,9 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+
+	"github.com/tigera/intrusion-detection/controller/pkg/feed"
+	"github.com/tigera/intrusion-detection/controller/pkg/statser"
 )
 
 const CommentPrefix = "#"
@@ -38,9 +39,6 @@ func NewHTTPPuller(feed feed.Feed, u *url.URL, period time.Duration, header http
 
 func (h *httpPuller) Run(ctx context.Context, statser statser.Statser) <-chan feed.IPSet {
 	snapshots := make(chan feed.IPSet)
-	if ctx == nil {
-		ctx = context.Background()
-	}
 	ctx, h.cancel = context.WithCancel(ctx)
 
 	go h.mainloop(ctx, snapshots, statser)
