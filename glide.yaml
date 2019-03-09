@@ -39,6 +39,12 @@ import:
   - lib/upgrade/migrator/clients
 - package: github.com/sirupsen/logrus
   version: v1.0.4
+- package: github.com/tigera/licensing
+  repo: git@github.com:tigera/licensing
+  vcs: git
+  version: c9432e3124d3f9da2f3e34a703d815b072f6b0b4
+  subpackages:
+  - client
 - package: k8s.io/apimachinery
   subpackages:
   - pkg/apis/meta/v1
