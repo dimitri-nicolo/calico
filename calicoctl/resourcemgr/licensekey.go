@@ -17,6 +17,7 @@ package resourcemgr
 import (
 	"context"
 	"fmt"
+	"time"
 
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
@@ -49,11 +50,23 @@ func init() {
 			}
 
 			// Validate the license before applying.
-			if err = licClaims.Validate(); err != nil {
-				// License is already expired. Don't apply it.
-				return nil, fmt.Errorf("the license you're trying to create expired on %s", licClaims.Expiry.Time().Local())
+			licStatus := licClaims.Validate()
+			if licStatus == licClient.NoLicenseLoaded {
+				// License is empty or invalid. Don't apply it.
+				return nil, fmt.Errorf("The license you're trying to create is empty or invalid")
 			}
-			log.Debug("License is valid")
+			if licStatus == licClient.Expired {
+				// License is already expired. Don't apply it.
+				return nil, fmt.Errorf("The license you're trying to create expired on %s", licClaims.Expiry.Time().Local())
+			}
+			if licStatus == licClient.InGracePeriod {
+				// License is already expired but in grace period.
+				expiryTime := licClaims.Expiry.Time()
+				gracePeriodExpiryTime := expiryTime.Add(time.Duration(licClaims.GracePeriod) * time.Hour * 24)
+				log.Warningf("The license you're trying to create is expired on %s but in grace period till %v", expiryTime.Local(), gracePeriodExpiryTime.Local())
+			} else {
+				log.Debug("License is valid")
+			}
 
 			// License is not corrupt or expired, so we create it.
 			return client.LicenseKey().Create(ctx, r, options.SetOptions{})
@@ -64,15 +77,27 @@ func init() {
 			// Decode the license to make sure it's not corrupt.
 			licClaims, err := licClient.Decode(*r)
 			if err != nil {
-				return nil, fmt.Errorf("license is corrupted: %s", err.Error())
+				return nil, fmt.Errorf("License is corrupted: %s", err.Error())
 			}
 
 			// Validate the license before applying.
-			if err = licClaims.Validate(); err != nil {
-				// License is already expired. Don't apply it.
-				return nil, fmt.Errorf("the license you're trying to apply expired on %s", licClaims.Expiry.Time().Local())
+			licStatus := licClaims.Validate()
+			if licStatus == licClient.NoLicenseLoaded {
+				// License is empty or invalid. Don't apply it.
+				return nil, fmt.Errorf("The license you're trying to create is empty or invalid")
 			}
-			log.Debug("License is valid")
+			if licStatus == licClient.Expired {
+				// License is already expired. Don't apply it.
+				return nil, fmt.Errorf("The license you're trying to apply expired on %s", licClaims.Expiry.Time().Local())
+			}
+			if licStatus == licClient.InGracePeriod {
+				// License is already expired but in grace period.
+				expiryTime := licClaims.Expiry.Time()
+				gracePeriodExpiryTime := expiryTime.Add(time.Duration(licClaims.GracePeriod) * time.Hour * 24)
+				log.Warningf("The license you're trying to create is expired on %s but in grace period till %v", expiryTime.Local(), gracePeriodExpiryTime.Local())
+			} else {
+				log.Debug("License is valid")
+			}
 
 			// See if there's already an existing license, if there is then compare it's expiry date with the one we're
 			// about to apply, and only apply the new one if it's expiry is not sooner than the current one.

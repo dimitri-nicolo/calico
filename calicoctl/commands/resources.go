@@ -256,7 +256,7 @@ func executeResourceAction(args map[string]interface{}, client client.Interface,
 			return nil, fmt.Errorf("license is corrupted. Please contact Tigera support or email licensing@tigera.io")
 		}
 
-		if err = claims.Validate(); err != nil {
+		if licStatus := claims.Validate(); licStatus != licClient.Valid {
 			// If the license is expired (but within grace period) then show this warning banner, but continue to work.
 			// in CNX v2.1, grace period is infinite.
 			fmt.Println("[WARNING] Your license has expired. Please update your license to restore normal operations.")

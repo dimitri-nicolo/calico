@@ -313,12 +313,14 @@ imports:
 - name: github.com/termie/go-shutil
   version: bcacb06fecaeec8dc42af03c87c6949f4a05c74c
 - name: github.com/tigera/licensing
-  version: dbaa48ceef2b82d07b531bcf46f8d5e30552dfd9
+  version: c9432e3124d3f9da2f3e34a703d815b072f6b0b4
   repo: git@github.com:tigera/licensing
   vcs: git
   subpackages:
   - client
+  - client/features
   - crypto
+  - monitor
 - name: github.com/vishvananda/netlink
   version: f07d9d5231b9cd05ddf2e5a8ef6582f385bc1770
   subpackages:

@@ -16,7 +16,7 @@ import:
 - package: github.com/projectcalico/go-yaml-wrapper
 # Pinning to old version until client code is updated.
 - package: github.com/tigera/licensing
-  version: dbaa48ceef2b82d07b531bcf46f8d5e30552dfd9
+  version: c9432e3124d3f9da2f3e34a703d815b072f6b0b4
   repo: git@github.com:tigera/licensing
   vcs: git
   subpackages:
