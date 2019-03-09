@@ -18,11 +18,11 @@ func ConvertFlowLog(flowLog FlowLogJSONOutput, key string, hit *elastic.SearchHi
 	var description string
 	switch key {
 	case "source_ip":
-		description = fmt.Sprintf("Suspicious IP %s from list %s connected to pod %s/%s", util.StringPtrWrapper{S: flowLog.SourceIP}, strings.Join(feeds, ", "), flowLog.SourceNamespace, flowLog.SourceName)
+		description = fmt.Sprintf("suspicious IP %s from list %s connected to %s %s/%s", util.StringPtrWrapper{S: flowLog.SourceIP}, strings.Join(feeds, ", "), flowLog.DestType, flowLog.DestNamespace, flowLog.DestName)
 	case "dest_ip":
-		description = fmt.Sprintf("Pod %s/%s connected to suspicious IP %s from list %s", flowLog.DestNamespace, flowLog.DestName, util.StringPtrWrapper{S: flowLog.DestIP}, strings.Join(feeds, ", "))
+		description = fmt.Sprintf("%s %s/%s connected to suspicious IP %s from list %s", flowLog.SourceType, flowLog.SourceNamespace, flowLog.SourceName, util.StringPtrWrapper{S: flowLog.DestIP}, strings.Join(feeds, ", "))
 	default:
-		description = fmt.Sprintf("%s connected to %s", util.StringPtrWrapper{S: flowLog.SourceIP}, util.StringPtrWrapper{S: flowLog.DestIP})
+		description = fmt.Sprintf("%s %s connected to %s %s", flowLog.SourceType, util.StringPtrWrapper{S: flowLog.SourceIP}, flowLog.DestType, util.StringPtrWrapper{S: flowLog.DestIP})
 	}
 
 	return SecurityEvent{

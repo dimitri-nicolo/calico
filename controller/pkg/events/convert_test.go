@@ -24,7 +24,7 @@ func TestConvertFlowLogSourceIP(t *testing.T) {
 		SourceNameAggr:  "source",
 		SourceNamespace: "test",
 		SourcePort:      util.I64ptr(443),
-		SourceType:      "pod",
+		SourceType:      "wep",
 		SourceLabels: &FlowLogLabelsJSONOutput{
 			Labels: []string{"source-label"},
 		},
@@ -33,7 +33,7 @@ func TestConvertFlowLogSourceIP(t *testing.T) {
 		DestNameAggr:  "dest",
 		DestNamespace: "internet",
 		DestPort:      util.I64ptr(80),
-		DestType:      "public",
+		DestType:      "net",
 		DestLabels: &FlowLogLabelsJSONOutput{
 			Labels: []string{"dest-label"},
 		},
@@ -56,7 +56,7 @@ func TestConvertFlowLogSourceIP(t *testing.T) {
 	expected := SecurityEvent{
 		Time:             123,
 		Type:             SuspiciousFlow,
-		Description:      "Suspicious IP 1.2.3.4 from list testfeed connected to pod test/source-foo",
+		Description:      "suspicious IP 1.2.3.4 from list testfeed connected to net internet/dest-foo",
 		Severity:         Severity,
 		FlowLogIndex:     "test_flows_index",
 		FlowLogID:        "111-222-333",
@@ -95,7 +95,7 @@ func TestConvertFlowLogDestIP(t *testing.T) {
 		SourceNameAggr:  "source",
 		SourceNamespace: "test",
 		SourcePort:      util.I64ptr(443),
-		SourceType:      "pod",
+		SourceType:      "wep",
 		SourceLabels: &FlowLogLabelsJSONOutput{
 			Labels: []string{"source-label"},
 		},
@@ -104,7 +104,7 @@ func TestConvertFlowLogDestIP(t *testing.T) {
 		DestNameAggr:  "dest",
 		DestNamespace: "internet",
 		DestPort:      util.I64ptr(80),
-		DestType:      "public",
+		DestType:      "net",
 		DestLabels: &FlowLogLabelsJSONOutput{
 			Labels: []string{"dest-label"},
 		},
@@ -127,7 +127,7 @@ func TestConvertFlowLogDestIP(t *testing.T) {
 	expected := SecurityEvent{
 		Time:             123,
 		Type:             SuspiciousFlow,
-		Description:      "Pod internet/dest-foo connected to suspicious IP 2.3.4.5 from list testfeed",
+		Description:      "wep test/source-foo connected to suspicious IP 2.3.4.5 from list testfeed",
 		Severity:         Severity,
 		FlowLogIndex:     "test_flows_index",
 		FlowLogID:        "111-222-333",
@@ -166,7 +166,7 @@ func TestConvertFlowLogUnknown(t *testing.T) {
 		SourceNameAggr:  "source",
 		SourceNamespace: "test",
 		SourcePort:      util.I64ptr(443),
-		SourceType:      "pod",
+		SourceType:      "hep",
 		SourceLabels: &FlowLogLabelsJSONOutput{
 			Labels: []string{"source-label"},
 		},
@@ -175,7 +175,7 @@ func TestConvertFlowLogUnknown(t *testing.T) {
 		DestNameAggr:  "dest",
 		DestNamespace: "internet",
 		DestPort:      util.I64ptr(80),
-		DestType:      "public",
+		DestType:      "ns",
 		DestLabels: &FlowLogLabelsJSONOutput{
 			Labels: []string{"dest-label"},
 		},
@@ -198,7 +198,7 @@ func TestConvertFlowLogUnknown(t *testing.T) {
 	expected := SecurityEvent{
 		Time:             123,
 		Type:             SuspiciousFlow,
-		Description:      "1.2.3.4 connected to 2.3.4.5",
+		Description:      "hep 1.2.3.4 connected to ns 2.3.4.5",
 		Severity:         Severity,
 		FlowLogIndex:     "test_flows_index",
 		FlowLogID:        "111-222-333",

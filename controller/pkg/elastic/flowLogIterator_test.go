@@ -125,8 +125,10 @@ func TestElasticFlowLogIteratorWithTwoScrollers(t *testing.T) {
 	g := NewGomegaWithT(t)
 
 	source_log := events.FlowLogJSONOutput{
+		SourceType: "wep",
 		SourceIP:   util.Sptr("1.2.3.4"),
 		SourceName: "source",
+		DestType:   "hep",
 		DestIP:     util.Sptr("2.3.4.5"),
 		DestName:   "dest",
 	}
@@ -135,8 +137,10 @@ func TestElasticFlowLogIteratorWithTwoScrollers(t *testing.T) {
 	source_msg := json.RawMessage(b)
 
 	dest_log := events.FlowLogJSONOutput{
+		SourceType: "net",
 		SourceIP:   util.Sptr("3.4.5.6"),
 		SourceName: "source",
+		DestType:   "ns",
 		DestIP:     util.Sptr("4.5.6.7"),
 		DestName:   "dest",
 	}
@@ -192,8 +196,8 @@ func TestElasticFlowLogIteratorWithTwoScrollers(t *testing.T) {
 		results[1], results[0] = results[0], results[1]
 	}
 
-	g.Expect(results[0].Description).Should(Equal("Suspicious IP 1.2.3.4 from list test connected to pod /source"))
-	g.Expect(results[1].Description).Should(Equal("Pod /dest connected to suspicious IP 4.5.6.7 from list test"))
+	g.Expect(results[0].Description).Should(Equal("suspicious IP 1.2.3.4 from list test connected to hep /dest"))
+	g.Expect(results[1].Description).Should(Equal("net /source connected to suspicious IP 4.5.6.7 from list test"))
 }
 
 type mockScrollerError struct{}
