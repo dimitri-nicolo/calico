@@ -1,5 +1,5 @@
-hash: 9c0482a55011cdca3ea9acd1e2a21967cc7c035024ee02175b38210bfa6b7153
-updated: 2018-11-26T15:46:26.525454269Z
+hash: 669e7e0031650b569f19c668e600f6bdd8ec28e70d93556b8ec692285e10fd6e
+updated: 2019-03-11T20:02:29.858733788Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -14,7 +14,7 @@ imports:
   - autorest/azure
   - autorest/date
 - name: github.com/beorn7/perks
-  version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
+  version: 4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9
   subpackages:
   - quantile
 - name: github.com/coreos/etcd
@@ -33,7 +33,7 @@ imports:
   - pkg/types
   - version
 - name: github.com/coreos/go-semver
-  version: e214231b295a8ea9479f11b70b35d5acf3556d9b
+  version: 8ab6407b697782a06568d4b7f1db25550ec2e4c6
   subpackages:
   - semver
 - name: github.com/davecgh/go-spew
@@ -55,11 +55,17 @@ imports:
 - name: github.com/go-openapi/jsonpointer
   version: 46af16f9f7b149af66e5d1bd010e3574dc06de98
 - name: github.com/go-openapi/jsonreference
-  version: 3fb327e6747da3043567ee86abd02bb6376b6be2
+  version: 13c6e3589ad90f49bd3e3bbe2c2cb3d7a4142272
 - name: github.com/go-openapi/spec
   version: 384415f06ee238aae1df5caad877de6ceac3a5c4
 - name: github.com/go-openapi/swag
   version: becd2f08beafcca035645a8a101e0e3e18140458
+- name: github.com/go-playground/locales
+  version: f63010822830b6fe52288ee52d5a1151088ce039
+  subpackages:
+  - currency
+- name: github.com/go-playground/universal-translator
+  version: 71201497bace774495daed26a3874fd339e0b538
 - name: github.com/gogo/protobuf
   version: c0656edd0d9eab7c66d1eb0c568f9039345796f7
   subpackages:
@@ -112,6 +118,8 @@ imports:
   version: ae77be60afb1dcacde03767a8c37337fad28ac14
 - name: github.com/kelseyhightower/envconfig
   version: f611eb38b3875cc3bd991ca91c51d06446afa14c
+- name: github.com/leodido/go-urn
+  version: a67a23e1c1af3c66528573bb86a87246477277c1
 - name: github.com/mailru/easyjson
   version: 03f2033d19d5860aef995fe360ac7d395cd8ce65
   subpackages:
@@ -176,7 +184,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 62b0caa50dc18ed3a402a924a35c25636fd45513
+  version: b57de3f3848a32bfcdce5c1f630327397f574280
   repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib/apiconfig
@@ -325,7 +333,7 @@ imports:
   subpackages:
   - rate
 - name: google.golang.org/appengine
-  version: b1f26356af11148e710935ed1ac8a7f5702c7612
+  version: 9d8544a6b2c7df9cff240fcf92d7b2f59bc13416
   subpackages:
   - internal
   - internal/app_identity
@@ -361,8 +369,8 @@ imports:
   - status
   - tap
   - transport
-- name: gopkg.in/go-playground/validator.v8
-  version: 5f1438d3fca68893a817e4a66806cea46a9e4ebf
+- name: gopkg.in/go-playground/validator.v9
+  version: b199fa0642d29caca62b6a99d65cc981ba5edc3b
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: gopkg.in/yaml.v2
