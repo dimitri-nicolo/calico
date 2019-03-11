@@ -10,7 +10,6 @@ REGISTRY_PREFIX?=gcr.io/unique-caldron-775/cnx/
 PACKAGE_NAME?=github.com/tigera/calicoq
 LOCAL_USER_ID?=$(shell id -u $$USER)
 BINARY:=bin/calicoq
-QUERYSERVER_IMAGE:=tigera/cnx-queryserver
 
 GO_BUILD_VER?=latest
 GO_BUILD?=calico/go-build:$(GO_BUILD_VER)
@@ -47,6 +46,14 @@ DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
                               -v $${PWD}/.go-pkg-cache:/go/pkg:rw \
                               -w /go/src/$(PACKAGE_NAME) \
                               $(GO_BUILD)
+
+# Always install the git hooks to prevent publishing closed source code to a non-private repo.
+hooks_installed:=$(shell ./install-git-hooks)
+
+.PHONY: install-git-hooks
+## Install Git hooks
+install-git-hooks:
+	./install-git-hooks
 
 .PHONY: vendor
 vendor vendor/.up-to-date: glide.lock
@@ -209,11 +216,6 @@ endif
 	$(MAKE) binary-containerized RELEASE_BUILD=1
 	$(MAKE) build-image
 
-	# Build CNX queryserver.  Delete the image here as well to catch if the
-	# container name changes in the slave Makefile.
-	docker rmi $(QUERYSERVER_IMAGE):latest || true
-	$(MAKE) -C web clean clean-release $(QUERYSERVER_IMAGE) RELEASE_BUILD=1
-
 	# Make the release directory and move over the relevant files
 	mkdir -p release
 	mv $(BINARY) release/calicoq-$(CALICOQ_GIT_DESCRIPTION)
@@ -231,25 +233,19 @@ endif
 
 	# Retag images with correct version and registry prefix
 	docker tag $(BUILD_IMAGE) $(REGISTRY_PREFIX)$(BUILD_IMAGE):$(VERSION)
-	docker tag $(QUERYSERVER_IMAGE) $(REGISTRY_PREFIX)$(QUERYSERVER_IMAGE):$(VERSION)
 
 	# Check that images were created recently and that the IDs of the versioned and latest images match
 	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" $(BUILD_IMAGE)
 	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" $(REGISTRY_PREFIX)$(BUILD_IMAGE):$(VERSION)
-	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" $(QUERYSERVER_IMAGE)
-	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" $(REGISTRY_PREFIX)$(QUERYSERVER_IMAGE):$(VERSION)
 
 	@echo "\nNow push the tag and images."
 	@echo "git push origin $(VERSION)"
 	@echo "gcloud auth configure-docker"
 	@echo "docker push $(REGISTRY_PREFIX)$(BUILD_IMAGE):$(VERSION)"
-	@echo "docker push $(REGISTRY_PREFIX)$(QUERYSERVER_IMAGE):$(VERSION)"
 	@echo "\nIf this release version is the newest stable release, also tag and push the"
 	@echo "images with the 'latest' tag"
 	@echo "docker tag $(BUILD_IMAGE) $(REGISTRY_PREFIX)$(BUILD_IMAGE):latest"
-	@echo "docker tag $(QUERYSERVER_IMAGE):latest $(REGISTRY_PREFIX)$(QUERYSERVER_IMAGE):latest"
 	@echo "docker push $(REGISTRY_PREFIX)$(BUILD_IMAGE):latest"
-	@echo "docker push $(REGISTRY_PREFIX)$(QUERYSERVER_IMAGE):latest"
 
 .PHONY: compress-release
 compressed-release: release/calicoq
