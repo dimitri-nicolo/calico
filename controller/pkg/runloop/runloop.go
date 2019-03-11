@@ -3,6 +3,7 @@ package runloop
 import (
 	"context"
 	"errors"
+	"reflect"
 	"sync"
 	"time"
 )
@@ -11,6 +12,32 @@ import (
 func RunLoop(ctx context.Context, f func(), period time.Duration) error {
 	// The channel is closed within RunLoop
 	return runLoop(ctx, func() {}, f, period, make(chan struct{}), func() {}, 0)
+}
+
+func RunLoopRecvChannel(ctx context.Context, f func(interface{}), c interface{}) error {
+	ch := reflect.ValueOf(c)
+	for {
+		chosen, v, ok := reflect.Select([]reflect.SelectCase{
+			{
+				Dir:  reflect.SelectRecv,
+				Chan: reflect.ValueOf(ctx.Done()),
+			},
+			{
+				Dir:  reflect.SelectRecv,
+				Chan: ch,
+			},
+		})
+		switch chosen {
+		case 0:
+			return ctx.Err()
+		case 1:
+			if ok {
+				f(v.Interface())
+			} else {
+				return nil
+			}
+		}
+	}
 }
 
 // RunFuncWithReschedule periodically executes f, or executes rescheduleFunc, sleeps for reschedulePeriod and then executes f

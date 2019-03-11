@@ -9,9 +9,11 @@ import (
 
 const statserType = "PullFailed"
 
+type SyncFailFunction func()
+
 type Puller interface {
 	// Run activates the feed and returns a channel that sends snapshots of the
 	// IPs that are considered suspicious.
-	Run(context.Context, statser.Statser) <-chan feed.IPSet
+	Run(context.Context, statser.Statser) (<-chan feed.IPSet, SyncFailFunction)
 	Close()
 }

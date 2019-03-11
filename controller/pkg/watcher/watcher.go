@@ -63,7 +63,7 @@ func (s *watcher) Run(ctx context.Context) {
 		headers.Add("Accept", "text/plain")
 
 		feed := feed.NewFeed("test", "calico-monitoring")
-		puller := puller.NewHTTPPuller(feed, testUrl, 24*time.Hour, headers)
+		puller := puller.NewHTTPPuller(feed, &http.Client{}, testUrl, headers, 24*time.Hour, 0)
 
 		s.startFeed(feed, puller)
 	})
@@ -80,8 +80,8 @@ func (s *watcher) startFeed(feed feed.Feed, puller puller.Puller) {
 	}
 
 	s.feeds[feed.Name()] = fw
-	c := puller.Run(s.ctx, fw.statser)
-	fw.syncer.Run(s.ctx, c, fw.statser)
+	c, failFunc := puller.Run(s.ctx, fw.statser)
+	fw.syncer.Run(s.ctx, c, failFunc, fw.statser)
 	fw.garbageCollector.Run(s.ctx, fw.statser)
 	fw.searcher.Run(s.ctx, fw.statser)
 }
