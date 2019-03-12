@@ -936,6 +936,21 @@ func validateRule(structLevel validator.StructLevel) {
 		structLevel.ReportError(alpValue, alpField,
 			"", reason("only valid for Allow rules"), "")
 	}
+
+	if len(rule.AllowedEgressDomains) != 0 {
+		if rule.Action != api.Allow {
+			structLevel.ReportError(reflect.ValueOf(rule.AllowedEgressDomains), "AllowedEgressDomains",
+				"", reason("only valid for Allow rules"), "")
+		}
+		if len(rule.Destination.Nets) != 0 {
+			structLevel.ReportError(reflect.ValueOf(rule.Destination.Nets), "Destination.Nets",
+				"", reason("must be left empty when AllowedEgressDomains is specified"), "")
+		}
+		if rule.Destination.Selector != "" {
+			structLevel.ReportError(reflect.ValueOf(rule.Destination.Selector), "Destination.Selector",
+				"", reason("must be left empty when AllowedEgressDomains is specified"), "")
+		}
+	}
 }
 
 func validateNodeSpec(structLevel validator.StructLevel) {

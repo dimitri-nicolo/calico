@@ -1198,6 +1198,28 @@ func init() {
 				Action: "Deny",
 				HTTP:   &api.HTTPMatch{Methods: []string{"GET"}},
 			}, false),
+		Entry("should allow Allow Rule with AllowedEgressDomains",
+			api.Rule{
+				Action:               "Allow",
+				AllowedEgressDomains: []string{"example.com"},
+			}, true),
+		Entry("should reject Deny Rule with AllowedEgressDomains",
+			api.Rule{
+				Action:               "Deny",
+				AllowedEgressDomains: []string{"example.com"},
+			}, false),
+		Entry("should reject Rule with AllowedEgressDomains and Destination.Nets",
+			api.Rule{
+				Action:               "Allow",
+				AllowedEgressDomains: []string{"example.com"},
+				Destination:          api.EntityRule{Nets: []string{"8.8.8.8/32"}},
+			}, false),
+		Entry("should reject Rule with AllowedEgressDomains and Destination.Selector",
+			api.Rule{
+				Action:               "Allow",
+				AllowedEgressDomains: []string{"example.com"},
+				Destination:          api.EntityRule{Selector: "role == 'fish'"},
+			}, false),
 
 		// (API) BGPPeerSpec
 		Entry("should accept valid BGPPeerSpec", api.BGPPeerSpec{PeerIP: ipv4_1}, true),
