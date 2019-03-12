@@ -13,7 +13,7 @@ import:
 - package: github.com/mipearson/rfw
 - package: github.com/projectcalico/libcalico-go
   repo: git@github.com:tigera/libcalico-go-private
-  version: 62b0caa50dc18ed3a402a924a35c25636fd45513
+  version: b57de3f3848a32bfcdce5c1f630327397f574280
   subpackages:
   - lib/apiconfig
   - lib/backend/api
@@ -25,7 +25,13 @@ import:
   - lib/upgrade/migrator
   - lib/upgrade/migrator/clients
   - lib/validator/v1
+# Pin to the client_golang commit that changed NewProcessCollector(pid int, namespace string)
+# to NewProcessCollector(opts ProcessCollectorOpts), because otherwise we get coreos/etcd's
+# pin which is to an earlier point, and then all of our updated NewProcessCollector(...) calls
+# fail to compile.  Ideally we'd be happy with >= 773f5027234d0b08adf766be34f55df2f312abf7,
+# but I don't think glide allows that.
 - package: github.com/prometheus/client_golang
+  version: 773f5027234d0b08adf766be34f55df2f312abf7
   subpackages:
   - prometheus
   - prometheus/promhttp

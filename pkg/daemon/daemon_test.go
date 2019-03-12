@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -413,6 +413,10 @@ func (b *mockDatastore) ClusterInformation() clientv3.ClusterInformationInterfac
 }
 
 func (b *mockDatastore) RemoteClusterConfigurations() clientv3.RemoteClusterConfigurationInterface {
+	panic("not implemented")
+}
+
+func (b *mockDatastore) GlobalThreatFeeds() clientv3.GlobalThreatFeedInterface {
 	panic("not implemented")
 }
 
