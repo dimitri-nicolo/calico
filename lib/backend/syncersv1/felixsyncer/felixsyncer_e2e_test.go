@@ -256,6 +256,10 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 			gns.Spec.Nets = []string{
 				"11.0.0.0/16",
 			}
+			gns.Spec.AllowedEgressDomains = []string{
+				"direct.gov.uk",
+				"cam.ac.uk",
+			}
 			gns, err = c.GlobalNetworkSets().Create(
 				ctx,
 				gns,
@@ -273,6 +277,10 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 					},
 					Nets: []net.IPNet{
 						*expNet,
+					},
+					AllowedEgressDomains: []string{
+						"direct.gov.uk",
+						"cam.ac.uk",
 					},
 				},
 				Revision: gns.ResourceVersion,

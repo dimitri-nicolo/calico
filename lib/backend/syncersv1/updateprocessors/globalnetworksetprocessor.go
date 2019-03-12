@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -62,8 +62,9 @@ func convertGlobalNetworkSetV3ToV1(kvp *model.KVPair) (*model.KVPair, error) {
 	}
 
 	v1value := &model.NetworkSet{
-		Labels: v3res.GetLabels(),
-		Nets:   addrs,
+		Labels:               v3res.GetLabels(),
+		Nets:                 addrs,
+		AllowedEgressDomains: v3res.Spec.AllowedEgressDomains,
 	}
 
 	return &model.KVPair{
