@@ -3720,7 +3720,7 @@ func schema_libcalico_go_lib_apis_v3_GlobalNetworkSet(ref common.ReferenceCallba
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "GlobalNetworkSet contains a set of arbitrary IP sub-networks/CIDRs that share labels to allow rules to refer to them via selectors.  The labels of GlobalNetworkSet are not namespaced.",
+				Description: "GlobalNetworkSet contains a set of arbitrary IP sub-networks/CIDRs and domain names that share labels to allow rules to refer to them via selectors.  The labels of GlobalNetworkSet are not namespaced.",
 				Properties: map[string]spec.Schema{
 					"kind": {
 						SchemaProps: spec.SchemaProps{
@@ -3811,6 +3811,20 @@ func schema_libcalico_go_lib_apis_v3_GlobalNetworkSetSpec(ref common.ReferenceCa
 					"nets": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The list of IP networks that belong to this set.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+					"allowedEgressDomains": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The list of domain names that belong to this set and are honored in egress allow rules only.  Domain names specified here only work to allow egress traffic from the cluster to external destinations.  They don't work to _deny_ traffic to destinations specified by domain name, or to allow ingress traffic from _sources_ specified by domain name.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -5863,6 +5877,20 @@ func schema_libcalico_go_lib_apis_v3_Rule(ref common.ReferenceCallback) common.O
 						SchemaProps: spec.SchemaProps{
 							Description: "Destination contains the match criteria that apply to destination entity.",
 							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.EntityRule"),
+						},
+					},
+					"allowedEgressDomains": {
+						SchemaProps: spec.SchemaProps{
+							Description: "AllowedEgressDomains is an optional field, valid for Allow rules only, that restricts the rule to apply only to traffic to one of the specified domains.  If this field is specified, Action must be Allow, and Destination.Nets and Destination.Selector must both be left empty.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
 						},
 					},
 					"http": {

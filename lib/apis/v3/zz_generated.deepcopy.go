@@ -1076,6 +1076,11 @@ func (in *GlobalNetworkSetSpec) DeepCopyInto(out *GlobalNetworkSetSpec) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.AllowedEgressDomains != nil {
+		in, out := &in.AllowedEgressDomains, &out.AllowedEgressDomains
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 
@@ -2344,6 +2349,11 @@ func (in *Rule) DeepCopyInto(out *Rule) {
 	}
 	in.Source.DeepCopyInto(&out.Source)
 	in.Destination.DeepCopyInto(&out.Destination)
+	if in.AllowedEgressDomains != nil {
+		in, out := &in.AllowedEgressDomains, &out.AllowedEgressDomains
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	if in.HTTP != nil {
 		in, out := &in.HTTP, &out.HTTP
 		*out = new(HTTPMatch)
