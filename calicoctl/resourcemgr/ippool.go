@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2017,2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -28,14 +28,15 @@ func init() {
 		api.NewIPPoolList(),
 		false,
 		[]string{"ippool", "ippools", "ipp", "ipps", "pool", "pools"},
-		[]string{"NAME", "CIDR"},
-		[]string{"NAME", "CIDR", "NAT", "IPIPMODE", "DISABLED"},
+		[]string{"NAME", "CIDR", "SELECTOR"},
+		[]string{"NAME", "CIDR", "NAT", "IPIPMODE", "DISABLED", "SELECTOR"},
 		map[string]string{
 			"NAME":     "{{.ObjectMeta.Name}}",
 			"CIDR":     "{{.Spec.CIDR}}",
 			"NAT":      "{{.Spec.NATOutgoing}}",
 			"IPIPMODE": "{{if .Spec.IPIPMode}}{{.Spec.IPIPMode}}{{else}}Never{{end}}",
 			"DISABLED": "{{.Spec.Disabled}}",
+			"SELECTOR": "{{.Spec.NodeSelector}}",
 		},
 		func(ctx context.Context, client client.Interface, resource ResourceObject) (ResourceObject, error) {
 			r := resource.(*api.IPPool)

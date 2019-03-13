@@ -63,6 +63,12 @@ class TestCalicoctlCommands(TestBase):
         rc = calicoctl("get ippool -o yaml")
         rc.assert_list("IPPool", [ippool_name1_rev1_v4, ippool_name2_rev1_v6])
 
+        # Check correct rendering of the table format.
+        rc = calicoctl("get ippool %s" % name(ippool_name1_rev1_v4))
+        rc.assert_output_equals(ippool_name1_rev1_table)
+        rc = calicoctl("get ippool %s -o wide" % name(ippool_name1_rev1_v4))
+        rc.assert_output_equals(ippool_name1_rev1_wide_table)
+
         # Remove both the ipv4 pool and ipv6 pool by CLI options and by file.
         rc = calicoctl("delete ippool %s" % name(ippool_name1_rev1_v4))
         rc.assert_no_error()
@@ -1015,6 +1021,62 @@ class TestCalicoctlCommands(TestBase):
         rc.assert_output_contains("has(rr)")
         assert "global" not in rc.output
 
+    def test_label_command(self):
+        """
+        Test calicoctl label command.
+        """
+        rc = calicoctl("create",data=workloadendpoint_name1_rev1)
+        rev1_labels = workloadendpoint_name1_rev1['metadata']['labels']
+        rc.assert_no_error()
+
+        rc = calicoctl("label workloadendpoint node1-k8s-abcd-eth0 app=web --namespace=namespace1")
+        rc.assert_no_error()
+
+        rc = calicoctl("get workloadendpoint node1-k8s-abcd-eth0 --namespace=namespace1 -o yaml")
+        rc.assert_no_error()
+        rev2 = rc.decoded
+        self.assertEqual("web",rev2['metadata']['labels']['app'])
+
+        rc = calicoctl("label workloadendpoint node1-k8s-abcd-eth0 app=order --namespace=namespace1")
+        rc.assert_error(text="key app is already present")
+
+        rc = calicoctl("label workloadendpoint node1-k8s-abcd-eth0 app=order --namespace=namespace1 --overwrite")
+        rc.assert_no_error()
+
+        rc = calicoctl("get workloadendpoint node1-k8s-abcd-eth0 --namespace=namespace1 -o yaml")
+        rc.assert_no_error()
+        rev3 = rc.decoded
+        self.assertEqual("order",rev3['metadata']['labels']['app'])
+
+        rc = calicoctl("label workloadendpoint node1-k8s-abcd-eth0 app --namespace=namespace1 --remove")
+        rc.assert_no_error()
+
+        rc = calicoctl("get workloadendpoint node1-k8s-abcd-eth0 --namespace=namespace1 -o yaml")
+        rc.assert_no_error()
+        rev4 = rc.decoded
+        self.assertEqual(rev1_labels,rev4['metadata']['labels'])
+
+        # test adding label for resources with no labels.
+        rc = calicoctl("create",data=node_name1_rev1)
+        rc.assert_no_error()
+
+        rc = calicoctl("label nodes node1 cluster=frontend")
+        rc.assert_no_error()
+
+        rc = calicoctl("get nodes node1 -o yaml")
+        rc.assert_no_error()
+        node1_rev2 = rc.decoded
+        self.assertEqual("frontend",node1_rev2['metadata']['labels']['cluster'])
+
+        # test removing labels on resources with no labels
+        rc = calicoctl("apply",data=node_name1_rev1)
+        rc.assert_no_error()
+        rc = calicoctl("label nodes node1 cluster --remove")
+        rc.assert_error("can not remove label")
+
+
+
+
 #
 #
 # class TestCreateFromFile(TestBase):
@@ -1785,7 +1847,7 @@ class InvalidData(TestBase):
                                 'node': 'node1',
                                 'peerIP': '192.168.0.256',
                                 }
-                   }, "error with field peerIP = '192.168.0.256'"),
+                   }, "error with field PeerIP = '192.168.0.256'"),
                    ("bgpPeer-apiversion", {
                        'apiVersion': 'v7',
                        'kind': 'BGPPeer',
@@ -1803,7 +1865,7 @@ class InvalidData(TestBase):
                                 'node': 'node2',
                                 'peerIP': 'fd5f::6::ee',
                                 }
-                   }, "error with field peerIP = 'fd5f::6::ee'"),
+                   }, "error with field PeerIP = 'fd5f::6::ee'"),
                    ("bgpPeer-invalidnodename", {
                        'apiVersion': API_VERSION,
                        'kind': 'BGPPeer',
@@ -1812,7 +1874,7 @@ class InvalidData(TestBase):
                                 'node': 'node 2',
                                 'peerIP': 'fd5f::6:ee',
                                 }
-                   }, "error with field node = 'node 2'"),
+                   }, "error with field Node = 'node 2'"),
                    # See issue https://github.com/projectcalico/libcalico-go/issues/248
                    ("bgpPeer-unrecognisedfield", {
                        'apiVersion': API_VERSION,
@@ -1855,7 +1917,7 @@ class InvalidData(TestBase):
                                              'prof2'],
                                 'node': 'host1',
                                 }
-                   }, "error with field interfaceName = 'wibblywobblyeth0'"),
+                   }, "error with field InterfaceName = 'wibblywobblyeth0'"),
                    # https://github.com/projectcalico/libcalico-go/pull/236/files
                    ("policy-invalidHighPortinList", {
                        'apiVersion': API_VERSION,
@@ -1963,7 +2025,7 @@ class InvalidData(TestBase):
                                              'source': {}}],
                                 'order': 100000,
                                 'selector': ""}
-                   }, "error with field action = 'jumpupanddown'"),
+                   }, "error with field Action = 'jumpupanddown'"),
                    ("policy-NetworkPolicyNameRejected", {
                        'apiVersion': API_VERSION,
                        'kind': 'NetworkPolicy',
@@ -1988,7 +2050,7 @@ class InvalidData(TestBase):
                        'spec': {
                            'ipipMode': 'Always',
                            'cidr': "10.0.1.0/33"}  # impossible mask
-                   }, "error with field cidr = '10.0.1.0/33'"),
+                   }, "CIDR = '10.0.1.0/33'"),
                    ("pool-invalidNet2", {
                        'apiVersion': API_VERSION,
                        'kind': 'IPPool',
@@ -1996,7 +2058,7 @@ class InvalidData(TestBase):
                        'spec': {
                            'ipipMode': 'Always',
                            'cidr': "10.0.256.0/24"}  # invalid octet
-                   }, "error with field cidr = '10.0.256.0/24'"),
+                   }, "CIDR = '10.0.256.0/24'"),
                    ("pool-invalidNet3", {
                        'apiVersion': API_VERSION,
                        'kind': 'IPPool',
@@ -2013,7 +2075,7 @@ class InvalidData(TestBase):
                        'spec': {
                            'ipipMode': 'Never',
                            'cidr': "fd5f::2::1/32"}  # too many ::
-                   }, "error with field cidr = 'fd5f::2::1/32'"),
+                   }, "CIDR = 'fd5f::2::1/32'"),
                    #  https://github.com/projectcalico/libcalico-go/issues/224
                    # ("pool-invalidNet5a", {'apiVersion': API_VERSION,
                    #                       'kind': 'IPPool',
@@ -2050,7 +2112,7 @@ class InvalidData(TestBase):
                            'ipipMode': 'Never',
                            'cidr': "fd5f::1/123",
                        }  # invalid mask
-                   }, "error with field cidr = 'fd5f::1/123'"),
+                   }, "CIDR = 'fd5f::1/123'"),
                    ("pool-invalidIpIp1", {
                        'apiVersion': API_VERSION,
                        'kind': 'IPPool',
@@ -2076,7 +2138,7 @@ class InvalidData(TestBase):
                            'Egress': [{'action': 'Allow',
                                        'destination': {},
                                        'source': {}}],
-                           'Ingress': [{'ipVersion': 6,
+                           'Ingress': [{'ipVersion': 4,
                                         'ICMP': {'type': 256,  # max value 255
                                                  'code': 255},
                                         'action': 'Deny',
@@ -2084,7 +2146,7 @@ class InvalidData(TestBase):
                                         'destination': {},
                                         'source': {}}],
                        }
-                   }, "error with field type = '256'"),
+                   }, "error with field Type = '256'"),
                    ("profile-ICMPcode", {
                        'apiVersion': API_VERSION,
                        'kind': 'Profile',
@@ -2095,7 +2157,7 @@ class InvalidData(TestBase):
                            'Egress': [{'action': 'Allow',
                                        'destination': {},
                                        'source': {}}],
-                           'Ingress': [{'ipVersion': 6,
+                           'Ingress': [{'ipVersion': 4,
                                         'ICMP': {'type': 19,
                                                  'code': 256},  # max value 255
                                         'action': 'Deny',
@@ -2103,7 +2165,7 @@ class InvalidData(TestBase):
                                         'destination': {},
                                         'source': {}}],
                        }
-                   }, "error with field code = '256'"),
+                   }, "error with field Code = '256'"),
                    ("compound-config", [{
                        'apiVersion': API_VERSION,
                        'kind': 'BGPPeer',
@@ -2126,7 +2188,7 @@ class InvalidData(TestBase):
                            'Egress': [{'action': 'Allow',
                                        'destination': {},
                                        'source': {}}],
-                           'Ingress': [{'ipVersion': 6,
+                           'Ingress': [{'ipVersion': 4,
                                         'ICMP': {'type': 256,  # 1-byte field
                                                  'code': 255},
                                         'action': 'Deny',
@@ -2134,7 +2196,7 @@ class InvalidData(TestBase):
                                         'destination': {},
                                         'source': {}}],
                            },
-                   }], "error with field type = '256'"),
+                   }], "error with field Type = '256'"),
                ]
 
     @parameterized.expand(testdata)

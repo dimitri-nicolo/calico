@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,8 +16,8 @@ package main
 
 import (
 	"fmt"
-
 	"os"
+	"strings"
 
 	"github.com/docopt/docopt-go"
 	"github.com/projectcalico/calicoctl/calicoctl/commands"
@@ -36,6 +36,7 @@ func main() {
               name.
     get       Get a resource identified by file, stdin or resource type and
               name.
+    label     Add or update labels of resources.
     convert   Convert config files between different API versions.
     ipam      IP address management.
     node      Calico node management.
@@ -53,7 +54,14 @@ Description:
 
   See 'calicoctl <command> --help' to read about a specific subcommand.
 `
-	arguments, _ := docopt.Parse(doc, nil, true, commands.VERSION_SUMMARY, true, false)
+	arguments, err := docopt.Parse(doc, nil, true, commands.VERSION_SUMMARY, true, false)
+	if err != nil {
+		if _, ok := err.(*docopt.UserError); ok {
+			// the user gave us bad input
+			fmt.Printf("Invalid option: 'calicoctl %s'. Use flag '--help' to read about a specific subcommand.\n", strings.Join(os.Args[1:], " "))
+		}
+		os.Exit(1)
+	}
 
 	if logLevel := arguments["--log-level"]; logLevel != nil {
 		parsedLogLevel, err := log.ParseLevel(logLevel.(string))
@@ -82,6 +90,8 @@ Description:
 			commands.Delete(args)
 		case "get":
 			commands.Get(args)
+		case "label":
+			commands.Label(args)
 		case "convert":
 			commands.Convert(args)
 		case "version":

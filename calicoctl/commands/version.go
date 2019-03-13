@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2017,2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ var VERSION, GIT_REVISION string
 var VERSION_SUMMARY string
 
 func init() {
-	VERSION_SUMMARY = "calicoctl version " + VERSION + ", build " + GIT_REVISION + ", CNX"
+	VERSION_SUMMARY = `Run 'calicoctl version' to see version information.`
 }
 
 func Version(args []string) {

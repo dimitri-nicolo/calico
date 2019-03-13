@@ -183,9 +183,20 @@ ippool_name1_rev1_v4 = {
     'spec': {
         'cidr': "10.0.1.0/24",
         'ipipMode': 'Always',
-        'blockSize': 27
+        'blockSize': 27,
+        'nodeSelector': "foo == 'bar'",
     }
 }
+
+ippool_name1_rev1_table = (
+    "NAME           CIDR          SELECTOR       \n"
+    "ippool-name1   10.0.1.0/24   foo == 'bar'"
+)
+
+ippool_name1_rev1_wide_table = (
+    "NAME           CIDR          NAT     IPIPMODE   DISABLED   SELECTOR       \n"
+    "ippool-name1   10.0.1.0/24   false   Always     false      foo == 'bar'"
+)
 
 ippool_name1_rev2_v4 = {
     'apiVersion': API_VERSION,
@@ -196,6 +207,7 @@ ippool_name1_rev2_v4 = {
     'spec': {
         'cidr': "10.0.1.0/24",
         'ipipMode': 'Never',
+        'nodeSelector': "all()",
     }
 }
 
@@ -208,7 +220,8 @@ ippool_name2_rev1_v6 = {
     'spec': {
         'cidr': "fed0:8001::/64",
         'ipipMode': 'Never',
-        'blockSize': 123
+        'blockSize': 123,
+        'nodeSelector': "all()",
     }
 }
 
