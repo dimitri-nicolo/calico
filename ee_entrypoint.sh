@@ -19,22 +19,34 @@ fi
 cat /fluentd/etc/fluent_transforms.conf >> /fluentd/etc/fluent.conf
 echo >> /fluentd/etc/fluent.conf
 
-
-# Check if s3 external storage is required and add the appropriate output sections.
-if [ "${S3_STORAGE}" == "true" ]; then
-  cat /fluentd/etc/fluent_output_s3.conf >> /fluentd/etc/fluent.conf
-else
-  cat /fluentd/etc/fluent_output.conf >> /fluentd/etc/fluent.conf
-fi
-
 # Check if we should strip out the secure settings from the configuration file.
 if [ -z ${FLUENTD_ES_SECURE} ] || [ "${FLUENTD_ES_SECURE}" = "false" ]; then
-  sed -i 's|scheme .*||g' /fluentd/etc/fluent.conf
-  sed -i 's|user .*||g' /fluentd/etc/fluent.conf
-  sed -i 's|password .*||g' /fluentd/etc/fluent.conf
-  sed -i 's|ca_file .*||g' /fluentd/etc/fluent.conf
-  sed -i 's|ssl_verify .*||g' /fluentd/etc/fluent.conf
+  sed -i 's|scheme .*||g' /fluentd/etc/fluent_output_es.conf.sh
+  sed -i 's|user .*||g' /fluentd/etc/fluent_output_es.conf.sh
+  sed -i 's|password .*||g' /fluentd/etc/fluent_output_es.conf.sh
+  sed -i 's|ca_file .*||g' /fluentd/etc/fluent_output_es.conf.sh
+  sed -i 's|ssl_verify .*||g' /fluentd/etc/fluent_output_es.conf.sh
 fi
+
+source /fluentd/etc/fluent_output_es.conf.sh
+if [ "${S3_STORAGE}" == "true" ]; then
+  source /fluentd/etc/fluent_output_s3.conf.sh
+  NEED_COPY=true
+fi
+
+# If we are outputing to 2 then the root type is copy and each sub block is
+# wrapped in <store>...</store>. The ES block does not include the store wrap
+# but the others do.
+# If there is only the ES output then the envs will be unset/empty and will not
+# add anything to the template.
+if [ "${NEED_COPY}" == "true" ]; then
+  COPY="  @type copy"
+  START_STORE="  <store>"
+  END_STORE="  </store>"
+fi
+
+template=$(cat /fluentd/etc/fluent_output.conf)
+eval "echo \"${template}\"" >> /fluentd/etc/fluent.conf
 
 # Run fluentd
 "$@"
