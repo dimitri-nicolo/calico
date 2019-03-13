@@ -1,0 +1,109 @@
+#!/bin/bash
+
+# This script will generate fluentd configs using the image
+# tigera/fluentd:latest based off the environment variables configurations
+# below and then compare to previously captured configurations to ensure
+# only expected changes have happened.
+
+TEST_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+mkdir -p $TEST_DIR/tmp
+
+function generateAndCollectConfig() {
+  ENV_FILE=$1
+  OUT_FILE=$2
+  docker run -d --rm --name generate-fluentd-config --hostname config.generator --env-file $ENV_FILE tigera/fluentd:latest >/dev/null
+  if [ $? -ne 0 ]; then echo "Running fluentd container failed"; exit 1; fi
+  sleep 2
+
+  docker logs generate-fluentd-config | sed -n '/<ROOT>/,/<\/ROOT>/p' | sed -e 's|^.*<ROOT>|<ROOT>|' > $OUT_FILE
+  if [ $? -ne 0 ]; then echo "Grabbing config from fluentd container failed"; exit 1; fi
+
+  docker stop generate-fluentd-config >/dev/null
+  if [ $? -ne 0 ]; then echo "Stopping fluentd container failed"; exit 1; fi
+}
+
+function checkConfiguration() {
+  ENV_FILE=$1
+  CFG_NAME=$2
+  READABLE_NAME=$3
+
+  EXPECTED=$TEST_DIR/$CFG_NAME.cfg
+  UUT=$TEST_DIR/tmp/$CFG_NAME.cfg
+
+  echo "#### Testing configuration of $READABLE_NAME"
+
+  generateAndCollectConfig $ENV_FILE $TEST_DIR/tmp/$CFG_NAME.cfg
+
+  diff $EXPECTED $UUT &> /dev/null
+  if [ $? -eq 0 ]; then
+    echo "  ## configuration is correct"
+  else
+    echo " XXX configuration is not correct"
+    diff $EXPECTED $UUT
+  fi
+}
+
+
+STANDARD_ENV_VARS=$(cat << EOM
+ELASTIC_INDEX_SUFFIX=test-cluster-name
+ELASTIC_FLOWS_INDEX_SHARDS=5
+FLUENTD_FLOW_FILTERS=# not a real filter
+FLOW_LOG_FILE=/var/log/calico/flowlogs/flows.log
+ELASTIC_HOST=elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local
+ELASTIC_PORT=9200
+EOM
+)
+
+ES_SECURE_VARS=$(cat <<EOM
+ELASTIC_SSL_VERIFY=true
+ELASTIC_USER=es-user
+ELASTIC_PASSWORD=es-password
+EOM
+)
+
+S3_VARS=$(cat <<EOM
+AWS_KEY_ID=aws-key-id-value
+AWS_SECRET_KEY=aws-secret-key-value
+S3_STORAGE=true
+S3_BUCKET_NAME=dummy-bucket
+AWS_REGION=not-real-region
+S3_BUCKET_PATH=not-a-bucket
+S3_FLUSH_INTERVAL=30
+EOM
+)
+
+# Test with ES not secure
+cat > $TEST_DIR/tmp/es-no-secure.env <<EOM
+$STANDARD_ENV_VARS
+FLUENTD_ES_SECURE=false
+EOM
+
+checkConfiguration $TEST_DIR/tmp/es-no-secure.env es-no-secure "ES secure false"
+
+# Test with ES secure
+cat > $TEST_DIR/tmp/es-secure.env << EOM
+$STANDARD_ENV_VARS
+FLUENTD_ES_SECURE=true
+$ES_SECURE_VARS
+EOM
+
+checkConfiguration $TEST_DIR/tmp/es-secure.env es-secure "ES secure"
+
+# Test with S3 and ES secure
+cat > $TEST_DIR/tmp/es-secure-with-s3.env << EOM
+$STANDARD_ENV_VARS
+FLUENTD_ES_SECURE=true
+$ES_SECURE_VARS
+$S3_VARS
+EOM
+
+checkConfiguration $TEST_DIR/tmp/es-secure-with-s3.env es-secure-with-s3 "ES secure with S3"
+
+# Test with S3 and ES not secure
+cat > $TEST_DIR/tmp/es-no-secure-with-s3.env << EOM
+$STANDARD_ENV_VARS
+FLUENTD_ES_SECURE=false
+$S3_VARS
+EOM
+
+checkConfiguration $TEST_DIR/tmp/es-no-secure-with-s3.env es-no-secure-with-s3 "ES secure false with S3"
