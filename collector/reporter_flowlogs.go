@@ -38,7 +38,8 @@ type aggregatorRef struct {
 	d []FlowLogDispatcher
 }
 
-var FlowLogAvg FlowLogAverage
+var FlowLogAvg *FlowLogAverage
+var flushIntervalDuration float64
 
 type FlowLogAverage struct {
 	totalFlows     int
@@ -64,13 +65,15 @@ const (
 	healthInterval = 10 * time.Second
 )
 
-func (f FlowLogAverage) updateFlowLogs(numFlows int) {
+func (f *FlowLogAverage) updateFlowLogs(numFlows int) {
 	f.totalFlows += numFlows
 }
 
-func (f FlowLogAverage) resetFlowLogs() {
-	f.totalFlows = 0
-	f.lastReportTime = time.Now()
+func (f *FlowLogAverage) ResetFlowLogs() {
+	FlowLogAvg = &FlowLogAverage{
+		totalFlows:     0,
+		lastReportTime: time.Now(),
+	}
 }
 
 func GetAndResetFlowsPerMinute() (flowsPerMinute float64) {
@@ -78,8 +81,12 @@ func GetAndResetFlowsPerMinute() (flowsPerMinute float64) {
 		currentTime := time.Now()
 		elapsedMinutes := currentTime.Sub(FlowLogAvg.lastReportTime).Minutes()
 
+		if elapsedMinutes < flushIntervalDuration {
+			return
+		}
+
 		flowsPerMinute = float64(FlowLogAvg.totalFlows) / elapsedMinutes
-		FlowLogAvg.resetFlowLogs()
+		FlowLogAvg.ResetFlowLogs()
 	}
 	return
 }
@@ -92,7 +99,8 @@ func NewFlowLogsReporter(dispatchers map[string]FlowLogDispatcher, flushInterval
 	}
 
 	// Initialize FlowLogAverage struct
-	FlowLogAvg.resetFlowLogs()
+	FlowLogAvg.ResetFlowLogs()
+	flushIntervalDuration = flushInterval.Seconds()
 
 	return &FlowLogsReporter{
 		dispatchers:      dispatchers,
