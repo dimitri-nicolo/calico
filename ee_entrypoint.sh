@@ -19,34 +19,27 @@ fi
 cat /fluentd/etc/fluent_transforms.conf >> /fluentd/etc/fluent.conf
 echo >> /fluentd/etc/fluent.conf
 
-# Check if we should strip out the secure settings from the configuration file.
-if [ -z ${FLUENTD_ES_SECURE} ] || [ "${FLUENTD_ES_SECURE}" = "false" ]; then
-  sed -i 's|scheme .*||g' /fluentd/etc/fluent_output_es.conf.sh
-  sed -i 's|user .*||g' /fluentd/etc/fluent_output_es.conf.sh
-  sed -i 's|password .*||g' /fluentd/etc/fluent_output_es.conf.sh
-  sed -i 's|ca_file .*||g' /fluentd/etc/fluent_output_es.conf.sh
-  sed -i 's|ssl_verify .*||g' /fluentd/etc/fluent_output_es.conf.sh
-fi
-
-source /fluentd/etc/fluent_output_es.conf.sh
+cp /fluentd/etc/outputs/out-es-flows.conf /fluentd/etc/output_flows/out-es.conf
+cp /fluentd/etc/outputs/out-es-tsee-audit.conf /fluentd/etc/output_tsee_audit/out-es.conf
+cp /fluentd/etc/outputs/out-es-kube-audit.conf /fluentd/etc/output_kube_audit/out-es.conf
 if [ "${S3_STORAGE}" == "true" ]; then
-  source /fluentd/etc/fluent_output_s3.conf.sh
-  NEED_COPY=true
+  cp /fluentd/etc/outputs/out-s3-flows.conf /fluentd/etc/output_flows/out-s3.conf
+  cp /fluentd/etc/outputs/out-s3-tsee-audit.conf /fluentd/etc/output_tsee_audit/out-s3.conf
+  cp /fluentd/etc/outputs/out-s3-kube-audit.conf /fluentd/etc/output_kube_audit/out-s3.conf
 fi
 
-# If we are outputing to 2 then the root type is copy and each sub block is
-# wrapped in <store>...</store>. The ES block does not include the store wrap
-# but the others do.
-# If there is only the ES output then the envs will be unset/empty and will not
-# add anything to the template.
-if [ "${NEED_COPY}" == "true" ]; then
-  COPY="  @type copy"
-  START_STORE="  <store>"
-  END_STORE="  </store>"
+# Check if we should strip out the secure settings from the configuration file.
+if [ -z ${FLUENTD_ES_SECURE} ] || [ "${FLUENTD_ES_SECURE}" == "false" ]; then
+  for x in flows tsee_audit kube_audit; do
+    sed -i 's|scheme .*||g' /fluentd/etc/output_${x}/out-es.conf
+    sed -i 's|user .*||g' /fluentd/etc/output_${x}/out-es.conf
+    sed -i 's|password .*||g' /fluentd/etc/output_${x}/out-es.conf
+    sed -i 's|ca_file .*||g' /fluentd/etc/output_${x}/out-es.conf
+    sed -i 's|ssl_verify .*||g' /fluentd/etc/output_${x}/out-es.conf
+  done
 fi
 
-template=$(cat /fluentd/etc/fluent_output.conf)
-eval "echo \"${template}\"" >> /fluentd/etc/fluent.conf
+cat /fluentd/etc/fluent_output.conf >> /fluentd/etc/fluent.conf
 
 # Run fluentd
 "$@"

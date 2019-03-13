@@ -16,8 +16,7 @@ ADD elastic_mapping_flows.template /fluentd/etc/elastic_mapping_flows.template
 COPY fluent_sources.conf /fluentd/etc/fluent_sources.conf
 COPY fluent_transforms.conf /fluentd/etc/fluent_transforms.conf
 COPY fluent_output.conf /fluentd/etc/fluent_output.conf
-COPY fluent_output_es.conf.sh /fluentd/etc/fluent_output_es.conf.sh
-COPY fluent_output_s3.conf.sh /fluentd/etc/fluent_output_s3.conf.sh
+COPY outputs /fluentd/etc/outputs
 
 ENV FLOW_LOG_FILE=/var/log/calico/flowlogs/flows.log
 ENV POS_DIR=/var/log/calico
@@ -36,6 +35,11 @@ RUN chmod +x /bin/readiness.sh
 
 COPY ee_entrypoint.sh /bin/
 RUN chmod +x /bin/ee_entrypoint.sh
+
+RUN mkdir /fluentd/etc/output_flows
+RUN mkdir /fluentd/etc/output_tsee_audit
+RUN mkdir /fluentd/etc/output_kube_audit
+
 
 EXPOSE 24284
 
