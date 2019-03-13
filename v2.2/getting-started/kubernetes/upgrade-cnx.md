@@ -4,12 +4,16 @@ canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/upgrade/up
 ---
 
 ## Prerequisite
+{% assign old_vers = "v3.1,v3.2,v3.4,v3.5" | split: "," %}
 
-Ensure that the open source Calico cluster is on the latest v3.1.x
+Ensure that the open source Calico cluster is on the latest {{site.data.versions[page.version].first.components["calico"].minor_version | append: '.x' }}
 release.
 
-If not, follow the [Calico upgrade documentation](https://docs.projectcalico.org/v3.1/getting-started/kubernetes/upgrade/) 
-before continuing.
+If not, follow the {% unless old_vers contains site.data.versions[page.version].first.components["calico"].minor_version %}
+[Calico upgrade documentation](https://docs.projectcalico.org/{{site.data.versions[page.version].first.components["calico"].minor_version}}/maintenance/kubernetes-upgrade) before continuing.
+{% else %}
+[Calico upgrade documentation](https://docs.projectcalico.org/{{site.data.versions[page.version].first.components["calico"].minor_version}}/getting-started/kubernetes/upgrade/upgrade) before continuing.
+{% endunless %}
 
 ## Upgrading Calico to {{site.prodname}}
 

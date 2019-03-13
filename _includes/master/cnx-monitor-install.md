@@ -315,7 +315,7 @@ optionally Elasticsearch and Kibana in order to enable logs.
    default pattern. Refer to the [Kibana documentation](https://www.elastic.co/guide/en/kibana/current/index-patterns.html#set-default-pattern)
    for more details.
 
-{% if include.type == "policy-only" %}
+{% if include.type == "policy-only" and include.orch != "openshift" %}
 1. Optionally enable either or both of the following:
    * To enforce application layer policies and secure workload-to-workload
     communications with mutually-authenticated TLS, continue to
@@ -324,9 +324,6 @@ optionally Elasticsearch and Kibana in order to enable logs.
    * If you are using the AWS CNI plugin and want to enforce granular access
     control between pods and AWS VPC resources, continue to
     [Enabling integration with AWS security groups]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/aws-sg-integration).
-{% else %}
-1. If you wish to enforce application layer policies and secure workload-to-workload
-   communications with mutually-authenticated TLS, continue to [Enabling application layer policy]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/app-layer-policy) (optional).
 {% endif %}
 
 1. By default, {{site.prodname}} Manager is made accessible via a NodePort listening on port 30003.
