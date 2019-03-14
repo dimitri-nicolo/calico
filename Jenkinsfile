@@ -171,7 +171,6 @@ pipeline {
                     ${SCP_CMD} -r ubuntu@${MASTER_IP}:/home/ubuntu/report . || true
                     ls -ltr .
                     ls -ltr ./report
-                    cat ./report/result.xml
                 '''
                 junit allowEmptyResults: true, testResults: 'report/*.xml'
                 dir('process/testing/winfv') {
