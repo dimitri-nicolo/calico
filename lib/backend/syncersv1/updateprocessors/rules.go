@@ -197,8 +197,7 @@ func RuleAPIV2ToBackend(ar apiv3.Rule, ns string, matchSGs bool) model.Rule {
 		DstNets:     normalizeIPNets(ar.Destination.Nets),
 		DstSelector: destSelector,
 		DstPorts:    ar.Destination.Ports,
-
-		AllowedEgressDomains: ar.AllowedEgressDomains,
+		DstDomains:  ar.Destination.Domains,
 
 		NotSrcNets:     convertStringsToNets(ar.Source.NotNets),
 		NotSrcSelector: ar.Source.NotSelector,

@@ -937,18 +937,23 @@ func validateRule(structLevel validator.StructLevel) {
 			"", reason("only valid for Allow rules"), "")
 	}
 
-	if len(rule.AllowedEgressDomains) != 0 {
+	if len(rule.Source.Domains) != 0 {
+		structLevel.ReportError(reflect.ValueOf(rule.Source.Domains), "Source.Domains",
+			"", reason("Domains can only be specified in the destination of an egress Allow rule"), "")
+	}
+
+	if len(rule.Destination.Domains) != 0 {
 		if rule.Action != api.Allow {
-			structLevel.ReportError(reflect.ValueOf(rule.AllowedEgressDomains), "AllowedEgressDomains",
+			structLevel.ReportError(reflect.ValueOf(rule.Destination.Domains), "Destination.Domains",
 				"", reason("only valid for Allow rules"), "")
 		}
 		if len(rule.Destination.Nets) != 0 {
 			structLevel.ReportError(reflect.ValueOf(rule.Destination.Nets), "Destination.Nets",
-				"", reason("must be left empty when AllowedEgressDomains is specified"), "")
+				"", reason("must be left empty when Destination.Domains is specified"), "")
 		}
 		if rule.Destination.Selector != "" {
 			structLevel.ReportError(reflect.ValueOf(rule.Destination.Selector), "Destination.Selector",
-				"", reason("must be left empty when AllowedEgressDomains is specified"), "")
+				"", reason("must be left empty when Destination.Domains is specified"), "")
 		}
 	}
 }

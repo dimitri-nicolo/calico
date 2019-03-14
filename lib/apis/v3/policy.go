@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -57,11 +57,6 @@ type Rule struct {
 	Source EntityRule `json:"source,omitempty" validate:"omitempty"`
 	// Destination contains the match criteria that apply to destination entity.
 	Destination EntityRule `json:"destination,omitempty" validate:"omitempty"`
-	// AllowedEgressDomains is an optional field, valid for Allow rules only, that restricts the
-	// rule to apply only to traffic to one of the specified domains.  If this field is
-	// specified, Action must be Allow, and Destination.Nets and Destination.Selector must both
-	// be left empty.
-	AllowedEgressDomains []string `json:"allowedEgressDomains,omitempty" validate:"omitempty,dive,name"`
 
 	// HTTP contains match criteria that apply to HTTP requests.
 	HTTP *HTTPMatch `json:"http,omitempty" validate:"omitempty"`
@@ -150,6 +145,11 @@ type EntityRule struct {
 	// Since only some protocols have ports, if any ports are specified it requires the
 	// Protocol match in the Rule to be set to "TCP" or "UDP".
 	Ports []numorstring.Port `json:"ports,omitempty" validate:"omitempty,dive"`
+
+	// Domains is an optional field, valid for egress Allow rules only, that restricts the rule
+	// to apply only to traffic to one of the specified domains.  If this field is specified,
+	// Action must be Allow, and Nets and Selector must both be left empty.
+	Domains []string `json:"domains,omitempty" validate:"omitempty,dive,name"`
 
 	// NotNets is the negated version of the Nets field.
 	NotNets []string `json:"notNets,omitempty" validate:"omitempty,dive,net"`

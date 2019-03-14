@@ -417,6 +417,11 @@ func (in *EntityRule) DeepCopyInto(out *EntityRule) {
 		*out = make([]numorstring.Port, len(*in))
 		copy(*out, *in)
 	}
+	if in.Domains != nil {
+		in, out := &in.Domains, &out.Domains
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	if in.NotNets != nil {
 		in, out := &in.NotNets, &out.NotNets
 		*out = make([]string, len(*in))
@@ -2349,11 +2354,6 @@ func (in *Rule) DeepCopyInto(out *Rule) {
 	}
 	in.Source.DeepCopyInto(&out.Source)
 	in.Destination.DeepCopyInto(&out.Destination)
-	if in.AllowedEgressDomains != nil {
-		in, out := &in.AllowedEgressDomains, &out.AllowedEgressDomains
-		*out = make([]string, len(*in))
-		copy(*out, *in)
-	}
 	if in.HTTP != nil {
 		in, out := &in.HTTP, &out.HTTP
 		*out = new(HTTPMatch)

@@ -496,15 +496,17 @@ var _ = Describe("Test the Rules Conversion Functions", func() {
 	It("should parse and convert a rule with allowed egress domains", func() {
 		rules := []apiv3.Rule{
 			{
-				Action:               apiv3.Allow,
-				AllowedEgressDomains: []string{"docs.projectcalico.org", "k8s.io"},
+				Action: apiv3.Allow,
+				Destination: apiv3.EntityRule{
+					Domains: []string{"docs.projectcalico.org", "k8s.io"},
+				},
 			},
 		}
 
 		// Parse and convert.
 		outRules := updateprocessors.RulesAPIV2ToBackend(rules, "namespace", false)
 		Expect(outRules).To(HaveLen(1))
-		Expect(outRules[0].AllowedEgressDomains).To(HaveLen(2))
-		Expect(outRules[0].AllowedEgressDomains).To(ConsistOf("docs.projectcalico.org", "k8s.io"))
+		Expect(outRules[0].DstDomains).To(HaveLen(2))
+		Expect(outRules[0].DstDomains).To(ConsistOf("docs.projectcalico.org", "k8s.io"))
 	})
 })

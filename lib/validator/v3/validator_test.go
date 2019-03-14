@@ -1198,27 +1198,42 @@ func init() {
 				Action: "Deny",
 				HTTP:   &api.HTTPMatch{Methods: []string{"GET"}},
 			}, false),
-		Entry("should allow Allow Rule with AllowedEgressDomains",
+		Entry("should allow Allow Rule with Destination Domains",
 			api.Rule{
-				Action:               "Allow",
-				AllowedEgressDomains: []string{"example.com"},
+				Action: "Allow",
+				Destination: api.EntityRule{
+					Domains: []string{"example.com"},
+				},
 			}, true),
-		Entry("should reject Deny Rule with AllowedEgressDomains",
+		Entry("should reject Allow Rule with Source Domains",
 			api.Rule{
-				Action:               "Deny",
-				AllowedEgressDomains: []string{"example.com"},
+				Action: "Allow",
+				Source: api.EntityRule{
+					Domains: []string{"example.com"},
+				},
 			}, false),
-		Entry("should reject Rule with AllowedEgressDomains and Destination.Nets",
+		Entry("should reject Deny Rule with Destination Domains",
 			api.Rule{
-				Action:               "Allow",
-				AllowedEgressDomains: []string{"example.com"},
-				Destination:          api.EntityRule{Nets: []string{"8.8.8.8/32"}},
+				Action: "Deny",
+				Destination: api.EntityRule{
+					Domains: []string{"example.com"},
+				},
 			}, false),
-		Entry("should reject Rule with AllowedEgressDomains and Destination.Selector",
+		Entry("should reject Rule with Destination Domains and Nets",
 			api.Rule{
-				Action:               "Allow",
-				AllowedEgressDomains: []string{"example.com"},
-				Destination:          api.EntityRule{Selector: "role == 'fish'"},
+				Action: "Allow",
+				Destination: api.EntityRule{
+					Domains: []string{"example.com"},
+					Nets:    []string{"8.8.8.8/32"},
+				},
+			}, false),
+		Entry("should reject Rule with Destination Domains and Selector",
+			api.Rule{
+				Action: "Allow",
+				Destination: api.EntityRule{
+					Domains:  []string{"example.com"},
+					Selector: "role == 'fish'",
+				},
 			}, false),
 
 		// (API) BGPPeerSpec

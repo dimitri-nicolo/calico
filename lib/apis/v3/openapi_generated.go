@@ -2616,6 +2616,20 @@ func schema_libcalico_go_lib_apis_v3_EntityRule(ref common.ReferenceCallback) co
 							},
 						},
 					},
+					"domains": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Domains is an optional field, valid for egress Allow rules only, that restricts the rule to apply only to traffic to one of the specified domains.  If this field is specified, Action must be Allow, and Nets and Selector must both be left empty.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
 					"notNets": {
 						SchemaProps: spec.SchemaProps{
 							Description: "NotNets is the negated version of the Nets field.",
@@ -5877,20 +5891,6 @@ func schema_libcalico_go_lib_apis_v3_Rule(ref common.ReferenceCallback) common.O
 						SchemaProps: spec.SchemaProps{
 							Description: "Destination contains the match criteria that apply to destination entity.",
 							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.EntityRule"),
-						},
-					},
-					"allowedEgressDomains": {
-						SchemaProps: spec.SchemaProps{
-							Description: "AllowedEgressDomains is an optional field, valid for Allow rules only, that restricts the rule to apply only to traffic to one of the specified domains.  If this field is specified, Action must be Allow, and Destination.Nets and Destination.Selector must both be left empty.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
-									},
-								},
-							},
 						},
 					},
 					"http": {

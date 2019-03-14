@@ -94,6 +94,12 @@ func init() {
 			Nets:     []string{cidrv62},
 			Selector: "label2 == '1234'",
 		},
-		AllowedEgressDomains: []string{"github.com", "microsoft.com", "tigera.io"},
+		Destination: apiv3.EntityRule{
+			Domains: []string{
+				"github.com",
+				"microsoft.com",
+				"tigera.io",
+			},
+		},
 	}
 }
