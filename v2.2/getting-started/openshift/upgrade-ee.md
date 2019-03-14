@@ -5,9 +5,9 @@ canonical_url: https://docs.tigera.io/v2.3/getting-started/openshift/upgrade-ee
 
 ## Prerequisites
 
-- Ensure that the open source Calico cluster is running the latest version of Calico v3.2.x.
+- Ensure that the open source Calico cluster is running the latest version of Calico {{site.data.versions[page.version].first.components["calico"].minor_version | append: '.x' }}
 
-  If not, follow the [Calico OpenShift installation documentation](https://docs.projectcalico.org/v3.2/getting-started/openshift/installation) 
+  If not, follow the [Calico OpenShift installation documentation](https://docs.projectcalico.org/{{site.data.versions[page.version].first.components["calico"].minor_version}}/getting-started/openshift/installation)
   before continuing.
 
 - Ensure that you have satisfied all of the {{site.prodname}} prerequisites listed
