@@ -3964,7 +3964,6 @@ func schema_libcalico_go_lib_apis_v3_GlobalThreatFeedSpec(ref common.ReferenceCa
 						},
 					},
 				},
-				Required: []string{"content"},
 			},
 		},
 		Dependencies: []string{
@@ -4124,7 +4123,7 @@ func schema_libcalico_go_lib_apis_v3_HTTPPull(ref common.ReferenceCallback) comm
 						},
 					},
 				},
-				Required: []string{"format", "url"},
+				Required: []string{"url"},
 			},
 		},
 		Dependencies: []string{
