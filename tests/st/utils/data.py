@@ -1101,3 +1101,82 @@ clusterinfo_name1_rev2 = {
     }
 }
 
+#
+# GlobalThreatFeed
+#
+globalthreatfeed_name1 = {
+    'apiVersion': API_VERSION,
+    'kind': 'GlobalThreatFeed',
+    'metadata': {
+        'name': 'name1'
+    },
+    'spec': {
+        'content': 'IPSet',
+        'globalNetworkSet': {
+            'labels': {
+                'foo': 'bar',
+                'fizz': 'buzz',
+            }
+        },
+        'pull': {
+            'period': '13.5h',
+            'http': {
+                'url': 'https://notreal.tigera.io/threatfeed',
+                'headers': [
+                    {'name': 'Accept', 'value': 'text/plain'},
+                    {'name': 'APIKey', 'valueFrom': {
+                        'secretKeyRef': {
+                            'name': 'my-secret',
+                            'key': 'my-key'
+                        }
+                    }}
+                ]
+            }
+        }
+    }
+}
+
+globalthreatfeed_name2_rev1 = {
+    'apiVersion': API_VERSION,
+    'kind': 'GlobalThreatFeed',
+    'metadata': {
+        'name': 'name2'
+    },
+    'spec': {
+        'pull': {
+            'http': {
+                'url': 'https://notreal.tigera.io/threatfeed2',
+            }
+        }
+    }
+}
+
+globalthreatfeed_name2_rev2 = {
+    'apiVersion': API_VERSION,
+    'kind': 'GlobalThreatFeed',
+    'metadata': {
+        'name': 'name2'
+    },
+    'spec': {
+        'pull': {
+            'http': {
+                'url': 'https://notreal.tigera.io/threatfeed/rev2',
+            }
+        }
+    }
+}
+
+# Note: empty/omitted spec is valid!
+globalthreatfeed_name0 = {
+    'apiVersion': API_VERSION,
+    'kind': 'GlobalThreatFeed',
+    'metadata': {
+        'name': 'name0'
+    },
+}
+
+# Note: whitespace matters!  Be careful editing.
+globalthreatfeed_get_table_output = """NAME    PERIOD   URL                                         
+name0                                                        
+name1   13.5h    https://notreal.tigera.io/threatfeed        
+name2   24h      https://notreal.tigera.io/threatfeed/rev2"""

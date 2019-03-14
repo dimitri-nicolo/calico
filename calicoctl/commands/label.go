@@ -71,6 +71,7 @@ Description:
     * felixConfiguration
     * globalNetworkPolicy
     * globalNetworkSet
+    * globalThreatFeed
     * hostEndpoint
     * ipPool
     * networkPolicy
