@@ -44,7 +44,7 @@ type GlobalThreatFeed struct {
 // GlobalThreatFeedSpec contains the specification of a GlobalThreatFeed resource.
 type GlobalThreatFeedSpec struct {
 	// Content describes the kind of data the data feed provides.
-	Content          ThreatFeedContent     `json:"content" validate:"omitempty,eq=IPSet"`
+	Content          ThreatFeedContent     `json:"content,omitempty" validate:"omitempty,eq=IPSet"`
 	GlobalNetworkSet *GlobalNetworkSetSync `json:"globalNetworkSet,omitempty"`
 	Pull             *Pull                 `json:"pull,omitempty"`
 }
@@ -76,7 +76,7 @@ type Pull struct {
 }
 
 type HTTPPull struct {
-	Format  ThreatFeedFormat `json:"format" validate:"omitempty,eq=NewlineDelimited"`
+	Format  ThreatFeedFormat `json:"format,omitempty" validate:"omitempty,eq=NewlineDelimited"`
 	URL     string           `json:"url" validate:"required,url"`
 	Headers []HTTPHeader     `json:"headers,omitempty" validate:"dive"`
 }
