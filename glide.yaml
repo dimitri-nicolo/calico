@@ -26,7 +26,7 @@ import:
   - jwt
 - package: github.com/projectcalico/libcalico-go
   repo: git@github.com:tigera/libcalico-go-private.git
-  version: 62b0caa50dc18ed3a402a924a35c25636fd45513
+  version: b57de3f3848a32bfcdce5c1f630327397f574280
   subpackages:
   - lib/apiconfig
   - lib/apis/v1
@@ -54,7 +54,19 @@ import:
   - pkg/apis/meta/v1/unstructured
   - pkg/runtime
   - pkg/runtime/schema
+# Later versions don't seem to work with glide.
+- package: github.com/influxdata/influxdb 
+  version: dd481f35df2c3b50c42087e2f8e3890e0f889711
+# Note to Open Source mergers: ginkgo and gomega are imported *not* as testImport
+# in some dependencies, so we can't import them as testImport here.
 - package: github.com/onsi/ginkgo
   subpackages:
   - extensions/table
 - package: github.com/onsi/gomega
+# github.com/vishvananda/netlink is incompatible with newer version of sys, but
+# doesn't pin, so we have to here.
+- package: golang.org/x/sys
+  version: 1b2967e3c290b7c545b3db0deeda16e9be4f98a2
+  subpackages:
+    - unix
+    - windows
