@@ -90,5 +90,5 @@ func MatchNetworkSet(label labels.Selector, field fields.Selector) storage.Selec
 
 // NetworkSetToSelectableFields returns a field set that represents the object.
 func NetworkSetToSelectableFields(obj *calico.GlobalNetworkSet) fields.Set {
-	return generic.ObjectMetaFieldsSet(&obj.ObjectMeta, true)
+	return generic.ObjectMetaFieldsSet(&obj.ObjectMeta, false)
 }

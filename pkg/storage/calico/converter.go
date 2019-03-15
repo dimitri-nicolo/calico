@@ -3,9 +3,9 @@
 package calico
 
 import (
+	"fmt"
 	"reflect"
 
-	"github.com/golang/glog"
 	libcalicoapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/errors"
 
@@ -62,7 +62,7 @@ func convertToAAPI(libcalicoObject runtime.Object) (res runtime.Object) {
 		GlobalThreatFeedConverter{}.convertToAAPI(lcg, aapi)
 		return aapi
 	default:
-		glog.Errorf("unrecognized libcalico object (type %v)", reflect.TypeOf(libcalicoObject))
+		panic(fmt.Sprintf("unrecognized libcalico object (type %v)", reflect.TypeOf(libcalicoObject)))
 		return nil
 	}
 }

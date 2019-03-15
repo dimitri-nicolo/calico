@@ -28,9 +28,9 @@ import (
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/names"
 
+	libcalicoapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
 	licClient "github.com/tigera/licensing/client"
-	libcalicoapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
 )
 
 type apiServerStrategy struct {
@@ -92,7 +92,7 @@ func MatchLicenseKey(label labels.Selector, field fields.Selector) storage.Selec
 
 // NetworkSetToSelectableFields returns a field set that represents the object.
 func LicenseKeyToSelectableFields(obj *calico.LicenseKey) fields.Set {
-	return generic.ObjectMetaFieldsSet(&obj.ObjectMeta, true)
+	return generic.ObjectMetaFieldsSet(&obj.ObjectMeta, false)
 }
 
 // Convert from aggregated api server runtime object to libcalico-go's licensekey structure
