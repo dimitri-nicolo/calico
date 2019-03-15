@@ -19,22 +19,27 @@ fi
 cat /fluentd/etc/fluent_transforms.conf >> /fluentd/etc/fluent.conf
 echo >> /fluentd/etc/fluent.conf
 
-
-# Check if s3 external storage is required and add the appropriate output sections.
+cp /fluentd/etc/outputs/out-es-flows.conf /fluentd/etc/output_flows/out-es.conf
+cp /fluentd/etc/outputs/out-es-tsee-audit.conf /fluentd/etc/output_tsee_audit/out-es.conf
+cp /fluentd/etc/outputs/out-es-kube-audit.conf /fluentd/etc/output_kube_audit/out-es.conf
 if [ "${S3_STORAGE}" == "true" ]; then
-  cat /fluentd/etc/fluent_output_s3.conf >> /fluentd/etc/fluent.conf
-else
-  cat /fluentd/etc/fluent_output.conf >> /fluentd/etc/fluent.conf
+  cp /fluentd/etc/outputs/out-s3-flows.conf /fluentd/etc/output_flows/out-s3.conf
+  cp /fluentd/etc/outputs/out-s3-tsee-audit.conf /fluentd/etc/output_tsee_audit/out-s3.conf
+  cp /fluentd/etc/outputs/out-s3-kube-audit.conf /fluentd/etc/output_kube_audit/out-s3.conf
 fi
 
 # Check if we should strip out the secure settings from the configuration file.
-if [ -z ${FLUENTD_ES_SECURE} ] || [ "${FLUENTD_ES_SECURE}" = "false" ]; then
-  sed -i 's|scheme .*||g' /fluentd/etc/fluent.conf
-  sed -i 's|user .*||g' /fluentd/etc/fluent.conf
-  sed -i 's|password .*||g' /fluentd/etc/fluent.conf
-  sed -i 's|ca_file .*||g' /fluentd/etc/fluent.conf
-  sed -i 's|ssl_verify .*||g' /fluentd/etc/fluent.conf
+if [ -z ${FLUENTD_ES_SECURE} ] || [ "${FLUENTD_ES_SECURE}" == "false" ]; then
+  for x in flows tsee_audit kube_audit; do
+    sed -i 's|scheme .*||g' /fluentd/etc/output_${x}/out-es.conf
+    sed -i 's|user .*||g' /fluentd/etc/output_${x}/out-es.conf
+    sed -i 's|password .*||g' /fluentd/etc/output_${x}/out-es.conf
+    sed -i 's|ca_file .*||g' /fluentd/etc/output_${x}/out-es.conf
+    sed -i 's|ssl_verify .*||g' /fluentd/etc/output_${x}/out-es.conf
+  done
 fi
+
+cat /fluentd/etc/fluent_output.conf >> /fluentd/etc/fluent.conf
 
 # Run fluentd
 "$@"
