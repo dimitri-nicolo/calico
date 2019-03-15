@@ -90,6 +90,11 @@ func checkTiers(store *policystore.PolicyStore, req *authz.CheckRequest) (s rpc.
 	for _, tier := range ep.Tiers {
 		log.WithField("tier", tier.GetName()).Debug("Checking policy tier")
 		policies := tier.IngressPolicies
+		if len(policies) == 0 {
+			// No ingress policy in this tier, move on to next one.
+			continue
+		}
+
 		action := NO_MATCH
 	Policy:
 		for i, name := range policies {
