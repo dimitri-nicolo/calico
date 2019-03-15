@@ -20,6 +20,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	authz "github.com/envoyproxy/data-plane-api/envoy/service/auth/v2alpha"
+	"github.com/gogo/googleapis/google/rpc"
 	"github.com/projectcalico/app-policy/policystore"
 	"github.com/projectcalico/app-policy/proto"
 )
@@ -106,6 +107,56 @@ func TestCheckPolicyRules(t *testing.T) {
 
 	http.Method = "GET"
 	Expect(checkPolicy(policy, reqCache)).To(Equal(DENY))
+}
+
+// If tiers have no ingress policies, we should not get NO_MATCH.
+func TestCheckNoIngressPolicyRulesInTier(t *testing.T) {
+	RegisterTestingT(t)
+
+	store := policystore.NewPolicyStore()
+	store.Endpoint = &proto.WorkloadEndpoint{
+		Tiers: []*proto.TierInfo{
+			{
+				Name:           "tier1",
+				EgressPolicies: []string{"policy1", "policy2"},
+			},
+		},
+		ProfileIds: []string{"profile1"},
+	}
+	store.PolicyByID[proto.PolicyID{Tier: "tier1", Name: "policy1"}] = &proto.Policy{
+		OutboundRules: []*proto.Rule{
+			{
+				Action: "allow",
+			},
+		},
+	}
+	store.PolicyByID[proto.PolicyID{Tier: "tier1", Name: "policy2"}] = &proto.Policy{
+		OutboundRules: []*proto.Rule{
+			{
+				Action: "allow",
+			},
+		},
+	}
+	store.ProfileByID[proto.ProfileID{Name: "profile1"}] = &proto.Profile{
+		InboundRules: []*proto.Rule{
+			{
+				Action:    "allow",
+				HttpMatch: &proto.HTTPMatch{Methods: []string{"GET"}},
+			},
+		},
+	}
+	req := &authz.CheckRequest{Attributes: &authz.AttributeContext{
+		Source: &authz.AttributeContext_Peer{
+			Principal: "spiffe://cluster.local/ns/default/sa/steve",
+		},
+		Destination: &authz.AttributeContext_Peer{
+			Principal: "spiffe://cluster.local/ns/default/sa/sue",
+		},
+		Request: &authz.AttributeContext_Request{
+			Http: &authz.AttributeContext_HttpRequest{Method: "GET"},
+		},
+	}}
+	Expect(checkTiers(store, req)).To(Equal(rpc.Status{Code: OK}))
 }
 
 // CheckStore when the store has no endpoint should deny requests.
