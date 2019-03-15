@@ -70,11 +70,13 @@ defaults:
       layout: docwithnav
       version: master
       sitemap: true
+      registry:
   -
     scope:
       path: master
     values:
       version: master
+      registry:
   -
     scope:
       path: v2.0

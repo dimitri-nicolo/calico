@@ -331,7 +331,6 @@ v2.2:
 - title: v2.2.0
   note: |
     12 October 2018
-
   dockerRepo: quay.io
   components:
     cnx-manager:
@@ -532,6 +531,7 @@ v2.1:
       version: v0.0.1
       url: ""
 
+<<<<<<< HEAD
 v2.0:
 - title: v2.0.2
   note: |
@@ -629,7 +629,6 @@ v2.0:
       version: v3.0.1
       url: https://github.com/projectcalico/calico/releases/tag/v3.0.1
 
-
 - title: v2.0.0
   note: |
     15 January 2018
@@ -658,6 +657,7 @@ v2.0:
 
     ##### Prometheus updates
 
+<<<<<<< HEAD
     The manifests now use Prometheus Operator v0.15.0 and are pinned to
     [Prometheus 2.0](https://prometheus.io/blog/2017/11/08/announcing-prometheus-2-0/).
 
@@ -760,6 +760,7 @@ v2.0:
     - Typha no longer sends incorrect `updateTypes` to Felix, increasing the accuracy of
       Felix statistics. [typha #70](https://github.com/projectcalico/typha/pull/70) (@fasaxc)
 
+<<<<<<< HEAD
     - The CNI plugin now offers an optional environment variable called `CNI_OLD_CONF_NAME`.
       If set, the CNI plug-in cleans up old configuration data during an upgrade, making it
       easier to migrate to a new `CNI_CONF_NAME` value. [cni-plugin #392](https://github.com/projectcalico/cni-plugin/pull/392)(@weikinhuang)
@@ -822,59 +823,39 @@ master:
   components:
     cnx-manager:
       version: master
-      url: ""
     cnx-manager-proxy:
       version: master
-      url: ""
     cnx-apiserver:
       version: master
-      url: ""
     cnx-queryserver:
       version: master
-      url: ""
     cnx-kube-controllers:
       version: master
-      url: ""
     calicoq:
       version: master
-      url: ""
     typha:
       version: master
-      url: ""
     calicoctl:
       version: master
-      url: ""
-      download_url: ""
     cnx-node:
       version: master
-      url: ""
     calico/cni:
       version: master
-      url: ""
-      download_calico_url: https://github.com/projectcalico/cni-plugin/releases/download/v2.0.1/calico
-      download_calico_ipam_url: https://github.com/projectcalico/cni-plugin/releases/download/v2.0.1/calico-ipam
     calico/routereflector:
       version: v0.6.1
-      url: ""
     calico:
-      version: v3.4.0
-      minor_version: v3.4
-      url: https://github.com/projectcalico/calico/releases/tag/v3.1.0
+      version: v3.6.0
+      minor_version: v3.6
     prometheus-operator:
       version: v0.28.0
-      url: ""
     prometheus:
       version: v2.7.1
-      url: ""
     alertmanager:
       version: v0.16.1
-      url: ""
     prometheus-config-reloader:
       version: v0.28.0
-      url: ""
     configmap-reload:
       version: v0.0.1
-      url: ""
     dikastes:
       version: master
     flexvol:
@@ -885,13 +866,10 @@ master:
       version: master
     elasticsearch-operator:
       version: 0.2.0
-      url: ""
     kibana:
       version: 6.4.3
-      url: ""
     elasticsearch:
       version: 6.4.3
-      url: ""
     cloud-controllers:
       version: master
     elastic-tsee-installer:

@@ -1,0 +1,68 @@
+---
+title: calicoctl ipam
+<<<<<<< HEAD
+canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/commands/ipam/release
+=======
+redirect_from: latest/reference/calicoctl/commands/ipam/release
+canonical_url: 'https://docs.projectcalico.org/v3.5/reference/calicoctl/commands/ipam/release'
+>>>>>>> open/master
+---
+
+This section describes the `calicoctl ipam release` command.
+
+<<<<<<< HEAD
+Read the [calicoctl Overview]({{site.baseurl}}/{{page.version}}/reference/calicoctl/) for a full list of `calicoctl` commands.
+=======
+Read the [calicoctl Overview]({{site.baseurl}}/{{page.version}}/reference/calicoctl/) for a full list of calicoctl commands.
+>>>>>>> open/master
+
+## Displaying the help text for 'calicoctl ipam release' command
+
+Run `calicoctl ipam release --help` to display the following help menu for the
+command.
+
+```
+Usage:
+  calicoctl ipam release --ip=<IP> [--config=<CONFIG>]
+
+Options:
+  -h --help             Show this screen.
+     --ip=<IP>          IP address to release.
+  -c --config=<CONFIG>  Path to the file containing connection
+                          configuration in YAML or JSON format.
+                          [default: /etc/calico/calicoctl.cfg]
+
+Description:
+  The ipam release command releases an IP address from the Calico IP Address
+  Manager that was been previously assigned to an endpoint.  When an IP address
+  is released, it becomes available for assignment to any endpoint.
+
+  Note that this does not remove the IP from any existing endpoints that may be
+  using it, so only use this command to clean up addresses from endpoints that
+  were not cleanly removed from Calico.
+```
+{: .no-select-button}
+
+### Examples
+
+```
+calicoctl ipam release --ip=192.168.1.2
+```
+
+### General options
+
+```
+-c --config=<CONFIG>      Path to the file containing connection
+                          configuration in YAML or JSON format.
+                          [default: /etc/calico/calicoctl.cfg]
+```
+{: .no-select-button}
+
+## See also
+
+<<<<<<< HEAD
+-  [calicoctl configuration]({{site.baseurl}}/{{page.version}}/usage/calicoctl/configure/) for details on configuring `calicoctl` to access
+   the {{site.prodname}} datastore.
+=======
+-  [Installing calicoctl]({{site.baseurl}}/{{page.version}}/getting-started/calicoctl/install)
+>>>>>>> open/master

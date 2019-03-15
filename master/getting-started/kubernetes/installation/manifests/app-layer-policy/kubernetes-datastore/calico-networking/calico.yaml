@@ -1,0 +1,14 @@
+---
+layout: null
+---
+<<<<<<< HEAD
+{% include {{page.version}}/manifests/calico.yaml datastore="kdd" network="calico" typha="true" app_layer_policy="true" %}
+=======
+{% helm %}
+datastore: kdd
+network: calico
+typha:
+  enabled: true
+app_layer_policy: true
+{% endhelm %}
+>>>>>>> open/master
