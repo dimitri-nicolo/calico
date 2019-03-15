@@ -807,6 +807,47 @@ class TestCalicoctlCommands(TestBase):
         rc.assert_no_error()
         rc.assert_data(ci)  # Implicitly checks the GUID is still the same.
 
+    def test_globalthreatfeed(self):
+        """
+        Test CRUD commands behave as expected on GlobalThreatFeed resource
+        :return: None
+        """
+        rc = calicoctl("get globalthreatfeed -o yaml")
+        rc.assert_empty_list("GlobalThreatFeed")
+
+        rc = calicoctl("create", data=globalthreatfeed_name1)
+        rc.assert_no_error()
+
+        rc = calicoctl("get globalthreatfeed -o yaml")
+        rc.assert_list("GlobalThreatFeed", [globalthreatfeed_name1])
+
+        rc = calicoctl("create", data=globalthreatfeed_name2_rev1)
+        rc.assert_no_error()
+
+        rc = calicoctl("get globalthreatfeed -o yaml")
+        rc.assert_list("GlobalThreatFeed", [globalthreatfeed_name1, globalthreatfeed_name2_rev1])
+
+        rc = calicoctl("apply", data=globalthreatfeed_name2_rev2)
+        rc.assert_no_error()
+
+        rc = calicoctl("get globalthreatfeed -o yaml")
+        rc.assert_list("GlobalThreatFeed", [globalthreatfeed_name1, globalthreatfeed_name2_rev2], format="yaml")
+
+        # Add a GTF with no pull section
+        rc = calicoctl("create", data=globalthreatfeed_name0)
+        rc.assert_no_error()
+
+        # Verify table output shows default period for name2, blank period & url for name 3
+        rc = calicoctl("get globalthreatfeed -o wide")
+        rc.assert_output_contains(globalthreatfeed_get_table_output)
+
+        rc = calicoctl("delete globalthreatfeed %s" % name(globalthreatfeed_name1))
+        rc.assert_no_error()
+
+        rc = calicoctl("get globalthreatfeed -o yaml")
+        rc.assert_list("GlobalThreatFeed", [globalthreatfeed_name0, globalthreatfeed_name2_rev2])
+
+
     @parameterized.expand([
         ('create', 'replace'),
         ('apply', 'apply'),
