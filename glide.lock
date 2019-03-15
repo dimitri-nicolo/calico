@@ -1,5 +1,5 @@
-hash: b4a4a8b4878ee21a4ec3fe311e032203558ed7b28fae3d7e866e1d06f13f2fd1
-updated: 2019-03-09T05:05:44.28119167Z
+hash: 12c3f2d72725b8b349a5cbd887faf2915ba2784b91f7b2c479332c913488aa2c
+updated: 2019-03-15T05:17:49.01881919Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -271,7 +271,7 @@ imports:
   - reporters/stenographer/support/go-isatty
   - types
 - name: github.com/onsi/gomega
-  version: 65fb64232476ad9046e57c26cd0bff3d3a8dc6cd
+  version: 90e289841c1ed79b7a598a7cd9959750cb5e89e2
   subpackages:
   - format
   - internal/assertion
@@ -289,7 +289,7 @@ imports:
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
 - name: github.com/projectcalico/cni-plugin
-  version: f6bafa4007c7b0b9298248a9b37976906ff1a67a
+  version: 1aca35b8085d8c9925150c788d2146bac91912f4
   repo: git@github.com:tigera/cni-plugin-private.git
   subpackages:
   - internal/pkg/azure
@@ -347,7 +347,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: b57de3f3848a32bfcdce5c1f630327397f574280
+  version: beadc1b3a96edd611c7f42e23b0bd62a38c5a58d
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
