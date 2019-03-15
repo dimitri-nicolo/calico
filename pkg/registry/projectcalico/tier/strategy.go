@@ -92,5 +92,5 @@ func MatchTier(label labels.Selector, field fields.Selector) storage.SelectionPr
 
 // TierToSelectableFields returns a field set that represents the object.
 func TierToSelectableFields(obj *calico.Tier) fields.Set {
-	return generic.ObjectMetaFieldsSet(&obj.ObjectMeta, true)
+	return generic.ObjectMetaFieldsSet(&obj.ObjectMeta, false)
 }

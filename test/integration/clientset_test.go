@@ -24,16 +24,18 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/watch"
 
 	calico "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
 	_ "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/install"
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset"
+	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // TestGroupVersion is trivial.
@@ -500,7 +502,6 @@ func testGlobalNetworkSetClient(client calicoclient.Interface, name string) erro
 	return nil
 }
 
-
 // TestLicenseKeyClient exercises the LicenseKey client.
 func TestLicenseKeyClient(t *testing.T) {
 	const name = "default"
@@ -520,7 +521,6 @@ func TestLicenseKeyClient(t *testing.T) {
 		t.Errorf("test-licensekey test failed")
 	}
 }
-
 
 func testLicenseKeyClient(client calicoclient.Interface, name string) error {
 	licenseKeyClient := client.ProjectcalicoV3().LicenseKeys()
@@ -543,7 +543,7 @@ func testLicenseKeyClient(client calicoclient.Interface, name string) error {
 
 	// Confirm that valid, but expired licenses, are rejected
 	expiredLicenseKey := getExpiredLicenseKey(name)
-	_, err = licenseKeyClient.Create(expiredLicenseKey )
+	_, err = licenseKeyClient.Create(expiredLicenseKey)
 	if err == nil {
 		return fmt.Errorf("expected creating the expiredLicenseKey")
 	} else if err.Error() != "LicenseKey.projectcalico.org \"default\" is invalid: LicenseKeySpec.token: Internal error: the license you're trying to create expired on 2019-02-08 07:59:59 +0000 UTC" {
@@ -645,6 +645,9 @@ func testGlobalThreatFeedClient(client calicoclient.Interface, name string) erro
 	if err != nil {
 		return fmt.Errorf("error listing globalThreatFeeds (%s)", err)
 	}
+	if len(globalThreatFeeds.Items) != 1 {
+		return fmt.Errorf("expected 1 globalThreatFeed got %d", len(globalThreatFeeds.Items))
+	}
 
 	globalThreatFeedServer, err = globalThreatFeedClient.Get(name, metav1.GetOptions{})
 	if err != nil {
@@ -658,6 +661,49 @@ func testGlobalThreatFeedClient(client calicoclient.Interface, name string) erro
 	err = globalThreatFeedClient.Delete(name, &metav1.DeleteOptions{})
 	if nil != err {
 		return fmt.Errorf("globalThreatFeed should be deleted (%s)", err)
+	}
+
+	// Test watch
+	w, err := client.ProjectcalicoV3().GlobalThreatFeeds().Watch(v1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error watching GlobalThreatFeeds (%s)", err)
+	}
+	var events []watch.Event
+	done := sync.WaitGroup{}
+	done.Add(1)
+	timeout := time.After(500 * time.Millisecond)
+	var timeoutErr error
+	// watch for 2 events
+	go func() {
+		defer done.Done()
+		for i := 0; i < 2; i++ {
+			select {
+			case e := <-w.ResultChan():
+				events = append(events, e)
+			case <-timeout:
+				timeoutErr = fmt.Errorf("timed out wating for events")
+				return
+			}
+		}
+		return
+	}()
+
+	// Create two GlobalThreatFeeds
+	for i := 0; i < 2; i++ {
+		gtf := &v3.GlobalThreatFeed{
+			ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("gtf%d", i)},
+		}
+		_, err = globalThreatFeedClient.Create(gtf)
+		if err != nil {
+			return fmt.Errorf("error creating the globalThreatFeed '%v' (%v)", gtf, err)
+		}
+	}
+	done.Wait()
+	if timeoutErr != nil {
+		return timeoutErr
+	}
+	if len(events) != 2 {
+		return fmt.Errorf("expected 2 watch events got %d", len(events))
 	}
 
 	return nil

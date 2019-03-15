@@ -336,37 +336,6 @@ as well as non-namespaced (e.g. globalnetworkset) resources:
   ...
   ```
 
-* Write and register your conversion routines in
-  `pkg/storage/calico/<your_resource>_storage.go`. For example:
-
-  ```
-  convertToAAPI() {
-    ...
-    case *libcalicoapi.LicenseKey:
-      lcgLicense := libcalicoObject.(*libcalicoapi.LicenseKey)
-      aapiLicenseKey := &aapi.LicenseKey{}
-      convertToAAPILicenseKey(aapiLicenseKey, lcgLicense)
-      return aapiLicenseKey
-  }
-
-  ...
-
-  // Write your conversion routines, for example:
-
-  func convertToLibcalicoLicenseKey(netset *aapi.LicenseKey, libcalicoLicenseKey *libcalicoapi.LicenseKey) {
-  	libcalicoLicenseKey.TypeMeta = netset.TypeMeta
-  	libcalicoLicenseKey.ObjectMeta = netset.ObjectMeta
-  	libcalicoLicenseKey.Spec = netset.Spec
-  }
-
-  func convertToAAPILicenseKey(licenseKey *aapi.LicenseKey, libcalicoLicenseKey *libcalicoapi.LicenseKey) {
-  	licenseKey.Spec = libcalicoLicenseKey.Spec
-  	licenseKey.TypeMeta = libcalicoLicenseKey.TypeMeta
-  	licenseKey.ObjectMeta = libcalicoLicenseKey.ObjectMeta
-  }
-
-  ```
-
 * Create a factory function to create a resource storage implementation. Use
   `pkg/storage/calico/licenseKey_storage.go` as a model for your work - this is
   basically a copy/paste and then update the resource type declarations.
@@ -382,6 +351,20 @@ as well as non-namespaced (e.g. globalnetworkset) resources:
     case "projectcalico.org/licensekeys":
 		  return NewLicenseKeyStorage(opts)
   }
+  ```
+
+* Register your conversion routines in `pkg/storage/calico/converter.go`. For example:
+
+  ```
+    convertToAAPI() {
+      ...
+      case *libcalicoapi.LicenseKey:
+        lcgLicense := libcalicoObject.(*libcalicoapi.LicenseKey)
+        aapiLicenseKey := &aapi.LicenseKey{}
+        LicenseKeyConverter{}.convertToAAPI(lcgLicense, aapiLicenseKey)
+        return aapiLicenseKey
+    }
+
   ```
 
 * Lastly, add a clientset test for functional verification tests to

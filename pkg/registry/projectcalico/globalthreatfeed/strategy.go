@@ -18,6 +18,7 @@ package globalthreatfeed
 
 import (
 	"fmt"
+	"reflect"
 
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
@@ -73,7 +74,7 @@ func (apiServerStrategy) ValidateUpdate(ctx genericapirequest.Context, obj, old 
 func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, bool, error) {
 	apiserver, ok := obj.(*calico.GlobalThreatFeed)
 	if !ok {
-		return nil, nil, false, fmt.Errorf("given object is not a Global Threat Feed")
+		return nil, nil, false, fmt.Errorf("given object (type %v) is not a Global Threat Feed", reflect.TypeOf(obj))
 	}
 	return labels.Set(apiserver.ObjectMeta.Labels), ThreatFeedToSelectableFields(apiserver), apiserver.Initializers != nil, nil
 }
@@ -90,5 +91,5 @@ func MatchThreatFeed(label labels.Selector, field fields.Selector) storage.Selec
 
 // ThreatFeedToSelectableFields returns a field set that represents the object.
 func ThreatFeedToSelectableFields(obj *calico.GlobalThreatFeed) fields.Set {
-	return generic.ObjectMetaFieldsSet(&obj.ObjectMeta, true)
+	return generic.ObjectMetaFieldsSet(&obj.ObjectMeta, false)
 }

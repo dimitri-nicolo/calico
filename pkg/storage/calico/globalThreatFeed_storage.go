@@ -5,17 +5,17 @@ package calico
 import (
 	"reflect"
 
-	"golang.org/x/net/context"
-
 	libcalicoapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/watch"
-	aapi "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
+	"golang.org/x/net/context"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/etcd"
 	"k8s.io/apiserver/pkg/storage/storagebackend/factory"
+
+	aapi "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
 )
 
 // NewGlobalThreatFeedStorage creates a new libcalico-based storage.Interface implementation for GlobalThreatFeeds
