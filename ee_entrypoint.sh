@@ -28,6 +28,9 @@ if [ "${S3_STORAGE}" == "true" ]; then
   cp /fluentd/etc/outputs/out-s3-kube-audit.conf /fluentd/etc/output_kube_audit/out-s3.conf
 fi
 
+export SYSLOG_TLS=${SYSLOG_TLS:-false}
+export SYSLOG_FLUSH_INTERVAL=${SYSLOG_FLUSH_INTERVAL:-5s}
+
 if [ -z "${SYSLOG_VERIFY_MODE}" ]; then
   sed -i 's|verify_mode.*||g' /fluentd/etc/outputs/out-syslog.conf
 fi
