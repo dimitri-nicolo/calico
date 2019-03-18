@@ -28,6 +28,26 @@ if [ "${S3_STORAGE}" == "true" ]; then
   cp /fluentd/etc/outputs/out-s3-kube-audit.conf /fluentd/etc/output_kube_audit/out-s3.conf
 fi
 
+export SYSLOG_TLS=${SYSLOG_TLS:-false}
+export SYSLOG_FLUSH_INTERVAL=${SYSLOG_FLUSH_INTERVAL:-5s}
+
+if [ -z "${SYSLOG_VERIFY_MODE}" ]; then
+  sed -i 's|verify_mode.*||g' /fluentd/etc/outputs/out-syslog.conf
+fi
+
+if [ ! -f /etc/fluentd/syslog/ca.pem ]; then
+  sed -i 's|ca_file.*||g' /fluentd/etc/outputs/out-syslog.conf
+fi
+
+if [ "${SYSLOG_FLOW_LOG}" == "true" ]; then
+  cp /fluentd/etc/outputs/out-syslog.conf /fluentd/etc/output_flows/out-syslog.conf
+fi
+
+if [ "${SYSLOG_AUDIT_LOG}" == "true" ]; then
+  cp /fluentd/etc/outputs/out-syslog.conf /fluentd/etc/output_tsee_audit/out-syslog.conf
+  cp /fluentd/etc/outputs/out-syslog.conf /fluentd/etc/output_kube_audit/out-syslog.conf
+fi
+
 # Check if we should strip out the secure settings from the configuration file.
 if [ -z ${FLUENTD_ES_SECURE} ] || [ "${FLUENTD_ES_SECURE}" == "false" ]; then
   for x in flows tsee_audit kube_audit; do

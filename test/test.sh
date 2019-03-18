@@ -8,10 +8,13 @@
 TEST_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 mkdir -p $TEST_DIR/tmp
 
+ADDITIONAL_MOUNT=""
+
 function generateAndCollectConfig() {
   ENV_FILE=$1
   OUT_FILE=$2
-  docker run -d --rm --name generate-fluentd-config --hostname config.generator --env-file $ENV_FILE tigera/fluentd:latest >/dev/null
+
+  docker run -d --rm --name generate-fluentd-config $ADDITIONAL_MOUNT --hostname config.generator --env-file $ENV_FILE tigera/fluentd:latest >/dev/null
   if [ $? -ne 0 ]; then echo "Running fluentd container failed"; exit 1; fi
   sleep 2
 
@@ -20,6 +23,7 @@ function generateAndCollectConfig() {
 
   docker stop generate-fluentd-config >/dev/null
   if [ $? -ne 0 ]; then echo "Stopping fluentd container failed"; exit 1; fi
+  unset ADDITIONAL_MOUNT
 }
 
 function checkConfiguration() {
@@ -72,6 +76,28 @@ S3_FLUSH_INTERVAL=30
 EOM
 )
 
+SYSLOG_NO_TLS_VARS=$(cat <<EOM
+SYSLOG_FLOW_LOG=true
+SYSLOG_HOST=169.254.254.254
+SYSLOG_PORT=3665
+SYSLOG_PROTOCOL=udp
+SYSLOG_HOSTNAME=nodename
+SYSLOG_FLUSH_INTERVAL=17s
+EOM
+)
+
+SYSLOG_TLS_VARS=$(cat <<EOM
+SYSLOG_FLOW_LOG=true
+SYSLOG_AUDIT_LOG=true
+SYSLOG_HOST=169.254.254.254
+SYSLOG_PORT=3665
+SYSLOG_PROTOCOL=tcp
+SYSLOG_TLS=true
+SYSLOG_VERIFY_MODE=\${OPENSSL::SSL::VERIFY_NONE}
+SYSLOG_HOSTNAME=nodename
+EOM
+)
+
 # Test with ES not secure
 cat > $TEST_DIR/tmp/es-no-secure.env <<EOM
 $STANDARD_ENV_VARS
@@ -107,3 +133,37 @@ $S3_VARS
 EOM
 
 checkConfiguration $TEST_DIR/tmp/es-no-secure-with-s3.env es-no-secure-with-s3 "ES secure false with S3"
+
+# Test with ES not secure and syslog w/no tls
+cat > $TEST_DIR/tmp/es-no-secure-with-syslog-no-tls.env << EOM
+$STANDARD_ENV_VARS
+FLUENTD_ES_SECURE=false
+$SYSLOG_NO_TLS_VARS
+EOM
+
+checkConfiguration $TEST_DIR/tmp/es-no-secure-with-syslog-no-tls.env es-no-secure-with-syslog-no-tls "ES secure false with syslog without TLS"
+
+# Test with ES secure and syslog with tls
+cat > $TEST_DIR/tmp/es-secure-with-syslog-with-tls.env << EOM
+$STANDARD_ENV_VARS
+FLUENTD_ES_SECURE=true
+$ES_SECURE_VARS
+$SYSLOG_TLS_VARS
+EOM
+
+TMP=$(tempfile)
+ADDITIONAL_MOUNT="-v $TMP:/etc/fluentd/syslog/ca.pem"
+checkConfiguration $TEST_DIR/tmp/es-secure-with-syslog-with-tls.env es-secure-with-syslog-with-tls "ES secure with syslog with TLS"
+
+# Test with ES secure and syslog with tls
+cat > $TEST_DIR/tmp/es-secure-with-syslog-and-s3.env << EOM
+$STANDARD_ENV_VARS
+FLUENTD_ES_SECURE=true
+$ES_SECURE_VARS
+$SYSLOG_TLS_VARS
+$S3_VARS
+EOM
+
+checkConfiguration $TEST_DIR/tmp/es-secure-with-syslog-and-s3.env es-secure-with-syslog-and-s3 "ES secure with syslog and S3"
+
+rm -f $TMP
