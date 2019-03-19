@@ -38,6 +38,7 @@ type endpointData struct {
 	nets    []ip.CIDR
 	ports   []model.EndpointPort
 	parents []*npParentData
+	domains []string
 
 	cachedMatchingIPSetIDs set.Set /* or, as an optimization, nil if there are none */
 }
@@ -121,6 +122,7 @@ type IPSetMember struct {
 	CIDR       ip.CIDR
 	Protocol   IPSetPortProtocol
 	PortNumber uint16
+	Domain     string
 }
 
 type ipSetData struct {
@@ -245,7 +247,8 @@ func (idx *SelectorAndNamedPortIndex) OnUpdate(update api.Update) (_ bool) {
 				netSet.Labels,
 				extractCIDRsFromNetworkSet(netSet),
 				nil,
-				nil)
+				nil,
+				extractDomainsFromNetworkSet(netset))
 		} else {
 			log.Debugf("Deleting network set %v from NamedPortIndex", key)
 			idx.DeleteEndpoint(key)
@@ -332,6 +335,15 @@ func extractCIDRsFromNetworkSet(netSet *model.NetworkSet) []ip.CIDR {
 			// Normal case, just append the single CIDR.
 			combined = append(combined, cidr)
 		}
+	}
+	return combined
+}
+
+func extractDomainsFromNetworkSet(netSet *model.NetworkSet) []string {
+	a := netSets.AllowedEgressDomains
+	combined := make([]string, 0, len(a))
+	for _, domain = range a {
+		combined = append(combined, domain)
 	}
 	return combined
 }
@@ -433,6 +445,7 @@ func (idx *SelectorAndNamedPortIndex) UpdateEndpointOrSet(
 	nets []ip.CIDR,
 	ports []model.EndpointPort,
 	parentIDs []string,
+	domains []string,
 ) {
 	var cidrsToLog interface{} = nets
 	if log.GetLevel() < log.DebugLevel && len(nets) > 20 {
@@ -465,6 +478,9 @@ func (idx *SelectorAndNamedPortIndex) UpdateEndpointOrSet(
 	if len(ports) > 0 {
 		newEndpointData.ports = ports
 	}
+	if len(domains) > 0 {
+		newEndpointData.domains = domains
+	}
 
 	// Get the old endpoint data so we can compare it.
 	oldEndpointData := idx.endpointDataByID[id]
@@ -475,7 +491,8 @@ func (idx *SelectorAndNamedPortIndex) UpdateEndpointOrSet(
 		if reflect.DeepEqual(oldEndpointData.labels, newEndpointData.labels) &&
 			reflect.DeepEqual(oldEndpointData.ports, newEndpointData.ports) &&
 			reflect.DeepEqual(oldEndpointData.nets, newEndpointData.nets) &&
-			reflect.DeepEqual(oldEndpointData.parents, newEndpointData.parents) {
+			reflect.DeepEqual(oldEndpointData.parents, newEndpointData.parents) &&
+			reflect.DeepEqual(oldEndpointData.domains, newEndpointData.domains) {
 			log.Debug("Endpoint update makes no changes, skipping.")
 			return
 		}
@@ -670,12 +687,24 @@ func (idx *SelectorAndNamedPortIndex) CalculateEndpointContribution(d *endpointD
 					PortNumber: namedPort,
 				})
 			}
+			for _, domain := range d.domain {
+				contrib = append(contrib, IPSetMember{
+					Protocol:   ipSetData.namedPortProtocol,
+					PortNumber: namedPort,
+					Domains:    domain,
+				})
+			}
 		}
 	} else {
-		// Non-named port match, simply return the CIDRs.
+		// Non-named port match, simply return the CIDRs and domains.
 		for _, addr := range d.nets {
 			contrib = append(contrib, IPSetMember{
 				CIDR: addr,
+			})
+		}
+		for _, domain := range d.domains {
+			contrib = append(contrib, IPSetMember{
+				Domain: domain,
 			})
 		}
 	}

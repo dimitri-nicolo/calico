@@ -395,6 +395,7 @@ func ruleToParsedRule(rule *model.Rule) (parsedRule *ParsedRule, allIPSets []*IP
 		NotDstNets:              rule.AllNotDstNets(),
 		NotDstPorts:             notDstNumericPorts,
 		NotDstNamedPortIPSetIDs: ipSetsToUIDs(notDstNamedPortIPSets),
+		NotDstDomains:           rule.AllNotDstDomains(),
 		NotDstIPSetIDs:          ipSetsToUIDs(notDstSelIPSets),
 
 		NotICMPType: rule.NotICMPType,

@@ -74,6 +74,7 @@ const (
 	IPSetTypeHashIP     IPSetType = "hash:ip"
 	IPSetTypeHashIPPort IPSetType = "hash:ip,port"
 	IPSetTypeHashNet    IPSetType = "hash:net"
+	IPSetTypeDomain	    IPSetType = "hash.domain"
 )
 
 func (t IPSetType) SetType() string {
@@ -102,7 +103,7 @@ func (p V6IPPort) String() string {
 
 func (t IPSetType) IsMemberIPV6(member string) bool {
 	switch t {
-	case IPSetTypeHashIP, IPSetTypeHashNet:
+	case IPSetTypeHashIP, IPSetTypeHashNet, IPSetTypeDomain:
 		return strings.Contains(member, ":")
 	case IPSetTypeHashIPPort:
 		return strings.Contains(strings.Split(member, ",")[0], ":")
@@ -170,6 +171,8 @@ func (t IPSetType) CanonicaliseMember(member string) ipSetMember {
 		// pretty-printing, the hash:net ipset type prints IPs with no "/32" or "/128"
 		// suffix.
 		return ip.MustParseCIDROrIP(member)
+	case IPSetTypeDomain:
+		return member
 	}
 	log.WithField("type", string(t)).Panic("Unknown IPSetType")
 	return nil
@@ -181,7 +184,7 @@ type ipSetMember interface {
 
 func (t IPSetType) IsValid() bool {
 	switch t {
-	case IPSetTypeHashIP, IPSetTypeHashNet, IPSetTypeHashIPPort:
+	case IPSetTypeHashIP, IPSetTypeHashNet, IPSetTypeHashIPPort, IPSetTypeDomain:
 		return true
 	}
 	return false
