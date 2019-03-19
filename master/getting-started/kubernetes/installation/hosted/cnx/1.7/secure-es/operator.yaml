@@ -1,4 +1,6 @@
 ---
 layout: null
 ---
-{% include {{page.version}}/manifests/operator.yaml elasticsearch="external" %}
+{% helm --execute templates/operator.yaml %}
+elasticsearchType: external
+{% endhelm %}
