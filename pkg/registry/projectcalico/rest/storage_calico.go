@@ -25,6 +25,7 @@ import (
 	"github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/server"
 	calicotier "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/tier"
 	calicogthreatfeed "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/globalthreatfeed"
+	calicohostendpoint "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/hostendpoint"
 	"github.com/tigera/calico-k8sapiserver/pkg/storage/etcd"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -174,6 +175,27 @@ func (p RESTStorageProvider) NewV3Storage(
 		authorizer,
 	)
 
+	hostEndpointRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("hostendpoints"))
+	if err != nil {
+		return nil, err
+	}
+	hostEndpointOpts := server.NewOptions(
+		etcd.Options{
+			RESTOptions:   hostEndpointRESTOptions,
+			Capacity:      1000, //TODO: What's this?
+			ObjectType:    calicohostendpoint.EmptyObject(),
+			ScopeStrategy: calicohostendpoint.NewStrategy(scheme),
+			NewListFunc:   calicohostendpoint.NewList,
+			GetAttrsFunc:  calicohostendpoint.GetAttrs,
+			Trigger:       storage.NoTriggerPublisher,
+		},
+		calicostorage.Options{
+			RESTOptions: hostEndpointRESTOptions,
+		},
+		p.StorageType,
+		authorizer,
+	)
+
 	storage := map[string]rest.Storage{}
 	storage["networkpolicies"] = calicopolicy.NewREST(scheme, *policyOpts)
 	storage["tiers"] = calicotier.NewREST(scheme, *tierOpts)
@@ -181,6 +203,7 @@ func (p RESTStorageProvider) NewV3Storage(
 	storage["globalnetworksets"] = calicognetworkset.NewREST(scheme, *gNetworkSetOpts)
 	storage["licensekeys"] = calicolicensekey.NewREST(scheme, *licenseKeysSetOpts)
 	storage["globalthreatfeeds"] = calicogthreatfeed.NewREST(scheme, *gThreatFeedOpts)
+	storage["hostendpoints"] = calicohostendpoint.NewREST(scheme, *hostEndpointOpts)
 
 	return storage, nil
 }

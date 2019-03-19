@@ -4,3 +4,5 @@ bin/calico-k8sapiserver
 /bin
 .idea/
 vendor
+**.*.swp
+cscope.*

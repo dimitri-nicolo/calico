@@ -46,6 +46,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&LicenseKeyList{},
 		&GlobalThreatFeed{},
 		&GlobalThreatFeedList{},
+		&HostEndpoint{},
+		&HostEndpointList{},
 	)
 	return nil
 }

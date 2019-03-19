@@ -61,6 +61,11 @@ func convertToAAPI(libcalicoObject runtime.Object) (res runtime.Object) {
 		aapi := &aapi.GlobalThreatFeed{}
 		GlobalThreatFeedConverter{}.convertToAAPI(lcg, aapi)
 		return aapi
+	case *libcalicoapi.HostEndpoint:
+		lcg := libcalicoObject.(*libcalicoapi.HostEndpoint)
+		aapi := &aapi.HostEndpoint{}
+		HostEndpointConverter{}.convertToAAPI(lcg, aapi)
+		return aapi
 	default:
 		panic(fmt.Sprintf("unrecognized libcalico object (type %v)", reflect.TypeOf(libcalicoObject)))
 		return nil

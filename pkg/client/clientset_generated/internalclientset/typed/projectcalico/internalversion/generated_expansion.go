@@ -10,6 +10,8 @@ type GlobalNetworkSetExpansion interface{}
 
 type GlobalThreatFeedExpansion interface{}
 
+type HostEndpointExpansion interface{}
+
 type LicenseKeyExpansion interface{}
 
 type NetworkPolicyExpansion interface{}

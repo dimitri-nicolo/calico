@@ -1,5 +1,5 @@
 hash: 71d3ea5ffdc4a4a95ee83b5840859da2a4d929dd7a60bb6fe5bf461699718db1
-updated: 2019-03-07T04:06:29.220324308Z
+updated: 2019-03-14T21:13:23.161388547Z
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -123,7 +123,7 @@ imports:
 - name: github.com/kelseyhightower/envconfig
   version: dd1402a4d99de9ac2f396cd6fcb957bc2c695ec1
 - name: github.com/kubernetes/repo-infra
-  version: 52d76ba3344e755f5a9ab595b94b21df49448ffb
+  version: a3f1f8d5b18ad754f553bb59a80334f4f70405a6
 - name: github.com/leodido/go-urn
   version: a67a23e1c1af3c66528573bb86a87246477277c1
 - name: github.com/mailru/easyjson
@@ -273,7 +273,7 @@ imports:
   subpackages:
   - rate
 - name: golang.org/x/tools
-  version: 69e0dcfa1121488c38c3c8f9624f7de769003896
+  version: 1286b2016bb195031cab5657d3244bc996b3f2dd
   subpackages:
   - import
 - name: google.golang.org/appengine

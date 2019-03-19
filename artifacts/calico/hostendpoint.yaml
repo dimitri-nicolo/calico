@@ -1,0 +1,18 @@
+apiVersion: projectcalico.org/v3
+kind: HostEndpoint
+metadata:
+  name: sample-host-endpoint
+  labels:
+    type: sample
+spec:
+  interfaceName: eth0
+  node:
+  profiles: []
+  expectedIPs: ["10.0.0.1"]
+  ports:
+    - name: https
+      port: 443
+      protocol: TCP
+    - name: http
+      port: 80
+      protocol: TCP

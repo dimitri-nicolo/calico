@@ -14,6 +14,7 @@ type ProjectcalicoInterface interface {
 	GlobalNetworkPoliciesGetter
 	GlobalNetworkSetsGetter
 	GlobalThreatFeedsGetter
+	HostEndpointsGetter
 	LicenseKeysGetter
 	NetworkPoliciesGetter
 	TiersGetter
@@ -34,6 +35,10 @@ func (c *ProjectcalicoClient) GlobalNetworkSets() GlobalNetworkSetInterface {
 
 func (c *ProjectcalicoClient) GlobalThreatFeeds() GlobalThreatFeedInterface {
 	return newGlobalThreatFeeds(c)
+}
+
+func (c *ProjectcalicoClient) HostEndpoints() HostEndpointInterface {
+	return newHostEndpoints(c)
 }
 
 func (c *ProjectcalicoClient) LicenseKeys() LicenseKeyInterface {

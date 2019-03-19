@@ -25,6 +25,8 @@ func NewStorage(opts Options) (storage.Interface, factory.DestroyFunc) {
 		return NewLicenseKeyStorage(opts)
 	case "projectcalico.org/globalthreatfeeds":
 		return NewGlobalThreatFeedStorage(opts)
+	case "projectcalico.org/hostendpoints":
+		return NewHostEndpointStorage(opts)
 	default:
 		glog.Fatalf("Unable to create storage for resource %v", opts.RESTOptions.ResourcePrefix)
 		return nil, nil

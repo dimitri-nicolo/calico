@@ -708,3 +708,122 @@ func testGlobalThreatFeedClient(client calicoclient.Interface, name string) erro
 
 	return nil
 }
+
+// TestHostEndpointClient exercises the HostEndpoint client.
+func TestHostEndpointClient(t *testing.T) {
+	const name = "test-hostendpoint"
+	rootTestFunc := func() func(t *testing.T) {
+		return func(t *testing.T) {
+			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+				return &projectcalico.HostEndpoint{}
+			})
+			defer shutdownServer()
+			if err := testHostEndpointClient(client, name); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	if !t.Run(name, rootTestFunc()) {
+		t.Errorf("test-hostendpoint test failed")
+	}
+}
+
+func createTestHostEndpoint(name string, ip string, node string) *v3.HostEndpoint{
+	hostEndpoint := &v3.HostEndpoint{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+	}
+	hostEndpoint.Spec.ExpectedIPs = []string{ip}
+	hostEndpoint.Spec.Node = node
+
+	return hostEndpoint
+}
+
+func testHostEndpointClient(client calicoclient.Interface, name string) error {
+	hostEndpointClient := client.ProjectcalicoV3().HostEndpoints()
+
+	hostEndpoint := createTestHostEndpoint(name, "192.168.0.1", "test-node")
+
+	// start from scratch
+	hostEndpoints, err := hostEndpointClient.List(metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing hostEndpoints (%s)", err)
+	}
+	if hostEndpoints.Items == nil {
+		return fmt.Errorf("Items field should not be set to nil")
+	}
+
+	hostEndpointServer, err := hostEndpointClient.Create(hostEndpoint)
+	if nil != err {
+		return fmt.Errorf("error creating the hostEndpoint '%v' (%v)", hostEndpoint, err)
+	}
+	if name != hostEndpointServer.Name {
+		return fmt.Errorf("didn't get the same hostEndpoint back from the server \n%+v\n%+v", hostEndpoint, hostEndpointServer)
+	}
+
+	hostEndpoints, err = hostEndpointClient.List(metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing hostEndpoints (%s)", err)
+	}
+	if len(hostEndpoints.Items) != 1 {
+		return fmt.Errorf("expected 1 hostEndpoint entry, got %d", len(hostEndpoints.Items))
+	}
+
+	hostEndpointServer, err = hostEndpointClient.Get(name, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("error getting hostEndpoint %s (%s)", name, err)
+	}
+	if name != hostEndpointServer.Name &&
+		hostEndpoint.ResourceVersion == hostEndpointServer.ResourceVersion {
+		return fmt.Errorf("didn't get the same hostEndpoint back from the server \n%+v\n%+v", hostEndpoint, hostEndpointServer)
+	}
+
+	err = hostEndpointClient.Delete(name, &metav1.DeleteOptions{})
+	if nil != err {
+		return fmt.Errorf("hostEndpoint should be deleted (%s)", err)
+	}
+
+	// Test watch
+	w, err := client.ProjectcalicoV3().HostEndpoints().Watch(v1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error watching HostEndpoints (%s)", err)
+	}
+	var events []watch.Event
+	done := sync.WaitGroup{}
+	done.Add(1)
+	timeout := time.After(500 * time.Millisecond)
+	var timeoutErr error
+	// watch for 2 events
+	go func() {
+		defer done.Done()
+		for i := 0; i < 2; i++ {
+			select {
+			case e := <-w.ResultChan():
+				events = append(events, e)
+			case <-timeout:
+				timeoutErr = fmt.Errorf("timed out wating for events")
+				return
+			}
+		}
+		return
+	}()
+
+	// Create two HostEndpoints
+	for i := 0; i < 2; i++ {
+		hep := createTestHostEndpoint(fmt.Sprintf("hep%d", i), "192.168.0.1", "test-node")
+		_, err = hostEndpointClient.Create(hep)
+		if err != nil {
+			return fmt.Errorf("error creating hostEndpoint '%v' (%v)", hep, err)
+		}
+	}
+
+	done.Wait()
+	if timeoutErr != nil {
+		return timeoutErr
+	}
+	if len(events) != 2 {
+		return fmt.Errorf("expected 2 watch events got %d", len(events))
+	}
+
+	return nil
+}

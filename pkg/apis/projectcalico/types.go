@@ -136,3 +136,25 @@ type GlobalThreatFeed struct {
 
 	Spec calico.GlobalThreatFeedSpec
 }
+
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// HostEndpointList is a list of Policy objects.
+type HostEndpointList struct {
+	metav1.TypeMeta
+	metav1.ListMeta
+
+	Items []HostEndpoint
+}
+
+// +genclient
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type HostEndpoint struct {
+	metav1.TypeMeta
+	metav1.ObjectMeta
+
+	Spec calico.HostEndpointSpec
+}

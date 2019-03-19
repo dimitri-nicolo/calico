@@ -16,6 +16,10 @@ type GlobalNetworkSetListerExpansion interface{}
 // GlobalThreatFeedLister.
 type GlobalThreatFeedListerExpansion interface{}
 
+// HostEndpointListerExpansion allows custom methods to be added to
+// HostEndpointLister.
+type HostEndpointListerExpansion interface{}
+
 // LicenseKeyListerExpansion allows custom methods to be added to
 // LicenseKeyLister.
 type LicenseKeyListerExpansion interface{}

@@ -26,6 +26,10 @@ func (c *FakeProjectcalico) GlobalThreatFeeds() internalversion.GlobalThreatFeed
 	return &FakeGlobalThreatFeeds{c}
 }
 
+func (c *FakeProjectcalico) HostEndpoints() internalversion.HostEndpointInterface {
+	return &FakeHostEndpoints{c}
+}
+
 func (c *FakeProjectcalico) LicenseKeys() internalversion.LicenseKeyInterface {
 	return &FakeLicenseKeys{c}
 }

@@ -26,6 +26,10 @@ func (c *FakeProjectcalicoV3) GlobalThreatFeeds() v3.GlobalThreatFeedInterface {
 	return &FakeGlobalThreatFeeds{c}
 }
 
+func (c *FakeProjectcalicoV3) HostEndpoints() v3.HostEndpointInterface {
+	return &FakeHostEndpoints{c}
+}
+
 func (c *FakeProjectcalicoV3) LicenseKeys() v3.LicenseKeyInterface {
 	return &FakeLicenseKeys{c}
 }
