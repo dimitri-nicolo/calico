@@ -1,11 +1,6 @@
 ---
 title: calicoctl replace
-<<<<<<< HEAD
 canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/commands/replace
-=======
-redirect_from: latest/reference/calicoctl/commands/replace
-canonical_url: 'https://docs.projectcalico.org/v3.5/reference/calicoctl/commands/replace'
->>>>>>> open/master
 ---
 
 This sections describes the `calicoctl replace` command.
@@ -60,10 +55,7 @@ Description:
     * globalNetworkPolicy
     * hostEndpoint
     * ipPool
-<<<<<<< HEAD
     * tier
-=======
->>>>>>> open/master
     * networkPolicy
     * node
     * profile
@@ -130,15 +122,9 @@ Description:
 
 ## See also
 
-<<<<<<< HEAD
+-  [Installing calicoctl]({{site.baseurl}}/{{page.version}}/getting-started/calicoctl/install)
 -  [Resources]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/) for details on all valid resources, including file format
    and schema
 -  [NetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/networkpolicy) for details on the {{site.prodname}} selector-based policy model
 -  [calicoctl configuration]({{site.baseurl}}/{{page.version}}/usage/calicoctl/configure/) for details on configuring `calicoctl` to access
    the {{site.prodname}} datastore.
-=======
--  [Installing calicoctl]({{site.baseurl}}/{{page.version}}/getting-started/calicoctl/install)
--  [Resources]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/) for details on all valid resources, including file format
-   and schema
--  [NetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/networkpolicy) for details on the {{site.prodname}} selector-based policy model
->>>>>>> open/master

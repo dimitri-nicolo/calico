@@ -1,12 +1,6 @@
 ---
-<<<<<<< HEAD
 title: Tigera Secure EE Architecture
 canonical_url: https://docs.tigera.io/v2.3/reference/architecture/
-=======
-title: Calico architecture
-redirect_from: latest/reference/architecture/index
-canonical_url: 'https://docs.projectcalico.org/v3.5/reference/architecture/'
->>>>>>> open/master
 ---
 
 This document discusses the various pieces of {{site.prodname}}'s architecture,
@@ -44,11 +38,7 @@ endpoints on that host.
 Depending on the specific orchestrator environment, Felix is responsible
 for the following tasks:
 
-<<<<<<< HEAD
-#### Interface Management
-=======
 #### Interface management
->>>>>>> open/master
 
 Felix programs some information about interfaces into the kernel in
 order to get the kernel to correctly handle the traffic emitted by that
@@ -60,70 +50,38 @@ It also monitors for interfaces to appear and disappear so that it can
 ensure that the programming for those interfaces is applied at the
 appropriate time.
 
-<<<<<<< HEAD
-#### Route Programming
-=======
 #### Route programming
->>>>>>> open/master
 
 Felix is responsible for programming routes to the endpoints on its host
 into the Linux kernel FIB (Forwarding Information Base) . This ensures that packets destined for those
 endpoints that arrive on at the host are forwarded accordingly.
 
-<<<<<<< HEAD
-#### ACL Programming
-=======
 #### ACL programming
->>>>>>> open/master
 
 Felix is also responsible for programming ACLs into the Linux kernel.
 These ACLs are used to ensure that only valid traffic can be sent
 between endpoints, and ensure that endpoints are not capable of
 circumventing {{site.prodname}}'s security measures.
 
-<<<<<<< HEAD
-#### State Reporting
-=======
 #### State reporting
->>>>>>> open/master
 
 Felix is responsible for providing data about the health of the network.
 In particular, it reports errors and problems with configuring its host.
 This data is written into etcd, to make it visible to other components
 and operators of the network.
 
-
-<<<<<<< HEAD
-## Orchestrator Plugin
-
-Unlike Felix there is no single 'orchestrator plugin': instead, there
-are separate plugins for each major cloud orchestration platform (e.g.
-Kubernetes). The purpose of these plugins is to bind {{site.prodname}}
-=======
 ## Orchestrator plugin
 
 Unlike Felix there is no single 'orchestrator plugin': instead, there
 are separate plugins for each major cloud orchestration platform (e.g.
-OpenStack, Kubernetes). The purpose of these plugins is to bind {{site.prodname}}
->>>>>>> open/master
+Kubernetes). The purpose of these plugins is to bind {{site.prodname}}
 more tightly into the orchestrator, allowing users to manage the {{site.prodname}}
 network just as they'd manage network tools that were built into the
 orchestrator.
 
-<<<<<<< HEAD
-The orchestrator plugin is responsible for the following tasks:
-
-#### API Translation
-=======
-A good example of an orchestrator plugin is the {{site.prodname}} Neutron ML2
-mechanism driver. This component integrates with Neutron's ML2 plugin,
-and allows users to configure the {{site.prodname}} network by making Neutron API
-calls. This provides seamless integration with Neutron.
-
 The orchestrator plugin is responsible for the following tasks:
 
 #### API translation
->>>>>>> open/master
 
 The orchestrator will inevitably have its own set of APIs for managing
 networks. The orchestrator plugin's primary job is to translate those
@@ -142,8 +100,6 @@ If necessary, the orchestrator plugin will provide feedback from the
 information about Felix liveness; marking certain endpoints as failed if
 network setup failed.
 
-
-
 ## etcd
 
 etcd is a distributed key-value store that has a focus on consistency.
@@ -152,27 +108,8 @@ a consistent data store, which ensures {{site.prodname}} can always build an
 accurate network.
 
 Depending on the orchestrator plugin, etcd may either be the master data
-<<<<<<< HEAD
 store or a lightweight mirror of a separate data store.
-=======
-store or a lightweight mirror of a separate data store. For example, in
-an OpenStack deployment, the OpenStack database is considered the
-"source of truth" and etcd is used to mirror information about the
-network to the other {{site.prodname}} components.
->>>>>>> open/master
-
-The etcd component is distributed across the entire deployment. It is
-divided into two groups of machines: the core cluster, and the proxies.
-
-For small deployments, the core cluster can be an etcd cluster of one
-node (which would typically be co-located with the
-[orchestrator plugin](#orchestrator-plugin) component). This deployment model is simple but provides no redundancy for etcd -- in the case of etcd failure the
-<<<<<<< HEAD
 [orchestrator plugin](#orchestrator-plugin) would have to rebuild the database.
-=======
-[orchstrator plugin](#orchestrator-plugin) would have to rebuild the database which, as noted for OpenStack, will simply require that the plugin resynchronizes
-state to etcd from the OpenStack database.
->>>>>>> open/master
 
 In larger deployments, the core cluster can be scaled up, as per the
 [etcd admin guide](https://coreos.com/etcd/docs/latest/admin_guide.html#optimal-cluster-size).
@@ -186,11 +123,7 @@ machine.
 
 etcd is responsible for performing the following tasks:
 
-<<<<<<< HEAD
-#### Data Storage
-=======
 #### Data storage
->>>>>>> open/master
 
 etcd stores the data for the {{site.prodname}} network in a distributed,
 consistent, fault-tolerant manner (for cluster sizes of at least three
@@ -199,11 +132,7 @@ always in a known-good state, while allowing for some number of the
 machines hosting etcd to fail or become unreachable.
 
 This distributed storage of {{site.prodname}} data also improves the ability of the
-<<<<<<< HEAD
 {{site.prodname}} components to read from the database (which is their most common
-=======
-Calico components to read from the database (which is their most common
->>>>>>> open/master
 operation), as they can distribute their reads around the cluster.
 
 #### Communication
@@ -215,36 +144,21 @@ to respond to those changes in a timely manner. This allows the act of
 committing the state to the database to cause that state to be programmed
 into the network.
 
-
-
-<<<<<<< HEAD
-## BGP Client (BIRD)
-=======
 ## BGP client (BIRD)
->>>>>>> open/master
 
 {{site.prodname}} deploys a BGP client on every node that also hosts a [Felix](#felix). The role of the BGP client is to read routing state that [Felix](#felix) programs into the kernel and
 distribute it around the data center.
 
 The BGP client is responsible for performing the following task:
 
-<<<<<<< HEAD
-#### Route Distribution
-=======
 #### Route distribution
->>>>>>> open/master
 
 When [Felix](#felix) inserts routes into the Linux kernel FIB,
 the BGP client will pick them up and distribute them to the other nodes
 in the deployment. This ensures that traffic is efficiently routed
 around the deployment.
 
-
-<<<<<<< HEAD
-## BGP Route Reflector (BIRD)
-=======
 ## BGP route reflector (BIRD)
->>>>>>> open/master
 
 For larger deployments, simple BGP can become a limiting factor because
 it requires every BGP client to be connected to every other BGP client
@@ -252,11 +166,7 @@ in a mesh topology. This requires an increasing number of connections
 that rapidly become tricky to maintain, due to the N^2 nature of the
 increase.
 
-<<<<<<< HEAD
 For that reason, in larger deployments, {{site.prodname}} will deploy a BGP route
-=======
-For that reason, in larger deployments, Calico will deploy a BGP route
->>>>>>> open/master
 reflector. This component, commonly used in the Internet, acts as a
 central point to which the BGP clients connect, preventing them from
 needing to talk to every single BGP client in the cluster.
@@ -265,24 +175,14 @@ For redundancy, multiple BGP route reflectors can be deployed
 seamlessly. The route reflectors are purely involved in the control of
 the network: no endpoint data passes through them.
 
-<<<<<<< HEAD
 In {{site.prodname}}, this BGP component is also most commonly
-=======
-In Calico, this BGP component is also most commonly
->>>>>>> open/master
 [BIRD](http://bird.network.cz/), configured as a route reflector rather
 than as a standard BGP client.
 
 The BGP route reflector is responsible for the following task:
 
-<<<<<<< HEAD
-#### Centralized Route Distribution
-
-When the [{{site.prodname}} BGP client](#bgp-client-bird) advertises routes
-=======
 #### Centralized route distribution
 
-When the [Calico BGP client](#bgp-client-bird) advertises routes
->>>>>>> open/master
+When the [{{site.prodname}} BGP client](#bgp-client-bird) advertises routes
 from its FIB to the route reflector, the route reflector advertises
 those routes out to the other nodes in the deployment.

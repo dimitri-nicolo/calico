@@ -1,11 +1,6 @@
 ---
 title: calicoctl convert
-<<<<<<< HEAD
 canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/commands/convert
-=======
-redirect_from: latest/reference/calicoctl/commands/convert
-canonical_url: 'https://docs.projectcalico.org/v3.5/reference/calicoctl/commands/convert'
->>>>>>> open/master
 ---
 
 This sections describes the `calicoctl convert` command.
@@ -85,15 +80,9 @@ Description:
 
 ## See also
 
-<<<<<<< HEAD
+-  [Installing calicoctl]({{site.baseurl}}/{{page.version}}/getting-started/calicoctl/install)
 -  [Resources]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/) for details on all valid resources, including file format
    and schema
 -  [calicoctl get]({{site.baseurl}}/{{page.version}}/reference/calicoctl/commands/get) for details on `calicoctl get` command to get the resources.
 -  [calicoctl configuration]({{site.baseurl}}/{{page.version}}/usage/calicoctl/configure/) for details on configuring `calicoctl` to access
    the {{site.prodname}} datastore.
-=======
--  [Installing calicoctl]({{site.baseurl}}/{{page.version}}/getting-started/calicoctl/install)
--  [Resources]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/) for details on all valid resources, including file format
-   and schema
--  [calicoctl get]({{site.baseurl}}/{{page.version}}/reference/calicoctl/commands/get) for details on `calicoctl get` command to get the resources.
->>>>>>> open/master

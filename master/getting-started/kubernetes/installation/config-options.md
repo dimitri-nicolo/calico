@@ -1,11 +1,6 @@
 ---
 title: Customizing the manifests
-<<<<<<< HEAD
 canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/installation/config-options
-=======
-redirect_from: latest/getting-started/kubernetes/installation/config-options
-canonical_url: 'https://docs.projectcalico.org/v3.5/getting-started/kubernetes/installation/config-options'
->>>>>>> open/master
 ---
 
 ## About customizing manifests
@@ -16,11 +11,7 @@ settings as needed.
 
 Refer to the section that corresponds to the manifest you wish to modify for more details.
 
-<<<<<<< HEAD
 - [Customizing {{site.prodname}} manifests](#customizing-{{site.prodnamedash}}-manifests)
-=======
-- [Customizing {{site.prodname}} manifests](#customizing-calico-manifests)
->>>>>>> open/master
 
 - [Customizing application layer policy manifests](#customizing-application-layer-policy-manifests)
 
@@ -37,11 +28,7 @@ It installs the following Kubernetes resources:
 - Installs the `{{site.nodecontainer}}` container on each host using a DaemonSet.
 - Installs the {{site.prodname}} CNI binaries and network config on each host using
   a DaemonSet.
-<<<<<<< HEAD
 - Runs `{{site.imageNames["kubeControllers"]}}` as a deployment.
-=======
-- Runs `calico/kube-controllers` as a deployment.
->>>>>>> open/master
 - The `calico-etcd-secrets` secret, which optionally allows for providing etcd
   TLS assets.
 - The `calico-config` ConfigMap, which contains parameters for configuring
@@ -96,16 +83,6 @@ To use these manifests with a TLS-enabled etcd cluster you must do the following
    -O
    ```
 
-<<<<<<< HEAD
-=======
-   **{{site.prodname}} for policy and flannel for networking**
-   ```bash
-   curl \
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/canal/canal.yaml \
-   -O
-   ```
-
->>>>>>> open/master
 1. Within the `ConfigMap` section, uncomment the `etcd_ca`, `etcd_key`, and `etcd_cert`
    lines so that they look as follows.
 
@@ -154,14 +131,6 @@ To use these manifests with a TLS-enabled etcd cluster you must do the following
    kubectl apply -f calico.yaml
    ```
 
-<<<<<<< HEAD
-=======
-   **{{site.prodname}} for policy and flannel for networking**
-   ```bash
-   kubectl apply -f canal.yaml
-   ```
-
->>>>>>> open/master
 ### Authorization options
 
 {{site.prodname}}'s manifests assign its components one of two service accounts.
@@ -171,11 +140,7 @@ service accounts with the necessary permissions.
 ### Configuring service advertisement
 
 {{site.prodname}} supports [advertising Kubernetes services over
-<<<<<<< HEAD
-BGP]({{site.baseurl}}/{{page.version}}/usage/service-advertisement),
-=======
 BGP](../../../networking/service-advertisement),
->>>>>>> open/master
 so that service cluster IPs are routable from outside the cluster.  To
 enable this, add a `CALICO_ADVERTISE_CLUSTER_IPS` variable setting to
 the environment for {{site.nodecontainer}} in the `calico.yaml`
@@ -218,69 +183,4 @@ be filled in automatically by the `calico/cni` container:
 | `__ETCD_CERT_FILE__`                  | The path to the etcd certificate file installed to the host, empty if no cert present.
 | `__ETCD_CA_CERT_FILE__`               | The path to the etcd certificate authority file installed to the host. Empty if no certificate authority is present.
 
-<<<<<<< HEAD
 {% include {{page.version}}/alp-options.md %}
-=======
-
-## Customizing application layer policy manifests
-
-### About customizing application layer policy manifests
-
-Instead of installing from our pre-modified Istio manifests, you may wish to
-customize your Istio install or use a different Istio version.  This section
-walks you through the necessary changes to a generic Istio install manifest to
-allow application layer policy to operate.
-
-### Sidecar injector
-
-The standard Istio manifests for the sidecar injector include a ConfigMap that
-contains the template used when adding pods to the cluster. The template adds an
-init container and the Envoy sidecar.  Application layer policy requires
-an additional lightweight sidecar called Dikastes which receives {{site.prodname}} policy
-from Felix and applies it to incoming connections and requests.
-
-If you haven't already done so, download an
-[Istio release](https://github.com/istio/istio/releases) and untar it to a
-working directory.
-
-Open the `install/kubernetes/istio-demo-auth.yaml` file in an
-editor, and locate the `istio-sidecar-injector` ConfigMap.  In the existing `istio-proxy` container, add a new `volumeMount`.
-
-```
-        - mountPath: /var/run/dikastes
-          name: dikastes-sock
-```
-
-Add a new container to the template.
-
-```
-      - name: dikastes
-        image: {{page.registry}}{{site.imageNames["dikastes"]}}:{{site.data.versions[page.version].first.components["calico/dikastes"].version}}
-        args: ["/dikastes", "server", "-l", "/var/run/dikastes/dikastes.sock", "-d", "/var/run/felix/nodeagent/socket", "--debug"]
-        volumeMounts:
-        - mountPath: /var/run/dikastes
-          name: dikastes-sock
-        - mountPath: /var/run/felix
-          name: felix-sync
-```
-
-Add two new volumes.
-
-```
-      - name: dikastes-sock
-        emptyDir:
-          medium: Memory
-      - name: felix-sync
-        flexVolume:
-          driver: nodeagent/uds
-```
-
-The volumes you added are used to create Unix domain sockets that allow
-communication between Envoy and Dikastes and between Dikastes and
-Felix.  Once created, a Unix domain socket is an in-memory communications
-channel. The volumes are not used for any kind of stateful storage on disk.
-
-Refer to the
-[Calico ConfigMap manifest](./manifests/app-layer-policy/istio-inject-configmap.yaml){:target="_blank"} for an
-example with the above changes.
->>>>>>> open/master

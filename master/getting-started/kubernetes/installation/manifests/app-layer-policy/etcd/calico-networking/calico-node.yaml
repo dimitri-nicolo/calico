@@ -1,15 +1,10 @@
 ---
 layout: null
 ---
-<<<<<<< HEAD
-{% include {{page.version}}/manifests/calico-node.yaml datastore="etcd" network="calico" calico_ipam="true" app_layer_policy="true" variant_name="Calico" %}
-=======
 {% helm --execute=templates/calico-node.yaml %}
 datastore: etcd
 network: calico
 calico_ipam: true
 app_layer_policy: true
-variant_name: Calico
+app_layer_policy_enabled: true
 {% endhelm %}
-
->>>>>>> open/master

@@ -1,11 +1,6 @@
 ---
 title: Configuring Typha
-<<<<<<< HEAD
 canonical_url: https://docs.tigera.io/v2.3/reference/typha/configuration
-=======
-redirect_from: latest/reference/typha/configuration
-canonical_url: 'https://docs.projectcalico.org/v3.5/reference/typha/configuration'
->>>>>>> open/master
 ---
 
 Configuration for Typha is read from one of two possible locations, in
@@ -43,11 +38,7 @@ The full list of parameters which can be set is as follows.
 | `PrometheusMetricsPort`           | `TYPHA_PROMETHEUSMETRICSPORT`           | Experimental: TCP port that the Prometheus metrics server should bind to. [Default: `9091`] | int |
 | `PrometheusProcessMetricsEnabled` | `TYPHA_PROMETHEUSPROCESSMETRICSENABLED` | Set to `false` to disable process metrics collection, which the Prometheus client does by default. This reduces the number of metrics reported, reducing Prometheus load. [Default: `true`] | boolean |
 
-<<<<<<< HEAD
-> **Note**: By default, if the health endpoint is enabled Typha listens on localhost.  However, if  Typha is used in
-=======
 > **Note**: By default, if the health endpoint is enabled Typha listens on localhost.  However, if  Typhs is used in
->>>>>>> open/master
 > Kubernetes, the kubelet will do health checks using the pod IP.  To work around this discrepancy, the Typha image
 > supports a health-check CLI command that fetches the health endpoint:
 > `calico-typha check (readiness|liveness) --port=<port>`.  If you modify the health port, you will need to add the
@@ -67,7 +58,6 @@ The full list of parameters which can be set is as follows.
 
 The Kubernetes API datastore driver reads its configuration from Kubernetes-provided environment variables.
 
-<<<<<<< HEAD
 #### {{site.prodname}} specific configuration
 
 | Setting                      | Environment variable               | Default | Meaning                                 |
@@ -83,8 +73,6 @@ valid client must then connect over HTTPS and present a certificate
 that is signed by one of the trusted CAs in the
 `PrometheusMetricsCAFile` setting.
 
-=======
->>>>>>> open/master
 #### Felix-Typha TLS configuration
 
 | Configuration parameter | Environment variable   | Description | Schema |
@@ -96,8 +84,4 @@ that is signed by one of the trusted CAs in the
 | `ServerKeyFile`         | `TYPHA_SERVERKEYFILE`  | Path to the file containing the private key matching the Typha server certificate. Example: `/etc/typha/key.pem` (optional) | string |
 
 For more information on how to use and set these variables, refer to
-<<<<<<< HEAD
-[Connections from Felix to Typha (Kubernetes)](../../usage/encrypt-comms#connections-from-felix-to-typha-kubernetes).
-=======
 [Connections from Felix to Typha (Kubernetes)](../../security/comms/crypto-auth#connections-from-felix-to-typha-kubernetes).
->>>>>>> open/master

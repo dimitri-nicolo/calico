@@ -1,12 +1,6 @@
 ---
-<<<<<<< HEAD
 title: Global Network Policy Resource (GlobalNetworkPolicy)
 canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/resources/globalnetworkpolicy
-=======
-title: Global network policy
-redirect_from: latest/reference/calicoctl/resources/globalnetworkpolicy
-canonical_url: 'https://docs.projectcalico.org/v3.5/reference/calicoctl/resources/globalnetworkpolicy'
->>>>>>> open/master
 ---
 
 A global network policy resource (`GlobalNetworkPolicy`) represents an ordered set of rules which are applied
@@ -21,12 +15,9 @@ See [network policy resource]({{site.baseurl}}/{{page.version}}/reference/calico
 `GlobalNetworkPolicy` resources can be used to define network connectivity rules between groups of {{site.prodname}} endpoints and host endpoints, and
 take precedence over [Profile resources]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/profile) if any are defined.
 
-<<<<<<< HEAD
-GlobalNetworkPolicies are organised into [tiers]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/tier), which provide an additional layer of ordering—in particular, note that the `Pass` action skips to the
+GlobalNetworkPolicies are organized into [tiers]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/tier), which provide an additional layer of ordering—in particular, note that the `Pass` action skips to the
 next [tier]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/tier), to enable hierarchical security policy.
 
-=======
->>>>>>> open/master
 For `calicoctl` [commands]({{site.baseurl}}/{{page.version}}/reference/calicoctl/commands/) that specify a resource type on the CLI, the following
 aliases are supported (all case insensitive): `globalnetworkpolicy`, `globalnetworkpolicies`, `gnp`, `gnps`.
 
@@ -39,14 +30,9 @@ This sample policy allows TCP traffic from `frontend` endpoints to port 6379 on
 apiVersion: projectcalico.org/v3
 kind: GlobalNetworkPolicy
 metadata:
-<<<<<<< HEAD
   name: internal-access.allow-tcp-6379
 spec:
   tier: internal-access
-=======
-  name: allow-tcp-6379
-spec:
->>>>>>> open/master
   selector: role == 'database'
   types:
   - Ingress
@@ -76,10 +62,7 @@ spec:
 | Field              | Description                                                                                                                                           | Accepted Values | Schema                | Default |
 |--------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------|-----------------------|---------|
 | order              | Controls the order of precedence. {{site.prodname}} applies the policy with the lowest value first.                                                   |                 | float                 |         |
-<<<<<<< HEAD
 | tier               | Name of the [tier]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/tier) this policy belongs to.                                                   |                 | string                 |  `default` |
-=======
->>>>>>> open/master
 | selector           | Selects the endpoints to which this policy applies.                                                                                                   |                 | [selector](#selector) | all()   |
 | types              | Applies the policy based on the direction of the traffic. To apply the policy to inbound traffic, set to `Ingress`. To apply the policy to outbound traffic, set to `Egress`. To apply the policy to both, set to `Ingress, Egress`. | `Ingress`, `Egress`  | List of strings | Depends on presence of ingress/egress rules\* |
 | ingress            | Ordered list of ingress rules applied by policy.                                                                                                      |                 | List of [Rule](#rule) |         |
@@ -146,10 +129,6 @@ in order to use the following match criteria.
 >  * Rules must have the action `Allow` if they contain application layer policy match clauses.
 {: .alert .alert-info}
 
-<<<<<<< HEAD
-=======
-
->>>>>>> open/master
 #### HTTPMatch
 
 {% include {{page.version}}/httpmatch.md %}

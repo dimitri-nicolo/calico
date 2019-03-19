@@ -12,18 +12,18 @@ operate.
 ## Enabling application layer policy
 
 Application layer policy can be enabled during installation of {{ site.prodname }}, or can be enabled on an cluster
-already running {{ site.prodname }} 
+already running {{ site.prodname }}
 
 #### Enabling during installation of {{ site.prodname }}
 
-Prior to applying the `calico.yaml` manifest that will install Calico, modify the file to set the 
+Prior to applying the `calico.yaml` manifest that will install Calico, modify the file to set the
 `felix-policy-sync-path-prefix` value in the `calico-config` ConfigMap as follows:
 
 ```yaml
   felix-policy-sync-path-prefix: "/var/run/nodeagent"
 ```
 
-Prior to applying the `cnx.yaml` manifest that will install the {{ site.prodname }} Manager and API Server, modify the 
+Prior to applying the `cnx.yaml` manifest that will install the {{ site.prodname }} Manager and API Server, modify the
 file to set the `tigera.cnx-manager.alp-support` value in the `tigera-cnx-manager-config` ConfigMap as follows:
 
 ```yaml
@@ -131,5 +131,5 @@ to take effect.
 
 ## Next steps
 
-To get started with application layer policy support, we recommend that you run through the 
+To get started with application layer policy support, we recommend that you run through the
 [application layer policy tutorial](../tutorials/app-layer-policy).

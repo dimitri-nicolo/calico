@@ -1,31 +1,17 @@
 ---
-<<<<<<< HEAD
 title: Resource Definitions
 canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/resources/
 ---
 
 This section describes the set of valid resource types that can be managed
 through `calicoctl`.
-=======
-title: Resource definitions
-redirect_from: latest/reference/calicoctl/resources/index
-canonical_url: 'https://docs.projectcalico.org/v3.5/reference/calicoctl/resources/'
----
-
-This section describes the set of valid resource types that can be managed
-through `calicoctl`.  
->>>>>>> open/master
 
 While resources may be supplied in YAML or JSON format, this guide provides examples in YAML.
 
 ## Overview of resource structure
 
 The calicoctl commands for resource management (create, apply, delete, replace, get)
-<<<<<<< HEAD
 all take resource manifests as input.
-=======
-all take resource manifests as input.  
->>>>>>> open/master
 
 Each manifest may contain a single resource
 (e.g. a profile resource), or a list of multiple resources (e.g. a profile and two
@@ -54,11 +40,7 @@ spec:
 | metadata | Contains information used to uniquely identify the particular instance of the resource. | | map |
 | spec     | Contains the resource specification. | | map |
 
-<<<<<<< HEAD
-### Supported Kinds
-=======
 ### Supported kinds
->>>>>>> open/master
 
 The following resources are supported:
 
@@ -70,10 +52,7 @@ The following resources are supported:
 - [IPPool]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/ippool)
 - [Profile]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/profile)
 - [FelixConfiguration]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/felixconfig)
-<<<<<<< HEAD
 - [Tier]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/tier)
-=======
->>>>>>> open/master
 - [WorkloadEndpoint]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/workloadendpoint)
 
 ### Resource name requirements

@@ -1,17 +1,10 @@
 ---
-<<<<<<< HEAD
 title: Installing Tigera Secure EE for policy and networking
 canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/installation/calico
-=======
-title: Installing Calico for policy and networking (recommended)
-redirect_from: latest/getting-started/kubernetes/installation/calico
-canonical_url: 'https://docs.projectcalico.org/v3.5/getting-started/kubernetes/installation/calico'
->>>>>>> open/master
 ---
 
 ## Before you begin
 
-<<<<<<< HEAD
 - Ensure that you have a Kubernetes cluster that meets the {{site.prodname}}
   [system requirements](../requirements). If you don't, follow the steps in
   [Using kubeadm to create a cluster](http://kubernetes.io/docs/getting-started-guides/kubeadm/).
@@ -79,27 +72,6 @@ and your datastore type. Refer to the section that matches your configuration.
    > **Tip**: On kubeadm, you can pass `--pod-network-cidr=<your-pod-cidr>`
    > to kubeadm to set both Kubernetes controller flags.
    {: .alert .alert-success}
-=======
-Ensure that you have a Kubernetes cluster that meets the
-{{site.prodname}} [system requirements](../requirements). If you don't,
-follow the steps in [Using kubeadm to create a cluster](http://kubernetes.io/docs/getting-started-guides/kubeadm/).
-
-## Installing {{site.prodname}} for policy and networking
-
-### Selecting your datastore type and number of nodes
-
-The procedure differs according to the type of datastore you want {{site.prodname}}
-to use and the number of nodes. Refer to the section that matches your desired
-datastore type and number of nodes.
-
-- [Kubernetes API datastore—50 nodes or less](#installing-with-the-kubernetes-api-datastore50-nodes-or-less)
-
-- [Kubernetes API datastore—more than 50 nodes](#installing-with-the-kubernetes-api-datastoremore-than-50-nodes)
-
-- [etcd datastore](#installing-with-the-etcd-datastore)
-
-### Installing with the Kubernetes API datastore—50 nodes or less
->>>>>>> open/master
 
 1. Download the {{site.prodname}} networking manifest for the Kubernetes API datastore.
 
@@ -109,23 +81,16 @@ datastore type and number of nodes.
    -O
    ```
 
-<<<<<<< HEAD
 {% include {{page.version}}/cnx-pod-cidr-sed.md yaml="calico" %}
 
 {% include {{page.version}}/cnx-cred-sed.md yaml="calico" %}
 
 1. Apply the manifest.
-=======
-{% include {{page.version}}/pod-cidr-sed.md yaml="calico" %}
-
-1. Apply the manifest using the following command.
->>>>>>> open/master
 
    ```bash
    kubectl apply -f calico.yaml
    ```
 
-<<<<<<< HEAD
 1. Continue to [Installing the {{site.prodname}} Manager and API Server](#install-cnx-mgr)
 
 ### Installing without federation, using Kubernetes API datastore, more than 50 nodes
@@ -137,12 +102,6 @@ datastore type and number of nodes.
    > **Tip**: On kubeadm, you can pass `--pod-network-cidr=<your-pod-cidr>`
    > to kubeadm to set both Kubernetes controller flags.
    {: .alert .alert-success}
-=======
-1. If you wish to enforce application layer policies and secure workload-to-workload
-   communications with mutual TLS authentication, continue to [Enabling application layer policy](app-layer-policy) (optional).
-
-### Installing with the Kubernetes API datastore—more than 50 nodes
->>>>>>> open/master
 
 1. Download the {{site.prodname}} networking manifest for the Kubernetes API datastore.
 
@@ -152,11 +111,7 @@ datastore type and number of nodes.
    -O
    ```
 
-<<<<<<< HEAD
 {% include {{page.version}}/cnx-pod-cidr-sed.md yaml="calico" %}
-=======
-{% include {{page.version}}/pod-cidr-sed.md yaml="calico" %}
->>>>>>> open/master
 
 1. Modify the replica count in the`Deployment` named `calico-typha`
    to the desired number of replicas.
@@ -175,34 +130,23 @@ datastore type and number of nodes.
 
    We recommend at least one replica for every 200 nodes and no more than
    20 replicas. In production, we recommend a minimum of three replicas to reduce
-<<<<<<< HEAD
-   the impact of rolling upgrades and failures.
-
-   > **Warning**: If you do not increase the replica
-=======
-   the impact of rolling upgrades and failures.  The number of replicas should 
+   the impact of rolling upgrades and failures.  The number of replicas should
    always be less than the number of nodes, otherwise rolling upgrades will stall.
-   In addition, Typha only helps with scale if there are fewer Typha instances than 
+   In addition, Typha only helps with scale if there are fewer Typha instances than
    there are nodes.
 
+
    > **Warning**: If you set `typha_service_name` without increasing the replica
->>>>>>> open/master
    > count from its default of `0` Felix will try to connect to Typha, find no
    > Typha instances to connect to, and fail to start.
    {: .alert .alert-danger}
 
-<<<<<<< HEAD
-{% include {{page.version}}/cnx-cred-sed.md yaml="calico" %}
-
-=======
->>>>>>> open/master
 1. Apply the manifest.
 
    ```bash
    kubectl apply -f calico.yaml
    ```
 
-<<<<<<< HEAD
 1. Continue to [Installing the {{site.prodname}} Manager and API Server](#install-cnx-mgr)
 
 
@@ -230,30 +174,16 @@ for each [remote cluster](../../../usage/federation/index#terminology). Ensure t
    --from-file=kubeconfig-rem-cluster-1 --from-file=kubeconfig-rem-cluster-2 \
    --namespace=kube-system
    ```
-=======
-1. If you wish to enforce application layer policies and secure workload-to-workload
-   communications with mutual TLS authentication, continue to [Enabling application layer policy](app-layer-policy) (optional).
-
-### Installing with the etcd datastore
->>>>>>> open/master
 
 1. Download the {{site.prodname}} networking manifest for etcd.
 
    ```bash
    curl \
-<<<<<<< HEAD
    {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/federation/calico.yaml \
    -O
    ```
 
 {% include {{page.version}}/cnx-pod-cidr-sed.md yaml="calico" %}
-=======
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/calico.yaml \
-   -O
-   ```
-
-{% include {{page.version}}/pod-cidr-sed.md yaml="calico" %}
->>>>>>> open/master
 
 1. In the `ConfigMap` named `calico-config`, set the value of
    `etcd_endpoints` to the IP address and port of your etcd server.
@@ -261,7 +191,6 @@ for each [remote cluster](../../../usage/federation/index#terminology). Ensure t
    > **Tip**: You can specify more than one using commas as delimiters.
    {: .alert .alert-success}
 
-<<<<<<< HEAD
 1. Modify the replica count in the `Deployment` named `calico-typha`
    to the desired number of replicas.
 
@@ -290,15 +219,12 @@ for each [remote cluster](../../../usage/federation/index#terminology). Ensure t
 
 {% include {{page.version}}/cnx-cred-sed.md yaml="calico" %}
 
-=======
->>>>>>> open/master
 1. Apply the manifest using the following command.
 
    ```bash
    kubectl apply -f calico.yaml
    ```
 
-<<<<<<< HEAD
 1. Continue to [Installing the {{site.prodname}} Manager and API Server](#install-cnx-mgr)
 
 
@@ -390,7 +316,3 @@ for each [remote cluster](../../../usage/federation/index#terminology). Ensure t
 {% include {{page.version}}/cnx-monitor-install.md elasticsearch="operator"%}
 
 {% include {{page.version}}/gs-next-steps.md %}
-=======
-1. If you wish to enforce application layer policies and secure workload-to-workload
-   communications with mutual TLS authentication, continue to [Enabling application layer policy](app-layer-policy) (optional).
->>>>>>> open/master

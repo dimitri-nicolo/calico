@@ -1,11 +1,6 @@
 ---
 title: Configuring Felix
-<<<<<<< HEAD
 canonical_url: https://docs.tigera.io/v2.3/reference/felix/configuration
-=======
-redirect_from: latest/reference/felix/configuration
-canonical_url: 'https://docs.projectcalico.org/v3.5/reference/felix/configuration'
->>>>>>> open/master
 ---
 
 Configuration for Felix is read from one of four possible locations, in
@@ -35,30 +30,18 @@ The full list of parameters which can be set is as follows.
 | Configuration parameter           | Environment variable                    | Description  | Schema |
 | --------------------------------- | --------------------------------------- | -------------| ------ |
 | `DatastoreType`                   | `FELIX_DATASTORETYPE`                   | The datastore that Felix should read endpoints and policy information from. [Default: `etcdv3`] | `etcdv3`, `kubernetes`|
-<<<<<<< HEAD
 | `ExternalNodesCIDRList`           | `FELIX_EXTERNALNODESCIDRLIST`           | Comma-delimited list of IPv4 or CIDR of external-non-{{site.nodecontainer}}s from which IPIP traffic is accepted by {{site.nodecontainer}}s. [Default: ""] | string |
-=======
-| `ExternalNodesCIDRList`           | `FELIX_EXTERNALNODESCIDRLIST`           | Comma-delimited list of IPv4 or CIDR of external-non-calico-nodes from which IPIP traffic is accepted by calico-nodes. [Default: ""] | string |
->>>>>>> open/master
 | `FailsafeInboundHostPorts`        | `FELIX_FAILSAFEINBOUNDHOSTPORTS`        | Comma-delimited list of UDP/TCP ports that Felix will allow incoming traffic to host endpoints on irrespective of the security policy. This is useful to avoid accidentally cutting off a host with incorrect configuration. Each port should be specified as `tcp:<port-number>` or `udp:<port-number>`. For backwards compatibility, if the protocol is not specified, it defaults to "tcp". To disable all inbound host ports, use the value `none`. The default value allows ssh access, DHCP, BGP and etcd. [Default: `tcp:22, udp:68, tcp:179, tcp:2379, tcp:2380, tcp:6666, tcp:6667`] | string |
 | `FailsafeOutboundHostPorts`       | `FELIX_FAILSAFEOUTBOUNDHOSTPORTS`       | Comma-delimited list of UDP/TCP ports that Felix will allow outgoing traffic from host endpoints to irrespective of the security policy. This is useful to avoid accidently cutting off a host with incorrect configuration. Each port should be specified as `tcp:<port-number>` or `udp:<port-number>`.  For backwards compatibility, if the protocol is not specified, it defaults to "tcp". To disable all outbound host ports, use the value `none`. The default value opens etcd's standard ports to ensure that Felix does not get cut off from etcd as well as allowing DHCP, DNS, BGP. [Default: `udp:53, udp:67, tcp:179, tcp:2379, tcp:2380, tcp:6666, tcp:6667`]  | string |
 | `FelixHostname`                   | `FELIX_FELIXHOSTNAME`                   | The hostname Felix reports to the plugin. Should be used if the hostname Felix autodetects is incorrect or does not match what the plugin will expect. [Default: `socket.gethostname()`] | string |
 | `HealthEnabled`                   | `FELIX_HEALTHENABLED`                   | When enabled, exposes felix health information via an http endpoint. | boolean |
 | `HealthHost`                      | `FELIX_HEALTHHOST`                      | The address on which Felix will respond to health requests. [Default: `localhost`] | string |
-<<<<<<< HEAD
-| `IpInIpMtu`                       | `FELIX_IPINIPMTU`                       | The MTU to set on the tunnel device. See [Configuring MTU]({{site.baseurl}}/{{page.version}}/usage/configuration/mtu) [Default: `1440`] | int |
-=======
 | `IpInIpMtu`                       | `FELIX_IPINIPMTU`                       | The MTU to set on the tunnel device. See [Configuring MTU]({{site.baseurl}}/{{page.version}}/networking/mtu) [Default: `1440`] | int |
->>>>>>> open/master
 | `LogFilePath`                     | `FELIX_LOGFILEPATH`                     | The full path to the Felix log. Set to `none` to disable file logging. [Default: `/var/log/calico/felix.log`] | string |
 | `LogSeverityFile`                 | `FELIX_LOGSEVERITYFILE`                 | The log severity above which logs are sent to the log file. [Default: `Info`] | `Debug`, `Info`, `Warning`, `Error`, `Fatal` |
 | `LogSeverityScreen`               | `FELIX_LOGSEVERITYSCREEN`               | The log severity above which logs are sent to the stdout. [Default: `Info`] | `Debug`, `Info`, `Warning`, `Error`, `Fatal` |
 | `LogSeveritySys`                  | `FELIX_LOGSEVERITYSYS`                  | The log severity above which logs are sent to the syslog. Set to `""` for no logging to syslog. [Default: `Info`] | `Debug`, `Info`, `Warning`, `Error`, `Fatal` |
-<<<<<<< HEAD
 | `PolicySyncPathPrefix`            | `FELIX_POLICYSYNCPATHPREFIX`            | File system path where Felix notifies services of policy changes over Unix domain sockets. This is only required if you're configuring [application layer policy](../../getting-started/kubernetes/installation/app-layer-policy). Set to `""` to disable. [Default: `""`] | string |
-=======
-| `PolicySyncPathPrefix`            | `FELIX_POLICYSYNCPATHPREFIX`            | File system path where Felix notifies services of policy changes over Unix domain sockets. This is only required if you're configuring [application layer policy](https://github.com/projectcalico/app-policy). Set to `""` to disable. [Default: `""`] | string |
->>>>>>> open/master
 | `PrometheusGoMetricsEnabled`      | `FELIX_PROMETHEUSGOMETRICSENABLED`      | Set to `false` to disable Go runtime metrics collection, which the Prometheus client does by default. This reduces the number of metrics reported, reducing Prometheus load. [Default: `true`]  | boolean |
 | `PrometheusMetricsEnabled`        | `FELIX_PROMETHEUSMETRICSENABLED`        | Set to `true` to enable the Prometheus metrics server in Felix. [Default: `false`] | boolean |
 | `PrometheusMetricsPort`           | `FELIX_PROMETHEUSMETRICSPORT`           | Experimental: TCP port that the Prometheus metrics server should bind to. [Default: `9091`] | int |
@@ -69,10 +52,6 @@ The full list of parameters which can be set is as follows.
 | `UsageReportingInitialDelaySecs`  | `FELIX_USAGEREPORTINGINITIALDELAYSECS`  | Minimum delay before first usage report, in seconds. [Default: `300`] | int |
 | `UsageReportingIntervalSecs`      | `FELIX_USAGEREPORTINGINTERVALSECS`      | Interval at which to make usage reports, in seconds. [Default: `86400`] | int |
 
-<<<<<<< HEAD
-=======
-
->>>>>>> open/master
 #### etcd datastore configuration
 
 | Configuration parameter | Environment variable  | Description | Schema |
@@ -82,10 +61,6 @@ The full list of parameters which can be set is as follows.
 | `EtcdEndpoints`         | `FELIX_ETCDENDPOINTS` | Comma-delimited list of etcd endpoints to connect to. Example: `http://127.0.0.1:2379,http://127.0.0.2:2379`. | `<scheme>://<ip-or-fqdn>:<port>` |
 | `EtcdKeyFile`           | `FELIX_ETCDKEYFILE`   | Path to the file containing the private key matching Felix's client certificate. Enables Felix to participate in mutual TLS authentication and identify itself to the etcd server. Example: `/etc/felix/key.pem` (optional) | string |
 
-<<<<<<< HEAD
-=======
-
->>>>>>> open/master
 #### Kubernetes API datastore configuration
 
 The Kubernetes API datastore driver reads its configuration from Kubernetes-provided environment variables.
@@ -129,22 +104,15 @@ The Kubernetes API datastore driver reads its configuration from Kubernetes-prov
 
 #### OpenStack-specific configuration
 
-<<<<<<< HEAD
 | Configuration parameter | Environment variable | Description  | Schema |
 | ------------------------|--------------------- | ------------ | ------ |
 | `MetadataAddr`          | `FELIX_METADATAADDR` | The IP address or domain name of the server that can answer VM queries for cloud-init metadata. In OpenStack, this corresponds to the machine running nova-api (or in Ubuntu, nova-api-metadata). A value of `none`  (case insensitive) means that Felix should not set up any NAT rule for the metadata path. [Default: `127.0.0.1`]  | `<IPv4-address>`, `<hostname>`, `none` |
 | `MetadataPort`          | `FELIX_METADATAPORT` | The port of the metadata server. This, combined with global.MetadataAddr (if not 'None'), is used to set up a NAT rule, from 169.254.169.254:80 to MetadataAddr:MetadataPort. In most cases this should not need to be changed [Default: `8775`].  | int |
-=======
-| Configuration parameter | Environment variable    | Description  | Schema |
-| ------------------------|------------------------ | ------------ | ------ |
-| `MetadataAddr`          | `FELIX_METADATAADDR`    | The IP address or domain name of the server that can answer VM queries for cloud-init metadata. In OpenStack, this corresponds to the machine running nova-api (or in Ubuntu, nova-api-metadata). A value of `none`  (case insensitive) means that Felix should not set up any NAT rule for the metadata path. [Default: `127.0.0.1`]  | `<IPv4-address>`, `<hostname>`, `none` |
-| `MetadataPort`          | `FELIX_METADATAPORT`    | The port of the metadata server. This, combined with global.MetadataAddr (if not 'None'), is used to set up a NAT rule, from 169.254.169.254:80 to MetadataAddr:MetadataPort. In most cases this should not need to be changed [Default: `8775`].  | int |
 | `OpenstackRegion`       | `FELIX_OPENSTACKREGION` | In a [multi-region deployment]({{site.baseurl}}/{{page.version}}/networking/openstack/multiple-regions), the name of the region that this Felix is in. [Default: none].  | string\* |
 
 \* If non-empty, the value specified for `OpenstackRegion` must be a
 string of lower case alphanumeric characters or '-', starting and
 ending with an alphanumeric character.
->>>>>>> open/master
 
 #### Bare metal specific configuration
 
@@ -152,7 +120,6 @@ ending with an alphanumeric character.
 | ----------------------- | ----------------------- | ----------- | ------ |
 | `InterfacePrefix`       | `FELIX_INTERFACEPREFIX` | The interface name prefix that identifies workload endpoints and so distinguishes them from host endpoint interfaces. Accepts more than one interface name prefix in comma-delimited format, e.g., `tap,cali`. Note: in environments other than bare metal, the orchestrators configure this appropriately.  For example our Kubernetes and Docker integrations set the `cali` value, and our OpenStack integration sets the `tap` value. [Default: `cali`] | string |
 
-<<<<<<< HEAD
 #### {{site.prodname}} specific configuration
 
 | Setting                      | Environment variable               | Default | Meaning                                 |
@@ -232,8 +199,6 @@ encrypted in transit.  A valid client must then connect over HTTPS and
 present a certificate that is signed by one of the trusted CAs in the
 relevant `Prometheus...CAFile` setting.
 
-=======
->>>>>>> open/master
 #### Felix-Typha TLS configuration
 
 | Configuration parameter | Environment variable   | Description | Schema |
@@ -245,11 +210,7 @@ relevant `Prometheus...CAFile` setting.
 | `TyphaURISAN`           | `FELIX_TYPHAURISAN`    | If set, a URI SAN that Typha's certificate must have. We recommend populating this with a [SPIFFE](https://github.com/spiffe/spiffe/blob/master/standards/SPIFFE-ID.md#2-spiffe-identity) string that identifies Typha. All Typha instances should use the same SPIFFE ID. If you have enabled TLS on the communications from Felix to Typha, you must set a value here or in `TyphaCN`. You can set values in both, as well, such as to facilitate a migration from using one to the other. If either matches, the communication succeeds. [Default: none] | string |
 
 For more information on how to use and set these variables, refer to
-<<<<<<< HEAD
-[Connections from Felix to Typha (Kubernetes)](../../usage/encrypt-comms#connections-from-felix-to-typha-kubernetes).
-=======
 [Connections from Felix to Typha (Kubernetes)](../../security/comms/crypto-auth#connections-from-felix-to-typha-kubernetes).
->>>>>>> open/master
 
 ### Environment variables
 
@@ -270,15 +231,12 @@ using the `-c` or `--config-file` options on the command line. If the
 file exists, then it is read (ignoring section names) and all parameters
 are set from it.
 
-<<<<<<< HEAD
-=======
 In OpenStack, we recommend putting all configuration into configuration
 files, since the etcd database is transient (and may be recreated by the
 OpenStack plugin in certain error cases). However, in a Docker
 environment the use of environment variables or etcd is often more
 convenient.
 
->>>>>>> open/master
 ### Datastore
 
 Felix also reads configuration parameters from the datastore.  It supports

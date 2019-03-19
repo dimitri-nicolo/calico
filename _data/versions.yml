@@ -531,7 +531,6 @@ v2.1:
       version: v0.0.1
       url: ""
 
-<<<<<<< HEAD
 v2.0:
 - title: v2.0.2
   note: |
@@ -657,7 +656,6 @@ v2.0:
 
     ##### Prometheus updates
 
-<<<<<<< HEAD
     The manifests now use Prometheus Operator v0.15.0 and are pinned to
     [Prometheus 2.0](https://prometheus.io/blog/2017/11/08/announcing-prometheus-2-0/).
 
@@ -760,7 +758,6 @@ v2.0:
     - Typha no longer sends incorrect `updateTypes` to Felix, increasing the accuracy of
       Felix statistics. [typha #70](https://github.com/projectcalico/typha/pull/70) (@fasaxc)
 
-<<<<<<< HEAD
     - The CNI plugin now offers an optional environment variable called `CNI_OLD_CONF_NAME`.
       If set, the CNI plug-in cleans up old configuration data during an upgrade, making it
       easier to migrate to a new `CNI_CONF_NAME` value. [cni-plugin #392](https://github.com/projectcalico/cni-plugin/pull/392)(@weikinhuang)

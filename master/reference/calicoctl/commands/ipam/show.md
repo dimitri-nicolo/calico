@@ -1,11 +1,6 @@
 ---
 title: calicoctl ipam
-<<<<<<< HEAD
 canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/commands/ipam/show
-=======
-redirect_from: latest/reference/calicoctl/commands/ipam/show
-canonical_url: 'https://docs.projectcalico.org/v3.5/reference/calicoctl/commands/ipam/show'
->>>>>>> open/master
 ---
 
 This section describes the `calicoctl ipam show` command.
@@ -82,9 +77,4 @@ Description:
 
 ## See also
 
-<<<<<<< HEAD
--  [calicoctl configuration]({{site.baseurl}}/{{page.version}}/usage/calicoctl/configure/) for details on configuring `calicoctl` to access
-   the {{site.prodname}} datastore.
-=======
 -  [Installing calicoctl]({{site.baseurl}}/{{page.version}}/getting-started/calicoctl/install)
->>>>>>> open/master

@@ -1,11 +1,6 @@
 ---
 title: calicoctl ipam
-<<<<<<< HEAD
 canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/commands/ipam/
-=======
-redirect_from: latest/reference/calicoctl/commands/ipam/index
-canonical_url: 'https://docs.projectcalico.org/v3.5/reference/calicoctl/commands/ipam/'
->>>>>>> open/master
 ---
 
 This section describes the `calicoctl ipam` commands.

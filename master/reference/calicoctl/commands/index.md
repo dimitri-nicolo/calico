@@ -1,32 +1,18 @@
 ---
-<<<<<<< HEAD
 title: Command Reference
 canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/commands/
-=======
-title: Command reference
-redirect_from: latest/reference/calicoctl/commands/index
-canonical_url: 'https://docs.projectcalico.org/v3.5/reference/calicoctl/commands/'
->>>>>>> open/master
 ---
 
 The command line tool, `calicoctl`, makes it easy to manage {{site.prodname}} network
 and security policy.
 
-<<<<<<< HEAD
 This section is a command line reference for `calicoctl`, organized based on
-=======
-This section is a command line reference for calicoctl, organised based on
->>>>>>> open/master
 the command hierarchy.
 
 ## Top level help
 
 Run `calicoctl --help` to display the following help menu for the top level
-<<<<<<< HEAD
-`calicoctl` commands.
-=======
 calicoctl commands.
->>>>>>> open/master
 
 ```
 Usage:
@@ -40,10 +26,7 @@ Usage:
               name.
     get       Get a resource identified by file, stdin or resource type and
               name.
-<<<<<<< HEAD
-=======
     label     Add or update labels of resources.
->>>>>>> open/master
     convert   Convert config files between different API versions.
     ipam      IP address management.
     node      Calico node management.
@@ -73,10 +56,7 @@ organized by top level command.
 -  [calicoctl apply]({{site.baseurl}}/{{page.version}}/reference/calicoctl/commands/apply)
 -  [calicoctl delete]({{site.baseurl}}/{{page.version}}/reference/calicoctl/commands/delete)
 -  [calicoctl get]({{site.baseurl}}/{{page.version}}/reference/calicoctl/commands/get)
-<<<<<<< HEAD
-=======
 -  [calicoctl label]({{site.baseurl}}/{{page.version}}/reference/calicoctl/commands/label)
->>>>>>> open/master
 -  [calicoctl ipam]({{site.baseurl}}/{{page.version}}/reference/calicoctl/commands/ipam)
 -  [calicoctl node]({{site.baseurl}}/{{page.version}}/reference/calicoctl/commands/node)
 -  [calicoctl convert]({{site.baseurl}}/{{page.version}}/reference/calicoctl/commands/convert)

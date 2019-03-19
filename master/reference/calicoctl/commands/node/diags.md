@@ -1,11 +1,6 @@
 ---
 title: calicoctl node diags
-<<<<<<< HEAD
 canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/commands/node/diags
-=======
-redirect_from: latest/reference/calicoctl/commands/node/diags
-canonical_url: 'https://docs.projectcalico.org/v3.5/reference/calicoctl/commands/node/diags'
->>>>>>> open/master
 ---
 
 This section describes the `calicoctl node diags` command.

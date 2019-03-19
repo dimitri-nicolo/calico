@@ -1,11 +1,6 @@
 ---
 title: calicoctl node run
-<<<<<<< HEAD
 canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/commands/node/run
-=======
-redirect_from: latest/reference/calicoctl/commands/node/run
-canonical_url: 'https://docs.projectcalico.org/v3.5/reference/calicoctl/commands/node/run'
->>>>>>> open/master
 ---
 
 This sections describes the `calicoctl node run` command.
@@ -92,11 +87,7 @@ Options:
                            [default: /var/log/calico]
      --node-image=<DOCKER_IMAGE_NAME>
                            Docker image to use for Calico's per-node container.
-<<<<<<< HEAD
-                           [default: {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["node"]}}:latest]
-=======
                            [default: {{page.registry}}{{site.imageNames["node"]}}:latest]
->>>>>>> open/master
      --backend=(bird|none)
                            Specify which networking backend to use.  When set
                            to "none", Calico node runs in policy only mode.
@@ -127,11 +118,7 @@ Options:
                            [default: /etc/calico/calicoctl.cfg]
 
 Description:
-<<<<<<< HEAD
   This command is used to start a {{site.nodecontainer}} container instance which provides
-=======
-  This command is used to start a calico/node container instance which provides
->>>>>>> open/master
   Calico networking and network policy on your compute host.
 ```
 {: .no-select-button}
@@ -162,11 +149,7 @@ Enabling IPv6 forwarding
 Increasing conntrack limit
 Running the following command:
 
-<<<<<<< HEAD
 docker run --net=host --privileged --name={{site.noderunning}} -d --restart=always -e ETCD_SCHEME=http -e HOSTNAME=calico -e ETCD_AUTHORITY=127.0.0.1:2379 -e AS= -e NO_DEFAULT_POOLS= -e ETCD_ENDPOINTS= -e IP= -e IP6= -e CALICO_NETWORKING_BACKEND=bird -v /var/run/docker.sock:/var/run/docker.sock -v /var/run/calico:/var/run/calico -v /lib/modules:/lib/modules -v /var/log/calico:/var/log/calico -v /run/docker/plugins:/run/docker/plugins {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["node"]}}:{{site.data.versions[page.version].first.title}}
-=======
-docker run --net=host --privileged --name={{site.noderunning}} -d --restart=always -e ETCD_SCHEME=http -e HOSTNAME=calico -e CALICO_LIBNETWORK_ENABLED=true -e ETCD_AUTHORITY=127.0.0.1:2379 -e AS= -e NO_DEFAULT_POOLS= -e ETCD_ENDPOINTS= -e IP= -e IP6= -e CALICO_NETWORKING_BACKEND=bird -v /var/run/docker.sock:/var/run/docker.sock -v /var/run/calico:/var/run/calico -v /lib/modules:/lib/modules -v /var/log/calico:/var/log/calico -v /run/docker/plugins:/run/docker/plugins {{page.registry}}{{site.imageNames["node"]}}:{{site.data.versions[page.version].first.title}}
->>>>>>> open/master
 
 Waiting for etcd connection...
 Using configured IPv4 address: 192.0.2.0
@@ -174,10 +157,6 @@ No IPv6 address configured
 Using global AS number
 WARNING: Could not confirm that the provided IPv4 address is assigned to this host.
 Calico node name:  calico
-<<<<<<< HEAD
-=======
-CALICO_LIBNETWORK_ENABLED is true - start libnetwork service
->>>>>>> open/master
 Calico node started successfully
 ```
 {: .no-select-button}
@@ -344,11 +323,7 @@ terminating `,` character does not need to be specified for those cases.
                          [default: /var/log/calico]
    --node-image=<DOCKER_IMAGE_NAME>
                          Docker image to use for Calico's per-node container.
-<<<<<<< HEAD
-                         [default: {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["node"]}}:latest]
-=======
                          [default: {{page.registry}}{{site.imageNames["node"]}}:latest]
->>>>>>> open/master
    --backend=(bird|none)
                          Specify which networking backend to use.  When set
                          to "none", Calico node runs in policy only mode.
@@ -388,15 +363,7 @@ terminating `,` character does not need to be specified for those cases.
 
 ## See also
 
-<<<<<<< HEAD
--  [Resources]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/) for details on all valid resources, including file format
-   and schema
--  [Policy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/networkpolicy) for details on the {{site.prodname}} selector-based policy model
--  [calicoctl configuration]({{site.baseurl}}/{{page.version}}/usage/calicoctl/configure/) for details on configuring `calicoctl` to access
-   the {{site.prodname}} datastore.
-=======
 -  [Installing calicoctl]({{site.baseurl}}/{{page.version}}/getting-started/calicoctl/install)
 -  [Resources]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/) for details on all valid resources, including file format
    and schema
 -  [Policy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/networkpolicy) for details on the {{site.prodname}} selector-based policy model
->>>>>>> open/master

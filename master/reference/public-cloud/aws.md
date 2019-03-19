@@ -1,34 +1,6 @@
 ---
-<<<<<<< HEAD
 title: Amazon Web Services (AWS)
 canonical_url: https://docs.tigera.io/v2.3/reference/public-cloud/aws
----
-
-## Overview
-
-{{site.prodname}} provides fine-grained network security policy for individual containers on AWS.
-
-For networking, you can use:
-
-- [{{site.prodname}} networking](#using-{{site.prodnamedash}}-networking)
-
-- [AWS networking](#using-aws-networking) (recommended with federation)
-
-## Using {{site.prodname}} networking
-
-### About {{site.prodname}} networking
-
-{{site.prodname}} networking on AWS allows you to achieve the following.
-
-- **No Overlays**: Within each VPC subnet {{site.prodname}} doesn’t need an overlay, which means high performance networking for your containers.
-
-- **No 50 Node Limit**: With {{site.prodname}}, you can exceed the 50 node limit, which exists as a consequence of the AWS 50 route limit when using the VPC routing table.
-
-### Routing traffic within a single VPC subnet
-=======
-title: Amazon Web Services
-redirect_from: latest/reference/public-cloud/aws
-canonical_url: https://docs.projectcalico.org/v3.5/reference/public-cloud/aws
 ---
 
 {{site.prodname}} provides the following advantages when running in Amazon Web Services (AWS):
@@ -38,18 +10,13 @@ canonical_url: https://docs.projectcalico.org/v3.5/reference/public-cloud/aws
 - **No 50 Node Limit**: {{site.prodname}} allows you to surpass the 50 node limit, which exists as a consequence of the [AWS 50 route limit](http://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/VPC_Appendix_Limits.html#vpc-limits-route-tables) when using the VPC routing table.
 
 ## Routing traffic within a single VPC subnet
->>>>>>> open/master
 
 Since {{site.prodname}} assigns IP addresses outside the range used by AWS for EC2 instances, you must disable AWS src/dst
 checks on each EC2 instance in your cluster
 [as described in the AWS documentation](http://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/VPC_NAT_Instance.html#EIP_Disable_SrcDestCheck).  This
 allows {{site.prodname}} to route traffic natively within a single VPC subnet without using an overlay or any of the limited VPC routing table entries.
 
-<<<<<<< HEAD
-### Routing traffic across different VPC subnets / VPCs
-=======
 ## Routing traffic across different VPC subnets / VPCs
->>>>>>> open/master
 
 If you need to split your deployment across multiple AZs for high availability then each AZ will have its own VPC subnet.  To
 use {{site.prodname}} across multiple different VPC subnets or [peered VPCs](http://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/vpc-peering.html),
@@ -68,11 +35,7 @@ to enable IPIP and set the mode to "CrossSubnet".
 
 > **Note**: This feature was introduced in {{site.prodname}} v2.1, if your deployment was created with
 > an older version of {{site.prodname}}, or if you if you are unsure whether your deployment
-<<<<<<< HEAD
-> is configured correctly, follow the [Configuring IP-in-IP guide]({{site.baseurl}}/{{page.version}}/usage/configuration/ip-in-ip)
-=======
 > is configured correctly, follow the [Configuring IP-in-IP guide]({{site.baseurl}}/{{page.version}}/networking/ip-in-ip)
->>>>>>> open/master
 > which discusses this in more detail.
 >
 {: .alert .alert-info}
@@ -92,11 +55,7 @@ spec:
 EOF
 ```
 
-<<<<<<< HEAD
-### Enabling workload-to-WAN traffic
-=======
 ## Enabling workload-to-WAN traffic
->>>>>>> open/master
 
 To allow {{site.prodname}} networked containers to reach resources outside of AWS,
 you must configure outgoing NAT on your [{{site.prodname}} IP pool]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/ippool).
@@ -121,7 +80,6 @@ spec:
   natOutgoing: true
 EOF
 ```
-<<<<<<< HEAD
 
 ## Using AWS networking
 
@@ -204,5 +162,3 @@ Install the AWS VPC CNI plugin in your Kubernetes cluster as follows.
 
 1. Follow the standard {{site.prodname}} instructions to install [{{site.prodname}} for policy only](/{{page.version}}/getting-started/kubernetes/installation/other),
    making sure to download the correct manifest.
-=======
->>>>>>> open/master

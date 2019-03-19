@@ -1,12 +1,6 @@
 ---
-<<<<<<< HEAD
 title: Workload Endpoint Resource (WorkloadEndpoint)
 canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/resources/workloadendpoint
-=======
-title: Workload endpoint
-redirect_from: latest/reference/calicoctl/resources/workloadendpoint
-canonical_url: 'https://docs.projectcalico.org/v3.5/reference/calicoctl/resources/workloadendpoint'
->>>>>>> open/master
 ---
 
 A workload endpoint resource (`WorkloadEndpoint`) represents an interface
@@ -27,12 +21,7 @@ insensitive): `workloadendpoint`, `workloadendpoints`, `wep`, `weps`.
 
 > **Note**: While `calicoctl` allows the user to fully manage Workload Endpoint resources,
 > the lifecycle of these resources is generally handled by an orchestrator-specific
-<<<<<<< HEAD
-> plugin such as the {{site.prodname}} CNI plugin or the {{site.prodname}} Docker network plugin. In general, we recommend that you only
-=======
-> plugin such as the {{site.prodname}} CNI plugin, the {{site.prodname}} Docker network plugin,
-> or the {{site.prodname}} OpenStack Neutron Driver. In general, we recommend that you only
->>>>>>> open/master
+> plugin such as the {{site.prodname}} CNI plugin. In general, we recommend that you only
 > use `calicoctl` to view this resource type.
 {: .alert .alert-info}
 

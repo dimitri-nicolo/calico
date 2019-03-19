@@ -1,12 +1,6 @@
 ---
-<<<<<<< HEAD
 title: Profile Resource (Profile)
 canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/resources/profile
-=======
-title: Profile
-redirect_from: latest/reference/calicoctl/resources/profile
-canonical_url: 'https://docs.projectcalico.org/v3.5/reference/calicoctl/resources/profile'
->>>>>>> open/master
 ---
 
 A profile resource (`Profile`) represents a set of rules which are applied
@@ -30,11 +24,6 @@ apiVersion: projectcalico.org/v3
 kind: Profile
 metadata:
   name: profile1
-<<<<<<< HEAD
-  labels:
-    profile: profile1
-=======
->>>>>>> open/master
 spec:
   ingress:
   - action: Deny
@@ -46,11 +35,8 @@ spec:
       selector: profile == 'profile1'
   egress:
   - action: Allow
-<<<<<<< HEAD
-=======
   labelsToApply:
     profile: profile1
->>>>>>> open/master
 ```
 
 ### Definition
@@ -115,8 +101,4 @@ in order to use the following match criteria.
 | Datastore type        | Create/Delete | Update | Get/List | Notes
 |-----------------------|---------------|--------|----------|------
 | etcdv3                | Yes           | Yes    | Yes      |
-<<<<<<< HEAD
 | Kubernetes API server | No            | No     | Yes      | {{site.prodname}} profiles are pre-assigned for each Namespace and Service Account.
-=======
-| Kubernetes API server | No            | No     | Yes      | {{site.prodname}} profiles are pre-assigned for each Namespace.
->>>>>>> open/master

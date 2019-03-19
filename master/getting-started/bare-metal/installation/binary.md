@@ -1,41 +1,7 @@
 ---
-<<<<<<< HEAD
-title: Binary install
-canonical_url: https://docs.tigera.io/v2.3/getting-started/bare-metal/installation/binary
----
-
-## Prerequisites
-
-Felix has the following pre-requisites:
-
--   For IPv4 support, Linux kernel v2.6.32 is required. We have tested
-    against v2.6.32-573+. Note: if you intend to run containers, Docker
-    requires kernel >=v3.10. The kernel's version can be checked with
-    `uname -a`.
--   For IPv6 support, Linux kernel 3.10+ is required (due to the lack of
-    reverse path filtering for IPv6 in older versions).
--   [conntrack-tools](http://conntrack-tools.netfilter.org/); in
-    particular, the `conntrack` command must be available. We test
-    against >=v1.4.1. To check the version, run `conntrack --version`.
--   [iptables](http://www.netfilter.org/projects/iptables/index.html);
-    for IPv6 support, the `ip6tables` command must be available. We test
-    against >=v1.4.7. To check the version, run `iptables --version`.
--   [ipset](http://ipset.netfilter.org/); we test against >=v6.11. To
-    check the version, run `ipset --version`.
--   The conntrack, iptables and ipsets kernel modules must be available
-    (or compiled-in).
-
-> **Note**: If any of the commands above fail when run with the `--version`
-> flag then you have an old version that doesn't support reporting
-> its version.
->
-{: .alert .alert-info}
-
-{% include {{page.version}}/ctl-binary-install.md cli="cnx-node" codepath="/bin/calico-node" %}
-=======
 title: Binary install without package manager
+canonical_url: https://docs.tigera.io/v2.3/getting-started/bare-metal/installation/binary
 redirect_from: latest/getting-started/bare-metal/installation/binary
-canonical_url: 'https://docs.projectcalico.org/v3.5/getting-started/bare-metal/installation/binary'
 ---
 
 ## Download and install the binary
@@ -76,17 +42,12 @@ canonical_url: 'https://docs.projectcalico.org/v3.5/getting-started/bare-metal/i
    ```
    chmod +x calico-node
    ```
->>>>>>> open/master
 
 ## Create a start-up script
 
 Felix should be started at boot by your init system and the init system
 **must** be configured to restart Felix if it stops. Felix relies on
-<<<<<<< HEAD
 that behavior for certain configuration changes.
-=======
-that behaviour for certain configuration changes.
->>>>>>> open/master
 
 If your distribution uses systemd, then you could use the following unit
 file:
@@ -98,11 +59,7 @@ file:
     [Service]
     User=root
     ExecStartPre=/usr/bin/mkdir -p /var/run/calico
-<<<<<<< HEAD
     ExecStart=/usr/local/bin/cnx-node -felix
-=======
-    ExecStart=/usr/local/bin/calico-node -felix
->>>>>>> open/master
     KillMode=process
     Restart=on-failure
     LimitNOFILE=32000
@@ -130,11 +87,7 @@ Or, for upstart:
       chown root:root /var/run/calico
     end script
 
-<<<<<<< HEAD
     exec /usr/local/bin/cnx-node -felix
-=======
-    exec /usr/local/bin/calico-node -felix
->>>>>>> open/master
 
 ## Configure Felix
 
@@ -166,9 +119,5 @@ For debugging, it's sometimes useful to run Felix manually and tell it
 to emit its logs to screen. You can do that with the following command.
 
 ```bash
-<<<<<<< HEAD
 FELIX_LOGSEVERITYSCREEN=INFO /usr/local/bin/cnx-node -felix
-=======
-FELIX_LOGSEVERITYSCREEN=INFO /usr/local/bin/calico-node -felix
->>>>>>> open/master
 ```

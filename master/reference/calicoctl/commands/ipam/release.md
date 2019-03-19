@@ -1,20 +1,11 @@
 ---
 title: calicoctl ipam
-<<<<<<< HEAD
 canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/commands/ipam/release
-=======
-redirect_from: latest/reference/calicoctl/commands/ipam/release
-canonical_url: 'https://docs.projectcalico.org/v3.5/reference/calicoctl/commands/ipam/release'
->>>>>>> open/master
 ---
 
 This section describes the `calicoctl ipam release` command.
 
-<<<<<<< HEAD
-Read the [calicoctl Overview]({{site.baseurl}}/{{page.version}}/reference/calicoctl/) for a full list of `calicoctl` commands.
-=======
-Read the [calicoctl Overview]({{site.baseurl}}/{{page.version}}/reference/calicoctl/) for a full list of calicoctl commands.
->>>>>>> open/master
+Read the [calicoctl overview]({{site.baseurl}}/{{page.version}}/reference/calicoctl/) for a full list of calicoctl commands.
 
 ## Displaying the help text for 'calicoctl ipam release' command
 
@@ -60,9 +51,4 @@ calicoctl ipam release --ip=192.168.1.2
 
 ## See also
 
-<<<<<<< HEAD
--  [calicoctl configuration]({{site.baseurl}}/{{page.version}}/usage/calicoctl/configure/) for details on configuring `calicoctl` to access
-   the {{site.prodname}} datastore.
-=======
 -  [Installing calicoctl]({{site.baseurl}}/{{page.version}}/getting-started/calicoctl/install)
->>>>>>> open/master

@@ -1,26 +1,14 @@
 ---
-<<<<<<< HEAD
 title: Felix Prometheus Statistics
 canonical_url: https://docs.tigera.io/v2.3/reference/felix/prometheus
-=======
-title: Prometheus statistics
-redirect_from: latest/reference/felix/prometheus
-canonical_url: 'https://docs.projectcalico.org/v3.5/reference/felix/prometheus'
->>>>>>> open/master
 ---
 
 Felix can be configured to report a number of metrics through Prometheus.  See the
 [configuration reference](configuration) for how to enable metrics reporting.
 
-<<<<<<< HEAD
-## Metric Reference
-
-#### Felix Specific
-=======
 ## Metric reference
 
 #### Felix specific
->>>>>>> open/master
 
 Felix exports a number of Prometheus metrics.  The current set is as follows.  Since some metrics
 are tied to particular implementation choices inside Felix we can't make any hard guarantees that
@@ -87,11 +75,7 @@ felix_active_local_selectors 82
 ```
 {: .no-select-button}
 
-<<<<<<< HEAD
-#### CPU / Memory metrics
-=======
 #### CPU / memory metrics
->>>>>>> open/master
 
 Felix also exports the default set of metrics that Prometheus makes available.  Currently, those
 include:

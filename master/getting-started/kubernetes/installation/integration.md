@@ -1,33 +1,13 @@
 ---
-<<<<<<< HEAD
 title: Integration Guide
 canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/installation/integration
-=======
-title: Integration guide
-redirect_from: latest/getting-started/kubernetes/installation/integration
-canonical_url: 'https://docs.projectcalico.org/v3.5/getting-started/kubernetes/installation/integration'
->>>>>>> open/master
 ---
 
 This document explains the components necessary to install {{site.prodname}} on
 Kubernetes for integrating with custom configuration management.
 
 The manifests we provide in [Installing {{site.prodname}} for policy and networking](calico),
-<<<<<<< HEAD
 and [Installing {{site.prodname}} for policy](other) will perform these steps automatically
-for you and are *strongly* recommended for most users. These instructions should only
-be followed by users who have a specific need that cannot be met by using manifests.
-
-
-## Before you begin
-
-- Ensure that your cluster meets the {{site.prodname}} [system requirements](../requirements).
-
-- Ensure that you have the [private registry credentials](../../../getting-started/#obtain-the-private-registry-credentials)
-  and a [license key](../../../getting-started/#obtain-a-license-key).
-=======
-[Installing {{site.prodname}} for policy and flannel for networking](flannel), and
-[Installing {{site.prodname}} for policy](other) will perform these steps automatically
 for you and are *strongly* recommended for most users. These instructions should only
 be followed by users who have a specific need that cannot be met by using manifests.
 
@@ -36,9 +16,10 @@ be followed by users who have a specific need that cannot be met by using manife
 
 ## Before you begin
 
-Ensure that your cluster meets the {{site.prodname}} [system requirements](../requirements).
+- Ensure that your cluster meets the {{site.prodname}} [system requirements](../requirements).
 
->>>>>>> open/master
+- Ensure that you have the [private registry credentials](../../../getting-started/#obtain-the-private-registry-credentials)
+  and a [license key](../../../getting-started/#obtain-a-license-key).
 
 ## About the {{site.prodname}} components
 
@@ -55,11 +36,7 @@ and the Felix agent which programs network policy rules.
 The `cni-plugin` plugin integrates directly with the Kubernetes `kubelet` process
 on each node to discover which pods have been created, and adds them to {{site.prodname}} networking.
 
-<<<<<<< HEAD
 The `{{site.imageNames["kubeControllers"]}}` container runs as a pod on top of Kubernetes and keeps {{site.prodname}}
-=======
-The `calico/kube-controllers` container runs as a pod on top of Kubernetes and keeps {{site.prodname}}
->>>>>>> open/master
 in-sync with Kubernetes.
 
 ## Installing {{site.nodecontainer}}
@@ -74,19 +51,11 @@ done using the `calicoctl` utility.
 
 ```
 # Download and install calicoctl
-<<<<<<< HEAD
-wget {{site.data.versions[page.version].first.components.calicoctl.download_url}}
-sudo chmod +x calicoctl
-
-# Run the {{site.nodecontainer}} container
-sudo ETCD_ENDPOINTS=http://<ETCD_IP>:<ETCD_PORT> ./calicoctl node run --node-image={{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["node"]}}:{{site.data.versions[page.version].first.title}}
-=======
 wget {% include urls component="calicoctl" %}
 sudo chmod +x calicoctl
 
 # Run the {{site.nodecontainer}} container
 sudo ETCD_ENDPOINTS=http://<ETCD_IP>:<ETCD_PORT> ./calicoctl node run --node-image={{page.registry}}{{site.imageNames["node"]}}:{{site.data.versions[page.version].first.title}}
->>>>>>> open/master
 ```
 
 See the [`calicoctl node run` documentation]({{site.baseurl}}/{{page.version}}/reference/calicoctl/commands/node/)
@@ -121,11 +90,7 @@ ExecStart=/usr/bin/docker run --net=host --privileged --name={{site.noderunning}
   -v /var/run/calico:/var/run/calico \
   -v /var/log/calico:/var/log/calico \
   -v /var/lib/calico:/var/lib/calico \
-<<<<<<< HEAD
-  {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["node"]}}:{{site.data.versions[page.version].first.title}}
-=======
   {{page.registry}}{{site.imageNames["node"]}}:{{site.data.versions[page.version].first.title}}
->>>>>>> open/master
 ExecStop=/usr/bin/docker rm -f {{site.noderunning}}
 Restart=always
 RestartSec=10
@@ -141,15 +106,12 @@ Replace `<ETCD_IP>:<ETCD_PORT>` with your etcd configuration.
 > benefits up to 0.5 cores.
 {: .alert .alert-info}
 
-<<<<<<< HEAD
 ### Configuring {{site.nodecontainer}} for metrics collection
 
 Enable metrics in {{site.prodname}} by updating the global `FelixConfiguration` resource (`default`).
 
 {% include {{page.version}}/enable-felix-prometheus-reporting.md %}
 
-=======
->>>>>>> open/master
 ## Installing the {{site.prodname}} CNI plugins
 
 The Kubernetes `kubelet` should be configured to use the `calico` and `calico-ipam` plugins.
@@ -173,11 +135,7 @@ chmod +x /opt/cni/bin/calico /opt/cni/bin/calico-ipam
 {% endif %}
 
 The {{site.prodname}} CNI plugins require a standard CNI config file.  The `policy` section is only required when
-<<<<<<< HEAD
 running the `{{site.imageNames["kubeControllers"]}}` container .
-=======
-running the `calico/kube-controllers` container .
->>>>>>> open/master
 
 ```bash
 mkdir -p /etc/cni/net.d
@@ -220,26 +178,15 @@ sudo cp loopback /opt/cni/bin/
 
 ## Installing the {{site.prodname}} Kubernetes controllers
 
-<<<<<<< HEAD
 The `{{site.imageNames["kubeControllers"]}}` container keeps {{site.prodname}}'s datastore in-sync with Kubernetes.
 It runs as a single pod managed by a Deployment.
 
 > **Note**: The `{{site.imageNames["kubeControllers"]}}` container is required even if policy is not in use.
-=======
-The `calico/kube-controllers` container keeps {{site.prodname}}'s datastore in-sync with Kubernetes.
-It runs as a single pod managed by a Deployment.
-
-> **Note**: The `calico/kube-controllers` container is required even if policy is not in use.
->>>>>>> open/master
 {: .alert .alert-info}
 
 To install the controllers:
 
-<<<<<<< HEAD
 - Download the [{{site.prodname}} Kubernetes controllers manifest](calico-kube-controllers.yaml).
-=======
-- Download the [Calico Kubernetes controllers manifest](calico-kube-controllers.yaml).
->>>>>>> open/master
 - Modify `<ETCD_ENDPOINTS>` to point to your etcd cluster.
 - Install it using `kubectl`.
 
@@ -282,7 +229,6 @@ Apply the manifest appropriate to your cluster configuration.
    kubectl apply -f {{site.url}}/{{page.version}}/manifests/rbac-kdd-calico.yaml
    ```
 
-<<<<<<< HEAD
 - **etcd datastore with {{site.prodname}} networking**:
 
    ```
@@ -298,23 +244,3 @@ Apply the manifest appropriate to your cluster configuration.
 {% include {{page.version}}/cnx-monitor-install.md elasticsearch="operator" %}
 
 {% include {{page.version}}/gs-next-steps.md %}
-
-=======
-- **Kubernetes API datastore with flannel networking**:
-
-   ```
-   kubectl apply -f {{site.url}}/{{page.version}}/manifests/rbac-kdd-flannel.yaml
-   ```
-
-- **etcd datastore with {{site.prodname}} networking**:
-
-   ```
-   kubectl apply -f {{site.url}}/{{page.version}}/manifests/rbac-etcd-calico.yaml
-   ```
-
-- **etcd datastore with flannel networking**:
-
-   ```
-   kubectl apply -f {{site.url}}/{{page.version}}/manifests/rbac-etcd-flannel.yaml
-   ```
->>>>>>> open/master

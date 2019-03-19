@@ -1,22 +1,12 @@
 ---
-<<<<<<< HEAD
 title: Configuring cnx-node
 canonical_url: https://docs.tigera.io/v2.3/reference/node/configuration
-=======
-title: Configuring calico/node
-redirect_from: latest/reference/node/configuration
-canonical_url: 'https://docs.projectcalico.org/v3.5/reference/node/configuration'
->>>>>>> open/master
 ---
 
 The `{{site.nodecontainer}}` container is primarily configured through environment variables.
 
 
-<<<<<<< HEAD
-## Environment Variables
-=======
 ## Environment variables
->>>>>>> open/master
 
 | Environment   | Description | Schema |
 | ------------- | ----------- | ------ |
@@ -27,25 +17,13 @@ The `{{site.nodecontainer}}` container is primarily configured through environme
 | IP_AUTODETECTION_METHOD | The method to use to autodetect the IPv4 address for this host. This is only used when the IPv4 address is being autodetected. See [IP Autodetection methods](#ip-autodetection-methods) for details of the valid methods. [Default: `first-found`] | string |
 | IP6_AUTODETECTION_METHOD | The method to use to autodetect the IPv6 address for this host. This is only used when the IPv6 address is being autodetected. See [IP Autodetection methods](#ip-autodetection-methods) for details of the valid methods. [Default: `first-found`] | string |
 | DISABLE_NODE_IP_CHECK | Skips checks for duplicate Node IPs. This can reduce the load on the cluster when a large number of Nodes are restarting. [Default: `false`] | boolean |
-<<<<<<< HEAD
-| AS | The AS number for this node. When specified, the value is saved in the node resource configuration for this host, overriding any previously configured value. When omitted, if an AS number has been previously configured in the node resource, that AS number is used for the peering.  When omitted, if an AS number has not yet been configured in the node resource, the node will use the global value (see [example modifying Global BGP settings](/{{page.version}}/usage/configuration/bgp#example) for details.) | int |
-=======
 | AS | The AS number for this node. When specified, the value is saved in the node resource configuration for this host, overriding any previously configured value. When omitted, if an AS number has been previously configured in the node resource, that AS number is used for the peering.  When omitted, if an AS number has not yet been configured in the node resource, the node will use the global value (see [example modifying Global BGP settings](/{{page.version}}/networking/bgp#example) for details.) | int |
->>>>>>> open/master
 | CALICO_DISABLE_FILE_LOGGING | Disables logging to file. [Default: "false"] | string |
 | CALICO_ROUTER_ID | Sets the `router id` to use for BGP if no IPv4 address is set on the node. [Default: ``] | string |
 | DATASTORE_TYPE | Type of datastore. [Default: `etcdv3`] | kubernetes, etcdv3 |
 | WAIT_FOR_DATASTORE | Wait for connection to datastore before starting. If a successful connection is not made, node will shutdown. [Default: `false`] | boolean |
-<<<<<<< HEAD
-| CALICO_NETWORKING_BACKEND | Describes which BGP networking backend to use [Default: `bird`] | gobgp, bird, none |
-=======
-| CALICO_K8S_NODE_REF | The name of the corresponding node object in the Kubernetes API. When set, used for correlating this node with events from the Kubernetes API. | string |
-| CALICO_LIBNETWORK_CREATE_PROFILES | Enables creating a {{site.prodname}} profile resource for each Docker network.  When disabled, no profiles will be processed even if manually created. [Default: `true`] | boolean |
-| CALICO_LIBNETWORK_LABEL_ENDPOINTS | Enables copying a subset of the Docker container labels for use as Calico labels on workloadendpoints. [Default: `false`] | boolean |
-| CALICO_LIBNETWORK_ENABLED | Enables running the docker-libnetwork plugin directly in the `{{site.nodecontainer}}` container. [Default: `true`] | boolean |
-| CALICO_LIBNETWORK_IFPREFIX | Interface prefix to use for the network interface within the Docker containers that have been networked by the {{site.prodname}} driver. [Default: `cali`] | string |
 | CALICO_NETWORKING_BACKEND | Describes which BGP networking backend to use [Default: `bird`] | bird, none |
->>>>>>> open/master
+| CALICO_K8S_NODE_REF | The name of the corresponding node object in the Kubernetes API. When set, used for correlating this node with events from the Kubernetes API. | string |
 | CALICO_IPV4POOL_CIDR | The IPv4 Pool to create if none exists at start up. It is invalid to define this variable and NO_DEFAULT_POOLS. [Default: `192.168.0.0/16`] | IPv4 CIDR |
 | CALICO_IPV6POOL_CIDR | The IPv6 Pool to create if none exists at start up. It is invalid to define this variable and NO_DEFAULT_POOLS. [Default: `<a randomly chosen /48 ULA>`] | IPv6 CIDR |
 | CALICO_IPV4POOL_IPIP | IPIP Mode to use for the IPv4 POOL created at start up. [Default: `Always`] | Always, CrossSubnet, Never ("Off" is also accepted as a synonym for "Never") |
@@ -62,12 +40,7 @@ The `{{site.nodecontainer}}` container is primarily configured through environme
 | K8S_CERT_FILE | Location of a client certificate for accessing the Kubernetes API.          | string |
 | K8S_KEY_FILE | Location of a client key for accessing the Kubernetes API.                   | string |
 | K8S_CA_FILE | Location of a CA for accessing the Kubernetes API.                            | string |
-<<<<<<< HEAD
-| K8S_TOKEN | Token to be used for accessing the Kubernetes API.                              | string |
-| CALICO_ADVERTISE_CLUSTER_IPS | Enable [advertising Kubernetes service cluster IPs over BGP]({{site.baseurl}}/{{page.version}}/usage/service-advertisement), within the specified CIDR. [Default: disabled] | IPv4 CIDR |
-=======
 | CALICO_ADVERTISE_CLUSTER_IPS | Enable [advertising Kubernetes service cluster IPs over BGP]({{site.baseurl}}/{{page.version}}/networking/service-advertisement), within the specified CIDR. [Default: disabled] | IPv4 CIDR |
->>>>>>> open/master
 
 In addition to the above, `{{site.nodecontainer}}` also supports [the standard Felix configuration environment variables](../felix/configuration).
 
@@ -127,11 +100,7 @@ variables, they are:
   resource.
 - `none`: Autodetection will not be performed (this is useful to disable IPv4).
 
-<<<<<<< HEAD
-### IP Autodetection methods
-=======
 ### IP autodetection methods
->>>>>>> open/master
 
 When {{site.prodname}} is used for routing, each node must be configured with an IPv4
 address and/or an IPv6 address that will be used to route between
@@ -219,8 +188,4 @@ Substitute `[flag]` with one or more of the following.
 
 The BIRD readiness endpoint ensures that the BGP mesh is healthy by verifying that all BGP peers are established and
 no graceful restart is in progress. If the BIRD readiness check is failing due to unreachable peers that are no longer
-<<<<<<< HEAD
-in the cluster, see [decomissioning a node]({{site.baseurl}}/{{page.version}}/usage/decommissioning-a-node).
-=======
 in the cluster, see [decomissioning a node]({{site.baseurl}}/{{page.version}}/maintenance/decommissioning-a-node).
->>>>>>> open/master

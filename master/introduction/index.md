@@ -1,10 +1,12 @@
 ---
-<<<<<<< HEAD
 title: About Tigera Secure Enterprise Edition (EE)
+redirect_from: latest/introduction/index
 canonical_url: https://docs.tigera.io/v2.3/introduction/
 description: Home
 layout: docwithnav
 ---
+
+## What is {{site.prodname}}?
 
 Modern applications are more distributed, dynamically orchestrated, and
 run across multi-cloud infrastructure. To protect workloads and enforce
@@ -19,34 +21,6 @@ Designed from the ground up as cloud-native software, {{site.prodname}} builds o
 open source projects like [Calico](https://docs.projectcalico.org/).
 It connects and secures container, virtual machine, and bare metal host
 workloads in public cloud and private data centers.
-
-# Get started
-
-<div class="row">
-  <div class="col-xs-6 col-md-3">
-    <a href="/{{page.version}}/getting-started/kubernetes/" class="thumbnail">
-      <img src="{{site.baseurl}}/images/kubernetes-button.svg" alt="Kubernetes" width="40%">
-    </a>
-  </div>
-  <div class="col-xs-6 col-md-3">
-    <a href="/{{page.version}}/getting-started/openshift/installation" class="thumbnail">
-      <img src="{{site.baseurl}}/images/openshift-button.svg" alt="OpenShift" width="35%">
-    </a>
-  </div>
-</div>
-=======
-title: About Calico
-redirect_from: latest/introduction/index
-canonical_url: 'https://docs.projectcalico.org/v3.5/introduction/'
----
-## What is {{site.prodname}}?
-
-{{site.prodname}} is an open source networking and network security solution for containers, virtual machines, and native host-based workloads.  {{site.prodname}}
-supports a broad range of platforms including Kubernetes, OpenShift, Docker EE, OpenStack, and bare metal services.
-
-{{site.prodname}} combines flexible networking capabilities with run-anywhere security enforcement to provide a solution with native Linux kernel performance
-and true cloud-native scalability. {{site.prodname}} provides developers and cluster operators with a consistent experience and set of capabilities whether
-running in public cloud or on-prem, on a single node or across a multi-thousand node cluster.
 
 ## Why use {{site.prodname}}?
 
@@ -87,21 +61,9 @@ and you’ll get the results you expect.  In the vast majority of deployments th
 with no encapsulation, tunnels, or overlays.  All the existings tools that system and network administrators use to gain visibility
 and analyze networking issues work as they do today.
 
-### Real world production hardened
-
-{{site.prodname}} is trusted and running in production at large enterprises including SaaS providers, financial services companies, and manufacturers.  The largest
-public cloud providers have selected {{site.prodname}} to provide network security for their hosted Kubernetes services (Amazon EKS, Azure AKS, Google GKE, and IBM IKS) running
-across tens of thousands of clusters.
-
 ### Full Kubernetes network policy support
 
 {{site.prodname}}’s network policy engine formed the original reference implementation of Kubernetes network policy during the development of the API. {{site.prodname}} is
 distinguished in that it implements the full set of features defined by the API giving users all the capabilities and flexibility envisaged when the API was defined.
 And for users that require even more power, {{site.prodname}} supports an extended set of network policy capabilities that work seamlessly alongside the Kubernetes API
 giving users even more flexibility in how they define their network policies.
-
-### A contributor community backed by the Tigera team
-
-The {{site.prodname}} open source project has been supported by 150+ contributors across a broad range of companies.  In addition {{site.prodname}} is backed by Tigera, founded by
-the original {{site.prodname}} engineering team, and committed to maintaining {{site.prodname}} as the leading standard for Kubernetes network security.
->>>>>>> open/master

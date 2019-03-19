@@ -1,5 +1,3 @@
-## Casey: TODO: figure out this conditional in helm.
-{%- capture typha_service_name %}{% if include.platform == "gke" %}calico-typha-ee{% else %}calico-typha{% endif %}{% endcapture -%}
 # This ConfigMap is used to configure a self-hosted {{include "variant_name" . }} installation.
 kind: ConfigMap
 apiVersion: v1
@@ -19,7 +17,7 @@ data:
 {{- end }}
 {{- if .Values.typha.enabled }}
   # You must set a non-zero value for Typha replicas below.
-  typha_service_name: "{{ typha_service_name }}"
+  typha_service_name: "{{ include "typha_service_name" . }}"
 {{- else }}
   # Typha is disabled.
   typha_service_name: "none"
@@ -136,7 +134,7 @@ data:
       }
     }
 {{- end }}
-{{- if .Values.app_layer_policy }}
+{{- if .Values.app_layer_policy_enabled }}
   # Enable the Policy Sync API between Felix and Dikastes
   felix-policy-sync-path-prefix: "/var/run/nodeagent"
 {{- else}}

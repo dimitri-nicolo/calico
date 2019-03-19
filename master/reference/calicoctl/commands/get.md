@@ -1,11 +1,6 @@
 ---
 title: calicoctl get
-<<<<<<< HEAD
 canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/commands/get
-=======
-redirect_from: latest/reference/calicoctl/commands/get
-canonical_url: 'https://docs.projectcalico.org/v3.5/reference/calicoctl/commands/get'
->>>>>>> open/master
 ---
 
 This sections describes the `calicoctl get` command.
@@ -72,10 +67,7 @@ Description:
     * globalNetworkPolicy
     * hostEndpoint
     * ipPool
-<<<<<<< HEAD
     * tier
-=======
->>>>>>> open/master
     * networkPolicy
     * node
     * profile
@@ -162,11 +154,7 @@ calicoctl get hostEndpoint
 
 Response:
 ```bash
-<<<<<<< HEAD
 NAME          NODE
-=======
-NAME          NODE       
->>>>>>> open/master
 endpoint1     host1
 myhost-eth0   myhost
 ```
@@ -206,11 +194,7 @@ Response:
 ```
 NAME        IPS
 endpoint1   1.2.3.4,0:bb::aa
-<<<<<<< HEAD
 myhost-eth0
-=======
-myhost-eth0                           
->>>>>>> open/master
 ```
 {: .no-select-button}
 
@@ -273,15 +257,9 @@ endpoint1,eth0,
 
 ## See also
 
-<<<<<<< HEAD
+-  [Installing calicoctl]({{site.baseurl}}/{{page.version}}/getting-started/calicoctl/install).
 -  [Resources]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/) for details on all valid resources, including file format
    and schema
 -  [NetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/networkpolicy) for details on the {{site.prodname}} selector-based policy model
 -  [calicoctl configuration]({{site.baseurl}}/{{page.version}}/usage/calicoctl/configure/) for details on configuring `calicoctl` to access
    the {{site.prodname}} datastore.
-=======
--  [Installing calicoctl]({{site.baseurl}}/{{page.version}}/getting-started/calicoctl/install).
--  [Resources]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/) for details on all valid resources, including file format
-   and schema
--  [NetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/networkpolicy) for details on the {{site.prodname}} selector-based policy model
->>>>>>> open/master

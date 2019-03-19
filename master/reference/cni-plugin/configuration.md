@@ -1,12 +1,6 @@
 ---
-<<<<<<< HEAD
 title: Configuring the Tigera Secure EE CNI plugins
 canonical_url: https://docs.tigera.io/v2.3/reference/cni-plugin/configuration
-=======
-title: Configuring the Calico CNI plugins
-redirect_from: latest/reference/cni-plugin/configuration
-canonical_url: 'https://docs.projectcalico.org/v3.5/reference/cni-plugin/configuration'
->>>>>>> open/master
 ---
 
 The {{site.prodname}} CNI plugin is configured through the standard CNI
@@ -77,10 +71,7 @@ The following options are deprecated.
 
 * Logging is always to `stderr`
 * Logging level can be controlled by setting `"log_level"` in the netconf. Allowed levels are
-<<<<<<< HEAD
-=======
   * `ERROR` - Only error logs are emitted.
->>>>>>> open/master
   * `WARNING` - the default.
   * `INFO` - Enables some additional logging from the CNI plugin.
   * `DEBUG` - Enables lots of debug logging from both the CNI plugin and the underlying libcalico library.
@@ -189,19 +180,11 @@ As a convenience, the API location location can also be configured directly, e.g
 }
 ```
 
-<<<<<<< HEAD
-### Enabling Kubernetes Policy
-
-If you wish to use the Kubernetes `NetworkPolicy` resource then you must set a policy type in the network config.
-There is a single supported policy type, `k8s`. When set,
-you must also run `{{site.imageNames["kubeControllers"]}}` with the policy, profile, and workloadendpoint controllers enabled.
-=======
 ### Enabling Kubernetes policy
 
 If you wish to use the Kubernetes `NetworkPolicy` resource then you must set a policy type in the network config.
 There is a single supported policy type, `k8s`. When set,
-you must also run calico/kube-controllers with the policy, profile, and workloadendpoint controllers enabled.
->>>>>>> open/master
+you must also run `{{site.imageNames["kubeControllers"]}}` with the policy, profile, and workloadendpoint controllers enabled.
 
 ```json
 {
@@ -224,22 +207,15 @@ When using `type: k8s`, the {{site.prodname}} CNI plugin requires read-only Kube
 
 ## IPAM
 
-<<<<<<< HEAD
-=======
 ### Using CNI configuration
 
->>>>>>> open/master
 When using the CNI `host-local` IPAM plugin, a special value `usePodCidr` is allowed for the subnet field (either at the top-level, or in a "range").  This tells the plugin to determine the subnet to use from the Kubernetes API based on the Node.podCIDR field. {{site.prodname}} does not use the `gateway` field of a range so that field is not required and it will be ignored if present.
 
 > **Note**: `usePodCidr` can only be used as the value of the `subnet` field, it cannot be used in
 > `rangeStart` or `rangeEnd` so those values are not useful if `subnet` is set to `usePodCidr`.
 {: .alert .alert-info}
 
-<<<<<<< HEAD
-{{site.prodname}}supports the host-local IPAM plugin's `routes` field as follows:
-=======
 {{site.prodname}} supports the host-local IPAM plugin's `routes` field as follows:
->>>>>>> open/master
 
 * If there is no `routes` field, {{site.prodname}} will install a default `0.0.0.0/0`, and/or `::/0` route into the pod (depending on whether the pod has an IPv4 and/or IPv6 address).
 
@@ -279,11 +255,7 @@ When using the CNI `host-local` IPAM plugin, a special value `usePodCidr` is all
 
 When making use of the `usePodCidr` option, the {{site.prodname}} CNI plugin requires read-only Kubernetes API access to the `Nodes` resource.
 
-<<<<<<< HEAD
-### IPAM Manipulation with Kubernetes Annotations
-=======
 ### Using Kubernetes annotations
->>>>>>> open/master
 
 #### Specifying IP pools on a per-namespace or per-pod basis
 
@@ -298,11 +270,7 @@ In addition to specifying IP pools in the CNI config as discussed above, {{site.
       "cni.projectcalico.org/ipv4pools": "[\"default-ipv4-ippool\"]"
    ```
 
-<<<<<<< HEAD
-- `cni.projectcalico.org/ipv6pools`: A list of configured IPv6 pools from which to choose an address for the pod.
-=======
 - `cni.projectcalico.org/ipv6pools`: A list of configured IPv6 Pools from which to choose an address for the pod.
->>>>>>> open/master
 
    Example:
 
@@ -320,22 +288,13 @@ If provided, these IP pools will override any IP pools specified in the CNI conf
 {: .alert .alert-info}
 
 > **Note**: The {{site.prodname}} CNI plugin supports specifying an annotation per namespace.
-<<<<<<< HEAD
-> If both the namespace and the pod have this annotation, the pod information will be used. 
-> Otherwise, if only the namespace has the annotation the annotation of the namespace will 
-=======
 > If both the namespace and the pod have this annotation, the pod information will be used.
 > Otherwise, if only the namespace has the annotation the annotation of the namespace will
->>>>>>> open/master
 > be used for each pod in it.
 {: .alert .alert-info}
 
 
-<<<<<<< HEAD
-#### Requesting a Specific IP address
-=======
 #### Requesting a specific IP address
->>>>>>> open/master
 
 You can also request a specific IP address through [Kubernetes annotations](https://kubernetes.io/docs/user-guide/annotations/) with {{site.prodname}} IPAM.
 There are two annotations to request a specific IP address:
@@ -421,8 +380,6 @@ You can request a floating IP address for a pod through [Kubernetes annotations]
    > **Warning**: This feature can allow pods to receive traffic which may not have been intended for that pod.
    > Users should make sure the proper admission control is in place to prevent users from selecting arbitrary floating IP addresses.
    {: .alert .alert-danger}
-<<<<<<< HEAD
-=======
 
 ### Using IP pools node selectors
 
@@ -493,4 +450,3 @@ take on the following precedence, 1 being the highest:
 > a newly configured IP pool, they must be recreated. We recommmend doing this
 > before going into production or during a maintenance window.
 {: .alert .alert-info}
->>>>>>> open/master

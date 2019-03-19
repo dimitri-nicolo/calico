@@ -1,5 +1,4 @@
 ---
-<<<<<<< HEAD
 title: Getting started with Tigera Secure EE
 canonical_url: https://docs.tigera.io/v2.3/getting-started/
 ---
@@ -58,14 +57,3 @@ was Awesome Corp, the file would be named `awesome-corp-license.yaml`.
     </a>
   </div>
 </div>
-=======
-title: Getting started
-redirect_from: latest/getting-started/index
-canonical_url: 'https://docs.projectcalico.org/v3.5/getting-started/'
----
-
-This section provides instructions for installing {{site.prodname}} with popular orchestrators, on bare metal hosts,
-and using an init system.
-
-It also goes over how to set up `calicoctl`, {{site.prodname}}'s command line interface (CLI) tool.
->>>>>>> open/master

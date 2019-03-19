@@ -1,12 +1,6 @@
 ---
-<<<<<<< HEAD
 title: Using Tigera Secure EE to Secure Host Interfaces
 canonical_url: https://docs.tigera.io/v2.3/getting-started/bare-metal/bare-metal
-=======
-title: Using Calico to Secure Host Interfaces
-redirect_from: latest/getting-started/bare-metal/bare-metal
-canonical_url: 'https://docs.projectcalico.org/v3.5/getting-started/bare-metal/bare-metal'
->>>>>>> open/master
 ---
 
 This guide describes how to use {{site.prodname}} to secure the network interfaces

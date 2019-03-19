@@ -142,7 +142,6 @@ spec:
 {{- end }}
 {{- end }}
 {{- if .Values.app_layer_policy }}
-        # Casey: TODO: Disabled?? {%- if include.app_layer_policy == "true" or include.app_layer_policy == "disabled" %}
         # Adds a Flex Volume Driver that creates a per-pod Unix Domain Socket to allow Dikastes
         # to communicate with Felix over the Policy Sync API.
         - name: flexvol-driver
@@ -314,7 +313,6 @@ spec:
             - name: FELIX_FLOWLOGSENABLENETWORKSETS
               value: "true"
 {{- if .Values.app_layer_policy }}
-            # Casey: TODO {%- if include.app_layer_policy == "true" or include.app_layer_policy == "disabled" %}
             - name: FELIX_POLICYSYNCPATHPREFIX
               valueFrom:
                 configMapKeyRef:
@@ -397,7 +395,6 @@ spec:
             - mountPath: /calico-secrets
               name: etcd-certs
 {{- end }}
-# Casey: TODO {%- if include.app_layer_policy == "true" or include.app_layer_policy == "disabled" %}
 {{- if .Values.app_layer_policy }}
             - name: policysync
               mountPath: /var/run/nodeagent
@@ -567,7 +564,6 @@ spec:
           hostPath:
             path: /var/lib/cni/networks
 {{- end }}
-# Casey: TODO {%- if include.app_layer_policy == "true" or include.app_layer_policy == "disabled" %}
 {{- if .Values.app_layer_policy }}
         # Used to create per-pod Unix Domain Sockets
         - name: policysync

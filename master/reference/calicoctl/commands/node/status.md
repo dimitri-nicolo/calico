@@ -1,21 +1,12 @@
 ---
 title: calicoctl node status
-<<<<<<< HEAD
 canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/commands/node/status
-=======
-redirect_from: latest/reference/calicoctl/commands/node/status
-canonical_url: 'https://docs.projectcalico.org/v3.5/reference/calicoctl/commands/node/status'
->>>>>>> open/master
 ---
 
 This sections describes the `calicoctl node status` command.
 
 Read the [calicoctl Overview]({{site.baseurl}}/{{page.version}}/reference/calicoctl)
-<<<<<<< HEAD
-for a full list of `calicoctl` commands.
-=======
 for a full list of calicoctl commands.
->>>>>>> open/master
 
 ## Displaying the help text for 'calicoctl node status' command
 

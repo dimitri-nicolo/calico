@@ -1,12 +1,6 @@
 ---
-<<<<<<< HEAD
 title: Deploying Tigera Secure EE on Azure
 canonical_url: https://docs.tigera.io/v2.3/reference/public-cloud/azure
-=======
-title: Azure
-redirect_from: latest/reference/public-cloud/azure
-canonical_url: https://docs.projectcalico.org/v3.5/reference/public-cloud/azure
->>>>>>> open/master
 ---
 
 ## About {{site.prodname}} on Azure
@@ -20,12 +14,6 @@ While Azure does not support {{site.prodname}} networking, you can use
   [Configuring {{site.nodecontainer}}](../node/configuration) and [Azure user-defined routes](#azure-user-defined-routes) for more information. If you're on Kubernetes, refer to [Installing {{site.prodname}} for policy (advanced)](../../getting-started/kubernetes/installation/other) for
   a sample manifest.
 
-<<<<<<< HEAD
-=======
-- **flannel** (Kubernetes only): Refer to [Installing {{site.prodname}} for policy and flannel for networking](../../getting-started/kubernetes/installation/flannel)
-  for specific instructions and a manifest. This option does use overlays.
-
->>>>>>> open/master
 - **Azure CNI IPAM plug-in**: Configure {{site.prodname}} to use the
   [Azure CNI plug-in](https://github.com/Azure/azure-container-networking/blob/master/docs/cni.md)
   instead of the {{site.prodname}} CNI plug-in.
