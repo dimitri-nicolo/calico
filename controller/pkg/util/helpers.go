@@ -1,3 +1,5 @@
+// Copyright 2019 Tigera Inc. All rights reserved.
+
 package util
 
 import "fmt"
@@ -32,4 +34,9 @@ func (n Int64PtrWrapper) String() string {
 		return "-"
 	}
 	return fmt.Sprintf("%d", *n.I)
+}
+
+func BoolPtr(b bool) *bool {
+	bCopy := b
+	return &bCopy
 }

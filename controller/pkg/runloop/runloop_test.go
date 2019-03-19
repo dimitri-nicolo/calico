@@ -1,7 +1,10 @@
+// Copyright 2019 Tigera Inc. All rights reserved.
+
 package runloop
 
 import (
 	"context"
+	"os"
 	"sync"
 	"testing"
 	"time"
@@ -9,7 +12,16 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+// This mock suite is unstable in Coverage mode because it relies on the clock. It may also be unstable under heavier
+// loads.
+
+var runTests = os.Getenv("TEST_RUNLOOP") == "yes"
+
 func TestRunLoop(t *testing.T) {
+	if !runTests {
+		t.Skip("Set TEST_RUNLOOP to \"yes\" to run this test")
+	}
+
 	g := NewGomegaWithT(t)
 
 	maxDuration := time.Millisecond * 10
@@ -40,16 +52,15 @@ func TestRunLoop(t *testing.T) {
 	// Measure the difference in time between executions
 	cond.L.Lock()
 	cond.Wait()
-	// t0 := time.Now()
+	t0 := time.Now()
 	cond.L.Unlock()
 
 	cond.L.Lock()
 	cond.Wait()
-	// t1 := time.Now()
+	t1 := time.Now()
 	cond.L.Unlock()
 
-	// TODO Unreliable test disabled
-	// g.Expect(t1.Sub(t0)).Should(BeNumerically(">=", period))
+	g.Expect(t1.Sub(t0)).Should(BeNumerically(">=", period))
 
 	wg.Wait()
 	g.Expect(err).Should(Equal(context.DeadlineExceeded))
@@ -58,6 +69,10 @@ func TestRunLoop(t *testing.T) {
 }
 
 func TestRunLoopRecvChannel(t *testing.T) {
+	if !runTests {
+		t.Skip("Set TEST_RUNLOOP to \"yes\" to run this test")
+	}
+
 	g := NewGomegaWithT(t)
 
 	maxDuration := time.Millisecond * 10
@@ -96,6 +111,10 @@ func TestRunLoopRecvChannel(t *testing.T) {
 }
 
 func TestRunLoopWithReschedule(t *testing.T) {
+	if !runTests {
+		t.Skip("Set TEST_RUNLOOP to \"yes\" to run this test")
+	}
+
 	g := NewGomegaWithT(t)
 
 	maxDuration := time.Millisecond * 10
@@ -131,7 +150,7 @@ func TestRunLoopWithReschedule(t *testing.T) {
 	// Measure the difference in time between executions when reschedule() is called
 	cond.L.Lock()
 	cond.Wait()
-	// t0 := time.Now()
+	t0 := time.Now()
 	g.Expect(reschedule()).ShouldNot(HaveOccurred(), "Reschedule runs successfully")
 	// This must not cause rescheduleFunc to be called again. Tested at the bottom where we check that rc=2
 	g.Expect(reschedule()).ShouldNot(HaveOccurred(), "Reschedule runs successfully")
@@ -139,13 +158,12 @@ func TestRunLoopWithReschedule(t *testing.T) {
 
 	cond.L.Lock()
 	cond.Wait()
-	// t1 := time.Now()
+	t1 := time.Now()
 	// Call reschedule again now that the reschedule has been cleared
 	g.Expect(reschedule()).ShouldNot(HaveOccurred(), "Reschedule runs successfully")
 	cond.L.Unlock()
 
-	// TODO Unreliable test disabled
-	// g.Expect(t1.Sub(t0)).Should(BeNumerically("<", period))
+	g.Expect(t1.Sub(t0)).Should(BeNumerically("<", period))
 
 	wg.Wait()
 	g.Expect(res).Should(Equal(context.DeadlineExceeded))
@@ -156,6 +174,10 @@ func TestRunLoopWithReschedule(t *testing.T) {
 }
 
 func TestRunLoopWithRescheduleLongRunningFunction(t *testing.T) {
+	if !runTests {
+		t.Skip("Set TEST_RUNLOOP to \"yes\" to run this test")
+	}
+
 	g := NewGomegaWithT(t)
 
 	maxDuration := time.Millisecond * 10

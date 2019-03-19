@@ -1,9 +1,14 @@
+// Copyright 2019 Tigera Inc. All rights reserved.
+
 package elastic
 
 const ipSetMapping = `{
   "mappings": {
     "_doc": {
       "properties": {
+        "created_at": {
+            "type": "date"
+        },
         "ips": {
             "type": "ip_range"
         }

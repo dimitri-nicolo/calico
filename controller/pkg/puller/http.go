@@ -1,19 +1,28 @@
+// Copyright 2019 Tigera Inc. All rights reserved.
+
 package puller
 
 import (
 	"bufio"
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
+
+	"github.com/tigera/intrusion-detection/controller/pkg/util"
 
 	retry "github.com/avast/retry-go"
 	log "github.com/sirupsen/logrus"
+	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/feed"
+	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/runloop"
 	"github.com/tigera/intrusion-detection/controller/pkg/statser"
 )
@@ -26,52 +35,189 @@ const (
 
 // httpPuller is a feed that periodically pulls Puller sets from a URL
 type httpPuller struct {
-	client       *http.Client
-	feed         feed.Feed
-	name         string
-	namespace    string
-	period       time.Duration
-	url          *url.URL
-	header       http.Header
-	startupDelay time.Duration
-	cancel       context.CancelFunc
+	ipSet            db.IPSet
+	configMapClient  v1.ConfigMapInterface
+	secretsClient    v1.SecretInterface
+	client           *http.Client
+	feed             *v3.GlobalThreatFeed
+	needsUpdate      bool
+	url              *url.URL
+	header           http.Header
+	period           time.Duration
+	snapshots        chan db.IPSetSpec
+	syncFailFunction SyncFailFunction
+	cancel           context.CancelFunc
+	once             sync.Once
+	lock             sync.RWMutex
 }
 
-func NewHTTPPuller(feed feed.Feed, client *http.Client, u *url.URL, header http.Header, period, startupDelay time.Duration) Puller {
-	return &httpPuller{
-		client:       client,
-		feed:         feed,
-		url:          u,
-		period:       period,
-		header:       header,
-		startupDelay: startupDelay,
+func NewHTTPPuller(f *v3.GlobalThreatFeed, ipSet db.IPSet, configMapClient v1.ConfigMapInterface, secretsClient v1.SecretInterface, client *http.Client) Puller {
+	p := &httpPuller{
+		ipSet:           ipSet,
+		configMapClient: configMapClient,
+		secretsClient:   secretsClient,
+		client:          client,
+		feed:            f.DeepCopy(),
+		needsUpdate:     true,
 	}
+
+	p.period = util.ParseFeedDuration(p.feed)
+
+	return p
 }
 
-func (h *httpPuller) Run(ctx context.Context, s statser.Statser) (<-chan feed.IPSet, SyncFailFunction) {
-	snapshots := make(chan feed.IPSet)
-	ctx, h.cancel = context.WithCancel(ctx)
+func (h *httpPuller) SetFeed(f *v3.GlobalThreatFeed) {
+	h.lock.Lock()
+	defer h.lock.Unlock()
 
-	runFunc, rescheduleFunc := runloop.RunLoopWithReschedule()
-	go func() {
-		select {
-		case <-ctx.Done():
-			return
-		case <-time.After(h.startupDelay):
-			break
-		}
-		runFunc(ctx, func() { h.query(ctx, snapshots, s, retryAttempts, retryDelay) }, h.period, func() {}, h.period/3)
-	}()
+	h.feed = f.DeepCopy()
+	h.needsUpdate = true
+}
 
-	return snapshots, func() { rescheduleFunc() }
+func (h *httpPuller) Run(ctx context.Context, s statser.Statser) (<-chan db.IPSetSpec, SyncFailFunction) {
+	h.once.Do(func() {
+		h.snapshots = make(chan db.IPSetSpec)
+
+		ctx, h.cancel = context.WithCancel(ctx)
+
+		runFunc, rescheduleFunc := runloop.RunLoopWithReschedule()
+		go func() {
+			defer h.cancel()
+			defer close(h.snapshots)
+			if h.period == 0 {
+				return
+			}
+
+			delay := h.getStartupDelay(ctx, s.Status())
+			if delay > 0 {
+				log.WithField("delay", delay).WithField("feed", h.feed.Name).Info("Delaying start")
+			}
+
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(delay):
+				break
+			}
+			_ = runFunc(ctx, func() { _ = h.query(ctx, h.snapshots, s, retryAttempts, retryDelay) }, h.period, func() {}, h.period/3)
+		}()
+
+		h.syncFailFunction = func() { _ = rescheduleFunc() }
+	})
+
+	return h.snapshots, h.syncFailFunction
 }
 
 func (h *httpPuller) Close() {
 	h.cancel()
 }
 
-func (h *httpPuller) query(ctx context.Context, snapshots chan<- feed.IPSet, statser statser.Statser, attempts uint, delay time.Duration) {
-	req := &http.Request{Method: "GET", Header: h.header, URL: h.url}
+func (h *httpPuller) setFeedURIAndHeader(f *v3.GlobalThreatFeed) error {
+	u, err := url.Parse(f.Spec.Pull.HTTP.URL)
+	if err != nil {
+		return err
+	}
+
+	headers := http.Header{}
+	for _, header := range f.Spec.Pull.HTTP.Headers {
+		ok := true
+		value := header.Value
+		if value == "" && header.ValueFrom != nil {
+			ok = false
+			switch {
+			case header.ValueFrom.ConfigMapKeyRef != nil:
+				configMap, err := h.configMapClient.Get(header.ValueFrom.ConfigMapKeyRef.Name, metav1.GetOptions{})
+				if err != nil {
+					if header.ValueFrom.ConfigMapKeyRef.Optional != nil && *header.ValueFrom.ConfigMapKeyRef.Optional {
+						log.WithError(err).WithFields(log.Fields{"feed": f.Name, "header": header.Name, "configMapKeyRef": header.ValueFrom.ConfigMapKeyRef.Name, "key": header.ValueFrom.ConfigMapKeyRef.Key}).Debug("Skipping header")
+						continue
+					}
+					return FatalError("could not get ConfigMap %s", header.ValueFrom.ConfigMapKeyRef.Name)
+				}
+				value, ok = configMap.Data[header.ValueFrom.ConfigMapKeyRef.Key]
+				fmt.Printf("%#v %s %v\n", configMap.Data, header.ValueFrom.ConfigMapKeyRef.Key, ok)
+				if ok {
+					log.WithField("value", value).Debug("Loaded config")
+				} else if header.ValueFrom.ConfigMapKeyRef.Optional != nil && *header.ValueFrom.ConfigMapKeyRef.Optional {
+					log.WithFields(log.Fields{"feed": f.Name, "header": header.Name, "configMapKeyRef": header.ValueFrom.ConfigMapKeyRef.Name, "key": header.ValueFrom.ConfigMapKeyRef.Key}).Debug("Skipping header")
+					continue
+				} else {
+					return FatalError("configMap %s key %s not found", header.ValueFrom.ConfigMapKeyRef.Name, header.ValueFrom.ConfigMapKeyRef.Key)
+				}
+			case header.ValueFrom.SecretKeyRef != nil:
+				secret, err := h.secretsClient.Get(header.ValueFrom.SecretKeyRef.Name, metav1.GetOptions{})
+				if err != nil {
+					if header.ValueFrom.SecretKeyRef.Optional != nil && *header.ValueFrom.SecretKeyRef.Optional {
+						log.WithError(err).WithFields(log.Fields{"feed": f.Name, "header": header.Name, "secretKeyRef": header.ValueFrom.SecretKeyRef.Name, "key": header.ValueFrom.SecretKeyRef.Key}).Debug("Skipping header")
+						continue
+					}
+					return FatalError("could not get Secret %s", header.ValueFrom.SecretKeyRef.Name)
+				}
+
+				var bvalue []byte
+				bvalue, ok = secret.Data[header.ValueFrom.SecretKeyRef.Key]
+				value = string(bvalue)
+				if ok {
+					log.Debug("Loaded secret")
+				} else if header.ValueFrom.SecretKeyRef.Optional != nil && *header.ValueFrom.SecretKeyRef.Optional {
+					log.WithFields(log.Fields{"feed": f.Name, "header": header.Name, "secretKeyRef": header.ValueFrom.SecretKeyRef.Name, "key": header.ValueFrom.SecretKeyRef.Key}).Debug("Skipping header")
+					continue
+				} else {
+					return FatalError("secrets %s key %s not found", header.ValueFrom.SecretKeyRef.Name, header.ValueFrom.SecretKeyRef.Key)
+				}
+			default:
+				return FatalError("neither ConfigMap nor SecretKey was set")
+			}
+		}
+		headers.Add(header.Name, value)
+	}
+
+	h.url = u
+	h.header = headers
+	h.needsUpdate = false
+
+	return nil
+}
+
+func (h *httpPuller) getStartupDelay(ctx context.Context, s statser.Status) time.Duration {
+	lastModified, err := h.ipSet.GetIPSetModified(ctx, h.feed.Name)
+	if err != nil {
+		return 0
+	}
+	since := time.Now().Sub(lastModified)
+	if since < h.period {
+		return h.period - since
+	}
+	return 0
+}
+
+func (h *httpPuller) query(ctx context.Context, snapshots chan<- db.IPSetSpec, st statser.Statser, attempts uint, delay time.Duration) error {
+	h.lock.RLock()
+	name := h.feed.Name
+	u := h.url
+	header := h.header
+
+	if h.needsUpdate {
+		h.lock.RUnlock()
+		h.lock.Lock()
+
+		if h.needsUpdate {
+			err := h.setFeedURIAndHeader(h.feed)
+			if err != nil {
+				h.lock.Unlock()
+				return err
+			}
+		}
+
+		name = h.feed.Name
+		u = h.url
+		header = h.header
+		h.lock.Unlock()
+	} else {
+		h.lock.RUnlock()
+	}
+
+	req := &http.Request{Method: "GET", Header: header, URL: u}
 	req = req.WithContext(ctx)
 	var resp *http.Response
 	err := retry.Do(
@@ -83,16 +229,16 @@ func (h *httpPuller) query(ctx context.Context, snapshots chan<- feed.IPSet, sta
 			}
 			if resp.StatusCode >= 500 {
 				return &url.Error{
-					req.Method,
-					h.url.String(),
-					TemporaryError(resp.Status),
+					Op:  req.Method,
+					URL: u.String(),
+					Err: TemporaryError(resp.Status),
 				}
 			}
 			if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 				return &url.Error{
-					req.Method,
-					h.url.String(),
-					errors.New(resp.Status),
+					Op:  req.Method,
+					URL: u.String(),
+					Err: errors.New(resp.Status),
 				}
 			}
 			return nil
@@ -113,17 +259,19 @@ func (h *httpPuller) query(ctx context.Context, snapshots chan<- feed.IPSet, sta
 			func(n uint, err error) {
 				log.WithError(err).WithFields(log.Fields{
 					"n":   n,
-					"url": h.url,
+					"url": u,
 				}).Infof("Retrying")
 			},
 		),
 	)
 	if err != nil {
 		log.WithError(err).Error("failed to query ")
-		statser.Error(statserType, err)
-		return
+		st.Error(statser.PullFailed, err)
+		return err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	// Response format is one Puller address per line.
 	s := bufio.NewScanner(resp.Body)
@@ -146,7 +294,7 @@ func (h *httpPuller) query(ctx context.Context, snapshots chan<- feed.IPSet, sta
 			_, ipNet, err := net.ParseCIDR(l)
 			if err != nil {
 				log.WithError(err).WithFields(log.Fields{
-					"feed":     h.namespace + "/" + h.name,
+					"feed":     name,
 					"line_num": n,
 					"line":     l,
 				}).Warn("could not parse IP network")
@@ -157,7 +305,7 @@ func (h *httpPuller) query(ctx context.Context, snapshots chan<- feed.IPSet, sta
 			ip := net.ParseIP(l)
 			if ip == nil {
 				log.WithFields(log.Fields{
-					"feed":     h.namespace + "/" + h.name,
+					"feed":     name,
 					"line_num": n,
 					"line":     l,
 				}).Warn("could not parse IP address")
@@ -174,5 +322,7 @@ func (h *httpPuller) query(ctx context.Context, snapshots chan<- feed.IPSet, sta
 		}
 	}
 	snapshots <- snapshot
-	statser.ClearError(statserType)
+	st.ClearError(statser.PullFailed)
+
+	return nil
 }

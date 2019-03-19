@@ -1,3 +1,5 @@
+// Copyright 2019 Tigera Inc. All rights reserved.
+
 package elastic
 
 import (
@@ -76,10 +78,13 @@ func TestElasticFlowLogIterator(t *testing.T) {
 		results: results,
 	}
 
+	ctx, cancel := context.WithCancel(context.TODO())
+	defer cancel()
+
 	expectedKey := "source_ip"
 	i := elasticFlowLogIterator{
 		scrollers: map[string]Scroller{expectedKey: scroll},
-		ctx:       context.TODO(),
+		ctx:       ctx,
 	}
 
 	var actual []events.SecurityEvent
@@ -111,10 +116,13 @@ func (m *mockScroller) Do(context.Context) (*elastic.SearchResult, error) {
 func TestElasticFlowLogIteratorWithError(t *testing.T) {
 	g := NewGomegaWithT(t)
 
+	ctx, cancel := context.WithCancel(context.TODO())
+	defer cancel()
+
 	scroll := &mockScrollerError{}
 	i := elasticFlowLogIterator{
 		scrollers: map[string]Scroller{"dest_ip": scroll},
-		ctx:       context.TODO(),
+		ctx:       ctx,
 	}
 
 	g.Expect(i.Next()).Should(BeFalse(), "Iterator stops immediately")
@@ -177,10 +185,13 @@ func TestElasticFlowLogIteratorWithTwoScrollers(t *testing.T) {
 		},
 	}
 
+	ctx, cancel := context.WithCancel(context.TODO())
+	defer cancel()
+
 	i := elasticFlowLogIterator{
 		scrollers: scrollers,
-		ctx:       context.TODO(),
-		name:      "test",
+		ctx:       ctx,
+		name:      "mock",
 	}
 
 	var results []events.SecurityEvent
@@ -196,8 +207,9 @@ func TestElasticFlowLogIteratorWithTwoScrollers(t *testing.T) {
 		results[1], results[0] = results[0], results[1]
 	}
 
-	g.Expect(results[0].Description).Should(Equal("suspicious IP 1.2.3.4 from list test connected to hep /dest"))
-	g.Expect(results[1].Description).Should(Equal("net /source connected to suspicious IP 4.5.6.7 from list test"))
+	// TODO random failure
+	g.Expect(results[0].Description).Should(Equal("suspicious IP 1.2.3.4 from list mock connected to hep /dest"))
+	g.Expect(results[1].Description).Should(Equal("net /source connected to suspicious IP 4.5.6.7 from list mock"))
 }
 
 type mockScrollerError struct{}

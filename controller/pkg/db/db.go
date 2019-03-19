@@ -1,18 +1,21 @@
+// Copyright 2019 Tigera Inc. All rights reserved.
+
 package db
 
 import (
 	"context"
+	"time"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/events"
-	"github.com/tigera/intrusion-detection/controller/pkg/feed"
 )
 
 type IPSet interface {
 	// Put a set of IPs in the database. IPs are sent as strings to avoid
 	// overhead of decoding and encoding net.IP, since they are strings on the
 	// wire to elastic.
-	PutIPSet(ctx context.Context, name string, set feed.IPSet) error
-	GetIPSet(name string) ([]string, error)
+	PutIPSet(ctx context.Context, name string, set IPSetSpec) error
+	GetIPSet(ctx context.Context, name string) (IPSetSpec, error)
+	GetIPSetModified(ctx context.Context, name string) (time.Time, error)
 }
 
 type SuspiciousIP interface {
@@ -28,3 +31,5 @@ type SecurityEventIterator interface {
 type Events interface {
 	PutSecurityEvent(context.Context, events.SecurityEvent) error
 }
+
+type IPSetSpec []string

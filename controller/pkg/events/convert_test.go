@@ -1,3 +1,5 @@
+// Copyright 2019 Tigera Inc. All rights reserved.
+
 package events
 
 import (
@@ -22,7 +24,7 @@ func TestConvertFlowLogSourceIP(t *testing.T) {
 		SourceIP:        util.Sptr("1.2.3.4"),
 		SourceName:      "source-foo",
 		SourceNameAggr:  "source",
-		SourceNamespace: "test",
+		SourceNamespace: "mock",
 		SourcePort:      util.I64ptr(443),
 		SourceType:      "wep",
 		SourceLabels: &FlowLogLabelsJSONOutput{
@@ -63,7 +65,7 @@ func TestConvertFlowLogSourceIP(t *testing.T) {
 		Protocol:         "tcp",
 		SourceIP:         util.Sptr("1.2.3.4"),
 		SourcePort:       util.I64ptr(443),
-		SourceNamespace:  "test",
+		SourceNamespace:  "mock",
 		SourceName:       "source-foo",
 		DestIP:           util.Sptr("2.3.4.5"),
 		DestPort:         util.I64ptr(80),
@@ -93,7 +95,7 @@ func TestConvertFlowLogDestIP(t *testing.T) {
 		SourceIP:        util.Sptr("1.2.3.4"),
 		SourceName:      "source-foo",
 		SourceNameAggr:  "source",
-		SourceNamespace: "test",
+		SourceNamespace: "mock",
 		SourcePort:      util.I64ptr(443),
 		SourceType:      "wep",
 		SourceLabels: &FlowLogLabelsJSONOutput{
@@ -127,14 +129,14 @@ func TestConvertFlowLogDestIP(t *testing.T) {
 	expected := SecurityEvent{
 		Time:             123,
 		Type:             SuspiciousFlow,
-		Description:      "wep test/source-foo connected to suspicious IP 2.3.4.5 from list testfeed",
+		Description:      "wep mock/source-foo connected to suspicious IP 2.3.4.5 from list testfeed",
 		Severity:         Severity,
 		FlowLogIndex:     "test_flows_index",
 		FlowLogID:        "111-222-333",
 		Protocol:         "tcp",
 		SourceIP:         util.Sptr("1.2.3.4"),
 		SourcePort:       util.I64ptr(443),
-		SourceNamespace:  "test",
+		SourceNamespace:  "mock",
 		SourceName:       "source-foo",
 		DestIP:           util.Sptr("2.3.4.5"),
 		DestPort:         util.I64ptr(80),
@@ -164,7 +166,7 @@ func TestConvertFlowLogUnknown(t *testing.T) {
 		SourceIP:        util.Sptr("1.2.3.4"),
 		SourceName:      "source-foo",
 		SourceNameAggr:  "source",
-		SourceNamespace: "test",
+		SourceNamespace: "mock",
 		SourcePort:      util.I64ptr(443),
 		SourceType:      "hep",
 		SourceLabels: &FlowLogLabelsJSONOutput{
@@ -205,7 +207,7 @@ func TestConvertFlowLogUnknown(t *testing.T) {
 		Protocol:         "tcp",
 		SourceIP:         util.Sptr("1.2.3.4"),
 		SourcePort:       util.I64ptr(443),
-		SourceNamespace:  "test",
+		SourceNamespace:  "mock",
 		SourceName:       "source-foo",
 		DestIP:           util.Sptr("2.3.4.5"),
 		DestPort:         util.I64ptr(80),

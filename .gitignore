@@ -7,3 +7,4 @@
 /controller/.go-pkg-cache
 /controller/docker-image/bin
 /controller/cmd/controller/controller
+vendor

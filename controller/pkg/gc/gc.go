@@ -1,3 +1,5 @@
+// Copyright 2019 Tigera Inc. All rights reserved.
+
 package gc
 
 import (
@@ -5,26 +7,26 @@ import (
 	"sync"
 	"time"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/feed"
+	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
+
 	"github.com/tigera/intrusion-detection/controller/pkg/statser"
 )
 
-const statserType = "GarbageCollectionFailed"
-
 type GarbageCollector interface {
 	Run(context.Context, statser.Statser)
+	SetFeed(*v3.GlobalThreatFeed)
 	Close()
 }
 
 type garbageCollector struct {
-	feed   feed.Feed
+	feed   *v3.GlobalThreatFeed
 	period time.Duration
 	cancel context.CancelFunc
 	once   sync.Once
 }
 
-func NewGarbageCollector(feed feed.Feed, period time.Duration) GarbageCollector {
-	return &garbageCollector{feed: feed, period: period}
+func NewGarbageCollector(feed *v3.GlobalThreatFeed, period time.Duration) GarbageCollector {
+	return &garbageCollector{feed: feed.DeepCopy(), period: period}
 }
 
 func (g *garbageCollector) Run(ctx context.Context, statser statser.Statser) {
@@ -45,6 +47,10 @@ func (g *garbageCollector) Run(ctx context.Context, statser statser.Statser) {
 			}
 		}()
 	})
+}
+
+func (g *garbageCollector) SetFeed(f *v3.GlobalThreatFeed) {
+	g.feed = f.DeepCopy()
 }
 
 func (g *garbageCollector) Close() {

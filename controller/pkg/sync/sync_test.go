@@ -1,106 +1,120 @@
+// Copyright 2019 Tigera Inc. All rights reserved.
+
 package sync
 
 import (
 	"context"
 	"errors"
-	"reflect"
 	"testing"
 	"time"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/feed"
 	"github.com/tigera/intrusion-detection/controller/pkg/statser"
+
+	. "github.com/onsi/gomega"
+	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+
+	"github.com/tigera/intrusion-detection/controller/pkg/db"
+	"github.com/tigera/intrusion-detection/controller/pkg/mock"
+	"github.com/tigera/intrusion-detection/controller/pkg/util"
 )
 
 func TestSync(t *testing.T) {
-	expected := feed.IPSet{
+	expected := db.IPSetSpec{
 		"1.2.3.4",
 		"2.3.4.5",
 	}
-	testSync(t, true, expected, nil)
+	testSync(t, true, expected, nil, nil)
 }
 
 func TestSyncEmpty(t *testing.T) {
-	expected := feed.IPSet{}
-	testSync(t, true, expected, nil)
+	expected := db.IPSetSpec{}
+	testSync(t, true, expected, nil, nil)
 }
 
-func TestSyncError(t *testing.T) {
-	expected := feed.IPSet{}
-	testSync(t, false, expected, errors.New("test error"))
+func TestSyncIPSetError(t *testing.T) {
+	expected := db.IPSetSpec{}
+	testSync(t, false, expected, errors.New("mock error"), nil)
 }
 
-func testSync(t *testing.T, successful bool, expected feed.IPSet, err error) {
-	feed := feed.NewFeed("test", "test-namespace")
-	ipSet := &mockDB{
-		err: err,
+func TestSyncGNSError(t *testing.T) {
+	expected := db.IPSetSpec{}
+	testSync(t, false, expected, nil, errors.New("mock error"))
+}
+
+func testSync(t *testing.T, successful bool, expected db.IPSetSpec, expectedIPSetError, expectedGNSError error) {
+	g := NewGomegaWithT(t)
+
+	ipSet := &mock.IPSet{
+		Error: expectedIPSetError,
 	}
-
-	syncer := NewSyncer(feed, ipSet).(*syncer)
-
-	statser := statser.NewStatser()
-	failFunc := &mockFailFunc{}
-
-	syncer.sync(context.TODO(), expected, failFunc.Fail, statser, 1, 0)
-
-	if !reflect.DeepEqual(expected, ipSet.set) {
-		t.Errorf("Feed contents mismatch: %v != %v", expected, ipSet.set)
+	gns := &mock.GlobalNetworkSetInterface{
+		Error: expectedGNSError,
 	}
+	f := util.NewGlobalThreatFeedFromName("mock")
+	f.Spec.GlobalNetworkSet = &v3.GlobalNetworkSetSync{
+		Labels: map[string]string{},
+	}
+	st := &mock.Statser{}
 
-	status := statser.Status()
+	syncer := NewSyncer(f, ipSet, gns).(*syncer)
+
+	failFunc := &FailFunc{}
+	ctx, cancel := context.WithCancel(context.TODO())
+	defer cancel()
+
+	err := syncer.sync(ctx, expected, failFunc.Fail, st, 1, 0)
 	if successful {
-		if status.LastSuccessfulSync.Equal(time.Time{}) {
-			t.Errorf("Sync was not marked as successful when it should have been.")
-		}
-		if failFunc.called {
-			t.Errorf("Fail function was called when it should not have been")
-		}
+		g.Expect(err).ShouldNot(HaveOccurred())
 	} else {
-		if !status.LastSuccessfulSync.Equal(time.Time{}) {
-			t.Errorf("Sync was marked as successful when it should not have been.")
-		}
-		if !failFunc.called {
-			t.Errorf("Fail function was not called when it should have been")
-		}
+		g.Expect(err).Should(HaveOccurred())
 	}
-	if !status.LastSuccessfulSearch.Equal(time.Time{}) {
-		t.Errorf("Search was marked as successful when it should not have been.")
-	}
-	if err == nil {
-		if len(status.ErrorConditions) != 0 {
-			t.Errorf("Status errors reported: %v", status.ErrorConditions)
-		}
+
+	g.Expect(expected).Should(Equal(ipSet.Set), "Feed contents match")
+
+	s := st.Status()
+	if successful {
+		g.Expect(s.LastSuccessfulSync).ShouldNot(Equal(time.Time{}), "Sync was marked as successful")
+		g.Expect(failFunc.Called).Should(BeFalse(), "Fail function not called")
 	} else {
-		if len(status.ErrorConditions) == 0 {
-			t.Errorf("Status error not reported.")
-		} else {
-			if status.ErrorConditions[0].Type != statserType {
-				t.Errorf("ErrorConditions type mismatch: %v != %v", status.ErrorConditions[0].Type, statserType)
-			}
-		}
+		g.Expect(s.LastSuccessfulSync).Should(Equal(time.Time{}), "Sync was not marked as successful")
+		g.Expect(failFunc.Called).Should(BeTrue(), "Fail function called")
+	}
+	g.Expect(s.LastSuccessfulSearch).Should(Equal(time.Time{}), "Search was not marked as successful")
+	switch {
+	case expectedIPSetError == nil && expectedGNSError == nil:
+		g.Expect(s.ErrorConditions).Should(HaveLen(0), "No status errors reported")
+	case expectedIPSetError != nil && expectedGNSError == nil:
+		g.Expect(s.ErrorConditions).Should(HaveLen(1), "1 status errors reported")
+		g.Expect(s.ErrorConditions[0].Type).Should(Equal(statser.ElasticSyncFailed), "ErrorConditions type matches")
+	case expectedIPSetError == nil && expectedGNSError != nil:
+		g.Expect(s.ErrorConditions).Should(HaveLen(1), "1 status errors reported")
+		g.Expect(s.ErrorConditions[0].Type).Should(Equal(statser.GlobalNetworkSetSyncFailed), "ErrorConditions type matches")
+	case expectedIPSetError != nil && expectedGNSError != nil:
+		g.Expect(s.ErrorConditions).Should(HaveLen(1), "2 status errors reported")
+		g.Expect(s.ErrorConditions[0].Type).Should(Equal(statser.ElasticSyncFailed), "ErrorConditions type matches")
+		g.Expect(s.ErrorConditions[1].Type).Should(Equal(statser.GlobalNetworkSetSyncFailed), "ErrorConditions type matches")
 	}
 }
 
-type mockFailFunc struct {
-	called bool
+func TestSyncer_SetFeed(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	ipSet := &mock.IPSet{}
+	gns := &mock.GlobalNetworkSetInterface{}
+	f := util.NewGlobalThreatFeedFromName("mock")
+	f2 := util.NewGlobalThreatFeedFromName("swap")
+
+	syncer := NewSyncer(f, ipSet, gns).(*syncer)
+
+	syncer.SetFeed(f2)
+	g.Expect(syncer.feed).Should(Equal(f2))
+	g.Expect(syncer.feed).ShouldNot(BeIdenticalTo(f2))
 }
 
-func (m *mockFailFunc) Fail() {
-	m.called = true
+type FailFunc struct {
+	Called bool
 }
 
-type mockDB struct {
-	name string
-	set  feed.IPSet
-	err  error
-}
-
-func (m *mockDB) GetIPSet(name string) ([]string, error) {
-	panic("not implemented")
-}
-
-func (m *mockDB) PutIPSet(ctx context.Context, name string, set feed.IPSet) error {
-	m.name = name
-	m.set = set
-
-	return m.err
+func (m *FailFunc) Fail() {
+	m.Called = true
 }

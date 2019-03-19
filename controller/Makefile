@@ -1,3 +1,5 @@
+# Copyright 2019 Tigera Inc. All rights reserved.
+
 ###############################################################################
 # Both native and cross architecture builds are supported.
 # The target architecture is select by setting the ARCH variable.
@@ -133,6 +135,9 @@ RELEASE_LDFLAGS=-ldflags "$(VERSION_FLAGS) -s -w"
 MY_UID:=$(shell id -u)
 MY_GID:=$(shell id -g)
 
+ifdef SSH_AUTH_SOCK
+  EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
+endif
 
 DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
                    mkdir -p .go-build-cache && \
@@ -166,7 +171,8 @@ endif
 	@echo Building controller...
 	mkdir -p bin
 	$(DOCKER_GO_BUILD) \
-	    sh -c 'go build -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/controller" && \
+	    sh -c 'git config --global url."git@github.com:tigera".insteadOf "https://github.com/tigera" && \
+	           go build -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/controller" && \
                ( ldd $(BINDIR)/controller-$(ARCH) 2>&1 | grep -q "Not a valid dynamic program" || \
 	             ( echo "Error: $(BINDIR)/controller-$(ARCH) was not statically linked"; false ) )'
 
@@ -247,7 +253,8 @@ sub-tag-images-%:
 .PHONY: ut
 ut:
 	$(DOCKER_GO_BUILD) \
-		sh -c 'go test $(UNIT_TEST_FLAGS) \
+		sh -c 'git config --global url."git@github.com:tigera".insteadOf "https://github.com/tigera" && \
+		    go test $(UNIT_TEST_FLAGS) \
 			$(addprefix $(PACKAGE_NAME)/,$(TEST_DIRS))'
 
 .PHONY: fv

@@ -1,17 +1,21 @@
+// Copyright 2019 Tigera Inc. All rights reserved.
+
 package elastic
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/olivere/elastic"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/events"
-	"github.com/tigera/intrusion-detection/controller/pkg/feed"
 )
 
 const IPSetIndex = ".tigera.ipset"
@@ -21,7 +25,8 @@ const EventIndex = "tigera_secure_ee_events"
 const QuerySize = 1000
 
 type ipSetDoc struct {
-	IPs feed.IPSet `json:"ips"`
+	CreatedAt time.Time    `json:"created_at"`
+	IPs       db.IPSetSpec `json:"ips"`
 }
 
 type Elastic struct {
@@ -47,14 +52,14 @@ func NewElastic(h *http.Client, url *url.URL, username, password string) *Elasti
 	return &Elastic{c}
 }
 
-func (e *Elastic) PutIPSet(ctx context.Context, name string, set feed.IPSet) error {
+func (e *Elastic) PutIPSet(ctx context.Context, name string, set db.IPSetSpec) error {
 	err := e.ensureIndexExists(ctx, IPSetIndex, ipSetMapping)
 	if err != nil {
 		return err
 	}
 
 	// Put document
-	body := ipSetDoc{set}
+	body := ipSetDoc{CreatedAt: time.Now(), IPs: set}
 	_, err = e.c.Index().Index(IPSetIndex).Type(StandardType).Id(name).BodyJson(body).Do(ctx)
 	log.WithField("name", name).Info("IP set stored")
 
@@ -79,8 +84,65 @@ func (e *Elastic) ensureIndexExists(ctx context.Context, idx, mapping string) er
 	return nil
 }
 
-func (e *Elastic) GetIPSet(name string) ([]string, error) {
-	return nil, nil
+func (e *Elastic) GetIPSet(ctx context.Context, name string) (db.IPSetSpec, error) {
+	res, err := e.c.Get().Index(IPSetIndex).Type(StandardType).Id(name).Do(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if res.Source == nil {
+		return nil, errors.New("Elastic document has nil Source")
+	}
+
+	var doc map[string]interface{}
+	err = json.Unmarshal(*res.Source, &doc)
+	if err != nil {
+		fmt.Printf("%s\n", string(*res.Source))
+		return nil, err
+	}
+	i, ok := doc["ips"]
+	if !ok {
+		return nil, errors.New("Elastic document missing ips section")
+	}
+
+	ia, ok := i.([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("Unknown type for %#v", i)
+	}
+	ips := db.IPSetSpec{}
+	for _, v := range ia {
+		s, ok := v.(string)
+		if !ok {
+			return nil, fmt.Errorf("Unknown type for %#v", s)
+		}
+		ips = append(ips, s)
+	}
+
+	return ips, nil
+}
+
+func (e *Elastic) GetIPSetModified(ctx context.Context, name string) (time.Time, error) {
+	res, err := e.c.Get().Index(IPSetIndex).Type(StandardType).Id(name).StoredFields("created_at").Do(ctx)
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	createdAt, ok := res.Fields["created_at"]
+	if !ok {
+		return time.Time{}, nil
+	}
+
+	switch createdAt.(type) {
+	case time.Time:
+		return createdAt.(time.Time), nil
+	case int64:
+		return time.Unix(createdAt.(int64), 0), nil
+	case string:
+		return time.Parse(time.RFC3339, createdAt.(string))
+	default:
+		return time.Time{}, fmt.Errorf("Unexpected type for %#v", createdAt)
+	}
+
 }
 
 func (e *Elastic) QueryIPSet(ctx context.Context, name string) (db.SecurityEventIterator, error) {

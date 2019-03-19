@@ -1,3 +1,5 @@
+// Copyright 2019 Tigera Inc. All rights reserved.
+
 package events
 
 import (
@@ -37,9 +39,9 @@ func (s SecurityEvent) ID() string {
 		feed,
 		s.Time,
 		s.Protocol,
-		util.StringPtrWrapper{s.SourceIP},
-		util.Int64PtrWrapper{s.SourcePort},
-		util.StringPtrWrapper{s.DestIP},
-		util.Int64PtrWrapper{s.DestPort},
+		util.StringPtrWrapper{S: s.SourceIP},
+		util.Int64PtrWrapper{I: s.SourcePort},
+		util.StringPtrWrapper{S: s.DestIP},
+		util.Int64PtrWrapper{I: s.DestPort},
 	)
 }

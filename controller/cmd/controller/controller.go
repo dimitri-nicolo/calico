@@ -1,3 +1,5 @@
+// Copyright 2019 Tigera Inc. All rights reserved.
+
 package main
 
 import (
@@ -15,6 +17,10 @@ import (
 	"syscall"
 
 	log "github.com/sirupsen/logrus"
+	calicoclient "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/elastic"
 	"github.com/tigera/intrusion-detection/controller/pkg/watcher"
@@ -25,17 +31,46 @@ const (
 	DefaultElasticHost   = "elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local"
 	DefaultElasticPort   = 9200
 	DefaultElasticUser   = "elastic"
+	ConfigMapNamespace   = "calico-monitoring"
+	SecretsNamespace     = "calico-monitoring"
 )
 
 func main() {
-	var ver bool
+	var ver, debug bool
 	flag.BoolVar(&ver, "version", false, "Print version information")
+	flag.BoolVar(&debug, "debug", false, "Debug mode")
 	flag.Parse()
 
 	if ver {
 		Version()
 		return
 	}
+
+	kubeconfig := os.Getenv("KUBECONFIG")
+	var config *rest.Config
+	var err error
+	if kubeconfig == "" {
+		// creates the in-cluster config
+		config, err = rest.InClusterConfig()
+		if err != nil {
+			panic(err.Error())
+		}
+	} else {
+		// creates a config from supplied kubeconfig
+		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
+		if err != nil {
+			panic(err.Error())
+		}
+	}
+	k8sClient, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		panic(err.Error())
+	}
+	calicoClient, err := calicoclient.NewForConfig(config)
+	if err != nil {
+		panic(err.Error())
+	}
+
 	var u *url.URL
 	uri := os.Getenv("ELASTIC_URI")
 	if uri != "" {
@@ -73,7 +108,9 @@ func main() {
 		}
 	}
 
-	//log.SetLevel(log.TraceLevel)
+	if debug {
+		log.SetLevel(log.DebugLevel)
+	}
 	user := os.Getenv("ELASTIC_USER")
 	if user == "" {
 		user = DefaultElasticUser
@@ -101,8 +138,17 @@ func main() {
 	}
 	e := elastic.NewElastic(h, u, user, pass)
 
-	s := watcher.NewWatcher(e, e, e)
-	s.Run(context.Background())
+	s := watcher.NewWatcher(
+		k8sClient.CoreV1().ConfigMaps(ConfigMapNamespace),
+		k8sClient.CoreV1().Secrets(SecretsNamespace),
+		calicoClient.ProjectcalicoV3().GlobalThreatFeeds(),
+		calicoClient.ProjectcalicoV3().GlobalNetworkSets(),
+		&http.Client{},
+		e, e, e)
+	err = s.Run(context.Background())
+	if err != nil {
+		log.WithError(err).Fatal("Could not run Watcher")
+	}
 	defer s.Close()
 	log.Info("Watcher started")
 

@@ -1,3 +1,5 @@
+// Copyright 2019 Tigera Inc. All rights reserved.
+
 package searcher
 
 import (
@@ -8,10 +10,8 @@ import (
 
 	. "github.com/onsi/gomega"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/events"
-	"github.com/tigera/intrusion-detection/controller/pkg/feed"
-	"github.com/tigera/intrusion-detection/controller/pkg/statser"
+	"github.com/tigera/intrusion-detection/controller/pkg/mock"
 	"github.com/tigera/intrusion-detection/controller/pkg/util"
 )
 
@@ -86,25 +86,26 @@ func TestDoIPSetEventsFails(t *testing.T) {
 func runTest(t *testing.T, successful bool, expected []events.SecurityEvent, err error, suspiciousErrorIdx, eventsErrorIdx int) {
 	g := NewGomegaWithT(t)
 
-	f := feed.NewFeed("test", "test-namespace")
-	suspiciousIP := &mockDB{err: err, errorIdx: suspiciousErrorIdx, flowLogs: expected}
-	events := &mockDB{errorIdx: eventsErrorIdx, flowLogs: []events.SecurityEvent{}}
-	searcher := NewFlowSearcher(f, 0, suspiciousIP, events).(*flowSearcher)
+	f := util.NewGlobalThreatFeedFromName("mock")
+	suspiciousIP := &mock.SuspiciousIP{Error: err, ErrorIndex: suspiciousErrorIdx, FlowLogs: expected}
+	eventsDB := &mock.Events{ErrorIndex: eventsErrorIdx, FlowLogs: []events.SecurityEvent{}}
+	searcher := NewFlowSearcher(f, 0, suspiciousIP, eventsDB).(*flowSearcher)
+	s := &mock.Statser{}
 
-	ctx := context.TODO()
-	s := statser.NewStatser()
+	ctx, cancel := context.WithCancel(context.TODO())
+	defer cancel()
 
 	searcher.doIPSet(ctx, s)
 
 	if successful {
-		g.Expect(events.flowLogs).Should(Equal(expected), "Logs in DB should match expected")
-		g.Expect(suspiciousIP.flowLogs).Should(HaveLen(0), "All flowLogs from suspiciousIP were consumed")
+		g.Expect(eventsDB.FlowLogs).Should(Equal(expected), "Logs in DB should match expected")
+		g.Expect(suspiciousIP.FlowLogs).Should(HaveLen(0), "All flowLogs from suspiciousIP were consumed")
 	} else {
 		if eventsErrorIdx >= 0 {
-			g.Expect(events.flowLogs).Should(HaveLen(len(expected)-1), "Logs in DB should have skipped 1 from input")
+			g.Expect(eventsDB.FlowLogs).Should(HaveLen(len(expected)-1), "Logs in DB should have skipped 1 from input")
 		}
 		if suspiciousErrorIdx >= 0 {
-			g.Expect(events.flowLogs).Should(HaveLen(suspiciousErrorIdx), "Logs in DB should stop at the first error")
+			g.Expect(eventsDB.FlowLogs).Should(HaveLen(suspiciousErrorIdx), "Logs in DB should stop at the first error")
 		}
 	}
 
@@ -119,46 +120,16 @@ func runTest(t *testing.T, successful bool, expected []events.SecurityEvent, err
 	}
 }
 
-type mockDB struct {
-	err           error
-	errorIdx      int
-	errorReturned bool
-	flowLogs      []events.SecurityEvent
-	value         events.SecurityEvent
-}
+func TestFlowSearcher_SetFeed(t *testing.T) {
+	g := NewGomegaWithT(t)
 
-func (m *mockDB) QueryIPSet(ctx context.Context, name string) (db.SecurityEventIterator, error) {
-	return m, m.err
-}
+	f := util.NewGlobalThreatFeedFromName("mock")
+	f2 := util.NewGlobalThreatFeedFromName("swap")
+	suspiciousIP := &mock.SuspiciousIP{}
+	eventsDB := &mock.Events{}
+	searcher := NewFlowSearcher(f, 0, suspiciousIP, eventsDB).(*flowSearcher)
 
-func (m *mockDB) Next() bool {
-	if len(m.flowLogs) == m.errorIdx {
-		return false
-	}
-	if len(m.flowLogs) > 0 {
-		m.value = m.flowLogs[0]
-		m.flowLogs = m.flowLogs[1:]
-		return true
-	}
-	return false
-}
-
-func (m *mockDB) Value() events.SecurityEvent {
-	return m.value
-}
-
-func (m *mockDB) Err() error {
-	if m.errorIdx >= 0 {
-		return errors.New("Err error")
-	}
-	return nil
-}
-
-func (m *mockDB) PutSecurityEvent(ctx context.Context, l events.SecurityEvent) error {
-	if len(m.flowLogs) == m.errorIdx && !m.errorReturned {
-		m.errorReturned = true
-		return errors.New("PutSecurityEvent error")
-	}
-	m.flowLogs = append(m.flowLogs, l)
-	return nil
+	searcher.SetFeed(f2)
+	g.Expect(searcher.feed).Should(Equal(f2))
+	g.Expect(searcher.feed).ShouldNot(BeIdenticalTo(f2))
 }
