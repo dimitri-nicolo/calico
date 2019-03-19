@@ -70,13 +70,13 @@ defaults:
       layout: docwithnav
       version: master
       sitemap: true
-      registry:
+      registry: gcr.io/unique-caldron-775/cnx/
   -
     scope:
       path: master
     values:
       version: master
-      registry:
+      registry: gcr.io/unique-caldron-775/cnx/
   -
     scope:
       path: v2.0
