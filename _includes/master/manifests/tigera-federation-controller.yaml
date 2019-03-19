@@ -1,4 +1,4 @@
-{{- if .Values.federation -}}
+{{- if .Values.federation.enabled -}}
 {{- /*
 tigera-federation-controller.yaml acccepts the following include flags:
 
@@ -62,13 +62,13 @@ spec:
             - name: ETCD_ENDPOINTS
               valueFrom:
                 configMapKeyRef:
-                  name: {{lower .Values.variant_name}}-config
+                  name: {{.Values.variant_name | lower}}-config
                   key: etcd_endpoints
             # Location of the CA certificate for etcd.
             - name: ETCD_CA_CERT_FILE
               valueFrom:
                 configMapKeyRef:
-                  name: {{lower .Values.variant_name}}-config
+                  name: {{.Values.variant_name | lower}}-config
                   key: etcd_ca
             # Location of the client key for etcd.
             - name: ETCD_KEY_FILE

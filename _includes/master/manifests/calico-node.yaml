@@ -48,7 +48,6 @@ spec:
       imagePullSecrets:
         - name: cnx-pull-secret
       initContainers:
-{{- if ne .Values.network "ecs" }}
 {{- if and (eq .Values.network "calico") (eq .Values.datastore "kdd") }}
         # This container performs upgrade from host-local IPAM to calico-ipam.
         # It can be deleted if this is a fresh installation, or if you have already
@@ -72,7 +71,7 @@ spec:
             - mountPath: /host/opt/cni/bin
               name: cni-bin-dir
 {{- end }}
-        # This container installs the {{site.prodname}} CNI binaries
+        # This container installs the {{.Values.prodname}} CNI binaries
         # and CNI network config file on each node.
         - name: install-cni
           image: {{.Values.cni.image}}:{{ .Values.cni.tag }}
@@ -221,7 +220,7 @@ spec:
             # Auto-detect the BGP IP address.
             - name: IP
               value: "autodetect"
-  {{- if .Values.disable_ipip %}
+  {{- if .Values.disable_ipip }}
             # Disable IPIP by default
             - name: CALICO_IPV4POOL_IPIP
               value: "Never"
@@ -268,7 +267,7 @@ spec:
             - name: CLUSTER_TYPE
               value: "k8s"
 {{- end }}
-{{- if ne Values.network "ecs" }}
+{{- if ne .Values.network "ecs" }}
             # The default IPv4 pool to create on startup if none exists. Pod IPs will be
             # chosen from this range. Changing this value after installation will have
             # no effect. This should fall within `--cluster-cidr`.
@@ -363,7 +362,7 @@ spec:
               path: /readiness
               port: 9099
               host: localhost
-{{- else if eq .Values.platform "gke" %}
+{{- else if eq .Values.platform "gke" }}
             httpGet:
               path: /readiness
               port: 9199

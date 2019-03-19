@@ -1,4 +1,4 @@
-{{- if .Values.federation -}}
+{{- if .Values.federation.enabled -}}
 {{- /*
 calico-typha.yaml contains the federation specific service accounts:
 */ -}}

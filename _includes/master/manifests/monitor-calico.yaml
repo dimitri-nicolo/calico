@@ -799,9 +799,9 @@ spec:
       serviceAccountName: intrusion-detection-controller
       containers:
       - name: controller
-        image: {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["intrusion-detection-controller"]}}:{{site.data.versions[page.version].first.components["intrusion-detection-controller"].version}}
+        image: {{.Values.imageRegistry}}{{ .Values.intrusionDetectionController.image }}:{{ .Values.intrusionDetectionController.tag }}
         env:
-{%- if include.secure_es == "true" %}
+{{- if .Values.secure_es }}
           - name: ELASTIC_HOST
             valueFrom: 
               configMapKeyRef:
@@ -831,14 +831,14 @@ spec:
         - name: certs
           configMap:
             name: elastic-ca-config
-{%- else %}
+{{- else }}
           - name: ELASTIC_HOST
             value: elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local
           - name: ELASTIC_PORT
             value: "9200" 
           - name: ELASTIC_SCHEME
             value: "http" 
-{%- endif %}
+{{- end }}
 ---
 
 # Network set for the K8s API Server's IP addresses.

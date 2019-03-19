@@ -1,4 +1,14 @@
 typha:
   enabled: false
+federation:
+  enabled: false
 network: "none"
 calico_ipam: false
+datastore: kdd
+
+# TODO: move to helpers
+orch: ""
+elasticsearchType: operator
+rbac: ""
+variant_name: CNX
+platform: ""
