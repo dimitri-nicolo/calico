@@ -9,6 +9,8 @@ import (
 	goSync "sync"
 	"time"
 
+	"github.com/tigera/intrusion-detection/controller/pkg/health"
+
 	"github.com/tigera/intrusion-detection/controller/pkg/util"
 
 	log "github.com/sirupsen/logrus"
@@ -29,6 +31,9 @@ import (
 // Watcher accepts updates from threat pullers and synchronizes them to the
 // database
 type Watcher interface {
+	health.Pinger
+	health.Readier
+
 	// Run starts the feed synchronization.
 	Run(ctx context.Context) error
 	Close()
@@ -47,6 +52,8 @@ type watcher struct {
 	cancel                 context.CancelFunc
 	once                   goSync.Once
 	err                    error
+	ping                   chan struct{}
+	watching               bool
 }
 
 type feedWatcher struct {
@@ -80,6 +87,7 @@ func NewWatcher(
 		suspiciousIP:           suspiciousIP,
 		events:                 events,
 		feeds:                  feeds,
+		ping:                   make(chan struct{}),
 	}
 }
 
@@ -99,10 +107,19 @@ func (s *watcher) Run(ctx context.Context) error {
 			defer s.cancel()
 			defer w.Stop()
 
+			// Set watching to true only after the Watch has returned without an
+			// error, and only until this Run loop returns.  No need to bother
+			// with a lock since bools are atomic.
+			s.watching = true
+			defer func() { s.watching = false }()
+
 			for {
 				select {
 				case <-ctx.Done():
 					return
+				case <-s.ping:
+					// Used to test liveness of the watcher.
+					continue
 				case event, ok := <-w.ResultChan():
 					if !ok {
 						return
@@ -268,4 +285,31 @@ func (s *watcher) stopFeed(name string) {
 
 func (s *watcher) Close() {
 	s.cancel()
+}
+
+// Ping is used to ensure the watcher's main loop is running and not blocked.
+func (s *watcher) Ping() {
+	// Since this channel is unbuffered, this will block if the main loop is not
+	// running, or has itself blocked.
+	s.ping <- struct{}{}
+}
+
+// Ready determines whether we are watching GlobalThreatFeeds and they are all
+// functioning correctly.
+func (s *watcher) Ready() bool {
+	if !s.watching {
+		return false
+	}
+
+	// Loop over all the active feeds and return false if any have errors. We
+	// don't need to worry about synchronizing this with the main loop, since
+	// this is for readiness. If a new feed is added or one removed, we'll check
+	// it next time kubelet queries readiness.
+	for _, fw := range s.feeds {
+		status := fw.statser.Status()
+		if len(status.ErrorConditions) > 0 {
+			return false
+		}
+	}
+	return true
 }
