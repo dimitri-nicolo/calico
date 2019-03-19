@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017,2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -47,7 +47,7 @@ const (
 	SelectorPod
 )
 
-//TODO: make this private and expose a public conversion interface instead
+// TODO: make this private and expose a public conversion interface instead
 type Converter struct{}
 
 // VethNameForWorkload returns a deterministic veth name
@@ -121,8 +121,10 @@ func (c Converter) NamespaceToProfile(ns *kapiv1.Namespace) (*model.KVPair, erro
 }
 
 // IsValidCalicoWorkloadEndpoint returns true if the pod should be shown as a workloadEndpoint
-// in the Calico API and false otherwise.  A Pod suitable for Calico should not be host
-// networked and should have been scheduled to a Node.
+// in the Calico API and false otherwise.  Note: since we completely ignore notifications for
+// invalid Pods, it is important that pods can only transition from not-valid to valid and not
+// the other way.  If they transition from valid to invalid, we'll fail to emit a deletion
+// event in the watcher.
 func (c Converter) IsValidCalicoWorkloadEndpoint(pod *kapiv1.Pod) bool {
 	if c.IsHostNetworked(pod) {
 		log.WithField("pod", pod.Name).Debug("Pod is host networked.")
@@ -144,6 +146,20 @@ func (c Converter) IsReadyCalicoPod(pod *kapiv1.Pod) bool {
 		return false
 	}
 	return true
+}
+
+const (
+	// Completed is documented but doesn't seem to be in the API, it should be safe to include.
+	// Maybe it's in an older version of the API?
+	podCompleted kapiv1.PodPhase = "Completed"
+)
+
+func (c Converter) IsFinished(pod *kapiv1.Pod) bool {
+	switch pod.Status.Phase {
+	case kapiv1.PodFailed, kapiv1.PodSucceeded, podCompleted:
+		return true
+	}
+	return false
 }
 
 func (c Converter) IsScheduled(pod *kapiv1.Pod) bool {
@@ -207,11 +223,19 @@ func (c Converter) PodToWorkloadEndpoint(pod *kapiv1.Pod) (*model.KVPair, error)
 		return nil, err
 	}
 
-	// An IP address may not yet be assigned (or may have been removed for a Pod deletion), so
-	// handle a missing IP gracefully.
 	ipNets, err := c.GetPodIPs(pod)
 	if err != nil {
+		// IP address was present but malformed in some way, handle as an explicit failure.
 		return nil, err
+	}
+
+	if c.IsFinished(pod) {
+		// Pod is finished but not yet deleted.  In this state the IP will have been freed and returned to the pool
+		// so we need to make sure we don't let the caller believe it still belongs to this endpoint.
+		// Pods with no IPs will get filtered out before they get to Felix in the watcher syncer cache layer.
+		// We can't pretend the workload endpoint is deleted _here_ because that would confuse users of the
+		// native v3 Watch() API.
+		ipNets = nil
 	}
 
 	// Generate the interface name based on workload.  This must match
