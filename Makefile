@@ -121,7 +121,7 @@ TYPHA_REPO?=github.com/tigera/typha-private
 TYPHA_VERSION?=$(shell git ls-remote git@github.com:tigera/typha-private $(TYPHA_BRANCH) 2>/dev/null | cut -f 1)
 
 ## Update typha pin in glide.yaml
-update-typha:
+update-libcalico update-typha:
 	$(DOCKER_GO_BUILD) sh -c '\
         echo "Updating typha to $(TYPHA_VERSION) from $(TYPHA_REPO)"; \
         export OLD_VER=$$(grep --after 50 typha glide.yaml |grep --max-count=1 --only-matching --perl-regexp "version:\s*\K[^\s]+") ;\
@@ -166,7 +166,7 @@ static-checks: vendor
 		-v $(CURDIR):/go/src/$(PACKAGE_NAME) \
 		-w /go/src/$(PACKAGE_NAME) \
 		$(CALICO_BUILD) \
-		gometalinter --deadline=300s --disable-all --enable=vet --enable=errcheck  --enable=goimports --vendor ./...
+		gometalinter --deadline=300s --disable-all --enable=vet --enable=errcheck  --enable=goimports --vendor --exclude=vendor ./...
 
 .PHONY: fix
 ## Fix static checks
@@ -187,6 +187,7 @@ test-kdd: bin/confd bin/kubectl bin/bird bin/bird6 bin/calico-node bin/calicoctl
 	-git clean -fx etc/calico/confd
 	docker run --rm --net=host \
 		-v $(CURDIR)/tests/:/tests/ \
+		-v $(CURDIR)/vendor:/vendor/ \
 		-v $(CURDIR)/bin:/calico/bin/ \
 		-v $(CURDIR)/etc/calico:/etc/calico/ \
 		-e LOCAL_USER_ID=0 \
