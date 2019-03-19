@@ -1,4 +1,4 @@
-{% comment %}
+{{- /*
 cnx.yaml acccepts the following include flags:
 
 | Name             | Accepted Values          |
@@ -7,15 +7,15 @@ cnx.yaml acccepts the following include flags:
 | datastore        | kdd, etcd                |
 | elasticsearch    | operator, external       |
 
-{% endcomment -%}
+*/ -}}
 
 # This manifest includes the following component versions:
-#   quay.io/coreos/prometheus-operator:{{site.data.versions[page.version].first.components["prometheus-operator"].version}}
-#   quay.io/coreos/prometheus-config-reloader:{{site.data.versions[page.version].first.components["prometheus-config-reloader"].version}}
-#   quay.io/coreos/configmap-reload:{{site.data.versions[page.version].first.components["configmap-reload"].version}}
-{%- if include.elasticsearch == "operator" %}
-#   upmcenterprises/elasticsearch-operator:{{site.data.versions[page.version].first.components["elasticsearch-operator"].version}}
-{%- endif %}
+#   {{.Values.prometheusOperator.image}}:{{.Values.prometheusOperator.tag}}
+#   {{.Values.prometheusConfigReloader.image}}:{{.Values.prometheusConfigReloader.tag}}
+#   {{.Values.configmapReload.image}}:{{.Values.configmapReload.tag}}
+{{- if eq .Values.elasticsearchType "operator" }}
+#   {{.Values.elasticsearchOperator.image}}:{{.Values.elasticsearchOperator.tag}}
+{{- end }}
 ---
 
 # This manifest creates a namespace for deploying prometheus-operator,
@@ -100,7 +100,7 @@ metadata:
   namespace: calico-monitoring
 ---
 
-# This manifest deploys the {{site.prodname}} Prometheus Operator.
+# This manifest deploys the {{.Values.prodname}} Prometheus Operator.
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
@@ -122,10 +122,10 @@ spec:
       serviceAccountName: calico-prometheus-operator
       containers:
       - name: calico-prometheus-operator
-        image: quay.io/coreos/prometheus-operator:{{site.data.versions[page.version].first.components["prometheus-operator"].version}}
+        image: quay.io/coreos/prometheus-operator:{{.Values.prometheusOperator.tag}}
         args:
-          - --prometheus-config-reloader=quay.io/coreos/prometheus-config-reloader:{{site.data.versions[page.version].first.components["prometheus-config-reloader"].version}}
-          - --config-reloader-image=quay.io/coreos/configmap-reload:{{site.data.versions[page.version].first.components["configmap-reload"].version}}
+          - --prometheus-config-reloader=quay.io/coreos/prometheus-config-reloader:{{.Values.prometheusConfigReloader.tag}}
+          - --config-reloader-image=quay.io/coreos/configmap-reload:{{.Values.configmapReload.tag}}
         resources:
           requests:
             cpu: 100m
@@ -134,7 +134,7 @@ spec:
             cpu: 200m
             memory: 100Mi
 
-{%- if include.elasticsearch == "operator" %}
+{{- if eq .Values.elasticsearchType "operator" }}
 ---
 
 # Service account for the elasticsearch cluster
@@ -215,7 +215,7 @@ spec:
         #node.role: infrastructure
       containers:
       - name: operator
-        image: upmcenterprises/elasticsearch-operator:{{site.data.versions[page.version].first.components["elasticsearch-operator"].version}}
+        image: upmcenterprises/elasticsearch-operator:{{.Values.elasticsearchOperator.tag}}
         imagePullPolicy: Always
         env:
         - name: NAMESPACE
@@ -238,9 +238,9 @@ spec:
           initialDelaySeconds: 10
           timeoutSeconds: 5
       serviceAccount: elasticsearch-operator
-{%- endif %}
+{{- end }}
 
-{%- if include.orch == "openshift" %}
+{{- if eq .Values.orch "openshift" }}
 
 # This manifest includes some additional resources required to
 # deploy Prometheus Operator with Openshift.
@@ -296,4 +296,4 @@ users:
 - system:serviceaccount:calico-monitoring:tigera-fluentd
 groups:
 - system:authenticated
-{%- endif %}
+{{- end }}

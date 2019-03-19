@@ -75,7 +75,7 @@ spec:
         # This container installs the {{site.prodname}} CNI binaries
         # and CNI network config file on each node.
         - name: install-cni
-          image: {{.Values.imageRegistry}}{{.Values.cni.image}}:{{ .Values.cni.tag }}
+          image: {{.Values.cni.image}}:{{ .Values.cni.tag }}
           command: ["/install-cni.sh"]
           env:
             # Name of the CNI config file to create.
