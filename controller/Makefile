@@ -146,7 +146,8 @@ DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
                               $(EXTRA_DOCKER_ARGS) \
                               -e LOCAL_USER_ID=$(MY_UID) \
                               -e GOARCH=$(ARCH) \
-                              -v $${PWD}:/intrusion-detection/controller:rw \
+                              -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
+                              -v $${PWD}/../:/intrusion-detection/:rw \
                               -v $${PWD}/.go-pkg-cache:/go/pkg:rw \
                               -v $${PWD}/.go-build-cache:/home/user/.cache/go-build:rw \
                               -w /intrusion-detection/controller \
@@ -339,8 +340,6 @@ endif
 # Run fossa.io license checks
 foss-checks:
 	@echo Running $@...
-	@docker run --rm -v $(CURDIR)/../:/code/:rw \
-	  -e LOCAL_USER_ID=$(MY_UID) \
-	  -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
-	  -w /code/controller/ \
-	  $(CALICO_BUILD) /usr/local/bin/fossa
+	$(DOCKER_GO_BUILD) \
+			sh -c 'git config --global url."git@github.com:tigera".insteadOf "https://github.com/tigera" && \
+					/usr/local/bin/fossa'
