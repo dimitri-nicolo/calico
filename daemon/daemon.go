@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -529,6 +529,7 @@ configRetry:
 			"Endpoint status reporting enabled, starting status reporter")
 		dpConnector.statusReporter = statusrep.NewEndpointStatusReporter(
 			configParams.FelixHostname,
+			configParams.OpenstackRegion,
 			dpConnector.StatusUpdatesFromDataplane,
 			dpConnector.InSync,
 			dpConnector.datastore,
@@ -1088,7 +1089,7 @@ func (fc *DataplaneConnector) handleProcessStatusUpdate(ctx context.Context, msg
 		FirstUpdate:   !fc.firstStatusReportSent,
 	}
 	kv := model.KVPair{
-		Key:   model.ActiveStatusReportKey{Hostname: fc.config.FelixHostname},
+		Key:   model.ActiveStatusReportKey{Hostname: fc.config.FelixHostname, RegionString: model.RegionString(fc.config.OpenstackRegion)},
 		Value: &statusReport,
 		TTL:   fc.config.ReportingTTLSecs,
 	}
@@ -1096,12 +1097,17 @@ func (fc *DataplaneConnector) handleProcessStatusUpdate(ctx context.Context, msg
 	_, err := fc.datastore.Apply(applyCtx, &kv)
 	cancel()
 	if err != nil {
-		log.Warningf("Failed to write status to datastore: %v", err)
+		if _, ok := err.(cerrors.ErrorOperationNotSupported); ok {
+			log.Debug("Datastore doesn't support status reports.")
+			return // and it won't support the last status key either.
+		} else {
+			log.Warningf("Failed to write status to datastore: %v", err)
+		}
 	} else {
 		fc.firstStatusReportSent = true
 	}
 	kv = model.KVPair{
-		Key:   model.LastStatusReportKey{Hostname: fc.config.FelixHostname},
+		Key:   model.LastStatusReportKey{Hostname: fc.config.FelixHostname, RegionString: model.RegionString(fc.config.OpenstackRegion)},
 		Value: &statusReport,
 	}
 	applyCtx, cancel = context.WithTimeout(ctx, 2*time.Second)

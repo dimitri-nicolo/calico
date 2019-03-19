@@ -154,7 +154,8 @@ func StartDataplaneDriver(configParams *config.Config,
 
 				EnableNflogSize: configParams.EnableNflogSize,
 
-				NATPortRange: configParams.NATPortRange,
+				NATPortRange:                       configParams.NATPortRange,
+				IptablesNATOutgoingInterfaceFilter: configParams.IptablesNATOutgoingInterfaceFilter,
 			},
 
 			IPIPMTU:                        configParams.IpInIpMtu,
