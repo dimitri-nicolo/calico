@@ -1,5 +1,5 @@
-hash: 1a60fd4028a82de2edff406aec5848cde8fc993edd5420bb0afa69576a5afaf2
-updated: 2018-11-26T17:49:08.224172831Z
+hash: 781ddbe95fb86b94deab43b17ca4f8265caa662759e222f0654e14845e3d28c1
+updated: 2019-03-20T13:43:22.802901155Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -77,7 +77,7 @@ imports:
 - name: github.com/ghodss/yaml
   version: 0ca9ea5df5451ffdf184b4428c902747c2c11cd7
 - name: github.com/go-ini/ini
-  version: 5cf292cae48347c2490ac1a58fe36735fb78df7e
+  version: 9c8236e659b76e87bf02044d06fde8683008ff3e
 - name: github.com/go-openapi/jsonpointer
   version: ef5f0afec364d3b9396b7b77b43dbe26bf1f8004
 - name: github.com/go-openapi/jsonreference
@@ -86,6 +86,12 @@ imports:
   version: 384415f06ee238aae1df5caad877de6ceac3a5c4
 - name: github.com/go-openapi/swag
   version: becd2f08beafcca035645a8a101e0e3e18140458
+- name: github.com/go-playground/locales
+  version: f63010822830b6fe52288ee52d5a1151088ce039
+  subpackages:
+  - currency
+- name: github.com/go-playground/universal-translator
+  version: 71201497bace774495daed26a3874fd339e0b538
 - name: github.com/gogo/protobuf
   version: 342cbe0a04158f6dcb03ca0079991a51a4248c02
   subpackages:
@@ -107,7 +113,7 @@ imports:
 - name: github.com/google/btree
   version: 925471ac9e2131377a91e1595defec898166fe49
 - name: github.com/google/gofuzz
-  version: 44d81051d367757e1c7c6a5a86423ece9afcf63c
+  version: 24818f796faf91cd76ec7bddd72458fbced7a6c1
 - name: github.com/googleapis/gnostic
   version: 0c5108395e2debce0d731cf0287ddf7242066aba
   subpackages:
@@ -128,9 +134,9 @@ imports:
   subpackages:
   - diskcache
 - name: github.com/hashicorp/go-version
-  version: b5a281d3160aa11950a6182bd9a9dc2cb1e02d50
+  version: d40cf49b3a77bba84a7afdbd7f1dc295d114efb1
 - name: github.com/hashicorp/golang-lru
-  version: a0d98a5f288019575c6d1f4bb1573fef2d1fcdc4
+  version: 20f1fb78b0740ba8c3cb143a61e86ba5c8669768
   subpackages:
   - simplelru
 - name: github.com/hpcloud/tail
@@ -145,11 +151,13 @@ imports:
 - name: github.com/jmespath/go-jmespath
   version: 3433f3ea46d9f8019119e7dd41274e112a2359a9
 - name: github.com/json-iterator/go
-  version: ab8a2e0c74be9d3be70b3184d9acc634935ded82
+  version: f2b4162afba35581b6d4a50d3b8f34e33c144682
 - name: github.com/kardianos/osext
   version: ae77be60afb1dcacde03767a8c37337fad28ac14
 - name: github.com/kelseyhightower/envconfig
-  version: f611eb38b3875cc3bd991ca91c51d06446afa14c
+  version: dd1402a4d99de9ac2f396cd6fcb957bc2c695ec1
+- name: github.com/leodido/go-urn
+  version: a67a23e1c1af3c66528573bb86a87246477277c1
 - name: github.com/mailru/easyjson
   version: 03f2033d19d5860aef995fe360ac7d395cd8ce65
   subpackages:
@@ -167,7 +175,7 @@ imports:
 - name: github.com/modern-go/reflect2
   version: 94122c33edd36123c84d5368cfb2b69df93a0ec8
 - name: github.com/onsi/ginkgo
-  version: 2e1be8f7d90e9d3e3e58b0ce470f2f14d075406f
+  version: eea6ad008b96acdaa524f5b409513bf062b500ad
   subpackages:
   - config
   - extensions/table
@@ -188,7 +196,7 @@ imports:
   - reporters/stenographer/support/go-isatty
   - types
 - name: github.com/onsi/gomega
-  version: 65fb64232476ad9046e57c26cd0bff3d3a8dc6cd
+  version: 90e289841c1ed79b7a598a7cd9959750cb5e89e2
   subpackages:
   - format
   - internal/assertion
@@ -208,7 +216,7 @@ imports:
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
 - name: github.com/projectcalico/felix
-  version: 80872ff3fffe830556295b9423f3b7f977117fcb
+  version: 3a22c58357e0110e6172b2f4ecbe4827a4381665
   repo: git@github.com:tigera/felix-private
   subpackages:
   - calc
@@ -239,7 +247,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 62b0caa50dc18ed3a402a924a35c25636fd45513
+  version: 1acc1d224f822833c483d9f1f33493079f500946
   repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib/apiconfig
@@ -279,7 +287,7 @@ imports:
   - lib/validator/v3
   - lib/watch
 - name: github.com/projectcalico/typha
-  version: 61adc9691f472cc0f291ecb774413b5d1dc8de30
+  version: b48d19b5fcefcf22a487b7ec8d2447021eca0dc2
   repo: git@github.com:tigera/typha-private
   subpackages:
   - pkg/syncclient
@@ -312,7 +320,7 @@ imports:
 - name: github.com/sirupsen/logrus
   version: f006c2ac4710855cf0f916dd6b77acf6b048dc6e
 - name: github.com/spf13/pflag
-  version: 583c0c0531f06d5278b7d917446061adc344b5cd
+  version: e57e3eeb33f795204c1ca35f56c44f83227c6e66
 - name: github.com/tigera/licensing
   version: c9432e3124d3f9da2f3e34a703d815b072f6b0b4
   repo: git@github.com:tigera/licensing
@@ -342,6 +350,7 @@ imports:
   - blowfish
   - ed25519
   - ed25519/internal/edwards25519
+  - pbkdf2
   - ssh/terminal
 - name: golang.org/x/net
   version: 66aacef3dd8a676686c7ae3716979581e8b03c47
@@ -399,7 +408,7 @@ imports:
   subpackages:
   - rate
 - name: google.golang.org/appengine
-  version: b1f26356af11148e710935ed1ac8a7f5702c7612
+  version: 4a4468ece617fc8205e99368fa2200e9d1fad421
   subpackages:
   - internal
   - internal/app_identity
@@ -437,8 +446,8 @@ imports:
   - transport
 - name: gopkg.in/fsnotify/fsnotify.v1
   version: c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9
-- name: gopkg.in/go-playground/validator.v8
-  version: 5f1438d3fca68893a817e4a66806cea46a9e4ebf
+- name: gopkg.in/go-playground/validator.v9
+  version: b199fa0642d29caca62b6a99d65cc981ba5edc3b
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: gopkg.in/natefinch/lumberjack.v2
@@ -529,13 +538,12 @@ imports:
   - pkg/watch
   - third_party/forked/golang/reflect
 - name: k8s.io/apiserver
-  version: e3c8fa95bba5a5ff9939a62c6ccd51ff3646b350
+  version: d5ae2df97af577da65cf16668054b920f14c3789
   subpackages:
   - pkg/storage
   - pkg/storage/etcd
   - pkg/storage/etcd3
   - pkg/storage/value
-  - pkg/util/trace
 - name: k8s.io/client-go
   version: 7d04d0e2a0a1a4d4a1cd6baa432a2301492e4e65
   subpackages:
@@ -604,9 +612,16 @@ imports:
   - util/retry
   - util/workqueue
 - name: k8s.io/klog
-  version: 8139d8cb77af419532b33dfa7dd09fbc5f1d344f
+  version: 8e90cee79f823779174776412c13478955131846
 - name: k8s.io/kube-openapi
-  version: 91cfa479c814065e420cee7ed227db0f63a5854e
+  version: b3a7cee44a305be0a69e1b9ac03018307287e1b0
   subpackages:
   - pkg/common
+- name: k8s.io/utils
+  version: c2654d5206da6b7b6ace12841e8f359bb89b443c
+  subpackages:
+  - buffer
+  - integer
+  - pointer
+  - trace
 testImports: []
