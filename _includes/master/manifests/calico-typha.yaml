@@ -128,25 +128,25 @@ spec:
           - name: TYPHA_ETCDENDPOINTS
             valueFrom:
               configMapKeyRef:
-                name: {{include "variant_name" | lower}}-config
+                name: {{include "variant_name" . | lower}}-config
                 key: etcd_endpoints
           # Location of the CA certificate for etcd.
           - name: TYPHA_ETCDCAFILE
             valueFrom:
               configMapKeyRef:
-                name: {{include "variant_name" | lower}}-config
+                name: {{include "variant_name" . | lower}}-config
                 key: etcd_ca
           # Location of the client key for etcd.
           - name: TYPHA_ETCDKEYFILE
             valueFrom:
               configMapKeyRef:
-                name: {{include "variant_name" | lower}}-config
+                name: {{include "variant_name" . | lower}}-config
                 key: etcd_key
           # Location of the client certificate for etcd.
           - name: TYPHA_ETCDCERTFILE
             valueFrom:
               configMapKeyRef:
-                name: {{include "variant_name" | lower}}-config
+                name: {{include "variant_name" . | lower}}-config
                 key: etcd_cert
 {{- else if eq .Values.datastore "kdd" }}
           # Use Kubernetes API as the backing datastore.

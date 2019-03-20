@@ -56,15 +56,6 @@ to choose the value that matches your environment.
 workload MTUs, see the section that corresponds to your plugin type.
 {: .alert .alert-info}
 
-### MTU configuration with libnetwork
-
-The MTU of the veth pairs created by the {{site.prodname}} libnetwork plugin can be configured
-by setting the `CALICO_LIBNETWORK_VETH_MTU` environment variable on the `libnetwork`
-process.
-
-This should either be set on the standalone `libnetwork` service, or on the
-`{{site.nodecontainer}}` container as a whole.
-
 ### MTU configuration with CNI
 
 MTU is set in the by the `"mtu": <MTU size>` field of the CNI configuration. Example:

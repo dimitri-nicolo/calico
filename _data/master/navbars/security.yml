@@ -36,11 +36,75 @@ toc:
     path: /security/host-endpoints/tutorial
   - title: Connection tracking
     path: /security/host-endpoints/conntrack
-- title: Securing Calico component communications
+- title: Securing Tigera Secure EE component communications
   section:
   - title: Configuring encryption and authentication
     path: /security/comms/crypto-auth
   - title: Scheduling to well-known nodes
     path: /security/comms/reduce-nodes
-  - title: Securing Calico's Prometheus endpoints
+  - title: Securing Tigera Secure EE Prometheus endpoints
     path: /security/comms/secure-metrics
+- title: AWS security group integration
+  section:
+  - title: Overview
+    path: /security/aws-security-group-integration/
+  - title: Interconnecting your VPC and cluster
+    path: /security/aws-security-group-integration/interconnection
+  - title: Enabling pods to access VPC members
+    path: /security/aws-security-group-integration/pod-access
+  - title: Enabling VPC members to access pods
+    path: /security/aws-security-group-integration/vpc-member-access
+  - title: Enabling access to AWS metadata 
+    path: /security/aws-security-group-integration/metadata-access
+  - title: Managing the tiers associated with security group integration
+    path: /security/aws-security-group-integration/tier-management
+  - title: Host endpoints
+    path: /security/aws-security-group-integration/host-endpoints
+- title: Flow and audit logs 
+  section:
+  - title: Elasticsearch
+    section:
+    - title: Overview
+      path: /security/logs/elastic/
+    - title: Flow logs
+      path: /security/logs/elastic/flow
+    - title: Audit logs
+      path: /security/logs/elastic/ee-audit
+    - title: Accessing logs
+      path: /security/logs/elastic/view
+    - title: Configuring Elasticsearch
+      path: /security/logs/configure-elastic
+    - title: Archiving logs to S3
+      path: /security/logs/elastic/s3-archive
+    - title: Filtering out flow logs
+      path: /security/logs/elastic/filtering
+  - title: iptables
+    path: /security/logs/iptables
+  - title: Component
+    section:
+    - title: Overview
+      path: /security/logs/component
+    - title: Logging
+      path: /security/logs/troubleshooting
+- title: Metrics
+  section:
+  - title: Overview
+    path: /security/metrics/
+  - title: Policy metrics in Prometheus
+    path: /security/metrics/metrics
+  - title: Configuring Prometheus
+    path: /security/configuration/prometheus
+  - title: Configuring Alertmanager
+    path: /security/configuration/alertmanager
+- title: Intrusion detection
+  section:
+  - title: Overview
+    path: /security/intrusion-detection/
+  - title: Enabling intrusion detection
+    path: /security/intrusion-detection/enabling
+  - title: Viewing anomalies
+    path: /security/intrusion-detection/viewing-anomalies
+  - title: Job descriptions
+    path: /security/intrusion-detection/job-descriptions
+  - title: Customizing
+    path: /security/intrusion-detection/customizing

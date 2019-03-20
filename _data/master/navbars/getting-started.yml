@@ -80,3 +80,16 @@ toc:
       path: /getting-started/calicoctl/configure/etcd
     - title: Configuring calicoctl to connect to the Kubernetes API datastore
       path: /getting-started/calicoctl/configure/kdd
+
+- title: calicoq
+  section:
+  - title: Installing calicoq
+    path: /getting-started/calicoq/
+  - title: Configuring calicoq
+    section:
+    - title: Overview
+      path: /getting-started/calicoq/configure/
+    - title: etcd datastore options
+      path: /getting-started/calicoq/configure/etcd
+    - title: Kubernetes API datastore options
+      path: /getting-started/calicoq/configure/kdd

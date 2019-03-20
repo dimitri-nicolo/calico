@@ -87,24 +87,47 @@ If you do not see this, please check the following.
 
 - Make sure your network allows the requisite BGP traffic on TCP port 179.
 
-### Configure NetworkManager
-
-Configure [NetworkManager](https://help.ubuntu.com/community/NetworkManager) before
-attempting to use {{site.prodname}} networking.
+### Prevent NetworkManager from controlling {{site.prodname}} interfaces
 
 NetworkManager manipulates the routing table for interfaces in the default network
 namespace where {{site.prodname}} veth pairs are anchored for connections to containers.
 This can interfere with the {{site.prodname}} agent's ability to route correctly.
 
-Create the following configuration file at `/etc/NetworkManager/conf.d/calico.conf` to prevent
-NetworkManager from interfering with the interfaces:
+The procedure for configuring NetworkManager to ignore {{site.prodname}} interfaces
+varies by Linux distribution. The following steps work best on Ubuntu systems.
 
-```
-[keyfile]
-unmanaged-devices=interface-name:cali*;interface-name:tunl*
-```
+1. Create the following configuration file at `/etc/NetworkManager/conf.d/calico.conf`.
 
-## Running sudo calicoctl with environment variables
+   ```
+   [keyfile]
+   unmanaged-devices=interface-name:cali*;interface-name:tunl*
+   ```
+
+1. Restart NetworkManager.
+
+   ```bash
+   sudo service network-manager stop
+   sudo service network-manager start
+   ```
+
+1. Install {{site.prodname}}.
+
+1. Check the interfaces that NetworkManager ignores.
+
+   ```bash
+   nmcli dev status
+   ```
+
+   It should return output indicating that the `cali` and `tunl` interfaces
+   are `unmanaged`.
+
+   If this does not to prevent NetworkManager from interfering with {{site.prodname}}
+   networking, try disabling NetworkManager. If disabling NetworkManager does not
+   stop it from interfering with {{site.prodname}} networking, you may need to remove
+   NetworkManager. This will require manual network configuration.
+
+
+## Running sudo calicoctl ... with Environment Variables
 
 If you use `sudo` for commands like `calicoctl node run`, remember that your environment
 variables will not be transferred to the `sudo` environment.  You can run `sudo` with

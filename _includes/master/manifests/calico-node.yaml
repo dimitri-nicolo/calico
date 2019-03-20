@@ -128,7 +128,7 @@ spec:
                 configMapKeyRef:
                   name: {{include "variant_name" . | lower}}-config
                   key: veth_mtu
-{{- endif }}
+{{- end }}
             # Prevents the container from sleeping forever.
             - name: SLEEP
               value: "false"

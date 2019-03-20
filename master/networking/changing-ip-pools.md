@@ -25,7 +25,7 @@ This guide only applies if you are using {{site.prodname}} IPAM.
 While {{ site.prodname }} supports changing IP pools, not all orchestrators do.
 Be sure to consult the documentation of the orchestrator you are using to ensure it supports changing the workload CIDR.
 
-For example, in Kubernetes, all three of the following arguments must be equal to, or contain, the Calico IP pool CIDRs:
+For example, in Kubernetes, all three of the following arguments must be equal to, or contain, the {{site.prodname}} IP pool CIDRs:
 
 - kube-apiserver: `--pod-network-cidr`
 - kube-proxy: `--cluster-cidr`
@@ -45,7 +45,7 @@ workloads with addresses from that IP pool. Namely:
 
 - If IP-in-IP was enabled on the IP pool, those workloads will no longer have their traffic encapsulated.
 - If nat-outgoing was enabled on the IP pool, those workloads will no longer have their traffic NAT'd.
-- If using Calico BGP routing, routes to pods will no longer be aggregated.
+- If using {{site.prodname}} BGP routing, routes to pods will no longer be aggregated.
 
 ## Changing an IP pool
 

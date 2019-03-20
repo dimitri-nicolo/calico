@@ -114,25 +114,25 @@ spec:
             - name: ETCD_ENDPOINTS
               valueFrom:
                 configMapKeyRef:
-                  name: {{lower include "variant_name"}}-config
+                  name: {{include "variant_name" . | lower }}-config
                   key: etcd_endpoints
             # Location of the CA certificate for etcd.
             - name: ETCD_CA_CERT_FILE
               valueFrom:
                 configMapKeyRef:
-                  name: {{lower include "variant_name"}}-config
+                  name: {{include "variant_name" . | lower }}-config
                   key: etcd_ca
             # Location of the client key for etcd.
             - name: ETCD_KEY_FILE
               valueFrom:
                 configMapKeyRef:
-                  name: {{lower include "variant_name"}}-config
+                  name: {{include "variant_name" . | lower }}-config
                   key: etcd_key
             # Location of the client certificate for etcd.
             - name: ETCD_CERT_FILE
               valueFrom:
                 configMapKeyRef:
-                  name: {{lower include "variant_name"}}-config
+                  name: {{include "variant_name" . | lower }}-config
                   key: etcd_cert
 {{- end }}
             # Enabling health reporting requires additional IAM permissions for tigera-cloud-controllers
