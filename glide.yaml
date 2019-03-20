@@ -26,7 +26,7 @@ import:
   - jwt
 - package: github.com/projectcalico/libcalico-go
   repo: git@github.com:tigera/libcalico-go-private.git
-  version: beadc1b3a96edd611c7f42e23b0bd62a38c5a58d
+  version: 1acc1d224f822833c483d9f1f33493079f500946
   subpackages:
   - lib/apiconfig
   - lib/apis/v1
