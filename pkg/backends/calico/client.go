@@ -616,12 +616,8 @@ func (c *client) OnUpdates(updates []api.Update) {
 	c.cacheLock.Lock()
 	defer c.cacheLock.Unlock()
 
-	// If we are in-sync then this is an incremental update, so increment our internal
-	// cache revision.
-	if c.synced {
-		c.cacheRevision++
-		log.Debugf("Processing new updates, revision is now: %d", c.cacheRevision)
-	}
+	// Indicate that our cache has been updated.
+	c.incrementCacheRevision()
 
 	// Track whether these updates require BGP peerings to be recomputed.
 	needUpdatePeersV1 := false
@@ -642,10 +638,25 @@ func (c *client) OnUpdates(updates []api.Update) {
 		// generates etcd key/value pairs as expected by existing confd templates.
 		v3key, ok := u.Key.(model.ResourceKey)
 		if !ok {
-			// Not a v3 resource.
+			// Not a v3 resource. We care about when the BGP configuration changes - recalculate
+			// peers when we receive AS number updates.
+			if cfgKey, ok := u.Key.(model.GlobalBGPConfigKey); ok {
+				if cfgKey.Name == "as_num" {
+					log.Debugf("Global AS number update, recalculate peers")
+					needUpdatePeersV1 = true
+				}
+			}
+
+			if cfgKey, ok := u.Key.(model.NodeBGPConfigKey); ok {
+				if cfgKey.Name == "as_num" {
+					log.WithField("node", cfgKey.Nodename).Debugf("Node AS number update, recalculate peers")
+					needUpdatePeersV1 = true
+				}
+			}
 			continue
 		}
 
+		// It's a v3 resource - we care about some of these.
 		if v3key.Kind == apiv3.KindNode {
 			// Convert to v1 key/value pairs.
 			log.Debugf("Node: %#v", u.Value)
@@ -701,6 +712,12 @@ func (c *client) OnUpdates(updates []api.Update) {
 		}
 	}
 
+	// Update our cache from each of the individual updates, and keep track of
+	// any of the prefixes that are impacted.
+	for _, u := range updates {
+		c.updateCache(u.UpdateType, &u.KVPair)
+	}
+
 	// If configuration relevant to BGP peerings has changed, recalculate the set of v1
 	// peerings that should exist, and update the cache accordingly.
 	if needUpdatePeersV1 {
@@ -708,12 +725,20 @@ func (c *client) OnUpdates(updates []api.Update) {
 		c.updatePeersV1()
 	}
 
-	// Update our cache from each of the individual updates, and keep track of
-	// any of the prefixes that are impacted.
-	for _, u := range updates {
-		c.updateCache(u.UpdateType, &u.KVPair)
-	}
+	// Notify watcher thread that we've received new updates.
+	c.onNewUpdates()
+}
 
+func (c *client) incrementCacheRevision() {
+	// If we are in-sync then this is an incremental update, so increment our internal
+	// cache revision.
+	if c.synced {
+		c.cacheRevision++
+		log.Debugf("Processing new updates, revision is now: %d", c.cacheRevision)
+	}
+}
+
+func (c *client) onNewUpdates() {
 	if c.synced {
 		// Wake up the watchers to let them know there may be some updates of interest.  We only
 		// need to do this once we're synced because until that point all of the Watcher threads
@@ -892,11 +917,13 @@ func (c *client) AddRejectCIDRs(cidrs []string) {
 	c.cacheLock.Lock()
 	defer c.cacheLock.Unlock()
 
+	c.incrementCacheRevision()
 	for _, cidr := range cidrs {
 		k := rejectKeyPrefix + strings.Replace(cidr, "/", "-", 1)
 		c.cache[k] = cidr
 		c.keyUpdated(k)
 	}
+	c.onNewUpdates()
 }
 
 // DeleteRejectCIDRs removes the config to reject routes within the given CIDRs.
@@ -904,11 +931,13 @@ func (c *client) DeleteRejectCIDRs(cidrs []string) {
 	c.cacheLock.Lock()
 	defer c.cacheLock.Unlock()
 
+	c.incrementCacheRevision()
 	for _, cidr := range cidrs {
 		k := rejectKeyPrefix + strings.Replace(cidr, "/", "-", 1)
 		delete(c.cache, k)
 		c.keyUpdated(k)
 	}
+	c.onNewUpdates()
 }
 
 // AddStaticRoutes adds the given CIDRs as static routes to be advertised from this node.
@@ -916,11 +945,13 @@ func (c *client) AddStaticRoutes(cidrs []string) {
 	c.cacheLock.Lock()
 	defer c.cacheLock.Unlock()
 
+	c.incrementCacheRevision()
 	for _, cidr := range cidrs {
 		k := routeKeyPrefix + strings.Replace(cidr, "/", "-", 1)
 		c.cache[k] = cidr
 		c.keyUpdated(k)
 	}
+	c.onNewUpdates()
 }
 
 // DeleteStaticRoutes withdraws the given CIDRs from the set of static routes advertised
@@ -929,9 +960,11 @@ func (c *client) DeleteStaticRoutes(cidrs []string) {
 	c.cacheLock.Lock()
 	defer c.cacheLock.Unlock()
 
+	c.incrementCacheRevision()
 	for _, cidr := range cidrs {
 		k := routeKeyPrefix + strings.Replace(cidr, "/", "-", 1)
 		delete(c.cache, k)
 		c.keyUpdated(k)
 	}
+	c.onNewUpdates()
 }

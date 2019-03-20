@@ -1,5 +1,5 @@
-hash: 6fe7939120195d2743697eb20272c21f7f03dc1e7b4d292122a06131e6d7870d
-updated: 2018-11-26T16:24:27.064008653Z
+hash: 2fbd08624adce36b27ea5756d86d0d7f28afdbf0219417ffb4b0092c4065ad6b
+updated: 2019-03-20T11:19:00.923547639Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -14,11 +14,11 @@ imports:
   - autorest/azure
   - autorest/date
 - name: github.com/beorn7/perks
-  version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
+  version: 3a771d992973f24aa725d07868b467d1ddfceafb
   subpackages:
   - quantile
 - name: github.com/BurntSushi/toml
-  version: a368813c5e648fee92e5f6c30e3944ff9d5e8895
+  version: 3012a1dbe2e4bd1391d42b32f0577cb7bbc7f005
 - name: github.com/coreos/etcd
   version: 33245c6b5b49130ca99280408fadfab01aac0e48
   subpackages:
@@ -51,6 +51,12 @@ imports:
   version: 384415f06ee238aae1df5caad877de6ceac3a5c4
 - name: github.com/go-openapi/swag
   version: becd2f08beafcca035645a8a101e0e3e18140458
+- name: github.com/go-playground/locales
+  version: f63010822830b6fe52288ee52d5a1151088ce039
+  subpackages:
+  - currency
+- name: github.com/go-playground/universal-translator
+  version: 71201497bace774495daed26a3874fd339e0b538
 - name: github.com/gogo/protobuf
   version: c0656edd0d9eab7c66d1eb0c568f9039345796f7
   subpackages:
@@ -100,9 +106,11 @@ imports:
 - name: github.com/json-iterator/go
   version: f2b4162afba35581b6d4a50d3b8f34e33c144682
 - name: github.com/kelseyhightower/envconfig
-  version: f611eb38b3875cc3bd991ca91c51d06446afa14c
+  version: dd1402a4d99de9ac2f396cd6fcb957bc2c695ec1
 - name: github.com/kelseyhightower/memkv
   version: 892bfd468afa0fa476556e7bd7734a087cda08b3
+- name: github.com/leodido/go-urn
+  version: a67a23e1c1af3c66528573bb86a87246477277c1
 - name: github.com/mailru/easyjson
   version: 03f2033d19d5860aef995fe360ac7d395cd8ce65
   subpackages:
@@ -164,7 +172,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 62b0caa50dc18ed3a402a924a35c25636fd45513
+  version: 1acc1d224f822833c483d9f1f33493079f500946
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
@@ -201,7 +209,7 @@ imports:
   - lib/validator/v3
   - lib/watch
 - name: github.com/projectcalico/typha
-  version: 61adc9691f472cc0f291ecb774413b5d1dc8de30
+  version: b48d19b5fcefcf22a487b7ec8d2447021eca0dc2
   repo: git@github.com:tigera/typha-private.git
   subpackages:
   - pkg/syncclient
@@ -296,7 +304,7 @@ imports:
   subpackages:
   - rate
 - name: google.golang.org/appengine
-  version: b1f26356af11148e710935ed1ac8a7f5702c7612
+  version: 4a4468ece617fc8205e99368fa2200e9d1fad421
   subpackages:
   - internal
   - internal/app_identity
@@ -332,8 +340,8 @@ imports:
   - status
   - tap
   - transport
-- name: gopkg.in/go-playground/validator.v8
-  version: 5f1438d3fca68893a817e4a66806cea46a9e4ebf
+- name: gopkg.in/go-playground/validator.v9
+  version: b199fa0642d29caca62b6a99d65cc981ba5edc3b
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: gopkg.in/yaml.v2

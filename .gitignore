@@ -4,6 +4,7 @@ tmp/
 vendor
 .go-pkg-cache
 tests/logs/
+/report/*
 /*.ps1
 /dist/*.zip
 *.exe
