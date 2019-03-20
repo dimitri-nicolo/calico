@@ -3,8 +3,6 @@
 package mock
 
 import (
-	"time"
-
 	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -14,14 +12,23 @@ import (
 type GlobalNetworkSetInterface struct {
 	GlobalNetworkSet *v3.GlobalNetworkSet
 	Error            error
+	CreateError      error
+	GetError         error
+	UpdateError      error
 }
 
 func (m *GlobalNetworkSetInterface) Create(gns *v3.GlobalNetworkSet) (*v3.GlobalNetworkSet, error) {
+	if m.CreateError != nil {
+		return nil, m.CreateError
+	}
+	m.GlobalNetworkSet = gns
 	return gns, m.Error
 }
 
 func (m *GlobalNetworkSetInterface) Update(gns *v3.GlobalNetworkSet) (*v3.GlobalNetworkSet, error) {
-	gns.CreationTimestamp.Time = time.Now()
+	if m.UpdateError != nil {
+		return nil, m.UpdateError
+	}
 	m.GlobalNetworkSet = gns
 	return gns, m.Error
 }
@@ -35,6 +42,9 @@ func (m *GlobalNetworkSetInterface) DeleteCollection(options *v1.DeleteOptions, 
 }
 
 func (m *GlobalNetworkSetInterface) Get(name string, options v1.GetOptions) (*v3.GlobalNetworkSet, error) {
+	if m.GetError != nil {
+		return nil, m.GetError
+	}
 	return m.GlobalNetworkSet, m.Error
 }
 

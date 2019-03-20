@@ -76,3 +76,27 @@ func TestParseFeedDurationNilPull(t *testing.T) {
 
 	g.Expect(func() { ParseFeedDuration(f) }).Should(Panic())
 }
+
+func TestFeedNeedsRestart(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	a := testGlobalThreatFeed.DeepCopy()
+	a.Spec.Pull = nil
+	b := testGlobalThreatFeed.DeepCopy()
+	b.Spec.Pull.Period = "24h"
+	c := testGlobalThreatFeed.DeepCopy()
+	c.Spec.Pull.Period = "12h"
+	d := testGlobalThreatFeed.DeepCopy()
+	d.Spec.Pull.Period = ""
+
+	g.Expect(FeedNeedsRestart(a, a)).Should(BeFalse())
+	g.Expect(FeedNeedsRestart(a, b)).Should(BeTrue())
+	g.Expect(FeedNeedsRestart(b, a)).Should(BeTrue())
+	g.Expect(FeedNeedsRestart(b, b)).Should(BeFalse())
+	g.Expect(FeedNeedsRestart(b, c)).Should(BeTrue())
+	g.Expect(FeedNeedsRestart(c, b)).Should(BeTrue())
+	g.Expect(FeedNeedsRestart(b, d)).Should(BeFalse())
+	g.Expect(FeedNeedsRestart(d, b)).Should(BeFalse())
+	g.Expect(FeedNeedsRestart(c, d)).Should(BeTrue())
+	g.Expect(FeedNeedsRestart(d, c)).Should(BeTrue())
+}

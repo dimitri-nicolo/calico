@@ -145,11 +145,8 @@ func (s *syncer) syncGlobalNetworkSet(ctx context.Context, name string, set db.I
 		if kerrors.IsAlreadyExists(err) {
 			gns, err := s.globalNetworkSetClient.Get(name, v1.GetOptions{})
 			if err != nil {
-				if !kerrors.IsNotFound(err) {
-					log.WithError(err).WithField("name", name).Error("Could not get GlobalNetworkSet")
-					return err
-				}
-
+				log.WithError(err).WithField("name", name).Error("Could not get GlobalNetworkSet")
+				return err
 			}
 
 			gns.Labels = gnss.Labels

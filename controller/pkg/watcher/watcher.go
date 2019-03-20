@@ -86,7 +86,6 @@ func NewWatcher(
 func (s *watcher) Run(ctx context.Context) error {
 	s.once.Do(func() {
 		ctx, s.cancel = context.WithCancel(ctx)
-		defer s.cancel()
 
 		w, err := s.globalThreatFeedClient.Watch(metav1.ListOptions{
 			Watch: true,
@@ -95,57 +94,70 @@ func (s *watcher) Run(ctx context.Context) error {
 			s.err = err
 			return
 		}
-		defer w.Stop()
 
-		for {
-			select {
-			case <-ctx.Done():
-				s.err = ctx.Err()
-				return
-			case event, ok := <-w.ResultChan():
-				if !ok {
+		go func() {
+			defer s.cancel()
+			defer w.Stop()
+
+			for {
+				select {
+				case <-ctx.Done():
 					return
-				}
-
-				switch event.Type {
-				case watch.Added, watch.Modified:
-					globalThreatFeed, ok := event.Object.(*v3.GlobalThreatFeed)
+				case event, ok := <-w.ResultChan():
 					if !ok {
-						log.WithField("event", event).Error("Received event of unexpected type")
-						continue
+						return
 					}
 
-					if _, ok := s.feeds[globalThreatFeed.Name]; !ok {
-						s.startFeed(ctx, *globalThreatFeed)
-						log.WithField("feed", globalThreatFeed.Name).Info("Feed started")
-					} else {
-						s.updateFeed(ctx, *globalThreatFeed)
-						log.WithField("feed", globalThreatFeed.Name).Info("Feed updated")
-
-					}
-				case watch.Deleted:
-					globalThreatFeed, ok := event.Object.(*v3.GlobalThreatFeed)
-					if !ok {
-						log.WithField("event", event).Error("Received event of unexpected type")
-						continue
-					}
-
-					s.stopFeed(globalThreatFeed.Name)
-					log.WithField("feed", globalThreatFeed.Name).Info("Feed stopped")
-				case watch.Error:
-					switch event.Object.(type) {
-					case *metav1.Status:
-						status := event.Object.(*metav1.Status)
-						log.WithField("status", status).Error("Kubernetes API error")
-
-					default:
-						log.WithField("event", event).Error("Received kubernetes API error of unexpected type")
-					}
+					s.handleEvent(ctx, event)
 				}
 			}
-		}
+		}()
 	})
 	return s.err
+}
+
+func (s *watcher) handleEvent(ctx context.Context, event watch.Event) {
+	switch event.Type {
+	case watch.Added, watch.Modified:
+		globalThreatFeed, ok := event.Object.(*v3.GlobalThreatFeed)
+		if !ok {
+			log.WithField("event", event).Error("Received event of unexpected type")
+			return
+		}
+
+		if _, ok := s.feeds[globalThreatFeed.Name]; !ok {
+			s.startFeed(ctx, *globalThreatFeed)
+			log.WithField("feed", globalThreatFeed.Name).Info("Feed started")
+		} else {
+			s.updateFeed(ctx, *globalThreatFeed)
+			log.WithField("feed", globalThreatFeed.Name).Info("Feed updated")
+
+		}
+	case watch.Deleted:
+		globalThreatFeed, ok := event.Object.(*v3.GlobalThreatFeed)
+		if !ok {
+			log.WithField("event", event).Error("Received event of unexpected type")
+			return
+		}
+
+		if _, ok := s.feeds[globalThreatFeed.Name]; ok {
+			s.stopFeed(globalThreatFeed.Name)
+			log.WithField("feed", globalThreatFeed.Name).Info("Feed stopped")
+		} else {
+			log.WithField("feed", globalThreatFeed.Name).Info("Ignored deletion of non-running feed")
+		}
+	case watch.Error:
+		switch event.Object.(type) {
+		case *metav1.Status:
+			status := event.Object.(*metav1.Status)
+			log.WithField("status", status).Error("Kubernetes API error")
+
+		default:
+			log.WithField("event", event).Error("Received kubernetes API error of unexpected type")
+		}
+	default:
+		log.WithField("event", event).Error("Received event with unexpected type")
+	}
 }
 
 func (s *watcher) startFeed(ctx context.Context, f v3.GlobalThreatFeed) {
@@ -170,7 +182,6 @@ func (s *watcher) startFeed(ctx context.Context, f v3.GlobalThreatFeed) {
 		fw.syncer = sync.NewSyncer(fCopy, s.ipSet, s.globalNetworkSetClient)
 		fw.syncer.Run(ctx, c, failFunc, fw.statser)
 	} else {
-		// TODO log
 		fw.puller = nil
 		fw.syncer = nil
 	}
@@ -231,7 +242,6 @@ func (s *watcher) restartPuller(ctx context.Context, f v3.GlobalThreatFeed) {
 		fw.syncer = sync.NewSyncer(fw.feed, s.ipSet, s.globalNetworkSetClient)
 		fw.syncer.Run(ctx, c, failFunc, fw.statser)
 	} else {
-		// TODO log
 		fw.puller = nil
 		fw.syncer = nil
 	}

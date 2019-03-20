@@ -12,231 +12,136 @@ import (
 	v32 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/watch"
 
+	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/mock"
+	"github.com/tigera/intrusion-detection/controller/pkg/puller"
+	"github.com/tigera/intrusion-detection/controller/pkg/statser"
 	"github.com/tigera/intrusion-detection/controller/pkg/util"
 )
 
-/*
-func TestWatcher_sync(t *testing.T) {
-	g := NewGomegaWithT(t)
+var testClient = &http.Client{Transport: &mock.RoundTripper{Error: errors.New("mock error")}}
 
-	gti := &GlobalThreatFeedInterface{}
-	db := &mockDB{}
-	gns := &GlobalNetworkSetInterface{}
-	w := NewWatcher(nil, nil, gti, gns, &http.Client{Transport: &mock.RoundTripper{Error: errors.New("mock error")}}, db, db, db).(*watcher)
+func TestWatcher_HandleEvent(t *testing.T) {
+	g := NewGomegaWithT(t)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
-	err := w.sync(ctx)
-	g.Expect(err).Should(HaveOccurred(), "Fails with nil GlobalThreatFeeds pointer")
-	g.Expect(w.feeds).Should(HaveLen(0), "No feeds running")
+	ipSet := &mock.IPSet{}
+	gns := &mock.GlobalNetworkSetInterface{}
 
-	gti.list = &v3.GlobalThreatFeedList{}
-	err = w.sync(ctx)
-	g.Expect(err).ShouldNot(HaveOccurred(), "Succeeds with empty GlobalThreatFeeds")
-	g.Expect(w.feeds).Should(HaveLen(0), "No feeds running")
+	w := NewWatcher(nil, nil, nil, gns, testClient, ipSet, &mock.SuspiciousIP{}, &mock.Events{}).(*watcher)
 
-	gti.err = errors.New("mock error")
-	err = w.sync(ctx)
-	g.Expect(err).Should(HaveOccurred(), "Fails with GlobalThreatFeeds.List error")
-	g.Expect(w.feeds).Should(HaveLen(0), "No feeds running")
-	gti.err = nil
+	g.Expect(w).ShouldNot(BeNil())
 
-	// Add a new feed
-	gti.list = &v3.GlobalThreatFeedList{
-		Items: []v3.GlobalThreatFeed{
-			{
-				ObjectMeta: v1.ObjectMeta{
-					Name:      "mock",
-					Namespace: feed.FeedsNamespace,
-				},
-				Spec: v32.GlobalThreatFeedSpec{
-					Content: "IPSet",
-					GlobalNetworkSet: &v32.GlobalNetworkSetSync{
-						Labels: map[string]string{
-							"level": "high",
-						},
-					},
-					Pull: &v32.Pull{
-						Period: "12h",
-						HTTP: &v32.HTTPPull{
-							Format:  "NewlineDelimited",
-							URL:     "http://test.feed/v1",
-							Headers: []v32.HTTPHeader{},
-						},
-					},
-				},
-			},
-		},
-	}
-	err = w.sync(ctx)
-	g.Expect(err).ShouldNot(HaveOccurred(), "Succeeds with empty GlobalThreatFeeds")
-	g.Expect(w.feeds).Should(HaveLen(1), "1 feed running")
-	g.Expect(w.feeds[gti.list.Items[0].Name].feed.GlobalThreatFeed).Should(Equal(gti.list.Items[0]), "Feed is as expected")
+	// a k8s status is reported
+	w.handleEvent(ctx, watch.Event{
+		Type:   watch.Error,
+		Object: &v1.Status{Reason: v1.StatusReasonInternalError},
+	})
 
-	// Change the URL
-	gti.list.Items[0].Spec.Pull.HTTP.URL = "http://test.feed/v2"
-	puller := w.feeds[gti.list.Items[0].Name].puller
-	g.Expect(w.feeds[gti.list.Items[0].Name].feed.GlobalThreatFeed.Spec.Pull.HTTP.URL).ShouldNot(Equal(gti.list.Items[0].Spec.Pull.HTTP.URL), "Feed url is about to change")
-	err = w.sync(ctx)
-	g.Expect(err).ShouldNot(HaveOccurred(), "Succeeds with empty GlobalThreatFeeds")
-	g.Expect(w.feeds).Should(HaveLen(1), "1 feed running")
-	g.Expect(w.feeds[gti.list.Items[0].Name].feed.GlobalThreatFeed).Should(Equal(gti.list.Items[0]), "Feed updated")
-	g.Expect(w.feeds[gti.list.Items[0].Name].puller).Should(Equal(puller), "Puller was not restarted")
+	// an error is reported with something unexpected
+	w.handleEvent(ctx, watch.Event{
+		Type:   watch.Error,
+		Object: nil,
+	})
 
-	// Change the period
-	gti.list.Items[0].Spec.Pull.Period = "3h"
-	puller = w.feeds[gti.list.Items[0].Name].puller
-	syncer := w.feeds[gti.list.Items[0].Name].syncer
-	g.Expect(w.feeds[gti.list.Items[0].Name].feed.GlobalThreatFeed.Spec.Pull.Period).ShouldNot(Equal(gti.list.Items[0].Spec.Pull.Period), "Period is about to change")
-	err = w.sync(ctx)
-	g.Expect(err).ShouldNot(HaveOccurred(), "Succeeds with empty GlobalThreatFeeds")
-	g.Expect(w.feeds).Should(HaveLen(1), "1 feed running")
-	g.Expect(w.feeds[gti.list.Items[0].Name].feed.GlobalThreatFeed).Should(Equal(gti.list.Items[0]), "Feed updated")
-	g.Expect(w.feeds[gti.list.Items[0].Name].puller).ShouldNot(Equal(puller), "Puller was restarted")
-	g.Expect(w.feeds[gti.list.Items[0].Name].syncer).ShouldNot(Equal(syncer), "Syncer was restarted")
-
-	// Add another feed
-	gti.list.Items = append(gti.list.Items, v3.GlobalThreatFeed{
-		ObjectMeta: v1.ObjectMeta{
-			Name:      "test2",
-			Namespace: feed.FeedsNamespace,
-		},
-		Spec: v32.GlobalThreatFeedSpec{
-			Content: "IPSet",
-			GlobalNetworkSet: &v32.GlobalNetworkSetSync{
-				Labels: map[string]string{
-					"level": "high",
-				},
-			},
-			Pull: &v32.Pull{
-				Period: "24h",
-				HTTP: &v32.HTTPPull{
-					Format:  "NewlineDelimited",
-					URL:     "http://test2.feed/v1",
-					Headers: []v32.HTTPHeader{},
-				},
+	// a non-existing feed is deleted.
+	w.handleEvent(ctx, watch.Event{
+		Type: watch.Deleted,
+		Object: &v3.GlobalThreatFeed{
+			ObjectMeta: v1.ObjectMeta{
+				Name: "nonexisting",
 			},
 		},
 	})
-	g.Expect(w.feeds).Should(HaveLen(1), "1 feed running")
-	err = w.sync(ctx)
-	g.Expect(err).ShouldNot(HaveOccurred())
-	g.Expect(w.feeds).Should(HaveLen(2), "2 feeds running")
 
-	// Remove a feed
-	canceledName := gti.list.Items[0].Name
-	gti.list.Items = gti.list.Items[1:]
-	err = w.sync(ctx)
-	g.Expect(err).ShouldNot(HaveOccurred())
-	g.Expect(w.feeds).Should(HaveLen(1), "1 feed running")
-	g.Expect(w.feeds[canceledName]).Should(BeNil(), "Feed 1 is not running")
-	g.Expect(w.feeds[gti.list.Items[0].Name]).ShouldNot(BeNil(), "Feed 2 is still running")
-
-	// Add a feed with missing Pull section
-	gti.list.Items = append(gti.list.Items, v3.GlobalThreatFeed{
-		ObjectMeta: v1.ObjectMeta{
-			Name:      "test3",
-			Namespace: feed.FeedsNamespace,
-		},
-		Spec: v32.GlobalThreatFeedSpec{
-			Content: "IPSet",
-			GlobalNetworkSet: &v32.GlobalNetworkSetSync{
-				Labels: map[string]string{
-					"level": "high",
-				},
-			},
-			Pull: nil,
-		},
-	})
-	err = w.sync(ctx)
-	g.Expect(err).ShouldNot(HaveOccurred())
-	g.Expect(w.feeds).Should(HaveLen(1), "1 feed running")
-	g.Expect(w.feeds[gti.list.Items[0].Name]).ShouldNot(BeNil(), "Feed 2 is still running")
-
-	// Add a feed with a broken pull section
-	gti.list.Items = append(gti.list.Items, v3.GlobalThreatFeed{
-		ObjectMeta: v1.ObjectMeta{
-			Name:      "test4",
-			Namespace: feed.FeedsNamespace,
-		},
-		Spec: v32.GlobalThreatFeedSpec{
-			Content: "IPSet",
-			GlobalNetworkSet: &v32.GlobalNetworkSetSync{
-				Labels: map[string]string{
-					"level": "high",
-				},
-			},
-			Pull: &v32.Pull{
-				Period: "abc",
-				HTTP: &v32.HTTPPull{
-					Format:  "NewlineDelmited",
-					URL:     "http://test3.feed/v1",
-					Headers: nil,
-				},
+	// a feed is added
+	w.handleEvent(ctx, watch.Event{
+		Type: watch.Added,
+		Object: &v3.GlobalThreatFeed{
+			ObjectMeta: v1.ObjectMeta{
+				Name: "feed1",
 			},
 		},
 	})
-	err = w.sync(ctx)
-	g.Expect(err).ShouldNot(HaveOccurred())
-	g.Expect(w.feeds).Should(HaveLen(1), "1 feed running")
-	g.Expect(w.feeds[gti.list.Items[0].Name]).ShouldNot(BeNil(), "Feed 2 is still running")
+	g.Expect(w.feeds).Should(HaveLen(1))
 
-	// Add a feed with an unsupported Content
-	gti.list.Items = append(gti.list.Items, v3.GlobalThreatFeed{
-		ObjectMeta: v1.ObjectMeta{
-			Name:      "test4",
-			Namespace: feed.FeedsNamespace,
-		},
-		Spec: v32.GlobalThreatFeedSpec{
-			Content: "DomainSet",
-			GlobalNetworkSet: &v32.GlobalNetworkSetSync{
-				Labels: map[string]string{
-					"level": "high",
-				},
-			},
-			Pull: &v32.Pull{
-				Period: "12h",
-				HTTP: &v32.HTTPPull{
-					Format:  "NewlineDelmited",
-					URL:     "http://test3.feed/v1",
-					Headers: nil,
-				},
+	// a non-existing feed is with Modified (should never happen)
+	w.handleEvent(ctx, watch.Event{
+		Type: watch.Modified,
+		Object: &v3.GlobalThreatFeed{
+			ObjectMeta: v1.ObjectMeta{
+				Name: "feed2",
 			},
 		},
 	})
-	err = w.sync(ctx)
-	g.Expect(err).ShouldNot(HaveOccurred())
-	g.Expect(w.feeds).Should(HaveLen(1), "1 feed running")
-	g.Expect(w.feeds[gti.list.Items[0].Name]).ShouldNot(BeNil(), "Feed 2 is still running")
+	g.Expect(w.feeds).Should(HaveLen(2))
 
-	// A valid feed is refreshed with an invalid one
-	gti.list.Items[0].Spec.Pull.Period = "abc"
-	pullBefore := *w.feeds[gti.list.Items[0].Name].feed.Spec.Pull
-	err = w.sync(ctx)
-	g.Expect(err).ShouldNot(HaveOccurred())
-	g.Expect(w.feeds).Should(HaveLen(1), "1 feed running")
-	g.Expect(w.feeds[gti.list.Items[0].Name]).ShouldNot(BeNil(), "Feed 2 is still running")
-	g.Expect(*w.feeds[gti.list.Items[0].Name].feed.Spec.Pull).Should(Equal(pullBefore), "period did not change")
+	// an existing feed is added again
+	w.handleEvent(ctx, watch.Event{
+		Type: watch.Added,
+		Object: &v3.GlobalThreatFeed{
+			ObjectMeta: v1.ObjectMeta{
+				Name:            "feed1",
+				ResourceVersion: "test",
+			},
+		},
+	})
+	g.Expect(w.feeds).Should(HaveLen(2))
+	g.Expect(w.feeds["feed1"].feed.ResourceVersion).Should(Equal("test"))
 
-	// A valid feed is refreshed with one with a missing pull section
-	gti.list.Items[0].Spec.Pull = nil
-	pullBefore = *w.feeds[gti.list.Items[0].Name].feed.Spec.Pull
-	err = w.sync(ctx)
-	g.Expect(err).ShouldNot(HaveOccurred())
-	g.Expect(w.feeds).Should(HaveLen(1), "1 feed running")
-	g.Expect(w.feeds[gti.list.Items[0].Name]).ShouldNot(BeNil(), "Feed 2 is still running")
-	g.Expect(*w.feeds[gti.list.Items[0].Name].feed.Spec.Pull).Should(Equal(pullBefore), "period did not change")
+	// an existing feed is modified
+	w.handleEvent(ctx, watch.Event{
+		Type: watch.Added,
+		Object: &v3.GlobalThreatFeed{
+			ObjectMeta: v1.ObjectMeta{
+				Name:            "feed1",
+				ResourceVersion: "test2",
+			},
+		},
+	})
+	g.Expect(w.feeds).Should(HaveLen(2))
+	g.Expect(w.feeds["feed1"].feed.ResourceVersion).Should(Equal("test2"))
 
-	// Remove all feeds
-	gti.list = &v3.GlobalThreatFeedList{}
-	err = w.sync(ctx)
-	g.Expect(err).ShouldNot(HaveOccurred(), "Succeeds with empty GlobalThreatFeeds")
-	g.Expect(w.feeds).Should(HaveLen(0), "All feeds stopped")
+	// an existing feed is deleted
+	w.handleEvent(ctx, watch.Event{
+		Type: watch.Deleted,
+		Object: &v3.GlobalThreatFeed{
+			ObjectMeta: v1.ObjectMeta{
+				Name: "feed1",
+			},
+		},
+	})
+	g.Expect(w.feeds).Should(HaveLen(1))
+	g.Expect(w.feeds["feed1"]).Should(BeNil())
+
+	// a nil feed is added
+	w.handleEvent(ctx, watch.Event{
+		Type:   watch.Added,
+		Object: nil,
+	})
+
+	// a nil feed is modified
+	w.handleEvent(ctx, watch.Event{
+		Type:   watch.Modified,
+		Object: nil,
+	})
+
+	// a nil feed is deleted
+	w.handleEvent(ctx, watch.Event{
+		Type:   watch.Deleted,
+		Object: nil,
+	})
+
+	// an unexpected event type is received
+	w.handleEvent(ctx, watch.Event{
+		Type:   "something",
+		Object: nil,
+	})
 }
-*/
 
 func TestWatcher_startFeed_stopFeed(t *testing.T) {
 	g := NewGomegaWithT(t)
@@ -267,7 +172,7 @@ func TestWatcher_startFeed_stopFeed(t *testing.T) {
 	ipSet := &mock.IPSet{}
 	gns := &mock.GlobalNetworkSetInterface{}
 
-	w := NewWatcher(nil, nil, nil, gns, &http.Client{Transport: &mock.RoundTripper{Error: errors.New("mock error")}}, ipSet, &mock.SuspiciousIP{}, &mock.Events{}).(*watcher)
+	w := NewWatcher(nil, nil, nil, gns, testClient, ipSet, &mock.SuspiciousIP{}, &mock.Events{}).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -312,7 +217,7 @@ func TestWatcher_startFeed_NoPull(t *testing.T) {
 	ipSet := &mock.IPSet{}
 	gns := &mock.GlobalNetworkSetInterface{}
 
-	w := NewWatcher(nil, nil, nil, gns, &http.Client{Transport: &mock.RoundTripper{Error: errors.New("mock error")}}, ipSet, &mock.SuspiciousIP{}, &mock.Events{}).(*watcher)
+	w := NewWatcher(nil, nil, nil, gns, testClient, ipSet, &mock.SuspiciousIP{}, &mock.Events{}).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -322,8 +227,8 @@ func TestWatcher_startFeed_NoPull(t *testing.T) {
 	fw, ok := w.feeds[f.Name]
 	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
 	g.Expect(w.feeds).Should(HaveLen(1), "No FeedWatchers")
-	g.Expect(fw.puller).Should(BeNil(), "Puller is nil")
-	g.Expect(fw.syncer).Should(BeNil(), "Syncer is nil")
+	g.Expect(fw.puller).Should(BeNil(), "MockPuller is nil")
+	g.Expect(fw.syncer).Should(BeNil(), "MockSyncer is nil")
 	g.Expect(fw.statser).ShouldNot(BeNil(), "Statser is not nil")
 	g.Expect(fw.garbageCollector).ShouldNot(BeNil(), "GC is not nil")
 }
@@ -350,7 +255,7 @@ func TestWatcher_startFeed_NoPullHTTP(t *testing.T) {
 	ipSet := &mock.IPSet{}
 	gns := &mock.GlobalNetworkSetInterface{}
 
-	w := NewWatcher(nil, nil, nil, gns, &http.Client{Transport: &mock.RoundTripper{Error: errors.New("mock error")}}, ipSet, &mock.SuspiciousIP{}, &mock.Events{}).(*watcher)
+	w := NewWatcher(nil, nil, nil, gns, testClient, ipSet, &mock.SuspiciousIP{}, &mock.Events{}).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -360,8 +265,8 @@ func TestWatcher_startFeed_NoPullHTTP(t *testing.T) {
 	fw, ok := w.feeds[f.Name]
 	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
 	g.Expect(w.feeds).Should(HaveLen(1), "No FeedWatchers")
-	g.Expect(fw.puller).Should(BeNil(), "Puller is nil")
-	g.Expect(fw.syncer).Should(BeNil(), "Syncer is nil")
+	g.Expect(fw.puller).Should(BeNil(), "MockPuller is nil")
+	g.Expect(fw.syncer).Should(BeNil(), "MockSyncer is nil")
 	g.Expect(fw.statser).ShouldNot(BeNil(), "Statser is not nil")
 	g.Expect(fw.garbageCollector).ShouldNot(BeNil(), "GC is not nil")
 }
@@ -395,7 +300,7 @@ func TestWatcher_startFeed_Exists(t *testing.T) {
 	ipSet := &mock.IPSet{}
 	gns := &mock.GlobalNetworkSetInterface{}
 
-	w := NewWatcher(nil, nil, nil, gns, &http.Client{Transport: &mock.RoundTripper{Error: errors.New("mock error")}}, ipSet, &mock.SuspiciousIP{}, &mock.Events{}).(*watcher)
+	w := NewWatcher(nil, nil, nil, gns, testClient, ipSet, &mock.SuspiciousIP{}, &mock.Events{}).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -412,9 +317,283 @@ func TestWatcher_startFeed_Exists(t *testing.T) {
 func TestWatcher_stopFeed_notExists(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	w := NewWatcher(nil, nil, nil, nil, &http.Client{Transport: &mock.RoundTripper{Error: errors.New("mock error")}}, nil, nil, nil).(*watcher)
+	w := NewWatcher(nil, nil, nil, nil, testClient, nil, nil, nil).(*watcher)
 
 	g.Expect(func() { w.stopFeed("mock") }).Should(Panic())
+}
+
+func TestWatcher_updateFeed_NotStarted(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	f := v3.GlobalThreatFeed{
+		ObjectMeta: v1.ObjectMeta{
+			Name:      "mock",
+			Namespace: util.FeedsNamespace,
+		},
+		Spec: v32.GlobalThreatFeedSpec{
+			Content: "IPSet",
+			GlobalNetworkSet: &v32.GlobalNetworkSetSync{
+				Labels: map[string]string{
+					"level": "high",
+				},
+			},
+			Pull: &v32.Pull{
+				Period: "12h",
+				HTTP: &v32.HTTPPull{
+					Format:  "NewlineDelimited",
+					URL:     "http://mock.feed/v1",
+					Headers: []v32.HTTPHeader{},
+				},
+			},
+		},
+	}
+
+	ipSet := &mock.IPSet{}
+	gns := &mock.GlobalNetworkSetInterface{}
+
+	w := NewWatcher(nil, nil, nil, gns, testClient, ipSet, &mock.SuspiciousIP{}, &mock.Events{}).(*watcher)
+
+	ctx, cancel := context.WithCancel(context.TODO())
+	defer cancel()
+
+	g.Expect(func() { w.updateFeed(ctx, f) }).Should(Panic())
+}
+
+func TestWatcher_updateFeed_PullToPull(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	f := v3.GlobalThreatFeed{
+		ObjectMeta: v1.ObjectMeta{
+			Name:      "mock",
+			Namespace: util.FeedsNamespace,
+		},
+		Spec: v32.GlobalThreatFeedSpec{
+			Content: "IPSet",
+			GlobalNetworkSet: &v32.GlobalNetworkSetSync{
+				Labels: map[string]string{
+					"level": "high",
+				},
+			},
+			Pull: &v32.Pull{
+				Period: "12h",
+				HTTP: &v32.HTTPPull{
+					Format:  "NewlineDelimited",
+					URL:     "http://mock.feed/v1",
+					Headers: []v32.HTTPHeader{},
+				},
+			},
+		},
+	}
+
+	ipSet := &mock.IPSet{}
+	gns := &mock.GlobalNetworkSetInterface{}
+
+	w := NewWatcher(nil, nil, nil, gns, testClient, ipSet, &mock.SuspiciousIP{}, &mock.Events{}).(*watcher)
+
+	ctx, cancel := context.WithCancel(context.TODO())
+	defer cancel()
+
+	w.startFeed(ctx, f)
+
+	fw, ok := w.feeds[f.Name]
+	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
+	g.Expect(w.feeds).To(HaveLen(1), "Only one FeedWatcher")
+
+	// hack in some mocks so we can verify that SetFeed was called
+	mockPuller := &MockPuller{}
+	mockSyncer := &MockSyncer{}
+	mockSearcher := &MockSearcher{}
+	mockGC := &MockGC{}
+	fw.puller = mockPuller
+	fw.syncer = mockSyncer
+	fw.searcher = mockSearcher
+	fw.garbageCollector = mockGC
+
+	w.updateFeed(ctx, f)
+
+	fw, ok = w.feeds[f.Name]
+	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
+	g.Expect(w.feeds).To(HaveLen(1), "Only one FeedWatcher")
+	g.Expect(mockPuller.Feed).ShouldNot(BeNil())
+	g.Expect(mockPuller.CloseCalled).Should(BeFalse())
+	g.Expect(fw.puller).Should(BeIdenticalTo(mockPuller))
+	g.Expect(mockSyncer.Feed).ShouldNot(BeNil())
+	g.Expect(mockSyncer.CloseCalled).Should(BeFalse())
+	g.Expect(fw.syncer).Should(BeIdenticalTo(mockSyncer))
+	g.Expect(mockSearcher.Feed).ShouldNot(BeNil(), "SetFeed was called")
+	g.Expect(mockGC.Feed).ShouldNot(BeNil(), "SetFeed was called")
+}
+
+func TestWatcher_updateFeed_PullToPush(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	f := v3.GlobalThreatFeed{
+		ObjectMeta: v1.ObjectMeta{
+			Name:      "mock",
+			Namespace: util.FeedsNamespace,
+		},
+		Spec: v32.GlobalThreatFeedSpec{
+			Content: "IPSet",
+			GlobalNetworkSet: &v32.GlobalNetworkSetSync{
+				Labels: map[string]string{
+					"level": "high",
+				},
+			},
+			Pull: &v32.Pull{
+				Period: "12h",
+				HTTP: &v32.HTTPPull{
+					Format:  "NewlineDelimited",
+					URL:     "http://mock.feed/v1",
+					Headers: []v32.HTTPHeader{},
+				},
+			},
+		},
+	}
+
+	ipSet := &mock.IPSet{}
+	gns := &mock.GlobalNetworkSetInterface{}
+
+	w := NewWatcher(nil, nil, nil, gns, testClient, ipSet, &mock.SuspiciousIP{}, &mock.Events{}).(*watcher)
+
+	ctx, cancel := context.WithCancel(context.TODO())
+	defer cancel()
+
+	w.startFeed(ctx, f)
+
+	fw, ok := w.feeds[f.Name]
+	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
+	g.Expect(w.feeds).To(HaveLen(1), "Only one FeedWatcher")
+
+	// hack in some mocks so we can verify that SetFeed was called
+	mockPuller := &MockPuller{}
+	mockSyncer := &MockSyncer{}
+	mockSearcher := &MockSearcher{}
+	mockGC := &MockGC{}
+	fw.puller = mockPuller
+	fw.syncer = mockSyncer
+	fw.searcher = mockSearcher
+	fw.garbageCollector = mockGC
+
+	f.Spec.Pull = nil
+
+	w.updateFeed(ctx, f)
+
+	fw, ok = w.feeds[f.Name]
+	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
+	g.Expect(w.feeds).To(HaveLen(1), "Only one FeedWatcher")
+	g.Expect(fw.puller).Should(BeNil())
+	g.Expect(fw.syncer).Should(BeNil())
+	g.Expect(mockPuller.Feed).Should(BeNil())
+	g.Expect(mockPuller.CloseCalled).Should(BeTrue())
+	g.Expect(mockSyncer.Feed).Should(BeNil())
+	g.Expect(mockSyncer.CloseCalled).Should(BeTrue())
+	g.Expect(mockSearcher.Feed).ShouldNot(BeNil(), "SetFeed was called")
+	g.Expect(mockGC.Feed).ShouldNot(BeNil(), "SetFeed was called")
+}
+func TestWatcher_updateFeed_PushToPull(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	f := v3.GlobalThreatFeed{
+		ObjectMeta: v1.ObjectMeta{
+			Name:      "mock",
+			Namespace: util.FeedsNamespace,
+		},
+		Spec: v32.GlobalThreatFeedSpec{
+			Content: "IPSet",
+			GlobalNetworkSet: &v32.GlobalNetworkSetSync{
+				Labels: map[string]string{
+					"level": "high",
+				},
+			},
+		},
+	}
+
+	ipSet := &mock.IPSet{}
+	gns := &mock.GlobalNetworkSetInterface{}
+
+	w := NewWatcher(nil, nil, nil, gns, testClient, ipSet, &mock.SuspiciousIP{}, &mock.Events{}).(*watcher)
+
+	ctx, cancel := context.WithCancel(context.TODO())
+	defer cancel()
+
+	w.startFeed(ctx, f)
+
+	fw, ok := w.feeds[f.Name]
+	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
+	g.Expect(w.feeds).To(HaveLen(1), "Only one FeedWatcher")
+
+	// hack in some mocks so we can verify that SetFeed was called
+	searcher := &MockSearcher{}
+	garbageCollector := &MockGC{}
+	fw.searcher = searcher
+	fw.garbageCollector = garbageCollector
+
+	f.Spec.Pull = &v32.Pull{
+		Period: "12h",
+		HTTP: &v32.HTTPPull{
+			Format:  "NewlineDelimited",
+			URL:     "http://mock.feed/v1",
+			Headers: []v32.HTTPHeader{},
+		},
+	}
+
+	w.updateFeed(ctx, f)
+
+	fw, ok = w.feeds[f.Name]
+	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
+	g.Expect(w.feeds).To(HaveLen(1), "Only one FeedWatcher")
+	g.Expect(fw.puller).ShouldNot(BeNil())
+	g.Expect(fw.syncer).ShouldNot(BeNil())
+	g.Expect(searcher.Feed).ShouldNot(BeNil(), "SetFeed was called")
+	g.Expect(garbageCollector.Feed).ShouldNot(BeNil(), "SetFeed was called")
+}
+
+func TestWatcher_updateFeed_PushToPush(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	f := v3.GlobalThreatFeed{
+		ObjectMeta: v1.ObjectMeta{
+			Name:      "mock",
+			Namespace: util.FeedsNamespace,
+		},
+		Spec: v32.GlobalThreatFeedSpec{
+			Content: "IPSet",
+			GlobalNetworkSet: &v32.GlobalNetworkSetSync{
+				Labels: map[string]string{
+					"level": "high",
+				},
+			},
+		},
+	}
+
+	ipSet := &mock.IPSet{}
+	gns := &mock.GlobalNetworkSetInterface{}
+
+	w := NewWatcher(nil, nil, nil, gns, testClient, ipSet, &mock.SuspiciousIP{}, &mock.Events{}).(*watcher)
+
+	ctx, cancel := context.WithCancel(context.TODO())
+	defer cancel()
+
+	w.startFeed(ctx, f)
+
+	fw, ok := w.feeds[f.Name]
+	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
+	g.Expect(w.feeds).To(HaveLen(1), "Only one FeedWatcher")
+
+	searcher := &MockSearcher{}
+	garbageCollector := &MockGC{}
+	fw.searcher = searcher
+	fw.garbageCollector = garbageCollector
+
+	w.updateFeed(ctx, f)
+
+	fw, ok = w.feeds[f.Name]
+	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
+	g.Expect(w.feeds).To(HaveLen(1), "Only one FeedWatcher")
+	g.Expect(fw.puller).Should(BeNil())
+	g.Expect(fw.syncer).Should(BeNil())
+	g.Expect(searcher.Feed).ShouldNot(BeNil(), "SetFeed was called")
+	g.Expect(garbageCollector.Feed).ShouldNot(BeNil(), "SetFeed was called")
 }
 
 func TestWatcher_restartPuller(t *testing.T) {
@@ -446,7 +625,7 @@ func TestWatcher_restartPuller(t *testing.T) {
 	ipSet := &mock.IPSet{}
 	gns := &mock.GlobalNetworkSetInterface{}
 
-	w := NewWatcher(nil, nil, nil, gns, &http.Client{Transport: &mock.RoundTripper{Error: errors.New("mock error")}}, ipSet, &mock.SuspiciousIP{}, &mock.Events{}).(*watcher)
+	w := NewWatcher(nil, nil, nil, gns, testClient, ipSet, &mock.SuspiciousIP{}, &mock.Events{}).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -472,7 +651,7 @@ func TestWatcher_restartPuller(t *testing.T) {
 	g.Expect(w.feeds[f.Name].syncer).ShouldNot(Equal(oldSyncer))
 }
 
-func TestWatcher_restartPuller_Fail(t *testing.T) {
+func TestWatcher_restartPuller_NoPull(t *testing.T) {
 	g := NewGomegaWithT(t)
 
 	f := v3.GlobalThreatFeed{
@@ -501,31 +680,83 @@ func TestWatcher_restartPuller_Fail(t *testing.T) {
 	ipSet := &mock.IPSet{}
 	gns := &mock.GlobalNetworkSetInterface{}
 
-	w := NewWatcher(nil, nil, nil, gns, &http.Client{Transport: &mock.RoundTripper{Error: errors.New("mock error")}}, ipSet, &mock.SuspiciousIP{}, &mock.Events{}).(*watcher)
+	w := NewWatcher(nil, nil, nil, gns, testClient, ipSet, &mock.SuspiciousIP{}, &mock.Events{}).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
-	g.Expect(func() { w.restartPuller(ctx, f) }).Should(Panic())
+	w.startFeed(ctx, f)
 
-	/*
-		TODO move to another test
-		err := w.startFeed(ctx, f)
-		g.Expect(err).ShouldNot(HaveOccurred())
+	fw, ok := w.feeds[f.Name]
+	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
+	g.Expect(w.feeds).To(HaveLen(1), "Only one FeedWatcher")
 
-		fw, ok := w.feeds[f.Name]
-		g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
-		g.Expect(w.feeds).To(HaveLen(1), "Only one FeedWatcher")
+	g.Expect(*fw.feed).Should(Equal(f))
+	g.Expect(fw.puller).ShouldNot(BeNil())
+	g.Expect(fw.syncer).ShouldNot(BeNil())
+	g.Expect(fw.garbageCollector).ShouldNot(BeNil())
+	g.Expect(fw.statser).ShouldNot(BeNil())
+	g.Expect(fw.searcher).ShouldNot(BeNil())
 
-		oldPuller := fw.puller
-		oldSyncer := fw.syncer
+	f.Spec.Pull = nil
 
-		f.Spec.Pull.Period = "abc"
-		err = w.restartPuller(ctx, f)
-		g.Expect(err).ShouldNot(HaveOccurred(), "restartPuller was not successful")
-		g.Expect(w.feeds[f.Name].puller).Should(Equal(oldPuller), "puller was not restarted")
-		g.Expect(w.feeds[f.Name].syncer).Should(Equal(oldSyncer), "syncer was not restarted")
-	*/
+	w.restartPuller(ctx, f)
+	g.Expect(w.feeds[f.Name].puller).Should(BeNil())
+	g.Expect(w.feeds[f.Name].syncer).Should(BeNil())
+}
+
+func TestWatcher_restartPuller_NoPullHTTP(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	f := v3.GlobalThreatFeed{
+		ObjectMeta: v1.ObjectMeta{
+			Name:      "mock",
+			Namespace: util.FeedsNamespace,
+		},
+		Spec: v32.GlobalThreatFeedSpec{
+			Content: "IPSet",
+			GlobalNetworkSet: &v32.GlobalNetworkSetSync{
+				Labels: map[string]string{
+					"level": "high",
+				},
+			},
+			Pull: &v32.Pull{
+				Period: "12h",
+				HTTP: &v32.HTTPPull{
+					Format:  "NewlineDelimited",
+					URL:     "http://mock.feed/v1",
+					Headers: []v32.HTTPHeader{},
+				},
+			},
+		},
+	}
+
+	ipSet := &mock.IPSet{}
+	gns := &mock.GlobalNetworkSetInterface{}
+
+	w := NewWatcher(nil, nil, nil, gns, testClient, ipSet, &mock.SuspiciousIP{}, &mock.Events{}).(*watcher)
+
+	ctx, cancel := context.WithCancel(context.TODO())
+	defer cancel()
+
+	w.startFeed(ctx, f)
+
+	fw, ok := w.feeds[f.Name]
+	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
+	g.Expect(w.feeds).To(HaveLen(1), "Only one FeedWatcher")
+
+	g.Expect(*fw.feed).Should(Equal(f))
+	g.Expect(fw.puller).ShouldNot(BeNil())
+	g.Expect(fw.syncer).ShouldNot(BeNil())
+	g.Expect(fw.garbageCollector).ShouldNot(BeNil())
+	g.Expect(fw.statser).ShouldNot(BeNil())
+	g.Expect(fw.searcher).ShouldNot(BeNil())
+
+	f.Spec.Pull.HTTP = nil
+
+	w.restartPuller(ctx, f)
+	g.Expect(w.feeds[f.Name].puller).Should(BeNil())
+	g.Expect(w.feeds[f.Name].syncer).Should(BeNil())
 }
 
 func TestWatcher_restartPuller_notExists(t *testing.T) {
@@ -554,10 +785,76 @@ func TestWatcher_restartPuller_notExists(t *testing.T) {
 		},
 	}
 
-	w := NewWatcher(nil, nil, nil, nil, &http.Client{Transport: &mock.RoundTripper{Error: errors.New("mock error")}}, nil, nil, nil).(*watcher)
+	w := NewWatcher(nil, nil, nil, nil, testClient, nil, nil, nil).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
 	g.Expect(func() { w.restartPuller(ctx, globalThreatFeed) }).Should(Panic())
+}
+
+type MockPuller struct {
+	Feed        *v3.GlobalThreatFeed
+	CloseCalled bool
+}
+
+func (p *MockPuller) Close() {
+	p.CloseCalled = true
+}
+
+func (*MockPuller) Run(context.Context, statser.Statser) (<-chan db.IPSetSpec, puller.SyncFailFunction) {
+	panic("implement me")
+}
+
+func (p *MockPuller) SetFeed(f *v3.GlobalThreatFeed) {
+	p.Feed = f
+}
+
+type MockSyncer struct {
+	Feed        *v3.GlobalThreatFeed
+	CloseCalled bool
+}
+
+func (s *MockSyncer) Close() {
+	s.CloseCalled = true
+}
+
+func (*MockSyncer) Run(context.Context, <-chan db.IPSetSpec, puller.SyncFailFunction, statser.Statser) {
+	panic("implement me")
+}
+
+func (s *MockSyncer) SetFeed(f *v3.GlobalThreatFeed) {
+	s.Feed = f
+}
+
+type MockSearcher struct {
+	Feed *v3.GlobalThreatFeed
+}
+
+func (*MockSearcher) Close() {
+	panic("implement me")
+}
+
+func (*MockSearcher) Run(context.Context, statser.Statser) {
+	panic("implement me")
+}
+
+func (m *MockSearcher) SetFeed(f *v3.GlobalThreatFeed) {
+	m.Feed = f
+}
+
+type MockGC struct {
+	Feed *v3.GlobalThreatFeed
+}
+
+func (*MockGC) Run(context.Context, statser.Statser) {
+	panic("implement me")
+}
+
+func (m *MockGC) SetFeed(f *v3.GlobalThreatFeed) {
+	m.Feed = f
+}
+
+func (*MockGC) Close() {
+	panic("implement me")
 }
