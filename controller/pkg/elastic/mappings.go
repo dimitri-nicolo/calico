@@ -7,7 +7,8 @@ const ipSetMapping = `{
     "_doc": {
       "properties": {
         "created_at": {
-            "type": "date"
+            "type": "date",
+            "format": "strict_date_optional_time"
         },
         "ips": {
             "type": "ip_range"

@@ -5,6 +5,7 @@ go 1.11
 replace github.com/projectcalico/libcalico-go v1.7.3 => github.com/tigera/libcalico-go-private v2.1.1-0.20190307140245-b57de3f3848a+incompatible
 
 require (
+	github.com/araddon/dateparse v0.0.0-20190223010137-262228af701e
 	github.com/avast/retry-go v2.2.0+incompatible
 	github.com/emicklei/go-restful v2.9.0+incompatible // indirect
 	github.com/fortytw2/leaktest v1.3.0 // indirect
