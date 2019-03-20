@@ -10,5 +10,4 @@ datastore: kdd
 orch: ""
 elasticsearchType: operator
 rbac: ""
-variant_name: CNX
 platform: ""
