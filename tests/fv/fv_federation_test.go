@@ -5,7 +5,6 @@ package fv_test
 import (
 	"context"
 	"fmt"
-	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	"io/ioutil"
 	"os"
 	"time"
@@ -23,6 +22,7 @@ import (
 	"github.com/projectcalico/felix/fv/infrastructure"
 	"github.com/projectcalico/kube-controllers/pkg/controllers/federatedservices"
 	"github.com/projectcalico/kube-controllers/tests/testutils"
+	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
@@ -301,9 +301,10 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 		// which we can get from our vendor directory.
 		if !isCalicoEtcdDatastore {
 			// Copy CRD registration manifest into the API server container, and apply it.
-			err = localApiserver.CopyFileIntoContainer("../../vendor/github.com/projectcalico/libcalico-go/test/crds.yaml", "/crds.yaml")
+			name := "calico-crds.yaml"
+			err = localApiserver.CopyFileIntoContainer("../../vendor/github.com/projectcalico/libcalico-go/test/crds.yaml", name)
 			Expect(err).NotTo(HaveOccurred())
-			err = localApiserver.ExecMayFail("kubectl", "apply", "-f", "/crds.yaml")
+			err = localApiserver.ExecMayFail("kubectl", "apply", "-f", name)
 			Expect(err).NotTo(HaveOccurred())
 		}
 
