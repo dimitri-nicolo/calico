@@ -251,6 +251,7 @@ type RuleRenderer interface {
 	ProfileToIptablesChains(profileID *proto.ProfileID, policy *proto.Profile, ipVersion uint8) []*iptables.Chain
 	ProtoRuleToIptablesRules(pRule *proto.Rule, ipVersion uint8, owner RuleOwnerType, dir RuleDir, idx int, name string, untracked bool) []iptables.Rule
 
+	MakeNatOutgoingRule(protocol string, action iptables.Action, ipVersion uint8) iptables.Rule
 	NATOutgoingChain(active bool, ipVersion uint8) *iptables.Chain
 
 	DNATsToIptablesChains(dnats map[string]string) []*iptables.Chain
@@ -318,7 +319,8 @@ type Config struct {
 
 	DisableConntrackInvalid bool
 
-	NATPortRange numorstring.Port
+	NATPortRange                       numorstring.Port
+	IptablesNATOutgoingInterfaceFilter string
 
 	EnableNflogSize bool
 	IPSecEnabled    bool
