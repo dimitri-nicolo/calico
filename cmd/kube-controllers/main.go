@@ -151,7 +151,7 @@ func main() {
 				threadiness: config.PolicyWorkers,
 			}
 		case "node":
-			nodeController := node.NewNodeController(ctx, k8sClientset, calicoClient)
+			nodeController := node.NewNodeController(ctx, k8sClientset, calicoClient, config)
 			controllerCtrl.controllerStates["Node"] = &controllerState{
 				controller:  nodeController,
 				threadiness: config.NodeWorkers,
@@ -171,12 +171,14 @@ func main() {
 			}
 			controllerCtrl.needLicenseMonitoring = true
 		default:
-			log.Fatalf("Invalid controller '%s' provided. Valid options are workloadendpoint, profile, policy", controllerType)
+			log.Fatalf("Invalid controller '%s' provided.", controllerType)
 		}
 	}
 
-	// If configured to do so, start an etcdv3 compaction.
-	go startCompactor(ctx, config)
+	if config.DatastoreType == "etcdv3" {
+		// If configured to do so, start an etcdv3 compaction.
+		go startCompactor(ctx, config)
+	}
 
 	// Run the health checks on a separate goroutine.
 	if config.HealthEnabled {
@@ -213,7 +215,23 @@ func runHealthChecks(ctx context.Context, s *status.Status, k8sClientset *kubern
 
 		// Kube-apiserver HealthCheck
 		healthStatus := 0
+		k8sCheckDone := make(chan interface{}, 1)
+		go func(k8sCheckDone <-chan interface{}) {
+			time.Sleep(2 * time.Second)
+			select {
+			case <-k8sCheckDone:
+				// The check has completed.
+			default:
+				// Check is still running, so report not ready.
+				s.SetReady(
+					"KubeAPIServer",
+					false,
+					fmt.Sprintf("Error reaching apiserver: taking a long time to check apiserver"),
+				)
+			}
+		}(k8sCheckDone)
 		k8sClientset.Discovery().RESTClient().Get().AbsPath("/healthz").Do().StatusCode(&healthStatus)
+		k8sCheckDone <- nil
 		if healthStatus != http.StatusOK {
 			log.WithError(err).Errorf("Failed to reach apiserver")
 			s.SetReady(

@@ -71,7 +71,6 @@ VALIDARCHES = $(filter-out $(EXCLUDEARCH),$(ARCHES))
 OS?=$(shell uname -s | tr A-Z a-z)
 ###############################################################################
 GO_BUILD_VER?=v0.20
-FOSSA_GO_BUILD_VER?=v0.18
 
 K8S_VERSION?=v1.11.3
 HYPERKUBE_IMAGE?=gcr.io/google_containers/hyperkube-$(ARCH):$(K8S_VERSION)
@@ -118,6 +117,7 @@ SRCFILES=cmd/kube-controllers/main.go $(shell find pkg -name '*.go')
 clean:
 	rm -rf bin image.created-$(ARCH)
 	-docker rmi $(BUILD_IMAGE)
+	-docker rmi $(BUILD_IMAGE):latest-amd64
 	rm -f tests/fv/fv.test
 	rm -f report/*.xml
 
@@ -312,7 +312,7 @@ foss-checks: vendor
 	  -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
 	  -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
 	  -w /go/src/$(PACKAGE_NAME) \
-	  $(FOSSA_CALICO_BUILD) /usr/local/bin/fossa
+	  $(CALICO_BUILD) /usr/local/bin/fossa
 
 ###############################################################################
 # Tests
@@ -332,7 +332,12 @@ ut: vendor
 ## Build and run the FV tests.
 fv: tests/fv/fv.test image
 	@echo Running Go FVs.
-	cd tests/fv && ETCD_IMAGE=$(ETCD_IMAGE) HYPERKUBE_IMAGE=$(HYPERKUBE_IMAGE) CONTAINER_NAME=$(BUILD_IMAGE):latest-$(ARCH) PRIVATE_KEY=`pwd`/private.key ./fv.test $(GINKGO_ARGS) -ginkgo.slowSpecThreshold 30
+	cd tests/fv && ETCD_IMAGE=$(ETCD_IMAGE) \
+		HYPERKUBE_IMAGE=$(HYPERKUBE_IMAGE) \
+		CONTAINER_NAME=$(BUILD_IMAGE):latest-$(ARCH) \
+		PRIVATE_KEY=`pwd`/private.key \
+		CRDS_FILE=${PWD}/vendor/github.com/projectcalico/libcalico-go/test/crds.yaml \
+		./fv.test $(GINKGO_ARGS) -ginkgo.slowSpecThreshold 30
 
 tests/fv/fv.test: $(shell find ./tests -type f -name '*.go' -print)
 	# We pre-build the test binary so that we can run it outside a container and allow it
