@@ -1,4 +1,7 @@
 ---
 layout: null
 ---
-{% include {{page.version}}/manifests/cnx.yaml datastore="kdd" platform="eks" %}
+{% helm --execute templates/cnx.yaml %}
+datastore: kdd
+platform: eks
+{% endhelm %}

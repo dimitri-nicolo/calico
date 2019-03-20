@@ -125,7 +125,7 @@ rules:
       # Used to discover service IPs for advertisement.
       - watch
       - list
-{{- if eq .Values.typha "true" }}
+{{- if .Values.typha.enabled }}
       # Used to discover Typhas.
       - get
 {{- end }}

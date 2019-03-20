@@ -38,7 +38,7 @@ data:
   # the pod network.
   masquerade: "true"
 {{- end }}
-{{- if neq .Values.network "ecs" }}
+{{- if ne .Values.network "ecs" }}
   # The CNI network configuration to install on each node.  The special
   # values in this config will be automatically populated.
 {{- if and (eq .Values.datastore "etcd") (eq .Values.network "flannel") }}

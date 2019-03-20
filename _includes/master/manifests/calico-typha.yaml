@@ -75,7 +75,7 @@ spec:
           operator: Exists
       # Since Calico can't network a pod until Typha is up, we need to run Typha itself
       # as a host-networked pod.
-{{- if .Values.platform "gke" }}
+{{- if eq .Values.platform "gke" }}
       serviceAccountName: calico-node-ee
 {{- else }}
       serviceAccountName: calico-node
@@ -85,10 +85,10 @@ spec:
       containers:
       - image: {{.Values.imageRegistry}}{{.Values.typha.image}}:{{.Values.typha.tag}}
         name: calico-typha
-{{- if or (eq .Values.federation "true") (eq .Values.datastore "etcd") }}
+{{- if or .Values.federation.enabled (eq .Values.datastore "etcd") }}
         volumeMounts:
 {{- end }}
-{{- if eq .Values.federation "true" }}
+{{- if .Values.federation.enabled }}
         # These lines enable a secrets volume for use with federated endpoint identity. Add
         # multiple entries to the volumeMounts if you are mounting in multiple secrets (e.g. one for each remote cluster)
         - name: tigera-federation-remotecluster
@@ -124,29 +124,29 @@ spec:
 {{- if eq .Values.datastore "etcd" }}
           - name: TYPHA_DATASTORETYPE
             value: "etcdv3"
-          # The location of the {{site.prodname}} etcd cluster.
+          # The location of the {{.Values.prodname}} etcd cluster.
           - name: TYPHA_ETCDENDPOINTS
             valueFrom:
               configMapKeyRef:
-                name: {{include.variant_name | downcase}}-config
+                name: {{include "variant_name" | lower}}-config
                 key: etcd_endpoints
           # Location of the CA certificate for etcd.
           - name: TYPHA_ETCDCAFILE
             valueFrom:
               configMapKeyRef:
-                name: {{include.variant_name | downcase}}-config
+                name: {{include "variant_name" | lower}}-config
                 key: etcd_ca
           # Location of the client key for etcd.
           - name: TYPHA_ETCDKEYFILE
             valueFrom:
               configMapKeyRef:
-                name: {{include.variant_name | downcase}}-config
+                name: {{include "variant_name" | lower}}-config
                 key: etcd_key
           # Location of the client certificate for etcd.
           - name: TYPHA_ETCDCERTFILE
             valueFrom:
               configMapKeyRef:
-                name: {{include.variant_name | downcase}}-config
+                name: {{include "variant_name" | lower}}-config
                 key: etcd_cert
 {{- else if eq .Values.datastore "kdd" }}
           # Use Kubernetes API as the backing datastore.
@@ -201,10 +201,10 @@ spec:
             - --port=9198
 {{- end }}
           periodSeconds: 10
-{{- if or (eq .Values.federation "true") (eq .Values.datastore "etcd") }}
+{{- if or .Values.federation.enabled (eq .Values.datastore "etcd") }}
       volumes:
 {{- end }}
-{{- if .Values.federation }}
+{{- if .Values.federation.enabled }}
       # These lines enable a secrets volume for use with federated endpoint identity. Add
       # multiple entries to the volumes if you are mounting in multiple secrets (e.g. one for each remote cluster)
       # The secret should be created with: kubectl create secret generic tigera-federation-remotecluster --from-file=...

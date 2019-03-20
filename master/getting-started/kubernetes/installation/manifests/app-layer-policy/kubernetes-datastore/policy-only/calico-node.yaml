@@ -5,6 +5,7 @@ layout: null
 datastore: kdd
 typha:
   enabled: true
-app_layer_policy: true
-app_layer_policy_enabled: true
+app_layer_policy:
+  enabled: true
+  configured: true
 {% endhelm %}

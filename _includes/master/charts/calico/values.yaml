@@ -1,4 +1,16 @@
 typha:
   enabled: false
+federation:
+  enabled: false
 network: "none"
 calico_ipam: false
+datastore: kdd
+app_layer_policy:
+  enabled: false
+  configured: false
+
+# TODO: move to helpers
+orch: ""
+elasticsearchType: operator
+rbac: ""
+platform: ""
