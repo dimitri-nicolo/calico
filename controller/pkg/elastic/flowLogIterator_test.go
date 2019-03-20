@@ -203,11 +203,10 @@ func TestElasticFlowLogIteratorWithTwoScrollers(t *testing.T) {
 	g.Expect(results[0].SourceIP).ShouldNot(Equal(results[1].SourceIP), "Both have different source IPs")
 
 	// Order is random. Swap them to make the tests simpler.
-	if results[0].SourceIP == dest_log.SourceIP {
+	if *results[0].SourceIP == *dest_log.SourceIP {
 		results[1], results[0] = results[0], results[1]
 	}
 
-	// TODO random failure
 	g.Expect(results[0].Description).Should(Equal("suspicious IP 1.2.3.4 from list mock connected to hep /dest"))
 	g.Expect(results[1].Description).Should(Equal("net /source connected to suspicious IP 4.5.6.7 from list mock"))
 }
