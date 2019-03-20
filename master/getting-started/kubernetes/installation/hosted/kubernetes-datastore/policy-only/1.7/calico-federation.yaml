@@ -8,6 +8,5 @@ typha:
 federation:
   enabled: true
 app_layer_policy:
-  enabled: false
   configured: true
 {% endhelm %}

@@ -7,6 +7,5 @@ typha:
   enabled: true
 network: ecs
 app_layer_policy:
-  enabled: false
   configured: true
 {% endhelm %}

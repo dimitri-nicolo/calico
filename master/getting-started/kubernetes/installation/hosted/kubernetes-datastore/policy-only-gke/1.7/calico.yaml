@@ -5,6 +5,5 @@ layout: null
 datastore: kdd
 platform: gke
 app_layer_policy:
-  enabled: false
   configured: true
 {% endhelm %}
