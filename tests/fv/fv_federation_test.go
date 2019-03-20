@@ -1,10 +1,11 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 
 package fv_test
 
 import (
 	"context"
 	"fmt"
+	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	"io/ioutil"
 	"os"
 	"time"
@@ -269,7 +270,7 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 
 		// Create the appropriate local Calico client depending on whether this is an etcd or kdd test.
 		if isCalicoEtcdDatastore {
-			localCalicoClient = testutils.GetCalicoClient(localEtcd.IP)
+			localCalicoClient = testutils.GetCalicoClient(apiconfig.EtcdV3, localEtcd.IP, localKubeconfig)
 		} else {
 			localCalicoClient = testutils.GetCalicoKubernetesClient(localKubeconfig)
 		}
