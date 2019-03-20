@@ -125,11 +125,21 @@ type IPSetMember struct {
 	Domain     string
 }
 
+// XXX This goes in libcalico-go-private/selector, but it's declared here for now.
+type IPSetSelectorType int
+
+const (
+	IPSetSelector_None   IPSetSelectorType = 0
+	IPSetSelector_IP     IPSetSelectorType = 1
+	IPSetSelector_Domain IPSetSelectorType = 2
+)
+
 type ipSetData struct {
 	// The selector and named port that this IP set represents.  If the selector is nil then
 	// this IP set represents an unfiltered named port.  If namedPortProtocol == ProtocolNone then
 	// this IP set represents a selector only, with no named port component.
 	selector          selector.Selector
+	selType           IPSetSelectorType
 	namedPortProtocol IPSetPortProtocol
 	namedPort         string
 
@@ -216,7 +226,8 @@ func (idx *SelectorAndNamedPortIndex) OnUpdate(update api.Update) (_ bool) {
 				endpoint.Labels,
 				extractCIDRsFromWorkloadEndpoint(endpoint),
 				endpoint.Ports,
-				profileIDs)
+				profileIDs,
+				nil)
 		} else {
 			log.Debugf("Deleting endpoint %v from NamedPortIndex", key)
 			idx.DeleteEndpoint(key)
@@ -232,7 +243,8 @@ func (idx *SelectorAndNamedPortIndex) OnUpdate(update api.Update) (_ bool) {
 				endpoint.Labels,
 				extractCIDRsFromHostEndpoint(endpoint),
 				endpoint.Ports,
-				profileIDs)
+				profileIDs,
+				nil)
 		} else {
 			log.Debugf("Deleting host endpoint %v from NamedPortIndex", key)
 			idx.DeleteEndpoint(key)
@@ -248,7 +260,7 @@ func (idx *SelectorAndNamedPortIndex) OnUpdate(update api.Update) (_ bool) {
 				extractCIDRsFromNetworkSet(netSet),
 				nil,
 				nil,
-				extractDomainsFromNetworkSet(netset))
+				extractDomainsFromNetworkSet(netSet))
 		} else {
 			log.Debugf("Deleting network set %v from NamedPortIndex", key)
 			idx.DeleteEndpoint(key)
@@ -340,18 +352,19 @@ func extractCIDRsFromNetworkSet(netSet *model.NetworkSet) []ip.CIDR {
 }
 
 func extractDomainsFromNetworkSet(netSet *model.NetworkSet) []string {
-	a := netSets.AllowedEgressDomains
+	a := netSet.AllowedEgressDomains
 	combined := make([]string, 0, len(a))
-	for _, domain = range a {
+	for _, domain := range a {
 		combined = append(combined, domain)
 	}
 	return combined
 }
 
-func (idx *SelectorAndNamedPortIndex) UpdateIPSet(ipSetID string, sel selector.Selector, namedPortProtocol IPSetPortProtocol, namedPort string) {
+func (idx *SelectorAndNamedPortIndex) UpdateIPSet(ipSetID string, sel selector.Selector, selType IPSetSelectorType, namedPortProtocol IPSetPortProtocol, namedPort string) {
 	logCxt := log.WithFields(log.Fields{
 		"ipSetID":           ipSetID,
 		"selector":          sel,
+		"selType":           selType,
 		"namedPort":         namedPort,
 		"namedPortProtocol": namedPortProtocol,
 	})
@@ -380,6 +393,7 @@ func (idx *SelectorAndNamedPortIndex) UpdateIPSet(ipSetID string, sel selector.S
 	// If we get here, we have a new IP set and we need to do a full scan of all endpoints.
 	newIPSetData := &ipSetData{
 		selector:          sel,
+		selType:           selType,
 		namedPort:         namedPort,
 		namedPortProtocol: namedPortProtocol,
 		memberToRefCount:  map[IPSetMember]uint64{},
@@ -472,13 +486,13 @@ func (idx *SelectorAndNamedPortIndex) UpdateEndpointOrSet(
 		}
 		newEndpointData.parents = parents
 	}
-	if len(nets) > 0 {
+	if nets != nil {
 		newEndpointData.nets = nets
 	}
-	if len(ports) > 0 {
+	if ports != nil {
 		newEndpointData.ports = ports
 	}
-	if len(domains) > 0 {
+	if domains != nil {
 		newEndpointData.domains = domains
 	}
 
@@ -677,21 +691,25 @@ func (idx *SelectorAndNamedPortIndex) DeleteParentLabels(parentID string) {
 func (idx *SelectorAndNamedPortIndex) CalculateEndpointContribution(d *endpointData, ipSetData *ipSetData) (contrib []IPSetMember) {
 	if ipSetData.namedPortProtocol != ProtocolNone {
 		// This IP set represents a named port match, calculate the cross product of
-		// matching named ports by IP address.
-		portNumbers := d.LookupNamedPorts(ipSetData.namedPort, ipSetData.namedPortProtocol)
-		for _, namedPort := range portNumbers {
-			for _, addr := range d.nets {
-				contrib = append(contrib, IPSetMember{
-					CIDR:       addr,
-					Protocol:   ipSetData.namedPortProtocol,
-					PortNumber: namedPort,
-				})
+		// matching named ports by IP address or domain.
+		switch ipSetData.selType {
+		case IPSetSelector_IP:
+			portNumbers := d.LookupNamedPorts(ipSetData.namedPort, ipSetData.namedPortProtocol)
+			for _, namedPort := range portNumbers {
+				for _, addr := range d.nets {
+					contrib = append(contrib, IPSetMember{
+						CIDR:       addr,
+						Protocol:   ipSetData.namedPortProtocol,
+						PortNumber: namedPort,
+					})
+				}
 			}
-			for _, domain := range d.domain {
+
+		case IPSetSelector_Domain:
+			for _, domain := range d.domains {
 				contrib = append(contrib, IPSetMember{
-					Protocol:   ipSetData.namedPortProtocol,
-					PortNumber: namedPort,
-					Domains:    domain,
+					Protocol: ipSetData.namedPortProtocol,
+					Domain:   domain,
 				})
 			}
 		}

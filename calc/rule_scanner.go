@@ -82,11 +82,22 @@ type RuleScanner struct {
 	RulesUpdateCallbacks rulesUpdateCallbacks
 }
 
+// XXX This goes in libcalico-go-private/selector, but it's declared here for now.
+type IPSetSelectorType int
+
+const (
+	IPSetSelector_None   IPSetSelectorType = 0
+	IPSetSelector_IP     IPSetSelectorType = 1
+	IPSetSelector_Domain IPSetSelectorType = 2
+)
+
 type IPSetData struct {
 	// The selector and named port that this IP set represents.  To represent an unfiltered named
 	// port, set selector to AllSelector.  If NamedPortProtocol == ProtocolNone then
 	// this IP set represents a selector only, with no named port component.
-	Selector selector.Selector
+	Selector     selector.Selector
+	SelectorType IPSetSelectorType
+
 	// NamedPortProtocol identifies the protocol (TCP or UDP) for a named port IP set.  It is
 	// set to ProtocolNone for a selector-only IP set.
 	NamedPortProtocol labelindex.IPSetPortProtocol
@@ -345,10 +356,11 @@ func ruleToParsedRule(rule *model.Rule) (parsedRule *ParsedRule, allIPSets []*IP
 	//     not (<match-1> or <match-2>)
 	//
 	// we'd need the union of <match-1> and <match-2> rather than the intersection.
-	srcNamedPortIPSets := namedPortsToIPSets(srcNamedPorts, srcSel, namedPortProto)
-	dstNamedPortIPSets := namedPortsToIPSets(dstNamedPorts, dstSel, namedPortProto)
-	notSrcNamedPortIPSets := namedPortsToIPSets(notSrcNamedPorts, srcSel, namedPortProto)
-	notDstNamedPortIPSets := namedPortsToIPSets(notDstNamedPorts, dstSel, namedPortProto)
+	srcNamedPortIPSets := namedPortsToIPSets(srcNamedPorts, srcSel, IPSetDataType_IP, namedPortProto)
+	dstNamedPortIPSets := namedPortsToIPSets(dstNamedPorts, dstSel, IPSetDataType_IP, namedPortProto)
+	notSrcNamedPortIPSets := namedPortsToIPSets(notSrcNamedPorts, srcSel, IPSetDataType_IP, namedPortProto)
+	notDstNamedPortIPSets := namedPortsToIPSets(notDstNamedPorts, dstSel, IPSetDataType_IP, namedPortProto)
+	dstDomainIPSets := namedPortsTOIPsets(rule.DstDomains, dstSel, IPSetDataType_Domain, namedPortProto)
 
 	// Optimization: only include the selectors if we haven't already covered them with a named
 	// port match above.  If we have some named ports then we've already filtered the named port
@@ -364,6 +376,8 @@ func ruleToParsedRule(rule *model.Rule) (parsedRule *ParsedRule, allIPSets []*IP
 
 	notSrcSelIPSets := selectorsToIPSets(notSrcSels)
 	notDstSelIPSets := selectorsToIPSets(notDstSels)
+
+	dstDomainSelIPSets := selectorsToIPSets(dstSel)
 
 	parsedRule = &ParsedRule{
 		Action: rule.Action,
@@ -381,6 +395,7 @@ func ruleToParsedRule(rule *model.Rule) (parsedRule *ParsedRule, allIPSets []*IP
 		DstPorts:             dstNumericPorts,
 		DstNamedPortIPSetIDs: ipSetsToUIDs(dstNamedPortIPSets),
 		DstIPSetIDs:          ipSetsToUIDs(dstSelIPSets),
+		DstDomainIPSetIDs:    rule.AllDstDomainIPSets(),
 
 		ICMPType: rule.ICMPType,
 		ICMPCode: rule.ICMPCode,
@@ -395,7 +410,6 @@ func ruleToParsedRule(rule *model.Rule) (parsedRule *ParsedRule, allIPSets []*IP
 		NotDstNets:              rule.AllNotDstNets(),
 		NotDstPorts:             notDstNumericPorts,
 		NotDstNamedPortIPSetIDs: ipSetsToUIDs(notDstNamedPortIPSets),
-		NotDstDomains:           rule.AllNotDstDomains(),
 		NotDstIPSetIDs:          ipSetsToUIDs(notDstSelIPSets),
 
 		NotICMPType: rule.NotICMPType,
@@ -425,11 +439,12 @@ func ruleToParsedRule(rule *model.Rule) (parsedRule *ParsedRule, allIPSets []*IP
 	allIPSets = append(allIPSets, dstSelIPSets...)
 	allIPSets = append(allIPSets, notSrcSelIPSets...)
 	allIPSets = append(allIPSets, notDstSelIPSets...)
+	allIPSets = append(allIPSets, dstDomainSelIPSets...)
 
 	return
 }
 
-func namedPortsToIPSets(namedPorts []string, positiveSelectors []selector.Selector, proto labelindex.IPSetPortProtocol) []*IPSetData {
+func namedPortsToIPSets(namedPorts []string, positiveSelectors []selector.Selector, IPSetDataType selType, proto labelindex.IPSetPortProtocol) []*IPSetData {
 	var ipSets []*IPSetData
 	if len(positiveSelectors) > 1 {
 		log.WithField("selectors", positiveSelectors).Panic(
@@ -442,6 +457,7 @@ func namedPortsToIPSets(namedPorts []string, positiveSelectors []selector.Select
 	for _, namedPort := range namedPorts {
 		ipSet := IPSetData{
 			Selector:          sel,
+			SelectorType:      selType,
 			NamedPort:         namedPort,
 			NamedPortProtocol: proto,
 		}
@@ -450,11 +466,12 @@ func namedPortsToIPSets(namedPorts []string, positiveSelectors []selector.Select
 	return ipSets
 }
 
-func selectorsToIPSets(selectors []selector.Selector) []*IPSetData {
+func selectorsToIPSets(selectors []selector.Selector, IPSetSelectorType selType) []*IPSetData {
 	var ipSets []*IPSetData
 	for _, s := range selectors {
 		ipSets = append(ipSets, &IPSetData{
-			Selector: s,
+			Selector:     s,
+			SelectorType: selType,
 		})
 	}
 	return ipSets

@@ -39,8 +39,6 @@ func newIPSet(update *proto.IPSetUpdate) *ipSetInfo {
 		s.Type = ipsets.IPSetTypeHashIPPort
 	case proto.IPSetUpdate_NET:
 		s.Type = ipsets.IPSetTypeHashNet
-	case proto.IPSetUpdate_DOMAIN
-		s.Type = ipsets.IPSetTypeDomain
 	default:
 		log.WithField("IPSetType", update.GetType()).Panic("unknown IPSetType")
 	}
@@ -87,8 +85,6 @@ func (s *ipSetInfo) getProtoType() proto.IPSetUpdate_IPSetType {
 		return proto.IPSetUpdate_IP_AND_PORT
 	case ipsets.IPSetTypeHashNet:
 		return proto.IPSetUpdate_NET
-	case ipsets.IPSetTypeDomain:
-		return proto.IPSetUpdate_DOMAIN
 	default:
 		log.WithField("IPSetType", s.Type).Panic("unknown IPSetType")
 	}
