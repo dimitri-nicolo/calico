@@ -1,4 +1,4 @@
-// Copyright 2015-2018 Tigera Inc
+// Copyright (c) 2015-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,7 +23,6 @@ import (
 	"net"
 	"os"
 	"regexp"
-	"runtime"
 	"strings"
 
 	"github.com/containernetworking/cni/pkg/skel"
@@ -170,7 +169,7 @@ func AddIPAM(conf types.NetConf, args *skel.CmdArgs, logger *logrus.Entry) (*cur
 // It also contains IPAM plugin specific logic based on the configured plugin,
 // and is the logical counterpart to AddIPAM.
 func DeleteIPAM(conf types.NetConf, args *skel.CmdArgs, logger *logrus.Entry) error {
-	fmt.Fprint(os.Stderr, "Calico CNI releasing IP address\n")
+	logger.Info("Calico CNI releasing IP address")
 	logger.WithFields(logrus.Fields{"paths": os.Getenv("CNI_PATH"),
 		"type": conf.IPAM.Type}).Debug("Looking for IPAM plugin in paths")
 
@@ -305,7 +304,7 @@ func replaceHostLocalIPAMPodCIDR(logger *logrus.Entry, rawIpamData interface{}, 
 	}
 	subnet, _ := ipamData["subnet"].(string)
 	if strings.EqualFold(subnet, "usePodCidr") {
-		fmt.Fprint(os.Stderr, "Calico CNI fetching podCidr from Kubernetes\n")
+		logger.Info("Calico CNI fetching podCidr from Kubernetes")
 		podCidr, err := getPodCidr()
 		if err != nil {
 			logger.Info("Failed to getPodCidr")
@@ -314,24 +313,24 @@ func replaceHostLocalIPAMPodCIDR(logger *logrus.Entry, rawIpamData interface{}, 
 		logger.WithField("podCidr", podCidr).Info("Fetched podCidr")
 		ipamData["subnet"] = podCidr
 		subnet = podCidr
-		fmt.Fprintf(os.Stderr, "Calico CNI passing podCidr to host-local IPAM: %s\n", podCidr)
+		logger.Infof("Calico CNI passing podCidr to host-local IPAM: %s", podCidr)
 	}
 
-	if runtime.GOOS == "windows" {
-		fmt.Fprint(os.Stderr, "Updating host-local IPAM configuration to reserve IPs for Windows bridge \n")
-		if len(subnet) > 0 {
-			err := UpdateHostLocalIPAMDataForWindows(subnet, ipamData)
-			if err != nil {
-				return err
-			}
-		}
+	err := updateHostLocalIPAMDataForOS(subnet, ipamData)
+	if err != nil {
+		return err
 	}
+
 	return nil
 }
 
 //This function will update host-local Ipam data based on input from cni.conf
-func UpdateHostLocalIPAMDataForWindows(subnet string, ipamData map[string]interface{}) error {
+func updateHostLocalIPAMDataForOS(subnet string, ipamData map[string]interface{}) error {
+	if len(subnet) == 0 {
+		return nil
+	}
 	//Checks whether the ip is valid or not
+	log.Info("Updating host-local IPAM configuration to reserve IPs for Windows bridge.")
 	ip, ipnet, err := net.ParseCIDR(subnet)
 	if err != nil {
 		return err
@@ -580,15 +579,15 @@ func GetIdentifiers(args *skel.CmdArgs, nodename string) (*WEPIdentifiers, error
 	return &epIDs, nil
 }
 
-func GetHandleID(netName string, containerID string, workload string) (string, error) {
+func GetHandleID(netName, containerID, workload string) string {
 	handleID := fmt.Sprintf("%s.%s", netName, containerID)
 	logrus.WithFields(logrus.Fields{
-		"Network":     netName,
-		"ContainerID": containerID,
-		"Workload":    workload,
 		"HandleID":    handleID,
+		"Network":     netName,
+		"Workload":    workload,
+		"ContainerID": containerID,
 	}).Debug("Generated IPAM handle")
-	return handleID, nil
+	return handleID
 }
 
 func CreateClient(conf types.NetConf) (client.Interface, error) {
@@ -686,6 +685,8 @@ func ConfigureLogging(logLevel string) {
 		logrus.SetLevel(logrus.DebugLevel)
 	} else if strings.EqualFold(logLevel, "info") {
 		logrus.SetLevel(logrus.InfoLevel)
+	} else if strings.EqualFold(logLevel, "error") {
+		logrus.SetLevel(logrus.ErrorLevel)
 	} else {
 		// Default level
 		logrus.SetLevel(logrus.WarnLevel)

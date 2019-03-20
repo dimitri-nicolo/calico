@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"time"
 
 	"github.com/containernetworking/cni/pkg/skel"
 	cnitypes "github.com/containernetworking/cni/pkg/types"
@@ -27,6 +28,9 @@ import (
 	cniSpecVersion "github.com/containernetworking/cni/pkg/version"
 	"github.com/projectcalico/cni-plugin/internal/pkg/utils"
 	"github.com/projectcalico/cni-plugin/pkg/types"
+	"github.com/projectcalico/cni-plugin/pkg/upgrade"
+	"github.com/projectcalico/libcalico-go/lib/apiconfig"
+	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/ipam"
 	"github.com/projectcalico/libcalico-go/lib/logutils"
@@ -46,6 +50,7 @@ func Main(version string) {
 	flagSet := flag.NewFlagSet("calico-ipam", flag.ExitOnError)
 
 	versionFlag := flagSet.Bool("v", false, "Display version")
+	upgradeFlag := flagSet.Bool("upgrade", false, "Upgrade from host-local")
 	err := flagSet.Parse(os.Args[1:])
 
 	if err != nil {
@@ -55,6 +60,42 @@ func Main(version string) {
 
 	if *versionFlag {
 		fmt.Println(version)
+		os.Exit(0)
+	}
+
+	// Migration logic
+	if *upgradeFlag {
+		logrus.Info("migrating from host-local to calico-ipam...")
+		ctxt := context.Background()
+
+		// nodename associates IPs to this node.
+		nodename := os.Getenv("KUBERNETES_NODE_NAME")
+		if nodename == "" {
+			logrus.Fatal("KUBERNETES_NODE_NAME not specified, refusing to migrate...")
+		}
+		logCtxt := logrus.WithField("node", nodename)
+
+		// calicoClient makes IPAM calls.
+		cfg, err := apiconfig.LoadClientConfig("")
+		if err != nil {
+			logCtxt.Fatal("failed to load api client config")
+		}
+		cfg.Spec.DatastoreType = apiconfig.Kubernetes
+		calicoClient, err := client.New(*cfg)
+		if err != nil {
+			logCtxt.Fatal("failed to initialize api client")
+		}
+
+		// Perform the migration.
+		for {
+			err := upgrade.Migrate(ctxt, calicoClient, nodename)
+			if err == nil {
+				break
+			}
+			logCtxt.WithError(err).Error("failed to migrate ipam, retrying...")
+			time.Sleep(time.Second)
+		}
+		logCtxt.Info("migration from host-local to calico-ipam complete")
 		os.Exit(0)
 	}
 
@@ -93,10 +134,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 		return fmt.Errorf("error constructing WorkloadEndpoint name: %s", err)
 	}
 
-	handleID, err := utils.GetHandleID(conf.Name, args.ContainerID, epIDs.WEPName)
-	if err != nil {
-		return err
-	}
+	handleID := utils.GetHandleID(conf.Name, args.ContainerID, epIDs.WEPName)
 
 	logger := logrus.WithFields(logrus.Fields{
 		"Workload":    epIDs.WEPName,
@@ -109,18 +147,24 @@ func cmdAdd(args *skel.CmdArgs) error {
 		return err
 	}
 
+	// We attach important attributes to the allocation.
+	attrs := map[string]string{ipam.AttributeNode: nodename}
+	if epIDs.Pod != "" {
+		attrs[ipam.AttributePod] = epIDs.Pod
+		attrs[ipam.AttributeNamespace] = epIDs.Namespace
+	}
+
 	ctx := context.Background()
 	r := &current.Result{}
 	if ipamArgs.IP != nil {
-		fmt.Fprintf(os.Stderr, "Calico CNI IPAM request IP: %v\n", ipamArgs.IP)
+		logger.Infof("Calico CNI IPAM request IP: %v", ipamArgs.IP)
 
-		// The hostname will be defaulted to the actual hostname if conf.Nodename is empty
 		assignArgs := ipam.AssignIPArgs{
 			IP:       cnet.IP{IP: ipamArgs.IP},
 			HandleID: &handleID,
 			Hostname: nodename,
+			Attrs:    attrs,
 		}
-
 		logger.WithField("assignArgs", assignArgs).Info("Assigning provided IP")
 		err := calicoClient.IPAM().AssignIP(ctx, assignArgs)
 		if err != nil {
@@ -161,7 +205,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 			num6 = 1
 		}
 
-		fmt.Fprintf(os.Stderr, "Calico CNI IPAM request count IPv4=%d IPv6=%d\n", num4, num6)
+		logger.Infof("Calico CNI IPAM request count IPv4=%d IPv6=%d", num4, num6)
 
 		v4pools, err := utils.ResolvePools(ctx, calicoClient, conf.IPAM.IPv4Pools, true)
 		if err != nil {
@@ -173,7 +217,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 			return err
 		}
 
-		fmt.Fprintf(os.Stderr, "Calico CNI IPAM handle=%s\n", handleID)
+		logger.Infof("Calico CNI IPAM handle=%s", handleID)
 		var maxBlocks int
 		if conf.WindowsUseSingleNetwork {
 			// When running in single-network mode (for kube-proxy compatibility), limit the
@@ -189,10 +233,11 @@ func cmdAdd(args *skel.CmdArgs) error {
 			IPv4Pools:        v4pools,
 			IPv6Pools:        v6pools,
 			MaxBlocksPerHost: maxBlocks,
+			Attrs:            attrs,
 		}
 		logger.WithField("assignArgs", assignArgs).Info("Auto assigning IP")
 		assignedV4, assignedV6, err := calicoClient.IPAM().AutoAssign(ctx, assignArgs)
-		fmt.Fprintf(os.Stderr, "Calico CNI IPAM assigned addresses IPv4=%v IPv6=%v\n", assignedV4, assignedV6)
+		logger.Infof("Calico CNI IPAM assigned addresses IPv4=%v IPv6=%v", assignedV4, assignedV6)
 		if err != nil {
 			return err
 		}
@@ -251,10 +296,7 @@ func cmdDel(args *skel.CmdArgs) error {
 		return fmt.Errorf("error constructing WorkloadEndpoint name: %s", err)
 	}
 
-	handleID, err := utils.GetHandleID(conf.Name, args.ContainerID, epIDs.WEPName)
-	if err != nil {
-		return err
-	}
+	handleID := utils.GetHandleID(conf.Name, args.ContainerID, epIDs.WEPName)
 
 	logger := logrus.WithFields(logrus.Fields{
 		"Workload":    epIDs.WEPName,
