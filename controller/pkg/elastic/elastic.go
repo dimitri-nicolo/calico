@@ -146,18 +146,18 @@ func (e *Elastic) GetIPSetModified(ctx context.Context, name string) (time.Time,
 }
 
 func (e *Elastic) QueryIPSet(ctx context.Context, name string) (db.SecurityEventIterator, error) {
-	f := func(name string) *elastic.ScrollService {
-		q := elastic.NewTermsQuery(name).TermsLookup(
+	f := func(ipset, field string) *elastic.ScrollService {
+		q := elastic.NewTermsQuery(field).TermsLookup(
 			elastic.NewTermsLookup().
 				Index(IPSetIndex).
 				Type(StandardType).
-				Id(name).
+				Id(ipset).
 				Path("ips"))
 		return e.c.Scroll(FlowLogIndex).SortBy(elastic.SortByDoc{}).Query(q).Size(QuerySize)
 	}
 
 	return &elasticFlowLogIterator{
-		scrollers: map[string]Scroller{"source_ip": f("source_ip"), "dest_ip": f("dest_ip")},
+		scrollers: map[string]Scroller{"source_ip": f(name, "source_ip"), "dest_ip": f(name, "dest_ip")},
 		ctx:       ctx,
 		name:      name,
 	}, nil

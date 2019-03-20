@@ -25,15 +25,15 @@ const eventMapping = `{
             "type": "date",
             "format": "epoch_second"
         },
-		"type": {
+        "type": {
             "type": "keyword"
         },
-		"description": {
-			"type": "keyword"
-		},
-		"severity": {
-			"type": "long"
-		},
+        "description": {
+            "type": "keyword"
+        },
+        "severity": {
+            "type": "long"
+        },
         "flow_log_index": {
             "type": "keyword"
         },
@@ -79,7 +79,7 @@ const eventMapping = `{
         },
         "suspicious_prefix": {
             "type": "keyword"
-        },
+        }
       }   
     }
   }
