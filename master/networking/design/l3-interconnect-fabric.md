@@ -1,7 +1,7 @@
 ---
 title: Calico over IP fabrics
 redirect_from: latest/networking/design/l3-interconnect-fabric
-canonical_url: 'https://docs.projectcalico.org/v3.5/reference/private-cloud/l3-interconnect-fabric'
+canonical_url: 'https://docs.tigera.io/v2.3/reference/private-cloud/l3-interconnect-fabric'
 ---
 
 
@@ -182,8 +182,7 @@ Endpoints
     platforms are constrained by the number of routes they can learn.
     This is usually in range of 10,000's or 100,000's of routes. Route
     aggregation can help, but that is usually dependent on the
-    capabilities of the scheduler used by the orchestration software
-    (*e.g.* OpenStack).
+    capabilities of the scheduler used by the orchestration software.
 
 A deeper discussion of these considerations can be found in the IP
 Fabric Design Considerations\_ appendix.

@@ -1,6 +1,6 @@
 ---
 title: External connectivity
-canonical_url: 'https://docs.projectcalico.org/v3.5/usage/external-connectivity'
+canonical_url: 'https://docs.tigera.io/v2.3/usage/external-connectivity'
 ---
 
 {{site.prodname}} creates a routed network on which your containers look like normal IP
@@ -81,6 +81,6 @@ to discuss your environment.
 ### Orchestrator specific
 
 {{site.prodname}} supports a number of orchestrator specific options for inbound
-connectivity, such as Kubernetes service IPs, or OpenStack floating IPs.
+connectivity, such as Kubernetes service IPs.
 
 Consult the [documentation for your orchestrator]({{site.baseurl}}/{{page.version}}/getting-started/) for more information.

@@ -101,24 +101,11 @@ The Kubernetes API datastore driver reads its configuration from Kubernetes-prov
 > 10 bits is enough for 1024 different values and {{site.prodname}} uses 2 of those for internal purposes, leaving enough for 1022 endpoints on the host.
 {: .alert .alert-info}
 
-
-#### OpenStack-specific configuration
-
-| Configuration parameter | Environment variable | Description  | Schema |
-| ------------------------|--------------------- | ------------ | ------ |
-| `MetadataAddr`          | `FELIX_METADATAADDR` | The IP address or domain name of the server that can answer VM queries for cloud-init metadata. In OpenStack, this corresponds to the machine running nova-api (or in Ubuntu, nova-api-metadata). A value of `none`  (case insensitive) means that Felix should not set up any NAT rule for the metadata path. [Default: `127.0.0.1`]  | `<IPv4-address>`, `<hostname>`, `none` |
-| `MetadataPort`          | `FELIX_METADATAPORT` | The port of the metadata server. This, combined with global.MetadataAddr (if not 'None'), is used to set up a NAT rule, from 169.254.169.254:80 to MetadataAddr:MetadataPort. In most cases this should not need to be changed [Default: `8775`].  | int |
-| `OpenstackRegion`       | `FELIX_OPENSTACKREGION` | In a [multi-region deployment]({{site.baseurl}}/{{page.version}}/networking/openstack/multiple-regions), the name of the region that this Felix is in. [Default: none].  | string\* |
-
-\* If non-empty, the value specified for `OpenstackRegion` must be a
-string of lower case alphanumeric characters or '-', starting and
-ending with an alphanumeric character.
-
 #### Bare metal specific configuration
 
 | Configuration parameter | Environment variable    | Description | Schema |
 | ----------------------- | ----------------------- | ----------- | ------ |
-| `InterfacePrefix`       | `FELIX_INTERFACEPREFIX` | The interface name prefix that identifies workload endpoints and so distinguishes them from host endpoint interfaces. Accepts more than one interface name prefix in comma-delimited format, e.g., `tap,cali`. Note: in environments other than bare metal, the orchestrators configure this appropriately.  For example our Kubernetes and Docker integrations set the `cali` value, and our OpenStack integration sets the `tap` value. [Default: `cali`] | string |
+| `InterfacePrefix`       | `FELIX_INTERFACEPREFIX` | The interface name prefix that identifies workload endpoints and so distinguishes them from host endpoint interfaces. Accepts more than one interface name prefix in comma-delimited format, e.g., `tap,cali`. Note: in environments other than bare metal, the orchestrators configure this appropriately.  For example our Kubernetes and Docker integrations set the `cali` value. [Default: `cali`] | string |
 
 #### {{site.prodname}} specific configuration
 

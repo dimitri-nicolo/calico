@@ -1,7 +1,7 @@
 ---
 title: Route reflectors
 redirect_from: latest/networking/routereflector
-canonical_url: 'https://docs.projectcalico.org/v3.5/usage/routereflector'
+canonical_url: 'https://docs.tigera.io/v2.3/usage/routereflector'
 ---
 
 BGP route reflectors are useful in large scale deployments, to reduce the number of BGP

@@ -5,9 +5,9 @@ canonical_url: https://docs.tigera.io/v2.3/getting-started/bare-metal/installati
 
 You will need to install calicoctl and configure it to connect to your etcd datastore.
 
--  [Install calicoctl as a binary](/{{page.version}}/usage/calicoctl/install#installing-calicoctl-as-a-binary-on-a-single-host).
+-  [Install calicoctl as a binary](../../calicoctl/install#installing-calicoctl-as-a-binary-on-a-single-host).
 
--  [Configure calicoctl to connect to etcd](/{{page.version}}/usage/calicoctl/configure/).
+-  [Configure calicoctl to connect to etcd](../../calicoctl/configure/).
 
 Then you can use any of the following methods to install and run Felix, on each bare metal
 host where you want {{site.prodname}} host protection.

@@ -1,7 +1,7 @@
 ---
 title: Installing calicoctl
 redirect_from: latest/getting-started/calicoctl/install
-canonical_url: 'https://docs.projectcalico.org/v3.5/usage/calicoctl/install'
+canonical_url: 'https://docs.tigera.io/v2.3/usage/calicoctl/install'
 ---
 
 ## About installing calicoctl

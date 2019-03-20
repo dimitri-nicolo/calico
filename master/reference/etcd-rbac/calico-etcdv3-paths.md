@@ -1,7 +1,7 @@
 ---
 title: Calico key and path prefixes
 redirect_from: latest/reference/etcd-rbac/calico-etcdv3-paths
-canonical_url: 'https://docs.projectcalico.org/v3.5/reference/advanced/etcd-rbac/calico-etcdv3-paths'
+canonical_url: 'https://docs.tigera.io/v2.3/reference/advanced/etcd-rbac/calico-etcdv3-paths'
 ---
 
 The paths listed here are the key or path prefixes that a particular {{site.prodname}}
@@ -40,20 +40,6 @@ component needs access to in etcd to function successfully.
 |-------------------------------------------|--------|
 | /calico/ipam/v2/\*                        |   RW   |
 | /calico/resources/v3/projectcalico.org/\* |   RW   |
-
-## OpenStack Calico driver for Neutron
-
-| Path                                      | Access |
-|-------------------------------------------|--------|
-| /calico/ipam/v2/\*                        |   RW   |
-| /calico/resources/v3/projectcalico.org/\* |   RW   |
-
-## OpenStack Calico DHCP agent
-
-| Path                                      | Access |
-|-------------------------------------------|--------|
-| /calico/resources/v3/projectcalico.org/\* |   R    |
-| /calico/dhcp/v1/subnet/\*                 |   R    |
 
 ## calicoctl (read only access)
 

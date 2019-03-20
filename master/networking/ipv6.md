@@ -14,7 +14,6 @@ Support for IPv6 and the procedure for enabling it varies by orchestrator.
 Refer to the section that corresponds to your orchestrator for details.
 
 - [Enabling IPv6 with Kubernetes](#enabling-ipv6-with-kubernetes)
-- [Enabling IPv6 with OpenStack](#enabling-ipv6-with-openstack)
 
 ## Enabling IPv6 with Kubernetes
 
@@ -136,21 +135,3 @@ then the following changes will ensure IPv6 operation.
   --probe=dnsmasq,127.0.0.1:53,kubernetes.default.svc.cluster.local,5,SRV
   ```
   {: .no-select-button}
-
-### Enabling IPv6 support in {{site.prodname}}
-
-In OpenStack, IPv6 connectivity requires defining an IPv6 subnet, in
-each Neutron network, with:
-
--   the IPv6 address range that you want your VMs to use
--   DHCP enabled
--   (from Juno onwards) IPv6 address mode set to DHCPv6 stateful.
-
-We suggest initially configuring both IPv4 and IPv6 subnets in each
-network. This allows handling VM images that support only IPv4 alongside
-those that support both IPv4 and IPv6, and allows a VM to be accessed
-over IPv4 in case this is needed to troubleshoot any issues with its
-IPv6 configuration.
-
-In principle, though, we are not aware of any problems with configuring
-and using IPv6-only networks in OpenStack.
