@@ -1,5 +1,5 @@
-hash: d6b092459024971631aa116784b8cc4fd465412885601d4da9c20e5d2ac5563b
-updated: 2018-11-09T05:06:00.273908849Z
+hash: 3a93431e4d81c3cd8f56f85928f44085863cf6658ee1f9010c3914fc15ff68ac
+updated: 2019-03-20T15:00:56.024255873Z
 imports:
 - name: github.com/docopt/docopt-go
   version: 784ddc588536785e7299f7272f39101f7faccc3f
@@ -13,21 +13,21 @@ imports:
   subpackages:
   - google/rpc
 - name: github.com/gogo/protobuf
-  version: c0656edd0d9eab7c66d1eb0c568f9039345796f7
+  version: 342cbe0a04158f6dcb03ca0079991a51a4248c02
   subpackages:
   - proto
   - sortkeys
   - types
 - name: github.com/golang/protobuf
-  version: b4deda0973fb4c70b50d226b1af49f3da59f5265
+  version: 1e59b77b52bf8e4b449a57e6f79f21226d571845
   subpackages:
   - proto
 - name: github.com/konsorten/go-windows-terminal-sequences
-  version: 5c8c8bd35d3832f5d134ae1e1e375b69a4d25242
+  version: f55edac94c9bbba5d6182a4be46d86a2c9b5b50e
 - name: github.com/lyft/protoc-gen-validate
   version: 930a67cf7ba41b9d9436ad7a1be70a5d5ff6e1fc
 - name: github.com/onsi/gomega
-  version: 7615b9433f86a8bdf29709bf288bc4fd0636a369
+  version: 90e289841c1ed79b7a598a7cd9959750cb5e89e2
   subpackages:
   - format
   - internal/assertion
@@ -41,7 +41,7 @@ imports:
   - matchers/support/goraph/util
   - types
 - name: github.com/projectcalico/libcalico-go
-  version: 5e05209688ae1fb40a2916e40dc17f9c22e7b556
+  version: 1acc1d224f822833c483d9f1f33493079f500946
   repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib/apis/v3
@@ -51,13 +51,13 @@ imports:
   - lib/selector/parser
   - lib/selector/tokenizer
 - name: github.com/sirupsen/logrus
-  version: bcd833dfe83d3cebad139e4a29ed79cb2318bf95
+  version: dae0fa8d5b0c810a8ab733fbd5510c7cae84eca4
 - name: golang.org/x/crypto
   version: 9419663f5a44be8b34ca85f08abc5fe1be11f8a3
   subpackages:
   - ssh/terminal
 - name: golang.org/x/net
-  version: 1c05540f6879653db88113bc4a2b70aec4bd491f
+  version: 66aacef3dd8a676686c7ae3716979581e8b03c47
   subpackages:
   - context
   - html
@@ -116,4 +116,4 @@ imports:
   - pkg/util/validation
 testImports:
 - name: gopkg.in/yaml.v2
-  version: 670d4cfef0544295bc27a114dbac37980d83185a
+  version: cd8b52f8269e0feb286dfeef29f8fe4d5b397e0b
