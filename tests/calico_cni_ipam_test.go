@@ -17,6 +17,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/names"
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/projectcalico/libcalico-go/lib/options"
+	"github.com/satori/go.uuid"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 )

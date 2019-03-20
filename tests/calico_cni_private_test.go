@@ -14,6 +14,7 @@ import (
 	"github.com/projectcalico/cni-plugin/internal/pkg/testutils"
 	"github.com/projectcalico/cni-plugin/internal/pkg/utils"
 	"github.com/projectcalico/cni-plugin/pkg/types"
+	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	k8sconversion "github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/logutils"
@@ -43,12 +44,30 @@ var _ = Describe("CalicoCni Private", func() {
 	}
 
 	BeforeEach(func() {
-		testutils.WipeK8sPods()
-		testutils.WipeEtcd()
+		if os.Getenv("DATASTORE_TYPE") == "kubernetes" {
+			Skip("Don't run non-kubernetes test with Kubernetes Datastore")
+		}
+		testutils.WipeDatastore()
+		// Create the node for these tests. The IPAM code requires a corresponding Calico node to exist.
+		var err error
+		n := api.NewNode()
+		n.Name, err = names.Hostname()
+		Expect(err).NotTo(HaveOccurred())
+		_, err = calicoClient.Nodes().Create(context.Background(), n, options.SetOptions{})
+		Expect(err).NotTo(HaveOccurred())
 	})
+
 	AfterEach(func() {
-		testutils.WipeK8sPods()
-		testutils.WipeEtcd()
+		if os.Getenv("DATASTORE_TYPE") == "kubernetes" {
+			// no cleanup needed.
+			return
+		}
+
+		// Delete the node.
+		name, err := names.Hostname()
+		Expect(err).NotTo(HaveOccurred())
+		_, err = calicoClient.Nodes().Delete(context.Background(), name, options.DeleteOptions{})
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	Describe("Run Calico CNI plugin in K8s mode", func() {
@@ -141,8 +160,30 @@ var _ = Describe("CalicoCNI Private Kubernetes CNI tests", func() {
 	}
 
 	BeforeEach(func() {
-		testutils.WipeK8sPods()
-		testutils.WipeEtcd()
+		if os.Getenv("DATASTORE_TYPE") == "kubernetes" {
+			Skip("Don't run non-kubernetes test with Kubernetes Datastore")
+		}
+		testutils.WipeDatastore()
+		// Create the node for these tests. The IPAM code requires a corresponding Calico node to exist.
+		var err error
+		n := api.NewNode()
+		n.Name, err = names.Hostname()
+		Expect(err).NotTo(HaveOccurred())
+		_, err = calicoClient.Nodes().Create(context.Background(), n, options.SetOptions{})
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	AfterEach(func() {
+		if os.Getenv("DATASTORE_TYPE") == "kubernetes" {
+			// no cleanup needed.
+			return
+		}
+
+		// Delete the node.
+		name, err := names.Hostname()
+		Expect(err).NotTo(HaveOccurred())
+		_, err = calicoClient.Nodes().Delete(context.Background(), name, options.DeleteOptions{})
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	utils.ConfigureLogging("info")

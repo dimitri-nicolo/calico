@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 
 package main_windows_test
 
@@ -84,7 +84,16 @@ var _ = Describe("Kubernetes CNI tests", func() {
 	})
 
 	BeforeEach(func() {
-		testutils.WipeEtcd()
+		testutils.WipeDatastore()
+
+		if os.Getenv("DATASTORE_TYPE") != "kubernetes" {
+			// Since we're not running the startup script, we need to create a Calico Node, as required by our
+			// IPAM plugin.
+			caliNode := api.NewNode()
+			caliNode.Name = hostname
+			caliNode, err := calicoClient.Nodes().Create(context.Background(), caliNode, options.SetOptions{})
+			Expect(err).NotTo(HaveOccurred(), "Failed to create Calico Node resource")
+		}
 	})
 
 	utils.ConfigureLogging("info")
@@ -956,7 +965,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 
 		checkIPAMReservation := func() {
 			// IPAM reservation should still be in place.
-			handleID, _ := utils.GetHandleID(networkName, containerID, workloadName)
+			handleID := utils.GetHandleID(networkName, containerID, workloadName)
 			ipamIPs, err := calicoClient.IPAM().IPsByHandle(context.Background(), handleID)
 			ExpectWithOffset(1, err).NotTo(HaveOccurred(), "error getting IPs")
 			ExpectWithOffset(1, ipamIPs).To(HaveLen(1),
@@ -1014,7 +1023,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 					PodCIDR: "10.0.0.0/24",
 				},
 			})
-			defer clientset.CoreV1().Nodes().Delete(hostname, &metav1.DeleteOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			name = fmt.Sprintf("run%d", rand.Uint32())
@@ -1036,7 +1044,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 
 			// Run the CNI plugin.
 			containerID, result, _, _, _, err = testutils.CreateContainer(netconf, name, testutils.HnsNoneNs, "", nsName)
-			Expect(err).ShouldNot(HaveOccurred())
+			Expect(err).ShouldNot(HaveOccurred(), "Failed to create initial container")
 			log.Debugf("Unmarshalled result from first ADD: %v", result)
 
 			// The endpoint is created in etcd

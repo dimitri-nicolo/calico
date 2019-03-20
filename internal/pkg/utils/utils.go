@@ -324,13 +324,13 @@ func replaceHostLocalIPAMPodCIDR(logger *logrus.Entry, rawIpamData interface{}, 
 	return nil
 }
 
-//This function will update host-local Ipam data based on input from cni.conf
-func updateHostLocalIPAMDataForOS(subnet string, ipamData map[string]interface{}) error {
+// This function will update host-local IPAM data based on input from cni.conf
+func UpdateHostLocalIPAMDataForWindows(subnet string, ipamData map[string]interface{}) error {
 	if len(subnet) == 0 {
 		return nil
 	}
 	//Checks whether the ip is valid or not
-	log.Info("Updating host-local IPAM configuration to reserve IPs for Windows bridge.")
+	logrus.Info("Updating host-local IPAM configuration to reserve IPs for Windows bridge.")
 	ip, ipnet, err := net.ParseCIDR(subnet)
 	if err != nil {
 		return err
