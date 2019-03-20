@@ -48,6 +48,7 @@ spec:
       imagePullSecrets:
         - name: cnx-pull-secret
       initContainers:
+{{- if ne .Values.network "ecs" }}
 {{- if and (eq .Values.network "calico") (eq .Values.datastore "kdd") }}
         # This container performs upgrade from host-local IPAM to calico-ipam.
         # It can be deleted if this is a fresh installation, or if you have already
@@ -127,6 +128,7 @@ spec:
                 configMapKeyRef:
                   name: {{include "variant_name" . | lower}}-config
                   key: veth_mtu
+{{- endif }}
             # Prevents the container from sleeping forever.
             - name: SLEEP
               value: "false"
