@@ -20,7 +20,7 @@ import:
   - daemon
 - package: github.com/projectcalico/cni-plugin
   repo: git@github.com:tigera/cni-plugin-private.git
-  version: 3fe324ad1803ebef0c7ac92aef7f7a2ac6fefa50
+  version: 4d0dfaac7dd4991b8894070379f2985dbe2bc99f
 - package: github.com/projectcalico/libcalico-go
   repo: git@github.com:tigera/libcalico-go-private.git
   version: 1acc1d224f822833c483d9f1f33493079f500946

@@ -293,7 +293,7 @@ imports:
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
 - name: github.com/projectcalico/cni-plugin
-  version: 3fe324ad1803ebef0c7ac92aef7f7a2ac6fefa50
+  version: 4d0dfaac7dd4991b8894070379f2985dbe2bc99f
   repo: git@github.com:tigera/cni-plugin-private.git
   subpackages:
   - internal/pkg/azure
