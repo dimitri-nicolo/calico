@@ -146,7 +146,8 @@ func (e *Elastic) GetIPSetModified(ctx context.Context, name string) (time.Time,
 
 	switch createdAt.(type) {
 	case string:
-		return dateparse.ParseAny(createdAt.(string))
+		fmt.Println(createdAt)
+		return dateparse.ParseIn(createdAt.(string), time.UTC)
 	default:
 		return time.Time{}, fmt.Errorf("Unexpected type for %#v", createdAt)
 	}

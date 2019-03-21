@@ -71,11 +71,11 @@ func TestElastic_GetIPSetModified(t *testing.T) {
 
 	tm, err := e.GetIPSetModified(ctx, "test")
 	g.Expect(err).ShouldNot(HaveOccurred(), "Proper response")
-	g.Expect(tm).Should(Equal(dateparse.MustParse("2019-03-18T12:29:18.590008-03:00")))
+	g.Expect(tm).Should(BeTemporally("==", dateparse.MustParse("2019-03-18T12:29:18.590008-03:00")))
 
 	tm, err = e.GetIPSetModified(ctx, "test2")
 	g.Expect(err).ShouldNot(HaveOccurred(), "String integer time")
-	g.Expect(tm).Should(Equal(dateparse.MustParse("2019-03-20T14:40:52-03:00")))
+	g.Expect(tm).Should(BeTemporally("==", dateparse.MustParse("2019-03-20T14:40:52-03:00")))
 
 	tm, err = e.GetIPSetModified(ctx, "test3")
 	g.Expect(err).ShouldNot(HaveOccurred(), "Missing source")
