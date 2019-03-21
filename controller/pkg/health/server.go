@@ -3,6 +3,7 @@
 package health
 
 import (
+	"context"
 	"errors"
 	"net"
 	"net/http"
@@ -18,7 +19,7 @@ type Server struct {
 }
 
 type Pinger interface {
-	Ping()
+	Ping(context.Context) error
 }
 
 type Readier interface {
@@ -30,7 +31,11 @@ type liveness struct {
 }
 
 func (l *liveness) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	l.pinger.Ping()
+	err := l.pinger.Ping(r.Context())
+	if err != nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		return
+	}
 	w.WriteHeader(http.StatusOK)
 }
 

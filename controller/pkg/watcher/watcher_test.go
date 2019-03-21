@@ -7,6 +7,7 @@ import (
 	"errors"
 	"net/http"
 	"testing"
+	"time"
 
 	. "github.com/onsi/gomega"
 	v32 "github.com/projectcalico/libcalico-go/lib/apis/v3"
@@ -806,21 +807,30 @@ func TestWatcher_restartPuller_notExists(t *testing.T) {
 func TestWatcher_Ping(t *testing.T) {
 	RegisterTestingT(t)
 
+	ctx, cancel := context.WithTimeout(context.TODO(), time.Minute)
+	defer cancel()
+
 	gtf := &mock.GlobalThreatFeedInterface{}
 	uut := NewWatcher(nil, nil, gtf, nil, testClient, nil, nil, nil)
 
-	var done bool
-	go func() {
-		uut.Ping()
-		done = true
-	}()
-	Consistently(func() bool { return done }).Should(BeFalse())
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	err := uut.Run(ctx)
-	Expect(err).ToNot(HaveOccurred())
-	Eventually(func() bool { return done }).Should(BeTrue())
+	Expect(err).ShouldNot(HaveOccurred())
+
+	err = uut.Ping(ctx)
+	Expect(err).ShouldNot(HaveOccurred())
+}
+
+func TestWatcher_PingFail(t *testing.T) {
+	RegisterTestingT(t)
+
+	ctx, cancel := context.WithTimeout(context.TODO(), time.Millisecond)
+	defer cancel()
+
+	gtf := &mock.GlobalThreatFeedInterface{}
+	uut := NewWatcher(nil, nil, gtf, nil, testClient, nil, nil, nil)
+
+	err := uut.Ping(ctx)
+	Expect(err).Should(MatchError(context.DeadlineExceeded), "Ping times out")
 }
 
 func TestWatcher_Ready(t *testing.T) {

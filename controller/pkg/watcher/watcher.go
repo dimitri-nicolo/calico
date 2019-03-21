@@ -319,10 +319,16 @@ func (s *watcher) listFeedWatchers() []*feedWatcher {
 }
 
 // Ping is used to ensure the watcher's main loop is running and not blocked.
-func (s *watcher) Ping() {
+func (s *watcher) Ping(ctx context.Context) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+
 	// Since this channel is unbuffered, this will block if the main loop is not
 	// running, or has itself blocked.
-	s.ping <- struct{}{}
+	case s.ping <- struct{}{}:
+		return nil
+	}
 }
 
 // Ready determines whether we are watching GlobalThreatFeeds and they are all

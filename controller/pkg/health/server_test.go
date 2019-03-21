@@ -3,6 +3,7 @@
 package health
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -12,8 +13,8 @@ import (
 
 type testPinger struct{}
 
-func (p testPinger) Ping() {
-	return
+func (p testPinger) Ping(context.Context) error {
+	return nil
 }
 
 type testReadier struct {
