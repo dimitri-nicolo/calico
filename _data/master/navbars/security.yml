@@ -76,6 +76,8 @@ toc:
       path: /security/logs/configure-elastic
     - title: Archiving logs to S3
       path: /security/logs/elastic/s3-archive
+    - title: Archiving logs to syslog
+      path: /security/logs/elastic/syslog
     - title: Filtering out flow logs
       path: /security/logs/elastic/filtering
   - title: iptables

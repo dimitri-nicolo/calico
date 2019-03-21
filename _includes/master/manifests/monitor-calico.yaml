@@ -1,13 +1,3 @@
-{{- /*
-monitor-calico.yaml acccepts the following include flags:
-
-| Name          | Accepted Values             |
-|---------------|-----------------------------|
-| secure_es     | true, false                 |
-| elasticsearch | operator, external          |
-| platform      | gke, <unset>                |
-
-*/ -}}
 ---
 # This manifest includes the following component versions:
 #   quay.io/prometheus/prometheus:{{.Values.prometheus.tag}}
@@ -25,7 +15,7 @@ metadata:
   namespace: calico-monitoring
 data:
   # The name of the cluster.  This field is used as part of the index name of Elasticsearch logs, and is intended
-  # to allow multiple clusters to share one Elasticsearch cluster.  The value of this field must match that of 
+  # to allow multiple clusters to share one Elasticsearch cluster.  The value of this field must match that of
   # tigera.cnx-manager.cluster-name in tigera-cnx-manager-config.
   tigera.elasticsearch.cluster-name: "cluster"
   # The number of shards for index tigera_secure_ee_flows.
@@ -526,6 +516,58 @@ spec:
                   name: tigera-s3-archiving
                   key: s3.flush-interval
                   optional: true
+            - name: SYSLOG_FLOW_LOG
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-syslog-archiving
+                  key: flow-logs
+                  optional: true
+            - name: SYSLOG_AUDIT_LOG
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-syslog-archiving
+                  key: audit-logs
+                  optional: true
+            - name: SYSLOG_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-syslog-archiving
+                  key: host
+                  optional: true
+            - name: SYSLOG_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-syslog-archiving
+                  key: port
+                  optional: true
+            - name: SYSLOG_PROTOCOL
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-syslog-archiving
+                  key: protocol
+                  optional: true
+            - name: SYSLOG_FLUSH_INTERVAL
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-syslog-archiving
+                  key: flush-interval
+                  optional: true
+            - name: SYSLOG_TLS
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-syslog-archiving
+                  key: tls
+                  optional: true
+            - name: SYSLOG_VERIFY_MODE
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-syslog-archiving
+                  key: verify_mode
+                  optional: true
+            - name: SYSLOG_HOSTNAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
 {{- if eq .Values.orch "openshift" }}
           securityContext:
             privileged: true
@@ -540,6 +582,9 @@ spec:
             - name: elastic-ca-cert-volume
               mountPath: /etc/fluentd/elastic
 {{- end }}
+            - name: syslog-config
+              mountPath: /etc/fluentd/syslog/ca.pem
+              subPath: ca
           readinessProbe:
             exec:
               command:
@@ -570,6 +615,11 @@ spec:
           configMap:
             name: elastic-ca-config
 {{- end }}
+        - name: syslog-config
+          configMap:
+            name: tigera-syslog-archiving
+            defaultMode: 420
+            optional: true
 ---
 
 apiVersion: batch/v1beta1
@@ -597,7 +647,7 @@ spec:
             - key: node-role.kubernetes.io/master
               effect: NoSchedule
           imagePullSecrets:
-            - name: cnx-pull-secret      
+            - name: cnx-pull-secret
           containers:
             - name: tigera-es-curator
               image: {{.Values.imageRegistry}}{{.Values.esCurator.image}}:{{.Values.esCurator.tag}}
@@ -689,32 +739,32 @@ spec:
         env:
 {{- if .Values.secure_es }}
           - name: ELASTIC_HOST
-            valueFrom: 
+            valueFrom:
               configMapKeyRef:
                 name: tigera-es-proxy
                 key: elasticsearch.backend.host
           - name: ELASTIC_PORT
-            valueFrom: 
+            valueFrom:
               configMapKeyRef:
                 name: tigera-es-proxy
                 key: elasticsearch.backend.port
           - name: KIBANA_HOST
-            valueFrom: 
+            valueFrom:
               configMapKeyRef:
                 name: tigera-es-proxy
                 key: kibana.backend.host
           - name: KIBANA_PORT
-            valueFrom: 
+            valueFrom:
               configMapKeyRef:
                 name: tigera-es-proxy
                 key: kibana.backend.port
           - name: USER
-            valueFrom: 
+            valueFrom:
               secretKeyRef:
                 name: elastic-ee-installer
                 key: username
           - name: PASSWORD
-            valueFrom: 
+            valueFrom:
               secretKeyRef:
                 name: elastic-ee-installer
                 key: password
@@ -731,13 +781,13 @@ spec:
           - name: ELASTIC_HOST
             value: elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local
           - name: ELASTIC_PORT
-            value: "9200" 
+            value: "9200"
           - name: KIBANA_HOST
-            value: kibana-tigera-elasticsearch.calico-monitoring.svc.cluster.local 
+            value: kibana-tigera-elasticsearch.calico-monitoring.svc.cluster.local
           - name: KIBANA_PORT
-            value: "80" 
+            value: "80"
           - name: ELASTIC_SCHEME
-            value: "http" 
+            value: "http"
           - name: KIBANA_SCHEME
             value: "http"
           - name: START_XPACK_TRIAL
@@ -803,22 +853,22 @@ spec:
         env:
 {{- if .Values.secure_es }}
           - name: ELASTIC_HOST
-            valueFrom: 
+            valueFrom:
               configMapKeyRef:
                 name: tigera-es-proxy
                 key: elasticsearch.backend.host
           - name: ELASTIC_PORT
-            valueFrom: 
+            valueFrom:
               configMapKeyRef:
                 name: tigera-es-proxy
                 key: elasticsearch.backend.port
           - name: USER
-            valueFrom: 
+            valueFrom:
               secretKeyRef:
                 name: elastic-ee-intrusion-detection
                 key: username
           - name: PASSWORD
-            valueFrom: 
+            valueFrom:
               secretKeyRef:
                 name: elastic-ee-intrusion-detection
                 key: password
@@ -835,9 +885,9 @@ spec:
           - name: ELASTIC_HOST
             value: elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local
           - name: ELASTIC_PORT
-            value: "9200" 
+            value: "9200"
           - name: ELASTIC_SCHEME
-            value: "http" 
+            value: "http"
 {{- end }}
 ---
 
@@ -855,7 +905,7 @@ spec:
 
 {{- if eq .Values.elasticsearchType "operator" }}
 ---
-# Allow access to Elasticsearch client nodes from Kibana, fluentd, and the 
+# Allow access to Elasticsearch client nodes from Kibana, fluentd, and the
 # intrusion dection installer
 apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
