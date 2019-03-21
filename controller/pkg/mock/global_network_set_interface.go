@@ -3,8 +3,8 @@
 package mock
 
 import (
-	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
+	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
 )
@@ -15,6 +15,8 @@ type GlobalNetworkSetInterface struct {
 	CreateError      error
 	GetError         error
 	UpdateError      error
+	WatchError       error
+	W                *Watch
 }
 
 func (m *GlobalNetworkSetInterface) Create(gns *v3.GlobalNetworkSet) (*v3.GlobalNetworkSet, error) {
@@ -53,7 +55,14 @@ func (m *GlobalNetworkSetInterface) List(opts v1.ListOptions) (*v3.GlobalNetwork
 }
 
 func (m *GlobalNetworkSetInterface) Watch(opts v1.ListOptions) (watch.Interface, error) {
-	return nil, m.Error
+	if m.WatchError == nil {
+		if m.W == nil {
+			m.W = &Watch{make(chan watch.Event)}
+		}
+		return m.W, nil
+	} else {
+		return nil, m.WatchError
+	}
 }
 
 func (m *GlobalNetworkSetInterface) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v3.GlobalNetworkSet, err error) {
