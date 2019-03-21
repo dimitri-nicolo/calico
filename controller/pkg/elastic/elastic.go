@@ -98,7 +98,6 @@ func (e *Elastic) GetIPSet(ctx context.Context, name string) (db.IPSetSpec, erro
 	var doc map[string]interface{}
 	err = json.Unmarshal(*res.Source, &doc)
 	if err != nil {
-		fmt.Printf("%s\n", string(*res.Source))
 		return nil, err
 	}
 	i, ok := doc["ips"]
@@ -146,7 +145,6 @@ func (e *Elastic) GetIPSetModified(ctx context.Context, name string) (time.Time,
 
 	switch createdAt.(type) {
 	case string:
-		fmt.Println(createdAt)
 		return dateparse.ParseIn(createdAt.(string), time.UTC)
 	default:
 		return time.Time{}, fmt.Errorf("Unexpected type for %#v", createdAt)
