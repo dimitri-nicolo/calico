@@ -111,7 +111,7 @@ equipped with {{site.prodname}}.
 
 **[Experiment with non-admin users and the {{site.prodname}} manager](/{{page.version}}/reference/cnx/rbac-tiered-policies)**
 
-**[Enable audit logs for Kubernetes `NetworkPolicy` and send them to Elasticsearch](/{{page.version}}/usage/logs/elastic/ee-audit#enabling-auditing-for-other-resources)**
+**[Enable audit logs for Kubernetes `NetworkPolicy` and send them to Elasticsearch](/{{page.version}}/security/logs/elastic/ee-audit#enabling-auditing-for-other-resources)**
 
 **[Secure a simple application using the Kubernetes `NetworkPolicy` API](tutorials/simple-policy)**
 
@@ -119,4 +119,4 @@ equipped with {{site.prodname}}.
 
 **[Create a user interface that shows blocked and allowed connections in real time](tutorials/stars-policy/)**
 
-**[Install and configure calicoctl](/{{page.version}}/usage/calicoctl/install)**
+**[Install and configure calicoctl](/{{page.version}}/getting-started/calicoctl/install)**

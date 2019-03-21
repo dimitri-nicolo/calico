@@ -157,7 +157,7 @@ also have write access to update `Endpoints`.
 The federation controller is disabled by default if `ENABLED_CONTROLLERS` is not explicitly specified.
 
 This controller is valid for all {{site.prodname}} datastore types. For more details refer to the
-[Configuring federated services](/{{page.version}}/usage/federation/services-controller) usage guide.
+[Configuring federated services](/{{page.version}}/networking/federation/services-controller) usage guide.
 
 [in-cluster-config]: https://kubernetes.io/docs/tasks/access-application-cluster/access-cluster/#accessing-the-api-from-a-pod
 [kubeconfig]: https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/

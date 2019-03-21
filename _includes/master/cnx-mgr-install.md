@@ -126,8 +126,8 @@
 {% endif %}
 
    > **Note**: If you are upgrading from {{site.prodname}} v2.2 or earlier you will need to make some modifications prior
-   > to upgrade to ensure RBAC behavior for tiered policy is unchanged. Please refer to the instructions in the comments for 
-   > `ClusterRole "ee-calico-tiered-policy-passthru"` in the `cnx.yaml` manifest, or the 
+   > to upgrade to ensure RBAC behavior for tiered policy is unchanged. Please refer to the instructions in the comments for
+   > `ClusterRole "ee-calico-tiered-policy-passthru"` in the `cnx.yaml` manifest, or the
    > [Configuring {{site.prodname}} RBAC]({{site.url}}/{{page.version}}/reference/cnx/rbac-tiered-policies) documentation
    > for more details.
    {: .alert .alert-info}
@@ -216,9 +216,9 @@
      ```
 
    - **kops deployments**
-     
+
      Run the following command on the master node.
-     
+
      ```bash
      kubectl create secret generic cnx-manager-tls \
      --from-file=cert=/srv/kubernetes/server.cert \
@@ -229,7 +229,7 @@
 
      > **Note**: Web browsers will warn end users about self-signed certificates.
      > To stop the warnings by using valid certificates
-     > instead, refer to [{{site.prodname}} Manager connections]({{site.url}}/{{page.version}}/usage/encrypt-comms#{{site.prodnamedash}}-manager-connections).
+     > instead, refer to [{{site.prodname}} Manager connections]({{site.url}}/{{page.version}}/security/comms/crypto-auth#{{site.prodnamedash}}-manager-connections).
      {: .alert .alert-info}
 
 1. Apply the manifest to install the {{site.prodname}} Manager and the {{site.prodname}} API server.
@@ -291,7 +291,7 @@
 1. Grant permission to access the {{site.prodname}} Manager to users in your cluster. Issue one of the following
    commands, replacing `<USER>` with the name of the user you wish to grant access.
 
-   The ClusterRole `tigera-manager-user` grants permission to use the {{site.prodname}} Manager UI, view flow 
+   The ClusterRole `tigera-manager-user` grants permission to use the {{site.prodname}} Manager UI, view flow
    logs, audit logs, and network statistics, and access the default policy tier.
 
    ```
@@ -304,7 +304,7 @@
 {%- endif %}
    ```
 
-   The ClusterRole `network-admin` grants permission to use the {{site.prodname}} Manager UI, view flow 
+   The ClusterRole `network-admin` grants permission to use the {{site.prodname}} Manager UI, view flow
    logs, audit logs, and network statistics, and administer all network policies and tiers.
 
    ```
@@ -316,5 +316,5 @@
      --user=<USER>
 {%- endif %}
    ```
-   
+
    To grant access to additional tiers, or create your own roles consult the [RBAC documentation]({{site.url}}/{{page.version}}/reference/cnx/rbac-tiered-policies){:target="_blank"}.

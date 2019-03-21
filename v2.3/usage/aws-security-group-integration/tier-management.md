@@ -1,6 +1,6 @@
 ---
 title: Managing the tiers associated with security group integration
-canonical_url: https://docs.tigera.io/master/usage/aws-security-group-integration/tier-management  
+canonical_url: https://docs.tigera.io/v2.3/usage/aws-security-group-integration/tier-management
 ---
 
 
@@ -17,7 +17,7 @@ introduces three additional tiers: `sg-remote`, `sg-local`, and `metadata`.
 | `sg-local`  | 106    | AWS SG integration feature |
 | `metadata`  | 107    | AWS SG integration feature |
 
-The tiers above and the network policies in them should not be 
+The tiers above and the network policies in them should not be
 modified since they are essential for proper functioning of {{site.prodname}}.
 In addition, we recommend installing customer-specific tiers _after_ the above
 tiers, i.e. with order > 107.
@@ -25,9 +25,9 @@ tiers, i.e. with order > 107.
 In order to avoid accidentally modifying the above tiers and associated
 network policies, the best practice is to restrict non-admin users' ability to
 view and modify the above tiers.
-Although [RBAC for tiered policies](/{{page.version}}/reference/cnx/rbac-tiered-policies) 
+Although [RBAC for tiered policies](/{{page.version}}/reference/cnx/rbac-tiered-policies)
 does not allow you to hide specific tiers from non-admin users, it is possible
-to display only a subset of tiers in the {{site.prodname}} UI. 
+to display only a subset of tiers in the {{site.prodname}} UI.
 
 For an example of how to display only a subset of tiers in the {{site.prodname}} UI, see
 [displaying only the net-sec tier](/{{page.version}}/reference/cnx/rbac-tiered-policies#displaying-only-the-net-sec-tier).

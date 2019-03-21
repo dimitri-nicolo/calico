@@ -9,7 +9,7 @@ access to {{site.prodname}} resources using Kubernetes RBAC
 Authorization APIs.
 
 If you are upgrading from a pre-v2.3 release of {{site.prodname}}, or you want to maintain the
-pre-v2.3 RBAC behavior, please refer to the [Upgrading from a pre-v2.3 release of {{site.prodname}}](/{{page.version}}/getting-started/kubernetes/upgrade/upgrade-tsee#upgrading-pre23)
+pre-v2.3 RBAC behavior, please refer to the [Upgrading from a pre-v2.3 release of {{site.prodname}}](/{{page.version}}/maintenance/kubernetes-upgrade-tsee#upgrading-pre23)
 guide.
 
 ### Policy and tier RBAC
@@ -130,8 +130,8 @@ namespace, and to provide read-only access for all other tiers.
    kubectl apply -f min-ui-user-rbac.yaml
    ```
 
-The roles and bindings in this file provide a minimum starting point for setting up RBAC for your users according to your 
-specific security requirements. 
+The roles and bindings in this file provide a minimum starting point for setting up RBAC for your users according to your
+specific security requirements.
 
 ##### UI user can view all policies and can modify policies in the default namespace and tier
 
@@ -151,7 +151,7 @@ specific security requirements.
    ```
 
 The roles and bindings in this file provide the permissions to read all policies across all tiers and to fully manage
-policies in the default tier and default namespace. This file includes the minimum required `ClusterRole` and `ClusterRoleBinding` 
+policies in the default tier and default namespace. This file includes the minimum required `ClusterRole` and `ClusterRoleBinding`
 definitions for all UI users (see `min-ui-user-rbac.yaml` above).
 
 ### <a name="examples"></a>Example fine-grained permissions

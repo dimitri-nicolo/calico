@@ -80,12 +80,6 @@ toc:
       path: /security/logs/elastic/filtering
   - title: iptables
     path: /security/logs/iptables
-  - title: Component
-    section:
-    - title: Overview
-      path: /security/logs/component
-    - title: Logging
-      path: /security/logs/troubleshooting
 - title: Metrics
   section:
   - title: Overview

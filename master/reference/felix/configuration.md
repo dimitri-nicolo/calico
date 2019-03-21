@@ -171,7 +171,7 @@ When the reporting of denied packet metrics is enabled, Felix keeps counts of
 recently denied packets and publishes these as Prometheus metrics on the port
 configured by the `PrometheusReporterPort` setting.  Please
 see the
-[Metrics]({{site.baseurl}}/{{page.version}}/usage/metrics/metrics) section for
+[Metrics]({{site.baseurl}}/{{page.version}}/security/metrics/metrics) section for
 more details.
 
 Note that denied packet metrics are independent of the DropActionOverride

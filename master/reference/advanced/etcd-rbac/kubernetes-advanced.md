@@ -38,7 +38,7 @@ components listed above and links to their detailed configuration pages:
 - [cni-plugin]({{site.baseurl}}/{{page.version}}/reference/cni-plugin/configuration)
 - [{{site.prodname}} Kubernetes controllers]({{site.baseurl}}/{{page.version}}/reference/kube-controllers/configuration)
 - [{{site.nodecontainer}}]({{site.baseurl}}/{{page.version}}/reference/node/configuration)
-- [calicoctl](/{{page.version}}/usage/calicoctl/configure/)
+- [calicoctl](/{{page.version}}/getting-started/calicoctl/configure/)
 
 Below are examples and suggestions when using a hosted {{site.prodname}} install where
 the {{site.prodname}} components are launched through a Kubernetes manifest file, this

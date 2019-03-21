@@ -60,7 +60,7 @@ Identity to provide discovery of remote pods. It extends the standard Kubernetes
 provide federation of [Kubernetes endpoints](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.10/#endpoints-v1-core) across all of the clusters.
 
 Configuration for this feature is also through the [Remote Cluster Configuration](/{{page.version}}/reference/calicoctl/resources/remoteclusterconfiguration)
-resource. In addition, a [service annotation](/{{page.version}}/usage/federation/services-controller) is used to configure
+resource. In addition, a [service annotation](/{{page.version}}/networking/federation/services-controller) is used to configure
 a federated service.
 
 > **Note**: The controller always uses the pod IP for the service endpoints even for pods in remote clusters,
@@ -73,7 +73,7 @@ a federated service.
 
 The `calicoq` command line tool will display the endpoints from remote clusters provided that the files specified
 in the Remote Cluster Configuration resources are also accessible to `calicoq`, using the same file path.
-[Running `calicoq` as a pod on the local cluster](/{{page.version}}/usage/calicoq/#installing-calicoq-as-a-kubernetes-pod)
+[Running `calicoq` as a pod on the local cluster](/{{page.version}}/getting-started/calicoq/#installing-calicoq-as-a-kubernetes-pod)
 is the simplest way to ensure it has access to the correct configuration.
 
 At this time, neither the {{site.prodname}} Manager nor `calicoctl` can be used to view endpoints from remote clusters.

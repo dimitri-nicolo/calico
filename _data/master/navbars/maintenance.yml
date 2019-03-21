@@ -7,9 +7,7 @@ toc:
 - title: Upgrading
   section:
   - title: Kubernetes
-    path: /maintenance/kubernetes-upgrade
-  - title: OpenStack
-    path: /maintenance/openstack-upgrade
+    path: /maintenance/kubernetes-upgrade-tsee
 - title: Decommissioning a node
   path: /maintenance/decommissioning-a-node
 - title: Component logs

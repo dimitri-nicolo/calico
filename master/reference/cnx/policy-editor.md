@@ -69,7 +69,7 @@ to update a tier or create tiers allows that user to place their tier first
 and take control before other policy.
 
 The ability to manage NetworkPolicy and GlobalNetworkPolicy in the Web UI requires GET access to any tier
-the user can view/manage, plus the required access to the tiered policy resources. See 
+the user can view/manage, plus the required access to the tiered policy resources. See
 [Configuring {{site.prodname}} RBAC]({{site.url}}/{{page.version}}/reference/cnx/rbac-tiered-policies)
 for more details and example configurations.
 
@@ -78,7 +78,7 @@ for more details and example configurations.
 Policies created by the orchestrator integration are
 created in this tier, such as [Kubernetes network policy resources](https://kubernetes.io/docs/concepts/services-networking/network-policies/).
 
-Kubernetes resources should be managed directly, rather than modifying the Calico policies created by the 
+Kubernetes resources should be managed directly, rather than modifying the Calico policies created by the
 controller.
 
 ## Secure HTTPS
@@ -87,5 +87,5 @@ The {{site.prodname}} Manager Web UI uses HTTPS to securely access the {{site.pr
 Kubernetes and {{site.prodname}} API servers over TLS - where 'securely' means that these
 communications are encrypted and that the browser can be sure that it is
 speaking to those servers.  The web browser should display `Secure` in the
-address bar, to indicate this. See [{{site.prodname}} Manager connections](../../usage/encrypt-comms#{{site.prodnamedash}}-manager-connections)
+address bar, to indicate this. See [{{site.prodname}} Manager connections](../../security/comms/crypto-auth#{{site.prodnamedash}}-manager-connections)
 for more information.

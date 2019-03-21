@@ -1,7 +1,6 @@
 ---
 title: Assigning IP addresses based on topology
-redirect_from: latest/networking/assigning-ip-addresses-topology
-canonical_url: https://docs.tigera.io/v2.3/usage/assigning-ip-addresses-topology
+canonical_url: ""
 ---
 
 ## About IP address assignment

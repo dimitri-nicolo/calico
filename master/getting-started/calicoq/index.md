@@ -23,6 +23,6 @@ corresponds to your desired deployment.
 
 **Next step**:
 
-[Configure `calicoq` to connect to your datastore](/{{page.version}}/usage/calicoq/configure/).
+[Configure `calicoq` to connect to your datastore](/{{page.version}}/getting-started/calicoq/configure/).
 
 {% include {{page.version}}/ctl-container-install.md cli="calicoq" %}

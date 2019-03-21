@@ -1,5 +1,5 @@
 ---
-redirect_to: /master/usage/calicoctl/configure/etcd
+redirect_to: /v2.3/usage/calicoctl/configure/etcd
 no_canonical: true
 ---
 
