@@ -1,0 +1,5 @@
+FROM scratch
+
+ADD bin/config-snapshotter-amd64 /config-snapshotter
+WORKDIR /
+ENTRYPOINT ["/config-snapshotter"]
