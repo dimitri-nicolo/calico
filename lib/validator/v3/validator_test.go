@@ -18,13 +18,13 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	k8sv1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	apiv1 "github.com/projectcalico/libcalico-go/lib/apis/v1"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/ipip"
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
-	"github.com/projectcalico/libcalico-go/lib/validator/v3"
+	v3 "github.com/projectcalico/libcalico-go/lib/validator/v3"
 )
 
 func intptr(num int) *int {
@@ -2301,6 +2301,72 @@ func init() {
 				},
 			},
 			false,
+		),
+
+		// GlobalReportType
+		Entry("Disallow GlobalReportType with invalid k8s name",
+			&api.GlobalReportType{
+				ObjectMeta: v1.ObjectMeta{Name: "~grt"},
+				Spec: api.ReportTypeSpec{
+					UISummaryTemplate: api.ReportTemplate{
+						Name:     "Summary",
+						Template: "{{ .Great }} Summary Report",
+					},
+				},
+			},
+			false,
+		),
+		Entry("Allow GlobalReportType with valid k8s name",
+			&api.GlobalReportType{
+				ObjectMeta: v1.ObjectMeta{Name: "grt"},
+				Spec: api.ReportTypeSpec{
+					UISummaryTemplate: api.ReportTemplate{
+						Name:     "Summary",
+						Template: "{{ .Great }} Summary Report",
+					},
+				},
+			},
+			true,
+		),
+
+		// GlobalReport
+		Entry("disallow GlobalReport with invalid k8s name",
+			&api.GlobalReport{
+				ObjectMeta: v1.ObjectMeta{Name: "~gr"},
+				Spec: api.ReportSpec{
+					ReportType: "Summary",
+				},
+			},
+			false,
+		),
+		Entry("allow GlobalReport with valid k8s name",
+			&api.GlobalReport{
+				ObjectMeta: v1.ObjectMeta{Name: "gr"},
+				Spec: api.ReportSpec{
+					ReportType: "Summary",
+				},
+			},
+			true,
+		),
+		Entry("Disallow invalid CRON expression",
+			&api.GlobalReport{
+				ObjectMeta: v1.ObjectMeta{Name: "gr"},
+				Spec: api.ReportSpec{
+					ReportType:  "Summary",
+					JobSchedule: "61 * * * *",
+				},
+			},
+			false,
+		),
+		Entry("Allow valid CRON expression",
+			&api.GlobalReport{
+				ObjectMeta: v1.ObjectMeta{Name: "gr"},
+				Spec: api.ReportSpec{
+					ReportType:  "Summary",
+					JobSchedule: "* * * * *",
+				},
+			},
+			true,
 		),
 	)
 }

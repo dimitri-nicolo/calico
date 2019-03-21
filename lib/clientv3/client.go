@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -156,6 +156,14 @@ func (c client) RemoteClusterConfigurations() RemoteClusterConfigurationInterfac
 
 func (c client) GlobalThreatFeeds() GlobalThreatFeedInterface {
 	return globalThreatFeeds{client: c}
+}
+
+func (c client) GlobalReportTypes() GlobalReportTypeInterface {
+	return globalReportTypes{client: c}
+}
+
+func (c client) GlobalReports() GlobalReportInterface {
+	return globalReports{client: c}
 }
 
 type poolAccessor struct {

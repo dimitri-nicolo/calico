@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -145,6 +145,16 @@ func init() {
 		apiv3.KindGlobalThreatFeed,
 		"globalthreatfeeds",
 		reflect.TypeOf(apiv3.GlobalThreatFeed{}),
+	)
+	registerResourceInfo(
+		apiv3.KindGlobalReportType,
+		"globalreporttypes",
+		reflect.TypeOf(apiv3.GlobalReportType{}),
+	)
+	registerResourceInfo(
+		apiv3.KindGlobalReport,
+		"globalreports",
+		reflect.TypeOf(apiv3.GlobalReport{}),
 	)
 }
 
