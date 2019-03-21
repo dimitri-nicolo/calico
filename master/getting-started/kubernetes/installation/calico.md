@@ -61,7 +61,7 @@ and your datastore type. Refer to the section that matches your configuration.
    kubectl apply -f calico.yaml
    ```
 
-1. Continue to [Installing the {{site.prodname}} Manager and API Server](#install-cnx-mgr)
+1. Continue to [Installing the {{site.prodname}} Manager and API Server](#installing-the-{{site.prodnamedash}}-manager-and-api-server)
 
 ### Installing without federation, using Kubernetes API datastore, 50 nodes or less
 
@@ -91,7 +91,7 @@ and your datastore type. Refer to the section that matches your configuration.
    kubectl apply -f calico.yaml
    ```
 
-1. Continue to [Installing the {{site.prodname}} Manager and API Server](#install-cnx-mgr)
+1. Continue to [Installing the {{site.prodname}} Manager and API Server](#installing-the-{{site.prodnamedash}}-manager-and-api-server)
 
 ### Installing without federation, using Kubernetes API datastore, more than 50 nodes
 
@@ -147,7 +147,7 @@ and your datastore type. Refer to the section that matches your configuration.
    kubectl apply -f calico.yaml
    ```
 
-1. Continue to [Installing the {{site.prodname}} Manager and API Server](#install-cnx-mgr)
+1. Continue to [Installing the {{site.prodname}} Manager and API Server](#installing-the-{{site.prodnamedash}}-manager-and-api-server)
 
 
 ### Installing with federation, using etcd
@@ -225,7 +225,7 @@ for each [remote cluster](../../../networking/federation/index#terminology). Ens
    kubectl apply -f calico.yaml
    ```
 
-1. Continue to [Installing the {{site.prodname}} Manager and API Server](#install-cnx-mgr)
+1. Continue to [Installing the {{site.prodname}} Manager and API Server](#installing-the-{{site.prodnamedash}}-manager-and-api-server)
 
 
 ### Installing with federation, using Kubernetes API datastore
@@ -305,7 +305,7 @@ for each [remote cluster](../../../networking/federation/index#terminology). Ens
    kubectl apply -f calico.yaml
    ```
 
-1. Continue to [Installing the {{site.prodname}} Manager and API Server](#install-cnx-mgr)
+1. Continue to [Installing the {{site.prodname}} Manager and API Server](#installing-the-{{site.prodnamedash}}-manager-and-api-server)
 
 {% include {{page.version}}/cnx-mgr-install.md init="kubernetes" net="calico" %}
 

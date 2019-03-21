@@ -4,7 +4,7 @@
   {% assign cli = "oc" %}
 {% endif %}
 
-## <a name="install-cnx-mgr"></a>Installing the {{site.prodname}} Manager and API Server
+## Installing the {{site.prodname}} Manager and API Server
 
 {% if include.init == "systemd" %}
 

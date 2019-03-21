@@ -1,6 +1,5 @@
 ---
 title: Enabling IPv6 support
-redirect_from: latest/networking/ipv6
 ---
 
 ### About enabling IPv6

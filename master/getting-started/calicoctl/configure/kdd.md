@@ -1,6 +1,5 @@
 ---
 title: Configuring calicoctl to connect to the Kubernetes API datastore
-redirect_from: latest/getting-started/calicoctl/configure/kdd
 canonical_url: 'https://docs.tigera.io/v2.3/usage/calicoctl/configure/kdd'
 ---
 
@@ -39,7 +38,7 @@ And using `CALICO_` prefixed names:
 
 ```shell
 export CALICO_DATASTORE_TYPE=kubernetes
-export CALICO_KUBECONFIG=~/.kube/config 
+export CALICO_KUBECONFIG=~/.kube/config
 calicoctl get workloadendpoints
 ```
 

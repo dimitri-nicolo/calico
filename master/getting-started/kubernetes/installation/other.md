@@ -77,7 +77,7 @@ configuration.
    kubectl apply -f calico.yaml
    ```
 
-1. Continue to [Installing the {{site.prodname}} Manager and API Server](#install-cnx-mgr)
+1. Continue to [Installing the {{site.prodname}} Manager and API Server](#installing-the-{{site.prodnamedash}}-manager-and-api-server)
 
 ### <a name="install-ee-typha-nofed"></a>Installing {{site.prodname}} for policy only without federation, more than 50 nodes
 
@@ -138,7 +138,7 @@ configuration.
    kubectl apply -f calico.yaml
    ```
 
-1. Continue to [Installing the {{site.prodname}} Manager and API Server](#install-cnx-mgr)
+1. Continue to [Installing the {{site.prodname}} Manager and API Server](#installing-the-{{site.prodnamedash}}-manager-and-api-server)
 
 ### <a name="install-ee-fed"></a>Installing {{site.prodname}} for policy only with federation
 
@@ -223,7 +223,7 @@ for each [remote cluster](../../../networking/federation/index#terminology). Ens
    kubectl apply -f calico.yaml
    ```
 
-1. Continue to [Installing the {{site.prodname}} Manager and API Server](#install-cnx-mgr)
+1. Continue to [Installing the {{site.prodname}} Manager and API Server](#installing-the-{{site.prodnamedash}}-manager-and-api-server)
 
 {% include {{page.version}}/cnx-mgr-install.md init="kubernetes" net="other" %}
 

@@ -1,6 +1,5 @@
 ---
 title: Installing calicoctl
-redirect_from: latest/getting-started/calicoctl/install
 canonical_url: 'https://docs.tigera.io/v2.3/usage/calicoctl/install'
 ---
 
@@ -12,7 +11,7 @@ of your cluster.
 
 You should limit access to `calicoctl` and your {{site.prodname}} datastore to
 trusted administrators. We discuss methods of limiting access to the
-{{site.prodname}} datastore in the [configuration section](/{{page.version}}/getting-started/calicoctl/configure/).
+{{site.prodname}} datastore in the [configuration section](configure).
 
 You can run `calicoctl` on any host with network access to the
 {{site.prodname}} datastore as either a binary or a container.
@@ -43,4 +42,4 @@ rm /etc/calico/calicoctl.cfg
 
 [Configure `calicoctl` to connect to your datastore](configure).
 
-{% include {{page.version}}/ctl-container-install.md %}
+{% include {{page.version}}/ctl-container-install.md cli="calicoctl" %}

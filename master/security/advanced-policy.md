@@ -1,6 +1,5 @@
 ---
 title: Controlling ingress and egress traffic with network policy
-redirect_from: latest/security/advanced-policy
 canonical_url: 'https://docs.tigera.io/v2.3/getting-started/kubernetes/tutorials/advanced-policy'
 ---
 

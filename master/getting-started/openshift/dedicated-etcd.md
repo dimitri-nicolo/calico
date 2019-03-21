@@ -1,7 +1,6 @@
 ---
 title: Connecting to a dedicated etcd cluster (optional)
-redirect_from: latest/getting-started/openshift/dedicated-etcd
-canonical_url: https://docs.tigera.io/v2.3/getting-started/openshift/dedicated-etcd
+canonical_url: ""
 ---
 
 {{site.prodname}}'s OpenShift-ansible integration supports connection to a custom etcd which

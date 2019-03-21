@@ -1,6 +1,5 @@
 ---
 title: Host endpoints
-redirect_from: latest/security/host-endpoints/index
 canonical_url: 'https://docs.tigera.io/v2.3/getting-started/bare-metal/bare-metal'
 ---
 
