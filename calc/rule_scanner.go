@@ -82,13 +82,12 @@ type RuleScanner struct {
 	RulesUpdateCallbacks rulesUpdateCallbacks
 }
 
-// XXX This goes in libcalico-go-private/selector, but it's declared here for now.
-type IPSetSelectorType int
+type SelectorIPSetType int
 
 const (
-	IPSetSelector_None   IPSetSelectorType = 0
-	IPSetSelector_IP     IPSetSelectorType = 1
-	IPSetSelector_Domain IPSetSelectorType = 2
+	SelectorIPSetType_None   SelectorIPSetType = 0
+	SelectorIPSetType_IP     SelectorIPSetType = 1
+	SelectorIPSetType_Domain SelectorIPSetType = 2
 )
 
 type IPSetData struct {
@@ -96,7 +95,7 @@ type IPSetData struct {
 	// port, set selector to AllSelector.  If NamedPortProtocol == ProtocolNone then
 	// this IP set represents a selector only, with no named port component.
 	Selector     selector.Selector
-	SelectorType IPSetSelectorType
+	SelectorType SelectorIPSetType
 
 	// NamedPortProtocol identifies the protocol (TCP or UDP) for a named port IP set.  It is
 	// set to ProtocolNone for a selector-only IP set.
@@ -167,7 +166,7 @@ func (rs *RuleScanner) updateRules(key interface{}, inbound, outbound []model.Ru
 	currentUIDToIPSet := make(map[string]*IPSetData)
 	parsedInbound := make([]*ParsedRule, len(inbound))
 	for ii, rule := range inbound {
-		parsed, allIPSets := ruleToParsedRule(&rule)
+		parsed, allIPSets := ruleToParsedRule(&rule, ingressPolicy)
 		parsedInbound[ii] = parsed
 		for _, ipSet := range allIPSets {
 			// Note: there may be more than one entry in allIPSets for the same UID, but that's only
@@ -178,7 +177,7 @@ func (rs *RuleScanner) updateRules(key interface{}, inbound, outbound []model.Ru
 	}
 	parsedOutbound := make([]*ParsedRule, len(outbound))
 	for ii, rule := range outbound {
-		parsed, allIPSets := ruleToParsedRule(&rule)
+		parsed, allIPSets := ruleToParsedRule(&rule, egressPolicy)
 		parsedOutbound[ii] = parsed
 		for _, ipSet := range allIPSets {
 			// Note: there may be more than one entry in allIPSets for the same UID, but that's only
@@ -321,7 +320,7 @@ type ParsedRule struct {
 	LogPrefix string
 }
 
-func ruleToParsedRule(rule *model.Rule) (parsedRule *ParsedRule, allIPSets []*IPSetData) {
+func ruleToParsedRule(rule *model.Rule) (parsedRule *ParsedRule, allIPSets []*IPSetData, ruleDirection string) {
 	srcSel, dstSel, notSrcSels, notDstSels := extractTagsAndSelectors(rule)
 
 	// In the datamodel, named ports are included in the list of ports as an "or" match; i.e. the
@@ -356,28 +355,39 @@ func ruleToParsedRule(rule *model.Rule) (parsedRule *ParsedRule, allIPSets []*IP
 	//     not (<match-1> or <match-2>)
 	//
 	// we'd need the union of <match-1> and <match-2> rather than the intersection.
-	srcNamedPortIPSets := namedPortsToIPSets(srcNamedPorts, srcSel, IPSetDataType_IP, namedPortProto)
-	dstNamedPortIPSets := namedPortsToIPSets(dstNamedPorts, dstSel, IPSetDataType_IP, namedPortProto)
-	notSrcNamedPortIPSets := namedPortsToIPSets(notSrcNamedPorts, srcSel, IPSetDataType_IP, namedPortProto)
-	notDstNamedPortIPSets := namedPortsToIPSets(notDstNamedPorts, dstSel, IPSetDataType_IP, namedPortProto)
-	dstDomainIPSets := namedPortsTOIPsets(rule.DstDomains, dstSel, IPSetDataType_Domain, namedPortProto)
+	srcNamedPortIPSets := namedPortsToIPSets(srcNamedPorts, srcSel, namedPortProto)
+	dstNamedPortIPSets := namedPortsToIPSets(dstNamedPorts, dstSel, namedPortProto)
+	notSrcNamedPortIPSets := namedPortsToIPSets(notSrcNamedPorts, srcSel, namedPortProto)
+	notDstNamedPortIPSets := namedPortsToIPSets(notDstNamedPorts, dstSel, namedPortProto)
+	dstDomainIPSets := namedPortsToIPSets(rule.DstDomains, dstSel, namedPortProto)
 
 	// Optimization: only include the selectors if we haven't already covered them with a named
 	// port match above.  If we have some named ports then we've already filtered the named port
 	// by the selector above.  If we have numeric ports, we can't make the optimization
 	// because we can't filter numeric ports by selector in the same way.
 	var srcSelIPSets, dstSelIPSets []*IPSetData
+
 	if len(srcNumericPorts) > 0 || len(srcNamedPorts) == 0 {
-		srcSelIPSets = selectorsToIPSets(srcSel)
+		srcSelIPSets = selectorsToIPSets(srcSel, SelectorIPSetType_IP)
 	}
 	if len(dstNumericPorts) > 0 || len(dstNamedPorts) == 0 {
-		dstSelIPSets = selectorsToIPSets(dstSel)
+		dstSelIPSets = selectorsToIPSets(dstSel, SelectorIPSetType_IP)
+
+		// If the rule has a destination selector and is of type allow egress, check if it includes domains.
+		// If it doesn't have a selector, check if domains were still directly specified.
+		if dstSel != nil {
+			if rule.Action == "allow" && ruleDirection == egressPolicy {
+				dstDomainIPSets := selectorsToIPSets(dstSel, SelectorIPSetType_Domain)
+			}
+		} else {
+			if rule.DstDomains != nil {
+				dstDodmainIPSets := domainsToIPSets(rule.DstDomains)
+			}
+		}
 	}
 
-	notSrcSelIPSets := selectorsToIPSets(notSrcSels)
-	notDstSelIPSets := selectorsToIPSets(notDstSels)
-
-	dstDomainSelIPSets := selectorsToIPSets(dstSel)
+	notSrcSelIPSets := selectorsToIPSets(notSrcSels, SelectorIPSetType_IP)
+	notDstSelIPSets := selectorsToIPSets(notDstSels, SelectorIPSetType_IP)
 
 	parsedRule = &ParsedRule{
 		Action: rule.Action,
@@ -395,7 +405,7 @@ func ruleToParsedRule(rule *model.Rule) (parsedRule *ParsedRule, allIPSets []*IP
 		DstPorts:             dstNumericPorts,
 		DstNamedPortIPSetIDs: ipSetsToUIDs(dstNamedPortIPSets),
 		DstIPSetIDs:          ipSetsToUIDs(dstSelIPSets),
-		DstDomainIPSetIDs:    rule.AllDstDomainIPSets(),
+		DstDomainIPSetIDs:    dstDomainIPSets,
 
 		ICMPType: rule.ICMPType,
 		ICMPCode: rule.ICMPCode,
@@ -444,7 +454,7 @@ func ruleToParsedRule(rule *model.Rule) (parsedRule *ParsedRule, allIPSets []*IP
 	return
 }
 
-func namedPortsToIPSets(namedPorts []string, positiveSelectors []selector.Selector, IPSetDataType selType, proto labelindex.IPSetPortProtocol) []*IPSetData {
+func namedPortsToIPSets(namedPorts []string, positiveSelectors []selector.Selector, proto labelindex.IPSetPortProtocol) []*IPSetData {
 	var ipSets []*IPSetData
 	if len(positiveSelectors) > 1 {
 		log.WithField("selectors", positiveSelectors).Panic(
@@ -457,7 +467,7 @@ func namedPortsToIPSets(namedPorts []string, positiveSelectors []selector.Select
 	for _, namedPort := range namedPorts {
 		ipSet := IPSetData{
 			Selector:          sel,
-			SelectorType:      selType,
+			SelectorType:      SelectorIPSetType_IP,
 			NamedPort:         namedPort,
 			NamedPortProtocol: proto,
 		}
@@ -466,7 +476,21 @@ func namedPortsToIPSets(namedPorts []string, positiveSelectors []selector.Select
 	return ipSets
 }
 
-func selectorsToIPSets(selectors []selector.Selector, IPSetSelectorType selType) []*IPSetData {
+func domainsToIPSets(dstDomains []string) []*IPSetData {
+	var ipSets []*IPSetData
+	sel := AllSelector
+	for _, d := range dstDomains {
+		ipSet := IPSetData{
+			Selector:     sel,
+			SelectorType: SelectorIPSetType_Domain,
+			Domain:       d,
+		}
+		ipSets = append(ipSets, &ipSet)
+	}
+	return ipSets
+}
+
+func selectorsToIPSets(selectors []selector.Selector, SelectorIPSetType selType) []*IPSetData {
 	var ipSets []*IPSetData
 	for _, s := range selectors {
 		ipSets = append(ipSets, &IPSetData{

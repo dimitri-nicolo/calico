@@ -126,12 +126,12 @@ type IPSetMember struct {
 }
 
 // XXX This goes in libcalico-go-private/selector, but it's declared here for now.
-type IPSetSelectorType int
+type SelectorIPSetType int
 
 const (
-	IPSetSelector_None   IPSetSelectorType = 0
-	IPSetSelector_IP     IPSetSelectorType = 1
-	IPSetSelector_Domain IPSetSelectorType = 2
+	SelectorIPSetType_None   SelectorIPSetType = 0
+	SelectorIPSetType_IP     SelectorIPSetType = 1
+	SelectorIPSetType_Domain SelectorIPSetType = 2
 )
 
 type ipSetData struct {
@@ -139,7 +139,7 @@ type ipSetData struct {
 	// this IP set represents an unfiltered named port.  If namedPortProtocol == ProtocolNone then
 	// this IP set represents a selector only, with no named port component.
 	selector          selector.Selector
-	selType           IPSetSelectorType
+	selType           SelectorIPSetType
 	namedPortProtocol IPSetPortProtocol
 	namedPort         string
 
@@ -260,7 +260,7 @@ func (idx *SelectorAndNamedPortIndex) OnUpdate(update api.Update) (_ bool) {
 				extractCIDRsFromNetworkSet(netSet),
 				nil,
 				nil,
-				extractDomainsFromNetworkSet(netSet))
+				netSet.AllowedEgressDomains)
 		} else {
 			log.Debugf("Deleting network set %v from NamedPortIndex", key)
 			idx.DeleteEndpoint(key)
@@ -351,16 +351,7 @@ func extractCIDRsFromNetworkSet(netSet *model.NetworkSet) []ip.CIDR {
 	return combined
 }
 
-func extractDomainsFromNetworkSet(netSet *model.NetworkSet) []string {
-	a := netSet.AllowedEgressDomains
-	combined := make([]string, 0, len(a))
-	for _, domain := range a {
-		combined = append(combined, domain)
-	}
-	return combined
-}
-
-func (idx *SelectorAndNamedPortIndex) UpdateIPSet(ipSetID string, sel selector.Selector, selType IPSetSelectorType, namedPortProtocol IPSetPortProtocol, namedPort string) {
+func (idx *SelectorAndNamedPortIndex) UpdateIPSet(ipSetID string, sel selector.Selector, selType SelectorIPSetType, namedPortProtocol IPSetPortProtocol, namedPort string) {
 	logCxt := log.WithFields(log.Fields{
 		"ipSetID":           ipSetID,
 		"selector":          sel,
@@ -486,13 +477,13 @@ func (idx *SelectorAndNamedPortIndex) UpdateEndpointOrSet(
 		}
 		newEndpointData.parents = parents
 	}
-	if nets != nil {
+	if len(nets) > 0 {
 		newEndpointData.nets = nets
 	}
-	if ports != nil {
+	if len(ports) > 0 {
 		newEndpointData.ports = ports
 	}
-	if domains != nil {
+	if len(domains) > 0 {
 		newEndpointData.domains = domains
 	}
 
@@ -692,38 +683,31 @@ func (idx *SelectorAndNamedPortIndex) CalculateEndpointContribution(d *endpointD
 	if ipSetData.namedPortProtocol != ProtocolNone {
 		// This IP set represents a named port match, calculate the cross product of
 		// matching named ports by IP address or domain.
-		switch ipSetData.selType {
-		case IPSetSelector_IP:
-			portNumbers := d.LookupNamedPorts(ipSetData.namedPort, ipSetData.namedPortProtocol)
-			for _, namedPort := range portNumbers {
-				for _, addr := range d.nets {
-					contrib = append(contrib, IPSetMember{
-						CIDR:       addr,
-						Protocol:   ipSetData.namedPortProtocol,
-						PortNumber: namedPort,
-					})
-				}
-			}
-
-		case IPSetSelector_Domain:
-			for _, domain := range d.domains {
+		portNumbers := d.LookupNamedPorts(ipSetData.namedPort, ipSetData.namedPortProtocol)
+		for _, namedPort := range portNumbers {
+			for _, addr := range d.nets {
 				contrib = append(contrib, IPSetMember{
-					Protocol: ipSetData.namedPortProtocol,
-					Domain:   domain,
+					CIDR:       addr,
+					Protocol:   ipSetData.namedPortProtocol,
+					PortNumber: namedPort,
 				})
 			}
 		}
 	} else {
 		// Non-named port match, simply return the CIDRs and domains.
-		for _, addr := range d.nets {
-			contrib = append(contrib, IPSetMember{
-				CIDR: addr,
-			})
-		}
-		for _, domain := range d.domains {
-			contrib = append(contrib, IPSetMember{
-				Domain: domain,
-			})
+		switch ipSetData.selType {
+		case SelectorIPSetType_IP:
+			for _, addr := range d.nets {
+				contrib = append(contrib, IPSetMember{
+					CIDR: addr,
+				})
+			}
+		case SelectorIPSetType_Domain:
+			for _, domain := range d.domains {
+				contrib = append(contrib, IPSetMember{
+					Domain: domain,
+				})
+			}
 		}
 	}
 	return
