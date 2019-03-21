@@ -41,7 +41,7 @@ and your datastore type. Refer to the section that matches your configuration.
 
    ```bash
    curl \
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/calico.yaml \
+   {{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/calico.yaml \
    -O
    ```
 
@@ -77,7 +77,7 @@ and your datastore type. Refer to the section that matches your configuration.
 
    ```bash
    curl \
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calico-networking/1.7/calico.yaml \
+   {{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calico-networking/1.7/calico.yaml \
    -O
    ```
 
@@ -107,7 +107,7 @@ and your datastore type. Refer to the section that matches your configuration.
 
    ```bash
    curl \
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calico-networking/typha/calico.yaml \
+   {{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calico-networking/typha/calico.yaml \
    -O
    ```
 
@@ -179,7 +179,7 @@ for each [remote cluster](../../../networking/federation/index#terminology). Ens
 
    ```bash
    curl \
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/federation/calico.yaml \
+   {{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/federation/calico.yaml \
    -O
    ```
 
@@ -267,7 +267,7 @@ for each [remote cluster](../../../networking/federation/index#terminology). Ens
 
    ```bash
    curl \
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calico-networking/federation/calico.yaml \
+   {{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calico-networking/federation/calico.yaml \
    -O
    ```
 

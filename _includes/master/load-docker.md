@@ -226,22 +226,22 @@
 
      ```
      curl -O \
-     {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/{{include.yaml}}.yaml
+     {{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/{{include.yaml}}.yaml
      ```
 
      > **Note**: You can also
-     > [view the YAML in a new tab]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/{{include.yaml}}.yaml){:target="_blank"}.
+     > [view the YAML in a new tab]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/{{include.yaml}}.yaml){:target="_blank"}.
      {: .alert .alert-info}
 
    - **Kubernetes API datastore**
 
      ```
      curl -O \
-     {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/{{include.yaml}}.yaml
+     {{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/{{include.yaml}}.yaml
      ```
 
      > **Note**: You can also
-     > [view the YAML in a new tab]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/{{include.yaml}}.yaml){:target="_blank"}.
+     > [view the YAML in a new tab]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/{{include.yaml}}.yaml){:target="_blank"}.
      {: .alert .alert-info}
 
 {% include {{page.version}}/cnx-cred-sed.md yaml=include.yaml %}

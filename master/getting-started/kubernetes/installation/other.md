@@ -58,14 +58,14 @@ configuration.
    - **AWS VPC CNI plugin**
      ```bash
      curl \
-     {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only-ecs/1.7/calico.yaml \
+     {{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only-ecs/1.7/calico.yaml \
      -O
      ```
 
    - **All others**
      ```bash
      curl \
-     {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only/1.7/calico.yaml \
+     {{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only/1.7/calico.yaml \
      -O
      ```
 
@@ -95,14 +95,14 @@ configuration.
    - **AWS VPC CNI plugin**
      ```bash
      curl -o calico.yaml \
-     {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only-ecs/1.7/calico-typha.yaml \
+     {{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only-ecs/1.7/calico-typha.yaml \
      -O
      ```
 
    - **All others**
      ```bash
      curl -o calico.yaml \
-     {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only/1.7/calico-typha.yaml \
+     {{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only/1.7/calico-typha.yaml \
      -O
      ```
 
@@ -180,14 +180,14 @@ for each [remote cluster](../../../networking/federation/index#terminology). Ens
    - **AWS VPC CNI plugin**
      ```bash
      curl -o calico.yaml \
-     {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only-ecs/1.7/calico-federation.yaml \
+     {{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only-ecs/1.7/calico-federation.yaml \
      -O
      ```
 
    - **All others**
      ```bash
      curl -o calico.yaml \
-     {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only/1.7/calico-federation.yaml \
+     {{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only/1.7/calico-federation.yaml \
      -O
      ```
 

@@ -23,7 +23,7 @@ serves up account summaries, and an [etcd] datastore.
 
 ```bash
 kubectl apply -n yaobank -f \
-{{site.url}}/{{page.version}}/manifests/tutorials/app-layer-policy/10-yaobank.yaml
+{{site.baseurl}}/{{page.version}}/manifests/tutorials/app-layer-policy/10-yaobank.yaml
 ```
 
 > **Note**: You can also
@@ -199,7 +199,7 @@ return to the customer pod later).
 
 ```bash
 kubectl apply -n yaobank -f \
-{{site.url}}/{{page.version}}/manifests/tutorials/app-layer-policy/20-attack-pod.yaml
+{{site.baseurl}}/{{page.version}}/manifests/tutorials/app-layer-policy/20-attack-pod.yaml
 ```
 
 Take a look at the [`20-attack-pod.yaml` manifest in your browser](/{{page.version}}/manifests/tutorials/app-layer-policy/20-attack-pod.yaml).
@@ -233,7 +233,7 @@ We can mitigate both of the above deficiencies with a {{site.prodname}} policy (
 the attack pod, first exit out or open a new terminal tab)
 
 ```bash
-wget {{site.url}}/{{page.version}}/manifests/tutorials/app-layer-policy/30-policy.yaml
+wget {{site.baseurl}}/{{page.version}}/manifests/tutorials/app-layer-policy/30-policy.yaml
 kubectl create -n yaobank -f 30-policy.yaml
 ```
 

@@ -21,7 +21,7 @@ serves up account summaries, and an [etcd] datastore.
 
 ```bash
 kubectl apply -f \
-{{site.url}}/{{page.version}}/security/app-layer-policy/manifests/10-yaobank.yaml
+{{site.baseurl}}/{{page.version}}/security/app-layer-policy/manifests/10-yaobank.yaml
 ```
 
 > **Note**: You can also
@@ -183,7 +183,7 @@ return to the customer pod later).
 
 ```bash
 kubectl apply -f \
-{{site.url}}/{{page.version}}/security/app-layer-policy/manifests/20-attack-pod.yaml
+{{site.baseurl}}/{{page.version}}/security/app-layer-policy/manifests/20-attack-pod.yaml
 ```
 
 Take a look at the [`20-attack-pod.yaml` manifest in your browser](manifests/20-attack-pod.yaml).
@@ -207,7 +207,7 @@ Return to your web browser and refresh to confirm the new balance.
 
 We can mitigate both of the above deficiencies with a {{site.prodname}} policy.
 
-    wget {{site.url}}/{{page.version}}/security/app-layer-policy/manifests/30-policy.yaml
+    wget {{site.baseurl}}/{{page.version}}/security/app-layer-policy/manifests/30-policy.yaml
     calicoctl create -f 30-policy.yaml
 
 > **Note**: You can also

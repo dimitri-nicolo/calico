@@ -80,7 +80,7 @@ with Istio. This step modifies the injector configuration to add Dikastes, a
 
    ```bash
    kubectl apply -f \
-   {{site.url}}/{{page.version}}/manifests/app-layer-policy/istio-inject-configmap.yaml
+   {{site.baseurl}}/{{page.version}}/manifests/app-layer-policy/istio-inject-configmap.yaml
    ```
 
 	 > **Note**: You can also
@@ -97,7 +97,7 @@ Apply the following manifest to configure Istio to query {{site.prodname}} for a
 
 ```bash
 kubectl apply -f \
-{{site.url}}/{{page.version}}/manifests/app-layer-policy/istio-app-layer-policy.yaml
+{{site.baseurl}}/{{page.version}}/manifests/app-layer-policy/istio-app-layer-policy.yaml
 ```
 
 > **Note**: You can also

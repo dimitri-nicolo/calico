@@ -79,7 +79,7 @@ To use these manifests with a TLS-enabled etcd cluster you must do the following
    **{{site.prodname}} for policy and networking**
    ```bash
    curl \
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/calico.yaml \
+   {{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/calico.yaml \
    -O
    ```
 

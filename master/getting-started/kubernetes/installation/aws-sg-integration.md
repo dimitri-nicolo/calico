@@ -12,13 +12,13 @@ Your Kubernetes cluster must meet the following specifications:
 - Exists within a single VPC.
 - The Kubernetes AWS cloud provider is enabled.
 - Networking provider is
-  [Amazon VPC Networking]({{site.url}}/{{page.version}}/reference/public-cloud/aws#using-aws-networking).
+  [Amazon VPC Networking]({{site.baseurl}}/{{page.version}}/reference/public-cloud/aws#using-aws-networking).
   (You must be using the [AWS CNI Plugin](https://github.com/aws/amazon-vpc-cni-k8s).)
 - You have already installed
-  [Tigera Secure EE for policy]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/other#installing-tigera-secure-ee-for-policy-only)
+  [Tigera Secure EE for policy]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/other#installing-tigera-secure-ee-for-policy-only)
   on your cluster. The AWS security group integration requires the Kubernetes API datastore.
 - You have not created any
-  [host endpoints]({{site.url}}/{{page.version}}/reference/calicoctl/resources/hostendpoint)
+  [host endpoints]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/hostendpoint)
   that have a `spec.node` value that matches any of your Kubernetes nodes. See the [AWS security group integration guide](/{{page.version}}/security/aws-security-group-integration/host-endpoints) for more information.
 
 
@@ -120,7 +120,7 @@ We've provided info below on how to gather the above info in common Kubernetes e
     ```bash
     aws cloudformation create-stack \
     --stack-name tigera-cloudtrail \
-    --template-body {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/manifests/aws-sg-integration/account-cf.yaml
+    --template-body {{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/manifests/aws-sg-integration/account-cf.yaml
 
     # Wait for the stack to finish provisioning
     aws cloudformation wait stack-create-complete --stack-name tigera-cloudtrail
@@ -142,7 +142,7 @@ We've provided info below on how to gather the above info in common Kubernetes e
     --stack-name tigera-vpc-$VPC_ID \
     --parameters ParameterKey=VpcId,ParameterValue=$VPC_ID \
     --capabilities CAPABILITY_IAM \
-    --template-body {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/manifests/aws-sg-integration/vpc-cf.yaml
+    --template-body {{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/manifests/aws-sg-integration/vpc-cf.yaml
 
     # Wait for the stack to finish provisioning
     aws cloudformation wait stack-create-complete --stack-name tigera-vpc-$VPC_ID
@@ -156,7 +156,7 @@ We've provided info below on how to gather the above info in common Kubernetes e
     --parameters ParameterKey=VpcId,ParameterValue=$VPC_ID \
                  ParameterKey=KubernetesHostDefaultSGId,ParameterValue=$K8S_NODE_SGS \
                  ParameterKey=KubernetesControlPlaneSGId,ParameterValue=$CONTROL_PLANE_SG \
-    --template-body {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/manifests/aws-sg-integration/cluster-cf.yaml
+    --template-body {{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/manifests/aws-sg-integration/cluster-cf.yaml
 
     # Wait for the stack to finish provisioning
     aws cloudformation wait stack-create-complete --stack-name tigera-cluster-$CLUSTER_NAME
@@ -246,7 +246,7 @@ We've provided info below on how to gather the above info in common Kubernetes e
    * Directly update the DaemonSet using the following command:
      `kubectl -n kube-system edit daemonset calico-node`
 
-   > **Note:** See [Configuring Felix]({{site.url}}/{{page.version}}/reference/felix/configuration)
+   > **Note:** See [Configuring Felix]({{site.baseurl}}/{{page.version}}/reference/felix/configuration)
    > for more information on the configuration options.
    {: .alert .alert-info}
 
@@ -266,7 +266,7 @@ We've provided info below on how to gather the above info in common Kubernetes e
 
     ```bash
     curl \
-    {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/manifests/aws-sg-integration/cloud-controllers.yaml \
+    {{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/manifests/aws-sg-integration/cloud-controllers.yaml \
     -O
     ```
 

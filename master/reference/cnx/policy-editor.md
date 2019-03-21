@@ -70,7 +70,7 @@ and take control before other policy.
 
 The ability to manage NetworkPolicy and GlobalNetworkPolicy in the Web UI requires GET access to any tier
 the user can view/manage, plus the required access to the tiered policy resources. See
-[Configuring {{site.prodname}} RBAC]({{site.url}}/{{page.version}}/reference/cnx/rbac-tiered-policies)
+[Configuring {{site.prodname}} RBAC]({{site.baseurl}}/{{page.version}}/reference/cnx/rbac-tiered-policies)
 for more details and example configurations.
 
 ### The Default Tier

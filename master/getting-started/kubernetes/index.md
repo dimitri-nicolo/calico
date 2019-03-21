@@ -68,7 +68,7 @@ To deploy a cluster suitable for production, refer to [Installation](installatio
 
    ```bash
    curl --compressed \
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/install-cnx.sh -O
+   {{site.baseurl}}/{{page.version}}/getting-started/kubernetes/install-cnx.sh -O
    ```
 
 1. Set the `install-cnx.sh` file to be executable.
