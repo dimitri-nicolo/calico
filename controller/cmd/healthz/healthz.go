@@ -31,7 +31,7 @@ func main() {
 		os.Exit(2)
 	}
 	if r.StatusCode != http.StatusOK {
-		fmt.Printf("healtz endpoint returned status %d\n", r.StatusCode)
+		fmt.Printf("healthz endpoint returned status %d\n", r.StatusCode)
 		os.Exit(3)
 	}
 	return
