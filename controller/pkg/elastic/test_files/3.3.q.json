@@ -1,0 +1,1 @@
+{"query":{"terms":{"dest_ip":{"id":"test","index":".tigera.ipset","path":"ips","type":"_doc"}}},"sort":["_doc"]}

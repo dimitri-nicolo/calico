@@ -5,10 +5,12 @@ package elastic
 import (
 	"bytes"
 	"context"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	url2 "net/url"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -140,31 +142,31 @@ func (*testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 			return &http.Response{
 				StatusCode: 200,
 				Request:    req,
-				Body:       ioutil.NopCloser(strings.NewReader(`{"_index":".tigera.ipset","_type":"_doc","_id":"test1","_version":5,"found":true,"_source":{"ips":["35.32.82.0/24","10.10.1.20/32"]}}`)),
+				Body:       mustOpen("test_files/1.1.json"),
 			}, nil
 		case baseURI + "/.tigera.ipset/_doc/test2":
 			return &http.Response{
 				StatusCode: 200,
 				Request:    req,
-				Body:       ioutil.NopCloser(strings.NewReader(`{"_index":".tigera.ipset","_type":"_doc","_id":"test2","_version":5,"found":true}`)),
+				Body:       mustOpen("test_files/1.2.json"),
 			}, nil
 		case baseURI + "/.tigera.ipset/_doc/test3":
 			return &http.Response{
 				StatusCode: 200,
 				Request:    req,
-				Body:       ioutil.NopCloser(strings.NewReader(`{"_index":".tigera.ipset","_type":"_doc","_id":"test3","_version":5,"found":true,"_source":{}}`)),
+				Body:       mustOpen("test_files/1.3.json"),
 			}, nil
 		case baseURI + "/.tigera.ipset/_doc/test4":
 			return &http.Response{
 				StatusCode: 200,
 				Request:    req,
-				Body:       ioutil.NopCloser(strings.NewReader(`{"_index":".tigera.ipset","_type":"_doc","_id":"test4","_version":5,"found":true,"_source":{"ips":"123"}}`)),
+				Body:       mustOpen("test_files/1.4.json"),
 			}, nil
 		case baseURI + "/.tigera.ipset/_doc/test5":
 			return &http.Response{
 				StatusCode: 200,
 				Request:    req,
-				Body:       ioutil.NopCloser(strings.NewReader(`{"_index":".tigera.ipset","_type":"_doc","_id":"test4","_version":5,"found":true,"_source":{"ips":[123]}}`)),
+				Body:       mustOpen("test_files/1.5.json"),
 			}, nil
 
 		// GetIPSetModified
@@ -172,31 +174,31 @@ func (*testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 			return &http.Response{
 				StatusCode: 200,
 				Request:    req,
-				Body:       ioutil.NopCloser(strings.NewReader(`{"_index":".tigera.ipset","_type":"_doc","_id":"test","_version":2,"found":true,"_source":{"created_at":"2019-03-18T12:29:18.590008-03:00"}}`)),
+				Body:       mustOpen("test_files/2.1.json"),
 			}, nil
 		case baseURI + "/.tigera.ipset/_doc/test2?_source_include=created_at":
 			return &http.Response{
 				StatusCode: 200,
 				Request:    req,
-				Body:       ioutil.NopCloser(strings.NewReader(`{"_index":".tigera.ipset","_type":"_doc","_id":"test2","_version":2,"found":true,"_source":{"created_at":"1553103652"}}`)),
+				Body:       mustOpen("test_files/2.2.json"),
 			}, nil
 		case baseURI + "/.tigera.ipset/_doc/test3?_source_include=created_at":
 			return &http.Response{
 				StatusCode: 200,
 				Request:    req,
-				Body:       ioutil.NopCloser(strings.NewReader(`{"_index":".tigera.ipset","_type":"_doc","_id":"test3","_version":2,"found":true}`)),
+				Body:       mustOpen("test_files/2.3.json"),
 			}, nil
 		case baseURI + "/.tigera.ipset/_doc/test4?_source_include=created_at":
 			return &http.Response{
 				StatusCode: 200,
 				Request:    req,
-				Body:       ioutil.NopCloser(strings.NewReader(`{"_index":".tigera.ipset","_type":"_doc","_id":"test4","_version":2,"found":true,"_source":{}}`)),
+				Body:       mustOpen("test_files/2.4.json"),
 			}, nil
 		case baseURI + "/.tigera.ipset/_doc/test5?_source_include=created_at":
 			return &http.Response{
 				StatusCode: 200,
 				Request:    req,
-				Body:       ioutil.NopCloser(strings.NewReader(`{"_index":".tigera.ipset","_type":"_doc","_id":"test5","_version":2,"found":true,"_source":{"created_at": 1553103652}}`)),
+				Body:       mustOpen("test_files/2.5.json"),
 			}, nil
 
 		}
@@ -210,36 +212,36 @@ func (*testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 		case baseURI + "/tigera_secure_ee_flows%2A/_search?scroll=5m&size=1000":
 			switch body {
 			// QueryIPSet source_ip query
-			case `{"query":{"terms":{"source_ip":{"id":"test","index":".tigera.ipset","path":"ips","type":"_doc"}}},"sort":["_doc"]}`:
+			case mustGetString("test_files/3.1.q.json"):
 				return &http.Response{
 					StatusCode: 200,
 					Request:    req,
-					Body:       ioutil.NopCloser(strings.NewReader(`{"_scroll_id":"DnF1ZXJ5VGhlbkZldGNoDwAAAAAABD7nFm9CTGZ2OWNZU2E2UjJtdGNYOVJpcUEAAAAAAAQ-5hZvQkxmdjljWVNhNlIybXRjWDlSaXFBAAAAAAAEPugWb0JMZnY5Y1lTYTZSMm10Y1g5UmlxQQAAAAAABD7pFm9CTGZ2OWNZU2E2UjJtdGNYOVJpcUEAAAAAAAQ-6hZvQkxmdjljWVNhNlIybXRjWDlSaXFBAAAAAAAEPuwWb0JMZnY5Y1lTYTZSMm10Y1g5UmlxQQAAAAAABD7rFm9CTGZ2OWNZU2E2UjJtdGNYOVJpcUEAAAAAAAQ-8xZvQkxmdjljWVNhNlIybXRjWDlSaXFBAAAAAAAEPu0Wb0JMZnY5Y1lTYTZSMm10Y1g5UmlxQQAAAAAABD7uFm9CTGZ2OWNZU2E2UjJtdGNYOVJpcUEAAAAAAAQ-7xZvQkxmdjljWVNhNlIybXRjWDlSaXFBAAAAAAAEPvAWb0JMZnY5Y1lTYTZSMm10Y1g5UmlxQQAAAAAABD7xFm9CTGZ2OWNZU2E2UjJtdGNYOVJpcUEAAAAAAAQ-8hZvQkxmdjljWVNhNlIybXRjWDlSaXFBAAAAAAAEPvQWb0JMZnY5Y1lTYTZSMm10Y1g5UmlxQQ==","took":18,"timed_out":false,"_shards":{"total":15,"successful":15,"skipped":0,"failed":0},"hits":{"total":1,"max_score":null,"hits":[{"_index":"tigera_secure_ee_flows.flowsynth.20180914","_type":"fluentd","_id":"BQ15nGkBixKz5K3LBMRy","_score":null,"_source":{"start_time":1536897600,"end_time":1536897900,"source_ip":"35.32.82.134","source_name":"-","source_name_aggr":"pub","source_namespace":"-","source_port":null,"source_type":"net","source_labels":null,"dest_ip":"10.10.1.20","dest_name":"basic-6tn46e","dest_name_aggr":"basic-*","dest_namespace":"default","dest_port":0,"dest_type":"wep","dest_labels":null,"proto":"tcp","action":"allow","reporter":"dst","policies":null,"bytes_in":18966,"bytes_out":10048,"num_flows":1,"num_flows_started":1,"num_flows_completed":1,"packets_in":172,"packets_out":84,"http_requests_allowed_in":0,"http_requests_denied_in":0,"host":"node02"},"sort":[0]}]}}`)),
+					Body:       mustOpen("test_files/3.1.r.json"),
 				}, nil
 
 			// QueryIPSet dest_ip query
-			case `{"query":{"terms":{"dest_ip":{"id":"test","index":".tigera.ipset","path":"ips","type":"_doc"}}},"sort":["_doc"]}`:
+			case mustGetString("test_files/3.3.q.json"):
 				return &http.Response{
 					StatusCode: 200,
 					Request:    req,
-					Body:       ioutil.NopCloser(strings.NewReader(`{"_scroll_id":"DnF1ZXJ5VGhlbkZldGNoDwAAAAAABEEmFm9CTGZ2OWNZU2E2UjJtdGNYOVJpcUEAAAAAAARBIBZvQkxmdjljWVNhNlIybXRjWDlSaXFBAAAAAAAEQSEWb0JMZnY5Y1lTYTZSMm10Y1g5UmlxQQAAAAAABEEiFm9CTGZ2OWNZU2E2UjJtdGNYOVJpcUEAAAAAAARBIxZvQkxmdjljWVNhNlIybXRjWDlSaXFBAAAAAAAEQSQWb0JMZnY5Y1lTYTZSMm10Y1g5UmlxQQAAAAAABEElFm9CTGZ2OWNZU2E2UjJtdGNYOVJpcUEAAAAAAARBJxZvQkxmdjljWVNhNlIybXRjWDlSaXFBAAAAAAAEQSgWb0JMZnY5Y1lTYTZSMm10Y1g5UmlxQQAAAAAABEEpFm9CTGZ2OWNZU2E2UjJtdGNYOVJpcUEAAAAAAARBKhZvQkxmdjljWVNhNlIybXRjWDlSaXFBAAAAAAAEQSsWb0JMZnY5Y1lTYTZSMm10Y1g5UmlxQQAAAAAABEEsFm9CTGZ2OWNZU2E2UjJtdGNYOVJpcUEAAAAAAARBLRZvQkxmdjljWVNhNlIybXRjWDlSaXFBAAAAAAAEQS4Wb0JMZnY5Y1lTYTZSMm10Y1g5UmlxQQ==","took":10,"timed_out":false,"_shards":{"total":15,"successful":15,"skipped":0,"failed":0},"hits":{"total":1,"max_score":null,"hits":[{"_index":"tigera_secure_ee_flows.flowsynth.20180914","_type":"fluentd","_id":"BQ15nGkBixKz5K3LBMRy","_score":null,"_source":{"start_time":1536897600,"end_time":1536897900,"source_ip":"35.32.82.134","source_name":"-","source_name_aggr":"pub","source_namespace":"-","source_port":null,"source_type":"net","source_labels":null,"dest_ip":"10.10.1.20","dest_name":"basic-6tn46e","dest_name_aggr":"basic-*","dest_namespace":"default","dest_port":0,"dest_type":"wep","dest_labels":null,"proto":"tcp","action":"allow","reporter":"dst","policies":null,"bytes_in":18966,"bytes_out":10048,"num_flows":1,"num_flows_started":1,"num_flows_completed":1,"packets_in":172,"packets_out":84,"http_requests_allowed_in":0,"http_requests_denied_in":0,"host":"node02"},"sort":[0]}]}} `)),
+					Body:       mustOpen("test_files/3.3.r.json"),
 				}, nil
 			}
 		case baseURI + "/_search/scroll":
 			switch body {
 			// QueryIPSet source_ip query
-			case `{"scroll":"5m","scroll_id":"DnF1ZXJ5VGhlbkZldGNoDwAAAAAABD7nFm9CTGZ2OWNZU2E2UjJtdGNYOVJpcUEAAAAAAAQ-5hZvQkxmdjljWVNhNlIybXRjWDlSaXFBAAAAAAAEPugWb0JMZnY5Y1lTYTZSMm10Y1g5UmlxQQAAAAAABD7pFm9CTGZ2OWNZU2E2UjJtdGNYOVJpcUEAAAAAAAQ-6hZvQkxmdjljWVNhNlIybXRjWDlSaXFBAAAAAAAEPuwWb0JMZnY5Y1lTYTZSMm10Y1g5UmlxQQAAAAAABD7rFm9CTGZ2OWNZU2E2UjJtdGNYOVJpcUEAAAAAAAQ-8xZvQkxmdjljWVNhNlIybXRjWDlSaXFBAAAAAAAEPu0Wb0JMZnY5Y1lTYTZSMm10Y1g5UmlxQQAAAAAABD7uFm9CTGZ2OWNZU2E2UjJtdGNYOVJpcUEAAAAAAAQ-7xZvQkxmdjljWVNhNlIybXRjWDlSaXFBAAAAAAAEPvAWb0JMZnY5Y1lTYTZSMm10Y1g5UmlxQQAAAAAABD7xFm9CTGZ2OWNZU2E2UjJtdGNYOVJpcUEAAAAAAAQ-8hZvQkxmdjljWVNhNlIybXRjWDlSaXFBAAAAAAAEPvQWb0JMZnY5Y1lTYTZSMm10Y1g5UmlxQQ=="}`:
+			case mustGetString("test_files/3.2.q.json"):
 				return &http.Response{
 					StatusCode: 200,
 					Request:    req,
-					Body:       ioutil.NopCloser(strings.NewReader(`{"_scroll_id":"DnF1ZXJ5VGhlbkZldGNoDwAAAAAABD7nFm9CTGZ2OWNZU2E2UjJtdGNYOVJpcUEAAAAAAAQ-5hZvQkxmdjljWVNhNlIybXRjWDlSaXFBAAAAAAAEPugWb0JMZnY5Y1lTYTZSMm10Y1g5UmlxQQAAAAAABD7pFm9CTGZ2OWNZU2E2UjJtdGNYOVJpcUEAAAAAAAQ-6hZvQkxmdjljWVNhNlIybXRjWDlSaXFBAAAAAAAEPuwWb0JMZnY5Y1lTYTZSMm10Y1g5UmlxQQAAAAAABD7rFm9CTGZ2OWNZU2E2UjJtdGNYOVJpcUEAAAAAAAQ-8xZvQkxmdjljWVNhNlIybXRjWDlSaXFBAAAAAAAEPu0Wb0JMZnY5Y1lTYTZSMm10Y1g5UmlxQQAAAAAABD7uFm9CTGZ2OWNZU2E2UjJtdGNYOVJpcUEAAAAAAAQ-7xZvQkxmdjljWVNhNlIybXRjWDlSaXFBAAAAAAAEPvAWb0JMZnY5Y1lTYTZSMm10Y1g5UmlxQQAAAAAABD7xFm9CTGZ2OWNZU2E2UjJtdGNYOVJpcUEAAAAAAAQ-8hZvQkxmdjljWVNhNlIybXRjWDlSaXFBAAAAAAAEPvQWb0JMZnY5Y1lTYTZSMm10Y1g5UmlxQQ==","took":1,"timed_out":false,"_shards":{"total":15,"successful":15,"skipped":0,"failed":0},"hits":{"total":1,"max_score":null,"hits":[]}}`)),
+					Body:       mustOpen("test_files/3.2.r.json"),
 				}, nil
 			// QueryIPSet dest_ip query
-			case `{"scroll":"5m","scroll_id":"DnF1ZXJ5VGhlbkZldGNoDwAAAAAABEEmFm9CTGZ2OWNZU2E2UjJtdGNYOVJpcUEAAAAAAARBIBZvQkxmdjljWVNhNlIybXRjWDlSaXFBAAAAAAAEQSEWb0JMZnY5Y1lTYTZSMm10Y1g5UmlxQQAAAAAABEEiFm9CTGZ2OWNZU2E2UjJtdGNYOVJpcUEAAAAAAARBIxZvQkxmdjljWVNhNlIybXRjWDlSaXFBAAAAAAAEQSQWb0JMZnY5Y1lTYTZSMm10Y1g5UmlxQQAAAAAABEElFm9CTGZ2OWNZU2E2UjJtdGNYOVJpcUEAAAAAAARBJxZvQkxmdjljWVNhNlIybXRjWDlSaXFBAAAAAAAEQSgWb0JMZnY5Y1lTYTZSMm10Y1g5UmlxQQAAAAAABEEpFm9CTGZ2OWNZU2E2UjJtdGNYOVJpcUEAAAAAAARBKhZvQkxmdjljWVNhNlIybXRjWDlSaXFBAAAAAAAEQSsWb0JMZnY5Y1lTYTZSMm10Y1g5UmlxQQAAAAAABEEsFm9CTGZ2OWNZU2E2UjJtdGNYOVJpcUEAAAAAAARBLRZvQkxmdjljWVNhNlIybXRjWDlSaXFBAAAAAAAEQS4Wb0JMZnY5Y1lTYTZSMm10Y1g5UmlxQQ=="}`:
+			case mustGetString("test_files/3.4.q.json"):
 				return &http.Response{
 					StatusCode: 200,
 					Request:    req,
-					Body:       ioutil.NopCloser(strings.NewReader(`{"_scroll_id":"DnF1ZXJ5VGhlbkZldGNoDwAAAAAABEEmFm9CTGZ2OWNZU2E2UjJtdGNYOVJpcUEAAAAAAARBIBZvQkxmdjljWVNhNlIybXRjWDlSaXFBAAAAAAAEQSEWb0JMZnY5Y1lTYTZSMm10Y1g5UmlxQQAAAAAABEEiFm9CTGZ2OWNZU2E2UjJtdGNYOVJpcUEAAAAAAARBIxZvQkxmdjljWVNhNlIybXRjWDlSaXFBAAAAAAAEQSQWb0JMZnY5Y1lTYTZSMm10Y1g5UmlxQQAAAAAABEElFm9CTGZ2OWNZU2E2UjJtdGNYOVJpcUEAAAAAAARBJxZvQkxmdjljWVNhNlIybXRjWDlSaXFBAAAAAAAEQSgWb0JMZnY5Y1lTYTZSMm10Y1g5UmlxQQAAAAAABEEpFm9CTGZ2OWNZU2E2UjJtdGNYOVJpcUEAAAAAAARBKhZvQkxmdjljWVNhNlIybXRjWDlSaXFBAAAAAAAEQSsWb0JMZnY5Y1lTYTZSMm10Y1g5UmlxQQAAAAAABEEsFm9CTGZ2OWNZU2E2UjJtdGNYOVJpcUEAAAAAAARBLRZvQkxmdjljWVNhNlIybXRjWDlSaXFBAAAAAAAEQS4Wb0JMZnY5Y1lTYTZSMm10Y1g5UmlxQQ==","took":3,"timed_out":false,"_shards":{"total":15,"successful":15,"skipped":0,"failed":0},"hits":{"total":1,"max_score":null,"hits":[]}} `)),
+					Body:       mustOpen("test_files/3.4.r.json"),
 				}, nil
 			}
 		}
@@ -248,4 +250,29 @@ func (*testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	return &http.Response{
 		StatusCode: 500,
 	}, nil
+}
+
+func mustOpen(name string) io.ReadCloser {
+	f, err := os.Open(name)
+	if err != nil {
+		panic(err)
+	}
+	return f
+}
+
+func mustGetString(name string) string {
+	f, err := os.Open(name)
+	if err != nil {
+		panic(err)
+	}
+	b, err := ioutil.ReadAll(f)
+	if err != nil {
+		panic(err)
+	}
+	err = f.Close()
+	if err != nil {
+		panic(err)
+	}
+
+	return strings.Trim(string(b), " \r\n\t")
 }
