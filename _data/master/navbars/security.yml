@@ -4,10 +4,14 @@ order: 3
 toc:
 - title: Security
   path: /security/
+- title: Tigera Secure EE policy tutorial
+  path: /security/simple-policy-cnx
 - title: Simple policy tutorial
   path: /security/simple-policy
 - title: Stars policy tutorial
   path: /security/stars-policy/
+- title: Tiered policy
+  path: /security/tiered-policy
 - title: Controlling ingress and egress traffic with network policy
   path: /security/advanced-policy
 - title: Application layer tutorial
