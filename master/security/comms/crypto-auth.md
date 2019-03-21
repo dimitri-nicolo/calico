@@ -14,12 +14,12 @@ its connections as follows.
 
 - Configure each {{site.prodname}} component to verify the etcd server's identity and to present
   a certificate to the etcd server that is signed by the etcd certificate authority.
-  - [{{site.nodecontainer}}](../reference/node/configuration)
-  - [`calicoctl`](./calicoctl/configure/etcd)
-  - [CNI plugin](../reference/cni-plugin/configuration#etcd-location) (Kubernetes and OpenShift only)
-  - [Kubernetes controllers](../reference/kube-controllers/configuration#configuring-etcd-access) (Kubernetes and OpenShift only)
-  - [Felix](../reference/felix/configuration#etcd-datastore-configuration) (on [bare metal hosts](../getting-started/bare-metal/installation/))
-  - [Typha](../reference/typha/configuration#etcd-datastore-configuration) (often deployed in
+  - [{{site.nodecontainer}}](../../reference/node/configuration)
+  - [`calicoctl`](../../getting-started/calicoctl/configure/etcd)
+  - [CNI plugin](../../reference/cni-plugin/configuration#etcd-location) (Kubernetes and OpenShift only)
+  - [Kubernetes controllers](../../reference/kube-controllers/configuration#etcdv3) (Kubernetes and OpenShift only)
+  - [Felix](../../reference/felix/configuration#etcd-datastore-configuration) (on [bare metal hosts](../../getting-started/bare-metal/installation/))
+  - [Typha](../../reference/typha/configuration#etcd-datastore-configuration) (often deployed in
     larger Kubernetes deployments)
 
 ### Connections from {{site.prodname}} components to kube-apiserver (Kubernetes and OpenShift)
@@ -107,9 +107,9 @@ follow the same procedure as above, except:
 
 For detailed reference information on these parameters, refer to:
 
-- **Typha**: [Felix-Typha TLS configuration](../reference/typha/configuration#felix-typha-tls-configuration)
+- **Typha**: [Felix-Typha TLS configuration](../../reference/typha/configuration#felix-typha-tls-configuration)
 
-- **Felix**: [Felix-Typha TLS configuration](../reference/felix/configuration#felix-typha-tls-configuration)
+- **Felix**: [Felix-Typha TLS configuration](../../reference/felix/configuration#felix-typha-tls-configuration)
 
 ## {{site.prodname}} Manager connections
 
