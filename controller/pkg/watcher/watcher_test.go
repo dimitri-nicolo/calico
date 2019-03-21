@@ -67,7 +67,7 @@ func TestWatcher_HandleEvent(t *testing.T) {
 			},
 		},
 	})
-	g.Expect(w.feeds).Should(HaveLen(1))
+	g.Expect(w.listFeedWatchers()).Should(HaveLen(1))
 
 	// a non-existing feed is with Modified (should never happen)
 	w.handleEvent(ctx, watch.Event{
@@ -78,7 +78,7 @@ func TestWatcher_HandleEvent(t *testing.T) {
 			},
 		},
 	})
-	g.Expect(w.feeds).Should(HaveLen(2))
+	g.Expect(w.listFeedWatchers()).Should(HaveLen(2))
 
 	// an existing feed is added again
 	w.handleEvent(ctx, watch.Event{
@@ -90,8 +90,10 @@ func TestWatcher_HandleEvent(t *testing.T) {
 			},
 		},
 	})
-	g.Expect(w.feeds).Should(HaveLen(2))
-	g.Expect(w.feeds["feed1"].feed.ResourceVersion).Should(Equal("test"))
+	g.Expect(w.listFeedWatchers()).Should(HaveLen(2))
+	fw, ok := w.getFeedWatcher("feed1")
+	g.Expect(ok).Should(BeTrue())
+	g.Expect(fw.feed.ResourceVersion).Should(Equal("test"))
 
 	// an existing feed is modified
 	w.handleEvent(ctx, watch.Event{
@@ -103,8 +105,10 @@ func TestWatcher_HandleEvent(t *testing.T) {
 			},
 		},
 	})
-	g.Expect(w.feeds).Should(HaveLen(2))
-	g.Expect(w.feeds["feed1"].feed.ResourceVersion).Should(Equal("test2"))
+	g.Expect(w.listFeedWatchers()).Should(HaveLen(2))
+	fw, ok = w.getFeedWatcher("feed1")
+	g.Expect(ok).Should(BeTrue())
+	g.Expect(fw.feed.ResourceVersion).Should(Equal("test2"))
 
 	// an existing feed is deleted
 	w.handleEvent(ctx, watch.Event{
@@ -115,8 +119,9 @@ func TestWatcher_HandleEvent(t *testing.T) {
 			},
 		},
 	})
-	g.Expect(w.feeds).Should(HaveLen(1))
-	g.Expect(w.feeds["feed1"]).Should(BeNil())
+	g.Expect(w.listFeedWatchers()).Should(HaveLen(1))
+	_, ok = w.getFeedWatcher("feed1")
+	g.Expect(ok).Should(BeFalse())
 
 	// a nil feed is added
 	w.handleEvent(ctx, watch.Event{
@@ -179,9 +184,9 @@ func TestWatcher_startFeed_stopFeed(t *testing.T) {
 
 	w.startFeed(ctx, f)
 
-	fw, ok := w.feeds[f.Name]
+	fw, ok := w.getFeedWatcher(f.Name)
 	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
-	g.Expect(w.feeds).To(HaveLen(1), "Only one FeedWatcher")
+	g.Expect(w.listFeedWatchers()).To(HaveLen(1), "Only one FeedWatcher")
 
 	g.Expect(*fw.feed).Should(Equal(f))
 	g.Expect(fw.puller).ShouldNot(BeNil())
@@ -191,9 +196,9 @@ func TestWatcher_startFeed_stopFeed(t *testing.T) {
 	g.Expect(fw.searcher).ShouldNot(BeNil())
 
 	w.stopFeed(f.Name)
-	_, ok = w.feeds[f.Name]
+	_, ok = w.getFeedWatcher(f.Name)
 	g.Expect(ok).Should(BeFalse(), "FeedWatchers map does not contain feed")
-	g.Expect(w.feeds).To(HaveLen(0), "No FeedWatchers")
+	g.Expect(w.listFeedWatchers()).To(HaveLen(0), "No FeedWatchers")
 }
 
 func TestWatcher_startFeed_NoPull(t *testing.T) {
@@ -224,9 +229,9 @@ func TestWatcher_startFeed_NoPull(t *testing.T) {
 
 	w.startFeed(ctx, f)
 
-	fw, ok := w.feeds[f.Name]
+	fw, ok := w.getFeedWatcher(f.Name)
 	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
-	g.Expect(w.feeds).Should(HaveLen(1), "No FeedWatchers")
+	g.Expect(w.listFeedWatchers()).Should(HaveLen(1), "No FeedWatchers")
 	g.Expect(fw.puller).Should(BeNil(), "MockPuller is nil")
 	g.Expect(fw.syncer).Should(BeNil(), "MockSyncer is nil")
 	g.Expect(fw.statser).ShouldNot(BeNil(), "Statser is not nil")
@@ -262,9 +267,9 @@ func TestWatcher_startFeed_NoPullHTTP(t *testing.T) {
 
 	w.startFeed(ctx, f)
 
-	fw, ok := w.feeds[f.Name]
+	fw, ok := w.getFeedWatcher(f.Name)
 	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
-	g.Expect(w.feeds).Should(HaveLen(1), "No FeedWatchers")
+	g.Expect(w.listFeedWatchers()).Should(HaveLen(1), "No FeedWatchers")
 	g.Expect(fw.puller).Should(BeNil(), "MockPuller is nil")
 	g.Expect(fw.syncer).Should(BeNil(), "MockSyncer is nil")
 	g.Expect(fw.statser).ShouldNot(BeNil(), "Statser is not nil")
@@ -307,9 +312,9 @@ func TestWatcher_startFeed_Exists(t *testing.T) {
 
 	w.startFeed(ctx, f)
 
-	_, ok := w.feeds[f.Name]
+	_, ok := w.getFeedWatcher(f.Name)
 	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
-	g.Expect(w.feeds).To(HaveLen(1), "Only one FeedWatcher")
+	g.Expect(w.listFeedWatchers()).To(HaveLen(1), "Only one FeedWatcher")
 
 	g.Expect(func() { w.startFeed(ctx, f) }).Should(Panic())
 }
@@ -395,9 +400,9 @@ func TestWatcher_updateFeed_PullToPull(t *testing.T) {
 
 	w.startFeed(ctx, f)
 
-	fw, ok := w.feeds[f.Name]
+	fw, ok := w.getFeedWatcher(f.Name)
 	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
-	g.Expect(w.feeds).To(HaveLen(1), "Only one FeedWatcher")
+	g.Expect(w.listFeedWatchers()).To(HaveLen(1), "Only one FeedWatcher")
 
 	// hack in some mocks so we can verify that SetFeed was called
 	mockPuller := &MockPuller{}
@@ -411,9 +416,9 @@ func TestWatcher_updateFeed_PullToPull(t *testing.T) {
 
 	w.updateFeed(ctx, f)
 
-	fw, ok = w.feeds[f.Name]
+	fw, ok = w.getFeedWatcher(f.Name)
 	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
-	g.Expect(w.feeds).To(HaveLen(1), "Only one FeedWatcher")
+	g.Expect(w.listFeedWatchers()).To(HaveLen(1), "Only one FeedWatcher")
 	g.Expect(mockPuller.Feed).ShouldNot(BeNil())
 	g.Expect(mockPuller.CloseCalled).Should(BeFalse())
 	g.Expect(fw.puller).Should(BeIdenticalTo(mockPuller))
@@ -460,9 +465,9 @@ func TestWatcher_updateFeed_PullToPush(t *testing.T) {
 
 	w.startFeed(ctx, f)
 
-	fw, ok := w.feeds[f.Name]
+	fw, ok := w.getFeedWatcher(f.Name)
 	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
-	g.Expect(w.feeds).To(HaveLen(1), "Only one FeedWatcher")
+	g.Expect(w.listFeedWatchers()).To(HaveLen(1), "Only one FeedWatcher")
 
 	// hack in some mocks so we can verify that SetFeed was called
 	mockPuller := &MockPuller{}
@@ -478,9 +483,9 @@ func TestWatcher_updateFeed_PullToPush(t *testing.T) {
 
 	w.updateFeed(ctx, f)
 
-	fw, ok = w.feeds[f.Name]
+	fw, ok = w.getFeedWatcher(f.Name)
 	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
-	g.Expect(w.feeds).To(HaveLen(1), "Only one FeedWatcher")
+	g.Expect(w.listFeedWatchers()).To(HaveLen(1), "Only one FeedWatcher")
 	g.Expect(fw.puller).Should(BeNil())
 	g.Expect(fw.syncer).Should(BeNil())
 	g.Expect(mockPuller.Feed).Should(BeNil())
@@ -518,9 +523,9 @@ func TestWatcher_updateFeed_PushToPull(t *testing.T) {
 
 	w.startFeed(ctx, f)
 
-	fw, ok := w.feeds[f.Name]
+	fw, ok := w.getFeedWatcher(f.Name)
 	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
-	g.Expect(w.feeds).To(HaveLen(1), "Only one FeedWatcher")
+	g.Expect(w.listFeedWatchers()).To(HaveLen(1), "Only one FeedWatcher")
 
 	// hack in some mocks so we can verify that SetFeed was called
 	searcher := &MockSearcher{}
@@ -539,9 +544,9 @@ func TestWatcher_updateFeed_PushToPull(t *testing.T) {
 
 	w.updateFeed(ctx, f)
 
-	fw, ok = w.feeds[f.Name]
+	fw, ok = w.getFeedWatcher(f.Name)
 	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
-	g.Expect(w.feeds).To(HaveLen(1), "Only one FeedWatcher")
+	g.Expect(w.listFeedWatchers()).To(HaveLen(1), "Only one FeedWatcher")
 	g.Expect(fw.puller).ShouldNot(BeNil())
 	g.Expect(fw.syncer).ShouldNot(BeNil())
 	g.Expect(searcher.Feed).ShouldNot(BeNil(), "SetFeed was called")
@@ -576,9 +581,9 @@ func TestWatcher_updateFeed_PushToPush(t *testing.T) {
 
 	w.startFeed(ctx, f)
 
-	fw, ok := w.feeds[f.Name]
+	fw, ok := w.getFeedWatcher(f.Name)
 	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
-	g.Expect(w.feeds).To(HaveLen(1), "Only one FeedWatcher")
+	g.Expect(w.listFeedWatchers()).To(HaveLen(1), "Only one FeedWatcher")
 
 	searcher := &MockSearcher{}
 	garbageCollector := &MockGC{}
@@ -587,9 +592,9 @@ func TestWatcher_updateFeed_PushToPush(t *testing.T) {
 
 	w.updateFeed(ctx, f)
 
-	fw, ok = w.feeds[f.Name]
+	fw, ok = w.getFeedWatcher(f.Name)
 	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
-	g.Expect(w.feeds).To(HaveLen(1), "Only one FeedWatcher")
+	g.Expect(w.listFeedWatchers()).To(HaveLen(1), "Only one FeedWatcher")
 	g.Expect(fw.puller).Should(BeNil())
 	g.Expect(fw.syncer).Should(BeNil())
 	g.Expect(searcher.Feed).ShouldNot(BeNil(), "SetFeed was called")
@@ -632,9 +637,9 @@ func TestWatcher_restartPuller(t *testing.T) {
 
 	w.startFeed(ctx, f)
 
-	fw, ok := w.feeds[f.Name]
+	fw, ok := w.getFeedWatcher(f.Name)
 	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
-	g.Expect(w.feeds).To(HaveLen(1), "Only one FeedWatcher")
+	g.Expect(w.listFeedWatchers()).To(HaveLen(1), "Only one FeedWatcher")
 
 	g.Expect(*fw.feed).Should(Equal(f))
 	g.Expect(fw.puller).ShouldNot(BeNil())
@@ -647,8 +652,10 @@ func TestWatcher_restartPuller(t *testing.T) {
 	oldSyncer := fw.syncer
 
 	w.restartPuller(ctx, f)
-	g.Expect(w.feeds[f.Name].puller).ShouldNot(Equal(oldPuller))
-	g.Expect(w.feeds[f.Name].syncer).ShouldNot(Equal(oldSyncer))
+	fw, ok = w.getFeedWatcher(f.Name)
+	g.Expect(ok).Should(BeTrue())
+	g.Expect(fw.puller).ShouldNot(Equal(oldPuller))
+	g.Expect(fw.syncer).ShouldNot(Equal(oldSyncer))
 }
 
 func TestWatcher_restartPuller_NoPull(t *testing.T) {
@@ -687,9 +694,9 @@ func TestWatcher_restartPuller_NoPull(t *testing.T) {
 
 	w.startFeed(ctx, f)
 
-	fw, ok := w.feeds[f.Name]
+	fw, ok := w.getFeedWatcher(f.Name)
 	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
-	g.Expect(w.feeds).To(HaveLen(1), "Only one FeedWatcher")
+	g.Expect(w.listFeedWatchers()).To(HaveLen(1), "Only one FeedWatcher")
 
 	g.Expect(*fw.feed).Should(Equal(f))
 	g.Expect(fw.puller).ShouldNot(BeNil())
@@ -701,8 +708,10 @@ func TestWatcher_restartPuller_NoPull(t *testing.T) {
 	f.Spec.Pull = nil
 
 	w.restartPuller(ctx, f)
-	g.Expect(w.feeds[f.Name].puller).Should(BeNil())
-	g.Expect(w.feeds[f.Name].syncer).Should(BeNil())
+	fw, ok = w.getFeedWatcher(f.Name)
+	g.Expect(ok).Should(BeTrue())
+	g.Expect(fw.puller).Should(BeNil())
+	g.Expect(fw.syncer).Should(BeNil())
 }
 
 func TestWatcher_restartPuller_NoPullHTTP(t *testing.T) {
@@ -741,9 +750,9 @@ func TestWatcher_restartPuller_NoPullHTTP(t *testing.T) {
 
 	w.startFeed(ctx, f)
 
-	fw, ok := w.feeds[f.Name]
+	fw, ok := w.getFeedWatcher(f.Name)
 	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
-	g.Expect(w.feeds).To(HaveLen(1), "Only one FeedWatcher")
+	g.Expect(w.listFeedWatchers()).To(HaveLen(1), "Only one FeedWatcher")
 
 	g.Expect(*fw.feed).Should(Equal(f))
 	g.Expect(fw.puller).ShouldNot(BeNil())
@@ -755,8 +764,9 @@ func TestWatcher_restartPuller_NoPullHTTP(t *testing.T) {
 	f.Spec.Pull.HTTP = nil
 
 	w.restartPuller(ctx, f)
-	g.Expect(w.feeds[f.Name].puller).Should(BeNil())
-	g.Expect(w.feeds[f.Name].syncer).Should(BeNil())
+	fw, ok = w.getFeedWatcher(f.Name)
+	g.Expect(fw.puller).Should(BeNil())
+	g.Expect(fw.syncer).Should(BeNil())
 }
 
 func TestWatcher_restartPuller_notExists(t *testing.T) {

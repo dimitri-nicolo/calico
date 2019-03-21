@@ -49,6 +49,7 @@ type watcher struct {
 	suspiciousIP           db.SuspiciousIP
 	events                 db.Events
 	feeds                  map[string]*feedWatcher
+	feedMutex              goSync.RWMutex
 	cancel                 context.CancelFunc
 	once                   goSync.Once
 	err                    error
@@ -142,7 +143,7 @@ func (s *watcher) handleEvent(ctx context.Context, event watch.Event) {
 			return
 		}
 
-		if _, ok := s.feeds[globalThreatFeed.Name]; !ok {
+		if _, ok := s.getFeedWatcher(globalThreatFeed.Name); !ok {
 			s.startFeed(ctx, *globalThreatFeed)
 			log.WithField("feed", globalThreatFeed.Name).Info("Feed started")
 		} else {
@@ -157,7 +158,7 @@ func (s *watcher) handleEvent(ctx context.Context, event watch.Event) {
 			return
 		}
 
-		if _, ok := s.feeds[globalThreatFeed.Name]; ok {
+		if _, ok := s.getFeedWatcher(globalThreatFeed.Name); ok {
 			s.stopFeed(globalThreatFeed.Name)
 			log.WithField("feed", globalThreatFeed.Name).Info("Feed stopped")
 		} else {
@@ -178,7 +179,7 @@ func (s *watcher) handleEvent(ctx context.Context, event watch.Event) {
 }
 
 func (s *watcher) startFeed(ctx context.Context, f v3.GlobalThreatFeed) {
-	if _, ok := s.feeds[f.Name]; ok {
+	if _, ok := s.getFeedWatcher(f.Name); ok {
 		panic(fmt.Sprintf("Feed %s already started", f.Name))
 	}
 
@@ -191,7 +192,7 @@ func (s *watcher) startFeed(ctx context.Context, f v3.GlobalThreatFeed) {
 		statser:          st,
 	}
 
-	s.feeds[f.Name] = &fw
+	s.setFeedWatcher(f.Name, &fw)
 
 	if fCopy.Spec.Pull != nil && fCopy.Spec.Pull.HTTP != nil {
 		fw.puller = puller.NewHTTPPuller(fCopy, s.ipSet, s.configMapClient, s.secretsClient, s.httpClient)
@@ -208,7 +209,7 @@ func (s *watcher) startFeed(ctx context.Context, f v3.GlobalThreatFeed) {
 }
 
 func (s *watcher) updateFeed(ctx context.Context, f v3.GlobalThreatFeed) {
-	fw, ok := s.feeds[f.Name]
+	fw, ok := s.getFeedWatcher(f.Name)
 	if !ok {
 		panic(fmt.Sprintf("Feed %s not started", f.Name))
 	}
@@ -240,7 +241,7 @@ func (s *watcher) updateFeed(ctx context.Context, f v3.GlobalThreatFeed) {
 func (s *watcher) restartPuller(ctx context.Context, f v3.GlobalThreatFeed) {
 	name := f.Name
 
-	fw, ok := s.feeds[name]
+	fw, ok := s.getFeedWatcher(name)
 	if !ok {
 		panic(fmt.Sprintf("feed %s not running", name))
 	}
@@ -265,7 +266,7 @@ func (s *watcher) restartPuller(ctx context.Context, f v3.GlobalThreatFeed) {
 }
 
 func (s *watcher) stopFeed(name string) {
-	fw, ok := s.feeds[name]
+	fw, ok := s.getFeedWatcher(name)
 	if !ok {
 		panic(fmt.Sprintf("feed %s not running", name))
 	}
@@ -280,11 +281,41 @@ func (s *watcher) stopFeed(name string) {
 	}
 	fw.garbageCollector.Close()
 	fw.searcher.Close()
-	delete(s.feeds, name)
+	s.deleteFeedWatcher(name)
 }
 
 func (s *watcher) Close() {
 	s.cancel()
+}
+
+func (s *watcher) getFeedWatcher(name string) (fw *feedWatcher, ok bool) {
+	s.feedMutex.RLock()
+	defer s.feedMutex.RUnlock()
+	fw, ok = s.feeds[name]
+	return
+}
+
+func (s *watcher) setFeedWatcher(name string, fw *feedWatcher) {
+	s.feedMutex.Lock()
+	defer s.feedMutex.Unlock()
+	s.feeds[name] = fw
+	return
+}
+
+func (s *watcher) deleteFeedWatcher(name string) {
+	s.feedMutex.Lock()
+	defer s.feedMutex.Unlock()
+	delete(s.feeds, name)
+}
+
+func (s *watcher) listFeedWatchers() []*feedWatcher {
+	s.feedMutex.RLock()
+	defer s.feedMutex.RUnlock()
+	var out []*feedWatcher
+	for _, fw := range s.feeds {
+		out = append(out, fw)
+	}
+	return out
 }
 
 // Ping is used to ensure the watcher's main loop is running and not blocked.
@@ -301,11 +332,8 @@ func (s *watcher) Ready() bool {
 		return false
 	}
 
-	// Loop over all the active feeds and return false if any have errors. We
-	// don't need to worry about synchronizing this with the main loop, since
-	// this is for readiness. If a new feed is added or one removed, we'll check
-	// it next time kubelet queries readiness.
-	for _, fw := range s.feeds {
+	// Loop over all the active feeds and return false if any have errors.
+	for _, fw := range s.listFeedWatchers() {
 		status := fw.statser.Status()
 		if len(status.ErrorConditions) > 0 {
 			return false
