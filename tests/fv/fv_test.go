@@ -24,9 +24,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -36,6 +36,7 @@ import (
 
 	"github.com/projectcalico/felix/fv/containers"
 	"github.com/projectcalico/kube-controllers/tests/testutils"
+	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
@@ -61,28 +62,28 @@ var _ = Describe("kube-controllers FV tests", func() {
 	BeforeEach(func() {
 		// Run etcd.
 		etcd = testutils.RunEtcd()
-		calicoClient = testutils.GetCalicoClient(etcd.IP)
+		calicoClient = testutils.GetCalicoClient(apiconfig.EtcdV3, etcd.IP, "")
 
 		// Run apiserver.
 		apiserver = testutils.RunK8sApiserver(etcd.IP)
 
 		// Write out a kubeconfig file
-		kfconfigfile, err := ioutil.TempFile("", "ginkgo-policycontroller")
+		kconfigfile, err := ioutil.TempFile("", "ginkgo-policycontroller")
 		Expect(err).NotTo(HaveOccurred())
-		defer os.Remove(kfconfigfile.Name())
+		defer os.Remove(kconfigfile.Name())
 		data := fmt.Sprintf(testutils.KubeconfigTemplate, apiserver.IP)
-		kfconfigfile.Write([]byte(data))
+		kconfigfile.Write([]byte(data))
 
-		policyController = testutils.RunPolicyController(etcd.IP, kfconfigfile.Name())
+		policyController = testutils.RunPolicyController(apiconfig.EtcdV3, etcd.IP, kconfigfile.Name(), "")
 
-		k8sClient, err = testutils.GetK8sClient(kfconfigfile.Name())
+		k8sClient, err = testutils.GetK8sClient(kconfigfile.Name())
 		Expect(err).NotTo(HaveOccurred())
 
 		// Wait for the apiserver to be available.
 		Eventually(func() error {
 			_, err := k8sClient.CoreV1().Namespaces().List(metav1.ListOptions{})
 			return err
-		}, 15*time.Second, 500*time.Millisecond).Should(BeNil())
+		}, 30*time.Second, 1*time.Second).Should(BeNil())
 
 		// Run controller manager.  Empirically it can take around 10s until the
 		// controller manager is ready to create default service accounts, even

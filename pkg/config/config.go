@@ -48,6 +48,12 @@ type Config struct {
 	// Enable healthchecks
 	HealthEnabled bool `default:"true"`
 
+	// Enable syncing of node labels
+	SyncNodeLabels bool `default:"true" split_words:"true"`
+
+	// etcdv3 or kubernetes
+	DatastoreType string `default:"etcdv3" split_words:"true"`
+
 	// Option used for testing and debugging to set the license polling interval to a shorter period.
 	DebugUseShortPollIntervals bool `default:"false" split_words:"true"`
 }

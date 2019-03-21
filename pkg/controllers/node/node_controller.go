@@ -16,28 +16,33 @@ package node
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 	"k8s.io/api/core/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	uruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
+	"github.com/projectcalico/kube-controllers/pkg/config"
 	"github.com/projectcalico/kube-controllers/pkg/controllers/controller"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
-	"github.com/projectcalico/libcalico-go/lib/errors"
-	"github.com/projectcalico/libcalico-go/lib/options"
 )
 
 const (
 	RateLimitCalicoList   = "calico-list"
 	RateLimitK8s          = "k8s"
 	RateLimitCalicoDelete = "calico-delete"
+	nodeLabelAnnotation   = "projectcalico.org/kube-labels"
+)
+
+var (
+	retrySleepTime = 100 * time.Millisecond
 )
 
 // NodeController implements the Controller interface.  It is responsible for monitoring
@@ -45,39 +50,68 @@ const (
 type NodeController struct {
 	ctx          context.Context
 	informer     cache.Controller
+	indexer      cache.Indexer
 	calicoClient client.Interface
 	k8sClientset *kubernetes.Clientset
 	rl           workqueue.RateLimiter
 	schedule     chan interface{}
+	nodemapper   map[string]string
+	nodemapLock  sync.Mutex
+	syncer       bapi.Syncer
+	config       *config.Config
 }
 
 // NewNodeController Constructor for NodeController
-func NewNodeController(ctx context.Context, k8sClientset *kubernetes.Clientset, calicoClient client.Interface) controller.Controller {
+func NewNodeController(ctx context.Context, k8sClientset *kubernetes.Clientset, calicoClient client.Interface, cfg *config.Config) controller.Controller {
+	nc := &NodeController{
+		ctx:          ctx,
+		calicoClient: calicoClient,
+		k8sClientset: k8sClientset,
+		rl:           workqueue.DefaultControllerRateLimiter(),
+		nodemapper:   map[string]string{},
+		config:       cfg,
+	}
+
 	// channel used to kick the controller into scheduling a sync. It has length
 	// 1 so that we coalesce multiple kicks while a sync is happening down to
 	// just one additional sync.
-	schedule := make(chan interface{}, 1)
+	nc.schedule = make(chan interface{}, 1)
 
 	// Create a Node watcher.
 	listWatcher := cache.NewListWatchFromClient(k8sClientset.CoreV1().RESTClient(), "nodes", "", fields.Everything())
 
-	// Informer handles managing the watch and signals us when nodes are deleted.
-	_, informer := cache.NewIndexerInformer(listWatcher, &v1.Node{}, 0, cache.ResourceEventHandlerFuncs{
+	// Setup event handlers
+	handlers := cache.ResourceEventHandlerFuncs{
 		DeleteFunc: func(obj interface{}) {
 			// Just kick controller to wake up and perform a sync. No need to bother what node it was
 			// as we sync everything.
-			kick(schedule)
-		},
-	}, cache.Indexers{})
+			kick(nc.schedule)
+		}}
 
-	return &NodeController{
-		ctx:          ctx,
-		informer:     informer,
-		calicoClient: calicoClient,
-		k8sClientset: k8sClientset,
-		rl:           workqueue.DefaultControllerRateLimiter(),
-		schedule:     schedule,
+	// Determine if we should sync node labels.
+	syncLabels := cfg.SyncNodeLabels && cfg.DatastoreType != "kubernetes"
+
+	if syncLabels {
+		// Add handlers for node add/update events from k8s.
+		handlers.AddFunc = func(obj interface{}) {
+			nc.syncNodeLabels(obj.(*v1.Node))
+		}
+		handlers.UpdateFunc = func(_, obj interface{}) {
+			nc.syncNodeLabels(obj.(*v1.Node))
+		}
 	}
+
+	// Informer handles managing the watch and signals us when nodes are deleted.
+	// also syncs up labels between k8s/calico node objects
+	nc.indexer, nc.informer = cache.NewIndexerInformer(listWatcher, &v1.Node{}, 0, handlers, cache.Indexers{})
+
+	if syncLabels {
+		// Start the syncer.
+		nc.initSyncer()
+		nc.syncer.Start()
+	}
+
+	return nc
 }
 
 // getK8sNodeName is a helper method that searches a calicoNode for its kubernetes nodeRef.
@@ -139,45 +173,13 @@ func (c *NodeController) acceptScheduleRequests(stopCh <-chan struct{}) {
 	}
 }
 
-// syncDelete is the main work routine of the controller. It queries Calico and
-// K8s, and deletes any Calico nodes which do not exist in K8s.
 func (c *NodeController) syncDelete() error {
-	// Possibly rate limit calls to Calico
-	time.Sleep(c.rl.When(RateLimitCalicoList))
-	cNodes, err := c.calicoClient.Nodes().List(c.ctx, options.ListOptions{})
-	if err != nil {
-		log.WithError(err).Error("Error listing Calico nodes")
-		return err
+	// Call the appropriate cleanup logic based on whether we're using
+	// Kubernetes datastore or etecdv3.
+	if c.config.DatastoreType == "kubernetes" {
+		return c.syncDeleteKDD()
 	}
-	c.rl.Forget(RateLimitCalicoList)
-
-	time.Sleep(c.rl.When(RateLimitK8s))
-	kNodes, err := c.k8sClientset.CoreV1().Nodes().List(meta_v1.ListOptions{})
-	if err != nil {
-		log.WithError(err).Error("Error listing K8s nodes")
-		return err
-	}
-	c.rl.Forget(RateLimitK8s)
-	kNodeIdx := make(map[string]bool)
-	for _, node := range kNodes.Items {
-		kNodeIdx[node.Name] = true
-	}
-
-	for _, node := range cNodes.Items {
-		k8sNodeName := getK8sNodeName(node)
-		if k8sNodeName != "" && !kNodeIdx[k8sNodeName] {
-			// No matching Kubernetes node with that name
-			time.Sleep(c.rl.When(RateLimitCalicoDelete))
-			_, err := c.calicoClient.Nodes().Delete(c.ctx, node.Name, options.DeleteOptions{})
-			if _, doesNotExist := err.(errors.ErrorResourceDoesNotExist); err != nil && !doesNotExist {
-				// We hit an error other than "does not exist".
-				log.WithError(err).Errorf("Error deleting Calico node: %v", node.Name)
-				return err
-			}
-			c.rl.Forget(RateLimitCalicoDelete)
-		}
-	}
-	return nil
+	return c.syncDeleteEtcd()
 }
 
 // kick puts an item on the channel in non-blocking write. This means if there
@@ -190,5 +192,4 @@ func kick(c chan<- interface{}) {
 	default:
 		// pass
 	}
-
 }

@@ -31,6 +31,7 @@ import (
 	"github.com/projectcalico/felix/fv/containers"
 	"github.com/projectcalico/felix/fv/infrastructure"
 	"github.com/projectcalico/kube-controllers/tests/testutils"
+	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
@@ -57,7 +58,7 @@ var _ = Describe("[Resilience] PolicyController", func() {
 	BeforeEach(func() {
 		// Run etcd.
 		calicoEtcd = testutils.RunEtcd()
-		calicoClient = testutils.GetCalicoClient(calicoEtcd.IP)
+		calicoClient = testutils.GetCalicoClient(apiconfig.EtcdV3, calicoEtcd.IP, "")
 
 		// Run apiserver.
 		k8sEtcd = testutils.RunEtcd()
@@ -77,7 +78,7 @@ var _ = Describe("[Resilience] PolicyController", func() {
 		Eventually(func() error {
 			_, err := k8sClient.CoreV1().Namespaces().Get("default", metav1.GetOptions{})
 			return err
-		}, 15*time.Second, 500*time.Millisecond).Should(BeNil())
+		}, 30*time.Second, 1*time.Second).Should(BeNil())
 
 		// Create a Kubernetes NetworkPolicy.
 		policyName = "jelly"
@@ -105,7 +106,7 @@ var _ = Describe("[Resilience] PolicyController", func() {
 			Do().Error()
 		Expect(err).NotTo(HaveOccurred())
 
-		policyController = testutils.RunPolicyController(calicoEtcd.IP, kfConfigFile.Name())
+		policyController = testutils.RunPolicyController(apiconfig.EtcdV3, calicoEtcd.IP, kfConfigFile.Name(), "")
 
 		// Wait for it to appear in Calico's etcd.
 		Eventually(func() *api.NetworkPolicy {
