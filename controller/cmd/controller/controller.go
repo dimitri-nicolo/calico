@@ -39,8 +39,10 @@ const (
 
 func main() {
 	var ver, debug bool
+	var healthzSockPath string
 	flag.BoolVar(&ver, "version", false, "Print version information")
 	flag.BoolVar(&debug, "debug", false, "Debug mode")
+	flag.StringVar(&healthzSockPath, "sock", health.DefaultHealthzSockPath, "Path to healthz socket")
 	flag.Parse()
 
 	if ver {
@@ -153,7 +155,7 @@ func main() {
 	}
 	defer s.Close()
 	log.Info("Watcher started")
-	hs := health.NewServer(s, s)
+	hs := health.NewServer(s, s, healthzSockPath)
 	go func() {
 		err := hs.Serve()
 		if err != nil {

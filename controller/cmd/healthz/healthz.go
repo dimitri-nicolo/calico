@@ -4,6 +4,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"net"
 	"net/http"
@@ -13,25 +14,29 @@ import (
 )
 
 func main() {
+	var healthzSockPath string
+	flag.StringVar(&healthzSockPath, "sock", health.DefaultHealthzSockPath, "Path to healthz socket")
+	flag.Parse()
+
 	c := http.Client{
 		Transport: &http.Transport{
 			DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
-				return net.Dial("unix", health.HealthzSockPath)
+				return net.Dial("unix", healthzSockPath)
 			},
 		},
 	}
-	if len(os.Args) != 2 {
-		fmt.Println("Usage: healthz (liveness|readiness)")
+	if len(flag.Args()) == 0 {
+		_, _ = fmt.Fprintf(os.Stderr, "Usage: %s (liveness|readiness)\n", os.Args[0])
 		os.Exit(1)
 	}
-	path := "/" + os.Args[1]
+	path := "/" + flag.Arg(0)
 	r, err := c.Get("http://unix" + path)
 	if err != nil {
-		fmt.Printf("Error getting healthz %s: %s\n", os.Args[1], err)
+		_, _ = fmt.Fprintf(os.Stderr, "Error getting healthz %s: %s\n", flag.Arg(0), err)
 		os.Exit(2)
 	}
 	if r.StatusCode != http.StatusOK {
-		fmt.Printf("healthz endpoint returned status %d\n", r.StatusCode)
+		_, _ = fmt.Fprintf(os.Stderr, "healthz endpoint returned status %d\n", r.StatusCode)
 		os.Exit(3)
 	}
 	return
