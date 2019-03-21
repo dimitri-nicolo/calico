@@ -73,12 +73,12 @@ clean:
 # CI / test targets
 ###############################################################################
 
-ci: htmlproofer kubeval
-htmlproofer: clean _site
+ci: clean htmlproofer kubeval
+htmlproofer: _site
 	# Run htmlproofer, failing if we hit any errors.
 	./htmlproofer.sh
 
-kubeval: clean _site
+kubeval: _site
 	# Run kubeval to check master manifests are valid Kubernetes resources.
 	-docker run -v $$PWD:/calico --entrypoint /bin/sh garethr/kubeval:0.7.3 -c 'ok=true; for f in `find /calico/_site/master -name "*.yaml" |grep -v "\(patch-cnx-manager-configmap\|kube-controllers-patch\|config\|allow-istio-pilot\|30-policy\|cnx-policy\|crds-only\|istio-app-layer-policy\|patch-flow-logs\|upgrade-calico\|-cf\).yaml"`; do echo Running kubeval on $$f; /kubeval $$f || ok=false; done; $$ok' 1>stderr.out 2>&1
 	
