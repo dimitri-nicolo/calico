@@ -12,6 +12,8 @@ import (
 type GlobalThreatFeedInterface struct {
 	GlobalThreatFeedList *v3.GlobalThreatFeedList
 	Error                error
+	WatchError           error
+	W                    *Watch
 }
 
 func (m *GlobalThreatFeedInterface) Create(gtf *v3.GlobalThreatFeed) (*v3.GlobalThreatFeed, error) {
@@ -39,7 +41,14 @@ func (m *GlobalThreatFeedInterface) List(opts v1.ListOptions) (*v3.GlobalThreatF
 }
 
 func (m *GlobalThreatFeedInterface) Watch(opts v1.ListOptions) (watch.Interface, error) {
-	return nil, m.Error
+	if m.WatchError == nil {
+		if m.W == nil {
+			m.W = &Watch{make(chan watch.Event)}
+		}
+		return m.W, nil
+	} else {
+		return nil, m.WatchError
+	}
 }
 
 func (m *GlobalThreatFeedInterface) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v3.GlobalThreatFeed, err error) {

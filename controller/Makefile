@@ -161,7 +161,7 @@ DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
 controller: $(BINDIR)/controller
 
 $(BINDIR)/controller: $(BINDIR)/controller-amd64
-	cd $(BINDIR) && ln -s -T controller-$(ARCH) controller
+	cd $(BINDIR) && (rm controller || ln -s -T controller-$(ARCH) controller)
 
 $(BINDIR)/controller-$(ARCH): $(GO_FILES)
 ifndef RELEASE_BUILD
@@ -177,6 +177,25 @@ endif
                ( ldd $(BINDIR)/controller-$(ARCH) 2>&1 | grep -q "Not a valid dynamic program" || \
 	             ( echo "Error: $(BINDIR)/controller-$(ARCH) was not statically linked"; false ) )'
 
+healthz: $(BINDIR)/healthz
+
+$(BINDIR)/healthz: $(BINDIR)/healthz-amd64
+	cd $(BINDIR) && (rm healthz || ln -s -T healthz-$(ARCH) healthz)
+
+$(BINDIR)/healthz-$(ARCH): $(GO_FILES)
+ifndef RELEASE_BUILD
+	$(eval LDFLAGS:=$(RELEASE_LDFLAGS))
+else
+	$(eval LDFLAGS:=$(BUILD_LDFLAGS))
+endif
+	@echo Building healthz...
+	mkdir -p bin
+	$(DOCKER_GO_BUILD) \
+	    sh -c 'git config --global url."git@github.com:tigera".insteadOf "https://github.com/tigera" && \
+	           go build -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/healthz" && \
+               ( ldd $(BINDIR)/healthz-$(ARCH) 2>&1 | grep -q "Not a valid dynamic program" || \
+	             ( echo "Error: $(BINDIR)/healthz-$(ARCH) was not statically linked"; false ) )'
+
 # Build the docker image.
 .PHONY: $(BUILD_IMAGE) $(BUILD_IMAGE)-$(ARCH)
 
@@ -188,10 +207,11 @@ sub-image-%:
 
 image: $(BUILD_IMAGE)
 $(BUILD_IMAGE): $(BUILD_IMAGE)-$(ARCH)
-$(BUILD_IMAGE)-$(ARCH): $(BINDIR)/controller-$(ARCH)
+$(BUILD_IMAGE)-$(ARCH): $(BINDIR)/controller-$(ARCH) $(BINDIR)/healthz-$(ARCH)
 	rm -rf docker-image/bin
 	mkdir -p docker-image/bin
 	cp $(BINDIR)/controller-$(ARCH) docker-image/bin/
+	cp $(BINDIR)/healthz-$(ARCH) docker-image/bin/
 	docker build --pull -t $(BUILD_IMAGE):latest-$(ARCH) --file ./docker-image/Dockerfile.$(ARCH) docker-image
 ifeq ($(ARCH),amd64)
 	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(BUILD_IMAGE):latest

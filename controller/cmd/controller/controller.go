@@ -16,6 +16,8 @@ import (
 	"strconv"
 	"syscall"
 
+	"github.com/tigera/intrusion-detection/controller/pkg/health"
+
 	log "github.com/sirupsen/logrus"
 	calicoclient "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset"
 	"k8s.io/client-go/kubernetes"
@@ -37,8 +39,10 @@ const (
 
 func main() {
 	var ver, debug bool
+	var healthzSockPath string
 	flag.BoolVar(&ver, "version", false, "Print version information")
 	flag.BoolVar(&debug, "debug", false, "Debug mode")
+	flag.StringVar(&healthzSockPath, "sock", health.DefaultHealthzSockPath, "Path to healthz socket")
 	flag.Parse()
 
 	if ver {
@@ -151,8 +155,20 @@ func main() {
 	}
 	defer s.Close()
 	log.Info("Watcher started")
+	hs := health.NewServer(s, s, healthzSockPath)
+	go func() {
+		err := hs.Serve()
+		if err != nil {
+			log.WithError(err).Error("failed to start healthz server")
+		}
+	}()
 
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 	<-sig
+	log.Info("got signal; shutting down")
+	err = hs.Close()
+	if err != nil {
+		log.WithError(err).Error("failed to stop healthz server")
+	}
 }

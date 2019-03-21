@@ -1,5 +1,6 @@
 FROM scratch
 
 ADD bin/controller-amd64 /controller
+ADD bin/healthz-amd64 /healthz
 WORKDIR /
 ENTRYPOINT ["/controller"]
