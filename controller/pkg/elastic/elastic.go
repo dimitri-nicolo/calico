@@ -34,13 +34,14 @@ type Elastic struct {
 	c *elastic.Client
 }
 
-func NewElastic(h *http.Client, url *url.URL, username, password string) *Elastic {
+func NewElastic(h *http.Client, url *url.URL, username, password string) (*Elastic, error) {
 
 	options := []elastic.ClientOptionFunc{
 		elastic.SetURL(url.String()),
 		elastic.SetHttpClient(h),
 		elastic.SetErrorLog(log.StandardLogger()),
 		elastic.SetSniff(false),
+		elastic.SetHealthcheck(false),
 		//elastic.SetTraceLog(log.StandardLogger()),
 	}
 	if username != "" {
@@ -48,9 +49,9 @@ func NewElastic(h *http.Client, url *url.URL, username, password string) *Elasti
 	}
 	c, err := elastic.NewClient(options...)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return &Elastic{c}
+	return &Elastic{c}, nil
 }
 
 func (e *Elastic) PutIPSet(ctx context.Context, name string, set db.IPSetSpec) error {

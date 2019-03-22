@@ -5,6 +5,7 @@ package elastic
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -23,6 +24,21 @@ const (
 	baseURI = "http://127.0.0.1:9200"
 )
 
+func TestNewElastic_Fail(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	u, err := url2.Parse(baseURI)
+	g.Expect(err).ShouldNot(HaveOccurred())
+	client := &http.Client{
+		Transport: &testRoundTripper{
+			e: errors.New("test error"),
+		},
+	}
+
+	_, err = NewElastic(client, u, "", "")
+	g.Expect(err).ShouldNot(BeNil())
+}
+
 func TestElastic_GetIPSet(t *testing.T) {
 	g := NewGomegaWithT(t)
 
@@ -32,7 +48,8 @@ func TestElastic_GetIPSet(t *testing.T) {
 		Transport: http.RoundTripper(&testRoundTripper{}),
 	}
 
-	e := NewElastic(client, u, "", "")
+	e, err := NewElastic(client, u, "", "")
+	g.Expect(err).Should(BeNil())
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -66,7 +83,8 @@ func TestElastic_GetIPSetModified(t *testing.T) {
 		Transport: http.RoundTripper(&testRoundTripper{}),
 	}
 
-	e := NewElastic(client, u, "", "")
+	e, err := NewElastic(client, u, "", "")
+	g.Expect(err).Should(BeNil())
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -104,7 +122,8 @@ func TestElastic_QueryIPSet(t *testing.T) {
 		Transport: http.RoundTripper(&testRoundTripper{}),
 	}
 
-	e := NewElastic(client, u, "", "")
+	e, err := NewElastic(client, u, "", "")
+	g.Expect(err).Should(BeNil())
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -122,9 +141,14 @@ func TestElastic_QueryIPSet(t *testing.T) {
 
 type testRoundTripper struct {
 	u *url.URL
+	e error
 }
 
-func (*testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+func (t *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	if t.e != nil {
+		return nil, t.e
+	}
+
 	switch req.Method {
 	case "HEAD":
 		switch req.URL.String() {

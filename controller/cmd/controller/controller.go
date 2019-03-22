@@ -140,7 +140,10 @@ func main() {
 	if u.Scheme == "https" {
 		h.Transport = &http.Transport{TLSClientConfig: &tls.Config{RootCAs: ca}}
 	}
-	e := elastic.NewElastic(h, u, user, pass)
+	e, err := elastic.NewElastic(h, u, user, pass)
+	if err != nil {
+		log.WithError(err).Fatal("Could not connect to Elastic")
+	}
 
 	s := watcher.NewWatcher(
 		k8sClient.CoreV1().ConfigMaps(ConfigMapNamespace),
