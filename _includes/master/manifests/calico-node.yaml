@@ -1,4 +1,3 @@
-# This manifest installs the {{.Values.nodecontainer}} container
 {{- if ne .Values.network "ecs" }}
 # as well as the CNI plugins and network config on
 {{- end }}
@@ -152,7 +151,7 @@ spec:
             mountPath: /host/driver
 {{- end }}
       containers:
-        # Runs {{.Values.nodecontainer}} container on each Kubernetes node.  This
+        # Runs cnx-node container on each Kubernetes node.  This
         # container programs network policy and routes on each
         # host.
         - name: calico-node
@@ -509,7 +508,7 @@ spec:
   {{- end }}
 {{- end }}
       volumes:
-        # Used by {{.Values.nodecontainer}}.
+        # Used by cnx-node.
         - name: lib-modules
           hostPath:
             path: /lib/modules

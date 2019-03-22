@@ -401,7 +401,7 @@ spec:
       nodeSelector:
         beta.kubernetes.io/os: linux
       tolerations:
-        # Make sure {{include "nodeName" . }} gets scheduled on all nodes.
+        # Make sure fluentd-node gets scheduled on all nodes.
         - effect: NoSchedule
           operator: Exists
         - effect: NoExecute
