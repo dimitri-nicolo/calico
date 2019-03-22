@@ -132,4 +132,4 @@ to take effect.
 ## Next steps
 
 To get started with application layer policy support, we recommend that you run through the
-[application layer policy tutorial](../tutorials/app-layer-policy).
+[application layer policy tutorial]({{site.baseurl}}/{{page.version}}/security/app-layer-policy/).

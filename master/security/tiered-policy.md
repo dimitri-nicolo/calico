@@ -18,7 +18,7 @@ first use case.
 
 ### Prerequisites
 
-- A Kubernetes cluster configured with [{{site.prodname}}](../../kubernetes/installation/)
+- A Kubernetes cluster configured with [{{site.prodname}}]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/)
 - [calicoctl installed and set up]({{site.baseurl}}/{{page.version}}/getting-started/calicoctl/configure/) to work properly with your cluster
 - [calicoq installed and set up]({{site.baseurl}}/{{page.version}}/reference/calicoq/) to work with your cluster
 

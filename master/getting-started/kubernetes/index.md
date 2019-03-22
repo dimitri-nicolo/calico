@@ -114,10 +114,10 @@ equipped with {{site.prodname}}.
 
 **[Enable audit logs for Kubernetes `NetworkPolicy` and send them to Elasticsearch](/{{page.version}}/security/logs/elastic/ee-audit#enabling-auditing-for-other-resources)**
 
-**[Secure a simple application using the Kubernetes `NetworkPolicy` API](tutorials/simple-policy)**
+**[Secure a simple application using the Kubernetes `NetworkPolicy` API]({{site.baseurl}}/{{page.version}}/security/simple-policy)**
 
-**[Control ingress and egress traffic using the Kubernetes `NetworkPolicy` API](tutorials/advanced-policy)**
+**[Control ingress and egress traffic using the Kubernetes `NetworkPolicy` API]({{site.baseurl}}/{{page.version}}/security/advanced-policy)**
 
-**[Create a user interface that shows blocked and allowed connections in real time](tutorials/stars-policy/)**
+**[Create a user interface that shows blocked and allowed connections in real time]({{site.baseurl}}/{{page.version}}/security/stars-policy/)**
 
 **[Install and configure calicoctl](/{{page.version}}/getting-started/calicoctl/install)**

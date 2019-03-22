@@ -83,7 +83,7 @@ a user using the UI.
 
 For details on creating a [tier]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/tier)
 resource and adding a Global/NetworkPolicy to that tier, refer to the
-[Tiered Policy Demo]({{site.baseurl}}/{{page.version}}/getting-started/cnx/tiered-policy-cnx/).
+[Tiered Policy Demo]({{site.baseurl}}/{{page.version}}/security/tiered-policy).
 
 ### Permissions required for {{site.prodname}} UI
 

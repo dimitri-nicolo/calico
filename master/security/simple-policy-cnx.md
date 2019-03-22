@@ -218,7 +218,7 @@ In {{site.prodname}} Manager, head to the dashboard view. You will see graphs as
 
 Now if we wanted to dig in further and find out what's causing the packets to be denied, we could take a look at the **Packets by Policy** bar graph. Each individual bar represents a policy that has either denied or allowed a packet. Also, the policies shown by the graph, just like the rest of the dashboard graphs, are time-windowed i.e. they will reflect only the ones that were recently exercised.
 
-> **Note**: The `NetworkPolicy` spec for [`default-deny`]({{site.baseurl}}/{{page.version}}/getting-started/cnx/simple-policy-cnx/#enable-isolation) does not come configured
+> **Note**: The `NetworkPolicy` spec for [`default-deny`](#enable-isolation) does not come configured
 > with any rules. This policy results in a 'default deny' because of how it is [evaluated]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/tier#how-policy-is-evaluated). A packet will be dropped if the policies (like default-deny in this case) affecting the
 > endpoint takes no action.
 >
@@ -328,4 +328,4 @@ from anywhere else.
    This was just a simple example of the Kubernetes NetworkPolicy API and how {{site.prodname}} can secure your Kubernetes cluster.  For more
    information on network policy in Kubernetes, see the [Kubernetes user guide](http://kubernetes.io/docs/user-guide/networkpolicies/).
 
-   For a slightly more detailed demonstration of Policy, check out the [Stars Policy Demo]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/tutorials/stars-policy/).
+   For a slightly more detailed demonstration of Policy, check out the [Stars Policy Demo]({{site.baseurl}}/{{page.version}}/security/stars-policy/).
