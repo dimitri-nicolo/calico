@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/araddon/dateparse"
 	"github.com/olivere/elastic"
 	log "github.com/sirupsen/logrus"
 
@@ -97,7 +98,6 @@ func (e *Elastic) GetIPSet(ctx context.Context, name string) (db.IPSetSpec, erro
 	var doc map[string]interface{}
 	err = json.Unmarshal(*res.Source, &doc)
 	if err != nil {
-		fmt.Printf("%s\n", string(*res.Source))
 		return nil, err
 	}
 	i, ok := doc["ips"]
@@ -122,27 +122,33 @@ func (e *Elastic) GetIPSet(ctx context.Context, name string) (db.IPSetSpec, erro
 }
 
 func (e *Elastic) GetIPSetModified(ctx context.Context, name string) (time.Time, error) {
-	res, err := e.c.Get().Index(IPSetIndex).Type(StandardType).Id(name).StoredFields("created_at").Do(ctx)
+	res, err := e.c.Get().Index(IPSetIndex).Type(StandardType).Id(name).FetchSourceContext(elastic.NewFetchSourceContext(true).Include("created_at")).Do(ctx)
 	if err != nil {
 		return time.Time{}, err
 	}
 
-	createdAt, ok := res.Fields["created_at"]
+	if res.Source == nil {
+		return time.Time{}, err
+	}
+
+	var doc map[string]interface{}
+	err = json.Unmarshal(*res.Source, &doc)
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	createdAt, ok := doc["created_at"]
 	if !ok {
+		// missing created_at field
 		return time.Time{}, nil
 	}
 
 	switch createdAt.(type) {
-	case time.Time:
-		return createdAt.(time.Time), nil
-	case int64:
-		return time.Unix(createdAt.(int64), 0), nil
 	case string:
-		return time.Parse(time.RFC3339, createdAt.(string))
+		return dateparse.ParseIn(createdAt.(string), time.UTC)
 	default:
 		return time.Time{}, fmt.Errorf("Unexpected type for %#v", createdAt)
 	}
-
 }
 
 func (e *Elastic) QueryIPSet(ctx context.Context, name string) (db.SecurityEventIterator, error) {
