@@ -3,7 +3,7 @@
 # The target architecture is select by setting the ARCH variable.
 # When ARCH is undefined it is set to the detected host architecture.
 # When ARCH differs from the host architecture a crossbuild will be performed.
-ARCHES=$(patsubst docker-image/report-generator/Dockerfile.%,%,$(wildcard docker-image/report-generator/Dockerfile.*))
+ARCHES=$(patsubst docker-image/server/Dockerfile.%,%,$(wildcard docker-image/server/Dockerfile.*))
 
 # BUILDARCH is the host architecture
 # ARCH is the target architecture
@@ -46,11 +46,11 @@ prefix_linux = $(addprefix linux/,$(strip $1))
 join_platforms = $(subst $(space),$(comma),$(call prefix_linux,$(strip $1)))
 
 ###############################################################################
-BUILD_IMAGE?=tigera/report-generator
+BUILD_IMAGE?=tigera/compliance-server
 PUSH_IMAGES?=gcr.io/unique-caldron-775/cnx/$(BUILD_IMAGE)
 RELEASE_IMAGES?=quay.io/$(BUILD_IMAGE)
 PACKAGE_NAME?=github.com/tigera/compliance
-DOCKER_IMAGE?=docker-image/report-generator
+DOCKER_IMAGE?=docker-image/server
 
 # If this is a release, also tag and push additional images.
 ifeq ($(RELEASE),true)
@@ -72,11 +72,11 @@ GO_BUILD_VER?=v0.21
 CALICO_BUILD=calico/go-build:$(GO_BUILD_VER)
 
 help:
-	@echo "Tigera Compliance Report Generator Makefile"
+	@echo "Tigera Compliance Report Generator Scheduler Makefile"
 	@echo "Builds:"
 	@echo
 	@echo "  make all                                   Build all the binary packages."
-	@echo "  make tigera/report-generator     Build $(BUILD_IMAGE) docker image."
+	@echo "  make tigera/compliance-server     Build $(BUILD_IMAGE) docker image."
 	@echo
 	@echo "Tests:"
 	@echo
@@ -116,15 +116,15 @@ ifdef UNIT_TESTS
 	UNIT_TEST_FLAGS=-run $(UNIT_TESTS) -v
 endif
 
-REPORT_GENERATOR_VERSION?=$(shell git describe --tags --dirty --always)
-REPORT_GENERATOR_BUILD_DATE?=$(shell date -u +'%FT%T%z')
-REPORT_GENERATOR_GIT_REVISION?=$(shell git rev-parse --short HEAD)
-REPORT_GENERATOR_GIT_DESCRIPTION?=$(shell git describe --tags)
+REPORT_GENERATOR_SCHEDULER_VERSION?=$(shell git describe --tags --dirty --always)
+REPORT_GENERATOR_SCHEDULER_BUILD_DATE?=$(shell date -u +'%FT%T%z')
+REPORT_GENERATOR_SCHEDULER_GIT_REVISION?=$(shell git rev-parse --short HEAD)
+REPORT_GENERATOR_SCHEDULER_GIT_DESCRIPTION?=$(shell git describe --tags)
 
-VERSION_FLAGS=-X main.VERSION=$(REPORT_GENERATOR_VERSION) \
-	-X main.BUILD_DATE=$(REPORT_GENERATOR_BUILD_DATE) \
-	-X main.GIT_DESCRIPTION=$(REPORT_GENERATOR_GIT_DESCRIPTION) \
-	-X main.GIT_REVISION=$(REPORT_GENERATOR_GIT_REVISION)
+VERSION_FLAGS=-X main.VERSION=$(REPORT_GENERATOR_SCHEDULER_VERSION) \
+	-X main.BUILD_DATE=$(REPORT_GENERATOR_SCHEDULER_BUILD_DATE) \
+	-X main.GIT_DESCRIPTION=$(REPORT_GENERATOR_SCHEDULER_GIT_DESCRIPTION) \
+	-X main.GIT_REVISION=$(REPORT_GENERATOR_SCHEDULER_GIT_REVISION)
 BUILD_LDFLAGS=-ldflags "$(VERSION_FLAGS)"
 RELEASE_LDFLAGS=-ldflags "$(VERSION_FLAGS) -s -w"
 
@@ -151,25 +151,25 @@ DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
 
 # This section builds the output binaries.
 # Some will have dedicated targets to make it easier to type, for example
-# "report-generator" instead of "$(BINDIR)/report-generator".
+# "server" instead of "$(BINDIR)/server".
 #########################################################################
-report-generator: $(BINDIR)/report-generator
+server: $(BINDIR)/server
 
-$(BINDIR)/report-generator: $(BINDIR)/report-generator-amd64
-	cd $(BINDIR) && ln -s -T report-generator-$(ARCH) report-generator
+$(BINDIR)/server: $(BINDIR)/server-amd64
+	cd $(BINDIR) && ln -s -T server-$(ARCH) server
 
-$(BINDIR)/report-generator-$(ARCH): $(GO_FILES)
+$(BINDIR)/server-$(ARCH): $(GO_FILES)
 ifndef RELEASE_BUILD
 	$(eval LDFLAGS:=$(RELEASE_LDFLAGS))
 else
 	$(eval LDFLAGS:=$(BUILD_LDFLAGS))
 endif
-	@echo Building report-generator...
+	@echo Building server...
 	mkdir -p bin
 	$(DOCKER_GO_BUILD) \
-	    sh -c 'go build -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/report-generator" && \
-               ( ldd $(BINDIR)/report-generator-$(ARCH) 2>&1 | grep -q "Not a valid dynamic program" || \
-	             ( echo "Error: $(BINDIR)/report-generator-$(ARCH) was not statically linked"; false ) )'
+	    sh -c 'go build -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/server" && \
+               ( ldd $(BINDIR)/server-$(ARCH) 2>&1 | grep -q "Not a valid dynamic program" || \
+	             ( echo "Error: $(BINDIR)/server-$(ARCH) was not statically linked"; false ) )'
 
 # Build the docker image.
 .PHONY: $(BUILD_IMAGE) $(BUILD_IMAGE)-$(ARCH)
@@ -182,10 +182,10 @@ sub-image-%:
 
 image: $(BUILD_IMAGE)
 $(BUILD_IMAGE): $(BUILD_IMAGE)-$(ARCH)
-$(BUILD_IMAGE)-$(ARCH): $(BINDIR)/report-generator-$(ARCH)
+$(BUILD_IMAGE)-$(ARCH): $(BINDIR)/server-$(ARCH)
 	rm -rf $(DOCKER_IMAGE)/bin
 	mkdir -p $(DOCKER_IMAGE)/bin
-	cp $(BINDIR)/report-generator-$(ARCH) $(DOCKER_IMAGE)/bin/
+	cp $(BINDIR)/server-$(ARCH) $(DOCKER_IMAGE)/bin/
 	docker build --pull -t $(BUILD_IMAGE):latest-$(ARCH) --file ./$(DOCKER_IMAGE)/Dockerfile.$(ARCH) $(DOCKER_IMAGE)
 ifeq ($(ARCH),amd64)
 	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(BUILD_IMAGE):latest
@@ -336,5 +336,5 @@ foss-checks:
 	@docker run --rm -v $(CURDIR)/../:/code/:rw \
 	  -e LOCAL_USER_ID=$(MY_UID) \
 	  -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
-	  -w /code/report-generator/ \
+	  -w /code/server/ \
 	  $(CALICO_BUILD) /usr/local/bin/fossa

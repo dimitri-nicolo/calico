@@ -3,7 +3,7 @@
 # The target architecture is select by setting the ARCH variable.
 # When ARCH is undefined it is set to the detected host architecture.
 # When ARCH differs from the host architecture a crossbuild will be performed.
-ARCHES=$(patsubst docker-image/config-snapshotter/Dockerfile.%,%,$(wildcard docker-image/config-snapshotter/Dockerfile.*))
+ARCHES=$(patsubst docker-image/controller/Dockerfile.%,%,$(wildcard docker-image/controller/Dockerfile.*))
 
 # BUILDARCH is the host architecture
 # ARCH is the target architecture
@@ -46,11 +46,11 @@ prefix_linux = $(addprefix linux/,$(strip $1))
 join_platforms = $(subst $(space),$(comma),$(call prefix_linux,$(strip $1)))
 
 ###############################################################################
-BUILD_IMAGE?=tigera/config-snapshotter
+BUILD_IMAGE?=tigera/compliance-controller
 PUSH_IMAGES?=gcr.io/unique-caldron-775/cnx/$(BUILD_IMAGE)
 RELEASE_IMAGES?=quay.io/$(BUILD_IMAGE)
 PACKAGE_NAME?=github.com/tigera/compliance
-DOCKER_IMAGE?=docker-image/config-snapshotter
+DOCKER_IMAGE?=docker-image/controller
 
 # If this is a release, also tag and push additional images.
 ifeq ($(RELEASE),true)
@@ -72,11 +72,11 @@ GO_BUILD_VER?=v0.21
 CALICO_BUILD=calico/go-build:$(GO_BUILD_VER)
 
 help:
-	@echo "Tigera Compliance Config Snapshotter Makefile"
+	@echo "Tigera Compliance Report Generator Scheduler Makefile"
 	@echo "Builds:"
 	@echo
 	@echo "  make all                                   Build all the binary packages."
-	@echo "  make tigera/config-snapshotter     Build $(BUILD_IMAGE) docker image."
+	@echo "  make tigera/compliance-controller     Build $(BUILD_IMAGE) docker image."
 	@echo
 	@echo "Tests:"
 	@echo
@@ -116,15 +116,15 @@ ifdef UNIT_TESTS
 	UNIT_TEST_FLAGS=-run $(UNIT_TESTS) -v
 endif
 
-CONFIG_SNAPSHOTTER_VERSION?=$(shell git describe --tags --dirty --always)
-CONFIG_SNAPSHOTTER_BUILD_DATE?=$(shell date -u +'%FT%T%z')
-CONFIG_SNAPSHOTTER_GIT_REVISION?=$(shell git rev-parse --short HEAD)
-CONFIG_SNAPSHOTTER_GIT_DESCRIPTION?=$(shell git describe --tags)
+REPORT_GENERATOR_SCHEDULER_VERSION?=$(shell git describe --tags --dirty --always)
+REPORT_GENERATOR_SCHEDULER_BUILD_DATE?=$(shell date -u +'%FT%T%z')
+REPORT_GENERATOR_SCHEDULER_GIT_REVISION?=$(shell git rev-parse --short HEAD)
+REPORT_GENERATOR_SCHEDULER_GIT_DESCRIPTION?=$(shell git describe --tags)
 
-VERSION_FLAGS=-X main.VERSION=$(CONFIG_SNAPSHOTTER_VERSION) \
-	-X main.BUILD_DATE=$(CONFIG_SNAPSHOTTER_BUILD_DATE) \
-	-X main.GIT_DESCRIPTION=$(CONFIG_SNAPSHOTTER_GIT_DESCRIPTION) \
-	-X main.GIT_REVISION=$(CONFIG_SNAPSHOTTER_GIT_REVISION)
+VERSION_FLAGS=-X main.VERSION=$(REPORT_GENERATOR_SCHEDULER_VERSION) \
+	-X main.BUILD_DATE=$(REPORT_GENERATOR_SCHEDULER_BUILD_DATE) \
+	-X main.GIT_DESCRIPTION=$(REPORT_GENERATOR_SCHEDULER_GIT_DESCRIPTION) \
+	-X main.GIT_REVISION=$(REPORT_GENERATOR_SCHEDULER_GIT_REVISION)
 BUILD_LDFLAGS=-ldflags "$(VERSION_FLAGS)"
 RELEASE_LDFLAGS=-ldflags "$(VERSION_FLAGS) -s -w"
 
@@ -151,25 +151,25 @@ DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
 
 # This section builds the output binaries.
 # Some will have dedicated targets to make it easier to type, for example
-# "config-snapshotter" instead of "$(BINDIR)/config-snapshotter".
+# "controller" instead of "$(BINDIR)/controller".
 #########################################################################
-config-snapshotter: $(BINDIR)/config-snapshotter
+controller: $(BINDIR)/controller
 
-$(BINDIR)/config-snapshotter: $(BINDIR)/config-snapshotter-amd64
-	cd $(BINDIR) && ln -s -T config-snapshotter-$(ARCH) config-snapshotter
+$(BINDIR)/controller: $(BINDIR)/controller-amd64
+	cd $(BINDIR) && ln -s -T controller-$(ARCH) controller
 
-$(BINDIR)/config-snapshotter-$(ARCH): $(GO_FILES)
+$(BINDIR)/controller-$(ARCH): $(GO_FILES)
 ifndef RELEASE_BUILD
 	$(eval LDFLAGS:=$(RELEASE_LDFLAGS))
 else
 	$(eval LDFLAGS:=$(BUILD_LDFLAGS))
 endif
-	@echo Building config-snapshotter...
+	@echo Building controller...
 	mkdir -p bin
 	$(DOCKER_GO_BUILD) \
-	    sh -c 'go build -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/config-snapshotter" && \
-               ( ldd $(BINDIR)/config-snapshotter-$(ARCH) 2>&1 | grep -q "Not a valid dynamic program" || \
-	             ( echo "Error: $(BINDIR)/config-snapshotter-$(ARCH) was not statically linked"; false ) )'
+	    sh -c 'go build -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/controller" && \
+               ( ldd $(BINDIR)/controller-$(ARCH) 2>&1 | grep -q "Not a valid dynamic program" || \
+	             ( echo "Error: $(BINDIR)/controller-$(ARCH) was not statically linked"; false ) )'
 
 # Build the docker image.
 .PHONY: $(BUILD_IMAGE) $(BUILD_IMAGE)-$(ARCH)
@@ -182,10 +182,10 @@ sub-image-%:
 
 image: $(BUILD_IMAGE)
 $(BUILD_IMAGE): $(BUILD_IMAGE)-$(ARCH)
-$(BUILD_IMAGE)-$(ARCH): $(BINDIR)/config-snapshotter-$(ARCH)
+$(BUILD_IMAGE)-$(ARCH): $(BINDIR)/controller-$(ARCH)
 	rm -rf $(DOCKER_IMAGE)/bin
 	mkdir -p $(DOCKER_IMAGE)/bin
-	cp $(BINDIR)/config-snapshotter-$(ARCH) $(DOCKER_IMAGE)/bin/
+	cp $(BINDIR)/controller-$(ARCH) $(DOCKER_IMAGE)/bin/
 	docker build --pull -t $(BUILD_IMAGE):latest-$(ARCH) --file ./$(DOCKER_IMAGE)/Dockerfile.$(ARCH) $(DOCKER_IMAGE)
 ifeq ($(ARCH),amd64)
 	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(BUILD_IMAGE):latest
@@ -336,5 +336,5 @@ foss-checks:
 	@docker run --rm -v $(CURDIR)/../:/code/:rw \
 	  -e LOCAL_USER_ID=$(MY_UID) \
 	  -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
-	  -w /code/config-snapshotter/ \
+	  -w /code/controller/ \
 	  $(CALICO_BUILD) /usr/local/bin/fossa

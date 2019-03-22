@@ -1,53 +1,69 @@
 ###############################################################################
 # Subcomponents
 ###############################################################################
-.PHONY: config-snapshotter-release-build
-config-snapshotter-release-build:
-	$(MAKE) -f Makefile.config-snapshotter release-build
+.PHONY: snapshotter-release-build
+snapshotter-release-build:
+	$(MAKE) -f Makefile.snapshotter release-build
 
-.PHONY: report-generator-release-build
-report-generator-release-build:
-	$(MAKE) -f Makefile.report-generator release-build
+.PHONY: reporter-release-build
+reporter-release-build:
+	$(MAKE) -f Makefile.reporter release-build
 
-.PHONY: report-generator-scheduler-release-build
-report-generator-scheduler-release-build:
-	$(MAKE) -f Makefile.report-generator-scheduler release-build
+.PHONY: controller-release-build
+controller-release-build:
+	$(MAKE) -f Makefile.controller release-build
 
-.PHONY: config-snapshotter-release-verify
-config-snapshotter-release-verify:
-	$(MAKE) -f Makefile.config-snapshotter release-verify
+.PHONY: server-release-build
+server-release-build:
+	$(MAKE) -f Makefile.server release-build
 
-.PHONY: report-generator-release-verify
-report-generator-release-verify:
-	$(MAKE) -f Makefile.report-generator release-verify
+.PHONY: snapshotter-release-verify
+snapshotter-release-verify:
+	$(MAKE) -f Makefile.snapshotter release-verify
 
-.PHONY: report-generator-scheduler-release-verify
-report-generator-scheduler-release-verify:
-	$(MAKE) -f Makefile.report-generator-scheduler release-verify
+.PHONY: reporter-release-verify
+reporter-release-verify:
+	$(MAKE) -f Makefile.reporter release-verify
 
-.PHONY: config-snapshotter-push-all
-config-snapshotter-push-all:
-	$(MAKE) -f Makefile.config-snapshotter push-all
+.PHONY: controller-release-verify
+controller-release-verify:
+	$(MAKE) -f Makefile.controller release-verify
 
-.PHONY: report-generator-push-all
-report-generator-push-all:
-	$(MAKE) -f Makefile.report-generator push-all
+.PHONY: server-release-verify
+server-release-verify:
+	$(MAKE) -f Makefile.server release-verify
 
-.PHONY: report-generator-scheduler-push-all
-report-generator-scheduler-push-all:
-	$(MAKE) -f Makefile.report-generator-scheduler push-all
+.PHONY: snapshotter-push-all
+snapshotter-push-all:
+	$(MAKE) -f Makefile.snapshotter push-all
 
-.PHONY: tigera/config-snapshotter
-tigera/config-snapshotter:
-	$(MAKE) -f Makefile.config-snapshotter tigera/config-snapshotter
+.PHONY: reporter-push-all
+reporter-push-all:
+	$(MAKE) -f Makefile.reporter push-all
 
-.PHONY: tigera/report-generator
-tigera/report-generator:
-	$(MAKE) -f Makefile.report-generator tigera/report-generator
+.PHONY: controller-push-all
+controller-push-all:
+	$(MAKE) -f Makefile.controller push-all
 
-.PHONY: tigera/report-generator-scheduler
-tigera/report-generator-scheduler:
-	$(MAKE) -f Makefile.report-generator-scheduler tigera/report-generator-scheduler
+.PHONY: server-push-all
+server-push-all:
+	$(MAKE) -f Makefile.server push-all
+
+.PHONY: tigera/compliance-snapshotter
+tigera/compliance-snapshotter:
+	$(MAKE) -f Makefile.snapshotter tigera/compliance-snapshotter
+
+.PHONY: tigera/compliance-reporter
+tigera/compliance-reporter:
+	$(MAKE) -f Makefile.reporter tigera/compliance-reporter
+
+.PHONY: tigera/compliance-controller
+tigera/compliance-controller:
+	$(MAKE) -f Makefile.controller tigera/compliance-controller
+
+.PHONY: tigera/compliance-server
+tigera/compliance-server:
+	$(MAKE) -f Makefile.server tigera/compliance-server
 
 ###############################################################################
 # Release
@@ -82,14 +98,14 @@ release-tag: release-prereqs release-notes
 	@echo ""
 
 ## Produces a clean build of release artifacts at the specified version.
-release-build: release-prereqs config-snapshotter-release-build report-generator-release-build report-generator-scheduler-release-build
+release-build: release-prereqs snapshotter-release-build reporter-release-build controller-release-build server-release-build
 # Check that the correct code is checked out.
 ifneq ($(VERSION), $(GIT_VERSION))
 	$(error Attempt to build $(VERSION) from $(GIT_VERSION))
 endif
 
 ## Verifies the release artifacts produces by `make release-build` are correct.
-release-verify: release-prereqs config-snapshotter-release-verify report-generator-release-verify report-generator-scheduler-release-verify
+release-verify: release-prereqs snapshotter-release-verify reporter-release-verify controller-release-verify server-release-verify
 
 ## Generates release notes based on commits in this version.
 release-notes: release-prereqs
@@ -106,4 +122,4 @@ ifdef LOCAL_BUILD
 	$(error LOCAL_BUILD must not be set for a release)
 endif
 
-push-all: config-snapshotter-push-all report-generator-push-all report-generator-scheduler-push-all
+push-all: snapshotter-push-all reporter-push-all controller-push-all server-push-all

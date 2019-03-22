@@ -1,5 +1,0 @@
-FROM scratch
-
-ADD bin/report-generator-amd64 /report-generator
-WORKDIR /
-ENTRYPOINT ["/report-generator"]
