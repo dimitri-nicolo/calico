@@ -1,14 +1,4 @@
 {{- if .Values.federation.enabled -}}
-{{- /*
-tigera-federation-controller.yaml acccepts the following include flags:
-
-| Name             | Accepted Values               |
-|------------------|-------------------------------|
-| network          | calico, flannel, ecs, <unset> |
-| variant_name     | Calico, Canal                 |
-| datastore        | kdd, etcd                     |
-
-*/ -}}
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:

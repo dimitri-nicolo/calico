@@ -1,14 +1,3 @@
-{{- /*
-cnx.yaml acccepts the following include flags:
-
-| Name             | Accepted Values          |
-|------------------|--------------------------|
-| orch             | openshift                |
-| datastore        | kdd, etcd                |
-| platform         | eks                      |
-| rbac             | pre23                    |
-
-*/ -}}
 {{- if eq .Values.datastore "kdd" }}
 # This manifest adds the additional Tigera Secure EE Manager components to a cluster
 # that has already had the Calico part of Tigera Secure EE deployed.
