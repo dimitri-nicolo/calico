@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -88,6 +88,7 @@ func (options NetworkSetListOptions) KeyFromDefaultPath(path string) Key {
 }
 
 type NetworkSet struct {
-	Nets   []net.IPNet       `json:"nets,omitempty" validate:"omitempty,dive,cidr"`
-	Labels map[string]string `json:"labels,omitempty" validate:"omitempty,labels"`
+	Nets                 []net.IPNet       `json:"nets,omitempty" validate:"omitempty,dive,cidr"`
+	Labels               map[string]string `json:"labels,omitempty" validate:"omitempty,labels"`
+	AllowedEgressDomains []string          `json:"allowedEgressDomains,omitempty" validate:"omitempty,dive,name"`
 }

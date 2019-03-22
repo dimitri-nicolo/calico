@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -491,5 +491,22 @@ var _ = Describe("Test the Rules Conversion Functions", func() {
 		// Neither should select security groups.
 		Expect(outRules[0].DstSelector).To(Equal("(projectcalico.org/namespace == 'namespace') && (has(label1))"))
 		Expect(outRules[1].DstSelector).To(Equal("(pcns.namespace == \"somens\") && (sg.aws.tigera.io/sg-12345 == '')"))
+	})
+
+	It("should parse and convert a rule with allowed egress domains", func() {
+		rules := []apiv3.Rule{
+			{
+				Action: apiv3.Allow,
+				Destination: apiv3.EntityRule{
+					Domains: []string{"docs.projectcalico.org", "k8s.io"},
+				},
+			},
+		}
+
+		// Parse and convert.
+		outRules := updateprocessors.RulesAPIV2ToBackend(rules, "namespace", false)
+		Expect(outRules).To(HaveLen(1))
+		Expect(outRules[0].DstDomains).To(HaveLen(2))
+		Expect(outRules[0].DstDomains).To(ConsistOf("docs.projectcalico.org", "k8s.io"))
 	})
 })

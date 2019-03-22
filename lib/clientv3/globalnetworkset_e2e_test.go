@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -48,6 +48,10 @@ var _ = testutils.E2eDatastoreDescribe("GlobalNetworkSet tests", testutils.Datas
 	spec2 := apiv3.GlobalNetworkSetSpec{
 		Nets: []string{
 			"12.0.0.0/16",
+		},
+		AllowedEgressDomains: []string{
+			"bob.example.co.uk",
+			"api.twilio.com",
 		},
 	}
 

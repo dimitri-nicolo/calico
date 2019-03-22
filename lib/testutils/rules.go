@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -93,6 +93,13 @@ func init() {
 		Source: apiv3.EntityRule{
 			Nets:     []string{cidrv62},
 			Selector: "label2 == '1234'",
+		},
+		Destination: apiv3.EntityRule{
+			Domains: []string{
+				"github.com",
+				"microsoft.com",
+				"tigera.io",
+			},
 		},
 	}
 }

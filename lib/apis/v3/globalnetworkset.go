@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,8 +26,9 @@ const (
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// GlobalNetworkSet contains a set of arbitrary IP sub-networks/CIDRs that share labels to
-// allow rules to refer to them via selectors.  The labels of GlobalNetworkSet are not namespaced.
+// GlobalNetworkSet contains a set of arbitrary IP sub-networks/CIDRs and domain names that share
+// labels to allow rules to refer to them via selectors.  The labels of GlobalNetworkSet are not
+// namespaced.
 type GlobalNetworkSet struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object's metadata.
@@ -40,6 +41,11 @@ type GlobalNetworkSet struct {
 type GlobalNetworkSetSpec struct {
 	// The list of IP networks that belong to this set.
 	Nets []string `json:"nets,omitempty" validate:"omitempty,dive,cidr"`
+	// The list of domain names that belong to this set and are honored in egress allow rules
+	// only.  Domain names specified here only work to allow egress traffic from the cluster to
+	// external destinations.  They don't work to _deny_ traffic to destinations specified by
+	// domain name, or to allow ingress traffic from _sources_ specified by domain name.
+	AllowedEgressDomains []string `json:"allowedEgressDomains,omitempty" validate:"omitempty,dive,name"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

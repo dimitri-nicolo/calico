@@ -1198,6 +1198,43 @@ func init() {
 				Action: "Deny",
 				HTTP:   &api.HTTPMatch{Methods: []string{"GET"}},
 			}, false),
+		Entry("should allow Allow Rule with Destination Domains",
+			api.Rule{
+				Action: "Allow",
+				Destination: api.EntityRule{
+					Domains: []string{"example.com"},
+				},
+			}, true),
+		Entry("should reject Allow Rule with Source Domains",
+			api.Rule{
+				Action: "Allow",
+				Source: api.EntityRule{
+					Domains: []string{"example.com"},
+				},
+			}, false),
+		Entry("should reject Deny Rule with Destination Domains",
+			api.Rule{
+				Action: "Deny",
+				Destination: api.EntityRule{
+					Domains: []string{"example.com"},
+				},
+			}, false),
+		Entry("should reject Rule with Destination Domains and Nets",
+			api.Rule{
+				Action: "Allow",
+				Destination: api.EntityRule{
+					Domains: []string{"example.com"},
+					Nets:    []string{"8.8.8.8/32"},
+				},
+			}, false),
+		Entry("should reject Rule with Destination Domains and Selector",
+			api.Rule{
+				Action: "Allow",
+				Destination: api.EntityRule{
+					Domains:  []string{"example.com"},
+					Selector: "role == 'fish'",
+				},
+			}, false),
 
 		// (API) BGPPeerSpec
 		Entry("should accept valid BGPPeerSpec", api.BGPPeerSpec{PeerIP: ipv4_1}, true),
