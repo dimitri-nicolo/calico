@@ -381,7 +381,7 @@ func ruleToParsedRule(rule *model.Rule) (parsedRule *ParsedRule, allIPSets []*IP
 			}
 		} else {
 			if rule.DstDomains != nil {
-				dstDodmainIPSets := domainsToIPSets(rule.DstDomains)
+				dstDomainIPSets := domainsToIPSets(rule.DstDomains)
 			}
 		}
 	}

@@ -125,7 +125,6 @@ type IPSetMember struct {
 	Domain     string
 }
 
-// XXX This goes in libcalico-go-private/selector, but it's declared here for now.
 type SelectorIPSetType int
 
 const (

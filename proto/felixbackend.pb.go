@@ -1891,13 +1891,6 @@ func (m *Rule) GetDstIpSetIds() []string {
 	return nil
 }
 
-func (m *Rule) GetDstDomainIpSetIds() []string {
-	if m != nil {
-		return m.DstDomainIpSetIds
-	}
-	return nil
-}
-
 func (m *Rule) GetNotProtocol() *Protocol {
 	if m != nil {
 		return m.NotProtocol

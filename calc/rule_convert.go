@@ -92,6 +92,7 @@ func parsedRuleToProtoRule(in *ParsedRule) *proto.Rule {
 		DstNet:               ipNetsToProtoStrings(in.DstNets),
 		DstPorts:             portsToProtoPorts(in.DstPorts),
 		DstNamedPortIpSetIds: in.DstNamedPortIPSetIDs,
+		DstDomain:            in.DstDomains,
 		SrcIpSetIds:          in.SrcIPSetIDs,
 		DstIpSetIds:          in.DstIPSetIDs,
 
