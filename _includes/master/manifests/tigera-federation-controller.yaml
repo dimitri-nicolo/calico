@@ -34,7 +34,7 @@ spec:
         - name: cnx-pull-secret
       containers:
         - name: tigera-federation-controller
-          image: {{.Values.imageRegistry}}{{.Values.kubeControllers.image}}:{{.Values.kubeControllers.tag}}
+          image: {{.Values.kubeControllers.image}}:{{.Values.kubeControllers.tag}}
           env:
             # Set log level to debug
             - name: LOG_LEVEL

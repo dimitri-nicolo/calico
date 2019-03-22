@@ -53,7 +53,7 @@ spec:
         # It can be deleted if this is a fresh installation, or if you have already
         # upgraded to use calico-ipam.
         - name: upgrade-ipam
-          image: {{.Values.imageRegistry}}{{.Values.cni.image}}:{{ .Values.cni.tag }}
+          image: {{.Values.cni.image}}:{{ .Values.cni.tag }}
           command: ["/opt/cni/bin/calico-ipam", "-upgrade"]
           env:
             - name: KUBERNETES_NODE_NAME
@@ -145,7 +145,7 @@ spec:
         # Adds a Flex Volume Driver that creates a per-pod Unix Domain Socket to allow Dikastes
         # to communicate with Felix over the Policy Sync API.
         - name: flexvol-driver
-          image: {{.Values.imageRegistry}}{{.Values.flexvol.image}}:{{.Values.flexvol.tag}}
+          image: {{.Values.flexvol.image}}:{{.Values.flexvol.tag}}
           volumeMounts:
           - name: flexvol-driver-host
             mountPath: /host/driver
@@ -155,7 +155,7 @@ spec:
         # container programs network policy and routes on each
         # host.
         - name: calico-node
-          image: {{.Values.imageRegistry}}{{.Values.node.image}}:{{.Values.node.tag}}
+          image: {{.Values.node.image}}:{{.Values.node.tag}}
           env:
 {{- if eq .Values.datastore "etcd" }}
             # The location of the etcd cluster.

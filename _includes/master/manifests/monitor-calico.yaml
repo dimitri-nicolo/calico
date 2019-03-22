@@ -421,7 +421,7 @@ spec:
               mountPath: /var/log/calico
       containers:
         - name: fluentd
-          image: {{.Values.imageRegistry}}{{.Values.fluentd.image}}:{{.Values.fluentd.tag}}
+          image: {{.Values.fluentd.image}}:{{.Values.fluentd.tag}}
           env:
             - name: ELASTIC_INDEX_SUFFIX
               valueFrom:
@@ -649,7 +649,7 @@ spec:
             - name: cnx-pull-secret
           containers:
             - name: tigera-es-curator
-              image: {{.Values.imageRegistry}}{{.Values.esCurator.image}}:{{.Values.esCurator.tag}}
+              image: {{.Values.esCurator.image}}:{{.Values.esCurator.tag}}
               env:
                 - name: ELASTIC_INDEX_SUFFIX
                   valueFrom:
@@ -734,7 +734,7 @@ spec:
         - name: cnx-pull-secret
       containers:
       - name: install
-        image: {{.Values.imageRegistry}}{{.Values.elasticTseeInstaller.image}}:{{.Values.elasticTseeInstaller.tag}}
+        image: {{.Values.elasticTseeInstaller.image}}:{{.Values.elasticTseeInstaller.tag}}
         env:
 {{- if .Values.secure_es }}
           - name: ELASTIC_HOST
@@ -848,7 +848,7 @@ spec:
       serviceAccountName: intrusion-detection-controller
       containers:
       - name: controller
-        image: {{.Values.imageRegistry}}{{ .Values.intrusionDetectionController.image }}:{{ .Values.intrusionDetectionController.tag }}
+        image: {{ .Values.intrusionDetectionController.image }}:{{ .Values.intrusionDetectionController.tag }}
         env:
 {{- if .Values.secure_es }}
           - name: ELASTIC_HOST

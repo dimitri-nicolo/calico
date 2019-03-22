@@ -83,7 +83,7 @@ spec:
       imagePullSecrets:
         - name: cnx-pull-secret
       containers:
-      - image: {{.Values.imageRegistry}}{{.Values.typha.image}}:{{.Values.typha.tag}}
+      - image: {{.Values.typha.image}}:{{.Values.typha.tag}}
         name: calico-typha
 {{- if or .Values.federation.enabled (eq .Values.datastore "etcd") }}
         volumeMounts:

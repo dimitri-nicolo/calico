@@ -2,49 +2,48 @@ def gen_values(versions, imageNames, version, imageRegistry)
     components = versions[version][0]["components"]
     versionsYml = <<~EOF
     node:
-      image: #{imageNames["node"]}
+      image: #{imageRegistry}#{imageNames["node"]}
       tag: #{components["cnx-node"]["version"]}
     calicoctl:
-      image: #{imageNames["calicoctl"]}
+      image: #{imageRegistry}#{imageNames["calicoctl"]}
       tag: #{components["calicoctl"]["version"]}
     typha:
-      image: #{imageNames["typha"]}
+      image: #{imageRegistry}#{imageNames["typha"]}
       tag: #{components["typha"]["version"]}
     cni:
       image: #{imageNames["cni"]}
       tag: #{components["calico/cni"]["version"]}
     kubeControllers:
-      image: #{imageNames["kubeControllers"]}
+      image: #{imageRegistry}#{imageNames["kubeControllers"]}
       tag: #{components["cnx-kube-controllers"]["version"]}
     flannel:
       image: #{imageNames["flannel"]}
     dikastes:
-      image: #{imageNames["dikastes"]}
+      image: #{imageRegistry}#{imageNames["dikastes"]}
       tag: #{components["dikastes"]["version"]}
     flexvol:
-      image: #{imageNames["flexvol"]}
+      image: #{imageRegistry}#{imageNames["flexvol"]}
       tag: #{components["flexvol"]["version"]}
-    imageRegistry: #{imageRegistry}
     EOF
 
     versionsYml += <<~EOF
     cnxApiserver:
-      image: #{imageNames["cnxApiserver"]}
+      image: #{imageRegistry}#{imageNames["cnxApiserver"]}
       tag: #{components["cnx-apiserver"]["version"]}
     cnxManager:
-      image: #{imageNames["cnxManager"]}
+      image: #{imageRegistry}#{imageNames["cnxManager"]}
       tag: #{components["cnx-manager"]["version"]}
     cnxManagerProxy:
-      image: #{imageNames["cnxManagerProxy"]}
+      image: #{imageRegistry}#{imageNames["cnxManagerProxy"]}
       tag: #{components["cnx-manager-proxy"]["version"]}
     cnxQueryserver:
-      image: #{imageNames["cnxQueryserver"]}
+      image: #{imageRegistry}#{imageNames["cnxQueryserver"]}
       tag: #{components["cnx-queryserver"]["version"]}
     cloudControllers:
-      image: #{imageNames["cloudControllers"]}
+      image: #{imageRegistry}#{imageNames["cloudControllers"]}
       tag: #{components["cloud-controllers"]["version"]}
     intrusionDetectionController:
-      image: #{imageNames["intrusion-detection-controller"]}
+      image: #{imageRegistry}#{imageNames["intrusion-detection-controller"]}
       tag: #{components["intrusion-detection-controller"]["version"]}
 
     prometheusOperator:
@@ -66,16 +65,16 @@ def gen_values(versions, imageNames, version, imageRegistry)
     kibana:
       tag: #{components["kibana"]["version"]}
     fluentd:
-      image: #{imageNames["fluentd"]}
+      image: #{imageRegistry}#{imageNames["fluentd"]}
       tag: #{components["fluentd"]["version"]}
     esCurator:
-      image: #{imageNames["es-curator"]}
+      image: #{imageRegistry}#{imageNames["es-curator"]}
       tag: #{components["es-curator"]["version"]}
     elasticTseeInstaller:
-      image: #{imageNames["elastic-tsee-installer"]}
+      image: #{imageRegistry}#{imageNames["elastic-tsee-installer"]}
       tag: #{components["elastic-tsee-installer"]["version"]}
     esProxy:
-      image: #{imageNames["es-proxy"]}
+      image: #{imageRegistry}#{imageNames["es-proxy"]}
       tag: #{components["es-proxy"]["version"]}
     EOF
 end
