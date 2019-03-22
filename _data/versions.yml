@@ -875,3 +875,5 @@ master:
       version: master
     intrusion-detection-controller:
       version: master
+    flannel:
+      version: v0.9.1

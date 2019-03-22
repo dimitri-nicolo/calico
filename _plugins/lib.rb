@@ -18,6 +18,7 @@ def gen_values(versions, imageNames, version, imageRegistry)
       tag: #{components["cnx-kube-controllers"]["version"]}
     flannel:
       image: #{imageNames["flannel"]}
+      tag: #{components["flannel"]["version"]}
     dikastes:
       image: #{imageRegistry}#{imageNames["dikastes"]}
       tag: #{components["dikastes"]["version"]}
