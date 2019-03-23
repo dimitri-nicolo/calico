@@ -1,15 +1,4 @@
 {{- if .Values.federation.enabled -}}
-{{- /*
-tigera-federation-controller.yaml acccepts the following include flags:
-
-| Name             | Accepted Values               |
-|------------------|-------------------------------|
-| network          | calico, flannel, ecs, <unset> |
-| variant_name     | Calico, Canal                 |
-| datastore        | kdd, etcd                     |
-
-*/ -}}
-# This manifest deploys the {{.Values.prodname}} Federated Identity controller.
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
@@ -45,7 +34,7 @@ spec:
         - name: cnx-pull-secret
       containers:
         - name: tigera-federation-controller
-          image: {{.Values.imageRegistry}}{{.Values.kubeControllers.image}}:{{.Values.kubeControllers.tag}}
+          image: {{.Values.kubeControllers.image}}:{{.Values.kubeControllers.tag}}
           env:
             # Set log level to debug
             - name: LOG_LEVEL
@@ -58,7 +47,7 @@ spec:
             - name: COMPACTION_PERIOD
               value: "0"
 {{- if eq .Values.datastore "etcd" }}
-            # The location of the {{.Values.prodname}} etcd cluster.
+            # The location of the etcd cluster.
             - name: ETCD_ENDPOINTS
               valueFrom:
                 configMapKeyRef:

@@ -1,38 +1,27 @@
-{{- /*
-cnx.yaml acccepts the following include flags:
-
-| Name             | Accepted Values          |
-|------------------|--------------------------|
-| orch             | openshift                |
-| datastore        | kdd, etcd                |
-| platform         | eks                      |
-| rbac             | pre23                    |
-
-*/ -}}
 {{- if eq .Values.datastore "kdd" }}
-# This manifest adds the additional {{.Values.prodname}} Manager components to a cluster
-# that has already had the Calico part of {{.Values.prodname}} deployed.
+# This manifest adds the additional Tigera Secure EE Manager components to a cluster
+# that has already had the Calico part of Tigera Secure EE deployed.
 # - It refers to the calico-config ConfigMap from that file, so if you are
 #   not using the provided hosted Calico manifest you must update
 #   references to that resource in this file.
 # - Update the tigera-cnx-manager-config ConfigMap below before use.
 # - Optionally update the cnx-apiserver-certs ConfigMap and caBundle in the
 #   apiregistration section below to use your TLS certs for secure communication
-#   between the {{.Values.prodname}} API server and Kubernetes API server.
-# - This manifest makes the {{.Values.prodname}} Manager web server available via a NodePort
+#   between the Tigera Secure EE API server and Kubernetes API server.
+# - This manifest makes the Tigera Secure EE Manager web server available via a NodePort
 #   serving on port 30003.  You may wish to update how this is exposed; do
 #   so by editing the tigera-cnx-manager-access Service below.
 {{- else if eq .Values.datastore "etcd" }}
-# This manifest adds the additional {{.Values.prodname}} Manager components to a cluster
-# that has already had the Calico part of {{.Values.prodname}} deployed.
+# This manifest adds the additional Tigera Secure EE Manager components to a cluster
+# that has already had the Calico part of Tigera Secure EE deployed.
 # - It refers to the calico-config ConfigMap and calico-etcd-secrets Secret
 #   from that file, so if you are not using the provided hosted Calico
 #   manifest you must update references to those resources in this file.
 # - Update the tigera-cnx-manager-config ConfigMap below before use.
 # - Optionally update the cnx-apiserver-certs ConfigMap and caBundle in the
 #   apiregistration section below to use your TLS certs for secure communication
-#   between the {{.Values.prodname}} API server and Kubernetes API server.
-# - This manifest makes the {{.Values.prodname}} Manager web server available via a NodePort
+#   between the Tigera Secure EE API server and Kubernetes API server.
+# - This manifest makes the Tigera Secure EE Manager web server available via a NodePort
 #   serving on port 30003.  You may wish to update how this is exposed; do
 #   so by editing the cnx-manager Service below.
 {{- end }}
@@ -82,7 +71,7 @@ data:
 {{- if ne .Values.platform "eks" }}
 ---
 
-# Optionally update this ConfigMap to enable TLS with certificate verification when {{.Values.prodname}} API
+# Optionally update this ConfigMap to enable TLS with certificate verification when Tigera Secure EE API
 # server communicates with the Kubernetes API server.
 apiVersion: v1
 kind: Secret
@@ -100,7 +89,7 @@ data:
 {{- end }}
 ---
 
-# Optionally update this Service to change how {{.Values.prodname}} Manager is accessed.
+# Optionally update this Service to change how Tigera Secure EE Manager is accessed.
 # If using Google login, the URL for the web server must be configured
 # as a redirect URI in the Google project.  If the web server will be
 # accessed at https://<host>:<port>, add https://<host>:<port>/login/oidc/callback
@@ -313,7 +302,7 @@ spec:
 
 ---
 
-# Audit policy for the {{.Values.prodname}} API Server.
+# Audit policy for the Tigera Secure EE API Server.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -375,7 +364,7 @@ spec:
         - name: cnx-pull-secret
       containers:
       - name: cnx-apiserver
-        image: {{.Values.imageRegistry}}{{.Values.cnxApiserver.image}}:{{.Values.cnxApiserver.tag}}
+        image: {{.Values.cnxApiserver.image}}:{{.Values.cnxApiserver.tag}}
         args:
           - "--secure-port=5443"
 {{- if eq .Values.platform "eks" }}
@@ -443,7 +432,7 @@ spec:
           privileged: true
 {{- end }}
       - name: cnx-queryserver
-        image: {{.Values.imageRegistry}}{{.Values.cnxQueryserver.image}}:{{.Values.cnxQueryserver.tag}}
+        image: {{.Values.cnxQueryserver.image}}:{{.Values.cnxQueryserver.tag}}
         env:
           # Set queryserver logging to "info"
           - name: LOGLEVEL
@@ -598,7 +587,7 @@ spec:
           name: cnx-manager-tls
       containers:
       - name: cnx-manager
-        image: {{.Values.imageRegistry}}{{.Values.cnxManager.image}}:{{.Values.cnxManager.tag}}
+        image: {{.Values.cnxManager.image}}:{{.Values.cnxManager.tag}}
         env:
           - name: CNX_WEB_AUTHENTICATION_TYPE
             valueFrom:
@@ -673,7 +662,7 @@ spec:
           initialDelaySeconds: 90
           periodSeconds: 10
       - name: cnx-manager-proxy
-        image: {{.Values.imageRegistry}}{{.Values.cnxManagerProxy.image}}:{{.Values.cnxManagerProxy.tag}}
+        image: {{.Values.cnxManagerProxy.image}}:{{.Values.cnxManagerProxy.tag}}
         env:
           - name: CNX_WEB_AUTHENTICATION_TYPE
             valueFrom:

@@ -1,6 +1,5 @@
-# This manifest installs the {{.Values.nodecontainer}} container
 {{- if ne .Values.network "ecs" }}
-# as well as the {{.Values.prodname}} CNI plugins and network config on
+# as well as the CNI plugins and network config on
 {{- end }}
 # on each master and worker node in a Kubernetes cluster.
 kind: DaemonSet
@@ -54,7 +53,7 @@ spec:
         # It can be deleted if this is a fresh installation, or if you have already
         # upgraded to use calico-ipam.
         - name: upgrade-ipam
-          image: {{.Values.imageRegistry}}{{.Values.cni.image}}:{{ .Values.cni.tag }}
+          image: {{.Values.cni.image}}:{{ .Values.cni.tag }}
           command: ["/opt/cni/bin/calico-ipam", "-upgrade"]
           env:
             - name: KUBERNETES_NODE_NAME
@@ -72,7 +71,7 @@ spec:
             - mountPath: /host/opt/cni/bin
               name: cni-bin-dir
 {{- end }}
-        # This container installs the {{.Values.prodname}} CNI binaries
+        # This container installs the CNI binaries
         # and CNI network config file on each node.
         - name: install-cni
           image: {{.Values.cni.image}}:{{ .Values.cni.tag }}
@@ -88,7 +87,7 @@ spec:
                   name: {{include "variant_name" . | lower}}-config
                   key: cni_network_config
 {{- if eq .Values.datastore "etcd" }}
-            # The location of the {{.Values.prodname}} etcd cluster.
+            # The location of the etcd cluster.
             - name: ETCD_ENDPOINTS
               valueFrom:
                 configMapKeyRef:
@@ -146,20 +145,20 @@ spec:
         # Adds a Flex Volume Driver that creates a per-pod Unix Domain Socket to allow Dikastes
         # to communicate with Felix over the Policy Sync API.
         - name: flexvol-driver
-          image: {{.Values.imageRegistry}}{{.Values.flexvol.image}}:{{.Values.flexvol.tag}}
+          image: {{.Values.flexvol.image}}:{{.Values.flexvol.tag}}
           volumeMounts:
           - name: flexvol-driver-host
             mountPath: /host/driver
 {{- end }}
       containers:
-        # Runs {{.Values.nodecontainer}} container on each Kubernetes node.  This
+        # Runs cnx-node container on each Kubernetes node.  This
         # container programs network policy and routes on each
         # host.
         - name: calico-node
-          image: {{.Values.imageRegistry}}{{.Values.node.image}}:{{.Values.node.tag}}
+          image: {{.Values.node.image}}:{{.Values.node.tag}}
           env:
 {{- if eq .Values.datastore "etcd" }}
-            # The location of the {{.Values.prodname}} etcd cluster.
+            # The location of the etcd cluster.
             - name: ETCD_ENDPOINTS
               valueFrom:
                 configMapKeyRef:
@@ -405,7 +404,7 @@ spec:
         # This container runs flannel using the kube-subnet-mgr backend
         # for allocating subnets.
         - name: kube-flannel
-          image: quay.io/coreos/flannel:v0.9.1
+          image: {{ .Values.flannel.image }}:{{ .Values.flannel.tag }}
           command: [ "/opt/bin/flanneld", "--ip-masq", "--kube-subnet-mgr" ]
           securityContext:
             privileged: true
@@ -438,7 +437,7 @@ spec:
         # Runs the flannel daemon to enable vxlan networking between
         # container hosts.
         - name: flannel
-          image: quay.io/coreos/flannel:v0.9.1
+          image: {{ .Values.flannel.image }}:{{ .Values.flannel.tag }}
           env:
             # The location of the etcd cluster.
             - name: FLANNELD_ETCD_ENDPOINTS
@@ -509,7 +508,7 @@ spec:
   {{- end }}
 {{- end }}
       volumes:
-        # Used by {{.Values.nodecontainer}}.
+        # Used by cnx-node.
         - name: lib-modules
           hostPath:
             path: /lib/modules

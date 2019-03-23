@@ -1,12 +1,3 @@
-{{- /*
-aws-cloud-controller.yaml acccepts the following include flags:
-
-| Name             | Accepted Values               |
-|------------------|-------------------------------|
-| datastore        | kdd, etcd                     |
-| variant_name     | Calico, Canal                 |
-
-*/ -}}
 # Create the ServiceAccount and roles necessary for Tigera Cloud Controllers.
 apiVersion: v1
 kind: ServiceAccount
@@ -93,7 +84,7 @@ spec:
         - name: cnx-pull-secret
       containers:
         - name: tigera-cloud-controllers
-          image: {{.Values.imageRegistry}}{{.Values.cloudControllers.image}}:{{.Values.cloudControllers.tag}}
+          image: {{.Values.cloudControllers.image}}:{{.Values.cloudControllers.tag}}
           readinessProbe:
             exec:
               command:

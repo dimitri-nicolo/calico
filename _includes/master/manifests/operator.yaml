@@ -1,14 +1,3 @@
-{{- /*
-cnx.yaml acccepts the following include flags:
-
-| Name             | Accepted Values          |
-|------------------|--------------------------|
-| orch             | openshift                |
-| datastore        | kdd, etcd                |
-| elasticsearch    | operator, external       |
-
-*/ -}}
-
 # This manifest includes the following component versions:
 #   {{.Values.prometheusOperator.image}}:{{.Values.prometheusOperator.tag}}
 #   {{.Values.prometheusConfigReloader.image}}:{{.Values.prometheusConfigReloader.tag}}
@@ -100,7 +89,6 @@ metadata:
   namespace: calico-monitoring
 ---
 
-# This manifest deploys the {{.Values.prodname}} Prometheus Operator.
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:

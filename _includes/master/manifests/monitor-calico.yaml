@@ -233,7 +233,6 @@ data:
   alertmanager.yaml: Z2xvYmFsOgogIHJlc29sdmVfdGltZW91dDogNW0Kcm91dGU6CiAgZ3JvdXBfYnk6IFsnam9iJ10KICBncm91cF93YWl0OiAzMHMKICBncm91cF9pbnRlcnZhbDogMW0KICByZXBlYXRfaW50ZXJ2YWw6IDVtCiAgcmVjZWl2ZXI6ICd3ZWJob29rJwpyZWNlaXZlcnM6Ci0gbmFtZTogJ3dlYmhvb2snCiAgd2ViaG9va19jb25maWdzOgogIC0gdXJsOiAnaHR0cDovL2NhbGljby1hbGVydG1hbmFnZXItd2ViaG9vazozMDUwMS8nCg==
 ---
 
-# This manifest creates the {{.Values.prodname}} Alertmanager.
 apiVersion: monitoring.coreos.com/v1
 kind: Alertmanager
 metadata:
@@ -402,7 +401,7 @@ spec:
       nodeSelector:
         beta.kubernetes.io/os: linux
       tolerations:
-        # Make sure {{include "nodeName" . }} gets scheduled on all nodes.
+        # Make sure fluentd-node gets scheduled on all nodes.
         - effect: NoSchedule
           operator: Exists
         - effect: NoExecute
@@ -422,7 +421,7 @@ spec:
               mountPath: /var/log/calico
       containers:
         - name: fluentd
-          image: {{.Values.imageRegistry}}{{.Values.fluentd.image}}:{{.Values.fluentd.tag}}
+          image: {{.Values.fluentd.image}}:{{.Values.fluentd.tag}}
           env:
             - name: ELASTIC_INDEX_SUFFIX
               valueFrom:
@@ -650,7 +649,7 @@ spec:
             - name: cnx-pull-secret
           containers:
             - name: tigera-es-curator
-              image: {{.Values.imageRegistry}}{{.Values.esCurator.image}}:{{.Values.esCurator.tag}}
+              image: {{.Values.esCurator.image}}:{{.Values.esCurator.tag}}
               env:
                 - name: ELASTIC_INDEX_SUFFIX
                   valueFrom:
@@ -735,7 +734,7 @@ spec:
         - name: cnx-pull-secret
       containers:
       - name: install
-        image: {{.Values.imageRegistry}}{{.Values.elasticTseeInstaller.image}}:{{.Values.elasticTseeInstaller.tag}}
+        image: {{.Values.elasticTseeInstaller.image}}:{{.Values.elasticTseeInstaller.tag}}
         env:
 {{- if .Values.secure_es }}
           - name: ELASTIC_HOST
@@ -849,7 +848,7 @@ spec:
       serviceAccountName: intrusion-detection-controller
       containers:
       - name: controller
-        image: {{.Values.imageRegistry}}{{ .Values.intrusionDetectionController.image }}:{{ .Values.intrusionDetectionController.tag }}
+        image: {{ .Values.intrusionDetectionController.image }}:{{ .Values.intrusionDetectionController.tag }}
         env:
 {{- if .Values.secure_es }}
           - name: ELASTIC_HOST
