@@ -1,6 +1,6 @@
 # This manifest installs the {{.Values.nodecontainer}} container
 {{- if ne .Values.network "ecs" }}
-# as well as the {{.Values.prodname}} CNI plugins and network config on
+# as well as the CNI plugins and network config on
 {{- end }}
 # on each master and worker node in a Kubernetes cluster.
 kind: DaemonSet
@@ -72,7 +72,7 @@ spec:
             - mountPath: /host/opt/cni/bin
               name: cni-bin-dir
 {{- end }}
-        # This container installs the {{.Values.prodname}} CNI binaries
+        # This container installs the CNI binaries
         # and CNI network config file on each node.
         - name: install-cni
           image: {{.Values.cni.image}}:{{ .Values.cni.tag }}
@@ -88,7 +88,7 @@ spec:
                   name: {{include "variant_name" . | lower}}-config
                   key: cni_network_config
 {{- if eq .Values.datastore "etcd" }}
-            # The location of the {{.Values.prodname}} etcd cluster.
+            # The location of the etcd cluster.
             - name: ETCD_ENDPOINTS
               valueFrom:
                 configMapKeyRef:
@@ -159,7 +159,7 @@ spec:
           image: {{.Values.imageRegistry}}{{.Values.node.image}}:{{.Values.node.tag}}
           env:
 {{- if eq .Values.datastore "etcd" }}
-            # The location of the {{.Values.prodname}} etcd cluster.
+            # The location of the etcd cluster.
             - name: ETCD_ENDPOINTS
               valueFrom:
                 configMapKeyRef:

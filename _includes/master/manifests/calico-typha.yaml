@@ -124,7 +124,7 @@ spec:
 {{- if eq .Values.datastore "etcd" }}
           - name: TYPHA_DATASTORETYPE
             value: "etcdv3"
-          # The location of the {{.Values.prodname}} etcd cluster.
+          # The location of the etcd cluster.
           - name: TYPHA_ETCDENDPOINTS
             valueFrom:
               configMapKeyRef:

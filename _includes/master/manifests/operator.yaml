@@ -100,7 +100,6 @@ metadata:
   namespace: calico-monitoring
 ---
 
-# This manifest deploys the {{.Values.prodname}} Prometheus Operator.
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
