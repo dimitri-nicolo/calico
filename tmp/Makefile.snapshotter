@@ -46,6 +46,7 @@ prefix_linux = $(addprefix linux/,$(strip $1))
 join_platforms = $(subst $(space),$(comma),$(call prefix_linux,$(strip $1)))
 
 ###############################################################################
+THISMAKE ?= $(MAKE) -f $(firstword $(MAKEFILE_LIST))
 BUILD_IMAGE?=tigera/compliance-snapshotter
 PUSH_IMAGES?=gcr.io/unique-caldron-775/cnx/$(BUILD_IMAGE)
 RELEASE_IMAGES?=quay.io/$(BUILD_IMAGE)
@@ -178,7 +179,7 @@ endif
 .PHONY: image-all
 image-all: $(addprefix sub-image-,$(ARCHES))
 sub-image-%:
-	$(MAKE) image ARCH=$*
+	$(THISMAKE) image ARCH=$*
 
 image: $(BUILD_IMAGE)
 $(BUILD_IMAGE): $(BUILD_IMAGE)-$(ARCH)
@@ -205,7 +206,7 @@ sub-single-push-%:
 ## push all arches
 push-all: imagetag $(addprefix sub-push-,$(ARCHES))
 sub-push-%:
-	$(MAKE) push ARCH=$* IMAGETAG=$(IMAGETAG)
+	$(THISMAKE) push ARCH=$* IMAGETAG=$(IMAGETAG)
 
 ## push multi-arch manifest where supported
 push-manifests: imagetag  $(addprefix sub-manifest-,$(call escapefs,$(PUSH_MANIFEST_IMAGES)))
@@ -240,7 +241,7 @@ endif
 ## tag images of all archs
 tag-images-all: imagetag $(addprefix sub-tag-images-,$(ARCHES))
 sub-tag-images-%:
-	$(MAKE) tag-images ARCH=$* IMAGETAG=$(IMAGETAG)
+	$(THISMAKE) tag-images ARCH=$* IMAGETAG=$(IMAGETAG)
 
 ##########################################################################
 # Testing
@@ -280,8 +281,8 @@ endif
 ifndef BRANCH_NAME
 	$(error BRANCH_NAME is undefined - run using make <target> BRANCH_NAME=var or set an environment variable)
 endif
-	$(MAKE) tag-images-all push-all push-manifests push-non-manifests IMAGETAG=$(BRANCH_NAME) EXCLUDEARCH="$(EXCLUDEARCH)"
-	$(MAKE) tag-images-all push-all push-manifests push-non-manifests IMAGETAG=$(shell git describe --tags --dirty --always --long) EXCLUDEARCH="$(EXCLUDEARCH)"
+	$(THISMAKE) tag-images-all push-all push-manifests push-non-manifests IMAGETAG=$(BRANCH_NAME) EXCLUDEARCH="$(EXCLUDEARCH)"
+	$(THISMAKE) tag-images-all push-all push-manifests push-non-manifests IMAGETAG=$(shell git describe --tags --dirty --always --long) EXCLUDEARCH="$(EXCLUDEARCH)"
 
 ##############################################################################
 # Release
@@ -302,10 +303,10 @@ ifneq ($(VERSION), $(GIT_VERSION))
 	$(error Attempt to build $(VERSION) from $(GIT_VERSION))
 endif
 
-	$(MAKE) image-all 
-	$(MAKE) tag-images-all IMAGETAG=$(VERSION) RELEASE=true
+	$(THISMAKE) image-all 
+	$(THISMAKE) tag-images-all IMAGETAG=$(VERSION) RELEASE=true
 	# Generate the `latest` images.
-	$(MAKE) tag-images-all IMAGETAG=latest RELEASE=true
+	$(THISMAKE) tag-images-all IMAGETAG=latest RELEASE=true
 
 ## Verifies the release artifacts produces by `make release-build` are correct.
 release-verify: release-prereqs
@@ -328,13 +329,3 @@ endif
 ifdef LOCAL_BUILD
 	$(error LOCAL_BUILD must not be set for a release)
 endif
-
-
-# Run fossa.io license checks
-foss-checks:
-	@echo Running $@...
-	@docker run --rm -v $(CURDIR)/../:/code/:rw \
-	  -e LOCAL_USER_ID=$(MY_UID) \
-	  -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
-	  -w /code/snapshotter/ \
-	  $(CALICO_BUILD) /usr/local/bin/fossa

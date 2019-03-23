@@ -6,14 +6,15 @@ import (
 
 	"strings"
 
+	"github.com/tigera/compliance/pkg/querycache/api"
+	"github.com/tigera/compliance/pkg/querycache/dispatcherv1v3"
+	"github.com/tigera/compliance/pkg/querycache/labelhandler"
+
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/libcalico-go/lib/apis/v3"
 	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/set"
-	"github.com/tigera/compliance/pkg/querycache/api"
-	"github.com/tigera/compliance/pkg/querycache/dispatcherv1v3"
-	"github.com/tigera/compliance/pkg/querycache/labelhandler"
 )
 
 type PoliciesCache interface {
@@ -31,9 +32,9 @@ func NewPoliciesCache() PoliciesCache {
 	return &policiesCache{
 		globalNetworkPolicies:      newPolicyCache(),
 		networkPoliciesByNamespace: make(map[string]*policyCache),
-		tiers:         make(map[string]*tierData, 0),
-		policySorter:  calc.NewPolicySorter(),
-		ruleSelectors: make(map[string]*ruleSelectorInfo),
+		tiers:                      make(map[string]*tierData, 0),
+		policySorter:               calc.NewPolicySorter(),
+		ruleSelectors:              make(map[string]*ruleSelectorInfo),
 	}
 }
 
@@ -290,7 +291,7 @@ func (c *policiesCache) addPolicyRuleSelectors(p *model.Policy, polKey model.Key
 		}
 		rsi.numRuleRefs++
 		if rsi.numRuleRefs == 1 {
-			c.ruleRegistration.AddRuleSelector(s)
+			_ = c.ruleRegistration.AddRuleSelector(s)
 		}
 		rsi.policies.Add(polKey)
 	}

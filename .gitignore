@@ -17,3 +17,4 @@
 .go-build-cache
 .go-pkg-cache
 bin
+vendor

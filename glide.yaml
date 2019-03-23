@@ -1,0 +1,34 @@
+package: github.com/tigera/compliance
+import:
+- package: github.com/satori/go.uuid
+  version: ^1.2.0
+- package: github.com/sirupsen/logrus
+  version: ^1.0.4
+- package: github.com/projectcalico/libcalico-go
+  vcs: git
+  repo: git@github.com:tigera/libcalico-go-private.git
+  version: b95d12c63b408a5ecced3e5ae34db59db37f167e
+- package: github.com/tigera/licensing
+  repo: git@github.com:tigera/licensing
+  vcs: git
+  version: cb027c7c879597e0e02f2411c0c201752bab39c8
+  subpackages:
+  - client
+- package: github.com/projectcalico/calicoctl
+  vcs: git
+  repo: git@github.com:tigera/calicoctl-private.git
+  version: 904830690a1e32c199c24256c930e5df1e51f8f6
+  subpackages:
+  - calicoctl/resourcemgr
+- package: github.com/projectcalico/felix
+  vcs: git
+  repo: git@github.com:tigera/felix-private.git
+  version: 51d5200862f2f306c0a0ffadffd6d5f59602d995
+  subpackages:
+  - labelindex
+- package: k8s.io/client-go
+  version: 82aa063804cf055e16e8911250f888bc216e8b61
+- package: github.com/olivere/elastic
+  version: v6.2.16
+- package: github.com/mailru/easyjson
+  version: 1de009706dbeb9d05f18586f0735fcdb7c524481

@@ -3,7 +3,7 @@
 # The target architecture is select by setting the ARCH variable.
 # When ARCH is undefined it is set to the detected host architecture.
 # When ARCH differs from the host architecture a crossbuild will be performed.
-ARCHES=$(patsubst docker-image/server/Dockerfile.%,%,$(wildcard docker-image/server/Dockerfile.*))
+ARCHES=$(patsubst docker-image/snapshotter/Dockerfile.%,%,$(wildcard docker-image/snapshotter/Dockerfile.*))
 
 # BUILDARCH is the host architecture
 # ARCH is the target architecture
@@ -46,11 +46,12 @@ prefix_linux = $(addprefix linux/,$(strip $1))
 join_platforms = $(subst $(space),$(comma),$(call prefix_linux,$(strip $1)))
 
 ###############################################################################
-BUILD_IMAGE?=tigera/compliance-server
+THISMAKE ?= $(MAKE) -f $(firstword $(MAKEFILE_LIST))
+BUILD_IMAGE?=tigera/compliance-snapshotter
 PUSH_IMAGES?=gcr.io/unique-caldron-775/cnx/$(BUILD_IMAGE)
 RELEASE_IMAGES?=quay.io/$(BUILD_IMAGE)
 PACKAGE_NAME?=github.com/tigera/compliance
-DOCKER_IMAGE?=docker-image/server
+DOCKER_IMAGE?=docker-image/snapshotter
 
 # If this is a release, also tag and push additional images.
 ifeq ($(RELEASE),true)
@@ -72,11 +73,11 @@ GO_BUILD_VER?=v0.21
 CALICO_BUILD=calico/go-build:$(GO_BUILD_VER)
 
 help:
-	@echo "Tigera Compliance Report Generator Scheduler Makefile"
+	@echo "Tigera Compliance Config Snapshotter Makefile"
 	@echo "Builds:"
 	@echo
 	@echo "  make all                                   Build all the binary packages."
-	@echo "  make tigera/compliance-server     Build $(BUILD_IMAGE) docker image."
+	@echo "  make tigera/compliance-snapshotter         Build $(BUILD_IMAGE) docker image."
 	@echo
 	@echo "Tests:"
 	@echo
@@ -116,15 +117,15 @@ ifdef UNIT_TESTS
 	UNIT_TEST_FLAGS=-run $(UNIT_TESTS) -v
 endif
 
-REPORT_GENERATOR_SCHEDULER_VERSION?=$(shell git describe --tags --dirty --always)
-REPORT_GENERATOR_SCHEDULER_BUILD_DATE?=$(shell date -u +'%FT%T%z')
-REPORT_GENERATOR_SCHEDULER_GIT_REVISION?=$(shell git rev-parse --short HEAD)
-REPORT_GENERATOR_SCHEDULER_GIT_DESCRIPTION?=$(shell git describe --tags)
+CONFIG_SNAPSHOTTER_VERSION?=$(shell git describe --tags --dirty --always)
+CONFIG_SNAPSHOTTER_BUILD_DATE?=$(shell date -u +'%FT%T%z')
+CONFIG_SNAPSHOTTER_GIT_REVISION?=$(shell git rev-parse --short HEAD)
+CONFIG_SNAPSHOTTER_GIT_DESCRIPTION?=$(shell git describe --tags)
 
-VERSION_FLAGS=-X main.VERSION=$(REPORT_GENERATOR_SCHEDULER_VERSION) \
-	-X main.BUILD_DATE=$(REPORT_GENERATOR_SCHEDULER_BUILD_DATE) \
-	-X main.GIT_DESCRIPTION=$(REPORT_GENERATOR_SCHEDULER_GIT_DESCRIPTION) \
-	-X main.GIT_REVISION=$(REPORT_GENERATOR_SCHEDULER_GIT_REVISION)
+VERSION_FLAGS=-X main.VERSION=$(CONFIG_SNAPSHOTTER_VERSION) \
+	-X main.BUILD_DATE=$(CONFIG_SNAPSHOTTER_BUILD_DATE) \
+	-X main.GIT_DESCRIPTION=$(CONFIG_SNAPSHOTTER_GIT_DESCRIPTION) \
+	-X main.GIT_REVISION=$(CONFIG_SNAPSHOTTER_GIT_REVISION)
 BUILD_LDFLAGS=-ldflags "$(VERSION_FLAGS)"
 RELEASE_LDFLAGS=-ldflags "$(VERSION_FLAGS) -s -w"
 
@@ -151,25 +152,25 @@ DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
 
 # This section builds the output binaries.
 # Some will have dedicated targets to make it easier to type, for example
-# "server" instead of "$(BINDIR)/server".
+# "snapshotter" instead of "$(BINDIR)/snapshotter".
 #########################################################################
-server: $(BINDIR)/server
+snapshotter: $(BINDIR)/snapshotter
 
-$(BINDIR)/server: $(BINDIR)/server-amd64
-	cd $(BINDIR) && ln -s -T server-$(ARCH) server
+$(BINDIR)/snapshotter: $(BINDIR)/snapshotter-amd64
+	cd $(BINDIR) && ln -s -T snapshotter-$(ARCH) snapshotter
 
-$(BINDIR)/server-$(ARCH): $(GO_FILES)
+$(BINDIR)/snapshotter-$(ARCH): $(GO_FILES)
 ifndef RELEASE_BUILD
 	$(eval LDFLAGS:=$(RELEASE_LDFLAGS))
 else
 	$(eval LDFLAGS:=$(BUILD_LDFLAGS))
 endif
-	@echo Building server...
+	@echo Building snapshotter...
 	mkdir -p bin
 	$(DOCKER_GO_BUILD) \
-	    sh -c 'go build -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/server" && \
-               ( ldd $(BINDIR)/server-$(ARCH) 2>&1 | grep -q "Not a valid dynamic program" || \
-	             ( echo "Error: $(BINDIR)/server-$(ARCH) was not statically linked"; false ) )'
+	    sh -c 'go build -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/snapshotter" && \
+               ( ldd $(BINDIR)/snapshotter-$(ARCH) 2>&1 | grep -q "Not a valid dynamic program" || \
+	             ( echo "Error: $(BINDIR)/snapshotter-$(ARCH) was not statically linked"; false ) )'
 
 # Build the docker image.
 .PHONY: $(BUILD_IMAGE) $(BUILD_IMAGE)-$(ARCH)
@@ -178,14 +179,14 @@ endif
 .PHONY: image-all
 image-all: $(addprefix sub-image-,$(ARCHES))
 sub-image-%:
-	$(MAKE) image ARCH=$*
+	$(THISMAKE) image ARCH=$*
 
 image: $(BUILD_IMAGE)
 $(BUILD_IMAGE): $(BUILD_IMAGE)-$(ARCH)
-$(BUILD_IMAGE)-$(ARCH): $(BINDIR)/server-$(ARCH)
+$(BUILD_IMAGE)-$(ARCH): $(BINDIR)/snapshotter-$(ARCH)
 	rm -rf $(DOCKER_IMAGE)/bin
 	mkdir -p $(DOCKER_IMAGE)/bin
-	cp $(BINDIR)/server-$(ARCH) $(DOCKER_IMAGE)/bin/
+	cp $(BINDIR)/snapshotter-$(ARCH) $(DOCKER_IMAGE)/bin/
 	docker build --pull -t $(BUILD_IMAGE):latest-$(ARCH) --file ./$(DOCKER_IMAGE)/Dockerfile.$(ARCH) $(DOCKER_IMAGE)
 ifeq ($(ARCH),amd64)
 	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(BUILD_IMAGE):latest
@@ -205,7 +206,7 @@ sub-single-push-%:
 ## push all arches
 push-all: imagetag $(addprefix sub-push-,$(ARCHES))
 sub-push-%:
-	$(MAKE) push ARCH=$* IMAGETAG=$(IMAGETAG)
+	$(THISMAKE) push ARCH=$* IMAGETAG=$(IMAGETAG)
 
 ## push multi-arch manifest where supported
 push-manifests: imagetag  $(addprefix sub-manifest-,$(call escapefs,$(PUSH_MANIFEST_IMAGES)))
@@ -240,7 +241,7 @@ endif
 ## tag images of all archs
 tag-images-all: imagetag $(addprefix sub-tag-images-,$(ARCHES))
 sub-tag-images-%:
-	$(MAKE) tag-images ARCH=$* IMAGETAG=$(IMAGETAG)
+	$(THISMAKE) tag-images ARCH=$* IMAGETAG=$(IMAGETAG)
 
 ##########################################################################
 # Testing
@@ -280,8 +281,8 @@ endif
 ifndef BRANCH_NAME
 	$(error BRANCH_NAME is undefined - run using make <target> BRANCH_NAME=var or set an environment variable)
 endif
-	$(MAKE) tag-images-all push-all push-manifests push-non-manifests IMAGETAG=$(BRANCH_NAME) EXCLUDEARCH="$(EXCLUDEARCH)"
-	$(MAKE) tag-images-all push-all push-manifests push-non-manifests IMAGETAG=$(shell git describe --tags --dirty --always --long) EXCLUDEARCH="$(EXCLUDEARCH)"
+	$(THISMAKE) tag-images-all push-all push-manifests push-non-manifests IMAGETAG=$(BRANCH_NAME) EXCLUDEARCH="$(EXCLUDEARCH)"
+	$(THISMAKE) tag-images-all push-all push-manifests push-non-manifests IMAGETAG=$(shell git describe --tags --dirty --always --long) EXCLUDEARCH="$(EXCLUDEARCH)"
 
 ##############################################################################
 # Release
@@ -302,10 +303,10 @@ ifneq ($(VERSION), $(GIT_VERSION))
 	$(error Attempt to build $(VERSION) from $(GIT_VERSION))
 endif
 
-	$(MAKE) image-all 
-	$(MAKE) tag-images-all IMAGETAG=$(VERSION) RELEASE=true
+	$(THISMAKE) image-all 
+	$(THISMAKE) tag-images-all IMAGETAG=$(VERSION) RELEASE=true
 	# Generate the `latest` images.
-	$(MAKE) tag-images-all IMAGETAG=latest RELEASE=true
+	$(THISMAKE) tag-images-all IMAGETAG=latest RELEASE=true
 
 ## Verifies the release artifacts produces by `make release-build` are correct.
 release-verify: release-prereqs
@@ -328,13 +329,3 @@ endif
 ifdef LOCAL_BUILD
 	$(error LOCAL_BUILD must not be set for a release)
 endif
-
-
-# Run fossa.io license checks
-foss-checks:
-	@echo Running $@...
-	@docker run --rm -v $(CURDIR)/../:/code/:rw \
-	  -e LOCAL_USER_ID=$(MY_UID) \
-	  -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
-	  -w /code/server/ \
-	  $(CALICO_BUILD) /usr/local/bin/fossa

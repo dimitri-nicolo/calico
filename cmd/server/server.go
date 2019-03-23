@@ -9,6 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/tigera/compliance/pkg/elastic"
+	"github.com/tigera/compliance/pkg/version"
 )
 
 func main() {
@@ -17,7 +18,7 @@ func main() {
 	flag.Parse()
 
 	if ver {
-		Version()
+		version.Version()
 		return
 	}
 	e := elastic.NewElasticFromEnv()

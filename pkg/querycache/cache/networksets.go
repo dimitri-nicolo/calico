@@ -2,11 +2,12 @@
 package cache
 
 import (
+	"github.com/tigera/compliance/pkg/querycache/api"
+	"github.com/tigera/compliance/pkg/querycache/dispatcherv1v3"
+
 	"github.com/projectcalico/libcalico-go/lib/apis/v3"
 	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
-	"github.com/tigera/compliance/pkg/querycache/api"
-	"github.com/tigera/compliance/pkg/querycache/dispatcherv1v3"
 )
 
 // NetworkSetCache implements the cache interface for the GlobalNetworkSet resource type.

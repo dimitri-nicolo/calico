@@ -8,10 +8,11 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/tigera/compliance/pkg/querycache/envoptions"
+
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/backend/watchersyncer"
-	"github.com/tigera/compliance/pkg/querycache/envoptions"
 )
 
 const (
@@ -40,15 +41,11 @@ type Converter interface {
 }
 
 func New(rs []Resource) Interface {
-	wsResourceTypes := make([]watchersyncer.ResourceType, 0, len(rs))
 	resourceTypes := make(map[string]*resourceType, len(rs))
 	for _, r := range rs {
 		resourceTypes[r.Kind] = &resourceType{
 			converter: r.Converter,
 		}
-		wsResourceTypes = append(wsResourceTypes, watchersyncer.ResourceType{
-			ListInterface: model.ResourceListOptions{Kind: r.Kind},
-		})
 	}
 
 	return &dispatcher{
