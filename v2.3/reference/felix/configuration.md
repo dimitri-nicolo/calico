@@ -102,13 +102,6 @@ The Kubernetes API datastore driver reads its configuration from Kubernetes-prov
 {: .alert .alert-info}
 
 
-#### OpenStack-specific configuration
-
-| Configuration parameter | Environment variable | Description  | Schema |
-| ------------------------|--------------------- | ------------ | ------ |
-| `MetadataAddr`          | `FELIX_METADATAADDR` | The IP address or domain name of the server that can answer VM queries for cloud-init metadata. In OpenStack, this corresponds to the machine running nova-api (or in Ubuntu, nova-api-metadata). A value of `none`  (case insensitive) means that Felix should not set up any NAT rule for the metadata path. [Default: `127.0.0.1`]  | `<IPv4-address>`, `<hostname>`, `none` |
-| `MetadataPort`          | `FELIX_METADATAPORT` | The port of the metadata server. This, combined with global.MetadataAddr (if not 'None'), is used to set up a NAT rule, from 169.254.169.254:80 to MetadataAddr:MetadataPort. In most cases this should not need to be changed [Default: `8775`].  | int |
-
 #### Bare metal specific configuration
 
 | Configuration parameter | Environment variable    | Description | Schema |
