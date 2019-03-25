@@ -91,7 +91,7 @@ the policy is enforced after connection tracking and any DNAT.
 `true` because for a given policy, any untracked rules or rules before DNAT will
  in practice apply to forwarded traffic.
 
-See [Using {{site.prodname}} to Secure Host Interfaces]({{site.baseurl}}/{{page.version}}/getting-started/bare-metal/bare-metal)
+See [Using {{site.prodname}} to Secure Host Interfaces]({{site.baseurl}}/{{page.version}}/security/host-endpoints/)
 for how `doNotTrack` and `preDNAT` and `applyOnForward` can be useful for host endpoints.
 
 #### Rule

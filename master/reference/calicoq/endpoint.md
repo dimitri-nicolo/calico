@@ -107,5 +107,5 @@ Workload endpoint k8s/advanced-policy-demo.nginx-2371676037-bk6v2/eth0
 -  [NetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/networkpolicy) and
    [GlobalNetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy)
    for more information about the {{site.prodname}} policy model.
--  [Untracked policy]({{site.baseurl}}/{{page.version}}/getting-started/bare-metal/bare-metal) for
+-  [Untracked policy]({{site.baseurl}}/{{page.version}}/security/host-endpoints/) for
    more information about untracked policy.

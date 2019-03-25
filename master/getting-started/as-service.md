@@ -1,5 +1,5 @@
 ---
-title: Running calico/node with an init system
+title: Running quay.io/tigera/node with an init system
 canonical_url: 'https://docs.tigera.io/v2.3/usage/configuration/as-service'
 ---
 

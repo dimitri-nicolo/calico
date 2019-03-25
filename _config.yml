@@ -18,8 +18,6 @@ repository: projectcalico/calico
 noderunning: calico-node
 
 # Image names in case the host changes
-# Some of these omit the repo: when used they must be prefixed with the repo path
-# like site.data.versions[page.version].first.dockerRepo/site.imageNames[component]:version.
 # Node is duplicated because documentation refers to it using both names. At least one needs to match the version in versions.yaml
 # IMPORTANT - When updating this list, also update _includes/<version>/load-docker.md
 imageNames:
@@ -70,12 +68,14 @@ defaults:
       layout: docwithnav
       version: master
       sitemap: true
-      registry: gcr.io/unique-caldron-775/cnx/
+      # By default, released builds are pulled from quay.
+      registry: quay.io 
   -
     scope:
       path: master
     values:
       version: master
+      # Master builds are pulled from GCR.
       registry: gcr.io/unique-caldron-775/cnx/
   -
     scope:

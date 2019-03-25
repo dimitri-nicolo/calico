@@ -19,16 +19,12 @@ then
 
     # When a new minor release is cut, add a new section at the end of this block.
     echo "Moving directories back to their original locations"
-    git mv v3.6 master
-    git mv _includes/v3.6 _includes/master
-    git mv _data/v3_6 _data/master
-
-#    git mv v3.0 v2.0
-#    git mv _includes/v3.0 _includes/v2.0
-#    git mv _data/v3_0 _data/v2_0
-#    git mv v3.1 v2.1
-#    git mv _includes/v3.1 _includes/v2.1
-#    git mv _data/v3_1 _data/v2_1
+    git mv v3.0 v2.0
+    git mv _includes/v3.0 _includes/v2.0
+    git mv _data/v3_0 _data/v2_0
+    git mv v3.1 v2.1
+    git mv _includes/v3.1 _includes/v2.1
+    git mv _data/v3_1 _data/v2_1
     git commit -m "Merge finish: move CNX docs directories back"
 
     echo "Merge complete!  Please create and submit your branch!"
@@ -46,22 +42,18 @@ git fetch ${PRIVATE_REMOTE}
 git fetch ${OPEN_REMOTE}
 git remote get-url ${PRIVATE_REMOTE} | grep tigera/calico-private
 git remote get-url ${OPEN_REMOTE} | grep projectcalico/calico
-# git checkout master
-# git reset --hard ${PRIVATE_REMOTE}/master
+git checkout master
+git reset --hard ${PRIVATE_REMOTE}/master
 echo "Remote URLs checked."
 
 # When a new minor release is cut, add a new section at the top of this block.
 echo "Moving CNX docs (up to v2.1) to respective Calico locations (up to v3.1)"
-git mv ./master ./v3.6 
-git mv _includes/master _includes/v3.6
-git mv _data/master _data/v3_6
-
-# git mv v2.1 v3.1
-# git mv _includes/v2.1 _includes/v3.1
-# git mv _data/v2_1 _data/v3_1
-# git mv v2.0 v3.0
-# git mv _includes/v2.0 _includes/v3.0
-# git mv _data/v2_0 _data/v3_0
+git mv v2.1 v3.1
+git mv _includes/v2.1 _includes/v3.1
+git mv _data/v2_1 _data/v3_1
+git mv v2.0 v3.0
+git mv _includes/v2.0 _includes/v3.0
+git mv _data/v2_0 _data/v3_0
 git commit -m "Merge prep: move CNX docs directories to Calico locations"
 
 echo "Merging open source docs"

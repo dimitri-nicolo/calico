@@ -2,7 +2,6 @@ v2.3:
 - title: v2.3.0
   note: |
     01 February 2019
-  dockerRepo: quay.io
   components:
     cnx-manager:
       version: v2.3.0
@@ -88,7 +87,6 @@ v2.2:
   note: |
     14 January 2019
 
-  dockerRepo: quay.io
   components:
     cnx-manager:
       version: v2.2.3
@@ -170,7 +168,6 @@ v2.2:
   note: |
     27 November 2018
 
-  dockerRepo: quay.io
   components:
     cnx-manager:
       version: v2.2.1
@@ -251,7 +248,6 @@ v2.2:
   note: |
     13 November 2018
 
-  dockerRepo: quay.io
   components:
     cnx-manager:
       version: v2.2.1
@@ -331,7 +327,6 @@ v2.2:
 - title: v2.2.0
   note: |
     12 October 2018
-  dockerRepo: quay.io
   components:
     cnx-manager:
       version: v2.2.0
@@ -412,8 +407,6 @@ v2.1:
 - title: v2.1.1
   note: |
     18 May 2018
-
-  dockerRepo: quay.io
   components:
     cnx-manager:
       version: v2.1.1
@@ -473,8 +466,6 @@ v2.1:
 - title: v2.1.0
   note: |
     20 April 2018
-
-  dockerRepo: quay.io
   components:
     cnx-manager:
       version: v2.1.0
@@ -545,7 +536,6 @@ v2.0:
     - Enable Kubernetes node references for automatic cleanup of Node resources in etcd. [calico #1678](https://github.com/projectcalico/calico/pull/1678) (@caseydavenport)
     - Fixed a panic when BGP is disabled. [calico #1674](https://github.com/projectcalico/calico/pull/1674) (@tmjd)
     - Kubernetes self-hosted manifests now enable BGP IP address auto-detection by default. [calico #1588](https://github.com/projectcalico/calico/pull/1588) (@caseydavenport)
-  dockerRepo: quay.io
   components:
     cnx-manager:
       version: v2.0.0
@@ -588,8 +578,6 @@ v2.0:
     This version includes updated versions of the calicoq and cnx-node container
     images. These new images fix some CVEs but introduce no new features or
     other bug fixes.
-
-  dockerRepo: quay.io
   components:
     cnx-manager:
       version: v2.0.0
@@ -770,8 +758,6 @@ v2.0:
 
     - **Route reflectors cannot be clustered**: We plan to resume support for
       this in a future release.
-
-  dockerRepo: quay.io
   components:
     cnx-manager:
       version: v2.0.0
@@ -816,7 +802,6 @@ v2.0:
 master:
 - title: master
   note: ""
-  dockerRepo: gcr.io/unique-caldron-775/cnx
   components:
     cnx-manager:
       version: master

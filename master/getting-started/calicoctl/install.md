@@ -36,7 +36,7 @@ rm /etc/calico/calicoctl.cfg
 
 ## Installing calicoctl as a binary on a single host
 
-{% include {{page.version}}/ctl-binary-install.md %}
+{% include {{page.version}}/ctl-binary-install.md cli="calicoctl" codepath="/calicoctl" %}
 
 **Next step**:
 
