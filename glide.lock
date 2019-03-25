@@ -1,5 +1,5 @@
-hash: 12c3f2d72725b8b349a5cbd887faf2915ba2784b91f7b2c479332c913488aa2c
-updated: 2019-03-15T05:17:49.01881919Z
+hash: c5e634eb35faeb454782fea13c3713658f6ce086fceb98f5defd7208912a8cc9
+updated: 2019-03-25T04:53:06.738464128Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -197,7 +197,7 @@ imports:
 - name: github.com/kardianos/osext
   version: ae77be60afb1dcacde03767a8c37337fad28ac14
 - name: github.com/kelseyhightower/confd
-  version: 35109b9a6b2bbfd8e67e8ddeb3a7ef3764b52c7c
+  version: f9336575ecb1a1c62d602ed1080ee6fd21578b79
   repo: git@github.com:tigera/confd-private.git
   subpackages:
   - pkg/backends
@@ -300,7 +300,7 @@ imports:
   - pkg/plugin
   - pkg/types
 - name: github.com/projectcalico/felix
-  version: 8467b9812df777e5ae56e18fd9eebdc673ef0fee
+  version: 3a22c58357e0110e6172b2f4ecbe4827a4381665
   repo: git@github.com:tigera/felix-private.git
   subpackages:
   - buildinfo
@@ -347,7 +347,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: beadc1b3a96edd611c7f42e23b0bd62a38c5a58d
+  version: 8e8526533e3be9fab2df8b01a28ac5b849bcf4b6
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
@@ -401,7 +401,7 @@ imports:
   subpackages:
   - binder
 - name: github.com/projectcalico/typha
-  version: 61adc9691f472cc0f291ecb774413b5d1dc8de30
+  version: b48d19b5fcefcf22a487b7ec8d2447021eca0dc2
   repo: git@github.com:tigera/typha-private.git
   subpackages:
   - pkg/syncclient
