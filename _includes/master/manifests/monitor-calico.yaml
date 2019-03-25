@@ -849,6 +849,15 @@ spec:
       containers:
       - name: controller
         image: {{ .Values.intrusionDetectionController.image }}:{{ .Values.intrusionDetectionController.tag }}
+        livenessProbe:
+          exec:
+            command: ["/healthz", "liveness"]
+          initialDelaySeconds: 5
+        name: controller
+        readinessProbe:
+          exec:
+            command: ["/healthz", "readiness"]
+          initialDelaySeconds: 5
         env:
 {{- if .Values.secure_es }}
           - name: ELASTIC_HOST
