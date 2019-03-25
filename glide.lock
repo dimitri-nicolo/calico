@@ -1,11 +1,13 @@
-hash: c5e634eb35faeb454782fea13c3713658f6ce086fceb98f5defd7208912a8cc9
-updated: 2019-03-25T04:53:06.738464128Z
+hash: 0412c66504e1a18f9009a1843e2b8a856b3d39912db7a6318d06d50bdf68fa30
+updated: 2019-03-25T14:30:03.312249049Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
   subpackages:
   - compute/metadata
   - internal
+- name: github.com/alexflint/go-filemutex
+  version: 72bdc8eae2aef913234599b837f5dda445ca9bd9
 - name: github.com/aws/aws-sdk-go
   version: fad131ddc707880428615dc8bc1587b55fb46d74
   subpackages:
@@ -76,6 +78,8 @@ imports:
   - pkg/ns
   - pkg/utils/hwaddr
   - pkg/utils/sysctl
+  - plugins/ipam/host-local/backend
+  - plugins/ipam/host-local/backend/disk
 - name: github.com/coreos/etcd
   version: 33245c6b5b49130ca99280408fadfab01aac0e48
   subpackages:
@@ -118,7 +122,7 @@ imports:
 - name: github.com/go-openapi/jsonpointer
   version: 46af16f9f7b149af66e5d1bd010e3574dc06de98
 - name: github.com/go-openapi/jsonreference
-  version: 13c6e3589ad90f49bd3e3bbe2c2cb3d7a4142272
+  version: 3fb327e6747da3043567ee86abd02bb6376b6be2
 - name: github.com/go-openapi/spec
   version: 384415f06ee238aae1df5caad877de6ceac3a5c4
 - name: github.com/go-openapi/swag
@@ -208,7 +212,7 @@ imports:
   - pkg/resource/template
   - pkg/run
 - name: github.com/kelseyhightower/envconfig
-  version: f611eb38b3875cc3bd991ca91c51d06446afa14c
+  version: dd1402a4d99de9ac2f396cd6fcb957bc2c695ec1
 - name: github.com/kelseyhightower/memkv
   version: 892bfd468afa0fa476556e7bd7734a087cda08b3
 - name: github.com/leodido/go-urn
@@ -289,7 +293,7 @@ imports:
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
 - name: github.com/projectcalico/cni-plugin
-  version: 1aca35b8085d8c9925150c788d2146bac91912f4
+  version: d7b082a0e9d0685ede6108649f4cbb813f3ff811
   repo: git@github.com:tigera/cni-plugin-private.git
   subpackages:
   - internal/pkg/azure
@@ -299,6 +303,7 @@ imports:
   - pkg/k8s
   - pkg/plugin
   - pkg/types
+  - pkg/upgrade
 - name: github.com/projectcalico/felix
   version: 3a22c58357e0110e6172b2f4ecbe4827a4381665
   repo: git@github.com:tigera/felix-private.git
@@ -470,7 +475,7 @@ imports:
 - name: github.com/vishvananda/netns
   version: 54f0e4339ce73702a0607f49922aaa1e749b418d
 - name: golang.org/x/crypto
-  version: 94eea52f7b742c7cbe0b03b22f0c4c8631ece122
+  version: 49796115aa4b964c318aad4f3084fdb41e9aa067
   subpackages:
   - ed25519
   - ed25519/internal/edwards25519
@@ -576,7 +581,7 @@ imports:
 - name: gopkg.in/natefinch/lumberjack.v2
   version: a96e63847dc3c67d17befa69c303767e2f84e54f
 - name: gopkg.in/square/go-jose.v2
-  version: 72415094398e2f013bf50b76fd6de36df47938ea
+  version: 628223f44a71f715d2881ea69afc795a1e9c01be
   subpackages:
   - cipher
   - json
@@ -726,7 +731,7 @@ imports:
   - util/jsonpath
   - util/retry
 - name: k8s.io/kube-openapi
-  version: 0c329704159e3b051aafac400b15baacf2a94a04
+  version: 91cfa479c814065e420cee7ed227db0f63a5854e
   subpackages:
   - pkg/common
 - name: k8s.io/utils
