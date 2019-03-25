@@ -1,3 +1,5 @@
+// Copyright (c) 2015-2019 Tigera, Inc. All rights reserved.
+
 package main_test
 
 import (
@@ -30,7 +32,30 @@ var _ = Describe("CalicoCni", func() {
 	calicoClient, _ := client.NewFromEnv()
 
 	BeforeEach(func() {
-		testutils.WipeEtcd()
+		if os.Getenv("DATASTORE_TYPE") == "kubernetes" {
+			Skip("Don't run non-kubernetes test with Kubernetes Datastore")
+		}
+		testutils.WipeDatastore()
+		// Create the node for these tests. The IPAM code requires a corresponding Calico node to exist.
+		var err error
+		n := api.NewNode()
+		n.Name, err = names.Hostname()
+		Expect(err).NotTo(HaveOccurred())
+		_, err = calicoClient.Nodes().Create(context.Background(), n, options.SetOptions{})
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	AfterEach(func() {
+		if os.Getenv("DATASTORE_TYPE") == "kubernetes" {
+			// no cleanup needed.
+			return
+		}
+
+		// Delete the node.
+		name, err := names.Hostname()
+		Expect(err).NotTo(HaveOccurred())
+		_, err = calicoClient.Nodes().Delete(context.Background(), name, options.DeleteOptions{})
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	cniVersion := os.Getenv("CNI_SPEC_VERSION")
@@ -552,7 +577,7 @@ var _ = Describe("CalicoCni", func() {
 
 		checkIPAMReservation := func() {
 			// IPAM reservation should still be in place.
-			handleID, _ := utils.GetHandleID("net1", containerID, workloadName)
+			handleID := utils.GetHandleID("net1", containerID, workloadName)
 			ipamIPs, err := calicoClient.IPAM().IPsByHandle(context.Background(), handleID)
 			ExpectWithOffset(1, err).NotTo(HaveOccurred())
 			ExpectWithOffset(1, ipamIPs).To(HaveLen(1),

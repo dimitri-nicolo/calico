@@ -14,9 +14,10 @@ import (
 	"strings"
 	"syscall"
 
+	types020 "github.com/containernetworking/cni/pkg/types/020"
+
 	"github.com/containernetworking/cni/pkg/invoke"
 	"github.com/containernetworking/cni/pkg/types"
-	"github.com/containernetworking/cni/pkg/types/020"
 	"github.com/containernetworking/cni/pkg/types/current"
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/containernetworking/plugins/pkg/testutils"
@@ -27,10 +28,6 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/names"
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 func min(a, b int) int {
@@ -38,36 +35,6 @@ func min(a, b int) int {
 		return a
 	}
 	return b
-}
-
-// Delete all K8s pods from the "test" namespace
-func WipeK8sPods() {
-	config, err := clientcmd.DefaultClientConfig.ClientConfig()
-	if err != nil {
-		panic(err)
-	}
-	clientset, err := kubernetes.NewForConfig(config)
-
-	if err != nil {
-		panic(err)
-	}
-	log.WithField("clientset:", clientset).Info("DEBUG")
-	pods, err := clientset.CoreV1().Pods(K8S_TEST_NS).List(metav1.ListOptions{})
-	if err != nil {
-		panic(err)
-	}
-
-	for _, pod := range pods.Items {
-		err = clientset.CoreV1().Pods(K8S_TEST_NS).Delete(pod.Name, &metav1.DeleteOptions{})
-
-		if err != nil {
-			if kerrors.IsNotFound(err) {
-				continue
-			}
-			panic(err)
-		}
-	}
-	log.Info("WipeK8sPods Sucess")
 }
 
 // GetResultForCurrent takes the output with cniVersion and returns the Result in current.Result format.
@@ -102,7 +69,7 @@ func GetResultForCurrent(session *gexec.Session, cniVersion string) (*current.Re
 
 // RunIPAMPlugin sets ENV vars required then calls the IPAM plugin
 // specified in the config and returns the result and exitCode.
-func RunIPAMPlugin(netconf, command, args, cniVersion string) (*current.Result, types.Error, int) {
+func RunIPAMPlugin(netconf, command, args, cid, cniVersion string) (*current.Result, types.Error, int) {
 	conf := types.NetConf{}
 	if err := json.Unmarshal([]byte(netconf), &conf); err != nil {
 		panic(fmt.Errorf("failed to load netconf: %v", err))
@@ -111,7 +78,7 @@ func RunIPAMPlugin(netconf, command, args, cniVersion string) (*current.Result, 
 	// Run the CNI plugin passing in the supplied netconf
 	cmd := &exec.Cmd{
 		Env: []string{
-			"CNI_CONTAINERID=a",
+			fmt.Sprintf("CNI_CONTAINERID=%s", cid),
 			"CNI_NETNS=b",
 			"CNI_IFNAME=c",
 			"CNI_PATH=d",
@@ -147,7 +114,7 @@ func RunIPAMPlugin(netconf, command, args, cniVersion string) (*current.Result, 
 	exitCode := session.ExitCode()
 
 	result := &current.Result{}
-	error := types.Error{}
+	e := types.Error{}
 	stdout := session.Out.Contents()
 	if exitCode == 0 {
 		if command == "ADD" {
@@ -158,12 +125,12 @@ func RunIPAMPlugin(netconf, command, args, cniVersion string) (*current.Result, 
 			}
 		}
 	} else {
-		if err := json.Unmarshal(stdout, &error); err != nil {
+		if err := json.Unmarshal(stdout, &e); err != nil {
 			panic(fmt.Errorf("failed to load error: %s %v", stdout, err))
 		}
 	}
 
-	return result, error, exitCode
+	return result, e, exitCode
 }
 
 func CreateContainerNamespace() (containerNs ns.NetNS, containerId string, err error) {

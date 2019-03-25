@@ -1,16 +1,5 @@
-// Copyright 2018 Tigera Inc
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
+
 package utils
 
 import (
@@ -329,6 +318,12 @@ func configureSysctls(hostVethName string, hasIPv4, hasIPv6 bool) error {
 	var err error
 
 	if hasIPv4 {
+		// Normally, the kernel has a delay before responding to proxy ARP but we know
+		// that's not needed in a Calico network so we disable it.
+		if err = writeProcSys(fmt.Sprintf("/proc/sys/net/ipv4/neigh/%s/proxy_delay", hostVethName), "0"); err != nil {
+			return fmt.Errorf("failed to set net.ipv4.neigh.%s.proxy_delay=0: %s", hostVethName, err)
+		}
+
 		// Enable proxy ARP, this makes the host respond to all ARP requests with its own
 		// MAC. We install explicit routes into the containers network
 		// namespace and we use a link-local address for the gateway.  Turing on proxy ARP
@@ -337,12 +332,6 @@ func configureSysctls(hostVethName string, hasIPv4, hasIPv6 bool) error {
 		// thing we may clash over.
 		if err = writeProcSys(fmt.Sprintf("/proc/sys/net/ipv4/conf/%s/proxy_arp", hostVethName), "1"); err != nil {
 			return fmt.Errorf("failed to set net.ipv4.conf.%s.proxy_arp=1: %s", hostVethName, err)
-		}
-
-		// Normally, the kernel has a delay before responding to proxy ARP but we know
-		// that's not needed in a Calico network so we disable it.
-		if err = writeProcSys(fmt.Sprintf("/proc/sys/net/ipv4/neigh/%s/proxy_delay", hostVethName), "0"); err != nil {
-			return fmt.Errorf("failed to set net.ipv4.neigh.%s.proxy_delay=0: %s", hostVethName, err)
 		}
 
 		// Enable IP forwarding of packets coming _from_ this interface.  For packets to
@@ -440,7 +429,7 @@ func CleanUpNamespace(args *skel.CmdArgs, logger *logrus.Entry) error {
 		})
 
 		if devErr == nil {
-			fmt.Fprintf(os.Stderr, "Calico CNI deleting device in netns %s\n", args.Netns)
+			logger.Infof("Calico CNI deleting device in netns %s", args.Netns)
 			// Deleting the veth has been seen to hang on some kernel version. Timeout the command if it takes too long.
 			ch := make(chan error, 1)
 
@@ -457,7 +446,7 @@ func CleanUpNamespace(args *skel.CmdArgs, logger *logrus.Entry) error {
 				if err != nil {
 					return err
 				} else {
-					fmt.Fprintf(os.Stderr, "Calico CNI deleted device in netns %s\n", args.Netns)
+					logger.Infof("Calico CNI deleted device in netns %s", args.Netns)
 				}
 			case <-time.After(5 * time.Second):
 				return fmt.Errorf("Calico CNI timed out deleting device in netns %s", args.Netns)
@@ -467,6 +456,10 @@ func CleanUpNamespace(args *skel.CmdArgs, logger *logrus.Entry) error {
 		}
 	}
 
+	return nil
+}
+
+func updateHostLocalIPAMDataForOS(subnet string, ipamData map[string]interface{}) error {
 	return nil
 }
 

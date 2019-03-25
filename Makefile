@@ -63,8 +63,7 @@ prefix_linux = $(addprefix linux/,$(strip $1))
 join_platforms = $(subst $(space),$(comma),$(call prefix_linux,$(strip $1)))
 
 ###############################################################################
-GO_BUILD_VER ?= v0.17
-FOSSA_GO_BUILD_VER ?= v0.18
+GO_BUILD_VER ?= v0.20
 
 SRCFILES=$(shell find pkg cmd internal -name '*.go')
 TEST_SRCFILES=$(shell find tests win_tests -name '*.go')
@@ -92,9 +91,6 @@ BIN=bin/$(ARCH)
 # Ensure that the bin directory is always created
 MAKE_SURE_BIN_EXIST := $(shell mkdir -p $(BIN))
 CALICO_BUILD?=$(BUILD_IMAGE_ORG)/go-build:$(GO_BUILD_VER)
-# Special go-build version for fossa license checks.
-# This is a workaround for failing static-checks that need to be fixed with v0.18.
-FOSSA_CALICO_BUILD?=$(BUILD_IMAGE_ORG)/go-build:$(FOSSA_GO_BUILD_VER)
 
 PACKAGE_NAME?=github.com/projectcalico/cni-plugin
 
@@ -131,8 +127,6 @@ ifeq ($(BUILDARCH),amd64)
 endif
 
 LIBCALICOGO_PATH?=none
-
-DATASTORE_TYPE?=etcdv3
 
 LOCAL_USER_ID?=$(shell id -u $$USER)
 
@@ -335,13 +329,17 @@ foss-checks: vendor
 	  -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
 	  -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
 	  -w /go/src/$(PACKAGE_NAME) \
-	  $(FOSSA_CALICO_BUILD) /usr/local/bin/fossa
+	  $(CALICO_BUILD) /usr/local/bin/fossa
 
 ###############################################################################
 # Unit Tests
 ###############################################################################
 ## Run the unit tests.
 ut: run-k8s-controller build $(BIN)/host-local
+	$(MAKE) ut-datastore DATASTORE_TYPE=etcdv3
+	$(MAKE) ut-datastore DATASTORE_TYPE=kubernetes
+
+ut-datastore:
 	# The tests need to run as root
 	docker run --rm -t --privileged --net=host \
 	-e ETCD_IP=$(LOCAL_IP_ENV) \
@@ -352,12 +350,22 @@ ut: run-k8s-controller build $(BIN)/host-local
 	-e CNI_SPEC_VERSION=$(CNI_SPEC_VERSION) \
 	-e DATASTORE_TYPE=$(DATASTORE_TYPE) \
 	-e ETCD_ENDPOINTS=http://$(LOCAL_IP_ENV):2379 \
+	-e K8S_API_ENDPOINT=http://127.0.0.1:8080 \
 	-v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
 	$(LOCAL_BUILD_MOUNTS) \
 	$(CALICO_BUILD) sh -c '\
 			cd  /go/src/$(PACKAGE_NAME) && \
 			ginkgo -cover -r -skipPackage vendor -skipPackage k8s-install $(GINKGO_ARGS)'
+
+ut-etcd: run-k8s-controller build $(BIN)/host-local
+	$(MAKE) ut-datastore DATASTORE_TYPE=etcdv3
 	make stop-etcd
+	make stop-k8s-controller
+
+ut-kdd: run-k8s-controller build $(BIN)/host-local
+	$(MAKE) ut-datastore DATASTORE_TYPE=kubernetes
+	make stop-etcd
+	make stop-k8s-controller
 
 ## Run the tests in a container (as root) for different CNI spec versions
 ## to make sure we don't break backwards compatibility.
@@ -371,12 +379,16 @@ test-cni-versions:
 run-k8s-apiserver: stop-k8s-apiserver run-etcd
 	docker run --detach --net=host \
 	  --name calico-k8s-apiserver \
+	  -v `pwd`/vendor/github.com/projectcalico/libcalico-go/test/crds.yaml:/crds.yaml \
 	  -v `pwd`/internal/pkg/testutils/private.key:/private.key \
 	  gcr.io/google_containers/hyperkube-$(ARCH):$(K8S_VERSION) \
 	  /hyperkube apiserver \
 	    --etcd-servers=http://$(LOCAL_IP_ENV):2379 \
 	    --service-cluster-ip-range=10.101.0.0/16 \
 	    --service-account-key-file=/private.key
+	# Wait until the apiserver is accepting requests.
+	while ! docker exec calico-k8s-apiserver kubectl get nodes; do echo "Waiting for apiserver to come up..."; sleep 2; done
+	docker exec calico-k8s-apiserver kubectl apply -f /crds.yaml
 
 ## Kubernetes controller manager used for tests
 run-k8s-controller: stop-k8s-controller run-k8s-apiserver
@@ -573,7 +585,7 @@ run-kube-proxy:
 ## Run the unit tests, watching for changes.
 test-watch: $(BIN)/calico $(BIN)/calico-ipam run-etcd run-k8s-apiserver
 	# The tests need to run as root
-	sudo CGO_ENABLED=0 ETCD_IP=127.0.0.1 PLUGIN=calico GOPATH=$(GOPATH) $(shell which ginkgo) watch -skipPackage k8s-install -skipPackage vendor
+	CGO_ENABLED=0 ETCD_IP=127.0.0.1 PLUGIN=calico GOPATH=$(GOPATH) $(shell which ginkgo) watch -skipPackage k8s-install -skipPackage vendor
 
 .PHONY: help
 help: # Some kind of magic from https://gist.github.com/rcmachado/af3db315e31383502660
