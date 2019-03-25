@@ -109,7 +109,7 @@ spec:
 
 # This manifest creates a network policy to allow traffic to Alertmanager
 # (TCP port 9093).
-apiVersion: extensions/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: calico-node-alertmanager
@@ -127,7 +127,7 @@ spec:
 
 # This manifest creates a network policy to allow traffic between
 # Alertmanagers for HA configuration (TCP port 6783).
-apiVersion: extensions/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: calico-node-alertmanager-mesh
@@ -158,7 +158,7 @@ spec:
 
 # This manifest creates a network policy to allow traffic to access the
 # Prometheus (TCP port 9090).
-apiVersion: extensions/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: prometheus
