@@ -83,8 +83,9 @@ BUILD_IMAGE_CONTROLLER=tigera/compliance-controller
 BUILD_IMAGE_SNAPSHOTTER=tigera/compliance-snapshotter
 BUILD_IMAGE_REPORTER=tigera/compliance-reporter
 PACKAGE_NAME?=github.com/tigera/compliance
+GCR_REPO?=gcr.io/unique-caldron-775/cnx
 
-PUSH_IMAGES?=$(BUILD_IMAGE_SERVER) $(BUILD_IMAGE_CONTROLLER) $(BUILD_IMAGE_SNAPSHOTTER) $(BUILD_IMAGE_REPORTER) quay.io/$(BUILD_IMAGE_SERVER) quay.io/$(BUILD_IMAGE_CONTROLLER) quay.io/$(BUILD_IMAGE_SNAPSHOTTER) quay.io/$(BUILD_IMAGE_REPORTER)
+PUSH_IMAGES?=$(GCR_REPO)/$(BUILD_IMAGE_SERVER) $(GCR_REPO)/$(BUILD_IMAGE_CONTROLLER) $(GCR_REPO)/$(BUILD_IMAGE_SNAPSHOTTER) $(GCR_REPO)/$(BUILD_IMAGE_REPORTER)
 RELEASE_IMAGES?=
 # If this is a release, also tag and push additional images.
 ifeq ($(RELEASE),true)
