@@ -152,12 +152,8 @@ func main() {
 		calicoClient.ProjectcalicoV3().GlobalNetworkSets(),
 		&http.Client{},
 		e, e, e)
-	err = s.Run(context.Background())
-	if err != nil {
-		log.WithError(err).Fatal("Could not run Watcher")
-	}
+	s.Run(context.Background())
 	defer s.Close()
-	log.Info("Watcher started")
 	hs := health.NewServer(s, s, healthzSockPath)
 	go func() {
 		err := hs.Serve()

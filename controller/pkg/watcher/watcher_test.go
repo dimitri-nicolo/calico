@@ -807,24 +807,16 @@ func TestWatcher_restartPuller_notExists(t *testing.T) {
 func TestWatcher_Ping(t *testing.T) {
 	g := NewWithT(t)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 
 	gtf := &mock.GlobalThreatFeedInterface{}
 	uut := NewWatcher(nil, nil, gtf, nil, testClient, nil, nil, nil)
 
-	var done bool
-	go func() {
-		err := uut.Ping(ctx)
-		done = true
-		g.Expect(err).ToNot(HaveOccurred())
-	}()
-	g.Consistently(func() bool { return done }).Should(BeFalse())
+	uut.Run(ctx)
 
-	err := uut.Run(ctx)
-	g.Expect(err).ShouldNot(HaveOccurred())
-
-	g.Eventually(func() bool { return done }).Should(BeTrue())
+	err := uut.Ping(ctx)
+	g.Expect(err).ToNot(HaveOccurred())
 }
 
 func TestWatcher_PingFail(t *testing.T) {
@@ -833,8 +825,7 @@ func TestWatcher_PingFail(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.TODO(), time.Millisecond)
 	defer cancel()
 
-	gtf := &mock.GlobalThreatFeedInterface{}
-	uut := NewWatcher(nil, nil, gtf, nil, testClient, nil, nil, nil)
+	uut := NewWatcher(nil, nil, nil, nil, testClient, nil, nil, nil)
 
 	err := uut.Ping(ctx)
 	g.Expect(err).Should(MatchError(context.DeadlineExceeded), "Ping times out")
@@ -850,23 +841,44 @@ func TestWatcher_Ready(t *testing.T) {
 
 	g.Expect(uut.Ready()).To(BeFalse())
 
-	ctx, cancel := context.WithCancel(context.Background())
-	err := uut.Run(ctx)
-	g.Expect(err).ToNot(HaveOccurred())
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	uut.Run(ctx)
 	g.Eventually(uut.Ready).Should(BeTrue())
 
 	// Send in gtf with no error
-	gtf.W.C <- watch.Event{Type: watch.Added, Object: util.NewGlobalThreatFeedFromName("mock0")}
+	select {
+	case <-ctx.Done():
+		t.Fatal("Timed out")
+	case gtf.W.C <- watch.Event{Type: watch.Added, Object: util.NewGlobalThreatFeedFromName("mock0")}:
+		// ok
+	}
 	g.Consistently(uut.Ready).Should(BeTrue())
 
 	// New gtf has error
 	sIP.Error = errors.New("test")
-	gtf.W.C <- watch.Event{Type: watch.Added, Object: util.NewGlobalThreatFeedFromName("mock1")}
+	select {
+	case <-ctx.Done():
+		t.Fatal("Timed out")
+	case gtf.W.C <- watch.Event{Type: watch.Added, Object: util.NewGlobalThreatFeedFromName("mock1")}:
+		// ok
+	}
 	g.Eventually(uut.Ready).Should(BeFalse())
 
 	// Remove both GTFs
-	gtf.W.C <- watch.Event{Type: watch.Deleted, Object: util.NewGlobalThreatFeedFromName("mock0")}
-	gtf.W.C <- watch.Event{Type: watch.Deleted, Object: util.NewGlobalThreatFeedFromName("mock1")}
+	select {
+	case <-ctx.Done():
+		t.Fatal("Timed out")
+	case gtf.W.C <- watch.Event{Type: watch.Deleted, Object: util.NewGlobalThreatFeedFromName("mock0")}:
+		// ok
+	}
+	select {
+	case <-ctx.Done():
+		t.Fatal("Timed out")
+	case gtf.W.C <- watch.Event{Type: watch.Deleted, Object: util.NewGlobalThreatFeedFromName("mock1")}:
+		// ok
+	}
 	g.Eventually(uut.Ready).Should(BeTrue())
 
 	// Stop the watch loop
