@@ -49,3 +49,14 @@ func ParseFeedDuration(f *v32.GlobalThreatFeed) time.Duration {
 
 	return v33.DefaultPullPeriod
 }
+
+func NewGlobalNetworkSet(tfName string) *v32.GlobalNetworkSet {
+	s := &v32.GlobalNetworkSet{
+		ObjectMeta: v1.ObjectMeta{Name: GlobalNetworkSetNameFromThreatFeed(tfName)},
+	}
+	return s
+}
+
+func GlobalNetworkSetNameFromThreatFeed(tfName string) string {
+	return "threatfeed." + tfName
+}

@@ -9,23 +9,21 @@ import (
 	goSync "sync"
 	"time"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/health"
-
-	"github.com/tigera/intrusion-detection/controller/pkg/util"
-
 	log "github.com/sirupsen/logrus"
-	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
+	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	v32 "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
-	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/kubernetes/typed/core/v1"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/gc"
+	"github.com/tigera/intrusion-detection/controller/pkg/health"
 	"github.com/tigera/intrusion-detection/controller/pkg/puller"
 	"github.com/tigera/intrusion-detection/controller/pkg/searcher"
 	"github.com/tigera/intrusion-detection/controller/pkg/statser"
-	"github.com/tigera/intrusion-detection/controller/pkg/sync"
+	"github.com/tigera/intrusion-detection/controller/pkg/sync/globalnetworksets"
+	"github.com/tigera/intrusion-detection/controller/pkg/util"
 )
 
 const (
@@ -48,6 +46,7 @@ type watcher struct {
 	secretsClient          v1.SecretInterface
 	globalThreatFeedClient v32.GlobalThreatFeedInterface
 	globalNetworkSetClient v32.GlobalNetworkSetInterface
+	gnsController          globalnetworksets.Controller
 	httpClient             *http.Client
 	ipSet                  db.IPSet
 	suspiciousIP           db.SuspiciousIP
@@ -63,7 +62,6 @@ type watcher struct {
 type feedWatcher struct {
 	feed             *v3.GlobalThreatFeed
 	puller           puller.Puller
-	syncer           sync.Syncer
 	garbageCollector gc.GarbageCollector
 	searcher         searcher.FlowSearcher
 	statser          statser.Statser
@@ -73,7 +71,7 @@ func NewWatcher(
 	configMapClient v1.ConfigMapInterface,
 	secretsClient v1.SecretInterface,
 	globalThreatFeedInterface v32.GlobalThreatFeedInterface,
-	globalNetworkSetInterface v32.GlobalNetworkSetInterface,
+	globalNetworkSetController globalnetworksets.Controller,
 	httpClient *http.Client,
 	ipSet db.IPSet,
 	suspiciousIP db.SuspiciousIP,
@@ -85,7 +83,7 @@ func NewWatcher(
 		configMapClient:        configMapClient,
 		secretsClient:          secretsClient,
 		globalThreatFeedClient: globalThreatFeedInterface,
-		globalNetworkSetClient: globalNetworkSetInterface,
+		gnsController:          globalNetworkSetController,
 		httpClient:             httpClient,
 		ipSet:                  ipSet,
 		suspiciousIP:           suspiciousIP,
@@ -208,13 +206,15 @@ func (s *watcher) startFeed(ctx context.Context, f v3.GlobalThreatFeed) {
 	s.setFeedWatcher(f.Name, &fw)
 
 	if fCopy.Spec.Pull != nil && fCopy.Spec.Pull.HTTP != nil {
-		fw.puller = puller.NewHTTPPuller(fCopy, s.ipSet, s.configMapClient, s.secretsClient, s.httpClient)
-		c, failFunc := fw.puller.Run(ctx, fw.statser)
-		fw.syncer = sync.NewSyncer(fCopy, s.ipSet, s.globalNetworkSetClient)
-		fw.syncer.Run(ctx, c, failFunc, fw.statser)
+		fw.puller = puller.NewHTTPPuller(fCopy, s.ipSet, s.configMapClient, s.secretsClient, s.httpClient, s.gnsController)
+		failFunc := fw.puller.Run(ctx, fw.statser)
+		s.gnsController.RegisterFailFunc(fCopy.Name, failFunc)
 	} else {
 		fw.puller = nil
-		fw.syncer = nil
+	}
+
+	if fCopy.Spec.GlobalNetworkSet != nil {
+		s.gnsController.NoGC(util.NewGlobalNetworkSet(fCopy.Name))
 	}
 
 	fw.garbageCollector.Run(ctx, fw.statser)
@@ -234,17 +234,19 @@ func (s *watcher) updateFeed(ctx context.Context, f v3.GlobalThreatFeed) {
 			s.restartPuller(ctx, f)
 		} else {
 			fw.puller.SetFeed(fw.feed)
-			fw.syncer.SetFeed(fw.feed)
 		}
 	} else {
 		if fw.puller != nil {
 			fw.puller.Close()
 		}
 		fw.puller = nil
-		if fw.syncer != nil {
-			fw.syncer.Close()
-		}
-		fw.syncer = nil
+	}
+
+	gns := util.NewGlobalNetworkSet(fw.feed.Name)
+	if fw.feed.Spec.GlobalNetworkSet != nil {
+		s.gnsController.NoGC(gns)
+	} else {
+		s.gnsController.Delete(gns)
 	}
 
 	fw.searcher.SetFeed(fw.feed)
@@ -263,18 +265,13 @@ func (s *watcher) restartPuller(ctx context.Context, f v3.GlobalThreatFeed) {
 	if fw.puller != nil {
 		fw.puller.Close()
 	}
-	if fw.syncer != nil {
-		fw.syncer.Close()
-	}
 
 	if fw.feed.Spec.Pull != nil && fw.feed.Spec.Pull.HTTP != nil {
-		fw.puller = puller.NewHTTPPuller(fw.feed, s.ipSet, s.configMapClient, s.secretsClient, s.httpClient)
-		c, failFunc := fw.puller.Run(ctx, fw.statser)
-		fw.syncer = sync.NewSyncer(fw.feed, s.ipSet, s.globalNetworkSetClient)
-		fw.syncer.Run(ctx, c, failFunc, fw.statser)
+		fw.puller = puller.NewHTTPPuller(fw.feed, s.ipSet, s.configMapClient, s.secretsClient, s.httpClient, s.gnsController)
+		failFunc := fw.puller.Run(ctx, fw.statser)
+		s.gnsController.RegisterFailFunc(name, failFunc)
 	} else {
 		fw.puller = nil
-		fw.syncer = nil
 	}
 }
 
@@ -289,9 +286,9 @@ func (s *watcher) stopFeed(name string) {
 	if fw.puller != nil {
 		fw.puller.Close()
 	}
-	if fw.syncer != nil {
-		fw.syncer.Close()
-	}
+	gns := util.NewGlobalNetworkSet(name)
+	s.gnsController.Delete(gns)
+
 	fw.garbageCollector.Close()
 	fw.searcher.Close()
 	s.deleteFeedWatcher(name)

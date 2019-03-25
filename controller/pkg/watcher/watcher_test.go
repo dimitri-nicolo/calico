@@ -15,7 +15,6 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/mock"
 	"github.com/tigera/intrusion-detection/controller/pkg/puller"
 	"github.com/tigera/intrusion-detection/controller/pkg/statser"
@@ -31,7 +30,7 @@ func TestWatcher_HandleEvent(t *testing.T) {
 	defer cancel()
 
 	ipSet := &mock.IPSet{}
-	gns := &mock.GlobalNetworkSetInterface{}
+	gns := mock.NewGlobalNetworkSetController()
 
 	w := NewWatcher(nil, nil, nil, gns, testClient, ipSet, &mock.SuspiciousIP{}, &mock.Events{}).(*watcher)
 
@@ -176,7 +175,7 @@ func TestWatcher_startFeed_stopFeed(t *testing.T) {
 	}
 
 	ipSet := &mock.IPSet{}
-	gns := &mock.GlobalNetworkSetInterface{}
+	gns := mock.NewGlobalNetworkSetController()
 
 	w := NewWatcher(nil, nil, nil, gns, testClient, ipSet, &mock.SuspiciousIP{}, &mock.Events{}).(*watcher)
 
@@ -191,7 +190,7 @@ func TestWatcher_startFeed_stopFeed(t *testing.T) {
 
 	g.Expect(*fw.feed).Should(Equal(f))
 	g.Expect(fw.puller).ShouldNot(BeNil())
-	g.Expect(fw.syncer).ShouldNot(BeNil())
+	g.Expect(gns.NotGCable()).Should(HaveKey(util.GlobalNetworkSetNameFromThreatFeed(f.Name)))
 	g.Expect(fw.garbageCollector).ShouldNot(BeNil())
 	g.Expect(fw.statser).ShouldNot(BeNil())
 	g.Expect(fw.searcher).ShouldNot(BeNil())
@@ -221,7 +220,7 @@ func TestWatcher_startFeed_NoPull(t *testing.T) {
 	}
 
 	ipSet := &mock.IPSet{}
-	gns := &mock.GlobalNetworkSetInterface{}
+	gns := mock.NewGlobalNetworkSetController()
 
 	w := NewWatcher(nil, nil, nil, gns, testClient, ipSet, &mock.SuspiciousIP{}, &mock.Events{}).(*watcher)
 
@@ -234,7 +233,7 @@ func TestWatcher_startFeed_NoPull(t *testing.T) {
 	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
 	g.Expect(w.listFeedWatchers()).Should(HaveLen(1), "No FeedWatchers")
 	g.Expect(fw.puller).Should(BeNil(), "MockPuller is nil")
-	g.Expect(fw.syncer).Should(BeNil(), "MockSyncer is nil")
+	g.Expect(gns.NotGCable()).Should(HaveKey(util.GlobalNetworkSetNameFromThreatFeed(f.Name)))
 	g.Expect(fw.statser).ShouldNot(BeNil(), "Statser is not nil")
 	g.Expect(fw.garbageCollector).ShouldNot(BeNil(), "GC is not nil")
 }
@@ -259,7 +258,7 @@ func TestWatcher_startFeed_NoPullHTTP(t *testing.T) {
 	}
 
 	ipSet := &mock.IPSet{}
-	gns := &mock.GlobalNetworkSetInterface{}
+	gns := mock.NewGlobalNetworkSetController()
 
 	w := NewWatcher(nil, nil, nil, gns, testClient, ipSet, &mock.SuspiciousIP{}, &mock.Events{}).(*watcher)
 
@@ -272,7 +271,7 @@ func TestWatcher_startFeed_NoPullHTTP(t *testing.T) {
 	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
 	g.Expect(w.listFeedWatchers()).Should(HaveLen(1), "No FeedWatchers")
 	g.Expect(fw.puller).Should(BeNil(), "MockPuller is nil")
-	g.Expect(fw.syncer).Should(BeNil(), "MockSyncer is nil")
+	g.Expect(gns.NotGCable()).Should(HaveKey(util.GlobalNetworkSetNameFromThreatFeed(f.Name)))
 	g.Expect(fw.statser).ShouldNot(BeNil(), "Statser is not nil")
 	g.Expect(fw.garbageCollector).ShouldNot(BeNil(), "GC is not nil")
 }
@@ -304,7 +303,7 @@ func TestWatcher_startFeed_Exists(t *testing.T) {
 	}
 
 	ipSet := &mock.IPSet{}
-	gns := &mock.GlobalNetworkSetInterface{}
+	gns := mock.NewGlobalNetworkSetController()
 
 	w := NewWatcher(nil, nil, nil, gns, testClient, ipSet, &mock.SuspiciousIP{}, &mock.Events{}).(*watcher)
 
@@ -355,7 +354,7 @@ func TestWatcher_updateFeed_NotStarted(t *testing.T) {
 	}
 
 	ipSet := &mock.IPSet{}
-	gns := &mock.GlobalNetworkSetInterface{}
+	gns := mock.NewGlobalNetworkSetController()
 
 	w := NewWatcher(nil, nil, nil, gns, testClient, ipSet, &mock.SuspiciousIP{}, &mock.Events{}).(*watcher)
 
@@ -392,7 +391,7 @@ func TestWatcher_updateFeed_PullToPull(t *testing.T) {
 	}
 
 	ipSet := &mock.IPSet{}
-	gns := &mock.GlobalNetworkSetInterface{}
+	gns := mock.NewGlobalNetworkSetController()
 
 	w := NewWatcher(nil, nil, nil, gns, testClient, ipSet, &mock.SuspiciousIP{}, &mock.Events{}).(*watcher)
 
@@ -407,11 +406,9 @@ func TestWatcher_updateFeed_PullToPull(t *testing.T) {
 
 	// hack in some mocks so we can verify that SetFeed was called
 	mockPuller := &MockPuller{}
-	mockSyncer := &MockSyncer{}
 	mockSearcher := &MockSearcher{}
 	mockGC := &MockGC{}
 	fw.puller = mockPuller
-	fw.syncer = mockSyncer
 	fw.searcher = mockSearcher
 	fw.garbageCollector = mockGC
 
@@ -423,9 +420,7 @@ func TestWatcher_updateFeed_PullToPull(t *testing.T) {
 	g.Expect(mockPuller.Feed).ShouldNot(BeNil())
 	g.Expect(mockPuller.CloseCalled).Should(BeFalse())
 	g.Expect(fw.puller).Should(BeIdenticalTo(mockPuller))
-	g.Expect(mockSyncer.Feed).ShouldNot(BeNil())
-	g.Expect(mockSyncer.CloseCalled).Should(BeFalse())
-	g.Expect(fw.syncer).Should(BeIdenticalTo(mockSyncer))
+	g.Expect(gns.NotGCable()).Should(HaveKey(util.GlobalNetworkSetNameFromThreatFeed(f.Name)))
 	g.Expect(mockSearcher.Feed).ShouldNot(BeNil(), "SetFeed was called")
 	g.Expect(mockGC.Feed).ShouldNot(BeNil(), "SetFeed was called")
 }
@@ -457,7 +452,7 @@ func TestWatcher_updateFeed_PullToPush(t *testing.T) {
 	}
 
 	ipSet := &mock.IPSet{}
-	gns := &mock.GlobalNetworkSetInterface{}
+	gns := mock.NewGlobalNetworkSetController()
 
 	w := NewWatcher(nil, nil, nil, gns, testClient, ipSet, &mock.SuspiciousIP{}, &mock.Events{}).(*watcher)
 
@@ -472,11 +467,9 @@ func TestWatcher_updateFeed_PullToPush(t *testing.T) {
 
 	// hack in some mocks so we can verify that SetFeed was called
 	mockPuller := &MockPuller{}
-	mockSyncer := &MockSyncer{}
 	mockSearcher := &MockSearcher{}
 	mockGC := &MockGC{}
 	fw.puller = mockPuller
-	fw.syncer = mockSyncer
 	fw.searcher = mockSearcher
 	fw.garbageCollector = mockGC
 
@@ -488,11 +481,9 @@ func TestWatcher_updateFeed_PullToPush(t *testing.T) {
 	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
 	g.Expect(w.listFeedWatchers()).To(HaveLen(1), "Only one FeedWatcher")
 	g.Expect(fw.puller).Should(BeNil())
-	g.Expect(fw.syncer).Should(BeNil())
+	g.Expect(gns.NotGCable()).Should(HaveKey(util.GlobalNetworkSetNameFromThreatFeed(f.Name)))
 	g.Expect(mockPuller.Feed).Should(BeNil())
 	g.Expect(mockPuller.CloseCalled).Should(BeTrue())
-	g.Expect(mockSyncer.Feed).Should(BeNil())
-	g.Expect(mockSyncer.CloseCalled).Should(BeTrue())
 	g.Expect(mockSearcher.Feed).ShouldNot(BeNil(), "SetFeed was called")
 	g.Expect(mockGC.Feed).ShouldNot(BeNil(), "SetFeed was called")
 }
@@ -506,16 +497,11 @@ func TestWatcher_updateFeed_PushToPull(t *testing.T) {
 		},
 		Spec: v32.GlobalThreatFeedSpec{
 			Content: "IPSet",
-			GlobalNetworkSet: &v32.GlobalNetworkSetSync{
-				Labels: map[string]string{
-					"level": "high",
-				},
-			},
 		},
 	}
 
 	ipSet := &mock.IPSet{}
-	gns := &mock.GlobalNetworkSetInterface{}
+	gns := mock.NewGlobalNetworkSetController()
 
 	w := NewWatcher(nil, nil, nil, gns, testClient, ipSet, &mock.SuspiciousIP{}, &mock.Events{}).(*watcher)
 
@@ -527,6 +513,7 @@ func TestWatcher_updateFeed_PushToPull(t *testing.T) {
 	fw, ok := w.getFeedWatcher(f.Name)
 	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
 	g.Expect(w.listFeedWatchers()).To(HaveLen(1), "Only one FeedWatcher")
+	g.Expect(gns.NotGCable()).ShouldNot(HaveKey(util.GlobalNetworkSetNameFromThreatFeed(f.Name)))
 
 	// hack in some mocks so we can verify that SetFeed was called
 	searcher := &MockSearcher{}
@@ -542,6 +529,9 @@ func TestWatcher_updateFeed_PushToPull(t *testing.T) {
 			Headers: []v32.HTTPHeader{},
 		},
 	}
+	f.Spec.GlobalNetworkSet = &v32.GlobalNetworkSetSync{
+		Labels: map[string]string{"level": "high"},
+	}
 
 	w.updateFeed(ctx, f)
 
@@ -549,7 +539,7 @@ func TestWatcher_updateFeed_PushToPull(t *testing.T) {
 	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
 	g.Expect(w.listFeedWatchers()).To(HaveLen(1), "Only one FeedWatcher")
 	g.Expect(fw.puller).ShouldNot(BeNil())
-	g.Expect(fw.syncer).ShouldNot(BeNil())
+	g.Expect(gns.NotGCable()).Should(HaveKey(util.GlobalNetworkSetNameFromThreatFeed(f.Name)))
 	g.Expect(searcher.Feed).ShouldNot(BeNil(), "SetFeed was called")
 	g.Expect(garbageCollector.Feed).ShouldNot(BeNil(), "SetFeed was called")
 }
@@ -564,16 +554,11 @@ func TestWatcher_updateFeed_PushToPush(t *testing.T) {
 		},
 		Spec: v32.GlobalThreatFeedSpec{
 			Content: "IPSet",
-			GlobalNetworkSet: &v32.GlobalNetworkSetSync{
-				Labels: map[string]string{
-					"level": "high",
-				},
-			},
 		},
 	}
 
 	ipSet := &mock.IPSet{}
-	gns := &mock.GlobalNetworkSetInterface{}
+	gns := mock.NewGlobalNetworkSetController()
 
 	w := NewWatcher(nil, nil, nil, gns, testClient, ipSet, &mock.SuspiciousIP{}, &mock.Events{}).(*watcher)
 
@@ -585,6 +570,7 @@ func TestWatcher_updateFeed_PushToPush(t *testing.T) {
 	fw, ok := w.getFeedWatcher(f.Name)
 	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
 	g.Expect(w.listFeedWatchers()).To(HaveLen(1), "Only one FeedWatcher")
+	g.Expect(gns.NotGCable()).ShouldNot(HaveKey(util.GlobalNetworkSetNameFromThreatFeed(f.Name)))
 
 	searcher := &MockSearcher{}
 	garbageCollector := &MockGC{}
@@ -597,7 +583,7 @@ func TestWatcher_updateFeed_PushToPush(t *testing.T) {
 	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
 	g.Expect(w.listFeedWatchers()).To(HaveLen(1), "Only one FeedWatcher")
 	g.Expect(fw.puller).Should(BeNil())
-	g.Expect(fw.syncer).Should(BeNil())
+	g.Expect(gns.NotGCable()).ShouldNot(HaveKey(util.GlobalNetworkSetNameFromThreatFeed(f.Name)))
 	g.Expect(searcher.Feed).ShouldNot(BeNil(), "SetFeed was called")
 	g.Expect(garbageCollector.Feed).ShouldNot(BeNil(), "SetFeed was called")
 }
@@ -629,7 +615,7 @@ func TestWatcher_restartPuller(t *testing.T) {
 	}
 
 	ipSet := &mock.IPSet{}
-	gns := &mock.GlobalNetworkSetInterface{}
+	gns := mock.NewGlobalNetworkSetController()
 
 	w := NewWatcher(nil, nil, nil, gns, testClient, ipSet, &mock.SuspiciousIP{}, &mock.Events{}).(*watcher)
 
@@ -644,19 +630,16 @@ func TestWatcher_restartPuller(t *testing.T) {
 
 	g.Expect(*fw.feed).Should(Equal(f))
 	g.Expect(fw.puller).ShouldNot(BeNil())
-	g.Expect(fw.syncer).ShouldNot(BeNil())
 	g.Expect(fw.garbageCollector).ShouldNot(BeNil())
 	g.Expect(fw.statser).ShouldNot(BeNil())
 	g.Expect(fw.searcher).ShouldNot(BeNil())
 
 	oldPuller := fw.puller
-	oldSyncer := fw.syncer
 
 	w.restartPuller(ctx, f)
 	fw, ok = w.getFeedWatcher(f.Name)
 	g.Expect(ok).Should(BeTrue())
 	g.Expect(fw.puller).ShouldNot(Equal(oldPuller))
-	g.Expect(fw.syncer).ShouldNot(Equal(oldSyncer))
 }
 
 func TestWatcher_restartPuller_NoPull(t *testing.T) {
@@ -686,7 +669,7 @@ func TestWatcher_restartPuller_NoPull(t *testing.T) {
 	}
 
 	ipSet := &mock.IPSet{}
-	gns := &mock.GlobalNetworkSetInterface{}
+	gns := mock.NewGlobalNetworkSetController()
 
 	w := NewWatcher(nil, nil, nil, gns, testClient, ipSet, &mock.SuspiciousIP{}, &mock.Events{}).(*watcher)
 
@@ -701,7 +684,6 @@ func TestWatcher_restartPuller_NoPull(t *testing.T) {
 
 	g.Expect(*fw.feed).Should(Equal(f))
 	g.Expect(fw.puller).ShouldNot(BeNil())
-	g.Expect(fw.syncer).ShouldNot(BeNil())
 	g.Expect(fw.garbageCollector).ShouldNot(BeNil())
 	g.Expect(fw.statser).ShouldNot(BeNil())
 	g.Expect(fw.searcher).ShouldNot(BeNil())
@@ -712,7 +694,6 @@ func TestWatcher_restartPuller_NoPull(t *testing.T) {
 	fw, ok = w.getFeedWatcher(f.Name)
 	g.Expect(ok).Should(BeTrue())
 	g.Expect(fw.puller).Should(BeNil())
-	g.Expect(fw.syncer).Should(BeNil())
 }
 
 func TestWatcher_restartPuller_NoPullHTTP(t *testing.T) {
@@ -742,7 +723,7 @@ func TestWatcher_restartPuller_NoPullHTTP(t *testing.T) {
 	}
 
 	ipSet := &mock.IPSet{}
-	gns := &mock.GlobalNetworkSetInterface{}
+	gns := mock.NewGlobalNetworkSetController()
 
 	w := NewWatcher(nil, nil, nil, gns, testClient, ipSet, &mock.SuspiciousIP{}, &mock.Events{}).(*watcher)
 
@@ -757,7 +738,6 @@ func TestWatcher_restartPuller_NoPullHTTP(t *testing.T) {
 
 	g.Expect(*fw.feed).Should(Equal(f))
 	g.Expect(fw.puller).ShouldNot(BeNil())
-	g.Expect(fw.syncer).ShouldNot(BeNil())
 	g.Expect(fw.garbageCollector).ShouldNot(BeNil())
 	g.Expect(fw.statser).ShouldNot(BeNil())
 	g.Expect(fw.searcher).ShouldNot(BeNil())
@@ -767,7 +747,6 @@ func TestWatcher_restartPuller_NoPullHTTP(t *testing.T) {
 	w.restartPuller(ctx, f)
 	fw, ok = w.getFeedWatcher(f.Name)
 	g.Expect(fw.puller).Should(BeNil())
-	g.Expect(fw.syncer).Should(BeNil())
 }
 
 func TestWatcher_restartPuller_notExists(t *testing.T) {
@@ -848,7 +827,8 @@ func TestWatcher_Ready(t *testing.T) {
 	gtf := &mock.GlobalThreatFeedInterface{W: &mock.Watch{make(chan watch.Event)}}
 	ipSet := &mock.IPSet{}
 	sIP := &mock.SuspiciousIP{ErrorIndex: -1}
-	uut := NewWatcher(nil, nil, gtf, nil, testClient, ipSet, sIP, &mock.Events{})
+	gns := mock.NewGlobalNetworkSetController()
+	uut := NewWatcher(nil, nil, gtf, gns, testClient, ipSet, sIP, &mock.Events{})
 
 	g.Expect(uut.Ready()).To(BeFalse())
 
@@ -886,29 +866,12 @@ func (p *MockPuller) Close() {
 	p.CloseCalled = true
 }
 
-func (*MockPuller) Run(context.Context, statser.Statser) (<-chan db.IPSetSpec, puller.SyncFailFunction) {
+func (*MockPuller) Run(context.Context, statser.Statser) puller.SyncFailFunction {
 	panic("implement me")
 }
 
 func (p *MockPuller) SetFeed(f *v3.GlobalThreatFeed) {
 	p.Feed = f
-}
-
-type MockSyncer struct {
-	Feed        *v3.GlobalThreatFeed
-	CloseCalled bool
-}
-
-func (s *MockSyncer) Close() {
-	s.CloseCalled = true
-}
-
-func (*MockSyncer) Run(context.Context, <-chan db.IPSetSpec, puller.SyncFailFunction, statser.Statser) {
-	panic("implement me")
-}
-
-func (s *MockSyncer) SetFeed(f *v3.GlobalThreatFeed) {
-	s.Feed = f
 }
 
 type MockSearcher struct {

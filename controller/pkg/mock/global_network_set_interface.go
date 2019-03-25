@@ -3,6 +3,9 @@
 package mock
 
 import (
+	"context"
+	"sync"
+
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -67,4 +70,79 @@ func (m *GlobalNetworkSetInterface) Watch(opts v1.ListOptions) (watch.Interface,
 
 func (m *GlobalNetworkSetInterface) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v3.GlobalNetworkSet, err error) {
 	return nil, m.Error
+}
+
+type GlobalNetworkSetController struct {
+	m         sync.Mutex
+	local     map[string]*v3.GlobalNetworkSet
+	noGC      map[string]struct{}
+	failFuncs map[string]func()
+}
+
+func NewGlobalNetworkSetController() *GlobalNetworkSetController {
+	return &GlobalNetworkSetController{
+		local:     make(map[string]*v3.GlobalNetworkSet),
+		noGC:      make(map[string]struct{}),
+		failFuncs: make(map[string]func()),
+	}
+}
+
+func (c *GlobalNetworkSetController) Add(s *v3.GlobalNetworkSet) {
+	c.m.Lock()
+	defer c.m.Unlock()
+	c.local[s.Name] = s
+}
+
+func (c *GlobalNetworkSetController) Delete(s *v3.GlobalNetworkSet) {
+	c.m.Lock()
+	defer c.m.Unlock()
+	delete(c.local, s.Name)
+	delete(c.noGC, s.Name)
+	delete(c.failFuncs, s.Name)
+}
+
+func (c *GlobalNetworkSetController) NoGC(s *v3.GlobalNetworkSet) {
+	c.m.Lock()
+	defer c.m.Unlock()
+	c.noGC[s.Name] = struct{}{}
+}
+
+func (c *GlobalNetworkSetController) RegisterFailFunc(key string, f func()) {
+	c.m.Lock()
+	defer c.m.Unlock()
+	c.failFuncs[key] = f
+}
+
+func (c *GlobalNetworkSetController) Run(_ context.Context) {
+	return
+}
+
+func (c *GlobalNetworkSetController) Local() map[string]*v3.GlobalNetworkSet {
+	out := make(map[string]*v3.GlobalNetworkSet)
+	c.m.Lock()
+	defer c.m.Unlock()
+	for k, s := range c.local {
+		out[k] = s
+	}
+	return out
+}
+
+func (c *GlobalNetworkSetController) NotGCable() map[string]struct{} {
+	out := make(map[string]struct{})
+	c.m.Lock()
+	defer c.m.Unlock()
+	for k, s := range c.noGC {
+		out[k] = s
+	}
+	return out
+}
+
+func (c *GlobalNetworkSetController) FailFuncs() map[string]func() {
+	out := make(map[string]func())
+	c.m.Lock()
+	defer c.m.Unlock()
+	for k, s := range c.failFuncs {
+		out[k] = s
+	}
+	return out
 }
