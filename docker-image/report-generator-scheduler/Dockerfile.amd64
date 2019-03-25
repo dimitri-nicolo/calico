@@ -1,5 +1,0 @@
-FROM scratch
-
-ADD bin/report-generator-scheduler-amd64 /report-generator-scheduler
-WORKDIR /
-ENTRYPOINT ["/report-generator-scheduler"]

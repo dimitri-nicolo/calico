@@ -1,0 +1,5 @@
+FROM scratch
+
+ADD bin/controller-amd64 /controller
+WORKDIR /
+ENTRYPOINT ["/controller"]

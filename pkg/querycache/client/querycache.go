@@ -7,6 +7,11 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/tigera/compliance/pkg/querycache/api"
+	"github.com/tigera/compliance/pkg/querycache/cache"
+	"github.com/tigera/compliance/pkg/querycache/dispatcherv1v3"
+	"github.com/tigera/compliance/pkg/querycache/labelhandler"
+
 	"github.com/projectcalico/libcalico-go/lib/apis/v3"
 	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
@@ -15,10 +20,6 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/set"
-	"github.com/tigera/compliance/pkg/querycache/api"
-	"github.com/tigera/compliance/pkg/querycache/cache"
-	"github.com/tigera/compliance/pkg/querycache/dispatcherv1v3"
-	"github.com/tigera/compliance/pkg/querycache/labelhandler"
 )
 
 // NewQueryInterface returns a queryable resource cache.
@@ -295,10 +296,10 @@ func (c *cachedQuery) apiEndpointToQueryEndpoint(ep api.Endpoint) *Endpoint {
 	pc := ep.GetPolicyCounts()
 	res := ep.GetResource()
 	e := &Endpoint{
-		Kind:      res.GetObjectKind().GroupVersionKind().Kind,
-		Name:      res.GetObjectMeta().GetName(),
-		Namespace: res.GetObjectMeta().GetNamespace(),
-		Node:      ep.GetNode(),
+		Kind:                     res.GetObjectKind().GroupVersionKind().Kind,
+		Name:                     res.GetObjectMeta().GetName(),
+		Namespace:                res.GetObjectMeta().GetNamespace(),
+		Node:                     ep.GetNode(),
 		NumGlobalNetworkPolicies: pc.NumGlobalNetworkPolicies,
 		NumNetworkPolicies:       pc.NumNetworkPolicies,
 		Labels:                   res.GetObjectMeta().GetLabels(),

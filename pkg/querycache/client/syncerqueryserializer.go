@@ -4,8 +4,9 @@ package client
 import (
 	"context"
 
-	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/libcalico-go/lib/backend/api"
 )
 
 // NewSerializedSyncerQuery returns a wrapped SyncerCallbacks and QueryInterface. The wrapped

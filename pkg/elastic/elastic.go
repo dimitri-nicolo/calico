@@ -1,14 +1,14 @@
 package elastic
 
 import (
+	"crypto/tls"
+	"crypto/x509"
+	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
 	"strconv"
-	"fmt"
-	"crypto/x509"
-	"io/ioutil"
-	"crypto/tls"
 
 	"github.com/olivere/elastic"
 	log "github.com/sirupsen/logrus"

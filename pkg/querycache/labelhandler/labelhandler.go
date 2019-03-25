@@ -5,12 +5,13 @@ import (
 	"github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/tigera/compliance/pkg/querycache/dispatcherv1v3"
+
 	"github.com/projectcalico/felix/labelindex"
 	"github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/selector"
-	"github.com/tigera/compliance/pkg/querycache/dispatcherv1v3"
 )
 
 type Interface interface {
