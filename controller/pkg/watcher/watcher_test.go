@@ -807,34 +807,27 @@ func TestWatcher_restartPuller_notExists(t *testing.T) {
 func TestWatcher_Ping(t *testing.T) {
 	g := NewWithT(t)
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-	defer cancel()
-
 	gtf := &mock.GlobalThreatFeedInterface{}
 	uut := NewWatcher(nil, nil, gtf, nil, testClient, nil, nil, nil)
 
 	ch := make(chan struct{})
 	defer func() {
-		select {
-		case <-ctx.Done():
-			t.Error("Ping did not terminate before context cancellation")
-		case <-ch:
-			// ok
-		}
+		g.Expect(ch).Should(BeClosed(), "Test cleans up correctly")
 	}()
 
-	var done bool
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
 	go func() {
 		defer close(ch)
 		err := uut.Ping(ctx)
-		done = true
 		g.Expect(err).ToNot(HaveOccurred())
 	}()
-	g.Consistently(func() bool { return done }).Should(BeFalse())
+	g.Consistently(ch).ShouldNot(BeClosed())
 
 	uut.Run(ctx)
 
-	g.Eventually(func() bool { return done }).Should(BeTrue())
+	g.Eventually(ch).Should(BeClosed())
 }
 
 func TestWatcher_PingFail(t *testing.T) {
