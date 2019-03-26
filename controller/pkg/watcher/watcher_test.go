@@ -813,10 +813,28 @@ func TestWatcher_Ping(t *testing.T) {
 	gtf := &mock.GlobalThreatFeedInterface{}
 	uut := NewWatcher(nil, nil, gtf, nil, testClient, nil, nil, nil)
 
+	ch := make(chan struct{})
+	defer func() {
+		select {
+		case <-ctx.Done():
+			t.Error("Ping did not terminate before context cancellation")
+		case <-ch:
+			// ok
+		}
+	}()
+
+	var done bool
+	go func() {
+		defer close(ch)
+		err := uut.Ping(ctx)
+		done = true
+		g.Expect(err).ToNot(HaveOccurred())
+	}()
+	g.Consistently(func() bool { return done }).Should(BeFalse())
+
 	uut.Run(ctx)
 
-	err := uut.Ping(ctx)
-	g.Expect(err).ToNot(HaveOccurred())
+	g.Eventually(func() bool { return done }).Should(BeTrue())
 }
 
 func TestWatcher_PingFail(t *testing.T) {
