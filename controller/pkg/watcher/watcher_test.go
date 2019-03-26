@@ -823,11 +823,11 @@ func TestWatcher_Ping(t *testing.T) {
 		err := uut.Ping(ctx)
 		g.Expect(err).ToNot(HaveOccurred())
 	}()
-	g.Consistently(ch).ShouldNot(BeClosed())
+	g.Consistently(ch).ShouldNot(BeClosed(), "Ping does not complete before Run is called")
 
 	uut.Run(ctx)
 
-	g.Eventually(ch).Should(BeClosed())
+	g.Eventually(ch).Should(BeClosed(), "Ping completes after Run is called")
 }
 
 func TestWatcher_PingFail(t *testing.T) {
