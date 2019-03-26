@@ -4,17 +4,20 @@ package watcher
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
-	goSync "sync"
+	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	v32 "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/tools/cache"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/gc"
@@ -26,9 +29,7 @@ import (
 	"github.com/tigera/intrusion-detection/controller/pkg/util"
 )
 
-const (
-	RetryDelay = 10 * time.Second
-)
+const DefaultResyncPeriod = 0
 
 // Watcher accepts updates from threat pullers and synchronizes them to the
 // database
@@ -51,12 +52,22 @@ type watcher struct {
 	ipSet                  db.IPSet
 	suspiciousIP           db.SuspiciousIP
 	events                 db.Events
-	feeds                  map[string]*feedWatcher
-	feedMutex              goSync.RWMutex
+	feedWatchers           map[string]*feedWatcher
+	feedWatchersMutex      sync.RWMutex
 	cancel                 context.CancelFunc
-	once                   goSync.Once
-	ping                   chan struct{}
-	watching               bool
+
+	// Unfortunately, cache.Controller callbacks can't accept
+	// a context, so we need to store this on the watcher so we can pass it
+	// to Pullers & Searchers we create.
+	ctx context.Context
+
+	once       sync.Once
+	err        error
+	ping       chan struct{}
+	watching   bool
+	controller cache.Controller
+	fifo       *cache.DeltaFIFO
+	feeds      cache.Store
 }
 
 type feedWatcher struct {
@@ -77,9 +88,17 @@ func NewWatcher(
 	suspiciousIP db.SuspiciousIP,
 	events db.Events,
 ) Watcher {
-	feeds := map[string]*feedWatcher{}
+	feedWatchers := map[string]*feedWatcher{}
 
-	return &watcher{
+	lw := &cache.ListWatch{
+		ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
+			return globalThreatFeedInterface.List(options)
+		},
+		WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
+			return globalThreatFeedInterface.Watch(options)
+		},
+	}
+	w := &watcher{
 		configMapClient:        configMapClient,
 		secretsClient:          secretsClient,
 		globalThreatFeedClient: globalThreatFeedInterface,
@@ -88,108 +107,99 @@ func NewWatcher(
 		ipSet:                  ipSet,
 		suspiciousIP:           suspiciousIP,
 		events:                 events,
-		feeds:                  feeds,
+		feedWatchers:           feedWatchers,
 		ping:                   make(chan struct{}),
 	}
+
+	w.fifo, w.feeds = NewPingableFifo()
+
+	cfg := &cache.Config{
+		Queue:            w.fifo,
+		ListerWatcher:    lw,
+		ObjectType:       &v3.GlobalThreatFeed{},
+		FullResyncPeriod: DefaultResyncPeriod,
+		RetryOnError:     false,
+		Process:          w.processQueue,
+	}
+	w.controller = cache.New(cfg)
+
+	return w
 }
 
 func (s *watcher) Run(ctx context.Context) {
 	s.once.Do(func() {
-		ctx, s.cancel = context.WithCancel(ctx)
 
+		s.ctx, s.cancel = context.WithCancel(ctx)
+
+		// We need to wait until we sync all GlobalThreatFeeds before starting
+		// the GlobalNetworkSet controller. This is because the GlobalNetworkSet
+		// controller does garbage collection---if we started garbage collecting
+		// before syncing all threat feeds, we might delete state associated
+		// with an active threat feed.
 		go func() {
-			defer s.cancel()
-			var w watch.Interface
-
-			// Try forever to establish a Watch
-			for {
-				var err error
-				w, err = s.globalThreatFeedClient.Watch(metav1.ListOptions{
-					Watch: true,
-				})
-				if err == nil {
-					log.Info("Watch started")
-					defer w.Stop()
-					// Set watching to true only after the Watch has returned without an
-					// error, and only until this Run loop returns.  No need to bother
-					// with a lock since bools are atomic.
-					s.watching = true
-					defer func() { s.watching = false }()
-					break
-				}
-				log.WithError(err).Error("Failed to start Watch")
-				select {
-				case <-ctx.Done():
-					return
-				case <-time.After(RetryDelay):
-					// retry
-				}
+			if !cache.WaitForCacheSync(s.ctx.Done(), s.controller.HasSynced) {
+				// WaitForCacheSync returns false if the context expires before sync is successful.
+				// If that happens, the controller is no longer needed, so just log the error.
+				log.Error("Failed to sync GlobalThreatFeed controller")
+				return
 			}
-
-			for {
-				select {
-				case <-ctx.Done():
-					return
-				case <-s.ping:
-					// Used to test liveness of the watcher.
-					continue
-				case event, ok := <-w.ResultChan():
-					if !ok {
-						return
-					}
-
-					s.handleEvent(ctx, event)
-				}
-			}
+			s.gnsController.Run(s.ctx)
 		}()
+
+		// s.watching should only be true while this function is running.  Don't
+		// bother with a lock because updates to booleans are always atomic.
+		s.watching = true
+		defer func() { s.watching = false }()
+
+		s.controller.Run(s.ctx.Done())
+		s.err = errors.New("watcher context expired")
 	})
 }
 
-func (s *watcher) handleEvent(ctx context.Context, event watch.Event) {
-	switch event.Type {
-	case watch.Added, watch.Modified:
-		globalThreatFeed, ok := event.Object.(*v3.GlobalThreatFeed)
-		if !ok {
-			log.WithField("event", event).Error("Received event of unexpected type")
-			return
-		}
+func (s *watcher) processQueue(obj interface{}) error {
+	// In general, this function only operates on local caches and FIFOs, so
+	// will never return an error.  We panic on any errors since these indicate
+	// programming bugs.
 
-		if _, ok := s.getFeedWatcher(globalThreatFeed.Name); !ok {
-			s.startFeed(ctx, *globalThreatFeed)
-			log.WithField("feed", globalThreatFeed.Name).Info("Feed started")
-		} else {
-			s.updateFeed(ctx, *globalThreatFeed)
-			log.WithField("feed", globalThreatFeed.Name).Info("Feed updated")
-
+	// from oldest to newest
+	for _, d := range obj.(cache.Deltas) {
+		switch d.Type {
+		case cache.Sync, cache.Added, cache.Updated:
+			old, exists, err := s.feeds.Get(d.Object)
+			if err != nil {
+				panic(err)
+			}
+			if exists {
+				if err := s.feeds.Update(d.Object); err != nil {
+					panic(err)
+				}
+				// Pings also come as cache updates
+				_, ok := d.Object.(ping)
+				if ok {
+					// Pong on a go routine so we don't block the main loop
+					// if no pinger is listening.
+					go s.pong()
+				} else {
+					s.updateFeedWatcher(old.(*v3.GlobalThreatFeed), d.Object.(*v3.GlobalThreatFeed))
+				}
+			} else {
+				if err := s.feeds.Add(d.Object); err != nil {
+					panic(err)
+				}
+				s.startFeedWatcher(d.Object.(*v3.GlobalThreatFeed))
+			}
+		case cache.Deleted:
+			if err := s.feeds.Delete(d.Object); err != nil {
+				panic(err)
+			}
+			f := d.Object.(*v3.GlobalThreatFeed)
+			s.stopFeedWatcher(f.Name)
 		}
-	case watch.Deleted:
-		globalThreatFeed, ok := event.Object.(*v3.GlobalThreatFeed)
-		if !ok {
-			log.WithField("event", event).Error("Received event of unexpected type")
-			return
-		}
-
-		if _, ok := s.getFeedWatcher(globalThreatFeed.Name); ok {
-			s.stopFeed(globalThreatFeed.Name)
-			log.WithField("feed", globalThreatFeed.Name).Info("Feed stopped")
-		} else {
-			log.WithField("feed", globalThreatFeed.Name).Info("Ignored deletion of non-running feed")
-		}
-	case watch.Error:
-		switch event.Object.(type) {
-		case *metav1.Status:
-			status := event.Object.(*metav1.Status)
-			log.WithField("status", status).Error("Kubernetes API error")
-
-		default:
-			log.WithField("event", event).Error("Received kubernetes API error of unexpected type")
-		}
-	default:
-		log.WithField("event", event).Error("Received event with unexpected type")
 	}
+	return nil
 }
 
-func (s *watcher) startFeed(ctx context.Context, f v3.GlobalThreatFeed) {
+func (s *watcher) startFeedWatcher(f *v3.GlobalThreatFeed) {
 	if _, ok := s.getFeedWatcher(f.Name); ok {
 		panic(fmt.Sprintf("Feed %s already started", f.Name))
 	}
@@ -207,7 +217,7 @@ func (s *watcher) startFeed(ctx context.Context, f v3.GlobalThreatFeed) {
 
 	if fCopy.Spec.Pull != nil && fCopy.Spec.Pull.HTTP != nil {
 		fw.puller = puller.NewHTTPPuller(fCopy, s.ipSet, s.configMapClient, s.secretsClient, s.httpClient, s.gnsController)
-		failFunc := fw.puller.Run(ctx, fw.statser)
+		failFunc := fw.puller.Run(s.ctx, fw.statser)
 		s.gnsController.RegisterFailFunc(fCopy.Name, failFunc)
 	} else {
 		fw.puller = nil
@@ -217,21 +227,20 @@ func (s *watcher) startFeed(ctx context.Context, f v3.GlobalThreatFeed) {
 		s.gnsController.NoGC(util.NewGlobalNetworkSet(fCopy.Name))
 	}
 
-	fw.garbageCollector.Run(ctx, fw.statser)
-	fw.searcher.Run(ctx, fw.statser)
+	fw.garbageCollector.Run(s.ctx, fw.statser)
+	fw.searcher.Run(s.ctx, fw.statser)
 }
 
-func (s *watcher) updateFeed(ctx context.Context, f v3.GlobalThreatFeed) {
-	fw, ok := s.getFeedWatcher(f.Name)
+func (s *watcher) updateFeedWatcher(oldFeed, newFeed *v3.GlobalThreatFeed) {
+	fw, ok := s.getFeedWatcher(newFeed.Name)
 	if !ok {
-		panic(fmt.Sprintf("Feed %s not started", f.Name))
+		panic(fmt.Sprintf("Feed %s not started", newFeed.Name))
 	}
 
-	oldFeed := fw.feed
-	fw.feed = f.DeepCopy()
+	fw.feed = newFeed.DeepCopy()
 	if fw.feed.Spec.Pull != nil && fw.feed.Spec.Pull.HTTP != nil {
 		if util.FeedNeedsRestart(oldFeed, fw.feed) {
-			s.restartPuller(ctx, f)
+			s.restartPuller(s.ctx, newFeed)
 		} else {
 			fw.puller.SetFeed(fw.feed)
 		}
@@ -253,7 +262,7 @@ func (s *watcher) updateFeed(ctx context.Context, f v3.GlobalThreatFeed) {
 	fw.garbageCollector.SetFeed(fw.feed)
 }
 
-func (s *watcher) restartPuller(ctx context.Context, f v3.GlobalThreatFeed) {
+func (s *watcher) restartPuller(ctx context.Context, f *v3.GlobalThreatFeed) {
 	name := f.Name
 
 	fw, ok := s.getFeedWatcher(name)
@@ -275,7 +284,7 @@ func (s *watcher) restartPuller(ctx context.Context, f v3.GlobalThreatFeed) {
 	}
 }
 
-func (s *watcher) stopFeed(name string) {
+func (s *watcher) stopFeedWatcher(name string) {
 	fw, ok := s.getFeedWatcher(name)
 	if !ok {
 		panic(fmt.Sprintf("feed %s not running", name))
@@ -299,30 +308,30 @@ func (s *watcher) Close() {
 }
 
 func (s *watcher) getFeedWatcher(name string) (fw *feedWatcher, ok bool) {
-	s.feedMutex.RLock()
-	defer s.feedMutex.RUnlock()
-	fw, ok = s.feeds[name]
+	s.feedWatchersMutex.RLock()
+	defer s.feedWatchersMutex.RUnlock()
+	fw, ok = s.feedWatchers[name]
 	return
 }
 
 func (s *watcher) setFeedWatcher(name string, fw *feedWatcher) {
-	s.feedMutex.Lock()
-	defer s.feedMutex.Unlock()
-	s.feeds[name] = fw
+	s.feedWatchersMutex.Lock()
+	defer s.feedWatchersMutex.Unlock()
+	s.feedWatchers[name] = fw
 	return
 }
 
 func (s *watcher) deleteFeedWatcher(name string) {
-	s.feedMutex.Lock()
-	defer s.feedMutex.Unlock()
-	delete(s.feeds, name)
+	s.feedWatchersMutex.Lock()
+	defer s.feedWatchersMutex.Unlock()
+	delete(s.feedWatchers, name)
 }
 
 func (s *watcher) listFeedWatchers() []*feedWatcher {
-	s.feedMutex.RLock()
-	defer s.feedMutex.RUnlock()
+	s.feedWatchersMutex.RLock()
+	defer s.feedWatchersMutex.RUnlock()
 	var out []*feedWatcher
-	for _, fw := range s.feeds {
+	for _, fw := range s.feedWatchers {
 		out = append(out, fw)
 	}
 	return out
@@ -330,15 +339,31 @@ func (s *watcher) listFeedWatchers() []*feedWatcher {
 
 // Ping is used to ensure the watcher's main loop is running and not blocked.
 func (s *watcher) Ping(ctx context.Context) error {
+	// Enqueue a ping
+	err := s.fifo.Update(ping{})
+	if err != nil {
+		// Local fifo & cache should never error.
+		panic(err)
+	}
+
+	// Wait for the ping to be processed, or context to expire.
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
 
 	// Since this channel is unbuffered, this will block if the main loop is not
 	// running, or has itself blocked.
-	case s.ping <- struct{}{}:
+	case <-s.ping:
 		return nil
 	}
+}
+
+// pong is called from the main processing loop to reply to a ping.
+func (s *watcher) pong() {
+	// Nominally, a sync.Cond would work nicely here rather than a channel,
+	// which would allow us to wake up all pingers at once. However, sync.Cond
+	// doesn't allow timeouts, so we stick with channels and one pong() per ping.
+	s.ping <- struct{}{}
 }
 
 // Ready determines whether we are watching GlobalThreatFeeds and they are all
@@ -348,7 +373,7 @@ func (s *watcher) Ready() bool {
 		return false
 	}
 
-	// Loop over all the active feeds and return false if any have errors.
+	// Loop over all the active feedWatchers and return false if any have errors.
 	for _, fw := range s.listFeedWatchers() {
 		status := fw.statser.Status()
 		if len(status.ErrorConditions) > 0 {

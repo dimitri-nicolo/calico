@@ -182,7 +182,7 @@ func TestWatcher_startFeed_stopFeed(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
-	w.startFeed(ctx, f)
+	w.startFeedWatcher(ctx, f)
 
 	fw, ok := w.getFeedWatcher(f.Name)
 	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
@@ -195,7 +195,7 @@ func TestWatcher_startFeed_stopFeed(t *testing.T) {
 	g.Expect(fw.statser).ShouldNot(BeNil())
 	g.Expect(fw.searcher).ShouldNot(BeNil())
 
-	w.stopFeed(f.Name)
+	w.stopFeedWatcher(f.Name)
 	_, ok = w.getFeedWatcher(f.Name)
 	g.Expect(ok).Should(BeFalse(), "FeedWatchers map does not contain feed")
 	g.Expect(w.listFeedWatchers()).To(HaveLen(0), "No FeedWatchers")
@@ -227,7 +227,7 @@ func TestWatcher_startFeed_NoPull(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
-	w.startFeed(ctx, f)
+	w.startFeedWatcher(ctx, f)
 
 	fw, ok := w.getFeedWatcher(f.Name)
 	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
@@ -265,7 +265,7 @@ func TestWatcher_startFeed_NoPullHTTP(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
-	w.startFeed(ctx, f)
+	w.startFeedWatcher(ctx, f)
 
 	fw, ok := w.getFeedWatcher(f.Name)
 	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
@@ -310,13 +310,13 @@ func TestWatcher_startFeed_Exists(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
-	w.startFeed(ctx, f)
+	w.startFeedWatcher(ctx, f)
 
 	_, ok := w.getFeedWatcher(f.Name)
 	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
 	g.Expect(w.listFeedWatchers()).To(HaveLen(1), "Only one FeedWatcher")
 
-	g.Expect(func() { w.startFeed(ctx, f) }).Should(Panic())
+	g.Expect(func() { w.startFeedWatcher(ctx, f) }).Should(Panic())
 }
 
 func TestWatcher_stopFeed_notExists(t *testing.T) {
@@ -324,7 +324,7 @@ func TestWatcher_stopFeed_notExists(t *testing.T) {
 
 	w := NewWatcher(nil, nil, nil, nil, testClient, nil, nil, nil).(*watcher)
 
-	g.Expect(func() { w.stopFeed("mock") }).Should(Panic())
+	g.Expect(func() { w.stopFeedWatcher("mock") }).Should(Panic())
 }
 
 func TestWatcher_updateFeed_NotStarted(t *testing.T) {
@@ -361,7 +361,7 @@ func TestWatcher_updateFeed_NotStarted(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
-	g.Expect(func() { w.updateFeed(ctx, f) }).Should(Panic())
+	g.Expect(func() { w.updateFeedWatcher(ctx, f) }).Should(Panic())
 }
 
 func TestWatcher_updateFeed_PullToPull(t *testing.T) {
@@ -398,7 +398,7 @@ func TestWatcher_updateFeed_PullToPull(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
-	w.startFeed(ctx, f)
+	w.startFeedWatcher(ctx, f)
 
 	fw, ok := w.getFeedWatcher(f.Name)
 	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
@@ -412,7 +412,7 @@ func TestWatcher_updateFeed_PullToPull(t *testing.T) {
 	fw.searcher = mockSearcher
 	fw.garbageCollector = mockGC
 
-	w.updateFeed(ctx, f)
+	w.updateFeedWatcher(ctx, f)
 
 	fw, ok = w.getFeedWatcher(f.Name)
 	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
@@ -459,7 +459,7 @@ func TestWatcher_updateFeed_PullToPush(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
-	w.startFeed(ctx, f)
+	w.startFeedWatcher(ctx, f)
 
 	fw, ok := w.getFeedWatcher(f.Name)
 	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
@@ -475,7 +475,7 @@ func TestWatcher_updateFeed_PullToPush(t *testing.T) {
 
 	f.Spec.Pull = nil
 
-	w.updateFeed(ctx, f)
+	w.updateFeedWatcher(ctx, f)
 
 	fw, ok = w.getFeedWatcher(f.Name)
 	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
@@ -508,7 +508,7 @@ func TestWatcher_updateFeed_PushToPull(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
-	w.startFeed(ctx, f)
+	w.startFeedWatcher(ctx, f)
 
 	fw, ok := w.getFeedWatcher(f.Name)
 	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
@@ -533,7 +533,7 @@ func TestWatcher_updateFeed_PushToPull(t *testing.T) {
 		Labels: map[string]string{"level": "high"},
 	}
 
-	w.updateFeed(ctx, f)
+	w.updateFeedWatcher(ctx, f)
 
 	fw, ok = w.getFeedWatcher(f.Name)
 	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
@@ -565,7 +565,7 @@ func TestWatcher_updateFeed_PushToPush(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
-	w.startFeed(ctx, f)
+	w.startFeedWatcher(ctx, f)
 
 	fw, ok := w.getFeedWatcher(f.Name)
 	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
@@ -577,7 +577,7 @@ func TestWatcher_updateFeed_PushToPush(t *testing.T) {
 	fw.searcher = searcher
 	fw.garbageCollector = garbageCollector
 
-	w.updateFeed(ctx, f)
+	w.updateFeedWatcher(ctx, f)
 
 	fw, ok = w.getFeedWatcher(f.Name)
 	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
@@ -622,7 +622,7 @@ func TestWatcher_restartPuller(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
-	w.startFeed(ctx, f)
+	w.startFeedWatcher(ctx, f)
 
 	fw, ok := w.getFeedWatcher(f.Name)
 	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
@@ -676,7 +676,7 @@ func TestWatcher_restartPuller_NoPull(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
-	w.startFeed(ctx, f)
+	w.startFeedWatcher(ctx, f)
 
 	fw, ok := w.getFeedWatcher(f.Name)
 	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
@@ -730,7 +730,7 @@ func TestWatcher_restartPuller_NoPullHTTP(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
-	w.startFeed(ctx, f)
+	w.startFeedWatcher(ctx, f)
 
 	fw, ok := w.getFeedWatcher(f.Name)
 	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
