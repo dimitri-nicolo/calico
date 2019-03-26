@@ -859,37 +859,17 @@ func TestWatcher_Ready(t *testing.T) {
 	g.Eventually(uut.Ready).Should(BeTrue())
 
 	// Send in gtf with no error
-	select {
-	case <-ctx.Done():
-		t.Fatal("Timed out")
-	case gtf.W.C <- watch.Event{Type: watch.Added, Object: util.NewGlobalThreatFeedFromName("mock0")}:
-		// ok
-	}
+	g.Eventually(gtf.W.C).Should(BeSent(watch.Event{Type: watch.Added, Object: util.NewGlobalThreatFeedFromName("mock0")}))
 	g.Consistently(uut.Ready).Should(BeTrue())
 
 	// New gtf has error
 	sIP.Error = errors.New("test")
-	select {
-	case <-ctx.Done():
-		t.Fatal("Timed out")
-	case gtf.W.C <- watch.Event{Type: watch.Added, Object: util.NewGlobalThreatFeedFromName("mock1")}:
-		// ok
-	}
+	g.Eventually(gtf.W.C).Should(BeSent(watch.Event{Type: watch.Added, Object: util.NewGlobalThreatFeedFromName("mock1")}))
 	g.Eventually(uut.Ready).Should(BeFalse())
 
 	// Remove both GTFs
-	select {
-	case <-ctx.Done():
-		t.Fatal("Timed out")
-	case gtf.W.C <- watch.Event{Type: watch.Deleted, Object: util.NewGlobalThreatFeedFromName("mock0")}:
-		// ok
-	}
-	select {
-	case <-ctx.Done():
-		t.Fatal("Timed out")
-	case gtf.W.C <- watch.Event{Type: watch.Deleted, Object: util.NewGlobalThreatFeedFromName("mock1")}:
-		// ok
-	}
+	g.Eventually(gtf.W.C).Should(BeSent(watch.Event{Type: watch.Deleted, Object: util.NewGlobalThreatFeedFromName("mock0")}))
+	g.Eventually(gtf.W.C).Should(BeSent(watch.Event{Type: watch.Deleted, Object: util.NewGlobalThreatFeedFromName("mock1")}))
 	g.Eventually(uut.Ready).Should(BeTrue())
 
 	// Stop the watch loop
