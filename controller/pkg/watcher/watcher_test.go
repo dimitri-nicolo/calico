@@ -807,24 +807,27 @@ func TestWatcher_restartPuller_notExists(t *testing.T) {
 func TestWatcher_Ping(t *testing.T) {
 	g := NewWithT(t)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	gtf := &mock.GlobalThreatFeedInterface{}
 	uut := NewWatcher(nil, nil, gtf, nil, testClient, nil, nil, nil)
 
-	var done bool
+	ch := make(chan struct{})
+	defer func() {
+		g.Eventually(ch).Should(BeClosed(), "Test cleans up correctly")
+	}()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
 	go func() {
+		defer close(ch)
 		err := uut.Ping(ctx)
-		done = true
 		g.Expect(err).ToNot(HaveOccurred())
 	}()
-	g.Consistently(func() bool { return done }).Should(BeFalse())
+	g.Consistently(ch).ShouldNot(BeClosed(), "Ping does not complete before Run is called")
 
-	err := uut.Run(ctx)
-	g.Expect(err).ShouldNot(HaveOccurred())
+	uut.Run(ctx)
 
-	g.Eventually(func() bool { return done }).Should(BeTrue())
+	g.Eventually(ch).Should(BeClosed(), "Ping completes after Run is called")
 }
 
 func TestWatcher_PingFail(t *testing.T) {
@@ -833,8 +836,7 @@ func TestWatcher_PingFail(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.TODO(), time.Millisecond)
 	defer cancel()
 
-	gtf := &mock.GlobalThreatFeedInterface{}
-	uut := NewWatcher(nil, nil, gtf, nil, testClient, nil, nil, nil)
+	uut := NewWatcher(nil, nil, nil, nil, testClient, nil, nil, nil)
 
 	err := uut.Ping(ctx)
 	g.Expect(err).Should(MatchError(context.DeadlineExceeded), "Ping times out")
@@ -850,23 +852,24 @@ func TestWatcher_Ready(t *testing.T) {
 
 	g.Expect(uut.Ready()).To(BeFalse())
 
-	ctx, cancel := context.WithCancel(context.Background())
-	err := uut.Run(ctx)
-	g.Expect(err).ToNot(HaveOccurred())
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	uut.Run(ctx)
 	g.Eventually(uut.Ready).Should(BeTrue())
 
 	// Send in gtf with no error
-	gtf.W.C <- watch.Event{Type: watch.Added, Object: util.NewGlobalThreatFeedFromName("mock0")}
+	g.Eventually(gtf.W.C).Should(BeSent(watch.Event{Type: watch.Added, Object: util.NewGlobalThreatFeedFromName("mock0")}))
 	g.Consistently(uut.Ready).Should(BeTrue())
 
 	// New gtf has error
 	sIP.Error = errors.New("test")
-	gtf.W.C <- watch.Event{Type: watch.Added, Object: util.NewGlobalThreatFeedFromName("mock1")}
+	g.Eventually(gtf.W.C).Should(BeSent(watch.Event{Type: watch.Added, Object: util.NewGlobalThreatFeedFromName("mock1")}))
 	g.Eventually(uut.Ready).Should(BeFalse())
 
 	// Remove both GTFs
-	gtf.W.C <- watch.Event{Type: watch.Deleted, Object: util.NewGlobalThreatFeedFromName("mock0")}
-	gtf.W.C <- watch.Event{Type: watch.Deleted, Object: util.NewGlobalThreatFeedFromName("mock1")}
+	g.Eventually(gtf.W.C).Should(BeSent(watch.Event{Type: watch.Deleted, Object: util.NewGlobalThreatFeedFromName("mock0")}))
+	g.Eventually(gtf.W.C).Should(BeSent(watch.Event{Type: watch.Deleted, Object: util.NewGlobalThreatFeedFromName("mock1")}))
 	g.Eventually(uut.Ready).Should(BeTrue())
 
 	// Stop the watch loop

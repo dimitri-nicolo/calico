@@ -28,6 +28,10 @@ import (
 	"github.com/tigera/intrusion-detection/controller/pkg/sync"
 )
 
+const (
+	RetryDelay = 10 * time.Second
+)
+
 // Watcher accepts updates from threat pullers and synchronizes them to the
 // database
 type Watcher interface {
@@ -35,7 +39,7 @@ type Watcher interface {
 	health.Readier
 
 	// Run starts the feed synchronization.
-	Run(ctx context.Context) error
+	Run(ctx context.Context)
 	Close()
 }
 
@@ -52,7 +56,6 @@ type watcher struct {
 	feedMutex              goSync.RWMutex
 	cancel                 context.CancelFunc
 	once                   goSync.Once
-	err                    error
 	ping                   chan struct{}
 	watching               bool
 }
@@ -92,27 +95,38 @@ func NewWatcher(
 	}
 }
 
-func (s *watcher) Run(ctx context.Context) error {
+func (s *watcher) Run(ctx context.Context) {
 	s.once.Do(func() {
 		ctx, s.cancel = context.WithCancel(ctx)
 
-		w, err := s.globalThreatFeedClient.Watch(metav1.ListOptions{
-			Watch: true,
-		})
-		if err != nil {
-			s.err = err
-			return
-		}
-
 		go func() {
 			defer s.cancel()
-			defer w.Stop()
+			var w watch.Interface
 
-			// Set watching to true only after the Watch has returned without an
-			// error, and only until this Run loop returns.  No need to bother
-			// with a lock since bools are atomic.
-			s.watching = true
-			defer func() { s.watching = false }()
+			// Try forever to establish a Watch
+			for {
+				var err error
+				w, err = s.globalThreatFeedClient.Watch(metav1.ListOptions{
+					Watch: true,
+				})
+				if err == nil {
+					log.Info("Watch started")
+					defer w.Stop()
+					// Set watching to true only after the Watch has returned without an
+					// error, and only until this Run loop returns.  No need to bother
+					// with a lock since bools are atomic.
+					s.watching = true
+					defer func() { s.watching = false }()
+					break
+				}
+				log.WithError(err).Error("Failed to start Watch")
+				select {
+				case <-ctx.Done():
+					return
+				case <-time.After(RetryDelay):
+					// retry
+				}
+			}
 
 			for {
 				select {
@@ -131,7 +145,6 @@ func (s *watcher) Run(ctx context.Context) error {
 			}
 		}()
 	})
-	return s.err
 }
 
 func (s *watcher) handleEvent(ctx context.Context, event watch.Event) {
