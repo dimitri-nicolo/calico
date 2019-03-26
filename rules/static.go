@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -507,6 +507,15 @@ func (r *DefaultRuleRenderer) StaticFilterForwardChains() []*Chain {
 		log.WithField("ifacePrefix", prefix).Debug("Adding workload match rules")
 		ifaceMatch := prefix + "+"
 		rules = append(rules,
+			Rule{
+				Match: Match().OutInterface(ifaceMatch).Protocol("udp").SourcePorts(53).ConntrackState("ESTABLISHED"),
+				Action: NflogAction{
+					Group:       NFLOGDomainGroup,
+					Prefix:      "DNS",
+					SizeEnabled: r.EnableNflogSize,
+					Size:        512,
+				},
+			},
 			Rule{
 				Match:  Match().InInterface(ifaceMatch),
 				Action: JumpAction{Target: ChainFromWorkloadDispatch},

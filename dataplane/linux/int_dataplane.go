@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -200,6 +200,9 @@ type InternalDataplane struct {
 
 	endpointStatusCombiner *endpointStatusCombiner
 
+	domainInfoStore   *domainInfoStore
+	domainInfoChanges chan *domainInfoChanged
+
 	allManagers []Manager
 
 	ruleRenderer rules.RuleRenderer
@@ -256,6 +259,7 @@ func NewIntDataplaneDriver(config Config) *InternalDataplane {
 		ifaceMonitor:      ifacemonitor.New(config.IfaceMonitorConfig),
 		ifaceUpdates:      make(chan *ifaceUpdate, 100),
 		ifaceAddrUpdates:  make(chan *ifaceAddrsUpdate, 100),
+		domainInfoChanges: make(chan *domainInfoChanged, 100),
 		config:            config,
 		applyThrottle:     throttle.New(10),
 	}
@@ -343,8 +347,9 @@ func NewIntDataplaneDriver(config Config) *InternalDataplane {
 	dp.routeTables = append(dp.routeTables, routeTableV4)
 
 	dp.endpointStatusCombiner = newEndpointStatusCombiner(dp.fromDataplane, config.IPv6Enabled)
+	dp.domainInfoStore = newDomainInfoStore(dp.domainInfoChanges, config.IPv6Enabled)
 
-	dp.RegisterManager(newIPSetsManager(ipSetsV4, config.MaxIPSetSize))
+	dp.RegisterManager(newIPSetsManager(ipSetsV4, config.MaxIPSetSize, dp.domainInfoStore))
 	dp.RegisterManager(newHostIPManager(
 		config.RulesConfig.WorkloadIfacePrefixes,
 		rules.IPSetIDThisHostIPs,
@@ -420,7 +425,7 @@ func NewIntDataplaneDriver(config Config) *InternalDataplane {
 		routeTableV6 := routetable.New(config.RulesConfig.WorkloadIfacePrefixes, 6, config.NetlinkTimeout)
 		dp.routeTables = append(dp.routeTables, routeTableV6)
 
-		dp.RegisterManager(newIPSetsManager(ipSetsV6, config.MaxIPSetSize))
+		dp.RegisterManager(newIPSetsManager(ipSetsV6, config.MaxIPSetSize, dp.domainInfoStore))
 		dp.RegisterManager(newHostIPManager(
 			config.RulesConfig.WorkloadIfacePrefixes,
 			rules.IPSetIDThisHostIPs,
@@ -541,6 +546,9 @@ func (d *InternalDataplane) Start() {
 	go d.loopUpdatingDataplane()
 	go d.loopReportingStatus()
 	go d.ifaceMonitor.MonitorInterfaces()
+
+	// Start DNS response capture.
+	d.domainInfoStore.Start()
 }
 
 // onIfaceStateChange is our interface monitor callback.  It gets called from the monitor's thread.
@@ -558,6 +566,10 @@ func (d *InternalDataplane) onIfaceStateChange(ifaceName string, state ifacemoni
 type ifaceUpdate struct {
 	Name  string
 	State ifacemonitor.State
+}
+
+type domainInfoChanged struct {
+	domain string
 }
 
 // Check if current felix ipvs config is correct when felix gets an kube-ipvs0 interface update.
@@ -810,6 +822,10 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 			}
 			summaryAddrBatchSize.Observe(float64(batchSize))
 			d.dataplaneNeedsSync = true
+		case domainInfoChanged := <-d.domainInfoChanges:
+			for _, mgr := range d.allManagers {
+				mgr.OnUpdate(domainInfoChanged)
+			}
 		case <-ipSetsRefreshC:
 			log.Debug("Refreshing IP sets state")
 			d.forceIPSetsRefresh = true

@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -137,6 +137,7 @@ func (r *DefaultRuleRenderer) ProtoRuleToIptablesRules(pRule *proto.Rule, ipVers
 	//     positive matches on dest ports
 	//     positive matches on source address
 	//     positive matches on dest address
+	//     positive selector-derived matches on dest address
 	//     negated matches on source address
 	//     negated matches on dest address
 	//     rule containing rest of match critera
@@ -203,6 +204,19 @@ func (r *DefaultRuleRenderer) ProtoRuleToIptablesRules(pRule *proto.Rule, ipVers
 		// Since we're using a block for this, nil out the match.
 		ruleCopy.DstNet = nil
 	}
+
+	// If there are selector-derived ipsets both for explicit IPs and for domain names, render a
+	// block for those.  Otherwise there's at most one ipset match needed, which will be included
+	// in the main rule below.
+	if (len(ruleCopy.DstIpSetIds) == 1) && (len(ruleCopy.DstDomainIpSetIds) == 1) {
+		matchBlockBuilder.AppendDestIPSetMatchBlock(
+			r.nameForIPSet(ruleCopy.DstIpSetIds[0], ipVersion),
+			r.nameForIPSet(ruleCopy.DstDomainIpSetIds[0], ipVersion),
+		)
+		ruleCopy.DstIpSetIds = nil
+		ruleCopy.DstDomainIpSetIds = nil
+	}
+
 	// Now, work out if we need to render a block for the src/dst negative CIDR matches.  We need
 	// to do that if:
 	//
@@ -352,6 +366,24 @@ func (r *matchBlockBuilder) AppendNegatedCIDRMatchBlock(cidrs []string, srcOrDst
 			},
 		)
 	}
+}
+
+func (r *matchBlockBuilder) AppendDestIPSetMatchBlock(ipsetNames ...string) {
+	// Write out the initial "reset" rule if this is the first block.
+	r.maybeAppendInitialRule(0)
+	// Figure out which bit to set.  See comment in positiveBlockMarkToSet() for details.
+	markToSet := r.positiveBlockMarkToSet()
+
+	// Render the per-ipset rules.
+	for _, ipsetName := range ipsetNames {
+		r.Rules = append(r.Rules, iptables.Rule{
+			Match:  iptables.Match().DestIPSet(ipsetName),
+			Action: iptables.SetMarkAction{Mark: markToSet},
+		})
+	}
+
+	// Append the end-of-block rules.
+	r.finishPositiveBlock()
 }
 
 func (r *matchBlockBuilder) maybeAppendInitialRule(markBitsToSetInitially uint32) {
@@ -571,6 +603,14 @@ func appendProtocolMatch(match iptables.MatchCriteria, protocol *proto.Protocol,
 	return match
 }
 
+func (r *DefaultRuleRenderer) nameForIPSet(ipsetID string, ipVersion uint8) string {
+	if ipVersion == 4 {
+		return r.IPSetConfigV4.NameForMainIPSet(ipsetID)
+	} else {
+		return r.IPSetConfigV6.NameForMainIPSet(ipsetID)
+	}
+}
+
 func (r *DefaultRuleRenderer) CalculateRuleMatch(pRule *proto.Rule, ipVersion uint8) (iptables.MatchCriteria, error) {
 	match := iptables.Match()
 
@@ -595,16 +635,8 @@ func (r *DefaultRuleRenderer) CalculateRuleMatch(pRule *proto.Rule, ipVersion ui
 			"CalculateRuleMatch() passed more than one CIDR in SrcNet.")
 	}
 
-	nameForIPSet := func(ipsetID string) string {
-		if ipVersion == 4 {
-			return r.IPSetConfigV4.NameForMainIPSet(ipsetID)
-		} else {
-			return r.IPSetConfigV6.NameForMainIPSet(ipsetID)
-		}
-	}
-
 	for _, ipsetID := range pRule.SrcIpSetIds {
-		ipsetName := nameForIPSet(ipsetID)
+		ipsetName := r.nameForIPSet(ipsetID, ipVersion)
 		logCxt.WithFields(log.Fields{
 			"ipsetID":   ipsetID,
 			"ipSetName": ipsetName,
@@ -624,7 +656,7 @@ func (r *DefaultRuleRenderer) CalculateRuleMatch(pRule *proto.Rule, ipVersion ui
 			"Bug: More than one source IP set ID left in rule.")
 	}
 	for _, np := range pRule.SrcNamedPortIpSetIds {
-		ipsetName := nameForIPSet(np)
+		ipsetName := r.nameForIPSet(np, ipVersion)
 		logCxt.WithFields(log.Fields{
 			"namedPort": np,
 			"ipsetName": ipsetName,
@@ -640,13 +672,28 @@ func (r *DefaultRuleRenderer) CalculateRuleMatch(pRule *proto.Rule, ipVersion ui
 			"CalculateRuleMatch() passed more than one CIDR in DstNet.")
 	}
 
-	for _, ipsetID := range pRule.DstIpSetIds {
-		ipsetName := nameForIPSet(ipsetID)
+	if len(pRule.DstIpSetIds) == 1 {
+		ipsetName := r.nameForIPSet(pRule.DstIpSetIds[0], ipVersion)
 		match = match.DestIPSet(ipsetName)
 		logCxt.WithFields(log.Fields{
-			"ipsetID":   ipsetID,
+			"ipsetID":   pRule.DstIpSetIds[0],
 			"ipSetName": ipsetName,
 		}).Debug("Adding dst IP set match")
+	} else if len(pRule.DstIpSetIds) > 1 {
+		log.WithField("rule", pRule).Panic(
+			"CalculateRuleMatch() passed more than one DstIpSetIds.")
+	}
+
+	if len(pRule.DstDomainIpSetIds) == 1 {
+		ipsetName := r.nameForIPSet(pRule.DstDomainIpSetIds[0], ipVersion)
+		match = match.DestIPSet(ipsetName)
+		logCxt.WithFields(log.Fields{
+			"ipsetID":   pRule.DstDomainIpSetIds[0],
+			"ipSetName": ipsetName,
+		}).Debug("Adding dst domain IP set match")
+	} else if len(pRule.DstDomainIpSetIds) > 1 {
+		log.WithField("rule", pRule).Panic(
+			"CalculateRuleMatch() passed more than one DstDomainIpSetIds.")
 	}
 
 	if len(pRule.DstPorts) > 0 {
@@ -661,7 +708,7 @@ func (r *DefaultRuleRenderer) CalculateRuleMatch(pRule *proto.Rule, ipVersion ui
 			"Bug: More than one source IP set ID left in rule.")
 	}
 	for _, np := range pRule.DstNamedPortIpSetIds {
-		ipsetName := nameForIPSet(np)
+		ipsetName := r.nameForIPSet(np, ipVersion)
 		logCxt.WithFields(log.Fields{
 			"namedPort": np,
 			"ipsetName": ipsetName,
@@ -712,7 +759,7 @@ func (r *DefaultRuleRenderer) CalculateRuleMatch(pRule *proto.Rule, ipVersion ui
 	}
 
 	for _, ipsetID := range pRule.NotSrcIpSetIds {
-		ipsetName := nameForIPSet(ipsetID)
+		ipsetName := r.nameForIPSet(ipsetID, ipVersion)
 		logCxt.WithFields(log.Fields{
 			"ipsetID":   ipsetID,
 			"ipSetName": ipsetName,
@@ -730,7 +777,7 @@ func (r *DefaultRuleRenderer) CalculateRuleMatch(pRule *proto.Rule, ipVersion ui
 	}
 
 	for _, np := range pRule.NotSrcNamedPortIpSetIds {
-		ipsetName := nameForIPSet(np)
+		ipsetName := r.nameForIPSet(np, ipVersion)
 		logCxt.WithFields(log.Fields{
 			"namedPort": np,
 			"ipsetName": ipsetName,
@@ -746,7 +793,7 @@ func (r *DefaultRuleRenderer) CalculateRuleMatch(pRule *proto.Rule, ipVersion ui
 	}
 
 	for _, ipsetID := range pRule.NotDstIpSetIds {
-		ipsetName := nameForIPSet(ipsetID)
+		ipsetName := r.nameForIPSet(ipsetID, ipVersion)
 		match = match.NotDestIPSet(ipsetName)
 		logCxt.WithFields(log.Fields{
 			"ipsetID":   ipsetID,
@@ -764,7 +811,7 @@ func (r *DefaultRuleRenderer) CalculateRuleMatch(pRule *proto.Rule, ipVersion ui
 	}
 
 	for _, np := range pRule.NotDstNamedPortIpSetIds {
-		ipsetName := nameForIPSet(np)
+		ipsetName := r.nameForIPSet(np, ipVersion)
 		logCxt.WithFields(log.Fields{
 			"namedPort": np,
 			"ipsetName": ipsetName,
