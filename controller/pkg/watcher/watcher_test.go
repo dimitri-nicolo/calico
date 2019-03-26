@@ -812,7 +812,7 @@ func TestWatcher_Ping(t *testing.T) {
 
 	ch := make(chan struct{})
 	defer func() {
-		g.Expect(ch).Should(BeClosed(), "Test cleans up correctly")
+		g.Eventually(ch).Should(BeClosed(), "Test cleans up correctly")
 	}()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
