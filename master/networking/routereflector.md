@@ -44,9 +44,3 @@ route reflector, you would need to configure BGP peerings like the following for
       import all;
       export all;
     }
-
-> **Note**: Previous {{site.prodname}} releases offered the calico/routereflector image for
-> the standalone route reflector use case.  However calico/routereflector since Calico v3.0
-> has not supported route reflector clustering, and is now no longer offered at all.
-> {{site.nodecontainer}} fully supports route reflector clustering.
-{: .alert .alert-info}

@@ -44,7 +44,7 @@ spec:
 | nodeSelector | Selects the nodes that {{site.prodname}} IPAM should assign addresses from this pool to. | | [selector](#node-selector) | all() |
 
 > **Important**: Do not use a custom `blockSize` until **all** {{site.prodname}} components have been updated to a version that
-> supports it (at least v3.3.0).  Older versions of components do not understand the field so they may corrupt the
+> supports it (at least v2.3.0).  Older versions of components do not understand the field so they may corrupt the
 > IP pool by creating blocks of incorrect size.
 {: .alert .alert-danger}
 

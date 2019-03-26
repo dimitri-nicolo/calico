@@ -162,21 +162,3 @@ toc:
     path: /reference/architecture/data-path
 - title: Frequently asked questions
   path: /reference/faq
-- title: Attributions
-  section:
-  - title: Application layer policy attributions
-    path: /reference/legal/alp
-  - title: calicoctl attributions
-    path: /reference/legal/calicoctl
-  - title: CNI plugin attributions
-    path: /reference/legal/cni
-  - title: confd attributions
-    path: /reference/legal/confd
-  - title: Felix attributions
-    path: /reference/legal/felix
-  - title: calico/node attributions
-    path: /reference/legal/node
-  - title: Typha attributions
-    path: /reference/legal/typha
-  - title: kube-controllers attributions
-    path: /reference/legal/kube-controllers
