@@ -113,7 +113,8 @@ func (c *GlobalNetworkSetController) RegisterFailFunc(key string, f func()) {
 	c.failFuncs[key] = f
 }
 
-func (c *GlobalNetworkSetController) Run(_ context.Context) {
+func (c *GlobalNetworkSetController) Run(ctx context.Context) {
+	<-ctx.Done()
 	return
 }
 

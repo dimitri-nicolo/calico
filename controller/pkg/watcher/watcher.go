@@ -4,7 +4,6 @@ package watcher
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"sync"
@@ -62,7 +61,6 @@ type watcher struct {
 	ctx context.Context
 
 	once       sync.Once
-	err        error
 	ping       chan struct{}
 	watching   bool
 	controller cache.Controller
@@ -131,6 +129,14 @@ func (s *watcher) Run(ctx context.Context) {
 
 		s.ctx, s.cancel = context.WithCancel(ctx)
 
+		go func() {
+			// s.watching should only be true while this function is running.  Don't
+			// bother with a lock because updates to booleans are always atomic.
+			s.watching = true
+			defer func() { s.watching = false }()
+			s.controller.Run(s.ctx.Done())
+		}()
+
 		// We need to wait until we sync all GlobalThreatFeeds before starting
 		// the GlobalNetworkSet controller. This is because the GlobalNetworkSet
 		// controller does garbage collection---if we started garbage collecting
@@ -146,14 +152,8 @@ func (s *watcher) Run(ctx context.Context) {
 			s.gnsController.Run(s.ctx)
 		}()
 
-		// s.watching should only be true while this function is running.  Don't
-		// bother with a lock because updates to booleans are always atomic.
-		s.watching = true
-		defer func() { s.watching = false }()
-
-		s.controller.Run(s.ctx.Done())
-		s.err = errors.New("watcher context expired")
 	})
+	return
 }
 
 func (s *watcher) processQueue(obj interface{}) error {
@@ -180,26 +180,37 @@ func (s *watcher) processQueue(obj interface{}) error {
 					// if no pinger is listening.
 					go s.pong()
 				} else {
-					s.updateFeedWatcher(old.(*v3.GlobalThreatFeed), d.Object.(*v3.GlobalThreatFeed))
+					s.updateFeedWatcher(s.ctx, old.(*v3.GlobalThreatFeed), d.Object.(*v3.GlobalThreatFeed))
 				}
 			} else {
 				if err := s.feeds.Add(d.Object); err != nil {
 					panic(err)
 				}
-				s.startFeedWatcher(d.Object.(*v3.GlobalThreatFeed))
+				s.startFeedWatcher(s.ctx, d.Object.(*v3.GlobalThreatFeed))
 			}
 		case cache.Deleted:
 			if err := s.feeds.Delete(d.Object); err != nil {
 				panic(err)
 			}
-			f := d.Object.(*v3.GlobalThreatFeed)
-			s.stopFeedWatcher(f.Name)
+			var name string
+			switch f := d.Object.(type) {
+			case *v3.GlobalThreatFeed:
+				name = f.Name
+			case cache.DeletedFinalStateUnknown:
+				name = f.Key
+			default:
+				panic(fmt.Sprintf("unknown FIFO delta type %v", d.Object))
+			}
+			_, exists := s.getFeedWatcher(name)
+			if exists {
+				s.stopFeedWatcher(name)
+			}
 		}
 	}
 	return nil
 }
 
-func (s *watcher) startFeedWatcher(f *v3.GlobalThreatFeed) {
+func (s *watcher) startFeedWatcher(ctx context.Context, f *v3.GlobalThreatFeed) {
 	if _, ok := s.getFeedWatcher(f.Name); ok {
 		panic(fmt.Sprintf("Feed %s already started", f.Name))
 	}
@@ -217,7 +228,7 @@ func (s *watcher) startFeedWatcher(f *v3.GlobalThreatFeed) {
 
 	if fCopy.Spec.Pull != nil && fCopy.Spec.Pull.HTTP != nil {
 		fw.puller = puller.NewHTTPPuller(fCopy, s.ipSet, s.configMapClient, s.secretsClient, s.httpClient, s.gnsController)
-		failFunc := fw.puller.Run(s.ctx, fw.statser)
+		failFunc := fw.puller.Run(ctx, fw.statser)
 		s.gnsController.RegisterFailFunc(fCopy.Name, failFunc)
 	} else {
 		fw.puller = nil
@@ -227,11 +238,11 @@ func (s *watcher) startFeedWatcher(f *v3.GlobalThreatFeed) {
 		s.gnsController.NoGC(util.NewGlobalNetworkSet(fCopy.Name))
 	}
 
-	fw.garbageCollector.Run(s.ctx, fw.statser)
-	fw.searcher.Run(s.ctx, fw.statser)
+	fw.garbageCollector.Run(ctx, fw.statser)
+	fw.searcher.Run(ctx, fw.statser)
 }
 
-func (s *watcher) updateFeedWatcher(oldFeed, newFeed *v3.GlobalThreatFeed) {
+func (s *watcher) updateFeedWatcher(ctx context.Context, oldFeed, newFeed *v3.GlobalThreatFeed) {
 	fw, ok := s.getFeedWatcher(newFeed.Name)
 	if !ok {
 		panic(fmt.Sprintf("Feed %s not started", newFeed.Name))
@@ -240,7 +251,7 @@ func (s *watcher) updateFeedWatcher(oldFeed, newFeed *v3.GlobalThreatFeed) {
 	fw.feed = newFeed.DeepCopy()
 	if fw.feed.Spec.Pull != nil && fw.feed.Spec.Pull.HTTP != nil {
 		if util.FeedNeedsRestart(oldFeed, fw.feed) {
-			s.restartPuller(s.ctx, newFeed)
+			s.restartPuller(ctx, newFeed)
 		} else {
 			fw.puller.SetFeed(fw.feed)
 		}
