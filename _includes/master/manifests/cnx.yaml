@@ -105,7 +105,7 @@ spec:
   selector:
     k8s-app: cnx-manager
   ports:
-    - port: 8080
+    - port: 9443
       targetPort: 9443
       nodePort: 30003
   type: NodePort
