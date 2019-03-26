@@ -125,20 +125,11 @@ type IPSetMember struct {
 	Domain     string
 }
 
-type SelectorIPSetType int
-
-const (
-	SelectorIPSetType_None   SelectorIPSetType = 0
-	SelectorIPSetType_IP     SelectorIPSetType = 1
-	SelectorIPSetType_Domain SelectorIPSetType = 2
-)
-
 type ipSetData struct {
 	// The selector and named port that this IP set represents.  If the selector is nil then
 	// this IP set represents an unfiltered named port.  If namedPortProtocol == ProtocolNone then
 	// this IP set represents a selector only, with no named port component.
 	selector          selector.Selector
-	selType           SelectorIPSetType
 	namedPortProtocol IPSetPortProtocol
 	namedPort         string
 
@@ -350,11 +341,10 @@ func extractCIDRsFromNetworkSet(netSet *model.NetworkSet) []ip.CIDR {
 	return combined
 }
 
-func (idx *SelectorAndNamedPortIndex) UpdateIPSet(ipSetID string, sel selector.Selector, selType SelectorIPSetType, namedPortProtocol IPSetPortProtocol, namedPort string) {
+func (idx *SelectorAndNamedPortIndex) UpdateIPSet(ipSetID string, sel selector.Selector, namedPortProtocol IPSetPortProtocol, namedPort string) {
 	logCxt := log.WithFields(log.Fields{
 		"ipSetID":           ipSetID,
 		"selector":          sel,
-		"selType":           selType,
 		"namedPort":         namedPort,
 		"namedPortProtocol": namedPortProtocol,
 	})
@@ -383,7 +373,6 @@ func (idx *SelectorAndNamedPortIndex) UpdateIPSet(ipSetID string, sel selector.S
 	// If we get here, we have a new IP set and we need to do a full scan of all endpoints.
 	newIPSetData := &ipSetData{
 		selector:          sel,
-		selType:           selType,
 		namedPort:         namedPort,
 		namedPortProtocol: namedPortProtocol,
 		memberToRefCount:  map[IPSetMember]uint64{},
@@ -694,19 +683,15 @@ func (idx *SelectorAndNamedPortIndex) CalculateEndpointContribution(d *endpointD
 		}
 	} else {
 		// Non-named port match, simply return the CIDRs and domains.
-		switch ipSetData.selType {
-		case SelectorIPSetType_IP:
-			for _, addr := range d.nets {
-				contrib = append(contrib, IPSetMember{
-					CIDR: addr,
-				})
-			}
-		case SelectorIPSetType_Domain:
-			for _, domain := range d.domains {
-				contrib = append(contrib, IPSetMember{
-					Domain: domain,
-				})
-			}
+		for _, addr := range d.nets {
+			contrib = append(contrib, IPSetMember{
+				CIDR: addr,
+			})
+		}
+		for _, domain := range d.domains {
+			contrib = append(contrib, IPSetMember{
+				Domain: domain,
+			})
 		}
 	}
 	return

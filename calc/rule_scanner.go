@@ -103,7 +103,7 @@ type IPSetData struct {
 	// NamedPort contains the name of the named port represented by this IP set or "" for a
 	// selector-only IP set
 	NamedPort string
-	// cachedUID holds the calculated unique ID of this IP set, or "" if it hasn't been calculated
+	// cachedUID holds the calculated unique ID of this IPSet, or "" if it hasn't been calculated
 	// yet.
 	cachedUID string
 }
@@ -111,12 +111,18 @@ type IPSetData struct {
 func (d *IPSetData) UniqueID() string {
 	if d.cachedUID == "" {
 		selID := d.Selector.UniqueID()
-		if d.NamedPortProtocol == labelindex.ProtocolNone {
-			d.cachedUID = selID
-		} else {
-			idToHash := selID + "," + d.NamedPortProtocol.String() + "," + d.NamedPort
-			d.cachedUID = hash.MakeUniqueID("n", idToHash)
+
+		switch d.SelectorType {
+		case SelectorIPSetType_IP:
+			if d.NamedPortProtocol == labelindex.ProtocolNone {
+				d.cachedUID = selID
+			} else {
+				idToHash := selID + "," + d.NamedPortProtocol.String() + "," + d.NamedPort
+			}
+		case SelectorIPSetType_Domain:
+			idToHash := selID + ',' + d.domain
 		}
+		d.cachedUID = hash.MakeUniqueID("n", idToHash)
 	}
 	return d.cachedUID
 }
@@ -359,7 +365,6 @@ func ruleToParsedRule(rule *model.Rule) (parsedRule *ParsedRule, allIPSets []*IP
 	dstNamedPortIPSets := namedPortsToIPSets(dstNamedPorts, dstSel, namedPortProto)
 	notSrcNamedPortIPSets := namedPortsToIPSets(notSrcNamedPorts, srcSel, namedPortProto)
 	notDstNamedPortIPSets := namedPortsToIPSets(notDstNamedPorts, dstSel, namedPortProto)
-	dstDomainIPSets := namedPortsToIPSets(rule.DstDomains, dstSel, namedPortProto)
 
 	// Optimization: only include the selectors if we haven't already covered them with a named
 	// port match above.  If we have some named ports then we've already filtered the named port
@@ -373,15 +378,14 @@ func ruleToParsedRule(rule *model.Rule) (parsedRule *ParsedRule, allIPSets []*IP
 	if len(dstNumericPorts) > 0 || len(dstNamedPorts) == 0 {
 		dstSelIPSets = selectorsToIPSets(dstSel, SelectorIPSetType_IP)
 
-		// If the rule has a destination selector and is of type allow egress, check if it includes domains.
-		// If it doesn't have a selector, check if domains were still directly specified.
-		if dstSel != nil {
-			if rule.Action == "allow" && ruleDirection == egressPolicy {
-				dstDomainIPSets := selectorsToIPSets(dstSel, SelectorIPSetType_Domain)
-			}
-		} else {
-			if rule.DstDomains != nil {
+		// If the rule is of type allow egress, check whether domains are directly specified
+		// and convert those to IPSets. If they are not, use the destination selector and
+		// calculate its IPSet(s).
+		if rule.Action == "allow" && ruleDirection == egressPolicy {
+			if len(rule.DstDomains) != 0 {
 				dstDomainIPSets := domainsToIPSets(rule.DstDomains)
+			} else {
+				dstDomainIPSets := selectorsToIPSets(dstSel, SelectorIPSetType_Domain)
 			}
 		}
 	}
@@ -405,7 +409,7 @@ func ruleToParsedRule(rule *model.Rule) (parsedRule *ParsedRule, allIPSets []*IP
 		DstPorts:             dstNumericPorts,
 		DstNamedPortIPSetIDs: ipSetsToUIDs(dstNamedPortIPSets),
 		DstIPSetIDs:          ipSetsToUIDs(dstSelIPSets),
-		DstDomainIPSetIDs:    dstDomainIPSets,
+		DstDomainIPSetIDs:    ipSetsToUIDs(dstDomainIPSets),
 
 		ICMPType: rule.ICMPType,
 		ICMPCode: rule.ICMPCode,
@@ -449,7 +453,7 @@ func ruleToParsedRule(rule *model.Rule) (parsedRule *ParsedRule, allIPSets []*IP
 	allIPSets = append(allIPSets, dstSelIPSets...)
 	allIPSets = append(allIPSets, notSrcSelIPSets...)
 	allIPSets = append(allIPSets, notDstSelIPSets...)
-	allIPSets = append(allIPSets, dstDomainSelIPSets...)
+	allIPSets = append(allIPSets, dstDomainIPSets...)
 
 	return
 }

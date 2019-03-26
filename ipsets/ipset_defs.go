@@ -74,7 +74,6 @@ const (
 	IPSetTypeHashIP     IPSetType = "hash:ip"
 	IPSetTypeHashIPPort IPSetType = "hash:ip,port"
 	IPSetTypeHashNet    IPSetType = "hash:net"
-	IPSetTypeDomain	    IPSetType = "hash.domain"
 )
 
 func (t IPSetType) SetType() string {
