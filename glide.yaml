@@ -41,8 +41,7 @@ import:
   subpackages:
   - types
 - package: github.com/projectcalico/libcalico-go
-#  repo:    git@github.com:tigera/libcalico-go-private
-  repo: ~/Work/go/src/github.com/tigera/libcalico-go-private-neil
+  repo:    git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib/apiconfig
   - lib/apis/v3
