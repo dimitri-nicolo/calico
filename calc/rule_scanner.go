@@ -15,6 +15,7 @@ package calc
 
 import (
 	"fmt"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 
@@ -82,20 +83,11 @@ type RuleScanner struct {
 	RulesUpdateCallbacks rulesUpdateCallbacks
 }
 
-type SelectorIPSetType int
-
-const (
-	SelectorIPSetType_None   SelectorIPSetType = 0
-	SelectorIPSetType_IP     SelectorIPSetType = 1
-	SelectorIPSetType_Domain SelectorIPSetType = 2
-)
-
 type IPSetData struct {
 	// The selector and named port that this IP set represents.  To represent an unfiltered named
 	// port, set selector to AllSelector.  If NamedPortProtocol == ProtocolNone then
 	// this IP set represents a selector only, with no named port component.
-	Selector     selector.Selector
-	SelectorType SelectorIPSetType
+	Selector selector.Selector
 
 	// NamedPortProtocol identifies the protocol (TCP or UDP) for a named port IP set.  It is
 	// set to ProtocolNone for a selector-only IP set.
@@ -108,21 +100,33 @@ type IPSetData struct {
 	cachedUID string
 }
 
-func (d *IPSetData) UniqueID() string {
-	if d.cachedUID == "" {
-		selID := d.Selector.UniqueID()
+func (d *IPSetData) SetUniqueID(dstDomains []string) {
+	var idToHash string
+	if d.cachedUID != "" {
+		log.WithField("IPSetData", d).Panic("cachedUID already set")
+	}
 
-		switch d.SelectorType {
-		case SelectorIPSetType_IP:
-			if d.NamedPortProtocol == labelindex.ProtocolNone {
-				d.cachedUID = selID
-			} else {
-				idToHash := selID + "," + d.NamedPortProtocol.String() + "," + d.NamedPort
-			}
-		case SelectorIPSetType_Domain:
-			idToHash := selID + ',' + d.domain
+	if len(dstDomains) == 0 {
+		selID := d.Selector.UniqueID()
+		if d.NamedPortProtocol == labelindex.ProtocolNone {
+			d.cachedUID = selID
+			return
+		} else {
+			idToHash = selID + "," + d.NamedPortProtocol.String() + "," + d.NamedPort
 		}
-		d.cachedUID = hash.MakeUniqueID("n", idToHash)
+	} else {
+		idToHash = strings.Join(dstDomains, "")
+	}
+
+	d.cachedUID = hash.MakeUniqueID("n", idToHash)
+	if d.cachedUID == "" {
+		log.WithField("IPSetData", d).Panic("failed to set cachedUID")
+	}
+}
+
+func (d *IPSetData) GetUniqueID() string {
+	if d.cachedUID == "" {
+		log.WithField("IPSetData", d).Panic("cachedUID not set")
 	}
 	return d.cachedUID
 }
@@ -172,24 +176,24 @@ func (rs *RuleScanner) updateRules(key interface{}, inbound, outbound []model.Ru
 	currentUIDToIPSet := make(map[string]*IPSetData)
 	parsedInbound := make([]*ParsedRule, len(inbound))
 	for ii, rule := range inbound {
-		parsed, allIPSets := ruleToParsedRule(&rule, ingressPolicy)
+		parsed, allIPSets := ruleToParsedRule(&rule, true)
 		parsedInbound[ii] = parsed
 		for _, ipSet := range allIPSets {
 			// Note: there may be more than one entry in allIPSets for the same UID, but that's only
 			// the case if the two entries really represent the same IP set so it's OK to coalesce
 			// them here.
-			currentUIDToIPSet[ipSet.UniqueID()] = ipSet
+			currentUIDToIPSet[ipSet.GetUniqueID()] = ipSet
 		}
 	}
 	parsedOutbound := make([]*ParsedRule, len(outbound))
 	for ii, rule := range outbound {
-		parsed, allIPSets := ruleToParsedRule(&rule, egressPolicy)
+		parsed, allIPSets := ruleToParsedRule(&rule, false)
 		parsedOutbound[ii] = parsed
 		for _, ipSet := range allIPSets {
 			// Note: there may be more than one entry in allIPSets for the same UID, but that's only
 			// the case if the two entries really represent the same IP set so it's OK to coalesce
 			// them here.
-			currentUIDToIPSet[ipSet.UniqueID()] = ipSet
+			currentUIDToIPSet[ipSet.GetUniqueID()] = ipSet
 		}
 	}
 	parsedRules = &ParsedRules{
@@ -326,7 +330,7 @@ type ParsedRule struct {
 	LogPrefix string
 }
 
-func ruleToParsedRule(rule *model.Rule) (parsedRule *ParsedRule, allIPSets []*IPSetData, ruleDirection string) {
+func ruleToParsedRule(rule *model.Rule, ingressRule bool) (parsedRule *ParsedRule, allIPSets []*IPSetData) {
 	srcSel, dstSel, notSrcSels, notDstSels := extractTagsAndSelectors(rule)
 
 	// In the datamodel, named ports are included in the list of ports as an "or" match; i.e. the
@@ -371,27 +375,24 @@ func ruleToParsedRule(rule *model.Rule) (parsedRule *ParsedRule, allIPSets []*IP
 	// by the selector above.  If we have numeric ports, we can't make the optimization
 	// because we can't filter numeric ports by selector in the same way.
 	var srcSelIPSets, dstSelIPSets []*IPSetData
+	dstDomainIPSets := []*IPSetData{}
 
 	if len(srcNumericPorts) > 0 || len(srcNamedPorts) == 0 {
-		srcSelIPSets = selectorsToIPSets(srcSel, SelectorIPSetType_IP)
+		srcSelIPSets = selectorsToIPSets(srcSel)
 	}
 	if len(dstNumericPorts) > 0 || len(dstNamedPorts) == 0 {
-		dstSelIPSets = selectorsToIPSets(dstSel, SelectorIPSetType_IP)
+		dstSelIPSets = selectorsToIPSets(dstSel)
 
 		// If the rule is of type allow egress, check whether domains are directly specified
 		// and convert those to IPSets. If they are not, use the destination selector and
 		// calculate its IPSet(s).
-		if rule.Action == "allow" && ruleDirection == egressPolicy {
-			if len(rule.DstDomains) != 0 {
-				dstDomainIPSets := domainsToIPSets(rule.DstDomains)
-			} else {
-				dstDomainIPSets := selectorsToIPSets(dstSel, SelectorIPSetType_Domain)
-			}
+		if !ingressRule && rule.Action == "allow" && len(rule.DstDomains) != 0 {
+			dstDomainIPSets = domainsToIPSets(rule.DstDomains)
 		}
 	}
 
-	notSrcSelIPSets := selectorsToIPSets(notSrcSels, SelectorIPSetType_IP)
-	notDstSelIPSets := selectorsToIPSets(notDstSels, SelectorIPSetType_IP)
+	notSrcSelIPSets := selectorsToIPSets(notSrcSels)
+	notDstSelIPSets := selectorsToIPSets(notDstSels)
 
 	parsedRule = &ParsedRule{
 		Action: rule.Action,
@@ -458,57 +459,61 @@ func ruleToParsedRule(rule *model.Rule) (parsedRule *ParsedRule, allIPSets []*IP
 	return
 }
 
+// Converts a list of named ports to a list of IPSets.
 func namedPortsToIPSets(namedPorts []string, positiveSelectors []selector.Selector, proto labelindex.IPSetPortProtocol) []*IPSetData {
 	var ipSets []*IPSetData
+	var sel selector.Selector
+
 	if len(positiveSelectors) > 1 {
 		log.WithField("selectors", positiveSelectors).Panic(
 			"More than one positive selector passed to namedPortsToIPSets")
 	}
-	sel := AllSelector
+
 	if len(positiveSelectors) > 0 {
 		sel = positiveSelectors[0]
+	} else {
+		sel = AllSelector
 	}
+
 	for _, namedPort := range namedPorts {
 		ipSet := IPSetData{
 			Selector:          sel,
-			SelectorType:      SelectorIPSetType_IP,
 			NamedPort:         namedPort,
 			NamedPortProtocol: proto,
 		}
+		ipSet.SetUniqueID(nil)
 		ipSets = append(ipSets, &ipSet)
 	}
 	return ipSets
 }
 
+// Converts a list of domain names to a single IPSet.
 func domainsToIPSets(dstDomains []string) []*IPSetData {
 	var ipSets []*IPSetData
-	sel := AllSelector
-	for _, d := range dstDomains {
+	ipSet := IPSetData{}
+	ipSet.SetUniqueID(dstDomains)
+	ipSets = append(ipSets, &ipSet)
+	return ipSets
+}
+
+// Converts a list of selectors to a list of IPSets.
+func selectorsToIPSets(selectors []selector.Selector) []*IPSetData {
+	var ipSets []*IPSetData
+	for _, s := range selectors {
 		ipSet := IPSetData{
-			Selector:     sel,
-			SelectorType: SelectorIPSetType_Domain,
-			Domain:       d,
+			Selector: s,
 		}
+		ipSet.SetUniqueID(nil)
 		ipSets = append(ipSets, &ipSet)
 	}
 	return ipSets
 }
 
-func selectorsToIPSets(selectors []selector.Selector, SelectorIPSetType selType) []*IPSetData {
-	var ipSets []*IPSetData
-	for _, s := range selectors {
-		ipSets = append(ipSets, &IPSetData{
-			Selector:     s,
-			SelectorType: selType,
-		})
-	}
-	return ipSets
-}
-
+// Converts a list of IPSets to a list of their unique IDs.
 func ipSetsToUIDs(ipSets []*IPSetData) []string {
 	var ids []string
 	for _, ipSet := range ipSets {
-		ids = append(ids, ipSet.UniqueID())
+		ids = append(ids, ipSet.GetUniqueID())
 	}
 	return ids
 }
