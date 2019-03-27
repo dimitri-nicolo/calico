@@ -4,7 +4,7 @@ canonical_url: https://docs.tigera.io/v2.3/reference/cnx/policy-editor
 ---
 
 {{site.prodname}} Manager includes a web client for viewing and editing
-[tiered security policy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/tier)
+[tiered security policy]({{site.url}}/{{page.version}}/reference/calicoctl/resources/tier)
 
 ## Policy Authentication
 
@@ -18,7 +18,7 @@ The options for authentication are described in detail [here](authentication).
 
 ## Access model
 
-The authorization model for policies uses the [tier]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/tier) each policy belongs to as an
+The authorization model for policies uses the [tier]({{site.url}}/{{page.version}}/reference/calicoctl/resources/tier) each policy belongs to as an
 additional layer of authorization.  To perform any operation on a policy,
 the user must be allowed to `GET` the tier that policy is in (or will be
 created in).  The operation must still be authorized on the policy in the normal
@@ -70,7 +70,7 @@ and take control before other policy.
 
 The ability to manage NetworkPolicy and GlobalNetworkPolicy in the Web UI requires GET access to any tier
 the user can view/manage, plus the required access to the tiered policy resources. See
-[Configuring {{site.prodname}} RBAC]({{site.baseurl}}/{{page.version}}/reference/cnx/rbac-tiered-policies)
+[Configuring {{site.prodname}} RBAC]({{site.url}}/{{page.version}}/reference/cnx/rbac-tiered-policies)
 for more details and example configurations.
 
 ### The Default Tier

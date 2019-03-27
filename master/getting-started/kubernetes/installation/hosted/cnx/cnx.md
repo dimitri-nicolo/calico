@@ -105,7 +105,7 @@ spec:
 The **[cnx-etcd.yaml](1.7/cnx-etcd.yaml)** and **[cnx-kdd.yaml](1.7/cnx-kdd.yaml)** manifests must be updated with
 the following changes.  Some of the parameters depend on the chosen
 authentication method.  Authentication methods, and the relevant parameters
-are described [here]({{site.baseurl}}/{{page.version}}/reference/cnx/authentication).
+are described [here]({{site.url}}/{{page.version}}/reference/cnx/authentication).
 
 1. If using Google login, update the `tigera.cnx-manager.oidc-client-id` field
    in the `tigera-cnx-manager-config` ConfigMap.

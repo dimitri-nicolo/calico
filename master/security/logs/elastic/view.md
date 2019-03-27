@@ -16,7 +16,7 @@ To view flow log visualizations from the {{site.prodname}} Manager, open the **F
 and enter a query. An example of a flow log visualization for the query
 `Filter: Source type: List [ "net", "ns", "wep", "hep" ], Destination type: List [ "net", "ns", "wep", "hep" ], Time range: 24` follows.
 
-![Example flow log visualization]({{site.baseurl}}/images/flow-log-visualization.png)
+![Example flow log visualization]({{site.url}}/images/flow-log-visualization.png)
 
 ## Accessing logs from Kibana
 

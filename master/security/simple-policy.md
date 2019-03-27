@@ -5,7 +5,7 @@ canonical_url: 'https://docs.tigera.io/v2.3/getting-started/kubernetes/tutorials
 
 This guide provides a simple way to try out Kubernetes `NetworkPolicy` with {{site.prodname}}.  It requires a Kubernetes cluster configured with {{site.prodname}} networking, and expects that you have `kubectl` configured to interact with the cluster.
 
-You can quickly and easily deploy such a cluster by following one of the [installation guides]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation).
+You can quickly and easily deploy such a cluster by following one of the [installation guides]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation).
 
 ### Configure namespaces
 

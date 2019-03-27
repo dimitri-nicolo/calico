@@ -84,7 +84,7 @@ with Istio. This step modifies the injector configuration to add Dikastes, a
 
    ```bash
    kubectl apply -f \
-   {{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/manifests/app-layer-policy/istio-inject-configmap.yaml
+   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/manifests/app-layer-policy/istio-inject-configmap.yaml
    ```
 
 	 > **Note**: You can also
@@ -101,7 +101,7 @@ Apply the following manifest to configure Istio to query {{site.prodname}} for a
 
 ```bash
 kubectl apply -f \
-{{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/manifests/app-layer-policy/istio-app-layer-policy.yaml
+{{site.url}}/{{page.version}}/getting-started/kubernetes/installation/manifests/app-layer-policy/istio-app-layer-policy.yaml
 ```
 
 > **Note**: You can also
@@ -136,4 +136,4 @@ to take effect.
 ## Next steps
 
 To get started with application layer policy support, we recommend that you run through the
-[application layer policy tutorial]({{site.baseurl}}/{{page.version}}/security/app-layer-policy/).
+[application layer policy tutorial]({{site.url}}/{{page.version}}/security/app-layer-policy/).

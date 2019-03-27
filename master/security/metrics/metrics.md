@@ -60,7 +60,7 @@ Once Prometheus scrapes a node and collects policy metrics, it will be
 available at Prometheus until the metric is considered _stale_, i.e.,
 Prometheus has not seen any updates to this metric for some time. This time is
 configurable. Refer to
-[Configuring Prometheus configuration]({{site.baseurl}}/{{page.version}}/security/configuration/prometheus)
+[Configuring Prometheus configuration](/{{page.version}}/security/configuration/prometheus)
 for more information.
 
 Because of metrics being expired, as just described, it is entirely possible
@@ -122,7 +122,7 @@ sum(irate(cnx_policy_rule_packets[30s])) without (instance,rule_index,rule_direc
 ```
 
 See the
-[Felix configuration reference]({{site.baseurl}}/{{page.version}}/reference/felix/configuration#{{site.prodnamedash}}-specific-configuration) for
+[Felix configuration reference](/{{page.version}}/reference/felix/configuration#{{site.prodnamedash}}-specific-configuration) for
 the settings that control the reporting of these metrics. {{site.prodname}} manifests
 normally set `PrometheusReporterEnabled=true` and
 `PrometheusReporterPort=9081`, so these metrics are available on each compute

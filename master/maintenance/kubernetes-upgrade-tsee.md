@@ -7,7 +7,7 @@ canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/upgrade/up
 
 Ensure that your Kubernetes cluster is already running an earlier version of {{site.prodname}}.
 
-If your cluster has a Calico installation, follow the [Upgrading a Kubernetes cluster with Calico to {{site.prodname}} guide]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/upgrade/upgrade-to-tsee)
+If your cluster has a Calico installation, follow the [Upgrading a Kubernetes cluster with Calico to {{site.prodname}} guide]({{site.url}}/{{page.version}}/getting-started/kubernetes/upgrade/upgrade-to-tsee)
 instead.
 
 ## Upgrading to {{page.version}} {{site.prodname}}

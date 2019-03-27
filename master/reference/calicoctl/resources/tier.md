@@ -4,8 +4,8 @@ canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/resources/tier
 no_canonical: true
 ---
 
-A tier resource (`Tier`) represents an ordered collection of [NetworkPolicies]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/networkpolicy)
-and/or [GlobalNetworkPolicies]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy).
+A tier resource (`Tier`) represents an ordered collection of [NetworkPolicies]({{site.url}}/{{page.version}}/reference/calicoctl/resources/networkpolicy)
+and/or [GlobalNetworkPolicies]({{site.url}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy).
 Tiers are used to divide these policies into groups of different priorities.  These policies
 are ordered within a Tier: the additional hierarchy of Tiers provides more flexibility
 because the `Pass` `action` in a Rule jumps to the next Tier.  Some example use cases for this are.
@@ -21,12 +21,12 @@ When a new connection is processed by {{site.prodname}}, each tier that contains
 Tiers are sorted by their `order` - smallest number first.
 
 Policies in each Tier are then processed in order.
-- If a [NetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/networkpolicy) or [GlobalNetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy) in the Tier `Allow`s or `Deny`s the packet, then evaluation is done: the packet is handled accordingly.
-- If a [NetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/networkpolicy) or [GlobalNetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy) in the Tier `Pass`es the packet, the next Tier containing a Policy that applies to the endpoint processes the packet.
+- If a [NetworkPolicy]({{site.url}}/{{page.version}}/reference/calicoctl/resources/networkpolicy) or [GlobalNetworkPolicy]({{site.url}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy) in the Tier `Allow`s or `Deny`s the packet, then evaluation is done: the packet is handled accordingly.
+- If a [NetworkPolicy]({{site.url}}/{{page.version}}/reference/calicoctl/resources/networkpolicy) or [GlobalNetworkPolicy]({{site.url}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy) in the Tier `Pass`es the packet, the next Tier containing a Policy that applies to the endpoint processes the packet.
 
 If the Tier applies to the endpoint, but takes no action on the packet the packet is dropped.
 
-If the last Tier applying to the endpoint `Pass`es the packet, that endpoint's [Profiles]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/profile) are evaluated.
+If the last Tier applying to the endpoint `Pass`es the packet, that endpoint's [Profiles]({{site.url}}/{{page.version}}/reference/calicoctl/resources/profile) are evaluated.
 
 ### Sample YAML
 

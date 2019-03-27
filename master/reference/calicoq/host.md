@@ -56,8 +56,8 @@ Workload endpoint k8s/policy-demo.nginx-2371676037-j2vmh/eth0
 
 ## See also
 
--  [calicoq endpoint]({{site.baseurl}}/{{page.version}}/reference/calicoq/endpoint) for
+-  [calicoq endpoint]({{site.url}}/{{page.version}}/reference/calicoq/endpoint) for
    the related `calicoq endpoint` command.
--  [NetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/networkpolicy) and
-   [GlobalNetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy)
+-  [NetworkPolicy]({{site.url}}/{{page.version}}/reference/calicoctl/resources/networkpolicy) and
+   [GlobalNetworkPolicy]({{site.url}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy)
    for more information about the {{site.prodname}} policy model.

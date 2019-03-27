@@ -44,16 +44,16 @@ spec:
 
 The following resources are supported:
 
-- [BGPPeer]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/bgppeer)
-- [BGPConfiguration]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/bgpconfig)
-- [HostEndpoint]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/hostendpoint)
-- [NetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/networkpolicy)
-- [GlobalNetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy)
-- [IPPool]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/ippool)
-- [Profile]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/profile)
-- [FelixConfiguration]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/felixconfig)
-- [Tier]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/tier)
-- [WorkloadEndpoint]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/workloadendpoint)
+- [BGPPeer]({{site.url}}/{{page.version}}/reference/calicoctl/resources/bgppeer)
+- [BGPConfiguration]({{site.url}}/{{page.version}}/reference/calicoctl/resources/bgpconfig)
+- [HostEndpoint]({{site.url}}/{{page.version}}/reference/calicoctl/resources/hostendpoint)
+- [NetworkPolicy]({{site.url}}/{{page.version}}/reference/calicoctl/resources/networkpolicy)
+- [GlobalNetworkPolicy]({{site.url}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy)
+- [IPPool]({{site.url}}/{{page.version}}/reference/calicoctl/resources/ippool)
+- [Profile]({{site.url}}/{{page.version}}/reference/calicoctl/resources/profile)
+- [FelixConfiguration]({{site.url}}/{{page.version}}/reference/calicoctl/resources/felixconfig)
+- [Tier]({{site.url}}/{{page.version}}/reference/calicoctl/resources/tier)
+- [WorkloadEndpoint]({{site.url}}/{{page.version}}/reference/calicoctl/resources/workloadendpoint)
 
 ### Resource name requirements
 

@@ -4,7 +4,7 @@ canonical_url: https://docs.tigera.io/v2.3/getting-started/cnx/tiered-policy-cnx
 ---
 
 This guide will introduce tiered policies and walk through a simple example
-for working with the [Tiers]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/tier) resource.
+for working with the [Tiers](/{{page.version}}/reference/calicoctl/resources/tier) resource.
 
 Some use cases for using tiers and tiered policies are:
 
@@ -18,9 +18,9 @@ first use case.
 
 ### Prerequisites
 
-- A Kubernetes cluster configured with [{{site.prodname}}]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/)
-- [calicoctl installed and set up]({{site.baseurl}}/{{page.version}}/getting-started/calicoctl/configure/) to work properly with your cluster
-- [calicoq installed and set up]({{site.baseurl}}/{{page.version}}/reference/calicoq/) to work with your cluster
+- A Kubernetes cluster configured with [{{site.prodname}}]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/)
+- [calicoctl installed and set up](/{{page.version}}/getting-started/calicoctl/configure/) to work properly with your cluster
+- [calicoq installed and set up](/{{page.version}}/reference/calicoq/) to work with your cluster
 
 > **Note**: Commands using calicoctl can be replaced with kubectl if the {{site.prodname}} Manager and {{site.prodname}} API server are installed.
 {: .alert .alert-info}
@@ -265,7 +265,7 @@ Notice that the order value of the netops tier is lower than the value of the
 a higher precedence.
 
 > **Note**: Read more about order values in the
-> [calicoctl reference section]({{site.baseurl}}/{{page.version}}/reference/calicoctl/).
+> [calicoctl reference section]({{site.url}}/{{page.version}}/reference/calicoctl/).
 {: .alert .alert-info}
 
 Launch a pod in the `policy-demo` Namespace to test DNS connectivity to 8.8.8.8 .

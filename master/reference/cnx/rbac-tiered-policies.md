@@ -81,9 +81,9 @@ a user using the UI.
 
 ### Associating a resource with a tier
 
-For details on creating a [tier]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/tier)
+For details on creating a [tier]({{site.url}}/{{page.version}}/reference/calicoctl/resources/tier)
 resource and adding a Global/NetworkPolicy to that tier, refer to the
-[Tiered Policy Demo]({{site.baseurl}}/{{page.version}}/security/tiered-policy).
+[Tiered Policy Demo]({{site.url}}/{{page.version}}/security/tiered-policy).
 
 ### Permissions required for {{site.prodname}} UI
 
@@ -115,7 +115,7 @@ namespace, and to provide read-only access for all other tiers.
 
 ##### Minimum permissions for all UI users
 
-1. Download the [`min-ui-user-rbac.yaml` manifest]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/demo-manifests/min-ui-user-rbac.yaml).
+1. Download the [`min-ui-user-rbac.yaml` manifest]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/demo-manifests/min-ui-user-rbac.yaml).
 
 1. Run the following command to replace `<USER>` with the `name or email` of
    the user you are providing permissions to:
@@ -135,7 +135,7 @@ specific security requirements.
 
 ##### UI user can view all policies and can modify policies in the default namespace and tier
 
-1. Download the [`read-all-crud-default-rbac.yaml` manifest]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/demo-manifests/read-all-crud-default-rbac.yaml).
+1. Download the [`read-all-crud-default-rbac.yaml` manifest]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/demo-manifests/read-all-crud-default-rbac.yaml).
 
 1. Run the following command to replace `<USER>` with the `name or email` of
    the user you are providing permissions to:

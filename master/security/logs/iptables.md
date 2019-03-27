@@ -13,11 +13,11 @@ Collection, rotation and other management of these logs is provided by your sysl
 ## Policy audit mode
 
 {{site.prodname}} adds a Felix option `DropActionOverride` that configures how the
-`deny` `action` in a [Rule]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/networkpolicy#Rule) is interpreted.
+`deny` `action` in a [Rule](/{{page.version}}/reference/calicoctl/resources/networkpolicy#Rule) is interpreted.
 It can add logs for denied packets, or even allow the traffic through.
 
 See the
-[Felix configuration reference]({{site.baseurl}}/{{page.version}}/reference/felix/configuration#{{site.prodnamedash}}-specific-configuration) for
+[Felix configuration reference](/{{page.version}}/reference/felix/configuration#{{site.prodnamedash}}-specific-configuration) for
 information on how to configure this option.
 
 `DropActionOverride` controls what happens to each packet that is denied by
@@ -44,12 +44,12 @@ May 18 18:42:44 ubuntu kernel: [ 1156.246182] calico-drop: IN=tunl0 OUT=cali76be
 ```
 {: .no-select-button}
 
-Note that [Denied Packet Metrics]({{site.baseurl}}/{{page.version}}/security/metrics/metrics) are independent of the `DropActionOverride`
+Note that [Denied Packet Metrics](/{{page.version}}/security/metrics/metrics) are independent of the `DropActionOverride`
 setting.  Specifically, if packets that would normally be denied are being
 allowed through by a setting of `Accept` or `LogAndAccept`, those packets
 still contribute to the denied packet metrics as normal.
 
-One way to configure `DropActionOverride`, would be to use the [calicoctl replace]({{site.baseurl}}/{{page.version}}/reference/calicoctl/commands/replace)
+One way to configure `DropActionOverride`, would be to use the [calicoctl replace](/{{page.version}}/reference/calicoctl/commands/replace)
 command. For example, to set a `DropActionOverride` for `myhost` to log then drop denied packets:
 
 Get current felix configuration for the node and save it to a file.

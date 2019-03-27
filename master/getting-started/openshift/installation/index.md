@@ -75,7 +75,7 @@ such that {{site.prodname}} connects to an etcd you have already set up by follo
 1. Download [oauth-client.yaml](/{{page.version}}/getting-started/openshift/installation/oauth-client.yaml).
 
    ```bash
-   curl {{site.baseurl}}/{{page.version}}/getting-started/openshift/installation/oauth-client.yaml -O
+   curl {{site.url}}/{{page.version}}/getting-started/openshift/installation/oauth-client.yaml -O
    ```
 
 1. To make the following commands easier to copy and paste, set an environment variable called

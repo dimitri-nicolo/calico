@@ -131,7 +131,7 @@ between your web browser and the {{site.prodname}} Manager do not need to be sha
 to any other TLS certificates that may be used elsewhere in your cluster or when
 configuring {{site.prodname}}. The flow of traffic should look like the following:
 
-![{{site.prodname}} Manager traffic diagram]({{site.baseurl}}/images/cnx-tls-mgr-comms.svg){: width="60%" }
+![{{site.prodname}} Manager traffic diagram]({{site.url}}/images/cnx-tls-mgr-comms.svg){: width="60%" }
 
 > **Note** the `NodePort` service in the above diagram can be replaced with other
 > [Kubernetes services](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services---service-types){:target="_blank"}.

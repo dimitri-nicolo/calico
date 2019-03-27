@@ -5,7 +5,7 @@ canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/commands/node/dia
 
 This section describes the `calicoctl node diags` command.
 
-Read the [calicoctl Overview]({{site.baseurl}}/{{page.version}}/reference/calicoctl)
+Read the [calicoctl Overview]({{site.url}}/{{page.version}}/reference/calicoctl)
 for a full list of calicoctl commands.
 
 ## Displaying the help text for 'calicoctl node diags' command

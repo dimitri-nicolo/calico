@@ -5,7 +5,7 @@ canonical_url: https://docs.tigera.io/v2.3/reference/calicoq/
 
 `calicoq` is the {{site.prodname}} policy query utility.  It is a command line tool that
 makes it easy to check your {{site.prodname}} security policies.
-See [Installing calicoq]({{site.baseurl}}/{{page.version}}/getting-started/calicoq/) for
+See [Installing calicoq]({{site.url}}/{{page.version}}/getting-started/calicoq/) for
 how to download and install `calicoq`.
 
 ## Datastore configuration
@@ -23,7 +23,7 @@ setup as `calicoctl`, which means that:
   location: `DATASTORE_TYPE` and so on.
 
 For more detail, see
-[Configuring calicoq]({{site.baseurl}}/{{page.version}}/getting-started/calicoq/configure/).
+[Configuring calicoq]({{site.url}}/{{page.version}}/getting-started/calicoq/configure/).
 
 ## Commands
 
@@ -31,17 +31,17 @@ The `calicoq` command line interface provides a number of policy inspection
 commands to allow you to confirm that your security policies are configured
 as intended.
 
-- The [endpoint]({{site.baseurl}}/{{page.version}}/reference/calicoq/endpoint)
+- The [endpoint]({{site.url}}/{{page.version}}/reference/calicoq/endpoint)
   command shows you the {{site.prodname}} policies and profiles that relate to specified
   endpoints.
-- The [eval]({{site.baseurl}}/{{page.version}}/reference/calicoq/eval) command
+- The [eval]({{site.url}}/{{page.version}}/reference/calicoq/eval) command
   displays the endpoints that a selector selects.
-- The [host]({{site.baseurl}}/{{page.version}}/reference/calicoq/host) command
+- The [host]({{site.url}}/{{page.version}}/reference/calicoq/host) command
   displays the policies and profiles that are relevant to all endpoints on a
   given host.
-- The [policy]({{site.baseurl}}/{{page.version}}/reference/calicoq/policy)
+- The [policy]({{site.url}}/{{page.version}}/reference/calicoq/policy)
   command shows the endpoints that are relevant to a given policy.
-- The [version]({{site.baseurl}}/{{page.version}}/reference/calicoq/version)
+- The [version]({{site.url}}/{{page.version}}/reference/calicoq/version)
   command displays the version of the tool.
 
 ## Overview of usage and options
