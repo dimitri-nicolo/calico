@@ -24,10 +24,28 @@ const (
 
 const AggregationDuration = time.Duration(10) * time.Millisecond
 
-func NflogSubscribe(groupNum int, bufSize int, ch chan<- *NflogPacketAggregate, done <-chan struct{}) error {
-	sock, err := nl.Subscribe(syscall.NETLINK_NETFILTER)
+func SubscribeDNS(groupNum int, bufSize int, ch chan<- []byte, done <-chan struct{}) error {
+	resChan, err := openAndReadNFNLSocket(groupNum, bufSize, done, 2*cap(ch))
 	if err != nil {
 		return err
+	}
+	parseAndReturnDNSResponses(groupNum, resChan, ch)
+	return nil
+}
+
+func NflogSubscribe(groupNum int, bufSize int, ch chan<- *NflogPacketAggregate, done <-chan struct{}) error {
+	resChan, err := openAndReadNFNLSocket(groupNum, bufSize, done, 2*cap(ch))
+	if err != nil {
+		return err
+	}
+	parseAndAggregateFlowLogs(groupNum, resChan, ch)
+	return nil
+}
+
+func openAndReadNFNLSocket(groupNum int, bufSize int, done <-chan struct{}, chanCap int) (chan [][]byte, error) {
+	sock, err := nl.Subscribe(syscall.NETLINK_NETFILTER)
+	if err != nil {
+		return nil, err
 	}
 	// TODO(doublek): Move all this someplace nice.
 	nlMsgType := nfnl.NFNL_SUBSYS_ULOG<<8 | nfnl.NFULNL_MSG_CONFIG
@@ -40,7 +58,7 @@ func NflogSubscribe(groupNum int, bufSize int, ch chan<- *NflogPacketAggregate, 
 	nfattr := nl.NewRtAttr(nfnl.NFULA_CFG_CMD, nflogcmd.Serialize())
 	req.AddData(nfattr)
 	if err := sock.Send(req); err != nil {
-		return err
+		return nil, err
 	}
 
 	req = nl.NewNetlinkRequest(nlMsgType, nlMsgFlags)
@@ -50,7 +68,7 @@ func NflogSubscribe(groupNum int, bufSize int, ch chan<- *NflogPacketAggregate, 
 	nfattr = nl.NewRtAttr(nfnl.NFULA_CFG_CMD, nflogcmd.Serialize())
 	req.AddData(nfattr)
 	if err := sock.Send(req); err != nil {
-		return err
+		return nil, err
 	}
 
 	req = nl.NewNetlinkRequest(nlMsgType, nlMsgFlags)
@@ -60,7 +78,7 @@ func NflogSubscribe(groupNum int, bufSize int, ch chan<- *NflogPacketAggregate, 
 	nfattr = nl.NewRtAttr(nfnl.NFULA_CFG_CMD, nflogcmd.Serialize())
 	req.AddData(nfattr)
 	if err := sock.Send(req); err != nil {
-		return err
+		return nil, err
 	}
 
 	req = nl.NewNetlinkRequest(nlMsgType, nlMsgFlags)
@@ -70,7 +88,7 @@ func NflogSubscribe(groupNum int, bufSize int, ch chan<- *NflogPacketAggregate, 
 	nfattr = nl.NewRtAttr(nfnl.NFULA_CFG_MODE, nflogcfg.Serialize())
 	req.AddData(nfattr)
 	if err := sock.Send(req); err != nil {
-		return err
+		return nil, err
 	}
 
 	req = nl.NewNetlinkRequest(nlMsgType, nlMsgFlags)
@@ -80,7 +98,7 @@ func NflogSubscribe(groupNum int, bufSize int, ch chan<- *NflogPacketAggregate, 
 	nfattr = nl.NewRtAttr(nfnl.NFULA_CFG_NLBUFSIZ, nflogbufsiz.Serialize())
 	req.AddData(nfattr)
 	if err := sock.Send(req); err != nil {
-		return err
+		return nil, err
 	}
 
 	go func() {
@@ -91,7 +109,7 @@ func NflogSubscribe(groupNum int, bufSize int, ch chan<- *NflogPacketAggregate, 
 	// Channel to pass raw netlink messages for further processing. We keep it at
 	// twice the size of the processor's outgoing channel so that reading netlink
 	// messages from the socket can be buffered until they can be consumed.
-	resChan := make(chan [][]byte, 2*cap(ch))
+	resChan := make(chan [][]byte, chanCap)
 	// Start a goroutine for receiving netlink messages from the kernel.
 	go func() {
 		logCtx := log.WithFields(log.Fields{
@@ -128,6 +146,11 @@ func NflogSubscribe(groupNum int, bufSize int, ch chan<- *NflogPacketAggregate, 
 			resChan <- res
 		}
 	}()
+
+	return resChan, nil
+}
+
+func parseAndAggregateFlowLogs(groupNum int, resChan <-chan [][]byte, ch chan<- *NflogPacketAggregate) {
 	// Start another goroutine for parsing netlink messages into nflog objects
 	go func() {
 		defer close(ch)
@@ -191,7 +214,30 @@ func NflogSubscribe(groupNum int, bufSize int, ch chan<- *NflogPacketAggregate, 
 			}
 		}
 	}()
-	return nil
+}
+
+func parseAndReturnDNSResponses(groupNum int, resChan <-chan [][]byte, ch chan<- []byte) {
+	// Start another goroutine for parsing netlink messages into nflog objects
+	go func() {
+		defer close(ch)
+		logCtx := log.WithFields(log.Fields{
+			"groupNum": groupNum,
+		})
+		for {
+			select {
+			case res := <-resChan:
+				for _, m := range res {
+					msg := nfnl.DeserializeNfGenMsg(m)
+					nflogPacket, err := parseNflog(m[msg.Len():])
+					if err != nil {
+						logCtx.Warnf("Error parsing NFLOG %v", err)
+						continue
+					}
+					ch <- nflogPacket.Data
+				}
+			}
+		}
+	}()
 }
 
 func parseNflog(m []byte) (NflogPacket, error) {
@@ -214,6 +260,7 @@ func parseNflog(m []byte) (NflogPacket, error) {
 		case nfnl.NFULA_PAYLOAD:
 			parsePacketHeader(&nflogPacket.Tuple, nflogPacket.Header.HwProtocol, attr.Value)
 			nflogPacket.Bytes = len(attr.Value)
+			nflogPacket.Data = attr.Value
 		case nfnl.NFULA_PREFIX:
 			p := NflogPrefix{Len: len(attr.Value) - 1}
 			copy(p.Prefix[:], attr.Value[:len(attr.Value)-1])
