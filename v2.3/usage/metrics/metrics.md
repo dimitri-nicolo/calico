@@ -83,7 +83,9 @@ Using these two metrics, one can identify the policy that denied packets as well
 the source IP address of the packets that were denied by this policy. Using
 Prometheus terminology, `calico_denied_packets` is the metric name and `policy`
 and `srcIP` are labels. Each one of these metrics will be available as a
-combination of `{policy, srcIP}`.
+combination of `{policy, srcIP}`.  The format of the `policy` label is `<tier>|[<namespace>/]<policy name>|<rule index>|<action>`.
+If the rule index is `-1` then the traffic was dropped because it was for an endpoint selected by the policy
+but not matched by a rule (an end of tier Deny).
 
 Example queries:
 - Total number of bytes, denied by {{site.prodname}} policies, originating from the IP address "10.245.13.133"
