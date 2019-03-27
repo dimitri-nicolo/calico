@@ -862,3 +862,9 @@ master:
       version: master
     flannel:
       version: v0.9.1
+    compliance-server:
+      version: master
+    compliance-controller:
+      version: master
+    compliance-snapshotter:
+      version: master

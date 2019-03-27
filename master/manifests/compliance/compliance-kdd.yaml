@@ -1,0 +1,25 @@
+---
+layout: null
+---
+
+# ------------------------------------------------------------------------------------------
+# compliance-server
+# ------------------------------------------------------------------------------------------
+
+{% include {{page.version}}/manifests/compliance/compliance-server.yaml datastore='kdd' %}
+
+---
+
+# ------------------------------------------------------------------------------------------
+# compliance-snapshotter
+# ------------------------------------------------------------------------------------------
+
+{% include {{page.version}}/manifests/compliance/compliance-snapshotter.yaml datastore='kdd' %}
+
+---
+
+# ------------------------------------------------------------------------------------------
+# compliance-controller
+# ------------------------------------------------------------------------------------------
+
+{% include {{page.version}}/manifests/compliance/compliance-controller.yaml datastore='kdd' %}

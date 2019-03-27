@@ -44,6 +44,10 @@ imageNames:
   elastic-tsee-installer: tigera/intrusion-detection-job-installer
   intrusion-detection-controller: tigera/intrusion-detection-controller
   es-curator: tigera/es-curator
+  compliance-controller: tigera/compliance-controller
+  compliance-server: tigera/compliance-server
+  compliance-snapshotter: tigera/compliance-snapshotter
+
 
 # List of files to exclude. These files won't get included in the deployed site.
 exclude:

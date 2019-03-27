@@ -1,0 +1,25 @@
+---
+layout: null
+---
+
+# ------------------------------------------------------------------------------------------
+# compliance-server
+# ------------------------------------------------------------------------------------------
+
+{% include {{page.version}}/manifests/compliance/compliance-server.yaml elasticsearch='secure' %}
+
+---
+
+# ------------------------------------------------------------------------------------------
+# compliance-snapshotter
+# ------------------------------------------------------------------------------------------
+
+{% include {{page.version}}/manifests/compliance/compliance-snapshotter.yaml elasticsearch='secure' %}
+
+---
+
+# ------------------------------------------------------------------------------------------
+# compliance-controller
+# ------------------------------------------------------------------------------------------
+
+{% include {{page.version}}/manifests/compliance/compliance-controller.yaml elasticsearch='secure' %}

@@ -1,0 +1,161 @@
+{% comment %}
+compliance-controller.yaml acccepts the following include flags:
+
+| Name         | Accepted Values          |
+|--------------|--------------------------|
+| elasticsearch| secure, <unset>          |
+| datastore    | kdd, etcd                |
+
+{% endcomment -%}
+
+
+
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: tigera-compliance-controller
+  namespace: calico-monitoring
+
+---
+
+
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRole
+metadata:
+  name: compliance-controller-role
+rules:
+  - apiGroups: ["extensions"]
+    resources: ["deployments", "replicasets", "daemonsets"]
+    verbs: ["create", "get", "update", "delete", "list"]
+  - apiGroups: ["apiextensions.k8s.io"]
+    resources: ["customresourcedefinitions"]
+    verbs: ["create", "get", "update", "delete", "list"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["storageclasses"]
+    verbs: ["get", "list", "create", "delete", "deletecollection"]
+  - apiGroups: [""]
+    resources: ["persistentvolumes", "persistentvolumeclaims", "services", "secrets", "configmaps"]
+    verbs: ["create", "get", "update", "delete", "list"]
+  - apiGroups: ["batch"]
+    resources: ["cronjobs", "jobs"]
+    verbs: ["create", "get", "deletecollection", "delete"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["list", "get", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["statefulsets", "deployments"]
+    verbs: ["*"]
+{%- if include.datastore == "kdd" %}
+  - apiGroups: ["crd.projectcalico.org"]
+    resources:
+      - globalnetworkpolicies
+      - networkpolicies
+      - tiers
+      - hostendpoints
+      - licensekeys
+      - globalnetworksets
+      - globalthreatfeeds
+    verbs:
+      - "*"
+{%- endif %}
+
+---
+
+
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: compliance-controller-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: compliance-controller-role
+subjects:
+- kind: ServiceAccount
+  name: tigera-compliance-controller
+  namespace: calico-monitoring
+
+
+---
+
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: compliance-controller
+  namespace: calico-monitoring
+  labels:
+    k8s-app: compliance-controller
+spec:
+  replicas: 1
+  strategy:
+     type: Recreate
+  selector:
+    matchLabels:
+      k8s-app: compliance-controller
+  template:
+    metadata:
+      name: compliance-controller
+      namespace: calico-monitoring
+      labels:
+        k8s-app: compliance-controller
+    spec:
+      serviceAccountName: tigera-compliance-controller
+      tolerations:
+        - key: node-role.kubernetes.io/master
+          effect: NoSchedule
+      imagePullSecrets:
+        - name: cnx-pull-secret
+      containers:
+        - name: compliance-controller
+          image: {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["compliance-controller"]}}:{{site.data.versions[page.version].first.components["compliance-controller"].version}}
+          env:
+            - name: LOG_LEVEL
+              value: "warning"
+            - name: TIGERA_COMPLIANCE_REPORT_AFTER
+              value: "30m"
+{%- if include.elasticsearch == 'secure' %}
+            - name: ELASTIC_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-es-proxy
+                  key: elasticsearch.backend.host
+            - name: ELASTIC_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-es-proxy
+                  key: elasticsearch.backend.port
+            - name: ELASTIC_USER
+              valueFrom:
+                secretKeyRef:
+                  name: elastic-compliance-user
+                  key: username
+            - name: ELASTIC_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: elastic-compliance-user
+                  key: password
+            - name: ELASTIC_SSL_VERIFY
+              value: "true"
+            - name: ELASTIC_CA
+              value: /etc/compliance/elastic/ca.pem
+{%- else %}
+            - name: ELASTIC_HOST
+              value: elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local
+            - name: ELASTIC_PORT
+              value: "9200"
+            - name: ELASTIC_SSL_VERIFY
+              value: "false"
+{%- endif %}
+{%- if include.elasticsearch == 'secure' %}
+          volumeMounts:
+            - name: elastic-ca-cert-volume
+              mountPath: /etc/compliance/elastic
+{%- endif %}
+{%- if include.elasticsearch == 'secure' %}
+      volumes:
+        # Should be created during installation process.
+        - name: elastic-ca-cert-volume
+          configMap:
+            name: elastic-ca-config
+{%- endif %}
+

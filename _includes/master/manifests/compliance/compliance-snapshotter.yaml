@@ -1,0 +1,154 @@
+{% comment %}
+compliance-snapshotter.yaml acccepts the following include flags:
+
+| Name         | Accepted Values          |
+|--------------|--------------------------|
+| elasticsearch| secure, <unset>          |
+| datastore    | kdd, etcd                |
+
+{% endcomment -%}
+
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: tigera-compliance-snapshotter
+  namespace: calico-monitoring
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRole
+metadata:
+  name: compliance-snapshotter-role
+rules:
+  - apiGroups: ["extensions","networking.k8s.io",""]
+    resources:
+      - networkpolicies
+      - nodes
+      - namespaces
+      - pods
+      - serviceaccounts
+      - endpoints
+    verbs:
+      - get
+      - list
+      - watch
+{%- if include.datastore == "kdd" %}
+  - apiGroups: ["crd.projectcalico.org"]
+    resources:
+      - globalnetworkpolicies
+      - networkpolicies
+      - tiers
+      - hostendpoints
+      - globalnetworksets
+    verbs:
+      - get
+      - list
+      - watch
+{%- endif %}
+
+---
+
+
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: compliance-snapshotter-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: compliance-snapshotter-role
+subjects:
+- kind: ServiceAccount
+  name: tigera-compliance-snapshotter
+  namespace: calico-monitoring
+
+
+---
+
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: compliance-snapshotter
+  namespace: calico-monitoring
+  labels:
+    k8s-app: compliance-snapshotter
+spec:
+  replicas: 1
+  strategy:
+     type: Recreate
+  selector:
+    matchLabels:
+      k8s-app: compliance-snapshotter
+  template:
+    metadata:
+      name: compliance-snapshotter
+      namespace: calico-monitoring
+      labels:
+        k8s-app: compliance-snapshotter
+    spec:
+      nodeSelector:
+        beta.kubernetes.io/os: linux
+      serviceAccountName: tigera-compliance-snapshotter
+      tolerations:
+        - key: node-role.kubernetes.io/master
+          effect: NoSchedule
+      imagePullSecrets:
+        - name: cnx-pull-secret
+      containers:
+        - name: compliance-snapshotter
+          image: {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["compliance-snapshotter"]}}:{{site.data.versions[page.version].first.components["compliance-snapshotter"].version}}
+          env:
+            - name: LOG_LEVEL
+              value: "warning"
+            - name: TIGERA_COMPLIANCE_SNAPSHOT_HOUR 
+              value: "0"
+            - name: ELASTIC_URI
+              value: ""
+            - name: ELASTIC_SCHEME
+              value: ""
+{%- if include.elasticsearch == 'secure' %}
+            - name: ELASTIC_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-es-proxy
+                  key: elasticsearch.backend.host
+            - name: ELASTIC_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-es-proxy
+                  key: elasticsearch.backend.port
+            - name: ELASTIC_USER
+              valueFrom:
+                secretKeyRef:
+                  name: elastic-compliance-user
+                  key: username
+            - name: ELASTIC_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: elastic-compliance-user
+                  key: password
+            - name: ELASTIC_SSL_VERIFY
+              value: "true"
+            - name: ELASTIC_CA
+              value: /etc/compliance/elastic/ca.pem
+{%- else %}
+            - name: ELASTIC_HOST
+              value: elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local
+            - name: ELASTIC_PORT
+              value: "9200"
+            - name: ELASTIC_SSL_VERIFY
+              value: "false"
+{%- endif %}
+{%- if include.elasticsearch == 'secure' %}
+          volumeMounts:
+            - name: elastic-ca-cert-volume
+              mountPath: /etc/compliance/elastic
+{%- endif %}
+{%- if include.elasticsearch == 'secure' %}
+      volumes:
+        # Should be created during installation process.
+        - name: elastic-ca-cert-volume
+          configMap:
+            name: elastic-ca-config
+{%- endif %}
