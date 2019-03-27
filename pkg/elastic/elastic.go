@@ -1,6 +1,7 @@
 package elastic
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
@@ -19,20 +20,44 @@ const (
 	DefaultElasticHost   = "elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local"
 	DefaultElasticPort   = 9200
 	DefaultElasticUser   = "elastic"
+
+	snapshotsIndex   = "tigera_secure_ee_snapshots"
+	snapshotsMapping = `{
+  "mappings": {
+    "_doc": {
+      "properties": {
+        "apiVersion": { "type": "text" },
+        "kind": { "type": "text" },
+        "items": {
+          "properties": {
+            "apiVersion": { "type": "text" },
+            "kind": { "type": "text" },
+            "metadata": { "type": "object" },
+            "spec": { "type": "object", "enabled": false }
+          }
+        },
+        "metadata": { "type": "object" },
+        "requestStarted": { "type": "date" },
+        "requestCompleted": { "type": "date" }
+      }
+    }
+  }
+}`
 )
 
-type Elastic struct {
-	c *elastic.Client
+// TODO(rlb): This should be an interface not a public struct.
+type Client struct {
+	*elastic.Client
 }
 
-func NewElasticFromEnv() *Elastic {
+func NewFromEnv() (*Client, error) {
 	var u *url.URL
 	uri := os.Getenv("ELASTIC_URI")
 	if uri != "" {
 		var err error
 		u, err = url.Parse(uri)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 	} else {
 		scheme := os.Getenv("ELASTIC_SCHEME")
@@ -53,7 +78,7 @@ func NewElasticFromEnv() *Elastic {
 			var err error
 			port, err = strconv.ParseInt(portStr, 10, 16)
 			if err != nil {
-				panic(err)
+				return nil, err
 			}
 		}
 
@@ -62,6 +87,7 @@ func NewElasticFromEnv() *Elastic {
 			Host:   fmt.Sprintf("%s:%d", host, port),
 		}
 	}
+	log.WithField("url", u).Debug("using elastic url")
 
 	//log.SetLevel(log.TraceLevel)
 	user := os.Getenv("ELASTIC_USER")
@@ -73,27 +99,26 @@ func NewElasticFromEnv() *Elastic {
 
 	ca, err := x509.SystemCertPool()
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	if pathToCA != "" {
 		cert, err := ioutil.ReadFile(pathToCA)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 		ok := ca.AppendCertsFromPEM(cert)
 		if !ok {
-			panic("failed to add CA")
+			return nil, fmt.Errorf("failed to add CA")
 		}
 	}
 	h := &http.Client{}
 	if u.Scheme == "https" {
 		h.Transport = &http.Transport{TLSClientConfig: &tls.Config{RootCAs: ca}}
 	}
-	return NewElastic(h, u, user, pass)
+	return New(h, u, user, pass)
 }
 
-func NewElastic(h *http.Client, url *url.URL, username, password string) *Elastic {
-
+func New(h *http.Client, url *url.URL, username, password string) (*Client, error) {
 	options := []elastic.ClientOptionFunc{
 		elastic.SetURL(url.String()),
 		elastic.SetHttpClient(h),
@@ -106,7 +131,46 @@ func NewElastic(h *http.Client, url *url.URL, username, password string) *Elasti
 	}
 	c, err := elastic.NewClient(options...)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return &Elastic{c}
+	return &Client{c}, nil
+}
+
+func (c *Client) EnsureIndices() error {
+	return c.ensureIndexExists(snapshotsIndex, snapshotsMapping)
+}
+
+func (c *Client) ensureIndexExists(index, mapping string) error {
+	clog := log.WithField("index", index)
+
+	// Check if index exists.
+	exists, err := c.IndexExists(index).Do(context.Background())
+	if err != nil {
+		clog.WithError(err).Error("failed to check if index exists")
+		return err
+	}
+
+	// Return if index exists
+	if exists {
+		clog.Info("index already exists, bailing out...")
+		return nil
+	}
+
+	// Create index.
+	clog.Info("index doesn't exist, creating...")
+	createIndex, err := c.
+		CreateIndex(index).
+		Body(mapping).
+		Do(context.Background())
+	if err != nil {
+		clog.WithError(err).Error("failed to create index")
+		return err
+	}
+
+	// Check if acknowledged
+	if !createIndex.Acknowledged {
+		clog.Warn("index creation has not yet been acknowledged...")
+	}
+	clog.Info("index successfully created!")
+	return nil
 }
