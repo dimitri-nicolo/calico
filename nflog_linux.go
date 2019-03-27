@@ -25,7 +25,8 @@ const (
 const AggregationDuration = time.Duration(10) * time.Millisecond
 
 func SubscribeDNS(groupNum int, bufSize int, ch chan<- []byte, done <-chan struct{}) error {
-	resChan, err := openAndReadNFNLSocket(groupNum, bufSize, done, 2*cap(ch))
+	log.Info("Subscribe to NFLOG group for DNS responses")
+	resChan, err := openAndReadNFNLSocket(groupNum, bufSize, done, 2*cap(ch), true)
 	if err != nil {
 		return err
 	}
@@ -34,7 +35,7 @@ func SubscribeDNS(groupNum int, bufSize int, ch chan<- []byte, done <-chan struc
 }
 
 func NflogSubscribe(groupNum int, bufSize int, ch chan<- *NflogPacketAggregate, done <-chan struct{}) error {
-	resChan, err := openAndReadNFNLSocket(groupNum, bufSize, done, 2*cap(ch))
+	resChan, err := openAndReadNFNLSocket(groupNum, bufSize, done, 2*cap(ch), false)
 	if err != nil {
 		return err
 	}
@@ -42,7 +43,7 @@ func NflogSubscribe(groupNum int, bufSize int, ch chan<- *NflogPacketAggregate, 
 	return nil
 }
 
-func openAndReadNFNLSocket(groupNum int, bufSize int, done <-chan struct{}, chanCap int) (chan [][]byte, error) {
+func openAndReadNFNLSocket(groupNum int, bufSize int, done <-chan struct{}, chanCap int, immediateFlush bool) (chan [][]byte, error) {
 	sock, err := nl.Subscribe(syscall.NETLINK_NETFILTER)
 	if err != nil {
 		return nil, err
@@ -99,6 +100,18 @@ func openAndReadNFNLSocket(groupNum int, bufSize int, done <-chan struct{}, chan
 	req.AddData(nfattr)
 	if err := sock.Send(req); err != nil {
 		return nil, err
+	}
+
+	if immediateFlush {
+		req = nl.NewNetlinkRequest(nlMsgType, nlMsgFlags)
+		nfgenmsg = nfnl.NewNfGenMsg(syscall.AF_UNSPEC, nfnl.NFNETLINK_V0, groupNum)
+		req.AddData(nfgenmsg)
+		timeout := nfnl.NewNflogMsgConfigBufSiz(0)
+		nfattr = nl.NewRtAttr(nfnl.NFULA_CFG_TIMEOUT, timeout.Serialize())
+		req.AddData(nfattr)
+		if err := sock.Send(req); err != nil {
+			return nil, err
+		}
 	}
 
 	go func() {
@@ -223,9 +236,11 @@ func parseAndReturnDNSResponses(groupNum int, resChan <-chan [][]byte, ch chan<-
 		logCtx := log.WithFields(log.Fields{
 			"groupNum": groupNum,
 		})
+		logCtx.Info("Start DNS response capture loop")
 		for {
 			select {
 			case res := <-resChan:
+				logCtx.Infof("%v messages from DNS response channel", len(res))
 				for _, m := range res {
 					msg := nfnl.DeserializeNfGenMsg(m)
 					nflogPacket, err := parseNflog(m[msg.Len():])
@@ -233,6 +248,7 @@ func parseAndReturnDNSResponses(groupNum int, resChan <-chan [][]byte, ch chan<-
 						logCtx.Warnf("Error parsing NFLOG %v", err)
 						continue
 					}
+					logCtx.Infof("DNS response length %v", nflogPacket.Bytes)
 					ch <- nflogPacket.Data
 				}
 			}
