@@ -57,7 +57,7 @@
 
       ```bash
       curl --compressed -o cnx-configmap.yaml \
-      {{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-configmap.yaml
+      {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-configmap.yaml
       ```
 
    1. Use the following commands to: set an environment variable called `ETCD_ENDPOINTS`
@@ -85,13 +85,13 @@
    - **etcd datastore**
      ```bash
      curl --compressed -o cnx.yaml \
-     {{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-etcd.yaml
+     {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-etcd.yaml
      ```
 
    - **Kubernetes API datastore**
      ```bash
      curl --compressed -o cnx.yaml \
-     {{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-kdd.yaml
+     {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-kdd.yaml
      ```
 
 {% elsif include.platform == "eks" %}
@@ -101,7 +101,7 @@
 
    ```bash
    curl --compressed -o cnx.yaml \
-   {{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only-ecs/cnx-kdd-eks.yaml
+   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only-ecs/cnx-kdd-eks.yaml
    ```
 
 {% elsif include.init != "openshift" and include.net == "other" %}
@@ -111,7 +111,7 @@
 
    ```bash
    curl --compressed -o cnx.yaml \
-   {{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-kdd.yaml
+   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-kdd.yaml
    ```
 
 {% elsif include.init == "openshift" %}
@@ -120,7 +120,7 @@
 
    ```bash
    curl --compressed -o cnx.yaml \
-   {{site.baseurl}}/{{page.version}}/getting-started/openshift/cnx.yaml
+   {{site.url}}/{{page.version}}/getting-started/openshift/cnx.yaml
    ```
 
 {% endif %}
@@ -261,11 +261,11 @@
 
    ```bash
    {{cli}} apply -f \
-   {{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml
+   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml
    ```
 
    > **Note**: You can also
-   > [view the manifest in a new tab]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml){:target="_blank"}.
+   > [view the manifest in a new tab]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml){:target="_blank"}.
    {: .alert .alert-info}
 
 {% if include.platform == "eks" %}
