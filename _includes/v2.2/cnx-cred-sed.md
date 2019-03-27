@@ -3,7 +3,7 @@
 
    ```bash
    REGISTRY=my-registry.com \
-   sed -i -e "s?{{site.data.versions[page.version].first.dockerRepo}}?$REGISTRY?g" {{include.yaml}}.yaml {% if include.yaml == "monitor-calico" %}\
+   sed -i -e "s?{{page.registry}}?$REGISTRY?g" {{include.yaml}}.yaml {% if include.yaml == "monitor-calico" %}\
    sed -i -e "s?docker.elastic.co?$REGISTRY/upmcenterprises?$REGISTRY?g" {{include.yaml}}.yaml{% endif %}
    ```
 

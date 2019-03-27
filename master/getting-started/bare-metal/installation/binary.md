@@ -8,20 +8,20 @@ canonical_url: https://docs.tigera.io/v2.3/getting-started/bare-metal/installati
 1. Use the following command to download the {{site.nodecontainer}} image.
 
    ```bash
-   docker pull {{site.nodecontainer}}:{{site.data.versions[page.version].first.components["calico/node"].version}}
+   docker pull {{site.nodecontainer}}:{{site.data.versions[page.version].first.components["cnx-node"].version}}
    ```
 
 1. Confirm that the image has loaded by typing `docker images`.
 
    ```bash
    REPOSITORY       TAG           IMAGE ID       CREATED         SIZE
-   {{site.nodecontainer}}      {{site.data.versions[page.version].first.components["calico/node"].version}}        e07d59b0eb8a   2 minutes ago   42MB
+   {{site.nodecontainer}}      {{site.data.versions[page.version].first.components["cnx-node"].version}}        e07d59b0eb8a   2 minutes ago   42MB
    ```
 
 1. Create a temporary {{site.nodecontainer}} container.
 
    ```bash
-   docker create --name container {{site.nodecontainer}}:{{site.data.versions[page.version].first.components["calico/node"].version}}
+   docker create --name container {{site.nodecontainer}}:{{site.data.versions[page.version].first.components["cnx-node"].version}}
    ```
 
 1. Copy the calico-node binary from the container to the local file system.

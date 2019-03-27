@@ -453,7 +453,7 @@ spec:
               mountPath: /var/log/calico
       containers:
         - name: fluentd
-          image: {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["fluentd"]}}:{{site.data.versions[page.version].first.components["fluentd"].version}}
+          image: {{page.registry}}/{{site.imageNames["fluentd"]}}:{{site.data.versions[page.version].first.components["fluentd"].version}}
           env:
             - name: ELASTIC_INDEX_SUFFIX
               valueFrom:
@@ -681,7 +681,7 @@ spec:
             - name: cnx-pull-secret      
           containers:
             - name: tigera-es-curator
-              image: {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["es-curator"]}}:{{site.data.versions[page.version].first.components["es-curator"].version}}
+              image: {{page.registry}}/{{site.imageNames["es-curator"]}}:{{site.data.versions[page.version].first.components["es-curator"].version}}
               env:
                 - name: ELASTIC_INDEX_SUFFIX
                   valueFrom:
@@ -766,7 +766,7 @@ spec:
         - name: cnx-pull-secret
       containers:
       - name: install
-        image: {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["elastic-tsee-installer"]}}:{{site.data.versions[page.version].first.components["elastic-tsee-installer"].version}}
+        image: {{page.registry}}/{{site.imageNames["elastic-tsee-installer"]}}:{{site.data.versions[page.version].first.components["elastic-tsee-installer"].version}}
         env:
 {%- if include.secure_es == "true" %}
           - name: ELASTIC_HOST

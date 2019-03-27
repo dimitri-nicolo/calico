@@ -180,7 +180,7 @@ spec:
           effect: NoSchedule
       containers:
       - name: cnx-apiserver
-        image: {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
+        image: {{page.registry}}/{{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
         args:
         - "--secure-port=5443"
         env:
@@ -261,7 +261,7 @@ spec:
         operator: Exists
       containers:
       - name: cnx-manager
-        image: {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["cnxManager"]}}:{{site.data.versions[page.version].first.components["cnx-manager"].version}}
+        image: {{page.registry}}/{{site.imageNames["cnxManager"]}}:{{site.data.versions[page.version].first.components["cnx-manager"].version}}
         env:
           - name: CNX_WEB_AUTHENTICATION_TYPE
             valueFrom:

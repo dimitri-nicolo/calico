@@ -55,9 +55,9 @@ If you do not already have a private registry, consider one of the following opt
    location of your registry first.
 
    ```
-   docker push {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["cnxManager"]}}:{{site.data.versions[page.version].first.components["cnx-manager"].version}}
-   docker push {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["node"]}}:{{site.data.versions[page.version].first.components["cnx-node"].version}}
-   docker push {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
+   docker push {{page.registry}}/{{site.imageNames["cnxManager"]}}:{{site.data.versions[page.version].first.components["cnx-manager"].version}}
+   docker push {{page.registry}}/{{site.imageNames["node"]}}:{{site.data.versions[page.version].first.components["cnx-node"].version}}
+   docker push {{page.registry}}/{{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
    ```
 
 1. Next, you must determine how to configure Kubernetes to pull from your private registry. The method varies according to your private registry vendor and Kubernetes hosting. For specific instructions, refer to:

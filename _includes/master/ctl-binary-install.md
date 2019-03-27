@@ -40,7 +40,7 @@ you want to install the binary.
    registry.
 
    ```bash
-   docker pull {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames[include.cli]}}:{{site.data.versions[page.version].first.components[include.cli].version}}
+   docker pull {{page.registry}}/{{site.imageNames[include.cli]}}:{{site.data.versions[page.version].first.components[include.cli].version}}
    ```
 
 1. Confirm that the image has loaded by typing `docker images`.
@@ -54,7 +54,7 @@ you want to install the binary.
 1. Create a copy of the container.
 
    ```bash
-   docker create --name {{include.cli}}-copy {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames[include.cli]}}:{{site.data.versions[page.version].first.components[include.cli].version}}
+   docker create --name {{include.cli}}-copy {{page.registry}}/{{site.imageNames[include.cli]}}:{{site.data.versions[page.version].first.components[include.cli].version}}
    ```
 
 1. Copy the {{include.cli}} file from the container to the local file system. The following command copies it to a common `$PATH` location.

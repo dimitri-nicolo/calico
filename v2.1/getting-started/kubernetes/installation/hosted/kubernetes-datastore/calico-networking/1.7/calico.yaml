@@ -112,7 +112,7 @@ spec:
       imagePullSecrets:
         - name: cnx-pull-secret
       containers:
-      - image: {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["typha"]}}:{{site.data.versions[page.version].first.components["typha"].version}}
+      - image: {{page.registry}}/{{site.imageNames["typha"]}}:{{site.data.versions[page.version].first.components["typha"].version}}
         name: calico-typha
         # Uncomment these lines to enable a secrets volume for use with federated endpoint identity.
         #volumeMounts:
@@ -216,7 +216,7 @@ spec:
         # container programs network policy and routes on each
         # host.
         - name: calico-node
-          image: {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["node"]}}:{{site.data.versions[page.version].first.title}}
+          image: {{page.registry}}/{{site.imageNames["node"]}}:{{site.data.versions[page.version].first.title}}
           env:
             # Use Kubernetes API as the backing datastore.
             - name: DATASTORE_TYPE
