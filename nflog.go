@@ -47,7 +47,6 @@ type NflogPacket struct {
 	Gid       int
 	Tuple     NflogPacketTuple
 	Bytes     int
-	Data      []byte
 }
 
 type NflogPacketAggregate struct {

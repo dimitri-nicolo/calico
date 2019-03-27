@@ -243,17 +243,32 @@ func parseAndReturnDNSResponses(groupNum int, resChan <-chan [][]byte, ch chan<-
 				logCtx.Infof("%v messages from DNS response channel", len(res))
 				for _, m := range res {
 					msg := nfnl.DeserializeNfGenMsg(m)
-					nflogPacket, err := parseNflog(m[msg.Len():])
+					packetData, err := getNflogPacketData(m[msg.Len():])
 					if err != nil {
 						logCtx.Warnf("Error parsing NFLOG %v", err)
 						continue
 					}
-					logCtx.Infof("DNS response length %v", nflogPacket.Bytes)
-					ch <- nflogPacket.Data
+					logCtx.Infof("DNS response length %v", len(packetData))
+					ch <- packetData
 				}
 			}
 		}
 	}()
+}
+
+func getNflogPacketData(m []byte) (packetData []byte, err error) {
+	var attrs [nfnl.NFULA_MAX]nfnl.NetlinkNetfilterAttr
+	err = nfnl.ParseNetfilterAttr(m, attrs[:])
+	if err != nil {
+		return packetData, err
+	}
+	for _, attr := range attrs {
+		if attr.Attr.Type == nfnl.NFULA_PAYLOAD {
+			packetData = attr.Value
+			return
+		}
+	}
+	return
 }
 
 func parseNflog(m []byte) (NflogPacket, error) {
@@ -276,7 +291,6 @@ func parseNflog(m []byte) (NflogPacket, error) {
 		case nfnl.NFULA_PAYLOAD:
 			parsePacketHeader(&nflogPacket.Tuple, nflogPacket.Header.HwProtocol, attr.Value)
 			nflogPacket.Bytes = len(attr.Value)
-			nflogPacket.Data = attr.Value
 		case nfnl.NFULA_PREFIX:
 			p := NflogPrefix{Len: len(attr.Value) - 1}
 			copy(p.Prefix[:], attr.Value[:len(attr.Value)-1])
