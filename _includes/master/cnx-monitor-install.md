@@ -1,8 +1,8 @@
 {% if include.orch != "openshift" %}
-  {% capture docpath %}{{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7{% endcapture %}
+  {% capture docpath %}{{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7{% endcapture %}
   {% assign cli = "kubectl" %}
 {% else %}
-  {% capture docpath %}{{site.baseurl}}/{{page.version}}/getting-started/openshift{% endcapture %}
+  {% capture docpath %}{{site.url}}/{{page.version}}/getting-started/openshift{% endcapture %}
   {% assign cli = "oc" %}
 {% endif %}
 {% if include.elasticsearch == "operator" %}

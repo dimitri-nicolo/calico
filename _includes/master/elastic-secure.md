@@ -80,7 +80,7 @@
 
 1. Download the configmap patch for {{site.prodname}} Manager.
     ```
-    curl --compressed -O {{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/secure-es/patch-cnx-manager-configmap.yaml
+    curl --compressed -O {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/secure-es/patch-cnx-manager-configmap.yaml
     ```
     Edit the Kibana URL in the patch file to point to your Kibana.
 

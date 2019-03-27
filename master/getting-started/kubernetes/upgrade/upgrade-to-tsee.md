@@ -13,7 +13,7 @@ release. If not, follow the {% unless old_vers contains site.data.versions[page.
 [Calico upgrade documentation](https://docs.projectcalico.org/{{site.data.versions[page.version].first.components["calico"].minor_version}}/getting-started/kubernetes/upgrade/upgrade) before continuing.
 {% endunless %}
 
-If your cluster already has {{site.prodname}} installed, follow the [Upgrading {{site.prodname}} from an earlier release guide]({{side.baseurl}}/{{page.version}}/maintenance/kubernetes-upgrade-tsee)
+If your cluster already has {{site.prodname}} installed, follow the [Upgrading {{site.prodname}} from an earlier release guide](/{{page.version}}/maintenance/kubernetes-upgrade-tsee)
 instead.
 
 ## Upgrading Calico to {{site.prodname}}
