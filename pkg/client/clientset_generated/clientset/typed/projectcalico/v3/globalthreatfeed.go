@@ -23,6 +23,7 @@ type GlobalThreatFeedsGetter interface {
 type GlobalThreatFeedInterface interface {
 	Create(*v3.GlobalThreatFeed) (*v3.GlobalThreatFeed, error)
 	Update(*v3.GlobalThreatFeed) (*v3.GlobalThreatFeed, error)
+	UpdateStatus(*v3.GlobalThreatFeed) (*v3.GlobalThreatFeed, error)
 	Delete(name string, options *v1.DeleteOptions) error
 	DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error
 	Get(name string, options v1.GetOptions) (*v3.GlobalThreatFeed, error)
@@ -93,6 +94,21 @@ func (c *globalThreatFeeds) Update(globalThreatFeed *v3.GlobalThreatFeed) (resul
 	err = c.client.Put().
 		Resource("globalthreatfeeds").
 		Name(globalThreatFeed.Name).
+		Body(globalThreatFeed).
+		Do().
+		Into(result)
+	return
+}
+
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+
+func (c *globalThreatFeeds) UpdateStatus(globalThreatFeed *v3.GlobalThreatFeed) (result *v3.GlobalThreatFeed, err error) {
+	result = &v3.GlobalThreatFeed{}
+	err = c.client.Put().
+		Resource("globalthreatfeeds").
+		Name(globalThreatFeed.Name).
+		SubResource("status").
 		Body(globalThreatFeed).
 		Do().
 		Into(result)

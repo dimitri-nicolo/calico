@@ -7,7 +7,7 @@ package v3
 import (
 	time "time"
 
-	projectcalicov3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
+	projectcalico_v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	clientset "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset"
 	internalinterfaces "github.com/tigera/calico-k8sapiserver/pkg/client/informers_generated/externalversions/internalinterfaces"
 	v3 "github.com/tigera/calico-k8sapiserver/pkg/client/listers_generated/projectcalico/v3"
@@ -55,7 +55,7 @@ func NewFilteredHostEndpointInformer(client clientset.Interface, resyncPeriod ti
 				return client.ProjectcalicoV3().HostEndpoints().Watch(options)
 			},
 		},
-		&projectcalicov3.HostEndpoint{},
+		&projectcalico_v3.HostEndpoint{},
 		resyncPeriod,
 		indexers,
 	)
@@ -66,7 +66,7 @@ func (f *hostEndpointInformer) defaultInformer(client clientset.Interface, resyn
 }
 
 func (f *hostEndpointInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&projectcalicov3.HostEndpoint{}, f.defaultInformer)
+	return f.factory.InformerFor(&projectcalico_v3.HostEndpoint{}, f.defaultInformer)
 }
 
 func (f *hostEndpointInformer) Lister() v3.HostEndpointLister {

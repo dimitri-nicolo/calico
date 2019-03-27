@@ -144,6 +144,7 @@ func Convert_projectcalico_GlobalNetworkSetList_To_v3_GlobalNetworkSetList(in *p
 func autoConvert_v3_GlobalThreatFeed_To_projectcalico_GlobalThreatFeed(in *GlobalThreatFeed, out *projectcalico.GlobalThreatFeed, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
 	out.Spec = in.Spec
+	out.Status = in.Status
 	return nil
 }
 
@@ -155,6 +156,7 @@ func Convert_v3_GlobalThreatFeed_To_projectcalico_GlobalThreatFeed(in *GlobalThr
 func autoConvert_projectcalico_GlobalThreatFeed_To_v3_GlobalThreatFeed(in *projectcalico.GlobalThreatFeed, out *GlobalThreatFeed, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
 	out.Spec = in.Spec
+	out.Status = in.Status
 	return nil
 }
 

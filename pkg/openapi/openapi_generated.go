@@ -2297,6 +2297,20 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								},
 							},
 						},
+						"domains": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Domains is an optional field, valid for egress Allow rules only, that restricts the rule to apply only to traffic to one of the specified domains.  If this field is specified, Action must be Allow, and Nets and Selector must both be left empty.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
+									},
+								},
+							},
+						},
 						"notNets": {
 							SchemaProps: spec.SchemaProps{
 								Description: "NotNets is the negated version of the Nets field.",
@@ -2342,6 +2356,28 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 			},
 			Dependencies: []string{
 				"github.com/projectcalico/libcalico-go/lib/apis/v3.ServiceAccountMatch", "github.com/projectcalico/libcalico-go/lib/numorstring.Port"},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.ErrorCondition": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Properties: map[string]spec.Schema{
+						"type": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
+						},
+						"message": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
+						},
+					},
+					Required: []string{"type", "message"},
+				},
+			},
+			Dependencies: []string{},
 		},
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.EtcdConfig": {
 			Schema: spec.Schema{
@@ -3377,7 +3413,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkSet": {
 			Schema: spec.Schema{
 				SchemaProps: spec.SchemaProps{
-					Description: "GlobalNetworkSet contains a set of arbitrary IP sub-networks/CIDRs that share labels to allow rules to refer to them via selectors.  The labels of GlobalNetworkSet are not namespaced.",
+					Description: "GlobalNetworkSet contains a set of arbitrary IP sub-networks/CIDRs and domain names that share labels to allow rules to refer to them via selectors.  The labels of GlobalNetworkSet are not namespaced.",
 					Properties: map[string]spec.Schema{
 						"kind": {
 							SchemaProps: spec.SchemaProps{
@@ -3473,6 +3509,20 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								},
 							},
 						},
+						"allowedEgressDomains": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The list of domain names that belong to this set and are honored in egress allow rules only.  Domain names specified here only work to allow egress traffic from the cluster to external destinations.  They don't work to _deny_ traffic to destinations specified by domain name, or to allow ingress traffic from _sources_ specified by domain name.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
+									},
+								},
+							},
+						},
 					},
 				},
 			},
@@ -3531,11 +3581,16 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeedSpec"),
 							},
 						},
+						"status": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeedStatus"),
+							},
+						},
 					},
 				},
 			},
 			Dependencies: []string{
-				"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeedSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeedSpec", "github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeedStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 		},
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeedList": {
 			Schema: spec.Schema{
@@ -3603,11 +3658,43 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							},
 						},
 					},
-					Required: []string{"content"},
 				},
 			},
 			Dependencies: []string{
 				"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkSetSync", "github.com/projectcalico/libcalico-go/lib/apis/v3.Pull"},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeedStatus": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Properties: map[string]spec.Schema{
+						"last_successful_sync": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+							},
+						},
+						"last_successful_search": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+							},
+						},
+						"error_conditions": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ErrorCondition"),
+										},
+									},
+								},
+							},
+						},
+					},
+					Required: []string{"last_successful_sync", "last_successful_search", "error_conditions"},
+				},
+			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.ErrorCondition", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 		},
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPHeader": {
 			Schema: spec.Schema{
@@ -3748,7 +3835,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							},
 						},
 					},
-					Required: []string{"format", "url"},
+					Required: []string{"url"},
 				},
 			},
 			Dependencies: []string{
@@ -5915,11 +6002,16 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeedSpec"),
 							},
 						},
+						"status": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeedStatus"),
+							},
+						},
 					},
 				},
 			},
 			Dependencies: []string{
-				"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeedSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeedSpec", "github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeedStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 		},
 		"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3.GlobalThreatFeedList": {
 			Schema: spec.Schema{
