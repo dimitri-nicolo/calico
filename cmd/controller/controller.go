@@ -21,7 +21,7 @@ func main() {
 		version.Version()
 		return
 	}
-	e := elastic.NewElasticFromEnv()
+	e, _ := elastic.NewFromEnv()
 
 	log.Infof("Created %s", e)
 

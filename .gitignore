@@ -18,3 +18,8 @@
 .go-pkg-cache
 bin
 vendor
+*.coverprofile
+
+# vim
+*.sw*
+out
