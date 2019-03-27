@@ -14,9 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/sync/globalnetworksets"
-
-	"github.com/tigera/intrusion-detection/controller/pkg/util"
+	"github.com/tigera/intrusion-detection/controller/pkg/db"
 
 	retry "github.com/avast/retry-go"
 	calico "github.com/projectcalico/libcalico-go/lib/apis/v3"
@@ -25,9 +23,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/runloop"
 	"github.com/tigera/intrusion-detection/controller/pkg/statser"
+	"github.com/tigera/intrusion-detection/controller/pkg/sync/elasticipsets"
+	"github.com/tigera/intrusion-detection/controller/pkg/sync/globalnetworksets"
+	"github.com/tigera/intrusion-detection/controller/pkg/util"
 )
 
 const (
@@ -38,20 +38,21 @@ const (
 
 // httpPuller is a feed that periodically pulls Puller sets from a URL
 type httpPuller struct {
-	ipSet            db.IPSet
-	configMapClient  v1.ConfigMapInterface
-	secretsClient    v1.SecretInterface
-	client           *http.Client
-	feed             *v3.GlobalThreatFeed
-	needsUpdate      bool
-	url              *url.URL
-	header           http.Header
-	period           time.Duration
-	gnsController    globalnetworksets.Controller
-	syncFailFunction SyncFailFunction
-	cancel           context.CancelFunc
-	once             sync.Once
-	lock             sync.RWMutex
+	ipSet             db.IPSet
+	configMapClient   v1.ConfigMapInterface
+	secretsClient     v1.SecretInterface
+	client            *http.Client
+	feed              *v3.GlobalThreatFeed
+	needsUpdate       bool
+	url               *url.URL
+	header            http.Header
+	period            time.Duration
+	gnsController     globalnetworksets.Controller
+	elasticController elasticipsets.Controller
+	syncFailFunction  SyncFailFunction
+	cancel            context.CancelFunc
+	once              sync.Once
+	lock              sync.RWMutex
 }
 
 func NewHTTPPuller(
@@ -61,15 +62,17 @@ func NewHTTPPuller(
 	secretsClient v1.SecretInterface,
 	client *http.Client,
 	gnsController globalnetworksets.Controller,
+	elasticController elasticipsets.Controller,
 ) Puller {
 	p := &httpPuller{
-		ipSet:           ipSet,
-		configMapClient: configMapClient,
-		secretsClient:   secretsClient,
-		client:          client,
-		feed:            f.DeepCopy(),
-		needsUpdate:     true,
-		gnsController:   gnsController,
+		ipSet:             ipSet,
+		configMapClient:   configMapClient,
+		secretsClient:     secretsClient,
+		client:            client,
+		feed:              f.DeepCopy(),
+		needsUpdate:       true,
+		gnsController:     gnsController,
+		elasticController: elasticController,
 	}
 
 	p.period = util.ParseFeedDuration(p.feed)
@@ -91,6 +94,7 @@ func (h *httpPuller) Run(ctx context.Context, s statser.Statser) SyncFailFunctio
 		ctx, h.cancel = context.WithCancel(ctx)
 
 		runFunc, rescheduleFunc := runloop.RunLoopWithReschedule()
+		h.syncFailFunction = func() { _ = rescheduleFunc() }
 		go func() {
 			defer h.cancel()
 			if h.period == 0 {
@@ -111,7 +115,6 @@ func (h *httpPuller) Run(ctx context.Context, s statser.Statser) SyncFailFunctio
 			_ = runFunc(ctx, func() { _ = h.query(ctx, s, retryAttempts, retryDelay) }, h.period, func() {}, h.period/3)
 		}()
 
-		h.syncFailFunction = func() { _ = rescheduleFunc() }
 	})
 
 	return h.syncFailFunction
@@ -349,6 +352,7 @@ func (h *httpPuller) query(ctx context.Context, st statser.Statser, attempts uin
 			}
 		}
 	}
+	h.elasticController.Add(name, snapshot, h.syncFailFunction, st)
 	if gns {
 		h.gnsController.Add(makeGNS(name, labels, snapshot))
 	}
