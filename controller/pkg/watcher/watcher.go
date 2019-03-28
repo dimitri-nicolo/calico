@@ -21,7 +21,6 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
-	"github.com/tigera/intrusion-detection/controller/pkg/gc"
 	"github.com/tigera/intrusion-detection/controller/pkg/health"
 	"github.com/tigera/intrusion-detection/controller/pkg/puller"
 	"github.com/tigera/intrusion-detection/controller/pkg/searcher"
@@ -72,11 +71,10 @@ type watcher struct {
 }
 
 type feedWatcher struct {
-	feed             *v3.GlobalThreatFeed
-	puller           puller.Puller
-	garbageCollector gc.GarbageCollector
-	searcher         searcher.FlowSearcher
-	statser          statser.Statser
+	feed     *v3.GlobalThreatFeed
+	puller   puller.Puller
+	searcher searcher.FlowSearcher
+	statser  statser.Statser
 }
 
 func NewWatcher(
@@ -231,10 +229,9 @@ func (s *watcher) startFeedWatcher(ctx context.Context, f *v3.GlobalThreatFeed) 
 	fCopy := f.DeepCopy()
 	st := statser.NewStatser()
 	fw := feedWatcher{
-		feed:             fCopy,
-		garbageCollector: gc.NewGarbageCollector(fCopy, time.Hour),
-		searcher:         searcher.NewFlowSearcher(fCopy, time.Minute, s.suspiciousIP, s.events),
-		statser:          st,
+		feed:     fCopy,
+		searcher: searcher.NewFlowSearcher(fCopy, time.Minute, s.suspiciousIP, s.events),
+		statser:  st,
 	}
 
 	s.setFeedWatcher(f.Name, &fw)
@@ -251,7 +248,6 @@ func (s *watcher) startFeedWatcher(ctx context.Context, f *v3.GlobalThreatFeed) 
 		s.gnsController.NoGC(util.NewGlobalNetworkSet(fCopy.Name))
 	}
 
-	fw.garbageCollector.Run(ctx, fw.statser)
 	fw.searcher.Run(ctx, fw.statser)
 }
 
@@ -283,7 +279,6 @@ func (s *watcher) updateFeedWatcher(ctx context.Context, oldFeed, newFeed *v3.Gl
 	}
 
 	fw.searcher.SetFeed(fw.feed)
-	fw.garbageCollector.SetFeed(fw.feed)
 }
 
 func (s *watcher) restartPuller(ctx context.Context, f *v3.GlobalThreatFeed) {
@@ -322,7 +317,6 @@ func (s *watcher) stopFeedWatcher(name string) {
 	s.gnsController.Delete(gns)
 	s.elasticController.Delete(name)
 
-	fw.garbageCollector.Close()
 	fw.searcher.Close()
 	s.deleteFeedWatcher(name)
 }
