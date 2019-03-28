@@ -10,7 +10,8 @@ def gen_values(versions, imageNames, imageRegistry)
       image: #{imageRegistry}#{imageNames["typha"]}
       tag: #{versions["typha"]}
     cni:
-      image: #{imageRegistry}#{imageNames["cni"]}
+      # cni does not use imageRegistry as it is an external OS image
+      image: #{imageNames["cni"]}
       tag: #{versions["calico/cni"]}
     kubeControllers:
       image: #{imageRegistry}#{imageNames["kubeControllers"]}
@@ -22,7 +23,8 @@ def gen_values(versions, imageNames, imageRegistry)
       image: #{imageRegistry}#{imageNames["dikastes"]}
       tag: #{versions["dikastes"]}
     flexvol:
-      image: #{imageRegistry}#{imageNames["flexvol"]}
+      # flexvol does not use imageRegistry as it is an external OS image
+      image: #{imageNames["flexvol"]}
       tag: #{versions["flexvol"]}
     EOF
 

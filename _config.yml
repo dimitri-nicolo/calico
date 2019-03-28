@@ -31,13 +31,13 @@ imageNames:
   cnxQueryserver: tigera/cnx-queryserver
   felix: tigera/felix
   calicoq: tigera/calicoq
-  cni: calico/cni
+  cni: quay.io/calico/cni
   kubeControllers: tigera/kube-controllers
   calicoKubeControllers: calico/kube-controllers
   calico-upgrade: calico/upgrade
   flannel: quay.io/coreos/flannel
   dikastes: tigera/dikastes
-  flexvol: calico/pod2daemon-flexvol
+  flexvol: quay.io/calico/pod2daemon-flexvol
   fluentd: tigera/fluentd
   es-proxy: tigera/es-proxy
   cloudControllers: tigera/cloud-controllers
