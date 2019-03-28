@@ -66,7 +66,7 @@ func (pup *profileUpdateProcessor) Process(kvp *model.KVPair) ([]*model.KVPair, 
 	var err error
 	// Deletion events will have a value of nil. Do not convert anything for a deletion event.
 	if kvp.Value != nil {
-		v1profile, err = convertProfileV2ToV1Value(kvp.Value)
+		v1profile, err = ConvertProfileV3ToV1Value(kvp.Value)
 		if err != nil {
 			// Currently treat any errors as a deletion event.
 			log.WithField("Resource", kvp.Key).Warn("Unable to process resource data - treating as deleted")
@@ -96,7 +96,7 @@ func (pup *profileUpdateProcessor) OnSyncerStarting() {
 	// Do nothing
 }
 
-func convertProfileV2ToV1Value(val interface{}) (*model.Profile, error) {
+func ConvertProfileV3ToV1Value(val interface{}) (*model.Profile, error) {
 	v3res, ok := val.(*apiv3.Profile)
 	if !ok {
 		return nil, errors.New("Value is not a valid Profile resource value")
