@@ -1,5 +1,5 @@
-hash: 21eec167eacf803f1668f1e7c3c3e47987f01151d39e9231986325e8565e7eac
-updated: 2019-03-27T12:41:37.592328-03:00
+hash: 07648c1c495a76c5ba31ece26e5c4788a203f2d36400bbde2a6feb8187889102
+updated: 2019-03-28T13:32:26.739979-03:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -149,7 +149,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: a93636eb4d883f4650916558c0e7a69dc537b8c8
+  version: 774f53b03a1bc843976ff8a5defe3298d065aabd
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
@@ -202,6 +202,8 @@ imports:
   version: 8a290539e2e8629dbc4e6bad948158f790ec31f4
 - name: github.com/PuerkitoBio/urlesc
   version: 5bd2802263f21d8788851d5305584c82a5c75d7e
+- name: github.com/satori/go.uuid
+  version: 879c5887cd475cd7864858769793b2ceb0d44feb
 - name: github.com/sirupsen/logrus
   version: 89742aefa4b206dcf400792f3bd35b542998eb3b
 - name: github.com/spf13/cobra
