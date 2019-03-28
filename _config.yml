@@ -76,7 +76,7 @@ defaults:
     values:
       version: master
       # Master builds are pulled from GCR.
-      registry: gcr.io/unique-caldron-775/cnx/
+      registry: gcr.io/unique-caldron-775/cnx
   -
     scope:
       path: v2.0
