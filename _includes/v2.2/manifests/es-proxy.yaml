@@ -68,7 +68,7 @@ spec:
           name: es-proxy-tls-cache
       containers:
       - name: tigera-es-proxy
-        image: {{page.registry}}/{{site.imageNames["es-proxy"]}}:{{site.data.versions[page.version].first.components["es-proxy"].version}}
+        image: {{page.registry}}{{site.imageNames["es-proxy"]}}:{{site.data.versions[page.version].first.components["es-proxy"].version}}
         env:
           - name: ES_BACKEND_HOST
             valueFrom:

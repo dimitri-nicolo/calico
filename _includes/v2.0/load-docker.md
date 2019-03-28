@@ -50,14 +50,14 @@ If you do not already have a private registry, consider one of the following opt
    docker login [registry-domain]
    ```
 
-1. Use the following commands to push the `cnx-manager`, `cnx-node`, and `cnx-apiserver` 
+1. Use the following commands to push the `cnx-manager`, `cnx-node`, and `cnx-apiserver`
    images to the private registry, replacing `<YOUR_PRIVATE_DOCKER_REGISTRY>` with the
    location of your registry first.
 
    ```
-   docker push {{page.registry}}/{{site.imageNames["cnxManager"]}}:{{site.data.versions[page.version].first.components["cnx-manager"].version}}
-   docker push {{page.registry}}/{{site.imageNames["node"]}}:{{site.data.versions[page.version].first.components["cnx-node"].version}}
-   docker push {{page.registry}}/{{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
+   docker push {{page.registry}}{{site.imageNames["cnxManager"]}}:{{site.data.versions[page.version].first.components["cnx-manager"].version}}
+   docker push {{page.registry}}{{site.imageNames["node"]}}:{{site.data.versions[page.version].first.components["cnx-node"].version}}
+   docker push {{page.registry}}{{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
    ```
 
 1. Next, you must determine how to configure Kubernetes to pull from your private registry. The method varies according to your private registry vendor and Kubernetes hosting. For specific instructions, refer to:

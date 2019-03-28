@@ -413,7 +413,7 @@ spec:
               mountPath: /var/log/calico
       containers:
         - name: fluentd
-          image: {{page.registry}}/{{site.imageNames["fluentd"]}}:{{site.data.versions[page.version].first.components["fluentd"].version}}
+          image: {{page.registry}}{{site.imageNames["fluentd"]}}:{{site.data.versions[page.version].first.components["fluentd"].version}}
           env:
             - name: FLOW_LOG_FILE
               value: /var/log/calico/flowlogs/flows.log
