@@ -19,7 +19,7 @@ ExecStart=/usr/bin/docker run \
 -v /var/log/calico:/var/log/calico \
 -v /run/docker/plugins:/run/docker/plugins \
 -v /var/run/docker.sock:/var/run/docker.sock \
--v /var/run/calico:/var/run/calico {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["node"]}}:{{site.data.versions[page.version].first.title}}
+-v /var/run/calico:/var/run/calico {{page.registry}}/{{site.imageNames["node"]}}:{{site.data.versions[page.version].first.title}}
 
 
 [Install]

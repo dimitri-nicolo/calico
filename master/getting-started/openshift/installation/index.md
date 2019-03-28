@@ -29,12 +29,12 @@ inventory file:
   - `calico_url_policy_controller=<YOUR-REGISTRY>/{{site.imageNames["kubeControllers"]}}:{{site.data.versions[page.version].first.components["cnx-kube-controllers"].version}}`
   - `calico_cni_image={{site.imageNames["cni"]}}:{{site.data.versions[page.version].first.components["calico/cni"].version}}`
 
-For OpenShift Container Platform 3.11 also specify the following variables: 
+For OpenShift Container Platform 3.11 also specify the following variables:
   - `oreg_auth_user`
   - `oreg_auth_password`
-  
+
 Also ensure that you have an explicitly defined host in the `[etcd]` group.
- 
+
 A sample inventory file follows.
 
 ```
@@ -106,6 +106,6 @@ such that {{site.prodname}} connects to an etcd you have already set up by follo
 {% include {{page.version}}/cnx-monitor-install.md orch="openshift" elasticsearch="operator" %}
 
 Once running, access Prometheus and Alertmanager using the NodePort from the created service.
-See the [Metrics](/{{page.version}}/usage/metrics/) section for more information.
+See the [Metrics](/{{page.version}}/security/metrics/) section for more information.
 
 {% include {{page.version}}/gs-openshift-next-steps.md %}

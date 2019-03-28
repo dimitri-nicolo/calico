@@ -1,6 +1,6 @@
 ---
 title: Configuring BIRD as a BGP Route Reflector
-canonical_url: https://docs.tigera.io/v2.3/usage/routereflector/bird-rr-config
+canonical_url: https://docs.tigera.io/v2.3/usage/routereflector
 ---
 
 For many {{site.prodname}} deployments, the use of a route reflector is not required.

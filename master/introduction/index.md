@@ -5,6 +5,8 @@ description: Home
 layout: docwithnav
 ---
 
+## What is {{site.prodname}}?
+
 Modern applications are more distributed, dynamically orchestrated, and
 run across multi-cloud infrastructure. To protect workloads and enforce
 compliance, connectivity must be established and secured in a highly dynamic
@@ -19,17 +21,48 @@ open source projects like [Calico](https://docs.projectcalico.org/).
 It connects and secures container, virtual machine, and bare metal host
 workloads in public cloud and private data centers.
 
-# Get started
+## Why use {{site.prodname}}?
 
-<div class="row">
-  <div class="col-xs-6 col-md-3">
-    <a href="/{{page.version}}/getting-started/kubernetes/" class="thumbnail">
-      <img src="{{site.baseurl}}/images/kubernetes-button.svg" alt="Kubernetes" width="40%">
-    </a>
-  </div>
-  <div class="col-xs-6 col-md-3">
-    <a href="/{{page.version}}/getting-started/openshift/installation" class="thumbnail">
-      <img src="{{site.baseurl}}/images/openshift-button.svg" alt="OpenShift" width="35%">
-    </a>
-  </div>
-</div>
+### Best practices for network security
+
+{{site.prodname}}’s rich network policy model makes it easy to lock down communication so the only traffic that flows is the traffic you want to flow.
+You can think of {{site.prodname}}’s security enforcement as wrapping each of your workloads with its own personal firewall that is dynamically
+re-configured in real time as you deploy new services or scale your application up or down.
+
+{{site.prodname}}’s policy engine can enforce the same policy model at the host networking layer and (if using Istio & Envoy) at the service mesh
+layer, protecting your infrastructure from compromised workloads and protecting your workloads from compromised infrastructure.
+
+### Performance
+
+{{site.prodname}} uses the Linux kernel’s built-in highly optimized forwarding and access control capabilities to deliver native Linux networking dataplane
+performance, typically without requiring any of the encap/decap overheads associated with first generation SDN networks. {{site.prodname}}’s control plane
+and policy engine has been fine tuned over many years of production use to minimize overall CPU usage and occupancy.
+
+### Scalability
+
+{{site.prodname}}’s core design principles leverage best practice cloud-native design patterns combined with proven standards based network protocols
+trusted worldwide by the largest internet carriers. The result is a solution with exceptional scalability that has been running at scale in
+production for years. {{site.prodname}}’s development test cycle includes regularly testing multi-thousand node clusters.  Whether you are running a 10
+node cluster, 100 node cluster, or more, you reap the benefits of the improved performance and scalability
+characteristics demanded by the largest Kubernetes clusters.
+
+### Interoperability
+
+{{site.prodname}} enables Kubernetes workloads and non-Kubernetes or legacy workloads to communicate seamlessly and securely.  Kubernetes pods are first
+class citizens on your network and able to communicate with any other workload on your network.  In addition {{site.prodname}} can seamlessly extend to
+secure your existing host based workloads (whether in public cloud or on-prem on VMs or bare metal servers) alongside Kubernetes.  All workloads
+are subject to the same network policy model so the only traffic that is allowed to flow is the traffic you expect to flow.
+
+### Looks familiar
+
+{{site.prodname}} uses the Linux primitives that existing system administrators are already familiar with. Type in your favorite Linux networking command
+and you’ll get the results you expect.  In the vast majority of deployments the packet leaving your application is the packet that goes on the wire,
+with no encapsulation, tunnels, or overlays.  All the existings tools that system and network administrators use to gain visibility
+and analyze networking issues work as they do today.
+
+### Full Kubernetes network policy support
+
+{{site.prodname}}’s network policy engine formed the original reference implementation of Kubernetes network policy during the development of the API. {{site.prodname}} is
+distinguished in that it implements the full set of features defined by the API giving users all the capabilities and flexibility envisaged when the API was defined.
+And for users that require even more power, {{site.prodname}} supports an extended set of network policy capabilities that work seamlessly alongside the Kubernetes API
+giving users even more flexibility in how they define their network policies.

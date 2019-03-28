@@ -46,7 +46,7 @@
    {: .no-select-button}
 
 **Next step**:
-[Configure `{{include.cli}}` to connect to your datastore](/{{page.version}}/usage/{{include.cli}}/configure/).
+[Configure `{{include.cli}}` to connect to your datastore](/{{page.version}}/getting-started/{{include.cli}}/configure/).
 
 ## Installing {{include.cli}} as a Kubernetes pod
 

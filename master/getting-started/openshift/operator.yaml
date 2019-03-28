@@ -1,4 +1,7 @@
 ---
 layout: null
 ---
-{% include {{page.version}}/manifests/operator.yaml orch="openshift" elasticsearch="operator" %}
+{% helm --execute templates/operator.yaml %}
+orch: openshift
+elasticsearchType: operator
+{% endhelm %}

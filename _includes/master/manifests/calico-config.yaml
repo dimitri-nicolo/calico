@@ -1,49 +1,34 @@
-{% comment %}
-calico-config.yaml acccepts the following include flags:
-
-| Name             | Accepted Values               |
-|------------------|-------------------------------|
-| datastore        | kdd, etcd                     |
-| typha            | true, false                   |
-| network          | calico, flannel, ecs, <unset> |
-| calico_ipam      | true, false                   |
-| variant_name     | Calico, Canal                 |
-| app_layer_policy | true, disabled, false         |
-| platform         | gke, <unset>                  |
-
-{% endcomment -%}
-{%- capture typha_service_name %}{% if include.platform == "gke" %}calico-typha-ee{% else %}calico-typha{% endif %}{% endcapture -%}
-# This ConfigMap is used to configure a self-hosted {{include.variant_name}} installation.
+# This ConfigMap is used to configure a self-hosted {{include "variant_name" . }} installation.
 kind: ConfigMap
 apiVersion: v1
 metadata:
-  name: {{include.variant_name | downcase}}-config
+  name: {{include "variant_name" . | lower}}-config
   namespace: kube-system
 data:
-{%- if include.datastore == "etcd" %}
+{{- if eq .Values.datastore "etcd" }}
   # Configure this with the location of your etcd cluster.
-  etcd_endpoints: "http://10.96.232.136:6666"
+  etcd_endpoints: "http://<ETCD_IP>:<ETCD_PORT>"
 
   # If you're using TLS enabled etcd uncomment the following.
   # You must also populate the Secret below with these files.
   etcd_ca: ""   # "/calico-secrets/etcd-ca"
   etcd_cert: "" # "/calico-secrets/etcd-cert"
   etcd_key: ""  # "/calico-secrets/etcd-key"
-{%- endif %}
-{%- if include.typha == "true" %}
+{{- end }}
+{{- if .Values.typha.enabled }}
   # You must set a non-zero value for Typha replicas below.
-  typha_service_name: "{{ typha_service_name }}"
-{%- else %}
+  typha_service_name: "{{ include "typha_service_name" . }}"
+{{- else }}
   # Typha is disabled.
   typha_service_name: "none"
-{%- endif %}
-{%- if include.network == "calico" %}
-  # Configure the {{site.prodname}} backend to use.
+
+{{- end }}
+{{- if eq .Values.network "calico" }}
   calico_backend: "bird"
 
   # Configure the MTU to use
   veth_mtu: "1440"
-{%- elsif include.network == "flannel" %}
+{{- else if eq .Values.network "flannel" }}
   # The interface used by canal for host <-> host communication.
   # If left blank, then the interface is chosen using the node's
   # default route.
@@ -52,11 +37,11 @@ data:
   # Whether or not to masquerade traffic to destinations not within
   # the pod network.
   masquerade: "true"
-{%- endif %}
-{%- if include.network != "ecs" %}
+{{- end }}
+{{- if ne .Values.network "ecs" }}
   # The CNI network configuration to install on each node.  The special
   # values in this config will be automatically populated.
-{%- if include.datastore == "etcd"  and include.network == "flannel" %}
+{{- if and (eq .Values.datastore "etcd") (eq .Values.network "flannel") }}
   cni_network_config: |-
     {
         "name": "canal",
@@ -89,7 +74,7 @@ data:
             }
         ]
     }
-{%- else %}
+{{- else }}
   cni_network_config: |-
     {
       "name": "k8s-pod-network",
@@ -98,30 +83,30 @@ data:
         {
           "type": "calico",
           "log_level": "info",
-  {%- if include.datastore == "etcd" %}
+  {{- if eq .Values.datastore "etcd" }}
           "etcd_endpoints": "__ETCD_ENDPOINTS__",
           "etcd_key_file": "__ETCD_KEY_FILE__",
           "etcd_cert_file": "__ETCD_CERT_FILE__",
           "etcd_ca_cert_file": "__ETCD_CA_CERT_FILE__",
-  {%- elsif include.datastore == "kdd" %}
+  {{- else if eq .Values.datastore "kdd" }}
           "datastore_type": "kubernetes",
           "nodename": "__KUBERNETES_NODE_NAME__",
-  {%- endif %}
-  {%- if include.network == "calico" %}
+  {{- end }}
+  {{- if eq .Values.network "calico" }}
           "mtu": __CNI_MTU__,
-  {%- elsif include.network == null %}
+  {{- else if eq .Values.network "none" }}
           "mtu": 1500,
-  {%- endif %}
-  {%- if include.calico_ipam == "true" %}
+  {{- end }}
+  {{- if .Values.calico_ipam }}
           "ipam": {
               "type": "calico-ipam"
           },
-  {%- else %}
+  {{- else }}
           "ipam": {
             "type": "host-local",
             "subnet": "usePodCidr"
           },
-  {%- endif %}
+  {{- end }}
           "policy": {
               "type": "k8s"
           },
@@ -136,9 +121,9 @@ data:
         }
       ]
     }
-{%- endif %}
-{%- endif %}
-{%- if include.network == "flannel" and include.datastore == "kdd" %}
+{{- end }}
+{{- end }}
+{{- if and (eq .Values.network "flannel") (eq .Values.datastore "kdd") }}
 
   # Flannel network configuration. Mounted into the flannel container.
   net-conf.json: |
@@ -148,12 +133,12 @@ data:
         "Type": "vxlan"
       }
     }
-{%- endif %}
-{%- if include.app_layer_policy == "true" %}
+{{- end }}
+{{- if .Values.app_layer_policy_enabled }}
   # Enable the Policy Sync API between Felix and Dikastes
   felix-policy-sync-path-prefix: "/var/run/nodeagent"
-{%- elsif include.app_layer_policy == "disabled" %}
+{{- else}}
   # To enable the Policy Sync API between Felix and Dikastes, set the value to
   # "/var/run/nodeagent"
   felix-policy-sync-path-prefix: ""
-{%- endif %}
+{{- end }}

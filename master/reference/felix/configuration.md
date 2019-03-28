@@ -36,7 +36,7 @@ The full list of parameters which can be set is as follows.
 | `FelixHostname`                   | `FELIX_FELIXHOSTNAME`                   | The hostname Felix reports to the plugin. Should be used if the hostname Felix autodetects is incorrect or does not match what the plugin will expect. [Default: `socket.gethostname()`] | string |
 | `HealthEnabled`                   | `FELIX_HEALTHENABLED`                   | When enabled, exposes felix health information via an http endpoint. | boolean |
 | `HealthHost`                      | `FELIX_HEALTHHOST`                      | The address on which Felix will respond to health requests. [Default: `localhost`] | string |
-| `IpInIpMtu`                       | `FELIX_IPINIPMTU`                       | The MTU to set on the tunnel device. See [Configuring MTU]({{site.baseurl}}/{{page.version}}/usage/configuration/mtu) [Default: `1440`] | int |
+| `IpInIpMtu`                       | `FELIX_IPINIPMTU`                       | The MTU to set on the tunnel device. See [Configuring MTU]({{site.url}}/{{page.version}}/networking/mtu) [Default: `1440`] | int |
 | `LogFilePath`                     | `FELIX_LOGFILEPATH`                     | The full path to the Felix log. Set to `none` to disable file logging. [Default: `/var/log/calico/felix.log`] | string |
 | `LogSeverityFile`                 | `FELIX_LOGSEVERITYFILE`                 | The log severity above which logs are sent to the log file. [Default: `Info`] | `Debug`, `Info`, `Warning`, `Error`, `Fatal` |
 | `LogSeverityScreen`               | `FELIX_LOGSEVERITYSCREEN`               | The log severity above which logs are sent to the stdout. [Default: `Info`] | `Debug`, `Info`, `Warning`, `Error`, `Fatal` |
@@ -101,12 +101,11 @@ The Kubernetes API datastore driver reads its configuration from Kubernetes-prov
 > 10 bits is enough for 1024 different values and {{site.prodname}} uses 2 of those for internal purposes, leaving enough for 1022 endpoints on the host.
 {: .alert .alert-info}
 
-
 #### Bare metal specific configuration
 
 | Configuration parameter | Environment variable    | Description | Schema |
 | ----------------------- | ----------------------- | ----------- | ------ |
-| `InterfacePrefix`       | `FELIX_INTERFACEPREFIX` | The interface name prefix that identifies workload endpoints and so distinguishes them from host endpoint interfaces. Accepts more than one interface name prefix in comma-delimited format, e.g., `tap,cali`. Note: in environments other than bare metal, the orchestrators configure this appropriately.  For example our Kubernetes and Docker integrations set the `cali` value, and our OpenStack integration sets the `tap` value. [Default: `cali`] | string |
+| `InterfacePrefix`       | `FELIX_INTERFACEPREFIX` | The interface name prefix that identifies workload endpoints and so distinguishes them from host endpoint interfaces. Accepts more than one interface name prefix in comma-delimited format, e.g., `tap,cali`. Note: in environments other than bare metal, the orchestrators configure this appropriately.  For example our Kubernetes and Docker integrations set the `cali` value. [Default: `cali`] | string |
 
 #### {{site.prodname}} specific configuration
 
@@ -172,7 +171,7 @@ When the reporting of denied packet metrics is enabled, Felix keeps counts of
 recently denied packets and publishes these as Prometheus metrics on the port
 configured by the `PrometheusReporterPort` setting.  Please
 see the
-[Metrics]({{site.baseurl}}/{{page.version}}/usage/metrics/metrics) section for
+[Metrics]({{site.url}}/{{page.version}}/security/metrics/metrics) section for
 more details.
 
 Note that denied packet metrics are independent of the DropActionOverride
@@ -198,7 +197,7 @@ relevant `Prometheus...CAFile` setting.
 | `TyphaURISAN`           | `FELIX_TYPHAURISAN`    | If set, a URI SAN that Typha's certificate must have. We recommend populating this with a [SPIFFE](https://github.com/spiffe/spiffe/blob/master/standards/SPIFFE-ID.md#2-spiffe-identity) string that identifies Typha. All Typha instances should use the same SPIFFE ID. If you have enabled TLS on the communications from Felix to Typha, you must set a value here or in `TyphaCN`. You can set values in both, as well, such as to facilitate a migration from using one to the other. If either matches, the communication succeeds. [Default: none] | string |
 
 For more information on how to use and set these variables, refer to
-[Connections from Felix to Typha (Kubernetes)](../../usage/encrypt-comms#connections-from-felix-to-typha-kubernetes).
+[Connections from Felix to Typha (Kubernetes)](../../security/comms/crypto-auth#connections-from-felix-to-typha-kubernetes).
 
 ### Environment variables
 
@@ -218,6 +217,12 @@ this file defaults to `/etc/calico/felix.cfg` but can be overridden
 using the `-c` or `--config-file` options on the command line. If the
 file exists, then it is read (ignoring section names) and all parameters
 are set from it.
+
+In OpenStack, we recommend putting all configuration into configuration
+files, since the etcd database is transient (and may be recreated by the
+OpenStack plugin in certain error cases). However, in a Docker
+environment the use of environment variables or etcd is often more
+convenient.
 
 ### Datastore
 

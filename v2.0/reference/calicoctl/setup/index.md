@@ -1,5 +1,5 @@
 ---
-redirect_to: /master/usage/calicoctl/configure/
+redirect_to: /v2.3/usage/calicoctl/configure/
 no_canonical: true
 ---
 

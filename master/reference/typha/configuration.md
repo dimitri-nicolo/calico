@@ -38,7 +38,7 @@ The full list of parameters which can be set is as follows.
 | `PrometheusMetricsPort`           | `TYPHA_PROMETHEUSMETRICSPORT`           | Experimental: TCP port that the Prometheus metrics server should bind to. [Default: `9091`] | int |
 | `PrometheusProcessMetricsEnabled` | `TYPHA_PROMETHEUSPROCESSMETRICSENABLED` | Set to `false` to disable process metrics collection, which the Prometheus client does by default. This reduces the number of metrics reported, reducing Prometheus load. [Default: `true`] | boolean |
 
-> **Note**: By default, if the health endpoint is enabled Typha listens on localhost.  However, if  Typha is used in
+> **Note**: By default, if the health endpoint is enabled Typha listens on localhost.  However, if  Typhs is used in
 > Kubernetes, the kubelet will do health checks using the pod IP.  To work around this discrepancy, the Typha image
 > supports a health-check CLI command that fetches the health endpoint:
 > `calico-typha check (readiness|liveness) --port=<port>`.  If you modify the health port, you will need to add the
@@ -84,4 +84,4 @@ that is signed by one of the trusted CAs in the
 | `ServerKeyFile`         | `TYPHA_SERVERKEYFILE`  | Path to the file containing the private key matching the Typha server certificate. Example: `/etc/typha/key.pem` (optional) | string |
 
 For more information on how to use and set these variables, refer to
-[Connections from Felix to Typha (Kubernetes)](../../usage/encrypt-comms#connections-from-felix-to-typha-kubernetes).
+[Connections from Felix to Typha (Kubernetes)](../../security/comms/crypto-auth#connections-from-felix-to-typha-kubernetes).

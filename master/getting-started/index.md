@@ -48,12 +48,12 @@ was Awesome Corp, the file would be named `awesome-corp-license.yaml`.
 <div class="row">
   <div class="col-xs-6 col-md-3">
     <a href="/{{page.version}}/getting-started/kubernetes/" class="thumbnail">
-      <img src="{{site.baseurl}}/images/kubernetes-button.svg" alt="Kubernetes" width="40%">
+      <img src="{{site.url}}/images/kubernetes-button.svg" alt="Kubernetes" width="40%">
     </a>
   </div>
   <div class="col-xs-6 col-md-3">
     <a href="/{{page.version}}/getting-started/openshift/installation/" class="thumbnail">
-      <img src="{{site.baseurl}}/images/openshift-button.svg" alt="OpenShift" width="35%">
+      <img src="{{site.url}}/images/openshift-button.svg" alt="OpenShift" width="35%">
     </a>
   </div>
 </div>

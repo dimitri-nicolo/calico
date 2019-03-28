@@ -1,23 +1,4 @@
-{% comment %}
-rbac.yaml acccepts the following include flags:
-
-| Name         | Accepted Values          |
-|--------------|--------------------------|
-| datastore    | kdd, etcd                |
-| typha        | true, false              |
-| network      | calico, flannel, <unset> |
-| calico_ipam  | true, false              |
-| variant_name | Calico, Canal            |
-| platform     | gke, <unset>             |
-{% endcomment -%}
-{%- capture role_name -%}
-  {%- if include.platform == "gke" -%}
-    calico-node-ee
-  {%- else -%}
-    calico-node
-  {%- endif -%}
-{%- endcapture -%}
-{%- if include.datastore == "etcd" %}
+{{- if eq .Values.datastore "etcd" }}
 # Include a clusterrole for the kube-controllers component,
 # and bind it to the calico-kube-controllers serviceaccount.
 kind: ClusterRole
@@ -28,8 +9,7 @@ rules:
   # Pods are monitored for changing labels.
   # The node controller monitors Kubernetes nodes.
   # Namespace and serviceaccount labels are used for policy.
-  - apiGroups:
-      - ""
+  - apiGroups: [""]
     resources:
       - pods
       - nodes
@@ -39,8 +19,7 @@ rules:
       - watch
       - list
   # Watch for changes to Kubernetes NetworkPolicies.
-  - apiGroups:
-      - networking.k8s.io
+  - apiGroups: ["networking.k8s.io"]
     resources:
       - networkpolicies
     verbs:
@@ -60,13 +39,75 @@ subjects:
   name: calico-kube-controllers
   namespace: kube-system
 ---
-{%- endif %}
-# Include a clusterrole for the calico-node DaemonSet,
-# and bind it to the {{ role_name }} serviceaccount.
+{{- else if eq .Values.network "calico" }}
+# Include a clusterrole for the kube-controllers component,
+# and bind it to the calico-kube-controllers serviceaccount.
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
-  name: {{ role_name }}
+  name: calico-kube-controllers
+rules:
+  # Nodes are watched to monitor for deletions.
+  - apiGroups: [""]
+    resources:
+      - nodes
+    verbs:
+      - watch
+      - list
+      - get
+  # Pods are queried to check for existence.
+  - apiGroups: [""]
+    resources:
+      - pods
+    verbs:
+      - get
+  # IPAM resources are manipulated when nodes are deleted.
+  - apiGroups: ["crd.projectcalico.org"]
+    resources:
+      - ippools
+    verbs:
+      - list
+  - apiGroups: ["crd.projectcalico.org"]
+    resources:
+      - blockaffinities
+      - ipamblocks
+      - ipamhandles
+    verbs:
+      - get
+      - list
+      - create
+      - update
+      - delete
+  # Needs access to update clusterinformations.
+  - apiGroups: ["crd.projectcalico.org"]
+    resources:
+      - clusterinformations
+    verbs:
+      - get
+      - create
+      - update
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: calico-kube-controllers
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: calico-kube-controllers
+subjects:
+- kind: ServiceAccount
+  name: calico-kube-controllers
+  namespace: kube-system
+---
+{{- end }}
+
+# Include a clusterrole for the {{ include "calico_node_role_name" . }} DaemonSet,
+# and bind it to the {{ include "calico_node_role_name" . }} serviceaccount.
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: {{ include "calico_node_role_name" . }}
 rules:
   # The CNI plugin needs to get pods, nodes, and namespaces.
   - apiGroups: [""]
@@ -84,17 +125,17 @@ rules:
       # Used to discover service IPs for advertisement.
       - watch
       - list
-{%- if include.typha == "true" %}
+{{- if .Values.typha.enabled }}
       # Used to discover Typhas.
       - get
-{%- endif %}
+{{- end }}
   - apiGroups: [""]
     resources:
       - nodes/status
     verbs:
       # Needed for clearing NodeNetworkUnavailable flag.
       - patch
-{%- if include.datastore == "kdd" %}
+{{- if eq .Values.datastore "kdd" }}
       # Calico stores some configuration information in node annotations.
       - update
   # Watch for changes to Kubernetes NetworkPolicies.
@@ -128,6 +169,7 @@ rules:
       - globalbgpconfigs
       - bgpconfigurations
       - ippools
+      - ipamblocks
       - globalnetworkpolicies
       - globalnetworksets
       - networkpolicies
@@ -173,7 +215,7 @@ rules:
       - get
       - list
       - watch
-{%- if include.typha == "true" %}
+{{- if .Values.typha }}
   # Typha needs to be able to create tiers
   - apiGroups: ["crd.projectcalico.org"]
     resources:
@@ -181,23 +223,57 @@ rules:
     verbs:
       - update
       - create
-{%- endif %}
-{%- endif %}
+{{- end}}
+{{- if eq .Values.network "calico" }}
+  # These permissions are required for Calico CNI to perform IPAM allocations.
+  - apiGroups: ["crd.projectcalico.org"]
+    resources:
+      - blockaffinities
+      - ipamblocks
+      - ipamhandles
+    verbs:
+      - get
+      - list
+      - create
+      - update
+      - delete
+  - apiGroups: ["crd.projectcalico.org"]
+    resources:
+      - ipamconfigs
+    verbs:
+      - get
+  # Block affinities must also be watchable by confd for route aggregation.
+  - apiGroups: ["crd.projectcalico.org"]
+    resources:
+      - blockaffinities
+    verbs:
+      - watch
+  # The Calico IPAM migration needs to get daemonsets. These permissions can be
+  # removed if not upgrading from an installation using host-local IPAM.
+  - apiGroups: ["apps"]
+    resources:
+      - daemonsets
+    verbs:
+      - get
+{{- end }}
+{{- end }}
+
 ---
+
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRoleBinding
 metadata:
-  name: {{ role_name }}
+  name: {{ include "calico_node_role_name" . }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: {{ role_name }}
+  name: {{ include "calico_node_role_name" . }}
 subjects:
 - kind: ServiceAccount
-  name: {{ role_name }}
+  name: {{ include "calico_node_role_name" . }}
   namespace: kube-system
 ---
-{%- if include.network == "flannel" %}
+{{- if eq .Values.network "flannel" }}
 # Flannel ClusterRole
 # Pulled from https://github.com/coreos/flannel/blob/master/Documentation/kube-flannel-rbac.yml
 kind: ClusterRole
@@ -205,21 +281,18 @@ apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
   name: flannel
 rules:
-  - apiGroups:
-      - ""
+  - apiGroups: [""]
     resources:
       - pods
     verbs:
       - get
-  - apiGroups:
-      - ""
+  - apiGroups: [""]
     resources:
       - nodes
     verbs:
       - list
       - watch
-  - apiGroups:
-      - ""
+  - apiGroups: [""]
     resources:
       - nodes/status
     verbs:
@@ -239,7 +312,6 @@ subjects:
   name: canal
   namespace: kube-system
 ---
-# Bind the {{site.prodname}} ClusterRole to the canal ServiceAccount.
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRoleBinding
 metadata:
@@ -252,4 +324,4 @@ subjects:
 - kind: ServiceAccount
   name: canal
   namespace: kube-system
-{%- endif %}
+{{- end }}

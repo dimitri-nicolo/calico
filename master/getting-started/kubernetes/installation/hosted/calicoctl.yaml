@@ -19,7 +19,7 @@ spec:
   - name: cnx-pull-secret
   containers:
   - name: calicoctl
-    image: {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["calicoctl"]}}:{{site.data.versions[page.version].first.components["calicoctl"].version}}
+    image: {{page.registry}}{{site.imageNames["calicoctl"]}}:{{site.data.versions[page.version].first.components["calicoctl"].version}}
     command: ["/bin/sh", "-c", "while true; do sleep 3600; done"]
     env:
     - name: ETCD_ENDPOINTS

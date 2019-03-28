@@ -1,16 +1,14 @@
-bigheader: "Getting Started"
-abstract: "All you need to know to get started with Tigera Secure EE"
+bigheader: "Getting started"
 path: /getting-started
 order: 1
 toc:
-- title: Getting Started with Tigera Secure EE
+- title: Getting started
   path: /getting-started/
-
 - title: Kubernetes
   section:
   - title: Quickstart
     path: /getting-started/kubernetes/
-  - title: Requirements
+  - title: System requirements
     path: /getting-started/kubernetes/requirements
   - title: Installation
     section:
@@ -24,9 +22,9 @@ toc:
       path: /getting-started/kubernetes/installation/app-layer-policy
     - title: Enabling integration with AWS security groups (optional)
       path: /getting-started/kubernetes/installation/aws-sg-integration
-    - title: Customizing the Calico manifests (advanced)
+    - title: Customizing the Calico manifests
       path: /getting-started/kubernetes/installation/config-options
-    - title: Customizing the Tigera Secure EE manifests (advanced)
+    - title: Customizing the Tigera Secure EE manifests
       path: /getting-started/kubernetes/installation/hosted/cnx/cnx
     - title: Integration guide (advanced)
       path: /getting-started/kubernetes/installation/integration
@@ -34,30 +32,12 @@ toc:
       path: /getting-started/kubernetes/installation/byo-elasticsearch
     - title: Installing Tigera Secure EE on EKS
       path: /getting-started/kubernetes/installation/eks
-  - title: Tutorials
-    section:
-    - title: Tigera Secure EE for Kubernetes Demo
-      path: /getting-started/cnx/simple-policy-cnx/
-    - title: Simple Policy Demo
-      path: /getting-started/kubernetes/tutorials/simple-policy
-    - title: Stars Policy Demo
-      path: /getting-started/kubernetes/tutorials/stars-policy/
-    - title: Advanced network policy
-      path: /getting-started/kubernetes/tutorials/advanced-policy
-    - title: Tiered Policy Demo
-      path: /getting-started/cnx/tiered-policy-cnx/
-    - title: Application layer policy
-      path: /getting-started/kubernetes/tutorials/app-layer-policy
-  - title: Troubleshooting / FAQ
-    path: /getting-started/kubernetes/troubleshooting
-  - title: Upgrade Tigera Secure EE from an earlier release
-    path: /getting-started/kubernetes/upgrade/upgrade-tsee
   - title: Upgrade from Calico to Tigera Secure EE
     path: /getting-started/kubernetes/upgrade/upgrade-to-tsee
 
 - title: OpenShift
   section:
-  - title: Requirements
+  - title: System requirements
     path: /getting-started/openshift/requirements
   - title: Installation
     section:
@@ -70,11 +50,9 @@ toc:
   - title: Upgrade to Tigera Secure EE
     path: /getting-started/openshift/upgrade-ee
 
-- title: Host Protection
+- title: Bare metal hosts
   section:
-  - title: Overview
-    path: /getting-started/bare-metal/bare-metal
-  - title: Requirements
+  - title: System requirements
     path: /getting-started/bare-metal/requirements
   - title: Installation
     section:
@@ -84,25 +62,32 @@ toc:
       path: /getting-started/bare-metal/installation/binary
     - title: Container install
       path: /getting-started/bare-metal/installation/container
-  - title: Setting policy
+
+- title: Running cnx/node with an init system
+  path: /getting-started/as-service
+
+- title: calicoctl
+  section:
+  - title: Installing calicoctl
+    path: /getting-started/calicoctl/install
+  - title: Configuring calicoctl
     section:
-    - title: Basic connectivity
-      path: /getting-started/bare-metal/policy/
-    - title: Creating policy objects
-      path: /getting-started/bare-metal/policy/objects
-    - title: Selector-based policies
-      path: /getting-started/bare-metal/policy/selector
-    - title: Failsafe rules
-      path: /getting-started/bare-metal/policy/failsafe
-    - title: Untracked policy
-      path: /getting-started/bare-metal/policy/donottrack
-    - title: Pre-DNAT policy
-      path: /getting-started/bare-metal/policy/pre-dnat
-    - title: Apply on forwarded traffic
-      path: /getting-started/bare-metal/policy/forwarded
-    - title: Summary
-      path: /getting-started/bare-metal/policy/summary
-    - title: Tutorial
-      path: /getting-started/bare-metal/policy/tutorial
-    - title: conntrack
-      path: /getting-started/bare-metal/policy/conntrack
+    - title: Overview
+      path: /getting-started/calicoctl/configure/
+    - title: Configuring calicoctl to connect to an etcd datastore
+      path: /getting-started/calicoctl/configure/etcd
+    - title: Configuring calicoctl to connect to the Kubernetes API datastore
+      path: /getting-started/calicoctl/configure/kdd
+
+- title: calicoq
+  section:
+  - title: Installing calicoq
+    path: /getting-started/calicoq/
+  - title: Configuring calicoq
+    section:
+    - title: Overview
+      path: /getting-started/calicoq/configure/
+    - title: etcd datastore options
+      path: /getting-started/calicoq/configure/etcd
+    - title: Kubernetes API datastore options
+      path: /getting-started/calicoq/configure/kdd

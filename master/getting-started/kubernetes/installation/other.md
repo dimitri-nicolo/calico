@@ -9,7 +9,7 @@ You can use {{site.prodname}} just for policy enforcement and achieve networking
 with another solution, such as:
 
 - [Amazon Web Services (AWS) VPC CNI plugin](../../../reference/public-cloud/aws#using-aws-networking)
-  (recommended for those on AWS who wish to [federate clusters](../../../usage/federation/index))
+  (recommended for those on AWS who wish to [federate clusters](../../../networking/federation/index))
 - Static routes
 - Kubernetes cloud provider integration
 
@@ -29,7 +29,7 @@ with another solution, such as:
 ### About installing for policy only
 
 The installation procedure differs according to whether or not you want to
-[federate clusters](../../../usage/federation/index). Refer to the section that matches your
+[federate clusters](../../../networking/federation/index). Refer to the section that matches your
 configuration.
 
 - [Without federation, 50 nodes or less](#install-ee-nofed)
@@ -77,7 +77,7 @@ configuration.
    kubectl apply -f calico.yaml
    ```
 
-1. Continue to [Installing the {{site.prodname}} Manager and API Server](#install-cnx-mgr)
+1. Continue to [Installing the {{site.prodname}} Manager and API Server](#installing-the-{{site.prodnamedash}}-manager-and-api-server)
 
 ### <a name="install-ee-typha-nofed"></a>Installing {{site.prodname}} for policy only without federation, more than 50 nodes
 
@@ -138,22 +138,22 @@ configuration.
    kubectl apply -f calico.yaml
    ```
 
-1. Continue to [Installing the {{site.prodname}} Manager and API Server](#install-cnx-mgr)
+1. Continue to [Installing the {{site.prodname}} Manager and API Server](#installing-the-{{site.prodnamedash}}-manager-and-api-server)
 
 ### <a name="install-ee-fed"></a>Installing {{site.prodname}} for policy only with federation
 
 The following procedure describes how to install {{site.prodname}} on a single cluster that uses the
 Kubernetes API datastore.
 
-**Prerequisite**: Complete the steps in [Creating kubeconfig files](../../../usage/federation/kubeconfig)
-for each [remote cluster](../../../usage/federation/index#terminology). Ensure that the
-[local cluster](../../../usage/federation/index#terminology) can access all of the necessary `kubeconfig` files.
+**Prerequisite**: Complete the steps in [Creating kubeconfig files](../../../networking/federation/kubeconfig)
+for each [remote cluster](../../../networking/federation/index#terminology). Ensure that the
+[local cluster](../../../networking/federation/index#terminology) can access all of the necessary `kubeconfig` files.
 
 1. Access the local cluster using a `kubeconfig` with administrative privileges.
 
 1. Create a secret containing the `kubeconfig` files for all of the remote clusters that
    the local cluster should federate with. A command to achieve this follows. Adjust the `--from-file`
-   flags to include all of the kubeconfig files you created in [Creating kubeconfig files](../../../usage/federation/kubeconfig).
+   flags to include all of the kubeconfig files you created in [Creating kubeconfig files](../../../networking/federation/kubeconfig).
 
    > **Tip**: We recommend naming this secret `tigera-federation-remotecluster` as shown below to
    > make the rest of the procedure easier to follow.
@@ -223,7 +223,7 @@ for each [remote cluster](../../../usage/federation/index#terminology). Ensure t
    kubectl apply -f calico.yaml
    ```
 
-1. Continue to [Installing the {{site.prodname}} Manager and API Server](#install-cnx-mgr)
+1. Continue to [Installing the {{site.prodname}} Manager and API Server](#installing-the-{{site.prodnamedash}}-manager-and-api-server)
 
 {% include {{page.version}}/cnx-mgr-install.md init="kubernetes" net="other" %}
 

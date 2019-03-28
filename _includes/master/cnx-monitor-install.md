@@ -21,7 +21,7 @@
 
 Below, we'll cover how to enable metrics in {{site.prodname}} and how to launch Prometheus using Prometheus-Operator.
 
-**Prerequisite**: `calicoctl` [installed](/{{page.version}}/usage/calicoctl/install) and [configured](/{{page.version}}/usage/calicoctl/configure/). We recommend [installing](/{{page.version}}/usage/calicoctl/install#installing-calicoctl-as-a-container-on-a-single-host) calicoctl as a container in OpenShift.
+**Prerequisite**: `calicoctl` [installed](/{{page.version}}/getting-started/calicoctl/install) and [configured](/{{page.version}}/getting-started/calicoctl/configure/). We recommend [installing](/{{page.version}}/getting-started/calicoctl/install#installing-calicoctl-as-a-container-on-a-single-host) calicoctl as a container in OpenShift.
 
 Enable metrics in {{site.prodname}} for OpenShift by updating the global `FelixConfiguration` resource (`default`) and opening up the necessary port on the host.
 
@@ -319,11 +319,11 @@ optionally Elasticsearch and Kibana in order to enable logs.
 1. Optionally enable either or both of the following:
    * To enforce application layer policies and secure workload-to-workload
     communications with mutually-authenticated TLS, continue to
-	[Enabling application layer policy]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/app-layer-policy).
+	[Enabling application layer policy]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/app-layer-policy).
 
    * If you are using the AWS CNI plugin and want to enforce granular access
     control between pods and AWS VPC resources, continue to
-    [Enabling integration with AWS security groups]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/aws-sg-integration).
+    [Enabling integration with AWS security groups]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/aws-sg-integration).
 {% endif %}
 
 1. By default, {{site.prodname}} Manager is made accessible via a NodePort listening on port 30003.

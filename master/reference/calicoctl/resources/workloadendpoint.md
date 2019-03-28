@@ -10,18 +10,18 @@ Each endpoint may specify a set of labels and list of profiles that {{site.prodn
 to apply policy to the interface.
 
 A workload endpoint is a namespaced resource, that means a
-[NetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/networkpolicy)
+[NetworkPolicy]({{site.url}}/{{page.version}}/reference/calicoctl/resources/networkpolicy)
 in a specific namespace only applies to the WorkloadEndpoint in that namespace.
 Two resources are in the same namespace if the namespace value is set the same
 on both.
 
-For `calicoctl` [commands]({{site.baseurl}}/{{page.version}}/reference/calicoctl/commands/)
+For `calicoctl` [commands]({{site.url}}/{{page.version}}/reference/calicoctl/commands/)
 that specify a resource type on the CLI, the following aliases are supported (all case
 insensitive): `workloadendpoint`, `workloadendpoints`, `wep`, `weps`.
 
 > **Note**: While `calicoctl` allows the user to fully manage Workload Endpoint resources,
 > the lifecycle of these resources is generally handled by an orchestrator-specific
-> plugin such as the {{site.prodname}} CNI plugin or the {{site.prodname}} Docker network plugin. In general, we recommend that you only
+> plugin such as the {{site.prodname}} CNI plugin. In general, we recommend that you only
 > use `calicoctl` to view this resource type.
 {: .alert .alert-info}
 

@@ -4,7 +4,7 @@
   {% assign cli = "oc" %}
 {% endif %}
 
-## <a name="install-cnx-mgr"></a>Installing the {{site.prodname}} Manager and API Server
+## Installing the {{site.prodname}} Manager and API Server
 
 {% if include.init == "systemd" %}
 
@@ -126,9 +126,9 @@
 {% endif %}
 
    > **Note**: If you are upgrading from {{site.prodname}} v2.2 or earlier you will need to make some modifications prior
-   > to upgrade to ensure RBAC behavior for tiered policy is unchanged. Please refer to the instructions in the comments for 
-   > `ClusterRole "ee-calico-tiered-policy-passthru"` in the `cnx.yaml` manifest, or the 
-   > [Configuring {{site.prodname}} RBAC]({{site.url}}/{{page.version}}/reference/cnx/rbac-tiered-policies) documentation
+   > to upgrade to ensure RBAC behavior for tiered policy is unchanged. Please refer to the instructions in the comments for
+   > `ClusterRole "ee-calico-tiered-policy-passthru"` in the `cnx.yaml` manifest, or the
+   > [Configuring {{site.prodname}} RBAC]({{site.baseurl}}/{{page.version}}/reference/cnx/rbac-tiered-policies) documentation
    > for more details.
    {: .alert .alert-info}
 
@@ -150,14 +150,14 @@
 
    - **Basic authentication**: Not recommended for a production system. If you want to use this method,
      you do not need to modify the manifest as it is the default selection. However, after completing
-     the installation, complete the steps in [Basic authentication]({{site.url}}/{{page.version}}/reference/cnx/authentication#basic-authentication). Also refer to Kubernetes' [Static Password File](https://kubernetes.io/docs/admin/authentication/#static-password-file) discussion.
+     the installation, complete the steps in [Basic authentication]({{site.baseurl}}/{{page.version}}/reference/cnx/authentication#basic-authentication). Also refer to Kubernetes' [Static Password File](https://kubernetes.io/docs/admin/authentication/#static-password-file) discussion.
 
    - **OIDC**: Open the cnx.yaml file and modify the `ConfigMap` named `tigera-cnx-manager-config`
      by setting the value of `tigera.cnx-manager.authentication-type` to `OIDC`.
      Add the other necessary values in the manifest as per the comments. Refer to
      [OpenID Connect Tokens](https://kubernetes.io/docs/admin/authentication/#openid-connect-tokens){:target="_blank"}
      for more information. If you are using a Google identity provider, refer to
-     [Google login]({{site.url}}/{{page.version}}/reference/cnx/authentication#google-login).
+     [Google login]({{site.baseurl}}/{{page.version}}/reference/cnx/authentication#google-login).
 
    - **OAuth**: Open the cnx.yaml file and modify the `ConfigMap` named `tigera-cnx-manager-config`
      by setting the value of `tigera.cnx-manager.authentication-type` to `OAuth`.
@@ -165,7 +165,7 @@
 
    - **Token**: Open the cnx.yaml file and modify the `ConfigMap` named `tigera-cnx-manager-config`
      by setting the value of `tigera.cnx-manager.authentication-type` to `Token`.
-     Refer to [Bearer tokens]({{site.url}}/{{page.version}}/reference/cnx/authentication#bearer-tokens)
+     Refer to [Bearer tokens]({{site.baseurl}}/{{page.version}}/reference/cnx/authentication#bearer-tokens)
      for more information. Also refer to Kubernetes' [Putting a bearer token in a request](https://kubernetes.io/docs/admin/authentication/#putting-a-bearer-token-in-a-request){:target="_blank"}
      for further details.<br>
 
@@ -216,9 +216,9 @@
      ```
 
    - **kops deployments**
-     
+
      Run the following command on the master node.
-     
+
      ```bash
      kubectl create secret generic cnx-manager-tls \
      --from-file=cert=/srv/kubernetes/server.cert \
@@ -229,7 +229,7 @@
 
      > **Note**: Web browsers will warn end users about self-signed certificates.
      > To stop the warnings by using valid certificates
-     > instead, refer to [{{site.prodname}} Manager connections]({{site.url}}/{{page.version}}/usage/encrypt-comms#{{site.prodnamedash}}-manager-connections).
+     > instead, refer to [{{site.prodname}} Manager connections]({{site.baseurl}}/{{page.version}}/security/comms/crypto-auth#{{site.prodnamedash}}-manager-connections).
      {: .alert .alert-info}
 
 1. Apply the manifest to install the {{site.prodname}} Manager and the {{site.prodname}} API server.
@@ -291,7 +291,7 @@
 1. Grant permission to access the {{site.prodname}} Manager to users in your cluster. Issue one of the following
    commands, replacing `<USER>` with the name of the user you wish to grant access.
 
-   The ClusterRole `tigera-manager-user` grants permission to use the {{site.prodname}} Manager UI, view flow 
+   The ClusterRole `tigera-manager-user` grants permission to use the {{site.prodname}} Manager UI, view flow
    logs, audit logs, and network statistics, and access the default policy tier.
 
    ```
@@ -304,7 +304,7 @@
 {%- endif %}
    ```
 
-   The ClusterRole `network-admin` grants permission to use the {{site.prodname}} Manager UI, view flow 
+   The ClusterRole `network-admin` grants permission to use the {{site.prodname}} Manager UI, view flow
    logs, audit logs, and network statistics, and administer all network policies and tiers.
 
    ```
@@ -316,5 +316,5 @@
      --user=<USER>
 {%- endif %}
    ```
-   
-   To grant access to additional tiers, or create your own roles consult the [RBAC documentation]({{site.url}}/{{page.version}}/reference/cnx/rbac-tiered-policies){:target="_blank"}.
+
+   To grant access to additional tiers, or create your own roles consult the [RBAC documentation]({{site.baseurl}}/{{page.version}}/reference/cnx/rbac-tiered-policies){:target="_blank"}.

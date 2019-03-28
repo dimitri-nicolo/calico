@@ -18,7 +18,7 @@ canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/installati
 
 ### Selecting your cluster configuration
 
-The procedure differs according to whether or not you want to [federate clusters](../../../usage/federation/index)
+The procedure differs according to whether or not you want to [federate clusters](../../../networking/federation/index)
 and your datastore type. Refer to the section that matches your configuration.
 
 - **Without federation**:
@@ -61,7 +61,7 @@ and your datastore type. Refer to the section that matches your configuration.
    kubectl apply -f calico.yaml
    ```
 
-1. Continue to [Installing the {{site.prodname}} Manager and API Server](#install-cnx-mgr)
+1. Continue to [Installing the {{site.prodname}} Manager and API Server](#installing-the-{{site.prodnamedash}}-manager-and-api-server)
 
 ### Installing without federation, using Kubernetes API datastore, 50 nodes or less
 
@@ -91,7 +91,7 @@ and your datastore type. Refer to the section that matches your configuration.
    kubectl apply -f calico.yaml
    ```
 
-1. Continue to [Installing the {{site.prodname}} Manager and API Server](#install-cnx-mgr)
+1. Continue to [Installing the {{site.prodname}} Manager and API Server](#installing-the-{{site.prodnamedash}}-manager-and-api-server)
 
 ### Installing without federation, using Kubernetes API datastore, more than 50 nodes
 
@@ -130,14 +130,16 @@ and your datastore type. Refer to the section that matches your configuration.
 
    We recommend at least one replica for every 200 nodes and no more than
    20 replicas. In production, we recommend a minimum of three replicas to reduce
-   the impact of rolling upgrades and failures.
+   the impact of rolling upgrades and failures.  The number of replicas should
+   always be less than the number of nodes, otherwise rolling upgrades will stall.
+   In addition, Typha only helps with scale if there are fewer Typha instances than
+   there are nodes.
 
-   > **Warning**: If you do not increase the replica
+
+   > **Warning**: If you set `typha_service_name` without increasing the replica
    > count from its default of `0` Felix will try to connect to Typha, find no
    > Typha instances to connect to, and fail to start.
    {: .alert .alert-danger}
-
-{% include {{page.version}}/cnx-cred-sed.md yaml="calico" %}
 
 1. Apply the manifest.
 
@@ -145,23 +147,23 @@ and your datastore type. Refer to the section that matches your configuration.
    kubectl apply -f calico.yaml
    ```
 
-1. Continue to [Installing the {{site.prodname}} Manager and API Server](#install-cnx-mgr)
+1. Continue to [Installing the {{site.prodname}} Manager and API Server](#installing-the-{{site.prodnamedash}}-manager-and-api-server)
 
 
 ### Installing with federation, using etcd
 
 The following procedure describes how to install {{site.prodname}} on a single cluster that uses an
-etcd datastore (the [local cluster](../../../usage/federation/index#terminology)).
+etcd datastore (the [local cluster](../../../networking/federation/index#terminology)).
 
-**Prerequisite**: Complete the steps in [Creating kubeconfig files](../../../usage/federation/kubeconfig)
-for each [remote cluster](../../../usage/federation/index#terminology). Ensure that the
-[local cluster](../../../usage/federation/index#terminology) can access all of the necessary `kubeconfig` files.
+**Prerequisite**: Complete the steps in [Creating kubeconfig files](../../../networking/federation/kubeconfig)
+for each [remote cluster](../../../networking/federation/index#terminology). Ensure that the
+[local cluster](../../../networking/federation/index#terminology) can access all of the necessary `kubeconfig` files.
 
 1. Access the local cluster using a `kubeconfig` with administrative privileges.
 
 1. Create a secret containing the `kubeconfig` files for all of the remote clusters that
    the local cluster should federate with. A command to achieve this follows. Adjust the `--from-file`
-   flags to include all of the kubeconfig files you created in [Creating kubeconfig files](../../../usage/federation/kubeconfig).
+   flags to include all of the kubeconfig files you created in [Creating kubeconfig files](../../../networking/federation/kubeconfig).
 
    > **Tip**: We recommend naming this secret `tigera-federation-remotecluster` as shown below
    > to make the rest of the procedure easier to follow.
@@ -223,23 +225,23 @@ for each [remote cluster](../../../usage/federation/index#terminology). Ensure t
    kubectl apply -f calico.yaml
    ```
 
-1. Continue to [Installing the {{site.prodname}} Manager and API Server](#install-cnx-mgr)
+1. Continue to [Installing the {{site.prodname}} Manager and API Server](#installing-the-{{site.prodnamedash}}-manager-and-api-server)
 
 
 ### Installing with federation, using Kubernetes API datastore
 
 The following procedure describes how to install {{site.prodname}} on a single cluster that uses the
-Kubernetes API datastore (the [local cluster](../../../usage/federation/index#terminology)).
+Kubernetes API datastore (the [local cluster](../../../networking/federation/index#terminology)).
 
-**Prerequisite**: Complete the steps in [Creating kubeconfig files](../../../usage/federation/kubeconfig)
-for each [remote cluster](../../../usage/federation/index#terminology). Ensure that the
-[local cluster](../../../usage/federation/index#terminology) can access all of the necessary `kubeconfig` files.
+**Prerequisite**: Complete the steps in [Creating kubeconfig files](../../../networking/federation/kubeconfig)
+for each [remote cluster](../../../networking/federation/index#terminology). Ensure that the
+[local cluster](../../../networking/federation/index#terminology) can access all of the necessary `kubeconfig` files.
 
 1. Access the local cluster using a `kubeconfig` with administrative privileges.
 
 1. Create a secret containing the `kubeconfig` files for all of the remote clusters that
    the local cluster should federate with. A command to achieve this follows. Adjust the `--from-file`
-   flags to include all of the kubeconfig files you created in [Creating kubeconfig files](../../../usage/federation/kubeconfig).
+   flags to include all of the kubeconfig files you created in [Creating kubeconfig files](../../../networking/federation/kubeconfig).
 
    > **Tip**: We recommend naming this secret `tigera-federation-remotecluster` as shown below to
    > make the rest of the procedure easier to follow.
@@ -303,7 +305,7 @@ for each [remote cluster](../../../usage/federation/index#terminology). Ensure t
    kubectl apply -f calico.yaml
    ```
 
-1. Continue to [Installing the {{site.prodname}} Manager and API Server](#install-cnx-mgr)
+1. Continue to [Installing the {{site.prodname}} Manager and API Server](#installing-the-{{site.prodnamedash}}-manager-and-api-server)
 
 {% include {{page.version}}/cnx-mgr-install.md init="kubernetes" net="calico" %}
 

@@ -14,12 +14,44 @@ Releases of this repository still serve several important purposes. Namely, they
 
 ## Prerequisites
 
-To release Calico, you need the following permissions:
+To release Calico, you need **the following permissions**:
 
 - Write access to the core repositories in the projectcalico/ GitHub organization.
-- Push access to the Calico DockerHub repositories.
-- Push access to the Calico quay.io repositories.
-- Push access to the gcr.io/projectcalico-org repositories.
+- Push access to the Calico DockerHub repositories. Assuming you've been granted access by an admin:
+
+    ```
+    docker login
+    ```
+
+- Push access to the Calico quay.io repositories. Assuming you've been granted access by an admin:
+
+    ```
+    docker login quay.io
+    ```
+
+- Push access to the gcr.io/projectcalico-org repositories. **Note:** Some of the repos do not yet support credential helpers, you must use one of the token-based logins.  For example, assuming you've been granted access, this will configure a short-lived auth token:
+
+    ```
+    gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin https://gcr.io
+    ```
+
+You'll also need **several GB of disk space** (~7GB for v3.4.0, for example).
+
+Some of the release scripts also require **tools to be installed** in your dev environment:
+
+- [Install and configure](https://github.com/github/hub#installation) the GitHub `hub` tool.
+- Create a [personal access token](https://github.com/settings/tokens) for Github and export it as the `GITHUB_TOKEN`
+  env var (for example by adding it to your `.profile`.
+- Install the "GitHub release" tool, `ghr`:
+
+    ```
+    go get -u github.com/tcnksm/ghr
+    ```
+
+Finally, the release process **assumes that your repos are checked out with name `origin`** for the git remote
+for the main Calico repo.
+
+## Releasing the subcomponents
 
 Before attempting to create a Calico release you must do the following.
 
@@ -106,7 +138,17 @@ be a release candidate.
        sitemap: true
    ```
 
-1. Remove `sitemap: false` from the previous release in `_config.yml`.
+1. If appropriate, update the list of tested versions for different platforms in the appropriate documents.
+   - Kubernetes `vX.Y/getting-started/kubernetes/requirements.md`
+   - OpenShift `vX.Y/getting-started/openshift/requirements.md`
+   - OpenStack `vX.Y/getting-started/openstack/requirements.md`
+   - Host protection `vX.Y/getting-started/bare-metal/requirements.md`
+
+1. Update the AUTHORS.md file. This will require `GITHUB_TOKEN` be set in your environment.
+
+   ```
+   make update-authors
+   ```
 
 1. Follow the steps in [writing release notes](#release-notes) to generate candidate release notes.
 
@@ -136,15 +178,14 @@ be a release candidate.
    ```
 
    Follow the steps on screen, which will instruct you to upload
-   the `release-<VERSION>.tgz` artifact to the GitHub release using the GitHub UI, and
-   populate the GitHub release with the release notes from earlier.
+   the `release-<VERSION>.tgz` artifact to the GitHub release.
 
 1. Push your branch and open a pull request. Get it reviewed and wait for it to pass CI.
 
    Once reviewed and CI is passing, merge the PR. This will cause the
    live docs site to be updated (after a few minutes).
 
-1. Edit `_config_dev.yml` to exclude the previous release.
+1. Review `_config_dev.yml` and edit it to exclude any previous releases that we now don't want to continue testing.
 
 If the release is not a release candidate but in fact a stable release, then you must also
 follow the steps in the next section for promoting a release candidate to a final release.
@@ -156,7 +197,7 @@ release in the documentation. Perform these steps on a branch off of master.
 
 ### Promoting to the latest release
 
-1. Add TWO new `<option>` entries to the `<span class="dropdown">` in `_layouts/docwithnav.html` file.
+1. Add TWO new `<li>` entries to the `<span class="dropdown">` in `_layouts/docwithnav.html` file.
 
 1. Modify the redirect in `/index.html` to point to your new release.
 
@@ -244,8 +285,7 @@ release in the documentation. Perform these steps on a branch off of master.
    ```
 
    Follow the steps on screen, which will instruct you to upload
-   the `release-<VERSION>.tgz` artifact to the GitHub release using the GitHub UI, and
-   populate the GitHub release with the release notes from earlier.
+   the `release-<VERSION>.tgz` artifact to the GitHub release.
 
 1. Push your branch and open a pull request. Get it reviewed and wait for it to pass CI.
 

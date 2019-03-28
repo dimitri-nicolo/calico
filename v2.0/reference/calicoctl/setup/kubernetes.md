@@ -1,5 +1,5 @@
 ---
-redirect_to: /master/usage/calicoctl/configure/kdd
+redirect_to: /v2.3/usage/calicoctl/configure/kdd
 no_canonical: true
 ---
 

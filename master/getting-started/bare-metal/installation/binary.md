@@ -1,36 +1,46 @@
 ---
-title: Binary install
+title: Binary install without package manager
 canonical_url: https://docs.tigera.io/v2.3/getting-started/bare-metal/installation/binary
 ---
 
-## Prerequisites
+## Download and install the binary
 
-Felix has the following pre-requisites:
+1. Use the following command to download the {{site.nodecontainer}} image.
 
--   For IPv4 support, Linux kernel v2.6.32 is required. We have tested
-    against v2.6.32-573+. Note: if you intend to run containers, Docker
-    requires kernel >=v3.10. The kernel's version can be checked with
-    `uname -a`.
--   For IPv6 support, Linux kernel 3.10+ is required (due to the lack of
-    reverse path filtering for IPv6 in older versions).
--   [conntrack-tools](http://conntrack-tools.netfilter.org/); in
-    particular, the `conntrack` command must be available. We test
-    against >=v1.4.1. To check the version, run `conntrack --version`.
--   [iptables](http://www.netfilter.org/projects/iptables/index.html);
-    for IPv6 support, the `ip6tables` command must be available. We test
-    against >=v1.4.7. To check the version, run `iptables --version`.
--   [ipset](http://ipset.netfilter.org/); we test against >=v6.11. To
-    check the version, run `ipset --version`.
--   The conntrack, iptables and ipsets kernel modules must be available
-    (or compiled-in).
+   ```bash
+   docker pull {{page.registry}}/{{site.nodecontainer}}:{{site.data.versions[page.version].first.components["cnx-node"].version}}
+   ```
 
-> **Note**: If any of the commands above fail when run with the `--version`
-> flag then you have an old version that doesn't support reporting
-> its version.
->
-{: .alert .alert-info}
+1. Confirm that the image has loaded by typing `docker images`.
 
-{% include {{page.version}}/ctl-binary-install.md cli="cnx-node" codepath="/bin/calico-node" %}
+   ```bash
+   REPOSITORY       TAG           IMAGE ID       CREATED         SIZE
+   {{page.registry}}/{{site.nodecontainer}}      {{site.data.versions[page.version].first.components["cnx-node"].version}}        e07d59b0eb8a   2 minutes ago   42MB
+   ```
+
+1. Create a temporary {{site.nodecontainer}} container.
+
+   ```bash
+   docker create --name container {{page.registry}}/{{site.nodecontainer}}:{{site.data.versions[page.version].first.components["cnx-node"].version}}
+   ```
+
+1. Copy the calico-node binary from the container to the local file system.
+
+   ```bash
+   docker cp container:/bin/calico-node calico-node
+   ```
+
+1. Delete the temporary container.
+
+   ```bash
+   docker rm container
+   ```
+
+1. Set the extracted binary file to be executable.
+
+   ```
+   chmod +x calico-node
+   ```
 
 ## Create a start-up script
 
@@ -83,7 +93,7 @@ Or, for upstart:
 Optionally, you can create a file at `/etc/calico/felix.cfg` to
 configure Felix. The configuration file as well as other options for
 configuring Felix (including environment variables) are described in
-[this]({{site.baseurl}}/{{page.version}}/reference/felix/configuration) document.
+[this]({{site.url}}/{{page.version}}/reference/felix/configuration) document.
 
 If etcd is not running on the local machine, it's essential to configure
 the `EtcdAddr` or `EtcdEndpoints` setting to tell Felix how to reach

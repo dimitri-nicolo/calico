@@ -11,6 +11,8 @@ and [Installing {{site.prodname}} for policy](other) will perform these steps au
 for you and are *strongly* recommended for most users. These instructions should only
 be followed by users who have a specific need that cannot be met by using manifests.
 
+* TOC
+{:toc}
 
 ## Before you begin
 
@@ -49,14 +51,14 @@ done using the `calicoctl` utility.
 
 ```
 # Download and install calicoctl
-wget {{site.data.versions[page.version].first.components.calicoctl.download_url}}
+wget {% include urls component="calicoctl" %}
 sudo chmod +x calicoctl
 
 # Run the {{site.nodecontainer}} container
-sudo ETCD_ENDPOINTS=http://<ETCD_IP>:<ETCD_PORT> ./calicoctl node run --node-image={{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["node"]}}:{{site.data.versions[page.version].first.title}}
+sudo ETCD_ENDPOINTS=http://<ETCD_IP>:<ETCD_PORT> ./calicoctl node run --node-image={{page.registry}}{{site.imageNames["node"]}}:{{site.data.versions[page.version].first.title}}
 ```
 
-See the [`calicoctl node run` documentation]({{site.baseurl}}/{{page.version}}/reference/calicoctl/commands/node/)
+See the [`calicoctl node run` documentation]({{site.url}}/{{page.version}}/reference/calicoctl/commands/node/)
 for more information.
 
 ### Example systemd unit file ({{site.noderunning}}.service)
@@ -88,7 +90,7 @@ ExecStart=/usr/bin/docker run --net=host --privileged --name={{site.noderunning}
   -v /var/run/calico:/var/run/calico \
   -v /var/log/calico:/var/log/calico \
   -v /var/lib/calico:/var/lib/calico \
-  {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["node"]}}:{{site.data.versions[page.version].first.title}}
+  {{page.registry}}{{site.imageNames["node"]}}:{{site.data.versions[page.version].first.title}}
 ExecStop=/usr/bin/docker rm -f {{site.noderunning}}
 Restart=always
 RestartSec=10
@@ -160,7 +162,7 @@ EOF
 Replace `<ETCD_IP>:<ETCD_PORT>` with your etcd configuration.
 Replace `</PATH/TO/KUBECONFIG>` with your kubeconfig file. See [Kubernetes kubeconfig](http://kubernetes.io/docs/user-guide/kubeconfig-file/) for more information about kubeconfig.
 
-For more information on configuring the {{site.prodname}} CNI plugins, see the [configuration guide]({{site.baseurl}}/{{page.version}}/reference/cni-plugin/configuration)
+For more information on configuring the {{site.prodname}} CNI plugins, see the [configuration guide]({{site.url}}/{{page.version}}/reference/cni-plugin/configuration)
 
 ### Install standard CNI loopback plugin
 
@@ -242,4 +244,3 @@ Apply the manifest appropriate to your cluster configuration.
 {% include {{page.version}}/cnx-monitor-install.md elasticsearch="operator" %}
 
 {% include {{page.version}}/gs-next-steps.md %}
-

@@ -1,4 +1,8 @@
 ---
 layout: null
 ---
-{% include {{page.version}}/manifests/tigera-federation-controller.yaml datastore="kdd" %}
+{% helm --execute templates/tigera-federation-controller.yaml %}
+datastore: kdd
+federation:
+  enabled: true
+{% endhelm %}

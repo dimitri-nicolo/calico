@@ -147,7 +147,7 @@ spec:
         # container programs network policy and routes on each
         # host.
         - name: calico-node
-          image: {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["node"]}}:{{site.data.versions[page.version].first.components["cnx-node"].version}}
+          image: {{page.registry}}/{{site.imageNames["node"]}}:{{site.data.versions[page.version].first.components["cnx-node"].version}}
           env:
 {%- if include.datastore == "etcd" %}
             # The location of the {{site.prodname}} etcd cluster.

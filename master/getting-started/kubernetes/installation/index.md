@@ -10,7 +10,7 @@ for instructions.
 - [Installing {{site.prodname}} for policy and networking](calico)
 
 - [Installing {{site.prodname}} for policy](other): recommended for those on AWS who wish to
-  [federate clusters](../../../usage/federation/index).
+  [federate clusters](../../../networking/federation/index).
 
 After installing {{site.prodname}}, you can [enable application layer policy](app-layer-policy).
 Enabling application layer policy also secures workload-to-workload communications with mutual

@@ -1,28 +1,11 @@
-{% comment %}
-monitor-calico.yaml acccepts the following include flags:
-
-| Name          | Accepted Values             |
-|---------------|-----------------------------|
-| secure_es     | true, false                 |
-| elasticsearch | operator, external          |
-| platform      | gke, <unset>                |
-
-{% endcomment -%}
-{%- capture node_name -%}
-  {%- if include.platform == "gke" -%}
-    calico-node-ee
-  {%- else -%}
-    calico-node
-  {%- endif -%}
-{%- endcapture -%}
 ---
 # This manifest includes the following component versions:
-#   quay.io/prometheus/prometheus:{{site.data.versions[page.version].first.components["prometheus"].version}}
-#   quay.io/prometheus/alertmanager:{{site.data.versions[page.version].first.components["alertmanager"].version}}
-{%- if include.elasticsearch == "operator" %}
-#   docker.elastic.co/elasticsearch/elasticsearch:{{site.data.versions[page.version].first.components["elasticsearch"].version}}
-#   docker.elastic.co/kibana/kibana:{{site.data.versions[page.version].first.components["kibana"].version}}
-{%- endif %}
+#   quay.io/prometheus/prometheus:{{.Values.prometheus.tag}}
+#   quay.io/prometheus/alertmanager:{{.Values.alertmanager.tag}}
+{{- if eq .Values.elasticsearchType "operator" }}
+#   docker.elastic.co/elasticsearch/elasticsearch:{{.Values.elasticsearch.tag}}
+#   docker.elastic.co/kibana/kibana:{{.Values.kibana.tag}}
+{{- end }}
 
 # This ConfigMap contains customizations for Elasticsearch and Curator.
 kind: ConfigMap
@@ -32,7 +15,7 @@ metadata:
   namespace: calico-monitoring
 data:
   # The name of the cluster.  This field is used as part of the index name of Elasticsearch logs, and is intended
-  # to allow multiple clusters to share one Elasticsearch cluster.  The value of this field must match that of 
+  # to allow multiple clusters to share one Elasticsearch cluster.  The value of this field must match that of
   # tigera.cnx-manager.cluster-name in tigera-cnx-manager-config.
   tigera.elasticsearch.cluster-name: "cluster"
   # The number of shards for index tigera_secure_ee_flows.
@@ -72,10 +55,10 @@ metadata:
   namespace: kube-system
   name: calico-node-metrics
   labels:
-    k8s-app: {{ node_name }}
+    k8s-app: {{ include "nodeName" . }}
 spec:
   selector:
-    k8s-app: {{ node_name }}
+    k8s-app: {{ include "nodeName" . }}
   type: ClusterIP
   clusterIP: None
   ports:
@@ -200,7 +183,7 @@ metadata:
 spec:
   selector:
     matchLabels:
-      k8s-app: {{ node_name }}
+      k8s-app: {{ include "nodeName" . }}
   namespaceSelector:
     matchNames:
     - kube-system
@@ -211,28 +194,7 @@ spec:
     honorLabels: true
 ---
 
-{% raw %}
-# This manifest is used to create the denied packets alerting rules in Prometheus.
-apiVersion: monitoring.coreos.com/v1
-kind: PrometheusRule
-metadata:
-  name: calico-prometheus-dp-rate
-  namespace: calico-monitoring
-  labels:
-    role: calico-prometheus-rules
-    prometheus: calico-node-prometheus
-spec:
-  groups:
-  - name: calico.rules
-    rules:
-    - alert: DeniedPacketsRate
-      expr: rate(calico_denied_packets[10s]) > 50
-      labels:
-        severity: critical
-      annotations:
-        summary: "Instance {{$labels.instance}} - Large rate of packets denied"
-        description: "{{$labels.instance}} with calico-node pod {{$labels.pod}} has been denying packets at a fast rate {{$labels.sourceIp}} by policy {{$labels.policy}}."
-{% endraw %}
+{{ .Files.Get "prometheus-dp-alerting.yaml" }}
 
 ---
 
@@ -271,14 +233,13 @@ data:
   alertmanager.yaml: Z2xvYmFsOgogIHJlc29sdmVfdGltZW91dDogNW0Kcm91dGU6CiAgZ3JvdXBfYnk6IFsnam9iJ10KICBncm91cF93YWl0OiAzMHMKICBncm91cF9pbnRlcnZhbDogMW0KICByZXBlYXRfaW50ZXJ2YWw6IDVtCiAgcmVjZWl2ZXI6ICd3ZWJob29rJwpyZWNlaXZlcnM6Ci0gbmFtZTogJ3dlYmhvb2snCiAgd2ViaG9va19jb25maWdzOgogIC0gdXJsOiAnaHR0cDovL2NhbGljby1hbGVydG1hbmFnZXItd2ViaG9vazozMDUwMS8nCg==
 ---
 
-# This manifest creates the {{site.prodname}} Alertmanager.
 apiVersion: monitoring.coreos.com/v1
 kind: Alertmanager
 metadata:
   name: calico-node-alertmanager
   namespace: calico-monitoring
 spec:
-  version: {{site.data.versions[page.version].first.components["alertmanager"].version}}
+  version: {{.Values.alertmanager.tag}}
   baseImage: quay.io/prometheus/alertmanager
   nodeSelector:
     beta.kubernetes.io/os: linux
@@ -323,7 +284,7 @@ spec:
   serviceMonitorSelector:
     matchLabels:
       team: network-operators
-  version: {{site.data.versions[page.version].first.components["prometheus"].version}}
+  version: {{.Values.prometheus.tag}}
   retention: 24h
   resources:
     requests:
@@ -358,7 +319,7 @@ spec:
   selector:
     prometheus: calico-node-prometheus
 
-{%- if include.elasticsearch == "operator" %}
+{{- if eq .Values.elasticsearchType "operator" }}
 ---
 
 # Set up the elasticsearch cluster parameters
@@ -374,8 +335,8 @@ spec:
     # If necessary, uncomment the line below and edit key:value pair with appropriate value for your environment.
     #node.role: infrastructure
   kibana:
-    image: docker.elastic.co/kibana/kibana:{{site.data.versions[page.version].first.components["kibana"].version}}
-  elastic-search-image: docker.elastic.co/elasticsearch/elasticsearch:{{site.data.versions[page.version].first.components["elasticsearch"].version}}
+    image: docker.elastic.co/kibana/kibana:{{.Values.kibana.tag}}
+  elastic-search-image: docker.elastic.co/elasticsearch/elasticsearch:{{.Values.elasticsearch.tag}}
   # For production deployments, modify the number of elasticsearch replicas accordingly
   client-node-replicas: 1
   master-node-replicas: 1
@@ -407,7 +368,7 @@ spec:
       targetPort: 5601
       nodePort: 30601
   type: NodePort
-{%- endif %}
+{{- end }}
 ---
 
 apiVersion: v1
@@ -440,7 +401,7 @@ spec:
       nodeSelector:
         beta.kubernetes.io/os: linux
       tolerations:
-        # Make sure {{objname}} gets scheduled on all nodes.
+        # Make sure fluentd-node gets scheduled on all nodes.
         - effect: NoSchedule
           operator: Exists
         - effect: NoExecute
@@ -460,7 +421,7 @@ spec:
               mountPath: /var/log/calico
       containers:
         - name: fluentd
-          image: {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["fluentd"]}}:{{site.data.versions[page.version].first.components["fluentd"].version}}
+          image: {{.Values.fluentd.image}}:{{.Values.fluentd.tag}}
           env:
             - name: ELASTIC_INDEX_SUFFIX
               valueFrom:
@@ -479,7 +440,7 @@ spec:
                   key: tigera.elasticsearch.flow-filtering
             - name: FLOW_LOG_FILE
               value: /var/log/calico/flowlogs/flows.log
-{%- if include.secure_es == "true" %}
+{{- if .Values.secure_es }}
             - name: ELASTIC_HOST
               valueFrom:
                 configMapKeyRef:
@@ -504,14 +465,14 @@ spec:
                 secretKeyRef:
                   name: elastic-fluentd-user
                   key: password
-{%- else %}
+{{- else }}
             - name: ELASTIC_HOST
               value: elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local
             - name: ELASTIC_PORT
               value: "9200"
             - name: FLUENTD_ES_SECURE
               value: "false"
-{%- endif %}
+{{- end }}
             - name: AWS_KEY_ID
               valueFrom:
                 secretKeyRef:
@@ -606,20 +567,20 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
-{%- if include.orch == "openshift" %}
+{{- if eq .Values.orch "openshift" }}
           securityContext:
             privileged: true
-{%- endif %}
+{{- end }}
           volumeMounts:
             - name: var-log-calico
               mountPath: /var/log/calico
             - name: es-config
               mountPath: /etc/fluentd/flow-filters.conf
               subPath: tigera.elasticsearch.flow-filters.conf
-{%- if include.secure_es == "true" %}
+{{- if .Values.secure_es }}
             - name: elastic-ca-cert-volume
               mountPath: /etc/fluentd/elastic
-{%- endif %}
+{{- end }}
             - name: syslog-config
               mountPath: /etc/fluentd/syslog/ca.pem
               subPath: ca
@@ -647,12 +608,12 @@ spec:
         - name: es-config
           configMap:
             name: tigera-es-config
-{%- if include.secure_es == "true" %}
+{{- if .Values.secure_es }}
         # Should be created during installation process.
         - name: elastic-ca-cert-volume
           configMap:
             name: elastic-ca-config
-{%- endif %}
+{{- end }}
         - name: syslog-config
           configMap:
             name: tigera-syslog-archiving
@@ -685,10 +646,10 @@ spec:
             - key: node-role.kubernetes.io/master
               effect: NoSchedule
           imagePullSecrets:
-            - name: cnx-pull-secret      
+            - name: cnx-pull-secret
           containers:
             - name: tigera-es-curator
-              image: {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["es-curator"]}}:{{site.data.versions[page.version].first.components["es-curator"].version}}
+              image: {{.Values.esCurator.image}}:{{.Values.esCurator.tag}}
               env:
                 - name: ELASTIC_INDEX_SUFFIX
                   valueFrom:
@@ -705,7 +666,7 @@ spec:
                     configMapKeyRef:
                       name: tigera-es-config
                       key: tigera.elasticsearch.audit-retention
-{%- if include.secure_es == "true" %}
+{{- if .Values.secure_es }}
                 - name: ELASTIC_HOST
                   valueFrom:
                     configMapKeyRef:
@@ -730,19 +691,19 @@ spec:
                   value: "true"
                 - name: ES_CURATOR_BACKEND_CERT
                   value: /etc/curator/elastic/ca.pem
-{%- else %}
+{{- else }}
                 - name: ELASTIC_HOST
                   value: elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local
                 - name: ELASTIC_PORT
                   value: "9200"
                 - name: ELASTIC_SSL_VERIFY
                   value: "false"
-{%- endif %}
-{%- if include.secure_es == "true" %}
+{{- end }}
+{{- if .Values.secure_es }}
               volumeMounts:
                 - name: elastic-ca-cert-volume
                   mountPath: /etc/curator/elastic
-{%- endif %}
+{{- end }}
               livenessProbe:
                 exec:
                   command:
@@ -751,13 +712,13 @@ spec:
                     - /usr/bin/curator --config /curator/curator_config.yaml --dry-run /curator/curator_action.yaml
                 initialDelaySeconds: 60
                 periodSeconds: 60
-{%- if include.secure_es == "true" %}
+{{- if .Values.secure_es }}
           volumes:
             # Should be created during installation process.
             - name: elastic-ca-cert-volume
               configMap:
                 name: elastic-ca-config
-{%- endif %}
+{{- end }}
 ---
 
 apiVersion: batch/v1
@@ -773,36 +734,36 @@ spec:
         - name: cnx-pull-secret
       containers:
       - name: install
-        image: {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["elastic-tsee-installer"]}}:{{site.data.versions[page.version].first.components["elastic-tsee-installer"].version}}
+        image: {{.Values.elasticTseeInstaller.image}}:{{.Values.elasticTseeInstaller.tag}}
         env:
-{%- if include.secure_es == "true" %}
+{{- if .Values.secure_es }}
           - name: ELASTIC_HOST
-            valueFrom: 
+            valueFrom:
               configMapKeyRef:
                 name: tigera-es-proxy
                 key: elasticsearch.backend.host
           - name: ELASTIC_PORT
-            valueFrom: 
+            valueFrom:
               configMapKeyRef:
                 name: tigera-es-proxy
                 key: elasticsearch.backend.port
           - name: KIBANA_HOST
-            valueFrom: 
+            valueFrom:
               configMapKeyRef:
                 name: tigera-es-proxy
                 key: kibana.backend.host
           - name: KIBANA_PORT
-            valueFrom: 
+            valueFrom:
               configMapKeyRef:
                 name: tigera-es-proxy
                 key: kibana.backend.port
           - name: USER
-            valueFrom: 
+            valueFrom:
               secretKeyRef:
                 name: elastic-ee-installer
                 key: username
           - name: PASSWORD
-            valueFrom: 
+            valueFrom:
               secretKeyRef:
                 name: elastic-ee-installer
                 key: password
@@ -815,22 +776,22 @@ spec:
         - name: certs
           configMap:
             name: elastic-ca-config
-{%- else %}
+{{- else }}
           - name: ELASTIC_HOST
             value: elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local
           - name: ELASTIC_PORT
-            value: "9200" 
+            value: "9200"
           - name: KIBANA_HOST
-            value: kibana-tigera-elasticsearch.calico-monitoring.svc.cluster.local 
+            value: kibana-tigera-elasticsearch.calico-monitoring.svc.cluster.local
           - name: KIBANA_PORT
-            value: "80" 
+            value: "80"
           - name: ELASTIC_SCHEME
-            value: "http" 
+            value: "http"
           - name: KIBANA_SCHEME
             value: "http"
           - name: START_XPACK_TRIAL
             value: "true"
-{%- endif %}
+{{- end }}
 ---
 
 apiVersion: v1
@@ -887,7 +848,7 @@ spec:
       serviceAccountName: intrusion-detection-controller
       containers:
       - name: controller
-        image: {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["intrusion-detection-controller"]}}:{{site.data.versions[page.version].first.components["intrusion-detection-controller"].version}}
+        image: {{ .Values.intrusionDetectionController.image }}:{{ .Values.intrusionDetectionController.tag }}
         livenessProbe:
           exec:
             command: ["/healthz", "liveness"]
@@ -898,24 +859,24 @@ spec:
             command: ["/healthz", "readiness"]
           initialDelaySeconds: 5
         env:
-{%- if include.secure_es == "true" %}
+{{- if .Values.secure_es }}
           - name: ELASTIC_HOST
-            valueFrom: 
+            valueFrom:
               configMapKeyRef:
                 name: tigera-es-proxy
                 key: elasticsearch.backend.host
           - name: ELASTIC_PORT
-            valueFrom: 
+            valueFrom:
               configMapKeyRef:
                 name: tigera-es-proxy
                 key: elasticsearch.backend.port
           - name: USER
-            valueFrom: 
+            valueFrom:
               secretKeyRef:
                 name: elastic-ee-intrusion-detection
                 key: username
           - name: PASSWORD
-            valueFrom: 
+            valueFrom:
               secretKeyRef:
                 name: elastic-ee-intrusion-detection
                 key: password
@@ -928,14 +889,14 @@ spec:
         - name: certs
           configMap:
             name: elastic-ca-config
-{%- else %}
+{{- else }}
           - name: ELASTIC_HOST
             value: elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local
           - name: ELASTIC_PORT
-            value: "9200" 
+            value: "9200"
           - name: ELASTIC_SCHEME
-            value: "http" 
-{%- endif %}
+            value: "http"
+{{- end }}
 ---
 
 # Network set for the K8s API Server's IP addresses.
@@ -950,9 +911,9 @@ spec:
   # List of IP addresses for the host K8s API server
   - 0.0.0.0/0 #K8S_API_SERVER_IP
 
-{%- if include.elasticsearch == "operator" %}
+{{- if eq .Values.elasticsearchType "operator" }}
 ---
-# Allow access to Elasticsearch client nodes from Kibana, fluentd, and the 
+# Allow access to Elasticsearch client nodes from Kibana, fluentd, and the
 # intrusion dection installer
 apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
@@ -1065,9 +1026,4 @@ spec:
       selector: job-name == 'elastic-tsee-installer'
     destination:
       ports: [5601]
-{%- endif %}
-
-{%- if include.secure_es == "true" %}
----
-{% include {{page.version}}/manifests/es-proxy.yaml %}
-{%- endif %}
+{{- end }}

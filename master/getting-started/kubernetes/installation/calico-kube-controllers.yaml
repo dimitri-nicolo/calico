@@ -1,4 +1,6 @@
 ---
 layout: null
 ---
-{% include {{page.version}}/manifests/calico-kube-controllers.yaml variant="Calico" %}
+{% helm --execute=templates/calico-kube-controllers.yaml %}
+datastore: etcd
+{% endhelm %}

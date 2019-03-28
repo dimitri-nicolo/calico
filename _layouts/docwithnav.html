@@ -42,7 +42,6 @@ The code is a little roundabout for a few reasons:
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="docsearch:version" content="{{page.version}}">
-    <!-- {% if page.no_canonical != true %}<link rel="canonical" href="{{site.url}}{{page.url | replace:page.version,'latest'}}" />{% endif %} -->
     <link rel="shortcut icon" type="image/png" href="{{site.baseurl}}/images/favicon.png">
     <link href='https://fonts.googleapis.com/css?family=Roboto:400,100,100italic,300,300italic,400italic,500,500italic,700,700italic,900,900italic' rel='stylesheet' type='text/css'>
     <link href="https://fonts.googleapis.com/css?family=Lato" rel="stylesheet">
@@ -70,9 +69,19 @@ The code is a little roundabout for a few reasons:
       ga('send', 'pageview');
     </script>
     <title>Tigera Secure EE - {{ page.title }}</title>
+    <!-- Google Tag Manager -->
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','GTM-5FQ2QV4');</script>
+    <!-- End Google Tag Manager -->
     {% seo %}
   </head>
   <body>
+    <!-- Google Tag Manager (noscript) -->
+    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-5FQ2QV4" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+    <!-- End Google Tag Manager (noscript) -->
     <section>
       <nav id="toplevel-nav" class="navbar navbar-default navbar-static-top">
         <div class="container">
@@ -90,6 +99,17 @@ The code is a little roundabout for a few reasons:
             </a>
           </div>
           <div id="tigera-navbar" class="navbar-collapse collapse">
+            <ul class="nav navbar-nav navbar-right">
+
+              <li class="active"><a href="{{site.baseurl}}/v2.3/introduction"><strong>{% if page.version == 'master' %}nightly{% else %}{{page.version}}{% endif %}<span class="caret"></span></strong></a>
+                <ul>
+                 <li><a href="{{site.baseurl}}/v2.3/introduction/">v2.3 (latest)</a></li>
+                 <li><a href="{{site.baseurl}}/v2.2/introduction/">v2.2</a></li>
+                 <li><a href="{{site.baseurl}}/v2.1/introduction/">v2.1</a></li>
+                </ul>
+              </li>
+
+            </ul>
             <form class="navbar-form visible-xs">
               <ul class="nav navbar-nav navbar-right">
                 {% for navbar in navbars %}
@@ -99,17 +119,6 @@ The code is a little roundabout for a few reasons:
                 {% endfor %}
               </ul>
             </form>
-            <ul class="visible-xs nav navbar-nav navbar-right">
-             <li class="dropdown">
-               <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Version ({% if page.version == 'master' %}nightly{% else %}{{page.version}}{% endif %})<span class="caret"></span></a>
-               <ul class="dropdown-menu">
-                 <li><a href="{{site.baseurl}}/v2.3/introduction/">v2.3 (latest)</a></li>
-                 <li><a href="{{site.baseurl}}/v2.2/introduction/">v2.2</a></li>
-                 <li><a href="{{site.baseurl}}/v2.1/introduction/">v2.1</a></li>
-                 <li role="separator" class="divider"></li>
-               </ul>
-             </li>
-           </ul>
           </div>
         </div>
         <div id="navbar" class="navbar-inverse navbar-collapse collapse">
@@ -120,14 +129,6 @@ The code is a little roundabout for a few reasons:
                   <a href="{{site.baseurl}}/{{page.version}}{{navbar.path}}/"><span>{{ navbar.bigheader }}</span></a>
                 </li>
               {% endfor %}
-              <li class="dropdown">
-                <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Version ({% if page.version == 'master' %}nightly{% else %}{{page.version}}{% endif %})<span class="caret"></span></a>
-                <ul class="dropdown-menu">
-                  <li><a href="{{site.baseurl}}/v2.3/introduction/">v2.3 (latest)</a></li>
-                  <li><a href="{{site.baseurl}}/v2.2/introduction/">v2.2</a></li>
-                  <li><a href="{{site.baseurl}}/v2.1/introduction/">v2.1</a></li>
-                </ul>
-              </li>
             </ul>
           </div>
           <div class="row">
@@ -149,7 +150,7 @@ The code is a little roundabout for a few reasons:
               </div>
             </div>
             <div id="sidebar">
-              {% include sidebar.html sidebar=this_pages_navbar.toc prefix="nav" %}
+            	{% include sidebar.html sidebar=this_pages_navbar.toc prefix="nav" %}
             </div>
           </div>
           <div class="col-xs-12 col-sm-8 col-md-9">

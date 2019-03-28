@@ -1,3 +1,11 @@
 # Block all indexing for all agents
 User-agent: *
 Disallow: /
+# Exclude from indexing
+User-agent: *
+Disallow: /master/
+Disallow: /images/
+Disallow: /js/
+Disallow: /fonts/
+Disallow: /css/
+Disallow: /assets/

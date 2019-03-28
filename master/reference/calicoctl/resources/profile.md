@@ -8,9 +8,9 @@ to the individual endpoints to which this profile has been assigned.
 
 Each {{site.prodname}} endpoint or host endpoint can be assigned to zero or more profiles.
 
-Also see the [NetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/networkpolicy) and [GlobalNetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy) which provide an alternate way to select what policy is applied to an endpoint.
+Also see the [NetworkPolicy]({{site.url}}/{{page.version}}/reference/calicoctl/resources/networkpolicy) and [GlobalNetworkPolicy]({{site.url}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy) which provide an alternate way to select what policy is applied to an endpoint.
 
-For `calicoctl` [commands]({{site.baseurl}}/{{page.version}}/reference/calicoctl/commands/) that specify a resource type on the CLI, the following
+For `calicoctl` [commands]({{site.url}}/{{page.version}}/reference/calicoctl/commands/) that specify a resource type on the CLI, the following
 aliases are supported (all case insensitive): `profile`, `profiles`, `pro`, `pros`.
 
 ### Sample YAML
@@ -24,8 +24,6 @@ apiVersion: projectcalico.org/v3
 kind: Profile
 metadata:
   name: profile1
-  labels:
-    profile: profile1
 spec:
   ingress:
   - action: Deny
@@ -37,6 +35,8 @@ spec:
       selector: profile == 'profile1'
   egress:
   - action: Allow
+  labelsToApply:
+    profile: profile1
 ```
 
 ### Definition
@@ -84,7 +84,7 @@ spec:
 ### Application layer policy
 
 Application layer policy is an optional feature of {{site.prodname}} and
-[must be enabled]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/app-layer-policy)
+[must be enabled]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/app-layer-policy)
 in order to use the following match criteria.
 
 > **NOTE**: Application layer policy match criteria are supported with the following restrictions.

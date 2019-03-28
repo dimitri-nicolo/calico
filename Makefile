@@ -1,7 +1,6 @@
 CALICO_DIR=$(shell git rev-parse --show-toplevel)
 VERSIONS_FILE?=$(CALICO_DIR)/_data/versions.yml
 JEKYLL_VERSION=pages
-JEKYLL_UID?=`id -u`
 HP_VERSION=v0.2
 DEV?=false
 CONFIG=--config _config.yml
@@ -43,12 +42,28 @@ hooks_installed:=$(shell ./install-git-hooks)
 install-git-hooks:
 	./install-git-hooks
 
-serve:
-	docker run --rm -e JEKYLL_UID=$(JEKYLL_UID) -p 4000:4000 -v $$PWD:/srv/jekyll jekyll/jekyll:$(JEKYLL_VERSION) jekyll serve --incremental $(CONFIG)
+serve: bin/helm
+	# We have to override JEKYLL_DOCKER_TAG which is usually set to 'pages'. 
+	# When set to 'pages', jekyll starts in safe mode which means it will not
+	# load any plugins. Since we're no longer running in github-pages, but would
+	# like to use a docker image that comes preloaded with all the github-pages plugins,
+	# its ok to override this variable.
+	docker run --rm \
+	  -v $$PWD/bin/helm:/usr/local/bin/helm:ro \
+	  -v $$PWD:/srv/jekyll \
+	  -e JEKYLL_DOCKER_TAG="" \
+	  -e JEKYLL_UID=`id -u` \
+	  -p 4000:4000 \
+	  jekyll/jekyll:$(JEKYLL_VERSION) jekyll serve --incremental $(CONFIG)
 
 .PHONY: build
-_site build:
-	docker run --rm -e JEKYLL_UID=$(JEKYLL_UID) -v $$PWD:/srv/jekyll jekyll/jekyll:$(JEKYLL_VERSION) jekyll build --incremental $(CONFIG)
+_site build: bin/helm
+	docker run --rm \
+	-e JEKYLL_DOCKER_TAG="" \
+	-e JEKYLL_UID=`id -u` \
+	-v $$PWD/bin/helm:/usr/local/bin/helm:ro \
+	-v $$PWD:/srv/jekyll \
+	jekyll/jekyll:$(JEKYLL_VERSION) jekyll build --incremental $(CONFIG)
 
 ## Clean enough that a new release build will be clean
 clean:
@@ -58,12 +73,12 @@ clean:
 # CI / test targets
 ###############################################################################
 
-ci: htmlproofer kubeval
-htmlproofer: clean _site
+ci: clean htmlproofer kubeval
+htmlproofer: _site
 	# Run htmlproofer, failing if we hit any errors.
 	./htmlproofer.sh
 
-kubeval: clean _site
+kubeval: _site
 	# Run kubeval to check master manifests are valid Kubernetes resources.
 	-docker run -v $$PWD:/calico --entrypoint /bin/sh garethr/kubeval:0.7.3 -c 'ok=true; for f in `find /calico/_site/master -name "*.yaml" |grep -v "\(patch-cnx-manager-configmap\|kube-controllers-patch\|config\|allow-istio-pilot\|30-policy\|cnx-policy\|crds-only\|istio-app-layer-policy\|patch-flow-logs\|upgrade-calico\|-cf\).yaml"`; do echo Running kubeval on $$f; /kubeval $$f || ok=false; done; $$ok' 1>stderr.out 2>&1
 	
@@ -144,14 +159,34 @@ release-publish: release-prereqs
 	# Push the git tag.
 	git push origin $(CALICO_VER)
 
-	@echo "Finalize the GitHub release based on the pushed tag and attach release-$(CALICO_VER).tgz"
+	# Push binaries to GitHub release.
+	# Requires ghr: https://github.com/tcnksm/ghr
+	# Requires GITHUB_TOKEN environment variable set.
+	ghr -u projectcalico -r calico \
+		-b 'Release notes can be found at https://docs.projectcalico.org/$(RELEASE_STREAM)/releases/' \
+		-n $(CALICO_VER) \
+		$(CALICO_VER) $(RELEASE_DIR).tgz
+
+	@echo "Verify the GitHub release based on the pushed tag."
 	@echo ""
 	@echo "  https://github.com/projectcalico/calico/releases/tag/$(CALICO_VER)"
 	@echo ""
 
 ## Generates release notes for the given version.
-release-notes: release-prereqs
+release-notes: #release-prereqs
 	VERSION=$(CALICO_VER) GITHUB_TOKEN=$(GITHUB_TOKEN) python2 ./release-scripts/generate-release-notes.py
+
+update-authors:
+ifndef GITHUB_TOKEN
+	$(error GITHUB_TOKEN must be set)
+endif
+	@echo "# Calico authors" > AUTHORS.md
+	@echo "" >> AUTHORS.md
+	@echo "This file is auto-generated based on contribution records reported" >> AUTHORS.md
+	@echo "by GitHub for the core repositories within the projectcalico/ organization. It is ordered alphabetically." >> AUTHORS.md
+	@echo "" >> AUTHORS.md
+	@docker run -ti --rm -v $(PWD):/code -e GITHUB_TOKEN=$(GITHUB_TOKEN) python:3 \
+		bash -c 'pip install pygithub && /usr/local/bin/python /code/release-scripts/get-contributors.py >> /code/AUTHORS.md'
 
 # release-prereqs checks that the environment is configured properly to create a release.
 release-prereqs:
@@ -161,6 +196,9 @@ endif
 	@if [ $(CALICO_VER) != $(NODE_VER) ]; then \
 		echo "Expected CALICO_VER $(CALICO_VER) to equal NODE_VER $(NODE_VER)"; \
 		exit 1; fi
+ifeq (, $(shell which ghr))
+	$(error Unable to find `ghr` in PATH, run this: go get -u github.com/tcnksm/ghr)
+endif
 
 OUTPUT_DIR?=_output
 RELEASE_DIR_NAME?=release-$(CALICO_VER)
@@ -242,6 +280,23 @@ $(RELEASE_DIR_BIN)/%:
 ###############################################################################
 # Utilities
 ###############################################################################
+HELM_RELEASE=helm-v2.11.0-linux-amd64.tar.gz
+bin/helm:
+	mkdir -p bin
+	$(eval TMP := $(shell mktemp -d))
+	wget https://storage.googleapis.com/kubernetes-helm/$(HELM_RELEASE) -O $(TMP)/$(HELM_RELEASE)
+	tar -zxvf $(TMP)/$(HELM_RELEASE) -C $(TMP)
+	mv $(TMP)/linux-amd64/helm bin/helm
+
+.PHONY: values.yml
+values.yml:
+ifndef RELEASE_STREAM
+	$(error RELEASE_STREAM is undefined - run using make values.yaml RELEASE_STREAM=vX.Y)
+endif
+	docker run --rm \
+	  -v $$PWD:/calico \
+	  -w /calico \
+	  ruby:2.5 ruby ./hack/gen_values_yml.rb $(RELEASE_STREAM) >> _includes/$(RELEASE_STREAM)/charts/calico/values.yaml
 
 .PHONY: help
 ## Display this help text

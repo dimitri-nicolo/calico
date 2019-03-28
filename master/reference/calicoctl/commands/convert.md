@@ -5,13 +5,13 @@ canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/commands/convert
 
 This sections describes the `calicoctl convert` command.
 
-Read the [calicoctl command line interface user reference]({{site.baseurl}}/{{page.version}}/reference/calicoctl/)
+Read the [calicoctl command line interface user reference]({{site.url}}/{{page.version}}/reference/calicoctl/)
 for a full list of calicoctl commands.
 
 > **Note**: The available actions for a specific resource type may be
 > limited based on the datastore used for {{site.prodname}} (etcdv3 / Kubernetes API).
 > Please refer to the
-> [Resources section]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/)
+> [Resources section]({{site.url}}/{{page.version}}/reference/calicoctl/resources/)
 > for details about each resource type.
 {: .alert .alert-info}
 
@@ -80,8 +80,7 @@ Description:
 
 ## See also
 
--  [Resources]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/) for details on all valid resources, including file format
+-  [Installing calicoctl]({{site.url}}/{{page.version}}/getting-started/calicoctl/install)
+-  [Resources]({{site.url}}/{{page.version}}/reference/calicoctl/resources/) for details on all valid resources, including file format
    and schema
--  [calicoctl get]({{site.baseurl}}/{{page.version}}/reference/calicoctl/commands/get) for details on `calicoctl get` command to get the resources.
--  [calicoctl configuration]({{site.baseurl}}/{{page.version}}/usage/calicoctl/configure/) for details on configuring `calicoctl` to access
-   the {{site.prodname}} datastore.
+-  [calicoctl get]({{site.url}}/{{page.version}}/reference/calicoctl/commands/get) for details on `calicoctl get` command to get the resources.

@@ -3,7 +3,7 @@ title: Deploying Tigera Secure EE on GCE
 canonical_url: https://docs.tigera.io/v2.3/reference/public-cloud/gce
 ---
 
-To deploy {{site.prodname}} in [Google Compute Engine][GCE], you must ensure
+To deploy {{site.prodname}} in [Google Compute Engine (GCE)][GCE], you must ensure
 that traffic between containers on different hosts is not dropped by the GCE
 fabric. There are a few different options for doing this depending on your
 deployment.
@@ -23,7 +23,7 @@ running {{site.prodname}} in policy-only mode.  Kubernetes GCE cloud provider in
 simplifies route configuration by enabling Kubernetes to handle creating
 routes.
 
-## Enabling Workload-to-WAN Traffic
+## Enabling workload-to-WAN traffic
 
 To allow {{site.prodname}} networked containers to reach resources outside of GCE,
 you must configure outgoing NAT on your [{{site.prodname}} IP pool][IPPool].
@@ -32,6 +32,6 @@ GCE will perform outbound NAT on any traffic which has the source address of a v
 machine instance.  By enabling outgoing NAT on your {{site.prodname}} IP pool, {{site.prodname}} will
 NAT any outbound traffic from the containers hosted on the virtual machine instances.
 
-[IPIP]: {{site.baseurl}}/{{page.version}}/usage/configuration/ip-in-ip
-[IPPool]: {{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/ippool
+[IPIP]: {{site.url}}/{{page.version}}/networking/ip-in-ip
+[IPPool]: {{site.url}}/{{page.version}}/reference/calicoctl/resources/ippool
 [GCE]: https://cloud.google.com/compute/

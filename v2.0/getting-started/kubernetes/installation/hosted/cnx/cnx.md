@@ -282,7 +282,7 @@ To enable Typha in either the {{site.prodname}} networking manifest or the polic
    `<YOUR_PRIVATE_DOCKER_REGISTRY>` with the location of your registry first.
 
    ```
-   docker push {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["typha"]}}:{{site.data.versions[page.version].first.components["typha"].version}}
+   docker push {{page.registry}}/{{site.imageNames["typha"]}}:{{site.data.versions[page.version].first.components["typha"].version}}
    ```
    
 1. Open the manifest that corresponds to your desired configuration. 

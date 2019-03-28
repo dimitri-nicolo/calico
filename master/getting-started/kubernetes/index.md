@@ -3,13 +3,13 @@ title: Quickstart for Tigera Secure EE on Kubernetes
 canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/
 ---
 
-
 ### Overview
 
 This quickstart gets you a single-host Kubernetes cluster with {{site.prodname}}
-in approximately 10 minutes. You can use this cluster for testing and development.
+in approximately 15 minutes. You can use this cluster for testing and
+development.
 
-To deploy a cluster suitable for production, refer to [Installation](/{{page.version}}/getting-started/kubernetes/installation/).
+To deploy a cluster suitable for production, refer to [Installation](installation).
 
 
 ### Host requirements
@@ -22,13 +22,16 @@ To deploy a cluster suitable for production, refer to [Installation](/{{page.ver
 - Internet access
 - [Sufficient virtual memory](https://www.elastic.co/guide/en/elasticsearch/reference/current/vm-max-map-count.html){:target="_blank"}
 
-
 ### Before you begin
 
 - Ensure that you have the following files in your current working directory:
   - [`config.json` containing the Tigera private registry credentials](/{{page.version}}/getting-started/#obtain-the-private-registry-credentials)
   - [`<customer-name>-license.yaml` containing your license key](/{{page.version}}/getting-started/#obtain-a-license-key)
 <br><br>
+- Ensure that {{site.prodname}} can manage `cali` and `tunl` interfaces on the host.
+  If NetworkManager is present on the host, refer to
+  [Configure NetworkManager](../../maintenance/troubleshooting#prevent-networkManager-from-controlling-{{site.prodnamedash}}-interfaces)
+.
 
 - [Follow the Kubernetes instructions to install kubeadm](https://kubernetes.io/docs/setup/independent/install-kubeadm/){:target="_blank"}.
 
@@ -104,16 +107,17 @@ Congratulations! You now have a single-host Kubernetes cluster
 equipped with {{site.prodname}}.
 
 ### Next steps
+
 **[Experiment with OIDC authentication strategy](/{{page.version}}/reference/cnx/authentication)**
 
 **[Experiment with non-admin users and the {{site.prodname}} manager](/{{page.version}}/reference/cnx/rbac-tiered-policies)**
 
-**[Enable audit logs for Kubernetes `NetworkPolicy` and send them to Elasticsearch](/{{page.version}}/usage/logs/elastic/ee-audit#enabling-auditing-for-other-resources)**
+**[Enable audit logs for Kubernetes `NetworkPolicy` and send them to Elasticsearch](/{{page.version}}/security/logs/elastic/ee-audit#enabling-auditing-for-other-resources)**
 
-**[Secure a simple application using the Kubernetes `NetworkPolicy` API](tutorials/simple-policy)**
+**[Secure a simple application using the Kubernetes `NetworkPolicy` API]({{site.url}}/{{page.version}}/security/simple-policy)**
 
-**[Control ingress and egress traffic using the Kubernetes `NetworkPolicy` API](tutorials/advanced-policy)**
+**[Control ingress and egress traffic using the Kubernetes `NetworkPolicy` API]({{site.url}}/{{page.version}}/security/advanced-policy)**
 
-**[Create a user interface that shows blocked and allowed connections in real time](tutorials/stars-policy/)**
+**[Create a user interface that shows blocked and allowed connections in real time]({{site.url}}/{{page.version}}/security/stars-policy/)**
 
-**[Install and configure calicoctl](/{{page.version}}/usage/calicoctl/install)**
+**[Install and configure calicoctl](/{{page.version}}/getting-started/calicoctl/install)**

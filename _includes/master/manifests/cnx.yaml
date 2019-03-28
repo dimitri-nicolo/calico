@@ -1,41 +1,30 @@
-{% comment %}
-cnx.yaml acccepts the following include flags:
-
-| Name             | Accepted Values          |
-|------------------|--------------------------|
-| orch             | openshift                |
-| datastore        | kdd, etcd                |
-| platform         | eks                      |
-| rbac             | pre23                    |
-
-{% endcomment -%}
-{%- if include.datastore == "kdd" %}
-# This manifest adds the additional {{site.prodname}} Manager components to a cluster
-# that has already had the Calico part of {{site.prodname}} deployed.
+{{- if eq .Values.datastore "kdd" }}
+# This manifest adds the additional Tigera Secure EE Manager components to a cluster
+# that has already had the Calico part of Tigera Secure EE deployed.
 # - It refers to the calico-config ConfigMap from that file, so if you are
 #   not using the provided hosted Calico manifest you must update
 #   references to that resource in this file.
 # - Update the tigera-cnx-manager-config ConfigMap below before use.
 # - Optionally update the cnx-apiserver-certs ConfigMap and caBundle in the
 #   apiregistration section below to use your TLS certs for secure communication
-#   between the {{site.prodname}} API server and Kubernetes API server.
-# - This manifest makes the {{site.prodname}} Manager web server available via a NodePort
+#   between the Tigera Secure EE API server and Kubernetes API server.
+# - This manifest makes the Tigera Secure EE Manager web server available via a NodePort
 #   serving on port 30003.  You may wish to update how this is exposed; do
 #   so by editing the tigera-cnx-manager-access Service below.
-{%- elsif include.datastore == "etcd" %}
-# This manifest adds the additional {{site.prodname}} Manager components to a cluster
-# that has already had the Calico part of {{site.prodname}} deployed.
+{{- else if eq .Values.datastore "etcd" }}
+# This manifest adds the additional Tigera Secure EE Manager components to a cluster
+# that has already had the Calico part of Tigera Secure EE deployed.
 # - It refers to the calico-config ConfigMap and calico-etcd-secrets Secret
 #   from that file, so if you are not using the provided hosted Calico
 #   manifest you must update references to those resources in this file.
 # - Update the tigera-cnx-manager-config ConfigMap below before use.
 # - Optionally update the cnx-apiserver-certs ConfigMap and caBundle in the
 #   apiregistration section below to use your TLS certs for secure communication
-#   between the {{site.prodname}} API server and Kubernetes API server.
-# - This manifest makes the {{site.prodname}} Manager web server available via a NodePort
+#   between the Tigera Secure EE API server and Kubernetes API server.
+# - This manifest makes the Tigera Secure EE Manager web server available via a NodePort
 #   serving on port 30003.  You may wish to update how this is exposed; do
 #   so by editing the cnx-manager Service below.
-{%- endif %}
+{{- end }}
 
 # Update this ConfigMap with the Google login client id.
 kind: ConfigMap
@@ -45,13 +34,13 @@ metadata:
   namespace: kube-system
 data:
   # Authentication type.  Must be set to "OIDC", "Basic", "Token", or "OAuth".
-{%- if include.orch == "openshift" %}
+{{- if eq .Values.orch "openshift" }}
   tigera.cnx-manager.authentication-type: "OAuth"
-{%- elsif include.platform == "eks" %}
+{{- else if eq .Values.platform "eks" }}
   tigera.cnx-manager.authentication-type: "Token"
-{%- else %}
+{{- else }}
   tigera.cnx-manager.authentication-type: "Basic"
-{%- endif %}
+{{- end }}
   # The OIDC authority.  Required if authentication-type is OIDC, ignored otherwise.
   tigera.cnx-manager.oidc-authority: "https://accounts.google.com"
   # The OIDC client id to use for OIDC login.  Kubelet must be configured accordingly.
@@ -79,10 +68,10 @@ data:
   # ELASTIC_INDEX_SUFFIX in tigera-fluentd-node.
   tigera.cnx-manager.cluster-name: "cluster"
 
-{%- if include.platform != "eks" %}
+{{- if ne .Values.platform "eks" }}
 ---
 
-# Optionally update this ConfigMap to enable TLS with certificate verification when {{site.prodname}} API
+# Optionally update this ConfigMap to enable TLS with certificate verification when Tigera Secure EE API
 # server communicates with the Kubernetes API server.
 apiVersion: v1
 kind: Secret
@@ -97,10 +86,10 @@ data:
   # should be base64 encoded strings of the entire contents of each file.
   #apiserver.key:
   #apiserver.crt:
-{%- endif %}
+{{- end }}
 ---
 
-# Optionally update this Service to change how {{site.prodname}} Manager is accessed.
+# Optionally update this Service to change how Tigera Secure EE Manager is accessed.
 # If using Google login, the URL for the web server must be configured
 # as a redirect URI in the Google project.  If the web server will be
 # accessed at https://<host>:<port>, add https://<host>:<port>/login/oidc/callback
@@ -170,11 +159,11 @@ metadata:
   name: ee-calico-tiered-policy-passthru
 rules:
 - apiGroups: ["projectcalico.org"]
-{%- if include.rbac == "pre23" %}
+{{- if eq .Values.rbac "pre23" }}
   resources: ["tier.networkpolicies","tier.globalnetworkpolicies"]
-{%- else %}
+{{- else }}
   resources: ["networkpolicies","globalnetworkpolicies"]
-{%- endif %}
+{{- end }}
   verbs: ["*"]
 
 ---
@@ -244,7 +233,7 @@ metadata:
 
 ---
 
-{%- if include.datastore == "kdd" %}
+{{- if eq .Values.datastore "kdd" }}
 # Give cnx-apiserver ServiceAccount permissions needed for
 # accessing various backing CRDs and K8s networkpolicies.
 kind: ClusterRole
@@ -291,7 +280,7 @@ subjects:
   namespace: kube-system
 
 ---
-{%- endif %}
+{{- end }}
 
 apiVersion: v1
 kind: Service
@@ -313,7 +302,7 @@ spec:
 
 ---
 
-# Audit policy for the {{site.prodname}} API Server.
+# Audit policy for the Tigera Secure EE API Server.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -375,17 +364,17 @@ spec:
         - name: cnx-pull-secret
       containers:
       - name: cnx-apiserver
-        image: {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
+        image: {{.Values.cnxApiserver.image}}:{{.Values.cnxApiserver.tag}}
         args:
           - "--secure-port=5443"
-{%- if include.platform == "eks" %}
+{{- if eq .Values.platform "eks" }}
           - "--authentication-skip-lookup=true"
           - "--requestheader-client-ca-file=/code/certificates/requestheader-client-ca-file"
-{%- endif %}
+{{- end }}
           - "--audit-policy-file=/etc/tigera/audit/policy.conf"
           - "--audit-log-path=/var/log/calico/audit/tsee-audit.log"
         env:
-{%- if include.datastore == "etcd" %}
+{{- if eq .Values.datastore "etcd" }}
           - name: ETCD_ENDPOINTS
             valueFrom:
               configMapKeyRef:
@@ -414,23 +403,23 @@ spec:
         volumeMounts:
           - mountPath: /calico-secrets
             name: etcd-certs
-{%- elsif include.datastore == "kdd" %}
+{{- else if eq .Values.datastore "kdd" }}
           - name: DATASTORE_TYPE
             value: "kubernetes"
         volumeMounts:
-{%- endif %}
+{{- end }}
           - mountPath: /var/log/calico/audit
             name: var-log-calico-audit
           - mountPath: /etc/tigera/audit
             name: audit-policy-ee
-{%- if include.platform == "eks" %}
+{{- if eq .Values.platform "eks" }}
           - mountPath: /code/certificates/requestheader-client-ca-file
             name: apiserver-certs
             subPath: requestheader-client-ca-file
-{%- else %}
+{{- else }}
           # - mountPath: /code/apiserver.local.config/certificates
           #   name: apiserver-certs
-{%- endif %}
+{{- end }}
         livenessProbe:
           httpGet:
             path: /apis/
@@ -438,17 +427,17 @@ spec:
             scheme: HTTPS
           initialDelaySeconds: 90
           periodSeconds: 10
-{%- if include.orch == "openshift" %}
+{{- if eq .Values.orch "openshift" }}
         securityContext:
           privileged: true
-{%- endif %}
+{{- end }}
       - name: cnx-queryserver
-        image: {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["cnxQueryserver"]}}:{{site.data.versions[page.version].first.components["cnx-queryserver"].version}}
+        image: {{.Values.cnxQueryserver.image}}:{{.Values.cnxQueryserver.tag}}
         env:
           # Set queryserver logging to "info"
           - name: LOGLEVEL
             value: "info"
-{%- if include.datastore == "etcd" %}
+{{- if eq .Values.datastore "etcd" }}
           - name: ETCD_ENDPOINTS
             valueFrom:
               configMapKeyRef:
@@ -492,7 +481,7 @@ spec:
         volumeMounts:
           - mountPath: /calico-secrets
             name: etcd-certs
-{%- elsif include.datastore == "kdd" %}
+{{- else if eq .Values.datastore "kdd" }}
           - name: DATASTORE_TYPE
             value: "kubernetes"
           # Sets Default Security Groups if tigera-aws-config exists
@@ -509,7 +498,7 @@ spec:
                 name: tigera-aws-config
                 key: pod_sg
                 optional: true
-{%- endif %}
+{{- end }}
         livenessProbe:
           httpGet:
             path: /version
@@ -529,24 +518,24 @@ spec:
             items:
             - key: config
               path: policy.conf
-{%- if include.datastore == "etcd" %}
+{{- if eq .Values.datastore "etcd" }}
         # Mount in the etcd TLS secrets with mode 400.
         # See https://kubernetes.io/docs/concepts/configuration/secret/
         - name: etcd-certs
           secret:
             secretName: calico-etcd-secrets
-{%- endif %}
-{%- if include.platform == "eks" %}
+{{- end }}
+{{- if eq .Values.platform "eks" }}
         - name: apiserver-certs
           configMap:
             name: extension-apiserver-authentication
-{%- else %}
+{{- else }}
         # If you're using TLS with certificate verification then
         # uncomment the following.
         # - name: apiserver-certs
         #   secret:
         #     secretName: cnx-apiserver-certs
-{%- endif %}
+{{- end }}
 
 ---
 
@@ -598,7 +587,7 @@ spec:
           name: cnx-manager-tls
       containers:
       - name: cnx-manager
-        image: {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["cnxManager"]}}:{{site.data.versions[page.version].first.components["cnx-manager"].version}}
+        image: {{.Values.cnxManager.image}}:{{.Values.cnxManager.tag}}
         env:
           - name: CNX_WEB_AUTHENTICATION_TYPE
             valueFrom:
@@ -650,7 +639,7 @@ spec:
               configMapKeyRef:
                 name: tigera-cnx-manager-config
                 key: tigera.cnx-manager.cluster-name
-{%- if include.datastore == "etcd" %}
+{{- if eq .Values.datastore "etcd" }}
           - name: CNX_WEB_OAUTH_AUTHORITY
             valueFrom:
               configMapKeyRef:
@@ -661,7 +650,7 @@ spec:
               configMapKeyRef:
                 name: tigera-cnx-manager-config
                 key: tigera.cnx-manager.oauth-client-id
-{%- endif %}
+{{- end }}
         # Use the same liveness check as the proxy since
         # the static content is only served over the localhost
         # interface. Liveness check hits the static content through the proxy.
@@ -673,7 +662,7 @@ spec:
           initialDelaySeconds: 90
           periodSeconds: 10
       - name: cnx-manager-proxy
-        image: {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["cnxManagerProxy"]}}:{{site.data.versions[page.version].first.components["cnx-manager-proxy"].version}}
+        image: {{.Values.cnxManagerProxy.image}}:{{.Values.cnxManagerProxy.tag}}
         env:
           - name: CNX_WEB_AUTHENTICATION_TYPE
             valueFrom:
@@ -690,7 +679,7 @@ spec:
               configMapKeyRef:
                 name: tigera-cnx-manager-config
                 key: tigera.cnx-manager.oidc-client-id
-{%- if include.datastore == "etcd" %}
+{{- if eq .Values.datastore "etcd" }}
           - name: CNX_WEB_OAUTH_AUTHORITY
             valueFrom:
               configMapKeyRef:
@@ -701,7 +690,7 @@ spec:
               configMapKeyRef:
                 name: tigera-cnx-manager-config
                 key: tigera.cnx-manager.oauth-client-id
-{%- endif %}
+{{- end }}
         volumeMounts:
         - mountPath: /etc/cnx-manager-web-tls
           name: cnx-manager-tls

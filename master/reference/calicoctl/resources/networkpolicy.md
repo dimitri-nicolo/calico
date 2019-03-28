@@ -7,18 +7,18 @@ A network policy resource (`NetworkPolicy`) represents an ordered set of rules w
 to a collection of endpoints that match a [label selector](#selector).
 
 `NetworkPolicy` is a namespaced resource. `NetworkPolicy` in a specific namespace
-only applies to [workload endpoint resources]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/workloadendpoint)
+only applies to [workload endpoint resources]({{site.url}}/{{page.version}}/reference/calicoctl/resources/workloadendpoint)
 in that namespace. Two resources are in the same namespace if the `namespace`
 value is set the same on both.
-See [global network policy resource]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy) for non-namespaced network policy.
+See [global network policy resource]({{site.url}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy) for non-namespaced network policy.
 
 `NetworkPolicy` resources can be used to define network connectivity rules between groups of {{site.prodname}} endpoints and host endpoints, and
-take precedence over [profile resources]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/profile) if any are defined.
+take precedence over [profile resources]({{site.url}}/{{page.version}}/reference/calicoctl/resources/profile) if any are defined.
 
-NetworkPolicies are organised into [tiers]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/tier), which provide an additional layer of ordering—in particular, note that the `Pass` action skips to the
-next [tier]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/tier), to enable hierarchical security policy.
+NetworkPolicies are organized into [tiers]({{site.url}}/{{page.version}}/reference/calicoctl/resources/tier), which provide an additional layer of ordering—in particular, note that the `Pass` action skips to the
+next [tier]({{site.url}}/{{page.version}}/reference/calicoctl/resources/tier), to enable hierarchical security policy.
 
-For `calicoctl` [commands]({{site.baseurl}}/{{page.version}}/reference/calicoctl/commands/) that specify a resource type on the CLI, the following
+For `calicoctl` [commands]({{site.url}}/{{page.version}}/reference/calicoctl/commands/) that specify a resource type on the CLI, the following
 aliases are supported (all case insensitive): `networkpolicy`, `networkpolicies`, `policy`, `np`, `policies`, `pol`, `pols`.
 
 ### Sample YAML
@@ -65,7 +65,7 @@ spec:
 | Field    | Description                                                                                         | Accepted Values | Schema                | Default |
 |----------|-----------------------------------------------------------------------------------------------------|-----------------|-----------------------|---------|
 | order    | Controls the order of precedence. {{site.prodname}} applies the policy with the lowest value first. |                 | float                 |         |
-| tier     | Name of the [tier]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/tier) this policy belongs to.                                                   |                 | string                 |  `default` |
+| tier     | Name of the [tier]({{site.url}}/{{page.version}}/reference/calicoctl/resources/tier) this policy belongs to.                                                   |                 | string                 |  `default` |
 | selector | Selects the endpoints to which this policy applies.                                                 |                 | [selector](#selector) | all()   |
 | types    | Applies the policy based on the direction of the traffic. To apply the policy to inbound traffic, set to `Ingress`. To apply the policy to outbound traffic, set to `Egress`. To apply the policy to both, set to `Ingress, Egress`. | `Ingress`, `Egress` | List of strings | Depends on presence of ingress/egress rules\* |
 | ingress  | Ordered list of ingress rules applied by policy.                                                    |                 | List of [Rule](#rule) |         |
@@ -108,7 +108,7 @@ spec:
 ### Application layer policy
 
 Application layer policy is an optional feature of {{site.prodname}} and
-[must be enabled]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/app-layer-policy)
+[must be enabled]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/app-layer-policy)
 in order to use the following match criteria.
 
 > **NOTE**: Application layer policy match criteria are supported with the following restrictions.
@@ -127,5 +127,5 @@ in order to use the following match criteria.
 | etcdv3                   | Yes           | Yes    | Yes      |
 | Kubernetes API datastore | Yes           | Yes    | Yes      |
 
-> **Note**: {{site.prodname}} `NetworkPolicy` resources with `knp.` prefixed names are determined from Kubernetes `NetworkPolicy` 
+> **Note**: {{site.prodname}} `NetworkPolicy` resources with `knp.` prefixed names are determined from Kubernetes `NetworkPolicy`
 > resources and are read-only through `calicoctl`.

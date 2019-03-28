@@ -2,7 +2,6 @@ v2.3:
 - title: v2.3.0
   note: |
     01 February 2019
-  dockerRepo: quay.io
   components:
     cnx-manager:
       version: v2.3.0
@@ -88,7 +87,6 @@ v2.2:
   note: |
     14 January 2019
 
-  dockerRepo: quay.io
   components:
     cnx-manager:
       version: v2.2.3
@@ -170,7 +168,6 @@ v2.2:
   note: |
     27 November 2018
 
-  dockerRepo: quay.io
   components:
     cnx-manager:
       version: v2.2.1
@@ -251,7 +248,6 @@ v2.2:
   note: |
     13 November 2018
 
-  dockerRepo: quay.io
   components:
     cnx-manager:
       version: v2.2.1
@@ -331,8 +327,6 @@ v2.2:
 - title: v2.2.0
   note: |
     12 October 2018
-
-  dockerRepo: quay.io
   components:
     cnx-manager:
       version: v2.2.0
@@ -413,8 +407,6 @@ v2.1:
 - title: v2.1.1
   note: |
     18 May 2018
-
-  dockerRepo: quay.io
   components:
     cnx-manager:
       version: v2.1.1
@@ -474,8 +466,6 @@ v2.1:
 - title: v2.1.0
   note: |
     20 April 2018
-
-  dockerRepo: quay.io
   components:
     cnx-manager:
       version: v2.1.0
@@ -546,7 +536,6 @@ v2.0:
     - Enable Kubernetes node references for automatic cleanup of Node resources in etcd. [calico #1678](https://github.com/projectcalico/calico/pull/1678) (@caseydavenport)
     - Fixed a panic when BGP is disabled. [calico #1674](https://github.com/projectcalico/calico/pull/1674) (@tmjd)
     - Kubernetes self-hosted manifests now enable BGP IP address auto-detection by default. [calico #1588](https://github.com/projectcalico/calico/pull/1588) (@caseydavenport)
-  dockerRepo: quay.io
   components:
     cnx-manager:
       version: v2.0.0
@@ -589,8 +578,6 @@ v2.0:
     This version includes updated versions of the calicoq and cnx-node container
     images. These new images fix some CVEs but introduce no new features or
     other bug fixes.
-
-  dockerRepo: quay.io
   components:
     cnx-manager:
       version: v2.0.0
@@ -628,7 +615,6 @@ v2.0:
     calico:
       version: v3.0.1
       url: https://github.com/projectcalico/calico/releases/tag/v3.0.1
-
 
 - title: v2.0.0
   note: |
@@ -772,8 +758,6 @@ v2.0:
 
     - **Route reflectors cannot be clustered**: We plan to resume support for
       this in a future release.
-
-  dockerRepo: quay.io
   components:
     cnx-manager:
       version: v2.0.0
@@ -818,63 +802,42 @@ v2.0:
 master:
 - title: master
   note: ""
-  dockerRepo: gcr.io/unique-caldron-775/cnx
   components:
     cnx-manager:
       version: master
-      url: ""
     cnx-manager-proxy:
       version: master
-      url: ""
     cnx-apiserver:
       version: master
-      url: ""
     cnx-queryserver:
       version: master
-      url: ""
     cnx-kube-controllers:
       version: master
-      url: ""
     calicoq:
       version: master
-      url: ""
     typha:
       version: master
-      url: ""
     calicoctl:
       version: master
-      url: ""
-      download_url: ""
     cnx-node:
       version: master
-      url: ""
     calico/cni:
       version: master
-      url: ""
-      download_calico_url: https://github.com/projectcalico/cni-plugin/releases/download/v2.0.1/calico
-      download_calico_ipam_url: https://github.com/projectcalico/cni-plugin/releases/download/v2.0.1/calico-ipam
     calico/routereflector:
       version: v0.6.1
-      url: ""
     calico:
-      version: v3.4.0
-      minor_version: v3.4
-      url: https://github.com/projectcalico/calico/releases/tag/v3.1.0
+      version: v3.6.0
+      minor_version: v3.6
     prometheus-operator:
       version: v0.28.0
-      url: ""
     prometheus:
       version: v2.7.1
-      url: ""
     alertmanager:
       version: v0.16.1
-      url: ""
     prometheus-config-reloader:
       version: v0.28.0
-      url: ""
     configmap-reload:
       version: v0.0.1
-      url: ""
     dikastes:
       version: master
     flexvol:
@@ -885,13 +848,10 @@ master:
       version: master
     elasticsearch-operator:
       version: 0.2.0
-      url: ""
     kibana:
       version: 6.4.3
-      url: ""
     elasticsearch:
       version: 6.4.3
-      url: ""
     cloud-controllers:
       version: master
     elastic-tsee-installer:
@@ -900,3 +860,5 @@ master:
       version: master
     intrusion-detection-controller:
       version: master
+    flannel:
+      version: v0.9.1

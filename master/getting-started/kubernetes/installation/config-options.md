@@ -38,24 +38,24 @@ The sections that follow discuss the configurable parameters in greater depth.
 
 ### Configuring the pod IP range
 
-{{site.prodname}} IPAM assigns IP addresses from [IP pools]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/ippool).
+{{site.prodname}} IPAM assigns IP addresses from [IP pools]({{site.url}}/{{page.version}}/reference/calicoctl/resources/ippool).
 
 To change the default IP range used for pods, modify the `CALICO_IPV4POOL_CIDR`
 section of the `calico.yaml` manifest.  For more information, see
-[Configuring {{site.nodecontainer}}]({{site.baseurl}}/{{page.version}}/reference/node/configuration).
+[Configuring {{site.nodecontainer}}]({{site.url}}/{{page.version}}/reference/node/configuration).
 
 ### Configuring IP-in-IP
 
 By default, the manifests enable IP-in-IP encapsulation across subnets. Many users may
 want to disable IP-in-IP encapsulation, such as under the following circumstances.
 
-- Their cluster is [running in a properly configured AWS VPC]({{site.baseurl}}/{{page.version}}/reference/public-cloud/aws).
+- Their cluster is [running in a properly configured AWS VPC]({{site.url}}/{{page.version}}/reference/public-cloud/aws).
 - All their Kubernetes nodes are connected to the same layer 2 network.
 - They intend to use BGP peering to make their underlying infrastructure aware of
   pod IP addresses.
 
 To disable IP-in-IP encapsulation, modify the `CALICO_IPV4POOL_IPIP` section of the
-manifest.  For more information, see [Configuring {{site.nodecontainer}}]({{site.baseurl}}/{{page.version}}/reference/node/configuration).
+manifest.  For more information, see [Configuring {{site.nodecontainer}}]({{site.url}}/{{page.version}}/reference/node/configuration).
 
 ### Configuring etcd
 
@@ -140,7 +140,7 @@ service accounts with the necessary permissions.
 ### Configuring service advertisement
 
 {{site.prodname}} supports [advertising Kubernetes services over
-BGP]({{site.baseurl}}/{{page.version}}/usage/service-advertisement),
+BGP](../../../networking/service-advertisement),
 so that service cluster IPs are routable from outside the cluster.  To
 enable this, add a `CALICO_ADVERTISE_CLUSTER_IPS` variable setting to
 the environment for {{site.nodecontainer}} in the `calico.yaml`
@@ -155,7 +155,7 @@ cluster; for example:
 ```
 
 For more information, see [Configuring
-{{site.nodecontainer}}]({{site.baseurl}}/{{page.version}}/reference/node/configuration).
+{{site.nodecontainer}}]({{site.url}}/{{page.version}}/reference/node/configuration).
 
 ### Other configuration options
 
@@ -183,4 +183,65 @@ be filled in automatically by the `calico/cni` container:
 | `__ETCD_CERT_FILE__`                  | The path to the etcd certificate file installed to the host, empty if no cert present.
 | `__ETCD_CA_CERT_FILE__`               | The path to the etcd certificate authority file installed to the host. Empty if no certificate authority is present.
 
-{% include {{page.version}}/alp-options.md %}
+
+## Customizing application layer policy manifests
+
+### About customizing application layer policy manifests
+
+Instead of installing from our pre-modified Istio manifests, you may wish to
+customize your Istio install or use a different Istio version.  This section
+walks you through the necessary changes to a generic Istio install manifest to
+allow application layer policy to operate.
+
+### Sidecar injector
+
+The standard Istio manifests for the sidecar injector include a ConfigMap that
+contains the template used when adding pods to the cluster. The template adds an
+init container and the Envoy sidecar.  Application layer policy requires
+an additional lightweight sidecar called Dikastes which receives {{site.prodname}} policy
+from Felix and applies it to incoming connections and requests.
+
+If you haven't already done so, download an
+[Istio release](https://github.com/istio/istio/releases) and untar it to a
+working directory.
+
+Open the `install/kubernetes/istio-demo-auth.yaml` file in an
+editor, and locate the `istio-sidecar-injector` ConfigMap.  In the existing `istio-proxy` container, add a new `volumeMount`.
+
+```
+        - mountPath: /var/run/dikastes
+          name: dikastes-sock
+```
+
+Add a new container to the template.
+
+```
+      - name: dikastes
+        image: {{page.registry}}{{site.imageNames["dikastes"]}}:{{site.data.versions[page.version].first.components["calico/dikastes"].version}}
+        args: ["/dikastes", "server", "-l", "/var/run/dikastes/dikastes.sock", "-d", "/var/run/felix/nodeagent/socket", "--debug"]
+        volumeMounts:
+        - mountPath: /var/run/dikastes
+          name: dikastes-sock
+        - mountPath: /var/run/felix
+          name: felix-sync
+```
+
+Add two new volumes.
+
+```
+      - name: dikastes-sock
+        emptyDir:
+          medium: Memory
+      - name: felix-sync
+        flexVolume:
+          driver: nodeagent/uds
+```
+
+The volumes you added are used to create Unix domain sockets that allow
+communication between Envoy and Dikastes and between Dikastes and
+Felix.  Once created, a Unix domain socket is an in-memory communications
+channel. The volumes are not used for any kind of stateful storage on disk.
+
+Refer to the
+[{{site.prodname}} ConfigMap manifest](/{{page.version}}/getting-started/kubernetes/installation/manifests/app-layer-policy/istio-inject-configmap.yaml){:target="_blank"} for an
+example with the above changes.

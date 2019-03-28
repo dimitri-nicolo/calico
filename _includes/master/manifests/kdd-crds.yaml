@@ -1,13 +1,4 @@
-{% comment %}
-kdd-crds.yaml acccepts the following include flags:
-
-| Name             | Accepted Values               |
-|------------------|-------------------------------|
-| network          | calico, flannel, ecs, <unset> |
-
-{% endcomment -%}
-# Create all the CustomResourceDefinitions needed for
-# {{site.prodname}} {% if include.network %}policy and networking{% else %}policy-only{% endif %} mode.
+{{- if eq .Values.datastore "kdd" -}}
 
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
@@ -22,7 +13,66 @@ spec:
     plural: felixconfigurations
     singular: felixconfiguration
 ---
-{%- if include.network == "calico" %}
+{{- if eq .Values.network "calico" }}
+
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: ipamblocks.crd.projectcalico.org
+spec:
+  scope: Cluster
+  group: crd.projectcalico.org
+  version: v1
+  names:
+    kind: IPAMBlock
+    plural: ipamblocks
+    singular: ipamblock
+
+---
+
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: blockaffinities.crd.projectcalico.org
+spec:
+  scope: Cluster
+  group: crd.projectcalico.org
+  version: v1
+  names:
+    kind: BlockAffinity
+    plural: blockaffinities
+    singular: blockaffinity
+
+---
+
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: ipamhandles.crd.projectcalico.org
+spec:
+  scope: Cluster
+  group: crd.projectcalico.org
+  version: v1
+  names:
+    kind: IPAMHandle
+    plural: ipamhandles
+    singular: ipamhandle
+
+---
+
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: ipamconfigs.crd.projectcalico.org
+spec:
+  scope: Cluster
+  group: crd.projectcalico.org
+  version: v1
+  names:
+    kind: IPAMConfig
+    plural: ipamconfigs
+    singular: ipamconfig
+
 
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
@@ -38,7 +88,7 @@ spec:
     singular: bgppeer
 
 ---
-{%- endif %}
+{{- end }}
 
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
@@ -103,20 +153,6 @@ spec:
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
-  name: tiers.crd.projectcalico.org
-spec:
-  scope: Cluster
-  group: crd.projectcalico.org
-  version: v1
-  names:
-    kind: Tier
-    plural: tiers
-    singular: tier
----
-
-apiVersion: apiextensions.k8s.io/v1beta1
-kind: CustomResourceDefinition
-metadata:
   name: globalnetworkpolicies.crd.projectcalico.org
 spec:
   scope: Cluster
@@ -158,47 +194,4 @@ spec:
     singular: networkpolicy
 
 ---
-
-apiVersion: apiextensions.k8s.io/v1beta1
-kind: CustomResourceDefinition
-metadata:
-  name: licensekeys.crd.projectcalico.org
-spec:
-  scope: Cluster
-  group: crd.projectcalico.org
-  version: v1
-  names:
-    kind: LicenseKey
-    plural: licensekeys
-    singular: licensekey
-
----
-
-apiVersion: apiextensions.k8s.io/v1beta1
-kind: CustomResourceDefinition
-metadata:
-  name: remoteclusterconfigurations.crd.projectcalico.org
-spec:
-  scope: Cluster
-  group: crd.projectcalico.org
-  version: v1
-  names:
-    kind: RemoteClusterConfiguration
-    plural: remoteclusterconfigurations
-    singular: remoteclusterconfiguration
-
----
-
-apiVersion: apiextensions.k8s.io/v1beta1
-kind: CustomResourceDefinition
-metadata:
-  name: globalthreatfeeds.crd.projectcalico.org
-spec:
-  scope: Cluster
-  group: crd.projectcalico.org
-  version: v1
-  names:
-    kind: GlobalThreatFeed
-    plural: globalthreatfeeds
-    singular: globalthreatfeeds
-
+{{- end -}}

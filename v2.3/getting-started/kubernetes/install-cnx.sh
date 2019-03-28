@@ -113,7 +113,7 @@ promptToContinue() {
 # checkRegistry()  default is quay.io
 #
 checkRegistry() {
- local IMAGE_REPO="{{site.data.versions[page.version].first.dockerRepo}}"
+ local IMAGE_REPO="{{page.registry}}"
  if [[ "$IMAGE_REPO" == "gcr.io/"* ]]; then
    CALICO_REGISTRY="gcr.io"
  fi

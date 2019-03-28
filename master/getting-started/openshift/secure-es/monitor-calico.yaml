@@ -1,4 +1,8 @@
 ---
 layout: null
 ---
-{% include {{page.version}}/manifests/monitor-calico.yaml secure_es="true" orch="openshift" elasticsearch="external" %}
+{% helm --execute templates/monitor-calico.yaml --execute templates/es-proxy.yaml %}
+secure_es: true
+orch: openshift
+elasticsearchType: external
+{% endhelm %}

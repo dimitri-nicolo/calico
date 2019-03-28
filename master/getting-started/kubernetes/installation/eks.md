@@ -10,7 +10,7 @@ This guide covers installing {{site.prodname}} for policy enforcement on Amazon 
 ## Before you begin
 
 - Ensure that you have an EKS cluster with [platform version](https://docs.aws.amazon.com/eks/latest/userguide/platform-versions.html)
-  at least eks.2 (for aggregated API server support).  
+  at least eks.2 (for aggregated API server support).
 
 - Ensure that you have the [credentials for the Tigera private registry](../../../getting-started/#obtain-the-private-registry-credentials)
   and a [license key](../../../getting-started/#obtain-a-license-key).
@@ -65,7 +65,7 @@ This guide covers installing {{site.prodname}} for policy enforcement on Amazon 
    kubectl apply -f calico.yaml
    ```
 
-1. Continue to [Installing the {{site.prodname}} Manager and API Server](#install-cnx-mgr)
+1. Continue to [Installing the {{site.prodname}} Manager and API Server](#installing-the-{{site.prodnamedash}}-manager-and-api-server)
 
 {% include {{page.version}}/cnx-mgr-install.md init="kubernetes" net="other" platform="eks" %}
 

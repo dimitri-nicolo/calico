@@ -1,0 +1,3 @@
+{% comment %}
+For Tigera Secure EE, we don't provide these URLs.
+{% endcomment %}

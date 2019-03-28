@@ -6,7 +6,7 @@
   The following distributions have the required kernel, its dependencies, and are
   known to work well with {{site.prodname}} and {{include.orch}}.{% if include.orch == "Kubernetes" or include.orch == "host protection" %}
   - CentOS 7
-  - Ubuntu Server 16.04
+  - Ubuntu 16.04
   - Debian 9
   {% endif %}{% if include.orch == "OpenShift" %}
   - CentOS 7
@@ -21,7 +21,7 @@
   > **Note**: Many Linux distributions, such as most of the above, include NetworkManager.
   > By default, NetworkManager does not allow {{site.prodname}} to manage interfaces.
   > If your nodes have NetworkManager, complete the steps in
-  > [Preventing NetworkManager from controlling {{site.prodname}} interfaces](../../usage/troubleshooting/#prevent-networkmanager-from-controlling-{{site.prodnamedash}}-interfaces)
+  > [Preventing NetworkManager from controlling {{site.prodname}} interfaces]({{site.baseurl}}/{{page.version}}/maintenance/troubleshooting#prevent-networkmanager-from-controlling-{{site.prodnamedash}}-interfaces)
   > before installing {{site.prodname}}.
   {: .alert .alert-info}
 
@@ -36,8 +36,11 @@ you can configure {{site.prodname}} to access an etcdv3 cluster directly or to
 use the Kubernetes API datastore.{% endif %}{% if include.orch == "OpenShift" %} On
 OpenShift, {{site.prodname}} can share an etcdv3 cluster with OpenShift, or
 you can set up an etcdv3 cluster dedicated to {{site.prodname}}.{% endif %}
-{% if include.orch == "OpenStack" %}If you don't already have an etcdv3 cluster
-to connect to, we provide instructions in the [installation documentation](./installation/).{% endif %}{% if include.orch == "host protection" %}The key/value store must be etcdv3.{% endif %}
+
+{% if include.orch == "OpenStack" %}For production you will likely want multiple
+nodes for greater performance and reliability.  If you don't already have an
+etcdv3 cluster to connect to, please refer to [the upstream etcd
+docs](https://coreos.com/etcd/) for detailed advice and setup.{% endif %}{% if include.orch == "host protection" %}The key/value store must be etcdv3.{% endif %}
 
 ## Network requirements
 
@@ -48,18 +51,20 @@ Ensure that your hosts and firewalls allow the necessary traffic based on your c
 | {{site.prodname}} networking (BGP)                           | All                  | Bidirectional   | TCP 179
 | {{site.prodname}} networking in IP-in-IP mode (default mode) | All                  | Bidirectional   | IP-in-IP, often represented by its protocol number `4`
 {%- if include.orch == "Kubernetes" %}
-| etcd datastore                                               | etcd hosts           | Incoming        | [Officially](http://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.txt) TCP 2379 but can vary
 | {{site.prodname}} networking with Typha enabled              | Typha agent hosts    | Incoming        | TCP 5473 (default)
 | All                                                          | kube-apiserver host  | Incoming        | Often TCP 443 or 6443\*
+| etcd datastore                                               | etcd hosts           | Incoming        | [Officially](http://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.txt) TCP 2379 but can vary
+{%- else %}
+| All                                                          | etcd hosts           | Incoming        | [Officially](http://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.txt) TCP 2379 but can vary |
 {%- endif %}
 {%- if include.orch == "OpenShift" %}
 | All                                                          | kube-apiserver host  | Incoming        | Often TCP 443 or 8443\*
 {%- endif %}
 {%- if include.orch == "Kubernetes" or include.orch == "OpenShift" %}
-| All                                                          | {{site.prodname}} API server hosts | Incoming | TCP 8080 and 5443 (default)                           
-| All                                                          | agent hosts         | Incoming        | TCP 9081 (default)                                            
-| All                                                          | Prometheus hosts    | Incoming        | TCP 9090 (default)                                            
-| All                                                          | Alertmanager hosts  | Incoming        | TCP 9093 (default)                                            
+| All                                                          | {{site.prodname}} API server hosts | Incoming | TCP 8080 and 5443 (default)
+| All                                                          | agent hosts         | Incoming        | TCP 9081 (default)
+| All                                                          | Prometheus hosts    | Incoming        | TCP 9090 (default)
+| All                                                          | Alertmanager hosts  | Incoming        | TCP 9093 (default)
 | All                                                          | {{site.prodname}} Manager host | Incoming | TCP 30003 and 9443 (defaults)
 {%- endif %}
 {%- if include.orch != "Kubernetes" %}
@@ -71,12 +76,10 @@ Ensure that your hosts and firewalls allow the necessary traffic based on your c
 
 \* _The value passed to kube-apiserver using the `--secure-port` flag. If you cannot locate this, check the `targetPort` value returned by `kubectl get svc kubernetes -o yaml`._
 {% endif -%}
-
 {%- if include.orch == "OpenStack" %}
 
 \* _If your compute hosts connect directly and don't use IP-in-IP, you don't need to allow IP-in-IP traffic._
 {% endif -%}
-
 
 ## Privileges
 

@@ -1,3 +1,5 @@
+{{- if .Values.secure_es }}
+---
 kind: ServiceAccount
 apiVersion: v1
 metadata:
@@ -68,7 +70,7 @@ spec:
           name: es-proxy-tls-cache
       containers:
       - name: tigera-es-proxy
-        image: {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["es-proxy"]}}:{{site.data.versions[page.version].first.components["es-proxy"].version}}
+        image: {{.Values.esProxy.image}}:{{.Values.esProxy.tag}}
         env:
           - name: ES_BACKEND_HOST
             valueFrom:
@@ -129,3 +131,4 @@ spec:
       selector: role == 'k8s-apiserver-endpoints'
     destination:
       ports: [8443]
+{{- end }}

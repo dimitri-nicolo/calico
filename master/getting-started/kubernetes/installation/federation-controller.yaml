@@ -1,4 +1,6 @@
 ---
 layout: null
 ---
-{% include {{page.version}}/manifests/tigera-federation-controller.yaml datastore="etcd" %}
+{% helm --execute templates/tigera-federation-controller.yaml %}
+datastore: etcd
+{% endhelm %}
