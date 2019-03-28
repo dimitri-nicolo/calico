@@ -198,7 +198,7 @@ spec:
         - name: cnx-pull-secret
       containers:
       - name: cnx-apiserver
-        image: {{page.registry}}/{{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
+        image: {{page.registry}}{{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
         args:
         - "--secure-port=5443"
         env:
@@ -241,7 +241,7 @@ spec:
           initialDelaySeconds: 5
           periodSeconds: 3
       - name: cnx-queryserver
-        image: {{page.registry}}/{{site.imageNames["cnxQueryserver"]}}:{{site.data.versions[page.version].first.components["cnx-queryserver"].version}}
+        image: {{page.registry}}{{site.imageNames["cnxQueryserver"]}}:{{site.data.versions[page.version].first.components["cnx-queryserver"].version}}
         env:
           # Set queryserver logging to "info"
           - name: LOGLEVEL
@@ -341,7 +341,7 @@ spec:
           name: cnx-manager-tls
       containers:
       - name: cnx-manager
-        image: {{page.registry}}/{{site.imageNames["cnxManager"]}}:{{site.data.versions[page.version].first.components["cnx-manager"].version}}
+        image: {{page.registry}}{{site.imageNames["cnxManager"]}}:{{site.data.versions[page.version].first.components["cnx-manager"].version}}
         env:
           - name: CNX_WEB_AUTHENTICATION_TYPE
             valueFrom:
@@ -389,7 +389,7 @@ spec:
           initialDelaySeconds: 5
           periodSeconds: 3
       - name: cnx-manager-proxy
-        image: {{page.registry}}/{{site.imageNames["cnxManagerProxy"]}}:{{site.data.versions[page.version].first.components["cnx-manager-proxy"].version}}
+        image: {{page.registry}}{{site.imageNames["cnxManagerProxy"]}}:{{site.data.versions[page.version].first.components["cnx-manager-proxy"].version}}
         env:
           - name: CNX_WEB_AUTHENTICATION_TYPE
             valueFrom:

@@ -21,7 +21,7 @@ you have etcd running.
 1. Launch `{{site.nodecontainer}}`:
 
    ```
-   sudo ETCD_ENDPOINTS=http://$ETCD_IP:$ETCD_PORT calicoctl node run --node-image={{page.registry}}/{{site.imageNames["node"]}}:{{site.data.versions[page.version].first.title}}
+   sudo ETCD_ENDPOINTS=http://$ETCD_IP:$ETCD_PORT calicoctl node run --node-image={{page.registry}}{{site.imageNames["node"]}}:{{site.data.versions[page.version].first.title}}
    ```
 
    > **Note**: Ensure you've set or replaced `$ETCD_IP` and `$ETCD_PORT` to point to
@@ -33,7 +33,7 @@ you have etcd running.
    ```
    vagrant@calico-01:~$ docker ps
    CONTAINER ID        IMAGE                        COMMAND             CREATED             STATUS              PORTS               NAMES
-   408bd2b9ba53        {{page.registry}}/{{site.imageNames["node"]}}:{{site.data.versions[page.version].first.title}}   "start_runit"       3 seconds ago       Up 2 seconds                            {{site.noderunning}}
+   408bd2b9ba53        {{page.registry}}{{site.imageNames["node"]}}:{{site.data.versions[page.version].first.title}}   "start_runit"       3 seconds ago       Up 2 seconds                            {{site.noderunning}}
    ```
 
    Furthermore, check that the `{{site.nodecontainer}}` container is functioning properly

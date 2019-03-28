@@ -72,7 +72,7 @@ os_sdn_network_plugin_name=cni
 openshift_use_calico=true
 openshift_use_openshift_sdn=false
 calico_node_image=<YOUR-REGISTRY>/tigera/cnx-node:{{site.data.versions[page.version].first.components["cnx-node"].version}}
-calico_url_policy_controller={{page.registry}}/{{site.imageNames["calicoKubeControllers"]}}:{{site.data.versions[page.version].first.components["calico/kube-controllers"].version}}
+calico_url_policy_controller={{page.registry}}{{site.imageNames["calicoKubeControllers"]}}:{{site.data.versions[page.version].first.components["calico/kube-controllers"].version}}
 calico_url_ipam={{site.data.versions[page.version].first.components["calico/cni"].download_calico_ipam_url}}
 calico_url_cni={{site.data.versions[page.version].first.components["calico/cni"].download_calico_url}}
 
