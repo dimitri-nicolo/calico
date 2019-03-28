@@ -47,15 +47,16 @@ type snapshotter struct {
 // then continuously snapshots with 'freq' periodicity.
 func (s *snapshotter) run() error {
 	// Check for a snapshot written within the last day.
-	if _, err := s.takeImmediateSnapshot(); err != nil {
-		// If there is no prior snapshot ...
-		if _, ok := err.(errors.ErrorResourceDoesNotExist); ok {
-			if err := s.storeSnapshot(); err != nil {
-				return err
-			}
-		} else {
-			s.clog.WithError(err).Error("failed to determine last list time, exiting...")
-			return nil
+	takeSnapshot, err := s.takeImmediateSnapshot()
+	if err != nil {
+		s.clog.WithError(err).Error("failed to determine last list time, exiting...")
+		return nil
+	}
+
+	// If there is no prior snapshot ...
+	if takeSnapshot {
+		if err = s.storeSnapshot(); err != nil {
+			return err
 		}
 	}
 
@@ -87,7 +88,7 @@ func (s *snapshotter) takeImmediateSnapshot() (bool, error) {
 		s.clog.Debug("Take immediate snapshot")
 		return true, nil
 	}
-	return err != nil, err
+	return false, err
 }
 
 func (s *snapshotter) storeSnapshot() error {
@@ -104,8 +105,9 @@ func (s *snapshotter) storeSnapshot() error {
 }
 
 func (s *snapshotter) lastListTimeFn() func() (interface{}, error) {
+	dayAgo := time.Now().Add(-24 * time.Hour)
 	return func() (interface{}, error) {
-		return s.listDest.RetrieveList(s.tm, time.Now().Add(-24*time.Hour))
+		return s.listDest.RetrieveList(s.tm, &dayAgo, nil, false)
 	}
 }
 
@@ -157,6 +159,12 @@ func (s *snapshotter) retry(f func() (interface{}, error)) (interface{}, error) 
 			s.clog.Debug("Function succeeded")
 			return val, nil
 		}
+
+		// Immediately return a does not exist error.
+		if _, doesNotExist := err.(errors.ErrorResourceDoesNotExist); doesNotExist {
+			return nil, err
+		}
+
 		retryTimer := time.NewTimer(retrySleepTime)
 		select {
 		case <-retryTimer.C:

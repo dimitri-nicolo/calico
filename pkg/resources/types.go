@@ -28,7 +28,7 @@ func GetResourceHelper(tm metav1.TypeMeta) ResourceHelper {
 
 func GetAllResourceHelpers() []ResourceHelper {
 	rhs := make([]ResourceHelper, len(resourceHelpers))
-	copy(resourceHelpers, rhs)
+	copy(rhs, resourceHelpers)
 	return rhs
 }
 
