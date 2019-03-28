@@ -93,7 +93,7 @@ spec:
         - name: cnx-pull-secret
       containers:
         - name: tigera-cloud-controllers
-          image: {{page.registry}}/{{site.imageNames["cloudControllers"]}}:{{site.data.versions[page.version].first.components["cloud-controllers"].version}}
+          image: {{page.registry}}{{site.imageNames["cloudControllers"]}}:{{site.data.versions[page.version].first.components["cloud-controllers"].version}}
           readinessProbe:
             exec:
               command:
