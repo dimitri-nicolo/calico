@@ -88,6 +88,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ClusterInformationSpec":         schema_libcalico_go_lib_apis_v3_ClusterInformationSpec(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointPort":                   schema_libcalico_go_lib_apis_v3_EndpointPort(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.EntityRule":                     schema_libcalico_go_lib_apis_v3_EntityRule(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.ErrorCondition":                 schema_libcalico_go_lib_apis_v3_ErrorCondition(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.EtcdConfig":                     schema_libcalico_go_lib_apis_v3_EtcdConfig(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.FelixConfiguration":             schema_libcalico_go_lib_apis_v3_FelixConfiguration(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.FelixConfigurationList":         schema_libcalico_go_lib_apis_v3_FelixConfigurationList(ref),
@@ -102,6 +103,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeed":               schema_libcalico_go_lib_apis_v3_GlobalThreatFeed(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeedList":           schema_libcalico_go_lib_apis_v3_GlobalThreatFeedList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeedSpec":           schema_libcalico_go_lib_apis_v3_GlobalThreatFeedSpec(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeedStatus":         schema_libcalico_go_lib_apis_v3_GlobalThreatFeedStatus(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPHeader":                     schema_libcalico_go_lib_apis_v3_HTTPHeader(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPHeaderSource":               schema_libcalico_go_lib_apis_v3_HTTPHeaderSource(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPMatch":                      schema_libcalico_go_lib_apis_v3_HTTPMatch(ref),
@@ -2678,6 +2680,31 @@ func schema_libcalico_go_lib_apis_v3_EntityRule(ref common.ReferenceCallback) co
 	}
 }
 
+func schema_libcalico_go_lib_apis_v3_ErrorCondition(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Properties: map[string]spec.Schema{
+					"type": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"message": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+				},
+				Required: []string{"type", "message"},
+			},
+		},
+		Dependencies: []string{},
+	}
+}
+
 func schema_libcalico_go_lib_apis_v3_EtcdConfig(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -3914,11 +3941,16 @@ func schema_libcalico_go_lib_apis_v3_GlobalThreatFeed(ref common.ReferenceCallba
 							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeedSpec"),
 						},
 					},
+					"status": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeedStatus"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeedSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeedSpec", "github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeedStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 
@@ -3996,6 +4028,42 @@ func schema_libcalico_go_lib_apis_v3_GlobalThreatFeedSpec(ref common.ReferenceCa
 		},
 		Dependencies: []string{
 			"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkSetSync", "github.com/projectcalico/libcalico-go/lib/apis/v3.Pull"},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_GlobalThreatFeedStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Properties: map[string]spec.Schema{
+					"last_successful_sync": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"last_successful_search": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"error_conditions": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ErrorCondition"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"last_successful_sync", "last_successful_search", "error_conditions"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.ErrorCondition", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 

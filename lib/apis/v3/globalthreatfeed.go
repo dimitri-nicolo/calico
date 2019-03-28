@@ -33,12 +33,14 @@ const (
 // GlobalThreatFeed is a source of intel for possible threats to the cluster. This
 // object configures how Tigera components communicate with the feed and update
 // detection jobs or policy based on the intel.
+// +kubebuilder:subresource:status
 type GlobalThreatFeed struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object's metadata.
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 	// Specification of the NetworkSet.
-	Spec GlobalThreatFeedSpec `json:"spec,omitempty"`
+	Spec   GlobalThreatFeedSpec   `json:"spec,omitempty"`
+	Status GlobalThreatFeedStatus `json:"status,omitempty"`
 }
 
 // GlobalThreatFeedSpec contains the specification of a GlobalThreatFeed resource.
@@ -102,6 +104,17 @@ type HTTPHeaderSource struct {
 	// Selects a key of a secret in the pod's namespace
 	// +optional
 	SecretKeyRef *k8sv1.SecretKeySelector `json:"secretKeyRef,omitempty"`
+}
+
+type GlobalThreatFeedStatus struct {
+	LastSuccessfulSync   metav1.Time      `json:"last_successful_sync"`
+	LastSuccessfulSearch metav1.Time      `json:"last_successful_search"`
+	ErrorConditions      []ErrorCondition `json:"error_conditions"`
+}
+
+type ErrorCondition struct {
+	Type    string `json:"type" validate:"required"`
+	Message string `json:"message" validate:"required"`
 }
 
 // NewGlobalThreatFeed creates a new (zeroed) GlobalThreatFeed struct with the TypeMetadata initialised to the current
