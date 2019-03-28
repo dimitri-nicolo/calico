@@ -27,11 +27,11 @@ import (
 // Create a new SyncerUpdateProcessor to sync GlobalNetworkSet data in v1 format for
 // consumption by Felix.
 func NewGlobalNetworkSetUpdateProcessor() watchersyncer.SyncerUpdateProcessor {
-	return NewConflictResolvingCacheUpdateProcessor(apiv3.KindGlobalNetworkSet, convertGlobalNetworkSetV3ToV1)
+	return NewConflictResolvingCacheUpdateProcessor(apiv3.KindGlobalNetworkSet, ConvertGlobalNetworkSetV3ToV1)
 }
 
 // Convert v3 KVPair to the equivalent v1 KVPair.
-func convertGlobalNetworkSetV3ToV1(kvp *model.KVPair) (*model.KVPair, error) {
+func ConvertGlobalNetworkSetV3ToV1(kvp *model.KVPair) (*model.KVPair, error) {
 	// Validate against incorrect key/value kinds.  This indicates a code bug rather
 	// than a user error.
 	v3key, ok := kvp.Key.(model.ResourceKey)
