@@ -13,20 +13,20 @@ import (
 // Create a new SyncerUpdateProcessor to sync Tiers data in v1 format for
 // consumption by Felix.
 func NewTierUpdateProcessor() watchersyncer.SyncerUpdateProcessor {
-	return NewSimpleUpdateProcessor(apiv3.KindTier, convertTierV2ToV1Key, convertTierV2ToV1Value)
+	return NewSimpleUpdateProcessor(apiv3.KindTier, ConvertTierV3ToV1Key, ConvertTierV3ToV1Value)
 }
 
-func convertTierV2ToV1Key(v2key model.ResourceKey) (model.Key, error) {
-	if v2key.Name == "" {
+func ConvertTierV3ToV1Key(v3key model.ResourceKey) (model.Key, error) {
+	if v3key.Name == "" {
 		return model.PolicyKey{}, errors.New("Missing Name or Namespace field to create a v1 Tier Key")
 	}
 	return model.TierKey{
-		Name: v2key.Name,
+		Name: v3key.Name,
 	}, nil
 
 }
 
-func convertTierV2ToV1Value(val interface{}) (interface{}, error) {
+func ConvertTierV3ToV1Value(val interface{}) (interface{}, error) {
 	v2res, ok := val.(*apiv3.Tier)
 	if !ok {
 		return nil, errors.New("Value is not a valid Tier resource value")

@@ -29,10 +29,10 @@ import (
 // Create a new SyncerUpdateProcessor to sync NetworkPolicy data in v1 format for
 // consumption by Felix.
 func NewNetworkPolicyUpdateProcessor() watchersyncer.SyncerUpdateProcessor {
-	return NewSimpleUpdateProcessor(apiv3.KindNetworkPolicy, convertNetworkPolicyV2ToV1Key, convertNetworkPolicyV2ToV1Value)
+	return NewSimpleUpdateProcessor(apiv3.KindNetworkPolicy, ConvertNetworkPolicyV3ToV1Key, ConvertNetworkPolicyV3ToV1Value)
 }
 
-func convertNetworkPolicyV2ToV1Key(v3key model.ResourceKey) (model.Key, error) {
+func ConvertNetworkPolicyV3ToV1Key(v3key model.ResourceKey) (model.Key, error) {
 	if v3key.Name == "" || v3key.Namespace == "" {
 		return model.PolicyKey{}, errors.New("Missing Name or Namespace field to create a v1 NetworkPolicy Key")
 	}
@@ -47,7 +47,7 @@ func convertNetworkPolicyV2ToV1Key(v3key model.ResourceKey) (model.Key, error) {
 
 }
 
-func convertNetworkPolicyV2ToV1Value(val interface{}) (interface{}, error) {
+func ConvertNetworkPolicyV3ToV1Value(val interface{}) (interface{}, error) {
 	v3res, ok := val.(*apiv3.NetworkPolicy)
 	if !ok {
 		return nil, errors.New("Value is not a valid NetworkPolicy resource value")
