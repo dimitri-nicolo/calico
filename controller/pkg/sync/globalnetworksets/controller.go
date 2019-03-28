@@ -16,6 +16,8 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
+
+	"github.com/tigera/intrusion-detection/controller/pkg/statser"
 )
 
 const DefaultClientRetries = 5
@@ -28,7 +30,7 @@ type Controller interface {
 	// maintain, by syncing with the Kubernetes API server.
 
 	// Add or update a new GlobalNetworkSet including the spec
-	Add(*v3.GlobalNetworkSet)
+	Add(*v3.GlobalNetworkSet, func(), statser.Statser)
 
 	// Delete removes a GlobalNetworkSet from the desired state.
 	Delete(*v3.GlobalNetworkSet)
@@ -37,10 +39,6 @@ type Controller interface {
 	// until deleted. This is useful when we don't know the contents of a
 	// GlobalNetworkSet, but know it should not be deleted.
 	NoGC(*v3.GlobalNetworkSet)
-
-	// RegisterFailFunc registers a function the controller should call when
-	// the given key fails to sync, so that a rescheduled pull can be triggered.
-	RegisterFailFunc(string, func())
 
 	// Run starts synching GlobalNetworkSets.  All required sets should be added
 	// or marked NoGC() before calling run, as any extra will be deleted by the
@@ -59,13 +57,23 @@ type controller struct {
 	gcMutex sync.RWMutex
 
 	failFuncs map[string]func()
-	ffMutex   sync.RWMutex
+	statsers  map[string]statser.Statser
+	fsMutex   sync.RWMutex
 }
 
 // Wrapper for clientset errors, used in retry processing.
 type clientsetError struct {
-	e error
+	e  error
+	op clientSetOp
 }
+
+type clientSetOp int
+
+const (
+	opCreate clientSetOp = iota
+	opUpdate
+	opDelete
+)
 
 func NewController(client v3client.GlobalNetworkSetInterface) Controller {
 	lw := &cache.ListWatch{
@@ -105,10 +113,19 @@ func NewController(client v3client.GlobalNetworkSetInterface) Controller {
 	}, cache.Indexers{})
 
 	local := cache.NewStore(cache.MetaNamespaceKeyFunc)
-	return &controller{local: local, queue: queue, remote: remote, informer: informer, noGC: make(map[string]struct{})}
+	return &controller{
+		client:    client,
+		local:     local,
+		queue:     queue,
+		remote:    remote,
+		informer:  informer,
+		noGC:      make(map[string]struct{}),
+		failFuncs: make(map[string]func()),
+		statsers:  make(map[string]statser.Statser),
+	}
 }
 
-func (c *controller) Add(s *v3.GlobalNetworkSet) {
+func (c *controller) Add(s *v3.GlobalNetworkSet, fail func(), stat statser.Statser) {
 	ss := s.DeepCopy()
 
 	// The "creator" key ensures this object will be watched/listed by
@@ -124,6 +141,11 @@ func (c *controller) Add(s *v3.GlobalNetworkSet) {
 		panic(err)
 	}
 	c.queue.Add(key)
+
+	c.fsMutex.Lock()
+	defer c.fsMutex.Unlock()
+	c.failFuncs[s.Name] = fail
+	c.statsers[s.Name] = stat
 }
 
 func (c *controller) Delete(s *v3.GlobalNetworkSet) {
@@ -134,23 +156,20 @@ func (c *controller) Delete(s *v3.GlobalNetworkSet) {
 		// which is a bug if it ever happens.
 		panic(err)
 	}
-	key, err := cache.MetaNamespaceKeyFunc(s)
-	if err != nil {
-		panic(err)
-	}
 
 	// Mark as safe to garbage collect
 	c.gcMutex.Lock()
-	delete(c.noGC, key)
+	delete(c.noGC, s.Name)
 	c.gcMutex.Unlock()
 
 	// Don't notify puller of failures any more, since the GNS is no longer
 	// needed.
-	c.ffMutex.Lock()
-	delete(c.failFuncs, key)
-	c.ffMutex.Unlock()
+	c.fsMutex.Lock()
+	delete(c.failFuncs, s.Name)
+	delete(c.statsers, s.Name)
+	c.fsMutex.Unlock()
 
-	c.queue.Add(key)
+	c.queue.Add(s.Name)
 }
 
 func (c *controller) NoGC(s *v3.GlobalNetworkSet) {
@@ -164,12 +183,6 @@ func (c *controller) NoGC(s *v3.GlobalNetworkSet) {
 	c.noGC[key] = struct{}{}
 	// don't add the Set to the queue.  NoGC just prevents garbage collection,
 	// but doesn't trigger any direct action.
-}
-
-func (c *controller) RegisterFailFunc(key string, f func()) {
-	c.ffMutex.Lock()
-	defer c.ffMutex.Unlock()
-	c.failFuncs[key] = f
 }
 
 func (c *controller) Run(ctx context.Context) {
@@ -250,8 +263,18 @@ func (c *controller) processNextItem() {
 func (c *controller) handleErr(key string) {
 	e := recover()
 	if e == nil {
+		// SUCCESS!
+
 		// Forget any rate limiting history for this key.
 		c.queue.Forget(key)
+
+		// If we are tracking status for the key, clear any errors.
+		c.fsMutex.RLock()
+		stat, ok := c.statsers[key]
+		c.fsMutex.RUnlock()
+		if ok {
+			stat.ClearError(statser.GlobalNetworkSetSyncFailed)
+		}
 		return
 	}
 	// Re-raise if not our "exception" type
@@ -272,11 +295,19 @@ func (c *controller) handleErr(key string) {
 	log.WithError(f.e).Errorf("Dropping key %q out of the work queue", key)
 
 	// Inform Puller of failure, if it has registered to be notified.
-	c.ffMutex.RLock()
-	fn, ok := c.failFuncs[key]
-	c.ffMutex.RUnlock()
-	if ok {
+	if f.op == opDelete {
+		// Don't inform on deletes --- these are garbage collection.
+		return
+	}
+	c.fsMutex.RLock()
+	fn, fok := c.failFuncs[key]
+	stat, sok := c.statsers[key]
+	c.fsMutex.RUnlock()
+	if fok {
 		fn()
+	}
+	if sok {
+		stat.Error(statser.GlobalNetworkSetSyncFailed, f.e)
 	}
 }
 
@@ -290,21 +321,21 @@ func (c *controller) okToGC(key string) bool {
 func (c *controller) update(s *v3.GlobalNetworkSet) {
 	_, err := c.client.Update(s)
 	if err != nil {
-		panic(clientsetError{err})
+		panic(clientsetError{err, opUpdate})
 	}
 }
 
 func (c *controller) create(s *v3.GlobalNetworkSet) {
 	_, err := c.client.Create(s)
 	if err != nil {
-		panic(clientsetError{err})
+		panic(clientsetError{err, opCreate})
 	}
 }
 
 func (c *controller) delete(s *v3.GlobalNetworkSet) {
 	err := c.client.Delete(s.Name, &metav1.DeleteOptions{})
 	if err != nil {
-		panic(clientsetError{err})
+		panic(clientsetError{err, opDelete})
 	}
 }
 

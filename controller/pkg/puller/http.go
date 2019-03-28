@@ -88,9 +88,12 @@ func (h *httpPuller) SetFeed(f *v3.GlobalThreatFeed) {
 	h.needsUpdate = true
 }
 
-func (h *httpPuller) Run(ctx context.Context, s statser.Statser) SyncFailFunction {
+func (h *httpPuller) Run(ctx context.Context, s statser.Statser) {
 	h.once.Do(func() {
 
+		h.lock.RLock()
+		log.WithField("feed", h.feed.Name).Debug("started HTTP puller")
+		h.lock.RUnlock()
 		ctx, h.cancel = context.WithCancel(ctx)
 
 		runFunc, rescheduleFunc := runloop.RunLoopWithReschedule()
@@ -103,7 +106,9 @@ func (h *httpPuller) Run(ctx context.Context, s statser.Statser) SyncFailFunctio
 
 			delay := h.getStartupDelay(ctx, s.Status())
 			if delay > 0 {
+				h.lock.RLock()
 				log.WithField("delay", delay).WithField("feed", h.feed.Name).Info("Delaying start")
+				h.lock.RUnlock()
 			}
 
 			select {
@@ -117,7 +122,7 @@ func (h *httpPuller) Run(ctx context.Context, s statser.Statser) SyncFailFunctio
 
 	})
 
-	return h.syncFailFunction
+	return
 }
 
 func (h *httpPuller) Close() {
@@ -247,6 +252,7 @@ func (h *httpPuller) query(ctx context.Context, st statser.Statser, attempts uin
 	if err != nil {
 		return err
 	}
+	log.WithField("feed", name).Debug("querying HTTP feed")
 
 	req := &http.Request{Method: "GET", Header: header, URL: u}
 	req = req.WithContext(ctx)
@@ -354,7 +360,7 @@ func (h *httpPuller) query(ctx context.Context, st statser.Statser, attempts uin
 	}
 	h.elasticController.Add(name, snapshot, h.syncFailFunction, st)
 	if gns {
-		h.gnsController.Add(makeGNS(name, labels, snapshot))
+		h.gnsController.Add(makeGNS(name, labels, snapshot), h.syncFailFunction, st)
 	}
 	st.ClearError(statser.PullFailed)
 

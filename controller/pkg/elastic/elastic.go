@@ -69,11 +69,7 @@ func (e *Elastic) ListIPSets(ctx context.Context) ([]db.IPSetMeta, error) {
 			return nil, err
 		}
 		for _, hit := range res.Hits.Hits {
-			var version interface{}
-			if hit.Version != nil {
-				version = *hit.Version
-			}
-			ids = append(ids, db.IPSetMeta{Name: hit.Id, Version: version})
+			ids = append(ids, db.IPSetMeta{Name: hit.Id, Version: hit.Version})
 		}
 	}
 }
@@ -195,7 +191,11 @@ func (e *Elastic) QueryIPSet(ctx context.Context, name string) (db.SecurityEvent
 }
 
 func (e *Elastic) DeleteIPSet(ctx context.Context, m db.IPSetMeta) error {
-	_, err := e.c.Delete().Index(IPSetIndex).Type(StandardType).Id(m.Name).Version(m.Version).Do(ctx)
+	ds := e.c.Delete().Index(IPSetIndex).Type(StandardType).Id(m.Name)
+	if m.Version != nil {
+		ds = ds.Version(*m.Version)
+	}
+	_, err := ds.Do(ctx)
 	return err
 }
 

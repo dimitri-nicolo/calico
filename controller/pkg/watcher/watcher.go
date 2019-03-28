@@ -9,6 +9,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/tigera/intrusion-detection/controller/pkg/sync/elasticipsets"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	v32 "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
@@ -47,6 +49,7 @@ type watcher struct {
 	globalThreatFeedClient v32.GlobalThreatFeedInterface
 	globalNetworkSetClient v32.GlobalNetworkSetInterface
 	gnsController          globalnetworksets.Controller
+	elasticController      elasticipsets.Controller
 	httpClient             *http.Client
 	ipSet                  db.IPSet
 	suspiciousIP           db.SuspiciousIP
@@ -81,6 +84,7 @@ func NewWatcher(
 	secretsClient v1.SecretInterface,
 	globalThreatFeedInterface v32.GlobalThreatFeedInterface,
 	globalNetworkSetController globalnetworksets.Controller,
+	elasticController elasticipsets.Controller,
 	httpClient *http.Client,
 	ipSet db.IPSet,
 	suspiciousIP db.SuspiciousIP,
@@ -101,6 +105,7 @@ func NewWatcher(
 		secretsClient:          secretsClient,
 		globalThreatFeedClient: globalThreatFeedInterface,
 		gnsController:          globalNetworkSetController,
+		elasticController:      elasticController,
 		httpClient:             httpClient,
 		ipSet:                  ipSet,
 		suspiciousIP:           suspiciousIP,
@@ -137,6 +142,12 @@ func (s *watcher) Run(ctx context.Context) {
 			s.controller.Run(s.ctx.Done())
 		}()
 
+		// The elasticController can start running right away. It waits for
+		// StartGC() before it does reconciliation. Note that the gnsController
+		// should *not* be started before everything is synced, since it will
+		// start reconciliation as soon as we call Run() on it.
+		go s.elasticController.Run(s.ctx)
+
 		// We need to wait until we sync all GlobalThreatFeeds before starting
 		// the GlobalNetworkSet controller. This is because the GlobalNetworkSet
 		// controller does garbage collection---if we started garbage collecting
@@ -149,7 +160,9 @@ func (s *watcher) Run(ctx context.Context) {
 				log.Error("Failed to sync GlobalThreatFeed controller")
 				return
 			}
-			s.gnsController.Run(s.ctx)
+			log.Debug("GlobalThreatFeed controller synced")
+			go s.gnsController.Run(s.ctx)
+			s.elasticController.StartReconciliation()
 		}()
 
 	})
@@ -227,12 +240,12 @@ func (s *watcher) startFeedWatcher(ctx context.Context, f *v3.GlobalThreatFeed) 
 	s.setFeedWatcher(f.Name, &fw)
 
 	if fCopy.Spec.Pull != nil && fCopy.Spec.Pull.HTTP != nil {
-		fw.puller = puller.NewHTTPPuller(fCopy, s.ipSet, s.configMapClient, s.secretsClient, s.httpClient, s.gnsController)
-		failFunc := fw.puller.Run(ctx, fw.statser)
-		s.gnsController.RegisterFailFunc(fCopy.Name, failFunc)
+		fw.puller = puller.NewHTTPPuller(fCopy, s.ipSet, s.configMapClient, s.secretsClient, s.httpClient, s.gnsController, s.elasticController)
+		fw.puller.Run(ctx, fw.statser)
 	} else {
 		fw.puller = nil
 	}
+	s.elasticController.NoGC(fCopy.Name)
 
 	if fCopy.Spec.GlobalNetworkSet != nil {
 		s.gnsController.NoGC(util.NewGlobalNetworkSet(fCopy.Name))
@@ -287,9 +300,8 @@ func (s *watcher) restartPuller(ctx context.Context, f *v3.GlobalThreatFeed) {
 	}
 
 	if fw.feed.Spec.Pull != nil && fw.feed.Spec.Pull.HTTP != nil {
-		fw.puller = puller.NewHTTPPuller(fw.feed, s.ipSet, s.configMapClient, s.secretsClient, s.httpClient, s.gnsController)
-		failFunc := fw.puller.Run(ctx, fw.statser)
-		s.gnsController.RegisterFailFunc(name, failFunc)
+		fw.puller = puller.NewHTTPPuller(fw.feed, s.ipSet, s.configMapClient, s.secretsClient, s.httpClient, s.gnsController, s.elasticController)
+		fw.puller.Run(ctx, fw.statser)
 	} else {
 		fw.puller = nil
 	}
@@ -308,6 +320,7 @@ func (s *watcher) stopFeedWatcher(name string) {
 	}
 	gns := util.NewGlobalNetworkSet(name)
 	s.gnsController.Delete(gns)
+	s.elasticController.Delete(name)
 
 	fw.garbageCollector.Close()
 	fw.searcher.Close()

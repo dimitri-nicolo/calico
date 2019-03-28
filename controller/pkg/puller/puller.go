@@ -14,7 +14,7 @@ type SyncFailFunction func()
 type Puller interface {
 	// Run activates the feed and returns a channel that sends snapshots of the
 	// IPs that are considered suspicious.
-	Run(context.Context, statser.Statser) SyncFailFunction
+	Run(context.Context, statser.Statser)
 	SetFeed(*v3.GlobalThreatFeed)
 	Close()
 }

@@ -30,10 +30,10 @@ type Controller interface {
 	// Set, but know it should not be deleted.
 	NoGC(name string)
 
-	// StartGC indicates that all Sets we don't want garbage collected have
-	// either Add() or NoGC() called on them, and we can start garbage collecting
-	// anything we don't recognize.
-	StartGC()
+	// StartReconciliation indicates that all Sets we don't want garbage
+	// collected have either Add() or NoGC() called on them, and we can start
+	// reconciling our desired state with the actual state.
+	StartReconciliation()
 
 	// Run starts processing Sets
 	Run(context.Context)
@@ -52,7 +52,7 @@ const (
 	opAdd op = iota
 	opDelete
 	opNoGC
-	opStartGC
+	opStart
 )
 
 type update struct {
@@ -87,11 +87,13 @@ func (c *controller) NoGC(name string) {
 	c.updates <- update{name: name, op: opNoGC}
 }
 
-func (c *controller) StartGC() {
-	c.updates <- update{op: opStartGC}
+func (c *controller) StartReconciliation() {
+	c.updates <- update{op: opStart}
 }
 
 func (c *controller) Run(ctx context.Context) {
+
+	log.Debug("starting elastic controller")
 
 	// Initially, we're just processing state updates, and not triggering any
 	// reconcilliation.
@@ -101,12 +103,14 @@ UpdateLoop:
 		case <-ctx.Done():
 			return
 		case u := <-c.updates:
-			if u.op == opStartGC {
+			if u.op == opStart {
 				break UpdateLoop
 			}
 			c.processUpdate(u)
 		}
 	}
+
+	log.Debug("elastic controller reconciliation started")
 
 	// After getting the startGC, we can also include state sync processing
 	tkr := time.NewTicker(DefaultElasticReconcilePeriod)
@@ -116,7 +120,7 @@ UpdateLoop:
 		case <-ctx.Done():
 			return
 		case u := <-c.updates:
-			if u.op == opStartGC {
+			if u.op == opStart {
 				continue
 			}
 			c.processUpdate(u)
