@@ -10,6 +10,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+
+	"github.com/tigera/intrusion-detection/controller/pkg/statser"
 )
 
 type GlobalNetworkSetInterface struct {
@@ -77,6 +79,7 @@ type GlobalNetworkSetController struct {
 	local     map[string]*v3.GlobalNetworkSet
 	noGC      map[string]struct{}
 	failFuncs map[string]func()
+	statsers  map[string]statser.Statser
 }
 
 func NewGlobalNetworkSetController() *GlobalNetworkSetController {
@@ -84,13 +87,16 @@ func NewGlobalNetworkSetController() *GlobalNetworkSetController {
 		local:     make(map[string]*v3.GlobalNetworkSet),
 		noGC:      make(map[string]struct{}),
 		failFuncs: make(map[string]func()),
+		statsers:  make(map[string]statser.Statser),
 	}
 }
 
-func (c *GlobalNetworkSetController) Add(s *v3.GlobalNetworkSet) {
+func (c *GlobalNetworkSetController) Add(s *v3.GlobalNetworkSet, f func(), stat statser.Statser) {
 	c.m.Lock()
 	defer c.m.Unlock()
 	c.local[s.Name] = s
+	c.failFuncs[s.Name] = f
+	c.statsers[s.Name] = stat
 }
 
 func (c *GlobalNetworkSetController) Delete(s *v3.GlobalNetworkSet) {
@@ -99,18 +105,13 @@ func (c *GlobalNetworkSetController) Delete(s *v3.GlobalNetworkSet) {
 	delete(c.local, s.Name)
 	delete(c.noGC, s.Name)
 	delete(c.failFuncs, s.Name)
+	delete(c.statsers, s.Name)
 }
 
 func (c *GlobalNetworkSetController) NoGC(s *v3.GlobalNetworkSet) {
 	c.m.Lock()
 	defer c.m.Unlock()
 	c.noGC[s.Name] = struct{}{}
-}
-
-func (c *GlobalNetworkSetController) RegisterFailFunc(key string, f func()) {
-	c.m.Lock()
-	defer c.m.Unlock()
-	c.failFuncs[key] = f
 }
 
 func (c *GlobalNetworkSetController) Run(ctx context.Context) {

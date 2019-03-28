@@ -139,11 +139,12 @@ func TestQuery(t *testing.T) {
 	}
 	s := &mock.Statser{}
 	gns := mock.NewGlobalNetworkSetController()
+	eip := mock.NewElasticIPSetController()
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
-	puller := NewHTTPPuller(&testGlobalThreatFeed, &mock.IPSet{}, &mock.ConfigMap{ConfigMapData: configMapData}, &mock.Secrets{SecretsData: secretsData}, client, gns).(*httpPuller)
+	puller := NewHTTPPuller(&testGlobalThreatFeed, &mock.IPSet{}, &mock.ConfigMap{ConfigMapData: configMapData}, &mock.Secrets{SecretsData: secretsData}, client, gns, eip).(*httpPuller)
 
 	go func() {
 		err := puller.query(ctx, s, 1, 0)
@@ -152,10 +153,17 @@ func TestQuery(t *testing.T) {
 
 	gn := util.GlobalNetworkSetNameFromThreatFeed(testGlobalThreatFeed.Name)
 	g.Eventually(gns.Local).Should(HaveKey(gn))
+	g.Eventually(eip.Sets).Should(HaveKey(testGlobalThreatFeed.Name))
 	set, ok := gns.Local()[gn]
 	g.Expect(ok).Should(BeTrue(), "Received a snapshot")
 	g.Expect(set.Spec.Nets).Should(HaveLen(len(expected)))
 	for idx, actual := range set.Spec.Nets {
+		g.Expect(actual).Should(Equal(expected[idx]))
+	}
+	dset, ok := eip.Sets()[testGlobalThreatFeed.Name]
+	g.Expect(ok).Should(BeTrue(), "Received a snapshot")
+	g.Expect(dset).Should(HaveLen(len(expected)))
+	for idx, actual := range dset {
 		g.Expect(actual).Should(Equal(expected[idx]))
 	}
 
@@ -168,7 +176,7 @@ func TestQuery(t *testing.T) {
 func TestNewHTTPPuller(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	puller := NewHTTPPuller(&testGlobalThreatFeed, &mock.IPSet{}, &mock.ConfigMap{ConfigMapData: configMapData}, &mock.Secrets{SecretsData: secretsData}, nil, nil).(*httpPuller)
+	puller := NewHTTPPuller(&testGlobalThreatFeed, &mock.IPSet{}, &mock.ConfigMap{ConfigMapData: configMapData}, &mock.Secrets{SecretsData: secretsData}, nil, nil, nil).(*httpPuller)
 
 	g.Expect(puller.needsUpdate).Should(BeTrue())
 	g.Expect(puller.url).Should(BeNil())
@@ -190,7 +198,8 @@ func TestQueryHTTPError(t *testing.T) {
 	defer cancel()
 
 	gns := mock.NewGlobalNetworkSetController()
-	puller := NewHTTPPuller(&testGlobalThreatFeed, &mock.IPSet{}, &mock.ConfigMap{ConfigMapData: configMapData}, &mock.Secrets{SecretsData: secretsData}, client, gns).(*httpPuller)
+	eip := mock.NewElasticIPSetController()
+	puller := NewHTTPPuller(&testGlobalThreatFeed, &mock.IPSet{}, &mock.ConfigMap{ConfigMapData: configMapData}, &mock.Secrets{SecretsData: secretsData}, client, gns, eip).(*httpPuller)
 
 	attempts := uint(5)
 	go func() {
@@ -200,6 +209,7 @@ func TestQueryHTTPError(t *testing.T) {
 
 	gn := util.GlobalNetworkSetNameFromThreatFeed(testGlobalThreatFeed.Name)
 	g.Consistently(gns.Local).ShouldNot(HaveKey(gn))
+	g.Consistently(eip.Sets).ShouldNot(HaveKey(testGlobalThreatFeed.Name))
 	g.Expect(rt.Count).Should(Equal(attempts), "Retried max times")
 
 	status := s.Status()
@@ -226,7 +236,8 @@ func TestQueryHTTPStatus404(t *testing.T) {
 	defer cancel()
 
 	gns := mock.NewGlobalNetworkSetController()
-	puller := NewHTTPPuller(&testGlobalThreatFeed, &mock.IPSet{}, &mock.ConfigMap{ConfigMapData: configMapData}, &mock.Secrets{SecretsData: secretsData}, client, gns).(*httpPuller)
+	eip := mock.NewElasticIPSetController()
+	puller := NewHTTPPuller(&testGlobalThreatFeed, &mock.IPSet{}, &mock.ConfigMap{ConfigMapData: configMapData}, &mock.Secrets{SecretsData: secretsData}, client, gns, eip).(*httpPuller)
 
 	attempts := uint(5)
 	go func() {
@@ -236,6 +247,7 @@ func TestQueryHTTPStatus404(t *testing.T) {
 
 	gn := util.GlobalNetworkSetNameFromThreatFeed(testGlobalThreatFeed.Name)
 	g.Consistently(gns.Local).ShouldNot(HaveKey(gn))
+	g.Consistently(eip.Sets).ShouldNot(HaveKey(testGlobalThreatFeed.Name))
 	g.Expect(rt.Count).Should(Equal(uint(1)), "Does not retry on error 404")
 
 	status := s.Status()
@@ -262,7 +274,8 @@ func TestQueryHTTPStatus500(t *testing.T) {
 	defer cancel()
 
 	gns := mock.NewGlobalNetworkSetController()
-	puller := NewHTTPPuller(&testGlobalThreatFeed, &mock.IPSet{}, &mock.ConfigMap{ConfigMapData: configMapData}, &mock.Secrets{SecretsData: secretsData}, client, gns).(*httpPuller)
+	eip := mock.NewElasticIPSetController()
+	puller := NewHTTPPuller(&testGlobalThreatFeed, &mock.IPSet{}, &mock.ConfigMap{ConfigMapData: configMapData}, &mock.Secrets{SecretsData: secretsData}, client, gns, eip).(*httpPuller)
 
 	attempts := uint(5)
 	go func() {
@@ -272,6 +285,7 @@ func TestQueryHTTPStatus500(t *testing.T) {
 
 	gn := util.GlobalNetworkSetNameFromThreatFeed(testGlobalThreatFeed.Name)
 	g.Consistently(gns.Local).ShouldNot(HaveKey(gn))
+	g.Consistently(eip.Sets).ShouldNot(HaveKey(testGlobalThreatFeed.Name))
 	g.Expect(rt.Count).Should(Equal(attempts))
 
 	status := s.Status()
@@ -291,7 +305,8 @@ func TestNewHTTPPullerWithNilPull(t *testing.T) {
 	f.Spec.Pull = nil
 
 	gns := mock.NewGlobalNetworkSetController()
-	puller := NewHTTPPuller(&testGlobalThreatFeed, &mock.IPSet{}, &mock.ConfigMap{ConfigMapData: configMapData}, &mock.Secrets{SecretsData: secretsData}, nil, gns).(*httpPuller)
+	eip := mock.NewElasticIPSetController()
+	puller := NewHTTPPuller(&testGlobalThreatFeed, &mock.IPSet{}, &mock.ConfigMap{ConfigMapData: configMapData}, &mock.Secrets{SecretsData: secretsData}, nil, gns, eip).(*httpPuller)
 
 	g.Expect(func() { _ = puller.query(ctx, &mock.Statser{}, 1, 0) }).Should(Panic())
 }
@@ -303,9 +318,10 @@ func TestGetStartupDelay(t *testing.T) {
 	defer cancel()
 
 	gns := mock.NewGlobalNetworkSetController()
+	eip := mock.NewElasticIPSetController()
 	puller := NewHTTPPuller(&testGlobalThreatFeed, &mock.IPSet{
 		Time: time.Now().Add(-time.Hour),
-	}, &mock.ConfigMap{ConfigMapData: configMapData}, &mock.Secrets{SecretsData: secretsData}, nil, gns).(*httpPuller)
+	}, &mock.ConfigMap{ConfigMapData: configMapData}, &mock.Secrets{SecretsData: secretsData}, nil, gns, eip).(*httpPuller)
 
 	delay := puller.getStartupDelay(ctx, statser.Status{})
 
@@ -319,7 +335,8 @@ func TestGetStartupDelayWithZeroLastSyncTime(t *testing.T) {
 	defer cancel()
 
 	gns := mock.NewGlobalNetworkSetController()
-	puller := NewHTTPPuller(&testGlobalThreatFeed, &mock.IPSet{}, &mock.ConfigMap{ConfigMapData: configMapData}, &mock.Secrets{SecretsData: secretsData}, nil, gns).(*httpPuller)
+	eip := mock.NewElasticIPSetController()
+	puller := NewHTTPPuller(&testGlobalThreatFeed, &mock.IPSet{}, &mock.ConfigMap{ConfigMapData: configMapData}, &mock.Secrets{SecretsData: secretsData}, nil, gns, eip).(*httpPuller)
 
 	delay := puller.getStartupDelay(ctx, statser.Status{})
 
@@ -333,9 +350,10 @@ func TestGetStartupDelayWithOlderLastSyncTime(t *testing.T) {
 	defer cancel()
 
 	gns := mock.NewGlobalNetworkSetController()
+	eip := mock.NewElasticIPSetController()
 	puller := NewHTTPPuller(&testGlobalThreatFeed, &mock.IPSet{
 		Time: time.Now().Add(-24 * time.Hour),
-	}, &mock.ConfigMap{ConfigMapData: configMapData}, &mock.Secrets{SecretsData: secretsData}, nil, gns).(*httpPuller)
+	}, &mock.ConfigMap{ConfigMapData: configMapData}, &mock.Secrets{SecretsData: secretsData}, nil, gns, eip).(*httpPuller)
 
 	delay := puller.getStartupDelay(ctx, statser.Status{})
 
@@ -349,9 +367,10 @@ func TestGetStartupDelayWithRecentLastSyncTime(t *testing.T) {
 	defer cancel()
 
 	gns := mock.NewGlobalNetworkSetController()
+	eip := mock.NewElasticIPSetController()
 	puller := NewHTTPPuller(&testGlobalThreatFeed, &mock.IPSet{
 		Time: time.Now(),
-	}, &mock.ConfigMap{ConfigMapData: configMapData}, &mock.Secrets{SecretsData: secretsData}, nil, gns).(*httpPuller)
+	}, &mock.ConfigMap{ConfigMapData: configMapData}, &mock.Secrets{SecretsData: secretsData}, nil, gns, eip).(*httpPuller)
 
 	delay := puller.getStartupDelay(ctx, statser.Status{})
 
@@ -362,7 +381,8 @@ func TestSetFeedURIAndHeader(t *testing.T) {
 	g := NewGomegaWithT(t)
 
 	gns := mock.NewGlobalNetworkSetController()
-	puller := NewHTTPPuller(&testGlobalThreatFeed, &mock.IPSet{}, &mock.ConfigMap{ConfigMapData: configMapData}, &mock.Secrets{SecretsData: secretsData}, nil, gns).(*httpPuller)
+	eip := mock.NewElasticIPSetController()
+	puller := NewHTTPPuller(&testGlobalThreatFeed, &mock.IPSet{}, &mock.ConfigMap{ConfigMapData: configMapData}, &mock.Secrets{SecretsData: secretsData}, nil, gns, eip).(*httpPuller)
 
 	err := puller.setFeedURIAndHeader(&testGlobalThreatFeed)
 	g.Expect(err).ShouldNot(HaveOccurred())
@@ -381,7 +401,8 @@ func TestSetFeedURIAndHeaderWithNilPull(t *testing.T) {
 	f := testGlobalThreatFeed.DeepCopy()
 
 	gns := mock.NewGlobalNetworkSetController()
-	puller := NewHTTPPuller(f, &mock.IPSet{}, &mock.ConfigMap{ConfigMapData: configMapData}, &mock.Secrets{SecretsData: secretsData}, nil, gns).(*httpPuller)
+	eip := mock.NewElasticIPSetController()
+	puller := NewHTTPPuller(f, &mock.IPSet{}, &mock.ConfigMap{ConfigMapData: configMapData}, &mock.Secrets{SecretsData: secretsData}, nil, gns, eip).(*httpPuller)
 
 	f.Spec.Pull = nil
 	g.Expect(func() { _ = puller.setFeedURIAndHeader(f) }).Should(Panic())
@@ -393,7 +414,8 @@ func TestSetFeedURIAndHeaderWithNilPullHTTP(t *testing.T) {
 	f := testGlobalThreatFeed.DeepCopy()
 
 	gns := mock.NewGlobalNetworkSetController()
-	puller := NewHTTPPuller(f, &mock.IPSet{}, &mock.ConfigMap{ConfigMapData: configMapData}, &mock.Secrets{SecretsData: secretsData}, nil, gns).(*httpPuller)
+	eip := mock.NewElasticIPSetController()
+	puller := NewHTTPPuller(f, &mock.IPSet{}, &mock.ConfigMap{ConfigMapData: configMapData}, &mock.Secrets{SecretsData: secretsData}, nil, gns, eip).(*httpPuller)
 
 	f.Spec.Pull.HTTP = nil
 	g.Expect(func() { _ = puller.setFeedURIAndHeader(f) }).Should(Panic())
@@ -405,7 +427,8 @@ func TestSetFeedURIAndHeaderWithInvalidURL(t *testing.T) {
 	f := testGlobalThreatFeed.DeepCopy()
 
 	gns := mock.NewGlobalNetworkSetController()
-	puller := NewHTTPPuller(f, &mock.IPSet{}, &mock.ConfigMap{ConfigMapData: configMapData}, &mock.Secrets{SecretsData: secretsData}, nil, gns).(*httpPuller)
+	eip := mock.NewElasticIPSetController()
+	puller := NewHTTPPuller(f, &mock.IPSet{}, &mock.ConfigMap{ConfigMapData: configMapData}, &mock.Secrets{SecretsData: secretsData}, nil, gns, eip).(*httpPuller)
 
 	f.Spec.Pull.HTTP.URL = ":/"
 	err := puller.setFeedURIAndHeader(f)
@@ -417,7 +440,8 @@ func TestSetFeedURIAndHeaderWithConfigMapError(t *testing.T) {
 	g := NewGomegaWithT(t)
 
 	gns := mock.NewGlobalNetworkSetController()
-	puller := NewHTTPPuller(&testGlobalThreatFeed, &mock.IPSet{}, &mock.ConfigMap{ConfigMapData: configMapData, Error: errors.New("error")}, &mock.Secrets{SecretsData: secretsData}, nil, gns).(*httpPuller)
+	eip := mock.NewElasticIPSetController()
+	puller := NewHTTPPuller(&testGlobalThreatFeed, &mock.IPSet{}, &mock.ConfigMap{ConfigMapData: configMapData, Error: errors.New("error")}, &mock.Secrets{SecretsData: secretsData}, nil, gns, eip).(*httpPuller)
 
 	err := puller.setFeedURIAndHeader(puller.feed)
 	g.Expect(err).Should(HaveOccurred())
@@ -440,7 +464,8 @@ func TestSetFeedURIAndHeaderWithConfigMapOptional(t *testing.T) {
 		}}
 
 	gns := mock.NewGlobalNetworkSetController()
-	puller := NewHTTPPuller(&testGlobalThreatFeed, &mock.IPSet{}, &mock.ConfigMap{ConfigMapData: configMapData}, &mock.Secrets{SecretsData: secretsData}, nil, gns).(*httpPuller)
+	eip := mock.NewElasticIPSetController()
+	puller := NewHTTPPuller(&testGlobalThreatFeed, &mock.IPSet{}, &mock.ConfigMap{ConfigMapData: configMapData}, &mock.Secrets{SecretsData: secretsData}, nil, gns, eip).(*httpPuller)
 
 	err := puller.setFeedURIAndHeader(f)
 	g.Expect(err).ShouldNot(HaveOccurred())
@@ -464,7 +489,8 @@ func TestSetFeedURIAndHeaderWithConfigMapNotOptional(t *testing.T) {
 		}}
 
 	gns := mock.NewGlobalNetworkSetController()
-	puller := NewHTTPPuller(f, &mock.IPSet{}, &mock.ConfigMap{ConfigMapData: configMapData}, &mock.Secrets{SecretsData: secretsData}, nil, gns).(*httpPuller)
+	eip := mock.NewElasticIPSetController()
+	puller := NewHTTPPuller(f, &mock.IPSet{}, &mock.ConfigMap{ConfigMapData: configMapData}, &mock.Secrets{SecretsData: secretsData}, nil, gns, eip).(*httpPuller)
 
 	err := puller.setFeedURIAndHeader(f)
 	g.Expect(err).Should(HaveOccurred())
@@ -486,7 +512,8 @@ func TestSetFeedURIAndHeaderWithConfigMapOptionalNotSpecified(t *testing.T) {
 		}}
 
 	gns := mock.NewGlobalNetworkSetController()
-	puller := NewHTTPPuller(f, &mock.IPSet{}, &mock.ConfigMap{ConfigMapData: configMapData}, &mock.Secrets{SecretsData: secretsData}, nil, gns).(*httpPuller)
+	eip := mock.NewElasticIPSetController()
+	puller := NewHTTPPuller(f, &mock.IPSet{}, &mock.ConfigMap{ConfigMapData: configMapData}, &mock.Secrets{SecretsData: secretsData}, nil, gns, eip).(*httpPuller)
 
 	err := puller.setFeedURIAndHeader(f)
 	g.Expect(err).Should(HaveOccurred())
@@ -497,7 +524,8 @@ func TestSetFeedURIAndHeaderWithSecretsError(t *testing.T) {
 	g := NewGomegaWithT(t)
 
 	gns := mock.NewGlobalNetworkSetController()
-	puller := NewHTTPPuller(&testGlobalThreatFeed, &mock.IPSet{}, &mock.ConfigMap{ConfigMapData: configMapData}, &mock.Secrets{SecretsData: secretsData, Error: errors.New("error")}, nil, gns).(*httpPuller)
+	eip := mock.NewElasticIPSetController()
+	puller := NewHTTPPuller(&testGlobalThreatFeed, &mock.IPSet{}, &mock.ConfigMap{ConfigMapData: configMapData}, &mock.Secrets{SecretsData: secretsData, Error: errors.New("error")}, nil, gns, eip).(*httpPuller)
 
 	err := puller.setFeedURIAndHeader(puller.feed)
 	g.Expect(err).Should(HaveOccurred())
@@ -520,7 +548,8 @@ func TestSetFeedURIAndHeaderWithSecretOptional(t *testing.T) {
 		}}
 
 	gns := mock.NewGlobalNetworkSetController()
-	puller := NewHTTPPuller(f, &mock.IPSet{}, &mock.ConfigMap{ConfigMapData: configMapData}, &mock.Secrets{SecretsData: secretsData}, nil, gns).(*httpPuller)
+	eip := mock.NewElasticIPSetController()
+	puller := NewHTTPPuller(f, &mock.IPSet{}, &mock.ConfigMap{ConfigMapData: configMapData}, &mock.Secrets{SecretsData: secretsData}, nil, gns, eip).(*httpPuller)
 
 	err := puller.setFeedURIAndHeader(f)
 	g.Expect(err).ShouldNot(HaveOccurred())
@@ -543,7 +572,8 @@ func TestSetFeedURIAndHeaderWithSecretNotOptional(t *testing.T) {
 		}}
 
 	gns := mock.NewGlobalNetworkSetController()
-	puller := NewHTTPPuller(f, &mock.IPSet{}, &mock.ConfigMap{ConfigMapData: configMapData}, &mock.Secrets{SecretsData: secretsData}, nil, gns).(*httpPuller)
+	eip := mock.NewElasticIPSetController()
+	puller := NewHTTPPuller(f, &mock.IPSet{}, &mock.ConfigMap{ConfigMapData: configMapData}, &mock.Secrets{SecretsData: secretsData}, nil, gns, eip).(*httpPuller)
 
 	err := puller.setFeedURIAndHeader(f)
 	g.Expect(err).Should(HaveOccurred())
@@ -565,7 +595,8 @@ func TestSetFeedURIAndHeaderWithSecretOptionalNotSpecified(t *testing.T) {
 		}}
 
 	gns := mock.NewGlobalNetworkSetController()
-	puller := NewHTTPPuller(f, &mock.IPSet{}, &mock.ConfigMap{ConfigMapData: configMapData}, &mock.Secrets{SecretsData: secretsData}, nil, gns).(*httpPuller)
+	eip := mock.NewElasticIPSetController()
+	puller := NewHTTPPuller(f, &mock.IPSet{}, &mock.ConfigMap{ConfigMapData: configMapData}, &mock.Secrets{SecretsData: secretsData}, nil, gns, eip).(*httpPuller)
 
 	err := puller.setFeedURIAndHeader(f)
 	g.Expect(err).Should(HaveOccurred())
@@ -578,7 +609,8 @@ func TestSetFeedURIAndHeaderWithMissingRefs(t *testing.T) {
 	f := testGlobalThreatFeed.DeepCopy()
 
 	gns := mock.NewGlobalNetworkSetController()
-	puller := NewHTTPPuller(f, &mock.IPSet{}, &mock.ConfigMap{ConfigMapData: configMapData}, &mock.Secrets{SecretsData: secretsData}, nil, gns).(*httpPuller)
+	eip := mock.NewElasticIPSetController()
+	puller := NewHTTPPuller(f, &mock.IPSet{}, &mock.ConfigMap{ConfigMapData: configMapData}, &mock.Secrets{SecretsData: secretsData}, nil, gns, eip).(*httpPuller)
 
 	f.Spec.Pull.HTTP.Headers[2].ValueFrom.ConfigMapKeyRef = nil
 	err := puller.setFeedURIAndHeader(f)
@@ -589,7 +621,8 @@ func TestSetFeed(t *testing.T) {
 	g := NewGomegaWithT(t)
 
 	gns := mock.NewGlobalNetworkSetController()
-	puller := NewHTTPPuller(&testGlobalThreatFeed, &mock.IPSet{}, &mock.ConfigMap{ConfigMapData: configMapData}, &mock.Secrets{SecretsData: secretsData}, nil, gns).(*httpPuller)
+	eip := mock.NewElasticIPSetController()
+	puller := NewHTTPPuller(&testGlobalThreatFeed, &mock.IPSet{}, &mock.ConfigMap{ConfigMapData: configMapData}, &mock.Secrets{SecretsData: secretsData}, nil, gns, eip).(*httpPuller)
 
 	f2 := testGlobalThreatFeed.DeepCopy()
 	f2.Name = "set feed"

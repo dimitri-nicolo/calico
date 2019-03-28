@@ -10,10 +10,31 @@ import (
 )
 
 type IPSet struct {
-	Name  string
-	Set   db.IPSetSpec
-	Time  time.Time
-	Error error
+	Name          string
+	Version       interface{}
+	Metas         []db.IPSetMeta
+	Set           db.IPSetSpec
+	Time          time.Time
+	Error         error
+	DeleteCalled  bool
+	DeleteName    string
+	DeleteVersion *int64
+}
+
+func (m *IPSet) ListIPSets(ctx context.Context) ([]db.IPSetMeta, error) {
+	return m.Metas, m.Error
+}
+
+func (m *IPSet) DeleteIPSet(ctx context.Context, meta db.IPSetMeta) error {
+	m.DeleteCalled = true
+	m.DeleteName = meta.Name
+	if meta.Version == nil {
+		m.DeleteVersion = nil
+	} else {
+		i := struct{ i int64 }{*meta.Version}
+		m.DeleteVersion = &i.i
+	}
+	return m.Error
 }
 
 func (m *IPSet) GetIPSetModified(ctx context.Context, name string) (time.Time, error) {

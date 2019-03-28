@@ -53,10 +53,30 @@ func (c *ElasticIPSetController) NoGC(name string) {
 	c.noGC[name] = struct{}{}
 }
 
-func (c *ElasticIPSetController) StartGC() {
+func (c *ElasticIPSetController) StartReconciliation() {
 	return
 }
 
 func (c *ElasticIPSetController) Run(ctx context.Context) {
 	<-ctx.Done()
+}
+
+func (c *ElasticIPSetController) NotGCable() map[string]struct{} {
+	out := make(map[string]struct{})
+	c.m.Lock()
+	defer c.m.Unlock()
+	for k, s := range c.noGC {
+		out[k] = s
+	}
+	return out
+}
+
+func (c *ElasticIPSetController) Sets() map[string]db.IPSetSpec {
+	out := make(map[string]db.IPSetSpec)
+	c.m.Lock()
+	defer c.m.Unlock()
+	for k, s := range c.sets {
+		out[k] = s
+	}
+	return out
 }
