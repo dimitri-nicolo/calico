@@ -1,9 +1,9 @@
 # This manifest includes the following component versions:
-#   {{.Values.prometheusOperator.image}}:{{.Values.prometheusOperator.tag}}
-#   {{.Values.prometheusConfigReloader.image}}:{{.Values.prometheusConfigReloader.tag}}
-#   {{.Values.configmapReload.image}}:{{.Values.configmapReload.tag}}
+#   quay.io/coreos/prometheus-operator:{{.Values.prometheusOperator.tag}}
+#   quay.io/coreos/prometheus-config-reloader:{{.Values.prometheusConfigReloader.tag}}
+#   quay.io/coreos/configmap-reload:{{.Values.configmapReload.tag}}
 {{- if eq .Values.elasticsearchType "operator" }}
-#   {{.Values.elasticsearchOperator.image}}:{{.Values.elasticsearchOperator.tag}}
+#   upmcenterprises/elasticsearch-operator:{{.Values.elasticsearchOperator.tag}}
 {{- end }}
 ---
 
