@@ -7,7 +7,7 @@ package v3
 import (
 	time "time"
 
-	projectcalico_v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
+	projectcalicov3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	clientset "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset"
 	internalinterfaces "github.com/tigera/calico-k8sapiserver/pkg/client/informers_generated/externalversions/internalinterfaces"
 	v3 "github.com/tigera/calico-k8sapiserver/pkg/client/listers_generated/projectcalico/v3"
@@ -55,7 +55,7 @@ func NewFilteredGlobalNetworkSetInformer(client clientset.Interface, resyncPerio
 				return client.ProjectcalicoV3().GlobalNetworkSets().Watch(options)
 			},
 		},
-		&projectcalico_v3.GlobalNetworkSet{},
+		&projectcalicov3.GlobalNetworkSet{},
 		resyncPeriod,
 		indexers,
 	)
@@ -66,7 +66,7 @@ func (f *globalNetworkSetInformer) defaultInformer(client clientset.Interface, r
 }
 
 func (f *globalNetworkSetInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&projectcalico_v3.GlobalNetworkSet{}, f.defaultInformer)
+	return f.factory.InformerFor(&projectcalicov3.GlobalNetworkSet{}, f.defaultInformer)
 }
 
 func (f *globalNetworkSetInformer) Lister() v3.GlobalNetworkSetLister {

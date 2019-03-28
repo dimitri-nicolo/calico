@@ -7,7 +7,7 @@ package v3
 import (
 	time "time"
 
-	projectcalico_v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
+	projectcalicov3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	clientset "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset"
 	internalinterfaces "github.com/tigera/calico-k8sapiserver/pkg/client/informers_generated/externalversions/internalinterfaces"
 	v3 "github.com/tigera/calico-k8sapiserver/pkg/client/listers_generated/projectcalico/v3"
@@ -55,7 +55,7 @@ func NewFilteredTierInformer(client clientset.Interface, resyncPeriod time.Durat
 				return client.ProjectcalicoV3().Tiers().Watch(options)
 			},
 		},
-		&projectcalico_v3.Tier{},
+		&projectcalicov3.Tier{},
 		resyncPeriod,
 		indexers,
 	)
@@ -66,7 +66,7 @@ func (f *tierInformer) defaultInformer(client clientset.Interface, resyncPeriod 
 }
 
 func (f *tierInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&projectcalico_v3.Tier{}, f.defaultInformer)
+	return f.factory.InformerFor(&projectcalicov3.Tier{}, f.defaultInformer)
 }
 
 func (f *tierInformer) Lister() v3.TierLister {
