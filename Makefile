@@ -327,7 +327,7 @@ endif
 # Run fossa.io license checks
 foss-checks:
 	@echo Running $@...
-	@docker run --rm -v $(CURDIR)/../:/code/:rw \
+	@docker run --rm -v $(CURDIR)/:/code/es-proxy:rw \
 	  -e LOCAL_USER_ID=$(MY_UID) \
 	  -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
 	  -w /code/es-proxy/ \
