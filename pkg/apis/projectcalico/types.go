@@ -129,12 +129,14 @@ type GlobalThreatFeedList struct {
 // +genclient
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:subresource:status
 
 type GlobalThreatFeed struct {
 	metav1.TypeMeta
 	metav1.ObjectMeta
 
 	Spec calico.GlobalThreatFeedSpec
+	Status calico.GlobalThreatFeedStatus
 }
 
 // +genclient:nonNamespaced

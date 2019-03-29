@@ -80,6 +80,17 @@ func (c *FakeGlobalThreatFeeds) Update(globalThreatFeed *v3.GlobalThreatFeed) (r
 	return obj.(*v3.GlobalThreatFeed), err
 }
 
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+func (c *FakeGlobalThreatFeeds) UpdateStatus(globalThreatFeed *v3.GlobalThreatFeed) (*v3.GlobalThreatFeed, error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewRootUpdateSubresourceAction(globalthreatfeedsResource, "status", globalThreatFeed), &v3.GlobalThreatFeed{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v3.GlobalThreatFeed), err
+}
+
 // Delete takes name of the globalThreatFeed and deletes it. Returns an error if one occurs.
 func (c *FakeGlobalThreatFeeds) Delete(name string, options *v1.DeleteOptions) error {
 	_, err := c.Fake.

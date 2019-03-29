@@ -135,6 +135,7 @@ type GlobalThreatFeed struct {
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
 	Spec calico.GlobalThreatFeedSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
+	Status calico.GlobalThreatFeedStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
 }
 
 // +genclient:nonNamespaced
