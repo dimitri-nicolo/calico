@@ -25,7 +25,7 @@ const (
 const AggregationDuration = time.Duration(10) * time.Millisecond
 
 func SubscribeDNS(groupNum int, bufSize int, ch chan<- []byte, done <-chan struct{}) error {
-	log.Info("Subscribe to NFLOG group for DNS responses")
+	log.Infof("Subscribe to NFLOG group %v for DNS responses", groupNum)
 	resChan, err := openAndReadNFNLSocket(groupNum, bufSize, done, 2*cap(ch), true)
 	if err != nil {
 		return err
@@ -236,11 +236,11 @@ func parseAndReturnDNSResponses(groupNum int, resChan <-chan [][]byte, ch chan<-
 		logCtx := log.WithFields(log.Fields{
 			"groupNum": groupNum,
 		})
-		logCtx.Info("Start DNS response capture loop")
+		logCtx.Debug("Start DNS response capture loop")
 		for {
 			select {
 			case res := <-resChan:
-				logCtx.Infof("%v messages from DNS response channel", len(res))
+				logCtx.Debugf("%v messages from DNS response channel", len(res))
 				for _, m := range res {
 					msg := nfnl.DeserializeNfGenMsg(m)
 					packetData, err := getNflogPacketData(m[msg.Len():])
@@ -248,7 +248,7 @@ func parseAndReturnDNSResponses(groupNum int, resChan <-chan [][]byte, ch chan<-
 						logCtx.Warnf("Error parsing NFLOG %v", err)
 						continue
 					}
-					logCtx.Infof("DNS response length %v", len(packetData))
+					logCtx.Debugf("DNS response length %v", len(packetData))
 					ch <- packetData
 				}
 			}
