@@ -205,7 +205,7 @@ loop:
 			// We're in sync and the resync timer has popped,
 			// do a resync with the datastore.  This will look for
 			// out-of-sync keys in the datastore and mark them as
-			// dirty so that we'll make delete/update them below.
+			// dirty so that we'll delete/update them below.
 			log.Debug("Doing endpoint status resync")
 			esr.attemptResync(ctx)
 			resyncRequested = false

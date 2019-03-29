@@ -115,6 +115,7 @@ func AddIPSetsRule(r *proto.Rule, s map[string]bool) {
 	addAll(r.NotDstIpSetIds, s)
 	addAll(r.NotSrcNamedPortIpSetIds, s)
 	addAll(r.NotDstNamedPortIpSetIds, s)
+	addAll(r.DstDomainIpSetIds, s)
 }
 
 func addAll(items []string, s map[string]bool) {

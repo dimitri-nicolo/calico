@@ -29,7 +29,7 @@ import (
 	"sort"
 
 	"github.com/projectcalico/felix/proto"
-	"github.com/projectcalico/libcalico-go/lib/apis/v3"
+	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/hash"
 	"github.com/projectcalico/libcalico-go/lib/net"
@@ -269,6 +269,7 @@ var _ = Describe("ParsedRule", func() {
 		for i := 0; i < numMRFields; i++ {
 			name := mrType.Field(i).Name
 			if strings.Contains(name, "Tag") ||
+				strings.Contains(name, "Domains") ||
 				(strings.Contains(name, "Selector") &&
 					!strings.Contains(name, "Original") &&
 					!strings.Contains(name, "Service")) {

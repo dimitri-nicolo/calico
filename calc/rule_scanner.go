@@ -101,12 +101,13 @@ type IPSetData struct {
 }
 
 func (d *IPSetData) SetUniqueID(dstDomains []string) {
-	var idToHash string
+	var hashPrefix, idToHash string
 	if d.cachedUID != "" {
 		log.WithField("IPSetData", d).Panic("cachedUID already set")
 	}
 
 	if len(dstDomains) == 0 {
+		hashPrefix = "n"
 		selID := d.Selector.UniqueID()
 		if d.NamedPortProtocol == labelindex.ProtocolNone {
 			d.cachedUID = selID
@@ -115,10 +116,11 @@ func (d *IPSetData) SetUniqueID(dstDomains []string) {
 			idToHash = selID + "," + d.NamedPortProtocol.String() + "," + d.NamedPort
 		}
 	} else {
+		hashPrefix = "d"
 		idToHash = strings.Join(dstDomains, "")
 	}
 
-	d.cachedUID = hash.MakeUniqueID("n", idToHash)
+	d.cachedUID = hash.MakeUniqueID(hashPrefix, idToHash)
 	if d.cachedUID == "" {
 		log.WithField("IPSetData", d).Panic("failed to set cachedUID")
 	}
@@ -137,6 +139,13 @@ func (d *IPSetData) DataplaneProtocolType() proto.IPSetUpdate_IPSetType {
 	if d.NamedPortProtocol != labelindex.ProtocolNone {
 		return proto.IPSetUpdate_IP_AND_PORT
 	}
+
+	// IPSetData struct refer to domain names have their unique IDs prefixed with 'd'
+	uniqueID := d.GetUniqueID()
+	if uniqueID[0] == 'd' {
+		return proto.IPSetUpdate_DOMAIN
+	}
+
 	return proto.IPSetUpdate_NET
 }
 

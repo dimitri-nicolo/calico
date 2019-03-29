@@ -32,11 +32,11 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/libcalico-go/lib/apis/v3"
+	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
 )
 
-var _ = Describe("FelixConfig vs ConfigParams parity", func() {
+var _ = Describe("FelixConfigurationSpec vs ConfigParams parity", func() {
 	var fcFields map[string]reflect.StructField
 	var cpFields map[string]reflect.StructField
 	cpFieldsToIgnore := []string{
@@ -77,6 +77,11 @@ var _ = Describe("FelixConfig vs ConfigParams parity", func() {
 		"EndpointReportingDelaySecs":         "EndpointReportingDelay",
 		"CloudWatchMetricsPushIntervalSecs":  "CloudWatchMetricsPushInterval",
 	}
+	fcFIeldsToIgnore := []string{
+		"IptablesNATOutgoingInterfaceFilter",
+		"OpenstackRegion",
+	}
+
 	fcFieldNameToCP := map[string]string{}
 	for k, v := range cpFieldNameToFC {
 		fcFieldNameToCP[v] = k
@@ -110,6 +115,9 @@ var _ = Describe("FelixConfig vs ConfigParams parity", func() {
 		Expect(missingFields).To(BeEmpty())
 	})
 	It("Config should contain all FelixConfigurationSpec fields", func() {
+		for _, name := range fcFIeldsToIgnore {
+			delete(fcFields, name)
+		}
 		missingFields := set.New()
 		for n := range fcFields {
 			mappedName := fcFieldNameToCP[n]

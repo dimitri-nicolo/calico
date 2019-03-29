@@ -968,6 +968,7 @@ help:
 	@echo "Tests:"
 	@echo
 	@echo "  make ut                Run UTs."
+	@echo "  make fv                Run FVs."
 	@echo "  make go-cover-browser  Display go code coverage in browser."
 	@echo
 	@echo "Maintenance:"
