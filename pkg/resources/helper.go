@@ -11,9 +11,11 @@ import (
 
 const (
 	v1               = "v1"
+	v1beta1          = "v1beta1"
 	v3               = "v3"
 	grpProjectcalico = "projectcalico.org"
 	grpK8sNetworking = "networking.k8s.io"
+	grpExtensions    = "extensions"
 )
 
 var (
@@ -26,6 +28,7 @@ var (
 	ResourceTypeEndpoints             = schema.GroupVersionKind{Version: v1, Kind: "Endpoints"}
 	ResourceTypeNamespaces            = schema.GroupVersionKind{Version: v1, Kind: "Namespace"}
 	ResourceTypeK8sNetworkPolicies    = schema.GroupVersionKind{Group: grpK8sNetworking, Version: v1, Kind: "NetworkPolicy"}
+	ResourceTypeK8sNetworkPoliciesDep = schema.GroupVersionKind{Group: grpExtensions, Version: v1beta1, Kind: "NetworkPolicy"}
 	ResourceTypePods                  = schema.GroupVersionKind{Version: v1, Kind: "Pod"}
 	ResourceTypeServiceAccounts       = schema.GroupVersionKind{Version: v1, Kind: "ServiceAccount"}
 )
@@ -36,8 +39,21 @@ type ResourceHelper interface {
 	NewResourceList() ResourceList
 }
 
+// GetGroupVersionKind extracts the group version kind from the resource unless
+//   it is using a deprecated apiVersion
+func GetGroupVersionKind(res Resource) schema.GroupVersionKind {
+	gvk := res.GetObjectKind().GroupVersionKind()
+	if gvk == ResourceTypeK8sNetworkPoliciesDep {
+		gvk = ResourceTypeK8sNetworkPolicies
+	}
+	return gvk
+}
+
 // GetResourceHelper returns the requested ResourceHelper, or nil if not supported.
 func GetResourceHelper(gvk schema.GroupVersionKind) ResourceHelper {
+	if gvk == ResourceTypeK8sNetworkPoliciesDep {
+		return resourceHelpersMap[ResourceTypeK8sNetworkPolicies]
+	}
 	return resourceHelpersMap[gvk]
 }
 
@@ -104,6 +120,9 @@ var (
 		},
 		&resourceHelper{
 			ResourceTypeK8sNetworkPolicies, &networkingv1.NetworkPolicy{}, &networkingv1.NetworkPolicyList{},
+		},
+		&resourceHelper{
+			ResourceTypeTiers, &apiv3.Tier{}, &apiv3.TierList{},
 		},
 		&resourceHelper{
 			ResourceTypeHostEndpoints, &apiv3.HostEndpoint{}, &apiv3.HostEndpointList{},

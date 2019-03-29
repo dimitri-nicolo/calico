@@ -15,6 +15,7 @@ import (
 	"github.com/olivere/elastic"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/tigera/compliance/pkg/event"
 	"github.com/tigera/compliance/pkg/list"
 )
 
@@ -27,12 +28,22 @@ const (
 
 type Client interface {
 	list.Destination
+	event.Fetcher
 	EnsureIndices() error
+	Backend() *elastic.Client
 }
 
 // TODO(rlb): This should be an interface not a public struct.
 type client struct {
 	*elastic.Client
+}
+
+func MustGetElasticClient() Client {
+	c, err := NewFromEnv()
+	if err != nil {
+		panic(err)
+	}
+	return c
 }
 
 func NewFromEnv() (Client, error) {
@@ -158,4 +169,8 @@ func (c *client) ensureIndexExists(index, mapping string) error {
 	}
 	clog.Info("index successfully created!")
 	return nil
+}
+
+func (c *client) Backend() *elastic.Client {
+	return c.Client
 }

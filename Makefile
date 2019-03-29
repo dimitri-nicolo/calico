@@ -7,6 +7,10 @@ all: build
 ## Run the tests for the current platform/architecture
 test: ut
 
+# Define some constants
+#############################
+ELASTIC_VERSION ?= 6.7.0
+
 ###############################################################################
 # Both native and cross architecture builds are supported.
 # The target architecture is select by setting the ARCH variable.
@@ -433,12 +437,37 @@ install-git-hooks:
 	./install-git-hooks
 
 ###############################################################################
-# Unit Tests
+# Tests
 ###############################################################################
 .PHONY: ut
-ut combined.coverprofile: vendor/.up-to-date $(SRC_FILES)
+ut combined.coverprofile: export-mockdata
 	@echo Running Go UTs.
-	$(DOCKER_RUN) $(LOCAL_BUILD_MOUNTS) $(CALICO_BUILD) ./utils/run-coverage
+	$(DOCKER_RUN) $(LOCAL_BUILD_MOUNTS) -e ELASTIC_HOST=localhost $(CALICO_BUILD) ./utils/run-coverage
+
+export-mockdata: $(SRC_FILES) vendor/.up-to-date run-elastic
+	@echo Exporting testdata...
+	$(DOCKER_RUN) \
+	-e ELASTIC_HOST=localhost \
+	$(LOCAL_BUILD_MOUNTS) \
+	golang:1.11 \
+	go run "$(PACKAGE_NAME)/cmd/mockdata-exporter"
+
+## Run elasticsearch as a container (tigera-elastic)
+run-elastic: stop-elastic
+	# Run ES on Docker.
+	docker run --detach \
+	--net=host \
+	--name=tigera-elastic \
+	-e "discovery.type=single-node" \
+	docker.elastic.co/elasticsearch/elasticsearch:$(ELASTIC_VERSION)
+
+	# Wait until ES is accepting requests.
+	@while ! docker exec tigera-elastic curl localhost:9200 2> /dev/null; do echo "Waiting for Elasticsearch to come up..."; sleep 2; done
+
+
+## Stop elasticsearch with name tigera-elastic
+stop-elastic:
+	-docker rm -f tigera-elastic
 
 ###############################################################################
 # CI/CD
