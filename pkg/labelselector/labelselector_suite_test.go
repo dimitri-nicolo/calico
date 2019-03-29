@@ -1,5 +1,5 @@
 // Copyright (c) 2019 Tigera, Inc. All rights reserved.
-package resources
+package labelselector
 
 import (
 	"testing"
@@ -8,7 +8,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestResourceTypes(t *testing.T) {
+func TestLabelSelector(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Resources Suite")
+	RunSpecs(t, "Label Selector Suite")
 }

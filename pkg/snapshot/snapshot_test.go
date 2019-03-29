@@ -1,3 +1,4 @@
+// Copyright (c) 2019 Tigera, Inc. All rights reserved.
 package snapshot
 
 import (
@@ -6,6 +7,7 @@ import (
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/tigera/compliance/pkg/list"
 	"github.com/tigera/compliance/pkg/resources"
@@ -19,9 +21,9 @@ type mockSource struct {
 	nCalls int
 }
 
-func (r *mockSource) RetrieveList(tm metav1.TypeMeta) (*list.TimestampedResourceList, error) {
-	if tm != testResourceType {
-		panic(fmt.Errorf("unexpected resource type. Got: %s; Expected: %s", tm, testResourceType))
+func (r *mockSource) RetrieveList(kind schema.GroupVersionKind) (*list.TimestampedResourceList, error) {
+	if kind != testResourceType {
+		panic(fmt.Errorf("unexpected resource type. Got: %s; Expected: %s", kind, testResourceType))
 	}
 
 	r.nCalls++

@@ -1,3 +1,4 @@
+// Copyright (c) 2019 Tigera, Inc. All rights reserved.
 package elastic
 
 import (
@@ -7,14 +8,14 @@ import (
 
 	"github.com/olivere/elastic"
 	log "github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/projectcalico/libcalico-go/lib/errors"
 
 	"github.com/tigera/compliance/pkg/list"
 )
 
-func (c *Client) RetrieveList(tm metav1.TypeMeta, from, to *time.Time, ascending bool) (*list.TimestampedResourceList, error) {
+func (c *client) RetrieveList(kind schema.GroupVersionKind, from, to *time.Time, ascending bool) (*list.TimestampedResourceList, error) {
 	// Construct the range query based on received arguments.
 	rangeQuery := elastic.NewRangeQuery("requestStartedTimestamp")
 	if from != nil {
@@ -29,8 +30,8 @@ func (c *Client) RetrieveList(tm metav1.TypeMeta, from, to *time.Time, ascending
 		Index(snapshotsIndex).
 		Query(
 			elastic.NewBoolQuery().Must(
-				elastic.NewTermQuery("apiVersion", tm.APIVersion),
-				elastic.NewTermQuery("kind", tm.Kind),
+				elastic.NewTermQuery("apiVersion", kind.GroupVersion().String()),
+				elastic.NewTermQuery("kind", kind.Kind),
 				rangeQuery,
 			)).
 		Sort("requestStartedTimestamp", ascending).
@@ -66,7 +67,7 @@ func (c *Client) RetrieveList(tm metav1.TypeMeta, from, to *time.Time, ascending
 }
 
 //TODO(rlb): What is the ES Id all about?
-func (c *Client) StoreList(_ metav1.TypeMeta, l *list.TimestampedResourceList) error {
+func (c *client) StoreList(_ schema.GroupVersionKind, l *list.TimestampedResourceList) error {
 	res, err := c.Index().
 		Index(snapshotsIndex).
 		Type("_doc").

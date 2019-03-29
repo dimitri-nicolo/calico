@@ -1,3 +1,4 @@
+// Copyright (c) 2019 Tigera, Inc. All rights reserved.
 package elastic
 
 import (
@@ -13,6 +14,8 @@ import (
 
 	"github.com/olivere/elastic"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/tigera/compliance/pkg/list"
 )
 
 const (
@@ -20,37 +23,19 @@ const (
 	DefaultElasticHost   = "elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local"
 	DefaultElasticPort   = 9200
 	DefaultElasticUser   = "elastic"
-
-	snapshotsIndex   = "tigera_secure_ee_snapshots"
-	snapshotsMapping = `{
-  "mappings": {
-    "_doc": {
-      "properties": {
-        "apiVersion": { "type": "text" },
-        "kind": { "type": "text" },
-        "items": {
-          "properties": {
-            "apiVersion": { "type": "text" },
-            "kind": { "type": "text" },
-            "metadata": { "type": "object" },
-            "spec": { "type": "object", "enabled": false }
-          }
-        },
-        "metadata": { "type": "object" },
-        "requestStartedTimestamp": { "type": "date" },
-        "requestCompletedTimestamp": { "type": "date" }
-      }
-    }
-  }
-}`
 )
 
+type Client interface {
+	list.Destination
+	EnsureIndices() error
+}
+
 // TODO(rlb): This should be an interface not a public struct.
-type Client struct {
+type client struct {
 	*elastic.Client
 }
 
-func NewFromEnv() (*Client, error) {
+func NewFromEnv() (Client, error) {
 	var u *url.URL
 	uri := os.Getenv("ELASTIC_URI")
 	if uri != "" {
@@ -118,7 +103,7 @@ func NewFromEnv() (*Client, error) {
 	return New(h, u, user, pass)
 }
 
-func New(h *http.Client, url *url.URL, username, password string) (*Client, error) {
+func New(h *http.Client, url *url.URL, username, password string) (Client, error) {
 	options := []elastic.ClientOptionFunc{
 		elastic.SetURL(url.String()),
 		elastic.SetHttpClient(h),
@@ -133,14 +118,14 @@ func New(h *http.Client, url *url.URL, username, password string) (*Client, erro
 	if err != nil {
 		return nil, err
 	}
-	return &Client{c}, nil
+	return &client{c}, nil
 }
 
-func (c *Client) EnsureIndices() error {
+func (c *client) EnsureIndices() error {
 	return c.ensureIndexExists(snapshotsIndex, snapshotsMapping)
 }
 
-func (c *Client) ensureIndexExists(index, mapping string) error {
+func (c *client) ensureIndexExists(index, mapping string) error {
 	clog := log.WithField("index", index)
 
 	// Check if index exists.
