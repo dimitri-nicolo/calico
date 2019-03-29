@@ -19,7 +19,7 @@ type Source interface {
 
 // Destination is the interface used for managing the archived time-dependent resource lists.
 type Destination interface {
-	RetrieveList(metav1.TypeMeta, time.Time) (*TimestampedResourceList, error)
+	RetrieveList(tm metav1.TypeMeta, from, to *time.Time, sortAscendingTime bool) (*TimestampedResourceList, error)
 	StoreList(metav1.TypeMeta, *TimestampedResourceList) error
 }
 

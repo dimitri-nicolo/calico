@@ -59,9 +59,10 @@ func main() {
 	// Starting snapshotter for each resource type.
 	wg := sync.WaitGroup{}
 	for _, rh := range resources.GetAllResourceHelpers() {
+		tm := rh.TypeMeta()
 		wg.Add(1)
 		go func() {
-			err := snapshot.Run(cxt, rh.TypeMeta(), datastoreClient, elasticClient)
+			err := snapshot.Run(cxt, tm, datastoreClient, elasticClient)
 			if err != nil {
 				log.Errorf("Hit terminating error in snapshotter: %v", err)
 			}

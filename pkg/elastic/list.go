@@ -14,16 +14,26 @@ import (
 	"github.com/tigera/compliance/pkg/list"
 )
 
-func (c *Client) RetrieveList(tm metav1.TypeMeta, from time.Time) (*list.TimestampedResourceList, error) {
+func (c *Client) RetrieveList(tm metav1.TypeMeta, from, to *time.Time, ascending bool) (*list.TimestampedResourceList, error) {
+	// Construct the range query based on received arguments.
+	rangeQuery := elastic.NewRangeQuery("requestStartedTimestamp")
+	if from != nil {
+		rangeQuery = rangeQuery.From(*from)
+	}
+	if to != nil {
+		rangeQuery = rangeQuery.To(*to)
+	}
+
 	// Execute query.
 	res, err := c.Search().
 		Index(snapshotsIndex).
-		//TODO(rlb): Shouldn't this include the api version too?
 		Query(
 			elastic.NewBoolQuery().Must(
+				elastic.NewTermQuery("apiVersion", tm.APIVersion),
 				elastic.NewTermQuery("kind", tm.Kind),
-				elastic.NewRangeQuery("timestamp").From(from))).
-		Sort("timestamp", true).
+				rangeQuery,
+			)).
+		Sort("requestStartedTimestamp", ascending).
 		Size(1). // Only retrieve the first document found.
 		Do(context.Background())
 	if err != nil {
@@ -36,7 +46,7 @@ func (c *Client) RetrieveList(tm metav1.TypeMeta, from time.Time) (*list.Timesta
 	switch len(res.Hits.Hits) {
 	case 0:
 		log.Error("no hits found")
-		return nil, &errors.ErrorResourceDoesNotExist{}
+		return nil, errors.ErrorResourceDoesNotExist{}
 	case 1:
 		break
 	default:

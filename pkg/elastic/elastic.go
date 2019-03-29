@@ -37,8 +37,8 @@ const (
           }
         },
         "metadata": { "type": "object" },
-        "requestStarted": { "type": "date" },
-        "requestCompleted": { "type": "date" }
+        "requestStartedTimestamp": { "type": "date" },
+        "requestCompletedTimestamp": { "type": "date" }
       }
     }
   }
