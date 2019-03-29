@@ -2,6 +2,7 @@ package handler_test
 
 import (
 	. "github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/reporters"
 	. "github.com/onsi/gomega"
 
 	"testing"
@@ -9,5 +10,6 @@ import (
 
 func TestHandler(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Handler Suite")
+	junitReporter := reporters.NewJUnitReporter("../../report/handler_suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "Handler Suite", []Reporter{junitReporter})
 }
