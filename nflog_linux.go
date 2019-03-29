@@ -230,7 +230,7 @@ func parseAndAggregateFlowLogs(groupNum int, resChan <-chan [][]byte, ch chan<- 
 }
 
 func parseAndReturnDNSResponses(groupNum int, resChan <-chan [][]byte, ch chan<- []byte) {
-	// Start another goroutine for parsing netlink messages into nflog objects
+	// Start another goroutine for parsing netlink messages into DNS response data.
 	go func() {
 		defer close(ch)
 		logCtx := log.WithFields(log.Fields{
