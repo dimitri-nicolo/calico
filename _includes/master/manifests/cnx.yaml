@@ -80,12 +80,17 @@ metadata:
   name: cnx-apiserver-certs
   namespace: kube-system
 data:
+{{- if include "calico.apiserver.tls" . }}
+  apiserver.key: {{ .Values.apiserver.tls.key | b64enc }}
+  apiserver.crt: {{ .Values.apiserver.tls.crt | b64enc }}
+{{- else }}
   # Populate the following files with apiserver TLS configuration if desired,
   # but leave blank if not using TLS with certificate verification.
   # This self-hosted install expects two files with the following names. The values
   # should be base64 encoded strings of the entire contents of each file.
   #apiserver.key:
   #apiserver.crt:
+{{- end }}
 {{- end }}
 ---
 
@@ -416,6 +421,9 @@ spec:
           - mountPath: /code/certificates/requestheader-client-ca-file
             name: apiserver-certs
             subPath: requestheader-client-ca-file
+{{- else if include "calico.apiserver.tls" . }}
+          - mountPath: /code/apiserver.local.config/certificates
+            name: apiserver-certs
 {{- else }}
           # - mountPath: /code/apiserver.local.config/certificates
           #   name: apiserver-certs
@@ -529,6 +537,10 @@ spec:
         - name: apiserver-certs
           configMap:
             name: extension-apiserver-authentication
+{{- else if include "calico.apiserver.tls" . }}
+        - name: apiserver-certs
+          secret:
+            secretName: cnx-apiserver-certs
 {{- else }}
         # If you're using TLS with certificate verification then
         # uncomment the following.
