@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -55,6 +55,10 @@ type Interface interface {
 	LicenseKey() LicenseKeyInterface
 	// GlobalThreatFeeds returns an interface for managing the Threat feed resources.
 	GlobalThreatFeeds() GlobalThreatFeedInterface
+	// GlobalReportTypes returns an interface for managing the report types resources.
+	GlobalReportTypes() GlobalReportTypeInterface
+	// GlobalReports returns an interface for managing the report resources.
+	GlobalReports() GlobalReportInterface
 
 	// EnsureInitialized is used to ensure the backend datastore is correctly
 	// initialized for use by Calico.  This method may be called multiple times, and

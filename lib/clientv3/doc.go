@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -33,6 +33,8 @@ The client has a number of methods that return interfaces for managing:
 	-  Tier resources
 	-  IP Address Management (IPAM)
 	-  Global threat feed resources
+	-  Global Report Types resources
+	-  Global Report resources
 
 See [resource definitions](http://docs.projectcalico.org/latest/reference/calicoctl/resources/) for details about the set of management commands for each
 resource type.

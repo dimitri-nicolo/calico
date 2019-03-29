@@ -85,6 +85,8 @@ import:
 # since we only reference it from out Makefile.
 - package: golang.org/x/tools/import
 - package: k8s.io/gengo
+# glide cannot fetch this package k8s.io/gengo relies on.
+- package: k8s.io/klog
 # Pin client-go to the exact tag release for K8s 1.11.0
 - package: k8s.io/client-go
   version: v8.0.0
@@ -100,3 +102,4 @@ import:
 # version.
 - package: github.com/json-iterator/go
   version: f2b4162afba35581b6d4a50d3b8f34e33c144682
+- package: github.com/robfig/cron

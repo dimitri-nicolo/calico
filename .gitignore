@@ -12,3 +12,4 @@ junit.xml
 checkouts
 /report/*.xml
 /release
+cscope.*

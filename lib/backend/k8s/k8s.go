@@ -32,7 +32,7 @@ import (
 	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/net"
 
-	"k8s.io/api/core/v1"
+	kcorev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -92,6 +92,10 @@ func init() {
 				&apiv3.IPAMConfigList{},
 				&apiv3.GlobalThreatFeed{},
 				&apiv3.GlobalThreatFeedList{},
+				&apiv3.GlobalReport{},
+				&apiv3.GlobalReportList{},
+				&apiv3.GlobalReportType{},
+				&apiv3.GlobalReportTypeList{},
 			)
 			metav1.AddToGroupVersion(scheme, ver)
 			return nil
@@ -264,6 +268,18 @@ func NewKubeClient(ca *apiconfig.CalicoAPIConfigSpec) (api.Client, error) {
 		apiv3.KindRemoteClusterConfiguration,
 		resources.NewRemoteClusterConfigurationClient(cs, crdClientV1),
 	)
+	kubeClient.registerResourceClient(
+		reflect.TypeOf(model.ResourceKey{}),
+		reflect.TypeOf(model.ResourceListOptions{}),
+		apiv3.KindGlobalReport,
+		resources.NewGlobalReportClient(cs, crdClientV1),
+	)
+	kubeClient.registerResourceClient(
+		reflect.TypeOf(model.ResourceKey{}),
+		reflect.TypeOf(model.ResourceListOptions{}),
+		apiv3.KindGlobalReportType,
+		resources.NewGlobalReportTypeClient(cs, crdClientV1),
+	)
 
 	return kubeClient, nil
 }
@@ -415,6 +431,8 @@ func (c *KubeClient) Clean() error {
 		apiv3.KindHostEndpoint,
 		apiv3.KindRemoteClusterConfiguration,
 		apiv3.KindGlobalThreatFeed,
+		apiv3.KindGlobalReport,
+		apiv3.KindGlobalReportType,
 	}
 	ctx := context.Background()
 	for _, k := range kinds {
@@ -679,7 +697,7 @@ func (c *KubeClient) listHostConfig(ctx context.Context, l model.HostConfigListO
 	}, nil
 }
 
-func getTunIp(n *v1.Node) (*model.KVPair, error) {
+func getTunIp(n *kcorev1.Node) (*model.KVPair, error) {
 	if n.Spec.PodCIDR == "" {
 		log.Warnf("Node %s does not have podCIDR for HostConfig", n.Name)
 		return nil, nil

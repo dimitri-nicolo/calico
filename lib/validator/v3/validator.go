@@ -20,8 +20,10 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
+	"text/template"
 	"time"
 
+	"github.com/robfig/cron"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/go-playground/validator.v9"
 	k8sv1 "k8s.io/api/core/v1"
@@ -171,6 +173,8 @@ func init() {
 	registerFieldValidator("file", validateFile)
 	registerFieldValidator("etcdEndpoints", validateEtcdEndpoints)
 	registerFieldValidator("k8sEndpoint", validateK8sEndpoint)
+	registerFieldValidator("reporttemplate", validateReportTemplate)
+	registerFieldValidator("reportschedule", validateReportSchedule)
 
 	registerStructValidator(validate, validateProtocol, numorstring.Protocol{})
 	registerStructValidator(validate, validateProtoPort, api.ProtoPort{})
@@ -1301,6 +1305,20 @@ func validateSecretKeyRef(structLevel validator.StructLevel) {
 			"",
 		)
 	}
+}
+
+func validateReportTemplate(fl validator.FieldLevel) bool {
+	rt := fl.Field().String()
+
+	_, err := template.New("rt").Parse(rt)
+	return err == nil
+}
+
+func validateReportSchedule(fl validator.FieldLevel) bool {
+	rs := fl.Field().String()
+
+	_, err := cron.ParseStandard(rs)
+	return err == nil
 }
 
 func validateObjectMetaAnnotations(structLevel validator.StructLevel, annotations map[string]string) {
