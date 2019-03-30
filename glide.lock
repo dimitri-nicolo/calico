@@ -1,5 +1,5 @@
-hash: 0529a55dbc153ce595e097cf71b7490409d8cc369528744fbd603212f00850e9
-updated: 2019-03-29T04:54:45.11406804Z
+hash: e2e5e8d2706984afd7afc5219c395c5086bf63682e11f0def7fa21936624f17f
+updated: 2019-03-30T04:53:39.949485266Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -352,7 +352,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: fb1aa4bee7ff05968e7068f00e0084f8c221bf8b
+  version: 4d2335fc34e9700eba491ad7179caca439d21907
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
@@ -423,7 +423,7 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: e3fb1a1acd7605367a2b378bc2e2f893c05174b7
+  version: cfeb6f9992ffa54aaa4f2170ade4067ee478b250
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
@@ -440,6 +440,8 @@ imports:
   version: 758b1f7c9d1ca5acaca0b909f06ff9ed9fe35de1
   subpackages:
   - netsh
+- name: github.com/robfig/cron
+  version: b41be1df696709bb6395fe435af20370037c0b4c
 - name: github.com/safchain/ethtool
   version: 7ff1ba29eca231991280817541cb3903f6be15d1
 - name: github.com/satori/go.uuid
@@ -581,7 +583,7 @@ imports:
 - name: gopkg.in/natefinch/lumberjack.v2
   version: a96e63847dc3c67d17befa69c303767e2f84e54f
 - name: gopkg.in/square/go-jose.v2
-  version: 628223f44a71f715d2881ea69afc795a1e9c01be
+  version: 89060dee6a84df9a4dae49f676f0c755037834f1
   subpackages:
   - cipher
   - json
@@ -664,6 +666,10 @@ imports:
   - pkg/version
   - pkg/watch
   - third_party/forked/golang/reflect
+- name: k8s.io/apiserver
+  version: 42393778815389260507d834ce7bda7629232081
+  subpackages:
+  - pkg/apis/audit
 - name: k8s.io/client-go
   version: 7d04d0e2a0a1a4d4a1cd6baa432a2301492e4e65
   subpackages:
