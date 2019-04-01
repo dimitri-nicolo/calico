@@ -17,6 +17,7 @@ var (
 	wg     sync.WaitGroup
 )
 
+// TODO(doublek): This should be moved to a config file.
 var (
 	flowLogIndexQuery  = "/tigera_secure_ee_flows*/_search"
 	auditLogIndexQuery = "/tigera_secure_ee_audit*/_search"

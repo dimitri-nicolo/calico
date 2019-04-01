@@ -8,6 +8,9 @@ import (
 )
 
 // Proxy is a HTTP Handler that proxies HTTP requests a target URL.
+// TODO(doublek):
+//  - Check liveness of backend.
+//  - Support multiple backends.
 type Proxy struct {
 	proxy http.Handler
 }

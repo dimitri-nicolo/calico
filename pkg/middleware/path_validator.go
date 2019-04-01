@@ -9,6 +9,11 @@ import (
 
 // PathValidator will check the request path of an request and reject
 // ones that are not in the paths map.
+// TODO(doublek):
+//  - PathValidator should probably be less generic and store
+//    parsed Elasticsearch index names in the request context for
+//    use later on.
+//  - Load paths from a file.
 func PathValidator(paths map[string]struct{}, h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		reqPath := req.URL.EscapedPath()
