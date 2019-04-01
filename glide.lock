@@ -1,5 +1,5 @@
-hash: 07648c1c495a76c5ba31ece26e5c4788a203f2d36400bbde2a6feb8187889102
-updated: 2019-03-28T13:32:26.739979-03:00
+hash: c390d91c5d6594afcc07577bee7bc4190258023b355be7dfa27c1c9245ad5dfe
+updated: 2019-03-29T15:59:01.976439-03:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -49,6 +49,11 @@ imports:
   - spew
 - name: github.com/dgrijalva/jwt-go
   version: 01aeca54ebda6e0fbfafd0a524d234159c05ec20
+- name: github.com/docker/distribution
+  version: edc3ab29cdff8694dd6feb85cfeb4b5f1b38ed9c
+  subpackages:
+  - digestset
+  - reference
 - name: github.com/elazarl/go-bindata-assetfs
   version: 3dcc96556217539f50599357fb481ac0dc7439b9
 - name: github.com/emicklei/go-restful
@@ -138,6 +143,8 @@ imports:
   - pbutil
 - name: github.com/NYTimes/gziphandler
   version: 56545f4a5d46df9a6648819d1664c3a03a13ffdb
+- name: github.com/opencontainers/go-digest
+  version: a6d0ee40d4207ea02364bd3b9e8e77b9159ba1eb
 - name: github.com/pborman/uuid
   version: ca53cad383cad2479bbba7f7a1a05797ec1386e4
 - name: github.com/projectcalico/go-json
@@ -359,6 +366,10 @@ imports:
   - storage/v1
   - storage/v1alpha1
   - storage/v1beta1
+- name: k8s.io/apiextensions-apiserver
+  version: 750feebe2038bad00fdf68ba37c31f62c4f1f891
+  subpackages:
+  - pkg/features
 - name: k8s.io/apimachinery
   version: 302974c03f7e50f16561ba237db776ab93594ef6
   subpackages:
@@ -648,5 +659,27 @@ imports:
 - name: k8s.io/kubernetes
   version: fc32d2f3698e36b93322a3465f63a14e9f0eaead
   subpackages:
+  - pkg/api/legacyscheme
+  - pkg/api/service
+  - pkg/apis/autoscaling
+  - pkg/apis/core
+  - pkg/apis/core/helper
+  - pkg/apis/core/pods
+  - pkg/apis/core/v1
+  - pkg/apis/core/v1/helper
+  - pkg/apis/core/validation
+  - pkg/apis/extensions
+  - pkg/apis/networking
+  - pkg/capabilities
+  - pkg/features
+  - pkg/fieldpath
+  - pkg/kubelet/types
+  - pkg/master/ports
+  - pkg/scheduler/api
+  - pkg/security/apparmor
+  - pkg/util/file
   - pkg/util/interrupt
+  - pkg/util/net/sets
+  - pkg/util/parsers
+  - pkg/util/pointer
 testImports: []

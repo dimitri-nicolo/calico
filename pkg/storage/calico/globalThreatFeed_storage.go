@@ -77,6 +77,7 @@ func (gc GlobalThreatFeedConverter) convertToLibcalico(aapiObj runtime.Object) r
 	lcgGlobalThreatFeed.TypeMeta = aapiGlobalThreatFeed.TypeMeta
 	lcgGlobalThreatFeed.ObjectMeta = aapiGlobalThreatFeed.ObjectMeta
 	lcgGlobalThreatFeed.Spec = aapiGlobalThreatFeed.Spec
+	lcgGlobalThreatFeed.Status = aapiGlobalThreatFeed.Status
 	return lcgGlobalThreatFeed
 }
 
@@ -84,6 +85,7 @@ func (gc GlobalThreatFeedConverter) convertToAAPI(libcalicoObject resourceObject
 	lcgGlobalThreatFeed := libcalicoObject.(*libcalicoapi.GlobalThreatFeed)
 	aapiGlobalThreatFeed := aapiObj.(*aapi.GlobalThreatFeed)
 	aapiGlobalThreatFeed.Spec = lcgGlobalThreatFeed.Spec
+	aapiGlobalThreatFeed.Status = lcgGlobalThreatFeed.Status
 	aapiGlobalThreatFeed.TypeMeta = lcgGlobalThreatFeed.TypeMeta
 	aapiGlobalThreatFeed.ObjectMeta = lcgGlobalThreatFeed.ObjectMeta
 }

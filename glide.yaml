@@ -27,6 +27,8 @@ import:
   - client
 - package: k8s.io/apiserver
   version: kubernetes-1.10.0
+- package: k8s.io/apiextensions-apiserver
+  version: kubernetes-1.10.0
 - package: k8s.io/kubernetes
   version: v1.10.0
 # Pin to kubernetes 1.10.8.

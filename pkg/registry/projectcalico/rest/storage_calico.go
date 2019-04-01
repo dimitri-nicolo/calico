@@ -17,24 +17,23 @@ limitations under the License.
 package rest
 
 import (
-	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
-	calicolicensekey "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/licensekey"
-	calicognetworkset "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/globalnetworkset"
-	calicogpolicy "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/globalpolicy"
-	calicopolicy "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/networkpolicy"
-	"github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/server"
-	calicotier "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/tier"
-	calicogthreatfeed "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/globalthreatfeed"
-	calicohostendpoint "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/hostendpoint"
-	"github.com/tigera/calico-k8sapiserver/pkg/storage/etcd"
-
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 	"k8s.io/apiserver/pkg/registry/generic"
 	"k8s.io/apiserver/pkg/registry/rest"
 	"k8s.io/apiserver/pkg/storage"
 
+	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
+	calicognetworkset "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/globalnetworkset"
+	calicogpolicy "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/globalpolicy"
+	calicogthreatfeed "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/globalthreatfeed"
+	calicohostendpoint "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/hostendpoint"
+	calicolicensekey "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/licensekey"
+	calicopolicy "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/networkpolicy"
+	"github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/server"
+	calicotier "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/tier"
 	calicostorage "github.com/tigera/calico-k8sapiserver/pkg/storage/calico"
+	"github.com/tigera/calico-k8sapiserver/pkg/storage/etcd"
 )
 
 // RESTStorageProvider provides a factory method to create a new APIGroupInfo for
@@ -202,7 +201,11 @@ func (p RESTStorageProvider) NewV3Storage(
 	storage["globalnetworkpolicies"] = calicogpolicy.NewREST(scheme, *gpolicyOpts)
 	storage["globalnetworksets"] = calicognetworkset.NewREST(scheme, *gNetworkSetOpts)
 	storage["licensekeys"] = calicolicensekey.NewREST(scheme, *licenseKeysSetOpts)
-	storage["globalthreatfeeds"] = calicogthreatfeed.NewREST(scheme, *gThreatFeedOpts)
+
+	globalThreatFeedsStorage, globalThreatFeedsStatusStorage := calicogthreatfeed.NewREST(scheme, *gThreatFeedOpts)
+	storage["globalthreatfeeds"] = globalThreatFeedsStorage
+	storage["globalthreatfeeds/status"] = globalThreatFeedsStatusStorage
+
 	storage["hostendpoints"] = calicohostendpoint.NewREST(scheme, *hostEndpointOpts)
 
 	return storage, nil

@@ -18,24 +18,26 @@ package integration
 
 import (
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	calico "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 
-	calico "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
 	_ "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/install"
-	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // TestGroupVersion is trivial.
@@ -622,6 +624,16 @@ func testGlobalThreatFeedClient(client calicoclient.Interface, name string) erro
 	globalThreatFeedClient := client.ProjectcalicoV3().GlobalThreatFeeds()
 	globalThreatFeed := &v3.GlobalThreatFeed{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Status: calico.GlobalThreatFeedStatus{
+			LastSuccessfulSync:   metav1.Time{time.Now()},
+			LastSuccessfulSearch: metav1.Time{time.Now()},
+			ErrorConditions: []calico.ErrorCondition{
+				{
+					Type:    "foo",
+					Message: "bar",
+				},
+			},
+		},
 	}
 
 	// start from scratch
@@ -640,6 +652,9 @@ func testGlobalThreatFeedClient(client calicoclient.Interface, name string) erro
 	if name != globalThreatFeedServer.Name {
 		return fmt.Errorf("didn't get the same globalThreatFeed back from the server \n%+v\n%+v", globalThreatFeed, globalThreatFeedServer)
 	}
+	if !reflect.DeepEqual(globalThreatFeedServer.Status, calico.GlobalThreatFeedStatus{}) {
+		return fmt.Errorf("status was set on create to %#v", globalThreatFeedServer.Status)
+	}
 
 	globalThreatFeeds, err = globalThreatFeedClient.List(metav1.ListOptions{})
 	if err != nil {
@@ -656,6 +671,38 @@ func testGlobalThreatFeedClient(client calicoclient.Interface, name string) erro
 	if name != globalThreatFeedServer.Name &&
 		globalThreatFeed.ResourceVersion == globalThreatFeedServer.ResourceVersion {
 		return fmt.Errorf("didn't get the same globalThreatFeed back from the server \n%+v\n%+v", globalThreatFeed, globalThreatFeedServer)
+	}
+
+	globalThreatFeedUpdate := globalThreatFeedServer.DeepCopy()
+	globalThreatFeedUpdate.Spec.Content = "IPSet"
+	globalThreatFeedUpdate.Status.LastSuccessfulSync = v1.Time{Time: time.Now()}
+	globalThreatFeedServer, err = globalThreatFeedClient.Update(globalThreatFeedUpdate)
+	if err != nil {
+		return fmt.Errorf("error updating globalThreatFeed %s (%s)", name, err)
+	}
+	if globalThreatFeedServer.Spec.Content != globalThreatFeedUpdate.Spec.Content {
+		return errors.New("didn't update spec.content")
+	}
+	if !globalThreatFeedServer.Status.LastSuccessfulSync.Time.Equal(time.Time{}) {
+		return errors.New("status was updated by Update()")
+	}
+
+	globalThreatFeedUpdate = globalThreatFeedServer.DeepCopy()
+	globalThreatFeedUpdate.Status.LastSuccessfulSync = v1.Time{Time: time.Now()}
+	globalThreatFeedUpdate.Labels = map[string]string{"foo": "bar"}
+	globalThreatFeedUpdate.Spec.Content = ""
+	globalThreatFeedServer, err = globalThreatFeedClient.UpdateStatus(globalThreatFeedUpdate)
+	if err != nil {
+		return fmt.Errorf("error updating globalThreatFeed %s (%s)", name, err)
+	}
+	if globalThreatFeedServer.Status.LastSuccessfulSync.Time.Equal(time.Time{}) {
+		return fmt.Errorf("didn't update status. %v != %v", globalThreatFeedUpdate.Status, globalThreatFeedServer.Status)
+	}
+	if _, ok := globalThreatFeedServer.Labels["foo"]; ok {
+		return fmt.Errorf("updatestatus updated labels")
+	}
+	if globalThreatFeedServer.Spec.Content == "" {
+		return fmt.Errorf("updatestatus updated spec")
 	}
 
 	err = globalThreatFeedClient.Delete(name, &metav1.DeleteOptions{})
@@ -729,7 +776,7 @@ func TestHostEndpointClient(t *testing.T) {
 	}
 }
 
-func createTestHostEndpoint(name string, ip string, node string) *v3.HostEndpoint{
+func createTestHostEndpoint(name string, ip string, node string) *v3.HostEndpoint {
 	hostEndpoint := &v3.HostEndpoint{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
 	}
