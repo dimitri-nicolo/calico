@@ -159,7 +159,7 @@ func (s *watcher) Run(ctx context.Context) {
 				return
 			}
 			log.Debug("GlobalThreatFeed controller synced")
-			go s.gnsController.Run(s.ctx)
+			s.gnsController.Run(s.ctx)
 			s.elasticController.StartReconciliation()
 		}()
 

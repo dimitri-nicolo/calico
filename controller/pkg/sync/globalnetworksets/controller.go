@@ -47,6 +47,7 @@ type Controller interface {
 }
 
 type controller struct {
+	once     sync.Once
 	client   v3client.GlobalNetworkSetInterface
 	local    cache.Store
 	remote   cache.Indexer
@@ -186,6 +187,12 @@ func (c *controller) NoGC(s *v3.GlobalNetworkSet) {
 }
 
 func (c *controller) Run(ctx context.Context) {
+	c.once.Do(func() {
+		go c.run(ctx)
+	})
+}
+
+func (c *controller) run(ctx context.Context) {
 
 	// Let the workers stop when we are done
 	defer c.queue.ShutDown()

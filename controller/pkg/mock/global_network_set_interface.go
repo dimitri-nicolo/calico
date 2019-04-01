@@ -115,7 +115,6 @@ func (c *GlobalNetworkSetController) NoGC(s *v3.GlobalNetworkSet) {
 }
 
 func (c *GlobalNetworkSetController) Run(ctx context.Context) {
-	<-ctx.Done()
 	return
 }
 
