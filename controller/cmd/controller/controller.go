@@ -16,12 +16,6 @@ import (
 	"strconv"
 	"syscall"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/sync/elasticipsets"
-
-	"github.com/tigera/intrusion-detection/controller/pkg/sync/globalnetworksets"
-
-	"github.com/tigera/intrusion-detection/controller/pkg/health"
-
 	log "github.com/sirupsen/logrus"
 	calicoclient "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset"
 	"k8s.io/client-go/kubernetes"
@@ -29,6 +23,9 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/elastic"
+	"github.com/tigera/intrusion-detection/controller/pkg/health"
+	"github.com/tigera/intrusion-detection/controller/pkg/sync/elasticipsets"
+	"github.com/tigera/intrusion-detection/controller/pkg/sync/globalnetworksets"
 	"github.com/tigera/intrusion-detection/controller/pkg/watcher"
 )
 

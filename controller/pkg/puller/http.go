@@ -14,15 +14,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/db"
-
-	retry "github.com/avast/retry-go"
-	calico "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	"github.com/avast/retry-go"
 	log "github.com/sirupsen/logrus"
-	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
+	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/kubernetes/typed/core/v1"
 
+	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/runloop"
 	"github.com/tigera/intrusion-detection/controller/pkg/statser"
 	"github.com/tigera/intrusion-detection/controller/pkg/sync/elasticipsets"
@@ -358,7 +356,7 @@ func (h *httpPuller) query(ctx context.Context, st statser.Statser, attempts uin
 			}
 		}
 	}
-	h.elasticController.Add(name, snapshot, h.syncFailFunction, st)
+	h.elasticController.Add(ctx, name, snapshot, h.syncFailFunction, st)
 	if gns {
 		h.gnsController.Add(makeGNS(name, labels, snapshot), h.syncFailFunction, st)
 	}
@@ -369,7 +367,10 @@ func (h *httpPuller) query(ctx context.Context, st statser.Statser, attempts uin
 
 func makeGNS(name string, labels map[string]string, snapshot []string) *v3.GlobalNetworkSet {
 	gns := util.NewGlobalNetworkSet(name)
-	gns.Labels = labels
-	gns.Spec = calico.GlobalNetworkSetSpec{Nets: snapshot}
+	gns.Labels = make(map[string]string)
+	for k, v := range labels {
+		gns.Labels[k] = v
+	}
+	gns.Spec.Nets = append(gns.Spec.Nets, snapshot...)
 	return gns
 }

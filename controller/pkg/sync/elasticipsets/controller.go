@@ -21,20 +21,20 @@ type Controller interface {
 	// maintain, by syncing with the Kubernetes API server.
 
 	// Add or update a new Set including the spec
-	Add(name string, set db.IPSetSpec, f func(), stat statser.Statser)
+	Add(ctx context.Context, name string, set db.IPSetSpec, f func(), stat statser.Statser)
 
 	// Delete removes a Set from the desired state.
-	Delete(name string)
+	Delete(ctx context.Context, name string)
 
 	// NoGC marks a Set as not eligible for garbage collection
 	// until deleted. This is useful when we don't know the contents of a
 	// Set, but know it should not be deleted.
-	NoGC(name string)
+	NoGC(ctx context.Context, name string)
 
 	// StartReconciliation indicates that all Sets we don't want garbage
 	// collected have either Add() or NoGC() called on them, and we can start
 	// reconciling our desired state with the actual state.
-	StartReconciliation()
+	StartReconciliation(ctx context.Context)
 
 	// Run starts processing Sets
 	Run(context.Context)
@@ -77,20 +77,40 @@ func NewController(ipSet db.IPSet) Controller {
 	}
 }
 
-func (c *controller) Add(name string, set db.IPSetSpec, f func(), stat statser.Statser) {
-	c.updates <- update{name: name, op: opAdd, set: set, fail: f, statser: stat}
+func (c *controller) Add(ctx context.Context, name string, set db.IPSetSpec, f func(), stat statser.Statser) {
+	select {
+	case <-ctx.Done():
+		return
+	case c.updates <- update{name: name, op: opAdd, set: set, fail: f, statser: stat}:
+		return
+	}
 }
 
-func (c *controller) Delete(name string) {
-	c.updates <- update{name: name, op: opDelete}
+func (c *controller) Delete(ctx context.Context, name string) {
+	select {
+	case <-ctx.Done():
+		return
+	case c.updates <- update{name: name, op: opDelete}:
+		return
+	}
 }
 
-func (c *controller) NoGC(name string) {
-	c.updates <- update{name: name, op: opNoGC}
+func (c *controller) NoGC(ctx context.Context, name string) {
+	select {
+	case <-ctx.Done():
+		return
+	case c.updates <- update{name: name, op: opNoGC}:
+		return
+	}
 }
 
-func (c *controller) StartReconciliation() {
-	c.updates <- update{op: opStart}
+func (c *controller) StartReconciliation(ctx context.Context) {
+	select {
+	case <-ctx.Done():
+		return
+	case c.updates <- update{op: opStart}:
+		return
+	}
 }
 
 func (c *controller) Run(ctx context.Context) {

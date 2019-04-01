@@ -9,8 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/sync/elasticipsets"
-
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	v32 "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
@@ -25,6 +23,7 @@ import (
 	"github.com/tigera/intrusion-detection/controller/pkg/puller"
 	"github.com/tigera/intrusion-detection/controller/pkg/searcher"
 	"github.com/tigera/intrusion-detection/controller/pkg/statser"
+	"github.com/tigera/intrusion-detection/controller/pkg/sync/elasticipsets"
 	"github.com/tigera/intrusion-detection/controller/pkg/sync/globalnetworksets"
 	"github.com/tigera/intrusion-detection/controller/pkg/util"
 )
@@ -160,7 +159,7 @@ func (s *watcher) Run(ctx context.Context) {
 			}
 			log.Debug("GlobalThreatFeed controller synced")
 			s.gnsController.Run(s.ctx)
-			s.elasticController.StartReconciliation()
+			s.elasticController.StartReconciliation(s.ctx)
 		}()
 
 	})
@@ -214,7 +213,7 @@ func (s *watcher) processQueue(obj interface{}) error {
 			}
 			_, exists := s.getFeedWatcher(name)
 			if exists {
-				s.stopFeedWatcher(name)
+				s.stopFeedWatcher(s.ctx, name)
 			}
 		}
 	}
@@ -242,7 +241,7 @@ func (s *watcher) startFeedWatcher(ctx context.Context, f *v3.GlobalThreatFeed) 
 	} else {
 		fw.puller = nil
 	}
-	s.elasticController.NoGC(fCopy.Name)
+	s.elasticController.NoGC(ctx, fCopy.Name)
 
 	if fCopy.Spec.GlobalNetworkSet != nil {
 		s.gnsController.NoGC(util.NewGlobalNetworkSet(fCopy.Name))
@@ -302,7 +301,7 @@ func (s *watcher) restartPuller(ctx context.Context, f *v3.GlobalThreatFeed) {
 	}
 }
 
-func (s *watcher) stopFeedWatcher(name string) {
+func (s *watcher) stopFeedWatcher(ctx context.Context, name string) {
 	fw, ok := s.getFeedWatcher(name)
 	if !ok {
 		panic(fmt.Sprintf("feed %s not running", name))
@@ -315,7 +314,7 @@ func (s *watcher) stopFeedWatcher(name string) {
 	}
 	gns := util.NewGlobalNetworkSet(name)
 	s.gnsController.Delete(gns)
-	s.elasticController.Delete(name)
+	s.elasticController.Delete(ctx, name)
 
 	fw.searcher.Close()
 	s.deleteFeedWatcher(name)

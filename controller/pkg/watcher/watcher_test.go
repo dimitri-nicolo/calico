@@ -180,7 +180,7 @@ func TestWatcher_startFeed_stopFeed(t *testing.T) {
 	g.Expect(fw.statser).ShouldNot(BeNil())
 	g.Expect(fw.searcher).ShouldNot(BeNil())
 
-	w.stopFeedWatcher(f.Name)
+	w.stopFeedWatcher(ctx, f.Name)
 	_, ok = w.getFeedWatcher(f.Name)
 	g.Expect(ok).Should(BeFalse(), "FeedWatchers map does not contain feed")
 	g.Expect(w.listFeedWatchers()).To(HaveLen(0), "No FeedWatchers")
@@ -313,8 +313,10 @@ func TestWatcher_stopFeed_notExists(t *testing.T) {
 	g := NewGomegaWithT(t)
 
 	w := NewWatcher(nil, nil, nil, nil, nil, testClient, nil, nil, nil).(*watcher)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	g.Expect(func() { w.stopFeedWatcher("mock") }).Should(Panic())
+	g.Expect(func() { w.stopFeedWatcher(ctx, "mock") }).Should(Panic())
 }
 
 func TestWatcher_updateFeed_NotStarted(t *testing.T) {

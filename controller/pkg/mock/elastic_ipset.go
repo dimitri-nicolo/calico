@@ -30,7 +30,7 @@ func NewElasticIPSetController() *ElasticIPSetController {
 	}
 }
 
-func (c *ElasticIPSetController) Add(name string, set db.IPSetSpec, f func(), stat statser.Statser) {
+func (c *ElasticIPSetController) Add(ctx context.Context, name string, set db.IPSetSpec, f func(), stat statser.Statser) {
 	c.m.Lock()
 	defer c.m.Unlock()
 	c.sets[name] = set
@@ -38,7 +38,7 @@ func (c *ElasticIPSetController) Add(name string, set db.IPSetSpec, f func(), st
 	c.statsers[name] = stat
 }
 
-func (c *ElasticIPSetController) Delete(name string) {
+func (c *ElasticIPSetController) Delete(ctx context.Context, name string) {
 	c.m.Lock()
 	defer c.m.Unlock()
 	delete(c.sets, name)
@@ -47,13 +47,13 @@ func (c *ElasticIPSetController) Delete(name string) {
 	delete(c.noGC, name)
 }
 
-func (c *ElasticIPSetController) NoGC(name string) {
+func (c *ElasticIPSetController) NoGC(ctx context.Context, name string) {
 	c.m.Lock()
 	defer c.m.Unlock()
 	c.noGC[name] = struct{}{}
 }
 
-func (c *ElasticIPSetController) StartReconciliation() {
+func (c *ElasticIPSetController) StartReconciliation(ctx context.Context) {
 	return
 }
 
