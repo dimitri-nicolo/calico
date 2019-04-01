@@ -14,10 +14,10 @@ Build an image using the `make image` command.
   ```
 - Run the proxy
   ```
-  docker run --net=host --rm -it -e TARGET_URL=http://localhost:9200 --name eb-test tigera/es-proxy:latest
+  docker run --net=host --rm -it -e LOG_LEVEL=debug -e LISTEN_ADDR=":8080" -e ELASTIC_HOST=localhost -e ELASTIC_PORT=9200 -e ELASTIC_SCHEME=http --name eb-test tigera/es-proxy:latest
   ```
 
 - curl it.
   ```
-  docker run --net=host --rm byrnedo/alpine-curl -s http://localhost:8080
+  docker run --net=host --rm byrnedo/alpine-curl -s http://localhost:8080/tigera_secure_ee_audit*/_search -v
   ```
