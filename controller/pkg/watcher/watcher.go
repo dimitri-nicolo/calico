@@ -144,7 +144,7 @@ func (s *watcher) Run(ctx context.Context) {
 		// StartGC() before it does reconciliation. Note that the gnsController
 		// should *not* be started before everything is synced, since it will
 		// start reconciliation as soon as we call Run() on it.
-		go s.elasticController.Run(s.ctx)
+		s.elasticController.Run(s.ctx)
 
 		// We need to wait until we sync all GlobalThreatFeeds before starting
 		// the GlobalNetworkSet controller. This is because the GlobalNetworkSet

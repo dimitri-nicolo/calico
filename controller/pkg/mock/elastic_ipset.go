@@ -58,7 +58,7 @@ func (c *ElasticIPSetController) StartReconciliation() {
 }
 
 func (c *ElasticIPSetController) Run(ctx context.Context) {
-	<-ctx.Done()
+	return
 }
 
 func (c *ElasticIPSetController) NotGCable() map[string]struct{} {

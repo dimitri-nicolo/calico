@@ -5,6 +5,7 @@ package elasticipsets
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/statser"
@@ -40,6 +41,7 @@ type Controller interface {
 }
 
 type controller struct {
+	once    sync.Once
 	ipSet   db.IPSet
 	dirty   map[string]update
 	noGC    map[string]struct{}
@@ -92,6 +94,12 @@ func (c *controller) StartReconciliation() {
 }
 
 func (c *controller) Run(ctx context.Context) {
+	c.once.Do(func() {
+		go c.run(ctx)
+	})
+}
+
+func (c *controller) run(ctx context.Context) {
 
 	log.Debug("starting elastic controller")
 
