@@ -18,8 +18,8 @@ var _ = Describe("Proxy Handler", func() {
 	Context("Proxy should proxy a response OK", func() {
 		BeforeEach(func() {
 			target = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.WriteHeader(200)
 				w.Header().Add("X-Target-Name", targetName)
+				w.WriteHeader(200)
 				w.Write([]byte(targetName))
 			}))
 			targetURL, err := url.Parse(target.URL)
@@ -41,8 +41,8 @@ var _ = Describe("Proxy Handler", func() {
 	Context("Status code must be sent unchanged by the proxy", func() {
 		BeforeEach(func() {
 			target = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.WriteHeader(400)
 				w.Header().Add("X-Target-Name", targetName)
+				w.WriteHeader(400)
 			}))
 			targetURL, err := url.Parse(target.URL)
 			Expect(err).ShouldNot(HaveOccurred())
