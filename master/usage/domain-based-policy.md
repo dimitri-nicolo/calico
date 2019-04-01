@@ -24,7 +24,7 @@ AWS's RDS - by its domain name instead of its IP.
 {: .alert .alert-info}
 
 Specifically, a GlobalNetworkPolicy can have egress rules with
-`action: Allow` and an `allowedEgressDomains` field specifying the
+`action: Allow` and a `destination.domains` field specifying the
 possible domain names to which egress traffic is allowed.
 
 > **Note**: This makes sense when egress traffic from the workloads
@@ -35,7 +35,7 @@ possible domain names to which egress traffic is allowed.
 
 There are two ways for a rule to specify allowed domain names:
 
-1.  By listing those domain names directly in `allowedEgressDomains`.
+1.  By listing those domain names directly in `destination.domains`.
 
 2.  With a `destination.selector` that matches a
     [GlobalNetworkSet]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkset)
