@@ -24,10 +24,29 @@ const (
 
 const AggregationDuration = time.Duration(10) * time.Millisecond
 
-func NflogSubscribe(groupNum int, bufSize int, ch chan<- *NflogPacketAggregate, done <-chan struct{}) error {
-	sock, err := nl.Subscribe(syscall.NETLINK_NETFILTER)
+func SubscribeDNS(groupNum int, bufSize int, ch chan<- []byte, done <-chan struct{}) error {
+	log.Infof("Subscribe to NFLOG group %v for DNS responses", groupNum)
+	resChan, err := openAndReadNFNLSocket(groupNum, bufSize, done, 2*cap(ch), true)
 	if err != nil {
 		return err
+	}
+	parseAndReturnDNSResponses(groupNum, resChan, ch)
+	return nil
+}
+
+func NflogSubscribe(groupNum int, bufSize int, ch chan<- *NflogPacketAggregate, done <-chan struct{}) error {
+	resChan, err := openAndReadNFNLSocket(groupNum, bufSize, done, 2*cap(ch), false)
+	if err != nil {
+		return err
+	}
+	parseAndAggregateFlowLogs(groupNum, resChan, ch)
+	return nil
+}
+
+func openAndReadNFNLSocket(groupNum int, bufSize int, done <-chan struct{}, chanCap int, immediateFlush bool) (chan [][]byte, error) {
+	sock, err := nl.Subscribe(syscall.NETLINK_NETFILTER)
+	if err != nil {
+		return nil, err
 	}
 	// TODO(doublek): Move all this someplace nice.
 	nlMsgType := nfnl.NFNL_SUBSYS_ULOG<<8 | nfnl.NFULNL_MSG_CONFIG
@@ -40,7 +59,7 @@ func NflogSubscribe(groupNum int, bufSize int, ch chan<- *NflogPacketAggregate, 
 	nfattr := nl.NewRtAttr(nfnl.NFULA_CFG_CMD, nflogcmd.Serialize())
 	req.AddData(nfattr)
 	if err := sock.Send(req); err != nil {
-		return err
+		return nil, err
 	}
 
 	req = nl.NewNetlinkRequest(nlMsgType, nlMsgFlags)
@@ -50,7 +69,7 @@ func NflogSubscribe(groupNum int, bufSize int, ch chan<- *NflogPacketAggregate, 
 	nfattr = nl.NewRtAttr(nfnl.NFULA_CFG_CMD, nflogcmd.Serialize())
 	req.AddData(nfattr)
 	if err := sock.Send(req); err != nil {
-		return err
+		return nil, err
 	}
 
 	req = nl.NewNetlinkRequest(nlMsgType, nlMsgFlags)
@@ -60,7 +79,7 @@ func NflogSubscribe(groupNum int, bufSize int, ch chan<- *NflogPacketAggregate, 
 	nfattr = nl.NewRtAttr(nfnl.NFULA_CFG_CMD, nflogcmd.Serialize())
 	req.AddData(nfattr)
 	if err := sock.Send(req); err != nil {
-		return err
+		return nil, err
 	}
 
 	req = nl.NewNetlinkRequest(nlMsgType, nlMsgFlags)
@@ -70,7 +89,7 @@ func NflogSubscribe(groupNum int, bufSize int, ch chan<- *NflogPacketAggregate, 
 	nfattr = nl.NewRtAttr(nfnl.NFULA_CFG_MODE, nflogcfg.Serialize())
 	req.AddData(nfattr)
 	if err := sock.Send(req); err != nil {
-		return err
+		return nil, err
 	}
 
 	req = nl.NewNetlinkRequest(nlMsgType, nlMsgFlags)
@@ -80,7 +99,19 @@ func NflogSubscribe(groupNum int, bufSize int, ch chan<- *NflogPacketAggregate, 
 	nfattr = nl.NewRtAttr(nfnl.NFULA_CFG_NLBUFSIZ, nflogbufsiz.Serialize())
 	req.AddData(nfattr)
 	if err := sock.Send(req); err != nil {
-		return err
+		return nil, err
+	}
+
+	if immediateFlush {
+		req = nl.NewNetlinkRequest(nlMsgType, nlMsgFlags)
+		nfgenmsg = nfnl.NewNfGenMsg(syscall.AF_UNSPEC, nfnl.NFNETLINK_V0, groupNum)
+		req.AddData(nfgenmsg)
+		timeout := nfnl.NewNflogMsgConfigBufSiz(0)
+		nfattr = nl.NewRtAttr(nfnl.NFULA_CFG_TIMEOUT, timeout.Serialize())
+		req.AddData(nfattr)
+		if err := sock.Send(req); err != nil {
+			return nil, err
+		}
 	}
 
 	go func() {
@@ -88,10 +119,10 @@ func NflogSubscribe(groupNum int, bufSize int, ch chan<- *NflogPacketAggregate, 
 		sock.Close()
 	}()
 
-	// Channel to pass raw Nflog packets for further processing. We keep it at
-	// twice the size of the processers outgoing channel so that reading NFLOG
-	// packets from the socket can be buffered until they can be consumed.
-	resChan := make(chan [][]byte, 2*cap(ch))
+	// Channel to pass raw netlink messages for further processing. We keep it at
+	// twice the size of the processor's outgoing channel so that reading netlink
+	// messages from the socket can be buffered until they can be consumed.
+	resChan := make(chan [][]byte, chanCap)
 	// Start a goroutine for receiving netlink messages from the kernel.
 	go func() {
 		logCtx := log.WithFields(log.Fields{
@@ -128,6 +159,11 @@ func NflogSubscribe(groupNum int, bufSize int, ch chan<- *NflogPacketAggregate, 
 			resChan <- res
 		}
 	}()
+
+	return resChan, nil
+}
+
+func parseAndAggregateFlowLogs(groupNum int, resChan <-chan [][]byte, ch chan<- *NflogPacketAggregate) {
 	// Start another goroutine for parsing netlink messages into nflog objects
 	go func() {
 		defer close(ch)
@@ -191,7 +227,48 @@ func NflogSubscribe(groupNum int, bufSize int, ch chan<- *NflogPacketAggregate, 
 			}
 		}
 	}()
-	return nil
+}
+
+func parseAndReturnDNSResponses(groupNum int, resChan <-chan [][]byte, ch chan<- []byte) {
+	// Start another goroutine for parsing netlink messages into DNS response data.
+	go func() {
+		defer close(ch)
+		logCtx := log.WithFields(log.Fields{
+			"groupNum": groupNum,
+		})
+		logCtx.Debug("Start DNS response capture loop")
+		for {
+			select {
+			case res := <-resChan:
+				logCtx.Debugf("%v messages from DNS response channel", len(res))
+				for _, m := range res {
+					msg := nfnl.DeserializeNfGenMsg(m)
+					packetData, err := getNflogPacketData(m[msg.Len():])
+					if err != nil {
+						logCtx.Warnf("Error parsing NFLOG %v", err)
+						continue
+					}
+					logCtx.Debugf("DNS response length %v", len(packetData))
+					ch <- packetData
+				}
+			}
+		}
+	}()
+}
+
+func getNflogPacketData(m []byte) (packetData []byte, err error) {
+	var attrs [nfnl.NFULA_MAX]nfnl.NetlinkNetfilterAttr
+	err = nfnl.ParseNetfilterAttr(m, attrs[:])
+	if err != nil {
+		return packetData, err
+	}
+	for _, attr := range attrs {
+		if attr.Attr.Type == nfnl.NFULA_PAYLOAD {
+			packetData = attr.Value
+			return
+		}
+	}
+	return
 }
 
 func parseNflog(m []byte) (NflogPacket, error) {
