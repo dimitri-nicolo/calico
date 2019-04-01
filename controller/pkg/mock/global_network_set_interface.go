@@ -17,22 +17,43 @@ import (
 type GlobalNetworkSetInterface struct {
 	GlobalNetworkSet *v3.GlobalNetworkSet
 	Error            error
-	CreateError      error
+	CreateError      []error
+	DeleteError      error
 	GetError         error
 	UpdateError      error
 	WatchError       error
 	W                *Watch
+
+	m     sync.Mutex
+	calls []Call
+}
+
+type Call struct {
+	Method string
+	GNS    *v3.GlobalNetworkSet
+	Name   string
 }
 
 func (m *GlobalNetworkSetInterface) Create(gns *v3.GlobalNetworkSet) (*v3.GlobalNetworkSet, error) {
-	if m.CreateError != nil {
-		return nil, m.CreateError
+	m.m.Lock()
+	defer m.m.Unlock()
+	m.calls = append(m.calls, Call{Method: "Create", GNS: gns.DeepCopy()})
+	var err error
+	if len(m.CreateError) > 0 {
+		err = m.CreateError[0]
+		m.CreateError = m.CreateError[1:]
+	}
+	if err != nil {
+		return nil, err
 	}
 	m.GlobalNetworkSet = gns
 	return gns, m.Error
 }
 
 func (m *GlobalNetworkSetInterface) Update(gns *v3.GlobalNetworkSet) (*v3.GlobalNetworkSet, error) {
+	m.m.Lock()
+	defer m.m.Unlock()
+	m.calls = append(m.calls, Call{Method: "Update", GNS: gns.DeepCopy()})
 	if m.UpdateError != nil {
 		return nil, m.UpdateError
 	}
@@ -41,7 +62,10 @@ func (m *GlobalNetworkSetInterface) Update(gns *v3.GlobalNetworkSet) (*v3.Global
 }
 
 func (m *GlobalNetworkSetInterface) Delete(name string, options *v1.DeleteOptions) error {
-	return m.Error
+	m.m.Lock()
+	defer m.m.Unlock()
+	m.calls = append(m.calls, Call{Method: "Delete", Name: name})
+	return m.DeleteError
 }
 
 func (m *GlobalNetworkSetInterface) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
@@ -56,7 +80,11 @@ func (m *GlobalNetworkSetInterface) Get(name string, options v1.GetOptions) (*v3
 }
 
 func (m *GlobalNetworkSetInterface) List(opts v1.ListOptions) (*v3.GlobalNetworkSetList, error) {
-	return nil, m.Error
+	out := &v3.GlobalNetworkSetList{}
+	if m.GlobalNetworkSet != nil {
+		out.Items = append(out.Items, *m.GlobalNetworkSet)
+	}
+	return out, m.Error
 }
 
 func (m *GlobalNetworkSetInterface) Watch(opts v1.ListOptions) (watch.Interface, error) {
@@ -72,6 +100,16 @@ func (m *GlobalNetworkSetInterface) Watch(opts v1.ListOptions) (watch.Interface,
 
 func (m *GlobalNetworkSetInterface) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v3.GlobalNetworkSet, err error) {
 	return nil, m.Error
+}
+
+func (m *GlobalNetworkSetInterface) Calls() []Call {
+	var out []Call
+	m.m.Lock()
+	defer m.m.Unlock()
+	for _, c := range m.calls {
+		out = append(out, c)
+	}
+	return out
 }
 
 type GlobalNetworkSetController struct {

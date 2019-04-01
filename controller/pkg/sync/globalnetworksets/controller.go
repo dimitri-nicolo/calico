@@ -130,6 +130,9 @@ func (c *controller) Add(s *v3.GlobalNetworkSet, fail func(), stat statser.Stats
 	ss := s.DeepCopy()
 
 	// The "creator" key ensures this object will be watched/listed by
+	if ss.Labels == nil {
+		ss.Labels = make(map[string]string)
+	}
 	ss.Labels[LabelKey] = LabelValue
 	err := c.local.Add(ss)
 	if err != nil {
@@ -227,6 +230,8 @@ func (c *controller) processNextItem() {
 	}
 	defer c.queue.Done(item)
 	key := item.(string)
+	logCtx := log.WithField("name", key)
+	logCtx.Debug("processing GlobalNetworkSet")
 
 	il, okl, err := c.local.GetByKey(key)
 	if err != nil {
@@ -244,23 +249,32 @@ func (c *controller) processNextItem() {
 		// Local and remote copies exist.  Are they identical?
 		sl := il.(*v3.GlobalNetworkSet)
 		sr := ir.(*v3.GlobalNetworkSet)
+		logCtx.Debug("local & remote GNS exist")
 		if setIdentical(sl, sr) {
+			logCtx.Debug("local & remote identical, no update")
 			return
 		} else {
+			logCtx.Debug("updating GNS")
 			c.update(sl)
 		}
 	case okl && !okr:
 		// Local exists, but remote does not.
 		sl := il.(*v3.GlobalNetworkSet)
+		logCtx.Debug("local GNS exists")
 		c.create(sl)
 	case !okl && okr:
 		// Local does not exist, but remote does.
+		logCtx.Debug("remote GNS exists")
 		if c.okToGC(key) {
 			sr := ir.(*v3.GlobalNetworkSet)
+			logCtx.Debug("garbage collect GNS")
 			c.delete(sr)
+		} else {
+			logCtx.Debug("skip GC of GNS")
 		}
 	case !okl && !okr:
 		// Neither local nor remote exist
+		logCtx.Debug("neither local nor remote GNS exist")
 		return
 	}
 }
@@ -270,7 +284,7 @@ func (c *controller) processNextItem() {
 func (c *controller) handleErr(key string) {
 	e := recover()
 	if e == nil {
-		// SUCCESS!
+		log.WithField("name", key).Debug("successfully processed GNS")
 
 		// Forget any rate limiting history for this key.
 		c.queue.Forget(key)
