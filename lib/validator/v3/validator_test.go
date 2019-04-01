@@ -2309,8 +2309,7 @@ func init() {
 				ObjectMeta: v1.ObjectMeta{Name: "~grt"},
 				Spec: api.ReportTypeSpec{
 					UISummaryTemplate: api.ReportTemplate{
-						Name:     "Summary",
-						Template: "{{ .Great }} Summary Report",
+						Name: "Summary",
 					},
 				},
 			},
@@ -2321,8 +2320,20 @@ func init() {
 				ObjectMeta: v1.ObjectMeta{Name: "grt"},
 				Spec: api.ReportTypeSpec{
 					UISummaryTemplate: api.ReportTemplate{
-						Name:     "Summary",
-						Template: "{{ .Great }} Summary Report",
+						Name: "Summary",
+					},
+				},
+			},
+			true,
+		),
+		Entry("Validate GlobalReportType inventory-summary template rendering.",
+			&api.GlobalReportType{
+				ObjectMeta: v1.ObjectMeta{Name: "grt"},
+				Spec: api.ReportTypeSpec{
+					UISummaryTemplate: api.ReportTemplate{
+						Name: "inventory-summary",
+						Template: `startTime,endTime,endpointSelector,namespaceSelector,serviceAccountSelectors,endpointsNumInScope,endpointsNumIngressProtected,endpointsNumEgressProtected,endpointsNumIngressFromInternet,endpointsNumEgressToInternet,endpointsNumIngressFromOtherNamespace,endpointsNumEgressToOtherNamespace,endpointsNumEnvoyEnabled
+{{ .StartTime }},{{ .EndTime }},{{ .ReportSpec.EndpointsSelection.EndpointSelector }},{{ .ReportSpec.EndpointsSelection.Namespaces.Selector }},{{ .ReportSpec.EndpointsSelection.ServiceAccounts.Selector }},{{ .EndpointsNumTotal }},{{ .EndpointsNumIngressProtected }},{{ .EndpointsNumEgressProtected }},{{ .EndpointsNumIngressFromInternet }},{{ .EndpointsNumEgressToInternet }},{{ .EndpointsNumIngressFromOtherNamespace }},{{ .EndpointsNumEgressToOtherNamespace }},{{ .EndpointsNumEnvoyEnabled }}`,
 					},
 				},
 			},

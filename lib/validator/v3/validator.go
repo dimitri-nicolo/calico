@@ -200,6 +200,7 @@ func init() {
 	registerStructValidator(validate, validateHTTPHeader, api.HTTPHeader{})
 	registerStructValidator(validate, validateConfigMapKeyRef, k8sv1.ConfigMapKeySelector{})
 	registerStructValidator(validate, validateSecretKeyRef, k8sv1.SecretKeySelector{})
+	registerStructValidator(validate, validateGlobalReportType, api.GlobalReportType{})
 }
 
 // reason returns the provided error reason prefixed with an identifier that
@@ -1304,6 +1305,66 @@ func validateSecretKeyRef(structLevel validator.StructLevel) {
 			reason(errStr),
 			"",
 		)
+	}
+}
+
+func validateGlobalReportType(structLevel validator.StructLevel) {
+	grt := structLevel.Current().Interface().(api.GlobalReportType)
+	tmpl := grt.Spec.UISummaryTemplate.Template
+
+	if tmpl != "" {
+		st := metav1.Unix(1554076800, 0)
+		et := metav1.Time{st.Add(time.Hour * 10)}
+		sel := "lbl == 'lbl-val'"
+		name := "grt-sel"
+		ep_num := 10
+
+		rd := api.ReportData{
+			StartTime: st,
+			EndTime:   et,
+			ReportSpec: api.ReportSpec{
+				EndpointsSelection: api.EndpointsSelection{
+					EndpointSelector: sel,
+					Namespaces: &api.NamesAndLabelsMatch{
+						Selector: name,
+					},
+					ServiceAccounts: &api.NamesAndLabelsMatch{
+						Selector: name,
+					},
+				},
+			},
+			EndpointsNumTotal:                     ep_num,
+			EndpointsNumIngressProtected:          ep_num,
+			EndpointsNumEgressProtected:           ep_num,
+			EndpointsNumIngressFromInternet:       ep_num,
+			EndpointsNumEgressToInternet:          ep_num,
+			EndpointsNumIngressFromOtherNamespace: ep_num,
+			EndpointsNumEgressToOtherNamespace:    ep_num,
+			EndpointsNumEnvoyEnabled:              ep_num,
+		}
+
+		rendered, err := api.RenderTemplate(tmpl, rd)
+		if err != nil {
+			structLevel.ReportError(
+				reflect.ValueOf(grt.Name),
+				"GlobalReportType",
+				"",
+				reason("Error rendering report: "+err.Error()),
+				"",
+			)
+		}
+
+		const expectRendered = `startTime,endTime,endpointSelector,namespaceSelector,serviceAccountSelectors,endpointsNumInScope,endpointsNumIngressProtected,endpointsNumEgressProtected,endpointsNumIngressFromInternet,endpointsNumEgressToInternet,endpointsNumIngressFromOtherNamespace,endpointsNumEgressToOtherNamespace,endpointsNumEnvoyEnabled
+2019-04-01 00:00:00 +0000 UTC,2019-04-01 10:00:00 +0000 UTC,lbl == 'lbl-val',grt-sel,grt-sel,10,10,10,10,10,10,10,10`
+		if rendered != expectRendered {
+			structLevel.ReportError(
+				reflect.ValueOf(grt.Name),
+				"GlobalReportType",
+				"",
+				reason("Unexpected report rendering: "+rendered),
+				"",
+			)
+		}
 	}
 }
 
