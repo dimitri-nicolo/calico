@@ -77,10 +77,6 @@ var _ = Describe("FelixConfigurationSpec vs ConfigParams parity", func() {
 		"EndpointReportingDelaySecs":         "EndpointReportingDelay",
 		"CloudWatchMetricsPushIntervalSecs":  "CloudWatchMetricsPushInterval",
 	}
-	fcFIeldsToIgnore := []string{
-		"IptablesNATOutgoingInterfaceFilter",
-		"OpenstackRegion",
-	}
 
 	fcFieldNameToCP := map[string]string{}
 	for k, v := range cpFieldNameToFC {
@@ -115,9 +111,6 @@ var _ = Describe("FelixConfigurationSpec vs ConfigParams parity", func() {
 		Expect(missingFields).To(BeEmpty())
 	})
 	It("Config should contain all FelixConfigurationSpec fields", func() {
-		for _, name := range fcFIeldsToIgnore {
-			delete(fcFields, name)
-		}
 		missingFields := set.New()
 		for n := range fcFields {
 			mappedName := fcFieldNameToCP[n]
