@@ -2309,7 +2309,12 @@ func init() {
 				ObjectMeta: v1.ObjectMeta{Name: "~grt"},
 				Spec: api.ReportTypeSpec{
 					UISummaryTemplate: api.ReportTemplate{
-						Name: "Summary",
+						Name:     "uist",
+						Template: "Total Endpoints: {{ .EndpointsNumTotal }}",
+					},
+					UICompleteTemplate: api.ReportTemplate{
+						Name:     "uict",
+						Template: "Total Endpoints: {{ .EndpointsNumTotal }}",
 					},
 				},
 			},
@@ -2320,24 +2325,110 @@ func init() {
 				ObjectMeta: v1.ObjectMeta{Name: "grt"},
 				Spec: api.ReportTypeSpec{
 					UISummaryTemplate: api.ReportTemplate{
-						Name: "Summary",
+						Name:     "uist",
+						Template: "Total Endpoints: {{ .EndpointsNumTotal }}",
+					},
+					UICompleteTemplate: api.ReportTemplate{
+						Name:     "uict",
+						Template: "Total Endpoints: {{ .EndpointsNumTotal }}",
 					},
 				},
 			},
 			true,
 		),
-		Entry("Validate GlobalReportType inventory-summary template rendering.",
+		Entry("Disallow GlobalReportType without template-name",
 			&api.GlobalReportType{
 				ObjectMeta: v1.ObjectMeta{Name: "grt"},
 				Spec: api.ReportTypeSpec{
 					UISummaryTemplate: api.ReportTemplate{
-						Name: "inventory-summary",
+						Template: "Total Endpoints: {{ .EndpointsNumTotal }}",
+					},
+					UICompleteTemplate: api.ReportTemplate{
+						Name:     "uict",
+						Template: "Total Endpoints: {{ .EndpointsNumTotal }}",
+					},
+				},
+			},
+			false,
+		),
+		Entry("Disallow GlobalReportType without template",
+			&api.GlobalReportType{
+				ObjectMeta: v1.ObjectMeta{Name: "grt"},
+				Spec: api.ReportTypeSpec{
+					UISummaryTemplate: api.ReportTemplate{
+						Name: "uist",
+					},
+					UICompleteTemplate: api.ReportTemplate{
+						Name: "uict",
+					},
+				},
+			},
+			false,
+		),
+		Entry("Disallow GlobalReportType with invalid template-name",
+			&api.GlobalReportType{
+				ObjectMeta: v1.ObjectMeta{Name: "grt"},
+				Spec: api.ReportTypeSpec{
+					UISummaryTemplate: api.ReportTemplate{
+						Name:     "~uist",
+						Template: "Total Endpoints: {{ .EndpointsNumTotal }}",
+					},
+					UICompleteTemplate: api.ReportTemplate{
+						Name:     "uict",
+						Template: "Total Endpoints: {{ .EndpointsNumTotal }}",
+					},
+				},
+			},
+			false,
+		),
+		Entry("Disallow GlobalReportType with invalid template",
+			&api.GlobalReportType{
+				ObjectMeta: v1.ObjectMeta{Name: "grt"},
+				Spec: api.ReportTypeSpec{
+					UISummaryTemplate: api.ReportTemplate{
+						Name:     "uist",
+						Template: "Total Endpoints: {{ .Foo }}",
+					},
+					UICompleteTemplate: api.ReportTemplate{
+						Name:     "uict",
+						Template: "Total Endpoints: {{ .EndpointsNumTotal }}",
+					},
+				},
+			},
+			false,
+		),
+		Entry("Validate GlobalReportType inventory-summary template",
+			&api.GlobalReportType{
+				ObjectMeta: v1.ObjectMeta{Name: "grt"},
+				Spec: api.ReportTypeSpec{
+					UISummaryTemplate: api.ReportTemplate{
+						Name: "uist",
 						Template: `startTime,endTime,endpointSelector,namespaceSelector,serviceAccountSelectors,endpointsNumInScope,endpointsNumIngressProtected,endpointsNumEgressProtected,endpointsNumIngressFromInternet,endpointsNumEgressToInternet,endpointsNumIngressFromOtherNamespace,endpointsNumEgressToOtherNamespace,endpointsNumEnvoyEnabled
 {{ .StartTime }},{{ .EndTime }},{{ .ReportSpec.EndpointsSelection.EndpointSelector }},{{ .ReportSpec.EndpointsSelection.Namespaces.Selector }},{{ .ReportSpec.EndpointsSelection.ServiceAccounts.Selector }},{{ .EndpointsNumTotal }},{{ .EndpointsNumIngressProtected }},{{ .EndpointsNumEgressProtected }},{{ .EndpointsNumIngressFromInternet }},{{ .EndpointsNumEgressToInternet }},{{ .EndpointsNumIngressFromOtherNamespace }},{{ .EndpointsNumEgressToOtherNamespace }},{{ .EndpointsNumEnvoyEnabled }}`,
+					},
+					UICompleteTemplate: api.ReportTemplate{
+						Name:     "uict",
+						Template: "Total Endpoints: {{ .EndpointsNumTotal }}",
 					},
 				},
 			},
 			true,
+		),
+		Entry("Disallow GlobalReportType with the same template-name",
+			&api.GlobalReportType{
+				ObjectMeta: v1.ObjectMeta{Name: "grt"},
+				Spec: api.ReportTypeSpec{
+					UISummaryTemplate: api.ReportTemplate{
+						Name:     "uist",
+						Template: "Total Endpoints: {{ .EndpointsNumTotal }}",
+					},
+					UICompleteTemplate: api.ReportTemplate{
+						Name:     "uist",
+						Template: "Total Endpoints: {{ .EndpointsNumTotal }}",
+					},
+				},
+			},
+			false,
 		),
 
 		// GlobalReport
