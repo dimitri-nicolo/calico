@@ -2,7 +2,6 @@
 package main
 
 import (
-	"net/url"
 	"os"
 
 	log "github.com/sirupsen/logrus"
@@ -21,13 +20,12 @@ func main() {
 	}
 	log.SetLevel(logLevel)
 
-	targetURLStr := os.Getenv("TARGET_URL")
-	targetURL, err := url.Parse(targetURLStr)
-	if err != nil || targetURLStr == "" {
-		log.Fatalf("Cannot parse target URL %v", targetURLStr)
+	config, err := server.NewConfigFromEnv()
+	if err != nil {
+		log.WithError(err).Fatal("Configuration Error.")
 	}
 
-	server.Start("127.0.0.1:8080", targetURL)
+	server.Start(config)
 
 	server.Wait()
 }

@@ -4,7 +4,6 @@ package server
 import (
 	"context"
 	"net/http"
-	"net/url"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
@@ -18,25 +17,39 @@ var (
 	wg     sync.WaitGroup
 )
 
-func Start(listenAddr string, targetURL *url.URL) error {
+var (
+	flowLogIndexQuery  = "/tigera_secure_ee_flows*/_search"
+	auditLogIndexQuery = "/tigera_secure_ee_audit*/_search"
+	eventsIndexQuery   = "/tigera_secure_ee_event*/_search"
+)
+
+func Start(config *Config) error {
 	sm := http.NewServeMux()
 
 	// Initialize all handlers and middlewares here. Proxy is handler as well.
-	proxy := handler.NewProxy(targetURL)
+	proxy := handler.NewProxy(config.ElasticURL)
 
-	// TODO(doublek): This could probably be nicer.
+	validPaths := map[string]struct{}{
+		flowLogIndexQuery:  struct{}{},
+		auditLogIndexQuery: struct{}{},
+		eventsIndexQuery:   struct{}{},
+	}
 	// For now we are a proxy for all requests so only add the default
 	// handler.
-	sm.Handle("/", middleware.LogRequestHeaders((proxy)))
+	// TODO(doublek):
+	//  - This could be nicer. Seems a bit kludgy to add middlewares like this.
+	//  - Logging only logs the frontend requests and not the backend response. We could
+	//    move the logger to the end and make it log responses if present.
+	sm.Handle("/", middleware.LogRequestHeaders(middleware.PathValidator(validPaths, proxy)))
 
 	server = &http.Server{
-		Addr:    listenAddr,
+		Addr:    config.ListenAddr,
 		Handler: sm,
 	}
 
 	wg.Add(1)
 	go func() {
-		log.Infof("Starting server on %v", listenAddr)
+		log.Infof("Starting server on %v", config.ListenAddr)
 		// TODO(doublek): Make this TLS.
 		err := server.ListenAndServe()
 		if err != nil {

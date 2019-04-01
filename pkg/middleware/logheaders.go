@@ -8,17 +8,22 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// LogRequestHeaders is a sample Handler/Middleware that will log the headers
+// LogRequestHeaders is a sample Handler/Middleware that will log some headers
 // of an incoming request.
 // "Middlewares" are just handlers that also return a handler. Inspired by
 // various utility handlers in the standard library net/http package.
 func LogRequestHeaders(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		log.WithFields(log.Fields{
+			"method":     req.Method,
+			"path":       req.RequestURI,
+			"remoteAddr": req.RemoteAddr,
+		}).Infof("Request received")
 		reqB, err := httputil.DumpRequest(req, true)
 		if err == nil {
-			log.Infof("Request dump %v", string(reqB))
+			log.WithField("request", string(reqB)).Debug("Request dump")
 		} else {
-			log.Infof("Couldn't dump request.")
+			log.WithError(err).Debug("Couldn't dump request.")
 		}
 		h.ServeHTTP(w, req)
 	})

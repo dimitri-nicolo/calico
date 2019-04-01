@@ -241,10 +241,9 @@ sub-tag-images-%:
 ##########################################################################
 .PHONY: ut
 ut:
-	echo "UT not implemented yet"
-	#$(DOCKER_GO_BUILD) \
-	#	sh -c 'go test $(UNIT_TEST_FLAGS) \
-	#		$(addprefix $(PACKAGE_NAME)/,$(TEST_DIRS))'
+	$(DOCKER_GO_BUILD) \
+		sh -c 'go test $(UNIT_TEST_FLAGS) \
+			$(addprefix $(PACKAGE_NAME)/,$(TEST_DIRS))'
 
 .PHONY: fv
 fv:
@@ -296,7 +295,7 @@ ifneq ($(VERSION), $(GIT_VERSION))
 	$(error Attempt to build $(VERSION) from $(GIT_VERSION))
 endif
 
-	$(MAKE) image-all 
+	$(MAKE) image-all
 	$(MAKE) tag-images-all IMAGETAG=$(VERSION) RELEASE=true
 	# Generate the `latest` images.
 	$(MAKE) tag-images-all IMAGETAG=latest RELEASE=true
