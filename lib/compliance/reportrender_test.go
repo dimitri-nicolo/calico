@@ -26,7 +26,7 @@ var _ = Describe("ReportTemplate Rederer", func() {
 		tmpl := `startTime,endTime,endpointSelector,namespaceSelector,serviceAccountSelectors,endpointsNumInScope,endpointsNumIngressProtected,endpointsNumEgressProtected,endpointsNumIngressFromInternet,endpointsNumEgressToInternet,endpointsNumIngressFromOtherNamespace,endpointsNumEgressToOtherNamespace,endpointsNumEnvoyEnabled
 {{ .StartTime }},{{ .EndTime }},{{ .ReportSpec.EndpointsSelection.EndpointSelector }},{{ .ReportSpec.EndpointsSelection.Namespaces.Selector }},{{ .ReportSpec.EndpointsSelection.ServiceAccounts.Selector }},{{ .EndpointsNumTotal }},{{ .EndpointsNumIngressProtected }},{{ .EndpointsNumEgressProtected }},{{ .EndpointsNumIngressFromInternet }},{{ .EndpointsNumEgressToInternet }},{{ .EndpointsNumIngressFromOtherNamespace }},{{ .EndpointsNumEgressToOtherNamespace }},{{ .EndpointsNumEnvoyEnabled }}`
 		rendered := `startTime,endTime,endpointSelector,namespaceSelector,serviceAccountSelectors,endpointsNumInScope,endpointsNumIngressProtected,endpointsNumEgressProtected,endpointsNumIngressFromInternet,endpointsNumEgressToInternet,endpointsNumIngressFromOtherNamespace,endpointsNumEgressToOtherNamespace,endpointsNumEnvoyEnabled
-	2019-04-01 00:00:00 +0000 UTC,2019-04-01 10:00:00 +0000 UTC,lbl == 'lbl-val',grt-sel,grt-sel,10,10,10,10,10,10,10,10`
+2019-04-01 00:00:00 +0000 UTC,2019-04-01 10:00:00 +0000 UTC,lbl == 'lbl-val',grt-sel,grt-sel,10,10,10,10,10,10,10,10`
 
 		matches, err := compliance.RenderTemplate(tmpl, compliance.ReportDataSample)
 		Expect(err).ToNot(HaveOccurred())
