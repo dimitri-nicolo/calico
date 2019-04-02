@@ -1,5 +1,5 @@
-hash: 38b9941967f4c2912077897db2984124932a9180223eba0324ab62b3dbd5dc02
-updated: 2019-03-20T11:22:36.281645558Z
+hash: 1b48b5821eb9add6f4042a21e2eb70d471b1ccdfe8a7461a5570936c257b37ad
+updated: 2019-04-01T09:15:15.438001323Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -190,7 +190,7 @@ imports:
   - poll
   - singlepoll
 - name: github.com/libp2p/go-sockaddr
-  version: de9f21a5c0897b0169840a7ca3c3350184477bd7
+  version: a7494d4eefeb607c8bc491cf8850a6e8dbd41cab
   subpackages:
   - net
 - name: github.com/mailru/easyjson
@@ -200,9 +200,9 @@ imports:
   - jlexer
   - jwriter
 - name: github.com/mattn/go-colorable
-  version: 3a70a971f94a22f2fa562ffcc7a0eb45f5daf045
+  version: efa589957cd060542a26d2dd7832fd6a6c6c3ade
 - name: github.com/mattn/go-isatty
-  version: c2a7a6ca930a4cd0bc33a3f298eb71960732a3a7
+  version: 3fb116b820352b7f0c281308a4d6250c22d94e27
 - name: github.com/matttproud/golang_protobuf_extensions
   version: c12348ce28de40eed0136aa2b644d0ee0650e56c
   subpackages:
@@ -264,7 +264,7 @@ imports:
   - matchers/support/goraph/util
   - types
 - name: github.com/opentracing/opentracing-go
-  version: 25a84ff92183e2f8ac018ba1db54f8a07b3c0e04
+  version: be550b025b433cdfa2f11efb962afa2ea3c4d967
   subpackages:
   - ext
   - log
@@ -373,7 +373,7 @@ imports:
   - crypto
   - monitor
 - name: github.com/tigera/nfnetlink
-  version: 6129e0f5c02789e10680b1d01fbb23cbe456331f
+  version: 2623d65568be5c8929d273a2d1496b1962ca64c1
   repo: git@github.com:tigera/nfnetlink
   subpackages:
   - nfnl
@@ -384,7 +384,7 @@ imports:
   subpackages:
   - nl
 - name: github.com/vishvananda/netns
-  version: 8ba1072b58e0c2a240eb5f6120165c7776c3e7b8
+  version: 54f0e4339ce73702a0607f49922aaa1e749b418d
 - name: github.com/whyrusleeping/go-logging
   version: 0457bb6b88fc1973573aaf6b5145d8d3ae972390
 - name: golang.org/x/crypto
@@ -494,7 +494,7 @@ imports:
 - name: gopkg.in/natefinch/lumberjack.v2
   version: a96e63847dc3c67d17befa69c303767e2f84e54f
 - name: gopkg.in/square/go-jose.v2
-  version: 628223f44a71f715d2881ea69afc795a1e9c01be
+  version: 8254d6c783765f38c8675fae4427a1fe73fbd09d
   subpackages:
   - cipher
   - json

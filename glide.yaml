@@ -152,7 +152,7 @@ import:
   - monitor
 - package: github.com/tigera/nfnetlink
   repo:    git@github.com:tigera/nfnetlink
-  version: 6129e0f5c02789e10680b1d01fbb23cbe456331f
+  version: 2623d65568be5c8929d273a2d1496b1962ca64c1
 - package: github.com/emicklei/go-restful
 #  version: v1.2
 - package: github.com/containernetworking/cni
