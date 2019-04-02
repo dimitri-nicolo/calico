@@ -1345,6 +1345,31 @@ deleteMonitorCalicoManifest() {
 }
 
 #
+# applyComplianceMonitoring() - install compliance reporting 
+#
+applyComplianceMonitoring() {
+    if [ "$DATASTORE" == "etcdv3" ]; then
+      runIgnoreErrors kubectl appply -f compliance.yaml
+    else
+      runIgnoreErrors kubectl appply -f compliance-kdd.yaml
+    fi
+    blockUntilPodIsReady "name=compliance-controller" 180 "compliance-controller"
+    blockUntilPodIsReady "name=compliance-server" 180 "compliance-server"
+    blockUntilPodIsReady "name=compliance-snapshotter" 180 "compliance-snapshotter"
+}
+
+#
+# deleteComplianceMonitoring() - uninstall compliance reporting
+#
+deleteComplianceMonitoring() {
+    if [ "$DATASTORE" == "etcdv3" ]; then
+      runIgnoreErrors kubectl delete -f compliance.yaml
+    else
+      runIgnoreErrors kubectl delete -f compliance-kdd.yaml
+    fi
+}
+
+#
 # createCNXManagerSecret()
 #
 createCNXManagerSecret() {
@@ -1668,6 +1693,9 @@ installCNX() {
     applyOperatorManifest         # Apply operator.yaml
     applyElasticStorageManifest   # Apply elastic-storage.yaml
     applyMonitorCalicoManifest    # Apply monitor-calico.yaml
+    if "$INSTALL_COMPLIANCE_REPORTING" ; then
+      applyComplianceMonitoring   # Apply compliance.yaml orcompliance-kdd.yaml
+    fi
   fi
 }
 
@@ -1685,6 +1713,7 @@ uninstallCNX() {
     deleteElasticStorageManifest # Delete elastic-storage.yaml
     deleteOperatorManifest       # Delete operator.yaml
     deleteCNXPolicyManifest      # Delete cnx-policy.yaml
+    deleteComplianceMonitoring   # Delete compliance.yaml orcompliance-kdd.yaml
   fi
 
   deleteCNXManifest              # Delete cnx-[etcd|kdd].yaml
