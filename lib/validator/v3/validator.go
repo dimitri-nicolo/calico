@@ -20,7 +20,6 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
-	"text/template"
 	"time"
 
 	"github.com/robfig/cron"
@@ -31,6 +30,7 @@ import (
 	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
 
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/libcalico-go/lib/compliance"
 	"github.com/projectcalico/libcalico-go/lib/errors"
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
@@ -173,7 +173,6 @@ func init() {
 	registerFieldValidator("file", validateFile)
 	registerFieldValidator("etcdEndpoints", validateEtcdEndpoints)
 	registerFieldValidator("k8sEndpoint", validateK8sEndpoint)
-	registerFieldValidator("reporttemplate", validateReportTemplate)
 	registerFieldValidator("reportschedule", validateReportSchedule)
 
 	registerStructValidator(validate, validateProtocol, numorstring.Protocol{})
@@ -200,6 +199,8 @@ func init() {
 	registerStructValidator(validate, validateHTTPHeader, api.HTTPHeader{})
 	registerStructValidator(validate, validateConfigMapKeyRef, k8sv1.ConfigMapKeySelector{})
 	registerStructValidator(validate, validateSecretKeyRef, k8sv1.SecretKeySelector{})
+	registerStructValidator(validate, validateGlobalReportType, api.GlobalReportType{})
+	registerStructValidator(validate, validateReportTemplate, api.ReportTemplate{})
 }
 
 // reason returns the provided error reason prefixed with an identifier that
@@ -1307,11 +1308,41 @@ func validateSecretKeyRef(structLevel validator.StructLevel) {
 	}
 }
 
-func validateReportTemplate(fl validator.FieldLevel) bool {
-	rt := fl.Field().String()
+func validateReportTemplate(structLevel validator.StructLevel) {
+	rt := structLevel.Current().Interface().(api.ReportTemplate)
+	tmpl := rt.Template
 
-	_, err := template.New("rt").Parse(rt)
-	return err == nil
+	if tmpl != "" {
+		// Validate template execution.
+		_, err := compliance.RenderTemplate(tmpl, compliance.ReportDataSample)
+		if err != nil {
+			structLevel.ReportError(
+				reflect.ValueOf(rt.Name),
+				"ReportTemplate",
+				"",
+				reason("Invalid template defined in: "+rt.Name),
+				"",
+			)
+		}
+	}
+}
+
+func validateGlobalReportType(structLevel validator.StructLevel) {
+	grt := structLevel.Current().Interface().(api.GlobalReportType)
+	spec := grt.Spec
+
+	// Validate unique name across templates.
+	tmplNames := map[string]bool{spec.UISummaryTemplate.Name: true}
+	if _, exists := tmplNames[spec.UICompleteTemplate.Name]; exists {
+		structLevel.ReportError(reflect.ValueOf(grt.Name),
+			"GlobalReportType", "", reason("Template name '"+spec.UICompleteTemplate.Name+"' is already in use."), "")
+	}
+	for _, t := range spec.DownloadTemplates {
+		if _, exists := tmplNames[t.Name]; exists {
+			structLevel.ReportError(reflect.ValueOf(grt.Name),
+				"GlobalReportType", "", reason("Template name '"+t.Name+"' is already in use."), "")
+		}
+	}
 }
 
 func validateReportSchedule(fl validator.FieldLevel) bool {

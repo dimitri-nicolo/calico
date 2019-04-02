@@ -41,11 +41,11 @@ type ReportTypeSpec struct {
 	// The summary template, explicitly used by the UI to render a summary version of the report. This should render
 	// to json containing a sets of widgets that the UI can use to render the summary. The rendered data is returned
 	// on the list query of the reports.
-	UISummaryTemplate ReportTemplate `json:"uiSummaryTemplate,omitempty"`
+	UISummaryTemplate ReportTemplate `json:"uiSummaryTemplate,omitempty" validate:"required"`
 
 	// The complete template, explicitly used by the UI to render a full version of the report. This should render to
 	// json containing a set of widgets that the UI can use to render the full report.
-	UICompleteTemplate ReportTemplate `json:"uiCompleteTemplate,omitempty"`
+	UICompleteTemplate ReportTemplate `json:"uiCompleteTemplate,omitempty" validate:"required"`
 
 	// The set of templates used to render the report for downloads.
 	DownloadTemplates []ReportTemplate `json:"downloadTemplates,omitempty"`
@@ -66,13 +66,13 @@ type ReportTypeSpec struct {
 type ReportTemplate struct {
 	// The name of this template. This should be unique across all template names within a ReportType. This will be used
 	// by the UI as the suffix of the downloadable file name.
-	Name string `json:"name,omitempty"`
+	Name string `json:"name,omitempty" validate:"name,required"`
 
 	// A user-facing description of the template.
 	Description string `json:"description,omitempty"`
 
 	// The base-64 encoded go template used to render the report data.
-	Template string `json:"template,omitempty" validate:"reporttemplate,omitempty"`
+	Template string `json:"template,omitempty" validate:"required"`
 }
 
 // AuditEventsSelection defines which set of resources should be audited.

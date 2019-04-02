@@ -39,20 +39,20 @@ var _ = testutils.E2eDatastoreDescribe("GlobalReportType tests", testutils.Datas
 	name1 := "reporttype-1"
 	spec1 := apiv3.ReportTypeSpec{
 		UISummaryTemplate: apiv3.ReportTemplate{
-			Name:        "rt-uist-n1",
-			Description: "rt-uist-d1",
-			Template:    "Hello{{ if .Uis }} UISummaryTemplate{{ end }}!",
+			Name:        "rt-uist-n11",
+			Description: "rt-uist-d11",
+			Template:    "Total Endpoints: {{ .EndpointsNumTotal }}",
 		},
 		UICompleteTemplate: apiv3.ReportTemplate{
-			Name:        "rt-uict-n1",
-			Description: "rt-uict-d1",
-			Template:    "Hello{{ if .Uic }} UICompleteTemplate{{ end }}!",
+			Name:        "rt-uict-n12",
+			Description: "rt-uict-d12",
+			Template:    "Total Endpoints: {{ .EndpointsNumTotal }}",
 		},
 		DownloadTemplates: []apiv3.ReportTemplate{
 			{
-				Name:        "rt-uict-n1",
-				Description: "rt-uict-d1",
-				Template:    "Hello{{ if .Uic }} UICompleteTemplate{{ end }}!",
+				Name:        "rt-uict-n13",
+				Description: "rt-uict-d13",
+				Template:    "Total Endpoints: {{ .EndpointsNumTotal }}",
 			},
 		},
 		IncludeEndpointData:        true,
@@ -60,8 +60,8 @@ var _ = testutils.E2eDatastoreDescribe("GlobalReportType tests", testutils.Datas
 		AuditEventsSelection: &apiv3.AuditEventsSelection{
 			Resources: []apiv3.ResourceID{
 				{
-					Name:      "rt-aes-r-n1",
-					Namespace: "rt-aes-r-ns1",
+					Name:      "rt-aes-r-n14",
+					Namespace: "rt-aes-r-ns14",
 				},
 			},
 		},
@@ -70,20 +70,20 @@ var _ = testutils.E2eDatastoreDescribe("GlobalReportType tests", testutils.Datas
 	name2 := "reporttype-2"
 	spec2 := apiv3.ReportTypeSpec{
 		UISummaryTemplate: apiv3.ReportTemplate{
-			Name:        "rt-uist-n2",
-			Description: "rt-uist-d2",
-			Template:    "Hello{{ if .Uis }} UISummaryTemplate{{ end }}!",
+			Name:        "rt-uist-n21",
+			Description: "rt-uist-d21",
+			Template:    "Total Endpoints: {{ .EndpointsNumTotal }}",
 		},
 		UICompleteTemplate: apiv3.ReportTemplate{
-			Name:        "rt-uict-n2",
-			Description: "rt-uict-d2",
-			Template:    "Hello{{ if .Uic }} UICompleteTemplate{{ end }}!",
+			Name:        "rt-uict-n22",
+			Description: "rt-uict-d22",
+			Template:    "Total Endpoints: {{ .EndpointsNumTotal }}",
 		},
 		DownloadTemplates: []apiv3.ReportTemplate{
 			{
-				Name:        "rt-uict-n2",
-				Description: "rt-uict-d2",
-				Template:    "Hello{{ if .Uic }} UICompleteTemplate{{ end }}!",
+				Name:        "rt-uict-n23",
+				Description: "rt-uict-d23",
+				Template:    "Total Endpoints: {{ .EndpointsNumTotal }}",
 			},
 		},
 		IncludeEndpointData:        true,
@@ -91,8 +91,8 @@ var _ = testutils.E2eDatastoreDescribe("GlobalReportType tests", testutils.Datas
 		AuditEventsSelection: &apiv3.AuditEventsSelection{
 			Resources: []apiv3.ResourceID{
 				{
-					Name:      "rt-aes-r-n2",
-					Namespace: "rt-aes-r-ns2",
+					Name:      "rt-aes-r-n24",
+					Namespace: "rt-aes-r-ns24",
 				},
 			},
 		},
