@@ -34,7 +34,7 @@ func TestController_Add_Success(t *testing.T) {
 	q := uut.(*controller).queue
 
 	gns := util.NewGlobalNetworkSet("test")
-	fail := func() {}
+	fail := func() { t.Error("controller called fail func unexpectedly") }
 	stat := &mock.Statser{}
 	// Set an error which we expect to clear.
 	stat.Error(statser.GlobalNetworkSetSyncFailed, errors.New("test"))
@@ -106,7 +106,7 @@ func TestController_Update(t *testing.T) {
 	// Grab a ref to the workqueue, which we'll use to measure progress.
 	q := uut.(*controller).queue
 
-	fail := func() {}
+	fail := func() { t.Error("controller called fail func unexpectedly") }
 	stat := &mock.Statser{}
 	uut.Add(gns, fail, stat)
 	g.Expect(q.Len()).Should(Equal(1))
@@ -146,7 +146,7 @@ func TestController_AddDelete(t *testing.T) {
 	// Grab a ref to the workqueue, which we'll use to measure progress.
 	q := uut.(*controller).queue
 
-	fail := func() {}
+	fail := func() { t.Error("controller called fail func unexpectedly") }
 	stat := &mock.Statser{}
 	uut.Add(gns, fail, stat)
 	g.Expect(q.Len()).Should(Equal(1))
@@ -173,7 +173,7 @@ func TestController_AddRetry(t *testing.T) {
 	// Grab a ref to the workqueue, which we'll use to measure progress.
 	q := uut.(*controller).queue
 
-	fail := func() {}
+	fail := func() { t.Error("controller called fail func unexpectedly") }
 	stat := &mock.Statser{}
 	uut.Add(gns, fail, stat)
 	g.Expect(q.Len()).Should(Equal(1))
@@ -267,6 +267,7 @@ func TestController_FailToSync(t *testing.T) {
 	informer := uut.(*controller).informer
 
 	uut.Run(ctx)
+	g.Consistently(informer.HasSynced).Should(BeFalse())
 	cancel()
 	g.Consistently(informer.HasSynced).Should(BeFalse())
 }

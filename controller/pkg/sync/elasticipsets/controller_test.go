@@ -5,16 +5,16 @@ package elasticipsets
 import (
 	"context"
 	"errors"
-	"github.com/olivere/elastic"
-	"github.com/tigera/intrusion-detection/controller/pkg/statser"
 	"net/http"
 	"testing"
 	"time"
 
+	"github.com/olivere/elastic"
 	. "github.com/onsi/gomega"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/mock"
+	"github.com/tigera/intrusion-detection/controller/pkg/statser"
 )
 
 func TestController_Add_Success(t *testing.T) {
@@ -31,7 +31,7 @@ func TestController_Add_Success(t *testing.T) {
 
 	name := "test"
 	set := db.IPSetSpec{"1.2.3.4"}
-	fail := func() {}
+	fail := func() { t.Error("controller called fail func unexpectedly") }
 	stat := &mock.Statser{}
 	uut.Add(ctx, name, set, fail, stat)
 
@@ -122,7 +122,7 @@ func TestController_Update_Success(t *testing.T) {
 	uut.Run(ctx)
 
 	set := db.IPSetSpec{"1.2.3.4"}
-	fail := func() {}
+	fail := func() { t.Error("controller called fail func unexpectedly") }
 	stat := &mock.Statser{}
 	uut.Add(ctx, name, set, fail, stat)
 
@@ -276,12 +276,16 @@ func TestController_NewTicker(t *testing.T) {
 	uut.StartReconciliation(ctx)
 }
 
+// Test Add, Delete, NoGC, StartReconciliation, and Run functions when their
+// context expires.
 func TestController_ContextExpiry(t *testing.T) {
 	g := NewWithT(t)
 	dbm := &mock.IPSet{}
 	uut := NewController(dbm)
 
-	// monkey patch a blocking update channel
+	// monkey patch a blocking update channel. This prevents Add, Delete, NoGC
+	// and StartReconciliation from being queued when the controller is not
+	// running.
 	uut.(*controller).updates = make(chan update)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

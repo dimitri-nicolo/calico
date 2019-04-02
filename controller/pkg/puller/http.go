@@ -371,6 +371,6 @@ func makeGNS(name string, labels map[string]string, snapshot []string) *v3.Globa
 	for k, v := range labels {
 		gns.Labels[k] = v
 	}
-	gns.Spec.Nets = append(gns.Spec.Nets, snapshot...)
+	gns.Spec.Nets = append([]string{}, snapshot...)
 	return gns
 }
