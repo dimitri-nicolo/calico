@@ -6,7 +6,10 @@ layout: null
 # compliance-server
 # ------------------------------------------------------------------------------------------
 
-{% include {{page.version}}/manifests/compliance/compliance-server.yaml elasticsearch='secure' %}
+{% helm --execute templates/compliance/compliance-server.yaml %}
+secure_es: true
+datastore: "etcd"
+{% endhelm %}
 
 ---
 
@@ -14,7 +17,10 @@ layout: null
 # compliance-snapshotter
 # ------------------------------------------------------------------------------------------
 
-{% include {{page.version}}/manifests/compliance/compliance-snapshotter.yaml elasticsearch='secure' %}
+{% helm --execute templates/compliance/compliance-snapshotter.yaml %}
+secure_es: true
+datastore: "etcd"
+{% endhelm %}
 
 ---
 
@@ -22,4 +28,7 @@ layout: null
 # compliance-controller
 # ------------------------------------------------------------------------------------------
 
-{% include {{page.version}}/manifests/compliance/compliance-controller.yaml elasticsearch='secure' %}
+{% helm --execute templates/compliance/compliance-controller.yaml %}
+secure_es: true
+datastore: "etcd"
+{% endhelm %}

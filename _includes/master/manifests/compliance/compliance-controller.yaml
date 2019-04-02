@@ -1,14 +1,3 @@
-{% comment %}
-compliance-controller.yaml acccepts the following include flags:
-
-| Name         | Accepted Values          |
-|--------------|--------------------------|
-| elasticsearch| secure, <unset>          |
-| datastore    | kdd, etcd                |
-
-{% endcomment -%}
-
-
 
 kind: ServiceAccount
 apiVersion: v1
@@ -45,19 +34,19 @@ rules:
   - apiGroups: ["apps"]
     resources: ["statefulsets", "deployments"]
     verbs: ["*"]
-{%- if include.datastore == "kdd" %}
+{{- if eq .Values.datastore "kdd" }}      
   - apiGroups: ["crd.projectcalico.org"]
     resources:
       - globalnetworkpolicies
       - networkpolicies
       - tiers
       - hostendpoints
-      - licensekeys
       - globalnetworksets
-      - globalthreatfeeds
     verbs:
-      - "*"
-{%- endif %}
+      - get
+      - list
+      - watch
+{{- end }}
 
 ---
 
@@ -107,13 +96,13 @@ spec:
         - name: cnx-pull-secret
       containers:
         - name: compliance-controller
-          image: {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["compliance-controller"]}}:{{site.data.versions[page.version].first.components["compliance-controller"].version}}
+          image: {{.Values.complianceController.image}}:{{.Values.complianceController.tag}}
           env:
             - name: LOG_LEVEL
               value: "warning"
             - name: TIGERA_COMPLIANCE_REPORT_AFTER
               value: "30m"
-{%- if include.elasticsearch == 'secure' %}
+{{- if .Values.secure_es }}
             - name: ELASTIC_HOST
               valueFrom:
                 configMapKeyRef:
@@ -138,24 +127,25 @@ spec:
               value: "true"
             - name: ELASTIC_CA
               value: /etc/compliance/elastic/ca.pem
-{%- else %}
+{{- else }}
             - name: ELASTIC_HOST
               value: elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local
             - name: ELASTIC_PORT
               value: "9200"
             - name: ELASTIC_SSL_VERIFY
               value: "false"
-{%- endif %}
-{%- if include.elasticsearch == 'secure' %}
+{{- end }}
+{{- if .Values.secure_es }}
           volumeMounts:
             - name: elastic-ca-cert-volume
               mountPath: /etc/compliance/elastic
-{%- endif %}
-{%- if include.elasticsearch == 'secure' %}
+{{- end }}
+{{- if .Values.secure_es }}
       volumes:
         # Should be created during installation process.
         - name: elastic-ca-cert-volume
           configMap:
             name: elastic-ca-config
-{%- endif %}
+{{- end }}
+
 

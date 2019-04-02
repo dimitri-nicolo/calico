@@ -91,7 +91,10 @@ INSTALL_TYPE=${INSTALL_TYPE:="KUBEADM"}
 
 INSTALL_AWS_SG=${INSTALL_AWS_SG:=false}
 
+INSTALL_COMPLIANCE_REPORTING=${INSTALL_COMPLIANCE_REPORTING:=true}
+
 SKIP_EE_INSTALLATION=${SKIP_EE_INSTALLATION:=false}
+
 
 #
 # promptToContinue()
@@ -255,6 +258,12 @@ validateSettings() {
   if "$INSTALL_AWS_SG" ; then
     checkAwsIntegration
   fi
+
+  # Do not install compliance reporting if elastic storage is not local
+  if [ "$ELASTIC_STORAGE" -ne "local" ] ; then
+    INSTALL_COMPLIANCE_REPORTING=false
+  fi
+
 }
 
 #
@@ -1015,6 +1024,15 @@ downloadManifests() {
     downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/manifests/aws-sg-integration/cluster-cf.yaml"
     downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/manifests/aws-sg-integration/cloud-controllers.yaml"
   fi
+
+  if "$INSTALL_COMPLIANCE_REPORTING" ; then
+    if [ "$DATASTORE" == "etcdv3" ]; then
+      downloadManifest "${DOCS_LOCATION}/${VERSION}/manifests/compliance/compliance.yaml"
+    else
+      downloadManifest "${DOCS_LOCATION}/${VERSION}/manifests/compliance/compliance-kdd.yaml"
+    fi
+  fi
+
 
   if [ "${DOWNLOAD_MANIFESTS_ONLY}" -eq 1 ]; then
     echo "Tigera Secure EE manifests downloaded."
