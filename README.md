@@ -207,12 +207,16 @@ as well as non-namespaced (e.g. globalnetworkset) resources:
   // +genclient
   // +genclient:nonNamespaced
   // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+  // If your object has a status subresource:
+  // +kubebuilder:subresource:status
 
   type LicenseKey struct {
   	metav1.TypeMeta
   	metav1.ObjectMeta
 
   	Spec calico.LicenseKeySpec
+  	// If your object has a status subresource:
+  	Status calico.LicenseKeyStatus
   }
   ```
 
@@ -239,12 +243,16 @@ as well as non-namespaced (e.g. globalnetworkset) resources:
   // +genclient
   // +genclient:nonNamespaced
   // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+  // If your object has a status subresource:
+  // +kubebuilder:subresource:status
 
   type LicenseKey struct {
   	metav1.TypeMeta   `json:",inline"`
   	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
   	Spec calico.LicenseKeySpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
+  	// If your object has a status subresource:
+  	Status calico.LicenseKeyStatus `json:"status,omitempty" protobyf:"bytes,3,opt,name=status"`
   }
 
   ```
@@ -293,6 +301,11 @@ as well as non-namespaced (e.g. globalnetworkset) resources:
   * `pkg/registry/projectcalico/licensekey/storage.go`
   * `pkg/registry/projectcalico/licensekey/strategy.go`
 
+  If your resource has a status subresource, use the following instead:
+
+  * `pkg/registry/projectcalico/globalthreatfeed/storage.go`
+  * `pkg/registry/projectcalico/globalthreatfeed/strategy.go`
+
 * Add a reference to your storage strategy created in the previous steps to
   `pkg/registry/projectcalico/rest/storage_calico.go`. This registers a callback
   for RESTapi calls for your resource type. For example:
@@ -336,6 +349,16 @@ as well as non-namespaced (e.g. globalnetworkset) resources:
   ...
   ```
 
+  If your resource has a status subresource:
+
+  ```
+  ...
+  globalThreatFeedsStorage, globalThreatFeedsStatusStorage := calicogthreatfeed.NewREST(scheme, *gThreatFeedOpts)
+  storage["globalthreatfeeds"] = globalThreatFeedsStorage
+  storage["globalthreatfeeds/status"] = globalThreatFeedsStatusStorage
+  ...
+  ```
+
 * Create a factory function to create a resource storage implementation. Use
   `pkg/storage/calico/licenseKey_storage.go` as a model for your work - this is
   basically a copy/paste and then update the resource type declarations.
@@ -366,6 +389,8 @@ as well as non-namespaced (e.g. globalnetworkset) resources:
     }
 
   ```
+
+  Remember to copy the Status member if your resource has one.
 
 * Lastly, add a clientset test for functional verification tests to
   `test/integration/clientset_test.go`. Take a look at the `TestLicenseKeyClient()`
@@ -414,3 +439,7 @@ as well as non-namespaced (e.g. globalnetworkset) resources:
 
 * For an example pull request that contains all these changes (plus all the
   generated files as well), see: https://github.com/tigera/calico-k8sapiserver/pull/97
+
+  For one with a status subresource, see:
+  https://github.com/tigera/calico-k8sapiserver/pull/104 and
+  https://github.com/tigera/calico-k8sapiserver/pull/106
