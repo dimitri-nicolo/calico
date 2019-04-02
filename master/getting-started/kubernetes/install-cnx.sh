@@ -790,11 +790,20 @@ setupEtcdEndpoints() {
       fatalError "Error: did not find \"calico.yaml\" manifest."
     fi
 
-    # $ETCD_ENDPOINTS is ""; user wants to use the default etcd endpoint specified in "calico.yaml"
+    # $ETCD_ENDPOINTS is unspecified; user wants to use the default etcd endpoint
+    # associated with self-hosted etcd pod
     if [ -z "${ETCD_ENDPOINTS}" ]; then
 
-      # Extract etcd server url from "calico.yaml"
-      export ETCD_ENDPOINTS=$(grep etcd_endpoints calico.yaml | grep -i http | sed 's/etcd_endpoints: //g')
+      export SELF_HOSTED_ETCD_ADDR="10.96.232.136:6666"
+      export ETCD_ENDPOINTS="http://${SELF_HOSTED_ETCD_ADDR}"
+
+      cat > sedcmd.txt <<EOF
+s?<ETCD_IP>:<ETCD_PORT>?${SELF_HOSTED_ETCD_ADDR}?g
+EOF
+
+     # update calico.yaml
+     sed -i -f sedcmd.txt calico.yaml
+     rm -f sedcmd.txt
 
     else
 

@@ -1,82 +1,84 @@
-def gen_values(versions, imageNames, version, imageRegistry)
-    components = versions[version][0]["components"]
+def gen_values(versions, imageNames, imageRegistry)
     versionsYml = <<~EOF
     node:
       image: #{imageRegistry}#{imageNames["node"]}
-      tag: #{components["cnx-node"]["version"]}
+      tag: #{versions["cnx-node"]}
     calicoctl:
       image: #{imageRegistry}#{imageNames["calicoctl"]}
-      tag: #{components["calicoctl"]["version"]}
+      tag: #{versions["calicoctl"]}
     typha:
       image: #{imageRegistry}#{imageNames["typha"]}
-      tag: #{components["typha"]["version"]}
+      tag: #{versions["typha"]}
     cni:
+      # cni does not use imageRegistry as it is an external OS image
       image: #{imageNames["cni"]}
-      tag: #{components["calico/cni"]["version"]}
+      tag: #{versions["calico/cni"]}
     kubeControllers:
       image: #{imageRegistry}#{imageNames["kubeControllers"]}
-      tag: #{components["cnx-kube-controllers"]["version"]}
+      tag: #{versions["cnx-kube-controllers"]}
     flannel:
       image: #{imageNames["flannel"]}
-      tag: #{components["flannel"]["version"]}
+      tag: #{versions["flannel"]}
     dikastes:
       image: #{imageRegistry}#{imageNames["dikastes"]}
-      tag: #{components["dikastes"]["version"]}
+      tag: #{versions["dikastes"]}
     flexvol:
-      image: #{imageRegistry}#{imageNames["flexvol"]}
-      tag: #{components["flexvol"]["version"]}
+      # flexvol does not use imageRegistry as it is an external OS image
+      image: #{imageNames["flexvol"]}
+      tag: #{versions["flexvol"]}
     EOF
 
     versionsYml += <<~EOF
     cnxApiserver:
       image: #{imageRegistry}#{imageNames["cnxApiserver"]}
-      tag: #{components["cnx-apiserver"]["version"]}
+      tag: #{versions["cnx-apiserver"]}
     cnxManager:
       image: #{imageRegistry}#{imageNames["cnxManager"]}
-      tag: #{components["cnx-manager"]["version"]}
+      tag: #{versions["cnx-manager"]}
     cnxManagerProxy:
       image: #{imageRegistry}#{imageNames["cnxManagerProxy"]}
-      tag: #{components["cnx-manager-proxy"]["version"]}
+      tag: #{versions["cnx-manager-proxy"]}
     cnxQueryserver:
       image: #{imageRegistry}#{imageNames["cnxQueryserver"]}
-      tag: #{components["cnx-queryserver"]["version"]}
+      tag: #{versions["cnx-queryserver"]}
     cloudControllers:
       image: #{imageRegistry}#{imageNames["cloudControllers"]}
-      tag: #{components["cloud-controllers"]["version"]}
+      tag: #{versions["cloud-controllers"]}
     intrusionDetectionController:
       image: #{imageRegistry}#{imageNames["intrusion-detection-controller"]}
-      tag: #{components["intrusion-detection-controller"]["version"]}
+      tag: #{versions["intrusion-detection-controller"]}
 
     prometheusOperator:
-      tag: #{components["prometheus-operator"]["version"]}
+      tag: #{versions["prometheus-operator"]}
     prometheus:
       image: #{imageNames["prometheus"]}
-      tag: #{components["prometheus"]["version"]}
+      tag: #{versions["prometheus"]}
     alertmanager:
       image: #{imageNames["alertmanager"]}
-      tag: #{components["alertmanager"]["version"]}
+      tag: #{versions["alertmanager"]}
     prometheusConfigReloader:
-      tag: #{components["prometheus-config-reloader"]["version"]}
+      tag: #{versions["prometheus-config-reloader"]}
     configmapReload:
-      tag: #{components["configmap-reload"]["version"]}
+      tag: #{versions["configmap-reload"]}
     elasticsearchOperator:
-      tag: #{components["elasticsearch-operator"]["version"]}
+      tag: #{versions["elasticsearch-operator"]}
     elasticsearch:
-      tag: #{components["elasticsearch"]["version"]}
+      tag: #{versions["elasticsearch"]}
     kibana:
-      tag: #{components["kibana"]["version"]}
+      tag: #{versions["kibana"]}
     fluentd:
       image: #{imageRegistry}#{imageNames["fluentd"]}
-      tag: #{components["fluentd"]["version"]}
+      tag: #{versions["fluentd"]}
     esCurator:
       image: #{imageRegistry}#{imageNames["es-curator"]}
-      tag: #{components["es-curator"]["version"]}
+      tag: #{versions["es-curator"]}
     elasticTseeInstaller:
       image: #{imageRegistry}#{imageNames["elastic-tsee-installer"]}
-      tag: #{components["elastic-tsee-installer"]["version"]}
+      tag: #{versions["elastic-tsee-installer"]}
     esProxy:
       image: #{imageRegistry}#{imageNames["es-proxy"]}
       tag: #{components["es-proxy"]["version"]}
+      tag: #{versions["es-proxy"]}
       
     complianceController:
       image: #{imageRegistry}#{imageNames["compliance-controller"]}
@@ -88,8 +90,27 @@ def gen_values(versions, imageNames, version, imageRegistry)
       image: #{imageRegistry}#{imageNames["compliance-snapshotter"]}
       tag: #{components["compliance-snapshotter"]["version"]}
 
-
-
-
     EOF
+end
+
+
+# Takes versions_yml which is structured as follows:
+#
+# {"v3.6"=>
+#     ["components"=>
+#        {"calico/node"=>{"version"=>"v3.6.0"},
+#         "typha"=>{"version"=>"v3.6.0"}}]
+#
+# And for a given version, return a Hash of each components' version by component name e.g:
+#
+# {"calico/node"=>"v3.6.0",
+#   "typha"=>"v3.6.0"}
+#
+def parse_versions(versions_yml, version)
+  if not versions_yml.key?(version)
+    raise IndexError.new "requested version '#{version}' not present in versions.yml"
+  end
+
+  components = versions_yml[version][0]["components"].clone
+  return components.each { |key,val| components[key] = val["version"] }
 end
