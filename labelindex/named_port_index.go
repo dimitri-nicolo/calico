@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -693,6 +693,9 @@ func (idx *SelectorAndNamedPortIndex) CalculateEndpointContribution(d *endpointD
 				Domain: domain,
 			})
 		}
+		// For the specific ipSetData in hand, I think this code should return EITHER the IP contributions OR the domain
+		// contributions, but not both.  The code needs to look at ipSetData to determine if it's the domain IP set, or
+		// not, and then return just the corresponding contributions.
 	}
 	return
 }

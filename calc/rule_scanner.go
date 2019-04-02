@@ -96,11 +96,18 @@ type IPSetData struct {
 	// selector-only IP set
 	NamedPort string
 	// cachedUID holds the calculated unique ID of this IPSet, or "" if it hasn't been calculated
+	// That "IPSet" is inconsistent with uses of "IP set" just above, so I think we should revert this change.
 	// yet.
 	cachedUID string
 }
 
 func (d *IPSetData) SetUniqueID(dstDomains []string) {
+	// I think we could rework the changes here so as to reduce the churn elsewhere, and to make it clearer that
+	// things are changing only in the new domains case.  What I have in mind is:
+	// - Leave UniqueID as it was, so that it calculates and returns a selector-based ID if cachedUID is not already set.
+	// - Only call SetUniqueID in the domains case; and in that case it sets cachedUID to a domains-based ID.
+	// - Maybe rename SetUniqueID to SetUniqueIDForDomains (or similar), to make clear that it's only for the domains case.
+	// WDYT?
 	var hashPrefix, idToHash string
 	if d.cachedUID != "" {
 		log.WithField("IPSetData", d).Panic("cachedUID already set")
@@ -118,6 +125,8 @@ func (d *IPSetData) SetUniqueID(dstDomains []string) {
 	} else {
 		hashPrefix = "d"
 		idToHash = strings.Join(dstDomains, "")
+		// Add a separator character or string that would not be valid in a domain name.  (I think "_" or "__" would work.)
+		// Otherwise a list like ["a.b", "c.d"] can generate the same UID as ["a.bc.d"].
 	}
 
 	d.cachedUID = hash.MakeUniqueID(hashPrefix, idToHash)
@@ -340,6 +349,10 @@ type ParsedRule struct {
 }
 
 func ruleToParsedRule(rule *model.Rule, ingressRule bool) (parsedRule *ParsedRule, allIPSets []*IPSetData) {
+	// Just a thought, but other options than "ingressRule bool" would be:
+	// - direction string, with values "ingress" and "egress" - clearer at point of call, but maybe more costly to test against
+	// - allowDomains bool - naming according to what the field is going to be used for
+	// I'm not sure either of these is clearly better, though, so wonder what you think.
 	srcSel, dstSel, notSrcSels, notDstSels := extractTagsAndSelectors(rule)
 
 	// In the datamodel, named ports are included in the list of ports as an "or" match; i.e. the
@@ -397,6 +410,7 @@ func ruleToParsedRule(rule *model.Rule, ingressRule bool) (parsedRule *ParsedRul
 		// calculate its IPSet(s).
 		if !ingressRule && rule.Action == "allow" && len(rule.DstDomains) != 0 {
 			dstDomainIPSets = domainsToIPSets(rule.DstDomains)
+			// Where is the code for the "If they are not, use the destination selector" case?
 		}
 	}
 
@@ -472,6 +486,7 @@ func ruleToParsedRule(rule *model.Rule, ingressRule bool) (parsedRule *ParsedRul
 func namedPortsToIPSets(namedPorts []string, positiveSelectors []selector.Selector, proto labelindex.IPSetPortProtocol) []*IPSetData {
 	var ipSets []*IPSetData
 	var sel selector.Selector
+	// I don't think you should make any changes in this function.  Are they needed?
 
 	if len(positiveSelectors) > 1 {
 		log.WithField("selectors", positiveSelectors).Panic(
@@ -503,6 +518,8 @@ func domainsToIPSets(dstDomains []string) []*IPSetData {
 	ipSet.SetUniqueID(dstDomains)
 	ipSets = append(ipSets, &ipSet)
 	return ipSets
+	// You could eliminate the var and append lines here, and write the return line as:
+	//    return []*IPSetData{&ipSet}
 }
 
 // Converts a list of selectors to a list of IPSets.
@@ -514,6 +531,7 @@ func selectorsToIPSets(selectors []selector.Selector) []*IPSetData {
 		}
 		ipSet.SetUniqueID(nil)
 		ipSets = append(ipSets, &ipSet)
+		// Would be good to revert changes in this function, if we can eliminate the SetUniqueID call as discussed above.
 	}
 	return ipSets
 }

@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -82,6 +82,8 @@ func CreateDefaultProfile(c client.Interface) {
 	d.Spec.Ingress = []api.Rule{{
 		Action: api.Allow,
 		Source: api.EntityRule{Selector: "default == ''"},
+		// The tests that you've changed don't all have this source selector, and I think there is a subtle difference.  So I think
+		// you need a boolean arg on CreateDefaultProfile that says whether or not to include this selector.
 	}}
 	_, err := c.Profiles().Create(utils.Ctx, d, utils.NoOptions)
 	Expect(err).NotTo(HaveOccurred())
