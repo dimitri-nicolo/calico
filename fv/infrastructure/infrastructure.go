@@ -15,6 +15,8 @@
 package infrastructure
 
 import (
+	. "github.com/onsi/gomega"
+	"github.com/projectcalico/felix/fv/utils"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 )
@@ -68,4 +70,19 @@ type DatastoreInfra interface {
 
 	// Stop cleans up anything necessary in preparation for the end of the test.
 	Stop()
+}
+
+// Creates a default profile that allows workloads with this profile to talk to each
+// other in the absence of any Policy.
+func CreateDefaultProfile(c client.Interface) {
+	d := api.NewProfile()
+	d.Name = "default"
+	d.Spec.LabelsToApply = map[string]string{"default": ""}
+	d.Spec.Egress = []api.Rule{{Action: api.Allow}}
+	d.Spec.Ingress = []api.Rule{{
+		Action: api.Allow,
+		Source: api.EntityRule{Selector: "default == ''"},
+	}}
+	_, err := c.Profiles().Create(utils.Ctx, d, utils.NoOptions)
+	Expect(err).NotTo(HaveOccurred())
 }
