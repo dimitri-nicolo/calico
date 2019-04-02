@@ -143,13 +143,22 @@
    {: .alert .alert-info}
 
 {% include {{page.version}}/cnx-cred-sed.md yaml="monitor-calico" %}
+{% if include.platform == "docker-ee" %}
+1. Update the `calico-node-alertmanager` Service section and replace `nodePort: 30903` with `nodePort: 33903`
 
+1. Update the `calico-node-prometheus` Service section and replace `nodePort: 30909` with `nodePort: 33909`
+
+   > **Note**: Docker Enterprise requires non-reserved port ranges to be above 32000.
+   {: .alert .alert-info}
+
+{% endif %}
 1. Apply the manifest.
 
    ```bash
    {{cli}} apply -f monitor-calico.yaml
    ```
 
+{% if include.platform != "docker-ee" %}
 1. Edit the `tigera-cnx-manager-config` ConfigMap to update the URL Kibana is accessed at.  By default a NodePort is
    installed that serves Kibana on port 30601, so use the address of a node (for example a master).
 
@@ -158,7 +167,7 @@
    ```bash
    {{cli}} patch configmap -n kube-system tigera-cnx-manager-config -p $'data:\n  tigera.cnx-manager.kibana-url: http://<insert-node-address-here>:30601'
    ```
-
+{% endif %}
 {% if include.orch == "openshift" %}
 {% if include.elasticsearch == "operator" %}
 
@@ -265,6 +274,15 @@
 {% endif %}
 {% endif %}
 
+{% if include.platform == "docker-ee" %}
+   Kibana will be accessible on the `tigera.cnx-manager.kibana-url` value specified in `cnx.yaml` You may need to create a ssh tunnel if
+   the node is not accessible. For example:
+
+   ```bash
+   ssh <jumpbox> -L 127.0.0.1:33601:<docker node>:33601
+   ```
+{% endif %}
+
 1. Open the **Management** -> **Index Patterns** pane in Kibana, select one of the imported index patterns and click the star to set it as the
    default pattern. Refer to the [Kibana documentation](https://www.elastic.co/guide/en/kibana/current/index-patterns.html#set-default-pattern)
    for more details.
@@ -280,6 +298,7 @@
     [Enabling integration with AWS security groups]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/aws-sg-integration).
 {% endif %}
 
+{% if include.platform != "docker-ee" %}
 1. By default, {{site.prodname}} Manager is made accessible via a NodePort listening on port 30003.
    You can edit the `cnx.yaml` manifest if you want to change how {{site.prodname}} Manager is
    exposed.  You may need to create an ssh tunnel if the node is not accessible - for example:
@@ -289,14 +308,17 @@
    ```
 
    Sign in by navigating to `https://<address of a Kubernetes node or 127.0.0.1 for ssh tunnel>:30003` and login.
+{% endif %}
 
 {% if include.platform == "eks" %}
    Log in to {{site.prodname}} Manager using the token you created earlier in the process.
 {% endif %}
 
+{% if include.platform != "docker-ee" %}
 1. Kibana is made available similarly, on port 30601.
+{% endif %}
 
-{% if include.elasticsearch == "operator" %}
+{% if include.elasticsearch == "operator" and include.platform != "docker-ee" %}
    You may need to create an ssh tunnel if the node is not accessible - for example:
 
    ```bash
