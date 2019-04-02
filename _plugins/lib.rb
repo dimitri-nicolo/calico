@@ -77,18 +77,17 @@ def gen_values(versions, imageNames, imageRegistry)
       tag: #{versions["elastic-tsee-installer"]}
     esProxy:
       image: #{imageRegistry}#{imageNames["es-proxy"]}
-      tag: #{components["es-proxy"]["version"]}
       tag: #{versions["es-proxy"]}
       
     complianceController:
       image: #{imageRegistry}#{imageNames["compliance-controller"]}
-      tag: #{components["compliance-controller"]["version"]}
+      tag: #{versions["compliance-controller"]}
     complianceServer:
       image: #{imageRegistry}#{imageNames["compliance-server"]}
-      tag: #{components["compliance-server"]["version"]}
+      tag: #{versions["compliance-server"]}
     complianceSnapshotter:
       image: #{imageRegistry}#{imageNames["compliance-snapshotter"]}
-      tag: #{components["compliance-snapshotter"]["version"]}
+      tag: #{versions["compliance-snapshotter"]}
 
     EOF
 end
