@@ -17,10 +17,11 @@ import (
 )
 
 type Controller interface {
-	// Add, Delete, and GC alter the desired state the controller will attempt to
-	// maintain, by syncing with the Kubernetes API server.
+	// Add, Delete, and NoGC alter the desired state the controller will attempt to
+	// maintain, by syncing with the elastic database.
 
-	// Add or update a new Set including the spec
+	// Add or update a new Set including the spec. f is function the controller should call
+	// if we fail to update, and stat is the Statser we should report or clear errors on.
 	Add(ctx context.Context, name string, set db.IPSetSpec, f func(), stat statser.Statser)
 
 	// Delete removes a Set from the desired state.
@@ -67,6 +68,11 @@ type update struct {
 
 const DefaultUpdateQueueLen = 1000
 const DefaultElasticReconcilePeriod = 15 * time.Second
+
+var NewTicker = func() *time.Ticker {
+	tkr := time.NewTicker(DefaultElasticReconcilePeriod)
+	return tkr
+}
 
 func NewController(ipSet db.IPSet) Controller {
 	return &controller{
@@ -141,7 +147,7 @@ UpdateLoop:
 	log.Debug("elastic controller reconciliation started")
 
 	// After getting the startGC, we can also include state sync processing
-	tkr := time.NewTicker(DefaultElasticReconcilePeriod)
+	tkr := NewTicker()
 	defer tkr.Stop()
 	for {
 		select {
@@ -186,45 +192,35 @@ func (c *controller) reconcile(ctx context.Context) {
 
 		if u, ok := c.dirty[ipSetMeta.Name]; ok {
 			// set already exists, but is dirty
-			err := c.ipSet.PutIPSet(ctx, ipSetMeta.Name, u.set)
-			if err != nil {
-				log.WithError(err).WithField("name", ipSetMeta.Name).Error("failed to update ipset")
-				u.fail()
-				u.statser.Error(statser.ElasticSyncFailed, err)
-				continue
-			}
-			// success!
-			u.statser.ClearError(statser.ElasticSyncFailed)
-			c.noGC[ipSetMeta.Name] = struct{}{}
-			delete(c.dirty, ipSetMeta.Name)
+			c.updateElasticIPSet(ctx, u)
 		} else if _, ok := c.noGC[ipSetMeta.Name]; !ok {
 			// Garbage collect
-			err := c.purgeElasticIPSet(ctx, ipSetMeta)
-			if err != nil {
-				log.WithError(err).Error("failed to purge elastic IP set")
-				continue
-			}
+			c.purgeElasticIPSet(ctx, ipSetMeta)
 		} else {
 			log.WithField("name", ipSetMeta.Name).Debug("Retained Elastic IPSet")
 		}
 	}
 
-	for name, u := range c.dirty {
-		err := c.ipSet.PutIPSet(ctx, name, u.set)
-		if err != nil {
-			log.WithError(err).WithField("name", name).Error("failed to update ipset")
-			u.fail()
-			u.statser.Error(statser.ElasticSyncFailed, err)
-			continue
-		}
-		// success!
-		u.statser.ClearError(statser.ElasticSyncFailed)
-		c.noGC[name] = struct{}{}
-		delete(c.dirty, name)
+	for _, u := range c.dirty {
+		c.updateElasticIPSet(ctx, u)
 	}
 }
 
-func (c *controller) purgeElasticIPSet(ctx context.Context, m db.IPSetMeta) error {
+func (c *controller) updateElasticIPSet(ctx context.Context, u update) {
+	err := c.ipSet.PutIPSet(ctx, u.name, u.set)
+	if err != nil {
+		log.WithError(err).WithField("name", u.name).Error("failed to update ipset")
+		u.fail()
+		u.statser.Error(statser.ElasticSyncFailed, err)
+		return
+	}
+	// success!
+	u.statser.ClearError(statser.ElasticSyncFailed)
+	c.noGC[u.name] = struct{}{}
+	delete(c.dirty, u.name)
+}
+
+func (c *controller) purgeElasticIPSet(ctx context.Context, m db.IPSetMeta) {
 	var fields log.Fields
 	if m.Version != nil {
 		fields = log.Fields{
@@ -240,12 +236,12 @@ func (c *controller) purgeElasticIPSet(ctx context.Context, m db.IPSetMeta) erro
 
 	err := c.ipSet.DeleteIPSet(ctx, m)
 	if elastic.IsNotFound(err) {
-		return nil
+		return
 	}
 	if err != nil {
 		log.WithError(err).WithFields(fields).Error("Failed to purge Elastic IPSet")
-		return err
+		return
 	}
 	log.WithFields(fields).Info("GC'd elastic IPSet")
-	return nil
+	return
 }

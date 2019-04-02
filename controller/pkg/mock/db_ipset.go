@@ -4,6 +4,7 @@ package mock
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
@@ -19,6 +20,11 @@ type IPSet struct {
 	DeleteCalled  bool
 	DeleteName    string
 	DeleteVersion *int64
+	DeleteError   error
+	PutError      error
+
+	m     sync.Mutex
+	calls []Call
 }
 
 func (m *IPSet) ListIPSets(ctx context.Context) ([]db.IPSetMeta, error) {
@@ -26,6 +32,9 @@ func (m *IPSet) ListIPSets(ctx context.Context) ([]db.IPSetMeta, error) {
 }
 
 func (m *IPSet) DeleteIPSet(ctx context.Context, meta db.IPSetMeta) error {
+	m.m.Lock()
+	defer m.m.Unlock()
+	m.calls = append(m.calls, Call{Method: "DeleteIPSet", Name: meta.Name, Version: meta.Version})
 	m.DeleteCalled = true
 	m.DeleteName = meta.Name
 	if meta.Version == nil {
@@ -34,7 +43,7 @@ func (m *IPSet) DeleteIPSet(ctx context.Context, meta db.IPSetMeta) error {
 		i := struct{ i int64 }{*meta.Version}
 		m.DeleteVersion = &i.i
 	}
-	return m.Error
+	return m.DeleteError
 }
 
 func (m *IPSet) GetIPSetModified(ctx context.Context, name string) (time.Time, error) {
@@ -46,12 +55,25 @@ func (m *IPSet) GetIPSet(ctx context.Context, name string) (db.IPSetSpec, error)
 }
 
 func (m *IPSet) PutIPSet(ctx context.Context, name string, set db.IPSetSpec) error {
+	m.m.Lock()
+	defer m.m.Unlock()
+	m.calls = append(m.calls, Call{Method: "PutIPSet", Name: name, Set: set})
 	m.Name = name
 	m.Set = set
 
-	if m.Error == nil {
+	if m.PutError == nil {
 		m.Time = time.Now()
 	}
 
-	return m.Error
+	return m.PutError
+}
+
+func (m *IPSet) Calls() []Call {
+	var out []Call
+	m.m.Lock()
+	defer m.m.Unlock()
+	for _, c := range m.calls {
+		out = append(out, c)
+	}
+	return out
 }

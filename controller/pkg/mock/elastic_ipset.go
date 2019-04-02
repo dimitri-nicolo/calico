@@ -8,10 +8,7 @@ import (
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/statser"
-	"github.com/tigera/intrusion-detection/controller/pkg/sync/elasticipsets"
 )
-
-var _ elasticipsets.Controller = NewElasticIPSetController()
 
 type ElasticIPSetController struct {
 	m         sync.Mutex

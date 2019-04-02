@@ -28,12 +28,6 @@ type GlobalNetworkSetInterface struct {
 	calls []Call
 }
 
-type Call struct {
-	Method string
-	GNS    *v3.GlobalNetworkSet
-	Name   string
-}
-
 func (m *GlobalNetworkSetInterface) Create(gns *v3.GlobalNetworkSet) (*v3.GlobalNetworkSet, error) {
 	m.m.Lock()
 	defer m.m.Unlock()
