@@ -252,7 +252,11 @@ message Rule {
     IcmpTypeAndCode icmp_type_code = 9;
   }
   repeated string src_ip_set_ids = 10;
+  // There should not be any situation where dst_ip_set_ids or dst_domain_ip_set_ids have
+  // more than one value (i.e more than one IPSet id). The intended semantics is that their
+  // values will be OR'ed when processed by the dataplane.
   repeated string dst_ip_set_ids = 11;
+  repeated string dst_domain_ip_set_ids = 14;
 
   Protocol not_protocol = 102;
 
