@@ -23,10 +23,13 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/felix/fv/containers"
 	"github.com/projectcalico/felix/fv/infrastructure"
+	"github.com/projectcalico/felix/fv/utils"
 	"github.com/projectcalico/felix/fv/workload"
+	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 )
 
@@ -78,7 +81,55 @@ var _ = Describe("DNS Policy", func() {
 		etcd.Stop()
 	})
 
-	Context("Connectivity to tigera.io", func() {
+	It("can wget microsoft.com", func() {
+		out, err := w[0].ExecOutput("wget microsoft.com")
+		log.WithError(err).Infof("wget said:\n%v", out)
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	Context("with default-deny egress policy", func() {
+		BeforeEach(func() {
+			policy := api.NewGlobalNetworkPolicy()
+			policy.Name = "default-deny-egress"
+			policy.Spec.Selector = "all()"
+			policy.Spec.Egress = []api.Rule{{
+				Action: api.Deny,
+			}}
+			_, err := client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("can wget microsoft.com", func() {
+			out, err := w[0].ExecOutput("wget microsoft.com")
+			log.WithError(err).Infof("wget said:\n%v", out)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		Context("with domain-allow egress policy", func() {
+			BeforeEach(func() {
+				policy := api.NewGlobalNetworkPolicy()
+				policy.Name = "allow-microsoft"
+				order := float64(20)
+				policy.Spec.Order = &order
+				policy.Spec.Selector = "all()"
+				policy.Spec.Egress = []api.Rule{{
+					Action:      api.Allow,
+					Destination: api.EntityRule{Domains: []string{"microsoft.com"}},
+				}}
+				_, err := client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("can wget microsoft.com", func() {
+				out, err := w[0].ExecOutput("wget microsoft.com")
+				log.WithError(err).Infof("wget said:\n%v", out)
+				Expect(err).NotTo(HaveOccurred())
+			})
+		})
+
+	})
+
+	PContext("Connectivity to tigera.io", func() {
 		It("can be established by default", func() {
 			for i := 0; i < 3; i++ {
 				out, err := w[0].ExecOutput("nslookup", "microsoft.com", "8.8.8.8")
