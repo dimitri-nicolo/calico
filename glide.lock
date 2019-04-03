@@ -1,5 +1,5 @@
-hash: c390d91c5d6594afcc07577bee7bc4190258023b355be7dfa27c1c9245ad5dfe
-updated: 2019-03-29T15:59:01.976439-03:00
+hash: 80ca7d38991734b7671ce88debb1f61331f1e3595ba2fde822f5e320f27cf637
+updated: 2019-04-02T23:35:32.794429406Z
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -128,7 +128,7 @@ imports:
 - name: github.com/kelseyhightower/envconfig
   version: dd1402a4d99de9ac2f396cd6fcb957bc2c695ec1
 - name: github.com/kubernetes/repo-infra
-  version: a3f1f8d5b18ad754f553bb59a80334f4f70405a6
+  version: df02ded38f9506e5bbcbf21702034b4fef815f2f
 - name: github.com/leodido/go-urn
   version: a67a23e1c1af3c66528573bb86a87246477277c1
 - name: github.com/mailru/easyjson
@@ -156,7 +156,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 774f53b03a1bc843976ff8a5defe3298d065aabd
+  version: 2806b1a9c38f9c6fd0f7cb5644c7e0aa8fb1efb6
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
@@ -171,6 +171,7 @@ imports:
   - lib/backend/k8s/resources
   - lib/backend/model
   - lib/clientv3
+  - lib/compliance
   - lib/errors
   - lib/hash
   - lib/ipam
@@ -209,6 +210,8 @@ imports:
   version: 8a290539e2e8629dbc4e6bad948158f790ec31f4
 - name: github.com/PuerkitoBio/urlesc
   version: 5bd2802263f21d8788851d5305584c82a5c75d7e
+- name: github.com/robfig/cron
+  version: df38d32658d8788cd446ba74db4bb5375c4b0cb3
 - name: github.com/satori/go.uuid
   version: 879c5887cd475cd7864858769793b2ceb0d44feb
 - name: github.com/sirupsen/logrus
@@ -280,11 +283,11 @@ imports:
   subpackages:
   - rate
 - name: golang.org/x/tools
-  version: 4735f53fb37db012e63d1a62914417980fb3c023
+  version: 202502a5a9245830b5ec7b877e26b67760da8e67
   subpackages:
   - import
 - name: google.golang.org/appengine
-  version: 4a4468ece617fc8205e99368fa2200e9d1fad421
+  version: 54a98f90d1c46b7731eb8fb305d2a321c30ef610
   subpackages:
   - internal
   - internal/app_identity
@@ -321,7 +324,7 @@ imports:
   - tap
   - transport
 - name: gopkg.in/go-playground/validator.v9
-  version: b199fa0642d29caca62b6a99d65cc981ba5edc3b
+  version: 46b4b1e301c24cac870ffcb4ba5c8a703d1ef475
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: gopkg.in/natefinch/lumberjack.v2
