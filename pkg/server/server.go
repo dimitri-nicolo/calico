@@ -41,6 +41,7 @@ func Start(config *Config) error {
 	//  - This could be nicer. Seems a bit kludgy to add middlewares like this.
 	//  - Logging only logs the frontend requests and not the backend response. We could
 	//    move the logger to the end and make it log responses if present.
+	sm.Handle("/version", middleware.LogRequestHeaders(http.HandlerFunc(handler.VersionHandler)))
 	sm.Handle("/", middleware.LogRequestHeaders(middleware.PathValidator(validPaths, proxy)))
 
 	server = &http.Server{

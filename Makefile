@@ -109,13 +109,13 @@ endif
 
 ES_PROXY_VERSION?=$(shell git describe --tags --dirty --always)
 ES_PROXY_BUILD_DATE?=$(shell date -u +'%FT%T%z')
-ES_PROXY_GIT_REVISION?=$(shell git rev-parse --short HEAD)
-ES_PROXY_GIT_DESCRIPTION?=$(shell git describe --tags)
+ES_PROXY_GIT_COMMIT?=$(shell git rev-parse --short HEAD)
+ES_PROXY_GIT_TAG?=$(shell git describe --tags)
 
-VERSION_FLAGS=-X main.VERSION=$(ES_PROXY_VERSION) \
-	-X main.BUILD_DATE=$(ES_PROXY_BUILD_DATE) \
-	-X main.GIT_DESCRIPTION=$(ES_PROXY_GIT_DESCRIPTION) \
-	-X main.GIT_REVISION=$(ES_PROXY_GIT_REVISION)
+VERSION_FLAGS=-X $(PACKAGE_NAME)/pkg/handler/version.VERSION=$(ES_PROXY_VERSION) \
+	-X $(PACKAGE_NAME)/pkg/handler/version.BUILD_DATE=$(ES_PROXY_BUILD_DATE) \
+	-X $(PACKAGE_NAME)/pkg/handler/version.GIT_TAG=$(ES_PROXY_GIT_TAG) \
+	-X $(PACKAGE_NAME)/pkg/handler/version.GIT_COMMIT=$(ES_PROXY_GIT_COMMIT)
 BUILD_LDFLAGS=-ldflags "$(VERSION_FLAGS)"
 RELEASE_LDFLAGS=-ldflags "$(VERSION_FLAGS) -s -w"
 
@@ -351,12 +351,3 @@ help: # Some kind of magic from https://gist.github.com/rcmachado/af3db315e31383
 	{ helpMsg = $$0 }'                                                  \
 	width=20                                                            \
 	$(MAKEFILE_LIST)
-
-$(info "Build dependency versions")
-$(info $(shell printf "%-21s = %-10s\n" "BIRD_VER" $(BIRD_VER)))
-
-$(info "Test dependency versions")
-$(info $(shell printf "%-21s = %-10s\n" "CNI_VER" $(CNI_VER)))
-
-$(info "Calico git version")
-$(info $(shell printf "%-21s = %-10s\n" "CALICO_GIT_VER" $(CALICO_GIT_VER)))
