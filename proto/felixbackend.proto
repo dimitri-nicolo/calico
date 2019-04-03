@@ -163,6 +163,7 @@ message IPSetUpdate {
     IP = 0;           // Each member is an IP address in dotted-decimal or IPv6 format.
     IP_AND_PORT = 1;  // Each member is "<IP>,(tcp|udp):port".
     NET = 2;          // Each member is a CIDR in dotted-decimal or IPv6 format.
+    DOMAIN = 3;       // Each member is a domain name.
   }
   IPSetType type = 3;
 }
