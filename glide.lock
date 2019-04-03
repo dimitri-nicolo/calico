@@ -1,5 +1,5 @@
-hash: 1b48b5821eb9add6f4042a21e2eb70d471b1ccdfe8a7461a5570936c257b37ad
-updated: 2019-04-01T09:15:15.438001323Z
+hash: 366ca0a3b6afc2af18d6077843ebff1d73b9c682a995e2debabd287d58da16c4
+updated: 2019-04-03T14:18:05.667248915Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -124,6 +124,10 @@ imports:
   version: 7d79101e329e5a3adf994758c578dab82b90c017
 - name: github.com/google/gofuzz
   version: 44d81051d367757e1c7c6a5a86423ece9afcf63c
+- name: github.com/google/gopacket
+  version: b7586607157b64351ab71d7f6ed36f71f2e83393
+  subpackages:
+  - layers
 - name: github.com/googleapis/gnostic
   version: 0c5108395e2debce0d731cf0287ddf7242066aba
   subpackages:
