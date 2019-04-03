@@ -682,20 +682,23 @@ func (idx *SelectorAndNamedPortIndex) CalculateEndpointContribution(d *endpointD
 			}
 		}
 	} else {
-		// Non-named port match, simply return the CIDRs and domains.
-		for _, addr := range d.nets {
-			contrib = append(contrib, IPSetMember{
-				CIDR: addr,
-			})
+		if len(d.nets) != 0 {
+			for _, addr := range d.nets {
+				contrib = append(contrib, IPSetMember{
+					CIDR: addr,
+				})
+			}
+		} else {
+			if len(d.domains) == 0 {
+				log.Panic("new ipSetData has no nets or domains")
+			}
+
+			for _, domain := range d.domains {
+				contrib = append(contrib, IPSetMember{
+					Domain: domain,
+				})
+			}
 		}
-		for _, domain := range d.domains {
-			contrib = append(contrib, IPSetMember{
-				Domain: domain,
-			})
-		}
-		// For the specific ipSetData in hand, I think this code should return EITHER the IP contributions OR the domain
-		// contributions, but not both.  The code needs to look at ipSetData to determine if it's the domain IP set, or
-		// not, and then return just the corresponding contributions.
 	}
 	return
 }

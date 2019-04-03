@@ -95,19 +95,12 @@ type IPSetData struct {
 	// NamedPort contains the name of the named port represented by this IP set or "" for a
 	// selector-only IP set
 	NamedPort string
-	// cachedUID holds the calculated unique ID of this IPSet, or "" if it hasn't been calculated
-	// That "IPSet" is inconsistent with uses of "IP set" just above, so I think we should revert this change.
+	// cachedUID holds the calculated unique ID of this ip set, or "" if it hasn't been calculated
 	// yet.
 	cachedUID string
 }
 
 func (d *IPSetData) SetUniqueID(dstDomains []string) {
-	// I think we could rework the changes here so as to reduce the churn elsewhere, and to make it clearer that
-	// things are changing only in the new domains case.  What I have in mind is:
-	// - Leave UniqueID as it was, so that it calculates and returns a selector-based ID if cachedUID is not already set.
-	// - Only call SetUniqueID in the domains case; and in that case it sets cachedUID to a domains-based ID.
-	// - Maybe rename SetUniqueID to SetUniqueIDForDomains (or similar), to make clear that it's only for the domains case.
-	// WDYT?
 	var hashPrefix, idToHash string
 	if d.cachedUID != "" {
 		log.WithField("IPSetData", d).Panic("cachedUID already set")
@@ -124,9 +117,7 @@ func (d *IPSetData) SetUniqueID(dstDomains []string) {
 		}
 	} else {
 		hashPrefix = "d"
-		idToHash = strings.Join(dstDomains, "")
-		// Add a separator character or string that would not be valid in a domain name.  (I think "_" or "__" would work.)
-		// Otherwise a list like ["a.b", "c.d"] can generate the same UID as ["a.bc.d"].
+		idToHash = strings.Join(dstDomains, "#")
 	}
 
 	d.cachedUID = hash.MakeUniqueID(hashPrefix, idToHash)
@@ -408,9 +399,12 @@ func ruleToParsedRule(rule *model.Rule, ingressRule bool) (parsedRule *ParsedRul
 		// If the rule is of type allow egress, check whether domains are directly specified
 		// and convert those to IPSets. If they are not, use the destination selector and
 		// calculate its IPSet(s).
-		if !ingressRule && rule.Action == "allow" && len(rule.DstDomains) != 0 {
-			dstDomainIPSets = domainsToIPSets(rule.DstDomains)
-			// Where is the code for the "If they are not, use the destination selector" case?
+		if !ingressRule && rule.Action == "allow" {
+			if len(rule.DstDomains) != 0 {
+				dstDomainIPSets = domainsToIPSets(rule.DstDomains)
+			} else {
+				dstDomainIPSets = selectorsToIPSets(dstSel)
+			}
 		}
 	}
 
@@ -513,13 +507,9 @@ func namedPortsToIPSets(namedPorts []string, positiveSelectors []selector.Select
 
 // Converts a list of domain names to a single IPSet.
 func domainsToIPSets(dstDomains []string) []*IPSetData {
-	var ipSets []*IPSetData
 	ipSet := IPSetData{}
 	ipSet.SetUniqueID(dstDomains)
-	ipSets = append(ipSets, &ipSet)
-	return ipSets
-	// You could eliminate the var and append lines here, and write the return line as:
-	//    return []*IPSetData{&ipSet}
+	return []*IPSetData{&ipSet}
 }
 
 // Converts a list of selectors to a list of IPSets.
@@ -531,7 +521,6 @@ func selectorsToIPSets(selectors []selector.Selector) []*IPSetData {
 		}
 		ipSet.SetUniqueID(nil)
 		ipSets = append(ipSets, &ipSet)
-		// Would be good to revert changes in this function, if we can eliminate the SetUniqueID call as discussed above.
 	}
 	return ipSets
 }

@@ -1,6 +1,4 @@
 // Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
-// You should have a Git hook installed that prevents making a commit with
-// out of date copyrights.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -243,8 +241,6 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, hostn
 		log.WithField("ipSet", ipSet).Info("IPSet now active")
 		callbacks.OnIPSetAdded(ipSet.GetUniqueID(), ipSet.DataplaneProtocolType())
 		ipsetMemberIndex.UpdateIPSet(ipSet.GetUniqueID(), ipSet.Selector, ipSet.NamedPortProtocol, ipSet.NamedPort)
-		// Do we really need the UniqueID -> GetUniqueID name change here?  I think you've done it because you think that GetUniqueID goes better with SetUniqueID; is that right?
-		// I think that XYZ() and SetXYZ() is also a common pattern for getter and setter naming, though, so not sure we need to change to GetXYZ() and SetXYZ().
 		gaugeNumActiveSelectors.Inc()
 	}
 	ruleScanner.OnIPSetInactive = func(ipSet *IPSetData) {

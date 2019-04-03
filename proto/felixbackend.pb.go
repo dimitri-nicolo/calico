@@ -144,9 +144,6 @@ const (
 	IPSetUpdate_IP_AND_PORT IPSetUpdate_IPSetType = 1
 	IPSetUpdate_NET         IPSetUpdate_IPSetType = 2
 	IPSetUpdate_DOMAIN      IPSetUpdate_IPSetType = 3
-
-// Note: this file should be auto-generated, so I'm not reviewing diffs here, even though there appear to be surprisingly many of them.
-// Did you edit this file by hand?  Procedure should be to edit felixbackend.proto and then run `make protobuf`.
 )
 
 var IPSetUpdate_IPSetType_name = map[int32]string{

@@ -42,7 +42,7 @@ var _ = Describe("DNS Policy", func() {
 	BeforeEach(func() {
 		opts := infrastructure.DefaultTopologyOptions()
 		felix, etcd, client = infrastructure.StartSingleNodeEtcdTopology(opts)
-		infrastructure.CreateDefaultProfile(client)
+		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")
 
 		// Create a workload, using that profile.
 		for ii := range w {

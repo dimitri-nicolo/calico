@@ -608,6 +608,11 @@ fv/fv.test: vendor/.up-to-date $(SRC_FILES)
 #         ...
 #         $(MAKE) fv FV_BATCHES_TO_RUN="10" FV_NUM_BATCHES=10    # the tenth 1/10
 #         etc.
+#
+# To only run specific fv tests, set GINGKO_FOCUS to the desired Describe{}, Context{}
+# or Ir{} description string. For example, to only run dns_test.go, type:
+# 	GINKGO_FOCUS="DNS Policy" make fv
+#
 fv fv/latency.log: $(BUILD_IMAGE) bin/iptables-locker bin/test-workload bin/test-connection fv/fv.test
 	cd fv && \
 	  FV_FELIXIMAGE=$(FV_FELIXIMAGE) \

@@ -30,7 +30,6 @@ import (
 
 	"github.com/projectcalico/felix/proto"
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
-	// Explicit v3 here is not needed.  (Could this be something your editor did automatically?)
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/hash"
 	"github.com/projectcalico/libcalico-go/lib/net"

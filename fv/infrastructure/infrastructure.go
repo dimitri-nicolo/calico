@@ -74,16 +74,14 @@ type DatastoreInfra interface {
 
 // Creates a default profile that allows workloads with this profile to talk to each
 // other in the absence of any Policy.
-func CreateDefaultProfile(c client.Interface) {
+func CreateDefaultProfile(c client.Interface, name string, labels map[string]string, entityRuleSelector string) {
 	d := api.NewProfile()
-	d.Name = "default"
-	d.Spec.LabelsToApply = map[string]string{"default": ""}
+	d.Name = name
+	d.Spec.LabelsToApply = labels
 	d.Spec.Egress = []api.Rule{{Action: api.Allow}}
 	d.Spec.Ingress = []api.Rule{{
 		Action: api.Allow,
-		Source: api.EntityRule{Selector: "default == ''"},
-		// The tests that you've changed don't all have this source selector, and I think there is a subtle difference.  So I think
-		// you need a boolean arg on CreateDefaultProfile that says whether or not to include this selector.
+		Source: api.EntityRule{Selector: entityRuleSelector},
 	}}
 	_, err := c.Profiles().Create(utils.Ctx, d, utils.NoOptions)
 	Expect(err).NotTo(HaveOccurred())
