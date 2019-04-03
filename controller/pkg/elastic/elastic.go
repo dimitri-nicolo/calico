@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"time"
@@ -52,6 +53,25 @@ func NewElastic(h *http.Client, url *url.URL, username, password string) (*Elast
 		return nil, err
 	}
 	return &Elastic{c}, nil
+}
+
+func (e *Elastic) ListIPSets(ctx context.Context) ([]db.IPSetMeta, error) {
+	q := elastic.NewMatchAllQuery()
+	scroller := e.c.Scroll(IPSetIndex).Type(StandardType).Version(true).FetchSource(false).Query(q)
+
+	var ids []db.IPSetMeta
+	for {
+		res, err := scroller.Do(ctx)
+		if err == io.EOF {
+			return ids, nil
+		}
+		if err != nil {
+			return nil, err
+		}
+		for _, hit := range res.Hits.Hits {
+			ids = append(ids, db.IPSetMeta{Name: hit.Id, Version: hit.Version})
+		}
+	}
 }
 
 func (e *Elastic) PutIPSet(ctx context.Context, name string, set db.IPSetSpec) error {
@@ -168,6 +188,15 @@ func (e *Elastic) QueryIPSet(ctx context.Context, name string) (db.SecurityEvent
 		ctx:       ctx,
 		name:      name,
 	}, nil
+}
+
+func (e *Elastic) DeleteIPSet(ctx context.Context, m db.IPSetMeta) error {
+	ds := e.c.Delete().Index(IPSetIndex).Type(StandardType).Id(m.Name)
+	if m.Version != nil {
+		ds = ds.Version(*m.Version)
+	}
+	_, err := ds.Do(ctx)
+	return err
 }
 
 func (e *Elastic) PutSecurityEvent(ctx context.Context, f events.SecurityEvent) error {

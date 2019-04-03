@@ -14,17 +14,18 @@ import (
 	"sync"
 	"time"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/util"
-
-	retry "github.com/avast/retry-go"
+	"github.com/avast/retry-go"
 	log "github.com/sirupsen/logrus"
-	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
+	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/kubernetes/typed/core/v1"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/runloop"
 	"github.com/tigera/intrusion-detection/controller/pkg/statser"
+	"github.com/tigera/intrusion-detection/controller/pkg/sync/elasticipsets"
+	"github.com/tigera/intrusion-detection/controller/pkg/sync/globalnetworksets"
+	"github.com/tigera/intrusion-detection/controller/pkg/util"
 )
 
 const (
@@ -35,30 +36,41 @@ const (
 
 // httpPuller is a feed that periodically pulls Puller sets from a URL
 type httpPuller struct {
-	ipSet            db.IPSet
-	configMapClient  v1.ConfigMapInterface
-	secretsClient    v1.SecretInterface
-	client           *http.Client
-	feed             *v3.GlobalThreatFeed
-	needsUpdate      bool
-	url              *url.URL
-	header           http.Header
-	period           time.Duration
-	snapshots        chan db.IPSetSpec
-	syncFailFunction SyncFailFunction
-	cancel           context.CancelFunc
-	once             sync.Once
-	lock             sync.RWMutex
+	ipSet             db.IPSet
+	configMapClient   v1.ConfigMapInterface
+	secretsClient     v1.SecretInterface
+	client            *http.Client
+	feed              *v3.GlobalThreatFeed
+	needsUpdate       bool
+	url               *url.URL
+	header            http.Header
+	period            time.Duration
+	gnsController     globalnetworksets.Controller
+	elasticController elasticipsets.Controller
+	syncFailFunction  SyncFailFunction
+	cancel            context.CancelFunc
+	once              sync.Once
+	lock              sync.RWMutex
 }
 
-func NewHTTPPuller(f *v3.GlobalThreatFeed, ipSet db.IPSet, configMapClient v1.ConfigMapInterface, secretsClient v1.SecretInterface, client *http.Client) Puller {
+func NewHTTPPuller(
+	f *v3.GlobalThreatFeed,
+	ipSet db.IPSet,
+	configMapClient v1.ConfigMapInterface,
+	secretsClient v1.SecretInterface,
+	client *http.Client,
+	gnsController globalnetworksets.Controller,
+	elasticController elasticipsets.Controller,
+) Puller {
 	p := &httpPuller{
-		ipSet:           ipSet,
-		configMapClient: configMapClient,
-		secretsClient:   secretsClient,
-		client:          client,
-		feed:            f.DeepCopy(),
-		needsUpdate:     true,
+		ipSet:             ipSet,
+		configMapClient:   configMapClient,
+		secretsClient:     secretsClient,
+		client:            client,
+		feed:              f.DeepCopy(),
+		needsUpdate:       true,
+		gnsController:     gnsController,
+		elasticController: elasticController,
 	}
 
 	p.period = util.ParseFeedDuration(p.feed)
@@ -74,23 +86,27 @@ func (h *httpPuller) SetFeed(f *v3.GlobalThreatFeed) {
 	h.needsUpdate = true
 }
 
-func (h *httpPuller) Run(ctx context.Context, s statser.Statser) (<-chan db.IPSetSpec, SyncFailFunction) {
+func (h *httpPuller) Run(ctx context.Context, s statser.Statser) {
 	h.once.Do(func() {
-		h.snapshots = make(chan db.IPSetSpec)
 
+		h.lock.RLock()
+		log.WithField("feed", h.feed.Name).Debug("started HTTP puller")
+		h.lock.RUnlock()
 		ctx, h.cancel = context.WithCancel(ctx)
 
 		runFunc, rescheduleFunc := runloop.RunLoopWithReschedule()
+		h.syncFailFunction = func() { _ = rescheduleFunc() }
 		go func() {
 			defer h.cancel()
-			defer close(h.snapshots)
 			if h.period == 0 {
 				return
 			}
 
 			delay := h.getStartupDelay(ctx, s.Status())
 			if delay > 0 {
+				h.lock.RLock()
 				log.WithField("delay", delay).WithField("feed", h.feed.Name).Info("Delaying start")
+				h.lock.RUnlock()
 			}
 
 			select {
@@ -99,13 +115,12 @@ func (h *httpPuller) Run(ctx context.Context, s statser.Statser) (<-chan db.IPSe
 			case <-time.After(delay):
 				break
 			}
-			_ = runFunc(ctx, func() { _ = h.query(ctx, h.snapshots, s, retryAttempts, retryDelay) }, h.period, func() {}, h.period/3)
+			_ = runFunc(ctx, func() { _ = h.query(ctx, s, retryAttempts, retryDelay) }, h.period, func() {}, h.period/3)
 		}()
 
-		h.syncFailFunction = func() { _ = rescheduleFunc() }
 	})
 
-	return h.snapshots, h.syncFailFunction
+	return
 }
 
 func (h *httpPuller) Close() {
@@ -191,36 +206,56 @@ func (h *httpPuller) getStartupDelay(ctx context.Context, s statser.Status) time
 	return 0
 }
 
-func (h *httpPuller) query(ctx context.Context, snapshots chan<- db.IPSetSpec, st statser.Statser, attempts uint, delay time.Duration) error {
+// queryInfo gets the information required for a query in a threadsafe way
+func (h *httpPuller) queryInfo() (name string, u *url.URL, header http.Header, labels map[string]string, gns bool, err error) {
 	h.lock.RLock()
-	name := h.feed.Name
-	u := h.url
-	header := h.header
+	name = h.feed.Name
+	u = h.url
+	header = h.header
+	if h.feed.Spec.GlobalNetworkSet != nil {
+		gns = true
+		labels = h.feed.Spec.GlobalNetworkSet.Labels
+	}
 
 	if h.needsUpdate {
 		h.lock.RUnlock()
 		h.lock.Lock()
 
 		if h.needsUpdate {
-			err := h.setFeedURIAndHeader(h.feed)
+			err = h.setFeedURIAndHeader(h.feed)
 			if err != nil {
 				h.lock.Unlock()
-				return err
+				return
 			}
 		}
 
 		name = h.feed.Name
 		u = h.url
 		header = h.header
+		if h.feed.Spec.GlobalNetworkSet != nil {
+			gns = true
+			labels = h.feed.Spec.GlobalNetworkSet.Labels
+		} else {
+			gns = false
+		}
 		h.lock.Unlock()
 	} else {
 		h.lock.RUnlock()
 	}
+	return
+}
+
+func (h *httpPuller) query(ctx context.Context, st statser.Statser, attempts uint, delay time.Duration) error {
+	name, u, header, labels, gns, err := h.queryInfo()
+	if err != nil {
+		return err
+	}
+	log.WithField("feed", name).Debug("querying HTTP feed")
 
 	req := &http.Request{Method: "GET", Header: header, URL: u}
 	req = req.WithContext(ctx)
 	var resp *http.Response
-	err := retry.Do(
+	err = retry.Do(
 		func() error {
 			var err error
 			resp, err = h.client.Do(req)
@@ -321,8 +356,21 @@ func (h *httpPuller) query(ctx context.Context, snapshots chan<- db.IPSetSpec, s
 			}
 		}
 	}
-	snapshots <- snapshot
+	h.elasticController.Add(ctx, name, snapshot, h.syncFailFunction, st)
+	if gns {
+		h.gnsController.Add(makeGNS(name, labels, snapshot), h.syncFailFunction, st)
+	}
 	st.ClearError(statser.PullFailed)
 
 	return nil
+}
+
+func makeGNS(name string, labels map[string]string, snapshot []string) *v3.GlobalNetworkSet {
+	gns := util.NewGlobalNetworkSet(name)
+	gns.Labels = make(map[string]string)
+	for k, v := range labels {
+		gns.Labels[k] = v
+	}
+	gns.Spec.Nets = append([]string{}, snapshot...)
+	return gns
 }

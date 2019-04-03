@@ -16,8 +16,6 @@ import (
 	"strconv"
 	"syscall"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/health"
-
 	log "github.com/sirupsen/logrus"
 	calicoclient "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset"
 	"k8s.io/client-go/kubernetes"
@@ -25,6 +23,9 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/elastic"
+	"github.com/tigera/intrusion-detection/controller/pkg/health"
+	"github.com/tigera/intrusion-detection/controller/pkg/sync/elasticipsets"
+	"github.com/tigera/intrusion-detection/controller/pkg/sync/globalnetworksets"
 	"github.com/tigera/intrusion-detection/controller/pkg/watcher"
 )
 
@@ -144,12 +145,15 @@ func main() {
 	if err != nil {
 		log.WithError(err).Fatal("Could not connect to Elastic")
 	}
+	gns := globalnetworksets.NewController(calicoClient.ProjectcalicoV3().GlobalNetworkSets())
+	eip := elasticipsets.NewController(e)
 
 	s := watcher.NewWatcher(
 		k8sClient.CoreV1().ConfigMaps(ConfigMapNamespace),
 		k8sClient.CoreV1().Secrets(SecretsNamespace),
 		calicoClient.ProjectcalicoV3().GlobalThreatFeeds(),
-		calicoClient.ProjectcalicoV3().GlobalNetworkSets(),
+		gns,
+		eip,
 		&http.Client{},
 		e, e, e)
 	s.Run(context.Background())
