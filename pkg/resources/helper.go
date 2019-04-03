@@ -100,6 +100,7 @@ func (h *resourceHelper) NewResourceList() ResourceList {
 	return h.resourceList.DeepCopyObject().(ResourceList)
 }
 
+//TODO(rlb): Need to normalize the output from the parsed data. The xref cache
 var (
 	resourceHelpersMap = map[schema.GroupVersionKind]ResourceHelper{}
 	resourceHelpers    = []ResourceHelper{

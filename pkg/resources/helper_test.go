@@ -132,4 +132,13 @@ var _ = Describe("types", func() {
 		list = NewResourceList(unknown)
 		Expect(list).To(BeNil())
 	})
+
+	It("should return a valid set of all resources", func() {
+		By("getting a copy of all resource helpers")
+		rhs := GetAllResourceHelpers()
+
+		By("checking there are >0 helpers and they are not nil")
+		Expect(len(rhs)).ToNot(BeZero())
+		Expect(rhs[0]).ToNot(BeNil())
+	})
 })

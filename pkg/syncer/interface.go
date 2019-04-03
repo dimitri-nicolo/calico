@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 
+	"fmt"
+
 	"github.com/tigera/compliance/pkg/resources"
 )
 
