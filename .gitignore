@@ -24,6 +24,8 @@ cmd/reporter/reporter
 cmd/server/server
 cmd/snapshotter/snapshotter
 
+cmd/server/apiserver.local.config/
+
 # vim
 *.sw*
 out
