@@ -21,12 +21,25 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/compliance"
 )
 
-var _ = Describe("ReportTemplate Rederer", func() {
-	It("returns rendered report: inventory-summary", func() {
+var _ = Describe("ReportTemplate Renderer", func() {
+	It("inventory-summary report rendering", func() {
 		tmpl := `startTime,endTime,endpointSelector,namespaceSelector,serviceAccountSelectors,endpointsNumInScope,endpointsNumIngressProtected,endpointsNumEgressProtected,endpointsNumIngressFromInternet,endpointsNumEgressToInternet,endpointsNumIngressFromOtherNamespace,endpointsNumEgressToOtherNamespace,endpointsNumEnvoyEnabled
 {{ .StartTime }},{{ .EndTime }},{{ .ReportSpec.EndpointsSelection.EndpointSelector }},{{ .ReportSpec.EndpointsSelection.Namespaces.Selector }},{{ .ReportSpec.EndpointsSelection.ServiceAccounts.Selector }},{{ .EndpointsNumTotal }},{{ .EndpointsNumIngressProtected }},{{ .EndpointsNumEgressProtected }},{{ .EndpointsNumIngressFromInternet }},{{ .EndpointsNumEgressToInternet }},{{ .EndpointsNumIngressFromOtherNamespace }},{{ .EndpointsNumEgressToOtherNamespace }},{{ .EndpointsNumEnvoyEnabled }}`
 		rendered := `startTime,endTime,endpointSelector,namespaceSelector,serviceAccountSelectors,endpointsNumInScope,endpointsNumIngressProtected,endpointsNumEgressProtected,endpointsNumIngressFromInternet,endpointsNumEgressToInternet,endpointsNumIngressFromOtherNamespace,endpointsNumEgressToOtherNamespace,endpointsNumEnvoyEnabled
-2019-04-01 00:00:00 +0000 UTC,2019-04-01 10:00:00 +0000 UTC,lbl == 'lbl-val',grt-sel,grt-sel,10,10,10,10,10,10,10,10`
+2019-04-01 00:00:00 +0000 UTC,2019-04-01 10:00:00 +0000 UTC,lbl == 'lbl-val',sample-sel,sample-sel,10,10,10,10,10,10,10,10`
+
+		matches, err := compliance.RenderTemplate(tmpl, compliance.ReportDataSample)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(matches).To(Equal(rendered))
+	})
+
+	It("inventory-endpoints report rendering", func() {
+		tmpl := `name,namespace,ingressProtected,egressProtected,envoyEnabled,appliedPolicies,services
+{{ range .Endpoints -}}
+  {{ .ID.Name }},{{ .ID.Namespace }},{{ .IngressProtected }},{{ .EgressProtected }},{{ .EnvoyEnabled }},{{ joinResources .AppliedPolicies ";" }},{{ joinResources .Services ";" }}
+{{- end }}`
+		rendered := `name,namespace,ingressProtected,egressProtected,envoyEnabled,appliedPolicies,services
+sample-res,sample-ns,false,true,false,sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res),sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res)`
 
 		matches, err := compliance.RenderTemplate(tmpl, compliance.ReportDataSample)
 		Expect(err).ToNot(HaveOccurred())

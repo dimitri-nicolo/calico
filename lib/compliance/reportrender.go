@@ -16,6 +16,8 @@ package compliance
 
 import (
 	"bytes"
+	"fmt"
+	"reflect"
 	"text/template"
 	"time"
 
@@ -24,11 +26,32 @@ import (
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 )
 
+////////////////////////////////////////////////////////////
 var st = metav1.Unix(1554076800, 0)
 var et = metav1.Time{st.Add(time.Hour * 10)}
 var sel = "lbl == 'lbl-val'"
-var name = "grt-sel"
-var ep_num = 10
+var selName = "sample-sel"
+var epNum = 10
+var resName = "sample-res"
+var nsName = "sample-ns"
+var kindName = "sample-kind"
+var resId = api.ResourceID{
+	TypeMeta: metav1.TypeMeta{
+		Kind: kindName,
+	},
+	Name:      resName,
+	Namespace: nsName,
+}
+
+// Used by validator for template function validation.
+var endpointSample = api.EndpointsReportEndpoint{
+	ID:               resId,
+	IngressProtected: false,
+	EgressProtected:  true,
+	EnvoyEnabled:     false,
+	AppliedPolicies:  []api.ResourceID{resId, resId},
+	Services:         []api.ResourceID{resId, resId},
+}
 
 // ReportDataSample is used by ReportTemplate validator.
 var ReportDataSample = api.ReportData{
@@ -38,21 +61,24 @@ var ReportDataSample = api.ReportData{
 		EndpointsSelection: api.EndpointsSelection{
 			EndpointSelector: sel,
 			Namespaces: &api.NamesAndLabelsMatch{
-				Selector: name,
+				Selector: selName,
 			},
 			ServiceAccounts: &api.NamesAndLabelsMatch{
-				Selector: name,
+				Selector: selName,
 			},
 		},
 	},
-	EndpointsNumTotal:                     ep_num,
-	EndpointsNumIngressProtected:          ep_num,
-	EndpointsNumEgressProtected:           ep_num,
-	EndpointsNumIngressFromInternet:       ep_num,
-	EndpointsNumEgressToInternet:          ep_num,
-	EndpointsNumIngressFromOtherNamespace: ep_num,
-	EndpointsNumEgressToOtherNamespace:    ep_num,
-	EndpointsNumEnvoyEnabled:              ep_num,
+	EndpointsNumTotal:                     epNum,
+	EndpointsNumIngressProtected:          epNum,
+	EndpointsNumEgressProtected:           epNum,
+	EndpointsNumIngressFromInternet:       epNum,
+	EndpointsNumEgressToInternet:          epNum,
+	EndpointsNumIngressFromOtherNamespace: epNum,
+	EndpointsNumEgressToOtherNamespace:    epNum,
+	EndpointsNumEnvoyEnabled:              epNum,
+	Endpoints: []api.EndpointsReportEndpoint{
+		endpointSample,
+	},
 }
 
 /*
@@ -60,8 +86,13 @@ Returns rendered text for given text-template and data struct input.
 */
 func RenderTemplate(reportTemplateText string, reportData api.ReportData) (string, error) {
 	var rendered string
+	var ret error
 
-	templ, err := template.New("report-template").Parse(reportTemplateText)
+	fnmp := template.FuncMap{
+		"joinResources": joinResourceIds,
+	}
+
+	templ, err := template.New("report-template").Funcs(fnmp).Parse(reportTemplateText)
 	if err != nil {
 		return rendered, err
 	}
@@ -73,5 +104,62 @@ func RenderTemplate(reportTemplateText string, reportData api.ReportData) (strin
 	}
 	rendered = b.String()
 
-	return rendered, nil
+	return rendered, ret
+}
+
+/*
+Join a list of ResourceID similar to  strings.Join() with a separator, capping maximum number of list
+entries to avoid running into a huge list.
+*/
+func joinResourceIds(resources interface{}, sep string, max ...int) string {
+	var ret string
+	defer func() {
+		if perr := recover(); perr != nil {
+			ret = fmt.Sprintf("template-error: %v", perr)
+		}
+	}()
+
+	// First verify that right resource type is passed.
+	if reflect.TypeOf(resources).Kind() != reflect.Slice {
+		panic("Resource used with joinResources is not of type Slice")
+	}
+
+	res := reflect.ValueOf(resources)
+	if res.Len() > 0 {
+		if res.Index(0).Kind() != reflect.Struct {
+			panic("Resource used with joinResources is not a Slice of type Struct")
+		}
+	}
+
+	maxResources := res.Len()
+	// Check if maximum resource count is specified.
+	if len(max) > 0 {
+		// Use the first value.
+		maxResources = max[0]
+	}
+
+	buf := new(bytes.Buffer)
+
+	for i := 0; i < maxResources; i++ {
+		if i != 0 {
+			buf.WriteString(sep)
+		}
+
+		kind := res.Index(i).FieldByName("Kind")
+		name := res.Index(i).FieldByName("Name")
+		if !kind.IsValid() || !name.IsValid() {
+			panic("Resource used with joinResources doesn't contain Kind/Name")
+		}
+		namespace := res.Index(i).FieldByName("Namespace")
+
+		// printing: kind(namespace/name)
+		fmt.Fprintf(buf, "%s(", kind)
+		if namespace.Len() > 0 {
+			fmt.Fprintf(buf, "%s/", namespace)
+		}
+		fmt.Fprintf(buf, "%s)", name)
+	}
+	ret = buf.String()
+
+	return ret
 }
