@@ -112,10 +112,10 @@ ES_PROXY_BUILD_DATE?=$(shell date -u +'%FT%T%z')
 ES_PROXY_GIT_COMMIT?=$(shell git rev-parse --short HEAD)
 ES_PROXY_GIT_TAG?=$(shell git describe --tags)
 
-VERSION_FLAGS=-X $(PACKAGE_NAME)/pkg/handler/version.VERSION=$(ES_PROXY_VERSION) \
-	-X $(PACKAGE_NAME)/pkg/handler/version.BUILD_DATE=$(ES_PROXY_BUILD_DATE) \
-	-X $(PACKAGE_NAME)/pkg/handler/version.GIT_TAG=$(ES_PROXY_GIT_TAG) \
-	-X $(PACKAGE_NAME)/pkg/handler/version.GIT_COMMIT=$(ES_PROXY_GIT_COMMIT)
+VERSION_FLAGS=-X $(PACKAGE_NAME)/pkg/handler.VERSION=$(ES_PROXY_VERSION) \
+	-X $(PACKAGE_NAME)/pkg/handler.BUILD_DATE=$(ES_PROXY_BUILD_DATE) \
+	-X $(PACKAGE_NAME)/pkg/handler.GIT_TAG=$(ES_PROXY_GIT_TAG) \
+	-X $(PACKAGE_NAME)/pkg/handler.GIT_COMMIT=$(ES_PROXY_GIT_COMMIT)
 BUILD_LDFLAGS=-ldflags "$(VERSION_FLAGS)"
 RELEASE_LDFLAGS=-ldflags "$(VERSION_FLAGS) -s -w"
 
