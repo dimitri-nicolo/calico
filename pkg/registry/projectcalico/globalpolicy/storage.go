@@ -48,8 +48,8 @@ func EmptyObject() runtime.Object {
 // NewList returns a new shell of a binding list
 func NewList() runtime.Object {
 	return &calico.GlobalNetworkPolicyList{
-	//TypeMeta: metav1.TypeMeta{},
-	//Items:    []calico.NetworkPolicy{},
+		//TypeMeta: metav1.TypeMeta{},
+		//Items:    []calico.NetworkPolicy{},
 	}
 }
 

@@ -3,6 +3,8 @@
 package install
 
 import (
+	v3 "calico-k8sapiserver/pkg/apis/projectcalico/v3"
+
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	"k8s.io/apimachinery/pkg/apimachinery/announced"

@@ -3,6 +3,8 @@
 package apiserver
 
 import (
+	v3 "calico-k8sapiserver/pkg/apis/projectcalico/v3"
+
 	calicorest "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/rest"
 	"k8s.io/apimachinery/pkg/apimachinery/announced"
 	"k8s.io/apimachinery/pkg/apimachinery/registered"
@@ -13,7 +15,6 @@ import (
 	"k8s.io/apimachinery/pkg/version"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 
-	"github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/install"
 )

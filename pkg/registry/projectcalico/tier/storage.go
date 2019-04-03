@@ -40,8 +40,8 @@ func EmptyObject() runtime.Object {
 // NewList returns a new shell of a binding list
 func NewList() runtime.Object {
 	return &calico.TierList{
-	//TypeMeta: metav1.TypeMeta{},
-	//Items:    []calico.Tier{},
+		//TypeMeta: metav1.TypeMeta{},
+		//Items:    []calico.Tier{},
 	}
 }
 
