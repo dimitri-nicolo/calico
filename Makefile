@@ -192,6 +192,49 @@ binary: vendor vendor/github.com/projectcalico/felix/proto/felixbackend.pb.go $(
 	mkdir -p bin
 	go build $(BUILD_LDFLAGS) -o "$(BINARY)" "./calicoq/calicoq.go"
 
+# ensure we have a real imagetag
+imagetag:
+ifndef IMAGETAG
+	$(error IMAGETAG is undefined - run using make <target> IMAGETAG=X.Y.Z)
+endif
+
+tag-image: imagetag build-image
+	docker tag $(BUILD_IMAGE):latest $(REGISTRY_PREFIX)$(BUILD_IMAGE):$(IMAGETAG)
+
+push-image: imagetag tag-image
+	docker push $(REGISTRY_PREFIX)$(BUILD_IMAGE):$(IMAGETAG)
+
+###############################################################################
+# Static checks
+###############################################################################
+.PHONY: static-checks
+## Perform static checks on the code.
+static-checks: vendor
+	docker run --rm \
+		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+		-v $(CURDIR):/go/src/$(PACKAGE_NAME) \
+		$(GO_BUILD) sh -c '\
+			cd  /go/src/$(PACKAGE_NAME) && \
+			gometalinter --deadline=300s --disable-all --enable=vet --enable=goimports  --vendor ./...'
+
+###############################################################################
+# CI/CD
+###############################################################################
+.PHONY: ci
+## Run what CI runs
+ci: clean static-checks fv-containerized ut-containerized st-containerized
+
+## Deploys images to registry
+cd:
+ifndef CONFIRM
+	$(error CONFIRM is undefined - run using make <target> CONFIRM=true)
+endif
+ifndef BRANCH_NAME
+	$(error BRANCH_NAME is undefined - run using make <target> BRANCH_NAME=var or set an environment variable)
+endif
+	$(MAKE) push-image IMAGETAG=${BRANCH_NAME}
+
+
 .PHONY: release
 release: clean clean-release release/calicoq
 
