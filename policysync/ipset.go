@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -116,9 +116,6 @@ func AddIPSetsRule(r *proto.Rule, s map[string]bool) {
 	addAll(r.NotSrcNamedPortIpSetIds, s)
 	addAll(r.NotDstNamedPortIpSetIds, s)
 	addAll(r.DstDomainIpSetIds, s)
-	// Let's leave the policysync code unchanged unless/until we have a specific reason to change it.
-	// In principle we don't need to pass domain IP sets to the ALP components (Dikastes) because ALP
-	// only implements ingress policy, and domains are only for egress, so there's no overlap.
 }
 
 func addAll(items []string, s map[string]bool) {
