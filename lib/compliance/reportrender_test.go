@@ -15,9 +15,12 @@
 package compliance_test
 
 import (
+	"strings"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/compliance"
 )
 
@@ -44,5 +47,73 @@ sample-res,sample-ns,false,true,false,sample-kind(sample-ns/sample-res);sample-k
 		matches, err := compliance.RenderTemplate(tmpl, compliance.ReportDataSample)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(matches).To(Equal(rendered))
+	})
+
+	It("inventory-endpoints report rendering with | separator", func() {
+		tmpl := `name,namespace,ingressProtected,egressProtected,envoyEnabled,appliedPolicies,services
+{{ range .Endpoints -}}
+  {{ .ID.Name }},{{ .ID.Namespace }},{{ .IngressProtected }},{{ .EgressProtected }},{{ .EnvoyEnabled }},{{ joinResources .AppliedPolicies "|" }},{{ joinResources .Services "|" }}
+{{- end }}`
+		rendered := `name,namespace,ingressProtected,egressProtected,envoyEnabled,appliedPolicies,services
+sample-res,sample-ns,false,true,false,sample-kind(sample-ns/sample-res)|sample-kind(sample-ns/sample-res),sample-kind(sample-ns/sample-res)|sample-kind(sample-ns/sample-res)`
+
+		matches, err := compliance.RenderTemplate(tmpl, compliance.ReportDataSample)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(matches).To(Equal(rendered))
+	})
+
+	It("inventory-endpoints report rendering multiple items", func() {
+		const endpointsCount = 100
+
+		tmpl := `name,namespace,ingressProtected,egressProtected,envoyEnabled,appliedPolicies,services
+{{ range .Endpoints -}}
+  {{ .ID.Name }},{{ .ID.Namespace }},{{ .IngressProtected }},{{ .EgressProtected }},{{ .EnvoyEnabled }},{{ joinResources .AppliedPolicies ";" }},{{ joinResources .Services ";" }}
+{{ end }}`
+		rendered := `sample-res,sample-ns,false,true,false,sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res),sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res)`
+
+		// Add entries to resource-list
+		aer := compliance.EndpointSample
+		for i := 1; i < 10-1; i++ {
+			aer.AppliedPolicies = append(aer.AppliedPolicies, compliance.ResourceId)
+			aer.Services = append(aer.Services, compliance.ResourceId)
+		}
+		// Add entries to endpoint-list
+		endpoints := []api.EndpointsReportEndpoint{}
+		for i := 0; i < endpointsCount; i++ {
+			endpoints = append(endpoints, aer)
+		}
+		// Polpulate multiple endpoints with multiple resource entries as test data.
+		ard := compliance.ReportDataSample
+		ard.Endpoints = endpoints
+
+		matches, err := compliance.RenderTemplate(tmpl, ard)
+		Expect(err).ToNot(HaveOccurred())
+
+		matches = strings.TrimSpace(matches) // remove last \n
+		endpointList := strings.Split(matches, "\n")
+		Expect(len(endpointList)).To(Equal(endpointsCount + 1)) // + Header
+		Expect(endpointList[endpointsCount]).To(Equal(rendered))
+
+		// Cap maximum entries
+		capped_tmpl := `{{ range .Endpoints -}} {{ joinResources .AppliedPolicies ";" 3 }} {{ end }}`
+
+		matches, err = compliance.RenderTemplate(capped_tmpl, ard)
+		Expect(err).ToNot(HaveOccurred())
+		matches = strings.TrimSpace(matches) // remove last \n
+		endpointList = strings.Split(matches, " ")
+		resourceList := strings.Split(endpointList[0], ";")
+		Expect(len(resourceList)).To(Equal(3))
+	})
+
+	It("inventory-endpoints report failing with invalid argument", func() {
+		// Wrong number of arguments
+		tmpl := `{{ joinResources .EndpointsNumTotal }}`
+		_, err := compliance.RenderTemplate(tmpl, compliance.ReportDataSample)
+		Expect(err).To(HaveOccurred())
+
+		// Invalid argument (not a slice)
+		no_slice_tmpl := `{{ joinResources .EndpointsNumTotal ";" }}`
+		_, err = compliance.RenderTemplate(no_slice_tmpl, compliance.ReportDataSample)
+		Expect(err).To(HaveOccurred())
 	})
 })

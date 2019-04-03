@@ -35,7 +35,7 @@ var epNum = 10
 var resName = "sample-res"
 var nsName = "sample-ns"
 var kindName = "sample-kind"
-var resId = api.ResourceID{
+var ResourceId = api.ResourceID{
 	TypeMeta: metav1.TypeMeta{
 		Kind: kindName,
 	},
@@ -44,13 +44,13 @@ var resId = api.ResourceID{
 }
 
 // Used by validator for template function validation.
-var endpointSample = api.EndpointsReportEndpoint{
-	ID:               resId,
+var EndpointSample = api.EndpointsReportEndpoint{
+	ID:               ResourceId,
 	IngressProtected: false,
 	EgressProtected:  true,
 	EnvoyEnabled:     false,
-	AppliedPolicies:  []api.ResourceID{resId, resId},
-	Services:         []api.ResourceID{resId, resId},
+	AppliedPolicies:  []api.ResourceID{ResourceId, ResourceId},
+	Services:         []api.ResourceID{ResourceId, ResourceId},
 }
 
 // ReportDataSample is used by ReportTemplate validator.
@@ -77,21 +77,23 @@ var ReportDataSample = api.ReportData{
 	EndpointsNumEgressToOtherNamespace:    epNum,
 	EndpointsNumEnvoyEnabled:              epNum,
 	Endpoints: []api.EndpointsReportEndpoint{
-		endpointSample,
+		EndpointSample,
 	},
 }
 
 /*
 Returns rendered text for given text-template and data struct input.
 */
-func RenderTemplate(reportTemplateText string, reportData api.ReportData) (string, error) {
-	var rendered string
-	var ret error
+func RenderTemplate(reportTemplateText string, reportData api.ReportData) (rendered string, ret error) {
+	defer func() {
+		if perr := recover(); perr != nil {
+			ret = fmt.Errorf("Template rendering error: %v", perr)
+		}
+	}()
 
 	fnmp := template.FuncMap{
 		"joinResources": joinResourceIds,
 	}
-
 	templ, err := template.New("report-template").Funcs(fnmp).Parse(reportTemplateText)
 	if err != nil {
 		return rendered, err
@@ -104,30 +106,23 @@ func RenderTemplate(reportTemplateText string, reportData api.ReportData) (strin
 	}
 	rendered = b.String()
 
-	return rendered, ret
+	return rendered, nil
 }
 
 /*
 Join a list of ResourceID similar to  strings.Join() with a separator, capping maximum number of list
 entries to avoid running into a huge list.
 */
-func joinResourceIds(resources interface{}, sep string, max ...int) string {
-	var ret string
-	defer func() {
-		if perr := recover(); perr != nil {
-			ret = fmt.Sprintf("template-error: %v", perr)
-		}
-	}()
-
+func joinResourceIds(resources interface{}, sep string, max ...int) (joined string, ret error) {
 	// First verify that right resource type is passed.
 	if reflect.TypeOf(resources).Kind() != reflect.Slice {
-		panic("Resource used with joinResources is not of type Slice")
+		return joined, fmt.Errorf("Resource used with joinResources is not a Slice")
 	}
 
 	res := reflect.ValueOf(resources)
 	if res.Len() > 0 {
 		if res.Index(0).Kind() != reflect.Struct {
-			panic("Resource used with joinResources is not a Slice of type Struct")
+			return joined, fmt.Errorf("Resource used with joinResources is not a Slice of Struct")
 		}
 	}
 
@@ -139,7 +134,6 @@ func joinResourceIds(resources interface{}, sep string, max ...int) string {
 	}
 
 	buf := new(bytes.Buffer)
-
 	for i := 0; i < maxResources; i++ {
 		if i != 0 {
 			buf.WriteString(sep)
@@ -148,7 +142,7 @@ func joinResourceIds(resources interface{}, sep string, max ...int) string {
 		kind := res.Index(i).FieldByName("Kind")
 		name := res.Index(i).FieldByName("Name")
 		if !kind.IsValid() || !name.IsValid() {
-			panic("Resource used with joinResources doesn't contain Kind/Name")
+			return joined, fmt.Errorf("Resource used with joinResources doesn't contain Kind/Name")
 		}
 		namespace := res.Index(i).FieldByName("Namespace")
 
@@ -159,7 +153,7 @@ func joinResourceIds(resources interface{}, sep string, max ...int) string {
 		}
 		fmt.Fprintf(buf, "%s)", name)
 	}
-	ret = buf.String()
+	joined = buf.String()
 
-	return ret
+	return joined, nil
 }
