@@ -16,6 +16,13 @@ module Jekyll
     def initialize(tag_name, extra_args, liquid_options)
       super
 
+      if extra_args.start_with?("tigera-secure-lma")
+        @chart = "tigera-secure-lma"
+        extra_args.slice! "tigera-secure-lma"
+      else
+        @chart = "calico"
+      end
+
       @extra_args = extra_args
     end
     def render(context)
@@ -40,7 +47,7 @@ module Jekyll
       tv.close
 
       # execute helm.
-      cmd = """helm template _includes/#{version}/charts/calico \
+      cmd = """helm template _includes/#{version}/charts/#{@chart} \
         -f #{tv.path} \
         -f #{t.path}"""
 

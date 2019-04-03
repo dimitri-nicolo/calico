@@ -1,7 +1,7 @@
 ---
 layout: null
 ---
-{% helm --execute templates/monitor-calico.yaml %}
+{% helm tigera-secure-lma --execute templates/monitor-calico.yaml %}
 secure_es: false
 elasticsearchType: operator
 {% endhelm %}
