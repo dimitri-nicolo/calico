@@ -568,10 +568,6 @@ type ifaceUpdate struct {
 	State ifacemonitor.State
 }
 
-type domainInfoChanged struct {
-	domain string
-}
-
 // Check if current felix ipvs config is correct when felix gets an kube-ipvs0 interface update.
 // If KubeIPVSInterface is UP and felix ipvs support is disabled (kube-proxy switched from iptables to ipvs mode),
 // or if KubeIPVSInterface is DOWN and felix ipvs support is enabled (kube-proxy switched from ipvs to iptables mode),

@@ -15,6 +15,7 @@
 package intdataplane
 
 import (
+	"sync"
 	"time"
 
 	"github.com/google/gopacket"
@@ -24,43 +25,71 @@ import (
 	"github.com/tigera/nfnetlink"
 )
 
-type timeout struct {
+// The data that we hold for each value in a name -> value mapping.  A value can be an IP, or
+// another name.  The values themselves are held as the keys of the nameData.values map.
+type valueData struct {
+	// When the validity of this value expires.
 	expiryTime time.Time
-	timer      *time.Timer
+	// Timer used to notify when the value expires.
+	timer *time.Timer
+	// Whether the value is another name, as opposed to being an IP.
+	isName bool
+}
+
+// The data that we hold for each name.
+type nameData struct {
+	// Known values for this name.  Map keys are the actual values (i.e. IPs or alias names),
+	// and valueData is as above.
+	values map[string]*valueData
+	// Other names whose cached IP list should be invalidated when the info for _this_ name
+	// changes.
+	ancestorNames []string
 }
 
 type domainInfoStore struct {
-	// Channel that we write to when we want DNS response capture
-	// to stop.
+	// Channel that we write to when we want DNS response capture to stop.
 	stopChannel chan struct{}
 
-	// Channel on which we receive captured DNS responses
-	// (beginning with the IP header).
+	// Channel on which we receive captured DNS responses (beginning with the IP header).
 	msgChannel chan []byte
 
-	// Channel that we write to when new information is available
-	// for a domain name.
+	// Channel that we write to when new information is available for a domain name.
 	domainInfoChanges chan *domainInfoChanged
 
-	// Stores for the information that we glean from DNS responses.
-	cnameInfo map[string]map[string]*timeout
-	aInfo     map[string]map[string]*timeout
-	aaaaInfo  map[string]map[string]*timeout
+	// Stores for the information that we glean from DNS responses.  Note: IPs are held here as
+	// strings, and also passed to the ipsets manager as strings.
+	mutex    sync.Mutex
+	mappings map[string]*nameData
 
 	// Cache for "what are the IPs for <domain>?".  We have this to halve our processing,
 	// because there are two copies of the IPSets Manager (one for v4 and one for v6) that will
 	// call us to make identical queries.
 	resultsCache map[string][]string
+
+	// Channel for domain mapping expiry signals.
+	mappingExpiryChannel chan *domainMappingExpired
+}
+
+// Signal sent by the domain info store to the ipsets manager when the information for a given
+// domain name changes.  (i.e. when GetDomainIPs(domain) would return a different set of IP
+// addresses.)
+type domainInfoChanged struct {
+	domain string
+}
+
+// Signal sent by timers' AfterFunc to the domain info store when a particular name -> IP or name ->
+// cname mapping expires.
+type domainMappingExpired struct {
+	name, value string
 }
 
 func newDomainInfoStore(domainInfoChanges chan *domainInfoChanged, ipv6Enabled bool) *domainInfoStore {
 	log.Info("Creating domain info store")
 	s := &domainInfoStore{
-		domainInfoChanges: domainInfoChanges,
-		cnameInfo:         make(map[string]map[string]*timeout),
-		aInfo:             make(map[string]map[string]*timeout),
-		aaaaInfo:          make(map[string]map[string]*timeout),
-		resultsCache:      make(map[string][]string),
+		domainInfoChanges:    domainInfoChanges,
+		mappings:             make(map[string]*nameData),
+		resultsCache:         make(map[string][]string),
+		mappingExpiryChannel: make(chan *domainMappingExpired),
 	}
 	return s
 }
@@ -70,20 +99,46 @@ func (s *domainInfoStore) Start() {
 	s.stopChannel = make(chan struct{})
 	s.msgChannel = make(chan []byte)
 	nfnetlink.SubscribeDNS(int(rules.NFLOGDomainGroup), 65535, s.msgChannel, s.stopChannel)
-	go s.processDNSPackets()
+	go s.loop()
 }
 
-func (s *domainInfoStore) processDNSPackets() {
-	for msg := range s.msgChannel {
-		packet := gopacket.NewPacket(msg, layers.LayerTypeIPv4, gopacket.Default)
-		if dnsLayer := packet.Layer(layers.LayerTypeDNS); dnsLayer != nil {
-			dns, _ := dnsLayer.(*layers.DNS)
-			for _, rec := range dns.Answers {
-				s.storeDNSRecordInfo(&rec, "answer")
+func (s *domainInfoStore) loop() {
+	for {
+		select {
+		case msg := <-s.msgChannel:
+			packet := gopacket.NewPacket(msg, layers.LayerTypeIPv4, gopacket.Default)
+			if dnsLayer := packet.Layer(layers.LayerTypeDNS); dnsLayer != nil {
+				dns, _ := dnsLayer.(*layers.DNS)
+				s.processDNSPacket(dns)
 			}
-			for _, rec := range dns.Additionals {
-				s.storeDNSRecordInfo(&rec, "additional")
-			}
+		case expiry := <-s.mappingExpiryChannel:
+			s.processMappingExpiry(expiry.name, expiry.value)
+		}
+	}
+}
+
+func (s *domainInfoStore) processDNSPacket(dns *layers.DNS) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	for _, rec := range dns.Answers {
+		s.storeDNSRecordInfo(&rec, "answer")
+	}
+	for _, rec := range dns.Additionals {
+		s.storeDNSRecordInfo(&rec, "additional")
+	}
+}
+
+func (s *domainInfoStore) processMappingExpiry(name, value string) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	if nameData := s.mappings[name]; nameData != nil {
+		delete(nameData.values, value)
+		if len(nameData.values) == 0 {
+			delete(s.mappings, name)
+		}
+		s.signalDomainInfoChange(name)
+		for _, ancestor := range nameData.ancestorNames {
+			s.signalDomainInfoChange(ancestor)
 		}
 	}
 }
@@ -102,7 +157,7 @@ func (s *domainInfoStore) storeDNSRecordInfo(rec *layers.DNSResourceRecord, sect
 			rec.TTL,
 			section,
 		)
-		s.storeInfo(s.aInfo, string(rec.Name), rec.IP.String(), time.Duration(rec.TTL)*time.Second)
+		s.storeInfo(string(rec.Name), rec.IP.String(), time.Duration(rec.TTL)*time.Second, false)
 	case layers.DNSTypeAAAA:
 		log.Infof("AAAA: %v -> %v with TTL %v (%v)",
 			string(rec.Name),
@@ -110,7 +165,7 @@ func (s *domainInfoStore) storeDNSRecordInfo(rec *layers.DNSResourceRecord, sect
 			rec.TTL,
 			section,
 		)
-		s.storeInfo(s.aaaaInfo, string(rec.Name), rec.IP.String(), time.Duration(rec.TTL)*time.Second)
+		s.storeInfo(string(rec.Name), rec.IP.String(), time.Duration(rec.TTL)*time.Second, false)
 	case layers.DNSTypeCNAME:
 		log.Infof("CNAME: %v -> %v with TTL %v (%v)",
 			string(rec.Name),
@@ -118,7 +173,7 @@ func (s *domainInfoStore) storeDNSRecordInfo(rec *layers.DNSResourceRecord, sect
 			rec.TTL,
 			section,
 		)
-		s.storeInfo(s.cnameInfo, string(rec.Name), string(rec.CNAME), time.Duration(rec.TTL)*time.Second)
+		s.storeInfo(string(rec.Name), string(rec.CNAME), time.Duration(rec.TTL)*time.Second, true)
 	default:
 		log.Debugf("Ignore DNS response with type %v", rec.Type)
 	}
@@ -126,19 +181,20 @@ func (s *domainInfoStore) storeDNSRecordInfo(rec *layers.DNSResourceRecord, sect
 	return
 }
 
-func (s *domainInfoStore) storeInfo(infoMap map[string]map[string]*timeout, name, value string, ttl time.Duration) {
-	if infoMap[name] == nil {
-		infoMap[name] = make(map[string]*timeout)
+func (s *domainInfoStore) storeInfo(name, value string, ttl time.Duration, isName bool) {
+	if s.mappings[name] == nil {
+		s.mappings[name] = &nameData{values: make(map[string]*valueData)}
 	}
-	existing := infoMap[name][value]
+	existing := s.mappings[name].values[value]
 	if existing == nil {
-		infoMap[name][value] = &timeout{
+		s.mappings[name].values[value] = &valueData{
 			expiryTime: time.Now().Add(ttl),
 			timer: time.AfterFunc(ttl, func() {
-				delete(infoMap[name], value)
-				s.signalDomainInfoChange(name)
+				s.mappingExpiryChannel <- &domainMappingExpired{name: name, value: value}
 			}),
+			isName: isName,
 		}
+		s.signalDomainInfoChange(name)
 	} else {
 		newExpiryTime := time.Now().Add(ttl)
 		if newExpiryTime.After(existing.expiryTime) {
@@ -150,41 +206,34 @@ func (s *domainInfoStore) storeInfo(infoMap map[string]map[string]*timeout, name
 }
 
 func (s *domainInfoStore) GetDomainIPs(domain string) []string {
-	cachedIPs := s.resultsCache[domain]
-	if cachedIPs != nil {
-		return cachedIPs
-	}
-	ips := []string{}
-	addResult := func(ip string) {
-		ips = append(ips, ip)
-	}
-	var handlePossibleAlias func(domain string)
-	handlePossibleAlias = func(domain string) {
-		if len(s.cnameInfo[domain]) > 0 {
-			// domain is an alias (i.e. the LHS of a CNAME record).  We say 'cname' here
-			// for the RHS of the stored record, but in fact that might be an alias too,
-			// so we recurse to check it.
-			for cname := range s.cnameInfo[domain] {
-				handlePossibleAlias(cname)
-			}
-		} else {
-			for ipv4 := range s.aInfo[domain] {
-				addResult(ipv4)
-			}
-			for ipv6 := range s.aaaaInfo[domain] {
-				addResult(ipv6)
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	ips := s.resultsCache[domain]
+	if ips == nil {
+		var collectIPsForName func(string, []string)
+		collectIPsForName = func(domain string, ancestorNames []string) {
+			if nameData := s.mappings[domain]; nameData != nil {
+				nameData.ancestorNames = ancestorNames
+				for value, valueData := range nameData.values {
+					if valueData.isName {
+						// The RHS of the mapping is another name, so we recurse to pick up
+						// its IPs.
+						collectIPsForName(value, append(ancestorNames, domain))
+					} else {
+						// The RHS of the mapping is an IP, so add it to the list that we
+						// will return.
+						ips = append(ips, value)
+					}
+				}
 			}
 		}
+		collectIPsForName(domain, nil)
+		s.resultsCache[domain] = ips
 	}
-	handlePossibleAlias(domain)
 	return ips
 }
 
 func (s *domainInfoStore) signalDomainInfoChange(name string) {
-	// Discard the results cache.
-	//
-	// TODO: Something more clever; should just invalid the entries for <name> and all those
-	// that depend on <name>.
-	s.resultsCache = make(map[string][]string)
+	delete(s.resultsCache, name)
 	s.domainInfoChanges <- &domainInfoChanged{domain: name}
 }
