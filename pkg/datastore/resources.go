@@ -1,3 +1,4 @@
+// Copyright (c) 2019 Tigera, Inc. All rights reserved.
 package datastore
 
 import (
@@ -7,6 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/options"
@@ -19,7 +21,7 @@ type resourceHelper struct {
 }
 
 var (
-	resourceHelpersMap = map[metav1.TypeMeta]*resourceHelper{
+	resourceHelpersMap = map[schema.GroupVersionKind]*resourceHelper{
 		resources.ResourceTypePods: {
 			func(c ClientSet) (resources.ResourceList, error) {
 				return c.CoreV1().Pods("").List(metav1.ListOptions{})

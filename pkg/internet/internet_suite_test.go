@@ -1,5 +1,5 @@
 // Copyright (c) 2019 Tigera, Inc. All rights reserved.
-package resources
+package internet
 
 import (
 	"testing"
@@ -8,7 +8,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestResourceTypes(t *testing.T) {
+func TestInternetHelpers(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Resources Suite")
+	RunSpecs(t, "Internet Suite")
 }

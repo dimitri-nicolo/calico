@@ -1,3 +1,4 @@
+// Copyright (c) 2019 Tigera, Inc. All rights reserved.
 package resources_test
 
 import (
@@ -7,6 +8,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	. "github.com/tigera/compliance/pkg/resources"
 )
@@ -114,5 +117,19 @@ var _ = Describe("types", func() {
 		list = rh.NewResourceList()
 		_, ok = list.(*apiv3.GlobalNetworkPolicyList)
 		Expect(ok).To(BeTrue())
+
+		// Unknown type
+		By("Trying to create unknown resource types")
+		unknown := schema.GroupVersionKind{
+			Kind:    "Foo",
+			Version: "Bar",
+			Group:   "Baz",
+		}
+		rh = GetResourceHelper(unknown)
+		Expect(rh).To(BeNil())
+		res = NewResource(unknown)
+		Expect(res).To(BeNil())
+		list = NewResourceList(unknown)
+		Expect(list).To(BeNil())
 	})
 })

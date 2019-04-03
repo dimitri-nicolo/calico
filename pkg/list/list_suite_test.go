@@ -1,3 +1,4 @@
+// Copyright (c) 2019 Tigera, Inc. All rights reserved.
 package list
 
 import (
@@ -7,7 +8,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestTypes(t *testing.T) {
+func TestResourceListing(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "List Suite")
 }
