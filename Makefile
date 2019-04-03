@@ -247,7 +247,7 @@ ifndef IMAGETAG
 	$(error IMAGETAG is undefined - run using make <target> IMAGETAG=X.Y.Z)
 endif
 
-tag-image: imagetag build-image
+tag-image: imagetag tigera/cnx-apiserver 
 	docker tag tigera/cnx-apiserver:latest $(CONTAINER_NAME):$(IMAGETAG)
 	
 push-image: imagetag tag-image
