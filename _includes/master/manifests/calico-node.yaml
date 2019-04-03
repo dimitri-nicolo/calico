@@ -131,6 +131,9 @@ spec:
             # Prevents the container from sleeping forever.
             - name: SLEEP
               value: "false"
+{{- if .Values.cni.env }}
+{{ toYaml .Values.cni.env | indent 12 }}
+{{- end }}
           volumeMounts:
             - mountPath: /host/opt/cni/bin
               name: cni-bin-dir
@@ -334,6 +337,9 @@ spec:
                   name: tigera-aws-config
                   key: pod_sg
                   optional: true
+{{- if .Values.node.env }}
+{{ toYaml .Values.node.env | indent 12 }}
+{{- end }}
           securityContext:
             privileged: true
           resources:
@@ -427,6 +433,9 @@ spec:
                 configMapKeyRef:
                   name: canal-config
                   key: masquerade
+{{- if .Values.flannel.env }}
+{{ toYaml .Values.flannel.env | indent 12 }}
+{{- end }}
           volumeMounts:
           - mountPath: /run/xtables.lock
             name: xtables-lock
@@ -496,6 +505,9 @@ spec:
             # Write the subnet.env file to the mounted directory.
             - name: FLANNELD_SUBNET_FILE
               value: "/run/flannel/subnet.env"
+{{- if .Values.flannel.env }}
+{{ toYaml .Values.flannel.env | indent 12 }}
+{{- end }}
           securityContext:
             privileged: true
           volumeMounts:
