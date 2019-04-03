@@ -12,32 +12,20 @@ type ping struct{}
 const pingKey = "~ping~"
 
 // NewPingableFifo returns a DeltaFIFO that accepts GlobalThreatFeed objects and
-// a special "ping" object that is used for health checking.  The ping object
-// exists in the store at start of day, and is never removed, only updated.
+// a special "ping" object that is used for health checking.
 func NewPingableFifo() (*cache.DeltaFIFO, cache.Store) {
-	// This will hold the client state, as we know it.
-	clientState := cache.NewStore(DeletionHandlingPingableKeyFunc)
-
-	// Add a special key to represent Ping objects.
-	err := clientState.Add(ping{})
-	if err != nil {
-		// Local cache never errors unless key func fails.
-		panic(err)
-	}
+	// This will hold the client state, as we know it.  The special "ping" object
+	// will never appear in the store, so it is safe to use a "standard" key function.
+	// This is because the FIFO uses the store to process deletion of objects,
+	// but we will never delete "ping" objects, just update.
+	clientState := cache.NewStore(cache.DeletionHandlingMetaNamespaceKeyFunc)
 
 	// This will hold incoming changes. Note how we pass clientState in as a
 	// KeyLister, that way resync operations will result in the correct set
-	// of update/delete deltas.
+	// of update/delete deltas.  The FIFO's key function does need to account
+	// for ping objects, since we will put them on the queue as updates.
 	fifo := cache.NewDeltaFIFO(PingableKeyFunc, clientState)
 	return fifo, clientState
-}
-
-func DeletionHandlingPingableKeyFunc(obj interface{}) (string, error) {
-	_, ok := obj.(ping)
-	if ok {
-		return pingKey, nil
-	}
-	return cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
 }
 
 func PingableKeyFunc(obj interface{}) (string, error) {

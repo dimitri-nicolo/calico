@@ -173,6 +173,14 @@ func (s *watcher) processQueue(obj interface{}) error {
 
 	// from oldest to newest
 	for _, d := range obj.(cache.Deltas) {
+		// Pings also come as cache updates
+		_, ok := d.Object.(ping)
+		if ok {
+			// Pong on a go routine so we don't block the main loop
+			// if no pinger is listening.
+			go s.pong()
+			continue
+		}
 		switch d.Type {
 		case cache.Sync, cache.Added, cache.Updated:
 			old, exists, err := s.feeds.Get(d.Object)
@@ -183,15 +191,7 @@ func (s *watcher) processQueue(obj interface{}) error {
 				if err := s.feeds.Update(d.Object); err != nil {
 					panic(err)
 				}
-				// Pings also come as cache updates
-				_, ok := d.Object.(ping)
-				if ok {
-					// Pong on a go routine so we don't block the main loop
-					// if no pinger is listening.
-					go s.pong()
-				} else {
-					s.updateFeedWatcher(s.ctx, old.(*v3.GlobalThreatFeed), d.Object.(*v3.GlobalThreatFeed))
-				}
+				s.updateFeedWatcher(s.ctx, old.(*v3.GlobalThreatFeed), d.Object.(*v3.GlobalThreatFeed))
 			} else {
 				if err := s.feeds.Add(d.Object); err != nil {
 					panic(err)
