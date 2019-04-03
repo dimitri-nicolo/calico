@@ -21,6 +21,10 @@ manifests.
 If you are upgrading from a pre-v2.3 release of {{site.prodname}}, or you previously modified your manifests to use the
 pre-v2.3 RBAC behavior, follow the additional instructions below to ensure RBAC behavior for tiered policy is as expected.
 
+Note: If you depend on the cluster IP of the `cnx-manager` service, you will need to update references to its port `8080` to
+port `9443`.
+{: .alert .alert-info}
+
 ### <a name="upgrading-pre23"></a>Upgrading from a pre-v2.3 {{site.prodname}} release
 
 The RBAC configuration model has changed between the v2.2 and v2.3 releases of {{site.prodname}}.
