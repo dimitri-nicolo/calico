@@ -1,5 +1,5 @@
-hash: e2e5e8d2706984afd7afc5219c395c5086bf63682e11f0def7fa21936624f17f
-updated: 2019-03-30T04:53:39.949485266Z
+hash: b4ef0ab0dc5587e88864698bf73ae6983c23839e6112eee62394497d8289a091
+updated: 2019-04-03T04:57:44.882723258Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -305,7 +305,7 @@ imports:
   - pkg/types
   - pkg/upgrade
 - name: github.com/projectcalico/felix
-  version: 3a22c58357e0110e6172b2f4ecbe4827a4381665
+  version: a4665edd4c0be94514a318d1df985c0ab11ce2cf
   repo: git@github.com:tigera/felix-private.git
   subpackages:
   - buildinfo
@@ -352,7 +352,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 4d2335fc34e9700eba491ad7179caca439d21907
+  version: 2806b1a9c38f9c6fd0f7cb5644c7e0aa8fb1efb6
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
@@ -372,6 +372,7 @@ imports:
   - lib/backend/syncersv1/updateprocessors
   - lib/backend/watchersyncer
   - lib/clientv3
+  - lib/compliance
   - lib/errors
   - lib/hash
   - lib/health
@@ -460,7 +461,7 @@ imports:
   - crypto
   - monitor
 - name: github.com/tigera/nfnetlink
-  version: 6129e0f5c02789e10680b1d01fbb23cbe456331f
+  version: 2623d65568be5c8929d273a2d1496b1962ca64c1
   repo: git@github.com:tigera/nfnetlink
   subpackages:
   - nfnl
@@ -481,7 +482,6 @@ imports:
   subpackages:
   - ed25519
   - ed25519/internal/edwards25519
-  - pbkdf2
   - ssh/terminal
 - name: golang.org/x/net
   version: 4dfa2610cdf3b287375bbba5b8f2a14d3b01d8de
