@@ -241,6 +241,48 @@ $(BINDIR)/openapi-gen: vendor/.up-to-date
 		--output-package "$(PACKAGE_NAME)/pkg/openapi"'
 	touch $@
 
+# ensure we have a real imagetag
+imagetag:
+ifndef IMAGETAG
+	$(error IMAGETAG is undefined - run using make <target> IMAGETAG=X.Y.Z)
+endif
+
+tag-image: imagetag tigera/cnx-apiserver 
+	docker tag tigera/cnx-apiserver:latest $(CONTAINER_NAME):$(IMAGETAG)
+	
+push-image: imagetag tag-image
+	docker push $(CONTAINER_NAME):$(IMAGETAG)
+
+###############################################################################
+# Static checks
+###############################################################################
+.PHONY: static-checks
+## Perform static checks on the code.
+static-checks: vendor
+	docker run --rm \
+		-e LOCAL_USER_ID=$(MY_UID) \
+		-v $(CURDIR):/go/src/$(PACKAGE_NAME) \
+		$(CALICO_BUILD) sh -c '\
+			cd  /go/src/$(PACKAGE_NAME) && \
+			gometalinter --deadline=300s --disable-all --enable=goimports  --vendor ./...'
+
+###############################################################################
+# CI/CD
+###############################################################################
+.PHONY: ci
+## Run what CI runs
+ci: clean static-checks tigera/cnx-apiserver fv ut
+
+## Deploys images to registry
+cd:
+ifndef CONFIRM
+	$(error CONFIRM is undefined - run using make <target> CONFIRM=true)
+endif
+ifndef BRANCH_NAME
+	$(error BRANCH_NAME is undefined - run using make <target> BRANCH_NAME=var or set an environment variable)
+endif
+	$(MAKE) push-image IMAGETAG=${BRANCH_NAME}
+
 # This section builds the output binaries.
 # Some will have dedicated targets to make it easier to type, for example
 # "apiserver" instead of "$(BINDIR)/apiserver".
