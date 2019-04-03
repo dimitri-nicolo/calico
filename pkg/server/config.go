@@ -29,6 +29,10 @@ const (
 	// Elasticsearch is accessed on behalf of the user using
 	// the service's Elasticsearch credentials.
 	ServiceUserMode = "serviceuser"
+
+	// In InsecureMode access to Elasticsearch is not password
+	// protected.
+	InsecureMode = "insecure"
 )
 
 // Config stores various configuration information for the es-proxy
@@ -79,8 +83,10 @@ func parseAccessMode(am string) ElasticAccessMode {
 	switch am {
 	case "serviceuser":
 		return ServiceUserMode
-	default:
+	case "passthrough":
 		return PassThroughMode
+	default:
+		return InsecureMode
 	}
 }
 
@@ -90,5 +96,6 @@ func validateConfig(config *Config) error {
 		return errors.New("Cannot set Elasticsearch credentials in Passthrough mode")
 
 	}
+
 	return nil
 }
