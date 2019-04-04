@@ -514,6 +514,8 @@ globalnetworkpolicy_name1_rev1 = {
                 'action': 'Allow',
                 'source': {
                     'selector': "type=='application'"},
+                'destination': {
+                    'domains': ["microsoft.com", "www.microsoft.com"]},
             },
         ],
         'ingress': [
@@ -659,7 +661,11 @@ globalnetworkset_name1_rev1 = {
             "11.0.0.0/16",
             "feed:beef::1",
             "dead:beef::96",
-        ]
+        ],
+        'allowedEgressDomains': [
+            "microsoft.com",
+            "www.microsoft.com",
+        ],
     }
 }
 
