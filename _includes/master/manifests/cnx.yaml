@@ -364,7 +364,7 @@ spec:
         - name: cnx-pull-secret
       containers:
       - name: cnx-apiserver
-        image: {{.Values.cnxApiserver.image}}:{{.Values.cnxApiserver.tag}}
+        image: {{.Values.apiserver.image}}:{{.Values.apiserver.tag}}
         args:
           - "--secure-port=5443"
 {{- if eq .Values.platform "eks" }}
@@ -432,7 +432,7 @@ spec:
           privileged: true
 {{- end }}
       - name: cnx-queryserver
-        image: {{.Values.cnxQueryserver.image}}:{{.Values.cnxQueryserver.tag}}
+        image: {{.Values.queryserver.image}}:{{.Values.queryserver.tag}}
         env:
           # Set queryserver logging to "info"
           - name: LOGLEVEL
@@ -587,7 +587,7 @@ spec:
           name: cnx-manager-tls
       containers:
       - name: cnx-manager
-        image: {{.Values.cnxManager.image}}:{{.Values.cnxManager.tag}}
+        image: {{.Values.manager.image}}:{{.Values.manager.tag}}
         env:
           - name: CNX_WEB_AUTHENTICATION_TYPE
             valueFrom:
@@ -662,7 +662,7 @@ spec:
           initialDelaySeconds: 90
           periodSeconds: 10
       - name: cnx-manager-proxy
-        image: {{.Values.cnxManagerProxy.image}}:{{.Values.cnxManagerProxy.tag}}
+        image: {{.Values.managerProxy.image}}:{{.Values.managerProxy.tag}}
         env:
           - name: CNX_WEB_AUTHENTICATION_TYPE
             valueFrom:
