@@ -1,5 +1,5 @@
-hash: b4ef0ab0dc5587e88864698bf73ae6983c23839e6112eee62394497d8289a091
-updated: 2019-04-03T04:57:44.882723258Z
+hash: 2b51a9642210b133826f4cf275a69afd89ab4243ac045b80127b9c1f7fb52087
+updated: 2019-04-04T04:59:18.253554603Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -305,7 +305,7 @@ imports:
   - pkg/types
   - pkg/upgrade
 - name: github.com/projectcalico/felix
-  version: a4665edd4c0be94514a318d1df985c0ab11ce2cf
+  version: d4ded8c9d7057fafd97f30362158a67e23ec50cb
   repo: git@github.com:tigera/felix-private.git
   subpackages:
   - buildinfo
