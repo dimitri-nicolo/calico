@@ -29,16 +29,16 @@ def gen_values(versions, imageNames, imageRegistry)
     EOF
 
     versionsYml += <<~EOF
-    cnxApiserver:
+    apiserver:
       image: #{imageRegistry}#{imageNames["cnxApiserver"]}
       tag: #{versions["cnx-apiserver"]}
-    cnxManager:
+    manager:
       image: #{imageRegistry}#{imageNames["cnxManager"]}
       tag: #{versions["cnx-manager"]}
-    cnxManagerProxy:
+    managerProxy:
       image: #{imageRegistry}#{imageNames["cnxManagerProxy"]}
       tag: #{versions["cnx-manager-proxy"]}
-    cnxQueryserver:
+    queryserver:
       image: #{imageRegistry}#{imageNames["cnxQueryserver"]}
       tag: #{versions["cnx-queryserver"]}
     cloudControllers:
