@@ -21,7 +21,10 @@ import:
   vcs: git
   subpackages:
   - client
+# Newer versions of go-jose.v2 break jwt decryption
+# See https://github.com/square/go-jose/pull/217
 - package: gopkg.in/square/go-jose.v2
+  version: cbf0fd6a984a4f8d5adfd38dc0dd8ef46f073ab7
   subpackages:
   - jwt
 - package: github.com/projectcalico/libcalico-go
