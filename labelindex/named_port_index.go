@@ -349,13 +349,10 @@ func (idx *SelectorAndNamedPortIndex) UpdateIPSet(ipSetID string, sel selector.S
 		"namedPortProtocol": namedPortProtocol,
 	})
 	logCxt.Debug("Updating IP set")
-	if sel == nil {
-		log.WithField("id", ipSetID).Panic("Selector should not be nil")
-	}
 
 	// Check whether anything has actually changed before we do a scan.
 	oldIPSetData := idx.ipSetDataByID[ipSetID]
-	if oldIPSetData != nil {
+	if oldIPSetData != nil && sel != nil {
 		if oldIPSetData.selector.UniqueID() == sel.UniqueID() &&
 			oldIPSetData.namedPortProtocol == namedPortProtocol &&
 			oldIPSetData.namedPort == namedPort {
@@ -381,7 +378,7 @@ func (idx *SelectorAndNamedPortIndex) UpdateIPSet(ipSetID string, sel selector.S
 
 	// Then scan all endpoints.
 	for epID, epData := range idx.endpointDataByID {
-		if !sel.EvaluateLabels(epData) {
+		if sel != nil && !sel.EvaluateLabels(epData) {
 			// Endpoint doesn't match.
 			continue
 		}
