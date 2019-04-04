@@ -378,7 +378,7 @@ func (idx *SelectorAndNamedPortIndex) UpdateIPSet(ipSetID string, sel selector.S
 
 	// Then scan all endpoints.
 	for epID, epData := range idx.endpointDataByID {
-		if sel != nil && !sel.EvaluateLabels(epData) {
+		if sel == nil || !sel.EvaluateLabels(epData) {
 			// Endpoint doesn't match.
 			continue
 		}
