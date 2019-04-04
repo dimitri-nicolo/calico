@@ -2414,6 +2414,25 @@ func init() {
 			},
 			true,
 		),
+		Entry("Validate GlobalReportType inventory-endpoints template",
+			&api.GlobalReportType{
+				ObjectMeta: v1.ObjectMeta{Name: "grt"},
+				Spec: api.ReportTypeSpec{
+					UISummaryTemplate: api.ReportTemplate{
+						Name: "foobar",
+						Template: `name,namespace,ingressProtected,egressProtected,envoyEnabled,appliedPolicies,services
+{{ range .Endpoints -}}
+  {{ .ID.Name }},{{ .ID.Namespace }},{{ .IngressProtected }},{{ .EgressProtected }},{{ .EnvoyEnabled }},{{ joinResources .AppliedPolicies ";" }},{{ joinResources .Services ";" }}
+{{- end }}`,
+					},
+					UICompleteTemplate: api.ReportTemplate{
+						Name:     "uict",
+						Template: "Total Endpoints: {{ .EndpointsNumTotal }}",
+					},
+				},
+			},
+			true,
+		),
 		Entry("Disallow GlobalReportType with the same template-name",
 			&api.GlobalReportType{
 				ObjectMeta: v1.ObjectMeta{Name: "grt"},
