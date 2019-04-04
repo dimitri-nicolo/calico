@@ -1,6 +1,6 @@
 // +build fvtests
 
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -51,16 +51,7 @@ var _ = Context("etcd connection interruption", func() {
 
 	BeforeEach(func() {
 		felixes, etcd, client = infrastructure.StartNNodeEtcdTopology(2, infrastructure.DefaultTopologyOptions())
-
-		// Install a default profile that allows all ingress and egress, in the absence of any Policy.
-		defaultProfile := api.NewProfile()
-		defaultProfile.Name = "default"
-		defaultProfile.Spec.LabelsToApply = map[string]string{"default": ""}
-		defaultProfile.Spec.Egress = []api.Rule{{Action: api.Allow}}
-		defaultProfile.Spec.Ingress = []api.Rule{{Action: api.Allow}}
-		_, err := client.Profiles().Create(utils.Ctx, defaultProfile, utils.NoOptions)
-		Expect(err).NotTo(HaveOccurred())
-
+		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")
 		// Wait until the tunl0 device appears; it is created when felix inserts the ipip module
 		// into the kernel.
 		Eventually(func() error {
