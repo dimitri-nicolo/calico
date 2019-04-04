@@ -29,7 +29,7 @@ var _ = Describe("ReportTemplate Renderer", func() {
 		tmpl := `startTime,endTime,endpointSelector,namespaceSelector,serviceAccountSelectors,endpointsNumInScope,endpointsNumIngressProtected,endpointsNumEgressProtected,endpointsNumIngressFromInternet,endpointsNumEgressToInternet,endpointsNumIngressFromOtherNamespace,endpointsNumEgressToOtherNamespace,endpointsNumEnvoyEnabled
 {{ .StartTime }},{{ .EndTime }},{{ .ReportSpec.EndpointsSelection.EndpointSelector }},{{ .ReportSpec.EndpointsSelection.Namespaces.Selector }},{{ .ReportSpec.EndpointsSelection.ServiceAccounts.Selector }},{{ .EndpointsNumTotal }},{{ .EndpointsNumIngressProtected }},{{ .EndpointsNumEgressProtected }},{{ .EndpointsNumIngressFromInternet }},{{ .EndpointsNumEgressToInternet }},{{ .EndpointsNumIngressFromOtherNamespace }},{{ .EndpointsNumEgressToOtherNamespace }},{{ .EndpointsNumEnvoyEnabled }}`
 		rendered := `startTime,endTime,endpointSelector,namespaceSelector,serviceAccountSelectors,endpointsNumInScope,endpointsNumIngressProtected,endpointsNumEgressProtected,endpointsNumIngressFromInternet,endpointsNumEgressToInternet,endpointsNumIngressFromOtherNamespace,endpointsNumEgressToOtherNamespace,endpointsNumEnvoyEnabled
-2019-04-01 00:00:00 +0000 UTC,2019-04-01 10:00:00 +0000 UTC,lbl == 'lbl-val',sample-sel,sample-sel,10,10,10,10,10,10,10,10`
+2019-04-01 00:00:00 +0000 UTC,2019-04-01 10:00:00 +0000 UTC,lbl == 'lbl-val',endpoint-namespace-selector,serviceaccount-selector,1,10,100,1000,9000,900,90,9`
 
 		matches, err := compliance.RenderTemplate(tmpl, compliance.ReportDataSample)
 		Expect(err).ToNot(HaveOccurred())
@@ -114,6 +114,11 @@ sample-res,sample-ns,false,true,false,sample-kind(sample-ns/sample-res)|sample-k
 		// Invalid argument (not a slice)
 		no_slice_tmpl := `{{ joinResources .EndpointsNumTotal ";" }}`
 		_, err = compliance.RenderTemplate(no_slice_tmpl, compliance.ReportDataSample)
+		Expect(err).To(HaveOccurred())
+
+		// Invalid max-entries argument
+		invalid_capped_tmpl := `{{ range .Endpoints -}} {{ joinResources .AppliedPolicies ";" "1" }} {{ end }}`
+		_, err = compliance.RenderTemplate(invalid_capped_tmpl, compliance.ReportDataSample)
 		Expect(err).To(HaveOccurred())
 	})
 })

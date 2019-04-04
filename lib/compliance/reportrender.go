@@ -19,31 +19,20 @@ import (
 	"fmt"
 	"reflect"
 	"text/template"
-	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 )
 
-////////////////////////////////////////////////////////////
-var st = metav1.Unix(1554076800, 0)
-var et = metav1.Time{st.Add(time.Hour * 10)}
-var sel = "lbl == 'lbl-val'"
-var selName = "sample-sel"
-var epNum = 10
-var resName = "sample-res"
-var nsName = "sample-ns"
-var kindName = "sample-kind"
+// Exposed to be used by UT code.
 var ResourceId = api.ResourceID{
 	TypeMeta: metav1.TypeMeta{
-		Kind: kindName,
+		Kind: "sample-kind",
 	},
-	Name:      resName,
-	Namespace: nsName,
+	Name:      "sample-res",
+	Namespace: "sample-ns",
 }
-
-// Used by validator for template function validation.
 var EndpointSample = api.EndpointsReportEndpoint{
 	ID:               ResourceId,
 	IngressProtected: false,
@@ -55,27 +44,27 @@ var EndpointSample = api.EndpointsReportEndpoint{
 
 // ReportDataSample is used by ReportTemplate validator.
 var ReportDataSample = api.ReportData{
-	StartTime: st,
-	EndTime:   et,
+	StartTime: metav1.Unix(1554076800, 0),
+	EndTime:   metav1.Unix(1554112800, 0),
 	ReportSpec: api.ReportSpec{
 		EndpointsSelection: api.EndpointsSelection{
-			EndpointSelector: sel,
+			EndpointSelector: "lbl == 'lbl-val'",
 			Namespaces: &api.NamesAndLabelsMatch{
-				Selector: selName,
+				Selector: "endpoint-namespace-selector",
 			},
 			ServiceAccounts: &api.NamesAndLabelsMatch{
-				Selector: selName,
+				Selector: "serviceaccount-selector",
 			},
 		},
 	},
-	EndpointsNumTotal:                     epNum,
-	EndpointsNumIngressProtected:          epNum,
-	EndpointsNumEgressProtected:           epNum,
-	EndpointsNumIngressFromInternet:       epNum,
-	EndpointsNumEgressToInternet:          epNum,
-	EndpointsNumIngressFromOtherNamespace: epNum,
-	EndpointsNumEgressToOtherNamespace:    epNum,
-	EndpointsNumEnvoyEnabled:              epNum,
+	EndpointsNumTotal:                     1,
+	EndpointsNumIngressProtected:          10,
+	EndpointsNumEgressProtected:           100,
+	EndpointsNumIngressFromInternet:       1000,
+	EndpointsNumEgressToInternet:          9000,
+	EndpointsNumIngressFromOtherNamespace: 900,
+	EndpointsNumEgressToOtherNamespace:    90,
+	EndpointsNumEnvoyEnabled:              9,
 	Endpoints: []api.EndpointsReportEndpoint{
 		EndpointSample,
 	},
@@ -87,7 +76,7 @@ Returns rendered text for given text-template and data struct input.
 func RenderTemplate(reportTemplateText string, reportData api.ReportData) (rendered string, ret error) {
 	defer func() {
 		if perr := recover(); perr != nil {
-			ret = fmt.Errorf("Template rendering error: %v", perr)
+			ret = fmt.Errorf("%v", perr)
 		}
 	}()
 
