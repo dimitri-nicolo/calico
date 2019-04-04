@@ -160,3 +160,47 @@ type HostEndpoint struct {
 
 	Spec calico.HostEndpointSpec
 }
+
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// GlobalReportList is a list of objects to generate compliance reports.
+type GlobalReportList struct {
+	metav1.TypeMeta
+	metav1.ListMeta
+
+	Items []GlobalReport
+}
+
+// +genclient
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type GlobalReport struct {
+	metav1.TypeMeta
+	metav1.ObjectMeta
+
+	Spec calico.ReportSpec
+}
+
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// GlobalReportTypeList is a list of objects used by GlobalReports to define report template.
+type GlobalReportTypeList struct {
+	metav1.TypeMeta
+	metav1.ListMeta
+
+	Items []GlobalReportType
+}
+
+// +genclient
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type GlobalReportType struct {
+	metav1.TypeMeta
+	metav1.ObjectMeta
+
+	Spec calico.ReportTypeSpec
+}

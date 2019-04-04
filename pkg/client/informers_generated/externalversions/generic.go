@@ -43,6 +43,10 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Projectcalico().V3().GlobalNetworkPolicies().Informer()}, nil
 	case v3.SchemeGroupVersion.WithResource("globalnetworksets"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Projectcalico().V3().GlobalNetworkSets().Informer()}, nil
+	case v3.SchemeGroupVersion.WithResource("globalreports"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Projectcalico().V3().GlobalReports().Informer()}, nil
+	case v3.SchemeGroupVersion.WithResource("globalreporttypes"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Projectcalico().V3().GlobalReportTypes().Informer()}, nil
 	case v3.SchemeGroupVersion.WithResource("globalthreatfeeds"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Projectcalico().V3().GlobalThreatFeeds().Informer()}, nil
 	case v3.SchemeGroupVersion.WithResource("hostendpoints"):

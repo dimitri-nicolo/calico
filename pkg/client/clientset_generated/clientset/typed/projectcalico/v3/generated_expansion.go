@@ -8,6 +8,10 @@ type GlobalNetworkPolicyExpansion interface{}
 
 type GlobalNetworkSetExpansion interface{}
 
+type GlobalReportExpansion interface{}
+
+type GlobalReportTypeExpansion interface{}
+
 type GlobalThreatFeedExpansion interface{}
 
 type HostEndpointExpansion interface{}

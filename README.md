@@ -225,7 +225,7 @@ as well as non-namespaced (e.g. globalnetworkset) resources:
 
 * Add the k8s-facing resource types to `pkg/apis/projectcalico/v3/types.go`. This
   will be similar to the types above, except the metadata fields indicate how to
-  pack/unpack json data. The contents will essentially the Calico v3 resource
+  pack/unpack json data. The contents will essentially use the Calico v3 resource
   type. For example:
 
   ```
@@ -258,7 +258,8 @@ as well as non-namespaced (e.g. globalnetworkset) resources:
   ```
 
 * Once you have these type declarations, add the resource and resource list types
-  to `addKnownTypes()` in `pkg/apis/projectcalico/register.go`. For example:
+  to `addKnownTypes()` in `pkg/apis/projectcalico/v3/register.go` and
+  `pkg/apis/projectcalico/register.go`. For example:
 
   ```
   ...
@@ -267,8 +268,8 @@ as well as non-namespaced (e.g. globalnetworkset) resources:
   ```
 
 * Add the resource name (i.e. the resource label that you pass to `kubectl`) to
-  the `GroupMetaFactoryArgs` type, specifically the `RootScopedKinds` field. For
-  example:
+  the `GroupMetaFactoryArgs` type, specifically the `RootScopedKinds` field in
+  `pkg/apis/projectcalico/install/install.go`. For example:
 
   ```
   RootScopedKinds: sets.NewString(..., "LicenseKey"),

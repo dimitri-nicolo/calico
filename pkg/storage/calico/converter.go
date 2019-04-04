@@ -66,6 +66,16 @@ func convertToAAPI(libcalicoObject runtime.Object) (res runtime.Object) {
 		aapi := &aapi.HostEndpoint{}
 		HostEndpointConverter{}.convertToAAPI(lcg, aapi)
 		return aapi
+	case *libcalicoapi.GlobalReport:
+		lcg := libcalicoObject.(*libcalicoapi.GlobalReport)
+		aapi := &aapi.GlobalReport{}
+		GlobalReportConverter{}.convertToAAPI(lcg, aapi)
+		return aapi
+	case *libcalicoapi.GlobalReportType:
+		lcg := libcalicoObject.(*libcalicoapi.GlobalReportType)
+		aapi := &aapi.GlobalReportType{}
+		GlobalReportTypeConverter{}.convertToAAPI(lcg, aapi)
+		return aapi
 	default:
 		panic(fmt.Sprintf("unrecognized libcalico object (type %v)", reflect.TypeOf(libcalicoObject)))
 		return nil

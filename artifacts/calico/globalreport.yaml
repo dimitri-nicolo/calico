@@ -1,0 +1,28 @@
+apiVersion: projectcalico.org/v3
+kind: GlobalReport
+metadata:
+  name: sample-global-report
+  labels:
+    type: sample-type-global-report
+spec:
+  ReportType: "sample-global-report-type"
+  endpointsSelection:
+    endpointSelector: 'gr-sel-key == "gr-sel-value"'
+    namespaces:
+      names:
+        - 'gr-eps-ns-name'
+      selector: 'gr-eps-ns-sel-key == "gr-eps-ns-sel-value"'
+    serviceAccounts:
+      names:
+        - 'gr-eps-sa-name'
+      selector: 'gr-eps-sa-sel-key == "gr-eps-sa-sel-value"'
+  auditEventsSelection:
+    resources:
+      - TypeMeta:
+          kind: 'globalnetworkpolicy'
+        name: 'gr-aes-gnp'
+        namespace: 'gr-aes-gnp-ns'
+  jobSchedule: "* * * * *"
+  jobNodeSelector:
+    gr-lbl: 'gr-lbl-val'
+    gr-lbl-2: 'gr-lbl-val-2'

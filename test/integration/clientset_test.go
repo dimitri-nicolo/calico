@@ -874,3 +874,257 @@ func testHostEndpointClient(client calicoclient.Interface, name string) error {
 
 	return nil
 }
+
+// TestGlobalReportClient exercises the GlobalReport client.
+func TestGlobalReportClient(t *testing.T) {
+	const name = "test-global-report"
+	rootTestFunc := func() func(t *testing.T) {
+		return func(t *testing.T) {
+			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+				return &projectcalico.GlobalReport{}
+			})
+			defer shutdownServer()
+			if err := testGlobalReportClient(client, name); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	if !t.Run(name, rootTestFunc()) {
+		t.Errorf("GlobalReport test failed")
+	}
+}
+
+func testGlobalReportClient(client calicoclient.Interface, name string) error {
+	globalReportClient := client.ProjectcalicoV3().GlobalReports()
+	globalReport := &v3.GlobalReport{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+	}
+
+	// Make sure there is no GlobalReport configured.
+	globalReports, err := globalReportClient.List(metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing globalReports (%s)", err)
+	}
+	if globalReports.Items == nil {
+		return fmt.Errorf("Items field should not be set to nil")
+	}
+
+	/*
+	Create/List/Get/Delete tests.
+	*/
+	globalReportServer, err := globalReportClient.Create(globalReport)
+	if nil != err {
+		return fmt.Errorf("error creating the globalReport '%v' (%v)", globalReport, err)
+	}
+	if name != globalReportServer.Name {
+		return fmt.Errorf("didn't get the same globalReport back from the server \n%+v\n%+v", globalReport, globalReportServer)
+	}
+
+	globalReports, err = globalReportClient.List(metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing globalReports (%s)", err)
+	}
+	if len(globalReports.Items) != 1 {
+		return fmt.Errorf("expected 1 globalReport entry, got %d", len(globalReports.Items))
+	}
+
+	globalReportServer, err = globalReportClient.Get(name, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("error getting globalReport %s (%s)", name, err)
+	}
+	if name != globalReportServer.Name &&
+		globalReport.ResourceVersion == globalReportServer.ResourceVersion {
+		return fmt.Errorf("didn't get the same globalReport back from the server \n%+v\n%+v", globalReport, globalReportServer)
+	}
+
+	err = globalReportClient.Delete(name, &metav1.DeleteOptions{})
+	if nil != err {
+		return fmt.Errorf("globalReport should be deleted (%s)", err)
+	}
+
+	/*
+	Check list-ing GlobalReport resource works with watch option.
+	*/
+	w, err := client.ProjectcalicoV3().GlobalReports().Watch(v1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error watching GlobalReports (%s)", err)
+	}
+	var events []watch.Event
+	done := sync.WaitGroup{}
+	done.Add(1)
+	timeout := time.After(500 * time.Millisecond)
+	var timeoutErr error
+	// watch for 2 events
+	go func() {
+		defer done.Done()
+		for i := 0; i < 2; i++ {
+			select {
+			case e := <-w.ResultChan():
+				events = append(events, e)
+			case <-timeout:
+				timeoutErr = fmt.Errorf("timed out wating for events")
+				return
+			}
+		}
+		return
+	}()
+
+	// Create two GlobalReports
+	for i := 0; i < 2; i++ {
+		gr := &v3.GlobalReport{
+			ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("gr%d", i)},
+		}
+		_, err = globalReportClient.Create(gr)
+		if err != nil {
+			return fmt.Errorf("error creating globalReport '%v' (%v)", gr, err)
+		}
+	}
+
+	done.Wait()
+	if timeoutErr != nil {
+		return timeoutErr
+	}
+	if len(events) != 2 {
+		return fmt.Errorf("expected 2 watch events got %d", len(events))
+	}
+
+	return nil
+}
+
+// TestGlobalReportTypeClient exercises the GlobalReportType client.
+func TestGlobalReportTypeClient(t *testing.T) {
+	const name = "test-global-report-type"
+	rootTestFunc := func() func(t *testing.T) {
+		return func(t *testing.T) {
+			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+				return &projectcalico.GlobalReportType{}
+			})
+			defer shutdownServer()
+			if err := testGlobalReportTypeClient(client, name); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	if !t.Run(name, rootTestFunc()) {
+		t.Errorf("GlobalReportType test failed")
+	}
+}
+
+func testGlobalReportTypeClient(client calicoclient.Interface, name string) error {
+	globalReportTypeClient := client.ProjectcalicoV3().GlobalReportTypes()
+	globalReportType := &v3.GlobalReportType{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Spec: calico.ReportTypeSpec{
+			UISummaryTemplate: calico.ReportTemplate{
+				Name: "uist",
+				Template: "Total Endpoints: {{ .EndpointsNumTotal }}",
+			},
+			UICompleteTemplate: calico.ReportTemplate{
+				Name: "uict",
+				Template: "Total Endpoints: {{ .EndpointsNumTotal }}",
+			},
+		},
+	}
+
+	// Make sure there is no GlobalReportType configured.
+	globalReportTypes, err := globalReportTypeClient.List(metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing globalReportTypes (%s)", err)
+	}
+	if globalReportTypes.Items == nil {
+		return fmt.Errorf("Items field should not be set to nil")
+	}
+
+	/*
+	Create/List/Get/Delete tests.
+	*/
+	globalReportTypeServer, err := globalReportTypeClient.Create(globalReportType)
+	if nil != err {
+		return fmt.Errorf("error creating the globalReportType '%v' (%v)", globalReportType, err)
+	}
+	if name != globalReportTypeServer.Name {
+		return fmt.Errorf("didn't get the same globalReportType back from the server \n%+v\n%+v", globalReportType, globalReportTypeServer)
+	}
+
+	globalReportTypes, err = globalReportTypeClient.List(metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing globalReportTypes (%s)", err)
+	}
+	if len(globalReportTypes.Items) != 1 {
+		return fmt.Errorf("expected 1 globalReportType entry, got %d", len(globalReportTypes.Items))
+	}
+
+	globalReportTypeServer, err = globalReportTypeClient.Get(name, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("error getting globalReportType %s (%s)", name, err)
+	}
+	if name != globalReportTypeServer.Name &&
+		globalReportType.ResourceVersion == globalReportTypeServer.ResourceVersion {
+		return fmt.Errorf("didn't get the same globalReportType back from the server \n%+v\n%+v", globalReportType, globalReportTypeServer)
+	}
+
+	err = globalReportTypeClient.Delete(name, &metav1.DeleteOptions{})
+	if nil != err {
+		return fmt.Errorf("globalReportType should be deleted (%s)", err)
+	}
+
+	/*
+	Check list-ing GlobalReportType resource works with watch option.
+	*/
+	w, err := client.ProjectcalicoV3().GlobalReportTypes().Watch(v1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error watching GlobalReportTypes (%s)", err)
+	}
+	var events []watch.Event
+	done := sync.WaitGroup{}
+	done.Add(1)
+	timeout := time.After(500 * time.Millisecond)
+	var timeoutErr error
+	// watch for 2 events
+	go func() {
+		defer done.Done()
+		for i := 0; i < 2; i++ {
+			select {
+			case e := <-w.ResultChan():
+				events = append(events, e)
+			case <-timeout:
+				timeoutErr = fmt.Errorf("timed out wating for events")
+				return
+			}
+		}
+		return
+	}()
+
+	// Create two GlobalReports
+	for i := 0; i < 2; i++ {
+		grt := &v3.GlobalReportType{
+			ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("grt%d", i)},
+			Spec: calico.ReportTypeSpec{
+				UISummaryTemplate: calico.ReportTemplate{
+					Name: fmt.Sprintf("uist%d", i),
+					Template: "Total Endpoints: {{ .EndpointsNumTotal }}",
+				},
+				UICompleteTemplate: calico.ReportTemplate{
+					Name: fmt.Sprintf("uict%d", i),
+					Template: "Total Endpoints: {{ .EndpointsNumTotal }}",
+				},
+			},
+		}
+		_, err = globalReportTypeClient.Create(grt)
+		if err != nil {
+			return fmt.Errorf("error creating globalReportType '%v' (%v)", grt, err)
+		}
+	}
+
+	done.Wait()
+	if timeoutErr != nil {
+		return timeoutErr
+	}
+	if len(events) != 2 {
+		return fmt.Errorf("expected 2 watch events got %d", len(events))
+	}
+
+	return nil
+}

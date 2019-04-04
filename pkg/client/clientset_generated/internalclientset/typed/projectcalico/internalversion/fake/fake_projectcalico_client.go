@@ -22,6 +22,14 @@ func (c *FakeProjectcalico) GlobalNetworkSets() internalversion.GlobalNetworkSet
 	return &FakeGlobalNetworkSets{c}
 }
 
+func (c *FakeProjectcalico) GlobalReports() internalversion.GlobalReportInterface {
+	return &FakeGlobalReports{c}
+}
+
+func (c *FakeProjectcalico) GlobalReportTypes() internalversion.GlobalReportTypeInterface {
+	return &FakeGlobalReportTypes{c}
+}
+
 func (c *FakeProjectcalico) GlobalThreatFeeds() internalversion.GlobalThreatFeedInterface {
 	return &FakeGlobalThreatFeeds{c}
 }
