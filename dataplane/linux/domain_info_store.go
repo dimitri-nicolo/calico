@@ -230,6 +230,7 @@ func (s *domainInfoStore) GetDomainIPs(domain string) []string {
 		collectIPsForName(domain, nil)
 		s.resultsCache[domain] = ips
 	}
+	log.Infof("GetDomainIPs(%v) -> %v", domain, ips)
 	return ips
 }
 
