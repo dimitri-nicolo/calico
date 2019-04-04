@@ -16,8 +16,18 @@ type Proxy struct {
 }
 
 func NewProxy(targetURL *url.URL) *Proxy {
+	p := httputil.NewSingleHostReverseProxy(targetURL)
+	origDirector := p.Director
+	// Rewrite host header. We do just enough and call the Director
+	// defined in the standard library to do the rest of the request
+	// fiddling.
+	p.Director = func(req *http.Request) {
+		req.Header.Add("X-Forwarded-Host", req.Host)
+		origDirector(req)
+		req.Host = targetURL.Host
+	}
 	return &Proxy{
-		proxy: httputil.NewSingleHostReverseProxy(targetURL),
+		proxy: p,
 	}
 }
 

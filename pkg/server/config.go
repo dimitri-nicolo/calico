@@ -50,7 +50,7 @@ type Config struct {
 	// The URL that we should proxy requests to.
 	ElasticURL *url.URL
 
-	// The usename and password to inject when in Singleuser mode.
+	// The username and password to inject when in ServiceUser mode.
 	// Unused otherwise.
 	ElasticUsername string
 	ElasticPassword string
@@ -58,7 +58,10 @@ type Config struct {
 
 func NewConfigFromEnv() (*Config, error) {
 	listenAddr := os.Getenv(listenAddrEnv)
-	accessMode := parseAccessMode(os.Getenv(accessModeEnv))
+	accessMode, err := parseAccessMode(os.Getenv(elasticAccessModeEnv))
+	if err != nil {
+		return nil, err
+	}
 	elasticScheme := os.Getenv(elasticSchemeEnv)
 	elasticHost := os.Getenv(elasticHostEnv)
 	elasticPort := os.Getenv(elasticPortEnv)
@@ -70,28 +73,32 @@ func NewConfigFromEnv() (*Config, error) {
 	elasticPassword := os.Getenv(elasticPasswordEnv)
 	config := &Config{
 		ListenAddr:      listenAddr,
+		CertFile:        certFilePath,
+		KeyFile:         keyFilePath,
 		AccessMode:      accessMode,
 		ElasticURL:      elasticURL,
 		ElasticUsername: elasticUsername,
 		ElasticPassword: elasticPassword,
 	}
-	err := validateConfig(config)
+	err = validateConfig(config)
 	return config, err
 }
 
-func parseAccessMode(am string) ElasticAccessMode {
+func parseAccessMode(am string) (ElasticAccessMode, error) {
 	switch am {
 	case "serviceuser":
-		return ServiceUserMode
+		return ServiceUserMode, nil
 	case "passthrough":
-		return PassThroughMode
+		return PassThroughMode, nil
+	case "insecure":
+		return InsecureMode, nil
 	default:
-		return InsecureMode
+		return ElasticAccessMode(""), fmt.Errorf("Unknown access mode %v", am)
 	}
 }
 
 func validateConfig(config *Config) error {
-	if config.AccessMode == PassThroughMode &&
+	if config.AccessMode == PassThroughMode || config.AccessMode == InsecureMode &&
 		config.ElasticUsername != "" && config.ElasticPassword != "" {
 		return errors.New("Cannot set Elasticsearch credentials in Passthrough mode")
 
