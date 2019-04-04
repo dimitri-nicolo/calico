@@ -45,6 +45,7 @@ var _ = Describe("DNS Policy", func() {
 
 	BeforeEach(func() {
 		opts := infrastructure.DefaultTopologyOptions()
+		//opts.FelixLogSeverity = "debug"
 		felix, etcd, client = infrastructure.StartSingleNodeEtcdTopology(opts)
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")
 
@@ -67,6 +68,7 @@ var _ = Describe("DNS Policy", func() {
 	// Stop etcd and workloads, collecting some state if anything failed.
 	AfterEach(func() {
 		if CurrentGinkgoTestDescription().Failed {
+			felix.Exec("ipset", "list")
 			felix.Exec("iptables-save", "-c")
 			felix.Exec("ip", "r")
 		}
