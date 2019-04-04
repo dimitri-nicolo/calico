@@ -23,7 +23,7 @@ var (
 		},
 	}
 	pod1Add = syncer.Update{
-		Type:       syncer.UpdateTypeNew,
+		Type:       syncer.UpdateTypeSet,
 		ResourceID: pod1ID,
 		Resource:   resources.NewResource(resources.ResourceTypePods),
 	}
@@ -46,7 +46,7 @@ var (
 		},
 	}
 	policy1Update = syncer.Update{
-		Type:       syncer.UpdateTypeUpdated,
+		Type:       syncer.UpdateTypeSet,
 		ResourceID: policy1ID,
 		Resource:   resources.NewResource(resources.ResourceTypeNetworkPolicies),
 	}
@@ -96,7 +96,7 @@ func (t *tester) onPolicyUpdate(update syncer.Update) {
 	}
 }
 
-func (t *tester) onStatusUpdate(status syncer.StatusType) {
+func (t *tester) onStatusUpdate(status syncer.StatusUpdate) {
 	log.WithField("status", status).Info("Status update")
 	t.status.Add(status)
 }
@@ -126,7 +126,7 @@ var _ = Describe("label selector checks", func() {
 		t := newTester()
 
 		By("Registering for pod deleted and new callbacks, and no policy or status callbacks")
-		t.registerPodUpdates(syncer.UpdateTypeDeleted | syncer.UpdateTypeNew)
+		t.registerPodUpdates(syncer.UpdateTypeDeleted | syncer.UpdateTypeSet)
 
 		By("Sending new and deleted pod updates")
 		t.d.OnUpdate(pod1Add)
@@ -137,7 +137,9 @@ var _ = Describe("label selector checks", func() {
 		t.d.OnUpdate(policy2Delete)
 
 		By("Sending an onStatusUpdate")
-		t.d.OnStatusUpdate(syncer.StatusTypeInSync)
+		t.d.OnStatusUpdate(syncer.StatusUpdate{
+			Type: syncer.StatusTypeInSync,
+		})
 
 		By("Checking we get updates for both pod resources")
 		Expect(t.pods.Len()).To(Equal(2))
@@ -158,7 +160,7 @@ var _ = Describe("label selector checks", func() {
 
 		By("Registering for pod deleted, policy updated and status callbacks")
 		t.registerPodUpdates(syncer.UpdateTypeDeleted)
-		t.registerPolicyUpdates(syncer.UpdateTypeUpdated)
+		t.registerPolicyUpdates(syncer.UpdateTypeSet)
 		t.registerOnStatusCallbacks()
 
 		By("Sending new and deleted pod updates")
@@ -170,7 +172,9 @@ var _ = Describe("label selector checks", func() {
 		t.d.OnUpdate(policy2Delete)
 
 		By("Sending an onStatusUpdate")
-		t.d.OnStatusUpdate(syncer.StatusTypeInSync)
+		t.d.OnStatusUpdate(syncer.StatusUpdate{
+			Type: syncer.StatusTypeInSync,
+		})
 
 		By("Checking we get updates for the pod delete")
 		Expect(t.pods.Len()).To(Equal(1))
@@ -185,7 +189,9 @@ var _ = Describe("label selector checks", func() {
 		Expect(t.status.Len()).To(Equal(1))
 
 		By("Checking we the in-sync status update")
-		Expect(t.status.Equals(set.From(syncer.StatusTypeInSync))).To(BeTrue())
+		Expect(t.status.Equals(set.From(syncer.StatusUpdate{
+			Type: syncer.StatusTypeInSync,
+		}))).To(BeTrue())
 	})
 
 })
