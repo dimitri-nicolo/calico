@@ -19,7 +19,10 @@ const (
 	numUpdatesPerPerfLog = 500
 )
 
-type DispatcherOnStatusUpdate func(syncer.StatusType)
+//TODO(rlb): Thinking that we might want to use resource type rather than the GroupVersionKind for doing
+// fanout.
+
+type DispatcherOnStatusUpdate func(syncer.StatusUpdate)
 type DispatcherOnUpdate func(syncer.Update)
 
 // Dispatcher implements the SyncerCallbacks.
@@ -115,7 +118,7 @@ func (d *dispatcher) OnUpdate(update syncer.Update) {
 }
 
 // InSync is a callback to indicate an initial self-consistent set of configuration has now been loaded.
-func (d *dispatcher) OnStatusUpdate(status syncer.StatusType) {
+func (d *dispatcher) OnStatusUpdate(status syncer.StatusUpdate) {
 	log.WithField("status", status).Debug("OnStatusUpdate")
 	for _, cb := range d.onStatusUpdateCallbacks {
 		cb(status)
