@@ -7,6 +7,16 @@ app_layer_policy:
   enabled: false
   configured: false
 
+# Configuration for etcd
+etcd:
+  # Endpoints for the etcd instances. This can be a comma separated list of endpoints.
+  endpoints: null
+  # Authentication information for accessing secure etcd instances.
+  tls:
+    crt: null
+    ca: null
+    key: null
+
 # Configuration for setting up Calico node
 node:
   env:
