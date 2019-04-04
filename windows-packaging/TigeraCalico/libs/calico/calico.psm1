@@ -28,11 +28,6 @@ function Test-CalicoConfiguration()
             throw "CNI config directory $env:CNI_CONF_DIR doesn't exist.  Please create it and ensure kubelet " +  `
                     "is configured with matching --cni-conf-dir."
         }
-        if (($env:CALICO_DATASTORE_TYPE -Eq "kubernetes") -AND (fileIsMissing("$env:CNI_BIN_DIR\host-local.exe")))
-        {
-            throw "Couldn't find the host-local IPAM plugin, host-local.exe in $env:CNI_BIN_DIR. The host-local " +`
-                  "IPAM plugin is required for Kubernetes datastore mode."
-        }
     }
     if ($env:CALICO_DATASTORE_TYPE -EQ "kubernetes")
     {
@@ -78,16 +73,6 @@ function Install-CNIPlugin()
     $cniConfFile = $env:CNI_CONF_DIR + "\" + $env:CNI_CONF_FILENAME
     Write-Host "Writing CNI configuration to $cniConfFile."
     $ipamType = "calico-ipam"
-    if ($env:CALICO_DATASTORE_TYPE -Eq "kubernetes")
-    {
-        Write-Host "Using Kubernetes API Datastore, will use host-local IPAM."
-        $ipamType = "host-local"
-    }
-    else
-    {
-        Write-Host "Using etcd Datastore, will use calico IPAM."
-        $ipamType = "calico-ipam"
-    }
     $nodeNameFile = "$baseDir\nodename".replace('\', '\\')
     $etcdKeyFile = "$env:ETCD_KEY_FILE".replace('\', '\\')
     $etcdCertFile = "$env:ETCD_CERT_FILE".replace('\', '\\')
