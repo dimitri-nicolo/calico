@@ -82,7 +82,7 @@ sample-res,sample-ns,false,true,false,sample-kind(sample-ns/sample-res)|sample-k
 		for i := 0; i < endpointsCount; i++ {
 			endpoints = append(endpoints, aer)
 		}
-		// Polpulate multiple endpoints with multiple resource entries as test data.
+		// Populate multiple endpoints with multiple resource entries as test data.
 		ard := compliance.ReportDataSample
 		ard.Endpoints = endpoints
 
