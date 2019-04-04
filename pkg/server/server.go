@@ -23,8 +23,6 @@ func Start(config *Config) error {
 	// Initialize all handlers and middlewares here. Proxy is handler as well.
 	proxy := handler.NewProxy(config.ElasticURL)
 
-	// For now we are a proxy for all requests so only add the default
-	// handler.
 	// TODO(doublek):
 	//  - This could be nicer. Seems a bit kludgy to add middlewares like this.
 	//  - Logging only logs the frontend requests and not the backend response. We could

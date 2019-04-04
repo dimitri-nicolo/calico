@@ -42,7 +42,7 @@ const (
 // Config stores various configuration information for the es-proxy
 // server.
 type Config struct {
-	// ListeAddr is the address and port that the server will listen
+	// ListenAddr is the address and port that the server will listen
 	// on for proxying requests. The format is similar to the address
 	// parameter of net.Listen
 	ListenAddr string
