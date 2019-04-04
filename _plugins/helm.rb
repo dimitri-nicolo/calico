@@ -17,9 +17,15 @@ module Jekyll
   class RenderHelmTagBlock < Liquid::Block
     def initialize(tag_name, extra_args, liquid_options)
       super
-      if not extra_args.empty?
-        @extra_args = extra_args
+
+      if extra_args.start_with?("tigera-secure-lma")
+        @chart = "tigera-secure-lma"
+        extra_args.slice! "tigera-secure-lma"
+      else
+        @chart = "calico"
       end
+
+      @extra_args = extra_args
     end
     def render(context)
       text = super
@@ -43,13 +49,11 @@ module Jekyll
       tv.close
 
       # execute helm.
-      cmd = """helm template _includes/#{version}/charts/calico \
+      cmd = """helm template _includes/#{version}/charts/#{@chart} \
         -f #{tv.path} \
         -f #{t.path}"""
 
-      if @extra_args
-        cmd += " " + @extra_args
-      end
+      cmd += " " + @extra_args.to_s
 
       out, stderr, status = Open3.capture3(cmd)
       if status != 0

@@ -45,7 +45,6 @@ typha:
 
 # TODO: move to helpers
 orch: ""
-elasticsearchType: operator
 rbac: ""
 platform: ""
 
