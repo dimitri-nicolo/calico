@@ -36,14 +36,14 @@ func main() {
 		log.WithError(err).Fatal("Configuration Error.")
 	}
 
+	// If configuration for certificates isn't provided, then generate one ourseles and
+	// set the correct paths.
 	if config.CertFile == "" || config.KeyFile == "" {
 		config.CertFile = defaultCertFilePath
 		config.KeyFile = defaultKeyFilePath
-
-	}
-
-	if err := MaybeDefaultWithSelfSignedCerts("localhost", nil, []net.IP{net.ParseIP("127.0.0.1")}); err != nil {
-		log.WithError(err).Fatal("Error creating self-signed certificates", err)
+		if err := MaybeDefaultWithSelfSignedCerts("localhost", nil, []net.IP{net.ParseIP("127.0.0.1")}); err != nil {
+			log.WithError(err).Fatal("Error creating self-signed certificates", err)
+		}
 	}
 
 	server.Start(config)
