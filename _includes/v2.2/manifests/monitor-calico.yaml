@@ -401,20 +401,12 @@ spec:
       serviceAccountName: tigera-fluentd
       imagePullSecrets:
         - name: cnx-pull-secret
-      initContainers:
-        # The fluentd image runs as user 1000, so make /var/log/calico writable by them
-        - name: chown-logs
-          image: busybox
-          command: ['sh', '-c', 'chown -R 1000:1000 /var/log/calico']
-          securityContext:
-            privileged: true
-          volumeMounts:
-            - name: var-log-calico
-              mountPath: /var/log/calico
       containers:
         - name: fluentd
           image: {{page.registry}}{{site.imageNames["fluentd"]}}:{{site.data.versions[page.version].first.components["fluentd"].version}}
           env:
+            - name: FLUENT_UID
+              value: "0"
             - name: FLOW_LOG_FILE
               value: /var/log/calico/flowlogs/flows.log
 {%- if include.secure_es == "true" %}
