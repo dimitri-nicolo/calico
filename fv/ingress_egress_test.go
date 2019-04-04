@@ -54,7 +54,7 @@ var _ = Context("with initialized Felix, etcd datastore, 3 workloads", func() {
 		opts.ExtraEnvVars["FELIX_FLOWLOGSENABLEHOSTENDPOINT"] = "true"
 		opts.ExtraEnvVars["FELIX_FLOWLOGSFLUSHINTERVAL"] = "120"
 		felix, etcd, client = infrastructure.StartSingleNodeEtcdTopology(opts)
-		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")
+		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "default == ''")
 
 		// Create three workloads, using that profile.
 		for ii := range w {
