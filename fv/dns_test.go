@@ -120,7 +120,7 @@ var _ = Describe("DNS Policy", func() {
 				policy.Spec.Egress = []api.Rule{
 					{
 						Action:      api.Allow,
-						Destination: api.EntityRule{Domains: []string{"microsoft.com"}},
+						Destination: api.EntityRule{Domains: []string{"microsoft.com", "www.microsoft.com"}},
 					},
 					{
 						Action:   api.Allow,
