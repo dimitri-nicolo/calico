@@ -422,7 +422,7 @@ spec:
 {{- end }}
         livenessProbe:
           httpGet:
-            path: /apis/
+            path: /version
             port: 5443
             scheme: HTTPS
           initialDelaySeconds: 90
