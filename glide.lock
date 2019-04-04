@@ -1,5 +1,5 @@
-hash: 6fa10e0109ef566c200c0350d7510011124623484ba7e0e31f7a803bf4411a47
-updated: 2019-04-04T00:04:02.604805511Z
+hash: df8073047ec01419fcd2c064be96e6f66c459a6ded78609d0e54777aa0ade83d
+updated: 2019-04-04T15:47:21.744423919Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -231,7 +231,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 1acc1d224f822833c483d9f1f33493079f500946
+  version: 2806b1a9c38f9c6fd0f7cb5644c7e0aa8fb1efb6
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
@@ -246,6 +246,7 @@ imports:
   - lib/backend/k8s/resources
   - lib/backend/model
   - lib/clientv3
+  - lib/compliance
   - lib/errors
   - lib/hash
   - lib/ipam
@@ -289,6 +290,8 @@ imports:
   version: 8a290539e2e8629dbc4e6bad948158f790ec31f4
 - name: github.com/PuerkitoBio/urlesc
   version: 5bd2802263f21d8788851d5305584c82a5c75d7e
+- name: github.com/robfig/cron
+  version: b41be1df696709bb6395fe435af20370037c0b4c
 - name: github.com/satori/go.uuid
   version: f58768cc1a7a7e77a3bd49e98cdd21419399b6a3
 - name: github.com/shirou/gopsutil
@@ -521,6 +524,10 @@ imports:
   - pkg/version
   - pkg/watch
   - third_party/forked/golang/reflect
+- name: k8s.io/apiserver
+  version: f1dab8c342623e75f0484f20b150183d9e73f406
+  subpackages:
+  - pkg/apis/audit
 - name: k8s.io/client-go
   version: 7d04d0e2a0a1a4d4a1cd6baa432a2301492e4e65
   subpackages:
