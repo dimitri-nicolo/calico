@@ -2,7 +2,7 @@ FROM amd64/alpine:3.8 as base
 MAINTAINER Shaun Crampton <shaun@tigera.io>
 
 # Install our dependencies.
-RUN apk --no-cache add ip6tables tini ipset iputils iproute2 conntrack-tools file strongswan
+RUN apk --no-cache add ip6tables tini ipset iputils iproute2 conntrack-tools file strongswan wget
 
 ADD felix.cfg /etc/calico/felix.cfg
 ADD calico-felix-wrapper /usr/bin

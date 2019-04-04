@@ -31,6 +31,7 @@ import (
 	"github.com/projectcalico/felix/fv/workload"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
+	"github.com/projectcalico/libcalico-go/lib/numorstring"
 )
 
 var _ = Describe("DNS Policy", func() {
@@ -82,7 +83,7 @@ var _ = Describe("DNS Policy", func() {
 	})
 
 	It("can wget microsoft.com", func() {
-		out, err := w[0].ExecOutput("wget microsoft.com")
+		out, err := w[0].ExecOutput("wget", "-T", "10", "microsoft.com")
 		log.WithError(err).Infof("wget said:\n%v", out)
 		Expect(err).NotTo(HaveOccurred())
 	})
@@ -99,10 +100,10 @@ var _ = Describe("DNS Policy", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("can wget microsoft.com", func() {
-			out, err := w[0].ExecOutput("wget microsoft.com")
+		It("cannot wget microsoft.com", func() {
+			out, err := w[0].ExecOutput("wget", "-T", "10", "microsoft.com")
 			log.WithError(err).Infof("wget said:\n%v", out)
-			Expect(err).NotTo(HaveOccurred())
+			Expect(err).To(HaveOccurred())
 		})
 
 		Context("with domain-allow egress policy", func() {
@@ -112,16 +113,34 @@ var _ = Describe("DNS Policy", func() {
 				order := float64(20)
 				policy.Spec.Order = &order
 				policy.Spec.Selector = "all()"
-				policy.Spec.Egress = []api.Rule{{
-					Action:      api.Allow,
-					Destination: api.EntityRule{Domains: []string{"microsoft.com"}},
-				}}
+				tcp := numorstring.ProtocolFromString(numorstring.ProtocolTCP)
+				udp := numorstring.ProtocolFromString(numorstring.ProtocolUDP)
+				policy.Spec.Egress = []api.Rule{
+					{
+						Action:      api.Allow,
+						Destination: api.EntityRule{Domains: []string{"microsoft.com"}},
+					},
+					{
+						Action:   api.Allow,
+						Protocol: &tcp,
+						Destination: api.EntityRule{
+							Ports: []numorstring.Port{numorstring.SinglePort(53)},
+						},
+					},
+					{
+						Action:   api.Allow,
+						Protocol: &udp,
+						Destination: api.EntityRule{
+							Ports: []numorstring.Port{numorstring.SinglePort(53)},
+						},
+					},
+				}
 				_, err := client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("can wget microsoft.com", func() {
-				out, err := w[0].ExecOutput("wget microsoft.com")
+				out, err := w[0].ExecOutput("wget", "-T", "10", "microsoft.com")
 				log.WithError(err).Infof("wget said:\n%v", out)
 				Expect(err).NotTo(HaveOccurred())
 			})
