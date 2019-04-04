@@ -89,10 +89,10 @@ type AuditEventsSelection struct {
 // When used as a resource filter, an empty field value indicates a wildcard. For example, if Kind is set to "NetworkPolicy" and all other fields
 // are blank then this filter would include all NetworkPolicy resources across all namespaces, including both Calico and Kubernetes resource types.
 type ResourceID struct {
-	metav1.TypeMeta
-	Name      string    `json:"name,omitempty" validate:"omitempty"`
-	Namespace string    `json:"namespace,omitempty" validate:"omitempty"`
-	UUID      types.UID `json:"uuid,omitempty" validate:"omitempty"`
+	metav1.TypeMeta `json:",inline"`
+	Name            string    `json:"name,omitempty" validate:"omitempty"`
+	Namespace       string    `json:"namespace,omitempty" validate:"omitempty"`
+	UUID            types.UID `json:"uuid,omitempty" validate:"omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
