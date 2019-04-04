@@ -268,6 +268,7 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, hostn
 		}
 		callbacks.OnIPSetMemberRemoved(ipSetID, member)
 	}
+	ruleScanner.OnIPSetMemberAdded = ipsetMemberIndex.OnMemberAdded
 
 	// The endpoint policy resolver marries up the active policies with local endpoints and
 	// calculates the complete, ordered set of policies that apply to each endpoint.

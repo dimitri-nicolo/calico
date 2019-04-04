@@ -80,6 +80,8 @@ type RuleScanner struct {
 	OnIPSetActive   func(ipSet *IPSetData)
 	OnIPSetInactive func(ipSet *IPSetData)
 
+	OnIPSetMemberAdded labelindex.NamedPortMatchCallback
+
 	RulesUpdateCallbacks rulesUpdateCallbacks
 }
 
@@ -261,6 +263,16 @@ func (rs *RuleScanner) updateRules(key interface{}, inbound, outbound []model.Ru
 		}
 		return nil
 	})
+
+	// ...
+	for _, rule := range parsedOutbound {
+		log.Infof("Check outbound rule %v", rule.DstDomainIPSetIDs)
+		for _, domain := range rule.DstDomains {
+			log.Infof("Domain %v", domain)
+			rs.OnIPSetMemberAdded(rule.DstDomainIPSetIDs[0], labelindex.IPSetMember{Domain: domain})
+		}
+	}
+
 	return
 }
 
@@ -305,6 +317,7 @@ type ParsedRule struct {
 	SrcIPSetIDs          []string
 	DstIPSetIDs          []string
 	DstDomainIPSetIDs    []string
+	DstDomains           []string
 
 	NotProtocol             *numorstring.Protocol
 	NotSrcNets              []*net.IPNet
@@ -389,6 +402,7 @@ func ruleToParsedRule(rule *model.Rule, ingressRule bool) (parsedRule *ParsedRul
 	// because we can't filter numeric ports by selector in the same way.
 	var srcSelIPSets, dstSelIPSets []*IPSetData
 	dstDomainIPSets := []*IPSetData{}
+	var dstDomains []string
 
 	if len(srcNumericPorts) > 0 || len(srcNamedPorts) == 0 {
 		srcSelIPSets = selectorsToIPSets(srcSel)
@@ -399,9 +413,12 @@ func ruleToParsedRule(rule *model.Rule, ingressRule bool) (parsedRule *ParsedRul
 		// If the rule is of type allow egress, check whether domains are directly specified
 		// and convert those to IPSets. If they are not, use the destination selector and
 		// calculate its IPSet(s).
+		log.Infof("Check rule %v %v for domains %v", ingressRule, rule.Action, rule.DstDomains)
 		if !ingressRule && rule.Action == "allow" {
 			if len(rule.DstDomains) != 0 {
+				log.Infof("Rule with domains %v", rule.DstDomains)
 				dstDomainIPSets = domainsToIPSets(rule.DstDomains)
+				dstDomains = rule.DstDomains
 			} else {
 				dstDomainIPSets = selectorsToIPSets(dstSel)
 			}
@@ -428,6 +445,7 @@ func ruleToParsedRule(rule *model.Rule, ingressRule bool) (parsedRule *ParsedRul
 		DstNamedPortIPSetIDs: ipSetsToUIDs(dstNamedPortIPSets),
 		DstIPSetIDs:          ipSetsToUIDs(dstSelIPSets),
 		DstDomainIPSetIDs:    ipSetsToUIDs(dstDomainIPSets),
+		DstDomains:           dstDomains,
 
 		ICMPType: rule.ICMPType,
 		ICMPCode: rule.ICMPCode,
