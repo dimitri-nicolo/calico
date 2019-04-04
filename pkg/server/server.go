@@ -52,8 +52,7 @@ func Start(config *Config) error {
 	wg.Add(1)
 	go func() {
 		log.Infof("Starting server on %v", config.ListenAddr)
-		// TODO(doublek): Make this TLS.
-		err := server.ListenAndServe()
+		err := server.ListenAndServeTLS(config.CertFile, config.KeyFile)
 		if err != nil {
 			log.WithError(err).Error("Error when starting server")
 		}

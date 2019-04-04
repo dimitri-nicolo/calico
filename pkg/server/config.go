@@ -8,14 +8,18 @@ import (
 	"os"
 )
 
+// Environment variables that we read.
 const (
-	listenAddrEnv      = "LISTEN_ADDR"
-	accessModeEnv      = "ACCESS_MODE"
-	elasticSchemeEnv   = "ELASTIC_SCHEME"
-	elasticHostEnv     = "ELASTIC_HOST"
-	elasticPortEnv     = "ELASTIC_PORT"
-	elasticUsernameEnv = "ELASTIC_USERNAME"
-	elasticPasswordEnv = "ELASTIC_PASSWORD"
+	listenAddrEnv   = "LISTEN_ADDR"
+	certFilePathEnv = "CERT_FILE_PATH"
+	keyFilePathEnv  = "KEY_FILE_PATH"
+
+	elasticAccessModeEnv = "ELASTIC_ACCESS_MODE"
+	elasticSchemeEnv     = "ELASTIC_SCHEME"
+	elasticHostEnv       = "ELASTIC_HOST"
+	elasticPortEnv       = "ELASTIC_PORT"
+	elasticUsernameEnv   = "ELASTIC_USERNAME"
+	elasticPasswordEnv   = "ELASTIC_PASSWORD"
 )
 
 type ElasticAccessMode string
@@ -43,6 +47,11 @@ type Config struct {
 	// parameter of net.Listen
 	ListenAddr string
 
+	// Paths to files containing certificate and matching private key
+	// for serving requests over TLS.
+	CertFile string
+	KeyFile  string
+
 	// AccessMode controls how we access es-proxy is configured to enforce
 	// Elasticsearch access.
 	AccessMode ElasticAccessMode
@@ -58,6 +67,9 @@ type Config struct {
 
 func NewConfigFromEnv() (*Config, error) {
 	listenAddr := os.Getenv(listenAddrEnv)
+	certFilePath := os.Getenv(certFilePathEnv)
+	keyFilePath := os.Getenv(keyFilePathEnv)
+
 	accessMode, err := parseAccessMode(os.Getenv(elasticAccessModeEnv))
 	if err != nil {
 		return nil, err
