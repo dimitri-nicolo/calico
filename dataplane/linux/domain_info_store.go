@@ -133,13 +133,10 @@ func (s *domainInfoStore) processMappingExpiry(name, value string) {
 	defer s.mutex.Unlock()
 	if nameData := s.mappings[name]; nameData != nil {
 		delete(nameData.values, value)
-		if len(nameData.values) == 0 {
+		if len(nameData.values)+len(nameData.ancestorNames) == 0 {
 			delete(s.mappings, name)
 		}
 		s.signalDomainInfoChange(name)
-		for _, ancestor := range nameData.ancestorNames {
-			s.signalDomainInfoChange(ancestor)
-		}
 	}
 }
 
@@ -195,6 +192,16 @@ func (s *domainInfoStore) storeInfo(name, value string, ttl time.Duration, isNam
 			isName: isName,
 		}
 		s.signalDomainInfoChange(name)
+		// If value is another name, for which we don't yet have any information, create a
+		// mapping entry for it so we can record that it is a descendant of the name in
+		// hand.  Then, when we get information for the descendant name, we can correctly
+		// signal changes for the name in hand and any of its ancestors.
+		if isName && s.mappings[value] == nil {
+			s.mappings[value] = &nameData{
+				values:        make(map[string]*valueData),
+				ancestorNames: append(s.mappings[name].ancestorNames, name),
+			}
+		}
 	} else {
 		newExpiryTime := time.Now().Add(ttl)
 		if newExpiryTime.After(existing.expiryTime) {
@@ -237,4 +244,10 @@ func (s *domainInfoStore) GetDomainIPs(domain string) []string {
 func (s *domainInfoStore) signalDomainInfoChange(name string) {
 	delete(s.resultsCache, name)
 	s.domainInfoChanges <- &domainInfoChanged{domain: name}
+	if nameData := s.mappings[name]; nameData != nil {
+		for _, ancestor := range nameData.ancestorNames {
+			delete(s.resultsCache, ancestor)
+			s.domainInfoChanges <- &domainInfoChanged{domain: ancestor}
+		}
+	}
 }
