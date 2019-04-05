@@ -18,7 +18,6 @@ spec:
   includeEndpointFlowLogData: true
   auditEventsSelection:
     resources:
-      - TypeMeta:
-          kind: 'globalnetworkpolicy'
+      - kind: 'globalnetworkpolicy'
         name: 'grt-aes-gnp'
         namespace: 'grt-aes-gnp-ns'

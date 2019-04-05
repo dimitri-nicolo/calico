@@ -18,8 +18,7 @@ spec:
       selector: 'gr-eps-sa-sel-key == "gr-eps-sa-sel-value"'
   auditEventsSelection:
     resources:
-      - TypeMeta:
-          kind: 'globalnetworkpolicy'
+      - kind: 'globalnetworkpolicy'
         name: 'gr-aes-gnp'
         namespace: 'gr-aes-gnp-ns'
   jobSchedule: "* * * * *"
