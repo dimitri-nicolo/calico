@@ -6901,9 +6901,18 @@ func schema_libcalico_go_lib_apis_v3_ResourceID(ref common.ReferenceCallback) co
 			SchemaProps: spec.SchemaProps{
 				Description: "ResourceID is used to identify a resource instance in the report data, and is used as a filter for resources in the Report configuration.\n\nWhen used to identify a resource, all valid fields will be set.\n\nWhen used as a resource filter, an empty field value indicates a wildcard. For example, if Kind is set to \"NetworkPolicy\" and all other fields are blank then this filter would include all NetworkPolicy resources across all namespaces, including both Calico and Kubernetes resource types.",
 				Properties: map[string]spec.Schema{
-					"TypeMeta": {
+					"kind": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.TypeMeta"),
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 					"name": {
@@ -6925,11 +6934,9 @@ func schema_libcalico_go_lib_apis_v3_ResourceID(ref common.ReferenceCallback) co
 						},
 					},
 				},
-				Required: []string{"TypeMeta"},
 			},
 		},
-		Dependencies: []string{
-			"k8s.io/apimachinery/pkg/apis/meta/v1.TypeMeta"},
+		Dependencies: []string{},
 	}
 }
 
