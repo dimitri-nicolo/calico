@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 
+	"github.com/projectcalico/app-policy/health"
 	"github.com/projectcalico/app-policy/policystore"
 	"github.com/projectcalico/app-policy/proto"
 	"github.com/projectcalico/app-policy/statscache"
@@ -42,6 +43,7 @@ type syncClient struct {
 	target   string
 	dialOpts []grpc.DialOption
 	stats    statscache.StatsCache
+	inSync   bool
 }
 
 type SyncClient interface {
@@ -50,6 +52,9 @@ type SyncClient interface {
 	// for enforcement.  Each time we disconnect and resync with the Policy Sync API a new PolicyStore is created
 	// and the previous one should be discarded.
 	Start(ctx context.Context, stores chan<- *policystore.PolicyStore, dpStats <-chan statscache.DPStats)
+
+	// SyncClient knows how to report its readiness.
+	health.ReadinessReporter
 }
 
 type ClientOptions struct {
@@ -80,6 +85,7 @@ func (s *syncClient) Start(cxt context.Context, stores chan<- *policystore.Polic
 			// Block until we receive InSync message, or cancelled.
 			select {
 			case <-inSync:
+				s.inSync = true
 				stores <- store
 			// Also catch the case where syncStore ends before it gets an InSync message.
 			case <-done:
@@ -146,6 +152,7 @@ func (s *syncClient) syncStore(cxt context.Context, client proto.PolicySyncClien
 	})
 	if err != nil {
 		log.Warnf("failed to synchronize with Policy Sync server: %v", err)
+		s.inSync = false
 		return
 	}
 
@@ -439,4 +446,9 @@ func processNamespaceRemove(store *policystore.PolicyStore, update *proto.Namesp
 		panic("got NamespaceRemove with nil NamespaceID")
 	}
 	delete(store.NamespaceByID, *update.Id)
+}
+
+// Readiness returns whether the SyncClient is InSync.
+func (s *syncClient) Readiness() bool {
+	return s.inSync
 }
