@@ -85,11 +85,22 @@ type RuleScanner struct {
 	RulesUpdateCallbacks rulesUpdateCallbacks
 }
 
+// XXX should we just use IPSetUpdate_IPSetType ?
+type SelectorIPSetType int
+
+const (
+	SelectorIPSetType_None      SelectorIPSetType = 0
+	SelectorIPSetType_IP        SelectorIPSetType = 1
+	SelectorIPSetType_NamedPort SelectorIPSetType = 2
+	SelectorIPSetType_Domain    SelectorIPSetType = 3
+)
+
 type IPSetData struct {
 	// The selector and named port that this IP set represents.  To represent an unfiltered named
 	// port, set selector to AllSelector.  If NamedPortProtocol == ProtocolNone then
 	// this IP set represents a selector only, with no named port component.
-	Selector selector.Selector
+	Selector     selector.Selector
+	selIPSetType SelectorIPSetType
 
 	// NamedPortProtocol identifies the protocol (TCP or UDP) for a named port IP set.  It is
 	// set to ProtocolNone for a selector-only IP set.
@@ -102,21 +113,30 @@ type IPSetData struct {
 	cachedUID string
 }
 
-func (d *IPSetData) SetUniqueID(dstDomains []string, hashPrefix string) {
-	var idToHash string
+func (d *IPSetData) SetUniqueID(dstDomains []string) {
+	var idToHash, hashPrefix string
 	if d.cachedUID != "" {
 		log.WithField("IPSetData", d).Panic("cachedUID already set")
 	}
 
-	if len(dstDomains) == 0 {
-		selID := d.Selector.UniqueID()
+	// Note that the Selector UniqueID is already prefixed with "s:"
+	selID := d.Selector.UniqueID()
+
+	switch d.selIPSetType {
+	case SelectorIPSetType_None:
+		log.WithField("IPSetData", d).Panic("selIPSetType not set")
+
+	case SelectorIPSetType_IP:
+		hashPrefix = "n:"
+		idToHash = selID[1:]
+
+	case SelectorIPSetType_NamedPort:
 		if d.NamedPortProtocol == labelindex.ProtocolNone {
-			d.cachedUID = hashPrefix + selID[1:]
-			return
-		} else {
-			idToHash = selID + "," + d.NamedPortProtocol.String() + "," + d.NamedPort
+			log.WithField("IPSetData", d).Panic("SelectorIPSetType_NamedPort with invalid NamedPortProtocol")
 		}
-	} else {
+		idToHash = selID + "," + d.NamedPortProtocol.String() + "," + d.NamedPort
+	case SelectorIPSetType_Domain:
+		hashPrefix = "d:"
 		idToHash = strings.Join(dstDomains, "#")
 	}
 
@@ -136,13 +156,20 @@ func (d *IPSetData) GetUniqueID() string {
 // DataplaneProtocolType returns the dataplane driver protocol type of this IP set.
 // One of the proto.IPSetUpdate_IPSetType constants.
 func (d *IPSetData) DataplaneProtocolType() proto.IPSetUpdate_IPSetType {
-	if d.NamedPortProtocol != labelindex.ProtocolNone {
-		return proto.IPSetUpdate_IP_AND_PORT
-	}
+	switch d.selIPSetType {
+	case SelectorIPSetType_None:
+		log.WithField("IPSetData", d).Panic("selIPSetType not set")
 
-	// IPSetData struct refer to domain names have their unique IDs prefixed with 'd'
-	uniqueID := d.GetUniqueID()
-	if uniqueID[0] == 'd' {
+	case SelectorIPSetType_IP:
+		return proto.IPSetUpdate_IP
+
+	case SelectorIPSetType_NamedPort:
+		if d.NamedPortProtocol == labelindex.ProtocolNone {
+			log.WithField("IPSetData", d).Panic("SelectorIPSetType_NamedPort with invalid NamedPortProtocol")
+		}
+		return proto.IPSetUpdate_IP_AND_PORT
+
+	case SelectorIPSetType_Domain:
 		return proto.IPSetUpdate_DOMAIN
 	}
 
@@ -403,10 +430,10 @@ func ruleToParsedRule(rule *model.Rule, ingressRule bool) (parsedRule *ParsedRul
 	var dstDomains []string
 
 	if len(srcNumericPorts) > 0 || len(srcNamedPorts) == 0 {
-		srcSelIPSets = selectorsToIPSets(srcSel, "n")
+		srcSelIPSets = selectorsToIPSets(srcSel, SelectorIPSetType_IP)
 	}
 	if len(dstNumericPorts) > 0 || len(dstNamedPorts) == 0 {
-		dstSelIPSets = selectorsToIPSets(dstSel, "n")
+		dstSelIPSets = selectorsToIPSets(dstSel, SelectorIPSetType_IP)
 
 		// If the rule is of type allow egress, check whether domains are directly specified
 		// and convert those to IPSets. If they are not, use the destination selector and
@@ -419,13 +446,13 @@ func ruleToParsedRule(rule *model.Rule, ingressRule bool) (parsedRule *ParsedRul
 				dstDomains = rule.DstDomains
 			} else {
 				log.Infof("Rule with selector %v", dstSel)
-				dstDomainIPSets = selectorsToIPSets(dstSel, "d")
+				dstDomainIPSets = selectorsToIPSets(dstSel, SelectorIPSetType_Domain)
 			}
 		}
 	}
 
-	notSrcSelIPSets := selectorsToIPSets(notSrcSels, "n")
-	notDstSelIPSets := selectorsToIPSets(notDstSels, "n")
+	notSrcSelIPSets := selectorsToIPSets(notSrcSels, SelectorIPSetType_IP)
+	notDstSelIPSets := selectorsToIPSets(notDstSels, SelectorIPSetType_IP)
 
 	parsedRule = &ParsedRule{
 		Action: rule.Action,
@@ -513,10 +540,11 @@ func namedPortsToIPSets(namedPorts []string, positiveSelectors []selector.Select
 	for _, namedPort := range namedPorts {
 		ipSet := IPSetData{
 			Selector:          sel,
+			selIPSetType:      SelectorIPSetType_NamedPort,
 			NamedPort:         namedPort,
 			NamedPortProtocol: proto,
 		}
-		ipSet.SetUniqueID(nil, "n")
+		ipSet.SetUniqueID(nil)
 		ipSets = append(ipSets, &ipSet)
 	}
 	return ipSets
@@ -525,18 +553,20 @@ func namedPortsToIPSets(namedPorts []string, positiveSelectors []selector.Select
 // Converts a list of domain names to a single IPSet.
 func domainsToIPSets(dstDomains []string) []*IPSetData {
 	ipSet := IPSetData{}
-	ipSet.SetUniqueID(dstDomains, "d")
+	ipSet.selIPSetType = SelectorIPSetType_Domain
+	ipSet.SetUniqueID(dstDomains)
 	return []*IPSetData{&ipSet}
 }
 
 // Converts a list of selectors to a list of IPSets.
-func selectorsToIPSets(selectors []selector.Selector, hashPrefix string) []*IPSetData {
+func selectorsToIPSets(selectors []selector.Selector, selType SelectorIPSetType) []*IPSetData {
 	var ipSets []*IPSetData
 	for _, s := range selectors {
 		ipSet := IPSetData{
-			Selector: s,
+			Selector:     s,
+			selIPSetType: selType,
 		}
-		ipSet.SetUniqueID(nil, hashPrefix)
+		ipSet.SetUniqueID(nil)
 		ipSets = append(ipSets, &ipSet)
 	}
 	return ipSets
