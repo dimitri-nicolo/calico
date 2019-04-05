@@ -14,6 +14,10 @@ type Interface interface {
 	GlobalNetworkPolicies() GlobalNetworkPolicyInformer
 	// GlobalNetworkSets returns a GlobalNetworkSetInformer.
 	GlobalNetworkSets() GlobalNetworkSetInformer
+	// GlobalReports returns a GlobalReportInformer.
+	GlobalReports() GlobalReportInformer
+	// GlobalReportTypes returns a GlobalReportTypeInformer.
+	GlobalReportTypes() GlobalReportTypeInformer
 	// GlobalThreatFeeds returns a GlobalThreatFeedInformer.
 	GlobalThreatFeeds() GlobalThreatFeedInformer
 	// HostEndpoints returns a HostEndpointInformer.
@@ -45,6 +49,16 @@ func (v *version) GlobalNetworkPolicies() GlobalNetworkPolicyInformer {
 // GlobalNetworkSets returns a GlobalNetworkSetInformer.
 func (v *version) GlobalNetworkSets() GlobalNetworkSetInformer {
 	return &globalNetworkSetInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// GlobalReports returns a GlobalReportInformer.
+func (v *version) GlobalReports() GlobalReportInformer {
+	return &globalReportInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// GlobalReportTypes returns a GlobalReportTypeInformer.
+func (v *version) GlobalReportTypes() GlobalReportTypeInformer {
+	return &globalReportTypeInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // GlobalThreatFeeds returns a GlobalThreatFeedInformer.

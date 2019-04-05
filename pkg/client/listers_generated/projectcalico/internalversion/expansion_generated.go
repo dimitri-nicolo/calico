@@ -12,6 +12,14 @@ type GlobalNetworkPolicyListerExpansion interface{}
 // GlobalNetworkSetLister.
 type GlobalNetworkSetListerExpansion interface{}
 
+// GlobalReportListerExpansion allows custom methods to be added to
+// GlobalReportLister.
+type GlobalReportListerExpansion interface{}
+
+// GlobalReportTypeListerExpansion allows custom methods to be added to
+// GlobalReportTypeLister.
+type GlobalReportTypeListerExpansion interface{}
+
 // GlobalThreatFeedListerExpansion allows custom methods to be added to
 // GlobalThreatFeedLister.
 type GlobalThreatFeedListerExpansion interface{}

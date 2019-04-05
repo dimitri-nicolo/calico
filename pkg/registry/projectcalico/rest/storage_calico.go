@@ -26,6 +26,8 @@ import (
 	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
 	calicognetworkset "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/globalnetworkset"
 	calicogpolicy "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/globalpolicy"
+	calicoglobalreport "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/globalreport"
+	calicoglobalreporttype "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/globalreporttype"
 	calicogthreatfeed "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/globalthreatfeed"
 	calicohostendpoint "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/hostendpoint"
 	calicolicensekey "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/licensekey"
@@ -181,7 +183,7 @@ func (p RESTStorageProvider) NewV3Storage(
 	hostEndpointOpts := server.NewOptions(
 		etcd.Options{
 			RESTOptions:   hostEndpointRESTOptions,
-			Capacity:      1000, //TODO: What's this?
+			Capacity:      1000,
 			ObjectType:    calicohostendpoint.EmptyObject(),
 			ScopeStrategy: calicohostendpoint.NewStrategy(scheme),
 			NewListFunc:   calicohostendpoint.NewList,
@@ -190,6 +192,48 @@ func (p RESTStorageProvider) NewV3Storage(
 		},
 		calicostorage.Options{
 			RESTOptions: hostEndpointRESTOptions,
+		},
+		p.StorageType,
+		authorizer,
+	)
+
+	globalReportRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("globalreports"))
+	if err != nil {
+		return nil, err
+	}
+	globalReportOpts := server.NewOptions(
+		etcd.Options{
+			RESTOptions:   globalReportRESTOptions,
+			Capacity:      1000,
+			ObjectType:    calicoglobalreport.EmptyObject(),
+			ScopeStrategy: calicoglobalreport.NewStrategy(scheme),
+			NewListFunc:   calicoglobalreport.NewList,
+			GetAttrsFunc:  calicoglobalreport.GetAttrs,
+			Trigger:       storage.NoTriggerPublisher,
+		},
+		calicostorage.Options{
+			RESTOptions: globalReportRESTOptions,
+		},
+		p.StorageType,
+		authorizer,
+	)
+
+	globalReportTypeRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("globalreporttypes"))
+	if err != nil {
+		return nil, err
+	}
+	globalReportTypeOpts := server.NewOptions(
+		etcd.Options{
+			RESTOptions:   globalReportTypeRESTOptions,
+			Capacity:      1000,
+			ObjectType:    calicoglobalreporttype.EmptyObject(),
+			ScopeStrategy: calicoglobalreporttype.NewStrategy(scheme),
+			NewListFunc:   calicoglobalreporttype.NewList,
+			GetAttrsFunc:  calicoglobalreporttype.GetAttrs,
+			Trigger:       storage.NoTriggerPublisher,
+		},
+		calicostorage.Options{
+			RESTOptions: globalReportTypeRESTOptions,
 		},
 		p.StorageType,
 		authorizer,
@@ -207,6 +251,8 @@ func (p RESTStorageProvider) NewV3Storage(
 	storage["globalthreatfeeds/status"] = globalThreatFeedsStatusStorage
 
 	storage["hostendpoints"] = calicohostendpoint.NewREST(scheme, *hostEndpointOpts)
+	storage["globalreports"] = calicoglobalreport.NewREST(scheme, *globalReportOpts)
+	storage["globalreporttypes"] = calicoglobalreporttype.NewREST(scheme, *globalReportTypeOpts)
 
 	return storage, nil
 }

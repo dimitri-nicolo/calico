@@ -1,0 +1,23 @@
+apiVersion: projectcalico.org/v3
+kind: GlobalReportType
+metadata:
+  name: sample-global-report-type
+  labels:
+    type: sample-type-global-report-type
+spec:
+  uiSummaryTemplate:
+    name: 'grt-ui-s-templ'
+    template: 'Total Endpoints: {{ .EndpointsNumTotal }}'
+  uiCompleteTemplate:
+    name: 'grt-ui-c-templ'
+    template: 'Total Endpoints: {{ .EndpointsNumTotal }}'
+  downloadTemplates:
+    - name: 'grt-dld-templ'
+      template: 'Total Endpoints: {{ .EndpointsNumTotal }}'
+  includeEndpointData: false
+  includeEndpointFlowLogData: true
+  auditEventsSelection:
+    resources:
+      - kind: 'globalnetworkpolicy'
+        name: 'grt-aes-gnp'
+        namespace: 'grt-aes-gnp-ns'

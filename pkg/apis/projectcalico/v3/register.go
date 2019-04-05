@@ -47,6 +47,10 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&GlobalThreatFeedList{},
 		&HostEndpoint{},
 		&HostEndpointList{},
+		&GlobalReport{},
+		&GlobalReportList{},
+		&GlobalReportType{},
+		&GlobalReportTypeList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil
