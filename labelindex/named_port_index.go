@@ -132,6 +132,7 @@ type ipSetData struct {
 	selector          selector.Selector
 	namedPortProtocol IPSetPortProtocol
 	namedPort         string
+	id                string
 
 	// memberToRefCount stores a reference count for each member in the IP set.  Reference counts
 	// may be >1 if an IP address is shared by more than one endpoint.
@@ -373,6 +374,7 @@ func (idx *SelectorAndNamedPortIndex) UpdateIPSet(ipSetID string, sel selector.S
 		namedPort:         namedPort,
 		namedPortProtocol: namedPortProtocol,
 		memberToRefCount:  map[IPSetMember]uint64{},
+		id:                ipSetID,
 	}
 	idx.ipSetDataByID[ipSetID] = newIPSetData
 
@@ -678,23 +680,17 @@ func (idx *SelectorAndNamedPortIndex) CalculateEndpointContribution(d *endpointD
 				})
 			}
 		}
+	} else if strings.HasPrefix(ipSetData.id, "d") {
+		for _, domain := range d.domains {
+			contrib = append(contrib, IPSetMember{
+				Domain: domain,
+			})
+		}
 	} else {
-		if len(d.nets) != 0 {
-			for _, addr := range d.nets {
-				contrib = append(contrib, IPSetMember{
-					CIDR: addr,
-				})
-			}
-		} else {
-			if len(d.domains) == 0 {
-				log.Panic("new ipSetData has no nets or domains")
-			}
-
-			for _, domain := range d.domains {
-				contrib = append(contrib, IPSetMember{
-					Domain: domain,
-				})
-			}
+		for _, addr := range d.nets {
+			contrib = append(contrib, IPSetMember{
+				CIDR: addr,
+			})
 		}
 	}
 	return
