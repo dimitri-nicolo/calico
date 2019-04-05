@@ -19,12 +19,14 @@
 bin
 vendor
 *.coverprofile
+
 cmd/controller/controller
 cmd/reporter/reporter
 cmd/server/server
 cmd/snapshotter/snapshotter
 
 cmd/server/apiserver.local.config/
+.settings
 
 # vim
 *.sw*

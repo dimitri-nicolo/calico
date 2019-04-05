@@ -8,8 +8,8 @@ import (
 	certutil "k8s.io/client-go/util/cert"
 )
 
-// GenerateSelfSignedCerts is a minimal copy of the version in the kubernetes apiserver in order to avoid versioning issues.
-func GenerateSelfSignedCerts(publicAddress string, alternateDNS []string, alternateIPs []net.IP, certpath string, keypath string) error {
+// GenerateSelfSignedCertsIfNeeded is a minimal copy of the version in the kubernetes apiserver in order to avoid versioning issues.
+func GenerateSelfSignedCertsIfNeeded(publicAddress string, alternateDNS []string, alternateIPs []net.IP, certpath string, keypath string) error {
 	canReadCertAndKey, err := certutil.CanReadCertAndKey(certpath, keypath)
 	if err != nil {
 		return err
