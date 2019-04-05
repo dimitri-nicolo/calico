@@ -15,6 +15,16 @@ var _ = Describe("Proxy Handler", func() {
 	targetName := "target"
 	var proxyServer, target *httptest.Server
 
+	requestAndCheckResult := func(path string, expectedStatusCode int, expectedTarget string) {
+		client := proxyServer.Client()
+		proxyServerURL, err := url.Parse(proxyServer.URL)
+		Expect(err).ShouldNot(HaveOccurred())
+		proxyServerURL.Path = path
+		resp, err := client.Get(proxyServerURL.String())
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(resp.StatusCode).Should(Equal(expectedStatusCode))
+		Expect(resp.Header.Get("X-Target-Name")).Should(Equal(expectedTarget))
+	}
 	BeforeEach(func() {
 		testmux := http.NewServeMux()
 		testmux.Handle("/test200", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -33,46 +43,25 @@ var _ = Describe("Proxy Handler", func() {
 		proxyServer = httptest.NewServer(handler.NewProxy(targetURL))
 	})
 	It("should forward requests to the target server when the target is available", func() {
+
 		By("Starting the target server")
 		target.Start()
-		client := proxyServer.Client()
-		proxyServerURL, err := url.Parse(proxyServer.URL)
-		Expect(err).ShouldNot(HaveOccurred())
 
 		By("Requesting an available resource should return a 200 OK")
-		proxyServerURL.Path = "/test200"
-		resp, err := client.Get(proxyServerURL.String())
-		Expect(err).ShouldNot(HaveOccurred())
-		Expect(resp.StatusCode).Should(Equal(200))
-		Expect(resp.Header.Get("X-Target-Name")).Should(Equal(targetName))
+		requestAndCheckResult("/test200", 200, targetName)
 
 		By("Requesting an non-existent resource should return the original 404 back")
-		proxyServerURL.Path = "/test123"
-		resp, err = client.Get(proxyServerURL.String())
-		Expect(err).ShouldNot(HaveOccurred())
-		Expect(resp.StatusCode).Should(Equal(404))
-		Expect(resp.Header.Get("X-Target-Name")).Should(Equal(""))
+		requestAndCheckResult("/test123", 404, "")
 
 		By("Requesting an available resource but a bad request should return the errored 400 back")
-		proxyServerURL.Path = "/test400"
-		resp, err = client.Get(proxyServerURL.String())
-		Expect(err).ShouldNot(HaveOccurred())
-		Expect(resp.StatusCode).Should(Equal(400))
-		Expect(resp.Header.Get("X-Target-Name")).Should(Equal(""))
+		requestAndCheckResult("/test400", 400, "")
 	})
 	It("should respond with 502 bad gateway when the server isn't available", func() {
-		By("Not stopping the target server")
+		By("Stopping the target server")
 		target.Close()
-		client := proxyServer.Client()
-		proxyServerURL, err := url.Parse(proxyServer.URL)
-		Expect(err).ShouldNot(HaveOccurred())
 
 		By("Requesting an available resource however should return a 502 Bad Gateway")
-		proxyServerURL.Path = "/test200"
-		resp, err := client.Get(proxyServerURL.String())
-		Expect(err).ShouldNot(HaveOccurred())
-		Expect(resp.StatusCode).Should(Equal(502))
-		Expect(resp.Header.Get("X-Target-Name")).Should(Equal(""))
+		requestAndCheckResult("/test200", 502, "")
 	})
 	AfterEach(func() {
 		proxyServer.Close()
