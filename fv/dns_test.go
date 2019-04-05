@@ -148,6 +148,55 @@ var _ = Describe("DNS Policy", func() {
 			})
 		})
 
+		Context("with networkset with allowed egress domains", func() {
+			BeforeEach(func() {
+				gns := api.NewGlobalNetworkSet()
+				gns.Name = "allow-microsoft"
+				gns.Labels = map[string]string{"founder": "billg"}
+				gns.Spec.AllowedEgressDomains = []string{"microsoft.com", "www.microsoft.com"}
+				_, err := client.GlobalNetworkSets().Create(utils.Ctx, gns, utils.NoOptions)
+				Expect(err).NotTo(HaveOccurred())
+
+				policy := api.NewGlobalNetworkPolicy()
+				policy.Name = "allow-microsoft"
+				order := float64(20)
+				policy.Spec.Order = &order
+				policy.Spec.Selector = "all()"
+				tcp := numorstring.ProtocolFromString(numorstring.ProtocolTCP)
+				udp := numorstring.ProtocolFromString(numorstring.ProtocolUDP)
+				policy.Spec.Egress = []api.Rule{
+					{
+						Action: api.Allow,
+						Destination: api.EntityRule{
+							Selector: "founder == 'billg'",
+						},
+					},
+					{
+						Action:   api.Allow,
+						Protocol: &tcp,
+						Destination: api.EntityRule{
+							Ports: []numorstring.Port{numorstring.SinglePort(53)},
+						},
+					},
+					{
+						Action:   api.Allow,
+						Protocol: &udp,
+						Destination: api.EntityRule{
+							Ports: []numorstring.Port{numorstring.SinglePort(53)},
+						},
+					},
+				}
+				_, err = client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("can wget microsoft.com", func() {
+				out, err := w[0].ExecOutput("wget", "-T", "10", "microsoft.com")
+				log.WithError(err).Infof("wget said:\n%v", out)
+				Expect(err).NotTo(HaveOccurred())
+			})
+		})
+
 	})
 
 	PContext("Connectivity to tigera.io", func() {
