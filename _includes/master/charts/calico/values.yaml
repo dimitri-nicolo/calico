@@ -1,7 +1,7 @@
 federation:
   enabled: false
-network: "none"
-calico_ipam: false
+network: calico
+calico_ipam: true
 datastore: kdd
 app_layer_policy:
   enabled: false

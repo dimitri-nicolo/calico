@@ -9,4 +9,5 @@ typha:
 app_layer_policy:
   enabled: true
   configured: true
+calico_ipam: false
 {% endhelm %}
