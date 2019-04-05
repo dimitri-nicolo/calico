@@ -25,21 +25,37 @@ var _ = Describe("Proxy Handler", func() {
 		Expect(resp.StatusCode).Should(Equal(expectedStatusCode))
 		Expect(resp.Header.Get("X-Target-Name")).Should(Equal(expectedTarget))
 	}
+
 	BeforeEach(func() {
 		testmux := http.NewServeMux()
+
+		var targetURL *url.URL
+
+		hostHeaderChecker := func(h http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				// Per RFC 7230, proxy should set the host header of
+				// the request-target.
+				By("Checking that the host header is set to the target")
+				Expect(r.Host).Should(Equal(targetURL.Host))
+				h.ServeHTTP(w, r)
+			})
+		}
+
+		target = httptest.NewUnstartedServer(hostHeaderChecker(testmux))
+		targetURLStr := "http://" + target.Listener.Addr().String()
+		targetURL, err := url.Parse(targetURLStr)
+		Expect(err).ShouldNot(HaveOccurred())
+
 		testmux.Handle("/test200", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Add("X-Target-Name", targetName)
 			w.WriteHeader(200)
 			w.Write([]byte(targetName))
 		}))
 		testmux.Handle("/test400", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			Expect(r.Host).Should(Equal(targetURL.Host))
 			w.WriteHeader(400)
 			w.Header().Add("X-Target-Name", targetName)
 		}))
-		target = httptest.NewUnstartedServer(testmux)
-		targetURLStr := "http://" + target.Listener.Addr().String()
-		targetURL, err := url.Parse(targetURLStr)
-		Expect(err).ShouldNot(HaveOccurred())
 		proxyServer = httptest.NewServer(handler.NewProxy(targetURL))
 	})
 	It("should forward requests to the target server when the target is available", func() {
