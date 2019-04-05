@@ -1,3 +1,4 @@
 elasticsearchType: "operator"
 orch: ""
+createCustomResources: true
 

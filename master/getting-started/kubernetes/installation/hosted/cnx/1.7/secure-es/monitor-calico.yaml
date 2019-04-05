@@ -9,4 +9,5 @@ elasticsearchType: external
 {% helm tigera-secure-lma --execute templates/monitor-calico.yaml %}
 secure_es: true
 elasticsearchType: external
+createCustomResources: false
 {% endhelm %}
