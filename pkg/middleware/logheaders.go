@@ -3,7 +3,6 @@ package middleware
 
 import (
 	"net/http"
-	"net/http/httputil"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -19,12 +18,6 @@ func LogRequestHeaders(h http.Handler) http.Handler {
 			"path":       req.RequestURI,
 			"remoteAddr": req.RemoteAddr,
 		}).Infof("Request received")
-		reqB, err := httputil.DumpRequest(req, true)
-		if err == nil {
-			log.WithField("request", string(reqB)).Debug("Request dump")
-		} else {
-			log.WithError(err).Debug("Couldn't dump request.")
-		}
 		h.ServeHTTP(w, req)
 	})
 }
