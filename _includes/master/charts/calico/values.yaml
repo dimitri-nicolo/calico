@@ -67,28 +67,6 @@ manager:
     crt: null
     key: null
 
-elasticsearch:
-  # Information for configuring connections to a BYO elasticsearch cluster.
-  # Leave all fields blank to deploy a self-hosted elasticsearch instance.
-
-  # The address of your elasticsearch cluster.
-  host: null
-  tls:
-    # Authentication information for communications between es-proxy and BYO elasticsearch.
-    # The CA used for authenticate es-proxy with elasticsearch.
-    ca: null
-    # Leave blank to use self-signed certs.
-    crt: null
-    key: null
-  fluentd:
-    # The username and password fluentd should use when connecting to elasticsearch.
-    username: tigera-ee-fluentd
-    password: null
-  manager:
-    # The username and password the manager should use when connecting to elasticsearch.
-    username: tigera-ee-manager
-    password: null
-
 # TODO: move to helpers
 orch: ""
 rbac: ""
