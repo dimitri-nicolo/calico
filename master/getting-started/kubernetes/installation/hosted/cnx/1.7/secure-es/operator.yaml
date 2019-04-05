@@ -3,4 +3,5 @@ layout: null
 ---
 {% helm tigera-secure-lma --execute templates/operator.yaml %}
 elasticsearchType: external
+createCustomResources: false
 {% endhelm %}

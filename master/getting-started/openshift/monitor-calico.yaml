@@ -5,4 +5,5 @@ layout: null
 secure_es: false
 orch: openshift
 elasticsearchType: operator
+createCustomResources: false
 {% endhelm %}

@@ -11,4 +11,5 @@ elasticsearchType: external
 secure_es: true
 orch: openshift
 elasticsearchType: external
+createCustomResources: false
 {% endhelm %}
