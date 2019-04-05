@@ -53,6 +53,20 @@ typha:
     # - name: TYPHA_PROMETHEUSMETRICSENABLED
     #   value: "true"
 
+apiserver:
+  # Authentication information for securing communications between TSEE manager and TSEE apiserver.
+  # Leave blank to use self-signed certs.
+  tls:
+    crt: null
+    key: null
+
+manager:
+  # Authentication information for securing communications between TSEE manager and the web browser.
+  # Leave blank to use self-signed certs.
+  tls:
+    crt: null
+    key: null
+
 # TODO: move to helpers
 orch: ""
 rbac: ""
