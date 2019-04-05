@@ -52,6 +52,16 @@ var (
 				return c.NetworkingV1().NetworkPolicies("").List(metav1.ListOptions{})
 			},
 		},
+		resources.ResourceTypeK8sNetworkPoliciesDep: {
+			func(c ClientSet) (resources.ResourceList, error) {
+				return c.NetworkingV1().NetworkPolicies("").List(metav1.ListOptions{})
+			},
+		},
+		resources.ResourceTypeTiers: {
+			func(c ClientSet) (resources.ResourceList, error) {
+				return c.Tiers().List(context.Background(), options.ListOptions{})
+			},
+		},
 		resources.ResourceTypeHostEndpoints: {
 			func(c ClientSet) (resources.ResourceList, error) {
 				return c.HostEndpoints().List(context.Background(), options.ListOptions{})

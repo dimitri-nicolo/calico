@@ -61,7 +61,7 @@ func main() {
 	wg := sync.WaitGroup{}
 	for _, rh := range resources.GetAllResourceHelpers() {
 		wg.Add(1)
-		go func(r resources.ResourceHelper) {
+		go func(rh resources.ResourceHelper) {
 			err := snapshot.Run(cxt, rh.GroupVersionKind(), datastoreClient, elasticClient)
 			if err != nil {
 				log.Errorf("Hit terminating error in snapshotter: %v", err)

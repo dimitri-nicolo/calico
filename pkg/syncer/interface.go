@@ -2,17 +2,14 @@
 package syncer
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/tigera/compliance/pkg/resources"
 )
 
-type SyncerClient interface {
-	NewSyncer(cb SyncerCallbacks) Syncer
-}
-
 type Syncer interface {
-	Start()
+	Start(context.Context)
 }
 
 type SyncerCallbacks interface {
@@ -41,13 +38,25 @@ type StatusUpdate struct {
 	Error error
 }
 
+func NewStatusUpdateComplete() StatusUpdate {
+	return StatusUpdate{StatusTypeComplete, nil}
+}
+
+func NewStatusUpdateInSync() StatusUpdate {
+	return StatusUpdate{StatusTypeInSync, nil}
+}
+
+func NewStatusUpdateFailed(err error) StatusUpdate {
+	return StatusUpdate{StatusTypeFailed, err}
+}
+
 func (s StatusUpdate) String() string {
 	switch s.Type {
 	case StatusTypeInSync:
 		return "in-sync"
 	case StatusTypeComplete:
 		return "complete"
-	case StatusUpdateFailed:
+	case StatusTypeFailed:
 		return fmt.Sprintf("failed: %v", s.Error)
 	default:
 		return "unknown"
@@ -59,5 +68,5 @@ type StatusType int8
 const (
 	StatusTypeInSync StatusType = iota
 	StatusTypeComplete
-	StatusUpdateFailed
+	StatusTypeFailed
 )

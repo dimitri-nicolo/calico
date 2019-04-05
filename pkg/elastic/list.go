@@ -16,8 +16,9 @@ import (
 )
 
 func (c *client) RetrieveList(kind schema.GroupVersionKind, from, to *time.Time, ascending bool) (*list.TimestampedResourceList, error) {
+	clog := log.WithField("kind", kind)
 	// Construct the range query based on received arguments.
-	rangeQuery := elastic.NewRangeQuery("requestStartedTimestamp")
+	rangeQuery := elastic.NewRangeQuery("requestCompletedTimestamp")
 	if from != nil {
 		rangeQuery = rangeQuery.From(*from)
 	}
@@ -34,24 +35,24 @@ func (c *client) RetrieveList(kind schema.GroupVersionKind, from, to *time.Time,
 				elastic.NewTermQuery("kind", kind.Kind),
 				rangeQuery,
 			)).
-		Sort("requestStartedTimestamp", ascending).
+		Sort("requestCompletedTimestamp", ascending).
 		Size(1). // Only retrieve the first document found.
 		Do(context.Background())
 	if err != nil {
-		log.WithError(err).Error("failed to execute query")
+		clog.WithError(err).Error("failed to execute query")
 		return nil, err
 	}
-	log.WithField("latency (ms)", res.TookInMillis).Debug("query success")
+	clog.WithField("latency (ms)", res.TookInMillis).Debug("query success")
 
 	// Should only return one document.
 	switch len(res.Hits.Hits) {
 	case 0:
-		log.Error("no hits found")
+		clog.Error("no hits found")
 		return nil, errors.ErrorResourceDoesNotExist{}
 	case 1:
 		break
 	default:
-		log.WithField("hits", len(res.Hits.Hits)).
+		clog.WithField("hits", len(res.Hits.Hits)).
 			Warn("expected to receive only one hit")
 	}
 
@@ -59,7 +60,7 @@ func (c *client) RetrieveList(kind schema.GroupVersionKind, from, to *time.Time,
 	hit := res.Hits.Hits[0]
 	l := new(list.TimestampedResourceList)
 	if err = json.Unmarshal(*hit.Source, l); err != nil {
-		log.WithError(err).Error("failed to extract list from result")
+		clog.WithError(err).Error("failed to extract list from result")
 		return nil, err
 	}
 

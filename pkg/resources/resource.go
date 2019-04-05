@@ -28,10 +28,7 @@ type ResourceID struct {
 }
 
 func (r ResourceID) String() string {
-	if r.Namespace == "" {
-		return r.GroupVersionKind.GroupVersion().String() + "/" + r.Kind + "/" + r.Name
-	}
-	return r.GroupVersionKind.GroupVersion().String() + "/" + r.Kind + "/" + r.Namespace + "/" + r.Name
+	return r.GroupVersion().String() + "/" + r.Kind + "/" + r.NameNamespace.String()
 }
 
 func GetResourceID(r Resource) ResourceID {
@@ -39,6 +36,13 @@ func GetResourceID(r Resource) ResourceID {
 		GroupVersionKind: r.GetObjectKind().GroupVersionKind(),
 		NameNamespace:    GetNameNamespace(r),
 	}
+}
+
+func (nn NameNamespace) String() string {
+	if nn.Namespace == "" {
+		return nn.Name
+	}
+	return nn.Namespace + "/" + nn.Name
 }
 
 func GetNameNamespace(r Resource) NameNamespace {

@@ -22,7 +22,8 @@ type TimestampedResourceList struct {
 }
 
 func (l *TimestampedResourceList) String() string {
-	return fmt.Sprintf("%s::%s", l.RequestCompletedTimestamp.Format(time.RFC3339), l.GetObjectKind().GroupVersionKind().String())
+	gvk := l.GetObjectKind().GroupVersionKind()
+	return fmt.Sprintf("%s::%s::%s", l.RequestCompletedTimestamp.Format(time.RFC3339), gvk.GroupVersion().String(), gvk.Kind)
 }
 
 // UnmarshalJSON implements the unmarshalling interface for JSON. We need to implement this explicitly because the

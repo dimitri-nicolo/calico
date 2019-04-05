@@ -7,8 +7,8 @@ const (
   "mappings": {
     "_doc": {
       "properties": {
+        "kind": { "type": "keyword" },
         "apiVersion": { "type": "keyword" },
-        "kind": { "type": "text" },
         "items": { "type": "object", "enabled": false },
         "metadata": { "type": "object" },
         "requestStartedTimestamp": { "type": "date" },
