@@ -438,6 +438,8 @@ as well as non-namespaced (e.g. globalnetworkset) resources:
   kubectl apply -f artifacts/calico/iwantcake5-license.yaml
 ```
 
+* Run `make static-checks` before creating a PR to make sure that all the changes can be goimport-ed.
+
 * For an example pull request that contains all these changes (plus all the
   generated files as well), see: https://github.com/tigera/calico-k8sapiserver/pull/97
 

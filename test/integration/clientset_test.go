@@ -910,9 +910,7 @@ func testGlobalReportClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("Items field should not be set to nil")
 	}
 
-	/*
-	Create/List/Get/Delete tests.
-	*/
+	// Create/List/Get/Delete tests.
 	globalReportServer, err := globalReportClient.Create(globalReport)
 	if nil != err {
 		return fmt.Errorf("error creating the globalReport '%v' (%v)", globalReport, err)
@@ -943,9 +941,7 @@ func testGlobalReportClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("globalReport should be deleted (%s)", err)
 	}
 
-	/*
-	Check list-ing GlobalReport resource works with watch option.
-	*/
+	// Check list-ing GlobalReport resource works with watch option.
 	w, err := client.ProjectcalicoV3().GlobalReports().Watch(v1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error watching GlobalReports (%s)", err)
@@ -1018,11 +1014,11 @@ func testGlobalReportTypeClient(client calicoclient.Interface, name string) erro
 		ObjectMeta: metav1.ObjectMeta{Name: name},
 		Spec: calico.ReportTypeSpec{
 			UISummaryTemplate: calico.ReportTemplate{
-				Name: "uist",
+				Name:     "uist",
 				Template: "Total Endpoints: {{ .EndpointsNumTotal }}",
 			},
 			UICompleteTemplate: calico.ReportTemplate{
-				Name: "uict",
+				Name:     "uict",
 				Template: "Total Endpoints: {{ .EndpointsNumTotal }}",
 			},
 		},
@@ -1037,9 +1033,7 @@ func testGlobalReportTypeClient(client calicoclient.Interface, name string) erro
 		return fmt.Errorf("Items field should not be set to nil")
 	}
 
-	/*
-	Create/List/Get/Delete tests.
-	*/
+	// Create/List/Get/Delete tests.
 	globalReportTypeServer, err := globalReportTypeClient.Create(globalReportType)
 	if nil != err {
 		return fmt.Errorf("error creating the globalReportType '%v' (%v)", globalReportType, err)
@@ -1070,9 +1064,7 @@ func testGlobalReportTypeClient(client calicoclient.Interface, name string) erro
 		return fmt.Errorf("globalReportType should be deleted (%s)", err)
 	}
 
-	/*
-	Check list-ing GlobalReportType resource works with watch option.
-	*/
+	// Check list-ing GlobalReportType resource works with watch option.
 	w, err := client.ProjectcalicoV3().GlobalReportTypes().Watch(v1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error watching GlobalReportTypes (%s)", err)
@@ -1103,11 +1095,11 @@ func testGlobalReportTypeClient(client calicoclient.Interface, name string) erro
 			ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("grt%d", i)},
 			Spec: calico.ReportTypeSpec{
 				UISummaryTemplate: calico.ReportTemplate{
-					Name: fmt.Sprintf("uist%d", i),
+					Name:     fmt.Sprintf("uist%d", i),
 					Template: "Total Endpoints: {{ .EndpointsNumTotal }}",
 				},
 				UICompleteTemplate: calico.ReportTemplate{
-					Name: fmt.Sprintf("uict%d", i),
+					Name:     fmt.Sprintf("uict%d", i),
 					Template: "Total Endpoints: {{ .EndpointsNumTotal }}",
 				},
 			},
