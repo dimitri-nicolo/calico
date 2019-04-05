@@ -127,7 +127,7 @@ func (d *IPSetData) SetUniqueID(dstDomains []string) {
 		log.WithField("IPSetData", d).Panic("selIPSetType not set")
 
 	case SelectorIPSetType_IP:
-		hashPrefix = "n:"
+		hashPrefix = "n"
 		idToHash = selID[1:]
 
 	case SelectorIPSetType_NamedPort:
@@ -135,8 +135,9 @@ func (d *IPSetData) SetUniqueID(dstDomains []string) {
 			log.WithField("IPSetData", d).Panic("SelectorIPSetType_NamedPort with invalid NamedPortProtocol")
 		}
 		idToHash = selID + "," + d.NamedPortProtocol.String() + "," + d.NamedPort
+
 	case SelectorIPSetType_Domain:
-		hashPrefix = "d:"
+		hashPrefix = "d"
 		idToHash = strings.Join(dstDomains, "#")
 	}
 
@@ -161,6 +162,7 @@ func (d *IPSetData) DataplaneProtocolType() proto.IPSetUpdate_IPSetType {
 		log.WithField("IPSetData", d).Panic("selIPSetType not set")
 
 	case SelectorIPSetType_IP:
+		// XXX Previous DataplaneProtocolType() does not return IPSetUpdate_IP.. is this change correct?
 		return proto.IPSetUpdate_IP
 
 	case SelectorIPSetType_NamedPort:
