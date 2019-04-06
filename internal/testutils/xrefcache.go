@@ -23,11 +23,19 @@ func NewXrefCacheTester() *XRefCacheTester {
 	}
 }
 
+var (
+	// Internal resource kind to encapsulate a selector.
+	kindSelector = schema.GroupVersionKind{
+		Kind:  "selector",
+		Group: "internal",
+	}
+)
+
 func labelByteToLabels(l Label) map[string]string {
 	labels := make(map[string]string)
 	for i := uint(0); i < 8; i++ {
-		if (l>>i)&1 == 1 {
-			labels[fmt.Sprintf("label%d")] = ""
+		if l&(1<<i) != 0 {
+			labels[fmt.Sprintf("label%d", i+1)] = ""
 		}
 	}
 	return labels
@@ -42,8 +50,24 @@ func selectorByteToSelector(s Selector) string {
 	}
 	sels := []string{}
 	for i := uint(0); i < 8; i++ {
-		if (s>>i)&1 == 1 {
-			sels = append(sels, fmt.Sprintf("has(label%d)", i))
+		if s&(1<<i) != 0 {
+			sels = append(sels, fmt.Sprintf("has(label%d)", i+1))
+		}
+	}
+	return strings.Join(sels, " && ")
+}
+
+func selectorByteToNamespaceSelector(s Selector) string {
+	if s == SelectAll {
+		return "all()"
+	}
+	if s == NoSelector {
+		return ""
+	}
+	sels := []string{}
+	for i := uint(0); i < 8; i++ {
+		if s&(1<<i) != 0 {
+			sels = append(sels, fmt.Sprintf("has(pcns.label%d)", i+1))
 		}
 	}
 	return strings.Join(sels, " && ")
@@ -58,9 +82,9 @@ func selectorByteToK8sSelector(s Selector) *metav1.LabelSelector {
 		return sel
 	}
 	for i := uint(0); i < 8; i++ {
-		if (s>>i)&1 == 1 {
+		if s&(1<<i) != 0 {
 			sel.MatchExpressions = append(sel.MatchExpressions, metav1.LabelSelectorRequirement{
-				Key:      fmt.Sprintf("label%d", i),
+				Key:      fmt.Sprintf("label%d", i+1),
 				Operator: metav1.LabelSelectorOpExists,
 			})
 
@@ -73,7 +97,7 @@ func getResourceId(kind schema.GroupVersionKind, nameIdx Name, namespaceIdx Name
 	name := fmt.Sprintf("%s-%d", strings.ToLower(kind.Kind), nameIdx)
 	var namespace string
 	if namespaceIdx > 0 {
-		namespace = fmt.Sprintf("namespace-%d")
+		namespace = fmt.Sprintf("namespace-%d", namespaceIdx)
 	}
 	return resources.ResourceID{
 		GroupVersionKind: kind,
@@ -484,4 +508,34 @@ func (t *XRefCacheTester) DeleteNamespace(nameIdx Name, namespaceIdx Namespace) 
 		Type:       syncer.UpdateTypeDeleted,
 		ResourceID: r,
 	})
+}
+
+//
+// -- K8s rule selector pseudo resource access --
+//
+
+func (t *XRefCacheTester) GetCachedRuleSelectors() []string {
+	ids := t.xrefCache.GetCachedResourceIDs(kindSelector)
+	selectors := make([]string, len(ids))
+	for i := range ids {
+		selectors[i] = ids[i].Name
+	}
+	return selectors
+}
+
+func (t *XRefCacheTester) GetGNPRuleSelectorCacheEntry(sel Selector, nsSel Selector) *xrefcache.CacheEntryNetworkPolicyRuleSelector {
+	s := selectorByteToSelector(sel)
+	if nsSel != NoNamespaceSelector {
+		s = fmt.Sprintf("(%s) && (%s)", selectorByteToNamespaceSelector(nsSel), s)
+	}
+	entry := t.xrefCache.Get(resources.ResourceID{
+		GroupVersionKind: kindSelector,
+		NameNamespace: resources.NameNamespace{
+			Name: s,
+		},
+	})
+	if entry == nil {
+		return nil
+	}
+	return entry.(*xrefcache.CacheEntryNetworkPolicyRuleSelector)
 }

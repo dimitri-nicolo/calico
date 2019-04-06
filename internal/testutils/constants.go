@@ -26,6 +26,7 @@ const (
 	NoLabels            = Label(0)
 	NoSelector          = Selector(0)
 	NoNamespaceSelector = Selector(0)
+	NoNamespace         = Namespace(0)
 
 	// Other special values
 	SelectAll = Selector(255)
@@ -34,7 +35,7 @@ const (
 type Name int
 
 const (
-	Name1 Name = iota
+	Name1 Name = 1 + iota
 	Name2
 	Name3
 	Name4
@@ -43,7 +44,7 @@ const (
 type Namespace int
 
 const (
-	Namespace1 Namespace = iota
+	Namespace1 Namespace = 1 + iota
 	Namespace2
 	Namespace3
 	Namespace4

@@ -50,7 +50,7 @@ type CacheEntryNetworkPolicy struct {
 	Flags CacheEntryFlags
 
 	// The matching rules.
-	MatchingAllowRules resources.Set
+	AllowRuleSelectors resources.Set
 
 	// The pods matching this policy selector.
 	SelectedPods          resources.Set
@@ -208,7 +208,7 @@ func (c *networkPolicyEngine) kinds() []schema.GroupVersionKind {
 // newCacheEntry implements the resourceCacheEngine interface.
 func (c *networkPolicyEngine) newCacheEntry() CacheEntry {
 	return &CacheEntryNetworkPolicy{
-		MatchingAllowRules:    resources.NewSet(),
+		AllowRuleSelectors:    resources.NewSet(),
 		SelectedPods:          resources.NewSet(),
 		SelectedHostEndpoints: resources.NewSet(),
 	}
@@ -483,7 +483,7 @@ func (c *networkPolicyEngine) ruleSelectorMatchStarted(polId, selId resources.Re
 		log.Errorf("Match started on policy, but policy is not in cache: %s matches %s", polId, selId)
 		return
 	}
-	p.MatchingAllowRules.Add(selId)
+	p.AllowRuleSelectors.Add(selId)
 	c.QueueRecalculation(polId, nil, EventPolicyRuleSelectorMatchStarted)
 }
 
@@ -493,7 +493,7 @@ func (c *networkPolicyEngine) ruleSelectorMatchStopped(polId, selId resources.Re
 		log.Errorf("Match stopped on policy, but policy is not in cache: %s matches %s", polId, selId)
 		return
 	}
-	p.MatchingAllowRules.Discard(selId)
+	p.AllowRuleSelectors.Discard(selId)
 	c.QueueRecalculation(polId, nil, EventPolicyRuleSelectorMatchStopped)
 }
 

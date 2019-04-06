@@ -66,6 +66,7 @@ type XrefCache interface {
 	Get(res resources.ResourceID) CacheEntry
 	RegisterOnStatusUpdateHandler(callback dispatcher.DispatcherOnStatusUpdate)
 	RegisterOnUpdateHandler(kind schema.GroupVersionKind, updateTypes syncer.UpdateType, callback dispatcher.DispatcherOnUpdate)
+	GetCachedResourceIDs(kind schema.GroupVersionKind) []resources.ResourceID
 }
 
 // NewXrefCache creates a new cross-referenced XrefCache.
@@ -203,6 +204,17 @@ func (c *xrefCache) RegisterOnStatusUpdateHandler(callback dispatcher.Dispatcher
 
 func (c *xrefCache) RegisterOnUpdateHandler(kind schema.GroupVersionKind, updateTypes syncer.UpdateType, callback dispatcher.DispatcherOnUpdate) {
 	c.cacheDispatcher.RegisterOnUpdateHandler(kind, updateTypes, callback)
+}
+
+func (c *xrefCache) GetCachedResourceIDs(kind schema.GroupVersionKind) []resources.ResourceID {
+	var ids []resources.ResourceID
+	cache := c.caches[kind]
+	for k := range cache.resources {
+		if k.GroupVersionKind == kind {
+			ids = append(ids, k)
+		}
+	}
+	return ids
 }
 
 func (c *xrefCache) queueRecalculation(id resources.ResourceID, entry CacheEntry, update syncer.UpdateType) {
