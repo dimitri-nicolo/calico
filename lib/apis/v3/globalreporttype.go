@@ -137,16 +137,13 @@ func (resource ResourceID) String() (expanded string) {
 
 	kind := resource.Kind
 	name := resource.Name
-	if len(kind) == 0 || len(name) == 0 {
-		return expanded
-	}
 	namespace := resource.Namespace
 	apiVersion := resource.APIVersion
 
-	// printing: kind[.apiVersion]([namespace/]name)
+	// Printing: kind[.apiVersion]([namespace/]name)
 	buf := new(bytes.Buffer)
 	buf.WriteString(kind)
-	// only print if non-Calico policy
+	// Only print api-version if non-Calico policy.
 	if apiVersion != calicoApiVersion {
 		fmt.Fprintf(buf, ".%s", apiVersion)
 	}
