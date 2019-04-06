@@ -207,7 +207,11 @@ func (c *networkPolicyEngine) kinds() []schema.GroupVersionKind {
 
 // newCacheEntry implements the resourceCacheEngine interface.
 func (c *networkPolicyEngine) newCacheEntry() CacheEntry {
-	return &CacheEntryNetworkPolicy{}
+	return &CacheEntryNetworkPolicy{
+		MatchingAllowRules:    resources.NewSet(),
+		SelectedPods:          resources.NewSet(),
+		SelectedHostEndpoints: resources.NewSet(),
+	}
 }
 
 // resourceAdded implements the resourceCacheEngine interface.
@@ -297,7 +301,7 @@ func (c *networkPolicyEngine) convertToVersioned(res resources.Resource) (Versio
 
 // updateRuleSelectors reads the set of policy rule selectors and tracks any allow rules selectors (since these are the
 // only ones that could cause exposure to IPs via network sets). To reduce churn, we group identical selector values
-// across all rules and all policies (so there is a little book keeping required here).
+// across all rules and all Policies (so there is a little book keeping required here).
 func (c *networkPolicyEngine) updateRuleSelectors(id resources.ResourceID, x *CacheEntryNetworkPolicy) {
 	// We care about newSelectors on Allow rules, so lets get the set of newSelectors that we care about for this policy.
 	newSelectors := resources.NewSet()
@@ -351,7 +355,7 @@ func (c *networkPolicyEngine) scanIngressRules(x *CacheEntryNetworkPolicy) synce
 		// Use the v3 settings to check if there is a NamespaceSelector specified. It is hard to do this with the v1
 		// settings since the selectors are munged together.
 		if !x.isNamespaced() || irV3.Source.NamespaceSelector != "" {
-			x.clog.Debugf("Policy is not namespaces, or namespace selector is configured")
+			x.clog.Debugf("Policy is not namespaced, or namespace selector is configured")
 			if len(irV1.SrcNets) == 0 {
 				x.clog.Debugf("Not matching on nets, therefore exposed to other namespaces")
 				x.Flags |= CacheEntryOtherNamespaceExposedIngress
@@ -364,8 +368,11 @@ func (c *networkPolicyEngine) scanIngressRules(x *CacheEntryNetworkPolicy) synce
 				// we don't care about the dest selector since that would simply further limit which endpoints
 				// the policy applies to rather than where traffic originated.
 				x.clog.Debugf("No source selector")
-				if len(irV1.SrcNets) == 0 || internet.NetPointersContainInternetAddr(irV1.SrcNets) {
-					x.clog.Debugf("No match on source nets, or source nets contain an internet address")
+				if len(irV1.SrcNets) == 0 {
+					x.clog.Debugf("No match on source nets - exposed to all addresses")
+					x.Flags |= CacheEntryInternetExposedIngress | CacheEntryOtherNamespaceExposedIngress
+				} else if internet.NetPointersContainInternetAddr(irV1.SrcNets) {
+					x.clog.Debugf("Source nets contain an internet address")
 					x.Flags |= CacheEntryInternetExposedIngress
 				}
 			} else if sel := c.GetFromXrefCache(selectorToSelectorID(irV1.SrcSelector)).(*CacheEntryNetworkPolicyRuleSelector); sel != nil {
@@ -410,7 +417,7 @@ func (c *networkPolicyEngine) scanEgressRules(x *CacheEntryNetworkPolicy) syncer
 		// Use the v3 settings to check if there is a NamespaceSelector specified. It is hard to do this with the v1
 		// settings since the selectors are munged together.
 		if !x.isNamespaced() || erV3.Destination.NamespaceSelector != "" {
-			x.clog.Debugf("Policy is not namespaces, or namespace selector is configured")
+			x.clog.Debugf("Policy is not namespaced, or namespace selector is configured")
 			if len(erV1.DstNets) == 0 {
 				x.clog.Debugf("Not matching on nets, therefore exposed to other namespaces")
 				x.Flags |= CacheEntryOtherNamespaceExposedEgress
@@ -423,8 +430,11 @@ func (c *networkPolicyEngine) scanEgressRules(x *CacheEntryNetworkPolicy) syncer
 				// we don't care about the dest selector since that would simply further limit which endpoints
 				// the policy applies to rather than where traffic was destined.
 				x.clog.Debugf("No destination selector")
-				if len(erV1.DstNets) == 0 || internet.NetPointersContainInternetAddr(erV1.DstNets) {
-					x.clog.Debugf("No match on destination nets, or destination nets contain an internet address")
+				if len(erV1.DstNets) == 0 {
+					x.clog.Debugf("No match on destination nets - exposed to all addresses")
+					x.Flags |= CacheEntryInternetExposedEgress | CacheEntryOtherNamespaceExposedEgress
+				} else if internet.NetPointersContainInternetAddr(erV1.DstNets) {
+					x.clog.Debugf("Destination nets contain an internet address")
 					x.Flags |= CacheEntryInternetExposedEgress
 				}
 			} else if sel := c.GetFromXrefCache(selectorToSelectorID(erV1.DstSelector)).(*CacheEntryNetworkPolicyRuleSelector); sel != nil {

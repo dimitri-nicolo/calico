@@ -287,8 +287,8 @@ func (t *XRefCacheTester) GetNetworkPolicy(nameIdx, namespaceIdx int) *xrefcache
 	return e.(*xrefcache.CacheEntryNetworkPolicy)
 }
 
-func (t *XRefCacheTester) SetNetworkPolicy(nameIdx int, labelSelector byte, ingress, egress []apiv3.Rule) {
-	r := getResourceId(resources.ResourceTypeNetworkPolicies, nameIdx, 0)
+func (t *XRefCacheTester) SetNetworkPolicy(nameIdx, namespaceIdx int, labelSelector byte, ingress, egress []apiv3.Rule) {
+	r := getResourceId(resources.ResourceTypeNetworkPolicies, nameIdx, namespaceIdx)
 	types := []apiv3.PolicyType{}
 	if ingress != nil {
 		types = append(types, apiv3.PolicyTypeIngress)

@@ -174,7 +174,7 @@ func (c *calicoNetworkSetEngine) scanNets(x *CacheEntryCalicoNetworkSet) syncer.
 	changed := syncer.UpdateType(old ^ x.Flags)
 
 	// If the settings have changed, then trigger recalculations of matching selectors which will in turn fanout to
-	// the appropriate policies for recalculation, and then on to the endpoints.
+	// the appropriate Policies for recalculation, and then on to the endpoints.
 	if changed != 0 {
 		x.PolicyRuleSelectors.Iter(func(id resources.ResourceID) error {
 			c.QueueRecalculation(id, nil, changed)

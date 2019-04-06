@@ -107,4 +107,159 @@ var _ = Describe("Basic CRUD of network policies with no other resources present
 		np = tester.GetGlobalNetworkPolicy(Name1)
 		Expect(np).To(BeNil())
 	})
+
+	// Ensure  the client resource list is in-sync with the resource helper.
+	It("should handle basic CRUD of Calico NetworkPolicy and determine non-xref state", func() {
+		By("applying a NetworkPolicy, ingress no rules")
+		tester.SetNetworkPolicy(Name1, Namespace1, NoLabels, []apiv3.Rule{}, nil)
+
+		By("checking the cache settings")
+		np := tester.GetNetworkPolicy(Name1, Namespace1)
+		Expect(np).ToNot(BeNil())
+		Expect(np.Flags).To(Equal(xrefcache.CacheEntryProtectedIngress))
+
+		By("applying a NetworkPolicy, egress no rules")
+		tester.SetNetworkPolicy(Name1, Namespace1, NoLabels, nil, []apiv3.Rule{})
+
+		By("checking the cache settings")
+		np = tester.GetNetworkPolicy(Name1, Namespace1)
+		Expect(np).ToNot(BeNil())
+		Expect(np.Flags).To(Equal(xrefcache.CacheEntryProtectedEgress))
+
+		By("applying a NetworkPolicy, ingress, one allow source rule with internet CIDR")
+		tester.SetNetworkPolicy(Name1, Namespace1, NoLabels, []apiv3.Rule{CalicoRuleAllowSourceNetsInternet}, nil)
+
+		By("checking the cache settings")
+		np = tester.GetNetworkPolicy(Name1, Namespace1)
+		Expect(np).ToNot(BeNil())
+		Expect(np.Flags).To(Equal(
+			xrefcache.CacheEntryProtectedIngress |
+				xrefcache.CacheEntryInternetExposedIngress,
+		))
+
+		By("applying a NetworkPolicy, ingress, one allow source rule with private CIDR")
+		tester.SetNetworkPolicy(Name1, Namespace1, NoLabels, []apiv3.Rule{CalicoRuleAllowSourceNetsPrivate}, nil)
+
+		By("checking the cache settings")
+		np = tester.GetNetworkPolicy(Name1, Namespace1)
+		Expect(np).ToNot(BeNil())
+		Expect(np.Flags).To(Equal(xrefcache.CacheEntryProtectedIngress))
+
+		By("applying a NetworkPolicy, ingress, one allow source rule with selector")
+		tester.SetNetworkPolicy(Name1, Namespace1, NoLabels, []apiv3.Rule{CalicoRuleAllowSourceSelector}, nil)
+
+		By("checking the cache settings")
+		np = tester.GetNetworkPolicy(Name1, Namespace1)
+		Expect(np).ToNot(BeNil())
+		Expect(np.Flags).To(Equal(xrefcache.CacheEntryProtectedIngress))
+
+		By("applying a NetworkPolicy, ingress, one allow source rule with namespace selector")
+		tester.SetNetworkPolicy(Name1, Namespace1, NoLabels, []apiv3.Rule{CalicoRuleAllowSourceNamespaceSelector}, nil)
+
+		By("checking the cache settings")
+		np = tester.GetNetworkPolicy(Name1, Namespace1)
+		Expect(np).ToNot(BeNil())
+		Expect(np.Flags).To(Equal(
+			xrefcache.CacheEntryProtectedIngress |
+				xrefcache.CacheEntryOtherNamespaceExposedIngress,
+		))
+
+		By("applying a NetworkPolicy, ingress, one allow destination rule with internet CIDR")
+		tester.SetNetworkPolicy(Name1, Namespace1, NoLabels, []apiv3.Rule{CalicoRuleAllowDestinationNetsInternet}, nil)
+
+		By("checking the cache settings - dest CIDR not relevant for ingress rule")
+		np = tester.GetNetworkPolicy(Name1, Namespace1)
+		Expect(np).ToNot(BeNil())
+		Expect(np.Flags).To(Equal(
+			xrefcache.CacheEntryProtectedIngress |
+				xrefcache.CacheEntryInternetExposedIngress |
+				xrefcache.CacheEntryOtherNamespaceExposedIngress,
+		))
+
+		By("applying a NetworkPolicy, ingress, one allow destination rule with selector")
+		tester.SetNetworkPolicy(Name1, Namespace1, NoLabels, []apiv3.Rule{CalicoRuleAllowDestinationSelector}, nil)
+
+		By("checking the cache settings - dest selector not relevant for ingress rule")
+		np = tester.GetNetworkPolicy(Name1, Namespace1)
+		Expect(np).ToNot(BeNil())
+		Expect(np.Flags).To(Equal(
+			xrefcache.CacheEntryProtectedIngress |
+				xrefcache.CacheEntryInternetExposedIngress |
+				xrefcache.CacheEntryOtherNamespaceExposedIngress,
+		))
+
+		By("applying a NetworkPolicy, ingress and egress no rules")
+		tester.SetNetworkPolicy(Name1, Namespace1, NoLabels, []apiv3.Rule{}, []apiv3.Rule{})
+
+		By("checking the cache settings")
+		np = tester.GetNetworkPolicy(Name1, Namespace1)
+		Expect(np).ToNot(BeNil())
+		Expect(np.Flags).To(Equal(xrefcache.CacheEntryProtectedIngress | xrefcache.CacheEntryProtectedEgress))
+
+		By("applying a NetworkPolicy, egress, one allow destination rule with internet CIDR")
+		tester.SetNetworkPolicy(Name1, Namespace1, NoLabels, nil, []apiv3.Rule{CalicoRuleAllowDestinationNetsInternet})
+
+		By("checking the cache settings")
+		np = tester.GetNetworkPolicy(Name1, Namespace1)
+		Expect(np).ToNot(BeNil())
+		Expect(np.Flags).To(Equal(xrefcache.CacheEntryProtectedEgress | xrefcache.CacheEntryInternetExposedEgress))
+
+		By("applying a NetworkPolicy, egress, one allow destination rule with private CIDR")
+		tester.SetNetworkPolicy(Name1, Namespace1, NoLabels, nil, []apiv3.Rule{CalicoRuleAllowDestinationNetsPrivate})
+
+		By("checking the cache settings")
+		np = tester.GetNetworkPolicy(Name1, Namespace1)
+		Expect(np).ToNot(BeNil())
+		Expect(np.Flags).To(Equal(xrefcache.CacheEntryProtectedEgress))
+
+		By("applying a NetworkPolicy, egress, one allow destination rule with selector")
+		tester.SetNetworkPolicy(Name1, Namespace1, NoLabels, nil, []apiv3.Rule{CalicoRuleAllowDestinationSelector})
+
+		By("checking the cache settings")
+		np = tester.GetNetworkPolicy(Name1, Namespace1)
+		Expect(np).ToNot(BeNil())
+		Expect(np.Flags).To(Equal(xrefcache.CacheEntryProtectedEgress))
+
+		By("applying a NetworkPolicy, egress, one allow destination rule with namespace selector")
+		tester.SetNetworkPolicy(Name1, Namespace1, NoLabels, nil, []apiv3.Rule{CalicoRuleAllowDestinationNetspaceSelector})
+
+		By("checking the cache settings")
+		np = tester.GetNetworkPolicy(Name1, Namespace1)
+		Expect(np).ToNot(BeNil())
+		Expect(np.Flags).To(Equal(
+			xrefcache.CacheEntryProtectedEgress |
+				xrefcache.CacheEntryOtherNamespaceExposedEgress,
+		))
+
+		By("applying a NetworkPolicy, egress, one allow source rule with internet CIDR")
+		tester.SetNetworkPolicy(Name1, Namespace1, NoLabels, nil, []apiv3.Rule{CalicoRuleAllowSourceNetsInternet})
+
+		By("checking the cache settings - source CIDR not relevant for egress rule")
+		np = tester.GetNetworkPolicy(Name1, Namespace1)
+		Expect(np).ToNot(BeNil())
+		Expect(np.Flags).To(Equal(
+			xrefcache.CacheEntryProtectedEgress |
+				xrefcache.CacheEntryInternetExposedEgress |
+				xrefcache.CacheEntryOtherNamespaceExposedEgress,
+		))
+
+		By("applying a NetworkPolicy, egress, one allow source rule with selector")
+		tester.SetNetworkPolicy(Name1, Namespace1, NoLabels, nil, []apiv3.Rule{CalicoRuleAllowSourceSelector})
+
+		By("checking the cache settings - source selector not relevant for egress rule")
+		np = tester.GetNetworkPolicy(Name1, Namespace1)
+		Expect(np).ToNot(BeNil())
+		Expect(np.Flags).To(Equal(
+			xrefcache.CacheEntryProtectedEgress |
+				xrefcache.CacheEntryInternetExposedEgress |
+				xrefcache.CacheEntryOtherNamespaceExposedEgress,
+		))
+
+		By("deleting the first network policy")
+		tester.DeleteNetworkPolicy(Name1, Namespace1)
+
+		By("checking the cache settings")
+		np = tester.GetNetworkPolicy(Name1, Namespace1)
+		Expect(np).To(BeNil())
+	})
 })

@@ -219,26 +219,26 @@ func (c *endpointEngine) recalculate(podId resources.ResourceID, podEntry CacheE
 	// Store the current set of flags.
 	oldFlags := pod.Flags
 
-	// Clear the set of flags that will be reset from the applied network policies.
+	// Clear the set of flags that will be reset from the applied network Policies.
 	pod.Flags &^= CacheEntryEndpointAndNetworkPolicy
 
-	// Iterate through the applied network policies and recalculate the flags that the network policy applies to the
+	// Iterate through the applied network Policies and recalculate the flags that the network policy applies to the
 	// pod.
 	pod.AppliedPolicies.Iter(func(polId resources.ResourceID) error {
 		policy, ok := c.GetFromXrefCache(polId).(*CacheEntryNetworkPolicy)
 
 		if !ok {
-			// The applied policies should always be in the cache since deletion of the underlying policy should remove
+			// The applied Policies should always be in the cache since deletion of the underlying policy should remove
 			// the reference from the set.
 			log.Errorf("%s applied policy is missing from cache: %s", podId, polId)
 			return nil
 		}
 
-		// The pod flags are the combined set of flags from the applied policies filtered by the allowed set of
+		// The pod flags are the combined set of flags from the applied Policies filtered by the allowed set of
 		// flags for a Pod.
 		pod.Flags |= policy.Flags & CacheEntryEndpointAndNetworkPolicy
 
-		// If all flags that the policy can set in the pod are now set then exit without checking the other policies.
+		// If all flags that the policy can set in the pod are now set then exit without checking the other Policies.
 		if pod.Flags&CacheEntryEndpointAndNetworkPolicy == CacheEntryEndpointAndNetworkPolicy {
 			return resources.StopIteration
 		}
@@ -251,7 +251,7 @@ func (c *endpointEngine) recalculate(podId resources.ResourceID, podEntry CacheE
 }
 
 // policyMatchStarted is called synchronously from the policy or pod resource update methods when a policy<->pod match
-// has started. We update  our set of applied policies and then queue for asynchronous recalculation - this ensures we
+// has started. We update  our set of applied Policies and then queue for asynchronous recalculation - this ensures we
 // wait until all related changes to have occurred further up the casading chain of events before we recalculate.
 func (c *endpointEngine) policyMatchStarted(policyId, podId resources.ResourceID) {
 	p, ok := c.GetFromOurCache(podId).(*CacheEntryEndpoint)
@@ -269,7 +269,7 @@ func (c *endpointEngine) policyMatchStarted(policyId, podId resources.ResourceID
 }
 
 // policyMatchStopped is called synchronously from the policy or pod resource update methods when a policy<->pod match
-// has stopped. We update  our set of applied policies and then queue for asynchronous recalculation - this ensures we
+// has stopped. We update  our set of applied Policies and then queue for asynchronous recalculation - this ensures we
 // wait until all related changes to have occurred further up the chain of events before we recalculate.
 func (c *endpointEngine) policyMatchStopped(policyId, podId resources.ResourceID) {
 	p, ok := c.GetFromOurCache(podId).(*CacheEntryEndpoint)

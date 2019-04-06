@@ -54,8 +54,8 @@ type CacheEntryNetworkPolicyRuleSelector struct {
 	NetworkSetFlags CacheEntryFlags
 
 	// Internally managed references.
-	networkSets resources.Set
-	policies    resources.Set
+	NetworkSets resources.Set
+	Policies    resources.Set
 
 	// --- Internal data ---
 	cacheEntryCommon
@@ -98,8 +98,8 @@ func (c *networkPolicyRuleSelectorsEngine) kinds() []schema.GroupVersionKind {
 // newCacheEntry implements the resourceCacheEngine interface.
 func (c *networkPolicyRuleSelectorsEngine) newCacheEntry() CacheEntry {
 	return &CacheEntryNetworkPolicyRuleSelector{
-		networkSets: resources.NewSet(),
-		policies:    resources.NewSet(),
+		NetworkSets: resources.NewSet(),
+		Policies:    resources.NewSet(),
 	}
 }
 
@@ -127,7 +127,7 @@ func (c *networkPolicyRuleSelectorsEngine) recalculate(id resources.ResourceID, 
 	// Store and clear the effective set of Netset flags.
 	oldFlags := sel.NetworkSetFlags
 	sel.NetworkSetFlags = 0
-	sel.networkSets.Iter(func(nsid resources.ResourceID) error {
+	sel.NetworkSets.Iter(func(nsid resources.ResourceID) error {
 		netset := c.GetFromXrefCache(nsid)
 		if netset == nil {
 			log.Errorf("Cannot find referenced NetworkSet in cache when recalculating rule selector flags")
@@ -142,8 +142,8 @@ func (c *networkPolicyRuleSelectorsEngine) recalculate(id resources.ResourceID, 
 	//TODO(rlb): This should really be done by registered callbacks
 	if changed != 0 {
 		// The effective settings of the NetworkSet flags for this rule selector have changed. Trigger a recalculation
-		// of affected policies.
-		sel.policies.Iter(func(pid resources.ResourceID) error {
+		// of affected Policies.
+		sel.Policies.Iter(func(pid resources.ResourceID) error {
 			c.QueueRecalculation(pid, nil, changed)
 			return nil
 		})
@@ -162,7 +162,7 @@ func (c *networkPolicyRuleSelectorsEngine) netsetMatchStarted(ns, sel resources.
 		log.Errorf("Match started on selector, but selector is not in cache: %s matches %s", sel, ns)
 		return
 	}
-	s.networkSets.Add(ns)
+	s.NetworkSets.Add(ns)
 	c.QueueRecalculation(sel, nil, EventNetsetMatchStarted)
 }
 
@@ -172,7 +172,7 @@ func (c *networkPolicyRuleSelectorsEngine) netsetMatchStopped(ns, sel resources.
 		log.Errorf("Match stopped on selector, but selector is not in cache: %s matches %s", sel, ns)
 		return
 	}
-	s.networkSets.Discard(ns)
+	s.NetworkSets.Discard(ns)
 	c.QueueRecalculation(sel, nil, EventNetsetMatchStopped)
 }
 
@@ -182,7 +182,7 @@ func (c *networkPolicyRuleSelectorsEngine) policyMatchStarted(pol, sel resources
 		log.Errorf("Match started on selector, but selector is not in cache: %s matches %s", sel, pol)
 		return
 	}
-	s.policies.Add(pol)
+	s.Policies.Add(pol)
 }
 
 func (c *networkPolicyRuleSelectorsEngine) policyMatchStopped(pol, sel resources.ResourceID) {
@@ -191,5 +191,5 @@ func (c *networkPolicyRuleSelectorsEngine) policyMatchStopped(pol, sel resources
 		log.Errorf("Match stopped on selector, but selector is not in cache: %s matches %s", sel, pol)
 		return
 	}
-	s.policies.Discard(pol)
+	s.Policies.Discard(pol)
 }

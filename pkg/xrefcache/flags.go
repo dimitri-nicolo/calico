@@ -18,20 +18,20 @@ import "github.com/tigera/compliance/pkg/syncer"
 //
 // The boolean values are chosen where possible to be additive so that if a resource depends on multiple other
 // resources, then we can simply OR the values together to determine effective configuration. For example:
-// - a Pod has multiple applied policies
-// - if any of those policies has ProtectedIngress then the Pod as a whole has ProtectedIngress.
-// If the field was "UnprotectedIngress" then we'd need to AND the values of the policies together to determine the pods
+// - a Pod has multiple applied Policies
+// - if any of those Policies has ProtectedIngress then the Pod as a whole has ProtectedIngress.
+// If the field was "UnprotectedIngress" then we'd need to AND the values of the Policies together to determine the pods
 // UnprotectedIngress value.
 const (
-	// Valid for policies, pods and host endpoints
+	// Valid for Policies, pods and host endpoints
 	EventProtectedIngress syncer.UpdateType = 1 << iota
 	EventProtectedEgress
 	// Valid for network sets
 	EventInternetExposed
-	// Valid for policies, pods and host endpoints
+	// Valid for Policies, pods and host endpoints
 	EventInternetExposedIngress
 	EventInternetExposedEgress
-	// Valid for policies, pods and host endpoints
+	// Valid for Policies, pods and host endpoints
 	EventOtherNamespaceExposedIngress
 	EventOtherNamespaceExposedEgress
 	// Valid for pods

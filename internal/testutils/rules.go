@@ -34,6 +34,34 @@ var (
 		},
 	}
 
+	CalicoRuleAllowSourceSelector = apiv3.Rule{
+		Action: apiv3.Allow,
+		Source: apiv3.EntityRule{
+			Selector: "x == 'y'",
+		},
+	}
+
+	CalicoRuleAllowSourceNamespaceSelector = apiv3.Rule{
+		Action: apiv3.Allow,
+		Source: apiv3.EntityRule{
+			NamespaceSelector: "x == 'y'",
+		},
+	}
+
+	CalicoRuleAllowDestinationSelector = apiv3.Rule{
+		Action: apiv3.Allow,
+		Destination: apiv3.EntityRule{
+			Selector: "x == 'y'",
+		},
+	}
+
+	CalicoRuleAllowDestinationNetspaceSelector = apiv3.Rule{
+		Action: apiv3.Allow,
+		Destination: apiv3.EntityRule{
+			NamespaceSelector: "x == 'y'",
+		},
+	}
+
 	CalicoRule = apiv3.Rule{
 		Action: apiv3.Allow,
 		Source: apiv3.EntityRule{
