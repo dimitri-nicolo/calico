@@ -11,19 +11,19 @@ import (
 var (
 	r1 = resources.ResourceID{
 		GroupVersionKind: resources.ResourceTypePods,
-		NameNamespace: resources.NameNamespace{Name: "a", Namespace: "b"},
+		NameNamespace:    resources.NameNamespace{Name: "a", Namespace: "b"},
 	}
 	r2 = resources.ResourceID{
 		GroupVersionKind: resources.ResourceTypeGlobalNetworkPolicies,
-		NameNamespace: resources.NameNamespace{Name: "a"},
+		NameNamespace:    resources.NameNamespace{Name: "a"},
 	}
 	r3 = resources.ResourceID{
 		GroupVersionKind: resources.ResourceTypeNetworkPolicies,
-		NameNamespace: resources.NameNamespace{Name: "a", Namespace: "b"},
+		NameNamespace:    resources.NameNamespace{Name: "a", Namespace: "b"},
 	}
 	r4 = resources.ResourceID{
 		GroupVersionKind: resources.ResourceTypeK8sNetworkPolicies,
-		NameNamespace: resources.NameNamespace{Name: "a", Namespace: "b"},
+		NameNamespace:    resources.NameNamespace{Name: "a", Namespace: "b"},
 	}
 )
 

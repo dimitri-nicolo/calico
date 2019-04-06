@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 
+	"strconv"
+
 	"github.com/tigera/compliance/pkg/resources"
 )
 
@@ -32,6 +34,10 @@ const (
 	UpdateTypeSet
 	UpdateTypeDeleted
 )
+
+func (t UpdateType) String() string {
+	return strconv.FormatInt(int64(t), 2)
+}
 
 type StatusUpdate struct {
 	Type  StatusType

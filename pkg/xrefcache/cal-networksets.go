@@ -166,9 +166,9 @@ func (c *calicoNetworkSetEngine) scanNets(x *CacheEntryCalicoNetworkSet) syncer.
 	old := x.Flags
 	// Toggle the InternetAddressExposed flag
 	if internet.NetsContainInternetAddr(x.getV1NetworkSet().Nets) {
-		x.Flags |= CacheEntryInternetAddressExposed
+		x.Flags |= CacheEntryInternetExposed
 	} else {
-		x.Flags &^= CacheEntryInternetAddressExposed
+		x.Flags &^= CacheEntryInternetExposed
 	}
 	// Determine flags that have changed, and convert to an update type. See notes in flags.go.
 	changed := syncer.UpdateType(old ^ x.Flags)

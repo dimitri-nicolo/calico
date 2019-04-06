@@ -8,7 +8,7 @@ import "github.com/tigera/compliance/pkg/syncer"
 // Some of the event type flags are re-used as cache entry flags to store the equivalent boolean value. For example
 // the event type EventProtectedIngress is identical to the cache entry flag FlagProtectedIngress. This flag indicates
 // whether the resource has ingress protection or not. Using the same set of values makes it easy to use bit-wise
-// operations to track changes and to notify of the eqivalent events:
+// operations to track changes and to notify of the equivalent events:
 // -  If a policy has cache entry flags X which are then updated to Y
 // -  The event flags correspond one-to-one with the cache flags, so therefore the event flags associated with
 //    configuration change X->Y can be determined using syncer.UpdateType(X ^ Y).
@@ -27,10 +27,10 @@ const (
 	EventProtectedIngress syncer.UpdateType = 1 << iota
 	EventProtectedEgress
 	// Valid for network sets
-	EventInternetAddressExposed
+	EventInternetExposed
 	// Valid for policies, pods and host endpoints
-	EventInternetAddressExposedIngress
-	EventInternetAddressExposedEgress
+	EventInternetExposedIngress
+	EventInternetExposedEgress
 	// Valid for policies, pods and host endpoints
 	EventOtherNamespaceExposedIngress
 	EventOtherNamespaceExposedEgress
@@ -55,31 +55,31 @@ const (
 type CacheEntryFlags syncer.UpdateType
 
 const (
-	CacheEntryProtectedIngress              = CacheEntryFlags(EventProtectedIngress)
-	CacheEntryProtectedEgress               = CacheEntryFlags(EventProtectedEgress)
-	CacheEntryInternetAddressExposed        = CacheEntryFlags(EventInternetAddressExposed)
-	CacheEntryInternetAddressExposedIngress = CacheEntryFlags(EventInternetAddressExposedIngress)
-	CacheEntryInternetAddressExposedEgress  = CacheEntryFlags(EventInternetAddressExposedEgress)
-	CacheEntryOtherNamespaceExposedIngress  = CacheEntryFlags(EventOtherNamespaceExposedIngress)
-	CacheEntryOtherNamespaceExposedEgress   = CacheEntryFlags(EventOtherNamespaceExposedEgress)
-	CacheEntryEnvoyEnabled                  = CacheEntryFlags(EventEnvoyEnabled)
+	CacheEntryProtectedIngress             = CacheEntryFlags(EventProtectedIngress)
+	CacheEntryProtectedEgress              = CacheEntryFlags(EventProtectedEgress)
+	CacheEntryInternetExposed              = CacheEntryFlags(EventInternetExposed)
+	CacheEntryInternetExposedIngress       = CacheEntryFlags(EventInternetExposedIngress)
+	CacheEntryInternetExposedEgress        = CacheEntryFlags(EventInternetExposedEgress)
+	CacheEntryOtherNamespaceExposedIngress = CacheEntryFlags(EventOtherNamespaceExposedIngress)
+	CacheEntryOtherNamespaceExposedEgress  = CacheEntryFlags(EventOtherNamespaceExposedEgress)
+	CacheEntryEnvoyEnabled                 = CacheEntryFlags(EventEnvoyEnabled)
 )
 
 const (
 	CacheEntryFlagsEndpoint = CacheEntryProtectedIngress |
 		CacheEntryProtectedEgress |
-		CacheEntryInternetAddressExposedIngress |
-		CacheEntryInternetAddressExposedEgress |
+		CacheEntryInternetExposedIngress |
+		CacheEntryInternetExposedEgress |
 		CacheEntryOtherNamespaceExposedIngress |
 		CacheEntryOtherNamespaceExposedEgress |
 		CacheEntryEnvoyEnabled
 
 	CacheEntryFlagsNetworkPolicy = CacheEntryProtectedIngress |
 		CacheEntryProtectedEgress |
-		CacheEntryInternetAddressExposedIngress |
-		CacheEntryInternetAddressExposedEgress |
+		CacheEntryInternetExposedIngress |
+		CacheEntryInternetExposedEgress |
 		CacheEntryOtherNamespaceExposedIngress |
 		CacheEntryOtherNamespaceExposedEgress
 
-	CacheEntryFlagsNetworkSets = CacheEntryInternetAddressExposed
+	CacheEntryFlagsNetworkSets = CacheEntryInternetExposed
 )

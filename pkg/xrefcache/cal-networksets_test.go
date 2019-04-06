@@ -32,7 +32,7 @@ var _ = Describe("Basic CRUD of network sets with no other resources present", f
 		By("checking the cache settings")
 		ns = tester.GetGlobalNetworkSet(Name1)
 		Expect(ns).ToNot(BeNil())
-		Expect(ns.Flags).To(Equal(xrefcache.CacheEntryInternetAddressExposed))
+		Expect(ns.Flags).To(Equal(xrefcache.CacheEntryInternetExposed))
 
 		By("applying a network set with one private net")
 		tester.SetGlobalNetworkSet(Name1, Label1, []string{"10.0.0.0/16"})
@@ -48,7 +48,7 @@ var _ = Describe("Basic CRUD of network sets with no other resources present", f
 		By("checking the cache settings")
 		ns = tester.GetGlobalNetworkSet(Name1)
 		Expect(ns).ToNot(BeNil())
-		Expect(ns.Flags).To(Equal(xrefcache.CacheEntryInternetAddressExposed))
+		Expect(ns.Flags).To(Equal(xrefcache.CacheEntryInternetExposed))
 
 		By("applying another network set with no nets")
 		tester.SetGlobalNetworkSet(Name2, NoLabels, nil)
@@ -56,7 +56,7 @@ var _ = Describe("Basic CRUD of network sets with no other resources present", f
 		By("checking the cache settings")
 		ns = tester.GetGlobalNetworkSet(Name1)
 		Expect(ns).ToNot(BeNil())
-		Expect(ns.Flags).To(Equal(xrefcache.CacheEntryInternetAddressExposed))
+		Expect(ns.Flags).To(Equal(xrefcache.CacheEntryInternetExposed))
 		ns = tester.GetGlobalNetworkSet(Name2)
 		Expect(ns).ToNot(BeNil())
 		Expect(ns.Flags).To(BeZero())

@@ -14,6 +14,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/updateprocessors"
+
 	"github.com/tigera/compliance/pkg/internet"
 	"github.com/tigera/compliance/pkg/resources"
 	"github.com/tigera/compliance/pkg/syncer"
@@ -330,7 +331,7 @@ func (c *networkPolicyEngine) scanIngressRules(x *CacheEntryNetworkPolicy) synce
 	oldFlags := x.Flags
 
 	// Reset egress stats based on rules
-	x.Flags &^= CacheEntryInternetAddressExposedEgress | CacheEntryOtherNamespaceExposedEgress
+	x.Flags &^= CacheEntryInternetExposedIngress | CacheEntryOtherNamespaceExposedIngress
 
 	// Loop through the rules to check if exposed to another namespace. This is determined by checking allow rules to
 	// see if any Namespace selectors have been specified.
@@ -340,6 +341,7 @@ func (c *networkPolicyEngine) scanIngressRules(x *CacheEntryNetworkPolicy) synce
 	for i, irV3 := range ingressV3 {
 		// Only allow rules can impact our exposure.
 		if irV3.Action != apiv3.Allow {
+			x.clog.Debugf("Skipping non-allow rule")
 			continue
 		}
 
@@ -349,25 +351,33 @@ func (c *networkPolicyEngine) scanIngressRules(x *CacheEntryNetworkPolicy) synce
 		// Use the v3 settings to check if there is a NamespaceSelector specified. It is hard to do this with the v1
 		// settings since the selectors are munged together.
 		if !x.isNamespaced() || irV3.Source.NamespaceSelector != "" {
-			x.Flags |= CacheEntryOtherNamespaceExposedIngress
+			x.clog.Debugf("Policy is not namespaces, or namespace selector is configured")
+			if len(irV1.SrcNets) == 0 {
+				x.clog.Debugf("Not matching on nets, therefore exposed to other namespaces")
+				x.Flags |= CacheEntryOtherNamespaceExposedIngress
+			}
 		}
-		if x.Flags&CacheEntryInternetAddressExposedIngress == 0 {
+		if x.Flags&CacheEntryInternetExposedIngress == 0 {
+			x.clog.Debugf("Checking if exposed to internet")
 			if irV1.SrcSelector == "" {
 				// There is no v1 source selector. Check the nets to see if we are exposed. Note that for ingress
 				// we don't care about the dest selector since that would simply further limit which endpoints
 				// the policy applies to rather than where traffic originated.
+				x.clog.Debugf("No source selector")
 				if len(irV1.SrcNets) == 0 || internet.NetPointersContainInternetAddr(irV1.SrcNets) {
-					x.Flags |= CacheEntryInternetAddressExposedEgress
+					x.clog.Debugf("No match on source nets, or source nets contain an internet address")
+					x.Flags |= CacheEntryInternetExposedIngress
 				}
 			} else if sel := c.GetFromXrefCache(selectorToSelectorID(irV1.SrcSelector)).(*CacheEntryNetworkPolicyRuleSelector); sel != nil {
 				// Found the selector in the cache.  If the effective network set settings for this selector indicate
 				// internet exposure then update our flags.
-				if sel.NetworkSetFlags&CacheEntryInternetAddressExposed != 0 {
-					x.clog.Debugf("Policy egress allow rule refs netset exposed to internet: %s", irV1.SrcSelector)
-					x.Flags |= CacheEntryInternetAddressExposedEgress
+				x.clog.Debugf("Source selector is specified, found cached selector details")
+				if sel.NetworkSetFlags&CacheEntryInternetExposed != 0 {
+					x.clog.Debugf("Policy egress allow rule selector references netset exposed to internet: %s", irV1.SrcSelector)
+					x.Flags |= CacheEntryInternetExposedIngress
 				}
 			} else {
-				log.Errorf("Allow rule selector is not in cache: %s", irV1.SrcSelector)
+				x.clog.Errorf("Allow rule selector is not in cache: %s", irV1.SrcSelector)
 			}
 		}
 	}
@@ -375,12 +385,12 @@ func (c *networkPolicyEngine) scanIngressRules(x *CacheEntryNetworkPolicy) synce
 	return syncer.UpdateType(x.Flags ^ oldFlags)
 }
 
-// scanEgressRules scans the ingress rules and updates the augmented data for a policy.
+// scanEgressRules scans the egress rules and updates the augmented data for a policy.
 func (c *networkPolicyEngine) scanEgressRules(x *CacheEntryNetworkPolicy) syncer.UpdateType {
 	oldFlags := x.Flags
 
 	// Reset egress stats based on rules
-	x.Flags &^= CacheEntryInternetAddressExposedEgress | CacheEntryOtherNamespaceExposedEgress
+	x.Flags &^= CacheEntryInternetExposedEgress | CacheEntryOtherNamespaceExposedEgress
 
 	// Loop through the rules to check if exposed to another namespace. This is determined by checking allow rules to
 	// see if any Namespace selectors have been specified.
@@ -390,6 +400,7 @@ func (c *networkPolicyEngine) scanEgressRules(x *CacheEntryNetworkPolicy) syncer
 	for i, erV3 := range egressV3 {
 		// Only allow rules can impact our exposure.
 		if erV3.Action != apiv3.Allow {
+			x.clog.Debugf("Skipping non-allow rule")
 			continue
 		}
 
@@ -398,28 +409,34 @@ func (c *networkPolicyEngine) scanEgressRules(x *CacheEntryNetworkPolicy) syncer
 
 		// Use the v3 settings to check if there is a NamespaceSelector specified. It is hard to do this with the v1
 		// settings since the selectors are munged together.
-		if x.Flags&CacheEntryOtherNamespaceExposedEgress == 0 {
-			if !x.isNamespaced() || erV3.Destination.NamespaceSelector != "" {
+		if !x.isNamespaced() || erV3.Destination.NamespaceSelector != "" {
+			x.clog.Debugf("Policy is not namespaces, or namespace selector is configured")
+			if len(erV1.DstNets) == 0 {
+				x.clog.Debugf("Not matching on nets, therefore exposed to other namespaces")
 				x.Flags |= CacheEntryOtherNamespaceExposedEgress
 			}
 		}
-		if x.Flags&CacheEntryInternetAddressExposedEgress == 0 {
+		if x.Flags&CacheEntryInternetExposedEgress == 0 {
+			x.clog.Debugf("Checking if exposed to internet")
 			if erV1.DstSelector == "" {
-				// There is no v1 dest selector. Check the nets to see if we are exposed. Note that for egress
-				// we don't care about the source selector since that would simply further limit which endpoints
-				// the policy applies to rather than where traffic is headed to.
+				// There is no v1 destination selector. Check the nets to see if we are exposed. Note that for egress
+				// we don't care about the dest selector since that would simply further limit which endpoints
+				// the policy applies to rather than where traffic was destined.
+				x.clog.Debugf("No destination selector")
 				if len(erV1.DstNets) == 0 || internet.NetPointersContainInternetAddr(erV1.DstNets) {
-					x.Flags |= CacheEntryInternetAddressExposedEgress
+					x.clog.Debugf("No match on destination nets, or destination nets contain an internet address")
+					x.Flags |= CacheEntryInternetExposedEgress
 				}
 			} else if sel := c.GetFromXrefCache(selectorToSelectorID(erV1.DstSelector)).(*CacheEntryNetworkPolicyRuleSelector); sel != nil {
 				// Found the selector in the cache.  If the effective network set settings for this selector indicate
 				// internet exposure then update our flags.
-				if sel.NetworkSetFlags&CacheEntryInternetAddressExposed != 0 {
-					x.clog.Debugf("Policy egress allow rule refs netset exposed to internet: %s", erV1.DstSelector)
-					x.Flags |= CacheEntryInternetAddressExposedEgress
+				x.clog.Debugf("Destination selector is specified, found cached selector details")
+				if sel.NetworkSetFlags&CacheEntryInternetExposed != 0 {
+					x.clog.Debugf("Policy egress allow rule selector references netset exposed to internet: %s", erV1.DstSelector)
+					x.Flags |= CacheEntryInternetExposedEgress
 				}
 			} else {
-				log.Errorf("Allow rule selector is not in cache: %s", erV1.DstSelector)
+				x.clog.Errorf("Allow rule selector is not in cache: %s", erV1.DstSelector)
 			}
 		}
 	}

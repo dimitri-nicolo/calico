@@ -44,10 +44,6 @@ const (
 	Namespace4
 )
 
-const (
-	NoLabels = byte(0)
-)
-
 func NewXrefCacheTester() *XRefCacheTester {
 	return &XRefCacheTester{
 		xrefCache: xrefcache.NewXrefCache(),
@@ -245,8 +241,15 @@ func (t *XRefCacheTester) GetGlobalNetworkPolicy(nameIdx int) *xrefcache.CacheEn
 	return e.(*xrefcache.CacheEntryNetworkPolicy)
 }
 
-func (t *XRefCacheTester) SetGlobalNetworkPolicy(nameIdx int, labelSelector byte) {
+func (t *XRefCacheTester) SetGlobalNetworkPolicy(nameIdx int, labelSelector byte, ingress, egress []apiv3.Rule) {
 	r := getResourceId(resources.ResourceTypeGlobalNetworkPolicies, nameIdx, 0)
+	types := []apiv3.PolicyType{}
+	if ingress != nil {
+		types = append(types, apiv3.PolicyTypeIngress)
+	}
+	if egress != nil {
+		types = append(types, apiv3.PolicyTypeEgress)
+	}
 	t.xrefCache.OnUpdate(syncer.Update{
 		Type:       syncer.UpdateTypeSet,
 		ResourceID: r,
@@ -255,6 +258,9 @@ func (t *XRefCacheTester) SetGlobalNetworkPolicy(nameIdx int, labelSelector byte
 			ObjectMeta: getObjectMeta(r, labelSelector),
 			Spec: apiv3.GlobalNetworkPolicySpec{
 				Selector: labelByteToSelector(labelSelector),
+				Ingress:  ingress,
+				Egress:   egress,
+				Types:    types,
 			},
 		},
 	})
@@ -281,8 +287,15 @@ func (t *XRefCacheTester) GetNetworkPolicy(nameIdx, namespaceIdx int) *xrefcache
 	return e.(*xrefcache.CacheEntryNetworkPolicy)
 }
 
-func (t *XRefCacheTester) SetNetworkPolicy(nameIdx, namespaceIdx int, labelSelector byte) {
-	r := getResourceId(resources.ResourceTypeNetworkPolicies, nameIdx, namespaceIdx)
+func (t *XRefCacheTester) SetNetworkPolicy(nameIdx int, labelSelector byte, ingress, egress []apiv3.Rule) {
+	r := getResourceId(resources.ResourceTypeNetworkPolicies, nameIdx, 0)
+	types := []apiv3.PolicyType{}
+	if ingress != nil {
+		types = append(types, apiv3.PolicyTypeIngress)
+	}
+	if egress != nil {
+		types = append(types, apiv3.PolicyTypeEgress)
+	}
 	t.xrefCache.OnUpdate(syncer.Update{
 		Type:       syncer.UpdateTypeSet,
 		ResourceID: r,
@@ -291,6 +304,9 @@ func (t *XRefCacheTester) SetNetworkPolicy(nameIdx, namespaceIdx int, labelSelec
 			ObjectMeta: getObjectMeta(r, labelSelector),
 			Spec: apiv3.NetworkPolicySpec{
 				Selector: labelByteToSelector(labelSelector),
+				Ingress:  ingress,
+				Egress:   egress,
+				Types:    types,
 			},
 		},
 	})
@@ -317,8 +333,19 @@ func (t *XRefCacheTester) GetK8sNetworkPolicy(nameIdx, namespaceIdx int) *xrefca
 	return e.(*xrefcache.CacheEntryNetworkPolicy)
 }
 
-func (t *XRefCacheTester) SetK8sNetworkPolicy(nameIdx, namespaceIdx int, labelSelector byte) {
-	r := getResourceId(resources.ResourceTypeK8sNetworkPolicies, nameIdx, namespaceIdx)
+func (t *XRefCacheTester) SetK8sNetworkPolicy(
+	nameIdx int, labelSelector byte,
+	ingress []networkingv1.NetworkPolicyIngressRule,
+	egress []networkingv1.NetworkPolicyEgressRule,
+) {
+	r := getResourceId(resources.ResourceTypeK8sNetworkPolicies, nameIdx, 0)
+	types := []networkingv1.PolicyType{}
+	if ingress != nil {
+		types = append(types, networkingv1.PolicyTypeIngress)
+	}
+	if egress != nil {
+		types = append(types, networkingv1.PolicyTypeEgress)
+	}
 	t.xrefCache.OnUpdate(syncer.Update{
 		Type:       syncer.UpdateTypeSet,
 		ResourceID: r,
@@ -327,6 +354,9 @@ func (t *XRefCacheTester) SetK8sNetworkPolicy(nameIdx, namespaceIdx int, labelSe
 			ObjectMeta: getObjectMeta(r, labelSelector),
 			Spec: networkingv1.NetworkPolicySpec{
 				PodSelector: labelByteToK8sSelector(labelSelector),
+				PolicyTypes: types,
+				Ingress:     ingress,
+				Egress:      egress,
 			},
 		},
 	})

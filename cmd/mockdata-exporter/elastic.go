@@ -40,7 +40,7 @@ func main() {
 
 	// Dump into elastic.
 	for _, hit := range append(eeEvents.Hits.Hits, append(kubeEvents.Hits.Hits, listEvents.Hits.Hits...)...) {
-		for r := 0;; r++ {
+		for r := 0; ; r++ {
 			res, err := client.Backend().Index().
 				Index(hit.Index).
 				Type(hit.Type).
