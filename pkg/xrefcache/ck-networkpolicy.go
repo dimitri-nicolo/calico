@@ -355,7 +355,7 @@ func (c *networkPolicyEngine) scanIngressRules(x *CacheEntryNetworkPolicy) synce
 		// Use the v3 settings to check if there is a NamespaceSelector specified. It is hard to do this with the v1
 		// settings since the selectors are munged together.
 		if !x.isNamespaced() || irV3.Source.NamespaceSelector != "" {
-			x.clog.Debugf("Policy is not namespaced, or namespace selector is configured")
+			x.clog.WithField("nsSelector", irV3.Source.NamespaceSelector).Debugf("Policy is not namespaced, or namespace selector is configured")
 			if len(irV1.SrcNets) == 0 {
 				x.clog.Debugf("Not matching on nets, therefore exposed to other namespaces")
 				x.Flags |= CacheEntryOtherNamespaceExposedIngress

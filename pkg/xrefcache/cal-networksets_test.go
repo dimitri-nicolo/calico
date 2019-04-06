@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019 Tigera, Inc. SelectAll rights reserved.
 package xrefcache_test
 
 import (
