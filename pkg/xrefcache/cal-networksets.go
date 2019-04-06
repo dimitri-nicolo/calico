@@ -43,6 +43,7 @@ type CacheEntryCalicoNetworkSet struct {
 
 	// --- Internal data ---
 	cacheEntryCommon
+	clog *log.Entry
 }
 
 // getVersionedResource implements the CacheEntry interface.
@@ -96,6 +97,7 @@ func (c *calicoNetworkSetEngine) register(cache engineCache) {
 	c.engineCache = cache
 
 	// Register with the allow-rule label seletor so that we can track which allow rules are using this NetworkSet.
+	c.NetworkSetLabelSelector().RegisterCallbacks(c.kinds(), c.selectorMatchStarted, c.selectorMatchStopped)
 }
 
 // kinds implements the resourceCacheEngine interface.
@@ -112,6 +114,7 @@ func (c *calicoNetworkSetEngine) newCacheEntry() CacheEntry {
 
 // resourceAdded implements the resourceCacheEngine interface.
 func (c *calicoNetworkSetEngine) resourceAdded(id resources.ResourceID, entry CacheEntry) {
+	entry.(*CacheEntryCalicoNetworkSet).clog = log.WithField("id", id)
 	_ = c.resourceUpdated(id, entry, nil)
 }
 
@@ -165,11 +168,11 @@ func (c *calicoNetworkSetEngine) convertToVersioned(res resources.Resource) (Ver
 func (c *calicoNetworkSetEngine) scanNets(x *CacheEntryCalicoNetworkSet) syncer.UpdateType {
 	old := x.Flags
 	// Toggle the InternetAddressExposed flag
+	x.Flags &^= CacheEntryInternetExposed
 	if internet.NetsContainInternetAddr(x.getV1NetworkSet().Nets) {
 		x.Flags |= CacheEntryInternetExposed
-	} else {
-		x.Flags &^= CacheEntryInternetExposed
 	}
+
 	// Determine flags that have changed, and convert to an update type. See notes in flags.go.
 	changed := syncer.UpdateType(old ^ x.Flags)
 
@@ -186,10 +189,10 @@ func (c *calicoNetworkSetEngine) scanNets(x *CacheEntryCalicoNetworkSet) syncer.
 	return changed
 }
 
-// selectorMatchStarted is called synchronously from the policy or network set resource update methods when a
+// selectorMatchStarted is called synchronously from the rule selector or network set resource update methods when a
 // selector<->netset match has started. We update our set of matched selectors.
 func (c *calicoNetworkSetEngine) selectorMatchStarted(selId, netsetId resources.ResourceID) {
-	p, ok := c.GetFromOurCache(netsetId).(*CacheEntryCalicoNetworkSet)
+	x, ok := c.GetFromOurCache(netsetId).(*CacheEntryCalicoNetworkSet)
 	if !ok {
 		// This is called synchronously from the resource update methods, so we don't expect the entries to have been
 		// removed from the cache at this point.
@@ -198,13 +201,13 @@ func (c *calicoNetworkSetEngine) selectorMatchStarted(selId, netsetId resources.
 	}
 	// Update the selector set in our network set data. No need to queue an async recalculation since this won't affect
 	// our settings *and* we don't notify the cache listeners about this event type.
-	p.PolicyRuleSelectors.Add(netsetId)
+	x.PolicyRuleSelectors.Add(selId)
 }
 
-// selectorMatchStopped is called synchronously from the policy or network set resource update methods when a
+// selectorMatchStopped is called synchronously from the rule selector or network set resource update methods when a
 // selector<->netset match has stopped. We update our set of matched selectors.
 func (c *calicoNetworkSetEngine) selectorMatchStopped(selId, netsetId resources.ResourceID) {
-	p, ok := c.GetFromOurCache(netsetId).(*CacheEntryCalicoNetworkSet)
+	x, ok := c.GetFromOurCache(netsetId).(*CacheEntryCalicoNetworkSet)
 	if !ok {
 		// This is called synchronously from the resource update methods, so we don't expect the entries to have been
 		// removed from the cache at this point.
@@ -213,5 +216,5 @@ func (c *calicoNetworkSetEngine) selectorMatchStopped(selId, netsetId resources.
 	}
 	// Update the selector set in our network set data. No need to queue an async recalculation since this won't affect
 	// our settings *and* we don't notify the cache listeners about this event type.
-	p.PolicyRuleSelectors.Add(netsetId)
+	x.PolicyRuleSelectors.Discard(selId)
 }

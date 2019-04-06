@@ -210,7 +210,7 @@ func (t *XRefCacheTester) GetGlobalNetworkSet(nameIdx Name) *xrefcache.CacheEntr
 	return e.(*xrefcache.CacheEntryCalicoNetworkSet)
 }
 
-func (t *XRefCacheTester) SetGlobalNetworkSet(nameIdx Name, labels Label, nets []string) {
+func (t *XRefCacheTester) SetGlobalNetworkSet(nameIdx Name, labels Label, nets Net) {
 	r := getResourceId(resources.ResourceTypeGlobalNetworkSets, nameIdx, 0)
 	t.xrefCache.OnUpdate(syncer.Update{
 		Type:       syncer.UpdateTypeSet,
@@ -219,7 +219,7 @@ func (t *XRefCacheTester) SetGlobalNetworkSet(nameIdx Name, labels Label, nets [
 			TypeMeta:   getTypeMeta(r),
 			ObjectMeta: getObjectMeta(r, labels),
 			Spec: apiv3.GlobalNetworkSetSpec{
-				Nets: nets,
+				Nets: getCalicoNets(nets),
 			},
 		},
 	})

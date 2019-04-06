@@ -16,7 +16,7 @@ func getCalicoAction(a Action) apiv3.Action {
 
 func getCalicoNets(n Net) []string {
 	var nets []string
-	if n&Internet != 0 {
+	if n&Public != 0 {
 		nets = append(nets, "1.1.1.1/32")
 	}
 	if n&Private != 0 {

@@ -7,7 +7,7 @@ import (
 
 func getK8sNets(n Net) []networkingv1.NetworkPolicyPeer {
 	var nets []networkingv1.NetworkPolicyPeer
-	if n&Internet != 0 {
+	if n&Public != 0 {
 		nets = append(nets, networkingv1.NetworkPolicyPeer{
 			IPBlock: &networkingv1.IPBlock{
 				CIDR: "1.1.1.1/32",

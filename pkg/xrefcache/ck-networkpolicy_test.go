@@ -46,7 +46,7 @@ var _ = Describe("Basic CRUD of network policies with no other resources present
 		By("applying a GlobalNetworkPolicy, ingress, one allow source rule with internet CIDR")
 		tester.SetGlobalNetworkPolicy(Name1, SelectAll,
 			[]apiv3.Rule{
-				CalicoRuleNets(Allow, Source, Internet),
+				CalicoRuleNets(Allow, Source, Public),
 			},
 			nil,
 		)
@@ -59,7 +59,7 @@ var _ = Describe("Basic CRUD of network policies with no other resources present
 		By("applying a GlobalNetworkPolicy, ingress, one allow destination rule with internet CIDR")
 		tester.SetGlobalNetworkPolicy(Name1, SelectAll,
 			[]apiv3.Rule{
-				CalicoRuleNets(Allow, Destination, Internet),
+				CalicoRuleNets(Allow, Destination, Public),
 			},
 			nil,
 		)
@@ -101,7 +101,7 @@ var _ = Describe("Basic CRUD of network policies with no other resources present
 		tester.SetGlobalNetworkPolicy(Name1, SelectAll,
 			nil,
 			[]apiv3.Rule{
-				CalicoRuleNets(Allow, Destination, Internet),
+				CalicoRuleNets(Allow, Destination, Public),
 			},
 		)
 
@@ -114,7 +114,7 @@ var _ = Describe("Basic CRUD of network policies with no other resources present
 		tester.SetGlobalNetworkPolicy(Name1, SelectAll,
 			nil,
 			[]apiv3.Rule{
-				CalicoRuleNets(Allow, Source, Internet),
+				CalicoRuleNets(Allow, Source, Public),
 			},
 		)
 
@@ -174,7 +174,7 @@ var _ = Describe("Basic CRUD of network policies with no other resources present
 		By("applying a NetworkPolicy, ingress, one allow source rule with internet CIDR")
 		tester.SetNetworkPolicy(Name1, Namespace1, SelectAll,
 			[]apiv3.Rule{
-				CalicoRuleNets(Allow, Source, Internet),
+				CalicoRuleNets(Allow, Source, Public),
 			},
 			nil,
 		)
@@ -232,7 +232,7 @@ var _ = Describe("Basic CRUD of network policies with no other resources present
 		By("applying a NetworkPolicy, ingress, one allow destination rule with internet CIDR")
 		tester.SetNetworkPolicy(Name1, Namespace1, SelectAll,
 			[]apiv3.Rule{
-				CalicoRuleNets(Allow, Destination, Internet),
+				CalicoRuleNets(Allow, Destination, Public),
 			},
 			nil,
 		)
@@ -278,7 +278,7 @@ var _ = Describe("Basic CRUD of network policies with no other resources present
 		tester.SetNetworkPolicy(Name1, Namespace1, SelectAll,
 			nil,
 			[]apiv3.Rule{
-				CalicoRuleNets(Allow, Destination, Internet),
+				CalicoRuleNets(Allow, Destination, Public),
 			},
 		)
 
@@ -333,7 +333,7 @@ var _ = Describe("Basic CRUD of network policies with no other resources present
 		tester.SetNetworkPolicy(Name1, Namespace1, SelectAll,
 			nil,
 			[]apiv3.Rule{
-				CalicoRuleNets(Allow, Source, Internet),
+				CalicoRuleNets(Allow, Source, Public),
 			},
 		)
 
@@ -397,7 +397,7 @@ var _ = Describe("Basic CRUD of network policies with no other resources present
 		By("applying a K8sNetworkPolicy, ingress, one allow source rule with internet CIDR")
 		tester.SetK8sNetworkPolicy(Name1, Namespace1, SelectAll,
 			[]networkingv1.NetworkPolicyIngressRule{
-				K8sIngressRuleNets(Allow, Source, Internet),
+				K8sIngressRuleNets(Allow, Source, Public),
 			},
 			nil,
 		)
@@ -467,7 +467,7 @@ var _ = Describe("Basic CRUD of network policies with no other resources present
 		tester.SetK8sNetworkPolicy(Name1, Namespace1, SelectAll,
 			nil,
 			[]networkingv1.NetworkPolicyEgressRule{
-				K8sEgressRuleNets(Allow, Destination, Internet),
+				K8sEgressRuleNets(Allow, Destination, Public),
 			},
 		)
 

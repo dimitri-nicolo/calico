@@ -156,40 +156,40 @@ func (c *networkPolicyRuleSelectorsEngine) convertToVersioned(res resources.Reso
 	return nil, nil
 }
 
-func (c *networkPolicyRuleSelectorsEngine) netsetMatchStarted(ns, sel resources.ResourceID) {
-	s, ok := c.GetFromOurCache(sel).(*CacheEntryNetworkPolicyRuleSelector)
+func (c *networkPolicyRuleSelectorsEngine) netsetMatchStarted(sel, nsLabels resources.ResourceID) {
+	x, ok := c.GetFromOurCache(sel).(*CacheEntryNetworkPolicyRuleSelector)
 	if !ok {
-		log.Errorf("Match started on selector, but selector is not in cache: %s matches %s", sel, ns)
+		log.Errorf("Match started on selector, but selector is not in cache: %s matches %s", sel, nsLabels)
 		return
 	}
-	s.NetworkSets.Add(ns)
+	x.NetworkSets.Add(nsLabels)
 	c.QueueRecalculation(sel, nil, EventNetsetMatchStarted)
 }
 
-func (c *networkPolicyRuleSelectorsEngine) netsetMatchStopped(ns, sel resources.ResourceID) {
-	s, ok := c.GetFromOurCache(sel).(*CacheEntryNetworkPolicyRuleSelector)
+func (c *networkPolicyRuleSelectorsEngine) netsetMatchStopped(sel, nsLabels resources.ResourceID) {
+	x, ok := c.GetFromOurCache(sel).(*CacheEntryNetworkPolicyRuleSelector)
 	if !ok {
-		log.Errorf("Match stopped on selector, but selector is not in cache: %s matches %s", sel, ns)
+		log.Errorf("Match stopped on selector, but selector is not in cache: %s matches %s", sel, nsLabels)
 		return
 	}
-	s.NetworkSets.Discard(ns)
+	x.NetworkSets.Discard(nsLabels)
 	c.QueueRecalculation(sel, nil, EventNetsetMatchStopped)
 }
 
 func (c *networkPolicyRuleSelectorsEngine) policyMatchStarted(pol, sel resources.ResourceID) {
-	s, ok := c.GetFromOurCache(sel).(*CacheEntryNetworkPolicyRuleSelector)
+	x, ok := c.GetFromOurCache(sel).(*CacheEntryNetworkPolicyRuleSelector)
 	if !ok {
 		log.Errorf("Match started on selector, but selector is not in cache: %s matches %s", sel, pol)
 		return
 	}
-	s.Policies.Add(pol)
+	x.Policies.Add(pol)
 }
 
 func (c *networkPolicyRuleSelectorsEngine) policyMatchStopped(pol, sel resources.ResourceID) {
-	s, ok := c.GetFromOurCache(sel).(*CacheEntryNetworkPolicyRuleSelector)
+	x, ok := c.GetFromOurCache(sel).(*CacheEntryNetworkPolicyRuleSelector)
 	if !ok {
 		log.Errorf("Match stopped on selector, but selector is not in cache: %s matches %s", sel, pol)
 		return
 	}
-	s.Policies.Discard(pol)
+	x.Policies.Discard(pol)
 }

@@ -8,6 +8,7 @@ import (
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
 	. "github.com/tigera/compliance/internal/testutils"
+	"github.com/tigera/compliance/pkg/xrefcache"
 )
 
 // The network policy rule selector pseudo resources are managed internally through the NetworkPolicyRuleSelectorManager.
@@ -211,6 +212,203 @@ var _ = Describe("Basic CRUD of network policies rule selector pseudo resource t
 
 		By("checking the cache settings")
 		ids = tester.GetCachedRuleSelectors()
+		Expect(ids).To(HaveLen(0))
+	})
+
+	It("should handle Netset-RuleSelector-Polify linkages and config calculation", func() {
+		By("applying gnp1, with an ingress allow all() rule")
+		tester.SetGlobalNetworkPolicy(Name1, SelectAll,
+			[]apiv3.Rule{
+				CalicoRuleSelectors(Allow, Source, SelectAll, NoNamespaceSelector),
+			},
+			nil,
+		)
+
+		By("applying gnp2, with an ingress allow select2 rule")
+		tester.SetGlobalNetworkPolicy(Name2, SelectAll,
+			[]apiv3.Rule{
+				CalicoRuleSelectors(Allow, Source, Select2, NoNamespaceSelector),
+			},
+			nil,
+		)
+
+		By("creating ns1 with label1 and internet exposed")
+		tester.SetGlobalNetworkSet(Name1, Label1, Public)
+
+		By("creating ns2 with label2 and all addresses private")
+		tester.SetGlobalNetworkSet(Name2, Label2, Private)
+
+		By("checking all() rule matches ns1/ns2/gnp1 and effective config is 'internet exposed'")
+		r := tester.GetGNPRuleSelectorCacheEntry(SelectAll, NoNamespaceSelector)
+		Expect(r).ToNot(BeNil())
+		Expect(r.Policies.Len()).To(Equal(1))
+		Expect(r.NetworkSets.Len()).To(Equal(2))
+		Expect(r.NetworkSetFlags & xrefcache.CacheEntryInternetExposed).ToNot(BeZero())
+
+		By("checking gnp1 has inherited the settings from the all() rule (internet exposed ingress)")
+		np := tester.GetGlobalNetworkPolicy(Name1)
+		Expect(np).ToNot(BeNil())
+		Expect(np.AllowRuleSelectors.Len()).To(Equal(1))
+		Expect(np.Flags & xrefcache.CacheEntryInternetExposedIngress).ToNot(BeZero())
+		Expect(np.Flags & xrefcache.CacheEntryInternetExposedEgress).To(BeZero())
+		Expect(np.Flags & xrefcache.CacheEntryProtectedIngress).ToNot(BeZero())
+		Expect(np.Flags & xrefcache.CacheEntryProtectedEgress).To(BeZero())
+		Expect(np.Flags).To(Equal(
+			xrefcache.CacheEntryInternetExposedIngress | xrefcache.CacheEntryProtectedIngress |
+				xrefcache.CacheEntryOtherNamespaceExposedIngress,
+		))
+
+		By("updating gnp1, to have only an egress allow all() rule")
+		tester.SetGlobalNetworkPolicy(Name1, SelectAll,
+			nil,
+			[]apiv3.Rule{
+				CalicoRuleSelectors(Allow, Destination, SelectAll, NoNamespaceSelector),
+			},
+		)
+
+		By("checking gnp1 has inherited the settings from the all() rule (internet exposed egress)")
+		np = tester.GetGlobalNetworkPolicy(Name1)
+		Expect(np).ToNot(BeNil())
+		Expect(np.AllowRuleSelectors.Len()).To(Equal(1))
+		Expect(np.Flags & xrefcache.CacheEntryInternetExposedIngress).To(BeZero())
+		Expect(np.Flags & xrefcache.CacheEntryInternetExposedEgress).ToNot(BeZero())
+		Expect(np.Flags & xrefcache.CacheEntryProtectedIngress).To(BeZero())
+		Expect(np.Flags & xrefcache.CacheEntryProtectedEgress).ToNot(BeZero())
+		Expect(np.Flags).To(Equal(
+			xrefcache.CacheEntryInternetExposedEgress | xrefcache.CacheEntryProtectedEgress |
+				xrefcache.CacheEntryOtherNamespaceExposedEgress,
+		))
+
+		By("checking select2 rule matches ns2/gnp2 and effective config is 'internet not exposed'")
+		r = tester.GetGNPRuleSelectorCacheEntry(Select2, NoNamespaceSelector)
+		Expect(r).ToNot(BeNil())
+		Expect(r.Policies.Len()).To(Equal(1))
+		Expect(r.NetworkSets.Len()).To(Equal(1))
+		Expect(r.NetworkSetFlags & xrefcache.CacheEntryInternetExposed).To(BeZero())
+
+		By("checking gnp2 has inherited the settings from the select2 rule (internet not exposed)")
+		np = tester.GetGlobalNetworkPolicy(Name2)
+		Expect(np).ToNot(BeNil())
+		Expect(np.AllowRuleSelectors.Len()).To(Equal(1))
+		Expect(np.Flags & xrefcache.CacheEntryInternetExposedIngress).To(BeZero())
+		Expect(np.Flags & xrefcache.CacheEntryInternetExposedEgress).To(BeZero())
+		Expect(np.Flags & xrefcache.CacheEntryProtectedIngress).ToNot(BeZero())
+		Expect(np.Flags & xrefcache.CacheEntryProtectedEgress).To(BeZero())
+		Expect(np.Flags).To(Equal(
+			xrefcache.CacheEntryProtectedIngress | xrefcache.CacheEntryOtherNamespaceExposedIngress,
+		))
+
+		By("updating gnp2 to have an ingress allow *select1* rule")
+		tester.SetGlobalNetworkPolicy(Name2, SelectAll,
+			[]apiv3.Rule{
+				CalicoRuleSelectors(Allow, Source, Select1, NoNamespaceSelector),
+			},
+			nil,
+		)
+
+		By("checking cache xref and to ensure select2 rule no longer exists")
+		r = tester.GetGNPRuleSelectorCacheEntry(Select2, NoNamespaceSelector)
+		Expect(r).To(BeNil())
+
+		By("checking select1 rule matches ns1/gnp2 and effective config is 'internet exposed'")
+		r = tester.GetGNPRuleSelectorCacheEntry(Select1, NoNamespaceSelector)
+		Expect(r).ToNot(BeNil())
+		Expect(r.Policies.Len()).To(Equal(1))
+		Expect(r.NetworkSets.Len()).To(Equal(1))
+		Expect(r.NetworkSetFlags & xrefcache.CacheEntryInternetExposed).ToNot(BeZero())
+
+		By("checking gnp2 has inherited the settings from the select1 rule (internet exposed)")
+		np = tester.GetGlobalNetworkPolicy(Name2)
+		Expect(np).ToNot(BeNil())
+		Expect(np.AllowRuleSelectors.Len()).To(Equal(1))
+		Expect(np.Flags & xrefcache.CacheEntryInternetExposedIngress).ToNot(BeZero())
+		Expect(np.Flags & xrefcache.CacheEntryInternetExposedEgress).To(BeZero())
+
+		By("deleting ns1")
+		tester.DeleteGlobalNetworkSet(Name1)
+
+		By("checking select1 has no nets and all has 1 net")
+		r = tester.GetGNPRuleSelectorCacheEntry(Select1, NoNamespaceSelector)
+		Expect(r).ToNot(BeNil())
+		Expect(r.NetworkSets.Len()).To(Equal(0))
+		r = tester.GetGNPRuleSelectorCacheEntry(SelectAll, NoNamespaceSelector)
+		Expect(r).ToNot(BeNil())
+		Expect(r.NetworkSets.Len()).To(Equal(1))
+		ns := tester.GetGlobalNetworkSet(Name2)
+		Expect(ns).ToNot(BeNil())
+		Expect(ns.PolicyRuleSelectors.Len()).To(Equal(1))
+
+		By("checking gnp1 has inherited the settings from ns2 (internet not exposed)")
+		np = tester.GetGlobalNetworkPolicy(Name1)
+		Expect(np).ToNot(BeNil())
+		Expect(np.AllowRuleSelectors.Len()).To(Equal(1))
+		Expect(np.Flags & xrefcache.CacheEntryInternetExposedIngress).To(BeZero())
+		Expect(np.Flags & xrefcache.CacheEntryInternetExposedEgress).To(BeZero())
+
+		By("checking gnp2 has inherited the settings from no networksets (i.e. internet not exposed)")
+		np = tester.GetGlobalNetworkPolicy(Name2)
+		Expect(np).ToNot(BeNil())
+		Expect(np.AllowRuleSelectors.Len()).To(Equal(1))
+		Expect(np.Flags & xrefcache.CacheEntryInternetExposedIngress).To(BeZero())
+		Expect(np.Flags & xrefcache.CacheEntryInternetExposedEgress).To(BeZero())
+
+		By("updating ns2 to have public and private addresses")
+		tester.SetGlobalNetworkSet(Name2, Label2, Private|Public)
+
+		By("checking gnp1 has inherited the settings from ns2 (internet is exposed)")
+		np = tester.GetGlobalNetworkPolicy(Name1)
+		Expect(np).ToNot(BeNil())
+		Expect(np.AllowRuleSelectors.Len()).To(Equal(1))
+		Expect(np.Flags & xrefcache.CacheEntryInternetExposedIngress).To(BeZero())
+		Expect(np.Flags & xrefcache.CacheEntryInternetExposedEgress).ToNot(BeZero())
+
+		By("checking gnp2 has inherited the settings from no networksets (i.e. internet not exposed)")
+		np = tester.GetGlobalNetworkPolicy(Name2)
+		Expect(np).ToNot(BeNil())
+		Expect(np.AllowRuleSelectors.Len()).To(Equal(1))
+		Expect(np.Flags & xrefcache.CacheEntryInternetExposedIngress).To(BeZero())
+		Expect(np.Flags & xrefcache.CacheEntryInternetExposedEgress).To(BeZero())
+
+		By("setting ns2 labels to have Label1 and Label2")
+		tester.SetGlobalNetworkSet(Name2, Label1|Label2, Private|Public)
+
+		By("checking gnp1 has inherited the settings from ns2 (internet is exposed)")
+		np = tester.GetGlobalNetworkPolicy(Name1)
+		Expect(np).ToNot(BeNil())
+		Expect(np.AllowRuleSelectors.Len()).To(Equal(1))
+		Expect(np.Flags & xrefcache.CacheEntryInternetExposedIngress).To(BeZero())
+		Expect(np.Flags & xrefcache.CacheEntryInternetExposedEgress).ToNot(BeZero())
+
+		By("checking gnp2 has inherited the settings from ns2 (internet is exposed)")
+		np = tester.GetGlobalNetworkPolicy(Name2)
+		Expect(np).ToNot(BeNil())
+		Expect(np.AllowRuleSelectors.Len()).To(Equal(1))
+		Expect(np.Flags & xrefcache.CacheEntryInternetExposedIngress).ToNot(BeZero())
+		Expect(np.Flags & xrefcache.CacheEntryInternetExposedEgress).To(BeZero())
+
+		By("deleting ns2")
+		tester.DeleteGlobalNetworkSet(Name2)
+
+		By("checking gnp1 and gnp2 no longer inherit the settings from ns2")
+		np = tester.GetGlobalNetworkPolicy(Name1)
+		Expect(np).ToNot(BeNil())
+		Expect(np.AllowRuleSelectors.Len()).To(Equal(1))
+		Expect(np.Flags & xrefcache.CacheEntryInternetExposedIngress).To(BeZero())
+		Expect(np.Flags & xrefcache.CacheEntryInternetExposedEgress).To(BeZero())
+
+		By("checking gnp2 has inherited the settings from ns2 (internet is exposed)")
+		np = tester.GetGlobalNetworkPolicy(Name2)
+		Expect(np).ToNot(BeNil())
+		Expect(np.AllowRuleSelectors.Len()).To(Equal(1))
+		Expect(np.Flags & xrefcache.CacheEntryInternetExposedIngress).To(BeZero())
+		Expect(np.Flags & xrefcache.CacheEntryInternetExposedEgress).To(BeZero())
+
+		By("deleting gnp1 and gnp2")
+		tester.DeleteGlobalNetworkPolicy(Name1)
+		tester.DeleteGlobalNetworkPolicy(Name2)
+
+		By("checking the rule selector cache has no entries")
+		ids := tester.GetCachedRuleSelectors()
 		Expect(ids).To(HaveLen(0))
 	})
 })

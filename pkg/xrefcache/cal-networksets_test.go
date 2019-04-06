@@ -19,7 +19,7 @@ var _ = Describe("Basic CRUD of network sets with no other resources present", f
 	// Ensure  the client resource list is in-sync with the resource helper.
 	It("should handle basic CRUD and identify a network set with internet exposed", func() {
 		By("applying a network set with no nets")
-		tester.SetGlobalNetworkSet(Name1, NoLabels, nil)
+		tester.SetGlobalNetworkSet(Name1, NoLabels, 0)
 
 		By("checking the cache settings")
 		ns := tester.GetGlobalNetworkSet(Name1)
@@ -27,7 +27,7 @@ var _ = Describe("Basic CRUD of network sets with no other resources present", f
 		Expect(ns.Flags).To(BeZero())
 
 		By("applying a network set with one public net")
-		tester.SetGlobalNetworkSet(Name1, Label1, []string{"1.1.1.1/32"})
+		tester.SetGlobalNetworkSet(Name1, Label1, Public)
 
 		By("checking the cache settings")
 		ns = tester.GetGlobalNetworkSet(Name1)
@@ -35,7 +35,7 @@ var _ = Describe("Basic CRUD of network sets with no other resources present", f
 		Expect(ns.Flags).To(Equal(xrefcache.CacheEntryInternetExposed))
 
 		By("applying a network set with one private net")
-		tester.SetGlobalNetworkSet(Name1, Label1, []string{"10.0.0.0/16"})
+		tester.SetGlobalNetworkSet(Name1, Label1, Private)
 
 		By("checking the cache settings")
 		ns = tester.GetGlobalNetworkSet(Name1)
@@ -43,7 +43,7 @@ var _ = Describe("Basic CRUD of network sets with no other resources present", f
 		Expect(ns.Flags).To(BeZero())
 
 		By("applying a network set with one private and one public net")
-		tester.SetGlobalNetworkSet(Name1, Label1, []string{"10.0.0.0/16", "1.1.1.1/32", "10.10.0.0/16"})
+		tester.SetGlobalNetworkSet(Name1, Label1, Public|Private)
 
 		By("checking the cache settings")
 		ns = tester.GetGlobalNetworkSet(Name1)
@@ -51,7 +51,7 @@ var _ = Describe("Basic CRUD of network sets with no other resources present", f
 		Expect(ns.Flags).To(Equal(xrefcache.CacheEntryInternetExposed))
 
 		By("applying another network set with no nets")
-		tester.SetGlobalNetworkSet(Name2, NoLabels, nil)
+		tester.SetGlobalNetworkSet(Name2, NoLabels, 0)
 
 		By("checking the cache settings")
 		ns = tester.GetGlobalNetworkSet(Name1)

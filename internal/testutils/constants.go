@@ -67,6 +67,6 @@ const (
 type Net byte
 
 const (
-	Internet Net = 1 << iota
+	Public Net = 1 << iota
 	Private
 )
