@@ -16,21 +16,28 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/tools/cache"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/mock"
+	"github.com/tigera/intrusion-detection/controller/pkg/calico"
+	"github.com/tigera/intrusion-detection/controller/pkg/db"
+	"github.com/tigera/intrusion-detection/controller/pkg/puller"
 	"github.com/tigera/intrusion-detection/controller/pkg/statser"
+	"github.com/tigera/intrusion-detection/controller/pkg/sync/elasticipsets"
+	"github.com/tigera/intrusion-detection/controller/pkg/sync/globalnetworksets"
 	"github.com/tigera/intrusion-detection/controller/pkg/util"
 )
 
-var testClient = &http.Client{Transport: &mock.RoundTripper{Error: errors.New("mock error")}}
+var testClient = &http.Client{Transport: &puller.MockRoundTripper{Error: errors.New("mock error")}}
 
 func TestWatcher_processQueue(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	ipSet := &mock.IPSet{}
-	gns := mock.NewGlobalNetworkSetController()
-	eip := mock.NewElasticIPSetController()
+	ipSet := &db.MockIPSet{}
+	gns := globalnetworksets.NewMockGlobalNetworkSetController()
+	eip := elasticipsets.NewMockElasticIPSetController()
+	gtf := &calico.MockGlobalThreatFeedInterface{
+		GlobalThreatFeed: &v3.GlobalThreatFeed{},
+	}
 
-	w := NewWatcher(nil, nil, nil, gns, eip, testClient, ipSet, &mock.SuspiciousIP{}, &mock.Events{}).(*watcher)
+	w := NewWatcher(nil, nil, gtf, gns, eip, testClient, ipSet, &db.MockSuspiciousIP{}, &db.MockEvents{}).(*watcher)
 
 	g.Expect(w).ShouldNot(BeNil())
 
@@ -158,11 +165,14 @@ func TestWatcher_startFeed_stopFeed(t *testing.T) {
 		},
 	}
 
-	ipSet := &mock.IPSet{}
-	gns := mock.NewGlobalNetworkSetController()
-	eip := mock.NewElasticIPSetController()
+	ipSet := &db.MockIPSet{}
+	gns := globalnetworksets.NewMockGlobalNetworkSetController()
+	eip := elasticipsets.NewMockElasticIPSetController()
+	gtf := &calico.MockGlobalThreatFeedInterface{
+		GlobalThreatFeed: &v3.GlobalThreatFeed{},
+	}
 
-	w := NewWatcher(nil, nil, nil, gns, eip, testClient, ipSet, &mock.SuspiciousIP{}, &mock.Events{}).(*watcher)
+	w := NewWatcher(nil, nil, gtf, gns, eip, testClient, ipSet, &db.MockSuspiciousIP{}, &db.MockEvents{}).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -206,11 +216,14 @@ func TestWatcher_startFeed_NoPull(t *testing.T) {
 		},
 	}
 
-	ipSet := &mock.IPSet{}
-	gns := mock.NewGlobalNetworkSetController()
-	eip := mock.NewElasticIPSetController()
+	ipSet := &db.MockIPSet{}
+	gns := globalnetworksets.NewMockGlobalNetworkSetController()
+	eip := elasticipsets.NewMockElasticIPSetController()
+	gtf := &calico.MockGlobalThreatFeedInterface{
+		GlobalThreatFeed: &v3.GlobalThreatFeed{},
+	}
 
-	w := NewWatcher(nil, nil, nil, gns, eip, testClient, ipSet, &mock.SuspiciousIP{}, &mock.Events{}).(*watcher)
+	w := NewWatcher(nil, nil, gtf, gns, eip, testClient, ipSet, &db.MockSuspiciousIP{}, &db.MockEvents{}).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -245,11 +258,14 @@ func TestWatcher_startFeed_NoPullHTTP(t *testing.T) {
 		},
 	}
 
-	ipSet := &mock.IPSet{}
-	gns := mock.NewGlobalNetworkSetController()
-	eip := mock.NewElasticIPSetController()
+	ipSet := &db.MockIPSet{}
+	gns := globalnetworksets.NewMockGlobalNetworkSetController()
+	eip := elasticipsets.NewMockElasticIPSetController()
+	gtf := &calico.MockGlobalThreatFeedInterface{
+		GlobalThreatFeed: &v3.GlobalThreatFeed{},
+	}
 
-	w := NewWatcher(nil, nil, nil, gns, eip, testClient, ipSet, &mock.SuspiciousIP{}, &mock.Events{}).(*watcher)
+	w := NewWatcher(nil, nil, gtf, gns, eip, testClient, ipSet, &db.MockSuspiciousIP{}, &db.MockEvents{}).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -291,11 +307,14 @@ func TestWatcher_startFeed_Exists(t *testing.T) {
 		},
 	}
 
-	ipSet := &mock.IPSet{}
-	gns := mock.NewGlobalNetworkSetController()
-	eip := mock.NewElasticIPSetController()
+	ipSet := &db.MockIPSet{}
+	gns := globalnetworksets.NewMockGlobalNetworkSetController()
+	eip := elasticipsets.NewMockElasticIPSetController()
+	gtf := &calico.MockGlobalThreatFeedInterface{
+		GlobalThreatFeed: &v3.GlobalThreatFeed{},
+	}
 
-	w := NewWatcher(nil, nil, nil, gns, eip, testClient, ipSet, &mock.SuspiciousIP{}, &mock.Events{}).(*watcher)
+	w := NewWatcher(nil, nil, gtf, gns, eip, testClient, ipSet, &db.MockSuspiciousIP{}, &db.MockEvents{}).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -312,7 +331,11 @@ func TestWatcher_startFeed_Exists(t *testing.T) {
 func TestWatcher_stopFeed_notExists(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	w := NewWatcher(nil, nil, nil, nil, nil, testClient, nil, nil, nil).(*watcher)
+	gtf := &calico.MockGlobalThreatFeedInterface{
+		GlobalThreatFeed: &v3.GlobalThreatFeed{},
+	}
+
+	w := NewWatcher(nil, nil, gtf, nil, nil, testClient, nil, nil, nil).(*watcher)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -345,11 +368,14 @@ func TestWatcher_updateFeed_NotStarted(t *testing.T) {
 		},
 	}
 
-	ipSet := &mock.IPSet{}
-	gns := mock.NewGlobalNetworkSetController()
-	eip := mock.NewElasticIPSetController()
+	ipSet := &db.MockIPSet{}
+	gns := globalnetworksets.NewMockGlobalNetworkSetController()
+	eip := elasticipsets.NewMockElasticIPSetController()
+	gtf := &calico.MockGlobalThreatFeedInterface{
+		GlobalThreatFeed: &v3.GlobalThreatFeed{},
+	}
 
-	w := NewWatcher(nil, nil, nil, gns, eip, testClient, ipSet, &mock.SuspiciousIP{}, &mock.Events{}).(*watcher)
+	w := NewWatcher(nil, nil, gtf, gns, eip, testClient, ipSet, &db.MockSuspiciousIP{}, &db.MockEvents{}).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -383,11 +409,14 @@ func TestWatcher_updateFeed_PullToPull(t *testing.T) {
 		},
 	}
 
-	ipSet := &mock.IPSet{}
-	gns := mock.NewGlobalNetworkSetController()
-	eip := mock.NewElasticIPSetController()
+	ipSet := &db.MockIPSet{}
+	gns := globalnetworksets.NewMockGlobalNetworkSetController()
+	eip := elasticipsets.NewMockElasticIPSetController()
+	gtf := &calico.MockGlobalThreatFeedInterface{
+		GlobalThreatFeed: &v3.GlobalThreatFeed{},
+	}
 
-	w := NewWatcher(nil, nil, nil, gns, eip, testClient, ipSet, &mock.SuspiciousIP{}, &mock.Events{}).(*watcher)
+	w := NewWatcher(nil, nil, gtf, gns, eip, testClient, ipSet, &db.MockSuspiciousIP{}, &db.MockEvents{}).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -445,11 +474,14 @@ func TestWatcher_updateFeed_PullToPush(t *testing.T) {
 		},
 	}
 
-	ipSet := &mock.IPSet{}
-	gns := mock.NewGlobalNetworkSetController()
-	eip := mock.NewElasticIPSetController()
+	ipSet := &db.MockIPSet{}
+	gns := globalnetworksets.NewMockGlobalNetworkSetController()
+	eip := elasticipsets.NewMockElasticIPSetController()
+	gtf := &calico.MockGlobalThreatFeedInterface{
+		GlobalThreatFeed: &v3.GlobalThreatFeed{},
+	}
 
-	w := NewWatcher(nil, nil, nil, gns, eip, testClient, ipSet, &mock.SuspiciousIP{}, &mock.Events{}).(*watcher)
+	w := NewWatcher(nil, nil, gtf, gns, eip, testClient, ipSet, &db.MockSuspiciousIP{}, &db.MockEvents{}).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -496,11 +528,14 @@ func TestWatcher_updateFeed_PushToPull(t *testing.T) {
 		},
 	}
 
-	ipSet := &mock.IPSet{}
-	gns := mock.NewGlobalNetworkSetController()
-	eip := mock.NewElasticIPSetController()
+	ipSet := &db.MockIPSet{}
+	gns := globalnetworksets.NewMockGlobalNetworkSetController()
+	eip := elasticipsets.NewMockElasticIPSetController()
+	gtf := &calico.MockGlobalThreatFeedInterface{
+		GlobalThreatFeed: &v3.GlobalThreatFeed{},
+	}
 
-	w := NewWatcher(nil, nil, nil, gns, eip, testClient, ipSet, &mock.SuspiciousIP{}, &mock.Events{}).(*watcher)
+	w := NewWatcher(nil, nil, gtf, gns, eip, testClient, ipSet, &db.MockSuspiciousIP{}, &db.MockEvents{}).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -554,11 +589,14 @@ func TestWatcher_updateFeed_PushToPush(t *testing.T) {
 		},
 	}
 
-	ipSet := &mock.IPSet{}
-	gns := mock.NewGlobalNetworkSetController()
-	eip := mock.NewElasticIPSetController()
+	ipSet := &db.MockIPSet{}
+	gns := globalnetworksets.NewMockGlobalNetworkSetController()
+	eip := elasticipsets.NewMockElasticIPSetController()
+	gtf := &calico.MockGlobalThreatFeedInterface{
+		GlobalThreatFeed: &v3.GlobalThreatFeed{},
+	}
 
-	w := NewWatcher(nil, nil, nil, gns, eip, testClient, ipSet, &mock.SuspiciousIP{}, &mock.Events{}).(*watcher)
+	w := NewWatcher(nil, nil, gtf, gns, eip, testClient, ipSet, &db.MockSuspiciousIP{}, &db.MockEvents{}).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -611,11 +649,14 @@ func TestWatcher_restartPuller(t *testing.T) {
 		},
 	}
 
-	ipSet := &mock.IPSet{}
-	gns := mock.NewGlobalNetworkSetController()
-	eip := mock.NewElasticIPSetController()
+	ipSet := &db.MockIPSet{}
+	gns := globalnetworksets.NewMockGlobalNetworkSetController()
+	eip := elasticipsets.NewMockElasticIPSetController()
+	gtf := &calico.MockGlobalThreatFeedInterface{
+		GlobalThreatFeed: &v3.GlobalThreatFeed{},
+	}
 
-	w := NewWatcher(nil, nil, nil, gns, eip, testClient, ipSet, &mock.SuspiciousIP{}, &mock.Events{}).(*watcher)
+	w := NewWatcher(nil, nil, gtf, gns, eip, testClient, ipSet, &db.MockSuspiciousIP{}, &db.MockEvents{}).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -665,11 +706,14 @@ func TestWatcher_restartPuller_NoPull(t *testing.T) {
 		},
 	}
 
-	ipSet := &mock.IPSet{}
-	gns := mock.NewGlobalNetworkSetController()
-	eip := mock.NewElasticIPSetController()
+	ipSet := &db.MockIPSet{}
+	gns := globalnetworksets.NewMockGlobalNetworkSetController()
+	eip := elasticipsets.NewMockElasticIPSetController()
+	gtf := &calico.MockGlobalThreatFeedInterface{
+		GlobalThreatFeed: &v3.GlobalThreatFeed{},
+	}
 
-	w := NewWatcher(nil, nil, nil, gns, eip, testClient, ipSet, &mock.SuspiciousIP{}, &mock.Events{}).(*watcher)
+	w := NewWatcher(nil, nil, gtf, gns, eip, testClient, ipSet, &db.MockSuspiciousIP{}, &db.MockEvents{}).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -719,11 +763,14 @@ func TestWatcher_restartPuller_NoPullHTTP(t *testing.T) {
 		},
 	}
 
-	ipSet := &mock.IPSet{}
-	gns := mock.NewGlobalNetworkSetController()
-	eip := mock.NewElasticIPSetController()
+	ipSet := &db.MockIPSet{}
+	gns := globalnetworksets.NewMockGlobalNetworkSetController()
+	eip := elasticipsets.NewMockElasticIPSetController()
+	gtf := &calico.MockGlobalThreatFeedInterface{
+		GlobalThreatFeed: &v3.GlobalThreatFeed{},
+	}
 
-	w := NewWatcher(nil, nil, nil, gns, eip, testClient, ipSet, &mock.SuspiciousIP{}, &mock.Events{}).(*watcher)
+	w := NewWatcher(nil, nil, gtf, gns, eip, testClient, ipSet, &db.MockSuspiciousIP{}, &db.MockEvents{}).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -771,8 +818,11 @@ func TestWatcher_restartPuller_notExists(t *testing.T) {
 			},
 		},
 	}
+	gtf := &calico.MockGlobalThreatFeedInterface{
+		GlobalThreatFeed: globalThreatFeed,
+	}
 
-	w := NewWatcher(nil, nil, nil, nil, nil, testClient, nil, nil, nil).(*watcher)
+	w := NewWatcher(nil, nil, gtf, nil, nil, testClient, nil, nil, nil).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -784,9 +834,9 @@ func TestWatcher_Ping(t *testing.T) {
 	g := NewWithT(t)
 
 	// Include an empty list so that the controller doesn't complain
-	gtf := &mock.GlobalThreatFeedInterface{GlobalThreatFeedList: &v3.GlobalThreatFeedList{}}
-	gns := mock.NewGlobalNetworkSetController()
-	eip := mock.NewElasticIPSetController()
+	gtf := &calico.MockGlobalThreatFeedInterface{GlobalThreatFeedList: &v3.GlobalThreatFeedList{}}
+	gns := globalnetworksets.NewMockGlobalNetworkSetController()
+	eip := elasticipsets.NewMockElasticIPSetController()
 	uut := NewWatcher(nil, nil, gtf, gns, eip, testClient, nil, nil, nil)
 
 	ch := make(chan struct{})
@@ -816,9 +866,9 @@ func TestWatcher_PingFail(t *testing.T) {
 	defer cancel()
 
 	// Include an empty list so that the controller doesn't complain
-	gtf := &mock.GlobalThreatFeedInterface{GlobalThreatFeedList: &v3.GlobalThreatFeedList{}}
-	gns := mock.NewGlobalNetworkSetController()
-	eip := mock.NewElasticIPSetController()
+	gtf := &calico.MockGlobalThreatFeedInterface{GlobalThreatFeedList: &v3.GlobalThreatFeedList{}}
+	gns := globalnetworksets.NewMockGlobalNetworkSetController()
+	eip := elasticipsets.NewMockElasticIPSetController()
 	uut := NewWatcher(nil, nil, gtf, gns, eip, testClient, nil, nil, nil)
 
 	err := uut.Ping(ctx)
@@ -828,12 +878,12 @@ func TestWatcher_PingFail(t *testing.T) {
 func TestWatcher_Ready(t *testing.T) {
 	g := NewWithT(t)
 
-	gtf := &mock.GlobalThreatFeedInterface{W: &mock.Watch{make(chan watch.Event)}, GlobalThreatFeedList: &v3.GlobalThreatFeedList{}}
-	ipSet := &mock.IPSet{}
-	sIP := &mock.SuspiciousIP{ErrorIndex: -1}
-	gns := mock.NewGlobalNetworkSetController()
-	eip := mock.NewElasticIPSetController()
-	uut := NewWatcher(nil, nil, gtf, gns, eip, testClient, ipSet, sIP, &mock.Events{})
+	gtf := &calico.MockGlobalThreatFeedInterface{W: &calico.MockWatch{make(chan watch.Event)}, GlobalThreatFeedList: &v3.GlobalThreatFeedList{}, GlobalThreatFeed: &v3.GlobalThreatFeed{}}
+	ipSet := &db.MockIPSet{}
+	sIP := &db.MockSuspiciousIP{ErrorIndex: -1}
+	gns := globalnetworksets.NewMockGlobalNetworkSetController()
+	eip := elasticipsets.NewMockElasticIPSetController()
+	uut := NewWatcher(nil, nil, gtf, gns, eip, testClient, ipSet, sIP, &db.MockEvents{})
 
 	g.Expect(uut.Ready()).To(BeFalse())
 

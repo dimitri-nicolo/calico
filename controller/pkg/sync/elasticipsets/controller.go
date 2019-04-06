@@ -8,12 +8,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/statser"
-
 	"github.com/olivere/elastic"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
+	"github.com/tigera/intrusion-detection/controller/pkg/statser"
 )
 
 type Controller interface {

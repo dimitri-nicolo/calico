@@ -14,11 +14,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/avast/retry-go"
+	retry "github.com/avast/retry-go"
 	log "github.com/sirupsen/logrus"
-	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/typed/core/v1"
+	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/runloop"
@@ -102,7 +102,7 @@ func (h *httpPuller) Run(ctx context.Context, s statser.Statser) {
 				return
 			}
 
-			delay := h.getStartupDelay(ctx, s.Status())
+			delay := h.getStartupDelay(ctx)
 			if delay > 0 {
 				h.lock.RLock()
 				log.WithField("delay", delay).WithField("feed", h.feed.Name).Info("Delaying start")
@@ -194,7 +194,7 @@ func (h *httpPuller) setFeedURIAndHeader(f *v3.GlobalThreatFeed) error {
 	return nil
 }
 
-func (h *httpPuller) getStartupDelay(ctx context.Context, s statser.Status) time.Duration {
+func (h *httpPuller) getStartupDelay(ctx context.Context) time.Duration {
 	lastModified, err := h.ipSet.GetIPSetModified(ctx, h.feed.Name)
 	if err != nil {
 		return 0

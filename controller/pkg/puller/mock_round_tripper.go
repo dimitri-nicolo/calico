@@ -1,16 +1,16 @@
 // Copyright 2019 Tigera Inc. All rights reserved.
 
-package mock
+package puller
 
 import "net/http"
 
-type RoundTripper struct {
+type MockRoundTripper struct {
 	Response *http.Response
 	Error    error
 	Count    uint
 }
 
-func (r *RoundTripper) RoundTrip(*http.Request) (*http.Response, error) {
+func (r *MockRoundTripper) RoundTrip(*http.Request) (*http.Response, error) {
 	r.Count++
 	return r.Response, r.Error
 }

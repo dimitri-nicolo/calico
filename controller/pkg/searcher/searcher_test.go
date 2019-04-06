@@ -10,8 +10,9 @@ import (
 
 	. "github.com/onsi/gomega"
 
+	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/events"
-	"github.com/tigera/intrusion-detection/controller/pkg/mock"
+	"github.com/tigera/intrusion-detection/controller/pkg/statser"
 	"github.com/tigera/intrusion-detection/controller/pkg/util"
 )
 
@@ -87,10 +88,10 @@ func runTest(t *testing.T, successful bool, expected []events.SecurityEvent, err
 	g := NewGomegaWithT(t)
 
 	f := util.NewGlobalThreatFeedFromName("mock")
-	suspiciousIP := &mock.SuspiciousIP{Error: err, ErrorIndex: suspiciousErrorIdx, FlowLogs: expected}
-	eventsDB := &mock.Events{ErrorIndex: eventsErrorIdx, FlowLogs: []events.SecurityEvent{}}
+	suspiciousIP := &db.MockSuspiciousIP{Error: err, ErrorIndex: suspiciousErrorIdx, FlowLogs: expected}
+	eventsDB := &db.MockEvents{ErrorIndex: eventsErrorIdx, FlowLogs: []events.SecurityEvent{}}
 	searcher := NewFlowSearcher(f, 0, suspiciousIP, eventsDB).(*flowSearcher)
-	s := &mock.Statser{}
+	s := &statser.MockStatser{}
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -110,12 +111,12 @@ func runTest(t *testing.T, successful bool, expected []events.SecurityEvent, err
 	}
 
 	status := s.Status()
-	g.Expect(status.LastSuccessfulSync).Should(Equal(time.Time{}), "Sync should not be marked as successful")
+	g.Expect(status.LastSuccessfulSync.Time).Should(Equal(time.Time{}), "Sync should not be marked as successful")
 	if successful {
-		g.Expect(status.LastSuccessfulSearch).ShouldNot(Equal(time.Time{}), "Search should be marked as successful")
+		g.Expect(status.LastSuccessfulSearch.Time).ShouldNot(Equal(time.Time{}), "Search should be marked as successful")
 		g.Expect(status.ErrorConditions).Should(HaveLen(0), "No errors should be reported")
 	} else {
-		g.Expect(status.LastSuccessfulSearch).Should(Equal(time.Time{}), "Search should be not marked as successful")
+		g.Expect(status.LastSuccessfulSearch.Time).Should(Equal(time.Time{}), "Search should be not marked as successful")
 		g.Expect(status.ErrorConditions).ShouldNot(HaveLen(0), "Errors should be reported")
 	}
 }
@@ -125,8 +126,8 @@ func TestFlowSearcher_SetFeed(t *testing.T) {
 
 	f := util.NewGlobalThreatFeedFromName("mock")
 	f2 := util.NewGlobalThreatFeedFromName("swap")
-	suspiciousIP := &mock.SuspiciousIP{}
-	eventsDB := &mock.Events{}
+	suspiciousIP := &db.MockSuspiciousIP{}
+	eventsDB := &db.MockEvents{}
 	searcher := NewFlowSearcher(f, 0, suspiciousIP, eventsDB).(*flowSearcher)
 
 	searcher.SetFeed(f2)

@@ -9,7 +9,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	v3client "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"

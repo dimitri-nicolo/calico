@@ -11,7 +11,8 @@ import (
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/watch"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/mock"
+	"github.com/tigera/intrusion-detection/controller/pkg/calico"
+	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/statser"
 	"github.com/tigera/intrusion-detection/controller/pkg/util"
 )
@@ -19,7 +20,7 @@ import (
 func TestNewController(t *testing.T) {
 	g := NewWithT(t)
 
-	client := &mock.GlobalNetworkSetInterface{}
+	client := &calico.MockGlobalNetworkSetInterface{}
 	uut := NewController(client)
 	g.Expect(uut).ToNot(BeNil())
 }
@@ -27,7 +28,7 @@ func TestNewController(t *testing.T) {
 func TestController_Add_Success(t *testing.T) {
 	g := NewWithT(t)
 
-	client := &mock.GlobalNetworkSetInterface{W: &mock.Watch{C: make(chan watch.Event)}}
+	client := &calico.MockGlobalNetworkSetInterface{W: &calico.MockWatch{C: make(chan watch.Event)}}
 	uut := NewController(client)
 
 	// Grab a ref to the workqueue, which we'll use to measure progress.
@@ -35,7 +36,7 @@ func TestController_Add_Success(t *testing.T) {
 
 	gns := util.NewGlobalNetworkSet("test")
 	fail := func() { t.Error("controller called fail func unexpectedly") }
-	stat := &mock.Statser{}
+	stat := &statser.MockStatser{}
 	// Set an error which we expect to clear.
 	stat.Error(statser.GlobalNetworkSetSyncFailed, errors.New("test"))
 	uut.Add(gns, fail, stat)
@@ -51,7 +52,7 @@ func TestController_Add_Success(t *testing.T) {
 
 	// Wait for queue to be processed
 	g.Eventually(q.Len).Should(Equal(0))
-	g.Expect(client.Calls()).To(ContainElement(mock.Call{Method: "Create", GNS: ex}))
+	g.Expect(client.Calls()).To(ContainElement(db.Call{Method: "Create", GNS: ex}))
 	g.Expect(stat.Status().ErrorConditions).To(HaveLen(0))
 
 	// The watch will send the GNS back to the informer
@@ -69,7 +70,7 @@ func TestController_Delete(t *testing.T) {
 
 	gns := util.NewGlobalNetworkSet("test")
 	gns.Labels = map[string]string{LabelKey: LabelValue}
-	client := &mock.GlobalNetworkSetInterface{GlobalNetworkSet: gns}
+	client := &calico.MockGlobalNetworkSetInterface{GlobalNetworkSet: gns}
 	uut := NewController(client)
 
 	// Grab a ref to the workqueue, which we'll use to measure progress.
@@ -92,7 +93,7 @@ func TestController_Delete(t *testing.T) {
 
 	uut.Delete(gns)
 	g.Eventually(countMethod(client, "Delete")).Should(Equal(1))
-	g.Expect(client.Calls()).To(ContainElement(mock.Call{Method: "Delete", Name: gns.Name}))
+	g.Expect(client.Calls()).To(ContainElement(db.Call{Method: "Delete", Name: gns.Name}))
 }
 
 func TestController_Update(t *testing.T) {
@@ -100,14 +101,14 @@ func TestController_Update(t *testing.T) {
 
 	gns := util.NewGlobalNetworkSet("test")
 	gns.Labels = map[string]string{LabelKey: LabelValue}
-	client := &mock.GlobalNetworkSetInterface{GlobalNetworkSet: gns}
+	client := &calico.MockGlobalNetworkSetInterface{GlobalNetworkSet: gns}
 	uut := NewController(client)
 
 	// Grab a ref to the workqueue, which we'll use to measure progress.
 	q := uut.(*controller).queue
 
 	fail := func() { t.Error("controller called fail func unexpectedly") }
-	stat := &mock.Statser{}
+	stat := &statser.MockStatser{}
 	uut.Add(gns, fail, stat)
 	g.Expect(q.Len()).Should(Equal(1))
 
@@ -124,7 +125,7 @@ func TestController_Update(t *testing.T) {
 	uut.Add(gns1, fail, stat)
 
 	g.Eventually(countMethod(client, "Update")).Should(Equal(1))
-	g.Expect(client.Calls()).To(ContainElement(mock.Call{Method: "Update", GNS: gns1}))
+	g.Expect(client.Calls()).To(ContainElement(db.Call{Method: "Update", GNS: gns1}))
 
 	// Update labels
 	gns2 := gns1.DeepCopy()
@@ -132,7 +133,7 @@ func TestController_Update(t *testing.T) {
 	uut.Add(gns2, fail, stat)
 
 	g.Eventually(countMethod(client, "Update")).Should(Equal(2))
-	g.Expect(client.Calls()).To(ContainElement(mock.Call{Method: "Update", GNS: gns2}))
+	g.Expect(client.Calls()).To(ContainElement(db.Call{Method: "Update", GNS: gns2}))
 }
 
 // Add and then delete a GNS before there is a chance to process it.
@@ -140,14 +141,14 @@ func TestController_AddDelete(t *testing.T) {
 	g := NewWithT(t)
 
 	gns := util.NewGlobalNetworkSet("test")
-	client := &mock.GlobalNetworkSetInterface{}
+	client := &calico.MockGlobalNetworkSetInterface{}
 	uut := NewController(client)
 
 	// Grab a ref to the workqueue, which we'll use to measure progress.
 	q := uut.(*controller).queue
 
 	fail := func() { t.Error("controller called fail func unexpectedly") }
-	stat := &mock.Statser{}
+	stat := &statser.MockStatser{}
 	uut.Add(gns, fail, stat)
 	g.Expect(q.Len()).Should(Equal(1))
 	uut.Delete(gns)
@@ -167,14 +168,14 @@ func TestController_AddRetry(t *testing.T) {
 	g := NewWithT(t)
 
 	gns := util.NewGlobalNetworkSet("test")
-	client := &mock.GlobalNetworkSetInterface{CreateError: []error{errors.New("test")}}
+	client := &calico.MockGlobalNetworkSetInterface{CreateError: []error{errors.New("test")}}
 	uut := NewController(client)
 
 	// Grab a ref to the workqueue, which we'll use to measure progress.
 	q := uut.(*controller).queue
 
 	fail := func() { t.Error("controller called fail func unexpectedly") }
-	stat := &mock.Statser{}
+	stat := &statser.MockStatser{}
 	uut.Add(gns, fail, stat)
 	g.Expect(q.Len()).Should(Equal(1))
 
@@ -191,7 +192,7 @@ func TestController_AddFail(t *testing.T) {
 
 	gns := util.NewGlobalNetworkSet("test")
 	//
-	client := &mock.GlobalNetworkSetInterface{}
+	client := &calico.MockGlobalNetworkSetInterface{}
 	for i := 0; i < DefaultClientRetries+1; i++ {
 		client.CreateError = append(client.CreateError, errors.New("test"))
 	}
@@ -202,7 +203,7 @@ func TestController_AddFail(t *testing.T) {
 
 	var failed bool
 	fail := func() { failed = true }
-	stat := &mock.Statser{}
+	stat := &statser.MockStatser{}
 	uut.Add(gns, fail, stat)
 	g.Expect(q.Len()).Should(Equal(1))
 
@@ -220,7 +221,7 @@ func TestController_AddFail(t *testing.T) {
 func TestController_ResourceEventHandlerFuncs(t *testing.T) {
 	g := NewWithT(t)
 
-	client := &mock.GlobalNetworkSetInterface{W: &mock.Watch{C: make(chan watch.Event)}}
+	client := &calico.MockGlobalNetworkSetInterface{W: &calico.MockWatch{C: make(chan watch.Event)}}
 	uut := NewController(client)
 
 	// Grab a ref to the workqueue, which we'll use to measure progress.
@@ -258,7 +259,7 @@ func TestController_ResourceEventHandlerFuncs(t *testing.T) {
 func TestController_FailToSync(t *testing.T) {
 	g := NewWithT(t)
 
-	client := &mock.GlobalNetworkSetInterface{Error: errors.New("test")}
+	client := &calico.MockGlobalNetworkSetInterface{Error: errors.New("test")}
 	uut := NewController(client)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -277,7 +278,7 @@ func TestController_FailToSync(t *testing.T) {
 func TestController_ShutDown(t *testing.T) {
 	g := NewWithT(t)
 
-	client := &mock.GlobalNetworkSetInterface{}
+	client := &calico.MockGlobalNetworkSetInterface{}
 	uut := NewController(client)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -298,7 +299,7 @@ func TestController_DeleteFailure(t *testing.T) {
 	g := NewWithT(t)
 
 	gns := util.NewGlobalNetworkSet("test")
-	client := &mock.GlobalNetworkSetInterface{
+	client := &calico.MockGlobalNetworkSetInterface{
 		GlobalNetworkSet: gns,
 		DeleteError:      errors.New("test"),
 	}
@@ -316,7 +317,7 @@ func TestController_UpdateFailure(t *testing.T) {
 	g := NewWithT(t)
 
 	gns := util.NewGlobalNetworkSet("test")
-	client := &mock.GlobalNetworkSetInterface{
+	client := &calico.MockGlobalNetworkSetInterface{
 		GlobalNetworkSet: gns,
 		UpdateError:      errors.New("test"),
 	}
@@ -328,7 +329,7 @@ func TestController_UpdateFailure(t *testing.T) {
 	gnsUp := gns.DeepCopy()
 	gnsUp.Spec.Nets = []string{"4.5.6.7"}
 	fail := func() {}
-	stat := &mock.Statser{}
+	stat := &statser.MockStatser{}
 	uut.Add(gnsUp, fail, stat)
 
 	uut.Run(ctx)
@@ -336,7 +337,7 @@ func TestController_UpdateFailure(t *testing.T) {
 	g.Eventually(countMethod(client, "Update")).Should(Equal(DefaultClientRetries + 1))
 }
 
-func countMethod(client *mock.GlobalNetworkSetInterface, method string) func() int {
+func countMethod(client *calico.MockGlobalNetworkSetInterface, method string) func() int {
 	return func() int {
 		n := 0
 		for _, c := range client.Calls() {

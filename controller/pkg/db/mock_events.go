@@ -1,6 +1,6 @@
 // Copyright 2019 Tigera Inc. All rights reserved.
 
-package mock
+package db
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"github.com/tigera/intrusion-detection/controller/pkg/events"
 )
 
-type Events struct {
+type MockEvents struct {
 	Error         error
 	ErrorIndex    int
 	ErrorReturned bool
@@ -17,7 +17,7 @@ type Events struct {
 	value         events.SecurityEvent
 }
 
-func (m *Events) PutSecurityEvent(ctx context.Context, l events.SecurityEvent) error {
+func (m *MockEvents) PutSecurityEvent(ctx context.Context, l events.SecurityEvent) error {
 	if len(m.FlowLogs) == m.ErrorIndex && !m.ErrorReturned {
 		m.ErrorReturned = true
 		return errors.New("PutSecurityEvent error")

@@ -10,12 +10,12 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	v32 "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/client-go/kubernetes/typed/core/v1"
+	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/cache"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
@@ -226,7 +226,9 @@ func (s *watcher) startFeedWatcher(ctx context.Context, f *v3.GlobalThreatFeed) 
 	}
 
 	fCopy := f.DeepCopy()
-	st := statser.NewStatser()
+	st := statser.NewStatser(f.Name, s.globalThreatFeedClient)
+	st.Run(ctx)
+
 	fw := feedWatcher{
 		feed:     fCopy,
 		searcher: searcher.NewFlowSearcher(fCopy, time.Minute, s.suspiciousIP, s.events),
@@ -317,6 +319,7 @@ func (s *watcher) stopFeedWatcher(ctx context.Context, name string) {
 	s.elasticController.Delete(ctx, name)
 
 	fw.searcher.Close()
+	fw.statser.Close()
 	s.deleteFeedWatcher(name)
 }
 

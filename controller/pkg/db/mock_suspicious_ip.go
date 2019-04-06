@@ -1,16 +1,15 @@
 // Copyright 2019 Tigera Inc. All rights reserved.
 
-package mock
+package db
 
 import (
 	"context"
 	"errors"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/events"
 )
 
-type SuspiciousIP struct {
+type MockSuspiciousIP struct {
 	Error         error
 	ErrorIndex    int
 	ErrorReturned bool
@@ -18,11 +17,11 @@ type SuspiciousIP struct {
 	value         events.SecurityEvent
 }
 
-func (m *SuspiciousIP) QueryIPSet(ctx context.Context, name string) (db.SecurityEventIterator, error) {
+func (m *MockSuspiciousIP) QueryIPSet(ctx context.Context, name string) (SecurityEventIterator, error) {
 	return m, m.Error
 }
 
-func (m *SuspiciousIP) Next() bool {
+func (m *MockSuspiciousIP) Next() bool {
 	if len(m.FlowLogs) == m.ErrorIndex {
 		return false
 	}
@@ -34,11 +33,11 @@ func (m *SuspiciousIP) Next() bool {
 	return false
 }
 
-func (m *SuspiciousIP) Value() events.SecurityEvent {
+func (m *MockSuspiciousIP) Value() events.SecurityEvent {
 	return m.value
 }
 
-func (m *SuspiciousIP) Err() error {
+func (m *MockSuspiciousIP) Err() error {
 	if m.ErrorIndex >= 0 {
 		return errors.New("Err error")
 	}

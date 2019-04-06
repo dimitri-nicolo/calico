@@ -97,9 +97,13 @@ github.com/stretchr/testify v1.2.2 h1:bSDNvY7ZPG5RlJ8otE/7V6gMiyenm9RtJ7IUVIAoJ1
 github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
 github.com/tigera/calico-k8sapiserver v0.0.0-20190308063427-4222586d04ae h1:eweO0fvqLkvzWvoWfg4M13T0arqsNw2DVHZyOE3QihM=
 github.com/tigera/calico-k8sapiserver v0.0.0-20190308063427-4222586d04ae/go.mod h1:+7LLjDxng2qt+QMos2PcEG6eD/niSnTcBRpTmEcXVgU=
+github.com/tigera/calico-k8sapiserver v2.4.0-0.dev.0.20190401183701-0162d8b8ebc0+incompatible h1:CmI0+naVMYEq7vD0Z0l73rAawDJ47//HD5WiKKR+eck=
+github.com/tigera/calico-k8sapiserver v2.4.0-0.dev.0.20190401183701-0162d8b8ebc0+incompatible/go.mod h1:+7LLjDxng2qt+QMos2PcEG6eD/niSnTcBRpTmEcXVgU=
 github.com/tigera/intrusion-detection v2.3.0+incompatible h1:CvZKd3UGwGDSFQiaDSB+PvfacS/RUqyGVjxFoBMF+g0=
 github.com/tigera/libcalico-go-private v2.1.1-0.20190307140245-b57de3f3848a+incompatible h1:S94PCHMMhinNQW5cmhVs25x0jOYItyMJ09w0bErjTRM=
 github.com/tigera/libcalico-go-private v2.1.1-0.20190307140245-b57de3f3848a+incompatible/go.mod h1:PB1WZ4WFCQ6q6btBlnpFGzDF7arX6G1iTDeqTcAO6BU=
+github.com/tigera/libcalico-go-private v2.1.1-0.20190329214018-4d2335fc34e9+incompatible h1:sI9A2ZESgK/d+RzFnCQn6o3kIXLE4WcTA25vKTL1e30=
+github.com/tigera/libcalico-go-private v2.1.1-0.20190329214018-4d2335fc34e9+incompatible/go.mod h1:PB1WZ4WFCQ6q6btBlnpFGzDF7arX6G1iTDeqTcAO6BU=
 golang.org/x/crypto v0.0.0-20180904163835-0709b304e793 h1:u+LnwYTOOW7Ukr/fppxEb1Nwz0AtPflrblfvUudpo+I=
 golang.org/x/crypto v0.0.0-20180904163835-0709b304e793/go.mod h1:6SG95UA2DQfeDnfUPMdvaQW0Q7yPrPDi9nlGo2tz2b4=
 golang.org/x/net v0.0.0-20180906233101-161cd47e91fd h1:nTDtHvHSdCn1m6ITfMRqtOd/9+7a3s8RBNOZ3eYZzJA=
@@ -135,6 +139,8 @@ k8s.io/api v0.0.0-20180308224125-73d903622b73 h1:5Z+PFfTIOXwKmOhQtZ0WBykbpGBBOuv
 k8s.io/api v0.0.0-20180308224125-73d903622b73/go.mod h1:iuAfoD4hCxJ8Onx9kaTIt30j7jUFS00AXQi6QMi99vA=
 k8s.io/apimachinery v0.0.0-20180228050457-302974c03f7e h1:CsgbEA8905OlpVLNKWD4GacPex50kFbqhotVNPew+dU=
 k8s.io/apimachinery v0.0.0-20180228050457-302974c03f7e/go.mod h1:ccL7Eh7zubPUSh9A3USN90/OzHNSVN6zxzde07TDCL0=
+k8s.io/apiserver v0.0.0-20190402105105-9b20910895af h1:nnXZLpkBTpBTBxJCE195esPVKgc6AckCDWD/oHa1JBA=
+k8s.io/apiserver v0.0.0-20190402105105-9b20910895af/go.mod h1:6bqaTSOSJavUIXUtfaR9Os9JtTCm8ZqH2SUl2S60C4w=
 k8s.io/client-go v7.0.0+incompatible h1:kiH+Y6hn+pc78QS/mtBfMJAMIIaWevHi++JvOGEEQp4=
 k8s.io/client-go v7.0.0+incompatible/go.mod h1:7vJpHMYJwNQCWgzmNV+VYUl1zCObLyodBc8nIyt8L5s=
 k8s.io/kube-openapi v0.0.0-20180216212618-50ae88d24ede h1:YOWlONzJUq456SnNYPcK/org5asA+LU6AzNBm+l/04o=

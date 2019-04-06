@@ -11,15 +11,15 @@ import (
 
 	"github.com/olivere/elastic"
 	. "github.com/onsi/gomega"
+	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
-	"github.com/tigera/intrusion-detection/controller/pkg/mock"
 	"github.com/tigera/intrusion-detection/controller/pkg/statser"
 )
 
 func TestController_Add_Success(t *testing.T) {
 	g := NewWithT(t)
-	dbm := &mock.IPSet{}
+	dbm := &db.MockIPSet{}
 	tkr := mockNewTicker()
 	defer tkr.restoreNewTicker()
 	uut := NewController(dbm)
@@ -32,14 +32,14 @@ func TestController_Add_Success(t *testing.T) {
 	name := "test"
 	set := db.IPSetSpec{"1.2.3.4"}
 	fail := func() { t.Error("controller called fail func unexpectedly") }
-	stat := &mock.Statser{}
+	stat := &statser.MockStatser{}
 	uut.Add(ctx, name, set, fail, stat)
 
 	uut.StartReconciliation(ctx)
 
 	tkr.reconcile(t, ctx)
 
-	g.Eventually(dbm.Calls).Should(ContainElement(mock.Call{Method: "PutIPSet", Name: name, Set: set}))
+	g.Eventually(dbm.Calls).Should(ContainElement(db.Call{Method: "PutIPSet", Name: name, Set: set}))
 	g.Expect(countMethod(dbm, "PutIPSet")()).To(Equal(1))
 
 	dbm.Metas = append(dbm.Metas, db.IPSetMeta{Name: name})
@@ -53,7 +53,7 @@ func TestController_Add_Success(t *testing.T) {
 func TestController_Delete_Success(t *testing.T) {
 	g := NewWithT(t)
 	name := "testdelete"
-	dbm := &mock.IPSet{Metas: []db.IPSetMeta{{Name: name}}}
+	dbm := &db.MockIPSet{Metas: []db.IPSetMeta{{Name: name}}}
 	tkr := mockNewTicker()
 	defer tkr.restoreNewTicker()
 	uut := NewController(dbm)
@@ -71,7 +71,7 @@ func TestController_Delete_Success(t *testing.T) {
 
 	tkr.reconcile(t, ctx)
 
-	g.Eventually(dbm.Calls).Should(ContainElement(mock.Call{Method: "DeleteIPSet", Name: name}))
+	g.Eventually(dbm.Calls).Should(ContainElement(db.Call{Method: "DeleteIPSet", Name: name}))
 	g.Expect(countMethod(dbm, "DeleteIPSet")()).To(Equal(1))
 
 	dbm.Metas = nil
@@ -84,7 +84,7 @@ func TestController_Delete_Success(t *testing.T) {
 
 func TestController_GC_Success(t *testing.T) {
 	g := NewWithT(t)
-	dbm := &mock.IPSet{}
+	dbm := &db.MockIPSet{}
 	tkr := mockNewTicker()
 	defer tkr.restoreNewTicker()
 	uut := NewController(dbm)
@@ -103,7 +103,7 @@ func TestController_GC_Success(t *testing.T) {
 
 	tkr.reconcile(t, ctx)
 
-	g.Eventually(dbm.Calls).Should(ContainElement(mock.Call{Method: "DeleteIPSet", Name: gcName, Version: &gcVer}))
+	g.Eventually(dbm.Calls).Should(ContainElement(db.Call{Method: "DeleteIPSet", Name: gcName, Version: &gcVer}))
 	g.Expect(countMethod(dbm, "DeleteIPSet")()).To(Equal(1), "should only GC one set")
 }
 
@@ -111,7 +111,7 @@ func TestController_Update_Success(t *testing.T) {
 	g := NewWithT(t)
 	name := "test"
 	var version int64 = 10
-	dbm := &mock.IPSet{Metas: []db.IPSetMeta{{Name: name, Version: &version}}}
+	dbm := &db.MockIPSet{Metas: []db.IPSetMeta{{Name: name, Version: &version}}}
 	tkr := mockNewTicker()
 	defer tkr.restoreNewTicker()
 	uut := NewController(dbm)
@@ -123,14 +123,14 @@ func TestController_Update_Success(t *testing.T) {
 
 	set := db.IPSetSpec{"1.2.3.4"}
 	fail := func() { t.Error("controller called fail func unexpectedly") }
-	stat := &mock.Statser{}
+	stat := &statser.MockStatser{}
 	uut.Add(ctx, name, set, fail, stat)
 
 	uut.StartReconciliation(ctx)
 
 	tkr.reconcile(t, ctx)
 
-	g.Eventually(dbm.Calls).Should(ContainElement(mock.Call{Method: "PutIPSet", Name: name, Set: set}))
+	g.Eventually(dbm.Calls).Should(ContainElement(db.Call{Method: "PutIPSet", Name: name, Set: set}))
 	g.Expect(countMethod(dbm, "PutIPSet")()).To(Equal(1))
 
 	tkr.reconcile(t, ctx)
@@ -141,7 +141,7 @@ func TestController_Update_Success(t *testing.T) {
 
 func TestController_Reconcile_FailToList(t *testing.T) {
 	g := NewWithT(t)
-	dbm := &mock.IPSet{Error: errors.New("test")}
+	dbm := &db.MockIPSet{Error: errors.New("test")}
 	tkr := mockNewTicker()
 	defer tkr.restoreNewTicker()
 	uut := NewController(dbm)
@@ -155,7 +155,7 @@ func TestController_Reconcile_FailToList(t *testing.T) {
 	aSet := db.IPSetSpec{"6.7.8.9"}
 	var failed bool
 	fail := func() { failed = true }
-	stat := &mock.Statser{}
+	stat := &statser.MockStatser{}
 	uut.Add(ctx, aName, aSet, fail, stat)
 
 	gName := "nogc"
@@ -165,13 +165,13 @@ func TestController_Reconcile_FailToList(t *testing.T) {
 
 	tkr.reconcile(t, ctx)
 
-	g.Eventually(func() []statser.ErrorCondition { return stat.Status().ErrorConditions }).Should(HaveLen(1))
+	g.Eventually(func() []v3.ErrorCondition { return stat.Status().ErrorConditions }).Should(HaveLen(1))
 	g.Expect(failed).To(BeFalse())
 }
 
 func TestController_Add_FailToPut(t *testing.T) {
 	g := NewWithT(t)
-	dbm := &mock.IPSet{PutError: errors.New("test")}
+	dbm := &db.MockIPSet{PutError: errors.New("test")}
 	tkr := mockNewTicker()
 	defer tkr.restoreNewTicker()
 	uut := NewController(dbm)
@@ -185,14 +185,14 @@ func TestController_Add_FailToPut(t *testing.T) {
 	set := db.IPSetSpec{"1.2.3.4"}
 	var failed bool
 	fail := func() { failed = true }
-	stat := &mock.Statser{}
+	stat := &statser.MockStatser{}
 	uut.Add(ctx, name, set, fail, stat)
 
 	uut.StartReconciliation(ctx)
 
 	tkr.reconcile(t, ctx)
 
-	g.Eventually(dbm.Calls).Should(ContainElement(mock.Call{Method: "PutIPSet", Name: name, Set: set}))
+	g.Eventually(dbm.Calls).Should(ContainElement(db.Call{Method: "PutIPSet", Name: name, Set: set}))
 	g.Expect(countMethod(dbm, "PutIPSet")()).To(Equal(1))
 	g.Expect(stat.Status().ErrorConditions).To(HaveLen(1))
 	g.Expect(stat.Status().ErrorConditions[0].Type).To(Equal(statser.ElasticSyncFailed))
@@ -208,7 +208,7 @@ func TestController_Add_FailToPut(t *testing.T) {
 
 func TestController_GC_NotFound(t *testing.T) {
 	g := NewWithT(t)
-	dbm := &mock.IPSet{DeleteError: &elastic.Error{Status: http.StatusNotFound}}
+	dbm := &db.MockIPSet{DeleteError: &elastic.Error{Status: http.StatusNotFound}}
 	tkr := mockNewTicker()
 	defer tkr.restoreNewTicker()
 	uut := NewController(dbm)
@@ -225,7 +225,7 @@ func TestController_GC_NotFound(t *testing.T) {
 
 	tkr.reconcile(t, ctx)
 
-	g.Eventually(dbm.Calls).Should(ContainElement(mock.Call{Method: "DeleteIPSet", Name: gcName, Version: &gcVer}))
+	g.Eventually(dbm.Calls).Should(ContainElement(db.Call{Method: "DeleteIPSet", Name: gcName, Version: &gcVer}))
 	g.Expect(countMethod(dbm, "DeleteIPSet")()).To(Equal(1))
 
 	dbm.Metas = nil
@@ -236,7 +236,7 @@ func TestController_GC_NotFound(t *testing.T) {
 
 func TestController_GC_Error(t *testing.T) {
 	g := NewWithT(t)
-	dbm := &mock.IPSet{DeleteError: errors.New("test")}
+	dbm := &db.MockIPSet{DeleteError: errors.New("test")}
 	tkr := mockNewTicker()
 	defer tkr.restoreNewTicker()
 	uut := NewController(dbm)
@@ -253,7 +253,7 @@ func TestController_GC_Error(t *testing.T) {
 
 	tkr.reconcile(t, ctx)
 
-	g.Eventually(dbm.Calls).Should(ContainElement(mock.Call{Method: "DeleteIPSet", Name: gcName, Version: &gcVer}))
+	g.Eventually(dbm.Calls).Should(ContainElement(db.Call{Method: "DeleteIPSet", Name: gcName, Version: &gcVer}))
 	g.Expect(countMethod(dbm, "DeleteIPSet")()).To(Equal(1))
 
 	dbm.DeleteError = nil
@@ -263,7 +263,7 @@ func TestController_GC_Error(t *testing.T) {
 }
 
 func TestController_NewTicker(t *testing.T) {
-	dbm := &mock.IPSet{}
+	dbm := &db.MockIPSet{}
 	uut := NewController(dbm)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -280,7 +280,7 @@ func TestController_NewTicker(t *testing.T) {
 // context expires.
 func TestController_ContextExpiry(t *testing.T) {
 	g := NewWithT(t)
-	dbm := &mock.IPSet{}
+	dbm := &db.MockIPSet{}
 	uut := NewController(dbm)
 
 	// monkey patch a blocking update channel. This prevents Add, Delete, NoGC
@@ -294,7 +294,7 @@ func TestController_ContextExpiry(t *testing.T) {
 	aCtx, aCancel := context.WithCancel(ctx)
 	var aDone bool
 	go func() {
-		uut.Add(aCtx, "add", db.IPSetSpec{}, func() {}, &mock.Statser{})
+		uut.Add(aCtx, "add", db.IPSetSpec{}, func() {}, &statser.MockStatser{})
 		aDone = true
 	}()
 
@@ -361,7 +361,7 @@ func (m *mockTicker) reconcile(t *testing.T, ctx context.Context) {
 	}
 }
 
-func countMethod(client *mock.IPSet, method string) func() int {
+func countMethod(client *db.MockIPSet, method string) func() int {
 	return func() int {
 		n := 0
 		for _, c := range client.Calls() {

@@ -1,6 +1,6 @@
 // Copyright 2019 Tigera Inc. All rights reserved.
 
-package mock
+package elasticipsets
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	"github.com/tigera/intrusion-detection/controller/pkg/statser"
 )
 
-type ElasticIPSetController struct {
+type MockElasticIPSetController struct {
 	m         sync.Mutex
 	sets      map[string]db.IPSetSpec
 	failFuncs map[string]func()
@@ -18,8 +18,8 @@ type ElasticIPSetController struct {
 	noGC      map[string]struct{}
 }
 
-func NewElasticIPSetController() *ElasticIPSetController {
-	return &ElasticIPSetController{
+func NewMockElasticIPSetController() *MockElasticIPSetController {
+	return &MockElasticIPSetController{
 		sets:      make(map[string]db.IPSetSpec),
 		failFuncs: make(map[string]func()),
 		statsers:  make(map[string]statser.Statser),
@@ -27,7 +27,7 @@ func NewElasticIPSetController() *ElasticIPSetController {
 	}
 }
 
-func (c *ElasticIPSetController) Add(ctx context.Context, name string, set db.IPSetSpec, f func(), stat statser.Statser) {
+func (c *MockElasticIPSetController) Add(ctx context.Context, name string, set db.IPSetSpec, f func(), stat statser.Statser) {
 	c.m.Lock()
 	defer c.m.Unlock()
 	c.sets[name] = set
@@ -35,7 +35,7 @@ func (c *ElasticIPSetController) Add(ctx context.Context, name string, set db.IP
 	c.statsers[name] = stat
 }
 
-func (c *ElasticIPSetController) Delete(ctx context.Context, name string) {
+func (c *MockElasticIPSetController) Delete(ctx context.Context, name string) {
 	c.m.Lock()
 	defer c.m.Unlock()
 	delete(c.sets, name)
@@ -44,21 +44,21 @@ func (c *ElasticIPSetController) Delete(ctx context.Context, name string) {
 	delete(c.noGC, name)
 }
 
-func (c *ElasticIPSetController) NoGC(ctx context.Context, name string) {
+func (c *MockElasticIPSetController) NoGC(ctx context.Context, name string) {
 	c.m.Lock()
 	defer c.m.Unlock()
 	c.noGC[name] = struct{}{}
 }
 
-func (c *ElasticIPSetController) StartReconciliation(ctx context.Context) {
+func (c *MockElasticIPSetController) StartReconciliation(ctx context.Context) {
 	return
 }
 
-func (c *ElasticIPSetController) Run(ctx context.Context) {
+func (c *MockElasticIPSetController) Run(ctx context.Context) {
 	return
 }
 
-func (c *ElasticIPSetController) NotGCable() map[string]struct{} {
+func (c *MockElasticIPSetController) NotGCable() map[string]struct{} {
 	out := make(map[string]struct{})
 	c.m.Lock()
 	defer c.m.Unlock()
@@ -68,7 +68,7 @@ func (c *ElasticIPSetController) NotGCable() map[string]struct{} {
 	return out
 }
 
-func (c *ElasticIPSetController) Sets() map[string]db.IPSetSpec {
+func (c *MockElasticIPSetController) Sets() map[string]db.IPSetSpec {
 	out := make(map[string]db.IPSetSpec)
 	c.m.Lock()
 	defer c.m.Unlock()
