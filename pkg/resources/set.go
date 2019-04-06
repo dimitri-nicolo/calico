@@ -28,6 +28,7 @@ type Set interface {
 	Clear()
 	Contains(ResourceID) bool
 	Iter(func(item ResourceID) error)
+	IterDifferences(other Set, notInOther, onlyInOther func(ResourceID) error)
 	Copy() Set
 	Equals(Set) bool
 	ContainsAll(Set) bool
@@ -104,11 +105,25 @@ loop:
 		case RemoveItem:
 			delete(set, item)
 		case nil:
-			break
 		default:
 			log.WithError(err).Panic("Unexpected iteration error")
 		}
 	}
+}
+
+func (set mapSet) IterDifferences(other Set, notInOther, onlyInOther func(ResourceID) error) {
+	set.Iter(func(id ResourceID) error {
+		if !other.Contains(id) {
+			return notInOther(id)
+		}
+		return nil
+	})
+	other.Iter(func(id ResourceID) error {
+		if !set.Contains(id) {
+			return onlyInOther(id)
+		}
+		return nil
+	})
 }
 
 func (set mapSet) Copy() Set {

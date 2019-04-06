@@ -3,10 +3,7 @@ package xrefcache
 import (
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/libcalico-go/lib/set"
-
 	"github.com/tigera/compliance/pkg/resources"
-	"github.com/tigera/compliance/pkg/sethelper"
 	"github.com/tigera/compliance/pkg/syncer"
 )
 
@@ -22,7 +19,7 @@ type NPRSMatchStopped func(policy, selector resources.ResourceID)
 // any policy needs a particular selector to be tracked.
 type NetworkPolicyRuleSelectorManager interface {
 	RegisterCallbacks(onMatchStarted NPRSMatchStarted, onMatchStopped NPRSMatchStopped)
-	SetPolicyRuleSelectors(policy resources.ResourceID, selectors set.Set) (changed bool)
+	SetPolicyRuleSelectors(policy resources.ResourceID, selectors resources.Set) (changed bool)
 	DeletePolicy(policy resources.ResourceID)
 }
 
@@ -30,8 +27,8 @@ type NetworkPolicyRuleSelectorManager interface {
 func NewNetworkPolicyRuleSelectorManager(onUpdate func(update syncer.Update)) NetworkPolicyRuleSelectorManager {
 	return &networkPolicyRuleSelectorManager{
 		onUpdate:           onUpdate,
-		selectorsByPolicy:  make(map[resources.ResourceID]set.Set),
-		policiesBySelector: make(map[resources.ResourceID]set.Set),
+		selectorsByPolicy:  make(map[resources.ResourceID]resources.Set),
+		policiesBySelector: make(map[resources.ResourceID]resources.Set),
 	}
 }
 
@@ -45,10 +42,10 @@ type networkPolicyRuleSelectorManager struct {
 	onMatchStopped []NPRSMatchStopped
 
 	// Selectors by policy
-	selectorsByPolicy map[resources.ResourceID]set.Set
+	selectorsByPolicy map[resources.ResourceID]resources.Set
 
 	// Policies by selector
-	policiesBySelector map[resources.ResourceID]set.Set
+	policiesBySelector map[resources.ResourceID]resources.Set
 }
 
 // RegisterCallbacks registers match start/stop callbacks with this manager.
@@ -58,25 +55,25 @@ func (m *networkPolicyRuleSelectorManager) RegisterCallbacks(onMatchStarted NPRS
 }
 
 // SetPolicyRuleSelectors sets the rule selectors that need to be tracked by a policy resource.
-func (m *networkPolicyRuleSelectorManager) SetPolicyRuleSelectors(p resources.ResourceID, s set.Set) bool {
+func (m *networkPolicyRuleSelectorManager) SetPolicyRuleSelectors(p resources.ResourceID, s resources.Set) bool {
 	var changed bool
 
 	// If we have not seen this policy before then add it now
 	currentSelectors, ok := m.selectorsByPolicy[p]
 	if !ok {
-		currentSelectors = set.Empty()
+		currentSelectors = resources.EmptySet()
 	}
 
-	sethelper.IterDifferences(currentSelectors, s,
-		func(old interface{}) error {
+	currentSelectors.IterDifferences(s,
+		func(old resources.ResourceID) error {
 			// Stop tracking old selectors for this policy.
-			m.matchStopped(p, old.(resources.ResourceID))
+			m.matchStopped(p, old)
 			changed = true
 			return nil
 		},
-		func(new interface{}) error {
+		func(new resources.ResourceID) error {
 			// Start tracking new selectors for this policy.
-			m.matchStarted(p, new.(resources.ResourceID))
+			m.matchStarted(p, new)
 			changed = true
 			return nil
 		},
@@ -92,7 +89,7 @@ func (m *networkPolicyRuleSelectorManager) matchStarted(p, s resources.ResourceI
 	log.Debugf("NetworkPolicyRuleSelector match started: %s / %s", p, s)
 	pols, ok := m.policiesBySelector[s]
 	if !ok {
-		pols = set.New()
+		pols = resources.NewSet()
 		m.policiesBySelector[s] = pols
 	}
 	pols.Add(p)
@@ -142,8 +139,8 @@ func (m *networkPolicyRuleSelectorManager) DeletePolicy(policy resources.Resourc
 		return
 	}
 
-	currentSelectors.Iter(func(selector interface{}) error {
-		m.matchStopped(policy, selector.(resources.ResourceID))
+	currentSelectors.Iter(func(selector resources.ResourceID) error {
+		m.matchStopped(policy, selector)
 		return nil
 	})
 

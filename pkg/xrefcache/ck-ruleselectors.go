@@ -92,7 +92,7 @@ func (c *networkPolicyRuleSelectorsEngine) register(cache engineCache) {
 
 // register implements the resourceCacheEngine interface.
 func (c *networkPolicyRuleSelectorsEngine) kinds() []schema.GroupVersionKind {
-	return KindsNetworkPolicy
+	return KindsNetworkPolicyRuleSelectors
 }
 
 // newCacheEntry implements the resourceCacheEngine interface.

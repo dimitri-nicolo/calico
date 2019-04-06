@@ -11,8 +11,6 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/updateprocessors"
-	"github.com/projectcalico/libcalico-go/lib/set"
-
 	"github.com/tigera/compliance/pkg/resources"
 	"github.com/tigera/compliance/pkg/syncer"
 )
@@ -114,40 +112,37 @@ func (v *versionedCalicoHostEndpoint) getV1Profiles() []string {
 	return v.v1.ProfileIDs
 }
 
-// newK8sPodsEngine creates a resourceCacheEngine used to handle the Pods cache.
-func newK8sPodsEngine() resourceCacheEngine {
-	return &k8sPodEngine{}
+// newEndpointsEngine creates a resourceCacheEngine used to handle the Pods cache.
+func newEndpointsEngine() resourceCacheEngine {
+	return &endpointEngine{}
 }
 
-// k8sPodEngine implements the resourceCacheEngine.
-type k8sPodEngine struct {
+// endpointEngine implements the resourceCacheEngine.
+type endpointEngine struct {
 	engineCache
 	converter conversion.Converter
-
-	// Track the endpoints associated with each policy.
-	policiesToEndpoints map[resources.ResourceID]set.Set
 }
 
 // kinds implements the resourceCacheEngine interface.
-func (c *k8sPodEngine) kinds() []schema.GroupVersionKind {
+func (c *endpointEngine) kinds() []schema.GroupVersionKind {
 	return KindsEndpoint
 }
 
 // register implements the resourceCacheEngine interface.
-func (c *k8sPodEngine) register(cache engineCache) {
+func (c *endpointEngine) register(cache engineCache) {
 	c.engineCache = cache
 	c.EndpointLabelSelector().RegisterCallbacks(c.kinds(), c.policyMatchStarted, c.policyMatchStopped)
 }
 
 // newCacheEntry implements the resourceCacheEngine interface.
-func (c *k8sPodEngine) newCacheEntry() CacheEntry {
+func (c *endpointEngine) newCacheEntry() CacheEntry {
 	return &CacheEntryEndpoint{
 		AppliedPolicies: resources.NewSet(),
 	}
 }
 
 // convertToVersioned implements the resourceCacheEngine interface.
-func (c *k8sPodEngine) convertToVersioned(res resources.Resource) (VersionedResource, error) {
+func (c *endpointEngine) convertToVersioned(res resources.Resource) (VersionedResource, error) {
 	switch in := res.(type) {
 	case *apiv3.HostEndpoint:
 		v1, err := updateprocessors.ConvertHostEndpointV3ToV1(&model.KVPair{
@@ -188,12 +183,12 @@ func (c *k8sPodEngine) convertToVersioned(res resources.Resource) (VersionedReso
 }
 
 // resourceAdded implements the resourceCacheEngine interface.
-func (c *k8sPodEngine) resourceAdded(id resources.ResourceID, entry CacheEntry) {
+func (c *endpointEngine) resourceAdded(id resources.ResourceID, entry CacheEntry) {
 	_ = c.resourceUpdated(id, entry, nil)
 }
 
 // resourceUpdated implements the resourceCacheEngine interface.
-func (c *k8sPodEngine) resourceUpdated(id resources.ResourceID, entry CacheEntry, prev VersionedResource) syncer.UpdateType {
+func (c *endpointEngine) resourceUpdated(id resources.ResourceID, entry CacheEntry, prev VersionedResource) syncer.UpdateType {
 	x := entry.(*CacheEntryEndpoint)
 
 	// Update the labels associated with this pod. Use the labels and profile from the v1 model since these are
@@ -207,13 +202,13 @@ func (c *k8sPodEngine) resourceUpdated(id resources.ResourceID, entry CacheEntry
 }
 
 // resourceDeleted implements the resourceCacheEngine interface.
-func (c *k8sPodEngine) resourceDeleted(id resources.ResourceID, _ CacheEntry) {
+func (c *endpointEngine) resourceDeleted(id resources.ResourceID, _ CacheEntry) {
 	// Delete the labels associated with this pod. Default cache processing will remove this cache entry.
 	c.EndpointLabelSelector().DeleteLabels(id)
 }
 
 // recalculate implements the resourceCacheEngine interface.
-func (c *k8sPodEngine) recalculate(podId resources.ResourceID, podEntry CacheEntry) syncer.UpdateType {
+func (c *endpointEngine) recalculate(podId resources.ResourceID, podEntry CacheEntry) syncer.UpdateType {
 	pod := podEntry.(*CacheEntryEndpoint)
 
 	// ------
@@ -257,7 +252,7 @@ func (c *k8sPodEngine) recalculate(podId resources.ResourceID, podEntry CacheEnt
 // policyMatchStarted is called synchronously from the policy or pod resource update methods when a policy<->pod match
 // has started. We update  our set of applied policies and then queue for asynchronous recalculation - this ensures we
 // wait until all related changes to have occurred further up the casading chain of events before we recalculate.
-func (c *k8sPodEngine) policyMatchStarted(policyId, podId resources.ResourceID) {
+func (c *endpointEngine) policyMatchStarted(policyId, podId resources.ResourceID) {
 	p, ok := c.GetFromOurCache(podId).(*CacheEntryEndpoint)
 	if !ok {
 		// This is called synchronously from the resource update methods, so we don't expect the entries to have been
@@ -275,7 +270,7 @@ func (c *k8sPodEngine) policyMatchStarted(policyId, podId resources.ResourceID) 
 // policyMatchStopped is called synchronously from the policy or pod resource update methods when a policy<->pod match
 // has stopped. We update  our set of applied policies and then queue for asynchronous recalculation - this ensures we
 // wait until all related changes to have occurred further up the chain of events before we recalculate.
-func (c *k8sPodEngine) policyMatchStopped(policyId, podId resources.ResourceID) {
+func (c *endpointEngine) policyMatchStopped(policyId, podId resources.ResourceID) {
 	p, ok := c.GetFromOurCache(podId).(*CacheEntryEndpoint)
 	if !ok {
 		// This is called synchronously from the resource update methods, so we don't expect the entries to have been

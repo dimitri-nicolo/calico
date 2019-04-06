@@ -94,8 +94,8 @@ func NewXrefCache() XrefCache {
 	// Create the various engines that underpin the separate resource caches. This list is ordered by recalculation
 	// queue priority (highest index, highest priority).
 	allEngines := []resourceCacheEngine{
-		newK8sPodsEngine(),
-		newK8sEndpointsEngine(),
+		newEndpointsEngine(),
+		newK8sServiceEndpointsEngine(),
 		newK8sNamespacesEngine(),
 		newK8sServiceAccountsEngine(),
 		newNetworkPoliciesEngine(),
@@ -146,7 +146,7 @@ type xrefCache struct {
 }
 
 func (c *xrefCache) OnStatusUpdate(status syncer.StatusUpdate) {
-	log.Info("Processing status update: %s", status.Type)
+	log.Infof("Processing status update: %#o", status.Type)
 
 	// Notify the syncer dispatcher first.
 	c.syncerDispatcher.OnStatusUpdate(status)

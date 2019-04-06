@@ -30,6 +30,24 @@ const (
 	NoLabels = byte(0)
 )
 
+const (
+	Name1 int = iota
+	Name2
+	Name3
+	Name4
+)
+
+const (
+	Namespace1 int = iota
+	Namespace2
+	Namespace3
+	Namespace4
+)
+
+const (
+	NoLabels = byte(0)
+)
+
 func NewXrefCacheTester() *XRefCacheTester {
 	return &XRefCacheTester{
 		xrefCache: xrefcache.NewXrefCache(),
@@ -360,13 +378,13 @@ func (t *XRefCacheTester) DeletePod(nameIdx, namespaceIdx int) {
 // -- K8s Endpoints access --
 //
 
-func (t *XRefCacheTester) GetEndpoint(nameIdx, namespaceIdx int) *xrefcache.CacheEntryK8sEndpoints {
+func (t *XRefCacheTester) GetEndpoint(nameIdx, namespaceIdx int) *xrefcache.CacheEntryK8sServiceEndpoints {
 	r := getResourceId(resources.ResourceTypeEndpoints, nameIdx, namespaceIdx)
 	e := t.xrefCache.Get(r)
 	if e == nil {
 		return nil
 	}
-	return e.(*xrefcache.CacheEntryK8sEndpoints)
+	return e.(*xrefcache.CacheEntryK8sServiceEndpoints)
 }
 
 func (t *XRefCacheTester) SetEndpoint(nameIdx, namespaceIdx int, labels byte, ip string) {

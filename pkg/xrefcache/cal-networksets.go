@@ -105,7 +105,9 @@ func (c *calicoNetworkSetEngine) kinds() []schema.GroupVersionKind {
 
 // newCacheEntry implements the resourceCacheEngine interface.
 func (c *calicoNetworkSetEngine) newCacheEntry() CacheEntry {
-	return &CacheEntryCalicoNetworkSet{}
+	return &CacheEntryCalicoNetworkSet{
+		PolicyRuleSelectors: resources.NewSet(),
+	}
 }
 
 // resourceAdded implements the resourceCacheEngine interface.

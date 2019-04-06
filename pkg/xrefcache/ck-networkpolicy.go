@@ -14,8 +14,6 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/updateprocessors"
-	"github.com/projectcalico/libcalico-go/lib/set"
-
 	"github.com/tigera/compliance/pkg/internet"
 	"github.com/tigera/compliance/pkg/resources"
 	"github.com/tigera/compliance/pkg/syncer"
@@ -51,7 +49,7 @@ type CacheEntryNetworkPolicy struct {
 	Flags CacheEntryFlags
 
 	// The matching rules.
-	MatchingAllowRules set.Set
+	MatchingAllowRules resources.Set
 
 	// The pods matching this policy selector.
 	SelectedPods          resources.Set
@@ -301,7 +299,7 @@ func (c *networkPolicyEngine) convertToVersioned(res resources.Resource) (Versio
 // across all rules and all policies (so there is a little book keeping required here).
 func (c *networkPolicyEngine) updateRuleSelectors(id resources.ResourceID, x *CacheEntryNetworkPolicy) {
 	// We care about newSelectors on Allow rules, so lets get the set of newSelectors that we care about for this policy.
-	newSelectors := set.New()
+	newSelectors := resources.NewSet()
 
 	// Loop through the rules to check if exposed to another namespace. This is determined by checking allow rules to
 	// see if any Namespace newSelectors have been specified.
@@ -310,7 +308,7 @@ func (c *networkPolicyEngine) updateRuleSelectors(id resources.ResourceID, x *Ca
 
 	for i, irV3 := range ingressV3 {
 		if irV3.Action == apiv3.Allow && ingressV1[i].SrcSelector != "" {
-			newSelectors.Add(ingressV1[i].SrcSelector)
+			newSelectors.Add(selectorToSelectorID(ingressV1[i].SrcSelector))
 		}
 	}
 
@@ -319,7 +317,7 @@ func (c *networkPolicyEngine) updateRuleSelectors(id resources.ResourceID, x *Ca
 
 	for i, erV3 := range egressV3 {
 		if erV3.Action == apiv3.Allow && egressV1[i].DstSelector != "" {
-			newSelectors.Add(egressV1[i].DstSelector)
+			newSelectors.Add(selectorToSelectorID(egressV1[i].DstSelector))
 		}
 	}
 
