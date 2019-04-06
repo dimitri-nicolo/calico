@@ -26,20 +26,21 @@ import (
 )
 
 // Exposed to be used by UT code.
-var ResourceId = api.ResourceID{
+var ResourceIdSample = api.ResourceID{
 	TypeMeta: metav1.TypeMeta{
-		Kind: "sample-kind",
+		Kind:       "sample-kind",
+		APIVersion: "projectcalico.org/v3",
 	},
 	Name:      "sample-res",
 	Namespace: "sample-ns",
 }
 var EndpointSample = api.EndpointsReportEndpoint{
-	ID:               ResourceId,
+	ID:               ResourceIdSample,
 	IngressProtected: false,
 	EgressProtected:  true,
 	EnvoyEnabled:     false,
-	AppliedPolicies:  []api.ResourceID{ResourceId, ResourceId},
-	Services:         []api.ResourceID{ResourceId, ResourceId},
+	AppliedPolicies:  []api.ResourceID{ResourceIdSample, ResourceIdSample},
+	Services:         []api.ResourceID{ResourceIdSample, ResourceIdSample},
 }
 
 // ReportDataSample is used by ReportTemplate validator.
@@ -81,7 +82,7 @@ func RenderTemplate(reportTemplateText string, reportData api.ReportData) (rende
 	}()
 
 	fnmp := template.FuncMap{
-		"joinResources": joinResourceIds,
+		"join": joinResourceIds,
 	}
 	templ, err := template.New("report-template").Funcs(fnmp).Parse(reportTemplateText)
 	if err != nil {
@@ -105,16 +106,10 @@ entries to avoid running into a huge list.
 func joinResourceIds(resources interface{}, sep string, max ...int) (joined string, ret error) {
 	// First verify that right resource type is passed.
 	if reflect.TypeOf(resources).Kind() != reflect.Slice {
-		return joined, fmt.Errorf("Resource used with joinResources is not a Slice")
+		return joined, fmt.Errorf("Resource used with join is not a Slice")
 	}
 
 	res := reflect.ValueOf(resources)
-	if res.Len() > 0 {
-		if res.Index(0).Kind() != reflect.Struct {
-			return joined, fmt.Errorf("Resource used with joinResources is not a Slice of Struct")
-		}
-	}
-
 	maxResources := res.Len()
 	// Check if maximum resource count is specified.
 	if len(max) > 0 {
@@ -128,21 +123,8 @@ func joinResourceIds(resources interface{}, sep string, max ...int) (joined stri
 			buf.WriteString(sep)
 		}
 
-		kind := res.Index(i).FieldByName("Kind")
-		name := res.Index(i).FieldByName("Name")
-		if !kind.IsValid() || !name.IsValid() {
-			return joined, fmt.Errorf("Resource used with joinResources doesn't contain Kind/Name")
-		}
-		namespace := res.Index(i).FieldByName("Namespace")
-
-		// printing: kind(namespace/name)
-		fmt.Fprintf(buf, "%s(", kind)
-		if namespace.Len() > 0 {
-			fmt.Fprintf(buf, "%s/", namespace)
-		}
-		fmt.Fprintf(buf, "%s)", name)
+		fmt.Fprintf(buf, "%s", res.Index(i).Interface())
 	}
-	joined = buf.String()
 
-	return joined, nil
+	return buf.String(), nil
 }

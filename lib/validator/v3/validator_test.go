@@ -2422,7 +2422,7 @@ func init() {
 						Name: "foobar",
 						Template: `name,namespace,ingressProtected,egressProtected,envoyEnabled,appliedPolicies,services
 {{ range .Endpoints -}}
-  {{ .ID.Name }},{{ .ID.Namespace }},{{ .IngressProtected }},{{ .EgressProtected }},{{ .EnvoyEnabled }},{{ joinResources .AppliedPolicies ";" }},{{ joinResources .Services ";" }}
+  {{ .ID.Name }},{{ .ID.Namespace }},{{ .IngressProtected }},{{ .EgressProtected }},{{ .EnvoyEnabled }},{{ join .AppliedPolicies ";" }},{{ join .Services ";" }}
 {{- end }}`,
 					},
 					UICompleteTemplate: api.ReportTemplate{

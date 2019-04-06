@@ -15,6 +15,9 @@
 package v3
 
 import (
+	"bytes"
+	"fmt"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -124,4 +127,34 @@ func NewGlobalReportTypeList() *GlobalReportTypeList {
 			APIVersion: GroupVersionCurrent,
 		},
 	}
+}
+
+/*
+Prints ResourceID contents.
+*/
+func (resource ResourceID) String() (expanded string) {
+	const calicoApiVersion = "projectcalico.org/v3"
+
+	kind := resource.Kind
+	name := resource.Name
+	if len(kind) == 0 || len(name) == 0 {
+		return expanded
+	}
+	namespace := resource.Namespace
+	apiVersion := resource.APIVersion
+
+	// printing: kind[.apiVersion]([namespace/]name)
+	buf := new(bytes.Buffer)
+	buf.WriteString(kind)
+	// only print if non-Calico policy
+	if apiVersion != calicoApiVersion {
+		fmt.Fprintf(buf, ".%s", apiVersion)
+	}
+	buf.WriteString("(")
+	if len(namespace) > 0 {
+		fmt.Fprintf(buf, "%s/", namespace)
+	}
+	fmt.Fprintf(buf, "%s)", name)
+
+	return buf.String()
 }
