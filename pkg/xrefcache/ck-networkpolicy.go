@@ -494,7 +494,7 @@ func (c *networkPolicyEngine) queuePoliciesForRecalculation(update syncer.Update
 	x := update.Resource.(*CacheEntryNetworkPolicyRuleSelector)
 
 	x.Policies.Iter(func(id resources.ResourceID) error {
-		c.QueueRecalculation(id, nil, update.Type)
+		c.QueueUpdate(id, nil, update.Type)
 		return nil
 	})
 }
@@ -507,7 +507,7 @@ func (c *networkPolicyEngine) ruleSelectorMatchStarted(polId, selId resources.Re
 	}
 	x.clog.Debugf("Adding %s to allowRuleSelectors for %s", selId, polId)
 	x.AllowRuleSelectors.Add(selId)
-	c.QueueRecalculation(polId, nil, EventPolicyRuleSelectorMatchStarted)
+	c.QueueUpdate(polId, nil, EventPolicyRuleSelectorMatchStarted)
 }
 
 func (c *networkPolicyEngine) ruleSelectorMatchStopped(polId, selId resources.ResourceID) {
@@ -518,7 +518,7 @@ func (c *networkPolicyEngine) ruleSelectorMatchStopped(polId, selId resources.Re
 	}
 	x.clog.Debugf("Removing %s from allowRuleSelectors for %s", selId, polId)
 	x.AllowRuleSelectors.Discard(selId)
-	c.QueueRecalculation(polId, nil, EventPolicyRuleSelectorMatchStopped)
+	c.QueueUpdate(polId, nil, EventPolicyRuleSelectorMatchStopped)
 }
 
 func (c *networkPolicyEngine) endpointMatchStarted(policyId, epId resources.ResourceID) {

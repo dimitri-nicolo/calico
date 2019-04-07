@@ -54,6 +54,18 @@ const (
 	EventResourceDeleted
 )
 
+const (
+	// For a cache to indicate that the settings have changed, it queues itself for recalculation. However, not all
+	// updates require a recalculation since the data may be updated as part of another callback. The following events
+	// do not actually require a recalculation, and therefore the recalculation step can be omitted if the update
+	// flags only belong in this group.
+	EventsNotRequiringRecalculation = EventServiceAdded | EventServiceDeleted
+)
+
+// The CacheEntryFlags are the set of flags maintained by each cache entry. Only certain flags are valid for certain
+// resource types.
+//
+// See note above regarding the relationship between the event flags and the cache entry flags.
 type CacheEntryFlags syncer.UpdateType
 
 const (

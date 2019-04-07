@@ -12,6 +12,11 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/updateprocessors"
 
+	"errors"
+
+	"github.com/projectcalico/libcalico-go/lib/set"
+
+	"github.com/tigera/compliance/pkg/ips"
 	"github.com/tigera/compliance/pkg/resources"
 	"github.com/tigera/compliance/pkg/syncer"
 )
@@ -33,6 +38,7 @@ type VersionedEndpointResource interface {
 	VersionedResource
 	getV1Labels() map[string]string
 	getV1Profiles() []string
+	getIPs() (set.Set, error)
 }
 
 // CacheEntryEndpoint implements the CacheEntry interface, and is what we stored in the Pods cache.
@@ -91,6 +97,13 @@ func (v *versionedK8sPod) getV1Profiles() []string {
 	return v.v1.ProfileIDs
 }
 
+func (v *versionedK8sPod) getIPs() (set.Set, error) {
+	if len(v.v3.Spec.IPNetworks) == 0 {
+		return nil, errors.New("no IP address found in pod")
+	}
+	return ips.NormalizedIPSet(v.v3.Spec.IPNetworks...)
+}
+
 // versionedCalicoHostEndpoint implements the VersionedEndpointResource interface.
 type versionedCalicoHostEndpoint struct {
 	*apiv3.HostEndpoint
@@ -117,6 +130,13 @@ func (v *versionedCalicoHostEndpoint) getV1Profiles() []string {
 	return v.v1.ProfileIDs
 }
 
+func (v *versionedCalicoHostEndpoint) getIPs() (set.Set, error) {
+	if len(v.Spec.ExpectedIPs) == 0 {
+		return nil, errors.New("no expectedIPs configured")
+	}
+	return ips.NormalizedIPSet(v.Spec.ExpectedIPs...)
+}
+
 // newEndpointsEngine creates a resourceCacheEngine used to handle the Pods cache.
 func newEndpointsEngine() resourceCacheEngine {
 	return &endpointEngine{}
@@ -137,7 +157,7 @@ func (c *endpointEngine) kinds() []schema.GroupVersionKind {
 func (c *endpointEngine) register(cache engineCache) {
 	c.engineCache = cache
 	c.EndpointLabelSelector().RegisterCallbacks(c.kinds(), c.policyMatchStarted, c.policyMatchStopped)
-	c.IPManager().RegisterCallbacks(c.ipMatchStarted, c.ipMatchStopped)
+	c.IPManager().RegisterCallbacks(KindsServiceEndpoints, c.ipMatchStarted, c.ipMatchStopped)
 
 	// Register for updates for all NetworkPolicy events. We don't care about Added/Deleted/Updated events as any
 	// changes to the cross-referencing will result in a notification here where we will requeue any changed endpoints.
@@ -154,6 +174,7 @@ func (c *endpointEngine) register(cache engineCache) {
 func (c *endpointEngine) newCacheEntry() CacheEntry {
 	return &CacheEntryEndpoint{
 		AppliedPolicies: resources.NewSet(),
+		Services:        resources.NewSet(),
 	}
 }
 
@@ -212,12 +233,22 @@ func (c *endpointEngine) resourceUpdated(id resources.ResourceID, entry CacheEnt
 	// Update the labels associated with this pod. Use the labels and profile from the v1 model since these are
 	// modified to include namespace and service account details.
 	c.EndpointLabelSelector().UpdateLabels(id, x.getV1Labels(), x.getV1Profiles())
+
+	// Update the IP manager with the entries updated IP addresses.
+	i, err := x.getIPs()
+	if err != nil {
+		x.clog.Info("Unable to determine IP addresses")
+	}
+	c.IPManager().SetOwnerKeys(id, i)
 }
 
 // resourceDeleted implements the resourceCacheEngine interface.
 func (c *endpointEngine) resourceDeleted(id resources.ResourceID, _ CacheEntry) {
 	// Delete the labels associated with this pod. Default cache processing will remove this cache entry.
 	c.EndpointLabelSelector().DeleteLabels(id)
+
+	// Delete the endpoint from the IP manager.
+	c.IPManager().DeleteOwner(id)
 }
 
 // recalculate implements the resourceCacheEngine interface.
@@ -268,11 +299,11 @@ func (c *endpointEngine) recalculate(podId resources.ResourceID, epEntry CacheEn
 func (c *endpointEngine) queueEndpointsForRecalculation(update syncer.Update) {
 	x := update.Resource.(*CacheEntryNetworkPolicy)
 	x.SelectedPods.Iter(func(podId resources.ResourceID) error {
-		c.QueueRecalculation(podId, nil, update.Type)
+		c.QueueUpdate(podId, nil, update.Type)
 		return nil
 	})
 	x.SelectedHostEndpoints.Iter(func(hepId resources.ResourceID) error {
-		c.QueueRecalculation(hepId, nil, update.Type)
+		c.QueueUpdate(hepId, nil, update.Type)
 		return nil
 	})
 }
@@ -290,7 +321,7 @@ func (c *endpointEngine) policyMatchStarted(policyId, podId resources.ResourceID
 	}
 	// Update the policy list in our pod data and queue a recalculation.
 	x.AppliedPolicies.Add(policyId)
-	c.QueueRecalculation(podId, x, EventPolicyMatchStarted)
+	c.QueueUpdate(podId, x, EventPolicyMatchStarted)
 }
 
 // policyMatchStopped is called synchronously from the policy or pod resource update methods when a policy<->pod match
@@ -306,37 +337,37 @@ func (c *endpointEngine) policyMatchStopped(policyId, podId resources.ResourceID
 	}
 	// Update the policy list in our pod data and queue a recalculation.
 	x.AppliedPolicies.Discard(policyId)
-	c.QueueRecalculation(podId, x, EventPolicyMatchStopped)
+	c.QueueUpdate(podId, x, EventPolicyMatchStopped)
 }
 
-func (c *endpointEngine) ipMatchStarted(pod, client resources.ResourceID, ip string) {
-	x, ok := c.GetFromOurCache(pod).(*CacheEntryEndpoint)
+func (c *endpointEngine) ipMatchStarted(ep, service resources.ResourceID, ip string, firstIP bool) {
+	x, ok := c.GetFromOurCache(ep).(*CacheEntryEndpoint)
 	if !ok {
 		// This is called synchronously from the resource update methods, so we don't expect the entries to have been
 		// removed from the cache at this point.
-		log.Errorf("Match started on pod, but pod is not in cache: %s matches %s", client, pod)
+		log.Errorf("Match started on EP, but EP is not in cache: %s matches %s", ep, service)
 		return
 	}
-	// Currently endpoint only supports a single IP address and so we don't need to worry about ref counting here.
-	switch client.GroupVersionKind {
-	case resources.ResourceTypeEndpoints:
-		x.Services.Add(client)
-		c.QueueRecalculation(pod, x, EventServiceAdded)
+	// This is the first IP to match, start tracking this service.
+	if firstIP {
+		x.clog.Debugf("Start tracking service: %s", service)
+		x.Services.Add(service)
+		c.QueueUpdate(ep, x, EventServiceAdded)
 	}
 }
 
-func (c *endpointEngine) ipMatchStopped(pod, client resources.ResourceID, ip string) {
-	x, ok := c.GetFromOurCache(pod).(*CacheEntryEndpoint)
+func (c *endpointEngine) ipMatchStopped(ep, service resources.ResourceID, ip string, lastIP bool) {
+	x, ok := c.GetFromOurCache(ep).(*CacheEntryEndpoint)
 	if !ok {
 		// This is called synchronously from the resource update methods, so we don't expect the entries to have been
 		// removed from the cache at this point.
-		log.Errorf("Match started on pod, but pod is not in cache: %s matches %s", client, pod)
+		log.Errorf("Match started on EP, but EP is not in cache: %s matches %s", ep, service)
 		return
 	}
-	// Currently endpoint only supports a single IP address and so we don't need to worry about ref counting here.
-	switch client.GroupVersionKind {
-	case resources.ResourceTypeEndpoints:
-		x.Services.Discard(client)
-		c.QueueRecalculation(pod, x, EventServiceDeleted)
+	// This is the last IP to match, stop tracking this service.
+	if lastIP {
+		x.clog.Debugf("Stop tracking service: %s", service)
+		x.Services.Discard(service)
+		c.QueueUpdate(ep, x, EventServiceDeleted)
 	}
 }

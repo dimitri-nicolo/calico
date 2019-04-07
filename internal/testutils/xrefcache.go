@@ -467,21 +467,44 @@ func (t *XRefCacheTester) GetEndpoints(nameIdx Name, namespaceIdx Namespace) *xr
 	return e.(*xrefcache.CacheEntryK8sServiceEndpoints)
 }
 
-func (t *XRefCacheTester) SetEndpoints(nameIdx Name, namespaceIdx Namespace, ip string) {
+func (t *XRefCacheTester) SetEndpoints(nameIdx Name, namespaceIdx Namespace, ips IP) resources.ResourceID {
 	r := getResourceId(resources.ResourceTypeEndpoints, nameIdx, namespaceIdx)
+	ipAddrs := ipByteToIPStringSlice(ips)
+
+	// Convert the IP addresses to endpoint subsets, splitting over multiple if there is more than a single address.
+	ss := []corev1.EndpointSubset{}
+	if len(ipAddrs) > 1 {
+		ss = append(ss, corev1.EndpointSubset{
+			Addresses: []corev1.EndpointAddress{{
+				IP: ipAddrs[0],
+			}},
+		})
+		ipAddrs = ipAddrs[1:]
+	}
+	addrs := []corev1.EndpointAddress{}
+	for _, ip := range ipAddrs {
+		addrs = append(addrs, corev1.EndpointAddress{
+			IP: ip,
+		})
+	}
+	ss = append(ss, corev1.EndpointSubset{
+		Addresses: addrs,
+	})
+
 	t.xrefCache.OnUpdate(syncer.Update{
 		Type:       syncer.UpdateTypeSet,
 		ResourceID: r,
 		Resource: &corev1.Endpoints{
 			TypeMeta:   getTypeMeta(r),
 			ObjectMeta: getObjectMeta(r, NoLabels),
-			Subsets:    []corev1.EndpointSubset{},
+			Subsets:    ss,
 		},
 	})
+	return r
 }
 
 func (t *XRefCacheTester) DeleteEndpoints(nameIdx Name, namespaceIdx Namespace) {
-	r := getResourceId(resources.ResourceTypeEndpoints, nameIdx, 0)
+	r := getResourceId(resources.ResourceTypeEndpoints, nameIdx, namespaceIdx)
 	t.xrefCache.OnUpdate(syncer.Update{
 		Type:       syncer.UpdateTypeDeleted,
 		ResourceID: r,

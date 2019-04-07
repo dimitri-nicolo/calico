@@ -9,6 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/tigera/compliance/pkg/dispatcher"
+	"github.com/tigera/compliance/pkg/keyselector"
 	"github.com/tigera/compliance/pkg/labelselector"
 	"github.com/tigera/compliance/pkg/resources"
 	"github.com/tigera/compliance/pkg/syncer"
@@ -23,15 +24,15 @@ type engineCache interface {
 	EndpointLabelSelector() labelselector.Interface
 	NetworkSetLabelSelector() labelselector.Interface
 	NetworkPolicyRuleSelectorManager() NetworkPolicyRuleSelectorManager
-	IPManager() IPManager
+	IPManager() keyselector.Interface
 
 	// Register for updates for other resource types. This registers with the xref cache dispatcher, so the updates
 	// will be CacheEntry types and the available updateTypes are defined by the events in flags.go.
 	RegisterOnUpdateHandler(kind schema.GroupVersionKind, updateTypes syncer.UpdateType, callback dispatcher.DispatcherOnUpdate)
 
-	// Queue the specified resource for async recalculation. If the CacheEntry is specified, it should match the
-	// ResourceID. If no CacheEntry is specified, it will be looked up.
-	QueueRecalculation(resources.ResourceID, CacheEntry, syncer.UpdateType)
+	// Queue the specified resource for async recalculation and update. If the CacheEntry is specified, it should match
+	// the ResourceID. If no CacheEntry is specified, it will be looked up.
+	QueueUpdate(resources.ResourceID, CacheEntry, syncer.UpdateType)
 }
 
 // resourceCacheEngine is the interface a specific engine must implement for a resourceCache.
@@ -227,11 +228,11 @@ func (c *resourceEngineCache) NetworkPolicyRuleSelectorManager() NetworkPolicyRu
 	return c.xc.networkPolicyRuleSelectorManager
 }
 
-func (c *resourceEngineCache) IPManager() IPManager {
+func (c *resourceEngineCache) IPManager() keyselector.Interface {
 	return c.xc.ipManager
 }
 
-func (c *resourceEngineCache) QueueRecalculation(id resources.ResourceID, entry CacheEntry, update syncer.UpdateType) {
+func (c *resourceEngineCache) QueueUpdate(id resources.ResourceID, entry CacheEntry, update syncer.UpdateType) {
 	c.xc.queueRecalculation(id, entry, update)
 }
 

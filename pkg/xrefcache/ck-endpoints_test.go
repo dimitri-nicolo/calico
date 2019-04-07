@@ -172,4 +172,101 @@ var _ = Describe("Pods cache verification", func() {
 				xrefcache.CacheEntryOtherNamespaceExposedIngress | xrefcache.CacheEntryOtherNamespaceExposedEgress,
 		))
 	})
+
+	It("should handle tracking matching services", func() {
+		By("applying pod1 IP1")
+		tester.SetPod(Name1, Namespace1, NoLabels, IP1, NoServiceAccount, NoPodOptions)
+
+		By("applying pod2 IP2")
+		tester.SetPod(Name2, Namespace1, NoLabels, IP2, NoServiceAccount, NoPodOptions)
+
+		By("applying service1 with IP1 IP2 IP3")
+		svc1 := tester.SetEndpoints(Name1, Namespace1, IP1|IP2|IP3)
+
+		By("applying service2 with IP1 IP3")
+		svc2 := tester.SetEndpoints(Name2, Namespace1, IP1|IP3)
+
+		By("checking that pod1 refs service1 and service2")
+		ep := tester.GetPod(Name1, Namespace1)
+		Expect(ep).NotTo(BeNil())
+		Expect(ep.Services.Len()).To(Equal(2))
+		Expect(ep.Services.Contains(svc1)).To(BeTrue())
+		Expect(ep.Services.Contains(svc2)).To(BeTrue())
+
+		By("checking that pod2 refs service1")
+		ep = tester.GetPod(Name2, Namespace1)
+		Expect(ep).NotTo(BeNil())
+		Expect(ep.Services.Len()).To(Equal(1))
+		Expect(ep.Services.Contains(svc1)).To(BeTrue())
+
+		By("updating service2 with IP2 IP3")
+		tester.SetEndpoints(Name2, Namespace1, IP2|IP3)
+
+		By("checking that pod1 no longer refs service2")
+		ep = tester.GetPod(Name1, Namespace1)
+		Expect(ep).NotTo(BeNil())
+		Expect(ep.Services.Len()).To(Equal(1))
+		Expect(ep.Services.Contains(svc1)).To(BeTrue())
+		Expect(ep.Services.Contains(svc2)).To(BeFalse())
+
+		By("checking that pod2 refs service1 and service2")
+		ep = tester.GetPod(Name2, Namespace1)
+		Expect(ep).NotTo(BeNil())
+		Expect(ep.Services.Len()).To(Equal(2))
+		Expect(ep.Services.Contains(svc1)).To(BeTrue())
+		Expect(ep.Services.Contains(svc2)).To(BeTrue())
+
+		By("deleting and re-adding pod2 and checking services are the same")
+		tester.DeletePod(Name2, Namespace1)
+		Expect(tester.GetPod(Name2, Namespace1)).To(BeNil())
+		tester.SetPod(Name2, Namespace1, NoLabels, IP2, NoServiceAccount, NoPodOptions)
+		ep = tester.GetPod(Name2, Namespace1)
+		Expect(ep).NotTo(BeNil())
+		Expect(ep.Services.Len()).To(Equal(2))
+		Expect(ep.Services.Contains(svc1)).To(BeTrue())
+		Expect(ep.Services.Contains(svc2)).To(BeTrue())
+
+		By("updating service1 with IP3")
+		tester.SetEndpoints(Name1, Namespace1, IP3)
+
+		By("checking that pod2 no longer refs service1")
+		ep = tester.GetPod(Name2, Namespace1)
+		Expect(ep).NotTo(BeNil())
+		Expect(ep.Services.Len()).To(Equal(1))
+		Expect(ep.Services.Contains(svc1)).To(BeFalse())
+		Expect(ep.Services.Contains(svc2)).To(BeTrue())
+
+		By("updating pod2 with IP3")
+		tester.SetPod(Name2, Namespace1, NoLabels, IP3, NoServiceAccount, NoPodOptions)
+
+		By("checking that pod3 no refs service1 and service2")
+		ep = tester.GetPod(Name2, Namespace1)
+		Expect(ep).NotTo(BeNil())
+		Expect(ep.Services.Len()).To(Equal(2))
+		Expect(ep.Services.Contains(svc1)).To(BeTrue())
+		Expect(ep.Services.Contains(svc2)).To(BeTrue())
+
+		By("deleting service2")
+		tester.DeleteEndpoints(Name2, Namespace1)
+		Expect(tester.GetEndpoints(Name2, Namespace1)).To(BeNil())
+
+		By("checking that pod2 no refs service2")
+		ep = tester.GetPod(Name2, Namespace1)
+		Expect(ep).NotTo(BeNil())
+		Expect(ep.Services.Len()).To(Equal(1))
+		Expect(ep.Services.Contains(svc1)).To(BeTrue())
+		Expect(ep.Services.Contains(svc2)).To(BeFalse())
+
+		By("deleting service1")
+		tester.DeleteEndpoints(Name1, Namespace1)
+		Expect(tester.GetEndpoints(Name1, Namespace1)).To(BeNil())
+
+		By("checking both pods reference no services")
+		ep = tester.GetPod(Name1, Namespace1)
+		Expect(ep).NotTo(BeNil())
+		Expect(ep.Services.Len()).To(BeZero())
+		ep = tester.GetPod(Name2, Namespace1)
+		Expect(ep).NotTo(BeNil())
+		Expect(ep.Services.Len()).To(BeZero())
+	})
 })

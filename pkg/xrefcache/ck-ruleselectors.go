@@ -164,7 +164,7 @@ func (c *networkPolicyRuleSelectorsEngine) queueRuleSelectorsForRecalculation(up
 	x := update.Resource.(*CacheEntryCalicoNetworkSet)
 
 	x.PolicyRuleSelectors.Iter(func(id resources.ResourceID) error {
-		c.QueueRecalculation(id, nil, update.Type)
+		c.QueueUpdate(id, nil, update.Type)
 		return nil
 	})
 }
@@ -177,7 +177,7 @@ func (c *networkPolicyRuleSelectorsEngine) netsetMatchStarted(sel, nsLabels reso
 	}
 	x.clog.Debugf("Adding %s to networksets for %s", nsLabels, sel)
 	x.NetworkSets.Add(nsLabels)
-	c.QueueRecalculation(sel, nil, EventNetsetMatchStarted)
+	c.QueueUpdate(sel, nil, EventNetsetMatchStarted)
 }
 
 func (c *networkPolicyRuleSelectorsEngine) netsetMatchStopped(sel, nsLabels resources.ResourceID) {
@@ -188,7 +188,7 @@ func (c *networkPolicyRuleSelectorsEngine) netsetMatchStopped(sel, nsLabels reso
 	}
 	x.clog.Debugf("Removing %s to networksets for %s", nsLabels, sel)
 	x.NetworkSets.Discard(nsLabels)
-	c.QueueRecalculation(sel, nil, EventNetsetMatchStopped)
+	c.QueueUpdate(sel, nil, EventNetsetMatchStopped)
 }
 
 func (c *networkPolicyRuleSelectorsEngine) policyMatchStarted(pol, sel resources.ResourceID) {

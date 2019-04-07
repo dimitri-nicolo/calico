@@ -11,6 +11,7 @@ import (
 	"container/heap"
 
 	"github.com/tigera/compliance/pkg/dispatcher"
+	"github.com/tigera/compliance/pkg/keyselector"
 	"github.com/tigera/compliance/pkg/labelselector"
 	"github.com/tigera/compliance/pkg/resources"
 	"github.com/tigera/compliance/pkg/syncer"
@@ -115,7 +116,7 @@ func NewXrefCache() XrefCache {
 		endpointLabelSelector:            endpointLabelSelection,
 		networkSetLabelSelector:          netsetLabelSelection,
 		networkPolicyRuleSelectorManager: networkPolicyRuleSelectorManager,
-		ipManager:                        NewIPManager(),
+		ipManager:                        keyselector.New(),
 		caches:                           map[schema.GroupVersionKind]*resourceCache{},
 		priorities:                       map[schema.GroupVersionKind]int8{},
 	}
@@ -146,7 +147,7 @@ type xrefCache struct {
 	endpointLabelSelector            labelselector.Interface
 	networkSetLabelSelector          labelselector.Interface
 	networkPolicyRuleSelectorManager NetworkPolicyRuleSelectorManager
-	ipManager                        IPManager
+	ipManager                        keyselector.Interface
 	caches                           map[schema.GroupVersionKind]*resourceCache
 	priorities                       map[schema.GroupVersionKind]int8
 	modified                         resources.PriorityQueue
@@ -190,8 +191,11 @@ func (c *xrefCache) OnUpdate(update syncer.Update) {
 		updates := entry.getUpdateTypes()
 		entry.resetUpdateTypes()
 
-		// Recalculate the entry, combine the response with the existing set of update types.
-		updates |= cache.engine.recalculate(id, entry)
+		if updates&EventsNotRequiringRecalculation != updates {
+			// The set of updates that have been queued do require some recalculation, therefore recalculate the entry,
+			// combine the response with the existing set of update types.
+			updates |= cache.engine.recalculate(id, entry)
+		}
 
 		// If we are in-sync then send a notification via the cache dispatcher for this entry.
 		update := syncer.Update{

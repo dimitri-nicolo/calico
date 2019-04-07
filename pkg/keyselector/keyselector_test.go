@@ -40,9 +40,10 @@ var (
 )
 
 type cb struct {
-	owner  resources.ResourceID
-	client resources.ResourceID
-	key    string
+	owner     resources.ResourceID
+	client    resources.ResourceID
+	key       string
+	firstLast bool
 }
 
 type tester struct {
@@ -62,12 +63,12 @@ func newTester() *tester {
 	return t
 }
 
-func (t *tester) onMatchStarted(owner, client resources.ResourceID, key string) {
-	t.matchStarted.Add(cb{owner, client, key})
+func (t *tester) onMatchStarted(owner, client resources.ResourceID, key string, first bool) {
+	t.matchStarted.Add(cb{owner, client, key, first})
 }
 
-func (t *tester) onMatchStopped(owner, client resources.ResourceID, key string) {
-	t.matchStopped.Add(cb{owner, client, key})
+func (t *tester) onMatchStopped(owner, client resources.ResourceID, key string, last bool) {
+	t.matchStopped.Add(cb{owner, client, key, last})
 }
 
 func (t *tester) setClientKeys(client resources.ResourceID, keys set.Set) {
@@ -111,7 +112,7 @@ func (t *tester) ExpectEmpty() {
 	Expect(t.k.(*keySelector).keysByClient).To(HaveLen(0))
 	Expect(t.k.(*keySelector).ownersByKey).To(HaveLen(0))
 	Expect(t.k.(*keySelector).keysByOwner).To(HaveLen(0))
-
+	Expect(t.k.(*keySelector).keysByOwnerClient).To(HaveLen(0))
 }
 
 var _ = Describe("label selector checks", func() {
@@ -127,13 +128,13 @@ var _ = Describe("label selector checks", func() {
 		t.setOwnerKeys(o1, set.From("A"))
 		Expect(t.matchStopped.Len()).To(BeZero())
 		Expect(t.matchStarted.Len()).To(Equal(1))
-		Expect(t.matchStarted.Contains(cb{o1, c1, "A"})).To(BeTrue())
+		Expect(t.matchStarted.Contains(cb{o1, c1, "A", true})).To(BeTrue())
 
 		By("Deleting owner1")
 		t.deleteOwner(o1)
 		Expect(t.matchStopped.Len()).To(Equal(1))
 		Expect(t.matchStarted.Len()).To(BeZero())
-		Expect(t.matchStopped.Contains(cb{o1, c1, "A"})).To(BeTrue())
+		Expect(t.matchStopped.Contains(cb{o1, c1, "A", true})).To(BeTrue())
 
 		By("Deleting client1")
 		t.deleteClient(c1)
@@ -156,13 +157,13 @@ var _ = Describe("label selector checks", func() {
 		t.setClientKeys(c1, set.From("A"))
 		Expect(t.matchStopped.Len()).To(BeZero())
 		Expect(t.matchStarted.Len()).To(Equal(1))
-		Expect(t.matchStarted.Contains(cb{o1, c1, "A"})).To(BeTrue())
+		Expect(t.matchStarted.Contains(cb{o1, c1, "A", true})).To(BeTrue())
 
 		By("Deleting client1")
 		t.deleteClient(c1)
 		Expect(t.matchStarted.Len()).To(BeZero())
 		Expect(t.matchStopped.Len()).To(Equal(1))
-		Expect(t.matchStopped.Contains(cb{o1, c1, "A"})).To(BeTrue())
+		Expect(t.matchStopped.Contains(cb{o1, c1, "A", true})).To(BeTrue())
 
 		By("Deleting owner1")
 		t.deleteOwner(o1)
@@ -185,20 +186,20 @@ var _ = Describe("label selector checks", func() {
 		t.setClientKeys(c1, set.From("A"))
 		Expect(t.matchStopped.Len()).To(BeZero())
 		Expect(t.matchStarted.Len()).To(Equal(1))
-		Expect(t.matchStarted.Contains(cb{o1, c1, "A"})).To(BeTrue())
+		Expect(t.matchStarted.Contains(cb{o1, c1, "A", true})).To(BeTrue())
 
 		By("Setting client2 key A")
 		t.setClientKeys(c2, set.From("A"))
 		Expect(t.matchStopped.Len()).To(BeZero())
 		Expect(t.matchStarted.Len()).To(Equal(1))
-		Expect(t.matchStarted.Contains(cb{o1, c2, "A"})).To(BeTrue())
+		Expect(t.matchStarted.Contains(cb{o1, c2, "A", true})).To(BeTrue())
 
 		By("Deleting owner1")
 		t.deleteOwner(o1)
 		Expect(t.matchStopped.Len()).To(Equal(2))
 		Expect(t.matchStarted.Len()).To(BeZero())
-		Expect(t.matchStopped.Contains(cb{o1, c1, "A"})).To(BeTrue())
-		Expect(t.matchStopped.Contains(cb{o1, c2, "A"})).To(BeTrue())
+		Expect(t.matchStopped.Contains(cb{o1, c1, "A", true})).To(BeTrue())
+		Expect(t.matchStopped.Contains(cb{o1, c2, "A", true})).To(BeTrue())
 
 		By("Deleting client1 and client2")
 		t.deleteClient(c1)
@@ -224,48 +225,58 @@ var _ = Describe("label selector checks", func() {
 		t.setClientKeys(c1, set.From("A", "B"))
 		Expect(t.matchStopped.Len()).To(BeZero())
 		Expect(t.matchStarted.Len()).To(Equal(1))
-		Expect(t.matchStarted.Contains(cb{o1, c1, "A"})).To(BeTrue())
+		Expect(t.matchStarted.Contains(cb{o1, c1, "A", true})).To(BeTrue())
 
-		By("Setting owner2 keys A and B")
+		By("Setting owner2 keys A")
+		t.setOwnerKeys(o2, set.From("A"))
+		Expect(t.matchStopped.Len()).To(BeZero())
+		Expect(t.matchStarted.Len()).To(Equal(1))
+		Expect(t.matchStarted.Contains(cb{o2, c1, "A", true})).To(BeTrue())
+
+		By("Updating owner2 keys A and B")
 		t.setOwnerKeys(o2, set.From("A", "B"))
 		Expect(t.matchStopped.Len()).To(BeZero())
-		Expect(t.matchStarted.Len()).To(Equal(2))
-		Expect(t.matchStarted.Contains(cb{o2, c1, "A"})).To(BeTrue())
-		Expect(t.matchStarted.Contains(cb{o2, c1, "B"})).To(BeTrue())
+		Expect(t.matchStarted.Len()).To(Equal(1))
+		Expect(t.matchStarted.Contains(cb{o2, c1, "B", false})).To(BeTrue())
 
 		By("Updating owner1 key B")
 		t.setOwnerKeys(o1, set.From("B"))
 		Expect(t.matchStopped.Len()).To(Equal(1))
 		Expect(t.matchStarted.Len()).To(Equal(1))
-		Expect(t.matchStopped.Contains(cb{o1, c1, "A"})).To(BeTrue())
-		Expect(t.matchStarted.Contains(cb{o1, c1, "B"})).To(BeTrue())
+		Expect(t.matchStopped.Contains(cb{o1, c1, "A", true})).To(BeTrue())
+		Expect(t.matchStarted.Contains(cb{o1, c1, "B", true})).To(BeTrue())
 
 		By("Setting client2 keys B")
 		t.setClientKeys(c2, set.From("B"))
 		Expect(t.matchStopped.Len()).To(BeZero())
 		Expect(t.matchStarted.Len()).To(Equal(2))
-		Expect(t.matchStarted.Contains(cb{o1, c2, "B"})).To(BeTrue())
-		Expect(t.matchStarted.Contains(cb{o2, c2, "B"})).To(BeTrue())
+		Expect(t.matchStarted.Contains(cb{o1, c2, "B", true})).To(BeTrue())
+		Expect(t.matchStarted.Contains(cb{o2, c2, "B", true})).To(BeTrue())
+
+		By("Updating client1 key B")
+		t.setClientKeys(c1, set.From("B"))
+		Expect(t.matchStopped.Len()).To(Equal(1))
+		Expect(t.matchStarted.Len()).To(BeZero())
+		Expect(t.matchStopped.Contains(cb{o2, c1, "A", false})).To(BeTrue())
 
 		By("Deleting client1")
 		t.deleteClient(c1)
-		Expect(t.matchStopped.Len()).To(Equal(3))
+		Expect(t.matchStopped.Len()).To(Equal(2))
 		Expect(t.matchStarted.Len()).To(BeZero())
-		Expect(t.matchStopped.Contains(cb{o1, c1, "B"})).To(BeTrue())
-		Expect(t.matchStopped.Contains(cb{o2, c1, "A"})).To(BeTrue())
-		Expect(t.matchStopped.Contains(cb{o2, c1, "B"})).To(BeTrue())
+		Expect(t.matchStopped.Contains(cb{o1, c1, "B", true})).To(BeTrue())
+		Expect(t.matchStopped.Contains(cb{o2, c1, "B", true})).To(BeTrue())
 
 		By("Deleting owner1")
 		t.deleteOwner(o1)
 		Expect(t.matchStopped.Len()).To(Equal(1))
 		Expect(t.matchStarted.Len()).To(BeZero())
-		Expect(t.matchStopped.Contains(cb{o1, c2, "B"})).To(BeTrue())
+		Expect(t.matchStopped.Contains(cb{o1, c2, "B", true})).To(BeTrue())
 
 		By("Deleting owner2")
 		t.deleteOwner(o2)
 		Expect(t.matchStopped.Len()).To(Equal(1))
 		Expect(t.matchStarted.Len()).To(BeZero())
-		Expect(t.matchStopped.Contains(cb{o2, c2, "B"})).To(BeTrue())
+		Expect(t.matchStopped.Contains(cb{o2, c2, "B", true})).To(BeTrue())
 
 		By("Deleting client2")
 		t.deleteClient(c2)
