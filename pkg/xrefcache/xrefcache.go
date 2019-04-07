@@ -79,6 +79,9 @@ func NewXrefCache() XrefCache {
 	// for storing that resource kind.
 	syncerDispatcher := dispatcher.NewDispatcher()
 
+	// Create a dispatcher sending events to the consumer of the cross reference cache.
+	consumerDispatcher := dispatcher.NewDispatcher()
+
 	// Register the cache dispatcher as a consumer of status events with the syncer dispatcher (basically this passes
 	// status events straight through from the syncer to the xref caches.
 	syncerDispatcher.RegisterOnStatusUpdateHandler(cacheDispatcher.OnStatusUpdate)
@@ -108,6 +111,7 @@ func NewXrefCache() XrefCache {
 	c := &xrefCache{
 		cacheDispatcher:                  cacheDispatcher,
 		syncerDispatcher:                 syncerDispatcher,
+		consumerDispatcher:               consumerDispatcher,
 		endpointLabelSelector:            endpointLabelSelection,
 		networkSetLabelSelector:          netsetLabelSelection,
 		networkPolicyRuleSelectorManager: networkPolicyRuleSelectorManager,
@@ -137,6 +141,7 @@ func NewXrefCache() XrefCache {
 type xrefCache struct {
 	syncerDispatcher                 dispatcher.Dispatcher
 	cacheDispatcher                  dispatcher.Dispatcher
+	consumerDispatcher               dispatcher.Dispatcher
 	endpointLabelSelector            labelselector.Interface
 	networkSetLabelSelector          labelselector.Interface
 	networkPolicyRuleSelectorManager NetworkPolicyRuleSelectorManager
@@ -161,7 +166,8 @@ func (c *xrefCache) OnStatusUpdate(status syncer.StatusUpdate) {
 		c.inSync = true
 	}
 
-	// Finally, notify the cache dispatcher of the status update.
+	// Finally, notify the cache dispatcher and the consumer dispatcher of the status update.
+	c.cacheDispatcher.OnStatusUpdate(status)
 	c.cacheDispatcher.OnStatusUpdate(status)
 }
 
@@ -177,20 +183,27 @@ func (c *xrefCache) OnUpdate(update syncer.Update) {
 			continue
 		}
 
+		// Reset the update types now, just incase by some oddity the recalculation attempts to re-add itself to the
+		// queue (which is fine, but odd).
+		updates := entry.getUpdateTypes()
+		entry.resetUpdateTypes()
+
 		// Recalculate the entry, combine the response with the existing set of update types.
-		updates := cache.engine.recalculate(id, entry) | entry.getUpdateTypes()
+		updates |= cache.engine.recalculate(id, entry)
 
 		// If we are in-sync then send a notification via the cache dispatcher for this entry.
-		if c.inSync {
-			c.cacheDispatcher.OnUpdate(syncer.Update{
-				Type:       updates,
-				ResourceID: id,
-				Resource:   entry,
-			})
+		update := syncer.Update{
+			Type:       updates,
+			ResourceID: id,
+			Resource:   entry,
 		}
-
-		// Reset the update types.
-		entry.resetUpdateTypes()
+		c.cacheDispatcher.OnUpdate(update)
+		if c.inSync {
+			// The consumers only gets updates once we are in-sync otherwise the augmented data will not be correct
+			// at start of day. Once in-sync, the onStatusUpdate processing will send a complete dump of the
+			// cache to the consumer and only then will updates be sent as we calculate them.
+			c.consumerDispatcher.OnUpdate(update)
+		}
 	}
 }
 
@@ -199,11 +212,11 @@ func (c *xrefCache) Get(id resources.ResourceID) CacheEntry {
 }
 
 func (c *xrefCache) RegisterOnStatusUpdateHandler(callback dispatcher.DispatcherOnStatusUpdate) {
-	c.cacheDispatcher.RegisterOnStatusUpdateHandler(callback)
+	c.consumerDispatcher.RegisterOnStatusUpdateHandler(callback)
 }
 
 func (c *xrefCache) RegisterOnUpdateHandler(kind schema.GroupVersionKind, updateTypes syncer.UpdateType, callback dispatcher.DispatcherOnUpdate) {
-	c.cacheDispatcher.RegisterOnUpdateHandler(kind, updateTypes, callback)
+	c.consumerDispatcher.RegisterOnUpdateHandler(kind, updateTypes, callback)
 }
 
 func (c *xrefCache) GetCachedResourceIDs(kind schema.GroupVersionKind) []resources.ResourceID {
@@ -241,5 +254,7 @@ func (c *xrefCache) queueRecalculation(id resources.ResourceID, entry CacheEntry
 			Priority:   c.priorities[id.GroupVersionKind],
 		}
 		heap.Push(&c.modified, item)
+	} else {
+		log.WithField("id", id).Debug("Queue recalculation requested, but alreadt in progress")
 	}
 }

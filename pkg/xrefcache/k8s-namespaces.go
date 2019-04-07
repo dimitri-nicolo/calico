@@ -123,16 +123,15 @@ func (c *k8sNamespaceEngine) convertToVersioned(res resources.Resource) (Version
 
 // resourceAdded implements the resourceCacheEngine interface.
 func (c *k8sNamespaceEngine) resourceAdded(id resources.ResourceID, entry CacheEntry) {
-	_ = c.resourceUpdated(id, entry, nil)
+	c.resourceUpdated(id, entry, nil)
 }
 
 // resourceUpdated implements the resourceCacheEngine interface.
-func (c *k8sNamespaceEngine) resourceUpdated(id resources.ResourceID, entry CacheEntry, prev VersionedResource) syncer.UpdateType {
+func (c *k8sNamespaceEngine) resourceUpdated(id resources.ResourceID, entry CacheEntry, prev VersionedResource) {
 	// Kubernetes namespaces are configured as Calico profiles. Use the V3 version of the name and the V1 version of the
 	// labels since they will have been modified to match the selector modifications in the pod.
 	x := entry.(*CacheEntryK8sNamespace)
 	c.EndpointLabelSelector().UpdateParentLabels(x.getV3Profile().Name, x.getV1Profile().Labels)
-	return 0
 }
 
 // resourceDeleted implements the resourceCacheEngine interface.

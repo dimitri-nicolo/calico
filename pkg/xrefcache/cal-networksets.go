@@ -115,19 +115,17 @@ func (c *calicoNetworkSetEngine) newCacheEntry() CacheEntry {
 // resourceAdded implements the resourceCacheEngine interface.
 func (c *calicoNetworkSetEngine) resourceAdded(id resources.ResourceID, entry CacheEntry) {
 	entry.(*CacheEntryCalicoNetworkSet).clog = log.WithField("id", id)
-	_ = c.resourceUpdated(id, entry, nil)
+	c.resourceUpdated(id, entry, nil)
 }
 
 // resourceUpdated implements the resourceCacheEngine interface.
-func (c *calicoNetworkSetEngine) resourceUpdated(id resources.ResourceID, entry CacheEntry, prev VersionedResource) syncer.UpdateType {
+func (c *calicoNetworkSetEngine) resourceUpdated(id resources.ResourceID, entry CacheEntry, prev VersionedResource) {
 	// Use the V1 labels to register with the label selection handler.
 	x := entry.(*CacheEntryCalicoNetworkSet)
 
 	// Update the labels for this network set. Always update the labels first so that each cache can get a view of the
 	// links before we start sending updates.
 	c.NetworkSetLabelSelector().UpdateLabels(id, x.getV1NetworkSet().Labels, nil)
-
-	return 0
 }
 
 // resourceDeleted implements the resourceCacheEngine interface.
@@ -141,16 +139,7 @@ func (c *calicoNetworkSetEngine) recalculate(id resources.ResourceID, entry Cach
 
 	// Determine whether this network set contains any internet addresses.
 	changed := c.scanNets(x)
-
-	// If the settings have changed, then trigger recalculations of matching selectors which will in turn fanout to
-	// the appropriate Policies for recalculation, and then on to the endpoints.
-	if changed != 0 {
-		x.PolicyRuleSelectors.Iter(func(id resources.ResourceID) error {
-			c.QueueRecalculation(id, nil, changed)
-			return nil
-		})
-	}
-
+	x.clog.Debugf("Recalculated, returning update %d, flags now: %d", changed, x.Flags)
 	return changed
 }
 
@@ -204,6 +193,7 @@ func (c *calicoNetworkSetEngine) selectorMatchStarted(selId, netsetId resources.
 	}
 	// Update the selector set in our network set data. No need to queue an async recalculation since this won't affect
 	// our settings *and* we don't notify the cache listeners about this event type.
+	x.clog.Debugf("Adding %s to policyRuleSelectors for %s", selId, netsetId)
 	x.PolicyRuleSelectors.Add(selId)
 }
 
@@ -219,5 +209,6 @@ func (c *calicoNetworkSetEngine) selectorMatchStopped(selId, netsetId resources.
 	}
 	// Update the selector set in our network set data. No need to queue an async recalculation since this won't affect
 	// our settings *and* we don't notify the cache listeners about this event type.
+	x.clog.Debugf("Removing %s from policyRuleSelectors for %s", selId, netsetId)
 	x.PolicyRuleSelectors.Discard(selId)
 }

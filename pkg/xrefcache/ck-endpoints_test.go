@@ -11,14 +11,14 @@ import (
 	"github.com/tigera/compliance/pkg/xrefcache"
 )
 
-var _ = Describe("Basic CRUD of pods with no other resources present", func() {
+var _ = Describe("Pods cache verification", func() {
 	var tester *XRefCacheTester
 
 	BeforeEach(func() {
 		tester = NewXrefCacheTester()
 	})
 
-	It("should handle basic CRUD of a pod", func() {
+	It("should handle basic CRUD of a pod with no other resources", func() {
 		By("applying a pod")
 		tester.SetPod(Name1, Namespace1, NoLabels, IP1, NoServiceAccount, NoPodOptions)
 

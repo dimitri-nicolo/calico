@@ -198,6 +198,17 @@ func (c *networkPolicyEngine) register(cache engineCache) {
 	// Register with the endpoint and netset label selectors for notification of match start/stops.
 	c.EndpointLabelSelector().RegisterCallbacks(c.kinds(), c.endpointMatchStarted, c.endpointMatchStopped)
 	c.NetworkPolicyRuleSelectorManager().RegisterCallbacks(c.ruleSelectorMatchStarted, c.ruleSelectorMatchStopped)
+
+	// Register for updates for all RuleSelector events (which is currently the same as the available flags for the
+	// CacheEntryFlagsNetworkSets). We don't care about Added/Deleted/Updated events as any changes to the
+	// cross-referencing will result in a notification here where we will requeue any changed policies.
+	for _, kind := range KindsNetworkPolicyRuleSelectors {
+		c.RegisterOnUpdateHandler(
+			kind,
+			syncer.UpdateType(CacheEntryFlagsNetworkSets),
+			c.queuePoliciesForRecalculation,
+		)
+	}
 }
 
 // register implements the resourceCacheEngine interface.
@@ -224,7 +235,7 @@ func (c *networkPolicyEngine) resourceAdded(id resources.ResourceID, entry Cache
 }
 
 // resourceUpdated implements the resourceCacheEngine interface.
-func (c *networkPolicyEngine) resourceUpdated(id resources.ResourceID, entry CacheEntry, prev VersionedResource) syncer.UpdateType {
+func (c *networkPolicyEngine) resourceUpdated(id resources.ResourceID, entry CacheEntry, prev VersionedResource) {
 	// Get the augmented resource data.
 	x := entry.(*CacheEntryNetworkPolicy)
 
@@ -234,8 +245,6 @@ func (c *networkPolicyEngine) resourceUpdated(id resources.ResourceID, entry Cac
 
 	// Update the label selectors for the policy rules.
 	c.updateRuleSelectors(id, x)
-
-	return 0
 }
 
 // resourceDeleted implements the resourceCacheEngine interface.
@@ -257,11 +266,7 @@ func (c *networkPolicyEngine) recalculate(id resources.ResourceID, entry CacheEn
 	changed |= c.scanIngressRules(x)
 	changed |= c.scanEgressRules(x)
 
-	if changed != 0 {
-		x.clog.Debug("Policy updated, notify endpoints")
-		c.queueEndpointsForRecalculation(x, changed)
-	}
-
+	x.clog.Debugf("Recalculated, returning update %d, flags now: %d", changed, x.Flags)
 	return syncer.UpdateType(changed)
 }
 
@@ -484,73 +489,74 @@ func (c *networkPolicyEngine) scanProtected(id resources.ResourceID, x *CacheEnt
 	return syncer.UpdateType(x.Flags ^ oldFlags)
 }
 
-func (c *networkPolicyEngine) queueEndpointsForRecalculation(x *CacheEntryNetworkPolicy, update syncer.UpdateType) {
-	x.SelectedPods.Iter(func(podId resources.ResourceID) error {
-		c.QueueRecalculation(podId, nil, update)
-		return nil
-	})
-	x.SelectedHostEndpoints.Iter(func(hepId resources.ResourceID) error {
-		c.QueueRecalculation(hepId, nil, update)
+func (c *networkPolicyEngine) queuePoliciesForRecalculation(update syncer.Update) {
+	// We have only registered for notifications from NetworkSets and for changes to configuration that we care about.
+	x := update.Resource.(*CacheEntryNetworkPolicyRuleSelector)
+
+	x.Policies.Iter(func(id resources.ResourceID) error {
+		c.QueueRecalculation(id, nil, update.Type)
 		return nil
 	})
 }
 
 func (c *networkPolicyEngine) ruleSelectorMatchStarted(polId, selId resources.ResourceID) {
-	p, ok := c.GetFromOurCache(polId).(*CacheEntryNetworkPolicy)
+	x, ok := c.GetFromOurCache(polId).(*CacheEntryNetworkPolicy)
 	if !ok {
 		log.Errorf("Match started on policy, but policy is not in cache: %s matches %s", polId, selId)
 		return
 	}
-	p.AllowRuleSelectors.Add(selId)
+	x.clog.Debugf("Adding %s to allowRuleSelectors for %s", selId, polId)
+	x.AllowRuleSelectors.Add(selId)
 	c.QueueRecalculation(polId, nil, EventPolicyRuleSelectorMatchStarted)
 }
 
 func (c *networkPolicyEngine) ruleSelectorMatchStopped(polId, selId resources.ResourceID) {
-	p, ok := c.GetFromOurCache(polId).(*CacheEntryNetworkPolicy)
+	x, ok := c.GetFromOurCache(polId).(*CacheEntryNetworkPolicy)
 	if !ok {
 		log.Errorf("Match stopped on policy, but policy is not in cache: %s matches %s", polId, selId)
 		return
 	}
-	p.AllowRuleSelectors.Discard(selId)
+	x.clog.Debugf("Removing %s from allowRuleSelectors for %s", selId, polId)
+	x.AllowRuleSelectors.Discard(selId)
 	c.QueueRecalculation(polId, nil, EventPolicyRuleSelectorMatchStopped)
 }
 
 func (c *networkPolicyEngine) endpointMatchStarted(policyId, epId resources.ResourceID) {
-	p, ok := c.GetFromOurCache(policyId).(*CacheEntryNetworkPolicy)
+	x, ok := c.GetFromOurCache(policyId).(*CacheEntryNetworkPolicy)
 	if !ok {
 		log.Errorf("Match started on policy, but policy is not in cache: %s matches %s", policyId, epId)
 		return
 	}
 	switch epId.GroupVersionKind {
 	case resources.ResourceTypePods:
-		// Update the pod list in our policy data and queue a recalculation.
-		if !p.SelectedPods.Contains(epId) {
-			p.SelectedPods.Add(epId)
-		}
+		// Update the pod list in our policy data. No need to queue any policy recalculations since the endpoint
+		// data does not directly affect it.
+		x.clog.Debugf("Adding %s to pods for %s", epId, policyId)
+		x.SelectedPods.Add(epId)
 	case resources.ResourceTypeHostEndpoints:
-		// Update the HEP list in our policy data and queue a recalculation.
-		if !p.SelectedHostEndpoints.Contains(epId) {
-			p.SelectedHostEndpoints.Add(epId)
-		}
+		// Update the HEP list in our policy data. No need to queue any policy recalculations since the endpoint
+		// data does not directly affect it.
+		x.clog.Debugf("Adding %s to heps for %s", epId, policyId)
+		x.SelectedHostEndpoints.Add(epId)
 	}
 }
 
 func (c *networkPolicyEngine) endpointMatchStopped(policyId, epId resources.ResourceID) {
-	p, ok := c.GetFromOurCache(policyId).(*CacheEntryNetworkPolicy)
+	x, ok := c.GetFromOurCache(policyId).(*CacheEntryNetworkPolicy)
 	if !ok {
 		log.Errorf("Match stopped on policy, but policy is not in cache: %s matches %s", policyId, epId)
 		return
 	}
 	switch epId.GroupVersionKind {
 	case resources.ResourceTypePods:
-		// Update the pod list in our policy data and queue a recalculation.
-		if p.SelectedPods.Contains(epId) {
-			p.SelectedPods.Discard(epId)
-		}
+		// Update the pod list in our policy data. No need to queue any policy recalculations since the endpoint
+		// data does not directly affect it.
+		x.clog.Debugf("Removing %s from pods for %s", epId, policyId)
+		x.SelectedPods.Discard(epId)
 	case resources.ResourceTypeHostEndpoints:
-		// Update the HEP list in our policy data and queue a recalculation.
-		if p.SelectedHostEndpoints.Contains(epId) {
-			p.SelectedHostEndpoints.Discard(epId)
-		}
+		// Update the HEP list in our policy data. No need to queue any policy recalculations since the endpoint
+		// data does not directly affect it.
+		x.clog.Debugf("Removing %s from heps for %s", epId, policyId)
+		x.SelectedHostEndpoints.Discard(epId)
 	}
 }

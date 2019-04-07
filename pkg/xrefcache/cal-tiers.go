@@ -87,8 +87,7 @@ func (c *calicoTiersEngine) resourceAdded(id resources.ResourceID, entry CacheEn
 	c.resourceUpdated(id, entry, nil)
 }
 
-func (c *calicoTiersEngine) resourceUpdated(id resources.ResourceID, entry CacheEntry, prev VersionedResource) syncer.UpdateType {
-	return 0
+func (c *calicoTiersEngine) resourceUpdated(id resources.ResourceID, entry CacheEntry, prev VersionedResource) {
 }
 
 func (c *calicoTiersEngine) resourceDeleted(id resources.ResourceID, _ CacheEntry) {

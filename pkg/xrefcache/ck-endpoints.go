@@ -48,6 +48,7 @@ type CacheEntryEndpoint struct {
 
 	// --- Internal data ---
 	cacheEntryCommon
+	clog *log.Entry
 }
 
 // getVersionedResource implements the CacheEntry interface.
@@ -133,6 +134,16 @@ func (c *endpointEngine) kinds() []schema.GroupVersionKind {
 func (c *endpointEngine) register(cache engineCache) {
 	c.engineCache = cache
 	c.EndpointLabelSelector().RegisterCallbacks(c.kinds(), c.policyMatchStarted, c.policyMatchStopped)
+
+	// Register for updates for all NetworkPolicy events. We don't care about Added/Deleted/Updated events as any
+	// changes to the cross-referencing will result in a notification here where we will requeue any changed endpoints.
+	for _, kind := range KindsNetworkPolicy {
+		c.RegisterOnUpdateHandler(
+			kind,
+			syncer.UpdateType(CacheEntryFlagsNetworkPolicy),
+			c.queueEndpointsForRecalculation,
+		)
+	}
 }
 
 // newCacheEntry implements the resourceCacheEngine interface.
@@ -185,21 +196,18 @@ func (c *endpointEngine) convertToVersioned(res resources.Resource) (VersionedRe
 
 // resourceAdded implements the resourceCacheEngine interface.
 func (c *endpointEngine) resourceAdded(id resources.ResourceID, entry CacheEntry) {
-	_ = c.resourceUpdated(id, entry, nil)
+	x := entry.(*CacheEntryEndpoint)
+	x.clog = log.WithField("id", id)
+	c.resourceUpdated(id, entry, nil)
 }
 
 // resourceUpdated implements the resourceCacheEngine interface.
-func (c *endpointEngine) resourceUpdated(id resources.ResourceID, entry CacheEntry, prev VersionedResource) syncer.UpdateType {
+func (c *endpointEngine) resourceUpdated(id resources.ResourceID, entry CacheEntry, prev VersionedResource) {
 	x := entry.(*CacheEntryEndpoint)
 
 	// Update the labels associated with this pod. Use the labels and profile from the v1 model since these are
 	// modified to include namespace and service account details.
 	c.EndpointLabelSelector().UpdateLabels(id, x.getV1Labels(), x.getV1Profiles())
-
-	// These is no pod data that is calculated directly from the pod settings, it is all calculated as a result of
-	// cross referenced data and is therefore handled by the asynchronous recalculation callback.
-	//TODO(rlb): this will change when we add envoy enabled stats
-	return 0
 }
 
 // resourceDeleted implements the resourceCacheEngine interface.
@@ -209,22 +217,22 @@ func (c *endpointEngine) resourceDeleted(id resources.ResourceID, _ CacheEntry) 
 }
 
 // recalculate implements the resourceCacheEngine interface.
-func (c *endpointEngine) recalculate(podId resources.ResourceID, podEntry CacheEntry) syncer.UpdateType {
-	pod := podEntry.(*CacheEntryEndpoint)
+func (c *endpointEngine) recalculate(podId resources.ResourceID, epEntry CacheEntry) syncer.UpdateType {
+	x := epEntry.(*CacheEntryEndpoint)
 
 	// ------
 	// See note in flags.go for details of the bitwise operations for boolean values and their associated update type.
 	// ------
 
 	// Store the current set of flags.
-	oldFlags := pod.Flags
+	oldFlags := x.Flags
 
 	// Clear the set of flags that will be reset from the applied network Policies.
-	pod.Flags &^= CacheEntryEndpointAndNetworkPolicy
+	x.Flags &^= CacheEntryEndpointAndNetworkPolicy
 
 	// Iterate through the applied network Policies and recalculate the flags that the network policy applies to the
-	// pod.
-	pod.AppliedPolicies.Iter(func(polId resources.ResourceID) error {
+	// x.
+	x.AppliedPolicies.Iter(func(polId resources.ResourceID) error {
 		policy, ok := c.GetFromXrefCache(polId).(*CacheEntryNetworkPolicy)
 
 		if !ok {
@@ -234,20 +242,35 @@ func (c *endpointEngine) recalculate(podId resources.ResourceID, podEntry CacheE
 			return nil
 		}
 
-		// The pod flags are the combined set of flags from the applied Policies filtered by the allowed set of
+		// The x flags are the combined set of flags from the applied Policies filtered by the allowed set of
 		// flags for a Pod.
-		pod.Flags |= policy.Flags & CacheEntryEndpointAndNetworkPolicy
+		x.Flags |= policy.Flags & CacheEntryEndpointAndNetworkPolicy
 
-		// If all flags that the policy can set in the pod are now set then exit without checking the other Policies.
-		if pod.Flags&CacheEntryEndpointAndNetworkPolicy == CacheEntryEndpointAndNetworkPolicy {
+		// If all flags that the policy can set in the x are now set then exit without checking the other Policies.
+		if x.Flags&CacheEntryEndpointAndNetworkPolicy == CacheEntryEndpointAndNetworkPolicy {
 			return resources.StopIteration
 		}
 
 		return nil
 	})
 
-	// Return the delta between the old and new flags as a set up UpdataeType flags.
-	return syncer.UpdateType(oldFlags ^ pod.Flags)
+	// Return the delta between the old and new flags as a set up UpdateType flags.
+	changed := syncer.UpdateType(oldFlags ^ x.Flags)
+	x.clog.Debugf("Recalculated, returning update: %d", changed)
+
+	return changed
+}
+
+func (c *endpointEngine) queueEndpointsForRecalculation(update syncer.Update) {
+	x := update.Resource.(*CacheEntryNetworkPolicy)
+	x.SelectedPods.Iter(func(podId resources.ResourceID) error {
+		c.QueueRecalculation(podId, nil, update.Type)
+		return nil
+	})
+	x.SelectedHostEndpoints.Iter(func(hepId resources.ResourceID) error {
+		c.QueueRecalculation(hepId, nil, update.Type)
+		return nil
+	})
 }
 
 // policyMatchStarted is called synchronously from the policy or pod resource update methods when a policy<->pod match
@@ -262,10 +285,8 @@ func (c *endpointEngine) policyMatchStarted(policyId, podId resources.ResourceID
 		return
 	}
 	// Update the policy list in our pod data and queue a recalculation.
-	if !p.AppliedPolicies.Contains(policyId) {
-		p.AppliedPolicies.Add(policyId)
-		c.QueueRecalculation(podId, p, EventPolicyMatchStarted)
-	}
+	p.AppliedPolicies.Add(policyId)
+	c.QueueRecalculation(podId, p, EventPolicyMatchStarted)
 }
 
 // policyMatchStopped is called synchronously from the policy or pod resource update methods when a policy<->pod match
@@ -280,8 +301,6 @@ func (c *endpointEngine) policyMatchStopped(policyId, podId resources.ResourceID
 		return
 	}
 	// Update the policy list in our pod data and queue a recalculation.
-	if p.AppliedPolicies.Contains(policyId) {
-		p.AppliedPolicies.Discard(policyId)
-		c.QueueRecalculation(podId, p, EventPolicyMatchStopped)
-	}
+	p.AppliedPolicies.Discard(policyId)
+	c.QueueRecalculation(podId, p, EventPolicyMatchStopped)
 }

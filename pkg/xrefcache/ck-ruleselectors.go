@@ -59,6 +59,7 @@ type CacheEntryNetworkPolicyRuleSelector struct {
 
 	// --- Internal data ---
 	cacheEntryCommon
+	clog *log.Entry
 }
 
 // getVersionedResource implements the CacheEntry interface.
@@ -88,6 +89,16 @@ func (c *networkPolicyRuleSelectorsEngine) register(cache engineCache) {
 	// Register with the netset label selectors for notification of match start/stops.
 	c.NetworkSetLabelSelector().RegisterCallbacks(c.kinds(), c.netsetMatchStarted, c.netsetMatchStopped)
 	c.NetworkPolicyRuleSelectorManager().RegisterCallbacks(c.policyMatchStarted, c.policyMatchStopped)
+
+	// Register for updates for all NetworkSet events. We don't care about Added/Deleted/Updated events as any changes
+	// to the cross-referencing will result in a notification here where we will requeue any changed rule selectors.
+	for _, kind := range KindsNetworkSet {
+		c.RegisterOnUpdateHandler(
+			kind,
+			syncer.UpdateType(CacheEntryFlagsNetworkSets),
+			c.queueRuleSelectorsForRecalculation,
+		)
+	}
 }
 
 // register implements the resourceCacheEngine interface.
@@ -106,13 +117,13 @@ func (c *networkPolicyRuleSelectorsEngine) newCacheEntry() CacheEntry {
 // resourceAdded implements the resourceCacheEngine interface.
 func (c *networkPolicyRuleSelectorsEngine) resourceAdded(id resources.ResourceID, entry CacheEntry) {
 	// Just call through to our update processsing.
+	entry.(*CacheEntryNetworkPolicyRuleSelector).clog = log.WithField("id", id)
 	c.resourceUpdated(id, entry, nil)
 }
 
 // resourceUpdated implements the resourceCacheEngine interface.
-func (c *networkPolicyRuleSelectorsEngine) resourceUpdated(id resources.ResourceID, entry CacheEntry, prev VersionedResource) syncer.UpdateType {
+func (c *networkPolicyRuleSelectorsEngine) resourceUpdated(id resources.ResourceID, entry CacheEntry, prev VersionedResource) {
 	c.NetworkSetLabelSelector().UpdateSelector(id, selectorIDToSelector(id))
-	return 0
 }
 
 // resourceDeleted implements the resourceCacheEngine interface.
@@ -122,32 +133,24 @@ func (c *networkPolicyRuleSelectorsEngine) resourceDeleted(id resources.Resource
 
 // recalculate implements the resourceCacheEngine interface.
 func (c *networkPolicyRuleSelectorsEngine) recalculate(id resources.ResourceID, entry CacheEntry) syncer.UpdateType {
-	sel := entry.(*CacheEntryNetworkPolicyRuleSelector)
+	x := entry.(*CacheEntryNetworkPolicyRuleSelector)
 
 	// Store and clear the effective set of Netset flags.
-	oldFlags := sel.NetworkSetFlags
-	sel.NetworkSetFlags = 0
-	sel.NetworkSets.Iter(func(nsid resources.ResourceID) error {
+	oldFlags := x.NetworkSetFlags
+	x.NetworkSetFlags = 0
+	x.NetworkSets.Iter(func(nsid resources.ResourceID) error {
 		netset := c.GetFromXrefCache(nsid)
 		if netset == nil {
 			log.Errorf("Cannot find referenced NetworkSet in cache when recalculating rule selector flags")
 			return nil
 		}
-		sel.NetworkSetFlags |= netset.(*CacheEntryCalicoNetworkSet).Flags
+		x.NetworkSetFlags |= netset.(*CacheEntryCalicoNetworkSet).Flags
 		return nil
 	})
 
-	changed := syncer.UpdateType(oldFlags ^ sel.NetworkSetFlags)
+	changed := syncer.UpdateType(oldFlags ^ x.NetworkSetFlags)
 
-	//TODO(rlb): This should really be done by registered callbacks. Same with netset and policy...
-	if changed != 0 {
-		// The effective settings of the NetworkSet flags for this rule selector have changed. Trigger a recalculation
-		// of affected Policies.
-		sel.Policies.Iter(func(pid resources.ResourceID) error {
-			c.QueueRecalculation(pid, nil, changed)
-			return nil
-		})
-	}
+	x.clog.Debugf("Recalculated, returning update %d, flags now: %d", changed, x.NetworkSetFlags)
 	return changed
 }
 
@@ -156,12 +159,23 @@ func (c *networkPolicyRuleSelectorsEngine) convertToVersioned(res resources.Reso
 	return nil, nil
 }
 
+func (c *networkPolicyRuleSelectorsEngine) queueRuleSelectorsForRecalculation(update syncer.Update) {
+	// We have only registered for notifications from NetworkSets and for changes to configuration that we care about.
+	x := update.Resource.(*CacheEntryCalicoNetworkSet)
+
+	x.PolicyRuleSelectors.Iter(func(id resources.ResourceID) error {
+		c.QueueRecalculation(id, nil, update.Type)
+		return nil
+	})
+}
+
 func (c *networkPolicyRuleSelectorsEngine) netsetMatchStarted(sel, nsLabels resources.ResourceID) {
 	x, ok := c.GetFromOurCache(sel).(*CacheEntryNetworkPolicyRuleSelector)
 	if !ok {
 		log.Errorf("Match started on selector, but selector is not in cache: %s matches %s", sel, nsLabels)
 		return
 	}
+	x.clog.Debugf("Adding %s to networksets for %s", nsLabels, sel)
 	x.NetworkSets.Add(nsLabels)
 	c.QueueRecalculation(sel, nil, EventNetsetMatchStarted)
 }
@@ -172,6 +186,7 @@ func (c *networkPolicyRuleSelectorsEngine) netsetMatchStopped(sel, nsLabels reso
 		log.Errorf("Match stopped on selector, but selector is not in cache: %s matches %s", sel, nsLabels)
 		return
 	}
+	x.clog.Debugf("Removing %s to networksets for %s", nsLabels, sel)
 	x.NetworkSets.Discard(nsLabels)
 	c.QueueRecalculation(sel, nil, EventNetsetMatchStopped)
 }
@@ -182,6 +197,7 @@ func (c *networkPolicyRuleSelectorsEngine) policyMatchStarted(pol, sel resources
 		log.Errorf("Match started on selector, but selector is not in cache: %s matches %s", sel, pol)
 		return
 	}
+	x.clog.Debugf("Adding %s to policies for %s", pol, sel)
 	x.Policies.Add(pol)
 }
 
@@ -191,5 +207,6 @@ func (c *networkPolicyRuleSelectorsEngine) policyMatchStopped(pol, sel resources
 		log.Errorf("Match stopped on selector, but selector is not in cache: %s matches %s", sel, pol)
 		return
 	}
+	x.clog.Debugf("Removing %s from policies for %s", pol, sel)
 	x.Policies.Discard(pol)
 }

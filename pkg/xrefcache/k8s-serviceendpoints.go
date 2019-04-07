@@ -90,8 +90,7 @@ func (c *K8sServiceEndpointsEngine) resourceAdded(id resources.ResourceID, entry
 	c.resourceUpdated(id, entry, nil)
 }
 
-func (c *K8sServiceEndpointsEngine) resourceUpdated(id resources.ResourceID, entry CacheEntry, prev VersionedResource) syncer.UpdateType {
-	return 0
+func (c *K8sServiceEndpointsEngine) resourceUpdated(id resources.ResourceID, entry CacheEntry, prev VersionedResource) {
 }
 
 func (c *K8sServiceEndpointsEngine) resourceDeleted(id resources.ResourceID, entry CacheEntry) {

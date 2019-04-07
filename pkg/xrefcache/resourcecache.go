@@ -8,6 +8,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
+	"github.com/tigera/compliance/pkg/dispatcher"
 	"github.com/tigera/compliance/pkg/labelselector"
 	"github.com/tigera/compliance/pkg/resources"
 	"github.com/tigera/compliance/pkg/syncer"
@@ -22,6 +23,10 @@ type engineCache interface {
 	EndpointLabelSelector() labelselector.Interface
 	NetworkSetLabelSelector() labelselector.Interface
 	NetworkPolicyRuleSelectorManager() NetworkPolicyRuleSelectorManager
+
+	// Register for updates for other resource types. This registers with the xref cache dispatcher, so the updates
+	// will be CacheEntry types and the available updateTypes are defined by the events in flags.go.
+	RegisterOnUpdateHandler(kind schema.GroupVersionKind, updateTypes syncer.UpdateType, callback dispatcher.DispatcherOnUpdate)
 
 	// Queue the specified resource for async recalculation. If the CacheEntry is specified, it should match the
 	// ResourceID. If no CacheEntry is specified, it will be looked up.
@@ -55,7 +60,7 @@ type resourceCacheEngine interface {
 	// VersionedResource created from the syncer event. The method should return the set of updates for any changes that
 	// occurred as an immediate result of this method invocation. Generally, this method should only update
 	// configuration that is directly determined from the VersionedResource and not from related resources.
-	resourceUpdated(id resources.ResourceID, entry CacheEntry, prev VersionedResource) syncer.UpdateType
+	resourceUpdated(id resources.ResourceID, entry CacheEntry, prev VersionedResource)
 
 	// resourceDeleted is called from a syncer delete event *before* the CacheEntry has been deleted. The entry
 	// will be deleted immediately after returning from this method invocation.
@@ -115,12 +120,12 @@ func (c *resourceCache) onNewOrUpdated(id resources.ResourceID, res resources.Re
 		prev := entry.getVersionedResource()
 		entry.setVersionedResource(v)
 
-		// Call through to the engine to perform any additional processing for this resource update.
-		update := c.engine.resourceUpdated(id, entry, prev)
-
 		// Set the update type flag for this update, this prevents the update being sent by any callback processing
 		// until the resourceUpdated() call returns.
-		c.xc.queueRecalculation(id, entry, EventResourceModified|update)
+		c.xc.queueRecalculation(id, entry, EventResourceModified)
+
+		// Call through to the engine to perform any additional processing for this resource update.
+		c.engine.resourceUpdated(id, entry, prev)
 	} else {
 		log.Debugf("Add new resource to cache: %s", id)
 		// Create a new cache entry and set the versioned resource.
@@ -128,18 +133,21 @@ func (c *resourceCache) onNewOrUpdated(id resources.ResourceID, res resources.Re
 		c.resources[id] = entry
 		entry.setVersionedResource(v)
 
+		// Requeue this resource for recalculation.
+		c.xc.queueRecalculation(id, entry, EventResourceAdded)
+
 		// Call through to the engine to perform any additional processing for this resource creation, in particular
 		// setting up any xrefs. Calculation of data is performed asynchronously.
 		c.engine.resourceAdded(id, entry)
-
-		// Requeue this resource for recalculation.
-		c.xc.queueRecalculation(id, entry, EventResourceAdded)
 	}
 }
 
 func (c *resourceCache) onDeleted(id resources.ResourceID) {
 	log.Debugf("Deleting resource from cache: %s", id)
 	if entry, ok := c.resources[id]; ok {
+		// Add this to the queue.
+		c.xc.queueRecalculation(id, entry, EventResourceAdded)
+
 		// Call through to the engine to perform any additional processing for this resource creation.
 		c.engine.resourceDeleted(id, entry)
 
@@ -154,7 +162,7 @@ func (c *resourceCache) get(id resources.ResourceID) CacheEntry {
 
 func (c *resourceCache) dumpResourcesAsUpdate() {
 	for id, augRes := range c.resources {
-		c.xc.cacheDispatcher.OnUpdate(syncer.Update{
+		c.xc.consumerDispatcher.OnUpdate(syncer.Update{
 			ResourceID: id,
 			Resource:   augRes,
 			Type:       EventResourceAdded,
@@ -220,4 +228,8 @@ func (c *resourceEngineCache) NetworkPolicyRuleSelectorManager() NetworkPolicyRu
 
 func (c *resourceEngineCache) QueueRecalculation(id resources.ResourceID, entry CacheEntry, update syncer.UpdateType) {
 	c.xc.queueRecalculation(id, entry, update)
+}
+
+func (c *resourceEngineCache) RegisterOnUpdateHandler(kind schema.GroupVersionKind, updateTypes syncer.UpdateType, callback dispatcher.DispatcherOnUpdate) {
+	c.xc.cacheDispatcher.RegisterOnUpdateHandler(kind, updateTypes, callback)
 }
