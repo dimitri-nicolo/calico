@@ -115,12 +115,12 @@ func (c *resourceCache) onNewOrUpdated(id resources.ResourceID, res resources.Re
 		prev := entry.getVersionedResource()
 		entry.setVersionedResource(v)
 
+		// Call through to the engine to perform any additional processing for this resource update.
+		update := c.engine.resourceUpdated(id, entry, prev)
+
 		// Set the update type flag for this update, this prevents the update being sent by any callback processing
 		// until the resourceUpdated() call returns.
-		c.xc.queueRecalculation(id, entry, EventResourceModified)
-
-		// Call through to the engine to perform any additional processing for this resource update.
-		c.engine.resourceUpdated(id, entry, prev)
+		c.xc.queueRecalculation(id, entry, EventResourceModified|update)
 	} else {
 		log.Debugf("Add new resource to cache: %s", id)
 		// Create a new cache entry and set the versioned resource.
@@ -128,22 +128,18 @@ func (c *resourceCache) onNewOrUpdated(id resources.ResourceID, res resources.Re
 		c.resources[id] = entry
 		entry.setVersionedResource(v)
 
-		// Set the update type flag for this update, this prevents the update being sent by any callback processing
-		// until the resourceUpdated() call returns.
-		c.xc.queueRecalculation(id, entry, EventResourceAdded)
-
-		// Call through to the engine to perform any additional processing for this resource creation.
+		// Call through to the engine to perform any additional processing for this resource creation, in particular
+		// setting up any xrefs. Calculation of data is performed asynchronously.
 		c.engine.resourceAdded(id, entry)
+
+		// Requeue this resource for recalculation.
+		c.xc.queueRecalculation(id, entry, EventResourceAdded)
 	}
 }
 
 func (c *resourceCache) onDeleted(id resources.ResourceID) {
 	log.Debugf("Deleting resource from cache: %s", id)
 	if entry, ok := c.resources[id]; ok {
-		// Set the update type flag for this update, this prevents the update being sent by any callback processing
-		// until the resourceUpdated() call returns.
-		c.xc.queueRecalculation(id, entry, EventResourceDeleted)
-
 		// Call through to the engine to perform any additional processing for this resource creation.
 		c.engine.resourceDeleted(id, entry)
 

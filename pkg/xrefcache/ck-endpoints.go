@@ -78,7 +78,7 @@ func (v *versionedK8sPod) getV1() interface{} {
 }
 
 // getLabels implements the VersionedEndpointResource interface.
-func (v *versionedK8sPod) getLabels() map[string]string {
+func (v *versionedK8sPod) getV1Labels() map[string]string {
 	return v.v1.Labels
 }
 
@@ -104,7 +104,7 @@ func (v *versionedCalicoHostEndpoint) getV1() interface{} {
 }
 
 // getLabels implements the VersionedEndpointResource interface.
-func (v *versionedCalicoHostEndpoint) getLabels() map[string]string {
+func (v *versionedCalicoHostEndpoint) getV1Labels() map[string]string {
 	return v.v1.Labels
 }
 

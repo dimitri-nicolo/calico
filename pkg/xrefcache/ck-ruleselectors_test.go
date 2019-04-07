@@ -215,7 +215,7 @@ var _ = Describe("Basic CRUD of network policies rule selector pseudo resource t
 		Expect(ids).To(HaveLen(0))
 	})
 
-	It("should handle Netset-RuleSelector-Polify linkages and config calculation", func() {
+	It("should handle Netset-RuleSelector-Policy linkages and config calculation", func() {
 		By("applying gnp1, with an ingress allow all() rule")
 		tester.SetGlobalNetworkPolicy(Name1, SelectAll,
 			[]apiv3.Rule{

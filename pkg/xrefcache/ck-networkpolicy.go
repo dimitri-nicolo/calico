@@ -235,9 +235,7 @@ func (c *networkPolicyEngine) resourceUpdated(id resources.ResourceID, entry Cac
 	// Update the label selectors for the policy rules.
 	c.updateRuleSelectors(id, x)
 
-	// Check for changes to the policy configuration that do not depend on any label selection (since updates from that
-	// will be handled via asynchronous recalculation to avoid churn).
-	return c.scanProtected(id, x)
+	return 0
 }
 
 // resourceDeleted implements the resourceCacheEngine interface.
@@ -252,9 +250,18 @@ func (c *networkPolicyEngine) resourceDeleted(id resources.ResourceID, res Cache
 // recalculate implements the resourceCacheEngine interface.
 func (c *networkPolicyEngine) recalculate(id resources.ResourceID, entry CacheEntry) syncer.UpdateType {
 	// Async recalculation is required due to any rule/selector updates.
-	np := entry.(*CacheEntryNetworkPolicy)
-	changed := c.scanIngressRules(np)
-	changed |= c.scanEgressRules(np)
+	x := entry.(*CacheEntryNetworkPolicy)
+
+	// Update the internal view of our data.
+	changed := c.scanProtected(id, x)
+	changed |= c.scanIngressRules(x)
+	changed |= c.scanEgressRules(x)
+
+	if changed != 0 {
+		x.clog.Debug("Policy updated, notify endpoints")
+		c.queueEndpointsForRecalculation(x, changed)
+	}
+
 	return syncer.UpdateType(changed)
 }
 
@@ -475,6 +482,17 @@ func (c *networkPolicyEngine) scanProtected(id resources.ResourceID, x *CacheEnt
 	}
 
 	return syncer.UpdateType(x.Flags ^ oldFlags)
+}
+
+func (c *networkPolicyEngine) queueEndpointsForRecalculation(x *CacheEntryNetworkPolicy, update syncer.UpdateType) {
+	x.SelectedPods.Iter(func(podId resources.ResourceID) error {
+		c.QueueRecalculation(podId, nil, update)
+		return nil
+	})
+	x.SelectedHostEndpoints.Iter(func(hepId resources.ResourceID) error {
+		c.QueueRecalculation(hepId, nil, update)
+		return nil
+	})
 }
 
 func (c *networkPolicyEngine) ruleSelectorMatchStarted(polId, selId resources.ResourceID) {

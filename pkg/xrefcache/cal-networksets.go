@@ -127,8 +127,7 @@ func (c *calicoNetworkSetEngine) resourceUpdated(id resources.ResourceID, entry 
 	// links before we start sending updates.
 	c.NetworkSetLabelSelector().UpdateLabels(id, x.getV1NetworkSet().Labels, nil)
 
-	// Determine whether this network set contains any internet addresses.
-	return c.scanNets(x)
+	return 0
 }
 
 // resourceDeleted implements the resourceCacheEngine interface.
@@ -137,9 +136,22 @@ func (c *calicoNetworkSetEngine) resourceDeleted(id resources.ResourceID, entry 
 }
 
 // recalculate implements the resourceCacheEngine interface.
-func (c *calicoNetworkSetEngine) recalculate(podId resources.ResourceID, podEntry CacheEntry) syncer.UpdateType {
-	// We calculate all state in the resourceUpdated/resourceAdded callbacks.
-	return 0
+func (c *calicoNetworkSetEngine) recalculate(id resources.ResourceID, entry CacheEntry) syncer.UpdateType {
+	x := entry.(*CacheEntryCalicoNetworkSet)
+
+	// Determine whether this network set contains any internet addresses.
+	changed := c.scanNets(x)
+
+	// If the settings have changed, then trigger recalculations of matching selectors which will in turn fanout to
+	// the appropriate Policies for recalculation, and then on to the endpoints.
+	if changed != 0 {
+		x.PolicyRuleSelectors.Iter(func(id resources.ResourceID) error {
+			c.QueueRecalculation(id, nil, changed)
+			return nil
+		})
+	}
+
+	return changed
 }
 
 // convertToVersioned implements the resourceCacheEngine interface.
@@ -175,15 +187,6 @@ func (c *calicoNetworkSetEngine) scanNets(x *CacheEntryCalicoNetworkSet) syncer.
 
 	// Determine flags that have changed, and convert to an update type. See notes in flags.go.
 	changed := syncer.UpdateType(old ^ x.Flags)
-
-	// If the settings have changed, then trigger recalculations of matching selectors which will in turn fanout to
-	// the appropriate Policies for recalculation, and then on to the endpoints.
-	if changed != 0 {
-		x.PolicyRuleSelectors.Iter(func(id resources.ResourceID) error {
-			c.QueueRecalculation(id, nil, changed)
-			return nil
-		})
-	}
 
 	// Return which flags have changed and return as an update type. See notes in flags.go.
 	return changed

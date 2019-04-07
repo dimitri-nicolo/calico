@@ -31,6 +31,37 @@ var (
 	}
 )
 
+func ipByteToIPString(ip IP) string {
+	switch ip {
+	case IP1:
+		return "192.168.0.0"
+	case IP2:
+		return "192.168.0.1"
+	case IP3:
+		return "192.168.10.0"
+	case IP4:
+		return "192.168.10.1"
+	}
+	return ""
+}
+
+func ipByteToIPStringSlice(ip IP) []string {
+	var ips []string
+	if ip&IP1 != 0 {
+		ips = append(ips, ipByteToIPString(IP1))
+	}
+	if ip&IP2 != 0 {
+		ips = append(ips, ipByteToIPString(IP2))
+	}
+	if ip&IP3 != 0 {
+		ips = append(ips, ipByteToIPString(IP3))
+	}
+	if ip&IP4 != 0 {
+		ips = append(ips, ipByteToIPString(IP4))
+	}
+	return ips
+}
+
 func labelByteToLabels(l Label) map[string]string {
 	labels := make(map[string]string)
 	for i := uint(0); i < 8; i++ {
@@ -131,16 +162,16 @@ type XRefCacheTester struct {
 // -- HostEndpoint access --
 //
 
-func (t *XRefCacheTester) GetHostEndpoint(nameIdx Name) *xrefcache.CacheEntryCalicoNetworkSet {
+func (t *XRefCacheTester) GetHostEndpoint(nameIdx Name) *xrefcache.CacheEntryEndpoint {
 	r := getResourceId(resources.ResourceTypeHostEndpoints, nameIdx, 0)
 	e := t.xrefCache.Get(r)
 	if e == nil {
 		return nil
 	}
-	return e.(*xrefcache.CacheEntryCalicoNetworkSet)
+	return e.(*xrefcache.CacheEntryEndpoint)
 }
 
-func (t *XRefCacheTester) SetHostEndpoint(nameIdx Name, labels Label, nets []string) {
+func (t *XRefCacheTester) SetHostEndpoint(nameIdx Name, labels Label, ips IP) {
 	r := getResourceId(resources.ResourceTypeHostEndpoints, nameIdx, 0)
 	t.xrefCache.OnUpdate(syncer.Update{
 		Type:       syncer.UpdateTypeSet,
@@ -148,7 +179,10 @@ func (t *XRefCacheTester) SetHostEndpoint(nameIdx Name, labels Label, nets []str
 		Resource: &apiv3.HostEndpoint{
 			TypeMeta:   getTypeMeta(r),
 			ObjectMeta: getObjectMeta(r, labels),
-			Spec:       apiv3.HostEndpointSpec{},
+			Spec: apiv3.HostEndpointSpec{
+				Node:        "node1",
+				ExpectedIPs: ipByteToIPStringSlice(ips),
+			},
 		},
 	})
 }
@@ -388,15 +422,26 @@ func (t *XRefCacheTester) GetPod(nameIdx Name, namespaceIdx Namespace) *xrefcach
 	return e.(*xrefcache.CacheEntryEndpoint)
 }
 
-func (t *XRefCacheTester) SetPod(nameIdx Name, namespaceIdx Namespace, labels Label, ip string) {
+func (t *XRefCacheTester) SetPod(nameIdx Name, namespaceIdx Namespace, labels Label, ip IP, serviceAccount Name, opts PodOpt) {
 	r := getResourceId(resources.ResourceTypePods, nameIdx, namespaceIdx)
+	var sa string
+	if serviceAccount != 0 {
+		sr := getResourceId(resources.ResourceTypeServiceAccounts, serviceAccount, namespaceIdx)
+		sa = sr.Name
+	}
 	t.xrefCache.OnUpdate(syncer.Update{
 		Type:       syncer.UpdateTypeSet,
 		ResourceID: r,
 		Resource: &corev1.Pod{
 			TypeMeta:   getTypeMeta(r),
 			ObjectMeta: getObjectMeta(r, labels),
-			Spec:       corev1.PodSpec{},
+			Spec: corev1.PodSpec{
+				NodeName:           "node1",
+				ServiceAccountName: sa,
+			},
+			Status: corev1.PodStatus{
+				PodIP: ipByteToIPString(ip),
+			},
 		},
 	})
 }

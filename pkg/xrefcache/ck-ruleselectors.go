@@ -139,7 +139,7 @@ func (c *networkPolicyRuleSelectorsEngine) recalculate(id resources.ResourceID, 
 
 	changed := syncer.UpdateType(oldFlags ^ sel.NetworkSetFlags)
 
-	//TODO(rlb): This should really be done by registered callbacks
+	//TODO(rlb): This should really be done by registered callbacks. Same with netset and policy...
 	if changed != 0 {
 		// The effective settings of the NetworkSet flags for this rule selector have changed. Trigger a recalculation
 		// of affected Policies.

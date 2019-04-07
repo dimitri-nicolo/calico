@@ -27,6 +27,8 @@ const (
 	NoSelector          = Selector(0)
 	NoNamespaceSelector = Selector(0)
 	NoNamespace         = Namespace(0)
+	NoPodOptions        = PodOpt(0)
+	NoServiceAccount    = Name(0)
 
 	// Other special values
 	SelectAll = Selector(255)
@@ -69,4 +71,19 @@ type Net byte
 const (
 	Public Net = 1 << iota
 	Private
+)
+
+type IP byte
+
+const (
+	IP1 IP = 1 << iota
+	IP2
+	IP3
+	IP4
+)
+
+type PodOpt byte
+
+const (
+	PodOptEnvoyEnabled PodOpt = 1 << iota
 )
