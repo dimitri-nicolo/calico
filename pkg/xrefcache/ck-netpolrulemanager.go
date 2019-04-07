@@ -19,7 +19,7 @@ type NPRSMatchStopped func(policy, selector resources.ResourceID)
 // any policy needs a particular selector to be tracked.
 type NetworkPolicyRuleSelectorManager interface {
 	RegisterCallbacks(onMatchStarted NPRSMatchStarted, onMatchStopped NPRSMatchStopped)
-	SetPolicyRuleSelectors(policy resources.ResourceID, selectors resources.Set) (changed bool)
+	SetPolicyRuleSelectors(policy resources.ResourceID, selectors resources.Set)
 	DeletePolicy(policy resources.ResourceID)
 }
 
@@ -55,9 +55,7 @@ func (m *networkPolicyRuleSelectorManager) RegisterCallbacks(onMatchStarted NPRS
 }
 
 // SetPolicyRuleSelectors sets the rule selectors that need to be tracked by a policy resource.
-func (m *networkPolicyRuleSelectorManager) SetPolicyRuleSelectors(p resources.ResourceID, s resources.Set) bool {
-	var changed bool
-
+func (m *networkPolicyRuleSelectorManager) SetPolicyRuleSelectors(p resources.ResourceID, s resources.Set) {
 	// If we have not seen this policy before then add it now
 	currentSelectors, ok := m.selectorsByPolicy[p]
 	if !ok {
@@ -68,13 +66,11 @@ func (m *networkPolicyRuleSelectorManager) SetPolicyRuleSelectors(p resources.Re
 		func(old resources.ResourceID) error {
 			// Stop tracking old selectors for this policy.
 			m.matchStopped(p, old)
-			changed = true
 			return nil
 		},
 		func(new resources.ResourceID) error {
 			// Start tracking new selectors for this policy.
 			m.matchStarted(p, new)
-			changed = true
 			return nil
 		},
 	)
@@ -82,7 +78,6 @@ func (m *networkPolicyRuleSelectorManager) SetPolicyRuleSelectors(p resources.Re
 	// Replace the set of selectors for this policy.
 	m.selectorsByPolicy[p] = s
 
-	return changed
 }
 
 func (m *networkPolicyRuleSelectorManager) matchStarted(p, s resources.ResourceID) {

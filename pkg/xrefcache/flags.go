@@ -45,6 +45,8 @@ const (
 	EventPolicyMatchStopped
 	EventNetsetMatchStarted
 	EventNetsetMatchStopped
+	EventServiceAdded
+	EventServiceDeleted
 
 	// ----- Added by the generic cache processing -----
 	EventResourceAdded

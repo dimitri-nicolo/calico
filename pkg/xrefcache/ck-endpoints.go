@@ -46,6 +46,9 @@ type CacheEntryEndpoint struct {
 	// Policies applied to this pod.
 	AppliedPolicies resources.Set
 
+	// Services whose endpoints include this endpoint
+	Services resources.Set
+
 	// --- Internal data ---
 	cacheEntryCommon
 	clog *log.Entry
@@ -134,6 +137,7 @@ func (c *endpointEngine) kinds() []schema.GroupVersionKind {
 func (c *endpointEngine) register(cache engineCache) {
 	c.engineCache = cache
 	c.EndpointLabelSelector().RegisterCallbacks(c.kinds(), c.policyMatchStarted, c.policyMatchStopped)
+	c.IPManager().RegisterCallbacks(c.ipMatchStarted, c.ipMatchStopped)
 
 	// Register for updates for all NetworkPolicy events. We don't care about Added/Deleted/Updated events as any
 	// changes to the cross-referencing will result in a notification here where we will requeue any changed endpoints.
@@ -277,7 +281,7 @@ func (c *endpointEngine) queueEndpointsForRecalculation(update syncer.Update) {
 // has started. We update  our set of applied Policies and then queue for asynchronous recalculation - this ensures we
 // wait until all related changes to have occurred further up the casading chain of events before we recalculate.
 func (c *endpointEngine) policyMatchStarted(policyId, podId resources.ResourceID) {
-	p, ok := c.GetFromOurCache(podId).(*CacheEntryEndpoint)
+	x, ok := c.GetFromOurCache(podId).(*CacheEntryEndpoint)
 	if !ok {
 		// This is called synchronously from the resource update methods, so we don't expect the entries to have been
 		// removed from the cache at this point.
@@ -285,15 +289,15 @@ func (c *endpointEngine) policyMatchStarted(policyId, podId resources.ResourceID
 		return
 	}
 	// Update the policy list in our pod data and queue a recalculation.
-	p.AppliedPolicies.Add(policyId)
-	c.QueueRecalculation(podId, p, EventPolicyMatchStarted)
+	x.AppliedPolicies.Add(policyId)
+	c.QueueRecalculation(podId, x, EventPolicyMatchStarted)
 }
 
 // policyMatchStopped is called synchronously from the policy or pod resource update methods when a policy<->pod match
 // has stopped. We update  our set of applied Policies and then queue for asynchronous recalculation - this ensures we
 // wait until all related changes to have occurred further up the chain of events before we recalculate.
 func (c *endpointEngine) policyMatchStopped(policyId, podId resources.ResourceID) {
-	p, ok := c.GetFromOurCache(podId).(*CacheEntryEndpoint)
+	x, ok := c.GetFromOurCache(podId).(*CacheEntryEndpoint)
 	if !ok {
 		// This is called synchronously from the resource update methods, so we don't expect the entries to have been
 		// removed from the cache at this point.
@@ -301,6 +305,38 @@ func (c *endpointEngine) policyMatchStopped(policyId, podId resources.ResourceID
 		return
 	}
 	// Update the policy list in our pod data and queue a recalculation.
-	p.AppliedPolicies.Discard(policyId)
-	c.QueueRecalculation(podId, p, EventPolicyMatchStopped)
+	x.AppliedPolicies.Discard(policyId)
+	c.QueueRecalculation(podId, x, EventPolicyMatchStopped)
+}
+
+func (c *endpointEngine) ipMatchStarted(pod, client resources.ResourceID, ip string) {
+	x, ok := c.GetFromOurCache(pod).(*CacheEntryEndpoint)
+	if !ok {
+		// This is called synchronously from the resource update methods, so we don't expect the entries to have been
+		// removed from the cache at this point.
+		log.Errorf("Match started on pod, but pod is not in cache: %s matches %s", client, pod)
+		return
+	}
+	// Currently endpoint only supports a single IP address and so we don't need to worry about ref counting here.
+	switch client.GroupVersionKind {
+	case resources.ResourceTypeEndpoints:
+		x.Services.Add(client)
+		c.QueueRecalculation(pod, x, EventServiceAdded)
+	}
+}
+
+func (c *endpointEngine) ipMatchStopped(pod, client resources.ResourceID, ip string) {
+	x, ok := c.GetFromOurCache(pod).(*CacheEntryEndpoint)
+	if !ok {
+		// This is called synchronously from the resource update methods, so we don't expect the entries to have been
+		// removed from the cache at this point.
+		log.Errorf("Match started on pod, but pod is not in cache: %s matches %s", client, pod)
+		return
+	}
+	// Currently endpoint only supports a single IP address and so we don't need to worry about ref counting here.
+	switch client.GroupVersionKind {
+	case resources.ResourceTypeEndpoints:
+		x.Services.Discard(client)
+		c.QueueRecalculation(pod, x, EventServiceDeleted)
+	}
 }

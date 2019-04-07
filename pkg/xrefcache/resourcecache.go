@@ -23,6 +23,7 @@ type engineCache interface {
 	EndpointLabelSelector() labelselector.Interface
 	NetworkSetLabelSelector() labelselector.Interface
 	NetworkPolicyRuleSelectorManager() NetworkPolicyRuleSelectorManager
+	IPManager() IPManager
 
 	// Register for updates for other resource types. This registers with the xref cache dispatcher, so the updates
 	// will be CacheEntry types and the available updateTypes are defined by the events in flags.go.
@@ -224,6 +225,10 @@ func (c *resourceEngineCache) NetworkSetLabelSelector() labelselector.Interface 
 
 func (c *resourceEngineCache) NetworkPolicyRuleSelectorManager() NetworkPolicyRuleSelectorManager {
 	return c.xc.networkPolicyRuleSelectorManager
+}
+
+func (c *resourceEngineCache) IPManager() IPManager {
+	return c.xc.ipManager
 }
 
 func (c *resourceEngineCache) QueueRecalculation(id resources.ResourceID, entry CacheEntry, update syncer.UpdateType) {

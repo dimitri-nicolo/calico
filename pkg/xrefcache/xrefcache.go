@@ -115,6 +115,7 @@ func NewXrefCache() XrefCache {
 		endpointLabelSelector:            endpointLabelSelection,
 		networkSetLabelSelector:          netsetLabelSelection,
 		networkPolicyRuleSelectorManager: networkPolicyRuleSelectorManager,
+		ipManager:                        NewIPManager(),
 		caches:                           map[schema.GroupVersionKind]*resourceCache{},
 		priorities:                       map[schema.GroupVersionKind]int8{},
 	}
@@ -145,6 +146,7 @@ type xrefCache struct {
 	endpointLabelSelector            labelselector.Interface
 	networkSetLabelSelector          labelselector.Interface
 	networkPolicyRuleSelectorManager NetworkPolicyRuleSelectorManager
+	ipManager                        IPManager
 	caches                           map[schema.GroupVersionKind]*resourceCache
 	priorities                       map[schema.GroupVersionKind]int8
 	modified                         resources.PriorityQueue
