@@ -368,6 +368,10 @@ func (r *matchBlockBuilder) AppendNegatedCIDRMatchBlock(cidrs []string, srcOrDst
 	}
 }
 
+// Emit iptables rules to allow the packet in hand to match any of the specified ipsets.  This is
+// used for egress allow rules that involve both IPs and domain names: the IPs net down to one
+// ipset, and the domain names to a second ipset, and we want to allow a packet if it matches either
+// of those.
 func (r *matchBlockBuilder) AppendDestIPSetMatchBlock(ipsetNames ...string) {
 	// Write out the initial "reset" rule if this is the first block.
 	r.maybeAppendInitialRule(0)

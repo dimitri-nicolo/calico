@@ -135,11 +135,26 @@ func (m *ipSetsManager) domainRemovedFromSet(domain string, ipSetId string) {
 }
 
 func (m *ipSetsManager) handleDomainIPSetUpdate(msg *proto.IPSetUpdate, metadata *ipsets.IPSetMetadata) {
-	log.Infof("New domain set: msg=%v metadata=%v", msg, metadata)
+	log.Infof("Update whole domain set: msg=%v metadata=%v", msg, metadata)
 
-	// We shouldn't already have any data for this domain set ID.
 	if m.domainSetProgramming[msg.Id] != nil {
-		log.Panic("Got IPSetUpdate (which really means Add) for existing IP set")
+		log.Info("IPSetUpdate for existing IP set")
+		domainsToRemove := set.New()
+		domainsToAdd := set.From(msg.Members)
+		for domain, domainSetIds := range m.domainSetIds {
+			if domainSetIds.Contains(msg.Id) {
+				// Domain set previously included this domain name.
+				if domainsToAdd.Contains(domain) {
+					// And it still should, so don't re-add it.
+					domainsToAdd.Discard(domain)
+				} else {
+					// And now it doesn't, so remove it.
+					domainsToRemove.Add(domain)
+				}
+			}
+		}
+		m.handleDomainIPSetDeltaUpdate(msg.Id, ipsToSlice(domainsToRemove), ipsToSlice(domainsToAdd))
+		return
 	}
 
 	// Accumulator for the IPs that we need to program for this domain set.
@@ -181,7 +196,7 @@ func ipsToSlice(ips set.Set) []string {
 }
 
 func (m *ipSetsManager) handleDomainIPSetDeltaUpdate(ipSetId string, domainsRemoved []string, domainsAdded []string) {
-	log.Infof("Domain set update: id=%v removed=%v added=%v", ipSetId, domainsRemoved, domainsAdded)
+	log.Infof("Domain set delta update: id=%v removed=%v added=%v", ipSetId, domainsRemoved, domainsAdded)
 
 	// Get the current programming for this domain set.
 	ipToDomains := m.domainSetProgramming[ipSetId]

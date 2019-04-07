@@ -21,6 +21,7 @@ import (
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/projectcalico/felix/rules"
+	"github.com/projectcalico/libcalico-go/lib/set"
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/nfnetlink"
 )
@@ -97,7 +98,11 @@ func newDomainInfoStore(domainInfoChanges chan *domainInfoChanged, ipv6Enabled b
 func (s *domainInfoStore) Start() {
 	log.Info("Starting domain info store")
 	s.stopChannel = make(chan struct{})
-	s.msgChannel = make(chan []byte)
+	// Use a buffered channel here with reasonable capacity, so that the nfnetlink capture
+	// thread can handle a burst of DNS response packets without becoming blocked by the reading
+	// thread here.  Specifically we say 1000 because that what's we use for flow logs, so we
+	// know that works; even though we probably won't need so much capacity for the DNS case.
+	s.msgChannel = make(chan []byte, 1000)
 	nfnetlink.SubscribeDNS(int(rules.NFLOGDomainGroup), 65535, s.msgChannel, s.stopChannel)
 	go s.loop()
 }
@@ -132,11 +137,13 @@ func (s *domainInfoStore) processMappingExpiry(name, value string) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	if nameData := s.mappings[name]; nameData != nil {
-		delete(nameData.values, value)
-		if len(nameData.values)+len(nameData.ancestorNames) == 0 {
-			delete(s.mappings, name)
+		if valueData := nameData.values[value]; (valueData != nil) && valueData.expiryTime.Before(time.Now()) {
+			delete(nameData.values, value)
+			if len(nameData.values)+len(nameData.ancestorNames) == 0 {
+				delete(s.mappings, name)
+			}
+			s.signalDomainInfoChange(name)
 		}
-		s.signalDomainInfoChange(name)
 	}
 }
 
@@ -148,7 +155,7 @@ func (s *domainInfoStore) storeDNSRecordInfo(rec *layers.DNSResourceRecord, sect
 
 	switch rec.Type {
 	case layers.DNSTypeA:
-		log.Infof("A: %v -> %v with TTL %v (%v)",
+		log.Debugf("A: %v -> %v with TTL %v (%v)",
 			string(rec.Name),
 			rec.IP,
 			rec.TTL,
@@ -156,7 +163,7 @@ func (s *domainInfoStore) storeDNSRecordInfo(rec *layers.DNSResourceRecord, sect
 		)
 		s.storeInfo(string(rec.Name), rec.IP.String(), time.Duration(rec.TTL)*time.Second, false)
 	case layers.DNSTypeAAAA:
-		log.Infof("AAAA: %v -> %v with TTL %v (%v)",
+		log.Debugf("AAAA: %v -> %v with TTL %v (%v)",
 			string(rec.Name),
 			rec.IP,
 			rec.TTL,
@@ -164,7 +171,7 @@ func (s *domainInfoStore) storeDNSRecordInfo(rec *layers.DNSResourceRecord, sect
 		)
 		s.storeInfo(string(rec.Name), rec.IP.String(), time.Duration(rec.TTL)*time.Second, false)
 	case layers.DNSTypeCNAME:
-		log.Infof("CNAME: %v -> %v with TTL %v (%v)",
+		log.Debugf("CNAME: %v -> %v with TTL %v (%v)",
 			string(rec.Name),
 			string(rec.CNAME),
 			rec.TTL,
@@ -179,6 +186,11 @@ func (s *domainInfoStore) storeDNSRecordInfo(rec *layers.DNSResourceRecord, sect
 }
 
 func (s *domainInfoStore) storeInfo(name, value string, ttl time.Duration, isName bool) {
+	makeTimer := func() *time.Timer {
+		return time.AfterFunc(ttl, func() {
+			s.mappingExpiryChannel <- &domainMappingExpired{name: name, value: value}
+		})
+	}
 	if s.mappings[name] == nil {
 		s.mappings[name] = &nameData{values: make(map[string]*valueData)}
 	}
@@ -186,10 +198,8 @@ func (s *domainInfoStore) storeInfo(name, value string, ttl time.Duration, isNam
 	if existing == nil {
 		s.mappings[name].values[value] = &valueData{
 			expiryTime: time.Now().Add(ttl),
-			timer: time.AfterFunc(ttl, func() {
-				s.mappingExpiryChannel <- &domainMappingExpired{name: name, value: value}
-			}),
-			isName: isName,
+			timer:      makeTimer(),
+			isName:     isName,
 		}
 		s.signalDomainInfoChange(name)
 		// If value is another name, for which we don't yet have any information, create a
@@ -206,7 +216,7 @@ func (s *domainInfoStore) storeInfo(name, value string, ttl time.Duration, isNam
 		newExpiryTime := time.Now().Add(ttl)
 		if newExpiryTime.After(existing.expiryTime) {
 			// Update the expiry time of the existing mapping.
-			existing.timer.Reset(ttl)
+			existing.timer = makeTimer()
 			existing.expiryTime = newExpiryTime
 		}
 	}
@@ -242,12 +252,20 @@ func (s *domainInfoStore) GetDomainIPs(domain string) []string {
 }
 
 func (s *domainInfoStore) signalDomainInfoChange(name string) {
+	changedNames := set.From(name)
 	delete(s.resultsCache, name)
-	s.domainInfoChanges <- &domainInfoChanged{domain: name}
 	if nameData := s.mappings[name]; nameData != nil {
 		for _, ancestor := range nameData.ancestorNames {
+			changedNames.Add(ancestor)
 			delete(s.resultsCache, ancestor)
-			s.domainInfoChanges <- &domainInfoChanged{domain: ancestor}
 		}
 	}
+	// Release the mutex to send change signals, so that we can't get a deadlock between this
+	// thread and the int_dataplane thread.
+	s.mutex.Unlock()
+	defer s.mutex.Lock()
+	changedNames.Iter(func(item interface{}) error {
+		s.domainInfoChanges <- &domainInfoChanged{domain: item.(string)}
+		return nil
+	})
 }

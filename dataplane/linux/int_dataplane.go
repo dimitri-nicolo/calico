@@ -818,9 +818,28 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 			}
 			summaryAddrBatchSize.Observe(float64(batchSize))
 			d.dataplaneNeedsSync = true
-		case domainInfoChanged := <-d.domainInfoChanges:
-			for _, mgr := range d.allManagers {
-				mgr.OnUpdate(domainInfoChanged)
+		case domainInfoChange := <-d.domainInfoChanges:
+			// Opportunistically read and coalesce other domain change signals that are
+			// already pending on this channel.
+			domainChangeSignals := []*domainInfoChanged{domainInfoChange}
+			domainsChanged := set.From(domainInfoChange.domain)
+		domainChangeLoop:
+			for {
+				select {
+				case domainInfoChange := <-d.domainInfoChanges:
+					if !domainsChanged.Contains(domainInfoChange.domain) {
+						domainChangeSignals = append(domainChangeSignals, domainInfoChange)
+						domainsChanged.Add(domainInfoChange.domain)
+					}
+				default:
+					// Channel blocked so we've caught up.
+					break domainChangeLoop
+				}
+			}
+			for _, domainInfoChange = range domainChangeSignals {
+				for _, mgr := range d.allManagers {
+					mgr.OnUpdate(domainInfoChange)
+				}
 			}
 		case <-ipSetsRefreshC:
 			log.Debug("Refreshing IP sets state")
