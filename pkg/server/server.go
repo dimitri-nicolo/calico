@@ -3,6 +3,9 @@ package server
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"io/ioutil"
 	"net/http"
 	"sync"
 
@@ -20,8 +23,20 @@ var (
 func Start(config *Config) error {
 	sm := http.NewServeMux()
 
+	var rootCAs *x509.CertPool
+	if config.ElasticCAPath != "" {
+		rootCAs = addCertToCertPool(config.ElasticCAPath)
+	}
+	var tlsConfig *tls.Config
+	if rootCAs != nil {
+		tlsConfig = &tls.Config{
+			RootCAs:            rootCAs,
+			InsecureSkipVerify: config.ElasticInsecureSkipVerify,
+		}
+	}
+
 	// Initialize all handlers and middlewares here. Proxy is handler as well.
-	proxy := handler.NewProxy(config.ElasticURL)
+	proxy := handler.NewProxy(config.ElasticURL, tlsConfig)
 
 	// TODO(doublek):
 	//  - This could be nicer. Seems a bit kludgy to add middlewares like this.
@@ -64,4 +79,22 @@ func Wait() {
 
 func Stop() {
 	server.Shutdown(context.Background())
+}
+
+func addCertToCertPool(caPath string) *x509.CertPool {
+	caContent, err := ioutil.ReadFile(caPath)
+	if err != nil {
+		log.WithError(err).WithField("CA-Path", caPath).Fatal("Could not read CA file")
+	}
+
+	systemCertPool, err := x509.SystemCertPool()
+	if err != nil {
+		log.WithError(err).Fatal("Could not parse CA file")
+	}
+
+	ok := systemCertPool.AppendCertsFromPEM(caContent)
+	if !ok {
+		log.WithError(err).Fatal("Could not add CA to pool")
+	}
+	return systemCertPool
 }

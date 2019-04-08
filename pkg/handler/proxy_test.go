@@ -1,6 +1,8 @@
 package handler_test
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -9,11 +11,15 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	log "github.com/sirupsen/logrus"
 )
 
 var _ = Describe("Proxy Handler", func() {
 	targetName := "target"
-	var proxyServer, target *httptest.Server
+	var (
+		proxyServer, target *httptest.Server
+		targetURL           *url.URL
+	)
 
 	requestAndCheckResult := func(path string, expectedStatusCode int, expectedTarget string) {
 		client := proxyServer.Client()

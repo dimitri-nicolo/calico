@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"strconv"
 )
 
 // Environment variables that we read.
@@ -14,12 +15,14 @@ const (
 	certFilePathEnv = "CERT_FILE_PATH"
 	keyFilePathEnv  = "KEY_FILE_PATH"
 
-	elasticAccessModeEnv = "ELASTIC_ACCESS_MODE"
-	elasticSchemeEnv     = "ELASTIC_SCHEME"
-	elasticHostEnv       = "ELASTIC_HOST"
-	elasticPortEnv       = "ELASTIC_PORT"
-	elasticUsernameEnv   = "ELASTIC_USERNAME"
-	elasticPasswordEnv   = "ELASTIC_PASSWORD"
+	elasticAccessModeEnv         = "ELASTIC_ACCESS_MODE"
+	elasticSchemeEnv             = "ELASTIC_SCHEME"
+	elasticHostEnv               = "ELASTIC_HOST"
+	elasticPortEnv               = "ELASTIC_PORT"
+	elasticCAPathEnv             = "ELASTIC_CA"
+	elasticInsecureSkipVerifyEnv = "ELASTIC_INSECURE_SKIP_VERIFY"
+	elasticUsernameEnv           = "ELASTIC_USERNAME"
+	elasticPasswordEnv           = "ELASTIC_PASSWORD"
 )
 
 type ElasticAccessMode string
@@ -57,7 +60,9 @@ type Config struct {
 	AccessMode ElasticAccessMode
 
 	// The URL that we should proxy requests to.
-	ElasticURL *url.URL
+	ElasticURL                *url.URL
+	ElasticCAPath             string
+	ElasticInsecureSkipVerify bool
 
 	// The username and password to inject when in ServiceUser mode.
 	// Unused otherwise.
@@ -81,16 +86,23 @@ func NewConfigFromEnv() (*Config, error) {
 		Scheme: elasticScheme,
 		Host:   fmt.Sprintf("%s:%s", elasticHost, elasticPort),
 	}
+	elasticCAPath := os.Getenv(elasticCAPathEnv)
+	elasticInsecureSkipVerify, err := strconv.ParseBool(os.Getenv(elasticInsecureSkipVerifyEnv))
+	if err != nil {
+		elasticInsecureSkipVerify = false
+	}
 	elasticUsername := os.Getenv(elasticUsernameEnv)
 	elasticPassword := os.Getenv(elasticPasswordEnv)
 	config := &Config{
-		ListenAddr:      listenAddr,
-		CertFile:        certFilePath,
-		KeyFile:         keyFilePath,
-		AccessMode:      accessMode,
-		ElasticURL:      elasticURL,
-		ElasticUsername: elasticUsername,
-		ElasticPassword: elasticPassword,
+		ListenAddr:                listenAddr,
+		CertFile:                  certFilePath,
+		KeyFile:                   keyFilePath,
+		AccessMode:                accessMode,
+		ElasticURL:                elasticURL,
+		ElasticCAPath:             elasticCAPath,
+		ElasticInsecureSkipVerify: elasticInsecureSkipVerify,
+		ElasticUsername:           elasticUsername,
+		ElasticPassword:           elasticPassword,
 	}
 	err = validateConfig(config)
 	return config, err
@@ -113,8 +125,17 @@ func validateConfig(config *Config) error {
 	if config.AccessMode == PassThroughMode || config.AccessMode == InsecureMode &&
 		config.ElasticUsername != "" && config.ElasticPassword != "" {
 		return errors.New("Cannot set Elasticsearch credentials in Passthrough mode")
+	}
+	if config.AccessMode == ServiceUserMode &&
+		config.ElasticUsername == "" && config.ElasticPassword == "" {
+		return errors.New("Elasticsearch credentials not provided for Service user mode")
+	}
+	if config.ElasticURL.Scheme == "https" && config.ElasticCAPath == "" {
+		return errors.New("Elasticsearch CA not provided")
+	}
+	if config.ElasticURL.Scheme == "http" && config.ElasticCAPath != "" {
+		return errors.New("Elasticsearch CA provided but scheme is set to http")
 
 	}
-
 	return nil
 }
