@@ -103,9 +103,12 @@ type FelixConfigurationSpec struct {
 	// configure this appropriately. For example our Kubernetes and Docker integrations set the ‘cali’ value,
 	// and our OpenStack integration sets the ‘tap’ value. [Default: cali]
 	InterfacePrefix string `json:"interfacePrefix,omitempty"`
-	// InterfaceExclude is a list of interfaces that Felix should exclude when monitoring for host
-	// endpoints.  The default value ensures that Felix ignores Kubernetes' IPVS dummy interface,
-	// which is used internally by kube-proxy.  [Default: kube-ipvs0]
+	// InterfaceExclude is a comma-separated list of interfaces that Felix should exclude when monitoring for host
+	// endpoints. The default value ensures that Felix ignores Kubernetes' IPVS dummy interface, which is used
+	// internally by kube-proxy. If you want to exclude multiple interface names using a single value, the list
+	// supports regular expressions. For regular expressions you must wrap the value with '/'. For example
+	// having values '/^kube/,veth1' will exclude all interfaces that begin with 'kube' and also the interface
+	// 'veth1'. [Default: kube-ipvs0]
 	InterfaceExclude string `json:"interfaceExclude,omitempty"`
 
 	// ChainInsertMode controls whether Felix hooks the kernel’s top-level iptables chains by inserting a rule
@@ -144,6 +147,12 @@ type FelixConfigurationSpec struct {
 	IPIPEnabled *bool `json:"ipipEnabled,omitempty" confignamev1:"IpInIpEnabled"`
 	// IPIPMTU is the MTU to set on the tunnel device. See Configuring MTU [Default: 1440]
 	IPIPMTU *int `json:"ipipMTU,omitempty" confignamev1:"IpInIpMtu"`
+
+	VXLANEnabled *bool `json:"vxlanEnabled,omitempty"`
+	// VXLANMTU is the MTU to set on the tunnel device. See Configuring MTU [Default: 1440]
+	VXLANMTU  *int `json:"vxlanMTU,omitempty"`
+	VXLANPort *int `json:"vxlanPort,omitempty"`
+	VXLANVNI  *int `json:"vxlanVNI,omitempty"`
 
 	// ReportingInterval is the interval at which Felix reports its status into the datastore or 0 to disable.
 	// Must be non-zero in OpenStack deployments. [Default: 30s]

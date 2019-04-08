@@ -72,6 +72,7 @@ var (
 	actionRegex           = regexp.MustCompile("^(Allow|Deny|Log|Pass)$")
 	protocolRegex         = regexp.MustCompile("^(TCP|UDP|ICMP|ICMPv6|SCTP|UDPLite)$")
 	ipipModeRegex         = regexp.MustCompile("^(Always|CrossSubnet|Never)$")
+	vxlanModeRegex        = regexp.MustCompile("^(Always|Never)$")
 	logLevelRegex         = regexp.MustCompile("^(Debug|Info|Warning|Error|Fatal)$")
 	IPSeclogLevelRegex    = regexp.MustCompile("^(None|Notice|Info|Debug|Verbose)$")
 	IPSecModeRegex        = regexp.MustCompile("^(PSK)$")
@@ -88,6 +89,7 @@ var (
 	overlapsV6LinkLocal   = "IP pool range overlaps with IPv6 Link Local range fe80::/10"
 	protocolPortsMsg      = "rules that specify ports must set protocol to TCP or UDP"
 	protocolIcmpMsg       = "rules that specify ICMP fields must set protocol to ICMP"
+	protocolAndHTTPMsg    = "rules that specify HTTP fields must set protocol to TCP or empty"
 
 	dropActionOverrideRegex = regexp.MustCompile("^(Drop|Accept|LogAndDrop|LogAndAccept)$")
 
@@ -143,6 +145,7 @@ func init() {
 	registerFieldValidator("labels", validateLabels)
 	registerFieldValidator("ipVersion", validateIPVersion)
 	registerFieldValidator("ipIpMode", validateIPIPMode)
+	registerFieldValidator("vxlanMode", validateVXLANMode)
 	registerFieldValidator("policyType", validatePolicyType)
 	registerFieldValidator("logLevel", validateLogLevel)
 	registerFieldValidator("ipsecLogLevel", validateIPSecLogLevel)
@@ -195,6 +198,7 @@ func init() {
 	registerStructValidator(validate, validateNetworkPolicy, api.NetworkPolicy{})
 	registerStructValidator(validate, validateGlobalNetworkPolicy, api.GlobalNetworkPolicy{})
 	registerStructValidator(validate, validateGlobalNetworkSet, api.GlobalNetworkSet{})
+	registerStructValidator(validate, validateNetworkSet, api.NetworkSet{})
 	registerStructValidator(validate, validatePull, api.Pull{})
 	registerStructValidator(validate, validateHTTPHeader, api.HTTPHeader{})
 	registerStructValidator(validate, validateConfigMapKeyRef, k8sv1.ConfigMapKeySelector{})
@@ -295,6 +299,12 @@ func validateIPIPMode(fl validator.FieldLevel) bool {
 	s := fl.Field().String()
 	log.Debugf("Validate IPIP Mode: %s", s)
 	return ipipModeRegex.MatchString(s)
+}
+
+func validateVXLANMode(fl validator.FieldLevel) bool {
+	s := fl.Field().String()
+	log.Debugf("Validate VXLAN Mode: %s", s)
+	return vxlanModeRegex.MatchString(s)
 }
 
 func validateLogLevel(fl validator.FieldLevel) bool {
@@ -801,6 +811,12 @@ func validateIPPoolSpec(structLevel validator.StructLevel) {
 			"IPpool.IPIPMode", "", reason("IPIPMode other than 'Never' is not supported on an IPv6 IP pool"), "")
 	}
 
+	// Cannot have both VXLAN and IPIP on the same IP pool.
+	if (pool.IPIPMode == api.IPIPModeAlways || pool.IPIPMode == api.IPIPModeCrossSubnet) && pool.VXLANMode == api.VXLANModeAlways {
+		structLevel.ReportError(reflect.ValueOf(pool.IPIPMode),
+			"IPpool.IPIPMode", "", reason("IPIPMode and VXLANMode cannot both be enabled on the same IP pool"), "")
+	}
+
 	// Default the blockSize
 	if pool.BlockSize == 0 {
 		if ipAddr.Version() == 4 {
@@ -883,6 +899,14 @@ func validateRule(structLevel validator.StructLevel) {
 		if len(rule.Destination.NotPorts) > 0 {
 			structLevel.ReportError(reflect.ValueOf(rule.Destination.NotPorts),
 				"Destination.NotPorts", "", reason(protocolPortsMsg), "")
+		}
+	}
+
+	// Check that HTTP must not use non-TCP protocols
+	if rule.HTTP != nil && rule.Protocol != nil {
+		tcp := numorstring.ProtocolFromString("TCP")
+		if *rule.Protocol != tcp {
+			structLevel.ReportError(reflect.ValueOf(rule.Protocol), "Protocol", "", reason(protocolAndHTTPMsg), "")
 		}
 	}
 
@@ -1128,6 +1152,23 @@ func validateNetworkPolicy(structLevel validator.StructLevel) {
 			if useALP {
 				structLevel.ReportError(v, f, "", reason("not allowed in egress rule"), "")
 			}
+		}
+	}
+}
+
+func validateNetworkSet(structLevel validator.StructLevel) {
+	ns := structLevel.Current().Interface().(api.NetworkSet)
+	for k := range ns.GetLabels() {
+		if k == "projectcalico.org/namespace" {
+			// The namespace label should only be used when mapping the real namespace through
+			// to the v1 datamodel.  It shouldn't appear in the v3 datamodel.
+			structLevel.ReportError(
+				reflect.ValueOf(k),
+				"Metadata.Labels (label)",
+				"",
+				reason("projectcalico.org/namespace is not a valid label name"),
+				"",
+			)
 		}
 	}
 }

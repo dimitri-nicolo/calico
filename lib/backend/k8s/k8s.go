@@ -72,6 +72,8 @@ func init() {
 				&apiv3.LicenseKeyList{},
 				&apiv3.GlobalNetworkSet{},
 				&apiv3.GlobalNetworkSetList{},
+				&apiv3.NetworkSet{},
+				&apiv3.NetworkSetList{},
 				&apiv3.GlobalNetworkPolicy{},
 				&apiv3.GlobalNetworkPolicyList{},
 				&apiv3.NetworkPolicy{},
@@ -171,6 +173,12 @@ func NewKubeClient(ca *apiconfig.CalicoAPIConfigSpec) (api.Client, error) {
 		reflect.TypeOf(model.ResourceListOptions{}),
 		apiv3.KindNetworkPolicy,
 		resources.NewNetworkPolicyClient(cs, crdClientV1),
+	)
+	kubeClient.registerResourceClient(
+		reflect.TypeOf(model.ResourceKey{}),
+		reflect.TypeOf(model.ResourceListOptions{}),
+		apiv3.KindNetworkSet,
+		resources.NewNetworkSetClient(cs, crdClientV1),
 	)
 	kubeClient.registerResourceClient(
 		reflect.TypeOf(model.ResourceKey{}),
@@ -427,6 +435,8 @@ func (c *KubeClient) Clean() error {
 		apiv3.KindNetworkPolicy,
 		apiv3.KindTier,
 		apiv3.KindGlobalNetworkSet,
+		apiv3.KindNetworkPolicy,
+		apiv3.KindNetworkSet,
 		apiv3.KindIPPool,
 		apiv3.KindHostEndpoint,
 		apiv3.KindRemoteClusterConfiguration,
@@ -453,6 +463,7 @@ func (c *KubeClient) Clean() error {
 		model.BlockListOptions{},
 		model.BlockAffinityListOptions{},
 		model.BlockAffinityListOptions{},
+		model.IPAMHandleListOptions{},
 	} {
 		if rs, err := c.List(ctx, li, ""); err != nil {
 			log.WithError(err).WithField("Kind", li).Warning("Failed to list resources")
@@ -506,6 +517,43 @@ func buildCRDClientV1(cfg rest.Config) (*rest.RESTClient, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// We also need to register resources.
+	schemeBuilder := runtime.NewSchemeBuilder(
+		func(scheme *runtime.Scheme) error {
+			scheme.AddKnownTypes(
+				*cfg.GroupVersion,
+				&apiv3.FelixConfiguration{},
+				&apiv3.FelixConfigurationList{},
+				&apiv3.IPPool{},
+				&apiv3.IPPoolList{},
+				&apiv3.BGPPeer{},
+				&apiv3.BGPPeerList{},
+				&apiv3.BGPConfiguration{},
+				&apiv3.BGPConfigurationList{},
+				&apiv3.ClusterInformation{},
+				&apiv3.ClusterInformationList{},
+				&apiv3.GlobalNetworkSet{},
+				&apiv3.GlobalNetworkSetList{},
+				&apiv3.GlobalNetworkPolicy{},
+				&apiv3.GlobalNetworkPolicyList{},
+				&apiv3.NetworkPolicy{},
+				&apiv3.NetworkPolicyList{},
+				&apiv3.HostEndpoint{},
+				&apiv3.HostEndpointList{},
+				&apiv3.BlockAffinity{},
+				&apiv3.BlockAffinityList{},
+				&apiv3.IPAMBlock{},
+				&apiv3.IPAMBlockList{},
+				&apiv3.IPAMHandle{},
+				&apiv3.IPAMHandleList{},
+				&apiv3.IPAMConfig{},
+				&apiv3.IPAMConfigList{},
+			)
+			return nil
+		})
+
+	schemeBuilder.AddToScheme(scheme.Scheme)
 
 	return cli, nil
 }

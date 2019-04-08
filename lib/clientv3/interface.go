@@ -33,6 +33,8 @@ type Interface interface {
 	Profiles() ProfileInterface
 	// GlobalNetworkSets returns an interface for managing global network sets resources.
 	GlobalNetworkSets() GlobalNetworkSetInterface
+	// NetworkSets returns an interface for managing network sets resources.
+	NetworkSets() NetworkSetInterface
 	// HostEndpoints returns an interface for managing host endpoint resources.
 	HostEndpoints() HostEndpointInterface
 	// WorkloadEndpoints returns an interface for managing workload endpoint resources.

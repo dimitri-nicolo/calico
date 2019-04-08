@@ -70,7 +70,7 @@ var _ = Describe("Test the generic configuration update processor and the concre
 		Kind: apiv3.KindBGPConfiguration,
 		Name: "node.bgpnode1",
 	}
-	numFelixConfigs := 106
+	numFelixConfigs := 110
 	numClusterConfigs := 5
 	numNodeClusterConfigs := 4
 	numBgpConfigs := 4
@@ -672,7 +672,7 @@ func checkExpectedConfigs(kvps []*model.KVPair, dataType int, expectedNum int, e
 	allNames := map[string]struct{}{}
 
 	By(" - checking the expected number of results")
-	Expect(kvps).To(HaveLen(expectedNum))
+	ExpectWithOffset(1, kvps).To(HaveLen(expectedNum), "Wrong number of results")
 
 	By(" - checking for duplicated, nil values and assigned values as expected")
 	for _, kvp := range kvps {

@@ -19,6 +19,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/projectcalico/libcalico-go/lib/backend/encap"
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/felixsyncer"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -28,7 +29,6 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
-	"github.com/projectcalico/libcalico-go/lib/ipip"
 	"github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
 	"github.com/projectcalico/libcalico-go/lib/options"
@@ -235,7 +235,7 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 				Value: &model.IPPool{
 					CIDR:          poolCIDRNet,
 					IPIPInterface: "tunl0",
-					IPIPMode:      ipip.CrossSubnet,
+					IPIPMode:      encap.CrossSubnet,
 					Masquerade:    true,
 					IPAM:          true,
 					Disabled:      false,
@@ -267,7 +267,7 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 			)
 			expectedCacheSize++
 			syncTester.ExpectCacheSize(expectedCacheSize)
-			_, expNet, err := net.ParseCIDROrIP("11.0.0.0/16")
+			_, expGNet, err := net.ParseCIDROrIP("11.0.0.0/16")
 			Expect(err).NotTo(HaveOccurred())
 			syncTester.ExpectData(model.KVPair{
 				Key: model.NetworkSetKey{Name: "anetworkset"},
@@ -276,7 +276,7 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 						"a": "b",
 					},
 					Nets: []net.IPNet{
-						*expNet,
+						*expGNet,
 					},
 					AllowedEgressDomains: []string{
 						"direct.gov.uk",
@@ -284,6 +284,39 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 					},
 				},
 				Revision: gns.ResourceVersion,
+			})
+
+			By("Creating a NetworkSet")
+			ns := apiv3.NewNetworkSet()
+			ns.Name = "anetworkset"
+			ns.Namespace = "namespace-1"
+			ns.Labels = map[string]string{
+				"a": "b",
+			}
+			ns.Spec.Nets = []string{
+				"11.0.0.0/16",
+			}
+			ns, err = c.NetworkSets().Create(
+				ctx,
+				ns,
+				options.SetOptions{},
+			)
+			expectedCacheSize++
+			syncTester.ExpectCacheSize(expectedCacheSize)
+			_, expNet, err := net.ParseCIDROrIP("11.0.0.0/16")
+			Expect(err).NotTo(HaveOccurred())
+			syncTester.ExpectData(model.KVPair{
+				Key: model.NetworkSetKey{Name: "namespace-1/anetworkset"},
+				Value: &model.NetworkSet{
+					Labels: map[string]string{
+						"a":                           "b",
+						"projectcalico.org/namespace": "namespace-1",
+					},
+					Nets: []net.IPNet{
+						*expNet,
+					},
+				},
+				Revision: ns.ResourceVersion,
 			})
 
 			By("Creating a LicenseKey")
