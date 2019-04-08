@@ -13,99 +13,130 @@ import (
 
 func HandleDownloadReports(response http.ResponseWriter, request *http.Request) {
 
-	q := request.URL.Query()
+	rd := reportDownloader{
+		response: response,
+		request:  request,
+	}
 
-	log.Info(request.URL, q)
+	if err := rd.setFormats(); err != nil {
+		return
+	}
+
+	if len(rd.formats) == 1 {
+		rd.prepSingleFile()
+	} else {
+		rd.prepZipFile()
+	}
+
+	rd.serveContent()
+}
+
+const dateformat = "20060102"
+
+type reportDownloader struct {
+	response http.ResponseWriter
+	request  *http.Request
+	formats  []string
+	content  reportContent
+}
+
+type reportContent struct {
+	outputFormat string
+	contentType  string
+	startDate    time.Time
+	endDate      time.Time
+	reportType   string
+	reportName   string
+	data         []byte
+}
+
+//parse and validate the formats passed in the request
+func (rd *reportDownloader) setFormats() error {
+	q := rd.request.URL.Query()
+
+	log.Info(rd.request.URL, q)
 
 	f := q.Get("downloadFormats")
 
 	//ensure at least one format type was specified
 	if len(f) < 1 {
-		response.WriteHeader(400)
-		response.Write([]byte("Missing downloadFormats parameter"))
-		return
+		rd.response.WriteHeader(400)
+		rd.response.Write([]byte("Missing downloadFormats parameter"))
+		return fmt.Errorf("Missing download formats")
 	}
 
-	fmts := strings.Split(f, ",")
+	rd.formats = strings.Split(f, ",")
 
 	//ensure all formats requested are valid
-	if !areValidFormats(fmts) {
-		response.WriteHeader(400)
-		response.Write([]byte("Invalid format"))
-		return
+	if !areValidFormats(rd.formats) {
+		rd.response.WriteHeader(400)
+		rd.response.Write([]byte("Invalid format"))
+		return fmt.Errorf("Invalid format")
 	}
 
-	if len(fmts) == 1 {
-		//single file
-		log.Info("single", fmts[0])
-		serveSingleFile(response, request, string(fmts[0]))
-	} else {
-		//multiple files via zip file
-		log.Info("multi", len(fmts), fmts)
-		serveZipFile(response, request, fmts)
+	return nil
+}
+
+//fetch and prepare the content for single file
+func (rd *reportDownloader) prepSingleFile() {
+	log.Info("serve single report")
+
+	//TODO: now just generating a fake file
+	content := reportContent{
+		outputFormat: rd.formats[0] + ".txt",
+		contentType:  "text/plain",
+		startDate:    time.Now(),
+		endDate:      time.Now(),
+		reportType:   "reporttype",
+		reportName:   "reportName",
 	}
-}
-
-const dateformat = "2006-01-02"
-
-func serveZipFile(response http.ResponseWriter, request *http.Request, formats []string) {
-	log.Info("SERVE MULTI FILE")
 
 	//TODO: passing the url but what should this really be... something to find this report in ES
-	data := getReportData(request.URL.String())
+	content.data = getReportData(rd.request.URL.String())
 
-	//TODO: now just generating a fake file
-	fakeFormat := ".zip"
-	contentType := "application/zip"
-	startDate := time.Now()
-	endDate := time.Now()
-	reportType := "reporttype"
-	reportName := "reportName"
-
-	fileName := generateFileName(reportType, reportName, startDate, endDate, fakeFormat)
-
-	log.Info("serve report zip", fileName)
-
-	//set the response header and send the file
-	response.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", fileName))
-	response.Header().Set("Content-Type", contentType)
-	http.ServeContent(response, request, fileName, time.Now(), bytes.NewReader(data))
+	rd.content = content
 }
 
-func serveSingleFile(response http.ResponseWriter, request *http.Request, format string) {
-	log.Info("SERVE SINGLE FILE")
+//fetch and prepare the content for multifile zip
+func (rd *reportDownloader) prepZipFile() {
+	log.Info("serve multi report zip")
 
+	//TODO: now just generating a fake file
+	content := reportContent{
+		outputFormat: ".zip",
+		contentType:  "application/zip",
+		startDate:    time.Now(),
+		endDate:      time.Now(),
+		reportType:   "reporttype",
+		reportName:   "reportName",
+	}
+
+	//TODO: get all the format files and zip them together
 	//TODO: passing the url but what should this really be... something to find this report in ES
-	data := getReportData(request.URL.String())
+	content.data = getReportData(rd.request.URL.String())
 
-	//TODO: now just generating a fake file
-	fakeFormat := format + ".txt"
-	contentType := "text/plain"
-	startDate := time.Now()
-	endDate := time.Now()
-	reportType := "reporttype"
-	reportName := "reportName"
-
-	fileName := generateFileName(reportType, reportName, startDate, endDate, fakeFormat)
-
-	log.Info("serve report", fileName)
-
-	//set the response header and send the file
-	response.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", fileName))
-	response.Header().Set("Content-Type", contentType)
-	http.ServeContent(response, request, fileName, time.Now(), bytes.NewReader(data))
-
+	rd.content = content
 }
 
-//generates our standard report download file name
-func generateFileName(reportType, reportName string, startDate, endDate time.Time, formatWithExtension string) string {
-	startDateStr := startDate.Format(dateformat)
-	endDateStr := endDate.Format(dateformat)
+//serve the report or zip content
+func (rd *reportDownloader) serveContent() {
+	fileName := rd.content.generateFileName()
+
+	//set the response header and send the file
+	rd.response.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", fileName))
+	rd.response.Header().Set("Content-Type", rd.content.contentType)
+	http.ServeContent(rd.response, rd.request, fileName, time.Now(), bytes.NewReader(rd.content.data))
+}
+
+//generates our report download file name
+func (rc *reportContent) generateFileName() string {
+	startDateStr := rc.startDate.Format(dateformat)
+	endDateStr := rc.endDate.Format(dateformat)
 	var fileName string
-	if strings.HasPrefix(formatWithExtension, ".") {
-		fileName = fmt.Sprintf("%s-%s-%s-%s%s", reportType, reportName, startDateStr, endDateStr, formatWithExtension)
+	if strings.HasPrefix(rc.outputFormat, ".") {
+		fileName = fmt.Sprintf("%s-%s-%s-%s%s", rc.reportType, rc.reportName, startDateStr, endDateStr, rc.outputFormat)
 	} else {
-		fileName = fmt.Sprintf("%s-%s-%s-%s-%s", reportType, reportName, startDateStr, endDateStr, formatWithExtension)
+		fileName = fmt.Sprintf("%s-%s-%s-%s-%s", rc.reportType, rc.reportName, startDateStr, endDateStr, rc.outputFormat)
 	}
 	return fileName
 }
@@ -118,7 +149,7 @@ func areValidFormats(fmts []string) bool {
 
 //get the data for a report from elastic
 func getReportData(someKeyForElastic string) []byte {
-	//TODO: got get the actual data from elastic for now random file data
+	//TODO: go get the actual data from elastic... for now random data
 	d := make([]byte, 4096)
 	rand.Read(d)
 	return d
