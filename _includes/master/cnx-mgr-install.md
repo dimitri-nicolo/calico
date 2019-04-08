@@ -135,16 +135,6 @@
    ```
 {% endif %}
 
-{% if include.init == "openshift" %}
-
-1. Allow the {{site.prodname}} Manager to run as root:
-
-   ```bash
-   oc adm policy add-scc-to-user anyuid system:serviceaccount:calico-monitoring:cnx-manager
-   ```
-
-{% endif %}
-
 1. Apply the manifest to install the {{site.prodname}} Manager.
 
    ```bash
