@@ -22,7 +22,7 @@ import (
 	"math/rand"
 	"runtime"
 
-	"github.com/docopt/docopt-go"
+	docopt "github.com/docopt/docopt-go"
 
 	"context"
 
