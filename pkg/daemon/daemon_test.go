@@ -416,11 +416,19 @@ func (b *mockDatastore) RemoteClusterConfigurations() clientv3.RemoteClusterConf
 	panic("not implemented")
 }
 
+func (b *mockDatastore) LicenseKey() clientv3.LicenseKeyInterface {
+	panic("not implemented")
+}
+
 func (b *mockDatastore) GlobalThreatFeeds() clientv3.GlobalThreatFeedInterface {
 	panic("not implemented")
 }
 
-func (b *mockDatastore) LicenseKey() clientv3.LicenseKeyInterface {
+func (b *mockDatastore) GlobalReportTypes() clientv3.GlobalReportTypeInterface {
+	panic("not implemented")
+}
+
+func (b *mockDatastore) GlobalReports() clientv3.GlobalReportInterface {
 	panic("not implemented")
 }
 
