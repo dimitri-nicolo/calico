@@ -18,7 +18,6 @@ package fv_test
 
 import (
 	"strconv"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -195,26 +194,6 @@ var _ = Describe("DNS Policy", func() {
 				log.WithError(err).Infof("wget said:\n%v", out)
 				Expect(err).NotTo(HaveOccurred())
 			})
-		})
-
-	})
-
-	PContext("Connectivity to tigera.io", func() {
-		It("can be established by default", func() {
-			for i := 0; i < 3; i++ {
-				out, err := w[0].ExecOutput("nslookup", "microsoft.com", "8.8.8.8")
-				log.WithError(err).Infof("nslookup said:\n%v", out)
-				time.Sleep(3 * time.Second)
-			}
-			felix.Exec("iptables-save", "-c")
-		})
-
-		It("cannot be established when specified", func() {
-			for i := 0; i < 3; i++ {
-				out, err := w[0].ExecOutput("nslookup", "microsoft.com", "8.8.8.8")
-				log.WithError(err).Infof("nslookup said:\n%v", out)
-				time.Sleep(3 * time.Second)
-			}
 		})
 
 	})

@@ -27,6 +27,7 @@ import (
 )
 
 var _ = Describe("AddIPSetsRule", func() {
+
 	It("should add all fields that end in IpSetIds", func() {
 		r := proto.Rule{}
 		var fields []string

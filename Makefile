@@ -610,7 +610,7 @@ fv/fv.test: vendor/.up-to-date $(SRC_FILES)
 #         etc.
 #
 # To only run specific fv tests, set GINGKO_FOCUS to the desired Describe{}, Context{}
-# or Ir{} description string. For example, to only run dns_test.go, type:
+# or It{} description string. For example, to only run dns_test.go, type:
 # 	GINKGO_FOCUS="DNS Policy" make fv
 #
 fv fv/latency.log: $(BUILD_IMAGE) bin/iptables-locker bin/test-workload bin/test-connection fv/fv.test

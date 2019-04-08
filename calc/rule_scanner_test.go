@@ -29,7 +29,7 @@ import (
 	"sort"
 
 	"github.com/projectcalico/felix/proto"
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/hash"
 	"github.com/projectcalico/libcalico-go/lib/net"
@@ -269,7 +269,6 @@ var _ = Describe("ParsedRule", func() {
 		for i := 0; i < numMRFields; i++ {
 			name := mrType.Field(i).Name
 			if strings.Contains(name, "Tag") ||
-				strings.Contains(name, "Domains") ||
 				(strings.Contains(name, "Selector") &&
 					!strings.Contains(name, "Original") &&
 					!strings.Contains(name, "Service")) {
@@ -294,6 +293,7 @@ var _ = Describe("ParsedRule", func() {
 			name := strings.ToLower(prType.Field(i).Name)
 			if strings.Contains(name, "icmptype") ||
 				strings.Contains(name, "icmpcode") ||
+				strings.Contains(name, "domains") ||
 				strings.Contains(name, "serviceaccount") {
 				// expected to differ.
 				continue

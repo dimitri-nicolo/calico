@@ -1,4 +1,5 @@
 // Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
+
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -239,14 +240,14 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, hostn
 	ipsetMemberIndex.RegisterWith(allUpdDispatcher)
 	ruleScanner.OnIPSetActive = func(ipSet *IPSetData) {
 		log.WithField("ipSet", ipSet).Info("IPSet now active")
-		callbacks.OnIPSetAdded(ipSet.GetUniqueID(), ipSet.DataplaneProtocolType())
-		ipsetMemberIndex.UpdateIPSet(ipSet.GetUniqueID(), ipSet.Selector, ipSet.NamedPortProtocol, ipSet.NamedPort)
+		callbacks.OnIPSetAdded(ipSet.UniqueID(), ipSet.DataplaneProtocolType())
+		ipsetMemberIndex.UpdateIPSet(ipSet.UniqueID(), ipSet.Selector, ipSet.NamedPortProtocol, ipSet.NamedPort)
 		gaugeNumActiveSelectors.Inc()
 	}
 	ruleScanner.OnIPSetInactive = func(ipSet *IPSetData) {
 		log.WithField("ipSet", ipSet).Info("IPSet now inactive")
-		ipsetMemberIndex.DeleteIPSet(ipSet.GetUniqueID())
-		callbacks.OnIPSetRemoved(ipSet.GetUniqueID())
+		ipsetMemberIndex.DeleteIPSet(ipSet.UniqueID())
+		callbacks.OnIPSetRemoved(ipSet.UniqueID())
 		gaugeNumActiveSelectors.Dec()
 	}
 	// Send the IP set member index's outputs to the dataplane.

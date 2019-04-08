@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -115,7 +115,6 @@ func AddIPSetsRule(r *proto.Rule, s map[string]bool) {
 	addAll(r.NotDstIpSetIds, s)
 	addAll(r.NotSrcNamedPortIpSetIds, s)
 	addAll(r.NotDstNamedPortIpSetIds, s)
-	addAll(r.DstDomainIpSetIds, s)
 }
 
 func addAll(items []string, s map[string]bool) {

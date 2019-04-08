@@ -32,8 +32,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
-	// Again, explicit v3 not needed.
+	"github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
 )
 
@@ -78,7 +77,6 @@ var _ = Describe("FelixConfigurationSpec vs ConfigParams parity", func() {
 		"EndpointReportingDelaySecs":         "EndpointReportingDelay",
 		"CloudWatchMetricsPushIntervalSecs":  "CloudWatchMetricsPushInterval",
 	}
-
 	fcFieldNameToCP := map[string]string{}
 	for k, v := range cpFieldNameToFC {
 		fcFieldNameToCP[v] = k

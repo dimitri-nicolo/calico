@@ -132,7 +132,7 @@ type ipSetData struct {
 	selector          selector.Selector
 	namedPortProtocol IPSetPortProtocol
 	namedPort         string
-	id                string
+	isDomainSet       bool
 
 	// memberToRefCount stores a reference count for each member in the IP set.  Reference counts
 	// may be >1 if an IP address is shared by more than one endpoint.
@@ -209,7 +209,7 @@ func (idx *SelectorAndNamedPortIndex) OnUpdate(update api.Update) (_ bool) {
 	switch key := update.Key.(type) {
 	case model.WorkloadEndpointKey:
 		if update.Value != nil {
-			log.Infof("Updating NamedPortIndex with endpoint %v", key)
+			log.Debugf("Updating NamedPortIndex with endpoint %v", key)
 			endpoint := update.Value.(*model.WorkloadEndpoint)
 			profileIDs := endpoint.ProfileIDs
 			idx.UpdateEndpointOrSet(
@@ -220,13 +220,13 @@ func (idx *SelectorAndNamedPortIndex) OnUpdate(update api.Update) (_ bool) {
 				profileIDs,
 				nil)
 		} else {
-			log.Infof("Deleting endpoint %v from NamedPortIndex", key)
+			log.Debugf("Deleting endpoint %v from NamedPortIndex", key)
 			idx.DeleteEndpoint(key)
 		}
 	case model.HostEndpointKey:
 		if update.Value != nil {
 			// Figure out what's changed and update the cache.
-			log.Infof("Updating NamedPortIndex for host endpoint %v", key)
+			log.Debugf("Updating NamedPortIndex for host endpoint %v", key)
 			endpoint := update.Value.(*model.HostEndpoint)
 			profileIDs := endpoint.ProfileIDs
 			idx.UpdateEndpointOrSet(
@@ -237,13 +237,13 @@ func (idx *SelectorAndNamedPortIndex) OnUpdate(update api.Update) (_ bool) {
 				profileIDs,
 				nil)
 		} else {
-			log.Infof("Deleting host endpoint %v from NamedPortIndex", key)
+			log.Debugf("Deleting host endpoint %v from NamedPortIndex", key)
 			idx.DeleteEndpoint(key)
 		}
 	case model.NetworkSetKey:
 		if update.Value != nil {
 			// Figure out what's changed and update the cache.
-			log.Infof("Updating NamedPortIndex for network set %v", key)
+			log.Debugf("Updating NamedPortIndex for network set %v", key)
 			netSet := update.Value.(*model.NetworkSet)
 			idx.UpdateEndpointOrSet(
 				key,
@@ -253,25 +253,25 @@ func (idx *SelectorAndNamedPortIndex) OnUpdate(update api.Update) (_ bool) {
 				nil,
 				netSet.AllowedEgressDomains)
 		} else {
-			log.Infof("Deleting network set %v from NamedPortIndex", key)
+			log.Debugf("Deleting network set %v from NamedPortIndex", key)
 			idx.DeleteEndpoint(key)
 		}
 	case model.ProfileLabelsKey:
 		if update.Value != nil {
-			log.Infof("Updating NamedPortIndex for profile labels %v", key)
+			log.Debugf("Updating NamedPortIndex for profile labels %v", key)
 			labels := update.Value.(map[string]string)
 			idx.UpdateParentLabels(key.Name, labels)
 		} else {
-			log.Infof("Removing profile labels %v from NamedPortIndex", key)
+			log.Debugf("Removing profile labels %v from NamedPortIndex", key)
 			idx.DeleteParentLabels(key.Name)
 		}
 	case model.ProfileTagsKey:
 		if update.Value != nil {
-			log.Infof("Updating NamedPortIndex for profile tags %v", key)
+			log.Debugf("Updating NamedPortIndex for profile tags %v", key)
 			labels := update.Value.([]string)
 			idx.UpdateParentTags(key.Name, labels)
 		} else {
-			log.Infof("Removing profile tags %v from NamedPortIndex", key)
+			log.Debugf("Removing profile tags %v from NamedPortIndex", key)
 			idx.DeleteParentTags(key.Name)
 		}
 	}
@@ -319,7 +319,7 @@ func extractCIDRsFromNetworkSet(netSet *model.NetworkSet) []ip.CIDR {
 			// Special case: the linux dataplane can't handle 0-length CIDRs so we split it into
 			// multiple CIDRs.  Note: if the /1s were also in the network set, the deduplication is
 			// handled by reference counting in the ipSetData struct.
-			log.Info("Converting 0 length CIDR to pair of /1s")
+			log.Debug("Converting 0 length CIDR to pair of /1s")
 			switch cidr.Version() {
 			case 4:
 				combined = append(combined,
@@ -349,7 +349,7 @@ func (idx *SelectorAndNamedPortIndex) UpdateIPSet(ipSetID string, sel selector.S
 		"namedPort":         namedPort,
 		"namedPortProtocol": namedPortProtocol,
 	})
-	logCxt.Info("Updating IP set")
+	logCxt.Debug("Updating IP set")
 
 	// Check whether anything has actually changed before we do a scan.
 	oldIPSetData := idx.ipSetDataByID[ipSetID]
@@ -374,7 +374,7 @@ func (idx *SelectorAndNamedPortIndex) UpdateIPSet(ipSetID string, sel selector.S
 		namedPort:         namedPort,
 		namedPortProtocol: namedPortProtocol,
 		memberToRefCount:  map[IPSetMember]uint64{},
-		id:                ipSetID,
+		isDomainSet:       strings.HasPrefix(ipSetID, "d"),
 	}
 	idx.ipSetDataByID[ipSetID] = newIPSetData
 
@@ -388,7 +388,7 @@ func (idx *SelectorAndNamedPortIndex) UpdateIPSet(ipSetID string, sel selector.S
 		if len(contrib) == 0 {
 			continue
 		}
-		if log.GetLevel() >= log.InfoLevel {
+		if log.GetLevel() >= log.DebugLevel {
 			logCxt = logCxt.WithField("epID", epID)
 			logCxt.Debug("Endpoint contributes to IP set")
 		}
@@ -396,7 +396,7 @@ func (idx *SelectorAndNamedPortIndex) UpdateIPSet(ipSetID string, sel selector.S
 		for _, member := range contrib {
 			refCount := newIPSetData.memberToRefCount[member]
 			if refCount == 0 {
-				if log.GetLevel() >= log.InfoLevel {
+				if log.GetLevel() >= log.DebugLevel {
 					logCxt.WithField("member", member).Debug("New IP set member")
 				}
 				idx.OnMemberAdded(ipSetID, member)
@@ -417,7 +417,7 @@ func (idx *SelectorAndNamedPortIndex) DeleteIPSet(id string) {
 
 	// Emit events for all the removed CIDRs.
 	for member := range ipSetData.memberToRefCount {
-		if log.GetLevel() >= log.InfoLevel {
+		if log.GetLevel() >= log.DebugLevel {
 			log.WithField("member", member).Debug("Emitting deletion event.")
 		}
 		idx.OnMemberRemoved(id, member)
@@ -440,7 +440,7 @@ func (idx *SelectorAndNamedPortIndex) UpdateEndpointOrSet(
 	domains []string,
 ) {
 	var cidrsToLog interface{} = nets
-	if log.GetLevel() < log.InfoLevel && len(nets) > 20 {
+	if log.GetLevel() < log.DebugLevel && len(nets) > 20 {
 		cidrsToLog = fmt.Sprintf("<too many to log (%d)>", len(nets))
 	}
 	logCxt := log.WithFields(log.Fields{
@@ -563,7 +563,7 @@ func (idx *SelectorAndNamedPortIndex) scanEndpointAgainstAllIPSets(
 }
 
 func (idx *SelectorAndNamedPortIndex) DeleteEndpoint(id interface{}) {
-	log.Info("SelectorAndNamedPortIndex deleting endpoint", id)
+	log.Debug("SelectorAndNamedPortIndex deleting endpoint", id)
 	oldEndpointData := idx.endpointDataByID[id]
 	if oldEndpointData == nil {
 		return
@@ -680,13 +680,14 @@ func (idx *SelectorAndNamedPortIndex) CalculateEndpointContribution(d *endpointD
 				})
 			}
 		}
-	} else if strings.HasPrefix(ipSetData.id, "d") {
+	} else if ipSetData.isDomainSet {
 		for _, domain := range d.domains {
 			contrib = append(contrib, IPSetMember{
 				Domain: domain,
 			})
 		}
 	} else {
+		// Non-named port match, simply return the CIDRs.
 		for _, addr := range d.nets {
 			contrib = append(contrib, IPSetMember{
 				CIDR: addr,
