@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -76,9 +76,9 @@ var ruleTestData = []TableEntry{
 	Entry("Dest IP set", 4,
 		proto.Rule{DstIpSetIds: []string{"ipsetid1"}},
 		"-m set --match-set cali40ipsetid1 dst"),
-	Entry("Dest IP sets", 4,
-		proto.Rule{DstIpSetIds: []string{"ipsetid1", "ipsetid2"}},
-		"-m set --match-set cali40ipsetid1 dst -m set --match-set cali40ipsetid2 dst"),
+	Entry("Dest domain IP set", 4,
+		proto.Rule{DstDomainIpSetIds: []string{"ipsetid2"}},
+		"-m set --match-set cali40ipsetid2 dst"),
 	Entry("Dest ports", 4,
 		proto.Rule{DstPorts: []*proto.PortRange{{First: 10, Last: 12}}},
 		"-m multiport --destination-ports 10:12"),
