@@ -21,7 +21,7 @@ import (
 )
 
 var (
-	// The network policy cache is populated by both Kubernetes and Calico policy types. Include kindSelector in here so
+	// The network policy cache is populated by both Kubernetes and Calico policy types. Include KindSelector in here so
 	// the queued recalculation processing knows where to send those updates.
 	KindsNetworkPolicy = []schema.GroupVersionKind{
 		resources.ResourceTypeGlobalNetworkPolicies,

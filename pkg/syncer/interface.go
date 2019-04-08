@@ -10,7 +10,7 @@ import (
 	"github.com/tigera/compliance/pkg/resources"
 )
 
-type Syncer interface {
+type Starter interface {
 	Start(context.Context)
 }
 

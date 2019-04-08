@@ -168,6 +168,9 @@ func (c *endpointEngine) register(cache engineCache) {
 			c.queueEndpointsForRecalculation,
 		)
 	}
+
+	// Register for updates for the "in-scope" resource type.
+	c.EndpointLabelSelector().RegisterCallbacks(KindsInScopeSelection, c.inScopeStarted, c.inScopeStopped)
 }
 
 // newCacheEntry implements the resourceCacheEngine interface.
@@ -370,4 +373,21 @@ func (c *endpointEngine) ipMatchStopped(ep, service resources.ResourceID, ip str
 		x.Services.Discard(service)
 		c.QueueUpdate(ep, x, EventServiceDeleted)
 	}
+}
+
+func (c *endpointEngine) inScopeStarted(sel, epId resources.ResourceID) {
+	x, ok := c.GetFromOurCache(epId).(*CacheEntryEndpoint)
+	if !ok {
+		// This is called synchronously from the resource update methods, so we don't expect the entries to have been
+		// removed from the cache at this point.
+		log.Errorf("Match started on EP, but EP is not in cache: %s matches %s", sel, epId)
+		return
+	}
+	// We don't need to queue for an update because this can only happen from an endpoint configuration event since the
+	// in-scope selection should always occur before the cache injection has started, and is fixed from that point in.
+	x.setInscope()
+}
+
+func (c *endpointEngine) inScopeStopped(sel, epId resources.ResourceID) {
+	// no-op - we don't care about endpoints going out of scope.
 }

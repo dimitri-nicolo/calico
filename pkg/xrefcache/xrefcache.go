@@ -2,13 +2,14 @@
 package xrefcache
 
 import (
+	"container/heap"
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	"container/heap"
+	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
 	"github.com/tigera/compliance/pkg/dispatcher"
 	"github.com/tigera/compliance/pkg/keyselector"
@@ -16,59 +17,6 @@ import (
 	"github.com/tigera/compliance/pkg/resources"
 	"github.com/tigera/compliance/pkg/syncer"
 )
-
-// VersionedResource is an extension to the Resource interface to add some additional versioning
-// (converting the original resource into the v3 Calico model and then the v1 Calico model).
-type VersionedResource interface {
-	resources.Resource
-	getV3() resources.Resource
-	getV1() interface{}
-}
-
-// All internal caches store types that implement the CacheEntry interface.
-type CacheEntry interface {
-	VersionedResource
-	getVersionedResource() VersionedResource
-	setVersionedResource(r VersionedResource)
-	getUpdateTypes() syncer.UpdateType
-	setUpdateTypes(syncer.UpdateType)
-	resetUpdateTypes()
-}
-
-// cacheEntryCommon is embedded in each concrete CacheEntry type to provide the updateInProgress identifiers used
-// by the cache processing to handle sending of updates only at the end of a syncer update.
-type cacheEntryCommon struct {
-	updateTypes syncer.UpdateType
-}
-
-// getUpdateTypes returns the accumulated update types for a resource that is being updated from a syncer update.
-func (c *cacheEntryCommon) getUpdateTypes() syncer.UpdateType {
-	return c.updateTypes
-}
-
-// setUpdateTypes adds the supplied update types to the accumlated set of updates for a resource that is being
-// updated from a syncer update.
-func (c *cacheEntryCommon) setUpdateTypes(u syncer.UpdateType) {
-	c.updateTypes |= u
-}
-
-// resetUpdateTypes is called at the end of the syncer update processing to reset the accumlated set of updates
-// for the resource being updated from a syncer update.
-func (c *cacheEntryCommon) resetUpdateTypes() {
-	c.updateTypes = 0
-}
-
-// XrefCache interface.
-//
-// This interface implements the SyncerCallbacks which is used to populate the cache from the raw K8s and Calico resource
-// events.
-type XrefCache interface {
-	syncer.SyncerCallbacks
-	Get(res resources.ResourceID) CacheEntry
-	RegisterOnStatusUpdateHandler(callback dispatcher.DispatcherOnStatusUpdate)
-	RegisterOnUpdateHandler(kind schema.GroupVersionKind, updateTypes syncer.UpdateType, callback dispatcher.DispatcherOnUpdate)
-	GetCachedResourceIDs(kind schema.GroupVersionKind) []resources.ResourceID
-}
 
 // NewXrefCache creates a new cross-referenced XrefCache.
 func NewXrefCache() XrefCache {
@@ -154,6 +102,7 @@ type xrefCache struct {
 	inSync                           bool
 }
 
+// OnStatusUpdate implements the XrefCache interface.
 func (c *xrefCache) OnStatusUpdate(status syncer.StatusUpdate) {
 	log.Infof("Processing status update: %#o", status.Type)
 
@@ -174,6 +123,7 @@ func (c *xrefCache) OnStatusUpdate(status syncer.StatusUpdate) {
 	c.cacheDispatcher.OnStatusUpdate(status)
 }
 
+// OnUpdate implements the XrefCache interface.
 func (c *xrefCache) OnUpdate(update syncer.Update) {
 	c.syncerDispatcher.OnUpdate(update)
 	for c.modified.Len() > 0 {
@@ -213,18 +163,22 @@ func (c *xrefCache) OnUpdate(update syncer.Update) {
 	}
 }
 
+// Get implements the XrefCache interface.
 func (c *xrefCache) Get(id resources.ResourceID) CacheEntry {
 	return c.caches[id.GroupVersionKind].get(id)
 }
 
+// RegisterOnStatusUpdateHandler implements the XrefCache interface.
 func (c *xrefCache) RegisterOnStatusUpdateHandler(callback dispatcher.DispatcherOnStatusUpdate) {
 	c.consumerDispatcher.RegisterOnStatusUpdateHandler(callback)
 }
 
+// RegisterOnUpdateHandler implements the XrefCache interface.
 func (c *xrefCache) RegisterOnUpdateHandler(kind schema.GroupVersionKind, updateTypes syncer.UpdateType, callback dispatcher.DispatcherOnUpdate) {
 	c.consumerDispatcher.RegisterOnUpdateHandler(kind, updateTypes, callback)
 }
 
+// GetCachedResourceIDs implements the XrefCache interface.
 func (c *xrefCache) GetCachedResourceIDs(kind schema.GroupVersionKind) []resources.ResourceID {
 	var ids []resources.ResourceID
 	cache := c.caches[kind]
@@ -236,7 +190,18 @@ func (c *xrefCache) GetCachedResourceIDs(kind schema.GroupVersionKind) []resourc
 	return ids
 }
 
-func (c *xrefCache) queueRecalculation(id resources.ResourceID, entry CacheEntry, update syncer.UpdateType) {
+// RegisterInScopeEndpoints implements the XrefCache interface.
+func (c *xrefCache) RegisterInScopeEndpoints(selection apiv3.EndpointsSelection) error {
+	resId, sel, err := calculateInScopeEndpointsSelector(selection)
+	if err != nil {
+		return err
+	}
+	c.endpointLabelSelector.UpdateSelector(resId, sel)
+	return nil
+}
+
+// queueUpdate adds this update to the priority queue. The priority is determined by the resource kind.
+func (c *xrefCache) queueUpdate(id resources.ResourceID, entry CacheEntry, update syncer.UpdateType) {
 	if update == 0 {
 		log.Errorf("Update type should always be specified for resource recalculation: %s", id)
 		return

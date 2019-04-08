@@ -33,12 +33,10 @@ func main() {
 	log.SetLevel(logutils.SafeParseLogLevel(os.Getenv("LOG_LEVEL")))
 
 	// Init elastic.
-	elasticClient, err := elastic.NewFromEnv()
-	if err != nil {
-		panic(err)
-	}
+	elasticClient := elastic.MustGetElasticClient()
+
 	// Check elastic index.
-	if err = elasticClient.EnsureIndices(); err != nil {
+	if err := elasticClient.EnsureIndices(); err != nil {
 		panic(err)
 	}
 
@@ -60,7 +58,7 @@ func main() {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
-		err := report.Run(cxt, config)
+		err := report.Run(cxt, config, elasticClient, elasticClient)
 		if err != nil {
 			log.Errorf("Hit terminating error in reporter: %v", err)
 		}

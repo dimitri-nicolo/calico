@@ -52,6 +52,7 @@ const (
 	EventResourceAdded
 	EventResourceModified
 	EventResourceDeleted
+	EventInScope
 )
 
 const (

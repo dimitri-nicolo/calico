@@ -18,15 +18,15 @@ var (
 	// Internal resource kind to encapsulate a selector. This is a bit of a hack since our label-selector interface
 	// assumes all links are resource types, however we want to track selector/netset links so we create a fake
 	// selector kind.
-	kindSelector = schema.GroupVersionKind{
-		Kind:  "selector",
-		Group: "internal",
+	KindSelector = schema.GroupVersionKind{
+		Kind:  "rule-selector",
+		Group: "internal.tigera.io",
 	}
 
-	// The network policy cache is populated by both Kubernetes and Calico policy types. Include kindSelector in here so
+	// The network policy cache is populated by both Kubernetes and Calico policy types. Include KindSelector in here so
 	// the queued recalculation processing knows where to send those updates.
 	KindsNetworkPolicyRuleSelectors = []schema.GroupVersionKind{
-		kindSelector,
+		KindSelector,
 	}
 )
 
@@ -36,7 +36,7 @@ func selectorIDToSelector(id resources.ResourceID) string {
 
 func selectorToSelectorID(sel string) resources.ResourceID {
 	return resources.ResourceID{
-		GroupVersionKind: kindSelector,
+		GroupVersionKind: KindSelector,
 		NameNamespace: resources.NameNamespace{
 			Name: sel,
 		},

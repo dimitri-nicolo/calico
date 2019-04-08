@@ -23,7 +23,7 @@ type replayer struct {
 	cb         syncer.SyncerCallbacks
 }
 
-func New(start, end time.Time, lister list.Destination, eventer event.Fetcher, callbacks syncer.SyncerCallbacks) syncer.Syncer {
+func New(start, end time.Time, lister list.Destination, eventer event.Fetcher, callbacks syncer.SyncerCallbacks) syncer.Starter {
 	return &replayer{
 		make(map[schema.GroupVersionKind]map[string]resources.Resource),
 		start, end, lister, eventer, callbacks,

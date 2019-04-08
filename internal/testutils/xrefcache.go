@@ -23,14 +23,6 @@ func NewXrefCacheTester() *XRefCacheTester {
 	}
 }
 
-var (
-	// Internal resource kind to encapsulate a selector.
-	kindSelector = schema.GroupVersionKind{
-		Kind:  "selector",
-		Group: "internal",
-	}
-)
-
 func ipByteToIPString(ip IP) string {
 	switch ip {
 	case IP1:
@@ -583,7 +575,7 @@ func (t *XRefCacheTester) DeleteNamespace(nameIdx Name, namespaceIdx Namespace) 
 //
 
 func (t *XRefCacheTester) GetCachedRuleSelectors() []string {
-	ids := t.xrefCache.GetCachedResourceIDs(kindSelector)
+	ids := t.xrefCache.GetCachedResourceIDs(xrefcache.KindSelector)
 	selectors := make([]string, len(ids))
 	for i := range ids {
 		selectors[i] = ids[i].Name
@@ -597,7 +589,7 @@ func (t *XRefCacheTester) GetGNPRuleSelectorCacheEntry(sel Selector, nsSel Selec
 		s = fmt.Sprintf("(%s) && (%s)", selectorByteToNamespaceSelector(nsSel), s)
 	}
 	entry := t.xrefCache.Get(resources.ResourceID{
-		GroupVersionKind: kindSelector,
+		GroupVersionKind: xrefcache.KindSelector,
 		NameNamespace: resources.NameNamespace{
 			Name: s,
 		},
