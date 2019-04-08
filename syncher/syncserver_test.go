@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -665,6 +665,10 @@ func TestSyncRestart(t *testing.T) {
 	defer cCancel()
 	go uut.Start(cCtx, stores, dpStats)
 
+	if uut.Readiness() {
+		t.Error("Expected syncClient not to be ready before receiving inSync")
+	}
+
 	server.SendInSync()
 	Eventually(stores).Should(Receive())
 
@@ -673,6 +677,9 @@ func TestSyncRestart(t *testing.T) {
 
 	server.SendInSync()
 	Eventually(stores).Should(Receive())
+	if !uut.Readiness() {
+		t.Error("Expected syncClient to be ready after receiving inSync")
+	}
 }
 
 func TestSyncCancelBeforeInSync(t *testing.T) {

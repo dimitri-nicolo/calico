@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,12 +23,14 @@ import (
 	"syscall"
 
 	"github.com/projectcalico/app-policy/checker"
+	"github.com/projectcalico/app-policy/health"
 	"github.com/projectcalico/app-policy/policystore"
+	"github.com/projectcalico/app-policy/proto"
 	"github.com/projectcalico/app-policy/statscache"
 	"github.com/projectcalico/app-policy/syncher"
 	"github.com/projectcalico/app-policy/uds"
 
-	docopt "github.com/docopt/docopt-go"
+	"github.com/docopt/docopt-go"
 	authz "github.com/envoyproxy/data-plane-api/envoy/service/auth/v2alpha"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -111,6 +113,10 @@ func runServer(arguments map[string]interface{}) {
 	// Synchronize the policy store and start reporting stats.
 	opts := uds.GetDialOptions()
 	syncClient := syncher.NewClient(dial, opts, syncher.ClientOptions{})
+
+	// Register the health check service, which reports the syncClient's inSync status.
+	proto.RegisterHealthzServer(gs, health.NewHealthCheckService(syncClient))
+
 	go syncClient.Start(ctx, stores, dpStats)
 
 	// Run gRPC server on separate goroutine so we catch any signals and clean up.
@@ -125,7 +131,7 @@ func runServer(arguments map[string]interface{}) {
 	signal.Notify(c, os.Interrupt, os.Kill, syscall.SIGTERM)
 
 	// Block until a signal is received.
-	log.Infof("Got signal:", <-c)
+	log.Infof("Got signal: %v", <-c)
 }
 
 func runClient(arguments map[string]interface{}) {
