@@ -514,7 +514,10 @@ func (r *DefaultRuleRenderer) StaticFilterForwardChains() []*Chain {
 					Group:       NFLOGDomainGroup,
 					Prefix:      "DNS",
 					SizeEnabled: r.EnableNflogSize,
-					Size:        512,
+					// Traditional DNS over UDP has a maximum size of 512 bytes,
+					// but we need to allow for headers as well (Ethernet, IP
+					// and UDP); 1024 will amply cover what we need.
+					Size: 1024,
 				},
 			},
 			Rule{

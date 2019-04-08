@@ -140,7 +140,7 @@ func (m *ipSetsManager) handleDomainIPSetUpdate(msg *proto.IPSetUpdate, metadata
 	if m.domainSetProgramming[msg.Id] != nil {
 		log.Info("IPSetUpdate for existing IP set")
 		domainsToRemove := set.New()
-		domainsToAdd := set.From(msg.Members)
+		domainsToAdd := set.FromArray(msg.Members)
 		for domain, domainSetIds := range m.domainSetIds {
 			if domainSetIds.Contains(msg.Id) {
 				// Domain set previously included this domain name.
@@ -153,7 +153,7 @@ func (m *ipSetsManager) handleDomainIPSetUpdate(msg *proto.IPSetUpdate, metadata
 				}
 			}
 		}
-		m.handleDomainIPSetDeltaUpdate(msg.Id, ipsToSlice(domainsToRemove), ipsToSlice(domainsToAdd))
+		m.handleDomainIPSetDeltaUpdate(msg.Id, setToSlice(domainsToRemove), setToSlice(domainsToAdd))
 		return
 	}
 
@@ -186,9 +186,9 @@ func (m *ipSetsManager) handleDomainIPSetUpdate(msg *proto.IPSetUpdate, metadata
 	m.domainSetProgramming[msg.Id] = ipToDomains
 }
 
-func ipsToSlice(ips set.Set) []string {
-	slice := make([]string, 0, ips.Len())
-	ips.Iter(func(item interface{}) error {
+func setToSlice(setOfThings set.Set) []string {
+	slice := make([]string, 0, setOfThings.Len())
+	setOfThings.Iter(func(item interface{}) error {
 		slice = append(slice, item.(string))
 		return nil
 	})
@@ -247,7 +247,8 @@ func (m *ipSetsManager) handleDomainIPSetDeltaUpdate(ipSetId string, domainsRemo
 		}
 	}
 
-	// Remove any IPs that are in both ipsToRemove and ipsToAdd.
+	// If there are any IPs that are now in both ipsToRemove and ipsToAdd, we don't need either
+	// to add or remove those IPs.
 	ipsToRemove.Iter(func(item interface{}) error {
 		if ipsToAdd.Contains(item) {
 			ipsToAdd.Discard(item)
@@ -257,8 +258,8 @@ func (m *ipSetsManager) handleDomainIPSetDeltaUpdate(ipSetId string, domainsRemo
 	})
 
 	// Pass IP deltas onto the ipsets dataplane layer.
-	m.ipsetsDataplane.AddMembers(ipSetId, ipsToSlice(ipsToAdd))
-	m.ipsetsDataplane.RemoveMembers(ipSetId, ipsToSlice(ipsToRemove))
+	m.ipsetsDataplane.RemoveMembers(ipSetId, setToSlice(ipsToRemove))
+	m.ipsetsDataplane.AddMembers(ipSetId, setToSlice(ipsToAdd))
 }
 
 func (m *ipSetsManager) removeDomainIPSetTracking(ipSetId string) {

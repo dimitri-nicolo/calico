@@ -179,7 +179,7 @@ var _ = Describe("Static", func() {
 									Action: JumpAction{Target: ChainDispatchFromHostEndPointForward}},
 								// DNS response capture.
 								{Match: Match().OutInterface("cali+").Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53),
-									Action: NflogAction{Group: 3, Prefix: "DNS", Size: 512}},
+									Action: NflogAction{Group: 3, Prefix: "DNS", Size: 1024}},
 								// Per-prefix workload jump rules.
 								{Match: Match().InInterface("cali+"),
 									Action: JumpAction{Target: ChainFromWorkloadDispatch}},
@@ -1108,7 +1108,7 @@ var _ = Describe("Static", func() {
 							Action: JumpAction{Target: ChainDispatchFromHostEndPointForward}},
 						// DNS response capture.
 						{Match: Match().OutInterface("cali+").Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53),
-							Action: NflogAction{Group: 3, Prefix: "DNS", Size: 512}},
+							Action: NflogAction{Group: 3, Prefix: "DNS", Size: 1024}},
 						// Per-prefix workload jump rules.
 						{Match: Match().InInterface("cali+"),
 							Action: JumpAction{Target: ChainFromWorkloadDispatch}},
@@ -1197,13 +1197,13 @@ var _ = Describe("Static", func() {
 					Action: JumpAction{Target: ChainDispatchFromHostEndPointForward}},
 				// Per-prefix workload jump rules.
 				{Match: Match().OutInterface("cali+").Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53),
-					Action: NflogAction{Group: 3, Prefix: "DNS", Size: 512}},
+					Action: NflogAction{Group: 3, Prefix: "DNS", Size: 1024}},
 				{Match: Match().InInterface("cali+"),
 					Action: JumpAction{Target: ChainFromWorkloadDispatch}},
 				{Match: Match().OutInterface("cali+"),
 					Action: JumpAction{Target: ChainToWorkloadDispatch}},
 				{Match: Match().OutInterface("tap+").Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53),
-					Action: NflogAction{Group: 3, Prefix: "DNS", Size: 512}},
+					Action: NflogAction{Group: 3, Prefix: "DNS", Size: 1024}},
 				{Match: Match().InInterface("tap+"),
 					Action: JumpAction{Target: ChainFromWorkloadDispatch}},
 				{Match: Match().OutInterface("tap+"),
