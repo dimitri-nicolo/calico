@@ -78,6 +78,17 @@ def gen_values(versions, imageNames, imageRegistry)
     esProxy:
       image: #{imageRegistry}#{imageNames["es-proxy"]}
       tag: #{versions["es-proxy"]}
+      
+    complianceController:
+      image: #{imageRegistry}#{imageNames["compliance-controller"]}
+      tag: #{versions["compliance-controller"]}
+    complianceServer:
+      image: #{imageRegistry}#{imageNames["compliance-server"]}
+      tag: #{versions["compliance-server"]}
+    complianceSnapshotter:
+      image: #{imageRegistry}#{imageNames["compliance-snapshotter"]}
+      tag: #{versions["compliance-snapshotter"]}
+
     EOF
 end
 

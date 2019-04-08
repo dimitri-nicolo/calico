@@ -91,7 +91,10 @@ INSTALL_TYPE=${INSTALL_TYPE:="KUBEADM"}
 
 INSTALL_AWS_SG=${INSTALL_AWS_SG:=false}
 
+INSTALL_COMPLIANCE_REPORTING=${INSTALL_COMPLIANCE_REPORTING:=true}
+
 SKIP_EE_INSTALLATION=${SKIP_EE_INSTALLATION:=false}
+
 
 #
 # promptToContinue()
@@ -255,6 +258,12 @@ validateSettings() {
   if "$INSTALL_AWS_SG" ; then
     checkAwsIntegration
   fi
+
+  # Do not install compliance reporting if elastic storage is not local
+  if [ "$ELASTIC_STORAGE" -ne "local" ] ; then
+    INSTALL_COMPLIANCE_REPORTING=false
+  fi
+
 }
 
 #
@@ -1025,6 +1034,15 @@ downloadManifests() {
     downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/manifests/aws-sg-integration/cloud-controllers.yaml"
   fi
 
+  if "$INSTALL_COMPLIANCE_REPORTING" ; then
+    if [ "$DATASTORE" == "etcdv3" ]; then
+      downloadManifest "${DOCS_LOCATION}/${VERSION}/manifests/compliance/compliance.yaml"
+    else
+      downloadManifest "${DOCS_LOCATION}/${VERSION}/manifests/compliance/compliance-kdd.yaml"
+    fi
+  fi
+
+
   if [ "${DOWNLOAD_MANIFESTS_ONLY}" -eq 1 ]; then
     echo "Tigera Secure EE manifests downloaded."
     kill -s TERM $TOP_PID   # quit
@@ -1324,6 +1342,31 @@ applyMonitorCalicoManifest() {
 deleteMonitorCalicoManifest() {
   runIgnoreErrors kubectl delete -f monitor-calico.yaml
   countDownSecs 5 "Deleting \"monitor-calico.yaml\" manifest"
+}
+
+#
+# applyComplianceMonitoring() - install compliance reporting 
+#
+applyComplianceMonitoring() {
+    if [ "$DATASTORE" == "etcdv3" ]; then
+      runIgnoreErrors kubectl appply -f compliance.yaml
+    else
+      runIgnoreErrors kubectl appply -f compliance-kdd.yaml
+    fi
+    blockUntilPodIsReady "name=compliance-controller" 180 "compliance-controller"
+    blockUntilPodIsReady "name=compliance-server" 180 "compliance-server"
+    blockUntilPodIsReady "name=compliance-snapshotter" 180 "compliance-snapshotter"
+}
+
+#
+# deleteComplianceMonitoring() - uninstall compliance reporting
+#
+deleteComplianceMonitoring() {
+    if [ "$DATASTORE" == "etcdv3" ]; then
+      runIgnoreErrors kubectl delete -f compliance.yaml
+    else
+      runIgnoreErrors kubectl delete -f compliance-kdd.yaml
+    fi
 }
 
 #
@@ -1650,6 +1693,9 @@ installCNX() {
     applyOperatorManifest         # Apply operator.yaml
     applyElasticStorageManifest   # Apply elastic-storage.yaml
     applyMonitorCalicoManifest    # Apply monitor-calico.yaml
+    if "$INSTALL_COMPLIANCE_REPORTING" ; then
+      applyComplianceMonitoring   # Apply compliance.yaml orcompliance-kdd.yaml
+    fi
   fi
 }
 
@@ -1667,6 +1713,7 @@ uninstallCNX() {
     deleteElasticStorageManifest # Delete elastic-storage.yaml
     deleteOperatorManifest       # Delete operator.yaml
     deleteCNXPolicyManifest      # Delete cnx-policy.yaml
+    deleteComplianceMonitoring   # Delete compliance.yaml orcompliance-kdd.yaml
   fi
 
   deleteCNXManifest              # Delete cnx-[etcd|kdd].yaml

@@ -31,6 +31,18 @@
    -n calico-monitoring
    ```
 
+
+1. Set up secret with username and password for {{site.prodname}} compliance report and dashboard to authenticate with Elasticsearch.
+   Replace `<compliance-elasticsearch-password>` with the password.
+   ```
+   {{cli}} create secret generic elastic-compliance-user \
+   --from-literal=username=tigera-ee-compliance \
+   --from-literal=password=<compliance-elasticsearch-password> \
+   -n calico-monitoring
+   ```
+
+
+
 1. Set up configmap with the certificate authority certificate to authenticate Elasticsearch & Kibana.
    Replace `<ElasticsearchCA.pem>` with the path to your Elasticsearch/Kibana CA certificate.
 

@@ -1,0 +1,134 @@
+
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: tigera-compliance-controller
+  namespace: calico-monitoring
+
+---
+
+
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: Role
+metadata:
+  namespace: calico-monitoring
+  name: compliance-controller-role
+rules:
+  - apiGroups: ["batch"]
+    resources: ["cronjobs", "jobs"]
+    verbs: ["create", "get", "deletecollection", "delete"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["list", "get", "watch"]
+{{- if eq .Values.datastore "kdd" }}      
+  - apiGroups: ["crd.projectcalico.org"]
+    resources:
+      - globalreporttype
+      - globalreport
+    verbs:
+      - get
+      - list
+      - watch
+{{- end }}
+
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: RoleBinding
+metadata:
+  name: compliance-controller-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: compliance-controller-role
+subjects:
+- kind: ServiceAccount
+  name: tigera-compliance-controller
+  namespace: calico-monitoring
+
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: compliance-controller
+  namespace: calico-monitoring
+  labels:
+    k8s-app: compliance-controller
+spec:
+  replicas: 1
+  strategy:
+     type: Recreate
+  selector:
+    matchLabels:
+      k8s-app: compliance-controller
+  template:
+    metadata:
+      name: compliance-controller
+      namespace: calico-monitoring
+      labels:
+        k8s-app: compliance-controller
+    spec:
+      serviceAccountName: tigera-compliance-controller
+      tolerations:
+        - key: node-role.kubernetes.io/master
+          effect: NoSchedule
+      imagePullSecrets:
+        - name: cnx-pull-secret
+      containers:
+        - name: compliance-controller
+          image: {{.Values.complianceController.image}}:{{.Values.complianceController.tag}}
+          env:
+            - name: LOG_LEVEL
+              value: "warning"
+            - name: TIGERA_COMPLIANCE_REPORT_AFTER
+              value: "30m"
+{{- if .Values.secure_es }}
+            - name: ELASTIC_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-es-proxy
+                  key: elasticsearch.backend.host
+            - name: ELASTIC_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-es-proxy
+                  key: elasticsearch.backend.port
+            - name: ELASTIC_USER
+              valueFrom:
+                secretKeyRef:
+                  name: elastic-compliance-user
+                  key: username
+            - name: ELASTIC_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: elastic-compliance-user
+                  key: password
+            - name: ELASTIC_SSL_VERIFY
+              value: "true"
+            - name: ELASTIC_CA
+              value: /etc/compliance/elastic/ca.pem
+{{- else }}
+            - name: ELASTIC_HOST
+              value: elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local
+            - name: ELASTIC_PORT
+              value: "9200"
+            - name: ELASTIC_SSL_VERIFY
+              value: "false"
+{{- end }}
+{{- if .Values.secure_es }}
+          volumeMounts:
+            - name: elastic-ca-cert-volume
+              mountPath: /etc/compliance/elastic
+{{- end }}
+{{- if .Values.secure_es }}
+      volumes:
+        # Should be created during installation process.
+        - name: elastic-ca-cert-volume
+          configMap:
+            name: elastic-ca-config
+{{- end }}
+
+
