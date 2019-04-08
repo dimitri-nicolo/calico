@@ -508,7 +508,8 @@ func (r *DefaultRuleRenderer) StaticFilterForwardChains() []*Chain {
 		ifaceMatch := prefix + "+"
 		rules = append(rules,
 			Rule{
-				Match: Match().OutInterface(ifaceMatch).Protocol("udp").SourcePorts(53).ConntrackState("ESTABLISHED"),
+				// When we add DNS server vetting here, we will use --ctorigdst to do that.
+				Match: Match().OutInterface(ifaceMatch).Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53),
 				Action: NflogAction{
 					Group:       NFLOGDomainGroup,
 					Prefix:      "DNS",
