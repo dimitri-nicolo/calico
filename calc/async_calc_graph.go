@@ -110,7 +110,7 @@ func NewAsyncCalcGraph(
 			"If this is unexpected, contact Tigera support or email licensing@tigera.io")
 	}
 	eventBuffer := NewEventSequencer(conf)
-	calcGraph := NewCalculationGraph(eventBuffer, lookupCache, conf.FelixHostname, tierSupportEnabled)
+	calcGraph := NewCalculationGraph(eventBuffer, lookupCache, conf, tierSupportEnabled)
 	if conf.IPSecEnabled() {
 		log.Info("IPsec enabled, adding the binding calculator to calculation graph")
 		calcGraph.EnableIPSec(eventBuffer)

@@ -504,11 +504,13 @@ func doStateSequenceTest(expandedTest StateList, licenseMonitor featureChecker, 
 
 	tierSupportEnabled := licenseMonitor.GetFeatureStatus(features.Tiers)
 	BeforeEach(func() {
+		conf := config.New()
+		conf.FelixHostname = localHostname
 		mockDataplane = mock.NewMockDataplane()
 		lookupsCache = NewLookupsCache()
 		eventBuf = NewEventSequencer(mockDataplane)
 		eventBuf.Callback = mockDataplane.OnEvent
-		calcGraph = NewCalculationGraph(eventBuf, lookupsCache, localHostname, tierSupportEnabled)
+		calcGraph = NewCalculationGraph(eventBuf, lookupsCache, conf, tierSupportEnabled)
 		calcGraph.EnableIPSec(eventBuf)
 		statsCollector := NewStatsCollector(func(stats StatsUpdate) error {
 			log.WithField("stats", stats).Info("Stats update")

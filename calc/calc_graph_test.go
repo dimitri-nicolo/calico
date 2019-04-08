@@ -16,6 +16,7 @@ package calc_test
 
 import (
 	. "github.com/projectcalico/felix/calc"
+	"github.com/projectcalico/felix/config"
 
 	"reflect"
 
@@ -46,8 +47,10 @@ var _ = DescribeTable("Calculation graph pass-through tests",
 			log.WithField("message", message).Info("Received message")
 			messageReceived = message
 		}
+		conf := config.New()
+		conf.FelixHostname = "hostname"
 		lookupsCache := NewLookupsCache()
-		cg := NewCalculationGraph(eb, lookupsCache, "hostname", true).AllUpdDispatcher
+		cg := NewCalculationGraph(eb, lookupsCache, conf, true).AllUpdDispatcher
 
 		// Send in the update and flush the buffer.  It should deposit the message
 		// via our callback.
@@ -131,8 +134,10 @@ var _ = Describe("Host IP duplicate squashing test", func() {
 			log.WithField("message", message).Info("Received message")
 			messagesReceived = append(messagesReceived, message)
 		}
+		conf := config.New()
+		conf.FelixHostname = "hostname"
 		lookupsCache := NewLookupsCache()
-		cg = NewCalculationGraph(eb, lookupsCache, "hostname", true).AllUpdDispatcher
+		cg = NewCalculationGraph(eb, lookupsCache, conf, true).AllUpdDispatcher
 	})
 
 	It("should coalesce duplicate updates", func() {
@@ -235,8 +240,10 @@ var _ = Describe("specific scenario tests", func() {
 		mockDataplane = mock.NewMockDataplane()
 		eventBuf = NewEventSequencer(mockDataplane)
 		eventBuf.Callback = mockDataplane.OnEvent
+		conf := config.New()
+		conf.FelixHostname = localHostname
 		lookupsCache := NewLookupsCache()
-		calcGraph = NewCalculationGraph(eventBuf, lookupsCache, localHostname, true)
+		calcGraph = NewCalculationGraph(eventBuf, lookupsCache, conf, true)
 		statsCollector := NewStatsCollector(func(stats StatsUpdate) error {
 			log.WithField("stats", stats).Info("Stats update")
 			return nil

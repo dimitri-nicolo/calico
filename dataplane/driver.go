@@ -1,6 +1,6 @@
 // +build !windows
 
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,8 +26,8 @@ import (
 
 	"github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/felix/config"
-	"github.com/projectcalico/felix/dataplane/external"
-	"github.com/projectcalico/felix/dataplane/linux"
+	extdataplane "github.com/projectcalico/felix/dataplane/external"
+	intdataplane "github.com/projectcalico/felix/dataplane/linux"
 	"github.com/projectcalico/felix/ifacemonitor"
 	"github.com/projectcalico/felix/ipsets"
 	"github.com/projectcalico/felix/logutils"
@@ -100,8 +100,9 @@ func StartDataplaneDriver(configParams *config.Config,
 		}).Info("Calculated iptables mark bits")
 
 		dpConfig := intdataplane.Config{
+			Hostname: configParams.FelixHostname,
 			IfaceMonitorConfig: ifacemonitor.Config{
-				InterfaceExcludes: configParams.InterfaceExcludes(),
+				InterfaceExcludes: configParams.InterfaceExclude,
 			},
 			RulesConfig: rules.Config{
 				WorkloadIfacePrefixes: configParams.InterfacePrefixes(),
@@ -135,6 +136,10 @@ func StartDataplaneDriver(configParams *config.Config,
 				IptablesMarkEndpoint:        markEndpointMark,
 				IptablesMarkNonCaliEndpoint: markEndpointNonCaliEndpoint,
 
+				VXLANEnabled: configParams.VXLANEnabled,
+				VXLANPort:    configParams.VXLANPort,
+				VXLANVNI:     configParams.VXLANVNI,
+
 				IPIPEnabled:       configParams.IpInIpEnabled,
 				IPIPTunnelAddress: configParams.IpInIpTunnelAddr,
 
@@ -159,6 +164,7 @@ func StartDataplaneDriver(configParams *config.Config,
 			},
 
 			IPIPMTU:                        configParams.IpInIpMtu,
+			VXLANMTU:                       configParams.VXLANMTU,
 			IptablesRefreshInterval:        configParams.IptablesRefreshInterval,
 			RouteRefreshInterval:           configParams.RouteRefreshInterval,
 			IPSetsRefreshInterval:          configParams.IpsetsRefreshInterval,
