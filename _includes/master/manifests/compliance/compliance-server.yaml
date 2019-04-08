@@ -26,15 +26,12 @@ rules:
 {{- if eq .Values.datastore "kdd" }}      
   - apiGroups: ["crd.projectcalico.org"]
     resources:
-      - globalnetworkpolicies
-      - networkpolicies
-      - tiers
-      - hostendpoints
-      - licensekeys
-      - globalnetworksets
-      - globalthreatfeeds
+      - globalreporttype
+      - globalreport
     verbs:
-      - "*"
+      - get
+      - list
+      - watch
 {{- end }}
 
 ---
@@ -73,7 +70,7 @@ spec:
 ---
 
 
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: compliance-server

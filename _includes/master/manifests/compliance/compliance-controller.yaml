@@ -9,50 +9,33 @@ metadata:
 
 
 apiVersion: rbac.authorization.k8s.io/v1beta1
-kind: ClusterRole
+kind: Role
 metadata:
+  namespace: calico-monitoring
   name: compliance-controller-role
 rules:
-  - apiGroups: ["extensions"]
-    resources: ["deployments", "replicasets", "daemonsets"]
-    verbs: ["create", "get", "update", "delete", "list"]
-  - apiGroups: ["apiextensions.k8s.io"]
-    resources: ["customresourcedefinitions"]
-    verbs: ["create", "get", "update", "delete", "list"]
-  - apiGroups: ["storage.k8s.io"]
-    resources: ["storageclasses"]
-    verbs: ["get", "list", "create", "delete", "deletecollection"]
-  - apiGroups: [""]
-    resources: ["persistentvolumes", "persistentvolumeclaims", "services", "secrets", "configmaps"]
-    verbs: ["create", "get", "update", "delete", "list"]
   - apiGroups: ["batch"]
     resources: ["cronjobs", "jobs"]
     verbs: ["create", "get", "deletecollection", "delete"]
   - apiGroups: [""]
     resources: ["pods"]
     verbs: ["list", "get", "watch"]
-  - apiGroups: ["apps"]
-    resources: ["statefulsets", "deployments"]
-    verbs: ["*"]
 {{- if eq .Values.datastore "kdd" }}      
   - apiGroups: ["crd.projectcalico.org"]
     resources:
-      - globalnetworkpolicies
-      - networkpolicies
-      - tiers
-      - hostendpoints
-      - globalnetworksets
+      - globalreporttype
+      - globalreport
     verbs:
       - get
       - list
       - watch
 {{- end }}
 
+
 ---
 
-
 apiVersion: rbac.authorization.k8s.io/v1beta1
-kind: ClusterRoleBinding
+kind: RoleBinding
 metadata:
   name: compliance-controller-binding
 roleRef:
@@ -67,7 +50,7 @@ subjects:
 
 ---
 
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: compliance-controller

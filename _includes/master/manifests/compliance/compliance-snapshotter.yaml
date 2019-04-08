@@ -20,10 +20,10 @@ rules:
       - pods
       - serviceaccounts
       - endpoints
+      - services
     verbs:
       - get
       - list
-      - watch
 {{- if eq .Values.datastore "kdd" }}      
   - apiGroups: ["crd.projectcalico.org"]
     resources:
@@ -35,7 +35,6 @@ rules:
     verbs:
       - get
       - list
-      - watch
 {{- end }}
 
 ---
@@ -57,7 +56,7 @@ subjects:
 
 ---
 
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: compliance-snapshotter
