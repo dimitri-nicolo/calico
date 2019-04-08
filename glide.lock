@@ -1,5 +1,5 @@
 hash: 0a918ac03db80a89ebdc5d97055bf12c28bddd6dac236cefe03f0cd841c48773
-updated: 2019-04-08T16:18:03.329688826Z
+updated: 2019-04-08T16:25:13.251958896Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -349,7 +349,7 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: e3fb1a1acd7605367a2b378bc2e2f893c05174b7
+  version: 13ba4ddd0caa9c28ca7b7bffe1dfa9ed8d5ef207
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
@@ -501,7 +501,7 @@ imports:
 - name: gopkg.in/natefinch/lumberjack.v2
   version: a96e63847dc3c67d17befa69c303767e2f84e54f
 - name: gopkg.in/square/go-jose.v2
-  version: 8254d6c783765f38c8675fae4427a1fe73fbd09d
+  version: 89060dee6a84df9a4dae49f676f0c755037834f1
   subpackages:
   - cipher
   - json
@@ -584,6 +584,10 @@ imports:
   - pkg/version
   - pkg/watch
   - third_party/forked/golang/reflect
+- name: k8s.io/apiserver
+  version: f1dab8c342623e75f0484f20b150183d9e73f406
+  subpackages:
+  - pkg/apis/audit
 - name: k8s.io/client-go
   version: 7d04d0e2a0a1a4d4a1cd6baa432a2301492e4e65
   subpackages:
