@@ -1,25 +1,9 @@
 // Copyright (c) 2019 Tigera, Inc. SelectAll rights reserved.
 package testutils
 
-type Label byte
-
-const (
-	Label1 Label = 1 << iota
-	Label2
-	Label3
-	Label4
-	Label5
-)
-
-type Selector byte
-
-const (
-	Select1 Selector = 1 << iota
-	Select2
-	Select3
-	Select4
-	Select5
-)
+// We define a number of constants that are used to encapsulate name/namespace/label/selector and other useful
+// information. Having these defined as numerical values will make it easy to script a scale test, just passing in
+// incremental values for the name and namespace etc.
 
 const (
 	// Zero values with contextual meaning.
@@ -34,6 +18,29 @@ const (
 	SelectAll = Selector(255)
 )
 
+// Label value. This is a bit-mask and so may encapsulate multiple labels.
+type Label byte
+
+const (
+	Label1 Label = 1 << iota
+	Label2
+	Label3
+	Label4
+	Label5
+)
+
+// Selector value. This is a bit-mask and so may encapsulate multiple selectors.
+type Selector byte
+
+const (
+	Select1 Selector = 1 << iota
+	Select2
+	Select3
+	Select4
+	Select5
+)
+
+// Name value. This is rendered as a string containing the value by the helper methods.
 type Name int
 
 const (
@@ -43,6 +50,7 @@ const (
 	Name4
 )
 
+// Name value. This is rendered as a string containing the value by the helper methods.
 type Namespace int
 
 const (
@@ -52,6 +60,7 @@ const (
 	Namespace4
 )
 
+// Action value.
 type Action byte
 
 const (
@@ -59,6 +68,7 @@ const (
 	Deny         = 2
 )
 
+// Entity value referring to the source or destination in a Calico policy rule.
 type Entity byte
 
 const (
@@ -66,6 +76,7 @@ const (
 	Destination
 )
 
+// Net value which is rendered as a CIDR using the helper methods. Currently just support a Public and Private net.
 type Net byte
 
 const (
@@ -73,6 +84,8 @@ const (
 	Private
 )
 
+// Label value. This is a bit-mask and so may encapsulate multiple labels. This is rendered as a single IP or a slice
+// of IPs by the helper methods, depending on context.
 type IP byte
 
 const (
@@ -82,6 +95,7 @@ const (
 	IP4
 )
 
+// Additional Pod options, indicating what features to configure in the pod.
 type PodOpt byte
 
 const (

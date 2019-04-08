@@ -156,7 +156,7 @@ func (c *endpointEngine) kinds() []schema.GroupVersionKind {
 // register implements the resourceCacheEngine interface.
 func (c *endpointEngine) register(cache engineCache) {
 	c.engineCache = cache
-	c.EndpointLabelSelector().RegisterCallbacks(c.kinds(), c.policyMatchStarted, c.policyMatchStopped)
+	c.EndpointLabelSelector().RegisterCallbacks(KindsNetworkPolicy, c.policyMatchStarted, c.policyMatchStopped)
 	c.IPManager().RegisterCallbacks(KindsServiceEndpoints, c.ipMatchStarted, c.ipMatchStopped)
 
 	// Register for updates for all NetworkPolicy events. We don't care about Added/Deleted/Updated events as any
@@ -232,6 +232,8 @@ func (c *endpointEngine) resourceAdded(id resources.ResourceID, entry CacheEntry
 // resourceUpdated implements the resourceCacheEngine interface.
 func (c *endpointEngine) resourceUpdated(id resources.ResourceID, entry CacheEntry, prev VersionedResource) {
 	x := entry.(*CacheEntryEndpoint)
+
+	x.clog.Debugf("Configuring profiles: %v", x.getV1Profiles())
 
 	// Update the labels associated with this pod. Use the labels and profile from the v1 model since these are
 	// modified to include namespace and service account details.
@@ -322,6 +324,7 @@ func (c *endpointEngine) policyMatchStarted(policyId, podId resources.ResourceID
 		log.Errorf("Match started on pod, but pod is not in cache: %s matches %s", policyId, podId)
 		return
 	}
+	x.clog.Debugf("Policy applied: %s", policyId)
 	// Update the policy list in our pod data and queue a recalculation.
 	x.AppliedPolicies.Add(policyId)
 	c.QueueUpdate(podId, x, EventPolicyMatchStarted)
@@ -338,6 +341,7 @@ func (c *endpointEngine) policyMatchStopped(policyId, podId resources.ResourceID
 		log.Errorf("Match stopped on pod, but pod is not in cache: %s no longer matches %s", policyId, podId)
 		return
 	}
+	x.clog.Debugf("Policy no longer applied: %s", policyId)
 	// Update the policy list in our pod data and queue a recalculation.
 	x.AppliedPolicies.Discard(policyId)
 	c.QueueUpdate(podId, x, EventPolicyMatchStopped)
@@ -383,9 +387,10 @@ func (c *endpointEngine) inScopeStarted(sel, epId resources.ResourceID) {
 		log.Errorf("Match started on EP, but EP is not in cache: %s matches %s", sel, epId)
 		return
 	}
-	// We don't need to queue for an update because this can only happen from an endpoint configuration event since the
-	// in-scope selection should always occur before the cache injection has started, and is fixed from that point in.
+	// Set the endpoint as in-scope and queue an update so that listeners are notified.
+	x.clog.Debug("Setting endpoint as in-scope")
 	x.setInscope()
+	c.QueueUpdate(epId, x, EventInScope)
 }
 
 func (c *endpointEngine) inScopeStopped(sel, epId resources.ResourceID) {

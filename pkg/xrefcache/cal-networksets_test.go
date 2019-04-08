@@ -10,7 +10,7 @@ import (
 )
 
 var _ = Describe("Basic CRUD of network sets with no other resources present", func() {
-	var tester *XRefCacheTester
+	var tester *XrefCacheTester
 
 	BeforeEach(func() {
 		tester = NewXrefCacheTester()

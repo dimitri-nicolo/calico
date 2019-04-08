@@ -20,7 +20,7 @@ import (
 // different network policy resource types into the v3/v1 components separately.
 
 var _ = Describe("Basic CRUD of network policies rule selector pseudo resource types", func() {
-	var tester *XRefCacheTester
+	var tester *XrefCacheTester
 
 	BeforeEach(func() {
 		tester = NewXrefCacheTester()

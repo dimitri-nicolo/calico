@@ -14,9 +14,6 @@ type cacheEntryCommon struct {
 
 // getUpdateTypes returns the accumulated update types for a resource that is being updated from a syncer update.
 func (c *cacheEntryCommon) getUpdateTypes() syncer.UpdateType {
-	if c.inScope {
-		return c.updateTypes | EventInScope
-	}
 	return c.updateTypes
 }
 
@@ -26,14 +23,21 @@ func (c *cacheEntryCommon) setUpdateTypes(u syncer.UpdateType) {
 	c.updateTypes |= u
 }
 
+// resetUpdateTypes is called at the end of the syncer update processing to reset the accumlated set of updates
+// for the resource being updated from a syncer update.
+func (c *cacheEntryCommon) resetUpdateTypes() {
+	c.updateTypes = 0
+}
+
 // setInscope marks the cache entry as in-scope according to the registered selectors. Once in-scope the resource
 // remains in-scope.
 func (c *cacheEntryCommon) setInscope() {
 	c.inScope = true
 }
 
-// resetUpdateTypes is called at the end of the syncer update processing to reset the accumlated set of updates
-// for the resource being updated from a syncer update.
-func (c *cacheEntryCommon) resetUpdateTypes() {
-	c.updateTypes = 0
+func (c *cacheEntryCommon) getInScopeFlag() syncer.UpdateType {
+	if c.inScope {
+		return EventInScope
+	}
+	return 0
 }

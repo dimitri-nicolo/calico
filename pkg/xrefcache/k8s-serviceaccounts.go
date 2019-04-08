@@ -10,6 +10,8 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/updateprocessors"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/tigera/compliance/pkg/resources"
 	"github.com/tigera/compliance/pkg/syncer"
 )
@@ -20,7 +22,8 @@ var (
 	}
 )
 
-// VersionedServiceAccountResource is an extension of the VersionedResource interface, specific to handling ServiceAccounts.
+// VersionedServiceAccountResource is an extension of the VersionedResource interface, specific to handling
+// ServiceAccounts.
 type VersionedServiceAccountResource interface {
 	VersionedResource
 	getV1Profile() *model.Profile
@@ -128,16 +131,17 @@ func (c *k8sServiceAccountEngine) resourceAdded(id resources.ResourceID, entry C
 
 // resourceUpdated implements the resourceCacheEngine.
 func (c *k8sServiceAccountEngine) resourceUpdated(id resources.ResourceID, entry CacheEntry, prev VersionedResource) {
-	// Kubernetes namespaces are configured as Calico profiles. Use the V3 version of the name and the V1 version of the
-	// labels since they will have been modified to match the selector modifications in the pod.
+	// Kubernetes service accounts are configured as Calico profiles. Use the V3 version of the name and the V1 version
+	// of the labels since they will have been modified to match the selector modifications in the pod.
 	x := entry.(*CacheEntryK8sServiceAccount)
+	logrus.Debugf("Configure profile %s with labels %v", x.getV3Profile().Name, x.getV1Profile().Labels)
 	c.EndpointLabelSelector().UpdateParentLabels(x.getV3Profile().Name, x.getV1Profile().Labels)
 }
 
 // resourceDeleted implements the resourceCacheEngine.
 func (c *k8sServiceAccountEngine) resourceDeleted(id resources.ResourceID, entry CacheEntry) {
-	// Kubernetes namespaces are configured as Calico profiles. Use the V3 version of the name since it will have been
-	// modified to match the selector modifications in the pod.
+	// Kubernetes service accounts are configured as Calico profiles. Use the V3 version of the name since it will have
+	// been modified to match the selector modifications in the pod.
 	x := entry.(*CacheEntryK8sServiceAccount)
 	c.EndpointLabelSelector().DeleteParentLabels(x.getV3Profile().Name)
 }

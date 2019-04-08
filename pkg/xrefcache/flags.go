@@ -60,7 +60,7 @@ const (
 	// updates require a recalculation since the data may be updated as part of another callback. The following events
 	// do not actually require a recalculation, and therefore the recalculation step can be omitted if the update
 	// flags only belong in this group.
-	EventsNotRequiringRecalculation = EventServiceAdded | EventServiceDeleted
+	EventsNotRequiringRecalculation = EventServiceAdded | EventServiceDeleted | EventInScope
 )
 
 // The CacheEntryFlags are the set of flags maintained by each cache entry. Only certain flags are valid for certain

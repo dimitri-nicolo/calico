@@ -12,7 +12,7 @@ import (
 )
 
 var _ = Describe("Pods cache verification", func() {
-	var tester *XRefCacheTester
+	var tester *XrefCacheTester
 
 	BeforeEach(func() {
 		tester = NewXrefCacheTester()

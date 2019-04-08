@@ -170,11 +170,11 @@ func (c *resourceCache) get(id resources.ResourceID) CacheEntry {
 // all entries currently in the cache. Up until this point, no updates will have been sent to the consumer. After this
 // point all updates will be sent to the consumer (at least those registered for).
 func (c *resourceCache) dumpResourcesAsUpdate() {
-	for id, augRes := range c.resources {
+	for id, cacheEntry := range c.resources {
 		c.xc.consumerDispatcher.OnUpdate(syncer.Update{
 			ResourceID: id,
-			Resource:   augRes,
-			Type:       EventResourceAdded,
+			Resource:   cacheEntry,
+			Type:       EventResourceAdded | cacheEntry.getInScopeFlag(),
 		})
 	}
 }
@@ -217,10 +217,12 @@ type resourceEngineCache struct {
 }
 
 func (c *resourceEngineCache) GetFromOurCache(res resources.ResourceID) CacheEntry {
+	log.WithField("id", res).Debug("Get resource from our own cache")
 	return c.ours.resources[res]
 }
 
 func (c *resourceEngineCache) GetFromXrefCache(res resources.ResourceID) CacheEntry {
+	log.WithField("id", res).Debug("Get resource from x-ref cache")
 	return c.xc.Get(res)
 }
 

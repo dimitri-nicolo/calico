@@ -84,6 +84,8 @@ func (r *reporter) run() error {
 		r.clog.Debug("Including audit event data in report")
 	}
 
+	// Store report data
+
 	return nil
 }
 

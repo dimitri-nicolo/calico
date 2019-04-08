@@ -57,6 +57,7 @@ type CacheEntry interface {
 	getUpdateTypes() syncer.UpdateType
 	setUpdateTypes(syncer.UpdateType)
 	resetUpdateTypes()
+	getInScopeFlag() syncer.UpdateType
 }
 
 // VersionedResource is an extension to the Resource interface to add some additional versioning

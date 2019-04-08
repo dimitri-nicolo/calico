@@ -120,7 +120,7 @@ func (c *xrefCache) OnStatusUpdate(status syncer.StatusUpdate) {
 
 	// Finally, notify the cache dispatcher and the consumer dispatcher of the status update.
 	c.cacheDispatcher.OnStatusUpdate(status)
-	c.cacheDispatcher.OnStatusUpdate(status)
+	c.consumerDispatcher.OnStatusUpdate(status)
 }
 
 // OnUpdate implements the XrefCache interface.
@@ -147,9 +147,10 @@ func (c *xrefCache) OnUpdate(update syncer.Update) {
 			updates |= cache.engine.recalculate(id, entry)
 		}
 
-		// If we are in-sync then send a notification via the cache dispatcher for this entry.
+		// If we are in-sync then send a notification via the cache dispatcher for this entry. Always include the
+		// in-scope flag if the entry is in-scope.
 		update := syncer.Update{
-			Type:       updates,
+			Type:       updates | entry.getInScopeFlag(),
 			ResourceID: id,
 			Resource:   entry,
 		}
