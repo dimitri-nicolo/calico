@@ -2,6 +2,8 @@ package: github.com/projectcalico/felix
 homepage: https://projectcalico.org
 license: Apache-2.0
 import:
+- package: github.com/google/gopacket
+  version: b7586607157b64351ab71d7f6ed36f71f2e83393
 - package: github.com/containernetworking/cni
   version: v0.5.2
   subpackages:

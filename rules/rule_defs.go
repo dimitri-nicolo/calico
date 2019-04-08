@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -98,9 +98,11 @@ const (
 	// Ref: http://ipset.netfilter.org/iptables-extensions.man.html#lbDI
 	NFLOGPrefixMaxLength = 64
 
-	// NFLOG groups. 1 for inbound and 2 for outbound.
+	// NFLOG groups. 1 for inbound and 2 for outbound.  3 for
+	// snooping DNS response for domain information.
 	NFLOGInboundGroup  uint16 = 1
 	NFLOGOutboundGroup uint16 = 2
+	NFLOGDomainGroup   uint16 = 3
 
 	// HistoricNATRuleInsertRegex is a regex pattern to match to match
 	// special-case rules inserted by old versions of felix.  Specifically,

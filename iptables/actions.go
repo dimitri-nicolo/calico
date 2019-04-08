@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -101,13 +101,18 @@ type NflogAction struct {
 	Group       uint16
 	Prefix      string
 	SizeEnabled bool
+	Size        int
 }
 
 func (n NflogAction) ToFragment(features *Features) string {
+	size := 80
+	if n.Size != 0 {
+		size = n.Size
+	}
 	if n.SizeEnabled {
-		return fmt.Sprintf("--jump NFLOG --nflog-group %d --nflog-prefix %s --nflog-size 80", n.Group, n.Prefix)
+		return fmt.Sprintf("--jump NFLOG --nflog-group %d --nflog-prefix %s --nflog-size %d", n.Group, n.Prefix, size)
 	} else {
-		return fmt.Sprintf("--jump NFLOG --nflog-group %d --nflog-prefix %s --nflog-range 80", n.Group, n.Prefix)
+		return fmt.Sprintf("--jump NFLOG --nflog-group %d --nflog-prefix %s --nflog-range %d", n.Group, n.Prefix, size)
 	}
 }
 

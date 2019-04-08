@@ -1,0 +1,271 @@
+// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package intdataplane
+
+import (
+	"sync"
+	"time"
+
+	"github.com/google/gopacket"
+	"github.com/google/gopacket/layers"
+	"github.com/projectcalico/felix/rules"
+	"github.com/projectcalico/libcalico-go/lib/set"
+	log "github.com/sirupsen/logrus"
+	"github.com/tigera/nfnetlink"
+)
+
+// The data that we hold for each value in a name -> value mapping.  A value can be an IP, or
+// another name.  The values themselves are held as the keys of the nameData.values map.
+type valueData struct {
+	// When the validity of this value expires.
+	expiryTime time.Time
+	// Timer used to notify when the value expires.
+	timer *time.Timer
+	// Whether the value is another name, as opposed to being an IP.
+	isName bool
+}
+
+// The data that we hold for each name.
+type nameData struct {
+	// Known values for this name.  Map keys are the actual values (i.e. IPs or alias names),
+	// and valueData is as above.
+	values map[string]*valueData
+	// Other names whose cached IP list should be invalidated when the info for _this_ name
+	// changes.
+	ancestorNames []string
+}
+
+type domainInfoStore struct {
+	// Channel that we write to when we want DNS response capture to stop.
+	stopChannel chan struct{}
+
+	// Channel on which we receive captured DNS responses (beginning with the IP header).
+	msgChannel chan []byte
+
+	// Channel that we write to when new information is available for a domain name.
+	domainInfoChanges chan *domainInfoChanged
+
+	// Stores for the information that we glean from DNS responses.  Note: IPs are held here as
+	// strings, and also passed to the ipsets manager as strings.
+	mutex    sync.Mutex
+	mappings map[string]*nameData
+
+	// Cache for "what are the IPs for <domain>?".  We have this to halve our processing,
+	// because there are two copies of the IPSets Manager (one for v4 and one for v6) that will
+	// call us to make identical queries.
+	resultsCache map[string][]string
+
+	// Channel for domain mapping expiry signals.
+	mappingExpiryChannel chan *domainMappingExpired
+}
+
+// Signal sent by the domain info store to the ipsets manager when the information for a given
+// domain name changes.  (i.e. when GetDomainIPs(domain) would return a different set of IP
+// addresses.)
+type domainInfoChanged struct {
+	domain string
+}
+
+// Signal sent by timers' AfterFunc to the domain info store when a particular name -> IP or name ->
+// cname mapping expires.
+type domainMappingExpired struct {
+	name, value string
+}
+
+func newDomainInfoStore(domainInfoChanges chan *domainInfoChanged, ipv6Enabled bool) *domainInfoStore {
+	log.Info("Creating domain info store")
+	s := &domainInfoStore{
+		domainInfoChanges:    domainInfoChanges,
+		mappings:             make(map[string]*nameData),
+		resultsCache:         make(map[string][]string),
+		mappingExpiryChannel: make(chan *domainMappingExpired),
+	}
+	return s
+}
+
+func (s *domainInfoStore) Start() {
+	log.Info("Starting domain info store")
+	s.stopChannel = make(chan struct{})
+	// Use a buffered channel here with reasonable capacity, so that the nfnetlink capture
+	// thread can handle a burst of DNS response packets without becoming blocked by the reading
+	// thread here.  Specifically we say 1000 because that what's we use for flow logs, so we
+	// know that works; even though we probably won't need so much capacity for the DNS case.
+	s.msgChannel = make(chan []byte, 1000)
+	nfnetlink.SubscribeDNS(int(rules.NFLOGDomainGroup), 65535, s.msgChannel, s.stopChannel)
+	go s.loop()
+}
+
+func (s *domainInfoStore) loop() {
+	for {
+		select {
+		case msg := <-s.msgChannel:
+			packet := gopacket.NewPacket(msg, layers.LayerTypeIPv4, gopacket.Default)
+			if dnsLayer := packet.Layer(layers.LayerTypeDNS); dnsLayer != nil {
+				dns, _ := dnsLayer.(*layers.DNS)
+				s.processDNSPacket(dns)
+			}
+		case expiry := <-s.mappingExpiryChannel:
+			s.processMappingExpiry(expiry.name, expiry.value)
+		}
+	}
+}
+
+func (s *domainInfoStore) processDNSPacket(dns *layers.DNS) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	for _, rec := range dns.Answers {
+		s.storeDNSRecordInfo(&rec, "answer")
+	}
+	for _, rec := range dns.Additionals {
+		s.storeDNSRecordInfo(&rec, "additional")
+	}
+}
+
+func (s *domainInfoStore) processMappingExpiry(name, value string) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	if nameData := s.mappings[name]; nameData != nil {
+		if valueData := nameData.values[value]; (valueData != nil) && valueData.expiryTime.Before(time.Now()) {
+			delete(nameData.values, value)
+			if len(nameData.values)+len(nameData.ancestorNames) == 0 {
+				delete(s.mappings, name)
+			}
+			s.signalDomainInfoChange(name)
+		}
+	}
+}
+
+func (s *domainInfoStore) storeDNSRecordInfo(rec *layers.DNSResourceRecord, section string) {
+	if rec.Class != layers.DNSClassIN {
+		log.Debugf("Ignore DNS response with class %v", rec.Class)
+		return
+	}
+
+	switch rec.Type {
+	case layers.DNSTypeA:
+		log.Debugf("A: %v -> %v with TTL %v (%v)",
+			string(rec.Name),
+			rec.IP,
+			rec.TTL,
+			section,
+		)
+		s.storeInfo(string(rec.Name), rec.IP.String(), time.Duration(rec.TTL)*time.Second, false)
+	case layers.DNSTypeAAAA:
+		log.Debugf("AAAA: %v -> %v with TTL %v (%v)",
+			string(rec.Name),
+			rec.IP,
+			rec.TTL,
+			section,
+		)
+		s.storeInfo(string(rec.Name), rec.IP.String(), time.Duration(rec.TTL)*time.Second, false)
+	case layers.DNSTypeCNAME:
+		log.Debugf("CNAME: %v -> %v with TTL %v (%v)",
+			string(rec.Name),
+			string(rec.CNAME),
+			rec.TTL,
+			section,
+		)
+		s.storeInfo(string(rec.Name), string(rec.CNAME), time.Duration(rec.TTL)*time.Second, true)
+	default:
+		log.Debugf("Ignore DNS response with type %v", rec.Type)
+	}
+
+	return
+}
+
+func (s *domainInfoStore) storeInfo(name, value string, ttl time.Duration, isName bool) {
+	makeTimer := func() *time.Timer {
+		return time.AfterFunc(ttl, func() {
+			s.mappingExpiryChannel <- &domainMappingExpired{name: name, value: value}
+		})
+	}
+	if s.mappings[name] == nil {
+		s.mappings[name] = &nameData{values: make(map[string]*valueData)}
+	}
+	existing := s.mappings[name].values[value]
+	if existing == nil {
+		s.mappings[name].values[value] = &valueData{
+			expiryTime: time.Now().Add(ttl),
+			timer:      makeTimer(),
+			isName:     isName,
+		}
+		s.signalDomainInfoChange(name)
+		// If value is another name, for which we don't yet have any information, create a
+		// mapping entry for it so we can record that it is a descendant of the name in
+		// hand.  Then, when we get information for the descendant name, we can correctly
+		// signal changes for the name in hand and any of its ancestors.
+		if isName && s.mappings[value] == nil {
+			s.mappings[value] = &nameData{
+				values:        make(map[string]*valueData),
+				ancestorNames: append(s.mappings[name].ancestorNames, name),
+			}
+		}
+	} else {
+		newExpiryTime := time.Now().Add(ttl)
+		if newExpiryTime.After(existing.expiryTime) {
+			// Update the expiry time of the existing mapping.
+			existing.timer = makeTimer()
+			existing.expiryTime = newExpiryTime
+		}
+	}
+}
+
+func (s *domainInfoStore) GetDomainIPs(domain string) []string {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	ips := s.resultsCache[domain]
+	if ips == nil {
+		var collectIPsForName func(string, []string)
+		collectIPsForName = func(domain string, ancestorNames []string) {
+			if nameData := s.mappings[domain]; nameData != nil {
+				nameData.ancestorNames = ancestorNames
+				for value, valueData := range nameData.values {
+					if valueData.isName {
+						// The RHS of the mapping is another name, so we recurse to pick up
+						// its IPs.
+						collectIPsForName(value, append(ancestorNames, domain))
+					} else {
+						// The RHS of the mapping is an IP, so add it to the list that we
+						// will return.
+						ips = append(ips, value)
+					}
+				}
+			}
+		}
+		collectIPsForName(domain, nil)
+		s.resultsCache[domain] = ips
+	}
+	log.Infof("GetDomainIPs(%v) -> %v", domain, ips)
+	return ips
+}
+
+func (s *domainInfoStore) signalDomainInfoChange(name string) {
+	changedNames := set.From(name)
+	delete(s.resultsCache, name)
+	if nameData := s.mappings[name]; nameData != nil {
+		for _, ancestor := range nameData.ancestorNames {
+			changedNames.Add(ancestor)
+			delete(s.resultsCache, ancestor)
+		}
+	}
+	// Release the mutex to send change signals, so that we can't get a deadlock between this
+	// thread and the int_dataplane thread.
+	s.mutex.Unlock()
+	defer s.mutex.Lock()
+	changedNames.Iter(func(item interface{}) error {
+		s.domainInfoChanges <- &domainInfoChanged{domain: item.(string)}
+		return nil
+	})
+}
