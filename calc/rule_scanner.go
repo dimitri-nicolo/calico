@@ -15,6 +15,7 @@ package calc
 
 import (
 	"fmt"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 
@@ -79,6 +80,8 @@ type RuleScanner struct {
 	OnIPSetActive   func(ipSet *IPSetData)
 	OnIPSetInactive func(ipSet *IPSetData)
 
+	OnIPSetMemberAdded labelindex.NamedPortMatchCallback
+
 	RulesUpdateCallbacks rulesUpdateCallbacks
 }
 
@@ -86,7 +89,9 @@ type IPSetData struct {
 	// The selector and named port that this IP set represents.  To represent an unfiltered named
 	// port, set selector to AllSelector.  If NamedPortProtocol == ProtocolNone then
 	// this IP set represents a selector only, with no named port component.
-	Selector selector.Selector
+	Selector    selector.Selector
+	isDomainSet bool
+
 	// NamedPortProtocol identifies the protocol (TCP or UDP) for a named port IP set.  It is
 	// set to ProtocolNone for a selector-only IP set.
 	NamedPortProtocol labelindex.IPSetPortProtocol
@@ -98,11 +103,23 @@ type IPSetData struct {
 	cachedUID string
 }
 
+func (d *IPSetData) SetIDForDomains(dstDomains []string) {
+	if d.cachedUID != "" {
+		log.WithField("IPSetData", d).Panic("cachedUID already set")
+	}
+	d.cachedUID = hash.MakeUniqueID("d", strings.Join(dstDomains, "#"))
+}
+
 func (d *IPSetData) UniqueID() string {
 	if d.cachedUID == "" {
 		selID := d.Selector.UniqueID()
 		if d.NamedPortProtocol == labelindex.ProtocolNone {
-			d.cachedUID = selID
+			if d.isDomainSet {
+				// Prefix with "d" instead of "s".
+				d.cachedUID = "d" + selID[1:]
+			} else {
+				d.cachedUID = selID
+			}
 		} else {
 			idToHash := selID + "," + d.NamedPortProtocol.String() + "," + d.NamedPort
 			d.cachedUID = hash.MakeUniqueID("n", idToHash)
@@ -116,6 +133,9 @@ func (d *IPSetData) UniqueID() string {
 func (d *IPSetData) DataplaneProtocolType() proto.IPSetUpdate_IPSetType {
 	if d.NamedPortProtocol != labelindex.ProtocolNone {
 		return proto.IPSetUpdate_IP_AND_PORT
+	}
+	if d.isDomainSet {
+		return proto.IPSetUpdate_DOMAIN
 	}
 	return proto.IPSetUpdate_NET
 }
@@ -156,7 +176,7 @@ func (rs *RuleScanner) updateRules(key interface{}, inbound, outbound []model.Ru
 	currentUIDToIPSet := make(map[string]*IPSetData)
 	parsedInbound := make([]*ParsedRule, len(inbound))
 	for ii, rule := range inbound {
-		parsed, allIPSets := ruleToParsedRule(&rule)
+		parsed, allIPSets := ruleToParsedRule(&rule, true)
 		parsedInbound[ii] = parsed
 		for _, ipSet := range allIPSets {
 			// Note: there may be more than one entry in allIPSets for the same UID, but that's only
@@ -166,14 +186,21 @@ func (rs *RuleScanner) updateRules(key interface{}, inbound, outbound []model.Ru
 		}
 	}
 	parsedOutbound := make([]*ParsedRule, len(outbound))
+	currentUIDToDomains := make(map[string][]string)
 	for ii, rule := range outbound {
-		parsed, allIPSets := ruleToParsedRule(&rule)
+		parsed, allIPSets := ruleToParsedRule(&rule, false)
 		parsedOutbound[ii] = parsed
 		for _, ipSet := range allIPSets {
 			// Note: there may be more than one entry in allIPSets for the same UID, but that's only
 			// the case if the two entries really represent the same IP set so it's OK to coalesce
 			// them here.
 			currentUIDToIPSet[ipSet.UniqueID()] = ipSet
+		}
+		if (len(parsed.DstDomainIPSetIDs) == 1) && (len(parsed.DstDomains) > 0) {
+			// The rule has destination domains specified directly (as opposed to via a
+			// selector).  Save those off so we can generate the domain IP set
+			// membership below, if the domain IP set is now becoming active.
+			currentUIDToDomains[parsed.DstDomainIPSetIDs[0]] = parsed.DstDomains
 		}
 	}
 	parsedRules = &ParsedRules{
@@ -213,6 +240,11 @@ func (rs *RuleScanner) updateRules(key interface{}, inbound, outbound []model.Ru
 			log.Debugf("IP set became active: %v -> %v", uid, ipSet)
 			// This IP set just became active, send event.
 			rs.OnIPSetActive(ipSet)
+			// Also emit the IP set membership, in the directly specified domains case.
+			for _, domain := range currentUIDToDomains[uid] {
+				log.Infof("Domain %v", domain)
+				rs.OnIPSetMemberAdded(uid, labelindex.IPSetMember{Domain: domain})
+			}
 		}
 		rs.uidsToRulesIDs.Put(uid, key)
 		return nil
@@ -276,6 +308,7 @@ type ParsedRule struct {
 	SrcIPSetIDs          []string
 	DstIPSetIDs          []string
 	DstDomainIPSetIDs    []string
+	DstDomains           []string
 
 	NotProtocol             *numorstring.Protocol
 	NotSrcNets              []*net.IPNet
@@ -310,7 +343,7 @@ type ParsedRule struct {
 	LogPrefix string
 }
 
-func ruleToParsedRule(rule *model.Rule) (parsedRule *ParsedRule, allIPSets []*IPSetData) {
+func ruleToParsedRule(rule *model.Rule, ingressRule bool) (parsedRule *ParsedRule, allIPSets []*IPSetData) {
 	srcSel, dstSel, notSrcSels, notDstSels := extractTagsAndSelectors(rule)
 
 	// In the datamodel, named ports are included in the list of ports as an "or" match; i.e. the
@@ -355,15 +388,33 @@ func ruleToParsedRule(rule *model.Rule) (parsedRule *ParsedRule, allIPSets []*IP
 	// by the selector above.  If we have numeric ports, we can't make the optimization
 	// because we can't filter numeric ports by selector in the same way.
 	var srcSelIPSets, dstSelIPSets []*IPSetData
+	dstDomainIPSets := []*IPSetData{}
+	var dstDomains []string
+
 	if len(srcNumericPorts) > 0 || len(srcNamedPorts) == 0 {
-		srcSelIPSets = selectorsToIPSets(srcSel)
+		srcSelIPSets = selectorsToIPSets(srcSel, false)
 	}
 	if len(dstNumericPorts) > 0 || len(dstNamedPorts) == 0 {
-		dstSelIPSets = selectorsToIPSets(dstSel)
+		dstSelIPSets = selectorsToIPSets(dstSel, false)
+
+		// If the rule is of type allow egress, check whether domains are directly specified
+		// and convert those to IPSets. If they are not, use the destination selector and
+		// calculate its IPSet(s).
+		log.Infof("Check rule %v %v for domains %v", ingressRule, rule.Action, rule.DstDomains)
+		if !ingressRule && rule.Action == "allow" {
+			if len(rule.DstDomains) != 0 {
+				log.Infof("Rule with domains %v", rule.DstDomains)
+				dstDomainIPSets = domainsToIPSets(rule.DstDomains)
+				dstDomains = rule.DstDomains
+			} else {
+				log.Infof("Rule with selector %v", dstSel)
+				dstDomainIPSets = selectorsToIPSets(dstSel, true)
+			}
+		}
 	}
 
-	notSrcSelIPSets := selectorsToIPSets(notSrcSels)
-	notDstSelIPSets := selectorsToIPSets(notDstSels)
+	notSrcSelIPSets := selectorsToIPSets(notSrcSels, false)
+	notDstSelIPSets := selectorsToIPSets(notDstSels, false)
 
 	parsedRule = &ParsedRule{
 		Action: rule.Action,
@@ -381,6 +432,8 @@ func ruleToParsedRule(rule *model.Rule) (parsedRule *ParsedRule, allIPSets []*IP
 		DstPorts:             dstNumericPorts,
 		DstNamedPortIPSetIDs: ipSetsToUIDs(dstNamedPortIPSets),
 		DstIPSetIDs:          ipSetsToUIDs(dstSelIPSets),
+		DstDomainIPSetIDs:    ipSetsToUIDs(dstDomainIPSets),
+		DstDomains:           dstDomains,
 
 		ICMPType: rule.ICMPType,
 		ICMPCode: rule.ICMPCode,
@@ -424,10 +477,12 @@ func ruleToParsedRule(rule *model.Rule) (parsedRule *ParsedRule, allIPSets []*IP
 	allIPSets = append(allIPSets, dstSelIPSets...)
 	allIPSets = append(allIPSets, notSrcSelIPSets...)
 	allIPSets = append(allIPSets, notDstSelIPSets...)
+	allIPSets = append(allIPSets, dstDomainIPSets...)
 
 	return
 }
 
+// Converts a list of named ports to a list of IPSets.
 func namedPortsToIPSets(namedPorts []string, positiveSelectors []selector.Selector, proto labelindex.IPSetPortProtocol) []*IPSetData {
 	var ipSets []*IPSetData
 	if len(positiveSelectors) > 1 {
@@ -449,16 +504,26 @@ func namedPortsToIPSets(namedPorts []string, positiveSelectors []selector.Select
 	return ipSets
 }
 
-func selectorsToIPSets(selectors []selector.Selector) []*IPSetData {
+// Converts a list of domain names to a single IPSet.
+func domainsToIPSets(dstDomains []string) []*IPSetData {
+	ipSet := IPSetData{isDomainSet: true}
+	ipSet.SetIDForDomains(dstDomains)
+	return []*IPSetData{&ipSet}
+}
+
+// Converts a list of selectors to a list of IPSets.
+func selectorsToIPSets(selectors []selector.Selector, isDomainSet bool) []*IPSetData {
 	var ipSets []*IPSetData
 	for _, s := range selectors {
 		ipSets = append(ipSets, &IPSetData{
-			Selector: s,
+			Selector:    s,
+			isDomainSet: isDomainSet,
 		})
 	}
 	return ipSets
 }
 
+// Converts a list of IPSets to a list of their unique IDs.
 func ipSetsToUIDs(ipSets []*IPSetData) []string {
 	var ids []string
 	for _, ipSet := range ipSets {

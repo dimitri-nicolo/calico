@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -293,6 +293,7 @@ var _ = Describe("ParsedRule", func() {
 			name := strings.ToLower(prType.Field(i).Name)
 			if strings.Contains(name, "icmptype") ||
 				strings.Contains(name, "icmpcode") ||
+				strings.Contains(name, "domains") ||
 				strings.Contains(name, "serviceaccount") {
 				// expected to differ.
 				continue

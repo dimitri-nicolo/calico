@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -269,6 +269,7 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, hostn
 		}
 		callbacks.OnIPSetMemberRemoved(ipSetID, member)
 	}
+	ruleScanner.OnIPSetMemberAdded = ipsetMemberIndex.OnMemberAdded
 
 	// The endpoint policy resolver marries up the active policies with local endpoints and
 	// calculates the complete, ordered set of policies that apply to each endpoint.

@@ -164,7 +164,7 @@ func Run(configFile string) {
 
 	// Health monitoring, for liveness and readiness endpoints.  The following loop can take a
 	// while before the datastore reports itself as ready - for example when there is data that
-	// needs to be migrated from a previous version - and we still want to Felix to report
+	// needs to be migrated from a previous version - and we still want Felix to report
 	// itself as live (but not ready) while we are waiting for that.  So we create the
 	// aggregator upfront and will start serving health status over HTTP as soon as we see _any_
 	// config that indicates that.

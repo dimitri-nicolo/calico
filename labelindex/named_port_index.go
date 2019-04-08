@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -38,6 +38,7 @@ type endpointData struct {
 	nets    []ip.CIDR
 	ports   []model.EndpointPort
 	parents []*npParentData
+	domains []string
 
 	cachedMatchingIPSetIDs set.Set /* or, as an optimization, nil if there are none */
 }
@@ -121,6 +122,7 @@ type IPSetMember struct {
 	CIDR       ip.CIDR
 	Protocol   IPSetPortProtocol
 	PortNumber uint16
+	Domain     string
 }
 
 type ipSetData struct {
@@ -130,6 +132,7 @@ type ipSetData struct {
 	selector          selector.Selector
 	namedPortProtocol IPSetPortProtocol
 	namedPort         string
+	isDomainSet       bool
 
 	// memberToRefCount stores a reference count for each member in the IP set.  Reference counts
 	// may be >1 if an IP address is shared by more than one endpoint.
@@ -214,7 +217,8 @@ func (idx *SelectorAndNamedPortIndex) OnUpdate(update api.Update) (_ bool) {
 				endpoint.Labels,
 				extractCIDRsFromWorkloadEndpoint(endpoint),
 				endpoint.Ports,
-				profileIDs)
+				profileIDs,
+				nil)
 		} else {
 			log.Debugf("Deleting endpoint %v from NamedPortIndex", key)
 			idx.DeleteEndpoint(key)
@@ -230,7 +234,8 @@ func (idx *SelectorAndNamedPortIndex) OnUpdate(update api.Update) (_ bool) {
 				endpoint.Labels,
 				extractCIDRsFromHostEndpoint(endpoint),
 				endpoint.Ports,
-				profileIDs)
+				profileIDs,
+				nil)
 		} else {
 			log.Debugf("Deleting host endpoint %v from NamedPortIndex", key)
 			idx.DeleteEndpoint(key)
@@ -245,7 +250,8 @@ func (idx *SelectorAndNamedPortIndex) OnUpdate(update api.Update) (_ bool) {
 				netSet.Labels,
 				extractCIDRsFromNetworkSet(netSet),
 				nil,
-				nil)
+				nil,
+				netSet.AllowedEgressDomains)
 		} else {
 			log.Debugf("Deleting network set %v from NamedPortIndex", key)
 			idx.DeleteEndpoint(key)
@@ -344,13 +350,10 @@ func (idx *SelectorAndNamedPortIndex) UpdateIPSet(ipSetID string, sel selector.S
 		"namedPortProtocol": namedPortProtocol,
 	})
 	logCxt.Debug("Updating IP set")
-	if sel == nil {
-		log.WithField("id", ipSetID).Panic("Selector should not be nil")
-	}
 
 	// Check whether anything has actually changed before we do a scan.
 	oldIPSetData := idx.ipSetDataByID[ipSetID]
-	if oldIPSetData != nil {
+	if oldIPSetData != nil && sel != nil {
 		if oldIPSetData.selector.UniqueID() == sel.UniqueID() &&
 			oldIPSetData.namedPortProtocol == namedPortProtocol &&
 			oldIPSetData.namedPort == namedPort {
@@ -371,12 +374,13 @@ func (idx *SelectorAndNamedPortIndex) UpdateIPSet(ipSetID string, sel selector.S
 		namedPort:         namedPort,
 		namedPortProtocol: namedPortProtocol,
 		memberToRefCount:  map[IPSetMember]uint64{},
+		isDomainSet:       strings.HasPrefix(ipSetID, "d"),
 	}
 	idx.ipSetDataByID[ipSetID] = newIPSetData
 
 	// Then scan all endpoints.
 	for epID, epData := range idx.endpointDataByID {
-		if !sel.EvaluateLabels(epData) {
+		if sel == nil || !sel.EvaluateLabels(epData) {
 			// Endpoint doesn't match.
 			continue
 		}
@@ -433,6 +437,7 @@ func (idx *SelectorAndNamedPortIndex) UpdateEndpointOrSet(
 	nets []ip.CIDR,
 	ports []model.EndpointPort,
 	parentIDs []string,
+	domains []string,
 ) {
 	var cidrsToLog interface{} = nets
 	if log.GetLevel() < log.DebugLevel && len(nets) > 20 {
@@ -465,6 +470,9 @@ func (idx *SelectorAndNamedPortIndex) UpdateEndpointOrSet(
 	if len(ports) > 0 {
 		newEndpointData.ports = ports
 	}
+	if len(domains) > 0 {
+		newEndpointData.domains = domains
+	}
 
 	// Get the old endpoint data so we can compare it.
 	oldEndpointData := idx.endpointDataByID[id]
@@ -475,8 +483,9 @@ func (idx *SelectorAndNamedPortIndex) UpdateEndpointOrSet(
 		if reflect.DeepEqual(oldEndpointData.labels, newEndpointData.labels) &&
 			reflect.DeepEqual(oldEndpointData.ports, newEndpointData.ports) &&
 			reflect.DeepEqual(oldEndpointData.nets, newEndpointData.nets) &&
-			reflect.DeepEqual(oldEndpointData.parents, newEndpointData.parents) {
-			log.Debug("Endpoint update makes no changes, skipping.")
+			reflect.DeepEqual(oldEndpointData.parents, newEndpointData.parents) &&
+			reflect.DeepEqual(oldEndpointData.domains, newEndpointData.domains) {
+			log.Info("Endpoint update makes no changes, skipping.")
 			return
 		}
 
@@ -660,7 +669,7 @@ func (idx *SelectorAndNamedPortIndex) DeleteParentLabels(parentID string) {
 func (idx *SelectorAndNamedPortIndex) CalculateEndpointContribution(d *endpointData, ipSetData *ipSetData) (contrib []IPSetMember) {
 	if ipSetData.namedPortProtocol != ProtocolNone {
 		// This IP set represents a named port match, calculate the cross product of
-		// matching named ports by IP address.
+		// matching named ports by IP address or domain.
 		portNumbers := d.LookupNamedPorts(ipSetData.namedPort, ipSetData.namedPortProtocol)
 		for _, namedPort := range portNumbers {
 			for _, addr := range d.nets {
@@ -670,6 +679,12 @@ func (idx *SelectorAndNamedPortIndex) CalculateEndpointContribution(d *endpointD
 					PortNumber: namedPort,
 				})
 			}
+		}
+	} else if ipSetData.isDomainSet {
+		for _, domain := range d.domains {
+			contrib = append(contrib, IPSetMember{
+				Domain: domain,
+			})
 		}
 	} else {
 		// Non-named port match, simply return the CIDRs.

@@ -36,7 +36,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
 )
 
-var _ = Describe("FelixConfig vs ConfigParams parity", func() {
+var _ = Describe("FelixConfigurationSpec vs ConfigParams parity", func() {
 	var fcFields map[string]reflect.StructField
 	var cpFields map[string]reflect.StructField
 	cpFieldsToIgnore := []string{
