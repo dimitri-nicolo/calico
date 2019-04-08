@@ -24,7 +24,7 @@ and your datastore type. Refer to the section that matches your configuration.
 - **Without federation**:
    - [etcd datastore](#installing-without-federation-using-etcd)
    - [Kubernetes API datastore, 50 nodes or less](#installing-without-federation-using-kubernetes-api-datastore-50-nodes-or-less)
-   - [Kubernetes API datastore, more than 50 nodes](#installing-without-federation-using-kubernetes-api-datastore-50-nodes-or-less)
+   - [Kubernetes API datastore, more than 50 nodes](#installing-without-federation-using-kubernetes-api-datastore-more-than-50-nodes)
 
 - **With federation**:
    - [etcd datastore](#installing-with-federation-using-etcd)
