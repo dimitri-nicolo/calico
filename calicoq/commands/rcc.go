@@ -7,9 +7,10 @@ import (
 	"strings"
 	"sync"
 
+	"sort"
+
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
-	"sort"
 )
 
 func NewRemoteClusterHandler() *remoteClusterHandler {
