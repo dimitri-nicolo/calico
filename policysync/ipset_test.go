@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -36,6 +36,12 @@ var _ = Describe("AddIPSetsRule", func() {
 		for i := 0; i < rt.NumField(); i++ {
 			fn := rt.Field(i).Name
 			if strings.HasSuffix(fn, "IpSetIds") {
+				if fn == "DstDomainIpSetIds" {
+					// DstDomainIpSetIds isn't passed to ALP because it can only
+					// be set in egress rules and ALP only implements inbound
+					// policy.
+					continue
+				}
 				fields = append(fields, fn)
 				fv := rv.Elem().Field(i)
 				fv.Set(reflect.ValueOf([]string{fn}))
