@@ -89,8 +89,8 @@ SRC_FILES=$(shell find -name '*.go' |grep -v vendor)
 
 ############################################################################
 BUILD_IMAGE?=gcr.io/unique-caldron-775/cnx/tigera/dikastes
-PUSH_IMAGES?=$(BUILD_IMAGE) quay.io/calico/dikastes
-RELEASE_IMAGES?=gcr.io/projectcalico-org/dikastes eu.gcr.io/projectcalico-org/dikastes asia.gcr.io/projectcalico-org/dikastes us.gcr.io/projectcalico-org/dikastes
+PUSH_IMAGES?=$(BUILD_IMAGE)
+RELEASE_IMAGES?=quay.io/tigera/dikastes
 PACKAGE_NAME?=github.com/projectcalico/app-policy
 
 # If this is a release, also tag and push additional images.
