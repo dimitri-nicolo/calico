@@ -1,3 +1,4 @@
+// Copyright (c) 2019 Tigera, Inc. All rights reserved.
 package snapshot
 
 import (
@@ -8,7 +9,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/projectcalico/libcalico-go/lib/errors"
 
@@ -24,11 +25,11 @@ const (
 )
 
 // Run is the entrypoint to start running the snapshotter.
-func Run(ctx context.Context, tm metav1.TypeMeta, listSrc list.Source, listDest list.Destination) error {
+func Run(ctx context.Context, kind schema.GroupVersionKind, listSrc list.Source, listDest list.Destination) error {
 	s := &snapshotter{
 		ctx:      ctx,
-		tm:       tm,
-		clog:     logrus.WithField("type", tm),
+		kind:     kind,
+		clog:     logrus.WithField("groupVersionKind", kind),
 		listSrc:  listSrc,
 		listDest: listDest,
 	}
@@ -37,7 +38,7 @@ func Run(ctx context.Context, tm metav1.TypeMeta, listSrc list.Source, listDest 
 
 type snapshotter struct {
 	ctx      context.Context
-	tm       metav1.TypeMeta
+	kind     schema.GroupVersionKind
 	clog     *logrus.Entry
 	listSrc  list.Source
 	listDest list.Destination
@@ -107,19 +108,19 @@ func (s *snapshotter) storeSnapshot() error {
 func (s *snapshotter) lastListTimeFn() func() (interface{}, error) {
 	dayAgo := time.Now().Add(-24 * time.Hour)
 	return func() (interface{}, error) {
-		return s.listDest.RetrieveList(s.tm, &dayAgo, nil, false)
+		return s.listDest.RetrieveList(s.kind, &dayAgo, nil, false)
 	}
 }
 
 func (s *snapshotter) listQueryFn() func() (interface{}, error) {
 	return func() (interface{}, error) {
-		return s.listSrc.RetrieveList(s.tm)
+		return s.listSrc.RetrieveList(s.kind)
 	}
 }
 
 func (s *snapshotter) listWriteFn(trlist *list.TimestampedResourceList) func() (interface{}, error) {
 	return func() (interface{}, error) {
-		return nil, s.listDest.StoreList(s.tm, trlist)
+		return nil, s.listDest.StoreList(s.kind, trlist)
 	}
 }
 

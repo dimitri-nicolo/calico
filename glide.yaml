@@ -5,36 +5,26 @@ import:
 - package: github.com/sirupsen/logrus
   version: ^1.0.4
 - package: github.com/projectcalico/libcalico-go
-  version: b95d12c63b408a5ecced3e5ae34db59db37f167e
-  repo: git@github.com:tigera/libcalico-go-private.git
   vcs: git
+  repo: git@github.com:tigera/libcalico-go-private.git
+  version: b366ebe3298bca1d6a2b74e8c81d8bd529b70c97
 - package: github.com/tigera/licensing
-  version: cb027c7c879597e0e02f2411c0c201752bab39c8
   repo: git@github.com:tigera/licensing
   vcs: git
+  version: cb027c7c879597e0e02f2411c0c201752bab39c8
   subpackages:
   - client
-- package: github.com/projectcalico/calicoctl
-  version: 904830690a1e32c199c24256c930e5df1e51f8f6
-  repo: git@github.com:tigera/calicoctl-private.git
-  vcs: git
-  subpackages:
-  - calicoctl/resourcemgr
 - package: github.com/projectcalico/felix
-  version: 51d5200862f2f306c0a0ffadffd6d5f59602d995
-  repo: git@github.com:tigera/felix-private.git
   vcs: git
+  repo: git@github.com:tigera/felix-private.git
+  version: 51d5200862f2f306c0a0ffadffd6d5f59602d995
   subpackages:
   - labelindex
 - package: k8s.io/client-go
-  version: 82aa063804cf055e16e8911250f888bc216e8b61
-  subpackages:
-  - util/cert
+  version: v8.0.0
+- package: k8s.io/apiserver
+  version: kubernetes-1.11.9
 - package: github.com/olivere/elastic
   version: v6.2.16
 - package: github.com/mailru/easyjson
-  version: 1de009706dbeb9d05f18586f0735fcdb7c524481
-- package: github.com/caimeo/iniflags
-- package: github.com/x-cray/logrus-prefixed-formatter
-  version: ^0.5.2
-- package: github.com/mgutz/ansi
+  version: 03f2033d19d5860aef995fe360ac7d395cd8ce65

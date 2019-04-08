@@ -1,3 +1,4 @@
+// Copyright (c) 2019 Tigera, Inc. All rights reserved.
 package main
 
 import (
@@ -59,10 +60,9 @@ func main() {
 	// Starting snapshotter for each resource type.
 	wg := sync.WaitGroup{}
 	for _, rh := range resources.GetAllResourceHelpers() {
-		tm := rh.TypeMeta()
 		wg.Add(1)
-		go func() {
-			err := snapshot.Run(cxt, tm, datastoreClient, elasticClient)
+		go func(rh resources.ResourceHelper) {
+			err := snapshot.Run(cxt, rh.GroupVersionKind(), datastoreClient, elasticClient)
 			if err != nil {
 				log.Errorf("Hit terminating error in snapshotter: %v", err)
 			}
@@ -70,7 +70,7 @@ func main() {
 			// This snapshotter is exiting, so tell the others to exit.
 			cancel()
 			wg.Done()
-		}()
+		}(rh)
 	}
 
 	// Wait until all snapshotters have exited.
