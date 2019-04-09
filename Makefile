@@ -290,8 +290,8 @@ bin/helm:
 	tar -zxvf $(TMP)/$(HELM_RELEASE) -C $(TMP)
 	mv $(TMP)/linux-amd64/helm bin/helm
 
-.PHONY: values.yml
-values.yml:
+.PHONY: values.yaml
+values.yaml:
 ifndef RELEASE_STREAM
 	$(error RELEASE_STREAM is undefined - run using make values.yaml RELEASE_STREAM=vX.Y)
 endif
