@@ -147,6 +147,10 @@ type Config struct {
 
 	// Optional stats collector
 	Collector collector.Collector
+
+	// Config for domain-based policy.
+	DomainInfoStore        string
+	DomainInfoSaveInterval time.Duration
 }
 
 // InternalDataplane implements an in-process Felix dataplane driver based on iptables
@@ -234,6 +238,9 @@ type InternalDataplane struct {
 	config Config
 
 	debugHangC <-chan time.Time
+
+	// Channel used when the Felix top level wants the dataplane to stop.
+	stopChan chan *sync.WaitGroup
 }
 
 const (
@@ -241,7 +248,7 @@ const (
 	healthInterval = 10 * time.Second
 )
 
-func NewIntDataplaneDriver(config Config) *InternalDataplane {
+func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *InternalDataplane {
 	log.WithField("config", config).Info("Creating internal dataplane driver.")
 	ruleRenderer := config.RuleRendererOverride
 	if ruleRenderer == nil {
@@ -262,6 +269,7 @@ func NewIntDataplaneDriver(config Config) *InternalDataplane {
 		domainInfoChanges: make(chan *domainInfoChanged, 100),
 		config:            config,
 		applyThrottle:     throttle.New(10),
+		stopChan:          stopChan,
 	}
 	dp.applyThrottle.Refill() // Allow the first apply() immediately.
 
@@ -347,7 +355,11 @@ func NewIntDataplaneDriver(config Config) *InternalDataplane {
 	dp.routeTables = append(dp.routeTables, routeTableV4)
 
 	dp.endpointStatusCombiner = newEndpointStatusCombiner(dp.fromDataplane, config.IPv6Enabled)
-	dp.domainInfoStore = newDomainInfoStore(dp.domainInfoChanges, config.IPv6Enabled)
+	dp.domainInfoStore = newDomainInfoStore(
+		dp.domainInfoChanges,
+		config.DomainInfoStore,
+		config.DomainInfoSaveInterval,
+	)
 
 	dp.RegisterManager(newIPSetsManager(ipSetsV4, config.MaxIPSetSize, dp.domainInfoStore))
 	dp.RegisterManager(newHostIPManager(
@@ -865,6 +877,12 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 			log.Warning("Debug hang simulation timer popped, hanging the dataplane!!")
 			time.Sleep(1 * time.Hour)
 			log.Panic("Woke up after 1 hour, something's probably wrong with the test.")
+		case stopWG := <-d.stopChan:
+			if err := d.domainInfoStore.saveMappingsV1(); err != nil {
+				log.WithError(err).Warning("Failed to save mappings to file on Felix shutdown")
+
+			}
+			stopWG.Done()
 		}
 
 		if datastoreInSync && d.dataplaneNeedsSync {

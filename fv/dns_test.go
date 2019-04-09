@@ -17,6 +17,8 @@
 package fv_test
 
 import (
+	"io/ioutil"
+	"path"
 	"strconv"
 
 	log "github.com/sirupsen/logrus"
@@ -40,11 +42,16 @@ var _ = Describe("DNS Policy", func() {
 		felix  *infrastructure.Felix
 		client client.Interface
 		w      [1]*workload.Workload
+		dnsDir string
 	)
 
 	BeforeEach(func() {
 		opts := infrastructure.DefaultTopologyOptions()
-		//opts.FelixLogSeverity = "debug"
+		var err error
+		dnsDir, err = ioutil.TempDir("", "dnsinfo")
+		Expect(err).NotTo(HaveOccurred())
+		opts.ExtraVolumes[dnsDir] = "/dnsinfo"
+		opts.ExtraEnvVars["FELIX_DOMAININFOSTORE"] = "/dnsinfo/dnsinfo.txt"
 		felix, etcd, client = infrastructure.StartSingleNodeEtcdTopology(opts)
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")
 
@@ -76,6 +83,7 @@ var _ = Describe("DNS Policy", func() {
 			w[ii].Stop()
 		}
 		felix.Stop()
+		Eventually(path.Join(dnsDir, "dnsinfo.txt"), "10s", "1s").Should(BeARegularFile())
 
 		if CurrentGinkgoTestDescription().Failed {
 			etcd.Exec("etcdctl", "ls", "--recursive", "/")

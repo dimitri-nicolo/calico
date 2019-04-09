@@ -291,6 +291,11 @@ type Config struct {
 	Err               error
 
 	IptablesNATOutgoingInterfaceFilter string `config:"iface-param;"`
+
+	// Config for domain-based policy, just local for now.
+	// TODO: add to FelixConfiguration also?
+	DomainInfoStore        string        `config:"file;/tmp/felix-domain-info-store.txt;local"`
+	DomainInfoSaveInterval time.Duration `config:"seconds;60;local"`
 }
 
 type ProtoPort struct {

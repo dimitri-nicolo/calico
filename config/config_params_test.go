@@ -385,6 +385,9 @@ var _ = DescribeTable("Config parsing",
 	Entry("IPSecLogLevel", "IPSecLogLevel", "verbose", "VERBOSE"),
 
 	Entry("IPSecRekeyTime", "IPSecRekeyTime", "123", 123*time.Second),
+
+	Entry("DomainInfoStore", "DomainInfoStore", "/dnsinfo.txt", "/dnsinfo.txt"),
+	Entry("DomainInfoSaveInterval", "DomainInfoSaveInterval", "3600", time.Hour),
 )
 
 var _ = DescribeTable("OpenStack heuristic tests",
