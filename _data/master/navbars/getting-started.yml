@@ -30,6 +30,8 @@ toc:
       path: /getting-started/kubernetes/installation/integration
     - title: Using your own Elasticsearch for logs
       path: /getting-started/kubernetes/installation/byo-elasticsearch
+    - title: Installing Tigera Secure EE on Docker Enterprise
+      path: /getting-started/kubernetes/installation/docker-ee
     - title: Installing Tigera Secure EE on EKS
       path: /getting-started/kubernetes/installation/eks
   - title: Upgrade from Calico to Tigera Secure EE

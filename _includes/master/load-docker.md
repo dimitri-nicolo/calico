@@ -207,7 +207,12 @@
    ```
    {: .no-select-button}
 
+{% if include.platform == "docker-ee" %}
+1. Continue to [Docker Enterprise/UCP Installation](#install-docker-ucp).
+{% else %}
+
 1. Continue to [Installing {{site.prodname}}](#install-cnx).
+{% endif %}
 
 {% endif %}
 

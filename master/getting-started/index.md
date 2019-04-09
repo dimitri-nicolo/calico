@@ -46,14 +46,28 @@ was Awesome Corp, the file would be named `awesome-corp-license.yaml`.
 ## Get started
 
 <div class="row">
-  <div class="col-xs-6 col-md-3">
+  <div class="col-xs-6 col-md-3" style="text-align:center">
     <a href="/{{page.version}}/getting-started/kubernetes/" class="thumbnail">
-      <img src="{{site.url}}/images/kubernetes-button.svg" alt="Kubernetes" width="40%">
+      <img src="{{site.baseurl}}/images/kubernetes_logo.svg" alt="Kubernetes" width="87%">
     </a>
+    Kubernetes
   </div>
-  <div class="col-xs-6 col-md-3">
-    <a href="/{{page.version}}/getting-started/openshift/installation/" class="thumbnail">
-      <img src="{{site.url}}/images/openshift-button.svg" alt="OpenShift" width="35%">
+  <div class="col-xs-6 col-md-3" style="text-align:center">
+    <a href="/{{page.version}}/getting-started/kubernetes/installation/eks" class="thumbnail">
+      <img src="{{site.baseurl}}/images/icon-aws-amazon-eks.svg" alt="Amazon EKS" width="75%">
     </a>
+    Amazon EKS
+  </div>
+  <div class="col-xs-6 col-md-3" style="text-align:center">
+    <a href="/{{page.version}}/getting-started/kubernetes/installation/docker-ee" class="thumbnail">
+      <img src="{{site.baseurl}}/images/Docker-R-Logo-08-2018-Monochomatic-RGB_Vertical-x3.jpg" alt="Docker Enterprise" width="100%">
+    </a>
+    Docker Enterprise
+  </div>
+  <div class="col-xs-6 col-md-3" style="text-align:center">
+    <a href="/{{page.version}}/getting-started/openshift/installation/" class="thumbnail">
+      <img src="{{site.baseurl}}/images/OpenShift-LogoType.svg" alt="OpenShift" width="80%">
+    </a>
+    OpenShift
   </div>
 </div>
