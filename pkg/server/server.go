@@ -35,13 +35,8 @@ func Start(config *Config) error {
 		}
 	}
 
-	// Initialize all handlers and middlewares here. Proxy is handler as well.
 	proxy := handler.NewProxy(config.ElasticURL, tlsConfig)
 
-	// TODO(doublek):
-	//  - This could be nicer. Seems a bit kludgy to add middlewares like this.
-	//  - Logging only logs the frontend requests and not the backend response. We could
-	//    move the logger to the end and make it log responses if present.
 	sm.Handle("/version", http.HandlerFunc(handler.VersionHandler))
 
 	switch config.AccessMode {
