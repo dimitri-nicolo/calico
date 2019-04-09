@@ -1349,13 +1349,13 @@ deleteMonitorCalicoManifest() {
 #
 applyComplianceMonitoring() {
     if [ "$DATASTORE" == "etcdv3" ]; then
-      runIgnoreErrors kubectl appply -f compliance.yaml
+      runIgnoreErrors kubectl apply -f compliance.yaml
     else
-      runIgnoreErrors kubectl appply -f compliance-kdd.yaml
+      runIgnoreErrors kubectl apply -f compliance-kdd.yaml
     fi
-    blockUntilPodIsReady "name=compliance-controller" 180 "compliance-controller"
-    blockUntilPodIsReady "name=compliance-server" 180 "compliance-server"
-    blockUntilPodIsReady "name=compliance-snapshotter" 180 "compliance-snapshotter"
+    blockUntilPodIsReady "k8s-app=compliance-controller" 180 "compliance-controller"
+    blockUntilPodIsReady "k8s-app=compliance-server" 180 "compliance-server"
+    blockUntilPodIsReady "k8s-app=compliance-snapshotter" 180 "compliance-snapshotter"
 }
 
 #
