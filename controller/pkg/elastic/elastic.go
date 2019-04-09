@@ -65,6 +65,10 @@ func (e *Elastic) ListIPSets(ctx context.Context) ([]db.IPSetMeta, error) {
 		if err == io.EOF {
 			return ids, nil
 		}
+		if elastic.IsNotFound(err) {
+			// If we 404, just return an empty slice.
+			return nil, nil
+		}
 		if err != nil {
 			return nil, err
 		}
