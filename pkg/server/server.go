@@ -42,7 +42,7 @@ func Start(config *Config) error {
 		KeepAlivePeriod: config.ProxyKeepAlivePeriod,
 		IdleConnTimeout: config.ProxyIdleConnTimeout,
 	}
-	proxy := handler.NewProxy(config.ElasticURL, tlsConfig)
+	proxy := handler.NewProxy(pc)
 
 	sm.Handle("/version", http.HandlerFunc(handler.VersionHandler))
 

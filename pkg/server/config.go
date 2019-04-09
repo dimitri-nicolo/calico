@@ -107,9 +107,18 @@ func NewConfigFromEnv() (*Config, error) {
 	elasticUsername := os.Getenv(elasticUsernameEnv)
 	elasticPassword := os.Getenv(elasticPasswordEnv)
 
-	connectTimeout = getEnvOrDefaultDuration("PROXY_CONNECT_TIMEOUT", defaultConnectTimeout)
-	keepAlivePeriod = getEnvOrDefaultDuration("PROXY_KEEPALIVE_PERIOD", defaultKeepAlivePeriod)
-	idleConnTimeout = getEnvOrDefaultDuration("PROXY_IDLECONN_TIMEOUT", defaultIdleConnTimeout)
+	connectTimeout, err := getEnvOrDefaultDuration("PROXY_CONNECT_TIMEOUT", defaultConnectTimeout)
+	if err != nil {
+		return nil, err
+	}
+	keepAlivePeriod, err := getEnvOrDefaultDuration("PROXY_KEEPALIVE_PERIOD", defaultKeepAlivePeriod)
+	if err != nil {
+		return nil, err
+	}
+	idleConnTimeout, err := getEnvOrDefaultDuration("PROXY_IDLECONN_TIMEOUT", defaultIdleConnTimeout)
+	if err != nil {
+		return nil, err
+	}
 	config := &Config{
 		ListenAddr:                listenAddr,
 		CertFile:                  certFilePath,
@@ -128,12 +137,12 @@ func NewConfigFromEnv() (*Config, error) {
 	return config, err
 }
 
-func getEnvOrDefaultDuration(key string, defaultValue time.Duration) time.Duration {
+func getEnvOrDefaultDuration(key string, defaultValue time.Duration) (time.Duration, error) {
 	val := os.Getenv(key)
 	if val == "" {
-		return defaultValue
+		return defaultValue, nil
 	} else {
-		return val
+		return time.ParseDuration(val)
 	}
 }
 
