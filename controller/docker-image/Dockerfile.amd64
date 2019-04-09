@@ -1,5 +1,9 @@
+FROM ubuntu:18.04 as ubuntu
+RUN apt-get update && apt-get install -y ca-certificates
+
 FROM scratch
 
+COPY --from=ubuntu /etc/ssl/certs /etc/ssl/certs
 ADD bin/controller-amd64 /controller
 ADD bin/healthz-amd64 /healthz
 WORKDIR /
