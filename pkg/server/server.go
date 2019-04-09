@@ -35,6 +35,13 @@ func Start(config *Config) error {
 		}
 	}
 
+	pc := &handler.ProxyConfig{
+		TargetURL:       config.ElasticURL,
+		TLSConfig:       tlsConfig,
+		ConnectTimeout:  config.ProxyConnectTimeout,
+		KeepAlivePeriod: config.ProxyKeepAlivePeriod,
+		IdleConnTimeout: config.ProxyIdleConnTimeout,
+	}
 	proxy := handler.NewProxy(config.ElasticURL, tlsConfig)
 
 	sm.Handle("/version", http.HandlerFunc(handler.VersionHandler))

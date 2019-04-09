@@ -6,12 +6,12 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"time"
 
 	"github.com/tigera/es-proxy/pkg/handler"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	log "github.com/sirupsen/logrus"
 )
 
 var _ = Describe("Proxy Handler", func() {
@@ -97,7 +97,14 @@ var _ = Describe("Proxy Handler", func() {
 		targetURL, err := url.Parse(target.URL)
 		Expect(err).ShouldNot(HaveOccurred())
 
-		proxyServer = httptest.NewServer(handler.NewProxy(targetURL, tc))
+		pc := &handler.ProxyConfig{
+			TargetURL:       targetURL,
+			TLSConfig:       tc,
+			ConnectTimeout:  time.Second,
+			KeepAlivePeriod: time.Second,
+			IdleConnTimeout: time.Second,
+		}
+		proxyServer = httptest.NewServer(handler.NewProxy(pc))
 	}
 
 	Context("No TLS", func() {

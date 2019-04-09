@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"time"
 )
 
 // Environment variables that we read.
@@ -23,6 +24,13 @@ const (
 	elasticInsecureSkipVerifyEnv = "ELASTIC_INSECURE_SKIP_VERIFY"
 	elasticUsernameEnv           = "ELASTIC_USERNAME"
 	elasticPasswordEnv           = "ELASTIC_PASSWORD"
+)
+
+const (
+	defaultListenAddr      = "127.0.0.1:8443"
+	defaultConnectTimeout  = 30 * time.Second
+	defaultKeepAlivePeriod = 30 * time.Second
+	defaultIdleConnTimeout = 90 * time.Second
 )
 
 type ElasticAccessMode string
@@ -68,6 +76,11 @@ type Config struct {
 	// Unused otherwise.
 	ElasticUsername string
 	ElasticPassword string
+
+	// Various proxy timeouts. Used when creating a http.Transport RoundTripper.
+	ProxyConnectTimeout  time.Duration
+	ProxyKeepAlivePeriod time.Duration
+	ProxyIdleConnTimeout time.Duration
 }
 
 func NewConfigFromEnv() (*Config, error) {
@@ -93,6 +106,10 @@ func NewConfigFromEnv() (*Config, error) {
 	}
 	elasticUsername := os.Getenv(elasticUsernameEnv)
 	elasticPassword := os.Getenv(elasticPasswordEnv)
+
+	connectTimeout = getEnvOrDefaultDuration("PROXY_CONNECT_TIMEOUT", defaultConnectTimeout)
+	keepAlivePeriod = getEnvOrDefaultDuration("PROXY_KEEPALIVE_PERIOD", defaultKeepAlivePeriod)
+	idleConnTimeout = getEnvOrDefaultDuration("PROXY_IDLECONN_TIMEOUT", defaultIdleConnTimeout)
 	config := &Config{
 		ListenAddr:                listenAddr,
 		CertFile:                  certFilePath,
@@ -103,9 +120,21 @@ func NewConfigFromEnv() (*Config, error) {
 		ElasticInsecureSkipVerify: elasticInsecureSkipVerify,
 		ElasticUsername:           elasticUsername,
 		ElasticPassword:           elasticPassword,
+		ProxyConnectTimeout:       connectTimeout,
+		ProxyKeepAlivePeriod:      keepAlivePeriod,
+		ProxyIdleConnTimeout:      idleConnTimeout,
 	}
 	err = validateConfig(config)
 	return config, err
+}
+
+func getEnvOrDefaultDuration(key string, defaultValue time.Duration) time.Duration {
+	val := os.Getenv(key)
+	if val == "" {
+		return defaultValue
+	} else {
+		return val
+	}
 }
 
 func parseAccessMode(am string) (ElasticAccessMode, error) {

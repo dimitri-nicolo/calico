@@ -14,6 +14,23 @@ import (
 
 const unknownClientIP = "_"
 
+// Transport configuration
+const (
+	defaultMaxIdleConns          = 100
+	defaultTLSHandshakeTimeout   = 10 * time.Second
+	defaultExpectContinueTimeout = 1 * time.Second
+)
+
+type ProxyConfig struct {
+	TargetURL *url.URL
+
+	TLSConfig *tls.Config
+
+	ConnectTimeout  time.Duration
+	KeepAlivePeriod time.Duration
+	IdleConnTimeout time.Duration
+}
+
 // LoggingTransport wraps an existing http.Transport RoundTripper and then
 // logs some request headers along with the response status code.
 type LoggingTransport struct {
@@ -51,11 +68,12 @@ func (lt *LoggingTransport) RoundTrip(req *http.Request) (*http.Response, error)
 //  - Check liveness of backend.
 //  - Support multiple backends.
 type Proxy struct {
-	proxy http.Handler
+	proxy  http.Handler
+	config *ProxyConfig
 }
 
-func NewProxy(targetURL *url.URL, tlsConfig *tls.Config) *Proxy {
-	p := httputil.NewSingleHostReverseProxy(targetURL)
+func NewProxy(proxyConfig *ProxyConfig) *Proxy {
+	p := httputil.NewSingleHostReverseProxy(proxyConfig.TargetURL)
 	origDirector := p.Director
 	// Rewrite host header. We do just enough and call the Director
 	// defined in the standard library to do the rest of the request
@@ -63,26 +81,27 @@ func NewProxy(targetURL *url.URL, tlsConfig *tls.Config) *Proxy {
 	p.Director = func(req *http.Request) {
 		req.Header.Add("X-Forwarded-Host", req.Host)
 		origDirector(req)
-		req.Host = targetURL.Host
+		req.Host = proxyConfig.TargetURL.Host
 	}
 	// Extend http.DefaultTransport RoundTripper with custom TLS config.
 	p.Transport = &LoggingTransport{
 		&http.Transport{
-			TLSClientConfig: tlsConfig,
+			TLSClientConfig: proxyConfig.TLSConfig,
 			Proxy:           http.ProxyFromEnvironment,
 			DialContext: (&net.Dialer{
-				Timeout:   30 * time.Second,
-				KeepAlive: 30 * time.Second,
+				Timeout:   proxyConfig.ConnectTimeout,
+				KeepAlive: proxyConfig.KeepAlivePeriod,
 				DualStack: true,
 			}).DialContext,
-			MaxIdleConns:          100,
-			IdleConnTimeout:       90 * time.Second,
-			TLSHandshakeTimeout:   10 * time.Second,
-			ExpectContinueTimeout: 1 * time.Second,
+			MaxIdleConns:          defaultMaxIdleConns,
+			IdleConnTimeout:       proxyConfig.IdleConnTimeout,
+			TLSHandshakeTimeout:   defaultTLSHandshakeTimeout,
+			ExpectContinueTimeout: defaultExpectContinueTimeout,
 		},
 	}
 	return &Proxy{
-		proxy: p,
+		proxy:  p,
+		config: proxyConfig,
 	}
 }
 
