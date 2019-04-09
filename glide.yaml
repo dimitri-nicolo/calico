@@ -9,13 +9,13 @@ import:
   version: 773f5027234d0b08adf766be34f55df2f312abf7
 - package: github.com/kelseyhightower/confd
   repo: git@github.com:tigera/confd-private.git
-  version: f9336575ecb1a1c62d602ed1080ee6fd21578b79
+  version: ae4cd9fca6fe54f12e8e1e30299ae205fa656776
   subpackages:
   - pkg/config
   - pkg/run
 - package: github.com/projectcalico/felix
   repo: git@github.com:tigera/felix-private.git
-  version: 0f2a9311916994be3caefdde0b886c0838b85c88
+  version: c4c2418d4189b32b24cec970800a7f3f0a0b4eda
   subpackages:
   - daemon
 - package: github.com/projectcalico/cni-plugin
@@ -23,7 +23,7 @@ import:
   version: 78369537181a12f1e3c06dd63f2e39921dd8057d
 - package: github.com/projectcalico/libcalico-go
   repo: git@github.com:tigera/libcalico-go-private.git
-  version: 14de1ceb109a1be0a7ba757e5d5173185f9fbc87
+  version: 8558a8d0715c73355d90de7c2587ec3ab48dd1f8
   subpackages:
   - lib/apiconfig
   - lib/apis/v3
@@ -61,6 +61,13 @@ import:
   - kubernetes
   - tools/clientcmd
   - tools/clientcmd/api
+
+# Micrsoft networking service shim library and dependencies.  Felix pins these
+# but we also seem to pick them up at the wrong vesion via another route.
+- package: github.com/Microsoft/go-winio
+  version: 84b4ab48a50763fe7b3abcef38e5205c12027fac
+- package: github.com/Microsoft/hcsshim
+  version: 063ae4a83d78bdb93f76b18cc894c6342fa85c15
 
 # Microsoft SDN libs.  We pull library files from this repo when building the Windows package.
 - package: github.com/Microsoft/SDN

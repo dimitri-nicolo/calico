@@ -6,15 +6,15 @@ import (
 	"os"
 	"time"
 
+	"github.com/projectcalico/libcalico-go/lib/apis/v3"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/ipam"
+	"github.com/projectcalico/libcalico-go/lib/logutils"
 	"github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/node/pkg/calicoclient"
-	"github.com/projectcalico/typha/pkg/logutils"
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 )
