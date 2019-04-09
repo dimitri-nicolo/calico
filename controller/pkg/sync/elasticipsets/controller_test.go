@@ -203,7 +203,7 @@ func TestController_Add_FailToPut(t *testing.T) {
 
 	g.Eventually(countMethod(dbm, "PutIPSet")).
 		Should(Equal(2), "should retry put")
-	g.Expect(stat.Status().ErrorConditions).To(HaveLen(0), "should clear error on success")
+	g.Eventually(func() []v3.ErrorCondition { return stat.Status().ErrorConditions }).Should(HaveLen(0), "should clear error on success")
 }
 
 func TestController_GC_NotFound(t *testing.T) {
