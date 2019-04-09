@@ -29,7 +29,7 @@ import:
   - jwt
 - package: github.com/projectcalico/libcalico-go
   repo: git@github.com:tigera/libcalico-go-private.git
-  version: 2806b1a9c38f9c6fd0f7cb5644c7e0aa8fb1efb6
+  version: 8558a8d0715c73355d90de7c2587ec3ab48dd1f8
   subpackages:
   - lib/apiconfig
   - lib/apis/v1
@@ -58,10 +58,16 @@ import:
   - pkg/runtime
   - pkg/runtime/schema
 # Later versions don't seem to work with glide.
-- package: github.com/influxdata/influxdb 
+- package: github.com/influxdata/influxdb
   version: dd481f35df2c3b50c42087e2f8e3890e0f889711
+# Pin to a compatible version. Later versions cause build to fail
+# with missing symbols in unix package.
+- package: github.com/vishvananda/netns
+  version: 13995c7128ccc8e51e9a6bd2b551020a27180abd
 # Note to Open Source mergers: ginkgo and gomega are imported *not* as testImport
 # in some dependencies, so we can't import them as testImport here.
+# Pin to a compatible version. Later versions cause build to fail
+# with missing symbols in unix package.
 - package: github.com/onsi/ginkgo
   subpackages:
   - extensions/table
