@@ -802,6 +802,7 @@ rules:
       - "projectcalico.org"
     resources:
       - globalthreatfeeds
+      - globalthreatfeeds/status
       - globalnetworksets
     verbs: ["*"]
 ---
