@@ -53,19 +53,53 @@ typha:
     # - name: TYPHA_PROMETHEUSMETRICSENABLED
     #   value: "true"
 
+# Configuration for the Calico aggregated API server.
 apiserver:
   # Authentication information for securing communications between TSEE manager and TSEE apiserver.
   # Leave blank to use self-signed certs.
   tls:
     crt: null
     key: null
+  env:
+    # Optional environment variables for configuring the Calico API Server.
+    # - name: DATASTORE_TYPE
+    #   value: "kubernetes"
 
+# Configuration for the Calico query server.
+queryserver:
+  env:
+    # Optional environment variables for configuring the Calico query server.
+    # - name: TIGERA_POD_SECURITY_GROUP
+    #   valueFrom:
+    #     configMapKeyRef:
+    #       name: tigera-aws-config
+    #       key: pod_sg
+    #       optional: true
+
+# Configuration for setting up the manager UI.
 manager:
   # Authentication information for securing communications between TSEE manager and the web browser.
   # Leave blank to use self-signed certs.
   tls:
     crt: null
     key: null
+  env:
+    # Optional environment variables for configuring the manager UI.
+    # - name: CNX_CLUSTER_NAME
+    #   valueFrom:
+    #     configMapKeyRef:
+    #       name: tigera-cnx-manager-config
+    #       key: tigera.cnx-manager.cluster-name
+
+# Configuration for the manager UI proxy.
+managerProxy:
+  env:
+    # Optional environment variables for configuring the Calico query server.
+    # - name: CNX_WEB_OIDC_CLIENT_ID
+    #   valueFrom:
+    #     configMapKeyRef:
+    #       name: tigera-cnx-manager-config
+    #       key: tigera.cnx-manager.oidc-client-id
 
 # TODO: move to helpers
 orch: ""

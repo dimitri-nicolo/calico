@@ -379,6 +379,9 @@ spec:
           - "--audit-policy-file=/etc/tigera/audit/policy.conf"
           - "--audit-log-path=/var/log/calico/audit/tsee-audit.log"
         env:
+{{- if .Values.apiserver.env }}
+{{ toYaml .Values.apiserver.env | indent 10 }}
+{{- end }}
 {{- if eq .Values.datastore "etcd" }}
           - name: ETCD_ENDPOINTS
             valueFrom:
@@ -506,6 +509,9 @@ spec:
                 name: tigera-aws-config
                 key: pod_sg
                 optional: true
+{{- end }}
+{{- if .Values.queryserver.env }}
+{{ toYaml .Values.queryserver.env | indent 10 }}
 {{- end }}
         livenessProbe:
           httpGet:
@@ -663,6 +669,9 @@ spec:
                 name: tigera-cnx-manager-config
                 key: tigera.cnx-manager.oauth-client-id
 {{- end }}
+{{- if .Values.manager.env }}
+{{ toYaml .Values.manager.env | indent 10 }}
+{{- end }}
         # Use the same liveness check as the proxy since
         # the static content is only served over the localhost
         # interface. Liveness check hits the static content through the proxy.
@@ -702,6 +711,9 @@ spec:
               configMapKeyRef:
                 name: tigera-cnx-manager-config
                 key: tigera.cnx-manager.oauth-client-id
+{{- end }}
+{{- if .Values.managerProxy.env }}
+{{ toYaml .Values.managerProxy.env | indent 10 }}
 {{- end }}
         volumeMounts:
         - mountPath: /etc/cnx-manager-web-tls
