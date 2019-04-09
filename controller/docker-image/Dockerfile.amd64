@@ -4,7 +4,11 @@ RUN apt-get update && apt-get install -y ca-certificates
 FROM scratch
 
 COPY --from=ubuntu /etc/ssl/certs /etc/ssl/certs
+# Ensure the /tmp directory exists in case glog wants to write to it
+COPY tmp.txt /tmp/tmp.txt
 ADD bin/controller-amd64 /controller
 ADD bin/healthz-amd64 /healthz
 WORKDIR /
 ENTRYPOINT ["/controller"]
+# By default, tell glog to log to stderr instead of file.
+CMD ["-logtostderr=true"]
