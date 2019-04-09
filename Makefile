@@ -19,6 +19,8 @@ HP_IGNORE_LOCAL_DIRS="/v2.0/"
 # Version information used for cutting a release.
 RELEASE_STREAM?=
 
+CHART?=calico
+
 # Use := so that these V_ variables are computed only once per make run.
 CALICO_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].title')
 NODE_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.cnx-node.version')
@@ -296,7 +298,7 @@ endif
 	docker run --rm \
 	  -v $$PWD:/calico \
 	  -w /calico \
-	  ruby:2.5 ruby ./hack/gen_values_yml.rb $(RELEASE_STREAM) > _includes/$(RELEASE_STREAM)/charts/calico/values.yaml
+	  ruby:2.5 ruby ./hack/gen_values_yml.rb --chart $(CHART) $(RELEASE_STREAM) > _includes/$(RELEASE_STREAM)/charts/$(CHART)/values.yaml
 
 .PHONY: help
 ## Display this help text

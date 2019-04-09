@@ -12,6 +12,7 @@ as the default paths assume as much.
 --config    Path to the jekyll config. [default: _config.yml]
 --versions  Path to the versions.yml. [default: _data/versions.yml]
 --registry  The registry prefix. [default: quay.io]
+--chart     The chart to render. [default: calico]
 "
 
 # Extend the Hash class with deep_merge since the builtin 'merge' function does not merge duplicate keys in a Hash.
@@ -35,6 +36,10 @@ OptionParser.new do |parser|
     parser.on("-r", "--registry=REGISTRY") do |registry|
         @image_registry = registry
     end
+
+    parser.on("-C", "--chart=CHART") do |chart|
+        @chart = chart
+    end
 end.parse!
 
 @version = ARGV.pop
@@ -46,7 +51,8 @@ end
 @path_to_config ||= "_config.yml"
 @path_to_versions ||= "_data/versions.yml"
 @image_registry ||= "quay.io/"
-@path_to_base_values = "_includes/#{@version}/charts/calico/base_values.yaml"
+@chart ||= "calico"
+@path_to_base_values = "_includes/#{@version}/charts/#{@chart}/base_values.yaml"
 
 # In order to preserve backwards compatibility with the existing template system,
 # we process config.yml for imageNames and _versions.yml for tags,
