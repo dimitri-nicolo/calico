@@ -227,6 +227,6 @@ func (c *xrefCache) queueUpdate(id resources.ResourceID, entry CacheEntry, updat
 		}
 		heap.Push(&c.modified, item)
 	} else {
-		log.WithField("id", id).Debug("Queue recalculation requested, but alreadt in progress")
+		log.WithField("id", id).Debug("Queue recalculation requested, but already in progress")
 	}
 }

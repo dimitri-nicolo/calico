@@ -23,6 +23,7 @@ import (
 type Set interface {
 	Len() int
 	Add(ResourceID)
+	AddSet(Set)
 	AddAll(items []ResourceID)
 	Discard(ResourceID)
 	Clear()
@@ -32,6 +33,7 @@ type Set interface {
 	Copy() Set
 	Equals(Set) bool
 	ContainsAll(Set) bool
+	ToSlice() []ResourceID
 }
 
 type empty struct{}
@@ -71,6 +73,13 @@ func (set mapSet) Len() int {
 
 func (set mapSet) Add(item ResourceID) {
 	set[item] = emptyValue
+}
+
+func (set mapSet) AddSet(other Set) {
+	other.Iter(func(item ResourceID) error {
+		set.Add(item)
+		return nil
+	})
 }
 
 func (set mapSet) AddAll(items []ResourceID) {
@@ -156,4 +165,12 @@ func (set mapSet) ContainsAll(other Set) bool {
 		return nil
 	})
 	return result
+}
+
+func (set mapSet) ToSlice() []ResourceID {
+	ids := make([]ResourceID, len(set))
+	for id := range set {
+		ids = append(ids, id)
+	}
+	return ids
 }

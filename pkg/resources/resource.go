@@ -22,6 +22,8 @@ type NameNamespace struct {
 	Namespace string
 }
 
+//TODO(rlb): We define a ResourceID in libcalico-go for the report. We really should have a common set. But this means
+//TODO       going back to using TypeMeta I think (because the report definitions rely on it being TypeMeta).
 type ResourceID struct {
 	schema.GroupVersionKind
 	NameNamespace
