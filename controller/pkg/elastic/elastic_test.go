@@ -141,9 +141,40 @@ func TestElastic_QueryIPSet(t *testing.T) {
 	g.Expect(c).Should(Equal(2))
 }
 
+func TestElastic_ListIPSets(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	u, err := url2.Parse(baseURI)
+	g.Expect(err).ShouldNot(HaveOccurred())
+	rt := &testRoundTripper{}
+	client := &http.Client{
+		Transport: http.RoundTripper(rt),
+	}
+
+	e, err := NewElastic(client, u, "", "")
+	g.Expect(err).Should(BeNil())
+
+	ctx, cancel := context.WithCancel(context.TODO())
+	defer cancel()
+
+	rt.listRespFile = "test_files/list.1.r.json"
+	rt.listStatus = 200
+	metas, err := e.ListIPSets(ctx)
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(metas).To(HaveLen(0))
+
+	rt.listRespFile = "test_files/list.2.r.json"
+	rt.listStatus = 404
+	metas, err = e.ListIPSets(ctx)
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(metas).To(HaveLen(0))
+}
+
 type testRoundTripper struct {
-	u *url.URL
-	e error
+	u            *url.URL
+	e            error
+	listRespFile string
+	listStatus   int
 }
 
 func (t *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
@@ -270,6 +301,12 @@ func (t *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 					Body:       mustOpen("test_files/3.4.r.json"),
 				}, nil
 			}
+		case baseURI + "/.tigera.ipset/_doc/_search?scroll=5m":
+			return &http.Response{
+				StatusCode: t.listStatus,
+				Request:    req,
+				Body:       mustOpen(t.listRespFile),
+			}, nil
 		}
 	}
 
