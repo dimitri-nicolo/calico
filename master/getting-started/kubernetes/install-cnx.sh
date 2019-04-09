@@ -260,7 +260,7 @@ validateSettings() {
   fi
 
   # Do not install compliance reporting if elastic storage is not local
-  if [ "$ELASTIC_STORAGE" -ne "local" ] ; then
+  if [ "$ELASTIC_STORAGE" != "local" ] ; then
     INSTALL_COMPLIANCE_REPORTING=false
   fi
 
