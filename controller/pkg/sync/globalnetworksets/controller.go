@@ -255,7 +255,7 @@ func (c *controller) processNextItem() {
 			return
 		} else {
 			logCtx.Debug("updating GNS")
-			c.update(sl)
+			c.update(sl, sr)
 		}
 	case okl && !okr:
 		// Local exists, but remote does not.
@@ -339,8 +339,11 @@ func (c *controller) okToGC(key string) bool {
 	return !ok
 }
 
-func (c *controller) update(s *v3.GlobalNetworkSet) {
-	_, err := c.client.Update(s)
+func (c *controller) update(new, old *v3.GlobalNetworkSet) {
+	newMeta := old.ObjectMeta.DeepCopy()
+	newMeta.Labels = new.Labels
+	newMeta.DeepCopyInto(&new.ObjectMeta)
+	_, err := c.client.Update(new)
 	if err != nil {
 		panic(clientsetError{err, opUpdate})
 	}

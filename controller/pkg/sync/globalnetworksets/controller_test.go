@@ -101,6 +101,7 @@ func TestController_Update(t *testing.T) {
 
 	gns := util.NewGlobalNetworkSet("test")
 	gns.Labels = map[string]string{LabelKey: LabelValue}
+	gns.ResourceVersion = "test_version"
 	client := &calico.MockGlobalNetworkSetInterface{GlobalNetworkSet: gns}
 	uut := NewController(client)
 
@@ -122,18 +123,24 @@ func TestController_Update(t *testing.T) {
 	// Add the GNS with different data
 	gns1 := gns.DeepCopy()
 	gns1.Spec.Nets = []string{"192.168.9.45"}
+	gns1e := gns1.DeepCopy()
+	// added GNS doesn't know the ResourceVersion
+	gns1.ResourceVersion = ""
 	uut.Add(gns1, fail, stat)
 
 	g.Eventually(countMethod(client, "Update")).Should(Equal(1))
-	g.Expect(client.Calls()).To(ContainElement(db.Call{Method: "Update", GNS: gns1}))
+	g.Expect(client.Calls()).To(ContainElement(db.Call{Method: "Update", GNS: gns1e}))
 
 	// Update labels
-	gns2 := gns1.DeepCopy()
+	gns2 := gns1e.DeepCopy()
 	gns2.Labels["mock"] = "yes"
+	gns2e := gns2.DeepCopy()
+	// added GNS doesn't know the resource version
+	gns2.ResourceVersion = ""
 	uut.Add(gns2, fail, stat)
 
 	g.Eventually(countMethod(client, "Update")).Should(Equal(2))
-	g.Expect(client.Calls()).To(ContainElement(db.Call{Method: "Update", GNS: gns2}))
+	g.Expect(client.Calls()).To(ContainElement(db.Call{Method: "Update", GNS: gns2e}))
 }
 
 // Add and then delete a GNS before there is a chance to process it.
