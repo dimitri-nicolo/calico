@@ -54,6 +54,14 @@ module Jekyll
         -f _includes/#{version}/charts/#{@chart}/base_values.yaml \
         -f #{tv.path} \
         -f #{t.path} \
+        --set manager.service.type=NodePort \
+        --set manager.service.nodePort=30003 \
+        --set alertmanager.service.type=NodePort \
+        --set alertmanager.service.nodePort=30903 \
+        --set prometheus.scrapeTargets.node.service.type=NodePort \
+        --set prometheus.scrapeTargets.node.service.nodePort=30909 \
+        --set kibana.service.type=NodePort \
+        --set kibana.service.nodePort=30601 \
         --set etcd.endpoints='http://<ETCD_IP>:<ETCD_PORT>'"""
 
       cmd += " " + @extra_args.to_s

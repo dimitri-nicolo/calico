@@ -256,10 +256,12 @@ metadata:
   name: calico-node-alertmanager
   namespace: calico-monitoring
 spec:
-  type: NodePort
+  type: {{ .Values.alertmanager.service.type }}
   ports:
   - name: web
-    nodePort: 30903
+{{- if .Values.alertmanager.service.nodePort }}
+    nodePort: {{ .Values.alertmanager.service.nodePort }}
+{{- end }}
     port: 9093
     protocol: TCP
     targetPort: web
@@ -309,10 +311,12 @@ metadata:
   name: calico-node-prometheus
   namespace: calico-monitoring
 spec:
-  type: NodePort
+  type: {{ .Values.prometheus.scrapeTargets.node.service.type }}
   ports:
   - name: web
-    nodePort: 30909
+{{- if .Values.prometheus.scrapeTargets.node.service.nodePort }}
+    nodePort: {{ .Values.prometheus.scrapeTargets.node.service.nodePort }}
+{{- end }}
     port: 9090
     protocol: TCP
     targetPort: web
@@ -351,8 +355,10 @@ spec:
     storage-class: elasticsearch-storage
 ---
 
+{{- if eq .Values.kibana.service.type "NodePort" }}
 # Add a NodePort for access to Kibana on port 30601.
 # This can be customized if you would like to expose Kibana in a different way.
+{{- end }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -366,8 +372,16 @@ spec:
   ports:
     - port: 5601
       targetPort: 5601
-      nodePort: 30601
-  type: NodePort
+{{- if .Values.kibana.service.nodePort }}
+      nodePort: {{ .Values.kibana.service.nodePort }}
+{{- end }}
+  type: {{ .Values.kibana.service.type }}
+{{- if .Values.kibana.service.clusterIP }}
+  clusterIP: {{ .Values.kibana.service.clusterIP }}
+{{- end }}
+{{- if .Values.kibana.service.loadBalancerIP }}
+  loadBalancerIP: {{ .Values.kibana.service.loadBalancerIP }}
+{{- end }}
 {{- end }}
 ---
 
