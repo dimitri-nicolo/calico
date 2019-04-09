@@ -169,7 +169,7 @@ func NewWinDataplaneDriver(hns hns.API, config Config) *WindowsDataplane {
 		log.Info("VXLAN enabled, starting the VXLAN manager")
 		dp.RegisterManager(newVXLANManager(
 			config.Hostname,
-			regexp.MustCompile(defaultNetworkName), // FIXME HArd-coded regex
+			regexp.MustCompile(defaultNetworkName), // FIXME Hard-coded regex
 			config.VXLANID,
 			config.VXLANPort,
 		))

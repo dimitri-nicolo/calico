@@ -145,7 +145,7 @@ type Config struct {
 	IpsetsRefreshInterval              time.Duration `config:"seconds;10"`
 	MaxIpsetSize                       int           `config:"int;1048576;non-zero"`
 
-	WindowsNetworkName regexp.Regexp `config:"regexp-pattern;(?i)calico.*"`
+	WindowsNetworkName *regexp.Regexp `config:"regexp-pattern;(?i)calico.*"`
 
 	PolicySyncPathPrefix string `config:"file;;"`
 
