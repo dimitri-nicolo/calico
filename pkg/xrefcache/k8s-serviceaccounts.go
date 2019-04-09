@@ -3,7 +3,7 @@ package xrefcache
 
 import (
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
@@ -17,8 +17,8 @@ import (
 )
 
 var (
-	KindsServiceAccount = []schema.GroupVersionKind{
-		resources.ResourceTypeServiceAccounts,
+	KindsServiceAccount = []metav1.TypeMeta{
+		resources.TypeK8sServiceAccounts,
 	}
 )
 
@@ -93,7 +93,7 @@ func (c *k8sServiceAccountEngine) register(cache engineCache) {
 }
 
 // kinds implements the resourceCacheEngine.
-func (c *k8sServiceAccountEngine) kinds() []schema.GroupVersionKind {
+func (c *k8sServiceAccountEngine) kinds() []metav1.TypeMeta {
 	return KindsServiceAccount
 }
 
@@ -125,12 +125,12 @@ func (c *k8sServiceAccountEngine) convertToVersioned(res resources.Resource) (Ve
 }
 
 // resourceAdded implements the resourceCacheEngine.
-func (c *k8sServiceAccountEngine) resourceAdded(id resources.ResourceID, entry CacheEntry) {
+func (c *k8sServiceAccountEngine) resourceAdded(id apiv3.ResourceID, entry CacheEntry) {
 	c.resourceUpdated(id, entry, nil)
 }
 
 // resourceUpdated implements the resourceCacheEngine.
-func (c *k8sServiceAccountEngine) resourceUpdated(id resources.ResourceID, entry CacheEntry, prev VersionedResource) {
+func (c *k8sServiceAccountEngine) resourceUpdated(id apiv3.ResourceID, entry CacheEntry, prev VersionedResource) {
 	// Kubernetes service accounts are configured as Calico profiles. Use the V3 version of the name and the V1 version
 	// of the labels since they will have been modified to match the selector modifications in the pod.
 	x := entry.(*CacheEntryK8sServiceAccount)
@@ -139,7 +139,7 @@ func (c *k8sServiceAccountEngine) resourceUpdated(id resources.ResourceID, entry
 }
 
 // resourceDeleted implements the resourceCacheEngine.
-func (c *k8sServiceAccountEngine) resourceDeleted(id resources.ResourceID, entry CacheEntry) {
+func (c *k8sServiceAccountEngine) resourceDeleted(id apiv3.ResourceID, entry CacheEntry) {
 	// Kubernetes service accounts are configured as Calico profiles. Use the V3 version of the name since it will have
 	// been modified to match the selector modifications in the pod.
 	x := entry.(*CacheEntryK8sServiceAccount)
@@ -147,7 +147,7 @@ func (c *k8sServiceAccountEngine) resourceDeleted(id resources.ResourceID, entry
 }
 
 // recalculate implements the resourceCacheEngine interface.
-func (c *k8sServiceAccountEngine) recalculate(id resources.ResourceID, entry CacheEntry) syncer.UpdateType {
+func (c *k8sServiceAccountEngine) recalculate(id apiv3.ResourceID, entry CacheEntry) syncer.UpdateType {
 	// We don't store any additional ServiceAccount state at the moment.
 	return 0
 }

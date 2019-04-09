@@ -4,7 +4,7 @@ package xrefcache
 import (
 	log "github.com/sirupsen/logrus"
 
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
@@ -16,8 +16,8 @@ import (
 )
 
 var (
-	KindsNetworkSet = []schema.GroupVersionKind{
-		resources.ResourceTypeGlobalNetworkSets,
+	KindsNetworkSet = []metav1.TypeMeta{
+		resources.TypeCalicoGlobalNetworkSets,
 	}
 )
 
@@ -101,7 +101,7 @@ func (c *calicoNetworkSetEngine) register(cache engineCache) {
 }
 
 // kinds implements the resourceCacheEngine interface.
-func (c *calicoNetworkSetEngine) kinds() []schema.GroupVersionKind {
+func (c *calicoNetworkSetEngine) kinds() []metav1.TypeMeta {
 	return KindsNetworkSet
 }
 
@@ -113,13 +113,13 @@ func (c *calicoNetworkSetEngine) newCacheEntry() CacheEntry {
 }
 
 // resourceAdded implements the resourceCacheEngine interface.
-func (c *calicoNetworkSetEngine) resourceAdded(id resources.ResourceID, entry CacheEntry) {
+func (c *calicoNetworkSetEngine) resourceAdded(id apiv3.ResourceID, entry CacheEntry) {
 	entry.(*CacheEntryCalicoNetworkSet).clog = log.WithField("id", id)
 	c.resourceUpdated(id, entry, nil)
 }
 
 // resourceUpdated implements the resourceCacheEngine interface.
-func (c *calicoNetworkSetEngine) resourceUpdated(id resources.ResourceID, entry CacheEntry, prev VersionedResource) {
+func (c *calicoNetworkSetEngine) resourceUpdated(id apiv3.ResourceID, entry CacheEntry, prev VersionedResource) {
 	// Use the V1 labels to register with the label selection handler.
 	x := entry.(*CacheEntryCalicoNetworkSet)
 
@@ -129,12 +129,12 @@ func (c *calicoNetworkSetEngine) resourceUpdated(id resources.ResourceID, entry 
 }
 
 // resourceDeleted implements the resourceCacheEngine interface.
-func (c *calicoNetworkSetEngine) resourceDeleted(id resources.ResourceID, entry CacheEntry) {
+func (c *calicoNetworkSetEngine) resourceDeleted(id apiv3.ResourceID, entry CacheEntry) {
 	c.NetworkSetLabelSelector().DeleteLabels(id)
 }
 
 // recalculate implements the resourceCacheEngine interface.
-func (c *calicoNetworkSetEngine) recalculate(id resources.ResourceID, entry CacheEntry) syncer.UpdateType {
+func (c *calicoNetworkSetEngine) recalculate(id apiv3.ResourceID, entry CacheEntry) syncer.UpdateType {
 	x := entry.(*CacheEntryCalicoNetworkSet)
 
 	// Determine whether this network set contains any internet addresses.
@@ -183,7 +183,7 @@ func (c *calicoNetworkSetEngine) scanNets(x *CacheEntryCalicoNetworkSet) syncer.
 
 // selectorMatchStarted is called synchronously from the rule selector or network set resource update methods when a
 // selector<->netset match has started. We update our set of matched selectors.
-func (c *calicoNetworkSetEngine) selectorMatchStarted(selId, netsetId resources.ResourceID) {
+func (c *calicoNetworkSetEngine) selectorMatchStarted(selId, netsetId apiv3.ResourceID) {
 	x, ok := c.GetFromOurCache(netsetId).(*CacheEntryCalicoNetworkSet)
 	if !ok {
 		// This is called synchronously from the resource update methods, so we don't expect the entries to have been
@@ -199,7 +199,7 @@ func (c *calicoNetworkSetEngine) selectorMatchStarted(selId, netsetId resources.
 
 // selectorMatchStopped is called synchronously from the rule selector or network set resource update methods when a
 // selector<->netset match has stopped. We update our set of matched selectors.
-func (c *calicoNetworkSetEngine) selectorMatchStopped(selId, netsetId resources.ResourceID) {
+func (c *calicoNetworkSetEngine) selectorMatchStopped(selId, netsetId apiv3.ResourceID) {
 	x, ok := c.GetFromOurCache(netsetId).(*CacheEntryCalicoNetworkSet)
 	if !ok {
 		// This is called synchronously from the resource update methods, so we don't expect the entries to have been

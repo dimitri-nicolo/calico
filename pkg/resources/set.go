@@ -18,22 +18,24 @@ import (
 	"errors"
 
 	log "github.com/sirupsen/logrus"
+
+	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 )
 
 type Set interface {
 	Len() int
-	Add(ResourceID)
+	Add(apiv3.ResourceID)
 	AddSet(Set)
-	AddAll(items []ResourceID)
-	Discard(ResourceID)
+	AddAll(items []apiv3.ResourceID)
+	Discard(apiv3.ResourceID)
 	Clear()
-	Contains(ResourceID) bool
-	Iter(func(item ResourceID) error)
-	IterDifferences(other Set, notInOther, onlyInOther func(ResourceID) error)
+	Contains(apiv3.ResourceID) bool
+	Iter(func(item apiv3.ResourceID) error)
+	IterDifferences(other Set, notInOther, onlyInOther func(apiv3.ResourceID) error)
 	Copy() Set
 	Equals(Set) bool
 	ContainsAll(Set) bool
-	ToSlice() []ResourceID
+	ToSlice() []apiv3.ResourceID
 }
 
 type empty struct{}
@@ -49,13 +51,13 @@ func NewSet() Set {
 	return make(mapSet)
 }
 
-func SetFrom(members ...ResourceID) Set {
+func SetFrom(members ...apiv3.ResourceID) Set {
 	s := NewSet()
 	s.AddAll(members)
 	return s
 }
 
-func SetFromArray(membersArray []ResourceID) Set {
+func SetFromArray(membersArray []apiv3.ResourceID) Set {
 	s := NewSet()
 	s.AddAll(membersArray)
 	return s
@@ -65,31 +67,31 @@ func EmptySet() Set {
 	return mapSet(nil)
 }
 
-type mapSet map[ResourceID]empty
+type mapSet map[apiv3.ResourceID]empty
 
 func (set mapSet) Len() int {
 	return len(set)
 }
 
-func (set mapSet) Add(item ResourceID) {
+func (set mapSet) Add(item apiv3.ResourceID) {
 	set[item] = emptyValue
 }
 
 func (set mapSet) AddSet(other Set) {
-	other.Iter(func(item ResourceID) error {
+	other.Iter(func(item apiv3.ResourceID) error {
 		set.Add(item)
 		return nil
 	})
 }
 
-func (set mapSet) AddAll(items []ResourceID) {
+func (set mapSet) AddAll(items []apiv3.ResourceID) {
 
 	for _, r := range items {
 		set.Add(r)
 	}
 }
 
-func (set mapSet) Discard(item ResourceID) {
+func (set mapSet) Discard(item apiv3.ResourceID) {
 	delete(set, item)
 }
 
@@ -99,12 +101,12 @@ func (set mapSet) Clear() {
 	}
 }
 
-func (set mapSet) Contains(item ResourceID) bool {
+func (set mapSet) Contains(item apiv3.ResourceID) bool {
 	_, present := set[item]
 	return present
 }
 
-func (set mapSet) Iter(visitor func(item ResourceID) error) {
+func (set mapSet) Iter(visitor func(item apiv3.ResourceID) error) {
 loop:
 	for item := range set {
 		err := visitor(item)
@@ -120,14 +122,14 @@ loop:
 	}
 }
 
-func (set mapSet) IterDifferences(other Set, notInOther, onlyInOther func(ResourceID) error) {
-	set.Iter(func(id ResourceID) error {
+func (set mapSet) IterDifferences(other Set, notInOther, onlyInOther func(apiv3.ResourceID) error) {
+	set.Iter(func(id apiv3.ResourceID) error {
 		if !other.Contains(id) {
 			return notInOther(id)
 		}
 		return nil
 	})
-	other.Iter(func(id ResourceID) error {
+	other.Iter(func(id apiv3.ResourceID) error {
 		if !set.Contains(id) {
 			return onlyInOther(id)
 		}
@@ -157,7 +159,7 @@ func (set mapSet) Equals(other Set) bool {
 
 func (set mapSet) ContainsAll(other Set) bool {
 	result := true
-	other.Iter(func(item ResourceID) error {
+	other.Iter(func(item apiv3.ResourceID) error {
 		if !set.Contains(item) {
 			result = false
 			return StopIteration
@@ -167,8 +169,8 @@ func (set mapSet) ContainsAll(other Set) bool {
 	return result
 }
 
-func (set mapSet) ToSlice() []ResourceID {
-	ids := make([]ResourceID, len(set))
+func (set mapSet) ToSlice() []apiv3.ResourceID {
+	ids := make([]apiv3.ResourceID, len(set))
 	for id := range set {
 		ids = append(ids, id)
 	}

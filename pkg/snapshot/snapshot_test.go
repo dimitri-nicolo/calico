@@ -7,21 +7,20 @@ import (
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/tigera/compliance/pkg/list"
 	"github.com/tigera/compliance/pkg/resources"
 )
 
 var (
-	testResourceType = resources.ResourceTypeHostEndpoints
+	testResourceType = resources.TypeCalicoHostEndpoints
 )
 
 type mockSource struct {
 	nCalls int
 }
 
-func (r *mockSource) RetrieveList(kind schema.GroupVersionKind) (*list.TimestampedResourceList, error) {
+func (r *mockSource) RetrieveList(kind metav1.TypeMeta) (*list.TimestampedResourceList, error) {
 	if kind != testResourceType {
 		panic(fmt.Errorf("unexpected resource type. Got: %s; Expected: %s", kind, testResourceType))
 	}
@@ -66,7 +65,7 @@ var _ = Describe("Snapshot", func() {
 			cancel()
 		}()
 
-		Run(cxt, resources.ResourceTypeHostEndpoints, src, dest)
+		Run(cxt, resources.TypeCalicoHostEndpoints, src, dest)
 
 		expectedCalls := len(resources.GetAllResourceHelpers())
 		Expect(src.nCalls).To(Equal(expectedCalls))

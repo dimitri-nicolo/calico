@@ -3,6 +3,8 @@ package xrefcache
 import (
 	log "github.com/sirupsen/logrus"
 
+	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+
 	"github.com/tigera/compliance/pkg/resources"
 	"github.com/tigera/compliance/pkg/syncer"
 )
@@ -11,24 +13,24 @@ import (
 // and the pseudo NetworkPolicuy RuleSelector types. The manager is responsible for handling
 
 // Callbacks for match start/stop between a selector and a policy.
-type NPRSMatchStarted func(policy, selector resources.ResourceID)
-type NPRSMatchStopped func(policy, selector resources.ResourceID)
+type NPRSMatchStarted func(policy, selector apiv3.ResourceID)
+type NPRSMatchStopped func(policy, selector apiv3.ResourceID)
 
 // NetworkPolicyRuleSelectorManager provides a shared interface for communication between the policy and the selector
 // pseudo-resource caches. It also manages the creation and deletion of the pseudo resource types based on whether
 // any policy needs a particular selector to be tracked.
 type NetworkPolicyRuleSelectorManager interface {
 	RegisterCallbacks(onMatchStarted NPRSMatchStarted, onMatchStopped NPRSMatchStopped)
-	SetPolicyRuleSelectors(policy resources.ResourceID, selectors resources.Set)
-	DeletePolicy(policy resources.ResourceID)
+	SetPolicyRuleSelectors(policy apiv3.ResourceID, selectors resources.Set)
+	DeletePolicy(policy apiv3.ResourceID)
 }
 
 // NewNetworkPolicyRuleSelectorManager creates a new NetworkPolicyRuleSelectorManager.
 func NewNetworkPolicyRuleSelectorManager(onUpdate func(update syncer.Update)) NetworkPolicyRuleSelectorManager {
 	return &networkPolicyRuleSelectorManager{
 		onUpdate:           onUpdate,
-		selectorsByPolicy:  make(map[resources.ResourceID]resources.Set),
-		policiesBySelector: make(map[resources.ResourceID]resources.Set),
+		selectorsByPolicy:  make(map[apiv3.ResourceID]resources.Set),
+		policiesBySelector: make(map[apiv3.ResourceID]resources.Set),
 	}
 }
 
@@ -42,10 +44,10 @@ type networkPolicyRuleSelectorManager struct {
 	onMatchStopped []NPRSMatchStopped
 
 	// Selectors by policy
-	selectorsByPolicy map[resources.ResourceID]resources.Set
+	selectorsByPolicy map[apiv3.ResourceID]resources.Set
 
 	// Policies by selector
-	policiesBySelector map[resources.ResourceID]resources.Set
+	policiesBySelector map[apiv3.ResourceID]resources.Set
 }
 
 // RegisterCallbacks registers match start/stop callbacks with this manager.
@@ -55,7 +57,7 @@ func (m *networkPolicyRuleSelectorManager) RegisterCallbacks(onMatchStarted NPRS
 }
 
 // SetPolicyRuleSelectors sets the rule selectors that need to be tracked by a policy resource.
-func (m *networkPolicyRuleSelectorManager) SetPolicyRuleSelectors(p resources.ResourceID, s resources.Set) {
+func (m *networkPolicyRuleSelectorManager) SetPolicyRuleSelectors(p apiv3.ResourceID, s resources.Set) {
 	// If we have not seen this policy before then add it now
 	currentSelectors, ok := m.selectorsByPolicy[p]
 	if !ok {
@@ -63,12 +65,12 @@ func (m *networkPolicyRuleSelectorManager) SetPolicyRuleSelectors(p resources.Re
 	}
 
 	currentSelectors.IterDifferences(s,
-		func(old resources.ResourceID) error {
+		func(old apiv3.ResourceID) error {
 			// Stop tracking old selectors for this policy.
 			m.matchStopped(p, old)
 			return nil
 		},
-		func(new resources.ResourceID) error {
+		func(new apiv3.ResourceID) error {
 			// Start tracking new selectors for this policy.
 			m.matchStarted(p, new)
 			return nil
@@ -80,7 +82,7 @@ func (m *networkPolicyRuleSelectorManager) SetPolicyRuleSelectors(p resources.Re
 
 }
 
-func (m *networkPolicyRuleSelectorManager) matchStarted(p, s resources.ResourceID) {
+func (m *networkPolicyRuleSelectorManager) matchStarted(p, s apiv3.ResourceID) {
 	log.Debugf("NetworkPolicyRuleSelector match started: %s / %s", p, s)
 	pols, ok := m.policiesBySelector[s]
 	if !ok {
@@ -104,7 +106,7 @@ func (m *networkPolicyRuleSelectorManager) matchStarted(p, s resources.ResourceI
 	}
 }
 
-func (m *networkPolicyRuleSelectorManager) matchStopped(p, s resources.ResourceID) {
+func (m *networkPolicyRuleSelectorManager) matchStopped(p, s apiv3.ResourceID) {
 	log.Debugf("NetworkPolicyRuleSelector match stopped: %s / %s", p, s)
 	pols := m.policiesBySelector[s]
 	pols.Discard(p)
@@ -128,13 +130,13 @@ func (m *networkPolicyRuleSelectorManager) matchStopped(p, s resources.ResourceI
 
 // DeletePolicy is called to delete a policy from the manager. This will result in match stopped callbacks for any
 // selectors it was previously tracking.
-func (m *networkPolicyRuleSelectorManager) DeletePolicy(policy resources.ResourceID) {
+func (m *networkPolicyRuleSelectorManager) DeletePolicy(policy apiv3.ResourceID) {
 	currentSelectors, ok := m.selectorsByPolicy[policy]
 	if !ok {
 		return
 	}
 
-	currentSelectors.Iter(func(selector resources.ResourceID) error {
+	currentSelectors.Iter(func(selector apiv3.ResourceID) error {
 		m.matchStopped(policy, selector)
 		return nil
 	})

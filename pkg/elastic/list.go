@@ -8,14 +8,14 @@ import (
 
 	"github.com/olivere/elastic"
 	log "github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/libcalico-go/lib/errors"
 
 	"github.com/tigera/compliance/pkg/list"
 )
 
-func (c *client) RetrieveList(kind schema.GroupVersionKind, from, to *time.Time, ascending bool) (*list.TimestampedResourceList, error) {
+func (c *client) RetrieveList(kind metav1.TypeMeta, from, to *time.Time, ascending bool) (*list.TimestampedResourceList, error) {
 	clog := log.WithField("kind", kind)
 	// Construct the range query based on received arguments.
 	rangeQuery := elastic.NewRangeQuery("requestCompletedTimestamp")
@@ -31,7 +31,7 @@ func (c *client) RetrieveList(kind schema.GroupVersionKind, from, to *time.Time,
 		Index(snapshotsIndex).
 		Query(
 			elastic.NewBoolQuery().Must(
-				elastic.NewTermQuery("apiVersion", kind.GroupVersion().String()),
+				elastic.NewTermQuery("apiVersion", kind.APIVersion),
 				elastic.NewTermQuery("kind", kind.Kind),
 				rangeQuery,
 			)).
@@ -68,7 +68,7 @@ func (c *client) RetrieveList(kind schema.GroupVersionKind, from, to *time.Time,
 }
 
 //TODO(rlb): What is the ES Id all about?
-func (c *client) StoreList(_ schema.GroupVersionKind, l *list.TimestampedResourceList) error {
+func (c *client) StoreList(_ metav1.TypeMeta, l *list.TimestampedResourceList) error {
 	res, err := c.Index().
 		Index(snapshotsIndex).
 		Type("_doc").

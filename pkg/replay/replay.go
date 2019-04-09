@@ -7,7 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/tigera/compliance/pkg/event"
 	"github.com/tigera/compliance/pkg/list"
@@ -16,7 +16,7 @@ import (
 )
 
 type replayer struct {
-	resources  map[schema.GroupVersionKind]map[string]resources.Resource
+	resources  map[metav1.TypeMeta]map[string]resources.Resource
 	start, end time.Time
 	lister     list.Destination
 	eventer    event.Fetcher
@@ -25,7 +25,7 @@ type replayer struct {
 
 func New(start, end time.Time, lister list.Destination, eventer event.Fetcher, callbacks syncer.SyncerCallbacks) syncer.Starter {
 	return &replayer{
-		make(map[schema.GroupVersionKind]map[string]resources.Resource),
+		make(map[metav1.TypeMeta]map[string]resources.Resource),
 		start, end, lister, eventer, callbacks,
 	}
 }
@@ -98,7 +98,7 @@ func (r *replayer) initialize(ctx context.Context) error {
 }
 
 // replay fetches events for the given resource from the list's timestamp up until the specified start time.
-func (r *replayer) replay(ctx context.Context, gvk *schema.GroupVersionKind, from, to *time.Time) error {
+func (r *replayer) replay(ctx context.Context, gvk *metav1.TypeMeta, from, to *time.Time) error {
 	for ev := range r.eventer.GetAuditEvents(ctx, gvk, from, to) {
 		clog := log.WithFields(log.Fields{"auditID": ev.Event.AuditID, "verb": ev.Event.Verb})
 		// Determine proper resource to update for internal cache.
@@ -115,7 +115,7 @@ func (r *replayer) replay(ctx context.Context, gvk *schema.GroupVersionKind, fro
 
 		// Update the internal cache and send the appropriate Update to the callbacks.
 		key := resources.GetNameNamespace(res).String()
-		gvk2 := resources.GetGroupVersionKind(res)
+		gvk2 := resources.GetTypeMeta(res)
 		update := syncer.Update{ResourceID: resources.GetResourceID(res), Resource: res}
 		switch ev.Event.Verb {
 		case "create", "update", "patch":

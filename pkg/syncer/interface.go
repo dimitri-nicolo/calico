@@ -4,8 +4,9 @@ package syncer
 import (
 	"context"
 	"fmt"
-
 	"strconv"
+
+	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
 	"github.com/tigera/compliance/pkg/resources"
 )
@@ -21,7 +22,7 @@ type SyncerCallbacks interface {
 
 type Update struct {
 	Type       UpdateType
-	ResourceID resources.ResourceID
+	ResourceID apiv3.ResourceID
 	Resource   resources.Resource
 }
 

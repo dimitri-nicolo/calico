@@ -5,43 +5,36 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/set"
 
 	"github.com/tigera/compliance/pkg/resources"
 )
 
 var (
-	c1 = resources.ResourceID{
-		GroupVersionKind: resources.ResourceTypeEndpoints,
-		NameNamespace: resources.NameNamespace{
-			Name: "1",
-		},
+	c1 = apiv3.ResourceID{
+		TypeMeta: resources.TypeK8sEndpoints,
+		Name:     "1",
 	}
-	c2 = resources.ResourceID{
-		GroupVersionKind: resources.ResourceTypeEndpoints,
-		NameNamespace: resources.NameNamespace{
-			Name: "2",
-		},
+	c2 = apiv3.ResourceID{
+		TypeMeta: resources.TypeK8sEndpoints,
+		Name:     "2",
 	}
-	o1 = resources.ResourceID{
-		GroupVersionKind: resources.ResourceTypeHostEndpoints,
-		NameNamespace: resources.NameNamespace{
-			Name: "1",
-		},
+	o1 = apiv3.ResourceID{
+		TypeMeta: resources.TypeCalicoHostEndpoints,
+		Name:     "1",
 	}
-	o2 = resources.ResourceID{
-		GroupVersionKind: resources.ResourceTypeHostEndpoints,
-		NameNamespace: resources.NameNamespace{
-			Name: "2",
-		},
+	o2 = apiv3.ResourceID{
+		TypeMeta: resources.TypeCalicoHostEndpoints,
+		Name:     "2",
 	}
 )
 
 type cb struct {
-	owner     resources.ResourceID
-	client    resources.ResourceID
+	owner     apiv3.ResourceID
+	client    apiv3.ResourceID
 	key       string
 	firstLast bool
 }
@@ -57,22 +50,22 @@ func newTester() *tester {
 		k: New(),
 	}
 	t.k.RegisterCallbacks(
-		[]schema.GroupVersionKind{resources.ResourceTypeHostEndpoints, resources.ResourceTypeEndpoints},
+		[]metav1.TypeMeta{resources.TypeCalicoHostEndpoints, resources.TypeK8sEndpoints},
 		t.onMatchStarted, t.onMatchStopped,
 	)
 	return t
 }
 
-func (t *tester) onMatchStarted(owner, client resources.ResourceID, key string, first bool) {
+func (t *tester) onMatchStarted(owner, client apiv3.ResourceID, key string, first bool) {
 	t.matchStarted.Add(cb{owner, client, key, first})
 }
 
-func (t *tester) onMatchStopped(owner, client resources.ResourceID, key string, last bool) {
+func (t *tester) onMatchStopped(owner, client apiv3.ResourceID, key string, last bool) {
 	t.matchStopped.Add(cb{owner, client, key, last})
 }
 
-func (t *tester) setClientKeys(client resources.ResourceID, keys set.Set) {
-	if client.GroupVersionKind != resources.ResourceTypeEndpoints {
+func (t *tester) setClientKeys(client apiv3.ResourceID, keys set.Set) {
+	if client.TypeMeta != resources.TypeK8sEndpoints {
 		panic("Error in test code, passing in wrong client type")
 	}
 	t.matchStarted = set.New()
@@ -80,8 +73,8 @@ func (t *tester) setClientKeys(client resources.ResourceID, keys set.Set) {
 	t.k.SetClientKeys(client, keys)
 }
 
-func (t *tester) setOwnerKeys(owner resources.ResourceID, keys set.Set) {
-	if owner.GroupVersionKind != resources.ResourceTypeHostEndpoints {
+func (t *tester) setOwnerKeys(owner apiv3.ResourceID, keys set.Set) {
+	if owner.TypeMeta != resources.TypeCalicoHostEndpoints {
 		panic("Error in test code, passing in wrong owner type")
 	}
 	t.matchStarted = set.New()
@@ -89,8 +82,8 @@ func (t *tester) setOwnerKeys(owner resources.ResourceID, keys set.Set) {
 	t.k.SetOwnerKeys(owner, keys)
 }
 
-func (t *tester) deleteClient(client resources.ResourceID) {
-	if client.GroupVersionKind != resources.ResourceTypeEndpoints {
+func (t *tester) deleteClient(client apiv3.ResourceID) {
+	if client.TypeMeta != resources.TypeK8sEndpoints {
 		panic("Error in test code, passing in wrong client type")
 	}
 	t.matchStarted = set.New()
@@ -98,8 +91,8 @@ func (t *tester) deleteClient(client resources.ResourceID) {
 	t.k.DeleteClient(client)
 }
 
-func (t *tester) deleteOwner(owner resources.ResourceID) {
-	if owner.GroupVersionKind != resources.ResourceTypeHostEndpoints {
+func (t *tester) deleteOwner(owner apiv3.ResourceID) {
+	if owner.TypeMeta != resources.TypeCalicoHostEndpoints {
 		panic("Error in test code, passing in wrong owner type")
 	}
 	t.matchStarted = set.New()

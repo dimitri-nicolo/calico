@@ -3,7 +3,7 @@ package xrefcache
 
 import (
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
@@ -15,8 +15,8 @@ import (
 )
 
 var (
-	KindsNamespace = []schema.GroupVersionKind{
-		resources.ResourceTypeNamespaces,
+	KindsNamespace = []metav1.TypeMeta{
+		resources.TypeK8sNamespaces,
 	}
 )
 
@@ -85,7 +85,7 @@ type k8sNamespaceEngine struct {
 }
 
 // kinds implements the resourceCacheEngine interface.
-func (c *k8sNamespaceEngine) kinds() []schema.GroupVersionKind {
+func (c *k8sNamespaceEngine) kinds() []metav1.TypeMeta {
 	return KindsNamespace
 }
 
@@ -122,12 +122,12 @@ func (c *k8sNamespaceEngine) convertToVersioned(res resources.Resource) (Version
 }
 
 // resourceAdded implements the resourceCacheEngine interface.
-func (c *k8sNamespaceEngine) resourceAdded(id resources.ResourceID, entry CacheEntry) {
+func (c *k8sNamespaceEngine) resourceAdded(id apiv3.ResourceID, entry CacheEntry) {
 	c.resourceUpdated(id, entry, nil)
 }
 
 // resourceUpdated implements the resourceCacheEngine interface.
-func (c *k8sNamespaceEngine) resourceUpdated(id resources.ResourceID, entry CacheEntry, prev VersionedResource) {
+func (c *k8sNamespaceEngine) resourceUpdated(id apiv3.ResourceID, entry CacheEntry, prev VersionedResource) {
 	// Kubernetes namespaces are configured as Calico profiles. Use the V3 version of the name and the V1 version of the
 	// labels since they will have been modified to match the selector modifications in the pod.
 	x := entry.(*CacheEntryK8sNamespace)
@@ -135,7 +135,7 @@ func (c *k8sNamespaceEngine) resourceUpdated(id resources.ResourceID, entry Cach
 }
 
 // resourceDeleted implements the resourceCacheEngine interface.
-func (c *k8sNamespaceEngine) resourceDeleted(id resources.ResourceID, entry CacheEntry) {
+func (c *k8sNamespaceEngine) resourceDeleted(id apiv3.ResourceID, entry CacheEntry) {
 	// Kubernetes namespaces are configured as Calico profiles. Use the V3 version of the name since it will have been
 	// modified to match the selector modifications in the pod.
 	x := entry.(*CacheEntryK8sNamespace)
@@ -143,7 +143,7 @@ func (c *k8sNamespaceEngine) resourceDeleted(id resources.ResourceID, entry Cach
 }
 
 // recalculate implements the resourceCacheEngine interface.
-func (c *k8sNamespaceEngine) recalculate(id resources.ResourceID, res CacheEntry) syncer.UpdateType {
+func (c *k8sNamespaceEngine) recalculate(id apiv3.ResourceID, res CacheEntry) syncer.UpdateType {
 	// We don't store any additional Namespace state at the moment.
 	return 0
 }

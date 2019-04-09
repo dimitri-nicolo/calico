@@ -11,59 +11,25 @@ import (
 	"github.com/tigera/compliance/pkg/event"
 	"github.com/tigera/compliance/pkg/list"
 	"github.com/tigera/compliance/pkg/replay"
+	"github.com/tigera/compliance/pkg/resources"
 	"github.com/tigera/compliance/pkg/syncer"
 	"github.com/tigera/compliance/pkg/xrefcache"
-	"github.com/tigera/compliance/pkg/resources"
 )
 
 const (
 	// A zero-trust exposure is indicated when any of these flags are *set* in the endpoint cache entry.
-	ZeroTrustWhenEndpointFlagsSet =  xrefcache.CacheEntryInternetExposedIngress |
+	ZeroTrustWhenEndpointFlagsSet = xrefcache.CacheEntryInternetExposedIngress |
 		xrefcache.CacheEntryInternetExposedEgress |
 		xrefcache.CacheEntryOtherNamespaceExposedIngress |
 		xrefcache.CacheEntryOtherNamespaceExposedEgress
 
 	// A zero-trust exposure is indicated when any of these flags are *unset* in the endpoint cache entry.
 	ZeroTrustWhenEndpointFlagsUnset = xrefcache.CacheEntryProtectedIngress |
-		xrefcache.CacheEntryProtectedIngress |
+		xrefcache.CacheEntryProtectedEgress |
 		xrefcache.CacheEntryEnvoyEnabled
 
 	// The full set of zero-trust flags for an endpoint.
 	ZeroTrustFlags = ZeroTrustWhenEndpointFlagsSet | ZeroTrustWhenEndpointFlagsUnset
-
-
-
-	// Valid for Policies, pods and host endpoints
-	EventProtectedIngress syncer.UpdateType = 1 << iota
-	EventProtectedEgress
-	// Valid for network sets
-	EventInternetExposed
-	// Valid for Policies, pods and host endpoints
-	EventInternetExposedIngress
-	EventInternetExposedEgress
-	// Valid for Policies, pods and host endpoints
-	EventOtherNamespaceExposedIngress
-	EventOtherNamespaceExposedEgress
-	// Valid for pods
-	EventEnvoyEnabled
-
-	// ----- Non boolean configuration values -----
-	// The following event flags do not have equivalent CacheEntry flags.
-	EventPolicyRuleSelectorMatchStarted
-	EventPolicyRuleSelectorMatchStopped
-	EventPolicyMatchStarted
-	EventPolicyMatchStopped
-	EventNetsetMatchStarted
-	EventNetsetMatchStopped
-	EventServiceAdded
-	EventServiceDeleted
-
-	// ----- Added by the generic cache processing -----
-	EventResourceAdded
-	EventResourceModified
-	EventResourceDeleted
-	EventInScope
-
 )
 
 // Run is the entrypoint to start running the reporter.
@@ -94,26 +60,26 @@ func Run(
 }
 
 type reporter struct {
-	ctx              context.Context
-	cfg              *Config
-	clog             *logrus.Entry
-	listDest         list.Destination
-	eventer          event.Fetcher
-	xc               xrefcache.XrefCache
-	replayer         syncer.Starter
-	data             *apiv3.ReportData
+	ctx      context.Context
+	cfg      *Config
+	clog     *logrus.Entry
+	listDest list.Destination
+	eventer  event.Fetcher
+	xc       xrefcache.XrefCache
+	replayer syncer.Starter
+	data     *apiv3.ReportData
 
 	//TODO(rlb): Urgh this is truly terrible. We have different definitions of ResourceID between compliance and
 	//TODO       the API.
-	inScopeEndpoints map[resources.ResourceID]*reportEndpoint
-	services         map[resources.ResourceID]xrefcache.CacheEntryFlags
+	inScopeEndpoints map[apiv3.ResourceID]*reportEndpoint
+	services         map[apiv3.ResourceID]xrefcache.CacheEntryFlags
 	namespaces       map[string]xrefcache.CacheEntryFlags
 }
 
 type reportEndpoint struct {
 	zeroTrustFlags xrefcache.CacheEntryFlags
-	policies resources.Set
-	services resources.Set
+	policies       resources.Set
+	services       resources.Set
 }
 
 type reportService struct {
@@ -164,7 +130,7 @@ func (r *reporter) run() error {
 }
 
 func (r *reporter) onUpdate(update syncer.Update) {
-	if update.Type & xrefcache.EventResourceDeleted != 0 {
+	if update.Type&xrefcache.EventResourceDeleted != 0 {
 		// We don't need to track deleted endpoints because we are getting the superset of resources managed within the
 		// timeframe.
 		return
@@ -176,13 +142,13 @@ func (r *reporter) onUpdate(update syncer.Update) {
 	// Update the endpoint and namespaces policies and services
 	//TODO(rlb): Performance improvement here - we only need to update what has actually changed in particular no
 	//           need to update policies or services set if not changed. However, I have not UTd that the correct
-	//           flags are returned, so let's not trust to luck.
+	//           update flags are returned, so let's not trust to luck.
 	ep.zeroTrustFlags |= zeroTrustFlags
 	ep.policies.AddSet(x.AppliedPolicies)
 	ep.services.AddSet(x.Services)
 
 	// Loop through and update the flags on the services.
-	ep.services.Iter(func(item resources.ResourceID) error {
+	ep.services.Iter(func(item apiv3.ResourceID) error {
 		r.services[item] |= zeroTrustFlags
 		return nil
 	})
@@ -191,7 +157,7 @@ func (r *reporter) onUpdate(update syncer.Update) {
 	r.namespaces[update.ResourceID.Namespace] |= zeroTrustFlags
 }
 
-func (r *reporter) getEndpoint(id resources.ResourceID) *reportEndpoint {
+func (r *reporter) getEndpoint(id apiv3.ResourceID) *reportEndpoint {
 	re := r.inScopeEndpoints[id]
 	if re == nil {
 		re = &reportEndpoint{
@@ -204,23 +170,30 @@ func (r *reporter) getEndpoint(id resources.ResourceID) *reportEndpoint {
 }
 
 func (r *reporter) transferAggregatedData() {
+	// Create the endpoints slice up-front
+	r.data.Endpoints = make([]apiv3.EndpointsReportEndpoint, len(r.inScopeEndpoints))
+
 	// Transfer the aggregated data to the ReportData structure.
 	for id, ep := range r.inScopeEndpoints {
-		epd := apiv3.EndpointsReportEndpoint{
-			ID: apiv3.ResourceID{
-				TypeMeta:,
-			},
-			IngressProtected: ep.zeroTrustFlags & xrefcache.CacheEntryProtectedIngress == 0, // We reversed this for zero-trust
-			EgressProtected: ep.zeroTrustFlags & xrefcache.CacheEntryProtectedEgress == 0, // We reversed this for zero-trust
-			IngressFromInternet: ep.zeroTrustFlags & xrefcache.CacheEntryInternetExposedIngress != 0,
-			EgressToInternet: ep.zeroTrustFlags & xrefcache.CacheEntryInternetExposedEgress != 0,
-			IngressFromOtherNamespace: ep.zeroTrustFlags & xrefcache.CacheEntryOtherNamespaceExposedIngress != 0,
-			EgressToOtherNamespace: ep.zeroTrustFlags & xrefcache.CacheEntryOtherNamespaceExposedEgress != 0,
-			EnvoyEnabled: ep.zeroTrustFlags & xrefcache.CacheEntryEnvoyEnabled == 0, // We reversed this for zero-trust
-			AppliedPolicies: ep.policies.ToSlice(),
-			Services: ep.services.ToSlice(),
-		}
+		r.data.Endpoints = append(r.data.Endpoints, apiv3.EndpointsReportEndpoint{
+			ID:                        id,
+			IngressProtected:          ep.zeroTrustFlags&xrefcache.CacheEntryProtectedIngress == 0, // We reversed this for zero-trust
+			EgressProtected:           ep.zeroTrustFlags&xrefcache.CacheEntryProtectedEgress == 0,  // We reversed this for zero-trust
+			IngressFromInternet:       ep.zeroTrustFlags&xrefcache.CacheEntryInternetExposedIngress != 0,
+			EgressToInternet:          ep.zeroTrustFlags&xrefcache.CacheEntryInternetExposedEgress != 0,
+			IngressFromOtherNamespace: ep.zeroTrustFlags&xrefcache.CacheEntryOtherNamespaceExposedIngress != 0,
+			EgressToOtherNamespace:    ep.zeroTrustFlags&xrefcache.CacheEntryOtherNamespaceExposedEgress != 0,
+			EnvoyEnabled:              ep.zeroTrustFlags&xrefcache.CacheEntryEnvoyEnabled == 0, // We reversed this for zero-trust
+			AppliedPolicies:           ep.policies.ToSlice(),
+			Services:                  ep.services.ToSlice(),
+		})
+
+		// Delete from our dictionary now.
+		delete(r.inScopeEndpoints, id)
 	}
+
+	// We can delete the dictionary totally now.
+	r.inScopeEndpoints = nil
 }
 
 // zeroTrustFlags converts the flags and updates into a set of zero-trust flags and changed zero-trust flags.
@@ -233,7 +206,7 @@ func zeroTrustFlags(updateType syncer.UpdateType, flags xrefcache.CacheEntryFlag
 	// Get the set of changed flags (update masked with the flags of interest). One alteration though, for an add we need
 	// to treat as if all fields changed.
 	changedFlags := xrefcache.CacheEntryFlags(updateType) & ZeroTrustFlags
-	if updateType & xrefcache.EventResourceAdded != 0 {
+	if updateType&xrefcache.EventResourceAdded != 0 {
 		changedFlags = ZeroTrustFlags
 	}
 
@@ -242,4 +215,3 @@ func zeroTrustFlags(updateType syncer.UpdateType, flags xrefcache.CacheEntryFlag
 
 	return zeroTrust, zeroTrust & changedFlags
 }
-

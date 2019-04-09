@@ -8,7 +8,6 @@ import (
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
 	. "github.com/tigera/compliance/internal/testutils"
-	"github.com/tigera/compliance/pkg/resources"
 	"github.com/tigera/compliance/pkg/syncer"
 	"github.com/tigera/compliance/pkg/xrefcache"
 )
@@ -27,7 +26,7 @@ var _ = Describe("xref cache", func() {
 })
 
 type callbacks struct {
-	updated map[resources.ResourceID]*xrefcache.CacheEntryEndpoint
+	updated map[apiv3.ResourceID]*xrefcache.CacheEntryEndpoint
 }
 
 func (c *callbacks) onUpdate(update syncer.Update) {
@@ -37,19 +36,19 @@ func (c *callbacks) onUpdate(update syncer.Update) {
 var _ = Describe("xref cache in-scope callbacks", func() {
 	var cb *callbacks
 	var tester *XrefCacheTester
-	var nsID1 resources.ResourceID
-	var saID1 resources.ResourceID
-	var saID2 resources.ResourceID
-	//var nsID2 resources.ResourceID
-	var podID1 resources.ResourceID
-	var podID2 resources.ResourceID
-	var podID3 resources.ResourceID
-	var podID4 resources.ResourceID
+	var nsID1 apiv3.ResourceID
+	var saID1 apiv3.ResourceID
+	var saID2 apiv3.ResourceID
+	//var nsID2 apiv3.ResourceID
+	var podID1 apiv3.ResourceID
+	var podID2 apiv3.ResourceID
+	var podID3 apiv3.ResourceID
+	var podID4 apiv3.ResourceID
 
 	BeforeEach(func() {
 		tester = NewXrefCacheTester()
 		cb = &callbacks{
-			updated: make(map[resources.ResourceID]*xrefcache.CacheEntryEndpoint),
+			updated: make(map[apiv3.ResourceID]*xrefcache.CacheEntryEndpoint),
 		}
 		nsID1 = tester.SetNamespace(Namespace1, Label1)
 		tester.SetNamespace(Namespace2, Label2)

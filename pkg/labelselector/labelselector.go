@@ -4,12 +4,12 @@ package labelselector
 import (
 	log "github.com/sirupsen/logrus"
 
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/felix/labelindex"
 	"github.com/projectcalico/libcalico-go/lib/selector"
 
-	"github.com/tigera/compliance/pkg/resources"
+	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 )
 
 // This is just a wrapper around the Felix InheritIndex helper, but uses ResourceID selector and label identifiers and
@@ -20,18 +20,18 @@ import (
 // labels.
 
 type Interface interface {
-	RegisterCallbacks(kinds []schema.GroupVersionKind, started MatchStarted, stopped MatchStopped)
+	RegisterCallbacks(kinds []metav1.TypeMeta, started MatchStarted, stopped MatchStopped)
 
-	UpdateLabels(res resources.ResourceID, labels map[string]string, parentIDs []string)
-	DeleteLabels(res resources.ResourceID)
+	UpdateLabels(res apiv3.ResourceID, labels map[string]string, parentIDs []string)
+	DeleteLabels(res apiv3.ResourceID)
 	UpdateParentLabels(id string, labels map[string]string)
 	DeleteParentLabels(id string)
-	UpdateSelector(res resources.ResourceID, selector string)
-	DeleteSelector(res resources.ResourceID)
+	UpdateSelector(res apiv3.ResourceID, selector string)
+	DeleteSelector(res apiv3.ResourceID)
 }
 
-type MatchStarted func(selector, labels resources.ResourceID)
-type MatchStopped func(selector, labels resources.ResourceID)
+type MatchStarted func(selector, labels apiv3.ResourceID)
+type MatchStopped func(selector, labels apiv3.ResourceID)
 
 func NewLabelSelection() Interface {
 	ls := &labelSelection{}
@@ -51,10 +51,10 @@ type labelSelection struct {
 type callbacksWithKind struct {
 	started MatchStarted
 	stopped MatchStopped
-	kind    schema.GroupVersionKind
+	kind    metav1.TypeMeta
 }
 
-func (ls *labelSelection) RegisterCallbacks(kinds []schema.GroupVersionKind, started MatchStarted, stopped MatchStopped) {
+func (ls *labelSelection) RegisterCallbacks(kinds []metav1.TypeMeta, started MatchStarted, stopped MatchStopped) {
 	for _, kind := range kinds {
 		ls.cbs = append(ls.cbs, callbacksWithKind{
 			started: started,
@@ -64,11 +64,11 @@ func (ls *labelSelection) RegisterCallbacks(kinds []schema.GroupVersionKind, sta
 	}
 }
 
-func (ls *labelSelection) UpdateLabels(res resources.ResourceID, labels map[string]string, parentIDs []string) {
+func (ls *labelSelection) UpdateLabels(res apiv3.ResourceID, labels map[string]string, parentIDs []string) {
 	ls.index.UpdateLabels(res, labels, parentIDs)
 }
 
-func (ls *labelSelection) DeleteLabels(res resources.ResourceID) {
+func (ls *labelSelection) DeleteLabels(res apiv3.ResourceID) {
 	ls.index.DeleteLabels(res)
 }
 
@@ -80,7 +80,7 @@ func (ls *labelSelection) DeleteParentLabels(parentID string) {
 	ls.index.DeleteParentLabels(parentID)
 }
 
-func (ls *labelSelection) UpdateSelector(res resources.ResourceID, sel string) {
+func (ls *labelSelection) UpdateSelector(res apiv3.ResourceID, sel string) {
 	parsedSel, err := selector.Parse(sel)
 	if err != nil {
 		// The selector is bad, remove the associated resource from the helper.
@@ -91,18 +91,18 @@ func (ls *labelSelection) UpdateSelector(res resources.ResourceID, sel string) {
 	ls.index.UpdateSelector(res, parsedSel)
 }
 
-func (ls *labelSelection) DeleteSelector(res resources.ResourceID) {
+func (ls *labelSelection) DeleteSelector(res apiv3.ResourceID) {
 	ls.index.DeleteSelector(res)
 }
 
 // onMatchStarted is called from the InheritIndex helper when a selector-endpoint match has
 // started.
 func (c *labelSelection) onMatchStarted(selId, labelsId interface{}) {
-	selRes := selId.(resources.ResourceID)
-	labelsRes := labelsId.(resources.ResourceID)
+	selRes := selId.(apiv3.ResourceID)
+	labelsRes := labelsId.(apiv3.ResourceID)
 
 	for i := range c.cbs {
-		if c.cbs[i].kind == selRes.GroupVersionKind || c.cbs[i].kind == labelsRes.GroupVersionKind {
+		if c.cbs[i].kind == selRes.TypeMeta || c.cbs[i].kind == labelsRes.TypeMeta {
 			c.cbs[i].started(selRes, labelsRes)
 		}
 	}
@@ -111,11 +111,11 @@ func (c *labelSelection) onMatchStarted(selId, labelsId interface{}) {
 // onMatchStopped is called from the InheritIndex helper when a selector-endpoint match has
 // stopped.
 func (c *labelSelection) onMatchStopped(selId, labelsId interface{}) {
-	selRes := selId.(resources.ResourceID)
-	labelsRes := labelsId.(resources.ResourceID)
+	selRes := selId.(apiv3.ResourceID)
+	labelsRes := labelsId.(apiv3.ResourceID)
 
 	for i := range c.cbs {
-		if c.cbs[i].kind == selRes.GroupVersionKind || c.cbs[i].kind == labelsRes.GroupVersionKind {
+		if c.cbs[i].kind == selRes.TypeMeta || c.cbs[i].kind == labelsRes.TypeMeta {
 			c.cbs[i].stopped(selRes, labelsRes)
 		}
 	}

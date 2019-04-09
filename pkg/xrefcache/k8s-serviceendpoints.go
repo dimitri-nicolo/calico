@@ -5,8 +5,9 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/libcalico-go/lib/set"
 
@@ -16,8 +17,8 @@ import (
 )
 
 var (
-	KindsServiceEndpoints = []schema.GroupVersionKind{
-		resources.ResourceTypeEndpoints,
+	KindsServiceEndpoints = []metav1.TypeMeta{
+		resources.TypeK8sEndpoints,
 	}
 )
 
@@ -103,7 +104,7 @@ func (c *K8sServiceEndpointsEngine) register(cache engineCache) {
 	c.engineCache = cache
 }
 
-func (c *K8sServiceEndpointsEngine) kinds() []schema.GroupVersionKind {
+func (c *K8sServiceEndpointsEngine) kinds() []metav1.TypeMeta {
 	return KindsServiceEndpoints
 }
 
@@ -116,13 +117,13 @@ func (c *K8sServiceEndpointsEngine) convertToVersioned(res resources.Resource) (
 	return &versionedK8sServiceEndpoints{Endpoints: in}, nil
 }
 
-func (c *K8sServiceEndpointsEngine) resourceAdded(id resources.ResourceID, entry CacheEntry) {
+func (c *K8sServiceEndpointsEngine) resourceAdded(id apiv3.ResourceID, entry CacheEntry) {
 	x := entry.(*CacheEntryK8sServiceEndpoints)
 	x.clog = log.WithField("id", id)
 	c.resourceUpdated(id, entry, nil)
 }
 
-func (c *K8sServiceEndpointsEngine) resourceUpdated(id resources.ResourceID, entry CacheEntry, prev VersionedResource) {
+func (c *K8sServiceEndpointsEngine) resourceUpdated(id apiv3.ResourceID, entry CacheEntry, prev VersionedResource) {
 	x := entry.(*CacheEntryK8sServiceEndpoints)
 	i, err := x.getIPs()
 	if err != nil {
@@ -131,12 +132,12 @@ func (c *K8sServiceEndpointsEngine) resourceUpdated(id resources.ResourceID, ent
 	c.IPManager().SetClientKeys(id, i)
 }
 
-func (c *K8sServiceEndpointsEngine) resourceDeleted(id resources.ResourceID, entry CacheEntry) {
+func (c *K8sServiceEndpointsEngine) resourceDeleted(id apiv3.ResourceID, entry CacheEntry) {
 	c.IPManager().DeleteClient(id)
 }
 
 // recalculate implements the resourceCacheEngine interface.
-func (c *K8sServiceEndpointsEngine) recalculate(podId resources.ResourceID, podEntry CacheEntry) syncer.UpdateType {
+func (c *K8sServiceEndpointsEngine) recalculate(podId apiv3.ResourceID, podEntry CacheEntry) syncer.UpdateType {
 	// We calculate all state in the resourceUpdated/resourceAdded callbacks.
 	return 0
 }

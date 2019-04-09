@@ -10,7 +10,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/tigera/compliance/pkg/syncer"
 )
@@ -30,19 +30,19 @@ type DispatcherOnUpdate func(syncer.Update)
 type Dispatcher interface {
 	syncer.SyncerCallbacks
 	RegisterOnStatusUpdateHandler(callback DispatcherOnStatusUpdate)
-	RegisterOnUpdateHandler(kind schema.GroupVersionKind, updateTypes syncer.UpdateType, callback DispatcherOnUpdate)
+	RegisterOnUpdateHandler(kind metav1.TypeMeta, updateTypes syncer.UpdateType, callback DispatcherOnUpdate)
 }
 
 func NewDispatcher() Dispatcher {
 	return &dispatcher{
-		resourceTypes:   map[schema.GroupVersionKind]*resourceType{},
+		resourceTypes:   map[metav1.TypeMeta]*resourceType{},
 		outputPerfStats: outputPerfStats(),
 		startSync:       time.Now(),
 	}
 }
 
 type dispatcher struct {
-	resourceTypes           map[schema.GroupVersionKind]*resourceType
+	resourceTypes           map[metav1.TypeMeta]*resourceType
 	onStatusUpdateCallbacks []DispatcherOnStatusUpdate
 
 	// Performance statistics tracking
@@ -66,7 +66,7 @@ func (d *dispatcher) RegisterOnStatusUpdateHandler(callback DispatcherOnStatusUp
 	d.onStatusUpdateCallbacks = append(d.onStatusUpdateCallbacks, callback)
 }
 
-func (d *dispatcher) RegisterOnUpdateHandler(kind schema.GroupVersionKind, updateTypes syncer.UpdateType, callback DispatcherOnUpdate) {
+func (d *dispatcher) RegisterOnUpdateHandler(kind metav1.TypeMeta, updateTypes syncer.UpdateType, callback DispatcherOnUpdate) {
 	rt, ok := d.resourceTypes[kind]
 	if !ok {
 		// Initialise the registration. This will be used to convert the updates.
@@ -79,7 +79,7 @@ func (d *dispatcher) RegisterOnUpdateHandler(kind schema.GroupVersionKind, updat
 // OnUpdates is a callback from the SyncerQuerySerializer to update our cache from a syncer
 // update.  It is guaranteed not to be called at the same time as RunQuery and OnStatusUpdated.
 func (d *dispatcher) OnUpdate(update syncer.Update) {
-	registration, ok := d.resourceTypes[update.ResourceID.GroupVersionKind]
+	registration, ok := d.resourceTypes[update.ResourceID.TypeMeta]
 	if !ok {
 		log.Infof("Update for unregistered resource type: %s", update.ResourceID.GroupVersionKind)
 		return

@@ -15,7 +15,7 @@ var _ = Describe("inscope endpoint helpers", func() {
 		Expect(err).ToNot(HaveOccurred())
 		Expect(s).To(Equal("all()"))
 		Expect(r.Name).To(Equal("all()"))
-		Expect(r.GroupVersionKind).To(Equal(KindInScopeSelection))
+		Expect(r.TypeMeta).To(Equal(KindInScopeSelection))
 	})
 
 	It("Handles EP selector but no NS or SA", func() {

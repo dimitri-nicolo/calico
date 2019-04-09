@@ -6,7 +6,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
 	"github.com/tigera/compliance/pkg/dispatcher"
 	"github.com/tigera/compliance/pkg/keyselector"
@@ -18,8 +20,8 @@ import (
 // engineCache is the interface provided to the engine in registration processing to call back into the cache. This
 // simply hides the internals of the cache from the resource specific engine implementations.
 type engineCache interface {
-	GetFromOurCache(res resources.ResourceID) CacheEntry
-	GetFromXrefCache(res resources.ResourceID) CacheEntry
+	GetFromOurCache(res apiv3.ResourceID) CacheEntry
+	GetFromXrefCache(res apiv3.ResourceID) CacheEntry
 
 	EndpointLabelSelector() labelselector.Interface
 	NetworkSetLabelSelector() labelselector.Interface
@@ -28,18 +30,18 @@ type engineCache interface {
 
 	// Register for updates for other resource types. This registers with the xref cache dispatcher, so the updates
 	// will be CacheEntry types and the available updateTypes are defined by the events in flags.go.
-	RegisterOnUpdateHandler(kind schema.GroupVersionKind, updateTypes syncer.UpdateType, callback dispatcher.DispatcherOnUpdate)
+	RegisterOnUpdateHandler(kind metav1.TypeMeta, updateTypes syncer.UpdateType, callback dispatcher.DispatcherOnUpdate)
 
 	// Queue the specified resource for async recalculation and update. If the CacheEntry is specified, it should match
 	// the ResourceID. If no CacheEntry is specified, it will be looked up.
-	QueueUpdate(resources.ResourceID, CacheEntry, syncer.UpdateType)
+	QueueUpdate(apiv3.ResourceID, CacheEntry, syncer.UpdateType)
 }
 
 // resourceCacheEngine is the interface a specific engine must implement for a resourceCache.
 type resourceCacheEngine interface {
 	// kinds returns the kinds of resources managed by a particular cache engine. Only a single engine should register
 	// for each resource type.
-	kinds() []schema.GroupVersionKind
+	kinds() []metav1.TypeMeta
 
 	// register initializes the engine with details of the owning cache, this allows the engine to call into the cache
 	// to get resources, and to register with the label-selectors for match stopped/started events.
@@ -56,29 +58,29 @@ type resourceCacheEngine interface {
 
 	// resourceAdded is called *after* a CacheEntry has been added into the cache. The CacheEntry will contain the
 	// VersionedResource created from the syncer event.
-	resourceAdded(id resources.ResourceID, entry CacheEntry)
+	resourceAdded(id apiv3.ResourceID, entry CacheEntry)
 
 	// resourceUpdated is called *after* a CacheEntry has been updated in the cache. The CacheEntry will contain the
 	// VersionedResource created from the syncer event. The method should return the set of updates for any changes that
 	// occurred as an immediate result of this method invocation. Generally, this method should only update
 	// configuration that is directly determined from the VersionedResource and not from related resources.
-	resourceUpdated(id resources.ResourceID, entry CacheEntry, prev VersionedResource)
+	resourceUpdated(id apiv3.ResourceID, entry CacheEntry, prev VersionedResource)
 
 	// resourceDeleted is called from a syncer delete event *before* the CacheEntry has been deleted. The entry
 	// will be deleted immediately after returning from this method invocation.
-	resourceDeleted(id resources.ResourceID, entry CacheEntry)
+	resourceDeleted(id apiv3.ResourceID, entry CacheEntry)
 
 	// recalculate is called to calculate or recalculate the augmented resource data for a CacheEntry. This is called
 	// asychronously after a related entry was updated that indicated an update was required. This method may itself
 	// queue further recalculations. Augmented data that is determine solely from it's own VersionedResource should
 	// be handled in resourceAdded/Updated.
-	recalculate(id resources.ResourceID, entry CacheEntry) syncer.UpdateType
+	recalculate(id apiv3.ResourceID, entry CacheEntry) syncer.UpdateType
 }
 
 // newResourceCache creates a new resourceCache backed by a specific implementation of a resourceCacheEngine.
 func newResourceCache(engine resourceCacheEngine) *resourceCache {
 	return &resourceCache{
-		resources: make(map[resources.ResourceID]CacheEntry, 0),
+		resources: make(map[apiv3.ResourceID]CacheEntry, 0),
 		engine:    engine,
 	}
 }
@@ -86,7 +88,7 @@ func newResourceCache(engine resourceCacheEngine) *resourceCache {
 // resourceCache is a cache for a related set of resource types. It is a sub-cache of the main cache.
 type resourceCache struct {
 	xc        *xrefCache
-	resources map[resources.ResourceID]CacheEntry
+	resources map[apiv3.ResourceID]CacheEntry
 	engine    resourceCacheEngine
 }
 
@@ -105,7 +107,7 @@ func (c *resourceCache) onUpdate(update syncer.Update) {
 
 // onNewOrUpdated checks cache for existing entry and treats as new or updated based on that rather than on what
 // the syncer indicated - just to more gracefully handle discrepencies.
-func (c *resourceCache) onNewOrUpdated(id resources.ResourceID, res resources.Resource) {
+func (c *resourceCache) onNewOrUpdated(id apiv3.ResourceID, res resources.Resource) {
 	// Convert the resource to a versioned resource (this contains the various versioned representations of the
 	// resource required by our cache processing).
 	v, err := c.engine.convertToVersioned(res)
@@ -144,7 +146,7 @@ func (c *resourceCache) onNewOrUpdated(id resources.ResourceID, res resources.Re
 	}
 }
 
-func (c *resourceCache) onDeleted(id resources.ResourceID) {
+func (c *resourceCache) onDeleted(id apiv3.ResourceID) {
 	log.Debugf("Deleting resource from cache: %s", id)
 	if entry, ok := c.resources[id]; ok {
 		// Send the delete to the consumer dispatcher before we make any updates.
@@ -162,7 +164,7 @@ func (c *resourceCache) onDeleted(id resources.ResourceID) {
 	}
 }
 
-func (c *resourceCache) get(id resources.ResourceID) CacheEntry {
+func (c *resourceCache) get(id apiv3.ResourceID) CacheEntry {
 	return c.resources[id]
 }
 
@@ -205,7 +207,7 @@ func (c *resourceCache) register(xc *xrefCache) {
 	c.engine.register(ci)
 }
 
-func (c *resourceCache) kinds() []schema.GroupVersionKind {
+func (c *resourceCache) kinds() []metav1.TypeMeta {
 	return c.engine.kinds()
 }
 
@@ -216,12 +218,12 @@ type resourceEngineCache struct {
 	xc   *xrefCache
 }
 
-func (c *resourceEngineCache) GetFromOurCache(res resources.ResourceID) CacheEntry {
+func (c *resourceEngineCache) GetFromOurCache(res apiv3.ResourceID) CacheEntry {
 	log.WithField("id", res).Debug("Get resource from our own cache")
 	return c.ours.resources[res]
 }
 
-func (c *resourceEngineCache) GetFromXrefCache(res resources.ResourceID) CacheEntry {
+func (c *resourceEngineCache) GetFromXrefCache(res apiv3.ResourceID) CacheEntry {
 	log.WithField("id", res).Debug("Get resource from x-ref cache")
 	return c.xc.Get(res)
 }
@@ -242,10 +244,10 @@ func (c *resourceEngineCache) IPManager() keyselector.Interface {
 	return c.xc.ipManager
 }
 
-func (c *resourceEngineCache) QueueUpdate(id resources.ResourceID, entry CacheEntry, update syncer.UpdateType) {
+func (c *resourceEngineCache) QueueUpdate(id apiv3.ResourceID, entry CacheEntry, update syncer.UpdateType) {
 	c.xc.queueUpdate(id, entry, update)
 }
 
-func (c *resourceEngineCache) RegisterOnUpdateHandler(kind schema.GroupVersionKind, updateTypes syncer.UpdateType, callback dispatcher.DispatcherOnUpdate) {
+func (c *resourceEngineCache) RegisterOnUpdateHandler(kind metav1.TypeMeta, updateTypes syncer.UpdateType, callback dispatcher.DispatcherOnUpdate) {
 	c.xc.cacheDispatcher.RegisterOnUpdateHandler(kind, updateTypes, callback)
 }

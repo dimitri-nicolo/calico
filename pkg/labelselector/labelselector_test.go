@@ -5,8 +5,9 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/set"
 
 	"github.com/tigera/compliance/pkg/labelselector"
@@ -14,19 +15,15 @@ import (
 )
 
 var (
-	podID = resources.ResourceID{
-		GroupVersionKind: resources.ResourceTypePods,
-		NameNamespace: resources.NameNamespace{
-			Name:      "test",
-			Namespace: "namespace",
-		},
+	podID = apiv3.ResourceID{
+		TypeMeta:  resources.TypeK8sPods,
+		Name:      "test",
+		Namespace: "namespace",
 	}
-	policyID = resources.ResourceID{
-		GroupVersionKind: resources.ResourceTypeNetworkPolicies,
-		NameNamespace: resources.NameNamespace{
-			Name:      "testNP",
-			Namespace: "namespace",
-		},
+	policyID = apiv3.ResourceID{
+		TypeMeta:  resources.TypeCalicoNetworkPolicies,
+		Name:      "testNP",
+		Namespace: "namespace",
 	}
 	podSet    = set.From(podID)
 	policySet = set.From(policyID)
@@ -46,25 +43,25 @@ func newTester() *tester {
 	}
 }
 
-func (t *tester) onMatchPodStart(policy, pod resources.ResourceID) {
+func (t *tester) onMatchPodStart(policy, pod apiv3.ResourceID) {
 	t.pods.Add(pod)
 }
 
-func (t *tester) onMatchPodStopped(policy, pod resources.ResourceID) {
+func (t *tester) onMatchPodStopped(policy, pod apiv3.ResourceID) {
 	t.pods.Discard(pod)
 }
 
-func (t *tester) onMatchPolicyStart(policy, pod resources.ResourceID) {
+func (t *tester) onMatchPolicyStart(policy, pod apiv3.ResourceID) {
 	t.policies.Add(policy)
 }
 
-func (t *tester) onMatchPolicyStopped(policy, pod resources.ResourceID) {
+func (t *tester) onMatchPolicyStopped(policy, pod apiv3.ResourceID) {
 	t.policies.Discard(policy)
 }
 
 func (t *tester) registerPodCallbacks() {
 	t.l.RegisterCallbacks(
-		[]schema.GroupVersionKind{resources.ResourceTypePods},
+		[]metav1.TypeMeta{resources.TypeK8sPods},
 		t.onMatchPodStart,
 		t.onMatchPodStopped,
 	)
@@ -72,7 +69,7 @@ func (t *tester) registerPodCallbacks() {
 
 func (t *tester) registerPolicyCallbacks() {
 	t.l.RegisterCallbacks(
-		[]schema.GroupVersionKind{resources.ResourceTypeNetworkPolicies},
+		[]metav1.TypeMeta{resources.TypeCalicoNetworkPolicies},
 		t.onMatchPolicyStart,
 		t.onMatchPolicyStopped,
 	)

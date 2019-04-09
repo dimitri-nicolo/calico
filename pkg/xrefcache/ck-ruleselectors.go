@@ -4,7 +4,9 @@ package xrefcache
 import (
 	log "github.com/sirupsen/logrus"
 
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
 	"github.com/tigera/compliance/pkg/resources"
 	"github.com/tigera/compliance/pkg/syncer"
@@ -18,28 +20,26 @@ var (
 	// Internal resource kind to encapsulate a selector. This is a bit of a hack since our label-selector interface
 	// assumes all links are resource types, however we want to track selector/netset links so we create a fake
 	// selector kind.
-	KindSelector = schema.GroupVersionKind{
-		Kind:  "rule-selector",
-		Group: "internal.tigera.io",
+	KindSelector = metav1.TypeMeta{
+		Kind:       "rule-selector",
+		APIVersion: "internal.tigera.io/v1",
 	}
 
 	// The network policy cache is populated by both Kubernetes and Calico policy types. Include KindSelector in here so
 	// the queued recalculation processing knows where to send those updates.
-	KindsNetworkPolicyRuleSelectors = []schema.GroupVersionKind{
+	KindsNetworkPolicyRuleSelectors = []metav1.TypeMeta{
 		KindSelector,
 	}
 )
 
-func selectorIDToSelector(id resources.ResourceID) string {
+func selectorIDToSelector(id apiv3.ResourceID) string {
 	return id.Name
 }
 
-func selectorToSelectorID(sel string) resources.ResourceID {
-	return resources.ResourceID{
-		GroupVersionKind: KindSelector,
-		NameNamespace: resources.NameNamespace{
-			Name: sel,
-		},
+func selectorToSelectorID(sel string) apiv3.ResourceID {
+	return apiv3.ResourceID{
+		TypeMeta: KindSelector,
+		Name:     sel,
 	}
 }
 
@@ -102,7 +102,7 @@ func (c *networkPolicyRuleSelectorsEngine) register(cache engineCache) {
 }
 
 // register implements the resourceCacheEngine interface.
-func (c *networkPolicyRuleSelectorsEngine) kinds() []schema.GroupVersionKind {
+func (c *networkPolicyRuleSelectorsEngine) kinds() []metav1.TypeMeta {
 	return KindsNetworkPolicyRuleSelectors
 }
 
@@ -115,30 +115,30 @@ func (c *networkPolicyRuleSelectorsEngine) newCacheEntry() CacheEntry {
 }
 
 // resourceAdded implements the resourceCacheEngine interface.
-func (c *networkPolicyRuleSelectorsEngine) resourceAdded(id resources.ResourceID, entry CacheEntry) {
+func (c *networkPolicyRuleSelectorsEngine) resourceAdded(id apiv3.ResourceID, entry CacheEntry) {
 	// Just call through to our update processsing.
 	entry.(*CacheEntryNetworkPolicyRuleSelector).clog = log.WithField("id", id)
 	c.resourceUpdated(id, entry, nil)
 }
 
 // resourceUpdated implements the resourceCacheEngine interface.
-func (c *networkPolicyRuleSelectorsEngine) resourceUpdated(id resources.ResourceID, entry CacheEntry, prev VersionedResource) {
+func (c *networkPolicyRuleSelectorsEngine) resourceUpdated(id apiv3.ResourceID, entry CacheEntry, prev VersionedResource) {
 	c.NetworkSetLabelSelector().UpdateSelector(id, selectorIDToSelector(id))
 }
 
 // resourceDeleted implements the resourceCacheEngine interface.
-func (c *networkPolicyRuleSelectorsEngine) resourceDeleted(id resources.ResourceID, res CacheEntry) {
+func (c *networkPolicyRuleSelectorsEngine) resourceDeleted(id apiv3.ResourceID, res CacheEntry) {
 	c.NetworkSetLabelSelector().DeleteSelector(id)
 }
 
 // recalculate implements the resourceCacheEngine interface.
-func (c *networkPolicyRuleSelectorsEngine) recalculate(id resources.ResourceID, entry CacheEntry) syncer.UpdateType {
+func (c *networkPolicyRuleSelectorsEngine) recalculate(id apiv3.ResourceID, entry CacheEntry) syncer.UpdateType {
 	x := entry.(*CacheEntryNetworkPolicyRuleSelector)
 
 	// Store and clear the effective set of Netset flags.
 	oldFlags := x.NetworkSetFlags
 	x.NetworkSetFlags = 0
-	x.NetworkSets.Iter(func(nsid resources.ResourceID) error {
+	x.NetworkSets.Iter(func(nsid apiv3.ResourceID) error {
 		netset := c.GetFromXrefCache(nsid)
 		if netset == nil {
 			log.Errorf("Cannot find referenced NetworkSet in cache when recalculating rule selector flags")
@@ -163,13 +163,13 @@ func (c *networkPolicyRuleSelectorsEngine) queueRuleSelectorsForRecalculation(up
 	// We have only registered for notifications from NetworkSets and for changes to configuration that we care about.
 	x := update.Resource.(*CacheEntryCalicoNetworkSet)
 
-	x.PolicyRuleSelectors.Iter(func(id resources.ResourceID) error {
+	x.PolicyRuleSelectors.Iter(func(id apiv3.ResourceID) error {
 		c.QueueUpdate(id, nil, update.Type)
 		return nil
 	})
 }
 
-func (c *networkPolicyRuleSelectorsEngine) netsetMatchStarted(sel, nsLabels resources.ResourceID) {
+func (c *networkPolicyRuleSelectorsEngine) netsetMatchStarted(sel, nsLabels apiv3.ResourceID) {
 	x, ok := c.GetFromOurCache(sel).(*CacheEntryNetworkPolicyRuleSelector)
 	if !ok {
 		log.Errorf("Match started on selector, but selector is not in cache: %s matches %s", sel, nsLabels)
@@ -180,7 +180,7 @@ func (c *networkPolicyRuleSelectorsEngine) netsetMatchStarted(sel, nsLabels reso
 	c.QueueUpdate(sel, nil, EventNetsetMatchStarted)
 }
 
-func (c *networkPolicyRuleSelectorsEngine) netsetMatchStopped(sel, nsLabels resources.ResourceID) {
+func (c *networkPolicyRuleSelectorsEngine) netsetMatchStopped(sel, nsLabels apiv3.ResourceID) {
 	x, ok := c.GetFromOurCache(sel).(*CacheEntryNetworkPolicyRuleSelector)
 	if !ok {
 		log.Errorf("Match stopped on selector, but selector is not in cache: %s matches %s", sel, nsLabels)
@@ -191,7 +191,7 @@ func (c *networkPolicyRuleSelectorsEngine) netsetMatchStopped(sel, nsLabels reso
 	c.QueueUpdate(sel, nil, EventNetsetMatchStopped)
 }
 
-func (c *networkPolicyRuleSelectorsEngine) policyMatchStarted(pol, sel resources.ResourceID) {
+func (c *networkPolicyRuleSelectorsEngine) policyMatchStarted(pol, sel apiv3.ResourceID) {
 	x, ok := c.GetFromOurCache(sel).(*CacheEntryNetworkPolicyRuleSelector)
 	if !ok {
 		log.Errorf("Match started on selector, but selector is not in cache: %s matches %s", sel, pol)
@@ -201,7 +201,7 @@ func (c *networkPolicyRuleSelectorsEngine) policyMatchStarted(pol, sel resources
 	x.Policies.Add(pol)
 }
 
-func (c *networkPolicyRuleSelectorsEngine) policyMatchStopped(pol, sel resources.ResourceID) {
+func (c *networkPolicyRuleSelectorsEngine) policyMatchStopped(pol, sel apiv3.ResourceID) {
 	x, ok := c.GetFromOurCache(sel).(*CacheEntryNetworkPolicyRuleSelector)
 	if !ok {
 		log.Errorf("Match stopped on selector, but selector is not in cache: %s matches %s", sel, pol)

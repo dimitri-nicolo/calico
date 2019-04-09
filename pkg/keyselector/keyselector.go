@@ -2,8 +2,9 @@
 package keyselector
 
 import (
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/set"
 
 	"github.com/tigera/compliance/pkg/resources"
@@ -23,23 +24,23 @@ import (
 // rule selector manager to use this.
 
 // Callbacks. This is the notify the owner that there is a client using one of their keys.
-type MatchStarted func(owner, client resources.ResourceID, key string, firstKey bool)
-type MatchStopped func(owner, client resources.ResourceID, key string, lastKey bool)
+type MatchStarted func(owner, client apiv3.ResourceID, key string, firstKey bool)
+type MatchStopped func(owner, client apiv3.ResourceID, key string, lastKey bool)
 
 // KeyManager interface.
 type Interface interface {
-	RegisterCallbacks(kinds []schema.GroupVersionKind, started MatchStarted, stopped MatchStopped)
-	SetOwnerKeys(owner resources.ResourceID, keys set.Set)
-	SetClientKeys(client resources.ResourceID, keys set.Set)
-	DeleteOwner(owner resources.ResourceID)
-	DeleteClient(client resources.ResourceID)
+	RegisterCallbacks(kinds []metav1.TypeMeta, started MatchStarted, stopped MatchStopped)
+	SetOwnerKeys(owner apiv3.ResourceID, keys set.Set)
+	SetClientKeys(client apiv3.ResourceID, keys set.Set)
+	DeleteOwner(owner apiv3.ResourceID)
+	DeleteClient(client apiv3.ResourceID)
 }
 
 // New creates a new KeyManager.
 func New() Interface {
 	keym := &keySelector{
-		keysByOwner:       make(map[resources.ResourceID]set.Set),
-		keysByClient:      make(map[resources.ResourceID]set.Set),
+		keysByOwner:       make(map[apiv3.ResourceID]set.Set),
+		keysByClient:      make(map[apiv3.ResourceID]set.Set),
 		clientsByKey:      make(map[string]resources.Set),
 		ownersByKey:       make(map[string]resources.Set),
 		keysByOwnerClient: make(map[ownerClient]set.Set),
@@ -50,8 +51,8 @@ func New() Interface {
 // keySelector implements the KeyManager interface.
 type keySelector struct {
 	// The cross referencing.
-	keysByOwner       map[resources.ResourceID]set.Set
-	keysByClient      map[resources.ResourceID]set.Set
+	keysByOwner       map[apiv3.ResourceID]set.Set
+	keysByClient      map[apiv3.ResourceID]set.Set
 	ownersByKey       map[string]resources.Set
 	clientsByKey      map[string]resources.Set
 	keysByOwnerClient map[ownerClient]set.Set
@@ -63,16 +64,16 @@ type keySelector struct {
 type callbacksWithKind struct {
 	started MatchStarted
 	stopped MatchStopped
-	kind    schema.GroupVersionKind
+	kind    metav1.TypeMeta
 }
 
 type ownerClient struct {
-	owner  resources.ResourceID
-	client resources.ResourceID
+	owner  apiv3.ResourceID
+	client apiv3.ResourceID
 }
 
 // RegisterCallbacks registers client callbacks with this manager.
-func (ls *keySelector) RegisterCallbacks(kinds []schema.GroupVersionKind, started MatchStarted, stopped MatchStopped) {
+func (ls *keySelector) RegisterCallbacks(kinds []metav1.TypeMeta, started MatchStarted, stopped MatchStopped) {
 	for _, kind := range kinds {
 		ls.cbs = append(ls.cbs, callbacksWithKind{
 			started: started,
@@ -83,7 +84,7 @@ func (ls *keySelector) RegisterCallbacks(kinds []schema.GroupVersionKind, starte
 }
 
 // SetOwnerKeys sets owners keys.
-func (m *keySelector) SetOwnerKeys(owner resources.ResourceID, keys set.Set) {
+func (m *keySelector) SetOwnerKeys(owner apiv3.ResourceID, keys set.Set) {
 	// Start by finding the delta sets of Keys.
 	currentSet := m.keysByOwner[owner]
 	if currentSet == nil {
@@ -113,7 +114,7 @@ func (m *keySelector) SetOwnerKeys(owner resources.ResourceID, keys set.Set) {
 			if clients == nil {
 				return nil
 			}
-			clients.Iter(func(client resources.ResourceID) error {
+			clients.Iter(func(client apiv3.ResourceID) error {
 				m.onKeyMatchStopped(owner, client, key)
 				return nil
 			})
@@ -136,7 +137,7 @@ func (m *keySelector) SetOwnerKeys(owner resources.ResourceID, keys set.Set) {
 			if clients == nil {
 				return nil
 			}
-			clients.Iter(func(client resources.ResourceID) error {
+			clients.Iter(func(client apiv3.ResourceID) error {
 				m.onKeyMatchStarted(owner, client, key)
 				return nil
 			})
@@ -146,7 +147,7 @@ func (m *keySelector) SetOwnerKeys(owner resources.ResourceID, keys set.Set) {
 }
 
 // SetClientKeys sets clients keys.
-func (m *keySelector) SetClientKeys(client resources.ResourceID, keys set.Set) {
+func (m *keySelector) SetClientKeys(client apiv3.ResourceID, keys set.Set) {
 	// Start by finding the delta sets of Keys.
 	currentSet := m.keysByClient[client]
 	if currentSet == nil {
@@ -176,7 +177,7 @@ func (m *keySelector) SetClientKeys(client resources.ResourceID, keys set.Set) {
 			if owners == nil {
 				return nil
 			}
-			owners.Iter(func(owner resources.ResourceID) error {
+			owners.Iter(func(owner apiv3.ResourceID) error {
 				m.onKeyMatchStopped(owner, client, key)
 				return nil
 			})
@@ -199,7 +200,7 @@ func (m *keySelector) SetClientKeys(client resources.ResourceID, keys set.Set) {
 			if owners == nil {
 				return nil
 			}
-			owners.Iter(func(owner resources.ResourceID) error {
+			owners.Iter(func(owner apiv3.ResourceID) error {
 				m.onKeyMatchStarted(owner, client, key)
 				return nil
 			})
@@ -208,17 +209,17 @@ func (m *keySelector) SetClientKeys(client resources.ResourceID, keys set.Set) {
 	)
 }
 
-func (m *keySelector) DeleteOwner(owner resources.ResourceID) {
+func (m *keySelector) DeleteOwner(owner apiv3.ResourceID) {
 	m.SetOwnerKeys(owner, nil)
 }
 
-func (m *keySelector) DeleteClient(client resources.ResourceID) {
+func (m *keySelector) DeleteClient(client apiv3.ResourceID) {
 	m.SetClientKeys(client, nil)
 }
 
 // onMatchStarted is called from the InheritIndex helper when a selector-endpoint match has
 // started.
-func (c *keySelector) onKeyMatchStarted(owner, client resources.ResourceID, key string) {
+func (c *keySelector) onKeyMatchStarted(owner, client apiv3.ResourceID, key string) {
 	var firstKey bool
 	oc := ownerClient{owner: owner, client: client}
 	keys := c.keysByOwnerClient[oc]
@@ -230,7 +231,7 @@ func (c *keySelector) onKeyMatchStarted(owner, client resources.ResourceID, key 
 	keys.Add(key)
 
 	for i := range c.cbs {
-		if c.cbs[i].kind == owner.GroupVersionKind || c.cbs[i].kind == client.GroupVersionKind {
+		if c.cbs[i].kind == owner.TypeMeta || c.cbs[i].kind == client.TypeMeta {
 			c.cbs[i].started(owner, client, key, firstKey)
 		}
 	}
@@ -238,7 +239,7 @@ func (c *keySelector) onKeyMatchStarted(owner, client resources.ResourceID, key 
 
 // onMatchStopped is called from the InheritIndex helper when a selector-endpoint match has
 // stopped.
-func (c *keySelector) onKeyMatchStopped(owner, client resources.ResourceID, key string) {
+func (c *keySelector) onKeyMatchStopped(owner, client apiv3.ResourceID, key string) {
 	var lastKey bool
 	oc := ownerClient{owner: owner, client: client}
 	keys := c.keysByOwnerClient[oc]
@@ -249,7 +250,7 @@ func (c *keySelector) onKeyMatchStopped(owner, client resources.ResourceID, key 
 	}
 
 	for i := range c.cbs {
-		if c.cbs[i].kind == owner.GroupVersionKind || c.cbs[i].kind == client.GroupVersionKind {
+		if c.cbs[i].kind == owner.TypeMeta || c.cbs[i].kind == client.TypeMeta {
 			c.cbs[i].stopped(owner, client, key, lastKey)
 		}
 	}

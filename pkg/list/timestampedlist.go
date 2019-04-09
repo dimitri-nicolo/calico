@@ -2,13 +2,12 @@
 package list
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"bytes"
 
 	"github.com/tigera/compliance/pkg/resources"
 )
@@ -43,7 +42,7 @@ func (l *TimestampedResourceList) UnmarshalJSON(b []byte) error {
 	}
 
 	// Generate the appropriate list resource.
-	l.ResourceList = resources.NewResourceList(meta.TypeMeta.GroupVersionKind())
+	l.ResourceList = resources.NewResourceList(meta.TypeMeta)
 	if l.ResourceList == nil {
 		return fmt.Errorf("unable to process resource: %s", meta.TypeMeta.GroupVersionKind())
 	}

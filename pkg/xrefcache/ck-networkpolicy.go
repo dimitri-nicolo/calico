@@ -8,7 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	networkingv1 "k8s.io/api/networking/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
@@ -23,10 +23,10 @@ import (
 var (
 	// The network policy cache is populated by both Kubernetes and Calico policy types. Include KindSelector in here so
 	// the queued recalculation processing knows where to send those updates.
-	KindsNetworkPolicy = []schema.GroupVersionKind{
-		resources.ResourceTypeGlobalNetworkPolicies,
-		resources.ResourceTypeNetworkPolicies,
-		resources.ResourceTypeK8sNetworkPolicies,
+	KindsNetworkPolicy = []metav1.TypeMeta{
+		resources.TypeCalicoGlobalNetworkPolicies,
+		resources.TypeCalicoNetworkPolicies,
+		resources.TypeK8sNetworkPolicies,
 	}
 )
 
@@ -212,7 +212,7 @@ func (c *networkPolicyEngine) register(cache engineCache) {
 }
 
 // register implements the resourceCacheEngine interface.
-func (c *networkPolicyEngine) kinds() []schema.GroupVersionKind {
+func (c *networkPolicyEngine) kinds() []metav1.TypeMeta {
 	return KindsNetworkPolicy
 }
 
@@ -226,7 +226,7 @@ func (c *networkPolicyEngine) newCacheEntry() CacheEntry {
 }
 
 // resourceAdded implements the resourceCacheEngine interface.
-func (c *networkPolicyEngine) resourceAdded(id resources.ResourceID, entry CacheEntry) {
+func (c *networkPolicyEngine) resourceAdded(id apiv3.ResourceID, entry CacheEntry) {
 	// Set the context log.
 	entry.(*CacheEntryNetworkPolicy).clog = log.WithField("policy", id)
 
@@ -235,7 +235,7 @@ func (c *networkPolicyEngine) resourceAdded(id resources.ResourceID, entry Cache
 }
 
 // resourceUpdated implements the resourceCacheEngine interface.
-func (c *networkPolicyEngine) resourceUpdated(id resources.ResourceID, entry CacheEntry, prev VersionedResource) {
+func (c *networkPolicyEngine) resourceUpdated(id apiv3.ResourceID, entry CacheEntry, prev VersionedResource) {
 	// Get the augmented resource data.
 	x := entry.(*CacheEntryNetworkPolicy)
 
@@ -248,7 +248,7 @@ func (c *networkPolicyEngine) resourceUpdated(id resources.ResourceID, entry Cac
 }
 
 // resourceDeleted implements the resourceCacheEngine interface.
-func (c *networkPolicyEngine) resourceDeleted(id resources.ResourceID, res CacheEntry) {
+func (c *networkPolicyEngine) resourceDeleted(id apiv3.ResourceID, res CacheEntry) {
 	// Delete the label selector for this policy.
 	c.EndpointLabelSelector().DeleteSelector(id)
 
@@ -257,7 +257,7 @@ func (c *networkPolicyEngine) resourceDeleted(id resources.ResourceID, res Cache
 }
 
 // recalculate implements the resourceCacheEngine interface.
-func (c *networkPolicyEngine) recalculate(id resources.ResourceID, entry CacheEntry) syncer.UpdateType {
+func (c *networkPolicyEngine) recalculate(id apiv3.ResourceID, entry CacheEntry) syncer.UpdateType {
 	// Async recalculation is required due to any rule/selector updates.
 	x := entry.(*CacheEntryNetworkPolicy)
 
@@ -314,7 +314,7 @@ func (c *networkPolicyEngine) convertToVersioned(res resources.Resource) (Versio
 // updateRuleSelectors reads the set of policy rule selectors and tracks any allow rules selectors (since these are the
 // only ones that could cause exposure to IPs via network sets). To reduce churn, we group identical selector values
 // across all rules and all Policies (so there is a little book keeping required here).
-func (c *networkPolicyEngine) updateRuleSelectors(id resources.ResourceID, x *CacheEntryNetworkPolicy) {
+func (c *networkPolicyEngine) updateRuleSelectors(id apiv3.ResourceID, x *CacheEntryNetworkPolicy) {
 	// We care about newSelectors on Allow rules, so lets get the set of newSelectors that we care about for this policy.
 	newSelectors := resources.NewSet()
 
@@ -468,7 +468,7 @@ func (c *networkPolicyEngine) scanEgressRules(x *CacheEntryNetworkPolicy) syncer
 
 // scanProtected scans whether the policy has ingress or egress protection and updates its augmented data. This is
 // independent of other resources and may therefore be calculated as part of the resourceAdded or resourceUpdated call.
-func (c *networkPolicyEngine) scanProtected(id resources.ResourceID, x *CacheEntryNetworkPolicy) syncer.UpdateType {
+func (c *networkPolicyEngine) scanProtected(id apiv3.ResourceID, x *CacheEntryNetworkPolicy) syncer.UpdateType {
 	oldFlags := x.Flags
 
 	// The policy type can be ingress and/or egress. In terms of statistics, this equates to ingress and/or egress
@@ -493,13 +493,13 @@ func (c *networkPolicyEngine) queuePoliciesForRecalculation(update syncer.Update
 	// We have only registered for notifications from NetworkSets and for changes to configuration that we care about.
 	x := update.Resource.(*CacheEntryNetworkPolicyRuleSelector)
 
-	x.Policies.Iter(func(id resources.ResourceID) error {
+	x.Policies.Iter(func(id apiv3.ResourceID) error {
 		c.QueueUpdate(id, nil, update.Type)
 		return nil
 	})
 }
 
-func (c *networkPolicyEngine) ruleSelectorMatchStarted(polId, selId resources.ResourceID) {
+func (c *networkPolicyEngine) ruleSelectorMatchStarted(polId, selId apiv3.ResourceID) {
 	x, ok := c.GetFromOurCache(polId).(*CacheEntryNetworkPolicy)
 	if !ok {
 		log.Errorf("Match started on policy, but policy is not in cache: %s matches %s", polId, selId)
@@ -510,7 +510,7 @@ func (c *networkPolicyEngine) ruleSelectorMatchStarted(polId, selId resources.Re
 	c.QueueUpdate(polId, nil, EventPolicyRuleSelectorMatchStarted)
 }
 
-func (c *networkPolicyEngine) ruleSelectorMatchStopped(polId, selId resources.ResourceID) {
+func (c *networkPolicyEngine) ruleSelectorMatchStopped(polId, selId apiv3.ResourceID) {
 	x, ok := c.GetFromOurCache(polId).(*CacheEntryNetworkPolicy)
 	if !ok {
 		log.Errorf("Match stopped on policy, but policy is not in cache: %s matches %s", polId, selId)
@@ -521,19 +521,19 @@ func (c *networkPolicyEngine) ruleSelectorMatchStopped(polId, selId resources.Re
 	c.QueueUpdate(polId, nil, EventPolicyRuleSelectorMatchStopped)
 }
 
-func (c *networkPolicyEngine) endpointMatchStarted(policyId, epId resources.ResourceID) {
+func (c *networkPolicyEngine) endpointMatchStarted(policyId, epId apiv3.ResourceID) {
 	x, ok := c.GetFromOurCache(policyId).(*CacheEntryNetworkPolicy)
 	if !ok {
 		log.Errorf("Match started on policy, but policy is not in cache: %s matches %s", policyId, epId)
 		return
 	}
-	switch epId.GroupVersionKind {
-	case resources.ResourceTypePods:
+	switch epId.TypeMeta {
+	case resources.TypeK8sPods:
 		// Update the pod list in our policy data. No need to queue any policy recalculations since the endpoint
 		// data does not directly affect it.
 		x.clog.Debugf("Adding %s to pods for %s", epId, policyId)
 		x.SelectedPods.Add(epId)
-	case resources.ResourceTypeHostEndpoints:
+	case resources.TypeCalicoHostEndpoints:
 		// Update the HEP list in our policy data. No need to queue any policy recalculations since the endpoint
 		// data does not directly affect it.
 		x.clog.Debugf("Adding %s to heps for %s", epId, policyId)
@@ -541,19 +541,19 @@ func (c *networkPolicyEngine) endpointMatchStarted(policyId, epId resources.Reso
 	}
 }
 
-func (c *networkPolicyEngine) endpointMatchStopped(policyId, epId resources.ResourceID) {
+func (c *networkPolicyEngine) endpointMatchStopped(policyId, epId apiv3.ResourceID) {
 	x, ok := c.GetFromOurCache(policyId).(*CacheEntryNetworkPolicy)
 	if !ok {
 		log.Errorf("Match stopped on policy, but policy is not in cache: %s matches %s", policyId, epId)
 		return
 	}
-	switch epId.GroupVersionKind {
-	case resources.ResourceTypePods:
+	switch epId.TypeMeta {
+	case resources.TypeK8sPods:
 		// Update the pod list in our policy data. No need to queue any policy recalculations since the endpoint
 		// data does not directly affect it.
 		x.clog.Debugf("Removing %s from pods for %s", epId, policyId)
 		x.SelectedPods.Discard(epId)
-	case resources.ResourceTypeHostEndpoints:
+	case resources.TypeCalicoHostEndpoints:
 		// Update the HEP list in our policy data. No need to queue any policy recalculations since the endpoint
 		// data does not directly affect it.
 		x.clog.Debugf("Removing %s from heps for %s", epId, policyId)

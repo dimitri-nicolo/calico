@@ -5,25 +5,30 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+
 	"github.com/tigera/compliance/pkg/resources"
 )
 
 var (
-	r1 = resources.ResourceID{
-		GroupVersionKind: resources.ResourceTypePods,
-		NameNamespace:    resources.NameNamespace{Name: "a", Namespace: "b"},
+	r1 = apiv3.ResourceID{
+		TypeMeta:  resources.TypeK8sPods,
+		Name:      "a",
+		Namespace: "b",
 	}
-	r2 = resources.ResourceID{
-		GroupVersionKind: resources.ResourceTypeGlobalNetworkPolicies,
-		NameNamespace:    resources.NameNamespace{Name: "a"},
+	r2 = apiv3.ResourceID{
+		TypeMeta: resources.TypeCalicoGlobalNetworkPolicies,
+		Name:     "a",
 	}
-	r3 = resources.ResourceID{
-		GroupVersionKind: resources.ResourceTypeNetworkPolicies,
-		NameNamespace:    resources.NameNamespace{Name: "a", Namespace: "b"},
+	r3 = apiv3.ResourceID{
+		TypeMeta:  resources.TypeCalicoNetworkPolicies,
+		Name:      "a",
+		Namespace: "b",
 	}
-	r4 = resources.ResourceID{
-		GroupVersionKind: resources.ResourceTypeK8sNetworkPolicies,
-		NameNamespace:    resources.NameNamespace{Name: "a", Namespace: "b"},
+	r4 = apiv3.ResourceID{
+		TypeMeta:  resources.TypeK8sNetworkPolicies,
+		Name:      "a",
+		Namespace: "b",
 	}
 )
 
@@ -38,11 +43,11 @@ var _ = Describe("Set differences", func() {
 		s2NotS1 := resources.NewSet()
 
 		s1.IterDifferences(s2,
-			func(diff resources.ResourceID) error {
+			func(diff apiv3.ResourceID) error {
 				s1NotS2.Add(diff)
 				return nil
 			},
-			func(diff resources.ResourceID) error {
+			func(diff apiv3.ResourceID) error {
 				s2NotS1.Add(diff)
 				return nil
 			},

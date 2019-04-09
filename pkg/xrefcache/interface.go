@@ -2,7 +2,7 @@
 package xrefcache
 
 import (
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
@@ -14,7 +14,7 @@ import (
 // Callback for notification that a particular resource type is in-scope. The x-ref cache will guarantee that this
 // callback is made before the OnUpdate that triggered it.
 // Note that the x-ref cache does not identify when a resource goes out of scope.
-type InScopeCallback (resources.ResourceID)
+type InScopeCallback (apiv3.ResourceID)
 
 // XrefCache interface.
 //
@@ -30,7 +30,7 @@ type XrefCache interface {
 	syncer.SyncerCallbacks
 
 	// Get returns the current CacheEntry for a particular resource, or nil if the entry is not cached.
-	Get(res resources.ResourceID) CacheEntry
+	Get(res apiv3.ResourceID) CacheEntry
 
 	// RegisterOnStatusUpdateHandler registers for status update events.
 	RegisterOnStatusUpdateHandler(callback dispatcher.DispatcherOnStatusUpdate)
@@ -38,7 +38,7 @@ type XrefCache interface {
 	// RegisterOnUpdateHandler registers for update events. Note that no updates are send until the cache is in-sync.
 	// When in-sync the entire cache is dumped as updates, after which all further updates that occur as the result of
 	// datastore actions will be sent.
-	RegisterOnUpdateHandler(kind schema.GroupVersionKind, updateTypes syncer.UpdateType, callback dispatcher.DispatcherOnUpdate)
+	RegisterOnUpdateHandler(kind metav1.TypeMeta, updateTypes syncer.UpdateType, callback dispatcher.DispatcherOnUpdate)
 
 	// RegisterInScopeEndpoints registers an endpoints selector which selects which endpoints are considered in-scope.
 	// The EventInScope flag will be set on all updates for events from in-scope endpoints.
@@ -46,7 +46,7 @@ type XrefCache interface {
 
 	// GetCachedResourceIDs is a helper method (primarily used for testing), to obtain the current list of resource
 	// IDs cached for a particular resource kind.
-	GetCachedResourceIDs(kind schema.GroupVersionKind) []resources.ResourceID
+	GetCachedResourceIDs(kind metav1.TypeMeta) []apiv3.ResourceID
 }
 
 // All internal caches store types that implement the CacheEntry interface.

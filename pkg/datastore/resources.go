@@ -8,7 +8,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/options"
@@ -21,61 +20,61 @@ type resourceHelper struct {
 }
 
 var (
-	resourceHelpersMap = map[schema.GroupVersionKind]*resourceHelper{
-		resources.ResourceTypePods: {
+	resourceHelpersMap = map[metav1.TypeMeta]*resourceHelper{
+		resources.TypeK8sPods: {
 			func(c ClientSet) (resources.ResourceList, error) {
 				return c.CoreV1().Pods("").List(metav1.ListOptions{})
 			},
 		},
-		resources.ResourceTypeNamespaces: {
+		resources.TypeK8sNamespaces: {
 			func(c ClientSet) (resources.ResourceList, error) {
 				return c.CoreV1().Namespaces().List(metav1.ListOptions{})
 			},
 		},
-		resources.ResourceTypeServiceAccounts: {
+		resources.TypeK8sServiceAccounts: {
 			func(c ClientSet) (resources.ResourceList, error) {
 				return c.CoreV1().ServiceAccounts("").List(metav1.ListOptions{})
 			},
 		},
-		resources.ResourceTypeEndpoints: {
+		resources.TypeK8sEndpoints: {
 			func(c ClientSet) (resources.ResourceList, error) {
 				return c.CoreV1().Endpoints("").List(metav1.ListOptions{})
 			},
 		},
-		resources.ResourceTypeServices: {
+		resources.TypeK8sServices: {
 			func(c ClientSet) (resources.ResourceList, error) {
 				return c.CoreV1().Services("").List(metav1.ListOptions{})
 			},
 		},
-		resources.ResourceTypeK8sNetworkPolicies: {
+		resources.TypeK8sNetworkPolicies: {
 			func(c ClientSet) (resources.ResourceList, error) {
 				return c.NetworkingV1().NetworkPolicies("").List(metav1.ListOptions{})
 			},
 		},
-		resources.ResourceTypeK8sNetworkPoliciesDep: {
+		resources.TypeK8sNetworkPoliciesExtensions: {
 			func(c ClientSet) (resources.ResourceList, error) {
 				return c.NetworkingV1().NetworkPolicies("").List(metav1.ListOptions{})
 			},
 		},
-		resources.ResourceTypeTiers: {
+		resources.TypeCalicoTiers: {
 			func(c ClientSet) (resources.ResourceList, error) {
 				return c.Tiers().List(context.Background(), options.ListOptions{})
 			},
 		},
-		resources.ResourceTypeHostEndpoints: {
+		resources.TypeCalicoHostEndpoints: {
 			func(c ClientSet) (resources.ResourceList, error) {
 				return c.HostEndpoints().List(context.Background(), options.ListOptions{})
 			},
 		},
-		resources.ResourceTypeGlobalNetworkSets: {
+		resources.TypeCalicoGlobalNetworkSets: {
 			func(c ClientSet) (resources.ResourceList, error) {
 				return c.GlobalNetworkSets().List(context.Background(), options.ListOptions{})
 			},
 		},
-		resources.ResourceTypeNetworkPolicies: {
+		resources.TypeCalicoNetworkPolicies: {
 			listNetworkPolicies,
 		},
-		resources.ResourceTypeGlobalNetworkPolicies: {
+		resources.TypeCalicoGlobalNetworkPolicies: {
 			func(c ClientSet) (resources.ResourceList, error) {
 				return c.GlobalNetworkPolicies().List(context.Background(), options.ListOptions{})
 			},

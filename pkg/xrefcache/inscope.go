@@ -7,27 +7,25 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/libcalico-go/lib/selector/parser"
-
-	"github.com/tigera/compliance/pkg/resources"
 )
 
 var (
 	// Fake resource kind used to register an in-scope selector.
-	KindInScopeSelection = schema.GroupVersionKind{
-		Kind:  "in-scope-selector",
-		Group: "internal.tigera.io",
+	KindInScopeSelection = metav1.TypeMeta{
+		Kind:       "in-scope-selector",
+		APIVersion: "internal.tigera.io/v1",
 	}
-	KindsInScopeSelection = []schema.GroupVersionKind{KindInScopeSelection}
+	KindsInScopeSelection = []metav1.TypeMeta{KindInScopeSelection}
 )
 
 // calculateInScopeEndpointsSelector converts an EndpointsSelection into a single selector string and the appropriate
 // in-scope resource ID to use.
-func calculateInScopeEndpointsSelector(e apiv3.EndpointsSelection) (resources.ResourceID, string, error) {
+func calculateInScopeEndpointsSelector(e apiv3.EndpointsSelection) (apiv3.ResourceID, string, error) {
 	// Start of with the endpoint selector (if specified)
 	var updated string
 	if e.EndpointSelector != "" {
@@ -61,14 +59,12 @@ func calculateInScopeEndpointsSelector(e apiv3.EndpointsSelection) (resources.Re
 	parsedSelector, err := parser.Parse(updated)
 	if err != nil {
 		log.WithError(err).Errorf("Failed to parse full endpoints selector: %s", updated)
-		return resources.ResourceID{}, "", err
+		return apiv3.ResourceID{}, "", err
 	}
 
-	return resources.ResourceID{
-		GroupVersionKind: KindInScopeSelection,
-		NameNamespace: resources.NameNamespace{
-			Name: updated,
-		},
+	return apiv3.ResourceID{
+		TypeMeta: KindInScopeSelection,
+		Name:     updated,
 	}, parsedSelector.String(), nil
 }
 

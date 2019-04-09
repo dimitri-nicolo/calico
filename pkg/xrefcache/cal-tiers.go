@@ -2,7 +2,7 @@
 package xrefcache
 
 import (
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
@@ -13,8 +13,8 @@ import (
 )
 
 var (
-	KindsTier = []schema.GroupVersionKind{
-		resources.ResourceTypeTiers,
+	KindsTier = []metav1.TypeMeta{
+		resources.TypeCalicoTiers,
 	}
 )
 
@@ -75,7 +75,7 @@ func (c *calicoTiersEngine) register(cache engineCache) {
 	c.engineCache = cache
 }
 
-func (c *calicoTiersEngine) kinds() []schema.GroupVersionKind {
+func (c *calicoTiersEngine) kinds() []metav1.TypeMeta {
 	return KindsTier
 }
 
@@ -83,18 +83,18 @@ func (c *calicoTiersEngine) newCacheEntry() CacheEntry {
 	return &CacheEntryCalicoTier{}
 }
 
-func (c *calicoTiersEngine) resourceAdded(id resources.ResourceID, entry CacheEntry) {
+func (c *calicoTiersEngine) resourceAdded(id apiv3.ResourceID, entry CacheEntry) {
 	c.resourceUpdated(id, entry, nil)
 }
 
-func (c *calicoTiersEngine) resourceUpdated(id resources.ResourceID, entry CacheEntry, prev VersionedResource) {
+func (c *calicoTiersEngine) resourceUpdated(id apiv3.ResourceID, entry CacheEntry, prev VersionedResource) {
 }
 
-func (c *calicoTiersEngine) resourceDeleted(id resources.ResourceID, _ CacheEntry) {
+func (c *calicoTiersEngine) resourceDeleted(id apiv3.ResourceID, _ CacheEntry) {
 }
 
 // recalculate implements the resourceCacheEngine interface.
-func (c *calicoTiersEngine) recalculate(podId resources.ResourceID, podEntry CacheEntry) syncer.UpdateType {
+func (c *calicoTiersEngine) recalculate(podId apiv3.ResourceID, podEntry CacheEntry) syncer.UpdateType {
 	// We calculate all state in the resourceUpdated/resourceAdded callbacks.
 	return 0
 }

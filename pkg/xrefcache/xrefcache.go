@@ -7,7 +7,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
@@ -65,8 +65,8 @@ func NewXrefCache() XrefCache {
 		networkSetLabelSelector:          netsetLabelSelection,
 		networkPolicyRuleSelectorManager: networkPolicyRuleSelectorManager,
 		ipManager:                        keyselector.New(),
-		caches:                           map[schema.GroupVersionKind]*resourceCache{},
-		priorities:                       map[schema.GroupVersionKind]int8{},
+		caches:                           map[metav1.TypeMeta]*resourceCache{},
+		priorities:                       map[metav1.TypeMeta]int8{},
 	}
 	// Initialise the priority queue used for handling asynchronous resource recalculations.
 	heap.Init(&c.modified)
@@ -96,8 +96,8 @@ type xrefCache struct {
 	networkSetLabelSelector          labelselector.Interface
 	networkPolicyRuleSelectorManager NetworkPolicyRuleSelectorManager
 	ipManager                        keyselector.Interface
-	caches                           map[schema.GroupVersionKind]*resourceCache
-	priorities                       map[schema.GroupVersionKind]int8
+	caches                           map[metav1.TypeMeta]*resourceCache
+	priorities                       map[metav1.TypeMeta]int8
 	modified                         resources.PriorityQueue
 	inSync                           bool
 }
@@ -129,7 +129,7 @@ func (c *xrefCache) OnUpdate(update syncer.Update) {
 	for c.modified.Len() > 0 {
 		id := heap.Pop(&c.modified).(*resources.QueueItem).ResourceID
 
-		cache := c.caches[id.GroupVersionKind]
+		cache := c.caches[id.TypeMeta]
 		entry := cache.get(id)
 		if entry == nil {
 			log.Errorf("Resource queued for recalculation, but is no longer in cache: %s", id)
@@ -165,8 +165,8 @@ func (c *xrefCache) OnUpdate(update syncer.Update) {
 }
 
 // Get implements the XrefCache interface.
-func (c *xrefCache) Get(id resources.ResourceID) CacheEntry {
-	return c.caches[id.GroupVersionKind].get(id)
+func (c *xrefCache) Get(id apiv3.ResourceID) CacheEntry {
+	return c.caches[id.TypeMeta].get(id)
 }
 
 // RegisterOnStatusUpdateHandler implements the XrefCache interface.
@@ -175,16 +175,16 @@ func (c *xrefCache) RegisterOnStatusUpdateHandler(callback dispatcher.Dispatcher
 }
 
 // RegisterOnUpdateHandler implements the XrefCache interface.
-func (c *xrefCache) RegisterOnUpdateHandler(kind schema.GroupVersionKind, updateTypes syncer.UpdateType, callback dispatcher.DispatcherOnUpdate) {
+func (c *xrefCache) RegisterOnUpdateHandler(kind metav1.TypeMeta, updateTypes syncer.UpdateType, callback dispatcher.DispatcherOnUpdate) {
 	c.consumerDispatcher.RegisterOnUpdateHandler(kind, updateTypes, callback)
 }
 
 // GetCachedResourceIDs implements the XrefCache interface.
-func (c *xrefCache) GetCachedResourceIDs(kind schema.GroupVersionKind) []resources.ResourceID {
-	var ids []resources.ResourceID
+func (c *xrefCache) GetCachedResourceIDs(kind metav1.TypeMeta) []apiv3.ResourceID {
+	var ids []apiv3.ResourceID
 	cache := c.caches[kind]
 	for k := range cache.resources {
-		if k.GroupVersionKind == kind {
+		if k.TypeMeta == kind {
 			ids = append(ids, k)
 		}
 	}
@@ -202,7 +202,7 @@ func (c *xrefCache) RegisterInScopeEndpoints(selection apiv3.EndpointsSelection)
 }
 
 // queueUpdate adds this update to the priority queue. The priority is determined by the resource kind.
-func (c *xrefCache) queueUpdate(id resources.ResourceID, entry CacheEntry, update syncer.UpdateType) {
+func (c *xrefCache) queueUpdate(id apiv3.ResourceID, entry CacheEntry, update syncer.UpdateType) {
 	if update == 0 {
 		log.Errorf("Update type should always be specified for resource recalculation: %s", id)
 		return
@@ -223,7 +223,7 @@ func (c *xrefCache) queueUpdate(id resources.ResourceID, entry CacheEntry, updat
 		log.WithField("id", id).Debug("Queue recalculation of resource")
 		item := &resources.QueueItem{
 			ResourceID: id,
-			Priority:   c.priorities[id.GroupVersionKind],
+			Priority:   c.priorities[id.TypeMeta],
 		}
 		heap.Push(&c.modified, item)
 	} else {
