@@ -56,7 +56,7 @@ func Stop() {
 		log.WithField("Addr", server.Addr).Info("Stopping HTTPS server")
 		e := server.Shutdown(context.Background())
 		if e != nil {
-			log.Fatal("Server gracefull shutdown fail")
+			log.Fatal("Server graceful shutdown fail")
 			os.Exit(1)
 		}
 		server = nil
