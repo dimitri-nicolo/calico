@@ -5,6 +5,8 @@ import (
 	"fmt"
 	gonet "net"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/projectcalico/felix/dispatcher"
 	"github.com/projectcalico/felix/ip"
 	"github.com/projectcalico/felix/proto"
@@ -13,7 +15,6 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/projectcalico/libcalico-go/lib/set"
-	"github.com/sirupsen/logrus"
 )
 
 // VXLANResolver is responsible for resolving node IPs, node config, IPAM blocks,

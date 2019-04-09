@@ -1,5 +1,5 @@
-hash: 2b4b9c44ae812b19e2ade50c1956d67014a617bc7856ed8f544458e5109ce3f9
-updated: 2019-04-08T15:03:38.310459782Z
+hash: 18cfdb00ed20e8e949527ed6667e34e69ea939776ae579d0d42e8c4e0128822d
+updated: 2019-04-09T10:43:30.223792866Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -208,19 +208,26 @@ imports:
   subpackages:
   - pbutil
 - name: github.com/Microsoft/go-winio
-  version: a6d595ae73cf27a1b8fc32930668708f45ce1c85
+  version: 84b4ab48a50763fe7b3abcef38e5205c12027fac
 - name: github.com/Microsoft/hcsshim
-  version: 4a468a6f7ae547974bc32911395c51fb1862b7df
+  version: 063ae4a83d78bdb93f76b18cc894c6342fa85c15
   subpackages:
+  - hcn
+  - internal/cni
   - internal/guid
   - internal/hcs
   - internal/hcserror
   - internal/hns
   - internal/interop
+  - internal/logfields
   - internal/longpath
   - internal/mergemaps
+  - internal/regstate
+  - internal/runhcs
   - internal/safefile
   - internal/schema1
+  - internal/schema2
+  - internal/timeout
   - internal/wclayer
 - name: github.com/mipearson/rfw
   version: 6f0a6f3266ba1058df9ef0c94cda1cecd2e62852
@@ -395,7 +402,6 @@ imports:
   subpackages:
   - ed25519
   - ed25519/internal/edwards25519
-  - pbkdf2
   - ssh/terminal
 - name: golang.org/x/net
   version: 1c05540f6879653db88113bc4a2b70aec4bd491f
@@ -423,6 +429,7 @@ imports:
   subpackages:
   - unix
   - windows
+  - windows/registry
 - name: golang.org/x/text
   version: b19bf474d317b857955b12035d2c5acb57ce8b01
   subpackages:

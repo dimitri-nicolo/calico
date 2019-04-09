@@ -3,6 +3,7 @@
 package windataplane
 
 import (
+	"regexp"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -39,6 +40,11 @@ func init() {
 type Config struct {
 	IPv6Enabled      bool
 	HealthAggregator *health.HealthAggregator
+
+	Hostname     string
+	VXLANEnabled bool
+	VXLANID      int
+	VXLANPort    int
 }
 
 // winDataplane implements an in-process Felix dataplane driver capable of applying network policy
@@ -159,6 +165,17 @@ func NewWinDataplaneDriver(hns hns.API, config Config) *WindowsDataplane {
 	dp.RegisterManager(newPolicyManager(dp.policySets))
 	dp.endpointMgr = newEndpointManager(hns, dp.policySets)
 	dp.RegisterManager(dp.endpointMgr)
+	if config.VXLANEnabled {
+		log.Info("VXLAN enabled, starting the VXLAN manager")
+		dp.RegisterManager(newVXLANManager(
+			config.Hostname,
+			regexp.MustCompile(defaultNetworkName), // FIXME HArd-coded regex
+			config.VXLANID,
+			config.VXLANPort,
+		))
+	} else {
+		log.Info("VXLAN disabled, not starting the VXLAN manager")
+	}
 
 	// Register that we will report liveness and readiness.
 	if config.HealthAggregator != nil {

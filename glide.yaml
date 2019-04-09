@@ -122,9 +122,9 @@ import:
   - tools/clientcmd
   - tools/clientcmd/api
 - package: github.com/Microsoft/go-winio
-  version: a6d595ae73cf27a1b8fc32930668708f45ce1c85
+  version: 84b4ab48a50763fe7b3abcef38e5205c12027fac
 - package: github.com/Microsoft/hcsshim
-  version: 4a468a6f7ae547974bc32911395c51fb1862b7df
+  version: 063ae4a83d78bdb93f76b18cc894c6342fa85c15
 - package: github.com/davecgh/go-spew
   subpackages:
   - spew
