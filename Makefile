@@ -46,8 +46,8 @@ LOCAL_BUILD_MOUNTS ?=
 ifeq ($(LOCAL_BUILD),true)
 LOCAL_BUILD_MOUNTS = -v $(CURDIR)/../libcalico-go:/go/src/$(PACKAGE_NAME)/vendor/github.com/projectcalico/libcalico-go:ro \
 	-v $(CURDIR)/.empty:/go/src/$(PACKAGE_NAME)/vendor/github.com/projectcalico/libcalico-go/vendor:ro \
-	-v $(CURDIR)/../confd:/go/src/$(PACKAGE_NAME)/vendor/github.com/projectcalico/confd:ro \
-	-v $(CURDIR)/.empty:/go/src/$(PACKAGE_NAME)/vendor/github.com/projectcalico/confd/vendor:ro \
+	-v $(CURDIR)/../confd:/go/src/$(PACKAGE_NAME)/vendor/github.com/kelseyhightower/confd:ro \
+	-v $(CURDIR)/.empty:/go/src/$(PACKAGE_NAME)/vendor/github.com/kelseyhightower/confd/vendor:ro \
 	-v $(CURDIR)/../felix:/go/src/$(PACKAGE_NAME)/vendor/github.com/projectcalico/felix:ro \
 	-v $(CURDIR)/.empty:/go/src/$(PACKAGE_NAME)/vendor/github.com/projectcalico/felix/vendor:ro
 endif
@@ -512,7 +512,7 @@ fv: vendor run-k8s-apiserver
 	-e ETCD_ENDPOINTS=http://$(LOCAL_IP_ENV):2379 \
 	--net=host \
 	-w /go/src/$(PACKAGE_NAME) \
-	$(CALICO_BUILD) ginkgo -cover -r -skipPackage vendor pkg/startup pkg/allocateipip $(GINKGO_ARGS)
+	$(CALICO_BUILD) ginkgo -cover -r -skipPackage vendor pkg/startup pkg/allocateip $(GINKGO_ARGS)
 
 # etcd is used by the STs
 .PHONY: run-etcd
@@ -659,6 +659,10 @@ k8s-stop: tests/k8st/$(DIND_SCR)
 .PHONY: k8s-run-test
 ## Run k8st in an existing k8s cluster
 k8s-run-test: calico_test.created
+## Only execute remove-go-build-image if flag is set
+ifeq ($(REMOVE_GOBUILD_IMG),true)
+	$(MAKE) remove-go-build-image
+endif
 	docker run \
 	    -v $(CURDIR):/code \
 	    -v /var/run/docker.sock:/var/run/docker.sock \
@@ -669,6 +673,12 @@ k8s-run-test: calico_test.created
         $(TEST_CONTAINER_NAME) \
 	    sh -c 'cp /root/.kubeadm-dind-cluster/kubectl /bin/kubectl && ls -ltr /bin/kubectl && which kubectl && cd /code/tests/k8st && \
 	           nosetests $(K8ST_TO_RUN) -v --with-xunit --xunit-file="/code/report/k8s-tests.xml" --with-timer'
+
+# Needed for Semaphore CI (where disk space is a real issue during k8s-test)
+.PHONY: remove-go-build-image
+remove-go-build-image:
+	@echo "Removing $(CALICO_BUILD) image to save space needed for testing ..."
+	@-docker rmi $(CALICO_BUILD)
 
 .PHONY: st
 ## Run the system tests
@@ -764,7 +774,7 @@ release-windows-archive $(WINDOWS_ARCHIVE): release-prereqs
 ## Verifies the release artifacts produces by `make release-build` are correct.
 release-verify: release-prereqs
 	# Check the reported version is correct for each release artifact.
-	if ! docker run $(BUILD_IMAGE):$(VERSION)-$(ARCH) versions | grep "^$(VERSION)$$"; then echo "Reported version:" `docker run $(BUILD_IMAGE):$(VERSION)-$(ARCH) versions` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
+	if ! docker run $(BUILD_IMAGE):$(VERSION)-$(ARCH) versions | grep '^$(VERSION)$$'; then echo "Reported version:" `docker run $(BUILD_IMAGE):$(VERSION)-$(ARCH) versions` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
 
 ## Generates release notes based on commits in this version.
 release-notes: release-prereqs
