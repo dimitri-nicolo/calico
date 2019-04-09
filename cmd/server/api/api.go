@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"net/http"
+	"os"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
@@ -53,7 +54,11 @@ func Wait() {
 func Stop() {
 	if server != nil {
 		log.WithField("Addr", server.Addr).Info("Stopping HTTPS server")
-		server.Shutdown(context.Background())
+		e := server.Shutdown(context.Background())
+		if e != nil {
+			log.Fatal("Server gracefull shutdown fail")
+			os.Exit(1)
+		}
 		server = nil
 		wg.Wait()
 	}

@@ -11,6 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// HandleDownloadReports sends one or multiple (via zip) reports to the client
 func HandleDownloadReports(response http.ResponseWriter, request *http.Request) {
 
 	rd := reportDownloader{
@@ -61,7 +62,10 @@ func (rd *reportDownloader) setFormats() error {
 	//ensure at least one format type was specified
 	if len(f) < 1 {
 		rd.response.WriteHeader(400)
-		rd.response.Write([]byte("Missing downloadFormats parameter"))
+		_, e := rd.response.Write([]byte("Missing downloadFormats parameter"))
+		if e != nil {
+			log.WithError(e).Error("http response write failure")
+		}
 		return fmt.Errorf("Missing download formats")
 	}
 
@@ -70,7 +74,11 @@ func (rd *reportDownloader) setFormats() error {
 	//ensure all formats requested are valid
 	if !areValidFormats(rd.formats) {
 		rd.response.WriteHeader(400)
-		rd.response.Write([]byte("Invalid format"))
+		_, e := rd.response.Write([]byte("Invalid format"))
+		if e != nil {
+			log.WithError(e).Error("http response write failure")
+		}
+
 		return fmt.Errorf("Invalid format")
 	}
 
@@ -151,6 +159,7 @@ func areValidFormats(fmts []string) bool {
 func getReportData(someKeyForElastic string) []byte {
 	//TODO: go get the actual data from elastic... for now random data
 	d := make([]byte, 4096)
-	rand.Read(d)
+	_, _ = rand.Read(d)
+
 	return d
 }

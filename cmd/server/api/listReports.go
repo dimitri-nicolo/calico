@@ -8,6 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// HandleListReports returns a json list of the reports available to the client
 func HandleListReports(response http.ResponseWriter, request *http.Request) {
 	log.Info(request.URL)
 
@@ -22,7 +23,10 @@ func HandleListReports(response http.ResponseWriter, request *http.Request) {
 
 	//marshal and return
 	b, _ := json.Marshal(rl)
-	response.Write(b)
+	_, e := response.Write(b)
+	if e != nil {
+		log.WithError(e).Error("http response write failure")
+	}
 }
 
 type ReportList struct {
