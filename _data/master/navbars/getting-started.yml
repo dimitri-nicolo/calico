@@ -32,7 +32,7 @@ toc:
       path: /getting-started/kubernetes/installation/byo-elasticsearch
     - title: Installing Tigera Secure EE on Docker Enterprise
       path: /getting-started/kubernetes/installation/docker-ee
-    - title: Installing Tigera Secure EE on EKS
+    - title: Installing Tigera Secure EE on Amazon EKS
       path: /getting-started/kubernetes/installation/eks
   - title: Upgrade from Calico to Tigera Secure EE
     path: /getting-started/kubernetes/upgrade/upgrade-to-tsee
