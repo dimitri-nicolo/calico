@@ -236,7 +236,7 @@ vendor/github.com/projectcalico/felix/proto/felixbackend.pb.go: vendor/.up-to-da
 	              felixbackend.proto
 
 bin/server: bin/server-$(ARCH)
-	ln -f bin/server-$(ARCH) bin/server
+	cp -f bin/server-$(ARCH) bin/server
 
 bin/server-$(ARCH): $(SRC_FILES) vendor/.up-to-date vendor/github.com/projectcalico/felix/proto/felixbackend.pb.go
 	@echo Building compliance-server...
@@ -248,7 +248,7 @@ bin/server-$(ARCH): $(SRC_FILES) vendor/.up-to-date vendor/github.com/projectcal
 		( echo "Error: bin/server was not statically linked"; false ) )'
 
 bin/controller: bin/controller-$(ARCH)
-	ln -f bin/controller-$(ARCH) bin/controller
+	cp -f bin/controller-$(ARCH) bin/controller
 
 bin/controller-$(ARCH): $(SRC_FILES) vendor/.up-to-date vendor/github.com/projectcalico/felix/proto/felixbackend.pb.go
 	@echo Building compliance controller...
@@ -260,7 +260,7 @@ bin/controller-$(ARCH): $(SRC_FILES) vendor/.up-to-date vendor/github.com/projec
 		( echo "Error: bin/controller was not statically linked"; false ) )'
 
 bin/snapshotter: bin/snapshotter-$(ARCH)
-	ln -f bin/snapshotter-$(ARCH) bin/snapshotter
+	cp -f bin/snapshotter-$(ARCH) bin/snapshotter
 
 bin/snapshotter-$(ARCH): $(SRC_FILES) vendor/.up-to-date vendor/github.com/projectcalico/felix/proto/felixbackend.pb.go
 	@echo Building compliance snapshotter...
@@ -272,7 +272,7 @@ bin/snapshotter-$(ARCH): $(SRC_FILES) vendor/.up-to-date vendor/github.com/proje
 		( echo "Error: bin/snapshotter was not statically linked"; false ) )'
 
 bin/reporter: bin/reporter-$(ARCH)
-	ln -f bin/reporter-$(ARCH) bin/reporter
+	cp -f bin/reporter-$(ARCH) bin/reporter
 
 bin/reporter-$(ARCH): $(SRC_FILES) vendor/.up-to-date vendor/github.com/projectcalico/felix/proto/felixbackend.pb.go
 	@echo Building compliance reporter...
@@ -643,13 +643,13 @@ cover-report: combined.coverprofile
 	# Print the coverage.  We use sed to remove the verbose prefix and trim down
 	# the whitespace.
 	@echo
-	@echo ======== All coverage =========
+	@echo -------- All coverage ---------
 	@echo
 	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c 'go tool cover -func combined.coverprofile | \
 	                           sed 's=$(PACKAGE_NAME)/==' | \
 	                           column -t'
 	@echo
-	@echo ======== Missing coverage only =========
+	@echo -------- Missing coverage only ---------
 	@echo
 	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c "go tool cover -func combined.coverprofile | \
 	                           sed 's=$(PACKAGE_NAME)/==' | \
