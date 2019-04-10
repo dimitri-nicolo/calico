@@ -56,7 +56,7 @@ subjects:
 apiVersion: v1
 kind: Service
 metadata:
-  name: compliance-server-service
+  name: compliance
   namespace: calico-monitoring
 spec:
   ports:
