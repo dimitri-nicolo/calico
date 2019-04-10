@@ -1,7 +1,10 @@
 federation:
   enabled: false
 network: calico
-calico_ipam: true
+
+# Sets the ipam. Can be 'calico-ipam' or 'host-local'
+ipam: calico-ipam
+
 datastore: kdd
 app_layer_policy:
   enabled: false
