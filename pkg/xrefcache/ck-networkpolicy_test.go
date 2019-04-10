@@ -10,6 +10,7 @@ import (
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
 	. "github.com/tigera/compliance/internal/testutils"
+	"github.com/tigera/compliance/pkg/resources"
 	"github.com/tigera/compliance/pkg/xrefcache"
 )
 
@@ -524,5 +525,63 @@ var _ = Describe("Basic CRUD of network policies with no other resources present
 		By("checking the cache settings")
 		np = tester.GetK8sNetworkPolicy(Name1, Namespace1)
 		Expect(np).To(BeNil())
+	})
+
+	It("should track endpoints correctly", func() {
+		By("applying pod1 label1")
+		tester.SetPod(Name1, Namespace1, Label1, IP1, NoServiceAccount, NoPodOptions)
+		pod := tester.GetPod(Name1, Namespace1)
+
+		By("applying hep1 label2")
+		tester.SetHostEndpoint(Name2, Label2, IP2)
+		hep := tester.GetHostEndpoint(Name2)
+
+		By("applying a GlobalNetworkPolicy matching select all()")
+		tester.SetGlobalNetworkPolicy(Name1, SelectAll,
+			[]apiv3.Rule{},
+			[]apiv3.Rule{},
+		)
+
+		By("checking the pod and hep are linked in the policy")
+		gnp := tester.GetGlobalNetworkPolicy(Name1)
+		Expect(gnp.SelectedHostEndpoints.Len()).To(Equal(1))
+		Expect(gnp.SelectedPods.Len()).To(Equal(1))
+		Expect(gnp.SelectedHostEndpoints.Contains(resources.GetResourceID(hep))).To(BeTrue())
+		Expect(gnp.SelectedPods.Contains(resources.GetResourceID(pod))).To(BeTrue())
+
+		By("updating GlobalNetworkPolicy to match Label1")
+		tester.SetGlobalNetworkPolicy(Name1, Select1,
+			[]apiv3.Rule{},
+			[]apiv3.Rule{},
+		)
+
+		By("checking the pod is linked in the policy and the hep is now unlinked")
+		gnp = tester.GetGlobalNetworkPolicy(Name1)
+		Expect(gnp.SelectedHostEndpoints.Len()).To(Equal(0))
+		Expect(gnp.SelectedPods.Len()).To(Equal(1))
+		Expect(gnp.SelectedPods.Contains(resources.GetResourceID(pod))).To(BeTrue())
+
+		By("updating GlobalNetworkPolicy to match Label2")
+		tester.SetGlobalNetworkPolicy(Name1, Select2,
+			[]apiv3.Rule{},
+			[]apiv3.Rule{},
+		)
+
+		By("checking the hep is linked in the policy and the pod is now unlinked")
+		gnp = tester.GetGlobalNetworkPolicy(Name1)
+		Expect(gnp.SelectedHostEndpoints.Len()).To(Equal(1))
+		Expect(gnp.SelectedPods.Len()).To(Equal(0))
+		Expect(gnp.SelectedHostEndpoints.Contains(resources.GetResourceID(hep))).To(BeTrue())
+
+		By("updating GlobalNetworkPolicy to match Label3")
+		tester.SetGlobalNetworkPolicy(Name1, Select3,
+			[]apiv3.Rule{},
+			[]apiv3.Rule{},
+		)
+
+		By("checking the policy has no linked endpoints")
+		gnp = tester.GetGlobalNetworkPolicy(Name1)
+		Expect(gnp.SelectedHostEndpoints.Len()).To(Equal(0))
+		Expect(gnp.SelectedPods.Len()).To(Equal(0))
 	})
 })

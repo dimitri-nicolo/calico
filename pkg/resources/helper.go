@@ -32,7 +32,7 @@ var (
 )
 
 type ResourceHelper interface {
-	GroupVersionKind() metav1.TypeMeta
+	TypeMeta() metav1.TypeMeta
 	NewResource() Resource
 	NewResourceList() ResourceList
 }
@@ -87,7 +87,7 @@ type resourceHelper struct {
 	resourceList ResourceList
 }
 
-func (h *resourceHelper) GroupVersionKind() metav1.TypeMeta {
+func (h *resourceHelper) TypeMeta() metav1.TypeMeta {
 	return h.kind
 }
 
@@ -141,6 +141,6 @@ var (
 
 func init() {
 	for _, rh := range resourceHelpers {
-		resourceHelpersMap[rh.GroupVersionKind()] = rh
+		resourceHelpersMap[rh.TypeMeta()] = rh
 	}
 }

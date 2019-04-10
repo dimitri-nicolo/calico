@@ -239,7 +239,7 @@ var _ = Describe("Pods cache verification", func() {
 		By("updating pod2 with IP3")
 		tester.SetPod(Name2, Namespace1, NoLabels, IP3, NoServiceAccount, NoPodOptions)
 
-		By("checking that pod3 no refs service1 and service2")
+		By("checking that pod2 no refs service1 and service2")
 		ep = tester.GetPod(Name2, Namespace1)
 		Expect(ep).NotTo(BeNil())
 		Expect(ep.Services.Len()).To(Equal(2))

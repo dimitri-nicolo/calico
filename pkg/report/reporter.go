@@ -82,14 +82,6 @@ type reportEndpoint struct {
 	services       resources.Set
 }
 
-type reportService struct {
-	zeroTrustFlags xrefcache.CacheEntryFlags
-}
-
-type reportNamespace struct {
-	zeroTrustFlags xrefcache.CacheEntryFlags
-}
-
 func (r *reporter) run() error {
 	if r.cfg.ReportType.Spec.IncludeEndpointData {
 		// We need to include endpoint data in the report.
@@ -173,7 +165,7 @@ func (r *reporter) transferAggregatedData() {
 	// Create the endpoints slice up-front
 	r.data.Endpoints = make([]apiv3.EndpointsReportEndpoint, len(r.inScopeEndpoints))
 
-	// Transfer the aggregated data to the ReportData structure.
+	// Transfer the aggregated data to the ReportData structure. Start with endpoints.
 	for id, ep := range r.inScopeEndpoints {
 		r.data.Endpoints = append(r.data.Endpoints, apiv3.EndpointsReportEndpoint{
 			ID:                        id,
@@ -192,8 +184,48 @@ func (r *reporter) transferAggregatedData() {
 		delete(r.inScopeEndpoints, id)
 	}
 
-	// We can delete the dictionary totally now.
+	// We can delete the dictionary now.
 	r.inScopeEndpoints = nil
+
+	// Now handle namespaces.
+	for name, zeroTrustFlags := range r.namespaces {
+		r.data.Namespaces = append(r.data.Namespaces, apiv3.EndpointsReportNamespace{
+			Namespace: apiv3.ResourceID{
+				TypeMeta: resources.TypeK8sNamespaces,
+				Name:     name,
+			},
+			IngressProtected:          zeroTrustFlags&xrefcache.CacheEntryProtectedIngress == 0, // We reversed this for zero-trust
+			EgressProtected:           zeroTrustFlags&xrefcache.CacheEntryProtectedEgress == 0,  // We reversed this for zero-trust
+			IngressFromInternet:       zeroTrustFlags&xrefcache.CacheEntryInternetExposedIngress != 0,
+			EgressToInternet:          zeroTrustFlags&xrefcache.CacheEntryInternetExposedEgress != 0,
+			IngressFromOtherNamespace: zeroTrustFlags&xrefcache.CacheEntryOtherNamespaceExposedIngress != 0,
+			EgressToOtherNamespace:    zeroTrustFlags&xrefcache.CacheEntryOtherNamespaceExposedEgress != 0,
+			EnvoyEnabled:              zeroTrustFlags&xrefcache.CacheEntryEnvoyEnabled == 0, // We reversed this for zero-trust
+		})
+
+		// Delete from our dictionary now.
+		delete(r.namespaces, name)
+	}
+
+	// We can delete the dictionary now.
+	r.namespaces = nil
+
+	// Now handle services.
+	for id, zeroTrustFlags := range r.services {
+		r.data.Services = append(r.data.Services, apiv3.EndpointsReportService{
+			Service:                   id,
+			IngressProtected:          zeroTrustFlags&xrefcache.CacheEntryProtectedIngress == 0, // We reversed this for zero-trust
+			IngressFromInternet:       zeroTrustFlags&xrefcache.CacheEntryInternetExposedIngress != 0,
+			IngressFromOtherNamespace: zeroTrustFlags&xrefcache.CacheEntryOtherNamespaceExposedIngress != 0,
+			EnvoyEnabled:              zeroTrustFlags&xrefcache.CacheEntryEnvoyEnabled == 0, // We reversed this for zero-trust
+		})
+
+		// Delete from our dictionary now.
+		delete(r.services, id)
+	}
+
+	// We can delete the dictionary now.
+	r.services = nil
 }
 
 // zeroTrustFlags converts the flags and updates into a set of zero-trust flags and changed zero-trust flags.

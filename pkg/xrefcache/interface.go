@@ -55,7 +55,7 @@ type CacheEntry interface {
 	getVersionedResource() VersionedResource
 	setVersionedResource(r VersionedResource)
 	getUpdateTypes() syncer.UpdateType
-	setUpdateTypes(syncer.UpdateType)
+	addUpdateTypes(syncer.UpdateType)
 	resetUpdateTypes()
 	getInScopeFlag() syncer.UpdateType
 }

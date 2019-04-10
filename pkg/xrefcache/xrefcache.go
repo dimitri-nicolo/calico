@@ -141,7 +141,7 @@ func (c *xrefCache) OnUpdate(update syncer.Update) {
 		updates := entry.getUpdateTypes()
 		entry.resetUpdateTypes()
 
-		if updates&EventsNotRequiringRecalculation != updates {
+		if updates&^EventsNotRequiringRecalculation != 0 {
 			// The set of updates that have been queued do require some recalculation, therefore recalculate the entry,
 			// combine the response with the existing set of update types.
 			updates |= cache.engine.recalculate(id, entry)
@@ -217,7 +217,7 @@ func (c *xrefCache) queueUpdate(id apiv3.ResourceID, entry CacheEntry, update sy
 	}
 
 	queue := entry.getUpdateTypes() == 0
-	entry.setUpdateTypes(update)
+	entry.addUpdateTypes(update)
 	if queue {
 		// There are no other recalculations pending for this resource
 		log.WithField("id", id).Debug("Queue recalculation of resource")

@@ -9,6 +9,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+
 	"github.com/tigera/compliance/pkg/event"
 	"github.com/tigera/compliance/pkg/list"
 	"github.com/tigera/compliance/pkg/resources"
@@ -16,7 +18,7 @@ import (
 )
 
 type replayer struct {
-	resources  map[metav1.TypeMeta]map[string]resources.Resource
+	resources  map[metav1.TypeMeta]map[apiv3.ResourceID]resources.Resource
 	start, end time.Time
 	lister     list.Destination
 	eventer    event.Fetcher
@@ -25,7 +27,7 @@ type replayer struct {
 
 func New(start, end time.Time, lister list.Destination, eventer event.Fetcher, callbacks syncer.SyncerCallbacks) syncer.Starter {
 	return &replayer{
-		make(map[metav1.TypeMeta]map[string]resources.Resource),
+		make(map[metav1.TypeMeta]map[apiv3.ResourceID]resources.Resource),
 		start, end, lister, eventer, callbacks,
 	}
 }
@@ -53,22 +55,22 @@ func (r *replayer) Start(ctx context.Context) {
 // - Replay the retrieve events on top of the list.
 func (r *replayer) initialize(ctx context.Context) error {
 	for _, rh := range resources.GetAllResourceHelpers() {
-		gvk := rh.GroupVersionKind()
-		clog := log.WithField("kind", gvk.String())
+		kind := rh.TypeMeta()
+		clog := log.WithField("kind", kind.String())
 		clog.Debug("initializing replayer")
 
 		// Allocate map for resource.
-		r.resources[gvk] = make(map[string]resources.Resource)
+		r.resources[kind] = make(map[apiv3.ResourceID]resources.Resource)
 
 		// Get list for resource.
-		list, err := r.lister.RetrieveList(gvk, nil, &r.start, false)
+		l, err := r.lister.RetrieveList(kind, nil, &r.start, false)
 		if err != nil {
 			return err
 		}
 		clog.Debug("retrieved list")
 
 		// Extract the list into an array of runtime.Objects.
-		objs, err := meta.ExtractList(list.ResourceList)
+		objs, err := meta.ExtractList(l.ResourceList)
 		if err != nil {
 			return err
 		}
@@ -81,25 +83,32 @@ func (r *replayer) initialize(ctx context.Context) error {
 				clog.WithField("obj", objs[i]).Warn("failed to type assert resource")
 				continue
 			}
-			key := resources.GetNameNamespace(res).String()
-			r.resources[gvk][key] = res
+			id := resources.GetResourceID(res)
+			r.resources[kind][id] = res
+
+			//TODO(rlb): Why are we sending updates from before the start time? We should only be populating
+			// our cache up to this point. When we have finished populating our cache we should be dumping the
+			// entire contents as the "starting point".
 
 			// Send Update to callbacks.
-			r.cb.OnUpdate(syncer.Update{Type: syncer.UpdateTypeSet, ResourceID: resources.GetResourceID(res), Resource: res})
+			r.cb.OnUpdate(syncer.Update{Type: syncer.UpdateTypeSet, ResourceID: id, Resource: res})
 		}
-		clog.WithField("length", len(r.resources[gvk])).Debug("stored objects into internal cache")
+		clog.WithField("length", len(r.resources[kind])).Debug("stored objects into internal cache")
 
 		// Replay events into the internal cache from the list time to the desired start time.
-		if err = r.replay(ctx, &gvk, &list.RequestStartedTimestamp.Time, &r.start); err != nil {
+		if err = r.replay(ctx, &kind, &l.RequestStartedTimestamp.Time, &r.start); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
+//TODO(rlb): For resources with multiple possible versions, we need to list all audit events across all versions
+//TODO       and order those event by time (since all versions may be used simultaneously by different clients)
+
 // replay fetches events for the given resource from the list's timestamp up until the specified start time.
-func (r *replayer) replay(ctx context.Context, gvk *metav1.TypeMeta, from, to *time.Time) error {
-	for ev := range r.eventer.GetAuditEvents(ctx, gvk, from, to) {
+func (r *replayer) replay(ctx context.Context, kind *metav1.TypeMeta, from, to *time.Time) error {
+	for ev := range r.eventer.GetAuditEvents(ctx, kind, from, to) {
 		clog := log.WithFields(log.Fields{"auditID": ev.Event.AuditID, "verb": ev.Event.Verb})
 		// Determine proper resource to update for internal cache.
 		res, err := event.ExtractResourceFromAuditEvent(ev.Event)
@@ -114,16 +123,17 @@ func (r *replayer) replay(ctx context.Context, gvk *metav1.TypeMeta, from, to *t
 		}
 
 		// Update the internal cache and send the appropriate Update to the callbacks.
-		key := resources.GetNameNamespace(res).String()
-		gvk2 := resources.GetTypeMeta(res)
-		update := syncer.Update{ResourceID: resources.GetResourceID(res), Resource: res}
+		id := resources.GetResourceID(res)
+
+		kind2 := resources.GetTypeMeta(res)
+		update := syncer.Update{ResourceID: id, Resource: res}
 		switch ev.Event.Verb {
 		case "create", "update", "patch":
 			update.Type = syncer.UpdateTypeSet
-			r.resources[gvk2][key] = res
+			r.resources[kind2][id] = res
 		case "delete":
 			update.Type = syncer.UpdateTypeDeleted
-			delete(r.resources[gvk2], key)
+			delete(r.resources[kind2], id)
 		}
 		clog.WithField("update", update).Debug("replayed event")
 		r.cb.OnUpdate(update)

@@ -19,7 +19,7 @@ const (
 	numUpdatesPerPerfLog = 500
 )
 
-//TODO(rlb): Thinking that we might want to use resource type rather than the GroupVersionKind for doing
+//TODO(rlb): Thinking that we might want to use resource type rather than the TypeMeta for doing
 // fanout.
 
 type DispatcherOnStatusUpdate func(syncer.StatusUpdate)

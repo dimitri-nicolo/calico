@@ -17,9 +17,9 @@ func (c *cacheEntryCommon) getUpdateTypes() syncer.UpdateType {
 	return c.updateTypes
 }
 
-// setUpdateTypes adds the supplied update types to the accumlated set of updates for a resource that is being
+// addUpdateTypes adds the supplied update types to the accumlated set of updates for a resource that is being
 // updated from a syncer update.
-func (c *cacheEntryCommon) setUpdateTypes(u syncer.UpdateType) {
+func (c *cacheEntryCommon) addUpdateTypes(u syncer.UpdateType) {
 	c.updateTypes |= u
 }
 

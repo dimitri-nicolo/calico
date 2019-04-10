@@ -346,7 +346,7 @@ func (c *networkPolicyEngine) updateRuleSelectors(id apiv3.ResourceID, x *CacheE
 func (c *networkPolicyEngine) scanIngressRules(x *CacheEntryNetworkPolicy) syncer.UpdateType {
 	oldFlags := x.Flags
 
-	// Reset egress stats based on rules
+	// Reset ingress stats based on rules
 	x.Flags &^= CacheEntryInternetExposedIngress | CacheEntryOtherNamespaceExposedIngress
 
 	// Loop through the rules to check if exposed to another namespace. This is determined by checking allow rules to
@@ -392,7 +392,7 @@ func (c *networkPolicyEngine) scanIngressRules(x *CacheEntryNetworkPolicy) synce
 				// internet exposure then update our flags.
 				x.clog.Debugf("Source selector is specified, found cached selector details")
 				if sel.NetworkSetFlags&CacheEntryInternetExposed != 0 {
-					x.clog.Debugf("Policy egress allow rule selector references netset exposed to internet: %s", irV1.SrcSelector)
+					x.clog.Debugf("Policy ingress allow rule selector references netset exposed to internet: %s", irV1.SrcSelector)
 					x.Flags |= CacheEntryInternetExposedIngress
 				}
 			} else {
