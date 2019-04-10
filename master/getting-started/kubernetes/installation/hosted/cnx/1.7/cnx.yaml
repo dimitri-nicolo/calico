@@ -2,5 +2,6 @@
 layout: null
 ---
 {% helm tigera-secure-lma --execute templates/manager.yaml %}
-orch: openshift
+# TODO: fix bug where an empty helm includer doesn't render the manifest?
+foo: bar
 {% endhelm %}

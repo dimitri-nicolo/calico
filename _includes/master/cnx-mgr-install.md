@@ -4,130 +4,18 @@
   {% assign cli = "oc" %}
 {% endif %}
 
-## Installing the {{site.prodname}} Manager and API Server
+## Installing the {{site.prodname}} Manager
 
-{% if include.init == "systemd" %}
-
-1. Load the following manifest to Kubernetes to deploy dummy pods that
-   will be used for Prometheus targeting. You should ensure that this manifest
-   deploys one pod on each host running {{site.prodname}} that you wish to
-   monitor, adjusting the annotations and tolerations as needed.
-
-   ```yaml
-   apiVersion: extensions/v1beta1
-   kind: DaemonSet
-   metadata:
-     name: node-exporter
-     namespace: kube-system
-     labels:
-       k8s-app: calico-node
-   spec:
-     template:
-       metadata:
-         name: node-exporter
-         labels:
-           k8s-app: calico-node
-         annotations:
-           scheduler.alpha.kubernetes.io/critical-pod: ''
-       spec:
-         serviceAccountName: default
-         containers:
-         - image: busybox
-           command: ["sleep", "10000000"]
-           name: node-exporter
-           ports:
-           - containerPort: 9081
-             hostPort: 9081
-             name: scrape
-         hostNetwork: true
-         hostPID: true
-         tolerations:
-         - operator: Exists
-           effect: NoSchedule
-   ```
-   > **Note**: Another option for monitoring is to set up and configure your own
-   > Prometheus monitoring instead of using the monitoring provided in the next
-   > steps, then it would not be necessary to load the above manifest.
-   {: .alert .alert-info}
-
-
-1. If you are using the etcd datastore:
-
-   1. Download the [cnx-configmap.yaml file](hosted/cnx/1.7/cnx-configmap.yaml).
-
-      ```bash
-      curl --compressed -o cnx-configmap.yaml \
-      {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-configmap.yaml
-      ```
-
-   1. Use the following commands to: set an environment variable called `ETCD_ENDPOINTS`
-      containing the location of the private registry and replace `<ETCD_ENDPOINTS>` in the manifest
-      with the location of your etcd cluster.
-
-      ```bash
-      ETCD_ENDPOINTS=10.90.89.100:2379,10.90.89.101:2379 \
-      sed -i -e "s?<ETCD_ENDPOINTS>?$ETCD_ENDPOINTS?g" cnx-configmap.yaml
-      ```
-
-   1. Apply the manifest.
-
-      ```bash
-      kubectl apply -f cnx-configmap.yaml
-      ```
-
-{% endif %}
-
-{% if include.init != "openshift" and include.net == "calico" %}
-
-1. Download the manifest that corresponds to your datastore type and save the file
-   as cnx.yaml. That is how we will refer to it in later steps.
-
-   - **etcd datastore**
-     ```bash
-     curl --compressed -o cnx.yaml \
-     {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-etcd.yaml
-     ```
-
-   - **Kubernetes API datastore**
-     ```bash
-     curl --compressed -o cnx.yaml \
-     {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-kdd.yaml
-     ```
-
-{% elsif include.platform == "eks" %}
-
-1. Download the EKS {{site.prodname}} manifest and save the file
-   as cnx.yaml. That is how we will refer to it in later steps.
+1. Download the {{site.prodname}} manifest.
 
    ```bash
-   curl --compressed -o cnx.yaml \
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only-ecs/cnx-kdd-eks.yaml
+   curl --compressed -O \
+   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx.yaml
    ```
-
-{% elsif include.init != "openshift" and include.net == "other" %}
-
-1. Download the networking manifest for the Kubernetes API datastore and save the file
-   as cnx.yaml. That is how we will refer to it in later steps.
-
-   ```bash
-   curl --compressed -o cnx.yaml \
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-kdd.yaml
-   ```
-
-{% elsif include.init == "openshift" %}
-
-1. Download the {{site.prodname}} manifest for etcd and save the file as cnx.yaml. That is how we will refer to it in later steps:
-
-   ```bash
-   curl --compressed -o cnx.yaml \
-   {{site.url}}/{{page.version}}/getting-started/openshift/cnx.yaml
-   ```
-
-{% endif %}
 
    > **Note**: If you are upgrading from {{site.prodname}} v2.2 or earlier you will need to make some modifications prior
    > to upgrade to ensure RBAC behavior for tiered policy is unchanged. Please refer to the instructions in the comments for
-   > `ClusterRole "ee-calico-tiered-policy-passthru"` in the `cnx.yaml` manifest, or the
+   > `ClusterRole "ee-calico-tiered-policy-passthru"` in the `cnx-api.yaml` manifest, or the
    > [Configuring {{site.prodname}} RBAC]({{site.baseurl}}/{{page.version}}/reference/cnx/rbac-tiered-policies) documentation
    > for more details.
    {: .alert .alert-info}
@@ -180,7 +68,7 @@
    ```bash
    oc create secret generic cnx-manager-tls \
    --from-file=cert=/etc/origin/master/master.server.crt \
-   --from-file=key=/etc/origin/master/master.server.key -n kube-system
+   --from-file=key=/etc/origin/master/master.server.key -n calico-monitoring
    ```
 
 {% elsif include.platform == "eks" %}
@@ -191,7 +79,7 @@
    apiVersion: certificates.k8s.io/v1beta1
    kind: CertificateSigningRequest
    metadata:
-     name: cnxmanager.kube-system
+     name: cnxmanager.calico-monitoring
    spec:
      groups:
      - system:authenticated
@@ -201,9 +89,9 @@
      - key encipherment
      - server auth
    EOF
-   kubectl certificate approve cnxmanager.kube-system
-   kubectl get csr cnxmanager.kube-system -o jsonpath='{.status.certificate}' | base64 --decode > cnxmanager.crt
-   kubectl create secret generic cnx-manager-tls --from-file=cert=./cnxmanager.crt --from-file=key=./cnxmanager.key -n kube-system
+   kubectl certificate approve cnxmanager.calico-monitoring
+   kubectl get csr cnxmanager.calico-monitoring -o jsonpath='{.status.certificate}' | base64 --decode > cnxmanager.crt
+   kubectl create secret generic cnx-manager-tls --from-file=cert=./cnxmanager.crt --from-file=key=./cnxmanager.key -n calico-monitoring
    ```
 
 {% else %}
@@ -212,7 +100,7 @@
      ```bash
      kubectl create secret generic cnx-manager-tls \
      --from-file=cert=/etc/kubernetes/pki/apiserver.crt \
-     --from-file=key=/etc/kubernetes/pki/apiserver.key -n kube-system
+     --from-file=key=/etc/kubernetes/pki/apiserver.key -n calico-monitoring
      ```
 
    - **kops deployments**
@@ -222,7 +110,7 @@
      ```bash
      kubectl create secret generic cnx-manager-tls \
      --from-file=cert=/srv/kubernetes/server.cert \
-     --from-file=key=/srv/kubernetes/server.key -n kube-system
+     --from-file=key=/srv/kubernetes/server.key -n calico-monitoring
      ```
 
 {% endif %}
@@ -232,7 +120,17 @@
      > instead, refer to [{{site.prodname}} Manager connections]({{site.baseurl}}/{{page.version}}/security/comms/crypto-auth#{{site.prodnamedash}}-manager-connections).
      {: .alert .alert-info}
 
-1. Apply the manifest to install the {{site.prodname}} Manager and the {{site.prodname}} API server.
+{% if include.platform != "docker-ee" %}
+1. Edit the Kibana URL to point to your Kibana. Open the cnx.yaml file and
+   modify the `ConfigMap` named `tigera-cnx-manager-config` by setting the
+   value of `tigera.cnx-manager.kibana-url`
+{% endif %}
+{% if include.elasticsearch != "external" %}
+   By default a NodePort is installed that serves Kibana on port 30601, so use
+   the address of a node (for example a master).
+{% endif %}
+
+1. Apply the manifest to install the {{site.prodname}} Manager.
 
    ```bash
    {{cli}} apply -f cnx.yaml
@@ -243,7 +141,7 @@
 1. Allow the {{site.prodname}} Manager to run as root:
 
    ```bash
-   oc adm policy add-scc-to-user anyuid system:serviceaccount:kube-system:cnx-manager
+   oc adm policy add-scc-to-user anyuid system:serviceaccount:calico-monitoring:cnx-manager
    ```
 
 {% endif %}
@@ -279,8 +177,8 @@
 
    ```bash
    export TIGERA_UI_USER=tigera-user
-   {{cli}} create serviceaccount -n kube-system $TIGERA_UI_USER
-   kubectl get secret -n kube-system -o jsonpath='{.data.token}' $(kubectl -n kube-system get secret | grep $TIGERA_UI_USER | awk '{print $1}') | base64 --decode
+   {{cli}} create serviceaccount -n calico-monitoring $TIGERA_UI_USER
+   kubectl get secret -n calico-monitoring -o jsonpath='{.data.token}' $(kubectl -n calico-monitoring get secret | grep $TIGERA_UI_USER | awk '{print $1}') | base64 --decode
    ```
 
    Save the token - you'll use it to log in to {{site.prodname}} Manager.  Next we'll assign permissions to do so
@@ -318,3 +216,19 @@
    ```
 
    To grant access to additional tiers, or create your own roles consult the [RBAC documentation]({{site.baseurl}}/{{page.version}}/reference/cnx/rbac-tiered-policies){:target="_blank"}.
+
+{% if include.platform != "docker-ee" %}
+1. By default, {{site.prodname}} Manager is made accessible via a NodePort listening on port 30003.
+   You can edit the `cnx.yaml` manifest if you want to change how {{site.prodname}} Manager is
+   exposed.  You may need to create an ssh tunnel if the node is not accessible - for example:
+
+   ```bash
+   ssh <jumpbox> -L 127.0.0.1:30003:<kubernetes node>:30003
+   ```
+
+   Sign in by navigating to `https://<address of a Kubernetes node or 127.0.0.1 for ssh tunnel>:30003` and login.
+{% endif %}
+
+{% if include.platform == "eks" %}
+   Log in to {{site.prodname}} Manager using the token you created earlier in the process.
+{% endif %}

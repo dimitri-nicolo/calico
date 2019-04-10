@@ -2,5 +2,5 @@
 layout: null
 ---
 {% helm tigera-secure-lma --execute templates/manager.yaml %}
-orch: openshift
+platform: eks
 {% endhelm %}

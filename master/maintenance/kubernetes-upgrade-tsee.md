@@ -55,7 +55,7 @@ Prior to upgrading, follow one of the sections below to ensure minimal service i
 
 ##### During the upgrade to {{site.prodname}} {{page.version}}
 
-If you are following the documented installation instructions, download the `cnx.yaml`, and before applying it modify
+If you are following the documented installation instructions, download the `cnx-api.yaml`, and before applying it modify
 `ClusterRole "ee-calico-tiered-policy-passthru"` to specify the resource kinds `tier.networkpolicies` and
 `tier.globalnetworkpolicies`. The resource definition should be:
 
@@ -113,7 +113,7 @@ rules:
 
 ##### Upgrading
 
-When upgrading, ensure the cnx.yaml manifest has the {{page.version}} default settings for the `ClusterRole "ee-calico-tiered-policy-passthru"`.
+When upgrading, ensure the cnx-api.yaml manifest has the {{page.version}} default settings for the `ClusterRole "ee-calico-tiered-policy-passthru"`.
 This resource should have the `resources` set to include only the real resource kinds `networkpolicies` and `globalnetworkpolicies`.
 These are the settings in the standard {{page.version}} {{site.prodname}} manifests, and so provided you have not previously modified them
 no changes should be required.
