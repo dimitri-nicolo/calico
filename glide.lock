@@ -327,7 +327,8 @@ imports:
   - lib/validator/v3
   - lib/watch
 - name: github.com/projectcalico/pod2daemon
-  version: df2b9c8d2744ebce544742f7f765b59c5e88db0d
+  repo: https://github.com/neiljerram/pod2daemon
+  version: 6ecd939986d4e994de8509b10c29411e98e24fba
   subpackages:
   - binder
 - name: github.com/projectcalico/typha
