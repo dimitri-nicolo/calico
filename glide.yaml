@@ -13,7 +13,7 @@ import:
 - package: github.com/tigera/licensing
   repo: git@github.com:tigera/licensing
   vcs: git
-  version: 871d880429a77ff359fb3f9f09e09422ff474f32
+  version: c9432e3124d3f9da2f3e34a703d815b072f6b0b4
   subpackages:
   - client
 - package: github.com/projectcalico/go-yaml-wrapper

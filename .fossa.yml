@@ -14,9 +14,3 @@ analyze:
     path: /go/src/github.com/tigera/calicoq/calicoq
     options:
       allow-unresolved: true
-  - name: github.com/tigera/calicoq/web/queryserver
-    type: go
-    target: github.com/tigera/calicoq/web/queryserver
-    path: /go/src/github.com/tigera/calicoq/web/queryserver
-    options:
-      allow-unresolved: true
