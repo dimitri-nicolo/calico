@@ -89,17 +89,17 @@ BUILD_IMAGE_REPORTER=tigera/compliance-reporter
 PACKAGE_NAME?=github.com/tigera/compliance
 GCR_REPO?=gcr.io/unique-caldron-775/cnx
 
-PUSH_IMAGES?=$(GCR_REPO)/$(BUILD_IMAGE_SERVER) $(GCR_REPO)/$(BUILD_IMAGE_CONTROLLER) $(GCR_REPO)/$(BUILD_IMAGE_SNAPSHOTTER) $(GCR_REPO)/$(BUILD_IMAGE_REPORTER)
+PUSH_IMAGE_PREFIXES?=$(GCR_REPO)/
 RELEASE_IMAGES?=
 # If this is a release, also tag and push additional images.
 ifeq ($(RELEASE),true)
-PUSH_IMAGES+=$(RELEASE_IMAGES)
+PUSH_IMAGE_PREFIXES+=$(RELEASE_IMAGES)
 endif
 
 # remove from the list to push to manifest any registries that do not support multi-arch
 EXCLUDE_MANIFEST_REGISTRIES ?= quay.io/
-PUSH_MANIFEST_IMAGES=$(PUSH_IMAGES:$(EXCLUDE_MANIFEST_REGISTRIES)%=)
-PUSH_NONMANIFEST_IMAGES=$(filter-out $(PUSH_MANIFEST_IMAGES),$(PUSH_IMAGES))
+PUSH_MANIFEST_IMAGE_PREFIXES=$(PUSH_IMAGE_PREFIXES:$(EXCLUDE_MANIFEST_REGISTRIES)%=)
+PUSH_NONMANIFEST_IMAGE_PREFIXES=$(filter-out $(PUSH_MANIFEST_IMAGE_PREFIXES),$(PUSH_IMAGE_PREFIXES))
 
 # location of docker credentials to push manifests
 DOCKER_CONFIG ?= $(HOME)/.docker/config.json
@@ -187,7 +187,7 @@ clean:
 ###############################################################################
 # Building the binary
 ###############################################################################
-build: bin/server bin/controller bin/snapshotter bin/reporter
+build: bin/server bin/controller bin/snapshotter bin/reporter bin/report-type-gen
 build-all: $(addprefix sub-build-,$(VALIDARCHES))
 sub-build-%:
 	$(MAKE) build ARCH=$*
@@ -283,6 +283,18 @@ bin/reporter-$(ARCH): $(SRC_FILES) vendor/.up-to-date vendor/github.com/projectc
 		-e "not a dynamic executable" || \
 		( echo "Error: bin/reporter was not statically linked"; false ) )'
 
+bin/report-type-gen: bin/report-type-gen-$(ARCH)
+	ln -f bin/report-type-gen-$(ARCH) bin/report-type-gen
+
+bin/report-type-gen-$(ARCH): $(SRC_FILES) vendor/.up-to-date
+	@echo Building report type generator...
+	mkdir -p bin
+	$(DOCKER_RUN) $(LOCAL_BUILD_MOUNTS) $(CALICO_BUILD) \
+	    sh -c 'go build -v -i -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/report-type-gen" && \
+		( ldd $@ 2>&1 | grep -q -e "Not a valid dynamic program" \
+		-e "not a dynamic executable" || \
+		( echo "Error: bin/report-type-gen was not statically linked"; false ) )'
+
 ###############################################################################
 # Building the images
 ###############################################################################
@@ -348,46 +360,55 @@ ifndef IMAGETAG
 endif
 
 ## push one arch
-push: imagetag $(addprefix sub-single-push-,$(call escapefs,$(PUSH_IMAGES)))
+push: imagetag $(addprefix sub-single-push-,$(call escapefs,$(PUSH_IMAGE_PREFIXES)))
 
 sub-single-push-%:
-	docker push $(call unescapefs,$*:$(IMAGETAG)-$(ARCH))
+	docker push $(call unescapefs,$*$(BUILD_IMAGE_SERVER):$(IMAGETAG)-$(ARCH))
+	docker push $(call unescapefs,$*$(BUILD_IMAGE_CONTROLLER):$(IMAGETAG)-$(ARCH))
+	docker push $(call unescapefs,$*$(BUILD_IMAGE_SNAPSHOTTER):$(IMAGETAG)-$(ARCH))
+	docker push $(call unescapefs,$*$(BUILD_IMAGE_REPORTER):$(IMAGETAG)-$(ARCH))
 
 ## push all archs
 push-all: imagetag $(addprefix sub-push-,$(VALIDARCHES))
 sub-push-%:
 	$(MAKE) push ARCH=$* IMAGETAG=$(IMAGETAG)
 
-push-manifests: imagetag  $(addprefix sub-manifest-,$(call escapefs,$(PUSH_MANIFEST_IMAGES)))
+push-manifests: imagetag  $(addprefix sub-manifest-,$(call escapefs,$(PUSH_MANIFEST_IMAGE_PREFIXES)))
 sub-manifest-%:
 	# Docker login to hub.docker.com required before running this target as we are using $(DOCKER_CONFIG) holds the docker login credentials
 	# path to credentials based on manifest-tool's requirements here https://github.com/estesp/manifest-tool#sample-usage
-	docker run -t --entrypoint /bin/sh -v $(DOCKER_CONFIG):/root/.docker/config.json $(CALICO_BUILD) -c "/usr/bin/manifest-tool push from-args --platforms $(call join_platforms,$(VALIDARCHES)) --template $(call unescapefs,$*:$(IMAGETAG))-ARCH --target $(call unescapefs,$*:$(IMAGETAG))"
+	docker run -t --entrypoint /bin/sh -v $(DOCKER_CONFIG):/root/.docker/config.json $(CALICO_BUILD) -c "/usr/bin/manifest-tool push from-args --platforms $(call join_platforms,$(VALIDARCHES)) --template $(call unescapefs,$*$(BUILD_IMAGE_SERVER):$(IMAGETAG))-ARCH --target $(call unescapefs,$*$(BUILD_IMAGE_SERVER):$(IMAGETAG))"
+	docker run -t --entrypoint /bin/sh -v $(DOCKER_CONFIG):/root/.docker/config.json $(CALICO_BUILD) -c "/usr/bin/manifest-tool push from-args --platforms $(call join_platforms,$(VALIDARCHES)) --template $(call unescapefs,$*$(BUILD_IMAGE_CONTROLLER):$(IMAGETAG))-ARCH --target $(call unescapefs,$*$(BUILD_IMAGE_CONTROLLER):$(IMAGETAG))"
+	docker run -t --entrypoint /bin/sh -v $(DOCKER_CONFIG):/root/.docker/config.json $(CALICO_BUILD) -c "/usr/bin/manifest-tool push from-args --platforms $(call join_platforms,$(VALIDARCHES)) --template $(call unescapefs,$*$(BUILD_IMAGE_SNAPSHOTTER):$(IMAGETAG))-ARCH --target $(call unescapefs,$*$(BUILD_IMAGE_SNAPSHOTTER):$(IMAGETAG))"
+	docker run -t --entrypoint /bin/sh -v $(DOCKER_CONFIG):/root/.docker/config.json $(CALICO_BUILD) -c "/usr/bin/manifest-tool push from-args --platforms $(call join_platforms,$(VALIDARCHES)) --template $(call unescapefs,$*$(BUILD_IMAGE_REPORTER):$(IMAGETAG))-ARCH --target $(call unescapefs,$*$(BUILD_IMAGE_REPORTER):$(IMAGETAG))"
 
-## push default amd64 arch where multi-arch manifest is not supported
-push-non-manifests: imagetag $(addprefix sub-non-manifest-,$(call escapefs,$(PUSH_NONMANIFEST_IMAGES)))
+ ## push default amd64 arch where multi-arch manifest is not supported
+push-non-manifests: imagetag $(addprefix sub-non-manifest-,$(call escapefs,$(PUSH_NONMANIFEST_IMAGE_PREFIXES)))
 sub-non-manifest-%:
 ifeq ($(ARCH),amd64)
-	docker push $(call unescapefs,$*:$(IMAGETAG))
+	docker push $(call unescapefs,$*$(BUILD_IMAGE_SERVER):$(IMAGETAG))
+	docker push $(call unescapefs,$*$(BUILD_IMAGE_CONTROLLER):$(IMAGETAG))
+	docker push $(call unescapefs,$*$(BUILD_IMAGE_SHAPSHOTTER):$(IMAGETAG))
+	docker push $(call unescapefs,$*$(BUILD_IMAGE_REPORTER):$(IMAGETAG))
 else
 	$(NOECHO) $(NOOP)
 endif
 
 ## tag images of one arch
-tag-images: imagetag $(addprefix sub-single-tag-images-arch-,$(call escapefs,$(PUSH_IMAGES))) $(addprefix sub-single-tag-images-non-manifest-,$(call escapefs,$(PUSH_NONMANIFEST_IMAGES)))
+tag-images: imagetag $(addprefix sub-single-tag-images-arch-,$(call escapefs,$(PUSH_IMAGE_PREFIXES))) $(addprefix sub-single-tag-images-non-manifest-,$(call escapefs,$(PUSH_NONMANIFEST_IMAGE_PREFIXES)))
 sub-single-tag-images-arch-%:
-	docker tag $(BUILD_IMAGE_SERVER):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG)-$(ARCH))
-	docker tag $(BUILD_IMAGE_CONTROLLER):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG)-$(ARCH))
-	docker tag $(BUILD_IMAGE_SNAPSHOTTER):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG)-$(ARCH))
-	docker tag $(BUILD_IMAGE_REPORTER):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG)-$(ARCH))
+	docker tag $(BUILD_IMAGE_SERVER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_SERVER):$(IMAGETAG)-$(ARCH))
+	docker tag $(BUILD_IMAGE_CONTROLLER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_CONTROLLER):$(IMAGETAG)-$(ARCH))
+	docker tag $(BUILD_IMAGE_SNAPSHOTTER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_SNAPSHOTTER):$(IMAGETAG)-$(ARCH))
+	docker tag $(BUILD_IMAGE_REPORTER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_REPORTER):$(IMAGETAG)-$(ARCH))
 
 # because some still do not support multi-arch manifest
 sub-single-tag-images-non-manifest-%:
 ifeq ($(ARCH),amd64)
-	docker tag $(BUILD_IMAGE_SERVER):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG))
-	docker tag $(BUILD_IMAGE_CONTROLLER):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG))
-	docker tag $(BUILD_IMAGE_SNAPSHOTTER):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG))
-	docker tag $(BUILD_IMAGE_REPORTER):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG))
+	docker tag $(BUILD_IMAGE_SERVER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_SERVER):$(IMAGETAG))
+	docker tag $(BUILD_IMAGE_CONTROLLER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_CONTROLLER):$(IMAGETAG))
+	docker tag $(BUILD_IMAGE_SNAPSHOTTER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_SNAPSHOTTER):$(IMAGETAG))
+	docker tag $(BUILD_IMAGE_REPORTER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_REPORTER):$(IMAGETAG))
 else
 	$(NOECHO) $(NOOP)
 endif
@@ -622,13 +643,13 @@ cover-report: combined.coverprofile
 	# Print the coverage.  We use sed to remove the verbose prefix and trim down
 	# the whitespace.
 	@echo
-	@echo ======== All coverage =========
+	@echo -------- All coverage ---------
 	@echo
 	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c 'go tool cover -func combined.coverprofile | \
 	                           sed 's=$(PACKAGE_NAME)/==' | \
 	                           column -t'
 	@echo
-	@echo ======== Missing coverage only =========
+	@echo -------- Missing coverage only ---------
 	@echo
 	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c "go tool cover -func combined.coverprofile | \
 	                           sed 's=$(PACKAGE_NAME)/==' | \
