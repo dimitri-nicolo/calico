@@ -42,7 +42,7 @@ func (r *replayer) Start(ctx context.Context) {
 		return
 	}
 	r.cb.OnStatusUpdate(syncer.NewStatusUpdateInSync())
-	if err := r.replay(ctx, nil, &r.start, &r.end); err != nil {
+	if err := r.replay(ctx, nil, &r.start, &r.end, true); err != nil {
 		r.cb.OnStatusUpdate(syncer.NewStatusUpdateFailed(err))
 		return
 	}
@@ -85,29 +85,26 @@ func (r *replayer) initialize(ctx context.Context) error {
 			}
 			id := resources.GetResourceID(res)
 			r.resources[kind][id] = res
-
-			//TODO(rlb): Why are we sending updates from before the start time? We should only be populating
-			// our cache up to this point. When we have finished populating our cache we should be dumping the
-			// entire contents as the "starting point".
-
-			// Send Update to callbacks.
-			r.cb.OnUpdate(syncer.Update{Type: syncer.UpdateTypeSet, ResourceID: id, Resource: res})
 		}
 		clog.WithField("length", len(r.resources[kind])).Debug("stored objects into internal cache")
 
 		// Replay events into the internal cache from the list time to the desired start time.
-		if err = r.replay(ctx, &kind, &l.RequestStartedTimestamp.Time, &r.start); err != nil {
+		if err = r.replay(ctx, &kind, &l.RequestStartedTimestamp.Time, &r.start, false); err != nil {
 			return err
+		}
+
+		// Send Update to callbacks.
+		for _, resList := range r.resources {
+			for _, res := range resList {
+				r.cb.OnUpdate(syncer.Update{Type: syncer.UpdateTypeSet, ResourceID: resources.GetResourceID(res), Resource: res})
+			}
 		}
 	}
 	return nil
 }
 
-//TODO(rlb): For resources with multiple possible versions, we need to list all audit events across all versions
-//TODO       and order those event by time (since all versions may be used simultaneously by different clients)
-
 // replay fetches events for the given resource from the list's timestamp up until the specified start time.
-func (r *replayer) replay(ctx context.Context, kind *metav1.TypeMeta, from, to *time.Time) error {
+func (r *replayer) replay(ctx context.Context, kind *metav1.TypeMeta, from, to *time.Time, notifyUpdates bool) error {
 	for ev := range r.eventer.GetAuditEvents(ctx, kind, from, to) {
 		clog := log.WithFields(log.Fields{"auditID": ev.Event.AuditID, "verb": ev.Event.Verb})
 		// Determine proper resource to update for internal cache.
@@ -127,6 +124,8 @@ func (r *replayer) replay(ctx context.Context, kind *metav1.TypeMeta, from, to *
 
 		kind2 := resources.GetTypeMeta(res)
 		update := syncer.Update{ResourceID: id, Resource: res}
+
+		// TODO: handle possible resourceVersion conflicts
 		switch ev.Event.Verb {
 		case "create", "update", "patch":
 			update.Type = syncer.UpdateTypeSet
@@ -136,7 +135,9 @@ func (r *replayer) replay(ctx context.Context, kind *metav1.TypeMeta, from, to *
 			delete(r.resources[kind2], id)
 		}
 		clog.WithField("update", update).Debug("replayed event")
-		r.cb.OnUpdate(update)
+		if notifyUpdates {
+			r.cb.OnUpdate(update)
+		}
 	}
 	return nil
 }
