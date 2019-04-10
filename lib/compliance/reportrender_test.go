@@ -96,9 +96,9 @@ sample-res,sample-ns,false,true,false,sample-kind(sample-ns/sample-res)|sample-k
 		Expect(endpointList[endpointsCount]).To(Equal(rendered))
 
 		// Cap maximum entries
-		capped_tmpl := `{{ range .Endpoints -}} {{ join .AppliedPolicies ";" 3 }} {{ end }}`
+		cappedTmpl := `{{ range .Endpoints -}} {{ join .AppliedPolicies ";" 3 }} {{ end }}`
 
-		matches, err = compliance.RenderTemplate(capped_tmpl, ard)
+		matches, err = compliance.RenderTemplate(cappedTmpl, ard)
 		Expect(err).ToNot(HaveOccurred())
 		matches = strings.TrimSpace(matches) // remove last \n
 		endpointList = strings.Split(matches, " ")
@@ -135,13 +135,27 @@ sample-res,sample-ns,false,true,false,sample-kind(sample-ns/sample-res)|sample-k
 		Expect(err).To(HaveOccurred())
 
 		// Invalid argument (not a slice)
-		no_slice_tmpl := `{{ join .EndpointsNumTotal ";" }}`
-		_, err = compliance.RenderTemplate(no_slice_tmpl, compliance.ReportDataSample)
+		noSliceTmpl := `{{ join .EndpointsNumTotal ";" }}`
+		_, err = compliance.RenderTemplate(noSliceTmpl, compliance.ReportDataSample)
 		Expect(err).To(HaveOccurred())
 
 		// Invalid max-entries argument
-		invalid_capped_tmpl := `{{ range .Endpoints -}} {{ join .AppliedPolicies ";" "1" }} {{ end }}`
-		_, err = compliance.RenderTemplate(invalid_capped_tmpl, compliance.ReportDataSample)
+		invalidCappedTmpl := `{{ range .Endpoints -}} {{ join .AppliedPolicies ";" "1" }} {{ end }}`
+		_, err = compliance.RenderTemplate(invalidCappedTmpl, compliance.ReportDataSample)
 		Expect(err).To(HaveOccurred())
+	})
+
+	It("audit report rendering - json", func() {
+		tmpl := "{{ json .AuditEvents }}"
+
+		_, err := compliance.RenderTemplate(tmpl, compliance.ReportDataSample)
+		Expect(err).ToNot(HaveOccurred())
+	})
+
+	It("audit report rendering - yaml", func() {
+		tmpl := "{{ yaml .AuditEvents }}"
+
+		_, err := compliance.RenderTemplate(tmpl, compliance.ReportDataSample)
+		Expect(err).ToNot(HaveOccurred())
 	})
 })
