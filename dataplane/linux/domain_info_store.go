@@ -213,11 +213,20 @@ func (s *domainInfoStore) saveMappingsV1() error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	f, err := os.Create(s.saveFile)
+	// Write first to a temporary save file, so that we can atomically rename it to the intended
+	// file once it contains new data.  Thus we avoid overwriting a previous version of the file
+	// (which may still be useful) until we're sure we have a complete new file prepared.
+	tmpSaveFile := s.saveFile + ".tmp"
+	f, err := os.Create(tmpSaveFile)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	fileAlreadyClosed := false
+	defer func() {
+		if !fileAlreadyClosed {
+			f.Close()
+		}
+	}()
 
 	// File format 1.
 	if _, err = f.WriteString("1\n"); err != nil {
@@ -237,6 +246,21 @@ func (s *domainInfoStore) saveMappingsV1() error {
 			log.Infof("Saved mapping: %v", jsonMapping)
 		}
 	}
+
+	// Sync and close the temporary save file.
+	if err = f.Sync(); err != nil {
+		return err
+	}
+	if err = f.Close(); err != nil {
+		return err
+	}
+	fileAlreadyClosed = true
+
+	// Move that file to the non-temporary name.
+	if err = os.Rename(tmpSaveFile, s.saveFile); err != nil {
+		return err
+	}
+
 	return nil
 }
 
