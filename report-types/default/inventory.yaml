@@ -1,0 +1,19 @@
+apiVersion: projectcalico.org/v3
+kind: GlobalReportType
+metadata:
+  name: inventory
+  labels:
+    global-report-type: inventory
+spec:
+  uiSummaryTemplate:
+    name: ui-inventory-summary.json
+  uiCompleteTemplate:
+    name: ui-inventory-complete.json
+  downloadTemplates:
+    - name: summary.csv
+    - name: endpoints.csv
+  auditEventsSelection:
+    resources:
+      - kind: 'globalnetworkpolicy'
+        name: 'grt-aes-g'
+        namespace: 'grt-aes-gnp-ns'

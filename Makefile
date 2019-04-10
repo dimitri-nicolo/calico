@@ -187,7 +187,7 @@ clean:
 ###############################################################################
 # Building the binary
 ###############################################################################
-build: bin/server bin/controller bin/snapshotter bin/reporter
+build: bin/server bin/controller bin/snapshotter bin/reporter bin/report-type-gen
 build-all: $(addprefix sub-build-,$(VALIDARCHES))
 sub-build-%:
 	$(MAKE) build ARCH=$*
@@ -282,6 +282,18 @@ bin/reporter-$(ARCH): $(SRC_FILES) vendor/.up-to-date vendor/github.com/projectc
 		( ldd $@ 2>&1 | grep -q -e "Not a valid dynamic program" \
 		-e "not a dynamic executable" || \
 		( echo "Error: bin/reporter was not statically linked"; false ) )'
+
+bin/report-type-gen: bin/report-type-gen-$(ARCH)
+	ln -f bin/report-type-gen-$(ARCH) bin/report-type-gen
+
+bin/report-type-gen-$(ARCH): $(SRC_FILES) vendor/.up-to-date
+	@echo Building report type generator...
+	mkdir -p bin
+	$(DOCKER_RUN) $(LOCAL_BUILD_MOUNTS) $(CALICO_BUILD) \
+	    sh -c 'go build -v -i -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/report-type-gen" && \
+		( ldd $@ 2>&1 | grep -q -e "Not a valid dynamic program" \
+		-e "not a dynamic executable" || \
+		( echo "Error: bin/report-type-gen was not statically linked"; false ) )'
 
 ###############################################################################
 # Building the images
