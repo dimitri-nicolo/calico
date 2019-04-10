@@ -10,6 +10,9 @@ import (
 	"time"
 )
 
+// Used only when overriding config tests.
+var getEnv = os.Getenv
+
 // Environment variables that we read.
 const (
 	listenAddrEnv   = "LISTEN_ADDR"
@@ -84,28 +87,28 @@ type Config struct {
 }
 
 func NewConfigFromEnv() (*Config, error) {
-	listenAddr := os.Getenv(listenAddrEnv)
-	certFilePath := os.Getenv(certFilePathEnv)
-	keyFilePath := os.Getenv(keyFilePathEnv)
+	listenAddr := getEnvOrDefaultString(listenAddrEnv, defaultListenAddr)
+	certFilePath := getEnv(certFilePathEnv)
+	keyFilePath := getEnv(keyFilePathEnv)
 
-	accessMode, err := parseAccessMode(os.Getenv(elasticAccessModeEnv))
+	accessMode, err := parseAccessMode(getEnv(elasticAccessModeEnv))
 	if err != nil {
 		return nil, err
 	}
-	elasticScheme := os.Getenv(elasticSchemeEnv)
-	elasticHost := os.Getenv(elasticHostEnv)
-	elasticPort := os.Getenv(elasticPortEnv)
+	elasticScheme := getEnv(elasticSchemeEnv)
+	elasticHost := getEnv(elasticHostEnv)
+	elasticPort := getEnv(elasticPortEnv)
 	elasticURL := &url.URL{
 		Scheme: elasticScheme,
 		Host:   fmt.Sprintf("%s:%s", elasticHost, elasticPort),
 	}
-	elasticCAPath := os.Getenv(elasticCAPathEnv)
-	elasticInsecureSkipVerify, err := strconv.ParseBool(os.Getenv(elasticInsecureSkipVerifyEnv))
+	elasticCAPath := getEnv(elasticCAPathEnv)
+	elasticInsecureSkipVerify, err := strconv.ParseBool(getEnv(elasticInsecureSkipVerifyEnv))
 	if err != nil {
 		elasticInsecureSkipVerify = false
 	}
-	elasticUsername := os.Getenv(elasticUsernameEnv)
-	elasticPassword := os.Getenv(elasticPasswordEnv)
+	elasticUsername := getEnv(elasticUsernameEnv)
+	elasticPassword := getEnv(elasticPasswordEnv)
 
 	connectTimeout, err := getEnvOrDefaultDuration("PROXY_CONNECT_TIMEOUT", defaultConnectTimeout)
 	if err != nil {
@@ -137,8 +140,17 @@ func NewConfigFromEnv() (*Config, error) {
 	return config, err
 }
 
+func getEnvOrDefaultString(key string, defaultValue string) string {
+	val := getEnv(key)
+	if val == "" {
+		return defaultValue
+	} else {
+		return val
+	}
+}
+
 func getEnvOrDefaultDuration(key string, defaultValue time.Duration) (time.Duration, error) {
-	val := os.Getenv(key)
+	val := getEnv(key)
 	if val == "" {
 		return defaultValue, nil
 	} else {
@@ -160,12 +172,15 @@ func parseAccessMode(am string) (ElasticAccessMode, error) {
 }
 
 func validateConfig(config *Config) error {
-	if config.AccessMode == PassThroughMode || config.AccessMode == InsecureMode &&
-		config.ElasticUsername != "" && config.ElasticPassword != "" {
-		return errors.New("Cannot set Elasticsearch credentials in Passthrough mode")
+	if config.ElasticURL.Scheme == "" || config.ElasticURL.Host == "" {
+		return errors.New("Invalid Elasticsearch backend URL specified")
+	}
+	if (config.AccessMode == PassThroughMode || config.AccessMode == InsecureMode) &&
+		(config.ElasticUsername != "" || config.ElasticPassword != "") {
+		return errors.New("Cannot set Elasticsearch credentials in Passthrough or Insecure mode")
 	}
 	if config.AccessMode == ServiceUserMode &&
-		config.ElasticUsername == "" && config.ElasticPassword == "" {
+		(config.ElasticUsername == "" || config.ElasticPassword == "") {
 		return errors.New("Elasticsearch credentials not provided for Service user mode")
 	}
 	if config.ElasticURL.Scheme == "https" && config.ElasticCAPath == "" {
