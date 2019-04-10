@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/olivere/elastic"
-	auditv1 "k8s.io/apiserver/pkg/apis/audit/v1beta1"
+	auditv1 "k8s.io/apiserver/pkg/apis/audit"
 
 	"github.com/tigera/compliance/pkg/list"
 )
