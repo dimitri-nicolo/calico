@@ -171,8 +171,8 @@ func TestQuery(t *testing.T) {
 	}
 
 	status := s.Status()
-	g.Expect(status.LastSuccessfulSync.Time).Should(Equal(time.Time{}), "Sync was not successful")
-	g.Expect(status.LastSuccessfulSearch.Time).Should(Equal(time.Time{}), "Search was not successful")
+	g.Expect(status.LastSuccessfulSync.Time).ShouldNot(Equal(time.Time{}), "Sync time was set")
+	g.Expect(status.LastSuccessfulSearch.Time).Should(Equal(time.Time{}), "Search time was not set")
 	g.Expect(status.ErrorConditions).Should(HaveLen(0), "Statser errors were not reported")
 }
 

@@ -147,7 +147,7 @@ func (h *httpPuller) setFeedURIAndHeader(f *v3.GlobalThreatFeed) error {
 						log.WithError(err).WithFields(log.Fields{"feed": f.Name, "header": header.Name, "configMapKeyRef": header.ValueFrom.ConfigMapKeyRef.Name, "key": header.ValueFrom.ConfigMapKeyRef.Key}).Debug("Skipping header")
 						continue
 					}
-					return FatalError("could not get ConfigMap %s", header.ValueFrom.ConfigMapKeyRef.Name)
+					return FatalError("could not get ConfigMap %s, %s", header.ValueFrom.ConfigMapKeyRef.Name, err.Error())
 				}
 				value, ok = configMap.Data[header.ValueFrom.ConfigMapKeyRef.Key]
 				fmt.Printf("%#v %s %v\n", configMap.Data, header.ValueFrom.ConfigMapKeyRef.Key, ok)
@@ -166,7 +166,7 @@ func (h *httpPuller) setFeedURIAndHeader(f *v3.GlobalThreatFeed) error {
 						log.WithError(err).WithFields(log.Fields{"feed": f.Name, "header": header.Name, "secretKeyRef": header.ValueFrom.SecretKeyRef.Name, "key": header.ValueFrom.SecretKeyRef.Key}).Debug("Skipping header")
 						continue
 					}
-					return FatalError("could not get Secret %s", header.ValueFrom.SecretKeyRef.Name)
+					return FatalError("could not get Secret %s, %s", header.ValueFrom.SecretKeyRef.Name, err.Error())
 				}
 
 				var bvalue []byte
@@ -248,6 +248,8 @@ func (h *httpPuller) queryInfo() (name string, u *url.URL, header http.Header, l
 func (h *httpPuller) query(ctx context.Context, st statser.Statser, attempts uint, delay time.Duration) error {
 	name, u, header, labels, gns, err := h.queryInfo()
 	if err != nil {
+		log.WithError(err).Error("failed to query")
+		st.Error(statser.PullFailed, err)
 		return err
 	}
 	log.WithField("feed", name).Debug("querying HTTP feed")
@@ -300,7 +302,7 @@ func (h *httpPuller) query(ctx context.Context, st statser.Statser, attempts uin
 		),
 	)
 	if err != nil {
-		log.WithError(err).Error("failed to query ")
+		log.WithError(err).Error("failed to query")
 		st.Error(statser.PullFailed, err)
 		return err
 	}
@@ -361,6 +363,7 @@ func (h *httpPuller) query(ctx context.Context, st statser.Statser, attempts uin
 		h.gnsController.Add(makeGNS(name, labels, snapshot), h.syncFailFunction, st)
 	}
 	st.ClearError(statser.PullFailed)
+	st.SuccessfulSync()
 
 	return nil
 }
