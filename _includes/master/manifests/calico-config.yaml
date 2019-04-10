@@ -142,7 +142,7 @@ data:
       }
     }
 {{- end }}
-{{- if .Values.app_layer_policy_enabled }}
+{{- if .Values.app_layer_policy }}
   # Enable the Policy Sync API between Felix and Dikastes
   felix-policy-sync-path-prefix: "/var/run/nodeagent"
 {{- else}}
