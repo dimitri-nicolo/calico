@@ -821,6 +821,35 @@ subjects:
   namespace: calico-monitoring
 ---
 
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: intrusion-detection-controller
+  namespace: calico-monitoring
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+      - configmaps
+    verbs: ["get"]
+---
+
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: intrusion-detection-controller
+  namespace: calico-monitoring
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: intrusion-detection-controller
+subjects:
+- kind: ServiceAccount
+  name: intrusion-detection-controller
+  namespace: calico-monitoring
+---
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
