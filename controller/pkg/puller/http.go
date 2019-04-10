@@ -248,7 +248,7 @@ func (h *httpPuller) queryInfo() (name string, u *url.URL, header http.Header, l
 func (h *httpPuller) query(ctx context.Context, st statser.Statser, attempts uint, delay time.Duration) error {
 	name, u, header, labels, gns, err := h.queryInfo()
 	if err != nil {
-		log.WithError(err).Error("failed to query ")
+		log.WithError(err).Error("failed to query")
 		st.Error(statser.PullFailed, err)
 		return err
 	}
@@ -302,7 +302,7 @@ func (h *httpPuller) query(ctx context.Context, st statser.Statser, attempts uin
 		),
 	)
 	if err != nil {
-		log.WithError(err).Error("failed to query ")
+		log.WithError(err).Error("failed to query")
 		st.Error(statser.PullFailed, err)
 		return err
 	}
