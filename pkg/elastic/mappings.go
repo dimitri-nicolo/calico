@@ -17,4 +17,23 @@ const (
     }
   }
 }`
+
+	reportsIndex   = "tigera_secure_ee_compliance_reports"
+	reportsMapping = `{
+  "mappings": {
+    "_doc": {
+      "properties": {
+        "reportType": { "type": "text” },
+        "reportSpec": { "type": "object", "enabled": false },
+        "startTime": { "type": "date", "format": "date_hour_minute_second_millis" },
+        "endTime": { "type": "date", "format": "date_hour_minute_second_millis" },
+        "uiSummary": { "type": "text" },
+        "endpoints": { "type": "object", "enabled": false },
+        "namespaces": { "type": "object", "enabled": false },
+        "services": { "type": "object", "enabled": false },
+        "auditEvents": { "type": "object", "enabled": false }
+      }
+    }
+  }
+}`
 )
