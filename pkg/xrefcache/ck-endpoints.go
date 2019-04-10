@@ -38,7 +38,7 @@ type VersionedEndpointResource interface {
 	VersionedResource
 	getV1Labels() map[string]string
 	getV1Profiles() []string
-	getIPs() (set.Set, error)
+	getIPOrEndpointIDs() (set.Set, error)
 }
 
 // CacheEntryEndpoint implements the CacheEntry interface, and is what we stored in the Pods cache.
@@ -73,8 +73,9 @@ func (c *CacheEntryEndpoint) setVersionedResource(r VersionedResource) {
 // versionedK8sNamespace implements the VersionedEndpointResource interface.
 type versionedK8sPod struct {
 	*corev1.Pod
-	v3 *apiv3.WorkloadEndpoint
-	v1 *model.WorkloadEndpoint
+	v3      *apiv3.WorkloadEndpoint
+	v1      *model.WorkloadEndpoint
+	validIP bool
 }
 
 // getV3 implements the VersionedEndpointResource interface.
@@ -97,11 +98,16 @@ func (v *versionedK8sPod) getV1Profiles() []string {
 	return v.v1.ProfileIDs
 }
 
-func (v *versionedK8sPod) getIPs() (set.Set, error) {
-	if len(v.v3.Spec.IPNetworks) == 0 {
-		return nil, errors.New("no IP address found in pod")
+func (v *versionedK8sPod) getIPOrEndpointIDs() (set.Set, error) {
+	if v.validIP {
+		// Where possible use the IP address to identify the pod.
+		return ips.NormalizedIPSet(v.v3.Spec.IPNetworks...)
 	}
-	return ips.NormalizedIPSet(v.v3.Spec.IPNetworks...)
+	// If the pod IP address is not present (which it might not be since we don't recommend auditing pod status)
+	// then use the pod ID converted to a string to identify this endpoint.
+	id := resources.GetResourceID(v.Pod).String()
+	log.Debugf("Including %s in IP/endpoint ID match", id)
+	return set.From(id), nil
 }
 
 // versionedCalicoHostEndpoint implements the VersionedEndpointResource interface.
@@ -130,7 +136,7 @@ func (v *versionedCalicoHostEndpoint) getV1Profiles() []string {
 	return v.v1.ProfileIDs
 }
 
-func (v *versionedCalicoHostEndpoint) getIPs() (set.Set, error) {
+func (v *versionedCalicoHostEndpoint) getIPOrEndpointIDs() (set.Set, error) {
 	if len(v.Spec.ExpectedIPs) == 0 {
 		return nil, errors.New("no expectedIPs configured")
 	}
@@ -157,7 +163,7 @@ func (c *endpointEngine) kinds() []metav1.TypeMeta {
 func (c *endpointEngine) register(cache engineCache) {
 	c.engineCache = cache
 	c.EndpointLabelSelector().RegisterCallbacks(KindsNetworkPolicy, c.policyMatchStarted, c.policyMatchStopped)
-	c.IPManager().RegisterCallbacks(KindsServiceEndpoints, c.ipMatchStarted, c.ipMatchStopped)
+	c.IPOrEndpointManager().RegisterCallbacks(KindsServiceEndpoints, c.ipMatchStarted, c.ipMatchStopped)
 
 	// Register for updates for all NetworkPolicy events. We don't care about Added/Deleted/Updated events as any
 	// changes to the cross-referencing will result in a notification here where we will requeue any changed endpoints.
@@ -201,6 +207,17 @@ func (c *endpointEngine) convertToVersioned(res resources.Resource) (VersionedRe
 			v1:           v1.Value.(*model.HostEndpoint),
 		}, nil
 	case *corev1.Pod:
+		// Check if an IP address is available, if not then it won't be possible to convert the Pod.
+		ips, ipErr := c.converter.GetPodIPs(in)
+		if ipErr != nil || len(ips) == 0 {
+			// There is no valid IP. In this case we need to sneak in an IP address in order to get the conversion
+			// to succeeed. We'll flag that this IP address is not actually valid which will mean the getIPOrEndpointIDs
+			// will not return this invalid IP.
+			log.Debugf("Setting fake IP in Pod to ensure conversion is handled correctly - IP will be ignored: %s",
+				resources.GetResourceID(in))
+			in.Status.PodIP = "255.255.255.255"
+		}
+
 		kvp, err := c.converter.PodToWorkloadEndpoint(in)
 		if err != nil {
 			return nil, err
@@ -213,9 +230,10 @@ func (c *endpointEngine) convertToVersioned(res resources.Resource) (VersionedRe
 		}
 
 		return &versionedK8sPod{
-			Pod: in,
-			v3:  v3,
-			v1:  v1.(*model.WorkloadEndpoint),
+			Pod:     in,
+			v3:      v3,
+			v1:      v1.(*model.WorkloadEndpoint),
+			validIP: len(ips) != 0,
 		}, nil
 	}
 
@@ -239,12 +257,12 @@ func (c *endpointEngine) resourceUpdated(id apiv3.ResourceID, entry CacheEntry, 
 	// modified to include namespace and service account details.
 	c.EndpointLabelSelector().UpdateLabels(id, x.getV1Labels(), x.getV1Profiles())
 
-	// Update the IP manager with the entries updated IP addresses.
-	i, err := x.getIPs()
+	// Up`date the IP manager with the entries updated IP addresses or if the IP address is unknown the endpoint ID.
+	i, err := x.getIPOrEndpointIDs()
 	if err != nil {
 		x.clog.Info("Unable to determine IP addresses")
 	}
-	c.IPManager().SetOwnerKeys(id, i)
+	c.IPOrEndpointManager().SetOwnerKeys(id, i)
 }
 
 // resourceDeleted implements the resourceCacheEngine interface.
@@ -253,7 +271,7 @@ func (c *endpointEngine) resourceDeleted(id apiv3.ResourceID, _ CacheEntry) {
 	c.EndpointLabelSelector().DeleteLabels(id)
 
 	// Delete the endpoint from the IP manager.
-	c.IPManager().DeleteOwner(id)
+	c.IPOrEndpointManager().DeleteOwner(id)
 }
 
 // recalculate implements the resourceCacheEngine interface.

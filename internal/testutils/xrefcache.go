@@ -473,7 +473,7 @@ func (t *XrefCacheTester) GetEndpoints(nameIdx Name, namespaceIdx Namespace) *xr
 	return e.(*xrefcache.CacheEntryK8sServiceEndpoints)
 }
 
-func (t *XrefCacheTester) SetEndpoints(nameIdx Name, namespaceIdx Namespace, ips IP) apiv3.ResourceID {
+func (t *XrefCacheTester) SetEndpoints(nameIdx Name, namespaceIdx Namespace, ips IP, pods ...apiv3.ResourceID) apiv3.ResourceID {
 	r := getResourceId(resources.TypeK8sEndpoints, nameIdx, namespaceIdx)
 	ipAddrs := ipByteToIPStringSlice(ips)
 
@@ -496,6 +496,22 @@ func (t *XrefCacheTester) SetEndpoints(nameIdx Name, namespaceIdx Namespace, ips
 	ss = append(ss, corev1.EndpointSubset{
 		Addresses: addrs,
 	})
+	if len(pods) > 0 {
+		addrs := []corev1.EndpointAddress{}
+		for _, pod := range pods {
+			addrs = append(addrs, corev1.EndpointAddress{
+				IP: "0.0.0.0",
+				TargetRef: &corev1.ObjectReference{
+					Kind:      "Pod",
+					Name:      pod.Name,
+					Namespace: pod.Namespace,
+				},
+			})
+		}
+		ss = append(ss, corev1.EndpointSubset{
+			Addresses: addrs,
+		})
+	}
 
 	t.OnUpdate(syncer.Update{
 		Type:       syncer.UpdateTypeSet,

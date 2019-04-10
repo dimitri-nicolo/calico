@@ -67,13 +67,13 @@ type reporter struct {
 	eventer  event.Fetcher
 	xc       xrefcache.XrefCache
 	replayer syncer.Starter
-	data     *apiv3.ReportData
 
-	//TODO(rlb): Urgh this is truly terrible. We have different definitions of ResourceID between compliance and
-	//TODO       the API.
+	// Consolidate the tracked in-scope endpoint events into a local cache, which will get converted and copied into
+	// the report data structure.
 	inScopeEndpoints map[apiv3.ResourceID]*reportEndpoint
 	services         map[apiv3.ResourceID]xrefcache.CacheEntryFlags
 	namespaces       map[string]xrefcache.CacheEntryFlags
+	data             *apiv3.ReportData
 }
 
 type reportEndpoint struct {

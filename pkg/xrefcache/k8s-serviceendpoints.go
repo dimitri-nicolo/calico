@@ -26,7 +26,7 @@ var (
 // endpoints.
 type VersionedServiceEndpointsResource interface {
 	VersionedResource
-	getIPs() (set.Set, error)
+	getIPAndEndpointIDs() (set.Set, error)
 }
 
 type CacheEntryK8sServiceEndpoints struct {
@@ -75,16 +75,29 @@ func (v *versionedK8sServiceEndpoints) getV1() interface{} {
 	return nil
 }
 
-func (v *versionedK8sServiceEndpoints) getIPs() (set.Set, error) {
+func (v *versionedK8sServiceEndpoints) getIPAndEndpointIDs() (set.Set, error) {
 	var lastErr error
 	s := set.New()
 	for ssIdx := range v.Endpoints.Subsets {
 		for addrIdx := range v.Endpoints.Subsets[ssIdx].Addresses {
+			if target := v.Endpoints.Subsets[ssIdx].Addresses[addrIdx].TargetRef; target != nil && target.Kind == "Pod" {
+				pod := apiv3.ResourceID{
+					TypeMeta:  resources.TypeK8sPods,
+					Name:      target.Name,
+					Namespace: target.Namespace,
+				}.String()
+
+				log.Debugf("Including %s in service endpoints: %s", pod, resources.GetResourceID(v.Endpoints))
+				s.Add(pod)
+			}
+
 			ip, err := ips.NormalizeIP(v.Endpoints.Subsets[ssIdx].Addresses[addrIdx].IP)
 			if err != nil {
 				lastErr = err
 				continue
 			}
+
+			log.Debugf("Including %s in service endpoints: %s", ip, resources.GetResourceID(v.Endpoints))
 			s.Add(ip)
 		}
 	}
@@ -125,15 +138,15 @@ func (c *K8sServiceEndpointsEngine) resourceAdded(id apiv3.ResourceID, entry Cac
 
 func (c *K8sServiceEndpointsEngine) resourceUpdated(id apiv3.ResourceID, entry CacheEntry, prev VersionedResource) {
 	x := entry.(*CacheEntryK8sServiceEndpoints)
-	i, err := x.getIPs()
+	i, err := x.getIPAndEndpointIDs()
 	if err != nil {
-		x.clog.Info("Unable to determine IP addresses")
+		x.clog.Info("Unable to determine IP addresses or Pod IDs")
 	}
-	c.IPManager().SetClientKeys(id, i)
+	c.IPOrEndpointManager().SetClientKeys(id, i)
 }
 
 func (c *K8sServiceEndpointsEngine) resourceDeleted(id apiv3.ResourceID, entry CacheEntry) {
-	c.IPManager().DeleteClient(id)
+	c.IPOrEndpointManager().DeleteClient(id)
 }
 
 // recalculate implements the resourceCacheEngine interface.

@@ -81,7 +81,7 @@ func (d *dispatcher) RegisterOnUpdateHandler(kind metav1.TypeMeta, updateTypes s
 func (d *dispatcher) OnUpdate(update syncer.Update) {
 	registration, ok := d.resourceTypes[update.ResourceID.TypeMeta]
 	if !ok {
-		log.Infof("Update for unregistered resource type: %s", update.ResourceID.GroupVersionKind)
+		log.Infof("Update for unregistered resource type: %s", update.ResourceID)
 		return
 	}
 

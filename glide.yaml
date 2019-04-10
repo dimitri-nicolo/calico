@@ -7,7 +7,7 @@ import:
 - package: github.com/projectcalico/libcalico-go
   vcs: git
   repo: git@github.com:tigera/libcalico-go-private.git
-  version: b366ebe3298bca1d6a2b74e8c81d8bd529b70c97
+  version: 14de1ceb109a1be0a7ba757e5d5173185f9fbc87
 - package: github.com/tigera/licensing
   repo: git@github.com:tigera/licensing
   vcs: git

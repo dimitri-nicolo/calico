@@ -64,7 +64,7 @@ func NewXrefCache() XrefCache {
 		endpointLabelSelector:            endpointLabelSelection,
 		networkSetLabelSelector:          netsetLabelSelection,
 		networkPolicyRuleSelectorManager: networkPolicyRuleSelectorManager,
-		ipManager:                        keyselector.New(),
+		ipOrEndpointManager:              keyselector.New(),
 		caches:                           map[metav1.TypeMeta]*resourceCache{},
 		priorities:                       map[metav1.TypeMeta]int8{},
 	}
@@ -95,7 +95,7 @@ type xrefCache struct {
 	endpointLabelSelector            labelselector.Interface
 	networkSetLabelSelector          labelselector.Interface
 	networkPolicyRuleSelectorManager NetworkPolicyRuleSelectorManager
-	ipManager                        keyselector.Interface
+	ipOrEndpointManager              keyselector.Interface
 	caches                           map[metav1.TypeMeta]*resourceCache
 	priorities                       map[metav1.TypeMeta]int8
 	modified                         resources.PriorityQueue

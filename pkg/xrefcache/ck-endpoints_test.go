@@ -180,11 +180,14 @@ var _ = Describe("Pods cache verification", func() {
 		By("applying pod2 IP2")
 		tester.SetPod(Name2, Namespace1, NoLabels, IP2, NoServiceAccount, NoPodOptions)
 
+		By("applying pod3 with no IP")
+		pod3 := tester.SetPod(Name2, Namespace2, NoLabels, 0, NoServiceAccount, NoPodOptions)
+
 		By("applying service1 with IP1 IP2 IP3")
 		svc1 := tester.SetEndpoints(Name1, Namespace1, IP1|IP2|IP3)
 
-		By("applying service2 with IP1 IP3")
-		svc2 := tester.SetEndpoints(Name2, Namespace1, IP1|IP3)
+		By("applying service2 with IP1 IP3 and pod3 ref")
+		svc2 := tester.SetEndpoints(Name2, Namespace1, IP1|IP3, pod3)
 
 		By("checking that pod1 refs service1 and service2")
 		ep := tester.GetPod(Name1, Namespace1)
@@ -199,7 +202,13 @@ var _ = Describe("Pods cache verification", func() {
 		Expect(ep.Services.Len()).To(Equal(1))
 		Expect(ep.Services.Contains(svc1)).To(BeTrue())
 
-		By("updating service2 with IP2 IP3")
+		By("checking that pod3 refs service2")
+		ep = tester.GetPod(Name2, Namespace2)
+		Expect(ep).NotTo(BeNil())
+		Expect(ep.Services.Len()).To(Equal(1))
+		Expect(ep.Services.Contains(svc2)).To(BeTrue())
+
+		By("updating service2 with IP2 IP3 and removing pod3")
 		tester.SetEndpoints(Name2, Namespace1, IP2|IP3)
 
 		By("checking that pod1 no longer refs service2")
@@ -215,6 +224,11 @@ var _ = Describe("Pods cache verification", func() {
 		Expect(ep.Services.Len()).To(Equal(2))
 		Expect(ep.Services.Contains(svc1)).To(BeTrue())
 		Expect(ep.Services.Contains(svc2)).To(BeTrue())
+
+		By("checking that pod3 no longer refs service2")
+		ep = tester.GetPod(Name2, Namespace2)
+		Expect(ep).NotTo(BeNil())
+		Expect(ep.Services.Len()).To(Equal(0))
 
 		By("deleting and re-adding pod2 and checking services are the same")
 		tester.DeletePod(Name2, Namespace1)

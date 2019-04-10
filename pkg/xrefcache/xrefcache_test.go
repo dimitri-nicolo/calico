@@ -39,7 +39,6 @@ var _ = Describe("xref cache in-scope callbacks", func() {
 	var nsID1 apiv3.ResourceID
 	var saID1 apiv3.ResourceID
 	var saID2 apiv3.ResourceID
-	//var nsID2 apiv3.ResourceID
 	var podID1 apiv3.ResourceID
 	var podID2 apiv3.ResourceID
 	var podID3 apiv3.ResourceID
