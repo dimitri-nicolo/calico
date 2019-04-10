@@ -363,9 +363,9 @@ spec:
                 optional: true
           - name: ELASTIC_CA
             valueFrom:
-              secretKeyRef:
+              configMapKeyRef:
                 name: tigera-es-config
-                key: tigera.elasticsearch.ca
+                key: tigera.elasticsearch.ca.path
                 optional: true
 {{- if .Values.esProxy.env }}
 {{ toYaml .Values.esProxy.env | indent 10 }}

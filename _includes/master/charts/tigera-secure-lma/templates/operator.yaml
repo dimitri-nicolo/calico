@@ -134,7 +134,7 @@ metadata:
   namespace: calico-monitoring
 
 ---
-{{- if not .Values.runElasticsearchOperatorClusterAdmin }}
+{{- if and (not .Values.runElasticsearchOperatorClusterAdmin) (eq .Values.elasticsearchType "operator") }}
 
 # Permissions for the elasticsearch operator
 apiVersion: rbac.authorization.k8s.io/v1beta1
