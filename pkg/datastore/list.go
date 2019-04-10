@@ -5,12 +5,11 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/tigera/compliance/pkg/list"
 )
 
-func (cs *clientSet) RetrieveList(kind schema.GroupVersionKind) (*list.TimestampedResourceList, error) {
+func (cs *clientSet) RetrieveList(kind metav1.TypeMeta) (*list.TimestampedResourceList, error) {
 	log.WithField("type", kind).Debug("Listing resource")
 
 	requestStartTime := metav1.Now()
@@ -22,7 +21,7 @@ func (cs *clientSet) RetrieveList(kind schema.GroupVersionKind) (*list.Timestamp
 
 	// TODO(rlb): strictly speaking the list type is NOT the same as the items it contains.
 	// List func succeeded. Overwrite the group/version/kind which k8s does not correctly populate.
-	l.GetObjectKind().SetGroupVersionKind(kind)
+	l.GetObjectKind().SetGroupVersionKind(kind.GroupVersionKind())
 	return &list.TimestampedResourceList{
 		ResourceList:              l,
 		RequestStartedTimestamp:   requestStartTime,

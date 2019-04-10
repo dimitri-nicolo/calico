@@ -8,7 +8,7 @@ import (
 	"github.com/olivere/elastic"
 	log "github.com/sirupsen/logrus"
 
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	auditv1 "k8s.io/apiserver/pkg/apis/audit/v1beta1"
 
 	"github.com/tigera/compliance/pkg/event"
@@ -19,7 +19,7 @@ const (
 	pageSize      = 100
 )
 
-func (c *client) GetAuditEvents(ctx context.Context, gvk *schema.GroupVersionKind, start, end *time.Time) <-chan *event.AuditEventResult {
+func (c *client) GetAuditEvents(ctx context.Context, kind *metav1.TypeMeta, start, end *time.Time) <-chan *event.AuditEventResult {
 	// create the channel that the retrieved events will fill into.
 	ch := make(chan *event.AuditEventResult, pageSize)
 
@@ -34,9 +34,9 @@ func (c *client) GetAuditEvents(ctx context.Context, gvk *schema.GroupVersionKin
 			queries := []elastic.Query{}
 
 			// Query by TypeMeta if specified.
-			if gvk != nil {
-				queries = append(queries, elastic.NewMatchQuery("responseObject.kind", gvk.Kind))
-				queries = append(queries, elastic.NewMatchQuery("responseObject.apiVersion", gvk.GroupVersion().String()))
+			if kind != nil {
+				queries = append(queries, elastic.NewMatchQuery("responseObject.kind", kind.Kind))
+				queries = append(queries, elastic.NewMatchQuery("responseObject.apiVersion", kind.APIVersion))
 			}
 
 			// Query by from/to if specified.

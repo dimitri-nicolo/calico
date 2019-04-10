@@ -33,11 +33,12 @@ type Client interface {
 	Backend() *elastic.Client
 }
 
-// TODO(rlb): This should be an interface not a public struct.
+// client implements the Client interface.
 type client struct {
 	*elastic.Client
 }
 
+// MustGetElasticClient returns the elastic Client, or panics if it's not possible.
 func MustGetElasticClient() Client {
 	c, err := NewFromEnv()
 	if err != nil {
@@ -46,6 +47,7 @@ func MustGetElasticClient() Client {
 	return c
 }
 
+// NewFromEnv returns a new elastic Client using configuration in the environments.
 func NewFromEnv() (Client, error) {
 	var u *url.URL
 	uri := os.Getenv("ELASTIC_URI")

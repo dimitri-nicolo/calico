@@ -4,7 +4,8 @@ package resources
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 )
 
 type Resource interface {
@@ -17,36 +18,9 @@ type ResourceList interface {
 	metav1.ListMetaAccessor
 }
 
-type NameNamespace struct {
-	Name      string
-	Namespace string
-}
-
-type ResourceID struct {
-	schema.GroupVersionKind
-	NameNamespace
-}
-
-func (r ResourceID) String() string {
-	return r.GroupVersion().String() + "/" + r.Kind + "/" + r.NameNamespace.String()
-}
-
-func GetResourceID(r Resource) ResourceID {
-	return ResourceID{
-		GroupVersionKind: r.GetObjectKind().GroupVersionKind(),
-		NameNamespace:    GetNameNamespace(r),
-	}
-}
-
-func (nn NameNamespace) String() string {
-	if nn.Namespace == "" {
-		return nn.Name
-	}
-	return nn.Namespace + "/" + nn.Name
-}
-
-func GetNameNamespace(r Resource) NameNamespace {
-	return NameNamespace{
+func GetResourceID(r Resource) apiv3.ResourceID {
+	return apiv3.ResourceID{
+		TypeMeta:  GetTypeMeta(r),
 		Name:      r.GetObjectMeta().GetName(),
 		Namespace: r.GetObjectMeta().GetNamespace(),
 	}

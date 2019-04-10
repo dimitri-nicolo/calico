@@ -4,55 +4,54 @@ package resources
 import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 )
 
 const (
-	v1               = "v1"
-	v1beta1          = "v1beta1"
-	v3               = "v3"
-	grpProjectcalico = "projectcalico.org"
-	grpK8sNetworking = "networking.k8s.io"
-	grpExtensions    = "extensions"
+	v1                      = "v1"
+	grpVersionProjectcalico = "projectcalico.org/v3"
+	grpVersionK8sNetworking = "networking.k8s.io/v1"
+	grpVersionExtensions    = "extensions/v1beta1"
 )
 
 var (
-	ResourceTypeGlobalNetworkPolicies = schema.GroupVersionKind{Group: grpProjectcalico, Version: v3, Kind: apiv3.KindGlobalNetworkPolicy}
-	ResourceTypeGlobalNetworkSets     = schema.GroupVersionKind{Group: grpProjectcalico, Version: v3, Kind: apiv3.KindGlobalNetworkSet}
-	ResourceTypeHostEndpoints         = schema.GroupVersionKind{Group: grpProjectcalico, Version: v3, Kind: apiv3.KindHostEndpoint}
-	ResourceTypeNetworkPolicies       = schema.GroupVersionKind{Group: grpProjectcalico, Version: v3, Kind: apiv3.KindNetworkPolicy}
-	ResourceTypeTiers                 = schema.GroupVersionKind{Group: grpProjectcalico, Version: v3, Kind: apiv3.KindTier}
-	ResourceTypeServices              = schema.GroupVersionKind{Version: v1, Kind: "Service"}
-	ResourceTypeEndpoints             = schema.GroupVersionKind{Version: v1, Kind: "Endpoints"}
-	ResourceTypeNamespaces            = schema.GroupVersionKind{Version: v1, Kind: "Namespace"}
-	ResourceTypeK8sNetworkPolicies    = schema.GroupVersionKind{Group: grpK8sNetworking, Version: v1, Kind: "NetworkPolicy"}
-	ResourceTypeK8sNetworkPoliciesDep = schema.GroupVersionKind{Group: grpExtensions, Version: v1beta1, Kind: "NetworkPolicy"}
-	ResourceTypePods                  = schema.GroupVersionKind{Version: v1, Kind: "Pod"}
-	ResourceTypeServiceAccounts       = schema.GroupVersionKind{Version: v1, Kind: "ServiceAccount"}
+	TypeCalicoGlobalNetworkPolicies  = metav1.TypeMeta{APIVersion: grpVersionProjectcalico, Kind: apiv3.KindGlobalNetworkPolicy}
+	TypeCalicoGlobalNetworkSets      = metav1.TypeMeta{APIVersion: grpVersionProjectcalico, Kind: apiv3.KindGlobalNetworkSet}
+	TypeCalicoHostEndpoints          = metav1.TypeMeta{APIVersion: grpVersionProjectcalico, Kind: apiv3.KindHostEndpoint}
+	TypeCalicoNetworkPolicies        = metav1.TypeMeta{APIVersion: grpVersionProjectcalico, Kind: apiv3.KindNetworkPolicy}
+	TypeCalicoTiers                  = metav1.TypeMeta{APIVersion: grpVersionProjectcalico, Kind: apiv3.KindTier}
+	TypeK8sServices                  = metav1.TypeMeta{APIVersion: v1, Kind: "Service"}
+	TypeK8sEndpoints                 = metav1.TypeMeta{APIVersion: v1, Kind: "Endpoints"}
+	TypeK8sNamespaces                = metav1.TypeMeta{APIVersion: v1, Kind: "Namespace"}
+	TypeK8sNetworkPolicies           = metav1.TypeMeta{APIVersion: grpVersionK8sNetworking, Kind: "NetworkPolicy"}
+	TypeK8sNetworkPoliciesExtensions = metav1.TypeMeta{APIVersion: grpVersionExtensions, Kind: "NetworkPolicy"}
+	TypeK8sPods                      = metav1.TypeMeta{APIVersion: v1, Kind: "Pod"}
+	TypeK8sServiceAccounts           = metav1.TypeMeta{APIVersion: v1, Kind: "ServiceAccount"}
 )
 
 type ResourceHelper interface {
-	GroupVersionKind() schema.GroupVersionKind
+	TypeMeta() metav1.TypeMeta
 	NewResource() Resource
 	NewResourceList() ResourceList
 }
 
-// GetGroupVersionKind extracts the group version kind from the resource unless
+// GetTypeMeta extracts the group version kind from the resource unless
 //   it is using a deprecated apiVersion
-func GetGroupVersionKind(res Resource) schema.GroupVersionKind {
+func GetTypeMeta(res Resource) metav1.TypeMeta {
 	gvk := res.GetObjectKind().GroupVersionKind()
-	if gvk == ResourceTypeK8sNetworkPoliciesDep {
-		gvk = ResourceTypeK8sNetworkPolicies
+	tm := metav1.TypeMeta{Kind: gvk.Kind, APIVersion: gvk.GroupVersion().String()}
+	if tm == TypeK8sNetworkPoliciesExtensions {
+		tm = TypeK8sNetworkPolicies
 	}
-	return gvk
+	return tm
 }
 
 // GetResourceHelper returns the requested ResourceHelper, or nil if not supported.
-func GetResourceHelper(gvk schema.GroupVersionKind) ResourceHelper {
-	if gvk == ResourceTypeK8sNetworkPoliciesDep {
-		return resourceHelpersMap[ResourceTypeK8sNetworkPolicies]
+func GetResourceHelper(gvk metav1.TypeMeta) ResourceHelper {
+	if gvk == TypeK8sNetworkPoliciesExtensions {
+		return resourceHelpersMap[TypeK8sNetworkPolicies]
 	}
 	return resourceHelpersMap[gvk]
 }
@@ -65,7 +64,7 @@ func GetAllResourceHelpers() []ResourceHelper {
 }
 
 // NewResource returns a new instance of the requested resource type.
-func NewResource(gvk schema.GroupVersionKind) Resource {
+func NewResource(gvk metav1.TypeMeta) Resource {
 	helper := resourceHelpersMap[gvk]
 	if helper == nil {
 		return nil
@@ -74,7 +73,7 @@ func NewResource(gvk schema.GroupVersionKind) Resource {
 }
 
 // NewResourceList returns a new instance of the requested resource type list.
-func NewResourceList(gvk schema.GroupVersionKind) ResourceList {
+func NewResourceList(gvk metav1.TypeMeta) ResourceList {
 	helper := resourceHelpersMap[gvk]
 	if helper == nil {
 		return nil
@@ -83,12 +82,12 @@ func NewResourceList(gvk schema.GroupVersionKind) ResourceList {
 }
 
 type resourceHelper struct {
-	kind         schema.GroupVersionKind
+	kind         metav1.TypeMeta
 	resource     Resource
 	resourceList ResourceList
 }
 
-func (h *resourceHelper) GroupVersionKind() schema.GroupVersionKind {
+func (h *resourceHelper) TypeMeta() metav1.TypeMeta {
 	return h.kind
 }
 
@@ -100,47 +99,48 @@ func (h *resourceHelper) NewResourceList() ResourceList {
 	return h.resourceList.DeepCopyObject().(ResourceList)
 }
 
+//TODO(rlb): Need to normalize the output from the parsed data. The xref cache
 var (
-	resourceHelpersMap = map[schema.GroupVersionKind]ResourceHelper{}
+	resourceHelpersMap = map[metav1.TypeMeta]ResourceHelper{}
 	resourceHelpers    = []ResourceHelper{
 		&resourceHelper{
-			ResourceTypePods, &corev1.Pod{}, &corev1.PodList{},
+			TypeK8sPods, &corev1.Pod{}, &corev1.PodList{},
 		},
 		&resourceHelper{
-			ResourceTypeNamespaces, &corev1.Namespace{}, &corev1.NamespaceList{},
+			TypeK8sNamespaces, &corev1.Namespace{}, &corev1.NamespaceList{},
 		},
 		&resourceHelper{
-			ResourceTypeServiceAccounts, &corev1.ServiceAccount{}, &corev1.ServiceAccountList{},
+			TypeK8sServiceAccounts, &corev1.ServiceAccount{}, &corev1.ServiceAccountList{},
 		},
 		&resourceHelper{
-			ResourceTypeEndpoints, &corev1.Endpoints{}, &corev1.EndpointsList{},
+			TypeK8sEndpoints, &corev1.Endpoints{}, &corev1.EndpointsList{},
 		},
 		&resourceHelper{
-			ResourceTypeServices, &corev1.Service{}, &corev1.ServiceList{},
+			TypeK8sServices, &corev1.Service{}, &corev1.ServiceList{},
 		},
 		&resourceHelper{
-			ResourceTypeK8sNetworkPolicies, &networkingv1.NetworkPolicy{}, &networkingv1.NetworkPolicyList{},
+			TypeK8sNetworkPolicies, &networkingv1.NetworkPolicy{}, &networkingv1.NetworkPolicyList{},
 		},
 		&resourceHelper{
-			ResourceTypeTiers, &apiv3.Tier{}, &apiv3.TierList{},
+			TypeCalicoTiers, &apiv3.Tier{}, &apiv3.TierList{},
 		},
 		&resourceHelper{
-			ResourceTypeHostEndpoints, &apiv3.HostEndpoint{}, &apiv3.HostEndpointList{},
+			TypeCalicoHostEndpoints, &apiv3.HostEndpoint{}, &apiv3.HostEndpointList{},
 		},
 		&resourceHelper{
-			ResourceTypeGlobalNetworkSets, &apiv3.GlobalNetworkSet{}, &apiv3.GlobalNetworkSetList{},
+			TypeCalicoGlobalNetworkSets, &apiv3.GlobalNetworkSet{}, &apiv3.GlobalNetworkSetList{},
 		},
 		&resourceHelper{
-			ResourceTypeNetworkPolicies, &apiv3.NetworkPolicy{}, &apiv3.NetworkPolicyList{},
+			TypeCalicoNetworkPolicies, &apiv3.NetworkPolicy{}, &apiv3.NetworkPolicyList{},
 		},
 		&resourceHelper{
-			ResourceTypeGlobalNetworkPolicies, &apiv3.GlobalNetworkPolicy{}, &apiv3.GlobalNetworkPolicyList{},
+			TypeCalicoGlobalNetworkPolicies, &apiv3.GlobalNetworkPolicy{}, &apiv3.GlobalNetworkPolicyList{},
 		},
 	}
 )
 
 func init() {
 	for _, rh := range resourceHelpers {
-		resourceHelpersMap[rh.GroupVersionKind()] = rh
+		resourceHelpersMap[rh.TypeMeta()] = rh
 	}
 }

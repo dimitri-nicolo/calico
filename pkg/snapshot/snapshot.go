@@ -9,7 +9,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/libcalico-go/lib/errors"
 
@@ -25,7 +25,7 @@ const (
 )
 
 // Run is the entrypoint to start running the snapshotter.
-func Run(ctx context.Context, kind schema.GroupVersionKind, listSrc list.Source, listDest list.Destination) error {
+func Run(ctx context.Context, kind metav1.TypeMeta, listSrc list.Source, listDest list.Destination) error {
 	s := &snapshotter{
 		ctx:      ctx,
 		kind:     kind,
@@ -38,7 +38,7 @@ func Run(ctx context.Context, kind schema.GroupVersionKind, listSrc list.Source,
 
 type snapshotter struct {
 	ctx      context.Context
-	kind     schema.GroupVersionKind
+	kind     metav1.TypeMeta
 	clog     *logrus.Entry
 	listSrc  list.Source
 	listDest list.Destination

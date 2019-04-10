@@ -7,6 +7,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/set"
 
 	"github.com/tigera/compliance/pkg/dispatcher"
@@ -15,47 +16,39 @@ import (
 )
 
 var (
-	pod1ID = resources.ResourceID{
-		GroupVersionKind: resources.ResourceTypePods,
-		NameNamespace: resources.NameNamespace{
-			Name:      "test",
-			Namespace: "namespace",
-		},
+	pod1ID = apiv3.ResourceID{
+		TypeMeta:  resources.TypeK8sPods,
+		Name:      "test",
+		Namespace: "namespace",
 	}
 	pod1Add = syncer.Update{
 		Type:       syncer.UpdateTypeSet,
 		ResourceID: pod1ID,
-		Resource:   resources.NewResource(resources.ResourceTypePods),
+		Resource:   resources.NewResource(resources.TypeK8sPods),
 	}
-	pod2ID = resources.ResourceID{
-		GroupVersionKind: resources.ResourceTypePods,
-		NameNamespace: resources.NameNamespace{
-			Name:      "test2",
-			Namespace: "namespace2",
-		},
+	pod2ID = apiv3.ResourceID{
+		TypeMeta:  resources.TypeK8sPods,
+		Name:      "test2",
+		Namespace: "namespace2",
 	}
 	pod2Delete = syncer.Update{
 		Type:       syncer.UpdateTypeDeleted,
 		ResourceID: pod2ID,
 	}
-	policy1ID = resources.ResourceID{
-		GroupVersionKind: resources.ResourceTypeNetworkPolicies,
-		NameNamespace: resources.NameNamespace{
-			Name:      "testNP",
-			Namespace: "namespace",
-		},
+	policy1ID = apiv3.ResourceID{
+		TypeMeta:  resources.TypeCalicoNetworkPolicies,
+		Name:      "testNP",
+		Namespace: "namespace",
 	}
 	policy1Update = syncer.Update{
 		Type:       syncer.UpdateTypeSet,
 		ResourceID: policy1ID,
-		Resource:   resources.NewResource(resources.ResourceTypeNetworkPolicies),
+		Resource:   resources.NewResource(resources.TypeCalicoNetworkPolicies),
 	}
-	policy2ID = resources.ResourceID{
-		GroupVersionKind: resources.ResourceTypeNetworkPolicies,
-		NameNamespace: resources.NameNamespace{
-			Name:      "testNP2",
-			Namespace: "namespace",
-		},
+	policy2ID = apiv3.ResourceID{
+		TypeMeta:  resources.TypeCalicoNetworkPolicies,
+		Name:      "testNP2",
+		Namespace: "namespace",
 	}
 	policy2Delete = syncer.Update{
 		Type:       syncer.UpdateTypeDeleted,
@@ -103,7 +96,7 @@ func (t *tester) onStatusUpdate(status syncer.StatusUpdate) {
 
 func (t *tester) registerPodUpdates(types syncer.UpdateType) {
 	t.d.RegisterOnUpdateHandler(
-		resources.ResourceTypePods,
+		resources.TypeK8sPods,
 		types,
 		t.onPodUpdate,
 	)
@@ -111,7 +104,7 @@ func (t *tester) registerPodUpdates(types syncer.UpdateType) {
 
 func (t *tester) registerPolicyUpdates(types syncer.UpdateType) {
 	t.d.RegisterOnUpdateHandler(
-		resources.ResourceTypeNetworkPolicies,
+		resources.TypeCalicoNetworkPolicies,
 		types,
 		t.onPolicyUpdate,
 	)
