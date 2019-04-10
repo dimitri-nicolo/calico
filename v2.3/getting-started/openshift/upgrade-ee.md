@@ -39,6 +39,11 @@ This is typically found at `/usr/share/ansible/openshift-ansible/playbooks`.
 curl {{site.url}}/{{page.version}}/getting-started/openshift/upgrade-calico.yaml -o /usr/share/ansible/openshift-ansible/playbooks/upgrade-calico.yaml
 ```
 
+For users running OpenShift 3.10 and earlier, replace the above command with the following:
+```
+curl {{site.url}}/{{page.version}}/getting-started/openshift/upgrade-calico-3.10.yaml -o /usr/share/ansible/openshift-ansible/playbooks/upgrade-calico.yaml
+```
+
 Run the playbook.
 
 ```
