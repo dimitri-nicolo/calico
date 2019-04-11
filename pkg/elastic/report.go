@@ -62,9 +62,10 @@ func (c *client) RetrieveArchivedReportSummaries() ([]*report.ArchivedReportData
 		res, err := c.Search().
 			Index(reportsIndex).
 			Sort("startTime", false).
-			StoredFields("reportType", "startTime", "endTime", "uiSummary").
-			From(i).Size(pageSize).
-			Do(context.Background())
+			StoredFields(
+				"reportName", "reportType", "startTime", "endTime",
+				"endpointsSummary", "namespacesSummary", "servicesSummary", "uiSummary",
+			).From(i).Size(pageSize).Do(context.Background())
 		if err != nil {
 			log.WithError(err).Error("failed to query for raw report data")
 			return nil, err

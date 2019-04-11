@@ -67,7 +67,6 @@ func (c *client) RetrieveList(kind metav1.TypeMeta, from, to *time.Time, ascendi
 	return l, nil
 }
 
-//TODO(rlb): What is the ES Id all about?
 func (c *client) StoreList(_ metav1.TypeMeta, l *list.TimestampedResourceList) error {
 	res, err := c.Index().
 		Index(snapshotsIndex).
