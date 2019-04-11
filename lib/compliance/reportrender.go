@@ -40,7 +40,7 @@ var (
 		Namespace: "sample-ns",
 	}
 	EndpointSample = api.EndpointsReportEndpoint{
-		ID:               ResourceIdSample,
+		Endpoint:         ResourceIdSample,
 		IngressProtected: false,
 		EgressProtected:  true,
 		EnvoyEnabled:     false,
@@ -116,14 +116,16 @@ var (
 				},
 			},
 		},
-		EndpointsNumTotal:                     1,
-		EndpointsNumIngressProtected:          10,
-		EndpointsNumEgressProtected:           100,
-		EndpointsNumIngressFromInternet:       1000,
-		EndpointsNumEgressToInternet:          9000,
-		EndpointsNumIngressFromOtherNamespace: 900,
-		EndpointsNumEgressToOtherNamespace:    90,
-		EndpointsNumEnvoyEnabled:              9,
+		EndpointsSummary: api.EndpointsSummary{
+			NumTotal:                     1,
+			NumIngressProtected:          10,
+			NumEgressProtected:           100,
+			NumIngressFromInternet:       1000,
+			NumEgressToInternet:          9000,
+			NumIngressFromOtherNamespace: 900,
+			NumEgressToOtherNamespace:    90,
+			NumEnvoyEnabled:              9,
+		},
 		Endpoints: []api.EndpointsReportEndpoint{
 			EndpointSample,
 		},

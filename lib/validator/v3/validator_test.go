@@ -2310,11 +2310,11 @@ func init() {
 				Spec: api.ReportTypeSpec{
 					UISummaryTemplate: api.ReportTemplate{
 						Name:     "uist",
-						Template: "Total Endpoints: {{ .EndpointsNumTotal }}",
+						Template: "Report Name: {{ .ReportName }}",
 					},
 					UICompleteTemplate: api.ReportTemplate{
 						Name:     "uict",
-						Template: "Total Endpoints: {{ .EndpointsNumTotal }}",
+						Template: "Report Name: {{ .ReportName }}",
 					},
 				},
 			},
@@ -2326,11 +2326,11 @@ func init() {
 				Spec: api.ReportTypeSpec{
 					UISummaryTemplate: api.ReportTemplate{
 						Name:     "uist",
-						Template: "Total Endpoints: {{ .EndpointsNumTotal }}",
+						Template: "Report Name: {{ .ReportName }}",
 					},
 					UICompleteTemplate: api.ReportTemplate{
 						Name:     "uict",
-						Template: "Total Endpoints: {{ .EndpointsNumTotal }}",
+						Template: "Report Name: {{ .ReportName }}",
 					},
 				},
 			},
@@ -2341,11 +2341,11 @@ func init() {
 				ObjectMeta: v1.ObjectMeta{Name: "grt"},
 				Spec: api.ReportTypeSpec{
 					UISummaryTemplate: api.ReportTemplate{
-						Template: "Total Endpoints: {{ .EndpointsNumTotal }}",
+						Template: "Report Name: {{ .ReportName }}",
 					},
 					UICompleteTemplate: api.ReportTemplate{
 						Name:     "uict",
-						Template: "Total Endpoints: {{ .EndpointsNumTotal }}",
+						Template: "Report Name: {{ .ReportName }}",
 					},
 				},
 			},
@@ -2371,11 +2371,11 @@ func init() {
 				Spec: api.ReportTypeSpec{
 					UISummaryTemplate: api.ReportTemplate{
 						Name:     "~uist",
-						Template: "Total Endpoints: {{ .EndpointsNumTotal }}",
+						Template: "Report Name: {{ .ReportName }}",
 					},
 					UICompleteTemplate: api.ReportTemplate{
 						Name:     "uict",
-						Template: "Total Endpoints: {{ .EndpointsNumTotal }}",
+						Template: "Report Name: {{ .ReportName }}",
 					},
 				},
 			},
@@ -2391,7 +2391,7 @@ func init() {
 					},
 					UICompleteTemplate: api.ReportTemplate{
 						Name:     "uict",
-						Template: "Total Endpoints: {{ .EndpointsNumTotal }}",
+						Template: "Report Name: {{ .ReportName }}",
 					},
 				},
 			},
@@ -2404,11 +2404,11 @@ func init() {
 					UISummaryTemplate: api.ReportTemplate{
 						Name: "uist",
 						Template: `startTime,endTime,endpointSelector,namespaceSelector,serviceAccountSelectors,endpointsNumInScope,endpointsNumIngressProtected,endpointsNumEgressProtected,endpointsNumIngressFromInternet,endpointsNumEgressToInternet,endpointsNumIngressFromOtherNamespace,endpointsNumEgressToOtherNamespace,endpointsNumEnvoyEnabled
-{{ .StartTime }},{{ .EndTime }},{{ .ReportSpec.EndpointsSelection.EndpointSelector }},{{ .ReportSpec.EndpointsSelection.Namespaces.Selector }},{{ .ReportSpec.EndpointsSelection.ServiceAccounts.Selector }},{{ .EndpointsNumTotal }},{{ .EndpointsNumIngressProtected }},{{ .EndpointsNumEgressProtected }},{{ .EndpointsNumIngressFromInternet }},{{ .EndpointsNumEgressToInternet }},{{ .EndpointsNumIngressFromOtherNamespace }},{{ .EndpointsNumEgressToOtherNamespace }},{{ .EndpointsNumEnvoyEnabled }}`,
+{{ .StartTime }},{{ .EndTime }},{{ .ReportSpec.EndpointsSelection.EndpointSelector }},{{ .ReportSpec.EndpointsSelection.Namespaces.Selector }},{{ .ReportSpec.EndpointsSelection.ServiceAccounts.Selector }},{{ .EndpointsSummary.NumTotal }},{{ .EndpointsSummary.NumIngressProtected }},{{ .EndpointsSummary.NumEgressProtected }},{{ .EndpointsSummary.NumIngressFromInternet }},{{ .EndpointsSummary.NumEgressToInternet }},{{ .EndpointsSummary.NumIngressFromOtherNamespace }},{{ .EndpointsSummary.NumEgressToOtherNamespace }},{{ .EndpointsSummary.NumEnvoyEnabled }}`,
 					},
 					UICompleteTemplate: api.ReportTemplate{
 						Name:     "uict",
-						Template: "Total Endpoints: {{ .EndpointsNumTotal }}",
+						Template: "Report Name: {{ .ReportName }}",
 					},
 				},
 			},
@@ -2422,12 +2422,12 @@ func init() {
 						Name: "foobar",
 						Template: `name,namespace,ingressProtected,egressProtected,envoyEnabled,appliedPolicies,services
 {{ range .Endpoints -}}
-  {{ .ID.Name }},{{ .ID.Namespace }},{{ .IngressProtected }},{{ .EgressProtected }},{{ .EnvoyEnabled }},{{ join .AppliedPolicies ";" }},{{ join .Services ";" }}
+  {{ .Endpoint.Name }},{{ .Endpoint.Namespace }},{{ .IngressProtected }},{{ .EgressProtected }},{{ .EnvoyEnabled }},{{ join .AppliedPolicies ";" }},{{ join .Services ";" }}
 {{- end }}`,
 					},
 					UICompleteTemplate: api.ReportTemplate{
 						Name:     "uict",
-						Template: "Total Endpoints: {{ .EndpointsNumTotal }}",
+						Template: "Report Name: {{ .ReportName }}",
 					},
 				},
 			},
@@ -2439,11 +2439,11 @@ func init() {
 				Spec: api.ReportTypeSpec{
 					UISummaryTemplate: api.ReportTemplate{
 						Name:     "uist",
-						Template: "Total Endpoints: {{ .EndpointsNumTotal }}",
+						Template: "Report Name: {{ .ReportName }}",
 					},
 					UICompleteTemplate: api.ReportTemplate{
 						Name:     "uist",
-						Template: "Total Endpoints: {{ .EndpointsNumTotal }}",
+						Template: "Report Name: {{ .ReportName }}",
 					},
 				},
 			},

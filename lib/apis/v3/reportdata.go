@@ -31,120 +31,97 @@ type ReportData struct {
 	StartTime  metav1.Time `json:"startTime"`
 	EndTime    metav1.Time `json:"endTime"`
 
-	EndpointsStat EndpointsStat `json:"endpointsStat"`
-
 	// The set of in-scope endpoints.
 	Endpoints []EndpointsReportEndpoint `json:"endpoints,omitempty"`
 
-	NamespacesStat NamespacesStat `json:"namespacesStat"`
+	// Endpoint stats in a reporting period.
+	EndpointsSummary EndpointsSummary `json:"endpointsSummary,omitempty"`
 
 	// The set of namespaces containing in-scope endpoints.
 	Namespaces []EndpointsReportNamespace `json:"namespaces,omitempty"`
 
-	ServicesStat ServicesStat `json:"servicesStat"`
+	// Endpoint stats for given namespaces in a reporting period.
+	NamespacesSummary EndpointsSummary `json:"namespacesSummary,omitempty"`
 
 	// The set of services containing in-scope endpoints.
 	Services []EndpointsReportService `json:"services,omitempty"`
 
-	AuditStat AuditStat `json:"auditStat,inline"`
+	// Endpoint stats for services in a reporting period.
+	ServicesSummary EndpointsSummary `json:"servicesSummary,omitempty"`
 
 	// The time-ordered set of in-scope audit events that occurred within the reporting interval.
 	AuditEvents []audit.Event `json:"auditEvents,omitempty"`
+
+	// Audit log stats in a reporting period.
+	AuditSummary AuditSummary `json:"auditSummary,omitempty"`
 }
 
-type EndpointsStat struct {
-	// The total number of in-scope endpoints.
+// This tracks different statistics for Endpoints, Summary and Services.
+type EndpointsSummary struct {
+	// For endpoints: the total number of endpoints containing in-scope endpoints.
+	//    Namespaces: the total number of namespaces containing in-scope endpoints.
+	//      Services: the total number of services containing in-scope endpoints.
 	//
 	// Source: Calculated from pod/wep, hep, namespace and service account labels.
 	NumTotal int `json:"numTotal,omitempty"`
 
-	// The number of in-scope endpoints that were ingress protected during the reporting interval.
+	// For endpoints: the number of in-scope endpoints that were ingress protected during the reporting interval.
+	//    Namespaces: the number of namespaces whose in-scope endpoints were ingress protected during
+	//				  the reporting interval.
+	//      Services: the number of services whose in-scope endpoints were ingress protected during the reporting
+	//				  interval.
+	//
 	// See below for defn of ingress-protected.
 	NumIngressProtected int `json:"numIngressProtected,omitempty"`
 
-	// The number of in-scope endpoints that were egress protected during the reporting interval.
+	// For endpoints: the number of in-scope endpoints that were egress protected during the reporting interval.
+	//    Namespaces: the number of namespaces whose in-scope endpoints were egress protected during the reporting
+	//				  interval.
+	//
 	// See below for defn of egress-protected.
 	NumEgressProtected int `json:"numEgressProtected,omitempty"`
 
-	// The number of inscope endpoints whose policy would allow ingress traffic from the internet for *any* period within the
-	// reporting interval.
-	// See below for how this is calculated for an endpoint.
+	// For endpoints: the number of in-scope endpoints whose policy would allow ingress traffic from the Internet
+	//				  for *any* period within the reporting interval.
+	//				  (See below for how this is calculated for an endpoint.)
+	//    Namespaces: the number of namespaces that contained in-scope endpoints that would allow ingress traffic
+	//				  from the Internet for *any* period within the reporting interval.
+	//      Services: the number of services that contained in-scope endpoints that would allow ingress traffic
+	//				  from the Internet for *any* period within the reporting interval.
 	NumIngressFromInternet int `json:"numIngressFromInternet,omitempty"`
 
-	// The number of inscope endpoints whose policy would allow egress traffic to the internet for *any* period within the
-	// reporting interval.
-	// See below for how this is calculated for an endpoint.
+	// For endpoints: the number of in-scope endpoints whose policy would allow egress traffic to the Internet
+	//				  for *any* period within the reporting interval.
+	//				  (See below for how this is calculated for an endpoint.)
+	//    Namespaces: the number of namespaces that contained in-scope endpoints that would allow egress traffic
+	//				  to the Internet for *any* period within the reporting interval.
 	NumEgressToInternet int `json:"numEgressToInternet,omitempty"`
 
-	// The number of inscope endpoints whose policy would allow ingress traffic from a different namespace for *any* period
-	// within the reporting interval.
-	// See below for how this is calculated for an endpoint.
+	// For endpoints: the number of in-scope endpoints whose policy would allow ingress traffic from a
+	//				  different namespace for *any* period within the reporting interval.
+	//				  (See below for how this is calculated for an endpoint.)
+	//    Namespaces: the number of namespaces that contained in-scope endpoints that would allow ingress
+	//				  traffic from another namespace for *any* period within the reporting interval.
+	//      Services: the number of services that contained in-scope endpoints that would allow ingress
+	//				  traffic from another namespace for *any* period within the reporting interval.
 	NumIngressFromOtherNamespace int `json:"numIngressFromOtherNamespace,omitempty"`
 
-	// The number of inscope endpoints whose policy would allow ingress traffic from a different namespace for *any* period
-	// within the reporting interval.
-	// See below for how this is calculated for an endpoint.
+	// For endpoints: the number of in-scope endpoints whose policy would allow ingress traffic from
+	//				  a different namespace for *any* period within the reporting interval.
+	//				  (See below for how this is calculated for an endpoint.)
+	//    Namespaces: the number of namespaces that contained in-scope endpoints that would allow egress
+	//				  traffic to another namespace for *any* period within the reporting interval.
 	NumEgressToOtherNamespace int `json:"numEgressToOtherNamespace,omitempty"`
 
-	// The number of in-scope endpoints that were envoy-enabled within the reporting interval (see below for defn of
-	// envoy-enabled)
-	NumEnvoyEnabled int `json:"numEnvoyEnabled,omitempty"`
-}
-
-type NamespacesStat struct {
-	// The total number of namespaces containing in-scope endpoints.
+	// For endpoints: the number of in-scope endpoints that were envoy-enabled within the reporting interval.
+	//    Namespaces: the number of namespaces whose in-scope endpoints were always Envoy-enabled
+	//      Services: the number of services whose in-scope endpoints were always Envoy-enabled
 	//
-	// Source: Calculated from pod/wep, hep, namespace and service account labels.
-	NumTotal int `json:"numTotal,omitempty"`
-
-	// The number of namespaces whose in-scope endpoints were ingress protected during the reporting interval.
-	NumIngressProtected int `json:"numIngressProtected,omitempty"`
-
-	// The number of namespaces whose in-scope endpoints were egress protected during the reporting interval.
-	NumEgressProtected int `json:"numEgressProtected,omitempty"`
-
-	// The number of namespaces that contained in-scope endpoints that would allow ingress traffic from the internet for
-	// *any* period within the reporting interval.
-	NumIngressFromInternet int `json:"numIngressFromInternet,omitempty"`
-
-	// The number of namespaces that contained in-scope endpoints that would allow egress traffic to the internet for
-	// *any* period within the reporting interval.
-	NumEgressToInternet int `json:"numEgressToInternet,omitempty"`
-
-	// The number of namespaces that contained in-scope endpoints that would allow ingress traffic from another
-	// namespace for *any* period within the reporting interval.
-	NumIngressFromOtherNamespace int `json:"numIngressFromOtherNamespace,omitempty"`
-
-	// The number of namespaces that contained in-scope endpoints that would allow egress traffic to another
-	// namespace for *any* period within the reporting interval.
-	NumEgressToOtherNamespace int `json:"numEgressToOtherNamespace,omitempty"`
-
-	// The number of namespaces whose in-scope endpoints were always Envoy-enabled
+	// See below for defn of envoy-enabled
 	NumEnvoyEnabled int `json:"numEnvoyEnabled,omitempty"`
 }
 
-type ServicesStat struct {
-	// The total number of services containing in-scope endpoints.
-	//
-	// Source: Calculated from pod/wep, hep, service and service account labels.
-	NumTotal int `json:"numTotal,omitempty"`
-
-	// The number of services whose in-scope endpoints were ingress protected during the reporting interval.
-	NumIngressProtected int `json:"numIngressProtected,omitempty"`
-
-	// The number of services that contained in-scope endpoints that would allow ingress traffic from the internet for
-	// *any* period within the reporting interval.
-	NumIngressFromInternet int `json:"numIngressFromInternet,omitempty"`
-
-	// The number of services that contained in-scope endpoints that would allow ingress traffic from another
-	// namespace for *any* period within the reporting interval.
-	NumIngressFromOtherNamespace int `json:"numIngressFromOtherNamespace,omitempty"`
-
-	// The number of services whose in-scope endpoints were always Envoy-enabled
-	NumEnvoyEnabled int `json:"numEnvoyEnabled,omitempty"`
-}
-
-type AuditStat struct {
+type AuditSummary struct {
 	// The total number of in-scope audit logs.
 	NumTotal int `json:"numTotal,omitempty"`
 
@@ -159,7 +136,7 @@ type AuditStat struct {
 }
 
 type EndpointsReportEndpoint struct {
-	ID ResourceID `json:"id,omitempty"`
+	Endpoint ResourceID `json:"endpoint,omitempty"`
 
 	// Whether ingress traffic to this endpoint was always protected during the reporting interval.
 	//

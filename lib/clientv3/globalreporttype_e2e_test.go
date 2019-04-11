@@ -41,18 +41,18 @@ var _ = testutils.E2eDatastoreDescribe("GlobalReportType tests", testutils.Datas
 		UISummaryTemplate: apiv3.ReportTemplate{
 			Name:        "rt-uist-n11",
 			Description: "rt-uist-d11",
-			Template:    "Total Endpoints: {{ .EndpointsNumTotal }}",
+			Template:    "Report Name: {{ .ReportName }}",
 		},
 		UICompleteTemplate: apiv3.ReportTemplate{
 			Name:        "rt-uict-n12",
 			Description: "rt-uict-d12",
-			Template:    "Total Endpoints: {{ .EndpointsNumTotal }}",
+			Template:    "Report Name: {{ .ReportName }}",
 		},
 		DownloadTemplates: []apiv3.ReportTemplate{
 			{
 				Name:        "rt-uict-n13",
 				Description: "rt-uict-d13",
-				Template:    "Total Endpoints: {{ .EndpointsNumTotal }}",
+				Template:    "Report Name: {{ .ReportName }}",
 			},
 		},
 		IncludeEndpointData:        true,
@@ -72,18 +72,18 @@ var _ = testutils.E2eDatastoreDescribe("GlobalReportType tests", testutils.Datas
 		UISummaryTemplate: apiv3.ReportTemplate{
 			Name:        "rt-uist-n21",
 			Description: "rt-uist-d21",
-			Template:    "Total Endpoints: {{ .EndpointsNumTotal }}",
+			Template:    "Report Name: {{ .ReportName }}",
 		},
 		UICompleteTemplate: apiv3.ReportTemplate{
 			Name:        "rt-uict-n22",
 			Description: "rt-uict-d22",
-			Template:    "Total Endpoints: {{ .EndpointsNumTotal }}",
+			Template:    "Report Name: {{ .ReportName }}",
 		},
 		DownloadTemplates: []apiv3.ReportTemplate{
 			{
 				Name:        "rt-uict-n23",
 				Description: "rt-uict-d23",
-				Template:    "Total Endpoints: {{ .EndpointsNumTotal }}",
+				Template:    "Report Name: {{ .ReportName }}",
 			},
 		},
 		IncludeEndpointData:        true,
