@@ -1,0 +1,11 @@
+action: delete
+kind: "Pod"
+apiversion: v1
+metadata:
+  name: "protected-egress-pod-{{.ScaleId}}"
+  namespace: "{{.Namespace}}"
+  labels:
+    protected: "egress"
+spec:
+  serviceaccountname: demosa
+  nodeName: anode

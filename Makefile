@@ -88,6 +88,7 @@ BUILD_IMAGE_SERVER=tigera/compliance-server
 BUILD_IMAGE_CONTROLLER=tigera/compliance-controller
 BUILD_IMAGE_SNAPSHOTTER=tigera/compliance-snapshotter
 BUILD_IMAGE_REPORTER=tigera/compliance-reporter
+BUILD_IMAGE_SCALELOADER=tigera/compliance-scaleloader
 PACKAGE_NAME?=github.com/tigera/compliance
 GCR_REPO?=gcr.io/unique-caldron-775/cnx
 
@@ -174,6 +175,7 @@ clean:
 	       docker-image/controller/bin \
 	       docker-image/snapshotter/bin \
 	       docker-image/reporter/bin \
+	       docker-image/scaleloader/bin \
 	       build \
 	       $(GENERATED_GO_FILES) \
 	       .glide \
@@ -297,6 +299,18 @@ bin/report-type-gen-$(ARCH): $(SRC_FILES) vendor/.up-to-date
 		-e "not a dynamic executable" || \
 		( echo "Error: bin/report-type-gen was not statically linked"; false ) )'
 
+bin/scaleloader: bin/scaleloader-$(ARCH)
+	cp -f bin/scaleloader-$(ARCH) bin/scaleloader
+
+bin/scaleloader-$(ARCH): $(SRC_FILES) vendor/.up-to-date
+	@echo Building scaleloader...
+	mkdir -p bin
+	$(DOCKER_RUN) $(LOCAL_BUILD_MOUNTS) $(CALICO_BUILD) \
+	    sh -c 'go build -v -i -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/mockdata-scaleloader" && \
+		( ldd $@ 2>&1 | grep -q -e "Not a valid dynamic program" \
+		-e "not a dynamic executable" || \
+		( echo "Error: bin/scaleloader was not statically linked"; false ) )'
+
 ###############################################################################
 # Building the images
 ###############################################################################
@@ -304,10 +318,11 @@ bin/report-type-gen-$(ARCH): $(SRC_FILES) vendor/.up-to-date
 .PHONY: $(BUILD_IMAGE_CONTROLLER) $(BUILD_IMAGE_CONTROLLER)-$(ARCH)
 .PHONY: $(BUILD_IMAGE_SNAPSHOTTER) $(BUILD_IMAGE_SNAPSHOTTER)-$(ARCH)
 .PHONY: $(BUILD_IMAGE_REPORTER) $(BUILD_IMAGE_REPORTER)-$(ARCH)
+.PHONY: $(BUILD_IMAGE_SCALELOADER) $(BUILD_IMAGE_SCALELOADER)-$(ARCH)
 .PHONY: images
 .PHONY: image
 
-images image: $(BUILD_IMAGE_SERVER) $(BUILD_IMAGE_CONTROLLER) $(BUILD_IMAGE_SNAPSHOTTER) $(BUILD_IMAGE_REPORTER)
+images image: $(BUILD_IMAGE_SERVER) $(BUILD_IMAGE_CONTROLLER) $(BUILD_IMAGE_SNAPSHOTTER) $(BUILD_IMAGE_REPORTER) $(BUILD_IMAGE_SCALELOADER)
 
 # Build the images for the target architecture
 .PHONY: images-all
@@ -355,6 +370,18 @@ ifeq ($(ARCH),amd64)
 	docker tag $(BUILD_IMAGE_REPORTER):latest-$(ARCH) $(BUILD_IMAGE_REPORTER):latest
 endif
 
+# Build the tigera/compliance-scaleloader docker image, which contains only Compliance scaleloader.
+$(BUILD_IMAGE_SCALELOADER): bin/scaleloader-$(ARCH) register
+	rm -rf docker-image/scaleloader/bin
+	rm -rf docker-image/scaleloader/playbooks
+	mkdir -p docker-image/scaleloader/bin
+	cp bin/scaleloader-$(ARCH) docker-image/scaleloader/bin/
+	cp -r mockdata/scaleloader/playbooks docker-image/scaleloader
+	docker build --pull -t $(BUILD_IMAGE_SCALELOADER):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --file ./docker-image/scaleloader/Dockerfile.$(ARCH) docker-image/scaleloader
+ifeq ($(ARCH),amd64)
+	docker tag $(BUILD_IMAGE_SCALELOADER):latest-$(ARCH) $(BUILD_IMAGE_SCALELOADER):latest
+endif
+
 # ensure we have a real imagetag
 imagetag:
 ifndef IMAGETAG
@@ -369,6 +396,9 @@ sub-single-push-%:
 	docker push $(call unescapefs,$*$(BUILD_IMAGE_CONTROLLER):$(IMAGETAG)-$(ARCH))
 	docker push $(call unescapefs,$*$(BUILD_IMAGE_SNAPSHOTTER):$(IMAGETAG)-$(ARCH))
 	docker push $(call unescapefs,$*$(BUILD_IMAGE_REPORTER):$(IMAGETAG)-$(ARCH))
+ifneq (,$(findstring $GCR_REPO,$(call unescapefs,$*)))
+	docker push $(call unescapefs,$*$(BUILD_IMAGE_SCALELOADER):$(IMAGETAG)-$(ARCH))
+endif
 
 ## push all archs
 push-all: imagetag $(addprefix sub-push-,$(VALIDARCHES))
@@ -383,6 +413,8 @@ sub-manifest-%:
 	docker run -t --entrypoint /bin/sh -v $(DOCKER_CONFIG):/root/.docker/config.json $(CALICO_BUILD) -c "/usr/bin/manifest-tool push from-args --platforms $(call join_platforms,$(VALIDARCHES)) --template $(call unescapefs,$*$(BUILD_IMAGE_CONTROLLER):$(IMAGETAG))-ARCH --target $(call unescapefs,$*$(BUILD_IMAGE_CONTROLLER):$(IMAGETAG))"
 	docker run -t --entrypoint /bin/sh -v $(DOCKER_CONFIG):/root/.docker/config.json $(CALICO_BUILD) -c "/usr/bin/manifest-tool push from-args --platforms $(call join_platforms,$(VALIDARCHES)) --template $(call unescapefs,$*$(BUILD_IMAGE_SNAPSHOTTER):$(IMAGETAG))-ARCH --target $(call unescapefs,$*$(BUILD_IMAGE_SNAPSHOTTER):$(IMAGETAG))"
 	docker run -t --entrypoint /bin/sh -v $(DOCKER_CONFIG):/root/.docker/config.json $(CALICO_BUILD) -c "/usr/bin/manifest-tool push from-args --platforms $(call join_platforms,$(VALIDARCHES)) --template $(call unescapefs,$*$(BUILD_IMAGE_REPORTER):$(IMAGETAG))-ARCH --target $(call unescapefs,$*$(BUILD_IMAGE_REPORTER):$(IMAGETAG))"
+	# I don't think we need this for scaleloader since it is a test thing anyway.
+	#docker run -t --entrypoint /bin/sh -v $(DOCKER_CONFIG):/root/.docker/config.json $(CALICO_BUILD) -c "/usr/bin/manifest-tool push from-args --platforms $(call join_platforms,$(VALIDARCHES)) --template $(call unescapefs,$*$(BUILD_IMAGE_SCALELOADER):$(IMAGETAG))-ARCH --target $(call unescapefs,$*$(BUILD_IMAGE_SCALELOADER):$(IMAGETAG))"
 
  ## push default amd64 arch where multi-arch manifest is not supported
 push-non-manifests: imagetag $(addprefix sub-non-manifest-,$(call escapefs,$(PUSH_NONMANIFEST_IMAGE_PREFIXES)))
@@ -392,6 +424,9 @@ ifeq ($(ARCH),amd64)
 	docker push $(call unescapefs,$*$(BUILD_IMAGE_CONTROLLER):$(IMAGETAG))
 	docker push $(call unescapefs,$*$(BUILD_IMAGE_SHAPSHOTTER):$(IMAGETAG))
 	docker push $(call unescapefs,$*$(BUILD_IMAGE_REPORTER):$(IMAGETAG))
+ifneq (,$(findstring $GCR_REPO,$(call unescapefs,$*)))
+	docker push $(call unescapefs,$*$(BUILD_IMAGE_SCALELOADER):$(IMAGETAG))
+endif
 else
 	$(NOECHO) $(NOOP)
 endif
@@ -403,6 +438,9 @@ sub-single-tag-images-arch-%:
 	docker tag $(BUILD_IMAGE_CONTROLLER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_CONTROLLER):$(IMAGETAG)-$(ARCH))
 	docker tag $(BUILD_IMAGE_SNAPSHOTTER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_SNAPSHOTTER):$(IMAGETAG)-$(ARCH))
 	docker tag $(BUILD_IMAGE_REPORTER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_REPORTER):$(IMAGETAG)-$(ARCH))
+ifneq (,$(findstring $GCR_REPO,$(call unescapefs,$*)))
+	docker tag $(BUILD_IMAGE_SCALELOADER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_SCALELOADER):$(IMAGETAG)-$(ARCH))
+endif
 
 # because some still do not support multi-arch manifest
 sub-single-tag-images-non-manifest-%:
@@ -411,6 +449,9 @@ ifeq ($(ARCH),amd64)
 	docker tag $(BUILD_IMAGE_CONTROLLER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_CONTROLLER):$(IMAGETAG))
 	docker tag $(BUILD_IMAGE_SNAPSHOTTER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_SNAPSHOTTER):$(IMAGETAG))
 	docker tag $(BUILD_IMAGE_REPORTER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_REPORTER):$(IMAGETAG))
+ifneq (,$(findstring $GCR_REPO,$(call unescapefs,$*)))
+	docker tag $(BUILD_IMAGE_SCALELOADER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_SCALELOADER):$(IMAGETAG))
+endif
 else
 	$(NOECHO) $(NOOP)
 endif
@@ -745,6 +786,9 @@ bin/snapshotter.transfer-url: bin/snapshotter-$(ARCH)
 
 bin/reporter.transfer-url: bin/reporter-$(ARCH)
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -c 'curl --upload-file bin/reporter-$(ARCH) https://transfer.sh/tigera-compliance-reporter > $@'
+
+bin/scaleloader.transfer-url: bin/scaleloader-$(ARCH)
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c 'curl --upload-file bin/scaleloader-$(ARCH) https://transfer.sh/tigera-compliance-scaleloader > $@'
 
 # Install or update the tools used by the build
 .PHONY: update-tools

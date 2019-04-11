@@ -25,6 +25,8 @@ cmd/reporter/reporter
 cmd/server/server
 cmd/snapshotter/snapshotter
 cmd/mockdata-exporter/mockdata-exporter
+docker-image/scaleloader/playbooks
+docker-image/scaleloader/bin
 
 cmd/server/apiserver.local.config/
 .settings

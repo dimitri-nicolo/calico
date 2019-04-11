@@ -1,0 +1,12 @@
+action: init
+kind: "Pod"
+apiversion: v1
+metadata:
+  name: "demopod-a-{{.ScaleId}}"
+  namespace: "{{.Namespace}}"
+  labels:
+    labela: "value for label a"
+    labelb: "label b value is c"
+spec:
+  serviceaccountname: demosa
+  nodeName: anode

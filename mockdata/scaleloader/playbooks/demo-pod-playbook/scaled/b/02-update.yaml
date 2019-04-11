@@ -1,0 +1,10 @@
+kind: "Pod"
+apiversion: v1
+metadata:
+  name: "demopod-b-{{.ScaleId}}"
+  namespace: "{{.Namespace}}"
+  labels:
+    labelb: "podb label b value 2"
+spec:
+  serviceaccountname: demo-b-sa
+  nodeName: anode

@@ -1,0 +1,11 @@
+action: delete
+kind: "Pod"
+apiversion: v1
+metadata:
+  name: "protected-pod-{{.ScaleId}}"
+  namespace: "{{.Namespace}}"
+  labels:
+    protected: "yes"
+spec:
+  serviceaccountname: demosa
+  nodeName: anode

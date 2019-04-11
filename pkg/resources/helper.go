@@ -94,11 +94,15 @@ func (h *resourceHelper) TypeMeta() metav1.TypeMeta {
 }
 
 func (h *resourceHelper) NewResource() Resource {
-	return h.resource.DeepCopyObject().(Resource)
+	r := h.resource.DeepCopyObject().(Resource)
+	r.GetObjectKind().SetGroupVersionKind(h.kind.GroupVersionKind())
+	return r
 }
 
 func (h *resourceHelper) NewResourceList() ResourceList {
-	return h.resourceList.DeepCopyObject().(ResourceList)
+	rl := h.resourceList.DeepCopyObject().(ResourceList)
+	rl.GetObjectKind().SetGroupVersionKind(h.kind.GroupVersionKind())
+	return rl
 }
 
 func (h *resourceHelper) Deprecated() []metav1.TypeMeta {

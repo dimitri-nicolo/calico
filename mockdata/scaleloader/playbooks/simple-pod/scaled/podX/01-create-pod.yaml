@@ -1,0 +1,11 @@
+action: update
+kind: "Pod"
+apiversion: v1
+metadata:
+  name: "podX-{{.ScaleId}}"
+  namespace: "{{.Namespace}}"
+  labels:
+    protected: "yes"
+spec:
+  serviceaccountname: demosa
+  nodeName: anode
