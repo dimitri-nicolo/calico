@@ -112,10 +112,21 @@ optionally Elasticsearch and Kibana in order to enable logs.
 
 1. Download the `operator.yaml` manifest.
 
+{% if include.platform == "docker-ee" %}
+   ```bash
+   curl --compressed -o operator.yaml \
+   {{docpath}}{{secure}}/docker-ee-operator.yaml
+   ```
+   > **Important**: The bundled Elasticsearch operator requires running pods using Restricted Parameters
+   (privileged mode, host PID, and `IPC_LOCK` capability) which requires a `ClusterRoleBinding` with
+   `cluster-admin` permissions with Docker Enterprise. See [UCP release notes](https://docs.docker.com/ee/ucp/release-notes/)
+   {: .alert .alert-danger}
+{% else %}
    ```bash
    curl --compressed -O \
    {{docpath}}{{secure}}/operator.yaml
    ```
+{% endif %}
 
 1. Use the following commands to set an environment variable called `REGISTRY` containing the
    location of the private registry and replace the paths in the manifest to refer to

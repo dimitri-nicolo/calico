@@ -134,6 +134,7 @@ metadata:
   namespace: calico-monitoring
 
 ---
+{{- if not .Values.runElasticsearchOperatorClusterAdmin }}
 
 # Permissions for the elasticsearch operator
 apiVersion: rbac.authorization.k8s.io/v1beta1
@@ -167,6 +168,7 @@ rules:
   verbs: ["*"]
 
 ---
+{{- end }}
 
 # Assign the elasticsearch operator role to the serviceaccount
 apiVersion: rbac.authorization.k8s.io/v1beta1
@@ -177,12 +179,15 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
+{{- if .Values.runElasticsearchOperatorClusterAdmin }}
+  name: cluster-admin
+{{- else }}
   name: elasticsearch-operator
+{{- end }}
 subjects:
 - kind: ServiceAccount
   name: elasticsearch-operator
   namespace: calico-monitoring
-
 ---
 
 # Elasticsearch operator
