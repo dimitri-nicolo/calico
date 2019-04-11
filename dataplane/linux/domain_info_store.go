@@ -192,7 +192,7 @@ const (
 func (s *domainInfoStore) readMappingsV1(scanner *bufio.Scanner) error {
 	for scanner.Scan() {
 		var jsonMapping jsonMappingV1
-		if err := json.Unmarshal(scanner.Bytes(), jsonMapping); err != nil {
+		if err := json.Unmarshal(scanner.Bytes(), &jsonMapping); err != nil {
 			return err
 		}
 		expiryTime, err := time.Parse(time.RFC3339, jsonMapping.Expiry)
