@@ -7,9 +7,13 @@ import (
 	"crypto/x509"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
+	k8s "k8s.io/client-go/kubernetes"
+	restclient "k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/tigera/es-proxy/pkg/handler"
 	"github.com/tigera/es-proxy/pkg/middleware"
@@ -44,13 +48,19 @@ func Start(config *Config) error {
 	}
 	proxy := handler.NewProxy(pc)
 
+	k8sClient, k8sConfig := getKubernetestClientAndConfig()
+	k8sAuth := middleware.NewK8sAuth(k8sClient, k8sConfig)
+
 	sm.Handle("/version", http.HandlerFunc(handler.VersionHandler))
 
 	switch config.AccessMode {
 	case InsecureMode:
-		sm.Handle("/", proxy)
+		sm.Handle("/", middleware.RequestToResource(
+			k8sAuth.KubernetesAuthnAuthz(proxy)))
 	case ServiceUserMode:
-		sm.Handle("/", middleware.BasicAuthHeaderInjector(config.ElasticUsername, config.ElasticPassword, proxy))
+		sm.Handle("/", middleware.RequestToResource(
+			k8sAuth.KubernetesAuthnAuthz(
+				middleware.BasicAuthHeaderInjector(config.ElasticUsername, config.ElasticPassword, proxy))))
 	case PassThroughMode:
 		log.Fatal("PassThroughMode not implemented yet")
 	default:
@@ -99,4 +109,29 @@ func addCertToCertPool(caPath string) *x509.CertPool {
 		log.WithError(err).Fatal("Could not add CA to pool")
 	}
 	return systemCertPool
+}
+
+// getKubernetestClientAndConfig figures out a k8s client, either using a
+// incluster config or a provided KUBECONFIG environment variable.
+// This function doesn't return an error but instead panics on error.
+func getKubernetestClientAndConfig() (k8s.Interface, *restclient.Config) {
+	var (
+		k8sConfig *restclient.Config
+		err       error
+	)
+	kubeconfig := os.Getenv("KUBECONFIG")
+	if kubeconfig != "" {
+		// Create client with provided kubeconfig
+		k8sConfig, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
+		if err != nil {
+			log.WithError(err).Fatal("Could not process kubeconfig file")
+		}
+	} else {
+		k8sConfig, err = restclient.InClusterConfig()
+		if err != nil {
+			log.WithError(err).Fatal("Could not get in cluster config")
+		}
+	}
+	k8sClient := k8s.NewForConfigOrDie(k8sConfig)
+	return k8sClient, k8sConfig
 }
