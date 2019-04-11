@@ -12,6 +12,7 @@ import (
 	auditv1 "k8s.io/apiserver/pkg/apis/audit"
 
 	"github.com/projectcalico/libcalico-go/lib/apis/v3"
+
 	"github.com/tigera/compliance/pkg/event"
 	"github.com/tigera/compliance/pkg/resources"
 )

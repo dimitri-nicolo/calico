@@ -17,6 +17,7 @@ import (
 
 	"github.com/tigera/compliance/pkg/event"
 	"github.com/tigera/compliance/pkg/list"
+	"github.com/tigera/compliance/pkg/report"
 )
 
 const (
@@ -27,6 +28,8 @@ const (
 )
 
 type Client interface {
+	report.AuditLogReportHandler
+	report.ArchivedReportStore
 	list.Destination
 	event.Fetcher
 	EnsureIndices() error
