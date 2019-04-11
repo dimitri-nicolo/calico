@@ -1,0 +1,28 @@
+apiVersion: projectcalico.org/v3
+kind: GlobalReportType
+metadata:
+  creationTimestamp: null
+  labels:
+    global-report-type: audit
+  name: audit
+spec:
+  auditEventsSelection:
+    resources:
+    - kind: globalnetworkpolicy
+      name: grt-aes-g
+      namespace: grt-aes-gnp-ns
+  downloadTemplates:
+  - name: summary.csv
+    template: |
+      startTime,endTime,numCreatedPolicies,numModifiedPolicies,numDeletedPolicies
+      {{ .StartTime }},{{ .EndTime }},{{ .AuditSummary.NumCreated }},{{ .AuditSummary.NumModified }},{{ .AuditSummary.NumDeleted }}
+  - name: events.json
+    template: |
+      {{ json .AuditEvents }}
+  - name: events.yaml
+    template: |
+      {{ yaml .AuditEvents }}
+  uiCompleteTemplate:
+    name: ui-complete.json
+  uiSummaryTemplate:
+    name: ui-summary.json

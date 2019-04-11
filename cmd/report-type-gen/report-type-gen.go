@@ -28,6 +28,8 @@ import (
 )
 
 func main() {
+	const manifestsDir = "manifests"
+
 	// Always start with local "default" directory, unless specified.
 	dirs := []string{"default"}
 	if len(os.Args) >= 2 {
@@ -51,7 +53,6 @@ func main() {
 			}
 		}()
 
-		dirName := path.Dir(file)
 		contents, err := ioutil.ReadFile(file)
 		if err != nil {
 			log.Fatal(err)
@@ -62,16 +63,19 @@ func main() {
 			log.Fatal(err)
 		}
 
-		if templ, err := getTemplate(dirName, reportType.Spec.UISummaryTemplate.Name); err == nil {
+		// get the directory for template files.
+		inDirName := path.Join(path.Dir(file), reportType.Name)
+
+		if templ, err := getTemplate(inDirName, reportType.Spec.UISummaryTemplate.Name); err == nil {
 			reportType.Spec.UISummaryTemplate.Template = string(templ)
 		}
 
-		if templ, err := getTemplate(dirName, reportType.Spec.UICompleteTemplate.Name); err == nil {
+		if templ, err := getTemplate(inDirName, reportType.Spec.UICompleteTemplate.Name); err == nil {
 			reportType.Spec.UICompleteTemplate.Template = string(templ)
 		}
 
 		for i := 0; i < len(reportType.Spec.DownloadTemplates); i++ {
-			if templ, err := getTemplate(dirName, reportType.Spec.DownloadTemplates[i].Name); err == nil {
+			if templ, err := getTemplate(inDirName, reportType.Spec.DownloadTemplates[i].Name); err == nil {
 				reportType.Spec.DownloadTemplates[i].Template = string(templ)
 			}
 		}
@@ -81,7 +85,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		manifestFullPath := dirName + "/manifest/" + path.Base(file)
+		manifestFullPath := path.Join(path.Dir(file), manifestsDir, path.Base(file))
 		if err := ioutil.WriteFile(manifestFullPath, manifestContent, 0644); err != nil {
 			log.Fatal(err)
 		}
@@ -112,7 +116,7 @@ func getYamlFiles(dir string) (yamls []string, err error) {
 			continue
 		}
 
-		ret = append(ret, dir+"/"+fileName)
+		ret = append(ret, path.Join(dir, fileName))
 	}
 
 	return ret, nil
@@ -122,8 +126,7 @@ func getYamlFiles(dir string) (yamls []string, err error) {
 Given directory and template-file name, get the contents of the template file.
 */
 func getTemplate(dirName string, templName string) (template []byte, err error) {
-	templDirName := strings.TrimLeft(path.Ext(templName), ".")
-	templFullPath := path.Join(dirName, templDirName, templName)
+	templFullPath := path.Join(dirName, templName)
 	template, err = ioutil.ReadFile(templFullPath)
 	if err != nil {
 		return template, err
