@@ -35,6 +35,7 @@ type ResourceHelper interface {
 	TypeMeta() metav1.TypeMeta
 	NewResource() Resource
 	NewResourceList() ResourceList
+	Deprecated() []metav1.TypeMeta
 }
 
 // GetTypeMeta extracts the group version kind from the resource unless
@@ -85,6 +86,7 @@ type resourceHelper struct {
 	kind         metav1.TypeMeta
 	resource     Resource
 	resourceList ResourceList
+	deprecated   []metav1.TypeMeta
 }
 
 func (h *resourceHelper) TypeMeta() metav1.TypeMeta {
@@ -99,42 +101,46 @@ func (h *resourceHelper) NewResourceList() ResourceList {
 	return h.resourceList.DeepCopyObject().(ResourceList)
 }
 
+func (h *resourceHelper) Deprecated() []metav1.TypeMeta {
+	return h.deprecated
+}
+
 //TODO(rlb): Need to normalize the output from the parsed data. The xref cache
 var (
 	resourceHelpersMap = map[metav1.TypeMeta]ResourceHelper{}
 	resourceHelpers    = []ResourceHelper{
 		&resourceHelper{
-			TypeK8sPods, &corev1.Pod{}, &corev1.PodList{},
+			TypeK8sPods, &corev1.Pod{}, &corev1.PodList{}, []metav1.TypeMeta{},
 		},
 		&resourceHelper{
-			TypeK8sNamespaces, &corev1.Namespace{}, &corev1.NamespaceList{},
+			TypeK8sNamespaces, &corev1.Namespace{}, &corev1.NamespaceList{}, []metav1.TypeMeta{},
 		},
 		&resourceHelper{
-			TypeK8sServiceAccounts, &corev1.ServiceAccount{}, &corev1.ServiceAccountList{},
+			TypeK8sServiceAccounts, &corev1.ServiceAccount{}, &corev1.ServiceAccountList{}, []metav1.TypeMeta{},
 		},
 		&resourceHelper{
-			TypeK8sEndpoints, &corev1.Endpoints{}, &corev1.EndpointsList{},
+			TypeK8sEndpoints, &corev1.Endpoints{}, &corev1.EndpointsList{}, []metav1.TypeMeta{},
 		},
 		&resourceHelper{
-			TypeK8sServices, &corev1.Service{}, &corev1.ServiceList{},
+			TypeK8sServices, &corev1.Service{}, &corev1.ServiceList{}, []metav1.TypeMeta{},
 		},
 		&resourceHelper{
-			TypeK8sNetworkPolicies, &networkingv1.NetworkPolicy{}, &networkingv1.NetworkPolicyList{},
+			TypeK8sNetworkPolicies, &networkingv1.NetworkPolicy{}, &networkingv1.NetworkPolicyList{}, []metav1.TypeMeta{TypeK8sNetworkPoliciesExtensions},
 		},
 		&resourceHelper{
-			TypeCalicoTiers, &apiv3.Tier{}, &apiv3.TierList{},
+			TypeCalicoTiers, &apiv3.Tier{}, &apiv3.TierList{}, []metav1.TypeMeta{},
 		},
 		&resourceHelper{
-			TypeCalicoHostEndpoints, &apiv3.HostEndpoint{}, &apiv3.HostEndpointList{},
+			TypeCalicoHostEndpoints, &apiv3.HostEndpoint{}, &apiv3.HostEndpointList{}, []metav1.TypeMeta{},
 		},
 		&resourceHelper{
-			TypeCalicoGlobalNetworkSets, &apiv3.GlobalNetworkSet{}, &apiv3.GlobalNetworkSetList{},
+			TypeCalicoGlobalNetworkSets, &apiv3.GlobalNetworkSet{}, &apiv3.GlobalNetworkSetList{}, []metav1.TypeMeta{},
 		},
 		&resourceHelper{
-			TypeCalicoNetworkPolicies, &apiv3.NetworkPolicy{}, &apiv3.NetworkPolicyList{},
+			TypeCalicoNetworkPolicies, &apiv3.NetworkPolicy{}, &apiv3.NetworkPolicyList{}, []metav1.TypeMeta{},
 		},
 		&resourceHelper{
-			TypeCalicoGlobalNetworkPolicies, &apiv3.GlobalNetworkPolicy{}, &apiv3.GlobalNetworkPolicyList{},
+			TypeCalicoGlobalNetworkPolicies, &apiv3.GlobalNetworkPolicy{}, &apiv3.GlobalNetworkPolicyList{}, []metav1.TypeMeta{},
 		},
 	}
 )
@@ -142,5 +148,8 @@ var (
 func init() {
 	for _, rh := range resourceHelpers {
 		resourceHelpersMap[rh.TypeMeta()] = rh
+		for _, dep := range rh.Deprecated() {
+			resourceHelpersMap[dep] = rh
+		}
 	}
 }

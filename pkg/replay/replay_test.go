@@ -9,7 +9,9 @@ import (
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/tigera/compliance/pkg/elastic"
+	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+
+	. "github.com/tigera/compliance/internal/testutils"
 	. "github.com/tigera/compliance/pkg/replay"
 	"github.com/tigera/compliance/pkg/syncer"
 )
@@ -51,19 +53,27 @@ var _ = Describe("Replay", func() {
 		//ns  = "compliance-testing"
 		ctx = context.Background()
 
-		baseTime = time.Date(2019, 4, 3, 20, 01, 0, 0, time.UTC)
-		start    = baseTime.Add(time.Minute)
-		end      = start.Add(3 * time.Minute)
-
-		elasticClient = elastic.MustGetElasticClient()
-		cb            = new(mockCallbacks)
-		replayer      = New(start, end, elasticClient, elasticClient, cb)
+		baseTime     = time.Date(2019, 4, 3, 20, 01, 0, 0, time.UTC)
+		replayTester *ReplayTester
+		cb           *mockCallbacks
 	)
 
 	It("Replayer should send both an insync and a complete status update in a complete run through", func() {
+		replayTester = NewReplayTester(baseTime)
+		cb = new(mockCallbacks)
+		replayer := New(baseTime.Add(time.Minute), baseTime.Add(2*time.Minute), replayTester, replayTester, cb)
+
+		np := apiv3.NewNetworkPolicy()
+		replayTester.SetResourceAuditEvent(np, baseTime.Add(30*time.Second))
+
+		selector := `foo == "bar"`
+		np.Spec.Selector = selector
+		replayTester.SetResourceAuditEvent(np, baseTime.Add(75*time.Second))
 
 		// Make the replay call.
 		replayer.Start(ctx)
+		Expect(len(cb.updates)).To(Equal(1))
+		Expect(cb.updates[0].Resource.(*apiv3.NetworkPolicy).Spec.Selector).To(Equal(selector))
 		Expect(cb.statusUpdates).To(ContainElement(syncer.NewStatusUpdateInSync()))
 		Expect(cb.statusUpdates).To(ContainElement(syncer.NewStatusUpdateComplete()))
 	})

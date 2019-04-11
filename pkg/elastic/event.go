@@ -13,6 +13,7 @@ import (
 
 	"github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/tigera/compliance/pkg/event"
+	"github.com/tigera/compliance/pkg/resources"
 )
 
 const (
@@ -29,6 +30,9 @@ func (c *client) GetAuditEvents(ctx context.Context, kind *metav1.TypeMeta, star
 	if kind != nil {
 		filter = &v3.AuditEventsSelection{
 			Resources: []v3.ResourceID{v3.ResourceID{TypeMeta: metav1.TypeMeta{Kind: kind.Kind, APIVersion: kind.APIVersion}}}}
+		for _, otherTM := range resources.GetResourceHelper(*kind).Deprecated() {
+			filter.Resources = append(filter.Resources, v3.ResourceID{TypeMeta: otherTM})
+		}
 	}
 
 	// retrieve the events on a goroutine.
