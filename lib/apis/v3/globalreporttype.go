@@ -15,7 +15,6 @@
 package v3
 
 import (
-	"bytes"
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -129,29 +128,28 @@ func NewGlobalReportTypeList() *GlobalReportTypeList {
 	}
 }
 
-/*
-Prints ResourceID contents.
-*/
+//
+// Prints ResourceID contents.
+//
 func (resource ResourceID) String() (expanded string) {
 	const calicoApiVersion = "projectcalico.org/v3"
 
 	kind := resource.Kind
-	name := resource.Name
-	namespace := resource.Namespace
 	apiVersion := resource.APIVersion
+	namespace := resource.Namespace
+	name := resource.Name
 
 	// Printing: kind[.apiVersion]([namespace/]name)
-	buf := new(bytes.Buffer)
-	buf.WriteString(kind)
-	// Only print api-version if non-Calico policy.
-	if apiVersion != calicoApiVersion {
-		fmt.Fprintf(buf, ".%s", apiVersion)
+	switch {
+	case apiVersion != calicoApiVersion && namespace != "":
+		expanded = fmt.Sprintf("%s.%s(%s/%s)", kind, apiVersion, namespace, name)
+	case apiVersion == calicoApiVersion && namespace == "":
+		expanded = fmt.Sprintf("%s(%s)", kind, name)
+	case namespace == "":
+		expanded = fmt.Sprintf("%s.%s(%s)", kind, apiVersion, name)
+	case apiVersion == calicoApiVersion:
+		expanded = fmt.Sprintf("%s(%s/%s)", kind, namespace, name)
 	}
-	buf.WriteString("(")
-	if len(namespace) > 0 {
-		fmt.Fprintf(buf, "%s/", namespace)
-	}
-	fmt.Fprintf(buf, "%s)", name)
 
-	return buf.String()
+	return expanded
 }
