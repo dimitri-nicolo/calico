@@ -20,6 +20,7 @@ HP_IGNORE_LOCAL_DIRS="/v2.0/"
 RELEASE_STREAM?=
 
 CHART?=calico
+REGISTRY?=gcr.io/unique-caldron-775/cnx/
 
 # Use := so that these V_ variables are computed only once per make run.
 CALICO_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].title')
@@ -298,7 +299,7 @@ endif
 	docker run --rm \
 	  -v $$PWD:/calico \
 	  -w /calico \
-	  ruby:2.5 ruby ./hack/gen_values_yml.rb --chart $(CHART) $(RELEASE_STREAM) > _includes/$(RELEASE_STREAM)/charts/$(CHART)/values.yaml
+	  ruby:2.5 ruby ./hack/gen_values_yml.rb --registry $(REGISTRY) --chart $(CHART) $(RELEASE_STREAM) > _includes/$(RELEASE_STREAM)/charts/$(CHART)/values.yaml
 
 .PHONY: help
 ## Display this help text
