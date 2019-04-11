@@ -1,0 +1,68 @@
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: tigera-elasticsearch-access-for-basicuserall
+subjects:
+- kind: User
+  name: basicuserall
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: tigera-elasticsearch-access-all
+  apiGroup: rbac.authorization.k8s.io
+---
+
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: tigera-elasticsearch-access-for-basicflowonly
+subjects:
+- kind: User
+  name: basicuserflowonly
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: tigera-elasticsearch-access-flowonly
+  apiGroup: rbac.authorization.k8s.io
+---
+
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: tigera-elasticsearch-access-for-basicauditonly
+subjects:
+- kind: User
+  name: basicuserauditonly
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: tigera-elasticsearch-access-auditonly
+  apiGroup: rbac.authorization.k8s.io
+---
+
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: tigera-elasticsearch-access-for-basicauditkubeonly
+subjects:
+- kind: User
+  name: basicuserauditkubeonly
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: tigera-elasticsearch-access-audit_kube-only
+  apiGroup: rbac.authorization.k8s.io
+---
+
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: tigera-elasticsearch-access-for-basicgroup
+subjects:
+- kind: Group
+  name: selfgroup
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: tigera-elasticsearch-access-all
+  apiGroup: rbac.authorization.k8s.io

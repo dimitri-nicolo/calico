@@ -2,6 +2,7 @@ package middleware_test
 
 import (
 	. "github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/reporters"
 	. "github.com/onsi/gomega"
 
 	"testing"
@@ -9,5 +10,6 @@ import (
 
 func TestMiddleware(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Middleware Suite")
+	junitReporter := reporters.NewJUnitReporter("../../report/middleware_suite.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "Middleware Suite", []Reporter{junitReporter})
 }

@@ -79,6 +79,13 @@ GO_BUILD_VER?=v0.21
 # we do not need to use the arch since go-build:v0.15 now is multi-arch manifest
 CALICO_BUILD=calico/go-build:$(GO_BUILD_VER)
 
+ETCD_VERSION?=v3.3.7
+# If building on amd64 omit the arch in the container name.  Fixme!
+ETCD_IMAGE?=quay.io/coreos/etcd:$(ETCD_VERSION)
+
+K8S_VERSION?=v1.11.3
+HYPERKUBE_IMAGE?=gcr.io/google_containers/hyperkube-$(ARCH):$(K8S_VERSION)
+
 # Disable make's implicit rules, which are not useful for golang, and slow down the build
 # considerably.
 .SUFFIXES:
@@ -136,10 +143,11 @@ DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
                               $(EXTRA_DOCKER_ARGS) \
                               -e LOCAL_USER_ID=$(MY_UID) \
                               -e GOARCH=$(ARCH) \
-                              -v $${PWD}:/es-proxy:rw \
-                              -v $${PWD}/.go-pkg-cache:/go/pkg:rw \
-                              -v $${PWD}/.go-build-cache:/home/user/.cache/go-build:rw \
-                              -w /es-proxy \
+                              -v $(CURDIR):/$(PACKAGE_NAME):rw \
+                              -v $(CURDIR)/.go-pkg-cache:/go/pkg:rw \
+                              -v $(CURDIR)/.go-build-cache:/home/user/.cache/go-build:rw \
+                              -v $(CURDIR)/report:/report:rw \
+                              -w /$(PACKAGE_NAME) \
                               $(CALICO_BUILD)
 
 
@@ -239,15 +247,19 @@ sub-tag-images-%:
 ##########################################################################
 # Testing
 ##########################################################################
+report-dir:
+	mkdir -p report
+
 .PHONY: ut
-ut:
+ut: report-dir
 	$(DOCKER_GO_BUILD) \
 		sh -c 'go test $(UNIT_TEST_FLAGS) \
 			$(addprefix $(PACKAGE_NAME)/,$(TEST_DIRS))'
 
 .PHONY: fv
-fv:
-	echo "FV not implemented yet"
+fv: report-dir run-k8s-apiserver
+	$(DOCKER_GO_BUILD) \
+		sh -c 'ginkgo ./test/'
 
 .PHONY: clean
 clean: clean-bin clean-build-image
@@ -351,3 +363,56 @@ help: # Some kind of magic from https://gist.github.com/rcmachado/af3db315e31383
 	{ helpMsg = $$0 }'                                                  \
 	width=20                                                            \
 	$(MAKEFILE_LIST)
+
+LOCAL_IP_ENV?=$(shell ip route get 8.8.8.8 | head -1 | awk '{print $$7}')
+
+# etcd is used by the FVs
+.PHONY: run-etcd
+run-etcd: stop-etcd
+	@-docker rm -f calico-etcd
+	docker run --detach \
+		--net=host \
+		--name calico-etcd $(ETCD_IMAGE) \
+		etcd \
+		--advertise-client-urls "http://$(LOCAL_IP_ENV):2379,http://127.0.0.1:2379" \
+		--listen-client-urls "http://0.0.0.0:2379"
+
+stop-etcd:
+	@-docker rm -f calico-etcd
+
+
+# Kubernetes apiserver used for FVs
+.PHONY: run-k8s-apiserver
+run-k8s-apiserver: stop-k8s-apiserver run-etcd
+	docker run \
+		--net=host --name st-apiserver \
+		-v  $(CURDIR)/test:/test\
+		--detach \
+		${HYPERKUBE_IMAGE} \
+		/hyperkube apiserver \
+			--bind-address=0.0.0.0 \
+			--insecure-bind-address=0.0.0.0 \
+			--etcd-servers=http://127.0.0.1:2379 \
+			--admission-control=NamespaceLifecycle,LimitRanger,DefaultStorageClass,ResourceQuota \
+			--authorization-mode=RBAC \
+			--service-cluster-ip-range=10.101.0.0/16 \
+			--v=10 \
+			--token-auth-file=/test/token_auth.csv \
+			--basic-auth-file=/test/basic_auth.csv \
+			--anonymous-auth=true \
+			--logtostderr=true
+
+	# Wait until we can configure a cluster role binding which allows anonymous auth.
+	while ! docker exec st-apiserver kubectl create \
+		clusterrolebinding anonymous-admin \
+		--clusterrole=cluster-admin \
+		--user=system:anonymous; \
+		do echo "Trying to create ClusterRoleBinding"; \
+		sleep 1; \
+		done
+
+	test/setup_k8s_auth.sh
+
+# Stop Kubernetes apiserver
+stop-k8s-apiserver:
+	@-docker rm -f st-apiserver
