@@ -52,6 +52,8 @@ data:
   tigera.cnx-manager.oauth-client-id: "cnx-manager"
   # Prometheus server resource path
   tigera.cnx-manager.prometheus-api-url: "/api/v1/namespaces/calico-monitoring/services/calico-node-prometheus:9090/proxy/api/v1"
+  # Compliance resource path
+  tigera.cnx-manager.compliance-api-url: "/compliance"
   # Query api url
   tigera.cnx-manager.query-api-url: "/api/v1/namespaces/kube-system/services/https:cnx-api:8080/proxy"
   # Elasticsearch service resource path
@@ -637,6 +639,11 @@ spec:
               configMapKeyRef:
                 name: tigera-cnx-manager-config
                 key: tigera.cnx-manager.prometheus-api-url
+          - name: CNX_COMPLIANCE_API_URL
+            valueFrom:
+              configMapKeyRef:
+                name: tigera-cnx-manager-config
+                key: tigera.cnx-manager.compliance-api-url
           - name: CNX_QUERY_API_URL
             valueFrom:
               configMapKeyRef:
