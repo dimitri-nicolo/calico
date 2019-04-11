@@ -24,14 +24,6 @@ For a test environment, a minimum of 3 nodes is required. For a production envir
 - Ensure that you have the [credentials for the Tigera private registry](../../../getting-started/#obtain-the-private-registry-credentials)
   and a [license key](../../../getting-started/#obtain-a-license-key).
 
-{% include {{page.version}}/load-docker.md yaml="calico" orchestrator="kubernetes" platform="docker-ee" %}
-
-## <a name="install-docker-ucp"></a>Docker Enterprise/UCP Installation
-During the installation of UCP, the installation will require the following flag `--unmanaged-cni`. This tells UCP to
-not install the default Calico networking plugin.
-
-For installing Docker UCP, follow the best practice steps outlined [Install UCP for Production](https://docs.docker.com/ee/ucp/admin/install/).
-
 ## Install the Kubectl CLI Tool
 Install the Kubernetes command-line tool, kubectl, to deploy and manage applications on Kubernetes.
 As an example, you can run the following:
@@ -44,6 +36,14 @@ sudo mv ./kubectl /usr/local/bin/kubectl
 ```
 
 For more information please refer to [Install and Set Up kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/).
+
+{% include {{page.version}}/load-docker.md yaml="calico" orchestrator="kubernetes" platform="docker-ee" %}
+
+## <a name="install-docker-ucp"></a>Docker Enterprise/UCP Installation
+During the installation of UCP, the installation will require the following flag `--unmanaged-cni`. This tells UCP to
+not install the default Calico networking plugin.
+
+For installing Docker UCP, follow the best practice steps outlined [Install UCP for Production](https://docs.docker.com/ee/ucp/admin/install/).
 
 ## Download the UCP Client Certificate Bundle
 In order to use the Docker CLI client and kubectl, you just need to download and use a UCP client bundle.
@@ -88,22 +88,25 @@ Here is an example script to update the above values. The script expects the UCP
 and the `etcd_endpoint` is discoverable inspecting the IP address of the `ucp-kv` container running on the master node.
 
 ```bash
+#!/bin/bash
 BASE64_ETCD_CA=$(sudo cat /var/lib/docker/volumes/ucp-node-certs/_data/ca.pem | base64 -w 0)
 BASE64_ETCD_CERT=$(sudo cat /var/lib/docker/volumes/ucp-node-certs/_data/cert.pem | base64 -w 0)
 BASE64_ETCD_KEY=$(sudo cat /var/lib/docker/volumes/ucp-node-certs/_data/key.pem | base64 -w 0)
-ETCD_ENDPOINT_IP=$(sudo docker inspect -f '\{\{.Config.Hostname\}\}' ucp-kv)
+{% raw %}
+ETCD_ENDPOINT_IP=$(sudo docker inspect -f '{{.Config.Hostname}}' ucp-kv)
+{% endraw %}
 
 sed -i "s?etcd_endpoints: \"http://[0-9.:]*\"?etcd_endpoints: \"https://${ETCD_ENDPOINT_IP}:12378\"?g" calico.yaml
 sed -i "s?etcd_endpoints: \"http://<ETCD_IP>:<ETCD_PORT>\"?etcd_endpoints: \"https://${ETCD_ENDPOINT_IP}:12378\"?g" calico.yaml
 
-sed -i "s?etcd_ca: \"\"/etcd_ca: \"\/calico-secrets\/etcd-ca\"?" calico.yaml
-sed -i "s?etcd_cert: \"\"/etcd_cert: \"\/calico-secrets\/etcd-cert\"?" calico.yaml
-sed -i "s?etcd_key: \"\"/etcd_key: \"\/calico-secrets\/etcd-key\"?" calico.yaml
+sed -i "s?etcd_ca: \"\"?etcd_ca: \"\/calico-secrets\/etcd-ca\"?" calico.yaml
+sed -i "s?etcd_cert: \"\"?etcd_cert: \"\/calico-secrets\/etcd-cert\"?" calico.yaml
+sed -i "s?etcd_key: \"\"?etcd_key: \"\/calico-secrets\/etcd-key\"?" calico.yaml
 
-sed -i "s?# etcd-key: null/etcd-key: ${BASE64_ETCD_KEY}?" calico.yaml
-sed -i "s?# etcd-cert: null/etcd-cert: ${BASE64_ETCD_CERT}?" calico.yaml
-sed -i "s?# etcd-ca: null/etcd-ca: ${BASE64_ETCD_CA}?" calico.yaml
-sed -i "s?\"mtu\": __CNI_MTU__,/\"mtu\": __CNI_MTU__,\n          \"nodename_file_optional\": true,?" calico.yaml
+sed -i "s?# etcd-key: null?etcd-key: ${BASE64_ETCD_KEY}?" calico.yaml
+sed -i "s?# etcd-cert: null?etcd-cert: ${BASE64_ETCD_CERT}?" calico.yaml
+sed -i "s?# etcd-ca: null?etcd-ca: ${BASE64_ETCD_CA}?" calico.yaml
+sed -i "s?\"mtu\": __CNI_MTU__,?\"mtu\": __CNI_MTU__,\n          \"nodename_file_optional\": true,?" calico.yaml
 ```
 
 Once you have updated the {{site.prodname}} etcd manifest file, apply the manifest with the following cmd:

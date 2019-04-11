@@ -190,9 +190,11 @@ optionally Elasticsearch and Kibana in order to enable logs.
 
 {% include {{page.version}}/cnx-cred-sed.md yaml="monitor-calico" %}
 {% if include.platform == "docker-ee" %}
-1. Update the `calico-node-alertmanager` Service section and replace `nodePort: 30903` with `nodePort: 33903`
+1. Update the `calico-node-alertmanager` service section and replace `nodePort: 30903` with `nodePort: 33903`
 
-1. Update the `calico-node-prometheus` Service section and replace `nodePort: 30909` with `nodePort: 33909`
+1. Update the `calico-node-prometheus` service section and replace `nodePort: 30909` with `nodePort: 33909`
+
+1. Updte the `kibana-tigera-elasticsearch` service section and replace `nodePort: 30601` with `nodePort: 33601`
 
    > **Note**: Docker Enterprise requires non-reserved port ranges to be above 32000.
    {: .alert .alert-info}

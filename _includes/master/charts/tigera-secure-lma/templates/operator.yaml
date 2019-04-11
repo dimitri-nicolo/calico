@@ -114,6 +114,7 @@ spec:
         args:
           - --prometheus-config-reloader=quay.io/coreos/prometheus-config-reloader:{{.Values.prometheusConfigReloader.tag}}
           - --config-reloader-image=quay.io/coreos/configmap-reload:{{.Values.configmapReload.tag}}
+          - --config-reloader-memory=25Mi
         resources:
           requests:
             cpu: 100m

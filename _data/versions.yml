@@ -912,13 +912,13 @@ master:
       version: v3.6.0
       minor_version: v3.6
     prometheus-operator:
-      version: v0.28.0
+      version: v0.29.0
     prometheus:
       version: v2.7.1
     alertmanager:
       version: v0.16.1
     prometheus-config-reloader:
-      version: v0.28.0
+      version: v0.29.0
     configmap-reload:
       version: v0.0.1
     dikastes:
