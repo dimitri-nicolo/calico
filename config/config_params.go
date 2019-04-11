@@ -294,7 +294,7 @@ type Config struct {
 
 	// Config for domain-based policy, just local for now.
 	// TODO: add to FelixConfiguration also?
-	DomainInfoStore        string        `config:"file;/tmp/felix-domain-info-store.txt;local"`
+	DomainInfoStore        string        `config:"file;/var/run/calico/felix-domain-info-store.txt;local"`
 	DomainInfoSaveInterval time.Duration `config:"seconds;60;local"`
 }
 

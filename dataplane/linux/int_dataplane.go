@@ -878,11 +878,12 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 			time.Sleep(1 * time.Hour)
 			log.Panic("Woke up after 1 hour, something's probably wrong with the test.")
 		case stopWG := <-d.stopChan:
+			defer stopWG.Done()
 			if err := d.domainInfoStore.saveMappingsV1(); err != nil {
 				log.WithError(err).Warning("Failed to save mappings to file on Felix shutdown")
 
 			}
-			stopWG.Done()
+			return
 		}
 
 		if datastoreInSync && d.dataplaneNeedsSync {

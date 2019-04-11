@@ -206,7 +206,7 @@ func StartDataplaneDriver(configParams *config.Config,
 			DomainInfoStore:                 configParams.DomainInfoStore,
 			DomainInfoSaveInterval:          configParams.DomainInfoSaveInterval,
 		}
-		stopChan := make(chan *sync.WaitGroup)
+		stopChan := make(chan *sync.WaitGroup, 1)
 		intDP := intdataplane.NewIntDataplaneDriver(dpConfig, stopChan)
 		intDP.Start()
 

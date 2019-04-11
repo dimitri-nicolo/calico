@@ -185,8 +185,8 @@ func (s *domainInfoStore) readMappings() error {
 }
 
 const (
-	V1_TYPE_IP   = "ip"
-	V1_TYPE_NAME = "name"
+	v1TypeIP   = "ip"
+	v1TypeName = "name"
 )
 
 func (s *domainInfoStore) readMappingsV1(scanner *bufio.Scanner) error {
@@ -199,9 +199,10 @@ func (s *domainInfoStore) readMappingsV1(scanner *bufio.Scanner) error {
 		if err != nil {
 			return err
 		}
-		if expiryTime.After(time.Now()) {
+		ttlNow := time.Until(expiryTime)
+		if ttlNow.Seconds() > 1 {
 			log.Debugf("Recreate mapping %v", jsonMapping)
-			s.storeInfo(jsonMapping.LHS, jsonMapping.RHS, time.Until(expiryTime), jsonMapping.Type == V1_TYPE_NAME)
+			s.storeInfo(jsonMapping.LHS, jsonMapping.RHS, ttlNow, jsonMapping.Type == v1TypeName)
 		} else {
 			log.Debugf("Ignore expired mapping %v", jsonMapping)
 		}
@@ -235,15 +236,15 @@ func (s *domainInfoStore) saveMappingsV1() error {
 	jsonEncoder := json.NewEncoder(f)
 	for lhsName, nameData := range s.mappings {
 		for rhsName, valueData := range nameData.values {
-			jsonMapping := jsonMappingV1{LHS: lhsName, RHS: rhsName, Type: V1_TYPE_IP}
+			jsonMapping := jsonMappingV1{LHS: lhsName, RHS: rhsName, Type: v1TypeIP}
 			if valueData.isName {
-				jsonMapping.Type = V1_TYPE_NAME
+				jsonMapping.Type = v1TypeName
 			}
 			jsonMapping.Expiry = valueData.expiryTime.Format(time.RFC3339)
 			if err = jsonEncoder.Encode(jsonMapping); err != nil {
 				return err
 			}
-			log.Infof("Saved mapping: %v", jsonMapping)
+			log.Debugf("Saved mapping: %v", jsonMapping)
 		}
 	}
 

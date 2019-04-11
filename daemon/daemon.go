@@ -818,7 +818,21 @@ func monitorAndManageShutdown(failureReportChan <-chan string, driverCmd *exec.C
 			stopWG.Done()
 		}
 	}
-	stopWG.Wait()
+	logCxt.Info("Told subcomponents to shut down")
+
+	// Wait for those components to say they're done, for up to 30 seconds.
+	waitC := make(chan int)
+	timeoutC := time.NewTimer(30 * time.Second).C
+	go func() {
+		stopWG.Wait()
+		close(waitC)
+	}()
+	select {
+	case <-waitC:
+		logCxt.Info("Subcomponents have completed shut down")
+	case <-timeoutC:
+		logCxt.Warn("Subcomponent shut down timed out")
+	}
 
 	if !driverAlreadyStopped {
 		// Driver may still be running, just in case the driver is
