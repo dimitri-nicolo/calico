@@ -1,3 +1,12 @@
+# Shortcut targets
+default: build
+
+## Build binary for current platform
+all: build
+
+## Run the tests for the current platform/architecture
+test: ut fv
+
 ###############################################################################
 # Both native and cross architecture builds are supported.
 # The target architecture is select by setting the ARCH variable.
@@ -9,6 +18,7 @@ ARCHES=$(patsubst Dockerfile.%,%,$(wildcard Dockerfile.*))
 # ARCH is the target architecture
 # we need to keep track of them separately
 BUILDARCH ?= $(shell uname -m)
+BUILDOS ?= $(shell uname -s | tr A-Z a-z)
 
 # canonicalized names for host architecture
 ifeq ($(BUILDARCH),aarch64)
@@ -29,142 +39,254 @@ ifeq ($(ARCH),x86_64)
     override ARCH=amd64
 endif
 
-# list of arches *not* to build when doing *-all
-#    until s390x works correctly
-EXCLUDEARCH ?= s390x
-VALIDARCHES = $(filter-out $(EXCLUDEARCH),$(ARCHES))
+# we want to be able to run the same recipe on multiple targets keyed on the image name
+# to do that, we would use the entire image name, e.g. calico/node:abcdefg, as the stem, or '%', in the target
+# however, make does **not** allow the usage of invalid filename characters - like / and : - in a stem, and thus errors out
+# to get around that, we "escape" those characters by converting all : to --- and all / to ___ , so that we can use them
+# in the target, we then unescape them back
+escapefs = $(subst :,---,$(subst /,___,$(1)))
+unescapefs = $(subst ---,:,$(subst ___,/,$(1)))
+
+# these macros create a list of valid architectures for pushing manifests
+space :=
+space +=
+comma := ,
+prefix_linux = $(addprefix linux/,$(strip $1))
+join_platforms = $(subst $(space),$(comma),$(call prefix_linux,$(strip $1)))
 
 ###############################################################################
-CONTAINER_NAME?=gcr.io/unique-caldron-775/cnx/tigera/es-proxy
-PACKAGE_NAME?=github.com/tigera/es-proxy-image
+BUILD_IMAGE?=tigera/es-proxy
+PUSH_IMAGES?=gcr.io/unique-caldron-775/cnx/$(BUILD_IMAGE)
+RELEASE_IMAGES?=quay.io/$(BUILD_IMAGE)
+PACKAGE_NAME?=github.com/tigera/es-proxy
 
-## Clean enough that a new release build will be clean
-clean:
-	find . -name '*.created-$(ARCH)' -exec rm -f {} +
-	-docker rmi $(CONTAINER_NAME):latest-$(ARCH)
-	-docker rmi $(CONTAINER_NAME):$(VERSION)-$(ARCH)
-ifeq ($(ARCH),amd64)
-	-docker rmi $(CONTAINER_NAME):latest
-	-docker rmi $(CONTAINER_NAME):$(VERSION)
+# If this is a release, also tag and push additional images.
+ifeq ($(RELEASE),true)
+PUSH_IMAGES+=$(RELEASE_IMAGES)
 endif
 
-###############################################################################
-# Building the binary
-###############################################################################
-.PHONY: build-all
-## Build the binaries for all architectures and platforms
-build-all: build
+# remove from the list to push to manifest any registries that do not support multi-arch
+EXCLUDE_MANIFEST_REGISTRIES ?= quay.io/
+PUSH_MANIFEST_IMAGES=$(PUSH_IMAGES:$(EXCLUDE_MANIFEST_REGISTRIES)%=)
+PUSH_NONMANIFEST_IMAGES=$(filter-out $(PUSH_MANIFEST_IMAGES),$(PUSH_IMAGES))
 
-.PHONY: build
-## Build the binary for the current architecture and platform
-build:
-	@echo "Nothing to build, do 'make image' to create the container"
+# location of docker credentials to push manifests
+DOCKER_CONFIG ?= $(HOME)/.docker/config.json
 
-test:
-	@echo "Nothing to test here yet"
+GO_BUILD_VER?=v0.21
+# For building, we use the go-build image for the *host* architecture, even if the target is different
+# the one for the host should contain all the necessary cross-compilation tools
+# we do not need to use the arch since go-build:v0.15 now is multi-arch manifest
+CALICO_BUILD=calico/go-build:$(GO_BUILD_VER)
 
-###############################################################################
-# Building the image
-###############################################################################
-CONTAINER_CREATED?=.es-proxy.created-$(ARCH)
+# Disable make's implicit rules, which are not useful for golang, and slow down the build
+# considerably.
+.SUFFIXES:
 
-.PHONY: image
-image: $(CONTAINER_NAME)
-image-all: $(addprefix sub-image-,$(VALIDARCHES))
+# Some env vars that devs might find useful:
+#  TEST_DIRS=   : only run the unit tests from the specified dirs
+#  UNIT_TESTS=  : only run the unit tests matching the specified regexp
+
+# Define some constants
+#######################
+K8S_VERSION    = v1.11.0
+BINDIR        ?= bin
+BUILD_DIR     ?= build
+TOP_SRC_DIRS   = pkg
+SRC_DIRS       = $(shell sh -c "find $(TOP_SRC_DIRS) -name \\*.go \
+                   -exec dirname {} \\; | sort | uniq")
+TEST_DIRS     ?= $(shell sh -c "find $(TOP_SRC_DIRS) -name \\*_test.go \
+                   -exec dirname {} \\; | sort | uniq")
+GO_FILES       = $(shell sh -c "find pkg cmd -name \\*.go")
+ifeq ($(shell uname -s),Darwin)
+STAT           = stat -f '%c %N'
+else
+STAT           = stat -c '%Y %n'
+endif
+ifdef UNIT_TESTS
+	UNIT_TEST_FLAGS=-run $(UNIT_TESTS) -v
+endif
+
+ES_PROXY_VERSION?=$(shell git describe --tags --dirty --always)
+ES_PROXY_BUILD_DATE?=$(shell date -u +'%FT%T%z')
+ES_PROXY_GIT_COMMIT?=$(shell git rev-parse --short HEAD)
+ES_PROXY_GIT_TAG?=$(shell git describe --tags)
+
+VERSION_FLAGS=-X $(PACKAGE_NAME)/pkg/handler.VERSION=$(ES_PROXY_VERSION) \
+	-X $(PACKAGE_NAME)/pkg/handler.BUILD_DATE=$(ES_PROXY_BUILD_DATE) \
+	-X $(PACKAGE_NAME)/pkg/handler.GIT_TAG=$(ES_PROXY_GIT_TAG) \
+	-X $(PACKAGE_NAME)/pkg/handler.GIT_COMMIT=$(ES_PROXY_GIT_COMMIT)
+BUILD_LDFLAGS=-ldflags "$(VERSION_FLAGS)"
+RELEASE_LDFLAGS=-ldflags "$(VERSION_FLAGS) -s -w"
+
+# Figure out the users UID/GID.  These are needed to run docker containers
+# as the current user and ensure that files built inside containers are
+# owned by the current user.
+MY_UID:=$(shell id -u)
+MY_GID:=$(shell id -g)
+
+ifdef SSH_AUTH_SOCK
+  EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
+endif
+
+DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
+                   mkdir -p .go-build-cache && \
+                   docker run --rm \
+                              --net=host \
+                              $(EXTRA_DOCKER_ARGS) \
+                              -e LOCAL_USER_ID=$(MY_UID) \
+                              -e GOARCH=$(ARCH) \
+                              -v $${PWD}:/es-proxy:rw \
+                              -v $${PWD}/.go-pkg-cache:/go/pkg:rw \
+                              -v $${PWD}/.go-build-cache:/home/user/.cache/go-build:rw \
+                              -w /es-proxy \
+                              $(CALICO_BUILD)
+
+
+# This section builds the output binaries.
+# Some will have dedicated targets to make it easier to type, for example
+# "es-proxy" instead of "$(BINDIR)/es-proxy".
+#########################################################################
+build: $(BINDIR)/es-proxy
+
+es-proxy: $(BINDIR)/es-proxy
+
+$(BINDIR)/es-proxy: $(BINDIR)/es-proxy-amd64
+	$(DOCKER_GO_BUILD) \
+		sh -c 'cd $(BINDIR) && ln -s -T es-proxy-$(ARCH) es-proxy'
+
+$(BINDIR)/es-proxy-$(ARCH): $(GO_FILES)
+ifndef RELEASE_BUILD
+	$(eval LDFLAGS:=$(RELEASE_LDFLAGS))
+else
+	$(eval LDFLAGS:=$(BUILD_LDFLAGS))
+endif
+	@echo Building es-proxy...
+	mkdir -p bin
+	$(DOCKER_GO_BUILD) \
+	    sh -c 'go build -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/server" && \
+               ( ldd $(BINDIR)/es-proxy-$(ARCH) 2>&1 | grep -q "Not a valid dynamic program" || \
+	             ( echo "Error: $(BINDIR)/es-proxy-$(ARCH) was not statically linked"; false ) )'
+
+# Build the docker image.
+.PHONY: $(BUILD_IMAGE) $(BUILD_IMAGE)-$(ARCH)
+
+# by default, build the image for the target architecture
+.PHONY: image-all
+image-all: $(addprefix sub-image-,$(ARCHES))
 sub-image-%:
 	$(MAKE) image ARCH=$*
 
-$(CONTAINER_NAME): $(CONTAINER_CREATED)
-$(CONTAINER_CREATED): Dockerfile.$(ARCH) haproxy.cfg rsyslog.conf
-	docker build -t $(CONTAINER_NAME):latest-$(ARCH) -f Dockerfile.$(ARCH) .
+image: $(BUILD_IMAGE)
+$(BUILD_IMAGE): $(BUILD_IMAGE)-$(ARCH)
+$(BUILD_IMAGE)-$(ARCH): $(BINDIR)/es-proxy-$(ARCH)
+	docker build --pull -t $(BUILD_IMAGE):latest-$(ARCH) --file ./Dockerfile.$(ARCH) .
 ifeq ($(ARCH),amd64)
-	docker tag $(CONTAINER_NAME):latest-$(ARCH) $(CONTAINER_NAME):latest
+	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(BUILD_IMAGE):latest
 endif
-	touch $@
 
-
-# ensure we have a real imagetag
 imagetag:
 ifndef IMAGETAG
 	$(error IMAGETAG is undefined - run using make <target> IMAGETAG=X.Y.Z)
 endif
 
 ## push one arch
-push: imagetag
-	@echo pushing $(IMAGETAG)
-	docker push $(CONTAINER_NAME):$(IMAGETAG)-$(ARCH)
-ifeq ($(ARCH),amd64)
-	docker push $(CONTAINER_NAME):$(IMAGETAG)
-endif
+push: imagetag $(addprefix sub-single-push-,$(call escapefs,$(PUSH_IMAGES)))
 
-push-all: imagetag $(addprefix sub-push-,$(VALIDARCHES))
+sub-single-push-%:
+	docker push $(call unescapefs,$*:$(IMAGETAG)-$(ARCH))
+
+## push all arches
+push-all: imagetag $(addprefix sub-push-,$(ARCHES))
 sub-push-%:
 	$(MAKE) push ARCH=$* IMAGETAG=$(IMAGETAG)
 
-## tag images of one arch
-tag-images: imagetag
-	docker tag $(CONTAINER_NAME):latest-$(ARCH) $(CONTAINER_NAME):$(IMAGETAG)-$(ARCH)
+## push multi-arch manifest where supported
+push-manifests: imagetag  $(addprefix sub-manifest-,$(call escapefs,$(PUSH_MANIFEST_IMAGES)))
+sub-manifest-%:
+	# Docker login to hub.docker.com required before running this target as we are using $(DOCKER_CONFIG) holds the docker login credentials
+	# path to credentials based on manifest-tool's requirements here https://github.com/estesp/manifest-tool#sample-usage
+	docker run -t --entrypoint /bin/sh -v $(DOCKER_CONFIG):/root/.docker/config.json $(CALICO_BUILD) -c "/usr/bin/manifest-tool push from-args --platforms $(call join_platforms,$(ARCHES)) --template $(call unescapefs,$*:$(IMAGETAG))-ARCH --target $(call unescapefs,$*:$(IMAGETAG))"
+
+## push default amd64 arch where multi-arch manifest is not supported
+push-non-manifests: imagetag $(addprefix sub-non-manifest-,$(call escapefs,$(PUSH_NONMANIFEST_IMAGES)))
+sub-non-manifest-%:
 ifeq ($(ARCH),amd64)
-	docker tag $(CONTAINER_NAME):latest-$(ARCH) $(CONTAINER_NAME):$(IMAGETAG)
+	docker push $(call unescapefs,$*:$(IMAGETAG))
+else
+	$(NOECHO) $(NOOP)
+endif
+
+## tag images of one arch for all supported registries
+tag-images: imagetag $(addprefix sub-single-tag-images-arch-,$(call escapefs,$(PUSH_IMAGES))) $(addprefix sub-single-tag-images-non-manifest-,$(call escapefs,$(PUSH_NONMANIFEST_IMAGES)))
+
+sub-single-tag-images-arch-%:
+	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG)-$(ARCH))
+
+# because some still do not support multi-arch manifest
+sub-single-tag-images-non-manifest-%:
+ifeq ($(ARCH),amd64)
+	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG))
+else
+	$(NOECHO) $(NOOP)
 endif
 
 ## tag images of all archs
-tag-images-all: imagetag $(addprefix sub-tag-images-,$(VALIDARCHES))
+tag-images-all: imagetag $(addprefix sub-tag-images-,$(ARCHES))
 sub-tag-images-%:
 	$(MAKE) tag-images ARCH=$* IMAGETAG=$(IMAGETAG)
 
-###############################################################################
-# CI
-###############################################################################
-.PHONY: ci
-## Run what CI runs
-ci: image-all
+##########################################################################
+# Testing
+##########################################################################
+.PHONY: ut
+ut:
+	$(DOCKER_GO_BUILD) \
+		sh -c 'go test $(UNIT_TEST_FLAGS) \
+			$(addprefix $(PACKAGE_NAME)/,$(TEST_DIRS))'
 
+.PHONY: fv
+fv:
+	echo "FV not implemented yet"
+
+.PHONY: clean
+clean: clean-bin clean-build-image
+clean-build-image:
+	docker rmi -f $(BUILD_IMAGE) > /dev/null 2>&1 || true
+
+clean-bin:
+	rm -rf $(BINDIR) bin
 
 ###############################################################################
-# CD
+# CI/CD
 ###############################################################################
-.PHONY: cd
-## Deploys images to registry
-cd: image-all
+.PHONY: ci cd
+
+## run CI cycle - build, test, etc.
+ci: test image-all
+
+## Deploy images to registry
+cd:
 ifndef CONFIRM
 	$(error CONFIRM is undefined - run using make <target> CONFIRM=true)
 endif
 ifndef BRANCH_NAME
 	$(error BRANCH_NAME is undefined - run using make <target> BRANCH_NAME=var or set an environment variable)
 endif
-	$(MAKE) tag-images-all push-all IMAGETAG=${BRANCH_NAME} EXCLUDEARCH="$(EXCLUDEARCH)"
-	$(MAKE) tag-images-all push-all IMAGETAG=$(shell git describe --tags --dirty --always --long) EXCLUDEARCH="$(EXCLUDEARCH)"
+	$(MAKE) tag-images-all push-all push-manifests push-non-manifests IMAGETAG=$(BRANCH_NAME) EXCLUDEARCH="$(EXCLUDEARCH)"
+	$(MAKE) tag-images-all push-all push-manifests push-non-manifests IMAGETAG=$(shell git describe --tags --dirty --always --long) EXCLUDEARCH="$(EXCLUDEARCH)"
 
-	$(MAKE) tag-images push-all IMAGETAG=${BRANCH_NAME}
-	$(MAKE) tag-images push-all IMAGETAG=$(shell git describe --tags --dirty --always --long)
-
-###############################################################################
+##############################################################################
 # Release
-###############################################################################
+##############################################################################
 PREVIOUS_RELEASE=$(shell git describe --tags --abbrev=0)
 GIT_VERSION?=$(shell git describe --tags --dirty)
+ifndef VERSION
+	BUILD_VERSION = $(GIT_VERSION)
+else
+	BUILD_VERSION = $(VERSION)
+endif
 
-## Tags and builds a release from start to finish.
-release: release-prereqs
-	$(MAKE) VERSION=$(VERSION) release-tag
-	$(MAKE) VERSION=$(VERSION) release-build
-	$(MAKE) VERSION=$(VERSION) release-verify
-
-	@echo ""
-	@echo "Release build complete. Next, push the produced images."
-	@echo ""
-	@echo "  make VERSION=$(VERSION) release-publish"
-	@echo ""
-
-## Produces a git tag for the release.
-release-tag: release-prereqs release-notes
-	git tag $(VERSION) -F release-notes-$(VERSION)
-	@echo ""
-	@echo "Now you can build the release:"
-	@echo ""
-	@echo "  make VERSION=$(VERSION) release-build"
-	@echo ""
 
 ## Produces a clean build of release artifacts at the specified version.
 release-build: release-prereqs clean
@@ -172,55 +294,60 @@ release-build: release-prereqs clean
 ifneq ($(VERSION), $(GIT_VERSION))
 	$(error Attempt to build $(VERSION) from $(GIT_VERSION))
 endif
-	@echo "Building release."
-	# Check to make sure the tag isn't "dirty"
-	if git describe --tags --dirty | grep dirty; \
-	then echo current git working tree is "dirty". Make sure you do not have any uncommitted changes ;false; fi
 
 	$(MAKE) image-all
-	$(MAKE) tag-images-all IMAGETAG=$(VERSION)
+	$(MAKE) tag-images-all IMAGETAG=$(VERSION) RELEASE=true
 	# Generate the `latest` images.
-	$(MAKE) tag-images-all IMAGETAG=latest
+	$(MAKE) tag-images-all IMAGETAG=latest RELEASE=true
 
 ## Verifies the release artifacts produces by `make release-build` are correct.
-# Add checks here if any are possible
 release-verify: release-prereqs
-	@echo "Verifying release."
-	# Check that image were created recently and that the IDs of the versioned and latest image match
-	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" tigera/es-proxy:latest
-	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" $(CONTAINER_NAME):$(VERSION)
-
-## Generates release notes based on commits in this version.
-release-notes: release-prereqs
-	mkdir -p dist
-	echo "# Changelog" > release-notes-$(VERSION)
-	sh -c "git cherry -v $(PREVIOUS_RELEASE) | cut '-d ' -f 2- | sed 's/^/- /' >> release-notes-$(VERSION)"
-
-## Pushes a github release and release artifacts produced by `make release-build`.
-release-publish: release-prereqs
-	# Push the git tag.
-	git push origin $(VERSION)
-
-	# Push images.
-	$(MAKE) push-all IMAGETAG=$(VERSION)
-
-	@echo "Finalize the GitHub release based on the pushed tag."
-	@echo ""
-	@echo "  https://$(PACKAGE_NAME)/releases/tag/$(VERSION)"
-	@echo ""
-	@echo "If this is the latest stable release, then run the following to push 'latest' images."
-	@echo ""
-	@echo "  make VERSION=$(VERSION) release-publish-latest"
-	@echo ""
-
-# WARNING: Only run this target if this release is the latest stable release. Do NOT
-# run this target for alpha / beta / release candidate builds, or patches to earlier Calico versions.
-## Pushes `latest` release images. WARNING: Only run this for latest stable releases.
-release-publish-latest: release-prereqs
-	$(MAKE) push-all IMAGETAG=latest
+	# Check the reported version is correct for each release artifact.
+	for img in quay.io/$(BUILD_IMAGE):$(VERSION)-$(ARCH); do \
+	  if docker run $$img --version | grep -q '$(VERSION)$$'; \
+	  then \
+	    echo "Check successful. ($$img)"; \
+	  else \
+	    echo "Incorrect version in docker image $$img!"; \
+	    exit 1; \
+	  fi \
+	done; \
 
 # release-prereqs checks that the environment is configured properly to create a release.
 release-prereqs:
 ifndef VERSION
 	$(error VERSION is undefined - run using make release VERSION=vX.Y.Z)
 endif
+ifdef LOCAL_BUILD
+	$(error LOCAL_BUILD must not be set for a release)
+endif
+
+
+# Run fossa.io license checks
+foss-checks:
+	@echo Running $@...
+	@docker run --rm -v $(CURDIR)/:/code/es-proxy:rw \
+	  -e LOCAL_USER_ID=$(MY_UID) \
+	  -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
+	  -w /code/es-proxy/ \
+	  $(CALICO_BUILD) /usr/local/bin/fossa
+
+###############################################################################
+# Utilities
+###############################################################################
+.PHONY: help
+## Display this help text
+help: # Some kind of magic from https://gist.github.com/rcmachado/af3db315e31383502660
+	$(info Available targets)
+	@awk '/^[a-zA-Z\-\_0-9\/]+:/ {                                      \
+		nb = sub( /^## /, "", helpMsg );                                \
+		if(nb == 0) {                                                   \
+			helpMsg = $$0;                                              \
+			nb = sub( /^[^:]*:.* ## /, "", helpMsg );                   \
+		}                                                               \
+		if (nb)                                                         \
+			printf "\033[1;31m%-" width "s\033[0m %s\n", $$1, helpMsg;  \
+	}                                                                   \
+	{ helpMsg = $$0 }'                                                  \
+	width=20                                                            \
+	$(MAKEFILE_LIST)
