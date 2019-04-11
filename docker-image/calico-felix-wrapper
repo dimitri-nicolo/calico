@@ -39,8 +39,13 @@ while true; do
   calico-felix &
   pid=$!
   echo "Started calico-felix, PID=$pid"
-  wait $pid
-  rc=$?
+  while true; do
+    wait $pid
+    rc=$?
+    if ! kill -0 $pid; then
+	break
+    fi
+  done
   echo "Process stopped, RC=$rc"
   if [ "$rc" == "129" ]; then
     echo "Restarting calico-felix for config reload"
