@@ -75,6 +75,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v1.WorkloadEndpointSpec":           schema_libcalico_go_lib_apis_v1_WorkloadEndpointSpec(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.AllocationAttribute":            schema_libcalico_go_lib_apis_v3_AllocationAttribute(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.AuditEventsSelection":           schema_libcalico_go_lib_apis_v3_AuditEventsSelection(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.AuditStat":                      schema_libcalico_go_lib_apis_v3_AuditStat(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.BGPConfiguration":               schema_libcalico_go_lib_apis_v3_BGPConfiguration(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.BGPConfigurationList":           schema_libcalico_go_lib_apis_v3_BGPConfigurationList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.BGPConfigurationSpec":           schema_libcalico_go_lib_apis_v3_BGPConfigurationSpec(ref),
@@ -94,6 +95,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportNamespace":       schema_libcalico_go_lib_apis_v3_EndpointsReportNamespace(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportService":         schema_libcalico_go_lib_apis_v3_EndpointsReportService(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsSelection":             schema_libcalico_go_lib_apis_v3_EndpointsSelection(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsStat":                  schema_libcalico_go_lib_apis_v3_EndpointsStat(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.EntityRule":                     schema_libcalico_go_lib_apis_v3_EntityRule(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ErrorCondition":                 schema_libcalico_go_lib_apis_v3_ErrorCondition(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.EtcdConfig":                     schema_libcalico_go_lib_apis_v3_EtcdConfig(ref),
@@ -142,6 +144,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.LicenseKeyList":                 schema_libcalico_go_lib_apis_v3_LicenseKeyList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.LicenseKeySpec":                 schema_libcalico_go_lib_apis_v3_LicenseKeySpec(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.NamesAndLabelsMatch":            schema_libcalico_go_lib_apis_v3_NamesAndLabelsMatch(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.NamespacesStat":                 schema_libcalico_go_lib_apis_v3_NamespacesStat(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkPolicy":                  schema_libcalico_go_lib_apis_v3_NetworkPolicy(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkPolicyList":              schema_libcalico_go_lib_apis_v3_NetworkPolicyList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkPolicySpec":              schema_libcalico_go_lib_apis_v3_NetworkPolicySpec(ref),
@@ -165,6 +168,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ResourceID":                     schema_libcalico_go_lib_apis_v3_ResourceID(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.Rule":                           schema_libcalico_go_lib_apis_v3_Rule(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ServiceAccountMatch":            schema_libcalico_go_lib_apis_v3_ServiceAccountMatch(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.ServicesStat":                   schema_libcalico_go_lib_apis_v3_ServicesStat(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.Tier":                           schema_libcalico_go_lib_apis_v3_Tier(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.TierList":                       schema_libcalico_go_lib_apis_v3_TierList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.TierSpec":                       schema_libcalico_go_lib_apis_v3_TierSpec(ref),
@@ -2042,6 +2046,46 @@ func schema_libcalico_go_lib_apis_v3_AuditEventsSelection(ref common.ReferenceCa
 	}
 }
 
+func schema_libcalico_go_lib_apis_v3_AuditStat(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Properties: map[string]spec.Schema{
+					"numTotal": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The total number of in-scope audit logs.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"numCreate": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The number of in-scope audit log create events.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"numModified": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The number of in-scope audit log patch or replace events.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"numDelete": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The number of in-scope audit log delete events.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{},
+	}
+}
+
 func schema_libcalico_go_lib_apis_v3_BGPConfiguration(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -2941,6 +2985,74 @@ func schema_libcalico_go_lib_apis_v3_EndpointsSelection(ref common.ReferenceCall
 		},
 		Dependencies: []string{
 			"github.com/projectcalico/libcalico-go/lib/apis/v3.NamesAndLabelsMatch"},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_EndpointsStat(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Properties: map[string]spec.Schema{
+					"numTotal": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The total number of in-scope endpoints.\n\nSource: Calculated from pod/wep, hep, namespace and service account labels.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"numIngressProtected": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The number of in-scope endpoints that were ingress protected during the reporting interval. See below for defn of ingress-protected.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"numEgressProtected": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The number of in-scope endpoints that were egress protected during the reporting interval. See below for defn of egress-protected.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"numIngressFromInternet": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The number of inscope endpoints whose policy would allow ingress traffic from the internet for *any* period within the reporting interval. See below for how this is calculated for an endpoint.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"numEgressToInternet": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The number of inscope endpoints whose policy would allow egress traffic to the internet for *any* period within the reporting interval. See below for how this is calculated for an endpoint.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"numIngressFromOtherNamespace": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The number of inscope endpoints whose policy would allow ingress traffic from a different namespace for *any* period within the reporting interval. See below for how this is calculated for an endpoint.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"numEgressToOtherNamespace": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The number of inscope endpoints whose policy would allow ingress traffic from a different namespace for *any* period within the reporting interval. See below for how this is calculated for an endpoint.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"numEnvoyEnabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The number of in-scope endpoints that were envoy-enabled within the reporting interval (see below for defn of envoy-enabled)",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{},
 	}
 }
 
@@ -5740,6 +5852,74 @@ func schema_libcalico_go_lib_apis_v3_NamesAndLabelsMatch(ref common.ReferenceCal
 	}
 }
 
+func schema_libcalico_go_lib_apis_v3_NamespacesStat(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Properties: map[string]spec.Schema{
+					"numTotal": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The total number of namespaces containing in-scope endpoints.\n\nSource: Calculated from pod/wep, hep, namespace and service account labels.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"numIngressProtected": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The number of namespaces whose in-scope endpoints were ingress protected during the reporting interval.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"numEgressProtected": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The number of namespaces whose in-scope endpoints were egress protected during the reporting interval.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"numIngressFromInternet": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The number of namespaces that contained in-scope endpoints that would allow ingress traffic from the internet for *any* period within the reporting interval.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"numEgressToInternet": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The number of namespaces that contained in-scope endpoints that would allow egress traffic to the internet for *any* period within the reporting interval.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"numIngressFromOtherNamespace": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The number of namespaces that contained in-scope endpoints that would allow ingress traffic from another namespace for *any* period within the reporting interval.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"numEgressToOtherNamespace": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The number of namespaces that contained in-scope endpoints that would allow egress traffic to another namespace for *any* period within the reporting interval.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"numEnvoyEnabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The number of namespaces whose in-scope endpoints were always Envoy-enabled",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{},
+	}
+}
+
 func schema_libcalico_go_lib_apis_v3_NetworkPolicy(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -6496,6 +6676,12 @@ func schema_libcalico_go_lib_apis_v3_ReportData(ref common.ReferenceCallback) co
 							Format: "",
 						},
 					},
+					"reportType": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
 					"reportSpec": {
 						SchemaProps: spec.SchemaProps{
 							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ReportSpec"),
@@ -6511,60 +6697,9 @@ func schema_libcalico_go_lib_apis_v3_ReportData(ref common.ReferenceCallback) co
 							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
-					"endpointsNumTotal": {
+					"endpointsStat": {
 						SchemaProps: spec.SchemaProps{
-							Description: "The total number of in-scope endpoints.\n\nSource: Calculated from pod/wep, hep, namespace and service account labels.",
-							Type:        []string{"integer"},
-							Format:      "int32",
-						},
-					},
-					"endpointsNumIngressProtected": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The number of in-scope endpoints that were ingress protected during the reporting interval. See below for defn of ingress-protected.",
-							Type:        []string{"integer"},
-							Format:      "int32",
-						},
-					},
-					"endpointsNumEgressProtected": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The number of in-scope endpoints that were egress protected during the reporting interval. See below for defn of egress-protected.",
-							Type:        []string{"integer"},
-							Format:      "int32",
-						},
-					},
-					"endpointsNumIngressFromInternet": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The number of inscope endpoints whose policy would allow ingress traffic from the internet for *any* period within the reporting interval. See below for how this is calculated for an endpoint.",
-							Type:        []string{"integer"},
-							Format:      "int32",
-						},
-					},
-					"endpointsNumEgressToInternet": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The number of inscope endpoints whose policy would allow egress traffic to the internet for *any* period within the reporting interval. See below for how this is calculated for an endpoint.",
-							Type:        []string{"integer"},
-							Format:      "int32",
-						},
-					},
-					"endpointsNumIngressFromOtherNamespace": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The number of inscope endpoints whose policy would allow ingress traffic from a different namespace for *any* period within the reporting interval. See below for how this is calculated for an endpoint.",
-							Type:        []string{"integer"},
-							Format:      "int32",
-						},
-					},
-					"endpointsNumEgressToOtherNamespace": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The number of inscope endpoints whose policy would allow ingress traffic from a different namespace for *any* period within the reporting interval. See below for how this is calculated for an endpoint.",
-							Type:        []string{"integer"},
-							Format:      "int32",
-						},
-					},
-					"endpointsNumEnvoyEnabled": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The number of in-scope endpoints that were envoy-enabled within the reporting interval (see below for defn of envoy-enabled)",
-							Type:        []string{"integer"},
-							Format:      "int32",
+							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsStat"),
 						},
 					},
 					"endpoints": {
@@ -6580,60 +6715,9 @@ func schema_libcalico_go_lib_apis_v3_ReportData(ref common.ReferenceCallback) co
 							},
 						},
 					},
-					"namespacesNumTotal": {
+					"namespacesStat": {
 						SchemaProps: spec.SchemaProps{
-							Description: "The total number of namespaces containing in-scope endpoints.\n\nSource: Calculated from pod/wep, hep, namespace and service account labels.",
-							Type:        []string{"integer"},
-							Format:      "int32",
-						},
-					},
-					"namespacesNumIngressProtected": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The number of namespaces whose in-scope endpoints were ingress protected during the reporting interval.",
-							Type:        []string{"integer"},
-							Format:      "int32",
-						},
-					},
-					"namespacesNumEgressProtected": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The number of namespaces whose in-scope endpoints were egress protected during the reporting interval.",
-							Type:        []string{"integer"},
-							Format:      "int32",
-						},
-					},
-					"namespacesNumIngressFromInternet": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The number of namespaces that contained in-scope endpoints that would allow ingress traffic from the internet for *any* period within the reporting interval.",
-							Type:        []string{"integer"},
-							Format:      "int32",
-						},
-					},
-					"namespacesNumEgressToInternet": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The number of namespaces that contained in-scope endpoints that would allow egress traffic to the internet for *any* period within the reporting interval.",
-							Type:        []string{"integer"},
-							Format:      "int32",
-						},
-					},
-					"namespacesNumIngressFromOtherNamespace": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The number of namespaces that contained in-scope endpoints that would allow ingress traffic from another namespace for *any* period within the reporting interval.",
-							Type:        []string{"integer"},
-							Format:      "int32",
-						},
-					},
-					"namespacesNumEgressToOtherNamespace": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The number of namespaces that contained in-scope endpoints that would allow egress traffic to another namespace for *any* period within the reporting interval.",
-							Type:        []string{"integer"},
-							Format:      "int32",
-						},
-					},
-					"namespacesNumEnvoyEnabled": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The number of namespaces whose in-scope endpoints were always Envoy-enabled",
-							Type:        []string{"integer"},
-							Format:      "int32",
+							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.NamespacesStat"),
 						},
 					},
 					"namespaces": {
@@ -6649,39 +6733,9 @@ func schema_libcalico_go_lib_apis_v3_ReportData(ref common.ReferenceCallback) co
 							},
 						},
 					},
-					"servicesNumTotal": {
+					"servicesStat": {
 						SchemaProps: spec.SchemaProps{
-							Description: "The total number of services containing in-scope endpoints.\n\nSource: Calculated from pod/wep, hep, service and service account labels.",
-							Type:        []string{"integer"},
-							Format:      "int32",
-						},
-					},
-					"servicesNumIngressProtected": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The number of services whose in-scope endpoints were ingress protected during the reporting interval.",
-							Type:        []string{"integer"},
-							Format:      "int32",
-						},
-					},
-					"servicesNumIngressFromInternet": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The number of services that contained in-scope endpoints that would allow ingress traffic from the internet for *any* period within the reporting interval.",
-							Type:        []string{"integer"},
-							Format:      "int32",
-						},
-					},
-					"servicesNumIngressFromOtherNamespace": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The number of services that contained in-scope endpoints that would allow ingress traffic from another namespace for *any* period within the reporting interval.",
-							Type:        []string{"integer"},
-							Format:      "int32",
-						},
-					},
-					"servicesNumEnvoyEnabled": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The number of services whose in-scope endpoints were always Envoy-enabled",
-							Type:        []string{"integer"},
-							Format:      "int32",
+							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ServicesStat"),
 						},
 					},
 					"services": {
@@ -6697,28 +6751,28 @@ func schema_libcalico_go_lib_apis_v3_ReportData(ref common.ReferenceCallback) co
 							},
 						},
 					},
-					"auditNumTotal": {
+					"numTotal": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The total number of in-scope audit logs.",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},
 					},
-					"auditNumCreate": {
+					"numCreate": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The number of in-scope audit log create events.",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},
 					},
-					"auditNumModified": {
+					"numModified": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The number of in-scope audit log patch or replace events.",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},
 					},
-					"auditNumDelete": {
+					"numDelete": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The number of in-scope audit log delete events.",
 							Type:        []string{"integer"},
@@ -6739,11 +6793,11 @@ func schema_libcalico_go_lib_apis_v3_ReportData(ref common.ReferenceCallback) co
 						},
 					},
 				},
-				Required: []string{"reportName", "reportSpec", "startTime", "endTime"},
+				Required: []string{"reportName", "reportType", "reportSpec", "startTime", "endTime", "endpointsStat", "namespacesStat", "servicesStat"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportEndpoint", "github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportNamespace", "github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportService", "github.com/projectcalico/libcalico-go/lib/apis/v3.ReportSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.Time", "k8s.io/apiserver/pkg/apis/audit.Event"},
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportEndpoint", "github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportNamespace", "github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportService", "github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsStat", "github.com/projectcalico/libcalico-go/lib/apis/v3.NamespacesStat", "github.com/projectcalico/libcalico-go/lib/apis/v3.ReportSpec", "github.com/projectcalico/libcalico-go/lib/apis/v3.ServicesStat", "k8s.io/apimachinery/pkg/apis/meta/v1.Time", "k8s.io/apiserver/pkg/apis/audit.Event"},
 	}
 }
 
@@ -7034,6 +7088,53 @@ func schema_libcalico_go_lib_apis_v3_ServiceAccountMatch(ref common.ReferenceCal
 							Description: "Selector is an optional field that restricts the rule to only apply to traffic that originates from (or terminates at) a pod running as a service account that matches the given label selector. If both Names and Selector are specified then they are AND'ed.",
 							Type:        []string{"string"},
 							Format:      "",
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_ServicesStat(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Properties: map[string]spec.Schema{
+					"numTotal": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The total number of services containing in-scope endpoints.\n\nSource: Calculated from pod/wep, hep, service and service account labels.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"numIngressProtected": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The number of services whose in-scope endpoints were ingress protected during the reporting interval.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"numIngressFromInternet": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The number of services that contained in-scope endpoints that would allow ingress traffic from the internet for *any* period within the reporting interval.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"numIngressFromOtherNamespace": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The number of services that contained in-scope endpoints that would allow ingress traffic from another namespace for *any* period within the reporting interval.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"numEnvoyEnabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The number of services whose in-scope endpoints were always Envoy-enabled",
+							Type:        []string{"integer"},
+							Format:      "int32",
 						},
 					},
 				},
