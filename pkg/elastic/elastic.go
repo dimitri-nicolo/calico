@@ -29,7 +29,8 @@ const (
 
 type Client interface {
 	report.AuditLogReportHandler
-	report.ArchivedReportStore
+	report.ReportRetriever
+	report.ReportStorer
 	list.Destination
 	event.Fetcher
 	EnsureIndices() error

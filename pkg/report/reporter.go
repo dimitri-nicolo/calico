@@ -41,7 +41,7 @@ func Run(
 	lister list.Destination,
 	eventer event.Fetcher,
 	auditer AuditLogReportHandler,
-	archiver ArchivedReportStore,
+	archiver ReportStorer,
 ) error {
 
 	// Create the cross-reference cache that we use to monitor for changes in the relevant data.
@@ -81,7 +81,7 @@ type reporter struct {
 	xc       xrefcache.XrefCache
 	replayer syncer.Starter
 	auditer  AuditLogReportHandler
-	archiver ArchivedReportStore
+	archiver ReportStorer
 
 	// Consolidate the tracked in-scope endpoint events into a local cache, which will get converted and copied into
 	// the report data structure.

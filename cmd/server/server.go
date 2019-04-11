@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/tigera/compliance/cmd/server/api"
+	"github.com/tigera/compliance/internal/mocks"
 
 	log "github.com/sirupsen/logrus"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
@@ -14,6 +15,7 @@ import (
 	"github.com/caimeo/iniflags"
 
 	"github.com/tigera/compliance/pkg/elastic"
+	"github.com/tigera/compliance/pkg/report"
 	"github.com/tigera/compliance/pkg/tls"
 	"github.com/tigera/compliance/pkg/version"
 )
@@ -28,9 +30,9 @@ var (
 )
 
 var (
-	els *elastic.Client
 	sig chan os.Signal
 	tf  *prefixed.TextFormatter
+	rep report.ReportRetriever
 )
 
 func main() {
@@ -63,14 +65,18 @@ func handleFlags() {
 
 func initElastic() {
 	if *devFlagNoES {
+		//NOTE: Using mock data because es doesn't have data
+		rep = &mocks.MockReportRetriever{}
+		log.Info("MOCK REPORT RETRIEVER CREATED")
 		return
 	}
-	els, err := elastic.NewFromEnv()
+	var err error
+	rep, err = elastic.NewFromEnv()
 	if err != nil {
 		log.WithError(err).Errorf("Error creating ES client.")
 		os.Exit(3)
 	}
-	log.Infof("Created %s", els)
+	log.Infof("Created %s", rep)
 }
 
 func initAPIServer() {
@@ -86,6 +92,8 @@ func initAPIServer() {
 		log.WithError(err).Error("Error starting compliance server")
 		os.Exit(2)
 	}
+
+	api.SetReportRetriever(rep)
 
 	//wait while running
 	api.Wait()

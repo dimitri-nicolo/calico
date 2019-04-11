@@ -2,13 +2,19 @@ package api
 
 import (
 	"bytes"
-	"crypto/rand"
+	"context"
 	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	comp "github.com/projectcalico/libcalico-go/lib/compliance"
+	"github.com/projectcalico/libcalico-go/lib/options"
 	log "github.com/sirupsen/logrus"
+	"github.com/tigera/compliance/pkg/datastore"
+	"github.com/tigera/compliance/pkg/report"
 )
 
 // HandleDownloadReports sends one or multiple (via zip) reports to the client
@@ -19,33 +25,39 @@ func HandleDownloadReports(response http.ResponseWriter, request *http.Request) 
 		request:  request,
 	}
 
+	//make sure at least one valid format was requested
 	if err := rd.setFormats(); err != nil {
+		log.WithError(err)
+		http.Error(rd.response, err.Error(), http.StatusBadRequest)
 		return
 	}
 
+	//single file or zip based on number of formats requested
 	if len(rd.formats) == 1 {
 		rd.prepSingleFile()
 	} else {
-		rd.prepZipFile()
+		//TODO: implement multi-file zip
+		log.Info("multi report zip, not currently available")
+		http.Error(rd.response, "Multi format download not available yet", http.StatusServiceUnavailable)
+		return
 	}
 
 	rd.serveContent()
 }
 
-const dateformat = "20060102"
-
 type reportDownloader struct {
 	response http.ResponseWriter
 	request  *http.Request
+	reportId string //something like:  "Report0::2019-04-11T16:39:11-07:00::2019-04-11T16:39:11-07:00"
 	formats  []string
-	content  reportContent
+	content  downloadContent
 }
 
-type reportContent struct {
+type downloadContent struct {
 	outputFormat string
 	contentType  string
-	startDate    time.Time
-	endDate      time.Time
+	startDate    metav1.Time
+	endDate      metav1.Time
 	reportType   string
 	reportName   string
 	data         []byte
@@ -61,11 +73,6 @@ func (rd *reportDownloader) setFormats() error {
 
 	//ensure at least one format type was specified
 	if len(f) < 1 {
-		rd.response.WriteHeader(400)
-		_, e := rd.response.Write([]byte("Missing downloadFormats parameter"))
-		if e != nil {
-			log.WithError(e).Error("http response write failure")
-		}
 		return fmt.Errorf("Missing download formats")
 	}
 
@@ -73,12 +80,6 @@ func (rd *reportDownloader) setFormats() error {
 
 	//ensure all formats requested are valid
 	if !areValidFormats(rd.formats) {
-		rd.response.WriteHeader(400)
-		_, e := rd.response.Write([]byte("Invalid format"))
-		if e != nil {
-			log.WithError(e).Error("http response write failure")
-		}
-
 		return fmt.Errorf("Invalid format")
 	}
 
@@ -89,44 +90,40 @@ func (rd *reportDownloader) setFormats() error {
 func (rd *reportDownloader) prepSingleFile() {
 	log.Info("serve single report")
 
-	//TODO: now just generating a fake file
-	content := reportContent{
-		outputFormat: rd.formats[0] + ".txt",
-		contentType:  "text/plain",
-		startDate:    time.Now(),
-		endDate:      time.Now(),
-		reportType:   "reporttype",
-		reportName:   "reportName",
+	reportId := "Report0::2019-04-11T16:39:11-07:00::2019-04-11T16:39:11-07:00" //TODO:get from param
+
+	report, e := rep.RetrieveArchivedReport(reportId)
+	if e != nil {
+		errString := "RetrieveArchivedReport failed"
+		http.Error(rd.response, errString, http.StatusInternalServerError)
+		log.WithError(e).Error(errString)
+		return
 	}
 
-	//TODO: passing the url but what should this really be... something to find this report in ES
-	content.data = getReportData(rd.request.URL.String())
+	content := downloadContent{
+		contentType: "text/plain",
+		startDate:   report.StartTime,
+		endDate:     report.EndTime,
+		reportName:  report.ReportName,
+		reportType:  report.ReportSpec.ReportType,
+	}
+	report.UID()
+
+	//TODO:
+	//		outputFormat: rd.formats[0] + ".txt",
+
+	content.data, e = rd.renderReportData(report)
+	if e != nil {
+		errString := "report rendering failed failed"
+		http.Error(rd.response, errString, http.StatusInternalServerError)
+		log.WithError(e).Error(errString)
+		return
+	}
 
 	rd.content = content
 }
 
-//fetch and prepare the content for multifile zip
-func (rd *reportDownloader) prepZipFile() {
-	log.Info("serve multi report zip")
-
-	//TODO: now just generating a fake file
-	content := reportContent{
-		outputFormat: ".zip",
-		contentType:  "application/zip",
-		startDate:    time.Now(),
-		endDate:      time.Now(),
-		reportType:   "reporttype",
-		reportName:   "reportName",
-	}
-
-	//TODO: get all the format files and zip them together
-	//TODO: passing the url but what should this really be... something to find this report in ES
-	content.data = getReportData(rd.request.URL.String())
-
-	rd.content = content
-}
-
-//serve the report or zip content
+//download eeport or zip content
 func (rd *reportDownloader) serveContent() {
 	fileName := rd.content.generateFileName()
 
@@ -137,9 +134,9 @@ func (rd *reportDownloader) serveContent() {
 }
 
 //generates our report download file name
-func (rc *reportContent) generateFileName() string {
-	startDateStr := rc.startDate.Format(dateformat)
-	endDateStr := rc.endDate.Format(dateformat)
+func (rc *downloadContent) generateFileName() string {
+	startDateStr := rc.startDate.Format(time.RFC3339)
+	endDateStr := rc.endDate.Format(time.RFC3339)
 	var fileName string
 	if strings.HasPrefix(rc.outputFormat, ".") {
 		fileName = fmt.Sprintf("%s-%s-%s-%s%s", rc.reportType, rc.reportName, startDateStr, endDateStr, rc.outputFormat)
@@ -155,11 +152,32 @@ func areValidFormats(fmts []string) bool {
 	return true
 }
 
-//get the data for a report from elastic
-func getReportData(someKeyForElastic string) []byte {
-	//TODO: go get the actual data from elastic... for now random data
-	d := make([]byte, 4096)
-	_, _ = rand.Read(d)
+//renders the report data
+func (rd *reportDownloader) renderReportData(report *report.ArchivedReportData) ([]byte, error) {
 
-	return d
+	//get a handle to the calico client
+	calico := datastore.MustGetCalicoClient()
+
+	//get the global report type from calico
+	grt, e := calico.GlobalReportTypes().Get(context.Background(), report.ReportSpec.ReportType, options.GetOptions{})
+	if e != nil {
+		errString := "global report type look up failed"
+		http.Error(rd.response, errString, http.StatusInternalServerError)
+		log.WithError(e).Error(errString)
+		return nil, e
+	}
+
+	//create the formated report  from the global report type and the report data
+	log.Info("ReportTemplate", grt.Spec.UICompleteTemplate.Template)
+	log.Info("ReportData", *report.ReportData)
+
+	renderedReport, e := comp.RenderTemplate(grt.Spec.UICompleteTemplate.Template, report.ReportData)
+	if e != nil {
+		errString := "report generation failed"
+		http.Error(rd.response, errString, http.StatusInternalServerError)
+		log.WithError(e).Error(errString)
+		return nil, e
+	}
+
+	return []byte(renderedReport), nil
 }

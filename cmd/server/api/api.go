@@ -7,11 +7,13 @@ import (
 	"sync"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/tigera/compliance/pkg/report"
 )
 
 var (
 	server *http.Server
 	wg     sync.WaitGroup
+	rep    report.ReportRetriever
 )
 
 // Start the compliance api server
@@ -19,7 +21,7 @@ func Start(addr string, key string, cert string) error {
 	sm := http.NewServeMux()
 
 	sm.HandleFunc("/listreports", HandleListReports)
-	sm.HandleFunc("/downloadreports", HandleDownloadReports)
+	sm.HandleFunc("/downloadreport", HandleDownloadReports)
 
 	server = &http.Server{
 		Addr:    addr,
@@ -45,8 +47,14 @@ func Start(addr string, key string, cert string) error {
 	return nil
 }
 
+func SetReportRetriever(rr report.ReportRetriever) {
+	log.Info("Server API report retriever set")
+	rep = rr
+}
+
 // Wait for the compliance server to terminate.
 func Wait() {
+	log.Info("Waiting")
 	wg.Wait()
 }
 
