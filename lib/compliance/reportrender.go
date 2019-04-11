@@ -136,7 +136,7 @@ var (
 //
 // Returns rendered text for given text-template and data struct input.
 //
-func RenderTemplate(reportTemplateText string, reportData api.ReportData) (rendered string, ret error) {
+func RenderTemplate(reportTemplateText string, reportData *api.ReportData) (rendered string, ret error) {
 	defer func() {
 		if perr := recover(); perr != nil {
 			ret = fmt.Errorf("%v", perr)

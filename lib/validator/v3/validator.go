@@ -1314,7 +1314,7 @@ func validateReportTemplate(structLevel validator.StructLevel) {
 
 	if tmpl != "" {
 		// Validate template execution.
-		_, err := compliance.RenderTemplate(tmpl, compliance.ReportDataSample)
+		_, err := compliance.RenderTemplate(tmpl, &compliance.ReportDataSample)
 		if err != nil {
 			structLevel.ReportError(
 				reflect.ValueOf(rt.Name),

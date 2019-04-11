@@ -32,7 +32,7 @@ var _ = Describe("ReportTemplate Renderer", func() {
 		rendered := `startTime,endTime,endpointSelector,namespaceSelector,serviceAccountSelectors,endpointsNumInScope,endpointsNumIngressProtected,endpointsNumEgressProtected,endpointsNumIngressFromInternet,endpointsNumEgressToInternet,endpointsNumIngressFromOtherNamespace,endpointsNumEgressToOtherNamespace,endpointsNumEnvoyEnabled
 2019-04-01 00:00:00 +0000 UTC,2019-04-01 10:00:00 +0000 UTC,lbl == 'lbl-val',endpoint-namespace-selector,serviceaccount-selector,1,10,100,1000,9000,900,90,9`
 
-		matches, err := compliance.RenderTemplate(tmpl, compliance.ReportDataSample)
+		matches, err := compliance.RenderTemplate(tmpl, &compliance.ReportDataSample)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(matches).To(Equal(rendered))
 	})
@@ -45,7 +45,7 @@ var _ = Describe("ReportTemplate Renderer", func() {
 		rendered := `name,namespace,ingressProtected,egressProtected,envoyEnabled,appliedPolicies,services
 sample-res,sample-ns,false,true,false,sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res),sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res)`
 
-		matches, err := compliance.RenderTemplate(tmpl, compliance.ReportDataSample)
+		matches, err := compliance.RenderTemplate(tmpl, &compliance.ReportDataSample)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(matches).To(Equal(rendered))
 	})
@@ -58,7 +58,7 @@ sample-res,sample-ns,false,true,false,sample-kind(sample-ns/sample-res);sample-k
 		rendered := `name,namespace,ingressProtected,egressProtected,envoyEnabled,appliedPolicies,services
 sample-res,sample-ns,false,true,false,sample-kind(sample-ns/sample-res)|sample-kind(sample-ns/sample-res),sample-kind(sample-ns/sample-res)|sample-kind(sample-ns/sample-res)`
 
-		matches, err := compliance.RenderTemplate(tmpl, compliance.ReportDataSample)
+		matches, err := compliance.RenderTemplate(tmpl, &compliance.ReportDataSample)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(matches).To(Equal(rendered))
 	})
@@ -87,7 +87,7 @@ sample-res,sample-ns,false,true,false,sample-kind(sample-ns/sample-res)|sample-k
 		ard := compliance.ReportDataSample
 		ard.Endpoints = endpoints
 
-		matches, err := compliance.RenderTemplate(tmpl, ard)
+		matches, err := compliance.RenderTemplate(tmpl, &ard)
 		Expect(err).ToNot(HaveOccurred())
 
 		matches = strings.TrimSpace(matches) // remove last \n
@@ -98,7 +98,7 @@ sample-res,sample-ns,false,true,false,sample-kind(sample-ns/sample-res)|sample-k
 		// Cap maximum entries
 		cappedTmpl := `{{ range .Endpoints -}} {{ join .AppliedPolicies ";" 3 }} {{ end }}`
 
-		matches, err = compliance.RenderTemplate(cappedTmpl, ard)
+		matches, err = compliance.RenderTemplate(cappedTmpl, &ard)
 		Expect(err).ToNot(HaveOccurred())
 		matches = strings.TrimSpace(matches) // remove last \n
 		endpointList = strings.Split(matches, " ")
@@ -112,7 +112,7 @@ sample-res,sample-ns,false,true,false,sample-kind(sample-ns/sample-res)|sample-k
 		rendered := "sample-kind(sample-ns/sample-res)"
 		renderedWithAPIVer := fmt.Sprintf("sample-kind.%s(sample-ns/sample-res)", k8sNetNamespace)
 
-		matches, err := compliance.RenderTemplate(tmpl, compliance.ReportDataSample)
+		matches, err := compliance.RenderTemplate(tmpl, &compliance.ReportDataSample)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(matches).To(Equal(rendered))
 
@@ -123,7 +123,7 @@ sample-res,sample-ns,false,true,false,sample-kind(sample-ns/sample-res)|sample-k
 		rds := compliance.ReportDataSample
 		rds.Endpoints = []api.EndpointsReportEndpoint{endpoint}
 
-		matches, err = compliance.RenderTemplate(tmpl, rds)
+		matches, err = compliance.RenderTemplate(tmpl, &rds)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(matches).To(Equal(renderedWithAPIVer))
 	})
@@ -131,31 +131,31 @@ sample-res,sample-ns,false,true,false,sample-kind(sample-ns/sample-res)|sample-k
 	It("inventory-endpoints report failing with invalid argument", func() {
 		// Wrong number of arguments
 		tmpl := `{{ range .Endpoints -}} {{ join .AppliedPolicies }} {{ end }}`
-		_, err := compliance.RenderTemplate(tmpl, compliance.ReportDataSample)
+		_, err := compliance.RenderTemplate(tmpl, &compliance.ReportDataSample)
 		Expect(err).To(HaveOccurred())
 
 		// Invalid argument (not a slice)
 		noSliceTmpl := `{{ join .EndpointsNumTotal ";" }}`
-		_, err = compliance.RenderTemplate(noSliceTmpl, compliance.ReportDataSample)
+		_, err = compliance.RenderTemplate(noSliceTmpl, &compliance.ReportDataSample)
 		Expect(err).To(HaveOccurred())
 
 		// Invalid max-entries argument
 		invalidCappedTmpl := `{{ range .Endpoints -}} {{ join .AppliedPolicies ";" "1" }} {{ end }}`
-		_, err = compliance.RenderTemplate(invalidCappedTmpl, compliance.ReportDataSample)
+		_, err = compliance.RenderTemplate(invalidCappedTmpl, &compliance.ReportDataSample)
 		Expect(err).To(HaveOccurred())
 	})
 
 	It("audit report rendering - json", func() {
 		tmpl := "{{ json .AuditEvents }}"
 
-		_, err := compliance.RenderTemplate(tmpl, compliance.ReportDataSample)
+		_, err := compliance.RenderTemplate(tmpl, &compliance.ReportDataSample)
 		Expect(err).ToNot(HaveOccurred())
 	})
 
 	It("audit report rendering - yaml", func() {
 		tmpl := "{{ yaml .AuditEvents }}"
 
-		_, err := compliance.RenderTemplate(tmpl, compliance.ReportDataSample)
+		_, err := compliance.RenderTemplate(tmpl, &compliance.ReportDataSample)
 		Expect(err).ToNot(HaveOccurred())
 	})
 })
