@@ -90,6 +90,12 @@ manager:
     #     configMapKeyRef:
     #       name: tigera-cnx-manager-config
     #       key: tigera.cnx-manager.cluster-name
+  # Configuration for the service which exposes the manager UI.
+  service:
+    type: ClusterIP
+    nodePort: null
+    loadBalancerIP: null
+    clusterIP: null
 
 # Configuration for the manager UI proxy.
 managerProxy:
