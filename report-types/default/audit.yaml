@@ -15,6 +15,5 @@ spec:
     - name: events.yaml
   auditEventsSelection:
     resources:
-      - kind: 'globalnetworkpolicy'
-        name: 'grt-aes-g'
-        namespace: 'grt-aes-gnp-ns'
+      - kind: 'GlobalNetworkPolicy'
+      - kind: 'NetworkPolicy'
