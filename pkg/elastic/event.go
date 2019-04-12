@@ -56,7 +56,10 @@ func (c *client) GetAuditEvents(ctx context.Context, kind *metav1.TypeMeta, star
 //   all Calico GlobalNetworkPolicy audit events.
 func (c *client) AddAuditEvents(ctx context.Context, data *v3.ReportData, filter *v3.AuditEventsSelection, start, end time.Time) {
 	ch := make(chan *event.AuditEventResult, pageSize)
-	c.searchAuditEvents(ctx, filter, &start, &end, ch)
+	go func() {
+		defer close(ch)
+		c.searchAuditEvents(ctx, filter, &start, &end, ch)
+	}()
 	for event := range ch {
 		data.AuditEvents = append(data.AuditEvents, *event.Event)
 	}
