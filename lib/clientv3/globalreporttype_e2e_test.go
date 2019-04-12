@@ -43,11 +43,6 @@ var _ = testutils.E2eDatastoreDescribe("GlobalReportType tests", testutils.Datas
 			Description: "rt-uist-d11",
 			Template:    "Report Name: {{ .ReportName }}",
 		},
-		UICompleteTemplate: apiv3.ReportTemplate{
-			Name:        "rt-uict-n12",
-			Description: "rt-uict-d12",
-			Template:    "Report Name: {{ .ReportName }}",
-		},
 		DownloadTemplates: []apiv3.ReportTemplate{
 			{
 				Name:        "rt-uict-n13",
@@ -72,11 +67,6 @@ var _ = testutils.E2eDatastoreDescribe("GlobalReportType tests", testutils.Datas
 		UISummaryTemplate: apiv3.ReportTemplate{
 			Name:        "rt-uist-n21",
 			Description: "rt-uist-d21",
-			Template:    "Report Name: {{ .ReportName }}",
-		},
-		UICompleteTemplate: apiv3.ReportTemplate{
-			Name:        "rt-uict-n22",
-			Description: "rt-uict-d22",
 			Template:    "Report Name: {{ .ReportName }}",
 		},
 		DownloadTemplates: []apiv3.ReportTemplate{

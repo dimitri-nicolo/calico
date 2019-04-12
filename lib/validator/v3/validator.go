@@ -1333,10 +1333,6 @@ func validateGlobalReportType(structLevel validator.StructLevel) {
 
 	// Validate unique name across templates.
 	tmplNames := map[string]bool{spec.UISummaryTemplate.Name: true}
-	if _, exists := tmplNames[spec.UICompleteTemplate.Name]; exists {
-		structLevel.ReportError(reflect.ValueOf(grt.Name),
-			"GlobalReportType", "", reason("Template name '"+spec.UICompleteTemplate.Name+"' is already in use."), "")
-	}
 	for _, t := range spec.DownloadTemplates {
 		if _, exists := tmplNames[t.Name]; exists {
 			structLevel.ReportError(reflect.ValueOf(grt.Name),
