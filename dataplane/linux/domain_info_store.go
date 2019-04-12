@@ -225,7 +225,9 @@ func (s *domainInfoStore) saveMappingsV1() error {
 	fileAlreadyClosed := false
 	defer func() {
 		if !fileAlreadyClosed {
-			f.Close()
+			if err := f.Close(); err != nil {
+				log.WithError(err).Warning("Failed to close mappings file")
+			}
 		}
 	}()
 

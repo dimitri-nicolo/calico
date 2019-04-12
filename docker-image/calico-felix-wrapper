@@ -42,6 +42,13 @@ while true; do
   while true; do
     wait $pid
     rc=$?
+    # According to POSIX (via
+    # https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=566639), wait
+    # can also return when Felix is signalled, even if it handles the
+    # signal and takes noticeable time before actually exiting.
+    #
+    # To cover this, use 'kill -0' to check if Felix is still running,
+    # and loop round to wait again if so.
     if ! kill -0 $pid; then
 	break
     fi
