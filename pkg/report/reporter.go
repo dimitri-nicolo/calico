@@ -168,7 +168,7 @@ func (r *reporter) transferAggregatedData() {
 	// Transfer the aggregated data to the ReportData structure. Start with endpoints.
 	for id, ep := range r.inScopeEndpoints {
 		r.data.Endpoints = append(r.data.Endpoints, apiv3.EndpointsReportEndpoint{
-			ID:                        id,
+			Endpoint:                  id,
 			IngressProtected:          ep.zeroTrustFlags&xrefcache.CacheEntryProtectedIngress == 0, // We reversed this for zero-trust
 			EgressProtected:           ep.zeroTrustFlags&xrefcache.CacheEntryProtectedEgress == 0,  // We reversed this for zero-trust
 			IngressFromInternet:       ep.zeroTrustFlags&xrefcache.CacheEntryInternetExposedIngress != 0,
