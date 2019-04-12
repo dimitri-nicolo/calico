@@ -15,12 +15,12 @@ spec:
   - name: summary.csv
     template: |
       startTime,endTime,endpointSelector,namespaceNames,namespaceSelector,serviceAccountNames,serviceAccountSelectors,endpointsNumInScope,endpointsNumIngressProtected,endpointsNumEgressProtected,endpointsNumIngressFromInternet,endpointsNumEgressToInternet,endpointsNumIngressFromOtherNamespace,endpointsNumEgressToOtherNamespace,endpointsNumEnvoyEnabled
-      {{ .StartTime }},{{ .EndTime }},{{ .ReportSpec.EndpointsSelection.EndpointSelector }},{{ join .ReportSpec.EndpointsSelection.Namespaces.Names ";" }},{{ .ReportSpec.EndpointsSelection.Namespaces.Selector }},{{ join .ReportSpec.EndpointsSelection.ServiceAccounts.Names ";" }},{{ .ReportSpec.EndpointsSelection.ServiceAccounts.Selector }},{{ {{ .EndpointsNumTotal }},{{ .EndpointsNumIngressProtected }},{{ EndpointsNumEgressProtected }},{{ .EndpointsNumIngressFromInternet }},{{ .EndpointsNumEgressToInternet }},{{ .EndpointsNumIngressFromOtherNamespace }},{{ .EndpointsNumEgressToOtherNamespace }},{{ .EndpointsNumEnvoyEnabled }}
+      {{ .StartTime }},{{ .EndTime }},{{ .ReportSpec.EndpointsSelection.EndpointSelector }},{{ join .ReportSpec.EndpointsSelection.Namespaces.Names ";" }},{{ .ReportSpec.EndpointsSelection.Namespaces.Selector }},{{ join .ReportSpec.EndpointsSelection.ServiceAccounts.Names ";" }},{{ .ReportSpec.EndpointsSelection.ServiceAccounts.Selector }},{{ {{ .EndpointsSummary.NumTotal }},{{ .EndpointsSummary.NumIngressProtected }},{{.EndpointsSummary.NumEgressProtected }},{{ .EndpointsSummary.NumIngressFromInternet }},{{ .EndpointsSummary.NumEgressToInternet }},{{ .EndpointsSummary.NumIngressFromOtherNamespace }},{{ .EndpointsSummary.NumEgressToOtherNamespace }},{{ .EndpointsSummary.NumEnvoyEnabled }}
   - name: endpoints.csv
     template: |
       name,namespace,ingressProtected,egressProtected,envoyEnabled,appliedPolicies,services
       {{ range .Endpoints -}}
-      {{ .ID.Name }},{{ .ID.Namespace }},{{ .IngressProtected }},{{ .EgressProtected }},{{ .EnvoyEnabled }},{{ join .AppliedPolicies “;” }},{{ join .Services “;” }}
+      {{ .Endpoint.Name }},{{ .Endpoint.Namespace }},{{ .IngressProtected }},{{ .EgressProtected }},{{ .EnvoyEnabled }},{{ join .AppliedPolicies “;” }},{{ join .Services “;” }}
       {{- end }}
   uiCompleteTemplate:
     name: ui-complete.json
