@@ -158,8 +158,10 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.RemoteClusterConfiguration":     schema_libcalico_go_lib_apis_v3_RemoteClusterConfiguration(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.RemoteClusterConfigurationList": schema_libcalico_go_lib_apis_v3_RemoteClusterConfigurationList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.RemoteClusterConfigurationSpec": schema_libcalico_go_lib_apis_v3_RemoteClusterConfigurationSpec(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.ReportCreationStatus":           schema_libcalico_go_lib_apis_v3_ReportCreationStatus(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ReportData":                     schema_libcalico_go_lib_apis_v3_ReportData(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ReportSpec":                     schema_libcalico_go_lib_apis_v3_ReportSpec(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.ReportStatus":                   schema_libcalico_go_lib_apis_v3_ReportStatus(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ReportTemplate":                 schema_libcalico_go_lib_apis_v3_ReportTemplate(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ReportTypeSpec":                 schema_libcalico_go_lib_apis_v3_ReportTypeSpec(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ResourceID":                     schema_libcalico_go_lib_apis_v3_ResourceID(ref),
@@ -4314,11 +4316,16 @@ func schema_libcalico_go_lib_apis_v3_GlobalReport(ref common.ReferenceCallback) 
 							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ReportSpec"),
 						},
 					},
+					"status": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ReportStatus"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.ReportSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.ReportSpec", "github.com/projectcalico/libcalico-go/lib/apis/v3.ReportStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 
@@ -6484,6 +6491,46 @@ func schema_libcalico_go_lib_apis_v3_RemoteClusterConfigurationSpec(ref common.R
 	}
 }
 
+func schema_libcalico_go_lib_apis_v3_ReportCreationStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ReportCreationStatus contains the status of the automated report generation.",
+				Properties: map[string]spec.Schema{
+					"generationTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The time the report was generated and archived.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"start": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The start time of the report.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"end": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The end time of the report.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"reportType": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The ReportType as configured at the time the report was generated.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"generationTime", "start", "end", "reportType"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+	}
+}
+
 func schema_libcalico_go_lib_apis_v3_ReportData(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -6799,6 +6846,38 @@ func schema_libcalico_go_lib_apis_v3_ReportSpec(ref common.ReferenceCallback) co
 		},
 		Dependencies: []string{
 			"github.com/projectcalico/libcalico-go/lib/apis/v3.AuditEventsSelection", "github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsSelection"},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_ReportStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ReportStatus contains the status of the automated report generation.",
+				Properties: map[string]spec.Schema{
+					"lastSuccessfulReport": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ReportCreationStatus"),
+						},
+					},
+					"errorConditions": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ErrorCondition"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"lastSuccessfulReport", "errorConditions"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.ErrorCondition", "github.com/projectcalico/libcalico-go/lib/apis/v3.ReportCreationStatus"},
 	}
 }
 
