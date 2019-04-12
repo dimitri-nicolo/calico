@@ -10,6 +10,8 @@ test: ut
 # Define some constants
 #############################
 ELASTIC_VERSION ?= 6.7.0
+K8S_VERSION      ?= v1.11.3
+ETCD_VERSION     ?= v3.3.7
 
 ###############################################################################
 # Both native and cross architecture builds are supported.
@@ -461,7 +463,7 @@ install-git-hooks:
 # Tests
 ###############################################################################
 .PHONY: ut
-ut combined.coverprofile: export-mockdata
+ut combined.coverprofile: export-mockdata run-etcd
 	@echo Running Go UTs.
 	$(DOCKER_RUN) $(LOCAL_BUILD_MOUNTS) -e ELASTIC_HOST=localhost $(CALICO_BUILD) ./utils/run-coverage
 
@@ -489,6 +491,90 @@ run-elastic: stop-elastic
 ## Stop elasticsearch with name tigera-elastic
 stop-elastic:
 	-docker rm -f tigera-elastic
+
+## Run etcd as a container (calico-etcd)
+run-etcd: stop-etcd
+	docker run --detach \
+	--net=host \
+	--entrypoint=/usr/local/bin/etcd \
+	--name calico-etcd quay.io/coreos/etcd:$(ETCD_VERSION) \
+	--advertise-client-urls "http://$(LOCAL_IP_ENV):2379,http://127.0.0.1:2379,http://$(LOCAL_IP_ENV):4001,http://127.0.0.1:4001" \
+	--listen-client-urls "http://0.0.0.0:2379,http://0.0.0.0:4001"
+
+## Stop the etcd container (calico-etcd)
+stop-etcd:
+	-docker rm -f calico-etcd
+
+## Run a local kubernetes master with API via hyperkube
+run-kubernetes-master: stop-kubernetes-master
+	# Run a Kubernetes apiserver using Docker.
+	docker run \
+		--net=host --name st-apiserver \
+		--detach \
+		gcr.io/google_containers/hyperkube-amd64:${K8S_VERSION} \
+		/hyperkube apiserver \
+			--bind-address=0.0.0.0 \
+			--insecure-bind-address=0.0.0.0 \
+	        	--etcd-servers=http://127.0.0.1:2379 \
+			--admission-control=NamespaceLifecycle,LimitRanger,DefaultStorageClass,ResourceQuota \
+			--service-cluster-ip-range=10.101.0.0/16 \
+			--v=10 \
+			--logtostderr=true
+
+	# Wait until the apiserver is accepting requests.
+	while ! docker exec st-apiserver kubectl get nodes; do echo "Waiting for apiserver to come up..."; sleep 2; done
+
+	# And run the controller manager.
+	docker run \
+		--net=host --name st-controller-manager \
+		--detach \
+		gcr.io/google_containers/hyperkube-amd64:${K8S_VERSION} \
+		/hyperkube controller-manager \
+                        --master=127.0.0.1:8080 \
+                        --min-resync-period=3m \
+                        --allocate-node-cidrs=true \
+                        --cluster-cidr=10.10.0.0/16 \
+                        --v=5
+
+	# Create CustomResourceDefinition (CRD) for Calico resources
+	# from the manifest crds.yaml
+	docker run \
+	    --net=host \
+	    --rm \
+		-v  $(CURDIR):/manifests \
+		gcr.io/google_containers/hyperkube-amd64:${K8S_VERSION} \
+		/hyperkube kubectl \
+		--server=http://127.0.0.1:8080 \
+		apply -f /manifests/test/crds.yaml
+
+	# Create a Node in the API for the tests to use.
+	docker run \
+	    --net=host \
+	    --rm \
+		-v  $(CURDIR):/manifests \
+		gcr.io/google_containers/hyperkube-amd64:${K8S_VERSION} \
+		/hyperkube kubectl \
+		--server=http://127.0.0.1:8080 \
+		apply -f /manifests/test/mock-node.yaml
+
+	# Create Namespaces required by namespaced Calico `NetworkPolicy`
+	# tests from the manifests namespaces.yaml.
+	docker run \
+	    --net=host \
+	    --rm \
+		-v  $(CURDIR):/manifests \
+		gcr.io/google_containers/hyperkube-amd64:${K8S_VERSION} \
+		/hyperkube kubectl \
+		--server=http://localhost:8080 \
+		apply -f /manifests/test/namespaces.yaml
+
+## Stop the local kubernetes master
+stop-kubernetes-master:
+	# Delete the cluster role binding.
+	-docker exec st-apiserver kubectl delete clusterrolebinding anonymous-admin
+
+	# Stop master components.
+	-docker rm -f st-apiserver st-controller-manager
 
 ###############################################################################
 # CI/CD
