@@ -38,31 +38,33 @@ data:
   tigera.cnx-manager.authentication-type: "OAuth"
 {{- else if eq .Values.platform "eks" }}
   tigera.cnx-manager.authentication-type: "Token"
-{{- else }}
+{{- else if .Values.manager.auth }}
   tigera.cnx-manager.authentication-type: {{ .Values.manager.auth.type | default "Basic" | quote }}
+{{- else }}
+  tigera.cnx-manager.authentication-type: "Basic"
 {{- end }}
   # The OIDC authority.  Required if authentication-type is OIDC, ignored otherwise.
-{{- if .Values.manager.auth.authority }}
-  tigera.cnx-manager.oidc-authority: {{ .Values.manager.auth.authority | quote }}
+{{- if .Values.manager.auth }}
+  tigera.cnx-manager.oidc-authority: {{ .Values.manager.auth.authority | default "https://accounts.google.com" | quote }}
 {{- else }}
   tigera.cnx-manager.oidc-authority: "https://accounts.google.com"
 {{- end }}
   # The OIDC client id to use for OIDC login.  Kubelet must be configured accordingly.
   # Value is ignored if not using OIDC login.
-{{- if .Values.manager.auth.clientID }}
-  tigera.cnx-manager.oidc-client-id: {{ .Values.manager.auth.clientID | quote }}
+{{- if .Values.manager.auth }}
+  tigera.cnx-manager.oidc-client-id: {{ .Values.manager.auth.clientID | default "<oidc-client-id>" | quote }}
 {{- else }}
   tigera.cnx-manager.oidc-client-id: "<oidc-client-id>"
 {{- end }}
   # The OAuth endpoint. Required if authentication-type is OAuth, ignored otherwise.
-{{- if .Values.manager.auth.authority }}
-  tigera.cnx-manager.oauth-authority: {{ .Values.manager.auth.authority | quote }}
+{{- if .Values.manager.auth }}
+  tigera.cnx-manager.oauth-authority: {{ .Values.manager.auth.authority | default "https://<oauth-authority>/oauth/authorize" | quote }}
 {{- else }}
   tigera.cnx-manager.oauth-authority: "https://<oauth-authority>/oauth/authorize"
 {{- end }}
   # The OAuth client id to use for OAuth login. Value is ignored if not using OAuth login.
-{{- if .Values.manager.auth.clientID }}
-  tigera.cnx-manager.oauth-client-id: {{ .Values.manager.auth.clientID | quote }}
+{{- if .Values.manager.auth }}
+  tigera.cnx-manager.oauth-client-id: {{ .Values.manager.auth.clientID | default "cnx-manager" | quote }}
 {{- else }}
   tigera.cnx-manager.oauth-client-id: "cnx-manager"
 {{- end }}

@@ -88,8 +88,8 @@ manager:
     key: null
   auth:
     # Auth type. TSEE supports Basic, OIDC, Token, and OAuth
-    # type: (oidc | basic | token | oauth)
-    type: basic
+    # type: (OIDC | Basic | Token | OAuth)
+    type: Basic
     # The authority.  Required if authentication type is OIDC or OAuth.
     # OIDC  authority: "https://accounts.google.com"
     # OAuth authority: "https://<oauth-authority>/oauth/authorize"
