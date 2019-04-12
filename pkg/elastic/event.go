@@ -60,8 +60,17 @@ func (c *client) AddAuditEvents(ctx context.Context, data *v3.ReportData, filter
 		defer close(ch)
 		c.searchAuditEvents(ctx, filter, &start, &end, ch)
 	}()
-	for event := range ch {
-		data.AuditEvents = append(data.AuditEvents, *event.Event)
+	for e := range ch {
+		switch e.Verb {
+		case "create":
+			data.AuditSummary.NumCreate++
+		case "update", "patch":
+			data.AuditSummary.NumModified++
+		case "delete":
+			data.AuditSummary.NumDelete++
+		}
+		data.AuditEvents = append(data.AuditEvents, *e.Event)
+		data.AuditSummary.NumTotal++
 	}
 }
 

@@ -89,7 +89,7 @@ func (c *client) RetrieveArchivedReportSummaries() ([]*report.ArchivedReportData
 
 func (c *client) StoreArchivedReport(r *report.ArchivedReportData) error {
 	res, err := c.Index().
-		Index(reportsMapping).
+		Index(reportsIndex).
 		Type("_doc").
 		Id(r.UID()).
 		BodyJson(r).
