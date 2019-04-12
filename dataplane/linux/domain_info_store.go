@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path"
 	"strings"
 	"sync"
 	"time"
@@ -118,6 +119,11 @@ func (s *domainInfoStore) Start() {
 	// know that works; even though we probably won't need so much capacity for the DNS case.
 	s.msgChannel = make(chan []byte, 1000)
 	nfnetlink.SubscribeDNS(int(rules.NFLOGDomainGroup), 65535, s.msgChannel, s.stopChannel)
+
+	// Ensure that the directory for the persistent file exists.
+	if err := os.MkdirAll(path.Dir(s.saveFile), 0755); err != nil {
+		log.WithError(err).Fatal("Failed to create persistent file dir")
+	}
 
 	// Read mappings from the persistent file (if it exists).
 	if err := s.readMappings(); err != nil {

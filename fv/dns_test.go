@@ -43,15 +43,38 @@ var _ = Describe("DNS Policy", func() {
 		client client.Interface
 		w      [1]*workload.Workload
 		dnsDir string
+
+		// Path to the save file from the point of view inside the Felix container.
+		// (Whereas dnsDir is the directory outside the container.)
+		saveFile                       string
+		saveFileMappedOutsideContainer bool
 	)
 
 	BeforeEach(func() {
+		saveFile = "/dnsinfo/dnsinfo.txt"
+		saveFileMappedOutsideContainer = true
+	})
+
+	Context("with save file in initially non-existent directory", func() {
+		BeforeEach(func() {
+			saveFile = "/a/b/c/d/e/dnsinfo.txt"
+			saveFileMappedOutsideContainer = false
+		})
+
+		It("can wget microsoft.com", func() {
+			out, err := w[0].ExecOutput("wget", "-T", "10", "microsoft.com")
+			log.WithError(err).Infof("wget said:\n%v", out)
+			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+
+	JustBeforeEach(func() {
 		opts := infrastructure.DefaultTopologyOptions()
 		var err error
 		dnsDir, err = ioutil.TempDir("", "dnsinfo")
 		Expect(err).NotTo(HaveOccurred())
 		opts.ExtraVolumes[dnsDir] = "/dnsinfo"
-		opts.ExtraEnvVars["FELIX_DOMAININFOSTORE"] = "/dnsinfo/dnsinfo.txt"
+		opts.ExtraEnvVars["FELIX_DOMAININFOSTORE"] = saveFile
 		// For this test file, configure DomainInfoSaveInterval to be much longer than any
 		// test duration, so we can be sure that the writing of the dnsinfo.txt file is
 		// triggered by shutdown instead of by a periodic timer.
@@ -87,7 +110,9 @@ var _ = Describe("DNS Policy", func() {
 			w[ii].Stop()
 		}
 		felix.Stop()
-		Eventually(path.Join(dnsDir, "dnsinfo.txt"), "10s", "1s").Should(BeARegularFile())
+		if saveFileMappedOutsideContainer {
+			Eventually(path.Join(dnsDir, "dnsinfo.txt"), "10s", "1s").Should(BeARegularFile())
+		}
 
 		if CurrentGinkgoTestDescription().Failed {
 			etcd.Exec("etcdctl", "ls", "--recursive", "/")
@@ -102,7 +127,7 @@ var _ = Describe("DNS Policy", func() {
 	})
 
 	Context("with default-deny egress policy", func() {
-		BeforeEach(func() {
+		JustBeforeEach(func() {
 			policy := api.NewGlobalNetworkPolicy()
 			policy.Name = "default-deny-egress"
 			policy.Spec.Selector = "all()"
@@ -120,7 +145,7 @@ var _ = Describe("DNS Policy", func() {
 		})
 
 		Context("with domain-allow egress policy", func() {
-			BeforeEach(func() {
+			JustBeforeEach(func() {
 				policy := api.NewGlobalNetworkPolicy()
 				policy.Name = "allow-microsoft"
 				order := float64(20)
@@ -160,7 +185,7 @@ var _ = Describe("DNS Policy", func() {
 		})
 
 		Context("with networkset with allowed egress domains", func() {
-			BeforeEach(func() {
+			JustBeforeEach(func() {
 				gns := api.NewGlobalNetworkSet()
 				gns.Name = "allow-microsoft"
 				gns.Labels = map[string]string{"founder": "billg"}
