@@ -3001,42 +3001,42 @@ func schema_libcalico_go_lib_apis_v3_EndpointsSummary(ref common.ReferenceCallba
 					},
 					"numIngressProtected": {
 						SchemaProps: spec.SchemaProps{
-							Description: "For endpoints: the number of in-scope endpoints that were ingress protected during the reporting interval.\n   Namespaces: the number of namespaces whose in-scope endpoints were ingress protected during\n\t\t\t\t  the reporting interval.\n     Services: the number of services whose in-scope endpoints were ingress protected during the reporting\n\t\t\t\t  interval.\n\nSee below for defn of ingress-protected.",
+							Description: "For endpoints: the number of in-scope endpoints that were ingress protected during the reporting interval.\n   Namespaces: the number of namespaces whose in-scope endpoints were ingress protected during\n               the reporting interval.\n     Services: the number of services whose in-scope endpoints were ingress protected during the reporting\n               interval.\n\nSee below for defn of ingress-protected.",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},
 					},
 					"numEgressProtected": {
 						SchemaProps: spec.SchemaProps{
-							Description: "For endpoints: the number of in-scope endpoints that were egress protected during the reporting interval.\n   Namespaces: the number of namespaces whose in-scope endpoints were egress protected during the reporting\n\t\t\t\t  interval.\n\nSee below for defn of egress-protected.",
+							Description: "For endpoints: the number of in-scope endpoints that were egress protected during the reporting interval.\n   Namespaces: the number of namespaces whose in-scope endpoints were egress protected during the reporting\n               interval.\n\nSee below for defn of egress-protected.",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},
 					},
 					"numIngressFromInternet": {
 						SchemaProps: spec.SchemaProps{
-							Description: "For endpoints: the number of in-scope endpoints whose policy would allow ingress traffic from the Internet\n\t\t\t\t  for *any* period within the reporting interval.\n\t\t\t\t  (See below for how this is calculated for an endpoint.)\n   Namespaces: the number of namespaces that contained in-scope endpoints that would allow ingress traffic\n\t\t\t\t  from the Internet for *any* period within the reporting interval.\n     Services: the number of services that contained in-scope endpoints that would allow ingress traffic\n\t\t\t\t  from the Internet for *any* period within the reporting interval.",
+							Description: "For endpoints: the number of in-scope endpoints whose policy would allow ingress traffic from the Internet\n               for *any* period within the reporting interval.\n               (See below for how this is calculated for an endpoint.)\n   Namespaces: the number of namespaces that contained in-scope endpoints that would allow ingress traffic\n               from the Internet for *any* period within the reporting interval.\n     Services: the number of services that contained in-scope endpoints that would allow ingress traffic\n               from the Internet for *any* period within the reporting interval.",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},
 					},
 					"numEgressToInternet": {
 						SchemaProps: spec.SchemaProps{
-							Description: "For endpoints: the number of in-scope endpoints whose policy would allow egress traffic to the Internet\n\t\t\t\t  for *any* period within the reporting interval.\n\t\t\t\t  (See below for how this is calculated for an endpoint.)\n   Namespaces: the number of namespaces that contained in-scope endpoints that would allow egress traffic\n\t\t\t\t  to the Internet for *any* period within the reporting interval.",
+							Description: "For endpoints: the number of in-scope endpoints whose policy would allow egress traffic to the Internet\n               for *any* period within the reporting interval.\n               (See below for how this is calculated for an endpoint.)\n   Namespaces: the number of namespaces that contained in-scope endpoints that would allow egress traffic\n               to the Internet for *any* period within the reporting interval.",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},
 					},
 					"numIngressFromOtherNamespace": {
 						SchemaProps: spec.SchemaProps{
-							Description: "For endpoints: the number of in-scope endpoints whose policy would allow ingress traffic from a\n\t\t\t\t  different namespace for *any* period within the reporting interval.\n\t\t\t\t  (See below for how this is calculated for an endpoint.)\n   Namespaces: the number of namespaces that contained in-scope endpoints that would allow ingress\n\t\t\t\t  traffic from another namespace for *any* period within the reporting interval.\n     Services: the number of services that contained in-scope endpoints that would allow ingress\n\t\t\t\t  traffic from another namespace for *any* period within the reporting interval.",
+							Description: "For endpoints: the number of in-scope endpoints whose policy would allow ingress traffic from a\n               different namespace for *any* period within the reporting interval.\n               (See below for how this is calculated for an endpoint.)\n   Namespaces: the number of namespaces that contained in-scope endpoints that would allow ingress\n               traffic from another namespace for *any* period within the reporting interval.\n     Services: the number of services that contained in-scope endpoints that would allow ingress\n               traffic from another namespace for *any* period within the reporting interval.",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},
 					},
 					"numEgressToOtherNamespace": {
 						SchemaProps: spec.SchemaProps{
-							Description: "For endpoints: the number of in-scope endpoints whose policy would allow ingress traffic from\n\t\t\t\t  a different namespace for *any* period within the reporting interval.\n\t\t\t\t  (See below for how this is calculated for an endpoint.)\n   Namespaces: the number of namespaces that contained in-scope endpoints that would allow egress\n\t\t\t\t  traffic to another namespace for *any* period within the reporting interval.",
+							Description: "For endpoints: the number of in-scope endpoints whose policy would allow ingress traffic from\n               a different namespace for *any* period within the reporting interval.\n               (See below for how this is calculated for an endpoint.)\n   Namespaces: the number of namespaces that contained in-scope endpoints that would allow egress\n               traffic to another namespace for *any* period within the reporting interval.",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},
