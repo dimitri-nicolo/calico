@@ -157,6 +157,7 @@ func StartDataplaneDriver(configParams *config.Config,
 
 				NATPortRange:                       configParams.NATPortRange,
 				IptablesNATOutgoingInterfaceFilter: configParams.IptablesNATOutgoingInterfaceFilter,
+				DomainInfoTrustedServers:           configParams.DomainInfoTrustedServers,
 			},
 
 			IPIPMTU:                        configParams.IpInIpMtu,

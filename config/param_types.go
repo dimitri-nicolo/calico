@@ -26,12 +26,16 @@ import (
 	"strconv"
 	"strings"
 
+	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/validation"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 
 	"time"
 
 	"github.com/kardianos/osext"
 	log "github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
@@ -458,6 +462,60 @@ func (c *CIDRListParam) Parse(raw string) (result interface{}, err error) {
 		resultSlice = append(resultSlice, net.String())
 	}
 	return resultSlice, nil
+}
+
+type ServerListParam struct {
+	Metadata
+}
+
+const k8sServicePrefix = "k8s-service:"
+
+func (c *ServerListParam) Parse(raw string) (result interface{}, err error) {
+	log.WithField("raw", raw).Info("ServerList")
+	values := strings.Split(raw, ",")
+	resultSlice := []string{}
+	for _, in := range values {
+		val := strings.TrimSpace(in)
+		if len(val) == 0 {
+			continue
+		}
+		if strings.HasPrefix(val, k8sServicePrefix) {
+			svcName := val[len(k8sServicePrefix):]
+			svc, e := GetKubernetesService("kube-system", svcName)
+			if e != nil {
+				// Warn but don't report parse failure, so that other trusted IPs
+				// can still take effect.
+				log.Warningf("Couldn't get Kubernetes service '%v': %v", svcName, e)
+				continue
+			}
+			val = svc.Spec.ClusterIP
+			if val == "" {
+				// Ditto.
+				log.Warningf("Kubernetes service '%v' has no ClusterIP", svcName)
+				continue
+			}
+		} else if net.ParseIP(val) == nil {
+			err = c.parseFailed(in, "invalid server specification '"+val+"'")
+			return
+		}
+		resultSlice = append(resultSlice, val)
+	}
+	return resultSlice, nil
+}
+
+func GetKubernetesService(namespace, svcName string) (*v1.Service, error) {
+	k8sconf, err := rest.InClusterConfig()
+	if err != nil {
+		log.WithError(err).Error("Unable to create Kubernetes config.")
+		return nil, err
+	}
+	clientset, err := kubernetes.NewForConfig(k8sconf)
+	if err != nil {
+		log.WithError(err).Error("Unable to create Kubernetes client set.")
+		return nil, err
+	}
+	svcClient := clientset.CoreV1().Services(namespace)
+	return svcClient.Get(svcName, metav1.GetOptions{})
 }
 
 type RegionParam struct {

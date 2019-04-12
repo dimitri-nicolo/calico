@@ -63,6 +63,7 @@ var _ = Describe("Static", func() {
 					IptablesMarkNonCaliEndpoint: 0x1000,
 					KubeIPVSSupportEnabled:      kubeIPVSEnabled,
 					KubeNodePortRanges:          []numorstring.Port{{30030, 30040, ""}},
+					DomainInfoTrustedServers:    []string{"1.2.3.4"},
 				}
 			})
 
@@ -178,7 +179,7 @@ var _ = Describe("Static", func() {
 								{Match: Match().MarkClear(0x10),
 									Action: JumpAction{Target: ChainDispatchFromHostEndPointForward}},
 								// DNS response capture.
-								{Match: Match().OutInterface("cali+").Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53),
+								{Match: Match().OutInterface("cali+").Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53).ConntrackOrigDst("1.2.3.4"),
 									Action: NflogAction{Group: 3, Prefix: "DNS", Size: 1024}},
 								// Per-prefix workload jump rules.
 								{Match: Match().InInterface("cali+"),
@@ -1106,9 +1107,6 @@ var _ = Describe("Static", func() {
 						{Action: ClearMarkAction{Mark: 0xe0}},
 						{Match: Match().MarkClear(0x10),
 							Action: JumpAction{Target: ChainDispatchFromHostEndPointForward}},
-						// DNS response capture.
-						{Match: Match().OutInterface("cali+").Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53),
-							Action: NflogAction{Group: 3, Prefix: "DNS", Size: 1024}},
 						// Per-prefix workload jump rules.
 						{Match: Match().InInterface("cali+"),
 							Action: JumpAction{Target: ChainFromWorkloadDispatch}},
@@ -1196,14 +1194,10 @@ var _ = Describe("Static", func() {
 				{Match: Match().MarkClear(0x10),
 					Action: JumpAction{Target: ChainDispatchFromHostEndPointForward}},
 				// Per-prefix workload jump rules.
-				{Match: Match().OutInterface("cali+").Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53),
-					Action: NflogAction{Group: 3, Prefix: "DNS", Size: 1024}},
 				{Match: Match().InInterface("cali+"),
 					Action: JumpAction{Target: ChainFromWorkloadDispatch}},
 				{Match: Match().OutInterface("cali+"),
 					Action: JumpAction{Target: ChainToWorkloadDispatch}},
-				{Match: Match().OutInterface("tap+").Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53),
-					Action: NflogAction{Group: 3, Prefix: "DNS", Size: 1024}},
 				{Match: Match().InInterface("tap+"),
 					Action: JumpAction{Target: ChainFromWorkloadDispatch}},
 				{Match: Match().OutInterface("tap+"),

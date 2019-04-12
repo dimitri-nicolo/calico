@@ -294,8 +294,9 @@ type Config struct {
 
 	// Config for domain-based policy, just local for now.
 	// TODO: add to FelixConfiguration also?
-	DomainInfoStore        string        `config:"file;/var/run/calico/felix-domain-info-store.txt;local"`
-	DomainInfoSaveInterval time.Duration `config:"seconds;60;local"`
+	DomainInfoStore          string        `config:"file;/var/run/calico/felix-domain-info-store.txt;local"`
+	DomainInfoSaveInterval   time.Duration `config:"seconds;60;local"`
+	DomainInfoTrustedServers []string      `config:"server-list;;local"`
 }
 
 type ProtoPort struct {
@@ -755,6 +756,8 @@ func loadParams() {
 				Msg: "invalid string"}
 		case "cidr-list":
 			param = &CIDRListParam{}
+		case "server-list":
+			param = &ServerListParam{}
 		default:
 			log.Panicf("Unknown type of parameter: %v", kind)
 		}

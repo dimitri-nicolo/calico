@@ -134,6 +134,8 @@ func fieldsByName(example interface{}) map[string]reflect.StructField {
 	return fields
 }
 
+var nilStringSlice []string
+
 var _ = DescribeTable("Config parsing",
 	func(key, value string, expected interface{}, errorExpected ...bool) {
 		config := New()
@@ -388,6 +390,28 @@ var _ = DescribeTable("Config parsing",
 
 	Entry("DomainInfoStore", "DomainInfoStore", "/dnsinfo.txt", "/dnsinfo.txt"),
 	Entry("DomainInfoSaveInterval", "DomainInfoSaveInterval", "3600", time.Hour),
+	Entry("Trust 1 server IP",
+		"DomainInfoTrustedServers", "1.2.3.4",
+		[]string{"1.2.3.4"}),
+	Entry("Trust 2 server IPs",
+		"DomainInfoTrustedServers", "1.2.3.4,42.5.6.7",
+		[]string{"1.2.3.4", "42.5.6.7"}),
+	Entry("Trust kube-dns service",
+		"DomainInfoTrustedServers", "k8s-service:kube-dns",
+		// No IP for kube-dns, because UT does not run in Kubernetes environment.
+		[]string{}),
+	Entry("Trust kube-dns and an IP",
+		"DomainInfoTrustedServers", "k8s-service:kube-dns,42.5.6.7",
+		// No IP for kube-dns, because UT does not run in Kubernetes environment.
+		[]string{"42.5.6.7"}),
+	Entry("DomainInfoTrustedServers syntax error 1",
+		"DomainInfoTrustedServers", "k8s-servce:kube-dns,42.5.6.7",
+		// Parse error -> nil.
+		nilStringSlice),
+	Entry("DomainInfoTrustedServers syntax error 2",
+		"DomainInfoTrustedServers", "4245.5.699.7",
+		// Parse error -> nil.
+		nilStringSlice),
 )
 
 var _ = DescribeTable("OpenStack heuristic tests",

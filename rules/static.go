@@ -506,20 +506,24 @@ func (r *DefaultRuleRenderer) StaticFilterForwardChains() []*Chain {
 	for _, prefix := range r.WorkloadIfacePrefixes {
 		log.WithField("ifacePrefix", prefix).Debug("Adding workload match rules")
 		ifaceMatch := prefix + "+"
-		rules = append(rules,
-			Rule{
-				// When we add DNS server vetting here, we will use --ctorigdst to do that.
-				Match: Match().OutInterface(ifaceMatch).Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53),
-				Action: NflogAction{
-					Group:       NFLOGDomainGroup,
-					Prefix:      "DNS",
-					SizeEnabled: r.EnableNflogSize,
-					// Traditional DNS over UDP has a maximum size of 512 bytes,
-					// but we need to allow for headers as well (Ethernet, IP
-					// and UDP); 1024 will amply cover what we need.
-					Size: 1024,
+		for _, serverIP := range r.DomainInfoTrustedServers {
+			rules = append(rules,
+				Rule{
+					// When we add DNS server vetting here, we will use --ctorigdst to do that.
+					Match: Match().OutInterface(ifaceMatch).Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53).ConntrackOrigDst(serverIP),
+					Action: NflogAction{
+						Group:       NFLOGDomainGroup,
+						Prefix:      "DNS",
+						SizeEnabled: r.EnableNflogSize,
+						// Traditional DNS over UDP has a maximum size of 512 bytes,
+						// but we need to allow for headers as well (Ethernet, IP
+						// and UDP); 1024 will amply cover what we need.
+						Size: 1024,
+					},
 				},
-			},
+			)
+		}
+		rules = append(rules,
 			Rule{
 				Match:  Match().InInterface(ifaceMatch),
 				Action: JumpAction{Target: ChainFromWorkloadDispatch},
