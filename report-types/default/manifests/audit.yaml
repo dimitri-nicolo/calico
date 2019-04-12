@@ -22,7 +22,5 @@ spec:
   - name: events.yaml
     template: |
       {{ yaml .AuditEvents }}
-  uiCompleteTemplate:
-    name: ui-complete.json
   uiSummaryTemplate:
     name: ui-summary.json
