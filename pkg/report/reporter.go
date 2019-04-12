@@ -6,7 +6,10 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/libcalico-go/lib/compliance"
 
 	"github.com/tigera/compliance/pkg/event"
 	"github.com/tigera/compliance/pkg/list"
@@ -37,6 +40,8 @@ func Run(
 	ctx context.Context, cfg *Config,
 	lister list.Destination,
 	eventer event.Fetcher,
+	auditer AuditLogReportHandler,
+	archiver ArchivedReportStore,
 ) error {
 
 	// Create the cross-reference cache that we use to monitor for changes in the relevant data.
@@ -53,8 +58,16 @@ func Run(
 			"end":   cfg.End,
 		}),
 		eventer:  eventer,
+		auditer:  auditer,
+		archiver: archiver,
 		xc:       xc,
 		replayer: replayer,
+		data: &apiv3.ReportData{
+			ReportName: cfg.Report.Name,
+			ReportSpec: cfg.Report.Spec,
+			StartTime:  metav1.Time{cfg.Start},
+			EndTime:    metav1.Time{cfg.End},
+		},
 	}
 	return r.run()
 }
@@ -67,6 +80,8 @@ type reporter struct {
 	eventer  event.Fetcher
 	xc       xrefcache.XrefCache
 	replayer syncer.Starter
+	auditer  AuditLogReportHandler
+	archiver ArchivedReportStore
 
 	// Consolidate the tracked in-scope endpoint events into a local cache, which will get converted and copied into
 	// the report data structure.
@@ -114,11 +129,22 @@ func (r *reporter) run() error {
 	if r.cfg.ReportType.Spec.AuditEventsSelection != nil {
 		// We need to include audit log data in the report.
 		r.clog.Debug("Including audit event data in report")
+		r.auditer.AddAuditEvents(r.ctx, r.data, r.cfg.ReportType.Spec.AuditEventsSelection,
+			r.cfg.Start, r.cfg.End)
 	}
 
-	// Store report data
+	summary, err := compliance.RenderTemplate(r.cfg.ReportType.Spec.UISummaryTemplate.Template, r.data)
+	if err != nil {
+		r.clog.WithError(err).Error("Error rendering data into summary")
+	}
 
-	return nil
+	// Store report data.
+	err = r.archiver.StoreArchivedReport(&ArchivedReportData{
+		ReportData: r.data,
+		UISummary:  summary,
+	})
+
+	return err
 }
 
 func (r *reporter) onUpdate(update syncer.Update) {
@@ -180,6 +206,9 @@ func (r *reporter) transferAggregatedData() {
 			Services:                  ep.services.ToSlice(),
 		})
 
+		// Update the summary stats.
+		updateSummary(ep.zeroTrustFlags, &r.data.EndpointsSummary, true)
+
 		// Delete from our dictionary now.
 		delete(r.inScopeEndpoints, id)
 	}
@@ -205,6 +234,9 @@ func (r *reporter) transferAggregatedData() {
 
 		// Delete from our dictionary now.
 		delete(r.namespaces, name)
+
+		// Update the summary stats.
+		updateSummary(zeroTrustFlags, &r.data.EndpointsSummary, true)
 	}
 
 	// We can delete the dictionary now.
@@ -222,10 +254,39 @@ func (r *reporter) transferAggregatedData() {
 
 		// Delete from our dictionary now.
 		delete(r.services, id)
+
+		// Update the summary stats.
+		updateSummary(zeroTrustFlags, &r.data.EndpointsSummary, false)
 	}
 
 	// We can delete the dictionary now.
 	r.services = nil
+}
+
+func updateSummary(zeroTrustFlags xrefcache.CacheEntryFlags, summary *apiv3.EndpointsSummary, includeEgress bool) {
+	if zeroTrustFlags&xrefcache.CacheEntryProtectedIngress == 0 {
+		summary.NumIngressProtected++ // We reversed this for zero-trust
+	}
+	if zeroTrustFlags&xrefcache.CacheEntryInternetExposedIngress != 0 {
+		summary.NumIngressFromInternet++
+	}
+	if zeroTrustFlags&xrefcache.CacheEntryOtherNamespaceExposedIngress != 0 {
+		summary.NumIngressFromOtherNamespace++
+	}
+	if zeroTrustFlags&xrefcache.CacheEntryEnvoyEnabled == 0 {
+		summary.NumEnvoyEnabled++
+	}
+	if includeEgress {
+		if zeroTrustFlags&xrefcache.CacheEntryProtectedEgress == 0 {
+			summary.NumEgressProtected++ // We reversed this for zero-trust
+		}
+		if zeroTrustFlags&xrefcache.CacheEntryInternetExposedEgress != 0 {
+			summary.NumEgressToInternet++
+		}
+		if zeroTrustFlags&xrefcache.CacheEntryOtherNamespaceExposedEgress != 0 {
+			summary.NumEgressToOtherNamespace++
+		}
+	}
 }
 
 // zeroTrustFlags converts the flags and updates into a set of zero-trust flags and changed zero-trust flags.
