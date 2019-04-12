@@ -4692,17 +4692,17 @@ func schema_libcalico_go_lib_apis_v3_GlobalThreatFeedStatus(ref common.Reference
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Properties: map[string]spec.Schema{
-					"last_successful_sync": {
+					"lastSuccessfulSync": {
 						SchemaProps: spec.SchemaProps{
 							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
-					"last_successful_search": {
+					"lastSuccessfulSearch": {
 						SchemaProps: spec.SchemaProps{
 							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
-					"error_conditions": {
+					"errorConditions": {
 						SchemaProps: spec.SchemaProps{
 							Type: []string{"array"},
 							Items: &spec.SchemaOrArray{
@@ -4715,7 +4715,7 @@ func schema_libcalico_go_lib_apis_v3_GlobalThreatFeedStatus(ref common.Reference
 						},
 					},
 				},
-				Required: []string{"last_successful_sync", "last_successful_search", "error_conditions"},
+				Required: []string{"lastSuccessfulSync", "lastSuccessfulSearch", "errorConditions"},
 			},
 		},
 		Dependencies: []string{
