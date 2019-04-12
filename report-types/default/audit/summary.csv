@@ -1,0 +1,2 @@
+startTime,endTime,numCreatedPolicies,numModifiedPolicies,numDeletedPolicies
+{{ .StartTime }},{{ .EndTime }},{{ .AuditSummary.NumCreated }},{{ .AuditSummary.NumModified }},{{ .AuditSummary.NumDeleted }}

@@ -28,6 +28,8 @@ cmd/snapshotter/snapshotter
 cmd/server/apiserver.local.config/
 .settings
 
+cscope.*
+
 # vim
 *.sw*
 out

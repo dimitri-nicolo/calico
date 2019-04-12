@@ -1,9 +1,9 @@
 apiVersion: projectcalico.org/v3
 kind: GlobalReportType
 metadata:
-  name: inventory
+  name: audit
   labels:
-    global-report-type: inventory
+    global-report-type: audit
 spec:
   uiSummaryTemplate:
     name: ui-summary.json
@@ -11,7 +11,8 @@ spec:
     name: ui-complete.json
   downloadTemplates:
     - name: summary.csv
-    - name: endpoints.csv
+    - name: events.json
+    - name: events.yaml
   auditEventsSelection:
     resources:
       - kind: 'globalnetworkpolicy'
