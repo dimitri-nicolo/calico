@@ -39,17 +39,33 @@ data:
 {{- else if eq .Values.platform "eks" }}
   tigera.cnx-manager.authentication-type: "Token"
 {{- else }}
-  tigera.cnx-manager.authentication-type: "{{ .Values.manager.auth.type }}"
+  tigera.cnx-manager.authentication-type: {{ .Values.manager.auth.type | default "Basic" | quote }}
 {{- end }}
   # The OIDC authority.  Required if authentication-type is OIDC, ignored otherwise.
-  tigera.cnx-manager.oidc-authority: "{{ .Values.manager.auth.authority }}"
+{{- if .Values.manager.auth.authority }}
+  tigera.cnx-manager.oidc-authority: {{ .Values.manager.auth.authority | quote }}
+{{- else }}
+  tigera.cnx-manager.oidc-authority: "https://accounts.google.com"
+{{- end }}
   # The OIDC client id to use for OIDC login.  Kubelet must be configured accordingly.
   # Value is ignored if not using OIDC login.
-  tigera.cnx-manager.oidc-client-id: "{{ .Values.manager.auth.clientID }}"
+{{- if .Values.manager.auth.clientID }}
+  tigera.cnx-manager.oidc-client-id: {{ .Values.manager.auth.clientID | quote }}
+{{- else }}
+  tigera.cnx-manager.oidc-client-id: "<oidc-client-id>"
+{{- end }}
   # The OAuth endpoint. Required if authentication-type is OAuth, ignored otherwise.
-  tigera.cnx-manager.oauth-authority: "{{ .Values.manager.auth.authority }}"
+{{- if .Values.manager.auth.authority }}
+  tigera.cnx-manager.oauth-authority: {{ .Values.manager.auth.authority | quote }}
+{{- else }}
+  tigera.cnx-manager.oauth-authority: "https://<oauth-authority>/oauth/authorize"
+{{- end }}
   # The OAuth client id to use for OAuth login. Value is ignored if not using OAuth login.
-  tigera.cnx-manager.oauth-client-id: "{{ .Values.manager.auth.clientID }}"
+{{- if .Values.manager.auth.clientID }}
+  tigera.cnx-manager.oauth-client-id: {{ .Values.manager.auth.clientID | quote }}
+{{- else }}
+  tigera.cnx-manager.oauth-client-id: "cnx-manager"
+{{- end }}
   # Prometheus server resource path
   tigera.cnx-manager.prometheus-api-url: "/api/v1/namespaces/calico-monitoring/services/calico-node-prometheus:9090/proxy/api/v1"
   # Compliance resource path
