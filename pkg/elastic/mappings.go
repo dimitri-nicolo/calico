@@ -23,7 +23,7 @@ const (
   "mappings": {
     "_doc": {
       "properties": {
-        "reportType": { "type": "text” },
+        "reportType": { "type": "text" },
         "reportSpec": { "type": "object", "enabled": false },
         "startTime": { "type": "date", "format": "date_hour_minute_second_millis" },
         "endTime": { "type": "date", "format": "date_hour_minute_second_millis" },

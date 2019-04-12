@@ -138,7 +138,10 @@ func New(h *http.Client, url *url.URL, username, password string) (Client, error
 }
 
 func (c *client) EnsureIndices() error {
-	return c.ensureIndexExists(snapshotsIndex, snapshotsMapping)
+	if err := c.ensureIndexExists(snapshotsIndex, snapshotsMapping); err != nil {
+		return err
+	}
+	return c.ensureIndexExists(reportsIndex, reportsMapping)
 }
 
 func (c *client) ensureIndexExists(index, mapping string) error {

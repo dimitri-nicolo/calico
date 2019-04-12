@@ -95,10 +95,10 @@ func (c *client) StoreArchivedReport(r *report.ArchivedReportData) error {
 		BodyJson(r).
 		Do(context.Background())
 	if err != nil {
-		log.WithError(err).Error("failed to store list")
+		log.WithError(err).Error("failed to store report")
 		return err
 	}
 	log.WithFields(log.Fields{"id": res.Id, "index": res.Index, "type": res.Type}).
-		Info("successfully stored list")
+		Info("successfully stored report")
 	return nil
 }

@@ -133,11 +133,13 @@ func (r *reporter) run() error {
 			r.cfg.Start, r.cfg.End)
 	}
 
+	r.clog.Debug("Rendering report data based on tempalte")
 	summary, err := compliance.RenderTemplate(r.cfg.ReportType.Spec.UISummaryTemplate.Template, r.data)
 	if err != nil {
 		r.clog.WithError(err).Error("Error rendering data into summary")
 	}
 
+	r.clog.Debug("Storing report into archiver")
 	// Store report data.
 	err = r.archiver.StoreArchivedReport(&ArchivedReportData{
 		ReportData: r.data,
