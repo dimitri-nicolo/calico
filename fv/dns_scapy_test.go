@@ -18,7 +18,6 @@ package fv_test
 
 import (
 	"bufio"
-	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -26,16 +25,13 @@ import (
 	"path"
 	"strconv"
 	"strings"
-	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/fv/containers"
 	"github.com/projectcalico/felix/fv/infrastructure"
-	"github.com/projectcalico/felix/fv/utils"
 	"github.com/projectcalico/felix/fv/workload"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/set"
@@ -124,36 +120,21 @@ var _ = Describe("DNS Policy", func() {
 
 	DescribeTable("DNS response processing",
 		func(dnsSpec string, check func() bool) {
-			// Run scapy...
-			name := fmt.Sprintf("felixfv-scapy-%v", os.Getpid())
-			scapy := utils.Command("docker", "run", "--rm", "--name", name, "-i", "--privileged", "scapy")
-			stdin, err := scapy.StdinPipe()
-			Expect(err).NotTo(HaveOccurred())
-			var b bytes.Buffer
-			scapy.Stdout = &b
-			scapy.Stderr = &b
-			err = scapy.Start()
-			Expect(err).NotTo(HaveOccurred())
-
-			// Get scapy's IP, so we can establish conntrack state for a prior request to it.
-			scapyContainer := &containers.Container{Name: name}
-			time.Sleep(2 * time.Second)
-			scapyIP := scapyContainer.GetIP()
+			scapy := containers.Run("scapy",
+				containers.RunOpts{AutoRemove: true, WithStdinPipe: true},
+				"-i", "--privileged", "scapy")
 
 			// Establish that conntrack state, in Felix.
-			felix.Exec("conntrack", "-I", "-s", w[0].IP, "-d", scapyIP, "-p", "UDP", "-t", "10", "--sport", "53", "--dport", "53")
+			felix.Exec("conntrack", "-I", "-s", w[0].IP, "-d", scapy.IP, "-p", "UDP", "-t", "10", "--sport", "53", "--dport", "53")
 
 			// Now drive scapy.
 			go func() {
-				defer stdin.Close()
-				io.WriteString(stdin,
+				defer scapy.Stdin.Close()
+				io.WriteString(scapy.Stdin,
 					fmt.Sprintf("conf.route.add(host='%v',gw='%v')\n", w[0].IP, felix.IP))
-				io.WriteString(stdin,
+				io.WriteString(scapy.Stdin,
 					fmt.Sprintf("send(IP(dst='%v')/UDP(sport=53)/%v)\n", w[0].IP, dnsSpec))
 			}()
-			err = scapy.Wait()
-			Expect(err).NotTo(HaveOccurred())
-			log.Infof("scapy said:\n%v", b.String())
 
 			// Run the check function.
 			Eventually(check, "5s", "1s").Should(BeTrue())

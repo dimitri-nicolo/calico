@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -38,6 +38,7 @@ type Container struct {
 	IP       string
 	Hostname string
 	runCmd   *exec.Cmd
+	Stdin    io.WriteCloser
 
 	mutex         sync.Mutex
 	binaries      set.Set
@@ -147,7 +148,8 @@ func (c *Container) signalDockerRun(sig os.Signal) {
 }
 
 type RunOpts struct {
-	AutoRemove bool
+	AutoRemove    bool
+	WithStdinPipe bool
 }
 
 func NextContainerIndex() int {
@@ -172,6 +174,12 @@ func Run(namePrefix string, opts RunOpts, args ...string) (c *Container) {
 	runArgs = append(runArgs, args...)
 
 	c.runCmd = utils.Command("docker", runArgs...)
+
+	if opts.WithStdinPipe {
+		var err error
+		c.Stdin, err = c.runCmd.StdinPipe()
+		Expect(err).NotTo(HaveOccurred())
+	}
 
 	// Get the command's output pipes, so we can merge those into the test's own logging.
 	stdout, err := c.runCmd.StdoutPipe()
