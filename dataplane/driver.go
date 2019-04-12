@@ -1,6 +1,6 @@
 // +build !windows
 
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import (
 	"net"
 	"os/exec"
 	"runtime/debug"
+	"sync"
 
 	log "github.com/sirupsen/logrus"
 
@@ -40,7 +41,7 @@ func StartDataplaneDriver(configParams *config.Config,
 	healthAggregator *health.HealthAggregator,
 	collector collector.Collector,
 	configChangedRestartCallback func(),
-	childExitedRestartCallback func()) (DataplaneDriver, *exec.Cmd) {
+	childExitedRestartCallback func()) (DataplaneDriver, *exec.Cmd, chan *sync.WaitGroup) {
 	if configParams.UseInternalDataplaneDriver {
 		log.Info("Using internal (linux) dataplane driver.")
 		// If kube ipvs interface is present, enable ipvs support.
@@ -202,15 +203,19 @@ func StartDataplaneDriver(configParams *config.Config,
 			FelixHostname:                   configParams.FelixHostname,
 			ExternalNodesCidrs:              configParams.ExternalNodesCIDRList,
 			Collector:                       collector,
+			DomainInfoStore:                 configParams.DomainInfoStore,
+			DomainInfoSaveInterval:          configParams.DomainInfoSaveInterval,
 		}
-		intDP := intdataplane.NewIntDataplaneDriver(dpConfig)
+		stopChan := make(chan *sync.WaitGroup, 1)
+		intDP := intdataplane.NewIntDataplaneDriver(dpConfig, stopChan)
 		intDP.Start()
 
-		return intDP, nil
+		return intDP, nil, stopChan
 	} else {
 		log.WithField("driver", configParams.DataplaneDriver).Info(
 			"Using external dataplane driver.")
 
-		return extdataplane.StartExtDataplaneDriver(configParams.DataplaneDriver)
+		dpConn, cmd := extdataplane.StartExtDataplaneDriver(configParams.DataplaneDriver)
+		return dpConn, cmd, nil
 	}
 }

@@ -15,15 +15,22 @@
 package intdataplane
 
 import (
+	"bufio"
+	"encoding/json"
+	"fmt"
+	"os"
+	"path"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
-	"github.com/projectcalico/felix/rules"
-	"github.com/projectcalico/libcalico-go/lib/set"
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/nfnetlink"
+
+	"github.com/projectcalico/felix/rules"
+	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
 // The data that we hold for each value in a name -> value mapping.  A value can be an IP, or
@@ -69,6 +76,10 @@ type domainInfoStore struct {
 
 	// Channel for domain mapping expiry signals.
 	mappingExpiryChannel chan *domainMappingExpired
+
+	// Persistence.
+	saveFile     string
+	saveInterval time.Duration
 }
 
 // Signal sent by the domain info store to the ipsets manager when the information for a given
@@ -84,19 +95,23 @@ type domainMappingExpired struct {
 	name, value string
 }
 
-func newDomainInfoStore(domainInfoChanges chan *domainInfoChanged, ipv6Enabled bool) *domainInfoStore {
+func newDomainInfoStore(domainInfoChanges chan *domainInfoChanged, saveFile string, saveInterval time.Duration) *domainInfoStore {
 	log.Info("Creating domain info store")
 	s := &domainInfoStore{
 		domainInfoChanges:    domainInfoChanges,
 		mappings:             make(map[string]*nameData),
 		resultsCache:         make(map[string][]string),
 		mappingExpiryChannel: make(chan *domainMappingExpired),
+		saveFile:             saveFile,
+		saveInterval:         saveInterval,
 	}
 	return s
 }
 
 func (s *domainInfoStore) Start() {
 	log.Info("Starting domain info store")
+
+	// Use nfnetlink to capture DNS response packets.
 	s.stopChannel = make(chan struct{})
 	// Use a buffered channel here with reasonable capacity, so that the nfnetlink capture
 	// thread can handle a burst of DNS response packets without becoming blocked by the reading
@@ -104,10 +119,24 @@ func (s *domainInfoStore) Start() {
 	// know that works; even though we probably won't need so much capacity for the DNS case.
 	s.msgChannel = make(chan []byte, 1000)
 	nfnetlink.SubscribeDNS(int(rules.NFLOGDomainGroup), 65535, s.msgChannel, s.stopChannel)
-	go s.loop()
+
+	// Ensure that the directory for the persistent file exists.
+	if err := os.MkdirAll(path.Dir(s.saveFile), 0755); err != nil {
+		log.WithError(err).Fatal("Failed to create persistent file dir")
+	}
+
+	// Read mappings from the persistent file (if it exists).
+	if err := s.readMappings(); err != nil {
+		log.WithError(err).Warning("Failed to read mappings from file")
+	}
+
+	// Start a repeating timer for periodically saving DNS info to a persistent file.
+	saveTimerC := time.NewTicker(s.saveInterval).C
+
+	go s.loop(saveTimerC)
 }
 
-func (s *domainInfoStore) loop() {
+func (s *domainInfoStore) loop(saveTimerC <-chan time.Time) {
 	for {
 		select {
 		case msg := <-s.msgChannel:
@@ -118,8 +147,130 @@ func (s *domainInfoStore) loop() {
 			}
 		case expiry := <-s.mappingExpiryChannel:
 			s.processMappingExpiry(expiry.name, expiry.value)
+		case <-saveTimerC:
+			if err := s.saveMappingsV1(); err != nil {
+				log.WithError(err).Warning("Failed to save mappings to file")
+			}
 		}
 	}
+}
+
+type jsonMappingV1 struct {
+	LHS    string
+	RHS    string
+	Expiry string
+	Type   string
+}
+
+func (s *domainInfoStore) readMappings() error {
+	// This happens before the domain info store thread is started, so no need for locking.
+	f, err := os.Open(s.saveFile)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	scanner := bufio.NewScanner(f)
+
+	// Read the first line, which is the format version.
+	if scanner.Scan() {
+		version := strings.TrimSpace(scanner.Text())
+		readerFunc := map[string]func(*bufio.Scanner) error{
+			"1": s.readMappingsV1,
+		}[version]
+		if readerFunc != nil {
+			log.Infof("Read mappings in v%v format", version)
+			if err = readerFunc(scanner); err != nil {
+				return err
+			}
+		} else {
+			return fmt.Errorf("Unrecognised format version: %v", version)
+		}
+	}
+	// If we reach here, there was a problem scanning the version line.
+	return scanner.Err()
+}
+
+const (
+	v1TypeIP   = "ip"
+	v1TypeName = "name"
+)
+
+func (s *domainInfoStore) readMappingsV1(scanner *bufio.Scanner) error {
+	for scanner.Scan() {
+		var jsonMapping jsonMappingV1
+		if err := json.Unmarshal(scanner.Bytes(), &jsonMapping); err != nil {
+			return err
+		}
+		expiryTime, err := time.Parse(time.RFC3339, jsonMapping.Expiry)
+		if err != nil {
+			return err
+		}
+		ttlNow := time.Until(expiryTime)
+		if ttlNow.Seconds() > 1 {
+			log.Debugf("Recreate mapping %v", jsonMapping)
+			s.storeInfo(jsonMapping.LHS, jsonMapping.RHS, ttlNow, jsonMapping.Type == v1TypeName)
+		} else {
+			log.Debugf("Ignore expired mapping %v", jsonMapping)
+		}
+	}
+	return scanner.Err()
+}
+
+func (s *domainInfoStore) saveMappingsV1() error {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	// Write first to a temporary save file, so that we can atomically rename it to the intended
+	// file once it contains new data.  Thus we avoid overwriting a previous version of the file
+	// (which may still be useful) until we're sure we have a complete new file prepared.
+	tmpSaveFile := s.saveFile + ".tmp"
+	f, err := os.Create(tmpSaveFile)
+	if err != nil {
+		return err
+	}
+	fileAlreadyClosed := false
+	defer func() {
+		if !fileAlreadyClosed {
+			if err := f.Close(); err != nil {
+				log.WithError(err).Warning("Error closing mappings file")
+			}
+		}
+	}()
+
+	// File format 1.
+	if _, err = f.WriteString("1\n"); err != nil {
+		return err
+	}
+	jsonEncoder := json.NewEncoder(f)
+	for lhsName, nameData := range s.mappings {
+		for rhsName, valueData := range nameData.values {
+			jsonMapping := jsonMappingV1{LHS: lhsName, RHS: rhsName, Type: v1TypeIP}
+			if valueData.isName {
+				jsonMapping.Type = v1TypeName
+			}
+			jsonMapping.Expiry = valueData.expiryTime.Format(time.RFC3339)
+			if err = jsonEncoder.Encode(jsonMapping); err != nil {
+				return err
+			}
+			log.Debugf("Saved mapping: %v", jsonMapping)
+		}
+	}
+
+	// Sync and close the temporary save file.
+	if err = f.Sync(); err != nil {
+		return err
+	}
+	if err = f.Close(); err != nil {
+		return err
+	}
+	fileAlreadyClosed = true
+
+	// Move that file to the non-temporary name.
+	if err = os.Rename(tmpSaveFile, s.saveFile); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *domainInfoStore) processDNSPacket(dns *layers.DNS) {
