@@ -51,7 +51,7 @@ pipeline {
         stage('Check calico-private changes') {
             steps {
                 script {
-                    SKIP_CALICO_PRIVATE_MASTER_BUILD = sh(returnStatus: true, script: "git diff --name-only HEAD^ | grep '^_includes/master/manifests/\|^master/getting-started/kubernetes/install-cnx.sh\|^master/getting-started/kubernetes/installation/hosted/'")
+                    SKIP_CALICO_PRIVATE_MASTER_BUILD = sh(returnStatus: true, script: "git diff --name-only HEAD^ | grep '^_includes/master/manifests/\\|^master/getting-started/kubernetes/install-cnx.sh\\|^master/getting-started/kubernetes/installation/hosted/'")
                     echo "SKIP_CALICO_PRIVATE_MASTER_BUILD=${SKIP_CALICO_PRIVATE_MASTER_BUILD}"
                 }
             }
