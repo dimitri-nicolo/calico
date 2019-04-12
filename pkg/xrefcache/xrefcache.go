@@ -53,7 +53,6 @@ func NewXrefCache() XrefCache {
 		newK8sServiceAccountsEngine(),
 		newNetworkPoliciesEngine(),
 		newNetworkPolicyRuleSelectorsEngine(),
-		newCalicoTiersEngine(),
 		newCalicoGlobalNetworkSetEngine(),
 	}
 

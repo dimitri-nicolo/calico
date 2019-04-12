@@ -21,7 +21,6 @@ var (
 type VersionedTierResource interface {
 	VersionedResource
 	getV1Tier() *model.Tier
-	isNamespaced() bool
 }
 
 type CacheEntryCalicoTier struct {
