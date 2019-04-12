@@ -6814,12 +6814,6 @@ func schema_libcalico_go_lib_apis_v3_ReportTypeSpec(ref common.ReferenceCallback
 							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ReportTemplate"),
 						},
 					},
-					"uiCompleteTemplate": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The complete template, explicitly used by the UI to render a full version of the report. This should render to json containing a set of widgets that the UI can use to render the full report.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ReportTemplate"),
-						},
-					},
 					"downloadTemplates": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The set of templates used to render the report for downloads.",

@@ -2783,7 +2783,6 @@ func (in *ReportTemplate) DeepCopy() *ReportTemplate {
 func (in *ReportTypeSpec) DeepCopyInto(out *ReportTypeSpec) {
 	*out = *in
 	out.UISummaryTemplate = in.UISummaryTemplate
-	out.UICompleteTemplate = in.UICompleteTemplate
 	if in.DownloadTemplates != nil {
 		in, out := &in.DownloadTemplates, &out.DownloadTemplates
 		*out = make([]ReportTemplate, len(*in))

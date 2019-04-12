@@ -45,10 +45,6 @@ type ReportTypeSpec struct {
 	// on the list query of the reports.
 	UISummaryTemplate ReportTemplate `json:"uiSummaryTemplate,omitempty" validate:"required"`
 
-	// The complete template, explicitly used by the UI to render a full version of the report. This should render to
-	// json containing a set of widgets that the UI can use to render the full report.
-	UICompleteTemplate ReportTemplate `json:"uiCompleteTemplate,omitempty" validate:"required"`
-
 	// The set of templates used to render the report for downloads.
 	DownloadTemplates []ReportTemplate `json:"downloadTemplates,omitempty"`
 
