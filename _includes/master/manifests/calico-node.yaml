@@ -236,7 +236,7 @@ spec:
   {{- else }}
             # Enable IPIP by default
             - name: CALICO_IPV4POOL_IPIP
-              value: "Always"
+              value: "{{ .Values.initialPool.ipIpMode }}"
   {{- end }}
             # Set MTU for tunnel device used if ipip is enabled
             - name: FELIX_IPINIPMTU
@@ -281,7 +281,7 @@ spec:
             # chosen from this range. Changing this value after installation will have
             # no effect. This should fall within `--cluster-cidr`.
             - name: CALICO_IPV4POOL_CIDR
-              value: "192.168.0.0/16"
+              value: "{{ .Values.initialPool.cidr }}"
 {{- end }}
             # Disable file logging so `kubectl logs` works.
             - name: CALICO_DISABLE_FILE_LOGGING

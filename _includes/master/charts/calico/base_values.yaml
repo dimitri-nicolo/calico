@@ -12,6 +12,18 @@ federation:
 
 network: calico
 
+# initialPool configures the pool used by Calico when using calico-ipam.
+# Note that these settings are only applied during initial install.
+# Changing these settings post-install will have no effect.
+initialPool:
+  # The default IPv4 pool to create on startup if none exists. Pod IPs will be
+  # chosen from this range. Changing this value after installation will have
+  # no effect. This should fall within `--cluster-cidr`.
+  cidr: "192.168.0.0/16"
+
+  # Can be "None", "CrossSubnet", or "Always"
+  ipIpMode: Always
+
 # Configuration for Canal config job 
 configureCanal: 
   # Optional configuration for setting resource limits on the Canal config job container.
