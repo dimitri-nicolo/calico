@@ -4,19 +4,21 @@ package elastic
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"time"
 
 	"github.com/olivere/elastic"
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/projectcalico/libcalico-go/lib/errors"
+	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 
 	"github.com/tigera/compliance/pkg/list"
 )
 
 func (c *client) RetrieveList(kind metav1.TypeMeta, from, to *time.Time, ascending bool) (*list.TimestampedResourceList, error) {
 	clog := log.WithField("kind", kind)
+
 	// Construct the range query based on received arguments.
 	rangeQuery := elastic.NewRangeQuery("requestCompletedTimestamp")
 	if from != nil {
@@ -49,7 +51,10 @@ func (c *client) RetrieveList(kind metav1.TypeMeta, from, to *time.Time, ascendi
 	switch len(res.Hits.Hits) {
 	case 0:
 		clog.Info("no hits found")
-		return nil, errors.ErrorResourceDoesNotExist{}
+		return nil, cerrors.ErrorResourceDoesNotExist{
+			Err:        errors.New("insufficient archived data in Elastic"),
+			Identifier: kind.Kind + "/" + kind.APIVersion,
+		}
 	case 1:
 		break
 	default:

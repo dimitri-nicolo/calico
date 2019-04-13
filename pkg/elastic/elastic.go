@@ -9,23 +9,14 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"os"
-	"strconv"
 
 	"github.com/olivere/elastic"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/event"
 	"github.com/tigera/compliance/pkg/list"
 	"github.com/tigera/compliance/pkg/report"
-)
-
-const (
-	DefaultElasticScheme = "http"
-	DefaultElasticHost   = "elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local"
-	DefaultElasticPort   = 9200
-	DefaultElasticUser   = "elastic"
-	DefaultElasticSuffix = "cluster"
 )
 
 type Client interface {
@@ -44,73 +35,22 @@ type client struct {
 }
 
 // MustGetElasticClient returns the elastic Client, or panics if it's not possible.
-func MustGetElasticClient() Client {
-	c, err := NewFromEnv()
+func MustGetElasticClient(cfg *config.Config) Client {
+	c, err := NewFromConfig(cfg)
 	if err != nil {
 		panic(err)
 	}
 	return c
 }
 
-// NewFromEnv returns a new elastic Client using configuration in the environments.
-func NewFromEnv() (Client, error) {
-	var u *url.URL
-	uri := os.Getenv("ELASTIC_URI")
-	if uri != "" {
-		var err error
-		u, err = url.Parse(uri)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		scheme := os.Getenv("ELASTIC_SCHEME")
-		if scheme == "" {
-			scheme = DefaultElasticScheme
-		}
-
-		host := os.Getenv("ELASTIC_HOST")
-		if host == "" {
-			host = DefaultElasticHost
-		}
-
-		portStr := os.Getenv("ELASTIC_PORT")
-		var port int64
-		if portStr == "" {
-			port = DefaultElasticPort
-		} else {
-			var err error
-			port, err = strconv.ParseInt(portStr, 10, 16)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		u = &url.URL{
-			Scheme: scheme,
-			Host:   fmt.Sprintf("%s:%d", host, port),
-		}
-	}
-	log.WithField("url", u).Debug("using elastic url")
-
-	//log.SetLevel(log.TraceLevel)
-	user := os.Getenv("ELASTIC_USER")
-	if user == "" {
-		user = DefaultElasticUser
-	}
-	pass := os.Getenv("ELASTIC_PASSWORD")
-	pathToCA := os.Getenv("ELASTIC_CA")
-
-	indexSuffix := os.Getenv("ELASTIC_INDEX_SUFFIX")
-	if indexSuffix == "" {
-		indexSuffix = DefaultElasticSuffix
-	}
-
+// NewFromConfig returns a new elastic Client using the supplied configuration.
+func NewFromConfig(cfg *config.Config) (Client, error) {
 	ca, err := x509.SystemCertPool()
 	if err != nil {
 		return nil, err
 	}
-	if pathToCA != "" {
-		cert, err := ioutil.ReadFile(pathToCA)
+	if cfg.ElasticCA != "" {
+		cert, err := ioutil.ReadFile(cfg.ElasticCA)
 		if err != nil {
 			return nil, err
 		}
@@ -120,19 +60,21 @@ func NewFromEnv() (Client, error) {
 		}
 	}
 	h := &http.Client{}
-	if u.Scheme == "https" {
+	if cfg.ParsedElasticURL.Scheme == "https" {
 		h.Transport = &http.Transport{TLSClientConfig: &tls.Config{RootCAs: ca}}
 	}
-	return New(h, u, user, pass, indexSuffix)
+	return New(h, cfg.ParsedElasticURL, cfg.ElasticUser, cfg.ElasticPassword, cfg.ElasticIndexSuffix, cfg.ParsedLogLevel == log.DebugLevel)
 }
 
-func New(h *http.Client, url *url.URL, username, password, indexSuffix string) (Client, error) {
+func New(h *http.Client, url *url.URL, username, password, indexSuffix string, trace bool) (Client, error) {
 	options := []elastic.ClientOptionFunc{
 		elastic.SetURL(url.String()),
 		elastic.SetHttpClient(h),
 		elastic.SetErrorLog(log.StandardLogger()),
 		elastic.SetSniff(false),
-		//elastic.SetTraceLog(log.StandardLogger()),
+	}
+	if trace {
+		options = append(options, elastic.SetTraceLog(log.StandardLogger()))
 	}
 	if username != "" {
 		options = append(options, elastic.SetBasicAuth(username, password))

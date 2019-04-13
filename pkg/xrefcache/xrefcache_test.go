@@ -5,6 +5,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	log "github.com/sirupsen/logrus"
+
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
 	. "github.com/tigera/compliance/internal/testutils"
@@ -15,7 +17,9 @@ import (
 var _ = Describe("xref cache", func() {
 	// Ensure  the client resource list is in-sync with the resource helper.
 	It("should support in-sync and complete with no injected configuration", func() {
-		cache := xrefcache.NewXrefCache()
+		cache := xrefcache.NewXrefCache(func() {
+			log.Info("Healthy notification from xref cache")
+		})
 		cache.OnStatusUpdate(syncer.StatusUpdate{
 			Type: syncer.StatusTypeInSync,
 		})

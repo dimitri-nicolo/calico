@@ -11,7 +11,9 @@ import (
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/compliance"
+	"github.com/projectcalico/libcalico-go/lib/health"
 
+	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/event"
 	"github.com/tigera/compliance/pkg/list"
 	"github.com/tigera/compliance/pkg/replay"
@@ -36,44 +38,62 @@ const (
 	ZeroTrustFlags = ZeroTrustWhenEndpointFlagsSet | ZeroTrustWhenEndpointFlagsUnset
 )
 
+const (
+	// The health name for the reporter component.
+	healthReporter = "compliance-reporter"
+)
+
 // Run is the entrypoint to start running the reporter.
 func Run(
-	ctx context.Context, cfg *Config,
+	ctx context.Context, cfg *config.Config,
+	healthAggr *health.HealthAggregator,
 	lister list.Destination,
 	eventer event.Fetcher,
 	auditer AuditLogReportHandler,
 	archiver ReportStorer,
 ) error {
+	// Register that we will be reporting health liveness.
+	healthAggr.RegisterReporter(healthReporter, &health.HealthReport{Live: true}, cfg.HealthTimeout)
+
+	// Define a function that can be used to report health. We pass this to the xrefcache - since it isn't a long
+	// running process, it shouldn't have it's owner reporter type.
+	reportHealth := func() {
+		healthAggr.Report(healthReporter, &health.HealthReport{Live: true})
+	}
+	reportHealth()
+
+	// Get the report config.
+	reportCfg := MustLoadReportConfig(cfg)
 
 	// Create the cross-reference cache that we use to monitor for changes in the relevant data.
-	xc := xrefcache.NewXrefCache()
-	replayer := replay.New(cfg.Start, cfg.End, lister, eventer, xc)
+	xc := xrefcache.NewXrefCache(reportHealth)
+	replayer := replay.New(cfg.ParsedReportStart, cfg.ParsedReportEnd, lister, eventer, xc)
 
 	r := &reporter{
 		ctx: ctx,
-		cfg: cfg,
+		cfg: reportCfg,
 		clog: logrus.WithFields(logrus.Fields{
-			"name":  cfg.Name,
-			"type":  cfg.ReportType,
-			"start": cfg.Start,
-			"end":   cfg.End,
+			"name":  reportCfg.Report.Name,
+			"type":  reportCfg.ReportType.Name,
+			"start": cfg.ParsedReportStart.Format(time.RFC3339),
+			"end":   cfg.ParsedReportEnd.Format(time.RFC3339),
 		}),
-		eventer:  eventer,
-		auditer:  auditer,
-		archiver: archiver,
-		xc:       xc,
-		replayer: replayer,
-
+		eventer:          eventer,
+		auditer:          auditer,
+		archiver:         archiver,
+		xc:               xc,
+		replayer:         replayer,
+		health:           healthAggr,
 		inScopeEndpoints: make(map[apiv3.ResourceID]*reportEndpoint),
 		services:         make(map[apiv3.ResourceID]xrefcache.CacheEntryFlags),
 		namespaces:       make(map[string]xrefcache.CacheEntryFlags),
 		data: &apiv3.ReportData{
-			ReportName:     cfg.Report.Name,
-			ReportTypeName: cfg.ReportType.Name,
-			ReportSpec:     cfg.Report.Spec,
-			ReportTypeSpec: cfg.ReportType.Spec,
-			StartTime:      metav1.Time{cfg.Start},
-			EndTime:        metav1.Time{cfg.End},
+			ReportName:     reportCfg.Report.Name,
+			ReportTypeName: reportCfg.ReportType.Name,
+			ReportSpec:     reportCfg.Report.Spec,
+			ReportTypeSpec: reportCfg.ReportType.Spec,
+			StartTime:      metav1.Time{cfg.ParsedReportStart},
+			EndTime:        metav1.Time{cfg.ParsedReportEnd},
 		},
 	}
 	return r.run()
@@ -89,6 +109,7 @@ type reporter struct {
 	replayer syncer.Starter
 	auditer  AuditLogReportHandler
 	archiver ReportStorer
+	health   *health.HealthAggregator
 
 	// Consolidate the tracked in-scope endpoint events into a local cache, which will get converted and copied into
 	// the report data structure.
@@ -105,6 +126,9 @@ type reportEndpoint struct {
 }
 
 func (r *reporter) run() error {
+	// Indicate we are healthy.
+	r.health.Report(healthReporter, &health.HealthReport{Live: true})
+
 	if r.cfg.ReportType.Spec.IncludeEndpointData {
 		// We need to include endpoint data in the report.
 		r.clog.Debug("Including endpoint data in report")
@@ -121,6 +145,9 @@ func (r *reporter) run() error {
 			r.xc.RegisterOnUpdateHandler(k, xrefcache.EventInScope, r.onUpdate)
 		}
 
+		// Register for status updates.
+		r.xc.RegisterOnStatusUpdateHandler(r.onStatusUpdate)
+
 		// Populate the report data from the replayer.
 		r.replayer.Start(r.ctx)
 
@@ -133,25 +160,38 @@ func (r *reporter) run() error {
 		}
 	}
 
+	// Indicate we are healthy.
+	r.health.Report(healthReporter, &health.HealthReport{Live: true})
+
 	if r.cfg.ReportType.Spec.AuditEventsSelection != nil {
 		// We need to include audit log data in the report.
 		r.clog.Debug("Including audit event data in report")
 		r.auditer.AddAuditEvents(r.ctx, r.data, r.cfg.ReportType.Spec.AuditEventsSelection,
-			r.cfg.Start, r.cfg.End)
+			r.cfg.ParsedReportStart, r.cfg.ParsedReportEnd)
 	}
 
-	r.clog.Debug("Rendering report data based on tempalte")
+	// Indicate we are healthy.
+	r.health.Report(healthReporter, &health.HealthReport{Live: true})
+
+	r.clog.Debug("Rendering report data based on template")
 	summary, err := compliance.RenderTemplate(r.cfg.ReportType.Spec.UISummaryTemplate.Template, r.data)
 	if err != nil {
 		r.clog.WithError(err).Error("Error rendering data into summary")
 	}
 
+	// Indicate we are healthy.
+	r.health.Report(healthReporter, &health.HealthReport{Live: true})
+
+	// Set the generation time and store the report data.
 	r.clog.Debug("Storing report into archiver")
-	// Store report data.
+	r.data.GenerationTime = metav1.Now()
 	err = r.archiver.StoreArchivedReport(&ArchivedReportData{
 		ReportData: r.data,
 		UISummary:  summary,
 	}, time.Now())
+
+	// Indicate we are healthy.
+	r.health.Report(healthReporter, &health.HealthReport{Live: true})
 
 	return err
 }
@@ -194,6 +234,15 @@ func (r *reporter) getEndpoint(id apiv3.ResourceID) *reportEndpoint {
 		r.inScopeEndpoints[id] = re
 	}
 	return re
+}
+
+func (r *reporter) onStatusUpdate(status syncer.StatusUpdate) {
+	switch status.Type {
+	case syncer.StatusTypeFailed:
+		r.clog.Fatalf("Unable to generate report: %v", status.Error)
+	case syncer.StatusTypeComplete:
+		r.clog.Info("All data has been processed")
+	}
 }
 
 func (r *reporter) transferAggregatedData() {

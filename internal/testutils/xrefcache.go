@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
+
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,7 +22,9 @@ import (
 // resource types, and to query current state of the cache.
 func NewXrefCacheTester() *XrefCacheTester {
 	return &XrefCacheTester{
-		XrefCache: xrefcache.NewXrefCache(),
+		XrefCache: xrefcache.NewXrefCache(func() {
+			log.Info("Healthy notification from xref cache")
+		}),
 	}
 }
 

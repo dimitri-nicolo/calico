@@ -20,7 +20,7 @@ import (
 )
 
 // NewXrefCache creates a new cross-referenced XrefCache.
-func NewXrefCache() XrefCache {
+func NewXrefCache(healthy func()) XrefCache {
 	// Create a dispatcher for use internally within the cross reference cache. The resources passed around in this
 	// dispatcher will be augmented from the basic resource provided by the syncer.
 	cacheDispatcher := dispatcher.NewDispatcher("cache")
@@ -62,6 +62,7 @@ func NewXrefCache() XrefCache {
 	}
 
 	c := &xrefCache{
+		healthy:                          healthy,
 		cacheDispatcher:                  cacheDispatcher,
 		syncerDispatcher:                 syncerDispatcher,
 		consumerDispatcher:               consumerDispatcher,
@@ -93,6 +94,8 @@ func NewXrefCache() XrefCache {
 
 // xc implements the GlobalCache interface.
 type xrefCache struct {
+	healthy                          func()
+	livenessReporter                 string
 	syncerDispatcher                 dispatcher.Dispatcher
 	cacheDispatcher                  dispatcher.Dispatcher
 	consumerDispatcher               dispatcher.Dispatcher
@@ -110,6 +113,9 @@ type xrefCache struct {
 func (c *xrefCache) OnStatusUpdate(status syncer.StatusUpdate) {
 	log.Infof("Processing status update: %#o", status.Type)
 
+	// Indicate we are healthy.
+	c.healthy()
+
 	// Notify the syncer dispatcher first.
 	c.syncerDispatcher.OnStatusUpdate(status)
 
@@ -125,10 +131,17 @@ func (c *xrefCache) OnStatusUpdate(status syncer.StatusUpdate) {
 	// Finally, notify the cache dispatcher and the consumer dispatcher of the status update.
 	c.cacheDispatcher.OnStatusUpdate(status)
 	c.consumerDispatcher.OnStatusUpdate(status)
+
+	// Indicate we are healthy.
+	c.healthy()
 }
 
 // OnUpdate implements the XrefCache interface.
 func (c *xrefCache) OnUpdate(update syncer.Update) {
+	// Indicate we are healthy.
+	c.healthy()
+
+	// pass the update into the syncer dispatcher.
 	c.syncerDispatcher.OnUpdate(update)
 	for c.modified.Len() > 0 {
 		id := heap.Pop(&c.modified).(*resources.QueueItem).ResourceID
@@ -166,6 +179,9 @@ func (c *xrefCache) OnUpdate(update syncer.Update) {
 			c.consumerDispatcher.OnUpdate(update)
 		}
 	}
+
+	// Indicate we are healthy.
+	c.healthy()
 }
 
 // Get implements the XrefCache interface.

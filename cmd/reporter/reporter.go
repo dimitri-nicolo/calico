@@ -10,8 +10,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/libcalico-go/lib/logutils"
+	"github.com/projectcalico/libcalico-go/lib/health"
 
+	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/elastic"
 	"github.com/tigera/compliance/pkg/report"
 	"github.com/tigera/compliance/pkg/version"
@@ -27,16 +28,12 @@ func main() {
 		return
 	}
 
-	// Set up logger.
-	log.SetFormatter(&logutils.Formatter{})
-	log.AddHook(&logutils.ContextHook{})
-	log.SetLevel(logutils.SafeParseLogLevel(os.Getenv("LOG_LEVEL")))
+	// Load the config.
+	cfg := config.MustLoadConfig()
+	cfg.InitializeLogging()
 
 	// Init elastic.
-	elasticClient := elastic.MustGetElasticClient()
-
-	// Create a Calico client and query the report and corresponding report type.
-	config := report.MustLoadReportConfig()
+	elasticClient := elastic.MustGetElasticClient(cfg)
 
 	// Setup signals.
 	sigs := make(chan os.Signal, 1)
@@ -48,12 +45,16 @@ func main() {
 		cancel()
 	}()
 
-	// Starting snapshotter for each resource type.
+	// Create a health check aggregator and start the health check service.
+	h := health.NewHealthAggregator()
+	h.ServeHTTP(cfg.HealthEnabled, cfg.HealthHost, cfg.HealthPort)
+
+	// Run the reporter.
 	log.Debugf("Elastic: %v", elasticClient)
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
-		err := report.Run(cxt, config, elasticClient, elasticClient, elasticClient, elasticClient)
+		err := report.Run(cxt, cfg, h, elasticClient, elasticClient, elasticClient, elasticClient)
 		if err != nil {
 			log.Errorf("Hit terminating error in reporter: %v", err)
 		}

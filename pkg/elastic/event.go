@@ -135,7 +135,7 @@ func queryFromAuditEventsSelection(filter *v3.AuditEventsSelection) elastic.Quer
 func queryFromResourceID(resID v3.ResourceID) elastic.Query {
 	queries := []elastic.Query{}
 	if resID.Kind != "" {
-		queries = append(queries, elastic.NewMatchQuery("responseObject.kind", resID.Kind)) //TODO is this capitalized singular or lowercase plural?
+		queries = append(queries, elastic.NewMatchQuery("responseObject.kind", resID.Kind))
 	}
 	if resID.APIVersion != "" {
 		queries = append(queries, elastic.NewMatchQuery("responseObject.apiVersion", resID.APIVersion))
