@@ -24,7 +24,6 @@ const (
 
 func (c *client) GetAuditEvents(ctx context.Context, kind *metav1.TypeMeta, start, end *time.Time) <-chan *event.AuditEventResult {
 	// create the channel that the retrieved events will fill into.
-	ch := make(chan *event.AuditEventResult, pageSize)
 	var filter *v3.AuditEventsSelection
 
 	// Create an audit event filter if needed
@@ -36,14 +35,7 @@ func (c *client) GetAuditEvents(ctx context.Context, kind *metav1.TypeMeta, star
 		}
 	}
 
-	// retrieve the events on a goroutine.
-	go func() {
-		defer close(ch)
-
-		c.searchAuditEvents(ctx, filter, start, end, ch)
-	}()
-
-	return ch
+	return c.searchAuditEvents(ctx, filter, start, end)
 }
 
 // addAuditEvents reads audit logs from storage, filters them based on the resources specified in
@@ -55,12 +47,7 @@ func (c *client) GetAuditEvents(ctx context.Context, kind *metav1.TypeMeta, star
 //   set to "GlobalNetworkPolicy" would include all Kubernetes and Calico NetworkPolicy and
 //   all Calico GlobalNetworkPolicy audit events.
 func (c *client) AddAuditEvents(ctx context.Context, data *v3.ReportData, filter *v3.AuditEventsSelection, start, end time.Time) {
-	ch := make(chan *event.AuditEventResult, pageSize)
-	go func() {
-		defer close(ch)
-		c.searchAuditEvents(ctx, filter, &start, &end, ch)
-	}()
-	for e := range ch {
+	for e := range c.searchAuditEvents(ctx, filter, &start, &end) {
 		switch e.Verb {
 		case "create":
 			data.AuditSummary.NumCreate++
@@ -75,33 +62,39 @@ func (c *client) AddAuditEvents(ctx context.Context, data *v3.ReportData, filter
 }
 
 // Query for audit events in a paginated fashion
-func (c *client) searchAuditEvents(ctx context.Context, filter *v3.AuditEventsSelection, start, end *time.Time, eventChan chan *event.AuditEventResult) {
-	exit := false
-	for i := 0; !exit; i += pageSize {
-		// Make search query
-		res, err := c.Search().
-			Index(auditLogIndex).
-			Query(constructAuditEventsQuery(filter, start, end)).
-			Sort("stageTimestamp", true).
-			From(i).Size(pageSize).
-			Do(context.Background())
-		if err != nil {
-			eventChan <- &event.AuditEventResult{Err: err}
-		}
-		log.WithField("latency (ms)", res.TookInMillis).Debug("query success")
-
-		// define function that pushes the search results into the channel.
-		for _, hit := range res.Hits.Hits {
-			ev := new(auditv1.Event)
-			if err := json.Unmarshal(*hit.Source, ev); err != nil {
-				log.WithFields(log.Fields{"index": hit.Index, "id": hit.Id}).WithError(err).Warn("failed to unmarshal event json")
-				eventChan <- &event.AuditEventResult{nil, err}
+func (c *client) searchAuditEvents(ctx context.Context, filter *v3.AuditEventsSelection, start, end *time.Time) <-chan *event.AuditEventResult {
+	ch := make(chan *event.AuditEventResult, pageSize)
+	go func() {
+		defer close(ch)
+		exit := false
+		for i := 0; !exit; i += pageSize {
+			// Make search query
+			res, err := c.Search().
+				Index(auditLogIndex).
+				Query(constructAuditEventsQuery(filter, start, end)).
+				Sort("stageTimestamp", true).
+				From(i).Size(pageSize).
+				Do(context.Background())
+			if err != nil {
+				ch <- &event.AuditEventResult{Err: err}
 			}
-			eventChan <- &event.AuditEventResult{ev, nil}
-		}
+			log.WithField("latency (ms)", res.TookInMillis).Debug("query success")
 
-		exit = i+pageSize > int(res.Hits.TotalHits)
-	}
+			// define function that pushes the search results into the channel.
+			for _, hit := range res.Hits.Hits {
+				ev := new(auditv1.Event)
+				if err := json.Unmarshal(*hit.Source, ev); err != nil {
+					log.WithFields(log.Fields{"index": hit.Index, "id": hit.Id}).WithError(err).Warn("failed to unmarshal event json")
+					ch <- &event.AuditEventResult{nil, err}
+				}
+				ch <- &event.AuditEventResult{ev, nil}
+			}
+
+			exit = i+pageSize > int(res.Hits.TotalHits)
+		}
+	}()
+
+	return ch
 }
 
 func constructAuditEventsQuery(filter *v3.AuditEventsSelection, start, end *time.Time) elastic.Query {
