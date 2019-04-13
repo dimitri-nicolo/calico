@@ -24,18 +24,18 @@ rules:
     verbs:
       - get
       - list
-{{- if eq .Values.datastore "kdd" }}      
-  - apiGroups: ["crd.projectcalico.org"]
+  - apiGroups: ["projectcalico.org"]
     resources:
       - globalnetworkpolicies
       - networkpolicies
+      - tier.globalnetworkpolicies
+      - tier.networkpolicies
       - tiers
       - hostendpoints
       - globalnetworksets
     verbs:
       - get
       - list
-{{- end }}
 
 ---
 
