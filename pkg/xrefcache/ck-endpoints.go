@@ -208,8 +208,8 @@ func (c *endpointEngine) convertToVersioned(res resources.Resource) (VersionedRe
 		}, nil
 	case *corev1.Pod:
 		// Check if an IP address is available, if not then it won't be possible to convert the Pod.
-		ips, ipErr := c.converter.GetPodIPs(in)
-		if ipErr != nil || len(ips) == 0 {
+		podIPs, ipErr := c.converter.GetPodIPs(in)
+		if ipErr != nil || len(podIPs) == 0 {
 			// There is no valid IP. In this case we need to sneak in an IP address in order to get the conversion
 			// to succeeed. We'll flag that this IP address is not actually valid which will mean the getIPOrEndpointIDs
 			// will not return this invalid IP.
@@ -222,6 +222,7 @@ func (c *endpointEngine) convertToVersioned(res resources.Resource) (VersionedRe
 		if err != nil {
 			return nil, err
 		}
+		log.WithField("id", resources.GetResourceID(in)).Debug("Converted Pod to Calico WEP")
 
 		v3 := kvp.Value.(*apiv3.WorkloadEndpoint)
 		v1, err := updateprocessors.ConvertWorkloadEndpointV3ToV1Value(v3)
@@ -233,7 +234,7 @@ func (c *endpointEngine) convertToVersioned(res resources.Resource) (VersionedRe
 			Pod:     in,
 			v3:      v3,
 			v1:      v1.(*model.WorkloadEndpoint),
-			validIP: len(ips) != 0,
+			validIP: len(podIPs) != 0,
 		}, nil
 	}
 
