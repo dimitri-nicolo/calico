@@ -297,6 +297,8 @@ rules:
       - licensekeys
       - globalnetworksets
       - globalthreatfeeds
+      - globalreporttypes
+      - globalreports
     verbs:
       - "*"
 
