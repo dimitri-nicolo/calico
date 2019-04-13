@@ -7,16 +7,17 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
-	"github.com/projectcalico/libcalico-go/lib/apiconfig"
-	"github.com/projectcalico/libcalico-go/lib/clientv3"
+	calicoclient "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset"
+	clientv3 "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 
 	"github.com/tigera/compliance/pkg/list"
 )
 
 type k8sInterface kubernetes.Interface
-type calicoInterface clientv3.Interface
+type calicoInterface clientv3.ProjectcalicoV3Interface
 
 // ClientSet is a combined Calico/Kubernetes client set interface, with additional interfaces used by the compliance
 // code.
@@ -28,12 +29,21 @@ type ClientSet interface {
 
 // MustGetKubernetesClient returns a kubernetes client.
 func MustGetKubernetesClient() kubernetes.Interface {
-	// Build kubeconfig path
 	kubeconfig := os.Getenv("KUBECONFIG")
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
-	if err != nil {
-		log.WithError(err).Debug("failed to build config")
-		panic(err)
+	var config *rest.Config
+	var err error
+	if kubeconfig == "" {
+		// creates the in-cluster config
+		config, err = rest.InClusterConfig()
+		if err != nil {
+			panic(err.Error())
+		}
+	} else {
+		// creates a config from supplied kubeconfig
+		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
+		if err != nil {
+			panic(err.Error())
+		}
 	}
 	config.Timeout = 15 * time.Second
 
@@ -43,24 +53,37 @@ func MustGetKubernetesClient() kubernetes.Interface {
 		log.WithError(err).Debug("Failed to load k8s client")
 		panic(err)
 	}
+
 	return k8sClient
 }
 
 // MustGetCalicoClient returns a Calico client.
-func MustGetCalicoClient() clientv3.Interface {
-	// Build calico client
-	cfg, err := apiconfig.LoadClientConfig("")
-	if err != nil {
-		log.WithError(err).Error("failed to load datastore config")
-		panic(err)
+func MustGetCalicoClient() clientv3.ProjectcalicoV3Interface {
+	kubeconfig := os.Getenv("KUBECONFIG")
+	var config *rest.Config
+	var err error
+	if kubeconfig == "" {
+		// creates the in-cluster config
+		config, err = rest.InClusterConfig()
+		if err != nil {
+			panic(err.Error())
+		}
+	} else {
+		// creates a config from supplied kubeconfig
+		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
+		if err != nil {
+			panic(err.Error())
+		}
 	}
-	calicoClient, err := clientv3.New(*cfg)
+	config.Timeout = 15 * time.Second
+
+	// Build calico client
+	calicoClient, err := calicoclient.NewForConfig(config)
 	if err != nil {
-		log.WithError(err).Error("Failed to load calico client")
-		panic(err)
+		panic(err.Error())
 	}
 
-	return calicoClient
+	return calicoClient.ProjectcalicoV3()
 }
 
 // MustGetClientSet returns a client set (k8s and Calico)

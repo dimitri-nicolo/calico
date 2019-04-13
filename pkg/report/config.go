@@ -2,14 +2,13 @@
 package report
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"time"
 
-	"github.com/projectcalico/libcalico-go/lib/options"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 
 	"github.com/tigera/compliance/pkg/datastore"
 )
@@ -32,8 +31,8 @@ type Config struct {
 	End   time.Time
 
 	// --- Loaded from Calico ---
-	Report     *apiv3.GlobalReport
-	ReportType *apiv3.GlobalReportType
+	Report     *v3.GlobalReport
+	ReportType *v3.GlobalReportType
 }
 
 func MustLoadReportConfig() *Config {
@@ -45,12 +44,12 @@ func MustLoadReportConfig() *Config {
 
 	client := datastore.MustGetCalicoClient()
 
-	rc.Report, err = client.GlobalReports().Get(context.Background(), rc.Name, options.GetOptions{})
+	rc.Report, err = client.GlobalReports().Get(rc.Name, metav1.GetOptions{})
 	if err != nil {
 		panic(err)
 	}
 
-	rc.ReportType, err = client.GlobalReportTypes().Get(context.Background(), rc.Report.Spec.ReportType, options.GetOptions{})
+	rc.ReportType, err = client.GlobalReportTypes().Get(rc.Report.Spec.ReportType, metav1.GetOptions{})
 	if err != nil {
 		panic(err)
 	}
