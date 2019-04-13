@@ -129,7 +129,7 @@ type AuditSummary struct {
 	NumCreate int `json:"numCreate,omitempty"`
 
 	// The number of in-scope audit log patch or replace events.
-	NumModified int `json:"numModified,omitempty"`
+	NumModify int `json:"numModify,omitempty"`
 
 	// The number of in-scope audit log delete events.
 	NumDelete int `json:"numDelete,omitempty"`
