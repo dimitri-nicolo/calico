@@ -70,10 +70,6 @@ func main() {
 			reportType.Spec.UISummaryTemplate.Template = string(templ)
 		}
 
-		if templ, err := getTemplate(inDirName, reportType.Spec.UICompleteTemplate.Name); err == nil {
-			reportType.Spec.UICompleteTemplate.Template = string(templ)
-		}
-
 		for i := 0; i < len(reportType.Spec.DownloadTemplates); i++ {
 			if templ, err := getTemplate(inDirName, reportType.Spec.DownloadTemplates[i].Name); err == nil {
 				reportType.Spec.DownloadTemplates[i].Template = string(templ)

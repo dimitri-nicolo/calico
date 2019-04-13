@@ -7,8 +7,6 @@ metadata:
 spec:
   uiSummaryTemplate:
     name: ui-summary.json
-  uiCompleteTemplate:
-    name: ui-complete.json
   downloadTemplates:
     - name: summary.csv
     - name: endpoints.csv

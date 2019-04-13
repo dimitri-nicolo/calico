@@ -1,5 +1,5 @@
-hash: 98595105e9f54ec518a1df434fedc5ccbb7c2abf08e69aa0acb3125924c436bc
-updated: 2019-04-12T11:21:31.232915-07:00
+hash: cad22682b6866317f1e8b1f9ce3696c3cb288b39443d6236b4823b3d67e40b54
+updated: 2019-04-12T15:22:07.288969376-07:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -200,7 +200,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 2a51bae16b1e3fd38847755b1901a9655978870a
+  version: e7c444de1041d64957c9a639fcf90bc0dabf3a13
   repo: git@github.com:tigera/libcalico-go-private.git
   vcs: git
   subpackages:
@@ -238,9 +238,10 @@ imports:
   - lib/validator/v3
   - lib/watch
 - name: github.com/prometheus/client_golang
-  version: e7e903064f5e9eb5da98208bae10b475d4db0f8c
+  version: 505eaef017263e299324067d40ca2c48f6a2cf50
   subpackages:
   - prometheus
+  - prometheus/internal
 - name: github.com/prometheus/client_model
   version: fa8ad6fec33561be4280a8f0514318c79d7f6cb6
   subpackages:
@@ -276,8 +277,18 @@ imports:
 - name: github.com/x-cray/logrus-prefixed-formatter
   version: bb2702d423886830dee131692131d35648c382e2
 - name: golang.org/x/crypto
-  version: 49796115aa4b964c318aad4f3084fdb41e9aa067
+  version: de0752318171da717af4ce24d0a2e8626afaeb11
   subpackages:
+  - bcrypt
+  - blowfish
+  - cryptobyte
+  - cryptobyte/asn1
+  - ed25519
+  - ed25519/internal/edwards25519
+  - internal/subtle
+  - nacl/secretbox
+  - poly1305
+  - salsa20/salsa
   - ssh/terminal
 - name: golang.org/x/net
   version: 1c05540f6879653db88113bc4a2b70aec4bd491f
@@ -534,7 +545,7 @@ imports:
   - util/jsonpath
   - util/retry
 - name: k8s.io/kube-openapi
-  version: 94e1e7b7574c44c4c0f2007de6fe617e259191f3
+  version: 91cfa479c814065e420cee7ed227db0f63a5854e
   subpackages:
   - pkg/common
 testImports: []

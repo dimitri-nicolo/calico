@@ -22,7 +22,5 @@ spec:
       {{ range .Endpoints -}}
       {{ .Endpoint.Name }},{{ .Endpoint.Namespace }},{{ .IngressProtected }},{{ .EgressProtected }},{{ .EnvoyEnabled }},{{ join .AppliedPolicies “;” }},{{ join .Services “;” }}
       {{- end }}
-  uiCompleteTemplate:
-    name: ui-complete.json
   uiSummaryTemplate:
     name: ui-summary.json
