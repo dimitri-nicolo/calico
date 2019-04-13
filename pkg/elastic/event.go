@@ -52,7 +52,7 @@ func (c *client) AddAuditEvents(ctx context.Context, data *v3.ReportData, filter
 		case "create":
 			data.AuditSummary.NumCreate++
 		case "update", "patch":
-			data.AuditSummary.NumModified++
+			data.AuditSummary.NumModify++
 		case "delete":
 			data.AuditSummary.NumDelete++
 		}

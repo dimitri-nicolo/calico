@@ -7,11 +7,7 @@ metadata:
 spec:
   uiSummaryTemplate:
     name: ui-summary.json
+  includeEndpointData: true
   downloadTemplates:
     - name: summary.csv
     - name: endpoints.csv
-  auditEventsSelection:
-    resources:
-      - kind: 'globalnetworkpolicy'
-        name: 'grt-aes-g'
-        namespace: 'grt-aes-gnp-ns'

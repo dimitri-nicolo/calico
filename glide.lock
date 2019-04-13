@@ -1,5 +1,5 @@
-hash: 240f3d4ddb22ec47e001a4d3557a0fcbbc51407e6bf96ac3928fda6dd0f9dc83
-updated: 2019-04-13T13:22:51.563751-07:00
+hash: 622ac0d02e561718d59a6e7735f340b0a79af5991d5c42879006774c8b8b717b
+updated: 2019-04-15T10:44:08.473159-07:00
 imports:
 - name: github.com/beorn7/perks
   version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
@@ -145,7 +145,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: e7c444de1041d64957c9a639fcf90bc0dabf3a13
+  version: 12cc58937055c64eb819c22fc995349e3e53c1dc
   repo: git@github.com:tigera/libcalico-go-private.git
   vcs: git
   subpackages:
