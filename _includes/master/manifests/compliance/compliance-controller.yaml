@@ -15,13 +15,12 @@ metadata:
   name: compliance-controller-role
 rules:
   - apiGroups: ["batch"]
-    resources: ["cronjobs", "jobs"]
+    resources: ["jobs"]
     verbs: ["create", "get", "deletecollection", "delete"]
   - apiGroups: [""]
     resources: ["pods"]
     verbs: ["list", "get", "watch"]
-{{- if eq .Values.datastore "kdd" }}      
-  - apiGroups: ["crd.projectcalico.org"]
+  - apiGroups: ["projectcalico.org"]
     resources:
       - globalreporttype
       - globalreport
@@ -29,7 +28,6 @@ rules:
       - get
       - list
       - watch
-{{- end }}
 
 
 ---

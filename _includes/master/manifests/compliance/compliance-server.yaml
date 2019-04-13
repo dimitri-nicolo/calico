@@ -23,8 +23,7 @@ rules:
       - get
       - list
       - watch
-{{- if eq .Values.datastore "kdd" }}      
-  - apiGroups: ["crd.projectcalico.org"]
+  - apiGroups: ["projectcalico.org"]
     resources:
       - globalreporttype
       - globalreport
@@ -32,7 +31,6 @@ rules:
       - get
       - list
       - watch
-{{- end }}
 
 ---
 
