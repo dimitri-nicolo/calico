@@ -32,7 +32,8 @@ type GlobalReport struct {
 	// Standard object's metadata.
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 	// Specification of the GlobalReport.
-	Spec ReportSpec `json:"spec,omitempty"`
+	Spec   ReportSpec   `json:"spec,omitempty"`
+	Status ReportStatus `json:"status,omitempty"`
 }
 
 // ReportSpec contains the values of the GlobalReport.
@@ -54,6 +55,27 @@ type ReportSpec struct {
 
 	// The node selector used to specify which nodes the report job may be scheduled on.
 	JobNodeSelector map[string]string `json:"jobNodeSelector,omitempty" validate:"omitempty"`
+}
+
+// ReportStatus contains the status of the automated report generation.
+type ReportStatus struct {
+	LastSuccessfulReport *ReportCreationStatus `json:"lastSuccessfulReport"`
+	ErrorConditions      []ErrorCondition      `json:"errorConditions"`
+}
+
+// ReportCreationStatus contains the status of the automated report generation.
+type ReportCreationStatus struct {
+	// The time the report was generated and archived.
+	GenerationTime metav1.Time `json:"generationTime"`
+
+	// The start time of the report.
+	Start metav1.Time `json:"start"`
+
+	// The end time of the report.
+	End metav1.Time `json:"end"`
+
+	// The ReportType as configured at the time the report was generated.
+	ReportType string `json:"reportType"`
 }
 
 // EndpointsSelection is a set of selectors used to select the endpoints that are considered to be in-scope for the
