@@ -3,7 +3,7 @@ kind: ServiceAccount
 apiVersion: v1
 metadata:
   name: tigera-compliance-controller
-  namespace: kube-system
+  namespace: calico-monitoring
 
 ---
 
@@ -11,7 +11,7 @@ metadata:
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: Role
 metadata:
-  namespace: kube-system
+  namespace: calico-monitoring
   name: compliance-controller-role
 rules:
   - apiGroups: ["batch"]
@@ -43,7 +43,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: tigera-compliance-controller
-  namespace: kube-system
+  namespace: calico-monitoring
 
 
 ---
@@ -52,7 +52,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: compliance-controller
-  namespace: kube-system
+  namespace: calico-monitoring
   labels:
     k8s-app: compliance-controller
 spec:
@@ -65,7 +65,7 @@ spec:
   template:
     metadata:
       name: compliance-controller
-      namespace: kube-system
+      namespace: calico-monitoring
       labels:
         k8s-app: compliance-controller
     spec:

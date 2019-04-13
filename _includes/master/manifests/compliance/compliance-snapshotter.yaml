@@ -3,7 +3,7 @@ kind: ServiceAccount
 apiVersion: v1
 metadata:
   name: tigera-compliance-snapshotter
-  namespace: kube-system
+  namespace: calico-monitoring
 
 ---
 
@@ -51,7 +51,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: tigera-compliance-snapshotter
-  namespace: kube-system
+  namespace: calico-monitoring
 
 
 ---
@@ -60,7 +60,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: compliance-snapshotter
-  namespace: kube-system
+  namespace: calico-monitoring
   labels:
     k8s-app: compliance-snapshotter
 spec:
@@ -73,7 +73,7 @@ spec:
   template:
     metadata:
       name: compliance-snapshotter
-      namespace: kube-system
+      namespace: calico-monitoring
       labels:
         k8s-app: compliance-snapshotter
     spec:
