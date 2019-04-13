@@ -28,3 +28,7 @@ import:
   version: v6.2.16
 - package: github.com/mailru/easyjson
   version: 03f2033d19d5860aef995fe360ac7d395cd8ce65
+- package: github.com/tigera/calico-k8sapiserver
+  vcs: git
+  repo: git@github.com:tigera/calico-k8sapiserver.git
+  version: bba9707369955a0255e928db3d02f88c77a72664
