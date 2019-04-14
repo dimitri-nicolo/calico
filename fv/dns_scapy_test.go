@@ -44,6 +44,7 @@ type mapping struct {
 var _ = Describe("DNS Policy", func() {
 
 	var (
+		scapy  *containers.Container
 		etcd   *containers.Container
 		felix  *infrastructure.Felix
 		client client.Interface
@@ -56,9 +57,18 @@ var _ = Describe("DNS Policy", func() {
 		var err error
 		dnsDir, err = ioutil.TempDir("", "dnsinfo")
 		Expect(err).NotTo(HaveOccurred())
+
+		// Start scapy first, so we can get its IP and configure Felix to trust it.
+		scapy = containers.Run("scapy",
+			containers.RunOpts{AutoRemove: true, WithStdinPipe: true},
+			"-i", "--privileged", "scapy")
+		scapy.WaitUntilRunning()
+
+		// Now start etcd and Felix, with Felix trusting scapy's IP.
 		opts.ExtraVolumes[dnsDir] = "/dnsinfo"
 		opts.ExtraEnvVars["FELIX_DOMAININFOSTORE"] = "/dnsinfo/dnsinfo.txt"
 		opts.ExtraEnvVars["FELIX_DOMAININFOSAVEINTERVAL"] = "1"
+		opts.ExtraEnvVars["FELIX_DOMAININFOTRUSTEDSERVERS"] = scapy.IP
 		felix, etcd, client = infrastructure.StartSingleNodeEtcdTopology(opts)
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")
 
@@ -120,11 +130,8 @@ var _ = Describe("DNS Policy", func() {
 
 	DescribeTable("DNS response processing",
 		func(dnsSpec string, check func() bool) {
-			scapy := containers.Run("scapy",
-				containers.RunOpts{AutoRemove: true, WithStdinPipe: true},
-				"-i", "--privileged", "scapy")
-
-			// Establish that conntrack state, in Felix.
+			// Establish conntrack state, in Felix, as though the workload just sent a
+			// DNS request to scapy.
 			felix.Exec("conntrack", "-I", "-s", w[0].IP, "-d", scapy.IP, "-p", "UDP", "-t", "10", "--sport", "53", "--dport", "53")
 
 			// Now drive scapy.
