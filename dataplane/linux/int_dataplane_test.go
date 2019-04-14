@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -93,7 +93,7 @@ var _ = Describe("Constructor test", func() {
 	})
 
 	It("should be constructable", func() {
-		var dp = intdataplane.NewIntDataplaneDriver(dpConfig)
+		var dp = intdataplane.NewIntDataplaneDriver(dpConfig, nil)
 		Expect(dp).ToNot(BeNil())
 	})
 
@@ -104,7 +104,7 @@ var _ = Describe("Constructor test", func() {
 		})
 
 		It("should be constructable", func() {
-			var dp = intdataplane.NewIntDataplaneDriver(dpConfig)
+			var dp = intdataplane.NewIntDataplaneDriver(dpConfig, nil)
 			Expect(dp).ToNot(BeNil())
 		})
 	})
@@ -116,7 +116,7 @@ var _ = Describe("Constructor test", func() {
 		})
 
 		It("should be constructable", func() {
-			var dp = intdataplane.NewIntDataplaneDriver(dpConfig)
+			var dp = intdataplane.NewIntDataplaneDriver(dpConfig, nil)
 			Expect(dp).ToNot(BeNil())
 		})
 	})

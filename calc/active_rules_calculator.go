@@ -54,7 +54,7 @@ type PolicyMatchListener interface {
 //
 // When looking at policies, the ActiveRules calculator is only interested in the selector
 // attached to the policy itself (which determines the set of endpoints that it applies to).
-// The rules in a policy may also contain selectors; those are are ignored here; they are
+// The rules in a policy may also contain selectors; those are ignored here; they are
 // mapped to IP sets by the RuleScanner.
 type ActiveRulesCalculator struct {
 	// Caches of all known tiers/policies/profiles.

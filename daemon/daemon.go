@@ -24,6 +24,7 @@ import (
 	"os/signal"
 	"runtime"
 	"runtime/debug"
+	"sync"
 	"syscall"
 	"time"
 
@@ -44,7 +45,6 @@ import (
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/felix/config"
-	_ "github.com/projectcalico/felix/config"
 	dp "github.com/projectcalico/felix/dataplane"
 	"github.com/projectcalico/felix/logutils"
 	"github.com/projectcalico/felix/policysync"
@@ -164,7 +164,7 @@ func Run(configFile string) {
 
 	// Health monitoring, for liveness and readiness endpoints.  The following loop can take a
 	// while before the datastore reports itself as ready - for example when there is data that
-	// needs to be migrated from a previous version - and we still want to Felix to report
+	// needs to be migrated from a previous version - and we still want Felix to report
 	// itself as live (but not ready) while we are waiting for that.  So we create the
 	// aggregator upfront and will start serving health status over HTTP as soon as we see _any_
 	// config that indicates that.
@@ -349,12 +349,13 @@ configRetry:
 	// one.
 	var dpDriver dp.DataplaneDriver
 	var dpDriverCmd *exec.Cmd
+	var dpStopChan chan *sync.WaitGroup
 
 	failureReportChan := make(chan string)
 	configChangedRestartCallback := func() { failureReportChan <- reasonConfigChanged }
 	childExitedRestartCallback := func() { failureReportChan <- reasonChildExited }
 
-	dpDriver, dpDriverCmd = dp.StartDataplaneDriver(
+	dpDriver, dpDriverCmd, dpStopChan = dp.StartDataplaneDriver(
 		configParams,
 		healthAggregator,
 		dpStatsCollector,
@@ -522,7 +523,10 @@ configRetry:
 	go syncerToValidator.SendTo(validator)
 	asyncCalcGraph.Start()
 	log.Infof("Started the processing graph")
-	var stopSignalChans []chan<- bool
+	var stopSignalChans []chan<- *sync.WaitGroup
+	if dpStopChan != nil {
+		stopSignalChans = append(stopSignalChans, dpStopChan)
+	}
 	if configParams.EndpointReportingEnabled {
 		delay := configParams.EndpointReportingDelaySecs
 		log.WithField("delay", delay).Info(
@@ -546,7 +550,7 @@ configRetry:
 		log.WithField("policySyncPathPrefix", configParams.PolicySyncPathPrefix).Info(
 			"Policy sync API enabled.  Starting the policy sync server.")
 		policySyncProcessor.Start()
-		sc := make(chan bool)
+		sc := make(chan *sync.WaitGroup)
 		stopSignalChans = append(stopSignalChans, sc)
 		go policySyncAPIBinder.SearchAndBind(sc)
 	}
@@ -760,7 +764,7 @@ func servePrometheusMetrics(configParams *config.Config) {
 	}
 }
 
-func monitorAndManageShutdown(failureReportChan <-chan string, driverCmd *exec.Cmd, stopSignalChans []chan<- bool) {
+func monitorAndManageShutdown(failureReportChan <-chan string, driverCmd *exec.Cmd, stopSignalChans []chan<- *sync.WaitGroup) {
 	// Ask the runtime to tell us if we get a term/int signal.
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGTERM)
@@ -803,12 +807,30 @@ func monitorAndManageShutdown(failureReportChan <-chan string, driverCmd *exec.C
 	logCxt := log.WithField("reason", reason)
 	logCxt.Warn("Felix is shutting down")
 
-	// Notify other components to stop.
+	// Notify other components to stop.  Each notified component must call Done() on the wait
+	// group when it has completed its shutdown.
+	var stopWG sync.WaitGroup
 	for _, c := range stopSignalChans {
+		stopWG.Add(1)
 		select {
-		case c <- true:
+		case c <- &stopWG:
 		default:
+			stopWG.Done()
 		}
+	}
+	logCxt.Info("Told subcomponents to shut down")
+
+	// Wait for those components to say they're done, for up to 30 seconds.
+	waitC := make(chan int)
+	go func() {
+		stopWG.Wait()
+		close(waitC)
+	}()
+	select {
+	case <-waitC:
+		logCxt.Info("Subcomponents have completed shut down")
+	case <-time.After(30 * time.Second):
+		logCxt.Warn("Subcomponent shut down timed out")
 	}
 
 	if !driverAlreadyStopped {

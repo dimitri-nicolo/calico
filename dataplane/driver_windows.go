@@ -4,6 +4,7 @@ package dataplane
 
 import (
 	"os/exec"
+	"sync"
 
 	log "github.com/sirupsen/logrus"
 
@@ -18,7 +19,7 @@ func StartDataplaneDriver(configParams *config.Config,
 	healthAggregator *health.HealthAggregator,
 	collector collector.Collector,
 	configChangedRestartCallback func(),
-	childExitedRestartCallback func()) (DataplaneDriver, *exec.Cmd) {
+	childExitedRestartCallback func()) (DataplaneDriver, *exec.Cmd, chan *sync.WaitGroup) {
 	log.Info("Using Windows dataplane driver.")
 
 	dpConfig := windataplane.Config{
@@ -29,5 +30,5 @@ func StartDataplaneDriver(configParams *config.Config,
 	winDP := windataplane.NewWinDataplaneDriver(hns.API{}, dpConfig)
 	winDP.Start()
 
-	return winDP, nil
+	return winDP, nil, nil
 }

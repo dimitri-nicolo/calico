@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -147,6 +147,10 @@ type Config struct {
 
 	// Optional stats collector
 	Collector collector.Collector
+
+	// Config for domain-based policy.
+	DomainInfoStore        string
+	DomainInfoSaveInterval time.Duration
 }
 
 // InternalDataplane implements an in-process Felix dataplane driver based on iptables
@@ -200,6 +204,9 @@ type InternalDataplane struct {
 
 	endpointStatusCombiner *endpointStatusCombiner
 
+	domainInfoStore   *domainInfoStore
+	domainInfoChanges chan *domainInfoChanged
+
 	allManagers []Manager
 
 	ruleRenderer rules.RuleRenderer
@@ -231,6 +238,9 @@ type InternalDataplane struct {
 	config Config
 
 	debugHangC <-chan time.Time
+
+	// Channel used when the Felix top level wants the dataplane to stop.
+	stopChan chan *sync.WaitGroup
 }
 
 const (
@@ -238,7 +248,7 @@ const (
 	healthInterval = 10 * time.Second
 )
 
-func NewIntDataplaneDriver(config Config) *InternalDataplane {
+func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *InternalDataplane {
 	log.WithField("config", config).Info("Creating internal dataplane driver.")
 	ruleRenderer := config.RuleRendererOverride
 	if ruleRenderer == nil {
@@ -256,8 +266,10 @@ func NewIntDataplaneDriver(config Config) *InternalDataplane {
 		ifaceMonitor:      ifacemonitor.New(config.IfaceMonitorConfig),
 		ifaceUpdates:      make(chan *ifaceUpdate, 100),
 		ifaceAddrUpdates:  make(chan *ifaceAddrsUpdate, 100),
+		domainInfoChanges: make(chan *domainInfoChanged, 100),
 		config:            config,
 		applyThrottle:     throttle.New(10),
+		stopChan:          stopChan,
 	}
 	dp.applyThrottle.Refill() // Allow the first apply() immediately.
 
@@ -343,8 +355,13 @@ func NewIntDataplaneDriver(config Config) *InternalDataplane {
 	dp.routeTables = append(dp.routeTables, routeTableV4)
 
 	dp.endpointStatusCombiner = newEndpointStatusCombiner(dp.fromDataplane, config.IPv6Enabled)
+	dp.domainInfoStore = newDomainInfoStore(
+		dp.domainInfoChanges,
+		config.DomainInfoStore,
+		config.DomainInfoSaveInterval,
+	)
 
-	dp.RegisterManager(newIPSetsManager(ipSetsV4, config.MaxIPSetSize))
+	dp.RegisterManager(newIPSetsManager(ipSetsV4, config.MaxIPSetSize, dp.domainInfoStore))
 	dp.RegisterManager(newHostIPManager(
 		config.RulesConfig.WorkloadIfacePrefixes,
 		rules.IPSetIDThisHostIPs,
@@ -420,7 +437,7 @@ func NewIntDataplaneDriver(config Config) *InternalDataplane {
 		routeTableV6 := routetable.New(config.RulesConfig.WorkloadIfacePrefixes, 6, config.NetlinkTimeout)
 		dp.routeTables = append(dp.routeTables, routeTableV6)
 
-		dp.RegisterManager(newIPSetsManager(ipSetsV6, config.MaxIPSetSize))
+		dp.RegisterManager(newIPSetsManager(ipSetsV6, config.MaxIPSetSize, dp.domainInfoStore))
 		dp.RegisterManager(newHostIPManager(
 			config.RulesConfig.WorkloadIfacePrefixes,
 			rules.IPSetIDThisHostIPs,
@@ -541,6 +558,9 @@ func (d *InternalDataplane) Start() {
 	go d.loopUpdatingDataplane()
 	go d.loopReportingStatus()
 	go d.ifaceMonitor.MonitorInterfaces()
+
+	// Start DNS response capture.
+	d.domainInfoStore.Start()
 }
 
 // onIfaceStateChange is our interface monitor callback.  It gets called from the monitor's thread.
@@ -810,6 +830,29 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 			}
 			summaryAddrBatchSize.Observe(float64(batchSize))
 			d.dataplaneNeedsSync = true
+		case domainInfoChange := <-d.domainInfoChanges:
+			// Opportunistically read and coalesce other domain change signals that are
+			// already pending on this channel.
+			domainChangeSignals := []*domainInfoChanged{domainInfoChange}
+			domainsChanged := set.From(domainInfoChange.domain)
+		domainChangeLoop:
+			for {
+				select {
+				case domainInfoChange := <-d.domainInfoChanges:
+					if !domainsChanged.Contains(domainInfoChange.domain) {
+						domainChangeSignals = append(domainChangeSignals, domainInfoChange)
+						domainsChanged.Add(domainInfoChange.domain)
+					}
+				default:
+					// Channel blocked so we've caught up.
+					break domainChangeLoop
+				}
+			}
+			for _, domainInfoChange = range domainChangeSignals {
+				for _, mgr := range d.allManagers {
+					mgr.OnUpdate(domainInfoChange)
+				}
+			}
 		case <-ipSetsRefreshC:
 			log.Debug("Refreshing IP sets state")
 			d.forceIPSetsRefresh = true
@@ -834,6 +877,13 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 			log.Warning("Debug hang simulation timer popped, hanging the dataplane!!")
 			time.Sleep(1 * time.Hour)
 			log.Panic("Woke up after 1 hour, something's probably wrong with the test.")
+		case stopWG := <-d.stopChan:
+			defer stopWG.Done()
+			if err := d.domainInfoStore.saveMappingsV1(); err != nil {
+				log.WithError(err).Warning("Failed to save mappings to file on Felix shutdown")
+
+			}
+			return
 		}
 
 		if datastoreInSync && d.dataplaneNeedsSync {

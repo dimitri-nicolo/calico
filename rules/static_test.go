@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -177,6 +177,9 @@ var _ = Describe("Static", func() {
 								{Action: ClearMarkAction{Mark: 0xe0}},
 								{Match: Match().MarkClear(0x10),
 									Action: JumpAction{Target: ChainDispatchFromHostEndPointForward}},
+								// DNS response capture.
+								{Match: Match().OutInterface("cali+").Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53),
+									Action: NflogAction{Group: 3, Prefix: "DNS", Size: 1024}},
 								// Per-prefix workload jump rules.
 								{Match: Match().InInterface("cali+"),
 									Action: JumpAction{Target: ChainFromWorkloadDispatch}},
@@ -1103,6 +1106,9 @@ var _ = Describe("Static", func() {
 						{Action: ClearMarkAction{Mark: 0xe0}},
 						{Match: Match().MarkClear(0x10),
 							Action: JumpAction{Target: ChainDispatchFromHostEndPointForward}},
+						// DNS response capture.
+						{Match: Match().OutInterface("cali+").Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53),
+							Action: NflogAction{Group: 3, Prefix: "DNS", Size: 1024}},
 						// Per-prefix workload jump rules.
 						{Match: Match().InInterface("cali+"),
 							Action: JumpAction{Target: ChainFromWorkloadDispatch}},
@@ -1190,10 +1196,14 @@ var _ = Describe("Static", func() {
 				{Match: Match().MarkClear(0x10),
 					Action: JumpAction{Target: ChainDispatchFromHostEndPointForward}},
 				// Per-prefix workload jump rules.
+				{Match: Match().OutInterface("cali+").Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53),
+					Action: NflogAction{Group: 3, Prefix: "DNS", Size: 1024}},
 				{Match: Match().InInterface("cali+"),
 					Action: JumpAction{Target: ChainFromWorkloadDispatch}},
 				{Match: Match().OutInterface("cali+"),
 					Action: JumpAction{Target: ChainToWorkloadDispatch}},
+				{Match: Match().OutInterface("tap+").Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53),
+					Action: NflogAction{Group: 3, Prefix: "DNS", Size: 1024}},
 				{Match: Match().InInterface("tap+"),
 					Action: JumpAction{Target: ChainFromWorkloadDispatch}},
 				{Match: Match().OutInterface("tap+"),

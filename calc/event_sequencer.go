@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -547,6 +547,9 @@ func (buf *EventSequencer) flushAddedIPSets() {
 func memberToProto(member labelindex.IPSetMember) string {
 	switch member.Protocol {
 	case labelindex.ProtocolNone:
+		if member.Domain != "" {
+			return member.Domain
+		}
 		return member.CIDR.String()
 	case labelindex.ProtocolTCP:
 		return fmt.Sprintf("%s,tcp:%d", member.CIDR.Addr(), member.PortNumber)

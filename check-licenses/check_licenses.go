@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -84,6 +84,8 @@ var (
 			license: "BSD 3-clause \"New\" or \"Revised\" License (96%)"},
 		{pkgName: "github.com/projectcalico/felix/vendor/github.com/dustin/go-humanize",
 			license: "MIT License (96%)"},
+		{pkgName: "github.com/projectcalico/felix/vendor/github.com/google/gopacket/layers",
+			license: "BSD 3-clause \"New\" or \"Revised\" License (96%)"},
 
 		// Mixed license, Apache and some files under BSD-like.
 		{pkgName: "github.com/projectcalico/felix/vendor/github.com/ghodss/yaml",

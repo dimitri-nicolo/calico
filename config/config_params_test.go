@@ -36,7 +36,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
 )
 
-var _ = Describe("FelixConfig vs ConfigParams parity", func() {
+var _ = Describe("FelixConfigurationSpec vs ConfigParams parity", func() {
 	var fcFields map[string]reflect.StructField
 	var cpFields map[string]reflect.StructField
 	cpFieldsToIgnore := []string{
@@ -385,6 +385,9 @@ var _ = DescribeTable("Config parsing",
 	Entry("IPSecLogLevel", "IPSecLogLevel", "verbose", "VERBOSE"),
 
 	Entry("IPSecRekeyTime", "IPSecRekeyTime", "123", 123*time.Second),
+
+	Entry("DomainInfoStore", "DomainInfoStore", "/dnsinfo.txt", "/dnsinfo.txt"),
+	Entry("DomainInfoSaveInterval", "DomainInfoSaveInterval", "3600", time.Hour),
 )
 
 var _ = DescribeTable("OpenStack heuristic tests",
