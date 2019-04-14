@@ -27,18 +27,6 @@
    oc patch daemonset {{site.noderunning}} -n kube-system --patch "$(cat patch-flow-logs.yaml)"
    ```
 
-1. Allow Prometheus to run as root.
-
-   ```
-   oc adm policy add-scc-to-user --namespace=calico-monitoring anyuid -z default
-   ```
-
-1. Allow Prometheus to configure and use a security context.
-
-   ```
-   oc adm policy add-scc-to-user anyuid system:serviceaccount:calico-monitoring:prometheus
-   ```
-
 {% if include.elasticsearch == "external" %}
 
 1. Allow Elasticsearch proxy to configure and use a security context.
@@ -48,21 +36,7 @@
    ```
 
 {% endif %}
-
-1. Allow sleep pod to run with host networking.
-
-   ```
-   oc adm policy add-scc-to-user --namespace=calico-monitoring hostnetwork -z default
-   ```
-
-1. Allow Prometheus to have pods in `kube-system` namespace on each node.
-
-   ```
-   oc annotate ns kube-system openshift.io/node-selector="" --overwrite
-   ```
-
 {% endif %}
-
 
 1. Download the `operator.yaml` manifest.
 
@@ -104,7 +78,7 @@
    ```
 
 {% if include.orch == "openshift" %}
-1. Allow the monitoring pods to be scheduled on the master node.
+1. Allow the monitoring pods to be scheduled on the master node. This allows fluentd to be scheduled on master nodes to collect flow and audit logs.
 
    ```
    {{cli}} annotate ns calico-monitoring openshift.io/node-selector="" --overwrite
