@@ -24,7 +24,7 @@ import (
 )
 
 func (r *DefaultRuleRenderer) StaticFilterTableChains(ipVersion uint8) (chains []*Chain) {
-	chains = append(chains, r.StaticFilterForwardChains()...)
+	chains = append(chains, r.StaticFilterForwardChains(ipVersion)...)
 	chains = append(chains, r.StaticFilterInputChains(ipVersion)...)
 	chains = append(chains, r.StaticFilterOutputChains(ipVersion)...)
 	return
@@ -474,7 +474,7 @@ func (r *DefaultRuleRenderer) failsafeOutChain(table string) *Chain {
 	}
 }
 
-func (r *DefaultRuleRenderer) StaticFilterForwardChains() []*Chain {
+func (r *DefaultRuleRenderer) StaticFilterForwardChains(ipVersion uint8) []*Chain {
 	rules := []Rule{}
 
 	// Rules for filter forward chains dispatches the packet to our dispatch chains if it is going
@@ -507,6 +507,12 @@ func (r *DefaultRuleRenderer) StaticFilterForwardChains() []*Chain {
 		log.WithField("ifacePrefix", prefix).Debug("Adding workload match rules")
 		ifaceMatch := prefix + "+"
 		for _, serverIP := range r.DomainInfoTrustedServers {
+			if (ipVersion == 4) && strings.Contains(serverIP, ":") {
+				continue
+			}
+			if (ipVersion == 6) && !strings.Contains(serverIP, ":") {
+				continue
+			}
 			rules = append(rules,
 				Rule{
 					// When we add DNS server vetting here, we will use --ctorigdst to do that.
