@@ -333,6 +333,8 @@ optionally Elasticsearch and Kibana in order to enable logs.
 {% endif %}
 {% endif %}
 
+1. Access the Kibana UI.
+
 {% if include.platform == "docker-ee" %}
    Kibana will be accessible on the `tigera.cnx-manager.kibana-url` value specified in `cnx.yaml` You may need to create a ssh tunnel if
    the node is not accessible. For example:
@@ -340,6 +342,18 @@ optionally Elasticsearch and Kibana in order to enable logs.
    ```bash
    ssh <jumpbox> -L 127.0.0.1:33601:<docker node>:33601
    ```
+
+{% else %}
+
+   By default, Kibana is made accessible via a NodePort listening on port 30601
+
+{% if include.elasticsearch == "operator" %}
+   You may need to create an ssh tunnel if the node is not accessible - for example:
+
+   ```bash
+   ssh <jumpbox> -L 127.0.0.1:30601:<kubernetes node>:30601
+   ```
+{% endif %}
 {% endif %}
 
 1. Open the **Management** -> **Index Patterns** pane in Kibana, select one of the imported index patterns and click the star to set it as the
@@ -371,16 +385,4 @@ optionally Elasticsearch and Kibana in order to enable logs.
 
 {% if include.platform == "eks" %}
    Log in to {{site.prodname}} Manager using the token you created earlier in the process.
-{% endif %}
-
-{% if include.platform != "docker-ee" %}
-1. Kibana is made available similarly, on port 30601.
-{% endif %}
-
-{% if include.elasticsearch == "operator" and include.platform != "docker-ee" %}
-   You may need to create an ssh tunnel if the node is not accessible - for example:
-
-   ```bash
-   ssh <jumpbox> -L 127.0.0.1:30601:<kubernetes node>:30601
-   ```
 {% endif %}
