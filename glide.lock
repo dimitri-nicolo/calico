@@ -1,12 +1,18 @@
 hash: 622ac0d02e561718d59a6e7735f340b0a79af5991d5c42879006774c8b8b717b
-updated: 2019-04-15T10:44:08.473159-07:00
+updated: 2019-04-15T11:25:30.513-07:00
 imports:
 - name: github.com/beorn7/perks
   version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
   subpackages:
   - quantile
+- name: github.com/bmizerany/pat
+  version: 6226ea591a40176dd3ff9cd8eff81ed6ca721a00
 - name: github.com/caimeo/iniflags
   version: ef4ae6c5cd79d20db0b18bc5ebd8657fac7260e5
+- name: github.com/davecgh/go-spew
+  version: 782f4967f2dc4564575ca782fe2d04090b5faca8
+  subpackages:
+  - spew
 - name: github.com/emicklei/go-restful
   version: ff4f55a206334ef123e4f79bbf348980da81ca46
   subpackages:
@@ -213,6 +219,7 @@ imports:
   - pkg/client/clientset_generated/clientset
   - pkg/client/clientset_generated/clientset/scheme
   - pkg/client/clientset_generated/clientset/typed/projectcalico/v3
+  - pkg/client/clientset_generated/clientset/typed/projectcalico/v3/fake
 - name: github.com/tigera/licensing
   version: cb027c7c879597e0e02f2411c0c201752bab39c8
   repo: git@github.com:tigera/licensing
@@ -236,6 +243,7 @@ imports:
   - http2/hpack
   - idna
   - lex/httplex
+  - websocket
 - name: golang.org/x/sys
   version: 95c6576299259db960f6c5b9b69ea52422860fce
   subpackages:
@@ -338,9 +346,11 @@ imports:
   - pkg/util/framer
   - pkg/util/intstr
   - pkg/util/json
+  - pkg/util/mergepatch
   - pkg/util/net
   - pkg/util/runtime
   - pkg/util/sets
+  - pkg/util/strategicpatch
   - pkg/util/uuid
   - pkg/util/validation
   - pkg/util/validation/field
@@ -348,6 +358,7 @@ imports:
   - pkg/util/yaml
   - pkg/version
   - pkg/watch
+  - third_party/forked/golang/json
   - third_party/forked/golang/reflect
 - name: k8s.io/apiserver
   version: f881eae9ec04b8c996ef0d24309c860ea188acd1
@@ -395,6 +406,7 @@ imports:
   - plugin/pkg/client/auth/exec
   - rest
   - rest/watch
+  - testing
   - tools/auth
   - tools/clientcmd
   - tools/clientcmd/api
@@ -412,4 +424,5 @@ imports:
   version: 91cfa479c814065e420cee7ed227db0f63a5854e
   subpackages:
   - pkg/common
+  - pkg/util/proto
 testImports: []
