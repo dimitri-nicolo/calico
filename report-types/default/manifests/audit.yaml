@@ -8,13 +8,13 @@ metadata:
 spec:
   auditEventsSelection:
     resources:
-      - kind: 'GlobalNetworkPolicy'
-      - kind: 'NetworkPolicy'
+    - kind: GlobalNetworkPolicy
+    - kind: NetworkPolicy
   downloadTemplates:
   - name: summary.csv
     template: |
       startTime,endTime,numCreatedPolicies,numModifiedPolicies,numDeletedPolicies
-      {{ .StartTime }},{{ .EndTime }},{{ .AuditSummary.NumCreated }},{{ .AuditSummary.NumModified }},{{ .AuditSummary.NumDeleted }}
+      {{ .StartTime }},{{ .EndTime }},{{ .AuditSummary.NumCreate }},{{ .AuditSummary.NumModify }},{{ .AuditSummary.NumDelete }}
   - name: events.json
     template: |
       {{ json .AuditEvents }}
@@ -23,3 +23,54 @@ spec:
       {{ yaml .AuditEvents }}
   uiSummaryTemplate:
     name: ui-summary.json
+    template: |
+      {
+        uiSummary: {
+          type: "panel",
+          heading: 'Network policy configuration changes',
+          widgets: [
+            {
+              type: "radialbarchart",
+              heading: 'Network policies created',
+              summary: {
+                label: 'Total',
+                total: {{ .AuditSummary.NumTotal }}
+              },
+              data: [
+                {
+                  label: 'Created',
+                  value: {{ .AuditSummary.NumCreate }}
+                }
+              ]
+            },
+            {
+              type: "radialbarchart",
+              heading: 'Network policies modified',
+              summary: {
+                label: 'Total',
+                total: {{ .AuditSummary.NumTotal }}
+              },
+              data: [
+                {
+                  label: 'Modified',
+                  value: {{ .AuditSummary.NumModify }}
+                }
+              ]
+            },
+            {
+              type: "radialbarchart",
+              heading: 'Network policies deleted',
+              summary: {
+                label: 'Total',
+                total: {{ .AuditSummary.NumTotal }}
+              },
+              data: [
+                {
+                  label: 'Deleted',
+                  value: {{ .AuditSummary.NumDelete }}
+                }
+              ]
+            }
+          ]
+        }
+      }

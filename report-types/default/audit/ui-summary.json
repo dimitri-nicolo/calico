@@ -1,0 +1,50 @@
+{
+  uiSummary: {
+    type: "panel",
+    heading: 'Network policy configuration changes',
+    widgets: [
+      {
+        type: "radialbarchart",
+        heading: 'Network policies created',
+        summary: {
+          label: 'Total',
+          total: {{ .AuditSummary.NumTotal }}
+        },
+        data: [
+          {
+            label: 'Created',
+            value: {{ .AuditSummary.NumCreate }}
+          }
+        ]
+      },
+      {
+        type: "radialbarchart",
+        heading: 'Network policies modified',
+        summary: {
+          label: 'Total',
+          total: {{ .AuditSummary.NumTotal }}
+        },
+        data: [
+          {
+            label: 'Modified',
+            value: {{ .AuditSummary.NumModify }}
+          }
+        ]
+      },
+      {
+        type: "radialbarchart",
+        heading: 'Network policies deleted',
+        summary: {
+          label: 'Total',
+          total: {{ .AuditSummary.NumTotal }}
+        },
+        data: [
+          {
+            label: 'Deleted',
+            value: {{ .AuditSummary.NumDelete }}
+          }
+        ]
+      }
+    ]
+  }
+}
