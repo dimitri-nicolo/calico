@@ -22,14 +22,14 @@ import (
 func NewXrefCache() XrefCache {
 	// Create a dispatcher for use internally within the cross reference cache. The resources passed around in this
 	// dispatcher will be augmented from the basic resource provided by the syncer.
-	cacheDispatcher := dispatcher.NewDispatcher()
+	cacheDispatcher := dispatcher.NewDispatcher("cache")
 
 	// Create a dispatcher for the syncer. This simply fans out the original update to the appropriate cache responsible
 	// for storing that resource kind.
-	syncerDispatcher := dispatcher.NewDispatcher()
+	syncerDispatcher := dispatcher.NewDispatcher("syncer")
 
 	// Create a dispatcher sending events to the consumer of the cross reference cache.
-	consumerDispatcher := dispatcher.NewDispatcher()
+	consumerDispatcher := dispatcher.NewDispatcher("consumer")
 
 	// Register the cache dispatcher as a consumer of status events with the syncer dispatcher (basically this passes
 	// status events straight through from the syncer to the xref caches.
