@@ -24,6 +24,7 @@ cmd/controller/controller
 cmd/reporter/reporter
 cmd/server/server
 cmd/snapshotter/snapshotter
+cmd/mockdata-exporter/mockdata-exporter
 
 cmd/server/apiserver.local.config/
 .settings

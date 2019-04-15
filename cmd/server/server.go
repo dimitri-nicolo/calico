@@ -6,41 +6,61 @@ import (
 	"net"
 	"os"
 
-	"github.com/tigera/compliance/cmd/server/api"
-
 	log "github.com/sirupsen/logrus"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 
 	"github.com/caimeo/iniflags"
 
+	"os/signal"
+	"syscall"
+
+	"github.com/tigera/compliance/pkg/datastore"
 	"github.com/tigera/compliance/pkg/elastic"
+	"github.com/tigera/compliance/pkg/server"
 	"github.com/tigera/compliance/pkg/tls"
 	"github.com/tigera/compliance/pkg/version"
 )
 
 var (
-	versionFlag              = flag.Bool("version", false, "Print version information")
-	complianceServerCertPath = flag.String("certpath", "apiserver.local.config/certificates/apiserver.crt", "tls cert path")
-	complianceServerKeyPath  = flag.String("keypath", "apiserver.local.config/certificates/apiserver.key", "tls key path")
-	apiPort                  = flag.String("api-port", "8080", "web api port to listen on")
-	disableLogfmtFlag        = flag.Bool("disable-logfmt", false, "disable logfmt style logging")
-	devFlagNoES              = flag.Bool("no-es", false, "")
-)
-
-var (
-	els *elastic.Client
-	sig chan os.Signal
-	tf  *prefixed.TextFormatter
+	versionFlag       = flag.Bool("version", false, "Print version information")
+	certPath          = flag.String("certpath", "apiserver.local.config/certificates/apiserver.crt", "tls cert path")
+	keyPath           = flag.String("keypath", "apiserver.local.config/certificates/apiserver.key", "tls key path")
+	apiPort           = flag.String("api-port", "5443", "web api port to listen on")
+	disableLogfmtFlag = flag.Bool("disable-logfmt", false, "disable logfmt style logging")
 )
 
 func main() {
 	initIniFlags()
 	handleFlags()
-	initElastic()
-	initAPIServer()
+
+	// Create the elastic and Calico clients.
+	elastic := elastic.MustGetElasticClient()
+	clientSet := datastore.MustGetCalicoClient()
+
+	// Set up tls certs
+	altIPs := []net.IP{net.ParseIP("127.0.0.1")}
+	if err := tls.GenerateSelfSignedCertsIfNeeded("localhost", nil, altIPs, *certPath, *keyPath); err != nil {
+		log.Errorf("Error creating self-signed certificates: %v", err)
+		os.Exit(1)
+	}
+
+	// Create and start the server
+	s := server.New(elastic, clientSet, ":"+*apiPort, *keyPath, *certPath)
+	s.Start()
+
+	// Setup signals.
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-sigs
+		s.Stop()
+	}()
+
+	// Block until the server shuts down.
+	s.Wait()
 }
 
-// read command line flags and/or .settings
+// Read command line flags and/or .settings
 func initIniFlags() {
 	iniflags.SetConfigFile(".settings")
 	iniflags.SetAllowMissingConfigFile(true)
@@ -59,34 +79,4 @@ func handleFlags() {
 			ForceFormatting: true,
 		})
 	}
-}
-
-func initElastic() {
-	if *devFlagNoES {
-		return
-	}
-	els, err := elastic.NewFromEnv()
-	if err != nil {
-		log.WithError(err).Errorf("Error creating ES client.")
-		os.Exit(3)
-	}
-	log.Infof("Created %s", els)
-}
-
-func initAPIServer() {
-	//set up tls certs
-	altIPs := []net.IP{net.ParseIP("127.0.0.1")}
-	if err := tls.GenerateSelfSignedCertsIfNeeded("localhost", nil, altIPs, *complianceServerCertPath, *complianceServerKeyPath); err != nil {
-		log.Errorf("Error creating self-signed certificates: %v", err)
-		os.Exit(1)
-	}
-
-	//start the server
-	if err := api.Start(":"+*apiPort, *complianceServerKeyPath, *complianceServerCertPath); err != nil {
-		log.WithError(err).Error("Error starting compliance server")
-		os.Exit(2)
-	}
-
-	//wait while running
-	api.Wait()
 }

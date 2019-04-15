@@ -7,10 +7,13 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/apis/v3"
 )
 
-type ArchivedReportStore interface {
+type ReportRetriever interface {
+	RetrieveArchivedReport(id string) (*ArchivedReportData, error)
 	RetrieveArchivedReportSummaries() ([]*ArchivedReportData, error)
-	RetrieveArchivedReport(string) (*ArchivedReportData, error)
-	StoreArchivedReport(*ArchivedReportData) error
+}
+
+type ReportStorer interface {
+	StoreArchivedReport(r *ArchivedReportData) error
 }
 
 type AuditLogReportHandler interface {
