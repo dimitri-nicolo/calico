@@ -1,5 +1,5 @@
-hash: cfc8571489723559f1fe9aeb53e7a071edaf42509d0ae2ec3952b10481e3165a
-updated: 2019-04-12T13:38:51.820829876+01:00
+hash: 740462b2dfaff89f62f0ba0a6bac53af4e6bf74b59e60ab2fcece70cf15a3e2d
+updated: 2019-04-02T11:20:15.400072158Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -71,9 +71,9 @@ imports:
 - name: github.com/ghodss/yaml
   version: 73d445a93680fa1a78ae23a5839bad48f32ba1ee
 - name: github.com/go-openapi/jsonpointer
-  version: ef5f0afec364d3b9396b7b77b43dbe26bf1f8004
+  version: 46af16f9f7b149af66e5d1bd010e3574dc06de98
 - name: github.com/go-openapi/jsonreference
-  version: 8483a886a90412cd6858df4ea3483dce9c8e35a3
+  version: 13c6e3589ad90f49bd3e3bbe2c2cb3d7a4142272
 - name: github.com/go-openapi/spec
   version: 384415f06ee238aae1df5caad877de6ceac3a5c4
 - name: github.com/go-openapi/swag
@@ -139,7 +139,7 @@ imports:
 - name: github.com/juju/mutex
   version: d21b13acf4bfd8a8b0482a3a78e44d98880b40d3
 - name: github.com/kelseyhightower/envconfig
-  version: dd1402a4d99de9ac2f396cd6fcb957bc2c695ec1
+  version: f611eb38b3875cc3bd991ca91c51d06446afa14c
 - name: github.com/leodido/go-urn
   version: a67a23e1c1af3c66528573bb86a87246477277c1
 - name: github.com/mailru/easyjson
@@ -153,21 +153,27 @@ imports:
   subpackages:
   - pbutil
 - name: github.com/mcuadros/go-version
-  version: 6d5863ca60fa6fe914b5fd43ed8533d7567c5b0b
+  version: 88e56e02bea1c203c99222c365fa52a69996ccac
 - name: github.com/Microsoft/go-winio
   version: 97e4973ce50b2ff5f09635a57e2b88a037aae829
 - name: github.com/Microsoft/hcsshim
-  version: 548046cb2f0495eb2acd7682a0035d465bf05ea9
+  version: 5f3c4ba7af30b0c3a6aee5b98982b8b2a9886aa1
   subpackages:
+  - hcn
+  - internal/cni
   - internal/guid
   - internal/hcs
   - internal/hcserror
   - internal/hns
   - internal/interop
+  - internal/logfields
   - internal/longpath
   - internal/mergemaps
+  - internal/regstate
+  - internal/runhcs
   - internal/safefile
   - internal/schema1
+  - internal/schema2
   - internal/timeout
   - internal/wclayer
 - name: github.com/modern-go/concurrent
@@ -223,7 +229,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 8558a8d0715c73355d90de7c2587ec3ab48dd1f8
+  version: 1acc1d224f822833c483d9f1f33493079f500946
   repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib/apiconfig
@@ -232,17 +238,16 @@ imports:
   - lib/apis/v3
   - lib/backend
   - lib/backend/api
-  - lib/backend/encap
   - lib/backend/etcdv3
   - lib/backend/k8s
   - lib/backend/k8s/conversion
   - lib/backend/k8s/resources
   - lib/backend/model
   - lib/clientv3
-  - lib/compliance
   - lib/errors
   - lib/hash
   - lib/ipam
+  - lib/ipip
   - lib/logutils
   - lib/names
   - lib/namespace
@@ -258,22 +263,22 @@ imports:
   - lib/validator/v3
   - lib/watch
 - name: github.com/prometheus/client_golang
-  version: 505eaef017263e299324067d40ca2c48f6a2cf50
+  version: 773f5027234d0b08adf766be34f55df2f312abf7
   subpackages:
   - prometheus
   - prometheus/internal
 - name: github.com/prometheus/client_model
-  version: fa8ad6fec33561be4280a8f0514318c79d7f6cb6
+  version: 6f3806018612930941127f2a7c6c453ba2c527d2
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: cfeb6f9992ffa54aaa4f2170ade4067ee478b250
+  version: e3fb1a1acd7605367a2b378bc2e2f893c05174b7
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: 65c1f6f8f0fc1e2185eb9863a3bc751496404259
+  version: a6e9df898b1336106c743392c48ee0b71f5c4efa
   subpackages:
   - xfs
 - name: github.com/PuerkitoBio/purell
@@ -284,8 +289,6 @@ imports:
   version: 758b1f7c9d1ca5acaca0b909f06ff9ed9fe35de1
   subpackages:
   - netsh
-- name: github.com/robfig/cron
-  version: b41be1df696709bb6395fe435af20370037c0b4c
 - name: github.com/safchain/ethtool
   version: 7ff1ba29eca231991280817541cb3903f6be15d1
 - name: github.com/satori/go.uuid
@@ -301,7 +304,7 @@ imports:
 - name: github.com/vishvananda/netns
   version: 54f0e4339ce73702a0607f49922aaa1e749b418d
 - name: golang.org/x/crypto
-  version: 8dd112bcdc25174059e45e07517d9fc663123347
+  version: 94eea52f7b742c7cbe0b03b22f0c4c8631ece122
   subpackages:
   - ssh/terminal
 - name: golang.org/x/net
@@ -327,6 +330,7 @@ imports:
   subpackages:
   - unix
   - windows
+  - windows/registry
 - name: golang.org/x/text
   version: b19bf474d317b857955b12035d2c5acb57ce8b01
   subpackages:
@@ -346,7 +350,7 @@ imports:
   subpackages:
   - rate
 - name: google.golang.org/appengine
-  version: 54a98f90d1c46b7731eb8fb305d2a321c30ef610
+  version: 4a4468ece617fc8205e99368fa2200e9d1fad421
   subpackages:
   - internal
   - internal/app_identity
@@ -362,30 +366,22 @@ imports:
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: 168a6198bcb0ef175f7dacec0b8691fc141dc9b8
+  version: 5b3c4e850e90a4cf6a20ebd46c8b32a0a3afcb9e
   subpackages:
   - balancer
-  - balancer/base
-  - balancer/roundrobin
   - codes
   - connectivity
   - credentials
-  - encoding
-  - encoding/proto
+  - grpclb/grpc_lb_v1/messages
   - grpclog
   - health
   - health/grpc_health_v1
   - internal
-  - internal/backoff
-  - internal/channelz
-  - internal/grpcrand
   - keepalive
   - metadata
   - naming
   - peer
   - resolver
-  - resolver/dns
-  - resolver/passthrough
   - stats
   - status
   - tap
@@ -470,10 +466,6 @@ imports:
   - pkg/version
   - pkg/watch
   - third_party/forked/golang/reflect
-- name: k8s.io/apiserver
-  version: f881eae9ec04b8c996ef0d24309c860ea188acd1
-  subpackages:
-  - pkg/apis/audit
 - name: k8s.io/client-go
   version: 7d04d0e2a0a1a4d4a1cd6baa432a2301492e4e65
   subpackages:
