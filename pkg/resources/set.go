@@ -170,7 +170,7 @@ func (set mapSet) ContainsAll(other Set) bool {
 }
 
 func (set mapSet) ToSlice() []apiv3.ResourceID {
-	ids := make([]apiv3.ResourceID, len(set))
+	ids := make([]apiv3.ResourceID, 0, len(set))
 	for id := range set {
 		ids = append(ids, id)
 	}
