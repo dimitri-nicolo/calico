@@ -283,17 +283,14 @@
    ```bash
    ssh <jumpbox> -L 127.0.0.1:33601:<docker node>:33601
    ```
-{% else %}
-
+{% elsif include.elasticsearch == "operator" %}
    By default, Kibana is made accessible via a NodePort listening on port 30601
 
-{% if include.elasticsearch == "operator" %}
    You may need to create an ssh tunnel if the node is not accessible - for example:
 
    ```bash
    ssh <jumpbox> -L 127.0.0.1:30601:<kubernetes node>:30601
    ```
-{% endif %}
 {% endif %}
 
 1. Open the **Management** -> **Index Patterns** pane in Kibana, select one of the imported index patterns and click the star to set it as the
