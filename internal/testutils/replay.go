@@ -59,8 +59,9 @@ func (t *ReplayTester) GetAuditEvents(ctx context.Context, tm *metav1.TypeMeta, 
 	return ch
 }
 
-func (t *ReplayTester) SetResourceAuditEvent(res resources.Resource, timestamp time.Time) {
+func (t *ReplayTester) SetResourceAuditEvent(verb string, res resources.Resource, timestamp time.Time) {
 	ev := new(auditv1.Event)
+	ev.Verb = verb
 
 	// Set the objectRef
 	ev.ObjectRef = &auditv1.ObjectReference{}

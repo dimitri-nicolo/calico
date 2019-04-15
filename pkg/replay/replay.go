@@ -17,6 +17,13 @@ import (
 	"github.com/tigera/compliance/pkg/syncer"
 )
 
+const (
+	VerbCreate = "create"
+	VerbUpdate = "update"
+	VerbPatch  = "patch"
+	VerbDelete = "delete"
+)
+
 type replayer struct {
 	resources  map[metav1.TypeMeta]map[apiv3.ResourceID]resources.Resource
 	start, end time.Time
@@ -37,11 +44,14 @@ func New(start, end time.Time, lister list.Destination, eventer event.Fetcher, c
 //   replay all the audit events between the start and end Times,
 //   and then send a complete update.
 func (r *replayer) Start(ctx context.Context) {
+	log.Info("initializing replayer cache to start time")
 	if err := r.initialize(ctx); err != nil {
 		r.cb.OnStatusUpdate(syncer.NewStatusUpdateFailed(err))
 		return
 	}
 	r.cb.OnStatusUpdate(syncer.NewStatusUpdateInSync())
+
+	log.Info("replaying audit events to end time")
 	if err := r.replay(ctx, nil, &r.start, &r.end, true); err != nil {
 		r.cb.OnStatusUpdate(syncer.NewStatusUpdateFailed(err))
 		return
@@ -83,21 +93,24 @@ func (r *replayer) initialize(ctx context.Context) error {
 				clog.WithField("obj", objs[i]).Warn("failed to type assert resource")
 				continue
 			}
+			res.GetObjectKind().SetGroupVersionKind((&kind).GroupVersionKind())
 			id := resources.GetResourceID(res)
 			r.resources[kind][id] = res
 		}
-		clog.WithField("length", len(r.resources[kind])).Debug("stored objects into internal cache")
+		clog.Debug("stored objects into internal cache, replaying events to start time")
 
 		// Replay events into the internal cache from the list time to the desired start time.
 		if err = r.replay(ctx, &kind, &l.RequestStartedTimestamp.Time, &r.start, false); err != nil {
 			return err
 		}
+		clog.Debug("internal cache replayed to start time, publishing syncer updates")
+	}
 
-		// Send Update to callbacks.
-		for _, resList := range r.resources {
-			for _, res := range resList {
-				r.cb.OnUpdate(syncer.Update{Type: syncer.UpdateTypeSet, ResourceID: resources.GetResourceID(res), Resource: res})
-			}
+	// Send Update to callbacks.
+	for kind, resList := range r.resources {
+		for _, res := range resList {
+			log.WithFields(log.Fields{"kind": kind, "resID": resources.GetResourceID(res)}).Debug("publishing syncer updates")
+			r.cb.OnUpdate(syncer.Update{Type: syncer.UpdateTypeSet, ResourceID: resources.GetResourceID(res), Resource: res})
 		}
 	}
 	return nil
@@ -121,20 +134,23 @@ func (r *replayer) replay(ctx context.Context, kind *metav1.TypeMeta, from, to *
 
 		// Update the internal cache and send the appropriate Update to the callbacks.
 		id := resources.GetResourceID(res)
-
 		kind2 := resources.GetTypeMeta(res)
+		clog = clog.WithFields(log.Fields{"resID": id, "kind": kind2})
 		update := syncer.Update{ResourceID: id, Resource: res}
 
 		// TODO: handle possible resourceVersion conflicts
 		switch ev.Event.Verb {
-		case "create", "update", "patch":
+		case VerbCreate, VerbUpdate, VerbPatch:
+			clog.Debug("setting event")
 			update.Type = syncer.UpdateTypeSet
 			r.resources[kind2][id] = res
-		case "delete":
+		case VerbDelete:
+			clog.Debug("deleting event")
 			update.Type = syncer.UpdateTypeDeleted
 			delete(r.resources[kind2], id)
+		default:
+			clog.Warn("invalid verb")
 		}
-		clog.WithField("update", update).Debug("replayed event")
 		if notifyUpdates {
 			r.cb.OnUpdate(update)
 		}

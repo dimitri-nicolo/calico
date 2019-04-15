@@ -33,11 +33,12 @@ type Dispatcher interface {
 	RegisterOnUpdateHandler(kind metav1.TypeMeta, updateTypes syncer.UpdateType, callback DispatcherOnUpdate)
 }
 
-func NewDispatcher() Dispatcher {
+func NewDispatcher(name string) Dispatcher {
 	return &dispatcher{
 		resourceTypes:   map[metav1.TypeMeta]*resourceType{},
 		outputPerfStats: outputPerfStats(),
 		startSync:       time.Now(),
+		clog:            log.WithField("name", name),
 	}
 }
 
@@ -51,6 +52,8 @@ type dispatcher struct {
 	updateIdx       int
 	updateTime      time.Duration
 	memstats        runtime.MemStats
+
+	clog *log.Entry
 }
 
 type resourceType struct {
@@ -81,7 +84,7 @@ func (d *dispatcher) RegisterOnUpdateHandler(kind metav1.TypeMeta, updateTypes s
 func (d *dispatcher) OnUpdate(update syncer.Update) {
 	registration, ok := d.resourceTypes[update.ResourceID.TypeMeta]
 	if !ok {
-		log.Infof("Update for unregistered resource type: %s", update.ResourceID)
+		d.clog.WithField("resourceTypes", d.resourceTypes).Infof("Update for unregistered resource type: %s", update.ResourceID)
 		return
 	}
 

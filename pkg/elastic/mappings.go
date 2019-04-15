@@ -25,8 +25,8 @@ const (
       "properties": {
         "reportType": { "type": "text" },
         "reportSpec": { "type": "object", "enabled": false },
-        "startTime": { "type": "date", "format": "date_hour_minute_second_millis" },
-        "endTime": { "type": "date", "format": "date_hour_minute_second_millis" },
+        "startTime": { "type": "date" },
+        "endTime": { "type": "date" },
         "uiSummary": { "type": "text" },
         "endpoints": { "type": "object", "enabled": false },
         "namespaces": { "type": "object", "enabled": false },

@@ -66,7 +66,7 @@ type tester struct {
 
 func newTester() *tester {
 	return &tester{
-		d:        dispatcher.NewDispatcher(),
+		d:        dispatcher.NewDispatcher("test"),
 		policies: set.New(),
 		pods:     set.New(),
 		status:   set.New(),
