@@ -62,6 +62,10 @@ func Run(
 		archiver: archiver,
 		xc:       xc,
 		replayer: replayer,
+
+		inScopeEndpoints: make(map[apiv3.ResourceID]*reportEndpoint),
+		services:         make(map[apiv3.ResourceID]xrefcache.CacheEntryFlags),
+		namespaces:       make(map[string]xrefcache.CacheEntryFlags),
 		data: &apiv3.ReportData{
 			ReportName: cfg.Report.Name,
 			ReportSpec: cfg.Report.Spec,
