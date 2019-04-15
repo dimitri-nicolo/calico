@@ -82,8 +82,8 @@ func TestElasticFlowLogIterator(t *testing.T) {
 	defer cancel()
 
 	expectedKey := "source_ip"
-	i := elasticFlowLogIterator{
-		scrollers: map[string]Scroller{expectedKey: scroll},
+	i := flowLogIterator{
+		scrollers: []scrollerEntry{{expectedKey, scroll, nil}},
 		ctx:       ctx,
 	}
 
@@ -120,8 +120,8 @@ func TestElasticFlowLogIteratorWithError(t *testing.T) {
 	defer cancel()
 
 	scroll := &mockScrollerError{}
-	i := elasticFlowLogIterator{
-		scrollers: map[string]Scroller{"dest_ip": scroll},
+	i := flowLogIterator{
+		scrollers: []scrollerEntry{{"dest_ip", scroll, nil}},
 		ctx:       ctx,
 	}
 
@@ -156,8 +156,8 @@ func TestElasticFlowLogIteratorWithTwoScrollers(t *testing.T) {
 	g.Expect(err).ShouldNot(HaveOccurred())
 	dest_msg := json.RawMessage(b)
 
-	scrollers := map[string]Scroller{
-		"source_ip": &mockScroller{
+	scrollers := []scrollerEntry{
+		{"source_ip", &mockScroller{
 			[]*elastic.SearchResult{
 				{
 					Hits: &elastic.SearchHits{
@@ -169,8 +169,8 @@ func TestElasticFlowLogIteratorWithTwoScrollers(t *testing.T) {
 					},
 				},
 			},
-		},
-		"dest_ip": &mockScroller{
+		}, nil},
+		{"dest_ip", &mockScroller{
 			[]*elastic.SearchResult{
 				{
 					Hits: &elastic.SearchHits{
@@ -182,13 +182,13 @@ func TestElasticFlowLogIteratorWithTwoScrollers(t *testing.T) {
 					},
 				},
 			},
-		},
+		}, nil},
 	}
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
-	i := elasticFlowLogIterator{
+	i := flowLogIterator{
 		scrollers: scrollers,
 		ctx:       ctx,
 		name:      "mock",

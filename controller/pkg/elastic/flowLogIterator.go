@@ -17,8 +17,14 @@ type Scroller interface {
 	Do(context.Context) (*elastic.SearchResult, error)
 }
 
-type elasticFlowLogIterator struct {
-	scrollers map[string]Scroller
+type scrollerEntry struct {
+	name     string
+	scroller Scroller
+	terms    []interface{}
+}
+
+type flowLogIterator struct {
+	scrollers []scrollerEntry
 	ctx       context.Context
 	name      string
 	hits      []*elastic.SearchHit
@@ -27,19 +33,16 @@ type elasticFlowLogIterator struct {
 	err       error
 }
 
-func (i *elasticFlowLogIterator) Next() bool {
+func (i *flowLogIterator) Next() bool {
 	for len(i.scrollers) > 0 {
 		if len(i.hits) == 0 {
-			var scroller Scroller
-
-			// Get a random scroller for results
-			for i.key, scroller = range i.scrollers {
-				break
-			}
+			entry := i.scrollers[0]
+			i.key = entry.name
+			scroller := entry.scroller
 
 			r, err := scroller.Do(i.ctx)
 			if err == io.EOF {
-				delete(i.scrollers, i.key)
+				i.scrollers = i.scrollers[1:]
 				continue
 			}
 			if err != nil {
@@ -71,10 +74,10 @@ func (i *elasticFlowLogIterator) Next() bool {
 	return false
 }
 
-func (i *elasticFlowLogIterator) Value() events.SecurityEvent {
+func (i *flowLogIterator) Value() events.SecurityEvent {
 	return i.val
 }
 
-func (i *elasticFlowLogIterator) Err() error {
+func (i *flowLogIterator) Err() error {
 	return i.err
 }
