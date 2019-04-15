@@ -5,6 +5,7 @@ import (
 	"container/heap"
 	"fmt"
 
+	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -44,10 +45,14 @@ func NewXrefCache() XrefCache {
 	// Policy to rule selection manager
 	networkPolicyRuleSelectorManager := NewNetworkPolicyRuleSelectorManager(syncerDispatcher.OnUpdate)
 
+	// Initialize the config.
+	config := &Config{}
+	envconfig.MustProcess("TIGERA_COMPLIANCE", config)
+
 	// Create the various engines that underpin the separate resource caches. This list is ordered by recalculation
 	// queue priority (highest index, highest priority).
 	allEngines := []resourceCacheEngine{
-		newEndpointsEngine(),
+		newEndpointsEngine(config),
 		newK8sServiceEndpointsEngine(),
 		newK8sNamespacesEngine(),
 		newK8sServiceAccountsEngine(),

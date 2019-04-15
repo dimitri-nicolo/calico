@@ -3,6 +3,7 @@ package xrefcache
 
 import (
 	"errors"
+	"regexp"
 
 	log "github.com/sirupsen/logrus"
 
@@ -39,6 +40,7 @@ type VersionedEndpointResource interface {
 	getV1Labels() map[string]string
 	getV1Profiles() []string
 	getIPOrEndpointIDs() (set.Set, error)
+	getEnvoyEnabled(engine *endpointEngine) bool
 }
 
 // CacheEntryEndpoint implements the CacheEntry interface, and is what we stored in the Pods cache.
@@ -110,6 +112,52 @@ func (v *versionedK8sPod) getIPOrEndpointIDs() (set.Set, error) {
 	return set.From(id), nil
 }
 
+func (v *versionedK8sPod) getEnvoyEnabled(engine *endpointEngine) bool {
+	// If all of the required checks passed then return true.
+	var checked bool
+
+	// Check annotations.
+	if engine.podIstioSidecarAnnotation != "" {
+		if _, ok := v.Pod.Annotations[engine.podIstioSidecarAnnotation]; !ok {
+			log.Debugf("Pod annotation does not incude %s", engine.podIstioSidecarAnnotation)
+			return false
+		}
+		checked = true
+	}
+	// Check init containers.
+	if engine.podIstioInitContainerRegex != nil {
+		var found bool
+		for idx := range v.Pod.Spec.InitContainers {
+			if engine.podIstioInitContainerRegex.MatchString(v.Pod.Spec.InitContainers[idx].Image) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			log.Debugf("No Istio init container found")
+			return false
+		}
+		checked = true
+	}
+	// Check containers.
+	if engine.podIstioContainerRegex != nil {
+		var found bool
+		for idx := range v.Pod.Spec.Containers {
+			if engine.podIstioContainerRegex.MatchString(v.Pod.Spec.Containers[idx].Image) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			log.Debugf("No Istio container found")
+			return false
+		}
+		checked = true
+	}
+
+	return checked
+}
+
 // versionedCalicoHostEndpoint implements the VersionedEndpointResource interface.
 type versionedCalicoHostEndpoint struct {
 	*apiv3.HostEndpoint
@@ -143,15 +191,37 @@ func (v *versionedCalicoHostEndpoint) getIPOrEndpointIDs() (set.Set, error) {
 	return ips.NormalizedIPSet(v.Spec.ExpectedIPs...)
 }
 
+func (v *versionedCalicoHostEndpoint) getEnvoyEnabled(engine *endpointEngine) bool {
+	return false
+}
+
 // newEndpointsEngine creates a resourceCacheEngine used to handle the Pods cache.
-func newEndpointsEngine() resourceCacheEngine {
-	return &endpointEngine{}
+func newEndpointsEngine(config *Config) resourceCacheEngine {
+	var podIstioContainerRegex, podIstioInitContainerRegex *regexp.Regexp
+	if config.PodIstioContainerRegex != "" {
+		log.Debugf("Using regex for istio container: %s", config.PodIstioContainerRegex)
+		podIstioContainerRegex = regexp.MustCompile(config.PodIstioContainerRegex)
+	}
+	if config.PodIstioInitContainerRegex != "" {
+		log.Debugf("Using regex for istio init container: %s", config.PodIstioInitContainerRegex)
+		podIstioInitContainerRegex = regexp.MustCompile(config.PodIstioInitContainerRegex)
+	}
+	return &endpointEngine{
+		podIstioSidecarAnnotation:  config.PodIstioSidecarAnnotation,
+		podIstioContainerRegex:     podIstioContainerRegex,
+		podIstioInitContainerRegex: podIstioInitContainerRegex,
+	}
 }
 
 // endpointEngine implements the resourceCacheEngine.
 type endpointEngine struct {
 	engineCache
 	converter conversion.Converter
+
+	// Istio checks to determine if Envoy is enabled.
+	podIstioSidecarAnnotation  string
+	podIstioInitContainerRegex *regexp.Regexp
+	podIstioContainerRegex     *regexp.Regexp
 }
 
 // kinds implements the resourceCacheEngine interface.
@@ -270,7 +340,7 @@ func (c *endpointEngine) resourceUpdated(id apiv3.ResourceID, entry CacheEntry, 
 	// modified to include namespace and service account details.
 	c.EndpointLabelSelector().UpdateLabels(id, x.getV1Labels(), x.getV1Profiles())
 
-	// Up`date the IP manager with the entries updated IP addresses or if the IP address is unknown the endpoint ID.
+	// Update the IP manager with the entries updated IP addresses or if the IP address is unknown the endpoint ID.
 	i, err := x.getIPOrEndpointIDs()
 	if err != nil {
 		x.clog.Info("Unable to determine IP addresses")
@@ -324,6 +394,13 @@ func (c *endpointEngine) recalculate(podId apiv3.ResourceID, epEntry CacheEntry)
 
 		return nil
 	})
+
+	// Determine if envoy is enabled and set the flag appropriately.
+	if x.getEnvoyEnabled(c) {
+		x.Flags |= CacheEntryEnvoyEnabled
+	} else {
+		x.Flags &^= CacheEntryEnvoyEnabled
+	}
 
 	// Return the delta between the old and new flags as a set up UpdateType flags.
 	changed := syncer.UpdateType(oldFlags ^ x.Flags)
