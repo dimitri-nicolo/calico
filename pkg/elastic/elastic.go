@@ -183,3 +183,7 @@ func (c *client) ensureIndexExists(index, mapping string) error {
 func (c *client) Backend() *elastic.Client {
 	return c.Client
 }
+
+func (c *client) Reset() {
+	_, _ = c.Client.DeleteIndex(reportsIndex, snapshotsIndex, auditLogIndex).Do(context.Background())
+}
