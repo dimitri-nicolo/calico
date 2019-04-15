@@ -187,10 +187,13 @@ func (e *Elastic) QueryIPSet(ctx context.Context, name string) (db.SecurityEvent
 		return e.c.Scroll(FlowLogIndex).SortBy(elastic.SortByDoc{}).Query(q).Size(QuerySize)
 	}
 
-	return &elasticFlowLogIterator{
-		scrollers: map[string]Scroller{"source_ip": f(name, "source_ip"), "dest_ip": f(name, "dest_ip")},
-		ctx:       ctx,
-		name:      name,
+	return &flowLogIterator{
+		scrollers: []scrollerEntry{
+			{name: "source_ip", scroller: f(name, "source_ip")},
+			{name: "dest_ip", scroller: f(name, "dest_ip")},
+		},
+		ctx:  ctx,
+		name: name,
 	}, nil
 }
 
