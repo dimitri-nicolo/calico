@@ -116,6 +116,13 @@ func (c *resourceCache) onNewOrUpdated(id apiv3.ResourceID, res resources.Resour
 		c.onDeleted(id)
 		return
 	}
+	if v == nil {
+		// The conversion may have deliberately filtered out this resource, in which case treat as a delete. This
+		// is not an error condition and so should log appropriately.
+		log.WithField("id", id).Info("Resource filtered out, treating as delete")
+		c.onDeleted(id)
+		return
+	}
 
 	if entry, ok := c.resources[id]; ok {
 		log.Debugf("Update existing resource in cache: %s", id)

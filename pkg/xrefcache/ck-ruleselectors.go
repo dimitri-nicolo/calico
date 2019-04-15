@@ -43,11 +43,16 @@ func selectorToSelectorID(sel string) apiv3.ResourceID {
 	}
 }
 
+// Fake versioned struct so that the version conversion returns something non-nil.
+type VersionedNetworkPolicyRuleSelector struct {
+	VersionedResource
+}
+
 // CacheEntryNetworkPolicyRuleSelector is a cache entry in the NetworkPolicyRuleSelector cache. Each entry implements
 // the CacheEntry interface.
 type CacheEntryNetworkPolicyRuleSelector struct {
 	// The versioned policy resource.
-	VersionedResource
+	VersionedNetworkPolicyRuleSelector
 
 	// The effective NetworkSet CacheEntryFlags (i.e. the combination of the set of selected NetworkSets for this
 	// selector.
@@ -156,7 +161,7 @@ func (c *networkPolicyRuleSelectorsEngine) recalculate(id apiv3.ResourceID, entr
 
 // convertToVersioned implements the resourceCacheEngine interface.
 func (c *networkPolicyRuleSelectorsEngine) convertToVersioned(res resources.Resource) (VersionedResource, error) {
-	return nil, nil
+	return &VersionedNetworkPolicyRuleSelector{}, nil
 }
 
 func (c *networkPolicyRuleSelectorsEngine) queueRuleSelectorsForRecalculation(update syncer.Update) {
