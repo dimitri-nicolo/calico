@@ -211,7 +211,7 @@ func (c *endpointEngine) convertToVersioned(res resources.Resource) (VersionedRe
 		podIPs, ipErr := c.converter.GetPodIPs(in)
 		if ipErr != nil || len(podIPs) == 0 {
 			// There is no valid IP. In this case we need to sneak in an IP address in order to get the conversion
-			// to succeeed. We'll flag that this IP address is not actually valid which will mean the getIPOrEndpointIDs
+			// to succeed. We'll flag that this IP address is not actually valid which will mean the getIPOrEndpointIDs
 			// will not return this invalid IP.
 			log.Debugf("Setting fake IP in Pod to ensure conversion is handled correctly - IP will be ignored: %s",
 				resources.GetResourceID(in))
@@ -224,10 +224,22 @@ func (c *endpointEngine) convertToVersioned(res resources.Resource) (VersionedRe
 		}
 		log.WithField("id", resources.GetResourceID(in)).Debug("Converted Pod to Calico WEP")
 
-		v3 := kvp.Value.(*apiv3.WorkloadEndpoint)
+		v3, ok := kvp.Value.(*apiv3.WorkloadEndpoint)
+		if !ok {
+			// Handle gracefully the possibility that the Value is nil.
+			log.Error("Pod to workload endpoint conversion failed")
+			return nil, nil
+		}
+
 		v1, err := updateprocessors.ConvertWorkloadEndpointV3ToV1Value(v3)
 		if err != nil {
 			return nil, err
+		}
+		if v1 == nil {
+			// The update processor may filter out WEPs, for example if the Pod was completed then the IPNets will have
+			// been removed.
+			log.Debug("Update processor has filtered out the workload endpoint")
+			return nil, nil
 		}
 
 		return &versionedK8sPod{
