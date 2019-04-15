@@ -5,7 +5,6 @@ package windataplane
 import (
 	"encoding/json"
 	"fmt"
-	"net"
 	"regexp"
 	"strings"
 
@@ -109,14 +108,16 @@ func (m *vxlanManager) CompleteDeferredWork() error {
 	netPolsToAdd := set.New()
 	for dest, route := range m.routesByDest {
 		logrus.WithFields(logrus.Fields{
-			"node": dest,
+			"node":  dest,
 			"route": route,
 		}).Debug("Currently-active route")
 
 		vtep := m.vtepsByNode[route.Node]
 		if vtep == nil {
 			logrus.WithField("node", route.Node).Error("Received route without corresponding VTEP")
+			continue
 		}
+		logrus.WithFields(logrus.Fields{"vtep": vtep, "route": route}).Debug("Found VTEP for route")
 
 		networkPolicySettings := hcn.RemoteSubnetRoutePolicySetting{
 			IsolationId:                 uint16(m.vxlanID),
@@ -216,9 +217,7 @@ func (m *vxlanManager) CompleteDeferredWork() error {
 	return nil
 }
 
-func macToWindowsFormat(mac string) string {
-	parsed := net.HardwareAddr(mac)
-	colonFormat := parsed.String()
-	windowsFormat := strings.Replace(colonFormat, ":", "-", 0)
+func macToWindowsFormat(linuxFormat string) string {
+	windowsFormat := strings.Replace(linuxFormat, ":", "-", -1)
 	return windowsFormat
 }
