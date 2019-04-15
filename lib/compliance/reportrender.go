@@ -66,7 +66,6 @@ var (
 			Groups:   []string{"imperGroupFoo"},
 		},
 		SourceIPs: []string{"192.168.1.2"},
-		UserAgent: "curl/7.58.0",
 		ObjectRef: &audit.ObjectReference{
 			Name:       "oRef",
 			Namespace:  "default",
