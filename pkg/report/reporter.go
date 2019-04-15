@@ -194,8 +194,8 @@ func (r *reporter) getEndpoint(id apiv3.ResourceID) *reportEndpoint {
 }
 
 func (r *reporter) transferAggregatedData() {
-	// Create the endpoints slice up-front
-	r.data.Endpoints = make([]apiv3.EndpointsReportEndpoint, len(r.inScopeEndpoints))
+	// Create the endpoints slice up-front because it's likely to be large.
+	r.data.Endpoints = make([]apiv3.EndpointsReportEndpoint, 0, len(r.inScopeEndpoints))
 
 	// Transfer the aggregated data to the ReportData structure. Start with endpoints.
 	for id, ep := range r.inScopeEndpoints {
