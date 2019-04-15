@@ -1,0 +1,13 @@
+{
+  "_index": ".tigera.ipset",
+  "_type": "_doc",
+  "_id": "test",
+  "_version": 1,
+  "found": true,
+  "_source": {
+    "ips": [
+      "35.32.82.0/24",
+      "10.10.1.20/32"
+    ]
+  }
+}

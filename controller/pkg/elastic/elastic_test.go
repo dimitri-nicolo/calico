@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -194,6 +195,14 @@ func (t *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 		}
 	case "GET":
 		switch req.URL.String() {
+		// QueryIPSet
+		case baseURI + "/.tigera.ipset/_doc/test":
+			return &http.Response{
+				StatusCode: 200,
+				Request:    req,
+				Body:       mustOpen("test_files/3.ipset.json"),
+			}, nil
+
 		// GetIPSet
 		case baseURI + "/.tigera.ipset/_doc/test1":
 			return &http.Response{
@@ -307,6 +316,17 @@ func (t *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 				Request:    req,
 				Body:       mustOpen(t.listRespFile),
 			}, nil
+		}
+	}
+
+	if os.Getenv("ELASTIC_TEST_DEBUG") == "yes" {
+		_, _ = fmt.Fprintf(os.Stderr, "%s %s\n", req.Method, req.URL)
+		if req.Body != nil {
+			b, _ := ioutil.ReadAll(req.Body)
+			_ = req.Body.Close()
+			body := string(b)
+			req.Body = ioutil.NopCloser(bytes.NewReader(b))
+			_, _ = fmt.Fprintln(os.Stderr, body)
 		}
 	}
 

@@ -20,11 +20,14 @@ import (
 	"github.com/tigera/intrusion-detection/controller/pkg/events"
 )
 
-const IPSetIndex = ".tigera.ipset"
-const StandardType = "_doc"
-const FlowLogIndex = "tigera_secure_ee_flows*"
-const EventIndex = "tigera_secure_ee_events"
-const QuerySize = 1000
+const (
+	IPSetIndex     = ".tigera.ipset"
+	StandardType   = "_doc"
+	FlowLogIndex   = "tigera_secure_ee_flows*"
+	EventIndex     = "tigera_secure_ee_events"
+	QuerySize      = 1000
+	MaxClausecount = 1024
+)
 
 type ipSetDoc struct {
 	CreatedAt time.Time    `json:"created_at"`
@@ -177,23 +180,34 @@ func (e *Elastic) GetIPSetModified(ctx context.Context, name string) (time.Time,
 }
 
 func (e *Elastic) QueryIPSet(ctx context.Context, name string) (db.SecurityEventIterator, error) {
-	f := func(ipset, field string) *elastic.ScrollService {
-		q := elastic.NewTermsQuery(field).TermsLookup(
-			elastic.NewTermsLookup().
-				Index(IPSetIndex).
-				Type(StandardType).
-				Id(ipset).
-				Path("ips"))
+	ipset, err := e.GetIPSet(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	terms := make([][]interface{}, 1)
+	for _, ip := range ipset {
+		if len(terms[len(terms)-1]) >= MaxClausecount {
+			terms = append(terms, []interface{}{ip})
+		} else {
+			terms[len(terms)-1] = append(terms[len(terms)-1], ip)
+		}
+	}
+
+	f := func(ipset, field string, terms []interface{}) *elastic.ScrollService {
+		q := elastic.NewTermsQuery(field, terms...)
 		return e.c.Scroll(FlowLogIndex).SortBy(elastic.SortByDoc{}).Query(q).Size(QuerySize)
 	}
 
+	var scrollers []scrollerEntry
+	for _, t := range terms {
+		scrollers = append(scrollers, scrollerEntry{name: "source_ip", scroller: f(name, "source_ip", t)})
+		scrollers = append(scrollers, scrollerEntry{name: "dest_ip", scroller: f(name, "dest_ip", t)})
+	}
+
 	return &flowLogIterator{
-		scrollers: []scrollerEntry{
-			{name: "source_ip", scroller: f(name, "source_ip")},
-			{name: "dest_ip", scroller: f(name, "dest_ip")},
-		},
-		ctx:  ctx,
-		name: name,
+		scrollers: scrollers,
+		ctx:       ctx,
+		name:      name,
 	}, nil
 }
 
