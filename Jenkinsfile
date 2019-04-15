@@ -42,56 +42,14 @@ pipeline {
         slack_alert_channel = 'ci-notifications-cnx'
     }
     stages {        
-        stage('Clean artifacts') {
-            steps {
-                echo 'clean artifacts..'
-                sh 'if [ -z "$SSH_AUTH_SOCK" ] ; then eval `ssh-agent -s`; ssh-add || true; fi && make clean'
-            }
-        }
-        stage('Check calico-private changes') {
-            steps {
-                script {
-                    SKIP_CALICO_PRIVATE_MASTER_BUILD = sh(returnStatus: true, script: "git diff --name-only HEAD^ | grep '^_includes/master/manifests/\\|^master/getting-started/kubernetes/install-cnx.sh\\|^master/getting-started/kubernetes/installation/hosted/'")
-                    echo "SKIP_CALICO_PRIVATE_MASTER_BUILD=${SKIP_CALICO_PRIVATE_MASTER_BUILD}"
-                }
-            }
-        }
-        stage('Build calico-private') {
-            when {
-                expression { SKIP_CALICO_PRIVATE_MASTER_BUILD == 0 }
-            }
-            steps {
-                withCredentials([sshUserPrivateKey(credentialsId: 'marvin-tigera-ssh-key', keyFileVariable: 'SSH_KEY', passphraseVariable: '', usernameVariable: '')]) {
-                    ansiColor('xterm') {
-                        // Needed to allow checkout of private repos
-                        echo 'Build calico-private...'
-                        sh 'if [ -z "$SSH_AUTH_SOCK" ] ; then eval `ssh-agent -s`; ssh-add $SSH_KEY || true; fi && make _site && make ci'
-                        sh 'mkdir ~/e2e-manifests'
-                        sh 'cp _site/master/getting-started/kubernetes/install-cnx.sh ~/e2e-manifests/'
-                        sh 'cp _site/master/getting-started/kubernetes/installation/hosted/calico.yaml ~/e2e-manifests/'
-                        sh 'cp _site/master/getting-started/kubernetes/installation/hosted/etcd.yaml ~/e2e-manifests/'
-                        sh 'cp _site/master/getting-started/kubernetes/installation/hosted/calicoctl.yaml ~/e2e-manifests/'
-                        sh 'cp _site/master/getting-started/kubernetes/installation/hosted/calicoq.yaml ~/e2e-manifests/'
-                        sh 'cp _site/master/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml ~/e2e-manifests/'
-                        sh 'cp _site/master/getting-started/kubernetes/installation/hosted/cnx/1.7/operator.yaml ~/e2e-manifests/'
-                        sh 'cp _site/master/getting-started/kubernetes/installation/hosted/cnx/1.7/monitor-calico.yaml ~/e2e-manifests/'
-                        sh 'cp _site/master/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-etcd.yaml ~/e2e-manifests/'
-                        sh 'cp _site/master/getting-started/kubernetes/installation/hosted/cnx/1.7/elastic-storage-local.yaml ~/e2e-manifests/'
-                        sh 'cp _site/master/manifests/compliance/compliance.yaml ~/e2e-manifests/'
-                    }
-                }
-            }
-        }
+        
         stage('Initialize') {
-            when {
-                expression { SKIP_CALICO_PRIVATE_MASTER_BUILD == 0 }
-            }
             steps {
                 dir('process') {
                     git(url: 'git@github.com:tigera/process.git', branch: 'master', credentialsId: 'marvin-tigera-ssh-key')
                     script {
                         env.TF_VAR_kubernetes_version = sh (returnStdout: true, script: "./k8s_version.sh stable-1.13").trim()
-            if ( "$env.TF_VAR_kubernetes_version" == "[FAIL] did not resolve a k8s version" ){
+                        if ( "$env.TF_VAR_kubernetes_version" == "[FAIL] did not resolve a k8s version" ){
                             currentBuild.result = "UNSTABLE"
                             echo "Current build status: ${currentBuild.result}"
                             return
@@ -108,6 +66,20 @@ pipeline {
                 }
             }
         }
+        stage('Clean artifacts') {
+            steps {
+                echo 'clean artifacts..'
+                sh 'if [ -z "$SSH_AUTH_SOCK" ] ; then eval `ssh-agent -s`; ssh-add || true; fi && make clean'
+            }
+        }
+        stage('Check calico-private changes') {
+            steps {
+                script {
+                    SKIP_CALICO_PRIVATE_MASTER_BUILD = sh(returnStatus: true, script: "git diff --name-only HEAD^ | grep '^_includes/master/manifests/\\|^master/getting-started/kubernetes/install-cnx.sh\\|^master/getting-started/kubernetes/installation/hosted/'")
+                    echo "SKIP_CALICO_PRIVATE_MASTER_BUILD=${SKIP_CALICO_PRIVATE_MASTER_BUILD}"
+                }
+            }
+        }
         stage('Provision Cluster') {
             when {
                 expression { SKIP_CALICO_PRIVATE_MASTER_BUILD == 0 && currentBuild.result != "UNSTABLE" }
@@ -119,13 +91,13 @@ pipeline {
                         withCredentials([file(credentialsId: 'registry-viewer-account-json', variable: 'DOCKER_AUTH')]) {
                             sh "cp $DOCKER_AUTH docker_auth.json"
                             sh "terraform init -upgrade"
-                            sh "terraform apply -var num_etcd_nodes=${TF_VAR_num_etcd_nodes} -var num_elastic_nodes=1"
+                            sh "terraform apply -var num_etcd_nodes=${TF_VAR_num_etcd_nodes}"
                             script {                              
                               // the self-hosted etcd install requires an explicit value
                               env.ETCD_ENDPOINTS = "http://10.96.232.136:6666"
                               
                               // Get Elasticsearch CA certificate
-                              sh "scp -i master_ssh_key -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ~/e2e-manifests/* \$(terraform output master_connect):~/"
+                              // sh "scp -i master_ssh_key -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ~/e2e-manifests/* \$(terraform output master_connect):~/"
                             }
 
                             // Remove the taint from master, but expect an error as this command tries to remove the taint from nodes (which do not have it).
@@ -137,6 +109,39 @@ pipeline {
             post {
                 failure {
                     slackSend message: "Failed during Terraform provisioning!'\n${env.SLACK_MSG}", color: "warning", channel: "${env.slack_alert_channel}"
+                }
+            }
+        }
+        stage('Checkout calico-private') {
+            steps {
+                sh '$(terraform output master_connect_command) "mkdir ~/calico-private"'
+                sh "scp -i -r master_ssh_key -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ./ \$(terraform output master_connect):~/calico-private/"                                
+            }
+        }        
+        stage('Build calico-private') {
+            when {
+                expression { SKIP_CALICO_PRIVATE_MASTER_BUILD == 0 }
+            }
+            steps {
+                withCredentials([sshUserPrivateKey(credentialsId: 'marvin-tigera-ssh-key', keyFileVariable: 'SSH_KEY', passphraseVariable: '', usernameVariable: '')]) {
+                    ansiColor('xterm') {
+                        // Needed to allow checkout of private repos
+                        echo 'Build calico-private...'
+                        // sh '$(terraform output master_connect_command) if [ -z "$SSH_AUTH_SOCK" ] ; then eval `ssh-agent -s`; ssh-add $SSH_KEY || true; fi && make _site && make ci'
+                        sh '$(terraform output master_connect_command) "cd ~/calico-private/ && make _site && make ci"'                        
+                        // sh '$(terraform output master_connect_command) "mkdir ~/e2e-manifests"'
+                        sh '$(terraform output master_connect_command) "cp ~/calico-private/_site/master/getting-started/kubernetes/install-cnx.sh ~/"'
+                        sh '$(terraform output master_connect_command) "cp ~/calico-private/_site/master/getting-started/kubernetes/installation/hosted/calico.yaml ~/"'
+                        sh '$(terraform output master_connect_command) "cp ~/calico-private/_site/master/getting-started/kubernetes/installation/hosted/etcd.yaml ~/"'
+                        sh '$(terraform output master_connect_command) "cp ~/calico-private/_site/master/getting-started/kubernetes/installation/hosted/calicoctl.yaml ~/"'
+                        sh '$(terraform output master_connect_command) "cp ~/calico-private/_site/master/getting-started/kubernetes/installation/hosted/calicoq.yaml ~/"'
+                        sh '$(terraform output master_connect_command) "cp ~/calico-private/_site/master/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml ~/"'
+                        sh '$(terraform output master_connect_command) "cp ~/calico-private/_site/master/getting-started/kubernetes/installation/hosted/cnx/1.7/operator.yaml ~/"'
+                        sh '$(terraform output master_connect_command) "cp ~/calico-private/_site/master/getting-started/kubernetes/installation/hosted/cnx/1.7/monitor-calico.yaml ~/"'
+                        sh '$(terraform output master_connect_command) "cp ~/calico-private/_site/master/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-etcd.yaml ~/"'
+                        sh '$(terraform output master_connect_command) "cp ~/calico-private/_site/master/getting-started/kubernetes/installation/hosted/cnx/1.7/elastic-storage-local.yaml ~/"'
+                        sh '$(terraform output master_connect_command) "cp ~/calico-private/_site/master/manifests/compliance/compliance.yaml ~/"'
+                    }
                 }
             }
         }
