@@ -77,6 +77,7 @@ func (c *client) searchAuditEvents(ctx context.Context, filter *v3.AuditEventsSe
 				Do(context.Background())
 			if err != nil {
 				ch <- &event.AuditEventResult{Err: err}
+				return
 			}
 			log.WithField("latency (ms)", res.TookInMillis).Debug("query success")
 
