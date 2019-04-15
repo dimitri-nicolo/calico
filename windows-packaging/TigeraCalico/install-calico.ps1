@@ -24,6 +24,10 @@ if ($env:CALICO_NETWORKING_BACKEND -EQ "windows-bgp")
     Install-ConfdService
     Install-CNIPlugin
 }
+elseif ($env:CALICO_NETWORKING_BACKEND -EQ "vxlan")
+{
+    Install-CNIPlugin
+}
 
 Write-Host "Starting Calico..."
 Write-Host "This may take several seconds if the vSwitch needs to be created."

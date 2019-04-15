@@ -17,7 +17,7 @@ function Test-CalicoConfiguration()
     {
         throw "Config not loaded?."
     }
-    if ($env:CALICO_NETWORKING_BACKEND -EQ "windows-bgp") {
+    if ($env:CALICO_NETWORKING_BACKEND -EQ "windows-bgp" -OR $env:CALICO_NETWORKING_BACKEND -EQ "vxlan") {
         if (fileIsMissing($env:CNI_BIN_DIR))
         {
             throw "CNI binary directory $env:CNI_BIN_DIR doesn't exist.  Please create it and ensure kubelet " +  `
@@ -78,6 +78,10 @@ function Install-CNIPlugin()
     $etcdCertFile = "$env:ETCD_CERT_FILE".replace('\', '\\')
     $etcdCACertFile = "$env:ETCD_CA_CERT_FILE".replace('\', '\\')
     $kubeconfigFile = "$env:KUBECONFIG".replace('\', '\\')
+    $mode = ""
+    if ($env:CALICO_NETWORKING_BACKEND -EQ "vxlan") {
+        $mode = "vxlan"
+    }
 
     (Get-Content "$baseDir\cni.conf.template") | ForEach-Object {
         $_.replace('__NODENAME_FILE__', $nodeNameFile).
@@ -88,7 +92,8 @@ function Install-CNIPlugin()
                 replace('__ETCD_KEY_FILE__', $etcdKeyFile).
                 replace('__ETCD_CERT_FILE__', $etcdCertFile).
                 replace('__ETCD_CA_CERT_FILE__', $etcdCACertFile).
-                replace('__IPAM_TYPE__', $ipamType)
+                replace('__IPAM_TYPE__', $ipamType).
+                replace('__MODE__', $mode)
     } | Set-Content "$cniConfFile"
     Write-Host "Wrote CNI configuration."
 }

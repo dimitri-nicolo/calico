@@ -10,9 +10,9 @@ $lastBootTime = Get-LastBootTime
 
 $timeout = $env:STARTUP_VALID_IP_TIMEOUT
 
-if ($env:CALICO_NETWORKING_BACKEND -EQ "windows-bgp")
+if ($env:CALICO_NETWORKING_BACKEND -EQ "windows-bgp" -OR $env:CALICO_NETWORKING_BACKEND -EQ "vxlan")
 {
-    Write-Host "Calico Windows BGP networking enabled."
+    Write-Host "Calico $env:CALICO_NETWORKING_BACKEND networking enabled."
 
     # Check if the node has been rebooted.  If so, the HNS networks will be in unknown state so we need to
     # clean them up and recreate them.
@@ -61,7 +61,15 @@ if ($env:CALICO_NETWORKING_BACKEND -EQ "windows-bgp")
     Write-Host "`nStart creating vSwitch. Note: Connection may get lost for RDP, please reconnect...`n"
     while (!(Get-HnsNetwork | ? Name -EQ "External"))
     {
-        $result = New-HNSNetwork -Type L2Bridge -AddressPrefix "192.168.255.0/30" -Gateway "192.168.255.1" -Name "External" -Verbose
+        if ($env:CALICO_NETWORKING_BACKEND -EQ "vxlan") {
+            # FIXME Firewall rule port?
+            New-NetFirewallRule -Name OverlayTraffic4789UDP -Description "Overlay network traffic UDP" -Action Allow -LocalPort 4789 -Enabled True -DisplayName "Overlay Traffic 4789 UDP" -Protocol UDP -ErrorAction SilentlyContinue
+            $result = New-HNSNetwork -Type Overlay -AddressPrefix "192.168.255.0/30" -Gateway "192.168.255.1" -Name "External" -SubnetPolicies @(@{Type = "VSID"; VSID = 9999; })  -Verbose
+        }
+        else
+        {
+            $result = New-HNSNetwork -Type L2Bridge -AddressPrefix "192.168.255.0/30" -Gateway "192.168.255.1" -Name "External" -Verbose
+        }
         if ($result.Error -OR (!$result.Success)) {
             Write-Host "Failed to create network, retrying..."
             Start-Sleep 1

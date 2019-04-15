@@ -4,6 +4,9 @@
 
   "cniVersion": "0.3.0",
   "type": "calico",
+  "mode": "__MODE__",
+  "VSID": 4096,
+
   "policy": {
     "type": "k8s"
   },
