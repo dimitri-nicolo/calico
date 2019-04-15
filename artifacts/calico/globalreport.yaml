@@ -5,7 +5,7 @@ metadata:
   labels:
     type: sample-type-global-report
 spec:
-  ReportType: "sample-global-report-type"
+  reportType: "sample-global-report-type"
   endpointsSelection:
     endpointSelector: 'gr-sel-key == "gr-sel-value"'
     namespaces:

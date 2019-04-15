@@ -175,12 +175,14 @@ type GlobalReportList struct {
 // +genclient
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:subresource:status
 
 type GlobalReport struct {
 	metav1.TypeMeta
 	metav1.ObjectMeta
 
-	Spec calico.ReportSpec
+	Spec   calico.ReportSpec
+	Status calico.ReportStatus
 }
 
 // +genclient:nonNamespaced

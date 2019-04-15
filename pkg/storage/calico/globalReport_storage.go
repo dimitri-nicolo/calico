@@ -77,6 +77,7 @@ func (gc GlobalReportConverter) convertToLibcalico(aapiObj runtime.Object) resou
 	lcgGlobalReport.TypeMeta = aapiGlobalReport.TypeMeta
 	lcgGlobalReport.ObjectMeta = aapiGlobalReport.ObjectMeta
 	lcgGlobalReport.Spec = aapiGlobalReport.Spec
+	lcgGlobalReport.Status = aapiGlobalReport.Status
 	return lcgGlobalReport
 }
 
@@ -84,6 +85,7 @@ func (gc GlobalReportConverter) convertToAAPI(libcalicoObject resourceObject, aa
 	lcgGlobalReport := libcalicoObject.(*libcalicoapi.GlobalReport)
 	aapiGlobalReport := aapiObj.(*aapi.GlobalReport)
 	aapiGlobalReport.Spec = lcgGlobalReport.Spec
+	aapiGlobalReport.Status = lcgGlobalReport.Status
 	aapiGlobalReport.TypeMeta = lcgGlobalReport.TypeMeta
 	aapiGlobalReport.ObjectMeta = lcgGlobalReport.ObjectMeta
 }
