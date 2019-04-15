@@ -2065,7 +2065,7 @@ func schema_libcalico_go_lib_apis_v3_AuditSummary(ref common.ReferenceCallback) 
 							Format:      "int32",
 						},
 					},
-					"numModified": {
+					"numModify": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The number of in-scope audit log patch or replace events.",
 							Type:        []string{"integer"},
