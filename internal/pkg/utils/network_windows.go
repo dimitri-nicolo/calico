@@ -191,6 +191,24 @@ func DoNetworking(
 	return hostVethName, contVethMAC, err
 }
 
+func EnsureVXLANTunnelAddr(ctx context.Context, calicoClient calicoclient.Interface, nodeName string, ipNet *net.IPNet) error {
+	logrus.Debug("Checking the node's VXLAN tunnel address")
+	node, err := calicoClient.Nodes().Get(ctx, nodeName, options.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	expectedIP := getNthIP(ipNet, 1).String()
+	if node.Spec.IPv4VXLANTunnelAddr == expectedIP {
+		logrus.WithField("ip", expectedIP).Debug("VXLAN tunnel IP is already correct")
+		return nil
+	}
+
+	node.Spec.IPv4VXLANTunnelAddr = expectedIP
+	_, err = calicoClient.Nodes().Update(ctx, node, options.SetOptions{})
+	return err
+}
+
 func lookupIPAMPools(
 	ctx context.Context, podIP net.IP, calicoClient calicoclient.Interface,
 ) (
