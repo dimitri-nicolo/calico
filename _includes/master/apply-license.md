@@ -1,28 +1,24 @@
-{% if include.init != "openshift" %}
-  {% assign cli = "kubectl" %}
-{% else %}
-  {% assign cli = "oc" %}
-{% endif %}
-
 ## Applying your license key
+
+1. [Install calicoctl]({{site.baseurl}}/{{page.version}}/getting-started/calicoctl/install#installing-calicoctl-as-a-kubernetes-pod).
 
 1. Use the following command to apply your [license key]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/licensekey).
 
    **Command**
    ```
-   {{cli}} apply -f - < <customer-name>-license.yaml
+   calicoctl apply -f - < <customer-name>-license.yaml
    ```
 
    **Example**
    ```
-   {{cli}} apply -f - < awesome-corp-license.yaml
+   calicoctl apply -f - < awesome-corp-license.yaml
    ```
    {: .no-select-button}
 
 1. Confirm that the license was applied:
 
    ```
-   {{cli}} get licensekey
+   calicoctl get license
    ```
 
 1. Continue to [Installing metrics and logs](#installing-metrics-and-logs)
