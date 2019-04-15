@@ -434,15 +434,33 @@ func (t *XrefCacheTester) SetPod(nameIdx Name, namespaceIdx Namespace, labels La
 		sr := getResourceId(resources.TypeK8sServiceAccounts, serviceAccount, namespaceIdx)
 		sa = sr.Name
 	}
+	var initContainers, containers []corev1.Container
+	meta := getObjectMeta(r, labels)
+	if opts&PodOptEnvoyEnabled != 0 {
+		// Set annotations for Envoy (this example was from a real system)
+		meta.Annotations = map[string]string{
+			"sidecar.istio.io/status": "{\"version\":\"99f7794ab7b49c473191a9b99fb394a24a1bd94be1602549ab75085af3fd34a6\"," +
+				"\"initContainers\":[\"istio-init\"],\"containers\":[\"istio-proxy\"]," +
+				"\"volumes\":[\"istio-envoy\",\"istio-certs\"],\"imagePullSecrets\":null}",
+		}
+		initContainers = append(initContainers, corev1.Container{
+			Image: "docker.io/istio/proxy_init:1.0.7",
+		})
+		containers = append(containers, corev1.Container{
+			Image: "docker.io/istio/proxyv2:1.0.7",
+		})
+	}
 	t.OnUpdate(syncer.Update{
 		Type:       syncer.UpdateTypeSet,
 		ResourceID: r,
 		Resource: &corev1.Pod{
 			TypeMeta:   r.TypeMeta,
-			ObjectMeta: getObjectMeta(r, labels),
+			ObjectMeta: meta,
 			Spec: corev1.PodSpec{
 				NodeName:           "node1",
 				ServiceAccountName: sa,
+				InitContainers:     initContainers,
+				Containers:         containers,
 			},
 			Status: corev1.PodStatus{
 				PodIP: ipByteToIPString(ip),

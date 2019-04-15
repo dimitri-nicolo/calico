@@ -67,3 +67,11 @@ type VersionedResource interface {
 	getV3() resources.Resource
 	getV1() interface{}
 }
+
+type Config struct {
+	// Pod annotation and init container and container regexes used to determine if Envoy is enabled inside the
+	// pod.
+	PodIstioSidecarAnnotation  string `envconfig:"POD_ISTIO_SIDECAR_ANNOTATION" default:"sidecar.istio.io/status"`
+	PodIstioInitContainerRegex string `envconfig:"POD_ISTIO_INIT_CONTAINER_REGEX" default:".*/istio/proxy_init:.*"`
+	PodIstioContainerRegex     string `envconfig:"POD_ISTIO_CONTAINER_REGEX" default:".*/istio/proxy.*"`
+}

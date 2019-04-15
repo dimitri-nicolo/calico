@@ -52,6 +52,24 @@ var _ = Describe("Pods cache verification", func() {
 		Expect(ep).To(BeNil())
 	})
 
+	It("should handle a pod with Envoy enabled", func() {
+		By("applying a pod")
+		tester.SetPod(Name1, Namespace1, NoLabels, IP1, NoServiceAccount, PodOptEnvoyEnabled)
+
+		By("checking the cache settings")
+		ep := tester.GetPod(Name1, Namespace1)
+		Expect(ep).NotTo(BeNil())
+		Expect(ep.Flags).To(Equal(xrefcache.CacheEntryEnvoyEnabled))
+		Expect(ep.AppliedPolicies.Len()).To(BeZero())
+
+		By("deleting the first pod")
+		tester.DeletePod(Name1, Namespace1)
+
+		By("checking the cache settings")
+		ep = tester.GetPod(Name1, Namespace1)
+		Expect(ep).To(BeNil())
+	})
+
 	It("should handle basic CRUD of a host endpoint", func() {
 		By("applying a host endpoint")
 		tester.SetHostEndpoint(Name1, NoLabels, IP1)
