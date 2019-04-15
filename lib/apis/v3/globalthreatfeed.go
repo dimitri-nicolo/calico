@@ -107,9 +107,9 @@ type HTTPHeaderSource struct {
 }
 
 type GlobalThreatFeedStatus struct {
-	LastSuccessfulSync   metav1.Time      `json:"last_successful_sync"`
-	LastSuccessfulSearch metav1.Time      `json:"last_successful_search"`
-	ErrorConditions      []ErrorCondition `json:"error_conditions"`
+	LastSuccessfulSync   metav1.Time      `json:"lastSuccessfulSync"`
+	LastSuccessfulSearch metav1.Time      `json:"lastSuccessfulSearch"`
+	ErrorConditions      []ErrorCondition `json:"errorConditions"`
 }
 
 type ErrorCondition struct {
