@@ -463,7 +463,7 @@ install-git-hooks:
 # Tests
 ###############################################################################
 .PHONY: ut
-ut combined.coverprofile: export-mockdata run-etcd
+ut combined.coverprofile: export-mockdata
 	@echo Running Go UTs.
 	$(DOCKER_RUN) $(LOCAL_BUILD_MOUNTS) -e ELASTIC_HOST=localhost $(CALICO_BUILD) ./utils/run-coverage
 
