@@ -17,6 +17,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/tigera/intrusion-detection/controller/pkg/db"
+
 	"github.com/araddon/dateparse"
 	. "github.com/onsi/gomega"
 )
@@ -169,6 +171,32 @@ func TestElastic_ListIPSets(t *testing.T) {
 	metas, err = e.ListIPSets(ctx)
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(metas).To(HaveLen(0))
+}
+
+func TestSplitIPSetToInterface(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	mul := 2
+	offset := 11
+
+	var input db.IPSetSpec
+	for i := 0; i < mul*MaxClausecount+offset; i++ {
+		input = append(input, fmt.Sprintf("%d", i))
+	}
+
+	output := splitIPSetToInterface(input)
+
+	g.Expect(len(output)).Should(Equal(mul + 1))
+	for i := 0; i < mul; i++ {
+		g.Expect(len(output[i])).Should(Equal(MaxClausecount))
+		for idx, v := range output[i] {
+			g.Expect(v).Should(Equal(fmt.Sprintf("%d", i*MaxClausecount+idx)))
+		}
+	}
+	g.Expect(len(output[mul])).Should(Equal(offset))
+	for idx, v := range output[mul] {
+		g.Expect(v).Should(Equal(fmt.Sprintf("%d", mul*MaxClausecount+idx)))
+	}
 }
 
 type testRoundTripper struct {

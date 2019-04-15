@@ -184,14 +184,7 @@ func (e *Elastic) QueryIPSet(ctx context.Context, name string) (db.SecurityEvent
 	if err != nil {
 		return nil, err
 	}
-	terms := make([][]interface{}, 1)
-	for _, ip := range ipset {
-		if len(terms[len(terms)-1]) >= MaxClausecount {
-			terms = append(terms, []interface{}{ip})
-		} else {
-			terms[len(terms)-1] = append(terms[len(terms)-1], ip)
-		}
-	}
+	queryTerms := splitIPSetToInterface(ipset)
 
 	f := func(ipset, field string, terms []interface{}) *elastic.ScrollService {
 		q := elastic.NewTermsQuery(field, terms...)
@@ -199,7 +192,7 @@ func (e *Elastic) QueryIPSet(ctx context.Context, name string) (db.SecurityEvent
 	}
 
 	var scrollers []scrollerEntry
-	for _, t := range terms {
+	for _, t := range queryTerms {
 		scrollers = append(scrollers, scrollerEntry{name: "source_ip", scroller: f(name, "source_ip", t)})
 		scrollers = append(scrollers, scrollerEntry{name: "dest_ip", scroller: f(name, "dest_ip", t)})
 	}
@@ -209,6 +202,18 @@ func (e *Elastic) QueryIPSet(ctx context.Context, name string) (db.SecurityEvent
 		ctx:       ctx,
 		name:      name,
 	}, nil
+}
+
+func splitIPSetToInterface(ipset db.IPSetSpec) [][]interface{} {
+	terms := make([][]interface{}, 1)
+	for _, ip := range ipset {
+		if len(terms[len(terms)-1]) >= MaxClausecount {
+			terms = append(terms, []interface{}{ip})
+		} else {
+			terms[len(terms)-1] = append(terms[len(terms)-1], ip)
+		}
+	}
+	return terms
 }
 
 func (e *Elastic) DeleteIPSet(ctx context.Context, m db.IPSetMeta) error {
