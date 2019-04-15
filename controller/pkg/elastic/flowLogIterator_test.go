@@ -83,7 +83,7 @@ func TestElasticFlowLogIterator(t *testing.T) {
 
 	expectedKey := "source_ip"
 	i := flowLogIterator{
-		scrollers: []scrollerEntry{{expectedKey, scroll}},
+		scrollers: []scrollerEntry{{expectedKey, scroll, nil}},
 		ctx:       ctx,
 	}
 
@@ -121,7 +121,7 @@ func TestElasticFlowLogIteratorWithError(t *testing.T) {
 
 	scroll := &mockScrollerError{}
 	i := flowLogIterator{
-		scrollers: []scrollerEntry{{"dest_ip", scroll}},
+		scrollers: []scrollerEntry{{"dest_ip", scroll, nil}},
 		ctx:       ctx,
 	}
 
@@ -169,7 +169,7 @@ func TestElasticFlowLogIteratorWithTwoScrollers(t *testing.T) {
 					},
 				},
 			},
-		}},
+		}, nil},
 		{"dest_ip", &mockScroller{
 			[]*elastic.SearchResult{
 				{
@@ -182,7 +182,7 @@ func TestElasticFlowLogIteratorWithTwoScrollers(t *testing.T) {
 					},
 				},
 			},
-		}},
+		}, nil},
 	}
 
 	ctx, cancel := context.WithCancel(context.TODO())

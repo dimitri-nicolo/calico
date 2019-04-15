@@ -166,8 +166,8 @@ func TestElastic_QueryIPSet_Big(t *testing.T) {
 
 	g.Expect(itr.scrollers).Should(HaveLen(4), "Input was split into 2x2 arrays")
 	g.Expect(itr.scrollers[0].terms).Should(HaveLen(MaxClauseCount))
-	g.Expect(itr.scrollers[1].terms).Should(HaveLen(256))
-	g.Expect(itr.scrollers[2].terms).Should(HaveLen(MaxClauseCount))
+	g.Expect(itr.scrollers[1].terms).Should(HaveLen(MaxClauseCount))
+	g.Expect(itr.scrollers[2].terms).Should(HaveLen(256))
 	g.Expect(itr.scrollers[3].terms).Should(HaveLen(256))
 }
 
