@@ -26,7 +26,7 @@ const (
 	FlowLogIndex   = "tigera_secure_ee_flows*"
 	EventIndex     = "tigera_secure_ee_events"
 	QuerySize      = 1000
-	MaxClausecount = 1024
+	MaxClauseCount = 1024
 )
 
 type ipSetDoc struct {
@@ -193,8 +193,8 @@ func (e *Elastic) QueryIPSet(ctx context.Context, name string) (db.SecurityEvent
 
 	var scrollers []scrollerEntry
 	for _, t := range queryTerms {
-		scrollers = append(scrollers, scrollerEntry{name: "source_ip", scroller: f(name, "source_ip", t)})
-		scrollers = append(scrollers, scrollerEntry{name: "dest_ip", scroller: f(name, "dest_ip", t)})
+		scrollers = append(scrollers, scrollerEntry{name: "source_ip", scroller: f(name, "source_ip", t), terms: t})
+		scrollers = append(scrollers, scrollerEntry{name: "dest_ip", scroller: f(name, "dest_ip", t), terms: t})
 	}
 
 	return &flowLogIterator{
@@ -207,7 +207,7 @@ func (e *Elastic) QueryIPSet(ctx context.Context, name string) (db.SecurityEvent
 func splitIPSetToInterface(ipset db.IPSetSpec) [][]interface{} {
 	terms := make([][]interface{}, 1)
 	for _, ip := range ipset {
-		if len(terms[len(terms)-1]) >= MaxClausecount {
+		if len(terms[len(terms)-1]) >= MaxClauseCount {
 			terms = append(terms, []interface{}{ip})
 		} else {
 			terms[len(terms)-1] = append(terms[len(terms)-1], ip)

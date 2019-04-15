@@ -144,6 +144,33 @@ func TestElastic_QueryIPSet(t *testing.T) {
 	g.Expect(c).Should(Equal(2))
 }
 
+func TestElastic_QueryIPSet_Big(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	u, err := url2.Parse(baseURI)
+	g.Expect(err).ShouldNot(HaveOccurred())
+	client := &http.Client{
+		Transport: http.RoundTripper(&testRoundTripper{}),
+	}
+
+	e, err := NewElastic(client, u, "", "")
+	g.Expect(err).Should(BeNil())
+
+	ctx, cancel := context.WithCancel(context.TODO())
+	defer cancel()
+
+	i, err := e.QueryIPSet(ctx, "test_big")
+	g.Expect(err).ShouldNot(HaveOccurred())
+
+	itr := i.(*flowLogIterator)
+
+	g.Expect(itr.scrollers).Should(HaveLen(4), "Input was split into 2x2 arrays")
+	g.Expect(itr.scrollers[0].terms).Should(HaveLen(MaxClauseCount))
+	g.Expect(itr.scrollers[1].terms).Should(HaveLen(256))
+	g.Expect(itr.scrollers[2].terms).Should(HaveLen(MaxClauseCount))
+	g.Expect(itr.scrollers[3].terms).Should(HaveLen(256))
+}
+
 func TestElastic_ListIPSets(t *testing.T) {
 	g := NewGomegaWithT(t)
 
@@ -180,7 +207,7 @@ func TestSplitIPSetToInterface(t *testing.T) {
 	offset := 11
 
 	var input db.IPSetSpec
-	for i := 0; i < mul*MaxClausecount+offset; i++ {
+	for i := 0; i < mul*MaxClauseCount+offset; i++ {
 		input = append(input, fmt.Sprintf("%d", i))
 	}
 
@@ -188,14 +215,14 @@ func TestSplitIPSetToInterface(t *testing.T) {
 
 	g.Expect(len(output)).Should(Equal(mul + 1))
 	for i := 0; i < mul; i++ {
-		g.Expect(len(output[i])).Should(Equal(MaxClausecount))
+		g.Expect(len(output[i])).Should(Equal(MaxClauseCount))
 		for idx, v := range output[i] {
-			g.Expect(v).Should(Equal(fmt.Sprintf("%d", i*MaxClausecount+idx)))
+			g.Expect(v).Should(Equal(fmt.Sprintf("%d", i*MaxClauseCount+idx)))
 		}
 	}
 	g.Expect(len(output[mul])).Should(Equal(offset))
 	for idx, v := range output[mul] {
-		g.Expect(v).Should(Equal(fmt.Sprintf("%d", mul*MaxClausecount+idx)))
+		g.Expect(v).Should(Equal(fmt.Sprintf("%d", mul*MaxClauseCount+idx)))
 	}
 }
 
@@ -229,6 +256,13 @@ func (t *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 				StatusCode: 200,
 				Request:    req,
 				Body:       mustOpen("test_files/3.ipset.json"),
+			}, nil
+		// QueryIPSet
+		case baseURI + "/.tigera.ipset/_doc/test_big":
+			return &http.Response{
+				StatusCode: 200,
+				Request:    req,
+				Body:       mustOpen("test_files/big_ipset.json"),
 			}, nil
 
 		// GetIPSet

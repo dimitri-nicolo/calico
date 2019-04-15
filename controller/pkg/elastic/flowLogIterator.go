@@ -20,6 +20,7 @@ type Scroller interface {
 type scrollerEntry struct {
 	name     string
 	scroller Scroller
+	terms    []interface{}
 }
 
 type flowLogIterator struct {
