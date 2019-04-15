@@ -147,6 +147,10 @@ func (c *Container) signalDockerRun(sig os.Signal) {
 	logCxt.Info("Signalled docker run")
 }
 
+func (c *Container) Signal(sig os.Signal) {
+	c.signalDockerRun(sig)
+}
+
 type RunOpts struct {
 	AutoRemove    bool
 	WithStdinPipe bool
@@ -438,7 +442,7 @@ func (c *Container) ExecMayFail(cmd ...string) error {
 func (c *Container) ExecOutput(args ...string) (string, error) {
 	arg := []string{"exec", c.Name}
 	arg = append(arg, args...)
-	cmd := exec.Command("docker", arg...)
+	cmd := utils.Command("docker", arg...)
 	out, err := cmd.Output()
 	if err != nil {
 		if out == nil {

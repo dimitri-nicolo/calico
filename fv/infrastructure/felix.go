@@ -22,6 +22,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
@@ -351,4 +352,10 @@ func (f *Felix) Stop() {
 	} else {
 		Expect(cwLogDir + "/" + f.cwlFile).NotTo(BeAnExistingFile())
 	}
+}
+
+func (f *Felix) Restart() {
+	oldPID := f.GetFelixPID()
+	f.Signal(syscall.SIGHUP)
+	Eventually(f.GetFelixPID, "10s", "100ms").ShouldNot(Equal(oldPID))
 }

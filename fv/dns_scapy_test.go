@@ -22,9 +22,11 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path"
 	"strconv"
 	"strings"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -33,7 +35,9 @@ import (
 
 	"github.com/projectcalico/felix/fv/containers"
 	"github.com/projectcalico/felix/fv/infrastructure"
+	"github.com/projectcalico/felix/fv/utils"
 	"github.com/projectcalico/felix/fv/workload"
+	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
@@ -70,6 +74,7 @@ var _ = Describe("DNS Policy", func() {
 		opts.ExtraEnvVars["FELIX_DOMAININFOSTORE"] = "/dnsinfo/dnsinfo.txt"
 		opts.ExtraEnvVars["FELIX_DOMAININFOSAVEINTERVAL"] = "1"
 		opts.ExtraEnvVars["FELIX_DOMAININFOTRUSTEDSERVERS"] = scapyTrusted.IP
+		opts.ExtraEnvVars["FELIX_LOGSEVERITYSCREEN"] = "debug"
 		felix, etcd, client = infrastructure.StartSingleNodeEtcdTopology(opts)
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")
 
@@ -357,6 +362,148 @@ var _ = Describe("DNS Policy", func() {
 				{lhs: "alice.com", rhs: "10.10.10.4"},
 				{lhs: "alice.com", rhs: "10.10.10.6"},
 			}), "5s", "1s").Should(BeTrue())
+		})
+	})
+
+	Context("with a chain of DNS info for xyz.com", func() {
+		BeforeEach(func() {
+			// We use the etcd container as a target IP for the workload to ping, so
+			// arrange for it to route back to the workload.
+			etcd.Exec("ip", "r", "add", w[0].IP, "via", felix.IP)
+
+			// Create a chain of DNS info that maps xyz.com to that IP.
+			dnsServerSetup(scapyTrusted)
+			sendDNSResponses(scapyTrusted, []string{
+				"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='xyz.com',qtype='CNAME'),an=(DNSRR(rrname='xyz.com',type='CNAME',ttl=60,rdata='bob.xyz.com')))",
+				"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='bob.xyz.com',qtype='CNAME'),an=(DNSRR(rrname='bob.xyz.com',type='CNAME',ttl=10,rdata='server-5.xyz.com')))",
+				"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='server-5.xyz.com',qtype='A'),an=(DNSRR(rrname='server-5.xyz.com',type='A',ttl=60,rdata='" + etcd.IP + "')))",
+			})
+			scapyTrusted.Stdin.Close()
+		})
+
+		workloadCanPingEtcd := func() error {
+			out, err := w[0].ExecOutput("ping", "-c", "1", "-W", "1", etcd.IP)
+			log.WithError(err).Infof("ping said:\n%v", out)
+			if err != nil {
+				log.Infof("stderr was:\n%v", string(err.(*exec.ExitError).Stderr))
+			}
+			return err
+		}
+
+		It("workload can ping etcd, because there's no policy", func() {
+			Expect(workloadCanPingEtcd()).NotTo(HaveOccurred())
+		})
+
+		Context("with default-deny egress policy", func() {
+			BeforeEach(func() {
+				policy := api.NewGlobalNetworkPolicy()
+				policy.Name = "default-deny-egress"
+				policy.Spec.Selector = "all()"
+				policy.Spec.Egress = []api.Rule{{
+					Action: api.Deny,
+				}}
+				_, err := client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("workload cannot ping etcd", func() {
+				Eventually(workloadCanPingEtcd, "5s", "1s").Should(HaveOccurred())
+			})
+
+			Context("with domain-allow egress policy", func() {
+				BeforeEach(func() {
+					policy := api.NewGlobalNetworkPolicy()
+					policy.Name = "allow-xyz"
+					order := float64(20)
+					policy.Spec.Order = &order
+					policy.Spec.Selector = "all()"
+					policy.Spec.Egress = []api.Rule{
+						{
+							Action:      api.Allow,
+							Destination: api.EntityRule{Domains: []string{"xyz.com"}},
+						},
+					}
+					_, err := client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("workload can ping etcd", func() {
+					Eventually(workloadCanPingEtcd, "5s", "1s").ShouldNot(HaveOccurred())
+				})
+
+				Context("with 11s sleep so that DNS info expires", func() {
+					BeforeEach(func() {
+						time.Sleep(11 * time.Second)
+					})
+
+					It("workload cannot ping etcd", func() {
+						Eventually(workloadCanPingEtcd, "5s", "1s").Should(HaveOccurred())
+					})
+				})
+
+				Context("with a Felix restart", func() {
+					BeforeEach(func() {
+						felix.Restart()
+						// Allow a bit of time for Felix to re-read the
+						// persistent file and update the dataplane, but not
+						// long enough (8s) for the DNS info to expire.
+						time.Sleep(3 * time.Second)
+					})
+
+					It("workload can still ping etcd", func() {
+						Eventually(workloadCanPingEtcd, "5s", "1s").ShouldNot(HaveOccurred())
+					})
+				})
+			})
+
+			Context("with networkset with allowed egress domains", func() {
+				BeforeEach(func() {
+					gns := api.NewGlobalNetworkSet()
+					gns.Name = "allow-xyz"
+					gns.Labels = map[string]string{"thingy": "xyz"}
+					gns.Spec.AllowedEgressDomains = []string{"xyz.com"}
+					_, err := client.GlobalNetworkSets().Create(utils.Ctx, gns, utils.NoOptions)
+					Expect(err).NotTo(HaveOccurred())
+
+					policy := api.NewGlobalNetworkPolicy()
+					policy.Name = "allow-xyz"
+					order := float64(20)
+					policy.Spec.Order = &order
+					policy.Spec.Selector = "all()"
+					policy.Spec.Egress = []api.Rule{
+						{
+							Action:      api.Allow,
+							Destination: api.EntityRule{Selector: "thingy == 'xyz'"},
+						},
+					}
+					_, err = client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				Context("with a Felix restart", func() {
+					BeforeEach(func() {
+						felix.Restart()
+						// Allow a bit of time for Felix to re-read the
+						// persistent file and update the dataplane, but not
+						// long enough (8s) for the DNS info to expire.
+						time.Sleep(3 * time.Second)
+					})
+
+					It("workload can still ping etcd", func() {
+						Eventually(workloadCanPingEtcd, "5s", "1s").ShouldNot(HaveOccurred())
+					})
+
+					Context("with 10s sleep so that DNS info expires", func() {
+						BeforeEach(func() {
+							time.Sleep(10 * time.Second)
+						})
+
+						It("workload cannot ping etcd", func() {
+							Eventually(workloadCanPingEtcd, "5s", "1s").Should(HaveOccurred())
+						})
+					})
+				})
+			})
 		})
 	})
 })

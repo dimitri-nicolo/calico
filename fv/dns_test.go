@@ -253,6 +253,5 @@ var _ = Describe("DNS Policy", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})
-
 	})
 })
