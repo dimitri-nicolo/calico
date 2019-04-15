@@ -175,13 +175,14 @@ func (m *vxlanManager) CompleteDeferredWork() error {
 
 	// Remove routes that are no longer needed.
 	netPolsToRemove.Iter(func(item interface{}) error {
-		polReq := wrapPolSettings(item.(hcn.RemoteSubnetRoutePolicySetting))
+		polSetting := item.(hcn.RemoteSubnetRoutePolicySetting)
+		polReq := wrapPolSettings(polSetting)
 		if polReq == nil {
 			return nil
 		}
 		err = network.RemovePolicy(*polReq)
 		if err != nil {
-			logrus.WithError(err).WithField("request", polReq).Error("Failed to remove unwanted VXLAN route policy")
+			logrus.WithError(err).WithField("request", polSetting).Error("Failed to remove unwanted VXLAN route policy")
 			return nil
 		}
 		return set.RemoveItem
