@@ -152,6 +152,7 @@ func Convert_projectcalico_GlobalNetworkSetList_To_v3_GlobalNetworkSetList(in *p
 func autoConvert_v3_GlobalReport_To_projectcalico_GlobalReport(in *GlobalReport, out *projectcalico.GlobalReport, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
 	out.Spec = in.Spec
+	out.Status = in.Status
 	return nil
 }
 
@@ -163,6 +164,7 @@ func Convert_v3_GlobalReport_To_projectcalico_GlobalReport(in *GlobalReport, out
 func autoConvert_projectcalico_GlobalReport_To_v3_GlobalReport(in *projectcalico.GlobalReport, out *GlobalReport, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
 	out.Spec = in.Spec
+	out.Status = in.Status
 	return nil
 }
 

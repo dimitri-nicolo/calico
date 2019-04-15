@@ -251,7 +251,11 @@ func (p RESTStorageProvider) NewV3Storage(
 	storage["globalthreatfeeds/status"] = globalThreatFeedsStatusStorage
 
 	storage["hostendpoints"] = calicohostendpoint.NewREST(scheme, *hostEndpointOpts)
-	storage["globalreports"] = calicoglobalreport.NewREST(scheme, *globalReportOpts)
+
+	globalReportsStorage, globalReportsStatusStorage := calicoglobalreport.NewREST(scheme, *globalReportOpts)
+	storage["globalreports"] = globalReportsStorage
+	storage["globalreports/status"] = globalReportsStatusStorage
+
 	storage["globalreporttypes"] = calicoglobalreporttype.NewREST(scheme, *globalReportTypeOpts)
 
 	return storage, nil

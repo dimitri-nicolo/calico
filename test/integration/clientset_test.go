@@ -899,6 +899,20 @@ func testGlobalReportClient(client calicoclient.Interface, name string) error {
 	globalReportClient := client.ProjectcalicoV3().GlobalReports()
 	globalReport := &v3.GlobalReport{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Status: calico.ReportStatus{
+			LastSuccessfulReport: &calico.ReportCreationStatus{
+				GenerationTime: metav1.Time{time.Now()},
+				Start:          metav1.Time{time.Now()},
+				End:            metav1.Time{time.Now()},
+				ReportType:     "endpoints",
+			},
+			ErrorConditions: []calico.ErrorCondition{
+				{
+					Type:    "foo",
+					Message: "bar",
+				},
+			},
+		},
 	}
 
 	// Make sure there is no GlobalReport configured.
@@ -918,6 +932,9 @@ func testGlobalReportClient(client calicoclient.Interface, name string) error {
 	if name != globalReportServer.Name {
 		return fmt.Errorf("didn't get the same globalReport back from the server \n%+v\n%+v", globalReport, globalReportServer)
 	}
+	if !reflect.DeepEqual(globalReportServer.Status, calico.ReportStatus{}) {
+		return fmt.Errorf("status was set on create to %#v", globalReportServer.Status)
+	}
 
 	globalReports, err = globalReportClient.List(metav1.ListOptions{})
 	if err != nil {
@@ -934,6 +951,42 @@ func testGlobalReportClient(client calicoclient.Interface, name string) error {
 	if name != globalReportServer.Name &&
 		globalReport.ResourceVersion == globalReportServer.ResourceVersion {
 		return fmt.Errorf("didn't get the same globalReport back from the server \n%+v\n%+v", globalReport, globalReportServer)
+	}
+
+	// Pupulate both GlobalReport and ReportStatus.
+	// Verify that Update() modifies GlobalReport only.
+	globalReportUpdate := globalReportServer.DeepCopy()
+	globalReportUpdate.Spec.ReportType = "Inventory"
+	globalReportUpdate.Status.LastSuccessfulReport = &calico.ReportCreationStatus{
+		GenerationTime: v1.Time{Time: time.Now()},
+	}
+	globalReportServer, err = globalReportClient.Update(globalReportUpdate)
+	if err != nil {
+		return fmt.Errorf("error updating globalReport %s (%s)", name, err)
+	}
+	if globalReportServer.Spec.JobSchedule != globalReportUpdate.Spec.JobSchedule {
+		return errors.New("GlobalReport Update() didn't update Spec.JobScdedule")
+	}
+	if globalReportServer.Status.LastSuccessfulReport != nil {
+		return errors.New("GlobalReport status was updated by Update()")
+	}
+
+	// Pupulate both GlobalReport and ReportStatus.
+	// Verify that UpdateStatus() modifies ReportStatus only.
+	globalReportUpdate = globalReportServer.DeepCopy()
+	globalReportUpdate.Status.LastSuccessfulReport = &calico.ReportCreationStatus{
+		GenerationTime: v1.Time{Time: time.Now()},
+	}
+	globalReportUpdate.Labels = map[string]string{"foo": "bar"}
+	globalReportServer, err = globalReportClient.UpdateStatus(globalReportUpdate)
+	if err != nil {
+		return fmt.Errorf("error updating globalReport %s (%s)", name, err)
+	}
+	if globalReportServer.Status.LastSuccessfulReport.GenerationTime.Time.Equal(time.Time{}) {
+		return fmt.Errorf("didn't update GlobalReport status. %v != %v", globalReportUpdate.Status, globalReportServer.Status)
+	}
+	if _, ok := globalReportServer.Labels["foo"]; ok {
+		return fmt.Errorf("updatestatus updated labels")
 	}
 
 	err = globalReportClient.Delete(name, &metav1.DeleteOptions{})
@@ -1015,11 +1068,7 @@ func testGlobalReportTypeClient(client calicoclient.Interface, name string) erro
 		Spec: calico.ReportTypeSpec{
 			UISummaryTemplate: calico.ReportTemplate{
 				Name:     "uist",
-				Template: "Total Endpoints: {{ .EndpointsNumTotal }}",
-			},
-			UICompleteTemplate: calico.ReportTemplate{
-				Name:     "uict",
-				Template: "Total Endpoints: {{ .EndpointsNumTotal }}",
+				Template: "Report Name: {{ .ReportName }}",
 			},
 		},
 	}
@@ -1096,11 +1145,7 @@ func testGlobalReportTypeClient(client calicoclient.Interface, name string) erro
 			Spec: calico.ReportTypeSpec{
 				UISummaryTemplate: calico.ReportTemplate{
 					Name:     fmt.Sprintf("uist%d", i),
-					Template: "Total Endpoints: {{ .EndpointsNumTotal }}",
-				},
-				UICompleteTemplate: calico.ReportTemplate{
-					Name:     fmt.Sprintf("uict%d", i),
-					Template: "Total Endpoints: {{ .EndpointsNumTotal }}",
+					Template: "Report Name: {{ .ReportName }}",
 				},
 			},
 		}

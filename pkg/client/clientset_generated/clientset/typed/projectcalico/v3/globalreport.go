@@ -23,6 +23,7 @@ type GlobalReportsGetter interface {
 type GlobalReportInterface interface {
 	Create(*v3.GlobalReport) (*v3.GlobalReport, error)
 	Update(*v3.GlobalReport) (*v3.GlobalReport, error)
+	UpdateStatus(*v3.GlobalReport) (*v3.GlobalReport, error)
 	Delete(name string, options *v1.DeleteOptions) error
 	DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error
 	Get(name string, options v1.GetOptions) (*v3.GlobalReport, error)
@@ -93,6 +94,21 @@ func (c *globalReports) Update(globalReport *v3.GlobalReport) (result *v3.Global
 	err = c.client.Put().
 		Resource("globalreports").
 		Name(globalReport.Name).
+		Body(globalReport).
+		Do().
+		Into(result)
+	return
+}
+
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+
+func (c *globalReports) UpdateStatus(globalReport *v3.GlobalReport) (result *v3.GlobalReport, err error) {
+	result = &v3.GlobalReport{}
+	err = c.client.Put().
+		Resource("globalreports").
+		Name(globalReport.Name).
+		SubResource("status").
 		Body(globalReport).
 		Do().
 		Into(result)
