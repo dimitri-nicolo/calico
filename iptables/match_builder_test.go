@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -59,6 +59,8 @@ var _ = DescribeTable("MatchBuilder",
 	Entry("NotMarkMatchesWithMask", Match().NotMarkMatchesWithMask(0x400a, 0xf00f), "-m mark ! --mark 0x400a/0xf00f"),
 	// Conntrack.
 	Entry("ConntrackState", Match().ConntrackState("INVALID"), "-m conntrack --ctstate INVALID"),
+	Entry("ConntrackOrigDst", Match().ConntrackOrigDst("8.8.8.8"), "-m conntrack --ctorigdst 8.8.8.8"),
+	Entry("ConntrackOrigDstPort", Match().ConntrackOrigDstPort(53), "-m conntrack --ctorigdstport 53"),
 	// Interfaces.
 	Entry("InInterface", Match().InInterface("tap1234abcd"), "--in-interface tap1234abcd"),
 	Entry("OutInterface", Match().OutInterface("tap1234abcd"), "--out-interface tap1234abcd"),

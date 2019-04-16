@@ -515,7 +515,6 @@ func (r *DefaultRuleRenderer) StaticFilterForwardChains(ipVersion uint8) []*Chai
 			}
 			rules = append(rules,
 				Rule{
-					// When we add DNS server vetting here, we will use --ctorigdst to do that.
 					Match: Match().OutInterface(ifaceMatch).Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53).ConntrackOrigDst(serverIP),
 					Action: NflogAction{
 						Group:       NFLOGDomainGroup,
