@@ -25,6 +25,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/fv/containers"
 	"github.com/projectcalico/felix/fv/infrastructure"
@@ -106,6 +107,7 @@ var _ = Describe("DNS Policy", func() {
 						foundIpsetName = true
 					}
 				}
+				log.Infof("ipset list said:\n%v", ipsetList)
 				return ""
 			}, "5s", "1s").Should(Equal("1000"))
 
