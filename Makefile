@@ -463,17 +463,9 @@ install-git-hooks:
 # Tests
 ###############################################################################
 .PHONY: ut
-ut combined.coverprofile: export-mockdata
+ut combined.coverprofile: run-elastic
 	@echo Running Go UTs.
 	$(DOCKER_RUN) $(LOCAL_BUILD_MOUNTS) -e ELASTIC_HOST=localhost $(CALICO_BUILD) ./utils/run-coverage
-
-export-mockdata: $(SRC_FILES) vendor/.up-to-date run-elastic
-	@echo Exporting testdata...
-	$(DOCKER_RUN) \
-	-e ELASTIC_HOST=localhost \
-	$(LOCAL_BUILD_MOUNTS) \
-	golang:1.11 \
-	go run "$(PACKAGE_NAME)/cmd/mockdata-exporter"
 
 ## Run elasticsearch as a container (tigera-elastic)
 run-elastic: stop-elastic
