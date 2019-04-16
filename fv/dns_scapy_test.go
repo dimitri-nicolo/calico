@@ -322,7 +322,7 @@ var _ = Describe("DNS Policy", func() {
 			// Start another scapy.  This one's IP won't be trusted by Felix.
 			scapyUntrusted = containers.Run("scapy",
 				containers.RunOpts{AutoRemove: true, WithStdinPipe: true},
-				"-i", "--privileged", "scapy")
+				"-i", "--privileged", "tigera-test/scapy")
 		})
 
 		It("s DNS information should be ignored", func() {
