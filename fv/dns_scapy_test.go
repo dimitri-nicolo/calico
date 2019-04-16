@@ -66,8 +66,7 @@ var _ = Describe("DNS Policy", func() {
 		// Start scapy first, so we can get its IP and configure Felix to trust it.
 		scapyTrusted = containers.Run("scapy",
 			containers.RunOpts{AutoRemove: true, WithStdinPipe: true},
-			"-i", "--privileged", "scapy")
-		scapyTrusted.WaitUntilRunning()
+			"-i", "--privileged", "tigera-test/scapy")
 
 		// Now start etcd and Felix, with Felix trusting scapy's IP.
 		opts.ExtraVolumes[dnsDir] = "/dnsinfo"
