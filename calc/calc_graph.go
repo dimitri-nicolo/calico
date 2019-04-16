@@ -241,14 +241,22 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, hostn
 	ruleScanner.OnIPSetActive = func(ipSet *IPSetData) {
 		log.WithField("ipSet", ipSet).Info("IPSet now active")
 		callbacks.OnIPSetAdded(ipSet.UniqueID(), ipSet.DataplaneProtocolType())
-		ipsetMemberIndex.UpdateIPSet(ipSet.UniqueID(), ipSet.Selector, ipSet.NamedPortProtocol, ipSet.NamedPort)
-		gaugeNumActiveSelectors.Inc()
+		if ipSet.Selector != nil {
+			if !ipSet.isDomainSet {
+				defer gaugeNumActiveSelectors.Inc()
+			}
+			ipsetMemberIndex.UpdateIPSet(ipSet.UniqueID(), ipSet.Selector, ipSet.NamedPortProtocol, ipSet.NamedPort)
+		}
 	}
 	ruleScanner.OnIPSetInactive = func(ipSet *IPSetData) {
 		log.WithField("ipSet", ipSet).Info("IPSet now inactive")
-		ipsetMemberIndex.DeleteIPSet(ipSet.UniqueID())
+		if ipSet.Selector != nil {
+			if !ipSet.isDomainSet {
+				defer gaugeNumActiveSelectors.Dec()
+			}
+			ipsetMemberIndex.DeleteIPSet(ipSet.UniqueID())
+		}
 		callbacks.OnIPSetRemoved(ipSet.UniqueID())
-		gaugeNumActiveSelectors.Dec()
 	}
 	// Send the IP set member index's outputs to the dataplane.
 	ipsetMemberIndex.OnMemberAdded = func(ipSetID string, member labelindex.IPSetMember) {
