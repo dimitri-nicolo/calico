@@ -163,7 +163,12 @@ type jsonMappingV1 struct {
 }
 
 func (s *domainInfoStore) readMappings() error {
-	// This happens before the domain info store thread is started, so no need for locking.
+	// This happens before the domain info store thread is started, so we don't need locking for
+	// concurrency reasons.  But we do need to lock the mutex because we'll be calling through
+	// to subroutines that assume it's locked and briefly unlock it.
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
 	f, err := os.Open(s.saveFile)
 	if err != nil {
 		return err
@@ -289,11 +294,16 @@ func (s *domainInfoStore) processMappingExpiry(name, value string) {
 	defer s.mutex.Unlock()
 	if nameData := s.mappings[name]; nameData != nil {
 		if valueData := nameData.values[value]; (valueData != nil) && valueData.expiryTime.Before(time.Now()) {
+			log.Debugf("Mapping expiry for %v -> %v", name, value)
 			delete(nameData.values, value)
 			if len(nameData.values)+len(nameData.ancestorNames) == 0 {
 				delete(s.mappings, name)
 			}
 			s.signalDomainInfoChange(name)
+		} else if valueData != nil {
+			log.Debugf("Too early mapping expiry for %v -> %v", name, value)
+		} else {
+			log.Debugf("Mapping already gone for %v -> %v", name, value)
 		}
 	}
 }
@@ -380,6 +390,10 @@ func (s *domainInfoStore) GetDomainIPs(domain string) []string {
 	if ips == nil {
 		var collectIPsForName func(string, []string)
 		collectIPsForName = func(domain string, ancestorNames []string) {
+			log.WithFields(log.Fields{
+				"domain":        domain,
+				"ancestorNames": ancestorNames,
+			}).Debug("Collect IPs for name")
 			if nameData := s.mappings[domain]; nameData != nil {
 				nameData.ancestorNames = ancestorNames
 				for value, valueData := range nameData.values {
