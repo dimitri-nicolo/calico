@@ -25,7 +25,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/fv/containers"
 	"github.com/projectcalico/felix/fv/infrastructure"
@@ -90,26 +89,14 @@ var _ = Describe("DNS Policy", func() {
 			_, err := client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
 			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(func() string {
-				ipsetList, err := felix.ExecOutput("ipset", "list")
-				Expect(err).NotTo(HaveOccurred())
-				foundIpsetName := false
-				const (
-					namePrefix       = "Name: cali40d:"
-					numEntriesPrefix = "Number of entries: "
-				)
-				for _, ipsetLine := range strings.Split(ipsetList, "\n") {
-					if foundIpsetName {
-						if strings.HasPrefix(ipsetLine, numEntriesPrefix) {
-							return strings.TrimSpace(ipsetLine[len(numEntriesPrefix):])
-						}
-					} else if strings.HasPrefix(ipsetLine, namePrefix) {
-						foundIpsetName = true
+			Eventually(func() int {
+				for name, count := range getIPSetCounts(felix.Container) {
+					if strings.HasPrefix(name, "cali40d:") {
+						return count
 					}
 				}
-				log.Infof("ipset list said:\n%v", ipsetList)
-				return ""
-			}, "5s", "1s").Should(Equal("1000"))
+				return 0
+			}, "5s", "1s").Should(Equal(1000))
 
 			// Now stop Felix again.
 			w.Stop()

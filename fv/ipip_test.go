@@ -1,6 +1,6 @@
 // +build fvtests
 
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -252,6 +252,10 @@ var _ = infrastructure.DatastoreDescribe("IPIP topology before adding host IPs t
 })
 
 func getNumIPSetMembers(c *containers.Container, ipSetName string) int {
+	return getIPSetCounts(c)[ipSetName]
+}
+
+func getIPSetCounts(c *containers.Container) map[string]int {
 	ipsetsOutput, err := c.ExecOutput("ipset", "list")
 	Expect(err).NotTo(HaveOccurred())
 	numMembers := map[string]int{}
@@ -270,5 +274,5 @@ func getNumIPSetMembers(c *containers.Container, ipSetName string) int {
 			numMembers[currentName]++
 		}
 	}
-	return numMembers[ipSetName]
+	return numMembers
 }
