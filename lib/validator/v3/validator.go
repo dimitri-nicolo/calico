@@ -1324,6 +1324,18 @@ func validateReportTemplate(structLevel validator.StructLevel) {
 				"",
 			)
 		}
+
+		// Run past nil pointer data to see if the template is valid.
+		_, err = compliance.RenderTemplate(tmpl, &compliance.ReportDataNilNamespace)
+		if err != nil {
+			structLevel.ReportError(
+				reflect.ValueOf(rt.Name),
+				"ReportTemplate",
+				"",
+				reason("Template contains nil-pointer in: "+rt.Name),
+				"",
+			)
+		}
 	}
 }
 

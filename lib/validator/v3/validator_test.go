@@ -2380,8 +2380,8 @@ func init() {
 				Spec: api.ReportTypeSpec{
 					UISummaryTemplate: api.ReportTemplate{
 						Name: "uist",
-						Template: `startTime,endTime,endpointSelector,namespaceSelector,serviceAccountSelectors,endpointsNumInScope,endpointsNumIngressProtected,endpointsNumEgressProtected,endpointsNumIngressFromInternet,endpointsNumEgressToInternet,endpointsNumIngressFromOtherNamespace,endpointsNumEgressToOtherNamespace,endpointsNumEnvoyEnabled
-{{ .StartTime }},{{ .EndTime }},{{ .ReportSpec.EndpointsSelection.EndpointSelector }},{{ .ReportSpec.EndpointsSelection.Namespaces.Selector }},{{ .ReportSpec.EndpointsSelection.ServiceAccounts.Selector }},{{ .EndpointsSummary.NumTotal }},{{ .EndpointsSummary.NumIngressProtected }},{{ .EndpointsSummary.NumEgressProtected }},{{ .EndpointsSummary.NumIngressFromInternet }},{{ .EndpointsSummary.NumEgressToInternet }},{{ .EndpointsSummary.NumIngressFromOtherNamespace }},{{ .EndpointsSummary.NumEgressToOtherNamespace }},{{ .EndpointsSummary.NumEnvoyEnabled }}`,
+						Template: `ReportName,EndpointSelector
+{{ .ReportName }},{{ .ReportSpec.EndpointsSelection.EndpointSelector }}`,
 					},
 				},
 			},
@@ -2420,13 +2420,25 @@ func init() {
 			},
 			false,
 		),
+		Entry("Catch invalid templates using nil data",
+			&api.GlobalReportType{
+				ObjectMeta: v1.ObjectMeta{Name: "grt"},
+				Spec: api.ReportTypeSpec{
+					UISummaryTemplate: api.ReportTemplate{
+						Name:     "report-nil-namespace",
+						Template: "{{ .ReportSpec.EndpointsSelection.Namespaces.Names }}",
+					},
+				},
+			},
+			false,
+		),
 
 		// GlobalReport
 		Entry("disallow GlobalReport with invalid k8s name",
 			&api.GlobalReport{
 				ObjectMeta: v1.ObjectMeta{Name: "~gr"},
 				Spec: api.ReportSpec{
-					ReportType: "Summary",
+					ReportType: "summary",
 				},
 			},
 			false,
@@ -2435,7 +2447,7 @@ func init() {
 			&api.GlobalReport{
 				ObjectMeta: v1.ObjectMeta{Name: "gr"},
 				Spec: api.ReportSpec{
-					ReportType: "Summary",
+					ReportType: "summary",
 				},
 			},
 			true,
@@ -2444,7 +2456,7 @@ func init() {
 			&api.GlobalReport{
 				ObjectMeta: v1.ObjectMeta{Name: "gr"},
 				Spec: api.ReportSpec{
-					ReportType:  "Summary",
+					ReportType:  "summary",
 					JobSchedule: "61 * * * *",
 				},
 			},
@@ -2454,7 +2466,7 @@ func init() {
 			&api.GlobalReport{
 				ObjectMeta: v1.ObjectMeta{Name: "gr"},
 				Spec: api.ReportSpec{
-					ReportType:  "Summary",
+					ReportType:  "summary",
 					JobSchedule: "* * * * *",
 				},
 			},

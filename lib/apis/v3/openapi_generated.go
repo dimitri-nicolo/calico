@@ -6681,7 +6681,7 @@ func schema_libcalico_go_lib_apis_v3_ReportData(ref common.ReferenceCallback) co
 							Format: "",
 						},
 					},
-					"reportType": {
+					"reportTypeName": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"string"},
 							Format: "",
@@ -6690,6 +6690,11 @@ func schema_libcalico_go_lib_apis_v3_ReportData(ref common.ReferenceCallback) co
 					"reportSpec": {
 						SchemaProps: spec.SchemaProps{
 							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ReportSpec"),
+						},
+					},
+					"reportTypeSpec": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ReportTypeSpec"),
 						},
 					},
 					"startTime": {
@@ -6779,11 +6784,11 @@ func schema_libcalico_go_lib_apis_v3_ReportData(ref common.ReferenceCallback) co
 						},
 					},
 				},
-				Required: []string{"reportName", "reportType", "reportSpec", "startTime", "endTime"},
+				Required: []string{"reportName", "reportTypeName", "reportSpec", "reportTypeSpec", "startTime", "endTime"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.AuditSummary", "github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportEndpoint", "github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportNamespace", "github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportService", "github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsSummary", "github.com/projectcalico/libcalico-go/lib/apis/v3.ReportSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.Time", "k8s.io/apiserver/pkg/apis/audit.Event"},
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.AuditSummary", "github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportEndpoint", "github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportNamespace", "github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportService", "github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsSummary", "github.com/projectcalico/libcalico-go/lib/apis/v3.ReportSpec", "github.com/projectcalico/libcalico-go/lib/apis/v3.ReportTypeSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.Time", "k8s.io/apiserver/pkg/apis/audit.Event"},
 	}
 }
 
@@ -6793,7 +6798,7 @@ func schema_libcalico_go_lib_apis_v3_ReportSpec(ref common.ReferenceCallback) co
 			SchemaProps: spec.SchemaProps{
 				Description: "ReportSpec contains the values of the GlobalReport.",
 				Properties: map[string]spec.Schema{
-					"ReportType": {
+					"reportType": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The name of the report type.",
 							Type:        []string{"string"},
@@ -6834,7 +6839,7 @@ func schema_libcalico_go_lib_apis_v3_ReportSpec(ref common.ReferenceCallback) co
 						},
 					},
 				},
-				Required: []string{"ReportType"},
+				Required: []string{"reportType"},
 			},
 		},
 		Dependencies: []string{
