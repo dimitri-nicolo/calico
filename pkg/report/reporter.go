@@ -242,7 +242,7 @@ func (r *reporter) transferAggregatedData() {
 		delete(r.namespaces, name)
 
 		// Update the summary stats.
-		updateSummary(zeroTrustFlags, &r.data.EndpointsSummary, true)
+		updateSummary(zeroTrustFlags, &r.data.NamespacesSummary, true)
 	}
 
 	// We can delete the dictionary now.
@@ -262,7 +262,7 @@ func (r *reporter) transferAggregatedData() {
 		delete(r.services, id)
 
 		// Update the summary stats.
-		updateSummary(zeroTrustFlags, &r.data.EndpointsSummary, false)
+		updateSummary(zeroTrustFlags, &r.data.ServicesSummary, false)
 	}
 
 	// We can delete the dictionary now.
