@@ -1105,7 +1105,7 @@ deleteEtcdDeployment() {
 applyLicenseManifest() {
   if [ "$LICENSE_FILE" ]; then
     echo -n "Applying license file: ${LICENSE_FILE} "
-    run "${CALICO_UTILS_INSTALL_DIR}/calicoctl"
+    run "${CALICO_UTILS_INSTALL_DIR}/calicoctl apply -f ${LICENSE_FILE}"
     echo "done."
   fi
 }
