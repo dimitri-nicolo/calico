@@ -27,7 +27,7 @@ Prior to applying the `calico.yaml` manifest that will install Calico, modify th
   felix-policy-sync-path-prefix: "/var/run/nodeagent"
 ```
 
-Prior to applying the `cnx.yaml` manifest that will install the {{ site.prodname }} Manager and API Server, modify the
+Prior to applying the `cnx.yaml` manifest that will install the {{ site.prodname }} Manager, modify the
 file to set the `tigera.cnx-manager.alp-support` value in the `tigera-cnx-manager-config` ConfigMap as follows:
 
 ```yaml

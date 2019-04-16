@@ -136,17 +136,75 @@ kubectl get pods --all-namespaces
 
 {% include {{page.version}}/apply-license.md %}
 
-## <a name="install-cnx-mgr"></a>Installing the {{site.prodname}} Manager and API Server
-1. Download the {{site.prodname}} etcd manifest and save the file as cnx.yaml. That is how we will refer to it in later steps.
+## <a name="install-api-server"></a>Installing the {{site.prodname}} API Server
+1. Download the {{site.prodname}} etcd manifest and save the file as cnx-api.yaml. That is how we will refer to it in later steps.
 
     ```bash
-    curl --compressed -o cnx.yaml \
-    {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-etcd.yaml
+    curl --compressed -o cnx-api.yaml \
+    {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-api-etcd.yaml
     ```
 
     > **Note**: If you are upgrading from {{site.prodname}} v2.2 or earlier you will need to make some modifications prior
     > to upgrade to ensure RBAC behavior for tiered policy is unchanged. Please refer to the instructions in the comments for
-    > `ClusterRole "ee-calico-tiered-policy-passthru"` in the `cnx.yaml` manifest, or the
+    > `ClusterRole "ee-calico-tiered-policy-passthru"` in the `cnx-api.yaml` manifest, or the
+    > [Configuring {{site.prodname}} RBAC]({{site.url}}/{{page.version}}/reference/cnx/rbac-tiered-policies) documentation
+    > for more details.
+    {: .alert .alert-info}
+
+{% include {{page.version}}/cnx-cred-sed.md yaml="cnx-api" %}
+
+1. Apply the manifest to install the {{site.prodname}} API server.
+
+   ```bash
+   kubectl apply -f cnx-api.yaml
+   ```
+
+1. Confirm that all of the pods are running with the following command.
+
+   ```bash
+   watch kubectl get pods --all-namespaces
+   ```
+
+   Wait until each pod has the `STATUS` of `Running`.
+
+1. Apply the following manifest to set network policy that allows users and the {{site.prodname}} API server
+   to access the {{site.prodname}} Manager.
+
+   ```bash
+   kubectl apply -f \
+   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml
+   ```
+
+   > **Note**: You can also
+   > [view the manifest in a new tab]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml).
+   {: .alert .alert-info}
+
+1. For production installs, we recommend using your own Elasticsearch cluster. If you are performing a
+   production install, refer to
+   [Using your own Elasticsearch for logs](byo-elasticsearch). Then skip to the [Accessing the {{site.prodname}} UI](#accessing-cnx-mgr) section.
+
+   For demonstration or proof of concept installs, you can use the bundled
+   [Elasticsearch operator](https://github.com/upmc-enterprises/elasticsearch-operator). Continue to the
+   next step to complete a demonstration or proof of concept install.
+
+   > **Important**: The bundled Elasticsearch operator does not provide reliable persistent storage
+   of logs or authenticate access to Kibana.
+   {: .alert .alert-danger}
+
+{% include {{page.version}}/cnx-monitor-install.md elasticsearch="operator" platform="docker-ee" %}
+
+## <a name="install-cnx-mgr"></a>Installing the {{site.prodname}} Manager
+
+1. Download the {{site.prodname}} etcd manifest and save the file as cnx.yaml. That is how we will refer to it in later steps.
+
+    ```bash
+    curl --compressed -O \
+    {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx.yaml
+    ```
+
+    > **Note**: If you are upgrading from {{site.prodname}} v2.2 or earlier you will need to make some modifications prior
+    > to upgrade to ensure RBAC behavior for tiered policy is unchanged. Please refer to the instructions in the comments for
+    > `ClusterRole "ee-calico-tiered-policy-passthru"` in the `cnx-api.yaml` manifest, or the
     > [Configuring {{site.prodname}} RBAC]({{site.url}}/{{page.version}}/reference/cnx/rbac-tiered-policies) documentation
     > for more details.
     {: .alert .alert-info}
@@ -199,7 +257,7 @@ kubectl get pods --all-namespaces
      > instead, refer to [{{site.prodname}} Manager connections]({{site.url}}/{{page.version}}/security/comms/crypto-auth#{{site.prodnamedash}}-manager-connections).
      {: .alert .alert-info}
 
-1. Apply the manifest to install the {{site.prodname}} Manager and the {{site.prodname}} API server.
+1. Apply the manifest to install the {{site.prodname}} Manager.
 
    ```bash
    kubectl apply -f cnx.yaml
@@ -225,23 +283,10 @@ kubectl get pods --all-namespaces
    > [view the manifest in a new tab]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml).
    {: .alert .alert-info}
  
-1. For production installs, we recommend using your own Elasticsearch cluster. If you are performing a
-   production install, refer to
-   [Using your own Elasticsearch for logs](byo-elasticsearch). Then skip to the [Accessing the {{site.prodname}} UI](#accessing-cnx-mgr) section.
-
-   For demonstration or proof of concept installs, you can use the bundled
-   [Elasticsearch operator](https://github.com/upmc-enterprises/elasticsearch-operator). Continue to the
-   next step to complete a demonstration or proof of concept install.
-
-   > **Important**: The bundled Elasticsearch operator does not provide reliable persistent storage
-   of logs or authenticate access to Kibana.
-   {: .alert .alert-danger}
-
-{% include {{page.version}}/cnx-monitor-install.md elasticsearch="operator" platform="docker-ee" %}
 
 ## <a name="accessing-cnx-mgr"></a>Accessing the {{site.prodname}} UI
 Authentication to {{site.prodname}} UI is performed via tokens for Docker Enterprise. The authentication method was specified
-in the cnx.yaml file in the previous [Installing {{site.prodname}} Manager and API Server](#install-cnx-mgr) section to use a `Token`.
+in the cnx.yaml file in the previous [Installing {{site.prodname}} Manager](#install-cnx-mgr) section to use a `Token`.
 In this section, we will create the `ServiceAccount` which will create a token to use.
 
 In order to access the {{site.prodname}} UI an account and a role needs to be setup in Kubernetes.

@@ -180,24 +180,18 @@ optionally Elasticsearch and Kibana in order to enable logs.
     {{docpath}}{{secure}}/monitor-calico.yaml
     ```
 
-1. Edit the `GlobalNetworkSet` named `k8sapi-endpoints` to specify the IP addresses of the hosts that are running the Kubernetes API server.
-
-   ```yaml
-   apiVersion: projectcalico.org/v3
-   kind: GlobalNetworkSet
-   metadata:
-     name: k8sapi-endpoints
-     labels:
-       role: k8s-apiserver-endpoints
-   spec:
-     nets:
-     - <Kubernetes API server IP address CIDR>
+1. Update the `tigera-es-config` configmap with information on how to reach the BYO Elasticsearch cluster.
+   Replace `<elasticsearch-host>` with the hostname (or IP) {{site.prodname}} should access Elasticsearch through.
+   Replace `<elasticsearch-port>` with the port Elasticsearch is listening on.
+   Replace `<kibana-host>` with the hostname (or IP) {{site.prodname}} should access Kibana through.
+   Replace `<kibana-port>` with the port Kibana is listening on.
    ```
-   {: .no-select-button}
+   sed -i -e "s?__ELASTICSEARCH_HOST__?<elasticsearch-host>?g" monitor-calico.yaml
+   sed -i -e "s?__ELASTICSEARCH_PORT__?<elasticsearch-port>?g" monitor-calico.yaml
+   sed -i -e "s?__KIBANA_HOST__?<kibana-host>?g" monitor-calico.yaml
+   sed -i -e "s?__KIBANA_PORT__?<kibana-port>?g" monitor-calico.yaml
+   ```
 
-   > **Note**: You may need to list all the IP addresses on that host including the IP address of `tunl0`
-   > if running in IPIP mode.
-   {: .alert .alert-info}
 
 {% include {{page.version}}/cnx-cred-sed.md yaml="monitor-calico" %}
 {% if include.platform == "docker-ee" %}
@@ -217,16 +211,6 @@ optionally Elasticsearch and Kibana in order to enable logs.
    {{cli}} apply -f monitor-calico.yaml
    ```
 
-{% if include.platform != "docker-ee" %}
-1. Edit the `tigera-cnx-manager-config` ConfigMap to update the URL Kibana is accessed at.  By default a NodePort is
-   installed that serves Kibana on port 30601, so use the address of a node (for example a master).
-
-   Either edit the `tigera.cnx-manager.kibana-url` field in the `cnx.yaml` manifest and reapply, or use the following patch:
-
-   ```bash
-   {{cli}} patch configmap -n kube-system tigera-cnx-manager-config -p $'data:\n  tigera.cnx-manager.kibana-url: http://<insert-node-address-here>:30601'
-   ```
-{% endif %}
 {% if include.orch == "openshift" %}
 {% if include.elasticsearch == "operator" %}
 
@@ -366,20 +350,4 @@ optionally Elasticsearch and Kibana in order to enable logs.
    * If you are using the AWS CNI plugin and want to enforce granular access
     control between pods and AWS VPC resources, continue to
     [Enabling integration with AWS security groups]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/aws-sg-integration).
-{% endif %}
-
-{% if include.platform != "docker-ee" %}
-1. By default, {{site.prodname}} Manager is made accessible via a NodePort listening on port 30003.
-   You can edit the `cnx.yaml` manifest if you want to change how {{site.prodname}} Manager is
-   exposed.  You may need to create an ssh tunnel if the node is not accessible - for example:
-
-   ```bash
-   ssh <jumpbox> -L 127.0.0.1:30003:<kubernetes node>:30003
-   ```
-
-   Sign in by navigating to `https://<address of a Kubernetes node or 127.0.0.1 for ssh tunnel>:30003` and login.
-{% endif %}
-
-{% if include.platform == "eks" %}
-   Log in to {{site.prodname}} Manager using the token you created earlier in the process.
 {% endif %}

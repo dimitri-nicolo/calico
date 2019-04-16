@@ -65,14 +65,18 @@ This guide covers installing {{site.prodname}} for policy enforcement on Amazon 
    kubectl apply -f calico.yaml
    ```
 
-1. Continue to [Installing the {{site.prodname}} Manager and API Server](#installing-the-{{site.prodnamedash}}-manager-and-api-server)
+1. Continue to [Installing the {{site.prodname}} API Server](#installing-the-{{site.prodnamedash}}-api-server)
 
-{% include {{page.version}}/cnx-mgr-install.md init="kubernetes" net="other" platform="eks" %}
+{% include {{page.version}}/cnx-api-install.md init="kubernetes" net="other" platform="eks" %}
 
 1. Continue to [Applying your license key](#applying-your-license-key).
 
 {% include {{page.version}}/apply-license.md platform="eks" %}
 
 {% include {{page.version}}/cnx-monitor-install.md elasticsearch="operator" platform="eks" %}
+
+1. Continue to [Installing the {{site.prodname}} Manager](#installing-the-{{site.prodnamedash}}-manager)
+
+{% include {{page.version}}/cnx-mgr-install.md init="kubernetes" net="other" platform="eks" %}
 
 {% include {{page.version}}/gs-next-steps.md %}

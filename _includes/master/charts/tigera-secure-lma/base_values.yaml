@@ -1,7 +1,53 @@
+datastore: kdd
 elasticsearchType: "operator"
 orch: ""
 runElasticsearchOperatorClusterAdmin: false
 createCustomResources: true
+
+# Configuration for setting up the manager UI.
+manager:
+  # Authentication information for securing communications between TSEE manager and the web browser.
+  # Leave blank to use self-signed certs.
+  tls:
+    crt: null
+    key: null
+  auth:
+    # Auth type. TSEE supports Basic, OIDC, Token, and OAuth
+    # type: (OIDC | Basic | Token | OAuth)
+    type: Basic
+    # The authority.  Required if authentication type is OIDC or OAuth.
+    # OIDC  authority: "https://accounts.google.com"
+    # OAuth authority: "https://<oauth-authority>/oauth/authorize"
+    authority: ""
+    # The client ID. Required if authentication type is OIDC or OAuth.
+    # OIDC  clientID: "<oidc-client-id>"
+    # OAuth clientID: "cnx-manager"
+    clientID: ""
+  env:
+    # Optional environment variables for configuring the manager UI.
+    # - name: CNX_CLUSTER_NAME
+    #   valueFrom:
+    #     configMapKeyRef:
+    #       name: tigera-cnx-manager-config
+    #       key: tigera.cnx-manager.cluster-name
+  # Configuration for the service which exposes the manager UI.
+  service:
+    type: ClusterIP
+    nodePort: null
+    loadBalancerIP: null
+    clusterIP: null
+
+# Configuration for the manager UI proxy.
+managerProxy:
+  env:
+    # Optional environment variables for configuring the manager proxy.
+    # - name: CNX_WEB_OIDC_CLIENT_ID
+    #   valueFrom:
+    #     configMapKeyRef:
+    #       name: tigera-cnx-manager-config
+    #       key: tigera.cnx-manager.oidc-client-id
+
+
 
 alertmanager:
   # Configuration for the service which exposes the Prometheus alertmanager.
@@ -26,3 +72,6 @@ kibana:
     nodePort: null
     loadBalancerIP: null
     clusterIP: null
+
+# TODO: move to helpers
+platform: ""

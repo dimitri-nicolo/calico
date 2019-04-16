@@ -5,7 +5,7 @@ canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/installati
 
 ## About the manifests
 
-The **[cnx-etcd.yaml](1.7/cnx-etcd.yaml)** and **[cnx-kdd.yaml](1.7/cnx-kdd.yaml)** manifests do the following:
+The **[cnx-api-etcd.yaml](1.7/cnx-api-etcd.yaml)** and **[cnx-api-kdd.yaml](1.7/cnx-api-kdd.yaml)** manifests do the following:
   - Installs the {{site.prodname}} API server, and configures the APIService to tell
     the Kubernetes API server to delegate to it.
   - Installs the {{site.prodname}} Manager web server, and configures it with the location
@@ -102,7 +102,7 @@ spec:
 
 ## Configure the {{site.prodname}} Manager
 
-The **[cnx-etcd.yaml](1.7/cnx-etcd.yaml)** and **[cnx-kdd.yaml](1.7/cnx-kdd.yaml)** manifests must be updated with
+The **[cnx.yaml](1.7/cnx.yaml)** manifests must be updated with
 the following changes.  Some of the parameters depend on the chosen
 authentication method.  Authentication methods, and the relevant parameters
 are described [here]({{site.url}}/{{page.version}}/reference/cnx/authentication).

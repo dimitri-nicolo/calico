@@ -70,6 +70,17 @@ You are now ready to execute the Ansible provision which will install {{site.pro
 certs to each node. If you would prefer {{site.prodname}} not connect to the same etcd as OpenShift, you may modify the install
 such that {{site.prodname}} connects to an etcd you have already set up by following the [dedicated etcd install guide](dedicated-etcd).
 
+{% include {{page.version}}/cnx-api-install.md init="openshift" %}
+
+1. Continue to [Applying your license key](#applying-your-license-key).
+
+{% include {{page.version}}/apply-license.md init="openshift" %}
+
+{% include {{page.version}}/cnx-monitor-install.md orch="openshift" elasticsearch="operator" %}
+
+Once running, access Prometheus and Alertmanager using the NodePort from the created service.
+See the [Metrics](/{{page.version}}/security/metrics/) section for more information.
+
 {% include {{page.version}}/cnx-mgr-install.md init="openshift" %}
 
 1. Download [oauth-client.yaml](/{{page.version}}/getting-started/openshift/installation/oauth-client.yaml).
@@ -98,14 +109,5 @@ such that {{site.prodname}} connects to an etcd you have already set up by follo
    ```bash
    oc apply -f oauth-client.yaml
    ```
-
-1. Continue to [Applying your license key](#applying-your-license-key).
-
-{% include {{page.version}}/apply-license.md init="openshift" %}
-
-{% include {{page.version}}/cnx-monitor-install.md orch="openshift" elasticsearch="operator" %}
-
-Once running, access Prometheus and Alertmanager using the NodePort from the created service.
-See the [Metrics](/{{page.version}}/security/metrics/) section for more information.
 
 {% include {{page.version}}/gs-openshift-next-steps.md %}

@@ -26,11 +26,11 @@ The logs can be [viewed in Elasticsearch or Kibana](view)
 The audit policy for {{site.prodname}} resources (above) is contained in a ConfigMap.  To update this policy,
 follow these steps.
 
-1. Edit the `audit-policy-ee` ConfigMap in `kube-system` (contained in `cnx.yaml`).
+1. Edit the `audit-policy-ee` ConfigMap in `kube-system` (contained in `cnx-api.yaml`).
 
    ```
-   vi cnx.yaml
-   kubectl apply -f cnx.yaml
+   vi cnx-api.yaml
+   kubectl apply -f cnx-api.yaml
    ```
 
    Or

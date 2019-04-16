@@ -44,6 +44,20 @@ data:
         pattern dev
       </exclude>
     </filter>
+{{- if eq .Values.elasticsearchType "secure_es" }}
+  tigera.elasticsearch.access-mode: serviceuser
+  tigera.elasticsearch.host: __ELASTICSEARCH_HOST__
+  tigera.elasticsearch.port: "__ELASTICSEARCH_PORT__"
+  tigera.elasticsearch.scheme: https
+  tigera.elasticsearch.ca: /etc/ssl/elastic/ca.pem
+  tigera.kibana.host: __KIBANA_HOST__
+  tigera.kibana.port: "__KIBANA_PORT__"
+{{- else }}
+  tigera.elasticsearch.access-mode: "insecure"
+  tigera.elasticsearch.scheme: "http"
+  tigera.elasticsearch.host: "elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local"
+  tigera.elasticsearch.port: "9200"
+{{- end }}
 
 ---
 
@@ -450,13 +464,13 @@ spec:
             - name: ELASTIC_HOST
               valueFrom:
                 configMapKeyRef:
-                  name: tigera-es-proxy
-                  key: elasticsearch.backend.host
+                  name: tigera-es-config
+                  key: tigera.elasticsearch.host
             - name: ELASTIC_PORT
               valueFrom:
                 configMapKeyRef:
-                  name: tigera-es-proxy
-                  key: elasticsearch.backend.port
+                  name: tigera-es-config
+                  key: tigera.elasticsearch.port
             - name: FLUENTD_ES_SECURE
               value: "true"
             - name: ELASTIC_SSL_VERIFY
@@ -676,13 +690,13 @@ spec:
                 - name: ELASTIC_HOST
                   valueFrom:
                     configMapKeyRef:
-                      name: tigera-es-proxy
-                      key: elasticsearch.backend.host
+                      name: tigera-es-config
+                      key: tigera.elasticsearch.host
                 - name: ELASTIC_PORT
                   valueFrom:
                     configMapKeyRef:
-                      name: tigera-es-proxy
-                      key: elasticsearch.backend.port
+                      name: tigera-es-config
+                      key: tigera.elasticsearch.port
                 - name: ELASTIC_USER
                   valueFrom:
                     secretKeyRef:
@@ -746,23 +760,23 @@ spec:
           - name: ELASTIC_HOST
             valueFrom:
               configMapKeyRef:
-                name: tigera-es-proxy
-                key: elasticsearch.backend.host
+                name: tigera-es-config
+                key: tigera.elasticsearch.host
           - name: ELASTIC_PORT
             valueFrom:
               configMapKeyRef:
-                name: tigera-es-proxy
-                key: elasticsearch.backend.port
+                name: tigera-es-config
+                key: tigera.elasticsearch.port
           - name: KIBANA_HOST
             valueFrom:
               configMapKeyRef:
-                name: tigera-es-proxy
-                key: kibana.backend.host
+                name: tigera-es-config
+                key: tigera.kibana.host
           - name: KIBANA_PORT
             valueFrom:
               configMapKeyRef:
-                name: tigera-es-proxy
-                key: kibana.backend.port
+                name: tigera-es-config
+                key: tigera.kibana.port
           - name: USER
             valueFrom:
               secretKeyRef:
@@ -899,13 +913,13 @@ spec:
           - name: ELASTIC_HOST
             valueFrom:
               configMapKeyRef:
-                name: tigera-es-proxy
-                key: elasticsearch.backend.host
+                name: tigera-es-config
+                key: tigera.elasticsearch.host
           - name: ELASTIC_PORT
             valueFrom:
               configMapKeyRef:
-                name: tigera-es-proxy
-                key: elasticsearch.backend.port
+                name: tigera-es-config
+                key: tigera.elasticsearch.port
           - name: USER
             valueFrom:
               secretKeyRef:
@@ -933,19 +947,6 @@ spec:
           - name: ELASTIC_SCHEME
             value: "http"
 {{- end }}
----
-
-# Network set for the K8s API Server's IP addresses.
-apiVersion: projectcalico.org/v3
-kind: GlobalNetworkSet
-metadata:
-  name: k8sapi-endpoints
-  labels:
-    role: k8s-apiserver-endpoints
-spec:
-  nets:
-  # List of IP addresses for the host K8s API server
-  - 0.0.0.0/0 #K8S_API_SERVER_IP
 
 {{- if eq .Values.elasticsearchType "operator" }}
 ---
@@ -987,25 +988,10 @@ spec:
       selector: k8s-app == 'es-curator'
     destination:
       ports: [9200]
-
----
-
-# Allow access to Elasticsearch client nodes from kube-apiserver
-apiVersion: projectcalico.org/v3
-kind: GlobalNetworkPolicy
-metadata:
-  name: allow-cnx.elasticsearch-access
-spec:
-  order: 1
-  tier: allow-cnx
-  selector: name == 'es-client-tigera-elasticsearch'
-  types:
-  - Ingress
-  ingress:
   - action: Allow
     protocol: TCP
     source:
-      selector: role == 'k8s-apiserver-endpoints'
+      selector: k8s-app == 'cnx-manager'
     destination:
       ports: [9200]
 

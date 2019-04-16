@@ -77,7 +77,7 @@ configuration.
    kubectl apply -f calico.yaml
    ```
 
-1. Continue to [Installing the {{site.prodname}} Manager and API Server](#installing-the-{{site.prodnamedash}}-manager-and-api-server)
+1. Continue to [Installing the {{site.prodname}} API Server](#installing-the-{{site.prodnamedash}}-api-server)
 
 ### <a name="install-ee-typha-nofed"></a>Installing {{site.prodname}} for policy only without federation, more than 50 nodes
 
@@ -138,7 +138,7 @@ configuration.
    kubectl apply -f calico.yaml
    ```
 
-1. Continue to [Installing the {{site.prodname}} Manager and API Server](#installing-the-{{site.prodnamedash}}-manager-and-api-server)
+1. Continue to [Installing the {{site.prodname}} API Server](#installing-the-{{site.prodnamedash}}-api-server)
 
 ### <a name="install-ee-fed"></a>Installing {{site.prodname}} for policy only with federation
 
@@ -223,14 +223,18 @@ for each [remote cluster](../../../networking/federation/index#terminology). Ens
    kubectl apply -f calico.yaml
    ```
 
-1. Continue to [Installing the {{site.prodname}} Manager and API Server](#installing-the-{{site.prodnamedash}}-manager-and-api-server)
+1. Continue to [Installing the {{site.prodname}} API Server](#installing-the-{{site.prodnamedash}}-api-server)
 
-{% include {{page.version}}/cnx-mgr-install.md init="kubernetes" net="other" %}
+{% include {{page.version}}/cnx-api-install.md init="kubernetes" net="other" %}
 
 1. Continue to [Applying your license key](#applying-your-license-key).
 
 {% include {{page.version}}/apply-license.md %}
 
 {% include {{page.version}}/cnx-monitor-install.md elasticsearch="operator" type="policy-only" %}
+
+1. Continue to [Installing the {{site.prodname}} Manager](#installing-the-{{site.prodnamedash}}-manager)
+
+{% include {{page.version}}/cnx-mgr-install.md init="kubernetes" net="other" %}
 
 {% include {{page.version}}/gs-next-steps.md %}
