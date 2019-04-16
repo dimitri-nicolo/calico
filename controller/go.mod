@@ -2,7 +2,7 @@ module github.com/tigera/intrusion-detection/controller
 
 go 1.11
 
-replace github.com/projectcalico/libcalico-go v3.7.0-0.dev.0.20190328155702-d0e07165e343+incompatible => github.com/tigera/libcalico-go-private v2.1.1-0.20190329214018-4d2335fc34e9+incompatible
+replace github.com/projectcalico/libcalico-go v3.7.0-0.dev.0.20190328155702-d0e07165e343+incompatible => github.com/tigera/libcalico-go-private v2.1.1-0.20190415160840-12cc58937055+incompatible
 
 require (
 	github.com/araddon/dateparse v0.0.0-20190223010137-262228af701e
@@ -34,7 +34,7 @@ require (
 	github.com/prometheus/client_golang v0.9.2 // indirect
 	github.com/sirupsen/logrus v1.4.0
 	github.com/spf13/pflag v1.0.3 // indirect
-	github.com/tigera/calico-k8sapiserver v2.4.0-0.dev.0.20190401183701-0162d8b8ebc0+incompatible
+	github.com/tigera/calico-k8sapiserver v2.4.0-0.dev.0.20190415231917-ffe2bbf68dd1+incompatible
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	k8s.io/api v0.0.0-20180308224125-73d903622b73
