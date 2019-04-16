@@ -398,7 +398,11 @@ spec:
         - key: node-role.kubernetes.io/master
           effect: NoSchedule
       imagePullSecrets:
-        - name: cnx-pull-secret
+{{- if .Values.imagePullSecrets }}
+{{- range $key, $value := .Values.imagePullSecrets }}
+        - name: {{ $key }}
+{{- end }}
+{{- end }}
       containers:
       - name: cnx-apiserver
         image: {{.Values.apiserver.image}}:{{.Values.apiserver.tag}}
@@ -623,7 +627,11 @@ spec:
       - key: CriticalAddonsOnly
         operator: Exists
       imagePullSecrets:
-        - name: cnx-pull-secret
+{{- if .Values.imagePullSecrets }}
+{{- range $key, $value := .Values.imagePullSecrets }}
+        - name: {{ $key }}
+{{- end }}
+{{- end }}
       # cnx-manager-init-pem writes a "pem" file into a volume shared by
       # cnx-manager-proxy.
       initContainers:

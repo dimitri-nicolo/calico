@@ -31,7 +31,11 @@ spec:
           effect: NoSchedule
       serviceAccountName: tigera-federation-controller
       imagePullSecrets:
-        - name: cnx-pull-secret
+{{- if .Values.imagePullSecrets }}
+{{- range $key, $value := .Values.imagePullSecrets }}
+        - name: {{ $key }}
+{{- end }}
+{{- end }}
       containers:
         - name: tigera-federation-controller
           image: {{.Values.kubeControllers.image}}:{{.Values.kubeControllers.tag}}

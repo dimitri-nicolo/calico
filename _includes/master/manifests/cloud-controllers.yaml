@@ -82,7 +82,11 @@ spec:
         - key: CriticalAddonsOnly
           operator: Exists
       imagePullSecrets:
-        - name: cnx-pull-secret
+{{- if .Values.imagePullSecrets }}
+{{- range $key, $value := .Values.imagePullSecrets }}
+        - name: {{ $key }}
+{{- end }}
+{{- end }}
       containers:
         - name: tigera-cloud-controllers
           image: {{.Values.cloudControllers.image}}:{{.Values.cloudControllers.tag}}

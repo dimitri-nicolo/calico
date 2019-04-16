@@ -81,7 +81,11 @@ spec:
       serviceAccountName: calico-node
 {{- end }}
       imagePullSecrets:
-        - name: cnx-pull-secret
+{{- if .Values.imagePullSecrets }}
+{{- range $key, $value := .Values.imagePullSecrets }}
+        - name: {{ $key }}
+{{- end }}
+{{- end }}
       containers:
       - image: {{.Values.typha.image}}:{{.Values.typha.tag}}
         name: calico-typha

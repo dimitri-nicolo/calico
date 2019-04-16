@@ -54,6 +54,7 @@ module Jekyll
         -f _includes/#{version}/charts/#{@chart}/base_values.yaml \
         -f #{tv.path} \
         -f #{t.path} \
+        --set imagePullSecrets.cnx-pull-secret='' \
         --set manager.service.type=NodePort \
         --set manager.service.nodePort=30003 \
         --set alertmanager.service.type=NodePort \

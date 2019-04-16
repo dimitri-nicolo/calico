@@ -127,5 +127,13 @@ orch: ""
 rbac: ""
 platform: ""
 
+# Optionally specify docker configuration to be used for imagePullSecrets. 
+# Default to an empty list. 
+#
+# E.g. 
+# imagePullSecrets:
+#   <secret_name>: <.docker/config.json contents>
+imagePullSecrets: {}
+
 cloudControllers:
   enabled: false

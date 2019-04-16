@@ -45,7 +45,11 @@ spec:
       # deletion": https://kubernetes.io/docs/concepts/workloads/pods/pod/#termination-of-pods.
       terminationGracePeriodSeconds: 0
       imagePullSecrets:
-        - name: cnx-pull-secret
+{{- if .Values.imagePullSecrets }}
+{{- range $key, $value := .Values.imagePullSecrets }}
+        - name: {{ $key }}
+{{- end }}
+{{- end }}
       initContainers:
 {{- if ne .Values.network "ecs" }}
 {{- if and (eq .Values.network "calico") (eq .Values.datastore "kdd") }}

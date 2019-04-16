@@ -84,7 +84,11 @@ spec:
         - key: node-role.kubernetes.io/master
           effect: NoSchedule
       imagePullSecrets:
-        - name: cnx-pull-secret
+{{- if .Values.imagePullSecrets }}
+{{- range $key, $value := .Values.imagePullSecrets }}
+        - name: {{ $key }}
+{{- end }}
+{{- end }}
       containers:
         - name: compliance-snapshotter
           image: {{.Values.complianceSnapshotter.image}}:{{ .Values.complianceSnapshotter.tag }}

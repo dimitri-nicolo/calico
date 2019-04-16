@@ -34,7 +34,11 @@ spec:
           effect: NoSchedule
       serviceAccountName: calico-kube-controllers
       imagePullSecrets:
-        - name: cnx-pull-secret
+{{- if .Values.imagePullSecrets }}
+{{- range $key, $value := .Values.imagePullSecrets }}
+        - name: {{ $key }}
+{{- end }}
+{{- end }}
       containers:
         - name: calico-kube-controllers
           image: {{.Values.kubeControllers.image}}:{{ .Values.kubeControllers.tag }}

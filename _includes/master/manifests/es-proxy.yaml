@@ -57,7 +57,11 @@ spec:
       - key: CriticalAddonsOnly
         operator: Exists
       imagePullSecrets:
-        - name: cnx-pull-secret
+{{- if .Values.imagePullSecrets }}
+{{- range $key, $value := .Values.imagePullSecrets }}
+        - name: {{ $key }}
+{{- end }}
+{{- end }}
       # ex-proxy-init-pem writes a "frontend.pem" file into a volume mounted in the tigera-es-proxy container.
       initContainers:
       - name: es-proxy-init-pem # create pem for tigera-es-proxy
