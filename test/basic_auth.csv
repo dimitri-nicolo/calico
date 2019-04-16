@@ -1,0 +1,7 @@
+basicpw,basicuserall,basicuid
+basicpwf,basicuserflowonly,flowonlyuid
+basicpwaa,basicuserauditonly,auditonlyuid
+basicpwak,basicuserauditkubeonly,auditonlyuid
+basicpwgrp,basicuserallgrp,basicuidgrp,selfgroup
+basicpw0,basicusernone,noneuid
+basicpwnos,basicusernoselfaccess,noselfuid
