@@ -424,7 +424,7 @@ func CreateAndAttachVxlanHostEP(epName string, hnsNetwork *hcsshim.HNSNetwork, s
 		logger.Infof("Deleted stale HNSEndpoint %s", epName)
 	}
 
-	macAddr := getMacAddr(hnsNetwork.ManagementIP)
+	macAddr := GetMacAddr(hnsNetwork.ManagementIP)
 
 	newEndpoint := &hcsshim.HNSEndpoint{
 		Name:             epName,
@@ -824,19 +824,20 @@ func updateHostLocalIPAMDataForOS(subnet string, ipamData map[string]interface{}
 	return UpdateHostLocalIPAMDataForWindows(subnet, ipamData)
 }
 
-// getMacAddr gets the MAC hardware
+// GetMacAddr gets the MAC hardware
 // address of the host machine
-func getMacAddr(mgmtIp string) (addr string) {
+func GetMacAddr(mgmtIp string) (addr string) {
 	interfaces, err := net.Interfaces()
 	if err == nil {
+	outerLoop:
 		for _, i := range interfaces {
 			addrs, err := i.Addrs()
 			if err == nil {
 				for _, j := range addrs {
-					ip := strings.Split(j.String(), "\\")
-					if ip[0] == mgmtIp {
+					ip := strings.Split(j.String(), "/")
+					if strings.Compare(ip[0], mgmtIp) == 0 {
 						addr = i.HardwareAddr.String()
-						break
+						break outerLoop
 					}
 				}
 			}

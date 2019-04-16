@@ -63,7 +63,7 @@ func WipeK8sPods(netconf string) {
 }
 
 func CreateContainerUsingDocker() (string, error) {
-	cmd := exec.Command("powershell.exe", "docker run --net none -d -i microsoft/powershell:nanoserver pwsh")
+	cmd := exec.Command("powershell.exe", "docker run --net none -d -i mcr.microsoft.com/windows/servercore/insider:10.0.18317.1000 powershell")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		log.Fatal(err)
