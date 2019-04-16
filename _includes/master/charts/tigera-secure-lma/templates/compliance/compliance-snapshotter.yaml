@@ -2,48 +2,56 @@
 kind: ServiceAccount
 apiVersion: v1
 metadata:
-  name: tigera-compliance-controller
-  namespace: kube-system
+  name: tigera-compliance-snapshotter
+  namespace: calico-monitoring
 
 ---
 
-
 apiVersion: rbac.authorization.k8s.io/v1beta1
-kind: Role
+kind: ClusterRole
 metadata:
-  namespace: kube-system
-  name: compliance-controller-role
+  name: compliance-snapshotter-role
 rules:
-  - apiGroups: ["batch"]
-    resources: ["jobs"]
-    verbs: ["create", "get", "deletecollection", "delete"]
-  - apiGroups: [""]
-    resources: ["pods"]
-    verbs: ["list", "get", "watch"]
-  - apiGroups: ["projectcalico.org"]
+  - apiGroups: ["extensions","networking.k8s.io",""]
     resources:
-      - globalreporttype
-      - globalreport
+      - networkpolicies
+      - nodes
+      - namespaces
+      - pods
+      - serviceaccounts
+      - endpoints
+      - services
     verbs:
       - get
       - list
-      - watch
-
+  - apiGroups: ["projectcalico.org"]
+    resources:
+      - globalnetworkpolicies
+      - networkpolicies
+      - tier.globalnetworkpolicies
+      - tier.networkpolicies
+      - tiers
+      - hostendpoints
+      - globalnetworksets
+    verbs:
+      - get
+      - list
 
 ---
 
+
 apiVersion: rbac.authorization.k8s.io/v1beta1
-kind: RoleBinding
+kind: ClusterRoleBinding
 metadata:
-  name: compliance-controller-binding
+  name: compliance-snapshotter-binding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: compliance-controller-role
+  name: compliance-snapshotter-role
 subjects:
 - kind: ServiceAccount
-  name: tigera-compliance-controller
-  namespace: kube-system
+  name: tigera-compliance-snapshotter
+  namespace: calico-monitoring
 
 
 ---
@@ -51,38 +59,44 @@ subjects:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: compliance-controller
-  namespace: kube-system
+  name: compliance-snapshotter
+  namespace: calico-monitoring
   labels:
-    k8s-app: compliance-controller
+    k8s-app: compliance-snapshotter
 spec:
   replicas: 1
   strategy:
      type: Recreate
   selector:
     matchLabels:
-      k8s-app: compliance-controller
+      k8s-app: compliance-snapshotter
   template:
     metadata:
-      name: compliance-controller
-      namespace: kube-system
+      name: compliance-snapshotter
+      namespace: calico-monitoring
       labels:
-        k8s-app: compliance-controller
+        k8s-app: compliance-snapshotter
     spec:
-      serviceAccountName: tigera-compliance-controller
+      nodeSelector:
+        beta.kubernetes.io/os: linux
+      serviceAccountName: tigera-compliance-snapshotter
       tolerations:
         - key: node-role.kubernetes.io/master
           effect: NoSchedule
       imagePullSecrets:
         - name: cnx-pull-secret
       containers:
-        - name: compliance-controller
-          image: {{.Values.complianceController.image}}:{{.Values.complianceController.tag}}
+        - name: compliance-snapshotter
+          image: {{.Values.complianceSnapshotter.image}}:{{ .Values.complianceSnapshotter.tag }}
           env:
             - name: LOG_LEVEL
               value: "warning"
-            - name: TIGERA_COMPLIANCE_REPORT_AFTER
-              value: "30m"
+            - name: TIGERA_COMPLIANCE_SNAPSHOT_HOUR 
+              value: "0"
+            - name: ELASTIC_URI
+              value: ""
+            - name: ELASTIC_SCHEME
+              value: ""
 {{- if .Values.secure_es }}
             - name: ELASTIC_HOST
               valueFrom:
@@ -128,5 +142,3 @@ spec:
           configMap:
             name: elastic-ca-config
 {{- end }}
-
-
