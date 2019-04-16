@@ -13,7 +13,7 @@ pipeline {
         WAVETANK_SERVICE_ACCT = "wavetank@unique-caldron-775.iam.gserviceaccount.com"
 
         // Jenkins job info
-        SANE_JOB_NAME =  "${env.JOB_BASE_NAME}".replace('.', '-')
+        SANE_JOB_NAME =  "${env.JOB_BASE_NAME}".replace('.', '-').toLowerCase()
 
         // Terraform base settings
         TF_VAR_google_project = 'unique-caldron-775'
