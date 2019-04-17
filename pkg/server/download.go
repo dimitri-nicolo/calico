@@ -48,12 +48,11 @@ func (s *server) handleDownloadReports(response http.ResponseWriter, request *ht
 		http.Error(response, err.Error(), http.StatusServiceUnavailable)
 		return
 	}
-	rt, ok := rts[r.ReportType]
+	rt, ok := rts[r.ReportTypeName]
+	// ReportType is deleted, use ReportTypeSpec in the ReportData.
 	if !ok {
-		// TODO(rlb): We should embed the ReportType in the Report.
-		log.WithError(err).Error("Unable to query render report, underlying ReportType has been deleted")
-		http.Error(response, "The report type has been deleted", http.StatusNotFound)
-		return
+		rt = &r.ReportTypeSpec
+		log.Infof("ReportType (%s) deleted from the configuration, using from ReportData", r.ReportTypeName)
 	}
 
 	// Check that the formats are valid.
@@ -95,7 +94,7 @@ func (s *server) prepareReportForDownload(
 		startDate:  r.StartTime,
 		endDate:    r.EndTime,
 		reportName: r.ReportName,
-		reportType: r.ReportType,
+		reportType: r.ReportTypeName,
 	}
 
 	// Extract the templates by name.

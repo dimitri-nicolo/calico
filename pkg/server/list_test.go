@@ -22,10 +22,10 @@ var (
 
 	summary1 = &report.ArchivedReportData{
 		ReportData: &calicov3.ReportData{
-			ReportName: "report1",
-			ReportType: "inventory",
-			StartTime:  now,
-			EndTime:    nowPlusHour,
+			ReportName:     "report1",
+			ReportTypeName: "inventory",
+			StartTime:      now,
+			EndTime:        nowPlusHour,
 			EndpointsSummary: calicov3.EndpointsSummary{
 				NumTotal: 100,
 			},
@@ -81,7 +81,7 @@ var _ = Describe("List tests", func() {
 		t.list(http.StatusOK, []server.Report{
 			{
 				ReportId:    summary1.UID(),
-				ReportType:  summary1.ReportType,
+				ReportType:  summary1.ReportTypeName,
 				StartTime:   now,
 				EndTime:     nowPlusHour,
 				UISummary:   "hello-100-goodbye",

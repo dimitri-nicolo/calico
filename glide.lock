@@ -1,5 +1,5 @@
-hash: 622ac0d02e561718d59a6e7735f340b0a79af5991d5c42879006774c8b8b717b
-updated: 2019-04-15T11:25:30.513-07:00
+hash: 6b25cd41e48fe637e6feab052e4dba66289f3401aac803c2810e5fa17ad23e19
+updated: 2019-04-18T00:10:08.269122227Z
 imports:
 - name: github.com/beorn7/perks
   version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
@@ -151,7 +151,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 12cc58937055c64eb819c22fc995349e3e53c1dc
+  version: cc3ba5d54da4248bc06ebe32e8dacd27038cc02b
   repo: git@github.com:tigera/libcalico-go-private.git
   vcs: git
   subpackages:
@@ -210,7 +210,7 @@ imports:
 - name: github.com/spf13/pflag
   version: 583c0c0531f06d5278b7d917446061adc344b5cd
 - name: github.com/tigera/calico-k8sapiserver
-  version: bba9707369955a0255e928db3d02f88c77a72664
+  version: ff8b400e433d916a3a8486d2c531995ca120c429
   repo: git@github.com:tigera/calico-k8sapiserver.git
   vcs: git
   subpackages:
@@ -231,6 +231,16 @@ imports:
 - name: golang.org/x/crypto
   version: de0752318171da717af4ce24d0a2e8626afaeb11
   subpackages:
+  - bcrypt
+  - blowfish
+  - cryptobyte
+  - cryptobyte/asn1
+  - ed25519
+  - ed25519/internal/edwards25519
+  - internal/subtle
+  - nacl/secretbox
+  - poly1305
+  - salsa20/salsa
   - ssh/terminal
 - name: golang.org/x/net
   version: 1c05540f6879653db88113bc4a2b70aec4bd491f
