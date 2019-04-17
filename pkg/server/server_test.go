@@ -147,11 +147,12 @@ func (t *tester) downloadSingle(id string, expStatus int, forecast forecastFile)
 func (t *tester) downloadMulti(id string, expStatus int, forecasts []forecastFile) {
 	var fmts []string
 	for _, v := range forecasts {
-		fmts = append(fmts, v.Format)
+		fmts = append(fmts, fmt.Sprintf("format=%s", v.Format))
 	}
-	formats := strings.Join(fmts, ",")
+	formats := strings.Join(fmts, "&")
 
-	downloadUrl := "http://" + t.addr + "/compliance/reports/" + id + "/download?format=" + formats
+	downloadUrl := "http://" + t.addr + "/compliance/reports/" + id + "/download?" + formats
+
 	r, err := t.client.Get(downloadUrl)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -177,7 +178,7 @@ func (t *tester) downloadMulti(id string, expStatus int, forecasts []forecastFil
 	zr, err := zip.NewReader(breader, int64(len(bodyBytes)))
 	Expect(err).NotTo(HaveOccurred())
 
-	//extract the files	into the files structure
+	//extract the files into the files structure
 	var files = make(map[string][]byte)
 	for _, f := range zr.File {
 		freader, err := f.Open()

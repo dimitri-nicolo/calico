@@ -24,13 +24,7 @@ import (
 // handleDownloadReports sends one or multiple (via zip) reports to the client
 func (s *server) handleDownloadReports(response http.ResponseWriter, request *http.Request) {
 	// Determine the download formats and if there were none set then exit immediately.
-	formatsQs := request.URL.Query()[QueryFormat][0]
-	if len(formatsQs) == 0 {
-		log.Info("No download formats specified on request")
-		http.Error(response, "No download formats specified", http.StatusBadRequest)
-		return
-	}
-	formats := strings.Split(formatsQs, ",")
+	formats := request.URL.Query()[QueryFormat]
 	log.WithField("Formats", formats).Info("Extracted download formats from URL")
 
 	// Determine the report UID. The pattern MUX will have extracted this parameter from the URL.
@@ -206,7 +200,6 @@ func (d *downloadContent) zipContent() ([]byte, error) {
 	//set up the zipwriter
 	var b bytes.Buffer
 	zipWriter := zip.NewWriter(&b)
-	defer zipWriter.Close()
 
 	for _, f := range d.files {
 
@@ -233,8 +226,11 @@ func (d *downloadContent) zipContent() ([]byte, error) {
 
 	}
 
-	//close the zip writer
-	zipWriter.Close()
+	err := zipWriter.Close()
+	if err != nil {
+		log.WithError(err).Error("Unable to close zip writer")
+		return nil, err
+	}
 
 	//return the zip data
 	return b.Bytes(), nil
