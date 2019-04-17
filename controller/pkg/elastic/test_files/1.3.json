@@ -1,5 +1,5 @@
 {
-  "_index": ".tigera.ipset",
+  "_index": ".tigera.ipset.cluster",
   "_type": "_doc",
   "_id": "test3",
   "_version": 5,

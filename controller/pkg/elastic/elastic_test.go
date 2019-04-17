@@ -251,14 +251,14 @@ func (t *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 	case "GET":
 		switch req.URL.String() {
 		// QueryIPSet
-		case baseURI + "/.tigera.ipset/_doc/test":
+		case baseURI + "/.tigera.ipset.cluster/_doc/test":
 			return &http.Response{
 				StatusCode: 200,
 				Request:    req,
 				Body:       mustOpen("test_files/3.ipset.json"),
 			}, nil
 		// QueryIPSet
-		case baseURI + "/.tigera.ipset/_doc/test_big":
+		case baseURI + "/.tigera.ipset.cluster/_doc/test_big":
 			return &http.Response{
 				StatusCode: 200,
 				Request:    req,
@@ -266,31 +266,31 @@ func (t *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 			}, nil
 
 		// GetIPSet
-		case baseURI + "/.tigera.ipset/_doc/test1":
+		case baseURI + "/.tigera.ipset.cluster/_doc/test1":
 			return &http.Response{
 				StatusCode: 200,
 				Request:    req,
 				Body:       mustOpen("test_files/1.1.json"),
 			}, nil
-		case baseURI + "/.tigera.ipset/_doc/test2":
+		case baseURI + "/.tigera.ipset.cluster/_doc/test2":
 			return &http.Response{
 				StatusCode: 200,
 				Request:    req,
 				Body:       mustOpen("test_files/1.2.json"),
 			}, nil
-		case baseURI + "/.tigera.ipset/_doc/test3":
+		case baseURI + "/.tigera.ipset.cluster/_doc/test3":
 			return &http.Response{
 				StatusCode: 200,
 				Request:    req,
 				Body:       mustOpen("test_files/1.3.json"),
 			}, nil
-		case baseURI + "/.tigera.ipset/_doc/test4":
+		case baseURI + "/.tigera.ipset.cluster/_doc/test4":
 			return &http.Response{
 				StatusCode: 200,
 				Request:    req,
 				Body:       mustOpen("test_files/1.4.json"),
 			}, nil
-		case baseURI + "/.tigera.ipset/_doc/test5":
+		case baseURI + "/.tigera.ipset.cluster/_doc/test5":
 			return &http.Response{
 				StatusCode: 200,
 				Request:    req,
@@ -298,31 +298,31 @@ func (t *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 			}, nil
 
 		// GetIPSetModified
-		case baseURI + "/.tigera.ipset/_doc/test?_source_include=created_at":
+		case baseURI + "/.tigera.ipset.cluster/_doc/test?_source_include=created_at":
 			return &http.Response{
 				StatusCode: 200,
 				Request:    req,
 				Body:       mustOpen("test_files/2.1.json"),
 			}, nil
-		case baseURI + "/.tigera.ipset/_doc/test2?_source_include=created_at":
+		case baseURI + "/.tigera.ipset.cluster/_doc/test2?_source_include=created_at":
 			return &http.Response{
 				StatusCode: 200,
 				Request:    req,
 				Body:       mustOpen("test_files/2.2.json"),
 			}, nil
-		case baseURI + "/.tigera.ipset/_doc/test3?_source_include=created_at":
+		case baseURI + "/.tigera.ipset.cluster/_doc/test3?_source_include=created_at":
 			return &http.Response{
 				StatusCode: 200,
 				Request:    req,
 				Body:       mustOpen("test_files/2.3.json"),
 			}, nil
-		case baseURI + "/.tigera.ipset/_doc/test4?_source_include=created_at":
+		case baseURI + "/.tigera.ipset.cluster/_doc/test4?_source_include=created_at":
 			return &http.Response{
 				StatusCode: 200,
 				Request:    req,
 				Body:       mustOpen("test_files/2.4.json"),
 			}, nil
-		case baseURI + "/.tigera.ipset/_doc/test5?_source_include=created_at":
+		case baseURI + "/.tigera.ipset.cluster/_doc/test5?_source_include=created_at":
 			return &http.Response{
 				StatusCode: 200,
 				Request:    req,
@@ -337,7 +337,7 @@ func (t *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 		req.Body = ioutil.NopCloser(bytes.NewReader(b))
 
 		switch req.URL.String() {
-		case baseURI + "/tigera_secure_ee_flows%2A/_search?scroll=5m&size=1000":
+		case baseURI + "/tigera_secure_ee_flows.cluster.%2A/_search?scroll=5m&size=1000":
 			switch body {
 			// QueryIPSet source_ip query
 			case mustGetString("test_files/3.1.q.json"):
@@ -372,7 +372,7 @@ func (t *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 					Body:       mustOpen("test_files/3.4.r.json"),
 				}, nil
 			}
-		case baseURI + "/.tigera.ipset/_doc/_search?scroll=5m":
+		case baseURI + "/.tigera.ipset.cluster/_doc/_search?scroll=5m":
 			return &http.Response{
 				StatusCode: t.listStatus,
 				Request:    req,
