@@ -72,7 +72,7 @@ import:
   - pkg/syncclient
   - pkg/tlsutils
 - package: github.com/projectcalico/pod2daemon
-  version: df2b9c8d2744ebce544742f7f765b59c5e88db0d
+  version: d1b62418f472caa0387e28d43466cd1749cf3dde
   subpackages:
   - binder
 - package: github.com/prometheus/client_golang

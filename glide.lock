@@ -1,5 +1,5 @@
-hash: 0a918ac03db80a89ebdc5d97055bf12c28bddd6dac236cefe03f0cd841c48773
-updated: 2019-04-08T16:25:13.251958896Z
+hash: 5858cad88f0cd318e14275b563764fc893eadb00f2719ccf19216285097480ff
+updated: 2019-04-17T17:23:13.333987554Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -327,8 +327,7 @@ imports:
   - lib/validator/v3
   - lib/watch
 - name: github.com/projectcalico/pod2daemon
-  repo: https://github.com/neiljerram/pod2daemon
-  version: 6ecd939986d4e994de8509b10c29411e98e24fba
+  version: d1b62418f472caa0387e28d43466cd1749cf3dde
   subpackages:
   - binder
 - name: github.com/projectcalico/typha
