@@ -99,6 +99,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.EntityRule":                     schema_libcalico_go_lib_apis_v3_EntityRule(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ErrorCondition":                 schema_libcalico_go_lib_apis_v3_ErrorCondition(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.EtcdConfig":                     schema_libcalico_go_lib_apis_v3_EtcdConfig(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.FailedReportJob":                schema_libcalico_go_lib_apis_v3_FailedReportJob(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.FelixConfiguration":             schema_libcalico_go_lib_apis_v3_FelixConfiguration(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.FelixConfigurationList":         schema_libcalico_go_lib_apis_v3_FelixConfigurationList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.FelixConfigurationSpec":         schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref),
@@ -160,8 +161,8 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.RemoteClusterConfiguration":     schema_libcalico_go_lib_apis_v3_RemoteClusterConfiguration(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.RemoteClusterConfigurationList": schema_libcalico_go_lib_apis_v3_RemoteClusterConfigurationList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.RemoteClusterConfigurationSpec": schema_libcalico_go_lib_apis_v3_RemoteClusterConfigurationSpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.ReportCreationStatus":           schema_libcalico_go_lib_apis_v3_ReportCreationStatus(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ReportData":                     schema_libcalico_go_lib_apis_v3_ReportData(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.ReportJob":                      schema_libcalico_go_lib_apis_v3_ReportJob(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ReportSpec":                     schema_libcalico_go_lib_apis_v3_ReportSpec(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ReportStatus":                   schema_libcalico_go_lib_apis_v3_ReportStatus(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ReportTemplate":                 schema_libcalico_go_lib_apis_v3_ReportTemplate(ref),
@@ -169,6 +170,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ResourceID":                     schema_libcalico_go_lib_apis_v3_ResourceID(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.Rule":                           schema_libcalico_go_lib_apis_v3_Rule(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ServiceAccountMatch":            schema_libcalico_go_lib_apis_v3_ServiceAccountMatch(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.SuccessfulReportJob":            schema_libcalico_go_lib_apis_v3_SuccessfulReportJob(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.Tier":                           schema_libcalico_go_lib_apis_v3_Tier(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.TierList":                       schema_libcalico_go_lib_apis_v3_TierList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.TierSpec":                       schema_libcalico_go_lib_apis_v3_TierSpec(ref),
@@ -3242,6 +3244,59 @@ func schema_libcalico_go_lib_apis_v3_EtcdConfig(ref common.ReferenceCallback) co
 			},
 		},
 		Dependencies: []string{},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_FailedReportJob(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "FailedReportJob augments the ReportJob with error details.",
+				Properties: map[string]spec.Schema{
+					"start": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The start time of the report.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"end": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The end time of the report.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"reportType": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The ReportType as configured at the time the report job was created.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"job": {
+						SchemaProps: spec.SchemaProps{
+							Description: "A reference to the report creation job. For successfully completed and failed jobs this job may no longer exist as it may have been garbage collected.",
+							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
+						},
+					},
+					"errors": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The error resulting in the failed report generation.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ErrorCondition"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"start", "end", "reportType", "job", "errors"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.ErrorCondition", "k8s.io/api/core/v1.ObjectReference", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 
@@ -6629,46 +6684,6 @@ func schema_libcalico_go_lib_apis_v3_RemoteClusterConfigurationSpec(ref common.R
 	}
 }
 
-func schema_libcalico_go_lib_apis_v3_ReportCreationStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "ReportCreationStatus contains the status of the automated report generation.",
-				Properties: map[string]spec.Schema{
-					"generationTime": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The time the report was generated and archived.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
-					"start": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The start time of the report.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
-					"end": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The end time of the report.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
-					"reportType": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The ReportType as configured at the time the report was generated.",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-				},
-				Required: []string{"generationTime", "start", "end", "reportType"},
-			},
-		},
-		Dependencies: []string{
-			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
-	}
-}
-
 func schema_libcalico_go_lib_apis_v3_ReportData(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -6792,6 +6807,46 @@ func schema_libcalico_go_lib_apis_v3_ReportData(ref common.ReferenceCallback) co
 	}
 }
 
+func schema_libcalico_go_lib_apis_v3_ReportJob(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ReportJob contains",
+				Properties: map[string]spec.Schema{
+					"start": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The start time of the report.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"end": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The end time of the report.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"reportType": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The ReportType as configured at the time the report job was created.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"job": {
+						SchemaProps: spec.SchemaProps{
+							Description: "A reference to the report creation job. For successfully completed and failed jobs this job may no longer exist as it may have been garbage collected.",
+							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
+						},
+					},
+				},
+				Required: []string{"start", "end", "reportType", "job"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/api/core/v1.ObjectReference", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+	}
+}
+
 func schema_libcalico_go_lib_apis_v3_ReportSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -6838,6 +6893,13 @@ func schema_libcalico_go_lib_apis_v3_ReportSpec(ref common.ReferenceCallback) co
 							},
 						},
 					},
+					"suspend": {
+						SchemaProps: spec.SchemaProps{
+							Description: "This flag tells the controller to suspend subsequent jobs for generating reports, it does not apply to already started jobs. If jobs are resumed then the controller will start creating jobs for any reports that were missed while the job was suspended.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 				},
 				Required: []string{"reportType"},
 			},
@@ -6853,29 +6915,56 @@ func schema_libcalico_go_lib_apis_v3_ReportStatus(ref common.ReferenceCallback) 
 			SchemaProps: spec.SchemaProps{
 				Description: "ReportStatus contains the status of the automated report generation.",
 				Properties: map[string]spec.Schema{
-					"lastSuccessfulReport": {
+					"lastSuccessfulReportJobs": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ReportCreationStatus"),
-						},
-					},
-					"errorConditions": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
+							Description: "The last report jobs that completed successfully. The number of entries in this list is configurable through environments on the controller. Defaults to 50.",
+							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ErrorCondition"),
+										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.SuccessfulReportJob"),
 									},
 								},
 							},
 						},
 					},
+					"lastFailedReportJobs": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The last report jobs that failed. The number of entries in this list is configurable through environments on the controller. Defaults to 50.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.FailedReportJob"),
+									},
+								},
+							},
+						},
+					},
+					"activeReportJobs": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The set of active report jobs. The maximum number of concurrent report jobs per report is configurable through environments on the controller. Defaults to 5.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ReportJob"),
+									},
+								},
+							},
+						},
+					},
+					"lastScheduleTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The last time a report generation job was created by the controller.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
 				},
-				Required: []string{"lastSuccessfulReport", "errorConditions"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.ErrorCondition", "github.com/projectcalico/libcalico-go/lib/apis/v3.ReportCreationStatus"},
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.FailedReportJob", "github.com/projectcalico/libcalico-go/lib/apis/v3.ReportJob", "github.com/projectcalico/libcalico-go/lib/apis/v3.SuccessfulReportJob", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 
@@ -7111,6 +7200,52 @@ func schema_libcalico_go_lib_apis_v3_ServiceAccountMatch(ref common.ReferenceCal
 			},
 		},
 		Dependencies: []string{},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_SuccessfulReportJob(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SuccessfulReportJob augments the ReportJob with completion details.",
+				Properties: map[string]spec.Schema{
+					"start": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The start time of the report.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"end": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The end time of the report.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"reportType": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The ReportType as configured at the time the report job was created.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"job": {
+						SchemaProps: spec.SchemaProps{
+							Description: "A reference to the report creation job. For successfully completed and failed jobs this job may no longer exist as it may have been garbage collected.",
+							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
+						},
+					},
+					"generationTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The time the report was generated and archived.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+				},
+				Required: []string{"start", "end", "reportType", "job", "generationTime"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/api/core/v1.ObjectReference", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 

@@ -15,6 +15,7 @@
 package v3
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -55,27 +56,61 @@ type ReportSpec struct {
 
 	// The node selector used to specify which nodes the report job may be scheduled on.
 	JobNodeSelector map[string]string `json:"jobNodeSelector,omitempty" validate:"omitempty"`
+
+	// This flag tells the controller to suspend subsequent jobs for generating reports, it does not apply to already
+	// started jobs. If jobs are resumed then the controller will start creating jobs for any reports that were missed
+	// while the job was suspended.
+	Suspend *bool `json:"suspend,omitempty" validate:"omitempty"`
 }
 
 // ReportStatus contains the status of the automated report generation.
 type ReportStatus struct {
-	LastSuccessfulReport *ReportCreationStatus `json:"lastSuccessfulReport"`
-	ErrorConditions      []ErrorCondition      `json:"errorConditions"`
+	// The last report jobs that completed successfully. The number of entries in this list is configurable through
+	// environments on the controller. Defaults to 50.
+	LastSuccessfulReportJobs []SuccessfulReportJob `json:"lastSuccessfulReportJobs,omitempty"`
+
+	// The last report jobs that failed. The number of entries in this list is configurable through
+	// environments on the controller. Defaults to 50.
+	LastFailedReportJobs []FailedReportJob `json:"lastFailedReportJobs,omitempty"`
+
+	// The set of active report jobs. The maximum number of concurrent report jobs per report is configurable through
+	// environments on the controller. Defaults to 5.
+	ActiveReportJobs []ReportJob `json:"activeReportJobs,omitempty"`
+
+	// The last time a report generation job was created by the controller.
+	LastScheduleTime *metav1.Time `json:"lastScheduleTime,omitempty"`
 }
 
-// ReportCreationStatus contains the status of the automated report generation.
-type ReportCreationStatus struct {
-	// The time the report was generated and archived.
-	GenerationTime metav1.Time `json:"generationTime"`
-
+// ReportJob contains
+type ReportJob struct {
 	// The start time of the report.
 	Start metav1.Time `json:"start"`
 
 	// The end time of the report.
 	End metav1.Time `json:"end"`
 
-	// The ReportType as configured at the time the report was generated.
+	// The ReportType as configured at the time the report job was created.
 	ReportType string `json:"reportType"`
+
+	// A reference to the report creation job. For successfully completed and failed jobs this job may no longer exist
+	// as it may have been garbage collected.
+	Job corev1.ObjectReference `json:"job"`
+}
+
+// SuccessfulReportJob augments the ReportJob with completion details.
+type SuccessfulReportJob struct {
+	ReportJob `json:",inline"`
+
+	// The time the report was generated and archived.
+	GenerationTime metav1.Time `json:"generationTime"`
+}
+
+// FailedReportJob augments the ReportJob with error details.
+type FailedReportJob struct {
+	ReportJob `json:",inline"`
+
+	// The error resulting in the failed report generation.
+	Errors []ErrorCondition `json:"errors"`
 }
 
 // EndpointsSelection is a set of selectors used to select the endpoints that are considered to be in-scope for the
