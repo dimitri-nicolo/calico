@@ -2,7 +2,11 @@
 package server_test
 
 import (
+	"archive/zip"
+	"bytes"
 	"encoding/json"
+	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -77,6 +81,11 @@ type tester struct {
 	client *http.Client
 }
 
+type forecastFile struct {
+	Format      string
+	FileContent string
+}
+
 // stop will stop the test server.
 func (t *tester) stop() {
 	t.server.Stop()
@@ -110,18 +119,84 @@ func (t *tester) list(expStatus int, exp []server.Report) {
 	}
 }
 
-func (t *tester) downloadSingle(id, format string, expStatus int, expFilename, expFile string) {
-	downloadUrl := "http://" + t.addr + "/compliance/reports/" + id + "/download?format=" + format
+func (t *tester) downloadSingle(id string, expStatus int, forecast forecastFile) {
+	downloadUrl := "http://" + t.addr + "/compliance/reports/" + id + "/download?format=" + forecast.Format
 	r, err := t.client.Get(downloadUrl)
 	Expect(err).NotTo(HaveOccurred())
+
+	Expect(r.StatusCode).To(Equal(expStatus))
+
+	//if we were not testing for an OK status we are done
+	if expStatus != http.StatusOK {
+		return
+	}
+
+	//check the file type that was downloaded
+	condisp := r.Header.Get("Content-Disposition")
+	Expect(condisp).Should(HavePrefix("attachment; filename="))
+	Expect(condisp).Should(HaveSuffix(forecast.Format))
+
+	// inspect the content
 	defer r.Body.Close()
 	bodyBytes, err := ioutil.ReadAll(r.Body)
 	Expect(err).NotTo(HaveOccurred())
 
-	Expect(r.StatusCode).To(Equal(expStatus))
-	if expStatus == http.StatusOK {
-		Expect(strings.TrimSpace(string(bodyBytes))).To(Equal(expFile))
+	Expect(strings.TrimSpace(string(bodyBytes))).To(Equal(forecast.FileContent))
+}
+
+func (t *tester) downloadMulti(id string, expStatus int, forecasts []forecastFile) {
+	var fmts []string
+	for _, v := range forecasts {
+		fmts = append(fmts, fmt.Sprintf("format=%s", v.Format))
 	}
+	formats := strings.Join(fmts, "&")
+
+	downloadUrl := "http://" + t.addr + "/compliance/reports/" + id + "/download?" + formats
+
+	r, err := t.client.Get(downloadUrl)
+	Expect(err).NotTo(HaveOccurred())
+
+	Expect(r.StatusCode).To(Equal(expStatus))
+
+	//if we were not testing for an OK status we are done
+	if expStatus != http.StatusOK {
+		return
+	}
+
+	//check the file type that was downloaded
+	condisp := r.Header.Get("Content-Disposition")
+	Expect(condisp).Should(HavePrefix("attachment; filename="))
+	Expect(condisp).Should(HaveSuffix(".zip"))
+
+	//inspect the content
+	defer r.Body.Close()
+	bodyBytes, err := ioutil.ReadAll(r.Body)
+	Expect(err).NotTo(HaveOccurred())
+
+	//unzip the the file
+	breader := bytes.NewReader(bodyBytes)
+	zr, err := zip.NewReader(breader, int64(len(bodyBytes)))
+	Expect(err).NotTo(HaveOccurred())
+
+	//extract the files into the files structure
+	var files = make(map[string][]byte)
+	for _, f := range zr.File {
+		freader, err := f.Open()
+		Expect(err).NotTo(HaveOccurred())
+		var b bytes.Buffer
+		io.Copy(&b, freader)
+		files[f.Name] = b.Bytes()
+	}
+
+	//determine the base file name we should be looking for based on the zip file
+	base := strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(condisp, "attachment; filename="), ".zip"))
+
+	//validate the file names and file content
+	for _, fc := range forecasts {
+		fn := fmt.Sprintf("%s-%s", base, fc.Format)
+		Expect(files).To(HaveKeyWithValue(fn, []byte(fc.FileContent)))
+	}
+
 }
 
 // RetrieveArchivedReport implements the ReportRetriever interface.

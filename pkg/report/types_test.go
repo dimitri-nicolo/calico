@@ -1,0 +1,32 @@
+package report
+
+import (
+	"time"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+var _ = Describe("ArchivedReportData.UID", func() {
+	It("should generate the same UID for a given input", func() {
+		//If this test should ever fail it probably means someone changed how we generate UIDs
+
+		Expect(getUID("someReportName", 111309193)).To(Equal("65589e0e-3d01-5692-bcf6-ec1a2bbc15f2"))
+		Expect(getUID("someReportName", 832915464)).To(Equal("c55cb8bc-1b9c-5d1b-ac07-d1beeb9b5d15"))
+		Expect(getUID("a different report name", 1000458854)).To(Equal("bcc465f5-d6a6-54ad-8b4d-aa2638a63638"))
+	})
+})
+
+func getUID(name string, seconds int64) string {
+	t := time.Unix(seconds, 0000).In(time.UTC)
+
+	rd := v3.ReportData{
+		ReportName: name,
+		StartTime:  v1.NewTime(t),
+		EndTime:    v1.NewTime(t),
+	}
+	ard := NewArchivedReport(&rd, "UI Summary")
+	return ard.UID()
+}
