@@ -5,14 +5,14 @@ import (
 	"flag"
 	"net"
 	"os"
+	"os/signal"
+	"syscall"
 
+	"github.com/caimeo/iniflags"
 	log "github.com/sirupsen/logrus"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 
-	"github.com/caimeo/iniflags"
-
-	"os/signal"
-	"syscall"
+	"github.com/projectcalico/libcalico-go/lib/logutils"
 
 	"github.com/tigera/compliance/pkg/datastore"
 	"github.com/tigera/compliance/pkg/elastic"
@@ -32,6 +32,11 @@ var (
 func main() {
 	initIniFlags()
 	handleFlags()
+
+	// Set up logger.
+	log.SetFormatter(&logutils.Formatter{})
+	log.AddHook(&logutils.ContextHook{})
+	log.SetLevel(logutils.SafeParseLogLevel(os.Getenv("LOG_LEVEL")))
 
 	// Create the elastic and Calico clients.
 	elastic := elastic.MustGetElasticClient()
