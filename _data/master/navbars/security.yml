@@ -108,3 +108,5 @@ toc:
     path: /security/intrusion-detection/job-descriptions
   - title: Customizing
     path: /security/intrusion-detection/customizing
+- title: Defend against a DoS attack
+  path: /security/defend-dos-attack   
