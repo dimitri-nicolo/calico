@@ -132,6 +132,16 @@ var (
 			AuditEventSample,
 		},
 	}
+
+	ReportDataNilNamespace = api.ReportData{
+		ReportName: "nil-namespace",
+		ReportSpec: api.ReportSpec{
+			EndpointsSelection: api.EndpointsSelection{
+				EndpointSelector: "lbl == 'lbl-val'",
+				Namespaces:       nil,
+			},
+		},
+	}
 )
 
 //

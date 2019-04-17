@@ -324,6 +324,7 @@ ci: clean check-glide-warnings static-checks test
 ## Display this help text
 help: # Some kind of magic from https://gist.github.com/rcmachado/af3db315e31383502660
 	$(info Available targets)
+	@echo
 	@awk '/^[a-zA-Z\-\_0-9\/]+:/ {                                      \
 		nb = sub( /^## /, "", helpMsg );                                \
 		if(nb == 0) {                                                   \
@@ -336,3 +337,5 @@ help: # Some kind of magic from https://gist.github.com/rcmachado/af3db315e31383
 	{ helpMsg = $$0 }'                                                  \
 	width=23                                                            \
 	$(MAKEFILE_LIST)
+	@echo
+	@echo 'To run a specific test suite, use: make test WHAT="<DIR containing test-suite>"'

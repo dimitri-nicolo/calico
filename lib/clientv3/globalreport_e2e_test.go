@@ -36,9 +36,18 @@ import (
 var _ = testutils.E2eDatastoreDescribe("GlobalReport tests", testutils.DatastoreAll, func(config apiconfig.CalicoAPIConfig) {
 	ctx := context.Background()
 
+	reportTypeName := "inventory"
+	reportTypeSpec := apiv3.ReportTypeSpec{
+		UISummaryTemplate: apiv3.ReportTemplate{
+			Name:        "rt-uist-n",
+			Description: "rt-uist-d",
+			Template:    "Report Name: {{ .ReportName }}",
+		},
+	}
+
 	name1 := "report-1"
 	spec1 := apiv3.ReportSpec{
-		ReportType: "inventory",
+		ReportType: reportTypeName,
 		EndpointsSelection: apiv3.EndpointsSelection{
 			EndpointSelector: "eps == 'report-eps1'",
 			Namespaces: &apiv3.NamesAndLabelsMatch{
@@ -64,7 +73,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalReport tests", testutils.Datastore
 
 	name2 := "report-2"
 	spec2 := apiv3.ReportSpec{
-		ReportType: "network-access",
+		ReportType: reportTypeName,
 		EndpointsSelection: apiv3.EndpointsSelection{
 			EndpointSelector: "eps == 'report-eps2'",
 			Namespaces: &apiv3.NamesAndLabelsMatch{
@@ -84,7 +93,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalReport tests", testutils.Datastore
 		},
 		JobSchedule: "0 0 * * *",
 		JobNodeSelector: map[string]string{
-			"report-l1": "report-v2",
+			"report-l2": "report-v2",
 		},
 	}
 
@@ -97,13 +106,27 @@ var _ = testutils.E2eDatastoreDescribe("GlobalReport tests", testutils.Datastore
 			Expect(err).NotTo(HaveOccurred())
 			be.Clean()
 
+			By("Attempting to create GlobalReport without creating GlobalReportType first")
+			_, outError := c.GlobalReports().Create(ctx, &apiv3.GlobalReport{
+				ObjectMeta: metav1.ObjectMeta{Name: name1},
+				Spec:       spec1,
+			}, options.SetOptions{})
+			Expect(outError).To(HaveOccurred())
+			Expect(outError.Error()).To(ContainSubstring(fmt.Sprintf("resource does not exist: GlobalReportType(%s)", reportTypeName)))
+
+			// GlobalReportType referenced in GlobalReport is required for following tests.
+			_, outError = c.GlobalReportTypes().Create(ctx, &apiv3.GlobalReportType{
+				ObjectMeta: metav1.ObjectMeta{Name: reportTypeName},
+				Spec:       reportTypeSpec,
+			}, options.SetOptions{})
+			Expect(outError).NotTo(HaveOccurred())
+
 			By("Updating the GlobalReport before it is created")
-			_, outError := c.GlobalReports().Update(ctx, &apiv3.GlobalReport{
+			_, outError = c.GlobalReports().Update(ctx, &apiv3.GlobalReport{
 				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", CreationTimestamp: metav1.Now(), UID: "test-fail-globalreport"},
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
-
 			Expect(outError.Error()).To(ContainSubstring(fmt.Sprintf("resource does not exist: GlobalReport(%s)", name1)))
 
 			By("Attempting to creating a new GlobalReport with name1/spec1 and a non-empty ResourceVersion")
@@ -170,6 +193,12 @@ var _ = testutils.E2eDatastoreDescribe("GlobalReport tests", testutils.Datastore
 			Expect(outList.Items).To(HaveLen(2))
 			Expect(&outList.Items[0]).To(MatchResource(apiv3.KindGlobalReport, testutils.ExpectNoNamespace, name1, spec1))
 			Expect(&outList.Items[1]).To(MatchResource(apiv3.KindGlobalReport, testutils.ExpectNoNamespace, name2, spec2))
+
+			By("Updating GlobalReport with ReportType pointing to invalid GlobalReportType")
+			res1.Spec.ReportType = "endpoints"
+			_, outError = c.GlobalReports().Update(ctx, res1, options.SetOptions{})
+			Expect(outError).To(HaveOccurred())
+			Expect(outError.Error()).To(ContainSubstring(fmt.Sprintf("resource does not exist: GlobalReportType(%s)", res1.Spec.ReportType)))
 
 			By("Updating GlobalReport name1 with spec2")
 			res1.Spec = spec2
@@ -316,6 +345,13 @@ var _ = testutils.E2eDatastoreDescribe("GlobalReport tests", testutils.Datastore
 			Expect(outError).NotTo(HaveOccurred())
 			Expect(outList.Items).To(HaveLen(0))
 			rev0 := outList.ResourceVersion
+
+			// GlobalReportType referenced in GlobalReport is required for following tests.
+			_, outError = c.GlobalReportTypes().Create(ctx, &apiv3.GlobalReportType{
+				ObjectMeta: metav1.ObjectMeta{Name: reportTypeName},
+				Spec:       reportTypeSpec,
+			}, options.SetOptions{})
+			Expect(outError).NotTo(HaveOccurred())
 
 			By("Configuring a GlobalReport name1/spec1 and storing the response")
 			outRes1, err := c.GlobalReports().Create(

@@ -2729,6 +2729,7 @@ func (in *ReportCreationStatus) DeepCopy() *ReportCreationStatus {
 func (in *ReportData) DeepCopyInto(out *ReportData) {
 	*out = *in
 	in.ReportSpec.DeepCopyInto(&out.ReportSpec)
+	in.ReportTypeSpec.DeepCopyInto(&out.ReportTypeSpec)
 	in.StartTime.DeepCopyInto(&out.StartTime)
 	in.EndTime.DeepCopyInto(&out.EndTime)
 	if in.Endpoints != nil {

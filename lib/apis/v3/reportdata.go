@@ -25,11 +25,12 @@ import (
 // The data is stored directly in elastic search. To reduce nesting and simplify indexing, all summary values are
 // contained at the top level.
 type ReportData struct {
-	ReportName string      `json:"reportName"`
-	ReportType string      `json:"reportType"`
-	ReportSpec ReportSpec  `json:"reportSpec"`
-	StartTime  metav1.Time `json:"startTime"`
-	EndTime    metav1.Time `json:"endTime"`
+	ReportName     string         `json:"reportName"`
+	ReportTypeName string         `json:"reportTypeName"`
+	ReportSpec     ReportSpec     `json:"reportSpec"`
+	ReportTypeSpec ReportTypeSpec `json:"reportTypeSpec"`
+	StartTime      metav1.Time    `json:"startTime"`
+	EndTime        metav1.Time    `json:"endTime"`
 
 	// The set of in-scope endpoints.
 	Endpoints []EndpointsReportEndpoint `json:"endpoints,omitempty"`

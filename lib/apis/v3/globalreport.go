@@ -39,7 +39,7 @@ type GlobalReport struct {
 // ReportSpec contains the values of the GlobalReport.
 type ReportSpec struct {
 	// The name of the report type.
-	ReportType string
+	ReportType string `json:"reportType" validate:"name,required"`
 
 	// EndpointsSelection is used to specify which endpoints are in-scope and stored in the generated report data.
 	// Only required if endpoints data is gathered in the report.

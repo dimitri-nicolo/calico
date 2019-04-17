@@ -17,9 +17,12 @@ import (
 	"context"
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	validator "github.com/projectcalico/libcalico-go/lib/validator/v3"
 	"github.com/projectcalico/libcalico-go/lib/watch"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // GlobalReportInterface has methods to work with GlobalReport resources.
@@ -44,6 +47,11 @@ func (r globalReports) Create(ctx context.Context, res *apiv3.GlobalReport, opts
 		return nil, err
 	}
 
+	// Validate GlobalReportType exists before create.
+	if err := r.CheckGlobalReportTypeExists(ctx, res); err != nil {
+		return nil, err
+	}
+
 	out, err := r.client.resources.Create(ctx, opts, apiv3.KindGlobalReport, res)
 	if out != nil {
 		return out.(*apiv3.GlobalReport), err
@@ -55,6 +63,11 @@ func (r globalReports) Create(ctx context.Context, res *apiv3.GlobalReport, opts
 // representation of the GlobalReport, and an error, if there is any.
 func (r globalReports) Update(ctx context.Context, res *apiv3.GlobalReport, opts options.SetOptions) (*apiv3.GlobalReport, error) {
 	if err := validator.Validate(res); err != nil {
+		return nil, err
+	}
+
+	// Validate GlobalReportType exists before update.
+	if err := r.CheckGlobalReportTypeExists(ctx, res); err != nil {
 		return nil, err
 	}
 
@@ -97,4 +110,28 @@ func (r globalReports) List(ctx context.Context, opts options.ListOptions) (*api
 // supplied options.
 func (r globalReports) Watch(ctx context.Context, opts options.ListOptions) (watch.Interface, error) {
 	return r.client.resources.Watch(ctx, opts, apiv3.KindGlobalReport, nil)
+}
+
+// Check that GlobalReportType configuration referenced in the GlobalReport configuration exists.
+func (c globalReports) CheckGlobalReportTypeExists(ctx context.Context, report *apiv3.GlobalReport) error {
+	reportTypeName := report.Spec.ReportType
+
+	_, err := c.client.GlobalReportTypes().Get(ctx, reportTypeName, options.GetOptions{})
+	if err != nil {
+		log.WithError(err).Debugf("ReportType(%s) configured with GlobalReport(%s) doesn't exist", reportTypeName, report.Name)
+
+		if _, ok := err.(cerrors.ErrorResourceDoesNotExist); ok {
+			return cerrors.ErrorValidation{
+				ErroredFields: []cerrors.ErroredField{
+					{
+						Name:   "ReportType",
+						Value:  reportTypeName,
+						Reason: err.Error(),
+					},
+				},
+			}
+		}
+	}
+
+	return err
 }
