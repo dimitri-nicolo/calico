@@ -441,6 +441,9 @@ spec:
       containers:
         - name: fluentd
           image: {{.Values.fluentd.image}}:{{.Values.fluentd.tag}}
+{{- if include "tigera-secure-lma.resourceLimitsConfigured" (tuple .Values.fluentd.resources) }}
+{{ tuple .Values.fluentd.resources | include "tigera-secure-lma.resourceLimits" | indent 10 }}
+{{- end }}
           env:
             - name: FLUENT_UID
               value: "0"
@@ -674,6 +677,9 @@ spec:
           containers:
             - name: tigera-es-curator
               image: {{.Values.esCurator.image}}:{{.Values.esCurator.tag}}
+{{- if include "tigera-secure-lma.resourceLimitsConfigured" (tuple .Values.esCurator.resources) }}
+{{ tuple .Values.esCurator.resources | include "tigera-secure-lma.resourceLimits" | indent 14 }}
+{{- end }}
               env:
                 - name: ELASTIC_INDEX_SUFFIX
                   valueFrom:
@@ -762,6 +768,9 @@ spec:
       containers:
       - name: install
         image: {{.Values.elasticTseeInstaller.image}}:{{.Values.elasticTseeInstaller.tag}}
+{{- if include "tigera-secure-lma.resourceLimitsConfigured" (tuple .Values.elasticTseeInstaller.resources) }}
+{{ tuple .Values.elasticTseeInstaller.resources | include "tigera-secure-lma.resourceLimits" | indent 8 }}
+{{- end }}
         env:
 {{- if eq $elasticMode "external" }}
           - name: ELASTIC_HOST

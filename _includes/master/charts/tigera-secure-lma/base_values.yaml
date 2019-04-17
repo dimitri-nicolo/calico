@@ -34,6 +34,14 @@ manager:
     nodePort: null
     loadBalancerIP: null
     clusterIP: null
+  # Optional configuration for setting resource limits on the manager container.
+  resources:
+    requests:
+      cpu: #"100m"
+      memory: #"128Mi"
+    limits:
+      cpu: #"2000m"
+      memory: #"1024Mi"
 
 # Configuration for the manager UI proxy.
 managerProxy:
@@ -44,6 +52,14 @@ managerProxy:
     #     configMapKeyRef:
     #       name: tigera-cnx-manager-config
     #       key: tigera.cnx-manager.oidc-client-id
+  # Optional configuration for setting resource limits on the manager proxy container.
+  resources:
+    requests:
+      cpu: #"100m"
+      memory: #"128Mi"
+    limits:
+      cpu: #"500m"
+      memory: #"1024Mi"
 
 # Configuration for the esProxy container.
 esProxy:
@@ -55,6 +71,14 @@ esProxy:
     #       name: tigera-es-config
     #       key: tigera.elasticsearch.ca.path
     #       optional: true
+  # Optional configuration for setting resource limits on the esProxy container.
+  resources:
+    requests:
+      cpu: #"100m"
+      memory: #"128Mi"
+    limits:
+      cpu: #"500m"
+      memory: #"1024Mi"
 
 # Configuration for the Tigera custom fluentd.
 fluentd:
@@ -62,6 +86,14 @@ fluentd:
     # Optional environment variables for configuring the Tigera fluentd.
     # - name: FLUENT_UID
     #   value: "0"
+  # Optional configuration for setting resource limits on the Tigera fluentd container.
+  resources:
+    requests:
+      cpu: #"100m"
+      memory: #"128Mi"
+    limits:
+      cpu: #"500m"
+      memory: #"1024Mi"
 
 # Configuration for the Tigera elasticsearch curator.
 esCurator:
@@ -72,6 +104,14 @@ esCurator:
     #     configMapKeyRef:
     #       name: tigera-es-config
     #       key: tigera.elasticsearch.cluster-name
+  # Optional configuration for setting resource limits on the elasticsearch curator container.
+  resources:
+    requests:
+      cpu: #"100m"
+      memory: #"128Mi"
+    limits:
+      cpu: #"500m"
+      memory: #"1024Mi"
 
 # Configuration for the Tigera elasticsearch dashboard installer job.
 elasticTseeInstaller:
@@ -79,6 +119,14 @@ elasticTseeInstaller:
     # Optional environment variables for configuring the elasticsearch dashboard installer job.
     # - name: ELASTIC_HOST
     #   value: elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local
+  # Optional configuration for setting resource limits on the elasticsearch dashboard installer container.
+  resources:
+    requests:
+      cpu: #"100m"
+      memory: #"128Mi"
+    limits:
+      cpu: #"500m"
+      memory: #"1024Mi"
 
 # Configuration for the compliance controller.
 complianceController:
@@ -86,6 +134,14 @@ complianceController:
     # Optional environment variables for configuring the compliance controller.
     # - name: LOG_LEVEL
     #   value: "warning"
+  # Optional configuration for setting resource limits on the compliance controller container.
+  resources:
+    requests:
+      cpu: #"100m"
+      memory: #"128Mi"
+    limits:
+      cpu: #"500m"
+      memory: #"1024Mi" 
 
 # Configuration for the compliance server.
 complianceServer:
@@ -93,6 +149,14 @@ complianceServer:
     # Optional environment variables for configuring the compliance server.
     # - name: LOG_LEVEL
     #   value: "warning"
+  # Optional configuration for setting resource limits on the compliance server container.
+  resources:
+    requests:
+      cpu: #"100m"
+      memory: #"128Mi"
+    limits:
+      cpu: #"500m"
+      memory: #"1024Mi"
 
 # Configuration for the compliance snapshotter.
 complianceSnapshotter:
@@ -100,6 +164,14 @@ complianceSnapshotter:
     # Optional environment variables for configuring the compliance snapshotter.
     # - name: LOG_LEVEL
     #   value: "warning"
+  # Optional configuration for setting resource limits on the compliance snapshotter container.
+  resources:
+    requests:
+      cpu: #"100m"
+      memory: #"128Mi"
+    limits:
+      cpu: #"500m"
+      memory: #"1024Mi"
 
 alertmanager:
   # Configuration for the service which exposes the Prometheus alertmanager.
