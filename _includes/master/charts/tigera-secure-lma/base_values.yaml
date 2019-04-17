@@ -1,6 +1,3 @@
-datastore: kdd
-elasticsearchType: "operator"
-secure_es: false
 orch: ""
 runElasticsearchOperatorClusterAdmin: false
 createCustomResources: true

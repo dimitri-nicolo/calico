@@ -2,7 +2,5 @@
 layout: null
 ---
 {% helm tigera-secure-lma --execute templates/monitor-calico.yaml %}
-secure_es: false
-elasticsearchType: operator
 createCustomResources: false
 {% endhelm %}

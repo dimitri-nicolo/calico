@@ -17,10 +17,9 @@ key: {{ $ca.Key | b64enc }}
 {{- end }}
 
 
-{{- define "tigera-secure-lma.elasticsearch.validate" -}}
+{{- define "tigera-secure-lma.elasticsearch.mode" -}}
 {{- if or (or (or (or (or (or (or (or .Values.elasticsearch.host) .Values.elasticsearch.tls.ca) .Values.elasticsearch.fluentd.password) .Values.elasticsearch.manager.password) .Values.elasticsearch.curator.password) .Values.elasticsearch.compliance.password) .Values.elasticsearch.intrusionDetection.password) .Values.elasticsearch.elasticInstaller.password -}}
 {{- $_ := required "Must specify all or none for secure ES settings" .Values.elasticsearch.host -}}
-{{- $_ := required "Must specify all or none for secure ES settings" .Values.kibana.host -}}
 {{- $_ := required "Must specify all or none for secure ES settings" .Values.elasticsearch.tls.ca -}}
 {{- $_ := required "Must specify all or none for secure ES settings" .Values.elasticsearch.fluentd.password -}}
 {{- $_ := required "Must specify all or none for secure ES settings" .Values.elasticsearch.manager.password -}}
@@ -34,5 +33,8 @@ key: {{ $ca.Key | b64enc }}
 {{- $_ := required "Must specify both or none for proxy auth" .Values.elasticsearch.tls.key -}}
 {{- end -}}
 
+external
+{{- else -}}
+operator
 {{- end -}}
 {{- end -}}

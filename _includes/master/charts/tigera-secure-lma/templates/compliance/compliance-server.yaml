@@ -1,4 +1,4 @@
-
+{{- $elasticMode := include "tigera-secure-lma.elasticsearch.mode" . }}
 kind: ServiceAccount
 apiVersion: v1
 metadata:
@@ -107,7 +107,7 @@ spec:
           env:
             - name: LOG_LEVEL
               value: "warning"
-{{- if .Values.secure_es }}
+{{- if eq $elasticMode "external" }}
             - name: ELASTIC_HOST
               valueFrom:
                 configMapKeyRef:
@@ -143,12 +143,12 @@ spec:
 {{- if .Values.complianceServer.env }}
 {{ toYaml .Values.complianceServer.env | indent 12 }}
 {{- end }}
-{{- if .Values.secure_es }}
+{{- if eq $elasticMode "external" }}
           volumeMounts:
             - name: elastic-ca-cert-volume
               mountPath: /etc/compliance/elastic
 {{- end }}
-{{- if .Values.secure_es }}
+{{- if eq $elasticMode "external" }}
       volumes:
         # Should be created during installation process.
         - name: elastic-ca-cert-volume

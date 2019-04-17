@@ -2,7 +2,6 @@
 layout: null
 ---
 {% helm tigera-secure-lma --execute templates/operator.yaml %}
-elasticsearchType: operator
 createCustomResources: false
 runElasticsearchOperatorClusterAdmin: true
 {% endhelm %}

@@ -18,11 +18,16 @@ module Jekyll
     def initialize(tag_name, extra_args, liquid_options)
       super
 
+      @chart = "calico"
       if extra_args.start_with?("tigera-secure-lma")
         @chart = "tigera-secure-lma"
         extra_args.slice! "tigera-secure-lma"
-      else
-        @chart = "calico"
+      end
+
+      @mock_es = false
+      if extra_args.start_with?(" secure-es")
+        @mock_es = true
+        extra_args.slice! " secure-es"
       end
 
       @extra_args = extra_args
@@ -65,6 +70,11 @@ module Jekyll
         --set kibana.service.nodePort=30601 \
         --set etcd.endpoints='http://<ETCD_IP>:<ETCD_PORT>'"""
 
+      # Add mock elasticsearch settings if required for rendering in the docs.
+      if @mock_es
+        cmd = mock_elastic_settings(cmd)
+      end
+
       cmd += " " + @extra_args.to_s
 
       out, stderr, status = Open3.capture3(cmd)
@@ -75,6 +85,17 @@ module Jekyll
       t.unlink
       tv.unlink
       return out
+    end
+    def mock_elastic_settings(cmd)
+      cmd += " " + """--set elasticsearch.host='__ELASTICSEARCH_HOST__' \
+        --set elasticsearch.tls.ca=fake \
+        --set elasticsearch.fluentd.password=fake \
+        --set elasticsearch.manager.password=fake \
+        --set elasticsearch.curator.password=fake \
+        --set elasticsearch.compliance.password=fake \
+        --set elasticsearch.intrusionDetection.password=fake \
+        --set elasticsearch.elasticInstaller.password=fake"""
+      return cmd
     end
   end
 end

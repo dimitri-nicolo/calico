@@ -1,8 +1,7 @@
 ---
 layout: null
 ---
-{% helm tigera-secure-lma --execute templates/operator.yaml %}
+{% helm tigera-secure-lma secure-es --execute templates/operator.yaml %}
 orch: openshift
-elasticsearchType: external
 createCustomResources: false
 {% endhelm %}

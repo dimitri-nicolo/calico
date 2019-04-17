@@ -1,9 +1,9 @@
-{{- include "tigera-secure-lma.elasticsearch.validate" . }}
+{{- $elasticMode := include "tigera-secure-lma.elasticsearch.mode" . }}
 ---
 # This manifest includes the following component versions:
 #   quay.io/prometheus/prometheus:{{.Values.prometheus.tag}}
 #   quay.io/prometheus/alertmanager:{{.Values.alertmanager.tag}}
-{{- if eq .Values.elasticsearchType "operator" }}
+{{- if eq $elasticMode "operator" }}
 #   docker.elastic.co/elasticsearch/elasticsearch:{{.Values.elasticsearch.tag}}
 #   docker.elastic.co/kibana/kibana:{{.Values.kibana.tag}}
 {{- end }}
@@ -45,7 +45,7 @@ data:
         pattern dev
       </exclude>
     </filter>
-{{- if .Values.secure_es }}
+{{- if eq $elasticMode "external" }}
   tigera.elasticsearch.access-mode: serviceuser
   tigera.elasticsearch.host: {{ .Values.elasticsearch.host | default "__ELASTICSEARCH_HOST__" | quote }}
   tigera.elasticsearch.port: {{ .Values.elasticsearch.port | default "__ELASTICSEARCH_PORT__" | quote }}
@@ -338,7 +338,7 @@ spec:
   selector:
     prometheus: calico-node-prometheus
 
-{{- if eq .Values.elasticsearchType "operator" }}
+{{- if eq $elasticMode "operator" }}
 ---
 
 # Set up the elasticsearch cluster parameters
@@ -461,7 +461,7 @@ spec:
                   key: tigera.elasticsearch.flow-filtering
             - name: FLOW_LOG_FILE
               value: /var/log/calico/flowlogs/flows.log
-{{- if .Values.secure_es }}
+{{- if eq $elasticMode "external" }}
             - name: ELASTIC_HOST
               valueFrom:
                 configMapKeyRef:
@@ -690,7 +690,7 @@ spec:
                     configMapKeyRef:
                       name: tigera-es-config
                       key: tigera.elasticsearch.audit-retention
-{{- if .Values.secure_es }}
+{{- if eq $elasticMode "external" }}
                 - name: ELASTIC_HOST
                   valueFrom:
                     configMapKeyRef:
@@ -763,7 +763,7 @@ spec:
       - name: install
         image: {{.Values.elasticTseeInstaller.image}}:{{.Values.elasticTseeInstaller.tag}}
         env:
-{{- if .Values.secure_es }}
+{{- if eq $elasticMode "external" }}
           - name: ELASTIC_HOST
             valueFrom:
               configMapKeyRef:
@@ -924,7 +924,7 @@ spec:
             command: ["/healthz", "readiness"]
           initialDelaySeconds: 5
         env:
-{{- if .Values.secure_es }}
+{{- if eq $elasticMode "external" }}
           - name: ELASTIC_HOST
             valueFrom:
               configMapKeyRef:
@@ -967,7 +967,7 @@ spec:
             value: "http"
 {{- end }}
 
-{{- if eq .Values.elasticsearchType "operator" }}
+{{- if eq $elasticMode "operator" }}
 ---
 # Allow access to Elasticsearch client nodes from Kibana, fluentd, and the
 # intrusion dection installer
