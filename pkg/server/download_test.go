@@ -21,11 +21,11 @@ var _ = Describe("Download tests", func() {
 		}
 
 		By("Running a download query")
-		t.downloadSingle(summary1.UID(), "boo.csv",
-			http.StatusOK,
-			"",
-			"xxx-100 BOO!",
-		)
+		t.downloadSingle(summary1.UID(), http.StatusOK, forecastFile1)
+
+		forecasts := []forecastFile{forecastFile1, forecastFile2}
+		By("Running a multi download query")
+		t.downloadMulti(summary1.UID(), http.StatusOK, forecasts)
 
 		By("Stopping the server")
 		t.stop()

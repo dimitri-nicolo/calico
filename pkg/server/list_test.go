@@ -54,6 +54,16 @@ var (
 			},
 		},
 	}
+
+	forecastFile1 = forecastFile{
+		Format:      "boo.csv",
+		FileContent: "xxx-100 BOO!",
+	}
+
+	forecastFile2 = forecastFile{
+		Format:      "bar.csv",
+		FileContent: "yyy-100 BAR!",
+	}
 )
 
 var _ = Describe("List tests", func() {
