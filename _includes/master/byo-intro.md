@@ -129,7 +129,7 @@ They may also be useful as a reference for defining alternative security configu
            "privileges": [ "read"]
          },
          {
-           "names": [ ".tigera.ipset", "tigera_secure_ee_events" ],
+           "names": [ ".tigera.ipset.*", "tigera_secure_ee_events.*" ],
            "privileges": [ "all"]
          }
        ]
