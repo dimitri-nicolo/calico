@@ -80,8 +80,8 @@ initialPool:
    helm install ./tigera-secure-ee-core.tgz -f my-values.yaml
      --set-file imagePullSecret=./tigera-pullsecret.json
    ```
-   
-2. Wait for the 'cnx-apiserver' pod to be running. 
+
+2. Wait for the 'cnx-apiserver' pod to be running.
 
 3. Install your license:
 
@@ -102,8 +102,16 @@ initialPool:
 ```yaml
 elasticsearch:
   host: my.elasticsearch.co
-  username: tigera-manager
-  password: mypassword
+```
+
+```
+--set-file elasticsearch.tls.ca=./elastic.ca \
+--set elasticsearch.fluentd.password=$FLUENTD_PASSWORD \
+--set elasticsearch.manager.password=$MANAGER_PASSWORD \
+--set elasticsearch.curator.password=$CURATOR_PASSWORD \
+--set elasticsearch.compliance.password=$COMPLIANCE_PASSWORD \
+--set elasticsearch.intrusionDetection.password=$IDS_PASSWORD \
+--set elasticsearch.elasticInstaller.password=$ELASTIC_INSTALLER_PASSWORD
 ```
 
 ### Setting an Auth Type
