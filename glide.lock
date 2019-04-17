@@ -1,13 +1,11 @@
-hash: f520398619a59ce58ffe4a2c1b5b56741d3ab3b5d65e4f7b53192d45f63e1311
-updated: 2019-04-13T05:03:00.015514845Z
+hash: 71da7cd3a0cbd3d2a87995f646e2c0fc2b1ecb42fbbfa611cf86bcbc036cbc1e
+updated: 2019-04-17T17:33:52.816877969Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
   subpackages:
   - compute/metadata
   - internal
-- name: github.com/alexflint/go-filemutex
-  version: 72bdc8eae2aef913234599b837f5dda445ca9bd9
 - name: github.com/aws/aws-sdk-go
   version: fad131ddc707880428615dc8bc1587b55fb46d74
   subpackages:
@@ -78,8 +76,6 @@ imports:
   - pkg/ns
   - pkg/utils/hwaddr
   - pkg/utils/sysctl
-  - plugins/ipam/host-local/backend
-  - plugins/ipam/host-local/backend/disk
 - name: github.com/coreos/etcd
   version: 33245c6b5b49130ca99280408fadfab01aac0e48
   subpackages:
@@ -100,7 +96,7 @@ imports:
   subpackages:
   - iptables
 - name: github.com/coreos/go-semver
-  version: 8ab6407b697782a06568d4b7f1db25550ec2e4c6
+  version: e214231b295a8ea9479f11b70b35d5acf3556d9b
   subpackages:
   - semver
 - name: github.com/davecgh/go-spew
@@ -154,6 +150,10 @@ imports:
   version: 7d79101e329e5a3adf994758c578dab82b90c017
 - name: github.com/google/gofuzz
   version: 44d81051d367757e1c7c6a5a86423ece9afcf63c
+- name: github.com/google/gopacket
+  version: b7586607157b64351ab71d7f6ed36f71f2e83393
+  subpackages:
+  - layers
 - name: github.com/googleapis/gnostic
   version: 0c5108395e2debce0d731cf0287ddf7242066aba
   subpackages:
@@ -293,7 +293,7 @@ imports:
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
 - name: github.com/projectcalico/cni-plugin
-  version: 78369537181a12f1e3c06dd63f2e39921dd8057d
+  version: e190531ffe41aeaf47f377ea560407ae6c36327b
   repo: git@github.com:tigera/cni-plugin-private.git
   subpackages:
   - internal/pkg/azure
@@ -303,9 +303,8 @@ imports:
   - pkg/k8s
   - pkg/plugin
   - pkg/types
-  - pkg/upgrade
 - name: github.com/projectcalico/felix
-  version: 0f2a9311916994be3caefdde0b886c0838b85c88
+  version: 40328eb4b6ea2f71c498b46d7979414aa6e99add
   repo: git@github.com:tigera/felix-private.git
   subpackages:
   - buildinfo
@@ -352,7 +351,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 4a928725dc8e3786d2bcb082c7d8880537435f87
+  version: d3d5a6f44bff12ee6166b3e145aa24ebf99ac1fa
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
@@ -403,7 +402,7 @@ imports:
   - lib/validator/v3
   - lib/watch
 - name: github.com/projectcalico/pod2daemon
-  version: df2b9c8d2744ebce544742f7f765b59c5e88db0d
+  version: d1b62418f472caa0387e28d43466cd1749cf3dde
   subpackages:
   - binder
 - name: github.com/projectcalico/typha
@@ -424,7 +423,7 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: cfeb6f9992ffa54aaa4f2170ade4067ee478b250
+  version: 13ba4ddd0caa9c28ca7b7bffe1dfa9ed8d5ef207
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
@@ -667,7 +666,7 @@ imports:
   - pkg/watch
   - third_party/forked/golang/reflect
 - name: k8s.io/apiserver
-  version: 42393778815389260507d834ce7bda7629232081
+  version: f1dab8c342623e75f0484f20b150183d9e73f406
   subpackages:
   - pkg/apis/audit
 - name: k8s.io/client-go
