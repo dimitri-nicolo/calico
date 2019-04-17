@@ -29,6 +29,7 @@ import (
 	"time"
 
 	calico "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -896,22 +897,62 @@ func TestGlobalReportClient(t *testing.T) {
 }
 
 func testGlobalReportClient(client calicoclient.Interface, name string) error {
+	globalReportTypeName := "inventory"
 	globalReportClient := client.ProjectcalicoV3().GlobalReports()
 	globalReport := &v3.GlobalReport{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Spec: calico.ReportSpec{
+			ReportType: globalReportTypeName,
+		},
 		Status: calico.ReportStatus{
-			LastSuccessfulReport: &calico.ReportCreationStatus{
-				GenerationTime: metav1.Time{time.Now()},
-				Start:          metav1.Time{time.Now()},
-				End:            metav1.Time{time.Now()},
-				ReportType:     "endpoints",
-			},
-			ErrorConditions: []calico.ErrorCondition{
+			LastSuccessfulReportJobs: []calico.SuccessfulReportJob{
 				{
-					Type:    "foo",
-					Message: "bar",
+					ReportJob: calico.ReportJob{
+						Start:      metav1.Time{time.Now()},
+						End:        metav1.Time{time.Now()},
+						ReportType: "endpoints",
+						Job: corev1.ObjectReference{
+							Kind:      "NetworkPolicy",
+							Name:      "fbar-srj",
+							Namespace: "fbar-ns-srj",
+						},
+					},
+					GenerationTime: metav1.Time{time.Now()},
 				},
 			},
+			LastFailedReportJobs: []calico.FailedReportJob{
+				{
+					ReportJob: calico.ReportJob{
+						Start:      metav1.Time{time.Now()},
+						End:        metav1.Time{time.Now()},
+						ReportType: "endpoints",
+						Job: corev1.ObjectReference{
+							Kind:      "NetworkPolicy",
+							Name:      "fbar-frj",
+							Namespace: "fbar-ns-frj",
+						},
+					},
+					Errors: []calico.ErrorCondition{
+						{
+							Type:    "foo",
+							Message: "bar",
+						},
+					},
+				},
+			},
+			ActiveReportJobs: []calico.ReportJob{
+				{
+					Start:      metav1.Time{time.Now()},
+					End:        metav1.Time{time.Now()},
+					ReportType: "endpoints",
+					Job: corev1.ObjectReference{
+						Kind:      "NetworkPolicy",
+						Name:      "fbar-arj",
+						Namespace: "fbar-ns-arj",
+					},
+				},
+			},
+			LastScheduleTime: &metav1.Time{time.Now()},
 		},
 	}
 
@@ -925,6 +966,23 @@ func testGlobalReportClient(client calicoclient.Interface, name string) error {
 	}
 
 	// Create/List/Get/Delete tests.
+
+	// We now need a GlobalReportType resource before GlobalReport can be created.
+	globalReportTypeClient := client.ProjectcalicoV3().GlobalReportTypes()
+	globalReportType := &v3.GlobalReportType{
+		ObjectMeta: metav1.ObjectMeta{Name: globalReportTypeName},
+		Spec: calico.ReportTypeSpec{
+			UISummaryTemplate: calico.ReportTemplate{
+				Name:     "uist",
+				Template: "Report Name: {{ .ReportName }}",
+			},
+		},
+	}
+	_, err = globalReportTypeClient.Create(globalReportType)
+	if nil != err {
+		return fmt.Errorf("error creating the pre-requisite globalReportType '%v' (%v)", globalReportType, err)
+	}
+
 	globalReportServer, err := globalReportClient.Create(globalReport)
 	if nil != err {
 		return fmt.Errorf("error creating the globalReport '%v' (%v)", globalReport, err)
@@ -956,33 +1014,34 @@ func testGlobalReportClient(client calicoclient.Interface, name string) error {
 	// Pupulate both GlobalReport and ReportStatus.
 	// Verify that Update() modifies GlobalReport only.
 	globalReportUpdate := globalReportServer.DeepCopy()
-	globalReportUpdate.Spec.ReportType = "Inventory"
-	globalReportUpdate.Status.LastSuccessfulReport = &calico.ReportCreationStatus{
-		GenerationTime: v1.Time{Time: time.Now()},
+	globalReportUpdate.Spec.JobSchedule = "*/1 * * * *"
+	globalReportUpdate.Status.LastSuccessfulReportJobs = []calico.SuccessfulReportJob{
+		{GenerationTime: v1.Time{Time: time.Now()}},
 	}
 	globalReportServer, err = globalReportClient.Update(globalReportUpdate)
 	if err != nil {
 		return fmt.Errorf("error updating globalReport %s (%s)", name, err)
 	}
 	if globalReportServer.Spec.JobSchedule != globalReportUpdate.Spec.JobSchedule {
-		return errors.New("GlobalReport Update() didn't update Spec.JobScdedule")
+		return errors.New("GlobalReport Update() didn't update Spec.JobSchedule")
 	}
-	if globalReportServer.Status.LastSuccessfulReport != nil {
+	if len(globalReportServer.Status.LastSuccessfulReportJobs) != 0 {
 		return errors.New("GlobalReport status was updated by Update()")
 	}
 
 	// Pupulate both GlobalReport and ReportStatus.
 	// Verify that UpdateStatus() modifies ReportStatus only.
 	globalReportUpdate = globalReportServer.DeepCopy()
-	globalReportUpdate.Status.LastSuccessfulReport = &calico.ReportCreationStatus{
-		GenerationTime: v1.Time{Time: time.Now()},
+	globalReportUpdate.Status.LastSuccessfulReportJobs = []calico.SuccessfulReportJob{
+		{GenerationTime: v1.Time{Time: time.Now()}},
 	}
 	globalReportUpdate.Labels = map[string]string{"foo": "bar"}
 	globalReportServer, err = globalReportClient.UpdateStatus(globalReportUpdate)
 	if err != nil {
 		return fmt.Errorf("error updating globalReport %s (%s)", name, err)
 	}
-	if globalReportServer.Status.LastSuccessfulReport.GenerationTime.Time.Equal(time.Time{}) {
+	if len(globalReportServer.Status.LastSuccessfulReportJobs) == 1 &&
+		globalReportServer.Status.LastSuccessfulReportJobs[0].GenerationTime.Time.Equal(time.Time{}) {
 		return fmt.Errorf("didn't update GlobalReport status. %v != %v", globalReportUpdate.Status, globalReportServer.Status)
 	}
 	if _, ok := globalReportServer.Labels["foo"]; ok {
@@ -1023,6 +1082,7 @@ func testGlobalReportClient(client calicoclient.Interface, name string) error {
 	for i := 0; i < 2; i++ {
 		gr := &v3.GlobalReport{
 			ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("gr%d", i)},
+			Spec:       calico.ReportSpec{ReportType: "inventory"},
 		}
 		_, err = globalReportClient.Create(gr)
 		if err != nil {
@@ -1036,6 +1096,12 @@ func testGlobalReportClient(client calicoclient.Interface, name string) error {
 	}
 	if len(events) != 2 {
 		return fmt.Errorf("expected 2 watch events got %d", len(events))
+	}
+
+	// Undo pre-requisite creating GlobalReportType.
+	err = globalReportTypeClient.Delete(globalReportTypeName, &metav1.DeleteOptions{})
+	if nil != err {
+		return fmt.Errorf("error deleting the pre-requisite globalReportType '%v' (%v)", globalReportType, err)
 	}
 
 	return nil
