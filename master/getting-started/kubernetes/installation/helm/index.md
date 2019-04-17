@@ -9,14 +9,14 @@ title: Installing TSEE Helm
 
 - Ensure that Tiller is running, and your local helm CLI tool is configured to speak to it.
 
-- Ensure you've acquired the {{ site.prodname }} Helm Artifacts from the Tigera support portal:
+- Ensure you've acquired the {{ site.prodname }} Helm Artifacts from the [Tigera support portal](https://support.tigera.io):
 
-  - tigera-secure-core.tgz
+  - tigera-secure-ee-core.tgz
   - tigera-secure-ee.tgz
 
 ## Step 1: Craft your values.yaml for Tigera Secure EE Core with Helm
 
-- Before we install, we must build a values.yaml to configure {{ site.prodname }} for your environment.
+Before we install, we must build a helm values file to configure {{ site.prodname }} Core for your environment.
 
 ### Configure your Datastore Connection
 
@@ -63,33 +63,39 @@ initialPool:
 
 ### Default Pool CIDR
 
-If you are using a different pod CIDR, use the following commands to
-
-Pod IPs will be chosen from this range. Changing this value after installation will have no effect. This should fall within `--cluster-cidr` configured for the cluster
+By default, {{ site.prodname }} creates an IPv4 Pool with CIDR `192.168.0.0/16` when it launches. To change this CIDR:
 
 ```yaml
 initialPool:
   cidr: 10.0.0.0/8
 ```
 
+>This should fall within `--cluster-cidr` configured for the cluster
+
+>Changing this value after installation will have no effect.
+
 ## Step 2: Install Tigera Secure EE Core with Helm
 
-1. Install the chart
+1. Install the chart, passing in the `my-values.yaml` file you crafted from the previous section:
 
    ```
    helm install ./tigera-secure-ee-core.tgz -f my-values.yaml
-     --set-file imagePullSecret=./tigera-pullsecret.json
+     --set-file imagePullSecrets.cnx-pull-secret=./tigera-pullsecret.json
    ```
 
-2. Wait for the 'cnx-apiserver' pod to be running.
+2. Wait for the 'cnx-apiserver' pod to become ready:
 
-3. Install your license:
+   ```
+   kubectl rollout status -n kube-system deployment/cnx-apiserver
+   ```
+
+3. Install your {{ site.prodname }} license:
 
    ```
    kubectl apply -f  ./license.yaml
    ```
 
-4. Install some NetworkPolicy to secure the TSEE install:
+4. Apply the following manifest to set network policy that secures access to {{ site.prodname }}:
 
    ```
    kubectl apply -f {{ site.url }}/{{ page.version }}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml
@@ -97,12 +103,19 @@ initialPool:
 
 ## Step 3: Craft your values.yaml Tigera Secure EE with Helm
 
-### Use your own Elasticsearch
+Before we install, we must build a helm values file to configure {{ site.prodname }} for your environment.
+
+### Connect to Elasticsearch
+
+By default, {{ site.prodname }} Monitoring launches Elasticsearch Operator to bootstrap an unsecured elasticsearch cluster for demonstrative purposes. To disable this behavior and instead connect to your own elasticsearch, define the address in your yaml:
 
 ```yaml
 elasticsearch:
   host: my.elasticsearch.co
+  port: 9200
 ```
+
+Additionally, provide the CA and passwords for each of the roles:
 
 ```
 --set-file elasticsearch.tls.ca=./elastic.ca \
@@ -113,6 +126,8 @@ elasticsearch:
 --set elasticsearch.intrusionDetection.password=$IDS_PASSWORD \
 --set elasticsearch.elasticInstaller.password=$ELASTIC_INSTALLER_PASSWORD
 ```
+
+See [information on the permissions of these roles]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/byo-elasticsearch#before-you-begin) for help setting up these roles.
 
 ### Setting an Auth Type
 
