@@ -1,8 +1,0 @@
----
-layout: null
----
-
-{% helm tigera-secure-lma --execute templates/compliance/compliance-server.yaml  --execute templates/compliance/compliance-controller.yaml %}
-secure_es: false
-datastore: "kdd"
-{% endhelm %}
