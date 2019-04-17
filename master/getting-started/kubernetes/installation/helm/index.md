@@ -1,5 +1,5 @@
 ---
-title: Installing TSEE Helm
+title: Installing Tigera Secure EE using Helm
 ---
 
 ## Before you begin
@@ -15,7 +15,7 @@ title: Installing TSEE Helm
   - tigera-secure-ee-core.tgz
   - tigera-secure-ee.tgz
 
-## Step 1: Craft your values.yaml for Tigera Secure EE Core with Helm
+## Step 1: Craft your values.yaml for {{ site.prodname }} Core
 
 Before we install, we must build a helm values file to configure {{ site.prodname }} Core for your environment.
 
@@ -74,7 +74,7 @@ initialPool:
 
 >Changing this value after installation will have no effect.
 
-## Step 2: Install Tigera Secure EE Core with Helm
+## Step 2: Install {{ site.prodname }} Core
 
 1. Install the chart, passing in the `my-values.yaml` file you crafted from the previous section:
 
@@ -101,7 +101,7 @@ initialPool:
    kubectl apply -f {{ site.url }}/{{ page.version }}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml
    ```
 
-## Step 3: Craft your values.yaml Tigera Secure EE with Helm
+## Step 3: Craft your values.yaml for {{ site.prodname }}
 
 Before we install, we must build a helm values file to configure {{ site.prodname }} for your environment.
 
@@ -159,7 +159,7 @@ manager:
     clientID: "cnx-manager"
 ```
 
-## Step 4: Install Tigera Secure EE with Helm
+## Step 4: Install {{ site.prodname }}
 
 0. Pre-install the CRDs.
 
@@ -171,10 +171,10 @@ manager:
 
    >[Click to view this manifest directly]({{ site.url }}/{{ page.version }}/getting-started/kubernetes/installation/helm/tigera-secure-lma/operator-crds.yaml)
 
-1. Install the tigera-secure-lma helm chart with custom resource provisioning disabled:
+1. Install the tigera-secure-ee helm chart with custom resource provisioning disabled:
 
    ```
-   helm install ./tigera-secure-lma.tgz --set createCustomResources=false \
+   helm install ./tigera-secure-ee.tgz --set createCustomResources=false \
      --set-file imagePullSecrets.cnx-pull-secret=./config.json
    ```
 
@@ -184,4 +184,4 @@ manager:
 
 ### Next Steps
 
-- [Customize your Tigera Secure Enterprise Edition install](configuring)
+- [Customize your {{ site.prodname }} install](configuring)
