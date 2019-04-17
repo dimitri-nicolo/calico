@@ -95,11 +95,11 @@ var _ = Describe("DNS Policy", func() {
 		Expect(err).NotTo(HaveOccurred())
 		opts.ExtraVolumes[dnsDir] = "/dnsinfo"
 		opts.ExtraEnvVars["FELIX_DNSCACHEFILE"] = saveFile
-		// For this test file, configure DomainInfoSaveInterval to be much longer than any
+		// For this test file, configure DNSCacheSaveInterval to be much longer than any
 		// test duration, so we can be sure that the writing of the dnsinfo.txt file is
 		// triggered by shutdown instead of by a periodic timer.
-		opts.ExtraEnvVars["FELIX_DOMAININFOSAVEINTERVAL"] = "3600"
-		opts.ExtraEnvVars["FELIX_DOMAININFOTRUSTEDSERVERS"] = strings.Join(GetLocalNameservers(), ",")
+		opts.ExtraEnvVars["FELIX_DNSCACHESAVEINTERVAL"] = "3600"
+		opts.ExtraEnvVars["FELIX_DNSTRUSTEDSERVERS"] = strings.Join(GetLocalNameservers(), ",")
 		felix, etcd, client = infrastructure.StartSingleNodeEtcdTopology(opts)
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")
 
