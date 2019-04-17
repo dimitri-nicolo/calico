@@ -148,9 +148,9 @@ type Config struct {
 	// Optional stats collector
 	Collector collector.Collector
 
-	// Config for domain-based policy.
-	DomainInfoStore        string
-	DomainInfoSaveInterval time.Duration
+	// Config for DNS policy.
+	DNSCacheFile         string
+	DNSCacheSaveInterval time.Duration
 }
 
 // InternalDataplane implements an in-process Felix dataplane driver based on iptables
@@ -357,8 +357,8 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	dp.endpointStatusCombiner = newEndpointStatusCombiner(dp.fromDataplane, config.IPv6Enabled)
 	dp.domainInfoStore = newDomainInfoStore(
 		dp.domainInfoChanges,
-		config.DomainInfoStore,
-		config.DomainInfoSaveInterval,
+		config.DNSCacheFile,
+		config.DNSCacheSaveInterval,
 	)
 
 	dp.RegisterManager(newIPSetsManager(ipSetsV4, config.MaxIPSetSize, dp.domainInfoStore))

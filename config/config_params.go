@@ -292,11 +292,10 @@ type Config struct {
 
 	IptablesNATOutgoingInterfaceFilter string `config:"iface-param;"`
 
-	// Config for domain-based policy, just local for now.
-	// TODO: add to FelixConfiguration also?
-	DomainInfoStore          string        `config:"file;/var/run/calico/felix-domain-info-store.txt;local"`
-	DomainInfoSaveInterval   time.Duration `config:"seconds;60;local"`
-	DomainInfoTrustedServers []string      `config:"server-list;;local"`
+	// Config for DNS policy.
+	DNSCacheFile         string        `config:"file;/var/run/calico/felix-dns-cache.txt"`
+	DNSCacheSaveInterval time.Duration `config:"seconds;60"`
+	DNSTrustedServers    []string      `config:"server-list;k8s-service:kube-dns"`
 }
 
 type ProtoPort struct {

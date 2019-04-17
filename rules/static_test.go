@@ -63,7 +63,7 @@ var _ = Describe("Static", func() {
 					IptablesMarkNonCaliEndpoint: 0x1000,
 					KubeIPVSSupportEnabled:      kubeIPVSEnabled,
 					KubeNodePortRanges:          []numorstring.Port{{30030, 30040, ""}},
-					DomainInfoTrustedServers:    []string{"1.2.3.4", "fd5f:83a5::34:2"},
+					DNSTrustedServers:           []string{"1.2.3.4", "fd5f:83a5::34:2"},
 				}
 			})
 

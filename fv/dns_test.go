@@ -94,7 +94,7 @@ var _ = Describe("DNS Policy", func() {
 		dnsDir, err = ioutil.TempDir("", "dnsinfo")
 		Expect(err).NotTo(HaveOccurred())
 		opts.ExtraVolumes[dnsDir] = "/dnsinfo"
-		opts.ExtraEnvVars["FELIX_DOMAININFOSTORE"] = saveFile
+		opts.ExtraEnvVars["FELIX_DNSCACHEFILE"] = saveFile
 		// For this test file, configure DomainInfoSaveInterval to be much longer than any
 		// test duration, so we can be sure that the writing of the dnsinfo.txt file is
 		// triggered by shutdown instead of by a periodic timer.

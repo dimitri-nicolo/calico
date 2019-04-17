@@ -506,7 +506,7 @@ func (r *DefaultRuleRenderer) StaticFilterForwardChains(ipVersion uint8) []*Chai
 	for _, prefix := range r.WorkloadIfacePrefixes {
 		log.WithField("ifacePrefix", prefix).Debug("Adding workload match rules")
 		ifaceMatch := prefix + "+"
-		for _, serverIP := range r.DomainInfoTrustedServers {
+		for _, serverIP := range r.DNSTrustedServers {
 			if (ipVersion == 4) && strings.Contains(serverIP, ":") {
 				continue
 			}
