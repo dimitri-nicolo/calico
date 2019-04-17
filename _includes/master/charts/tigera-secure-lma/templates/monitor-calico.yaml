@@ -1067,7 +1067,7 @@ spec:
     source:
       selector: k8s-app == 'cnx-manager'
     destination:
-      ports: [443]
+      ports: [5443]
 
 ---
 # Allow access to Kibana
