@@ -16,7 +16,7 @@ apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
   name: allow-cnx.cnx-manager-access
-  namespace: kube-system
+  namespace: calico-monitoring
 spec:
   order: 1
   tier: allow-cnx
