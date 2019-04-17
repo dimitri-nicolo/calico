@@ -4,8 +4,9 @@ title: Installing TSEE Helm
 
 ## Before you begin
 
-- Ensure that you have the [credentials for the Tigera private registry]({{ site.basuerl }}/{{ page.version }}/getting-started/#obtain-the-private-registry-credentials)
-  and a [license key]({{ site.baseurl }}/{{ page.version }}/getting-started/#obtain-a-license-key).
+- Ensure that you have the [credentials for the Tigera private registry]({{ site.basuerl }}/{{ page.version }}/getting-started/#obtain-the-private-registry-credentials), referred in this doc as `config.json`.
+
+- Ensure that you have a [license key]({{ site.baseurl }}/{{ page.version }}/getting-started/#obtain-a-license-key), referred to in this doc as `license.yaml`
 
 - Ensure that Tiller is running, and your local helm CLI tool is configured to speak to it.
 
@@ -34,10 +35,9 @@ etcd:
   endpoints: http://etcd.co
 ```
 
-To connect to an etcd secured by TLS, also pass your certs into `etcd.tls` as follows:
+To connect to an etcd secured by TLS, also pass your certs into `etcd.tls` at install time with the following flags:
 
 ```
-helm install ./tigera-secure-core \
 --set-file etcd.tls.crt=./etcd.crt \
 --set-file etcd.tls.ca=./etcd.ca \
 --set-file etcd.tls.key=./etcd.key
@@ -80,7 +80,7 @@ initialPool:
 
    ```
    helm install ./tigera-secure-ee-core.tgz -f my-values.yaml
-     --set-file imagePullSecrets.cnx-pull-secret=./tigera-pullsecret.json
+     --set-file imagePullSecrets.cnx-pull-secret=./config.json
    ```
 
 2. Wait for the 'cnx-apiserver' pod to become ready:
@@ -92,7 +92,7 @@ initialPool:
 3. Install your {{ site.prodname }} license:
 
    ```
-   kubectl apply -f  ./license.yaml
+   kubectl apply -f ./license.yaml
    ```
 
 4. Apply the following manifest to set network policy that secures access to {{ site.prodname }}:
@@ -171,11 +171,11 @@ manager:
 
    >[Click to view this manifest directly]({{ site.url }}/{{ page.version }}/getting-started/kubernetes/installation/helm/tigera-secure-lma/operator-crds.yaml)
 
-
 1. Install the tigera-secure-lma helm chart with custom resource provisioning disabled:
 
    ```
-   helm install ./tigera-secure-lma.tgz --set createCustomResources=false
+   helm install ./tigera-secure-lma.tgz --set createCustomResources=false \
+     --set-file imagePullSecrets.cnx-pull-secret=./config.json
    ```
 
 ## Step 5: Grant a User Access to the Manager Install
