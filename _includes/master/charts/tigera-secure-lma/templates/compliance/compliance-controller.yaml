@@ -95,13 +95,13 @@ spec:
             - name: ELASTIC_HOST
               valueFrom:
                 configMapKeyRef:
-                  name: tigera-es-proxy
-                  key: elasticsearch.backend.host
+                  name: tigera-es-config
+                  key: tigera.elasticsearch.host
             - name: ELASTIC_PORT
               valueFrom:
                 configMapKeyRef:
-                  name: tigera-es-proxy
-                  key: elasticsearch.backend.port
+                  name: tigera-es-config
+                  key: tigera.elasticsearch.port
             - name: ELASTIC_USER
               valueFrom:
                 secretKeyRef:
@@ -133,8 +133,12 @@ spec:
       volumes:
         # Should be created during installation process.
         - name: elastic-ca-cert-volume
-          configMap:
-            name: elastic-ca-config
+          secret:
+            optional: true
+            items:
+            - key: tigera.elasticsearch.ca
+              path: ca.pem
+            secretName: tigera-es-config
 {{- end }}
 
 

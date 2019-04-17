@@ -1,3 +1,4 @@
+{{- include "tigera-secure-lma.elasticsearch.validate" . }}
 ---
 # This manifest includes the following component versions:
 #   quay.io/prometheus/prometheus:{{.Values.prometheus.tag}}
@@ -44,19 +45,19 @@ data:
         pattern dev
       </exclude>
     </filter>
-{{- if eq .Values.elasticsearchType "secure_es" }}
+{{- if .Values.secure_es }}
   tigera.elasticsearch.access-mode: serviceuser
-  tigera.elasticsearch.host: __ELASTICSEARCH_HOST__
-  tigera.elasticsearch.port: "__ELASTICSEARCH_PORT__"
-  tigera.elasticsearch.scheme: https
-  tigera.elasticsearch.ca: /etc/ssl/elastic/ca.pem
-  tigera.kibana.host: __KIBANA_HOST__
-  tigera.kibana.port: "__KIBANA_PORT__"
+  tigera.elasticsearch.host: {{ .Values.elasticsearch.host | default "__ELASTICSEARCH_HOST__" | quote }}
+  tigera.elasticsearch.port: {{ .Values.elasticsearch.port | default "__ELASTICSEARCH_PORT__" | quote }}
+  tigera.elasticsearch.scheme: "https"
+  tigera.elasticsearch.ca.path: /etc/ssl/elastic/ca.pem
+  tigera.kibana.host: {{ .Values.kibana.host | default "__KIBANA_HOST__" | quote }}
+  tigera.kibana.port: {{ .Values.kibana.port | default "__KIBANA_PORT__" | quote }}
 {{- else }}
   tigera.elasticsearch.access-mode: "insecure"
   tigera.elasticsearch.scheme: "http"
-  tigera.elasticsearch.host: "elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local"
-  tigera.elasticsearch.port: "9200"
+  tigera.elasticsearch.host: {{ .Values.elasticsearch.host | default "elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local" }}
+  tigera.elasticsearch.port: {{ .Values.elasticsearch.port | default "9200" | quote }}
 {{- end }}
 
 ---
@@ -597,10 +598,8 @@ spec:
             - name: es-config
               mountPath: /etc/fluentd/flow-filters.conf
               subPath: tigera.elasticsearch.flow-filters.conf
-{{- if .Values.secure_es }}
             - name: elastic-ca-cert-volume
               mountPath: /etc/fluentd/elastic
-{{- end }}
             - name: syslog-config
               mountPath: /etc/fluentd/syslog/ca.pem
               subPath: ca
@@ -628,12 +627,14 @@ spec:
         - name: es-config
           configMap:
             name: tigera-es-config
-{{- if .Values.secure_es }}
         # Should be created during installation process.
         - name: elastic-ca-cert-volume
-          configMap:
-            name: elastic-ca-config
-{{- end }}
+          secret:
+            optional: true
+            items:
+            - key: tigera.elasticsearch.ca
+              path: ca.pem
+            secretName: tigera-es-config
         - name: syslog-config
           configMap:
             name: tigera-syslog-archiving
@@ -719,11 +720,9 @@ spec:
                 - name: ELASTIC_SSL_VERIFY
                   value: "false"
 {{- end }}
-{{- if .Values.secure_es }}
               volumeMounts:
                 - name: elastic-ca-cert-volume
                   mountPath: /etc/curator/elastic
-{{- end }}
               livenessProbe:
                 exec:
                   command:
@@ -732,13 +731,15 @@ spec:
                     - /usr/bin/curator --config /curator/curator_config.yaml --dry-run /curator/curator_action.yaml
                 initialDelaySeconds: 60
                 periodSeconds: 60
-{{- if .Values.secure_es }}
           volumes:
             # Should be created during installation process.
             - name: elastic-ca-cert-volume
-              configMap:
-                name: elastic-ca-config
-{{- end }}
+              secret:
+                optional: true
+                items:
+                - key: tigera.elasticsearch.ca
+                  path: ca.pem
+                secretName: tigera-es-config
 ---
 
 apiVersion: batch/v1
@@ -794,8 +795,12 @@ spec:
             mountPath: /certs
       volumes:
         - name: certs
-          configMap:
-            name: elastic-ca-config
+          secret:
+            optional: true
+            items:
+            - key: tigera.elasticsearch.ca
+              path: ca.pem
+            secretName: tigera-es-config
 {{- else }}
           - name: ELASTIC_HOST
             value: elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local
@@ -937,8 +942,12 @@ spec:
             mountPath: /certs
       volumes:
         - name: certs
-          configMap:
-            name: elastic-ca-config
+          secret:
+            optional: true
+            items:
+            - key: tigera.elasticsearch.ca
+              path: ca.pem
+            secretName: tigera-es-config
 {{- else }}
           - name: ELASTIC_HOST
             value: elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local

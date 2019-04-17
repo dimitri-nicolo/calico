@@ -1,5 +1,6 @@
 datastore: kdd
 elasticsearchType: "operator"
+secure_es: false
 orch: ""
 runElasticsearchOperatorClusterAdmin: false
 createCustomResources: true
@@ -66,12 +67,56 @@ prometheus:
         nodePort: null
 
 kibana:
+  # The address of your kibana instance.
+  host: null
+  # The port your kibana instance is listening on
+  port: 5601
   # Configuration for the service which exposes your Kibana instance.
   service:
     type: ClusterIP
     nodePort: null
     loadBalancerIP: null
     clusterIP: null
+
+elasticsearch:
+  # Information for configuring connections to a BYO elasticsearch cluster.
+  # Leave all fields blank to deploy a self-hosted elasticsearch instance.
+
+  # The address of your elasticsearch cluster.
+  host: null
+  # The port your elasticsearch is listening on.
+  port: 9200
+  tls:
+    # Authentication information for communications between es-proxy and BYO elasticsearch.
+    # The CA used for authenticate es-proxy with elasticsearch.
+    ca: null
+    # Leave blank to use self-signed certs.
+    crt: null
+    key: null
+  fluentd:
+    # The username and password fluentd should use when connecting to elasticsearch.
+    username: tigera-ee-fluentd
+    password: ""
+  manager:
+    # The username and password the manager should use when connecting to elasticsearch.
+    username: tigera-ee-manager
+    password: ""
+  curator:
+    # Username and password that the curator should use when connecting to elasticsearch.
+    username: tigera-ee-curator
+    password: ""
+  compliance:
+    # Username and password for the compliance dashboard to authenticate with elasticsearch.
+    username: tigera-ee-compliance
+    password: ""
+  intrusionDetection:
+    # Username and password for the intrusion detection controller to authenticate with elasticsearch.
+    username: tigera-ee-intrusion-detection
+    password: ""
+  elasticInstaller:
+    # Username and password for the job installer to authenticate with elasticsearch.
+    username: tigera-ee-installer
+    password: ""
 
 # TODO: move to helpers
 platform: ""
