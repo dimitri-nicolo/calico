@@ -1364,11 +1364,7 @@ deleteMonitorCalicoManifest() {
 # applyComplianceMonitoring() - install compliance reporting
 #
 applyComplianceMonitoring() {
-    if [ "$DATASTORE" == "etcdv3" ]; then
-      runIgnoreErrors kubectl apply -f compliance.yaml
-    else
-      runIgnoreErrors kubectl apply -f compliance-kdd.yaml
-    fi
+    runIgnoreErrors kubectl apply -f compliance.yaml
     blockUntilPodIsReady "k8s-app=compliance-controller" 180 "compliance-controller"
     blockUntilPodIsReady "k8s-app=compliance-server" 180 "compliance-server"
     #TODO: uncomment when snapshotter is working
@@ -1379,11 +1375,7 @@ applyComplianceMonitoring() {
 # deleteComplianceMonitoring() - uninstall compliance reporting
 #
 deleteComplianceMonitoring() {
-    if [ "$DATASTORE" == "etcdv3" ]; then
-      runIgnoreErrors kubectl delete -f compliance.yaml
-    else
-      runIgnoreErrors kubectl delete -f compliance-kdd.yaml
-    fi
+    runIgnoreErrors kubectl delete -f compliance.yaml
 }
 
 #
@@ -1710,7 +1702,7 @@ installCNX() {
     applyElasticStorageManifest   # Apply elastic-storage.yaml
     applyMonitorCalicoManifest    # Apply monitor-calico.yaml
     if "$INSTALL_COMPLIANCE_REPORTING" ; then
-      applyComplianceMonitoring   # Apply compliance.yaml orcompliance-kdd.yaml
+      applyComplianceMonitoring   # Apply compliance.yaml
     fi
   fi
   createCNXManagerSecret          # Create cnx-manager-tls to enable manager/apiserver communication
