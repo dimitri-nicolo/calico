@@ -100,16 +100,16 @@ spec:
               value: "warning"
             - name: TIGERA_COMPLIANCE_SNAPSHOT_HOUR 
               value: "0"
-            - name: ELASTIC_URI
-              value: ""
-            - name: ELASTIC_SCHEME
-              value: ""
             - name: ELASTIC_INDEX_SUFFIX
               valueFrom:
                 configMapKeyRef:
                   name: tigera-es-config
                   key: tigera.elasticsearch.cluster-name
-{{- if eq $elasticMode "external" }}
+            - name: ELASTIC_SCHEME
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-es-config
+                  key: tigera.elasticsearch.scheme
             - name: ELASTIC_HOST
               valueFrom:
                 configMapKeyRef:
@@ -124,35 +124,29 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: elastic-compliance-user
-                  key: username
+                  key: snapshotter.username
+                  optional: true
             - name: ELASTIC_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: elastic-compliance-user
-                  key: password
+                  key: snapshotter.password
+                  optional: true
             - name: ELASTIC_SSL_VERIFY
               value: "true"
             - name: ELASTIC_CA
-              value: /etc/compliance/elastic/ca.pem
-{{- else }}
-            - name: ELASTIC_HOST
-              value: elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local
-            - name: ELASTIC_PORT
-              value: "9200"
-            - name: ELASTIC_SSL_VERIFY
-              value: "false"
-{{- end }}
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-es-config
+                  key: tigera.elasticsearch.ca.path
+                  optional: true
 {{- if .Values.complianceSnapshotter.env }}
 {{ toYaml .Values.complianceSnapshotter.env | indent 12 }}
 {{- end }}
-{{- if eq $elasticMode "external" }}
           volumeMounts:
             - name: elastic-ca-cert-volume
-              mountPath: /etc/compliance/elastic
-{{- end }}
-{{- if eq $elasticMode "external" }}
+              mountPath: /etc/ssl/elastic/
       volumes:
-        # Should be created during installation process.
         - name: elastic-ca-cert-volume
           secret:
             optional: true
@@ -160,4 +154,3 @@ spec:
             - key: tigera.elasticsearch.ca
               path: ca.pem
             secretName: tigera-es-config
-{{- end }}

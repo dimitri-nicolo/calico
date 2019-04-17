@@ -91,8 +91,6 @@ INSTALL_TYPE=${INSTALL_TYPE:="KUBEADM"}
 
 INSTALL_AWS_SG=${INSTALL_AWS_SG:=false}
 
-INSTALL_COMPLIANCE_REPORTING=${INSTALL_COMPLIANCE_REPORTING:=true}
-
 SKIP_EE_INSTALLATION=${SKIP_EE_INSTALLATION:=false}
 
 
@@ -258,12 +256,6 @@ validateSettings() {
   if "$INSTALL_AWS_SG" ; then
     checkAwsIntegration
   fi
-
-  # Do not install compliance reporting if elastic storage is not local
-  if [ "$ELASTIC_STORAGE" != "local" ] ; then
-    INSTALL_COMPLIANCE_REPORTING=false
-  fi
-
 }
 
 #
@@ -1036,11 +1028,6 @@ downloadManifests() {
     downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/manifests/aws-sg-integration/cloud-controllers.yaml"
   fi
 
-  if "$INSTALL_COMPLIANCE_REPORTING" ; then
-    downloadManifest "${DOCS_LOCATION}/${VERSION}/manifests/compliance/compliance.yaml"
-  fi
-
-
   if [ "${DOWNLOAD_MANIFESTS_ONLY}" -eq 1 ]; then
     echo "Tigera Secure EE manifests downloaded."
     kill -s TERM $TOP_PID   # quit
@@ -1228,19 +1215,23 @@ deleteCNXManifest() {
 }
 
 #
-# applyCNXManagerManifest()
+# applyCNXManifest()
 #
-applyCNXManagerManifest() {
+applyCNXManifest() {
   echo -n "Applying \"cnx.yaml\" manifest: "
   run kubectl apply -f cnx.yaml
   blockUntilPodIsReady "k8s-app=cnx-manager" 180 "cnx-manager"      # Block until cnx-manager pod is running & ready
+  blockUntilPodIsReady "k8s-app=compliance-controller" 180 "compliance-controller"
+  blockUntilPodIsReady "k8s-app=compliance-server" 180 "compliance-server"
+  #TODO: uncomment when snapshotter is working
+  #blockUntilPodIsReady "k8s-app=compliance-snapshotter" 180 "compliance-snapshotter"
   countDownSecs 10 "Waiting for cnx-manager to stabilize"         # Wait until cnx-manager starts to run.
 }
 
 #
-# deleteCNXManagerManifest()
+# deleteCNXManifest()
 #
-deleteCNXManagerManifest() {
+deleteCNXManifest() {
   runIgnoreErrors "kubectl delete -f cnx.yaml"
   countDownSecs 30 "Deleting \"cnx.yaml\" manifest"
 }
@@ -1358,24 +1349,6 @@ applyMonitorCalicoManifest() {
 deleteMonitorCalicoManifest() {
   runIgnoreErrors kubectl delete -f monitor-calico.yaml
   countDownSecs 5 "Deleting \"monitor-calico.yaml\" manifest"
-}
-
-#
-# applyComplianceMonitoring() - install compliance reporting
-#
-applyComplianceMonitoring() {
-    runIgnoreErrors kubectl apply -f compliance.yaml
-    blockUntilPodIsReady "k8s-app=compliance-controller" 180 "compliance-controller"
-    blockUntilPodIsReady "k8s-app=compliance-server" 180 "compliance-server"
-    #TODO: uncomment when snapshotter is working
-    #blockUntilPodIsReady "k8s-app=compliance-snapshotter" 180 "compliance-snapshotter"
-}
-
-#
-# deleteComplianceMonitoring() - uninstall compliance reporting
-#
-deleteComplianceMonitoring() {
-    runIgnoreErrors kubectl delete -f compliance.yaml
 }
 
 #
@@ -1701,12 +1674,9 @@ installCNX() {
     applyOperatorManifest         # Apply operator.yaml
     applyElasticStorageManifest   # Apply elastic-storage.yaml
     applyMonitorCalicoManifest    # Apply monitor-calico.yaml
-    if "$INSTALL_COMPLIANCE_REPORTING" ; then
-      applyComplianceMonitoring   # Apply compliance.yaml
-    fi
   fi
   createCNXManagerSecret          # Create cnx-manager-tls to enable manager/apiserver communication
-  applyCNXManagerManifest         # Apply cnx.yaml
+  applyCNXManifest                # Apply cnx.yaml
 }
 
 #
@@ -1717,7 +1687,7 @@ uninstallCNX() {
   deleteCalicoBinaries           # delete /etc/calico/calicoct.cfg, calicoctl, and calicoq
 
   downloadManifests              # Download all manifests
-  deleteCNXManagerManifest       # Delete cnx.yaml
+  deleteCNXManifest              # Delete cnx.yaml
   deleteCNXManagerSecret         # Delete TLS secret
 
   if [ "${SKIP_MONITORING}" -eq 0 ]; then
@@ -1725,7 +1695,6 @@ uninstallCNX() {
     deleteElasticStorageManifest # Delete elastic-storage.yaml
     deleteOperatorManifest       # Delete operator.yaml
     deleteCNXPolicyManifest      # Delete cnx-policy.yaml
-    deleteComplianceMonitoring   # Delete compliance.yaml orcompliance-kdd.yaml
   fi
 
   deleteCNXManifest              # Delete cnx-[etcd|kdd].yaml
