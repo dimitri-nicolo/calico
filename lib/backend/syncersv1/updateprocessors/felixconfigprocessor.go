@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -35,6 +35,7 @@ func NewFelixConfigUpdateProcessor() watchersyncer.SyncerUpdateProcessor {
 		map[string]ConfigFieldValueToV1ModelValue{
 			"FailsafeInboundHostPorts":  protoPortSliceToString,
 			"FailsafeOutboundHostPorts": protoPortSliceToString,
+			"DNSTrustedServers":         emptyStringSliceToNone,
 		},
 	)
 }
@@ -50,4 +51,13 @@ var protoPortSliceToString = func(value interface{}) interface{} {
 		parts[i] = fmt.Sprintf("%s:%d", strings.ToLower(pp.Protocol), pp.Port)
 	}
 	return strings.Join(parts, ",")
+}
+
+// Convert an explicitly specified empty slice to the string representation "none".
+var emptyStringSliceToNone = func(value interface{}) interface{} {
+	slice := value.([]string)
+	if len(slice) == 0 {
+		return "none"
+	}
+	return strings.Join(slice, ",")
 }

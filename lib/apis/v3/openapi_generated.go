@@ -4053,6 +4053,33 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							Format:      "",
 						},
 					},
+					"dnsTrustedServers": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The DNS servers that Felix should trust. Each entry here must be an IP, or \"k8s-service:<name>\", where <name> is the name of a Kubernetes Service in the \"kube-system\" namespace. [Default: \"k8s-service:kube-dns\"].",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+					"dnsCacheFile": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The name of the file that Felix uses to preserve learnt DNS information when restarting. [Default: \"/var/run/calico/felix-dns-cache.txt\"].",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"dnsCacheSaveInterval": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The periodic interval at which Felix saves learnt DNS information to the cache file. [Default: 60s].",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
 				},
 			},
 		},

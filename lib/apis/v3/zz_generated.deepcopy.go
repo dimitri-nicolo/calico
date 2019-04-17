@@ -1102,6 +1102,20 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.DNSTrustedServers != nil {
+		in, out := &in.DNSTrustedServers, &out.DNSTrustedServers
+		*out = new([]string)
+		if **in != nil {
+			in, out := *in, *out
+			*out = make([]string, len(*in))
+			copy(*out, *in)
+		}
+	}
+	if in.DNSCacheSaveInterval != nil {
+		in, out := &in.DNSCacheSaveInterval, &out.DNSCacheSaveInterval
+		*out = new(v1.Duration)
+		**out = **in
+	}
 	return
 }
 
