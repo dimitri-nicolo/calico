@@ -1040,7 +1040,7 @@ func testGlobalReportClient(client calicoclient.Interface, name string) error {
 	if err != nil {
 		return fmt.Errorf("error updating globalReport %s (%s)", name, err)
 	}
-	if len(globalReportServer.Status.LastSuccessfulReportJobs) == 1 &&
+	if len(globalReportServer.Status.LastSuccessfulReportJobs) == 0 ||
 		globalReportServer.Status.LastSuccessfulReportJobs[0].GenerationTime.Time.Equal(time.Time{}) {
 		return fmt.Errorf("didn't update GlobalReport status. %v != %v", globalReportUpdate.Status, globalReportServer.Status)
 	}
