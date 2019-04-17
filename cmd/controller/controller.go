@@ -7,9 +7,6 @@ import (
 	"os/signal"
 	"syscall"
 
-	log "github.com/sirupsen/logrus"
-
-	"github.com/tigera/compliance/pkg/elastic"
 	"github.com/tigera/compliance/pkg/version"
 )
 
@@ -22,9 +19,6 @@ func main() {
 		version.Version()
 		return
 	}
-	e, _ := elastic.NewFromEnv()
-
-	log.Infof("Created %s", e)
 
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
