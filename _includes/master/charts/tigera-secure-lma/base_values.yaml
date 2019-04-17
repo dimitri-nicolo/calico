@@ -48,7 +48,61 @@ managerProxy:
     #       name: tigera-cnx-manager-config
     #       key: tigera.cnx-manager.oidc-client-id
 
+# Configuration for the esProxy container.
+esProxy:
+  env:
+    # Optional environment variables for configuring the elasticsearch proxy container.
+    # - name: ELASTIC_CA
+    #   valueFrom:
+    #     configMapKeyRef:
+    #       name: tigera-es-config
+    #       key: tigera.elasticsearch.ca.path
+    #       optional: true
 
+# Configuration for the Tigera custom fluentd.
+fluentd:
+  env:
+    # Optional environment variables for configuring the Tigera fluentd.
+    # - name: FLUENT_UID
+    #   value: "0"
+
+# Configuration for the Tigera elasticsearch curator.
+esCurator:
+  env:
+    # Optional environment variables for configuring the elasticsearch curator.
+    # - name: ELASTIC_INDEX_SUFFIX
+    #   valueFrom:
+    #     configMapKeyRef:
+    #       name: tigera-es-config
+    #       key: tigera.elasticsearch.cluster-name
+
+# Configuration for the Tigera elasticsearch dashboard installer job.
+elasticTseeInstaller:
+  env:
+    # Optional environment variables for configuring the elasticsearch dashboard installer job.
+    # - name: ELASTIC_HOST
+    #   value: elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local
+
+# Configuration for the compliance controller.
+complianceController:
+  env:
+    # Optional environment variables for configuring the compliance controller.
+    # - name: LOG_LEVEL
+    #   value: "warning"
+
+# Configuration for the compliance server.
+complianceServer:
+  env:
+    # Optional environment variables for configuring the compliance server.
+    # - name: LOG_LEVEL
+    #   value: "warning"
+
+# Configuration for the compliance snapshotter.
+complianceSnapshotter:
+  env:
+    # Optional environment variables for configuring the compliance snapshotter.
+    # - name: LOG_LEVEL
+    #   value: "warning"
 
 alertmanager:
   # Configuration for the service which exposes the Prometheus alertmanager.

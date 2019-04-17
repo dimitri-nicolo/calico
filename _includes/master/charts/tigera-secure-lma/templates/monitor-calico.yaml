@@ -588,6 +588,9 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
+{{- if .Values.fluentd.env }}
+{{ toYaml .Values.fluentd.env | indent 12 }}
+{{- end }}
 {{- if eq .Values.orch "openshift" }}
           securityContext:
             privileged: true
@@ -720,6 +723,9 @@ spec:
                 - name: ELASTIC_SSL_VERIFY
                   value: "false"
 {{- end }}
+{{- if .Values.esCurator.env }}
+{{ toYaml .Values.esCurator.env | indent 16 }}
+{{- end }}
               volumeMounts:
                 - name: elastic-ca-cert-volume
                   mountPath: /etc/curator/elastic
@@ -817,6 +823,10 @@ spec:
           - name: START_XPACK_TRIAL
             value: "true"
 {{- end }}
+{{- if .Values.elasticTseeInstaller.env }}
+{{ toYaml .Values.elasticTseeInstaller.env | indent 10 }}
+{{- end }}
+
 ---
 
 apiVersion: v1
