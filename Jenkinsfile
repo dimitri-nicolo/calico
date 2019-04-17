@@ -16,7 +16,6 @@ pipeline {
         SANE_JOB_NAME =  "${env.JOB_BASE_NAME}".replace('.', '-').toLowerCase()
 
         // Terraform base settings
-        TF_VAR_
         TF_VAR_google_project = 'unique-caldron-775'
         TF_VAR_google_region = 'us-central1'
         TF_VAR_zone = 'us-central1-f'
