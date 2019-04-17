@@ -15,8 +15,9 @@
 package v3
 
 import (
-	"github.com/projectcalico/libcalico-go/lib/numorstring"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/projectcalico/libcalico-go/lib/numorstring"
 )
 
 const (
@@ -349,6 +350,17 @@ type FelixConfigurationSpec struct {
 	// FlowLogsFileEnabledForDenied is used to enable/disable flow logs entries created for denied flows. Default is true.
 	// This parameter only takes effect when FlowLogsFileReporterEnabled is set to true.
 	FlowLogsFileEnabledForDenied *bool `json:"flowLogsFileEnabledForDenied,omitempty"`
+
+	// The DNS servers that Felix should trust. Each entry here must be an IP, or "k8s-service:<name>",
+	// where <name> is the name of a Kubernetes Service in the "kube-system" namespace. [Default:
+	// "k8s-service:kube-dns"].
+	DNSTrustedServers *[]string `json:"dnsTrustedServers,omitempty"`
+	// The name of the file that Felix uses to preserve learnt DNS information when restarting. [Default:
+	// "/var/run/calico/felix-dns-cache.txt"].
+	DNSCacheFile string `json:"dnsCacheFile,omitempty"`
+	// The periodic interval at which Felix saves learnt DNS information to the cache file. [Default:
+	// 60s].
+	DNSCacheSaveInterval *metav1.Duration `json:"dnsCacheSaveInterval,omitempty" configv1timescale:"seconds"`
 }
 
 // ProtoPort is combination of protocol and port, both must be specified.

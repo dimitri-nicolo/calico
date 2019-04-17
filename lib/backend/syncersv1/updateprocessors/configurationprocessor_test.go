@@ -19,15 +19,17 @@ import (
 	"time"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/sirupsen/logrus"
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/updateprocessors"
 	"github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
-	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -70,7 +72,7 @@ var _ = Describe("Test the generic configuration update processor and the concre
 		Kind: apiv3.KindBGPConfiguration,
 		Name: "node.bgpnode1",
 	}
-	numFelixConfigs := 106
+	numFelixConfigs := 109
 	numClusterConfigs := 5
 	numNodeClusterConfigs := 4
 	numBgpConfigs := 4
@@ -653,6 +655,63 @@ var _ = Describe("Test the generic configuration update processor and the concre
 			nil,
 		)
 	})
+
+	DescribeTable("FelixConfiguration field handling",
+		func(populateFunc func(*apiv3.FelixConfiguration), expectedConfig map[string]string) {
+			fc := apiv3.NewFelixConfiguration()
+			populateFunc(fc)
+			cc := updateprocessors.NewFelixConfigUpdateProcessor()
+			kvps, err := cc.Process(&model.KVPair{
+				Key:   globalFelixKey,
+				Value: fc,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			for _, kvp := range kvps {
+				if kvp.Value == nil {
+					continue
+				}
+				Expect(kvp.Key).To(BeAssignableToTypeOf(model.GlobalConfigKey{}))
+				name := kvp.Key.(model.GlobalConfigKey).Name
+				//Expect(kvp.Value).To(BeAssignableToTypeOf(""))
+				//value := kvp.Value.(string)
+				//Expect(expectedConfig[name]).To(Equal(value))
+				Expect(expectedConfig[name]).To(Equal(kvp.Value), "For "+name+":")
+				delete(expectedConfig, name)
+			}
+			Expect(expectedConfig).To(BeEmpty())
+		},
+		Entry("Default DNS policy config",
+			func(fc *apiv3.FelixConfiguration) {
+				// Don't set any fields.
+			},
+			map[string]string{
+				// Don't expect any non-nil settings.
+			},
+		),
+		Entry("Non-default settings for DNS policy config",
+			func(fc *apiv3.FelixConfiguration) {
+				fc.Spec.DNSCacheFile = "/dnsinfo.txt"
+				oneHour := metav1.Duration{time.Hour}
+				fc.Spec.DNSCacheSaveInterval = &oneHour
+				myServers := []string{"1.2.3.4", "5.6.7.8"}
+				fc.Spec.DNSTrustedServers = &myServers
+			},
+			map[string]string{
+				"DNSCacheFile":         "/dnsinfo.txt",
+				"DNSCacheSaveInterval": "3600",
+				"DNSTrustedServers":    "1.2.3.4,5.6.7.8",
+			},
+		),
+		Entry("Disable trusting DNS servers",
+			func(fc *apiv3.FelixConfiguration) {
+				emptyStringSlice := []string{}
+				fc.Spec.DNSTrustedServers = &emptyStringSlice
+			},
+			map[string]string{
+				"DNSTrustedServers": "none",
+			},
+		),
+	)
 })
 
 // Check the KVPairs returned by the UpdateProcessor are as expected.  The expectedValues contains
