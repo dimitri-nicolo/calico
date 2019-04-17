@@ -134,6 +134,9 @@ spec:
             - name: ELASTIC_SSL_VERIFY
               value: "false"
 {{- end }}
+{{- if .Values.complianceSnapshotter.env }}
+{{ toYaml .Values.complianceSnapshotter.env | indent 12 }}
+{{- end }}
 {{- if .Values.secure_es }}
           volumeMounts:
             - name: elastic-ca-cert-volume
