@@ -1037,11 +1037,7 @@ downloadManifests() {
   fi
 
   if "$INSTALL_COMPLIANCE_REPORTING" ; then
-    if [ "$DATASTORE" == "etcdv3" ]; then
-      downloadManifest "${DOCS_LOCATION}/${VERSION}/manifests/compliance/compliance.yaml"
-    else
-      downloadManifest "${DOCS_LOCATION}/${VERSION}/manifests/compliance/compliance-kdd.yaml"
-    fi
+    downloadManifest "${DOCS_LOCATION}/${VERSION}/manifests/compliance/compliance.yaml"
   fi
 
 
