@@ -20,9 +20,6 @@ func main() {
 	if err != nil {
 		log.WithError(err).Fatal("failed to initialize elastic client")
 	}
-	if err = client.EnsureIndices(); err != nil {
-		log.WithError(err).Fatal("failed to initialize elastic indices")
-	}
 
 	// Retrieve the testdata.
 	eeEvents, err := replayer.GetEEAuditEventsDoc()

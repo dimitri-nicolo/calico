@@ -39,10 +39,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	// Check elastic index.
-	if err = elasticClient.EnsureIndices(); err != nil {
-		panic(err)
-	}
 
 	// Create clientset.
 	datastoreClient := datastore.MustGetClientSet()

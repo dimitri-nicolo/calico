@@ -2,6 +2,7 @@
 package elastic
 
 const (
+	IndexTimeFormat  = "20060102"
 	snapshotsIndex   = "tigera_secure_ee_snapshots"
 	snapshotsMapping = `{
   "mappings": {

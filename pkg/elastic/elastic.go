@@ -25,6 +25,7 @@ const (
 	DefaultElasticHost   = "elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local"
 	DefaultElasticPort   = 9200
 	DefaultElasticUser   = "elastic"
+	DefaultElasticSuffix = "cluster"
 )
 
 type Client interface {
@@ -33,13 +34,13 @@ type Client interface {
 	report.ReportStorer
 	list.Destination
 	event.Fetcher
-	EnsureIndices() error
 	Backend() *elastic.Client
 }
 
 // client implements the Client interface.
 type client struct {
 	*elastic.Client
+	indexSuffix string
 }
 
 // MustGetElasticClient returns the elastic Client, or panics if it's not possible.
@@ -99,6 +100,11 @@ func NewFromEnv() (Client, error) {
 	pass := os.Getenv("ELASTIC_PASSWORD")
 	pathToCA := os.Getenv("ELASTIC_CA")
 
+	indexSuffix := os.Getenv("ELASTIC_INDEX_SUFFIX")
+	if indexSuffix == "" {
+		indexSuffix = DefaultElasticSuffix
+	}
+
 	ca, err := x509.SystemCertPool()
 	if err != nil {
 		return nil, err
@@ -117,10 +123,10 @@ func NewFromEnv() (Client, error) {
 	if u.Scheme == "https" {
 		h.Transport = &http.Transport{TLSClientConfig: &tls.Config{RootCAs: ca}}
 	}
-	return New(h, u, user, pass)
+	return New(h, u, user, pass, indexSuffix)
 }
 
-func New(h *http.Client, url *url.URL, username, password string) (Client, error) {
+func New(h *http.Client, url *url.URL, username, password, indexSuffix string) (Client, error) {
 	options := []elastic.ClientOptionFunc{
 		elastic.SetURL(url.String()),
 		elastic.SetHttpClient(h),
@@ -135,14 +141,7 @@ func New(h *http.Client, url *url.URL, username, password string) (Client, error
 	if err != nil {
 		return nil, err
 	}
-	return &client{c}, nil
-}
-
-func (c *client) EnsureIndices() error {
-	if err := c.ensureIndexExists(snapshotsIndex, snapshotsMapping); err != nil {
-		return err
-	}
-	return c.ensureIndexExists(reportsIndex, reportsMapping)
+	return &client{c, indexSuffix}, nil
 }
 
 func (c *client) ensureIndexExists(index, mapping string) error {
@@ -178,6 +177,10 @@ func (c *client) ensureIndexExists(index, mapping string) error {
 	}
 	clog.Info("index successfully created!")
 	return nil
+}
+
+func (c *client) clusterIndex(index, postfix string) string {
+	return fmt.Sprintf("%s.%s.%s", index, c.indexSuffix, postfix)
 }
 
 func (c *client) Backend() *elastic.Client {
