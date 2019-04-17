@@ -141,6 +141,8 @@ toc:
   path: /usage/decommissioning-a-node
 - title: Configuring Conntrack
   path: /usage/configuration/conntrack
+- title: Advertising Kubernetes services
+  path: /usage/service-advertisement
 - title: Troubleshooting
   path: /usage/troubleshooting/
 - title: Frequently Asked Questions
