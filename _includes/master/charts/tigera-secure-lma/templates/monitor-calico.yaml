@@ -1003,6 +1003,27 @@ spec:
       selector: k8s-app == 'cnx-manager'
     destination:
       ports: [9200]
+  - action: Allow
+    destination:
+      ports:
+      - 9200
+    protocol: TCP
+    source:
+      selector: k8s-app == 'compliance-server'
+  - action: Allow
+    destination:
+      ports:
+      - 9200
+    protocol: TCP
+    source:
+      selector: k8s-app == 'compliance-snapshotter'
+  - action: Allow
+    destination:
+      ports:
+      - 9200
+    protocol: TCP
+    source:
+      selector: k8s-app == 'compliance-reporter'
 
 ---
 
