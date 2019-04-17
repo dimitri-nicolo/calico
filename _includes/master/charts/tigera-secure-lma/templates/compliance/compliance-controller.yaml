@@ -22,8 +22,8 @@ rules:
     verbs: ["list", "get", "watch"]
   - apiGroups: ["projectcalico.org"]
     resources:
-      - globalreporttype
-      - globalreport
+      - globalreporttypes
+      - globalreports
     verbs:
       - get
       - list
