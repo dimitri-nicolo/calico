@@ -165,7 +165,7 @@ manager:
 
 ## Step 5: Grant a User Access to the Manager Install
 
-include {{page.version}}/cnx-grant-user-manager-permissions.md
+{% include {{page.version}}/cnx-grant-user-manager-permissions.md %}
 
 ### Next Steps
 
