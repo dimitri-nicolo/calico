@@ -2,7 +2,6 @@
 layout: null
 ---
 
-{% helm tigera-secure-lma --execute templates/compliance/compliance-server.yaml  --execute templates/compliance/compliance-controller.yaml %}
+{% helm tigera-secure-lma --execute templates/compliance/compliance-server.yaml  --execute templates/compliance/compliance-controller.yaml --execute templates/compliance/compliance-snapshotter.yaml %}
 secure_es: false
-datastore: "etcd"
 {% endhelm %}
