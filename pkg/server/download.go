@@ -116,6 +116,7 @@ func (s *server) prepareReportForDownload(
 
 		renderedReport, err := compliance.RenderTemplate(template.Template, r.ReportData)
 		if err != nil {
+			log.WithError(err).WithField("template", template.Template).Info("Error rendering from template: %s", template.Name)
 			return nil, err
 		}
 		dc.files = append(dc.files, downloadFile{
