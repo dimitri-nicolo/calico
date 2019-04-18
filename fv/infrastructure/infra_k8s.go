@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,9 +26,12 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
+
+	"github.com/projectcalico/libcalico-go/lib/backend/model"
+
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -38,6 +41,7 @@ import (
 	"github.com/projectcalico/felix/fv/utils"
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/names"
 	"github.com/projectcalico/libcalico-go/lib/options"
@@ -368,10 +372,31 @@ func (kds *K8sDatastoreInfra) Stop() {
 	cleanupAllNodes(kds.K8sClient)
 	cleanupAllNamespaces(kds.K8sClient)
 	cleanupAllPools(kds.calicoClient)
+	cleanupIPAM(kds.calicoClient)
 	cleanupAllGlobalNetworkPolicies(kds.calicoClient)
 	cleanupAllNetworkPolicies(kds.calicoClient)
 	cleanupAllHostEndpoints(kds.calicoClient)
 	cleanupAllFelixConfigurations(kds.calicoClient)
+}
+
+func cleanupIPAM(calicoClient client.Interface) {
+	c := calicoClient.(interface{ Backend() bapi.Client }).Backend()
+	for _, li := range []model.ListInterface{
+		model.BlockListOptions{},
+		model.BlockAffinityListOptions{},
+		model.BlockAffinityListOptions{},
+		model.IPAMHandleListOptions{},
+	} {
+		if rs, err := c.List(context.Background(), li, ""); err != nil {
+			log.WithError(err).WithField("Kind", li).Warning("Failed to list resources")
+		} else {
+			for _, r := range rs.KVPairs {
+				if _, err = c.DeleteKVP(context.Background(), r); err != nil {
+					log.WithError(err).WithField("Key", r.Key).Warning("Failed to delete entry from KDD")
+				}
+			}
+		}
+	}
 }
 
 func (kds *K8sDatastoreInfra) GetDockerArgs() []string {
@@ -414,6 +439,10 @@ func (kds *K8sDatastoreInfra) SetExpectedIPIPTunnelAddr(felix *Felix, idx int, n
 	felix.ExpectedIPIPTunnelAddr = fmt.Sprintf("10.65.%d.1", idx)
 }
 
+func (kds *K8sDatastoreInfra) SetExpectedVXLANTunnelAddr(felix *Felix, idx int, needBGP bool) {
+	felix.ExpectedVXLANTunnelAddr = fmt.Sprintf("10.65.%d.0", idx)
+}
+
 func (kds *K8sDatastoreInfra) AddNode(felix *Felix, idx int, needBGP bool) {
 	node_in := &v1.Node{
 		ObjectMeta: metav1.ObjectMeta{
@@ -426,6 +455,9 @@ func (kds *K8sDatastoreInfra) AddNode(felix *Felix, idx int, needBGP bool) {
 	}
 	if felix.ExpectedIPIPTunnelAddr != "" {
 		node_in.Annotations["projectcalico.org/IPv4IPIPTunnelAddr"] = felix.ExpectedIPIPTunnelAddr
+	}
+	if felix.ExpectedVXLANTunnelAddr != "" {
+		node_in.Annotations["projectcalico.org/IPv4VXLANTunnelAddr"] = felix.ExpectedVXLANTunnelAddr
 	}
 	log.WithField("node_in", node_in).Debug("Node defined")
 	node_out, err := kds.K8sClient.CoreV1().Nodes().Create(node_in)

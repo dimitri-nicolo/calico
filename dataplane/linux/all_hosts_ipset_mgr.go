@@ -4,6 +4,8 @@ package intdataplane
 import (
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/libcalico-go/lib/set"
+
 	"github.com/projectcalico/felix/ipsets"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/felix/rules"
@@ -80,4 +82,7 @@ type ipsetsDataplane interface {
 	AddMembers(setID string, newMembers []string)
 	RemoveMembers(setID string, removedMembers []string)
 	RemoveIPSet(setID string)
+	GetIPFamily() ipsets.IPFamily
+	GetTypeOf(setID string) (ipsets.IPSetType, error)
+	GetMembers(setID string) (set.Set, error)
 }

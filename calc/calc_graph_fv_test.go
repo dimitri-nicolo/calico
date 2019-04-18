@@ -241,11 +241,59 @@ var baseTests = []StateList{
 		withNonALPPolicy,
 	},
 
-	// TODO(smc): Test config calculation
-	// TODO(smc): Test mutation of endpoints
-	// TODO(smc): Test mutation of host endpoints
-	// TODO(smc): Test validation
-	// TODO(smc): Test rule conversions
+	// VXLAN tests.
+
+	{
+		// Start with a basic VXLAN scenario with one block.
+		vxlanWithBlock,
+
+		// Delete the block, should clean up the routes.
+		vxlanBlockDelete,
+
+		// Add it back again.
+		vxlanWithBlock,
+
+		// Delete the host, should clean up VTEP and routes.
+		vxlanHostIPDelete,
+
+		// Add it back again.
+		vxlanWithBlock,
+
+		// Delete tunnel IP, should clean up.
+		vxlanTunnelIPDelete,
+
+		// Add it back again.
+		vxlanWithBlock,
+	},
+	{
+		// This sequence switches the IP pool between VXLAN and IPIP.
+		vxlanWithBlock,
+		vxlanToIPIPSwitch,
+		vxlanWithBlock,
+		vxlanToIPIPSwitch,
+	},
+	{
+		// Start with a block.
+		vxlanWithBlock,
+
+		// This sequence adds some borrowed routes and then switches their owners back and forth.
+		vxlanWithBlockAndBorrows,
+		vxlanBlockOwnerSwitch,
+		vxlanWithBlockAndBorrows,
+
+		// Then check that removing the VTEP of a borrowed route withdraws the route.
+		vxlanWithBlockAndBorrowsAndMissingFirstVTEP,
+
+		// Back to base.
+		vxlanWithBlock,
+	},
+	{
+		// Test a local block with some IPs borrowed by another node.
+		vxlanLocalBlockWithBorrows,
+		vxlanWithBlock,
+		vxlanLocalBlockWithBorrows,
+		vxlanWithBlock,
+	},
 }
 
 // license is a mocked-up interface which provides a simple version of the licensing repo's
@@ -506,6 +554,7 @@ func doStateSequenceTest(expandedTest StateList, licenseMonitor featureChecker, 
 	BeforeEach(func() {
 		conf := config.New()
 		conf.FelixHostname = localHostname
+		conf.VXLANEnabled = true
 		mockDataplane = mock.NewMockDataplane()
 		lookupsCache = NewLookupsCache()
 		eventBuf = NewEventSequencer(mockDataplane)
@@ -591,6 +640,12 @@ func doStateSequenceTest(expandedTest StateList, licenseMonitor featureChecker, 
 			state.Name)
 		Expect(mockDataplane.ActiveProfiles()).To(Equal(state.ExpectedProfileIDs),
 			"Active profile IDs were incorrect after moving to state: %v",
+			state.Name)
+		Expect(mockDataplane.ActiveVTEPs()).To(Equal(state.ExpectedVTEPs),
+			"Active VTEPs were incorrect after moving to state: %v",
+			state.Name)
+		Expect(mockDataplane.ActiveRoutes()).To(Equal(state.ExpectedRoutes),
+			"Active routes were incorrect after moving to state: %v",
 			state.Name)
 		Expect(mockDataplane.EndpointToPolicyOrder()).To(Equal(state.ExpectedEndpointPolicyOrder),
 			"Endpoint policy order incorrect after moving to state: %v",

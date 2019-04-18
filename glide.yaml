@@ -22,7 +22,9 @@ import:
   version: b4deda0973fb4c70b50d226b1af49f3da59f5265
   subpackages:
   - proto
-- package: github.com/jbenet/go-reuseport
+# Need to pin to an older version as our code uses some deprecated functionality.
+- package: github.com/libp2p/go-reuseport
+  version: gx/v0.1.18
 # go-reuseport pulls in go-log without a pin and master is now incompatible with the
 # version of gogo/protobuf that we are using.  Pin to most recent working master revision.
 - package: github.com/ipfs/go-log
@@ -38,6 +40,10 @@ import:
   version: ^1.1.0
   subpackages:
   - types
+# gobuffalo/buffalo-plugins requires the DisableFlagParsing in the Command type,
+# so pin the version that has it.
+- package: github.com/spf13/cobra
+  version: ~0.0.3
 - package: github.com/projectcalico/libcalico-go
   repo:    git@github.com:tigera/libcalico-go-private
   subpackages:
@@ -84,8 +90,12 @@ import:
   subpackages:
   - xfs
 - package: github.com/satori/go.uuid
+# Use our fork, because v1.0.5 causes test breakages due to problems with our log formatting code,
+# but gobuffalo/logger require newer version because of the SetOutput function. Our fork backports
+# the missing stuff on top of v1.0.4.
 - package: github.com/sirupsen/logrus
-  version: v1.0.4
+  repo: https://github.com/projectcalico/logrus
+  version: v1.0.4-calico
 - package: github.com/vishvananda/netlink
   version: 3fd955dd632011983cd15e42663e1befa7929a15
   repo: git@github.com:tigera/netlink.git
@@ -130,6 +140,10 @@ import:
   - spew
 - package: github.com/hashicorp/go-version
   version: ^1.0.0
+- package: github.com/gobuffalo/packr
+  version: ~2.0.3
+  subpackages:
+  - v2/packr2
 # Everything above here should closely match open source - other than
 # 1) repo line for libcalico-go
 # 2) repo and version lines for typha

@@ -1,3 +1,8 @@
+# Image containing the bpftool binary
+FROM calico/bpftool:v5.0-amd64 as bpftool
+
+# Main image
+
 FROM amd64/alpine:3.8 as base
 MAINTAINER Shaun Crampton <shaun@tigera.io>
 
@@ -11,6 +16,7 @@ ADD calico-felix-wrapper /usr/bin
 # to more easily extract the Felix build artefacts from the container.
 ADD bin/calico-felix-amd64 /code/calico-felix
 RUN ln -s /code/calico-felix /usr/bin
+COPY --from=bpftool /bpftool /usr/bin
 WORKDIR /code
 
 # Since our binary isn't designed to run as PID 1, run it via the tini init daemon.
