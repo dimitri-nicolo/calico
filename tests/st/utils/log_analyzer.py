@@ -43,6 +43,7 @@ LOGS_IGNORE_ALL_TESTS = [
     "Exiting for config change",
     "Exiting. reason=\"config changed\"",
     "Exiting immediately reason=\"config changed\"",
+    "unable to load in-cluster configuration",
 ]
 
 
