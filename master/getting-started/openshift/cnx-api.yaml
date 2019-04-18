@@ -3,5 +3,6 @@ layout: null
 ---
 {% helm --execute templates/cnx-api.yaml %}
 datastore: etcd
-orch: openshift
+apiserver:
+  runAsPrivileged: true
 {% endhelm %}

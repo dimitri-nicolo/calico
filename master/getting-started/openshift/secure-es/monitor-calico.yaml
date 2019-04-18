@@ -2,6 +2,7 @@
 layout: null
 ---
 {% helm tigera-secure-lma secure-es --execute templates/monitor-calico.yaml %}
-orch: openshift
+fluentd:
+  runAsPrivileged: true
 createCustomResources: false
 {% endhelm %}

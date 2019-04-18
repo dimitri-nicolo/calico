@@ -1,4 +1,3 @@
-orch: ""
 runElasticsearchOperatorClusterAdmin: false
 createCustomResources: true
 
@@ -58,6 +57,11 @@ esProxy:
 
 # Configuration for the Tigera custom fluentd.
 fluentd:
+  # Set to true to create a security context constraint for fluentd enabling
+  # it to ingest logs volume-mounted from the host in environments where doing
+  # so is restricted.
+  runAsPrivileged: false
+
   env:
     # Optional environment variables for configuring the Tigera fluentd.
     # - name: FLUENT_UID
@@ -116,6 +120,9 @@ prometheus:
       service:
         type: NodePort
         nodePort: null
+
+  # Create RBAC roles to enable PrometheusOperator to create finalizers.
+  createFinalizers: false
 
 kibana:
   # The address of your kibana instance.

@@ -63,6 +63,7 @@ apiserver:
   tls:
     crt: null
     key: null
+  runAsPrivileged: false
   env:
     # Optional environment variables for configuring the Calico API Server.
     # - name: DATASTORE_TYPE
@@ -80,7 +81,6 @@ queryserver:
     #       optional: true
 
 # TODO: move to helpers
-orch: ""
 rbac: ""
 platform: ""
 

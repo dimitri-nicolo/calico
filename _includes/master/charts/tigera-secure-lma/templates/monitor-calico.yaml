@@ -591,7 +591,7 @@ spec:
 {{- if .Values.fluentd.env }}
 {{ toYaml .Values.fluentd.env | indent 12 }}
 {{- end }}
-{{- if eq .Values.orch "openshift" }}
+{{- if .Values.fluentd.runAsPrivileged }}
           securityContext:
             privileged: true
 {{- end }}
@@ -1109,4 +1109,28 @@ spec:
       selector: job-name == 'elastic-tsee-installer'
     destination:
       ports: [5601]
+{{- end }}
+
+{{- if .Values.fluentd.runAsPrivileged }}
+---
+# This manifest adds an additional security context for
+# OpenShift so fluentd can ingest logs from the host.
+kind: SecurityContextConstraints
+apiVersion: v1
+metadata:
+  name: calico-fluentd-hostpath
+allowPrivilegedContainer: true
+allowHostDirVolumePlugin: true
+runAsUser:
+  type: RunAsAny
+seLinuxContext:
+  type: MustRunAs
+fsGroup:
+  type: RunAsAny
+supplementalGroups:
+  type: RunAsAny
+users:
+- system:serviceaccount:calico-monitoring:tigera-fluentd
+groups:
+- system:authenticated
 {{- end }}
