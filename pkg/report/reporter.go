@@ -67,10 +67,12 @@ func Run(
 		services:         make(map[apiv3.ResourceID]xrefcache.CacheEntryFlags),
 		namespaces:       make(map[string]xrefcache.CacheEntryFlags),
 		data: &apiv3.ReportData{
-			ReportName: cfg.Report.Name,
-			ReportSpec: cfg.Report.Spec,
-			StartTime:  metav1.Time{cfg.Start},
-			EndTime:    metav1.Time{cfg.End},
+			ReportName:     cfg.Report.Name,
+			ReportTypeName: cfg.ReportType.Name,
+			ReportSpec:     cfg.Report.Spec,
+			ReportTypeSpec: cfg.ReportType.Spec,
+			StartTime:      metav1.Time{cfg.Start},
+			EndTime:        metav1.Time{cfg.End},
 		},
 	}
 	return r.run()
