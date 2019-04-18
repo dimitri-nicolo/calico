@@ -177,9 +177,8 @@ spec:
       # This, along with the annotation above marks this pod as a critical add-on.
       - key: CriticalAddonsOnly
         operator: Exists
-      imagePullSecrets:
-      imagePullSecrets:
 {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
 {{- range $key, $value := .Values.imagePullSecrets }}
         - name: {{ $key }}
 {{- end }}

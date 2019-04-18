@@ -44,8 +44,8 @@ spec:
       # Minimize downtime during a rolling upgrade or deletion; tell Kubernetes to do a "force
       # deletion": https://kubernetes.io/docs/concepts/workloads/pods/pod/#termination-of-pods.
       terminationGracePeriodSeconds: 0
-      imagePullSecrets:
 {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
 {{- range $key, $value := .Values.imagePullSecrets }}
         - name: {{ $key }}
 {{- end }}

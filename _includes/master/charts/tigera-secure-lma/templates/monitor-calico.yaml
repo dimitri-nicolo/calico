@@ -442,8 +442,12 @@ spec:
         - effect: NoExecute
           operator: Exists
       serviceAccountName: tigera-fluentd
+{{- if .Values.imagePullSecrets }}
       imagePullSecrets:
-        - name: cnx-pull-secret
+{{- range $key, $value := .Values.imagePullSecrets }}
+        - name: {{ $key }}
+{{- end }}
+{{- end }}
       containers:
         - name: fluentd
           image: {{.Values.fluentd.image}}:{{.Values.fluentd.tag}}
@@ -678,8 +682,12 @@ spec:
           tolerations:
             - key: node-role.kubernetes.io/master
               effect: NoSchedule
+{{- if .Values.imagePullSecrets }}
           imagePullSecrets:
-            - name: cnx-pull-secret
+{{- range $key, $value := .Values.imagePullSecrets }}
+            - name: {{ $key }}
+{{- end }}
+{{- end }}
           containers:
             - name: tigera-es-curator
               image: {{.Values.esCurator.image}}:{{.Values.esCurator.tag}}
@@ -779,8 +787,12 @@ spec:
   template:
     spec:
       restartPolicy: OnFailure
+{{- if .Values.imagePullSecrets }}
       imagePullSecrets:
-        - name: cnx-pull-secret
+{{- range $key, $value := .Values.imagePullSecrets }}
+        - name: {{ $key }}
+{{- end }}
+{{- end }}
       containers:
       - name: install
         image: {{.Values.elasticTseeInstaller.image}}:{{.Values.elasticTseeInstaller.tag}}

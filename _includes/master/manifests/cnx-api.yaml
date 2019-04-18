@@ -284,8 +284,8 @@ spec:
       tolerations:
         - key: node-role.kubernetes.io/master
           effect: NoSchedule
-      imagePullSecrets:
 {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
 {{- range $key, $value := .Values.imagePullSecrets }}
         - name: {{ $key }}
 {{- end }}
