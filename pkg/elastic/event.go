@@ -64,13 +64,14 @@ func (c *client) AddAuditEvents(ctx context.Context, data *v3.ReportData, filter
 // Query for audit events in a paginated fashion
 func (c *client) searchAuditEvents(ctx context.Context, filter *v3.AuditEventsSelection, start, end *time.Time) <-chan *event.AuditEventResult {
 	ch := make(chan *event.AuditEventResult, pageSize)
+	searchIndex := c.clusterIndex(auditLogIndex, "*")
 	go func() {
 		defer close(ch)
 		exit := false
 		for i := 0; !exit; i += pageSize {
 			// Make search query
 			res, err := c.Search().
-				Index(auditLogIndex).
+				Index(searchIndex).
 				Query(constructAuditEventsQuery(filter, start, end)).
 				Sort("stageTimestamp", true).
 				From(i).Size(pageSize).

@@ -2,6 +2,7 @@ package elastic_test
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"time"
 
@@ -30,15 +31,6 @@ var _ = Describe("Elastic", func() {
 		os.Setenv("ELASTIC_HOST", "localhost")
 		elasticClient = MustGetElasticClient()
 		elasticClient.(Resetable).Reset()
-		elasticClient.EnsureIndices()
-	})
-
-	It("should have the appropriate indices", func() {
-		indicesExist, _ := elasticClient.Backend().IndexExists(
-			"tigera_secure_ee_snapshots",
-			"tigera_secure_ee_compliance_reports",
-		).Do(context.Background())
-		Expect(indicesExist).To(Equal(true))
 	})
 
 	It("should store and retrieve lists properly", func() {
@@ -56,6 +48,13 @@ var _ = Describe("Elastic", func() {
 		npResList.RequestStartedTimestamp = metav1.Time{ts.Add(2 * time.Minute)}
 		npResList.RequestCompletedTimestamp = metav1.Time{ts.Add(2 * time.Minute)}
 		Expect(elasticClient.StoreList(resources.TypeCalicoNetworkPolicies, npResList)).ToNot(HaveOccurred())
+
+		By("having the appropriate snapshot indices")
+		dateIndex := npResList.RequestCompletedTimestamp.Format(IndexTimeFormat)
+		indicesExist, _ := elasticClient.Backend().IndexExists(
+			fmt.Sprintf("tigera_secure_ee_snapshots.cluster.%s", dateIndex),
+		).Do(context.Background())
+		Expect(indicesExist).To(Equal(true))
 
 		By("retrieving the network policy list, earliest first")
 		start := ts.Add(-12 * time.Hour)
@@ -80,9 +79,17 @@ var _ = Describe("Elastic", func() {
 			},
 			UISummary: "random-summary",
 		}
+		reportTime := time.Now()
 		By("storing a report")
-		Expect(elasticClient.StoreArchivedReport(rep)).ToNot(HaveOccurred())
+		Expect(elasticClient.StoreArchivedReport(rep, reportTime)).ToNot(HaveOccurred())
 		time.Sleep(time.Second)
+
+		By("having the appropriate report indices")
+		dateIndex := reportTime.Format(IndexTimeFormat)
+		indicesExist, _ := elasticClient.Backend().IndexExists(
+			fmt.Sprintf("tigera_secure_ee_compliance_reports.cluster.%s", dateIndex),
+		).Do(context.Background())
+		Expect(indicesExist).To(Equal(true))
 
 		By("retrieving report summaries")
 		get := func() ([]*report.ArchivedReportData, error) {

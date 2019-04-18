@@ -3,6 +3,7 @@ package elastic
 import (
 	"context"
 	"encoding/json"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -16,9 +17,11 @@ import (
 func (c *client) RetrieveArchivedReport(id string) (*report.ArchivedReportData, error) {
 	clog := log.WithField("id", id)
 
+	searchIndex := c.clusterIndex(reportsIndex, "*")
+
 	// Execute query.
 	res, err := c.Search().
-		Index(reportsIndex).
+		Index(searchIndex).
 		Query(elastic.NewTermQuery("_id", id)).
 		Size(1). // Only retrieve the first document found.
 		Do(context.Background())
@@ -55,6 +58,7 @@ func (c *client) RetrieveArchivedReport(id string) (*report.ArchivedReportData, 
 func (c *client) RetrieveArchivedReportSummaries() ([]*report.ArchivedReportData, error) {
 	reps := []*report.ArchivedReportData{}
 
+	searchIndex := c.clusterIndex(reportsIndex, "*")
 	// Query for raw report data in a paginated fashion.
 	//TODO(rlb): We will need to add pagination options for the UI.... and also sort options.
 	exit := false
@@ -62,7 +66,7 @@ func (c *client) RetrieveArchivedReportSummaries() ([]*report.ArchivedReportData
 		// Make search query
 		//TODO(rlb): Can we use exclusion rather than inclusion for this list if that makes sense?
 		res, err := c.Search().
-			Index(reportsIndex).
+			Index(searchIndex).
 			Sort("startTime", false).
 			FetchSourceContext(elastic.NewFetchSourceContext(true).Include(
 				"reportName", "reportTypeName", "reportSpec", "reportTypeSpec", "startTime", "endTime",
@@ -88,9 +92,13 @@ func (c *client) RetrieveArchivedReportSummaries() ([]*report.ArchivedReportData
 	return reps, nil
 }
 
-func (c *client) StoreArchivedReport(r *report.ArchivedReportData) error {
+func (c *client) StoreArchivedReport(r *report.ArchivedReportData, t time.Time) error {
+	index := c.clusterIndex(reportsIndex, t.Format(IndexTimeFormat))
+	if err := c.ensureIndexExists(index, reportsMapping); err != nil {
+		return err
+	}
 	res, err := c.Index().
-		Index(reportsIndex).
+		Index(index).
 		Type("_doc").
 		Id(r.UID()).
 		BodyJson(r).

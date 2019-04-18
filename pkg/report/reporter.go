@@ -3,6 +3,7 @@ package report
 
 import (
 	"context"
+	"time"
 
 	"github.com/sirupsen/logrus"
 
@@ -150,7 +151,7 @@ func (r *reporter) run() error {
 	err = r.archiver.StoreArchivedReport(&ArchivedReportData{
 		ReportData: r.data,
 		UISummary:  summary,
-	})
+	}, time.Now())
 
 	return err
 }

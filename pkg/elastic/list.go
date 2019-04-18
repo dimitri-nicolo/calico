@@ -26,9 +26,10 @@ func (c *client) RetrieveList(kind metav1.TypeMeta, from, to *time.Time, ascendi
 		rangeQuery = rangeQuery.To(*to)
 	}
 
+	searchIndex := c.clusterIndex(snapshotsIndex, "*")
 	// Execute query.
 	res, err := c.Search().
-		Index(snapshotsIndex).
+		Index(searchIndex).
 		Query(
 			elastic.NewBoolQuery().Must(
 				elastic.NewTermQuery("apiVersion", kind.APIVersion),
@@ -68,8 +69,13 @@ func (c *client) RetrieveList(kind metav1.TypeMeta, from, to *time.Time, ascendi
 }
 
 func (c *client) StoreList(_ metav1.TypeMeta, l *list.TimestampedResourceList) error {
+	dateSuffix := l.RequestCompletedTimestamp.Format(IndexTimeFormat)
+	index := c.clusterIndex(snapshotsIndex, dateSuffix)
+	if err := c.ensureIndexExists(index, snapshotsMapping); err != nil {
+		return err
+	}
 	res, err := c.Index().
-		Index(snapshotsIndex).
+		Index(index).
 		Type("_doc").
 		Id(l.String()).
 		BodyJson(l).

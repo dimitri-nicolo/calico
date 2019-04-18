@@ -35,11 +35,6 @@ func main() {
 	// Init elastic.
 	elasticClient := elastic.MustGetElasticClient()
 
-	// Check elastic index.
-	if err := elasticClient.EnsureIndices(); err != nil {
-		panic(err)
-	}
-
 	// Create a Calico client and query the report and corresponding report type.
 	config := report.MustLoadReportConfig()
 
