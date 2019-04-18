@@ -2374,6 +2374,24 @@ func init() {
 			},
 			false,
 		),
+		Entry("Disallow GlobalReportType with invalid download template",
+			&api.GlobalReportType{
+				ObjectMeta: v1.ObjectMeta{Name: "grt"},
+				Spec: api.ReportTypeSpec{
+					UISummaryTemplate: api.ReportTemplate{
+						Name:     "uist",
+						Template: "Report Name: {{ .ReportName }}",
+					},
+					DownloadTemplates: []api.ReportTemplate{
+						{
+							Name:     "uidt",
+							Template: "Total Endpoints: {{ .Foo }}",
+						},
+					},
+				},
+			},
+			false,
+		),
 		Entry("Validate GlobalReportType inventory-summary template",
 			&api.GlobalReportType{
 				ObjectMeta: v1.ObjectMeta{Name: "grt"},
