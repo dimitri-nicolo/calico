@@ -1,5 +1,5 @@
-hash: 5858cad88f0cd318e14275b563764fc893eadb00f2719ccf19216285097480ff
-updated: 2019-04-17T17:23:13.333987554Z
+hash: 4e65e47a6b4908b071880d0ab212a4136c67c0cb05575abd524fc6d1fd6d2ed2
+updated: 2019-04-18T10:07:49.147186119Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -285,7 +285,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 7ad687943ce0fd05eb5f276d010f7e5d61069c17
+  version: d3d5a6f44bff12ee6166b3e145aa24ebf99ac1fa
   repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib/apiconfig
@@ -331,7 +331,7 @@ imports:
   subpackages:
   - binder
 - name: github.com/projectcalico/typha
-  version: b9bc25e1bbc6a43b53f3079561f9865ce740be65
+  version: 9c1c502bc9f27dca18dfd960f8e854d30920d0b1
   repo: git@github.com:tigera/typha-private
   subpackages:
   - pkg/syncclient
@@ -399,7 +399,6 @@ imports:
   subpackages:
   - ed25519
   - ed25519/internal/edwards25519
-  - pbkdf2
   - ssh/terminal
 - name: golang.org/x/net
   version: 1c05540f6879653db88113bc4a2b70aec4bd491f
