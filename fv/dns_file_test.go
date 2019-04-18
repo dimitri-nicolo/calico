@@ -57,7 +57,7 @@ var _ = Describe("DNS Policy", func() {
 		// Now start etcd and Felix.
 		opts := infrastructure.DefaultTopologyOptions()
 		opts.ExtraVolumes[dnsDir] = "/dnsinfo"
-		opts.ExtraEnvVars["FELIX_DOMAININFOSTORE"] = "/dnsinfo/dnsinfo.txt"
+		opts.ExtraEnvVars["FELIX_DNSCACHEFILE"] = "/dnsinfo/dnsinfo.txt"
 		felix, etcd, client = infrastructure.StartSingleNodeEtcdTopology(opts)
 	}
 

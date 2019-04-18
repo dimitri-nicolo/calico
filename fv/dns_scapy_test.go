@@ -70,9 +70,9 @@ var _ = Describe("DNS Policy", func() {
 
 		// Now start etcd and Felix, with Felix trusting scapy's IP.
 		opts.ExtraVolumes[dnsDir] = "/dnsinfo"
-		opts.ExtraEnvVars["FELIX_DOMAININFOSTORE"] = "/dnsinfo/dnsinfo.txt"
-		opts.ExtraEnvVars["FELIX_DOMAININFOSAVEINTERVAL"] = "1"
-		opts.ExtraEnvVars["FELIX_DOMAININFOTRUSTEDSERVERS"] = scapyTrusted.IP
+		opts.ExtraEnvVars["FELIX_DNSCACHEFILE"] = "/dnsinfo/dnsinfo.txt"
+		opts.ExtraEnvVars["FELIX_DNSCACHESAVEINTERVAL"] = "1"
+		opts.ExtraEnvVars["FELIX_DNSTRUSTEDSERVERS"] = scapyTrusted.IP
 		opts.ExtraEnvVars["FELIX_LOGSEVERITYSCREEN"] = "debug"
 		felix, etcd, client = infrastructure.StartSingleNodeEtcdTopology(opts)
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")
