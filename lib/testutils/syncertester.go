@@ -127,6 +127,13 @@ func (st *SyncerTester) OnUpdates(updates []api.Update) {
 				Expect(u.Value).NotTo(BeNil())
 				st.cache[k] = u.KVPair
 			}
+
+			// Check that KeyFromDefaultPath supports parsing the path again;
+			// this is required for typha to support this resource.
+			parsedKey := model.KeyFromDefaultPath(k)
+			Expect(parsedKey).NotTo(BeNil(), fmt.Sprintf(
+				"KeyFromDefaultPath unable to parse %s, generated from %+v; typha won't support this key",
+				k, u.Key))
 		}
 	}()
 
@@ -202,7 +209,7 @@ func (st *SyncerTester) ExpectCacheSize(size int) {
 // revision number is not stable).
 func (st *SyncerTester) ExpectData(kvp model.KVPair) {
 	key, err := model.KeyToDefaultPath(kvp.Key)
-	Expect(err).NotTo(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("failed to convert key to default path: %v", kvp.Key))
 
 	if kvp.Revision == "" {
 		value := func() interface{} {

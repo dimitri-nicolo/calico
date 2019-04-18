@@ -3300,6 +3300,12 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							Format: "int32",
 						},
 					},
+					"XDPRefreshInterval": {
+						SchemaProps: spec.SchemaProps{
+							Description: "XDPRefreshInterval is the period at which Felix re-checks all XDP state to ensure that no other process has accidentally broken Calico's BPF maps or attached programs. Set to 0 to disable XDP refresh. [Default: 90s]",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
 					"netlinkTimeout": {
 						SchemaProps: spec.SchemaProps{
 							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
@@ -3716,6 +3722,20 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							Format: "",
 						},
 					},
+					"xdpEnabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "XDPEnabled enables XDP acceleration for suitable untracked incoming deny rules. [Default: true]",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"genericXDPEnabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "GenericXDPEnabled enables Generic XDP so network cards that don't support XDP offload or driver modes can use XDP. This is not recommended since it doesn't provide better performance than iptables. [Default: false]",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 					"syslogReporterNetwork": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"string"},
@@ -3969,6 +3989,7 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 						},
 					},
 				},
+				Required: []string{"XDPRefreshInterval"},
 			},
 		},
 		Dependencies: []string{
