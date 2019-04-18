@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -38,6 +38,7 @@ type Container struct {
 	IP       string
 	Hostname string
 	runCmd   *exec.Cmd
+	Stdin    io.WriteCloser
 
 	mutex         sync.Mutex
 	binaries      set.Set
@@ -146,8 +147,13 @@ func (c *Container) signalDockerRun(sig os.Signal) {
 	logCxt.Info("Signalled docker run")
 }
 
+func (c *Container) Signal(sig os.Signal) {
+	c.signalDockerRun(sig)
+}
+
 type RunOpts struct {
-	AutoRemove bool
+	AutoRemove    bool
+	WithStdinPipe bool
 }
 
 func NextContainerIndex() int {
@@ -172,6 +178,12 @@ func Run(namePrefix string, opts RunOpts, args ...string) (c *Container) {
 	runArgs = append(runArgs, args...)
 
 	c.runCmd = utils.Command("docker", runArgs...)
+
+	if opts.WithStdinPipe {
+		var err error
+		c.Stdin, err = c.runCmd.StdinPipe()
+		Expect(err).NotTo(HaveOccurred())
+	}
 
 	// Get the command's output pipes, so we can merge those into the test's own logging.
 	stdout, err := c.runCmd.StdoutPipe()
@@ -430,7 +442,7 @@ func (c *Container) ExecMayFail(cmd ...string) error {
 func (c *Container) ExecOutput(args ...string) (string, error) {
 	arg := []string{"exec", c.Name}
 	arg = append(arg, args...)
-	cmd := exec.Command("docker", arg...)
+	cmd := utils.Command("docker", arg...)
 	out, err := cmd.Output()
 	if err != nil {
 		if out == nil {

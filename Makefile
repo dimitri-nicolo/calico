@@ -614,6 +614,7 @@ fv/fv.test: vendor/.up-to-date $(SRC_FILES)
 # 	GINKGO_FOCUS="DNS Policy" make fv
 #
 fv fv/latency.log: $(BUILD_IMAGE) bin/iptables-locker bin/test-workload bin/test-connection fv/fv.test
+	docker build -t tigera-test/scapy fv/scapy
 	cd fv && \
 	  FV_FELIXIMAGE=$(FV_FELIXIMAGE) \
 	  FV_ETCDIMAGE=$(FV_ETCDIMAGE) \
