@@ -23,54 +23,10 @@ spec:
       {{ yaml .AuditEvents }}
   uiSummaryTemplate:
     name: ui-summary.json
-    template: |
-      {
-        uiSummary: {
-          type: "panel",
-          heading: 'Network policy configuration changes',
-          widgets: [
-            {
-              type: "radialbarchart",
-              heading: 'Network policies created',
-              summary: {
-                label: 'Total',
-                total: {{ .AuditSummary.NumTotal }}
-              },
-              data: [
-                {
-                  label: 'Created',
-                  value: {{ .AuditSummary.NumCreate }}
-                }
-              ]
-            },
-            {
-              type: "radialbarchart",
-              heading: 'Network policies modified',
-              summary: {
-                label: 'Total',
-                total: {{ .AuditSummary.NumTotal }}
-              },
-              data: [
-                {
-                  label: 'Modified',
-                  value: {{ .AuditSummary.NumModify }}
-                }
-              ]
-            },
-            {
-              type: "radialbarchart",
-              heading: 'Network policies deleted',
-              summary: {
-                label: 'Total',
-                total: {{ .AuditSummary.NumTotal }}
-              },
-              data: [
-                {
-                  label: 'Deleted',
-                  value: {{ .AuditSummary.NumDelete }}
-                }
-              ]
-            }
-          ]
-        }
-      }
+    template: '{"uiSummary":{"heading":"Network policy configuration changes","type":"panel","widgets":[{"data":[{"label":"Created","value":{{
+      .AuditSummary.NumCreate }}}],"heading":"Network policies created","summary":{"label":"Total","total":{{
+      .AuditSummary.NumTotal }}},"type":"radialbarchart"},{"data":[{"label":"Modified","value":{{
+      .AuditSummary.NumModify }}}],"heading":"Network policies modified","summary":{"label":"Total","total":{{
+      .AuditSummary.NumTotal }}},"type":"radialbarchart"},{"data":[{"label":"Deleted","value":{{
+      .AuditSummary.NumDelete }}}],"heading":"Network policies deleted","summary":{"label":"Total","total":{{
+      .AuditSummary.NumTotal }}},"type":"radialbarchart"}]}}'

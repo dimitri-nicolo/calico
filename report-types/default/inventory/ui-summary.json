@@ -1,89 +1,89 @@
 {
-  uiSummary: {
-    type: "panel",
-    heading: 'Inscope vs Protected',
-    widgets: [
+  "uiSummary": {
+    "type": "panel",
+    "heading": "Inscope vs Protected",
+    "widgets": [
       {
-        type: "radialbarchart",
-        heading: 'Endpoints',
-        summary: {
-          label: 'Total',
-          total: {{ .EndpointsSummary.NumTotal }}
+        "type": "radialbarchart",
+        "heading": "Endpoints",
+        "summary": {
+          "label": "Total",
+          "total": "@@@{{ .EndpointsSummary.NumTotal }}@@@"
         },
-        data: [
+        "data": [
           {
-            label: 'Protected ingress',
-            value: {{ .EndpointsSummary.NumIngressProtected }}
+            "label": "Protected ingress",
+            "value": "@@@{{ .EndpointsSummary.NumIngressProtected }}@@@"
           }
         ]
       },
       {
-        type: "radialbarchart",
-        heading: 'Namespaces',
-        summary: {
-          label: 'Total',
-          total: {{ .NamespacesSummary.NumTotal }}
+        "type": "radialbarchart",
+        "heading": "Namespaces",
+        "summary": {
+          "label": "Total",
+          "total": "@@@{{ .NamespacesSummary.NumTotal }}@@@"
         },
-        data: [
+        "data": [
           {
-            label: 'Protected ingress',
-            value: {{ .NamespacesSummary.NumIngressProtected }}
+            "label": "Protected ingress",
+            "value": "@@@{{ .NamespacesSummary.NumIngressProtected }}@@@"
           }
         ]
       },
       {
-        type: "radialbarchart",
-        heading: 'Service Accounts',
-        summary: {
-          label: 'Total',
-          total: {{ .ServicesSummary.NumTotal }}
+        "type": "radialbarchart",
+        "heading": "Service Accounts",
+        "summary": {
+          "label": "Total",
+          "total": "@@@{{ .ServicesSummary.NumTotal }}@@@"
         },
-        data: [
+        "data": [
           {
-            label: 'Protected ingress',
-            value: {{ .ServicesSummary.NumIngressProtected }}
+            "label": "Protected ingress",
+            "value": "@@@{{ .ServicesSummary.NumIngressProtected }}@@@"
           }
         ]
       },
       {
-        type: "radialbarchart",
-        heading: 'Endpoints',
-        summary: {
-          label: 'Total',
-          total: {{ .EndpointsSummary.NumTotal }}
+        "type": "radialbarchart",
+        "heading": "Endpoints",
+        "summary": {
+          "label": "Total",
+          "total": "@@@{{ .EndpointsSummary.NumTotal }}@@@"
         },
-        data: [
+        "data": [
           {
-            label: 'Protected egress',
-            value: {{ .EndpointsSummary.NumEgressProtected }}
+            "label": "Protected egress",
+            "value": "@@@{{ .EndpointsSummary.NumEgressProtected }}@@@"
           }
         ]
       },
       {
-        type: "radialbarchart",
-        heading: 'Namespaces',
-        summary: {
-          label: 'Total',
-          total: {{ .NamespacesSummary.NumTotal }}
+        "type": "radialbarchart",
+        "heading": "Namespaces",
+        "summary": {
+          "label": "Total",
+          "total": "@@@{{ .NamespacesSummary.NumTotal }}@@@"
         },
-        data: [
+        "data": [
           {
-            label: 'Protected egress',
-            value: {{ .NamespacesSummary.NumEgressProtected }}
+            "label": "Protected egress",
+            "value": "@@@{{ .NamespacesSummary.NumEgressProtected }}@@@"
           }
         ]
       },
       {
-        type: "radialbarchart",
-        heading: 'Service Accounts',
-        summary: {
-          label: 'Total',
-          total: {{ .ServicesSummary.NumTotal }}
+        "type": "radialbarchart",
+        "heading": "Service Accounts",
+        "summary": {
+          "label": "Total",
+          "total": "@@@{{ .ServicesSummary.NumTotal }}@@@"
         },
-        data: [
+        "data": [
           {
-            label: 'Protected egress',
-            value: {{ .ServicesSummary.NumEgressProtected }}
+            "label": "Protected egress",
+            "value": "@@@{{ .ServicesSummary.NumEgressProtected }}@@@"
           }
         ]
       }
