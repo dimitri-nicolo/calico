@@ -25,8 +25,8 @@ var _ = Describe("Snapshot", func() {
 
 	BeforeEach(func() {
 		retrySleepTime = time.Millisecond
-		src = &mock.Source{}
-		dest = &mock.Destination{}
+		src = mock.NewSource()
+		dest = mock.NewDestination(nil)
 	})
 
 	It("should decide that it is not yet time to make a snapshot", func() {

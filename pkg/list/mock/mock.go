@@ -13,6 +13,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/errors"
 
 	"github.com/tigera/compliance/pkg/list"
+	"github.com/tigera/compliance/pkg/resources"
 )
 
 func init() {
@@ -22,6 +23,17 @@ func init() {
 // mockList is used by both mockSource and mockDestination.
 type mockLister struct {
 	data []*list.TimestampedResourceList
+}
+
+// Initialize is used by the test to fill the lister with a list for each resource type
+//   Useful for replayer.
+func (m *mockLister) Initialize(ts time.Time) {
+	for _, rh := range resources.GetAllResourceHelpers() {
+		resList := rh.NewResourceList()
+		tm := rh.TypeMeta()
+		resList.GetObjectKind().SetGroupVersionKind((&tm).GroupVersionKind())
+		m.data = append(m.data, &list.TimestampedResourceList{resList, metav1.Time{ts}, metav1.Time{ts}})
+	}
 }
 
 // mockLister implements the expected logic of the list fetcher.
@@ -57,6 +69,10 @@ type Source struct {
 	RetrieveCalls int
 }
 
+func NewSource() *Source {
+	return &Source{}
+}
+
 // RetrieveList implements pkg/list.Source.RetrieveList using mockLister.retrieveList
 func (r *Source) RetrieveList(kind metav1.TypeMeta) (*list.TimestampedResourceList, error) {
 	r.RetrieveCalls++
@@ -68,6 +84,15 @@ type Destination struct {
 	mockLister
 	RetrieveCalls int
 	StoreCalls    int
+}
+
+// NewDestination creates a mock list.Destination struct with an optional parameter of filling it with empty lists.
+func NewDestination(tm *time.Time) *Destination {
+	dest := &Destination{}
+	if tm != nil {
+		dest.Initialize(*tm)
+	}
+	return dest
 }
 
 // StoreList implements pkg/list.Destination.StoreList using mockLister.LoadList
