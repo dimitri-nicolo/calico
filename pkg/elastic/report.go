@@ -53,17 +53,19 @@ func (c *client) RetrieveArchivedReport(id string) (*report.ArchivedReportData, 
 }
 
 func (c *client) RetrieveArchivedReportSummaries() ([]*report.ArchivedReportData, error) {
-	reports := []*report.ArchivedReportData{}
+	reps := []*report.ArchivedReportData{}
 
-	// Query for raw report data in a paginated fashion
+	// Query for raw report data in a paginated fashion.
+	//TODO(rlb): We will need to add pagination options for the UI.... and also sort options.
 	exit := false
 	for i := 0; !exit; i += pageSize {
 		// Make search query
+		//TODO(rlb): Can we use exclusion rather than inclusion for this list if that makes sense?
 		res, err := c.Search().
 			Index(reportsIndex).
 			Sort("startTime", false).
 			FetchSourceContext(elastic.NewFetchSourceContext(true).Include(
-				"reportName", "reportType", "startTime", "endTime",
+				"reportName", "reportTypeName", "reportSpec", "reportTypeSpec", "startTime", "endTime",
 				"endpointsSummary", "namespacesSummary", "servicesSummary", "uiSummary",
 			)).From(i).Size(pageSize).Do(context.Background())
 		if err != nil {
@@ -72,19 +74,18 @@ func (c *client) RetrieveArchivedReportSummaries() ([]*report.ArchivedReportData
 		}
 		log.WithField("latency (ms)", res.TookInMillis).Debug("query success")
 
-		// define function that pushes the search results into the channel.
 		for _, hit := range res.Hits.Hits {
-			report := new(report.ArchivedReportData)
-			if err := json.Unmarshal(*hit.Source, report); err != nil {
+			rep := new(report.ArchivedReportData)
+			if err := json.Unmarshal(*hit.Source, rep); err != nil {
 				log.WithFields(log.Fields{"index": hit.Index, "id": hit.Id}).WithError(err).Warn("failed to unmarshal event json")
 				continue
 			}
-			reports = append(reports, report)
+			reps = append(reps, rep)
 		}
 
 		exit = i+pageSize > int(res.Hits.TotalHits)
 	}
-	return reports, nil
+	return reps, nil
 }
 
 func (c *client) StoreArchivedReport(r *report.ArchivedReportData) error {

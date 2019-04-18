@@ -28,13 +28,15 @@ func (s *server) getReportTypes() (map[string]*v3.ReportTypeSpec, error) {
 		return s.reportTypes, nil
 	}
 
+	// Get the latest set of report types.
 	grt, err := s.rcg.GlobalReportTypes().List(v1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
 
+	// Transfer the specs into a new map keyed off the name.
+	s.reportTypes = make(map[string]*v3.ReportTypeSpec, 0)
 	for idx := range grt.Items {
-		s.reportTypes = make(map[string]*v3.ReportTypeSpec, 0)
 		s.reportTypes[grt.Items[idx].Name] = &grt.Items[idx].Spec
 	}
 	return s.reportTypes, nil
