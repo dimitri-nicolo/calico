@@ -13,7 +13,7 @@ import:
 - package: github.com/mipearson/rfw
 - package: github.com/projectcalico/libcalico-go
   repo: git@github.com:tigera/libcalico-go-private
-  version: 8558a8d0715c73355d90de7c2587ec3ab48dd1f8
+  version: 541f27125ab32f334ce9c288c43c44df64fc7320
   subpackages:
   - lib/apiconfig
   - lib/backend/api
@@ -35,9 +35,12 @@ import:
   subpackages:
   - prometheus
   - prometheus/promhttp
+# Use our fork, because v1.0.5 causes test breakages due to problems with our log formatting code,
+# but other deps require newer version because of the SetOutput function. Our fork backports
+# the missing stuff on top of v1.0.4.
 - package: github.com/sirupsen/logrus
-  # v1.0.5 causes test breakages.
-  version: v1.0.4
+  repo: https://github.com/projectcalico/logrus
+  version: v1.0.4-calico
 - package: k8s.io/apimachinery
   subpackages:
   - pkg/apis/meta/v1
