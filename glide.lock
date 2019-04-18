@@ -1,5 +1,5 @@
-hash: 5551330574b405275100f878a884b6da5e67d9fcf37ebc2ce81e0ae9756f834c
-updated: 2019-04-18T14:05:27.304702837+01:00
+hash: 3f8cde97be9dbb8011e4d016947bf6897ccbdf8737866d13d4b6ccfccba7add7
+updated: 2019-04-18T15:24:01.450833921+01:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -267,6 +267,8 @@ imports:
 - name: github.com/Microsoft/hcsshim
   version: 063ae4a83d78bdb93f76b18cc894c6342fa85c15
   subpackages:
+  - hcn
+  - internal/cni
   - internal/guid
   - internal/hcs
   - internal/hcserror
@@ -275,6 +277,8 @@ imports:
   - internal/logfields
   - internal/longpath
   - internal/mergemaps
+  - internal/regstate
+  - internal/runhcs
   - internal/safefile
   - internal/schema1
   - internal/schema2
@@ -332,7 +336,7 @@ imports:
 - name: github.com/pkg/errors
   version: 27936f6d90f9c8e1145f11ed52ffffbfdb9e0af7
 - name: github.com/projectcalico/cni-plugin
-  version: 869afd886c670fd4789a2ff51bff584a1bd32633
+  version: c9d33528eab040de09219df45226b1368b71ac30
   repo: git@github.com:tigera/cni-plugin-private.git
   subpackages:
   - internal/pkg/azure
@@ -344,7 +348,7 @@ imports:
   - pkg/types
   - pkg/upgrade
 - name: github.com/projectcalico/felix
-  version: 3ff19e28bcb4ce3ac661a4274c49bb8db936dd97
+  version: c570daf32a8437ac9ede18208d0099e1a516a753
   repo: git@github.com:tigera/felix-private.git
   subpackages:
   - bpf
@@ -558,6 +562,7 @@ imports:
   subpackages:
   - unix
   - windows
+  - windows/registry
 - name: golang.org/x/text
   version: b19bf474d317b857955b12035d2c5acb57ce8b01
   subpackages:
