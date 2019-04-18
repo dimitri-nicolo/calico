@@ -1,5 +1,5 @@
-hash: c5ed3e8ae1bc4fa7a2de918652e89e0d0dcf9a664ea60a9fcc17ab0d3cb12658
-updated: 2019-04-09T14:41:46.669788238+01:00
+hash: a67a332a7a65a05ea4bb59dfb38bd98ec963802a2e3509641d917a4ebba84aae
+updated: 2019-04-18T13:53:17.765438394+01:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -44,7 +44,7 @@ imports:
 - name: github.com/ghodss/yaml
   version: 73d445a93680fa1a78ae23a5839bad48f32ba1ee
 - name: github.com/go-openapi/jsonpointer
-  version: ef5f0afec364d3b9396b7b77b43dbe26bf1f8004
+  version: 46af16f9f7b149af66e5d1bd010e3574dc06de98
 - name: github.com/go-openapi/jsonreference
   version: 8483a886a90412cd6858df4ea3483dce9c8e35a3
 - name: github.com/go-openapi/spec
@@ -172,7 +172,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 8558a8d0715c73355d90de7c2587ec3ab48dd1f8
+  version: 541f27125ab32f334ce9c288c43c44df64fc7320
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
@@ -210,7 +210,7 @@ imports:
   - lib/validator/v3
   - lib/watch
 - name: github.com/projectcalico/typha
-  version: e0ad0e588541ec836a35c7cce5d29491f523a844
+  version: 6020cfcec79d468f39efbeafd2093e6c8e633779
   repo: git@github.com:tigera/typha-private.git
   subpackages:
   - pkg/syncclient
