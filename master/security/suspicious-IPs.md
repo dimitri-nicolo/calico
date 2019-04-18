@@ -8,9 +8,7 @@ Add threat intelligence feeds to Tigera Secure EE to trace network flows of susp
 
 ### Value
 
-Tigera Secure EE integrates with threat intelligence feeds so you can see the network flows to suspicious IPs to and from Kubernetes clusters. After you analyze the flows in the UI, and you are confident that an IP is a legitimate threat, you can block traffic using a global network policy.  
-
-If you are currently monitoring potential malicious IP addresses in Kubernetes, monitoring threat feeds may be easy. But it takes extraordinary time and effort to identify which Kubernetes pods are involved. Finally, Kubernetes network policy cannot block IPs for a cluster or specific endpoints when you get actionable data.
+Tigera Secure EE integrates with threat intelligence feeds so you can detect when your Kubernetes clsuters communicate with suspicious IPs. When communications are detected, an anomaly detection dashboard in the UI shows the full context, including which pod(s) were involved so you can analyze and remediate. You can also use a threat intelligence feed to power a dynamic blocklist, either to or from a specific group of sensitive pods, or your entire cluster.  
 
 ### Features
 
@@ -23,7 +21,7 @@ This how-to article uses the following Tigera Secure EE features:
 
 #### Pull or push threat feeds?
 
-It’s entirely up to you. If you want Tigera Secure EE to pull updates from your threat feed, use the pull method. If you want to your threat feed to push updates using Elasticsearch use the push method. 
+Tigera Secure EE supports both push and pull methods for updating threat feeds. Pull method supports fully automated threat feed updates driven by Tigera Secure EE without user intervention. Push method can be used for manually updating a threat feed. The push method is useful for threat feeds that Tigera cannot pull updates from (for example, if they are not available over HTTP/HTTPS), or if you prefer to manually update threat feeds based on your own schedule. 
 
 #### Suspicious IPs: test before you block
 
