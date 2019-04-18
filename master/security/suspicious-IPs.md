@@ -59,8 +59,7 @@ spec:
   pull:
     http:
       <b>url: https://my.threatfeed.com/blacklist</b>
-</pre>
-{: .no-select-button}      
+</pre>   
 
 2. Add the global threat feed to the cluster.  
    `kubectl apply -f <your_threatfeed_filename>`
@@ -79,8 +78,7 @@ apiVersion: projectcalico.org/v3
 kind: GlobalThreatFeed
 metadata:
   name: my-threat feed
-</pre>
-{: .no-select-button}   
+</pre>  
   
 2. Add the global threat feed to the cluster.  
    `kubectl apply -f <your_threatfeed_filename>`
@@ -93,7 +91,6 @@ metadata:
       "ips" : ["99.99.99.99", "100.100.100.0/24"]
   }
 </pre>
-{: .no-select-button}  
 
   See the Elasticsearch document APIs for how to create and update documents in Elasticsearch.
 
@@ -116,7 +113,6 @@ spec:
     labels:
       security-action: block</b>
 </pre>
-  {: .no-select-button} 
   
 1. Add the global threat feed to the cluster.  
    `kubectl apply -f <your_threatfeed_filename>`
@@ -138,7 +134,6 @@ spec:
     source:
       selector: security-action == 'block'
 </pre>
-  {: .no-select-button}
   
 3. Add the global network policy to the cluster.  
    `kubectl apply -f <your_threatfeed_filename>`
@@ -153,7 +148,7 @@ If you haven’t already adjusted your [aggregation flows](#before-you-begin), w
 
 #### Configure the threat feed
 
-1. Create a file called feodo-tracker.yaml with the following contents . 
+1. Create a file called feodo-tracker.yaml with the following contents:
 
 <pre>
 apiVersion: projectcalico.org/v3
@@ -165,9 +160,8 @@ spec:
     http:
       url: https://feodotracker.abuse.ch/downloads/ipblocklist.txt
 </pre>
-  {: .no-select-button} 
   
-  This pulls updates using the default period of once per day. See the [Global Resource Threat Feed API]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalthreatfeed) for all configuration options.
+This pulls updates using the default period of once per day. See the [Global Resource Threat Feed API]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalthreatfeed) for all configuration options.
 
 2. Add the feed to your cluster.  
    `kubectl apply -f feodo-tracker.yaml`
@@ -201,9 +195,9 @@ spec:
     image: ubuntu
     name: test
 </pre>
-  {: .no-select-button}
   
-2. Edit the feodo-tracker.yaml to include a globalNetworkSet stanza:
+2. Edit the feodo-tracker.yaml to include a globalNetworkSet stanza:  
+   `kubectl apply -f tf-ubuntu.yaml`
 
 <pre>
 apiVersion: projectcalico.org/v3
@@ -217,8 +211,7 @@ spec:
   globalNetworkSet:
     labels:
       docs.tigera.io/threatfeed: feodo
-</pre>
-  {: .no-select-button}      
+</pre>     
 
 3. Reapply the new YAML.  
    `kubectl apply -f feodo-tracker.yaml`
@@ -248,7 +241,6 @@ spec:
       selector: docs.tigera.io/threatfeed == 'feodo'
   - action: Allow
 </pre>
-  {: .no-select-button} 
 
 2. Apply this policy to the cluster
    `kubectl apply -f block-feodo.yaml`
