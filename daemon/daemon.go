@@ -37,9 +37,6 @@ import (
 	lclient "github.com/tigera/licensing/client"
 	"github.com/tigera/licensing/client/features"
 	"github.com/tigera/licensing/monitor"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 
 	"github.com/projectcalico/felix/buildinfo"
 	"github.com/projectcalico/felix/calc"
@@ -1252,18 +1249,7 @@ func discoverTyphaAddr(configParams *config.Config) (string, error) {
 
 	// If we get here, we need to look up the Typha service using the k8s API.
 	// TODO Typha: support Typha lookup without using rest.InClusterConfig().
-	k8sconf, err := rest.InClusterConfig()
-	if err != nil {
-		log.WithError(err).Error("Unable to create Kubernetes config.")
-		return "", err
-	}
-	clientset, err := kubernetes.NewForConfig(k8sconf)
-	if err != nil {
-		log.WithError(err).Error("Unable to create Kubernetes client set.")
-		return "", err
-	}
-	svcClient := clientset.CoreV1().Services(configParams.TyphaK8sNamespace)
-	svc, err := svcClient.Get(configParams.TyphaK8sServiceName, v1.GetOptions{})
+	svc, err := config.GetKubernetesService(configParams.TyphaK8sNamespace, configParams.TyphaK8sServiceName)
 	if err != nil {
 		log.WithError(err).Error("Unable to get Typha service from Kubernetes.")
 		return "", err

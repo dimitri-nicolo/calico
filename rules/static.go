@@ -24,7 +24,7 @@ import (
 )
 
 func (r *DefaultRuleRenderer) StaticFilterTableChains(ipVersion uint8) (chains []*Chain) {
-	chains = append(chains, r.StaticFilterForwardChains()...)
+	chains = append(chains, r.StaticFilterForwardChains(ipVersion)...)
 	chains = append(chains, r.StaticFilterInputChains(ipVersion)...)
 	chains = append(chains, r.StaticFilterOutputChains(ipVersion)...)
 	return
@@ -474,7 +474,7 @@ func (r *DefaultRuleRenderer) failsafeOutChain(table string) *Chain {
 	}
 }
 
-func (r *DefaultRuleRenderer) StaticFilterForwardChains() []*Chain {
+func (r *DefaultRuleRenderer) StaticFilterForwardChains(ipVersion uint8) []*Chain {
 	rules := []Rule{}
 
 	// Rules for filter forward chains dispatches the packet to our dispatch chains if it is going
@@ -506,20 +506,29 @@ func (r *DefaultRuleRenderer) StaticFilterForwardChains() []*Chain {
 	for _, prefix := range r.WorkloadIfacePrefixes {
 		log.WithField("ifacePrefix", prefix).Debug("Adding workload match rules")
 		ifaceMatch := prefix + "+"
-		rules = append(rules,
-			Rule{
-				// When we add DNS server vetting here, we will use --ctorigdst to do that.
-				Match: Match().OutInterface(ifaceMatch).Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53),
-				Action: NflogAction{
-					Group:       NFLOGDomainGroup,
-					Prefix:      "DNS",
-					SizeEnabled: r.EnableNflogSize,
-					// Traditional DNS over UDP has a maximum size of 512 bytes,
-					// but we need to allow for headers as well (Ethernet, IP
-					// and UDP); 1024 will amply cover what we need.
-					Size: 1024,
+		for _, serverIP := range r.DNSTrustedServers {
+			if (ipVersion == 4) && strings.Contains(serverIP, ":") {
+				continue
+			}
+			if (ipVersion == 6) && !strings.Contains(serverIP, ":") {
+				continue
+			}
+			rules = append(rules,
+				Rule{
+					Match: Match().OutInterface(ifaceMatch).Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53).ConntrackOrigDst(serverIP),
+					Action: NflogAction{
+						Group:       NFLOGDomainGroup,
+						Prefix:      "DNS",
+						SizeEnabled: r.EnableNflogSize,
+						// Traditional DNS over UDP has a maximum size of 512 bytes,
+						// but we need to allow for headers as well (Ethernet, IP
+						// and UDP); 1024 will amply cover what we need.
+						Size: 1024,
+					},
 				},
-			},
+			)
+		}
+		rules = append(rules,
 			Rule{
 				Match:  Match().InInterface(ifaceMatch),
 				Action: JumpAction{Target: ChainFromWorkloadDispatch},

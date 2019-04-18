@@ -148,6 +148,10 @@ func (m MatchCriteria) ConntrackOrigDstPort(port uint16) MatchCriteria {
 	return append(m, fmt.Sprintf("-m conntrack --ctorigdstport %v", port))
 }
 
+func (m MatchCriteria) ConntrackOrigDst(dst string) MatchCriteria {
+	return append(m, fmt.Sprintf("-m conntrack --ctorigdst %v", dst))
+}
+
 func (m MatchCriteria) Protocol(name string) MatchCriteria {
 	return append(m, fmt.Sprintf("-p %s", name))
 }

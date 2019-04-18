@@ -157,6 +157,7 @@ func StartDataplaneDriver(configParams *config.Config,
 
 				NATPortRange:                       configParams.NATPortRange,
 				IptablesNATOutgoingInterfaceFilter: configParams.IptablesNATOutgoingInterfaceFilter,
+				DNSTrustedServers:                  configParams.DNSTrustedServers,
 			},
 
 			IPIPMTU:                        configParams.IpInIpMtu,
@@ -203,8 +204,8 @@ func StartDataplaneDriver(configParams *config.Config,
 			FelixHostname:                   configParams.FelixHostname,
 			ExternalNodesCidrs:              configParams.ExternalNodesCIDRList,
 			Collector:                       collector,
-			DomainInfoStore:                 configParams.DomainInfoStore,
-			DomainInfoSaveInterval:          configParams.DomainInfoSaveInterval,
+			DNSCacheFile:                    configParams.DNSCacheFile,
+			DNSCacheSaveInterval:            configParams.DNSCacheSaveInterval,
 		}
 		stopChan := make(chan *sync.WaitGroup, 1)
 		intDP := intdataplane.NewIntDataplaneDriver(dpConfig, stopChan)

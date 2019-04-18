@@ -326,6 +326,8 @@ type Config struct {
 
 	EnableNflogSize bool
 	IPSecEnabled    bool
+
+	DNSTrustedServers []string
 }
 
 func (c *Config) validate() {

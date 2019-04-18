@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -110,11 +110,16 @@ var _ = AfterEach(func() {
 	}
 })
 
-func RunCommand(command string, args ...string) error {
+func GetCommandOutput(command string, args ...string) (string, error) {
 	cmd := Command(command, args...)
 	log.Infof("Running '%s %s'", cmd.Path, strings.Join(cmd.Args, " "))
 	output, err := cmd.CombinedOutput()
-	log.Infof("output: %v", string(output))
+	return string(output), err
+}
+
+func RunCommand(command string, args ...string) error {
+	output, err := GetCommandOutput(command, args...)
+	log.Infof("output: %v", output)
 	return err
 }
 

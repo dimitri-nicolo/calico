@@ -134,6 +134,8 @@ func fieldsByName(example interface{}) map[string]reflect.StructField {
 	return fields
 }
 
+var nilStringSlice []string
+
 var _ = DescribeTable("Config parsing",
 	func(key, value string, expected interface{}, errorExpected ...bool) {
 		config := New()
@@ -386,8 +388,39 @@ var _ = DescribeTable("Config parsing",
 
 	Entry("IPSecRekeyTime", "IPSecRekeyTime", "123", 123*time.Second),
 
-	Entry("DomainInfoStore", "DomainInfoStore", "/dnsinfo.txt", "/dnsinfo.txt"),
-	Entry("DomainInfoSaveInterval", "DomainInfoSaveInterval", "3600", time.Hour),
+	Entry("DNSCacheFile", "DNSCacheFile", "/dnsinfo.txt", "/dnsinfo.txt"),
+	Entry("DNSCacheSaveInterval", "DNSCacheSaveInterval", "3600", time.Hour),
+	Entry("DNSTrustedServers default",
+		"DNSTrustedServers", "",
+		// No IP for kube-dns, because UT does not run in Kubernetes environment.
+		[]string{}),
+	Entry("Trust 1 server IP",
+		"DNSTrustedServers", "1.2.3.4",
+		[]string{"1.2.3.4"}),
+	Entry("Trust 2 server IPs",
+		"DNSTrustedServers", "1.2.3.4,42.5.6.7",
+		[]string{"1.2.3.4", "42.5.6.7"}),
+	Entry("Trust kube-dns service",
+		"DNSTrustedServers", "k8s-service:kube-dns",
+		// No IP for kube-dns, because UT does not run in Kubernetes environment.
+		[]string{}),
+	Entry("Trust kube-dns and an IP",
+		"DNSTrustedServers", "k8s-service:kube-dns,42.5.6.7",
+		// No IP for kube-dns, because UT does not run in Kubernetes environment.
+		[]string{"42.5.6.7"}),
+	Entry("Disable trusting DNS servers",
+		"DNSTrustedServers", "none",
+		nilStringSlice),
+	Entry("DNSTrustedServers syntax error 1",
+		"DNSTrustedServers", "k8s-servce:kube-dns,42.5.6.7",
+		// Parse error -> default.
+		// No IP for kube-dns, because UT does not run in Kubernetes environment.
+		[]string{}),
+	Entry("DNSTrustedServers syntax error 2",
+		"DNSTrustedServers", "4245.5.699.7",
+		// Parse error -> default.
+		// No IP for kube-dns, because UT does not run in Kubernetes environment.
+		[]string{}),
 )
 
 var _ = DescribeTable("OpenStack heuristic tests",

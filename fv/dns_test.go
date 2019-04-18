@@ -20,6 +20,7 @@ import (
 	"io/ioutil"
 	"path"
 	"strconv"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 
@@ -34,6 +35,25 @@ import (
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
 )
+
+const nameserverPrefix = "nameserver "
+
+var localNameservers []string
+
+func GetLocalNameservers() (nameservers []string) {
+	if localNameservers == nil {
+		// Find out what Docker puts in a container's /etc/resolv.conf.
+		resolvConf, err := utils.GetCommandOutput("docker", "run", "--rm", utils.Config.FelixImage, "cat", "/etc/resolv.conf")
+		Expect(err).NotTo(HaveOccurred())
+		for _, resolvConfLine := range strings.Split(resolvConf, "\n") {
+			if strings.HasPrefix(resolvConfLine, nameserverPrefix) {
+				localNameservers = append(localNameservers, strings.TrimSpace(resolvConfLine[len(nameserverPrefix):]))
+			}
+		}
+		log.Infof("Discovered nameservers: %v", localNameservers)
+	}
+	return localNameservers
+}
 
 var _ = Describe("DNS Policy", func() {
 
@@ -74,11 +94,12 @@ var _ = Describe("DNS Policy", func() {
 		dnsDir, err = ioutil.TempDir("", "dnsinfo")
 		Expect(err).NotTo(HaveOccurred())
 		opts.ExtraVolumes[dnsDir] = "/dnsinfo"
-		opts.ExtraEnvVars["FELIX_DOMAININFOSTORE"] = saveFile
-		// For this test file, configure DomainInfoSaveInterval to be much longer than any
+		opts.ExtraEnvVars["FELIX_DNSCACHEFILE"] = saveFile
+		// For this test file, configure DNSCacheSaveInterval to be much longer than any
 		// test duration, so we can be sure that the writing of the dnsinfo.txt file is
 		// triggered by shutdown instead of by a periodic timer.
-		opts.ExtraEnvVars["FELIX_DOMAININFOSAVEINTERVAL"] = "3600"
+		opts.ExtraEnvVars["FELIX_DNSCACHESAVEINTERVAL"] = "3600"
+		opts.ExtraEnvVars["FELIX_DNSTRUSTEDSERVERS"] = strings.Join(GetLocalNameservers(), ",")
 		felix, etcd, client = infrastructure.StartSingleNodeEtcdTopology(opts)
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")
 
