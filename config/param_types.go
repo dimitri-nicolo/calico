@@ -506,7 +506,7 @@ func (c *ServerListParam) Parse(raw string) (result interface{}, err error) {
 func GetKubernetesService(namespace, svcName string) (*v1.Service, error) {
 	k8sconf, err := rest.InClusterConfig()
 	if err != nil {
-		log.WithError(err).Error("Unable to create Kubernetes config.")
+		log.WithError(err).Info("Unable to create Kubernetes config.")
 		return nil, err
 	}
 	clientset, err := kubernetes.NewForConfig(k8sconf)
