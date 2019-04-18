@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -223,6 +223,9 @@ func RunFelix(infra DatastoreInfra, options TopologyOptions) *Felix {
 		"-e", "FELIX_PROMETHEUSREPORTERENABLED=true",
 		"-e", "FELIX_USAGEREPORTINGENABLED=false",
 		"-e", "FELIX_IPV6SUPPORT="+ipv6Enabled,
+		// Disable log dropping, because it can cause flakes in tests that look
+		// for particular logs.
+		"-e", "FELIX_DEBUGDISABLELOGDROPPING=true",
 		"-v", "/lib/modules:/lib/modules",
 	)
 
