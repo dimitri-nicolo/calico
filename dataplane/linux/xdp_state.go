@@ -1454,7 +1454,8 @@ func isValidRuleForXDP(rule *proto.Rule) bool {
 		// have no application layer policy stuff
 		rule.HttpMatch == nil &&
 		rule.SrcServiceAccountMatch == nil &&
-		rule.DstServiceAccountMatch == nil
+		rule.DstServiceAccountMatch == nil &&
+		rule.LogPrefix == ""
 }
 
 func (s *xdpIPState) removeMembersIPSet(setID string, members set.Set) {

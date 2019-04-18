@@ -109,6 +109,9 @@ var knownProtoRuleFields = set.From(
 	"SrcIpSetIds",
 	"SrcServiceAccountMatch",
 	"HttpMatch",
+
+	// Commercial fields
+	"LogPrefix",
 )
 
 func testAllProtoRuleFieldsAreKnown() {
