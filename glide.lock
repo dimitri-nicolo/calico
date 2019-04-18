@@ -1,5 +1,5 @@
-hash: 8e5acbb416a10f3ceecab88f90b512a98a4806b4e8889950840a4725c71917e2
-updated: 2019-04-09T15:10:52.395771777+01:00
+hash: 5551330574b405275100f878a884b6da5e67d9fcf37ebc2ce81e0ae9756f834c
+updated: 2019-04-18T14:05:27.304702837+01:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -118,9 +118,9 @@ imports:
 - name: github.com/ghodss/yaml
   version: 73d445a93680fa1a78ae23a5839bad48f32ba1ee
 - name: github.com/go-ini/ini
-  version: ece0e89bb05aec0d6768f7bc1e77f11f03da0d11
+  version: 9c8236e659b76e87bf02044d06fde8683008ff3e
 - name: github.com/go-openapi/jsonpointer
-  version: ef5f0afec364d3b9396b7b77b43dbe26bf1f8004
+  version: 46af16f9f7b149af66e5d1bd010e3574dc06de98
 - name: github.com/go-openapi/jsonreference
   version: 8483a886a90412cd6858df4ea3483dce9c8e35a3
 - name: github.com/go-openapi/spec
@@ -133,6 +133,33 @@ imports:
   - currency
 - name: github.com/go-playground/universal-translator
   version: 71201497bace774495daed26a3874fd339e0b538
+- name: github.com/gobuffalo/envy
+  version: 043cb4b8af871b49563291e32c66bb84378a60ac
+- name: github.com/gobuffalo/genny
+  version: 3ca520ef0d9ea4981534aae98bf9a003d9b18678
+- name: github.com/gobuffalo/gogen
+  version: 8f38393713f59beb43221f903c07f58f0377a063
+  subpackages:
+  - goimports
+  - gomods
+- name: github.com/gobuffalo/logger
+  version: 86e12af44bc273e0063fad5b6ad588890b8cfe6b
+- name: github.com/gobuffalo/mapi
+  version: 0bb5e840be332d4280e40f2e6c50777c615bbac5
+- name: github.com/gobuffalo/packd
+  version: a385830c7fc0495b810318788a043c7655da337d
+- name: github.com/gobuffalo/packr
+  version: 68a5fdc58d980600c4622a82472ebe415048f141
+  subpackages:
+  - v2
+  - v2/file
+  - v2/file/resolver
+  - v2/file/resolver/encoding/hex
+  - v2/jam/parser
+  - v2/packr2
+  - v2/plog
+- name: github.com/gobuffalo/syncx
+  version: 33c29581e754bd354236e977dfe426e55331c45d
 - name: github.com/gogo/protobuf
   version: c0656edd0d9eab7c66d1eb0c568f9039345796f7
   subpackages:
@@ -190,6 +217,8 @@ imports:
   version: 6633656539c1639d9d78127b7d47c622b5d7b6dc
 - name: github.com/jmespath/go-jmespath
   version: 3433f3ea46d9f8019119e7dd41274e112a2359a9
+- name: github.com/joho/godotenv
+  version: 5c0e6c6ab1a0a9ef0a8822cba3a05d62f7dad941
 - name: github.com/json-iterator/go
   version: f2b4162afba35581b6d4a50d3b8f34e33c144682
 - name: github.com/juju/clock
@@ -199,9 +228,11 @@ imports:
 - name: github.com/juju/mutex
   version: d21b13acf4bfd8a8b0482a3a78e44d98880b40d3
 - name: github.com/kardianos/osext
-  version: 2bc1f35cddc0cc527b4bc3dce8578fc2a6c11384
+  version: ae77be60afb1dcacde03767a8c37337fad28ac14
+- name: github.com/karrick/godirwalk
+  version: 4e17292779dcc7ed08e10c03bfdd022f7c28b3c3
 - name: github.com/kelseyhightower/confd
-  version: ae4cd9fca6fe54f12e8e1e30299ae205fa656776
+  version: 7c54996ef94368053bcd7fdff63ae09608f9a827
   repo: git@github.com:tigera/confd-private.git
   subpackages:
   - pkg/backends
@@ -223,6 +254,10 @@ imports:
   - buffer
   - jlexer
   - jwriter
+- name: github.com/markbates/oncer
+  version: bf2de49a0be218916e69a11d22866e6cd0a560f2
+- name: github.com/markbates/safe
+  version: 6fea05a5732486546a4836b7a1d596c5ec687b98
 - name: github.com/matttproud/golang_protobuf_extensions
   version: c12348ce28de40eed0136aa2b644d0ee0650e56c
   subpackages:
@@ -232,8 +267,6 @@ imports:
 - name: github.com/Microsoft/hcsshim
   version: 063ae4a83d78bdb93f76b18cc894c6342fa85c15
   subpackages:
-  - hcn
-  - internal/cni
   - internal/guid
   - internal/hcs
   - internal/hcserror
@@ -242,8 +275,6 @@ imports:
   - internal/logfields
   - internal/longpath
   - internal/mergemaps
-  - internal/regstate
-  - internal/runhcs
   - internal/safefile
   - internal/schema1
   - internal/schema2
@@ -298,8 +329,10 @@ imports:
   version: ca53cad383cad2479bbba7f7a1a05797ec1386e4
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
+- name: github.com/pkg/errors
+  version: 27936f6d90f9c8e1145f11ed52ffffbfdb9e0af7
 - name: github.com/projectcalico/cni-plugin
-  version: 78369537181a12f1e3c06dd63f2e39921dd8057d
+  version: 869afd886c670fd4789a2ff51bff584a1bd32633
   repo: git@github.com:tigera/cni-plugin-private.git
   subpackages:
   - internal/pkg/azure
@@ -311,9 +344,11 @@ imports:
   - pkg/types
   - pkg/upgrade
 - name: github.com/projectcalico/felix
-  version: c4c2418d4189b32b24cec970800a7f3f0a0b4eda
+  version: 3ff19e28bcb4ce3ac661a4274c49bb8db936dd97
   repo: git@github.com:tigera/felix-private.git
   subpackages:
+  - bpf
+  - bpf/packrd
   - buildinfo
   - calc
   - collector
@@ -349,6 +384,7 @@ imports:
   - stringutils
   - throttle
   - usagerep
+  - versionparse
 - name: github.com/projectcalico/go-json
   version: 6219dc7339ba20ee4c57df0a8baac62317d19cb1
   subpackages:
@@ -358,7 +394,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 8558a8d0715c73355d90de7c2587ec3ab48dd1f8
+  version: 73f6544de778d9d1dde35b15a93c82442f3cfa42
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
@@ -413,7 +449,7 @@ imports:
   subpackages:
   - binder
 - name: github.com/projectcalico/typha
-  version: e0ad0e588541ec836a35c7cce5d29491f523a844
+  version: 6020cfcec79d468f39efbeafd2093e6c8e633779
   repo: git@github.com:tigera/typha-private.git
   subpackages:
   - pkg/syncclient
@@ -449,12 +485,19 @@ imports:
   - netsh
 - name: github.com/robfig/cron
   version: b41be1df696709bb6395fe435af20370037c0b4c
+- name: github.com/rogpeppe/go-internal
+  version: 438578804ca6f31be148c27683afc419ce47c06e
+  subpackages:
+  - modfile
+  - module
+  - semver
 - name: github.com/safchain/ethtool
   version: 7ff1ba29eca231991280817541cb3903f6be15d1
 - name: github.com/satori/go.uuid
   version: f58768cc1a7a7e77a3bd49e98cdd21419399b6a3
 - name: github.com/sirupsen/logrus
-  version: d682213848ed68c0a260ca37d6dd5ace8423f5ba
+  version: 1f80e3709dfafa8ca8727ba7eb392a11827ac8e2
+  repo: https://github.com/projectcalico/logrus
 - name: github.com/spf13/pflag
   version: 583c0c0531f06d5278b7d917446061adc344b5cd
 - name: github.com/tigera/licensing
@@ -515,7 +558,6 @@ imports:
   subpackages:
   - unix
   - windows
-  - windows/registry
 - name: golang.org/x/text
   version: b19bf474d317b857955b12035d2c5acb57ce8b01
   subpackages:
@@ -545,6 +587,19 @@ imports:
   version: f51c12702a4d776e4c1fa9b0fabab841babae631
   subpackages:
   - rate
+- name: golang.org/x/tools
+  version: 5a8dccf5b48ae388eebac31f4077f14adda4dbc6
+  subpackages:
+  - go/ast/astutil
+  - go/gcexportdata
+  - go/internal/gcimporter
+  - go/internal/packagesdriver
+  - go/packages
+  - imports
+  - internal/fastwalk
+  - internal/gopathwalk
+  - internal/module
+  - internal/semver
 - name: google.golang.org/appengine
   version: 54a98f90d1c46b7731eb8fb305d2a321c30ef610
   subpackages:

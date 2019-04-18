@@ -9,21 +9,21 @@ import:
   version: 773f5027234d0b08adf766be34f55df2f312abf7
 - package: github.com/kelseyhightower/confd
   repo: git@github.com:tigera/confd-private.git
-  version: ae4cd9fca6fe54f12e8e1e30299ae205fa656776
+  version: 7c54996ef94368053bcd7fdff63ae09608f9a827
   subpackages:
   - pkg/config
   - pkg/run
 - package: github.com/projectcalico/felix
   repo: git@github.com:tigera/felix-private.git
-  version: c4c2418d4189b32b24cec970800a7f3f0a0b4eda
+  version: 3ff19e28bcb4ce3ac661a4274c49bb8db936dd97
   subpackages:
   - daemon
 - package: github.com/projectcalico/cni-plugin
   repo: git@github.com:tigera/cni-plugin-private.git
-  version: 78369537181a12f1e3c06dd63f2e39921dd8057d
+  version: 869afd886c670fd4789a2ff51bff584a1bd32633
 - package: github.com/projectcalico/libcalico-go
   repo: git@github.com:tigera/libcalico-go-private.git
-  version: 8558a8d0715c73355d90de7c2587ec3ab48dd1f8
+  version: 73f6544de778d9d1dde35b15a93c82442f3cfa42
   subpackages:
   - lib/apiconfig
   - lib/apis/v3
@@ -37,8 +37,12 @@ import:
   - lib/options
   - lib/upgrade/migrator
   - lib/upgrade/migrator/clients
+# Use our fork, because v1.0.5 causes test breakages due to problems with our log formatting code,
+# but other deps require newer version because of the SetOutput function. Our fork backports
+# the missing stuff on top of v1.0.4.
 - package: github.com/sirupsen/logrus
-  version: v1.0.4
+  repo: https://github.com/projectcalico/logrus
+  version: v1.0.4-calico
 - package: github.com/tigera/licensing
   repo: git@github.com:tigera/licensing
   vcs: git
