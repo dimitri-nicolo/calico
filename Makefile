@@ -92,7 +92,8 @@ kubeval: _site
 	-grep -v "invalid Secret" filtered.out > filtered.out
 
 	# Filter out error reading calico networkpolicy since kubeval thinks they're kubernetes networkpolicies and
-	# complains when it doesn't have a podSelector.
+	# complains when it doesn't have a podSelector. Unfortunately, this also filters out networkpolicy failures.
+	# TODO: don't filter out k8s networkpolicy errors
 	-grep -v "invalid NetworkPolicy" filtered.out > filtered.out
 
 	# Display the errors with context and fail if there were any.
