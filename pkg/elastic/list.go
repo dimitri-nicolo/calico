@@ -47,7 +47,7 @@ func (c *client) RetrieveList(kind metav1.TypeMeta, from, to *time.Time, ascendi
 	// Should only return one document.
 	switch len(res.Hits.Hits) {
 	case 0:
-		clog.Error("no hits found")
+		clog.Info("no hits found")
 		return nil, errors.ErrorResourceDoesNotExist{}
 	case 1:
 		break

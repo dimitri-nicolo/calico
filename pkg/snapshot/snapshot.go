@@ -3,6 +3,7 @@ package snapshot
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strconv"
 	"time"
@@ -20,8 +21,11 @@ const (
 	// Snapshot frequency is hard coded to be daily.
 	defaultSnapshotHour = 22
 	snapshotHourEnv     = "TIGERA_COMPLIANCE_SNAPSHOT_HOUR"
-	retrySleepTime      = 10 * time.Second
 	maxRetryTime        = 1 * time.Hour
+)
+
+var (
+	retrySleepTime = 10 * time.Second
 )
 
 // Run is the entrypoint to start running the snapshotter.
@@ -29,7 +33,7 @@ func Run(ctx context.Context, kind metav1.TypeMeta, listSrc list.Source, listDes
 	s := &snapshotter{
 		ctx:      ctx,
 		kind:     kind,
-		clog:     logrus.WithField("groupVersionKind", kind),
+		clog:     logrus.WithField("kind", fmt.Sprintf("%s.%s", kind.Kind, kind.APIVersion)),
 		listSrc:  listSrc,
 		listDest: listDest,
 	}
@@ -50,18 +54,20 @@ func (s *snapshotter) run() error {
 	// Check for a snapshot written within the last day.
 	takeSnapshot, err := s.takeImmediateSnapshot()
 	if err != nil {
-		s.clog.WithError(err).Error("failed to determine last list time, exiting...")
+		s.clog.WithError(err).Error("Failed to determine last list time, exiting...")
 		return nil
 	}
 
 	// If there is no prior snapshot ...
 	if takeSnapshot {
+		s.clog.Info("No snapshot found in the last 24 hours, taking an instant snapshot")
 		if err = s.storeSnapshot(); err != nil {
 			return err
 		}
+		s.clog.Info("Successfully snapshotted the list source")
 	}
+	s.clog.Info("Executing snapshot continuously once every day at required time")
 
-	s.clog.Info("executing snapshot continuously once every day at required time")
 	for {
 		timeToNextFire := s.timeOfNextSnapshot().Sub(time.Now())
 		s.clog.WithField("timeToNextFire", timeToNextFire).Info("Wait for next fire timer")
@@ -74,10 +80,11 @@ func (s *snapshotter) run() error {
 			expireTimer.Stop()
 			return nil
 		case <-expireTimer.C:
-			s.clog.Debug("Store snapshot")
+			s.clog.Info("Store snapshot")
 			if err := s.storeSnapshot(); err != nil {
 				return err
 			}
+			s.clog.Info("Successfully snapshotted the list source")
 		}
 	}
 }
