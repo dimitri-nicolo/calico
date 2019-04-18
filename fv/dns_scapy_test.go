@@ -1,18 +1,6 @@
 // +build fvtests
 
 // Copyright (c) 2019 Tigera, Inc. All rights reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
 
 package fv_test
 
@@ -237,10 +225,7 @@ var _ = Describe("DNS Policy", func() {
 				"DNSRR(rrname='microsoft.com',type='A',ttl=24,rdata='10.10.10.13')/" +
 				"DNSRR(rrname='microsoft.com',type='A',ttl=24,rdata='10.10.10.14')/" +
 				"DNSRR(rrname='microsoft.com',type='A',ttl=24,rdata='10.10.10.15')/" +
-				//"DNSRR(rrname='microsoft.com',type='A',ttl=24,rdata='10.10.10.16')/" +
-				//"DNSRR(rrname='microsoft.com',type='A',ttl=24,rdata='10.10.10.17')/" +
-				//"DNSRR(rrname='microsoft.com',type='A',ttl=24,rdata='10.10.10.18')/" +
-				"DNSRR(rrname='microsoft.com',type='A',ttl=24,rdata='10.10.10.19')" +
+				"DNSRR(rrname='microsoft.com',type='A',ttl=24,rdata='10.10.10.16')" +
 				"))",
 		},
 			fileHasMappings([]mapping{
@@ -259,10 +244,7 @@ var _ = Describe("DNS Policy", func() {
 				{lhs: "microsoft.com", rhs: "10.10.10.13"},
 				{lhs: "microsoft.com", rhs: "10.10.10.14"},
 				{lhs: "microsoft.com", rhs: "10.10.10.15"},
-				//{lhs: "microsoft.com", rhs: "10.10.10.16"},
-				//{lhs: "microsoft.com", rhs: "10.10.10.17"},
-				//{lhs: "microsoft.com", rhs: "10.10.10.18"},
-				{lhs: "microsoft.com", rhs: "10.10.10.19"},
+				{lhs: "microsoft.com", rhs: "10.10.10.16"},
 			}),
 		),
 	)

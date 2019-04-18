@@ -1,18 +1,6 @@
 // +build fvtests
 
 // Copyright (c) 2019 Tigera, Inc. All rights reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
 
 package fv_test
 
@@ -39,6 +27,7 @@ var _ = Describe("DNS Policy", func() {
 	var (
 		etcd   *containers.Container
 		felix  *infrastructure.Felix
+		w      *workload.Workload
 		client client.Interface
 		dnsDir string
 	)
@@ -47,6 +36,18 @@ var _ = Describe("DNS Policy", func() {
 		var err error
 		dnsDir, err = ioutil.TempDir("", "dnsinfo")
 		Expect(err).NotTo(HaveOccurred())
+	})
+
+	AfterEach(func() {
+		if w != nil {
+			w.Stop()
+		}
+		if felix != nil {
+			felix.Stop()
+		}
+		if etcd != nil {
+			etcd.Stop()
+		}
 	})
 
 	startWithPersistentFileContent := func(fileContent string) {
@@ -62,6 +63,7 @@ var _ = Describe("DNS Policy", func() {
 	}
 
 	Describe("file with 1000 entries", func() {
+
 		It("should read and program those entries", func() {
 			fileContent := "1\n"
 			for i := 0; i < 1000; i++ {
@@ -72,7 +74,7 @@ var _ = Describe("DNS Policy", func() {
 			}
 			startWithPersistentFileContent(fileContent)
 
-			w := workload.Run(felix, "w0", "default", "10.65.0.10", "8055", "tcp")
+			w = workload.Run(felix, "w0", "default", "10.65.0.10", "8055", "tcp")
 			w.Configure(client)
 
 			policy := api.NewGlobalNetworkPolicy()
@@ -97,10 +99,6 @@ var _ = Describe("DNS Policy", func() {
 				}
 				return 0
 			}, "5s", "1s").Should(Equal(1000))
-
-			// Now stop Felix again.
-			w.Stop()
-			felix.Stop()
 		})
 	})
 
@@ -142,9 +140,4 @@ gobble de gook {
 {"LHS":"server-5.xyz.com","RHS":"172.17.0.3","Expiry":"2019-04-16T12:58:07Z","Type":"ip"}
 `),
 	)
-
-	// Stop etcd.
-	AfterEach(func() {
-		etcd.Stop()
-	})
 })
