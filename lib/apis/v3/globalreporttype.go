@@ -46,7 +46,7 @@ type ReportTypeSpec struct {
 	UISummaryTemplate ReportTemplate `json:"uiSummaryTemplate,omitempty" validate:"required"`
 
 	// The set of templates used to render the report for downloads.
-	DownloadTemplates []ReportTemplate `json:"downloadTemplates,omitempty"`
+	DownloadTemplates []ReportTemplate `json:"downloadTemplates,omitempty" validate:"dive"`
 
 	// Whether to include endpoint data in the report. The actual endpoints included may be filtered by the Report,
 	// but will otherwise contain the full set of endpoints.
