@@ -12,8 +12,9 @@ import (
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	. "github.com/tigera/compliance/internal/testutils"
+	mockEvent "github.com/tigera/compliance/pkg/event/mock"
 	"github.com/tigera/compliance/pkg/list"
+	mockList "github.com/tigera/compliance/pkg/list/mock"
 	. "github.com/tigera/compliance/pkg/replay"
 	"github.com/tigera/compliance/pkg/resources"
 	"github.com/tigera/compliance/pkg/syncer"
@@ -56,42 +57,53 @@ var _ = Describe("Replay", func() {
 		//ns  = "compliance-testing"
 		ctx = context.Background()
 
-		baseTime     = time.Date(2019, 4, 3, 20, 01, 0, 0, time.UTC)
-		replayTester *ReplayTester
-		cb           *mockCallbacks
+		baseTime = time.Date(2019, 4, 3, 20, 01, 0, 0, time.UTC)
+		lister   *mockList.Destination
+		eventer  *mockEvent.Fetcher
+		cb       *mockCallbacks
 	)
+
+	BeforeEach(func() {
+		lister = &mockList.Destination{}
+		lister.Initialize(baseTime)
+		eventer = mockEvent.NewEventFetcher()
+	})
 
 	It("should send both an insync and a complete status update in a complete run through", func() {
 		By("initializing the replayer with a replay tester than implements the required interfaces")
-		replayTester = NewReplayTester(baseTime)
 		cb = new(mockCallbacks)
-		replayer := New(baseTime.Add(time.Minute), baseTime.Add(2*time.Minute), replayTester, replayTester, cb)
+		replayer := New(baseTime.Add(time.Minute), baseTime.Add(2*time.Minute), lister, eventer, cb)
 
 		By("storing a mock list of the tested network policy")
 
 		// make the initial network policy without a typemeta
 		np := &apiv3.NetworkPolicy{
-			ObjectMeta: metav1.ObjectMeta{Namespace: "some-namespace", Name: "some-netpol"},
+			ObjectMeta: metav1.ObjectMeta{Namespace: "some-namespace", Name: "some-netpol", ResourceVersion: "100"},
 			Spec:       apiv3.NetworkPolicySpec{Selector: `foo == "bar"`},
 		}
 
 		npList := apiv3.NewNetworkPolicyList()
+		npList.GetObjectKind().SetGroupVersionKind(resources.TypeCalicoNetworkPolicies.GroupVersionKind())
+
 		npList.Items = append(npList.Items, *np)
-		npResList := &list.TimestampedResourceList{
+		lister.LoadList(&list.TimestampedResourceList{
 			ResourceList:              npList,
 			RequestStartedTimestamp:   metav1.Time{baseTime.Add(15 * time.Second)},
 			RequestCompletedTimestamp: metav1.Time{baseTime.Add(16 * time.Second)},
-		}
-		replayTester.StoreList(resources.TypeCalicoNetworkPolicies, npResList)
+		})
 
 		By("setting a network policy audit event before the start time")
 		np.TypeMeta = resources.TypeCalicoNetworkPolicies
 		np.Spec.Selector = `foo == "baz"`
-		replayTester.SetResourceAuditEvent(VerbUpdate, np, baseTime.Add(30*time.Second))
+		eventer.LoadAuditEvent(VerbUpdate, np, baseTime.Add(30*time.Second), "101")
 
 		By("setting a network policy audit event after the start time")
 		np.Spec.Selector = `foo == "barbaz"`
-		replayTester.SetResourceAuditEvent(VerbUpdate, np, baseTime.Add(75*time.Second))
+		eventer.LoadAuditEvent(VerbUpdate, np, baseTime.Add(75*time.Second), "102")
+
+		By("setting a network policy audit event after the start time but with a bad resource version")
+		np.Spec.Selector = `foo == "blah"`
+		eventer.LoadAuditEvent(VerbUpdate, np, baseTime.Add(90*time.Second), "100")
 
 		// Make the replay call.
 		replayer.Start(ctx)
