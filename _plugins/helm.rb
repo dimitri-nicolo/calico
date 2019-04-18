@@ -60,6 +60,7 @@ module Jekyll
         -f #{tv.path} \
         -f #{t.path} \
         --set imagePullSecrets.cnx-pull-secret='' \
+        --set node.resources.requests.cpu='250m' \
         --set manager.service.type=NodePort \
         --set manager.service.nodePort=30003 \
         --set alertmanager.service.type=NodePort \

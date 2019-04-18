@@ -1,6 +1,27 @@
+# Configuration for federation controller
 federation:
   enabled: false
+  # Optional configuration for setting resource limits on the federation controller container.
+  resources:
+    requests:
+      cpu: #"100m"
+      memory: #"128Mi"
+    limits:
+      cpu: #"2000m"
+      memory: #"1024Mi"
+
 network: calico
+
+# Configuration for Canal config job 
+configureCanal: 
+  # Optional configuration for setting resource limits on the Canal config job container.
+  resources:
+    requests:
+      cpu: #"100m"
+      memory: #"128Mi"
+    limits:
+      cpu: #"2000m"
+      memory: #"1024Mi"
 
 # Sets the ipam. Can be 'calico-ipam' or 'host-local'
 ipam: calico-ipam
@@ -26,6 +47,14 @@ node:
     # Optional environment variables for configuring Calico node.
     # - name: FELIX_LOGSEVERITYSCREEN
     #   value: "debug"
+  # Optional configuration for setting resource limits on the Calico node container.
+  resources:
+    requests:
+      cpu: #"250m"
+      memory: #"128Mi"
+    limits:
+      cpu: #"2000m"
+      memory: #"1024Mi"
 
 # Configuration for setting up Calico CNI.
 cni:
@@ -40,6 +69,14 @@ flannel:
     # Optional environment variables for configuring Flannel.
     # - name: FLANNELD_SUBNET_FILE
     #   value: "/run/flannel/subnet.env"
+  # Optional configuration for setting resource limits on the Flannel container.
+  resources:
+    requests:
+      cpu: #"100m"
+      memory: #"128Mi"
+    limits:
+      cpu: #"2000m"
+      memory: #"1024Mi"
 
 # Configuration for setting up Calico kube controllers
 kubeControllers:
@@ -47,6 +84,14 @@ kubeControllers:
     # Optional environment variables for configuring Calico kube controllers.
     # - name: ENABLED_CONTROLLERS
     #   value: "policy,namespace,serviceaccount,workloadendpoint,node"
+  # Optional configuration for setting resource limits on the Calico kube controllers container.
+  resources:
+    requests:
+      cpu: #"100m"
+      memory: #"128Mi"
+    limits:
+      cpu: #"2000m"
+      memory: #"1024Mi"
 
 # Configuration for setting up Typha
 typha:
@@ -55,6 +100,14 @@ typha:
     # Optional environment variables for configuring Typha.
     # - name: TYPHA_PROMETHEUSMETRICSENABLED
     #   value: "true"
+  # Optional configuration for setting resource limits on the Typha container.
+  resources:
+    requests:
+      cpu: #"100m"
+      memory: #"128Mi"
+    limits:
+      cpu: #"2000m"
+      memory: #"1024Mi"
 
 # Configuration for the Calico aggregated API server.
 apiserver:
@@ -68,6 +121,14 @@ apiserver:
     # Optional environment variables for configuring the Calico API Server.
     # - name: DATASTORE_TYPE
     #   value: "kubernetes"
+  # Optional configuration for setting resource limits on the API server container.
+  resources:
+    requests:
+      cpu: #"100m"
+      memory: #"128Mi"
+    limits:
+      cpu: #"2000m"
+      memory: #"1024Mi"
 
 # Configuration for the Calico query server.
 queryserver:
@@ -79,6 +140,14 @@ queryserver:
     #       name: tigera-aws-config
     #       key: pod_sg
     #       optional: true
+  # Optional configuration for setting resource limits on the Calico query server container.
+  resources:
+    requests:
+      cpu: #"100m"
+      memory: #"128Mi"
+    limits:
+      cpu: #"2000m"
+      memory: #"1024Mi"
 
 # TODO: move to helpers
 rbac: ""
@@ -92,5 +161,14 @@ platform: ""
 #   <secret_name>: <.docker/config.json contents>
 imagePullSecrets: {}
 
+# Configuration for the Tigera Cloud Controllers.
 cloudControllers:
   enabled: false
+  # Optional configuration for setting resource limits on the Cloud Controllers container.
+  resources:
+    requests:
+      cpu: #"100m"
+      memory: #"128Mi"
+    limits:
+      cpu: #"2000m"
+      memory: #"1024Mi"

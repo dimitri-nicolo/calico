@@ -293,6 +293,7 @@ spec:
       containers:
       - name: cnx-apiserver
         image: {{.Values.apiserver.image}}:{{.Values.apiserver.tag}}
+{{ tuple .Values.apiserver.resources | include "calico.resourceLimits" | indent 8 -}}
         args:
           - "--secure-port=5443"
 {{- if eq .Values.platform "eks" }}
@@ -367,6 +368,7 @@ spec:
 {{- end }}
       - name: cnx-queryserver
         image: {{.Values.queryserver.image}}:{{.Values.queryserver.tag}}
+{{ tuple .Values.queryserver.resources | include "calico.resourceLimits" | indent 8 -}}
         env:
           # Set queryserver logging to "info"
           - name: LOGLEVEL

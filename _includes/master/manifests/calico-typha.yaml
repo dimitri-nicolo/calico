@@ -87,8 +87,9 @@ spec:
 {{- end }}
 {{- end }}
       containers:
-      - image: {{.Values.typha.image}}:{{.Values.typha.tag}}
-        name: calico-typha
+      - name: calico-typha
+        image: {{.Values.typha.image}}:{{.Values.typha.tag}}
+{{ tuple .Values.typha.resources | include "calico.resourceLimits" | indent 8 -}}
 {{- if or .Values.federation.enabled (eq .Values.datastore "etcd") }}
         volumeMounts:
 {{- end }}
