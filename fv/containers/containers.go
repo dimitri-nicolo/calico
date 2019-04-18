@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -79,7 +79,7 @@ func (c *Container) Stop() {
 	startTime := time.Now()
 	for {
 		if !c.ListedInDockerPS() {
-			// Container has stopped.  Mkae sure the docker CLI command is dead (it should be already)
+			// Container has stopped.  Make sure the docker CLI command is dead (it should be already)
 			// and wait for its log.
 			logCxt.Info("Container stopped (no longer listed in 'docker ps')")
 			withTimeoutPanic(logCxt, 5*time.Second, func() { c.signalDockerRun(os.Kill) })
