@@ -33,6 +33,9 @@ var _ = Describe("DNS Policy", func() {
 	)
 
 	BeforeEach(func() {
+		etcd = nil
+		felix = nil
+		w = nil
 		var err error
 		dnsDir, err = ioutil.TempDir("", "dnsinfo")
 		Expect(err).NotTo(HaveOccurred())
@@ -108,6 +111,7 @@ var _ = Describe("DNS Policy", func() {
 
 			// Now stop Felix again.
 			felix.Stop()
+			felix = nil
 
 			// If Felix failed to cope with reading the persistent file, we'd either see
 			// the start up call failing like this:
