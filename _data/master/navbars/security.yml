@@ -99,6 +99,7 @@ toc:
 - title: Intrusion detection and prevention
   section:
   - title: Anomaly detection
+  section
     - title: Overview
       path: /security/intrusion-detection/
     - title: Enabling intrusion detection
