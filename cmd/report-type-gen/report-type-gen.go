@@ -15,6 +15,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -25,6 +26,7 @@ import (
 
 	yaml "github.com/projectcalico/go-yaml-wrapper"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	validator "github.com/projectcalico/libcalico-go/lib/validator/v3"
 )
 
 func main() {
@@ -37,6 +39,7 @@ func main() {
 	}
 
 	// Get list of yaml files inside the 1st level of given directories.
+	fmt.Print("Reading yaml manifests in directory\n\n")
 	var files []string
 	for _, dir := range dirs {
 		yamls, err := getYamlFiles(dir)
@@ -47,9 +50,11 @@ func main() {
 	}
 
 	for _, file := range files {
+		fmt.Printf("Processing file: %s\n", file)
+
 		defer func() {
 			if r := recover(); r != nil {
-				fmt.Printf("Error parsing yaml: %v", r)
+				fmt.Printf("-  Error parsing yaml: %v\n", r)
 			}
 		}()
 
@@ -68,12 +73,20 @@ func main() {
 
 		if templ, err := getTemplate(inDirName, reportType.Spec.UISummaryTemplate.Name); err == nil {
 			reportType.Spec.UISummaryTemplate.Template = string(templ)
+			maybeCompressJSON(&reportType.Spec.UISummaryTemplate)
 		}
 
 		for i := 0; i < len(reportType.Spec.DownloadTemplates); i++ {
 			if templ, err := getTemplate(inDirName, reportType.Spec.DownloadTemplates[i].Name); err == nil {
 				reportType.Spec.DownloadTemplates[i].Template = string(templ)
+				maybeCompressJSON(&reportType.Spec.DownloadTemplates[i])
 			}
+		}
+
+		// Validate the report type contents.
+		if err := validator.Validate(reportType); err != nil {
+			fmt.Printf("-  Manifest failed validation: %v\n", err)
+			continue
 		}
 
 		// Generate manifest.
@@ -85,7 +98,7 @@ func main() {
 		if err := ioutil.WriteFile(manifestFullPath, manifestContent, 0644); err != nil {
 			log.Fatal(err)
 		}
-		fmt.Println("Generated ", manifestFullPath)
+		fmt.Printf("Generated %s\n\n", manifestFullPath)
 	}
 }
 
@@ -118,9 +131,7 @@ func getYamlFiles(dir string) (yamls []string, err error) {
 	return ret, nil
 }
 
-/*
-Given directory and template-file name, get the contents of the template file.
-*/
+// getTemplate returns the contents of the specified template file
 func getTemplate(dirName string, templName string) (template []byte, err error) {
 	templFullPath := path.Join(dirName, templName)
 	template, err = ioutil.ReadFile(templFullPath)
@@ -129,4 +140,32 @@ func getTemplate(dirName string, templName string) (template []byte, err error) 
 	}
 
 	return template, nil
+}
+
+// maybeCompressJSON takes the json template and compresses it.
+func maybeCompressJSON(template *api.ReportTemplate) {
+	// Only attempt to compress if the format ends with .json.
+	if !strings.HasSuffix(template.Name, ".json") {
+		return
+	}
+
+	// The JSON should be convertable, if it isn't then print a warning and return the original JSON.
+	v := new(interface{})
+	err := json.Unmarshal([]byte(template.Template), v)
+	if err != nil {
+		fmt.Printf("-  Unable to process JSON in field %s - not attempting to compress. Check value is valid.\n", template.Name)
+		return
+	}
+
+	// Now convert the interface back to JSON
+	j, err := json.Marshal(v)
+	if err != nil {
+		return
+	}
+
+	// Remove any instances of `"@@@` and `@@@"` - these are put in around template directives which would not convert
+	// as JSON.
+	s := strings.Replace(string(j), "\"@@@", "", -1)
+	s = strings.Replace(s, "@@@\"", "", -1)
+	template.Template = s
 }
