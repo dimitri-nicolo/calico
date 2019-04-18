@@ -38,7 +38,7 @@ var (
 		},
 		Spec: calicov3.ReportTypeSpec{
 			UISummaryTemplate: calicov3.ReportTemplate{
-				Template: "hello-{{ .EndpointsSummary.NumTotal }}-goodbye",
+				Template: "{\"foobar\":\"hello-{{ .EndpointsSummary.NumTotal }}-goodbye\"}",
 			},
 			DownloadTemplates: []calicov3.ReportTemplate{
 				{
@@ -80,11 +80,13 @@ var _ = Describe("List tests", func() {
 		By("Running a list query")
 		t.list(http.StatusOK, []server.Report{
 			{
-				ReportId:    summary1.UID(),
-				ReportType:  summary1.ReportTypeName,
-				StartTime:   now,
-				EndTime:     nowPlusHour,
-				UISummary:   "hello-100-goodbye",
+				ReportId:   summary1.UID(),
+				ReportType: summary1.ReportTypeName,
+				StartTime:  now,
+				EndTime:    nowPlusHour,
+				UISummary: map[string]interface{}{
+					"foobar": "hello-100-goodbye",
+				},
 				DownloadURL: "/compliance/reports/" + summary1.UID() + "/download",
 				DownloadFormats: []server.Format{
 					{

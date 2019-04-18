@@ -23,10 +23,10 @@ spec:
       {{ yaml .AuditEvents }}
   uiSummaryTemplate:
     name: ui-summary.json
-    template: '{"uiSummary":{"heading":"Network policy configuration changes","type":"panel","widgets":[{"data":[{"label":"Created","value":{{
+    template: '{"heading":"Network policy configuration changes","type":"panel","widgets":[{"data":[{"label":"Created","value":{{
       .AuditSummary.NumCreate }}}],"heading":"Network policies created","summary":{"label":"Total","total":{{
       .AuditSummary.NumTotal }}},"type":"radialbarchart"},{"data":[{"label":"Modified","value":{{
       .AuditSummary.NumModify }}}],"heading":"Network policies modified","summary":{"label":"Total","total":{{
       .AuditSummary.NumTotal }}},"type":"radialbarchart"},{"data":[{"label":"Deleted","value":{{
       .AuditSummary.NumDelete }}}],"heading":"Network policies deleted","summary":{"label":"Total","total":{{
-      .AuditSummary.NumTotal }}},"type":"radialbarchart"}]}}'
+      .AuditSummary.NumTotal }}},"type":"radialbarchart"}]}'

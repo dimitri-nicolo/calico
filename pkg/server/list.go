@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -73,11 +74,17 @@ func (s *server) handleListReports(response http.ResponseWriter, request *http.R
 
 		// Create the UI summary from the template in the global report type and the report data. If we are unable
 		// to render the data just don't include the summary.
-		var uiSummary string
+		var uiSummaryTxt string
+		var uiSummary interface{}
 		var formats []Format
-		uiSummary, err = compliance.RenderTemplate(rt.UISummaryTemplate.Template, v.ReportData)
-		if err != nil {
+		if uiSummaryTxt, err = compliance.RenderTemplate(rt.UISummaryTemplate.Template, v.ReportData); err != nil {
 			log.WithError(err).Debug("Unable to render report data summary")
+		} else {
+			// We rendered the UI summary. This is expected to be JSON that we'll embed directly under the UISummary
+			// field. To do this unmarshal the rendered string into a generic interface type.
+			if err = json.Unmarshal([]byte(uiSummaryTxt), &uiSummary); err != nil {
+				log.WithError(err).Debug("UI summary is not JSON")
+			}
 		}
 
 		//load report formats from download templates in the global report report type
