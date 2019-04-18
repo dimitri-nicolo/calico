@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -16,7 +17,7 @@ func (s *server) handleListReports(response http.ResponseWriter, request *http.R
 	// Pull the report summaries from elastic
 	reportSummaries, err := s.rr.RetrieveArchivedReportSummaries()
 	if err != nil {
-		errString := "RetrieveArchivedReportSummaries failed"
+		errString := fmt.Sprintf("Unable to list reports: %v", err)
 		http.Error(response, errString, http.StatusServiceUnavailable)
 		log.WithError(err).Error(errString)
 		return
