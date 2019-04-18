@@ -128,20 +128,23 @@ func (s State) withKVUpdates(kvs ...model.KVPair) (newState State) {
 	newState.DatastoreState = make([]model.KVPair, 0, len(kvs)+len(s.DatastoreState))
 	// Make a set containing the new keys.
 	newKeys := make(map[string]bool)
-	for _, kv := range kvs {
-		path, err := model.KeyToDefaultPath(kv.Key)
-		if err != nil {
-			logrus.WithField("key", kv.Key).Panic("Unable to convert key to default path")
+
+	for i, kv := range kvs {
+		if k, ok := kv.Key.(model.PolicyKey); ok {
+			if k.Tier == "" {
+				k.Tier = "default"
+				kv.Key = k
+				kvs[i] = kv
+			}
 		}
-		newKeys[path] = true
+	}
+
+	for _, kv := range kvs {
+		newKeys[kvToPath(kv)] = true
 	}
 	// Copy across the old KVs, skipping ones that are in the updates set.
 	for _, kv := range s.DatastoreState {
-		path, err := model.KeyToDefaultPath(kv.Key)
-		if err != nil {
-			logrus.WithField("key", kv.Key).Panic("Unable to convert key to default path")
-		}
-		if newKeys[path] {
+		if newKeys[kvToPath(kv)] {
 			continue
 		}
 		newState.DatastoreState = append(newState.DatastoreState, kv)
