@@ -15,6 +15,7 @@ package testutils
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -131,9 +132,12 @@ func (st *SyncerTester) OnUpdates(updates []api.Update) {
 			// Check that KeyFromDefaultPath supports parsing the path again;
 			// this is required for typha to support this resource.
 			parsedKey := model.KeyFromDefaultPath(k)
-			Expect(parsedKey).NotTo(BeNil(), fmt.Sprintf(
-				"KeyFromDefaultPath unable to parse %s, generated from %+v; typha won't support this key",
-				k, u.Key))
+			if !strings.HasPrefix(k, "/calico/felix/v1/remotecluster/") &&
+				!strings.HasPrefix(k, "remote-cluster:") {
+				Expect(parsedKey).NotTo(BeNil(), fmt.Sprintf(
+					"KeyFromDefaultPath unable to parse %s, generated from %+v; typha won't support this key",
+					k, u.Key))
+			}
 		}
 	}()
 

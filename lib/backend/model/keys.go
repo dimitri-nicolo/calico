@@ -306,6 +306,8 @@ func KeyFromDefaultPath(path string) Key {
 		return k
 	} else if k := (ResourceListOptions{Kind: v3.KindK8sEndpoints}).KeyFromDefaultPath(path); k != nil {
 		return k
+	} else if k := (ResourceListOptions{Kind: v3.KindRemoteClusterConfiguration}).KeyFromDefaultPath(path); k != nil {
+		return k
 	} else if k := (HostEndpointStatusListOptions{}).KeyFromDefaultPath(path); k != nil {
 		return k
 	} else if k := (WorkloadEndpointStatusListOptions{}).KeyFromDefaultPath(path); k != nil {
