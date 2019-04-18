@@ -38,3 +38,37 @@ external
 operator
 {{- end -}}
 {{- end -}}
+
+
+{{- define "tigera-secure-lma.resourceLimits" -}}
+{{- $component := index . 0 -}}
+{{- if or (or (or $component.limits.cpu $component.limits.memory) $component.requests.cpu) $component.requests.memory -}}
+resources:
+{{- if or $component.limits.cpu $component.limits.memory }}
+  limits:
+{{- if $component.limits.cpu }}
+    cpu: {{ $component.limits.cpu | quote }}
+{{- end }}
+{{- if $component.limits.memory }}
+    memory: {{ $component.limits.memory | quote }}
+{{- end }}
+{{- end }}
+{{- if or $component.requests.cpu $component.requests.memory }}
+  requests:
+{{- if $component.requests.cpu }}
+    cpu: {{ $component.requests.cpu | quote }}
+{{- end }}
+{{- if $component.requests.memory }}
+    memory: {{ $component.requests.memory | quote }}
+{{- end }}
+{{- end }}
+{{- end -}}
+{{- end -}}
+
+
+{{- define "tigera-secure-lma.resourceLimitsConfigured" -}}
+{{- $component := index . 0 -}}
+{{- if or (or (or $component.limits.cpu $component.limits.memory) $component.requests.cpu) $component.requests.memory -}}
+true
+{{- end -}}
+{{- end -}}
