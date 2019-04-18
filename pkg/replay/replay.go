@@ -138,11 +138,31 @@ func (r *replayer) replay(ctx context.Context, kind *metav1.TypeMeta, from, to *
 		clog = clog.WithFields(log.Fields{"resID": id, "kind": kind2})
 		update := syncer.Update{ResourceID: id, Resource: res}
 
-		// TODO: handle possible resourceVersion conflicts
 		switch ev.Event.Verb {
 		case VerbCreate, VerbUpdate, VerbPatch:
 			clog.Debug("setting event")
 			update.Type = syncer.UpdateTypeSet
+
+			// Refuse to apply audit event if resource version of old resource is higher
+			//  than the new one.
+			oldRes, ok := r.resources[kind2][id]
+			if ok {
+				oldResVer, err := resources.GetResourceVersion(oldRes)
+				if err != nil {
+					clog.Warn("Failed to convert resourceVersion to number. Refusing to process event.")
+					continue
+				}
+				newResVer, err := resources.GetResourceVersion(res)
+				if err != nil {
+					clog.Warn("Failed to convert resourceVersion to number. Refusing to process event.")
+					continue
+				}
+				if oldResVer > newResVer {
+					clog.Info("Resource version conflict detected. Refusing to process event.")
+					continue
+				}
+			}
+
 			r.resources[kind2][id] = res
 		case VerbDelete:
 			clog.Debug("deleting event")

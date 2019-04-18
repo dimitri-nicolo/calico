@@ -21,6 +21,8 @@ type Fetcher interface {
 	GetAuditEvents(context.Context, *metav1.TypeMeta, *time.Time, *time.Time) <-chan *AuditEventResult
 }
 
+// ExtractResourceFromAuditEvent determines the resource kind located within an audit event
+//   and coerces the response object into the appropriate type.
 func ExtractResourceFromAuditEvent(event *auditv1.Event) (resources.Resource, error) {
 	clog := log.WithField("kind", event.ObjectRef.Resource)
 	// Extract group version kind from event response object.
