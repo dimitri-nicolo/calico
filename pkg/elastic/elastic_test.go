@@ -71,7 +71,7 @@ var _ = Describe("Elastic", func() {
 		rep := &report.ArchivedReportData{
 			ReportData: &apiv3.ReportData{
 				ReportName:        "report-foo",
-				ReportType:        "report-type-bar",
+				ReportTypeName:    "report-type-bar",
 				StartTime:         metav1.Time{ts},
 				EndTime:           metav1.Time{ts.Add(time.Minute)},
 				EndpointsSummary:  apiv3.EndpointsSummary{},

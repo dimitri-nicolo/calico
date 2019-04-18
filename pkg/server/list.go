@@ -51,7 +51,7 @@ func (s *server) handleListReports(response http.ResponseWriter, request *http.R
 		log.Debugf("Processing report. ReportType: %s, Report: %s", v.ReportSpec.ReportType, v.ReportName)
 
 		// If we can view the report then include it in the list.
-		if include, err := rbac.canViewReport(v.ReportName, v.ReportType); err != nil {
+		if include, err := rbac.canViewReport(v.ReportName, v.ReportTypeName); err != nil {
 			log.WithError(err).Error("Unable to determine access permissions for request")
 			http.Error(response, err.Error(), http.StatusServiceUnavailable)
 			return
@@ -61,8 +61,13 @@ func (s *server) handleListReports(response http.ResponseWriter, request *http.R
 		}
 
 		// Look up the specific report type if it still exists.
-		//TODO(rlb): Use the type embedded in the report if it is still available.
-		rt := rts[v.ReportType]
+		rt, ok := rts[v.ReportTypeName]
+		// ReportType is deleted, use ReportTypeSpec in the ReportData.
+		if !ok {
+			rt = &v.ReportTypeSpec
+			log.Infof("ReportType (%s) deleted from the configuration, using from ReportData", v.ReportTypeName)
+		}
+
 		var uiSummary string
 		var formats []Format
 
@@ -92,7 +97,7 @@ func (s *server) handleListReports(response http.ResponseWriter, request *http.R
 		// Package it up in a report and append to slice.
 		r := Report{
 			ReportId:        v.UID(),
-			ReportType:      v.ReportType,
+			ReportType:      v.ReportTypeName,
 			StartTime:       v.StartTime,
 			EndTime:         v.EndTime,
 			UISummary:       uiSummary,
