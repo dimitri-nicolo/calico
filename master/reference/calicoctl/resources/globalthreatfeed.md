@@ -52,14 +52,14 @@ the global threat feed spec.
 
 Alternately, you can have your threat feed push updates directly.  Leave out the `pull` stanza, and configure
 your threat feed to create or update the Elasticsearch document that corresponds to the global threat
-feed object.  This Elasticsearch document will be in the index `.tigera.ipset` and must have the ID set
+feed object.  This Elasticsearch document will be in the index `.tigera.ipset.<cluster_name>` and must have the ID set
 to the name of the global threat feed object. The doc should have a single field called `ips`, containing
 a list of IP addresses or IP prefixes.
 
 For example:
 
 ```
-PUT .tigera.ipset/_doc/sample-global-threat-feed
+PUT .tigera.ipset.cluster01/_doc/sample-global-threat-feed
 {
     "ips" : ["99.99.99.99", "100.100.100.0/24"]
 }

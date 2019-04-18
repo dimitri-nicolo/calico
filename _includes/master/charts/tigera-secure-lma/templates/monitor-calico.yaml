@@ -924,6 +924,11 @@ spec:
             command: ["/healthz", "readiness"]
           initialDelaySeconds: 5
         env:
+          - name: CLUSTER_NAME
+            valueFrom:
+              configMapKeyRef:
+                name: tigera-es-config
+                key: tigera.elasticsearch.cluster-name
 {{- if eq $elasticMode "external" }}
           - name: ELASTIC_HOST
             valueFrom:
