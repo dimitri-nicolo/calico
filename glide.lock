@@ -1,5 +1,5 @@
-hash: 9c8e760988aa1ea43712514f0e4ce46af15ab524c3347d0f0985e70519132633
-updated: 2019-04-17T21:56:18.804025535Z
+hash: 317d0610123b252d8b41037e56a45dcbd2fd4d8ea81f6dd070556ad6b0615e81
+updated: 2019-04-18T19:25:30.529062589Z
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -156,7 +156,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: cc3ba5d54da4248bc06ebe32e8dacd27038cc02b
+  version: 34f0aaaec9aaa5f05ee780cad592187a9d49014c
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
@@ -283,7 +283,7 @@ imports:
   subpackages:
   - rate
 - name: golang.org/x/tools
-  version: f6abc2cac8bfc7ec669c70f0f0d5b5d2557425e7
+  version: 6732636ccdfd99c4301d1d1ac2307f091331f767
   subpackages:
   - import
 - name: google.golang.org/appengine
