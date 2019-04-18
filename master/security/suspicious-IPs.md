@@ -8,7 +8,7 @@ Add threat intelligence feeds to Tigera Secure EE to trace network flows of susp
 
 ### Value
 
-Tigera Secure EE integrates with threat intelligence feeds so you can detect when your Kubernetes clsuters communicate with suspicious IPs. When communications are detected, an anomaly detection dashboard in the UI shows the full context, including which pod(s) were involved so you can analyze and remediate. You can also use a threat intelligence feed to power a dynamic blocklist, either to or from a specific group of sensitive pods, or your entire cluster.  
+Tigera Secure EE integrates with threat intelligence feeds so you can detect when your Kubernetes clusters communicate with suspicious IPs. When communications are detected, an anomaly detection dashboard in the UI shows the full context, including which pod(s) were involved so you can analyze and remediate. You can also use a threat intelligence feed to power a dynamic blocklist, either to or from a specific group of sensitive pods, or your entire cluster.  
 
 ### Features
 
