@@ -272,6 +272,7 @@ func (r *reporter) transferAggregatedData() {
 }
 
 func updateSummary(zeroTrustFlags xrefcache.CacheEntryFlags, summary *apiv3.EndpointsSummary, includeEgress bool) {
+	summary.NumTotal++
 	if zeroTrustFlags&xrefcache.CacheEntryProtectedIngress == 0 {
 		summary.NumIngressProtected++ // We reversed this for zero-trust
 	}
