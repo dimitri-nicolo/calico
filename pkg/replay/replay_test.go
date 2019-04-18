@@ -64,8 +64,7 @@ var _ = Describe("Replay", func() {
 	)
 
 	BeforeEach(func() {
-		lister = &mockList.Destination{}
-		lister.Initialize(baseTime)
+		lister = mockList.NewDestination(&baseTime)
 		eventer = mockEvent.NewEventFetcher()
 	})
 
