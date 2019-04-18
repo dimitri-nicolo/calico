@@ -42,7 +42,8 @@ Edit the cluster name by following this procedure.  The two values must match fo
 
 {{site.prodname}} includes a [Curator](https://www.elastic.co/guide/en/elasticsearch/client/curator/current/about.html)
 deployment that deletes old indices.  By default flow logs are removed after 7 days,
-and audit logs after 365 days.
+audit logs after 366 days, snapshots after 366 days, and compliance reports
+after 366 days.
 
 These time periods can be configured by editing the `tigera-es-config` ConfigMap,
 found in `monitor-calico.yaml`.

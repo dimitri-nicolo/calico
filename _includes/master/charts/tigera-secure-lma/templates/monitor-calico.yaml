@@ -27,6 +27,12 @@ data:
   # The retention period for audit logs, in days.  Logs written on a day that started at least this long ago are
   # removed.  To keep logs for at least x days, use a retention period of x+1.
   tigera.elasticsearch.audit-retention: "367"
+  # The retention period for snapshots, in days.  Logs written on a day that started at least this long ago are
+  # removed.  To keep logs for at least x days, use a retention period of x+1.
+  tigera.elasticsearch.snapshot-retention: "367"
+  # The retention period for compliance reports, in days.  Logs written on a day that started at least this long ago are
+  # removed.  To keep logs for at least x days, use a retention period of x+1.
+  tigera.elasticsearch.compliance-report-retention: "367"
   # Whether to include the custom flow filters defined below in the fluentd config
   # file.  Value must be "true" or "false".
   tigera.elasticsearch.flow-filtering: "false"
@@ -690,6 +696,16 @@ spec:
                     configMapKeyRef:
                       name: tigera-es-config
                       key: tigera.elasticsearch.audit-retention
+                - name: EE_SNAPSHOT_INDEX_RETENTION_PERIOD
+                  valueFrom:
+                    configMapKeyRef:
+                      name: tigera-es-config
+                      key: tigera.elasticsearch.snapshot-retention
+                - name: EE_COMPLIANCE_REPORT_INDEX_RETENTION_PERIOD
+                  valueFrom:
+                    configMapKeyRef:
+                      name: tigera-es-config
+                      key: tigera.elasticsearch.compliance-report-retention
 {{- if eq $elasticMode "external" }}
                 - name: ELASTIC_HOST
                   valueFrom:
