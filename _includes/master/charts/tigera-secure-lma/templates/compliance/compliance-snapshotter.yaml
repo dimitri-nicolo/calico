@@ -104,6 +104,11 @@ spec:
               value: ""
             - name: ELASTIC_SCHEME
               value: ""
+            - name: ELASTIC_INDEX_SUFFIX
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-es-config
+                  key: tigera.elasticsearch.cluster-name
 {{- if eq $elasticMode "external" }}
             - name: ELASTIC_HOST
               valueFrom:
