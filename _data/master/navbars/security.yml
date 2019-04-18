@@ -96,17 +96,18 @@ toc:
     path: /security/configuration/prometheus
   - title: Configuring Alertmanager
     path: /security/configuration/alertmanager
-- title: Intrusion detection
+- title: Intrusion detection and prevention
   section:
-  - title: Overview
-    path: /security/intrusion-detection/
-  - title: Enabling intrusion detection
-    path: /security/intrusion-detection/enabling
-  - title: Viewing anomalies
-    path: /security/intrusion-detection/viewing-anomalies
-  - title: Job descriptions
-    path: /security/intrusion-detection/job-descriptions
-  - title: Customizing
-    path: /security/intrusion-detection/customizing
+  - title: Anomaly detection
+    - title: Overview
+      path: /security/intrusion-detection/
+    - title: Enabling intrusion detection
+      path: /security/intrusion-detection/enabling
+    - title: Viewing anomalies
+      path: /security/intrusion-detection/viewing-anomalies
+    - title: Job descriptions
+      path: /security/intrusion-detection/job-descriptions
+    - title: Customizing
+      path: /security/intrusion-detection/customizing
 - title: Trace and block suspicious IPs
   path: /security/suspicious-IPs 
