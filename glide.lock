@@ -304,7 +304,7 @@ imports:
   - pkg/plugin
   - pkg/types
 - name: github.com/projectcalico/felix
-  version: 40328eb4b6ea2f71c498b46d7979414aa6e99add
+  version: 8a8b1a825c30b66b5ba82379cd15e4f8ea563b79
   repo: git@github.com:tigera/felix-private.git
   subpackages:
   - buildinfo
