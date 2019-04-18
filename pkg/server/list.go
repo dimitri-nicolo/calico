@@ -23,8 +23,10 @@ func (s *server) handleListReports(response http.ResponseWriter, request *http.R
 		return
 	}
 
-	// Our report list to return
-	rl := &ReportList{}
+	// Initialize the report list to return.
+	rl := &ReportList{
+		Reports: []Report{},
+	}
 
 	// Create an RBAC helper for determining which reports we should include in the returned list.
 	rbac := newReportRbacHelper(s, request)
@@ -48,10 +50,10 @@ func (s *server) handleListReports(response http.ResponseWriter, request *http.R
 
 	// Turn each of the reportSummaries into Report objects that will marshal into a format for the documented API.
 	for _, v := range reportSummaries {
-		log.Debugf("Processing report. ReportType: %s, Report: %s", v.ReportSpec.ReportType, v.ReportName)
+		log.Debugf("Processing report. ReportType: %s, Report: %s", v.ReportTypeName, v.ReportName)
 
 		// If we can view the report then include it in the list.
-		if include, err := rbac.canViewReport(v.ReportName, v.ReportTypeName); err != nil {
+		if include, err := rbac.canViewReport(v.ReportTypeName, v.ReportName); err != nil {
 			log.WithError(err).Error("Unable to determine access permissions for request")
 			http.Error(response, err.Error(), http.StatusServiceUnavailable)
 			return
@@ -61,37 +63,31 @@ func (s *server) handleListReports(response http.ResponseWriter, request *http.R
 		}
 
 		// Look up the specific report type if it still exists.
-		rt, ok := rts[v.ReportTypeName]
+		rt := rts[v.ReportTypeName]
 		// ReportType is deleted, use ReportTypeSpec in the ReportData.
-		if !ok {
-			rt = &v.ReportTypeSpec
+		if rt == nil {
+			// If the report type has been deleted just use the one stored in the ReportData.
 			log.Infof("ReportType (%s) deleted from the configuration, using from ReportData", v.ReportTypeName)
+			rt = &v.ReportTypeSpec
 		}
 
+		// Create the UI summary from the template in the global report type and the report data. If we are unable
+		// to render the data just don't include the summary.
 		var uiSummary string
 		var formats []Format
+		uiSummary, err = compliance.RenderTemplate(rt.UISummaryTemplate.Template, v.ReportData)
+		if err != nil {
+			log.WithError(err).Debug("Unable to render report data summary")
+		}
 
-		// If the ReportType does not exist, we'll still include the report but there will be no download options and
-		// no summary.
-		// TODO(rlb) See todo above.
-		if rt != nil {
-			log.Debug("ReportType exists, render report data summary")
-
-			// Create the UI summary from the template in the global report type and the report data. If we are unable
-			// to render the data just don't include the summary.
-			uiSummary, err = compliance.RenderTemplate(rt.UISummaryTemplate.Template, v.ReportData)
-			if err != nil {
-				log.WithError(err).Debug("Unable to render report data summary")
+		//load report formats from download templates in the global report report type
+		for _, dlt := range rt.DownloadTemplates {
+			log.Debugf("Including download format: %s", dlt.Name)
+			f := Format{
+				dlt.Name,
+				dlt.Description,
 			}
-
-			//load report formats from download templates in the global report report type
-			for _, dlt := range rt.DownloadTemplates {
-				f := Format{
-					dlt.Name,
-					dlt.Description,
-				}
-				formats = append(formats, f)
-			}
+			formats = append(formats, f)
 		}
 
 		// Package it up in a report and append to slice.

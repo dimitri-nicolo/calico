@@ -24,7 +24,7 @@ func (l *reportRbacHelper) canListReports() (bool, error) {
 }
 
 // canViewReport returns true if the caller is allowed to view a specific Report and ReportType.
-func (l *reportRbacHelper) canViewReport(report, reportType string) (bool, error) {
+func (l *reportRbacHelper) canViewReport(reportType, report string) (bool, error) {
 	var err error
 	canGetReport, ok := l.canGetReportByName[report]
 	if !ok {
