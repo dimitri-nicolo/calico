@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"time"
 
 	"github.com/araddon/dateparse"
@@ -21,13 +22,27 @@ import (
 )
 
 const (
-	IPSetIndex     = ".tigera.ipset"
-	StandardType   = "_doc"
-	FlowLogIndex   = "tigera_secure_ee_flows*"
-	EventIndex     = "tigera_secure_ee_events"
-	QuerySize      = 1000
-	MaxClauseCount = 1024
+	IPSetIndexPattern   = ".tigera.ipset.%s"
+	StandardType        = "_doc"
+	FlowLogIndexPattern = "tigera_secure_ee_flows.%s.*"
+	EventIndexPattern   = "tigera_secure_ee_events.%s"
+	QuerySize           = 1000
+	MaxClauseCount      = 1024
 )
+
+var IPSetIndex string
+var EventIndex string
+var FlowLogIndex string
+
+func init() {
+	cluster := os.Getenv("CLUSTER_NAME")
+	if cluster == "" {
+		cluster = "cluster"
+	}
+	IPSetIndex = fmt.Sprintf(IPSetIndexPattern, cluster)
+	EventIndex = fmt.Sprintf(EventIndexPattern, cluster)
+	FlowLogIndex = fmt.Sprintf(FlowLogIndexPattern, cluster)
+}
 
 type ipSetDoc struct {
 	CreatedAt time.Time    `json:"created_at"`
@@ -46,7 +61,7 @@ func NewElastic(h *http.Client, url *url.URL, username, password string) (*Elast
 		elastic.SetErrorLog(log.StandardLogger()),
 		elastic.SetSniff(false),
 		elastic.SetHealthcheck(false),
-		//elastic.SetTraceLog(log.StandardLogger()),
+		elastic.SetTraceLog(log.StandardLogger()),
 	}
 	if username != "" {
 		options = append(options, elastic.SetBasicAuth(username, password))
