@@ -12,6 +12,8 @@ If you are upgrading from a pre-v2.3 release of {{site.prodname}}, or you want t
 pre-v2.3 RBAC behavior, please refer to the [Upgrading from a pre-v2.3 release of {{site.prodname}}](/{{page.version}}/maintenance/kubernetes-upgrade-tsee#upgrading-pre23)
 guide.
 
+For RBAC related to elasticsearch, please refer to [Configuring Tigera Secure EE RBAC for Elasticsearch](/{{page.version}}/reference/cnx/rbac-elasticsearch).
+
 ### Policy and tier RBAC
 
 In {{site.prodname}}, `GlobalNetworkPolicy` and `NetworkPolicy` resources
