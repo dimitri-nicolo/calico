@@ -110,5 +110,5 @@ toc:
       path: /security/intrusion-detection/job-descriptions
     - title: Customizing
       path: /security/intrusion-detection/customizing
-- title: Trace and block suspicious IPs
-  path: /security/suspicious-IPs 
+  - title: Trace and block suspicious IPs
+    path: /security/suspicious-IPs 
