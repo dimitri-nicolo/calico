@@ -16,7 +16,7 @@ spec:
       endpoint,ingressProtected,egressProtected,envoyEnabled,appliedPolicies,services
       {{ range .Endpoints -}}
       {{ .Endpoint }},{{ .IngressProtected }},{{ .EgressProtected }},{{ .EnvoyEnabled }},{{ join .AppliedPolicies ";" }},{{ join .Services ";" }}
-      {{- end }}
+      {{ end }}
   includeEndpointData: true
   uiSummaryTemplate:
     name: ui-summary.json
