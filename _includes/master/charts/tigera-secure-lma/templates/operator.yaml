@@ -6,14 +6,7 @@
 {{- if eq $elasticMode "operator" }}
 #   upmcenterprises/elasticsearch-operator:{{.Values.elasticsearchOperator.tag}}
 {{- end }}
----
 
-# This manifest creates a namespace for deploying prometheus-operator,
-# Prometheus and alertmanager.
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: calico-monitoring
 ---
 kind: NetworkPolicy
 apiVersion: extensions/v1beta1
