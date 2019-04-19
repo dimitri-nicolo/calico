@@ -39,6 +39,7 @@ spec:
       containers:
         - name: tigera-federation-controller
           image: {{.Values.kubeControllers.image}}:{{.Values.kubeControllers.tag}}
+{{ tuple .Values.federation.resources | include "calico.resourceLimits" | indent 10 -}}
           env:
             # Set log level to debug
             - name: LOG_LEVEL
