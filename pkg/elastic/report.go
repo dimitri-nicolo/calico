@@ -70,7 +70,7 @@ func (c *client) RetrieveArchivedReportSummaries() ([]*report.ArchivedReportData
 			Sort("startTime", false).
 			FetchSourceContext(elastic.NewFetchSourceContext(true).Include(
 				"reportName", "reportTypeName", "reportSpec", "reportTypeSpec", "startTime", "endTime",
-				"endpointsSummary", "namespacesSummary", "servicesSummary", "uiSummary",
+				"endpointsSummary", "namespacesSummary", "servicesSummary", "auditSummary", "uiSummary",
 			)).From(i).Size(pageSize).Do(context.Background())
 		if err != nil {
 			log.WithError(err).Error("failed to query for raw report data")
