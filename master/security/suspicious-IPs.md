@@ -25,7 +25,7 @@ Tigera Secure EE supports both push and pull methods for updating threat feeds. 
 
 #### Suspicious IPs: test before you block
 
-There are many different types of threat intelligence feeds (community-curated, company-paid, and internally-developed) that you can choose to monitor in Tigera Secure EE. When you find a suspicious IP, we recommend that you assess the threat feed contents for false positives before blacklisting an IP. If you decide to block an IP, test a subset of your workloads before rolling to production to ensure legitimate application traffic is not blocked.
+There are many different types of threat intelligence feeds (community-curated, company-paid, and internally-developed) that you can choose to monitor in Tigera Secure EE. We recommend that you assess the threat feed contents for false positives before blocking based on the feed. If you decide to block, test a subset of your workloads before rolling to production to ensure legitimate application traffic is not blocked.
 
 ### Before you begin...
 
@@ -48,21 +48,24 @@ This section describes how to pull or push threat feeds to Tigera Secure EE, and
 To add threat feeds to Tigera Secure EE for automatic updates (default is once a day), the threat feed(s) must be available using HTTP(S), and return a newline-separated list of IP addresses or prefixes in CIDR notation. 
 
 1. Create the GlobalThreatFeed YAML and save it to file.  
-The simplest example of this looks like the following. Replace the **name** and the **URL** with your feed.
+   The simplest example of this looks like the following. Replace the **name** and the **URL** with your feed.
 
-<pre>
-apiVersion: projectcalico.org/v3
-kind: GlobalThreatFeed
-metadata:
-  <b>name: my-threat feed</b>
-spec:
-  pull:
-    http:
-      <b>url: https://my.threatfeed.com/blacklist</b>
-</pre>   
+   ```yaml
+   apiVersion: projectcalico.org/v3
+   kind: GlobalThreatFeed
+   metadata:
+     name: my-threat feed
+   spec:
+     pull:
+       http:
+         url: https://my.threatfeed.com/blacklist
+   ```   
 
-2. Add the global threat feed to the cluster.  
-   `kubectl apply -f <your_threatfeed_filename>`
+2. Add the global threat feed to the cluster.
+
+   ```shell  
+   kubectl apply -f <your_threatfeed_filename>
+   ```
 
 3. In Tigera Secure EE Manager, go to the “Anomaly Detection” page to view events that are generated when an IP is displayed on the threat feed list.
 
@@ -71,28 +74,31 @@ spec:
 Use the push method if your threat feeds that are not in newline-delimited format and available over HTTP, or if you prefer to manually update threat feeds on your own schedule.
 
 1. Create the GlobalThreatFeed YAML and save it to file.  
-Replace the **name** field with your own name. The name is important in the later steps so make note of it.
+   Replace the **name** field with your own name. The name is important in the later steps so make note of it.
 
-<pre>
-apiVersion: projectcalico.org/v3
-kind: GlobalThreatFeed
-metadata:
-  name: my-threat feed
-</pre>  
+   ```yaml
+   apiVersion: projectcalico.org/v3
+   kind: GlobalThreatFeed
+   metadata:
+     name: my-threat-feed
+   ```  
   
-2. Add the global threat feed to the cluster.  
-   `kubectl apply -f <your_threatfeed_filename>`
+2. Add the global threat feed to the cluster.
+   
+   ```shell  
+   kubectl apply -f <your_threatfeed_filename>
+   ```
 
-3. Configure or program your threat feed to write updates to ElasticSearch. This Elasticsearch document is in the index **.tigera.upset** and must have the ID set to the name of the global threat feed object. The doc should have a single field called **ips**, containing a list of IP addresses or IP prefixes. For example:  
+3. Configure or program your threat feed to write updates to ElasticSearch. This Elasticsearch document is in the index **.tigera.ipset.\<cluster_name\>** and must have the ID set to the name of the global threat feed object. The doc should have a single field called **ips**, containing a list of IP addresses or IP prefixes. For example:  
 
-<pre>
-  PUT .tiger.upset/_doc/my-threat feed
-  {
-      "ips" : ["99.99.99.99", "100.100.100.0/24"]
-  }
-</pre>
+   ```
+   PUT .tigera.ipset.cluster/_doc/my-threat-feed
+   {
+       "ips" : ["99.99.99.99", "100.100.100.0/24"]
+   }
+   ```
 
-  See the Elasticsearch document APIs for how to create and update documents in Elasticsearch.
+   See the Elasticsearch document APIs for how to create and update documents in Elasticsearch.
 
 4. In Tigera Secure EE Manager, go the “Anomaly Detection” page to view events that are generated when an IP is displayed on the threat feed list.
 
@@ -114,29 +120,35 @@ spec:
       security-action: block</b>
 </pre>
   
-1. Add the global threat feed to the cluster.  
-   `kubectl apply -f <your_threatfeed_filename>`
+1. Add the global threat feed to the cluster.
+
+   ```shell  
+   kubectl apply -f <your_threatfeed_filename>
+   ```
 
 2. Create a GlobalNetworkPolicy that blocks traffic based on the threat feed, by selecting sources or destinations using the labels you assigned in step 1. For example, the following GlobalNetworkPolicy blocks all traffic coming into the cluster if it came from any of the suspicious IPs.
 
-<pre>
-apiVersion: projectcalico.org/v3
-kind: GlobalNetworkPolicy
-metadata:
-  name: default.blockthreats
-spec:
-  tier: default
-  selector: all()
-  types:
-  - Ingress
-  ingress:
-  - action: Deny
-    source:
-      selector: security-action == 'block'
-</pre>
+   ```yaml
+   apiVersion: projectcalico.org/v3
+   kind: GlobalNetworkPolicy
+   metadata:
+     name: default.blockthreats
+   spec:
+     tier: default
+     selector: all()
+     types:
+     - Ingress
+     ingress:
+     - action: Deny
+       source:
+         selector: security-action == 'block'
+  ```
   
-3. Add the global network policy to the cluster.  
-   `kubectl apply -f <your_threatfeed_filename>`
+3. Add the global network policy to the cluster.
+
+   ```shell  
+   kubectl apply -f <your_policy_filename>
+   ```
 
 ### Tutorial 
 
@@ -150,21 +162,24 @@ If you haven’t already adjusted your [aggregation flows](#before-you-begin), w
 
 1. Create a file called feodo-tracker.yaml with the following contents:
 
-<pre>
-apiVersion: projectcalico.org/v3
-kind: GlobalThreatFeed
-metadata:
-  name: feodo-tracker
-spec:
-  pull:
-    http:
-      url: https://feodotracker.abuse.ch/downloads/ipblocklist.txt
-</pre>
+   ```yaml
+   apiVersion: projectcalico.org/v3
+   kind: GlobalThreatFeed
+   metadata:
+     name: feodo-tracker
+   spec:
+     pull:
+       http:
+         url: https://feodotracker.abuse.ch/downloads/ipblocklist.txt
+   ```
   
-This pulls updates using the default period of once per day. See the [Global Resource Threat Feed API]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalthreatfeed) for all configuration options.
+   This pulls updates using the default period of once per day. See the [Global Resource Threat Feed API]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalthreatfeed) for all configuration options.
 
-2. Add the feed to your cluster.  
-   `kubectl apply -f feodo-tracker.yaml`
+2. Add the feed to your cluster.
+
+   ```shell  
+   kubectl apply -f feodo-tracker.yaml
+   ```
    
 #### Check search results
 
@@ -180,44 +195,55 @@ In this demo, we will apply the policy only to a test workload (so we do not imp
 
 1. Create a file called **tf-ubuntu.yaml** with the following contents:
 
-<pre>
-apiVersion: v1
-kind: Pod
-metadata:
-  labels:
-    docs.tigera.io/tutorial: threat-feed
-  name: tf-ubuntu
-spec:
-  containers:
-  - command:
-    - sleep
-    - "3600"
-    image: ubuntu
-    name: test
-</pre>
+   ```yaml
+   apiVersion: v1
+   kind: Pod
+   metadata:
+     labels:
+       docs.tigera.io/tutorial: threat-feed
+     name: tf-ubuntu
+   spec:
+     containers:
+     - command:
+       - sleep
+       - "3600"
+       image: ubuntu
+       name: test
+   ```
+
+2. Apply the pod configuration.
+
+   ```shell
+   kubectl apply -f tf-ubuntu.yaml
+   ```
   
-2. Edit the feodo-tracker.yaml to include a globalNetworkSet stanza:  
-   `kubectl apply -f tf-ubuntu.yaml`
+3. Edit the feodo-tracker.yaml to include a globalNetworkSet stanza:  
 
-<pre>
-apiVersion: projectcalico.org/v3
-kind: GlobalThreatFeed
-metadata:
-  name: feodo-tracker
-spec:
-  pull:
-    http:
-      url: https://feodotracker.abuse.ch/downloads/ipblocklist.txt
-  globalNetworkSet:
-    labels:
-      docs.tigera.io/threatfeed: feodo
-</pre>     
+   ```yaml
+   apiVersion: projectcalico.org/v3
+   kind: GlobalThreatFeed
+   metadata:
+     name: feodo-tracker
+   spec:
+     pull:
+       http:
+         url: https://feodotracker.abuse.ch/downloads/ipblocklist.txt
+     globalNetworkSet:
+       labels:
+         docs.tigera.io/threatfeed: feodo
+   ```     
 
-3. Reapply the new YAML.  
-   `kubectl apply -f feodo-tracker.yaml`
+4. Reapply the new YAML.
 
-4. Verify that the GlobalNetworkSet is created.  
-   `kubectl get globalnetworksets threatfeed.feodo-tracker -o yaml`
+   ```shell  
+   kubectl apply -f feodo-tracker.yaml
+   ```
+
+5. Verify that the GlobalNetworkSet is created.
+
+   ```shell  
+   kubectl get globalnetworksets threatfeed.feodo-tracker -o yaml
+   ```
 
 #### Apply global network policy
 
@@ -225,40 +251,52 @@ We will now apply a GlobalNetworkPolicy that blocks the test workload from conne
 
 1. Create a file called block-feodo.yaml with the following contents:
 
-<pre>
-apiVersion: projectcalico.org/v3
-kind: GlobalNetworkPolicy
-metadata:
-  name: default.block-feodo
-spec:
-  tier: default
-  selector: docs.tigera.io/tutorial == 'threat-feed'
-  types:
-  - Egress
-  egress:
-  - action: Deny
-    destination:
-      selector: docs.tigera.io/threatfeed == 'feodo'
-  - action: Allow
-</pre>
+   ```yaml
+   apiVersion: projectcalico.org/v3
+   kind: GlobalNetworkPolicy
+   metadata:
+     name: default.block-feodo
+   spec:
+     tier: default
+     selector: docs.tigera.io/tutorial == 'threat-feed'
+     types:
+     - Egress
+     egress:
+     - action: Deny
+       destination:
+         selector: docs.tigera.io/threatfeed == 'feodo'
+     - action: Allow
+   ```
 
 2. Apply this policy to the cluster
-   `kubectl apply -f block-feodo.yaml`
+
+   ```shell
+   kubectl apply -f block-feodo.yaml
+   ```
 
 #### Verify policy on test workload
 
 We will verify the policy from the test workload that we created earlier.  
 
 1. Get a shell in the pod by executing
-  `kubectl exec -ti tf-ubuntu bash`
+
+   ```shell
+   kubectl exec -ti tf-ubuntu bash
+   ```
 
    You should get a prompt inside the pod.  
 
 2. Install the ping command.
-   `apt update && apt install iputils-ping`
+
+   ```shell
+   apt update && apt install iputils-ping
+   ```
 
 3. Ping a known safe IP (like 8.8.8.8, Google’s public DNS server)
-   `ping 8.8.8.8`
+
+   ```shell
+   ping 8.8.8.8
+   ```
 
 4. Open the [FEODO tracker list](https://feodotracker.abuse.ch/downloads/ipblocklist.txt) and choose an IP on the list to ping. 
    You should not get connectivity, and the pings will show up as denied traffic in the flow logs.
