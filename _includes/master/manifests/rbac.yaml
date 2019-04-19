@@ -131,10 +131,8 @@ rules:
       # Used to discover service IPs for advertisement.
       - watch
       - list
-{{- if .Values.typha.enabled }}
-      # Used to discover Typhas.
+      # Used to discover Typhas and trusted DNS services.
       - get
-{{- end }}
   - apiGroups: [""]
     resources:
       - nodes/status
