@@ -165,3 +165,11 @@ EOF
 > WorkloadEndpoints and HostEndpoints.  A single destination selector
 > expression can potentially match all of those.
 {: .alert .alert-info}
+
+### Above and Beyond
+
+This feature is configured by [Felix configuration
+parameters]({{site.baseurl}}/{{page.version}}/reference/felix/configuration)
+beginning with "DNS", but you normally won't need to change these, as
+the defaults are chosen to work out of the box with standard
+Kubernetes installs.
