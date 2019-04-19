@@ -62,13 +62,5 @@ resources:
     memory: {{ $component.requests.memory | quote }}
 {{- end }}
 {{- end }}
-{{- end -}}
-{{- end -}}
-
-
-{{- define "tigera-secure-lma.resourceLimitsConfigured" -}}
-{{- $component := index . 0 -}}
-{{- if or (or (or $component.limits.cpu $component.limits.memory) $component.requests.cpu) $component.requests.memory -}}
-true
-{{- end -}}
+{{ end }}
 {{- end -}}

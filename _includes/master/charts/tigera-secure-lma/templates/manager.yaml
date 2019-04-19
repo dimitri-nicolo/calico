@@ -197,9 +197,7 @@ spec:
       containers:
       - name: cnx-manager
         image: {{.Values.manager.image}}:{{.Values.manager.tag}}
-{{- if include "tigera-secure-lma.resourceLimitsConfigured" (tuple .Values.manager.resources) }}
-{{ tuple .Values.manager.resources | include "tigera-secure-lma.resourceLimits" | indent 8 }}
-{{- end }}
+{{ tuple .Values.manager.resources | include "tigera-secure-lma.resourceLimits" | indent 8 -}}
         env:
           - name: CNX_WEB_AUTHENTICATION_TYPE
             valueFrom:
@@ -281,9 +279,7 @@ spec:
           periodSeconds: 10
       - name: cnx-manager-proxy
         image: {{.Values.managerProxy.image}}:{{.Values.managerProxy.tag}}
-{{- if include "tigera-secure-lma.resourceLimitsConfigured" (tuple .Values.managerProxy.resources) }}
-{{ tuple .Values.managerProxy.resources | include "tigera-secure-lma.resourceLimits" | indent 8 }}
-{{- end }}
+{{ tuple .Values.managerProxy.resources | include "tigera-secure-lma.resourceLimits" | indent 8 -}}
         env:
           - name: CNX_WEB_AUTHENTICATION_TYPE
             valueFrom:
@@ -327,9 +323,7 @@ spec:
           periodSeconds: 10
       - name: tigera-es-proxy
         image: {{.Values.esProxy.image}}:{{.Values.esProxy.tag}}
-{{- if include "tigera-secure-lma.resourceLimitsConfigured" (tuple .Values.esProxy.resources) }}
-{{ tuple .Values.esProxy.resources | include "tigera-secure-lma.resourceLimits" | indent 8 }}
-{{- end }}
+{{ tuple .Values.esProxy.resources | include "tigera-secure-lma.resourceLimits" | indent 8 -}}
         env:
           - name: LOG_LEVEL
             value: "info"
