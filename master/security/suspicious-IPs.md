@@ -2,7 +2,7 @@
 title: Trace and block suspicious IPs
 ---
 
-### Big Picture
+### Big Picture 
 
 Add threat intelligence feeds to Tigera Secure EE to trace network flows of suspicious IP addresses, and optionally block traffic to suspicious IPs. 
 
