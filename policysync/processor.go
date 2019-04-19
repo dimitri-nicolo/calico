@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -399,6 +399,9 @@ func (p *Processor) handleNamespaceRemove(update *proto.NamespaceRemove) {
 }
 
 func (p *Processor) handleIPSetUpdate(update *proto.IPSetUpdate) {
+	if update.GetType() == proto.IPSetUpdate_DOMAIN {
+		return
+	}
 	id := update.Id
 	logCxt := log.WithField("ID", id)
 	logCxt.Debug("Processing IPSetUpdate")
@@ -432,8 +435,11 @@ func (p *Processor) handleIPSetDeltaUpdate(update *proto.IPSetDeltaUpdate) {
 	id := update.Id
 	log.WithField("ID", id).Debug("Processing IPSetDeltaUpdate")
 
-	// We trust the calc graph to never send us Delta updates for non-existent sets.
+	// Only process Delta updates for sets that we know about and have decided to track.
 	s := p.ipSetsByID[id]
+	if s == nil {
+		return
+	}
 	s.deltaUpdate(update)
 
 	// gRPC has limits on message size, so break up large update if necessary.

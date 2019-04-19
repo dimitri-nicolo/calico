@@ -62,6 +62,7 @@ var _ = Describe("DNS Policy", func() {
 		opts := infrastructure.DefaultTopologyOptions()
 		opts.ExtraVolumes[dnsDir] = "/dnsinfo"
 		opts.ExtraEnvVars["FELIX_DNSCACHEFILE"] = "/dnsinfo/dnsinfo.txt"
+		opts.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico"
 		felix, etcd, client = infrastructure.StartSingleNodeEtcdTopology(opts)
 	}
 

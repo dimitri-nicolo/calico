@@ -61,7 +61,7 @@ var _ = Describe("DNS Policy", func() {
 		opts.ExtraEnvVars["FELIX_DNSCACHEFILE"] = "/dnsinfo/dnsinfo.txt"
 		opts.ExtraEnvVars["FELIX_DNSCACHESAVEINTERVAL"] = "1"
 		opts.ExtraEnvVars["FELIX_DNSTRUSTEDSERVERS"] = scapyTrusted.IP
-		opts.ExtraEnvVars["FELIX_LOGSEVERITYSCREEN"] = "debug"
+		opts.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico"
 		felix, etcd, client = infrastructure.StartSingleNodeEtcdTopology(opts)
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")
 

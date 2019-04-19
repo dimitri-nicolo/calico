@@ -9,6 +9,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -88,6 +89,7 @@ var _ = Describe("DNS Policy", func() {
 		// triggered by shutdown instead of by a periodic timer.
 		opts.ExtraEnvVars["FELIX_DNSCACHESAVEINTERVAL"] = "3600"
 		opts.ExtraEnvVars["FELIX_DNSTRUSTEDSERVERS"] = strings.Join(GetLocalNameservers(), ",")
+		opts.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico"
 		felix, etcd, client = infrastructure.StartSingleNodeEtcdTopology(opts)
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")
 
@@ -236,6 +238,23 @@ var _ = Describe("DNS Policy", func() {
 			})
 
 			It("can wget microsoft.com", func() {
+				out, err := w[0].ExecOutput("wget", "-T", "10", "microsoft.com")
+				log.WithError(err).Infof("wget said:\n%v", out)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("handles a domain set update", func() {
+				// Create another GNS with same labels as the previous one, so that
+				// the destination selector will now match this one as well, and so
+				// the domain set membership will change.
+				gns := api.NewGlobalNetworkSet()
+				gns.Name = "allow-microsoft-2"
+				gns.Labels = map[string]string{"founder": "billg"}
+				gns.Spec.AllowedEgressDomains = []string{"port25.microsoft.com"}
+				_, err := client.GlobalNetworkSets().Create(utils.Ctx, gns, utils.NoOptions)
+				Expect(err).NotTo(HaveOccurred())
+
+				time.Sleep(2 * time.Second)
 				out, err := w[0].ExecOutput("wget", "-T", "10", "microsoft.com")
 				log.WithError(err).Infof("wget said:\n%v", out)
 				Expect(err).NotTo(HaveOccurred())
