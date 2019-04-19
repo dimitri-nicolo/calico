@@ -1,3 +1,5 @@
+{{- $elasticMode := include "tigera-secure-lma.elasticsearch.mode" . }}
+{{- if eq $elasticMode "operator" }}
 # This manifest implements elasticsearch-storage using local host-path volumes.
 # It is not suitable for production use; and only works on single node clusters.
 # For production or multinode clusters, use a different elasticsearch-storage implementation.
@@ -42,3 +44,4 @@ spec:
     path: /var/tigera/elastic-data/2
   persistentVolumeReclaimPolicy: Recycle
   storageClassName: elasticsearch-storage
+{{- end }}
