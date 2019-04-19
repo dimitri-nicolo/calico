@@ -370,8 +370,8 @@ spec:
   zones: []
   use-ssl: false
   # For production volumes, consider increasing volume sizes, memory and adding backups
-  data-volume-size: 5Gi
-  java-options: "-Xms256m -Xmx256m"
+  data-volume-size: 40Gi
+  java-options: "-Xms1g -Xmx1g"
   storage:
     storage-class: elasticsearch-storage
 ---
