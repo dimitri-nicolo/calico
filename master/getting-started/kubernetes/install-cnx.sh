@@ -51,9 +51,6 @@ ETCD_ENDPOINTS=${ETCD_ENDPOINTS:=""}
 # when set to 1, don't prompt for agreement to proceed
 QUIET=${QUIET:=0}
 
-# when set to 1, don't install monitoring components
-SKIP_MONITORING=${SKIP_MONITORING:=0}
-
 # when set to 1, download the manifests, then quit
 DOWNLOAD_MANIFESTS_ONLY=${DOWNLOAD_MANIFESTS_ONLY:=0}
 
@@ -201,7 +198,6 @@ HELP_USAGE
       v )  VERSION=$OPTARG;;
       x )  set -x;;
       q )  QUIET=1;;
-      p )  SKIP_MONITORING=1;;
       m )  DOWNLOAD_MANIFESTS_ONLY=1;;
       u )  CLEANUP=1;;
       h )  usage;;
@@ -1669,12 +1665,10 @@ installCNX() {
 
   applyLicenseManifest            # If the user specified a license file, apply it
 
-  if [ "${SKIP_MONITORING}" -eq 0 ]; then
-    applyCNXPolicyManifest        # Apply cnx-policy.yaml
-    applyOperatorManifest         # Apply operator.yaml
-    applyElasticStorageManifest   # Apply elastic-storage.yaml
-    applyMonitorCalicoManifest    # Apply monitor-calico.yaml
-  fi
+  applyCNXPolicyManifest          # Apply cnx-policy.yaml
+  applyOperatorManifest           # Apply operator.yaml
+  applyElasticStorageManifest     # Apply elastic-storage.yaml
+  applyMonitorCalicoManifest      # Apply monitor-calico.yaml
   createCNXManagerSecret          # Create cnx-manager-tls to enable manager/apiserver communication
   applyCNXManifest                # Apply cnx.yaml
 }
@@ -1690,12 +1684,10 @@ uninstallCNX() {
   deleteCNXManifest              # Delete cnx.yaml
   deleteCNXManagerSecret         # Delete TLS secret
 
-  if [ "${SKIP_MONITORING}" -eq 0 ]; then
-    deleteMonitorCalicoManifest  # Delete monitor-calico.yaml
-    deleteElasticStorageManifest # Delete elastic-storage.yaml
-    deleteOperatorManifest       # Delete operator.yaml
-    deleteCNXPolicyManifest      # Delete cnx-policy.yaml
-  fi
+  deleteMonitorCalicoManifest    # Delete monitor-calico.yaml
+  deleteElasticStorageManifest   # Delete elastic-storage.yaml
+  deleteOperatorManifest         # Delete operator.yaml
+  deleteCNXPolicyManifest        # Delete cnx-policy.yaml
 
   deleteCNXAPIManifest              # Delete cnx-[etcd|kdd].yaml
   deleteCalicoManifest           # Delete calico.yaml
