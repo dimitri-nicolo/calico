@@ -27,7 +27,7 @@
 
 [[constraint]]
   name = "gopkg.in/square/go-jose.v2"
-  version = "2.1.4"
+  revision = "cbf0fd6a984a4f8d5adfd38dc0dd8ef46f073ab7"
 
 [[constraint]]
   branch = "master"
