@@ -1184,9 +1184,9 @@ removeMasterTaints() {
 }
 
 #
-# applyCNXManifest()
+# applyCNXAPIManifest()
 #
-applyCNXManifest() {
+applyCNXAPIManifest() {
   if [ "$DATASTORE" == "kubernetes" ]; then
     echo -n "Applying \"cnx-api-kdd.yaml\" manifest: "
     run kubectl apply -f cnx-api-kdd.yaml
@@ -1202,9 +1202,9 @@ applyCNXManifest() {
 }
 
 #
-# deleteCNXManifest()
+# deleteCNXAPIManifest()
 #
-deleteCNXManifest() {
+deleteCNXAPIManifest() {
   if [ "$DATASTORE" == "kubernetes" ]; then
     runIgnoreErrors "kubectl delete -f cnx-api-kdd.yaml"
     countDownSecs 30 "Deleting \"cnx-api-kdd.yaml\" manifest"
@@ -1665,7 +1665,7 @@ installCNX() {
   applyCalicoManifest             # Apply calico.yaml
 
   removeMasterTaints              # Remove master taints
-  applyCNXManifest                # Apply cnx-[etcd|kdd].yaml
+  applyCNXAPIManifest                # Apply cnx-[etcd|kdd].yaml
 
   applyLicenseManifest            # If the user specified a license file, apply it
 
@@ -1697,7 +1697,7 @@ uninstallCNX() {
     deleteCNXPolicyManifest      # Delete cnx-policy.yaml
   fi
 
-  deleteCNXManifest              # Delete cnx-[etcd|kdd].yaml
+  deleteCNXAPIManifest              # Delete cnx-[etcd|kdd].yaml
   deleteCalicoManifest           # Delete calico.yaml
   deleteRbacManifest             # Delete rbac.yaml
   deleteEtcdDeployment           # Delete etcd.yaml (etcd datatstore only)
