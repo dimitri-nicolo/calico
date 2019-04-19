@@ -460,3 +460,27 @@ rules:
   resourceNames: ["flows", "audit*", "events"]
   verbs: ["get"]
 ---
+
+# Allow users to access Tigera Secure EE Manager.
+apiVersion: projectcalico.org/v3
+kind: NetworkPolicy
+metadata:
+  name: allow-cnx.cnx-manager-access
+  namespace: calico-monitoring
+spec:
+  order: 1
+  tier: allow-cnx
+  selector: k8s-app == 'cnx-manager'
+  types:
+  - Ingress
+  ingress:
+  - action: Allow
+    protocol: TCP
+    source:
+      # This policy allows access to Tigera Secure EE Manager from anywhere: narrow it down if
+      # only certain subnets should be allowed.
+      nets: ["0.0.0.0/0"]
+    destination:
+      # By default, Tigera Secure EE Manager is accessed over https. Update this if needed.
+      ports: [9443]
+---

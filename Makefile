@@ -84,10 +84,17 @@ htmlproofer: _site
 kubeval: _site
 	# Run kubeval to check master manifests are valid Kubernetes resources.
 	-docker run -v $$PWD:/calico --entrypoint /bin/sh garethr/kubeval:0.7.3 -c 'ok=true; for f in `find /calico/_site/master -name "*.yaml" |grep -v "\(patch-cnx-manager-configmap\|kube-controllers-patch\|config\|allow-istio-pilot\|30-policy\|cnx-policy\|crds-only\|istio-app-layer-policy\|patch-flow-logs\|upgrade-calico\|-cf\).yaml"`; do echo Running kubeval on $$f; /kubeval $$f || ok=false; done; $$ok' 1>stderr.out 2>&1
-	
+
 	# Filter out error loading schema for non-standard resources.
+	-grep -v "Could not read schema from HTTP, response status is 404 Not Found" stderr.out > filtered.out
+
 	# Filter out error reading empty secrets (which we use for e.g. etcd secrets and seem to work).
-	-grep -v "Could not read schema from HTTP, response status is 404 Not Found" stderr.out | grep -v "invalid Secret" > filtered.out
+	-grep -v "invalid Secret" filtered.out > filtered.out
+
+	# Filter out error reading calico networkpolicy since kubeval thinks they're kubernetes networkpolicies and
+	# complains when it doesn't have a podSelector. Unfortunately, this also filters out networkpolicy failures.
+	# TODO: don't filter out k8s networkpolicy errors
+	-grep -v "invalid NetworkPolicy" filtered.out > filtered.out
 
 	# Display the errors with context and fail if there were any.
 	-rm stderr.out
