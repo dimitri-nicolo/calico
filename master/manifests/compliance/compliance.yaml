@@ -1,8 +1,0 @@
----
-layout: null
----
-
-{% helm tigera-secure-lma --execute templates/compliance/compliance-server.yaml  --execute templates/compliance/compliance-controller.yaml --execute templates/compliance/compliance-snapshotter.yaml %}
-# TODO: fix bug where an empty helm includer doesn't render the manifest?
-foo: bar
-{% endhelm %}
