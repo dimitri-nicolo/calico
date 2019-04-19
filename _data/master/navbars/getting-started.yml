@@ -16,8 +16,6 @@ toc:
       section:
       - title: Installing Tigera Secure EE using Helm
         path: /getting-started/kubernetes/installation/helm/
-      - title: Configuring Tigera Secure EE using Helm
-        path: /getting-started/kubernetes/installation/helm/configuring
     - title: Manual
       section:
       - title: Introduction

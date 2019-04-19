@@ -17,7 +17,11 @@ title: Installing Tigera Secure EE using Helm
 
 ## Step 1: Craft your values.yaml for {{ site.prodname }} Core
 
-Before we install, we must build a helm values file to configure {{ site.prodname }} Core for your environment.
+Before we install, we must build a helm values file to configure {{ site.prodname }} Core for your environment. We weill refer to this values file as `my-values.yaml` at the time of installation.
+
+For the purposes of this install guide, we will cover options which must be set in order to achieve a functioning cluster. For a full reference of all available options, inspect the helm chart:
+
+    helm inspect tigera-secure-ee-core.tgz
 
 ### Configure your Datastore Connection
 
@@ -70,13 +74,15 @@ initialPool:
   cidr: 10.0.0.0/8
 ```
 
->This should fall within `--cluster-cidr` configured for the cluster
+>**Note**: This should fall within `--cluster-cidr` configured for the cluster
+{: .alert .alert-info}
 
->Changing this value after installation will have no effect.
+>**Warning**: Changing this value after installation will have no effect.
+{: .alert .alert-info}
 
 ## Step 2: Install {{ site.prodname }} Core
 
-1. Install the chart, passing in the `my-values.yaml` file you crafted from the previous section:
+1. Install the chart, passing in the `my-values.yaml` file you crafted from the previous section, an additionally passing your image pull secrets:
 
    ```
    helm install ./tigera-secure-ee-core.tgz -f my-values.yaml
@@ -101,13 +107,19 @@ initialPool:
    kubectl apply -f {{ site.url }}/{{ page.version }}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml
    ```
 
+Now that the **{{ site.prodname }} Core** chart is installed, please move on to the next step to install the **{{ site.prodname }}** chart.
+
 ## Step 3: Craft your values.yaml for {{ site.prodname }}
 
-Before we install, we must build a helm values file to configure {{ site.prodname }} for your environment.
+Before we install, we must build a helm values file to configure {{ site.prodname }} for your environment. We weill refer to this values file as `my-values.yaml` at the time of installation.
+
+For the purposes of this install guide, we will cover options which must be set in order to achieve a functioning cluster. For a full reference of all available options, inspect the helm chart:
+
+    helm inspect tigera-secure-ee.tgz
 
 ### Connect to Elasticsearch
 
-By default, {{ site.prodname }} Monitoring launches Elasticsearch Operator to bootstrap an unsecured elasticsearch cluster for demonstrative purposes. To disable this behavior and instead connect to your own elasticsearch, define the address in your yaml:
+By default, {{ site.prodname }} launches Elasticsearch Operator to bootstrap an unsecured elasticsearch cluster for demonstrative purposes. To disable this behavior and instead connect to your own elasticsearch, define the address in your yaml:
 
 ```yaml
 elasticsearch:
@@ -182,6 +194,7 @@ manager:
 
 {% include {{page.version}}/cnx-grant-user-manager-permissions.md %}
 
-### Next Steps
+## Next steps
 
-- [Customize your {{ site.prodname }} install](configuring)
+Consult the {{site.prodname}} for Kubernetes [demo](/{{page.version}}/security/simple-policy-cnx), which
+demonstrates the main features.
