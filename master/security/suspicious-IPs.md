@@ -43,7 +43,7 @@ This section describes how to pull or push threat feeds to Tigera Secure EE, and
 - [Push threat feed updates](#push-threat-feed-updates)
 - [Block traffic to a cluster](#block-traffic-to-a-cluster)
 
-#### Pull thread feed updates 
+#### Pull threat feed updates 
 
 To add threat feeds to Tigera Secure EE for automatic updates (default is once a day), the threat feed(s) must be available using HTTP(S), and return a newline-separated list of IP addresses or prefixes in CIDR notation. 
 
@@ -66,7 +66,7 @@ spec:
 
 3. In Tigera Secure EE Manager, go to the “Anomaly Detection” page to view events that are generated when an IP is displayed on the threat feed list.
 
-#### Push threat feeds updates
+#### Push threat feed updates
 
 Use the push method if your threat feeds that are not in newline-delimited format and available over HTTP, or if you prefer to manually update threat feeds on your own schedule.
 
