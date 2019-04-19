@@ -82,9 +82,7 @@ spec:
       containers:
         - name: compliance-controller
           image: {{.Values.complianceController.image}}:{{.Values.complianceController.tag}}
-{{- if include "tigera-secure-lma.resourceLimitsConfigured" (tuple .Values.complianceController.resources) }}
-{{ tuple .Values.complianceController.resources | include "tigera-secure-lma.resourceLimits" | indent 10 }}
-{{- end }}
+{{ tuple .Values.complianceController.resources | include "tigera-secure-lma.resourceLimits" | indent 10 -}}
           env:
             - name: LOG_LEVEL
               value: "warning"
