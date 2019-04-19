@@ -118,12 +118,12 @@ metadata:
 rules:
   - apiGroups: ["authentication.k8s.io"]
     resources:
-      - tokenreview
+      - tokenreviews
     verbs:
       - create
   - apiGroups: ["authorization.k8s.io"]
     resources:
-      - subjectaccessreview
+      - subjectaccessreviews
     verbs:
       - create
 
