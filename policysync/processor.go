@@ -435,8 +435,11 @@ func (p *Processor) handleIPSetDeltaUpdate(update *proto.IPSetDeltaUpdate) {
 	id := update.Id
 	log.WithField("ID", id).Debug("Processing IPSetDeltaUpdate")
 
-	// We trust the calc graph to never send us Delta updates for non-existent sets.
+	// Only process Delta updates for sets that we know about and have decided to track.
 	s := p.ipSetsByID[id]
+	if s == nil {
+		return
+	}
 	s.deltaUpdate(update)
 
 	// gRPC has limits on message size, so break up large update if necessary.
