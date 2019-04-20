@@ -28,9 +28,9 @@ import (
 var _ = Describe("ReportTemplate Renderer", func() {
 	It("inventory-summary report rendering", func() {
 		tmpl := `startTime,endTime,endpointSelector,namespaceSelector,serviceAccountSelectors,endpointsNumInScope,endpointsNumIngressProtected,endpointsNumEgressProtected,endpointsNumIngressFromInternet,endpointsNumEgressToInternet,endpointsNumIngressFromOtherNamespace,endpointsNumEgressToOtherNamespace,endpointsNumEnvoyEnabled
-{{ .StartTime }},{{ .EndTime }},{{ .ReportSpec.EndpointsSelection.EndpointSelector }},{{ .ReportSpec.EndpointsSelection.Namespaces.Selector }},{{ .ReportSpec.EndpointsSelection.ServiceAccounts.Selector }},{{ .EndpointsSummary.NumTotal }},{{ .EndpointsSummary.NumIngressProtected }},{{ .EndpointsSummary.NumEgressProtected }},{{ .EndpointsSummary.NumIngressFromInternet }},{{ .EndpointsSummary.NumEgressToInternet }},{{ .EndpointsSummary.NumIngressFromOtherNamespace }},{{ .EndpointsSummary.NumEgressToOtherNamespace }},{{ .EndpointsSummary.NumEnvoyEnabled }}`
+{{ dateRfc3339 .StartTime }},{{ dateRfc3339 .EndTime }},{{ .ReportSpec.EndpointsSelection.EndpointSelector }},{{ .ReportSpec.EndpointsSelection.Namespaces.Selector }},{{ .ReportSpec.EndpointsSelection.ServiceAccounts.Selector }},{{ .EndpointsSummary.NumTotal }},{{ .EndpointsSummary.NumIngressProtected }},{{ .EndpointsSummary.NumEgressProtected }},{{ .EndpointsSummary.NumIngressFromInternet }},{{ .EndpointsSummary.NumEgressToInternet }},{{ .EndpointsSummary.NumIngressFromOtherNamespace }},{{ .EndpointsSummary.NumEgressToOtherNamespace }},{{ .EndpointsSummary.NumEnvoyEnabled }}`
 		rendered := `startTime,endTime,endpointSelector,namespaceSelector,serviceAccountSelectors,endpointsNumInScope,endpointsNumIngressProtected,endpointsNumEgressProtected,endpointsNumIngressFromInternet,endpointsNumEgressToInternet,endpointsNumIngressFromOtherNamespace,endpointsNumEgressToOtherNamespace,endpointsNumEnvoyEnabled
-2019-04-01 00:00:00 +0000 UTC,2019-04-01 10:00:00 +0000 UTC,lbl == 'lbl-val',endpoint-namespace-selector,serviceaccount-selector,1,10,100,1000,9000,900,90,9`
+2019-04-01T00:00:00Z,2019-04-01T10:00:00Z,lbl == 'lbl-val',endpoint-namespace-selector,serviceaccount-selector,1,10,100,1000,9000,900,90,9`
 
 		matches, err := compliance.RenderTemplate(tmpl, &compliance.ReportDataSample)
 		Expect(err).ToNot(HaveOccurred())
@@ -40,7 +40,7 @@ var _ = Describe("ReportTemplate Renderer", func() {
 	It("inventory-endpoints report rendering", func() {
 		tmpl := `name,namespace,ingressProtected,egressProtected,envoyEnabled,appliedPolicies,services
 {{ range .Endpoints -}}
-  {{ .Endpoint.Name }},{{ .Endpoint.Namespace }},{{ .IngressProtected }},{{ .EgressProtected }},{{ .EnvoyEnabled }},{{ join .AppliedPolicies ";" }},{{ join .Services ";" }}
+  {{ .Endpoint.Name }},{{ .Endpoint.Namespace }},{{ .IngressProtected }},{{ .EgressProtected }},{{ .EnvoyEnabled }},{{ join ";" .AppliedPolicies }},{{ join ";" .Services }}
 {{- end }}`
 		rendered := `name,namespace,ingressProtected,egressProtected,envoyEnabled,appliedPolicies,services
 sample-res,sample-ns,false,true,false,sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res),sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res)`
@@ -53,7 +53,7 @@ sample-res,sample-ns,false,true,false,sample-kind(sample-ns/sample-res);sample-k
 	It("inventory-endpoints report rendering with | separator", func() {
 		tmpl := `name,namespace,ingressProtected,egressProtected,envoyEnabled,appliedPolicies,services
 {{ range .Endpoints -}}
-  {{ .Endpoint.Name }},{{ .Endpoint.Namespace }},{{ .IngressProtected }},{{ .EgressProtected }},{{ .EnvoyEnabled }},{{ join .AppliedPolicies "|" }},{{ join .Services "|" }}
+  {{ .Endpoint.Name }},{{ .Endpoint.Namespace }},{{ .IngressProtected }},{{ .EgressProtected }},{{ .EnvoyEnabled }},{{ join "|" .AppliedPolicies }},{{ join "|" .Services }}
 {{- end }}`
 		rendered := `name,namespace,ingressProtected,egressProtected,envoyEnabled,appliedPolicies,services
 sample-res,sample-ns,false,true,false,sample-kind(sample-ns/sample-res)|sample-kind(sample-ns/sample-res),sample-kind(sample-ns/sample-res)|sample-kind(sample-ns/sample-res)`
@@ -68,7 +68,7 @@ sample-res,sample-ns,false,true,false,sample-kind(sample-ns/sample-res)|sample-k
 
 		tmpl := `name,namespace,ingressProtected,egressProtected,envoyEnabled,appliedPolicies,services
 {{ range .Endpoints -}}
-  {{ .Endpoint.Name }},{{ .Endpoint.Namespace }},{{ .IngressProtected }},{{ .EgressProtected }},{{ .EnvoyEnabled }},{{ join .AppliedPolicies ";" }},{{ join .Services ";" }}
+  {{ .Endpoint.Name }},{{ .Endpoint.Namespace }},{{ .IngressProtected }},{{ .EgressProtected }},{{ .EnvoyEnabled }},{{ join ";" .AppliedPolicies }},{{ join ";" .Services }}
 {{ end }}`
 		rendered := `sample-res,sample-ns,false,true,false,sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res),sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res)`
 
@@ -96,7 +96,7 @@ sample-res,sample-ns,false,true,false,sample-kind(sample-ns/sample-res)|sample-k
 		Expect(endpointList[endpointsCount]).To(Equal(rendered))
 
 		// Cap maximum entries
-		cappedTmpl := `{{ range .Endpoints -}} {{ join .AppliedPolicies ";" 3 }} {{ end }}`
+		cappedTmpl := `{{ range .Endpoints -}} {{ joinN ";" 3 .AppliedPolicies }} {{ end }}`
 
 		matches, err = compliance.RenderTemplate(cappedTmpl, &ard)
 		Expect(err).ToNot(HaveOccurred())
@@ -134,26 +134,21 @@ sample-res,sample-ns,false,true,false,sample-kind(sample-ns/sample-res)|sample-k
 		_, err := compliance.RenderTemplate(tmpl, &compliance.ReportDataSample)
 		Expect(err).To(HaveOccurred())
 
-		// Invalid argument (not a slice)
-		noSliceTmpl := `{{ join .EndpointsNumTotal ";" }}`
-		_, err = compliance.RenderTemplate(noSliceTmpl, &compliance.ReportDataSample)
-		Expect(err).To(HaveOccurred())
-
 		// Invalid max-entries argument
-		invalidCappedTmpl := `{{ range .Endpoints -}} {{ join .AppliedPolicies ";" "1" }} {{ end }}`
+		invalidCappedTmpl := `{{ range .Endpoints -}} {{ join ";" "1" .AppliedPolicies }} {{ end }}`
 		_, err = compliance.RenderTemplate(invalidCappedTmpl, &compliance.ReportDataSample)
 		Expect(err).To(HaveOccurred())
 	})
 
 	It("audit report rendering - json", func() {
-		tmpl := "{{ json .AuditEvents }}"
+		tmpl := "{{ toJson .AuditEvents }}"
 
 		_, err := compliance.RenderTemplate(tmpl, &compliance.ReportDataSample)
 		Expect(err).ToNot(HaveOccurred())
 	})
 
 	It("audit report rendering - yaml", func() {
-		tmpl := "{{ yaml .AuditEvents }}"
+		tmpl := "{{ toYaml .AuditEvents }}"
 
 		_, err := compliance.RenderTemplate(tmpl, &compliance.ReportDataSample)
 		Expect(err).ToNot(HaveOccurred())

@@ -16,15 +16,17 @@ package compliance
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
-	"reflect"
+	"strings"
 	"text/template"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/apis/audit"
 
+	"time"
+
+	"github.com/Masterminds/sprig"
 	yaml "github.com/projectcalico/go-yaml-wrapper"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 )
@@ -154,12 +156,7 @@ func RenderTemplate(reportTemplateText string, reportData *api.ReportData) (rend
 		}
 	}()
 
-	fnmp := template.FuncMap{
-		"join": joinResourceIds,
-		"json": jsonify,
-		"yaml": yamlify,
-	}
-	templ, err := template.New("report-template").Funcs(fnmp).Parse(reportTemplateText)
+	templ, err := template.New("report-template").Funcs(templateFuncs()).Parse(reportTemplateText)
 	if err != nil {
 		return rendered, err
 	}
@@ -174,54 +171,7 @@ func RenderTemplate(reportTemplateText string, reportData *api.ReportData) (rend
 	return rendered, nil
 }
 
-//
-// Join a list of ResourceID similar to  strings.Join() with a separator, capping maximum number of list
-// entries to avoid running into a huge list.
-//
-func joinResourceIds(resources interface{}, sep string, max ...int) (joined string, ret error) {
-	// First verify that right resource type is passed.
-	if reflect.TypeOf(resources).Kind() != reflect.Slice {
-		return joined, fmt.Errorf("Resource used with join is not a Slice")
-	}
-
-	res := reflect.ValueOf(resources)
-	maxResources := res.Len()
-	// Check if maximum resource count is specified.
-	if len(max) > 0 {
-		// Use the first value.
-		maxResources = max[0]
-	}
-
-	buf := new(bytes.Buffer)
-	for i := 0; i < maxResources; i++ {
-		if i != 0 {
-			buf.WriteString(sep)
-		}
-
-		fmt.Fprintf(buf, "%s", res.Index(i).Interface())
-	}
-
-	return buf.String(), nil
-}
-
-//
-// Print indented-JSON for a given struct.
-//
-func jsonify(resource interface{}) (string, error) {
-	const prefix = ""
-	const indent = "  "
-
-	jsoned, err := json.MarshalIndent(resource, prefix, indent)
-	if err != nil {
-		return "", err
-	}
-
-	return string(jsoned), nil
-}
-
-//
-// Print YAML for a given struct.
-//
+// yamlify prints YAML for a given struct.
 func yamlify(resource interface{}) (string, error) {
 	yamled, err := yaml.Marshal(resource)
 	if err != nil {
@@ -229,4 +179,51 @@ func yamlify(resource interface{}) (string, error) {
 	}
 
 	return string(yamled), nil
+}
+
+// formatDate returns the date in the specified format
+func getFormatDateFn(format string) func(date interface{}) string {
+	return func(date interface{}) string {
+		switch d := date.(type) {
+		case time.Time:
+			return d.Format(format)
+		case *time.Time:
+			if d == nil {
+				return "nil"
+			}
+			return d.Format(format)
+		case metav1.Time:
+			return d.Format(format)
+		case *metav1.Time:
+			if d == nil {
+				return "nil"
+			}
+			return d.Format(format)
+		}
+		return fmt.Sprint(date)
+	}
+}
+
+func templateFuncs() template.FuncMap {
+	// Use the functions defined by sprig and add a couple more.
+	funcs := sprig.GenericFuncMap()
+
+	// Add YAML conversion, naming as per toJson.
+	funcs["toYaml"] = yamlify
+
+	// Add a joinN function which joins an array of strings up to a max number of elements. We utilize the
+	// sprig toStrings() method to convert the final arg to a string slice.
+	toStrings := funcs["toStrings"].(func(interface{}) []string)
+	funcs["joinN"] = func(sep string, max int, v interface{}) string {
+		s := toStrings(v)
+		if len(s) > max {
+			s = s[:max]
+		}
+		return strings.Join(s, sep)
+	}
+
+	// Add a useful time formats, we can add more later if required.
+	funcs["dateRfc3339"] = getFormatDateFn(time.RFC3339)
+
+	return template.FuncMap(funcs)
 }
