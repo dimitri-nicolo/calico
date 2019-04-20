@@ -9,13 +9,25 @@ spec:
   downloadTemplates:
   - name: summary.csv
     template: |
-      startTime,endTime,endpointSelector,namespaceNames,namespaceSelector,serviceAccountNames,serviceAccountSelectors,endpointsNumInScope,endpointsNumIngressProtected,endpointsNumEgressProtected,endpointsNumIngressFromInternet,endpointsNumEgressToInternet,endpointsNumIngressFromOtherNamespace,endpointsNumEgressToOtherNamespace,endpointsNumEnvoyEnabled
-      {{ .StartTime }},{{ .EndTime }},{{ .ReportSpec.EndpointsSelection.EndpointSelector }},{{ if .ReportSpec.EndpointsSelection.Namespaces }}{{ join .ReportSpec.EndpointsSelection.Namespaces.Names ";" }},{{ .ReportSpec.EndpointsSelection.Namespaces.Selector }}{{ else }},{{ end }},{{ if .ReportSpec.EndpointsSelection.ServiceAccounts }}{{ join .ReportSpec.EndpointsSelection.ServiceAccounts.Names ";" }},{{ .ReportSpec.EndpointsSelection.ServiceAccounts.Selector }}{{ else }},{{ end }},{{ .EndpointsSummary.NumTotal }},{{ .EndpointsSummary.NumIngressProtected }},{{.EndpointsSummary.NumEgressProtected }},{{ .EndpointsSummary.NumIngressFromInternet }},{{ .EndpointsSummary.NumEgressToInternet }},{{ .EndpointsSummary.NumIngressFromOtherNamespace }},{{ .EndpointsSummary.NumEgressToOtherNamespace }},{{ .EndpointsSummary.NumEnvoyEnabled }}
+      startTime,endTime,endpointSelector,namespaceNames,namespaceSelector,serviceAccountNames,serviceAccountSelector,endpointsNumInScope,endpointsNumIngressProtected,endpointsNumEgressProtected,namespacesNumInScope,namespacesNumIngressProtected,namespacesNumEgressProtected,servicesNumInScope,servicesNumIngressProtected
+      {{ .StartTime }},{{ .EndTime }},{{ .ReportSpec.EndpointsSelection.EndpointSelector }},{{ if .ReportSpec.EndpointsSelection.Namespaces }}{{ join .ReportSpec.EndpointsSelection.Namespaces.Names ";" }},{{ .ReportSpec.EndpointsSelection.Namespaces.Selector }}{{ else }},{{ end }},{{ if .ReportSpec.EndpointsSelection.ServiceAccounts }}{{ join .ReportSpec.EndpointsSelection.ServiceAccounts.Names ";" }},{{ .ReportSpec.EndpointsSelection.ServiceAccounts.Selector }}{{ else }},{{ end }},{{ .EndpointsSummary.NumTotal }},{{ .EndpointsSummary.NumIngressProtected }},{{ .EndpointsSummary.NumEgressProtected }},{{ .NamespacesSummary.NumTotal  }},{{ .NamespacesSummary.NumIngressProtected }},{{ .NamespacesSummary.NumEgressProtected }},{{ .ServicesSummary.NumTotal }},{{ .ServicesSummary.NumIngressProtected }}
   - name: endpoints.csv
     template: |
       endpoint,ingressProtected,egressProtected,envoyEnabled,appliedPolicies,services
       {{ range .Endpoints -}}
       {{ .Endpoint }},{{ .IngressProtected }},{{ .EgressProtected }},{{ .EnvoyEnabled }},{{ join .AppliedPolicies ";" }},{{ join .Services ";" }}
+      {{ end }}
+  - name: namespaces.csv
+    template: |
+      name,ingressProtected,egressProtected,envoyEnabled
+      {{ range .Namespaces -}}
+      {{ .Namespace }},{{ .IngressProtected }},{{ .EgressProtected }},{{ .EnvoyEnabled }}
+      {{ end }}
+  - name: services.csv
+    template: |
+      name,ingressProtected,envoyEnabled
+      {{ range .Services -}}
+      {{ .Service }},{{ .IngressProtected }},{{ .EnvoyEnabled }}
       {{ end }}
   includeEndpointData: true
   uiSummaryTemplate:

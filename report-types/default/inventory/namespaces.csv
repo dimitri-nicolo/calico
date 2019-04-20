@@ -1,0 +1,4 @@
+name,ingressProtected,egressProtected,envoyEnabled
+{{ range .Namespaces -}}
+{{ .Namespace }},{{ .IngressProtected }},{{ .EgressProtected }},{{ .EnvoyEnabled }}
+{{ end }}
