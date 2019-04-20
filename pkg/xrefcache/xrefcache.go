@@ -136,7 +136,10 @@ func (c *xrefCache) OnUpdate(update syncer.Update) {
 		cache := c.caches[id.TypeMeta]
 		entry := cache.get(id)
 		if entry == nil {
-			log.Errorf("Resource queued for recalculation, but is no longer in cache: %s", id)
+			// For a deletion event this is possible. We perhaps should try and prevent against this, but accepting
+			// this as a valid scenario keeps the processing simpler (i.e. we don't have to worry about ordering of
+			// events).
+			log.Infof("Resource queued for recalculation, but is no longer in cache: %s", id)
 			continue
 		}
 
@@ -215,6 +218,8 @@ func (c *xrefCache) queueUpdate(id apiv3.ResourceID, entry CacheEntry, update sy
 	if entry == nil {
 		entry = c.Get(id)
 		if entry == nil {
+			// If the resource was deleted then cross references should have been updated. This is therefore an
+			// unexpected condition.
 			log.Errorf("Queue recalculation request for resource that is no longer in cache: %s", id)
 			return
 		}
