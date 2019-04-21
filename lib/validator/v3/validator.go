@@ -29,6 +29,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
 
+	"math/bits"
+
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/compliance"
 	"github.com/projectcalico/libcalico-go/lib/errors"
@@ -1356,8 +1358,20 @@ func validateGlobalReportType(structLevel validator.StructLevel) {
 func validateReportSchedule(fl validator.FieldLevel) bool {
 	rs := fl.Field().String()
 
-	_, err := cron.ParseStandard(rs)
-	return err == nil
+	// Check that the cron tab parses ok.
+	s, err := cron.ParseStandard(rs)
+	if err != nil {
+		return false
+	}
+
+	// Check that there are at most 2 schedules per hour.
+	if ss, ok := s.(*cron.SpecSchedule); ok {
+		if bits.OnesCount64(ss.Minute) > 2 {
+			return false
+		}
+	}
+
+	return true
 }
 
 func validateObjectMetaAnnotations(structLevel validator.StructLevel, annotations map[string]string) {

@@ -19,12 +19,11 @@ import (
 	"fmt"
 	"strings"
 	"text/template"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/apis/audit"
-
-	"time"
 
 	"github.com/Masterminds/sprig"
 	yaml "github.com/projectcalico/go-yaml-wrapper"

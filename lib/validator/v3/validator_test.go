@@ -2480,7 +2480,37 @@ func init() {
 			},
 			false,
 		),
-		Entry("Allow valid CRON expression",
+		Entry("Allow valid CRON expression with 1 schedule per hour",
+			&api.GlobalReport{
+				ObjectMeta: v1.ObjectMeta{Name: "gr"},
+				Spec: api.ReportSpec{
+					ReportType:  "summary",
+					JobSchedule: "0 * * * *",
+				},
+			},
+			true,
+		),
+		Entry("Allow valid CRON expression with 2 schedules per hour",
+			&api.GlobalReport{
+				ObjectMeta: v1.ObjectMeta{Name: "gr"},
+				Spec: api.ReportSpec{
+					ReportType:  "summary",
+					JobSchedule: "0,30 * * * *",
+				},
+			},
+			true,
+		),
+		Entry("Disallow valid CRON expression with 3 schedules per hour",
+			&api.GlobalReport{
+				ObjectMeta: v1.ObjectMeta{Name: "gr"},
+				Spec: api.ReportSpec{
+					ReportType:  "summary",
+					JobSchedule: "0,30,35 * * * *",
+				},
+			},
+			false,
+		),
+		Entry("Disallow valid CRON expression with wildcard minute",
 			&api.GlobalReport{
 				ObjectMeta: v1.ObjectMeta{Name: "gr"},
 				Spec: api.ReportSpec{
@@ -2488,7 +2518,7 @@ func init() {
 					JobSchedule: "* * * * *",
 				},
 			},
-			true,
+			false,
 		),
 	)
 }
