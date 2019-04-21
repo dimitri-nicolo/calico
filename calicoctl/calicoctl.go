@@ -40,6 +40,7 @@ func main() {
     convert   Convert config files between different API versions.
     ipam      IP address management.
     node      Calico node management.
+    validate  Validate a manifest (currently only license manifests supported).
     version   Display the version of calicoctl.
 
 Options:
@@ -100,6 +101,8 @@ Description:
 			commands.Node(args)
 		case "ipam":
 			commands.IPAM(args)
+		case "validate":
+			commands.Validate(args)
 		default:
 			fmt.Fprintf(os.Stderr, "Unknown command: %q\n", command)
 			fmt.Println(doc)

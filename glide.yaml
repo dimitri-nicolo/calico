@@ -16,7 +16,7 @@ import:
 - package: github.com/projectcalico/go-yaml-wrapper
 # Pinning to old version until client code is updated.
 - package: github.com/tigera/licensing
-  version: c9432e3124d3f9da2f3e34a703d815b072f6b0b4
+  version: 4ab60de6cc1fe70e197d62e57963165c66268294
   repo: git@github.com:tigera/licensing
   vcs: git
   subpackages:
@@ -73,3 +73,10 @@ import:
   subpackages:
     - unix
     - windows
+- package: github.com/Azure/go-autorest
+  version: 1ff28809256a84bb6966640ff3d0371af82ccba4
+  subpackages:
+  - autorest
+  - autorest/adal
+  - autorest/azure
+  - autorest/date
