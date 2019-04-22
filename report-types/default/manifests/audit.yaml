@@ -14,13 +14,13 @@ spec:
   - name: summary.csv
     template: |
       startTime,endTime,numCreatedPolicies,numModifiedPolicies,numDeletedPolicies
-      {{ .StartTime }},{{ .EndTime }},{{ .AuditSummary.NumCreate }},{{ .AuditSummary.NumModify }},{{ .AuditSummary.NumDelete }}
+      {{ dateRfc3339 .StartTime }},{{ dateRfc3339 .EndTime }},{{ .AuditSummary.NumCreate }},{{ .AuditSummary.NumModify }},{{ .AuditSummary.NumDelete }}
   - name: events.json
     template: |
-      {{ json .AuditEvents }}
+      {{ toJson .AuditEvents }}
   - name: events.yaml
     template: |
-      {{ yaml .AuditEvents }}
+      {{ toYaml .AuditEvents }}
   uiSummaryTemplate:
     name: ui-summary.json
     template: '{"heading":"Network policy configuration changes","type":"panel","widgets":[{"data":[{"label":"Created","value":{{
