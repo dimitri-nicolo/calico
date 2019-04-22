@@ -30,6 +30,9 @@ import (
 // from any state to any other state (by feeding in the corresponding
 // datastore updates) and then assert that the dataplane matches the resulting
 // state.
+//
+// Notice that most of these pre-defined states are compounded. A small test
+// might prefer to start with a simpler state instead.
 
 // empty is the base state, with nothing in the datastore or dataplane.
 var empty = NewState().withName("<empty>")
@@ -72,6 +75,27 @@ var withHttpMethodPolicy = initialisedStore.withKVUpdates(
 ).withTotalALPPolicies(
 	1,
 ).withName("with http-method policy")
+
+// DNS Policy state(s)
+var withDNSPolicy = initialisedStore.withKVUpdates(
+	KVPair{Key: localWlEpKey1, Value: &localWlEpDNS},
+	KVPair{Key: netSetDstDomainsKey, Value: &netSetDstDomains},
+	KVPair{Key: PolicyKey{Tier: "default", Name: "default.dns-basic"}, Value: &policyDNSBasic},
+	KVPair{Key: PolicyKey{Tier: "default", Name: "default.ext-service"}, Value: &policyDNSExternal},
+).withActivePolicies(
+	proto.PolicyID{"default", "default.dns-basic"},
+	proto.PolicyID{"default", "default.ext-service"},
+).withEndpoint(
+	localWlEp1Id,
+	[]mock.TierInfo{
+		{"default", nil, []string{"default.ext-service", "default.dns-basic"}},
+	},
+).withIPSet(allSelectorId, []string{
+	"fc00:fe11::1/128",
+	"fc00:fe11::2/128",
+	"10.0.0.1/32",
+	"10.0.0.2/32",
+}).withIPSet(selectorIdDNSExternal, allowedEgressDomains).withIPSet(selectorIdDNSEmpty, []string{}).withName("with DNS Policy")
 
 // withServiceAccountPolicy adds two policies containing service account selector.
 var withServiceAccountPolicy = initialisedStore.withKVUpdates(

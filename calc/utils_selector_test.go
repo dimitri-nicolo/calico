@@ -15,6 +15,8 @@
 package calc_test
 
 import (
+	"strings"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/libcalico-go/lib/hash"
@@ -27,6 +29,17 @@ func selectorID(selStr string) string {
 		log.Panicf("Failed to parse %v: %v", selStr, err)
 	}
 	return sel.UniqueID()
+}
+
+func domainSelectorID(selStr string, domains []string) string {
+	if len(selStr) != 0 {
+		selID := selectorID(selStr)
+		return "d" + selID[1:]
+	}
+	if len(domains) == 0 {
+		log.Panic("either selector or domains must be specified")
+	}
+	return (hash.MakeUniqueID("d", strings.Join(domains, "#")))
 }
 
 func namedPortID(selector, protocol, portName string) string {

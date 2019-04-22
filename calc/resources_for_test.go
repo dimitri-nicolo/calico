@@ -569,3 +569,58 @@ var netSet2 = NetworkSet{
 		"a": "b",
 	},
 }
+
+// Resources for DNS Policy unit testing.
+var allowedEgressDomains = []string{"microsoft.com", "www.microsoft.com"}
+
+var netSetDstDomainsKey = NetworkSetKey{Name: "netset-domains"}
+var netSetDstDomains = NetworkSet{
+	AllowedEgressDomains: allowedEgressDomains,
+	Labels:               map[string]string{"external-service-name": "microsoft"},
+}
+
+var policyDNSBasic = Policy{
+	Selector: "name == 'dnspolicy'",
+	Order:    &order30,
+	Types:    []string{"egress"},
+	OutboundRules: []Rule{
+		{
+			Action:      "allow",
+			SrcSelector: allSelector,
+			Protocol:    &protoUDP,
+			DstPorts:    []numorstring.Port{numorstring.SinglePort(53)},
+		},
+		{
+			Action: "deny",
+		},
+	},
+}
+
+var dstSelectorDNSExternal = "external-service-name == 'microsoft'"
+var selectorIdDNSExternal = domainSelectorID(dstSelectorDNSExternal, allowedEgressDomains)
+var selectorIdDNSEmpty = selectorID(dstSelectorDNSExternal)
+
+var policyDNSExternal = Policy{
+	Selector: allSelector,
+	Order:    &order20,
+	Types:    []string{"egress"},
+	OutboundRules: []Rule{
+		{
+			Action:      "allow",
+			DstSelector: dstSelectorDNSExternal,
+		},
+	},
+}
+
+var localWlEpDNS = WorkloadEndpoint{
+	State: "active",
+	Name:  "cali1",
+	Mac:   mustParseMac("01:02:03:04:05:06"),
+	IPv4Nets: []net.IPNet{mustParseNet("10.0.0.1/32"),
+		mustParseNet("10.0.0.2/32")},
+	IPv6Nets: []net.IPNet{mustParseNet("fc00:fe11::1/128"),
+		mustParseNet("fc00:fe11::2/128")},
+	Labels: map[string]string{
+		"name": "dnspolicy",
+	},
+}

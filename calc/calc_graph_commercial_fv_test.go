@@ -804,6 +804,9 @@ var commercialTests = []StateList{
 		localEpAndRemoteEpWithPolicyAndTier,
 		remoteEpsWithPolicyAndTier},
 
+	// DNS Policy unit tests.
+	{withDNSPolicy},
+
 	// TODO(smc): Test config calculation
 	// TODO(smc): Test mutation of endpoints
 	// TODO(smc): Test mutation of host endpoints
