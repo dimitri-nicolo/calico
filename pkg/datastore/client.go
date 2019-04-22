@@ -23,29 +23,14 @@ type calicoInterface clientv3.ProjectcalicoV3Interface
 // code.
 type ClientSet interface {
 	k8sInterface
+
 	calicoInterface
 	list.Source
 }
 
 // MustGetKubernetesClient returns a kubernetes client.
 func MustGetKubernetesClient() kubernetes.Interface {
-	kubeconfig := os.Getenv("KUBECONFIG")
-	var config *rest.Config
-	var err error
-	if kubeconfig == "" {
-		// creates the in-cluster config
-		config, err = rest.InClusterConfig()
-		if err != nil {
-			panic(err.Error())
-		}
-	} else {
-		// creates a config from supplied kubeconfig
-		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
-		if err != nil {
-			panic(err.Error())
-		}
-	}
-	config.Timeout = 15 * time.Second
+	config := MustGetConfig()
 
 	// Build k8s client
 	k8sClient, err := kubernetes.NewForConfig(config)
@@ -53,12 +38,10 @@ func MustGetKubernetesClient() kubernetes.Interface {
 		log.WithError(err).Debug("Failed to load k8s client")
 		panic(err)
 	}
-
 	return k8sClient
 }
 
-// MustGetCalicoClient returns a Calico client.
-func MustGetCalicoClient() clientv3.ProjectcalicoV3Interface {
+func MustGetConfig() *rest.Config {
 	kubeconfig := os.Getenv("KUBECONFIG")
 	var config *rest.Config
 	var err error
@@ -66,16 +49,24 @@ func MustGetCalicoClient() clientv3.ProjectcalicoV3Interface {
 		// creates the in-cluster config
 		config, err = rest.InClusterConfig()
 		if err != nil {
+			log.WithError(err).Debug("Could not get in cluster config")
 			panic(err.Error())
 		}
 	} else {
 		// creates a config from supplied kubeconfig
 		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
 		if err != nil {
+			log.WithError(err).Debug("Could not process kubeconfig file")
 			panic(err.Error())
 		}
 	}
 	config.Timeout = 15 * time.Second
+	return config
+}
+
+// MustGetCalicoClient returns a Calico client.
+func MustGetCalicoClient() clientv3.ProjectcalicoV3Interface {
+	config := MustGetConfig()
 
 	// Build calico client
 	calicoClient, err := calicoclient.NewForConfig(config)
@@ -96,5 +87,6 @@ func MustGetClientSet() ClientSet {
 
 type clientSet struct {
 	k8sInterface
+
 	calicoInterface
 }

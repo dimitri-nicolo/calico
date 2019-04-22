@@ -5,18 +5,18 @@ import:
 - package: github.com/sirupsen/logrus
   version: ^1.0.4
 - package: github.com/projectcalico/libcalico-go
-  vcs: git
   repo: git@github.com:tigera/libcalico-go-private.git
+  vcs: git
 - package: github.com/tigera/licensing
+  version: cb027c7c879597e0e02f2411c0c201752bab39c8
   repo: git@github.com:tigera/licensing
   vcs: git
-  version: cb027c7c879597e0e02f2411c0c201752bab39c8
   subpackages:
   - client
 - package: github.com/projectcalico/felix
-  vcs: git
-  repo: git@github.com:tigera/felix-private.git
   version: 51d5200862f2f306c0a0ffadffd6d5f59602d995
+  repo: git@github.com:tigera/felix-private.git
+  vcs: git
   subpackages:
   - labelindex
 - package: k8s.io/client-go
@@ -28,6 +28,8 @@ import:
 - package: github.com/mailru/easyjson
   version: 03f2033d19d5860aef995fe360ac7d395cd8ce65
 - package: github.com/tigera/calico-k8sapiserver
-  vcs: git
-  repo: git@github.com:tigera/calico-k8sapiserver.git
   version: 1204a3060dc52f05777d5011fa7cd269a5d28869
+  repo: git@github.com:tigera/calico-k8sapiserver.git
+  vcs: git
+- package: github.com/tigera/es-proxy-image
+  version: ad8d517e8d6431c9429be735766e7b971efdad80
