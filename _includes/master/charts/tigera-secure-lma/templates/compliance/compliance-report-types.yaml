@@ -1,0 +1,1 @@
+{{ .Files.Get "compliance-report-types.yaml" }}

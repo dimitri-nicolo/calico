@@ -82,12 +82,15 @@ def gen_values(versions, imageNames, imageRegistry)
     complianceController:
       image: #{imageRegistry}#{imageNames["compliance-controller"]}
       tag: #{versions["compliance-controller"]}
-    complianceServer:
-      image: #{imageRegistry}#{imageNames["compliance-server"]}
-      tag: #{versions["compliance-server"]}
+    complianceReporter:
+      image: #{imageRegistry}#{imageNames["compliance-reporter"]}
+      tag: #{versions["compliance-reporter"]}
     complianceSnapshotter:
       image: #{imageRegistry}#{imageNames["compliance-snapshotter"]}
       tag: #{versions["compliance-snapshotter"]}
+    complianceServer:
+      image: #{imageRegistry}#{imageNames["compliance-server"]}
+      tag: #{versions["compliance-server"]}
 
     EOF
 end

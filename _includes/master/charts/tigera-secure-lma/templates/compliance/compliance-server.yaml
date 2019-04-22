@@ -1,4 +1,3 @@
-{{- $elasticMode := include "tigera-secure-lma.elasticsearch.mode" . }}
 kind: ServiceAccount
 apiVersion: v1
 metadata:
@@ -10,44 +9,31 @@ metadata:
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRole
 metadata:
-  name: compliance-server-role
+  name: tigera-compliance-server
 rules:
-  - apiGroups: ["extensions","networking.k8s.io",""]
-    resources:
-      - networkpolicies
-      - nodes
-      - namespaces
-      - pods
-      - serviceaccounts
-    verbs:
-      - get
-      - list
-      - watch
-  - apiGroups: ["projectcalico.org"]
-    resources:
-      - globalreporttypes
-      - globalreports
-    verbs:
-      - get
-      - list
-      - watch
+- apiGroups: ["projectcalico.org"]
+  resources:
+    - globalreporttypes
+    - globalreports
+  verbs:
+    - get
+    - list
+    - watch
 
 ---
-
 
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRoleBinding
 metadata:
-  name: compliance-server-binding
+  name: tigera-compliance-server
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: compliance-server-role
+  name: tigera-compliance-server
 subjects:
 - kind: ServiceAccount
   name: tigera-compliance-server
   namespace: calico-monitoring
-
 
 ---
 
@@ -66,7 +52,6 @@ spec:
     k8s-app: compliance-server
 
 ---
-
 
 apiVersion: apps/v1
 kind: Deployment

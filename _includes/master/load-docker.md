@@ -56,6 +56,10 @@
    docker pull {{page.registry}}{{site.imageNames["elastic-tsee-installer"]}}:{{site.data.versions[page.version].first.components["elastic-tsee-installer"].version}}
    docker pull {{page.registry}}{{site.imageNames["intrusion-detection-controller"]}}:{{site.data.versions[page.version].first.components["intrusion-detection-controller"].version}}
    docker pull {{page.registry}}{{site.imageNames["es-curator"]}}:{{site.data.versions[page.version].first.components["es-curator"].version}}
+   docker pull {{page.registry}}{{site.imageNames["compliance-controller"]}}:{{site.data.versions[page.version].first.components["compliance-controller"].version}}
+   docker pull {{page.registry}}{{site.imageNames["compliance-reporter"]}}:{{site.data.versions[page.version].first.components["compliance-reporter"].version}}
+   docker pull {{page.registry}}{{site.imageNames["compliance-snapshotter"]}}:{{site.data.versions[page.version].first.components["compliance-snapshotter"].version}}
+   docker pull {{page.registry}}{{site.imageNames["compliance-server"]}}:{{site.data.versions[page.version].first.components["compliance-server"].version}}
    docker pull quay.io/coreos/configmap-reload:{{site.data.versions[page.version].first.components["configmap-reload"].version}}
    docker pull quay.io/coreos/prometheus-config-reloader:{{site.data.versions[page.version].first.components["prometheus-config-reloader"].version}}
    docker pull quay.io/coreos/prometheus-operator:{{site.data.versions[page.version].first.components["prometheus-operator"].version}}
@@ -84,6 +88,10 @@
    docker tag {{page.registry}}{{site.imageNames["elastic-tsee-installer"]}}:{{site.data.versions[page.version].first.components["elastic-tsee-installer"].version}} <YOUR-REGISTRY>/{{site.imageNames["elastic-tsee-installer"]}}:{{site.data.versions[page.version].first.components["elastic-tsee-installer"].version}}
    docker tag {{page.registry}}{{site.imageNames["intrusion-detection-controller"]}}:{{site.data.versions[page.version].first.components["intrusion-detection-controller"].version}} <YOUR-REGISTRY>/{{site.imageNames["intrusion-detection-controller"]}}:{{site.data.versions[page.version].first.components["intrusion-detection-controller"].version}}
    docker tag {{page.registry}}{{site.imageNames["es-curator"]}}:{{site.data.versions[page.version].first.components["es-curator"].version}} <YOUR-REGISTRY>/{{site.imageNames["es-curator"]}}:{{site.data.versions[page.version].first.components["es-curator"].version}}
+   docker tag {{page.registry}}{{site.imageNames["compliance-controller"]}}:{{site.data.versions[page.version].first.components["compliance-controller"].version}} <YOUR-REGISTRY>/{{site.imageNames["compliance-controller"]}}:{{site.data.versions[page.version].first.components["compliance-controll"].version}}
+   docker tag {{page.registry}}{{site.imageNames["compliance-reporter"]}}:{{site.data.versions[page.version].first.components["compliance-reporter"].version}} <YOUR-REGISTRY>/{{site.imageNames["compliance-reporter"]}}:{{site.data.versions[page.version].first.components["compliance-controll"].version}}
+   docker tag {{page.registry}}{{site.imageNames["compliance-snapshotter"]}}:{{site.data.versions[page.version].first.components["compliance-snapshotter"].version}} <YOUR-REGISTRY>/{{site.imageNames["compliance-snapshotter"]}}:{{site.data.versions[page.version].first.components["compliance-controll"].version}}
+   docker tag {{page.registry}}{{site.imageNames["compliance-server"]}}:{{site.data.versions[page.version].first.components["compliance-server"].version}} <YOUR-REGISTRY>/{{site.imageNames["compliance-server"]}}:{{site.data.versions[page.version].first.components["compliance-controll"].version}}
    docker tag quay.io/coreos/configmap-reload:{{site.data.versions[page.version].first.components["configmap-reload"].version}} <YOUR-REGISTRY>/coreos/configmap-reload:{{site.data.versions[page.version].first.components["configmap-reload"].version}}
    docker tag quay.io/coreos/prometheus-config-reloader:{{site.data.versions[page.version].first.components["prometheus-config-reloader"].version}} <YOUR-REGISTRY>/coreos/prometheus-config-reloader:{{site.data.versions[page.version].first.components["prometheus-config-reloader"].version}}
    docker tag quay.io/coreos/prometheus-operator:{{site.data.versions[page.version].first.components["prometheus-operator"].version}} <YOUR-REGISTRY>/coreos/prometheus-operator:{{site.data.versions[page.version].first.components["prometheus-operator"].version}}
@@ -115,6 +123,10 @@
    docker push <YOUR-REGISTRY>/{{site.imageNames["elastic-tsee-installer"]}}:{{site.data.versions[page.version].first.components["elastic-tsee-installer"].version}}
    docker push <YOUR-REGISTRY>/{{site.imageNames["intrusion-detection-controller"]}}:{{site.data.versions[page.version].first.components["intrusion-detection-controller"].version}}
    docker push <YOUR-REGISTRY>/{{site.imageNames["es-curator"]}}:{{site.data.versions[page.version].first.components["es-curator"].version}}
+   docker push <YOUR-REGISTRY>/{{site.imageNames["compliance-controller"]}}:{{site.data.versions[page.version].first.components["compliance-controller"].version}}
+   docker push <YOUR-REGISTRY>/{{site.imageNames["compliance-reporter"]}}:{{site.data.versions[page.version].first.components["compliance-reporter"].version}}
+   docker push <YOUR-REGISTRY>/{{site.imageNames["compliance-snapshotter"]}}:{{site.data.versions[page.version].first.components["compliance-snapshotter"].version}}
+   docker push <YOUR-REGISTRY>/{{site.imageNames["compliance-server"]}}:{{site.data.versions[page.version].first.components["compliance-server"].version}}
    docker push <YOUR-REGISTRY>/coreos/configmap-reload:{{site.data.versions[page.version].first.components["configmap-reload"].version}}
    docker push <YOUR-REGISTRY>/coreos/prometheus-config-reloader:{{site.data.versions[page.version].first.components["prometheus-config-reloader"].version}}
    docker push <YOUR-REGISTRY>/coreos/prometheus-operator:{{site.data.versions[page.version].first.components["prometheus-operator"].version}}
