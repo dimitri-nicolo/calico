@@ -50,9 +50,15 @@ type ReportSpec struct {
 	// Only required if audit logs are gathered in the report.
 	AuditEventsSelection AuditEventsSelection `json:"auditEventsSelection,omitempty" validate:"omitempty"`
 
-	// The reporting job schedule specified in cron format. This specifies the start time of each report. The reporting
-	// interval ends at the start of the next report.
-	JobSchedule string `json:"jobSchedule,omitempty" validate:"omitempty,reportschedule"`
+	// The report schedule specified in cron format. This specifies both the start and end times of each report,
+	// where the end time of one report becomes the start time of the next report.
+	// Separate jobs are created to generate a report, and the job generates the report data from archived audit
+	// and traffic data. To ensure this data is actually archived, the jobs to generate each report starts at a
+	// configurable time *after* the end time of the report that is being generated. The default job start delay is
+	// 30m, but is configurable through the compliance-controller environments.
+	// The cron format has minute accuracy, but only up to two values may be configured for the minute column which
+	// means you may only have at most two reports for each hour period.
+	Schedule string `json:"schedule,omitempty" validate:"omitempty,reportschedule"`
 
 	// The node selector used to specify which nodes the report job may be scheduled on.
 	JobNodeSelector map[string]string `json:"jobNodeSelector,omitempty" validate:"omitempty"`
@@ -65,20 +71,17 @@ type ReportSpec struct {
 
 // ReportStatus contains the status of the automated report generation.
 type ReportStatus struct {
-	// The last report jobs that completed successfully. The number of entries in this list is configurable through
-	// environments on the controller. Defaults to 50.
-	LastSuccessfulReportJobs []SuccessfulReportJob `json:"lastSuccessfulReportJobs,omitempty"`
+	// The configured report jobs that have completed successfully.
+	LastSuccessfulReportJobs []CompletedReportJob `json:"lastSuccessfulReportJobs,omitempty"`
 
-	// The last report jobs that failed. The number of entries in this list is configurable through
-	// environments on the controller. Defaults to 50.
-	LastFailedReportJobs []FailedReportJob `json:"lastFailedReportJobs,omitempty"`
+	// The configured report jobs that have failed.
+	LastFailedReportJobs []CompletedReportJob `json:"lastFailedReportJobs,omitempty"`
 
-	// The set of active report jobs. The maximum number of concurrent report jobs per report is configurable through
-	// environments on the controller. Defaults to 5.
+	// The set of active report jobs.
 	ActiveReportJobs []ReportJob `json:"activeReportJobs,omitempty"`
 
-	// The last time a report generation job was created by the controller.
-	LastScheduleTime *metav1.Time `json:"lastScheduleTime,omitempty"`
+	// The last scheduled job.
+	LastScheduledJob *ReportJob `json:"lastScheduledJob,omitempty"`
 }
 
 // ReportJob contains
@@ -89,28 +92,16 @@ type ReportJob struct {
 	// The end time of the report.
 	End metav1.Time `json:"end"`
 
-	// The ReportType as configured at the time the report job was created.
-	ReportType string `json:"reportType"`
-
-	// A reference to the report creation job. For successfully completed and failed jobs this job may no longer exist
-	// as it may have been garbage collected.
-	Job corev1.ObjectReference `json:"job"`
+	// A reference to the report creation job if known.
+	Job *corev1.ObjectReference `json:"job"`
 }
 
-// SuccessfulReportJob augments the ReportJob with completion details.
-type SuccessfulReportJob struct {
+// CompletedReportJob augments the ReportJob with completion details.
+type CompletedReportJob struct {
 	ReportJob `json:",inline"`
 
-	// The time the report was generated and archived.
-	GenerationTime metav1.Time `json:"generationTime"`
-}
-
-// FailedReportJob augments the ReportJob with error details.
-type FailedReportJob struct {
-	ReportJob `json:",inline"`
-
-	// The error resulting in the failed report generation.
-	Errors []ErrorCondition `json:"errors"`
+	// The time the report job completed.
+	JobCompletionTime *metav1.Time `json:"jobCompletionTime,omitempty"`
 }
 
 // EndpointsSelection is a set of selectors used to select the endpoints that are considered to be in-scope for the

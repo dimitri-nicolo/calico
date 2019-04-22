@@ -31,6 +31,7 @@ type ReportData struct {
 	ReportTypeSpec ReportTypeSpec `json:"reportTypeSpec"`
 	StartTime      metav1.Time    `json:"startTime"`
 	EndTime        metav1.Time    `json:"endTime"`
+	GenerationTime metav1.Time    `json:"generationTime"`
 
 	// The set of in-scope endpoints.
 	Endpoints []EndpointsReportEndpoint `json:"endpoints,omitempty"`

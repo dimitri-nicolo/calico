@@ -2474,8 +2474,8 @@ func init() {
 			&api.GlobalReport{
 				ObjectMeta: v1.ObjectMeta{Name: "gr"},
 				Spec: api.ReportSpec{
-					ReportType:  "summary",
-					JobSchedule: "61 * * * *",
+					ReportType: "summary",
+					Schedule:   "61 * * * *",
 				},
 			},
 			false,
@@ -2484,8 +2484,8 @@ func init() {
 			&api.GlobalReport{
 				ObjectMeta: v1.ObjectMeta{Name: "gr"},
 				Spec: api.ReportSpec{
-					ReportType:  "summary",
-					JobSchedule: "0 * * * *",
+					ReportType: "summary",
+					Schedule:   "0 * * * *",
 				},
 			},
 			true,
@@ -2494,8 +2494,8 @@ func init() {
 			&api.GlobalReport{
 				ObjectMeta: v1.ObjectMeta{Name: "gr"},
 				Spec: api.ReportSpec{
-					ReportType:  "summary",
-					JobSchedule: "0,30 * * * *",
+					ReportType: "summary",
+					Schedule:   "0,30 * * * *",
 				},
 			},
 			true,
@@ -2504,8 +2504,8 @@ func init() {
 			&api.GlobalReport{
 				ObjectMeta: v1.ObjectMeta{Name: "gr"},
 				Spec: api.ReportSpec{
-					ReportType:  "summary",
-					JobSchedule: "0,30,35 * * * *",
+					ReportType: "summary",
+					Schedule:   "0,30,35 * * * *",
 				},
 			},
 			false,
@@ -2514,8 +2514,8 @@ func init() {
 			&api.GlobalReport{
 				ObjectMeta: v1.ObjectMeta{Name: "gr"},
 				Spec: api.ReportSpec{
-					ReportType:  "summary",
-					JobSchedule: "* * * * *",
+					ReportType: "summary",
+					Schedule:   "* * * * *",
 				},
 			},
 			false,

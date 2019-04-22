@@ -65,7 +65,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalReport tests", testutils.Datastore
 					Namespace: "report-aes-ns1"},
 			},
 		},
-		JobSchedule: "0 0 * * *",
+		Schedule: "0 0 * * *",
 		JobNodeSelector: map[string]string{
 			"report-l1": "report-v1",
 		},
@@ -91,7 +91,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalReport tests", testutils.Datastore
 					Namespace: "report-aes-ns2"},
 			},
 		},
-		JobSchedule: "0 0 * * *",
+		Schedule: "0 0 * * *",
 		JobNodeSelector: map[string]string{
 			"report-l2": "report-v2",
 		},
