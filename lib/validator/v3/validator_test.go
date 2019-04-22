@@ -2413,7 +2413,7 @@ func init() {
 						Name: "foobar",
 						Template: `name,namespace,ingressProtected,egressProtected,envoyEnabled,appliedPolicies,services
 {{ range .Endpoints -}}
-  {{ .Endpoint.Name }},{{ .Endpoint.Namespace }},{{ .IngressProtected }},{{ .EgressProtected }},{{ .EnvoyEnabled }},{{ join .AppliedPolicies ";" }},{{ join .Services ";" }}
+  {{ .Endpoint.Name }},{{ .Endpoint.Namespace }},{{ .IngressProtected }},{{ .EgressProtected }},{{ .EnvoyEnabled }},{{ join ";" .AppliedPolicies }},{{ join ";" .Services }}
 {{- end }}`,
 					},
 				},
@@ -2474,21 +2474,51 @@ func init() {
 			&api.GlobalReport{
 				ObjectMeta: v1.ObjectMeta{Name: "gr"},
 				Spec: api.ReportSpec{
-					ReportType:  "summary",
-					JobSchedule: "61 * * * *",
+					ReportType: "summary",
+					Schedule:   "61 * * * *",
 				},
 			},
 			false,
 		),
-		Entry("Allow valid CRON expression",
+		Entry("Allow valid CRON expression with 1 schedule per hour",
 			&api.GlobalReport{
 				ObjectMeta: v1.ObjectMeta{Name: "gr"},
 				Spec: api.ReportSpec{
-					ReportType:  "summary",
-					JobSchedule: "* * * * *",
+					ReportType: "summary",
+					Schedule:   "0 * * * *",
 				},
 			},
 			true,
+		),
+		Entry("Allow valid CRON expression with 2 schedules per hour",
+			&api.GlobalReport{
+				ObjectMeta: v1.ObjectMeta{Name: "gr"},
+				Spec: api.ReportSpec{
+					ReportType: "summary",
+					Schedule:   "0,30 * * * *",
+				},
+			},
+			true,
+		),
+		Entry("Disallow valid CRON expression with 3 schedules per hour",
+			&api.GlobalReport{
+				ObjectMeta: v1.ObjectMeta{Name: "gr"},
+				Spec: api.ReportSpec{
+					ReportType: "summary",
+					Schedule:   "0,30,35 * * * *",
+				},
+			},
+			false,
+		),
+		Entry("Disallow valid CRON expression with wildcard minute",
+			&api.GlobalReport{
+				ObjectMeta: v1.ObjectMeta{Name: "gr"},
+				Spec: api.ReportSpec{
+					ReportType: "summary",
+					Schedule:   "* * * * *",
+				},
+			},
+			false,
 		),
 	)
 }
