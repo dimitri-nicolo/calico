@@ -905,54 +905,54 @@ func testGlobalReportClient(client calicoclient.Interface, name string) error {
 			ReportType: globalReportTypeName,
 		},
 		Status: calico.ReportStatus{
-			LastSuccessfulReportJobs: []calico.SuccessfulReportJob{
+			LastSuccessfulReportJobs: []calico.CompletedReportJob{
 				{
 					ReportJob: calico.ReportJob{
-						Start:      metav1.Time{time.Now()},
-						End:        metav1.Time{time.Now()},
-						ReportType: "endpoints",
-						Job: corev1.ObjectReference{
+						Start: metav1.Time{time.Now()},
+						End:   metav1.Time{time.Now()},
+						Job: &corev1.ObjectReference{
 							Kind:      "NetworkPolicy",
 							Name:      "fbar-srj",
 							Namespace: "fbar-ns-srj",
 						},
 					},
-					GenerationTime: metav1.Time{time.Now()},
+					JobCompletionTime: &metav1.Time{time.Now()},
 				},
 			},
-			LastFailedReportJobs: []calico.FailedReportJob{
+			LastFailedReportJobs: []calico.CompletedReportJob{
 				{
 					ReportJob: calico.ReportJob{
-						Start:      metav1.Time{time.Now()},
-						End:        metav1.Time{time.Now()},
-						ReportType: "endpoints",
-						Job: corev1.ObjectReference{
+						Start: metav1.Time{time.Now()},
+						End:   metav1.Time{time.Now()},
+						Job: &corev1.ObjectReference{
 							Kind:      "NetworkPolicy",
 							Name:      "fbar-frj",
 							Namespace: "fbar-ns-frj",
 						},
 					},
-					Errors: []calico.ErrorCondition{
-						{
-							Type:    "foo",
-							Message: "bar",
-						},
-					},
+					JobCompletionTime: &metav1.Time{time.Now()},
 				},
 			},
 			ActiveReportJobs: []calico.ReportJob{
 				{
-					Start:      metav1.Time{time.Now()},
-					End:        metav1.Time{time.Now()},
-					ReportType: "endpoints",
-					Job: corev1.ObjectReference{
+					Start: metav1.Time{time.Now()},
+					End:   metav1.Time{time.Now()},
+					Job: &corev1.ObjectReference{
 						Kind:      "NetworkPolicy",
 						Name:      "fbar-arj",
 						Namespace: "fbar-ns-arj",
 					},
 				},
 			},
-			LastScheduleTime: &metav1.Time{time.Now()},
+			LastScheduledJob: &calico.ReportJob{
+				Start: metav1.Time{time.Now()},
+				End:   metav1.Time{time.Now()},
+				Job: &corev1.ObjectReference{
+					Kind:      "NetworkPolicy",
+					Name:      "fbar-lsj",
+					Namespace: "fbar-ns-lsj",
+				},
+			},
 		},
 	}
 
@@ -1014,16 +1014,16 @@ func testGlobalReportClient(client calicoclient.Interface, name string) error {
 	// Pupulate both GlobalReport and ReportStatus.
 	// Verify that Update() modifies GlobalReport only.
 	globalReportUpdate := globalReportServer.DeepCopy()
-	globalReportUpdate.Spec.JobSchedule = "*/1 * * * *"
-	globalReportUpdate.Status.LastSuccessfulReportJobs = []calico.SuccessfulReportJob{
-		{GenerationTime: v1.Time{Time: time.Now()}},
+	globalReportUpdate.Spec.Schedule = "1 * * * *"
+	globalReportUpdate.Status.LastSuccessfulReportJobs = []calico.CompletedReportJob{
+		{JobCompletionTime: &v1.Time{Time: time.Now()}},
 	}
 	globalReportServer, err = globalReportClient.Update(globalReportUpdate)
 	if err != nil {
 		return fmt.Errorf("error updating globalReport %s (%s)", name, err)
 	}
-	if globalReportServer.Spec.JobSchedule != globalReportUpdate.Spec.JobSchedule {
-		return errors.New("GlobalReport Update() didn't update Spec.JobSchedule")
+	if globalReportServer.Spec.Schedule != globalReportUpdate.Spec.Schedule {
+		return errors.New("GlobalReport Update() didn't update Spec.Schedule")
 	}
 	if len(globalReportServer.Status.LastSuccessfulReportJobs) != 0 {
 		return errors.New("GlobalReport status was updated by Update()")
@@ -1032,8 +1032,8 @@ func testGlobalReportClient(client calicoclient.Interface, name string) error {
 	// Pupulate both GlobalReport and ReportStatus.
 	// Verify that UpdateStatus() modifies ReportStatus only.
 	globalReportUpdate = globalReportServer.DeepCopy()
-	globalReportUpdate.Status.LastSuccessfulReportJobs = []calico.SuccessfulReportJob{
-		{GenerationTime: v1.Time{Time: time.Now()}},
+	globalReportUpdate.Status.LastSuccessfulReportJobs = []calico.CompletedReportJob{
+		{JobCompletionTime: &v1.Time{Time: time.Now()}},
 	}
 	globalReportUpdate.Labels = map[string]string{"foo": "bar"}
 	globalReportServer, err = globalReportClient.UpdateStatus(globalReportUpdate)
@@ -1041,7 +1041,8 @@ func testGlobalReportClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("error updating globalReport %s (%s)", name, err)
 	}
 	if len(globalReportServer.Status.LastSuccessfulReportJobs) == 0 ||
-		globalReportServer.Status.LastSuccessfulReportJobs[0].GenerationTime.Time.Equal(time.Time{}) {
+		globalReportServer.Status.LastSuccessfulReportJobs[0].JobCompletionTime == nil ||
+		globalReportServer.Status.LastSuccessfulReportJobs[0].JobCompletionTime.Time.Equal(time.Time{}) {
 		return fmt.Errorf("didn't update GlobalReport status. %v != %v", globalReportUpdate.Status, globalReportServer.Status)
 	}
 	if _, ok := globalReportServer.Labels["foo"]; ok {

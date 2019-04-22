@@ -10,7 +10,7 @@ import:
   - pkg/transport
 - package: github.com/projectcalico/libcalico-go
   repo: git@github.com:tigera/libcalico-go-private.git
-  version: 34f0aaaec9aaa5f05ee780cad592187a9d49014c
+  version: d878d7f5d6345aa2e129834154220cabb565e779
   subpackages:
   - lib/apiconfig
   - lib/apis/v3
@@ -66,3 +66,6 @@ import:
   subpackages:
   - codec
 - package: github.com/kubernetes/repo-infra
+# Using the pin used by Masterminds/sprig to address missing function issue.
+- package: github.com/imdario/mergo
+  version: ~0.3.7
