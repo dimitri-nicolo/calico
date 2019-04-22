@@ -5,75 +5,92 @@ canonical_url: 'https://docs.projectcalico.org/master/security/domain-based-poli
 
 ### Big Picture
 
-Cluster operators can use domain names in global {{site.prodname}}
-policy, to allow connection to services with those domain names
-outside the cluster.
+Use domain names to specify destinations outside the cluster to which
+traffic should be allowed.
 
 ### Value
 
-Identifying an external service by its domain name is usually more
-convenient than specifying its IP.  Especially if the IP can change
-while the domain name stays the same, as is often the case.
+Because IPs often change or are hard to predict, using a domain name
+is more convenient for identifying an external service.  And, because
+{{site.prodname}} only trusts DNS information from a configurable set
+of DNS servers, attackers cannot subvert this feature to gain access
+to arbitrary external IPs.
 
-> **Note**: For services *within* the cluster, Kubernetes labels
-> provide similar convenience.  Using domain names for services
-> *within* the cluster is not supported by the feature described here,
-> because Kubernetes labels can and should be used for those instead.
+> **Note**: Kubernetes labels provide a similar convenience for
+> services *within* the cluster.  {{site.prodname}} does not support
+> using domain names for services *within* the cluster, because
+> Kubernetes labels can and should be used for those instead.
 {: .alert .alert-info}
 
 ### Features
 
--  Domain names can be used to specify destinations outside the
-   cluster to which traffic should be allowed.  (They don't work for
-   *denying* traffic to particular destinations, or for services
-   *inside* the cluster.)
+- {{site.prodname}}
+  [GlobalNetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy)
+  and
+  [GlobalNetworkSet]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkset)
+  resources can use domain names instead of or as well as IPs, when
+  specifying destinations to which traffic should be allowed.
 
-   > **Note**: This makes sense when egress traffic from the workloads
-   > concerned (i.e. that the policy applies to) is denied by default.
-   > In other words, so that the GlobalNetworkPolicy with domain names is
-   > poking holes in a generally closed wall around the cluster.
-   {: .alert .alert-info}
+- Supported domain names are those in DNS A, AAAA and CNAME records.
 
--  Supported domain names are those in DNS A, AAAA and CNAME records.
+### Concepts
 
--  We rely on the client workload connecting to a service by name, and
-   therefore doing a DNS lookup for the name.  {{site.prodname}}
-   snoops the DNS exchange and uses that information to open a pinhole
-   to the service's current IP address.
+#### Deny all, allow some
 
--  {{site.prodname}} only trusts DNS information that comes from a
-   configurable set of DNS servers.  Otherwise an attacker could use a
-   malicious workload to poison the system by sending DNS lookups to a
-   fake DNS server under their own control.
+Domain names can be used to specify destinations outside the cluster
+to which traffic should be allowed.  This makes sense when egress
+traffic from workloads is denied by default.  When you use domain
+names in a global network policy, you are poking holes for allowed
+traffic in an otherwise firewalled cluster.
 
--  By default, {{site.prodname}} trusts the Kubernetes cluster's DNS
-   service (kube-dns or CoreDNS), which means that this feature will
-   work out of the box unless pods take particular steps to override
-   their DNS config.
+> **Note:** Domain names do not work for *denying* traffic to
+> particular destinations, or for services *inside* the cluster.
+{: .alert .alert-info}
+
+#### How it works
+
+When a client workload connects to a service by name, it does a DNS
+lookup for the name.  {{site.prodname}} snoops the DNS exchange and
+uses that information to open a pinhole to the service's current IP
+address.
+
+{{site.prodname}} trusts DNS information that comes only from a
+configurable set of DNS servers.  Otherwise, attackers could use a
+malicious workload to poison the system by sending DNS lookups to a
+fake DNS server under their own control.
+
+By default, {{site.prodname}} trusts the Kubernetes cluster's DNS
+service (kube-dns or CoreDNS).  Thus domain name usage works out of
+the box, unless you override pod DNS configurations.
+
+The domain name feature is configured by [Felix configuration
+parameters]({{site.baseurl}}/{{page.version}}/reference/felix/configuration)
+(with "DNS" prefix).  The defaults are chosen to work out of the box
+with standard Kubernetes installs, so you won’t normally change them.
 
 ### How to
 
-Allowed destination domain names can be configured in two ways.
+There are two options for configuring allowed destination domain names:
 
-1. A
-   [GlobalNetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy)
-   can have egress rules with `action: Allow` and a
-   `destination.domains` field specifying the domain names to which
-   egress traffic is allowed.
+- A
+  [GlobalNetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy)
+  can have egress rules with `action: Allow` and a
+  `destination.domains` field specifying the domain names to which
+  egress traffic is allowed.
 
-2. Allowed destination domain names can be specified in the `allowedEgressDomains` field of a
-   [GlobalNetworkSet]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkset)
-   resource, and GlobalNetworkPolicy can then use a
-   `destination.selector` expression that matches that
-   GlobalNetworkSet.
+- Allowed destination domain names can be specified in the
+  `allowedEgressDomains` field of a
+  [GlobalNetworkSet]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkset)
+  resource, and GlobalNetworkPolicy can then use a
+  `destination.selector` expression that matches that
+  GlobalNetworkSet.
 
 ### Tutorial
 
-To configure a default egress policy for all pods, that denies all
-outbound connections except for DNS:
+The following example configures a default **global network policy**
+for all pods, that denies all **egress** connections except for DNS:
 
 ```
-calicoctl apply -f - <<EOF
 apiVersion: projectcalico.org/v3
 kind: GlobalNetworkPolicy
 metadata:
@@ -89,13 +106,12 @@ spec:
       ports:
       - 53
   - action: Deny
-EOF
 ```
 
-Then, to allow particular pods to connect out to particular domains:
+Then, in the following example, we allow pods with “my-value” to
+connect out to domains **alice.com** and **bob.example.com**.
 
 ```
-calicoctl apply -f - <<EOF
 apiVersion: projectcalico.org/v3
 kind: GlobalNetworkPolicy
 metadata:
@@ -111,7 +127,6 @@ spec:
       domains:
       - alice.com
       - bob.example.com
-EOF
 ```
 
 Obviously the domain names should be changed to those that you need,
@@ -119,10 +134,9 @@ and the pod selector `my-pod-label == 'my-value'` should be whatever
 makes sense in your cluster for selecting the pods that you want to be
 able to make those outbound connections.
 
-Alternatively configure allowed domains in a GlobalNetworkSet like this:
+Alternatively, you can configure allowed domains in a GlobalNetworkSet:
 
 ```
-calicoctl apply -f - <<EOF
 apiVersion: projectcalico.org/v3
 kind: GlobalNetworkSet
 metadata:
@@ -134,13 +148,12 @@ spec:
   allowedEgressDomains:
   - alice.com
   - bob.example.com
-EOF
 ```
 
-and then reference that GlobalNetworkSet via a destination label selector:
+and then reference that GlobalNetworkSet using a destination label
+selector:
 
 ```
-calicoctl apply -f - <<EOF
 apiVersion: projectcalico.org/v3
 kind: GlobalNetworkPolicy
 metadata:
@@ -154,11 +167,10 @@ spec:
   - action: Allow
     destination:
       selector: "destination-set == 'alice-and-bob'"
-EOF
 ```
 
 > **Note**: Using a GlobalNetworkSet, instead of specifying domains
-> directly in GlobalNetworkPolicy rules, would make sense when
+> directly in GlobalNetworkPolicy rules, makes sense when
 > multiple policies need to reference the same set of domains, or when
 > you want the allowed destinations for a rule to be a mix of domains
 > and IPs from GlobalNetworkSets, as well, perhaps, as IPs from
@@ -168,8 +180,5 @@ EOF
 
 ### Above and Beyond
 
-This feature is configured by [Felix configuration
-parameters]({{site.baseurl}}/{{page.version}}/reference/felix/configuration)
-beginning with "DNS", but you normally won't need to change these, as
-the defaults are chosen to work out of the box with standard
-Kubernetes installs.
+To change the default DNS parameters, see [Felix configuration
+parameters]({{site.baseurl}}/{{page.version}}/reference/felix/configuration).
