@@ -16,16 +16,11 @@ is more convenient for identifying an external service.  And, because
 of DNS servers, attackers cannot subvert this feature to gain access
 to arbitrary external IPs.
 
-> **Note**: Kubernetes labels provide a similar convenience for
-> services *within* the cluster.  {{site.prodname}} does not support
-> using domain names for services *within* the cluster, because
-> Kubernetes labels can and should be used for those instead.
-{: .alert .alert-info}
-
 ### Features
 
-- {{site.prodname}}
-  [GlobalNetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy)
+This article covers the following {{site.prodname}} features:
+
+- [GlobalNetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy)
   and
   [GlobalNetworkSet]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkset)
   resources can use domain names instead of or as well as IPs, when
@@ -45,6 +40,12 @@ traffic in an otherwise firewalled cluster.
 
 > **Note:** Domain names do not work for *denying* traffic to
 > particular destinations, or for services *inside* the cluster.
+{: .alert .alert-info}
+
+> **Note**: Kubernetes labels provide a similar convenience for
+> services *within* the cluster.  {{site.prodname}} does not support
+> using domain names for services *within* the cluster, because
+> Kubernetes labels can and should be used for those instead.
 {: .alert .alert-info}
 
 #### How it works
