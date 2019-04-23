@@ -7,6 +7,11 @@ A global network set resource (GlobalNetworkSet) represents an arbitrary set of 
 allowing it to be matched by {{site.prodname}} policy.  Network sets are useful for applying policy to traffic
 coming from (or going to) external, non-{{site.prodname}}, networks.
 
+GlobalNetworkSets can also include domain names, whose effect is to allow egress traffic to those
+domain names, when the GlobalNetworkSet is matched by the destination selector of an egress rule
+with action Allow.  Domain names have no effect in ingress rules, or in a rule whose action is not
+Allow.
+
 The metadata for each network set includes a set of labels.  When {{site.prodname}} is calculating the set of
 IPs that should match a source/destination selector within a
 [global network policy]({{site.url}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy) rule, it includes
@@ -51,3 +56,4 @@ spec:
 | Field       | Description                                  | Accepted Values                                         | Schema | Default    |
 |-------------|----------------------------------------------|---------------------------------------------------------|--------|------------|
 | nets        | The IP networks/CIDRs to include in the set. | Valid IPv4 or IPv6 CIDRs, for example "192.0.2.128/25"  | list   |            |
+| allowedEgressDomains | The list of domain names that belong to this set and are honored in egress allow rules only.  Domain names specified here only work to allow egress traffic from the cluster to external destinations.  They don't work to _deny_ traffic to destinations specified by domain name, or to allow ingress traffic from _sources_ specified by domain name. | Valid domain names, for example "docs.tigera.io"  | list   |            |
