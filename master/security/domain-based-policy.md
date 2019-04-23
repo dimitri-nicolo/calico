@@ -20,13 +20,16 @@ to arbitrary external IPs.
 
 This article covers the following {{site.prodname}} features:
 
-- [GlobalNetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy)
-  and
-  [GlobalNetworkSet]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkset)
-  resources can use domain names instead of or as well as IPs, when
-  specifying destinations to which traffic should be allowed.
+- Allow egress traffic for specific domains using a [global network
+  policy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy).
 
-- Supported domain names are those in DNS A, AAAA and CNAME records.
+- Use a [global network
+  set]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkset)
+  for allowed domains, and reference the network set in a [global
+  network
+  policy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy).
+
+- Support for DNS types: DNS A, AAAA, and CNAME records.
 
 ### Concepts
 
@@ -129,11 +132,6 @@ spec:
       - alice.com
       - bob.example.com
 ```
-
-Obviously the domain names should be changed to those that you need,
-and the pod selector `my-pod-label == 'my-value'` should be whatever
-makes sense in your cluster for selecting the pods that you want to be
-able to make those outbound connections.
 
 Alternatively, you can configure allowed domains in a GlobalNetworkSet:
 
