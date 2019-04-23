@@ -47,7 +47,7 @@ module Jekyll
       versions = context.registers[:site].data["versions"]
 
       vs = parse_versions(versions, version)
-      versionsYml = gen_values(vs, imageNames, imageRegistry)
+      versionsYml = gen_values(vs, imageNames, imageRegistry, @chart)
 
       tv = Tempfile.new("temp_versions.yml")
       tv.write(versionsYml)
@@ -56,7 +56,6 @@ module Jekyll
       # Execute helm.
       # Set the default etcd endpoint placeholder for rendering in the docs.
       cmd = """helm template _includes/#{version}/charts/#{@chart} \
-        -f _includes/#{version}/charts/#{@chart}/base_values.yaml \
         -f #{tv.path} \
         -f #{t.path} \
         --set imagePullSecrets.cnx-pull-secret='' \
