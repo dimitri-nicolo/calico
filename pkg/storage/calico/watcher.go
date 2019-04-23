@@ -46,7 +46,7 @@ func (wc *watchChan) convertEvent(ce cwatch.Event) (res *watch.Event) {
 	switch ce.Type {
 	case cwatch.Added:
 		aapiObject := convertToAAPI(ce.Object)
-		if !wc.filter(aapiObject) {
+		if aapiObject == nil || !wc.filter(aapiObject) {
 			return nil
 		}
 		res = &watch.Event{
@@ -55,7 +55,7 @@ func (wc *watchChan) convertEvent(ce cwatch.Event) (res *watch.Event) {
 		}
 	case cwatch.Deleted:
 		aapiObject := convertToAAPI(ce.Previous)
-		if !wc.filter(aapiObject) {
+		if aapiObject == nil || !wc.filter(aapiObject) {
 			return nil
 		}
 		res = &watch.Event{
@@ -64,6 +64,9 @@ func (wc *watchChan) convertEvent(ce cwatch.Event) (res *watch.Event) {
 		}
 	case cwatch.Modified:
 		aapiObject := convertToAAPI(ce.Object)
+		if aapiObject == nil {
+			return nil
+		}
 		if wc.acceptAll() {
 			res = &watch.Event{
 				Type:   watch.Modified,
