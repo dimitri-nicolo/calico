@@ -64,6 +64,8 @@ toc:
         path: /reference/calicoctl/resources/globalnetworkpolicy
       - title: Global Network Set
         path: /reference/calicoctl/resources/globalnetworkset
+      - title: Global Report
+        path: /reference/calicoctl/resources/globalreport
       - title: Global Threat Feed
         path: /reference/calicoctl/resources/globalthreatfeed
       - title: Host Endpoint
