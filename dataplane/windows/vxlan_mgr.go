@@ -8,14 +8,17 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/Microsoft/hcsshim/hcn"
 	"github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/felix/dataplane/windows/hcn"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
 type vxlanManager struct {
+	// Shim for the Windows HNS API.
+	hcn hcnInterface
+
 	// Our dependencies.
 	hostname string
 
@@ -32,8 +35,13 @@ type vxlanManager struct {
 	dirty bool
 }
 
-func newVXLANManager(hostname string, networkName *regexp.Regexp, vxlanID, port int) *vxlanManager {
+type hcnInterface interface {
+	ListNetworks() ([]hcn.HostComputeNetwork, error)
+}
+
+func newVXLANManager(hcn hcnInterface, hostname string, networkName *regexp.Regexp, vxlanID, port int) *vxlanManager {
 	return &vxlanManager{
+		hcn:          hcn,
 		hostname:     hostname,
 		routesByDest: map[string]*proto.RouteUpdate{},
 		vtepsByNode:  map[string]*proto.VXLANTunnelEndpointUpdate{},
@@ -76,7 +84,7 @@ func (m *vxlanManager) CompleteDeferredWork() error {
 		return nil
 	}
 	// Find the right network
-	networks, err := hcn.ListNetworks()
+	networks, err := m.hcn.ListNetworks()
 	if err != nil {
 		logrus.WithError(err).Error("Failed to look up HNS networks.")
 		return err

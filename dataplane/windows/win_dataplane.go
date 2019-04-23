@@ -6,6 +6,8 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/projectcalico/felix/dataplane/windows/hcn"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/dataplane/windows/hns"
@@ -168,6 +170,7 @@ func NewWinDataplaneDriver(hns hns.API, config Config) *WindowsDataplane {
 	if config.VXLANEnabled {
 		log.Info("VXLAN enabled, starting the VXLAN manager")
 		dp.RegisterManager(newVXLANManager(
+			hcn.API{},
 			config.Hostname,
 			regexp.MustCompile(defaultNetworkName), // FIXME Hard-coded regex
 			config.VXLANID,
