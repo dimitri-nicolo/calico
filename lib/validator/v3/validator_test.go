@@ -614,6 +614,9 @@ func init() {
 		Entry("should accept an valid IPSecLogLevel value 'Verbose'", api.FelixConfigurationSpec{IPSecLogLevel: "Verbose"}, true),
 		Entry("should reject an invalid IPSecLogLevel value 'Warning'", api.FelixConfigurationSpec{IPSecLogLevel: "Warning"}, false),
 
+		Entry("should accept a valid WindowsNetworkName value '(?i)calico'", api.FelixConfigurationSpec{WindowsNetworkName: strPtr("(?i)calico")}, true),
+		Entry("should reject an invalid WindowsNetworkName value '('", api.FelixConfigurationSpec{WindowsNetworkName: strPtr("(")}, false),
+
 		Entry("should accept an valid CloudWatchAggregationKind value '0'", api.FelixConfigurationSpec{CloudWatchLogsAggregationKindForAllowed: &noAggKind}, true),
 		Entry("should accept an valid CloudWatchAggregationKind value '1'", api.FelixConfigurationSpec{CloudWatchLogsAggregationKindForAllowed: &srcPortAggKind}, true),
 		Entry("should accept an valid CloudWatchAggregationKind value '2'", api.FelixConfigurationSpec{CloudWatchLogsAggregationKindForAllowed: &podPfxAddKind}, true),
@@ -2572,6 +2575,10 @@ func init() {
 			true,
 		),
 	)
+}
+
+func strPtr(s string) *string {
+	return &s
 }
 
 func protocolFromString(s string) *numorstring.Protocol {

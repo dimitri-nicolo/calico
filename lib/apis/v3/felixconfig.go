@@ -371,6 +371,10 @@ type FelixConfigurationSpec struct {
 	// FlowLogsFileEnabledForDenied is used to enable/disable flow logs entries created for denied flows. Default is true.
 	// This parameter only takes effect when FlowLogsFileReporterEnabled is set to true.
 	FlowLogsFileEnabledForDenied *bool `json:"flowLogsFileEnabledForDenied,omitempty"`
+
+	// WindowsNetworkName specifies which Windows HNS networks Felix should operate on.  The default is to match
+	// networks that start with "calico".  Supports regular expression syntax.
+	WindowsNetworkName *string `json:"windowsNetworkName,omitempty"`
 }
 
 // ProtoPort is combination of protocol and port, both must be specified.

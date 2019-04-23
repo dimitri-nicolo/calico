@@ -658,6 +658,15 @@ func validateFelixConfigSpec(structLevel validator.StructLevel) {
 				"OpenstackRegion", "", reason("must be a valid DNS label"), "")
 		}
 	}
+
+	// Validate that the WindowsNetworkName is a valid regex.
+	if c.WindowsNetworkName != nil {
+		_, err := regexp.Compile(*c.WindowsNetworkName)
+		if err != nil {
+			structLevel.ReportError(reflect.ValueOf(*c.WindowsNetworkName),
+				"WindowsNetworkName", "", reason("must be a valid regular expression"), "")
+		}
+	}
 }
 
 func validateWorkloadEndpointSpec(structLevel validator.StructLevel) {

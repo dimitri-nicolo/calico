@@ -3988,6 +3988,13 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							Format:      "",
 						},
 					},
+					"windowsNetworkName": {
+						SchemaProps: spec.SchemaProps{
+							Description: "WindowsNetworkName specifies which Windows HNS networks Felix should operate on.  The default is to match networks that start with \"calico\".  Supports regular expression syntax.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 				},
 				Required: []string{"XDPRefreshInterval"},
 			},
