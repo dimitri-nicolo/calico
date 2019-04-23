@@ -1105,6 +1105,11 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.WindowsNetworkName != nil {
+		in, out := &in.WindowsNetworkName, &out.WindowsNetworkName
+		*out = new(string)
+		**out = **in
+	}
 	return
 }
 
