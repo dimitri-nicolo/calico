@@ -47,6 +47,11 @@ type store interface {
 	GetDomainIPs(domain string) []string
 }
 
+type DomainInfoChangeHandler interface {
+	// Handle a domainInfoChanged message and report if the dataplane needs syncing.
+	OnDomainInfoChange(msg *domainInfoChanged) (dataplaneSyncNeeded bool)
+}
+
 func newIPSetsManager(ipsets ipsetsDataplane, maxIPSetSize int, domainInfoStore store) *ipSetsManager {
 	return &ipSetsManager{
 		ipsetsDataplane: ipsets,
@@ -106,9 +111,6 @@ func (m *ipSetsManager) OnUpdate(msg interface{}) {
 			m.removeDomainIPSetTracking(msg.Id)
 		}
 		m.ipsetsDataplane.RemoveIPSet(msg.Id)
-	case *domainInfoChanged:
-		log.WithField("domain", msg.domain).Info("Domain info changed")
-		m.handleDomainInfoChange(msg.domain)
 	}
 }
 
@@ -270,15 +272,24 @@ func (m *ipSetsManager) removeDomainIPSetTracking(ipSetId string) {
 	delete(m.domainSetProgramming, ipSetId)
 }
 
-func (m *ipSetsManager) handleDomainInfoChange(domain string) {
+func (m *ipSetsManager) OnDomainInfoChange(msg *domainInfoChanged) (dataplaneSyncNeeded bool) {
+	log.WithField("domain", msg.domain).Info("Domain info changed")
+
 	// Find the affected domain sets.
-	domainSetIds := m.domainSetIds[domain]
-	if domainSetIds == nil {
-		return
+	domainSetIds := m.domainSetIds[msg.domain]
+	if domainSetIds != nil {
+		// This is a domain name of active interest, so report that a dataplane sync will be
+		// needed.
+		dataplaneSyncNeeded = true
+
+		// Tell each domain set that includes this domain name to requery the IPs for the
+		// domain name and adjust its overall IP set accordingly.
+		domainSetIds.Iter(func(item interface{}) error {
+			// Handle as a delta update where the same domain name is removed and then re-added.
+			m.handleDomainIPSetDeltaUpdate(item.(string), []string{msg.domain}, []string{msg.domain})
+			return nil
+		})
 	}
-	domainSetIds.Iter(func(item interface{}) error {
-		// Handle as a delta update where the same domain name is removed and then re-added.
-		m.handleDomainIPSetDeltaUpdate(item.(string), []string{domain}, []string{domain})
-		return nil
-	})
+
+	return
 }
