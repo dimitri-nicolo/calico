@@ -143,6 +143,7 @@ func (ka *k8sauth) subjectAccessReview(resource *authzv1.ResourceAttributes, use
 			ResourceAttributes: resource,
 			User:               user.Username,
 			Groups:             user.Groups,
+			Extra:              make(map[string]authzv1.ExtraValue),
 			UID:                user.UID,
 		},
 	}
