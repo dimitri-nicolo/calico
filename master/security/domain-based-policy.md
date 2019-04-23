@@ -1,6 +1,6 @@
 ---
 title: Using domain names in policy rules
-canonical_url: 'https://docs.projectcalico.org/master/security/domain-based-policy'
+canonical_url: 'https://docs.tigera.io/master/security/domain-based-policy'
 ---
 
 ### Big Picture
