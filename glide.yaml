@@ -25,7 +25,7 @@ import:
   - gexec
 - package: github.com/projectcalico/libcalico-go
   repo:    git@github.com:tigera/libcalico-go-private
-  version: 1acc1d224f822833c483d9f1f33493079f500946
+  version: d878d7f5d6345aa2e129834154220cabb565e779
   subpackages:
   - lib/apiconfig
   - lib/apis/v3
@@ -88,3 +88,8 @@ import:
   version: d21b13acf4bfd8a8b0482a3a78e44d98880b40d3
 - package: github.com/juju/clock
   version: bab88fc672997ef02d03f85310182d97a93dee21
+
+# Need to set as version pulled in by some library pulled in does not work
+# with the version pulled in by libcalico-go for Masterminds/sprig
+- package: github.com/imdario/mergo
+  version: ~0.3.7
