@@ -79,7 +79,7 @@ var withHttpMethodPolicy = initialisedStore.withKVUpdates(
 // DNS Policy state(s)
 var withDNSPolicy = initialisedStore.withKVUpdates(
 	KVPair{Key: localWlEpKey1, Value: &localWlEpDNS},
-	KVPair{Key: netSetDstDomainsKey, Value: &netSetDstDomains},
+	KVPair{Key: netSetDNSKey, Value: &netSetDNS},
 	KVPair{Key: PolicyKey{Tier: "default", Name: "default.dns-basic"}, Value: &policyDNSBasic},
 	KVPair{Key: PolicyKey{Tier: "default", Name: "default.ext-service"}, Value: &policyDNSExternal},
 ).withActivePolicies(
@@ -96,6 +96,27 @@ var withDNSPolicy = initialisedStore.withKVUpdates(
 	"10.0.0.1/32",
 	"10.0.0.2/32",
 }).withIPSet(selectorIdDNSExternal, allowedEgressDomains).withIPSet(selectorIdDNSEmpty, []string{}).withName("with DNS Policy")
+
+var withDNSPolicy2 = initialisedStore.withKVUpdates(
+	KVPair{Key: localWlEpKey1, Value: &localWlEpDNS},
+	KVPair{Key: netSetDNSKey, Value: &netSetDNS},
+	KVPair{Key: netSetDNSKey2, Value: &netSetDNS},
+	KVPair{Key: PolicyKey{Tier: "default", Name: "default.dns-basic"}, Value: &policyDNSBasic},
+	KVPair{Key: PolicyKey{Tier: "default", Name: "default.ext-service-2"}, Value: &policyDNSExternal2},
+).withActivePolicies(
+	proto.PolicyID{"default", "default.dns-basic"},
+	proto.PolicyID{"default", "default.ext-service-2"},
+).withEndpoint(
+	localWlEp1Id,
+	[]mock.TierInfo{
+		{"default", nil, []string{"default.ext-service-2", "default.dns-basic"}},
+	},
+).withIPSet(allSelectorId, []string{
+	"fc00:fe11::1/128",
+	"fc00:fe11::2/128",
+	"10.0.0.1/32",
+	"10.0.0.2/32",
+}).withIPSet(selectorIdDNSExternal, allowedEgressDomains).withIPSet(selectorIdDNSExternal2, allowedEgressDomains2).withIPSet(selectorIdDNSEmpty, []string{}).withName("with DNS Policy 2")
 
 // withServiceAccountPolicy adds two policies containing service account selector.
 var withServiceAccountPolicy = initialisedStore.withKVUpdates(

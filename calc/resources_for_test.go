@@ -570,15 +570,7 @@ var netSet2 = NetworkSet{
 	},
 }
 
-// Resources for DNS Policy unit testing.
-var allowedEgressDomains = []string{"microsoft.com", "www.microsoft.com"}
-
-var netSetDstDomainsKey = NetworkSetKey{Name: "netset-domains"}
-var netSetDstDomains = NetworkSet{
-	AllowedEgressDomains: allowedEgressDomains,
-	Labels:               map[string]string{"external-service-name": "microsoft"},
-}
-
+// Resources for DNS Policy unit testing. We start with a basic default-deny-egress policy that only allows UDP:53 out.
 var policyDNSBasic = Policy{
 	Selector: "name == 'dnspolicy'",
 	Order:    &order30,
@@ -596,9 +588,33 @@ var policyDNSBasic = Policy{
 	},
 }
 
+// Two GlobalNetworkSets, one for microsoft.com and one for google.com.
+var allowedEgressDomains = []string{"microsoft.com", "www.microsoft.com"}
+var allowedEgressDomains2 = []string{"google.com", "www.google.com"}
+
+var netSetDNSKey = NetworkSetKey{Name: "netset-domains"}
+var netSetDNSKey2 = NetworkSetKey{Name: "netset-domains-2"}
+
+var netSetDNS = NetworkSet{
+	AllowedEgressDomains: allowedEgressDomains,
+	Labels:               map[string]string{"external-service-name": "microsoft"},
+}
+
+var netSetDNS2 = NetworkSet{
+	AllowedEgressDomains: allowedEgressDomains2,
+	Labels:               map[string]string{"external-service-name": "google"},
+}
+
+// Two GlobalNetworkPolicies, the first allows external access to microsoft.com and the second to any resource that
+// specifies a "external-service-name" label.
 var dstSelectorDNSExternal = "external-service-name == 'microsoft'"
+var dstSelectorDNSExternal2 = "has(external-service-name)"
+
 var selectorIdDNSExternal = domainSelectorID(dstSelectorDNSExternal, allowedEgressDomains)
+var selectorIdDNSExternal2 = domainSelectorID(dstSelectorDNSExternal2, allowedEgressDomains2)
+
 var selectorIdDNSEmpty = selectorID(dstSelectorDNSExternal)
+var selectorIdDNSEmpty2 = selectorID(dstSelectorDNSExternal2)
 
 var policyDNSExternal = Policy{
 	Selector: allSelector,
@@ -612,6 +628,19 @@ var policyDNSExternal = Policy{
 	},
 }
 
+var policyDNSExternal2 = Policy{
+	Selector: allSelector,
+	Order:    &order20,
+	Types:    []string{"egress"},
+	OutboundRules: []Rule{
+		{
+			Action:      "allow",
+			DstSelector: dstSelectorDNSExternal2,
+		},
+	},
+}
+
+// One simple workload endpoint with v4 and v6 addresses, with a label to match on.
 var localWlEpDNS = WorkloadEndpoint{
 	State: "active",
 	Name:  "cali1",
