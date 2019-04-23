@@ -100,7 +100,7 @@ var withDNSPolicy = initialisedStore.withKVUpdates(
 var withDNSPolicy2 = initialisedStore.withKVUpdates(
 	KVPair{Key: localWlEpKey1, Value: &localWlEpDNS},
 	KVPair{Key: netSetDNSKey, Value: &netSetDNS},
-	KVPair{Key: netSetDNSKey2, Value: &netSetDNS},
+	KVPair{Key: netSetDNSKey2, Value: &netSetDNS2},
 	KVPair{Key: PolicyKey{Tier: "default", Name: "default.dns-basic"}, Value: &policyDNSBasic},
 	KVPair{Key: PolicyKey{Tier: "default", Name: "default.ext-service-2"}, Value: &policyDNSExternal2},
 ).withActivePolicies(
@@ -116,7 +116,7 @@ var withDNSPolicy2 = initialisedStore.withKVUpdates(
 	"fc00:fe11::2/128",
 	"10.0.0.1/32",
 	"10.0.0.2/32",
-}).withIPSet(selectorIdDNSExternal, allowedEgressDomains).withIPSet(selectorIdDNSExternal2, allowedEgressDomains2).withIPSet(selectorIdDNSEmpty, []string{}).withName("with DNS Policy 2")
+}).withIPSet(selectorIdDNSExternal2, append(allowedEgressDomains, allowedEgressDomains2...)).withIPSet(selectorIdDNSEmpty2, []string{}).withName("with DNS Policy 2")
 
 // withServiceAccountPolicy adds two policies containing service account selector.
 var withServiceAccountPolicy = initialisedStore.withKVUpdates(
