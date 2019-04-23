@@ -167,6 +167,10 @@ func (c *client) ensureIndexExists(index, mapping string) error {
 		Body(mapping).
 		Do(context.Background())
 	if err != nil {
+		if elastic.IsConflict(err) {
+			clog.Info("index already exists")
+			return nil
+		}
 		clog.WithError(err).Error("failed to create index")
 		return err
 	}

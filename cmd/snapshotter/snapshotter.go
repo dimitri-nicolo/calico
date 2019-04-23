@@ -6,17 +6,23 @@ import (
 	"flag"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
+	"time"
 
+	"github.com/projectcalico/libcalico-go/lib/health"
 	"github.com/projectcalico/libcalico-go/lib/logutils"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/tigera/compliance/pkg/datastore"
 	"github.com/tigera/compliance/pkg/elastic"
-	"github.com/tigera/compliance/pkg/resources"
 	"github.com/tigera/compliance/pkg/snapshot"
 	"github.com/tigera/compliance/pkg/version"
+)
+
+const (
+	healthHost       = "localhost"
+	healthPort       = 55555
+	keepAliveTimeout = 10 * time.Minute
 )
 
 func main() {
@@ -53,22 +59,13 @@ func main() {
 		cancel()
 	}()
 
-	// Starting snapshotter for each resource type.
-	wg := sync.WaitGroup{}
-	for _, rh := range resources.GetAllResourceHelpers() {
-		wg.Add(1)
-		go func(rh resources.ResourceHelper) {
-			err := snapshot.Run(cxt, rh.TypeMeta(), datastoreClient, elasticClient)
-			if err != nil {
-				log.Errorf("Hit terminating error in snapshotter: %v", err)
-			}
+	// Setup healthchecker.
+	healthAgg := health.NewHealthAggregator()
+	healthAgg.RegisterReporter(snapshot.HealthName, &health.HealthReport{true, true}, keepAliveTimeout)
+	healthAgg.ServeHTTP(true, healthHost, healthPort)
 
-			// This snapshotter is exiting, so tell the others to exit.
-			cancel()
-			wg.Done()
-		}(rh)
+	// Run snapshotter.
+	if err := snapshot.Run(cxt, datastoreClient, elasticClient, healthAgg); err != nil {
+		log.WithError(err).Error("Hit terminating error")
 	}
-
-	// Wait until all snapshotters have exited.
-	wg.Wait()
 }
