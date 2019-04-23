@@ -23,9 +23,6 @@ type vxlanManager struct {
 	routesByDest map[string]*proto.RouteUpdate
 	vtepsByNode  map[string]*proto.VXLANTunnelEndpointUpdate
 
-	// Holds this node's VTEP information.
-	myVTEP *proto.VXLANTunnelEndpointUpdate
-
 	// VXLAN configuration.
 	networkName *regexp.Regexp
 	vxlanID     int
@@ -64,8 +61,8 @@ func (m *vxlanManager) OnUpdate(protoBufMsg interface{}) {
 		logrus.WithField("msg", msg).Debug("VXLAN data plane received VTEP update")
 		if msg.Node != m.hostname { // Skip creating a route to ourselves.
 			m.vtepsByNode[msg.Node] = msg
+			m.dirty = true
 		}
-		m.dirty = true
 	case *proto.VXLANTunnelEndpointRemove:
 		logrus.WithField("msg", msg).Debug("VXLAN data plane received VTEP remove")
 		delete(m.vtepsByNode, msg.Node)
