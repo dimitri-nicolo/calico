@@ -122,7 +122,7 @@ func constructAuditEventsQuery(filter *v3.AuditEventsSelection, start, end *time
 
 	// Query by filter if specified.
 	if filter != nil {
-		queries = append(queries, queryFromAuditEventsSelection(filter))
+		queries = append(queries, auditEventQueryFromAuditEventsSelection(filter))
 	}
 
 	// Query by from/to if specified.
@@ -139,18 +139,18 @@ func constructAuditEventsQuery(filter *v3.AuditEventsSelection, start, end *time
 	return elastic.NewBoolQuery().Must(queries...)
 }
 
-func queryFromAuditEventsSelection(filter *v3.AuditEventsSelection) elastic.Query {
+func auditEventQueryFromAuditEventsSelection(filter *v3.AuditEventsSelection) elastic.Query {
 	if len(filter.Resources) == 0 {
 		return nil
 	}
 	queries := []elastic.Query{}
 	for _, resID := range filter.Resources {
-		queries = append(queries, queryFromResourceID(resID))
+		queries = append(queries, auditEventQueryFromResourceID(resID))
 	}
 	return elastic.NewBoolQuery().Should(queries...)
 }
 
-func queryFromResourceID(resID v3.ResourceID) elastic.Query {
+func auditEventQueryFromResourceID(resID v3.ResourceID) elastic.Query {
 	queries := []elastic.Query{}
 	if resID.Kind != "" {
 		queries = append(queries, elastic.NewMatchQuery("responseObject.kind", resID.Kind))

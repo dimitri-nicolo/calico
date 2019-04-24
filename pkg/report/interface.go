@@ -4,7 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/projectcalico/libcalico-go/lib/apis/v3"
+	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+
+	"github.com/tigera/compliance/pkg/flow"
 )
 
 type ReportRetriever interface {
@@ -19,5 +21,9 @@ type ReportStorer interface {
 }
 
 type AuditLogReportHandler interface {
-	AddAuditEvents(ctx context.Context, data *v3.ReportData, filter *v3.AuditEventsSelection, start, end time.Time)
+	AddAuditEvents(ctx context.Context, data *apiv3.ReportData, filter *apiv3.AuditEventsSelection, start, end time.Time)
+}
+
+type FlowLogReportHandler interface {
+	SearchFlowLogs(ctx context.Context, namespaces []string, start, end *time.Time) <-chan *flow.FlowLogResult
 }

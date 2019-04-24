@@ -27,6 +27,7 @@ var _ = Describe("Pods cache verification", func() {
 		Expect(ep).NotTo(BeNil())
 		Expect(ep.Flags).To(BeZero())
 		Expect(ep.AppliedPolicies.Len()).To(BeZero())
+		Expect(ep.GetFlowLogAggregationName()).To(Equal(ep.GetObjectMeta().GetName()))
 
 		By("applying another pod in a different namespace")
 		tester.SetPod(Name1, Namespace2, NoLabels, IP2, NoServiceAccount, NoPodOptions)
@@ -36,6 +37,7 @@ var _ = Describe("Pods cache verification", func() {
 		Expect(ep).NotTo(BeNil())
 		Expect(ep.Flags).To(BeZero())
 		Expect(ep.AppliedPolicies.Len()).To(BeZero())
+		Expect(ep.GetFlowLogAggregationName()).To(Equal(ep.GetObjectMeta().GetName()))
 
 		By("deleting the first pod")
 		tester.DeletePod(Name1, Namespace1)
@@ -61,6 +63,26 @@ var _ = Describe("Pods cache verification", func() {
 		Expect(ep).NotTo(BeNil())
 		Expect(ep.Flags).To(Equal(xrefcache.CacheEntryEnvoyEnabled))
 		Expect(ep.AppliedPolicies.Len()).To(BeZero())
+		Expect(ep.GetFlowLogAggregationName()).To(Equal(ep.GetObjectMeta().GetName()))
+
+		By("deleting the first pod")
+		tester.DeletePod(Name1, Namespace1)
+
+		By("checking the cache settings")
+		ep = tester.GetPod(Name1, Namespace1)
+		Expect(ep).To(BeNil())
+	})
+
+	It("should handle a pod with generate name", func() {
+		By("applying a pod")
+		tester.SetPod(Name1, Namespace1, NoLabels, IP1, NoServiceAccount, PodOptSetGenerateName)
+
+		By("checking the cache settings")
+		ep := tester.GetPod(Name1, Namespace1)
+		Expect(ep).NotTo(BeNil())
+		Expect(ep.Flags).To(BeZero())
+		Expect(ep.AppliedPolicies.Len()).To(BeZero())
+		Expect(ep.GetFlowLogAggregationName()).To(Equal("pod-*"))
 
 		By("deleting the first pod")
 		tester.DeletePod(Name1, Namespace1)
@@ -79,6 +101,8 @@ var _ = Describe("Pods cache verification", func() {
 		Expect(ep).NotTo(BeNil())
 		Expect(ep.Flags).To(BeZero())
 		Expect(ep.AppliedPolicies.Len()).To(BeZero())
+		// SetHostEndpoint always sets node to node1.
+		Expect(ep.GetFlowLogAggregationName()).To(Equal("node1"))
 
 		By("applying a different host endpoint")
 		tester.SetHostEndpoint(Name2, NoLabels, IP2)
@@ -88,6 +112,8 @@ var _ = Describe("Pods cache verification", func() {
 		Expect(ep).NotTo(BeNil())
 		Expect(ep.Flags).To(BeZero())
 		Expect(ep.AppliedPolicies.Len()).To(BeZero())
+		// SetHostEndpoint always sets node to node1.
+		Expect(ep.GetFlowLogAggregationName()).To(Equal("node1"))
 
 		By("deleting the first host endpoint")
 		tester.DeleteHostEndpoint(Name1)

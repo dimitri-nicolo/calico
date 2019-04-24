@@ -15,6 +15,7 @@ import (
 
 	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/event"
+	"github.com/tigera/compliance/pkg/flow"
 	"github.com/tigera/compliance/pkg/list"
 	"github.com/tigera/compliance/pkg/replay"
 	"github.com/tigera/compliance/pkg/resources"
@@ -50,6 +51,7 @@ func Run(
 	lister list.Destination,
 	eventer event.Fetcher,
 	auditer AuditLogReportHandler,
+	flowlogger FlowLogReportHandler,
 	archiver ReportStorer,
 ) error {
 	// Register that we will be reporting health liveness.
@@ -80,6 +82,7 @@ func Run(
 		}),
 		eventer:          eventer,
 		auditer:          auditer,
+		flowlogger:       flowlogger,
 		archiver:         archiver,
 		xc:               xc,
 		replayer:         replayer,
@@ -95,21 +98,23 @@ func Run(
 			StartTime:      metav1.Time{cfg.ParsedReportStart},
 			EndTime:        metav1.Time{cfg.ParsedReportEnd},
 		},
+		flowLogFilter: flow.NewFlowLogFilter(),
 	}
 	return r.run()
 }
 
 type reporter struct {
-	ctx      context.Context
-	cfg      *Config
-	clog     *logrus.Entry
-	listDest list.Destination
-	eventer  event.Fetcher
-	xc       xrefcache.XrefCache
-	replayer syncer.Starter
-	auditer  AuditLogReportHandler
-	archiver ReportStorer
-	health   *health.HealthAggregator
+	ctx        context.Context
+	cfg        *Config
+	clog       *logrus.Entry
+	listDest   list.Destination
+	eventer    event.Fetcher
+	xc         xrefcache.XrefCache
+	replayer   syncer.Starter
+	auditer    AuditLogReportHandler
+	flowlogger FlowLogReportHandler
+	archiver   ReportStorer
+	health     *health.HealthAggregator
 
 	// Consolidate the tracked in-scope endpoint events into a local cache, which will get converted and copied into
 	// the report data structure.
@@ -117,12 +122,16 @@ type reporter struct {
 	services         map[apiv3.ResourceID]xrefcache.CacheEntryFlags
 	namespaces       map[string]xrefcache.CacheEntryFlags
 	data             *apiv3.ReportData
+
+	// Flow logs tracking information.
+	flowLogFilter *flow.FlowLogFilter
 }
 
 type reportEndpoint struct {
 	zeroTrustFlags xrefcache.CacheEntryFlags
 	policies       resources.Set
 	services       resources.Set
+	flowAggrName   string
 }
 
 func (r *reporter) run() error {
@@ -157,7 +166,9 @@ func (r *reporter) run() error {
 		if r.cfg.ReportType.Spec.IncludeEndpointFlowLogData {
 			// We also need to include flow logs data for the in-scope endpoints.
 			r.clog.Debug("Including flow log data in report")
+			r.addFlowLogEntries()
 		}
+		r.flowLogFilter = nil
 	}
 
 	// Indicate we are healthy.
@@ -220,6 +231,8 @@ func (r *reporter) onUpdate(update syncer.Update) {
 		return nil
 	})
 
+	ep.flowAggrName = x.GetFlowLogAggregationName()
+
 	// Update the namespace flags.
 	r.namespaces[update.ResourceID.Namespace] |= zeroTrustFlags
 }
@@ -245,6 +258,30 @@ func (r *reporter) onStatusUpdate(status syncer.StatusUpdate) {
 	}
 }
 
+// addFlowLogEntries adds flows matching the FlowLogFilter to the ReportData.
+// Aggregated flow logs are searched Elasticsearch using the namespaces specified
+// in the FlowLogFilter. Results are further filtered using the endpoint names
+// and aggregated endpoint names tracked in the FlowLogFilter.
+func (r *reporter) addFlowLogEntries() {
+
+	namespaces := make([]string, 0, len(r.flowLogFilter.Namespaces))
+	for ns := range r.flowLogFilter.Namespaces {
+		namespaces = append(namespaces, ns)
+	}
+
+	r.clog.Debug("Processing flow log results")
+	for epFlow := range r.flowlogger.SearchFlowLogs(r.ctx, namespaces, &r.cfg.ParsedReportStart, &r.cfg.ParsedReportEnd) {
+		// On error, skip processing this flow and continue processing the next one.
+		if epFlow.Err != nil {
+			r.clog.WithError(epFlow.Err).Error("Error processing flow log entry")
+			continue
+		}
+		if r.flowLogFilter.FilterInFlow(epFlow.EndpointsReportFlow) {
+			r.data.Flows = append(r.data.Flows, *epFlow.EndpointsReportFlow)
+		}
+	}
+}
+
 func (r *reporter) transferAggregatedData() {
 	// Create the endpoints slice up-front because it's likely to be large.
 	r.data.Endpoints = make([]apiv3.EndpointsReportEndpoint, 0, len(r.inScopeEndpoints))
@@ -262,7 +299,11 @@ func (r *reporter) transferAggregatedData() {
 			EnvoyEnabled:              ep.zeroTrustFlags&xrefcache.CacheEntryEnvoyEnabled == 0, // We reversed this for zero-trust
 			AppliedPolicies:           ep.policies.ToSlice(),
 			Services:                  ep.services.ToSlice(),
+			FlowLogAggregationName:    ep.flowAggrName,
 		})
+
+		// Track for filter flow logs at a later stage.
+		r.flowLogFilter.TrackNamespaceAndEndpoint(id.Namespace, id.Name, ep.flowAggrName)
 
 		// Update the summary stats.
 		updateSummary(ep.zeroTrustFlags, &r.data.EndpointsSummary, true)
