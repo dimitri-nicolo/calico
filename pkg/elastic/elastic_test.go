@@ -12,6 +12,7 @@ import (
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/tigera/compliance/pkg/config"
 	. "github.com/tigera/compliance/pkg/elastic"
 	"github.com/tigera/compliance/pkg/list"
 	"github.com/tigera/compliance/pkg/report"
@@ -29,7 +30,8 @@ var _ = Describe("Elastic", func() {
 	)
 	BeforeEach(func() {
 		os.Setenv("ELASTIC_HOST", "localhost")
-		elasticClient = MustGetElasticClient()
+		cfg := config.MustLoadConfig()
+		elasticClient = MustGetElasticClient(cfg)
 		elasticClient.(Resetable).Reset()
 	})
 

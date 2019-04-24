@@ -10,6 +10,8 @@ import (
 type ReportRetriever interface {
 	RetrieveArchivedReport(id string) (*ArchivedReportData, error)
 	RetrieveArchivedReportSummaries() ([]*ArchivedReportData, error)
+	RetrieveArchivedReportSummary(id string) (*ArchivedReportData, error)
+	RetrieveLastArchivedReportSummary(name string) (*ArchivedReportData, error)
 }
 
 type ReportStorer interface {

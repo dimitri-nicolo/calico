@@ -2,96 +2,54 @@
 package report
 
 import (
-	"fmt"
-	"os"
-	"time"
+	"errors"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
-
+	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/datastore"
 )
 
-const (
-	reportNameEnv  = "TIGERA_COMPLIANCE_REPORT_NAME"
-	reportStartEnv = "TIGERA_COMPLIANCE_START_TIME"
-	reportEndEnv   = "TIGERA_COMPLIANCE_END_TIME"
-)
-
-var (
-	// Parameterised for testing.
-	getenv = os.Getenv
-)
-
+// Extend the base config to also load in the Report and ReportType
 type Config struct {
-	// --- Loaded from environment ---
-	Name  string
-	Start time.Time
-	End   time.Time
+	config.Config
 
 	// --- Loaded from Calico ---
 	Report     *v3.GlobalReport
 	ReportType *v3.GlobalReportType
 }
 
-func MustLoadReportConfig() *Config {
+func MustLoadReportConfig(cfg *config.Config) *Config {
 	var err error
-	rc, err := readReportConfigFromEnv()
-	if err != nil {
-		panic(err)
-	}
+	reportCfg := mustReadReportConfigFromEnv()
 
+	// Get the calico client and pull the named report and corresponding report type.
 	client := datastore.MustGetCalicoClient()
 
-	rc.Report, err = client.GlobalReports().Get(rc.Name, metav1.GetOptions{})
+	reportCfg.Report, err = client.GlobalReports().Get(reportCfg.ReportName, metav1.GetOptions{})
 	if err != nil {
 		panic(err)
 	}
 
-	rc.ReportType, err = client.GlobalReportTypes().Get(rc.Report.Spec.ReportType, metav1.GetOptions{})
+	reportCfg.ReportType, err = client.GlobalReportTypes().Get(reportCfg.Report.Spec.ReportType, metav1.GetOptions{})
 	if err != nil {
 		panic(err)
 	}
 
-	return rc
+	return reportCfg
 }
 
-func readReportConfigFromEnv() (*Config, error) {
-	// Determine the name of the report and the start and end time for the report.
-	reportName := getenv(reportNameEnv)
-	if reportName == "" {
-		return nil, fmt.Errorf("no report name specified in environment %s", reportNameEnv)
-	}
+// Use the standard config loader, but also check that a report name has been specified.
+func mustReadReportConfigFromEnv() *Config {
+	base := config.MustLoadConfig()
 
-	startEnv := getenv(reportStartEnv)
-	if startEnv == "" {
-		return nil, fmt.Errorf("no report start time specified in environment %s", reportStartEnv)
-	}
-	start, err := time.Parse(time.RFC3339, startEnv)
-	if err != nil {
-		return nil, fmt.Errorf("report start time specified in environment %s is not RFC3339 formatted: %s", reportStartEnv, startEnv)
-	}
-
-	endEnv := getenv(reportEndEnv)
-	if endEnv == "" {
-		return nil, fmt.Errorf("no report end time specified in environment %s", reportEndEnv)
-	}
-	end, err := time.Parse(time.RFC3339, endEnv)
-	if err != nil {
-		return nil, fmt.Errorf("report end time specified in environment %s is not RFC3339 formatted: %s", reportEndEnv, endEnv)
-	}
-
-	if end.Before(start) {
-		return nil, fmt.Errorf(
-			"invalid report times, end time is before start time: %s (%s) < %s (%s)",
-			endEnv, reportEndEnv, startEnv, reportStartEnv,
-		)
+	// The ReportName is mandatory for the Reporter.
+	if base.ReportName == "" {
+		panic(errors.New("report name has not been specified in environments"))
 	}
 
 	return &Config{
-		Name:  reportName,
-		Start: start,
-		End:   end,
-	}, nil
+		Config: *base,
+	}
 }

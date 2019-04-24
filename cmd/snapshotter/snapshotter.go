@@ -7,22 +7,15 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/projectcalico/libcalico-go/lib/health"
-	"github.com/projectcalico/libcalico-go/lib/logutils"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/datastore"
 	"github.com/tigera/compliance/pkg/elastic"
 	"github.com/tigera/compliance/pkg/snapshot"
 	"github.com/tigera/compliance/pkg/version"
-)
-
-const (
-	healthHost       = "localhost"
-	healthPort       = 55555
-	keepAliveTimeout = 10 * time.Minute
 )
 
 func main() {
@@ -35,13 +28,12 @@ func main() {
 		return
 	}
 
-	// Set up logger.
-	log.SetFormatter(&logutils.Formatter{})
-	log.AddHook(&logutils.ContextHook{})
-	log.SetLevel(logutils.SafeParseLogLevel(os.Getenv("LOG_LEVEL")))
+	// Load config.
+	cfg := config.MustLoadConfig()
+	cfg.InitializeLogging()
 
 	// Init elastic.
-	elasticClient, err := elastic.NewFromEnv()
+	elasticClient, err := elastic.NewFromConfig(cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -61,11 +53,11 @@ func main() {
 
 	// Setup healthchecker.
 	healthAgg := health.NewHealthAggregator()
-	healthAgg.RegisterReporter(snapshot.HealthName, &health.HealthReport{true, true}, keepAliveTimeout)
-	healthAgg.ServeHTTP(true, healthHost, healthPort)
+	healthAgg.RegisterReporter(snapshot.HealthName, &health.HealthReport{true, true}, cfg.HealthTimeout)
+	healthAgg.ServeHTTP(true, cfg.HealthHost, cfg.HealthPort)
 
 	// Run snapshotter.
-	if err := snapshot.Run(cxt, datastoreClient, elasticClient, healthAgg); err != nil {
+	if err := snapshot.Run(cxt, cfg, datastoreClient, elasticClient, healthAgg); err != nil {
 		log.WithError(err).Error("Hit terminating error")
 	}
 }

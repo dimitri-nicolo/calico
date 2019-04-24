@@ -28,6 +28,7 @@ const (
         "reportSpec": { "type": "object", "enabled": false },
         "startTime": { "type": "date" },
         "endTime": { "type": "date" },
+        "generationTime": { "type": "date" },
         "uiSummary": { "type": "text" },
         "endpoints": { "type": "object", "enabled": false },
         "namespaces": { "type": "object", "enabled": false },

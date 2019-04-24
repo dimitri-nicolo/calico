@@ -209,6 +209,16 @@ func (t *tester) RetrieveArchivedReportSummaries() ([]*report.ArchivedReportData
 	return t.summaries, t.summariesErr
 }
 
+// RetrieveArchivedReportSummary implements the ReportRetriever interface.
+func (t *tester) RetrieveArchivedReportSummary(id string) (*report.ArchivedReportData, error) {
+	return t.summaries[0], t.summariesErr
+}
+
+// RetrieveLastArchivedReportSummary implements the ReportRetriever interface.
+func (t *tester) RetrieveLastArchivedReportSummary(name string) (*report.ArchivedReportData, error) {
+	return t.summaries[0], t.summariesErr
+}
+
 // GlobalReports implements the GlobalReportsGetter interface.
 func (t *tester) GlobalReports() clientv3.GlobalReportInterface {
 	return &gr{tester: t}

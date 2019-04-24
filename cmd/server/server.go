@@ -10,10 +10,9 @@ import (
 
 	"github.com/caimeo/iniflags"
 	log "github.com/sirupsen/logrus"
-	prefixed "github.com/x-cray/logrus-prefixed-formatter"
+	"github.com/x-cray/logrus-prefixed-formatter"
 
-	"github.com/projectcalico/libcalico-go/lib/logutils"
-
+	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/datastore"
 	"github.com/tigera/compliance/pkg/elastic"
 	"github.com/tigera/compliance/pkg/server"
@@ -33,13 +32,12 @@ func main() {
 	initIniFlags()
 	handleFlags()
 
-	// Set up logger.
-	log.SetFormatter(&logutils.Formatter{})
-	log.AddHook(&logutils.ContextHook{})
-	log.SetLevel(logutils.SafeParseLogLevel(os.Getenv("LOG_LEVEL")))
+	// Load config
+	cfg := config.MustLoadConfig()
+	cfg.InitializeLogging()
 
 	// Create the elastic and Calico clients.
-	elastic := elastic.MustGetElasticClient()
+	ec := elastic.MustGetElasticClient(cfg)
 	clientSet := datastore.MustGetCalicoClient()
 
 	// Set up tls certs
@@ -50,7 +48,7 @@ func main() {
 	}
 
 	// Create and start the server
-	s := server.New(elastic, clientSet, ":"+*apiPort, *keyPath, *certPath)
+	s := server.New(ec, clientSet, ":"+*apiPort, *keyPath, *certPath)
 	s.Start()
 
 	// Setup signals.

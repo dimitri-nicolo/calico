@@ -1,5 +1,5 @@
 hash: f95580372e11e75d98a8764ab009d40f245661adb9cdbcdc4798f51abb957b34
-updated: 2019-04-22T22:53:15.585604352Z
+updated: 2019-04-22T16:10:13.694868-07:00
 imports:
 - name: github.com/beorn7/perks
   version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
@@ -40,6 +40,10 @@ imports:
   - sortkeys
 - name: github.com/golang/glog
   version: 44145f04b68cf362d9c4df2182967c2275eaefed
+- name: github.com/golang/groupcache
+  version: 02826c3e79038b59d737d3b1c0a1d937f71a4433
+  subpackages:
+  - lru
 - name: github.com/golang/protobuf
   version: b4deda0973fb4c70b50d226b1af49f3da59f5265
   subpackages:
@@ -185,7 +189,9 @@ imports:
   - lib/compliance
   - lib/errors
   - lib/hash
+  - lib/health
   - lib/ipip
+  - lib/jitter
   - lib/logutils
   - lib/names
   - lib/namespace
@@ -252,17 +258,7 @@ imports:
 - name: golang.org/x/crypto
   version: de0752318171da717af4ce24d0a2e8626afaeb11
   subpackages:
-  - bcrypt
-  - blowfish
-  - cryptobyte
-  - cryptobyte/asn1
-  - ed25519
-  - ed25519/internal/edwards25519
-  - internal/subtle
-  - nacl/secretbox
   - pbkdf2
-  - poly1305
-  - salsa20/salsa
   - scrypt
   - ssh/terminal
 - name: golang.org/x/net
@@ -314,7 +310,7 @@ imports:
 - name: gopkg.in/fsnotify/fsnotify.v1
   version: c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9
 - name: gopkg.in/go-playground/validator.v9
-  version: 46b4b1e301c24cac870ffcb4ba5c8a703d1ef475
+  version: b199fa0642d29caca62b6a99d65cc981ba5edc3b
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: gopkg.in/tomb.v1
@@ -359,6 +355,7 @@ imports:
   - pkg/api/errors
   - pkg/api/meta
   - pkg/api/resource
+  - pkg/apis/meta/internalversion
   - pkg/apis/meta/v1
   - pkg/apis/meta/v1/unstructured
   - pkg/apis/meta/v1beta1
@@ -448,6 +445,8 @@ imports:
   - tools/clientcmd/api/latest
   - tools/clientcmd/api/v1
   - tools/metrics
+  - tools/pager
+  - tools/record
   - tools/reference
   - transport
   - util/cert

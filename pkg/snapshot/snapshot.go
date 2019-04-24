@@ -4,8 +4,6 @@ package snapshot
 import (
 	"context"
 	"fmt"
-	"os"
-	"strconv"
 	"sync"
 	"time"
 
@@ -14,6 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/list"
 	"github.com/tigera/compliance/pkg/resources"
 )
@@ -21,8 +20,6 @@ import (
 const (
 	// Snapshot frequency is hard coded to be daily.
 	defaultSnapshotHour = 22
-	snapshotHourEnv     = "TIGERA_COMPLIANCE_SNAPSHOT_HOUR"
-	maxRetryTime        = 1 * time.Hour
 	oneDay              = 24 * time.Hour
 
 	// Health aggregator values.
@@ -36,9 +33,10 @@ var (
 )
 
 // Run is the entrypoint to start running the snapshotter.
-func Run(ctx context.Context, listSrc list.Source, listDest list.Destination, healthAgg *health.HealthAggregator) error {
+func Run(ctx context.Context, cfg *config.Config, listSrc list.Source, listDest list.Destination, healthAgg *health.HealthAggregator) error {
 	return (&snapshotter{
 		ctx:      ctx,
+		cfg:      cfg,
 		health:   healthAgg,
 		listSrc:  listSrc,
 		listDest: listDest,
@@ -47,6 +45,7 @@ func Run(ctx context.Context, listSrc list.Source, listDest list.Destination, he
 
 type snapshotter struct {
 	ctx      context.Context
+	cfg      *config.Config
 	health   *health.HealthAggregator
 	listSrc  list.Source
 	listDest list.Destination
@@ -80,7 +79,7 @@ func (s *snapshotter) run() error {
 	// Run snapshot infinitely.
 	for {
 		// Determine if time for snapshot.
-		prev, next := timeOfNextSnapshot()
+		prev, next := s.timeOfNextSnapshot()
 
 		// Iterate over resources and store snapshot for each.
 		errChan := make(chan error, len(allResources))
@@ -122,33 +121,20 @@ func (s *snapshotter) run() error {
 	}
 }
 
-type resourceResponse struct {
-	tm  metav1.TypeMeta
-	err error
-}
-
 // timeOfNextSnapshot determines the fire time of the previous and next day.
-func timeOfNextSnapshot() (time.Time, time.Time) {
+func (s *snapshotter) timeOfNextSnapshot() (time.Time, time.Time) {
 	now := time.Now()
 	year, month, day := now.Date()
-	hour := getSnapshotHour()
-	fireTime := time.Date(year, month, day, hour, 0, 0, 0, now.Location())
+	fireTime := time.Date(year, month, day, s.cfg.SnapshotHour, 0, 0, 0, now.Location())
 	if fireTime.Before(now) {
 		return fireTime, fireTime.Add(oneDay)
 	}
 	return fireTime.Add(-oneDay), fireTime
 }
 
-// getSnapshotHour returns the configured hour to take snapshots.
-func getSnapshotHour() int {
-	if she := os.Getenv(snapshotHourEnv); she != "" {
-		if sh, err := strconv.ParseUint(she, 10, 8); err == nil && sh < 24 {
-			log.WithField("SnapshotHour", sh).Debug("Parsed snapshot hour")
-			return int(sh)
-		}
-	}
-	log.WithField("SnapshotHour", defaultSnapshotHour).Debug("Using default snapshot hour")
-	return defaultSnapshotHour
+type resourceResponse struct {
+	tm  metav1.TypeMeta
+	err error
 }
 
 type resourceSnapshotter struct {

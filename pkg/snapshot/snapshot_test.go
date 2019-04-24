@@ -13,6 +13,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/health"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/list/mock"
 	"github.com/tigera/compliance/pkg/resources"
 )
@@ -33,6 +34,7 @@ func isAlive() bool {
 
 var _ = Describe("Snapshot", func() {
 	var (
+		cfg        *config.Config
 		src        *mock.Source
 		dest       *mock.Destination
 		healthAgg  *health.HealthAggregator
@@ -40,6 +42,7 @@ var _ = Describe("Snapshot", func() {
 	)
 
 	BeforeEach(func() {
+		cfg = &config.Config{}
 		src = mock.NewSource()
 		dest = mock.NewDestination(nil)
 		healthPort = rand.Int()%55536 + 10000
@@ -54,9 +57,14 @@ var _ = Describe("Snapshot", func() {
 			<-time.After(time.Second)
 			cancel()
 		}()
-		dest.Initialize(time.Now().Add(-time.Hour))
+		By("Taking a snapshot 2hrs ago")
+		dest.Initialize(time.Now().Add(-2 * time.Hour))
 
-		Run(ctx, src, dest, healthAgg)
+		By("Configuring the snapshot hour to be the next hour")
+		cfg.SnapshotHour = time.Now().Add(time.Hour).Hour()
+
+		By("Starting the snapshotter")
+		Run(ctx, cfg, src, dest, healthAgg)
 		Expect(dest.RetrieveCalls).To(Equal(nResources))
 		Expect(src.RetrieveCalls).To(Equal(0))
 		Expect(dest.StoreCalls).To(Equal(0))
@@ -70,7 +78,7 @@ var _ = Describe("Snapshot", func() {
 			cancel()
 		}()
 
-		Run(ctx, src, dest, healthAgg)
+		Run(ctx, cfg, src, dest, healthAgg)
 		Expect(dest.RetrieveCalls).To(Equal(nResources))
 		Expect(src.RetrieveCalls).To(Equal(nResources))
 		Expect(dest.StoreCalls).To(Equal(0))
@@ -83,10 +91,15 @@ var _ = Describe("Snapshot", func() {
 			<-time.After(2 * time.Second)
 			cancel()
 		}()
-		dest.Initialize(time.Now().Add(-25 * time.Hour))
+		By("Taking a snapshot 2hrs ago")
+		dest.Initialize(time.Now().Add(-2 * time.Hour))
 		src.Initialize(time.Now())
 
-		Run(ctx, src, dest, healthAgg)
+		By("Configuring the snapshot hour to be the current hour")
+		cfg.SnapshotHour = time.Now().Hour()
+
+		By("Starting the snapshotter")
+		Run(ctx, cfg, src, dest, healthAgg)
 		Expect(dest.RetrieveCalls).To(Equal(nResources))
 		Expect(src.RetrieveCalls).To(Equal(nResources))
 		Expect(dest.StoreCalls).To(Equal(nResources))
