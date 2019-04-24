@@ -13,13 +13,6 @@
    {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx.yaml
    ```
 
-   > **Note**: If you are upgrading from {{site.prodname}} v2.2 or earlier you will need to make some modifications prior
-   > to upgrade to ensure RBAC behavior for tiered policy is unchanged. Please refer to the instructions in the comments for
-   > `ClusterRole "ee-calico-tiered-policy-passthru"` in the `cnx-api.yaml` manifest, or the
-   > [Configuring {{site.prodname}} RBAC]({{site.baseurl}}/{{page.version}}/reference/cnx/rbac-tiered-policies) documentation
-   > for more details.
-   {: .alert .alert-info}
-
 {% include {{page.version}}/cnx-cred-sed.md yaml="cnx" %}
 
 {% if include.init == "openshift" %}
@@ -128,6 +121,18 @@
 {% if include.elasticsearch != "external" %}
    By default a NodePort is installed that serves Kibana on port 30601, so use
    the address of a node (for example a master).
+{% endif %}
+
+{% if include.upgrade %}
+1. Uninstall {{site.prodname}} Manager from previous install.
+   
+   ```bash
+   {{cli}} delete -n kube-system service cnx-manager
+   {{cli}} delete -n kube-system networkpolicy allow-cnx.cnx-manager-access
+   {{cli}} delete -n kube-system deployment cnx-manager
+   {{cli}} delete -n kube-system configmap tigera-cnx-manager-config
+   {{cli}} delete -n kube-system serviceaccount cnx-manager
+   ```
 {% endif %}
 
 1. Apply the manifest to install the {{site.prodname}} Manager.

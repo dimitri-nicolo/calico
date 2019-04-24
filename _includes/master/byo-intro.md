@@ -5,6 +5,7 @@
   {% assign path = "openshift" %}
   {% assign name = "OpenShift" %}
 {% endif %}
+{% unless include.upgrade %}
 ## About using your own Elasticsearch
 
 For production clusters, you must use your own Elasticsearch cluster. We bundle an Elasticsearch
@@ -42,6 +43,13 @@ To complete the following procedure, you'll need:
 - The CA certificate for the Elasticsearch cluster.
 - Any users who are going to use the Kibana dashboards will need to be given appropriate
   credentials.
+{% else %}
+
+This upgrade guide assumes you are using your own Elasticsearch cluster.  (We bundle an Elasticsearch
+operator for quickstart and demonstration purposes, but it is not suitable for production, and we do
+not support upgrading it.)
+
+{% endunless %}
 
 ### Setting up Elasticsearch roles
 

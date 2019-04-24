@@ -164,6 +164,7 @@
 
 {% endif %}
 
+{% unless include.upgrade %}
 {% if include.orchestrator == "kubernetes" and include.yaml == "calico" %}
 
 1. Issue the following command to create the `calico-monitoring` namespace.
@@ -282,3 +283,4 @@
 {% endif %}
 
 {% endif %}
+{% endunless %}

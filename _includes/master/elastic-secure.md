@@ -76,5 +76,5 @@
      --from-file=tigera.elasticsearch.ca=ElasticSearchCA.pem \
      --from-literal=tigera.elasticsearch.username=tigera-ee-manager \
      --from-literal=tigera.elasticserach.password=<ee-manager-elasticsearch-password> \
-     -n kube-system
+     -n calico-monitoring
    ```

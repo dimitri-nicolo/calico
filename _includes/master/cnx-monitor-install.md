@@ -13,9 +13,8 @@
   {% assign secure = "/secure-es" %}
 {% endif %}
 
-## Installing metrics and logs
-
 {% if include.orch == "openshift" %}
+## Installing metrics and logs
 
 ### Enable Metrics
 
@@ -99,6 +98,8 @@ optionally Elasticsearch and Kibana in order to enable logs.
    ```
 
 {% else %}
+{% unless include.elasticsearch == "external" %}
+## Installing metrics and logs
 
 1. For production installs, follow the instructions [here](byo-elasticsearch) to configure {{site.prodname}}
    to use your own Elasticsearch cluster.  For demo / proof of concept installs using the bundled Elasticsearch
@@ -107,7 +108,7 @@ optionally Elasticsearch and Kibana in order to enable logs.
    > **Important**: The bundled Elasticsearch operator does not provide reliable persistent storage
    of logs or authenticate access to Kibana.
    {: .alert .alert-danger}
-
+{% endunless %}
 {% endif %}
 
 1. Download the `operator.yaml` manifest.
@@ -175,10 +176,17 @@ optionally Elasticsearch and Kibana in order to enable logs.
 
 1.  Download the `monitor-calico.yaml` manifest.
 
+{% if include.upgrade %}
+    ```bash
+    curl --compressed -o monitor-calico.yaml \
+    {{docpath}}{{secure}}/monitor-calico-upgrade.yaml
+    ```
+{% else %}
     ```bash
     curl --compressed -O \
     {{docpath}}{{secure}}/monitor-calico.yaml
     ```
+{% endif %}
 
 1. Update the `tigera-es-config` configmap with information on how to reach the BYO Elasticsearch cluster.
    Replace `<elasticsearch-host>` with the hostname (or IP) {{site.prodname}} should access Elasticsearch through.
