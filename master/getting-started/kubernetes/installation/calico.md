@@ -23,8 +23,7 @@ and your datastore type. Refer to the section that matches your configuration.
 
 - **Without federation**:
    - [etcd datastore](#installing-without-federation-using-etcd)
-   - [Kubernetes API datastore, 50 nodes or less](#installing-without-federation-using-kubernetes-api-datastore-50-nodes-or-less)
-   - [Kubernetes API datastore, more than 50 nodes](#installing-without-federation-using-kubernetes-api-datastore-50-nodes-or-less)
+   - [Kubernetes API datastore](#installing-without-federation-using-kubernetes-api-datastore)
 
 - **With federation**:
    - [etcd datastore](#installing-with-federation-using-etcd)
@@ -63,37 +62,8 @@ and your datastore type. Refer to the section that matches your configuration.
 
 1. Continue to [Installing the {{site.prodname}} API Server](#installing-the-{{site.prodnamedash}}-api-server)
 
-### Installing without federation, using Kubernetes API datastore, 50 nodes or less
 
-1. Ensure that the Kubernetes controller manager has the following flags
-   set: <br>
-   `--cluster-cidr=<your-pod-cidr>` and `--allocate-node-cidrs=true`.
-
-   > **Tip**: On kubeadm, you can pass `--pod-network-cidr=<your-pod-cidr>`
-   > to kubeadm to set both Kubernetes controller flags.
-   {: .alert .alert-success}
-
-1. Download the {{site.prodname}} networking manifest for the Kubernetes API datastore.
-
-   ```bash
-   curl \
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calico-networking/1.7/calico.yaml \
-   -O
-   ```
-
-{% include {{page.version}}/cnx-pod-cidr-sed.md yaml="calico" %}
-
-{% include {{page.version}}/cnx-cred-sed.md yaml="calico" %}
-
-1. Apply the manifest.
-
-   ```bash
-   kubectl apply -f calico.yaml
-   ```
-
-1. Continue to [Installing the {{site.prodname}} API Server](#installing-the-{{site.prodnamedash}}-api-server)
-
-### Installing without federation, using Kubernetes API datastore, more than 50 nodes
+### Installing without federation, using Kubernetes API datastore
 
 1. Ensure that the Kubernetes controller manager has the following flags
    set: <br>
