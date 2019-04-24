@@ -15,7 +15,7 @@ import:
   - pkg/run
 - package: github.com/projectcalico/felix
   repo: git@github.com:tigera/felix-private.git
-  version: 1c249b26b4b19d2c058b9d2ac30662a4d6863dbd
+  version: bacae7cff70491bd0103c757f1effa4db2be923e
   subpackages:
   - daemon
 - package: github.com/projectcalico/cni-plugin
@@ -23,7 +23,7 @@ import:
   version: 
 - package: github.com/projectcalico/libcalico-go
   repo: git@github.com:tigera/libcalico-go-private.git
-  version: 34f0aaaec9aaa5f05ee780cad592187a9d49014c
+  version: d878d7f5d6345aa2e129834154220cabb565e779
   subpackages:
   - lib/apiconfig
   - lib/apis/v3
@@ -65,6 +65,11 @@ import:
 # Microsoft SDN libs.  We pull library files from this repo when building the Windows package.
 - package: github.com/Microsoft/SDN
   version: 0d7593e5c8d4c2347079a7a6dbd9eb034ae19a44
+
+# Need to set as version pulled in by some library pulled in does not work
+# # with the version pulled in by libcalico-go for Masterminds/sprig
+- package: github.com/imdario/mergo
+  version: ~0.3.7
 
 # CNI plugin overrides.
 
