@@ -219,6 +219,19 @@ optionally Elasticsearch and Kibana in order to enable logs.
    {{cli}} apply -f monitor-calico.yaml
    ```
 
+{% if include.upgrade %}
+1. Remove unused components from previous installation
+
+   ```bash
+   {{cli}} delete -n calico-monitoring service elasticsearch-tigera-elasticsearch
+   {{cli}} delete globalnetworkset k8sapi-endpoints
+   {{cli}} delete globalnetworkpolicy allow-cnx.es-proxy-access
+   {{cli}} delete -n calico-monitoring deployment tigera-es-proxy
+   {{cli}} delete -n calico-monitoring serviceaccount tigera-es-proxy
+   {{cli}} delete -n calico-monitoring configmap tigera-es-proxy
+   ```
+{% endif %}
+
 {% if include.orch == "openshift" %}
 {% if include.elasticsearch == "operator" %}
 
