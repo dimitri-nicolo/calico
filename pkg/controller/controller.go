@@ -152,9 +152,6 @@ func (cc *ComplianceController) Run(ctx context.Context) {
 func (cc *ComplianceController) syncAll(ctx context.Context) {
 	log.Debug("Perform sync")
 
-	start, end, err := cc.archivedReportQuery.GetLastReportStartEndTime("robs-report")
-	log.Debugf("Last report start/end/err: %v %v %v", start, end, err)
-
 	// Indicate we are healthy.
 	cc.health.ReportHealthy()
 

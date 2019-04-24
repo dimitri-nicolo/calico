@@ -10,7 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestXrefCache(t *testing.T) {
+func TestConfig(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Config Suite")
