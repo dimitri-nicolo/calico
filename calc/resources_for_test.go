@@ -612,6 +612,7 @@ var dstSelectorDNSExternal2 = "has(external-service-name)"
 
 var selectorIdDNSExternal = domainSelectorID(dstSelectorDNSExternal, allowedEgressDomains)
 var selectorIdDNSExternal2 = domainSelectorID(dstSelectorDNSExternal2, allowedEgressDomains2)
+var selectorIdDNSExternal3 = domainSelectorID("", allowedEgressDomains)
 
 var selectorIdDNSEmpty = selectorID(dstSelectorDNSExternal)
 var selectorIdDNSEmpty2 = selectorID(dstSelectorDNSExternal2)
@@ -636,6 +637,18 @@ var policyDNSExternal2 = Policy{
 		{
 			Action:      "allow",
 			DstSelector: dstSelectorDNSExternal2,
+		},
+	},
+}
+
+var policyDNSExternal3 = Policy{
+	Selector: allSelector,
+	Order:    &order20,
+	Types:    []string{"egress"},
+	OutboundRules: []Rule{
+		{
+			Action:     "allow",
+			DstDomains: allowedEgressDomains,
 		},
 	},
 }
