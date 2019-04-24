@@ -109,7 +109,7 @@ spec:
           env:
             - name: LOG_LEVEL
               value: "info"
-            - name: TIGERA_COMPLIANCE_REPORT_AFTER
+            - name: TIGERA_COMPLIANCE_REPORT_JOB_START_DELAY
               value: "30m"
 {{- if eq .Values.platform "gke" }}
             - name: HEALTH_PORT
@@ -163,15 +163,15 @@ spec:
           volumeMounts:
             - name: elastic-ca-cert-volume
               mountPath: /etc/ssl/elastic/
-          #livenessProbe:
-          #  httpGet:
-          #    path: /liveness
+          livenessProbe:
+            httpGet:
+              path: /liveness
 {{- if eq .Values.platform "gke" }}
-          #    port: 9199
+              port: 9199
 {{- else }}
-          #    port: 9099
+              port: 9099
 {{- end }}
-          #    host: localhost
+              host: localhost
       volumes:
         - name: elastic-ca-cert-volume
           secret:
