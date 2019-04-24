@@ -1,5 +1,5 @@
-hash: 4d4503e590cf47e28e1cc940848b46af1b412ed85168d32f1d88017664e3008c
-updated: 2019-04-18T12:49:11.088125515Z
+hash: 8d5344fb57d9fe1a1296586d42c95174d7a7b17a9af345d93b5488cce493e45a
+updated: 2019-04-23T13:12:13.446952766Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -175,7 +175,7 @@ imports:
 - name: github.com/gxed/GoEndian
   version: 0f5c6873267e5abf306ffcdfcfa4bf77517ef4a7
 - name: github.com/hashicorp/go-version
-  version: d40cf49b3a77bba84a7afdbd7f1dc295d114efb1
+  version: ac23dc3fea5d1a983c43f6a0f6e2c13f0195d8bd
 - name: github.com/hashicorp/golang-lru
   version: a0d98a5f288019575c6d1f4bb1573fef2d1fcdc4
   subpackages:
@@ -243,19 +243,26 @@ imports:
   subpackages:
   - pbutil
 - name: github.com/Microsoft/go-winio
-  version: a6d595ae73cf27a1b8fc32930668708f45ce1c85
+  version: 84b4ab48a50763fe7b3abcef38e5205c12027fac
 - name: github.com/Microsoft/hcsshim
-  version: 4a468a6f7ae547974bc32911395c51fb1862b7df
+  version: 063ae4a83d78bdb93f76b18cc894c6342fa85c15
   subpackages:
+  - hcn
+  - internal/cni
   - internal/guid
   - internal/hcs
   - internal/hcserror
   - internal/hns
   - internal/interop
+  - internal/logfields
   - internal/longpath
   - internal/mergemaps
+  - internal/regstate
+  - internal/runhcs
   - internal/safefile
   - internal/schema1
+  - internal/schema2
+  - internal/timeout
   - internal/wclayer
 - name: github.com/mipearson/rfw
   version: 6f0a6f3266ba1058df9ef0c94cda1cecd2e62852
@@ -318,7 +325,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 541f27125ab32f334ce9c288c43c44df64fc7320
+  version: 8bd33e997eba9314086257c4229a7d3d4523d06e
   repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib/apiconfig
@@ -364,7 +371,7 @@ imports:
   subpackages:
   - binder
 - name: github.com/projectcalico/typha
-  version: 6020cfcec79d468f39efbeafd2093e6c8e633779
+  version: 4684aecbfdeb6107db00534639ac7481cf2ecf08
   repo: git@github.com:tigera/typha-private
   subpackages:
   - pkg/syncclient
@@ -468,6 +475,7 @@ imports:
   subpackages:
   - unix
   - windows
+  - windows/registry
 - name: golang.org/x/text
   version: b19bf474d317b857955b12035d2c5acb57ce8b01
   subpackages:

@@ -146,6 +146,8 @@ type Config struct {
 	MaxIpsetSize                       int           `config:"int;1048576;non-zero"`
 	XDPRefreshInterval                 time.Duration `config:"seconds;90"`
 
+	WindowsNetworkName *regexp.Regexp `config:"regexp-pattern;(?i)calico.*"`
+
 	PolicySyncPathPrefix string `config:"file;;"`
 
 	NetlinkTimeoutSecs time.Duration `config:"seconds;10"`
@@ -724,6 +726,10 @@ func loadParams() {
 		case "iface-list":
 			param = &RegexpParam{Regexp: IfaceListRegexp,
 				Msg: "invalid Linux interface name"}
+		case "regexp-pattern":
+			param = &RegexpPatternParam{
+				Msg: "invalid regex pattern",
+			}
 		case "iface-list-regexp":
 			param = &RegexpPatternListParam{
 				NonRegexpElemRegexp: NonRegexpIfaceElemRegexp,
