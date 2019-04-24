@@ -15,7 +15,7 @@
 
 ### Selecting your cluster configuration
 
-The procedure differs according to whether or not you want to [federate clusters](../../../networking/federation/index)
+The procedure differs according to whether or not you want to [federate clusters](/{{page.version}}/networking/federation/index)
 and your datastore type. Refer to the section that matches your configuration.
 
 - **Without federation**:
@@ -115,17 +115,17 @@ and your datastore type. Refer to the section that matches your configuration.
 ### Installing with federation, using etcd
 
 The following procedure describes how to install {{site.prodname}} on a single cluster that uses an
-etcd datastore (the [local cluster](../../../networking/federation/index#terminology)).
+etcd datastore (the [local cluster](/{{page.version}}/networking/federation/index#terminology)).
 
-**Prerequisite**: Complete the steps in [Creating kubeconfig files](../../../networking/federation/kubeconfig)
-for each [remote cluster](../../../networking/federation/index#terminology). Ensure that the
-[local cluster](../../../networking/federation/index#terminology) can access all of the necessary `kubeconfig` files.
+**Prerequisite**: Complete the steps in [Creating kubeconfig files](/{{page.version}}/networking/federation/kubeconfig)
+for each [remote cluster](/{{page.version}}/networking/federation/index#terminology). Ensure that the
+[local cluster](/{{page.version}}/networking/federation/index#terminology) can access all of the necessary `kubeconfig` files.
 
 1. Access the local cluster using a `kubeconfig` with administrative privileges.
 
 1. Create a secret containing the `kubeconfig` files for all of the remote clusters that
    the local cluster should federate with. A command to achieve this follows. Adjust the `--from-file`
-   flags to include all of the kubeconfig files you created in [Creating kubeconfig files](../../../networking/federation/kubeconfig).
+   flags to include all of the kubeconfig files you created in [Creating kubeconfig files](/{{page.version}}/networking/federation/kubeconfig).
 
    > **Tip**: We recommend naming this secret `tigera-federation-remotecluster` as shown below
    > to make the rest of the procedure easier to follow.
@@ -193,17 +193,17 @@ for each [remote cluster](../../../networking/federation/index#terminology). Ens
 ### Installing with federation, using Kubernetes API datastore
 
 The following procedure describes how to install {{site.prodname}} on a single cluster that uses the
-Kubernetes API datastore (the [local cluster](../../../networking/federation/index#terminology)).
+Kubernetes API datastore (the [local cluster](/{{page.version}}/networking/federation/index#terminology)).
 
-**Prerequisite**: Complete the steps in [Creating kubeconfig files](../../../networking/federation/kubeconfig)
-for each [remote cluster](../../../networking/federation/index#terminology). Ensure that the
-[local cluster](../../../networking/federation/index#terminology) can access all of the necessary `kubeconfig` files.
+**Prerequisite**: Complete the steps in [Creating kubeconfig files](/{{page.version}}/networking/federation/kubeconfig)
+for each [remote cluster](/{{page.version}}/networking/federation/index#terminology). Ensure that the
+[local cluster](/{{page.version}}/networking/federation/index#terminology) can access all of the necessary `kubeconfig` files.
 
 1. Access the local cluster using a `kubeconfig` with administrative privileges.
 
 1. Create a secret containing the `kubeconfig` files for all of the remote clusters that
    the local cluster should federate with. A command to achieve this follows. Adjust the `--from-file`
-   flags to include all of the kubeconfig files you created in [Creating kubeconfig files](../../../networking/federation/kubeconfig).
+   flags to include all of the kubeconfig files you created in [Creating kubeconfig files](/{{page.version}}/networking/federation/kubeconfig).
 
    > **Tip**: We recommend naming this secret `tigera-federation-remotecluster` as shown below to
    > make the rest of the procedure easier to follow.
