@@ -10,14 +10,15 @@ canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/requiremen
 #### Supported versions
 
 We test {{site.prodname}} {{page.version}} against the following Kubernetes versions.
-- 1.9
-- 1.10
-- 1.11
+- v1.11
+- v1.12
+- v1.13
+- v1.14
 
-Other versions are likely to work, but we do not actively test {{site.prodname}}
+Helm installation requires Kubernetes v1.11.3 or later.
+
+Other versions may work, but we do not actively test {{site.prodname}}
 {{page.version}} against them.
-
-Application Layer Policy requires Kubernetes 1.9 or later.
 
 #### CNI plug-in enabled
 
