@@ -1,11 +1,13 @@
-hash: 0c97954c1abc4a57c21e74ff5f0a3b8b8f869794f931fe3f21f06568e04973c2
-updated: 2019-04-23T22:34:41.031414521Z
+hash: 418bd2042cc3ee1820f43943f52bb51d28d8446918d4e341dc6308fc1b7b61bf
+updated: 2019-04-24T08:49:28.731581058Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
   subpackages:
   - compute/metadata
   - internal
+- name: github.com/alexflint/go-filemutex
+  version: 72bdc8eae2aef913234599b837f5dda445ca9bd9
 - name: github.com/aws/aws-sdk-go
   version: fad131ddc707880428615dc8bc1587b55fb46d74
   subpackages:
@@ -48,7 +50,7 @@ imports:
   - autorest/azure
   - autorest/date
 - name: github.com/beorn7/perks
-  version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
+  version: 3a771d992973f24aa725d07868b467d1ddfceafb
   subpackages:
   - quantile
 - name: github.com/bronze1man/goStrongswanVici
@@ -76,6 +78,8 @@ imports:
   - pkg/ns
   - pkg/utils/hwaddr
   - pkg/utils/sysctl
+  - plugins/ipam/host-local/backend
+  - plugins/ipam/host-local/backend/disk
 - name: github.com/coreos/etcd
   version: 33245c6b5b49130ca99280408fadfab01aac0e48
   subpackages:
@@ -110,15 +114,15 @@ imports:
   subpackages:
   - log
 - name: github.com/gavv/monotime
-  version: 30dba43534243e3484a34676a0f068d12b989f84
+  version: 6f8212e8d10df7383609d3c377ca08884d8f3ec0
 - name: github.com/ghodss/yaml
   version: 73d445a93680fa1a78ae23a5839bad48f32ba1ee
 - name: github.com/go-ini/ini
-  version: 5cf292cae48347c2490ac1a58fe36735fb78df7e
+  version: 9c8236e659b76e87bf02044d06fde8683008ff3e
 - name: github.com/go-openapi/jsonpointer
-  version: ef5f0afec364d3b9396b7b77b43dbe26bf1f8004
+  version: 46af16f9f7b149af66e5d1bd010e3574dc06de98
 - name: github.com/go-openapi/jsonreference
-  version: 8483a886a90412cd6858df4ea3483dce9c8e35a3
+  version: 3fb327e6747da3043567ee86abd02bb6376b6be2
 - name: github.com/go-openapi/spec
   version: 384415f06ee238aae1df5caad877de6ceac3a5c4
 - name: github.com/go-openapi/swag
@@ -155,7 +159,7 @@ imports:
   subpackages:
   - layers
 - name: github.com/google/uuid
-  version: 8c31c18f31ede9fc8eae72290a7e7a8064e9b3e3
+  version: 064e2069ce9c359c118179501254f67d7d37ba24
 - name: github.com/googleapis/gnostic
   version: 0c5108395e2debce0d731cf0287ddf7242066aba
   subpackages:
@@ -303,7 +307,7 @@ imports:
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
 - name: github.com/projectcalico/cni-plugin
-  version: f6bafa4007c7b0b9298248a9b37976906ff1a67a
+  version: ff37804b6fc54ad39a0c27807b52b85eb749a583
   repo: git@github.com:tigera/cni-plugin-private.git
   subpackages:
   - internal/pkg/azure
@@ -313,8 +317,9 @@ imports:
   - pkg/k8s
   - pkg/plugin
   - pkg/types
+  - pkg/upgrade
 - name: github.com/projectcalico/felix
-  version: bacae7cff70491bd0103c757f1effa4db2be923e
+  version: 5c842ebb4b0616695255c7012847d0ce790d1fcb
   repo: git@github.com:tigera/felix-private.git
   subpackages:
   - buildinfo
@@ -429,11 +434,11 @@ imports:
   - prometheus/internal
   - prometheus/promhttp
 - name: github.com/prometheus/client_model
-  version: fa8ad6fec33561be4280a8f0514318c79d7f6cb6
+  version: 6f3806018612930941127f2a7c6c453ba2c527d2
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: cfeb6f9992ffa54aaa4f2170ade4067ee478b250
+  version: 13ba4ddd0caa9c28ca7b7bffe1dfa9ed8d5ef207
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
@@ -550,7 +555,7 @@ imports:
   subpackages:
   - rate
 - name: google.golang.org/appengine
-  version: 54a98f90d1c46b7731eb8fb305d2a321c30ef610
+  version: 4a4468ece617fc8205e99368fa2200e9d1fad421
   subpackages:
   - internal
   - internal/app_identity
@@ -678,7 +683,7 @@ imports:
   - pkg/watch
   - third_party/forked/golang/reflect
 - name: k8s.io/apiserver
-  version: f881eae9ec04b8c996ef0d24309c860ea188acd1
+  version: f1dab8c342623e75f0484f20b150183d9e73f406
   subpackages:
   - pkg/apis/audit
 - name: k8s.io/client-go
