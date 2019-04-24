@@ -27,6 +27,7 @@ import (
 	"github.com/projectcalico/felix/fv/workload"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
+	"github.com/projectcalico/libcalico-go/lib/numorstring"
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
@@ -346,6 +347,75 @@ var _ = Describe("DNS Policy", func() {
 		})
 	})
 
+	workloadCanPingEtcd := func() error {
+		out, err := w[0].ExecOutput("ping", "-c", "1", "-W", "1", etcd.IP)
+		log.WithError(err).Infof("ping said:\n%v", out)
+		if err != nil {
+			log.Infof("stderr was:\n%v", string(err.(*exec.ExitError).Stderr))
+		}
+		return err
+	}
+
+	Context("with policy in place first, then connection attempted", func() {
+		BeforeEach(func() {
+			policy := api.NewGlobalNetworkPolicy()
+			policy.Name = "default-deny-egress"
+			policy.Spec.Selector = "all()"
+			udp := numorstring.ProtocolFromString(numorstring.ProtocolUDP)
+			policy.Spec.Egress = []api.Rule{
+				{
+					Action:   api.Allow,
+					Protocol: &udp,
+					Destination: api.EntityRule{
+						Ports: []numorstring.Port{numorstring.SinglePort(53)},
+					},
+				},
+				{
+					Action: api.Deny,
+				},
+			}
+			_, err := client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
+			Expect(err).NotTo(HaveOccurred())
+
+			policy = api.NewGlobalNetworkPolicy()
+			policy.Name = "allow-xyz"
+			order := float64(20)
+			policy.Spec.Order = &order
+			policy.Spec.Selector = "all()"
+			policy.Spec.Egress = []api.Rule{
+				{
+					Action:      api.Allow,
+					Destination: api.EntityRule{Domains: []string{"xyz.com"}},
+				},
+			}
+			_, err = client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Allow 2s for Felix to see and process that policy.
+			time.Sleep(2 * time.Second)
+
+			// We use the etcd container as a target IP for the workload to ping, so
+			// arrange for it to route back to the workload.
+			etcd.Exec("ip", "r", "add", w[0].IP, "via", felix.IP)
+
+			// Create a chain of DNS info that maps xyz.com to that IP.
+			dnsServerSetup(scapyTrusted)
+			sendDNSResponses(scapyTrusted, []string{
+				"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='xyz.com',qtype='CNAME'),an=(DNSRR(rrname='xyz.com',type='CNAME',ttl=60,rdata='bob.xyz.com')))",
+				"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='bob.xyz.com',qtype='CNAME'),an=(DNSRR(rrname='bob.xyz.com',type='CNAME',ttl=10,rdata='server-5.xyz.com')))",
+				"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='server-5.xyz.com',qtype='A'),an=(DNSRR(rrname='server-5.xyz.com',type='A',ttl=60,rdata='" + etcd.IP + "')))",
+			})
+			scapyTrusted.Stdin.Close()
+		})
+
+		It("workload can ping etcd", func() {
+			// Allow a second for Felix to see the DNS responses and update ipsets.
+			time.Sleep(1 * time.Second)
+			// Ping should now go through.
+			Expect(workloadCanPingEtcd()).NotTo(HaveOccurred())
+		})
+	})
+
 	Context("with a chain of DNS info for xyz.com", func() {
 		BeforeEach(func() {
 			// We use the etcd container as a target IP for the workload to ping, so
@@ -361,15 +431,6 @@ var _ = Describe("DNS Policy", func() {
 			})
 			scapyTrusted.Stdin.Close()
 		})
-
-		workloadCanPingEtcd := func() error {
-			out, err := w[0].ExecOutput("ping", "-c", "1", "-W", "1", etcd.IP)
-			log.WithError(err).Infof("ping said:\n%v", out)
-			if err != nil {
-				log.Infof("stderr was:\n%v", string(err.(*exec.ExitError).Stderr))
-			}
-			return err
-		}
 
 		It("workload can ping etcd, because there's no policy", func() {
 			Expect(workloadCanPingEtcd()).NotTo(HaveOccurred())
