@@ -32,12 +32,19 @@
    ```
 
 
-1. Set up secret with username and password for {{site.prodname}} compliance report and dashboard to authenticate with Elasticsearch.
-   Replace `<compliance-elasticsearch-password>` with the password.
+1. Set up secret with username and passwords for {{site.prodname}} compliance report and dashboard to authenticate with Elasticsearch.
+   Replace `<compliance-elasticsearch-controller-password>`, `<compliance-elasticsearch-reporter-password>`,
+   `<compliance-elasticsearch-snapshotter-password>` and `<compliance-elasticsearch-server-password>` with the approrpiate passwords.
    ```
    {{cli}} create secret generic elastic-compliance-user \
-   --from-literal=username=tigera-ee-compliance \
-   --from-literal=password=<compliance-elasticsearch-password> \
+   --from-literal=controller.username=tigera-ee-compliance-controller \
+   --from-literal=controller.password=<compliance-controller-elasticsearch-password> \
+   --from-literal=reporter.username=tigera-ee-compliance-reporter \
+   --from-literal=reporter.password=<compliance-reporter-elasticsearch-password> \
+   --from-literal=snapshotter.username=tigera-ee-compliance-snapshotter \
+   --from-literal=snapshotter.password=<compliance-snapshotter-elasticsearch-password> \
+   --from-literal=server.username=tigera-ee-compliance-server \
+   --from-literal=server.password=<compliance-server-elasticsearch-password> \
    -n calico-monitoring
    ```
 

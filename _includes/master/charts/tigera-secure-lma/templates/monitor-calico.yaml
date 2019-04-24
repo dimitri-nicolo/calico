@@ -1067,6 +1067,13 @@ spec:
       - 9200
     protocol: TCP
     source:
+      selector: k8s-app == 'compliance-controller'
+  - action: Allow
+    destination:
+      ports:
+      - 9200
+    protocol: TCP
+    source:
       selector: k8s-app == 'compliance-server'
   - action: Allow
     destination:

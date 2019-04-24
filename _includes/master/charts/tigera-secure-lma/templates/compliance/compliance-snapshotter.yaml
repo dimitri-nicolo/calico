@@ -1,4 +1,3 @@
-{{- $elasticMode := include "tigera-secure-lma.elasticsearch.mode" . }}
 kind: ServiceAccount
 apiVersion: v1
 metadata:
@@ -10,7 +9,7 @@ metadata:
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRole
 metadata:
-  name: compliance-snapshotter-role
+  name: tigera-compliance-snapshotter
 rules:
   - apiGroups: ["extensions","networking.k8s.io",""]
     resources:
@@ -39,20 +38,18 @@ rules:
 
 ---
 
-
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRoleBinding
 metadata:
-  name: compliance-snapshotter-binding
+  name: tigera-compliance-snapshotter
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: compliance-snapshotter-role
+  name: tigera-compliance-snapshotter
 subjects:
 - kind: ServiceAccount
   name: tigera-compliance-snapshotter
   namespace: calico-monitoring
-
 
 ---
 
@@ -96,7 +93,11 @@ spec:
           env:
             - name: LOG_LEVEL
               value: "info"
-            - name: TIGERA_COMPLIANCE_SNAPSHOT_HOUR 
+{{- if eq .Values.platform "gke" }}
+            - name: HEALTH_PORT
+              value: "9199"
+{{- end }}
+            - name: TIGERA_COMPLIANCE_SNAPSHOT_HOUR
               value: "0"
             - name: ELASTIC_INDEX_SUFFIX
               valueFrom:
@@ -144,6 +145,15 @@ spec:
           volumeMounts:
             - name: elastic-ca-cert-volume
               mountPath: /etc/ssl/elastic/
+          #livenessProbe:
+          #  httpGet:
+          #    path: /liveness
+{{- if eq .Values.platform "gke" }}
+          #    port: 9199
+{{- else }}
+          #    port: 9099
+{{- end }}
+          #    host: localhost
       volumes:
         - name: elastic-ca-cert-volume
           secret:

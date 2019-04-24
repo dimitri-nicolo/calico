@@ -47,6 +47,7 @@ imageNames:
   compliance-controller: tigera/compliance-controller
   compliance-server: tigera/compliance-server
   compliance-snapshotter: tigera/compliance-snapshotter
+  compliance-reporter: tigera/compliance-reporter
 
 
 # List of files to exclude. These files won't get included in the deployed site.

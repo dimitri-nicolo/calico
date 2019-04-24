@@ -93,7 +93,10 @@ module Jekyll
         --set elasticsearch.fluentd.password=fake \
         --set elasticsearch.manager.password=fake \
         --set elasticsearch.curator.password=fake \
-        --set elasticsearch.compliance.password=fake \
+        --set elasticsearch.compliance.controller.password=fake \
+        --set elasticsearch.compliance.reporter.password=fake \
+        --set elasticsearch.compliance.snapshotter.password=fake \
+        --set elasticsearch.compliance.server.password=fake \
         --set elasticsearch.intrusionDetection.password=fake \
         --set elasticsearch.elasticInstaller.password=fake"""
       return cmd
