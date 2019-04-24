@@ -948,6 +948,12 @@ spec:
         k8s-app: intrusion-detection-controller
     spec:
       serviceAccountName: intrusion-detection-controller
+{{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+{{- range $key, $value := .Values.imagePullSecrets }}
+        - name: {{ $key }}
+{{- end }}
+{{- end }}
       containers:
       - name: controller
         image: {{ .Values.intrusionDetectionController.image }}:{{ .Values.intrusionDetectionController.tag }}
