@@ -141,8 +141,7 @@ kind: GlobalNetworkSet
 metadata:
   name: allowed-domains-1
   labels:
-  - name: destination-set
-    value: alice-and-bob
+    destination-set: alice-and-bob
 spec:
   allowedEgressDomains:
   - alice.com
