@@ -279,13 +279,16 @@ func (c *endpointEngine) convertToVersioned(res resources.Resource) (VersionedRe
 	case *corev1.Pod:
 		// Check if an IP address is available, if not then it won't be possible to convert the Pod.
 		podIPs, ipErr := c.converter.GetPodIPs(in)
+		validIP := true
 		if ipErr != nil || len(podIPs) == 0 {
 			// There is no valid IP. In this case we need to sneak in an IP address in order to get the conversion
 			// to succeed. We'll flag that this IP address is not actually valid which will mean the getIPOrEndpointIDs
-			// will not return this invalid IP.
+			// will not return this invalid IP. The upshot of this is that we might be flagging a pod that never became
+			// active, but we are focussing mostly on intent and so this is a good approximation.
 			log.Debugf("Setting fake IP in Pod to ensure conversion is handled correctly - IP will be ignored: %s",
 				resources.GetResourceID(in))
 			in.Status.PodIP = "255.255.255.255"
+			validIP = false
 		}
 
 		kvp, err := c.converter.PodToWorkloadEndpoint(in)
@@ -316,7 +319,7 @@ func (c *endpointEngine) convertToVersioned(res resources.Resource) (VersionedRe
 			Pod:     in,
 			v3:      v3,
 			v1:      v1.(*model.WorkloadEndpoint),
-			validIP: len(podIPs) != 0,
+			validIP: validIP,
 		}, nil
 	}
 
