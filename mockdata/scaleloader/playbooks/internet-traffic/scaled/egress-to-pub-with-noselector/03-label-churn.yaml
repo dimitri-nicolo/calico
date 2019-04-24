@@ -1,0 +1,12 @@
+action: update
+kind: "Pod"
+apiversion: v1
+metadata:
+  name: "egress-to-pub-with-noselector-{{.ScaleId}}"
+  namespace: "{{.Namespace}}"
+  labels:
+    egress-with-noselector: "yes"
+    just: "some churn"
+spec:
+  serviceaccountname: demosa
+  nodeName: anode

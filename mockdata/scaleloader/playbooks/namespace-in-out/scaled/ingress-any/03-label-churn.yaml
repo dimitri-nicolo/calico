@@ -1,0 +1,12 @@
+action: update
+kind: "Pod"
+apiversion: v1
+metadata:
+  name: "ingress-from-any-{{.ScaleId}}"
+  namespace: "{{.Namespace}}"
+  labels:
+    ingress-from-any: "yes"
+    just: "some churn"
+spec:
+  serviceaccountname: demosa
+  nodeName: anode

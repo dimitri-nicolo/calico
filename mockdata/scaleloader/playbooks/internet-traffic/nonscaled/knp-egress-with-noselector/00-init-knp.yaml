@@ -1,0 +1,16 @@
+action: init
+kind: NetworkPolicy
+apiversion: networking.k8s.io/v1
+metadata:
+  name: egress-with-noselector
+  namespace: "{{.Namespace}}"
+  labels:
+    churn-k8s: "one-fish"
+spec:
+  podSelector:
+    matchLabels:
+      egress-with-noselector: 'yes'
+  egress:
+    - to:
+      - namespaceSelector:
+      - podSelector:

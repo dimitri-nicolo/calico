@@ -5,7 +5,7 @@ metadata:
   name: "protected-ingress-pod-{{.ScaleId}}"
   namespace: "{{.Namespace}}"
   labels:
-    protected: "ingress"
+    "{{.Namespace}}-protected": "ingress"
 spec:
   serviceaccountname: demosa
   nodeName: anode

@@ -7,7 +7,7 @@ metadata:
 spec:
   podSelector:
     matchLabels:
-      protected: 'ingress'
+      "{{.Namespace}}-protected": 'ingress'
   ingress:
     - from:
       - podSelector:

@@ -1,0 +1,7 @@
+start: 2019-03-01T06:00:00
+duration: 24h
+playbooks:
+  - name: internet-traffic
+    playbookscale: 1
+    playscale: 1
+    churnrate: 2
