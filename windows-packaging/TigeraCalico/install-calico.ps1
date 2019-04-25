@@ -14,7 +14,7 @@ if ($env:PROCESSOR_ARCHITEW6432 -eq "AMD64") {
 ipmo "$PSScriptRoot\libs\calico\calico.psm1" -Force
 
 # Ensure our scripts are allowed to run.
-Unblock-File -Force $PSScriptRoot\*.ps1
+Unblock-File $PSScriptRoot\*.ps1
 
 . $PSScriptRoot\config.ps1
 

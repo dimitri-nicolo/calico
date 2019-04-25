@@ -108,7 +108,7 @@ function Install-NodeService()
     ensureRegistryKey
 
     # Ensure our service file can run.
-    Unblock-File -Force $baseDir\node\node-service.ps1
+    Unblock-File $baseDir\node\node-service.ps1
 
     & $NSSMPath install TigeraNode $powerShellPath
     & $NSSMPath set TigeraNode AppParameters $baseDir\node\node-service.ps1
@@ -154,7 +154,7 @@ function Install-FelixService()
     Write-Host "Installing Felix service..."
 
     # Ensure our service file can run.
-    Unblock-File -Force $baseDir\felix\felix-service.ps1
+    Unblock-File $baseDir\felix\felix-service.ps1
 
     # We run Felix via a wrapper script to make it easier to update env vars.
     & $NSSMPath install TigeraFelix $powerShellPath
@@ -201,7 +201,7 @@ function Install-ConfdService()
     Write-Host "Installing confd service..."
 
     # Ensure our service file can run.
-    Unblock-File -Force $baseDir\confd\confd-service.ps1
+    Unblock-File $baseDir\confd\confd-service.ps1
 
     # We run confd via a wrapper script to make it easier to update env vars.
     & $NSSMPath install TigeraConfd $powerShellPath
