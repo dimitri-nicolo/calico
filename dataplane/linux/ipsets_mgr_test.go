@@ -33,6 +33,30 @@ var _ = Describe("IP Sets manager", func() {
 		ipsetsMgr = newIPSetsManager(ipSets, 1024, nil)
 	})
 
+	AssertIPSetMembers := func(id string, members []string) {
+		It("IPSet should have the right members", func() {
+			Expect(ipSets.Members[id]).To(Equal(set.FromArray(members)))
+		})
+	}
+
+	AssertIPSetNoMembers := func(id string) {
+		It("IPSet should have no members", func() {
+			Expect(ipSets.Members[id]).To(BeNil())
+		})
+	}
+
+	AssertIPSetModified := func() {
+		It("IPSet should be modified", func() {
+			Expect(ipSets.AddOrReplaceCalled).To(BeTrue())
+		})
+	}
+
+	AssertIPSetNotModified := func() {
+		It("IPSet should not be modified", func() {
+			Expect(ipSets.AddOrReplaceCalled).To(BeFalse())
+		})
+	}
+
 	Describe("after sending a replace", func() {
 		BeforeEach(func() {
 			ipsetsMgr.OnUpdate(&proto.IPSetUpdate{
@@ -41,14 +65,8 @@ var _ = Describe("IP Sets manager", func() {
 			})
 			ipsetsMgr.CompleteDeferredWork()
 		})
-		It("should create the IP set", func() {
-			Expect(ipSets.AddOrReplaceCalled).To(BeTrue())
-		})
-		It("should add the right members", func() {
-			Expect(ipSets.Members).To(HaveLen(1))
-			expIPs := set.From("10.0.0.1", "10.0.0.2")
-			Expect(ipSets.Members["id1"]).To(Equal(expIPs))
-		})
+		AssertIPSetModified()
+		AssertIPSetMembers("id1", []string{"10.0.0.1", "10.0.0.2"})
 
 		Describe("after sending a delta update", func() {
 			BeforeEach(func() {
@@ -60,13 +78,8 @@ var _ = Describe("IP Sets manager", func() {
 				})
 				ipsetsMgr.CompleteDeferredWork()
 			})
-			It("should not replace the IP set", func() {
-				Expect(ipSets.AddOrReplaceCalled).To(BeFalse())
-			})
-			It("should contain the right IPs", func() {
-				expIPs := set.From("10.0.0.2", "10.0.0.3", "10.0.0.4")
-				Expect(ipSets.Members["id1"]).To(Equal(expIPs))
-			})
+			AssertIPSetNotModified()
+			AssertIPSetMembers("id1", []string{"10.0.0.2", "10.0.0.3", "10.0.0.4"})
 
 			Describe("after sending a delete", func() {
 				BeforeEach(func() {
@@ -75,9 +88,7 @@ var _ = Describe("IP Sets manager", func() {
 					})
 					ipsetsMgr.CompleteDeferredWork()
 				})
-				It("should remove the IP set", func() {
-					Expect(ipSets.Members["id1"]).To(BeNil())
-				})
+				AssertIPSetNoMembers("id1")
 			})
 		})
 
@@ -90,14 +101,8 @@ var _ = Describe("IP Sets manager", func() {
 				})
 				ipsetsMgr.CompleteDeferredWork()
 			})
-			It("should replace the IP set", func() {
-				Expect(ipSets.AddOrReplaceCalled).To(BeTrue())
-			})
-			It("should add the right members", func() {
-				Expect(ipSets.Members).To(HaveLen(1))
-				expIPs := set.From("10.0.0.2", "10.0.0.3")
-				Expect(ipSets.Members["id1"]).To(Equal(expIPs))
-			})
+			AssertIPSetModified()
+			AssertIPSetMembers("id1", []string{"10.0.0.2", "10.0.0.3"})
 		})
 	})
 })

@@ -20,8 +20,14 @@ set -x
 echo "Removing old coverprofiles..."
 find . -name "*.coverprofile" -type f -delete
 
-if [ -z $WHAT ]
-then
+# It's possible to run a specific test by passing its directory as the first argument to this script. Or if running tests through make 
+# targets, something like "GINKGO_ARGS="dataplane/linux" make ut" will only run the dataplane/linux UTs.
+
+if [ ! -z "$1" ]; then
+	WHAT=$1
+fi
+
+if [ -z "$WHAT" ]; then
     echo "Calculating packages to cover..."
     go_dirs=$(find -type f -name '*.go' | \
               grep -vE '/vendor/|\./proto/|.glide|/k8sfv/|/fv/' | \
@@ -37,10 +43,10 @@ then
     test ! -z "$test_pkgs"
     echo "Packages with tests: $test_pkgs"
 else
-    echo "Running the following tests: $WHAT"
+    echo "Running the following tests: ${WHAT}"
 fi
 
-ginkgo -cover -covermode=count -coverpkg=${go_dirs} -r -skipPackage fv,k8sfv $WHAT
+ginkgo -cover -covermode=count -coverpkg=${go_dirs} -r -skipPackage fv,k8sfv ${WHAT}
 
 gocovmerge $(find . -name '*.coverprofile') > combined.coverprofile
 
