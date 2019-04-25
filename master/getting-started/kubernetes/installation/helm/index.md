@@ -64,6 +64,9 @@ Set the following flags to specify TLS certs to use when connecting to etcd:
 
 By default, {{ site.prodname }} installs with IPIP encapsulation enabled.
 
+>**Warning**: Changing settings in the `initialPool` block after installation will have no effect. For information on changing IP Pools after installation, see [configuring IP Pools]({{site.url}}/{{page.version}}/networking/changing-ip-pools)
+{: .alert .alert-warning}
+
 **Turn off IPIP**
 
 ```yaml
@@ -88,9 +91,6 @@ initialPool:
 ```
 
 >**Note**: This should fall within `--cluster-cidr` configured for the cluster
-{: .alert .alert-info}
-
->**Warning**: Changing this value after installation will have no effect.
 {: .alert .alert-info}
 
 ## Step 2: Install {{ site.prodname }} Core
