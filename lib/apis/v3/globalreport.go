@@ -43,11 +43,11 @@ type ReportSpec struct {
 	ReportType string `json:"reportType" validate:"name,required"`
 
 	// EndpointsSelection is used to specify which endpoints are in-scope and stored in the generated report data.
-	// Only required if endpoints data is gathered in the report.
+	// Only used if endpoints data and/or audit logs are gathered in the report.
 	EndpointsSelection EndpointsSelection `json:"endpointsSelection,omitempty" validate:"omitempty,selector"`
 
 	// AuditEventsSelection is used to specify which audit events will be gathered.
-	// Only required if audit logs are gathered in the report.
+	// Only used if audit logs are gathered in the report.
 	AuditEventsSelection AuditEventsSelection `json:"auditEventsSelection,omitempty" validate:"omitempty"`
 
 	// The report schedule specified in cron format. This specifies both the start and end times of each report,
@@ -80,8 +80,8 @@ type ReportStatus struct {
 	// The set of active report jobs.
 	ActiveReportJobs []ReportJob `json:"activeReportJobs,omitempty"`
 
-	// The last scheduled job.
-	LastScheduledJob *ReportJob `json:"lastScheduledJob,omitempty"`
+	// The last scheduled report job.
+	LastScheduledReportJob *ReportJob `json:"lastScheduledReportJob,omitempty"`
 }
 
 // ReportJob contains
