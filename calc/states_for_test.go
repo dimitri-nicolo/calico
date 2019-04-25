@@ -77,9 +77,10 @@ var withHttpMethodPolicy = initialisedStore.withKVUpdates(
 ).withName("with http-method policy")
 
 // DNS Policy state(s)
+// withDNSPolicy tests the base use case of limiting egress traffic of a WEP to a single external domain.
 var withDNSPolicy = initialisedStore.withKVUpdates(
 	KVPair{Key: localWlEpKey1, Value: &localWlEpDNS},
-	KVPair{Key: netSetDstDomainsKey, Value: &netSetDstDomains},
+	KVPair{Key: netSetDNSKey, Value: &netSetDNS},
 	KVPair{Key: PolicyKey{Tier: "default", Name: "default.dns-basic"}, Value: &policyDNSBasic},
 	KVPair{Key: PolicyKey{Tier: "default", Name: "default.ext-service"}, Value: &policyDNSExternal},
 ).withActivePolicies(
@@ -96,6 +97,51 @@ var withDNSPolicy = initialisedStore.withKVUpdates(
 	"10.0.0.1/32",
 	"10.0.0.2/32",
 }).withIPSet(selectorIdDNSExternal, allowedEgressDomains).withIPSet(selectorIdDNSEmpty, []string{}).withName("with DNS Policy")
+
+// withDNSPolicy2 verifies that when two GlobalNetworkSets, each with its own allowedEgressDomains, are selected by an appropriate
+// GlobalNetworkPolicy, the resulting IPSet will contain the domain names from both Sets.
+var withDNSPolicy2 = initialisedStore.withKVUpdates(
+	KVPair{Key: localWlEpKey1, Value: &localWlEpDNS},
+	KVPair{Key: netSetDNSKey, Value: &netSetDNS},
+	KVPair{Key: netSetDNSKey2, Value: &netSetDNS2},
+	KVPair{Key: PolicyKey{Tier: "default", Name: "default.dns-basic"}, Value: &policyDNSBasic},
+	KVPair{Key: PolicyKey{Tier: "default", Name: "default.ext-service-2"}, Value: &policyDNSExternal2},
+).withActivePolicies(
+	proto.PolicyID{"default", "default.dns-basic"},
+	proto.PolicyID{"default", "default.ext-service-2"},
+).withEndpoint(
+	localWlEp1Id,
+	[]mock.TierInfo{
+		{"default", nil, []string{"default.ext-service-2", "default.dns-basic"}},
+	},
+).withIPSet(allSelectorId, []string{
+	"fc00:fe11::1/128",
+	"fc00:fe11::2/128",
+	"10.0.0.1/32",
+	"10.0.0.2/32",
+}).withIPSet(selectorIdDNSExternal2, append(allowedEgressDomains, allowedEgressDomains2...)).withIPSet(selectorIdDNSEmpty2, []string{}).withName("with DNS Policy 2")
+
+// withDNSPolicy3 verifies that a GlobalNetworkSet with allowedEgressDomains and a Policy that matches the domains directly but
+// without a selector will contain an IPSet with the correct domains.
+var withDNSPolicy3 = initialisedStore.withKVUpdates(
+	KVPair{Key: localWlEpKey1, Value: &localWlEpDNS},
+	KVPair{Key: netSetDNSKey, Value: &netSetDNS},
+	KVPair{Key: PolicyKey{Tier: "default", Name: "default.dns-basic"}, Value: &policyDNSBasic},
+	KVPair{Key: PolicyKey{Tier: "default", Name: "default.destination-domains"}, Value: &policyDNSExternal3},
+).withActivePolicies(
+	proto.PolicyID{"default", "default.dns-basic"},
+	proto.PolicyID{"default", "default.destination-domains"},
+).withEndpoint(
+	localWlEp1Id,
+	[]mock.TierInfo{
+		{"default", nil, []string{"default.destination-domains", "default.dns-basic"}},
+	},
+).withIPSet(allSelectorId, []string{
+	"fc00:fe11::1/128",
+	"fc00:fe11::2/128",
+	"10.0.0.1/32",
+	"10.0.0.2/32",
+}).withIPSet(selectorIdDNSExternal3, allowedEgressDomains).withName("with DNS Policy 3")
 
 // withServiceAccountPolicy adds two policies containing service account selector.
 var withServiceAccountPolicy = initialisedStore.withKVUpdates(

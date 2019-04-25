@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
 
 package calc_test
 
@@ -805,7 +805,7 @@ var commercialTests = []StateList{
 		remoteEpsWithPolicyAndTier},
 
 	// DNS Policy unit tests.
-	{withDNSPolicy},
+	{withDNSPolicy, withDNSPolicy2, withDNSPolicy3},
 
 	// TODO(smc): Test config calculation
 	// TODO(smc): Test mutation of endpoints
