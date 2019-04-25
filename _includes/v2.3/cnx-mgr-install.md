@@ -293,15 +293,15 @@ with appropriate permissions on the cluster.
 1. Grant permission to access the {{site.prodname}} Manager to users in your cluster. Issue one of the following
    commands, replacing `<USER>` with the name of the user you wish to grant access.
 
-   The ClusterRole `tigera-manager-user` grants permission to use the {{site.prodname}} Manager UI, view flow 
+   The ClusterRole `tigera-ui-user` grants permission to use the {{site.prodname}} Manager UI, view flow 
    logs, audit logs, and network statistics, and access the default policy tier.
 
    ```
 {%- if include.init == "openshift" %}
-   oc adm policy add-cluster-role-to-user tigera-manager-user <USER>
+   oc adm policy add-cluster-role-to-user tigera-ui-user <USER>
 {%- else %}
    kubectl create clusterrolebinding <USER>-tigera \
-     --clusterrole=tigera-manager-user \
+     --clusterrole=tigera-ui-user \
      --user=<USER>
 {%- endif %}
    ```
