@@ -61,7 +61,7 @@ func NewElastic(h *http.Client, url *url.URL, username, password string) (*Elast
 		elastic.SetErrorLog(log.StandardLogger()),
 		elastic.SetSniff(false),
 		elastic.SetHealthcheck(false),
-		elastic.SetTraceLog(log.StandardLogger()),
+		//elastic.SetTraceLog(log.StandardLogger()),
 	}
 	if username != "" {
 		options = append(options, elastic.SetBasicAuth(username, password))
