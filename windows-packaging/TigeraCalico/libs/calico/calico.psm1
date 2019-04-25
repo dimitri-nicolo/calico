@@ -29,6 +29,9 @@ function Test-CalicoConfiguration()
                     "is configured with matching --cni-conf-dir."
         }
     }
+    if ($env:CALICO_NETWORKING_BACKEND -EQ "vxlan" -AND $env:CNI_IPAM_TYPE -NE "calico-ipam") {
+        throw "Calico VXLAN requires IPAM type calico-ipam, not $env:CNI_IPAM_TYPE."
+    }
     if ($env:CALICO_DATASTORE_TYPE -EQ "kubernetes")
     {
         if (fileIsMissing($env:KUBECONFIG))
