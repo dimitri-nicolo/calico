@@ -252,6 +252,7 @@ data:
         - networkpolicies
         - globalnetworksets
         - tiers
+        - hostendpoints
 
 ---
 
