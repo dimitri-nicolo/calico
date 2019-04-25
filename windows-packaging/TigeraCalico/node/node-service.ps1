@@ -10,6 +10,13 @@ $lastBootTime = Get-LastBootTime
 
 $timeout = $env:STARTUP_VALID_IP_TIMEOUT
 
+# Autoconfigure the IPAM block mode.
+if ($env:CNI_IPAM_TYPE -EQ "host-local") {
+    $env:USE_POD_CIDR = "true"
+} else {
+    $env:USE_POD_CIDR = "false"
+}
+
 if ($env:CALICO_NETWORKING_BACKEND -EQ "windows-bgp" -OR $env:CALICO_NETWORKING_BACKEND -EQ "vxlan")
 {
     Write-Host "Calico $env:CALICO_NETWORKING_BACKEND networking enabled."
@@ -57,7 +64,7 @@ if ($env:CALICO_NETWORKING_BACKEND -EQ "windows-bgp" -OR $env:CALICO_NETWORKING_
         }
     }
 
-    # Create a L2Bridge to trigger a vSwitch creation. Do this only once
+    # Create a bridge to trigger a vSwitch creation. Do this only once
     Write-Host "`nStart creating vSwitch. Note: Connection may get lost for RDP, please reconnect...`n"
     while (!(Get-HnsNetwork | ? Name -EQ "External"))
     {

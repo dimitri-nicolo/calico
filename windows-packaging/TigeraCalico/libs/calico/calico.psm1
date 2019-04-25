@@ -72,7 +72,6 @@ function Install-CNIPlugin()
 
     $cniConfFile = $env:CNI_CONF_DIR + "\" + $env:CNI_CONF_FILENAME
     Write-Host "Writing CNI configuration to $cniConfFile."
-    $ipamType = "calico-ipam"
     $nodeNameFile = "$baseDir\nodename".replace('\', '\\')
     $etcdKeyFile = "$env:ETCD_KEY_FILE".replace('\', '\\')
     $etcdCertFile = "$env:ETCD_CERT_FILE".replace('\', '\\')
@@ -92,7 +91,7 @@ function Install-CNIPlugin()
                 replace('__ETCD_KEY_FILE__', $etcdKeyFile).
                 replace('__ETCD_CERT_FILE__', $etcdCertFile).
                 replace('__ETCD_CA_CERT_FILE__', $etcdCACertFile).
-                replace('__IPAM_TYPE__', $ipamType).
+                replace('__IPAM_TYPE__', $env:CNI_IPAM_TYPE).
                 replace('__MODE__', $mode)
     } | Set-Content "$cniConfFile"
     Write-Host "Wrote CNI configuration."
