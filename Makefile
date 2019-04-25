@@ -80,6 +80,14 @@ clean:
 ###############################################################################
 # CI / test targets
 ###############################################################################
+test:
+	docker run --rm \
+        -v $(PWD)/tests:/code \
+        -e RELEASE_STREAM=$(RELEASE_STREAM) \
+        calico/test:latest sh -c \
+	"nosetests . -e $(EXCLUDE_REGEX) -v --with-xunit \
+	--xunit-file='/code/report/nosetests.xml' \
+	--with-timer"
 
 ci: clean htmlproofer kubeval helm-tests
 htmlproofer: _site
