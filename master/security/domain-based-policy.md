@@ -128,7 +128,7 @@ kind: <b>GlobalNetworkSet</b>
 metadata:
   name: allowed-domains-1
   labels:
-  - color: red
+    color: red
 spec:
   <b>allowedEgressDomains:
   - api.alice.com
