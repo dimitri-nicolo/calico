@@ -83,10 +83,9 @@ In this method, you create a **global network policy** with egress rules
 with `action: Allow` and a `destination.domains` field specifying the
 domain names to which egress traffic is allowed.
 
-In the following example, the first rule allows DNS traffic to
-kube-system (where kube-dns or CoreDNS normally runs), and the second
-rule allows connections outside the cluster to domains **api.alice.com**
-and **bob.example.com**.
+In the following example, the first rule allows DNS traffic, and the
+second rule allows connections outside the cluster to domains
+**api.alice.com** and **bob.example.com**.
 
 <pre>
 apiVersion: projectcalico.org/v3
@@ -102,8 +101,8 @@ spec:
   - action: Allow
     protocol: UDP
     destination:
-      namespaceSelector: name == 'kube-system'
-      ports: [53]
+      ports:
+      - 53
   - action: Allow
     destination:
       domains:
