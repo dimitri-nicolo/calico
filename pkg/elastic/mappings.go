@@ -24,8 +24,10 @@ const (
   "mappings": {
     "_doc": {
       "properties": {
-        "reportType": { "type": "text" },
+        "reportName": { "type": "keyword" },
+        "reportTypeName": { "type": "keyword" },
         "reportSpec": { "type": "object", "enabled": false },
+        "reportTypeSpec": { "type": "object", "enabled": false },
         "startTime": { "type": "date" },
         "endTime": { "type": "date" },
         "generationTime": { "type": "date" },

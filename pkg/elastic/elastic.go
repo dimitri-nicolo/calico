@@ -134,5 +134,9 @@ func (c *client) Backend() *elastic.Client {
 }
 
 func (c *client) Reset() {
-	_, _ = c.Client.DeleteIndex(reportsIndex, snapshotsIndex, auditLogIndex).Do(context.Background())
+	_, _ = c.Client.DeleteIndex(
+		c.clusterIndex(reportsIndex, "*"),
+		c.clusterIndex(snapshotsIndex, "*"),
+		c.clusterIndex(auditLogIndex, "*"),
+	).Do(context.Background())
 }
