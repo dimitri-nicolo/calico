@@ -109,6 +109,9 @@ pipeline {
             }
         }
         stage('Checkout calico-private') {
+            when {
+                expression { SKIP_CALICO_PRIVATE_MASTER_BUILD == 0 }
+            }
             steps {
                 sh "mkdir ~/calico-private && cp -R ./ ~/calico-private/"
                 dir('crc/kubeadm/1.6') {
