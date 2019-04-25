@@ -160,7 +160,7 @@ func (c *client) RetrieveLastArchivedReportSummary(reportName string) (*report.A
 }
 
 func (c *client) retrieveArchivedReportSummary(queries []elastic.Query, includeReverseSort bool) (*report.ArchivedReportData, error) {
-	var rep *report.ArchivedReportData
+	rep := new(report.ArchivedReportData)
 
 	searchIndex := c.clusterIndex(reportsIndex, "*")
 

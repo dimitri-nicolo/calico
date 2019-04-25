@@ -30,6 +30,7 @@ var _ = Describe("Elastic", func() {
 	)
 	BeforeEach(func() {
 		os.Setenv("ELASTIC_HOST", "localhost")
+		os.Setenv("ELASTIC_INDEX_SUFFIX", "test_cluster")
 		cfg := config.MustLoadConfig()
 		elasticClient = MustGetElasticClient(cfg)
 		elasticClient.(Resetable).Reset()
@@ -54,7 +55,7 @@ var _ = Describe("Elastic", func() {
 		By("having the appropriate snapshot indices")
 		dateIndex := npResList.RequestCompletedTimestamp.Format(IndexTimeFormat)
 		indicesExist, _ := elasticClient.Backend().IndexExists(
-			fmt.Sprintf("tigera_secure_ee_snapshots.cluster.%s", dateIndex),
+			fmt.Sprintf("tigera_secure_ee_snapshots.test_cluster.%s", dateIndex),
 		).Do(context.Background())
 		Expect(indicesExist).To(Equal(true))
 
@@ -69,27 +70,20 @@ var _ = Describe("Elastic", func() {
 	})
 
 	It("should store and retrieve reports properly", func() {
+		By("storing a report")
 		rep := &report.ArchivedReportData{
 			ReportData: &apiv3.ReportData{
-				ReportName:        "report-foo",
-				ReportTypeName:    "report-type-bar",
-				StartTime:         metav1.Time{ts},
-				EndTime:           metav1.Time{ts.Add(time.Minute)},
-				EndpointsSummary:  apiv3.EndpointsSummary{},
-				NamespacesSummary: apiv3.EndpointsSummary{},
-				ServicesSummary:   apiv3.EndpointsSummary{},
+				ReportName: "report-foo",
+				EndTime:    metav1.Time{ts.Add(time.Minute)},
 			},
-			UISummary: "random-summary",
 		}
 		reportTime := time.Now()
-		By("storing a report")
 		Expect(elasticClient.StoreArchivedReport(rep, reportTime)).ToNot(HaveOccurred())
-		time.Sleep(time.Second)
 
 		By("having the appropriate report indices")
 		dateIndex := reportTime.Format(IndexTimeFormat)
 		indicesExist, _ := elasticClient.Backend().IndexExists(
-			fmt.Sprintf("tigera_secure_ee_compliance_reports.cluster.%s", dateIndex),
+			fmt.Sprintf("tigera_secure_ee_compliance_reports.test_cluster.%s", dateIndex),
 		).Do(context.Background())
 		Expect(indicesExist).To(Equal(true))
 
@@ -103,5 +97,41 @@ var _ = Describe("Elastic", func() {
 		retrievedReport, err := elasticClient.RetrieveArchivedReport(rep.UID())
 		Expect(err).ToNot(HaveOccurred())
 		Expect(retrievedReport.ReportName).To(Equal(rep.ReportName))
+
+		By("retrieving a specific report summary")
+		retrievedReportSummary, err := elasticClient.RetrieveArchivedReportSummary(rep.UID())
+		Expect(err).ToNot(HaveOccurred())
+		Expect(retrievedReportSummary.ReportName).To(Equal(rep.ReportName))
+
+		By("storing a more recent second report")
+		rep2 := &report.ArchivedReportData{
+			ReportData: &apiv3.ReportData{
+				ReportName: "report-foo",
+				EndTime:    metav1.Time{ts.Add(2 * time.Minute)},
+			},
+		}
+		Expect(elasticClient.StoreArchivedReport(rep2, reportTime.Add(time.Minute))).ToNot(HaveOccurred())
+
+		By("retrieving last archived report summary")
+		get2 := func() (time.Time, error) {
+			rep, err := elasticClient.RetrieveLastArchivedReportSummary(rep.ReportName)
+			if err != nil {
+				return time.Time{}, err
+			}
+			return rep.StartTime.Time.UTC(), nil
+		}
+		Eventually(get2, "5s", "0.1s").Should(Equal(rep2.StartTime.Time.UTC()))
+
+		By("storing a more recent report with a different name")
+		rep3 := &report.ArchivedReportData{
+			ReportData: &apiv3.ReportData{
+				ReportName: "report-foo2",
+				EndTime:    metav1.Time{ts.Add(3 * time.Minute)},
+			},
+		}
+		Expect(elasticClient.StoreArchivedReport(rep3, reportTime.Add(time.Minute))).ToNot(HaveOccurred())
+
+		By("retrieving report-foo and not returning report-foo2")
+		Eventually(get2, "5s", "0.1s").Should(Equal(rep2.StartTime.Time.UTC()))
 	})
 })
