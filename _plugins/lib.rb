@@ -164,6 +164,7 @@ def gen_chart_specific_values(versions, imageNames, imageRegistry, chart)
     
     # Configuration for the Tigera elasticsearch dashboard installer job.
     elasticTseeInstaller:
+      enable: true
       image: #{imageRegistry}#{imageNames["elastic-tsee-installer"]}
       tag: #{versions["elastic-tsee-installer"]}
       env:
