@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/Microsoft/hcsshim"
-	//"github.com/Microsoft/hcsshim/hcn"
+	"github.com/Microsoft/hcsshim/hcn"
 	"github.com/buger/jsonparser"
 	"github.com/containernetworking/cni/pkg/skel"
 	"github.com/containernetworking/cni/pkg/types/current"
@@ -222,6 +222,7 @@ func lookupIPAMPools(
 }
 
 func ensureVxlanNetworkExists(networkName string, subNet *net.IPNet, conf types.NetConf, result *current.Result, logger *logrus.Entry) (*hcsshim.HNSNetwork, error) {
+	var err error
 	createNetwork := true
 	expectedAddressPrefix := subNet.String()
 	expectedGW := getNthIP(subNet, 1)
@@ -233,12 +234,12 @@ func ensureVxlanNetworkExists(networkName string, subNet *net.IPNet, conf types.
 		Subnets: make([]hcsshim.Subnet, 0, 1),
 	}
 
-	if conf.VSID >= DefaultVSID {
+	if conf.VSID == 0 {
 		expectedVSID = conf.VSID
-	} else {
-		logger.Infof("Configured VSID is less than expected value. Setting it to default.")
-		expectedVSID = DefaultVSID
+	} else if conf.VSID < DefaultVSID {
+		return nil, errors.Annotatef(err, "Windows does not support VSID < 4096")
 	}
+	expectedVSID = conf.VSID
 
 	// Checking if HNS network exists
 	existingNetwork, _ := hcsshim.GetHNSNetworkByName(networkName)
@@ -311,7 +312,7 @@ func ensureVxlanNetworkExists(networkName string, subNet *net.IPNet, conf types.
 		existingNetwork = newNetwork
 	}
 
-	/*existingNetworkV2, err := hcn.GetNetworkByID(existingNetwork.Id)
+	existingNetworkV2, err := hcn.GetNetworkByID(existingNetwork.Id)
 	if err != nil {
 		return nil, errors.Annotatef(err, "Could not find vxlan0 in V2")
 	}
@@ -332,7 +333,7 @@ func ensureVxlanNetworkExists(networkName string, subNet *net.IPNet, conf types.
 			Policies: []hcn.NetworkPolicy{hostRoutePolicy},
 		}
 		existingNetworkV2.AddPolicy(networkRequest)
-	}*/
+	}
 
 	return existingNetwork, nil
 }

@@ -67,8 +67,8 @@ type NetConf struct {
 	Name       string `json:"name"`
 	Type       string `json:"type"`
 	Mode       string `json:"mode"`
-	MacPrefix  string `json:"mac_prefix"`
-	VSID       uint64 `json:"VSID"`
+	MacPrefix  string `json:"macPrefix"`
+	VSID       uint64 `json:"vsid"`
 	IPAM       struct {
 		Name       string
 		Type       string   `json:"type"`
