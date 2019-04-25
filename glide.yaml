@@ -13,7 +13,7 @@ import:
 - package: github.com/mipearson/rfw
 - package: github.com/projectcalico/libcalico-go
   repo: git@github.com:tigera/libcalico-go-private
-  version: d3d5a6f44bff12ee6166b3e145aa24ebf99ac1fa
+  version: d878d7f5d6345aa2e129834154220cabb565e779
   subpackages:
   - lib/apiconfig
   - lib/backend/api
@@ -41,7 +41,9 @@ import:
 - package: k8s.io/apimachinery
   subpackages:
   - pkg/apis/meta/v1
+# Pin client-go to the exact tag release for K8s 1.11.0
 - package: k8s.io/client-go
+  version: v8.0.0
   subpackages:
   - kubernetes
   - rest
@@ -49,3 +51,6 @@ import:
   subpackages:
   - extensions/table
 - package: github.com/onsi/gomega
+# Pin sprig to work around api change that breaks imdario/mergo package
+- package: github.com/Masterminds/sprig
+  version: v2.17.1
