@@ -95,7 +95,7 @@ metadata:
   name: <b>allow-egress-to-domains</b>
 spec:
   order: 1
-  <b>selector: my-pod-label == my-value</b>
+  <b>selector: my-pod-label == 'my-value'</b>
   types:
   - Egress
   <b>egress:
@@ -144,13 +144,13 @@ metadata:
   name: allow-egress-to-domain
 spec:
   order: 1
-  selector: my-pod-label == my-value
+  selector: my-pod-label == 'my-value'
   types:
   - Egress
   egress:
   - action: Allow
     destination:
-      <b>selector: color == red</b>
+      <b>selector: color == 'red'</b>
 </pre>
 
 ### Above and Beyond
