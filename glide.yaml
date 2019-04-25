@@ -7,7 +7,7 @@ import:
 - package: github.com/projectcalico/libcalico-go
   vcs: git
   repo: git@github.com:tigera/libcalico-go-private.git
-  version: d878d7f5d6345aa2e129834154220cabb565e779
+  version: 564e1f2493547b1727b0071a9c65d87d7ed68bd2
 - package: github.com/tigera/licensing
   repo: git@github.com:tigera/licensing
   vcs: git
@@ -31,4 +31,4 @@ import:
 - package: github.com/tigera/calico-k8sapiserver
   vcs: git
   repo: git@github.com:tigera/calico-k8sapiserver.git
-  version: bd27e802c8b9fe73cc5bfe59e6ce82c28ce30d70
+  version: 9fa2ea566688a96f95bd6b17932677054357a2d7
