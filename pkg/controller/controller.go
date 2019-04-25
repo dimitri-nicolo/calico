@@ -267,7 +267,7 @@ func (cc *ComplianceController) updateStatus(rep *v3.GlobalReport, js []batchv1.
 
 	// If we don't have a last scheduled time stored, and we should have scheduled at least one job by now, then we
 	// should query the archived store to see if there are any archived entries.
-	if rep.Status.LastScheduledJob == nil {
+	if rep.Status.LastScheduledReportJob == nil {
 		log.Debugf("No last scheduled job recorded for %s", rep.Name)
 		// In the event the schedule doesn't parse, don't worry, we'll handle that later by not scheduling anything.
 		sched, err := cron.ParseStandard(rep.Spec.Schedule)
@@ -284,7 +284,7 @@ func (cc *ComplianceController) updateStatus(rep *v3.GlobalReport, js []batchv1.
 				log.Infof("No archived report data for %s", rep.Name)
 			} else {
 				log.Infof("Updating the last end time from archived rep %s: %v - %v", rep.Name, start, end)
-				rep.Status.LastScheduledJob = &apiv3.ReportJob{
+				rep.Status.LastScheduledReportJob = &apiv3.ReportJob{
 					Start: *start,
 					End:   *end,
 				}
@@ -319,10 +319,10 @@ func (cc *ComplianceController) updateStatus(rep *v3.GlobalReport, js []batchv1.
 			Job:   jref,
 		}
 
-		if (rep.Status.LastScheduledJob == nil || rep.Status.LastScheduledJob.End.Before(end)) && end.Time.Before(now) {
+		if (rep.Status.LastScheduledReportJob == nil || rep.Status.LastScheduledReportJob.End.Before(end)) && end.Time.Before(now) {
 			// If this job contains the latest end time (and it's not for some reason in the future) then track it
 			// to update our status.
-			rep.Status.LastScheduledJob = &job
+			rep.Status.LastScheduledReportJob = &job
 		}
 
 		if !finished {
@@ -514,7 +514,7 @@ func (cc *ComplianceController) startReportJobs(rep *v3.GlobalReport, now time.T
 			Job:   jref,
 		}
 		rep.Status.ActiveReportJobs = append(rep.Status.ActiveReportJobs, job)
-		rep.Status.LastScheduledJob = &job
+		rep.Status.LastScheduledReportJob = &job
 
 		if _, err := cc.reportControl.UpdateStatus(rep); err != nil {
 			log.Infof("Unable to update status for %s (rv = %s): %v", rep.Name, rep.ResourceVersion, err)
@@ -550,8 +550,8 @@ func (cc *ComplianceController) getRecentUnmetScheduleTimes(rep v3.GlobalReport,
 
 	// Check the active, failed and successful jobs to find the one with the latest end time.
 	var latestEndTime time.Time
-	if rep.Status.LastScheduledJob != nil {
-		latestEndTime = rep.Status.LastScheduledJob.End.Time
+	if rep.Status.LastScheduledReportJob != nil {
+		latestEndTime = rep.Status.LastScheduledReportJob.End.Time
 		log.Debugf("Using recorded last scheduled jobs time in %s: %v", rep.Name, latestEndTime)
 	} else {
 		// If none found, then this is either a recently created Report,
