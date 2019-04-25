@@ -109,7 +109,7 @@ spec:
           env:
             - name: LOG_LEVEL
               value: "info"
-            - name: TIGERA_COMPLIANCE_REPORT_JOB_START_DELAY
+            - name: TIGERA_COMPLIANCE_JOB_START_DELAY
               value: "30m"
 {{- if eq .Values.platform "gke" }}
             - name: HEALTH_PORT
