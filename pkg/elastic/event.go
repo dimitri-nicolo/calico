@@ -77,6 +77,7 @@ func (c *client) searchAuditEvents(ctx context.Context, filter *v3.AuditEventsSe
 				From(i).Size(pageSize).
 				Do(context.Background())
 			if err != nil {
+				log.WithError(err).Warn("failed to search for audit events")
 				ch <- &event.AuditEventResult{Err: err}
 				return
 			}

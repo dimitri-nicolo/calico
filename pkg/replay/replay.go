@@ -119,6 +119,10 @@ func (r *replayer) initialize(ctx context.Context) error {
 // replay fetches events for the given resource from the list's timestamp up until the specified start time.
 func (r *replayer) replay(ctx context.Context, kind *metav1.TypeMeta, from, to *time.Time, notifyUpdates bool) error {
 	for ev := range r.eventer.GetAuditEvents(ctx, kind, from, to) {
+		if ev.Err != nil {
+			return ev.Err
+		}
+
 		clog := log.WithFields(log.Fields{"auditID": ev.Event.AuditID, "verb": ev.Event.Verb})
 		// Determine proper resource to update for internal cache.
 		res, err := event.ExtractResourceFromAuditEvent(ev.Event)
