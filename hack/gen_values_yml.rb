@@ -52,7 +52,6 @@ end
 @path_to_versions ||= "_data/versions.yml"
 @image_registry ||= "quay.io/"
 @chart ||= "calico"
-@path_to_base_values = "_includes/#{@version}/charts/#{@chart}/base_values.yaml"
 
 # In order to preserve backwards compatibility with the existing template system,
 # we process config.yml for imageNames and _versions.yml for tags,
@@ -62,8 +61,5 @@ imageNames = config["imageNames"]
 
 versions_yml = YAML::load_file(@path_to_versions)
 versions = parse_versions(versions_yml, @version)
-values = YAML::load(gen_values(versions, imageNames, @image_registry))
 
-base_values = YAML::load_file(@path_to_base_values)
-
-print base_values.deep_merge(values).to_yaml
+print gen_values(versions, imageNames, @image_registry, @chart)

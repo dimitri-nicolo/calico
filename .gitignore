@@ -13,6 +13,7 @@ publish-cnx-docs.yaml
 _output/
 /*.out
 bin
+vendor
 
 # This prevents us from accidentally checking actual files into
 # the helm templates directory, since (for now) we should be
