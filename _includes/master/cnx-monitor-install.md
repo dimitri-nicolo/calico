@@ -224,11 +224,12 @@ optionally Elasticsearch and Kibana in order to enable logs.
 
    ```bash
    {{cli}} delete -n calico-monitoring service elasticsearch-tigera-elasticsearch
-   {{cli}} delete globalnetworkset k8sapi-endpoints
-   {{cli}} delete globalnetworkpolicy allow-cnx.es-proxy-access
+   {{cli}} delete globalnetworkset.projectcalico.org k8sapi-endpoints
+   {{cli}} delete globalnetworkpolicy.projectcalico.org allow-cnx.es-proxy-access
    {{cli}} delete -n calico-monitoring deployment tigera-es-proxy
    {{cli}} delete -n calico-monitoring serviceaccount tigera-es-proxy
    {{cli}} delete -n calico-monitoring configmap tigera-es-proxy
+   {{cli}} delete -n calico-monitoring configmap elastic-ca-config
    ```
 {% endif %}
 

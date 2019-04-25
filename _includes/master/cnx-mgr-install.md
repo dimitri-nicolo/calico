@@ -128,7 +128,7 @@
    
    ```bash
    {{cli}} delete -n kube-system service cnx-manager
-   {{cli}} delete -n kube-system networkpolicy allow-cnx.cnx-manager-access
+   {{cli}} delete -n kube-system networkpolicy.projectcalico.org allow-cnx.cnx-manager-access
    {{cli}} delete -n kube-system deployment cnx-manager
    {{cli}} delete -n kube-system configmap tigera-cnx-manager-config
    {{cli}} delete -n kube-system serviceaccount cnx-manager

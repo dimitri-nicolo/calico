@@ -48,14 +48,6 @@
    -n calico-monitoring
    ```
 
-1. Set up configmap with the certificate authority certificate to authenticate Elasticsearch & Kibana.
-   Replace `<ElasticsearchCA.pem>` with the path to your Elasticsearch/Kibana CA certificate.
-
-   ```bash
-   cp <ElasticsearchCA.pem> ca.pem
-   {{cli}} create configmap -n calico-monitoring elastic-ca-config --from-file=ca.pem
-   ```
-
 1. Set up secret with username and password for the {{site.prodname}} job installer to authenticate with Elasticsearch.
    Replace `<installer-password>` with the password.
    ```
