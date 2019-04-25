@@ -202,9 +202,12 @@ manager:
 1. Install the tigera-secure-ee helm chart with custom resource provisioning disabled:
 
    ```
-   helm install ./tigera-secure-ee.tgz --set createCustomResources=false \
+   helm install ./tigera-secure-ee.tgz --namespace calico-monitoring \
+     --set createCustomResources=false \
      --set-file imagePullSecrets.cnx-pull-secret=./config.json
    ```
+
+   >Note: This version of the Tigera Secure EE Helm chart **must** be installed with `--namespace calico-monitoring`.
 
 ## Step 5: Grant access to user interface
 
