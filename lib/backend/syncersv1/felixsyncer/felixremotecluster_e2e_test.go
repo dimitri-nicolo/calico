@@ -74,7 +74,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 
 			By("Creating and starting a syncer")
 			syncTester = testutils.NewSyncerTester()
-			syncer = felixsyncer.New(be, syncTester)
+			syncer = felixsyncer.New(be, config.Spec, syncTester)
 			syncer.Start()
 
 			By("Checking status is updated to sync'd at start of day")
@@ -210,7 +210,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 
 			By("Creating and starting a syncer")
 			syncTester = testutils.NewSyncerTester()
-			syncer = felixsyncer.New(be, syncTester)
+			syncer = felixsyncer.New(be, config.Spec, syncTester)
 			syncer.Start()
 
 			By("Checking status is updated to sync'd at start of day")
@@ -339,7 +339,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 
 			By("Creating and starting a syncer")
 			syncTester = testutils.NewSyncerTester()
-			syncer = felixsyncer.New(be, syncTester)
+			syncer = felixsyncer.New(be, config.Spec, syncTester)
 			syncer.Start()
 
 			By("Checking status is updated to resync in progress")
@@ -623,7 +623,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests", testutils.
 
 			By("Creating and starting a syncer")
 			syncTester = testutils.NewSyncerTester()
-			syncer = felixsyncer.New(localBackend, syncTester)
+			syncer = felixsyncer.New(localBackend, localConfig.Spec, syncTester)
 			syncer.Start()
 
 			By("Checking status is updated to sync'd at start of day")
@@ -754,7 +754,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests", testutils.
 
 			By("Creating and starting a syncer")
 			syncTester = testutils.NewSyncerTester()
-			syncer = felixsyncer.New(localBackend, syncTester)
+			syncer = felixsyncer.New(localBackend, localConfig.Spec, syncTester)
 			syncer.Start()
 
 			By("Checking status is updated to sync'd at start of day")
@@ -909,7 +909,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests", testutils.
 
 			By("Creating and starting a syncer")
 			syncTester = testutils.NewSyncerTester()
-			syncer = felixsyncer.New(localBackend, syncTester)
+			syncer = felixsyncer.New(localBackend, localConfig.Spec, syncTester)
 			syncer.Start()
 
 			By("Checking status is updated to sync'd at start of day")
