@@ -2320,39 +2320,6 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 			Dependencies: []string{
 				"k8s.io/api/core/v1.ObjectReference", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 		},
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointFlowData": {
-			Schema: spec.Schema{
-				SchemaProps: spec.SchemaProps{
-					Properties: map[string]spec.Schema{
-						"bytes": {
-							SchemaProps: spec.SchemaProps{
-								Type:   []string{"integer"},
-								Format: "int32",
-							},
-						},
-						"packets": {
-							SchemaProps: spec.SchemaProps{
-								Type:   []string{"integer"},
-								Format: "int32",
-							},
-						},
-						"httpRequestsAllowed": {
-							SchemaProps: spec.SchemaProps{
-								Type:   []string{"integer"},
-								Format: "int32",
-							},
-						},
-						"httpRequestsDenied": {
-							SchemaProps: spec.SchemaProps{
-								Type:   []string{"integer"},
-								Format: "int32",
-							},
-						},
-					},
-				},
-			},
-			Dependencies: []string{},
-		},
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointPort": {
 			Schema: spec.Schema{
 				SchemaProps: spec.SchemaProps{
@@ -2465,62 +2432,48 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								},
 							},
 						},
-						"endpointsGeneratingTrafficToThisEndpoint": {
+						"serviceAccount": {
 							SchemaProps: spec.SchemaProps{
-								Description: "The list of all endpoints that have been generating traffic to this endpoint. This list includes endpoints that are not necessarily in-scope.\n\nSource: Measured from flow flogs.",
-								Type:        []string{"array"},
-								Items: &spec.SchemaOrArray{
-									Schema: &spec.Schema{
-										SchemaProps: spec.SchemaProps{
-											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportEndpointFlow"),
-										},
-									},
-								},
+								Description: "The ServiceAccount configured on this endpoint.",
+								Type:        []string{"string"},
+								Format:      "",
 							},
 						},
-						"endpointsReceivingTrafficFromThisEndpoint": {
+						"flowLogAggregationName": {
 							SchemaProps: spec.SchemaProps{
-								Description: "The list of endpoints that have been receiving traffic from this endpoint.  This list includes endpoints that are not necessarily in-scope.\n\nSource: Measured from flow flogs.",
-								Type:        []string{"array"},
-								Items: &spec.SchemaOrArray{
-									Schema: &spec.Schema{
-										SchemaProps: spec.SchemaProps{
-											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportEndpointFlow"),
-										},
-									},
-								},
+								Description: "The flow log aggregation name. This is used to locate flow logs associated with this endpoint when flow log aggregation is turned on.",
+								Type:        []string{"string"},
+								Format:      "",
 							},
 						},
 					},
 				},
 			},
 			Dependencies: []string{
-				"github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportEndpointFlow", "github.com/projectcalico/libcalico-go/lib/apis/v3.ResourceID"},
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.ResourceID"},
 		},
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportEndpointFlow": {
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportFlow": {
 			Schema: spec.Schema{
 				SchemaProps: spec.SchemaProps{
 					Properties: map[string]spec.Schema{
-						"endpoint": {
+						"source": {
 							SchemaProps: spec.SchemaProps{
-								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ResourceID"),
+								Description: "The source of the flow log.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.FlowEndpoint"),
 							},
 						},
-						"allowed": {
+						"destination": {
 							SchemaProps: spec.SchemaProps{
-								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointFlowData"),
-							},
-						},
-						"denied": {
-							SchemaProps: spec.SchemaProps{
-								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointFlowData"),
+								Description: "The destination of the flow log.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.FlowEndpoint"),
 							},
 						},
 					},
+					Required: []string{"source", "destination"},
 				},
 			},
 			Dependencies: []string{
-				"github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointFlowData", "github.com/projectcalico/libcalico-go/lib/apis/v3.ResourceID"},
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.FlowEndpoint"},
 		},
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportNamespace": {
 			Schema: spec.Schema{
@@ -2666,7 +2619,14 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 					Properties: map[string]spec.Schema{
 						"numTotal": {
 							SchemaProps: spec.SchemaProps{
-								Description: "For endpoints: the total number of endpoints containing in-scope endpoints.\n   Namespaces: the total number of namespaces containing in-scope endpoints.\n     Services: the total number of services containing in-scope endpoints.\n\nSource: Calculated from pod/wep, hep, namespace and service account labels.",
+								Description: "For endpoints: the total number of in-scope endpoints.\n   Namespaces: the total number of namespaces containing in-scope endpoints.\n     Services: the total number of services containing in-scope endpoints.\n\nSource: Calculated from pod/wep, hep, namespace and service account labels.",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
+						},
+						"numServiceAccounts": {
+							SchemaProps: spec.SchemaProps{
+								Description: "For endpoints: the total number of service accounts for in-scope endpoints.\n   Namespaces: n/a.\n     Services: n/a.",
 								Type:        []string{"integer"},
 								Format:      "int32",
 							},
@@ -3737,6 +3697,44 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 			},
 			Dependencies: []string{
 				"github.com/projectcalico/libcalico-go/lib/apis/v3.ProtoPort", "github.com/projectcalico/libcalico-go/lib/numorstring.Port", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.FlowEndpoint": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Properties: map[string]spec.Schema{
+						"type": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The endpoint type, indicating whether this is a Pod, HostEndpoint, NetworkSet, or internet.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"name": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The name of the endpoint. Note that this name may actually be a name prefix if flow logs have been aggregated.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"nameIsAggregationPrefix": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Whether the name is an aggregation prefix rather than the actual name.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
+						},
+						"namespace": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The namespace of the endpoint.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+					},
+					Required: []string{"type", "name", "nameIsAggregationPrefix", "namespace"},
+				},
+			},
+			Dependencies: []string{},
 		},
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkPolicy": {
 			Schema: spec.Schema{
@@ -6223,12 +6221,25 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.AuditSummary"),
 							},
 						},
+						"flows": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Flows for in-scope endpoints that have been recorded within the reporting period.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportFlow"),
+										},
+									},
+								},
+							},
+						},
 					},
 					Required: []string{"reportName", "reportTypeName", "reportSpec", "reportTypeSpec", "startTime", "endTime", "generationTime"},
 				},
 			},
 			Dependencies: []string{
-				"github.com/projectcalico/libcalico-go/lib/apis/v3.AuditSummary", "github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportEndpoint", "github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportNamespace", "github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportService", "github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsSummary", "github.com/projectcalico/libcalico-go/lib/apis/v3.ReportSpec", "github.com/projectcalico/libcalico-go/lib/apis/v3.ReportTypeSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.Time", "k8s.io/apiserver/pkg/apis/audit.Event"},
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.AuditSummary", "github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportEndpoint", "github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportFlow", "github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportNamespace", "github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportService", "github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsSummary", "github.com/projectcalico/libcalico-go/lib/apis/v3.ReportSpec", "github.com/projectcalico/libcalico-go/lib/apis/v3.ReportTypeSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.Time", "k8s.io/apiserver/pkg/apis/audit.Event"},
 		},
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ReportJob": {
 			Schema: spec.Schema{
@@ -6274,13 +6285,13 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 						},
 						"endpointsSelection": {
 							SchemaProps: spec.SchemaProps{
-								Description: "EndpointsSelection is used to specify which endpoints are in-scope and stored in the generated report data. Only required if endpoints data is gathered in the report.",
+								Description: "EndpointsSelection is used to specify which endpoints are in-scope and stored in the generated report data. Only used if endpoints data and/or audit logs are gathered in the report.",
 								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsSelection"),
 							},
 						},
 						"auditEventsSelection": {
 							SchemaProps: spec.SchemaProps{
-								Description: "AuditEventsSelection is used to specify which audit events will be gathered. Only required if audit logs are gathered in the report.",
+								Description: "AuditEventsSelection is used to specify which audit events will be gathered. Only used if audit logs are gathered in the report.",
 								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.AuditEventsSelection"),
 							},
 						},
@@ -6363,9 +6374,9 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								},
 							},
 						},
-						"lastScheduledJob": {
+						"lastScheduledReportJob": {
 							SchemaProps: spec.SchemaProps{
-								Description: "The last scheduled job.",
+								Description: "The last scheduled report job.",
 								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ReportJob"),
 							},
 						},

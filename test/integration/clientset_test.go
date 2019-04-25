@@ -944,7 +944,7 @@ func testGlobalReportClient(client calicoclient.Interface, name string) error {
 					},
 				},
 			},
-			LastScheduledJob: &calico.ReportJob{
+			LastScheduledReportJob: &calico.ReportJob{
 				Start: metav1.Time{time.Now()},
 				End:   metav1.Time{time.Now()},
 				Job: &corev1.ObjectReference{
