@@ -4,6 +4,7 @@
 *.so
 *.dylib
 dist/
+bin/
 
 # Test binary, build with `go test -c`
 *.test
@@ -19,3 +20,5 @@ dist/
 vendor/
 
 *-license.yaml
+
+.go-pkg-cache
