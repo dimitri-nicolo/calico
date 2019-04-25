@@ -56,16 +56,24 @@ type ReportData struct {
 
 	// Audit log stats in a reporting period.
 	AuditSummary AuditSummary `json:"auditSummary,omitempty"`
+
+	// Flows for in-scope endpoints that have been recorded within the reporting period.
+	Flows []EndpointsReportFlow `json:"flows,omitempty"`
 }
 
 // This tracks different statistics for Endpoints, Summary and Services.
 type EndpointsSummary struct {
-	// For endpoints: the total number of endpoints containing in-scope endpoints.
+	// For endpoints: the total number of in-scope endpoints.
 	//    Namespaces: the total number of namespaces containing in-scope endpoints.
 	//      Services: the total number of services containing in-scope endpoints.
 	//
 	// Source: Calculated from pod/wep, hep, namespace and service account labels.
 	NumTotal int `json:"numTotal,omitempty"`
+
+	// For endpoints: the total number of service accounts for in-scope endpoints.
+	//    Namespaces: n/a.
+	//      Services: n/a.
+	NumServiceAccounts int `json:"numServiceAccounts,omitempty"`
 
 	// For endpoints: the number of in-scope endpoints that were ingress protected during the reporting interval.
 	//    Namespaces: the number of namespaces whose in-scope endpoints were ingress protected during
@@ -249,30 +257,35 @@ type EndpointsReportEndpoint struct {
 	// Source: Determined from the Kubernetes endpoints resource associated with the service.
 	Services []ResourceID `json:"services,omitempty"`
 
-	// The list of all endpoints that have been generating traffic to this endpoint. This list includes endpoints that are
-	// not necessarily in-scope.
-	//
-	// Source: Measured from flow flogs.
-	EndpointsGeneratingTrafficToThisEndpoint []EndpointsReportEndpointFlow `json:"endpointsGeneratingTrafficToThisEndpoint,omitempty"`
+	// The ServiceAccount configured on this endpoint.
+	ServiceAccount string `json:"serviceAccount,omitempty"`
 
-	// The list of endpoints that have been receiving traffic from this endpoint.  This list includes endpoints that are
-	// not necessarily in-scope.
-	//
-	// Source: Measured from flow flogs.
-	EndpointsReceivingTrafficFromThisEndpoint []EndpointsReportEndpointFlow `json:"endpointsReceivingTrafficFromThisEndpoint,omitempty"`
+	// The flow log aggregation name. This is used to locate flow logs associated with this endpoint when flow log
+	// aggregation is turned on.
+	FlowLogAggregationName string `json:"flowLogAggregationName,omitempty"`
 }
 
-type EndpointsReportEndpointFlow struct {
-	Endpoint ResourceID       `json:"endpoint,omitempty"`
-	Allowed  EndpointFlowData `json:"allowed,omitempty"`
-	Denied   EndpointFlowData `json:"denied,omitempty"`
+type EndpointsReportFlow struct {
+	// The source of the flow log.
+	Source FlowEndpoint `json:"source"`
+
+	// The destination of the flow log.
+	Destination FlowEndpoint `json:"destination"`
 }
 
-type EndpointFlowData struct {
-	Bytes               int `json:"bytes,omitempty"`
-	Packets             int `json:"packets,omitempty"`
-	HTTPRequestsAllowed int `json:"httpRequestsAllowed,omitempty"`
-	HTTPRequestsDenied  int `json:"httpRequestsDenied,omitempty"`
+type FlowEndpoint struct {
+	// The endpoint type, indicating whether this is a Pod, HostEndpoint, NetworkSet, or internet.
+	Type string `json:"type"`
+
+	// The name of the endpoint. Note that this name may actually be a name prefix if flow logs have
+	// been aggregated.
+	Name string `json:"name"`
+
+	// Whether the name is an aggregation prefix rather than the actual name.
+	NameIsAggregationPrefix bool `json:"nameIsAggregationPrefix"`
+
+	// The namespace of the endpoint.
+	Namespace string `json:"namespace"`
 }
 
 type EndpointsReportNamespace struct {
