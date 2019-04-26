@@ -3,6 +3,8 @@ package elastic
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"io"
 	"time"
 
 	"github.com/olivere/elastic"
@@ -67,17 +69,30 @@ func (c *client) searchAuditEvents(ctx context.Context, filter *v3.AuditEventsSe
 	searchIndex := c.clusterIndex(auditLogIndex, "*")
 	go func() {
 		defer close(ch)
-		exit := false
-		for i := 0; !exit; i += pageSize {
-			// Make search query
-			res, err := c.Search().
-				Index(searchIndex).
-				Query(constructAuditEventsQuery(filter, start, end)).
-				Sort("stageTimestamp", true).
-				From(i).Size(pageSize).
-				Do(context.Background())
+		// Make search query with scroll
+		scroll := c.Scroll(searchIndex).
+			Query(constructAuditEventsQuery(filter, start, end)).
+			Sort("stageTimestamp", true).
+			Size(pageSize)
+		for {
+			res, err := scroll.Do(context.Background())
+			if err == io.EOF {
+				break
+			}
 			if err != nil {
 				log.WithError(err).Warn("failed to search for audit events")
+				ch <- &event.AuditEventResult{Err: err}
+				return
+			}
+			if res == nil {
+				err = fmt.Errorf("Search expected results != nil; got nil")
+			} else if res.Hits == nil {
+				err = fmt.Errorf("Search expected results.Hits != nil; got nil")
+			} else if len(res.Hits.Hits) == 0 {
+				err = fmt.Errorf("Search expected results.Hits.Hits > 0; got %d", res.Hits.Hits)
+			}
+			if err != nil {
+				log.WithError(err).Warn("Unexpected results from audit events search")
 				ch <- &event.AuditEventResult{Err: err}
 				return
 			}
@@ -92,8 +107,10 @@ func (c *client) searchAuditEvents(ctx context.Context, filter *v3.AuditEventsSe
 				}
 				ch <- &event.AuditEventResult{ev, nil}
 			}
+		}
 
-			exit = i+pageSize > int(res.Hits.TotalHits)
+		if err := scroll.Clear(context.Background()); err != nil {
+			log.WithError(err).Info("Failed to clear scroll context")
 		}
 	}()
 
