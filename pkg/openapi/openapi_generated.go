@@ -3702,7 +3702,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 			Schema: spec.Schema{
 				SchemaProps: spec.SchemaProps{
 					Properties: map[string]spec.Schema{
-						"type": {
+						"kind": {
 							SchemaProps: spec.SchemaProps{
 								Description: "The endpoint type, indicating whether this is a Pod, HostEndpoint, NetworkSet, or internet.",
 								Type:        []string{"string"},
@@ -3731,7 +3731,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							},
 						},
 					},
-					Required: []string{"type", "name", "nameIsAggregationPrefix", "namespace"},
+					Required: []string{"kind", "name"},
 				},
 			},
 			Dependencies: []string{},
