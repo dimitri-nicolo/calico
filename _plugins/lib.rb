@@ -396,7 +396,7 @@ def gen_chart_specific_values(versions, imageNames, imageRegistry, chart)
     # Sets the ipam. Can be 'calico-ipam' or 'host-local'
     ipam: calico-ipam
     
-    datastore: kdd
+    datastore: kubernetes
     app_layer_policy:
       enabled: false
       configured: false

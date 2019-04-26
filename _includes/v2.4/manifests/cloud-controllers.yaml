@@ -20,7 +20,7 @@ rules:
       - get
       - list
       - watch
-{{- if eq .Values.datastore "kdd" }}
+{{- if eq .Values.datastore "kubernetes" }}
   - apiGroups: ["crd.projectcalico.org"]
     resources:
       - globalnetworkpolicies
@@ -99,7 +99,7 @@ spec:
             periodSeconds: 10
             failureThreshold: 3
           env:
-{{- if eq .Values.datastore "kdd" }}
+{{- if eq .Values.datastore "kubernetes" }}
             # Use Kubernetes API as the backing datastore.
             - name: DATASTORE_TYPE
               value: "kubernetes"

@@ -1,4 +1,4 @@
-{{- if eq .Values.datastore "kdd" }}
+{{- if eq .Values.datastore "kubernetes" }}
 # This manifest adds the additional Tigera Secure EE components to a cluster
 # that has already had the Calico part of Tigera Secure EE deployed.
 # - It refers to the calico-config ConfigMap from that file, so if you are
@@ -155,7 +155,7 @@ metadata:
 
 ---
 
-{{- if eq .Values.datastore "kdd" }}
+{{- if eq .Values.datastore "kubernetes" }}
 # Give cnx-apiserver ServiceAccount permissions needed for
 # accessing various backing CRDs and K8s networkpolicies.
 kind: ClusterRole
@@ -336,7 +336,7 @@ spec:
         volumeMounts:
           - mountPath: /calico-secrets
             name: etcd-certs
-{{- else if eq .Values.datastore "kdd" }}
+{{- else if eq .Values.datastore "kubernetes" }}
           - name: DATASTORE_TYPE
             value: "kubernetes"
         volumeMounts:
@@ -418,7 +418,7 @@ spec:
         volumeMounts:
           - mountPath: /calico-secrets
             name: etcd-certs
-{{- else if eq .Values.datastore "kdd" }}
+{{- else if eq .Values.datastore "kubernetes" }}
           - name: DATASTORE_TYPE
             value: "kubernetes"
           # Sets Default Security Groups if tigera-aws-config exists

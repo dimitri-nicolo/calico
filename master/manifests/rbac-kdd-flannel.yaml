@@ -2,6 +2,6 @@
 layout: null
 ---
 {% helm --execute templates/rbac.yaml %}
-datastore: kdd
+datastore: kubernetes
 network: flannel
 {% endhelm %}

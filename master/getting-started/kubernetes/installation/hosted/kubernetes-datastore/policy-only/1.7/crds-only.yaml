@@ -2,5 +2,5 @@
 layout: null
 ---
 {% helm --execute templates/kdd-crds.yaml --execute templates/ee-specific-kdd-crds.yaml %}
-datastore: kdd
+datastore: kubernetes
 {% endhelm %}
