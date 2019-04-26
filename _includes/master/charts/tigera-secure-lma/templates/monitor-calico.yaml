@@ -779,6 +779,7 @@ spec:
                   path: ca.pem
                 secretName: tigera-es-config
 ---
+{{- if .Values.elasticTseeInstaller.enable }}
 
 apiVersion: batch/v1
 kind: Job
@@ -863,8 +864,8 @@ spec:
 {{- if .Values.elasticTseeInstaller.env }}
 {{ toYaml .Values.elasticTseeInstaller.env | indent 10 }}
 {{- end }}
-
 ---
+{{- end }}
 
 apiVersion: v1
 kind: ServiceAccount

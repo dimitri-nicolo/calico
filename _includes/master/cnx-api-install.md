@@ -124,12 +124,12 @@
 
 {% endif %}
 
-   > **Note**: If you are upgrading from {{site.prodname}} v2.2 or earlier you will need to make some modifications prior
-   > to upgrade to ensure RBAC behavior for tiered policy is unchanged. Please refer to the instructions in the comments for
-   > `ClusterRole "ee-calico-tiered-policy-passthru"` in the `cnx-api.yaml` manifest, or the
-   > [Configuring {{site.prodname}} RBAC]({{site.baseurl}}/{{page.version}}/reference/cnx/rbac-tiered-policies) documentation
-   > for more details.
+{% if include.upgrade %}
+   > **Note**: If you are upgrading from {{site.prodname}} v2.2 or earlier you will need 
+   > to [upgrade to version 2.3](/v2.3/getting-started/kubernetes/upgrade/upgrade-tsee) before following
+   > these intructions.
    {: .alert .alert-info}
+{% endif %}
 
 {% include {{page.version}}/cnx-cred-sed.md yaml="cnx-api" %}
 

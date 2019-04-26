@@ -9,8 +9,9 @@ access to {{site.prodname}} resources using Kubernetes RBAC
 Authorization APIs.
 
 If you are upgrading from a pre-v2.3 release of {{site.prodname}}, or you want to maintain the
-pre-v2.3 RBAC behavior, please refer to the [Upgrading from a pre-v2.3 release of {{site.prodname}}](/{{page.version}}/maintenance/kubernetes-upgrade-tsee#upgrading-pre23)
-guide.
+pre-v2.3 RBAC behavior, [upgrade to 2.3](/v2.3/getting-started/kubernetes/upgrade/upgrade-tsee#upgrading-pre23),
+following the instructions for handling RBAC. Then, continue to 
+[upgrade to this release](/{{page.version}}/maintenance/kubernetes-upgrade-tsee).
 
 For RBAC related to elasticsearch, please refer to [Configuring Tigera Secure EE RBAC for Elasticsearch](/{{page.version}}/reference/cnx/rbac-elasticsearch).
 
