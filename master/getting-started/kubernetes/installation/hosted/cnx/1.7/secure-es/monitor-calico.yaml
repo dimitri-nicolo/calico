@@ -1,6 +1,6 @@
 ---
 layout: null
 ---
-{% helm tigera-secure-lma secure-es --execute templates/monitor-calico.yaml %}
+{% helm tigera-secure-ee secure-es --execute templates/monitor-calico.yaml %}
 createCustomResources: false
 {% endhelm %}

@@ -1,7 +1,7 @@
 kind: ServiceAccount
 apiVersion: v1
 metadata:
-  name: tigera-compliance-snapshotter
+  name: tigera-compliance-server
   namespace: calico-monitoring
 
 ---
@@ -9,74 +9,74 @@ metadata:
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRole
 metadata:
-  name: tigera-compliance-snapshotter
+  name: tigera-compliance-server
 rules:
-  - apiGroups: ["extensions","networking.k8s.io",""]
-    resources:
-      - networkpolicies
-      - nodes
-      - namespaces
-      - pods
-      - serviceaccounts
-      - endpoints
-      - services
-    verbs:
-      - get
-      - list
-  - apiGroups: ["projectcalico.org"]
-    resources:
-      - globalnetworkpolicies
-      - networkpolicies
-      - tier.globalnetworkpolicies
-      - tier.networkpolicies
-      - tiers
-      - hostendpoints
-      - globalnetworksets
-    verbs:
-      - get
-      - list
+- apiGroups: ["projectcalico.org"]
+  resources:
+    - globalreporttypes
+    - globalreports
+  verbs:
+    - get
+    - list
+    - watch
 
 ---
 
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRoleBinding
 metadata:
-  name: tigera-compliance-snapshotter
+  name: tigera-compliance-server
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: tigera-compliance-snapshotter
+  name: tigera-compliance-server
 subjects:
 - kind: ServiceAccount
-  name: tigera-compliance-snapshotter
+  name: tigera-compliance-server
   namespace: calico-monitoring
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: compliance
+  namespace: calico-monitoring
+spec:
+  ports:
+  - name: compliance-api
+    port: 443
+    protocol: TCP
+    targetPort: 5443
+  selector:
+    k8s-app: compliance-server
 
 ---
 
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: compliance-snapshotter
+  name: compliance-server
   namespace: calico-monitoring
   labels:
-    k8s-app: compliance-snapshotter
+    k8s-app: compliance-server
 spec:
   replicas: 1
   strategy:
      type: Recreate
   selector:
     matchLabels:
-      k8s-app: compliance-snapshotter
+      k8s-app: compliance-server
   template:
     metadata:
-      name: compliance-snapshotter
+      name: compliance-server
       namespace: calico-monitoring
       labels:
-        k8s-app: compliance-snapshotter
+        k8s-app: compliance-server
     spec:
       nodeSelector:
         beta.kubernetes.io/os: linux
-      serviceAccountName: tigera-compliance-snapshotter
+      serviceAccountName: tigera-compliance-server
       tolerations:
         - key: node-role.kubernetes.io/master
           effect: NoSchedule
@@ -87,18 +87,12 @@ spec:
 {{- end }}
 {{- end }}
       containers:
-        - name: compliance-snapshotter
-          image: {{.Values.complianceSnapshotter.image}}:{{ .Values.complianceSnapshotter.tag }}
-{{ tuple .Values.complianceSnapshotter.resources | include "tigera-secure-lma.resourceLimits" | indent 10 -}}
+        - name: compliance-server
+          image: {{.Values.complianceServer.image}}:{{.Values.complianceServer.tag}}
+{{ tuple .Values.complianceServer.resources | include "tigera-secure-ee.resourceLimits" | indent 10 -}}
           env:
             - name: LOG_LEVEL
               value: "info"
-{{- if eq .Values.platform "gke" }}
-            - name: HEALTH_PORT
-              value: "9199"
-{{- end }}
-            - name: TIGERA_COMPLIANCE_SNAPSHOT_HOUR
-              value: "0"
             - name: ELASTIC_INDEX_SUFFIX
               valueFrom:
                 configMapKeyRef:
@@ -109,6 +103,7 @@ spec:
                 configMapKeyRef:
                   name: tigera-es-config
                   key: tigera.elasticsearch.scheme
+                  optional: true
             - name: ELASTIC_HOST
               valueFrom:
                 configMapKeyRef:
@@ -123,13 +118,13 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: elastic-compliance-user
-                  key: snapshotter.username
+                  key: server.username
                   optional: true
             - name: ELASTIC_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: elastic-compliance-user
-                  key: snapshotter.password
+                  key: server.password
                   optional: true
             - name: ELASTIC_SSL_VERIFY
               value: "true"
@@ -139,21 +134,12 @@ spec:
                   name: tigera-es-config
                   key: tigera.elasticsearch.ca.path
                   optional: true
-{{- if .Values.complianceSnapshotter.env }}
-{{ toYaml .Values.complianceSnapshotter.env | indent 12 }}
+{{- if .Values.complianceServer.env }}
+{{ toYaml .Values.complianceServer.env | indent 12 }}
 {{- end }}
           volumeMounts:
             - name: elastic-ca-cert-volume
               mountPath: /etc/ssl/elastic/
-          livenessProbe:
-            httpGet:
-              path: /liveness
-{{- if eq .Values.platform "gke" }}
-              port: 9199
-{{- else }}
-              port: 9099
-{{- end }}
-              host: localhost
       volumes:
         - name: elastic-ca-cert-volume
           secret:

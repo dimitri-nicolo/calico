@@ -1,7 +1,7 @@
 ---
 layout: null
 ---
-{% helm tigera-secure-lma --execute templates/manager.yaml %}
+{% helm tigera-secure-ee --execute templates/manager.yaml %}
 manager:
   auth:
     type: OAuth

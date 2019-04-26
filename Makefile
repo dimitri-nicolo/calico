@@ -127,7 +127,7 @@ endif
 		-v $$(pwd)/bin/helm:/usr/local/bin/helm \
 		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
 		-w /go/src/$(PACKAGE_NAME) \
-		$(CALICO_BUILD) ginkgo -cover -r -skipPackage vendor ./helm-tests -chart-path=./_includes/$(RELEASE_STREAM)/charts/calico,./_includes/$(RELEASE_STREAM)/charts/tigera-secure-lma $(GINKGO_ARGS)
+		$(CALICO_BUILD) ginkgo -cover -r -skipPackage vendor ./helm-tests -chart-path=./_includes/$(RELEASE_STREAM)/charts/calico,./_includes/$(RELEASE_STREAM)/charts/tigera-secure-ee $(GINKGO_ARGS)
 
 ###############################################################################
 # Docs automation

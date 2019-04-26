@@ -1,7 +1,7 @@
 ---
 layout: null
 ---
-{% helm tigera-secure-lma --execute templates/manager.yaml %}
+{% helm tigera-secure-ee --execute templates/manager.yaml %}
 datastore: kdd
 platform: gke
 {% endhelm %}
