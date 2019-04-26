@@ -14,12 +14,11 @@ const (
   "annotations":{"authorization.k8s.io/decision":"allow","authorization.k8s.io/reason":""},
   "name":"default-deny"}
 `
-
 	auditV1BetaTemplate = `
 {"kind":"Event","apiVersion":"audit.k8s.io/v1beta1",
-  "metadata":{"creationTimestamp":"2019-04-03T20:02:29Z"},
+  "metadata":{"creationTimestamp":"{{.Timestamp}}"},
   "level":"RequestResponse",
-  "timestamp":"2019-04-03T20:02:29Z",
+  "timestamp":"{{.Timestamp}}",
   "auditID":"a999a013-5e6b-4609-8a1e-d7f215255ed9","stage":"ResponseComplete","requestURI":"/apis/projectcalico.org/v3/globalnetworksets",
   "verb":"{{.Verb}}",
   "user":{"username":"kubernetes-admin","groups":["system:masters","system:authenticated"]},"sourceIPs":["199.116.73.11"],

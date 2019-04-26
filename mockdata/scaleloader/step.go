@@ -118,7 +118,7 @@ func readStep(log *logrus.Entry, scaleName string, stepCount int, path string) (
 		return step, nil
 	}
 
-	res := rh.NewResource()
+	res := getDefaultResource(rh)
 	if err := yaml.Unmarshal(data, res); err != nil {
 		clog.WithError(err).WithField("json", string(data)).Error("failed to unmarshal yaml")
 		return step, err
@@ -281,7 +281,6 @@ func (s *Step) updateResource(valueOf reflect.Value) {
 			} else {
 				s.updateResource(valueOf.MapIndex(key))
 			}
-			logrus.WithFields(logrus.Fields{"stringkey": key.String(), "value": valueOf.MapIndex(key)}).Debug("Stringed")
 		}
 	case reflect.Ptr:
 		s.updateResource(reflect.Indirect(valueOf))
@@ -292,10 +291,7 @@ func (s *Step) updateResource(valueOf reflect.Value) {
 		if valueOf.Kind() == reflect.String {
 			str := s.resolveResourceTemplate(valueOf.String())
 			if valueOf.CanSet() {
-				//logrus.WithField("resolveT", str).Debug("Resolved")
 				valueOf.SetString(str)
-			} else {
-				logrus.WithField("resolveT", str).Warn("Resolved but can't set")
 			}
 		}
 	}
