@@ -226,7 +226,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:96c9ad225958a35822586a18c2efc76b4fa0110352433508f2168017c2826a32"
+  digest = "1:5c9f3ab72e90e0756453a6a16b151b397999ca6223c506943b5a3dbd6d02b9f8"
   name = "github.com/projectcalico/libcalico-go"
   packages = [
     "lib/apis/v1",
@@ -246,7 +246,7 @@
     "lib/set",
   ]
   pruneopts = "UT"
-  revision = "34f0aaaec9aaa5f05ee780cad592187a9d49014c"
+  revision = "564e1f2493547b1727b0071a9c65d87d7ed68bd2"
   source = "github.com/tigera/libcalico-go-private"
 
 [[projects]]
@@ -300,11 +300,11 @@
     "pbkdf2",
   ]
   pruneopts = "UT"
-  revision = "df01cb2cc480549d72034218dd98bf97671450ac"
+  revision = "c05e17bb3b2dca130fc919668a96b4bec9eb9442"
 
 [[projects]]
   branch = "master"
-  digest = "1:6d182e40119b6f26c1b75220464c76afbbefe137d738632ff65d2a1996328ce0"
+  digest = "1:bd0cb8163c68965418ce71b57a78f732b55b897f4adf44876cb0d7fc380e1b0b"
   name = "golang.org/x/net"
   packages = [
     "html",
@@ -316,18 +316,18 @@
     "idna",
   ]
   pruneopts = "UT"
-  revision = "1da14a5a36f220ea3f03470682b737b1dfd5de22"
+  revision = "4829fb13d2c62012c17688fa7f629f371014946d"
 
 [[projects]]
   branch = "master"
-  digest = "1:d53852c73a1e10a3b9f26554fdea3f3a30f01652bc963417eb1d4f7baab8ce33"
+  digest = "1:157e5158a7f29d6633eed502880463aa43de3c36d451c7051591efd12f455ac8"
   name = "golang.org/x/sys"
   packages = ["unix"]
   pruneopts = "UT"
-  revision = "f0ce4c0180bef7e9c51babed693a6e47fdd8962f"
+  revision = "16072639606ea9e22c7d86e4cbd6af6314f4193c"
 
 [[projects]]
-  digest = "1:bb8277a2ca2bcad6ff7f413b939375924099be908cedd1314baa21ecd08df477"
+  digest = "1:0b5dc8c3581fc3ea2b80cc2e360dfb9c2d61dd0cba0d2fe247e8edd3e83f7551"
   name = "golang.org/x/text"
   packages = [
     "collate",
@@ -344,6 +344,8 @@
     "encoding/unicode",
     "internal/colltab",
     "internal/gen",
+    "internal/language",
+    "internal/language/compact",
     "internal/tag",
     "internal/triegen",
     "internal/ucd",
@@ -359,8 +361,8 @@
     "width",
   ]
   pruneopts = "UT"
-  revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
-  version = "v0.3.0"
+  revision = "342b2e1fbaa52c93f31447ad2c6abc048c63e475"
+  version = "v0.3.2"
 
 [[projects]]
   digest = "1:c25289f43ac4a68d88b02245742347c94f1e108c534dda442188015ff80669b3"
@@ -400,11 +402,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:1a52c09318b3614b969181ae1610beff89216480f6efa7c30e49790d9f07a48f"
+  digest = "1:451ce7a3ba3680101f97d5738ea978d43be2c4e3601b19f438b56e10c47ccdb1"
   name = "k8s.io/api"
   packages = ["core/v1"]
   pruneopts = "UT"
-  revision = "b8e4ab4b136a5ad597a48852189425fece12fdff"
+  revision = "181e1f9c52c1a4e72e64db906923efc79a76a8e3"
 
 [[projects]]
   digest = "1:7116931b73584478f7cb59567da0a0ff50935d5a41c1b3aab34d78b7aeea81c9"
@@ -440,7 +442,7 @@
   name = "k8s.io/apiserver"
   packages = ["pkg/apis/audit"]
   pruneopts = "UT"
-  revision = "0a718f081a3aa58909735ab6d02592edf7174f34"
+  revision = "48fa00984a63411ba1a92e31d8e0beaaed9447ba"
 
 [[projects]]
   branch = "master"
@@ -448,7 +450,7 @@
   name = "k8s.io/kube-openapi"
   packages = ["pkg/common"]
   pruneopts = "UT"
-  revision = "6b3d3b2d5666c5912bab8b7bf26bf50f75a8f887"
+  revision = "07b8972065522ba66df16032247530e1dbaca011"
 
 [solve-meta]
   analyzer-name = "dep"
