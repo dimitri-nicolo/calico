@@ -235,7 +235,7 @@ func ensureVxlanNetworkExists(networkName string, subNet *net.IPNet, conf types.
 	}
 
 	if conf.VSID == 0 {
-		expectedVSID = conf.VSID
+		expectedVSID = DefaultVSID
 	} else if conf.VSID < DefaultVSID {
 		return nil, errors.Annotatef(err, "Windows does not support VSID < 4096")
 	}
