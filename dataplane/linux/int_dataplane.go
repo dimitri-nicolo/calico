@@ -850,7 +850,11 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 			}
 			for _, domainInfoChange = range domainChangeSignals {
 				for _, mgr := range d.allManagers {
-					mgr.OnUpdate(domainInfoChange)
+					if handler, ok := mgr.(DomainInfoChangeHandler); ok {
+						if handler.OnDomainInfoChange(domainInfoChange) {
+							d.dataplaneNeedsSync = true
+						}
+					}
 				}
 			}
 		case <-ipSetsRefreshC:
