@@ -1,0 +1,13 @@
+action: update
+kind: GlobalNetworkPolicy
+apiversion: projectcalico.org/v3
+metadata:
+  name: "{{.Namespace}}-ingress-from-nsb"
+spec:
+  selector: '{{.Namespace}}-ingress-from-nsb == "yes"'
+  ingress:
+    - action: allow
+      source:
+        namespaceSelector: nsb-label == "{{.Namespace}}"
+  types:
+    - Ingress

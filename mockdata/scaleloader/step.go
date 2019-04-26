@@ -118,7 +118,7 @@ func readStep(log *logrus.Entry, scaleName string, stepCount int, path string) (
 		return step, nil
 	}
 
-	res := rh.NewResource()
+	res := getDefaultResource(rh)
 	if err := yaml.Unmarshal(data, res); err != nil {
 		clog.WithError(err).WithField("json", string(data)).Error("failed to unmarshal yaml")
 		return step, err
@@ -258,7 +258,29 @@ func (s *Step) updateResource(valueOf reflect.Value) {
 		}
 	case reflect.Map:
 		for _, key := range valueOf.MapKeys() {
-			s.updateResource(valueOf.MapIndex(key))
+			// If the key is a string then handle if it is templated.
+			if key.Kind() == reflect.String {
+				nk := reflect.New(key.Type()).Elem()
+				nk.SetString(s.resolveResourceTemplate(key.String()))
+				// It looks like the key is templated so add the rendered version
+				// then remove the templated version.
+				if nk.String() != key.String() {
+					valueOf.SetMapIndex(nk, valueOf.MapIndex(key))
+					valueOf.SetMapIndex(key, reflect.Value{})
+					key = nk
+				}
+			}
+
+			x := valueOf.MapIndex(key)
+			if x.Kind() == reflect.String {
+				// I don't understand why I have to do this 'new' and set on the
+				// new instead of doing it with updateResource.
+				nv := reflect.New(x.Type()).Elem()
+				nv.SetString(s.resolveResourceTemplate(x.String()))
+				valueOf.SetMapIndex(key, nv)
+			} else {
+				s.updateResource(valueOf.MapIndex(key))
+			}
 		}
 	case reflect.Ptr:
 		s.updateResource(reflect.Indirect(valueOf))
@@ -268,7 +290,6 @@ func (s *Step) updateResource(valueOf reflect.Value) {
 	if valueOf.IsValid() {
 		if valueOf.Kind() == reflect.String {
 			str := s.resolveResourceTemplate(valueOf.String())
-			//logrus.WithField("resolveT", str).Debug("Resolved")
 			if valueOf.CanSet() {
 				valueOf.SetString(str)
 			}

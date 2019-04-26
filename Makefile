@@ -374,9 +374,11 @@ endif
 $(BUILD_IMAGE_SCALELOADER): bin/scaleloader-$(ARCH) register
 	rm -rf docker-image/scaleloader/bin
 	rm -rf docker-image/scaleloader/playbooks
+	rm -rf docker-image/scaleloader/scenarios
 	mkdir -p docker-image/scaleloader/bin
 	cp bin/scaleloader-$(ARCH) docker-image/scaleloader/bin/
 	cp -r mockdata/scaleloader/playbooks docker-image/scaleloader
+	cp -r mockdata/scaleloader/scenarios docker-image/scaleloader
 	docker build --pull -t $(BUILD_IMAGE_SCALELOADER):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --file ./docker-image/scaleloader/Dockerfile.$(ARCH) docker-image/scaleloader
 ifeq ($(ARCH),amd64)
 	docker tag $(BUILD_IMAGE_SCALELOADER):latest-$(ARCH) $(BUILD_IMAGE_SCALELOADER):latest

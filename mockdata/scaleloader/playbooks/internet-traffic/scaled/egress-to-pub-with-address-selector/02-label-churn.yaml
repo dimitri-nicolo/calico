@@ -1,0 +1,12 @@
+action: update
+kind: "Pod"
+apiversion: v1
+metadata:
+  name: "egress-to-pub-with-address-selector-{{.ScaleId}}"
+  namespace: "{{.Namespace}}"
+  labels:
+    egress-with-address-selector: "yes"
+    just: "some churn"
+spec:
+  serviceaccountname: demosa
+  nodeName: anode

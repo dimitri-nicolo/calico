@@ -1,0 +1,14 @@
+action: update
+kind: NetworkPolicy
+apiversion: networking.k8s.io/v1
+metadata:
+  name: egress-with-noselector
+  namespace: "{{.Namespace}}"
+spec:
+  podSelector:
+    matchLabels:
+      egress-with-noselector: 'yes'
+  egress:
+    - to:
+      - namespaceSelector:
+      - podSelector:

@@ -1,0 +1,11 @@
+action: update
+kind: "Pod"
+apiversion: v1
+metadata:
+  name: "egress-to-nsb-{{.ScaleId}}"
+  namespace: "{{.Namespace}}"
+  labels:
+    egress-to-nsb: "yes"
+spec:
+  serviceaccountname: demosa
+  nodeName: anode

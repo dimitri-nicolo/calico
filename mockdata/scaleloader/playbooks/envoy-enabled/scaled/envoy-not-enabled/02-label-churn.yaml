@@ -1,0 +1,12 @@
+action: update
+kind: "Pod"
+apiversion: v1
+metadata:
+  name: "envoy-not-enabled-{{.ScaleId}}"
+  namespace: "{{.Namespace}}"
+  labels:
+    protected: "yes"
+    just: "some churn"
+spec:
+  serviceaccountname: demosa
+  nodeName: anode

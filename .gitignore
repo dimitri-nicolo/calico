@@ -27,6 +27,7 @@ cmd/snapshotter/snapshotter
 cmd/mockdata-exporter/mockdata-exporter
 docker-image/scaleloader/playbooks
 docker-image/scaleloader/bin
+docker-image/scaleloader/scenarios
 
 cmd/server/apiserver.local.config/
 .settings

@@ -1,0 +1,23 @@
+start: 2019-03-01T06:00:00
+duration: 2h
+playbooks:
+  - name: unprotected-protected
+    playbookscale: 3
+    playscale: 3
+    churnrate: 50
+    # 12 x sc + 10
+  - name: internet-traffic
+    playbookscale: 3
+    playscale: 5
+    churnrate: 30
+    # 45 x sc + 23
+  - name: namespace-in-out
+    playbookscale: 3
+    playscale: 5
+    churnrate: 30
+    # 42 x sc + 23
+  - name: envoy-enabled
+    playbookscale: 5
+    playscale: 5
+    churnrate: 50
+    # 8 x sc + 0

@@ -1,0 +1,11 @@
+action: delete
+kind: "Pod"
+apiversion: v1
+metadata:
+  name: "envoy-not-enabled-{{.ScaleId}}"
+  namespace: "{{.Namespace}}"
+  labels:
+    protected: "yes"
+spec:
+  serviceaccountname: demosa
+  nodeName: anode

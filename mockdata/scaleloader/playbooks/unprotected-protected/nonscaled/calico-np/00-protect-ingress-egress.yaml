@@ -5,7 +5,7 @@ metadata:
   name: protect-all
   namespace: "{{.Namespace}}"
 spec:
-  selector: protected == 'yes'
+  selector: '{{.Namespace}}-protected == "yes"'
   ingress:
     - action: allow
       source:

@@ -5,7 +5,7 @@ metadata:
   name: "protected-egress-pod-{{.ScaleId}}"
   namespace: "{{.Namespace}}"
   labels:
-    protected: "yes"
+    "{{.Namespace}}-protected": "yes"
 spec:
   serviceaccountname: demosa
   nodeName: anode

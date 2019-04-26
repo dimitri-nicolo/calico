@@ -6,7 +6,7 @@ metadata:
   labels:
     churn-gnp: "leslie"
 spec:
-  selector: protected == 'egress'
+  selector: '{{.Namespace}}-protected == "egress"'
   egress:
     - action: allow
       destination:
