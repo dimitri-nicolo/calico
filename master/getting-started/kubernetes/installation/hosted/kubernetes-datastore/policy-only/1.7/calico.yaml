@@ -8,5 +8,5 @@ typha:
 app_layer_policy:
   configured: true
 network: none
-calico_ipam: false
+ipam: host-local
 {% endhelm %}

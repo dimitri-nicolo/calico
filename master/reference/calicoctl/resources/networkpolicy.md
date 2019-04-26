@@ -91,7 +91,7 @@ spec:
 
 #### EntityRule
 
-{% include {{page.version}}/entityrule.md %}
+{% include {{page.version}}/entityrule.md global="false" %}
 
 #### Selector
 

@@ -35,7 +35,10 @@ To complete the following procedure, you'll need:
 - A `tigera-ee-installer` user with permission to install machine learning jobs, and configure Kibana dashboards (see below).
 - A `tigera-ee-curator` user with permission to delete indices in Elasticsearch (see below).
 - A `tigera-ee-intrusion-detection` user with permission to process threat feeds, flow logs and security events (see below). 
-- A `tigera-ee-compliance` user with permission to query and send documents to Elasticsearch (see below).
+- A `tigera-ee-compliance-controller` user with permission to issue queries to Elasticsearch (see below).
+- A `tigera-ee-compliance-reporter` user with permission to query and send documents to Elasticsearch (see below).
+- A `tigera-ee-compliance-snapshotter` user with permission to query and send documents to Elasticsearch (see below).
+- A `tigera-ee-compliance-server` user with permission to issue queries to Elasticsearch (see below).
 - The CA certificate for the Elasticsearch cluster.
 - Any users who are going to use the Kibana dashboards will need to be given appropriate
   credentials.
@@ -129,7 +132,7 @@ They may also be useful as a reference for defining alternative security configu
            "privileges": [ "read"]
          },
          {
-           "names": [ ".tigera.ipset", "tigera_secure_ee_events" ],
+           "names": [ ".tigera.ipset.*", "tigera_secure_ee_events.*" ],
            "privileges": [ "all"]
          }
        ]
@@ -137,19 +140,76 @@ They may also be useful as a reference for defining alternative security configu
    }
    ```
 
-
-1. {{site.prodname}} compliance report and dashboard for assessing the compliance posture of the cluster. (`tigera-ee-compliance`)
-
-   ```json
-   {
-     "elasticsearch": {
-       "cluster": [ "monitor", "manage_index_templates"],
-       "indices": [
-         {
-           "names": [ "tigera_secure_ee_*" ],
-           "privileges": [ "create_index", "write" ]
+1. {{site.prodname}} compliance report and dashboard for assessing the compliance posture of the cluster.
+    
+    1. Compliance controller role for querying last archived reports  (`tigera-ee-compliance-controller`)
+    
+       ```json
+       {
+         "elasticsearch": {
+           "cluster": [ "monitor", "manage_index_templates"],
+           "indices": [
+             {
+               "names": [ "tigera_secure_ee_compliance_reports_*" ],
+               "privileges": [ "read" ]
+             }
+           ]
          }
-       ]
-     }
-   }
-   ```
+       }
+       ```
+    
+    1. Compliance reporter role for querying archived audit information and storing reports  (`tigera-ee-compliance-reporter`)
+    
+       ```json
+       {
+         "elasticsearch": {
+           "cluster": [ "monitor", "manage_index_templates"],
+           "indices": [
+             {
+               "names": [ "tigera_secure_ee_audit_*" ],
+               "privileges": [ "read" ]
+             },
+             {
+               "names": [ "tigera_secure_ee_snapshots_*" ],
+               "privileges": [ "read" ]
+             },
+             {
+               "names": [ "tigera_secure_ee_compliance_reports_*" ],
+               "privileges": [ "create_index", "write" ]
+             }
+           ]
+         }
+       }
+       ```
+    
+    1. Compliance snapshotter role for recording daily configuration audits  (`tigera-ee-compliance-snapshotter`)
+    
+       ```json
+       {
+         "elasticsearch": {
+           "cluster": [ "monitor", "manage_index_templates"],
+           "indices": [
+             {
+               "names": [ "tigera_secure_ee_snapshots_*" ],
+               "privileges": [ "create_index", "write", "read" ]
+             }
+           ]
+         }
+       }
+       ```
+    
+    1. Compliance server role for querying archived reports (`tigera-ee-compliance-server`)
+    
+       ```json
+       {
+         "elasticsearch": {
+           "cluster": [ "monitor", "manage_index_templates"],
+           "indices": [
+             {
+               "names": [ "tigera_secure_ee_compliance_reports_*" ],
+               "privileges": [ "read" ]
+             }
+           ]
+         }
+       }
+       ```

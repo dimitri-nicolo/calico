@@ -1,8 +1,0 @@
----
-layout: null
----
-
-{% helm --execute templates/compliance/compliance-server.yaml  --execute templates/compliance/compliance-snapshotter.yaml  --execute templates/compliance/compliance-controller.yaml %}
-secure_es: true
-datastore: "kdd"
-{% endhelm %}

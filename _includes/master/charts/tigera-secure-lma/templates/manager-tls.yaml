@@ -4,6 +4,6 @@ kind: Secret
 type: Opaque
 metadata:
   name: cnx-manager-tls
-  namespace: kube-system
+  namespace: calico-monitoring
 data:
-{{ include "calico.manager.tls" . | indent 2 }}
+{{ include "tigera-secure-lma.manager.tls" . | indent 2 }}

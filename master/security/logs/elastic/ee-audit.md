@@ -13,6 +13,7 @@ Our manifests include a policy that enables audit logging on the following {{sit
 | `GlobalNetworkSet`    | [Reference documentation](../../../reference/calicoctl/resources/globalnetworkset)    |
 | `NetworkPolicy`       | [Reference documentation](../../../reference/calicoctl/resources/networkpolicy)       |
 | `Tier`                | [Reference documentation](../../../reference/calicoctl/resources/tier)                |
+| `HostEndpoint`        | [Reference documentation](../../../reference/calicoctl/resources/hostendpoint)        |
 
 By default, the logs:
 - Include `create`, `patch`, `update`, and `delete` events.
@@ -26,11 +27,11 @@ The logs can be [viewed in Elasticsearch or Kibana](view)
 The audit policy for {{site.prodname}} resources (above) is contained in a ConfigMap.  To update this policy,
 follow these steps.
 
-1. Edit the `audit-policy-ee` ConfigMap in `kube-system` (contained in `cnx.yaml`).
+1. Edit the `audit-policy-ee` ConfigMap in `kube-system` (contained in `cnx-api.yaml`).
 
    ```
-   vi cnx.yaml
-   kubectl apply -f cnx.yaml
+   vi cnx-api.yaml
+   kubectl apply -f cnx-api.yaml
    ```
 
    Or
@@ -50,18 +51,19 @@ follow these steps.
 As part of setting up your cluster we recommend you enable auditing for
 Kubernetes/OpenShift resources as well.
 The following sections describe setting up auditing on the Kubernetes/OpenShift API Server for the following
-resources that are directly involved in network policy evaluation at the same level as for the {{site.prodname}}
-resources above.
+resources that are directly involved in network policy evaluation and are required for {{site.prodname}} Compliance 
+Analytics, similar to the {{site.prodname}} resources above:
 
 - `Pod`
 - `Namespace`
 - `ServiceAccount`
 - `NetworkPolicy` (Kubernetes/OpenShift)
+- `Endpoints`
 
 You may wish to audit resources beyond those involved in network policy.  Consult the [Kubernetes docs](https://kubernetes.io/docs/tasks/debug-application-cluster/audit/#audit-policy), or
 look at [this function](https://github.com/kubernetes/kubernetes/blob/cc67ccfd7f4f0bc96d7f1c8e5fe8577821757d03/cluster/gce/gci/configure-helper.sh#L752)
-which generates the GKE audit policy for inspiration.  Here is the sample policy which audits changes to `pods`,
-`namespaces`, `serviceaccounts` and `NetworkPolicies`.
+which generates the GKE audit policy for inspiration.  Here is the sample policy which audits changes to `Pod`,
+`Namespace`, `ServiceAccount`, `Endpoints` and `NetworkPolicy` resources.
 
 ```yaml
 apiVersion: audit.k8s.io/v1beta1
@@ -81,7 +83,7 @@ rules:
     - group: extensions
       resources: ["networkpolicies"]
     - group: ""
-      resources: ["pods", "namespaces", "serviceaccounts"]
+      resources: ["pods", "namespaces", "serviceaccounts", "endpoints"]
 ```
 
 #### Kubernetes

@@ -81,11 +81,16 @@ spec:
         # Mark the pod as a critical add-on for rescheduling.
         - key: CriticalAddonsOnly
           operator: Exists
+{{- if .Values.imagePullSecrets }}
       imagePullSecrets:
-        - name: cnx-pull-secret
+{{- range $key, $value := .Values.imagePullSecrets }}
+        - name: {{ $key }}
+{{- end }}
+{{- end }}
       containers:
         - name: tigera-cloud-controllers
           image: {{.Values.cloudControllers.image}}:{{.Values.cloudControllers.tag}}
+{{ tuple .Values.cloudControllers.resources | include "calico.resourceLimits" | indent 10 -}}
           readinessProbe:
             exec:
               command:

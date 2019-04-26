@@ -56,16 +56,27 @@ true
 {{- end -}}
 {{- end -}}
 
-
-{{- define "calico.manager.tls" -}}
-{{- if or .Values.manager.tls.cert .Values.manager.tls.key -}}
-{{- $_ := required "Must specify both or neither of ee_manager_cert or ee_manager_key" .Values.manager.tls.cert -}}
-{{- $_ := required "Must specify both or neither of ee_manager_cert or ee_manager_key" .Values.manager.tls.key -}}
-cert: {{ .Values.manager.tls.cert | b64enc }}
-key: {{ .Values.manager.tls.key | b64enc }}
-{{- else -}}
-{{- $ca := genSelfSignedCert "localhost" (list "127.0.0.1") (list) 365 -}}
-cert: {{ $ca.Cert | b64enc }}
-key: {{ $ca.Key | b64enc }}
-{{- end -}}
+{{- define "calico.resourceLimits" -}}
+{{- $component := index . 0 -}}
+{{- if or (or (or $component.limits.cpu $component.limits.memory) $component.requests.cpu) $component.requests.memory -}}
+resources:
+{{- if or $component.limits.cpu $component.limits.memory }}
+  limits:
+{{- if $component.limits.cpu }}
+    cpu: {{ $component.limits.cpu | quote }}
+{{- end }}
+{{- if $component.limits.memory }}
+    memory: {{ $component.limits.memory | quote }}
+{{- end }}
+{{- end }}
+{{- if or $component.requests.cpu $component.requests.memory }}
+  requests:
+{{- if $component.requests.cpu }}
+    cpu: {{ $component.requests.cpu | quote }}
+{{- end }}
+{{- if $component.requests.memory }}
+    memory: {{ $component.requests.memory | quote }}
+{{- end }}
+{{- end }}
+{{end}}
 {{- end -}}

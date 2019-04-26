@@ -8,6 +8,11 @@ ifeq ($(DEV),true)
 	CONFIG:=$(CONFIG),_config_dev.yml
 endif
 
+GO_BUILD_VER?=v0.20
+CALICO_BUILD?=calico/go-build:$(GO_BUILD_VER)
+LOCAL_USER_ID?=$(shell id -u $$USER)
+PACKAGE_NAME?=github.com/projectcalico/calico
+
 # Determine whether there's a local yaml installed or use dockerized version.
 # Note in order to install local (faster) yaml: "go get github.com/mikefarah/yaml"
 YAML_CMD:=$(shell which yaml || echo docker run --rm -i calico/yaml)
@@ -20,6 +25,7 @@ HP_IGNORE_LOCAL_DIRS="/v2.0/"
 RELEASE_STREAM?=
 
 CHART?=calico
+REGISTRY?=gcr.io/unique-caldron-775/cnx/
 
 # Use := so that these V_ variables are computed only once per make run.
 CALICO_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].title')
@@ -74,8 +80,16 @@ clean:
 ###############################################################################
 # CI / test targets
 ###############################################################################
+test:
+	docker run --rm \
+        -v $(PWD)/tests:/code \
+        -e RELEASE_STREAM=$(RELEASE_STREAM) \
+        calico/test:latest sh -c \
+	"nosetests . -e $(EXCLUDE_REGEX) -v --with-xunit \
+	--xunit-file='/code/report/nosetests.xml' \
+	--with-timer"
 
-ci: clean htmlproofer kubeval
+ci: clean htmlproofer kubeval helm-tests
 htmlproofer: _site
 	# Run htmlproofer, failing if we hit any errors.
 	./htmlproofer.sh
@@ -83,15 +97,37 @@ htmlproofer: _site
 kubeval: _site
 	# Run kubeval to check master manifests are valid Kubernetes resources.
 	-docker run -v $$PWD:/calico --entrypoint /bin/sh garethr/kubeval:0.7.3 -c 'ok=true; for f in `find /calico/_site/master -name "*.yaml" |grep -v "\(patch-cnx-manager-configmap\|kube-controllers-patch\|config\|allow-istio-pilot\|30-policy\|cnx-policy\|crds-only\|istio-app-layer-policy\|patch-flow-logs\|upgrade-calico\|-cf\).yaml"`; do echo Running kubeval on $$f; /kubeval $$f || ok=false; done; $$ok' 1>stderr.out 2>&1
-	
+
 	# Filter out error loading schema for non-standard resources.
+	-grep -v "Could not read schema from HTTP, response status is 404 Not Found" stderr.out > filtered.out
+
 	# Filter out error reading empty secrets (which we use for e.g. etcd secrets and seem to work).
-	-grep -v "Could not read schema from HTTP, response status is 404 Not Found" stderr.out | grep -v "invalid Secret" > filtered.out
+	-grep -v "invalid Secret" filtered.out > filtered.out
+
+	# Filter out error reading calico networkpolicy since kubeval thinks they're kubernetes networkpolicies and
+	# complains when it doesn't have a podSelector. Unfortunately, this also filters out networkpolicy failures.
+	# TODO: don't filter out k8s networkpolicy errors
+	-grep -v "invalid NetworkPolicy" filtered.out > filtered.out
 
 	# Display the errors with context and fail if there were any.
 	-rm stderr.out
 	! grep -C3 -P "invalid|\t\*" filtered.out
 	rm filtered.out
+
+helm-tests: vendor bin/helm values.yaml
+ifndef RELEASE_STREAM
+	# Default the version to master if not set
+	$(eval RELEASE_STREAM = master)
+endif
+	mkdir -p .go-pkg-cache && \
+		docker run --rm \
+		--net=host \
+		-v $$(pwd):/go/src/$(PACKAGE_NAME):rw \
+		-v $$(pwd)/.go-pkg-cache:/go/pkg:rw \
+		-v $$(pwd)/bin/helm:/usr/local/bin/helm \
+		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+		-w /go/src/$(PACKAGE_NAME) \
+		$(CALICO_BUILD) ginkgo -cover -r -skipPackage vendor ./helm-tests -chart-path=./_includes/$(RELEASE_STREAM)/charts/calico,./_includes/$(RELEASE_STREAM)/charts/tigera-secure-lma $(GINKGO_ARGS)
 
 ###############################################################################
 # Docs automation
@@ -293,12 +329,25 @@ bin/helm:
 .PHONY: values.yaml
 values.yaml:
 ifndef RELEASE_STREAM
-	$(error RELEASE_STREAM is undefined - run using make values.yaml RELEASE_STREAM=vX.Y)
+	# Default the version to master if not set
+	$(eval RELEASE_STREAM = master)
 endif
 	docker run --rm \
 	  -v $$PWD:/calico \
 	  -w /calico \
-	  ruby:2.5 ruby ./hack/gen_values_yml.rb --chart $(CHART) $(RELEASE_STREAM) > _includes/$(RELEASE_STREAM)/charts/$(CHART)/values.yaml
+	  ruby:2.5 ruby ./hack/gen_values_yml.rb --registry $(REGISTRY) --chart $(CHART) $(RELEASE_STREAM) > _includes/$(RELEASE_STREAM)/charts/$(CHART)/values.yaml
+
+ ## Create the vendor directory
+vendor: glide.yaml
+	# Ensure that the glide cache directory exists.
+	mkdir -p $(HOME)/.glide
+
+	docker run --rm -i \
+	  -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
+	  -v $(HOME)/.glide:/home/user/.glide:rw \
+	  -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+	  -w /go/src/$(PACKAGE_NAME) \
+	  $(CALICO_BUILD) glide install -strip-vendor
 
 .PHONY: help
 ## Display this help text

@@ -1,7 +1,8 @@
 ---
 layout: null
 ---
-{% helm --execute templates/cnx.yaml %}
-datastore: etcd
-orch: openshift
+{% helm tigera-secure-lma --execute templates/manager.yaml %}
+manager:
+  auth:
+    type: OAuth
 {% endhelm %}

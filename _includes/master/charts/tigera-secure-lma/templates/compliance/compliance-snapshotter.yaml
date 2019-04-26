@@ -1,4 +1,3 @@
-
 kind: ServiceAccount
 apiVersion: v1
 metadata:
@@ -10,7 +9,7 @@ metadata:
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRole
 metadata:
-  name: compliance-snapshotter-role
+  name: tigera-compliance-snapshotter
 rules:
   - apiGroups: ["extensions","networking.k8s.io",""]
     resources:
@@ -24,35 +23,33 @@ rules:
     verbs:
       - get
       - list
-{{- if eq .Values.datastore "kdd" }}      
-  - apiGroups: ["crd.projectcalico.org"]
+  - apiGroups: ["projectcalico.org"]
     resources:
       - globalnetworkpolicies
       - networkpolicies
+      - tier.globalnetworkpolicies
+      - tier.networkpolicies
       - tiers
       - hostendpoints
       - globalnetworksets
     verbs:
       - get
       - list
-{{- end }}
 
 ---
-
 
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRoleBinding
 metadata:
-  name: compliance-snapshotter-binding
+  name: tigera-compliance-snapshotter
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: compliance-snapshotter-role
+  name: tigera-compliance-snapshotter
 subjects:
 - kind: ServiceAccount
   name: tigera-compliance-snapshotter
   namespace: calico-monitoring
-
 
 ---
 
@@ -83,62 +80,85 @@ spec:
       tolerations:
         - key: node-role.kubernetes.io/master
           effect: NoSchedule
+{{- if .Values.imagePullSecrets }}
       imagePullSecrets:
-        - name: cnx-pull-secret
+{{- range $key, $value := .Values.imagePullSecrets }}
+        - name: {{ $key }}
+{{- end }}
+{{- end }}
       containers:
         - name: compliance-snapshotter
           image: {{.Values.complianceSnapshotter.image}}:{{ .Values.complianceSnapshotter.tag }}
+{{ tuple .Values.complianceSnapshotter.resources | include "tigera-secure-lma.resourceLimits" | indent 10 -}}
           env:
             - name: LOG_LEVEL
-              value: "warning"
-            - name: TIGERA_COMPLIANCE_SNAPSHOT_HOUR 
+              value: "info"
+{{- if eq .Values.platform "gke" }}
+            - name: HEALTH_PORT
+              value: "9199"
+{{- end }}
+            - name: TIGERA_COMPLIANCE_SNAPSHOT_HOUR
               value: "0"
-            - name: ELASTIC_URI
-              value: ""
+            - name: ELASTIC_INDEX_SUFFIX
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-es-config
+                  key: tigera.elasticsearch.cluster-name
             - name: ELASTIC_SCHEME
-              value: ""
-{{- if .Values.secure_es }}
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-es-config
+                  key: tigera.elasticsearch.scheme
             - name: ELASTIC_HOST
               valueFrom:
                 configMapKeyRef:
-                  name: tigera-es-proxy
-                  key: elasticsearch.backend.host
+                  name: tigera-es-config
+                  key: tigera.elasticsearch.host
             - name: ELASTIC_PORT
               valueFrom:
                 configMapKeyRef:
-                  name: tigera-es-proxy
-                  key: elasticsearch.backend.port
+                  name: tigera-es-config
+                  key: tigera.elasticsearch.port
             - name: ELASTIC_USER
               valueFrom:
                 secretKeyRef:
                   name: elastic-compliance-user
-                  key: username
+                  key: snapshotter.username
+                  optional: true
             - name: ELASTIC_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: elastic-compliance-user
-                  key: password
+                  key: snapshotter.password
+                  optional: true
             - name: ELASTIC_SSL_VERIFY
               value: "true"
             - name: ELASTIC_CA
-              value: /etc/compliance/elastic/ca.pem
-{{- else }}
-            - name: ELASTIC_HOST
-              value: elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local
-            - name: ELASTIC_PORT
-              value: "9200"
-            - name: ELASTIC_SSL_VERIFY
-              value: "false"
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-es-config
+                  key: tigera.elasticsearch.ca.path
+                  optional: true
+{{- if .Values.complianceSnapshotter.env }}
+{{ toYaml .Values.complianceSnapshotter.env | indent 12 }}
 {{- end }}
-{{- if .Values.secure_es }}
           volumeMounts:
             - name: elastic-ca-cert-volume
-              mountPath: /etc/compliance/elastic
+              mountPath: /etc/ssl/elastic/
+          livenessProbe:
+            httpGet:
+              path: /liveness
+{{- if eq .Values.platform "gke" }}
+              port: 9199
+{{- else }}
+              port: 9099
 {{- end }}
-{{- if .Values.secure_es }}
+              host: localhost
       volumes:
-        # Should be created during installation process.
         - name: elastic-ca-cert-volume
-          configMap:
-            name: elastic-ca-config
-{{- end }}
+          secret:
+            optional: true
+            items:
+            - key: tigera.elasticsearch.ca
+              path: ca.pem
+            secretName: tigera-es-config

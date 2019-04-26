@@ -1,0 +1,182 @@
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: tigera-compliance-controller
+  namespace: calico-monitoring
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: Role
+metadata:
+  namespace: calico-monitoring
+  name: tigera-compliance-controller
+rules:
+- apiGroups: ["batch"]
+  resources: ["jobs"]
+  verbs: ["create", "list", "get", "delete"]
+- apiGroups: [""]
+  resources: ["podtemplates"]
+  verbs: ["get"]
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRole
+metadata:
+  name: tigera-compliance-controller
+rules:
+- apiGroups: ["projectcalico.org"]
+  resources:
+    - globalreports
+  verbs:
+    - list
+- apiGroups: ["projectcalico.org"]
+  resources:
+    - globalreports/status
+  verbs:
+    - update
+    - list
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: RoleBinding
+metadata:
+  name: tigera-compliance-controller
+  namespace: calico-monitoring
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: tigera-compliance-controller
+subjects:
+- kind: ServiceAccount
+  name: tigera-compliance-controller
+  namespace: calico-monitoring
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: tigera-compliance-controller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: tigera-compliance-controller
+subjects:
+- kind: ServiceAccount
+  name: tigera-compliance-controller
+  namespace: calico-monitoring
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: compliance-controller
+  namespace: calico-monitoring
+  labels:
+    k8s-app: compliance-controller
+spec:
+  replicas: 1
+  strategy:
+     type: Recreate
+  selector:
+    matchLabels:
+      k8s-app: compliance-controller
+  template:
+    metadata:
+      name: compliance-controller
+      namespace: calico-monitoring
+      labels:
+        k8s-app: compliance-controller
+    spec:
+      serviceAccountName: tigera-compliance-controller
+      tolerations:
+        - key: node-role.kubernetes.io/master
+          effect: NoSchedule
+{{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+{{- range $key, $value := .Values.imagePullSecrets }}
+        - name: {{ $key }}
+{{- end }}
+{{- end }}
+      containers:
+        - name: compliance-controller
+          image: {{.Values.complianceController.image}}:{{.Values.complianceController.tag}}
+{{ tuple .Values.complianceController.resources | include "tigera-secure-lma.resourceLimits" | indent 10 -}}
+          env:
+            - name: LOG_LEVEL
+              value: "info"
+            - name: TIGERA_COMPLIANCE_REPORT_JOB_START_DELAY
+              value: "30m"
+{{- if eq .Values.platform "gke" }}
+            - name: HEALTH_PORT
+              value: "9199"
+{{- end }}
+            - name: ELASTIC_INDEX_SUFFIX
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-es-config
+                  key: tigera.elasticsearch.cluster-name
+            - name: ELASTIC_SCHEME
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-es-config
+                  key: tigera.elasticsearch.scheme
+                  optional: true
+            - name: ELASTIC_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-es-config
+                  key: tigera.elasticsearch.host
+            - name: ELASTIC_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-es-config
+                  key: tigera.elasticsearch.port
+                  optional: true
+            - name: ELASTIC_USER
+              valueFrom:
+                secretKeyRef:
+                  name: elastic-compliance-user
+                  key: controller.username
+                  optional: true
+            - name: ELASTIC_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: elastic-compliance-user
+                  key: controller.password
+                  optional: true
+            - name: ELASTIC_SSL_VERIFY
+              value: "true"
+            - name: ELASTIC_CA
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-es-config
+                  key: tigera.elasticsearch.ca.path
+                  optional: true
+{{- if .Values.complianceController.env }}
+{{ toYaml .Values.complianceController.env | indent 12 }}
+{{- end }}
+          volumeMounts:
+            - name: elastic-ca-cert-volume
+              mountPath: /etc/ssl/elastic/
+          livenessProbe:
+            httpGet:
+              path: /liveness
+{{- if eq .Values.platform "gke" }}
+              port: 9199
+{{- else }}
+              port: 9099
+{{- end }}
+              host: localhost
+      volumes:
+        - name: elastic-ca-cert-volume
+          secret:
+            optional: true
+            items:
+            - key: tigera.elasticsearch.ca
+              path: ca.pem
+            secretName: tigera-es-config

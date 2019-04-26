@@ -44,8 +44,12 @@ spec:
       # Minimize downtime during a rolling upgrade or deletion; tell Kubernetes to do a "force
       # deletion": https://kubernetes.io/docs/concepts/workloads/pods/pod/#termination-of-pods.
       terminationGracePeriodSeconds: 0
+{{- if .Values.imagePullSecrets }}
       imagePullSecrets:
-        - name: cnx-pull-secret
+{{- range $key, $value := .Values.imagePullSecrets }}
+        - name: {{ $key }}
+{{- end }}
+{{- end }}
       initContainers:
 {{- if ne .Values.network "ecs" }}
 {{- if and (eq .Values.network "calico") (eq .Values.datastore "kdd") }}
@@ -159,6 +163,7 @@ spec:
         # host.
         - name: calico-node
           image: {{.Values.node.image}}:{{.Values.node.tag}}
+{{ tuple .Values.node.resources | include "calico.resourceLimits" | indent 10 -}}
           env:
 {{- if eq .Values.datastore "etcd" }}
             # The location of the etcd cluster.
@@ -231,7 +236,7 @@ spec:
   {{- else }}
             # Enable IPIP by default
             - name: CALICO_IPV4POOL_IPIP
-              value: "Always"
+              value: "{{ .Values.initialPool.ipIpMode }}"
   {{- end }}
             # Set MTU for tunnel device used if ipip is enabled
             - name: FELIX_IPINIPMTU
@@ -276,7 +281,7 @@ spec:
             # chosen from this range. Changing this value after installation will have
             # no effect. This should fall within `--cluster-cidr`.
             - name: CALICO_IPV4POOL_CIDR
-              value: "192.168.0.0/16"
+              value: "{{ .Values.initialPool.cidr }}"
 {{- end }}
             # Disable file logging so `kubectl logs` works.
             - name: CALICO_DISABLE_FILE_LOGGING
@@ -342,9 +347,6 @@ spec:
 {{- end }}
           securityContext:
             privileged: true
-          resources:
-            requests:
-              cpu: 250m
           livenessProbe:
             httpGet:
               path: /liveness
@@ -411,6 +413,7 @@ spec:
         # for allocating subnets.
         - name: kube-flannel
           image: {{ .Values.flannel.image }}:{{ .Values.flannel.tag }}
+{{ tuple .Values.flannel.resources | include "calico.resourceLimits" | indent 10 -}}
           command: [ "/opt/bin/flanneld", "--ip-masq", "--kube-subnet-mgr" ]
           securityContext:
             privileged: true
@@ -447,6 +450,7 @@ spec:
         # container hosts.
         - name: flannel
           image: {{ .Values.flannel.image }}:{{ .Values.flannel.tag }}
+{{ tuple .Values.flannel.resources | include "calico.resourceLimits" | indent 10 -}}
           env:
             # The location of the etcd cluster.
             - name: FLANNELD_ETCD_ENDPOINTS

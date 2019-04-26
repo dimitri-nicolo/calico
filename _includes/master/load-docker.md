@@ -39,8 +39,8 @@
 1. Use the following commands to pull the required {{site.prodname}} images.
 
    ```bash
-   docker pull docker.elastic.co/elasticsearch/elasticsearch-oss:{{site.data.versions[page.version].first.components["elasticsearch"].version}}
-   docker pull docker.elastic.co/kibana/kibana-oss:{{site.data.versions[page.version].first.components["kibana"].version}}
+   docker pull docker.elastic.co/elasticsearch/elasticsearch:{{site.data.versions[page.version].first.components["elasticsearch"].version}}
+   docker pull docker.elastic.co/kibana/kibana:{{site.data.versions[page.version].first.components["kibana"].version}}
    docker pull {{page.registry}}{{site.imageNames["calicoctl"]}}:{{site.data.versions[page.version].first.components["calicoctl"].version}}
    docker pull {{page.registry}}{{site.imageNames["calicoq"]}}:{{site.data.versions[page.version].first.components["calicoctl"].version}}
    docker pull {{page.registry}}{{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
@@ -56,6 +56,10 @@
    docker pull {{page.registry}}{{site.imageNames["elastic-tsee-installer"]}}:{{site.data.versions[page.version].first.components["elastic-tsee-installer"].version}}
    docker pull {{page.registry}}{{site.imageNames["intrusion-detection-controller"]}}:{{site.data.versions[page.version].first.components["intrusion-detection-controller"].version}}
    docker pull {{page.registry}}{{site.imageNames["es-curator"]}}:{{site.data.versions[page.version].first.components["es-curator"].version}}
+   docker pull {{page.registry}}{{site.imageNames["compliance-controller"]}}:{{site.data.versions[page.version].first.components["compliance-controller"].version}}
+   docker pull {{page.registry}}{{site.imageNames["compliance-reporter"]}}:{{site.data.versions[page.version].first.components["compliance-reporter"].version}}
+   docker pull {{page.registry}}{{site.imageNames["compliance-snapshotter"]}}:{{site.data.versions[page.version].first.components["compliance-snapshotter"].version}}
+   docker pull {{page.registry}}{{site.imageNames["compliance-server"]}}:{{site.data.versions[page.version].first.components["compliance-server"].version}}
    docker pull quay.io/coreos/configmap-reload:{{site.data.versions[page.version].first.components["configmap-reload"].version}}
    docker pull quay.io/coreos/prometheus-config-reloader:{{site.data.versions[page.version].first.components["prometheus-config-reloader"].version}}
    docker pull quay.io/coreos/prometheus-operator:{{site.data.versions[page.version].first.components["prometheus-operator"].version}}
@@ -67,8 +71,8 @@
 1. Retag the images with the name of your private registry.
 
    ```bash
-   docker tag docker.elastic.co/elasticsearch/elasticsearch-oss:{{site.data.versions[page.version].first.components["elasticsearch"].version}} <YOUR-REGISTRY>/docker.elastic.co/elasticsearch/elasticsearch-oss:{{site.data.versions[page.version].first.components["elasticsearch"].version}}
-   docker tag docker.elastic.co/kibana/kibana-oss:{{site.data.versions[page.version].first.components["kibana"].version}} <YOUR-REGISTRY>/docker.elastic.co/kibana/kibana-oss:{{site.data.versions[page.version].first.components["kibana"].version}}
+   docker tag docker.elastic.co/elasticsearch/elasticsearch:{{site.data.versions[page.version].first.components["elasticsearch"].version}} <YOUR-REGISTRY>/docker.elastic.co/elasticsearch/elasticsearch:{{site.data.versions[page.version].first.components["elasticsearch"].version}}
+   docker tag docker.elastic.co/kibana/kibana:{{site.data.versions[page.version].first.components["kibana"].version}} <YOUR-REGISTRY>/docker.elastic.co/kibana/kibana:{{site.data.versions[page.version].first.components["kibana"].version}}
    docker tag {{page.registry}}{{site.imageNames["calicoctl"]}}:{{site.data.versions[page.version].first.components["calicoctl"].version}} <YOUR-REGISTRY>/{{site.imageNames["calicoctl"]}}:{{site.data.versions[page.version].first.components["calicoctl"].version}}
    docker tag {{page.registry}}{{site.imageNames["calicoq"]}}:{{site.data.versions[page.version].first.components["calicoq"].version}} <YOUR-REGISTRY>/{{site.imageNames["calicoq"]}}:{{site.data.versions[page.version].first.components["calicoq"].version}}
    docker tag {{page.registry}}{{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}} <YOUR-REGISTRY>/{{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
@@ -76,7 +80,7 @@
    docker tag {{page.registry}}{{site.imageNames["cnxManagerProxy"]}}:{{site.data.versions[page.version].first.components["cnx-manager-proxy"].version}} <YOUR-REGISTRY>/{{site.imageNames["cnxManagerProxy"]}}:{{site.data.versions[page.version].first.components["cnx-manager-proxy"].version}}
    docker tag {{page.registry}}{{site.imageNames["node"]}}:{{site.data.versions[page.version].first.components["cnx-node"].version}} <YOUR-REGISTRY>/{{site.imageNames["node"]}}:{{site.data.versions[page.version].first.components["cnx-node"].version}}
    docker tag {{page.registry}}{{site.imageNames["cnxQueryserver"]}}:{{site.data.versions[page.version].first.components["cnx-queryserver"].version}} <YOUR-REGISTRY>/{{site.imageNames["cnxQueryserver"]}}:{{site.data.versions[page.version].first.components["cnx-queryserver"].version}}
-   docker tag {{page.registry}}{{site.imageNames["es-proxy"]}}:{{site.data.versions[page.version].first.components["cnx-queryserver"].version}} <YOUR-REGISTRY>/{{site.imageNames["es-proxy"]}}:{{site.data.versions[page.version].first.components["es-proxy"].version}}
+   docker tag {{page.registry}}{{site.imageNames["es-proxy"]}}:{{site.data.versions[page.version].first.components["es-proxy"].version}} <YOUR-REGISTRY>/{{site.imageNames["es-proxy"]}}:{{site.data.versions[page.version].first.components["es-proxy"].version}}
    docker tag {{page.registry}}{{site.imageNames["fluentd"]}}:{{site.data.versions[page.version].first.components["fluentd"].version}} <YOUR-REGISTRY>/{{page.registry}}{{site.imageNames["fluentd"]}}:{{site.data.versions[page.version].first.components["fluentd"].version}}
    docker tag {{page.registry}}{{site.imageNames["kubeControllers"]}}:{{site.data.versions[page.version].first.components["cnx-kube-controllers"].version}} <YOUR-REGISTRY>/{{site.imageNames["kubeControllers"]}}:{{site.data.versions[page.version].first.components["cnx-kube-controllers"].version}}
    docker tag {{page.registry}}{{site.imageNames["cloudControllers"]}}:{{site.data.versions[page.version].first.components["cloud-controllers"].version}} <YOUR-REGISTRY>/{{site.imageNames["cloudControllers"]}}:{{site.data.versions[page.version].first.components["cloud-controllers"].version}}
@@ -84,6 +88,10 @@
    docker tag {{page.registry}}{{site.imageNames["elastic-tsee-installer"]}}:{{site.data.versions[page.version].first.components["elastic-tsee-installer"].version}} <YOUR-REGISTRY>/{{site.imageNames["elastic-tsee-installer"]}}:{{site.data.versions[page.version].first.components["elastic-tsee-installer"].version}}
    docker tag {{page.registry}}{{site.imageNames["intrusion-detection-controller"]}}:{{site.data.versions[page.version].first.components["intrusion-detection-controller"].version}} <YOUR-REGISTRY>/{{site.imageNames["intrusion-detection-controller"]}}:{{site.data.versions[page.version].first.components["intrusion-detection-controller"].version}}
    docker tag {{page.registry}}{{site.imageNames["es-curator"]}}:{{site.data.versions[page.version].first.components["es-curator"].version}} <YOUR-REGISTRY>/{{site.imageNames["es-curator"]}}:{{site.data.versions[page.version].first.components["es-curator"].version}}
+   docker tag {{page.registry}}{{site.imageNames["compliance-controller"]}}:{{site.data.versions[page.version].first.components["compliance-controller"].version}} <YOUR-REGISTRY>/{{site.imageNames["compliance-controller"]}}:{{site.data.versions[page.version].first.components["compliance-controll"].version}}
+   docker tag {{page.registry}}{{site.imageNames["compliance-reporter"]}}:{{site.data.versions[page.version].first.components["compliance-reporter"].version}} <YOUR-REGISTRY>/{{site.imageNames["compliance-reporter"]}}:{{site.data.versions[page.version].first.components["compliance-controll"].version}}
+   docker tag {{page.registry}}{{site.imageNames["compliance-snapshotter"]}}:{{site.data.versions[page.version].first.components["compliance-snapshotter"].version}} <YOUR-REGISTRY>/{{site.imageNames["compliance-snapshotter"]}}:{{site.data.versions[page.version].first.components["compliance-controll"].version}}
+   docker tag {{page.registry}}{{site.imageNames["compliance-server"]}}:{{site.data.versions[page.version].first.components["compliance-server"].version}} <YOUR-REGISTRY>/{{site.imageNames["compliance-server"]}}:{{site.data.versions[page.version].first.components["compliance-controll"].version}}
    docker tag quay.io/coreos/configmap-reload:{{site.data.versions[page.version].first.components["configmap-reload"].version}} <YOUR-REGISTRY>/coreos/configmap-reload:{{site.data.versions[page.version].first.components["configmap-reload"].version}}
    docker tag quay.io/coreos/prometheus-config-reloader:{{site.data.versions[page.version].first.components["prometheus-config-reloader"].version}} <YOUR-REGISTRY>/coreos/prometheus-config-reloader:{{site.data.versions[page.version].first.components["prometheus-config-reloader"].version}}
    docker tag quay.io/coreos/prometheus-operator:{{site.data.versions[page.version].first.components["prometheus-operator"].version}} <YOUR-REGISTRY>/coreos/prometheus-operator:{{site.data.versions[page.version].first.components["prometheus-operator"].version}}
@@ -98,8 +106,8 @@
 1. Push the images to your private registry.
 
    ```bash
-   docker push <YOUR-REGISTRY>/docker.elastic.co/elasticsearch/elasticsearch-oss:{{site.data.versions[page.version].first.components["elasticsearch"].version}}
-   docker push <YOUR-REGISTRY>/docker.elastic.co/kibana/kibana-oss:{{site.data.versions[page.version].first.components["kibana"].version}}
+   docker push <YOUR-REGISTRY>/docker.elastic.co/elasticsearch/elasticsearch:{{site.data.versions[page.version].first.components["elasticsearch"].version}}
+   docker push <YOUR-REGISTRY>/docker.elastic.co/kibana/kibana:{{site.data.versions[page.version].first.components["kibana"].version}}
    docker push <YOUR-REGISTRY>/tigera/calicoctl:{{site.data.versions[page.version].first.components["calicoctl"].version}}
    docker push <YOUR-REGISTRY>/tigera/calicoq:{{site.data.versions[page.version].first.components["calicoq"].version}}
    docker push <YOUR-REGISTRY>/tigera/cnx-apiserver:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
@@ -115,6 +123,10 @@
    docker push <YOUR-REGISTRY>/{{site.imageNames["elastic-tsee-installer"]}}:{{site.data.versions[page.version].first.components["elastic-tsee-installer"].version}}
    docker push <YOUR-REGISTRY>/{{site.imageNames["intrusion-detection-controller"]}}:{{site.data.versions[page.version].first.components["intrusion-detection-controller"].version}}
    docker push <YOUR-REGISTRY>/{{site.imageNames["es-curator"]}}:{{site.data.versions[page.version].first.components["es-curator"].version}}
+   docker push <YOUR-REGISTRY>/{{site.imageNames["compliance-controller"]}}:{{site.data.versions[page.version].first.components["compliance-controller"].version}}
+   docker push <YOUR-REGISTRY>/{{site.imageNames["compliance-reporter"]}}:{{site.data.versions[page.version].first.components["compliance-reporter"].version}}
+   docker push <YOUR-REGISTRY>/{{site.imageNames["compliance-snapshotter"]}}:{{site.data.versions[page.version].first.components["compliance-snapshotter"].version}}
+   docker push <YOUR-REGISTRY>/{{site.imageNames["compliance-server"]}}:{{site.data.versions[page.version].first.components["compliance-server"].version}}
    docker push <YOUR-REGISTRY>/coreos/configmap-reload:{{site.data.versions[page.version].first.components["configmap-reload"].version}}
    docker push <YOUR-REGISTRY>/coreos/prometheus-config-reloader:{{site.data.versions[page.version].first.components["prometheus-config-reloader"].version}}
    docker push <YOUR-REGISTRY>/coreos/prometheus-operator:{{site.data.versions[page.version].first.components["prometheus-operator"].version}}

@@ -32,9 +32,7 @@ The installation procedure differs according to whether or not you want to
 [federate clusters](../../../networking/federation/index). Refer to the section that matches your
 configuration.
 
-- [Without federation, 50 nodes or less](#install-ee-nofed)
-
-- [Without federation, more than 50 nodes](#install-ee-typha-nofed)
+- [Without federation](#install-ee-typha-nofed)
 
 - [With federation](#install-ee-fed)
 
@@ -42,44 +40,7 @@ configuration.
 > to install {{site.prodname}} for policy only using the etcd datastore type, contact Tigera support.
 {: .alert .alert-danger}
 
-### <a name="install-ee-nofed"></a>Installing {{site.prodname}} for policy only without federation, 50 nodes or less
-
-1. Ensure that the Kubernetes controller manager has the following flags
-   set: <br>
-   `--cluster-cidr={your pod CIDR}` and `--allocate-node-cidrs=true`.
-
-   > **Tip**: On kubeadm, you can pass `--pod-network-cidr={your pod CIDR}`
-   > to kubeadm to set both Kubernetes controller flags.
-   {: .alert .alert-success}
-
-1. Download the {{site.prodname}} policy-only manifest for the Kubernetes API datastore that matches your
-   networking method.
-
-   - **AWS VPC CNI plugin**
-     ```bash
-     curl \
-     {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only-ecs/1.7/calico.yaml \
-     -O
-     ```
-
-   - **All others**
-     ```bash
-     curl \
-     {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only/1.7/calico.yaml \
-     -O
-     ```
-
-{% include {{page.version}}/cnx-cred-sed.md yaml="calico" %}
-
-1. Apply the manifest using the following command.
-
-   ```bash
-   kubectl apply -f calico.yaml
-   ```
-
-1. Continue to [Installing the {{site.prodname}} Manager and API Server](#installing-the-{{site.prodnamedash}}-manager-and-api-server)
-
-### <a name="install-ee-typha-nofed"></a>Installing {{site.prodname}} for policy only without federation, more than 50 nodes
+### <a name="install-ee-typha-nofed"></a>Installing {{site.prodname}} for policy only without federation
 
 1. Ensure that the Kubernetes controller manager has the following flags
    set: <br>
@@ -138,7 +99,7 @@ configuration.
    kubectl apply -f calico.yaml
    ```
 
-1. Continue to [Installing the {{site.prodname}} Manager and API Server](#installing-the-{{site.prodnamedash}}-manager-and-api-server)
+1. Continue to [Installing the {{site.prodname}} API Server](#installing-the-{{site.prodnamedash}}-api-server)
 
 ### <a name="install-ee-fed"></a>Installing {{site.prodname}} for policy only with federation
 
@@ -223,14 +184,18 @@ for each [remote cluster](../../../networking/federation/index#terminology). Ens
    kubectl apply -f calico.yaml
    ```
 
-1. Continue to [Installing the {{site.prodname}} Manager and API Server](#installing-the-{{site.prodnamedash}}-manager-and-api-server)
+1. Continue to [Installing the {{site.prodname}} API Server](#installing-the-{{site.prodnamedash}}-api-server)
 
-{% include {{page.version}}/cnx-mgr-install.md init="kubernetes" net="other" %}
+{% include {{page.version}}/cnx-api-install.md init="kubernetes" net="other" %}
 
 1. Continue to [Applying your license key](#applying-your-license-key).
 
 {% include {{page.version}}/apply-license.md %}
 
 {% include {{page.version}}/cnx-monitor-install.md elasticsearch="operator" type="policy-only" %}
+
+1. Continue to [Installing the {{site.prodname}} Manager](#installing-the-{{site.prodnamedash}}-manager)
+
+{% include {{page.version}}/cnx-mgr-install.md init="kubernetes" net="other" %}
 
 {% include {{page.version}}/gs-next-steps.md %}

@@ -32,16 +32,21 @@
    ```
 
 
-1. Set up secret with username and password for {{site.prodname}} compliance report and dashboard to authenticate with Elasticsearch.
-   Replace `<compliance-elasticsearch-password>` with the password.
+1. Set up secret with username and passwords for {{site.prodname}} compliance report and dashboard to authenticate with Elasticsearch.
+   Replace `<compliance-elasticsearch-controller-password>`, `<compliance-elasticsearch-reporter-password>`,
+   `<compliance-elasticsearch-snapshotter-password>` and `<compliance-elasticsearch-server-password>` with the approrpiate passwords.
    ```
    {{cli}} create secret generic elastic-compliance-user \
-   --from-literal=username=tigera-ee-compliance \
-   --from-literal=password=<compliance-elasticsearch-password> \
+   --from-literal=controller.username=tigera-ee-compliance-controller \
+   --from-literal=controller.password=<compliance-controller-elasticsearch-password> \
+   --from-literal=reporter.username=tigera-ee-compliance-reporter \
+   --from-literal=reporter.password=<compliance-reporter-elasticsearch-password> \
+   --from-literal=snapshotter.username=tigera-ee-compliance-snapshotter \
+   --from-literal=snapshotter.password=<compliance-snapshotter-elasticsearch-password> \
+   --from-literal=server.username=tigera-ee-compliance-server \
+   --from-literal=server.password=<compliance-server-elasticsearch-password> \
    -n calico-monitoring
    ```
-
-
 
 1. Set up configmap with the certificate authority certificate to authenticate Elasticsearch & Kibana.
    Replace `<ElasticsearchCA.pem>` with the path to your Elasticsearch/Kibana CA certificate.
@@ -49,22 +54,6 @@
    ```bash
    cp <ElasticsearchCA.pem> ca.pem
    {{cli}} create configmap -n calico-monitoring elastic-ca-config --from-file=ca.pem
-   ```
-
-1. Create a Secret containing
-   * TLS certificate and the private key used to sign it enable TLS connection from the kube-apiserver to the es-proxy
-   * certificate authority certificate to authenticate Elasticsearch backend
-   * Base64 encoded `<username>:<password>` for the es-proxy to authenticate with Elasticsearch
-
-   Replace `<ee-manager-elasticsearch-password>` with the password.
-
-   ```
-   {{cli}} create secret generic tigera-es-proxy \
-   --from-file=frontend.crt=frontend-server.crt \
-   --from-file=frontend.key=frontend-server.key \
-   --from-file=backend-ca.crt=ElasticSearchCA.pem \
-   --from-literal=backend.authHeader=$(echo -n tigera-ee-manager:<ee-manager-elasticsearch-password> | base64) \
-   -n calico-monitoring
    ```
 
 1. Set up secret with username and password for the {{site.prodname}} job installer to authenticate with Elasticsearch.
@@ -76,31 +65,16 @@
    -n calico-monitoring
    ```
 
-1. Create a configmap with information on how to reach the Elasticsearch cluster.
-   Replace `<elasticsearch-host>` with the hostname (or IP) {{site.prodname}} should access Elasticsearch through.
-   If your cluster is listening on a port other than `9200`, replace that too.
-   Replace `<kibana-host>` with the hostname (or IP) {{site.prodname}} should access Kibana through. If Kibana
-   is listening on a port other than `5601`, replace that too.
-   ```
-   {{cli}} create configmap tigera-es-proxy \
-   --from-literal=elasticsearch.backend.host="<elasticsearch-host>" \
-   --from-literal=elasticsearch.backend.port="9200" \
-   --from-literal=kibana.backend.host="<kibana-host>" \
-   --from-literal=kibana.backend.port="5601" \
-   -n calico-monitoring
-   ```
+1. Create a Secret in the calico-monitoring namespace containing
+   * certificate authority certificate to authenticate Elasticsearch backend
+   * Username and password for the tigera-ee-manager to authenticate with Elasticsearch
 
-1. Download the configmap patch for {{site.prodname}} Manager.
-    ```
-    curl --compressed -O {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/secure-es/patch-cnx-manager-configmap.yaml
-    ```
-    Edit the Kibana URL in the patch file to point to your Kibana.
+   Replace `<ee-manager-elasticsearch-password>` with the password.
 
-1. Apply the configmap patch.
    ```
-   {{cli}} patch configmap tigera-cnx-manager-config -n kube-system -p "$(cat patch-cnx-manager-configmap.yaml)"
-   ```
-1. Restart {{site.prodname}} Manager pod
-   ```
-   kubectl delete pod -n kube-system -l k8s-app=cnx-manager
+   {{cli}} create secret generic tigera-es-config \
+     --from-file=tigera.elasticsearch.ca=ElasticSearchCA.pem \
+     --from-literal=tigera.elasticsearch.username=tigera-ee-manager \
+     --from-literal=tigera.elasticserach.password=<ee-manager-elasticsearch-password> \
+     -n kube-system
    ```

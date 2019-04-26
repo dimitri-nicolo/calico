@@ -16,6 +16,8 @@ toc:
   path: /security/advanced-policy
 - title: Application layer tutorial
   path: /security/app-layer-policy/
+- title: Using domain names in policy rules
+  path: /security/domain-based-policy
 - title: Host endpoints
   section:
   - title: Overview
@@ -58,13 +60,13 @@ toc:
     path: /security/aws-security-group-integration/pod-access
   - title: Enabling VPC members to access pods
     path: /security/aws-security-group-integration/vpc-member-access
-  - title: Enabling access to AWS metadata 
+  - title: Enabling access to AWS metadata
     path: /security/aws-security-group-integration/metadata-access
   - title: Managing the tiers associated with security group integration
     path: /security/aws-security-group-integration/tier-management
   - title: Host endpoints
     path: /security/aws-security-group-integration/host-endpoints
-- title: Flow and audit logs 
+- title: Flow and audit logs
   section:
   - title: Elasticsearch
     section:
@@ -96,15 +98,19 @@ toc:
     path: /security/configuration/prometheus
   - title: Configuring Alertmanager
     path: /security/configuration/alertmanager
-- title: Intrusion detection
+- title: Intrusion detection and prevention
   section:
-  - title: Overview
-    path: /security/intrusion-detection/
-  - title: Enabling intrusion detection
-    path: /security/intrusion-detection/enabling
-  - title: Viewing anomalies
-    path: /security/intrusion-detection/viewing-anomalies
-  - title: Job descriptions
-    path: /security/intrusion-detection/job-descriptions
-  - title: Customizing
-    path: /security/intrusion-detection/customizing
+  - title: Anomaly detection
+    section:
+    - title: Overview
+      path: /security/intrusion-detection/
+    - title: Enabling intrusion detection
+      path: /security/intrusion-detection/enabling
+    - title: Viewing anomalies
+      path: /security/intrusion-detection/viewing-anomalies
+    - title: Job descriptions
+      path: /security/intrusion-detection/job-descriptions
+    - title: Customizing
+      path: /security/intrusion-detection/customizing
+  - title: Trace and block suspicious IPs
+    path: /security/suspicious-IPs 

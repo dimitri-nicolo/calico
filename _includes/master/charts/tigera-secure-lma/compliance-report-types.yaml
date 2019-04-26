@@ -1,0 +1,118 @@
+# This manifest contains the default report types
+apiVersion: projectcalico.org/v3
+kind: GlobalReportType
+metadata:
+  labels:
+    global-report-type: inventory
+  name: inventory
+spec:
+  downloadTemplates:
+  - name: summary.csv
+    template: |
+      startTime,endTime,endpointSelector,namespaceNames,namespaceSelector,serviceAccountNames,serviceAccountSelector,endpointsNumInScope,endpointsNumIngressProtected,endpointsNumEgressProtected,namespacesNumInScope,namespacesNumIngressProtected,namespacesNumEgressProtected,servicesNumInScope,servicesNumIngressProtected
+      {{ dateRfc3339 .StartTime }},{{ dateRfc3339 .EndTime }},{{ .ReportSpec.EndpointsSelection.EndpointSelector }},{{ if .ReportSpec.EndpointsSelection.Namespaces }}{{ join ";" .ReportSpec.EndpointsSelection.Namespaces.Names }},{{ .ReportSpec.EndpointsSelection.Namespaces.Selector }}{{ else }},{{ end }},{{ if .ReportSpec.EndpointsSelection.ServiceAccounts }}{{ join ";" .ReportSpec.EndpointsSelection.ServiceAccounts.Names }},{{ .ReportSpec.EndpointsSelection.ServiceAccounts.Selector }}{{ else }},{{ end }},{{ .EndpointsSummary.NumTotal }},{{ .EndpointsSummary.NumIngressProtected }},{{ .EndpointsSummary.NumEgressProtected }},{{ .NamespacesSummary.NumTotal  }},{{ .NamespacesSummary.NumIngressProtected }},{{ .NamespacesSummary.NumEgressProtected }},{{ .ServicesSummary.NumTotal }},{{ .ServicesSummary.NumIngressProtected }}
+  - name: endpoints.csv
+    template: |
+      endpoint,ingressProtected,egressProtected,envoyEnabled,appliedPolicies,services
+      {{ range .Endpoints -}}
+      {{ .Endpoint }},{{ .IngressProtected }},{{ .EgressProtected }},{{ .EnvoyEnabled }},{{ join ";" .AppliedPolicies }},{{ join ";" .Services }}
+      {{ end }}
+  - name: namespaces.csv
+    template: |
+      name,ingressProtected,egressProtected,envoyEnabled
+      {{ range .Namespaces -}}
+      {{ .Namespace }},{{ .IngressProtected }},{{ .EgressProtected }},{{ .EnvoyEnabled }}
+      {{ end }}
+  - name: services.csv
+    template: |
+      name,ingressProtected,envoyEnabled
+      {{ range .Services -}}
+      {{ .Service }},{{ .IngressProtected }},{{ .EnvoyEnabled }}
+      {{ end }}
+  includeEndpointData: true
+  uiSummaryTemplate:
+    name: ui-summary.json
+    template: '{"heading":"Inscope vs Protected","type":"panel","widgets":[{"data":[{"label":"Protected
+      ingress","value":{{ .EndpointsSummary.NumIngressProtected }}}],"heading":"Endpoints","summary":{"label":"Total","total":{{
+      .EndpointsSummary.NumTotal }}},"type":"radialbarchart"},{"data":[{"label":"Protected
+      ingress","value":{{ .NamespacesSummary.NumIngressProtected }}}],"heading":"Namespaces","summary":{"label":"Total","total":{{
+      .NamespacesSummary.NumTotal }}},"type":"radialbarchart"},{"data":[{"label":"Protected
+      ingress","value":{{ .ServicesSummary.NumIngressProtected }}}],"heading":"Service
+      Accounts","summary":{"label":"Total","total":{{ .ServicesSummary.NumTotal }}},"type":"radialbarchart"},{"data":[{"label":"Protected
+      egress","value":{{ .EndpointsSummary.NumEgressProtected }}}],"heading":"Endpoints","summary":{"label":"Total","total":{{
+      .EndpointsSummary.NumTotal }}},"type":"radialbarchart"},{"data":[{"label":"Protected
+      egress","value":{{ .NamespacesSummary.NumEgressProtected }}}],"heading":"Namespaces","summary":{"label":"Total","total":{{
+      .NamespacesSummary.NumTotal }}},"type":"radialbarchart"},{"data":[{"label":"Protected
+      egress","value":{{ .ServicesSummary.NumEgressProtected }}}],"heading":"Service
+      Accounts","summary":{"label":"Total","total":{{ .ServicesSummary.NumTotal }}},"type":"radialbarchart"}]}'
+
+---
+
+apiVersion: projectcalico.org/v3
+kind: GlobalReportType
+metadata:
+  labels:
+    global-report-type: networkaccess
+  name: networkaccess
+spec:
+  downloadTemplates:
+  - name: summary.csv
+    template: |
+      startTime,endTime,endpointSelector,namespaceNames,namespaceSelector,serviceAccountNames,serviceAccountSelector,numIngressProtected,numEgressProtected,numIngressUnprotected,numEgressUnprotected,numIngressFromInternet,numEgressToInternet,numIngressFromOtherNamespace,numEgressToOtherNamespace,numEnvoyEnabled
+      {{ dateRfc3339 .StartTime }},{{ dateRfc3339 .EndTime }},{{ .ReportSpec.EndpointsSelection.EndpointSelector }},{{ if .ReportSpec.EndpointsSelection.Namespaces }}{{ join ";" .ReportSpec.EndpointsSelection.Namespaces.Names }},{{ .ReportSpec.EndpointsSelection.Namespaces.Selector }}{{ else }},{{ end }},{{ if .ReportSpec.EndpointsSelection.ServiceAccounts }}{{ join ";" .ReportSpec.EndpointsSelection.ServiceAccounts.Names }},{{ .ReportSpec.EndpointsSelection.ServiceAccounts.Selector }}{{ else }},{{ end }},{{ .EndpointsSummary.NumIngressProtected }},{{ .EndpointsSummary.NumEgressProtected }},{{ sub .EndpointsSummary.NumTotal .EndpointsSummary.NumIngressProtected }},{{ sub .EndpointsSummary.NumTotal .EndpointsSummary.NumEgressProtected }},{{ .EndpointsSummary.NumIngressFromInternet }},{{ .EndpointsSummary.NumEgressToInternet }},{{ .EndpointsSummary.NumIngressFromOtherNamespace }},{{ .EndpointsSummary.NumEgressToOtherNamespace }},{{ .EndpointsSummary.NumEnvoyEnabled }}
+  - name: endpoints.csv
+    template: |
+      name,namespace,egressToInternet,ingressFromInternet,egressToOtherNamespace,ingressFromOtherNamespace,envoyEnabled,matchingPolicies,endpointsGeneratingTrafficToThisEndpoint,endpointsReceivingTrafficFromThisEndpoint
+      {{ range .Endpoints -}}
+      {{ .Endpoint }},{{ .EgressToInternet }},{{ .IngressFromInternet }},{{ .EgressToOtherNamespace }},{{ .IngressFromOtherNamespace }},{{ .EnvoyEnabled }},{{ join ";" .AppliedPolicies }},{{ join ";" .EndpointsGeneratingTrafficToThisEndpoint }},{{ join ";" .EndpointsReceivingTrafficFromThisEndpoint }}
+      {{ end }}
+  includeEndpointData: true
+  uiSummaryTemplate:
+    name: ui-summary.json
+    template: '{"heading":"Inscope vs Protected","type":"panel","widgets":[{"data":[{"label":"Protected
+      ingress","value":{{ .EndpointsSummary.NumIngressProtected }}}],"heading":"Endpoints","summary":{"label":"Total","total":{{
+      .EndpointsSummary.NumTotal }}},"type":"radialbarchart"},{"data":[{"label":"Protected
+      ingress","value":{{ .NamespacesSummary.NumIngressProtected }}}],"heading":"Namespaces","summary":{"label":"Total","total":{{
+      .NamespacesSummary.NumTotal }}},"type":"radialbarchart"},{"data":[{"label":"Protected
+      ingress","value":{{ .ServicesSummary.NumIngressProtected }}}],"heading":"Service
+      Accounts","summary":{"label":"Total","total":{{ .ServicesSummary.NumTotal }}},"type":"radialbarchart"},{"data":[{"label":"Protected
+      egress","value":{{ .EndpointsSummary.NumEgressProtected }}}],"heading":"Endpoints","summary":{"label":"Total","total":{{
+      .EndpointsSummary.NumTotal }}},"type":"radialbarchart"},{"data":[{"label":"Protected
+      egress","value":{{ .NamespacesSummary.NumEgressProtected }}}],"heading":"Namespaces","summary":{"label":"Total","total":{{
+      .NamespacesSummary.NumTotal }}},"type":"radialbarchart"},{"data":[{"label":"Protected
+      egress","value":{{ .ServicesSummary.NumEgressProtected }}}],"heading":"Service
+      Accounts","summary":{"label":"Total","total":{{ .ServicesSummary.NumTotal }}},"type":"radialbarchart"}]}'
+
+---
+
+apiVersion: projectcalico.org/v3
+kind: GlobalReportType
+metadata:
+  labels:
+    global-report-type: audit
+  name: audit
+spec:
+  auditEventsSelection:
+    resources:
+    - kind: GlobalNetworkPolicy
+    - kind: NetworkPolicy
+  downloadTemplates:
+  - name: summary.csv
+    template: |
+      startTime,endTime,numCreatedPolicies,numModifiedPolicies,numDeletedPolicies
+      {{ dateRfc3339 .StartTime }},{{ dateRfc3339 .EndTime }},{{ .AuditSummary.NumCreate }},{{ .AuditSummary.NumModify }},{{ .AuditSummary.NumDelete }}
+  - name: events.json
+    template: |
+      {{ toJson .AuditEvents }}
+  - name: events.yaml
+    template: |
+      {{ toYaml .AuditEvents }}
+  uiSummaryTemplate:
+    name: ui-summary.json
+    template: '{"heading":"Network policy configuration changes","type":"panel","widgets":[{"data":[{"label":"Created","value":{{
+      .AuditSummary.NumCreate }}}],"heading":"Network policies created","summary":{"label":"Total","total":{{
+      .AuditSummary.NumTotal }}},"type":"radialbarchart"},{"data":[{"label":"Modified","value":{{
+      .AuditSummary.NumModify }}}],"heading":"Network policies modified","summary":{"label":"Total","total":{{
+      .AuditSummary.NumTotal }}},"type":"radialbarchart"},{"data":[{"label":"Deleted","value":{{
+      .AuditSummary.NumDelete }}}],"heading":"Network policies deleted","summary":{"label":"Total","total":{{
+      .AuditSummary.NumTotal }}},"type":"radialbarchart"}]}'

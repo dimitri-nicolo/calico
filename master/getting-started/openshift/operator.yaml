@@ -2,7 +2,7 @@
 layout: null
 ---
 {% helm tigera-secure-lma --execute templates/operator.yaml %}
-orch: openshift
-elasticsearchType: operator
+prometheus:
+  createFinalizers: true
 createCustomResources: false
 {% endhelm %}

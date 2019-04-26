@@ -33,11 +33,16 @@ spec:
         - key: node-role.kubernetes.io/master
           effect: NoSchedule
       serviceAccountName: calico-kube-controllers
+{{- if .Values.imagePullSecrets }}
       imagePullSecrets:
-        - name: cnx-pull-secret
+{{- range $key, $value := .Values.imagePullSecrets }}
+        - name: {{ $key }}
+{{- end }}
+{{- end }}
       containers:
         - name: calico-kube-controllers
           image: {{.Values.kubeControllers.image}}:{{ .Values.kubeControllers.tag }}
+{{ tuple .Values.kubeControllers.resources | include "calico.resourceLimits" | indent 10 -}}
           env:
             # The location of the etcd cluster.
             - name: ETCD_ENDPOINTS
@@ -130,6 +135,7 @@ spec:
       containers:
         - name: calico-kube-controllers
           image: {{.Values.kubeControllers.image}}:{{ .Values.kubeControllers.tag }}
+{{ tuple .Values.kubeControllers.resources | include "calico.resourceLimits" | indent 10 -}}
           env:
             # Choose which controllers to run.
             - name: ENABLED_CONTROLLERS

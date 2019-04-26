@@ -104,7 +104,7 @@ for how `doNotTrack` and `preDNAT` and `applyOnForward` can be useful for host e
 
 #### EntityRule
 
-{% include {{page.version}}/entityrule.md %}
+{% include {{page.version}}/entityrule.md global="true" %}
 
 #### Selector
 

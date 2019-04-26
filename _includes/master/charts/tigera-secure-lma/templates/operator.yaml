@@ -1,18 +1,12 @@
+{{- $elasticMode := include "tigera-secure-lma.elasticsearch.mode" . }}
 # This manifest includes the following component versions:
 #   quay.io/coreos/prometheus-operator:{{.Values.prometheusOperator.tag}}
 #   quay.io/coreos/prometheus-config-reloader:{{.Values.prometheusConfigReloader.tag}}
 #   quay.io/coreos/configmap-reload:{{.Values.configmapReload.tag}}
-{{- if eq .Values.elasticsearchType "operator" }}
+{{- if eq $elasticMode "operator" }}
 #   upmcenterprises/elasticsearch-operator:{{.Values.elasticsearchOperator.tag}}
 {{- end }}
----
 
-# This manifest creates a namespace for deploying prometheus-operator,
-# Prometheus and alertmanager.
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: calico-monitoring
 ---
 kind: NetworkPolicy
 apiVersion: extensions/v1beta1
@@ -123,7 +117,7 @@ spec:
             cpu: 200m
             memory: 100Mi
 
-{{- if eq .Values.elasticsearchType "operator" }}
+{{- if eq $elasticMode "operator" }}
 ---
 
 # Service account for the elasticsearch cluster
@@ -134,6 +128,7 @@ metadata:
   namespace: calico-monitoring
 
 ---
+{{- if and (not .Values.runElasticsearchOperatorClusterAdmin) (eq $elasticMode "operator") }}
 
 # Permissions for the elasticsearch operator
 apiVersion: rbac.authorization.k8s.io/v1beta1
@@ -167,6 +162,7 @@ rules:
   verbs: ["*"]
 
 ---
+{{- end }}
 
 # Assign the elasticsearch operator role to the serviceaccount
 apiVersion: rbac.authorization.k8s.io/v1beta1
@@ -177,12 +173,15 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
+{{- if .Values.runElasticsearchOperatorClusterAdmin }}
+  name: cluster-admin
+{{- else }}
   name: elasticsearch-operator
+{{- end }}
 subjects:
 - kind: ServiceAccount
   name: elasticsearch-operator
   namespace: calico-monitoring
-
 ---
 
 # Elasticsearch operator
@@ -229,7 +228,7 @@ spec:
       serviceAccount: elasticsearch-operator
 {{- end }}
 
-{{- if eq .Values.orch "openshift" }}
+{{- if .Values.prometheus.createFinalizers }}
 
 # This manifest includes some additional resources required to
 # deploy Prometheus Operator with Openshift.
@@ -263,26 +262,4 @@ subjects:
   name: calico-prometheus-operator
   namespace: calico-monitoring
 
-# This manifest adds an additional security context for
-# OpenShift so fluentd can ingest logs from the host.
----
-
-kind: SecurityContextConstraints
-apiVersion: v1
-metadata:
-  name: calico-fluentd-hostpath
-allowPrivilegedContainer: true
-allowHostDirVolumePlugin: true
-runAsUser:
-  type: RunAsAny
-seLinuxContext:
-  type: MustRunAs
-fsGroup:
-  type: RunAsAny
-supplementalGroups:
-  type: RunAsAny
-users:
-- system:serviceaccount:calico-monitoring:tigera-fluentd
-groups:
-- system:authenticated
 {{- end }}

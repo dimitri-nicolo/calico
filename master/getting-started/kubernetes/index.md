@@ -16,8 +16,8 @@ To deploy a cluster suitable for production, refer to [Installation](installatio
 
 - AMD64 processor
 - 2CPU
-- 7.5GB RAM
-- 20GB free disk space
+- 12GB RAM
+- 50GB free disk space
 - Ubuntu Server 16.04
 - Internet access
 - [Sufficient virtual memory](https://www.elastic.co/guide/en/elasticsearch/reference/current/vm-max-map-count.html){:target="_blank"}

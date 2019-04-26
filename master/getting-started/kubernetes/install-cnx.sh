@@ -51,9 +51,6 @@ ETCD_ENDPOINTS=${ETCD_ENDPOINTS:=""}
 # when set to 1, don't prompt for agreement to proceed
 QUIET=${QUIET:=0}
 
-# when set to 1, don't install monitoring components
-SKIP_MONITORING=${SKIP_MONITORING:=0}
-
 # when set to 1, download the manifests, then quit
 DOWNLOAD_MANIFESTS_ONLY=${DOWNLOAD_MANIFESTS_ONLY:=0}
 
@@ -90,8 +87,6 @@ KUBE_CONTROLLER_MANIFEST=${KUBE_CONTROLLER_MANIFEST:="/etc/kubernetes/manifests/
 INSTALL_TYPE=${INSTALL_TYPE:="KUBEADM"}
 
 INSTALL_AWS_SG=${INSTALL_AWS_SG:=false}
-
-INSTALL_COMPLIANCE_REPORTING=${INSTALL_COMPLIANCE_REPORTING:=true}
 
 SKIP_EE_INSTALLATION=${SKIP_EE_INSTALLATION:=false}
 
@@ -203,7 +198,6 @@ HELP_USAGE
       v )  VERSION=$OPTARG;;
       x )  set -x;;
       q )  QUIET=1;;
-      p )  SKIP_MONITORING=1;;
       m )  DOWNLOAD_MANIFESTS_ONLY=1;;
       u )  CLEANUP=1;;
       h )  usage;;
@@ -258,12 +252,6 @@ validateSettings() {
   if "$INSTALL_AWS_SG" ; then
     checkAwsIntegration
   fi
-
-  # Do not install compliance reporting if elastic storage is not local
-  if [ "$ELASTIC_STORAGE" != "local" ] ; then
-    INSTALL_COMPLIANCE_REPORTING=false
-  fi
-
 }
 
 #
@@ -992,7 +980,7 @@ downloadManifests() {
     fi
 
     downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/etcd.yaml"
-    downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-etcd.yaml"
+    downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-api-etcd.yaml"
 
     # Grab calicoctl and calicoq manifests in order to extract the container url when we install the binaries
     downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/calicoctl.yaml"
@@ -1012,12 +1000,14 @@ downloadManifests() {
       fi
     fi
 
-    downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-kdd.yaml"
+    downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-api-kdd.yaml"
 
     # Grab calicoctl and calicoq manifests in order to extract the container url when we install the binaries
     downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calicoctl.yaml"
     downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calicoq.yaml"
   fi
+
+  downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx.yaml"
 
   if [ "$INSTALL_TYPE" == "ACS-ENGINE" ] && [ "$CLEANUP" -eq 0 ]; then
     setPodCIDR "calico.yaml"
@@ -1033,15 +1023,6 @@ downloadManifests() {
     downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/manifests/aws-sg-integration/cluster-cf.yaml"
     downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/manifests/aws-sg-integration/cloud-controllers.yaml"
   fi
-
-  if "$INSTALL_COMPLIANCE_REPORTING" ; then
-    if [ "$DATASTORE" == "etcdv3" ]; then
-      downloadManifest "${DOCS_LOCATION}/${VERSION}/manifests/compliance/compliance.yaml"
-    else
-      downloadManifest "${DOCS_LOCATION}/${VERSION}/manifests/compliance/compliance-kdd.yaml"
-    fi
-  fi
-
 
   if [ "${DOWNLOAD_MANIFESTS_ONLY}" -eq 1 ]; then
     echo "Tigera Secure EE manifests downloaded."
@@ -1105,7 +1086,7 @@ deleteEtcdDeployment() {
 applyLicenseManifest() {
   if [ "$LICENSE_FILE" ]; then
     echo -n "Applying license file: ${LICENSE_FILE} "
-    run "kubectl apply -f ${LICENSE_FILE}"
+    run "${CALICO_UTILS_INSTALL_DIR}/calicoctl apply -f ${LICENSE_FILE}"
     echo "done."
   fi
 }
@@ -1161,7 +1142,7 @@ updateTyphaReplicas() {
 # validateDatastore() - warn the user if they're switching
 # between kubernetes/etcdv3 datastore, but leaving the wrong
 # manifest laying around (specifically calico.yaml). Use the
-# existence of cnx-kdd.yaml|cnx-etcd.yaml as an indicator for
+# existence of cnx-api-kdd.yaml|cnx-api-etcd.yaml as an indicator for
 # which type of install/uninstall the user tried earlier.
 #
 function validateDatastore() {
@@ -1172,18 +1153,18 @@ function validateDatastore() {
   # for the "opposite" datastore type laying around the current directory.
 
   if [ "$DATASTORE" == "etcdv3" ]; then
-    if [ -f "cnx-kdd.yaml" ]; then
+    if [ -f "cnx-api-kdd.yaml" ]; then
       installedManifest="kdd"
       datastoreFlag="kubernetes"
     fi
-  elif [ -f "cnx-etcd.yaml" ]; then
+  elif [ -f "cnx-api-etcd.yaml" ]; then
       installedManifest="etcd"
       datastoreFlag="etcdv3"
   fi
 
   if [ "$installedManifest" ]; then
     echo
-    echo "Warning: the current $operation specifies \"$DATASTORE\", however \"cnx-$installedManifest.yaml\" exists"
+    echo "Warning: the current $operation specifies \"$DATASTORE\", however \"cnx-api-$installedManifest.yaml\" exists"
     echo "         in the current directory. Either remove all the manifests from the"
     echo "         currect directory or use the \"-k $datastoreFlag\" flag and restart the $operation."
     promptToContinue
@@ -1199,18 +1180,17 @@ removeMasterTaints() {
 }
 
 #
-# applyCNXManifest()
+# applyCNXAPIManifest()
 #
-applyCNXManifest() {
+applyCNXAPIManifest() {
   if [ "$DATASTORE" == "kubernetes" ]; then
-    echo -n "Applying \"cnx-kdd.yaml\" manifest: "
-    run kubectl apply -f cnx-kdd.yaml
+    echo -n "Applying \"cnx-api-kdd.yaml\" manifest: "
+    run kubectl apply -f cnx-api-kdd.yaml
   elif [ "$DATASTORE" == "etcdv3" ]; then
-    echo -n "Applying \"cnx-etcd.yaml\" manifest: "
-    run kubectl apply -f cnx-etcd.yaml
+    echo -n "Applying \"cnx-api-etcd.yaml\" manifest: "
+    run kubectl apply -f cnx-api-etcd.yaml
   fi
   blockUntilPodIsReady "k8s-app=cnx-apiserver" 180 "cnx-apiserver"  # Block until cnx-apiserver pod is running & ready
-  blockUntilPodIsReady "k8s-app=cnx-manager" 180 "cnx-manager"      # Block until cnx-manager pod is running & ready
   if [ "$DEPLOYMENT_TYPE" == "federation" ]; then
     blockUntilPodIsReady "k8s-app=tigera-federation-controller" 180 "tigera-federation-controller"  # Block until tigera-federation-controller pod is running & ready
   fi
@@ -1218,16 +1198,38 @@ applyCNXManifest() {
 }
 
 #
+# deleteCNXAPIManifest()
+#
+deleteCNXAPIManifest() {
+  if [ "$DATASTORE" == "kubernetes" ]; then
+    runIgnoreErrors "kubectl delete -f cnx-api-kdd.yaml"
+    countDownSecs 30 "Deleting \"cnx-api-kdd.yaml\" manifest"
+  elif [ "$DATASTORE" == "etcdv3" ]; then
+    runIgnoreErrors "kubectl delete -f cnx-api-etcd.yaml"
+    countDownSecs 30 "Deleting \"cnx-api-etcd.yaml\" manifest"
+  fi
+}
+
+#
+# applyCNXManifest()
+#
+applyCNXManifest() {
+  echo -n "Applying \"cnx.yaml\" manifest: "
+  run kubectl apply -f cnx.yaml
+  blockUntilPodIsReady "k8s-app=cnx-manager" 180 "cnx-manager"      # Block until cnx-manager pod is running & ready
+  blockUntilPodIsReady "k8s-app=compliance-controller" 180 "compliance-controller"
+  blockUntilPodIsReady "k8s-app=compliance-server" 180 "compliance-server"
+  #TODO: uncomment when snapshotter is working
+  #blockUntilPodIsReady "k8s-app=compliance-snapshotter" 180 "compliance-snapshotter"
+  countDownSecs 10 "Waiting for cnx-manager to stabilize"         # Wait until cnx-manager starts to run.
+}
+
+#
 # deleteCNXManifest()
 #
 deleteCNXManifest() {
-  if [ "$DATASTORE" == "kubernetes" ]; then
-    runIgnoreErrors "kubectl delete -f cnx-kdd.yaml"
-    countDownSecs 30 "Deleting \"cnx-kdd.yaml\" manifest"
-  elif [ "$DATASTORE" == "etcdv3" ]; then
-    runIgnoreErrors "kubectl delete -f cnx-etcd.yaml"
-    countDownSecs 30 "Deleting \"cnx-etcd.yaml\" manifest"
-  fi
+  runIgnoreErrors "kubectl delete -f cnx.yaml"
+  countDownSecs 30 "Deleting \"cnx.yaml\" manifest"
 }
 
 #
@@ -1245,6 +1247,7 @@ deleteCNXPolicyManifest() {
   runIgnoreErrors kubectl delete -f cnx-policy.yaml
   countDownSecs 20 "Deleting \"cnx-policy.yaml\" manifest"
 }
+
 
 #
 # applyElasticStorageManifest()
@@ -1345,32 +1348,6 @@ deleteMonitorCalicoManifest() {
 }
 
 #
-# applyComplianceMonitoring() - install compliance reporting
-#
-applyComplianceMonitoring() {
-    if [ "$DATASTORE" == "etcdv3" ]; then
-      runIgnoreErrors kubectl apply -f compliance.yaml
-    else
-      runIgnoreErrors kubectl apply -f compliance-kdd.yaml
-    fi
-    blockUntilPodIsReady "k8s-app=compliance-controller" 180 "compliance-controller"
-    blockUntilPodIsReady "k8s-app=compliance-server" 180 "compliance-server"
-    #TODO: uncomment when snapshotter is working
-    #blockUntilPodIsReady "k8s-app=compliance-snapshotter" 180 "compliance-snapshotter"
-}
-
-#
-# deleteComplianceMonitoring() - uninstall compliance reporting
-#
-deleteComplianceMonitoring() {
-    if [ "$DATASTORE" == "etcdv3" ]; then
-      runIgnoreErrors kubectl delete -f compliance.yaml
-    else
-      runIgnoreErrors kubectl delete -f compliance-kdd.yaml
-    fi
-}
-
-#
 # createCNXManagerSecret()
 #
 createCNXManagerSecret() {
@@ -1386,7 +1363,7 @@ createCNXManagerSecret() {
     local API_SERVER_KEY="/etc/kubernetes/certs/apiserver.key"
   fi
 
-  runAsRoot kubectl create secret generic cnx-manager-tls --from-file=cert="$API_SERVER_CRT" --from-file=key="$API_SERVER_KEY" -n kube-system
+  runAsRoot kubectl create secret generic cnx-manager-tls --from-file=cert="$API_SERVER_CRT" --from-file=key="$API_SERVER_KEY" -n calico-monitoring
   countDownSecs 5 "Creating cnx-manager-tls secret"
 }
 
@@ -1394,7 +1371,7 @@ createCNXManagerSecret() {
 # deleteCNXManagerSecret()
 #
 deleteCNXManagerSecret() {
-  runAsRootIgnoreErrors kubectl delete secret cnx-manager-tls -n kube-system
+  runAsRootIgnoreErrors kubectl delete secret cnx-manager-tls -n calico-monitoring
   echo "Deleting cnx-manager-tls secret"
 }
 
@@ -1684,20 +1661,16 @@ installCNX() {
   applyCalicoManifest             # Apply calico.yaml
 
   removeMasterTaints              # Remove master taints
-  createCNXManagerSecret          # Create cnx-manager-tls to enable manager/apiserver communication
-  applyCNXManifest                # Apply cnx-[etcd|kdd].yaml
+  applyCNXAPIManifest                # Apply cnx-[etcd|kdd].yaml
 
   applyLicenseManifest            # If the user specified a license file, apply it
 
-  if [ "${SKIP_MONITORING}" -eq 0 ]; then
-    applyCNXPolicyManifest        # Apply cnx-policy.yaml
-    applyOperatorManifest         # Apply operator.yaml
-    applyElasticStorageManifest   # Apply elastic-storage.yaml
-    applyMonitorCalicoManifest    # Apply monitor-calico.yaml
-    if "$INSTALL_COMPLIANCE_REPORTING" ; then
-      applyComplianceMonitoring   # Apply compliance.yaml orcompliance-kdd.yaml
-    fi
-  fi
+  applyCNXPolicyManifest          # Apply cnx-policy.yaml
+  applyOperatorManifest           # Apply operator.yaml
+  applyElasticStorageManifest     # Apply elastic-storage.yaml
+  applyMonitorCalicoManifest      # Apply monitor-calico.yaml
+  createCNXManagerSecret          # Create cnx-manager-tls to enable manager/apiserver communication
+  applyCNXManifest                # Apply cnx.yaml
 }
 
 #
@@ -1708,20 +1681,18 @@ uninstallCNX() {
   deleteCalicoBinaries           # delete /etc/calico/calicoct.cfg, calicoctl, and calicoq
 
   downloadManifests              # Download all manifests
+  deleteCNXManifest              # Delete cnx.yaml
+  deleteCNXManagerSecret         # Delete TLS secret
 
-  if [ "${SKIP_MONITORING}" -eq 0 ]; then
-    deleteMonitorCalicoManifest  # Delete monitor-calico.yaml
-    deleteElasticStorageManifest # Delete elastic-storage.yaml
-    deleteOperatorManifest       # Delete operator.yaml
-    deleteCNXPolicyManifest      # Delete cnx-policy.yaml
-    deleteComplianceMonitoring   # Delete compliance.yaml orcompliance-kdd.yaml
-  fi
+  deleteMonitorCalicoManifest    # Delete monitor-calico.yaml
+  deleteElasticStorageManifest   # Delete elastic-storage.yaml
+  deleteOperatorManifest         # Delete operator.yaml
+  deleteCNXPolicyManifest        # Delete cnx-policy.yaml
 
-  deleteCNXManifest              # Delete cnx-[etcd|kdd].yaml
+  deleteCNXAPIManifest              # Delete cnx-[etcd|kdd].yaml
   deleteCalicoManifest           # Delete calico.yaml
   deleteRbacManifest             # Delete rbac.yaml
   deleteEtcdDeployment           # Delete etcd.yaml (etcd datatstore only)
-  deleteCNXManagerSecret         # Delete TLS secret
   deleteImagePullSecret          # Delete pull secret
   deleteBasicAuth                # Remove basic auth updates, restart kubelet
   deleteKubeDnsPod               # Return kube-dns pod to "pending" state

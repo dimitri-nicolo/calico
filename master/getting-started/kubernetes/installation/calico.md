@@ -23,8 +23,7 @@ and your datastore type. Refer to the section that matches your configuration.
 
 - **Without federation**:
    - [etcd datastore](#installing-without-federation-using-etcd)
-   - [Kubernetes API datastore, 50 nodes or less](#installing-without-federation-using-kubernetes-api-datastore-50-nodes-or-less)
-   - [Kubernetes API datastore, more than 50 nodes](#installing-without-federation-using-kubernetes-api-datastore-50-nodes-or-less)
+   - [Kubernetes API datastore](#installing-without-federation-using-kubernetes-api-datastore)
 
 - **With federation**:
    - [etcd datastore](#installing-with-federation-using-etcd)
@@ -61,39 +60,10 @@ and your datastore type. Refer to the section that matches your configuration.
    kubectl apply -f calico.yaml
    ```
 
-1. Continue to [Installing the {{site.prodname}} Manager and API Server](#installing-the-{{site.prodnamedash}}-manager-and-api-server)
+1. Continue to [Installing the {{site.prodname}} API Server](#installing-the-{{site.prodnamedash}}-api-server)
 
-### Installing without federation, using Kubernetes API datastore, 50 nodes or less
 
-1. Ensure that the Kubernetes controller manager has the following flags
-   set: <br>
-   `--cluster-cidr=<your-pod-cidr>` and `--allocate-node-cidrs=true`.
-
-   > **Tip**: On kubeadm, you can pass `--pod-network-cidr=<your-pod-cidr>`
-   > to kubeadm to set both Kubernetes controller flags.
-   {: .alert .alert-success}
-
-1. Download the {{site.prodname}} networking manifest for the Kubernetes API datastore.
-
-   ```bash
-   curl \
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calico-networking/1.7/calico.yaml \
-   -O
-   ```
-
-{% include {{page.version}}/cnx-pod-cidr-sed.md yaml="calico" %}
-
-{% include {{page.version}}/cnx-cred-sed.md yaml="calico" %}
-
-1. Apply the manifest.
-
-   ```bash
-   kubectl apply -f calico.yaml
-   ```
-
-1. Continue to [Installing the {{site.prodname}} Manager and API Server](#installing-the-{{site.prodnamedash}}-manager-and-api-server)
-
-### Installing without federation, using Kubernetes API datastore, more than 50 nodes
+### Installing without federation, using Kubernetes API datastore
 
 1. Ensure that the Kubernetes controller manager has the following flags
    set: <br>
@@ -147,7 +117,7 @@ and your datastore type. Refer to the section that matches your configuration.
    kubectl apply -f calico.yaml
    ```
 
-1. Continue to [Installing the {{site.prodname}} Manager and API Server](#installing-the-{{site.prodnamedash}}-manager-and-api-server)
+1. Continue to [Installing the {{site.prodname}} API Server](#installing-the-{{site.prodnamedash}}-api-server)
 
 
 ### Installing with federation, using etcd
@@ -225,7 +195,7 @@ for each [remote cluster](../../../networking/federation/index#terminology). Ens
    kubectl apply -f calico.yaml
    ```
 
-1. Continue to [Installing the {{site.prodname}} Manager and API Server](#installing-the-{{site.prodnamedash}}-manager-and-api-server)
+1. Continue to [Installing the {{site.prodname}} API Server](#installing-the-{{site.prodnamedash}}-api-server)
 
 
 ### Installing with federation, using Kubernetes API datastore
@@ -305,14 +275,18 @@ for each [remote cluster](../../../networking/federation/index#terminology). Ens
    kubectl apply -f calico.yaml
    ```
 
-1. Continue to [Installing the {{site.prodname}} Manager and API Server](#installing-the-{{site.prodnamedash}}-manager-and-api-server)
+1. Continue to [Installing the {{site.prodname}} API Server](#installing-the-{{site.prodnamedash}}-api-server)
 
-{% include {{page.version}}/cnx-mgr-install.md init="kubernetes" net="calico" %}
+{% include {{page.version}}/cnx-api-install.md init="kubernetes" net="calico" %}
 
 1. Continue to [Applying your license key](#applying-your-license-key).
 
 {% include {{page.version}}/apply-license.md %}
 
 {% include {{page.version}}/cnx-monitor-install.md elasticsearch="operator"%}
+
+1. Continue to [Installing the {{site.prodname}} Manager](#installing-the-{{site.prodnamedash}}-manager)
+
+{% include {{page.version}}/cnx-mgr-install.md init="kubernetes" %}
 
 {% include {{page.version}}/gs-next-steps.md %}

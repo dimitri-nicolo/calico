@@ -1,15 +1,8 @@
 ---
 layout: null
 ---
-{% helm --execute templates/es-proxy.yaml %}
-secure_es: true
-orch: openshift
-elasticsearchType: external
-{% endhelm %}
-
-{% helm tigera-secure-lma --execute templates/monitor-calico.yaml %}
-secure_es: true
-orch: openshift
-elasticsearchType: external
+{% helm tigera-secure-lma secure-es --execute templates/monitor-calico.yaml %}
+fluentd:
+  runAsPrivileged: true
 createCustomResources: false
 {% endhelm %}
