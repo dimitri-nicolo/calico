@@ -109,6 +109,9 @@ pipeline {
             }
         }
         stage('Checkout calico-private') {
+            when {
+                expression { SKIP_CALICO_PRIVATE_MASTER_BUILD == 0 && currentBuild.result != "UNSTABLE" }
+            }
             steps {
                 sh "mkdir ~/calico-private && cp -R ./ ~/calico-private/"
                 dir('crc/kubeadm/1.6') {
@@ -118,7 +121,7 @@ pipeline {
         }        
         stage('Build calico-private') {
             when {
-                expression { SKIP_CALICO_PRIVATE_MASTER_BUILD == 0 }
+                expression { SKIP_CALICO_PRIVATE_MASTER_BUILD == 0 && currentBuild.result != "UNSTABLE" }
             }
             steps {
                 withCredentials([sshUserPrivateKey(credentialsId: 'marvin-tigera-ssh-key', keyFileVariable: 'SSH_KEY', passphraseVariable: '', usernameVariable: '')]) {
@@ -138,7 +141,6 @@ pipeline {
                             sh '$(terraform output master_connect_command) "cp ~/calico-private/_site/master/getting-started/kubernetes/installation/hosted/cnx/1.7/monitor-calico.yaml ~/"'
                             sh '$(terraform output master_connect_command) "cp ~/calico-private/_site/master/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-api-etcd.yaml ~/"'
                             sh '$(terraform output master_connect_command) "cp ~/calico-private/_site/master/getting-started/kubernetes/installation/hosted/cnx/1.7/elastic-storage-local.yaml ~/"'
-                            sh '$(terraform output master_connect_command) "cp ~/calico-private/_site/master/manifests/compliance/compliance.yaml ~/"'
                         }
                     }
                 }
