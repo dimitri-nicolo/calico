@@ -1,4 +1,6 @@
-name,ingressProtected,egressProtected,envoyEnabled
-{{ range .Namespaces -}}
-{{ .Namespace }},{{ .IngressProtected }},{{ .EgressProtected }},{{ .EnvoyEnabled }}
-{{ end }}
+{{ $c := csv }}
+{{- $c := $c.AddColumn "namespace"        "{{ .Namespace }}" }}
+{{- $c := $c.AddColumn "ingressProtected" "{{ .IngressProtected }}" }}
+{{- $c := $c.AddColumn "egressProtected"  "{{ .EgressProtected }}" }}
+{{- $c := $c.AddColumn "envoyEnabled"     "{{ .EnvoyEnabled }}" }}
+{{- $c.Render .Namespaces }}

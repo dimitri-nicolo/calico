@@ -1,0 +1,18 @@
+{{ $c := csv }}
+{{- $c := $c.AddColumn "startTime"                             "{{ dateRfc3339 .StartTime }}" }}
+{{- $c := $c.AddColumn "endTime"                               "{{ dateRfc3339 .EndTime }}" }}
+{{- $c := $c.AddColumn "endpointSelector"                      "{{ if .ReportSpec.EndpointsSelection }}{{ .ReportSpec.EndpointsSelection.EndpointSelector }}{{ end }}" }}
+{{- $c := $c.AddColumn "namespaceNames"                        "{{ if .ReportSpec.EndpointsSelection }}{{ if .ReportSpec.EndpointsSelection.Namespaces }}{{ join \";\" .ReportSpec.EndpointsSelection.Namespaces.Names }}{{ end }}{{ end }}" }}
+{{- $c := $c.AddColumn "namespaceSelector"                     "{{ if .ReportSpec.EndpointsSelection }}{{ if .ReportSpec.EndpointsSelection.Namespaces }}{{ .ReportSpec.EndpointsSelection.Namespaces.Selector }}{{ end }}{{ end }}" }}
+{{- $c := $c.AddColumn "serviceAccountNames"                   "{{ if .ReportSpec.EndpointsSelection }}{{ if .ReportSpec.EndpointsSelection.ServiceAccounts }}{{ join \";\" .ReportSpec.EndpointsSelection.ServiceAccounts.Names }}{{ end }}{{ end }}" }}
+{{- $c := $c.AddColumn "serviceAccountSelectors"               "{{ if .ReportSpec.EndpointsSelection }}{{ if .ReportSpec.EndpointsSelection.ServiceAccounts }}{{ .ReportSpec.EndpointsSelection.ServiceAccounts.Selector }}{{ end }}{{ end }}" }}
+{{- $c := $c.AddColumn "endpointsNumIngressProtected"          "{{ .EndpointsSummary.NumIngressProtected }}" }}
+{{- $c := $c.AddColumn "endpointsNumEgressProtected"           "{{ .EndpointsSummary.NumEgressProtected }}" }}
+{{- $c := $c.AddColumn "endpointsNumIngressUnprotected"        "{{ sub .EndpointsSummary.NumTotal .EndpointsSummary.NumIngressProtected }}" }}
+{{- $c := $c.AddColumn "endpointsNumEgressUnprotected"         "{{ sub .EndpointsSummary.NumTotal .EndpointsSummary.NumEgressProtected  }}" }}
+{{- $c := $c.AddColumn "endpointsNumIngressFromInternet"       "{{ .EndpointsSummary.NumIngressFromInternet }}" }}
+{{- $c := $c.AddColumn "endpointsNumEgressToInternet"          "{{ .EndpointsSummary.NumEgressToInternet }}" }}
+{{- $c := $c.AddColumn "endpointsNumIngressFromOtherNamespace" "{{ .EndpointsSummary.NumIngressFromOtherNamespace }}" }}
+{{- $c := $c.AddColumn "endpointsNumEgressToOtherNamespace"    "{{ .EndpointsSummary.NumEgressToOtherNamespace }}" }}
+{{- $c := $c.AddColumn "endpointsNumEnvoyEnabled"              "{{ .EndpointsSummary.NumEnvoyEnabled }}" }}
+{{- $c.Render . }}

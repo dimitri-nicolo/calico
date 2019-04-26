@@ -1,4 +1,0 @@
-name,namespace,egressToInternet,ingressFromInternet,egressToOtherNamespace,ingressFromOtherNamespace,envoyEnabled,matchingPolicies,endpointsGeneratingTrafficToThisEndpoint,endpointsReceivingTrafficFromThisEndpoint
-{{ range .Endpoints -}}
-{{ .Endpoint }},{{ .EgressToInternet }},{{ .IngressFromInternet }},{{ .EgressToOtherNamespace }},{{ .IngressFromOtherNamespace }},{{ .EnvoyEnabled }},{{ join ";" .AppliedPolicies }},{{ join ";" .EndpointsGeneratingTrafficToThisEndpoint }},{{ join ";" .EndpointsReceivingTrafficFromThisEndpoint }}
-{{ end }}

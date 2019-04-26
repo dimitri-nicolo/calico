@@ -1,9 +1,9 @@
 apiVersion: projectcalico.org/v3
 kind: GlobalReportType
 metadata:
-  name: networkaccess
+  name: network-access
   labels:
-    global-report-type: networkaccess
+    global-report-type: network-access
 spec:
   uiSummaryTemplate:
     name: ui-summary.json
