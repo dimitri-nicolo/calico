@@ -70,7 +70,19 @@ func NewElastic(h *http.Client, url *url.URL, username, password string) (*Elast
 	if err != nil {
 		return nil, err
 	}
-	return &Elastic{c}, nil
+	e := &Elastic{c}
+	go func() {
+		ctx := context.Background()
+		err := e.ensureIndexExists(ctx, IPSetIndex, ipSetMapping)
+		if err != nil {
+			log.WithError(err).WithField("index", IPSetIndex).Errorf("Could not create index")
+		}
+		err = e.ensureIndexExists(ctx, EventIndex, eventMapping)
+		if err != nil {
+			log.WithError(err).WithField("index", EventIndex).Errorf("Could not create index")
+		}
+	}()
+	return e, nil
 }
 
 func (e *Elastic) ListIPSets(ctx context.Context) ([]db.IPSetMeta, error) {
