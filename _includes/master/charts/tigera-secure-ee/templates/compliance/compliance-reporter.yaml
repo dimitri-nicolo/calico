@@ -61,7 +61,7 @@ template:
     containers:
     - name: reporter
       image: {{.Values.complianceReporter.image}}:{{.Values.complianceReporter.tag}}
-{{ tuple .Values.complianceReporter.resources | include "tigera-secure-lma.resourceLimits" | indent 6 -}}
+{{ tuple .Values.complianceReporter.resources | include "tigera-secure-ee.resourceLimits" | indent 6 -}}
       env:
       - name: LOG_LEVEL
         value: "warning"

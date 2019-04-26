@@ -31,7 +31,7 @@ end
 
 
 def gen_chart_specific_values(versions, imageNames, imageRegistry, chart)
-  if chart == "tigera-secure-lma"
+  if chart == "tigera-secure-ee"
     versionsYml = <<~EOF
     runElasticsearchOperatorClusterAdmin: false
     createCustomResources: true

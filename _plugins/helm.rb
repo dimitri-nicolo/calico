@@ -19,9 +19,9 @@ module Jekyll
       super
 
       @chart = "calico"
-      if extra_args.start_with?("tigera-secure-lma")
-        @chart = "tigera-secure-lma"
-        extra_args.slice! "tigera-secure-lma"
+      if extra_args.start_with?("tigera-secure-ee")
+        @chart = "tigera-secure-ee"
+        extra_args.slice! "tigera-secure-ee"
       end
 
       @mock_es = false

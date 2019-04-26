@@ -1,4 +1,4 @@
-{{- $elasticMode := include "tigera-secure-lma.elasticsearch.mode" . }}
+{{- $elasticMode := include "tigera-secure-ee.elasticsearch.mode" . }}
 # This manifest includes the following component versions:
 #   quay.io/coreos/prometheus-operator:{{.Values.prometheusOperator.tag}}
 #   quay.io/coreos/prometheus-config-reloader:{{.Values.prometheusConfigReloader.tag}}
