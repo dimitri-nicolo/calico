@@ -1,5 +1,5 @@
-hash: 0a9cb320e23386f52031f6a04dc4a587f8c1733f47a80657c84e56d5bf2fb190
-updated: 2019-04-25T15:02:08.173476-07:00
+hash: 98eb310dd43fc45e9c427decb751862c43dde74766fb2d0b30c0680d0b669a95
+updated: 2019-04-26T15:31:11.723171-07:00
 imports:
 - name: github.com/beorn7/perks
   version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
@@ -173,7 +173,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 564e1f2493547b1727b0071a9c65d87d7ed68bd2
+  version: 782feb87bbcb6652d288aaa1283f590ce968c98a
   repo: git@github.com:tigera/libcalico-go-private.git
   vcs: git
   subpackages:
@@ -237,7 +237,7 @@ imports:
 - name: github.com/spf13/pflag
   version: 583c0c0531f06d5278b7d917446061adc344b5cd
 - name: github.com/tigera/calico-k8sapiserver
-  version: 9fa2ea566688a96f95bd6b17932677054357a2d7
+  version: 68eb392e010a048eb25fd23c485a7dec7cfea5bd
   repo: git@github.com:tigera/calico-k8sapiserver.git
   vcs: git
   subpackages:
