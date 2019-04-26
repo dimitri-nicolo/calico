@@ -54,7 +54,7 @@ To add threat feeds to Tigera Secure EE for automatic updates (default is once a
    apiVersion: projectcalico.org/v3
    kind: GlobalThreatFeed
    metadata:
-     name: my-threat feed
+     name: my-threat-feed
    spec:
      pull:
        http:
