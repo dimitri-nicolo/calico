@@ -23,7 +23,7 @@ spec:
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     image: {{.Values.complianceReporter.image}}:{{.Values.complianceReporter.tag}}
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-{{ tuple .Values.complianceReporter.resources | include "tigera-secure-lma.resourceLimits" | indent 6 -}}
+{{ tuple .Values.complianceReporter.resources | include "tigera-secure-ee.resourceLimits" | indent 6 -}}
     env:
       # Modify these values with the report name and start and end time of the report
       # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
