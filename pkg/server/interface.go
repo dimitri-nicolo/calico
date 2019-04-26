@@ -38,6 +38,7 @@ type Report struct {
 	UISummary       interface{} `json:"uiSummary"`
 	DownloadURL     string      `json:"downloadUrl"`
 	DownloadFormats []Format    `json:"downloadFormats"`
+	GenerationTime  metav1.Time `json:"generationTime"`
 }
 
 type Format struct {

@@ -106,6 +106,7 @@ func (s *server) handleListReports(response http.ResponseWriter, request *http.R
 			UISummary:       uiSummary,
 			DownloadURL:     strings.Replace(UrlDownload, QueryReport, v.UID(), 1),
 			DownloadFormats: formats,
+			GenerationTime:  v.GenerationTime,
 		}
 		rl.Reports = append(rl.Reports, r)
 	}
