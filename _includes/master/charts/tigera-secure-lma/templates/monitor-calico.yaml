@@ -1089,6 +1089,13 @@ spec:
     protocol: TCP
     source:
       selector: k8s-app == 'compliance-reporter'
+  - action: Allow
+    destination:
+      ports:
+        - 9200
+    protocol: TCP
+    source:
+      selector: k8s-app == 'intrusion-detection-controller'
 
 ---
 
