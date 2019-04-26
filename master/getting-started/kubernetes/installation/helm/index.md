@@ -104,7 +104,7 @@ initialPool:
 4. Apply the following manifest to set network policy that secures access to {{ site.prodname }}:
 
    ```
-   kubectl apply -f {{ site.url }}/{{ page.version }}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml
+   kubectl apply -f {{ site.baseurl }}/{{ page.version }}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml
    ```
 
 Now that the **{{ site.prodname }} Core** chart is installed, please move on to the next step to install the **{{ site.prodname }}** chart.
@@ -181,10 +181,10 @@ manager:
    Due to [a bug in helm](https://github.com/helm/helm/issues/4925), it is possible for the CRDs that are created by this chart to fail to get fully deployed before Helm attempts to create resources that require them. This affects all versions of Helm with a potential fix pending. In order to work around this issue when installing the chart you will need to make sure all CRDs exist in the cluster first:
 
    ```
-   kubectl apply -f {{ site.url }}/{{ page.version }}/getting-started/kubernetes/installation/helm/tigera-secure-lma/operator-crds.yaml
+   kubectl apply -f {{ site.baseurl }}/{{ page.version }}/getting-started/kubernetes/installation/helm/tigera-secure-ee/operator-crds.yaml
    ```
 
-   >[Click to view this manifest directly]({{ site.url }}/{{ page.version }}/getting-started/kubernetes/installation/helm/tigera-secure-lma/operator-crds.yaml)
+   >[Click to view this manifest directly]({{ site.baseurl }}/{{ page.version }}/getting-started/kubernetes/installation/helm/tigera-secure-ee/operator-crds.yaml)
 
 1. Install the tigera-secure-ee helm chart with custom resource provisioning disabled:
 
