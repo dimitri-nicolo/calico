@@ -4090,7 +4090,7 @@ func schema_libcalico_go_lib_apis_v3_FlowEndpoint(ref common.ReferenceCallback) 
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Properties: map[string]spec.Schema{
-					"type": {
+					"kind": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The endpoint type, indicating whether this is a Pod, HostEndpoint, NetworkSet, or internet.",
 							Type:        []string{"string"},
@@ -4119,7 +4119,7 @@ func schema_libcalico_go_lib_apis_v3_FlowEndpoint(ref common.ReferenceCallback) 
 						},
 					},
 				},
-				Required: []string{"type", "name", "nameIsAggregationPrefix", "namespace"},
+				Required: []string{"kind", "name"},
 			},
 		},
 		Dependencies: []string{},
