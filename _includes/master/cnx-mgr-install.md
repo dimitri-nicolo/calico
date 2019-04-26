@@ -135,12 +135,6 @@
    ```
 {% endif %}
 
-1. Apply the manifest to install the {{site.prodname}} Manager.
-
-   ```bash
-   {{cli}} apply -f cnx.yaml
-   ```
-
 {% if include.init == "openshift" %}
 
 1. Allow the {{site.prodname}} Manager to run as root:
@@ -151,6 +145,12 @@
 
 {% endif %}
 
+1. Apply the manifest to install the {{site.prodname}} Manager.
+
+   ```bash
+   {{cli}} apply -f cnx.yaml
+   ```
+
 1. Confirm that all of the pods are running with the following command.
 
    ```bash
@@ -158,18 +158,6 @@
    ```
 
    Wait until each pod has the `STATUS` of `Running`.
-
-1. Apply the following manifest to set network policy that allows users and the {{site.prodname}} API server
-   to access the {{site.prodname}} Manager.
-
-   ```bash
-   {{cli}} apply -f \
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml
-   ```
-
-   > **Note**: You can also
-   > [view the manifest in a new tab]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml){:target="_blank"}.
-   {: .alert .alert-info}
 
 {% if include.platform == "eks" %}
 

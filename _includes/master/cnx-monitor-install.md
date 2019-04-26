@@ -111,6 +111,18 @@ optionally Elasticsearch and Kibana in order to enable logs.
 {% endunless %}
 {% endif %}
 
+1. Apply the following manifest to set network policy that allows users and the {{site.prodname}} API server
+   to access the {{site.prodname}} Manager.
+
+   ```bash
+   {{cli}} apply -f \
+   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml
+   ```
+
+   > **Note**: You can also
+   > [view the manifest in a new tab]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml){:target="_blank"}.
+   {: .alert .alert-info}
+
 1. Download the `operator.yaml` manifest.
 
 {% if include.platform == "docker-ee" %}
@@ -207,7 +219,7 @@ optionally Elasticsearch and Kibana in order to enable logs.
 
 1. Update the `calico-node-prometheus` service section and replace `nodePort: 30909` with `nodePort: 33909`
 
-1. Updte the `kibana-tigera-elasticsearch` service section and replace `nodePort: 30601` with `nodePort: 33601`
+1. Update the `kibana-tigera-elasticsearch` service section and replace `nodePort: 30601` with `nodePort: 33601`
 
    > **Note**: Docker Enterprise requires non-reserved port ranges to be above 32000.
    {: .alert .alert-info}

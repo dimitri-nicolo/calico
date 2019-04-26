@@ -39,6 +39,8 @@ For more information please refer to [Install and Set Up kubectl](https://kubern
 
 {% include {{page.version}}/load-docker.md yaml="calico" orchestrator="kubernetes" platform="docker-ee" %}
 
+{% include {{page.version}}/pull-secret.md platform="docker-ee" %}
+
 ## <a name="install-docker-ucp"></a>Docker Enterprise/UCP Installation
 During the installation of UCP, the installation will require the following flag `--unmanaged-cni`. This tells UCP to
 not install the default Calico networking plugin.

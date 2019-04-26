@@ -11,6 +11,10 @@
 
 {% include {{page.version}}/load-docker.md yaml="calico" orchestrator="kubernetes" upgrade=include.upgrade %}
 
+{% unless include.upgrade %}
+{% include {{page.version}}/pull-secret.md %}
+{% endunless %}
+
 ## <a name="install-cnx"></a>Installing {{site.prodname}} for policy and networking
 
 ### Selecting your cluster configuration
