@@ -194,7 +194,7 @@ manager:
    Due to [a bug in helm](https://github.com/helm/helm/issues/4925), it is possible for the CRDs that are created by this chart to fail to get fully deployed before Helm attempts to create resources that require them. This affects all versions of Helm with a potential fix pending. In order to work around this issue when installing the chart you will need to make sure all CRDs exist in the cluster first:
 
    ```
-   kubectl apply -f {{ site.baseurl }}/{{ page.version }}/getting-started/kubernetes/installation/helm/tigera-secure-ee/operator-crds.yaml
+   kubectl apply -f {{ site.url }}/{{ page.version }}/getting-started/kubernetes/installation/helm/tigera-secure-ee/operator-crds.yaml
    ```
 
    >[Click to view this manifest directly]({{ site.baseurl }}/{{ page.version }}/getting-started/kubernetes/installation/helm/tigera-secure-ee/operator-crds.yaml)
