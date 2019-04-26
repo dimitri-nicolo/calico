@@ -48,10 +48,10 @@ kubectl patch configmap calico-config -n kube-system -p '{"data":{"felix-policy-
 kubectl patch daemonset calico-node -n kube-system -p '{"spec":{"template":{"metadata":{"labels":{"projectcalico.org/application-layer-support":"true"}}}}}'
 
 # Update the tigera-cnx-manager-config ConfigMap to enabled application layer policy support in the UI.
-kubectl patch configmap tigera-cnx-manager-config -n kube-system -p '{"data":{"tigera.cnx-manager.alp-support":"true"}}'
+kubectl patch configmap tigera-cnx-manager-config -n calico-monitoring -p '{"data":{"tigera.cnx-manager.alp-support":"true"}}'
 
-# Restart the CNX manager pods to pick up the new config
-kubectl delete pod -n kube-system -l "k8s-app=cnx-manager"
+# Restart the {{site.prodname}} Manager pods to pick up the new config
+kubectl delete pod -n calico-monitoring -l "k8s-app=cnx-manager"
 ```
 
 ## Installing Istio
