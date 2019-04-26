@@ -390,11 +390,13 @@ func (s *domainInfoStore) GetDomainIPs(domain string) []string {
 	if ips == nil {
 		var collectIPsForName func(string, []string)
 		collectIPsForName = func(domain string, ancestorNames []string) {
+			nameData := s.mappings[domain]
 			log.WithFields(log.Fields{
 				"domain":        domain,
 				"ancestorNames": ancestorNames,
+				"nameData":      nameData,
 			}).Debug("Collect IPs for name")
-			if nameData := s.mappings[domain]; nameData != nil {
+			if nameData != nil {
 				nameData.ancestorNames = ancestorNames
 				for value, valueData := range nameData.values {
 					if valueData.isName {

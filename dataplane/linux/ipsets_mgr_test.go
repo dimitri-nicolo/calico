@@ -15,8 +15,11 @@
 package intdataplane
 
 import (
+	"time"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/libcalico-go/lib/set"
@@ -29,8 +32,10 @@ var _ = Describe("IP Sets manager", func() {
 	)
 
 	BeforeEach(func() {
+		domainInfoChanges := make(chan *domainInfoChanged, 100)
+		domainInfoStore := newDomainInfoStore(domainInfoChanges, "/dnsinfo", time.Duration(time.Minute))
 		ipSets = newMockIPSets()
-		ipsetsMgr = newIPSetsManager(ipSets, 1024, nil)
+		ipsetsMgr = newIPSetsManager(ipSets, 1024, domainInfoStore)
 	})
 
 	AssertIPSetMembers := func(id string, members []string) {
@@ -57,52 +62,60 @@ var _ = Describe("IP Sets manager", func() {
 		})
 	}
 
-	Describe("after sending a replace", func() {
-		BeforeEach(func() {
-			ipsetsMgr.OnUpdate(&proto.IPSetUpdate{
-				Id:      "id1",
-				Members: []string{"10.0.0.1", "10.0.0.2"},
-			})
-			ipsetsMgr.CompleteDeferredWork()
-		})
-		AssertIPSetModified()
-		AssertIPSetMembers("id1", []string{"10.0.0.1", "10.0.0.2"})
-
-		Describe("after sending a delta update", func() {
+	IPSets_Tests_1 := func(ipsetID string, ipsetType proto.IPSetUpdate_IPSetType, members [4]string) {
+		Describe("after creating an IPSet", func() {
 			BeforeEach(func() {
-				ipSets.AddOrReplaceCalled = false
-				ipsetsMgr.OnUpdate(&proto.IPSetDeltaUpdate{
-					Id:             "id1",
-					AddedMembers:   []string{"10.0.0.3", "10.0.0.4"},
-					RemovedMembers: []string{"10.0.0.1"},
-				})
-				ipsetsMgr.CompleteDeferredWork()
-			})
-			AssertIPSetNotModified()
-			AssertIPSetMembers("id1", []string{"10.0.0.2", "10.0.0.3", "10.0.0.4"})
-
-			Describe("after sending a delete", func() {
-				BeforeEach(func() {
-					ipsetsMgr.OnUpdate(&proto.IPSetRemove{
-						Id: "id1",
-					})
-					ipsetsMgr.CompleteDeferredWork()
-				})
-				AssertIPSetNoMembers("id1")
-			})
-		})
-
-		Describe("after sending another replace", func() {
-			BeforeEach(func() {
-				ipSets.AddOrReplaceCalled = false
 				ipsetsMgr.OnUpdate(&proto.IPSetUpdate{
-					Id:      "id1",
-					Members: []string{"10.0.0.2", "10.0.0.3"},
+					Id:      ipsetID,
+					Members: []string{members[0], members[1]},
+					Type:    ipsetType,
 				})
 				ipsetsMgr.CompleteDeferredWork()
 			})
 			AssertIPSetModified()
-			AssertIPSetMembers("id1", []string{"10.0.0.2", "10.0.0.3"})
+			AssertIPSetMembers(ipsetID, []string{members[0], members[1]})
+
+			Describe("after sending a delta update", func() {
+				BeforeEach(func() {
+					ipSets.AddOrReplaceCalled = false
+					ipsetsMgr.OnUpdate(&proto.IPSetDeltaUpdate{
+						Id:             ipsetID,
+						AddedMembers:   []string{members[2], members[3]},
+						RemovedMembers: []string{members[0]},
+					})
+					ipsetsMgr.CompleteDeferredWork()
+				})
+				AssertIPSetNotModified()
+				AssertIPSetMembers(ipsetID, []string{members[1], members[2], members[3]})
+
+				Describe("after sending a delete", func() {
+					BeforeEach(func() {
+						ipsetsMgr.OnUpdate(&proto.IPSetRemove{
+							Id: ipsetID,
+						})
+						ipsetsMgr.CompleteDeferredWork()
+					})
+					AssertIPSetNoMembers(ipsetID)
+				})
+			})
+
+			Describe("after sending another replace", func() {
+				BeforeEach(func() {
+					ipSets.AddOrReplaceCalled = false
+					ipsetsMgr.OnUpdate(&proto.IPSetUpdate{
+						Id:      ipsetID,
+						Members: []string{members[1], members[2]},
+						Type:    ipsetType,
+					})
+					ipsetsMgr.CompleteDeferredWork()
+				})
+				AssertIPSetModified()
+				AssertIPSetMembers(ipsetID, []string{members[1], members[2]})
+			})
 		})
-	})
+	}
+
+	logrus.SetLevel(logrus.DebugLevel)
+	//IPSets_Tests_1("id1", proto.IPSetUpdate_IP, [4]string{"10.0.0.1", "10.0.0.2", "10.0.0.3", "10.0.0.4"})
+	IPSets_Tests_1("id2", proto.IPSetUpdate_DOMAIN, [4]string{"abc.com", "def.com", "ghi.com", "jkl.com"})
 })
