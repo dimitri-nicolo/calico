@@ -62,9 +62,9 @@ spec:
       {{ dateRfc3339 .StartTime }},{{ dateRfc3339 .EndTime }},{{ .ReportSpec.EndpointsSelection.EndpointSelector }},{{ if .ReportSpec.EndpointsSelection.Namespaces }}{{ join ";" .ReportSpec.EndpointsSelection.Namespaces.Names }},{{ .ReportSpec.EndpointsSelection.Namespaces.Selector }}{{ else }},{{ end }},{{ if .ReportSpec.EndpointsSelection.ServiceAccounts }}{{ join ";" .ReportSpec.EndpointsSelection.ServiceAccounts.Names }},{{ .ReportSpec.EndpointsSelection.ServiceAccounts.Selector }}{{ else }},{{ end }},{{ .EndpointsSummary.NumIngressProtected }},{{ .EndpointsSummary.NumEgressProtected }},{{ sub .EndpointsSummary.NumTotal .EndpointsSummary.NumIngressProtected }},{{ sub .EndpointsSummary.NumTotal .EndpointsSummary.NumEgressProtected }},{{ .EndpointsSummary.NumIngressFromInternet }},{{ .EndpointsSummary.NumEgressToInternet }},{{ .EndpointsSummary.NumIngressFromOtherNamespace }},{{ .EndpointsSummary.NumEgressToOtherNamespace }},{{ .EndpointsSummary.NumEnvoyEnabled }}
   - name: endpoints.csv
     template: |
-      name,namespace,egressToInternet,ingressFromInternet,egressToOtherNamespace,ingressFromOtherNamespace,envoyEnabled,matchingPolicies,endpointsGeneratingTrafficToThisEndpoint,endpointsReceivingTrafficFromThisEndpoint
+      name,namespace,egressToInternet,ingressFromInternet,egressToOtherNamespace,ingressFromOtherNamespace,envoyEnabled,matchingPolicies
       {{ range .Endpoints -}}
-      {{ .Endpoint }},{{ .EgressToInternet }},{{ .IngressFromInternet }},{{ .EgressToOtherNamespace }},{{ .IngressFromOtherNamespace }},{{ .EnvoyEnabled }},{{ join ";" .AppliedPolicies }},{{ join ";" .EndpointsGeneratingTrafficToThisEndpoint }},{{ join ";" .EndpointsReceivingTrafficFromThisEndpoint }}
+      {{ .Endpoint }},{{ .EgressToInternet }},{{ .IngressFromInternet }},{{ .EgressToOtherNamespace }},{{ .IngressFromOtherNamespace }},{{ .EnvoyEnabled }},{{ join ";" .AppliedPolicies }}
       {{ end }}
   includeEndpointData: true
   uiSummaryTemplate:
