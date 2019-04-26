@@ -2,22 +2,33 @@
 title: Installing Tigera Secure EE using Helm
 ---
 
+This article describes how to install and configure Tigera Secure EE using Helm. After completing the steps you will have a functioning Tigera Secure EE cluster.
+
 ## Before you begin
 
-- Ensure that you have the [credentials for the Tigera private registry]({{ site.basuerl }}/{{ page.version }}/getting-started/#obtain-the-private-registry-credentials), referred in this doc as `config.json`.
+Ensure that you have the following:
 
-- Ensure that you have a [license key]({{ site.baseurl }}/{{ page.version }}/getting-started/#obtain-a-license-key), referred to in this doc as `license.yaml`
-
-- Ensure that Tiller is running, and your local helm CLI tool is configured to speak to it.
-
-- Ensure you've acquired the {{ site.prodname }} Helm Artifacts from the [Tigera support portal](https://support.tigera.io):
-
+- [credentials for the Tigera private registry]({{ site.basuerl }}/{{ page.version }}/getting-started/#obtain-the-private-registry-credentials), (`config.json`)
+- A [license key]({{ site.baseurl }}/{{ page.version }}/getting-started/#obtain-a-license-key) (`license.yaml`)
+- Tiller is running, and your local helm CLI tool is configured to speak to it.
+- {{ site.prodname }} Helm Artifacts from the [Tigera support portal](https://support.tigera.io):
   - tigera-secure-ee-core.tgz
   - tigera-secure-ee.tgz
 
-## Step 1: Craft your values.yaml for {{ site.prodname }} Core
+>Important:  The configuration values described in this article are required to achieve a functioning cluster. For a complete reference of all of the available options to customize your Helm install, inspect the helm chart: `helm inspect tigera-secure-ee-core.tgz`
 
-Before we install, we must build a helm values file to configure {{ site.prodname }} Core for your environment. We will refer to this values file as `my-values.yaml` at the time of installation.
+The high-level steps to a functioning cluster with access to the user interface are:
+
+- [Step 1: Create values.yaml for {{ site.prodname }} Core](#step-1-create-valuesyaml-for-tigera-secure-ee-core)
+- [Step 2: Install {{ site.prodname }} Core](#step-2-install-tigera-secure-ee-core)
+- [Step 3: Create values.yaml for {{ site.prodname }}](#step-3-create-valuesyaml-for-tigera-secure-ee)
+- [Step 4: Install {{ site.prodname }}](#step-4-install-tigera-secure-ee)
+- [Step 5: Grant access to user interface](#step-5-grant-access-to-user-interface)
+
+
+## Step 1: Create values.yaml for {{ site.prodname }} Core
+
+In this step, you create a <my_values>.yaml file with your configuration values to build a running cluster.
 
 For the purposes of this install guide, we will cover options which must be set in order to achieve a functioning cluster. For a full reference of all available options, inspect the helm chart:
 
@@ -25,13 +36,13 @@ For the purposes of this install guide, we will cover options which must be set 
 
 ### Configure your Datastore Connection
 
-To use Kubernetes as your datastore:
+**Kubernetes Datastore**
 
 ```yaml
 datastore: kubernetes
 ```
 
-To use etcd as your datastore
+**Etcd datastore**
 
 ```yaml
 datastore: etcd
@@ -39,7 +50,9 @@ etcd:
   endpoints: http://etcd.co
 ```
 
-To connect to an etcd secured by TLS, also pass your certs into `etcd.tls` at install time with the following flags:
+**Etcd secured by TLS**
+
+Set the following flags to specify TLS certs to use when connecting to etcd:
 
 ```
 --set-file etcd.tls.crt=./etcd.crt \
@@ -49,23 +62,26 @@ To connect to an etcd secured by TLS, also pass your certs into `etcd.tls` at in
 
 ### Network settings
 
-By default, {{ site.prodname }} installs with IPIP encapsulation enabled.
+>**Warning**: Changing any network settings in the `initialPool` block after installation will have no effect. For information on changing IP Pools after installation, see [configuring IP Pools]({{site.url}}/{{page.version}}/networking/changing-ip-pools)
+{: .alert .alert-warning}
 
 **Turn off IPIP**
+
+By default, {{ site.prodname }} installs with IPIP encapsulation enabled. To disable it:
 
 ```yaml
 initialPool:
   ipIpMode: None
 ```
 
-**Only use IPIP across subnets**
+**Use IPIP across subnets only**
 
 ```yaml
 initialPool:
   ipIpMode: CrossSubnet
 ```
 
-### Default Pool CIDR
+**Default Pool CIDR**
 
 By default, {{ site.prodname }} creates an IPv4 Pool with CIDR `192.168.0.0/16` when it launches. To change this CIDR:
 
@@ -77,12 +93,9 @@ initialPool:
 >**Note**: This should fall within `--cluster-cidr` configured for the cluster
 {: .alert .alert-info}
 
->**Warning**: Changing this value after installation will have no effect.
-{: .alert .alert-info}
-
 ## Step 2: Install {{ site.prodname }} Core
 
-1. Install the chart, passing in the `my-values.yaml` file you crafted from the previous section, an additionally passing your image pull secrets:
+1. Install the chart, passing in the `my-values.yaml` file you created from the previous section, an additionally passing your image pull secrets:
 
    ```
    helm install ./tigera-secure-ee-core.tgz -f my-values.yaml
@@ -109,7 +122,7 @@ initialPool:
 
 Now that the **{{ site.prodname }} Core** chart is installed, please move on to the next step to install the **{{ site.prodname }}** chart.
 
-## Step 3: Craft your values.yaml for {{ site.prodname }}
+## Step 3: Create values.yaml for {{ site.prodname }}
 
 Before we install, we must build a helm values file to configure {{ site.prodname }} for your environment. We will refer to this values file as `my-values.yaml` at the time of installation.
 
@@ -142,7 +155,7 @@ Additionally, provide the CA and passwords for each of the roles:
 --set elasticsearch.elasticInstaller.password=$ELASTIC_INSTALLER_PASSWORD
 ```
 
-See [information on the permissions of these roles]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/byo-elasticsearch#before-you-begin) for help setting up these roles.
+For help setting up these roles in your Elasticsearch cluster, see  [Setting up Elasticsearch roles]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/byo-elasticsearch#before-you-begin).
 
 ### Setting an Auth Type
 
@@ -189,13 +202,38 @@ manager:
 1. Install the tigera-secure-ee helm chart with custom resource provisioning disabled:
 
    ```
-   helm install ./tigera-secure-ee.tgz --set createCustomResources=false \
+   helm install ./tigera-secure-ee.tgz --namespace calico-monitoring \
+     --set createCustomResources=false \
      --set-file imagePullSecrets.cnx-pull-secret=./config.json
    ```
 
-## Step 5: Grant a User Access to the Manager Install
+   >Note: This version of the Tigera Secure EE Helm chart **must** be installed with `--namespace calico-monitoring`.
 
-{% include {{page.version}}/cnx-grant-user-manager-permissions.md %}
+## Step 5: Grant access to user interface
+
+Grant users permission to access the Tigera Secure EE Manager in your cluster. Run one of the following commands, replacing <USER> with the name of the user you wish to grant access.
+
+**User manager**
+
+The `tigera-manager-user`  role grants permission to use the Tigera Secure EE Manager UI, view flow logs, audit logs, and network statistics, and access the default policy tier.
+
+```
+kubectl create clusterrolebinding <USER>-tigera \
+  --clusterrole=tigera-manager-user \
+  --user=<USER>
+```
+
+**Network Admin**
+
+The `network-admin` role grants permission to use the Tigera Secure EE Manager UI, view flow logs, audit logs, and network statistics, and administer all network policies and tiers.
+
+```
+kubectl create clusterrolebinding <USER>-network-admin \
+  --clusterrole=network-admin \
+  --user=<USER>
+```
+
+To grant access to additional tiers, or create your own roles, see the RBAC documentation.
 
 ## Next steps
 
