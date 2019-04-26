@@ -1622,7 +1622,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			"cniVersion": "%s",
 			"name": "%s",
 			"type": "calico",
-			"mode": "%s",
+			"mode": "vxlan",
 			"macPrefix": "%s",
 			"vsid": 4096,
 			"etcd_endpoints": "%s",
@@ -1639,7 +1639,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			"policy": {"type": "k8s"},
 			"nodename_file_optional": true,
 			"log_level":"debug"
-		}`, cniVersion, networkName, os.Getenv("MODE"), os.Getenv("MAC_PREFIX"), os.Getenv("ETCD_ENDPOINTS"), os.Getenv("DATASTORE_TYPE"), os.Getenv("KUBERNETES_MASTER"))
+		}`, cniVersion, networkName, os.Getenv("MAC_PREFIX"), os.Getenv("ETCD_ENDPOINTS"), os.Getenv("DATASTORE_TYPE"), os.Getenv("KUBERNETES_MASTER"))
 
 		cleanup := func() {
 			// Cleanup hns network
