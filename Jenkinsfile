@@ -7,7 +7,6 @@ pipeline {
     }
     triggers{
         pollSCM('H/5 * * * *')
-        cron('H H(0-7) * * 1-5')
     }
     environment {
         WAVETANK_SERVICE_ACCT = "wavetank@unique-caldron-775.iam.gserviceaccount.com"
