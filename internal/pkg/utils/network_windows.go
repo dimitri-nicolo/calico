@@ -332,7 +332,10 @@ func ensureVxlanNetworkExists(networkName string, subNet *net.IPNet, conf types.
 		networkRequest := hcn.PolicyNetworkRequest{
 			Policies: []hcn.NetworkPolicy{hostRoutePolicy},
 		}
-		existingNetworkV2.AddPolicy(networkRequest)
+		err := existingNetworkV2.AddPolicy(networkRequest)
+		if err != nil {
+			logger.Warnf("Error adding policy to network : %v", err)
+		}
 	}
 
 	return existingNetwork, nil
@@ -441,13 +444,6 @@ func CreateAndAttachVxlanHostEP(epName string, hnsNetwork *hcsshim.HNSNetwork, s
 		return nil, errors.Annotatef(err, "failed to create remote HNSEndpoint %s", epName)
 	}
 	logger.Infof("Created HNSEndpoint %s", epName)
-
-	// Attach endpoint to host
-	/*if err = newEndpoint.HostAttach(1); err != nil {
-		logger.Errorf("Unable to hot attach bridge endpoint [%v] to host compartment, error: %v", epName, err)
-		return nil, err
-	}
-	logger.Infof("Attached bridge endpoint [%v] to host", epName)*/
 
 	return newEndpoint, nil
 }
