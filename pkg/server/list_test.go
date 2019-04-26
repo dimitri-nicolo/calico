@@ -29,6 +29,7 @@ var (
 			EndpointsSummary: calicov3.EndpointsSummary{
 				NumTotal: 100,
 			},
+			GenerationTime: now,
 		},
 	}
 
@@ -98,6 +99,7 @@ var _ = Describe("List tests", func() {
 						Description: "This is a bar file",
 					},
 				},
+				GenerationTime: now,
 			},
 		})
 
