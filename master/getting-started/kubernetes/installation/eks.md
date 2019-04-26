@@ -17,6 +17,8 @@ This guide covers installing {{site.prodname}} for policy enforcement on Amazon 
 
 {% include {{page.version}}/load-docker.md yaml="calico" orchestrator="kubernetes" %}
 
+{% include {{page.version}}/pull-secret.md %}
+
 ## <a name="install-cnx"></a>Installing {{site.prodname}} for policy only
 
 > **Important**: At this time, we include steps for Kubernetes API datastore only. Should you wish

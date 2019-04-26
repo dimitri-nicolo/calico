@@ -70,6 +70,10 @@ You are now ready to execute the Ansible provision which will install {{site.pro
 certs to each node. If you would prefer {{site.prodname}} not connect to the same etcd as OpenShift, you may modify the install
 such that {{site.prodname}} connects to an etcd you have already set up by following the [dedicated etcd install guide](dedicated-etcd).
 
+### Create pull secrets for image access
+
+{% include {{page.version}}/pull-secret.md %}
+ 
 {% include {{page.version}}/cnx-api-install.md init="openshift" %}
 
 1. Continue to [Applying your license key](#applying-your-license-key).

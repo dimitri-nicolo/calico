@@ -24,6 +24,8 @@ with another solution, such as:
 
 {% include {{page.version}}/load-docker.md yaml="calico" orchestrator="kubernetes" %}
 
+{% include {{page.version}}/pull-secret.md %}
+
 ## <a name="install-cnx"></a>Installing {{site.prodname}} for policy only
 
 ### About installing for policy only
