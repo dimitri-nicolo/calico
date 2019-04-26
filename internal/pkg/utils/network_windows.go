@@ -238,8 +238,9 @@ func ensureVxlanNetworkExists(networkName string, subNet *net.IPNet, conf types.
 		expectedVSID = DefaultVSID
 	} else if conf.VSID < DefaultVSID {
 		return nil, errors.Annotatef(err, "Windows does not support VSID < 4096")
+	} else {
+		expectedVSID = conf.VSID
 	}
-	expectedVSID = conf.VSID
 
 	// Checking if HNS network exists
 	existingNetwork, _ := hcsshim.GetHNSNetworkByName(networkName)
