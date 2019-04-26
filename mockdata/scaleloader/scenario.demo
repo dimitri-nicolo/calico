@@ -1,0 +1,7 @@
+start: 2019-03-01T06:00:00
+duration: 5h
+playbooks:
+  - name: unprotected-protected
+    playbookscale: 2
+    playscale: 3
+    churnrate: 12

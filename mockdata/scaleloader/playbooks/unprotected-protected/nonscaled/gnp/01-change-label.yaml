@@ -1,0 +1,16 @@
+action: update
+kind: GlobalNetworkPolicy
+apiversion: projectcalico.org/v3
+metadata:
+  name: protect-egress
+  labels:
+    churn-gnp: "knope"
+spec:
+  selector: protected == 'egress'
+  egress:
+    - action: allow
+      destination:
+        nets:
+          - 192.168.250.0/24
+  types:
+    - Egress

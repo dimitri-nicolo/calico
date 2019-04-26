@@ -1,0 +1,11 @@
+action: update
+kind: "Pod"
+apiversion: v1
+metadata:
+  name: "unprotected-pod-{{.ScaleId}}"
+  namespace: "{{.Namespace}}"
+  labels:
+    protected: "ingress"
+spec:
+  serviceaccountname: demosa
+  nodeName: anode

@@ -1,0 +1,13 @@
+FROM alpine:latest
+
+RUN apk add curl jq
+
+ADD entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+ADD bin/scaleloader-amd64 /bin/scaleloader
+ADD playbooks/ /playbooks/
+WORKDIR /playbooks
+
+ENV RUN_SCENARIO=true
+
+ENTRYPOINT ["/entrypoint.sh"]
