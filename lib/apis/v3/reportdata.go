@@ -15,6 +15,8 @@
 package v3
 
 import (
+	"fmt"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/apis/audit"
 )
@@ -275,17 +277,17 @@ type EndpointsReportFlow struct {
 
 type FlowEndpoint struct {
 	// The endpoint type, indicating whether this is a Pod, HostEndpoint, NetworkSet, or internet.
-	Type string `json:"type"`
+	Kind string `json:"kind"`
 
 	// The name of the endpoint. Note that this name may actually be a name prefix if flow logs have
 	// been aggregated.
 	Name string `json:"name"`
 
 	// Whether the name is an aggregation prefix rather than the actual name.
-	NameIsAggregationPrefix bool `json:"nameIsAggregationPrefix"`
+	NameIsAggregationPrefix bool `json:"nameIsAggregationPrefix,omitempty"`
 
 	// The namespace of the endpoint.
-	Namespace string `json:"namespace"`
+	Namespace string `json:"namespace,omitempty"`
 }
 
 type EndpointsReportNamespace struct {
@@ -338,4 +340,19 @@ type EndpointsReportService struct {
 	// Whether envoy was enabled for all endpoints that were exposed by this service within the reporting interval.
 	// This is a summary of information contained in the endpoints data.
 	EnvoyEnabled bool `json:"envoyEnabled,omitempty"`
+}
+
+//
+// Prints FlowEndpoint contents. This is a slightly less verbose version of the resource names but should have
+// sufficient context to be useful.
+//
+func (f FlowEndpoint) String() string {
+	switch f.Kind {
+	case KindK8sPod:
+		// We add in the v1 version to be inline with the ResourceID printed format.
+		return fmt.Sprintf("%s.v1(%s/%s)", f.Kind, f.Namespace, f.Name)
+	case KindHostEndpoint:
+		return fmt.Sprintf("%s(%s)", f.Kind, f.Name)
+	}
+	return fmt.Sprintf("%s(%s/%s)", f.Kind, f.Namespace, f.Name)
 }

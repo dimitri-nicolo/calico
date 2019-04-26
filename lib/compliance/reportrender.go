@@ -32,21 +32,108 @@ import (
 
 var (
 	// Exposed to be used by UT code.
-	ResourceIdSample = api.ResourceID{
+	EndpointIdSample1 = api.ResourceID{
 		TypeMeta: metav1.TypeMeta{
-			Kind:       "sample-kind",
+			Kind:       "HostEndpoint",
 			APIVersion: "projectcalico.org/v3",
 		},
-		Name:      "sample-res",
-		Namespace: "sample-ns",
+		Name: "hep1",
 	}
-	EndpointSample = api.EndpointsReportEndpoint{
-		Endpoint:         ResourceIdSample,
+	EndpointIdSample2 = api.ResourceID{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Pod",
+			APIVersion: "v1",
+		},
+		Name:      "pod-abcdef",
+		Namespace: "ns1",
+	}
+	PolicyIdSample1 = api.ResourceID{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "NetworkPolicy",
+			APIVersion: "projectcalico.org/v3",
+		},
+		Name:      "np1",
+		Namespace: "ns1",
+	}
+	PolicyIdSample2 = api.ResourceID{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "GlobalNetworkPolicy",
+			APIVersion: "projectcalico.org/v3",
+		},
+		Name: "gnp1",
+	}
+	ServiceIdSample1 = api.ResourceID{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Service",
+			APIVersion: "v1",
+		},
+		Name:      "svc1",
+		Namespace: "n21",
+	}
+	ServiceIdSample2 = api.ResourceID{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Service",
+			APIVersion: "v1",
+		},
+		Name:      "svc2",
+		Namespace: "n22",
+	}
+	EndpointSample1 = api.EndpointsReportEndpoint{
+		Endpoint:         EndpointIdSample1,
 		IngressProtected: false,
 		EgressProtected:  true,
 		EnvoyEnabled:     false,
-		AppliedPolicies:  []api.ResourceID{ResourceIdSample, ResourceIdSample},
-		Services:         []api.ResourceID{ResourceIdSample, ResourceIdSample},
+		AppliedPolicies:  []api.ResourceID{PolicyIdSample2},
+	}
+	EndpointSample2 = api.EndpointsReportEndpoint{
+		Endpoint:               EndpointIdSample2,
+		FlowLogAggregationName: "pod-*",
+		IngressProtected:       false,
+		EgressProtected:        true,
+		EnvoyEnabled:           false,
+		AppliedPolicies:        []api.ResourceID{PolicyIdSample1, PolicyIdSample2},
+		Services:               []api.ResourceID{ServiceIdSample1, ServiceIdSample2},
+	}
+	FlowSample1 = api.EndpointsReportFlow{
+		Source: api.FlowEndpoint{
+			Kind:                    "Pod",
+			Name:                    "pod-*",
+			Namespace:               "ns1",
+			NameIsAggregationPrefix: true,
+		},
+		Destination: api.FlowEndpoint{
+			Kind:                    "Pod",
+			Name:                    "pod-*",
+			Namespace:               "ns2",
+			NameIsAggregationPrefix: true,
+		},
+	}
+	FlowSample2 = api.EndpointsReportFlow{
+		Source: api.FlowEndpoint{
+			Kind:                    "Pod",
+			Name:                    "pod-abc-*",
+			Namespace:               "ns2",
+			NameIsAggregationPrefix: true,
+		},
+		Destination: api.FlowEndpoint{
+			Kind:                    "HostEndpoint",
+			Name:                    "hep1",
+			NameIsAggregationPrefix: false,
+		},
+	}
+	FlowSample3 = api.EndpointsReportFlow{
+		Source: api.FlowEndpoint{
+			Kind:                    "Pod",
+			Name:                    "pod-*",
+			Namespace:               "ns1",
+			NameIsAggregationPrefix: true,
+		},
+		Destination: api.FlowEndpoint{
+			Kind:                    "Pod",
+			Name:                    "pod-*",
+			Namespace:               "ns3",
+			NameIsAggregationPrefix: true,
+		},
 	}
 	AuditEventSample = audit.Event{
 		TypeMeta: metav1.TypeMeta{
@@ -127,11 +214,13 @@ var (
 			NumEnvoyEnabled:              9,
 		},
 		Endpoints: []api.EndpointsReportEndpoint{
-			EndpointSample,
+			EndpointSample1,
+			EndpointSample2,
 		},
 		AuditEvents: []audit.Event{
 			AuditEventSample,
 		},
+		Flows: []api.EndpointsReportFlow{FlowSample1, FlowSample2, FlowSample3},
 	}
 
 	ReportDataNilNamespace = api.ReportData{
@@ -155,7 +244,7 @@ func RenderTemplate(reportTemplateText string, reportData *api.ReportData) (rend
 		}
 	}()
 
-	templ, err := template.New("report-template").Funcs(templateFuncs()).Parse(reportTemplateText)
+	templ, err := template.New("report-template").Funcs(templateFuncs(reportData)).Parse(reportTemplateText)
 	if err != nil {
 		return rendered, err
 	}
@@ -203,7 +292,7 @@ func getFormatDateFn(format string) func(date interface{}) string {
 	}
 }
 
-func templateFuncs() template.FuncMap {
+func templateFuncs(reportData *api.ReportData) template.FuncMap {
 	// Use the functions defined by sprig and add a couple more.
 	funcs := sprig.GenericFuncMap()
 
@@ -224,5 +313,101 @@ func templateFuncs() template.FuncMap {
 	// Add a useful time formats, we can add more later if required.
 	funcs["dateRfc3339"] = getFormatDateFn(time.RFC3339)
 
+	// Add flow functions to enable flow lookup from endpoint
+	flowsPrefix, flowsIngress, flowsEgress := getFlowsLookupFuncs(reportData)
+	funcs["flowsPrefix"] = flowsPrefix
+	funcs["flowsIngress"] = flowsIngress
+	funcs["flowsEgress"] = flowsEgress
+
 	return template.FuncMap(funcs)
+}
+
+// getFlowsLookupFuncs creates ReportData specific flow lookup functions to determine the
+// prefix, ingress and egress flows associated with a specific report endpoint.
+func getFlowsLookupFuncs(d *api.ReportData) (prefix func(ep api.EndpointsReportEndpoint) string, ingress, egress func(ep api.EndpointsReportEndpoint) []api.FlowEndpoint) {
+	// Create a map of the flows keyed of the FlowEndpoint.
+	flows := make(map[api.FlowEndpoint]endpointFlowLogs)
+	for _, flow := range d.Flows {
+		if isCalicoEndpoint(flow.Destination) {
+			d := flows[flow.Destination]
+			d.ingress = append(d.ingress, flow.Source)
+			flows[flow.Destination] = d
+		}
+		if isCalicoEndpoint(flow.Source) {
+			d := flows[flow.Source]
+			d.egress = append(d.egress, flow.Destination)
+			flows[flow.Source] = d
+		}
+	}
+
+	prefix = func(ep api.EndpointsReportEndpoint) string {
+		unaggregated, aggregated := reportEndpointToFlowEndpoint(ep)
+		if _, ok := flows[unaggregated]; ok {
+			return unaggregated.Name
+		}
+		if aggregated != nil {
+			if _, ok := flows[*aggregated]; ok {
+				return aggregated.Name
+			}
+		}
+		return ""
+	}
+	ingress = func(ep api.EndpointsReportEndpoint) []api.FlowEndpoint {
+		unaggregated, aggregated := reportEndpointToFlowEndpoint(ep)
+		if f, ok := flows[unaggregated]; ok {
+			return f.ingress
+		}
+		if aggregated != nil {
+			return flows[*aggregated].ingress
+		}
+		return nil
+	}
+	egress = func(ep api.EndpointsReportEndpoint) []api.FlowEndpoint {
+		unaggregated, aggregated := reportEndpointToFlowEndpoint(ep)
+		if f, ok := flows[unaggregated]; ok {
+			return f.egress
+		}
+		if aggregated != nil {
+			return flows[*aggregated].egress
+		}
+		return nil
+	}
+	return
+}
+
+// isCalicoEndpoint returns true if the flow endpoint is a Calico endpoint (i.e. not the internet etc.)
+func isCalicoEndpoint(fe api.FlowEndpoint) bool {
+	switch fe.Kind {
+	case api.KindK8sPod, api.KindHostEndpoint:
+		return true
+	default:
+		return false
+	}
+}
+
+// reportEndpointToFlowEndpoint converts the report endpoint to an unaggregated and aggregated FlowEndpoint which
+// we can use to lookup the flows. We preferentially use the unaggregated name to lookup and fallback to the
+// aggregated name if known.
+func reportEndpointToFlowEndpoint(ep api.EndpointsReportEndpoint) (unaggregated api.FlowEndpoint, aggregated *api.FlowEndpoint) {
+	unaggregated = api.FlowEndpoint{
+		Kind:                    ep.Endpoint.Kind,
+		Name:                    ep.Endpoint.Name,
+		NameIsAggregationPrefix: false,
+		Namespace:               ep.Endpoint.Namespace,
+	}
+	if ep.FlowLogAggregationName != "" && ep.FlowLogAggregationName != ep.Endpoint.Name {
+		aggregated = &api.FlowEndpoint{
+			Kind:                    ep.Endpoint.Kind,
+			Name:                    ep.FlowLogAggregationName,
+			NameIsAggregationPrefix: true,
+			Namespace:               ep.Endpoint.Namespace,
+		}
+	}
+	return
+}
+
+// endpointFlowLogs encapsulates flow data for a specific endpoint in terms of ingress and egress flows.
+type endpointFlowLogs struct {
+	ingress []api.FlowEndpoint
+	egress  []api.FlowEndpoint
 }

@@ -15,13 +15,9 @@
 package compliance_test
 
 import (
-	"fmt"
-	"strings"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/compliance"
 )
 
@@ -41,9 +37,11 @@ var _ = Describe("ReportTemplate Renderer", func() {
 		tmpl := `name,namespace,ingressProtected,egressProtected,envoyEnabled,appliedPolicies,services
 {{ range .Endpoints -}}
   {{ .Endpoint.Name }},{{ .Endpoint.Namespace }},{{ .IngressProtected }},{{ .EgressProtected }},{{ .EnvoyEnabled }},{{ join ";" .AppliedPolicies }},{{ join ";" .Services }}
-{{- end }}`
+{{ end }}`
 		rendered := `name,namespace,ingressProtected,egressProtected,envoyEnabled,appliedPolicies,services
-sample-res,sample-ns,false,true,false,sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res),sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res)`
+hep1,,false,true,false,GlobalNetworkPolicy(gnp1),
+pod-abcdef,ns1,false,true,false,NetworkPolicy(ns1/np1);GlobalNetworkPolicy(gnp1),Service.v1(n21/svc1);Service.v1(n22/svc2)
+`
 
 		matches, err := compliance.RenderTemplate(tmpl, &compliance.ReportDataSample)
 		Expect(err).ToNot(HaveOccurred())
@@ -54,78 +52,46 @@ sample-res,sample-ns,false,true,false,sample-kind(sample-ns/sample-res);sample-k
 		tmpl := `name,namespace,ingressProtected,egressProtected,envoyEnabled,appliedPolicies,services
 {{ range .Endpoints -}}
   {{ .Endpoint.Name }},{{ .Endpoint.Namespace }},{{ .IngressProtected }},{{ .EgressProtected }},{{ .EnvoyEnabled }},{{ join "|" .AppliedPolicies }},{{ join "|" .Services }}
-{{- end }}`
+{{ end }}`
 		rendered := `name,namespace,ingressProtected,egressProtected,envoyEnabled,appliedPolicies,services
-sample-res,sample-ns,false,true,false,sample-kind(sample-ns/sample-res)|sample-kind(sample-ns/sample-res),sample-kind(sample-ns/sample-res)|sample-kind(sample-ns/sample-res)`
+hep1,,false,true,false,GlobalNetworkPolicy(gnp1),
+pod-abcdef,ns1,false,true,false,NetworkPolicy(ns1/np1)|GlobalNetworkPolicy(gnp1),Service.v1(n21/svc1)|Service.v1(n22/svc2)
+`
 
 		matches, err := compliance.RenderTemplate(tmpl, &compliance.ReportDataSample)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(matches).To(Equal(rendered))
-	})
-
-	It("inventory-endpoints report rendering multiple items", func() {
-		const endpointsCount = 100
-
-		tmpl := `name,namespace,ingressProtected,egressProtected,envoyEnabled,appliedPolicies,services
-{{ range .Endpoints -}}
-  {{ .Endpoint.Name }},{{ .Endpoint.Namespace }},{{ .IngressProtected }},{{ .EgressProtected }},{{ .EnvoyEnabled }},{{ join ";" .AppliedPolicies }},{{ join ";" .Services }}
-{{ end }}`
-		rendered := `sample-res,sample-ns,false,true,false,sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res),sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res);sample-kind(sample-ns/sample-res)`
-
-		// Add entries to resource-list
-		aer := compliance.EndpointSample
-		for i := 1; i < 10-1; i++ {
-			aer.AppliedPolicies = append(aer.AppliedPolicies, compliance.ResourceIdSample)
-			aer.Services = append(aer.Services, compliance.ResourceIdSample)
-		}
-		// Add entries to endpoint-list
-		endpoints := []api.EndpointsReportEndpoint{}
-		for i := 0; i < endpointsCount; i++ {
-			endpoints = append(endpoints, aer)
-		}
-		// Populate multiple endpoints with multiple resource entries as test data.
-		ard := compliance.ReportDataSample
-		ard.Endpoints = endpoints
-
-		matches, err := compliance.RenderTemplate(tmpl, &ard)
-		Expect(err).ToNot(HaveOccurred())
-
-		matches = strings.TrimSpace(matches) // remove last \n
-		endpointList := strings.Split(matches, "\n")
-		Expect(len(endpointList)).To(Equal(endpointsCount + 1)) // + Header
-		Expect(endpointList[endpointsCount]).To(Equal(rendered))
-
-		// Cap maximum entries
-		cappedTmpl := `{{ range .Endpoints -}} {{ joinN ";" 3 .AppliedPolicies }} {{ end }}`
-
-		matches, err = compliance.RenderTemplate(cappedTmpl, &ard)
-		Expect(err).ToNot(HaveOccurred())
-		matches = strings.TrimSpace(matches) // remove last \n
-		endpointList = strings.Split(matches, " ")
-		resourceList := strings.Split(endpointList[0], ";")
-		Expect(len(resourceList)).To(Equal(3))
 	})
 
 	It("inventory-endpoints report using ResourceID", func() {
-		const k8sNetNamespace = "networking.k8s.io/v1"
 		tmpl := "{{ range .Endpoints -}} {{ .Endpoint }} {{- end }}"
-		rendered := "sample-kind(sample-ns/sample-res)"
-		renderedWithAPIVer := fmt.Sprintf("sample-kind.%s(sample-ns/sample-res)", k8sNetNamespace)
+		rendered := "HostEndpoint(hep1)Pod.v1(ns1/pod-abcdef)"
 
 		matches, err := compliance.RenderTemplate(tmpl, &compliance.ReportDataSample)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(matches).To(Equal(rendered))
+	})
 
-		resId := compliance.ResourceIdSample
-		resId.APIVersion = k8sNetNamespace
-		endpoint := compliance.EndpointSample
-		endpoint.Endpoint = resId
-		rds := compliance.ReportDataSample
-		rds.Endpoints = []api.EndpointsReportEndpoint{endpoint}
+	It("inventory-endpoints report rendering flow logs", func() {
+		tmpl := `name,prefix,ingress,egress
+{{ range .Endpoints -}}
+  {{ .Endpoint }},{{ flowsPrefix . }},{{ join ";" (flowsIngress .) }},{{ join ";" (flowsEgress .) }}
+{{ end }}`
+		// Can't easily predict the order of flow entries, so just check for both possibilities.
+		rendered1 := `name,prefix,ingress,egress
+HostEndpoint(hep1),hep1,Pod.v1(ns2/pod-abc-*),
+Pod.v1(ns1/pod-abcdef),pod-*,,Pod.v1(ns2/pod-*);Pod.v1(ns3/pod-*)
+`
+		rendered2 := `name,prefix,ingress,egress
+HostEndpoint(hep1),hep1,Pod.v1(ns2/pod-abc-*),
+Pod.v1(ns1/pod-abcdef),pod-*,,Pod.v1(ns3/pod-*);Pod.v1(ns2/pod-*)
+`
 
-		matches, err = compliance.RenderTemplate(tmpl, &rds)
+		matches, err := compliance.RenderTemplate(tmpl, &compliance.ReportDataSample)
 		Expect(err).ToNot(HaveOccurred())
-		Expect(matches).To(Equal(renderedWithAPIVer))
+		if matches != rendered1 {
+			Expect(matches).To(Equal(rendered2))
+		}
 	})
 
 	It("inventory-endpoints report failing with invalid argument", func() {
