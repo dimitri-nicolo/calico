@@ -416,7 +416,7 @@ rules:
   resources: ["services/proxy"]
   resourceNames: ["https:cnx-api:8080", "calico-node-prometheus:9090"]
   verbs: ["get","create"]
-- apiGroups: ["elasticsearch.tigera.io"]
+- apiGroups: ["lma.tigera.io"]
   resources: ["index"]
   resourceNames: ["flows", "audit*", "events"]
   verbs: ["get"]
@@ -449,7 +449,7 @@ rules:
   resourceNames: ["https:cnx-api:8080", "calico-node-prometheus:9090"]
   verbs: ["get","create"]
 # Access to flow logs, audit logs, and statistics
-- apiGroups: ["elasticsearch.tigera.io"]
+- apiGroups: ["lma.tigera.io"]
   resources: ["index"]
   resourceNames: ["flows", "audit*", "events"]
   verbs: ["get"]
