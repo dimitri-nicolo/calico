@@ -43,6 +43,7 @@ type VersionedEndpointResource interface {
 	getV1Profiles() []string
 	getIPOrEndpointIDs() (set.Set, error)
 	getEnvoyEnabled(engine *endpointEngine) bool
+	getServiceAccount() *apiv3.ResourceID
 }
 
 // CacheEntryEndpoint implements the CacheEntry interface, and is what we stored in the Pods cache.
@@ -58,6 +59,9 @@ type CacheEntryEndpoint struct {
 
 	// Services whose endpoints include this endpoint
 	Services resources.Set
+
+	// Service account associated with this endpoint.
+	ServiceAccount *apiv3.ResourceID
 
 	// --- Internal data ---
 	cacheEntryCommon
@@ -169,6 +173,17 @@ func (v *versionedK8sPod) getEnvoyEnabled(engine *endpointEngine) bool {
 	return checked
 }
 
+func (v *versionedK8sPod) getServiceAccount() *apiv3.ResourceID {
+	if v.Pod.Spec.ServiceAccountName == "" {
+		return nil
+	}
+	return &apiv3.ResourceID{
+		TypeMeta:  resources.TypeK8sServiceAccounts,
+		Name:      v.Pod.Spec.ServiceAccountName,
+		Namespace: v.Pod.Namespace,
+	}
+}
+
 // versionedCalicoHostEndpoint implements the VersionedEndpointResource interface.
 type versionedCalicoHostEndpoint struct {
 	*apiv3.HostEndpoint
@@ -213,6 +228,10 @@ func (v *versionedCalicoHostEndpoint) getEnvoyEnabled(engine *endpointEngine) bo
 	return false
 }
 
+func (v *versionedCalicoHostEndpoint) getServiceAccount() *apiv3.ResourceID {
+	return nil
+}
+
 // newEndpointsEngine creates a resourceCacheEngine used to handle the Pods cache.
 func newEndpointsEngine(config *Config) resourceCacheEngine {
 	var podIstioContainerRegex, podIstioInitContainerRegex *regexp.Regexp
@@ -251,7 +270,7 @@ func (c *endpointEngine) kinds() []metav1.TypeMeta {
 func (c *endpointEngine) register(cache engineCache) {
 	c.engineCache = cache
 	c.EndpointLabelSelector().RegisterCallbacks(KindsNetworkPolicy, c.policyMatchStarted, c.policyMatchStopped)
-	c.IPOrEndpointManager().RegisterCallbacks(KindsServiceEndpoints, c.ipMatchStarted, c.ipMatchStopped)
+	c.IPOrEndpointManager().RegisterCallbacks(KindsServices, c.ipMatchStarted, c.ipMatchStopped)
 
 	// Register for updates for all NetworkPolicy events. We don't care about Added/Deleted/Updated events as any
 	// changes to the cross-referencing will result in a notification here where we will requeue any changed endpoints.
@@ -348,6 +367,11 @@ func (c *endpointEngine) convertToVersioned(res resources.Resource) (VersionedRe
 func (c *endpointEngine) resourceAdded(id apiv3.ResourceID, entry CacheEntry) {
 	x := entry.(*CacheEntryEndpoint)
 	x.clog = log.WithField("id", id)
+
+	// Set the service account now since it is not changeable after creation.
+	x.ServiceAccount = x.getServiceAccount()
+
+	// Our updated processing can do the rest.
 	c.resourceUpdated(id, entry, nil)
 }
 

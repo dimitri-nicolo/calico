@@ -2,6 +2,7 @@ package scaleloader
 
 import (
 	yaml "github.com/projectcalico/go-yaml-wrapper"
+
 	"github.com/tigera/compliance/pkg/resources"
 )
 

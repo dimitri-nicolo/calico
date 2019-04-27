@@ -37,34 +37,11 @@ func (c *client) GetAuditEvents(ctx context.Context, kind *metav1.TypeMeta, star
 		}
 	}
 
-	return c.searchAuditEvents(ctx, filter, start, end)
-}
-
-// addAuditEvents reads audit logs from storage, filters them based on the resources specified in
-// `filter`. Blank fields in the filter ResourceIDs are regarded as wildcard matches for that
-// parameter.  Fields within a ResourceID are ANDed, different ResourceIDs are ORed. For example:
-// - an empty filter would include no audit events
-// - a filter containing a blank ResourceID would contain all audit events
-// - a filter containing two ResourceIDs, one with Kind set to "NetworkPolicy", the other with kind
-//   set to "GlobalNetworkPolicy" would include all Kubernetes and Calico NetworkPolicy and
-//   all Calico GlobalNetworkPolicy audit events.
-func (c *client) AddAuditEvents(ctx context.Context, data *v3.ReportData, filter *v3.AuditEventsSelection, start, end time.Time) {
-	for e := range c.searchAuditEvents(ctx, filter, &start, &end) {
-		switch e.Verb {
-		case "create":
-			data.AuditSummary.NumCreate++
-		case "update", "patch":
-			data.AuditSummary.NumModify++
-		case "delete":
-			data.AuditSummary.NumDelete++
-		}
-		data.AuditEvents = append(data.AuditEvents, *e.Event)
-		data.AuditSummary.NumTotal++
-	}
+	return c.SearchAuditEvents(ctx, filter, start, end)
 }
 
 // Query for audit events in a paginated fashion
-func (c *client) searchAuditEvents(ctx context.Context, filter *v3.AuditEventsSelection, start, end *time.Time) <-chan *event.AuditEventResult {
+func (c *client) SearchAuditEvents(ctx context.Context, filter *v3.AuditEventsSelection, start, end *time.Time) <-chan *event.AuditEventResult {
 	ch := make(chan *event.AuditEventResult, pageSize)
 	searchIndex := c.clusterIndex(auditLogIndex, "*")
 	go func() {
