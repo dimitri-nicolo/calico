@@ -23,7 +23,7 @@ import:
   version: ff37804b6fc54ad39a0c27807b52b85eb749a583
 - package: github.com/projectcalico/libcalico-go
   repo: git@github.com:tigera/libcalico-go-private.git
-  version: 564e1f2493547b1727b0071a9c65d87d7ed68bd2
+  version: 782feb87bbcb6652d288aaa1283f590ce968c98a
   subpackages:
   - lib/apiconfig
   - lib/apis/v3
