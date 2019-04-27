@@ -51,7 +51,7 @@ func FromContextGetReviewResource(ctx context.Context) (*authzv1.ResourceAttribu
 func getResourceAttributes(resourceName string) *authzv1.ResourceAttributes {
 	return &authzv1.ResourceAttributes{
 		Verb:     "get",
-		Group:    "elasticsearch.tigera.io",
+		Group:    "lma.tigera.io",
 		Resource: "index",
 		Name:     resourceName,
 	}
