@@ -193,7 +193,7 @@ var (
 		StartTime: metav1.Unix(1554076800, 0),
 		EndTime:   metav1.Unix(1554112800, 0),
 		ReportSpec: api.ReportSpec{
-			EndpointsSelection: api.EndpointsSelection{
+			EndpointsSelection: &api.EndpointsSelection{
 				EndpointSelector: "lbl == 'lbl-val'",
 				Namespaces: &api.NamesAndLabelsMatch{
 					Selector: "endpoint-namespace-selector",
@@ -224,11 +224,10 @@ var (
 	}
 
 	ReportDataNilNamespace = api.ReportData{
-		ReportName: "nil-namespace",
+		ReportName: "nil-namespace-serviceaccount",
 		ReportSpec: api.ReportSpec{
-			EndpointsSelection: api.EndpointsSelection{
+			EndpointsSelection: &api.EndpointsSelection{
 				EndpointSelector: "lbl == 'lbl-val'",
-				Namespaces:       nil,
 			},
 		},
 	}

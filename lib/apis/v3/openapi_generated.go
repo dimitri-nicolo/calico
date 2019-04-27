@@ -6856,14 +6856,8 @@ func schema_libcalico_go_lib_apis_v3_ReportSpec(ref common.ReferenceCallback) co
 					},
 					"endpointsSelection": {
 						SchemaProps: spec.SchemaProps{
-							Description: "EndpointsSelection is used to specify which endpoints are in-scope and stored in the generated report data. Only used if endpoints data and/or audit logs are gathered in the report.",
+							Description: "EndpointsSelection is used to specify which endpoints are in-scope and stored in the generated report data. Only used if endpoints data and/or audit logs are gathered in the report. If omitted, treated as everything in-scope.",
 							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsSelection"),
-						},
-					},
-					"auditEventsSelection": {
-						SchemaProps: spec.SchemaProps{
-							Description: "AuditEventsSelection is used to specify which audit events will be gathered. Only used if audit logs are gathered in the report.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.AuditEventsSelection"),
 						},
 					},
 					"schedule": {
@@ -6899,7 +6893,7 @@ func schema_libcalico_go_lib_apis_v3_ReportSpec(ref common.ReferenceCallback) co
 			},
 		},
 		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.AuditEventsSelection", "github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsSelection"},
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsSelection"},
 	}
 }
 

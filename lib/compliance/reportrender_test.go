@@ -72,7 +72,7 @@ pod-abcdef,ns1,false,true,false,NetworkPolicy(ns1/np1)|GlobalNetworkPolicy(gnp1)
 		Expect(matches).To(Equal(rendered))
 	})
 
-	It("inventory-endpoints report rendering flow logs", func() {
+	It("network access report rendering flow logs", func() {
 		tmpl := `name,prefix,ingress,egress
 {{ range .Endpoints -}}
   {{ .Endpoint }},{{ flowsPrefix . }},{{ join ";" (flowsIngress .) }},{{ join ";" (flowsEgress .) }}
