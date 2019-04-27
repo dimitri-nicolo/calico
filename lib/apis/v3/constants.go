@@ -55,4 +55,6 @@ const (
 	KindK8sEndpoints = "K8sEndpoints"
 	KindK8sService   = "K8sService"
 	KindK8sPod       = "Pod"
+	KindFlowPublic   = "Public"
+	KindFlowPrivate  = "Private"
 )

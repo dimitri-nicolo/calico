@@ -17,16 +17,18 @@ package compliance
 import (
 	"bytes"
 	"fmt"
+	"reflect"
 	"strings"
 	"text/template"
 	"time"
+
+	"github.com/Masterminds/sprig"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/apis/audit"
 
-	"github.com/Masterminds/sprig"
-	yaml "github.com/projectcalico/go-yaml-wrapper"
+	"github.com/projectcalico/go-yaml-wrapper"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 )
 
@@ -223,14 +225,49 @@ var (
 		Flows: []api.EndpointsReportFlow{FlowSample1, FlowSample2, FlowSample3},
 	}
 
-	ReportDataNilNamespace = api.ReportData{
-		ReportName: "nil-namespace-serviceaccount",
+	// These are used by the validation code to check that any nil entries will not break the template. Note that
+	// the ReportName is being sneakily used to specify which field in the template is nil.
+	ReportDataNilEntries = []api.ReportData{{
+		ReportName: "ReportSpec.EndpointsSelection",
+		ReportSpec: api.ReportSpec{
+			EndpointsSelection: nil,
+		},
+		ReportTypeSpec: api.ReportTypeSpec{
+			AuditEventsSelection: &api.AuditEventsSelection{},
+		},
+	}, {
+		ReportName: "ReportSpec.EndpointsSelection.Namespaces",
 		ReportSpec: api.ReportSpec{
 			EndpointsSelection: &api.EndpointsSelection{
 				EndpointSelector: "lbl == 'lbl-val'",
+				ServiceAccounts:  &api.NamesAndLabelsMatch{},
 			},
 		},
-	}
+		ReportTypeSpec: api.ReportTypeSpec{
+			AuditEventsSelection: &api.AuditEventsSelection{},
+		},
+	}, {
+		ReportName: "ReportSpec.EndpointsSelection.ServiceAccounts",
+		ReportSpec: api.ReportSpec{
+			EndpointsSelection: &api.EndpointsSelection{
+				EndpointSelector: "lbl == 'lbl-val'",
+				Namespaces:       &api.NamesAndLabelsMatch{},
+			},
+		},
+		ReportTypeSpec: api.ReportTypeSpec{
+			AuditEventsSelection: &api.AuditEventsSelection{},
+		},
+	}, {
+		ReportName: "ReportTypeSpec.AuditEventsSelection",
+		ReportSpec: api.ReportSpec{
+			EndpointsSelection: &api.EndpointsSelection{
+				EndpointSelector: "lbl == 'lbl-val'",
+				Namespaces:       &api.NamesAndLabelsMatch{},
+				ServiceAccounts:  &api.NamesAndLabelsMatch{},
+			},
+		},
+		ReportTypeSpec: api.ReportTypeSpec{},
+	}}
 )
 
 //
@@ -317,6 +354,10 @@ func templateFuncs(reportData *api.ReportData) template.FuncMap {
 	funcs["flowsPrefix"] = flowsPrefix
 	funcs["flowsIngress"] = flowsIngress
 	funcs["flowsEgress"] = flowsEgress
+
+	// The csv functions allow a template to be defined that constructs a CSV column by column and then
+	// renders after. This makes the template look significantly better and is much easier to read.
+	funcs["csv"] = func() *csv { return &csv{funcs: funcs} }
 
 	return template.FuncMap(funcs)
 }
@@ -409,4 +450,42 @@ func reportEndpointToFlowEndpoint(ep api.EndpointsReportEndpoint) (unaggregated 
 type endpointFlowLogs struct {
 	ingress []api.FlowEndpoint
 	egress  []api.FlowEndpoint
+}
+
+// cvs encapsulates the headings and value template strings.
+type csv struct {
+	funcs    template.FuncMap
+	headings []string
+	values   []string
+}
+
+func (c *csv) AddColumn(heading, value string) *csv {
+	c.headings = append(c.headings, heading)
+	c.values = append(c.values, value)
+	return c
+}
+
+// Render renders a csv from the heading/value/function information stored in the csv struct.
+func (c *csv) Render(data interface{}) (string, error) {
+	var templateString string
+
+	val := reflect.ValueOf(data)
+	switch val.Kind() {
+	case reflect.Array, reflect.Slice:
+		templateString = strings.Join(c.headings, ",") + "\n{{ range . }}" + strings.Join(c.values, ",") + "\n{{ end }}"
+	default:
+		templateString = strings.Join(c.headings, ",") + "\n" + strings.Join(c.values, ",")
+	}
+
+	templ, err := template.New("csv-template").Funcs(c.funcs).Parse(templateString)
+	if err != nil {
+		return "", err
+	}
+
+	var b bytes.Buffer
+	err = templ.Execute(&b, data)
+	if err != nil {
+		return "", err
+	}
+	return b.String(), nil
 }
