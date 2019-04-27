@@ -33,11 +33,55 @@ var _ = Describe("ReportTemplate Renderer", func() {
 		Expect(matches).To(Equal(rendered))
 	})
 
+	It("inventory-summary report rendering using csv", func() {
+		tmpl := `{{ $c := csv }}
+{{- $c := $c.AddColumn "startTime"                             "{{ dateRfc3339 .StartTime }}" }}
+{{- $c := $c.AddColumn "endTime"                               "{{ dateRfc3339 .EndTime }}" }}
+{{- $c := $c.AddColumn "endpointSelector"                      "{{ .ReportSpec.EndpointsSelection.EndpointSelector }}" }}
+{{- $c := $c.AddColumn "namespaceSelector"                     "{{ .ReportSpec.EndpointsSelection.Namespaces.Selector }}" }}
+{{- $c := $c.AddColumn "serviceAccountSelectors"               "{{ .ReportSpec.EndpointsSelection.ServiceAccounts.Selector }}" }}
+{{- $c := $c.AddColumn "endpointsNumInScope"                   "{{ .EndpointsSummary.NumTotal }}" }}
+{{- $c := $c.AddColumn "endpointsNumIngressProtected"          "{{ .EndpointsSummary.NumIngressProtected }}" }}
+{{- $c := $c.AddColumn "endpointsNumEgressProtected"           "{{ .EndpointsSummary.NumEgressProtected }}" }}
+{{- $c := $c.AddColumn "endpointsNumIngressFromInternet"       "{{ .EndpointsSummary.NumIngressFromInternet }}" }}
+{{- $c := $c.AddColumn "endpointsNumEgressToInternet"          "{{ .EndpointsSummary.NumEgressToInternet }}" }}
+{{- $c := $c.AddColumn "endpointsNumIngressFromOtherNamespace" "{{ .EndpointsSummary.NumIngressFromOtherNamespace }}" }}
+{{- $c := $c.AddColumn "endpointsNumEgressToOtherNamespace"    "{{ .EndpointsSummary.NumEgressToOtherNamespace }}" }}
+{{- $c := $c.AddColumn "endpointsNumEnvoyEnabled"              "{{ .EndpointsSummary.NumEnvoyEnabled }}" }}
+{{- $c.Render . }}`
+		rendered := `startTime,endTime,endpointSelector,namespaceSelector,serviceAccountSelectors,endpointsNumInScope,endpointsNumIngressProtected,endpointsNumEgressProtected,endpointsNumIngressFromInternet,endpointsNumEgressToInternet,endpointsNumIngressFromOtherNamespace,endpointsNumEgressToOtherNamespace,endpointsNumEnvoyEnabled
+2019-04-01T00:00:00Z,2019-04-01T10:00:00Z,lbl == 'lbl-val',endpoint-namespace-selector,serviceaccount-selector,1,10,100,1000,9000,900,90,9`
+
+		matches, err := compliance.RenderTemplate(tmpl, &compliance.ReportDataSample)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(matches).To(Equal(rendered), matches)
+	})
+
 	It("inventory-endpoints report rendering", func() {
 		tmpl := `name,namespace,ingressProtected,egressProtected,envoyEnabled,appliedPolicies,services
 {{ range .Endpoints -}}
   {{ .Endpoint.Name }},{{ .Endpoint.Namespace }},{{ .IngressProtected }},{{ .EgressProtected }},{{ .EnvoyEnabled }},{{ join ";" .AppliedPolicies }},{{ join ";" .Services }}
 {{ end }}`
+		rendered := `name,namespace,ingressProtected,egressProtected,envoyEnabled,appliedPolicies,services
+hep1,,false,true,false,GlobalNetworkPolicy(gnp1),
+pod-abcdef,ns1,false,true,false,NetworkPolicy(ns1/np1);GlobalNetworkPolicy(gnp1),Service.v1(n21/svc1);Service.v1(n22/svc2)
+`
+
+		matches, err := compliance.RenderTemplate(tmpl, &compliance.ReportDataSample)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(matches).To(Equal(rendered))
+	})
+
+	It("inventory-endpoints report rendering using csv", func() {
+		tmpl := `{{ $c := csv }}
+{{- $c := $c.AddColumn "name"             "{{ .Endpoint.Name }}" }}
+{{- $c := $c.AddColumn "namespace"        "{{ .Endpoint.Namespace }}" }}
+{{- $c := $c.AddColumn "ingressProtected" "{{ .IngressProtected }}" }}
+{{- $c := $c.AddColumn "egressProtected"  "{{ .EgressProtected }}" }}
+{{- $c := $c.AddColumn "envoyEnabled"     "{{ .EnvoyEnabled }}" }}
+{{- $c := $c.AddColumn "appliedPolicies"  "{{ join \";\" .AppliedPolicies }}" }}
+{{- $c := $c.AddColumn "services"         "{{ join \";\" .Services }}" }}
+{{- $c.Render .Endpoints }}`
 		rendered := `name,namespace,ingressProtected,egressProtected,envoyEnabled,appliedPolicies,services
 hep1,,false,true,false,GlobalNetworkPolicy(gnp1),
 pod-abcdef,ns1,false,true,false,NetworkPolicy(ns1/np1);GlobalNetworkPolicy(gnp1),Service.v1(n21/svc1);Service.v1(n22/svc2)
@@ -72,7 +116,7 @@ pod-abcdef,ns1,false,true,false,NetworkPolicy(ns1/np1)|GlobalNetworkPolicy(gnp1)
 		Expect(matches).To(Equal(rendered))
 	})
 
-	It("inventory-endpoints report rendering flow logs", func() {
+	It("network access report rendering flow logs", func() {
 		tmpl := `name,prefix,ingress,egress
 {{ range .Endpoints -}}
   {{ .Endpoint }},{{ flowsPrefix . }},{{ join ";" (flowsIngress .) }},{{ join ";" (flowsEgress .) }}

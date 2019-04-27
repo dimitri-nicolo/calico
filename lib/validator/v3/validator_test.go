@@ -2399,7 +2399,7 @@ func init() {
 					UISummaryTemplate: api.ReportTemplate{
 						Name: "uist",
 						Template: `ReportName,EndpointSelector
-{{ .ReportName }},{{ .ReportSpec.EndpointsSelection.EndpointSelector }}`,
+{{ .ReportName }},{{ .ReportSpec.EndpointsSelection }}`,
 					},
 				},
 			},
@@ -2438,7 +2438,7 @@ func init() {
 			},
 			false,
 		),
-		Entry("Catch invalid templates using nil data",
+		Entry("Catch invalid templates using nil ReportSpec.EndpointsSelection data",
 			&api.GlobalReportType{
 				ObjectMeta: v1.ObjectMeta{Name: "grt"},
 				Spec: api.ReportTypeSpec{
@@ -2449,6 +2449,56 @@ func init() {
 				},
 			},
 			false,
+		),
+		Entry("Catch invalid templates using nil ReportSpec.EndpointsSelection.Namespaces data",
+			&api.GlobalReportType{
+				ObjectMeta: v1.ObjectMeta{Name: "grt"},
+				Spec: api.ReportTypeSpec{
+					UISummaryTemplate: api.ReportTemplate{
+						Name:     "report-nil-namespace",
+						Template: "{{ if .ReportSpec.EndpointsSelection }}{{ .ReportSpec.EndpointsSelection.Namespaces.Names }}{{ end }}",
+					},
+				},
+			},
+			false,
+		),
+		Entry("Catch invalid templates using nil ReportSpec.EndpointsSelection.ServiceAccounts data",
+			&api.GlobalReportType{
+				ObjectMeta: v1.ObjectMeta{Name: "grt"},
+				Spec: api.ReportTypeSpec{
+					UISummaryTemplate: api.ReportTemplate{
+						Name:     "report-nil-namespace",
+						Template: "{{ if .ReportSpec.EndpointsSelection }}{{ .ReportSpec.EndpointsSelection.ServiceAccounts.Names }}{{ end }}",
+					},
+				},
+			},
+			false,
+		),
+		Entry("Catch invalid templates using nil ReportTypeSpec.AuditEventsSelection data",
+			&api.GlobalReportType{
+				ObjectMeta: v1.ObjectMeta{Name: "grt"},
+				Spec: api.ReportTypeSpec{
+					UISummaryTemplate: api.ReportTemplate{
+						Name:     "report-nil-namespace",
+						Template: "{{ .ReportTypeSpec.AuditEventsSelection.Resources }}",
+					},
+				},
+			},
+			false,
+		),
+		Entry("Check templates with valid nil handling",
+			&api.GlobalReportType{
+				ObjectMeta: v1.ObjectMeta{Name: "grt"},
+				Spec: api.ReportTypeSpec{
+					UISummaryTemplate: api.ReportTemplate{
+						Name: "report-nil-namespace",
+						Template: "{{ if .ReportSpec.EndpointsSelection }}{{ if .ReportSpec.EndpointsSelection.Namespaces}}{{ .ReportSpec.EndpointsSelection.Namespaces.Names }}{{ end }}{{ end }}" +
+							"{{ if .ReportSpec.EndpointsSelection }}{{ if .ReportSpec.EndpointsSelection.ServiceAccounts}}{{ .ReportSpec.EndpointsSelection.ServiceAccounts.Names }}{{ end }}{{ end }}" +
+							"{{ if .ReportTypeSpec.AuditEventsSelection }}{{ .ReportTypeSpec.AuditEventsSelection.Resources }}{{ end }}",
+					},
+				},
+			},
+			true,
 		),
 
 		// GlobalReport

@@ -351,8 +351,10 @@ func (f FlowEndpoint) String() string {
 	case KindK8sPod:
 		// We add in the v1 version to be inline with the ResourceID printed format.
 		return fmt.Sprintf("%s.v1(%s/%s)", f.Kind, f.Namespace, f.Name)
-	case KindHostEndpoint:
+	case KindHostEndpoint, KindGlobalNetworkSet:
 		return fmt.Sprintf("%s(%s)", f.Kind, f.Name)
+	case KindFlowPublic, KindFlowPrivate:
+		return f.Kind
 	}
 	return fmt.Sprintf("%s(%s/%s)", f.Kind, f.Namespace, f.Name)
 }

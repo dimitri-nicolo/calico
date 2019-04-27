@@ -48,7 +48,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalReport tests", testutils.Datastore
 	name1 := "report-1"
 	spec1 := apiv3.ReportSpec{
 		ReportType: reportTypeName,
-		EndpointsSelection: apiv3.EndpointsSelection{
+		EndpointsSelection: &apiv3.EndpointsSelection{
 			EndpointSelector: "eps == 'report-eps1'",
 			Namespaces: &apiv3.NamesAndLabelsMatch{
 				Names:    []string{"report-ns-n1"},
@@ -57,12 +57,6 @@ var _ = testutils.E2eDatastoreDescribe("GlobalReport tests", testutils.Datastore
 			ServiceAccounts: &apiv3.NamesAndLabelsMatch{
 				Names:    []string{"report-sa-n1"},
 				Selector: "sa == 'report-sa-s1'",
-			},
-		},
-		AuditEventsSelection: apiv3.AuditEventsSelection{
-			Resources: []apiv3.ResourceID{
-				{Name: "report-aes-n1",
-					Namespace: "report-aes-ns1"},
 			},
 		},
 		Schedule: "0 0 * * *",
@@ -74,7 +68,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalReport tests", testutils.Datastore
 	name2 := "report-2"
 	spec2 := apiv3.ReportSpec{
 		ReportType: reportTypeName,
-		EndpointsSelection: apiv3.EndpointsSelection{
+		EndpointsSelection: &apiv3.EndpointsSelection{
 			EndpointSelector: "eps == 'report-eps2'",
 			Namespaces: &apiv3.NamesAndLabelsMatch{
 				Names:    []string{"report-ns-n2"},
@@ -83,12 +77,6 @@ var _ = testutils.E2eDatastoreDescribe("GlobalReport tests", testutils.Datastore
 			ServiceAccounts: &apiv3.NamesAndLabelsMatch{
 				Names:    []string{"report-sa-n2"},
 				Selector: "sa == 'report-sa-s2'",
-			},
-		},
-		AuditEventsSelection: apiv3.AuditEventsSelection{
-			Resources: []apiv3.ResourceID{
-				{Name: "report-aes-n2",
-					Namespace: "report-aes-ns2"},
 			},
 		},
 		Schedule: "0 0 * * *",

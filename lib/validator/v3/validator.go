@@ -1319,24 +1319,27 @@ func validateReportTemplate(structLevel validator.StructLevel) {
 		_, err := compliance.RenderTemplate(tmpl, &compliance.ReportDataSample)
 		if err != nil {
 			structLevel.ReportError(
-				reflect.ValueOf(rt.Name),
-				"ReportTemplate",
-				"",
+				reflect.ValueOf(rt.Template),
+				"Template",
+				"template",
 				reason("Invalid template defined in: "+rt.Name),
 				"",
 			)
 		}
 
 		// Run past nil pointer data to see if the template is valid.
-		_, err = compliance.RenderTemplate(tmpl, &compliance.ReportDataNilNamespace)
-		if err != nil {
-			structLevel.ReportError(
-				reflect.ValueOf(rt.Name),
-				"ReportTemplate",
-				"",
-				reason("Template contains nil-pointer in: "+rt.Name),
-				"",
-			)
+		for i := range compliance.ReportDataNilEntries {
+			_, err = compliance.RenderTemplate(tmpl, &compliance.ReportDataNilEntries[i])
+			if err != nil {
+				structLevel.ReportError(
+					reflect.ValueOf(rt.Name),
+					"Template",
+					"template",
+					reason("Template does not handle nil pointer in reportData field: "+
+						compliance.ReportDataNilEntries[i].ReportName),
+					"",
+				)
+			}
 		}
 	}
 }
