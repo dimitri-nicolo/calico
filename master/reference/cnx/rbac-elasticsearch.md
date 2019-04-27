@@ -9,7 +9,7 @@ the page will not display any data from that index.
  
 ### Elasticsearch indexes and RBAC
 
-In {{site.prodname}}, resources are associated with the Kubernetes API group `elasticsearch.tigera.io`.
+In {{site.prodname}}, resources are associated with the Kubernetes API group `lma.tigera.io`.
 
 | Elasticsearch Index          | Kubernetes RBAC resource name | Description                                                                                                                     |
 |------------------------------|-------------------------------|---------------------------------------------------------------------------------------------------------------------------------|
@@ -19,9 +19,9 @@ In {{site.prodname}}, resources are associated with the Kubernetes API group `el
 | tigera_secure_ee_audit_kube  | audit_kube                    | Access to K8s Audit logs                                                                                                        |
 | tigera_secure_ee_events      | events                        | Access to intrusion detection events                                                                                            |
 
-Each Elasticsearch index used within Tigera Secure EE is mapped to a specific RBAC resource name within the `elasticsearch.tigera.io` API group.
+Each Elasticsearch index used within Tigera Secure EE is mapped to a specific RBAC resource name within the `lma.tigera.io` API group.
 
-> **Note**: The `elasticsearch.tigera.io` API group is only used for RBAC and is not backed by an actual API.
+> **Note**: The `lma.tigera.io` API group is only used for RBAC and is not backed by an actual API.
 {: .alert .alert-info}
 
 ### Users with custom permissions
@@ -35,7 +35,7 @@ apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
   name: audit-ee-only
 rules:
-- apiGroups: ["elasticsearch.tigera.io"]
+- apiGroups: ["lma.tigera.io"]
   resources: ["index"]
   resourceNames: ["audit_ee"]
   verbs: ["get"]
@@ -67,7 +67,7 @@ Once you have `ClusterRole`s and `ClusterRoleBinding`s setup, you can verify use
 Creating a `SubjectAccessReview` returns YAML output that tells you whether the user is authorized.
 
 In the `SubjectAccessReview` spec:
-- `group` should be set to `elasticsearch.tigera.io`
+- `group` should be set to `lma.tigera.io`
 - `resource` should be set to `index` 
 - `verb` should be set to `get` 
 - and `resource` should be set to a Kubernetes RBAC resource name (as defined in the table above)
@@ -81,7 +81,7 @@ apiVersion: authorization.k8s.io/v1
 kind: SubjectAccessReview
 spec:
   resourceAttributes:
-    group: elasticsearch.tigera.io
+    group: lma.tigera.io
     resource: index
     name: audit_ee
     verb: get
@@ -98,7 +98,7 @@ metadata:
   creationTimestamp: null
 spec:
   resourceAttributes:
-    group: elasticsearch.tigera.io
+    group: lma.tigera.io
     name: audit_ee
     resource: index
     verb: get
@@ -119,7 +119,7 @@ apiVersion: authorization.k8s.io/v1
 kind: SubjectAccessReview
 spec:
   resourceAttributes:
-    group: elasticsearch.tigera.io
+    group: lma.tigera.io
     resource: index
     name: ""
     verb: get
@@ -136,7 +136,7 @@ metadata:
   creationTimestamp: null
 spec:
   resourceAttributes:
-    group: elasticsearch.tigera.io
+    group: lma.tigera.io
     resource: index
     verb: get
   user: bob
@@ -161,7 +161,7 @@ apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
   name: allow-all-es
 rules:
-- apiGroups: ["elasticsearch.tigera.io"]
+- apiGroups: ["lma.tigera.io"]
   resources: ["index"]
   resourceNames: []
   verbs: ["get"]

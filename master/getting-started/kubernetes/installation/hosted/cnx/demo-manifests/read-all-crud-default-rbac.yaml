@@ -19,9 +19,13 @@ metadata:
 rules:
 - apiGroups: [""]
   resources: ["services/proxy"]
-  resourceNames: ["https:cnx-api:8080", "calico-node-prometheus:9090", "https:elasticsearch-tigera-elasticsearch:8443", "elasticsearch-tigera-elasticsearch:9200"]
+  resourceNames: ["https:cnx-api:8080", "calico-node-prometheus:9090"]
   verbs: ["get","create"]
-
+# Access to flow logs, audit logs, and statistics
+- apiGroups: ["lma.tigera.io"]
+  resources: ["index"]
+  resourceNames: ["flows", "audit*", "events"]
+  verbs: ["get"]
 ---
 
 kind: ClusterRoleBinding
