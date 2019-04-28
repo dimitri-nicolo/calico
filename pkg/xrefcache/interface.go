@@ -42,7 +42,7 @@ type XrefCache interface {
 
 	// RegisterInScopeEndpoints registers an endpoints selector which selects which endpoints are considered in-scope.
 	// The EventInScope flag will be set on all updates for events from in-scope endpoints.
-	RegisterInScopeEndpoints(selection apiv3.EndpointsSelection) error
+	RegisterInScopeEndpoints(selection *apiv3.EndpointsSelection) error
 
 	// GetCachedResourceIDs is a helper method (primarily used for testing), to obtain the current list of resource
 	// IDs cached for a particular resource kind.
