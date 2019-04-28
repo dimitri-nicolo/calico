@@ -124,15 +124,18 @@ func (r *replayer) replay(ctx context.Context, kind *metav1.TypeMeta, from, to *
 		}
 
 		clog := log.WithFields(log.Fields{"auditID": ev.Event.AuditID, "verb": ev.Event.Verb})
+
 		// Determine proper resource to update for internal cache.
 		res, err := event.ExtractResourceFromAuditEvent(ev.Event)
 		if err != nil {
-			return err
+			// Inability to parse the audit event should not terminate the replayer. Best we can do here is log.
+			clog.WithError(err).Error("Unable to parse audit event - skipping")
+			continue
 		}
 
 		// Nil resource and nil error means a status object.
 		if res == nil {
-			clog.Info("passing on a status event")
+			clog.Info("No resource in audit event (maybe a status event) - skipping")
 			continue
 		}
 
@@ -153,20 +156,19 @@ func (r *replayer) replay(ctx context.Context, kind *metav1.TypeMeta, from, to *
 			if ok {
 				oldResVer, err := resources.GetResourceVersion(oldRes)
 				if err != nil {
-					clog.Warn("Failed to convert resourceVersion to number. Refusing to process event.")
+					clog.WithError(err).Error("Failed to convert resourceVersion to number - skipping")
 					continue
 				}
 				newResVer, err := resources.GetResourceVersion(res)
 				if err != nil {
-					clog.Warn("Failed to convert resourceVersion to number. Refusing to process event.")
+					clog.WithError(err).Error("Failed to convert resourceVersion to number - skipping")
 					continue
 				}
 				if oldResVer > newResVer {
-					clog.Info("Resource version conflict detected. Refusing to process event.")
+					clog.Info("Resource version conflict detected - skipping")
 					continue
 				}
 			}
-
 			r.resources[kind2][id] = res
 		case VerbDelete:
 			clog.Debug("deleting event")
