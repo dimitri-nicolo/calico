@@ -215,7 +215,7 @@ func (c *xrefCache) GetCachedResourceIDs(kind metav1.TypeMeta) []apiv3.ResourceI
 }
 
 // RegisterInScopeEndpoints implements the XrefCache interface.
-func (c *xrefCache) RegisterInScopeEndpoints(selection apiv3.EndpointsSelection) error {
+func (c *xrefCache) RegisterInScopeEndpoints(selection *apiv3.EndpointsSelection) error {
 	resId, sel, err := calculateInScopeEndpointsSelector(selection)
 	if err != nil {
 		return err

@@ -68,8 +68,20 @@ var _ = Describe("xref cache in-scope callbacks", func() {
 		}
 	})
 
+	It("should flag in-scope endpoints with no endpoint selector", func() {
+		tester.RegisterInScopeEndpoints(nil)
+		tester.OnStatusUpdate(syncer.StatusUpdate{
+			Type: syncer.StatusTypeInSync,
+		})
+		Expect(cb.updated).To(HaveLen(4))
+		Expect(cb.updated).To(HaveKey(podID1))
+		Expect(cb.updated).To(HaveKey(podID2))
+		Expect(cb.updated).To(HaveKey(podID3))
+		Expect(cb.updated).To(HaveKey(podID4))
+	})
+
 	It("should flag in-scope endpoints matching endpoint selector", func() {
-		tester.RegisterInScopeEndpoints(apiv3.EndpointsSelection{
+		tester.RegisterInScopeEndpoints(&apiv3.EndpointsSelection{
 			EndpointSelector: tester.GetSelector(Select1),
 		})
 		tester.OnStatusUpdate(syncer.StatusUpdate{
@@ -81,7 +93,7 @@ var _ = Describe("xref cache in-scope callbacks", func() {
 	})
 
 	It("should flag in-scope endpoints matching endpoint selector and namespace name", func() {
-		tester.RegisterInScopeEndpoints(apiv3.EndpointsSelection{
+		tester.RegisterInScopeEndpoints(&apiv3.EndpointsSelection{
 			EndpointSelector: tester.GetSelector(Select1),
 			Namespaces: &apiv3.NamesAndLabelsMatch{
 				Names: []string{nsID1.Name},
@@ -95,7 +107,7 @@ var _ = Describe("xref cache in-scope callbacks", func() {
 	})
 
 	It("should flag in-scope endpoints matching endpoint selector and namespace selector", func() {
-		tester.RegisterInScopeEndpoints(apiv3.EndpointsSelection{
+		tester.RegisterInScopeEndpoints(&apiv3.EndpointsSelection{
 			EndpointSelector: tester.GetSelector(Select1),
 			Namespaces: &apiv3.NamesAndLabelsMatch{
 				Selector: tester.GetSelector(Select2),
@@ -114,7 +126,7 @@ var _ = Describe("xref cache in-scope callbacks", func() {
 	})
 
 	It("should flag in-scope endpoints matching endpoint selector and service account name", func() {
-		tester.RegisterInScopeEndpoints(apiv3.EndpointsSelection{
+		tester.RegisterInScopeEndpoints(&apiv3.EndpointsSelection{
 			EndpointSelector: tester.GetSelector(Select2),
 			ServiceAccounts: &apiv3.NamesAndLabelsMatch{
 				Names: []string{saID1.Name},
@@ -129,7 +141,7 @@ var _ = Describe("xref cache in-scope callbacks", func() {
 	})
 
 	It("should flag in-scope endpoints by service account selector", func() {
-		tester.RegisterInScopeEndpoints(apiv3.EndpointsSelection{
+		tester.RegisterInScopeEndpoints(&apiv3.EndpointsSelection{
 			ServiceAccounts: &apiv3.NamesAndLabelsMatch{
 				Selector: tester.GetSelector(Select2),
 			},
@@ -156,7 +168,7 @@ var _ = Describe("xref cache in-scope callbacks", func() {
 	})
 
 	It("should flag in-scope endpoints matching endpoint selector and service account selector", func() {
-		tester.RegisterInScopeEndpoints(apiv3.EndpointsSelection{
+		tester.RegisterInScopeEndpoints(&apiv3.EndpointsSelection{
 			EndpointSelector: tester.GetSelector(Select1),
 			ServiceAccounts: &apiv3.NamesAndLabelsMatch{
 				Selector: tester.GetSelector(Select2),
@@ -171,7 +183,7 @@ var _ = Describe("xref cache in-scope callbacks", func() {
 	})
 
 	It("should flag in-scope endpoints multiple service account names", func() {
-		tester.RegisterInScopeEndpoints(apiv3.EndpointsSelection{
+		tester.RegisterInScopeEndpoints(&apiv3.EndpointsSelection{
 			ServiceAccounts: &apiv3.NamesAndLabelsMatch{
 				Names: []string{saID1.Name, saID2.Name},
 			},

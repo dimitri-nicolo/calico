@@ -25,15 +25,15 @@ var (
 
 // calculateInScopeEndpointsSelector converts an EndpointsSelection into a single selector string and the appropriate
 // in-scope resource ID to use.
-func calculateInScopeEndpointsSelector(e apiv3.EndpointsSelection) (apiv3.ResourceID, string, error) {
+func calculateInScopeEndpointsSelector(e *apiv3.EndpointsSelection) (apiv3.ResourceID, string, error) {
 	// Start of with the endpoint selector (if specified)
 	var updated string
-	if e.EndpointSelector != "" {
+	if e != nil && e.EndpointSelector != "" {
 		updated = fmt.Sprintf("(%s)", e.EndpointSelector)
 	}
 
 	// If the namespace selector is specified then include that in our selector, ANDing the selectors together.
-	if e.Namespaces != nil {
+	if e != nil && e.Namespaces != nil {
 		sel := createSelector(*e.Namespaces, conversion.NamespaceLabelPrefix, apiv3.LabelNamespace)
 		if updated != "" {
 			updated = fmt.Sprintf("%s && %s", updated, sel)
@@ -42,7 +42,7 @@ func calculateInScopeEndpointsSelector(e apiv3.EndpointsSelection) (apiv3.Resour
 		}
 	}
 
-	if e.ServiceAccounts != nil {
+	if e != nil && e.ServiceAccounts != nil {
 		sel := createSelector(*e.ServiceAccounts, conversion.ServiceAccountLabelPrefix, apiv3.LabelServiceAccount)
 		if updated != "" {
 			updated = fmt.Sprintf("%s && %s", updated, sel)

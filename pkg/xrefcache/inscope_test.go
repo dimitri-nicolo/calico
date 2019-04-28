@@ -11,7 +11,7 @@ import (
 var _ = Describe("inscope endpoint helpers", func() {
 	// Ensure  the client resource list is in-sync with the resource helper.
 	It("Empty selectors selects everything", func() {
-		r, s, err := calculateInScopeEndpointsSelector(apiv3.EndpointsSelection{})
+		r, s, err := calculateInScopeEndpointsSelector(&apiv3.EndpointsSelection{})
 		Expect(err).ToNot(HaveOccurred())
 		Expect(s).To(Equal("all()"))
 		Expect(r.Name).To(Equal("all()"))
@@ -19,7 +19,7 @@ var _ = Describe("inscope endpoint helpers", func() {
 	})
 
 	It("Handles EP selector but no NS or SA", func() {
-		_, s, err := calculateInScopeEndpointsSelector(apiv3.EndpointsSelection{
+		_, s, err := calculateInScopeEndpointsSelector(&apiv3.EndpointsSelection{
 			EndpointSelector: "x == \"a\"",
 		})
 		Expect(err).ToNot(HaveOccurred())
@@ -28,7 +28,7 @@ var _ = Describe("inscope endpoint helpers", func() {
 
 	It("Handles NS names and labels match but no EP or SA", func() {
 		By("calculating with no namespace selector or name")
-		_, s, err := calculateInScopeEndpointsSelector(apiv3.EndpointsSelection{
+		_, s, err := calculateInScopeEndpointsSelector(&apiv3.EndpointsSelection{
 			Namespaces: &apiv3.NamesAndLabelsMatch{},
 		})
 		By("checking it does not do a namespace check")
@@ -36,7 +36,7 @@ var _ = Describe("inscope endpoint helpers", func() {
 		Expect(s).To(Equal("all()"))
 
 		By("calculating with namespace selector all()")
-		_, s, err = calculateInScopeEndpointsSelector(apiv3.EndpointsSelection{
+		_, s, err = calculateInScopeEndpointsSelector(&apiv3.EndpointsSelection{
 			Namespaces: &apiv3.NamesAndLabelsMatch{
 				Selector: "all()",
 			},
@@ -46,7 +46,7 @@ var _ = Describe("inscope endpoint helpers", func() {
 		Expect(s).To(Equal("(all() && has(projectcalico.org/namespace))"))
 
 		By("calculating with namespace names")
-		_, s, err = calculateInScopeEndpointsSelector(apiv3.EndpointsSelection{
+		_, s, err = calculateInScopeEndpointsSelector(&apiv3.EndpointsSelection{
 			Namespaces: &apiv3.NamesAndLabelsMatch{
 				Names: []string{"ns1"},
 			},
@@ -56,7 +56,7 @@ var _ = Describe("inscope endpoint helpers", func() {
 		Expect(s).To(Equal("projectcalico.org/namespace in {\"ns1\"}"))
 
 		By("calculating with namespace selector and names")
-		_, s, err = calculateInScopeEndpointsSelector(apiv3.EndpointsSelection{
+		_, s, err = calculateInScopeEndpointsSelector(&apiv3.EndpointsSelection{
 			Namespaces: &apiv3.NamesAndLabelsMatch{
 				Selector: "x == \"a\"",
 				Names:    []string{"ns1"},
@@ -69,7 +69,7 @@ var _ = Describe("inscope endpoint helpers", func() {
 
 	It("Handles SA names and labels match but no EP or NS", func() {
 		By("calculating with no service account selector or name")
-		_, s, err := calculateInScopeEndpointsSelector(apiv3.EndpointsSelection{
+		_, s, err := calculateInScopeEndpointsSelector(&apiv3.EndpointsSelection{
 			ServiceAccounts: &apiv3.NamesAndLabelsMatch{},
 		})
 		By("checking it does not do a service account check")
@@ -77,7 +77,7 @@ var _ = Describe("inscope endpoint helpers", func() {
 		Expect(s).To(Equal("all()"))
 
 		By("calculating with service account selector all()")
-		_, s, err = calculateInScopeEndpointsSelector(apiv3.EndpointsSelection{
+		_, s, err = calculateInScopeEndpointsSelector(&apiv3.EndpointsSelection{
 			ServiceAccounts: &apiv3.NamesAndLabelsMatch{
 				Selector: "all()",
 			},
@@ -87,7 +87,7 @@ var _ = Describe("inscope endpoint helpers", func() {
 		Expect(s).To(Equal("(all() && has(projectcalico.org/serviceaccount))"))
 
 		By("calculating with service account names")
-		_, s, err = calculateInScopeEndpointsSelector(apiv3.EndpointsSelection{
+		_, s, err = calculateInScopeEndpointsSelector(&apiv3.EndpointsSelection{
 			ServiceAccounts: &apiv3.NamesAndLabelsMatch{
 				Names: []string{"sa1"},
 			},
@@ -97,7 +97,7 @@ var _ = Describe("inscope endpoint helpers", func() {
 		Expect(s).To(Equal("projectcalico.org/serviceaccount in {\"sa1\"}"))
 
 		By("calculating with service account selector and names")
-		_, s, err = calculateInScopeEndpointsSelector(apiv3.EndpointsSelection{
+		_, s, err = calculateInScopeEndpointsSelector(&apiv3.EndpointsSelection{
 			ServiceAccounts: &apiv3.NamesAndLabelsMatch{
 				Selector: "x == \"a\"",
 				Names:    []string{"sa1"},
@@ -110,7 +110,7 @@ var _ = Describe("inscope endpoint helpers", func() {
 
 	It("Handles SA and NS match but no EP", func() {
 		By("calculating with SA and NS name match")
-		_, s, err := calculateInScopeEndpointsSelector(apiv3.EndpointsSelection{
+		_, s, err := calculateInScopeEndpointsSelector(&apiv3.EndpointsSelection{
 			Namespaces: &apiv3.NamesAndLabelsMatch{
 				Names: []string{"ns1"},
 			},
@@ -125,7 +125,7 @@ var _ = Describe("inscope endpoint helpers", func() {
 
 	It("Handles EP, SA and NS match", func() {
 		By("calculating with SA and NS name match")
-		_, s, err := calculateInScopeEndpointsSelector(apiv3.EndpointsSelection{
+		_, s, err := calculateInScopeEndpointsSelector(&apiv3.EndpointsSelection{
 			EndpointSelector: "x == \"y\"",
 			Namespaces: &apiv3.NamesAndLabelsMatch{
 				Names: []string{"ns1"},
