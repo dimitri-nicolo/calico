@@ -11,8 +11,14 @@ have their content type set to IPSet.  IPSet threat feeds can also be configured
 [global network set](./globalnetworkset), allowing you to use them as a dynamically-updating 
 blacklist by incorporating the global network set into network policy.
 
-For `calicoctl` commands that specify a resource type on the CLI, the following
-aliases are supported (all case insensitive): `globalthreatfeed`, `globalthreatfeeds`.
+For `calicoctl` [commands]({{site.url}}/{{page.version}}/reference/calicoctl/commands/), the following case-insensitive aliases 
+may be used to specify the resource type on the CLI:
+`globalthreatfeed`, `globalthreatfeeds`.
+
+For `kubectl` [commands](https://kubernetes.io/docs/reference/kubectl/overview/), the following case-insensitive aliases 
+may be used to specify the resource type on the CLI:
+`globalthreatfeed.projectcalico.org`, `globalthreatfeeds.projectcalico.org` and abbreviations such as 
+`globalthreatfeed.p` and `globalthreatfeeds.p`.
 
 ### Sample YAML
 

@@ -10,8 +10,11 @@ Each {{site.prodname}} endpoint or host endpoint can be assigned to zero or more
 
 Also see the [NetworkPolicy]({{site.url}}/{{page.version}}/reference/calicoctl/resources/networkpolicy) and [GlobalNetworkPolicy]({{site.url}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy) which provide an alternate way to select what policy is applied to an endpoint.
 
-For `calicoctl` [commands]({{site.url}}/{{page.version}}/reference/calicoctl/commands/) that specify a resource type on the CLI, the following
-aliases are supported (all case insensitive): `profile`, `profiles`, `pro`, `pros`.
+For `calicoctl` [commands]({{site.url}}/{{page.version}}/reference/calicoctl/commands/), the following case-insensitive aliases 
+may be used to specify the resource type on the CLI:
+`profile`, `profiles`, `pro`, `pros`.
+
+This resource is not supported in `kubectl`.
 
 ### Sample YAML
 

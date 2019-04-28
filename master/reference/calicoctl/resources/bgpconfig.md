@@ -6,8 +6,11 @@ canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/resources/bgpconf
 A BGP configuration resource (`BGPConfiguration`) represents BGP specific configuration options for the cluster or a
 specific node.
 
-For `calicoctl` [commands]({{site.url}}/{{page.version}}/reference/calicoctl/commands/) that specify a resource type on the CLI, the following
-aliases are supported (all case insensitive): `bgpconfiguration`, `bgpconfig`, `bgpconfigurations`, `bgpconfigs`.
+For `calicoctl` [commands]({{site.url}}/{{page.version}}/reference/calicoctl/commands/), the following case-insensitive aliases 
+may be used to specify the resource type on the CLI:
+`bgpconfiguration`, `bgpconfig`, `bgpconfigurations`, `bgpconfigs`.
+
+This resource is not supported in `kubectl`.
 
 ### Sample YAML
 

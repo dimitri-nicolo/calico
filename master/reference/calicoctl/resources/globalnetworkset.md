@@ -24,8 +24,14 @@ the CIDRs from any network sets that match the selector.
 > policy will see the kube-proxy's host's IP as the source instead of the real source.
 {: .alert .alert-danger}
 
-For `calicoctl` commands that specify a resource type on the CLI, the following
-aliases are supported (all case insensitive): `globalnetworkset`, `globalnetworksets`.
+For `calicoctl` [commands]({{site.url}}/{{page.version}}/reference/calicoctl/commands/), the following case-insensitive aliases 
+may be used to specify the resource type on the CLI:
+`globalnetworkset`, `globalnetworksets`.
+
+For `kubectl` [commands](https://kubernetes.io/docs/reference/kubectl/overview/), the following case-insensitive aliases 
+may be used to specify the resource type on the CLI:
+`globalnetworkset.projectcalico.org`, `globalnetworksets.projectcalico.org` and abbreviations such as 
+`globalnetworkset.p` and `globalnetworksets.p`.
 
 ### Sample YAML
 

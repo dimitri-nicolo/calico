@@ -13,9 +13,11 @@ match the name configured in the Node resource.
 By default, starting a `{{site.nodecontainer}}` instance will automatically create a node resource
 using the `hostname` of the compute host.
 
-For `calicoctl` [commands]({{site.url}}/{{page.version}}/reference/calicoctl/commands/) that
-specify a resource type on the CLI, the following
-aliases are supported (all case insensitive): `node`, `nodes`, `no`, `nos`.
+For `calicoctl` [commands]({{site.url}}/{{page.version}}/reference/calicoctl/commands/), the following case-insensitive aliases 
+may be used to specify the resource type on the CLI:
+`node`, `nodes`, `no`, `nos`.
+
+This resource is not supported in `kubectl`.
 
 ### Sample YAML
 

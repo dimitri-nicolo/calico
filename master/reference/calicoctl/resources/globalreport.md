@@ -7,8 +7,12 @@ A global report resource is a configuration for generating compliance reports. A
 - Specify the node(s) to include in report generation jobs
 - Enable/disable creation of new jobs for generating the report
 
-**Note**: Currently, global reports can only be configured using the `kubectl` command using these case-sensitive aliases:
-`globalreport.projectcalico.org`, `globalreports.projectcalico.org` and abbreviations.
+This resource is not supported in `calicoctl`.
+
+For `kubectl` [commands](https://kubernetes.io/docs/reference/kubectl/overview/), the following case-insensitive aliases 
+may be used to specify the resource type on the CLI:
+`globalreport.projectcalico.org`, `globalreports.projectcalico.org` and abbreviations such as 
+`globalreport.p` and `globalreports.p`.
 
 ### Sample YAML
 
@@ -67,7 +71,7 @@ spec:
 |----------------------|------------------------------------------------|----------|-----------------|-----------|
 | reportType           | Name of the report type which defines the report content. {{ site.prodname }} supported report types are inventory, network-access, and policy-audit. | Yes | inventory, network-access, audit | string |
 | endpointsSelection   | Specify which endpoints are in scope. If omitted, selects everything. ||| [EndpointsSelection](#endpointsselection) |
-| schedule             | Configure report frequency by specifying start and end time in [cron-format][cron-format]. Reports are started 30 minutes (configurable) after the scheduled value to allow enough time for data archival. Cron format enforces a maximum limit of two reports an hour. | Yes || string |
+| schedule             | Configure report frequency by specifying start and end time in [cron-format][cron-format]. Reports are started 30 minutes (configurable) after the scheduled value to allow enough time for data archival. A maximum limit of two schedules per hour is enforced. | Yes || string |
 | jobNodeSelector      | Specify the node(s) for scheduling the report jobs using selectors. ||| map |
 | suspend              | Disable future scheduled report jobs. In-flight reports are not affected. ||| bool |
 

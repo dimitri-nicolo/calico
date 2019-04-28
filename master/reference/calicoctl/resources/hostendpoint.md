@@ -26,8 +26,14 @@ any policy.
 > implemented.
 {: .alert .alert-info}
 
-For `calicoctl` [commands]({{site.url}}/{{page.version}}/reference/calicoctl/commands/) that specify a resource type on the CLI, the following
-aliases are supported (all case insensitive): `hostendpoint`, `hostendpoints`, `hep`, `heps`.
+For `calicoctl` [commands]({{site.url}}/{{page.version}}/reference/calicoctl/commands/), the following case-insensitive aliases 
+may be used to specify the resource type on the CLI:
+`hostendpoint`, `hostendpoints`, `hep`, `heps`.
+
+For `kubectl` [commands](https://kubernetes.io/docs/reference/kubectl/overview/), the following case-insensitive aliases 
+may be used to specify the resource type on the CLI:
+`hostendpoint.projectcalico.org`, `hostendpoints.projectcalico.org` and abbreviations such as 
+`hostendpoint.p` and `hostendpoints.p`.
 
 > **Important**: When rendering security rules on other hosts, {{site.prodname}} uses the
 > `expectedIPs` field to resolve label selectors to IP addresses. If the `expectedIPs` field

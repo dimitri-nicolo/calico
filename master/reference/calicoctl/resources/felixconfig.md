@@ -5,8 +5,11 @@ canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/resources/felixco
 
 A [Felix]({{site.url}}/{{page.version}}/reference/architecture/#felix) configuration resource (`FelixConfiguration`) represents Felix configuration options for the cluster.
 
-For `calicoctl` [commands]({{site.url}}/{{page.version}}/reference/calicoctl/commands/) that specify a resource type on the CLI, the following
-aliases are supported (all case insensitive): `felixconfiguration`, `felixconfig`, `felixconfigurations`, `felixconfigs`.
+For `calicoctl` [commands]({{site.url}}/{{page.version}}/reference/calicoctl/commands/), the following case-insensitive aliases 
+may be used to specify the resource type on the CLI:
+`felixconfiguration`, `felixconfig`, `felixconfigurations`, `felixconfigs`.
+
+This resource is not supported in `kubectl`.
 
 See [Configuring Felix]({{site.url}}/{{page.version}}/reference/felix/configuration) for more details.
 
