@@ -45,6 +45,13 @@ var validate *validator.Validate
 // Maximum size of annotations.
 const totalAnnotationSizeLimitB int64 = 256 * (1 << 10) // 256 kB
 
+const (
+	// Constants when validating a CRON schedule. This is sneaking into the cron implementation a little, but we have
+	// validation tests that should protect against any changes to the internals.
+	lower60Bits             = (uint64(1) << 60) - 1
+	maxCRONSchedulesPerHour = 12
+)
+
 var (
 	nameLabelFmt     = "[a-z0-9]([-a-z0-9]*[a-z0-9])?"
 	nameSubdomainFmt = nameLabelFmt + "(\\." + nameLabelFmt + ")*"
@@ -1369,7 +1376,7 @@ func validateReportSchedule(fl validator.FieldLevel) bool {
 
 	// Check that there are at most 2 schedules per hour.
 	if ss, ok := s.(*cron.SpecSchedule); ok {
-		if bits.OnesCount64(ss.Minute) > 2 {
+		if bits.OnesCount64(ss.Minute&lower60Bits) > maxCRONSchedulesPerHour {
 			return false
 		}
 	}

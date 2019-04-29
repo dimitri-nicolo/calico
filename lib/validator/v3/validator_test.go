@@ -2540,22 +2540,22 @@ func init() {
 			},
 			true,
 		),
-		Entry("Allow valid CRON expression with 2 schedules per hour",
+		Entry("Allow valid CRON expression with schedules every 5 minutes",
 			&api.GlobalReport{
 				ObjectMeta: v1.ObjectMeta{Name: "gr"},
 				Spec: api.ReportSpec{
 					ReportType: "summary",
-					Schedule:   "0,30 * * * *",
+					Schedule:   "*/5 * * * *",
 				},
 			},
 			true,
 		),
-		Entry("Disallow valid CRON expression with 3 schedules per hour",
+		Entry("Disallow valid CRON expression with 13 schedules per hour",
 			&api.GlobalReport{
 				ObjectMeta: v1.ObjectMeta{Name: "gr"},
 				Spec: api.ReportSpec{
 					ReportType: "summary",
-					Schedule:   "0,30,35 * * * *",
+					Schedule:   "0,5,10,15,20,25,30,35,40,45,50,55,56 * * * *",
 				},
 			},
 			false,
