@@ -7,6 +7,8 @@ A License Key resource (`LicenseKey`) represents a user's license to use {{site.
 provided by Tigera support, and must be applied to the cluster to enable
 {{site.prodname}} features.
 
+This resource is not supported in `kubectl`.
+
 ### Working with license keys
 
 #### Applying or updating a license key

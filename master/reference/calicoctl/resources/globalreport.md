@@ -7,7 +7,12 @@ A global report resource is a configuration for generating compliance reports. A
 - Specify the node(s) to include in report generation jobs
 - Enable/disable creation of new jobs for generating the report
 
-**Note**: Currently, global reports can only be configured using the `kubectl` command using these case-sensitive aliases: `globalreport`, `globalreports`
+This resource is not supported in `calicoctl`.
+
+For `kubectl` [commands](https://kubernetes.io/docs/reference/kubectl/overview/), the following case-insensitive aliases 
+may be used to specify the resource type on the CLI:
+`globalreport.projectcalico.org`, `globalreports.projectcalico.org` and abbreviations such as 
+`globalreport.p` and `globalreports.p`.
 
 ### Sample YAML
 
@@ -15,45 +20,40 @@ A global report resource is a configuration for generating compliance reports. A
 apiVersion: projectcalico.org/v3
 kind: GlobalReport
 metadata:
-  name: inventory-report
-  labels:
-    deployment: production
+  name: weekly-full-inventory
 spec:
   reportType: inventory
-  endpointsSelection:
-    endpointSelector: resource == "high"
-    namespaces:
-      names:
-        - app-storage
-      selector: app == "identity-manager"
-    serviceAccounts:
-      names:
-        - app-dev
-      selector: role == "appDev"
-  schedule: "0 * * * *"
+  schedule: 0 0 * * 0
   jobNodeSelector:
-    resource: high
-  suspend: false
+    nodetype: infrastructure
 
 ---
 
 apiVersion: projectcalico.org/v3
 kind: GlobalReport
 metadata:
-  name: audit-report
-  labels:
-    deployment: production
+  name: hourly-accounts-networkaccess
 spec:
-  reportType: audit
-  auditEventsSelection:
-    resources:
-      - kind: globalnetworkpolicy
-        name: internal-access
-        namespace: app-storage
-  schedule: "30 * * * *"
-  jobNodeSelector:
-    resource: high
-  suspend: false
+  reportType: network-access
+  endpointsSelection:
+    namespaces:
+      names: ["payable", "collections", "payroll"]
+  schedule: 0 * * * *
+
+---
+
+apiVersion: projectcalico.org/v3
+kind: GlobalReport
+metadata:
+  name: monthly-widgets-controller-tigera-policy-audit
+spec:
+  reportType: policy-audit
+  schedule:  0 0 1 * *
+  endpointsSelection:
+    serviceAccount:
+      names: ["controller"]
+    namespace:
+      names: ["widgets"]
 ```
 
 ### GlobalReport Definition
@@ -69,10 +69,9 @@ spec:
 
 | Field                | Description                                    | Required | Accepted Values | Schema    |
 |----------------------|------------------------------------------------|----------|-----------------|-----------|
-| reportType           | Name of the report type resource and the content that is generated. {{ site.prodname }} out-of-the-box report types includes audit, inventory, and networkaccess.| Yes | audit, inventory, networkaccess | string |
-| endpointsSelection   | Specify which endpoints are in scope, if endpoints data is included in the report. ||| [EndpointsSelection](#endpointsselection) |
-| auditEventsSelection | Specify which audit events are in scope, and if auditing data is included in the report. ||| [AuditEventsSelection](#auditeventsselection) |
-| schedule             | Configure report frequency by specifying start and end time in [cron-format][cron-format]. Reports are started 30 minutes (configurable) after the scheduled value to allow enough time for data archival. Cron format enforces a maximum limit of two reports an hour. | Yes || string |
+| reportType           | Name of the report type which defines the report content. {{ site.prodname }} supported report types are inventory, network-access, and policy-audit. | Yes | inventory, network-access, audit | string |
+| endpointsSelection   | Specify which endpoints are in scope. If omitted, selects everything. ||| [EndpointsSelection](#endpointsselection) |
+| schedule             | Configure report frequency by specifying start and end time in [cron-format][cron-format]. Reports are started 30 minutes (configurable) after the scheduled value to allow enough time for data archival. A maximum limit of two schedules per hour is enforced. | Yes || string |
 | jobNodeSelector      | Specify the node(s) for scheduling the report jobs using selectors. ||| map |
 | suspend              | Disable future scheduled report jobs. In-flight reports are not affected. ||| bool |
 
@@ -81,47 +80,25 @@ spec:
 
 | Field            | Description                                  | Schema              |
 |------------------|----------------------------------------------|---------------------|
-| endpointSelector | Selects endpoints by endpoint labels. You can specify endpoints using labels under `endpointSelector`. Use `namespaces` and `serviceAccounts` for further scoping.       | string              |
-| namespaces       | Namespaces to include in report scope.       | NamesAndLabelsMatch |
-| serviceAccounts  | Service accounts to include in report scope. | NamesAndLabelsMatch |
+| endpointSelector | Endpoint label selector to restrict endpoint selection. | string              |
+| namespaces       | Namespace name and label selector to restrict endpoints by selected namespaces. | NamesAndLabelsMatch |
+| serviceAccounts  | Service account name and label selector to restrict endpoints by selected service accounts. | NamesAndLabelsMatch |
 
 #### NamesAndLabelsMatch
 
 | Field    | Description                            | Schema |
 |----------|----------------------------------------|--------|
 | names    | Set of resource names.                 | list   |
-| selector | Specifies a set of resource by labels. | string |
+| selector | Selects a set of resources by label.   | string |
 
 Use the `NamesAndLabelsMatch`to limit the scope of endpoints. If both `names`
 and `selector` are specified, the resource is identified using label *AND* name
 match.
 
-#### AuditEventsSelection
-
-| Field     | Description         | Schema |
-|-----------|---------------------|--------|
-| resources | List of [ResourceID](#resourceid) that will be included in the report if including audit logs. | list   |
-
-Use `AuditEventsSelection` to scope resources for inclusion in the audit report.
-
-#### ResourceID
-
-| Field     | Description           | Schema |
-|-----------|-----------------------|--------|
-| kind      | Resource type.        | string |
-| name      | Resource Name.        | string |
-| namespace | Resource namespace.   | string |
-
-Use `ResourceID` to filter resources in the report configuration. Blank fields
-value are treated as wildcards. For example, if Kind is set to `NetworkPolicy`
-and all other fields are blank, the report includes all `NetworkPolicy`
-resources across all namespaces, including both Calico and Kubernetes resource
-types.
-
-> **Note**: To include resources not added by {{ site.prodname }} in compliance
-> audit reporting, you must configure the [Kubernetes API
-> Server]({{site.url}}/{{page.version}}/security/logs/elastic/ee-audit#kubernetes)
-> to send audit logs to Elasticsearch.
+> **Note**: To use the {{site.prodname}} compliance reporting feature, you must ensure all required resource types
+> are being audited and the logs archived in Elasticsearch. You must explicitly configure the [Kubernetes API
+> Server](/{{page.version}}/security/logs/elastic/ee-audit#kubernetes) to send audit logs for Kubernetes-owned resources
+> to Elasticsearch. 
 
 ### Supported operations
 
