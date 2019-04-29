@@ -6,8 +6,8 @@ import (
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
-	"github.com/tigera/compliance/pkg/flow"
 	"github.com/tigera/compliance/pkg/event"
+	"github.com/tigera/compliance/pkg/flow"
 )
 
 type ReportRetriever interface {

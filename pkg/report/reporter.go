@@ -59,16 +59,16 @@ func Run(
 
 	// Define a function that can be used to report health. We pass this to the xrefcache - since it isn't a long
 	// running process, it shouldn't have it's owner reporter type.
-	reportHealth := func() {
+	healthy := func() {
 		healthAggr.Report(healthReporter, &health.HealthReport{Live: true})
 	}
-	reportHealth()
+	healthy()
 
 	// Get the report config.
 	reportCfg := MustLoadReportConfig(cfg)
 
 	// Create the cross-reference cache that we use to monitor for changes in the relevant data.
-	xc := xrefcache.NewXrefCache(reportHealth)
+	xc := xrefcache.NewXrefCache(healthy)
 	replayer := replay.New(cfg.ParsedReportStart, cfg.ParsedReportEnd, lister, eventer, xc)
 
 	r := &reporter{
@@ -80,13 +80,12 @@ func Run(
 			"start": cfg.ParsedReportStart.Format(time.RFC3339),
 			"end":   cfg.ParsedReportEnd.Format(time.RFC3339),
 		}),
-		eventer:          eventer,
 		auditer:          auditer,
 		flowlogger:       flowlogger,
 		archiver:         archiver,
 		xc:               xc,
 		replayer:         replayer,
-		health:           healthAggr,
+		healthy:          healthy,
 		inScopeEndpoints: make(map[apiv3.ResourceID]*reportEndpoint),
 		services:         make(map[apiv3.ResourceID]xrefcache.CacheEntryFlags),
 		namespaces:       make(map[apiv3.ResourceID]xrefcache.CacheEntryFlags),
@@ -110,13 +109,12 @@ type reporter struct {
 	cfg        *Config
 	clog       *logrus.Entry
 	listDest   list.Destination
-	eventer    event.Fetcher
 	xc         xrefcache.XrefCache
 	replayer   syncer.Starter
 	auditer    AuditLogReportHandler
 	flowlogger FlowLogReportHandler
 	archiver   ReportStorer
-	health     *health.HealthAggregator
+	healthy    func()
 
 	// Consolidate the tracked in-scope endpoint events into a local cache, which will get converted and copied into
 	// the report data structure.
@@ -139,8 +137,8 @@ type reportEndpoint struct {
 }
 
 func (r *reporter) run() error {
-	// Indicate we are healthy.
-	r.health.Report(healthReporter, &health.HealthReport{Live: true})
+	// Report healthy.
+	r.healthy()
 
 	if r.cfg.ReportType.Spec.IncludeEndpointData ||
 		(r.cfg.ReportType.Spec.AuditEventsSelection != nil && r.cfg.Report.Spec.EndpointsSelection != nil) {
@@ -167,7 +165,10 @@ func (r *reporter) run() error {
 		r.replayer.Start(r.ctx)
 
 		// Create the initial ReportData structure
-		r.transferAggregatedData()
+		if r.cfg.ReportType.Spec.IncludeEndpointData {
+			r.clog.Debug("Including endpoint data in report")
+			r.transferAggregatedData()
+		}
 
 		if r.cfg.ReportType.Spec.IncludeEndpointFlowLogData {
 			// We also need to include flow logs data for the in-scope endpoints.
@@ -178,7 +179,7 @@ func (r *reporter) run() error {
 	}
 
 	// Indicate we are healthy.
-	r.health.Report(healthReporter, &health.HealthReport{Live: true})
+	r.healthy()
 
 	if r.cfg.ReportType.Spec.AuditEventsSelection != nil {
 		// We need to include audit log data in the report.
@@ -190,7 +191,7 @@ func (r *reporter) run() error {
 	}
 
 	// Indicate we are healthy.
-	r.health.Report(healthReporter, &health.HealthReport{Live: true})
+	r.healthy()
 
 	r.clog.Debug("Rendering report data based on template")
 	summary, err := compliance.RenderTemplate(r.cfg.ReportType.Spec.UISummaryTemplate.Template, r.data)
@@ -199,7 +200,7 @@ func (r *reporter) run() error {
 	}
 
 	// Indicate we are healthy.
-	r.health.Report(healthReporter, &health.HealthReport{Live: true})
+	r.healthy()
 
 	// Set the generation time and store the report data.
 	r.clog.Debug("Storing report into archiver")
@@ -210,7 +211,7 @@ func (r *reporter) run() error {
 	}, time.Now())
 
 	// Indicate we are healthy.
-	r.health.Report(healthReporter, &health.HealthReport{Live: true})
+	r.healthy()
 
 	return err
 }
@@ -401,7 +402,7 @@ func (r *reporter) transferAggregatedData() {
 		// Update the summary stats.
 		updateSummary(ep.zeroTrustFlags, &r.data.EndpointsSummary, true)
 
-		// Fill in the service account stat which is not handle by zero trust.
+		// Fill in the service account stat which is not handled by zero trust.
 		r.data.EndpointsSummary.NumServiceAccounts = r.serviceAccounts.Len()
 
 		// Delete from our dictionary now.
