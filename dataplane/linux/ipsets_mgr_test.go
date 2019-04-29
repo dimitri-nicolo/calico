@@ -26,6 +26,78 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
+const numMembers int = 4
+
+type IPSetsMgrTestCase struct {
+	ipsetID      string
+	ipsetType    proto.IPSetUpdate_IPSetType
+	ipsetMembers [numMembers]string
+	dnsRecs      [numMembers]layers.DNSResourceRecord
+}
+
+var ipsetsMgrTestCases = []IPSetsMgrTestCase{
+	{
+		ipsetID:      "id1",
+		ipsetType:    proto.IPSetUpdate_IP,
+		ipsetMembers: [numMembers]string{"10.0.0.1", "10.0.0.2", "10.0.0.3", "10.0.0.4"},
+		dnsRecs:      [numMembers]layers.DNSResourceRecord{},
+	},
+	{
+		ipsetID:      "id2",
+		ipsetType:    proto.IPSetUpdate_DOMAIN,
+		ipsetMembers: [numMembers]string{"abc.com", "def.com", "ghi.com", "jkl.com"},
+		dnsRecs: [numMembers]layers.DNSResourceRecord{
+			{
+				Name:       []byte("abc.com"),
+				Type:       layers.DNSTypeA,
+				Class:      layers.DNSClassIN,
+				TTL:        5,
+				DataLength: 4,
+				Data:       []byte("10.0.0.10"),
+				IP:         net.ParseIP("10.0.0.10"),
+			},
+			{
+				Name:       []byte("def.com"),
+				Type:       layers.DNSTypeA,
+				Class:      layers.DNSClassIN,
+				TTL:        5,
+				DataLength: 4,
+				Data:       []byte("10.0.0.20"),
+				IP:         net.ParseIP("10.0.0.20"),
+			},
+			{
+				Name:       []byte("ghi.com"),
+				Type:       layers.DNSTypeA,
+				Class:      layers.DNSClassIN,
+				TTL:        5,
+				DataLength: 4,
+				Data:       []byte("10.0.0.30"),
+				IP:         net.ParseIP("10.0.0.30"),
+			},
+			{
+				Name:       []byte("jkl.com"),
+				Type:       layers.DNSTypeA,
+				Class:      layers.DNSClassIN,
+				TTL:        5,
+				DataLength: 4,
+				Data:       []byte("10.0.0.40"),
+				IP:         net.ParseIP("10.0.0.40"),
+			},
+		},
+	},
+}
+
+// Program any DNS records if this is a domain type IPSet
+func programDNSRecs(ipsetType proto.IPSetUpdate_IPSetType, domainStore *domainInfoStore, dnsPackets [numMembers]layers.DNSResourceRecord) {
+	if ipsetType == proto.IPSetUpdate_DOMAIN {
+		var layerDNS layers.DNS
+		for _, d := range dnsPackets {
+			layerDNS.Answers = append(layerDNS.Answers, d)
+		}
+		domainStore.processDNSPacket(&layerDNS)
+	}
+}
+
 var _ = Describe("IP Sets manager", func() {
 	var (
 		ipsetsMgr   *ipSetsManager
@@ -64,16 +136,12 @@ var _ = Describe("IP Sets manager", func() {
 		})
 	}
 
-	IPSets_Tests_1 := func(ipsetID string, ipsetType proto.IPSetUpdate_IPSetType, members [4]string, dnsPackets [4]layers.DNSResourceRecord) {
+	// Basic add/remove/update test case for different types of IPSets.
+	IPsetsMgrTest1 := func(ipsetID string, ipsetType proto.IPSetUpdate_IPSetType, members [numMembers]string, dnsPackets [numMembers]layers.DNSResourceRecord) {
 		Describe("after creating an IPSet", func() {
 			BeforeEach(func() {
-				var layerDNS0, layerDNS1 layers.DNS
-				layerDNS0.Answers = append(layerDNS0.Answers, dnsPackets[0])
-				layerDNS1.Answers = append(layerDNS1.Answers, dnsPackets[1])
-
-				domainStore.processDNSPacket(&layerDNS0)
-				domainStore.processDNSPacket(&layerDNS1)
-
+				ipSets.AddOrReplaceCalled = false
+				programDNSRecs(ipsetType, domainStore, dnsPackets)
 				ipsetsMgr.OnUpdate(&proto.IPSetUpdate{
 					Id:      ipsetID,
 					Members: []string{members[0], members[1]},
@@ -81,12 +149,20 @@ var _ = Describe("IP Sets manager", func() {
 				})
 				ipsetsMgr.CompleteDeferredWork()
 			})
+
 			AssertIPSetModified()
-			AssertIPSetMembers(ipsetID, []string{members[0], members[1]})
+
+			// We match domain ipsets with their respective IP addresses.
+			if ipsetType == proto.IPSetUpdate_DOMAIN {
+				AssertIPSetMembers(ipsetID, []string{dnsPackets[0].IP.String(), dnsPackets[1].IP.String()})
+			} else {
+				AssertIPSetMembers(ipsetID, []string{members[0], members[1]})
+			}
 
 			Describe("after sending a delta update", func() {
 				BeforeEach(func() {
 					ipSets.AddOrReplaceCalled = false
+					programDNSRecs(ipsetType, domainStore, dnsPackets)
 					ipsetsMgr.OnUpdate(&proto.IPSetDeltaUpdate{
 						Id:             ipsetID,
 						AddedMembers:   []string{members[2], members[3]},
@@ -94,11 +170,19 @@ var _ = Describe("IP Sets manager", func() {
 					})
 					ipsetsMgr.CompleteDeferredWork()
 				})
+
 				AssertIPSetNotModified()
-				AssertIPSetMembers(ipsetID, []string{members[1], members[2], members[3]})
+
+				if ipsetType == proto.IPSetUpdate_DOMAIN {
+					AssertIPSetMembers(ipsetID, []string{dnsPackets[1].IP.String(), dnsPackets[2].IP.String(),
+						dnsPackets[3].IP.String()})
+				} else {
+					AssertIPSetMembers(ipsetID, []string{members[1], members[2], members[3]})
+				}
 
 				Describe("after sending a delete", func() {
 					BeforeEach(func() {
+						programDNSRecs(ipsetType, domainStore, dnsPackets)
 						ipsetsMgr.OnUpdate(&proto.IPSetRemove{
 							Id: ipsetID,
 						})
@@ -111,6 +195,7 @@ var _ = Describe("IP Sets manager", func() {
 			Describe("after sending another replace", func() {
 				BeforeEach(func() {
 					ipSets.AddOrReplaceCalled = false
+					programDNSRecs(ipsetType, domainStore, dnsPackets)
 					ipsetsMgr.OnUpdate(&proto.IPSetUpdate{
 						Id:      ipsetID,
 						Members: []string{members[1], members[2]},
@@ -118,50 +203,18 @@ var _ = Describe("IP Sets manager", func() {
 					})
 					ipsetsMgr.CompleteDeferredWork()
 				})
-				AssertIPSetModified()
-				AssertIPSetMembers(ipsetID, []string{members[1], members[2]})
+
+				if ipsetType == proto.IPSetUpdate_DOMAIN {
+					AssertIPSetMembers(ipsetID, []string{dnsPackets[1].IP.String(), dnsPackets[2].IP.String()})
+				} else {
+					AssertIPSetModified()
+					AssertIPSetMembers(ipsetID, []string{members[1], members[2]})
+				}
 			})
 		})
 	}
 
-	IPSets_Tests_1("id1", proto.IPSetUpdate_IP, [4]string{"10.0.0.1", "10.0.0.2", "10.0.0.3", "10.0.0.4"}, nil)
-	IPSets_Tests_1("id2", proto.IPSetUpdate_DOMAIN, [4]string{"abc.com", "def.com", "ghi.com", "jkl.com"},
-		[4]layers.DNSResourceRecord{
-			{
-				Name:       []byte("abc.com"),
-				Type:       layers.DNSTypeA,
-				Class:      layers.DNSClassIN,
-				TTL:        5,
-				DataLength: 4,
-				Data:       []byte("10.0.0.10"),
-				IP:         net.ParseIP("10.0.0.10"),
-			},
-			{
-				Name:       []byte("def.com"),
-				Type:       layers.DNSTypeA,
-				Class:      layers.DNSClassIN,
-				TTL:        5,
-				DataLength: 4,
-				Data:       []byte("10.0.0.20"),
-				IP:         net.ParseIP("10.0.0.20"),
-			},
-			{
-				Name:       []byte("ghi.com"),
-				Type:       layers.DNSTypeA,
-				Class:      layers.DNSClassIN,
-				TTL:        5,
-				DataLength: 4,
-				Data:       []byte("10.0.0.30"),
-				IP:         net.ParseIP("10.0.0.30"),
-			},
-			{
-				Name:       []byte("jkl.com"),
-				Type:       layers.DNSTypeA,
-				Class:      layers.DNSClassIN,
-				TTL:        5,
-				DataLength: 4,
-				Data:       []byte("10.0.0.40"),
-				IP:         net.ParseIP("10.0.0.40"),
-			},
-		})
+	for _, testCase := range ipsetsMgrTestCases {
+		IPsetsMgrTest1(testCase.ipsetID, testCase.ipsetType, testCase.ipsetMembers, testCase.dnsRecs)
+	}
 })
