@@ -29,7 +29,7 @@ spec:
       restartPolicy: Never
       containers:
       - name: scaleloader
-        image: gcr.io/unique-caldron-775/cnx/tigera/compliance-scaleloader:erik
+        image: gcr.io/unique-caldron-775/cnx/tigera/compliance-scaleloader:master
         imagePullPolicy: Always
         env:
         - name: ELASTIC_HOST
