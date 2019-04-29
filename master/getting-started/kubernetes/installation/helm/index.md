@@ -117,7 +117,7 @@ initialPool:
 4. Apply the following manifest to set network policy that secures access to {{ site.prodname }}:
 
    ```
-   kubectl apply -f {{ site.baseurl }}/{{ page.version }}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml
+   kubectl apply -f {{ site.url }}/{{ page.version }}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml
    ```
 
 Now that the **{{ site.prodname }} Core** chart is installed, please move on to the next step to install the **{{ site.prodname }}** chart.
