@@ -1,0 +1,9 @@
+# Provides the credentials for TLS between the browser and CNX-Manager proxy.
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: cnx-manager-tls
+  namespace: calico-monitoring
+data:
+{{ include "tigera-secure-ee.manager.tls" . | indent 2 }}

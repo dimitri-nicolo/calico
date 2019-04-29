@@ -1,0 +1,23 @@
+---
+title: calicoq version
+canonical_url: https://docs.tigera.io/v2.3/reference/calicoq/version
+---
+
+`calicoq version` shows the version number of the calicoq tool, plus
+information about the source code it was built from, and when that was.
+
+## Example
+
+```
+calicoq version
+```
+
+Sample output follows.
+
+```
+Version:      v2.0.0-cnx
+Build date:   2018-01-10T21:40:16+0000
+Git tag ref:  v2.0.0-cnx-rc1-12-g9157612
+Git commit:   9157612
+```
+{: .no-select-button}

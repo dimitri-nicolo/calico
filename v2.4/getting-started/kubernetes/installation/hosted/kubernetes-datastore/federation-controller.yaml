@@ -1,0 +1,8 @@
+---
+layout: null
+---
+{% helm --execute templates/tigera-federation-controller.yaml %}
+datastore: kdd
+federation:
+  enabled: true
+{% endhelm %}

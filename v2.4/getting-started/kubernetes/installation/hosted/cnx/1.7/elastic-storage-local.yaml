@@ -1,0 +1,7 @@
+---
+layout: null
+---
+{% helm tigera-secure-ee --execute templates/elastic-storage.yaml %}
+# TODO: fix bug where an empty helm includer doesn't render the manifest?
+foo: bar
+{% endhelm %}

@@ -1,0 +1,11 @@
+{{- if .Values.federation.enabled -}}
+{{- /*
+calico-typha.yaml contains the federation specific service accounts:
+*/ -}}
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: tigera-federation-controller
+  namespace: kube-system
+{{- end -}}

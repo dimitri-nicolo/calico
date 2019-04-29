@@ -1,0 +1,8 @@
+---
+layout: null
+---
+{% helm --execute templates/cnx-api.yaml %}
+datastore: etcd
+apiserver:
+  runAsPrivileged: true
+{% endhelm %}

@@ -1,0 +1,8 @@
+---
+layout: null
+---
+{% helm tigera-secure-ee --execute templates/manager.yaml %}
+manager:
+  auth:
+    type: OAuth
+{% endhelm %}
