@@ -67,6 +67,6 @@
    {{cli}} create secret generic tigera-es-config \
      --from-file=tigera.elasticsearch.ca=ElasticSearchCA.pem \
      --from-literal=tigera.elasticsearch.username=tigera-ee-manager \
-     --from-literal=tigera.elasticserach.password=<ee-manager-elasticsearch-password> \
+     --from-literal=tigera.elasticsearch.password=<ee-manager-elasticsearch-password> \
      -n calico-monitoring
    ```
