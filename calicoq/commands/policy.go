@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019 Tigera, Inc. All rights reserved.
 
 package commands
 
@@ -118,7 +118,10 @@ func EvalPolicySelectors(configFile, policyName string, hideSelectors, hideRuleM
 	}
 
 	// If there are any errors connecting to the remote clusters, report the errors and exit.
-	rcc.CheckForErrorAndExit()
+	// It might be nil if the for loop did't run (because kvs was empty).
+	if rcc != nil {
+		rcc.CheckForErrorAndExit()
+	}
 
 	return
 }
