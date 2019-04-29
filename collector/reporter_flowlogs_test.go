@@ -339,6 +339,50 @@ var _ = Describe("CloudWatch Reporter health verification", func() {
 	})
 })
 
+var _ = Describe("FlowLog per minute verification", func() {
+	var (
+		cr *FlowLogsReporter
+		cd FlowLogDispatcher
+		ca FlowLogAggregator
+		cl cloudwatchlogsiface.CloudWatchLogsAPI
+	)
+
+	mt := &mockTime{}
+
+	Context("Flow logs per minute verification", func() {
+		It("Usage report is triggered before flushIntervalDuration", func() {
+			By("Triggering report right away before flushIntervalDuration")
+			cd = NewCloudWatchDispatcher(logGroupName, logStreamName, 7, cl)
+			ca = NewFlowLogAggregator()
+			ds := map[string]FlowLogDispatcher{CWDispatcher: cd}
+			mockFlushInterval := 600 * time.Second
+			cr = NewFlowLogsReporter(ds, mockFlushInterval, nil, false)
+			cr.AddAggregator(ca, []string{CWDispatcher})
+			cr.timeNowFn = mt.getMockTime
+			cr.Start()
+
+			Expect(GetAndResetFlowsPerMinute()).Should(Equal(0.0))
+		})
+		It("Usage report is triggered post flushIntervalDuration", func() {
+			By("Triggering report post flushIntervalDuration by mocking flushInterval")
+			cl = testutil.NewMockedCloudWatchLogsClient(logGroupName)
+			cd = NewCloudWatchDispatcher(logGroupName, logStreamName, 7, cl)
+			ca = NewFlowLogAggregator()
+			ca.IncludePolicies(true)
+			ds := map[string]FlowLogDispatcher{CWDispatcher: cd}
+			cr = NewFlowLogsReporter(ds, flushInterval, nil, false)
+			cr.AddAggregator(ca, []string{CWDispatcher})
+			cr.timeNowFn = mt.getMockTime
+			cr.Start()
+
+			cr.Report(muNoConn1Rule1AllowUpdate)
+			time.Sleep(1 * time.Second)
+
+			Expect(GetAndResetFlowsPerMinute()).Should(BeNumerically(">", 0))
+		})
+	})
+})
+
 type timingoutCWFLMockClient struct {
 	cloudwatchlogsiface.CloudWatchLogsAPI
 	timeout time.Duration
