@@ -26,6 +26,7 @@ RELEASE_STREAM?=
 
 CHART?=calico
 REGISTRY?=gcr.io/unique-caldron-775/cnx/
+DOCS_TEST_CONTAINER?=tigera/docs-test
 
 # Use := so that these V_ variables are computed only once per make run.
 CALICO_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].title')
@@ -75,18 +76,23 @@ _site build: bin/helm
 
 ## Clean enough that a new release build will be clean
 clean:
-	rm -rf _output _site .jekyll-metadata stderr.out filtered.out
+	rm -rf _output _site .jekyll-metadata stderr.out filtered.out docs_test.created
 
 ###############################################################################
 # CI / test targets
 ###############################################################################
-test:
+docs_test.created:
+	docker build -t $(DOCS_TEST_CONTAINER) -f docs_test/Dockerfile.python .
+	touch docs_test.created
+
+test: docs_test.created
 	docker run --rm \
-        -v $(PWD)/tests:/code \
+        -v $(PWD):/code \
         -e RELEASE_STREAM=$(RELEASE_STREAM) \
-        calico/test:latest sh -c \
+	-e QUAY_API_TOKEN=$(QUAY_API_TOKEN) \
+	$(DOCS_TEST_CONTAINER) sh -c \
 	"nosetests . -e $(EXCLUDE_REGEX) -v --with-xunit \
-	--xunit-file='/code/report/nosetests.xml' \
+	--xunit-file='/code/tests/report/nosetests.xml' \
 	--with-timer"
 
 ci: clean htmlproofer kubeval helm-tests
