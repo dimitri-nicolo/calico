@@ -13,8 +13,11 @@
   {% assign secure = "/secure-es" %}
 {% endif %}
 
-{% if include.orch == "openshift" %}
+{% unless include.upgrade %}
 ## Installing metrics and logs
+{% endunless %}
+
+{% if include.orch == "openshift" %}
 
 ### Enable Metrics
 
@@ -36,9 +39,10 @@ Enable metrics in {{site.prodname}} for OpenShift by updating the global `FelixC
 
 With metrics enabled, you are ready to monitor `{{site.nodecontainer}}` by scraping the endpoint on each node
 in the cluster. If you do not have your own Prometheus, the following commands will launch a Prometheus
-Operator, Prometheus, and Alertmanager instances for you. They will also deploy Fluentd, and
-optionally Elasticsearch and Kibana in order to enable logs.
+Operator, Prometheus, and Alertmanager instances for you. They will also deploy Fluentd{% if include.elasticsearch == "operator" %}, and
+optionally Elasticsearch and Kibana{% endif %} in order to enable logs.
 
+{% unless include.upgrade %}
 1. For production installs, we recommend using your own Elasticsearch cluster. If you are performing a
    production install, do not complete any more steps on this page. Instead, refer to
    [Using your own Elasticsearch for logs](byo-elasticsearch) for the final steps.
@@ -50,6 +54,7 @@ optionally Elasticsearch and Kibana in order to enable logs.
    > **Important**: The bundled Elasticsearch operator does not provide reliable persistent storage
    of logs or authenticate access to Kibana.
    {: .alert .alert-danger}
+{% endunless %}
 
 1. Download the flow logs patch for {{site.prodname}} node.
 
@@ -63,20 +68,8 @@ optionally Elasticsearch and Kibana in order to enable logs.
    oc patch daemonset {{site.noderunning}} -n kube-system --patch "$(cat patch-flow-logs.yaml)"
    ```
 
-
-{% if include.elasticsearch == "external" %}
-
-1. Allow Elasticsearch proxy to configure and use a security context.
-
-   ```
-   oc adm policy add-scc-to-user anyuid system:serviceaccount:calico-monitoring:tigera-es-proxy
-   ```
-
-{% endif %}
-
 {% else %}
 {% unless include.elasticsearch == "external" %}
-## Installing metrics and logs
 
 1. For production installs, follow the instructions [here](byo-elasticsearch) to configure {{site.prodname}}
    to use your own Elasticsearch cluster.  For demo / proof of concept installs using the bundled Elasticsearch
@@ -88,8 +81,7 @@ optionally Elasticsearch and Kibana in order to enable logs.
 {% endunless %}
 {% endif %}
 
-1. Apply the following manifest to set network policy that allows users and the {{site.prodname}} API server
-   to access the {{site.prodname}} Manager.
+1. Apply the following manifest to set network policy that allows access to the {{site.prodname}} API server.
 
    ```bash
    {{cli}} apply -f \
