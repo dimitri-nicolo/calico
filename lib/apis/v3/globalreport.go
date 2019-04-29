@@ -55,7 +55,7 @@ type ReportSpec struct {
 	// 30m, but is configurable through the compliance-controller environments.
 	// The cron format has minute accuracy, but only up to two values may be configured for the minute column which
 	// means you may only have at most two reports for each hour period.
-	Schedule string `json:"schedule,omitempty" validate:"omitempty,reportschedule"`
+	Schedule string `json:"schedule,omitempty" validate:"omitempty"`
 
 	// The node selector used to specify which nodes the report job may be scheduled on.
 	JobNodeSelector map[string]string `json:"jobNodeSelector,omitempty" validate:"omitempty"`
