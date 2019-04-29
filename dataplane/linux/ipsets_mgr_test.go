@@ -15,11 +15,12 @@
 package intdataplane
 
 import (
+	"net"
 	"time"
 
+	"github.com/google/gopacket/layers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/libcalico-go/lib/set"
@@ -27,15 +28,16 @@ import (
 
 var _ = Describe("IP Sets manager", func() {
 	var (
-		ipsetsMgr *ipSetsManager
-		ipSets    *mockIPSets
+		ipsetsMgr   *ipSetsManager
+		ipSets      *mockIPSets
+		domainStore *domainInfoStore
 	)
 
 	BeforeEach(func() {
 		domainInfoChanges := make(chan *domainInfoChanged, 100)
-		domainInfoStore := newDomainInfoStore(domainInfoChanges, "/dnsinfo", time.Duration(time.Minute))
+		domainStore = newDomainInfoStore(domainInfoChanges, "/dnsinfo", time.Duration(time.Minute))
 		ipSets = newMockIPSets()
-		ipsetsMgr = newIPSetsManager(ipSets, 1024, domainInfoStore)
+		ipsetsMgr = newIPSetsManager(ipSets, 1024, domainStore)
 	})
 
 	AssertIPSetMembers := func(id string, members []string) {
@@ -62,9 +64,16 @@ var _ = Describe("IP Sets manager", func() {
 		})
 	}
 
-	IPSets_Tests_1 := func(ipsetID string, ipsetType proto.IPSetUpdate_IPSetType, members [4]string) {
+	IPSets_Tests_1 := func(ipsetID string, ipsetType proto.IPSetUpdate_IPSetType, members [4]string, dnsPackets [4]layers.DNSResourceRecord) {
 		Describe("after creating an IPSet", func() {
 			BeforeEach(func() {
+				var layerDNS0, layerDNS1 layers.DNS
+				layerDNS0.Answers = append(layerDNS0.Answers, dnsPackets[0])
+				layerDNS1.Answers = append(layerDNS1.Answers, dnsPackets[1])
+
+				domainStore.processDNSPacket(&layerDNS0)
+				domainStore.processDNSPacket(&layerDNS1)
+
 				ipsetsMgr.OnUpdate(&proto.IPSetUpdate{
 					Id:      ipsetID,
 					Members: []string{members[0], members[1]},
@@ -115,7 +124,44 @@ var _ = Describe("IP Sets manager", func() {
 		})
 	}
 
-	logrus.SetLevel(logrus.DebugLevel)
-	//IPSets_Tests_1("id1", proto.IPSetUpdate_IP, [4]string{"10.0.0.1", "10.0.0.2", "10.0.0.3", "10.0.0.4"})
-	IPSets_Tests_1("id2", proto.IPSetUpdate_DOMAIN, [4]string{"abc.com", "def.com", "ghi.com", "jkl.com"})
+	IPSets_Tests_1("id1", proto.IPSetUpdate_IP, [4]string{"10.0.0.1", "10.0.0.2", "10.0.0.3", "10.0.0.4"}, nil)
+	IPSets_Tests_1("id2", proto.IPSetUpdate_DOMAIN, [4]string{"abc.com", "def.com", "ghi.com", "jkl.com"},
+		[4]layers.DNSResourceRecord{
+			{
+				Name:       []byte("abc.com"),
+				Type:       layers.DNSTypeA,
+				Class:      layers.DNSClassIN,
+				TTL:        5,
+				DataLength: 4,
+				Data:       []byte("10.0.0.10"),
+				IP:         net.ParseIP("10.0.0.10"),
+			},
+			{
+				Name:       []byte("def.com"),
+				Type:       layers.DNSTypeA,
+				Class:      layers.DNSClassIN,
+				TTL:        5,
+				DataLength: 4,
+				Data:       []byte("10.0.0.20"),
+				IP:         net.ParseIP("10.0.0.20"),
+			},
+			{
+				Name:       []byte("ghi.com"),
+				Type:       layers.DNSTypeA,
+				Class:      layers.DNSClassIN,
+				TTL:        5,
+				DataLength: 4,
+				Data:       []byte("10.0.0.30"),
+				IP:         net.ParseIP("10.0.0.30"),
+			},
+			{
+				Name:       []byte("jkl.com"),
+				Type:       layers.DNSTypeA,
+				Class:      layers.DNSClassIN,
+				TTL:        5,
+				DataLength: 4,
+				Data:       []byte("10.0.0.40"),
+				IP:         net.ParseIP("10.0.0.40"),
+			},
+		})
 })
