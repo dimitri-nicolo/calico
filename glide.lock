@@ -1,5 +1,5 @@
-hash: ed8d40333a412d0a06e49d4d74059e57377223fe1f7c168b7a327cebeca07d5b
-updated: 2019-04-23T22:43:44.322364292Z
+hash: 3c16220448a381a23b5922d844805760f8d831e05f7be3c41630ae6ea03ff6cf
+updated: 2019-04-30T22:21:39.124948473Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -16,7 +16,7 @@ imports:
   - autorest/azure
   - autorest/date
 - name: github.com/beorn7/perks
-  version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
+  version: 3a771d992973f24aa725d07868b467d1ddfceafb
   subpackages:
   - quantile
 - name: github.com/buger/jsonparser
@@ -79,7 +79,7 @@ imports:
 - name: github.com/go-openapi/swag
   version: becd2f08beafcca035645a8a101e0e3e18140458
 - name: github.com/go-playground/locales
-  version: f63010822830b6fe52288ee52d5a1151088ce039
+  version: 630ebbb602847eba93e75ae38bbc7bb7abcf1ff3
   subpackages:
   - currency
 - name: github.com/go-playground/universal-translator
@@ -106,7 +106,7 @@ imports:
 - name: github.com/google/gofuzz
   version: 44d81051d367757e1c7c6a5a86423ece9afcf63c
 - name: github.com/google/uuid
-  version: 8c31c18f31ede9fc8eae72290a7e7a8064e9b3e3
+  version: d460ce9f8df2e77fb1ba55ca87fafed96c607494
 - name: github.com/googleapis/gnostic
   version: 0c5108395e2debce0d731cf0287ddf7242066aba
   subpackages:
@@ -157,13 +157,13 @@ imports:
 - name: github.com/Masterminds/semver
   version: 59c29afe1a994eacb71c833025ca7acf874bb1da
 - name: github.com/Masterminds/sprig
-  version: 9f8fceff796fb9f4e992cd2bece016be0121ab74
+  version: 2625cd487a689ca112e1301a58b89b347ba2c994
 - name: github.com/matttproud/golang_protobuf_extensions
   version: c12348ce28de40eed0136aa2b644d0ee0650e56c
   subpackages:
   - pbutil
 - name: github.com/mcuadros/go-version
-  version: 6d5863ca60fa6fe914b5fd43ed8533d7567c5b0b
+  version: 92cdf37c5b7579ebaf7a036da94b40995972088d
 - name: github.com/Microsoft/go-winio
   version: 97e4973ce50b2ff5f09635a57e2b88a037aae829
 - name: github.com/Microsoft/hcsshim
@@ -233,7 +233,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: d878d7f5d6345aa2e129834154220cabb565e779
+  version: 63a9437e28fd073bd0e731d96e5c831bb21ffd11
   repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib/apiconfig
@@ -273,23 +273,25 @@ imports:
   - prometheus
   - prometheus/internal
 - name: github.com/prometheus/client_model
-  version: fa8ad6fec33561be4280a8f0514318c79d7f6cb6
+  version: 5c3871d89910bfb32f5fcab2aa4b9ec68e65a99f
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: cfeb6f9992ffa54aaa4f2170ade4067ee478b250
+  version: 4724e9255275ce38f7179b2478abeae4e28c904f
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: 65c1f6f8f0fc1e2185eb9863a3bc751496404259
+  version: 1dc9a6cbc91aacc3e8b2d63db4d2e957a5394ac4
   subpackages:
+  - internal/util
+  - nfs
   - xfs
 - name: github.com/PuerkitoBio/purell
-  version: 8a290539e2e8629dbc4e6bad948158f790ec31f4
+  version: 0bcb03f4b4d0a9428594752bd2a3b9aa0a9d4bd4
 - name: github.com/PuerkitoBio/urlesc
-  version: 5bd2802263f21d8788851d5305584c82a5c75d7e
+  version: de5bf2ad457846296e2031421a34e2568e304e35
 - name: github.com/rakelkar/gonetsh
   version: 758b1f7c9d1ca5acaca0b909f06ff9ed9fe35de1
   subpackages:
@@ -342,13 +344,7 @@ imports:
 - name: golang.org/x/text
   version: b19bf474d317b857955b12035d2c5acb57ce8b01
   subpackages:
-  - cases
-  - internal
-  - internal/tag
-  - language
-  - runes
   - secure/bidirule
-  - secure/precis
   - transform
   - unicode/bidi
   - unicode/norm
@@ -385,7 +381,6 @@ imports:
   - encoding
   - encoding/proto
   - grpclog
-  - health
   - health/grpc_health_v1
   - internal
   - internal/backoff
@@ -403,7 +398,7 @@ imports:
   - tap
   - transport
 - name: gopkg.in/go-playground/validator.v9
-  version: b199fa0642d29caca62b6a99d65cc981ba5edc3b
+  version: 46b4b1e301c24cac870ffcb4ba5c8a703d1ef475
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: gopkg.in/yaml.v2
@@ -483,7 +478,7 @@ imports:
   - pkg/watch
   - third_party/forked/golang/reflect
 - name: k8s.io/apiserver
-  version: f881eae9ec04b8c996ef0d24309c860ea188acd1
+  version: 3d1cdf2f60bd7eba6abe0829bbce272786cc8346
   subpackages:
   - pkg/apis/audit
 - name: k8s.io/client-go
