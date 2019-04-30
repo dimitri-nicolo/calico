@@ -92,6 +92,8 @@ spec:
       labels:
         k8s-app: compliance-controller
     spec:
+      nodeSelector:
+        beta.kubernetes.io/os: linux
       serviceAccountName: tigera-compliance-controller
       tolerations:
         - key: node-role.kubernetes.io/master

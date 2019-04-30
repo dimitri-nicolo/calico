@@ -61,6 +61,8 @@ metadata:
   labels:
     k8s-app: compliance-server
 spec:
+  nodeSelector:
+    beta.kubernetes.io/os: linux
   replicas: 1
   strategy:
      type: Recreate
