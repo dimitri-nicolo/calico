@@ -21,6 +21,7 @@ import (
 
 type Client interface {
 	report.AuditLogReportHandler
+	report.FlowLogReportHandler
 	report.ReportRetriever
 	report.ReportStorer
 	list.Destination

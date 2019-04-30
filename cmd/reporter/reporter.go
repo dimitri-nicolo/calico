@@ -54,7 +54,7 @@ func main() {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
-		err := report.Run(cxt, cfg, h, elasticClient, elasticClient, elasticClient, elasticClient)
+		err := report.Run(cxt, cfg, h, elasticClient, elasticClient, elasticClient, elasticClient, elasticClient)
 		if err != nil {
 			log.Errorf("Hit terminating error in reporter: %v", err)
 		}

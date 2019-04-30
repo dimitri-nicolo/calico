@@ -100,4 +100,5 @@ type PodOpt byte
 
 const (
 	PodOptEnvoyEnabled PodOpt = 1 << iota
+	PodOptSetGenerateName
 )

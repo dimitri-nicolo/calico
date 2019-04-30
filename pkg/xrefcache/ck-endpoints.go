@@ -3,6 +3,7 @@ package xrefcache
 
 import (
 	"errors"
+	"fmt"
 	"regexp"
 
 	log "github.com/sirupsen/logrus"
@@ -37,6 +38,7 @@ var (
 // VersionedEndpointResource is an extension of the VersionedResource interface, specific to handling Pods.
 type VersionedEndpointResource interface {
 	VersionedResource
+	GetFlowLogAggregationName() string
 	getV1Labels() map[string]string
 	getV1Profiles() []string
 	getIPOrEndpointIDs() (set.Set, error)
@@ -78,6 +80,15 @@ type versionedK8sPod struct {
 	v3      *apiv3.WorkloadEndpoint
 	v1      *model.WorkloadEndpoint
 	validIP bool
+}
+
+// GetFlowLogAggregationName implements the VersionedEndpointResource interface.
+func (v *versionedK8sPod) GetFlowLogAggregationName() string {
+	if v.GenerateName != "" {
+		return fmt.Sprintf("%s*", v.GenerateName)
+	} else {
+		return v.Name
+	}
 }
 
 // getV3 implements the VersionedEndpointResource interface.
@@ -162,6 +173,13 @@ func (v *versionedK8sPod) getEnvoyEnabled(engine *endpointEngine) bool {
 type versionedCalicoHostEndpoint struct {
 	*apiv3.HostEndpoint
 	v1 *model.HostEndpoint
+}
+
+// GetFlowLogAggregationName implements the VersionedEndpointResource interface.
+func (v *versionedCalicoHostEndpoint) GetFlowLogAggregationName() string {
+	// v3.HostEndpoint's Node field corresponds to the v1.HostEndpointKey's
+	// Hostname which is used as the aggregate name.
+	return v.Spec.Node
 }
 
 // getV3 implements the VersionedEndpointResource interface.

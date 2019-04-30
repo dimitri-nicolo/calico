@@ -454,6 +454,9 @@ func (t *XrefCacheTester) SetPod(nameIdx Name, namespaceIdx Namespace, labels La
 			Image: "docker.io/istio/proxyv2:1.0.7",
 		})
 	}
+	if opts&PodOptSetGenerateName != 0 {
+		meta.GenerateName = "pod-"
+	}
 	t.OnUpdate(syncer.Update{
 		Type:       syncer.UpdateTypeSet,
 		ResourceID: r,
