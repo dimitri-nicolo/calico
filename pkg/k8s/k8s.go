@@ -1,4 +1,4 @@
-// Copyright 2015 Tigera Inc
+// Copyright (c) 2015-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/containernetworking/cni/pkg/skel"
 	cnitypes "github.com/containernetworking/cni/pkg/types"
@@ -405,6 +406,23 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 	releaseIPAM := func() {
 		logger.WithField("endpointIPs", endpoint.Spec.IPNetworks).Info("Releasing IPAM allocation(s) after failure")
 		utils.ReleaseIPAllocation(logger, conf, args)
+	}
+
+	if conf.Mode == "vxlan" {
+		_, subNet, _ := net.ParseCIDR(result.IPs[0].Address.String())
+		var err error
+		for attempts := 3; attempts > 0; attempts-- {
+			err = utils.EnsureVXLANTunnelAddr(ctx, calicoClient, epIDs.Node, subNet)
+			if err != nil {
+				logger.WithError(err).Warn("Failed to set node's VXLAN tunnel IP, node may not receive traffic.  May retry...")
+				time.Sleep(1 * time.Second)
+				continue
+			}
+			break
+		}
+		if err != nil {
+			logger.WithError(err).Error("Failed to set node's VXLAN tunnel IP after retries, node may not receive traffic.")
+		}
 	}
 
 	// Whether the endpoint existed or not, the veth needs (re)creating.
