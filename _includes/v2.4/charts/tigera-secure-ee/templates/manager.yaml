@@ -376,7 +376,7 @@ spec:
         # cnx-manager-proxy.
         livenessProbe:
           httpGet:
-            path: /version
+            path: /tigera-elasticsearch/version
             port: 9443
             scheme: HTTPS
           initialDelaySeconds: 90
