@@ -62,11 +62,8 @@ etcd1
 {% if include.upgrade %}
 ### Run the custom upgrade playbook
 
-First, make sure that you have properly edited your
-[inventory file]({{site.url}}/{{page.version}}/getting-started/openshift/installation#edit-inventory-file).
-
 Once your inventory file has been properly configured, download the
-[upgrade playbook](upgrade-calico.yaml){:target="_blank"}
+[upgrade playbook](/{{page.version}}/getting-started/openshift/upgrade-calico.yaml){:target="_blank"}
 and copy it to the `playbooks` directory inside your OpenShift Ansible directory.
 This is typically found at `/usr/share/ansible/openshift-ansible/playbooks`.
 
