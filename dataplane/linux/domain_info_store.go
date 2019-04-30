@@ -294,7 +294,6 @@ func (s *domainInfoStore) processMappingExpiry(name, value string) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	if nameData := s.mappings[name]; nameData != nil {
-		log.Debugf(" ------> Mapping expiry for %v -> %v", name, value)
 		if valueData := nameData.values[value]; (valueData != nil) && valueData.expiryTime.Before(time.Now()) {
 			log.Debugf("Mapping expiry for %v -> %v", name, value)
 			delete(nameData.values, value)
