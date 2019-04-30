@@ -1,5 +1,5 @@
-hash: 6110df35f6c700e418956cfce5f1256c338fa08076dd67b5b1f39e38ffae166a
-updated: 2019-04-29T18:03:28.682544016+01:00
+hash: 68ff13780ff1bc29b4c4b331ecb4e51d1fce61038392b7e0127fcc48f8ae140a
+updated: 2019-04-30T10:02:15.225973537+01:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -50,7 +50,7 @@ imports:
   - autorest/azure
   - autorest/date
 - name: github.com/beorn7/perks
-  version: 4b2b341e8d7715fae06375aa633dbb6e91b3fb46
+  version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
   subpackages:
   - quantile
 - name: github.com/bronze1man/goStrongswanVici
@@ -118,7 +118,7 @@ imports:
 - name: github.com/ghodss/yaml
   version: 73d445a93680fa1a78ae23a5839bad48f32ba1ee
 - name: github.com/go-ini/ini
-  version: 3be5ad479f69d4e08d7fe25edf79bf3346bd658e
+  version: 9c8236e659b76e87bf02044d06fde8683008ff3e
 - name: github.com/go-openapi/jsonpointer
   version: 46af16f9f7b149af66e5d1bd010e3574dc06de98
 - name: github.com/go-openapi/jsonreference
@@ -136,9 +136,9 @@ imports:
 - name: github.com/gobuffalo/envy
   version: 043cb4b8af871b49563291e32c66bb84378a60ac
 - name: github.com/gobuffalo/genny
-  version: 34bef62e8202ea5e6dd1f9ee3d5ac217f1290352
+  version: 3ca520ef0d9ea4981534aae98bf9a003d9b18678
 - name: github.com/gobuffalo/gogen
-  version: 5482e6ef5d999f8cfa9b038a53953c9b4ee090af
+  version: 8f38393713f59beb43221f903c07f58f0377a063
   subpackages:
   - goimports
   - gomods
@@ -147,7 +147,7 @@ imports:
 - name: github.com/gobuffalo/mapi
   version: 0bb5e840be332d4280e40f2e6c50777c615bbac5
 - name: github.com/gobuffalo/packd
-  version: 9efbb667f2024a9370cadda45a57a0657c88a6fb
+  version: a385830c7fc0495b810318788a043c7655da337d
 - name: github.com/gobuffalo/packr
   version: 68a5fdc58d980600c4622a82472ebe415048f141
   subpackages:
@@ -207,7 +207,7 @@ imports:
   subpackages:
   - simplelru
 - name: github.com/hpcloud/tail
-  version: a30252cb686a21eb2d0b98132633053ec2f7f1e5
+  version: a1dbeea552b7c8df4b542c66073e393de198a800
   subpackages:
   - ratelimiter
   - util
@@ -228,7 +228,7 @@ imports:
 - name: github.com/juju/mutex
   version: d21b13acf4bfd8a8b0482a3a78e44d98880b40d3
 - name: github.com/kardianos/osext
-  version: 2bc1f35cddc0cc527b4bc3dce8578fc2a6c11384
+  version: ae77be60afb1dcacde03767a8c37337fad28ac14
 - name: github.com/karrick/godirwalk
   version: 4e17292779dcc7ed08e10c03bfdd022f7c28b3c3
 - name: github.com/kelseyhightower/confd
@@ -348,7 +348,7 @@ imports:
   - pkg/types
   - pkg/upgrade
 - name: github.com/projectcalico/felix
-  version: e3647a5447d3524c29339bb1328d5c598555430d
+  version: 6b1b93d7d1a3699e23e520343084885fc1bcda8b
   repo: git@github.com:tigera/felix-private.git
   subpackages:
   - bpf
@@ -467,7 +467,7 @@ imports:
   - prometheus/internal
   - prometheus/promhttp
 - name: github.com/prometheus/client_model
-  version: fd36f4220a901265f90734c3183c5f0c91daa0b8
+  version: fa8ad6fec33561be4280a8f0514318c79d7f6cb6
   subpackages:
   - go
 - name: github.com/prometheus/common
@@ -594,7 +594,7 @@ imports:
   subpackages:
   - rate
 - name: golang.org/x/tools
-  version: fe54fb35175bb1c0c175e2335e23d7fa90ca987a
+  version: 5a8dccf5b48ae388eebac31f4077f14adda4dbc6
   subpackages:
   - go/ast/astutil
   - go/gcexportdata
@@ -642,10 +642,10 @@ imports:
   - status
   - tap
   - transport
-- name: gopkg.in/fsnotify.v1
-  version: 7be54206639f256967dd82fa767397ba5f8f48f5
+- name: gopkg.in/fsnotify/fsnotify.v1
+  version: c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9
 - name: gopkg.in/go-playground/validator.v9
-  version: 46b4b1e301c24cac870ffcb4ba5c8a703d1ef475
+  version: b199fa0642d29caca62b6a99d65cc981ba5edc3b
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: gopkg.in/natefinch/lumberjack.v2
