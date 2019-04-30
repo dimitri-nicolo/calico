@@ -23,6 +23,7 @@ import (
 	. "github.com/tigera/compliance/internal/testutils"
 	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/event"
+	"github.com/tigera/compliance/pkg/flow"
 	"github.com/tigera/compliance/pkg/resources"
 	"github.com/tigera/compliance/pkg/syncer"
 	"github.com/tigera/compliance/pkg/xrefcache"
@@ -95,6 +96,14 @@ func (r *fakeReportStorer) StoreArchivedReport(d *ArchivedReportData, t time.Tim
 	return nil
 }
 
+// Fake flow reporter
+type fakeFlowReporter struct {
+}
+
+func (f *fakeFlowReporter) SearchFlowLogs(ctx context.Context, namespaces []string, start, end *time.Time) <-chan *flow.FlowLogResult {
+	return nil
+}
+
 var _ = Describe("Report tests", func() {
 	var r *reporter
 	var xc *XrefCacheTester
@@ -144,6 +153,7 @@ var _ = Describe("Report tests", func() {
 		auditer = &fakeAuditer{}
 		reportStorer = &fakeReportStorer{}
 		auditer = &fakeAuditer{}
+		flowReporter := &fakeFlowReporter{}
 		r = &reporter{
 			ctx: context.Background(),
 			cfg: cfg,
@@ -154,6 +164,7 @@ var _ = Describe("Report tests", func() {
 				"end":   cfg.ParsedReportEnd.Format(time.RFC3339),
 			}),
 			auditer:          auditer,
+			flowlogger:       flowReporter,
 			archiver:         reportStorer,
 			xc:               xc.XrefCache,
 			replayer:         replayer,
@@ -171,6 +182,7 @@ var _ = Describe("Report tests", func() {
 				StartTime:      metav1.Time{cfg.ParsedReportStart},
 				EndTime:        metav1.Time{cfg.ParsedReportEnd},
 			},
+			flowLogFilter: flow.NewFlowLogFilter(),
 		}
 
 		// Start the reporter and wait until start has been called.
