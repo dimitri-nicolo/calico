@@ -2,7 +2,7 @@ action: init
 kind: GlobalNetworkPolicy
 apiversion: projectcalico.org/v3
 metadata:
-  name: "{{.Namespace}}-ingress-with-net-set"
+  name: "ingress-with-net-set-ns-{{.Namespace}}"
 spec:
   selector: '{{.Namespace}}-ingress-with-net-set == "yes"'
   ingress:

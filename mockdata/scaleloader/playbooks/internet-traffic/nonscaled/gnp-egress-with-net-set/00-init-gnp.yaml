@@ -2,7 +2,7 @@ action: init
 kind: GlobalNetworkPolicy
 apiversion: projectcalico.org/v3
 metadata:
-  name: "{{.Namespace}}-egress-with-net-set"
+  name: "egress-with-net-set-ns-{{.Namespace}}"
 spec:
   selector: '{{.Namespace}}-egress-with-net-set == "yes"'
   egress:
