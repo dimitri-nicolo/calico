@@ -9,7 +9,7 @@ import:
   version: 773f5027234d0b08adf766be34f55df2f312abf7
 - package: github.com/kelseyhightower/confd
   repo: git@github.com:tigera/confd-private.git
-  version: 7c54996ef94368053bcd7fdff63ae09608f9a827
+  version: 891febea142ded09b2938c586bb3c7b5847d93f9
   subpackages:
   - pkg/config
   - pkg/run
