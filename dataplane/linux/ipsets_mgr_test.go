@@ -26,8 +26,10 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
+// For now, we only need four IPSets to stage different scenarios around adding, removing and updating members.
 const numMembers int = 4
 
+// Basic structure for a test case. The idea is to have at least one for each IPSetType.
 type IPSetsMgrTestCase struct {
 	ipsetID      string
 	ipsetType    proto.IPSetUpdate_IPSetType
@@ -35,6 +37,7 @@ type IPSetsMgrTestCase struct {
 	dnsRecs      [numMembers]layers.DNSResourceRecord
 }
 
+// Main array of test cases. We pass each of these to the test routines during execution.
 var ipsetsMgrTestCases = []IPSetsMgrTestCase{
 	{
 		ipsetID:      "id1",
@@ -112,6 +115,7 @@ var _ = Describe("IP Sets manager", func() {
 		ipsetsMgr = newIPSetsManager(ipSets, 1024, domainStore)
 	})
 
+	// Generic assumptions used during tests. Having them here reduces code duplication and improves readability.
 	AssertIPSetMembers := func(id string, members []string) {
 		It("IPSet should have the right members", func() {
 			Expect(ipSets.Members[id]).To(Equal(set.FromArray(members)))
