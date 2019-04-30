@@ -6,6 +6,7 @@ import (
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
+	"github.com/tigera/compliance/pkg/event"
 	"github.com/tigera/compliance/pkg/flow"
 )
 
@@ -21,7 +22,7 @@ type ReportStorer interface {
 }
 
 type AuditLogReportHandler interface {
-	AddAuditEvents(ctx context.Context, data *apiv3.ReportData, filter *apiv3.AuditEventsSelection, start, end time.Time)
+	SearchAuditEvents(ctx context.Context, filter *apiv3.AuditEventsSelection, start, end *time.Time) <-chan *event.AuditEventResult
 }
 
 type FlowLogReportHandler interface {

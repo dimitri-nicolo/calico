@@ -32,20 +32,6 @@
     },
     {
       "type": "radialbarchart",
-      "heading": "Service Accounts",
-      "summary": {
-        "label": "Total",
-        "total": "@@@{{ .ServicesSummary.NumTotal }}@@@"
-      },
-      "data": [
-        {
-          "label": "Protected ingress",
-          "value": "@@@{{ .ServicesSummary.NumIngressProtected }}@@@"
-        }
-      ]
-    },
-    {
-      "type": "radialbarchart",
       "heading": "Endpoints",
       "summary": {
         "label": "Total",
@@ -69,20 +55,6 @@
         {
           "label": "Protected egress",
           "value": "@@@{{ .NamespacesSummary.NumEgressProtected }}@@@"
-        }
-      ]
-    },
-    {
-      "type": "radialbarchart",
-      "heading": "Service Accounts",
-      "summary": {
-        "label": "Total",
-        "total": "@@@{{ .ServicesSummary.NumTotal }}@@@"
-      },
-      "data": [
-        {
-          "label": "Protected egress",
-          "value": "@@@{{ .ServicesSummary.NumEgressProtected }}@@@"
         }
       ]
     }

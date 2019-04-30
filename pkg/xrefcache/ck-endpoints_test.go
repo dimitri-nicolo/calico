@@ -8,6 +8,7 @@ import (
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
 	. "github.com/tigera/compliance/internal/testutils"
+	"github.com/tigera/compliance/pkg/resources"
 	"github.com/tigera/compliance/pkg/xrefcache"
 )
 
@@ -226,12 +227,25 @@ var _ = Describe("Pods cache verification", func() {
 
 		By("applying pod3 with no IP")
 		pod3 := tester.SetPod(Name2, Namespace2, NoLabels, 0, NoServiceAccount, NoPodOptions)
+		pod3Id := resources.GetResourceID(pod3)
 
 		By("applying service1 with IP1 IP2 IP3")
-		svc1 := tester.SetEndpoints(Name1, Namespace1, IP1|IP2|IP3)
+		svcEps1 := tester.SetEndpoints(Name1, Namespace1, IP1|IP2|IP3)
+		svcEpsID1 := resources.GetResourceID(svcEps1)
+		svc1 := apiv3.ResourceID{
+			TypeMeta:  resources.TypeK8sServices,
+			Name:      svcEpsID1.Name,
+			Namespace: svcEpsID1.Namespace,
+		}
 
-		By("applying service2 with IP1 IP3 and pod3 ref")
-		svc2 := tester.SetEndpoints(Name2, Namespace1, IP1|IP3, pod3)
+		By("applying service2 with IP1 IP3 and pod3Id ref")
+		svcEps2 := tester.SetEndpoints(Name2, Namespace1, IP1|IP3, pod3Id)
+		svcEpsID2 := resources.GetResourceID(svcEps2)
+		svc2 := apiv3.ResourceID{
+			TypeMeta:  resources.TypeK8sServices,
+			Name:      svcEpsID2.Name,
+			Namespace: svcEpsID2.Namespace,
+		}
 
 		By("checking that pod1 refs service1 and service2")
 		ep := tester.GetPod(Name1, Namespace1)

@@ -1,0 +1,14 @@
+{{ $c := csv }}
+{{- $c := $c.AddColumn "endpoint"                                  "{{ .Endpoint }}" }}
+{{- $c := $c.AddColumn "ingressProtected"                          "{{ .IngressProtected }}" }}
+{{- $c := $c.AddColumn "egressProtected"                           "{{ .EgressProtected }}" }}
+{{- $c := $c.AddColumn "ingressFromInternet"                       "{{ .IngressFromInternet }}" }}
+{{- $c := $c.AddColumn "egressToInternet"                          "{{ .EgressToInternet }}" }}
+{{- $c := $c.AddColumn "ingressFromOtherNamespace"                 "{{ .IngressFromOtherNamespace }}" }}
+{{- $c := $c.AddColumn "egressToOtherNamespace"                    "{{ .EgressToOtherNamespace }}" }}
+{{- $c := $c.AddColumn "envoyEnabled"                              "{{ .EnvoyEnabled }}" }}
+{{- $c := $c.AddColumn "appliedPolicies"                           "{{ join \";\" .AppliedPolicies }}" }}
+{{- $c := $c.AddColumn "trafficAggregationPrefix"                  "{{ flowsPrefix . }}" }}
+{{- $c := $c.AddColumn "endpointsGeneratingTrafficToThisEndpoint"  "{{ join \";\" (flowsIngress .) }}" }}
+{{- $c := $c.AddColumn "endpointsReceivingTrafficFromThisEndpoint" "{{ join \";\" (flowsEgress .) }}" }}
+{{- $c.Render .Endpoints }}

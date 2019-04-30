@@ -59,16 +59,16 @@ func Run(
 
 	// Define a function that can be used to report health. We pass this to the xrefcache - since it isn't a long
 	// running process, it shouldn't have it's owner reporter type.
-	reportHealth := func() {
+	healthy := func() {
 		healthAggr.Report(healthReporter, &health.HealthReport{Live: true})
 	}
-	reportHealth()
+	healthy()
 
 	// Get the report config.
 	reportCfg := MustLoadReportConfig(cfg)
 
 	// Create the cross-reference cache that we use to monitor for changes in the relevant data.
-	xc := xrefcache.NewXrefCache(reportHealth)
+	xc := xrefcache.NewXrefCache(healthy)
 	replayer := replay.New(cfg.ParsedReportStart, cfg.ParsedReportEnd, lister, eventer, xc)
 
 	r := &reporter{
@@ -80,16 +80,17 @@ func Run(
 			"start": cfg.ParsedReportStart.Format(time.RFC3339),
 			"end":   cfg.ParsedReportEnd.Format(time.RFC3339),
 		}),
-		eventer:          eventer,
 		auditer:          auditer,
 		flowlogger:       flowlogger,
 		archiver:         archiver,
 		xc:               xc,
 		replayer:         replayer,
-		health:           healthAggr,
+		healthy:          healthy,
 		inScopeEndpoints: make(map[apiv3.ResourceID]*reportEndpoint),
 		services:         make(map[apiv3.ResourceID]xrefcache.CacheEntryFlags),
-		namespaces:       make(map[string]xrefcache.CacheEntryFlags),
+		namespaces:       make(map[apiv3.ResourceID]xrefcache.CacheEntryFlags),
+		serviceAccounts:  resources.NewSet(),
+		policies:         resources.NewSet(),
 		data: &apiv3.ReportData{
 			ReportName:     reportCfg.Report.Name,
 			ReportTypeName: reportCfg.ReportType.Name,
@@ -108,19 +109,20 @@ type reporter struct {
 	cfg        *Config
 	clog       *logrus.Entry
 	listDest   list.Destination
-	eventer    event.Fetcher
 	xc         xrefcache.XrefCache
 	replayer   syncer.Starter
 	auditer    AuditLogReportHandler
 	flowlogger FlowLogReportHandler
 	archiver   ReportStorer
-	health     *health.HealthAggregator
+	healthy    func()
 
 	// Consolidate the tracked in-scope endpoint events into a local cache, which will get converted and copied into
 	// the report data structure.
 	inScopeEndpoints map[apiv3.ResourceID]*reportEndpoint
 	services         map[apiv3.ResourceID]xrefcache.CacheEntryFlags
-	namespaces       map[string]xrefcache.CacheEntryFlags
+	namespaces       map[apiv3.ResourceID]xrefcache.CacheEntryFlags
+	serviceAccounts  resources.Set
+	policies         resources.Set
 	data             *apiv3.ReportData
 
 	// Flow logs tracking information.
@@ -135,12 +137,14 @@ type reportEndpoint struct {
 }
 
 func (r *reporter) run() error {
-	// Indicate we are healthy.
-	r.health.Report(healthReporter, &health.HealthReport{Live: true})
+	// Report healthy.
+	r.healthy()
 
-	if r.cfg.ReportType.Spec.IncludeEndpointData {
-		// We need to include endpoint data in the report.
-		r.clog.Debug("Including endpoint data in report")
+	if r.cfg.ReportType.Spec.IncludeEndpointData ||
+		(r.cfg.ReportType.Spec.AuditEventsSelection != nil && r.cfg.Report.Spec.EndpointsSelection != nil) {
+		// We either want endpoint data in the report, or we are gathering audit logs and have specified and in-scope
+		// endpoints filter with which we will filter in-scope resources.
+		r.clog.Debug("Including endpoint data in report, or require endpoints for filtering")
 
 		// Register the endpoint selectors to specify which endpoints we will receive notification for.
 		if err := r.xc.RegisterInScopeEndpoints(r.cfg.Report.Spec.EndpointsSelection); err != nil {
@@ -161,7 +165,10 @@ func (r *reporter) run() error {
 		r.replayer.Start(r.ctx)
 
 		// Create the initial ReportData structure
-		r.transferAggregatedData()
+		if r.cfg.ReportType.Spec.IncludeEndpointData {
+			r.clog.Debug("Including endpoint data in report")
+			r.transferAggregatedData()
+		}
 
 		if r.cfg.ReportType.Spec.IncludeEndpointFlowLogData {
 			// We also need to include flow logs data for the in-scope endpoints.
@@ -172,17 +179,19 @@ func (r *reporter) run() error {
 	}
 
 	// Indicate we are healthy.
-	r.health.Report(healthReporter, &health.HealthReport{Live: true})
+	r.healthy()
 
 	if r.cfg.ReportType.Spec.AuditEventsSelection != nil {
 		// We need to include audit log data in the report.
 		r.clog.Debug("Including audit event data in report")
-		r.auditer.AddAuditEvents(r.ctx, r.data, r.cfg.ReportType.Spec.AuditEventsSelection,
-			r.cfg.ParsedReportStart, r.cfg.ParsedReportEnd)
+		if err := r.addAuditEvents(); err != nil {
+			r.clog.WithError(err).Error("Hit error gathering audit logs")
+			return err
+		}
 	}
 
 	// Indicate we are healthy.
-	r.health.Report(healthReporter, &health.HealthReport{Live: true})
+	r.healthy()
 
 	r.clog.Debug("Rendering report data based on template")
 	summary, err := compliance.RenderTemplate(r.cfg.ReportType.Spec.UISummaryTemplate.Template, r.data)
@@ -191,7 +200,7 @@ func (r *reporter) run() error {
 	}
 
 	// Indicate we are healthy.
-	r.health.Report(healthReporter, &health.HealthReport{Live: true})
+	r.healthy()
 
 	// Set the generation time and store the report data.
 	r.clog.Debug("Storing report into archiver")
@@ -202,7 +211,7 @@ func (r *reporter) run() error {
 	}, time.Now())
 
 	// Indicate we are healthy.
-	r.health.Report(healthReporter, &health.HealthReport{Live: true})
+	r.healthy()
 
 	return err
 }
@@ -225,6 +234,12 @@ func (r *reporter) onUpdate(update syncer.Update) {
 	ep.policies.AddSet(x.AppliedPolicies)
 	ep.services.AddSet(x.Services)
 
+	// Track the full set of Policies and ServiceAccounts for all our in-scope endpoints.
+	r.policies.AddSet(x.AppliedPolicies)
+	if x.ServiceAccount != nil {
+		r.serviceAccounts.Add(*x.ServiceAccount)
+	}
+
 	// Loop through and update the flags on the services.
 	ep.services.Iter(func(item apiv3.ResourceID) error {
 		r.services[item] |= zeroTrustFlags
@@ -234,7 +249,10 @@ func (r *reporter) onUpdate(update syncer.Update) {
 	ep.flowAggrName = x.GetFlowLogAggregationName()
 
 	// Update the namespace flags.
-	r.namespaces[update.ResourceID.Namespace] |= zeroTrustFlags
+	if update.ResourceID.Namespace != "" {
+		r.namespaces[toNamespace(update.ResourceID.Namespace)] |= zeroTrustFlags
+
+	}
 }
 
 func (r *reporter) getEndpoint(id apiv3.ResourceID) *reportEndpoint {
@@ -282,6 +300,82 @@ func (r *reporter) addFlowLogEntries() {
 	}
 }
 
+// addAuditEvents reads audit logs from storage, filters them based on the resources specified in
+// `filter`. Blank fields in the filter ResourceIDs are regarded as wildcard matches for that
+// parameter.  Fields within a ResourceID are ANDed, different ResourceIDs are ORed. For example:
+// - an empty filter would include no audit events
+// - a filter containing a blank ResourceID would contain all audit events
+// - a filter containing two ResourceIDs, one with Kind set to "NetworkPolicy", the other with kind
+//   set to "GlobalNetworkPolicy" would include all Kubernetes and Calico NetworkPolicy and
+//   all Calico GlobalNetworkPolicy audit events.
+func (r *reporter) addAuditEvents() error {
+	for e := range r.auditer.SearchAuditEvents(r.ctx, r.cfg.ReportType.Spec.AuditEventsSelection,
+		&r.cfg.ParsedReportStart, &r.cfg.ParsedReportEnd) {
+		// If we received an error then log, but carry on as best we can.
+		if e.Err != nil {
+			return e.Err
+		}
+
+		// If we were filtering endpoints, then check to see if the audit event is associated with any of our in-scope
+		// types, otherwise we aren't filtering at all.
+		if r.cfg.Report.Spec.EndpointsSelection != nil {
+			// Normalize the resource kind in the event log.
+			if res, err := event.ExtractResourceFromAuditEvent(e.Event); err != nil {
+				r.clog.WithError(err).Error("Unable to extract resource from audit event")
+				continue
+			} else if id := resources.GetResourceID(res); !r.isInScope(id) {
+				r.clog.Infof("Filtering out not-in-scope resource from audit events: %s", id)
+				continue
+			}
+		}
+
+		// The audit event is being included. Update the stats and append the event log.
+		switch e.Verb {
+		case replay.VerbCreate:
+			r.data.AuditSummary.NumCreate++
+		case replay.VerbPatch, replay.VerbUpdate:
+			r.data.AuditSummary.NumModify++
+		case replay.VerbDelete:
+			r.data.AuditSummary.NumDelete++
+		}
+		r.data.AuditEvents = append(r.data.AuditEvents, *e.Event)
+		r.data.AuditSummary.NumTotal++
+	}
+
+	return nil
+}
+
+// isInScope returns true if the specified id is in our in-scope data.
+func (r *reporter) isInScope(id apiv3.ResourceID) bool {
+	switch id.TypeMeta {
+	case resources.TypeK8sNamespaces:
+		_, ok := r.namespaces[id]
+		return ok
+	case resources.TypeK8sServiceAccounts:
+		return r.serviceAccounts.Contains(id)
+	case resources.TypeK8sPods, resources.TypeCalicoHostEndpoints:
+		_, ok := r.inScopeEndpoints[id]
+		return ok
+	case resources.TypeCalicoNetworkPolicies, resources.TypeCalicoGlobalNetworkPolicies, resources.TypeK8sNetworkPolicies:
+		return r.policies.Contains(id)
+	case resources.TypeK8sServices:
+		_, ok := r.services[id]
+		return ok
+	case resources.TypeK8sEndpoints:
+		nid := apiv3.ResourceID{
+			TypeMeta:  resources.TypeK8sServices,
+			Name:      id.Name,
+			Namespace: id.Namespace,
+		}
+		_, ok := r.services[nid]
+		return ok
+	case resources.TypeCalicoGlobalNetworkSets:
+		return false
+	default:
+		return false
+	}
+}
+
 func (r *reporter) transferAggregatedData() {
 	// Create the endpoints slice up-front because it's likely to be large.
 	r.data.Endpoints = make([]apiv3.EndpointsReportEndpoint, 0, len(r.inScopeEndpoints))
@@ -308,6 +402,9 @@ func (r *reporter) transferAggregatedData() {
 		// Update the summary stats.
 		updateSummary(ep.zeroTrustFlags, &r.data.EndpointsSummary, true)
 
+		// Fill in the service account stat which is not handled by zero trust.
+		r.data.EndpointsSummary.NumServiceAccounts = r.serviceAccounts.Len()
+
 		// Delete from our dictionary now.
 		delete(r.inScopeEndpoints, id)
 	}
@@ -316,11 +413,11 @@ func (r *reporter) transferAggregatedData() {
 	r.inScopeEndpoints = nil
 
 	// Now handle namespaces.
-	for name, zeroTrustFlags := range r.namespaces {
+	for ns, zeroTrustFlags := range r.namespaces {
 		r.data.Namespaces = append(r.data.Namespaces, apiv3.EndpointsReportNamespace{
 			Namespace: apiv3.ResourceID{
 				TypeMeta: resources.TypeK8sNamespaces,
-				Name:     name,
+				Name:     ns.Name,
 			},
 			IngressProtected:          zeroTrustFlags&xrefcache.CacheEntryProtectedIngress == 0, // We reversed this for zero-trust
 			EgressProtected:           zeroTrustFlags&xrefcache.CacheEntryProtectedEgress == 0,  // We reversed this for zero-trust
@@ -332,7 +429,7 @@ func (r *reporter) transferAggregatedData() {
 		})
 
 		// Delete from our dictionary now.
-		delete(r.namespaces, name)
+		delete(r.namespaces, ns)
 
 		// Update the summary stats.
 		updateSummary(zeroTrustFlags, &r.data.NamespacesSummary, true)
@@ -407,4 +504,12 @@ func zeroTrustFlags(updateType syncer.UpdateType, flags xrefcache.CacheEntryFlag
 	zeroTrust := (flags ^ ZeroTrustWhenEndpointFlagsUnset) & ZeroTrustFlags
 
 	return zeroTrust, zeroTrust & changedFlags
+}
+
+// toNamespace converts a namespace name to the equivalent ResourceID.
+func toNamespace(ns string) apiv3.ResourceID {
+	return apiv3.ResourceID{
+		TypeMeta: resources.TypeK8sNamespaces,
+		Name:     ns,
+	}
 }

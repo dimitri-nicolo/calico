@@ -1,2 +1,16 @@
-startTime,endTime,endpointSelector,namespaceNames,namespaceSelector,serviceAccountNames,serviceAccountSelector,endpointsNumInScope,endpointsNumIngressProtected,endpointsNumEgressProtected,namespacesNumInScope,namespacesNumIngressProtected,namespacesNumEgressProtected,servicesNumInScope,servicesNumIngressProtected
-{{ dateRfc3339 .StartTime }},{{ dateRfc3339 .EndTime }},{{ .ReportSpec.EndpointsSelection.EndpointSelector }},{{ if .ReportSpec.EndpointsSelection.Namespaces }}{{ join ";" .ReportSpec.EndpointsSelection.Namespaces.Names }},{{ .ReportSpec.EndpointsSelection.Namespaces.Selector }}{{ else }},{{ end }},{{ if .ReportSpec.EndpointsSelection.ServiceAccounts }}{{ join ";" .ReportSpec.EndpointsSelection.ServiceAccounts.Names }},{{ .ReportSpec.EndpointsSelection.ServiceAccounts.Selector }}{{ else }},{{ end }},{{ .EndpointsSummary.NumTotal }},{{ .EndpointsSummary.NumIngressProtected }},{{ .EndpointsSummary.NumEgressProtected }},{{ .NamespacesSummary.NumTotal  }},{{ .NamespacesSummary.NumIngressProtected }},{{ .NamespacesSummary.NumEgressProtected }},{{ .ServicesSummary.NumTotal }},{{ .ServicesSummary.NumIngressProtected }}
+{{ $c := csv }}
+{{- $c := $c.AddColumn "startTime"                     "{{ dateRfc3339 .StartTime }}" }}
+{{- $c := $c.AddColumn "endTime"                       "{{ dateRfc3339 .EndTime }}" }}
+{{- $c := $c.AddColumn "endpointSelector"              "{{ if .ReportSpec.EndpointsSelection }}{{ .ReportSpec.EndpointsSelection.EndpointSelector }}{{ end }}" }}
+{{- $c := $c.AddColumn "namespaceNames"                "{{ if .ReportSpec.EndpointsSelection }}{{ if .ReportSpec.EndpointsSelection.Namespaces }}{{ join \";\" .ReportSpec.EndpointsSelection.Namespaces.Names }}{{ end }}{{ end }}" }}
+{{- $c := $c.AddColumn "namespaceSelector"             "{{ if .ReportSpec.EndpointsSelection }}{{ if .ReportSpec.EndpointsSelection.Namespaces }}{{ .ReportSpec.EndpointsSelection.Namespaces.Selector }}{{ end }}{{ end }}" }}
+{{- $c := $c.AddColumn "serviceAccountNames"           "{{ if .ReportSpec.EndpointsSelection }}{{ if .ReportSpec.EndpointsSelection.ServiceAccounts }}{{ join \";\" .ReportSpec.EndpointsSelection.ServiceAccounts.Names }}{{ end }}{{ end }}" }}
+{{- $c := $c.AddColumn "serviceAccountSelectors"       "{{ if .ReportSpec.EndpointsSelection }}{{ if .ReportSpec.EndpointsSelection.ServiceAccounts }}{{ .ReportSpec.EndpointsSelection.ServiceAccounts.Selector }}{{ end }}{{ end }}" }}
+{{- $c := $c.AddColumn "endpointsNumInScope"           "{{ .EndpointsSummary.NumTotal }}" }}
+{{- $c := $c.AddColumn "endpointsNumIngressProtected"  "{{ .EndpointsSummary.NumIngressProtected }}" }}
+{{- $c := $c.AddColumn "endpointsNumEgressProtected"   "{{ .EndpointsSummary.NumEgressProtected }}" }}
+{{- $c := $c.AddColumn "namespacesNumInScope"          "{{ .NamespacesSummary.NumTotal }}" }}
+{{- $c := $c.AddColumn "namespacesNumIngressProtected" "{{ .NamespacesSummary.NumIngressProtected }}" }}
+{{- $c := $c.AddColumn "namespacesNumEgressProtected"  "{{ .NamespacesSummary.NumEgressProtected }}" }}
+{{- $c := $c.AddColumn "serviceAccountsNumInScope"     "{{ .EndpointsSummary.NumServiceAccounts }}" }}
+{{- $c.Render . }}

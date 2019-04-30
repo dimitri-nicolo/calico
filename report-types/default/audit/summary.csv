@@ -1,2 +1,0 @@
-startTime,endTime,numCreatedPolicies,numModifiedPolicies,numDeletedPolicies
-{{ dateRfc3339 .StartTime }},{{ dateRfc3339 .EndTime }},{{ .AuditSummary.NumCreate }},{{ .AuditSummary.NumModify }},{{ .AuditSummary.NumDelete }}

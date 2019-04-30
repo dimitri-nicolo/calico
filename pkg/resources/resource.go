@@ -22,6 +22,7 @@ type ResourceList interface {
 }
 
 func GetResourceID(r Resource) apiv3.ResourceID {
+	//TODO(rlb): We are not yet including UID.
 	return apiv3.ResourceID{
 		TypeMeta:  GetTypeMeta(r),
 		Name:      r.GetObjectMeta().GetName(),

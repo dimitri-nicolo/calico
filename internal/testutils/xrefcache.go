@@ -289,7 +289,7 @@ func (t *XrefCacheTester) GetGlobalNetworkPolicy(nameIdx Name) *xrefcache.CacheE
 	return e.(*xrefcache.CacheEntryNetworkPolicy)
 }
 
-func (t *XrefCacheTester) SetGlobalNetworkPolicy(nameIdx Name, s Selector, ingress, egress []apiv3.Rule) {
+func (t *XrefCacheTester) SetGlobalNetworkPolicy(nameIdx Name, s Selector, ingress, egress []apiv3.Rule) resources.Resource {
 	r := getResourceId(resources.TypeCalicoGlobalNetworkPolicies, nameIdx, 0)
 	types := []apiv3.PolicyType{}
 	if ingress != nil {
@@ -298,20 +298,22 @@ func (t *XrefCacheTester) SetGlobalNetworkPolicy(nameIdx Name, s Selector, ingre
 	if egress != nil {
 		types = append(types, apiv3.PolicyTypeEgress)
 	}
+	res := &apiv3.GlobalNetworkPolicy{
+		TypeMeta:   r.TypeMeta,
+		ObjectMeta: getObjectMeta(r, NoLabels),
+		Spec: apiv3.GlobalNetworkPolicySpec{
+			Selector: selectorByteToSelector(s),
+			Ingress:  ingress,
+			Egress:   egress,
+			Types:    types,
+		},
+	}
 	t.OnUpdate(syncer.Update{
 		Type:       syncer.UpdateTypeSet,
 		ResourceID: r,
-		Resource: &apiv3.GlobalNetworkPolicy{
-			TypeMeta:   r.TypeMeta,
-			ObjectMeta: getObjectMeta(r, NoLabels),
-			Spec: apiv3.GlobalNetworkPolicySpec{
-				Selector: selectorByteToSelector(s),
-				Ingress:  ingress,
-				Egress:   egress,
-				Types:    types,
-			},
-		},
+		Resource:   res,
 	})
+	return res
 }
 
 func (t *XrefCacheTester) DeleteGlobalNetworkPolicy(nameIdx Name) {
@@ -335,7 +337,7 @@ func (t *XrefCacheTester) GetNetworkPolicy(nameIdx Name, namespaceIdx Namespace)
 	return e.(*xrefcache.CacheEntryNetworkPolicy)
 }
 
-func (t *XrefCacheTester) SetNetworkPolicy(nameIdx Name, namespaceIdx Namespace, s Selector, ingress, egress []apiv3.Rule) {
+func (t *XrefCacheTester) SetNetworkPolicy(nameIdx Name, namespaceIdx Namespace, s Selector, ingress, egress []apiv3.Rule) resources.Resource {
 	r := getResourceId(resources.TypeCalicoNetworkPolicies, nameIdx, namespaceIdx)
 	types := []apiv3.PolicyType{}
 	if ingress != nil {
@@ -344,20 +346,22 @@ func (t *XrefCacheTester) SetNetworkPolicy(nameIdx Name, namespaceIdx Namespace,
 	if egress != nil {
 		types = append(types, apiv3.PolicyTypeEgress)
 	}
+	res := &apiv3.NetworkPolicy{
+		TypeMeta:   r.TypeMeta,
+		ObjectMeta: getObjectMeta(r, NoLabels),
+		Spec: apiv3.NetworkPolicySpec{
+			Selector: selectorByteToSelector(s),
+			Ingress:  ingress,
+			Egress:   egress,
+			Types:    types,
+		},
+	}
 	t.OnUpdate(syncer.Update{
 		Type:       syncer.UpdateTypeSet,
 		ResourceID: r,
-		Resource: &apiv3.NetworkPolicy{
-			TypeMeta:   r.TypeMeta,
-			ObjectMeta: getObjectMeta(r, NoLabels),
-			Spec: apiv3.NetworkPolicySpec{
-				Selector: selectorByteToSelector(s),
-				Ingress:  ingress,
-				Egress:   egress,
-				Types:    types,
-			},
-		},
+		Resource:   res,
 	})
+	return res
 }
 
 func (t *XrefCacheTester) DeleteNetworkPolicy(nameIdx Name, namespaceIdx Namespace) {
@@ -385,7 +389,7 @@ func (t *XrefCacheTester) SetK8sNetworkPolicy(
 	nameIdx Name, namespaceIdx Namespace, s Selector,
 	ingress []networkingv1.NetworkPolicyIngressRule,
 	egress []networkingv1.NetworkPolicyEgressRule,
-) {
+) resources.Resource {
 	r := getResourceId(resources.TypeK8sNetworkPolicies, nameIdx, namespaceIdx)
 	types := []networkingv1.PolicyType{}
 	if ingress != nil {
@@ -394,20 +398,22 @@ func (t *XrefCacheTester) SetK8sNetworkPolicy(
 	if egress != nil {
 		types = append(types, networkingv1.PolicyTypeEgress)
 	}
+	res := &networkingv1.NetworkPolicy{
+		TypeMeta:   r.TypeMeta,
+		ObjectMeta: getObjectMeta(r, NoLabels),
+		Spec: networkingv1.NetworkPolicySpec{
+			PodSelector: *selectorByteToK8sSelector(s),
+			PolicyTypes: types,
+			Ingress:     ingress,
+			Egress:      egress,
+		},
+	}
 	t.OnUpdate(syncer.Update{
 		Type:       syncer.UpdateTypeSet,
 		ResourceID: r,
-		Resource: &networkingv1.NetworkPolicy{
-			TypeMeta:   r.TypeMeta,
-			ObjectMeta: getObjectMeta(r, NoLabels),
-			Spec: networkingv1.NetworkPolicySpec{
-				PodSelector: *selectorByteToK8sSelector(s),
-				PolicyTypes: types,
-				Ingress:     ingress,
-				Egress:      egress,
-			},
-		},
+		Resource:   res,
 	})
+	return res
 }
 
 func (t *XrefCacheTester) DeleteK8sNetworkPolicy(nameIdx Name, namespaceIdx Namespace) {
@@ -431,7 +437,7 @@ func (t *XrefCacheTester) GetPod(nameIdx Name, namespaceIdx Namespace) *xrefcach
 	return e.(*xrefcache.CacheEntryEndpoint)
 }
 
-func (t *XrefCacheTester) SetPod(nameIdx Name, namespaceIdx Namespace, labels Label, ip IP, serviceAccount Name, opts PodOpt) apiv3.ResourceID {
+func (t *XrefCacheTester) SetPod(nameIdx Name, namespaceIdx Namespace, labels Label, ip IP, serviceAccount Name, opts PodOpt) resources.Resource {
 	r := getResourceId(resources.TypeK8sPods, nameIdx, namespaceIdx)
 	var sa string
 	if serviceAccount != 0 {
@@ -457,24 +463,25 @@ func (t *XrefCacheTester) SetPod(nameIdx Name, namespaceIdx Namespace, labels La
 	if opts&PodOptSetGenerateName != 0 {
 		meta.GenerateName = "pod-"
 	}
+	res := &corev1.Pod{
+		TypeMeta:   r.TypeMeta,
+		ObjectMeta: meta,
+		Spec: corev1.PodSpec{
+			NodeName:           "node1",
+			ServiceAccountName: sa,
+			InitContainers:     initContainers,
+			Containers:         containers,
+		},
+		Status: corev1.PodStatus{
+			PodIP: ipByteToIPString(ip),
+		},
+	}
 	t.OnUpdate(syncer.Update{
 		Type:       syncer.UpdateTypeSet,
 		ResourceID: r,
-		Resource: &corev1.Pod{
-			TypeMeta:   r.TypeMeta,
-			ObjectMeta: meta,
-			Spec: corev1.PodSpec{
-				NodeName:           "node1",
-				ServiceAccountName: sa,
-				InitContainers:     initContainers,
-				Containers:         containers,
-			},
-			Status: corev1.PodStatus{
-				PodIP: ipByteToIPString(ip),
-			},
-		},
+		Resource:   res,
 	})
-	return r
+	return res
 }
 
 func (t *XrefCacheTester) DeletePod(nameIdx Name, namespaceIdx Namespace) {
@@ -498,7 +505,7 @@ func (t *XrefCacheTester) GetEndpoints(nameIdx Name, namespaceIdx Namespace) *xr
 	return e.(*xrefcache.CacheEntryK8sServiceEndpoints)
 }
 
-func (t *XrefCacheTester) SetEndpoints(nameIdx Name, namespaceIdx Namespace, ips IP, pods ...apiv3.ResourceID) apiv3.ResourceID {
+func (t *XrefCacheTester) SetEndpoints(nameIdx Name, namespaceIdx Namespace, ips IP, pods ...apiv3.ResourceID) resources.Resource {
 	r := getResourceId(resources.TypeK8sEndpoints, nameIdx, namespaceIdx)
 	ipAddrs := ipByteToIPStringSlice(ips)
 
@@ -538,16 +545,17 @@ func (t *XrefCacheTester) SetEndpoints(nameIdx Name, namespaceIdx Namespace, ips
 		})
 	}
 
+	res := &corev1.Endpoints{
+		TypeMeta:   r.TypeMeta,
+		ObjectMeta: getObjectMeta(r, NoLabels),
+		Subsets:    ss,
+	}
 	t.OnUpdate(syncer.Update{
 		Type:       syncer.UpdateTypeSet,
 		ResourceID: r,
-		Resource: &corev1.Endpoints{
-			TypeMeta:   r.TypeMeta,
-			ObjectMeta: getObjectMeta(r, NoLabels),
-			Subsets:    ss,
-		},
+		Resource:   res,
 	})
-	return r
+	return res
 }
 
 func (t *XrefCacheTester) DeleteEndpoints(nameIdx Name, namespaceIdx Namespace) {
@@ -572,17 +580,18 @@ func (t *XrefCacheTester) GetServiceAccount(nameIdx Name, namespaceIdx Namespace
 	return e.(*xrefcache.CacheEntryK8sServiceAccount)
 }
 
-func (t *XrefCacheTester) SetServiceAccount(nameIdx Name, namespaceIdx Namespace, labels Label) apiv3.ResourceID {
+func (t *XrefCacheTester) SetServiceAccount(nameIdx Name, namespaceIdx Namespace, labels Label) resources.Resource {
 	r := getResourceId(resources.TypeK8sServiceAccounts, nameIdx, namespaceIdx)
+	res := &corev1.ServiceAccount{
+		TypeMeta:   r.TypeMeta,
+		ObjectMeta: getObjectMeta(r, labels),
+	}
 	t.OnUpdate(syncer.Update{
 		Type:       syncer.UpdateTypeSet,
 		ResourceID: r,
-		Resource: &corev1.ServiceAccount{
-			TypeMeta:   r.TypeMeta,
-			ObjectMeta: getObjectMeta(r, labels),
-		},
+		Resource:   res,
 	})
-	return r
+	return res
 }
 
 func (t *XrefCacheTester) DeleteServiceAccount(nameIdx Name, namespaceIdx Namespace) {
@@ -606,17 +615,18 @@ func (t *XrefCacheTester) GetNamespace(namespaceIdx Namespace) *xrefcache.CacheE
 	return e.(*xrefcache.CacheEntryK8sNamespace)
 }
 
-func (t *XrefCacheTester) SetNamespace(namespaceIdx Namespace, labels Label) apiv3.ResourceID {
+func (t *XrefCacheTester) SetNamespace(namespaceIdx Namespace, labels Label) resources.Resource {
 	r := getResourceId(resources.TypeK8sNamespaces, 0, namespaceIdx)
+	res := &corev1.Namespace{
+		TypeMeta:   r.TypeMeta,
+		ObjectMeta: getObjectMeta(r, labels),
+	}
 	t.OnUpdate(syncer.Update{
 		Type:       syncer.UpdateTypeSet,
 		ResourceID: r,
-		Resource: &corev1.Namespace{
-			TypeMeta:   r.TypeMeta,
-			ObjectMeta: getObjectMeta(r, labels),
-		},
+		Resource:   res,
 	})
-	return r
+	return res
 }
 
 func (t *XrefCacheTester) DeleteNamespace(namespaceIdx Namespace) {

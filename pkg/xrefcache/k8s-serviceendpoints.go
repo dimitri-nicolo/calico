@@ -20,6 +20,9 @@ var (
 	KindsServiceEndpoints = []metav1.TypeMeta{
 		resources.TypeK8sEndpoints,
 	}
+	KindsServices = []metav1.TypeMeta{
+		resources.TypeK8sServices,
+	}
 )
 
 // VersionedServiceEndpointsResource is an extension of the VersionedResource interface, specific to handling service
@@ -33,26 +36,14 @@ type CacheEntryK8sServiceEndpoints struct {
 	// The versioned policy resource.
 	VersionedServiceEndpointsResource
 
+	// The corresponding Service for this Endpoints.
+	Service apiv3.ResourceID
+
 	// --- Internal data ---
 	cacheEntryCommon
 
 	//TODO(rlb): Might as well include the clog in the cacheEntryCommon thing.
 	clog *log.Entry
-}
-
-type AugmentedK8sServiceEndpointsData struct {
-	// Whether this endpoints exposes ingress or egress to another endpoints. This is calculated directly from the rule
-	// configuration and therefore can be calculated outside any cross-reference processing.
-	IngressFromOtherEndpoints bool
-	EgressToOtherEndpoints    bool
-
-	// Whether this endpoints has ingress or egress protection.
-	IngressProtected bool
-	EgressProtected  bool
-
-	// Whether this endpoints exposes ingress or egress to the internet.
-	IngressFromInternet bool
-	EgressToInternet    bool
 }
 
 func (c *CacheEntryK8sServiceEndpoints) getVersionedResource() VersionedResource {
@@ -133,6 +124,14 @@ func (c *K8sServiceEndpointsEngine) convertToVersioned(res resources.Resource) (
 func (c *K8sServiceEndpointsEngine) resourceAdded(id apiv3.ResourceID, entry CacheEntry) {
 	x := entry.(*CacheEntryK8sServiceEndpoints)
 	x.clog = log.WithField("id", id)
+
+	// Set the Service ID since this is basically the same as the Endpoints with a different kind.
+	x.Service = apiv3.ResourceID{
+		TypeMeta:  resources.TypeK8sServices,
+		Name:      id.Name,
+		Namespace: id.Namespace,
+	}
+
 	c.resourceUpdated(id, entry, nil)
 }
 
@@ -142,11 +141,12 @@ func (c *K8sServiceEndpointsEngine) resourceUpdated(id apiv3.ResourceID, entry C
 	if err != nil {
 		x.clog.Info("Unable to determine IP addresses or Pod IDs")
 	}
-	c.IPOrEndpointManager().SetClientKeys(id, i)
+	c.IPOrEndpointManager().SetClientKeys(x.Service, i)
 }
 
 func (c *K8sServiceEndpointsEngine) resourceDeleted(id apiv3.ResourceID, entry CacheEntry) {
-	c.IPOrEndpointManager().DeleteClient(id)
+	x := entry.(*CacheEntryK8sServiceEndpoints)
+	c.IPOrEndpointManager().DeleteClient(x.Service)
 }
 
 // recalculate implements the resourceCacheEngine interface.
