@@ -81,10 +81,11 @@ var _ = Describe("List tests", func() {
 		By("Running a list query")
 		t.list(http.StatusOK, []server.Report{
 			{
-				ReportId:   summary1.UID(),
-				ReportType: summary1.ReportTypeName,
-				StartTime:  now,
-				EndTime:    nowPlusHour,
+				Id:        summary1.UID(),
+				Name:      summary1.ReportName,
+				Type:      summary1.ReportTypeName,
+				StartTime: now,
+				EndTime:   nowPlusHour,
 				UISummary: map[string]interface{}{
 					"foobar": "hello-100-goodbye",
 				},

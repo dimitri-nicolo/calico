@@ -31,8 +31,9 @@ type ReportList struct {
 }
 
 type Report struct {
-	ReportId        string      `json:"reportId"`
-	ReportType      string      `json:"reportType"`
+	Id              string      `json:"id"`
+	Name            string      `json:"name"`
+	Type            string      `json:"type"`
 	StartTime       metav1.Time `json:"startTime"`
 	EndTime         metav1.Time `json:"endTime"`
 	UISummary       interface{} `json:"uiSummary"`
