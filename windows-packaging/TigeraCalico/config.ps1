@@ -6,7 +6,7 @@ $env:KUBE_NETWORK = "Calico.*"
 # Set this to one of the following values:
 # - "windows-bgp" for Calico BGP networking using the Windows BGP router.
 # - "vxlan" for Calico VXLAN networking
-# - "none" fto disable the Calico CNI plugin (so that you can use flannel or another plugin).
+# - "none" to disable the Calico CNI plugin (so that you can use flannel or another plugin).
 $env:CALICO_NETWORKING_BACKEND="windows-bgp"
 
 ## CNI configuration, only used for the "windows-bgp" and "vxlan" networking backends.
