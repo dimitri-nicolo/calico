@@ -87,6 +87,7 @@ type domainInfoStore struct {
 // addresses.)
 type domainInfoChanged struct {
 	domain string
+	reason string
 }
 
 // Signal sent by timers' AfterFunc to the domain info store when a particular name -> IP or name ->
@@ -292,14 +293,16 @@ func (s *domainInfoStore) processDNSPacket(dns *layers.DNS) {
 func (s *domainInfoStore) processMappingExpiry(name, value string) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
+	log.Debugf(" ---> Mapping expiry for %v -> %v", name, value)
 	if nameData := s.mappings[name]; nameData != nil {
+		log.Debugf(" ------> Mapping expiry for %v -> %v", name, value)
 		if valueData := nameData.values[value]; (valueData != nil) && valueData.expiryTime.Before(time.Now()) {
 			log.Debugf("Mapping expiry for %v -> %v", name, value)
 			delete(nameData.values, value)
 			if len(nameData.values)+len(nameData.ancestorNames) == 0 {
 				delete(s.mappings, name)
 			}
-			s.signalDomainInfoChange(name)
+			s.signalDomainInfoChange(name, "remove")
 		} else if valueData != nil {
 			log.Debugf("Too early mapping expiry for %v -> %v", name, value)
 		} else {
@@ -362,7 +365,7 @@ func (s *domainInfoStore) storeInfo(name, value string, ttl time.Duration, isNam
 			timer:      makeTimer(),
 			isName:     isName,
 		}
-		s.signalDomainInfoChange(name)
+		s.signalDomainInfoChange(name, "add")
 		// If value is another name, for which we don't yet have any information, create a
 		// mapping entry for it so we can record that it is a descendant of the name in
 		// hand.  Then, when we get information for the descendant name, we can correctly
@@ -418,7 +421,7 @@ func (s *domainInfoStore) GetDomainIPs(domain string) []string {
 	return ips
 }
 
-func (s *domainInfoStore) signalDomainInfoChange(name string) {
+func (s *domainInfoStore) signalDomainInfoChange(name, reason string) {
 	changedNames := set.From(name)
 	delete(s.resultsCache, name)
 	if nameData := s.mappings[name]; nameData != nil {
@@ -432,7 +435,7 @@ func (s *domainInfoStore) signalDomainInfoChange(name string) {
 	s.mutex.Unlock()
 	defer s.mutex.Lock()
 	changedNames.Iter(func(item interface{}) error {
-		s.domainInfoChanges <- &domainInfoChanged{domain: item.(string)}
+		s.domainInfoChanges <- &domainInfoChanged{domain: item.(string), reason: reason}
 		return nil
 	})
 }
