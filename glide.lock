@@ -1,11 +1,13 @@
-hash: 4e65e47a6b4908b071880d0ab212a4136c67c0cb05575abd524fc6d1fd6d2ed2
-updated: 2019-04-18T10:07:49.147186119Z
+hash: 1cad21552c7decd35e9a8979de768b0b1ba85e679aec4143405fed26903ec8d4
+updated: 2019-04-30T01:01:02.615488118Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
   subpackages:
   - compute/metadata
   - internal
+- name: github.com/aokoli/goutils
+  version: 41ac8693c5c10a92ea1ff5ac3a7f95646f6123b0
 - name: github.com/aws/aws-sdk-go
   version: fad131ddc707880428615dc8bc1587b55fb46d74
   subpackages:
@@ -48,7 +50,7 @@ imports:
   - autorest/azure
   - autorest/date
 - name: github.com/beorn7/perks
-  version: 3a771d992973f24aa725d07868b467d1ddfceafb
+  version: 4b2b341e8d7715fae06375aa633dbb6e91b3fb46
   subpackages:
   - quantile
 - name: github.com/bronze1man/goStrongswanVici
@@ -72,7 +74,7 @@ imports:
   - pkg/transport
   - pkg/types
 - name: github.com/davecgh/go-spew
-  version: 782f4967f2dc4564575ca782fe2d04090b5faca8
+  version: d8f796af33cc11cb798c1aaeb27a4ebc5099927d
   subpackages:
   - spew
 - name: github.com/dgrijalva/jwt-go
@@ -84,15 +86,15 @@ imports:
   subpackages:
   - log
 - name: github.com/gavv/monotime
-  version: 6f8212e8d10df7383609d3c377ca08884d8f3ec0
+  version: 30dba43534243e3484a34676a0f068d12b989f84
 - name: github.com/ghodss/yaml
   version: 73d445a93680fa1a78ae23a5839bad48f32ba1ee
 - name: github.com/go-ini/ini
-  version: 9c8236e659b76e87bf02044d06fde8683008ff3e
+  version: 3be5ad479f69d4e08d7fe25edf79bf3346bd658e
 - name: github.com/go-openapi/jsonpointer
-  version: 46af16f9f7b149af66e5d1bd010e3574dc06de98
+  version: ef5f0afec364d3b9396b7b77b43dbe26bf1f8004
 - name: github.com/go-openapi/jsonreference
-  version: 3fb327e6747da3043567ee86abd02bb6376b6be2
+  version: 8483a886a90412cd6858df4ea3483dce9c8e35a3
 - name: github.com/go-openapi/spec
   version: 384415f06ee238aae1df5caad877de6ceac3a5c4
 - name: github.com/go-openapi/swag
@@ -128,6 +130,8 @@ imports:
   version: b7586607157b64351ab71d7f6ed36f71f2e83393
   subpackages:
   - layers
+- name: github.com/google/uuid
+  version: d460ce9f8df2e77fb1ba55ca87fafed96c607494
 - name: github.com/googleapis/gnostic
   version: 0c5108395e2debce0d731cf0287ddf7242066aba
   subpackages:
@@ -152,18 +156,20 @@ imports:
 - name: github.com/gxed/GoEndian
   version: 0f5c6873267e5abf306ffcdfcfa4bf77517ef4a7
 - name: github.com/hashicorp/go-version
-  version: d40cf49b3a77bba84a7afdbd7f1dc295d114efb1
+  version: ac23dc3fea5d1a983c43f6a0f6e2c13f0195d8bd
 - name: github.com/hashicorp/golang-lru
   version: a0d98a5f288019575c6d1f4bb1573fef2d1fcdc4
   subpackages:
   - simplelru
 - name: github.com/hpcloud/tail
-  version: a1dbeea552b7c8df4b542c66073e393de198a800
+  version: a30252cb686a21eb2d0b98132633053ec2f7f1e5
   subpackages:
   - ratelimiter
   - util
   - watch
   - winfile
+- name: github.com/huandu/xstrings
+  version: f02667b379e2fb5916c3cda2cf31e0eb885d79f8
 - name: github.com/imdario/mergo
   version: 6633656539c1639d9d78127b7d47c622b5d7b6dc
 - name: github.com/ipfs/go-log
@@ -183,7 +189,7 @@ imports:
 - name: github.com/json-iterator/go
   version: f2b4162afba35581b6d4a50d3b8f34e33c144682
 - name: github.com/kardianos/osext
-  version: ae77be60afb1dcacde03767a8c37337fad28ac14
+  version: 2bc1f35cddc0cc527b4bc3dce8578fc2a6c11384
 - name: github.com/kelseyhightower/envconfig
   version: dd1402a4d99de9ac2f396cd6fcb957bc2c695ec1
 - name: github.com/leodido/go-urn
@@ -194,7 +200,7 @@ imports:
   - poll
   - singlepoll
 - name: github.com/libp2p/go-sockaddr
-  version: a7494d4eefeb607c8bc491cf8850a6e8dbd41cab
+  version: 52957a0228cc3d7606fa619c7dde49ba1f1ebbb8
   subpackages:
   - net
 - name: github.com/mailru/easyjson
@@ -203,10 +209,14 @@ imports:
   - buffer
   - jlexer
   - jwriter
+- name: github.com/Masterminds/semver
+  version: 59c29afe1a994eacb71c833025ca7acf874bb1da
+- name: github.com/Masterminds/sprig
+  version: 544a9b1d90f323f6509491b389714fbbd126bee3
 - name: github.com/mattn/go-colorable
-  version: efa589957cd060542a26d2dd7832fd6a6c6c3ade
+  version: 3a70a971f94a22f2fa562ffcc7a0eb45f5daf045
 - name: github.com/mattn/go-isatty
-  version: 3fb116b820352b7f0c281308a4d6250c22d94e27
+  version: c1975dc15c1d481e8da23f6ed313bb071136b98f
 - name: github.com/matttproud/golang_protobuf_extensions
   version: c12348ce28de40eed0136aa2b644d0ee0650e56c
   subpackages:
@@ -268,7 +278,7 @@ imports:
   - matchers/support/goraph/util
   - types
 - name: github.com/opentracing/opentracing-go
-  version: be550b025b433cdfa2f11efb962afa2ea3c4d967
+  version: 659c90643e714681897ec2521c60567dd21da733
   subpackages:
   - ext
   - log
@@ -285,7 +295,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: d3d5a6f44bff12ee6166b3e145aa24ebf99ac1fa
+  version: 255dcb3da3363498e6ac1defba73c1022224b6bc
   repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib/apiconfig
@@ -331,25 +341,25 @@ imports:
   subpackages:
   - binder
 - name: github.com/projectcalico/typha
-  version: 9c1c502bc9f27dca18dfd960f8e854d30920d0b1
+  version: 705728a42fe9b62bde2949a5c8c2a2fc1041bc8d
   repo: git@github.com:tigera/typha-private
   subpackages:
   - pkg/syncclient
   - pkg/syncproto
   - pkg/tlsutils
 - name: github.com/prometheus/client_golang
-  version: 773f5027234d0b08adf766be34f55df2f312abf7
+  version: f951755f07bdd099e8ef7e308532fe518212d257
   subpackages:
   - prometheus
   - prometheus/internal
   - prometheus/promhttp
   - prometheus/push
 - name: github.com/prometheus/client_model
-  version: 6f3806018612930941127f2a7c6c453ba2c527d2
+  version: fd36f4220a901265f90734c3183c5f0c91daa0b8
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 13ba4ddd0caa9c28ca7b7bffe1dfa9ed8d5ef207
+  version: 4724e9255275ce38f7179b2478abeae4e28c904f
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
@@ -359,9 +369,9 @@ imports:
   subpackages:
   - xfs
 - name: github.com/PuerkitoBio/purell
-  version: 8a290539e2e8629dbc4e6bad948158f790ec31f4
+  version: 0bcb03f4b4d0a9428594752bd2a3b9aa0a9d4bd4
 - name: github.com/PuerkitoBio/urlesc
-  version: 5bd2802263f21d8788851d5305584c82a5c75d7e
+  version: de5bf2ad457846296e2031421a34e2568e304e35
 - name: github.com/robfig/cron
   version: b41be1df696709bb6395fe435af20370037c0b4c
 - name: github.com/satori/go.uuid
@@ -391,7 +401,7 @@ imports:
   subpackages:
   - nl
 - name: github.com/vishvananda/netns
-  version: 54f0e4339ce73702a0607f49922aaa1e749b418d
+  version: 13995c7128ccc8e51e9a6bd2b551020a27180abd
 - name: github.com/whyrusleeping/go-logging
   version: 0457bb6b88fc1973573aaf6b5145d8d3ae972390
 - name: golang.org/x/crypto
@@ -399,6 +409,8 @@ imports:
   subpackages:
   - ed25519
   - ed25519/internal/edwards25519
+  - pbkdf2
+  - scrypt
   - ssh/terminal
 - name: golang.org/x/net
   version: 1c05540f6879653db88113bc4a2b70aec4bd491f
@@ -429,7 +441,6 @@ imports:
 - name: golang.org/x/text
   version: b19bf474d317b857955b12035d2c5acb57ce8b01
   subpackages:
-  - cases
   - encoding
   - encoding/charmap
   - encoding/htmlindex
@@ -440,13 +451,11 @@ imports:
   - encoding/simplifiedchinese
   - encoding/traditionalchinese
   - encoding/unicode
-  - internal
   - internal/tag
   - internal/utf8internal
   - language
   - runes
   - secure/bidirule
-  - secure/precis
   - transform
   - unicode/bidi
   - unicode/norm
@@ -456,7 +465,7 @@ imports:
   subpackages:
   - rate
 - name: google.golang.org/appengine
-  version: 4a4468ece617fc8205e99368fa2200e9d1fad421
+  version: 54a98f90d1c46b7731eb8fb305d2a321c30ef610
   subpackages:
   - internal
   - internal/app_identity
@@ -491,10 +500,10 @@ imports:
   - status
   - tap
   - transport
-- name: gopkg.in/fsnotify/fsnotify.v1
+- name: gopkg.in/fsnotify.v1
   version: c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9
 - name: gopkg.in/go-playground/validator.v9
-  version: b199fa0642d29caca62b6a99d65cc981ba5edc3b
+  version: 46b4b1e301c24cac870ffcb4ba5c8a703d1ef475
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: gopkg.in/natefinch/lumberjack.v2
@@ -506,7 +515,7 @@ imports:
   - json
   - jwt
 - name: gopkg.in/tomb.v1
-  version: c131134a1947e9afd9cecfe11f4c6dff0732ae58
+  version: dd632973f1e7218eb1089048e0798ec9ae7dceb8
 - name: gopkg.in/yaml.v2
   version: 670d4cfef0544295bc27a114dbac37980d83185a
 - name: k8s.io/api
@@ -584,7 +593,7 @@ imports:
   - pkg/watch
   - third_party/forked/golang/reflect
 - name: k8s.io/apiserver
-  version: f1dab8c342623e75f0484f20b150183d9e73f406
+  version: accf7b6d6716240eeb6a19d45860beb028943f0d
   subpackages:
   - pkg/apis/audit
 - name: k8s.io/client-go
@@ -654,7 +663,7 @@ imports:
   - util/jsonpath
   - util/retry
 - name: k8s.io/kube-openapi
-  version: 91cfa479c814065e420cee7ed227db0f63a5854e
+  version: c5d3b0f4bee0a2c36e3f715a6b15dcc231c64adc
   subpackages:
   - pkg/common
 testImports: []
