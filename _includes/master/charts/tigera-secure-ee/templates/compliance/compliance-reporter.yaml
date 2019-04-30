@@ -48,6 +48,8 @@ template:
     labels:
       k8s-app: compliance-reporter
   spec:
+    nodeSelector:
+      beta.kubernetes.io/os: linux
     serviceAccountName: tigera-compliance-reporter
     tolerations:
       - key: node-role.kubernetes.io/master
