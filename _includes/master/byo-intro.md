@@ -158,7 +158,7 @@ They may also be useful as a reference for defining alternative security configu
            "cluster": [ "monitor", "manage_index_templates"],
            "indices": [
              {
-               "names": [ "tigera_secure_ee_compliance_reports_*" ],
+               "names": [ "tigera_secure_ee_compliance_reports.*" ],
                "privileges": [ "read" ]
              }
            ]
@@ -178,12 +178,12 @@ They may also be useful as a reference for defining alternative security configu
                "privileges": [ "read" ]
              },
              {
-               "names": [ "tigera_secure_ee_snapshots_*" ],
+               "names": [ "tigera_secure_ee_snapshots.*" ],
                "privileges": [ "read" ]
              },
              {
-               "names": [ "tigera_secure_ee_compliance_reports_*" ],
-               "privileges": [ "create_index", "write" ]
+               "names": [ "tigera_secure_ee_compliance_reports.*" ],
+               "privileges": [ "create_index", "write", "view_index_metadata", "read" ]
              }
            ]
          }
@@ -198,8 +198,8 @@ They may also be useful as a reference for defining alternative security configu
            "cluster": [ "monitor", "manage_index_templates"],
            "indices": [
              {
-               "names": [ "tigera_secure_ee_snapshots_*" ],
-               "privileges": [ "create_index", "write", "read" ]
+               "names": [ "tigera_secure_ee_snapshots.*" ],
+               "privileges": [ "create_index", "write", "view_index_metadata", "read" ]
              }
            ]
          }
@@ -214,7 +214,7 @@ They may also be useful as a reference for defining alternative security configu
            "cluster": [ "monitor", "manage_index_templates"],
            "indices": [
              {
-               "names": [ "tigera_secure_ee_compliance_reports_*" ],
+               "names": [ "tigera_secure_ee_compliance_reports.*" ],
                "privileges": [ "read" ]
              }
            ]
