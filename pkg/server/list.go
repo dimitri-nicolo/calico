@@ -99,8 +99,9 @@ func (s *server) handleListReports(response http.ResponseWriter, request *http.R
 
 		// Package it up in a report and append to slice.
 		r := Report{
-			ReportId:        v.UID(),
-			ReportType:      v.ReportTypeName,
+			Id:              v.UID(),
+			Name:            v.ReportName,
+			Type:            v.ReportTypeName,
 			StartTime:       v.StartTime,
 			EndTime:         v.EndTime,
 			UISummary:       uiSummary,
