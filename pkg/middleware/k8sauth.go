@@ -15,6 +15,7 @@ import (
 
 type K8sAuthInterface interface {
 	KubernetesAuthnAuthz(http.Handler) http.Handler
+	Authorize(*http.Request) (int, error)
 }
 
 type k8sauth struct {
