@@ -293,7 +293,6 @@ func (s *domainInfoStore) processDNSPacket(dns *layers.DNS) {
 func (s *domainInfoStore) processMappingExpiry(name, value string) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	log.Debugf(" ---> Mapping expiry for %v -> %v", name, value)
 	if nameData := s.mappings[name]; nameData != nil {
 		log.Debugf(" ------> Mapping expiry for %v -> %v", name, value)
 		if valueData := nameData.values[value]; (valueData != nil) && valueData.expiryTime.Before(time.Now()) {
