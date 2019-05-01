@@ -1,5 +1,5 @@
-hash: 994a47ee0728ad2a4d56a8208de06d3163d40ef2043b67693b08589d901f285e
-updated: 2019-04-30T05:34:32.879701389Z
+hash: 3263722a38132e2fc6c2f4b423f9c8620e22852a38cbc57b42e773af12282bce
+updated: 2019-05-01T05:20:31.736972978Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -307,7 +307,7 @@ imports:
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
 - name: github.com/projectcalico/cni-plugin
-  version: ff37804b6fc54ad39a0c27807b52b85eb749a583
+  version: b7f755f8a6324ef850f444d1ce7ca4d36341ccca
   repo: git@github.com:tigera/cni-plugin-private.git
   subpackages:
   - internal/pkg/azure
@@ -319,7 +319,7 @@ imports:
   - pkg/types
   - pkg/upgrade
 - name: github.com/projectcalico/felix
-  version: f72a8c740bb44fcab079998fde350d82ca2de075
+  version: 79c7d789adb6764509dd94b2c965b9bca32f60b7
   repo: git@github.com:tigera/felix-private.git
   subpackages:
   - buildinfo
