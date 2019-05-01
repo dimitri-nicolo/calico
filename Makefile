@@ -332,8 +332,13 @@ bin/helm:
 	tar -zxvf $(TMP)/$(HELM_RELEASE) -C $(TMP)
 	mv $(TMP)/linux-amd64/helm bin/helm
 
+###############################################################################
+# Helm
+###############################################################################
+# Build values.yaml for all charts
 .PHONY: values.yaml
-values.yaml:
+values.yaml: values.yaml/tigera-secure-ee-core values.yaml/tigera-secure-ee
+values.yaml/%:
 ifndef RELEASE_STREAM
 	# Default the version to master if not set
 	$(eval RELEASE_STREAM = master)
@@ -341,7 +346,40 @@ endif
 	docker run --rm \
 	  -v $$PWD:/calico \
 	  -w /calico \
-	  ruby:2.5 ruby ./hack/gen_values_yml.rb --registry $(REGISTRY) --chart $(CHART) $(RELEASE_STREAM) > _includes/$(RELEASE_STREAM)/charts/$(CHART)/values.yaml
+	  ruby:2.5 ruby ./hack/gen_values_yml.rb --registry $(REGISTRY) --chart $(@F) $(RELEASE_STREAM) > _includes/$(RELEASE_STREAM)/charts/$(@F)/values.yaml
+
+# The following chunk of conditionals sets the Version of the helm chart. 
+# Helm requires strict semantic versioning.
+# There are several use cases this code seeks to accomodate:
+# - For master directory, we hardcode the version to v0.0.0
+# - For master branch of any other directory, we should append '-pre' to the
+#   latest revision release (CALICO_VER) if it's not already appended,
+#   e.g. 'v2.4.0-pre'
+# - When building release artifacts, allow the ability to override '-pre' with an
+#   integer, e.g. 'v2.4.0-1'
+ifeq ($(RELEASE_STREAM), master)
+# For master, helm requires semantic versioning, so use v0.0.0
+chartVersion:=v0.0.0
+else ifdef CHART_RELEASE
+# When cutting a final package, use CHART_RELEASE to append a increasing integer.
+# eg. 'make charts.yaml RELEASE_STREAM=v2.4 CHART_RELEASE=0' would produce v2.4.0-0
+chartVersion=$(CALICO_VER)-$(CHART_RELEASE)
+else
+# Lastly, for builds of the master branch, we want to append a '-pre',
+# but not to any release name that already has one.
+chartVersion:=$(subst -pre,,$(CALICO_VER))-pre
+endif
+
+charts: values.yaml chart/tigera-secure-ee-core chart/tigera-secure-ee
+chart/%:
+ifndef RELEASE_STREAM
+	$(error Must set RELEASE_STREAM to build charts)
+endif
+	mkdir -p bin
+	helm package ./_includes/$(RELEASE_STREAM)/charts/$(@F) \
+	--destination ./bin/ \
+	--version $(chartVersion) \
+	--app-version $(CALICO_VER)
 
  ## Create the vendor directory
 vendor: glide.yaml
