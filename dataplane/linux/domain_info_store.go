@@ -315,6 +315,11 @@ func (s *domainInfoStore) storeDNSRecordInfo(rec *layers.DNSResourceRecord, sect
 		return
 	}
 
+	if rec.IP == nil {
+		log.Debugf("Ignore DNS response with empty or invalid IP")
+		return
+	}
+
 	switch rec.Type {
 	case layers.DNSTypeA:
 		log.Debugf("A: %v -> %v with TTL %v (%v)",

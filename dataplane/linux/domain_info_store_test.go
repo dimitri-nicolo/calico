@@ -71,7 +71,7 @@ var _ = Describe("Domain Info Store", func() {
 				programDNSRecs(domainStore, invalidDNSRec)
 			})
 			It("should return nil", func() {
-				Expect(domainStore.GetDomainIPs(string(mockDNSRec.Name))).To(Equal([]string{"<nil>"}))
+				Expect(domainStore.GetDomainIPs(string(mockDNSRec.Name))).To(BeNil())
 			})
 		})
 	})
