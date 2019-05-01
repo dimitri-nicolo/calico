@@ -478,3 +478,25 @@ spec:
       # By default, Tigera Secure EE Manager is accessed over https. Update this if needed.
       ports: [9443]
 ---
+
+# Allow internal communication to compliance-server from Manager.
+apiVersion: projectcalico.org/v3
+kind: NetworkPolicy
+metadata:
+  name: allow-cnx.compliance-server
+  namespace: calico-monitoring
+spec:
+  order: 1
+  tier: allow-cnx
+  selector: k8s-app == 'compliance-server'
+  types:
+  - Ingress
+  ingress:
+  - action: Allow
+    protocol: TCP
+    source:
+      selector: k8s-app == 'cnx-manager'
+    destination:
+      ports: [5443]
+
+---
