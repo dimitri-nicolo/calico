@@ -171,14 +171,10 @@ optionally Elasticsearch and Kibana{% endif %} in order to enable logs.
 
 1. Update the `tigera-es-config` configmap with information on how to reach the BYO Elasticsearch cluster.
    Replace `<elasticsearch-host>` with the hostname (or IP) {{site.prodname}} should access Elasticsearch through.
-   Replace `<elasticsearch-port>` with the port Elasticsearch is listening on.
    Replace `<kibana-host>` with the hostname (or IP) {{site.prodname}} should access Kibana through.
-   Replace `<kibana-port>` with the port Kibana is listening on.
    ```
    sed -i -e "s?__ELASTICSEARCH_HOST__?<elasticsearch-host>?g" monitor-calico.yaml
-   sed -i -e "s?__ELASTICSEARCH_PORT__?<elasticsearch-port>?g" monitor-calico.yaml
    sed -i -e "s?__KIBANA_HOST__?<kibana-host>?g" monitor-calico.yaml
-   sed -i -e "s?__KIBANA_PORT__?<kibana-port>?g" monitor-calico.yaml
    ```
 
 
