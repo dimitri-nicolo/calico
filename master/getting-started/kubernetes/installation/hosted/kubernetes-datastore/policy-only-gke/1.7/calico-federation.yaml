@@ -10,4 +10,5 @@ federation:
   enabled: true
 app_layer_policy:
   configured: true
+network: none
 {% endhelm %}
