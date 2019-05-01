@@ -2,7 +2,7 @@ action: init
 kind: GlobalNetworkPolicy
 apiversion: projectcalico.org/v3
 metadata:
-  name: "{{.Namespace}}-no-ingress-or-egress"
+  name: "no-ingress-or-egress-ns-{{.Namespace}}"
   labels:
     churn-gnp: "leslie"
 spec:

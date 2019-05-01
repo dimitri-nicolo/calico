@@ -2,7 +2,7 @@ action: update
 kind: GlobalNetworkPolicy
 apiversion: projectcalico.org/v3
 metadata:
-  name: "{{.Namespace}}-ingress-with-net-set"
+  name: "ingress-with-net-set-ns-{{.Namespace}}"
   labels:
     churn-gnp: "knope"
 spec:
