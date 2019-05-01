@@ -130,6 +130,16 @@ toc:
   path: /reference/typha/configuration
 - title: Dikastes
   path: /reference/dikastes/configuration
+- title: Tigera Secure EE Compliance Reports
+  section:
+    - title: Overview
+      path: /reference/compliance-reports/
+    - title: Inventory Report
+      path: /reference/compliance-reports/inventory
+    - title: Network Access Report
+      path: /reference/compliance-reports/network-access
+    - title: Policy Audit Report
+      path: /reference/compliance-reports/policy-audit
 - title: Tigera Secure EE CNI Plugins
   path: /reference/cni-plugin/configuration
 - title: Tigera Secure EE Kubernetes Controllers
