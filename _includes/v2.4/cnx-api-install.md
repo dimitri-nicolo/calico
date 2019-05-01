@@ -142,7 +142,7 @@
 1. Confirm that all of the pods are running with the following command.
 
    ```bash
-   watch {{cli}} get pods --all-namespaces
+   watch {{cli}} get pods -n kube-system
    ```
 
    Wait until each pod has the `STATUS` of `Running`.
