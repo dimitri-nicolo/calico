@@ -12,6 +12,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/x-cray/logrus-prefixed-formatter"
 
+	esprox "github.com/tigera/es-proxy-image/pkg/middleware"
+
 	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/datastore"
 	"github.com/tigera/compliance/pkg/elastic"
@@ -48,7 +50,10 @@ func main() {
 	}
 
 	// Create and start the server
-	s := server.New(ec, clientSet, ":"+*apiPort, *keyPath, *certPath)
+	auth := esprox.NewK8sAuth(datastore.MustGetKubernetesClient(), datastore.MustGetConfig())
+	rbhf := server.NewStandardRbacHelperFactory(auth)
+	s := server.New(ec, clientSet, rbhf, ":"+*apiPort, *keyPath, *certPath)
+
 	s.Start()
 
 	// Setup signals.

@@ -43,7 +43,7 @@ func startTester() *tester {
 	Expect(err).NotTo(HaveOccurred())
 
 	By("Starting the compliance server")
-	s := server.New(t, t, t.addr, "", "")
+	s := server.New(t, t, t, t.addr, "", "")
 	s.Start()
 	t.server = s
 	t.client = &http.Client{Timeout: time.Second * 10}
@@ -251,4 +251,34 @@ type gr struct {
 // to control the response to the List query.
 func (g *gr) List(opts v1.ListOptions) (*v3.GlobalReportList, error) {
 	return g.tester.reportList, g.tester.reportListErr
+}
+
+// NewReportRbacHelper to satisfy RbacHelperFactory interface
+func (t *tester) NewReportRbacHelper(req *http.Request) server.ReportRbacHelper {
+	return &tester{}
+}
+
+// CanViewReport to satisfy ReportRbacHelper interface
+func (t *tester) CanViewReport(x, y string) (bool, error) {
+	return true, nil
+}
+
+// CanListAnyReportsIn to satisfy ReportRbacHelper interface
+func (t *tester) CanListAnyReportsIn(x []*report.ArchivedReportData) (bool, error) {
+	return true, nil
+}
+
+// CanListReports to satisfy ReportRbacHelper interface
+func (t *tester) CanListReports(x string) (bool, error) {
+	return true, nil
+}
+
+// CanGetReport to satisfy ReportRbacHelper interface
+func (t *tester) CanGetReport(x string) (bool, error) {
+	return true, nil
+}
+
+// CanGetReportType to satisfy ReportRbacHelper interface
+func (t *tester) CanGetReportType(x string) (bool, error) {
+	return true, nil
 }

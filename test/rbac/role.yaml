@@ -1,0 +1,81 @@
+
+#     inventory   audit
+#      1    2     1    2
+#get   Y    Y     Y    Y
+#list  Y    Y     Y    Y
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: tigera-compliance-get-all-report-types
+rules:
+- apiGroups: ["projectcalico.org"]
+  resources: ["globalreports"]
+  resourceNames: ["inventoryreport1","inventoryreport2","auditreport1","auditreport2"]
+  verbs: ["get","list"]
+- apiGroups: ["projectcalico.org"]
+  resources: ["globalreporttypes"]
+  resourceNames: ["inventory", "audit"]
+  verbs: ["get"]
+
+---
+
+#     inventory   audit
+#      1    2     1    2
+#get   Y          X    Y
+#list  Y          Y 
+# ( X = allowed to Report Type but not to Report)
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: tigera-compliance-get-limited-reports
+rules:
+- apiGroups: ["projectcalico.org"]
+  resources: ["globalreporttypes"]
+  resourceNames: ["inventory","audit"]
+  verbs: ["get"]
+- apiGroups: ["projectcalico.org"]
+  resources: ["globalreports"]
+  resourceNames: ["inventoryreport1"]
+  verbs: ["get","list"]
+- apiGroups: ["projectcalico.org"]
+  resources: ["globalreports"]
+  resourceNames: ["auditreport1"]
+  verbs: ["list"]
+- apiGroups: ["projectcalico.org"]
+  resources: ["globalreports"]
+  resourceNames: ["auditreport2"]
+  verbs: ["get"]
+
+---
+
+
+#     inventory   audit
+#      1    2     1    2
+#get   Y          X      
+#list  Y    Y     X     
+# ( X = allowed to Report but not to Report Type)
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: tigera-compliance-get-inventory-only-reports
+rules:
+- apiGroups: ["projectcalico.org"]
+  resources: ["globalreports"]
+  resourceNames: ["inventoryreport1"]
+  verbs: ["get","list"]
+- apiGroups: ["projectcalico.org"]
+  resources: ["globalreports"]
+  resourceNames: ["inventoryreport2"]
+  verbs: ["list"]  
+- apiGroups: ["projectcalico.org"]
+  resources: ["globalreports"]
+  resourceNames: ["auditreport1"]
+  verbs: ["get","list"]
+- apiGroups: ["projectcalico.org"]
+  resources: ["globalreporttypes"]
+  resourceNames: ["inventory"]
+  verbs: ["get"]
+
+
+
+

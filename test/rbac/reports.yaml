@@ -1,0 +1,33 @@
+apiVersion: projectcalico.org/v3
+kind: GlobalReport
+metadata:
+  name: "auditreport1"
+spec:
+  reportType: "audit"
+
+---
+
+apiVersion: projectcalico.org/v3
+kind: GlobalReport
+metadata:
+  name: "auditreport2"
+spec:
+  reportType: "audit"
+
+---
+
+apiVersion: projectcalico.org/v3
+kind: GlobalReport
+metadata:
+  name: "inventoryreport1"
+spec:
+  reportType: "inventory"
+
+---
+
+apiVersion: projectcalico.org/v3
+kind: GlobalReport
+metadata:
+  name: "inventoryreport2"
+spec:
+  reportType: "inventory"

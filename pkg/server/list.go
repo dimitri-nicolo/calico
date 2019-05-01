@@ -30,8 +30,8 @@ func (s *server) handleListReports(response http.ResponseWriter, request *http.R
 	}
 
 	// Create an RBAC helper for determining which reports we should include in the returned list.
-	rbac := newReportRbacHelper(s, request)
-	if canList, err := rbac.canListReports(); err != nil {
+	rbac := s.rhf.NewReportRbacHelper(request)
+	if canList, err := rbac.CanListAnyReportsIn(reportSummaries); err != nil {
 		log.WithError(err).Error("Unable to determine access permissions for request")
 		http.Error(response, err.Error(), http.StatusServiceUnavailable)
 		return
@@ -54,7 +54,7 @@ func (s *server) handleListReports(response http.ResponseWriter, request *http.R
 		log.Debugf("Processing report. ReportType: %s, Report: %s", v.ReportTypeName, v.ReportName)
 
 		// If we can view the report then include it in the list.
-		if include, err := rbac.canViewReport(v.ReportTypeName, v.ReportName); err != nil {
+		if include, err := rbac.CanViewReport(v.ReportTypeName, v.ReportName); err != nil {
 			log.WithError(err).Error("Unable to determine access permissions for request")
 			http.Error(response, err.Error(), http.StatusServiceUnavailable)
 			return

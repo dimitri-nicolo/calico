@@ -16,12 +16,13 @@ import (
 )
 
 // New creates a new server.
-func New(rr report.ReportRetriever, rcg ReportConfigurationGetter, addr string, key string, cert string) Server {
+func New(rr report.ReportRetriever, rcg ReportConfigurationGetter, rhf RbacHelperFactory, addr string, key string, cert string) Server {
 	s := &server{
 		key:  key,
 		cert: cert,
 		rr:   rr,
 		rcg:  rcg,
+		rhf:  rhf,
 	}
 
 	// Create a new pattern matching MUX.
@@ -50,6 +51,7 @@ type server struct {
 	wg      sync.WaitGroup
 	rr      report.ReportRetriever
 	rcg     ReportConfigurationGetter
+	rhf     RbacHelperFactory
 
 	// Track all of the reports and report types. We don't expect these to change too often, so we only need to
 	// update the lists every so often. Access to this data should be through getReportTypes.
@@ -60,6 +62,7 @@ type server struct {
 
 // Start will start the compliance api server and return. Call Wait() to block until server termination.
 func (s *server) Start() {
+
 	if s.key != "" && s.cert != "" {
 		log.WithField("Addr", s.server.Addr).Info("Starting HTTPS server")
 		s.wg.Add(1)

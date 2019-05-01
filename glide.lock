@@ -1,5 +1,5 @@
-hash: 85a0805f9213b15a33c5417f839cffe4e3491d2962a8578fe4fb7d9ff8d6ae0a
-updated: 2019-04-27T16:41:55.341738-07:00
+hash: 446962219802cfdeaabb338a419737ebd891dd1222cb9299435655cbc2d0ca37
+updated: 2019-04-30T15:17:50.689559-07:00
 imports:
 - name: github.com/beorn7/perks
   version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
@@ -122,6 +122,7 @@ imports:
   version: eea6ad008b96acdaa524f5b409513bf062b500ad
   subpackages:
   - config
+  - extensions/table
   - internal/codelocation
   - internal/containernode
   - internal/failer
@@ -246,6 +247,12 @@ imports:
   - pkg/client/clientset_generated/clientset/scheme
   - pkg/client/clientset_generated/clientset/typed/projectcalico/v3
   - pkg/client/clientset_generated/clientset/typed/projectcalico/v3/fake
+- name: github.com/tigera/es-proxy-image
+  version: ad8d517e8d6431c9429be735766e7b971efdad80
+  repo: git@github.com:tigera/es-proxy-image
+  vcs: git
+  subpackages:
+  - pkg/middleware
 - name: github.com/tigera/licensing
   version: cb027c7c879597e0e02f2411c0c201752bab39c8
   repo: git@github.com:tigera/licensing

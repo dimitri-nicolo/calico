@@ -141,6 +141,7 @@ LDFLAGS:=-ldflags "\
 # depend on these, clean removes them.
 GENERATED_GO_FILES:=vendor/github.com/projectcalico/felix/proto/felixbackend.pb.go
 
+NON_SRC_DIRS = test
 # All Compliance Server go files.
 SRC_FILES:=$(shell find . $(foreach dir,$(NON_SRC_DIRS),-path ./$(dir) -prune -o) -type f -name '*.go' -print) $(GENERATED_GO_FILES)
 
@@ -157,6 +158,7 @@ endif
 ifdef SSH_AUTH_SOCK
   EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
 endif
+
 DOCKER_RUN := mkdir -p .go-pkg-cache && \
                    docker run --rm \
                               --net=host \
@@ -288,7 +290,7 @@ bin/reporter-$(ARCH): $(SRC_FILES) vendor/.up-to-date vendor/github.com/projectc
 		( echo "Error: bin/reporter was not statically linked"; false ) )'
 
 bin/report-type-gen: bin/report-type-gen-$(ARCH)
-	ln -f bin/report-type-gen-$(ARCH) bin/report-type-gen
+	cp -f bin/report-type-gen-$(ARCH) bin/report-type-gen
 
 bin/report-type-gen-$(ARCH): $(SRC_FILES) vendor/.up-to-date
 	@echo Building report type generator...
@@ -541,20 +543,26 @@ run-etcd: stop-etcd
 stop-etcd:
 	-docker rm -f calico-etcd
 
+
 ## Run a local kubernetes master with API via hyperkube
 run-kubernetes-master: stop-kubernetes-master
 	# Run a Kubernetes apiserver using Docker.
 	docker run \
 		--net=host --name st-apiserver \
+		-v  $(CURDIR)/test:/test\
 		--detach \
 		gcr.io/google_containers/hyperkube-amd64:${K8S_VERSION} \
 		/hyperkube apiserver \
 			--bind-address=0.0.0.0 \
 			--insecure-bind-address=0.0.0.0 \
-	        	--etcd-servers=http://127.0.0.1:2379 \
+			--etcd-servers=http://127.0.0.1:2379 \
 			--admission-control=NamespaceLifecycle,LimitRanger,DefaultStorageClass,ResourceQuota \
+			--authorization-mode=RBAC \
 			--service-cluster-ip-range=10.101.0.0/16 \
 			--v=10 \
+			--token-auth-file=/test/rbac/token_auth.csv \
+			--basic-auth-file=/test/rbac/basic_auth.csv \
+			--anonymous-auth=true \
 			--logtostderr=true
 
 	# Wait until the apiserver is accepting requests.
@@ -603,6 +611,7 @@ run-kubernetes-master: stop-kubernetes-master
 		/hyperkube kubectl \
 		--server=http://localhost:8080 \
 		apply -f /manifests/test/namespaces.yaml
+
 
 ## Stop the local kubernetes master
 stop-kubernetes-master:
