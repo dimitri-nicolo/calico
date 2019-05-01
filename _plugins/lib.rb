@@ -188,6 +188,11 @@ def gen_chart_specific_values(versions, imageNames, imageRegistry, chart)
         # Optional environment variables for configuring the compliance controller.
         # - name: LOG_LEVEL
         #   value: "warning"
+        # This environment is used to set the delay between the end time of the report and the start time
+        # of the job used to generate the report. This does not affect the actual times that the report
+        # covers. Defaults to 30m.
+        # - name: TIGERA_COMPLIANCE_JOB_START_DELAY
+        #   value: "30m"
       # Optional configuration for setting resource limits on the compliance controller container.
       resources:
         requests:

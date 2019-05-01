@@ -110,9 +110,12 @@ spec:
 {{ tuple .Values.complianceController.resources | include "tigera-secure-ee.resourceLimits" | indent 10 -}}
           env:
             - name: LOG_LEVEL
-              value: "info"
-            - name: TIGERA_COMPLIANCE_JOB_START_DELAY
-              value: "30m"
+              value: "warning"
+            # This environment is used to set the delay between the end time of the report and the start time
+            # of the job used to generate the report. This does not affect the actual times that the report
+            # covers. Defaults to 30m.
+            # - name: TIGERA_COMPLIANCE_JOB_START_DELAY
+            #   value: "30m"
 {{- if eq .Values.platform "gke" }}
             - name: HEALTH_PORT
               value: "9199"

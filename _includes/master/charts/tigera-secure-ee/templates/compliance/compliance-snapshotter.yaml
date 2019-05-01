@@ -92,7 +92,7 @@ spec:
 {{ tuple .Values.complianceSnapshotter.resources | include "tigera-secure-ee.resourceLimits" | indent 10 -}}
           env:
             - name: LOG_LEVEL
-              value: "info"
+              value: "warning"
 {{- if eq .Values.platform "gke" }}
             - name: HEALTH_PORT
               value: "9199"
