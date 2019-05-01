@@ -630,10 +630,17 @@ func (cc *ComplianceController) getJobFromTemplate(rep *v3.GlobalReport, jt Repo
 	// Set the node selector if the node selection is not specified in the template.
 	if template.Spec.NodeName == "" {
 		for k, v := range rep.Spec.JobNodeSelector {
+			// Check if the key already exists in the PodTemplate.
 			if V, exists := template.Spec.NodeSelector[k]; exists {
 				log.WithFields(log.Fields{"key": k, "templateValue": V, "reportValue": v}).Info("key already exists in template, refusing to overwrite")
 				continue
 			}
+
+			// Template could have an empty NodeSelector
+			if template.Spec.NodeSelector == nil {
+				template.Spec.NodeSelector = map[string]string{}
+			}
+
 			template.Spec.NodeSelector[k] = v
 		}
 	}
