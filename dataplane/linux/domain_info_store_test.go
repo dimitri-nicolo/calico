@@ -1,16 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright (c) 2019 Tigera, Inc. All rights reserved.
 
 package intdataplane
 
@@ -60,21 +48,21 @@ var _ = Describe("Domain Info Store", func() {
 
 	BeforeEach(func() {
 		domainChannel := make(chan *domainInfoChanged, 100)
-		domainStore = newDomainInfoStore(domainChannel, "/dnsinfo", time.Duration(time.Minute))
+		domainStore = newDomainInfoStore(domainChannel, "/dnsinfo", time.Minute)
 	})
 
 	Describe("receiving a DNS packet", func() {
 		Context("when the DNS record is valid", func() {
 			BeforeEach(func() {
 				programDNSRecs(domainStore, mockDNSRec)
-				AssertDomainChanged(domainStore, string(mockDNSRec.Name), "add")
+				AssertDomainChanged(domainStore, string(mockDNSRec.Name), "mapping added")
 			})
 			It("should result in a domain entry", func() {
 				Expect(domainStore.GetDomainIPs(string(mockDNSRec.Name))).To(Equal([]string{mockDNSRec.IP.String()}))
 			})
 			It("should expire and signal a domain change", func() {
 				domainStore.processMappingExpiry(string(mockDNSRec.Name), mockDNSRec.IP.String())
-				AssertDomainChanged(domainStore, string(mockDNSRec.Name), "remove")
+				AssertDomainChanged(domainStore, string(mockDNSRec.Name), "mapping expired")
 			})
 		})
 

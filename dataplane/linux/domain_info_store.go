@@ -300,7 +300,7 @@ func (s *domainInfoStore) processMappingExpiry(name, value string) {
 			if len(nameData.values)+len(nameData.ancestorNames) == 0 {
 				delete(s.mappings, name)
 			}
-			s.signalDomainInfoChange(name, "remove")
+			s.signalDomainInfoChange(name, "mapping expired")
 		} else if valueData != nil {
 			log.Debugf("Too early mapping expiry for %v -> %v", name, value)
 		} else {
@@ -363,7 +363,7 @@ func (s *domainInfoStore) storeInfo(name, value string, ttl time.Duration, isNam
 			timer:      makeTimer(),
 			isName:     isName,
 		}
-		s.signalDomainInfoChange(name, "add")
+		s.signalDomainInfoChange(name, "mapping added")
 		// If value is another name, for which we don't yet have any information, create a
 		// mapping entry for it so we can record that it is a descendant of the name in
 		// hand.  Then, when we get information for the descendant name, we can correctly
