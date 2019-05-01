@@ -1124,27 +1124,6 @@ spec:
 
 ---
 
-# Allow internal communication
-apiVersion: projectcalico.org/v3
-kind: NetworkPolicy
-metadata:
-  name: allow-cnx.compliance-server
-  namespace: calico-monitoring
-spec:
-  order: 1
-  tier: allow-cnx
-  selector: k8s-app == 'compliance-server'
-  types:
-  - Ingress
-  ingress:
-  - action: Allow
-    protocol: TCP
-    source:
-      selector: k8s-app == 'cnx-manager'
-    destination:
-      ports: [5443]
-
----
 # Allow access to Kibana
 apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
