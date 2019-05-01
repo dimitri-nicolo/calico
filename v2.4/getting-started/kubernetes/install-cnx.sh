@@ -1661,7 +1661,7 @@ installCNX() {
   applyCalicoManifest             # Apply calico.yaml
 
   removeMasterTaints              # Remove master taints
-  applyCNXAPIManifest                # Apply cnx-[etcd|kdd].yaml
+  applyCNXAPIManifest             # Apply cnx-api-[etcd|kdd].yaml
 
   applyLicenseManifest            # If the user specified a license file, apply it
 
@@ -1689,7 +1689,7 @@ uninstallCNX() {
   deleteOperatorManifest         # Delete operator.yaml
   deleteCNXPolicyManifest        # Delete cnx-policy.yaml
 
-  deleteCNXAPIManifest              # Delete cnx-[etcd|kdd].yaml
+  deleteCNXAPIManifest           # Delete cnx-api-[etcd|kdd].yaml
   deleteCalicoManifest           # Delete calico.yaml
   deleteRbacManifest             # Delete rbac.yaml
   deleteEtcdDeployment           # Delete etcd.yaml (etcd datatstore only)
