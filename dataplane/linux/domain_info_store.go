@@ -315,8 +315,9 @@ func (s *domainInfoStore) storeDNSRecordInfo(rec *layers.DNSResourceRecord, sect
 		return
 	}
 
-	if rec.IP == nil {
-		log.Debugf("Ignore DNS response with empty or invalid IP")
+	// Only CNAME type records can have the IP field set to nil
+	if rec.IP == nil && rec.Type != layers.DNSTypeCNAME {
+		log.Debugf("Ignore %s DNS response with empty or invalid IP", rec.Type.String())
 		return
 	}
 
