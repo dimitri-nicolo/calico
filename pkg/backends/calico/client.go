@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"strings"
 	"sync"
@@ -32,6 +33,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/kelseyhightower/confd/pkg/resource/template"
+
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
@@ -41,7 +43,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/watchersyncer"
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	lerr "github.com/projectcalico/libcalico-go/lib/errors"
-	"github.com/projectcalico/libcalico-go/lib/net"
+	cnet "github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/selector"
@@ -226,7 +228,7 @@ func discoverTyphaAddr(typhaConfig *config.TyphaConfig) (string, error) {
 	for _, p := range svc.Spec.Ports {
 		if p.Name == "calico-typha" {
 			log.WithField("port", p).Info("Found Typha service port.")
-			typhaAddr := fmt.Sprintf("%s:%v", host, p.Port)
+			typhaAddr := net.JoinHostPort(host, fmt.Sprintf("%v", p.Port))
 			return typhaAddr, nil
 		}
 	}
@@ -338,7 +340,7 @@ func (c *client) OnInSync(source string) {
 }
 
 type bgpPeer struct {
-	PeerIP      net.IP               `json:"ip"`
+	PeerIP      cnet.IP              `json:"ip"`
 	ASNum       numorstring.ASNumber `json:"as_num,string"`
 	RRClusterID string               `json:"rr_cluster_id"`
 	Extensions  map[string]string    `json:"extensions"`
@@ -416,7 +418,7 @@ func (c *client) updatePeersV1() {
 					peers = append(peers, c.nodeAsBGPPeers(peerNodeName)...)
 				}
 			} else {
-				ip := net.ParseIP(v3res.Spec.PeerIP)
+				ip := cnet.ParseIP(v3res.Spec.PeerIP)
 				if ip == nil {
 					log.Warning("PeerIP is not assigned or is malformed")
 					continue
@@ -576,7 +578,7 @@ func (c *client) nodeAsBGPPeers(nodeName string) (peers []*bgpPeer) {
 			log.Debugf("No %v for node %v", version, nodeName)
 			continue
 		}
-		ip := net.ParseIP(ipStr)
+		ip := cnet.ParseIP(ipStr)
 		if ip == nil {
 			log.Warningf("Couldn't parse %v %v for node %v", version, ipStr, nodeName)
 			continue
