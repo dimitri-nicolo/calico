@@ -814,6 +814,11 @@ spec:
               configMapKeyRef:
                 name: tigera-es-config
                 key: tigera.elasticsearch.port
+          - name: ELASTIC_SCHEME
+            valueFrom:
+              configMapKeyRef:
+                name: tigera-es-config
+                key: tigera.elasticsearch.scheme
           - name: KIBANA_HOST
             valueFrom:
               configMapKeyRef:
@@ -986,6 +991,11 @@ spec:
               configMapKeyRef:
                 name: tigera-es-config
                 key: tigera.elasticsearch.port
+          - name: ELASTIC_SCHEME
+            valueFrom:
+              configMapKeyRef:
+                name: tigera-es-config
+                key: tigera.elasticsearch.scheme
           - name: USER
             valueFrom:
               secretKeyRef:
