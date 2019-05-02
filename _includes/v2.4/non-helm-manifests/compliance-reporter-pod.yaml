@@ -1,13 +1,14 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  generateName: run-reporter
+  name: run-reporter
   namespace: calico-monitoring
   labels:
     k8s-app: compliance-reporter
 spec:
   nodeSelector:
     beta.kubernetes.io/os: linux
+  restartPolicy: Never
   serviceAccountName: tigera-compliance-reporter
   tolerations:
     - key: node-role.kubernetes.io/master
