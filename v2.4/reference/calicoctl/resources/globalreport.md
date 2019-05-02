@@ -69,7 +69,7 @@ spec:
 
 | Field                | Description                                    | Required | Accepted Values | Schema    |
 |----------------------|------------------------------------------------|----------|-----------------|-----------|
-| reportType           | Name of the report type which defines the report content. {{ site.prodname }} supported report types are inventory, network-access, and policy-audit. | Yes | inventory, network-access, audit | string |
+| reportType           | The type of report to produce.  This field controls the content of the report - see the links for each type for more details. | Yes | [inventory](/{{page.version}}/reference/compliance-reports/inventory), [network-access](/{{page.version}}/reference/compliance-reports/network-access), [policy-audit](/{{page.version}}/reference/compliance-reports/policy-audit) | string |
 | endpointsSelection   | Specify which endpoints are in scope. If omitted, selects everything. ||| [EndpointsSelection](#endpointsselection) |
 | schedule             | Configure report frequency by specifying start and end time in [cron-format][cron-format]. Reports are started 30 minutes (configurable) after the scheduled value to allow enough time for data archival. A maximum limit of two schedules per hour is enforced. | Yes || string |
 | jobNodeSelector      | Specify the node(s) for scheduling the report jobs using selectors. ||| map |
