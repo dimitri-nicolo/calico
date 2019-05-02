@@ -10,13 +10,7 @@ rbac.yaml acccepts the following include flags:
 | variant_name | Calico, Canal            |
 | platform     | gke, <unset>             |
 {% endcomment -%}
-{%- capture role_name -%}
-  {%- if include.platform == "gke" -%}
-    calico-node-ee
-  {%- else -%}
-    calico-node
-  {%- endif -%}
-{%- endcapture -%}
+
 {%- if include.datastore == "etcd" %}
 # Include a clusterrole for the kube-controllers component,
 # and bind it to the calico-kube-controllers serviceaccount.

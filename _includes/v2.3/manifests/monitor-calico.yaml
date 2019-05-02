@@ -8,13 +8,7 @@ monitor-calico.yaml acccepts the following include flags:
 | platform      | gke, <unset>                |
 
 {% endcomment -%}
-{%- capture node_name -%}
-  {%- if include.platform == "gke" -%}
-    calico-node-ee
-  {%- else -%}
-    calico-node
-  {%- endif -%}
-{%- endcapture -%}
+
 ---
 # This manifest includes the following component versions:
 #   quay.io/prometheus/prometheus:{{site.data.versions[page.version].first.components["prometheus"].version}}

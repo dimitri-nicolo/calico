@@ -12,7 +12,6 @@ calico-config.yaml acccepts the following include flags:
 | platform         | gke, <unset>                  |
 
 {% endcomment -%}
-{%- capture typha_service_name %}{% if include.platform == "gke" %}calico-typha-ee{% else %}calico-typha{% endif %}{% endcapture -%}
 # This ConfigMap is used to configure a self-hosted {{include.variant_name}} installation.
 kind: ConfigMap
 apiVersion: v1

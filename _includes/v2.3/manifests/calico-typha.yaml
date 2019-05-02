@@ -87,11 +87,7 @@ spec:
           operator: Exists
       # Since Calico can't network a pod until Typha is up, we need to run Typha itself
       # as a host-networked pod.
-{%- if include.platform == "gke" %}
-      serviceAccountName: calico-node-ee
-{%- else %}
       serviceAccountName: calico-node
-{%- endif %}
       imagePullSecrets:
         - name: cnx-pull-secret
       containers:
@@ -167,11 +163,6 @@ spec:
 {%- endif %}
           - name: TYPHA_HEALTHENABLED
             value: "true"
-{%- if include.platform == "gke" %}
-          # On GKE, use non-standard health port to avoid clash with open-source.
-          - name: TYPHA_HEALTHPORT
-            value: "9198"
-{%- endif %}
           # Sets Default Security Groups if tigera-aws-config exists
           - name: TIGERA_DEFAULT_SECURITY_GROUPS
             valueFrom:
@@ -198,9 +189,6 @@ spec:
             - {{ typha_service_name }}
             - check
             - liveness
-{%- if include.platform == "gke" %}
-            - --port=9198
-{%- endif %}
           periodSeconds: 30
           initialDelaySeconds: 30
         readinessProbe:

@@ -16,9 +16,7 @@ calico-node.yaml acccepts the following include flags:
  - platform=gke expects datastore=kdd and network=<unset>
 {% endcomment -%}
 {%- capture objname -%}
-  {%- if include.platform == "gke" -%}
-    calico-node-ee
-  {%- elsif include.network == "flannel" and include.datastore == "etcd" -%}
+  {%- if include.network == "flannel" and include.datastore == "etcd" -%}
     canal-node
   {%- elsif include.network == "flannel" -%}
     canal
@@ -296,10 +294,6 @@ spec:
               value: "info"
             - name: FELIX_HEALTHENABLED
               value: "true"
-{%- if include.platform == "gke" %}
-            - name: FELIX_HEALTHPORT
-              value: "9199"
-{%- endif %}
 {% include {{page.version}}/extra-felix-config-12sp.yaml %}
 {%- if include.app_layer_policy == "true" or include.app_layer_policy == "disabled" %}
             - name: FELIX_POLICYSYNCPATHPREFIX
@@ -331,11 +325,7 @@ spec:
           livenessProbe:
             httpGet:
               path: /liveness
-{%- if include.platform == "gke" %}
-              port: 9199
-{%- else %}
               port: 9099
-{%- endif %}
               host: localhost
             periodSeconds: 10
             initialDelaySeconds: 10
@@ -351,11 +341,6 @@ spec:
             httpGet:
               path: /readiness
               port: 9099
-              host: localhost
-{%- elsif include.platform == "gke" %}
-            httpGet:
-              path: /readiness
-              port: 9199
               host: localhost
 {%- else %}
             exec:
