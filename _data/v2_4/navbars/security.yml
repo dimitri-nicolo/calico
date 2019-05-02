@@ -114,3 +114,5 @@ toc:
       path: /security/intrusion-detection/customizing
   - title: Trace and block suspicious IPs
     path: /security/suspicious-IPs 
+- title: Tigera Secure EE compliance reports
+  path: /security/compliance-reports
