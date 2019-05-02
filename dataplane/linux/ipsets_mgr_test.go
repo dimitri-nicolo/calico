@@ -54,24 +54,17 @@ var ipsetsMgrTestCases = []IPSetsMgrTestCase{
 	},
 }
 
-// Program any DNS records if this is a domain type IPSet
-func programDNSRecs(ipsetType proto.IPSetUpdate_IPSetType, domainStore *mockDomainStore, dnsPackets map[string][]string) {
-	if ipsetType == proto.IPSetUpdate_DOMAIN {
-		domainStore.ips = dnsPackets
-	}
-}
-
 type mockDomainStore struct {
-	ips map[string][]string
+	mappings map[string][]string
 }
 
 func (s *mockDomainStore) GetDomainIPs(domain string) []string {
-	return s.ips[domain]
+	return s.mappings[domain]
 }
 
-func (s *mockDomainStore) allIPsForDomains(domains ...string) (ips []string) {
+func allIPsForDomains(mappings map[string][]string, domains ...string) (ips []string) {
 	for _, domain := range domains {
-		ips = append(ips, s.ips[domain]...)
+		ips = append(ips, mappings[domain]...)
 	}
 	return
 }
@@ -84,7 +77,7 @@ var _ = Describe("IP Sets manager", func() {
 	)
 
 	BeforeEach(func() {
-		domainStore = &mockDomainStore{ips: make(map[string][]string)}
+		domainStore = &mockDomainStore{mappings: make(map[string][]string)}
 		ipSets = newMockIPSets()
 		ipsetsMgr = newIPSetsManager(ipSets, 1024, domainStore)
 	})
@@ -115,11 +108,11 @@ var _ = Describe("IP Sets manager", func() {
 	}
 
 	// Basic add/remove/update test case for different types of IPSets.
-	IPsetsMgrTest1 := func(ipsetID string, ipsetType proto.IPSetUpdate_IPSetType, members [numMembers]string, dnsPackets map[string][]string) {
+	IPsetsMgrTest1 := func(ipsetID string, ipsetType proto.IPSetUpdate_IPSetType, members [numMembers]string, dnsMappings map[string][]string) {
 		Describe("after creating an IPSet", func() {
 			BeforeEach(func() {
 				ipSets.AddOrReplaceCalled = false
-				programDNSRecs(ipsetType, domainStore, dnsPackets)
+				domainStore.mappings = dnsMappings
 				ipsetsMgr.OnUpdate(&proto.IPSetUpdate{
 					Id:      ipsetID,
 					Members: []string{members[0], members[1]},
@@ -132,7 +125,7 @@ var _ = Describe("IP Sets manager", func() {
 
 			// We match domain ipsets with their respective IP addresses.
 			if ipsetType == proto.IPSetUpdate_DOMAIN {
-				AssertIPSetMembers(ipsetID, domainStore.allIPsForDomains(members[0], members[1]))
+				AssertIPSetMembers(ipsetID, allIPsForDomains(dnsMappings, members[0], members[1]))
 			} else {
 				AssertIPSetMembers(ipsetID, []string{members[0], members[1]})
 			}
@@ -140,7 +133,7 @@ var _ = Describe("IP Sets manager", func() {
 			Describe("after sending a delta update", func() {
 				BeforeEach(func() {
 					ipSets.AddOrReplaceCalled = false
-					programDNSRecs(ipsetType, domainStore, dnsPackets)
+					domainStore.mappings = dnsMappings
 					ipsetsMgr.OnUpdate(&proto.IPSetDeltaUpdate{
 						Id:             ipsetID,
 						AddedMembers:   []string{members[2], members[3]},
@@ -152,14 +145,14 @@ var _ = Describe("IP Sets manager", func() {
 				AssertIPSetNotModified()
 
 				if ipsetType == proto.IPSetUpdate_DOMAIN {
-					AssertIPSetMembers(ipsetID, domainStore.allIPsForDomains(members[1], members[2], members[3]))
+					AssertIPSetMembers(ipsetID, allIPsForDomains(dnsMappings, members[1], members[2], members[3]))
 				} else {
 					AssertIPSetMembers(ipsetID, []string{members[1], members[2], members[3]})
 				}
 
 				Describe("after sending a delete", func() {
 					BeforeEach(func() {
-						programDNSRecs(ipsetType, domainStore, dnsPackets)
+						domainStore.mappings = dnsMappings
 						ipsetsMgr.OnUpdate(&proto.IPSetRemove{
 							Id: ipsetID,
 						})
@@ -172,7 +165,7 @@ var _ = Describe("IP Sets manager", func() {
 			Describe("after sending another replace", func() {
 				BeforeEach(func() {
 					ipSets.AddOrReplaceCalled = false
-					programDNSRecs(ipsetType, domainStore, dnsPackets)
+					domainStore.mappings = dnsMappings
 					ipsetsMgr.OnUpdate(&proto.IPSetUpdate{
 						Id:      ipsetID,
 						Members: []string{members[1], members[2]},
@@ -182,7 +175,7 @@ var _ = Describe("IP Sets manager", func() {
 				})
 
 				if ipsetType == proto.IPSetUpdate_DOMAIN {
-					AssertIPSetMembers(ipsetID, domainStore.allIPsForDomains(members[1], members[2]))
+					AssertIPSetMembers(ipsetID, allIPsForDomains(dnsMappings, members[1], members[2]))
 				} else {
 					AssertIPSetModified()
 					AssertIPSetMembers(ipsetID, []string{members[1], members[2]})
