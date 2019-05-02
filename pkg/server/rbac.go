@@ -3,10 +3,10 @@ package server
 import (
 	"net/http"
 
-	esprox "github.com/tigera/es-proxy-image/pkg/middleware"
+	authzv1 "k8s.io/api/authorization/v1"
 
 	"github.com/tigera/compliance/pkg/report"
-	authzv1 "k8s.io/api/authorization/v1"
+	esprox "github.com/tigera/es-proxy-image/pkg/middleware"
 )
 
 type ReportRbacHelper interface {
