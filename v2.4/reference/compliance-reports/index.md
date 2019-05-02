@@ -25,9 +25,9 @@ included even if the resource is deleted or goes out-of-scope before the end of 
 
 An endpoint is ingress protected if it has at least one Ingress policy that is applied to it.
 
-A service is ingress protected if all of the inscope endpoints during that service are ingress protected.
+A service is ingress protected if all of the inscope endpoints within that service are ingress protected.
 
-A namespace is ingress protected if all of the inscope endpoints during that namespace are ingress protected.
+A namespace is ingress protected if all of the inscope endpoints within that namespace are ingress protected.
 
 _How this applies to the report_:
 An endpoint is ingress protected only if it was ingress protected throughout the entire report interval.
@@ -44,10 +44,10 @@ it with an ingress allow rule that:
 -  has no source selector or source CIDR configured, or
 -  (for GlobalNetworkPolicy) has no source CIDR.
 
-A service is flagged as allowing ingress traffic from another namespace if any of the inscope endpoints during that 
+A service is flagged as allowing ingress traffic from another namespace if any of the inscope endpoints within that 
 service are flagged.
 
-A namespace is flagged as allowing ingress traffic from another namespace if all of the inscope endpoints during that 
+A namespace is flagged as allowing ingress traffic from another namespace if all of the inscope endpoints within that 
 namespace are flagged.
 
 _How this applies to the report_:
@@ -68,7 +68,7 @@ with an ingress allow rule that:
 A service is flagged as allowing ingress traffic from the internet if any of the inscope endpoints within that service 
 are flagged.
 
-A namespace is flagged as allowing ingress traffic from the internet if all of the inscope endpoints during that 
+A namespace is flagged as allowing ingress traffic from the internet if all of the inscope endpoints within that 
 namespace are flagged.
 
 _How this applies to the report_:
