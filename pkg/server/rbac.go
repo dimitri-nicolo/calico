@@ -5,13 +5,11 @@ import (
 
 	authzv1 "k8s.io/api/authorization/v1"
 
-	"github.com/tigera/compliance/pkg/report"
 	esprox "github.com/tigera/es-proxy-image/pkg/middleware"
 )
 
 type ReportRbacHelper interface {
 	CanViewReport(string, string) (bool, error)
-	CanListAnyReportsIn([]*report.ArchivedReportData) (bool, error)
 	CanListReports(string) (bool, error)
 	CanGetReport(string) (bool, error)
 	CanGetReportType(string) (bool, error)
@@ -59,26 +57,18 @@ func NewStandardRbacHelperFactory(auth K8sAuthInterface) RbacHelperFactory {
 // CanViewReport returns true if the caller is allowed to view a specific Report and ReportType.
 func (l *reportRbacHelper) CanViewReport(reportTypeName, reportName string) (bool, error) {
 	var err error
-	canGetReport, ok := l.canGetReportByName[reportName]
-	if !ok {
-		// Query to determine if the user can get the report.
-		canGetReport, err = l.CanGetReport(reportName)
-		if err != nil {
-			return false, err
-		}
-		l.canGetReportByName[reportName] = canGetReport
+
+	canGetReport, err := l.CanGetReport(reportName)
+	if err != nil {
+		return false, err
 	}
 	if !canGetReport {
 		return false, nil
 	}
-	canGetReportType, ok := l.canGetReportTypeByName[reportName]
-	if !ok {
-		// Query to determine if the user can get the reportType.
-		canGetReportType, err = l.CanGetReportType(reportTypeName)
-		if err != nil {
-			return false, err
-		}
-		l.canGetReportTypeByName[reportName] = canGetReportType
+
+	canGetReportType, err := l.CanGetReportType(reportTypeName)
+	if err != nil {
+		return false, err
 	}
 	if !canGetReportType {
 		return false, nil
@@ -87,24 +77,22 @@ func (l *reportRbacHelper) CanViewReport(reportTypeName, reportName string) (boo
 	return true, nil
 }
 
-// CanListAnyReportsIn returns true if the caller can view any of the reports
-func (l *reportRbacHelper) CanListAnyReportsIn(reps []*report.ArchivedReportData) (bool, error) {
-	for _, r := range reps {
-		ok, err := l.CanListReports(r.ReportName)
-		if err != nil {
-			return false, err
-		}
-		//done as soon we find one that can be returned
-		if ok == true {
-			return true, nil
-		}
-	}
-	//if we don't find any then the reports cannot be listed
-	return false, nil
-}
-
 // CanListReports returns true if the caller is allowed to List Reports.
 func (l *reportRbacHelper) CanListReports(reportName string) (bool, error) {
+	var err = error(nil)
+	canDo, ok := l.canListReportByName[reportName]
+	if !ok {
+		// Query to determine if the user can list the report.
+		canDo, err = l.canListReports(reportName)
+		if err == nil {
+			l.canListReportByName[reportName] = canDo
+		}
+	}
+	return canDo, err
+}
+
+// canListReports returns true if the caller is allowed to List Reports. This is an internal method.
+func (l *reportRbacHelper) canListReports(reportName string) (bool, error) {
 	resAtr := &authzv1.ResourceAttributes{
 		Verb:     "list",
 		Group:    "projectcalico.org",
@@ -114,9 +102,22 @@ func (l *reportRbacHelper) CanListReports(reportName string) (bool, error) {
 	return l.checkAuthorized(*resAtr)
 }
 
-// CanGetReport returns true if the caller is allowed to Get a Report. This is an internal method. Consumers
-// of the reportRbacHelper should use the canViewReport entry point.
+// CanGetReport returns true if the caller is allowed to Get a Report.
 func (l *reportRbacHelper) CanGetReport(reportName string) (bool, error) {
+	var err = error(nil)
+	canDo, ok := l.canGetReportByName[reportName]
+	if !ok {
+		// Query to determine if the user can get the report.
+		canDo, err = l.canGetReport(reportName)
+		if err == nil {
+			l.canGetReportByName[reportName] = canDo
+		}
+	}
+	return canDo, err
+}
+
+// canGetReport returns true if the caller is allowed to Get a Report. This is an internal method.
+func (l *reportRbacHelper) canGetReport(reportName string) (bool, error) {
 	resAtr := &authzv1.ResourceAttributes{
 		Verb:     "get",
 		Group:    "projectcalico.org",
@@ -126,9 +127,22 @@ func (l *reportRbacHelper) CanGetReport(reportName string) (bool, error) {
 	return l.checkAuthorized(*resAtr)
 }
 
-// CanGetReportType returns true if the caller is allowed to Get a ReportType. This is an internal method.
-// Consumers of the reportRbacHelper should use the canViewReport entry point.
+// CanGetReportType returns true if the caller is allowed to Get a ReportType.
 func (l *reportRbacHelper) CanGetReportType(reportTypeName string) (bool, error) {
+	var err = error(nil)
+	canDo, ok := l.canGetReportTypeByName[reportTypeName]
+	if !ok {
+		// Query to determine if the user can get the report type.
+		canDo, err = l.canGetReportType(reportTypeName)
+		if err == nil {
+			l.canGetReportTypeByName[reportTypeName] = canDo
+		}
+	}
+	return canDo, err
+}
+
+// canGetReportType returns true if the caller is allowed to Get a ReportType. This is an internal method.
+func (l *reportRbacHelper) canGetReportType(reportTypeName string) (bool, error) {
 	resAtr := &authzv1.ResourceAttributes{
 		Verb:     "get",
 		Group:    "projectcalico.org",

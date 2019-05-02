@@ -33,3 +33,5 @@ import:
   vcs: git
 - package: github.com/tigera/es-proxy-image
   version: ad8d517e8d6431c9429be735766e7b971efdad80
+  repo: git@github.com:tigera/es-proxy-image
+  vcs: git

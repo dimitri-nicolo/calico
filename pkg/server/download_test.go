@@ -15,17 +15,17 @@ var _ = Describe("Download tests", func() {
 		t := startTester()
 
 		By("Setting responses to")
-		t.report = summary1
+		t.report = reportListAndGet
 		t.reportTypeList = &v3.GlobalReportTypeList{
-			Items: []v3.GlobalReportType{reportType1},
+			Items: []v3.GlobalReportType{reportTypeGettable},
 		}
 
 		By("Running a download query")
-		t.downloadSingle(summary1.UID(), http.StatusOK, forecastFile1)
+		t.downloadSingle(reportListAndGet.UID(), http.StatusOK, forecastFile1)
 
 		forecasts := []forecastFile{forecastFile1, forecastFile2}
 		By("Running a multi download query")
-		t.downloadMulti(summary1.UID(), http.StatusOK, forecasts)
+		t.downloadMulti(reportListAndGet.UID(), http.StatusOK, forecasts)
 
 		By("Stopping the server")
 		t.stop()
