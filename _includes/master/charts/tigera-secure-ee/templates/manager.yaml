@@ -498,5 +498,3 @@ spec:
       selector: k8s-app == 'cnx-manager'
     destination:
       ports: [5443]
-
----
