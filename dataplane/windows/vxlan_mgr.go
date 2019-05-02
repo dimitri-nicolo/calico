@@ -4,6 +4,7 @@ package windataplane
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -13,6 +14,10 @@ import (
 	"github.com/projectcalico/felix/dataplane/windows/hcn"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/libcalico-go/lib/set"
+)
+
+var (
+	ErrUpdatesFailed = errors.New("some VXLAN route updates failed")
 )
 
 type vxlanManager struct {
@@ -48,6 +53,7 @@ func newVXLANManager(hcn hcnInterface, hostname string, networkName *regexp.Rege
 		networkName:  networkName,
 		vxlanID:      vxlanID,
 		vxlanPort:    port,
+		dirty:        true,
 	}
 }
 
@@ -73,8 +79,10 @@ func (m *vxlanManager) OnUpdate(protoBufMsg interface{}) {
 		}
 	case *proto.VXLANTunnelEndpointRemove:
 		logrus.WithField("msg", msg).Debug("VXLAN data plane received VTEP remove")
-		delete(m.vtepsByNode, msg.Node)
-		m.dirty = true
+		if msg.Node != m.hostname { // Can't have a route to ourselves.
+			delete(m.vtepsByNode, msg.Node)
+			m.dirty = true
+		}
 	}
 }
 
@@ -217,6 +225,7 @@ func (m *vxlanManager) CompleteDeferredWork() error {
 			"numFailedAdds":    netPolsToAdd.Len(),
 			"numFailedRemoves": netPolsToRemove.Len(),
 		}).Error("Not all VXLAN route updates succeeded.")
+		return ErrUpdatesFailed
 	}
 
 	return nil

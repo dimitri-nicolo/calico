@@ -5,22 +5,55 @@ package hcn
 
 import (
 	"encoding/json"
+	"reflect"
+
+	"github.com/davecgh/go-spew/spew"
+	"github.com/sirupsen/logrus"
 )
 
 type API struct{}
 
 type HostComputeNetwork struct {
+	// Back pointer back to the original copy of this object.  Since we get returned by
+	// slice of structs we need some way to update the original data.
+	Ptr *HostComputeNetwork
+
 	Id       string
 	Name     string
 	Type     NetworkType
 	Policies []NetworkPolicy
+	Err      error
 }
 
-func (network HostComputeNetwork) RemovePolicy(request PolicyNetworkRequest) error {
+func (network *HostComputeNetwork) RemovePolicy(request PolicyNetworkRequest) error {
+	if network.Err != nil {
+		return network.Err
+	}
+	var updatedPols = network.Policies[:0]
+
+outer:
+	for _, p := range network.Policies {
+		for _, p2 := range request.Policies {
+			logrus.Infof("Comparing\n%s\nagainst\n%s", spew.Sdump(p), spew.Sdump(p2))
+			if reflect.DeepEqual(p, p2) {
+				logrus.Info("Match!")
+				continue outer
+			}
+		}
+		updatedPols = append(updatedPols, p)
+	}
+	network.Ptr.Policies = updatedPols
+
 	return nil
 }
 
-func (network HostComputeNetwork) AddPolicy(request PolicyNetworkRequest) error {
+func (network *HostComputeNetwork) AddPolicy(request PolicyNetworkRequest) error {
+	if network.Err != nil {
+		return network.Err
+	}
+	for _, p := range request.Policies {
+		network.Ptr.Policies = append(network.Ptr.Policies, p)
+	}
 	return nil
 }
 
