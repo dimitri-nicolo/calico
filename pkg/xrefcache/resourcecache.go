@@ -9,6 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/libcalico-go/lib/errors"
 
 	"github.com/tigera/compliance/pkg/dispatcher"
 	"github.com/tigera/compliance/pkg/keyselector"
@@ -112,7 +113,11 @@ func (c *resourceCache) onNewOrUpdated(id apiv3.ResourceID, res resources.Resour
 	// resource required by our cache processing).
 	v, err := c.engine.convertToVersioned(res)
 	if err != nil {
-		log.WithError(err).WithField("id", id).Error("Unable to convert resource, treating as delete")
+		if _, ok := err.(errors.ErrorResourceDoesNotExist); ok {
+			log.WithField("id", id).Debug("Cache has indicated an explicit delete of resource")
+		} else {
+			log.WithError(err).WithField("id", id).Error("Unable to convert resource, treating as delete")
+		}
 		c.onDeleted(id)
 		return
 	}

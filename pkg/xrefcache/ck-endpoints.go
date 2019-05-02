@@ -16,6 +16,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/updateprocessors"
+	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/set"
 
 	"github.com/tigera/compliance/pkg/ips"
@@ -26,6 +27,11 @@ import (
 const (
 	// The set of pod flags that are updated directly from the network policy flags associated with the pod.
 	CacheEntryEndpointAndNetworkPolicy = CacheEntryFlagsEndpoint & CacheEntryFlagsNetworkPolicy
+)
+
+const (
+	fakePodIP       = "255.255.255.255"
+	fakePodNodeName = "@"
 )
 
 var (
@@ -314,6 +320,17 @@ func (c *endpointEngine) convertToVersioned(res resources.Resource) (VersionedRe
 			v1:           v1.Value.(*model.HostEndpoint),
 		}, nil
 	case *corev1.Pod:
+		// If pod status is being archived then we will have the actual pod status to hand and can ignore completed
+		// or failed pods.
+		if c.converter.IsFinished(in) {
+			id := resources.GetResourceID(in)
+			log.Debugf("Pod status indicates finished: %s is %s", id, in.Status.Phase)
+			return nil, cerrors.ErrorResourceDoesNotExist{
+				Identifier: id,
+				Err:        errors.New("Pod status indicates finsihed"),
+			}
+		}
+
 		// Check if an IP address is available, if not then it won't be possible to convert the Pod.
 		podIPs, ipErr := c.converter.GetPodIPs(in)
 		validIP := true
@@ -324,8 +341,14 @@ func (c *endpointEngine) convertToVersioned(res resources.Resource) (VersionedRe
 			// active, but we are focussing mostly on intent and so this is a good approximation.
 			log.Debugf("Setting fake IP in Pod to ensure conversion is handled correctly - IP will be ignored: %s",
 				resources.GetResourceID(in))
-			in.Status.PodIP = "255.255.255.255"
+			in.Status.PodIP = fakePodIP
 			validIP = false
+		}
+
+		// The pod node name is updated as part of status despite being in the pod spec. As a result we have to handle
+		// it being not set gracefully.
+		if in.Spec.NodeName == "" {
+			in.Spec.NodeName = fakePodNodeName
 		}
 
 		kvp, err := c.converter.PodToWorkloadEndpoint(in)
