@@ -22,82 +22,169 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
+// For now, we only need four IPSets to stage different scenarios around adding, removing and updating members.
+const numMembers int = 4
+
+// Basic structure for a test case. The idea is to have at least one for each IPSetType.
+type IPSetsMgrTestCase struct {
+	ipsetID      string
+	ipsetType    proto.IPSetUpdate_IPSetType
+	ipsetMembers [numMembers]string
+	dnsRecs      map[string][]string
+}
+
+// Main array of test cases. We pass each of these to the test routines during execution.
+var ipsetsMgrTestCases = []IPSetsMgrTestCase{
+	{
+		ipsetID:      "id1",
+		ipsetType:    proto.IPSetUpdate_IP,
+		ipsetMembers: [numMembers]string{"10.0.0.1", "10.0.0.2", "10.0.0.3", "10.0.0.4"},
+		dnsRecs:      map[string][]string{},
+	},
+	{
+		ipsetID:      "id2",
+		ipsetType:    proto.IPSetUpdate_DOMAIN,
+		ipsetMembers: [numMembers]string{"abc.com", "def.com", "ghi.com", "jkl.com"},
+		dnsRecs: map[string][]string{
+			"abc.com": []string{"10.0.0.10"},
+			"def.com": []string{"10.0.0.20"},
+			"ghi.com": []string{"10.0.0.30"},
+			"jkl.com": []string{"10.0.0.40"},
+		},
+	},
+}
+
+type mockDomainStore struct {
+	mappings map[string][]string
+}
+
+func (s *mockDomainStore) GetDomainIPs(domain string) []string {
+	return s.mappings[domain]
+}
+
+func allIPsForDomains(mappings map[string][]string, domains ...string) (ips []string) {
+	for _, domain := range domains {
+		ips = append(ips, mappings[domain]...)
+	}
+	return
+}
+
 var _ = Describe("IP Sets manager", func() {
 	var (
-		ipsetsMgr *ipSetsManager
-		ipSets    *mockIPSets
+		ipsetsMgr   *ipSetsManager
+		ipSets      *mockIPSets
+		domainStore *mockDomainStore
 	)
 
 	BeforeEach(func() {
+		domainStore = &mockDomainStore{mappings: make(map[string][]string)}
 		ipSets = newMockIPSets()
-		ipsetsMgr = newIPSetsManager(ipSets, 1024, nil)
+		ipsetsMgr = newIPSetsManager(ipSets, 1024, domainStore)
 	})
 
-	Describe("after sending a replace", func() {
-		BeforeEach(func() {
-			ipsetsMgr.OnUpdate(&proto.IPSetUpdate{
-				Id:      "id1",
-				Members: []string{"10.0.0.1", "10.0.0.2"},
-			})
-			ipsetsMgr.CompleteDeferredWork()
+	// Generic assumptions used during tests. Having them here reduces code duplication and improves readability.
+	AssertIPSetMembers := func(id string, members []string) {
+		It("IPSet should have the right members", func() {
+			Expect(ipSets.Members[id]).To(Equal(set.FromArray(members)))
 		})
-		It("should create the IP set", func() {
+	}
+
+	AssertIPSetNoMembers := func(id string) {
+		It("IPSet should have no members", func() {
+			Expect(ipSets.Members[id]).To(BeNil())
+		})
+	}
+
+	AssertIPSetModified := func() {
+		It("IPSet should be modified", func() {
 			Expect(ipSets.AddOrReplaceCalled).To(BeTrue())
 		})
-		It("should add the right members", func() {
-			Expect(ipSets.Members).To(HaveLen(1))
-			expIPs := set.From("10.0.0.1", "10.0.0.2")
-			Expect(ipSets.Members["id1"]).To(Equal(expIPs))
-		})
+	}
 
-		Describe("after sending a delta update", func() {
+	AssertIPSetNotModified := func() {
+		It("IPSet should not be modified", func() {
+			Expect(ipSets.AddOrReplaceCalled).To(BeFalse())
+		})
+	}
+
+	// Basic add/remove/update test case for different types of IPSets.
+	IPsetsMgrTest1 := func(ipsetID string, ipsetType proto.IPSetUpdate_IPSetType, members [numMembers]string, dnsMappings map[string][]string) {
+		Describe("after creating an IPSet", func() {
 			BeforeEach(func() {
 				ipSets.AddOrReplaceCalled = false
-				ipsetsMgr.OnUpdate(&proto.IPSetDeltaUpdate{
-					Id:             "id1",
-					AddedMembers:   []string{"10.0.0.3", "10.0.0.4"},
-					RemovedMembers: []string{"10.0.0.1"},
+				domainStore.mappings = dnsMappings
+				ipsetsMgr.OnUpdate(&proto.IPSetUpdate{
+					Id:      ipsetID,
+					Members: []string{members[0], members[1]},
+					Type:    ipsetType,
 				})
 				ipsetsMgr.CompleteDeferredWork()
 			})
-			It("should not replace the IP set", func() {
-				Expect(ipSets.AddOrReplaceCalled).To(BeFalse())
-			})
-			It("should contain the right IPs", func() {
-				expIPs := set.From("10.0.0.2", "10.0.0.3", "10.0.0.4")
-				Expect(ipSets.Members["id1"]).To(Equal(expIPs))
-			})
 
-			Describe("after sending a delete", func() {
+			AssertIPSetModified()
+
+			// We match domain ipsets with their respective IP addresses.
+			if ipsetType == proto.IPSetUpdate_DOMAIN {
+				AssertIPSetMembers(ipsetID, allIPsForDomains(dnsMappings, members[0], members[1]))
+			} else {
+				AssertIPSetMembers(ipsetID, []string{members[0], members[1]})
+			}
+
+			Describe("after sending a delta update", func() {
 				BeforeEach(func() {
-					ipsetsMgr.OnUpdate(&proto.IPSetRemove{
-						Id: "id1",
+					ipSets.AddOrReplaceCalled = false
+					domainStore.mappings = dnsMappings
+					ipsetsMgr.OnUpdate(&proto.IPSetDeltaUpdate{
+						Id:             ipsetID,
+						AddedMembers:   []string{members[2], members[3]},
+						RemovedMembers: []string{members[0]},
 					})
 					ipsetsMgr.CompleteDeferredWork()
 				})
-				It("should remove the IP set", func() {
-					Expect(ipSets.Members["id1"]).To(BeNil())
-				})
-			})
-		})
 
-		Describe("after sending another replace", func() {
-			BeforeEach(func() {
-				ipSets.AddOrReplaceCalled = false
-				ipsetsMgr.OnUpdate(&proto.IPSetUpdate{
-					Id:      "id1",
-					Members: []string{"10.0.0.2", "10.0.0.3"},
+				AssertIPSetNotModified()
+
+				if ipsetType == proto.IPSetUpdate_DOMAIN {
+					AssertIPSetMembers(ipsetID, allIPsForDomains(dnsMappings, members[1], members[2], members[3]))
+				} else {
+					AssertIPSetMembers(ipsetID, []string{members[1], members[2], members[3]})
+				}
+
+				Describe("after sending a delete", func() {
+					BeforeEach(func() {
+						domainStore.mappings = dnsMappings
+						ipsetsMgr.OnUpdate(&proto.IPSetRemove{
+							Id: ipsetID,
+						})
+						ipsetsMgr.CompleteDeferredWork()
+					})
+					AssertIPSetNoMembers(ipsetID)
 				})
-				ipsetsMgr.CompleteDeferredWork()
 			})
-			It("should replace the IP set", func() {
-				Expect(ipSets.AddOrReplaceCalled).To(BeTrue())
-			})
-			It("should add the right members", func() {
-				Expect(ipSets.Members).To(HaveLen(1))
-				expIPs := set.From("10.0.0.2", "10.0.0.3")
-				Expect(ipSets.Members["id1"]).To(Equal(expIPs))
+
+			Describe("after sending another replace", func() {
+				BeforeEach(func() {
+					ipSets.AddOrReplaceCalled = false
+					domainStore.mappings = dnsMappings
+					ipsetsMgr.OnUpdate(&proto.IPSetUpdate{
+						Id:      ipsetID,
+						Members: []string{members[1], members[2]},
+						Type:    ipsetType,
+					})
+					ipsetsMgr.CompleteDeferredWork()
+				})
+
+				if ipsetType == proto.IPSetUpdate_DOMAIN {
+					AssertIPSetMembers(ipsetID, allIPsForDomains(dnsMappings, members[1], members[2]))
+				} else {
+					AssertIPSetModified()
+					AssertIPSetMembers(ipsetID, []string{members[1], members[2]})
+				}
 			})
 		})
-	})
+	}
+
+	for _, testCase := range ipsetsMgrTestCases {
+		IPsetsMgrTest1(testCase.ipsetID, testCase.ipsetType, testCase.ipsetMembers, testCase.dnsRecs)
+	}
 })

@@ -87,6 +87,7 @@ type domainInfoStore struct {
 // addresses.)
 type domainInfoChanged struct {
 	domain string
+	reason string
 }
 
 // Signal sent by timers' AfterFunc to the domain info store when a particular name -> IP or name ->
@@ -299,7 +300,7 @@ func (s *domainInfoStore) processMappingExpiry(name, value string) {
 			if len(nameData.values)+len(nameData.ancestorNames) == 0 {
 				delete(s.mappings, name)
 			}
-			s.signalDomainInfoChange(name)
+			s.signalDomainInfoChange(name, "mapping expired")
 		} else if valueData != nil {
 			log.Debugf("Too early mapping expiry for %v -> %v", name, value)
 		} else {
@@ -311,6 +312,12 @@ func (s *domainInfoStore) processMappingExpiry(name, value string) {
 func (s *domainInfoStore) storeDNSRecordInfo(rec *layers.DNSResourceRecord, section string) {
 	if rec.Class != layers.DNSClassIN {
 		log.Debugf("Ignore DNS response with class %v", rec.Class)
+		return
+	}
+
+	// Only CNAME type records can have the IP field set to nil
+	if rec.IP == nil && rec.Type != layers.DNSTypeCNAME {
+		log.Debugf("Ignore %s DNS response with empty or invalid IP", rec.Type.String())
 		return
 	}
 
@@ -362,7 +369,7 @@ func (s *domainInfoStore) storeInfo(name, value string, ttl time.Duration, isNam
 			timer:      makeTimer(),
 			isName:     isName,
 		}
-		s.signalDomainInfoChange(name)
+		s.signalDomainInfoChange(name, "mapping added")
 		// If value is another name, for which we don't yet have any information, create a
 		// mapping entry for it so we can record that it is a descendant of the name in
 		// hand.  Then, when we get information for the descendant name, we can correctly
@@ -390,11 +397,13 @@ func (s *domainInfoStore) GetDomainIPs(domain string) []string {
 	if ips == nil {
 		var collectIPsForName func(string, []string)
 		collectIPsForName = func(domain string, ancestorNames []string) {
+			nameData := s.mappings[domain]
 			log.WithFields(log.Fields{
 				"domain":        domain,
 				"ancestorNames": ancestorNames,
+				"nameData":      nameData,
 			}).Debug("Collect IPs for name")
-			if nameData := s.mappings[domain]; nameData != nil {
+			if nameData != nil {
 				nameData.ancestorNames = ancestorNames
 				for value, valueData := range nameData.values {
 					if valueData.isName {
@@ -416,7 +425,7 @@ func (s *domainInfoStore) GetDomainIPs(domain string) []string {
 	return ips
 }
 
-func (s *domainInfoStore) signalDomainInfoChange(name string) {
+func (s *domainInfoStore) signalDomainInfoChange(name, reason string) {
 	changedNames := set.From(name)
 	delete(s.resultsCache, name)
 	if nameData := s.mappings[name]; nameData != nil {
@@ -430,7 +439,7 @@ func (s *domainInfoStore) signalDomainInfoChange(name string) {
 	s.mutex.Unlock()
 	defer s.mutex.Lock()
 	changedNames.Iter(func(item interface{}) error {
-		s.domainInfoChanges <- &domainInfoChanged{domain: item.(string)}
+		s.domainInfoChanges <- &domainInfoChanged{domain: item.(string), reason: reason}
 		return nil
 	})
 }
