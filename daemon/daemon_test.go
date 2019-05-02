@@ -1,9 +1,10 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 
 package daemon
 
 import (
 	lclient "github.com/tigera/licensing/client"
+	"k8s.io/api/core/v1"
 
 	"github.com/projectcalico/felix/config"
 
@@ -184,5 +185,32 @@ var _ = Describe("FelixDaemon license checks", func() {
 		Expect(cfg.CloudWatchMetricsReporterEnabled).To(BeFalse())
 		Expect(cfg.CloudWatchNodeHealthStatusEnabled).To(BeFalse())
 		Expect(cfg.FlowLogsFileEnabled).To(BeTrue())
+	})
+})
+
+var _ = Describe("Typha address discovery", func() {
+
+	getKubernetesService := func(namespace, name string) (*v1.Service, error) {
+		return &v1.Service{
+			Spec: v1.ServiceSpec{
+				ClusterIP: "fd5f:65af::2",
+				Ports: []v1.ServicePort{
+					v1.ServicePort{
+						Name: "calico-typha",
+						Port: 8156,
+					},
+				},
+			},
+		}, nil
+	}
+
+	It("should bracket an IPv6 Typha address", func() {
+		configParams := config.New()
+		configParams.UpdateFrom(map[string]string{
+			"TyphaK8sServiceName": "calico-typha",
+		}, config.EnvironmentVariable)
+		typhaAddr, err := discoverTyphaAddr(configParams, getKubernetesService)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(typhaAddr).To(Equal("[fd5f:65af::2]:8156"))
 	})
 })

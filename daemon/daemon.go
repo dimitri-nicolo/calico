@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"net"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -27,6 +28,8 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"k8s.io/api/core/v1"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -277,7 +280,7 @@ configRetry:
 		numClientsCreated++
 
 		// If we're configured to discover Typha, do that now so we can retry if we fail.
-		typhaAddr, err = discoverTyphaAddr(configParams)
+		typhaAddr, err = discoverTyphaAddr(configParams, config.GetKubernetesService)
 		if err != nil {
 			log.WithError(err).Error("Typha discovery enabled but discovery failed.")
 			time.Sleep(1 * time.Second)
@@ -1236,7 +1239,7 @@ func (fc *DataplaneConnector) Start() {
 
 var ErrServiceNotReady = errors.New("Kubernetes service missing IP or port.")
 
-func discoverTyphaAddr(configParams *config.Config) (string, error) {
+func discoverTyphaAddr(configParams *config.Config, getKubernetesService func(namespace, name string) (*v1.Service, error)) (string, error) {
 	if configParams.TyphaAddr != "" {
 		// Explicit address; trumps other sources of config.
 		return configParams.TyphaAddr, nil
@@ -1249,7 +1252,7 @@ func discoverTyphaAddr(configParams *config.Config) (string, error) {
 
 	// If we get here, we need to look up the Typha service using the k8s API.
 	// TODO Typha: support Typha lookup without using rest.InClusterConfig().
-	svc, err := config.GetKubernetesService(configParams.TyphaK8sNamespace, configParams.TyphaK8sServiceName)
+	svc, err := getKubernetesService(configParams.TyphaK8sNamespace, configParams.TyphaK8sServiceName)
 	if err != nil {
 		log.WithError(err).Error("Unable to get Typha service from Kubernetes.")
 		return "", err
@@ -1263,7 +1266,7 @@ func discoverTyphaAddr(configParams *config.Config) (string, error) {
 	for _, p := range svc.Spec.Ports {
 		if p.Name == "calico-typha" {
 			log.WithField("port", p).Info("Found Typha service port.")
-			typhaAddr := fmt.Sprintf("%s:%v", host, p.Port)
+			typhaAddr := net.JoinHostPort(host, fmt.Sprintf("%v", p.Port))
 			return typhaAddr, nil
 		}
 	}
