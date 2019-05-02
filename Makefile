@@ -377,6 +377,7 @@ ifndef RELEASE_STREAM
 endif
 	mkdir -p bin
 	helm package ./_includes/$(RELEASE_STREAM)/charts/$(@F) \
+	--save=false \
 	--destination ./bin/ \
 	--version $(chartVersion) \
 	--app-version $(CALICO_VER)

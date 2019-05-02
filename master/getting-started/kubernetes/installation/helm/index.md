@@ -2,6 +2,8 @@
 title: Installing Tigera Secure EE using Helm
 ---
 
+{% capture chart_version_name %}{{ site.data.versions[page.version].first.title }}{% endcapture %}
+
 This article describes how to install and configure Tigera Secure EE using Helm. After completing the steps you will have a functioning Tigera Secure EE cluster.
 
 ## Before you begin
@@ -11,28 +13,30 @@ Ensure that you have the following:
 - [credentials for the Tigera private registry]({{ site.basuerl }}/{{ page.version }}/getting-started/#obtain-the-private-registry-credentials), (`config.json`)
 - A [license key]({{ site.baseurl }}/{{ page.version }}/getting-started/#obtain-a-license-key) (`license.yaml`)
 - Tiller is running, and your local helm CLI tool is configured to speak to it.
-- {{ site.prodname }} Helm Artifacts from the [Tigera support portal](https://support.tigera.io):
-  - tigera-secure-ee-core.tgz
-  - tigera-secure-ee.tgz
-
->Important:  The configuration values described in this article are required to achieve a functioning cluster. For a complete reference of all of the available options to customize your Helm install, inspect the helm chart: `helm inspect tigera-secure-ee-core.tgz`
 
 The high-level steps to a functioning cluster with access to the user interface are:
 
-- [Step 1: Create values.yaml for {{ site.prodname }} Core](#step-1-create-valuesyaml-for-tigera-secure-ee-core)
-- [Step 2: Install {{ site.prodname }} Core](#step-2-install-tigera-secure-ee-core)
-- [Step 3: Create values.yaml for {{ site.prodname }}](#step-3-create-valuesyaml-for-tigera-secure-ee)
-- [Step 4: Install {{ site.prodname }}](#step-4-install-tigera-secure-ee)
-- [Step 5: Grant access to user interface](#step-5-grant-access-to-user-interface)
+- [Step 1: Acquire the helm charts](#step-1-acquire-the-helm-charts)
+- [Step 2: Create values.yaml for {{ site.prodname }} Core](#step-2-create-valuesyaml-for-tigera-secure-ee-core)
+- [Step 3: Install {{ site.prodname }} Core](#step-3-install-tigera-secure-ee-core)
+- [Step 4: Create values.yaml for {{ site.prodname }}](#step-4-create-valuesyaml-for-tigera-secure-ee)
+- [Step 5: Install {{ site.prodname }}](#step-5-install-tigera-secure-ee)
+- [Step 6: Grant access to user interface](#step-6-grant-access-to-user-interface)
 
+## Step 1: Acquire the Helm charts
 
-## Step 1: Create values.yaml for {{ site.prodname }} Core
+```
+curl -O -L https://s3.amazonaws.com/tigera-public/ee/charts/tigera-secure-ee-core-{{ chart_version_name }}.tgz
+curl -O -L https://s3.amazonaws.com/tigera-public/ee/charts/tigera-secure-ee-{{ chart_version_name }}.tgz
+```
+
+## Step 2: Create values.yaml for {{ site.prodname }} Core
 
 In this step, you create a <my_values>.yaml file with your configuration values to build a running cluster.
 
 For the purposes of this install guide, we will cover options which must be set in order to achieve a functioning cluster. For a full reference of all available options, inspect the helm chart:
 
-    helm inspect tigera-secure-ee-core.tgz
+    helm inspect tigera-secure-ee-core-{{ chart_version_name }}.tgz
 
 ### Configure your Datastore Connection
 
@@ -93,12 +97,13 @@ initialPool:
 >**Note**: This should fall within `--cluster-cidr` configured for the cluster
 {: .alert .alert-info}
 
-## Step 2: Install {{ site.prodname }} Core
+## Step 3: Install {{ site.prodname }} Core
 
 1. Install the chart, passing in the `my-values.yaml` file you created from the previous section, an additionally passing your image pull secrets:
 
    ```
-   helm install ./tigera-secure-ee-core.tgz -f my-values.yaml
+   helm install ./tigera-secure-ee-core-{{ chart_version_name }}.tgz \
+     -f my-values.yaml \
      --set-file imagePullSecrets.cnx-pull-secret=./config.json
    ```
 
@@ -122,13 +127,13 @@ initialPool:
 
 Now that the **{{ site.prodname }} Core** chart is installed, please move on to the next step to install the **{{ site.prodname }}** chart.
 
-## Step 3: Create values.yaml for {{ site.prodname }}
+## Step 4: Create values.yaml for {{ site.prodname }}
 
 Before we install, we must build a helm values file to configure {{ site.prodname }} for your environment. We will refer to this values file as `my-values.yaml` at the time of installation.
 
 For the purposes of this install guide, we will cover options which must be set in order to achieve a functioning cluster. For a full reference of all available options, inspect the helm chart:
 
-    helm inspect tigera-secure-ee.tgz
+    helm inspect tigera-secure-ee-{{ chart_version_name }}.tgz
 
 ### Connect to Elasticsearch & Kibana
 
@@ -187,7 +192,7 @@ manager:
     clientID: "cnx-manager"
 ```
 
-## Step 4: Install {{ site.prodname }}
+## Step 5: Install {{ site.prodname }}
 
 0. Pre-install the CRDs.
 
@@ -202,14 +207,15 @@ manager:
 1. Install the tigera-secure-ee helm chart with custom resource provisioning disabled:
 
    ```
-   helm install ./tigera-secure-ee.tgz --namespace calico-monitoring \
+   helm install ./tigera-secure-ee-{{ chart_version_name }}.tgz \
+     --namespace calico-monitoring \
      --set createCustomResources=false \
      --set-file imagePullSecrets.cnx-pull-secret=./config.json
    ```
 
    >Note: This version of the Tigera Secure EE Helm chart **must** be installed with `--namespace calico-monitoring`.
 
-## Step 5: Grant access to user interface
+## Step 6: Grant access to user interface
 
 Grant users permission to access the Tigera Secure EE Manager in your cluster. Run one of the following commands, replacing <USER> with the name of the user you wish to grant access.
 
