@@ -3,7 +3,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   annotations:
-    something: 'dontcare'
+    sidecar.istio.io/status: '{"version":"99f7794ab7b49c473191a9b99fb394a24a1bd94be1602549ab75085af3fd34a6","initContainers":["istio-init"],"containers":["istio-proxy"],"volumes":["istio-envoy","istio-certs"],"imagePullSecrets":null}'
   labels:
     app: customer
     pod-template-hash: 8676f57d86

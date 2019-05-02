@@ -1,13 +1,13 @@
 action: init
 kind: NetworkPolicy
-apiversion: projectcalico.org/v3
+apiVersion: projectcalico.org/v3
 metadata:
   name: egress-to-any
   namespace: "{{.Namespace}}"
 spec:
   selector: egress-to-any == 'yes'
   egress:
-    - action: allow
+    - action: Allow
       destination:
         selector: 'all()'
   types:

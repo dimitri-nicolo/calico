@@ -1,6 +1,6 @@
 action: update
 kind: "Pod"
-apiversion: v1
+apiVersion: v1
 metadata:
   name: "ingress-from-pub-with-noselector-{{.ScaleId}}"
   namespace: "{{.Namespace}}"
@@ -8,5 +8,5 @@ metadata:
     ingress-with-noselector: "yes"
     just: "some churn 2"
 spec:
-  serviceaccountname: demosa
+  serviceAccountName: demosa
   nodeName: anode

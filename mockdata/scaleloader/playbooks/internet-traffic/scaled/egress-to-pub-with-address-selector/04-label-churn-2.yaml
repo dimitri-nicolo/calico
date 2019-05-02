@@ -1,6 +1,6 @@
 action: update
 kind: "Pod"
-apiversion: v1
+apiVersion: v1
 metadata:
   name: "egress-to-pub-with-address-selector-{{.ScaleId}}"
   namespace: "{{.Namespace}}"
@@ -8,5 +8,5 @@ metadata:
     egress-with-address-selector: "yes"
     just: "some churn 2"
 spec:
-  serviceaccountname: demosa
+  serviceAccountName: demosa
   nodeName: anode

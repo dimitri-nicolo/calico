@@ -1,13 +1,13 @@
 action: init
 kind: NetworkPolicy
-apiversion: projectcalico.org/v3
+apiVersion: projectcalico.org/v3
 metadata:
   name: demo-calico-np
   namespace: "{{.Namespace}}"
 spec:
   selector: 'kind == "calico-np"'
   ingress:
-    - action: allow
+    - action: Allow
       source:
         nets:
           - 192.168.0.1/32
@@ -20,7 +20,7 @@ spec:
           selector: 'ingress == "sa-in-calico-np"'
 
   egress:
-    - action: allow
+    - action: Allow
       destination:
         nets:
           - 192.168.0.2/32
