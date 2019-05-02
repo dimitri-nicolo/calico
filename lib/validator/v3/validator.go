@@ -50,6 +50,7 @@ const (
 	// validation tests that should protect against any changes to the internals.
 	lower60Bits             = (uint64(1) << 60) - 1
 	maxCRONSchedulesPerHour = 12
+	errorTooManySchedules   = "schedule is not valid: no more than 12 schedules are permitted per hour (av. /5mins)"
 )
 
 var (
@@ -182,7 +183,6 @@ func init() {
 	registerFieldValidator("file", validateFile)
 	registerFieldValidator("etcdEndpoints", validateEtcdEndpoints)
 	registerFieldValidator("k8sEndpoint", validateK8sEndpoint)
-	registerFieldValidator("reportschedule", validateReportSchedule)
 
 	registerStructValidator(validate, validateProtocol, numorstring.Protocol{})
 	registerStructValidator(validate, validateProtoPort, api.ProtoPort{})
@@ -209,6 +209,7 @@ func init() {
 	registerStructValidator(validate, validateConfigMapKeyRef, k8sv1.ConfigMapKeySelector{})
 	registerStructValidator(validate, validateSecretKeyRef, k8sv1.SecretKeySelector{})
 	registerStructValidator(validate, validateGlobalReportType, api.GlobalReportType{})
+	registerStructValidator(validate, validateReportSpec, api.ReportSpec{})
 	registerStructValidator(validate, validateReportTemplate, api.ReportTemplate{})
 }
 
@@ -1322,7 +1323,7 @@ func validateReportTemplate(structLevel validator.StructLevel) {
 	tmpl := rt.Template
 
 	if tmpl != "" {
-		// Validate template execution.
+		// Validate template is ok using sensible data.
 		_, err := compliance.RenderTemplate(tmpl, &compliance.ReportDataSample)
 		if err != nil {
 			structLevel.ReportError(
@@ -1332,6 +1333,9 @@ func validateReportTemplate(structLevel validator.StructLevel) {
 				reason("Invalid template defined in: "+rt.Name),
 				"",
 			)
+
+			// No point in doing additional checks if the template doesn't validate with sensible data.
+			return
 		}
 
 		// Run past nil pointer data to see if the template is valid.
@@ -1357,31 +1361,36 @@ func validateGlobalReportType(structLevel validator.StructLevel) {
 
 	// Validate unique name across templates.
 	tmplNames := map[string]bool{spec.UISummaryTemplate.Name: true}
-	for _, t := range spec.DownloadTemplates {
+	for i, t := range spec.DownloadTemplates {
 		if _, exists := tmplNames[t.Name]; exists {
-			structLevel.ReportError(reflect.ValueOf(grt.Name),
-				"GlobalReportType", "", reason("Template name '"+t.Name+"' is already in use."), "")
+			structLevel.ReportError(reflect.ValueOf(t.Name),
+				fmt.Sprintf("Spec.DownloadTemplates[%d].Name", i), "", reason("template name '"+t.Name+"' is already in use."), "")
 		}
 	}
 }
 
-func validateReportSchedule(fl validator.FieldLevel) bool {
-	rs := fl.Field().String()
+func validateReportSpec(structLevel validator.StructLevel) {
+	spec := structLevel.Current().Interface().(api.ReportSpec)
+
+	if spec.Schedule == "" {
+		return
+	}
 
 	// Check that the cron tab parses ok.
-	s, err := cron.ParseStandard(rs)
+	s, err := cron.ParseStandard(spec.Schedule)
 	if err != nil {
-		return false
+		structLevel.ReportError(reflect.ValueOf(spec.Schedule),
+			"Spec.Schedule", "", reason(fmt.Sprintf("schedule is not valid: %v", err)), "")
+		return
 	}
 
 	// Check that there are at most 2 schedules per hour.
 	if ss, ok := s.(*cron.SpecSchedule); ok {
 		if bits.OnesCount64(ss.Minute&lower60Bits) > maxCRONSchedulesPerHour {
-			return false
+			structLevel.ReportError(reflect.ValueOf(spec.Schedule),
+				"Spec.Schedule", "", reason(errorTooManySchedules), "")
 		}
 	}
-
-	return true
 }
 
 func validateObjectMetaAnnotations(structLevel validator.StructLevel, annotations map[string]string) {
