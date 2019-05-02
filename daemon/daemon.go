@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"net"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -1263,7 +1264,7 @@ func discoverTyphaAddr(configParams *config.Config) (string, error) {
 	for _, p := range svc.Spec.Ports {
 		if p.Name == "calico-typha" {
 			log.WithField("port", p).Info("Found Typha service port.")
-			typhaAddr := fmt.Sprintf("%s:%v", host, p.Port)
+			typhaAddr := net.JoinHostPort(host, fmt.Sprintf("%v", p.Port))
 			return typhaAddr, nil
 		}
 	}
