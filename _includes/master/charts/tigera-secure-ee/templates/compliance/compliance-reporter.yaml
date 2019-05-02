@@ -67,10 +67,6 @@ template:
       env:
       - name: LOG_LEVEL
         value: "warning"
-{{- if eq .Values.platform "gke" }}
-      - name: HEALTH_PORT
-        value: "9199"
-{{- end }}
       - name: ELASTIC_INDEX_SUFFIX
         valueFrom:
           configMapKeyRef:
@@ -122,12 +118,7 @@ template:
       livenessProbe:
         httpGet:
           path: /liveness
-{{- if eq .Values.platform "gke" }}
-          port: 9199
-{{- else }}
           port: 9099
-{{- end }}
-          host: localhost
     volumes:
     - name: elastic-ca-cert-volume
       secret:
