@@ -89,12 +89,12 @@ Use the push method if your threat feeds that are not in newline-delimited forma
    kubectl apply -f <your_threatfeed_filename>
    ```
 
-3. Configure or program your threat feed to write updates to ElasticSearch. This Elasticsearch document is in the index **.tigera.ipset.\<cluster_name\>** and must have the ID set to the name of the global threat feed object. The doc should have a single field called **ips**, containing a list of IP addresses or IP prefixes. For example:  
+3. Configure or program your threat feed to write updates to ElasticSearch. This Elasticsearch document is in the index **.tigera.ipset.\<cluster_name\>** and must have the ID set to the name of the global threat feed object. The doc should have a single field called **ips**, containing a list of IP prefixes. For example:
 
    ```
    PUT .tigera.ipset.cluster/_doc/my-threat-feed
    {
-       "ips" : ["99.99.99.99", "100.100.100.0/24"]
+       "ips" : ["99.99.99.99/32", "100.100.100.0/24"]
    }
    ```
 
