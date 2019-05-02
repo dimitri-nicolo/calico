@@ -57,6 +57,7 @@ import (
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/datastore"
+	"github.com/tigera/compliance/pkg/hashutils"
 	"github.com/tigera/compliance/pkg/report"
 )
 
@@ -73,6 +74,7 @@ var (
 
 const (
 	healthReporter = "compliance-controller"
+	maxNameLen     = 63
 )
 
 type ComplianceController struct {
@@ -593,7 +595,7 @@ func (cc *ComplianceController) getJobFromTemplate(rep *v3.GlobalReport, jt Repo
 
 	// Name the pod deterministically to prevent duplicate runs. We use the end time of the rep for this since that
 	// is what determines the scheduling.
-	name := fmt.Sprintf("%s%s-%d", cc.cfg.JobNamePrefix, rep.Name, jt.End.Unix())
+	name := getJobName(cc.cfg.JobNamePrefix, rep.Name, jt.End)
 
 	// Create the pod template for the Job from the stored pod template.
 	template := v1.PodTemplateSpec{
@@ -681,4 +683,10 @@ func getRef(object runtime.Object) (*v1.ObjectReference, error) {
 type ReportJobTimes struct {
 	Start time.Time
 	End   time.Time
+}
+
+// Create a job name from the global report. The name should be deterministic because the name is used as
+// a lock to prevent multiple identical jobs from being created at the same time.
+func getJobName(prefix, report string, endTime time.Time) string {
+	return hashutils.GetLengthLimitedName(fmt.Sprintf("%s%s-%d", prefix, report, endTime.Unix()), maxNameLen)
 }
