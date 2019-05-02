@@ -1,6 +1,6 @@
 action: update
 kind: "Pod"
-apiversion: v1
+apiVersion: v1
 metadata:
   name: "ingress-egress-with-nsb-{{.ScaleId}}"
   namespace: "{{.Namespace}}"
@@ -9,5 +9,5 @@ metadata:
     egress-to-nsb: "yes"
     just: "some churn"
 spec:
-  serviceaccountname: demosa
+  serviceAccountName: demosa
   nodeName: anode

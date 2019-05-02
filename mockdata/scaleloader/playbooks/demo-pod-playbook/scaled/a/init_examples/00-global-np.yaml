@@ -1,6 +1,6 @@
 action: init
 kind: GlobalNetworkPolicy
-apiversion: projectcalico.org/v3
+apiVersion: projectcalico.org/v3
 metadata:
   name: demo-gnp
   labels:
@@ -8,7 +8,7 @@ metadata:
 spec:
   selector: 'kind == "gnp"'
   ingress:
-    - action: allow
+    - action: Allow
       source:
         nets:
           - 192.168.0.3/32
@@ -21,7 +21,7 @@ spec:
           selector: 'ingress == "sa-in-gnp"'
 
   egress:
-    - action: allow
+    - action: Allow
       destination:
         nets:
           - 192.168.0.4/32

@@ -1,11 +1,11 @@
 action: update
 kind: "Pod"
-apiversion: v1
+apiVersion: v1
 metadata:
   name: "unprotected-pod-{{.ScaleId}}"
   namespace: "{{.Namespace}}"
   labels:
     "{{.Namespace}}-protected": "egress"
 spec:
-  serviceaccountname: demosa
+  serviceAccountName: demosa
   nodeName: anode

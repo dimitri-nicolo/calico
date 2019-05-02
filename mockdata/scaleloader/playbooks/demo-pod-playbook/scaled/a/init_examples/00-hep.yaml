@@ -1,6 +1,6 @@
 action: init
 kind: HostEndpoint
-apiversion: projectcalico.org/v3
+apiVersion: projectcalico.org/v3
 metadata:
   name: demo-hep
   labels:

@@ -1,6 +1,6 @@
 action: init
 kind: ServiceAccount
-apiversion: v1
+apiVersion: v1
 metadata:
   name: demoserviceaccount
   #namespace: demonamespace

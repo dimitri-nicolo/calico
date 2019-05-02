@@ -1,11 +1,11 @@
 action: delete
 kind: "Pod"
-apiversion: v1
+apiVersion: v1
 metadata:
   name: "protected-ingress-pod-{{.ScaleId}}"
   namespace: "{{.Namespace}}"
   labels:
     "{{.Namespace}}-protected": "ingress"
 spec:
-  serviceaccountname: demosa
+  serviceAccountName: demosa
   nodeName: anode

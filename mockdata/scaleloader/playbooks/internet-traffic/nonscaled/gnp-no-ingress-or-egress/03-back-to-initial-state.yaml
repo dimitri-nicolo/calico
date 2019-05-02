@@ -1,16 +1,16 @@
 action: update
 kind: GlobalNetworkPolicy
-apiversion: projectcalico.org/v3
+apiVersion: projectcalico.org/v3
 metadata:
   name: "no-ingress-or-egress-ns-{{.Namespace}}"
 spec:
   selector: '{{.Namespace}}-no-ingress-or-egress == "yes"'
   ingress:
-    - action: allow
+    - action: Allow
       source:
         selector: label == "non-existent"
   egress:
-    - action: allow
+    - action: Allow
       destination:
         selector: label == "non-existent"
   types:

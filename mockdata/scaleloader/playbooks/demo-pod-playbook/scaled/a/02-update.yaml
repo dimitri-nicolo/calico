@@ -1,5 +1,5 @@
 kind: "Pod"
-apiversion: v1
+apiVersion: v1
 metadata:
   name: "demopod-a-{{.ScaleId}}"
   namespace: "{{.Namespace}}"
@@ -7,5 +7,5 @@ metadata:
     labela: "value for label a"
     labelb: "label b value 2"
 spec:
-  serviceaccountname: demosa
+  serviceAccountName: demosa
   nodeName: anode
