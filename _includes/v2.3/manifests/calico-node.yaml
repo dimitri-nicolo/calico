@@ -9,9 +9,24 @@ calico-node.yaml acccepts the following include flags:
 | disable_ipip     | true, false                   |
 | variant_name     | Calico, Canal                 |
 | app_layer_policy | true, disabled, false         |
+| platform         | gke, <unset>                  |
 
+ Notes:
+
+ - platform=gke expects datastore=kdd and network=<unset>
 {% endcomment -%}
-{% capture objname %}{% if include.network == "flannel" and include.datastore == "etcd" %}canal-node{% elsif include.network == "flannel" %}canal{% else %}calico-node{% endif %}{% endcapture -%}
+{%- capture objname -%}
+  {%- if include.platform == "gke" -%}
+    calico-node-ee
+  {%- elsif include.network == "flannel" and include.datastore == "etcd" -%}
+    canal-node
+  {%- elsif include.network == "flannel" -%}
+    canal
+  {%- else -%}
+    calico-node
+  {%- endif -%}
+{%- endcapture -%}
+{% if include.network == "flannel" and include.datastore == "etcd" %}canal-node{% elsif include.network == "flannel" %}canal{% else %}calico-node{% endif %}{% endcapture -%}
 # This manifest installs the {{site.nodecontainer}} container
 {%-  if include.network != "ecs" %}
 # as well as the {{site.prodname}} CNI plugins and network config
@@ -281,6 +296,10 @@ spec:
               value: "info"
             - name: FELIX_HEALTHENABLED
               value: "true"
+{%- if include.platform == "gke" %}
+            - name: FELIX_HEALTHPORT
+              value: "9199"
+{%- endif %}
 {% include {{page.version}}/extra-felix-config-12sp.yaml %}
 {%- if include.app_layer_policy == "true" or include.app_layer_policy == "disabled" %}
             - name: FELIX_POLICYSYNCPATHPREFIX
@@ -312,7 +331,11 @@ spec:
           livenessProbe:
             httpGet:
               path: /liveness
+{%- if include.platform == "gke" %}
+              port: 9199
+{%- else %}
               port: 9099
+{%- endif %}
               host: localhost
             periodSeconds: 10
             initialDelaySeconds: 10
@@ -328,6 +351,11 @@ spec:
             httpGet:
               path: /readiness
               port: 9099
+              host: localhost
+{%- elsif include.platform == "gke" %}
+            httpGet:
+              path: /readiness
+              port: 9199
               host: localhost
 {%- else %}
             exec:
@@ -501,7 +529,11 @@ spec:
         # Used to install CNI.
         - name: cni-bin-dir
           hostPath:
+{%- if include.platform == "gke" %}
+            path: /home/kubernetes/bin
+{%- else %}
             path: /opt/cni/bin
+{%- endif %}
         - name: cni-net-dir
           hostPath:
             path: /etc/cni/net.d
@@ -524,7 +556,11 @@ spec:
         - name: flexvol-driver-host
           hostPath:
             type: DirectoryOrCreate
+{%- if include.platform == "gke" %}
+            path: /home/kubernetes/flexvolume/nodeagent~uds
+{%- else %}
             path: /usr/libexec/kubernetes/kubelet-plugins/volume/exec/nodeagent~uds
+{%- endif %}
 {%- endif %}
         # Used for calico logs
         - name: var-log-calico

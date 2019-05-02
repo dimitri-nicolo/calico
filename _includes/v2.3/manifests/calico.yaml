@@ -11,6 +11,7 @@ calico.yaml acccepts the following include flags:
 | variant_name     | Calico, Canal                 |
 | app_layer_policy | true, disabled, false         |
 | federation       | true, false                   |
+| platform         | gke, <unset>                  |
 
 {% endcomment -%}
 {% capture variant_name %}{% if include.network == "flannel" %}Canal{% else %}Calico{% endif %}{% endcapture -%}
@@ -26,7 +27,7 @@ calico.yaml acccepts the following include flags:
 #   coreos/flannel:{{site.data.versions[page.version].first.components["flannel"].version}}
 {%- endif %}
 
-{% include {{page.version}}/manifests/calico-config.yaml datastore=include.datastore network=include.network calico_ipam=include.calico_ipam variant_name=variant_name typha=include.typha app_layer_policy=include.app_layer_policy %}
+{% include {{page.version}}/manifests/calico-config.yaml datastore=include.datastore platform=include.platform network=include.network calico_ipam=include.calico_ipam variant_name=variant_name typha=include.typha app_layer_policy=include.app_layer_policy %}
 ---
 {% if include.datastore == "etcd" %}
 {% include {{page.version}}/manifests/calico-etcd-secrets.yaml %}
@@ -34,18 +35,18 @@ calico.yaml acccepts the following include flags:
 
 {%- endif -%}
 {%- if include.typha == "true" %}
-{% include {{page.version}}/manifests/calico-typha.yaml datastore=include.datastore variant_name=variant_name network=include.network federation=include.federation %}
+{% include {{page.version}}/manifests/calico-typha.yaml datastore=include.datastore platform=include.platform variant_name=variant_name network=include.network federation=include.federation %}
 ---
 
 {%- endif %}
 {%- if include.federation == "true" %}
-{% include {{page.version}}/manifests/tigera-federation-sa.yaml %}
+{% include {{page.version}}/manifests/tigera-federation-sa.yaml platform=include.platform%}
 ---
-{% include {{page.version}}/manifests/tigera-federation-controller.yaml datastore=include.datastore variant_name=variant_name %}
+{% include {{page.version}}/manifests/tigera-federation-controller.yaml datastore=include.datastore platform=include.platform variant_name=variant_name %}
 ---
 
 {%- endif %}
-{% include {{page.version}}/manifests/calico-node.yaml datastore=include.datastore network=include.network disable_ipip=include.disable_ipip variant_name=variant_name typha=include.typha app_layer_policy=include.app_layer_policy %}
+{% include {{page.version}}/manifests/calico-node.yaml datastore=include.datastore platform=include.platform network=include.network disable_ipip=include.disable_ipip variant_name=variant_name typha=include.typha app_layer_policy=include.app_layer_policy %}
 ---
 
 {%- if include.datastore == "etcd" and include.network == "flannel" %}
@@ -54,9 +55,9 @@ calico.yaml acccepts the following include flags:
 
 {%- endif %}
 {%- if include.datastore == "etcd" %}
-{% include {{page.version}}/manifests/calico-kube-controllers.yaml variant_name=variant_name %}
+{% include {{page.version}}/manifests/calico-kube-controllers.yaml platform=include.platform variant_name=variant_name %}
 {%- elsif include.datastore == "kdd" %}
-{% include {{page.version}}/manifests/kdd-crds.yaml network=include.network %}
+{% include {{page.version}}/manifests/kdd-crds.yaml platform=include.platform network=include.network %}
 {%- endif -%}
 ---
-{% include {{page.version}}/manifests/rbac.yaml datastore=include.datastore network=include.network calico_ipam=include.calico_ipam variant_name=variant_name typha=include.typha %}
+{% include {{page.version}}/manifests/rbac.yaml datastore=include.datastore platform=include.platform network=include.network calico_ipam=include.calico_ipam variant_name=variant_name typha=include.typha %}
