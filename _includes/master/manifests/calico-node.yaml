@@ -7,15 +7,15 @@
 kind: DaemonSet
 apiVersion: extensions/v1beta1
 metadata:
-  name: {{include "nodeName" . }}
+  name: {{include "nodeName" . }}-init
   labels:
-    app: {{include "nodeName" . }}
+    app: {{include "nodeName" . }}-init
   namespace: kube-system
 spec:
   template:
     metadata:
       labels:
-        app: {{include "nodeName" . }}
+        app: {{include "nodeName" . }}-init
     spec:
       hostPID: true
       containers:
@@ -28,6 +28,8 @@ spec:
           - name: STARTUP_SCRIPT
             value: |
               #! /bin/bash
+              # Modifications Copyright (c) 2019 Tigera, Inc. All rights reserved.
+              # Based on work Copyright 2019 Authors of Cilium (Apache v2 license).
               set -o errexit
               set -o pipefail
               set -o nounset
