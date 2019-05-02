@@ -176,7 +176,7 @@ var _ = Describe("Domain Info Store", func() {
 		})
 	}
 
-	// Check that a mal formed DNS record will not be accepted.
+	// Check that a malformed DNS record will not be accepted.
 	domainStoreTestInvalidRec := func(dnsRec layers.DNSResourceRecord) {
 		Context("with an invalid DNS record", func() {
 			BeforeEach(func() {
@@ -213,8 +213,6 @@ var _ = Describe("Domain Info Store", func() {
 		})
 	}
 
-	domainStoreTestCNAME(mockDNSRecCNAME, mockDNSRecA1)
-	return
 	domainStoreTestValidRec(mockDNSRecA1, mockDNSRecA2)
 	domainStoreTestValidRec(mockDNSRecAAAA1, mockDNSRecAAAA2)
 	domainStoreTestInvalidRec(invalidDNSRec)

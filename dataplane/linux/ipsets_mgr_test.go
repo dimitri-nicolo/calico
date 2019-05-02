@@ -15,10 +15,6 @@
 package intdataplane
 
 import (
-	"net"
-	"time"
-
-	"github.com/google/gopacket/layers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -34,7 +30,7 @@ type IPSetsMgrTestCase struct {
 	ipsetID      string
 	ipsetType    proto.IPSetUpdate_IPSetType
 	ipsetMembers [numMembers]string
-	dnsRecs      [numMembers]layers.DNSResourceRecord
+	dnsRecs      map[string][]string
 }
 
 // Main array of test cases. We pass each of these to the test routines during execution.
@@ -43,74 +39,52 @@ var ipsetsMgrTestCases = []IPSetsMgrTestCase{
 		ipsetID:      "id1",
 		ipsetType:    proto.IPSetUpdate_IP,
 		ipsetMembers: [numMembers]string{"10.0.0.1", "10.0.0.2", "10.0.0.3", "10.0.0.4"},
-		dnsRecs:      [numMembers]layers.DNSResourceRecord{},
+		dnsRecs:      map[string][]string{},
 	},
 	{
 		ipsetID:      "id2",
 		ipsetType:    proto.IPSetUpdate_DOMAIN,
 		ipsetMembers: [numMembers]string{"abc.com", "def.com", "ghi.com", "jkl.com"},
-		dnsRecs: [numMembers]layers.DNSResourceRecord{
-			{
-				Name:       []byte("abc.com"),
-				Type:       layers.DNSTypeA,
-				Class:      layers.DNSClassIN,
-				TTL:        5,
-				DataLength: 4,
-				Data:       []byte("10.0.0.10"),
-				IP:         net.ParseIP("10.0.0.10"),
-			},
-			{
-				Name:       []byte("def.com"),
-				Type:       layers.DNSTypeA,
-				Class:      layers.DNSClassIN,
-				TTL:        5,
-				DataLength: 4,
-				Data:       []byte("10.0.0.20"),
-				IP:         net.ParseIP("10.0.0.20"),
-			},
-			{
-				Name:       []byte("ghi.com"),
-				Type:       layers.DNSTypeA,
-				Class:      layers.DNSClassIN,
-				TTL:        5,
-				DataLength: 4,
-				Data:       []byte("10.0.0.30"),
-				IP:         net.ParseIP("10.0.0.30"),
-			},
-			{
-				Name:       []byte("jkl.com"),
-				Type:       layers.DNSTypeA,
-				Class:      layers.DNSClassIN,
-				TTL:        5,
-				DataLength: 4,
-				Data:       []byte("10.0.0.40"),
-				IP:         net.ParseIP("10.0.0.40"),
-			},
+		dnsRecs: map[string][]string{
+			"abc.com": []string{"10.0.0.10"},
+			"def.com": []string{"10.0.0.20"},
+			"ghi.com": []string{"10.0.0.30"},
+			"jkl.com": []string{"10.0.0.40"},
 		},
 	},
 }
 
 // Program any DNS records if this is a domain type IPSet
-func programDNSRecs(ipsetType proto.IPSetUpdate_IPSetType, domainStore *domainInfoStore, dnsPackets [numMembers]layers.DNSResourceRecord) {
+func programDNSRecs(ipsetType proto.IPSetUpdate_IPSetType, domainStore *mockDomainStore, dnsPackets map[string][]string) {
 	if ipsetType == proto.IPSetUpdate_DOMAIN {
-		var layerDNS layers.DNS
-		for _, d := range dnsPackets {
-			layerDNS.Answers = append(layerDNS.Answers, d)
-		}
-		domainStore.processDNSPacket(&layerDNS)
+		domainStore.ips = dnsPackets
 	}
+}
+
+type mockDomainStore struct {
+	ips map[string][]string
+}
+
+func (s *mockDomainStore) GetDomainIPs(domain string) []string {
+	return s.ips[domain]
+}
+
+func (s *mockDomainStore) allIPsForDomains(domains ...string) (ips []string) {
+	for _, domain := range domains {
+		ips = append(ips, s.ips[domain]...)
+	}
+	return
 }
 
 var _ = Describe("IP Sets manager", func() {
 	var (
 		ipsetsMgr   *ipSetsManager
 		ipSets      *mockIPSets
-		domainStore *domainInfoStore
+		domainStore *mockDomainStore
 	)
 
 	BeforeEach(func() {
-		domainInfoChanges := make(chan *domainInfoChanged, 100)
-		domainStore = newDomainInfoStore(domainInfoChanges, "/dnsinfo", time.Duration(time.Minute))
+		domainStore = &mockDomainStore{ips: make(map[string][]string)}
 		ipSets = newMockIPSets()
 		ipsetsMgr = newIPSetsManager(ipSets, 1024, domainStore)
 	})
@@ -141,7 +115,7 @@ var _ = Describe("IP Sets manager", func() {
 	}
 
 	// Basic add/remove/update test case for different types of IPSets.
-	IPsetsMgrTest1 := func(ipsetID string, ipsetType proto.IPSetUpdate_IPSetType, members [numMembers]string, dnsPackets [numMembers]layers.DNSResourceRecord) {
+	IPsetsMgrTest1 := func(ipsetID string, ipsetType proto.IPSetUpdate_IPSetType, members [numMembers]string, dnsPackets map[string][]string) {
 		Describe("after creating an IPSet", func() {
 			BeforeEach(func() {
 				ipSets.AddOrReplaceCalled = false
@@ -158,7 +132,7 @@ var _ = Describe("IP Sets manager", func() {
 
 			// We match domain ipsets with their respective IP addresses.
 			if ipsetType == proto.IPSetUpdate_DOMAIN {
-				AssertIPSetMembers(ipsetID, []string{dnsPackets[0].IP.String(), dnsPackets[1].IP.String()})
+				AssertIPSetMembers(ipsetID, domainStore.allIPsForDomains(members[0], members[1]))
 			} else {
 				AssertIPSetMembers(ipsetID, []string{members[0], members[1]})
 			}
@@ -178,8 +152,7 @@ var _ = Describe("IP Sets manager", func() {
 				AssertIPSetNotModified()
 
 				if ipsetType == proto.IPSetUpdate_DOMAIN {
-					AssertIPSetMembers(ipsetID, []string{dnsPackets[1].IP.String(), dnsPackets[2].IP.String(),
-						dnsPackets[3].IP.String()})
+					AssertIPSetMembers(ipsetID, domainStore.allIPsForDomains(members[1], members[2], members[3]))
 				} else {
 					AssertIPSetMembers(ipsetID, []string{members[1], members[2], members[3]})
 				}
@@ -209,7 +182,7 @@ var _ = Describe("IP Sets manager", func() {
 				})
 
 				if ipsetType == proto.IPSetUpdate_DOMAIN {
-					AssertIPSetMembers(ipsetID, []string{dnsPackets[1].IP.String(), dnsPackets[2].IP.String()})
+					AssertIPSetMembers(ipsetID, domainStore.allIPsForDomains(members[1], members[2]))
 				} else {
 					AssertIPSetModified()
 					AssertIPSetMembers(ipsetID, []string{members[1], members[2]})
