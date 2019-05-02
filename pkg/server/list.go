@@ -15,6 +15,14 @@ import (
 func (s *server) handleListReports(response http.ResponseWriter, request *http.Request) {
 	log.Info(request.URL)
 
+	// Obtain the current set of configured ReportTypes.
+	rts, err := s.getReportTypes()
+	if err != nil {
+		log.WithError(err).Error("Unable to query report types")
+		http.Error(response, err.Error(), http.StatusServiceUnavailable)
+		return
+	}
+
 	// Pull the report summaries from elastic
 	reportSummaries, err := s.rr.RetrieveArchivedReportSummaries()
 	if err != nil {
@@ -31,30 +39,13 @@ func (s *server) handleListReports(response http.ResponseWriter, request *http.R
 
 	// Create an RBAC helper for determining which reports we should include in the returned list.
 	rbac := s.rhf.NewReportRbacHelper(request)
-	if canList, err := rbac.CanListAnyReportsIn(reportSummaries); err != nil {
-		log.WithError(err).Error("Unable to determine access permissions for request")
-		http.Error(response, err.Error(), http.StatusServiceUnavailable)
-		return
-	} else if !canList {
-		log.Warning("Requester has insufficient permissions to list reports")
-		http.Error(response, "Insufficient permissions to list reports", http.StatusUnauthorized)
-		return
-	}
-
-	// Obtain the current set of configured ReportTypes.
-	rts, err := s.getReportTypes()
-	if err != nil {
-		log.WithError(err).Error("Unable to query report types")
-		http.Error(response, err.Error(), http.StatusServiceUnavailable)
-		return
-	}
 
 	// Turn each of the reportSummaries into Report objects that will marshal into a format for the documented API.
 	for _, v := range reportSummaries {
 		log.Debugf("Processing report. ReportType: %s, Report: %s", v.ReportTypeName, v.ReportName)
 
-		// If we can view the report then include it in the list.
-		if include, err := rbac.CanViewReport(v.ReportTypeName, v.ReportName); err != nil {
+		// If user can list the report then include it in the list.
+		if include, err := rbac.CanListReports(v.ReportName); err != nil {
 			log.WithError(err).Error("Unable to determine access permissions for request")
 			http.Error(response, err.Error(), http.StatusServiceUnavailable)
 			return
@@ -87,14 +78,21 @@ func (s *server) handleListReports(response http.ResponseWriter, request *http.R
 			}
 		}
 
-		//load report formats from download templates in the global report report type
-		for _, dlt := range rt.DownloadTemplates {
-			log.Debugf("Including download format: %s", dlt.Name)
-			f := Format{
-				dlt.Name,
-				dlt.Description,
+		// If the user can view the report then include the formats
+		if include, err := rbac.CanViewReport(v.ReportTypeName, v.ReportName); err != nil {
+			log.WithError(err).Error("Unable to determine access permissions for request")
+			http.Error(response, err.Error(), http.StatusServiceUnavailable)
+			return
+		} else if include {
+			//load report formats from download templates in the global report report type
+			for _, dlt := range rt.DownloadTemplates {
+				log.Debugf("Including download format: %s", dlt.Name)
+				f := Format{
+					dlt.Name,
+					dlt.Description,
+				}
+				formats = append(formats, f)
 			}
-			formats = append(formats, f)
 		}
 
 		// Package it up in a report and append to slice.

@@ -260,25 +260,55 @@ func (t *tester) NewReportRbacHelper(req *http.Request) server.ReportRbacHelper 
 
 // CanViewReport to satisfy ReportRbacHelper interface
 func (t *tester) CanViewReport(x, y string) (bool, error) {
-	return true, nil
+	if strings.Contains(x, "Get") && strings.Contains(y, "Get") {
+		return true, nil
+	}
+	if strings.Contains(x, "Error") && strings.Contains(y, "Error") {
+		return false, fmt.Errorf("cannot view report")
+	}
+	return false, nil
 }
 
 // CanListAnyReportsIn to satisfy ReportRbacHelper interface
 func (t *tester) CanListAnyReportsIn(x []*report.ArchivedReportData) (bool, error) {
-	return true, nil
+	for _, d := range x {
+		if strings.Contains(d.ReportName, "List") {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // CanListReports to satisfy ReportRbacHelper interface
 func (t *tester) CanListReports(x string) (bool, error) {
-	return true, nil
+	if strings.Contains(x, "List") {
+		return true, nil
+	}
+	if strings.Contains(x, "Error") {
+		return false, fmt.Errorf("cannot list report")
+	}
+	return false, nil
 }
 
 // CanGetReport to satisfy ReportRbacHelper interface
 func (t *tester) CanGetReport(x string) (bool, error) {
-	return true, nil
+	if strings.Contains(x, "Get") {
+		return true, nil
+	}
+	if strings.Contains(x, "Error") {
+		return false, fmt.Errorf("cannot get report")
+
+	}
+	return false, nil
 }
 
 // CanGetReportType to satisfy ReportRbacHelper interface
 func (t *tester) CanGetReportType(x string) (bool, error) {
-	return true, nil
+	if strings.Contains(x, "Get") {
+		return true, nil
+	}
+	if strings.Contains(x, "Error") {
+		return false, fmt.Errorf("cannot get report type")
+	}
+	return false, nil
 }
