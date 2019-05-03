@@ -95,7 +95,9 @@ function Install-CNIPlugin()
                 replace('__ETCD_CERT_FILE__', $etcdCertFile).
                 replace('__ETCD_CA_CERT_FILE__', $etcdCACertFile).
                 replace('__IPAM_TYPE__', $env:CNI_IPAM_TYPE).
-                replace('__MODE__', $mode)
+                replace('__MODE__', $mode).
+                replace('__VNI__', $env:VXLAN_VNI).
+                replace('__MAC_PREFIX__', $env:VXLAN_MAC_PREFIX)
     } | Set-Content "$cniConfFile"
     Write-Host "Wrote CNI configuration."
 }
