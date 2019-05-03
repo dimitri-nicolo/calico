@@ -216,6 +216,8 @@ manager:
 
    >Note: This version of the Tigera Secure EE Helm chart **must** be installed with `--namespace calico-monitoring`.
 
+   >Note: If you have not chosen to use a preexisting elasticsearch cluster, some pods may crashloop several times until the elasticsearch pods converge.
+
 ## Step 6: Grant access to user interface
 
 Grant users permission to access the Tigera Secure EE Manager in your cluster. Run one of the following commands, replacing <USER> with the name of the user you wish to grant access.
