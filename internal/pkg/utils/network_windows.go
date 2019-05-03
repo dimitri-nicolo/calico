@@ -39,7 +39,7 @@ var (
 )
 
 const (
-	DefaultVSID = 4096
+	DefaultVNI = 4096
 )
 
 func init() {
@@ -244,7 +244,7 @@ func ensureVxlanNetworkExists(networkName string, subNet *net.IPNet, conf types.
 	createNetwork := true
 	expectedAddressPrefix := subNet.String()
 	expectedGW := getNthIP(subNet, 1)
-	var expectedVSID uint64
+	var expectedVNI uint64
 
 	expectedNetwork := &hcsshim.HNSNetwork{
 		Name:    networkName,
@@ -252,12 +252,12 @@ func ensureVxlanNetworkExists(networkName string, subNet *net.IPNet, conf types.
 		Subnets: make([]hcsshim.Subnet, 0, 1),
 	}
 
-	if conf.VSID == 0 {
-		expectedVSID = DefaultVSID
-	} else if conf.VSID < DefaultVSID {
-		return nil, errors.Annotatef(err, "Windows does not support VSID < 4096")
+	if conf.VXLANVNI == 0 {
+		expectedVNI = DefaultVNI
+	} else if conf.VXLANVNI < DefaultVNI {
+		return nil, errors.Annotatef(err, "Windows does not support VXLANVNI < 4096")
 	} else {
-		expectedVSID = conf.VSID
+		expectedVNI = conf.VXLANVNI
 	}
 
 	// Checking if HNS network exists
@@ -289,7 +289,7 @@ func ensureVxlanNetworkExists(networkName string, subNet *net.IPNet, conf types.
 			AddressPrefix:  expectedAddressPrefix,
 			GatewayAddress: expectedGW.String(),
 			Policies: []json.RawMessage{
-				[]byte(fmt.Sprintf(`{"Type":"VSID","VSID":%d}`, expectedVSID)),
+				[]byte(fmt.Sprintf(`{"Type":"VSID","VSID":%d}`, expectedVNI)),
 			},
 		})
 
@@ -635,15 +635,15 @@ func createAndAttachContainerEP(args *skel.CmdArgs,
 	macAddr := ""
 
 	if ourNetconf.Mode == "vxlan" {
-		if len(ourNetconf.MacPrefix) != 0 {
-			if len(ourNetconf.MacPrefix) != 5 || ourNetconf.MacPrefix[2] != '-' {
-				return nil, fmt.Errorf("endpointMacPrefix [%v] is invalid, value must be of the format xx-xx", ourNetconf.MacPrefix)
+		if len(ourNetconf.VXLANMacPrefix) != 0 {
+			if len(ourNetconf.VXLANMacPrefix) != 5 || ourNetconf.VXLANMacPrefix[2] != '-' {
+				return nil, fmt.Errorf("endpointMacPrefix [%v] is invalid, value must be of the format xx-xx", ourNetconf.VXLANMacPrefix)
 			}
 		} else {
-			ourNetconf.MacPrefix = "0E-2A"
+			ourNetconf.VXLANMacPrefix = "0E-2A"
 		}
 		// conjure a MAC based on the IP for Overlay
-		macAddr = fmt.Sprintf("%v-%02x-%02x-%02x-%02x", ourNetconf.MacPrefix, epIPBytes[0], epIPBytes[1], epIPBytes[2], epIPBytes[3])
+		macAddr = fmt.Sprintf("%v-%02x-%02x-%02x-%02x", ourNetconf.VXLANMacPrefix, epIPBytes[0], epIPBytes[1], epIPBytes[2], epIPBytes[3])
 
 		pols = append(pols, []json.RawMessage{
 			[]byte(fmt.Sprintf(`{"Type":"PA","PA":"%s"}`, hnsNetwork.ManagementIP)),
