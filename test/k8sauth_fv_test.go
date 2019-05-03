@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 
+	authzv1 "k8s.io/api/authorization/v1"
 	k8s "k8s.io/client-go/kubernetes"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/util/flowcontrol"
@@ -29,6 +30,7 @@ func (dhh *DummyHttpHandler) ServeHTTP(http.ResponseWriter, *http.Request) {
 }
 
 var tigera_flow_path string = "/tigera_secure_ee_flows*/_search"
+var path_to_something string = "/path/to/something"
 
 func genPath(q string) string {
 	return fmt.Sprintf("/%s/_search", q)
@@ -317,4 +319,58 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 			Expect(dhh.serveCalled).To(BeFalse())
 		})
 	})
+
+	Context("Test non resource URL", func() {
+		DescribeTable("RBAC enforcement on access to non resource URL",
+			func(req *http.Request, statusCode int, isServeCalled bool) {
+				uut := dummyNonResourceMiddleware(k8sAuth.KubernetesAuthnAuthz(dhh))
+				uut.ServeHTTP(rr, req)
+
+				Expect(rr.Code).To(Equal(statusCode),
+					fmt.Sprintf("Should get %d status, message: %s", statusCode, rr.Body.String()))
+				Expect(dhh.serveCalled).To(Equal(isServeCalled))
+			},
+
+			Entry("Token for user tokenusernru try to access /path/to/something is allowed",
+				&http.Request{
+					Header: http.Header{"Authorization": []string{"Bearer deadbeefnru"}},
+					URL:    &url.URL{Path: path_to_something},
+				}, http.StatusOK, true),
+			Entry("Basic auth for user basicusernonresourceurl try to access /path/to/something is allowed",
+				&http.Request{
+					Header: http.Header{
+						"Authorization": []string{
+							fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte("basicusernonresourceurl:basicpwnru"))),
+						}},
+					URL: &url.URL{Path: path_to_something},
+				}, http.StatusOK, true),
+			Entry("Token for user tokenusernone try to access /path/to/something is forbidden",
+				&http.Request{
+					Header: http.Header{"Authorization": []string{"Bearer deadbeef0"}},
+					URL:    &url.URL{Path: path_to_something},
+				}, http.StatusForbidden, false),
+			Entry("Basic auth for user basicusernone try to accesss /path/to/something is forbidden",
+				&http.Request{
+					Header: http.Header{
+						"Authorization": []string{
+							fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte("basicusernone:basicpw0"))),
+						}},
+					URL: &url.URL{Path: path_to_something},
+				}, http.StatusForbidden, false),
+		)
+	})
+
 })
+
+func dummyNonResourceMiddleware(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		h.ServeHTTP(w, req.WithContext(middleware.NewContextWithReviewNonResource(req.Context(), getNonResourceAttributes(req.URL.Path))))
+	})
+}
+
+func getNonResourceAttributes(path string) *authzv1.NonResourceAttributes {
+	return &authzv1.NonResourceAttributes{
+		Verb: "get",
+		Path: path,
+	}
+}

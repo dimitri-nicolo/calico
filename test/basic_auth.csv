@@ -5,3 +5,4 @@ basicpwak,basicuserauditkubeonly,auditonlyuid
 basicpwgrp,basicuserallgrp,basicuidgrp,selfgroup
 basicpw0,basicusernone,noneuid
 basicpwnos,basicusernoselfaccess,noselfuid
+basicpwnru,basicusernonresourceurl,nruuid
