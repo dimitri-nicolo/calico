@@ -22,6 +22,7 @@ The high-level steps to a functioning cluster with access to the user interface 
 - [Step 4: Create values.yaml for {{ site.prodname }}](#step-4-create-valuesyaml-for-tigera-secure-ee)
 - [Step 5: Install {{ site.prodname }}](#step-5-install-tigera-secure-ee)
 - [Step 6: Grant access to user interface](#step-6-grant-access-to-user-interface)
+- [Step 7: Log in to the Manager UI](#step-7-log-in-to-the-manager-ui)
 
 ## Step 1: Acquire the Helm charts
 
@@ -240,6 +241,14 @@ kubectl create clusterrolebinding <USER>-network-admin \
 ```
 
 To grant access to additional tiers, or create your own roles, see the RBAC documentation.
+
+## Step 7. Log in to the Manager UI
+
+```
+kubectl port-forward -n calico-monitoring svc/cnx-manager 9443
+```
+
+Sign in by navigating to https://localhost:9443 and login.
 
 ## Next steps
 
