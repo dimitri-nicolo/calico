@@ -86,6 +86,9 @@ ETCD_IMAGE?=quay.io/coreos/etcd:$(ETCD_VERSION)
 K8S_VERSION?=v1.11.3
 HYPERKUBE_IMAGE?=gcr.io/google_containers/hyperkube-$(ARCH):$(K8S_VERSION)
 
+ELASTICSEARCH_VERSION?=6.4.3
+ELASTICSEARCH_IMAGE?=docker.elastic.co/elasticsearch/elasticsearch:$(ELASTICSEARCH_VERSION)
+
 # Disable make's implicit rules, which are not useful for golang, and slow down the build
 # considerably.
 .SUFFIXES:
@@ -257,9 +260,19 @@ ut: report-dir
 			$(addprefix $(PACKAGE_NAME)/,$(TEST_DIRS))'
 
 .PHONY: fv
-fv: report-dir run-k8s-apiserver
-	$(DOCKER_GO_BUILD) \
-		sh -c 'ginkgo ./test/'
+fv: image report-dir run-k8s-apiserver
+	$(MAKE) fv-no-setup
+
+## Developer friendly target to only run fvs and skip other
+## setup steps.
+.PHONY: fv-no-setup
+fv-no-setup:
+	PACKAGE_ROOT=$(CURDIR) \
+		       GO_BUILD_IMAGE=$(CALICO_BUILD) \
+		       PACKAGE_NAME=$(PACKAGE_NAME) \
+		       GINKGO_ARGS='$(GINKGO_ARGS)' \
+		       FV_ELASTICSEARCH_IMAGE=$(ELASTICSEARCH_IMAGE) \
+		       ./test/run_test.sh
 
 .PHONY: clean
 clean: clean-bin clean-build-image
@@ -275,7 +288,9 @@ clean-bin:
 .PHONY: ci cd
 
 ## run CI cycle - build, test, etc.
-ci: test image-all
+## Run UTs and only if they pass build image and continue along.
+## Building the image is required for fvs.
+ci: ut image fv image-all
 
 ## Deploy images to registry
 cd:
