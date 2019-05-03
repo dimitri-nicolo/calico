@@ -1,4 +1,4 @@
-## Global Network Policy - v1beta1
+## Global Network Policy
 
 ### Create
 
@@ -330,7 +330,7 @@
 }
 ```
 
-# Network Policy - v1beta1
+# Network Policy
 
 ### Create
 
