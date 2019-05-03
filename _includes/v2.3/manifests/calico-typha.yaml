@@ -10,7 +10,6 @@ calico-typha.yaml acccepts the following include flags:
 | platform     | gke, <unset>                  |
 
 {% endcomment -%}
-{%- capture typha_service_name %}{% if include.platform == "gke" %}calico-typha-ee{% else %}calico-typha{% endif %}{% endcapture -%}
 # This manifest creates a Service, which will be backed by Calico's Typha daemon.
 # Typha sits in between Felix and the API server, reducing Calico's load on the API server.
 # It is a requirement when using Kubernetes API datastore with more than 50 nodes, or when
@@ -63,21 +62,6 @@ spec:
         scheduler.alpha.kubernetes.io/critical-pod: ''
         cluster-autoscaler.kubernetes.io/safe-to-evict: 'true'
     spec:
-# For HA and to avoid port clashes, avoid scheduling multiple Typha instances on the same node.
-      affinity:
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 100
-            podAffinityTerm:
-              labelSelector:
-                matchExpressions:
-                - key: k8s-app
-                  operator: In
-                  values:
-                  # Avoid all variants of Typha that may be running.
-                  - calico-typha
-                  - calico-typha-ee
-              topologyKey: kubernetes.io/hostname
       nodeSelector:
         beta.kubernetes.io/os: linux
       hostNetwork: true
