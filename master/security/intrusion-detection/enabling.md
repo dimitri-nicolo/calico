@@ -43,7 +43,7 @@ search)" as the end time.
 
 For example, if you want to analyze all past flows and enable continutous real-time analysis, choose "Continue from 1969-12-31" as the start time, and "No end time (Real-time search)" as the end time.
 
-Keep in mind that each job you enable will use CPU and memory on your Elasticsearch cluster.
+Keep in mind that each job you enable will use CPU and memory on your Elasticsearch cluster. The default memory allocated for each job is 1024 MB and may need to be adjusted based on your cluster's flow log throughput.
 
 [Elasticsearch REST API]: https://www.elastic.co/guide/en/elasticsearch/reference/6.4/ml-apis.html
 [Elasticsearch machine learning documentation]: https://www.elastic.co/guide/en/elastic-stack-overview/6.4/xpack-ml.html
