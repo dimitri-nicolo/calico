@@ -42,6 +42,11 @@ spec:
             configMapKeyRef:
               name: tigera-es-config
               key: tigera.elasticsearch.port
+        - name: ELASTIC_INDEX_SUFFIX
+          valueFrom:
+            configMapKeyRef:
+              name: tigera-es-config
+              key: tigera.elasticsearch.cluster-name
         - name: ELASTIC_SSL_VERIFY
           value: "false"
         - name: RUN_SCENARIO

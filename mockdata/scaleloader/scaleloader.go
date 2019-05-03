@@ -3,6 +3,7 @@ package scaleloader
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	logrus "github.com/sirupsen/logrus"
@@ -74,7 +75,8 @@ func (pc *PlaybookCfg) String() string {
 }
 
 type scaleloader struct {
-	playbooks []*Playbook
+	playbooks   []*Playbook
+	indexSuffix string
 }
 
 func NewScaleLoader(base string, playbookCfg []PlaybookCfg) (*scaleloader, error) {
@@ -86,6 +88,12 @@ func NewScaleLoader(base string, playbookCfg []PlaybookCfg) (*scaleloader, error
 		}
 		sl.playbooks = append(sl.playbooks, pbs...)
 	}
+
+	clustName := os.Getenv("ELASTIC_INDEX_SUFFIX")
+	if clustName == "" {
+		clustName = "cluster"
+	}
+	sl.indexSuffix = clustName
 	return &sl, nil
 }
 
@@ -113,7 +121,7 @@ func (sl *scaleloader) PopulateES(start time.Time, timeperiod time.Duration, es 
 	for curTime := start; curTime.Before(end); curTime = curTime.Add(timeStep) {
 		for i := range sl.playbooks {
 			if sl.playbooks[i].nextsteptime.After(curTime) {
-				writeStep(sl.playbooks[i].GetNextStep(), es, curTime, logrus.WithField("time", curTime))
+				sl.writeStep(sl.playbooks[i].GetNextStep(), es, curTime, logrus.WithField("time", curTime))
 			}
 		}
 	}
@@ -162,7 +170,7 @@ const (
 	maxRetriesPerIndex = 10
 )
 
-func writeStep(s Step, es elastic.Client, t time.Time, log *logrus.Entry) {
+func (sl *scaleloader) writeStep(s Step, es elastic.Client, t time.Time, log *logrus.Entry) {
 	msgRev := DatastoreRevision
 	logrus.Debugf("Next step %d:%s", msgRev, s.String())
 	timestamp := t.Format("2006-01-02T15:04:05.000000Z07:00")
@@ -172,7 +180,7 @@ func writeStep(s Step, es elastic.Client, t time.Time, log *logrus.Entry) {
 		log.WithError(err).Error("Error generating Step msg")
 		return
 	}
-	index := fmt.Sprintf("%s.cluster.%s", s.GetIndex(), t.Format(elastic.IndexTimeFormat))
+	index := fmt.Sprintf("%s.%s.%s", s.GetIndex(), sl.indexSuffix, t.Format(elastic.IndexTimeFormat))
 	for r := 0; ; r++ {
 		res, err := es.Backend().Index().
 			Index(index).
