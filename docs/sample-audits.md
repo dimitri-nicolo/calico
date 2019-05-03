@@ -332,7 +332,7 @@
 
 # Network Policy - v1beta1
 
-###Create
+### Create
 
 ```
 {
