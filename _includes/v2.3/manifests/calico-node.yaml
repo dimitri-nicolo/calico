@@ -24,7 +24,6 @@ calico-node.yaml acccepts the following include flags:
     calico-node
   {%- endif -%}
 {%- endcapture -%}
-{% if include.network == "flannel" and include.datastore == "etcd" %}canal-node{% elsif include.network == "flannel" %}canal{% else %}calico-node{% endif %}{% endcapture -%}
 # This manifest installs the {{site.nodecontainer}} container
 {%-  if include.network != "ecs" %}
 # as well as the {{site.prodname}} CNI plugins and network config
