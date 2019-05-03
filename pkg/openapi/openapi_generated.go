@@ -1729,7 +1729,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Items: &spec.SchemaOrArray{
 									Schema: &spec.Schema{
 										SchemaProps: spec.SchemaProps{
-											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ResourceID"),
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.AuditResource"),
 										},
 									},
 								},
@@ -1739,7 +1739,52 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 				},
 			},
 			Dependencies: []string{
-				"github.com/projectcalico/libcalico-go/lib/apis/v3.ResourceID"},
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.AuditResource"},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.AuditResource": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "AuditResource is used to filter Audit events in the Report configuration.\n\nAn empty field value indicates a wildcard. For example, if Resource is set to \"networkpolicies\" and all other fields are blank then this filter would include all NetworkPolicy resources across all namespaces, and would include both Calico and Kubernetes resource types.",
+					Properties: map[string]spec.Schema{
+						"resource": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The resource type. The format is the lowercase plural as used in audit event selection and RBAC configuration.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"apiGroup": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIGroup is the name of the API group that contains the referred object (e.g. projectcalico.org).",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion is the version of the API group that contains the referred object (e.g. v3).",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"name": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The resource name.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"namespace": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The resource namespace.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+					},
+				},
+			},
+			Dependencies: []string{},
 		},
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.AuditSummary": {
 			Schema: spec.Schema{
@@ -2587,9 +2632,9 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 				SchemaProps: spec.SchemaProps{
 					Description: "EndpointsSelection is a set of selectors used to select the endpoints that are considered to be in-scope for the report. An empty selector is equivalent to all(). All three selectors are ANDed together.",
 					Properties: map[string]spec.Schema{
-						"endpointSelector": {
+						"selector": {
 							SchemaProps: spec.SchemaProps{
-								Description: "Endpoints selector, selecting endpoints by endpoint labels. If omitted, all endpoints are included in the report data.",
+								Description: "Selector, selects endpoints by endpoint labels. If omitted, all endpoints are included in the report data.",
 								Type:        []string{"string"},
 								Format:      "",
 							},
@@ -6283,9 +6328,9 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Format:      "",
 							},
 						},
-						"endpointsSelection": {
+						"endpoints": {
 							SchemaProps: spec.SchemaProps{
-								Description: "EndpointsSelection is used to specify which endpoints are in-scope and stored in the generated report data. Only used if endpoints data and/or audit logs are gathered in the report. If omitted, treated as everything in-scope.",
+								Description: "Endpoints is used to specify which endpoints are in-scope and stored in the generated report data. Only used if endpoints data and/or audit logs are gathered in the report. If omitted, treated as everything in-scope.",
 								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsSelection"),
 							},
 						},
@@ -6464,7 +6509,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ResourceID": {
 			Schema: spec.Schema{
 				SchemaProps: spec.SchemaProps{
-					Description: "ResourceID is used to identify a resource instance in the report data, and is used as a filter for resources in the Report configuration.\n\nWhen used to identify a resource, all valid fields will be set.\n\nWhen used as a resource filter, an empty field value indicates a wildcard. For example, if Kind is set to \"NetworkPolicy\" and all other fields are blank then this filter would include all NetworkPolicy resources across all namespaces, including both Calico and Kubernetes resource types.",
+					Description: "ResourceID is used to identify a resource instance in the report data.",
 					Properties: map[string]spec.Schema{
 						"kind": {
 							SchemaProps: spec.SchemaProps{
