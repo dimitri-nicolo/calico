@@ -48,8 +48,8 @@ var _ = testutils.E2eDatastoreDescribe("GlobalReport tests", testutils.Datastore
 	name1 := "report-1"
 	spec1 := apiv3.ReportSpec{
 		ReportType: reportTypeName,
-		EndpointsSelection: &apiv3.EndpointsSelection{
-			EndpointSelector: "eps == 'report-eps1'",
+		Endpoints: &apiv3.EndpointsSelection{
+			Selector: "eps == 'report-eps1'",
 			Namespaces: &apiv3.NamesAndLabelsMatch{
 				Names:    []string{"report-ns-n1"},
 				Selector: "ns == 'report-ns-s1'",
@@ -68,8 +68,8 @@ var _ = testutils.E2eDatastoreDescribe("GlobalReport tests", testutils.Datastore
 	name2 := "report-2"
 	spec2 := apiv3.ReportSpec{
 		ReportType: reportTypeName,
-		EndpointsSelection: &apiv3.EndpointsSelection{
-			EndpointSelector: "eps == 'report-eps2'",
+		Endpoints: &apiv3.EndpointsSelection{
+			Selector: "eps == 'report-eps2'",
 			Namespaces: &apiv3.NamesAndLabelsMatch{
 				Names:    []string{"report-ns-n2"},
 				Selector: "ns == 'report-ns-s2'",

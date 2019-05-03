@@ -195,8 +195,8 @@ var (
 		StartTime: metav1.Unix(1554076800, 0),
 		EndTime:   metav1.Unix(1554112800, 0),
 		ReportSpec: api.ReportSpec{
-			EndpointsSelection: &api.EndpointsSelection{
-				EndpointSelector: "lbl == 'lbl-val'",
+			Endpoints: &api.EndpointsSelection{
+				Selector: "lbl == 'lbl-val'",
 				Namespaces: &api.NamesAndLabelsMatch{
 					Selector: "endpoint-namespace-selector",
 				},
@@ -228,30 +228,30 @@ var (
 	// These are used by the validation code to check that any nil entries will not break the template. Note that
 	// the ReportName is being sneakily used to specify which field in the template is nil.
 	ReportDataNilEntries = []api.ReportData{{
-		ReportName: "ReportSpec.EndpointsSelection",
+		ReportName: "ReportSpec.Endpoints",
 		ReportSpec: api.ReportSpec{
-			EndpointsSelection: nil,
+			Endpoints: nil,
 		},
 		ReportTypeSpec: api.ReportTypeSpec{
 			AuditEventsSelection: &api.AuditEventsSelection{},
 		},
 	}, {
-		ReportName: "ReportSpec.EndpointsSelection.Namespaces",
+		ReportName: "ReportSpec.Endpoints.Namespaces",
 		ReportSpec: api.ReportSpec{
-			EndpointsSelection: &api.EndpointsSelection{
-				EndpointSelector: "lbl == 'lbl-val'",
-				ServiceAccounts:  &api.NamesAndLabelsMatch{},
+			Endpoints: &api.EndpointsSelection{
+				Selector:        "lbl == 'lbl-val'",
+				ServiceAccounts: &api.NamesAndLabelsMatch{},
 			},
 		},
 		ReportTypeSpec: api.ReportTypeSpec{
 			AuditEventsSelection: &api.AuditEventsSelection{},
 		},
 	}, {
-		ReportName: "ReportSpec.EndpointsSelection.ServiceAccounts",
+		ReportName: "ReportSpec.Endpoints.ServiceAccounts",
 		ReportSpec: api.ReportSpec{
-			EndpointsSelection: &api.EndpointsSelection{
-				EndpointSelector: "lbl == 'lbl-val'",
-				Namespaces:       &api.NamesAndLabelsMatch{},
+			Endpoints: &api.EndpointsSelection{
+				Selector:   "lbl == 'lbl-val'",
+				Namespaces: &api.NamesAndLabelsMatch{},
 			},
 		},
 		ReportTypeSpec: api.ReportTypeSpec{
@@ -260,10 +260,10 @@ var (
 	}, {
 		ReportName: "ReportTypeSpec.AuditEventsSelection",
 		ReportSpec: api.ReportSpec{
-			EndpointsSelection: &api.EndpointsSelection{
-				EndpointSelector: "lbl == 'lbl-val'",
-				Namespaces:       &api.NamesAndLabelsMatch{},
-				ServiceAccounts:  &api.NamesAndLabelsMatch{},
+			Endpoints: &api.EndpointsSelection{
+				Selector:        "lbl == 'lbl-val'",
+				Namespaces:      &api.NamesAndLabelsMatch{},
+				ServiceAccounts: &api.NamesAndLabelsMatch{},
 			},
 		},
 		ReportTypeSpec: api.ReportTypeSpec{},

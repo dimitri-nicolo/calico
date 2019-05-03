@@ -77,20 +77,37 @@ type ReportTemplate struct {
 type AuditEventsSelection struct {
 	// Resources lists the resources that will be included in the audit logs in the ReportData.  Blank fields in the
 	// listed ResourceID structs are treated as wildcards.
-	Resources []ResourceID `json:"resources,omitempty" validate:"omitempty"`
+	Resources []AuditResource `json:"resources,omitempty" validate:"omitempty"`
 }
 
-// ResourceID is used to identify a resource instance in the report data, and is used as a filter for resources in the Report configuration.
-//
-// When used to identify a resource, all valid fields will be set.
-//
-// When used as a resource filter, an empty field value indicates a wildcard. For example, if Kind is set to "NetworkPolicy" and all other fields
-// are blank then this filter would include all NetworkPolicy resources across all namespaces, including both Calico and Kubernetes resource types.
+// ResourceID is used to identify a resource instance in the report data.
 type ResourceID struct {
 	metav1.TypeMeta `json:",inline"`
 	Name            string    `json:"name,omitempty" validate:"omitempty"`
 	Namespace       string    `json:"namespace,omitempty" validate:"omitempty"`
 	UUID            types.UID `json:"uuid,omitempty" validate:"omitempty"`
+}
+
+// AuditResource is used to filter Audit events in the Report configuration.
+//
+// An empty field value indicates a wildcard. For example, if Resource is set to "networkpolicies" and all other
+// fields are blank then this filter would include all NetworkPolicy resources across all namespaces, and would include
+// both Calico and Kubernetes resource types.
+type AuditResource struct {
+	// The resource type. The format is the lowercase plural as used in audit event selection and RBAC configuration.
+	Resource string `json:"resource,omitempty" validate:"omitempty"`
+
+	// APIGroup is the name of the API group that contains the referred object (e.g. projectcalico.org).
+	APIGroup string `json:"apiGroup,omitempty" validate:"omitempty"`
+
+	// APIVersion is the version of the API group that contains the referred object (e.g. v3).
+	APIVersion string `json:"apiVersion,omitempty" validate:"omitempty"`
+
+	// The resource name.
+	Name string `json:"name,omitempty" validate:"omitempty"`
+
+	// The resource namespace.
+	Namespace string `json:"namespace,omitempty" validate:"omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -148,4 +165,13 @@ func (resource ResourceID) String() (expanded string) {
 	}
 
 	return expanded
+}
+
+//
+// Prints AuditResource contents.
+//
+func (resource AuditResource) String() (expanded string) {
+	return fmt.Sprintf("Res=%s; Grp=%s; Ver=%s; Name=%s; Namespace=%s",
+		resource.Resource, resource.APIGroup, resource.APIVersion, resource.Name, resource.Namespace,
+	)
 }

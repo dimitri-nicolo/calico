@@ -53,7 +53,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalReportType tests", testutils.Datas
 		IncludeEndpointData:        true,
 		IncludeEndpointFlowLogData: false,
 		AuditEventsSelection: &apiv3.AuditEventsSelection{
-			Resources: []apiv3.ResourceID{
+			Resources: []apiv3.AuditResource{
 				{
 					Name:      "rt-aes-r-n14",
 					Namespace: "rt-aes-r-ns14",
@@ -79,7 +79,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalReportType tests", testutils.Datas
 		IncludeEndpointData:        true,
 		IncludeEndpointFlowLogData: false,
 		AuditEventsSelection: &apiv3.AuditEventsSelection{
-			Resources: []apiv3.ResourceID{
+			Resources: []apiv3.AuditResource{
 				{
 					Name:      "rt-aes-r-n24",
 					Namespace: "rt-aes-r-ns24",

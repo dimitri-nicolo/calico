@@ -2398,8 +2398,8 @@ func init() {
 				Spec: api.ReportTypeSpec{
 					UISummaryTemplate: api.ReportTemplate{
 						Name: "uist",
-						Template: `ReportName,EndpointSelector
-{{ .ReportName }},{{ .ReportSpec.EndpointsSelection }}`,
+						Template: `ReportName,Selector
+{{ .ReportName }},{{ .ReportSpec.Endpoints }}`,
 					},
 				},
 			},
@@ -2438,37 +2438,37 @@ func init() {
 			},
 			false,
 		),
-		Entry("Catch invalid templates using nil ReportSpec.EndpointsSelection data",
+		Entry("Catch invalid templates using nil ReportSpec.Endpoints data",
 			&api.GlobalReportType{
 				ObjectMeta: v1.ObjectMeta{Name: "grt"},
 				Spec: api.ReportTypeSpec{
 					UISummaryTemplate: api.ReportTemplate{
 						Name:     "report-nil-namespace",
-						Template: "{{ .ReportSpec.EndpointsSelection.Namespaces.Names }}",
+						Template: "{{ .ReportSpec.Endpoints.Namespaces.Names }}",
 					},
 				},
 			},
 			false,
 		),
-		Entry("Catch invalid templates using nil ReportSpec.EndpointsSelection.Namespaces data",
+		Entry("Catch invalid templates using nil ReportSpec.Endpoints.Namespaces data",
 			&api.GlobalReportType{
 				ObjectMeta: v1.ObjectMeta{Name: "grt"},
 				Spec: api.ReportTypeSpec{
 					UISummaryTemplate: api.ReportTemplate{
 						Name:     "report-nil-namespace",
-						Template: "{{ if .ReportSpec.EndpointsSelection }}{{ .ReportSpec.EndpointsSelection.Namespaces.Names }}{{ end }}",
+						Template: "{{ if .ReportSpec.Endpoints }}{{ .ReportSpec.Endpoints.Namespaces.Names }}{{ end }}",
 					},
 				},
 			},
 			false,
 		),
-		Entry("Catch invalid templates using nil ReportSpec.EndpointsSelection.ServiceAccounts data",
+		Entry("Catch invalid templates using nil ReportSpec.Endpoints.ServiceAccounts data",
 			&api.GlobalReportType{
 				ObjectMeta: v1.ObjectMeta{Name: "grt"},
 				Spec: api.ReportTypeSpec{
 					UISummaryTemplate: api.ReportTemplate{
 						Name:     "report-nil-namespace",
-						Template: "{{ if .ReportSpec.EndpointsSelection }}{{ .ReportSpec.EndpointsSelection.ServiceAccounts.Names }}{{ end }}",
+						Template: "{{ if .ReportSpec.Endpoints }}{{ .ReportSpec.Endpoints.ServiceAccounts.Names }}{{ end }}",
 					},
 				},
 			},
@@ -2492,8 +2492,8 @@ func init() {
 				Spec: api.ReportTypeSpec{
 					UISummaryTemplate: api.ReportTemplate{
 						Name: "report-nil-namespace",
-						Template: "{{ if .ReportSpec.EndpointsSelection }}{{ if .ReportSpec.EndpointsSelection.Namespaces}}{{ .ReportSpec.EndpointsSelection.Namespaces.Names }}{{ end }}{{ end }}" +
-							"{{ if .ReportSpec.EndpointsSelection }}{{ if .ReportSpec.EndpointsSelection.ServiceAccounts}}{{ .ReportSpec.EndpointsSelection.ServiceAccounts.Names }}{{ end }}{{ end }}" +
+						Template: "{{ if .ReportSpec.Endpoints }}{{ if .ReportSpec.Endpoints.Namespaces}}{{ .ReportSpec.Endpoints.Namespaces.Names }}{{ end }}{{ end }}" +
+							"{{ if .ReportSpec.Endpoints }}{{ if .ReportSpec.Endpoints.ServiceAccounts}}{{ .ReportSpec.Endpoints.ServiceAccounts.Names }}{{ end }}{{ end }}" +
 							"{{ if .ReportTypeSpec.AuditEventsSelection }}{{ .ReportTypeSpec.AuditEventsSelection.Resources }}{{ end }}",
 					},
 				},
