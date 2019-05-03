@@ -627,6 +627,9 @@ func TestSetFeed(t *testing.T) {
 	eip := elasticipsets.NewMockElasticIPSetController()
 	puller := NewHTTPPuller(&testGlobalThreatFeed, &db.MockIPSet{}, &MockConfigMap{ConfigMapData: configMapData}, &MockSecrets{SecretsData: secretsData}, nil, gns, eip).(*httpPuller)
 
+	var called bool
+	puller.enqueueSyncFunction = func() { called = true }
+
 	f2 := testGlobalThreatFeed.DeepCopy()
 	f2.Name = "set feed"
 	f2.Spec.Pull.HTTP.URL = "http://updated"
@@ -638,4 +641,100 @@ func TestSetFeed(t *testing.T) {
 	g.Expect(puller.needsUpdate).Should(BeTrue(), "Needs Update must be set")
 	g.Expect(puller.url).Should(BeNil(), "Feed URL is still nil")
 	g.Expect(puller.header).Should(HaveLen(0), "Header is still empty")
+	g.Expect(called).Should(BeFalse(), "Sync was not called")
+}
+
+func TestSetFeedNeedsSync(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	feed := testGlobalThreatFeed.DeepCopy()
+	feed.Spec.GlobalNetworkSet = nil
+	ipSet := &db.MockIPSet{
+		Set: []string{"1.2.3.0/24", "2.3.4.5/32"},
+	}
+	gns := globalnetworksets.NewMockGlobalNetworkSetController()
+	eip := elasticipsets.NewMockElasticIPSetController()
+	puller := NewHTTPPuller(feed, ipSet, &MockConfigMap{ConfigMapData: configMapData}, &MockSecrets{SecretsData: secretsData}, nil, gns, eip).(*httpPuller)
+
+	var called bool
+	puller.enqueueSyncFunction = func() { called = true }
+
+	f2 := testGlobalThreatFeed.DeepCopy()
+	f2.Name = "set feed"
+	f2.Spec.Pull.HTTP.URL = "http://updated"
+
+	puller.SetFeed(f2)
+	g.Expect(puller.feed).Should(Equal(f2), "Feed contents should match")
+	g.Expect(puller.feed).ShouldNot(BeIdenticalTo(f2), "Feed pointer should not be the same")
+	g.Expect(puller.feed.Name).Should(Equal(f2.Name), "Feed name was updated")
+	g.Expect(puller.needsUpdate).Should(BeTrue(), "Needs Update must be set")
+	g.Expect(puller.url).Should(BeNil(), "Feed URL is still nil")
+	g.Expect(puller.header).Should(HaveLen(0), "Header is still empty")
+	g.Expect(called).Should(BeTrue(), "Sync was called")
+}
+
+func TestSyncGNSFromDB(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	ctx, cancel := context.WithCancel(context.TODO())
+	defer cancel()
+
+	feed := testGlobalThreatFeed.DeepCopy()
+	ipSet := &db.MockIPSet{
+		Set: []string{"1.2.3.0/24", "2.3.4.5/32"},
+	}
+	gns := globalnetworksets.NewMockGlobalNetworkSetController()
+	s := &statser.MockStatser{}
+
+	puller := NewHTTPPuller(feed, ipSet, &MockConfigMap{ConfigMapData: configMapData}, &MockSecrets{SecretsData: secretsData}, nil, gns, nil).(*httpPuller)
+
+	puller.syncGNSFromDB(ctx, s)
+
+	g.Expect(len(s.Status().ErrorConditions)).Should(Equal(0))
+	g.Expect(len(gns.Local())).Should(Equal(1))
+	g.Expect(gns.Local()).Should(HaveKey("threatfeed." + feed.Name))
+	g.Expect(gns.Local()["threatfeed."+feed.Name].Spec.Nets).Should(ConsistOf(ipSet.Set))
+
+}
+
+func TestSyncGNSFromDBElasticError(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	ctx, cancel := context.WithCancel(context.TODO())
+	defer cancel()
+
+	feed := testGlobalThreatFeed.DeepCopy()
+	ipSet := &db.MockIPSet{
+		Error: errors.New("error"),
+	}
+	gns := globalnetworksets.NewMockGlobalNetworkSetController()
+	s := &statser.MockStatser{}
+
+	puller := NewHTTPPuller(feed, ipSet, &MockConfigMap{ConfigMapData: configMapData}, &MockSecrets{SecretsData: secretsData}, nil, gns, nil).(*httpPuller)
+
+	puller.syncGNSFromDB(ctx, s)
+
+	g.Expect(len(s.Status().ErrorConditions)).Should(Equal(1))
+	g.Expect(len(gns.Local())).Should(Equal(0))
+}
+
+func TestSyncGNSFromDBNoGNS(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	ctx, cancel := context.WithCancel(context.TODO())
+	defer cancel()
+
+	feed := testGlobalThreatFeed.DeepCopy()
+	feed.Spec.GlobalNetworkSet = nil
+
+	ipSet := &db.MockIPSet{}
+	gns := globalnetworksets.NewMockGlobalNetworkSetController()
+	s := &statser.MockStatser{}
+
+	puller := NewHTTPPuller(feed, ipSet, &MockConfigMap{ConfigMapData: configMapData}, &MockSecrets{SecretsData: secretsData}, nil, gns, nil).(*httpPuller)
+
+	puller.syncGNSFromDB(ctx, s)
+
+	g.Expect(len(s.Status().ErrorConditions)).Should(Equal(0))
+	g.Expect(len(gns.Local())).Should(Equal(0))
 }

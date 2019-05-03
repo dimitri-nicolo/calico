@@ -6,7 +6,6 @@ import (
 	"bufio"
 	"context"
 	"errors"
-	"fmt"
 	"net"
 	"net/http"
 	"net/url"
@@ -36,21 +35,22 @@ const (
 
 // httpPuller is a feed that periodically pulls Puller sets from a URL
 type httpPuller struct {
-	ipSet             db.IPSet
-	configMapClient   v1.ConfigMapInterface
-	secretsClient     v1.SecretInterface
-	client            *http.Client
-	feed              *v3.GlobalThreatFeed
-	needsUpdate       bool
-	url               *url.URL
-	header            http.Header
-	period            time.Duration
-	gnsController     globalnetworksets.Controller
-	elasticController elasticipsets.Controller
-	syncFailFunction  SyncFailFunction
-	cancel            context.CancelFunc
-	once              sync.Once
-	lock              sync.RWMutex
+	ipSet               db.IPSet
+	configMapClient     v1.ConfigMapInterface
+	secretsClient       v1.SecretInterface
+	client              *http.Client
+	feed                *v3.GlobalThreatFeed
+	needsUpdate         bool
+	url                 *url.URL
+	header              http.Header
+	period              time.Duration
+	gnsController       globalnetworksets.Controller
+	elasticController   elasticipsets.Controller
+	enqueueSyncFunction func()
+	syncFailFunction    SyncFailFunction
+	cancel              context.CancelFunc
+	once                sync.Once
+	lock                sync.RWMutex
 }
 
 func NewHTTPPuller(
@@ -82,8 +82,14 @@ func (h *httpPuller) SetFeed(f *v3.GlobalThreatFeed) {
 	h.lock.Lock()
 	defer h.lock.Unlock()
 
+	needsSync := h.feed.Spec.GlobalNetworkSet == nil && f.Spec.GlobalNetworkSet != nil
+
 	h.feed = f.DeepCopy()
 	h.needsUpdate = true
+
+	if needsSync {
+		h.enqueueSyncFunction()
+	}
 }
 
 func (h *httpPuller) Run(ctx context.Context, s statser.Statser) {
@@ -96,11 +102,22 @@ func (h *httpPuller) Run(ctx context.Context, s statser.Statser) {
 
 		runFunc, rescheduleFunc := runloop.RunLoopWithReschedule()
 		h.syncFailFunction = func() { _ = rescheduleFunc() }
+
+		syncRunFunc, enqueueSyncFunction := runloop.OnDemand()
+		go syncRunFunc(ctx, func(ctx context.Context, i interface{}) {
+			h.syncGNSFromDB(ctx, s)
+		})
+		h.enqueueSyncFunction = func() {
+			enqueueSyncFunction(0)
+		}
 		go func() {
 			defer h.cancel()
 			if h.period == 0 {
 				return
 			}
+
+			// Synchronize the GlobalNetworkSet on startup
+			h.syncGNSFromDB(ctx, s)
 
 			delay := h.getStartupDelay(ctx)
 			if delay > 0 {
@@ -150,7 +167,6 @@ func (h *httpPuller) setFeedURIAndHeader(f *v3.GlobalThreatFeed) error {
 					return FatalError("could not get ConfigMap %s, %s", header.ValueFrom.ConfigMapKeyRef.Name, err.Error())
 				}
 				value, ok = configMap.Data[header.ValueFrom.ConfigMapKeyRef.Key]
-				fmt.Printf("%#v %s %v\n", configMap.Data, header.ValueFrom.ConfigMapKeyRef.Key, ok)
 				if ok {
 					log.WithField("value", value).Debug("Loaded config")
 				} else if header.ValueFrom.ConfigMapKeyRef.Optional != nil && *header.ValueFrom.ConfigMapKeyRef.Optional {
@@ -366,6 +382,23 @@ func (h *httpPuller) query(ctx context.Context, st statser.Statser, attempts uin
 	st.SuccessfulSync()
 
 	return nil
+}
+
+func (h *httpPuller) syncGNSFromDB(ctx context.Context, s statser.Statser) {
+	name, _, _, labels, gns, err := h.queryInfo()
+	if err != nil {
+		log.WithError(err).WithField("feed", name).Error("Failed to query")
+		s.Error(statser.GlobalNetworkSetSyncFailed, err)
+	} else if gns {
+		log.WithField("feed", name).Info("Synchronizing GlobalNetworkSet from cached feed contents")
+		ipSet, err := h.ipSet.GetIPSet(ctx, name)
+		if err != nil {
+			log.WithError(err).WithField("feed", name).Error("Failed to load cached feed contents")
+			s.Error(statser.GlobalNetworkSetSyncFailed, err)
+		} else {
+			h.gnsController.Add(makeGNS(name, labels, ipSet), func() {}, s)
+		}
+	}
 }
 
 func makeGNS(name string, labels map[string]string, snapshot []string) *v3.GlobalNetworkSet {
