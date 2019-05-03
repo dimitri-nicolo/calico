@@ -11,6 +11,4 @@ spec:
     matchLabels:
       egress-with-noselector: 'yes'
   egress:
-    - to:
-      - namespaceSelector: {}
-      - podSelector: {}
+    - {}
