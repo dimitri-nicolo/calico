@@ -66,10 +66,10 @@ metadata:
   namespace: kube-system
   name: calico-node-metrics
   labels:
-    k8s-app: {{ node_name }}
+    k8s-app: calico-node
 spec:
   selector:
-    k8s-app: {{ node_name }}
+    k8s-app: calico-node
   type: ClusterIP
   clusterIP: None
   ports:
@@ -194,7 +194,7 @@ metadata:
 spec:
   selector:
     matchLabels:
-      k8s-app: {{ node_name }}
+      k8s-app: calico-node
   namespaceSelector:
     matchNames:
     - kube-system

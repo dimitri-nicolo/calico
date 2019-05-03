@@ -31,7 +31,7 @@ data:
 {%- endif %}
 {%- if include.typha == "true" %}
   # You must set a non-zero value for Typha replicas below.
-  typha_service_name: "{{ typha_service_name }}"
+  typha_service_name: "calico-typha"
 {%- else %}
   # Typha is disabled.
   typha_service_name: "none"

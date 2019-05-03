@@ -10,7 +10,7 @@ calico-typha.yaml acccepts the following include flags:
 | platform     | gke, <unset>                  |
 
 {% endcomment -%}
-{%- capture typha_service_name %}{% if include.platform == "gke" %}{{ typha_service_name }}-ee{% else %}calico-typha{% endif %}{% endcapture -%}
+{%- capture typha_service_name %}{% if include.platform == "gke" %}calico-typha-ee{% else %}calico-typha{% endif %}{% endcapture -%}
 # This manifest creates a Service, which will be backed by Calico's Typha daemon.
 # Typha sits in between Felix and the API server, reducing Calico's load on the API server.
 # It is a requirement when using Kubernetes API datastore with more than 50 nodes, or when
@@ -19,18 +19,18 @@ calico-typha.yaml acccepts the following include flags:
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ typha_service_name }}
+  name: calico-typha
   namespace: kube-system
   labels:
-    k8s-app: {{ typha_service_name }}
+    k8s-app: calico-typha
 spec:
   ports:
     - port: 5473
       protocol: TCP
-      targetPort: {{ typha_service_name }}
-      name: {{ typha_service_name }}
+      targetPort: calico-typha
+      name: calico-typha
   selector:
-    k8s-app: {{ typha_service_name }}
+    k8s-app: calico-typha
 
 ---
 
@@ -39,10 +39,10 @@ spec:
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
-  name: {{ typha_service_name }}
+  name: calico-typha
   namespace: kube-system
   labels:
-    k8s-app: {{ typha_service_name }}
+    k8s-app: calico-typha
 spec:
   # Number of Typha replicas.  To enable Typha, set this to a non-zero value *and* set the
   # typha_service_name variable in the calico-config ConfigMap above.
@@ -55,7 +55,7 @@ spec:
   template:
     metadata:
       labels:
-        k8s-app: {{ typha_service_name }}
+        k8s-app: calico-typha
       annotations:
         # This, along with the CriticalAddonsOnly toleration below, marks the pod as a critical
         # add-on, ensuring it gets priority scheduling and that its resources are reserved
@@ -92,7 +92,7 @@ spec:
         - name: cnx-pull-secret
       containers:
       - image: {{page.registry}}{{site.imageNames["typha"]}}:{{site.data.versions[page.version].first.components["typha"].version}}
-        name: {{ typha_service_name }}
+        name: calico-typha
 {%- if include.federation == "true" or include.datastore == "etcd" %}
         volumeMounts:
 {%- endif -%}
@@ -110,7 +110,7 @@ spec:
 {%- endif %}
         ports:
         - containerPort: 5473
-          name: {{ typha_service_name }}
+          name: calico-typha
           protocol: TCP
         env:
 {%- if include.network == "ecs" %}
@@ -186,7 +186,7 @@ spec:
         livenessProbe:
           exec:
             command:
-            - {{ typha_service_name }}
+            - calico-typha
             - check
             - liveness
           periodSeconds: 30
@@ -194,7 +194,7 @@ spec:
         readinessProbe:
           exec:
             command:
-            - {{ typha_service_name }}
+            - calico-typha
             - check
             - readiness
           periodSeconds: 10
@@ -225,12 +225,12 @@ spec:
 apiVersion: policy/v1beta1
 kind: PodDisruptionBudget
 metadata:
-  name: {{ typha_service_name }}
+  name: calico-typha
   namespace: kube-system
   labels:
-    k8s-app: {{ typha_service_name }}
+    k8s-app: calico-typha
 spec:
   maxUnavailable: 1
   selector:
     matchLabels:
-      k8s-app: {{ typha_service_name }}
+      k8s-app: calico-typha
