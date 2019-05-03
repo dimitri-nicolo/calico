@@ -996,12 +996,12 @@ spec:
               configMapKeyRef:
                 name: tigera-es-config
                 key: tigera.elasticsearch.scheme
-          - name: USER
+          - name: ELASTIC_USER
             valueFrom:
               secretKeyRef:
                 name: elastic-ee-intrusion-detection
                 key: username
-          - name: PASSWORD
+          - name: ELASTIC_PASSWORD
             valueFrom:
               secretKeyRef:
                 name: elastic-ee-intrusion-detection
