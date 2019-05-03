@@ -364,25 +364,37 @@ func (c *networkPolicyEngine) scanIngressRules(x *CacheEntryNetworkPolicy) synce
 		//TODO (rlb): Nets may contain "other namespace"
 		irV1 := ingressV1[i]
 
-		// Use the v3 settings to check if there is a NamespaceSelector specified. It is hard to do this with the v1
-		// settings since the selectors are munged together.
-		if !x.isNamespaced() || irV3.Source.NamespaceSelector != "" {
-			x.clog.WithField("nsSelector", irV3.Source.NamespaceSelector).Debugf("Policy is not namespaced, or namespace selector is configured")
-			if len(irV1.SrcNets) == 0 {
-				x.clog.Debugf("Not matching on nets, therefore exposed to other namespaces")
+		// Note that for ingress we don't care about the dest selector since that would simply further limit
+		// which endpoints the policy applies to rather than where traffic was from.
+
+		// Check for exposed to namespace.
+		if x.Flags&CacheEntryOtherNamespaceExposedIngress == 0 {
+			// Use the v3 settings to check if there is a NamespaceSelector specified. It is hard to do this with the v1
+			// settings since the selectors are munged together.
+			x.clog.Debugf("Checking if exposed to other namespace")
+			if !x.isNamespaced() || irV3.Source.NamespaceSelector != "" {
+				x.clog.Debugf("Policy is not namespaced, or namespace selector is configured")
+				if len(irV1.SrcNets) == 0 {
+					x.clog.Debugf("Not matching on nets, therefore exposed to other namespaces")
+					x.Flags |= CacheEntryOtherNamespaceExposedIngress
+				}
+			} else if irV1.SrcSelector == "" && len(irV1.SrcNets) == 0 {
+				// There is no v1 source selector and no nets so we are exposed to everything (including other
+				// namespaces).
+				x.clog.Debugf("No match on source nets - exposed to all addresses")
 				x.Flags |= CacheEntryOtherNamespaceExposedIngress
 			}
 		}
+
+		// Check for exposed to internet.
 		if x.Flags&CacheEntryInternetExposedIngress == 0 {
 			x.clog.Debugf("Checking if exposed to internet")
 			if irV1.SrcSelector == "" {
-				// There is no v1 source selector. Check the nets to see if we are exposed. Note that for ingress
-				// we don't care about the dest selector since that would simply further limit which endpoints
-				// the policy applies to rather than where traffic originated.
+				// There is no v1 source selector. Check the nets to see if we are exposed.
 				x.clog.Debugf("No source selector")
 				if len(irV1.SrcNets) == 0 {
 					x.clog.Debugf("No match on source nets - exposed to all addresses")
-					x.Flags |= CacheEntryInternetExposedIngress | CacheEntryOtherNamespaceExposedIngress
+					x.Flags |= CacheEntryInternetExposedIngress
 				} else if internet.NetPointersContainInternetAddr(irV1.SrcNets) {
 					x.clog.Debugf("Source nets contain an internet address")
 					x.Flags |= CacheEntryInternetExposedIngress
@@ -426,25 +438,37 @@ func (c *networkPolicyEngine) scanEgressRules(x *CacheEntryNetworkPolicy) syncer
 		//TODO (rlb): Nets may contain "other namespace"
 		erV1 := egressV1[i]
 
-		// Use the v3 settings to check if there is a NamespaceSelector specified. It is hard to do this with the v1
-		// settings since the selectors are munged together.
-		if !x.isNamespaced() || erV3.Destination.NamespaceSelector != "" {
-			x.clog.Debugf("Policy is not namespaced, or namespace selector is configured")
-			if len(erV1.DstNets) == 0 {
-				x.clog.Debugf("Not matching on nets, therefore exposed to other namespaces")
+		// Note that for egress we don't care about the source selector since that would simply further limit
+		// which endpoints the policy applies to rather than where traffic was destined.
+
+		// Check for exposed to namespace.
+		if x.Flags&CacheEntryOtherNamespaceExposedEgress == 0 {
+			// Use the v3 settings to check if there is a NamespaceSelector specified. It is hard to do this with the v1
+			// settings since the selectors are munged together.
+			x.clog.Debugf("Checking if exposed to other namespace")
+			if !x.isNamespaced() || erV3.Destination.NamespaceSelector != "" {
+				x.clog.Debugf("Policy is not namespaced, or namespace selector is configured")
+				if len(erV1.DstNets) == 0 {
+					x.clog.Debugf("Not matching on nets, therefore exposed to other namespaces")
+					x.Flags |= CacheEntryOtherNamespaceExposedEgress
+				}
+			} else if erV1.DstSelector == "" && len(erV1.DstNets) == 0 {
+				// There is no v1 destination selector and no nets so we are exposed to everything (including other
+				// namespaces).
+				x.clog.Debugf("No match on destination nets - exposed to all addresses")
 				x.Flags |= CacheEntryOtherNamespaceExposedEgress
 			}
 		}
+
+		// Check for exposed to internet.
 		if x.Flags&CacheEntryInternetExposedEgress == 0 {
 			x.clog.Debugf("Checking if exposed to internet")
 			if erV1.DstSelector == "" {
-				// There is no v1 destination selector. Check the nets to see if we are exposed. Note that for egress
-				// we don't care about the dest selector since that would simply further limit which endpoints
-				// the policy applies to rather than where traffic was destined.
+				// There is no v1 destination selector. Check the nets to see if we are exposed.
 				x.clog.Debugf("No destination selector")
 				if len(erV1.DstNets) == 0 {
 					x.clog.Debugf("No match on destination nets - exposed to all addresses")
-					x.Flags |= CacheEntryInternetExposedEgress | CacheEntryOtherNamespaceExposedEgress
+					x.Flags |= CacheEntryInternetExposedEgress
 				} else if internet.NetPointersContainInternetAddr(erV1.DstNets) {
 					x.clog.Debugf("Destination nets contain an internet address")
 					x.Flags |= CacheEntryInternetExposedEgress
