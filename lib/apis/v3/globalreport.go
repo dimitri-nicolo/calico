@@ -42,10 +42,10 @@ type ReportSpec struct {
 	// The name of the report type.
 	ReportType string `json:"reportType" validate:"name,required"`
 
-	// EndpointsSelection is used to specify which endpoints are in-scope and stored in the generated report data.
+	// Endpoints is used to specify which endpoints are in-scope and stored in the generated report data.
 	// Only used if endpoints data and/or audit logs are gathered in the report. If omitted, treated as everything
 	// in-scope.
-	EndpointsSelection *EndpointsSelection `json:"endpointsSelection,omitempty" validate:"omitempty,selector"`
+	Endpoints *EndpointsSelection `json:"endpoints,omitempty" validate:"omitempty,selector"`
 
 	// The report schedule specified in cron format. This specifies both the start and end times of each report,
 	// where the end time of one report becomes the start time of the next report.
@@ -104,9 +104,9 @@ type CompletedReportJob struct {
 // EndpointsSelection is a set of selectors used to select the endpoints that are considered to be in-scope for the
 // report. An empty selector is equivalent to all(). All three selectors are ANDed together.
 type EndpointsSelection struct {
-	// Endpoints selector, selecting endpoints by endpoint labels. If omitted, all endpoints are included in the report
+	// Selector, selects endpoints by endpoint labels. If omitted, all endpoints are included in the report
 	// data.
-	EndpointSelector string `json:"endpointSelector,omitempty" validate:"omitempty,selector"`
+	Selector string `json:"selector,omitempty" validate:"omitempty,selector"`
 
 	// Namespace match restricts endpoint selection to those in the selected namespaces.
 	Namespaces *NamesAndLabelsMatch `json:"namespaces,omitempty" validate:"omitempty"`

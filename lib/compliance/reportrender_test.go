@@ -23,9 +23,9 @@ import (
 
 var _ = Describe("ReportTemplate Renderer", func() {
 	It("inventory-summary report rendering", func() {
-		tmpl := `startTime,endTime,endpointSelector,namespaceSelector,serviceAccountSelectors,endpointsNumInScope,endpointsNumIngressProtected,endpointsNumEgressProtected,endpointsNumIngressFromInternet,endpointsNumEgressToInternet,endpointsNumIngressFromOtherNamespace,endpointsNumEgressToOtherNamespace,endpointsNumEnvoyEnabled
-{{ dateRfc3339 .StartTime }},{{ dateRfc3339 .EndTime }},{{ .ReportSpec.EndpointsSelection.EndpointSelector }},{{ .ReportSpec.EndpointsSelection.Namespaces.Selector }},{{ .ReportSpec.EndpointsSelection.ServiceAccounts.Selector }},{{ .EndpointsSummary.NumTotal }},{{ .EndpointsSummary.NumIngressProtected }},{{ .EndpointsSummary.NumEgressProtected }},{{ .EndpointsSummary.NumIngressFromInternet }},{{ .EndpointsSummary.NumEgressToInternet }},{{ .EndpointsSummary.NumIngressFromOtherNamespace }},{{ .EndpointsSummary.NumEgressToOtherNamespace }},{{ .EndpointsSummary.NumEnvoyEnabled }}`
-		rendered := `startTime,endTime,endpointSelector,namespaceSelector,serviceAccountSelectors,endpointsNumInScope,endpointsNumIngressProtected,endpointsNumEgressProtected,endpointsNumIngressFromInternet,endpointsNumEgressToInternet,endpointsNumIngressFromOtherNamespace,endpointsNumEgressToOtherNamespace,endpointsNumEnvoyEnabled
+		tmpl := `startTime,endTime,selector,namespaceSelector,serviceAccountSelectors,endpointsNumInScope,endpointsNumIngressProtected,endpointsNumEgressProtected,endpointsNumIngressFromInternet,endpointsNumEgressToInternet,endpointsNumIngressFromOtherNamespace,endpointsNumEgressToOtherNamespace,endpointsNumEnvoyEnabled
+{{ dateRfc3339 .StartTime }},{{ dateRfc3339 .EndTime }},{{ .ReportSpec.Endpoints.Selector }},{{ .ReportSpec.Endpoints.Namespaces.Selector }},{{ .ReportSpec.Endpoints.ServiceAccounts.Selector }},{{ .EndpointsSummary.NumTotal }},{{ .EndpointsSummary.NumIngressProtected }},{{ .EndpointsSummary.NumEgressProtected }},{{ .EndpointsSummary.NumIngressFromInternet }},{{ .EndpointsSummary.NumEgressToInternet }},{{ .EndpointsSummary.NumIngressFromOtherNamespace }},{{ .EndpointsSummary.NumEgressToOtherNamespace }},{{ .EndpointsSummary.NumEnvoyEnabled }}`
+		rendered := `startTime,endTime,selector,namespaceSelector,serviceAccountSelectors,endpointsNumInScope,endpointsNumIngressProtected,endpointsNumEgressProtected,endpointsNumIngressFromInternet,endpointsNumEgressToInternet,endpointsNumIngressFromOtherNamespace,endpointsNumEgressToOtherNamespace,endpointsNumEnvoyEnabled
 2019-04-01T00:00:00Z,2019-04-01T10:00:00Z,lbl == 'lbl-val',endpoint-namespace-selector,serviceaccount-selector,1,10,100,1000,9000,900,90,9`
 
 		matches, err := compliance.RenderTemplate(tmpl, &compliance.ReportDataSample)
@@ -37,9 +37,9 @@ var _ = Describe("ReportTemplate Renderer", func() {
 		tmpl := `{{ $c := csv }}
 {{- $c := $c.AddColumn "startTime"                             "{{ dateRfc3339 .StartTime }}" }}
 {{- $c := $c.AddColumn "endTime"                               "{{ dateRfc3339 .EndTime }}" }}
-{{- $c := $c.AddColumn "endpointSelector"                      "{{ .ReportSpec.EndpointsSelection.EndpointSelector }}" }}
-{{- $c := $c.AddColumn "namespaceSelector"                     "{{ .ReportSpec.EndpointsSelection.Namespaces.Selector }}" }}
-{{- $c := $c.AddColumn "serviceAccountSelectors"               "{{ .ReportSpec.EndpointsSelection.ServiceAccounts.Selector }}" }}
+{{- $c := $c.AddColumn "selector"                              "{{ .ReportSpec.Endpoints.Selector }}" }}
+{{- $c := $c.AddColumn "namespaceSelector"                     "{{ .ReportSpec.Endpoints.Namespaces.Selector }}" }}
+{{- $c := $c.AddColumn "serviceAccountSelectors"               "{{ .ReportSpec.Endpoints.ServiceAccounts.Selector }}" }}
 {{- $c := $c.AddColumn "endpointsNumInScope"                   "{{ .EndpointsSummary.NumTotal }}" }}
 {{- $c := $c.AddColumn "endpointsNumIngressProtected"          "{{ .EndpointsSummary.NumIngressProtected }}" }}
 {{- $c := $c.AddColumn "endpointsNumEgressProtected"           "{{ .EndpointsSummary.NumEgressProtected }}" }}
@@ -49,7 +49,7 @@ var _ = Describe("ReportTemplate Renderer", func() {
 {{- $c := $c.AddColumn "endpointsNumEgressToOtherNamespace"    "{{ .EndpointsSummary.NumEgressToOtherNamespace }}" }}
 {{- $c := $c.AddColumn "endpointsNumEnvoyEnabled"              "{{ .EndpointsSummary.NumEnvoyEnabled }}" }}
 {{- $c.Render . }}`
-		rendered := `startTime,endTime,endpointSelector,namespaceSelector,serviceAccountSelectors,endpointsNumInScope,endpointsNumIngressProtected,endpointsNumEgressProtected,endpointsNumIngressFromInternet,endpointsNumEgressToInternet,endpointsNumIngressFromOtherNamespace,endpointsNumEgressToOtherNamespace,endpointsNumEnvoyEnabled
+		rendered := `startTime,endTime,selector,namespaceSelector,serviceAccountSelectors,endpointsNumInScope,endpointsNumIngressProtected,endpointsNumEgressProtected,endpointsNumIngressFromInternet,endpointsNumEgressToInternet,endpointsNumIngressFromOtherNamespace,endpointsNumEgressToOtherNamespace,endpointsNumEnvoyEnabled
 2019-04-01T00:00:00Z,2019-04-01T10:00:00Z,lbl == 'lbl-val',endpoint-namespace-selector,serviceaccount-selector,1,10,100,1000,9000,900,90,9`
 
 		matches, err := compliance.RenderTemplate(tmpl, &compliance.ReportDataSample)
