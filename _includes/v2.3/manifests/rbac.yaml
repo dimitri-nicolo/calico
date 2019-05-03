@@ -56,7 +56,7 @@ subjects:
 ---
 {%- endif %}
 # Include a clusterrole for the calico-node DaemonSet,
-# and bind it to the {{ role_name }} serviceaccount.
+# and bind it to the calico-node serviceaccount.
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:

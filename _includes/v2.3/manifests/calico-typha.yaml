@@ -1,5 +1,5 @@
 {% comment %}
-{{ typha_service_name }}.yaml acccepts the following include flags:
+calico-typha.yaml acccepts the following include flags:
 
 | Name         | Accepted Values               |
 |--------------|-------------------------------|
