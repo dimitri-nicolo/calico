@@ -126,7 +126,7 @@ var _ = Describe("List tests with Gettable ReportType", func() {
 				UISummary: map[string]interface{}{
 					"foobar": "hello-100-goodbye",
 				},
-				DownloadURL:     "/compliance/reports/" + reportListNoGet.UID() + "/download",
+				DownloadURL:     "",
 				DownloadFormats: nil,
 				GenerationTime:  now,
 			},
@@ -159,7 +159,7 @@ var _ = Describe("List tests with Not Gettable ReportType", func() {
 				UISummary: map[string]interface{}{
 					"foobar": "hello-100-goodbye",
 				},
-				DownloadURL:     "/compliance/reports/" + reportListAndGetNotType.UID() + "/download",
+				DownloadURL:     "",
 				DownloadFormats: nil,
 				GenerationTime:  now,
 			},
@@ -172,7 +172,7 @@ var _ = Describe("List tests with Not Gettable ReportType", func() {
 				UISummary: map[string]interface{}{
 					"foobar": "hello-100-goodbye",
 				},
-				DownloadURL:     "/compliance/reports/" + reportListNoGetNotType.UID() + "/download",
+				DownloadURL:     "",
 				DownloadFormats: nil,
 				GenerationTime:  now,
 			},
