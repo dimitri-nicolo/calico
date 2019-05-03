@@ -99,11 +99,11 @@ create and update documents in Elasticsearch.
 The `status` is read-only for users and updated by the `intrusion-detection-controller` component as
 it processes global threat feeds.
 
-| Field                | Description                                                                  |
-|----------------------|------------------------------------------------------------------------------|
-| lastSuccessfulSync   | Timestamp of last successful update to the threat intelligence from the feed |
-| lastSuccessfulSearch | Timestamp of the last successful search of flow logs for threats             |
-| errorConditions      | List of errors preventing operation of the updates or search                 |
+| Field                | Description                                                                      |
+|----------------------|----------------------------------------------------------------------------------|
+| lastSuccessfulSync   | Timestamp of the last successful update to the threat intelligence from the feed |
+| lastSuccessfulSearch | Timestamp of the last successful search of flow logs for threats                 |
+| errorConditions      | List of errors preventing operation of the updates or search                     |
 
 #### GlobalNetworkSetSync
 
