@@ -28,7 +28,7 @@ import:
 - package: github.com/mailru/easyjson
   version: 03f2033d19d5860aef995fe360ac7d395cd8ce65
 - package: github.com/tigera/calico-k8sapiserver
-  version: 1204a3060dc52f05777d5011fa7cd269a5d28869
+  version: 0e59242294781b92aded5bcf53168d1ccd6813d8
   repo: git@github.com:tigera/calico-k8sapiserver.git
   vcs: git
 - package: github.com/tigera/es-proxy-image

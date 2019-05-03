@@ -24,17 +24,13 @@ const (
 	pageSize      = 100
 )
 
-func (c *client) GetAuditEvents(ctx context.Context, kind *metav1.TypeMeta, start, end *time.Time) <-chan *event.AuditEventResult {
+func (c *client) GetAuditEvents(ctx context.Context, tm *metav1.TypeMeta, start, end *time.Time) <-chan *event.AuditEventResult {
 	// create the channel that the retrieved events will fill into.
 	var filter *v3.AuditEventsSelection
 
 	// Create an audit event filter if needed
-	if kind != nil {
-		filter = &v3.AuditEventsSelection{
-			Resources: []v3.ResourceID{v3.ResourceID{TypeMeta: metav1.TypeMeta{Kind: kind.Kind, APIVersion: kind.APIVersion}}}}
-		for _, otherTM := range resources.GetResourceHelper(*kind).Deprecated() {
-			filter.Resources = append(filter.Resources, v3.ResourceID{TypeMeta: otherTM})
-		}
+	if tm != nil {
+		filter = resources.GetResourceHelperByTypeMeta(*tm).GetAuditEventsSelection()
 	}
 
 	return c.SearchAuditEvents(ctx, filter, start, end)
@@ -121,25 +117,28 @@ func auditEventQueryFromAuditEventsSelection(filter *v3.AuditEventsSelection) el
 		return nil
 	}
 	queries := []elastic.Query{}
-	for _, resID := range filter.Resources {
-		queries = append(queries, auditEventQueryFromResourceID(resID))
+	for _, res := range filter.Resources {
+		queries = append(queries, auditEventQueryFromAuditResource(res))
 	}
 	return elastic.NewBoolQuery().Should(queries...)
 }
 
-func auditEventQueryFromResourceID(resID v3.ResourceID) elastic.Query {
+func auditEventQueryFromAuditResource(res v3.AuditResource) elastic.Query {
 	queries := []elastic.Query{}
-	if resID.Kind != "" {
-		queries = append(queries, elastic.NewMatchQuery("responseObject.kind", resID.Kind))
+	if res.Resource != "" {
+		queries = append(queries, elastic.NewMatchQuery("objectRef.resource", res.Resource))
 	}
-	if resID.APIVersion != "" {
-		queries = append(queries, elastic.NewMatchQuery("responseObject.apiVersion", resID.APIVersion))
+	if res.APIGroup != "" {
+		queries = append(queries, elastic.NewMatchQuery("objectRef.apiGroup", res.APIGroup))
 	}
-	if resID.Name != "" {
-		queries = append(queries, elastic.NewMatchQuery("responseObject.name", resID.Name))
+	if res.APIVersion != "" {
+		queries = append(queries, elastic.NewMatchQuery("objectRef.apiVersion", res.APIVersion))
 	}
-	if resID.Namespace != "" {
-		queries = append(queries, elastic.NewMatchQuery("responseObject.namespace", resID.Namespace))
+	if res.Name != "" {
+		queries = append(queries, elastic.NewMatchQuery("objectRef.name", res.Name))
+	}
+	if res.Namespace != "" {
+		queries = append(queries, elastic.NewMatchQuery("objectRef.namespace", res.Namespace))
 	}
 	return elastic.NewBoolQuery().Must(queries...)
 }

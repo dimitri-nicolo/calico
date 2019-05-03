@@ -1,10 +1,10 @@
 {
   "type": "panel",
-  "heading": "Network policy configuration changes",
+  "heading": "Network Policy Configuration Changes",
   "widgets": [
     {
       "type": "radialbarchart",
-      "heading": "Network policies created",
+      "heading": "Network Policies",
       "summary": {
         "label": "Total",
         "total": "@@@{{ .AuditSummary.NumTotal }}@@@"
@@ -18,7 +18,7 @@
     },
     {
       "type": "radialbarchart",
-      "heading": "Network policies modified",
+      "heading": "Network Policies",
       "summary": {
         "label": "Total",
         "total": "@@@{{ .AuditSummary.NumTotal }}@@@"
@@ -32,7 +32,7 @@
     },
     {
       "type": "radialbarchart",
-      "heading": "Network policies deleted",
+      "heading": "Network Policies",
       "summary": {
         "label": "Total",
         "total": "@@@{{ .AuditSummary.NumTotal }}@@@"

@@ -21,7 +21,7 @@ var _ = Describe("types", func() {
 
 		// Pods
 		By("creating a Pod instance using NewResource")
-		rh = GetResourceHelper(TypeK8sPods)
+		rh = GetResourceHelperByTypeMeta(TypeK8sPods)
 		Expect(rh).ToNot(BeNil())
 		res = rh.NewResource()
 		_, ok := res.(*corev1.Pod)
@@ -32,7 +32,7 @@ var _ = Describe("types", func() {
 
 		// Namespace
 		By("creating a Namespace instance using NewResource")
-		rh = GetResourceHelper(TypeK8sNamespaces)
+		rh = GetResourceHelperByTypeMeta(TypeK8sNamespaces)
 		Expect(rh).ToNot(BeNil())
 		res = rh.NewResource()
 		_, ok = res.(*corev1.Namespace)
@@ -43,7 +43,7 @@ var _ = Describe("types", func() {
 
 		// Service Account
 		By("creating a Service Account instance using NewResource")
-		rh = GetResourceHelper(TypeK8sServiceAccounts)
+		rh = GetResourceHelperByTypeMeta(TypeK8sServiceAccounts)
 		Expect(rh).ToNot(BeNil())
 		res = rh.NewResource()
 		_, ok = res.(*corev1.ServiceAccount)
@@ -54,7 +54,7 @@ var _ = Describe("types", func() {
 
 		// Endpoints
 		By("creating a Endpoint instance using NewResource")
-		rh = GetResourceHelper(TypeK8sEndpoints)
+		rh = GetResourceHelperByTypeMeta(TypeK8sEndpoints)
 		Expect(rh).ToNot(BeNil())
 		res = rh.NewResource()
 		_, ok = res.(*corev1.Endpoints)
@@ -63,20 +63,9 @@ var _ = Describe("types", func() {
 		_, ok = list.(*corev1.EndpointsList)
 		Expect(ok).To(BeTrue())
 
-		// Service
-		By("creating a Service instance using NewResource")
-		rh = GetResourceHelper(TypeK8sServices)
-		Expect(rh).ToNot(BeNil())
-		res = rh.NewResource()
-		_, ok = res.(*corev1.Service)
-		Expect(ok).To(BeTrue())
-		list = rh.NewResourceList()
-		_, ok = list.(*corev1.ServiceList)
-		Expect(ok).To(BeTrue())
-
 		// Host Endpoints
 		By("creating a Host Endpoint instance using NewResource")
-		rh = GetResourceHelper(TypeCalicoHostEndpoints)
+		rh = GetResourceHelperByTypeMeta(TypeCalicoHostEndpoints)
 		Expect(rh).ToNot(BeNil())
 		res = rh.NewResource()
 		_, ok = res.(*apiv3.HostEndpoint)
@@ -87,7 +76,7 @@ var _ = Describe("types", func() {
 
 		// Global Network Sets
 		By("creating a Global Network Set instance using NewResource")
-		rh = GetResourceHelper(TypeCalicoGlobalNetworkSets)
+		rh = GetResourceHelperByTypeMeta(TypeCalicoGlobalNetworkSets)
 		Expect(rh).ToNot(BeNil())
 		res = rh.NewResource()
 		_, ok = res.(*apiv3.GlobalNetworkSet)
@@ -98,7 +87,7 @@ var _ = Describe("types", func() {
 
 		// Network Policies
 		By("creating a Network Policies instance using NewResource")
-		rh = GetResourceHelper(TypeCalicoNetworkPolicies)
+		rh = GetResourceHelperByTypeMeta(TypeCalicoNetworkPolicies)
 		Expect(rh).ToNot(BeNil())
 		res = rh.NewResource()
 		_, ok = res.(*apiv3.NetworkPolicy)
@@ -109,7 +98,7 @@ var _ = Describe("types", func() {
 
 		// Global Network Policies
 		By("creating a Global Network Policies instance using NewResource")
-		rh = GetResourceHelper(TypeCalicoGlobalNetworkPolicies)
+		rh = GetResourceHelperByTypeMeta(TypeCalicoGlobalNetworkPolicies)
 		Expect(rh).ToNot(BeNil())
 		res = rh.NewResource()
 		_, ok = res.(*apiv3.GlobalNetworkPolicy)
@@ -124,7 +113,7 @@ var _ = Describe("types", func() {
 			Kind:       "foo",
 			APIVersion: "bar/v1",
 		}
-		rh = GetResourceHelper(unknown)
+		rh = GetResourceHelperByTypeMeta(unknown)
 		Expect(rh).To(BeNil())
 		res = NewResource(unknown)
 		Expect(res).To(BeNil())

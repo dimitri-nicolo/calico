@@ -7,7 +7,6 @@ import (
 
 	"context"
 	"encoding/json"
-	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -55,20 +54,30 @@ func (a *fakeAuditer) SearchAuditEvents(ctx context.Context, filter *apiv3.Audit
 
 	send := func(verb string, rs []resources.Resource) {
 		for _, r := range rs {
-			raw, _ := json.Marshal(r)
+			var ro *runtime.Unknown
+			tm := resources.GetTypeMeta(r)
+			rh := resources.GetResourceHelperByTypeMeta(tm)
+			if verb != event.VerbDelete {
+				raw, _ := json.Marshal(r)
+				ro = &runtime.Unknown{
+					TypeMeta: runtime.TypeMeta{
+						Kind:       r.GetObjectKind().GroupVersionKind().Kind,
+						APIVersion: r.GetObjectKind().GroupVersionKind().GroupVersion().String(),
+					},
+					Raw: raw,
+				}
+			}
 			ch <- &event.AuditEventResult{
 				Event: &auditv1.Event{
 					Verb: verb,
 					ObjectRef: &auditv1.ObjectReference{
-						Resource: strings.ToLower(r.GetObjectKind().GroupVersionKind().Kind) + "s",
+						Name:       r.GetObjectMeta().GetName(),
+						Namespace:  r.GetObjectMeta().GetNamespace(),
+						APIGroup:   r.GetObjectKind().GroupVersionKind().Group,
+						APIVersion: r.GetObjectKind().GroupVersionKind().Version,
+						Resource:   rh.Plural(),
 					},
-					ResponseObject: &runtime.Unknown{
-						TypeMeta: runtime.TypeMeta{
-							Kind:       r.GetObjectKind().GroupVersionKind().Kind,
-							APIVersion: r.GetObjectKind().GroupVersionKind().GroupVersion().String(),
-						},
-						Raw: raw,
-					},
+					ResponseObject: ro,
 				},
 			}
 		}
@@ -129,8 +138,8 @@ var _ = Describe("Report tests", func() {
 				Spec: apiv3.ReportSpec{
 					ReportType: "report-type",
 					Schedule:   "@daily",
-					EndpointsSelection: &apiv3.EndpointsSelection{
-						EndpointSelector: "has(label1)",
+					Endpoints: &apiv3.EndpointsSelection{
+						Selector: "has(label1)",
 					},
 				},
 			},

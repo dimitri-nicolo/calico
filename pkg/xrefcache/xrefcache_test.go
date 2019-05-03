@@ -90,7 +90,7 @@ var _ = Describe("xref cache in-scope callbacks", func() {
 
 	It("should flag in-scope endpoints matching endpoint selector", func() {
 		tester.RegisterInScopeEndpoints(&apiv3.EndpointsSelection{
-			EndpointSelector: tester.GetSelector(Select1),
+			Selector: tester.GetSelector(Select1),
 		})
 		tester.OnStatusUpdate(syncer.StatusUpdate{
 			Type: syncer.StatusTypeInSync,
@@ -102,7 +102,7 @@ var _ = Describe("xref cache in-scope callbacks", func() {
 
 	It("should flag in-scope endpoints matching endpoint selector and namespace name", func() {
 		tester.RegisterInScopeEndpoints(&apiv3.EndpointsSelection{
-			EndpointSelector: tester.GetSelector(Select1),
+			Selector: tester.GetSelector(Select1),
 			Namespaces: &apiv3.NamesAndLabelsMatch{
 				Names: []string{nsID1.Name},
 			},
@@ -116,7 +116,7 @@ var _ = Describe("xref cache in-scope callbacks", func() {
 
 	It("should flag in-scope endpoints matching endpoint selector and namespace selector", func() {
 		tester.RegisterInScopeEndpoints(&apiv3.EndpointsSelection{
-			EndpointSelector: tester.GetSelector(Select1),
+			Selector: tester.GetSelector(Select1),
 			Namespaces: &apiv3.NamesAndLabelsMatch{
 				Selector: tester.GetSelector(Select2),
 			},
@@ -135,7 +135,7 @@ var _ = Describe("xref cache in-scope callbacks", func() {
 
 	It("should flag in-scope endpoints matching endpoint selector and service account name", func() {
 		tester.RegisterInScopeEndpoints(&apiv3.EndpointsSelection{
-			EndpointSelector: tester.GetSelector(Select2),
+			Selector: tester.GetSelector(Select2),
 			ServiceAccounts: &apiv3.NamesAndLabelsMatch{
 				Names: []string{saName1},
 			},
@@ -177,7 +177,7 @@ var _ = Describe("xref cache in-scope callbacks", func() {
 
 	It("should flag in-scope endpoints matching endpoint selector and service account selector", func() {
 		tester.RegisterInScopeEndpoints(&apiv3.EndpointsSelection{
-			EndpointSelector: tester.GetSelector(Select1),
+			Selector: tester.GetSelector(Select1),
 			ServiceAccounts: &apiv3.NamesAndLabelsMatch{
 				Selector: tester.GetSelector(Select2),
 			},

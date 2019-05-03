@@ -13,5 +13,5 @@ spec:
     - name: events.yaml
   auditEventsSelection:
     resources:
-      - kind: 'GlobalNetworkPolicy'
-      - kind: 'NetworkPolicy'
+      - resource: 'globalnetworkpolicies'
+      - resource: 'networkpolicies'
