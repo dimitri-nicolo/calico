@@ -1,5 +1,5 @@
-hash: f6fed184c660125090ad256d56d615ddcd916dd6fb9c0b478ced01249d255673
-updated: 2019-04-29T21:07:17.713026317Z
+hash: e9bc8e8e92d5fa882c586fd8a91a67b0ed5a597baaef7af7a0c0e54158084383
+updated: 2019-05-03T03:35:22.818956833Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -16,7 +16,7 @@ imports:
   - autorest/azure
   - autorest/date
 - name: github.com/beorn7/perks
-  version: 4b2b341e8d7715fae06375aa633dbb6e91b3fb46
+  version: 3a771d992973f24aa725d07868b467d1ddfceafb
   subpackages:
   - quantile
 - name: github.com/coreos/etcd
@@ -63,7 +63,7 @@ imports:
 - name: github.com/go-openapi/swag
   version: becd2f08beafcca035645a8a101e0e3e18140458
 - name: github.com/go-playground/locales
-  version: f63010822830b6fe52288ee52d5a1151088ce039
+  version: 630ebbb602847eba93e75ae38bbc7bb7abcf1ff3
   subpackages:
   - currency
 - name: github.com/go-playground/universal-translator
@@ -201,7 +201,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 255dcb3da3363498e6ac1defba73c1022224b6bc
+  version: 84ae4a94137e125674079e12009ea198775747e1
   repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib/apiconfig
@@ -258,7 +258,7 @@ imports:
   - prometheus/internal
   - prometheus/promhttp
 - name: github.com/prometheus/client_model
-  version: fd36f4220a901265f90734c3183c5f0c91daa0b8
+  version: 5c3871d89910bfb32f5fcab2aa4b9ec68e65a99f
   subpackages:
   - go
 - name: github.com/prometheus/common
@@ -268,7 +268,11 @@ imports:
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: 87a4384529e0652f5035fb5cc8095faf73ea9b0b
+  version: 1dc9a6cbc91aacc3e8b2d63db4d2e957a5394ac4
+  subpackages:
+  - internal/util
+  - nfs
+  - xfs
 - name: github.com/PuerkitoBio/purell
   version: 0bcb03f4b4d0a9428594752bd2a3b9aa0a9d4bd4
 - name: github.com/PuerkitoBio/urlesc
@@ -479,7 +483,7 @@ imports:
   - pkg/watch
   - third_party/forked/golang/reflect
 - name: k8s.io/apiserver
-  version: accf7b6d6716240eeb6a19d45860beb028943f0d
+  version: 8584d010d11fb93499b4d91e29617da398458596
   subpackages:
   - pkg/apis/audit
 - name: k8s.io/client-go
@@ -549,7 +553,7 @@ imports:
   - util/jsonpath
   - util/retry
 - name: k8s.io/kube-openapi
-  version: c5d3b0f4bee0a2c36e3f715a6b15dcc231c64adc
+  version: 91cfa479c814065e420cee7ed227db0f63a5854e
   subpackages:
   - pkg/common
 testImports: []
