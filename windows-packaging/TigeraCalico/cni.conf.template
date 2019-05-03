@@ -5,7 +5,9 @@
   "cniVersion": "0.3.0",
   "type": "calico",
   "mode": "__MODE__",
-  "VSID": 4096,
+
+  "vxlan_mac_prefix":  "__MAC_PREFIX__",
+  "vxlan_vni": __VNI__,
 
   "policy": {
     "type": "k8s"

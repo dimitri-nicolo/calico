@@ -21,6 +21,14 @@ $env:CNI_IPAM_TYPE = "calico-ipam"
 # Set to match your Kubernetes service CIDR.
 $env:K8s_SERVICE_CIDR = "10.96.0.0/12"
 
+## VXLAN-specific configuration.
+
+# The VXLAN VNI / VSID.  Must match the VXLANVNI felix configuration parameter used
+# for Linux nodes.
+$env:VXLAN_VNI = "4096"
+# Prefix used when generating MAC addresses for virtual NICs.
+$env:VXLAN_MAC_PREFIX = "0E-2A"
+
 ## Datastore configuration:
 
 # Set this to "kubernetes" to use the kubernetes datastore, or "etcdv3" for etcd.
