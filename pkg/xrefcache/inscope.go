@@ -28,8 +28,8 @@ var (
 func calculateInScopeEndpointsSelector(e *apiv3.EndpointsSelection) (apiv3.ResourceID, string, error) {
 	// Start of with the endpoint selector (if specified)
 	var updated string
-	if e != nil && e.EndpointSelector != "" {
-		updated = fmt.Sprintf("(%s)", e.EndpointSelector)
+	if e != nil && e.Selector != "" {
+		updated = fmt.Sprintf("(%s)", e.Selector)
 	}
 
 	// If the namespace selector is specified then include that in our selector, ANDing the selectors together.

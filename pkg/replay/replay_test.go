@@ -12,6 +12,7 @@ import (
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/tigera/compliance/pkg/event"
 	mockEvent "github.com/tigera/compliance/pkg/event/mock"
 	"github.com/tigera/compliance/pkg/list"
 	mockList "github.com/tigera/compliance/pkg/list/mock"
@@ -94,15 +95,15 @@ var _ = Describe("Replay", func() {
 		By("setting a network policy audit event before the start time")
 		np.TypeMeta = resources.TypeCalicoNetworkPolicies
 		np.Spec.Selector = `foo == "baz"`
-		eventer.LoadAuditEvent(VerbUpdate, np, baseTime.Add(30*time.Second), "101")
+		eventer.LoadAuditEvent(event.VerbUpdate, np, baseTime.Add(30*time.Second), "101")
 
 		By("setting a network policy audit event after the start time")
 		np.Spec.Selector = `foo == "barbaz"`
-		eventer.LoadAuditEvent(VerbUpdate, np, baseTime.Add(75*time.Second), "102")
+		eventer.LoadAuditEvent(event.VerbUpdate, np, baseTime.Add(75*time.Second), "102")
 
 		By("setting a network policy audit event after the start time but with a bad resource version")
 		np.Spec.Selector = `foo == "blah"`
-		eventer.LoadAuditEvent(VerbUpdate, np, baseTime.Add(90*time.Second), "100")
+		eventer.LoadAuditEvent(event.VerbUpdate, np, baseTime.Add(90*time.Second), "100")
 
 		// Make the replay call.
 		replayer.Start(ctx)

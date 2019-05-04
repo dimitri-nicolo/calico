@@ -17,13 +17,6 @@ import (
 	"github.com/tigera/compliance/pkg/syncer"
 )
 
-const (
-	VerbCreate = "create"
-	VerbUpdate = "update"
-	VerbPatch  = "patch"
-	VerbDelete = "delete"
-)
-
 type replayer struct {
 	resources  map[metav1.TypeMeta]map[apiv3.ResourceID]resources.Resource
 	start, end time.Time
@@ -135,7 +128,7 @@ func (r *replayer) replay(ctx context.Context, kind *metav1.TypeMeta, from, to *
 
 		// Nil resource and nil error means a status object.
 		if res == nil {
-			clog.Info("No resource in audit event (maybe a status event) - skipping")
+			clog.Info("No resource in audit event (maybe a status event or wrong event type) - skipping")
 			continue
 		}
 
@@ -146,7 +139,7 @@ func (r *replayer) replay(ctx context.Context, kind *metav1.TypeMeta, from, to *
 		update := syncer.Update{ResourceID: id, Resource: res}
 
 		switch ev.Event.Verb {
-		case VerbCreate, VerbUpdate, VerbPatch:
+		case event.VerbCreate, event.VerbUpdate, event.VerbPatch:
 			clog.Debug("setting event")
 			update.Type = syncer.UpdateTypeSet
 
@@ -170,7 +163,7 @@ func (r *replayer) replay(ctx context.Context, kind *metav1.TypeMeta, from, to *
 				}
 			}
 			r.resources[kind2][id] = res
-		case VerbDelete:
+		case event.VerbDelete:
 			clog.Debug("deleting event")
 			update.Type = syncer.UpdateTypeDeleted
 			delete(r.resources[kind2], id)

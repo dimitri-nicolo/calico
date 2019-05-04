@@ -20,7 +20,7 @@ var _ = Describe("inscope endpoint helpers", func() {
 
 	It("Handles EP selector but no NS or SA", func() {
 		_, s, err := calculateInScopeEndpointsSelector(&apiv3.EndpointsSelection{
-			EndpointSelector: "x == \"a\"",
+			Selector: "x == \"a\"",
 		})
 		Expect(err).ToNot(HaveOccurred())
 		Expect(s).To(Equal("x == \"a\""))
@@ -126,7 +126,7 @@ var _ = Describe("inscope endpoint helpers", func() {
 	It("Handles EP, SA and NS match", func() {
 		By("calculating with SA and NS name match")
 		_, s, err := calculateInScopeEndpointsSelector(&apiv3.EndpointsSelection{
-			EndpointSelector: "x == \"y\"",
+			Selector: "x == \"y\"",
 			Namespaces: &apiv3.NamesAndLabelsMatch{
 				Names: []string{"ns1"},
 			},

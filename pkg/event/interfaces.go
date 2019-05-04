@@ -3,6 +3,7 @@ package event
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -10,6 +11,13 @@ import (
 	auditv1 "k8s.io/apiserver/pkg/apis/audit"
 
 	"github.com/tigera/compliance/pkg/resources"
+)
+
+const (
+	VerbCreate = "create"
+	VerbUpdate = "update"
+	VerbPatch  = "patch"
+	VerbDelete = "delete"
 )
 
 type AuditEventResult struct {
@@ -22,27 +30,71 @@ type Fetcher interface {
 }
 
 // ExtractResourceFromAuditEvent determines the resource kind located within an audit event
-//   and coerces the response object into the appropriate type.
+// and coerces the response object into the appropriate type. This may return a nil resource with
+// no error if the resource is not handled by the reporter code.
 func ExtractResourceFromAuditEvent(event *auditv1.Event) (resources.Resource, error) {
-	clog := log.WithField("kind", event.ObjectRef.Resource)
-	// Extract group version kind from event response object.
-	kind := new(metav1.TypeMeta)
-	if err := json.Unmarshal(event.ResponseObject.Raw, kind); err != nil {
-		clog.WithError(err).WithField("json", string(event.ResponseObject.Raw)).Error("failed to marshal json")
-		return nil, err
-	}
-
-	// Extract resource from event response object.
-	clog = log.WithField("type", kind)
-	rh := resources.GetResourceHelper(*kind)
-	if rh == nil {
+	// Check that the event is configuration event.
+	switch event.Verb {
+	case VerbCreate, VerbUpdate, VerbPatch, VerbDelete:
+		log.Debug("Event is a configuration event - process")
+	default:
+		log.Debug("Event is not a configuration event - skipping")
 		return nil, nil
 	}
+
+	// Extract the Object reference and use that to instantiate a new instance of the resource. We always expect
+	// this to be set for a configuration event.
+	if event.ObjectRef == nil {
+		logEventError(event, "No objectRef specified for configuration event")
+		return nil, errors.New("no objectRef specified in audit log")
+	} else if event.ObjectRef.Resource == "" {
+		logEventError(event, "No objectRef.Resource specified for configuration event")
+		return nil, errors.New("no objectRef.Resource specified in audit log")
+	}
+
+	// Set up a context logger.
+	clog := log.WithField("resource", event.ObjectRef.Resource)
+
+	// We only have resource helpers for events that we need to explicitly process. However, the audit and replay
+	// processing may read audit logs that are for different resource types - therefore it's perfectly reasonable
+	// to not have an associated resource helper, just skip.
+	rh := resources.GetResourceHelperByObjectRef(*event.ObjectRef)
+	if rh == nil {
+		clog.Info("Object type is not required for report processing - skipping")
+		return nil, nil
+	}
+
+	// Create a new resource to unmarshal the event into.
 	res := rh.NewResource()
+
+	if event.Verb == VerbDelete {
+		// This is a delete event, the response object will not be extractable so just return what we can.
+		//
+		// Sanity check that we have a name specified. It must be specified in the ObjectRef for a delete event although
+		// the same cannot be said for create events where the name may not necessarily be specified.
+		if event.ObjectRef.Name == "" {
+			logEventError(event, "No objectRef.Name specified for delete event")
+			return nil, errors.New("no objectReference.Name specified in audit log")
+		}
+		res.GetObjectMeta().SetNamespace(event.ObjectRef.Namespace)
+		res.GetObjectMeta().SetName(event.ObjectRef.Name)
+		return res, nil
+	}
+
 	if err := json.Unmarshal(event.ResponseObject.Raw, res); err != nil {
-		clog.WithError(err).WithField("json", string(event.ResponseObject.Raw)).Error("failed to marshal json")
+		clog.WithError(err).WithField("ResponseObject.Raw", string(event.ResponseObject.Raw)).Errorf("Failed to unmarshal responseObject")
 		return nil, err
 	}
 
 	return res, nil
+}
+
+// logEventError logs the audit event with an error message, or just the AuditID if marshaling fails for some
+// reason.
+func logEventError(event *auditv1.Event, txt string) {
+	if b, err := json.Marshal(event); err == nil {
+		log.WithField("Event", string(b)).Error(txt)
+	} else {
+		log.WithField("AuditID", event.AuditID).Error(txt)
+	}
 }

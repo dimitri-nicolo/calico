@@ -141,13 +141,13 @@ func (r *reporter) run() error {
 	r.healthy()
 
 	if r.cfg.ReportType.Spec.IncludeEndpointData ||
-		(r.cfg.ReportType.Spec.AuditEventsSelection != nil && r.cfg.Report.Spec.EndpointsSelection != nil) {
+		(r.cfg.ReportType.Spec.AuditEventsSelection != nil && r.cfg.Report.Spec.Endpoints != nil) {
 		// We either want endpoint data in the report, or we are gathering audit logs and have specified and in-scope
 		// endpoints filter with which we will filter in-scope resources.
 		r.clog.Debug("Including endpoint data in report, or require endpoints for filtering")
 
 		// Register the endpoint selectors to specify which endpoints we will receive notification for.
-		if err := r.xc.RegisterInScopeEndpoints(r.cfg.Report.Spec.EndpointsSelection); err != nil {
+		if err := r.xc.RegisterInScopeEndpoints(r.cfg.Report.Spec.Endpoints); err != nil {
 			r.clog.WithError(err).Debug("Unable to register inscope endpoints selection")
 			return nil
 		}
@@ -313,15 +313,19 @@ func (r *reporter) addAuditEvents() error {
 		&r.cfg.ParsedReportStart, &r.cfg.ParsedReportEnd) {
 		// If we received an error then log, but carry on as best we can.
 		if e.Err != nil {
+			r.clog.WithError(e.Err).Error("Error querying audit logs from store")
 			return e.Err
 		}
 
 		// If we were filtering endpoints, then check to see if the audit event is associated with any of our in-scope
 		// types, otherwise we aren't filtering at all.
-		if r.cfg.Report.Spec.EndpointsSelection != nil {
+		if r.cfg.Report.Spec.Endpoints != nil {
 			// Normalize the resource kind in the event log.
 			if res, err := event.ExtractResourceFromAuditEvent(e.Event); err != nil {
 				r.clog.WithError(err).Error("Unable to extract resource from audit event")
+				continue
+			} else if res == nil {
+				r.clog.Info("Filtering out unhandled event type")
 				continue
 			} else if id := resources.GetResourceID(res); !r.isInScope(id) {
 				r.clog.Infof("Filtering out not-in-scope resource from audit events: %s", id)
@@ -331,11 +335,11 @@ func (r *reporter) addAuditEvents() error {
 
 		// The audit event is being included. Update the stats and append the event log.
 		switch e.Verb {
-		case replay.VerbCreate:
+		case event.VerbCreate:
 			r.data.AuditSummary.NumCreate++
-		case replay.VerbPatch, replay.VerbUpdate:
+		case event.VerbPatch, event.VerbUpdate:
 			r.data.AuditSummary.NumModify++
-		case replay.VerbDelete:
+		case event.VerbDelete:
 			r.data.AuditSummary.NumDelete++
 		}
 		r.data.AuditEvents = append(r.data.AuditEvents, *e.Event)

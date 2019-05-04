@@ -52,8 +52,18 @@ func (f *Fetcher) LoadAuditEvent(verb string, res resources.Resource, timestamp 
 	ev := new(auditv1.Event)
 	ev.Verb = verb
 
+	// Get the resource helper.
+	tm := resources.GetTypeMeta(res)
+	rh := resources.GetResourceHelperByTypeMeta(tm)
+
 	// Set the objectRef
-	ev.ObjectRef = &auditv1.ObjectReference{}
+	ev.ObjectRef = &auditv1.ObjectReference{
+		Name:       res.GetObjectMeta().GetName(),
+		Namespace:  res.GetObjectMeta().GetNamespace(),
+		APIGroup:   res.GetObjectKind().GroupVersionKind().Group,
+		APIVersion: res.GetObjectKind().GroupVersionKind().Version,
+		Resource:   rh.Plural(),
+	}
 
 	// Set the resource version
 	res.GetObjectMeta().SetResourceVersion(resVer)
@@ -69,6 +79,5 @@ func (f *Fetcher) LoadAuditEvent(verb string, res resources.Resource, timestamp 
 	ev.StageTimestamp = metav1.MicroTime{timestamp}
 
 	// Append to event array
-	tm := resources.GetTypeMeta(res)
 	f.data[tm] = append(f.data[tm], &event.AuditEventResult{ev, nil})
 }

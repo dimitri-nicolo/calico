@@ -80,7 +80,7 @@ func NewStep(name string, scaleName string, step int, i resources.Resource, acti
 
 func (s *Step) Clone() Step {
 	n := *s
-	rh := resources.GetResourceHelper(s.GetTypeMeta())
+	rh := resources.GetResourceHelperByTypeMeta(s.GetTypeMeta())
 	if rh == nil {
 		logrus.Fatal("Failed to get resource helper to clone step")
 		return n
@@ -112,7 +112,7 @@ func readStep(log *logrus.Entry, scaleName string, stepCount int, path string) (
 
 	// Extract resource from event response object.
 	clog := log.WithFields(logrus.Fields{"type": kind})
-	rh := resources.GetResourceHelper(kind)
+	rh := resources.GetResourceHelperByTypeMeta(kind)
 	if rh == nil {
 		clog.WithField("yaml", string(data)).Warn("Failed to get resource helper")
 		return step, nil

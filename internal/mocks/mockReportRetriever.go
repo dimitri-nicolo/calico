@@ -20,10 +20,10 @@ func (c *MockReportRetriever) RetrieveArchivedReport(id string) (*report.Archive
 	rd.StartTime = metav1.Now()
 	rd.EndTime = metav1.Now()
 
-	rd.ReportSpec.EndpointsSelection.EndpointSelector = "EP_selector"
+	rd.ReportSpec.Endpoints.Selector = "EP_selector"
 
-	rd.ReportSpec.EndpointsSelection.Namespaces = &apiv3.NamesAndLabelsMatch{Selector: "NS_selector"}
-	rd.ReportSpec.EndpointsSelection.ServiceAccounts = &apiv3.NamesAndLabelsMatch{Selector: "SA_selector"}
+	rd.ReportSpec.Endpoints.Namespaces = &apiv3.NamesAndLabelsMatch{Selector: "NS_selector"}
+	rd.ReportSpec.Endpoints.ServiceAccounts = &apiv3.NamesAndLabelsMatch{Selector: "SA_selector"}
 
 	r := report.NewArchivedReport(&rd, "UI summary 0")
 
