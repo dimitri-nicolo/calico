@@ -1,7 +1,7 @@
-# This manifest contains the default report types
 apiVersion: projectcalico.org/v3
 kind: GlobalReportType
 metadata:
+  creationTimestamp: null
   labels:
     global-report-type: inventory
   name: inventory
@@ -12,11 +12,11 @@ spec:
       {{ $c := csv }}
       {{- $c := $c.AddColumn "startTime"                     "{{ dateRfc3339 .StartTime }}" }}
       {{- $c := $c.AddColumn "endTime"                       "{{ dateRfc3339 .EndTime }}" }}
-      {{- $c := $c.AddColumn "endpointSelector"              "{{ if .ReportSpec.EndpointsSelection }}{{ .ReportSpec.EndpointsSelection.EndpointSelector }}{{ end }}" }}
-      {{- $c := $c.AddColumn "namespaceNames"                "{{ if .ReportSpec.EndpointsSelection }}{{ if .ReportSpec.EndpointsSelection.Namespaces }}{{ join \";\" .ReportSpec.EndpointsSelection.Namespaces.Names }}{{ end }}{{ end }}" }}
-      {{- $c := $c.AddColumn "namespaceSelector"             "{{ if .ReportSpec.EndpointsSelection }}{{ if .ReportSpec.EndpointsSelection.Namespaces }}{{ .ReportSpec.EndpointsSelection.Namespaces.Selector }}{{ end }}{{ end }}" }}
-      {{- $c := $c.AddColumn "serviceAccountNames"           "{{ if .ReportSpec.EndpointsSelection }}{{ if .ReportSpec.EndpointsSelection.ServiceAccounts }}{{ join \";\" .ReportSpec.EndpointsSelection.ServiceAccounts.Names }}{{ end }}{{ end }}" }}
-      {{- $c := $c.AddColumn "serviceAccountSelectors"       "{{ if .ReportSpec.EndpointsSelection }}{{ if .ReportSpec.EndpointsSelection.ServiceAccounts }}{{ .ReportSpec.EndpointsSelection.ServiceAccounts.Selector }}{{ end }}{{ end }}" }}
+      {{- $c := $c.AddColumn "endpointSelector"              "{{ if .ReportSpec.Endpoints }}{{ .ReportSpec.Endpoints.Selector }}{{ end }}" }}
+      {{- $c := $c.AddColumn "namespaceNames"                "{{ if .ReportSpec.Endpoints }}{{ if .ReportSpec.Endpoints.Namespaces }}{{ join \";\" .ReportSpec.Endpoints.Namespaces.Names }}{{ end }}{{ end }}" }}
+      {{- $c := $c.AddColumn "namespaceSelector"             "{{ if .ReportSpec.Endpoints }}{{ if .ReportSpec.Endpoints.Namespaces }}{{ .ReportSpec.Endpoints.Namespaces.Selector }}{{ end }}{{ end }}" }}
+      {{- $c := $c.AddColumn "serviceAccountNames"           "{{ if .ReportSpec.Endpoints }}{{ if .ReportSpec.Endpoints.ServiceAccounts }}{{ join \";\" .ReportSpec.Endpoints.ServiceAccounts.Names }}{{ end }}{{ end }}" }}
+      {{- $c := $c.AddColumn "serviceAccountSelectors"       "{{ if .ReportSpec.Endpoints }}{{ if .ReportSpec.Endpoints.ServiceAccounts }}{{ .ReportSpec.Endpoints.ServiceAccounts.Selector }}{{ end }}{{ end }}" }}
       {{- $c := $c.AddColumn "endpointsNumInScope"           "{{ .EndpointsSummary.NumTotal }}" }}
       {{- $c := $c.AddColumn "endpointsNumIngressProtected"  "{{ .EndpointsSummary.NumIngressProtected }}" }}
       {{- $c := $c.AddColumn "endpointsNumEgressProtected"   "{{ .EndpointsSummary.NumEgressProtected }}" }}
@@ -79,11 +79,11 @@ spec:
       {{ $c := csv }}
       {{- $c := $c.AddColumn "startTime"                             "{{ dateRfc3339 .StartTime }}" }}
       {{- $c := $c.AddColumn "endTime"                               "{{ dateRfc3339 .EndTime }}" }}
-      {{- $c := $c.AddColumn "endpointSelector"                      "{{ if .ReportSpec.EndpointsSelection }}{{ .ReportSpec.EndpointsSelection.EndpointSelector }}{{ end }}" }}
-      {{- $c := $c.AddColumn "namespaceNames"                        "{{ if .ReportSpec.EndpointsSelection }}{{ if .ReportSpec.EndpointsSelection.Namespaces }}{{ join \";\" .ReportSpec.EndpointsSelection.Namespaces.Names }}{{ end }}{{ end }}" }}
-      {{- $c := $c.AddColumn "namespaceSelector"                     "{{ if .ReportSpec.EndpointsSelection }}{{ if .ReportSpec.EndpointsSelection.Namespaces }}{{ .ReportSpec.EndpointsSelection.Namespaces.Selector }}{{ end }}{{ end }}" }}
-      {{- $c := $c.AddColumn "serviceAccountNames"                   "{{ if .ReportSpec.EndpointsSelection }}{{ if .ReportSpec.EndpointsSelection.ServiceAccounts }}{{ join \";\" .ReportSpec.EndpointsSelection.ServiceAccounts.Names }}{{ end }}{{ end }}" }}
-      {{- $c := $c.AddColumn "serviceAccountSelectors"               "{{ if .ReportSpec.EndpointsSelection }}{{ if .ReportSpec.EndpointsSelection.ServiceAccounts }}{{ .ReportSpec.EndpointsSelection.ServiceAccounts.Selector }}{{ end }}{{ end }}" }}
+      {{- $c := $c.AddColumn "endpointSelector"                      "{{ if .ReportSpec.Endpoints }}{{ .ReportSpec.Endpoints.Selector }}{{ end }}" }}
+      {{- $c := $c.AddColumn "namespaceNames"                        "{{ if .ReportSpec.Endpoints }}{{ if .ReportSpec.Endpoints.Namespaces }}{{ join \";\" .ReportSpec.Endpoints.Namespaces.Names }}{{ end }}{{ end }}" }}
+      {{- $c := $c.AddColumn "namespaceSelector"                     "{{ if .ReportSpec.Endpoints }}{{ if .ReportSpec.Endpoints.Namespaces }}{{ .ReportSpec.Endpoints.Namespaces.Selector }}{{ end }}{{ end }}" }}
+      {{- $c := $c.AddColumn "serviceAccountNames"                   "{{ if .ReportSpec.Endpoints }}{{ if .ReportSpec.Endpoints.ServiceAccounts }}{{ join \";\" .ReportSpec.Endpoints.ServiceAccounts.Names }}{{ end }}{{ end }}" }}
+      {{- $c := $c.AddColumn "serviceAccountSelectors"               "{{ if .ReportSpec.Endpoints }}{{ if .ReportSpec.Endpoints.ServiceAccounts }}{{ .ReportSpec.Endpoints.ServiceAccounts.Selector }}{{ end }}{{ end }}" }}
       {{- $c := $c.AddColumn "endpointsNumIngressProtected"          "{{ .EndpointsSummary.NumIngressProtected }}" }}
       {{- $c := $c.AddColumn "endpointsNumEgressProtected"           "{{ .EndpointsSummary.NumEgressProtected }}" }}
       {{- $c := $c.AddColumn "endpointsNumIngressUnprotected"        "{{ sub .EndpointsSummary.NumTotal .EndpointsSummary.NumIngressProtected }}" }}
@@ -128,25 +128,26 @@ spec:
 apiVersion: projectcalico.org/v3
 kind: GlobalReportType
 metadata:
+  creationTimestamp: null
   labels:
     global-report-type: policy-audit
   name: policy-audit
 spec:
   auditEventsSelection:
     resources:
-    - kind: GlobalNetworkPolicy
-    - kind: NetworkPolicy
+    - resource: globalnetworkpolicies
+    - resource: networkpolicies
   downloadTemplates:
   - name: summary.csv
     template: |-
       {{ $c := csv }}
       {{- $c := $c.AddColumn "startTime"               "{{ dateRfc3339 .StartTime }}" }}
       {{- $c := $c.AddColumn "endTime"                 "{{ dateRfc3339 .EndTime }}" }}
-      {{- $c := $c.AddColumn "endpointSelector"        "{{ if .ReportSpec.EndpointsSelection }}{{ .ReportSpec.EndpointsSelection.EndpointSelector }}{{ end }}" }}
-      {{- $c := $c.AddColumn "namespaceNames"          "{{ if .ReportSpec.EndpointsSelection }}{{ if .ReportSpec.EndpointsSelection.Namespaces }}{{ join \";\" .ReportSpec.EndpointsSelection.Namespaces.Names }}{{ end }}{{ end }}" }}
-      {{- $c := $c.AddColumn "namespaceSelector"       "{{ if .ReportSpec.EndpointsSelection }}{{ if .ReportSpec.EndpointsSelection.Namespaces }}{{ .ReportSpec.EndpointsSelection.Namespaces.Selector }}{{ end }}{{ end }}" }}
-      {{- $c := $c.AddColumn "serviceAccountNames"     "{{ if .ReportSpec.EndpointsSelection }}{{ if .ReportSpec.EndpointsSelection.ServiceAccounts }}{{ join \";\" .ReportSpec.EndpointsSelection.ServiceAccounts.Names }}{{ end }}{{ end }}" }}
-      {{- $c := $c.AddColumn "serviceAccountSelectors" "{{ if .ReportSpec.EndpointsSelection }}{{ if .ReportSpec.EndpointsSelection.ServiceAccounts }}{{ .ReportSpec.EndpointsSelection.ServiceAccounts.Selector }}{{ end }}{{ end }}" }}
+      {{- $c := $c.AddColumn "endpointSelector"        "{{ if .ReportSpec.Endpoints }}{{ .ReportSpec.Endpoints.Selector }}{{ end }}" }}
+      {{- $c := $c.AddColumn "namespaceNames"          "{{ if .ReportSpec.Endpoints }}{{ if .ReportSpec.Endpoints.Namespaces }}{{ join \";\" .ReportSpec.Endpoints.Namespaces.Names }}{{ end }}{{ end }}" }}
+      {{- $c := $c.AddColumn "namespaceSelector"       "{{ if .ReportSpec.Endpoints }}{{ if .ReportSpec.Endpoints.Namespaces }}{{ .ReportSpec.Endpoints.Namespaces.Selector }}{{ end }}{{ end }}" }}
+      {{- $c := $c.AddColumn "serviceAccountNames"     "{{ if .ReportSpec.Endpoints }}{{ if .ReportSpec.Endpoints.ServiceAccounts }}{{ join \";\" .ReportSpec.Endpoints.ServiceAccounts.Names }}{{ end }}{{ end }}" }}
+      {{- $c := $c.AddColumn "serviceAccountSelectors" "{{ if .ReportSpec.Endpoints }}{{ if .ReportSpec.Endpoints.ServiceAccounts }}{{ .ReportSpec.Endpoints.ServiceAccounts.Selector }}{{ end }}{{ end }}" }}
       {{- $c := $c.AddColumn "numCreatedPolicies"      "{{ .AuditSummary.NumCreate }}" }}
       {{- $c := $c.AddColumn "numModifiedPolicies"     "{{ .AuditSummary.NumModify }}" }}
       {{- $c := $c.AddColumn "numDeletedPolicies"      "{{ .AuditSummary.NumDelete }}" }}
@@ -157,10 +158,10 @@ spec:
     template: '{{ toYaml .AuditEvents }}'
   uiSummaryTemplate:
     name: ui-summary.json
-    template: '{"heading":"Network policy configuration changes","type":"panel","widgets":[{"data":[{"label":"Created","value":{{
-      .AuditSummary.NumCreate }}}],"heading":"Network policies created","summary":{"label":"Total","total":{{
+    template: '{"heading":"Network Policy Configuration Changes","type":"panel","widgets":[{"data":[{"label":"Created","value":{{
+      .AuditSummary.NumCreate }}}],"heading":"Network Policies","summary":{"label":"Total","total":{{
       .AuditSummary.NumTotal }}},"type":"radialbarchart"},{"data":[{"label":"Modified","value":{{
-      .AuditSummary.NumModify }}}],"heading":"Network policies modified","summary":{"label":"Total","total":{{
+      .AuditSummary.NumModify }}}],"heading":"Network Policies","summary":{"label":"Total","total":{{
       .AuditSummary.NumTotal }}},"type":"radialbarchart"},{"data":[{"label":"Deleted","value":{{
-      .AuditSummary.NumDelete }}}],"heading":"Network policies deleted","summary":{"label":"Total","total":{{
+      .AuditSummary.NumDelete }}}],"heading":"Network Policies","summary":{"label":"Total","total":{{
       .AuditSummary.NumTotal }}},"type":"radialbarchart"}]}'

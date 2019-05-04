@@ -18,7 +18,7 @@ metadata:
     deployment: production
 spec:
   reportType: inventory
-  endpointsSelection:
+  endpoints:
     namespaces:
       names:
         - public

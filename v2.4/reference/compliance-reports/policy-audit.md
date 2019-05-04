@@ -19,7 +19,7 @@ metadata:
     deployment: production
 spec:
   reportType: policy-audit
-  endpointsSelection:
+  endpoints:
     namespaces:
       names:
         - public
