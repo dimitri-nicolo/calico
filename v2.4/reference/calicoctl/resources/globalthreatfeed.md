@@ -94,6 +94,17 @@ create and update documents in Elasticsearch.
 
 `IPSet` is the only supported `content` type at present, and is a list of IP addresses or IP prefixes.
 
+#### Status
+
+The `status` is read-only for users and updated by the `intrusion-detection-controller` component as
+it processes global threat feeds.
+
+| Field                | Description                                                                      |
+|----------------------|----------------------------------------------------------------------------------|
+| lastSuccessfulSync   | Timestamp of the last successful update to the threat intelligence from the feed |
+| lastSuccessfulSearch | Timestamp of the last successful search of flow logs for threats                 |
+| errorConditions      | List of errors preventing operation of the updates or search                     |
+
 #### GlobalNetworkSetSync
 
 When you include a `globalNetworkSet` stanza in a global threat feed, it triggers synchronization
@@ -109,7 +120,8 @@ where `<threat feed name>` is the name of the global threat feed it is synced wi
 
 #### Pull
 
-When you include a `pull` stanza in a global threat feed, it triggers a periodic pull of new data.
+When you include a `pull` stanza in a global threat feed, it triggers a periodic pull of new data. On successful
+pull and update to the data store, we update the `status.lastSuccessfulSync` timestamp.
 
 If you do not include a `pull` stanza, you must configure your system to [push](#push-or-pull) updates. 
 
@@ -117,7 +129,6 @@ If you do not include a `pull` stanza, you must configure your system to [push](
 |--------|---------------------------------------|-----------------|-----------------------------------|---------|
 | period | How often to pull an update           | >= 5m           | [Duration string][parse-duration] | 24h     |
 | http   | Pull the update from an HTTP endpoint |                 | [HTTPPull](#httppull)             |         |
-
 
 #### HTTPPull
 
