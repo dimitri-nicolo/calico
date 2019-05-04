@@ -4,7 +4,7 @@ title: Global Report Resource (GlobalReport)
 
 A global report resource is a configuration for generating compliance reports. A global report configuration in {{ site.prodname }} lets you:
 - Specify report contents, frequency, and data filtering
-- Specify the node(s) to include in report generation jobs
+- Specify the node(s) on which to run the report generation jobs
 - Enable/disable creation of new jobs for generating the report
 
 This resource is not supported in `calicoctl`.
@@ -35,7 +35,7 @@ metadata:
   name: hourly-accounts-networkaccess
 spec:
   reportType: network-access
-  endpointsSelection:
+  endpoints:
     namespaces:
       names: ["payable", "collections", "payroll"]
   schedule: 0 * * * *
@@ -49,10 +49,10 @@ metadata:
 spec:
   reportType: policy-audit
   schedule:  0 0 1 * *
-  endpointsSelection:
-    serviceAccount:
+  endpoints:
+    serviceAccounts:
       names: ["controller"]
-    namespace:
+    namespaces:
       names: ["widgets"]
 ```
 
@@ -67,22 +67,22 @@ spec:
 
 #### Spec
 
-| Field                | Description                                    | Required | Accepted Values | Schema    |
-|----------------------|------------------------------------------------|----------|-----------------|-----------|
-| reportType           | The type of report to produce.  This field controls the content of the report - see the links for each type for more details. | Yes | [inventory](/{{page.version}}/reference/compliance-reports/inventory), [network-access](/{{page.version}}/reference/compliance-reports/network-access), [policy-audit](/{{page.version}}/reference/compliance-reports/policy-audit) | string |
-| endpointsSelection   | Specify which endpoints are in scope. If omitted, selects everything. ||| [EndpointsSelection](#endpointsselection) |
-| schedule             | Configure report frequency by specifying start and end time in [cron-format][cron-format]. Reports are started 30 minutes (configurable) after the scheduled value to allow enough time for data archival. A maximum limit of two schedules per hour is enforced. | Yes || string |
-| jobNodeSelector      | Specify the node(s) for scheduling the report jobs using selectors. ||| map |
-| suspend              | Disable future scheduled report jobs. In-flight reports are not affected. ||| bool |
+| Field           | Description                                    | Required | Accepted Values | Schema    |
+|-----------------|------------------------------------------------|----------|-----------------|-----------|
+| reportType      | The type of report to produce.  This field controls the content of the report - see the links for each type for more details. | Yes | [inventory](/{{page.version}}/reference/compliance-reports/inventory), [network-access](/{{page.version}}/reference/compliance-reports/network-access), [policy-audit](/{{page.version}}/reference/compliance-reports/policy-audit) | string |
+| endpoints       | Specify which endpoints are in scope. If omitted, selects everything. ||| [EndpointsSelection](#endpointsselection) |
+| schedule        | Configure report frequency by specifying start and end time in [cron-format][cron-format]. Reports are started 30 minutes (configurable) after the scheduled value to allow enough time for data archival. A maximum limit of 12 schedules per hour is enforced (an average of one report every 5 minutes). | Yes || string |
+| jobNodeSelector | Specify the node(s) for scheduling the report jobs using selectors. ||| map |
+| suspend         | Disable future scheduled report jobs. In-flight reports are not affected. ||| bool |
 
 
 #### EndpointsSelection
 
-| Field            | Description                                  | Schema              |
-|------------------|----------------------------------------------|---------------------|
-| endpointSelector | Endpoint label selector to restrict endpoint selection. | string              |
-| namespaces       | Namespace name and label selector to restrict endpoints by selected namespaces. | NamesAndLabelsMatch |
-| serviceAccounts  | Service account name and label selector to restrict endpoints by selected service accounts. | NamesAndLabelsMatch |
+| Field           | Description                                  | Schema              |
+|-----------------|----------------------------------------------|---------------------|
+| selector        | Endpoint label selector to restrict endpoint selection. | string              |
+| namespaces      | Namespace name and label selector to restrict endpoints by selected namespaces. | NamesAndLabelsMatch |
+| serviceAccounts | Service account name and label selector to restrict endpoints by selected service accounts. | NamesAndLabelsMatch |
 
 #### NamesAndLabelsMatch
 

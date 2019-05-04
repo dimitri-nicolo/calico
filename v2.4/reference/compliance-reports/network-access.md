@@ -18,7 +18,7 @@ metadata:
     deployment: production
 spec:
   reportType: network-access
-  endpointsSelection:
+  endpoints:
     namespaces:
       names:
         - public
