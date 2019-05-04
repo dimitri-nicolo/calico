@@ -9,10 +9,10 @@ import (
 )
 
 type ReportRbacHelper interface {
-	CanViewReport(string, string) (bool, error)
-	CanListReports(string) (bool, error)
-	CanGetReport(string) (bool, error)
-	CanGetReportType(string) (bool, error)
+	CanViewReport(reportTypeName string, reportName string) (bool, error)
+	CanListReports(reportName string) (bool, error)
+	CanGetReport(reportName string) (bool, error)
+	CanGetReportType(reportTypeName string) (bool, error)
 }
 
 // reportRbacHelper implements helper functionality to determine whether the API user is able to view

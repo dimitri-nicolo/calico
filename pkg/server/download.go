@@ -41,6 +41,22 @@ func (s *server) handleDownloadReports(response http.ResponseWriter, request *ht
 		http.Error(response, "Unable to download report", http.StatusServiceUnavailable)
 	}
 
+	// Create an RBAC helper to see if we can download this report
+	rbac := s.rhf.NewReportRbacHelper(request)
+	allow, err := rbac.CanViewReport(r.ReportTypeName, r.ReportName)
+	if err != nil {
+		log.WithError(err).Error("Unable to determine access permissions for request")
+		http.Error(response, err.Error(), http.StatusServiceUnavailable)
+		return
+	}
+
+	// Deny if not allowed access to report
+	if !allow {
+		log.Debug("Requester has insufficient permissions to view report")
+		http.Error(response, "Access denied", http.StatusForbidden)
+		return
+	}
+
 	// Obtain the current set of configured ReportTypes.
 	rts, err := s.getReportTypes()
 	if err != nil {

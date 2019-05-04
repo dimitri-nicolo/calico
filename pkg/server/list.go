@@ -78,12 +78,17 @@ func (s *server) handleListReports(response http.ResponseWriter, request *http.R
 			}
 		}
 
-		// If the user can view the report then include the formats
+		var downloadUrl = ""
+
+		// If the user can view the report then include the download url and formats
 		if include, err := rbac.CanViewReport(v.ReportTypeName, v.ReportName); err != nil {
 			log.WithError(err).Error("Unable to determine access permissions for request")
 			http.Error(response, err.Error(), http.StatusServiceUnavailable)
 			return
 		} else if include {
+			//build the download url
+			downloadUrl = strings.Replace(UrlDownload, QueryReport, v.UID(), 1)
+
 			//load report formats from download templates in the global report report type
 			for _, dlt := range rt.DownloadTemplates {
 				log.Debugf("Including download format: %s", dlt.Name)
@@ -103,7 +108,7 @@ func (s *server) handleListReports(response http.ResponseWriter, request *http.R
 			StartTime:       v.StartTime,
 			EndTime:         v.EndTime,
 			UISummary:       uiSummary,
-			DownloadURL:     strings.Replace(UrlDownload, QueryReport, v.UID(), 1),
+			DownloadURL:     downloadUrl,
 			DownloadFormats: formats,
 			GenerationTime:  v.GenerationTime,
 		}
