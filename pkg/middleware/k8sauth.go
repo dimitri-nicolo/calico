@@ -130,22 +130,25 @@ func (ka *k8sauth) authenticateToken(req *http.Request) (user *authnv1.UserInfo,
 // If there is a failure status will be set and an appropriate error, otherwise
 // err is nil.
 func (ka *k8sauth) authorizeUser(req *http.Request, user *authnv1.UserInfo) (status int, err error) {
-	res, ok := FromContextGetReviewResource(req.Context())
-	if !ok {
+	res, resOK := FromContextGetReviewResource(req.Context())
+	nonRes, nonResOK := FromContextGetReviewNonResource(req.Context())
+	// Continue only if we have at least one resource or non-resource attribute to check.
+	if !resOK && !nonResOK {
 		return http.StatusForbidden, fmt.Errorf("No resource available to authorize")
 	}
-	return ka.subjectAccessReview(res, user)
+	return ka.subjectAccessReview(res, nonRes, user)
 }
 
 // subjectAccessReview authorizes that the user has permission to access the resource.
-func (ka *k8sauth) subjectAccessReview(resource *authzv1.ResourceAttributes, user *authnv1.UserInfo) (status int, err error) {
+func (ka *k8sauth) subjectAccessReview(resource *authzv1.ResourceAttributes, nonResource *authzv1.NonResourceAttributes, user *authnv1.UserInfo) (status int, err error) {
 	sar := authzv1.SubjectAccessReview{
 		Spec: authzv1.SubjectAccessReviewSpec{
-			ResourceAttributes: resource,
-			User:               user.Username,
-			Groups:             user.Groups,
-			Extra:              make(map[string]authzv1.ExtraValue),
-			UID:                user.UID,
+			ResourceAttributes:    resource,
+			NonResourceAttributes: nonResource,
+			User:                  user.Username,
+			Groups:                user.Groups,
+			Extra:                 make(map[string]authzv1.ExtraValue),
+			UID:                   user.UID,
 		},
 	}
 	for k, v := range user.Extra {
@@ -182,12 +185,14 @@ func (ka *k8sauth) BasicAuthorize(req *http.Request) (status int, err error) {
 		return http.StatusInternalServerError, err
 	}
 
-	res, ok := FromContextGetReviewResource(req.Context())
-	if !ok {
+	res, resOK := FromContextGetReviewResource(req.Context())
+	nonRes, nonResOK := FromContextGetReviewNonResource(req.Context())
+	// Continue only if we have at least one resource or non-resource attribute to check.
+	if !resOK && !nonResOK {
 		return http.StatusForbidden, fmt.Errorf("No resource available to authorize")
 	}
 
-	return ka.selfSubjectAccessReview(client, res)
+	return ka.selfSubjectAccessReview(client, res, nonRes)
 }
 
 // getUserPw returns the user and password from the header of the req passed in
@@ -217,10 +222,11 @@ func getUserK8sClient(cfg *restclient.Config, user, pw string) (k8s.Interface, e
 // selfSubjectAccessReview does a SelfSubjectAccessReview of the resource passed
 // in with the client passed in returning no error in the case of access being
 // allowed, otherwise a status code and appropriate error is returned.
-func (ka *k8sauth) selfSubjectAccessReview(client k8s.Interface, resource *authzv1.ResourceAttributes) (status int, err error) {
+func (ka *k8sauth) selfSubjectAccessReview(client k8s.Interface, resource *authzv1.ResourceAttributes, nonResource *authzv1.NonResourceAttributes) (status int, err error) {
 	ssar := authzv1.SelfSubjectAccessReview{
 		Spec: authzv1.SelfSubjectAccessReviewSpec{
-			ResourceAttributes: resource,
+			ResourceAttributes:    resource,
+			NonResourceAttributes: nonResource,
 		},
 	}
 	var res *authzv1.SelfSubjectAccessReview

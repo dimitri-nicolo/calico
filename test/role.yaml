@@ -40,3 +40,12 @@ rules:
   resources: ["index"]
   resourceNames: ["audit_kube"]
   verbs: ["get"]
+
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: tigera-path-to-something
+rules:
+- nonResourceURLs: ["/path/to/something"]
+  verbs: ["get"]

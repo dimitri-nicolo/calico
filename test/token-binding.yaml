@@ -52,3 +52,18 @@ roleRef:
   kind: ClusterRole
   name: tigera-elasticsearch-access-audit_kube-only
   apiGroup: rbac.authorization.k8s.io
+
+---
+
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: tigera-access-path-to-something-for-tokenusernru
+subjects:
+- kind: User
+  name: tokenusernru
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: tigera-path-to-something
+  apiGroup: rbac.authorization.k8s.io

@@ -34,18 +34,33 @@ func RequestToResource(h http.Handler) http.Handler {
 
 type contextKey int
 
-var subjectReviewResourceKey contextKey
+const (
+	ResourceAttributeKey contextKey = iota
+	NonResourceAttributeKey
+)
 
 func NewContextWithReviewResource(
 	ctx context.Context,
 	ra *authzv1.ResourceAttributes,
 ) context.Context {
-	return context.WithValue(ctx, subjectReviewResourceKey, ra)
+	return context.WithValue(ctx, ResourceAttributeKey, ra)
+}
+
+func NewContextWithReviewNonResource(
+	ctx context.Context,
+	ra *authzv1.NonResourceAttributes,
+) context.Context {
+	return context.WithValue(ctx, NonResourceAttributeKey, ra)
 }
 
 func FromContextGetReviewResource(ctx context.Context) (*authzv1.ResourceAttributes, bool) {
-	ra, ok := ctx.Value(subjectReviewResourceKey).(*authzv1.ResourceAttributes)
+	ra, ok := ctx.Value(ResourceAttributeKey).(*authzv1.ResourceAttributes)
 	return ra, ok
+}
+
+func FromContextGetReviewNonResource(ctx context.Context) (*authzv1.NonResourceAttributes, bool) {
+	nra, ok := ctx.Value(NonResourceAttributeKey).(*authzv1.NonResourceAttributes)
+	return nra, ok
 }
 
 func getResourceAttributes(resourceName string) *authzv1.ResourceAttributes {
