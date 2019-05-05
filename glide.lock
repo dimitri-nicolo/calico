@@ -1,5 +1,5 @@
-hash: e9bc8e8e92d5fa882c586fd8a91a67b0ed5a597baaef7af7a0c0e54158084383
-updated: 2019-05-03T03:35:22.818956833Z
+hash: d3717d0722451e310d2a87f68fe4f271735213eabb9c3517e39bf008d3cad8f5
+updated: 2019-05-05T01:52:22.20474856Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -201,7 +201,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 84ae4a94137e125674079e12009ea198775747e1
+  version: 7979a9a33f89116caf4e3ff9862b76a707b2a09a
   repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib/apiconfig
@@ -271,7 +271,6 @@ imports:
   version: 1dc9a6cbc91aacc3e8b2d63db4d2e957a5394ac4
   subpackages:
   - internal/util
-  - nfs
   - xfs
 - name: github.com/PuerkitoBio/purell
   version: 0bcb03f4b4d0a9428594752bd2a3b9aa0a9d4bd4
@@ -483,7 +482,7 @@ imports:
   - pkg/watch
   - third_party/forked/golang/reflect
 - name: k8s.io/apiserver
-  version: 8584d010d11fb93499b4d91e29617da398458596
+  version: 7dc4ceb2fd3311166a78bdf6a4eec4c194364dd0
   subpackages:
   - pkg/apis/audit
 - name: k8s.io/client-go
