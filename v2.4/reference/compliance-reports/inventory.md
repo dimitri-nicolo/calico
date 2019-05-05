@@ -22,7 +22,7 @@ spec:
     namespaces:
       names:
         - public
-  schedule: "0 0 * * *
+  schedule: 0 0 * * *
 EOF
 ```
 
