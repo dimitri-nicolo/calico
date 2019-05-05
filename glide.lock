@@ -1,5 +1,5 @@
-hash: 1cad21552c7decd35e9a8979de768b0b1ba85e679aec4143405fed26903ec8d4
-updated: 2019-04-30T01:01:02.615488118Z
+hash: 5b901fd73880dd39dd3910bf2bc1021466a52aa8c5fc34ca3923f66a85f57f75
+updated: 2019-05-05T04:21:01.968215048Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -50,7 +50,7 @@ imports:
   - autorest/azure
   - autorest/date
 - name: github.com/beorn7/perks
-  version: 4b2b341e8d7715fae06375aa633dbb6e91b3fb46
+  version: 3a771d992973f24aa725d07868b467d1ddfceafb
   subpackages:
   - quantile
 - name: github.com/bronze1man/goStrongswanVici
@@ -74,7 +74,7 @@ imports:
   - pkg/transport
   - pkg/types
 - name: github.com/davecgh/go-spew
-  version: d8f796af33cc11cb798c1aaeb27a4ebc5099927d
+  version: 782f4967f2dc4564575ca782fe2d04090b5faca8
   subpackages:
   - spew
 - name: github.com/dgrijalva/jwt-go
@@ -92,7 +92,7 @@ imports:
 - name: github.com/go-ini/ini
   version: 3be5ad479f69d4e08d7fe25edf79bf3346bd658e
 - name: github.com/go-openapi/jsonpointer
-  version: ef5f0afec364d3b9396b7b77b43dbe26bf1f8004
+  version: 46af16f9f7b149af66e5d1bd010e3574dc06de98
 - name: github.com/go-openapi/jsonreference
   version: 8483a886a90412cd6858df4ea3483dce9c8e35a3
 - name: github.com/go-openapi/spec
@@ -100,7 +100,7 @@ imports:
 - name: github.com/go-openapi/swag
   version: becd2f08beafcca035645a8a101e0e3e18140458
 - name: github.com/go-playground/locales
-  version: f63010822830b6fe52288ee52d5a1151088ce039
+  version: 630ebbb602847eba93e75ae38bbc7bb7abcf1ff3
   subpackages:
   - currency
 - name: github.com/go-playground/universal-translator
@@ -295,7 +295,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 255dcb3da3363498e6ac1defba73c1022224b6bc
+  version: 7979a9a33f89116caf4e3ff9862b76a707b2a09a
   repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib/apiconfig
@@ -341,21 +341,21 @@ imports:
   subpackages:
   - binder
 - name: github.com/projectcalico/typha
-  version: 705728a42fe9b62bde2949a5c8c2a2fc1041bc8d
+  version: 29068fbb971fa15c1fcd3dfb40aeda9d581c8c79
   repo: git@github.com:tigera/typha-private
   subpackages:
   - pkg/syncclient
   - pkg/syncproto
   - pkg/tlsutils
 - name: github.com/prometheus/client_golang
-  version: f951755f07bdd099e8ef7e308532fe518212d257
+  version: 773f5027234d0b08adf766be34f55df2f312abf7
   subpackages:
   - prometheus
   - prometheus/internal
   - prometheus/promhttp
   - prometheus/push
 - name: github.com/prometheus/client_model
-  version: fd36f4220a901265f90734c3183c5f0c91daa0b8
+  version: 5c3871d89910bfb32f5fcab2aa4b9ec68e65a99f
   subpackages:
   - go
 - name: github.com/prometheus/common
@@ -369,9 +369,9 @@ imports:
   subpackages:
   - xfs
 - name: github.com/PuerkitoBio/purell
-  version: 0bcb03f4b4d0a9428594752bd2a3b9aa0a9d4bd4
+  version: 8a290539e2e8629dbc4e6bad948158f790ec31f4
 - name: github.com/PuerkitoBio/urlesc
-  version: de5bf2ad457846296e2031421a34e2568e304e35
+  version: 5bd2802263f21d8788851d5305584c82a5c75d7e
 - name: github.com/robfig/cron
   version: b41be1df696709bb6395fe435af20370037c0b4c
 - name: github.com/satori/go.uuid
@@ -401,7 +401,7 @@ imports:
   subpackages:
   - nl
 - name: github.com/vishvananda/netns
-  version: 13995c7128ccc8e51e9a6bd2b551020a27180abd
+  version: 8ba1072b58e0c2a240eb5f6120165c7776c3e7b8
 - name: github.com/whyrusleeping/go-logging
   version: 0457bb6b88fc1973573aaf6b5145d8d3ae972390
 - name: golang.org/x/crypto
@@ -441,6 +441,7 @@ imports:
 - name: golang.org/x/text
   version: b19bf474d317b857955b12035d2c5acb57ce8b01
   subpackages:
+  - cases
   - encoding
   - encoding/charmap
   - encoding/htmlindex
@@ -451,11 +452,13 @@ imports:
   - encoding/simplifiedchinese
   - encoding/traditionalchinese
   - encoding/unicode
+  - internal
   - internal/tag
   - internal/utf8internal
   - language
   - runes
   - secure/bidirule
+  - secure/precis
   - transform
   - unicode/bidi
   - unicode/norm
@@ -593,7 +596,7 @@ imports:
   - pkg/watch
   - third_party/forked/golang/reflect
 - name: k8s.io/apiserver
-  version: accf7b6d6716240eeb6a19d45860beb028943f0d
+  version: 7dc4ceb2fd3311166a78bdf6a4eec4c194364dd0
   subpackages:
   - pkg/apis/audit
 - name: k8s.io/client-go
@@ -663,7 +666,7 @@ imports:
   - util/jsonpath
   - util/retry
 - name: k8s.io/kube-openapi
-  version: c5d3b0f4bee0a2c36e3f715a6b15dcc231c64adc
+  version: 91cfa479c814065e420cee7ed227db0f63a5854e
   subpackages:
   - pkg/common
 testImports: []

@@ -24,13 +24,8 @@ import:
   version: b4deda0973fb4c70b50d226b1af49f3da59f5265
   subpackages:
   - proto
-# pin to older version of reuseport to work around missing reuseport.Dialer()
-- package: github.com/libp2p/go-reuseport
-  version: 8cfd5f2973c8e2476813120b9a516d9a82eb7c7a
-  subpackages:
-  - poll
-  - singlepoll
 - package: github.com/jbenet/go-reuseport
+  version: 8cfd5f2973c8e2476813120b9a516d9a82eb7c7a
 # go-reuseport pulls in go-log without a pin and master is now incompatible with the
 # version of gogo/protobuf that we are using.  Pin to most recent working master revision.
 - package: github.com/ipfs/go-log
@@ -73,7 +68,7 @@ import:
   - lib/validator/v1
 - package: github.com/projectcalico/typha
   repo:    git@github.com:tigera/typha-private
-  version: 705728a42fe9b62bde2949a5c8c2a2fc1041bc8d
+  version: 29068fbb971fa15c1fcd3dfb40aeda9d581c8c79
   subpackages:
   - pkg/syncclient
   - pkg/tlsutils
