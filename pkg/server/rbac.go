@@ -3,14 +3,17 @@ package server
 import (
 	"net/http"
 
+	log "github.com/sirupsen/logrus"
+
 	authzv1 "k8s.io/api/authorization/v1"
 
 	esprox "github.com/tigera/es-proxy-image/pkg/middleware"
 )
 
 type ReportRbacHelper interface {
+	CanViewReportSummary(reportName string) (bool, error)
 	CanViewReport(reportTypeName string, reportName string) (bool, error)
-	CanListReports(reportName string) (bool, error)
+	CanListReports() (bool, error)
 	CanGetReport(reportName string) (bool, error)
 	CanGetReportType(reportTypeName string) (bool, error)
 }
@@ -21,7 +24,6 @@ type ReportRbacHelper interface {
 type reportRbacHelper struct {
 	canGetReportTypeByName map[string]bool
 	canGetReportByName     map[string]bool
-	canListReportByName    map[string]bool
 	Request                *http.Request
 	k8sAuth                K8sAuthInterface
 }
@@ -40,11 +42,9 @@ type standardRbacHelperFactory struct {
 
 // newReportRbacHelper returns a new initialized reportRbacHelper.
 func (f *standardRbacHelperFactory) NewReportRbacHelper(req *http.Request) ReportRbacHelper {
-
 	return &reportRbacHelper{
 		canGetReportTypeByName: make(map[string]bool),
 		canGetReportByName:     make(map[string]bool),
-		canListReportByName:    make(map[string]bool),
 		Request:                req,
 		k8sAuth:                f.auth,
 	}
@@ -54,10 +54,11 @@ func NewStandardRbacHelperFactory(auth K8sAuthInterface) RbacHelperFactory {
 	return &standardRbacHelperFactory{auth: auth}
 }
 
-// CanViewReport returns true if the caller is allowed to view a specific Report and ReportType.
+// CanViewReport returns true if the caller is allowed to view/download a specific report/report-type.
 func (l *reportRbacHelper) CanViewReport(reportTypeName, reportName string) (bool, error) {
 	var err error
 
+	// To view a report, the user must be able to get both the report and report type.
 	canGetReport, err := l.CanGetReport(reportName)
 	if err != nil {
 		return false, err
@@ -77,27 +78,34 @@ func (l *reportRbacHelper) CanViewReport(reportTypeName, reportName string) (boo
 	return true, nil
 }
 
-// CanListReports returns true if the caller is allowed to List Reports.
-func (l *reportRbacHelper) CanListReports(reportName string) (bool, error) {
-	var err = error(nil)
-	canDo, ok := l.canListReportByName[reportName]
-	if !ok {
-		// Query to determine if the user can list the report.
-		canDo, err = l.canListReports(reportName)
-		if err == nil {
-			l.canListReportByName[reportName] = canDo
-		}
+// CanViewReportSummary returns true if the caller is allowed to view the report summary for a specific
+// report.
+func (l *reportRbacHelper) CanViewReportSummary(reportName string) (bool, error) {
+	var err error
+
+	// A user can view a report summary if they have get access to the report.
+	canGetReport, err := l.CanGetReport(reportName)
+	if err != nil {
+		return false, err
 	}
-	return canDo, err
+	if !canGetReport {
+		return false, nil
+	}
+
+	return true, nil
+}
+
+// CanListReports returns true if the caller is allowed to List Reports.
+func (l *reportRbacHelper) CanListReports() (bool, error) {
+	return l.canListReports()
 }
 
 // canListReports returns true if the caller is allowed to List Reports. This is an internal method.
-func (l *reportRbacHelper) canListReports(reportName string) (bool, error) {
+func (l *reportRbacHelper) canListReports() (bool, error) {
 	resAtr := &authzv1.ResourceAttributes{
 		Verb:     "list",
 		Group:    "projectcalico.org",
 		Resource: "globalreports",
-		Name:     reportName,
 	}
 	return l.checkAuthorized(*resAtr)
 }
@@ -159,9 +167,14 @@ func (l *reportRbacHelper) checkAuthorized(atr authzv1.ResourceAttributes) (bool
 	req := l.Request.WithContext(ctx)
 
 	stat, err := l.k8sAuth.Authorize(req)
-	if err != nil {
-		return false, err
+	switch stat {
+	case 0:
+		log.WithField("stat", stat).Info("Request authorized")
+		return true, nil
+	case http.StatusForbidden:
+		log.WithField("stat", stat).WithError(err).Info("Forbidden - not authorized")
+		return false, nil
 	}
-
-	return (stat == 0), nil
+	log.WithField("stat", stat).WithError(err).Info("Error authorizing")
+	return false, err
 }

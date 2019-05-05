@@ -63,13 +63,9 @@ var (
 	reportTypeGettable    = newGlobalReportType("inventoryGet")
 	reportTypeNotGettable = newGlobalReportType("inventoryNoGo")
 
-	reportListAndGet  = newArchivedReportData("ListGet", "inventoryGet")
-	reportNotListable = newArchivedReportData("somethingelse", "inventoryGet")
-	reportListNoGet   = newArchivedReportData("List", "inventoryGet")
-
-	reportListAndGetNotType  = newArchivedReportData("ListGet", "inventoryNoGo")
-	reportNotListableNotType = newArchivedReportData("somethingelse", "inventoryNoGo")
-	reportListNoGetNotType   = newArchivedReportData("List", "inventoryNoGo")
+	reportGetTypeGet     = newArchivedReportData("Get", "inventoryGet")
+	reportNoGetTypeNoGet = newArchivedReportData("somethingelse", "inventoryNoGo")
+	reportGetTypeNoGet   = newArchivedReportData("Get", "inventoryNoGo")
 
 	forecastFile1 = forecastFile{
 		Format:      "boo.csv",
@@ -82,29 +78,29 @@ var (
 	}
 )
 
-var _ = Describe("List tests with Gettable ReportType", func() {
+var _ = Describe("List tests with Gettable Report and ReportType", func() {
 	It("", func() {
 		By("Starting a test server")
 		t := startTester()
 
-		By("Setting responses to")
-		t.summaries = []*report.ArchivedReportData{reportListAndGet, reportListNoGet, reportNotListable}
+		By("Setting responses")
+		t.summaries = []*report.ArchivedReportData{reportGetTypeGet, reportGetTypeNoGet, reportNoGetTypeNoGet}
 		t.reportTypeList = &v3.GlobalReportTypeList{
-			Items: []v3.GlobalReportType{reportTypeGettable},
+			Items: []v3.GlobalReportType{reportTypeGettable, reportTypeNotGettable},
 		}
 
 		By("Running a list query")
 		t.list(http.StatusOK, []server.Report{
 			{
-				Id:        reportListAndGet.UID(),
-				Name:      reportListAndGet.ReportName,
-				Type:      reportListAndGet.ReportTypeName,
+				Id:        reportGetTypeGet.UID(),
+				Name:      reportGetTypeGet.ReportName,
+				Type:      reportGetTypeGet.ReportTypeName,
 				StartTime: now,
 				EndTime:   nowPlusHour,
 				UISummary: map[string]interface{}{
 					"foobar": "hello-100-goodbye",
 				},
-				DownloadURL: "/compliance/reports/" + reportListAndGet.UID() + "/download",
+				DownloadURL: "/compliance/reports/" + reportGetTypeGet.UID() + "/download",
 				DownloadFormats: []server.Format{
 					{
 						Name:        "boo.csv",
@@ -118,9 +114,9 @@ var _ = Describe("List tests with Gettable ReportType", func() {
 				GenerationTime: now,
 			},
 			{
-				Id:        reportListNoGet.UID(),
-				Name:      reportListNoGet.ReportName,
-				Type:      reportListNoGet.ReportTypeName,
+				Id:        reportGetTypeNoGet.UID(),
+				Name:      reportGetTypeNoGet.ReportName,
+				Type:      reportGetTypeNoGet.ReportTypeName,
 				StartTime: now,
 				EndTime:   nowPlusHour,
 				UISummary: map[string]interface{}{
@@ -137,36 +133,67 @@ var _ = Describe("List tests with Gettable ReportType", func() {
 	})
 })
 
+var _ = Describe("List tests with Gettable Report and ReportType but no List", func() {
+	It("", func() {
+		By("Starting a test server")
+		t := startTester()
+
+		By("Setting tester to refuse List access")
+		t.listRBACControl = ""
+
+		By("Setting responses")
+		t.summaries = []*report.ArchivedReportData{reportGetTypeGet, reportGetTypeNoGet, reportNoGetTypeNoGet}
+		t.reportTypeList = &v3.GlobalReportTypeList{
+			Items: []v3.GlobalReportType{reportTypeGettable, reportTypeNotGettable},
+		}
+
+		By("Running a list query")
+		t.list(http.StatusUnauthorized, nil)
+
+		By("Stopping the server")
+		t.stop()
+	})
+})
+
 var _ = Describe("List tests with Not Gettable ReportType", func() {
 	It("", func() {
 		By("Starting a test server")
 		t := startTester()
 
 		By("Setting responses to")
-		t.summaries = []*report.ArchivedReportData{reportListAndGetNotType, reportNotListableNotType, reportListNoGetNotType}
+		t.summaries = []*report.ArchivedReportData{reportGetTypeGet, reportNoGetTypeNoGet, reportGetTypeNoGet}
 		t.reportTypeList = &v3.GlobalReportTypeList{
-			Items: []v3.GlobalReportType{reportTypeNotGettable},
+			Items: []v3.GlobalReportType{reportTypeNotGettable, reportTypeGettable},
 		}
 
 		By("Running a list query")
 		t.list(http.StatusOK, []server.Report{
 			{
-				Id:        reportListAndGetNotType.UID(),
-				Name:      reportListAndGetNotType.ReportName,
-				Type:      reportListAndGetNotType.ReportTypeName,
+				Id:        reportGetTypeGet.UID(),
+				Name:      reportGetTypeGet.ReportName,
+				Type:      reportGetTypeGet.ReportTypeName,
 				StartTime: now,
 				EndTime:   nowPlusHour,
 				UISummary: map[string]interface{}{
 					"foobar": "hello-100-goodbye",
 				},
-				DownloadURL:     "",
-				DownloadFormats: nil,
-				GenerationTime:  now,
+				DownloadURL: "/compliance/reports/" + reportGetTypeGet.UID() + "/download",
+				DownloadFormats: []server.Format{
+					{
+						Name:        "boo.csv",
+						Description: "This is a boo file",
+					},
+					{
+						Name:        "bar.csv",
+						Description: "This is a bar file",
+					},
+				},
+				GenerationTime: now,
 			},
 			{
-				Id:        reportListNoGetNotType.UID(),
-				Name:      reportListNoGetNotType.ReportName,
-				Type:      reportListNoGetNotType.ReportTypeName,
+				Id:        reportGetTypeNoGet.UID(),
+				Name:      reportGetTypeNoGet.ReportName,
+				Type:      reportGetTypeNoGet.ReportTypeName,
 				StartTime: now,
 				EndTime:   nowPlusHour,
 				UISummary: map[string]interface{}{
@@ -189,7 +216,7 @@ var _ = Describe("List tests with none available", func() {
 		t := startTester()
 
 		By("Setting responses to")
-		t.summaries = []*report.ArchivedReportData{reportNotListable, reportNotListableNotType}
+		t.summaries = []*report.ArchivedReportData{reportNoGetTypeNoGet, reportNoGetTypeNoGet}
 		t.reportTypeList = &v3.GlobalReportTypeList{
 			Items: []v3.GlobalReportType{reportTypeGettable},
 		}

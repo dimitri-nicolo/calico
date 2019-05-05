@@ -120,7 +120,7 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 
 			switch operation {
 			case perform_list_report:
-				stat, err = auth.CanListReports(name)
+				stat, err = auth.CanListReports()
 			case perform_get_report:
 				stat, err = auth.CanGetReport(name)
 			case perform_get_reporttype:
