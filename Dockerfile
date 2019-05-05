@@ -14,6 +14,7 @@ RUN apk add --no-cache curl
 RUN apk add --no-cache jq
 
 ADD elastic_mapping_flows.template /fluentd/etc/elastic_mapping_flows.template
+ADD elastic_mapping_audits.template /fluentd/etc/elastic_mapping_audits.template
 COPY fluent_sources.conf /fluentd/etc/fluent_sources.conf
 COPY fluent_transforms.conf /fluentd/etc/fluent_transforms.conf
 COPY fluent_output.conf /fluentd/etc/fluent_output.conf
