@@ -1,5 +1,5 @@
-hash: 3a93431e4d81c3cd8f56f85928f44085863cf6658ee1f9010c3914fc15ff68ac
-updated: 2019-03-20T15:00:56.024255873Z
+hash: cde95337b7b2eaef765225b280c9d7c610480c737cf7c8a9c5766ffa5c4f7607
+updated: 2019-05-05T16:22:03.320533948Z
 imports:
 - name: github.com/docopt/docopt-go
   version: 784ddc588536785e7299f7272f39101f7faccc3f
@@ -13,13 +13,13 @@ imports:
   subpackages:
   - google/rpc
 - name: github.com/gogo/protobuf
-  version: 342cbe0a04158f6dcb03ca0079991a51a4248c02
+  version: c0656edd0d9eab7c66d1eb0c568f9039345796f7
   subpackages:
   - proto
   - sortkeys
   - types
 - name: github.com/golang/protobuf
-  version: 1e59b77b52bf8e4b449a57e6f79f21226d571845
+  version: 1643683e1b54a9e88ad26d98f81400c8c9d9f4f9
   subpackages:
   - proto
 - name: github.com/konsorten/go-windows-terminal-sequences
@@ -41,7 +41,7 @@ imports:
   - matchers/support/goraph/util
   - types
 - name: github.com/projectcalico/libcalico-go
-  version: 1acc1d224f822833c483d9f1f33493079f500946
+  version: 7dfa0676b8ea724cb5786a912697253e3c8bdb08
   repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib/apis/v3
@@ -51,13 +51,9 @@ imports:
   - lib/selector/parser
   - lib/selector/tokenizer
 - name: github.com/sirupsen/logrus
-  version: dae0fa8d5b0c810a8ab733fbd5510c7cae84eca4
-- name: golang.org/x/crypto
-  version: 9419663f5a44be8b34ca85f08abc5fe1be11f8a3
-  subpackages:
-  - ssh/terminal
+  version: 8bdbc7bcc01dcbb8ec23dc8a28e332258d25251f
 - name: golang.org/x/net
-  version: 66aacef3dd8a676686c7ae3716979581e8b03c47
+  version: 1c05540f6879653db88113bc4a2b70aec4bd491f
   subpackages:
   - context
   - html
@@ -70,10 +66,9 @@ imports:
   - lex/httplex
   - trace
 - name: golang.org/x/sys
-  version: ebfc5b4631820b793c9010c87fd8fef0f39eb082
+  version: 1b2967e3c290b7c545b3db0deeda16e9be4f98a2
   subpackages:
   - unix
-  - windows
 - name: golang.org/x/text
   version: b19bf474d317b857955b12035d2c5acb57ce8b01
   subpackages:
@@ -116,4 +111,4 @@ imports:
   - pkg/util/validation
 testImports:
 - name: gopkg.in/yaml.v2
-  version: cd8b52f8269e0feb286dfeef29f8fe4d5b397e0b
+  version: 670d4cfef0544295bc27a114dbac37980d83185a
