@@ -67,25 +67,6 @@ Set the following flags to specify TLS certs to use when connecting to etcd:
 
 ### Network settings
 
->**Warning**: Changing any network settings in the `initialPool` block after installation will have no effect. For information on changing IP Pools after installation, see [configuring IP Pools]({{site.url}}/{{page.version}}/networking/changing-ip-pools)
-{: .alert .alert-warning}
-
-**Turn off IPIP**
-
-By default, {{ site.prodname }} installs with IPIP encapsulation enabled. To disable it:
-
-```yaml
-initialPool:
-  ipIpMode: None
-```
-
-**Use IPIP across subnets only**
-
-```yaml
-initialPool:
-  ipIpMode: CrossSubnet
-```
-
 **Default Pool CIDR**
 
 By default, {{ site.prodname }} creates an IPv4 Pool with CIDR `192.168.0.0/16` when it launches. To change this CIDR:
@@ -94,6 +75,9 @@ By default, {{ site.prodname }} creates an IPv4 Pool with CIDR `192.168.0.0/16` 
 initialPool:
   cidr: 10.0.0.0/8
 ```
+
+>**Warning**: Changing any network settings in the `initialPool` block after installation will have no effect. For information on changing IP Pools after installation, see [configuring IP Pools]({{site.url}}/{{page.version}}/networking/changing-ip-pools)
+{: .alert .alert-warning}
 
 >**Note**: This should fall within `--cluster-cidr` configured for the cluster
 {: .alert .alert-info}
