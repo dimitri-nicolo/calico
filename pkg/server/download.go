@@ -31,6 +31,31 @@ func (s *server) handleDownloadReports(response http.ResponseWriter, request *ht
 	uid := request.URL.Query().Get(QueryReport)
 	log.WithField("ReportUID", uid).Info("Extracted report UID from URL")
 
+	// The report UID is constructed as <reportname>_<reporttype>_UID. Extract the report name and type from the
+	// ID and use that to validate RBAC permissions.
+	//TODO(rlb) This processing should be handled alongside the report ID construction to keep it all together.
+	parts := strings.Split(uid, "_")
+	if len(parts) < 3 {
+		log.Info("Report ID is badly constructed")
+		http.Error(response, "Access denied", http.StatusForbidden)
+		return
+	}
+	reportName := parts[0]
+	reportTypeName := parts[1]
+
+	// Create an RBAC helper to see if we can download this report
+	//TODO(rlb): Should add test to verify no ES calls are made when the user is not authorized.
+	rbac := s.rhf.NewReportRbacHelper(request)
+	if allow, err := rbac.CanViewReport(reportTypeName, reportName); err != nil {
+		log.WithError(err).Error("Unable to determine access permissions for request")
+		http.Error(response, err.Error(), http.StatusServiceUnavailable)
+		return
+	} else if !allow {
+		log.Debug("Requester has insufficient permissions to view report")
+		http.Error(response, "Access denied", http.StatusUnauthorized)
+		return
+	}
+
 	// Download the report.
 	r, err := s.rr.RetrieveArchivedReport(uid)
 	if err != nil {
@@ -39,22 +64,6 @@ func (s *server) handleDownloadReports(response http.ResponseWriter, request *ht
 			return
 		}
 		http.Error(response, "Unable to download report", http.StatusServiceUnavailable)
-	}
-
-	// Create an RBAC helper to see if we can download this report
-	rbac := s.rhf.NewReportRbacHelper(request)
-	allow, err := rbac.CanViewReport(r.ReportTypeName, r.ReportName)
-	if err != nil {
-		log.WithError(err).Error("Unable to determine access permissions for request")
-		http.Error(response, err.Error(), http.StatusServiceUnavailable)
-		return
-	}
-
-	// Deny if not allowed access to report
-	if !allow {
-		log.Debug("Requester has insufficient permissions to view report")
-		http.Error(response, "Access denied", http.StatusForbidden)
-		return
 	}
 
 	// Obtain the current set of configured ReportTypes.

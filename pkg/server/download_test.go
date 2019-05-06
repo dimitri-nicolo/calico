@@ -20,31 +20,34 @@ var _ = Describe("Download tests", func() {
 		}
 
 		By("Setting reports and forecasts with allowed types and reports ")
-		t.report = reportListAndGet
+		t.report = reportGetTypeGet
 		forecasts := []forecastFile{forecastFile1, forecastFile2}
 
 		By("Running a download query that should succeed")
-		t.downloadSingle(reportListAndGet.UID(), http.StatusOK, forecastFile1)
+		t.downloadSingle(reportGetTypeGet.UID(), http.StatusOK, forecastFile1)
 		By("Running a multi download query that should succeed")
-		t.downloadMulti(reportListAndGet.UID(), http.StatusOK, forecasts)
+		t.downloadMulti(reportGetTypeGet.UID(), http.StatusOK, forecasts)
 
 		By("Setting reports to reports with a not allowed report type")
-		t.report = reportListAndGetNotType
+		t.report = reportGetTypeGet
 		forecasts = []forecastFile{forecastFile1, forecastFile2}
 
 		By("Running a download query that should be denied because of report type")
-		t.downloadSingle(reportListAndGetNotType.UID(), http.StatusForbidden, forecastFile1)
+		t.downloadSingle(reportGetTypeNoGet.UID(), http.StatusUnauthorized, forecastFile1)
 		By("Running a multi download query that should be denied because of report type")
-		t.downloadMulti(reportListAndGetNotType.UID(), http.StatusForbidden, forecasts)
+		t.downloadMulti(reportGetTypeNoGet.UID(), http.StatusUnauthorized, forecasts)
+
+		By("Running a download query with an invalid report name")
+		t.downloadSingle("not a valid report ID", http.StatusForbidden, forecastFile1)
 
 		By("Setting reports to reports with a not allowed report")
-		t.report = reportListNoGet
+		t.report = reportGetTypeNoGet
 		forecasts = []forecastFile{forecastFile1, forecastFile2}
 
 		By("Running a download query that should be denied because of report name")
-		t.downloadSingle(reportListNoGet.UID(), http.StatusForbidden, forecastFile1)
+		t.downloadSingle(reportGetTypeNoGet.UID(), http.StatusUnauthorized, forecastFile1)
 		By("Running a multi download query that should be denied because of report name")
-		t.downloadMulti(reportListNoGet.UID(), http.StatusForbidden, forecasts)
+		t.downloadMulti(reportGetTypeNoGet.UID(), http.StatusUnauthorized, forecasts)
 
 		By("Stopping the server")
 		t.stop()

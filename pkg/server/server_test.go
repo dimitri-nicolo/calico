@@ -19,6 +19,8 @@ import (
 
 	"strings"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	clientv3 "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 	"github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3/fake"
@@ -32,8 +34,10 @@ import (
 // The Calico and Report stores are mocked out, and the responses controlled via the control paraameters in the
 // tester struct.
 func startTester() *tester {
-	// Create a new tester
-	t := &tester{}
+	// Create a new tester, defaulting permissions to allow lists.
+	t := &tester{
+		listRBACControl: "List",
+	}
 
 	// Choose an arbitrary port for the server to listen on.
 	By("Choosing an arbitrary available local port for the queryserver")
@@ -59,6 +63,9 @@ func startTester() *tester {
 }
 
 type tester struct {
+	// Control parameters for the List RBAC. Set to "List" or "Error" or leave blank.
+	listRBACControl string
+
 	// Control parameters for the Calico Report List response.
 	reportList    *v3.GlobalReportList
 	reportListErr error
@@ -255,7 +262,19 @@ func (g *gr) List(opts v1.ListOptions) (*v3.GlobalReportList, error) {
 
 // NewReportRbacHelper to satisfy RbacHelperFactory interface
 func (t *tester) NewReportRbacHelper(req *http.Request) server.ReportRbacHelper {
-	return &tester{}
+	// We don't store any state for a particular request, so no need to instantiate a new instance each time.
+	return t
+}
+
+// CanViewReport to satisfy ReportRbacHelper interface
+func (t *tester) CanViewReportSummary(x string) (bool, error) {
+	if strings.Contains(x, "Get") {
+		return true, nil
+	}
+	if strings.Contains(x, "Error") {
+		return false, fmt.Errorf("cannot view report")
+	}
+	return false, nil
 }
 
 // CanViewReport to satisfy ReportRbacHelper interface
@@ -269,24 +288,18 @@ func (t *tester) CanViewReport(x, y string) (bool, error) {
 	return false, nil
 }
 
-// CanListAnyReportsIn to satisfy ReportRbacHelper interface
-func (t *tester) CanListAnyReportsIn(x []*report.ArchivedReportData) (bool, error) {
-	for _, d := range x {
-		if strings.Contains(d.ReportName, "List") {
-			return true, nil
-		}
-	}
-	return false, nil
-}
-
 // CanListReports to satisfy ReportRbacHelper interface
-func (t *tester) CanListReports(x string) (bool, error) {
-	if strings.Contains(x, "List") {
+func (t *tester) CanListReports() (bool, error) {
+	logrus.Debug("Can list reports?")
+	if t.listRBACControl == "List" {
+		logrus.Debug("Can list", t.listRBACControl)
 		return true, nil
 	}
-	if strings.Contains(x, "Error") {
+	if t.listRBACControl == "Error" {
+		logrus.Debug("Error")
 		return false, fmt.Errorf("cannot list report")
 	}
+	logrus.Debug("Cannot list")
 	return false, nil
 }
 
