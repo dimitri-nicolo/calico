@@ -136,8 +136,6 @@ running. Verify the containers are running with the following cmd
 kubectl get pods --all-namespaces
 ```
 
-{% include {{page.version}}/apply-license.md %}
-
 ## <a name="install-api-server"></a>Installing the {{site.prodname}} API Server
 1. Download the {{site.prodname}} etcd manifest and save the file as cnx-api.yaml. That is how we will refer to it in later steps.
 
@@ -169,31 +167,10 @@ kubectl get pods --all-namespaces
 
    Wait until each pod has the `STATUS` of `Running`.
 
-1. Apply the following manifest to set network policy that allows users and the {{site.prodname}} API server
-   to access the {{site.prodname}} Manager.
-
-   ```bash
-   kubectl apply -f \
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml
-   ```
-
-   > **Note**: You can also
-   > [view the manifest in a new tab]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml).
-   {: .alert .alert-info}
-
-1. For production installs, we recommend using your own Elasticsearch cluster. If you are performing a
-   production install, refer to
-   [Using your own Elasticsearch for logs](byo-elasticsearch). Then skip to the [Accessing the {{site.prodname}} UI](#accessing-cnx-mgr) section.
-
-   For demonstration or proof of concept installs, you can use the bundled
-   [Elasticsearch operator](https://github.com/upmc-enterprises/elasticsearch-operator). Continue to the
-   next step to complete a demonstration or proof of concept install.
-
-   > **Important**: The bundled Elasticsearch operator does not provide reliable persistent storage
-   of logs or authenticate access to Kibana.
-   {: .alert .alert-danger}
-
+{% include {{page.version}}/apply-license.md %}
 {% include {{page.version}}/cnx-monitor-install.md elasticsearch="operator" platform="docker-ee" %}
+
+1. Continue to [Installing the {{site.prodname}} Manager](#install-cnx-mgr)
 
 ## <a name="install-cnx-mgr"></a>Installing the {{site.prodname}} Manager
 
@@ -247,7 +224,7 @@ kubectl get pods --all-namespaces
     sudo cp ${KUBELET_PODS_PATH}/server.crt server.crt
     sudo cp ${KUBELET_PODS_PATH}/server.key server.key
 
-    kubectl -n kube-system create secret generic cnx-manager-tls \
+    kubectl -n calico-monitoring create secret generic cnx-manager-tls \
     --from-file=cert=server.crt \
     --from-file=key=server.key
     sudo rm server.crt
@@ -273,18 +250,7 @@ kubectl get pods --all-namespaces
 
    Wait until each pod has the `STATUS` of `Running`.
 
-1. Apply the following manifest to set network policy that allows users and the {{site.prodname}} API server
-   to access the {{site.prodname}} Manager.
-
-   ```bash
-   kubectl apply -f \
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml
-   ```
-
-   > **Note**: You can also
-   > [view the manifest in a new tab]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml).
-   {: .alert .alert-info}
- 
+1. Continue to [Accessing the {{site.prodname}} UI](#accessing-cnx-mgr)
 
 ## <a name="accessing-cnx-mgr"></a>Accessing the {{site.prodname}} UI
 Authentication to {{site.prodname}} UI is performed via tokens for Docker Enterprise. The authentication method was specified
@@ -340,7 +306,9 @@ $(kubectl -n kube-system get serviceaccount cnx-user -o jsonpath='{.secrets[*].n
 -o jsonpath='{.data.token}' |base64 --decode
 ```
 
-## Log into the {{site.prodname}} UI
+1. Continue to [Log into the {{site.prodname}} UI](#login-cnx-mgr)
+
+## <a name="login-cnx-mgr"></a>Log into the {{site.prodname}} UI
 Open a browser to `https://<docker node>:33333` and use the token retreived above for the {{site.prodname}} Token value. If the node
 is not accessible a ssh tunnel may need to be created. For example:
 
