@@ -2,7 +2,7 @@ action: update
 kind: "Pod"
 apiVersion: v1
 metadata:
-  name: "ingress-from-any-an-{{.ScaleId}}"
+  name: "ingress-from-any-ns-{{.ScaleId}}"
   namespace: "{{.Namespace}}"
   labels:
     "ingress-from-any-ns": "yes"

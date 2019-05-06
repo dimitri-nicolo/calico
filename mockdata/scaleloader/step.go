@@ -208,10 +208,17 @@ func (s *Step) getAuditV1(revision int, timestamp string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("error marshaling into JSON: %v", err)
 	}
+	or, err := json.Marshal(s.getObjRef())
+	if err != nil {
+		return "", fmt.Errorf("error marshaling ObjRef into JSON: %v", err)
+	}
+
+	logrus.WithFields(logrus.Fields{"verb": s.getAction(), "obRef": string(or)}).Debug("AuditV1 msg")
 
 	return Tprintf(auditV1Template, map[string]interface{}{
 		"Verb":           s.getAction(),
 		"ResponseObject": string(j),
+		"ObjectRef":      string(or),
 		"Timestamp":      timestamp,
 	}), nil
 }
@@ -223,10 +230,17 @@ func (s *Step) getAuditV1Beta(revision int, timestamp string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("error marshaling into JSON: %v", err)
 	}
+	or, err := json.Marshal(s.getObjRef())
+	if err != nil {
+		return "", fmt.Errorf("error marshaling ObjRef into JSON: %v", err)
+	}
+
+	logrus.WithFields(logrus.Fields{"verb": s.getAction(), "obRef": string(or)}).Debug("AuditV1Beta msg")
 
 	return Tprintf(auditV1BetaTemplate, map[string]interface{}{
 		"Verb":           s.getAction(),
 		"ResponseObject": string(j),
+		"ObjectRef":      string(or),
 		"Timestamp":      timestamp,
 	}), nil
 }
@@ -313,4 +327,32 @@ func Tprintf(tmpl string, data map[string]interface{}) string {
 		return ""
 	}
 	return buf.String()
+}
+
+type ObjRef struct {
+	APIGroup   string `json:"apiGroup,omitempty"`
+	APIVersion string `json:"apiVersion,omitempty"`
+	Name       string `json:"name,omitempty"`
+	Resource   string `json:"resource,omitempty"`
+	Namespace  string `json:"namespace,omitempty"`
+}
+
+// Example objectRefs
+//"objectRef":{"resource":"pods","namespace":"compliance-testing","name":"database-f5c74785f-m7vd2","apiVersion":"v1"}
+//"objectRef":{"resource":"globalnetworksets","name":"google-dns","apiGroup":"projectcalico.org","apiVersion":"v3"},
+//"objectRef":{"resource":"tiers","name":"internal-access","apiGroup":"projectcalico.org","apiVersion":"v3"},
+//"objectRef":{"resource":"networkpolicies","namespace":"compliance-testing","name":"internal-access.allow-mysql","apiGroup":"projectcalico.org","apiVersion":"v3"},
+//"objectRef":{"resource":"networkpolicies","namespace":"compliance-testing","name":"default-deny","apiGroup":"networking.k8s.io","apiVersion":"v1"},
+
+func (s *Step) getObjRef() ObjRef {
+	rid := resources.GetResourceID(s.resource)
+	gvk := rid.TypeMeta.GroupVersionKind()
+	o := ObjRef{
+		Name:       rid.Name,
+		APIVersion: gvk.Version,
+		Resource:   resources.GetResourceHelperByTypeMeta(rid.TypeMeta).Plural(),
+		Namespace:  rid.Namespace,
+		APIGroup:   gvk.Group,
+	}
+	return o
 }
