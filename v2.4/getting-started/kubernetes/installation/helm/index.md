@@ -67,6 +67,20 @@ Set the following flags to specify TLS certs to use when connecting to etcd:
 
 ### Network settings
 
+**AWS VPC CNI plugin**
+
+By default, {{ site.prodname }} uses Calico networking. To run {{ site.prodname }} in policy-only mode using Elastic Network Interfaces on AWS via the AWS VPC CNI plugin, set:
+
+```
+network: ecs
+```
+
+To run Calico in policy-only mode for all other networking methods, set:
+
+```
+network: none
+```
+
 **Default Pool CIDR**
 
 By default, {{ site.prodname }} creates an IPv4 Pool with CIDR `192.168.0.0/16` when it launches. To change this CIDR:
