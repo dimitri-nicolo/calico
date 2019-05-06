@@ -132,6 +132,12 @@ spec:
         - key: node-role.kubernetes.io/master
           effect: NoSchedule
       serviceAccountName: calico-kube-controllers
+{{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+{{- range $key, $value := .Values.imagePullSecrets }}
+        - name: {{ $key }}
+{{- end }}
+{{- end }}
       containers:
         - name: calico-kube-controllers
           image: {{.Values.kubeControllers.image}}:{{ .Values.kubeControllers.tag }}
