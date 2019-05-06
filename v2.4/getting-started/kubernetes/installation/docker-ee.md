@@ -267,7 +267,7 @@ cat << EOF > manager-credentials.yaml
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  namespace: kube-system
+  namespace: calico-monitoring
   name: cnx-user
 automountServiceAccountToken: false
 
@@ -275,10 +275,10 @@ automountServiceAccountToken: false
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: kube-system:cnx-user:cluster-admin
+  name: calico-monitoring:cnx-user:cluster-admin
 subjects:
 - kind: ServiceAccount
-  namespace: kube-system
+  namespace: calico-monitoring
   name: cnx-user
 roleRef:
   kind: ClusterRole
@@ -301,8 +301,8 @@ Now retrieve the token from the cluster.
 
 An example kubectl command using jsonpath syntax is provided to complete the above steps
 ```bash
-kubectl -n kube-system get secret \
-$(kubectl -n kube-system get serviceaccount cnx-user -o jsonpath='{.secrets[*].name}') \
+kubectl -n calico-monitoring get secret \
+$(kubectl -n calico-monitoring get serviceaccount cnx-user -o jsonpath='{.secrets[*].name}') \
 -o jsonpath='{.data.token}' |base64 --decode
 ```
 
