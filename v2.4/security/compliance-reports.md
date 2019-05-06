@@ -9,22 +9,22 @@ and evidence data -- so you can prove compliance for these highly dynamic and ep
 
 ### Value
 
-Tigera Secure EE provides compliance reports and a dashboard so you can easily assess Kubernetes workloads for 
+{{ site.prodname }} provides compliance reports and a dashboard so you can easily assess Kubernetes workloads for 
 regulatory compliance. 
 
 Existing compliance tools that rely on periodic snapshots, do not provide accurate assessments of Kubernetes workloads 
-against your compliance standards. Tigera Secure EE compliance reports provide a complete inventory of regulated 
+against your compliance standards. {{ site.prodname }} compliance reports provide a complete inventory of regulated 
 workloads, along with evidence of enforcement of network controls for these workloads. Additionally, audit reports are 
 available to see changes to any network security controls. These reports are essential tools for compliance managers to 
 prove compliance for regulated workloads.
 
 ### Features
 
-This how-to guide uses the following Tigera Secure EE features:
+This how-to guide uses the following {{ site.prodname }} features:
 
-- Predefined **compliance reports** (Inventory, Network Access, Policy Audit) that are installed with Tigera Secure EE
+- Predefined **compliance reports** (Inventory, Network Access, Policy Audit) that are installed with {{ site.prodname }}
 - A **GlobalReport** resource to schedule periodic report generation, specify which nodes to include, and manually run reports 
-- The **compliance dashboard** in Tigera Secure EE Manager to view and export reports from Elasticsearch
+- The **compliance dashboard** in {{ site.prodname }} Manager to view and export reports from Elasticsearch
 - Kubernetes RBAC to grant report view/manage permissions
 
 ### Concepts
@@ -56,7 +56,7 @@ Compliance reports provide the following high-level information:
   - Allowed ingress/egress traffic to/from namespaces
   - Allowed ingress/egress traffic to/from the internet
   
-From Tigera Secure EE Manager, you can export:
+From {{ site.prodname }} Manager, you can export:
 
 - Compliance report contents (csv file)
 - Policy audit logs (json or yaml format)
@@ -77,7 +77,7 @@ This section describes how to:
 
 #### Configure audit logs 
 
-By default, Tigera Secure EE provides audit logs in Elasticsearch for the following Tigera Secure EE resources:
+By default, {{ site.prodname }} provides audit logs in Elasticsearch for the following {{ site.prodname }} resources:
 
 - Global network policy
 - Global network set
@@ -92,7 +92,12 @@ For compliance reports, you must configure audit logs for these additional Kuber
 - ServiceAccount
 - NetworkPolicy
 
-Follow these steps to [Configure Kubernetes audit logs](/{{page.version}}/security/logs/elastic/ee-audit#enabling-auditing-for-other-resources). 
+Follow these steps to configure and produce audit logs:
+
+1. Start using `kubectl` (rather than calicoctl). Because compliance reports use audited data, you must use `kubectl`,
+   the Kubernetes API, or the {{ site.prodname }} Manager to manage policy, tiers and host endpoints. If you use `calicoctl`
+   you will not get audit logs for changes to these resources.
+1. [Configure Kubernetes audit logs](/{{page.version}}/security/logs/elastic/ee-audit#enabling-auditing-for-other-resources).
 
 #### Configure report permissions
 
@@ -207,7 +212,7 @@ roleRef:
 
 #### Configure and schedule reports
 
-To configure and schedule a compliance report, create a [GlobalReport]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalreport) with the following information.
+To configure and schedule a compliance report, create a [GlobalReport](/{{page.version}}/reference/calicoctl/resources/globalreport) with the following information.
 
 | **Fields**      | **Description**                                              |
 | --------------- | ------------------------------------------------------------ |
@@ -350,7 +355,7 @@ You can manually run reports at any time. For example, run a manual report:
 - To specify a different start/end time
 - If a scheduled report fails
 
-Tigera Secure EE GlobalReport schedules Kubernetes Jobs which create a single-run pod to generate a report and store it 
+{{ site.prodname }} GlobalReport schedules Kubernetes Jobs which create a single-run pod to generate a report and store it 
 in Elasticsearch. Because you need to run manual reports as a pod, you need higher permissions: allow `create` access 
 access for pods in namespace `calico-monitoring` using the `tigera-compliance-reporter` service account.
 
@@ -370,7 +375,7 @@ To manually run a report:
      - `TIGERA_COMPLIANCE_REPORT_START_TIME`
      - `TIGERA_COMPLIANCE_REPORT_END_TIME`
 1. Apply the updated manifest, and query the status of the pod to ensure it completes. 
-   Upon completion, the report is available in Tigera Secure EE Manager.  
+   Upon completion, the report is available in {{ site.prodname }} Manager.  
    
    ```bash
    # Apply the compliance report pod
