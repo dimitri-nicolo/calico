@@ -359,7 +359,7 @@ To manually run a report:
 1. Download the pod template.
 
    ```bash
-   curl -O {{site.baseurl}}/{{page.version}}/manifests/compliance-reporter-pod.yaml
+   curl -O {{site.url}}/{{page.version}}/manifests/compliance-reporter-pod.yaml
    ```
    
 1. Edit the template as follows:  
