@@ -8,6 +8,8 @@ toc:
   section:
   - title: Kubernetes
     path: /maintenance/kubernetes-upgrade-tsee
+  - title: Helm
+    path: /maintenance/helm-upgrade-tsee
   - title: OpenShift
     path: /maintenance/openshift-upgrade-tsee
 - title: Decommissioning a node
