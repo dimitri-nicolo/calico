@@ -14,14 +14,14 @@ import (
 )
 
 func main() {
-	var healthzSockPath string
-	flag.StringVar(&healthzSockPath, "sock", health.DefaultHealthzSockPath, "Path to healthz socket")
+	var healthzSockPort int
+	flag.IntVar(&healthzSockPort, "port", health.DefaultHealthzSockPort, "Healthz port")
 	flag.Parse()
 
 	c := http.Client{
 		Transport: &http.Transport{
 			DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
-				return net.Dial("unix", healthzSockPath)
+				return net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", healthzSockPort))
 			},
 		},
 	}
