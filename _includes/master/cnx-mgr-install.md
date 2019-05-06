@@ -1,7 +1,9 @@
 {% if include.init != "openshift" %}
   {% assign cli = "kubectl" %}
+  {% assign manifestPath = "getting-started/kubernetes/installation/hosted/cnx/1.7" %}
 {% else %}
   {% assign cli = "oc" %}
+  {% assign manifestPath = "getting-started/openshift" %}
 {% endif %}
 
 ## Installing the {{site.prodname}} Manager
@@ -10,7 +12,7 @@
 
    ```bash
    curl --compressed -O \
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx.yaml
+   {{site.url}}/{{page.version}}/{{manifestPath}}/cnx.yaml
    ```
 
 {% include {{page.version}}/cnx-cred-sed.md yaml="cnx" %}
