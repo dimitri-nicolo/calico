@@ -92,6 +92,12 @@ rules:
       - tiers
     verbs:
       - create
+  # Needed to validate the license
+  - apiGroups: ["crd.projectcalico.org"]
+    resources:
+      - licensekeys
+    verbs:
+      - get
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1beta1
