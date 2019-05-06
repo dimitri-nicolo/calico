@@ -240,6 +240,7 @@ def gen_chart_specific_values(versions, imageNames, imageRegistry, chart)
     complianceServer:
       image: #{imageRegistry}#{imageNames["compliance-server"]}
       tag: #{versions["compliance-server"]}
+      runAsPrivileged: false
       env:
         # Optional environment variables for configuring the compliance server.
         # - name: LOG_LEVEL

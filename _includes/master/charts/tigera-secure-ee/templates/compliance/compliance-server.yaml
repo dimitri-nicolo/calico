@@ -137,6 +137,10 @@ spec:
 {{- if .Values.complianceServer.env }}
 {{ toYaml .Values.complianceServer.env | indent 12 }}
 {{- end }}
+{{- if .Values.complianceServer.runAsPrivileged }}
+          securityContext:
+            privileged: true
+{{- end }}
           volumeMounts:
             - name: elastic-ca-cert-volume
               mountPath: /etc/ssl/elastic/

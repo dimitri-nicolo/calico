@@ -1,8 +1,10 @@
 ---
 layout: null
 ---
-{% helm tigera-secure-ee --execute templates/manager.yaml %}
+{% helm tigera-secure-ee --execute templates/manager.yaml --execute templates/compliance/compliance-server.yaml --execute templates/compliance/compliance-controller.yaml --execute templates/compliance/compliance-snapshotter.yaml --execute templates/compliance/compliance-reporter.yaml --execute templates/compliance/compliance-report-types.yaml %}
 manager:
   auth:
     type: OAuth
+complianceServer:
+  runAsPrivileged: true
 {% endhelm %}
