@@ -40,10 +40,10 @@ const (
 
 func main() {
 	var ver, debug bool
-	var healthzSockPath string
+	var healthzSockPort int
 	flag.BoolVar(&ver, "version", false, "Print version information")
 	flag.BoolVar(&debug, "debug", false, "Debug mode")
-	flag.StringVar(&healthzSockPath, "sock", health.DefaultHealthzSockPath, "Path to healthz socket")
+	flag.IntVar(&healthzSockPort, "port", health.DefaultHealthzSockPort, "Healthz port")
 	flag.Parse()
 
 	if ver {
@@ -158,7 +158,7 @@ func main() {
 		e, e, e)
 	s.Run(context.Background())
 	defer s.Close()
-	hs := health.NewServer(s, s, healthzSockPath)
+	hs := health.NewServer(s, s, healthzSockPort)
 	go func() {
 		err := hs.Serve()
 		if err != nil {

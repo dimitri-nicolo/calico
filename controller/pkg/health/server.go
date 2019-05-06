@@ -5,18 +5,17 @@ package health
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
-	"os"
-	"path/filepath"
 )
 
-const DefaultHealthzSockPath = "/var/run/healthz.sock"
+const DefaultHealthzSockPort = 50000
 
 type Server struct {
-	mux             *http.ServeMux
-	svr             *http.Server
-	healthzSockPath string
+	mux  *http.ServeMux
+	svr  *http.Server
+	port int
 }
 
 type Pinger interface {
@@ -52,24 +51,19 @@ func (r *readiness) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 	}
 }
 
-func NewServer(p Pinger, r Readier, healthzSockPath string) *Server {
+func NewServer(p Pinger, r Readier, healthzSockPort int) *Server {
 	m := http.NewServeMux()
 	m.Handle("/liveness", &liveness{pinger: p})
 	m.Handle("/readiness", &readiness{readier: r})
 	s := &Server{
-		mux:             m,
-		healthzSockPath: healthzSockPath,
+		mux:  m,
+		port: healthzSockPort,
 	}
 	return s
 }
 
 func (s *Server) Serve() error {
-	healthzSockDir := filepath.Dir(s.healthzSockPath)
-	err := os.MkdirAll(healthzSockDir, 0777)
-	if err != nil {
-		return err
-	}
-	l, err := net.Listen("unix", s.healthzSockPath)
+	l, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", s.port))
 	if err != nil {
 		return err
 	}
