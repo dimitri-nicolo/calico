@@ -68,6 +68,19 @@ However, you can also run this after submitting your PR and experiencing an `htm
 
 Let's say there's a single commit that makes changes to the `master` directory which I want to apply to the `v1.5` directory.
 
+1. There's a make target that attempts to backport your changes
+   (to the `<version>`, `_includes/<version>` and `_data/<version>` directories) for you.
+   It backports all changes committed in your current branch from the merge-base with the `master` branch.
+   ```
+   make backport_docs_change VERSION=v1.5
+   ```
+
+   You can also specify `ORIG_VERSION=v1.6` if you wish to backport from `v1.6`.
+
+1. Inspect the results (`git status` etc.), resolve conflicts and commit.
+
+Or you can do it by hand:
+
 1. Generate a diff. A sample command follows which stores the diff in a file called `my-patch.diff`.
 
     ```

@@ -169,6 +169,27 @@ update_canonical_urls:
 	# Looks through all directories and replaces previous latest release version numbers in canonical URLs with new
 	find . \( -name '*.md' -o -name '*.html' \) -exec sed -i '/canonical_url:/s/$(OLD)/$(NEW)/g' {} \;
 
+# Copy a docs change from ORIG_VERSION (default master) to a specified version.
+# The docs change copied is all modifications from the master branch.
+backport_docs_change:
+ifndef VERSION
+	$(error VERSION is undefined - run using make backport_docs_change VERSION=vX.Y)
+endif  
+ifndef ORIG_VERSION
+	# Backporting changes from master.
+	$(eval ORIG_VERSION = master)
+endif
+	# (Note that ... indicates the diff from the merge-base.)
+	git diff master...HEAD -- $(ORIG_VERSION) > backport_main.patch
+	git diff master...HEAD -- _includes/$(ORIG_VERSION) > backport_includes.patch
+	git diff master...HEAD -- _data/`echo $(ORIG_VERSION) | tr . _` > backport_data.patch
+
+	-git apply --3way -p2 --directory=$(VERSION) backport_main.patch
+	-git apply --3way -p3 --directory=_includes/$(VERSION) backport_includes.patch
+	-git apply --3way -p3 --directory=_data/`echo $(VERSION) | tr . _` backport_data.patch
+	# "error: unrecognized input" can be ignored if you didn't modify those directories.
+	# "error: patch failed" means you will need to manually patch certain directories.
+
 ###############################################################################
 # Release targets
 ###############################################################################

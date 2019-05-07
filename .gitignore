@@ -14,6 +14,7 @@ _output/
 /*.out
 bin
 vendor
+backport*.patch
 
 # This prevents us from accidentally checking actual files into
 # the helm templates directory, since (for now) we should be
