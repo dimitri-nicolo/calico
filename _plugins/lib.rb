@@ -59,11 +59,9 @@ def gen_chart_specific_values(versions, imageNames, imageRegistry, chart)
         clientID: ""
       env:
         # Optional environment variables for configuring the manager UI.
-        # - name: CNX_CLUSTER_NAME
-        #   valueFrom:
-        #     configMapKeyRef:
-        #       name: tigera-cnx-manager-config
-        #       key: tigera.cnx-manager.cluster-name
+        # These should match the EnvVar spec of the corev1 Kubernetes API. For example:
+        # - name: FOO
+        #   value: bar
       # Configuration for the service which exposes the manager UI.
       service:
         type: ClusterIP
@@ -85,11 +83,9 @@ def gen_chart_specific_values(versions, imageNames, imageRegistry, chart)
       tag: #{versions["cnx-manager-proxy"]}
       env:
         # Optional environment variables for configuring the manager proxy.
-        # - name: CNX_WEB_OIDC_CLIENT_ID
-        #   valueFrom:
-        #     configMapKeyRef:
-        #       name: tigera-cnx-manager-config
-        #       key: tigera.cnx-manager.oidc-client-id
+        # These should match the EnvVar spec of the corev1 Kubernetes API. For example:
+        # - name: FOO
+        #   value: bar
       # Optional configuration for setting resource limits on the manager proxy container.
       resources:
         requests:
@@ -105,12 +101,9 @@ def gen_chart_specific_values(versions, imageNames, imageRegistry, chart)
       tag: #{versions["es-proxy"]}
       env:
         # Optional environment variables for configuring the elasticsearch proxy container.
-        # - name: ELASTIC_CA
-        #   valueFrom:
-        #     configMapKeyRef:
-        #       name: tigera-es-config
-        #       key: tigera.elasticsearch.ca.path
-        #       optional: true
+        # These should match the EnvVar spec of the corev1 Kubernetes API. For example:
+        # - name: FOO
+        #   value: bar
       # Optional configuration for setting resource limits on the esProxy container.
       resources:
         requests:
@@ -131,8 +124,9 @@ def gen_chart_specific_values(versions, imageNames, imageRegistry, chart)
     
       env:
         # Optional environment variables for configuring the Tigera fluentd.
-        # - name: FLUENT_UID
-        #   value: "0"
+        # These should match the EnvVar spec of the corev1 Kubernetes API. For example:
+        # - name: FOO
+        #   value: bar
       # Optional configuration for setting resource limits on the Tigera fluentd container.
       resources:
         requests:
@@ -148,11 +142,9 @@ def gen_chart_specific_values(versions, imageNames, imageRegistry, chart)
       tag: #{versions["es-curator"]}
       env:
         # Optional environment variables for configuring the elasticsearch curator.
-        # - name: ELASTIC_INDEX_SUFFIX
-        #   valueFrom:
-        #     configMapKeyRef:
-        #       name: tigera-es-config
-        #       key: tigera.elasticsearch.cluster-name
+        # These should match the EnvVar spec of the corev1 Kubernetes API. For example:
+        # - name: FOO
+        #   value: bar
       # Optional configuration for setting resource limits on the elasticsearch curator container.
       resources:
         requests:
@@ -169,8 +161,9 @@ def gen_chart_specific_values(versions, imageNames, imageRegistry, chart)
       tag: #{versions["elastic-tsee-installer"]}
       env:
         # Optional environment variables for configuring the elasticsearch dashboard installer job.
-        # - name: ELASTIC_HOST
-        #   value: elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local
+        # These should match the EnvVar spec of the corev1 Kubernetes API. For example:
+        # - name: FOO
+        #   value: bar
       # Optional configuration for setting resource limits on the elasticsearch dashboard installer container.
       resources:
         requests:
@@ -186,13 +179,9 @@ def gen_chart_specific_values(versions, imageNames, imageRegistry, chart)
       tag: #{versions["compliance-controller"]}
       env:
         # Optional environment variables for configuring the compliance controller.
+        # These should match the EnvVar spec of the corev1 Kubernetes API. For example:
         # - name: LOG_LEVEL
         #   value: "warning"
-        # This environment is used to set the delay between the end time of the report and the start time
-        # of the job used to generate the report. This does not affect the actual times that the report
-        # covers. Defaults to 30m.
-        # - name: TIGERA_COMPLIANCE_JOB_START_DELAY
-        #   value: "30m"
       # Optional configuration for setting resource limits on the compliance controller container.
       resources:
         requests:
@@ -208,6 +197,7 @@ def gen_chart_specific_values(versions, imageNames, imageRegistry, chart)
       tag: #{versions["compliance-reporter"]}
       env:
         # Optional environment variables for configuring the compliance reporter.
+        # These should match the EnvVar spec of the corev1 Kubernetes API. For example:
         # - name: LOG_LEVEL
         #   value: "warning"
       # Optional configuration for setting resource limits on the compliance reporter container.
@@ -225,6 +215,7 @@ def gen_chart_specific_values(versions, imageNames, imageRegistry, chart)
       tag: #{versions["compliance-snapshotter"]}
       env:
         # Optional environment variables for configuring the compliance snapshotter.
+        # These should match the EnvVar spec of the corev1 Kubernetes API. For example:
         # - name: LOG_LEVEL
         #   value: "warning"
       # Optional configuration for setting resource limits on the compliance snapshotter container.
@@ -242,6 +233,7 @@ def gen_chart_specific_values(versions, imageNames, imageRegistry, chart)
       tag: #{versions["compliance-server"]}
       env:
         # Optional environment variables for configuring the compliance server.
+        # These should match the EnvVar spec of the corev1 Kubernetes API. For example:
         # - name: LOG_LEVEL
         #   value: "warning"
       # Optional configuration for setting resource limits on the compliance server container.
@@ -417,6 +409,7 @@ def gen_chart_specific_values(versions, imageNames, imageRegistry, chart)
       tag: #{versions["cnx-node"]}
       env:
         # Optional environment variables for configuring Calico node.
+        # These should match the EnvVar spec of the corev1 Kubernetes API. For example:
         # - name: FELIX_LOGSEVERITYSCREEN
         #   value: "debug"
       # Optional configuration for setting resource limits on the Calico node container.
@@ -435,8 +428,9 @@ def gen_chart_specific_values(versions, imageNames, imageRegistry, chart)
       tag: #{versions["calico/cni"]}
       env:
         # Optional environment variables for configuring Calico CNI.
-        # - name: SLEEP
-        #   value: "false"
+        # These should match the EnvVar spec of the corev1 Kubernetes API. For example:
+        # - name: FOO
+        #   value: bar
     
     # Configuration for setting up Flannel.
     flannel:
@@ -444,8 +438,9 @@ def gen_chart_specific_values(versions, imageNames, imageRegistry, chart)
       tag: #{versions["flannel"]}
       env:
         # Optional environment variables for configuring Flannel.
-        # - name: FLANNELD_SUBNET_FILE
-        #   value: "/run/flannel/subnet.env"
+        # These should match the EnvVar spec of the corev1 Kubernetes API. For example:
+        # - name: FOO
+        #   value: bar
       # Optional configuration for setting resource limits on the Flannel container.
       resources:
         requests:
@@ -461,8 +456,9 @@ def gen_chart_specific_values(versions, imageNames, imageRegistry, chart)
       tag: #{versions["cnx-kube-controllers"]}
       env:
         # Optional environment variables for configuring Calico kube controllers.
-        # - name: ENABLED_CONTROLLERS
-        #   value: "policy,namespace,serviceaccount,workloadendpoint,node"
+        # These should match the EnvVar spec of the corev1 Kubernetes API. For example:
+        # - name: LOG_LEVEL
+        #   value: debug
       # Optional configuration for setting resource limits on the Calico kube controllers container.
       resources:
         requests:
@@ -479,8 +475,9 @@ def gen_chart_specific_values(versions, imageNames, imageRegistry, chart)
       enabled: false
       env:
         # Optional environment variables for configuring Typha.
-        # - name: TYPHA_PROMETHEUSMETRICSENABLED
-        #   value: "true"
+        # These should match the EnvVar spec of the corev1 Kubernetes API. For example:
+        # - name: TYPHA_LOGSEVERITYSYS
+        #   value: debug
       # Optional configuration for setting resource limits on the Typha container.
       resources:
         requests:
@@ -502,8 +499,9 @@ def gen_chart_specific_values(versions, imageNames, imageRegistry, chart)
       runAsPrivileged: false
       env:
         # Optional environment variables for configuring the Calico API Server.
-        # - name: DATASTORE_TYPE
-        #   value: "kubernetes"
+        # These should match the EnvVar spec of the corev1 Kubernetes API. For example:
+        # - name: FOO
+        #   value: bar
       # Optional configuration for setting resource limits on the API server container.
       resources:
         requests:
@@ -519,12 +517,9 @@ def gen_chart_specific_values(versions, imageNames, imageRegistry, chart)
       tag: #{versions["cnx-queryserver"]}
       env:
         # Optional environment variables for configuring the Calico query server.
-        # - name: TIGERA_POD_SECURITY_GROUP
-        #   valueFrom:
-        #     configMapKeyRef:
-        #       name: tigera-aws-config
-        #       key: pod_sg
-        #       optional: true
+        # These should match the EnvVar spec of the corev1 Kubernetes API. For example:
+        # - name: FOO
+        #   value: bar
       # Optional configuration for setting resource limits on the Calico query server container.
       resources:
         requests:
