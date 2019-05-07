@@ -1,5 +1,9 @@
-FROM scratch
+FROM debian:9.8-slim
 
-ADD bin/server-amd64 /server
-WORKDIR /
-ENTRYPOINT ["/server"]
+ADD bin/server-amd64 /code/server
+
+RUN chgrp -R 0 /code && \
+    chmod -R g=u /code
+
+WORKDIR /code
+ENTRYPOINT ["/code/server"]
