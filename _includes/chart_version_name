@@ -1,0 +1,4 @@
+{{- site.data.versions[page.version].first.title -}}
+{%- if site.data.versions[page.version].first.helmRelease -%}
+-{{- site.data.versions[page.version].first.helmRelease -}}
+{%- endif -%}
