@@ -1,9 +1,12 @@
-{% if include.init != "openshift" %}
-  {% assign cli = "kubectl" %}
-  {% assign manifestPath = "getting-started/kubernetes/installation/hosted/cnx/1.7" %}
-{% else %}
+{% if include.init == "openshift" %}
   {% assign cli = "oc" %}
   {% assign manifestPath = "getting-started/openshift" %}
+{% elsif include.platform == "eks" %}
+  {% assign cli = "kubectl" %}
+  {% assign manifestPath = "getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only-ecs" %}
+{% else %}
+  {% assign cli = "kubectl" %}
+  {% assign manifestPath = "getting-started/kubernetes/installation/hosted/cnx/1.7" %}
 {% endif %}
 
 ## Installing the {{site.prodname}} Manager
@@ -169,9 +172,11 @@
    Save the token - you'll use it to log in to {{site.prodname}} Manager.  Next we'll assign permissions to do so
    to it.  Use the value of `$TIGERA_UI_USER` as `<USER>` in the following step.
 
+{% include {{page.version}}/cnx-grant-user-manager-permissions.md usertype="serviceaccount" %}
+{% else %}
+{% include {{page.version}}/cnx-grant-user-manager-permissions.md %}
 {% endif %}
 
-{% include {{page.version}}/cnx-grant-user-manager-permissions.md %}
 
 {% if include.platform != "docker-ee" %}
 1. By default, {{site.prodname}} Manager is made accessible via a NodePort listening on port 30003.
