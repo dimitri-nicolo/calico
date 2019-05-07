@@ -825,7 +825,7 @@ installCalicoBinary() {
   # Validate arg
   [ "$utilityName" == "calicoctl" ] || [ "$utilityName" == "calicoq" ] || fatalError "Utility name \"${utilityName}\" is not valid, must be either \"calicoctl\" or \"calicoq\"."
 
-  # We've already downloaded the uiltity manifests, i.e. "calicoctl.yaml"
+  # We've already downloaded the utility manifests, i.e. "calicoctl.yaml"
   # or "calicoq.yaml". Perform sanity checking to make sure they exist.
   utilityManifest=${utilityName}.yaml
 
@@ -1220,7 +1220,7 @@ checkCRDs() {
   svcCRD="servicemonitors.monitoring.coreos.com"
   elasticCRD="elasticsearchclusters.enterprises.upmc.com"
 
-  echo -n "waiting for Custom Resource Defintions to be created: "
+  echo -n "waiting for Custom Resource Definitions to be created: "
 
   count=30
   while [[ $count -ne 0 ]]; do
