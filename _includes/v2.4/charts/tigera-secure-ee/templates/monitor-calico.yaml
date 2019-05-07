@@ -1006,7 +1006,7 @@ spec:
               secretKeyRef:
                 name: elastic-ee-intrusion-detection
                 key: password
-          - name: CA_CERT
+          - name: ELASTIC_CA
             value: /certs/ca.pem
         volumeMounts:
           - name: certs
