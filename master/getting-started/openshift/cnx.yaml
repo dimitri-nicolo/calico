@@ -5,6 +5,4 @@ layout: null
 manager:
   auth:
     type: OAuth
-complianceServer:
-  runAsPrivileged: true
 {% endhelm %}
