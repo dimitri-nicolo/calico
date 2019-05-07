@@ -1,4 +1,4 @@
-FROM debian:9.8-slim
+FROM alpine:3.9.3
 
 ADD bin/server-amd64 /code/server
 
