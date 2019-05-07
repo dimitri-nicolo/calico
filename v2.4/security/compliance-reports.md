@@ -333,7 +333,8 @@ In a report, the job status types are:
 - **activeReportJobs**:   
   Default = allows up to 5 concurrent report generation jobs.
 - **lastFailedReportJobs**:     
-  Default = keeps the 10 most recent failed jobs and deletes older ones. 
+  Default = keeps the 3 most recent failed jobs and deletes older ones. A single report generation job will be retried
+  up to 6 times (by default) before it is marked as failed.
 - **lastSuccessfulReportJobs**:   
   Default = keeps the 2 most recent successful jobs and deletes older ones. 
 
@@ -348,7 +349,7 @@ creating a report that is not counted in global report status.
 To change the delay, go to the installation manifest, and uncomment and set the environment 
 `TIGERA_COMPLIANCE_JOB_START_DELAY`. Specify value as a [Duration string][parse-duration].
 
-### Manually run reports
+#### Manually run reports
 
 You can manually run reports at any time. For example, run a manual report:
 
