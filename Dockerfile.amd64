@@ -1,5 +1,9 @@
-FROM scratch
+FROM debian:9.8-slim
 
 ADD bin/es-proxy-amd64 /es-proxy
+
+RUN chgrp -R 0 /etc && \
+    chmod -R g=u /etc
+
 WORKDIR /
 ENTRYPOINT ["/es-proxy"]
