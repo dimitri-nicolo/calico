@@ -15,7 +15,7 @@ We test {{site.prodname}} {{page.version}} against the following Kubernetes vers
 - v1.13
 - v1.14
 
-Helm installation requires Kubernetes v1.11.3 or later.
+Helm installation requires Kubernetes v1.12 or later.
 
 Other versions may work, but we do not actively test {{site.prodname}}
 {{page.version}} against them.
