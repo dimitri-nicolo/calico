@@ -29,6 +29,7 @@ var (
 	TypeK8sNetworkPolicies          = metav1.TypeMeta{APIVersion: grpVersionK8sNetworking, Kind: "NetworkPolicy"}
 	TypeK8sPods                     = metav1.TypeMeta{APIVersion: v1, Kind: "Pod"}
 	TypeK8sServiceAccounts          = metav1.TypeMeta{APIVersion: v1, Kind: "ServiceAccount"}
+	TypeK8sStatus                   = metav1.TypeMeta{APIVersion: v1, Kind: "Status"}
 
 	// Legacy types.
 	TypeK8sNetworkPoliciesExtensions = metav1.TypeMeta{APIVersion: grpVersionExtensions, Kind: "NetworkPolicy"}

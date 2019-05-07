@@ -1434,3 +1434,115 @@ Create
   ]
 }
 ```
+
+## Status
+```
+{
+  "_index": "tigera_secure_ee_audit_ee.cluster.20190507",
+  "_type": "fluentd",
+  "_id": "fgSXkGoBxB1mk6MND1lZ",
+  "_score": 1.3862944,
+  "_source": {
+    "kind": "Event",
+    "apiVersion": "audit.k8s.io/v1beta1",
+    "metadata": {
+      "creationTimestamp": "2019-05-07T04:39:34Z"
+    },
+    "level": "RequestResponse",
+    "timestamp": "2019-05-07T04:39:34Z",
+    "auditID": "62d4a78d-1067-42b6-9c70-a4aaf6cf2cbc",
+    "stage": "ResponseComplete",
+    "requestURI": "/apis/projectcalico.org/v3/globalnetworkpolicies/test.allow-egress-to-domains",
+    "verb": "update",
+    "user": {
+      "username": "jane",
+      "groups": [
+        "system:authenticated"
+      ]
+    },
+    "sourceIPs": [
+      "10.128.0.12"
+    ],
+    "objectRef": {
+      "resource": "globalnetworkpolicies",
+      "name": "test.allow-egress-to-domains",
+      "uid": "c9534716-7081-11e9-8d6c-42010a80007d",
+      "apiGroup": "projectcalico.org",
+      "apiVersion": "v3",
+      "resourceVersion": "74616"
+    },
+    "responseStatus": {
+      "kind": "Status",
+      "apiVersion": "v1",
+      "metadata": {},
+      "status": "Failure",
+      "message": " \"test.allow-egress-to-domains\" is invalid: Destination.Selector: Invalid value: \"null\": must be left empty when Destination.Domains is specified",
+      "reason": "Invalid",
+      "details": {
+        "name": "test.allow-egress-to-domains",
+        "causes": [
+          {
+            "reason": "FieldValueInvalid",
+            "message": "Invalid value: \"null\": must be left empty when Destination.Domains is specified",
+            "field": "Destination.Selector"
+          }
+        ]
+      },
+      "code": 422
+    },
+    "requestObject": {
+      "kind": "GlobalNetworkPolicy",
+      "apiVersion": "projectcalico.org/v3",
+      "metadata": {
+        "name": "test.allow-egress-to-domains",
+        "uid": "c9534716-7081-11e9-8d6c-42010a80007d",
+        "resourceVersion": "74616",
+        "creationTimestamp": null
+      },
+      "spec": {
+        "tier": "test",
+        "order": 100,
+        "egress": [
+          {
+            "action": "Allow",
+            "source": {},
+            "destination": {
+              "selector": "my-pod-label == \"my-value\"",
+              "domains": [
+                "api.alice.com",
+                "bob.example.com"
+              ]
+            }
+          }
+        ],
+        "selector": "my-pod-label == \"my-value\"",
+        "types": [
+          "Egress"
+        ]
+      }
+    },
+    "responseObject": {
+      "kind": "Status",
+      "apiVersion": "v1",
+      "metadata": {},
+      "status": "Failure",
+      "message": " \"test.allow-egress-to-domains\" is invalid: Destination.Selector: Invalid value: \"null\": must be left empty when Destination.Domains is specified",
+      "reason": "Invalid",
+      "details": {
+        "name": "test.allow-egress-to-domains",
+        "causes": [
+          {
+            "reason": "FieldValueInvalid",
+            "message": "Invalid value: \"null\": must be left empty when Destination.Domains is specified",
+            "field": "Destination.Selector"
+          }
+        ]
+      },
+      "code": 422
+    },
+    "requestReceivedTimestamp": "2019-05-07T04:39:34.945734Z",
+    "stageTimestamp": "2019-05-07T04:39:34.953272Z",
+    "name": null
+  }
+}
+```

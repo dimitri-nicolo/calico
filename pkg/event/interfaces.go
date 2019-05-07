@@ -86,6 +86,16 @@ func ExtractResourceFromAuditEvent(event *auditv1.Event) (resources.Resource, er
 		return nil, err
 	}
 
+	// Ensure that we haven't received a status audit log or some other invalid type.
+	if tm := resources.GetTypeMeta(res); tm == resources.TypeK8sStatus {
+		clog.Info("Skipping status audit event")
+		return nil, nil
+	} else if rh2 := resources.GetResourceHelperByTypeMeta(resources.GetTypeMeta(res)); rh2 == nil {
+		return nil, errors.New("received unknown type " + tm.String())
+	} else if tm2 := rh2.TypeMeta(); tm != tm2 {
+		return nil, errors.New("objRef typeMeta " + tm.String() + " does not match respObj typeMeta " + tm2.String())
+	}
+
 	return res, nil
 }
 

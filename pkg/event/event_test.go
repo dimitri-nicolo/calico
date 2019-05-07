@@ -26,6 +26,11 @@ var _ = Describe("Event", func() {
 					continue
 				}
 
+				if ev.ResponseStatus.Status == "Failure" {
+					Expect(res).To(BeNil())
+					continue
+				}
+
 				Expect(res).ToNot(BeNil())
 				gvk := res.GetObjectKind().GroupVersionKind()
 				Expect(gvk.Group).To(Equal(ev.ObjectRef.APIGroup))

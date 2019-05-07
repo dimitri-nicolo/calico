@@ -110,8 +110,8 @@ func (r *replayer) initialize(ctx context.Context) error {
 }
 
 // replay fetches events for the given resource from the list's timestamp up until the specified start time.
-func (r *replayer) replay(ctx context.Context, kind *metav1.TypeMeta, from, to *time.Time, notifyUpdates bool) error {
-	for ev := range r.eventer.GetAuditEvents(ctx, kind, from, to) {
+func (r *replayer) replay(ctx context.Context, filterTM *metav1.TypeMeta, from, to *time.Time, notifyUpdates bool) error {
+	for ev := range r.eventer.GetAuditEvents(ctx, filterTM, from, to) {
 		if ev.Err != nil {
 			return ev.Err
 		}
@@ -133,19 +133,24 @@ func (r *replayer) replay(ctx context.Context, kind *metav1.TypeMeta, from, to *
 		}
 
 		// Update the internal cache and send the appropriate Update to the callbacks.
-		id := resources.GetResourceID(res)
-		kind2 := resources.GetTypeMeta(res)
-		clog = clog.WithFields(log.Fields{"resID": id, "kind": kind2})
-		update := syncer.Update{ResourceID: id, Resource: res}
+		kind := resources.GetTypeMeta(res)
+		resMap, ok := r.resources[kind]
+		if !ok {
+			clog.Warn("Failed to retrieve map for kind - skipping")
+			continue
+		}
 
+		id := resources.GetResourceID(res)
+		update := syncer.Update{ResourceID: id, Resource: res}
+		clog = clog.WithFields(log.Fields{"resID": id, "kind": kind})
 		switch ev.Event.Verb {
 		case event.VerbCreate, event.VerbUpdate, event.VerbPatch:
-			clog.Debug("setting event")
+			clog.Debug("Setting event")
 			update.Type = syncer.UpdateTypeSet
 
 			// Refuse to apply audit event if resource version of old resource is higher
 			//  than the new one.
-			oldRes, ok := r.resources[kind2][id]
+			oldRes, ok := resMap[id]
 			if ok {
 				oldResVer, err := resources.GetResourceVersion(oldRes)
 				if err != nil {
@@ -162,11 +167,11 @@ func (r *replayer) replay(ctx context.Context, kind *metav1.TypeMeta, from, to *
 					continue
 				}
 			}
-			r.resources[kind2][id] = res
+			resMap[id] = res
 		case event.VerbDelete:
 			clog.Debug("deleting event")
 			update.Type = syncer.UpdateTypeDeleted
-			delete(r.resources[kind2], id)
+			delete(resMap, id)
 		default:
 			clog.Warn("invalid verb")
 		}
