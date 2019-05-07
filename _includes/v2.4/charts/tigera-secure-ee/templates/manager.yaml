@@ -425,6 +425,14 @@ rules:
   resources: ["tiers"]
   resourceNames: ["default"]
   verbs: ["get"]
+# List and download the reports in the UI.
+- apiGroups: ["projectcalico.org"]
+  resources: ["globalreports"]
+  verbs: ["get", "list"]
+- apiGroups: ["projectcalico.org"]
+  resources: ["globalreporttypes"]
+  verbs: ["get"]
+
 ---
 
 kind: ClusterRole
@@ -453,6 +461,18 @@ rules:
   resources: ["index"]
   resourceNames: ["flows", "audit*", "events"]
   verbs: ["get"]
+# Manage globalreport configuration, view report generation status, and list reports in the UI.
+- apiGroups: ["projectcalico.org"]
+  resources: ["globalreports"]
+  verbs: ["*"]
+- apiGroups: ["projectcalico.org"]
+  resources: ["globalreports/status"]
+  verbs: ["get", "list", "watch"]
+# Download the reports in the UI.
+- apiGroups: ["projectcalico.org"]
+  resources: ["globalreporttypes"]
+  verbs: ["get"]
+
 ---
 
 # Allow users to access Tigera Secure EE Manager.
