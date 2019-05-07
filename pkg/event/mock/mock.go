@@ -48,28 +48,28 @@ func (f *Fetcher) GetAuditEvents(ctx context.Context, tm *metav1.TypeMeta, from,
 	return ch
 }
 
-func (f *Fetcher) LoadAuditEvent(verb string, res resources.Resource, timestamp time.Time, resVer string) {
+func (f *Fetcher) LoadAuditEvent(verb string, objRef resources.Resource, respObj interface{}, timestamp time.Time, resVer string) {
 	ev := new(auditv1.Event)
 	ev.Verb = verb
 
 	// Get the resource helper.
-	tm := resources.GetTypeMeta(res)
+	tm := resources.GetTypeMeta(objRef)
 	rh := resources.GetResourceHelperByTypeMeta(tm)
 
 	// Set the objectRef
 	ev.ObjectRef = &auditv1.ObjectReference{
-		Name:       res.GetObjectMeta().GetName(),
-		Namespace:  res.GetObjectMeta().GetNamespace(),
-		APIGroup:   res.GetObjectKind().GroupVersionKind().Group,
-		APIVersion: res.GetObjectKind().GroupVersionKind().Version,
+		Name:       objRef.GetObjectMeta().GetName(),
+		Namespace:  objRef.GetObjectMeta().GetNamespace(),
+		APIGroup:   objRef.GetObjectKind().GroupVersionKind().Group,
+		APIVersion: objRef.GetObjectKind().GroupVersionKind().Version,
 		Resource:   rh.Plural(),
 	}
 
 	// Set the resource version
-	res.GetObjectMeta().SetResourceVersion(resVer)
+	objRef.GetObjectMeta().SetResourceVersion(resVer)
 
 	// Set the response object.
-	resJson, err := json.Marshal(res)
+	resJson, err := json.Marshal(respObj)
 	ev.ResponseObject = &runtime.Unknown{Raw: resJson}
 	if err != nil {
 		panic(err)

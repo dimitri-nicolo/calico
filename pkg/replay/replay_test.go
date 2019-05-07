@@ -95,15 +95,15 @@ var _ = Describe("Replay", func() {
 		By("setting a network policy audit event before the start time")
 		np.TypeMeta = resources.TypeCalicoNetworkPolicies
 		np.Spec.Selector = `foo == "baz"`
-		eventer.LoadAuditEvent(event.VerbUpdate, np, baseTime.Add(30*time.Second), "101")
+		eventer.LoadAuditEvent(event.VerbUpdate, np, np, baseTime.Add(30*time.Second), "101")
 
 		By("setting a network policy audit event after the start time")
 		np.Spec.Selector = `foo == "barbaz"`
-		eventer.LoadAuditEvent(event.VerbUpdate, np, baseTime.Add(75*time.Second), "102")
+		eventer.LoadAuditEvent(event.VerbUpdate, np, np, baseTime.Add(75*time.Second), "102")
 
 		By("setting a network policy audit event after the start time but with a bad resource version")
 		np.Spec.Selector = `foo == "blah"`
-		eventer.LoadAuditEvent(event.VerbUpdate, np, baseTime.Add(90*time.Second), "100")
+		eventer.LoadAuditEvent(event.VerbUpdate, np, np, baseTime.Add(90*time.Second), "100")
 
 		// Make the replay call.
 		replayer.Start(ctx)
@@ -119,5 +119,17 @@ var _ = Describe("Replay", func() {
 		By("ensuring that the in-sync and complete status update was received")
 		Expect(cb.statusUpdates).To(ContainElement(syncer.NewStatusUpdateInSync()))
 		Expect(cb.statusUpdates).To(ContainElement(syncer.NewStatusUpdateComplete()))
+	})
+
+	It("should properly handle a Status event", func() {
+		cb = new(mockCallbacks)
+		replayer := New(baseTime.Add(time.Minute), baseTime.Add(2*time.Minute), lister, eventer, cb)
+		np := &apiv3.NetworkPolicy{TypeMeta: resources.TypeCalicoNetworkPolicies}
+
+		eventer.LoadAuditEvent(event.VerbCreate, np, &metav1.Status{TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "Status"}}, baseTime.Add(30*time.Second), "100")
+
+		Expect(func() {
+			replayer.Start(ctx)
+		}).ShouldNot(Panic())
 	})
 })
