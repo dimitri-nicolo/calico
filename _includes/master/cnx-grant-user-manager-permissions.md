@@ -1,12 +1,14 @@
 {%- if include.usertype == "serviceaccount" %}
   {% assign type = "service account" %}
   {% assign flag = "serviceaccount" %}
+  {% assign user = "<NAMESPACE>:<USER>" %}
 {% else %}
   {% assign type = "user" %}
   {% assign flag = "user" %}
+  {% assign user = "<USER>" %}
 {%- endif %}
 1. Grant permission to access the {{site.prodname}} Manager to users in your cluster. Issue one of the following
-   commands, replacing `<USER>` with the name of the {{type}} you wish to grant access.
+   commands, replacing `{{user}}` with the {{type}} you wish to grant access.
 
    The ClusterRole `tigera-ui-user` grants permission to use the {{site.prodname}} Manager UI, view flow
    logs, audit logs, network statistics, compliance reports, and access the default policy tier.
@@ -17,7 +19,7 @@
 {%- else %}
    kubectl create clusterrolebinding <USER>-tigera \
      --clusterrole=tigera-ui-user \
-     --{{flag}}=<USER>
+     --{{flag}}={{user}}
 {%- endif %}
    ```
 
@@ -31,7 +33,7 @@
 {%- else %}
    kubectl create clusterrolebinding <USER>-network-admin \
      --clusterrole=network-admin \
-     --{{flag}}=<USER>
+     --{{flag}}={{user}}
 {%- endif %}
    ```
 
