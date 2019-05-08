@@ -1,25 +1,27 @@
 v2.4:
-- title: v2.4.0-pre
-  note: ""
+- title: v2.4.0
+  helmVersion: 0
+  note: |
+    07 May 2019
   components:
     cnx-manager:
-      version: release-v2.4
+      version: v2.4.0
     cnx-manager-proxy:
-      version: release-v2.4
+      version: v2.4.0
     cnx-apiserver:
-      version: release-v2.4
+      version: v2.4.0
     cnx-queryserver:
-      version: release-v2.4
+      version: v2.4.0
     cnx-kube-controllers:
-      version: release-v2.4
+      version: v2.4.0
     calicoq:
-      version: release-v2.4
+      version: v2.4.0
     typha:
-      version: release-v2.4
+      version: v2.4.0
     calicoctl:
-      version: release-v2.4
+      version: v2.4.0
     cnx-node:
-      version: release-v2.4
+      version: v2.4.0
     calico/cni:
       version: v3.6.1
     calico/routereflector:
@@ -38,13 +40,13 @@ v2.4:
     configmap-reload:
       version: v0.0.1
     dikastes:
-      version: release-v2.4
+      version: v2.4.0
     flexvol:
       version: v3.6.1
     fluentd:
-      version: release-v2.4
+      version: v2.4.0
     es-proxy:
-      version: release-v2.4
+      version: v2.4.0
     elasticsearch-operator:
       version: 0.2.0
     kibana:
@@ -52,23 +54,23 @@ v2.4:
     elasticsearch:
       version: 6.4.3
     cloud-controllers:
-      version: release-v2.4
+      version: v2.4.0
     elastic-tsee-installer:
-      version: release-v2.4
+      version: v2.4.0
     es-curator:
-      version: release-v2.4
+      version: v2.4.0
     intrusion-detection-controller:
-      version: release-v2.4
+      version: v2.4.0
     flannel:
       version: v0.9.1
     compliance-controller:
-      version: release-v2.4
+      version: v2.4.0
     compliance-reporter:
-      version: release-v2.4
+      version: v2.4.0
     compliance-snapshotter:
-      version: release-v2.4
+      version: v2.4.0
     compliance-server:
-      version: release-v2.4
+      version: v2.4.0
 
 
 v2.3:

@@ -107,5 +107,3 @@ defaults:
       path: v2.4
     values:
       version: v2.4
-      # Until it is released, v2.4 images are pulled from GCR.
-      registry: gcr.io/unique-caldron-775/cnx/
