@@ -9,7 +9,7 @@
    commands, replacing `<USER>` with the name of the {{type}} you wish to grant access.
 
    The ClusterRole `tigera-ui-user` grants permission to use the {{site.prodname}} Manager UI, view flow
-   logs, audit logs, and network statistics, and access the default policy tier.
+   logs, audit logs, network statistics, compliance reports, and access the default policy tier.
 
    ```
 {%- if include.init == "openshift" %}
@@ -22,7 +22,8 @@
    ```
 
    The ClusterRole `network-admin` grants permission to use the {{site.prodname}} Manager UI, view flow
-   logs, audit logs, and network statistics, and administer all network policies and tiers.
+   logs, audit logs, compliance reports and network statistics, and administer all network policies and tiers, and
+   manage compliance report schedules.
 
    ```
 {%- if include.init == "openshift" %}
