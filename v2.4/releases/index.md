@@ -1,23 +1,9 @@
 ---
 title: Releases
-canonical_url: https://docs.tigera.io/v2.3/releases/
+redirect_from: latest/releases/
+canonical_url: https://docs.tigera.io/v2.4/releases/
 ---
 
-The following table shows component versioning for {{site.prodname}}  **{{ page.version }}**.
+## Tigera Secure Enterprise Edition v2.4
 
-Use the version selector at the top-right of this page to view a different release.
-
-{% for release in site.data.versions[page.version] %}
-## {{ release.title }}
-
-{% if release.note %}
-{{ release.note }}
-{% else %}
-{% include {{page.version}}/release-notes/{{release.title}}-release-notes.md %}
-{% endif %}
-
-| Component              | Version |
-|------------------------|---------|{% for component_name in release.components %}
-| {{ component_name[0] }}   | [{{ component_name[1].version }}]({{ component_name[1].url }}) |{% endfor %}
-
-{% endfor %}
+{% include {{page.version}}/release-notes/v2.4.0-release-notes.md %}
