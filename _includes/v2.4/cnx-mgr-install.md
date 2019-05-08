@@ -130,7 +130,7 @@
 
 {% if include.upgrade %}
 1. Uninstall {{site.prodname}} Manager from previous install.
-   
+
    ```bash
    {{cli}} delete -n kube-system service cnx-manager
    {{cli}} delete -n kube-system networkpolicy.projectcalico.org allow-cnx.cnx-manager-access
@@ -138,6 +138,44 @@
    {{cli}} delete -n kube-system configmap tigera-cnx-manager-config
    {{cli}} delete -n kube-system serviceaccount cnx-manager
    ```
+
+1. Prior to {{site.prodname}} v2.4.0, {{site.prodname}} Manager users were granted access
+   to Elasticsearch by a ClusterRole RBAC rule that allowed access to the appropriate
+   Kubernetes services proxy resource:
+
+   ```
+   kind: ClusterRole
+   apiVersion: rbac.authorization.k8s.io/v1beta1
+   metadata:
+     name: tigera-elasticsearch-access
+   rules:
+   - apiGroups: [""]
+     resources: ["services/proxy"]
+     resourceNames: ["https:elasticsearch-tigera-elasticsearch:8443"]
+     verbs: ["get"]
+   ```
+
+   To ensure that {{site.prodname}} Manager users have the same level of access to
+   Elasticsearch indices, ClusterRoles that grant access to Elasticsearch in the
+   manner show above should be modified to give access to all resource names under
+   of type `index` in the `lma.tigera.io` group.
+
+   ```
+   kubectl apply -f - <<EOF
+   kind: ClusterRole
+   apiVersion: rbac.authorization.k8s.io/v1beta1
+   metadata:
+     name: tigera-elasticsearch-access
+   rules:
+   - apiGroups: ["lma.tigera.io"]
+     resources: ["index"]
+     resourceNames: []
+     verbs: ["get"]
+   EOF
+   ```
+
+   If the ClusterRole `tigera-ui-user` or `network-admin` were not modified, then no
+   additional step is required for Elasticsearch access.
 {% endif %}
 
 1. Apply the manifest to install the {{site.prodname}} Manager.
