@@ -160,17 +160,19 @@
    with appropriate permissions on the cluster.
 
    The easiest way to create such a token is to create a service account, assign it permissions
-   and get a token for it to use for login.  Update `TIGERA_UI_USER` to change the name to give
-   to the service account.
+   and get a token for it to use for login.  Update `USER` to change the name to give
+   to the service account and update `NAMESPACE` to change the namespace where the
+   service account is created. Create the namespace if needed.
 
    ```bash
-   export TIGERA_UI_USER=tigera-user
-   {{cli}} create serviceaccount -n calico-monitoring $TIGERA_UI_USER
-   kubectl get secret -n calico-monitoring -o jsonpath='{.data.token}' $(kubectl -n calico-monitoring get secret | grep $TIGERA_UI_USER | awk '{print $1}') | base64 --decode
+   export USER=ui-user
+   export NAMESPACE=ui-namespace
+   {{cli}} create serviceaccount -n $NAMESPACE $USER
+   kubectl get secret -n $NAMESPACE -o jsonpath='{.data.token}' $(kubectl -n $NAMESPACE get secret | grep $USER | awk '{print $1}') | base64 --decode
    ```
 
    Save the token - you'll use it to log in to {{site.prodname}} Manager.  Next we'll assign permissions to do so
-   to it.  Use the value of `$TIGERA_UI_USER` as `<USER>` in the following step.
+   to it.  Use the value of `$USER` as `<USER>` and `$NAMESPACE` as `<NAMESPACE>` in the following step.
 
 {% include {{page.version}}/cnx-grant-user-manager-permissions.md usertype="serviceaccount" %}
 {% else %}
