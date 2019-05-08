@@ -1,6 +1,6 @@
 v2.4:
 - title: v2.4.0
-  helmVersion: 0
+  helmRelease: 0
   note: |
     07 May 2019
   components:
