@@ -6,7 +6,7 @@ The {{site.prodname}} allows administrators the ability to manage access to Elas
 This effectively allows administrators to manage a user's UI access to flow logs, audit logs, and intrusion detection events. If a user
 does not have access to a specific Elasticsearch index, then when they navigate to a page that uses Elasticsearch queries on that index,
 the page will not display any data from that index.
- 
+
 ### Elasticsearch indexes and RBAC
 
 In {{site.prodname}}, resources are associated with the Kubernetes API group `lma.tigera.io`.
@@ -68,8 +68,8 @@ Creating a `SubjectAccessReview` returns YAML output that tells you whether the 
 
 In the `SubjectAccessReview` spec:
 - `group` should be set to `lma.tigera.io`
-- `resource` should be set to `index` 
-- `verb` should be set to `get` 
+- `resource` should be set to `index`
+- `verb` should be set to `get`
 - and `resource` should be set to a Kubernetes RBAC resource name (as defined in the table above)
 
 Continuing with our running example `ClusterRoleBinding` that allows the user bob access only to the `audit_ee` resource (i.e., Tigera Secure audit logs),
@@ -183,4 +183,3 @@ roleRef:
   name: allow-all-es
   apiGroup: rbac.authorization.k8s.io
 ```
-
