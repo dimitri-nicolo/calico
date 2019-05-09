@@ -11,7 +11,7 @@
     "detectors": [
       {
         "detector_description": "Count of destination ports compared with all external IPs",
-        "function": "distinct_count",
+        "function": "high_distinct_count",
         "field_name": "dest_port",
         "over_field_name": "source_ip",
         "detector_index": 0
