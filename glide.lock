@@ -348,7 +348,7 @@ imports:
   - pkg/types
   - pkg/upgrade
 - name: github.com/projectcalico/felix
-  version: 6b1b93d7d1a3699e23e520343084885fc1bcda8b
+  version: 3c4334750d2fc2343df7058344681f637760bd66
   repo: git@github.com:tigera/felix-private.git
   subpackages:
   - bpf
