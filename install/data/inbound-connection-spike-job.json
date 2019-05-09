@@ -11,7 +11,7 @@
     "detectors": [
       {
         "detector_description": "Inbound connection spike for a pod within a replica set",
-        "function": "sum",
+        "function": "high_sum",
         "field_name": "num_flows_started",
         "over_field_name": "dest_name",
         "partition_field_name": "namespace_dest_name_aggr",
@@ -19,7 +19,7 @@
       },
       {
         "detector_description": "Inbound connection spike over a whole replica set",
-        "function": "non_null_sum",
+        "function": "high_non_null_sum",
         "field_name": "num_flows_started",
         "partition_field_name": "namespace_dest_name_aggr",
         "detector_index": 1

@@ -11,30 +11,30 @@
     "detectors": [
       {
         "detector_description": "Input bytes spike for a pod within a replica set",
-        "function": "sum",
+        "function": "high_sum",
         "field_name": "bytes_in",
         "over_field_name": "dest_name",
         "partition_field_name": "namespace_dest_name_aggr",
         "detector_index": 0
       },
       {
-        "detector_description": "Input bytes spike for over a whole replica set",
-        "function": "non_null_sum",
+        "detector_description": "Input bytes spike over a whole replica set",
+        "function": "high_non_null_sum",
         "field_name": "bytes_in",
         "partition_field_name": "namespace_dest_name_aggr",
         "detector_index": 1
       },
       {
         "detector_description": "Output bytes spike for a pod within a replica set",
-        "function": "sum",
+        "function": "high_sum",
         "field_name": "bytes_out",
         "over_field_name": "dest_name",
         "partition_field_name": "namespace_dest_name_aggr",
         "detector_index": 2
       },
       {
-        "detector_description": "Output bytes spike for over a whole replica set",
-        "function": "non_null_sum",
+        "detector_description": "Output bytes spike over a whole replica set",
+        "function": "high_non_null_sum",
         "field_name": "bytes_out",
         "partition_field_name": "namespace_dest_name_aggr",
         "detector_index": 3
