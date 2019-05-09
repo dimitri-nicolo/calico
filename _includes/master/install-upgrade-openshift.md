@@ -30,6 +30,9 @@ For OpenShift Container Platform 3.11 also specify the following variables:
   - `oreg_auth_user`
   - `oreg_auth_password`
 
+If your private registry requires a pull secret, specify the path on each host to your pull secret in the following variable:
+  - `calico_image_credentials`
+
 Also ensure that you have an explicitly defined host in the `[etcd]` group.
 
 A sample inventory file follows.
@@ -90,10 +93,6 @@ certs to each node. If you would prefer {{site.prodname}} not connect to the sam
 such that {{site.prodname}} connects to an etcd you have already set up by following the [dedicated etcd install guide](dedicated-etcd).
 {% endif %}
 
-### Create pull secrets for image access
-
-{% include {{page.version}}/pull-secret.md %}
- 
 {% include {{page.version}}/cnx-api-install.md init="openshift" %}
 
 1. Continue to [Applying your license key](#applying-your-license-key).
