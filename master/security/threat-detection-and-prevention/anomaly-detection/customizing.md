@@ -1,14 +1,14 @@
 ---
 title:  Customizing
-canonical_url: https://docs.tigera.io/v2.3/usage/intrusion-detection/customizing
+canonical_url: https://docs.tigera.io/v2.4/usage/anomaly-detection/customizing
 ---
 
-{{site.prodname}} ships with Tigera-designed intrusion detection jobs, but you may customize the jobs
-or design new ones to fit your environment using the full power of Elasticsearch machine learning.
+{{site.prodname}} ships with Tigera-designed anomaly detection jobs. But you can customize the jobs
+or design new ones using the full power of Elasticsearch machine learning.
 
-Tigera **highly** recommends that you customize copies of the Tigera-designed jobs with different Job IDs,
-rather than modify them in place.  Modification in place may result in loss of those customizations if
-you reinstall or upgrade {{site.prodname}}.  To make a copy of a job:
+**Important!** Always clone the predefined anomaly protection jobs before modifying them. When you reinstall or upgrade, predefined anomaly detections jobs can change; if you modify the originals, your modifications are overwritten.
+
+To clone a predefined anomaly protection job:
 
 1. Access Kibana by clicking the "Kibana" icon along the left side of {{site.prodname}} Manager, or by visting
    the Kibana URL provided by your Elasticsearch admin.
@@ -17,7 +17,7 @@ you reinstall or upgrade {{site.prodname}}.  To make a copy of a job:
 1. Click "Machine Learning" in the left-hand menu.
 1. Click the gear icon to the far right of the job you wish to copy and select "Clone job"
 
-Refer to the [Elasticsearch machine learning documentation] for more information on the configuration
+See the [Elasticsearch machine learning documentation] for more information on the configuration
 options for machine learning jobs.
 
 [Elasticsearch machine learning documentation]: https://www.elastic.co/guide/en/elastic-stack-overview/6.4/xpack-ml.html

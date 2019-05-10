@@ -1,5 +1,6 @@
 ---
 title: Trace and block suspicious IPs
+canonical_url: v2.4/security/suspicious-IPs
 ---
 
 ### Big Picture 
