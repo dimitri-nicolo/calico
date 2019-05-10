@@ -1,9 +1,9 @@
 ---
 title: Job descriptions
-canonical_url: https://docs.tigera.io/v2.3/usage/intrusion-detection/job-descriptions
+canonical_url: https://docs.tigera.io/v2.4/security/threat-detection-and-prevention/anomaly-detection/job-descriptions
 ---
 
-The following intrusion detection jobs are included in {{site.prodname}}
+The following anomaly detection jobs are included in {{site.prodname}}
 
 ### Inbound connection spike
 **Job ID**: `inbound_connection_spike`
