@@ -1,6 +1,6 @@
 ---
 title: Viewing anomalies
-canonical_url: https://docs.tigera.io/v2.4/usage/anomaly-detection/viewing-anomalies
+canonical_url: https://docs.tigera.io/v2.4/security/threat-detection-and-prevention/anomaly-detection/viewing-anomalies
 ---
 
 Once anomaly detection jobs are running their analysis you will be able to see the results, which are called 

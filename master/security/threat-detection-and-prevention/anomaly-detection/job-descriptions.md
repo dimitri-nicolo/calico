@@ -1,6 +1,6 @@
 ---
 title: Job descriptions
-canonical_url: https://docs.tigera.io/v2.4/usage/anomaly-detection/job-descriptions
+canonical_url: https://docs.tigera.io/v2.4/security/threat-detection-and-prevention/anomaly-detection/job-descriptions
 ---
 
 The following anomaly detection jobs are included in {{site.prodname}}

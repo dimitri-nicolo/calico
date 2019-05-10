@@ -1,6 +1,6 @@
 ---
 title: Enabling anomaly detection
-canonical_url: https://docs.tigera.io/v2.4/usage/anomaly-detection/enabling
+canonical_url: https://docs.tigera.io/v2.4/security/threat-detection-and-prevention/anomaly-detection/enabling
 ---
 
 ## Flow Log Aggregation

@@ -1,6 +1,7 @@
 ---
 title:  Customizing
-canonical_url: https://docs.tigera.io/v2.4/usage/anomaly-detection/customizing
+canonical_url: https://docs.tigera.io/v2.4/security/threat-detection-and-prevention/anomaly-detection/customizing
+
 ---
 
 {{site.prodname}} ships with Tigera-designed anomaly detection jobs. But you can customize the jobs

@@ -1,6 +1,5 @@
 ---
 title: Anomaly detection
-canonical_url: https://docs.tigera.io/v2.4/usage/anomaly-detection
 ---
 
 {{site.prodname}} includes software that analyzes the logs of network communications
