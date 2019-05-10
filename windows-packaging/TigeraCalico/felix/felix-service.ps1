@@ -14,6 +14,9 @@ $env:FELIX_FELIXHOSTNAME = $env:NODENAME
 # Disable OpenStack metadata server support, which is not available on Windows.
 $env:FELIX_METADATAADDR = "none"
 
+# VXLAN settings.
+$env:FELIX_VXLANVNI = "$env:VXLAN_VNI"
+
 # Autoconfigure the IPAM block mode.
 if ($env:CNI_IPAM_TYPE -EQ "host-local") {
     $env:USE_POD_CIDR = "true"
