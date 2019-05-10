@@ -1,5 +1,6 @@
 ---
 title: Trace and block suspicious IPs
+canonical_url: https://docs.tigera.io/v2.4/usage/anomaly
 ---
 
 ### Big Picture 
