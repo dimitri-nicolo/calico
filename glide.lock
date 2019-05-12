@@ -1,5 +1,5 @@
-hash: 557707ddad8b3e3633ddc7a88970ab7756a8c881150392e7c9b5c3f37ec7463c
-updated: 2019-05-12T19:37:50.940109902Z
+hash: d0a20e6894d963a24daafbeb44cdbd7bc11ae2c1e9913d2a93415dc187b1c1fc
+updated: 2019-05-12T21:09:55.158537083Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -57,7 +57,6 @@ imports:
   version: 33245c6b5b49130ca99280408fadfab01aac0e48
   subpackages:
   - auth/authpb
-  - client
   - clientv3
   - etcdserver/api/v3rpc/rpctypes
   - etcdserver/etcdserverpb

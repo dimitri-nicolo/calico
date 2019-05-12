@@ -10,9 +10,7 @@ import:
 - package: github.com/coreos/etcd
   version: v3.3.8
   subpackages:
-  - client
   - clientv3
-  - mvcc/mvccpb
   - pkg/transport
 - package: github.com/projectcalico/libcalico-go
   repo: git@github.com:tigera/libcalico-go-private.git
@@ -23,12 +21,11 @@ import:
   vcs: git
   subpackages:
   - client
+  - monitor
 - package: github.com/projectcalico/felix
   version: e54bb027f0d6d8076f894db5879d2648f2416ddd
   repo: git@github.com:tigera/felix-private.git
   vcs: git
-  subpackages:
-  - labelindex
 - package: k8s.io/apiserver
   version: f881eae9ec04b8c996ef0d24309c860ea188acd1
 - package: github.com/Azure/go-autorest
