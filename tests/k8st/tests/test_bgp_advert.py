@@ -151,16 +151,16 @@ protocol bgp Mesh_10_192_0_4 from bgp_template {
 }
 """
 
-class TestBGPAdvert(TestBase):
+class _TestBGPAdvert(TestBase):
 
     def setUp(self):
-        super(TestBGPAdvert, self).setUp()
+        super(_TestBGPAdvert, self).setUp()
 
         # Create bgp test namespace
         self.ns = "bgp-test"
         self.create_namespace(self.ns)
 
-        start_external_node_with_bgp("kube-node-extra", bird_conf)
+        start_external_node_with_bgp("kube-node-extra", self.BIRD_CONF)
 
         # set CALICO_ADVERTISE_CLUSTER_IPS=10.96.0.0/12
         self.update_ds_env("calico-node",
@@ -179,50 +179,12 @@ class TestBGPAdvert(TestBase):
 apiVersion: projectcalico.org/v3
 kind: BGPPeer
 metadata:
-  name: node-extra.peer
-spec:
-  peerIP: 10.192.0.5
-  asNumber: 64512
+  name: node-extra.peer%s
 EOF
-""")
-
-    def setUpRR(self):
-        super(TestBGPAdvert, self).setUp()
-
-        # Create bgp test namespace
-        self.ns = "bgp-test"
-        self.create_namespace(self.ns)
-
-        start_external_node_with_bgp("kube-node-extra", bird_conf_rr)
-
-        # set CALICO_ADVERTISE_CLUSTER_IPS=10.96.0.0/12
-        self.update_ds_env("calico-node",
-                           "kube-system",
-                           "CALICO_ADVERTISE_CLUSTER_IPS",
-                           "10.96.0.0/12")
-
-        # Enable debug logging
-        self.update_ds_env("calico-node",
-                           "kube-system",
-                           "BGP_LOGSEVERITYSCREEN",
-                           "debug")
-
-        # Establish BGPPeer from cluster nodes to node-extra using calicoctl
-        # External peer has IP 10.192.0.5
-        calicoctl("""apply -f - << EOF
-apiVersion: projectcalico.org/v3
-kind: BGPPeer
-metadata:
-  name: node-extra.peer
-spec:
-  node: kube-node-2
-  peerIP: 10.192.0.5
-  asNumber: 64512
-EOF
-""")
+""" % self.NODE_EXTRA_PEER_SPEC)
 
     def tearDown(self):
-        super(TestBGPAdvert, self).tearDown()
+        super(_TestBGPAdvert, self).tearDown()
         self.delete_and_confirm(self.ns, "ns")
         try:
             # Delete the extra node.
@@ -265,99 +227,15 @@ EOF
             matchStr += "\n\tnexthop via %s  dev eth0 weight 1" % ip
         retry_until_success(lambda: self.assertIn(matchStr, self.get_routes()))
 
-    def test_rr(self):
-        self.tearDown()
-        self.setUpRR()
 
-        # Create ExternalTrafficPolicy Local service with one endpoint on node-1
-        kubectl("""apply -f - << EOF
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: nginx-rr
-  namespace: bgp-test
-  labels:
-    app: nginx
+class TestBGPAdvert(_TestBGPAdvert):
+
+    BIRD_CONF = bird_conf
+    NODE_EXTRA_PEER_SPEC = """
 spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: nginx
-      run: nginx-rr
-  template:
-    metadata:
-      labels:
-        app: nginx
-        run: nginx-rr
-    spec:
-      containers:
-      - name: nginx-rr
-        image: nginx:1.7.9
-        ports:
-        - containerPort: 80
-      nodeSelector:
-        beta.kubernetes.io/os: linux
-        kubernetes.io/hostname: kube-node-1
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: nginx-rr
-  namespace: bgp-test
-  labels:
-    app: nginx
-    run: nginx-rr
-spec:
-  ports:
-  - port: 80
-    targetPort: 80
-  selector:
-    app: nginx
-    run: nginx-rr
-  type: NodePort
-  externalTrafficPolicy: Local
-EOF
-""")
-
-        calicoctl("get nodes -o yaml")
-        calicoctl("get bgppeers -o yaml")
-        calicoctl("get bgpconfigs -o yaml")
-
-        # Update the node-2 to behave as a route-reflector
-        json_str = calicoctl("get node kube-node-2 -o json")
-        node_dict = json.loads(json_str)
-        node_dict['metadata']['labels']['i-am-a-route-reflector'] = 'true'
-        node_dict['spec']['bgp']['routeReflectorClusterID'] = '224.0.0.1'
-        calicoctl("""apply -f - << EOF
-%s
-EOF
-""" % json.dumps(node_dict))
-
-        # Disable node-to-node mesh and configure bgp peering
-        # between node-1 and RR and also between external node and RR
-        calicoctl("""apply -f - << EOF
-apiVersion: projectcalico.org/v3
-kind: BGPConfiguration
-metadata: {name: default}
-spec:
-  nodeToNodeMeshEnabled: false
+  peerIP: 10.192.0.5
   asNumber: 64512
-EOF
-""")
-        calicoctl("""apply -f - << EOF
-apiVersion: projectcalico.org/v3
-kind: BGPPeer
-metadata: {name: kube-node-1}
-spec:
-  node: kube-node-1
-  peerIP: 10.192.0.4
-  asNumber: 64512
-EOF
-""")
-        svc_json = kubectl("get svc nginx-rr -n bgp-test -o json")
-        svc_dict = json.loads(svc_json)
-        svcRoute = svc_dict['spec']['clusterIP']
-        retry_until_success(lambda: self.assertIn(svcRoute, self.get_routes()))
+"""
 
     def test_mainline(self):
         """
@@ -533,9 +411,11 @@ EOF
             # Assert they are all advertised to the other node. This should happen
             # quickly enough that by the time we have queried all services from
             # the k8s API, they should be programmed on the remote node.
-            routes = self.get_routes()
-            for cip in cluster_ips:
-                self.assertIn(cip, routes)
+            def check_routes_advertised():
+                routes = self.get_routes()
+                for cip in cluster_ips:
+                    self.assertIn(cip, routes)
+            retry_until_success(check_routes_advertised, retries=3, wait_time=5)
 
             # Scale to 0 replicas, assert all routes are removed.
             self.scale_deployment(local_svc, self.ns, 0)
@@ -545,3 +425,105 @@ EOF
                 for cip in cluster_ips:
                     self.assertNotIn(cip, routes)
             retry_until_success(check_routes_gone, retries=10, wait_time=5)
+
+
+class TestBGPAdvertRR(_TestBGPAdvert):
+
+    BIRD_CONF = bird_conf_rr
+    NODE_EXTRA_PEER_SPEC = """
+spec:
+  node: kube-node-2
+  peerIP: 10.192.0.5
+  asNumber: 64512
+"""
+
+    def test_rr(self):
+        # Create ExternalTrafficPolicy Local service with one endpoint on node-1
+        kubectl("""apply -f - << EOF
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-rr
+  namespace: bgp-test
+  labels:
+    app: nginx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx
+      run: nginx-rr
+  template:
+    metadata:
+      labels:
+        app: nginx
+        run: nginx-rr
+    spec:
+      containers:
+      - name: nginx-rr
+        image: nginx:1.7.9
+        ports:
+        - containerPort: 80
+      nodeSelector:
+        beta.kubernetes.io/os: linux
+        kubernetes.io/hostname: kube-node-1
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-rr
+  namespace: bgp-test
+  labels:
+    app: nginx
+    run: nginx-rr
+spec:
+  ports:
+  - port: 80
+    targetPort: 80
+  selector:
+    app: nginx
+    run: nginx-rr
+  type: NodePort
+  externalTrafficPolicy: Local
+EOF
+""")
+
+        calicoctl("get nodes -o yaml")
+        calicoctl("get bgppeers -o yaml")
+        calicoctl("get bgpconfigs -o yaml")
+
+        # Update the node-2 to behave as a route-reflector
+        json_str = calicoctl("get node kube-node-2 -o json")
+        node_dict = json.loads(json_str)
+        node_dict['metadata']['labels']['i-am-a-route-reflector'] = 'true'
+        node_dict['spec']['bgp']['routeReflectorClusterID'] = '224.0.0.1'
+        calicoctl("""apply -f - << EOF
+%s
+EOF
+""" % json.dumps(node_dict))
+
+        # Disable node-to-node mesh and configure bgp peering
+        # between node-1 and RR and also between external node and RR
+        calicoctl("""apply -f - << EOF
+apiVersion: projectcalico.org/v3
+kind: BGPConfiguration
+metadata: {name: default}
+spec:
+  nodeToNodeMeshEnabled: false
+  asNumber: 64512
+EOF
+""")
+        calicoctl("""apply -f - << EOF
+apiVersion: projectcalico.org/v3
+kind: BGPPeer
+metadata: {name: kube-node-1}
+spec:
+  node: kube-node-1
+  peerIP: 10.192.0.4
+  asNumber: 64512
+EOF
+""")
+        svc_json = kubectl("get svc nginx-rr -n bgp-test -o json")
+        svc_dict = json.loads(svc_json)
+        svcRoute = svc_dict['spec']['clusterIP']
+        retry_until_success(lambda: self.assertIn(svcRoute, self.get_routes()))
