@@ -1,16 +1,16 @@
 # Contributing to manifests
 
-## Background: Jekyll, liquid, helm, oh my!
+This document explains how the static Kubernetes manifests are built on https://docs.tigera.io
 
-Our Kubernetes manifest generation is not immediately intuitive.
+## Background: Jekyll, liquid, and helm, oh my!
 
-Pre-v2.4, our Manifests were templated in the [Liquid templating language](https://shopify.github.io/liquid/) - the available templating language for [Jekyll](https://jekyllrb.com/). This worked well for generating static manifests in the docs, but didn't work well if you wanted to generate manifests on the fly via CLI.
+Pre-v2.4, our Manifests were templated using the [Liquid templating language](https://shopify.github.io/liquid/) - the available templating language for [Jekyll](https://jekyllrb.com/). This worked well for generating static manifests in the docs, but didn't work well if you wanted to generate manifests on the fly via CLI.
 
 To make our manifests more CLI usable, there was a desire to convert our manifest templates into a Helm Chart. Unfortunately, Helm's templating language is [go templates](https://golang.org/pkg/text/template/), and Jekyll can't render go templates. So we taught it how!
 
 - First, we converted all of our manifest templates 1:1 to go templates.
 
-- Then, we registered a "custom tag" in jekyll:
+- Then, we registered a "custom tag" in Jekyll:
 
    ```
    {% helm %}
@@ -18,7 +18,7 @@ To make our manifests more CLI usable, there was a desire to convert our manifes
    {% endhelm %}
    ```
 
-- Any time Jekyll sees this, it calls our custom jekyll plugin: `_plugins/helm.rb`.
+- Any time Jekyll sees this, it calls our custom Jekyll plugin: `_plugins/helm.rb`.
 
 - `helm.rb` executes Helm against our templates, passing everything between the tags to helm as a [values.yaml](https://helm.sh/docs/glossary/#values-values-files-values-yaml) file.
 
@@ -36,7 +36,6 @@ For example, if I want a file at `https://docs.tigera.io/master/manifests/policy
 
 ```
 tee ./master/manifests/policy-only-etcd-calico.yaml <<EOF
-
 ---
 layout: null
 ---
@@ -44,7 +43,6 @@ layout: null
 network: none
 datastore: etcd
 {% endhelm %}
-
 EOF
 ```
 
@@ -62,8 +60,10 @@ datastore: etcd
 
 **Why does every manifest call --execute?**
 
+There are two reasons:
+
 1. There are some resources that the helm manifests render that the docs shouldn't show, namely Secrets. Helm doesn't have an `--exclude` flag, so we have to `--execute` every file except for the ones that contain secrets.
-2. Helm is split into two charts, but the Docs take a 4-manifest-step approach. See more on this point [here](#)
+2. TSEE is split into two Helm charts, but the Docs split EE into 4 manifests. To accomplisht his, it uses `--exclude` flags to only render some manifests from each chart. See more on this point [here](#)
 
 ### Choosing between helm charts
 
@@ -111,9 +111,9 @@ elasticsearch:
       password: <>
     server:
       password: <>
-  intrusionDetection
+  intrusionDetection:
     password: <>
-  elasticInstaller
+  elasticInstaller:
     password: <>
 {% endhelm %}
 ```
@@ -132,9 +132,7 @@ Much simpler!
 
 #### 1. Figure out which manifest it belongs in
 
-To add a new resource, ask yourselve if there's an existing rendered manifest this belongs in. Avoid adding new manifests at all cost!
-
-The following information explains how dependencies are handled in the install procedure and should help you to identify which manifest to add it to:
+To add a new resource, ask yourself if there's an existing rendered manifest this belongs in. The following information explains how dependencies are handled in the install procedure and should help you to identify which manifest to add it to:
 
 [chart] charts/tigera-secure-ee-core:
 
@@ -148,7 +146,7 @@ The following information explains how dependencies are handled in the install p
 1. operator.yaml
    - installs 3rd party CRDs
 1. monitor-calico.yaml
-   - installs 3rd party CR's
+   - installs 3rd party CRs
 1. cnx.yaml
    - installs all the rest of the sweet sweet EE sauce
 
@@ -165,15 +163,16 @@ Use your discretion here. Some tips:
 
 #### 3. If you've added a new file, don't forget to --execute it where necessary
 
-## Manifest Templating Tips
+Since most rendered docs manifests explicitly call `--execute` when rendering the charts, they will not pick up a new file automatically.
 
-#### Helm Flags
+Make sure to `--execute` your new file in all static manifests that you need it to show in.
 
-- TODO: explain how values.yaml is a public API. provide guidance on it
-- Avoid logic based off of which platform/orchestrator (openshift, eks, etc.). Instead, break it down into the actual feature, even if it’s multiple toggles. Example: https://github.com/tigera/calico-private/pull/1021/files
+## Manifest Templating with Helm
 
-#### K8s Resource Tips
+The values used for templating the manifests are technically a public API. Adding new values or modifying existing ones should be done with care as they will impact customers.
 
-- Prefer "optional" secret volume mounts for TLS
-- Avoid changes to the ports opened on calico-node (or any hostNetworked pod)! They are costly because they open up ports on the host.
-- Identify which version of k8s this release dropping support for, then start making use of any features added by the next version.
+#### Helm Values
+
+Helm values for Tigera are dynamically generating by parsing versioning information in `_data/versions.yaml`, image names in `_config.yaml`, and other settings from `_plugins/lib.rb`. You can generate the `values.yaml` yourself by running `make values.yaml`.
+
+You can modify the values by making changes to `_plugins/lib.rb`.
