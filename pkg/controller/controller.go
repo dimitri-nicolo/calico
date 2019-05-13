@@ -626,8 +626,10 @@ func (cc *ComplianceController) getJobFromTemplate(rep *v3.GlobalReport, jt Repo
 		},
 	}...)
 
-	// Make sure the restart policy is Never since we use the Job restart instead.
-	template.Spec.RestartPolicy = v1.RestartPolicyNever
+	// Make sure the restart policy is either Never or OnFailure.
+	if template.Spec.RestartPolicy != v1.RestartPolicyNever && template.Spec.RestartPolicy != v1.RestartPolicyOnFailure {
+		template.Spec.RestartPolicy = v1.RestartPolicyNever
+	}
 
 	// Template could have an empty NodeSelector
 	if template.Spec.NodeSelector == nil {

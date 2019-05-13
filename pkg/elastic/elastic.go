@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/olivere/elastic"
 	log "github.com/sirupsen/logrus"
@@ -17,6 +18,11 @@ import (
 	"github.com/tigera/compliance/pkg/event"
 	"github.com/tigera/compliance/pkg/list"
 	"github.com/tigera/compliance/pkg/report"
+)
+
+const (
+	connRetries    = 30
+	connRetryDelay = 500 * time.Millisecond
 )
 
 type Client interface {
@@ -80,11 +86,18 @@ func New(h *http.Client, url *url.URL, username, password, indexSuffix string, t
 	if username != "" {
 		options = append(options, elastic.SetBasicAuth(username, password))
 	}
-	c, err := elastic.NewClient(options...)
-	if err != nil {
-		return nil, err
+
+	var err error
+	var c *elastic.Client
+	for i := 0; i < connRetries; i++ {
+		log.Info("Connecting to elastic")
+		if c, err = elastic.NewClient(options...); err == nil {
+			return &client{c, indexSuffix}, nil
+		}
+		time.Sleep(connRetryDelay)
 	}
-	return &client{c, indexSuffix}, nil
+	log.Errorf("Unable to connect to Elastic after %d retries", connRetries)
+	return nil, err
 }
 
 func (c *client) ensureIndexExists(index, mapping string) error {
