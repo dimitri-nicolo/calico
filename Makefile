@@ -650,6 +650,8 @@ k8s-start: $(NODE_CONTAINER_CREATED) tests/k8st/$(DIND_SCR)
 	CALICO_NODE_IMAGE=$(BUILD_IMAGE):latest-$(ARCH) \
 	POD_NETWORK_CIDR=192.168.0.0/16 \
 	SKIP_SNAPSHOT=y \
+	GCR_IO_PULL_SECRET=${HOME}/gcr-pull-secret.json \
+	TSEE_TEST_LICENSE=${HOME}/new-test-customer-license.yaml \
 	tests/k8st/$(DIND_SCR) up
 
 .PHONY: k8s-stop
@@ -670,6 +672,7 @@ endif
 	    -v /var/run/docker.sock:/var/run/docker.sock \
 	    -v /home/$(USER)/.kube/config:/root/.kube/config \
 	    -v /home/$(USER)/.kubeadm-dind-cluster:/root/.kubeadm-dind-cluster \
+	    -e CALICO_NODE_IMAGE=$(BUILD_IMAGE):latest-$(ARCH) \
 	    --privileged \
 	    --net host \
         $(TEST_CONTAINER_NAME) \

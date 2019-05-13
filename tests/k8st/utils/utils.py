@@ -39,7 +39,8 @@ class DiagsCollector(object):
         for node in ["kube-master", "kube-node-1", "kube-node-2"]:
             _log.info("")
             run("docker exec " + node + " ip r")
-        kubectl("logs -n kube-system -l k8s-app=calico-node")
+        kubectl("logs -n kube-system -l k8s-app=calico-node",
+                allow_fail=True)
         _log.info("===================================================")
         _log.info("============= COLLECTED DIAGS FOR TEST ============")
         _log.info("===================================================")

@@ -29,6 +29,8 @@ logger = logging.getLogger(__name__)
 
 first_log_time = None
 
+NODE_IMAGE_NAME = os.getenv("CALICO_NODE_IMAGE")
+
 
 class TestBase(TestCase):
 
@@ -170,14 +172,21 @@ class TestBase(TestCase):
         logger.debug("Additional Service created. status='%s'" % str(api_response.status))
 
     def check_calico_version(self):
+        if NODE_IMAGE_NAME is None:
+            # No locally built image; continue using whatever was
+            # installed.
+            return
         config.load_kube_config(os.environ.get('KUBECONFIG'))
         api = client.AppsV1Api(client.ApiClient())
         node_ds = api.read_namespaced_daemon_set("calico-node", "kube-system", exact=True, export=True)
         for container in node_ds.spec.template.spec.containers:
             if container.name == "calico-node":
-                if container.image != "calico/node:latest-amd64":
-                    container.image = "calico/node:latest-amd64"
-                    api.replace_namespaced_daemon_set("calico-node", "kube-system", node_ds)
+                if container.image != NODE_IMAGE_NAME:
+                    logger.info("Reinstate correct image %s" % NODE_IMAGE_NAME)
+                    container.image = NODE_IMAGE_NAME
+                    api.replace_namespaced_daemon_set("calico-node",
+                                                      "kube-system",
+                                                      node_ds)
                     time.sleep(3)
                     retry_until_success(self.check_pod_status, retries=20, wait_time=3, function_args=["kube-system"])
 
