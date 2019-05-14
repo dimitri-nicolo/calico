@@ -33,7 +33,8 @@ import (
 )
 
 const (
-	envAdvertiseClusterIPs = "CALICO_ADVERTISE_CLUSTER_IPS"
+	envAdvertiseClusterIPs       = "CALICO_ADVERTISE_CLUSTER_IPS"
+	advertiseClusterIPAnnotation = "projectcalico.org/AdvertiseClusterIP"
 )
 
 // routeGenerator defines the data fields
@@ -218,7 +219,7 @@ func (rg *routeGenerator) setRouteForSvc(svc *v1.Service, ep *v1.Endpoints) {
 // advertiseThisService returns true if this service should be advertised on this node,
 // false otherwise.
 func (rg *routeGenerator) advertiseThisService(svc *v1.Service, ep *v1.Endpoints) bool {
-	logc := log.WithField("svc", fmt.Sprintf("%s/%s", svc.Namespace, svc.Name))
+	logc := log.WithField("svc", fmt.Sprintf("%s/%s", svc.Namespace, svc.Name)).WithField("type", svc.Spec.Type)
 
 	// do nothing if the svc is not a relevant type
 	if (svc.Spec.Type != v1.ServiceTypeClusterIP) && (svc.Spec.Type != v1.ServiceTypeNodePort) && (svc.Spec.Type != v1.ServiceTypeLoadBalancer) {
@@ -232,8 +233,16 @@ func (rg *routeGenerator) advertiseThisService(svc *v1.Service, ep *v1.Endpoints
 		return false
 	}
 
-	// we only need to advertise local services, since we advertise the entire cluster IP range.
-	if svc.Spec.ExternalTrafficPolicy != v1.ServiceExternalTrafficPolicyTypeLocal {
+	// advertise ClusterIP services only if they have an annotation override
+	if svc.Spec.Type == v1.ServiceTypeClusterIP {
+		if _, ok := svc.ObjectMeta.Annotations[advertiseClusterIPAnnotation]; !ok {
+			logc.Debug("Skipping ClusterIP service without annotation override")
+			return false
+		}
+	}
+
+	// advertise NodePort/LoadBalancer services only if their traffic policy is local, since we advertise the entire cluster IP range.
+	if svc.Spec.Type != v1.ServiceTypeClusterIP && svc.Spec.ExternalTrafficPolicy != v1.ServiceExternalTrafficPolicyTypeLocal {
 		logc.Debugf("Skipping service with non-local external traffic policy '%s'", svc.Spec.ExternalTrafficPolicy)
 		return false
 	}
