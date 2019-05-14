@@ -69,6 +69,11 @@ func main() {
 			calico = append(calico, path)
 		}
 	}
+	for def := range swaggerDoc.Definitions {
+		if !strings.Contains(def, "projectcalico") {
+			delete(swaggerDoc.Definitions, def)
+		}
+	}
 
 	// Write back to a file.
 	calicoSwagger, err := json.MarshalIndent(swaggerDoc, "", "  ")
@@ -88,7 +93,7 @@ func main() {
 
 	err = json.Unmarshal(calicoSwagger, newSwaggerDoc)
 	newSwaggerDoc.BasePath = "/apis/projectcalico.org/v3"
-	newSwaggerDoc.Host = "https://kubernetes-master"
+	newSwaggerDoc.Host = "kubernetes.master"
 	newSwaggerDoc.Info.Title = ""
 	newSwaggerDoc.Info.Version = "v3"
 	calicoSwagger, err = json.MarshalIndent(newSwaggerDoc, "", "  ")
