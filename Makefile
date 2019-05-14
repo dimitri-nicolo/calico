@@ -150,14 +150,15 @@ vendor: glide.yaml
 		$(CALICO_BUILD) glide install -strip-vendor
 
 # Default the felix repo and version but allow them to be overridden
+FELIX_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
 FELIX_REPO?=github.com/tigera/felix-private
-FELIX_VERSION?=$(shell git ls-remote git@github.com:tigera/felix-private master 2>/dev/null | cut -f 1)
+FELIX_VERSION?=$(shell git ls-remote git@github.com:tigera/felix-private $(FELIX_BRANCH) 2>/dev/null | cut -f 1)
 
 ## Update felix pin in glide.yaml.  That will also update the felix
 ## and libcalico-go pins in glide.lock, so we also keep the
 ## 'update-libcalico' name for this target.  (CI for the node repo
 ## expects there to be an 'update-libcalico' target here.)
-update-felix update-libcalico:
+update-pins update-felix update-libcalico:
 	if [ -n "$(SSH_AUTH_SOCK)" ]; then \
 		EXTRA_DOCKER_ARGS="-v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent"; \
 	fi; \
