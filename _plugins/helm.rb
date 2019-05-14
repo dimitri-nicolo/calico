@@ -47,7 +47,8 @@ module Jekyll
       versions = context.registers[:site].data["versions"]
 
       vs = parse_versions(versions, version)
-      versionsYml = gen_values(vs, imageNames, imageRegistry, @chart)
+
+      versionsYml = gen_values(version, vs, imageNames, imageRegistry, @chart)
 
       tv = Tempfile.new("temp_versions.yml")
       tv.write(versionsYml)

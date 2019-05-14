@@ -173,6 +173,6 @@ The values used for templating the manifests are technically a public API. Addin
 
 #### Helm Values
 
-Helm values for Tigera are dynamically generating by parsing versioning information in `_data/versions.yaml`, image names in `_config.yaml`, and other settings from `_plugins/lib.rb`. You can generate the `values.yaml` yourself by running `make values.yaml`.
+Helm values for Tigera are dynamically generating by parsing versioning information in `_data/versions.yaml`, image names in `_config.yaml`, and other settings from `_plugins/<version>/versions.rb`. You can generate the `values.yaml` yourself by running `make values.yaml`.
 
-You can modify the values by making changes to `_plugins/lib.rb`.
+You can modify the values by making changes to `_plugins/<version>/versions.rb`.
