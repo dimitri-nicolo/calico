@@ -255,7 +255,7 @@ func ensureVxlanNetworkExists(networkName string, subNet *net.IPNet, conf types.
 	if conf.VXLANVNI == 0 {
 		expectedVNI = DefaultVNI
 	} else if conf.VXLANVNI < DefaultVNI {
-		return nil, errors.Annotatef(err, "Windows does not support VXLANVNI < 4096")
+		return nil, fmt.Errorf("Windows does not support VXLANVNI < 4096")
 	} else {
 		expectedVNI = conf.VXLANVNI
 	}
