@@ -27,6 +27,9 @@ calico-typha
 calico-node
 {{- end -}}
 
+{{- define "calico_windows_node_role_name" -}}
+calico-windows
+{{- end -}}
 
 {{- define "calico.etcd.tls" -}}
 {{- if or (or .Values.etcd.tls.crt .Values.etcd.tls.ca) .Values.etcd.tls.key -}}
