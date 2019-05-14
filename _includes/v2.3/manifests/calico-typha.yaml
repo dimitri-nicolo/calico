@@ -7,6 +7,7 @@ calico-typha.yaml acccepts the following include flags:
 | variant_name | Calico, Canal                 |
 | network      | calico, flannel, ecs, <unset> |
 | federation   | true, false                   |
+| platform     | gke, <unset>                  |
 
 {% endcomment -%}
 # This manifest creates a Service, which will be backed by Calico's Typha daemon.

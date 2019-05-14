@@ -9,6 +9,7 @@ calico-config.yaml acccepts the following include flags:
 | calico_ipam      | true, false                   |
 | variant_name     | Calico, Canal                 |
 | app_layer_policy | true, disabled, false         |
+| platform         | gke, <unset>                  |
 
 {% endcomment -%}
 # This ConfigMap is used to configure a self-hosted {{include.variant_name}} installation.

@@ -8,6 +8,7 @@ rbac.yaml acccepts the following include flags:
 | network      | calico, flannel, <unset> |
 | calico_ipam  | true, false              |
 | variant_name | Calico, Canal            |
+| platform     | gke, <unset>             |
 {% endcomment -%}
 
 {%- if include.datastore == "etcd" %}

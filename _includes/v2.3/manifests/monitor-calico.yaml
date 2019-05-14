@@ -5,8 +5,10 @@ monitor-calico.yaml acccepts the following include flags:
 |---------------|-----------------------------|
 | secure_es     | true, false                 |
 | elasticsearch | operator, external          |
+| platform      | gke, <unset>                |
 
 {% endcomment -%}
+
 ---
 # This manifest includes the following component versions:
 #   quay.io/prometheus/prometheus:{{site.data.versions[page.version].first.components["prometheus"].version}}

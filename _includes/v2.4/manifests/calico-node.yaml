@@ -2,6 +2,77 @@
 # as well as the CNI plugins and network config on
 {{- end }}
 # on each master and worker node in a Kubernetes cluster.
+{{- if eq .Values.platform "gke" }}
+# Update network mode to cni
+kind: DaemonSet
+apiVersion: extensions/v1beta1
+metadata:
+  name: {{include "nodeName" . }}-init
+  labels:
+    app: {{include "nodeName" . }}-init
+  namespace: kube-system
+spec:
+  template:
+    metadata:
+      labels:
+        app: {{include "nodeName" . }}-init
+    spec:
+      hostPID: true
+      containers:
+        - name: node-init
+          image: gcr.io/google-containers/startup-script:v1
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            privileged: true
+          env:
+          - name: STARTUP_SCRIPT
+            value: |
+              #! /bin/bash
+              # Modifications Copyright (c) 2019 Tigera, Inc. All rights reserved.
+              # Based on work Copyright 2019 Authors of Cilium (Apache v2 license).
+              set -o errexit
+              set -o pipefail
+              set -o nounset
+              echo "Installing BPF filesystem mount"
+              cat >/tmp/sys-fs-bpf.mount <<EOF
+              [Unit]
+              Description=Mount BPF filesystem (Calico)
+              Documentation=http://docs.calico.org/
+              DefaultDependencies=no
+              Before=local-fs.target umount.target
+              After=swap.target
+              [Mount]
+              What=bpffs
+              Where=/sys/fs/bpf
+              Type=bpf
+              [Install]
+              WantedBy=multi-user.target
+              EOF
+              if [ -d "/etc/systemd/system/" ]; then
+                mv /tmp/sys-fs-bpf.mount /etc/systemd/system/
+                echo "Installed sys-fs-bpf.mount to /etc/systemd/system/"
+              elif [ -d "/lib/systemd/system/" ]; then
+                mv /tmp/sys-fs-bpf.mount /lib/systemd/system/
+                echo "Installed sys-fs-bpf.mount to /lib/systemd/system/"
+              fi
+              systemctl enable sys-fs-bpf.mount
+              systemctl start sys-fs-bpf.mount
+              echo "Changing kubelet configuration to --network-plugin=cni --cni-bin-dir=/home/kubernetes/bin"
+              mkdir -p /home/kubernetes/bin
+              sed -i "s:--network-plugin=kubenet:--network-plugin=cni\ --cni-bin-dir=/home/kubernetes/bin:g" /etc/default/kubelet
+              echo "Restarting kubelet..."
+              systemctl restart kubelet
+              if ip link show cbr0; then
+                echo "Detected cbr0 bridge. Deleting interface..."
+                ip link del cbr0
+              fi
+              echo "Link information:"
+              ip link
+              echo "Routing table:"
+              ip route
+              echo "Node initialization complete"
+---
+{{- end }}
 kind: DaemonSet
 apiVersion: extensions/v1beta1
 metadata:
@@ -297,10 +368,6 @@ spec:
               value: "info"
             - name: FELIX_HEALTHENABLED
               value: "true"
-{{- if eq .Values.platform "gke" }}
-            - name: FELIX_HEALTHPORT
-              value: "9199"
-{{- end }}
             # Additional Felix configuration options
             # Enable Tigera Secure EE Prometheus denied packet reporting
             - name: FELIX_PROMETHEUSREPORTERENABLED
@@ -350,11 +417,7 @@ spec:
           livenessProbe:
             httpGet:
               path: /liveness
-{{- if eq .Values.platform "gke" }}
-              port: 9199
-{{- else }}
               port: 9099
-{{- end }}
               host: localhost
             periodSeconds: 10
             initialDelaySeconds: 10
@@ -370,11 +433,6 @@ spec:
             httpGet:
               path: /readiness
               port: 9099
-              host: localhost
-{{- else if eq .Values.platform "gke" }}
-            httpGet:
-              path: /readiness
-              port: 9199
               host: localhost
 {{- else }}
             exec:

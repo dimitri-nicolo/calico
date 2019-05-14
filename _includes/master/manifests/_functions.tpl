@@ -3,8 +3,6 @@
 canal-node
 {{- else if eq .Values.network "flannel" -}}
 canal
-{{- else if eq .Values.platform "gke" -}}
-calico-node-ee
 {{- else -}}
 calico-node
 {{- end -}}
@@ -21,20 +19,12 @@ Calico
 
 
 {{- define "typha_service_name" -}}
-{{- if eq .Values.platform "gke" -}}
-calico-typha-ee
-{{- else -}}
 calico-typha
-{{- end -}}
 {{- end -}}
 
 
 {{- define "calico_node_role_name" -}}
-{{- if eq .Values.platform "gke" -}}
-calico-node-ee
-{{- else -}}
 calico-node
-{{- end -}}
 {{- end -}}
 
 
