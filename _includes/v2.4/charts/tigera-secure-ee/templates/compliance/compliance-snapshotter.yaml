@@ -93,10 +93,6 @@ spec:
           env:
             - name: LOG_LEVEL
               value: "warning"
-{{- if eq .Values.platform "gke" }}
-            - name: HEALTH_PORT
-              value: "9199"
-{{- end }}
             - name: TIGERA_COMPLIANCE_SNAPSHOT_HOUR
               value: "0"
             - name: ELASTIC_INDEX_SUFFIX
@@ -148,11 +144,7 @@ spec:
           livenessProbe:
             httpGet:
               path: /liveness
-{{- if eq .Values.platform "gke" }}
-              port: 9199
-{{- else }}
               port: 9099
-{{- end }}
               host: localhost
       volumes:
         - name: elastic-ca-cert-volume
