@@ -24,10 +24,10 @@ ARCH ?= $(BUILDARCH)
 
 # canonicalized names for target architecture
 ifeq ($(ARCH),aarch64)
-        override ARCH=arm64
+	override ARCH=arm64
 endif
 ifeq ($(ARCH),x86_64)
-    override ARCH=amd64
+	override ARCH=amd64
 endif
 
 # Targets used when cross building.
@@ -132,17 +132,16 @@ ifdef SSH_AUTH_SOCK
   EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
 endif
 
-DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
-                   docker run --rm \
-                              --net=host \
-                              $(EXTRA_DOCKER_ARGS) \
-                              -e LOCAL_USER_ID=$(MY_UID) \
-                              -e GOARCH=$(ARCH) \
-                              -v $${PWD}:/go/src/github.com/tigera/calico-k8sapiserver:rw \
-                              -v $${PWD}/.go-pkg-cache:/go/pkg:rw \
-                              -v $${PWD}/hack/boilerplate:/go/src/k8s.io/kubernetes/hack/boilerplate:rw \
-                              -w /go/src/github.com/tigera/calico-k8sapiserver \
-                              $(CALICO_BUILD)
+DOCKER_RUN := mkdir -p .go-pkg-cache && \
+			  docker run --rm \
+				 --net=host \
+				 $(EXTRA_DOCKER_ARGS) \
+				 -e LOCAL_USER_ID=$(MY_UID) \
+				 -v $${PWD}:/go/src/github.com/tigera/calico-k8sapiserver:rw \
+				 -v $${PWD}/.go-pkg-cache:/go/pkg:rw \
+				 -v $${PWD}/hack/boilerplate:/go/src/k8s.io/kubernetes/hack/boilerplate:rw \
+				 -w /go/src/github.com/tigera/calico-k8sapiserver \
+				 -e GOARCH=$(ARCH) 
 
 # Update the vendored dependencies with the latest upstream versions matching
 # our glide.yaml.  If there area any changes, this updates glide.lock
@@ -151,35 +150,102 @@ DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
 .PHONY: update-vendor
 update-vendor:
 	mkdir -p $$HOME/.glide
-	$(DOCKER_GO_BUILD) glide up --strip-vendor
+	$(DOCKER_RUN) $(CALICO_BUILD) glide up --strip-vendor
 	touch vendor/.up-to-date
 
 # vendor is a shortcut for force rebuilding the go vendor directory.
 .PHONY: vendor
 vendor vendor/.up-to-date: glide.lock
 	mkdir -p $$HOME/.glide
-	$(DOCKER_GO_BUILD) glide install --strip-vendor
+	$(DOCKER_RUN) $(CALICO_BUILD) glide install --strip-vendor
 	touch vendor/.up-to-date
 
-# Default the libcalico repo and version but allow them to be overridden
-LIBCALICO_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
-LIBCALICO_REPO?=github.com/tigera/libcalico-go-private
-LIBCALICO_VERSION?=$(shell git ls-remote git@github.com:tigera/libcalico-go-private $(LIBCALICO_BRANCH) 2>/dev/null | cut -f 1)
 
-## Update libcalico pin in glide.yaml
-update-libcalico:
-	$(DOCKER_GO_BUILD) \
-        /bin/sh -c ' \
-        echo "Updating libcalico to $(LIBCALICO_VERSION) from $(LIBCALICO_REPO)"; \
-        export OLD_VER=$$(grep --after 50 libcalico-go glide.yaml |grep --max-count=1 --only-matching --perl-regexp "version:\s*\K[^\s]+") ;\
-        echo "Old version: $$OLD_VER";\
-        if [ $(LIBCALICO_VERSION) != $$OLD_VER ]; then \
-            sed -i "s/$$OLD_VER/$(LIBCALICO_VERSION)/" glide.yaml && \
-            if [ $(LIBCALICO_REPO) != "github.com/tigera/libcalico-go-private" ]; then \
-	          glide mirror set https://github.com/tigera/libcalico-go-private $(LIBCALICO_REPO) --vcs git; glide mirror list; \
-	        fi;\
-	      glide up --strip-vendor || glide up --strip-vendor; \
-	    fi'
+###############################################################################
+# Managing the upstream library pin
+###############################################################################
+
+## Set the default library source for this project (libcalico/apiserver/typha/etc..)
+LIBRARY_PROJECT_DEFAULT=tigera/libcalico-go-private.git
+LIBRARY_GLIDE_LABEL=libcalico-go
+
+## Default the library repo and version but allow them to be overridden (master or release-vX.Y)
+## default library branch to the same branch name as the current checked out repo
+LIBRARY_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
+LIBRARY_REPO?=github.com/$(LIBRARY_PROJECT_DEFAULT)
+LIBRARY_VERSION?=$(shell git ls-remote git@github.com:$(LIBRARY_PROJECT_DEFAULT) $(LIBRARY_BRANCH) 2>/dev/null | cut -f 1)
+
+## set up some test scripts so we can fail with useful information
+CAN_REACH_LIBRARY_MASTER=$(shell git ls-remote --exit-code git@github.com:$(LIBRARY_PROJECT_DEFAULT) master >/dev/null 2>&1; echo $$?;)
+CAN_REACH_LIBRARY_BRANCH=$(shell git ls-remote --exit-code git@github.com:$(LIBRARY_PROJECT_DEFAULT) $(LIBRARY_BRANCH) >/dev/null 2>&1; echo $$?;)
+CAN_REACH_LIBRARY_BRANCH_IN_CONTAINER=$(shell $(DOCKER_RUN) $(CALICO_BUILD) sh -c '\
+	git ls-remote git@github.com:$(LIBRARY_PROJECT_DEFAULT) $(LIBRARY_BRANCH) >/dev/null 2>&1; echo $$?;')
+
+
+## Guard to ensure library repo and branch are reachable
+guard-git-lc: 
+	@if [ "$(strip $(CAN_REACH_LIBRARY_MASTER))" != "0" ]; then \
+		echo "ERROR: git@github.com:$(LIBRARY_PROJECT_DEFAULT) is not reachable."; \
+		echo "Ensure your ssh keys are correct and that you can access github" ; \
+		exit 1; \
+	fi;
+	@if [ "$(strip $(CAN_REACH_LIBRARY_BRANCH))" != "0" ]; then \
+		echo "ERROR: git@github.com:$(LIBRARY_PROJECT_DEFAULT)/$(LIBRARY_BRANCH) not reachable."; \
+		echo "Ensure branch '$(LIBRARY_BRANCH)' exists, or set LIBRARY_BRANCH variable"; \
+		exit 1; \
+	fi;
+	@if [ "$(strip $(LIBRARY_VERSION))" = "" ]; then \
+		echo "ERROR: libcalico version could not be determined"; \
+		exit 1; \
+	fi;
+
+## Guard so we don't run this on osx because of ssh-agent to docker forwarding bug
+guard-ssh-forwarding-bug:
+	@if [ "$(shell uname)" = "Darwin" ]; then \
+		echo "ERROR: This target requires ssh-agent to docker key forwarding and is not compatible with OSX/Mac OS"; \
+		echo "$(MAKECMDGOALS)"; \
+		exit 1; \
+	fi;
+	@if [ "$(strip $(CAN_REACH_LIBRARY_BRANCH_IN_CONTAINER))" != "0" ]; then \
+		echo "ERROR: git@github.com:$(LIBRARY_PROJECT_DEFAULT)/$(LIBRARY_BRANCH) not reachable in the container."; \
+		echo "Ensure your ssh-agent is forwarding the correct keys"; \
+		exit 1; \
+	fi;
+
+
+## Update dependency pins in glide.yaml
+update-pins: update-library-pin 
+
+## Update libary pin in glide.yaml
+update-library-pin: guard-ssh-forwarding-bug guard-git-lc 
+	@$(DOCKER_RUN) $(CALICO_BUILD) /bin/sh -c '\
+		echo "Updating $(LIBRARY_GLIDE_LABEL) to $(LIBRARY_VERSION) from $(LIBRARY_REPO)"; \
+		L=$$(grep --after 10 $(LIBRARY_GLIDE_LABEL) glide.yaml); \
+		P=$$(echo $$L | grep -b -o 'package:' | head -2 | tail -n1 | cut -f1 -d:); \
+		V=$$(echo $$L | grep -b -o 'version:' | head -1 | cut -f1 -d:); \
+		if [[ $$V -gt $$P ]]; then \
+			sed -i -r "/package:[[:print:]]*$(LIBRARY_GLIDE_LABEL)/a\ \ version: MissingLibraryVersion" glide.yaml; \
+		fi; \
+		OLD_VER=$$(grep --after 10 $(LIBRARY_GLIDE_LABEL) glide.yaml |grep --max-count=1 --only-matching --perl-regexp "version:\s*\K[^\s]+") ;\
+		echo "Old version: $$OLD_VER";\
+		echo "New version: $(LIBRARY_VERSION)";\
+		echo "Repo: github.com:$(LIBRARY_PROJECT_DEFAULT) $(LIBRARY_BRANCH)" ; \
+		if [[ "$(LIBRARY_VERSION)" != "$$OLD_VER" ]]; then \
+			sed -i "s/$$OLD_VER/$(LIBRARY_VERSION)/" glide.yaml && \
+			if [ $(LIBRARY_REPO) != "github.com/$(LIBRARY_PROJECT_DEFAULT)" ]; then \
+			  glide mirror set https://github.com/$(LIBRARY_PROJECT_DEFAULT) $(LIBRARY_REPO) --vcs git; echo "GLIDE MIRRORS UPDATED"; glide mirror list; \
+			fi;\
+		  glide up --strip-vendor || glide up --strip-vendor; \
+		else \
+		  echo "No change to $(LIBRARY_GLIDE_LABEL)."; \
+		fi;'
+
+## deprecated target alias
+update-libcalico: update-library-pin
+
+
+
+
 
 # This section contains the code generation stuff
 #################################################
@@ -193,47 +259,47 @@ update-libcalico:
 	touch $@
 
 $(BINDIR)/defaulter-gen: vendor/.up-to-date
-	$(DOCKER_GO_BUILD) \
+	$(DOCKER_RUN) $(CALICO_BUILD) \
 	    sh -c 'go build -o $@ $(PACKAGE_NAME)/vendor/k8s.io/code-generator/cmd/defaulter-gen'
 
 $(BINDIR)/deepcopy-gen: vendor/.up-to-date
-	$(DOCKER_GO_BUILD) \
+	$(DOCKER_RUN) $(CALICO_BUILD) \
 	    sh -c 'go build -o $@ $(PACKAGE_NAME)/vendor/k8s.io/code-generator/cmd/deepcopy-gen'
 
 $(BINDIR)/conversion-gen: vendor/.up-to-date
-	$(DOCKER_GO_BUILD) \
+	$(DOCKER_RUN) $(CALICO_BUILD) \
 	    sh -c 'go build -o $@ $(PACKAGE_NAME)/vendor/k8s.io/code-generator/cmd/conversion-gen'
 
 $(BINDIR)/client-gen: vendor/.up-to-date
-	$(DOCKER_GO_BUILD) \
+	$(DOCKER_RUN) $(CALICO_BUILD) \
 	    sh -c 'go build -o $@ $(PACKAGE_NAME)/vendor/k8s.io/code-generator/cmd/client-gen'
 
 $(BINDIR)/lister-gen: vendor/.up-to-date
-	$(DOCKER_GO_BUILD) \
+	$(DOCKER_RUN) $(CALICO_BUILD) \
 	    sh -c 'go build -o $@ $(PACKAGE_NAME)/vendor/k8s.io/code-generator/cmd/lister-gen'
 
 $(BINDIR)/informer-gen: vendor/.up-to-date
-	$(DOCKER_GO_BUILD) \
+	$(DOCKER_RUN) $(CALICO_BUILD) \
 	    sh -c 'go build -o $@ $(PACKAGE_NAME)/vendor/k8s.io/code-generator/cmd/informer-gen'
 
 $(BINDIR)/openapi-gen: vendor/.up-to-date
-	$(DOCKER_GO_BUILD) \
+	$(DOCKER_RUN) $(CALICO_BUILD) \
 	    sh -c 'go build -o $@ $(PACKAGE_NAME)/vendor/k8s.io/code-generator/cmd/openapi-gen'
 
 # Regenerate all files if the gen exes changed or any "types.go" files changed
 .generate_files: .generate_exes $(TYPES_FILES)
 	# Generate defaults
-	$(DOCKER_GO_BUILD) \
+	$(DOCKER_RUN) $(CALICO_BUILD) \
 	   sh -c '$(BINDIR)/defaulter-gen \
 		--v 1 --logtostderr \
 		--go-header-file "/go/src/$(PACKAGE_NAME)/hack/boilerplate/boilerplate.go.txt" \
 		--input-dirs "$(PACKAGE_NAME)/pkg/apis/projectcalico" \
 		--input-dirs "$(PACKAGE_NAME)/pkg/apis/projectcalico/v3" \
-	  	--extra-peer-dirs "$(PACKAGE_NAME)/pkg/apis/projectcalico" \
+		--extra-peer-dirs "$(PACKAGE_NAME)/pkg/apis/projectcalico" \
 		--extra-peer-dirs "$(PACKAGE_NAME)/pkg/apis/projectcalico/v3" \
 		--output-file-base "zz_generated.defaults"'
 	# Generate deep copies
-	$(DOCKER_GO_BUILD) \
+	$(DOCKER_RUN) $(CALICO_BUILD) \
 	   sh -c '$(BINDIR)/deepcopy-gen \
 		--v 1 --logtostderr \
 		--go-header-file "/go/src/$(PACKAGE_NAME)/hack/boilerplate/boilerplate.go.txt" \
@@ -242,7 +308,7 @@ $(BINDIR)/openapi-gen: vendor/.up-to-date
 		--bounding-dirs "github.com/tigera/calico-k8sapiserver" \
 		--output-file-base zz_generated.deepcopy'
 	# Generate conversions
-	$(DOCKER_GO_BUILD) \
+	$(DOCKER_RUN) $(CALICO_BUILD) \
 	   sh -c '$(BINDIR)/conversion-gen \
 		--v 1 --logtostderr \
 		--go-header-file "/go/src/$(PACKAGE_NAME)/hack/boilerplate/boilerplate.go.txt" \
@@ -250,10 +316,10 @@ $(BINDIR)/openapi-gen: vendor/.up-to-date
 		--input-dirs "$(PACKAGE_NAME)/pkg/apis/projectcalico/v3" \
 		--output-file-base zz_generated.conversion'
 	# generate all pkg/client contents
-	$(DOCKER_GO_BUILD) \
+	$(DOCKER_RUN) $(CALICO_BUILD) \
 	   sh -c '$(BUILD_DIR)/update-client-gen.sh'
 	# generate openapi
-	$(DOCKER_GO_BUILD) \
+	$(DOCKER_RUN) $(CALICO_BUILD) \
 	   sh -c '$(BINDIR)/openapi-gen \
 		--v 1 --logtostderr \
 		--go-header-file "/go/src/$(PACKAGE_NAME)/hack/boilerplate/boilerplate.go.txt" \
@@ -315,10 +381,10 @@ else
 endif
 	@echo Building k8sapiserver...
 	mkdir -p bin
-	$(DOCKER_GO_BUILD) \
-	    sh -c 'go build -v -i -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/apiserver" && \
-               ( ldd $(BINDIR)/calico-k8sapiserver 2>&1 | grep -q "Not a valid dynamic program" || \
-	             ( echo "Error: $(BINDIR)/calico-k8sapiserver was not statically linked"; false ) )'
+	$(DOCKER_RUN) $(CALICO_BUILD) \
+		sh -c 'go build -v -i -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/apiserver" && \
+		( ldd $(BINDIR)/calico-k8sapiserver 2>&1 | grep -q "Not a valid dynamic program" || \
+		( echo "Error: $(BINDIR)/calico-k8sapiserver was not statically linked"; false ) )'
 
 # Build the tigera/cnx-apiserver docker image.
 .PHONY: tigera/cnx-apiserver
@@ -330,7 +396,7 @@ tigera/cnx-apiserver: vendor/.up-to-date .generate_files $(BINDIR)/calico-k8sapi
 
 .PHONY: ut
 ut: vendor/.up-to-date run-etcd
-	$(DOCKER_GO_BUILD) \
+	$(DOCKER_RUN) $(CALICO_BUILD) \
 		sh -c 'ETCD_ENDPOINTS="http://127.0.0.1:2379" DATASTORE_TYPE="etcdv3" go test $(UNIT_TEST_FLAGS) \
 			$(addprefix $(PACKAGE_NAME)/,$(TEST_DIRS))'
 
@@ -349,7 +415,7 @@ stop-etcd:
 
 .PHONY: fv
 fv: vendor/.up-to-date run-etcd
-	$(DOCKER_GO_BUILD) \
+	$(DOCKER_RUN) $(CALICO_BUILD) \
 		sh -c 'ETCD_ENDPOINTS="http://127.0.0.1:2379" DATASTORE_TYPE="etcdv3" test/integration.sh'
 
 ## Run a local kubernetes master with API via hyperkube
@@ -362,7 +428,7 @@ run-kubernetes-master: run-etcd stop-kubernetes-master
 		/hyperkube apiserver \
 			--bind-address=0.0.0.0 \
 			--insecure-bind-address=0.0.0.0 \
-	        	--etcd-servers=http://127.0.0.1:2379 \
+			--etcd-servers=http://127.0.0.1:2379 \
 			--admission-control=NamespaceLifecycle,LimitRanger,DefaultStorageClass,ResourceQuota \
 			--authorization-mode=RBAC \
 			--service-cluster-ip-range=10.101.0.0/16 \
@@ -378,17 +444,17 @@ run-kubernetes-master: run-etcd stop-kubernetes-master
 		--detach \
 		gcr.io/google_containers/hyperkube-amd64:${K8S_VERSION} \
 		/hyperkube controller-manager \
-                        --master=127.0.0.1:8080 \
-                        --min-resync-period=3m \
-                        --allocate-node-cidrs=true \
-                        --cluster-cidr=10.10.0.0/16 \
-                        --v=5
+			--master=127.0.0.1:8080 \
+			--min-resync-period=3m \
+			--allocate-node-cidrs=true \
+			--cluster-cidr=10.10.0.0/16 \
+			--v=5
 
 	# Create CustomResourceDefinition (CRD) for Calico resources
 	# from the manifest crds.yaml
 	docker run \
-	    --net=host \
-	    --rm \
+		--net=host \
+		--rm \
 		-v  $(CURDIR)/vendor/github.com/projectcalico/libcalico-go:/manifests \
 		lachlanevenson/k8s-kubectl:${K8S_VERSION} \
 		--server=http://127.0.0.1:8080 \
@@ -396,8 +462,8 @@ run-kubernetes-master: run-etcd stop-kubernetes-master
 
 	# Create a Node in the API for the tests to use.
 	docker run \
-	    --net=host \
-	    --rm \
+		--net=host \
+		--rm \
 		-v  $(CURDIR)/vendor/github.com/projectcalico/libcalico-go:/manifests \
 		lachlanevenson/k8s-kubectl:${K8S_VERSION} \
 		--server=http://127.0.0.1:8080 \
@@ -406,8 +472,8 @@ run-kubernetes-master: run-etcd stop-kubernetes-master
 	# Create Namespaces required by namespaced Calico `NetworkPolicy`
 	# tests from the manifests namespaces.yaml.
 	docker run \
-	    --net=host \
-	    --rm \
+		--net=host \
+		--rm \
 		-v  $(CURDIR)/vendor/github.com/projectcalico/libcalico-go:/manifests \
 		lachlanevenson/k8s-kubectl:${K8S_VERSION} \
 		--server=http://127.0.0.1:8080 \
@@ -423,7 +489,7 @@ stop-kubernetes-master:
 
 .PHONY: fv-kdd
 fv-kdd: vendor/.up-to-date run-kubernetes-master
-	$(DOCKER_GO_BUILD) \
+	$(DOCKER_RUN) $(CALICO_BUILD) \
 		sh -c 'K8S_API_ENDPOINT="http://127.0.0.1:8080" DATASTORE_TYPE="kubernetes" test/integration.sh'
 
 .PHONY: clean
