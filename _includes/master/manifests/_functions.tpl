@@ -70,3 +70,13 @@ resources:
 {{- end }}
 {{end}}
 {{- end -}}
+
+{{- define "calico.customBgpTemplates" -}}
+{{- if or (or (or .Values.bgp.birdConfigTemplate .Values.bgp.birdIpamConfigTemplate) .Values.bgp.bird6ConfigTemplate) .Values.bgp.bird6IpamConfigTemplate }}
+{{- $_ := required "Must specify all or none of birdConfigTemplate, birdIpamConfigTemplate, bird6ConfigTemplate, bird6IpamConfigTemplate" .Values.bgp.birdConfigTemplate -}}
+{{- $_ := required "Must specify all or none of birdConfigTemplate, birdIpamConfigTemplate, bird6ConfigTemplate, bird6IpamConfigTemplate" .Values.bgp.birdIpamConfigTemplate -}}
+{{- $_ := required "Must specify all or none of birdConfigTemplate, birdIpamConfigTemplate, bird6ConfigTemplate, bird6IpamConfigTemplate" .Values.bgp.bird6ConfigTemplate -}}
+{{- $_ := required "Must specify all or none of birdConfigTemplate, birdIpamConfigTemplate, bird6ConfigTemplate, bird6IpamConfigTemplate" .Values.bgp.bird6IpamConfigTemplate -}}
+true
+{{- end }}
+{{- end -}}

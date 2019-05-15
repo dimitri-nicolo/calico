@@ -528,6 +528,13 @@ def gen_chart_specific_values(versions, imageNames, imageRegistry, chart)
         limits:
           cpu: #"2000m"
           memory: #"1024Mi"
+
+    # Optional configuration for 
+    bgp:
+      birdConfigTemplate:
+      birdIpamConfigTemplate:
+      bird6ConfigTemplate:
+      bird6IpamConfigTemplate:
     
     # TODO: move to helpers
     rbac: ""
