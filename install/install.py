@@ -31,6 +31,10 @@ class RESTClient:
 
         if response.status_code == 200:
             print(method, path, "- 200 OK")
+        elif method == "DELETE" and response.status_code == 404:
+            print(method, path, "- 404 Skipping")
+        elif (path.endswith("_stop") or path.endswith("_close")) and response.status_code == 404:
+            print(method, path, "- 404 Skipping")
         else:
             # Check if the resource already exists
             resource_exists = False
