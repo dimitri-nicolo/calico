@@ -21,6 +21,14 @@ CORE_MAPPED_IMAGES = {'cnxApiserver': 'apiserver',
                       'kubeControllers': 'kubeControllers',
                       'cloudControllers': 'cloudControllers'}
                       
+VERSIONS_MAPPED_IMAGES = {'node': 'cnx-node',
+                          'cloudControllers': 'cloud-controllers',
+                          'kubeControllers': 'cnx-kube-controllers',
+                          'cnxApiserver': 'cnx-apiserver',
+                          'cnxQueryserver': 'cnx-queryserver',
+                          'cnxManager': 'cnx-manager',
+                          'cnxManagerProxy': 'cnx-manager-proxy'}
+
 EE_MAPPED_IMAGES = {'intrusion-detection-controller': 'intrusionDetectionController',
                     'cnxManager': 'manager',
                     'cnxManagerProxy': 'managerProxy',
@@ -59,7 +67,12 @@ def test_core_chart_values_updated():
         config_images = yaml.safe_load(f)
         for config_image in config_images['imageNames']:
             if config_image in CORE_MAPPED_IMAGES:
-                expected_image = 'quay.io/' + config_images['imageNames'][config_image] + ':%s' % RELEASE_VERSION
+                if config_image in VERSIONS_MAPPED_IMAGES:
+                    expected_ver = versions[RELEASE_STREAM][0]['components'][VERSIONS_MAPPED_IMAGES[config_image]]['version']
+                else:
+                    expected_ver = versions[RELEASE_STREAM][0]['components'][config_image]['version']
+
+                expected_image = 'quay.io/' + config_images['imageNames'][config_image] + ':%s' % expected_ver
                 image_path = core_values[CORE_MAPPED_IMAGES[config_image]]['image']
                 image_tag = core_values[CORE_MAPPED_IMAGES[config_image]]['tag']
 
@@ -85,7 +98,12 @@ def test_ee_chart_values_updated():
         config_images = yaml.safe_load(f)
         for config_image in config_images['imageNames']:
             if config_image in EE_MAPPED_IMAGES:
-                expected_image = 'quay.io/' + config_images['imageNames'][config_image] + ':%s' % RELEASE_VERSION
+                if config_image in VERSIONS_MAPPED_IMAGES:
+                    expected_ver = versions[RELEASE_STREAM][0]['components'][VERSIONS_MAPPED_IMAGES[config_image]]['version']
+                else:
+                    expected_ver = versions[RELEASE_STREAM][0]['components'][config_image]['version']
+
+                expected_image = 'quay.io/' + config_images['imageNames'][config_image] + ':%s' % expected_ver
                 image_path = core_values[EE_MAPPED_IMAGES[config_image]]['image']
                 image_tag = core_values[EE_MAPPED_IMAGES[config_image]]['tag']
 

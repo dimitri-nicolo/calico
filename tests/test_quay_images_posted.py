@@ -14,6 +14,13 @@ EXCLUDED_IMAGES = ['calico/upgrade',
                    'tigera/felix',
                    'tigera/dikastes']
 
+VERSIONS_MAPPED_IMAGES = {'node': 'cnx-node',
+                          'cloudControllers': 'cloud-controllers',
+                          'kubeControllers': 'cnx-kube-controllers',
+                          'cnxApiserver': 'cnx-apiserver',
+                          'cnxQueryserver': 'cnx-queryserver',
+                          'cnxManager': 'cnx-manager',
+                          'cnxManagerProxy': 'cnx-manager-proxy'}
 
 with open('%s/../_data/versions.yml' % PATH) as f:
     versions = yaml.safe_load(f)
@@ -24,10 +31,14 @@ with open('%s/../_data/versions.yml' % PATH) as f:
 def test_release_tag_present():
     with open('%s/../_config.yml' % PATH) as f:
         images = yaml.safe_load(f)
+        headers = {'content-type': 'application/json', 'authorization': 'Bearer %s' % QUAY_API_TOKEN}
         for image in images['imageNames']:
             if images['imageNames'][image] not in EXCLUDED_IMAGES:
-                headers = {'content-type': 'application/json', 'authorization': 'Bearer %s' % QUAY_API_TOKEN}
-                print '[INFO] checking quay.io/%s:%s' % (images['imageNames'][image], RELEASE_VERSION)
+                if image in VERSIONS_MAPPED_IMAGES:
+                    expected_ver = versions[RELEASE_STREAM][0]['components'][VERSIONS_MAPPED_IMAGES[image]]['version']
+                else:
+                    expected_ver = versions[RELEASE_STREAM][0]['components'][image]['version']
 
-                req = requests.get("https://quay.io/api/v1/repository/%s/tag/%s/images" % (images['imageNames'][image], RELEASE_VERSION), headers=headers)
+                print '[INFO] checking quay.io/%s:%s' % (images['imageNames'][image], expected_ver)
+                req = requests.get("https://quay.io/api/v1/repository/%s/tag/%s/images" % (images['imageNames'][image], expected_ver), headers=headers)
                 assert req.status_code == 200
