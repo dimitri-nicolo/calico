@@ -22,14 +22,14 @@ Calico
 calico-typha
 {{- end -}}
 
-
 {{- define "calico_node_role_name" -}}
+{{- if (.Values.osType) and eq .Values.osType "windows" -}}
+calico-windows
+{{- else -}}
 calico-node
 {{- end -}}
-
-{{- define "calico_windows_node_role_name" -}}
-calico-windows
 {{- end -}}
+
 
 {{- define "calico.etcd.tls" -}}
 {{- if or (or .Values.etcd.tls.crt .Values.etcd.tls.ca) .Values.etcd.tls.key -}}

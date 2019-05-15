@@ -3,3 +3,5 @@ layout: null
 ---
 {% include {{page.version}}/manifests/kdd-crds.yaml %}
 {% include {{page.version}}/manifests/rbac.yaml platform="gke" %}
+{% include {{page.version}}/manifests/cluster-role.yaml %}
+{% include {{page.version}}/manifests/cluster-role.yaml osType="windows" %}
