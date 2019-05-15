@@ -30,6 +30,8 @@ _log = logging.getLogger(__name__)
 
 attempts = 10
 
+cluster_ip_annotation = "projectcalico.org/AdvertiseClusterIP"
+
 bird_conf = """
 router id 10.192.0.5;
 
@@ -411,6 +413,62 @@ EOF
 
             # Assert that clusterIP is no longer and advertised route
             retry_until_success(lambda: self.assertNotIn(local_svc_ip, self.get_routes()))
+
+    def test_clusterip_service(self):
+        """
+        Run ClusterIP service test for service ip advertisement
+        """
+        with DiagsCollector():
+            # Assert that a route to the service IP range is present.
+            retry_until_success(lambda: self.assertIn("10.96.0.0/12", self.get_routes()))
+
+            # Create two ClusterIP services: one with the service advertisement annotation and one without.
+            svc = "test-clusterip"
+            annotated_svc = "test-clusterip-annotated"
+            self.deploy("nginx:1.7.9", svc, self.ns, 80, svc_type="ClusterIP", traffic_policy=None)
+            self.deploy("nginx:1.7.9", annotated_svc, self.ns, 80, svc_type="ClusterIP", traffic_policy=None)
+            self.wait_until_exists(svc, "svc", self.ns)
+            self.wait_until_exists(annotated_svc, "svc", self.ns)
+
+            self.annotate_resource("service", annotated_svc, self.ns, cluster_ip_annotation, "true")
+
+            # Get clusterIPs.
+            svc_ip = self.get_svc_cluster_ip(svc, self.ns)
+            annotated_svc_ip = self.get_svc_cluster_ip(annotated_svc, self.ns)
+
+            # Wait for the deployments to roll out.
+            self.wait_for_deployment(svc, self.ns)
+            self.wait_for_deployment(annotated_svc, self.ns)
+
+            # Assert that the services can be curled from the external node. This just validates the services are up.
+            retry_until_success(curl, function_args=[svc_ip])
+            retry_until_success(curl, function_args=[annotated_svc_ip])
+
+            # Assert that the cluster IP of "svc" is not advertised but the one for the annotated service is.
+            retry_until_success(lambda: self.assertNotIn(svc_ip, self.get_routes()))
+            retry_until_success(lambda: self.assertIn(annotated_svc_ip, self.get_routes()))
+
+            # Get the IP of the one node with a local pod backing the annotated_svc.
+            local_node_ips = self.get_node_ips_with_local_pods(self.ns, "app=%s" % annotated_svc)
+            self.assertEquals(len(local_node_ips), 1)
+
+            # Verify that we have a non-ecmp route to the node with the backing pod for the annotated svc.
+            expected_route = "%s via %s dev eth0 proto bird" % (annotated_svc_ip, local_node_ips[0])
+            retry_until_success(lambda: self.assertIn(expected_route, self.get_routes()))
+
+            # Annotate the first service.
+            self.annotate_resource("service", svc, self.ns, cluster_ip_annotation, "doesnotmatter")
+
+            # Assert that its cluster IP is an advertised route.
+            retry_until_success(lambda: self.assertIn(svc_ip, self.get_routes()))
+
+            # Delete both services, assert only service CIDR route is advertised.
+            self.delete_and_confirm(svc, "svc", self.ns)
+            self.delete_and_confirm(annotated_svc, "svc", self.ns)
+
+            # Assert that cluster IP's are no longer advertised.
+            retry_until_success(lambda: self.assertNotIn(svc_ip, self.get_routes()))
+            retry_until_success(lambda: self.assertNotIn(annotated_svc_ip, self.get_routes()))
 
     def test_many_services(self):
         """

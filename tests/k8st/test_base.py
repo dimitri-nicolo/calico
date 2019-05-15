@@ -107,13 +107,16 @@ class TestBase(TestCase):
     def create_namespace(self, ns_name):
         self.cluster.create_namespace(client.V1Namespace(metadata=client.V1ObjectMeta(name=ns_name)))
 
-    def deploy(self, image, name, ns, port, replicas=1, svc_type="NodePort", traffic_policy="Local", cluster_ip=None):
+    def deploy(self, image, name, ns, port, replicas=1, svc_type="NodePort", traffic_policy="Local", annotations=None):
         """
         Creates a deployment and corresponding service with the given
         parameters.
         """
         # Run a deployment with <replicas> copies of <image>, with the
         # pods labelled with "app": <name>.
+        md = client.V1ObjectMeta(name=name)
+        if annotations:
+            md.annotations = annotations
         deployment = client.ExtensionsV1beta1Deployment(
             api_version="extensions/v1beta1",
             kind="Deployment",
@@ -154,9 +157,10 @@ class TestBase(TestCase):
                 "ports": [{"port": port}],
                 "selector": {"app": app},
                 "type": svc_type,
-                "externalTrafficPolicy": traffic_policy,
             }
         )
+        if traffic_policy:
+            service.spec["externalTrafficPolicy"] = traffic_policy
         if cluster_ip:
           service.spec["clusterIP"] = cluster_ip
         api_response = self.cluster.create_namespaced_service(
@@ -201,6 +205,22 @@ class TestBase(TestCase):
 
     def get_routes(self):
         return run("docker exec kube-node-extra ip r")
+
+    def annotate_resource(self, res_type, res_name, ns, k, v):
+        return run("kubectl annotate %s %s -n %s %s=%s" % (res_type, res_name, ns, k, v)).strip()
+
+    def get_node_ips_with_local_pods(self, ns, label_selector):
+        config.load_kube_config(os.environ.get('KUBECONFIG'))
+        api = client.CoreV1Api(client.ApiClient())
+        pods = api.list_namespaced_pod(ns, label_selector=label_selector)
+        node_names = map(lambda x: x.spec.node_name, pods.items)
+        node_ips = []
+        for n in node_names:
+            addrs = api.read_node(n).status.addresses
+            for a in addrs:
+                if a.type == 'InternalIP':
+                    node_ips.append(a.address)
+        return node_ips
 
     def update_ds_env(self, ds, ns, k, v):
         config.load_kube_config(os.environ.get('KUBECONFIG'))
