@@ -91,7 +91,7 @@ test: docs_test.created
         -e RELEASE_STREAM=$(RELEASE_STREAM) \
 	-e QUAY_API_TOKEN=$(QUAY_API_TOKEN) \
 	$(DOCS_TEST_CONTAINER) sh -c \
-	"nosetests . -e $(EXCLUDE_REGEX) -v --with-xunit \
+	"nosetests . -e "$(EXCLUDE_REGEX)" -v --nocapture --with-xunit \
 	--xunit-file='/code/tests/report/nosetests.xml' \
 	--with-timer"
 

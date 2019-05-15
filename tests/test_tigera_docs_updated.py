@@ -1,8 +1,14 @@
 import os
 import requests
+import yaml
 from bs4 import BeautifulSoup
 
+PATH = os.path.abspath(os.path.dirname(__file__))
 RELEASE_STREAM = os.environ.get('RELEASE_STREAM')
+with open('%s/../_data/versions.yml' % PATH) as f:
+    versions = yaml.safe_load(f)
+    RELEASE_VERSION = versions[RELEASE_STREAM][0]['title']
+    print '[INFO] using _data/versions.yaml, discovered version: %s' % RELEASE_VERSION
 
 
 def test_latest_redirects_correctly():
@@ -28,4 +34,4 @@ def test_release_notes_updated():
     headings_txt = []
     headings = BeautifulSoup(req.content, features="html.parser").find_all('h2')
     [headings_txt.append(x.text) for x in headings]
-    assert "Tigera Secure Enterprise Edition %s" % RELEASE_STREAM in headings_txt
+    assert "Tigera Secure Enterprise Edition %s" % RELEASE_VERSION in headings_txt
