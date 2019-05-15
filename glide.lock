@@ -1,5 +1,5 @@
-hash: f726c4c84314661be89a979e418816fe6ee6394a9b125b3b57b5790770a2a029
-updated: 2019-05-06T05:21:44.550731833Z
+hash: fce4676cc35545759ebca7804d59106b8c69fef97a899fc869ef6ed868b8baaa
+updated: 2019-05-15T05:24:05.167753019Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -209,7 +209,7 @@ imports:
 - name: github.com/kardianos/osext
   version: ae77be60afb1dcacde03767a8c37337fad28ac14
 - name: github.com/kelseyhightower/confd
-  version: 69800153a34075ac54e4536e4dc9e5867471a448
+  version: e286ae58e2d459de49ff88f7c776ec48cd5a2317
   repo: git@github.com:tigera/confd-private.git
   subpackages:
   - pkg/backends
