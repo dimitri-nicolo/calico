@@ -1,3 +1,4 @@
+
 # Shortcut targets
 default: build
 
@@ -117,7 +118,7 @@ CALICO_BUILD=calico/go-build:$(GO_BUILD_VER)
 # <unknown> if this isn't a git checkout.
 PKG_VERSION?=$(shell git describe --tags --dirty --always || echo '<unknown>')
 PKG_VERSION_BUILD_DATE?=$(shell date -u +'%FT%T%z' || echo '<unknown>')
-PKG_VERSION_GIT_DESCRIPTION?=$(shell git describe --tags || echo '<unknown>')
+PKG_VERSION_GIT_DESCRIPTION?=$(shell git describe --tags 2>/dev/null || echo '<unknown>')
 PKG_VERSION_GIT_REVISION?=$(shell git rev-parse --short HEAD || echo '<unknown>')
 
 # Calculate a timestamp for any build artefacts.
@@ -190,6 +191,92 @@ clean:
 	find . -name ".coverage" -type f -delete
 	find . -name "*.pyc" -type f -delete
 
+
+
+###############################################################################
+# Managing the upstream library pin
+###############################################################################
+
+## Set the default library source for this project (libcalico/apiserver/typha/etc..)
+LIBRARY_PROJECT_DEFAULT=tigera/calico-k8sapiserver.git
+LIBRARY_GLIDE_LABEL=calico-k8sapiserver
+
+## Default the library repo and version but allow them to be overridden (master or release-vX.Y)
+## default library branch to the same branch name as the current checked out repo
+LIBRARY_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
+LIBRARY_REPO?=github.com/$(LIBRARY_PROJECT_DEFAULT)
+LIBRARY_VERSION?=$(shell git ls-remote git@github.com:$(LIBRARY_PROJECT_DEFAULT) $(LIBRARY_BRANCH) 2>/dev/null | cut -f 1)
+
+## set up some test scripts so we can fail with useful information
+CAN_REACH_LIBRARY_MASTER=$(shell git ls-remote --exit-code git@github.com:$(LIBRARY_PROJECT_DEFAULT) master >/dev/null 2>&1; echo $$?;)
+CAN_REACH_LIBRARY_BRANCH=$(shell git ls-remote --exit-code git@github.com:$(LIBRARY_PROJECT_DEFAULT) $(LIBRARY_BRANCH) >/dev/null 2>&1; echo $$?;)
+CAN_REACH_LIBRARY_BRANCH_IN_CONTAINER=$(shell $(DOCKER_RUN) $(CALICO_BUILD) sh -c '\
+	git ls-remote git@github.com:$(LIBRARY_PROJECT_DEFAULT) $(LIBRARY_BRANCH) >/dev/null 2>&1; echo $$?;')
+
+
+## Guard to ensure library repo and branch are reachable
+guard-git-lc: 
+	@if [ "$(strip $(CAN_REACH_LIBRARY_MASTER))" != "0" ]; then \
+		echo "ERROR: git@github.com:$(LIBRARY_PROJECT_DEFAULT) is not reachable."; \
+		echo "Ensure your ssh keys are correct and that you can access github" ; \
+		exit 1; \
+	fi;
+	@if [ "$(strip $(CAN_REACH_LIBRARY_BRANCH))" != "0" ]; then \
+		echo "ERROR: git@github.com:$(LIBRARY_PROJECT_DEFAULT)/$(LIBRARY_BRANCH) not reachable."; \
+		echo "Ensure branch '$(LIBRARY_BRANCH)' exists, or set LIBRARY_BRANCH variable"; \
+		exit 1; \
+	fi;
+	@if [ "$(strip $(LIBRARY_VERSION))" = "" ]; then \
+		echo "ERROR: libcalico version could not be determined"; \
+		exit 1; \
+	fi;
+
+## Guard so we don't run this on osx because of ssh-agent to docker forwarding bug
+guard-ssh-forwarding-bug:
+	@if [ "$(shell uname)" = "Darwin" ]; then \
+		echo "ERROR: This target requires ssh-agent to docker key forwarding and is not compatible with OSX/Mac OS"; \
+		echo "$(MAKECMDGOALS)"; \
+		exit 1; \
+	fi;
+	@if [ "$(strip $(CAN_REACH_LIBRARY_BRANCH_IN_CONTAINER))" != "0" ]; then \
+		echo "ERROR: git@github.com:$(LIBRARY_PROJECT_DEFAULT)/$(LIBRARY_BRANCH) not reachable in the container."; \
+		echo "Ensure your ssh-agent is forwarding the correct keys"; \
+		exit 1; \
+	fi;
+
+
+## Update dependency pins in glide.yaml
+update-pins: update-library-pin 
+
+## Update libary pin in glide.yaml
+update-library-pin: guard-ssh-forwarding-bug guard-git-lc 
+	@$(DOCKER_RUN) $(CALICO_BUILD) /bin/sh -c '\
+        echo "Updating $(LIBRARY_GLIDE_LABEL) to $(LIBRARY_VERSION) from $(LIBRARY_REPO)"; \
+		L=$$(grep --after 10 $(LIBRARY_GLIDE_LABEL) glide.yaml); \
+		P=$$(echo $$L | grep -b -o 'package:' | head -2 | tail -n1 | cut -f1 -d:); \
+		V=$$(echo $$L | grep -b -o 'version:' | head -1 | cut -f1 -d:); \
+		if [[ $$V -gt $$P ]]; then \
+			sed -i -r "/package:[[:print:]]*$(LIBRARY_GLIDE_LABEL)/a\ \ version: MissingLibraryVersion" glide.yaml; \
+		fi; \
+        OLD_VER=$$(grep --after 10 $(LIBRARY_GLIDE_LABEL) glide.yaml |grep --max-count=1 --only-matching --perl-regexp "version:\s*\K[^\s]+") ;\
+        echo "Old version: $$OLD_VER";\
+        echo "New version: $(LIBRARY_VERSION)";\
+        echo "Repo: github.com:$(LIBRARY_PROJECT_DEFAULT) $(LIBRARY_BRANCH)" ; \
+        if [[ "$(LIBRARY_VERSION)" != "$$OLD_VER" ]]; then \
+            sed -i "s/$$OLD_VER/$(LIBRARY_VERSION)/" glide.yaml && \
+            if [ $(LIBRARY_REPO) != "github.com/$(LIBRARY_PROJECT_DEFAULT)" ]; then \
+              glide mirror set https://github.com/$(LIBRARY_PROJECT_DEFAULT) $(LIBRARY_REPO) --vcs git; echo "GLIDE MIRRORS UPDATED"; glide mirror list; \
+            fi;\
+          glide up --strip-vendor || glide up --strip-vendor; \
+        else \
+          echo "No change to $(LIBRARY_GLIDE_LABEL)."; \
+        fi;'
+
+## deprecated target alias
+update-libcalico: update-library-pin
+
+
+
 ###############################################################################
 # Building the binary
 ###############################################################################
@@ -215,24 +302,6 @@ vendor vendor/.up-to-date: glide.lock
 	$(DOCKER_RUN) $(CALICO_BUILD) glide install --strip-vendor
 	touch vendor/.up-to-date
 
-# Default the libcalico repo and version but allow them to be overridden
-LIBCALICO_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
-LIBCALICO_REPO?=github.com/projectcalico/libcalico-go
-LIBCALICO_VERSION?=$(shell git ls-remote git@github.com:projectcalico/libcalico-go $(LIBCALICO_BRANCH) 2>/dev/null | cut -f 1)
-
-## Update libcalico pin in glide.yaml
-update-libcalico:
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '\
-        echo "Updating libcalico to $(LIBCALICO_VERSION) from $(LIBCALICO_REPO)"; \
-        export OLD_VER=$$(grep --after 50 libcalico-go glide.yaml |grep --max-count=1 --only-matching --perl-regexp "version:\s*\K[^\s]+") ;\
-        echo "Old version: $$OLD_VER";\
-        if [ $(LIBCALICO_VERSION) != $$OLD_VER ]; then \
-            sed -i "s/$$OLD_VER/$(LIBCALICO_VERSION)/" glide.yaml && \
-            if [ $(LIBCALICO_REPO) != "github.com/projectcalico/libcalico-go" ]; then \
-              glide mirror set https://github.com/projectcalico/libcalico-go $(LIBCALICO_REPO) --vcs git; glide mirror list; \
-            fi;\
-          glide up --strip-vendor || glide up --strip-vendor; \
-        fi'
 
 # Generate the protobuf bindings for Felix.
 vendor/github.com/projectcalico/felix/proto/felixbackend.pb.go: vendor/.up-to-date vendor/github.com/projectcalico/felix/proto/felixbackend.proto
@@ -421,7 +490,7 @@ ifneq ("",$(findstring $(GCR_REPO),$(call unescapefs,$*)))
 	docker run -t --entrypoint /bin/sh -v $(DOCKER_CONFIG):/root/.docker/config.json $(CALICO_BUILD) -c "/usr/bin/manifest-tool push from-args --platforms $(call join_platforms,$(VALIDARCHES)) --template $(call unescapefs,$*$(BUILD_IMAGE_SCALELOADER):$(IMAGETAG))-ARCH --target $(call unescapefs,$*$(BUILD_IMAGE_SCALELOADER):$(IMAGETAG))"
 endif
 
- ## push default amd64 arch where multi-arch manifest is not supported
+## push default amd64 arch where multi-arch manifest is not supported
 push-non-manifests: imagetag $(addprefix sub-non-manifest-,$(call escapefs,$(PUSH_NONMANIFEST_IMAGE_PREFIXES)))
 sub-non-manifest-%:
 ifeq ($(ARCH),amd64)
@@ -651,8 +720,8 @@ endif
 ###############################################################################
 # Release
 ###############################################################################
-PREVIOUS_RELEASE=$(shell git describe --tags --abbrev=0)
-GIT_VERSION?=$(shell git describe --tags --dirty)
+PREVIOUS_RELEASE=$(shell git describe --tags --abbrev=0 )
+GIT_VERSION?=$(shell git describe --tags --dirty  2>/dev/null  )
 
 ## Tags and builds a release from start to finish.
 release: release-prereqs

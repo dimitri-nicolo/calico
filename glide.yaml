@@ -4,9 +4,6 @@ import:
   version: ^1.2.0
 - package: github.com/sirupsen/logrus
   version: ^1.0.4
-- package: github.com/projectcalico/libcalico-go
-  repo: git@github.com:tigera/libcalico-go-private.git
-  vcs: git
 - package: github.com/tigera/licensing
   version: cb027c7c879597e0e02f2411c0c201752bab39c8
   repo: git@github.com:tigera/licensing
