@@ -190,6 +190,15 @@ optionally Elasticsearch and Kibana{% endif %} in order to enable logs.
    {: .alert .alert-info}
 
 {% endif %}
+
+{% if include.upgrade %}
+1. Delete the install Job from previous {{site.prodname}} install, if it exists (Kubernetes Jobs cannot be modified, they must be deleted and re-created).
+   ```bash
+   {{cli}} delete -n calico-monitoring job elastic-tsee-installer
+   ```
+
+{% endif %}
+
 1. Apply the manifest.
 
    ```bash
