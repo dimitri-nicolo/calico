@@ -60,6 +60,25 @@ template:
       - name: {{ $key }}
 {{- end }}
 {{- end }}
+    initContainers:
+    - name: init-reporter
+      image: alpine:3.7
+      env:
+      - name: ELASTIC_HOST
+        valueFrom:
+          configMapKeyRef:
+            name: tigera-es-config
+            key: tigera.elasticsearch.host
+      - name: ELASTIC_PORT
+        valueFrom:
+          configMapKeyRef:
+            name: tigera-es-config
+            key: tigera.elasticsearch.port
+            optional: true
+      command:
+      - sh
+      - -c
+      - nc -w 3 $ELASTIC_HOST ${ELASTIC_PORT:=9200} || nc -w 3 $ELASTIC_HOST ${ELASTIC_PORT:=9200} || nc -w 3 $ELASTIC_HOST ${ELASTIC_PORT:=9200}
     containers:
     - name: reporter
       image: {{.Values.complianceReporter.image}}:{{.Values.complianceReporter.tag}}
@@ -67,10 +86,6 @@ template:
       env:
       - name: LOG_LEVEL
         value: "warning"
-{{- if eq .Values.platform "gke" }}
-      - name: HEALTH_PORT
-        value: "9199"
-{{- end }}
       - name: ELASTIC_INDEX_SUFFIX
         valueFrom:
           configMapKeyRef:
@@ -122,11 +137,7 @@ template:
       livenessProbe:
         httpGet:
           path: /liveness
-{{- if eq .Values.platform "gke" }}
-          port: 9199
-{{- else }}
           port: 9099
-{{- end }}
           host: localhost
     volumes:
     - name: elastic-ca-cert-volume

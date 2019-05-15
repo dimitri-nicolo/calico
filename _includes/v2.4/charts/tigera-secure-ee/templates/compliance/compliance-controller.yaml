@@ -126,10 +126,6 @@ spec:
             # covers. Defaults to 30m.
             # - name: TIGERA_COMPLIANCE_JOB_START_DELAY
             #   value: "30m"
-{{- if eq .Values.platform "gke" }}
-            - name: HEALTH_PORT
-              value: "9199"
-{{- end }}
             - name: ELASTIC_INDEX_SUFFIX
               valueFrom:
                 configMapKeyRef:
@@ -181,11 +177,7 @@ spec:
           livenessProbe:
             httpGet:
               path: /liveness
-{{- if eq .Values.platform "gke" }}
-              port: 9199
-{{- else }}
               port: 9099
-{{- end }}
               host: localhost
       volumes:
         - name: elastic-ca-cert-volume
