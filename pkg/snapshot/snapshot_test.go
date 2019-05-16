@@ -20,6 +20,9 @@ import (
 
 var (
 	healthPort int
+
+	// Use a fixed "now" to prevent
+	now = time.Now()
 )
 
 func isAlive() bool {
@@ -58,10 +61,10 @@ var _ = Describe("Snapshot", func() {
 			cancel()
 		}()
 		By("Taking a snapshot 2hrs ago")
-		dest.Initialize(time.Now().Add(-2 * time.Hour))
+		dest.Initialize(now.Add(-2 * time.Hour))
 
 		By("Configuring the snapshot hour to be the next hour")
-		cfg.SnapshotHour = time.Now().Add(time.Hour).Hour()
+		cfg.SnapshotHour = now.Add(time.Hour).Hour()
 
 		By("Starting the snapshotter")
 		Run(ctx, cfg, src, dest, healthAgg)
@@ -92,11 +95,11 @@ var _ = Describe("Snapshot", func() {
 			cancel()
 		}()
 		By("Taking a snapshot 2hrs ago")
-		dest.Initialize(time.Now().Add(-2 * time.Hour))
-		src.Initialize(time.Now())
+		dest.Initialize(now.Add(-2 * time.Hour))
+		src.Initialize(now)
 
 		By("Configuring the snapshot hour to be the current hour")
-		cfg.SnapshotHour = time.Now().Hour()
+		cfg.SnapshotHour = now.Hour()
 
 		By("Starting the snapshotter")
 		Run(ctx, cfg, src, dest, healthAgg)
