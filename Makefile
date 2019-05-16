@@ -633,6 +633,8 @@ st-checks:
 ## Get the kubeadm-dind-cluster script
 K8ST_VERSION?=v1.12
 DIND_SCR?=dind-cluster-$(K8ST_VERSION).sh
+GCR_IO_PULL_SECRET?=${HOME}/gcr-pull-secret.json
+TSEE_TEST_LICENSE?=${HOME}/new-test-customer-license.yaml
 
 .PHONY: k8s-test
 ## Run the k8s tests
@@ -650,8 +652,8 @@ k8s-start: $(NODE_CONTAINER_CREATED) tests/k8st/$(DIND_SCR)
 	CALICO_NODE_IMAGE=$(BUILD_IMAGE):latest-$(ARCH) \
 	POD_NETWORK_CIDR=192.168.0.0/16 \
 	SKIP_SNAPSHOT=y \
-	GCR_IO_PULL_SECRET=${HOME}/gcr-pull-secret.json \
-	TSEE_TEST_LICENSE=${HOME}/new-test-customer-license.yaml \
+	GCR_IO_PULL_SECRET=$(GCR_IO_PULL_SECRET) \
+	TSEE_TEST_LICENSE=$(TSEE_TEST_LICENSE) \
 	tests/k8st/$(DIND_SCR) up
 
 .PHONY: k8s-stop
