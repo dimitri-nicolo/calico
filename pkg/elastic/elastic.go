@@ -20,11 +20,6 @@ import (
 	"github.com/tigera/compliance/pkg/report"
 )
 
-const (
-	connRetries    = 30
-	connRetryDelay = 500 * time.Millisecond
-)
-
 type Client interface {
 	report.AuditLogReportHandler
 	report.FlowLogReportHandler
@@ -70,10 +65,17 @@ func NewFromConfig(cfg *config.Config) (Client, error) {
 	if cfg.ParsedElasticURL.Scheme == "https" {
 		h.Transport = &http.Transport{TLSClientConfig: &tls.Config{RootCAs: ca}}
 	}
-	return New(h, cfg.ParsedElasticURL, cfg.ElasticUser, cfg.ElasticPassword, cfg.ElasticIndexSuffix, cfg.ParsedLogLevel == log.DebugLevel)
+	return New(
+		h, cfg.ParsedElasticURL, cfg.ElasticUser, cfg.ElasticPassword, cfg.ElasticIndexSuffix,
+		cfg.ElasticConnRetries, cfg.ElasticConnRetryInterval, cfg.ParsedLogLevel == log.DebugLevel)
 }
 
-func New(h *http.Client, url *url.URL, username, password, indexSuffix string, trace bool) (Client, error) {
+// New returns a new elastic client using the supplied parameters. This method performs retries if creation of the
+// client fails.
+func New(
+	h *http.Client, url *url.URL, username, password, indexSuffix string,
+	retries int, retryInterval time.Duration, trace bool,
+) (Client, error) {
 	options := []elastic.ClientOptionFunc{
 		elastic.SetURL(url.String()),
 		elastic.SetHttpClient(h),
@@ -89,14 +91,14 @@ func New(h *http.Client, url *url.URL, username, password, indexSuffix string, t
 
 	var err error
 	var c *elastic.Client
-	for i := 0; i < connRetries; i++ {
+	for i := 0; i < retries; i++ {
 		log.Info("Connecting to elastic")
 		if c, err = elastic.NewClient(options...); err == nil {
 			return &client{c, indexSuffix}, nil
 		}
-		time.Sleep(connRetryDelay)
+		time.Sleep(retryInterval)
 	}
-	log.Errorf("Unable to connect to Elastic after %d retries", connRetries)
+	log.Errorf("Unable to connect to Elastic after %d retries", retries)
 	return nil, err
 }
 

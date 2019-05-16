@@ -30,14 +30,16 @@ type Config struct {
 	HealthTimeout time.Duration `envconfig:"HEALTH_TIMEOUT" default:"30s"`
 
 	// Elastic parameters
-	ElasticURI         string `envconfig:"ELASTIC_URI"`
-	ElasticScheme      string `envconfig:"ELASTIC_SCHEME" default:"http"`
-	ElasticHost        string `envconfig:"ELASTIC_HOST" default:"elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local"`
-	ElasticPort        int    `envconfig:"ELASTIC_PORT" default:"9200"`
-	ElasticUser        string `envconfig:"ELASTIC_USER" default:"elastic"`
-	ElasticPassword    string `envconfig:"ELASTIC_PASSWORD"`
-	ElasticCA          string `envconfig:"ELASTIC_CA"`
-	ElasticIndexSuffix string `envconfig:"ELASTIC_INDEX_SUFFIX" default:"cluster"`
+	ElasticURI               string        `envconfig:"ELASTIC_URI"`
+	ElasticScheme            string        `envconfig:"ELASTIC_SCHEME" default:"http"`
+	ElasticHost              string        `envconfig:"ELASTIC_HOST" default:"elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local"`
+	ElasticPort              int           `envconfig:"ELASTIC_PORT" default:"9200"`
+	ElasticUser              string        `envconfig:"ELASTIC_USER" default:"elastic"`
+	ElasticPassword          string        `envconfig:"ELASTIC_PASSWORD"`
+	ElasticCA                string        `envconfig:"ELASTIC_CA"`
+	ElasticIndexSuffix       string        `envconfig:"ELASTIC_INDEX_SUFFIX" default:"cluster"`
+	ElasticConnRetries       int           `envconfig:"ELASTIC_CONN_RETRIES" default:"30"`
+	ElasticConnRetryInterval time.Duration `envconfig:"ELASTIC_CONN_RETRY_INTERVAL" default:"500ms"`
 
 	// Snapshotter specific data.
 	SnapshotHour int `envconfig:"TIGERA_COMPLIANCE_SNAPSHOT_HOUR" default:"0"`
