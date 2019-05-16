@@ -60,25 +60,6 @@ template:
       - name: {{ $key }}
 {{- end }}
 {{- end }}
-    initContainers:
-    - name: init-reporter
-      image: alpine:3.7
-      env:
-      - name: ELASTIC_HOST
-        valueFrom:
-          configMapKeyRef:
-            name: tigera-es-config
-            key: tigera.elasticsearch.host
-      - name: ELASTIC_PORT
-        valueFrom:
-          configMapKeyRef:
-            name: tigera-es-config
-            key: tigera.elasticsearch.port
-            optional: true
-      command:
-      - sh
-      - -c
-      - nc -w 3 $ELASTIC_HOST ${ELASTIC_PORT:=9200} || nc -w 3 $ELASTIC_HOST ${ELASTIC_PORT:=9200} || nc -w 3 $ELASTIC_HOST ${ELASTIC_PORT:=9200}
     containers:
     - name: reporter
       image: {{.Values.complianceReporter.image}}:{{.Values.complianceReporter.tag}}
