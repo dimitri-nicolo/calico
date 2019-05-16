@@ -194,7 +194,7 @@ EOF
 
         # Delete BGPPeers.
         calicoctl("delete bgppeer node-extra.peer", allow_fail=True)
-        calicoctl("delete bgppeer kube-node-1", allow_fail=True)
+        calicoctl("delete bgppeer peer-with-rr", allow_fail=True)
 
         # Restore node-to-node mesh.
         calicoctl("""apply -f - << EOF
@@ -229,6 +229,19 @@ EOF
 
 
 class TestBGPAdvert(_TestBGPAdvert):
+
+    # In the tests of this class we have a full BGP mesh between the
+    # cluster nodes (kube-master, kube-node-1 and kube-node-2) and the
+    # external node (kube-node-extra):
+    #
+    # - The full mesh between the cluster nodes is configured by
+    #   nodeToNodeMeshEnabled: true.
+    #
+    # - The peerings from each cluster node to the external node are
+    #   configured by NODE_EXTRA_PEER_SPEC.
+    #
+    # - The peerings from the external node to each cluster node are
+    #   configured in bird_conf above.
 
     BIRD_CONF = bird_conf
     NODE_EXTRA_PEER_SPEC = """
@@ -429,6 +442,20 @@ EOF
 
 class TestBGPAdvertRR(_TestBGPAdvert):
 
+    # In the tests of this class, kube-node-2 acts as an RR, and all
+    # the other nodes peer with it.  Here are the peerings that we
+    # need for that:
+    #
+    #                                      RR
+    # kube-master     kube-node-1     kube-node-2    kube-node-extra
+    #  10.192.0.2      10.192.0.3      10.192.0.4      10.192.0.5
+    #        |                |         | |    |         |
+    #        |                +---------+ |    +---------+
+    #        +----------------------------+   Peering -> is configured
+    #           These peerings are            by NODE_EXTRA_PEER_SPEC.
+    #           configured by BGPPeer         Peering <- is configured
+    #           peer-with-rr                  in bird_conf_rr above.
+
     BIRD_CONF = bird_conf_rr
     NODE_EXTRA_PEER_SPEC = """
 spec:
@@ -502,8 +529,9 @@ EOF
 EOF
 """ % json.dumps(node_dict))
 
-        # Disable node-to-node mesh and configure bgp peering
-        # between node-1 and RR and also between external node and RR
+        # Disable node-to-node mesh and configure BGP peering between
+        # the cluster nodes and the RR.  (The BGP peering from the
+        # external node to the RR is included in bird_conf_rr above.)
         calicoctl("""apply -f - << EOF
 apiVersion: projectcalico.org/v3
 kind: BGPConfiguration
@@ -516,9 +544,8 @@ EOF
         calicoctl("""apply -f - << EOF
 apiVersion: projectcalico.org/v3
 kind: BGPPeer
-metadata: {name: kube-node-1}
+metadata: {name: peer-with-rr}
 spec:
-  node: kube-node-1
   peerIP: 10.192.0.4
   asNumber: 64512
 EOF
