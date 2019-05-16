@@ -1,4 +1,7 @@
 ---
 layout: null
 ---
-{% include {{page.version}}/manifests/kdd-crds.yaml  platform="gke" %}
+{% helm --execute templates/kdd-crds.yaml --execute templates/rbac.yaml --execute templates/cluster-role.yaml %}
+platform: gke
+osType: windows
+{% endhelm %}
