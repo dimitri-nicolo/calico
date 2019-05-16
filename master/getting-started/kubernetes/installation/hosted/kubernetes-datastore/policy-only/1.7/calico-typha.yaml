@@ -9,6 +9,3 @@ app_layer_policy:
   configured: true
 network: none
 {% endhelm %}
-{% helm --execute templates/cluster-role.yaml %}
-calico_node_role_name: calico-windows
-{% endhelm %}

@@ -11,6 +11,3 @@ app_layer_policy:
   configured: true
 network: none
 {% endhelm %}
-{% helm --execute templates/cluster-role.yaml %}
-osType: windows
-{% endhelm %}

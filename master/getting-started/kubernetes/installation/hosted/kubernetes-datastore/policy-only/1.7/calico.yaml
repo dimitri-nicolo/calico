@@ -10,6 +10,3 @@ app_layer_policy:
 network: none
 ipam: host-local
 {% endhelm %}
-{% helm  --execute templates/cluster-role.yaml %}
-osType: windows
-{% endhelm %}

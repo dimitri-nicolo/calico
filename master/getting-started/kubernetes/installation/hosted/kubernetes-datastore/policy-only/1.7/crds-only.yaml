@@ -3,8 +3,5 @@ layout: null
 ---
 {% helm --execute templates/kdd-crds.yaml --execute templates/ee-specific-kdd-crds.yaml --execute templates/rbac.yaml --execute templates/cluster-role.yaml %}
 datastore: kubernetes
-calico_node_role_name: calico-node
-{% endhelm %}
-{% helm --execute templates/cluster-role.yaml %}
 osType: windows
 {% endhelm %}

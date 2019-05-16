@@ -9,6 +9,3 @@ typha:
 app_layer_policy:
   configured: true
 {% endhelm %}
-{% helm --execute templates/cluster-role.yaml %}
-osType: windows
-{% endhelm %}
