@@ -198,6 +198,19 @@ common reasons and their fixes are listed below.
   you will need to reissue the certificates with the correct Common Name or
   Subject Alternative Name and reconfigure {{site.prodname}} Manager following the steps above.
 
+### Ingress proxies and load balancers
+
+You may wish to configure proxy elements, including hardware or software load balancers, Kubernetes Ingress
+proxies etc., between user web browsers and the {{site.prodname}} Manager.  If you do so, configure your proxy
+such that {{site.prodname}} Manager receives a HTTPS (TLS) connection, not unencrypted HTTP.
+
+If you require TLS termination at any of these proxy elements, you will need to
+
+  * use a proxy that supports transparent HTTP/2 proxying, for example, [Envoy](https://www.envoyproxy.io/)
+  * re-originate a TLS connection from your proxy to {{site.prodname}} Manager, as it expects TLS
+
+If you do not require TLS termination, configure your proxy to "pass thru" the TLS to {{site.prodname}} Manager.
+
 ## Prometheus connections
 
 ### Format your certificates
