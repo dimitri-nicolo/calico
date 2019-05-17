@@ -363,7 +363,6 @@ $(NODE_CONTAINER_CREATED): ./Dockerfile.$(ARCH) $(NODE_CONTAINER_FILES) $(NODE_C
 	  echo; echo calico-node-$(ARCH) -v;         /go/bin/calico-node-$(ARCH) -v; \
 	"
 	docker build --pull -t $(BUILD_IMAGE):latest-$(ARCH) . --build-arg BIRD_IMAGE=$(BIRD_IMAGE) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --build-arg ver=$(CALICO_GIT_VER) -f ./Dockerfile.$(ARCH)
-	docker tag $(BUILD_IMAGE):latest-$(ARCH) calico/node:latest-$(ARCH)
 	touch $@
 
 # ensure we have a real imagetag
@@ -634,10 +633,11 @@ st-checks:
 ## Get the kubeadm-dind-cluster script
 K8ST_VERSION?=v1.12
 DIND_SCR?=dind-cluster-$(K8ST_VERSION).sh
+GCR_IO_PULL_SECRET?=${HOME}/gcr-pull-secret.json
+TSEE_TEST_LICENSE?=${HOME}/new-test-customer-license.yaml
 
 .PHONY: k8s-test
 ## Run the k8s tests
-k8s-test: export BUILD_IMAGE=calico/node
 k8s-test:
 	$(MAKE) k8s-stop
 	$(MAKE) k8s-start
@@ -652,6 +652,8 @@ k8s-start: $(NODE_CONTAINER_CREATED) tests/k8st/$(DIND_SCR)
 	CALICO_NODE_IMAGE=$(BUILD_IMAGE):latest-$(ARCH) \
 	POD_NETWORK_CIDR=192.168.0.0/16 \
 	SKIP_SNAPSHOT=y \
+	GCR_IO_PULL_SECRET=$(GCR_IO_PULL_SECRET) \
+	TSEE_TEST_LICENSE=$(TSEE_TEST_LICENSE) \
 	tests/k8st/$(DIND_SCR) up
 
 .PHONY: k8s-stop

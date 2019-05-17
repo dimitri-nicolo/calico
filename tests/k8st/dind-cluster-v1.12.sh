@@ -1819,21 +1819,66 @@ function dind::up {
       ;;
     calico)
       manifest_base=tests/k8st/infra
+
+      # Deploy an etcd cluster.
       dind::retry "${kubectl}" --context "$ctx" apply -f ${manifest_base}/etcd.yaml
-      tmpd=$(mktemp -d -t calico.XXXXXX)
-      cp ${manifest_base}/calico-etcd.yaml ${tmpd}/calico.yaml
+
+      # If a local image is specified, provide that to all the nodes.
+      # The test code will ensure that the calico-node daemonset is
+      # using this image.
       if [ "${CALICO_NODE_IMAGE}" ]; then
-	  docker save --output ${tmpd}/calico-node.tar ${CALICO_NODE_IMAGE}
-	  docker cp ${tmpd}/calico-node.tar $(dind::master-name):/calico-node.tar
-	  docker exec $(dind::master-name) docker load -i /calico-node.tar
-	  for ((n=1; n <= NUM_NODES; n++)); do
- 	      docker cp ${tmpd}/calico-node.tar $(dind::node-name ${n}):/calico-node.tar
-	      docker exec $(dind::node-name ${n}) docker load -i /calico-node.tar
-	  done
-	  sed -i "s,image: .*calico/node:.*,image: ${CALICO_NODE_IMAGE}," ${tmpd}/calico.yaml
+	  tmpd=$(mktemp -d -t calico.XXXXXX)
+          docker save --output ${tmpd}/calico-node.tar ${CALICO_NODE_IMAGE}
+          docker cp ${tmpd}/calico-node.tar $(dind::master-name):/calico-node.tar
+          docker exec $(dind::master-name) docker load -i /calico-node.tar
+          for ((n=1; n <= NUM_NODES; n++)); do
+              docker cp ${tmpd}/calico-node.tar $(dind::node-name ${n}):/calico-node.tar
+              docker exec $(dind::node-name ${n}) docker load -i /calico-node.tar
+          done
+	  sed "s,image: .*calico/node:.*,image: ${CALICO_NODE_IMAGE}," ${manifest_base}/calico-etcd.yaml > ${tmpd}/calico.yaml
+	  helm_image_args="--set node.image=${CALICO_NODE_IMAGE%%:*} --set node.tag=${CALICO_NODE_IMAGE##*:}"
       fi
-      dind::retry "${kubectl}" --context "$ctx" apply -f ${tmpd}/calico.yaml
-      dind::retry "${kubectl}" --context "$ctx" apply -f ${manifest_base}/calicoctl-etcd.yaml
+
+      case "${CALICO_NODE_IMAGE}" in
+
+          calico/node* )
+	      # Install using manifests in ${manifest_base} - which are Calico open source
+	      # manifests - but using the locally built node image and pretending that it
+	      # is "calico/node".
+	      dind::retry "${kubectl}" --context "$ctx" apply -f ${tmpd}/calico.yaml
+	      dind::retry "${kubectl}" --context "$ctx" apply -f ${manifest_base}/calicoctl-etcd.yaml
+              ;;
+
+          * )
+              # Install using Helm and TSEE manifests.
+              master_chart=tigera-secure-ee-core-v0.0.0.tgz
+              gsutil cp gs://tigera-helm-charts/${master_chart} .
+              docker exec $(dind::master-name) mkdir /install-cnx
+              docker cp ${master_chart} $(dind::master-name):/install-cnx/${master_chart}
+              docker cp ${GCR_IO_PULL_SECRET} $(dind::master-name):/install-cnx/gcr-io-pull-secret.json
+              docker exec $(dind::master-name) curl -LO https://git.io/get_helm.sh
+              docker exec $(dind::master-name) chmod 700 get_helm.sh
+              docker exec $(dind::master-name) ./get_helm.sh
+              docker exec $(dind::master-name) kubectl create clusterrolebinding tiller-cluster-rule --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
+              docker exec $(dind::master-name) kubectl create serviceaccount --namespace kube-system tiller
+              docker exec $(dind::master-name) helm init --net-host --service-account tiller \
+                     --override "spec.template.spec.tolerations[0].effect=NoSchedule" \
+                     --override "spec.template.spec.tolerations[0].key=node.kubernetes.io/not-ready" \
+                     --override "spec.template.spec.tolerations[0].operator=Exists"
+              docker exec $(dind::master-name) kubectl rollout -n kube-system  status deployments/tiller-deploy -w
+              docker exec $(dind::master-name) helm install /install-cnx/${master_chart} \
+                     --set-file imagePullSecrets.cnx-pull-secret=/install-cnx/gcr-io-pull-secret.json \
+                     --set datastore=etcd \
+                     --set etcd.endpoints=http://10.96.232.136:6666 ${helm_image_args}
+              docker exec $(dind::master-name) kubectl rollout status -n kube-system deployment/cnx-apiserver
+              dind::retry "${kubectl}" --context "$ctx" apply -f ${TSEE_TEST_LICENSE}
+              dind::retry "${kubectl}" --context "$ctx" apply -f https://docs.tigera.io/master/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml
+
+              # Install a calicoctl pod.  The test code uses this to run
+              # calicoctl commands.
+              dind::retry "${kubectl}" --context "$ctx" apply -f https://docs.tigera.io/master/getting-started/kubernetes/installation/hosted/calicoctl.yaml
+              ;;
+      esac
       ;;
     calico-kdd)
       manifest_base=tests/k8st/infra
