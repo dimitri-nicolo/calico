@@ -19,7 +19,7 @@ In order to redirect the flow/audit logs to Amazon S3 cloud object storage(along
     > **Note**: `s3.flush-interval` is in seconds.
     {: .alert .alert-info}
 
-    The [fluentd documentation for the S3 output plugin]( https://docs.fluentd.org/v0.12/articles/out_s3#parameters) has more information on these options.
+    The [fluentd documentation for the S3 output plugin](https://docs.fluentd.org/output/s3#parameters) has more information on these options.
 
 1.  Set up secret with AWS key ID and Secret key for authentication.
     ```

@@ -29,7 +29,7 @@ To enable flow log filtering, follow these steps.
 ## Writing filter configuration files
 
 The filters defined by the ConfigMap are inserted into the fluentd configuration file.
-The [upstream fluentd documentation](https://docs.fluentd.org/v1.0/articles/filter_grep)
+The [upstream fluentd documentation](https://docs.fluentd.org/filter/grep)
 describes how to write fluentd filters.  The [flow log schema](flow) can be referred to
 for the specification of the various fields you can filter based on.  Remember to ensure
 that the config file is properly indented in the ConfigMap.
