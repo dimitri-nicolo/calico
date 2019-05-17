@@ -44,13 +44,13 @@ spec:
   groups:
   - name: calico.rules
     rules:
-      ALERT DeniedPacketsRate
-        IF rate(calico_denied_packets[10s]) > 50
-        LABELS { severity = "critical" }
-        ANNOTATIONS {
-           summary = "Instance {{$labels.instance}} - Large rate of packets denied",
-           description = "{{$labels.instance}} with calico-node pod {{$labels.pod}} has been denying packets at a fast rate {{$labels.sourceIp}} by policy {{$labels.policy}}."
-        }
+    - alert: DeniedPacketsRate
+      expr: rate(calico_denied_packets[10s]) > 50
+      labels:
+        severity: critical
+      annotations:
+        summary: "Instance {{$labels.instance}} - Large rate of packets denied"
+        description: "{{$labels.instance}} with calico-node pod {{$labels.pod}} has been denying packets at a fast rate {{$labels.sourceIp}} by policy {{$labels.policy}}."
 {% endraw %}
 ```
 
@@ -71,13 +71,13 @@ spec:
   groups:
   - name: calico.rules
     rules:
-      ALERT DeniedPacketsRate
-        IF rate(calico_denied_packets[20s]) > 50
-        LABELS { severity = "critical" }
-        ANNOTATIONS {
-           summary = "Instance {{$labels.instance}} - Large rate of packets denied",
-           description = "{{$labels.instance}} with calico-node pod {{$labels.pod}} has been denying packets at a fast rate {{$labels.sourceIp}} by policy {{$labels.policy}}."
-        }
+    - alert: DeniedPacketsRate
+      expr: rate(calico_denied_packets[20s]) > 50
+      labels:
+        severity: critical
+      annotations:
+        summary: "Instance {{$labels.instance}} - Large rate of packets denied"
+        description: "{{$labels.instance}} with calico-node pod {{$labels.pod}} has been denying packets at a fast rate {{$labels.sourceIp}} by policy {{$labels.policy}}."
 {% endraw %}
 ```
 
@@ -112,14 +112,14 @@ spec:
   groups:
   - name: calico.rules
     rules:
-      ALERT CalicoNodeInstanceDown
-        IF up == 0
-        FOR 5m
-        LABELS { severity = "warning" }
-        ANNOTATIONS {
-         summary = "Instance {{$labels.instance}} Pod: {{$labels.pod}} is down",
-         description = "{{$labels.instance}} of job {{$labels.job}} has been down for more than 5 minutes"
-        }
+    - alert: CalicoNodeInstanceDown
+      expr: up == 0
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Instance {{$labels.instance}} Pod: {{$labels.pod}} is down"
+        description: "{{$labels.instance}} of job {{$labels.job}} has been down for more than 5 minutes"
 {% endraw %}
 ```
 
