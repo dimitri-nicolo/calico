@@ -3,7 +3,6 @@ package xrefcache
 
 import (
 	"container/heap"
-	"fmt"
 
 	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
@@ -82,7 +81,7 @@ func NewXrefCache(healthy func()) XrefCache {
 		cache.register(c)
 		for _, kind := range cache.kinds() {
 			if _, ok := c.caches[kind]; ok {
-				panic(fmt.Errorf("Resource kind registered with multiple caches: %s", kind))
+				log.Panicf("Resource kind %s registered with multiple caches.", kind)
 			}
 			c.caches[kind] = cache
 			c.priorities[kind] = int8(i)
