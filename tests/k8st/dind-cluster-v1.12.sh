@@ -1835,6 +1835,8 @@ function dind::up {
               docker cp ${tmpd}/calico-node.tar $(dind::node-name ${n}):/calico-node.tar
               docker exec $(dind::node-name ${n}) docker load -i /calico-node.tar
           done
+	  sed "s,image: .*calico/node:.*,image: ${CALICO_NODE_IMAGE}," ${manifest_base}/calico-etcd.yaml > ${tmpd}/calico.yaml
+	  helm_image_args="--set node.image=${CALICO_NODE_IMAGE%%:*} --set node.tag=${CALICO_NODE_IMAGE##*:}"
       fi
 
       case "${CALICO_NODE_IMAGE}" in
@@ -1843,7 +1845,7 @@ function dind::up {
 	      # Install using manifests in ${manifest_base} - which are Calico open source
 	      # manifests - but using the locally built node image and pretending that it
 	      # is "calico/node".
-	      dind::retry "${kubectl}" --context "$ctx" apply -f ${manifest_base}/calico-etcd.yaml
+	      dind::retry "${kubectl}" --context "$ctx" apply -f ${tmpd}/calico.yaml
 	      dind::retry "${kubectl}" --context "$ctx" apply -f ${manifest_base}/calicoctl-etcd.yaml
               ;;
 
@@ -1867,7 +1869,7 @@ function dind::up {
               docker exec $(dind::master-name) helm install /install-cnx/${master_chart} \
                      --set-file imagePullSecrets.cnx-pull-secret=/install-cnx/gcr-io-pull-secret.json \
                      --set datastore=etcd \
-                     --set etcd.endpoints=http://10.96.232.136:6666
+                     --set etcd.endpoints=http://10.96.232.136:6666 ${helm_image_args}
               docker exec $(dind::master-name) kubectl rollout status -n kube-system deployment/cnx-apiserver
               dind::retry "${kubectl}" --context "$ctx" apply -f ${TSEE_TEST_LICENSE}
               dind::retry "${kubectl}" --context "$ctx" apply -f https://docs.tigera.io/master/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml

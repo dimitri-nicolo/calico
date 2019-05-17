@@ -674,7 +674,6 @@ endif
 	    -v /var/run/docker.sock:/var/run/docker.sock \
 	    -v /home/$(USER)/.kube/config:/root/.kube/config \
 	    -v /home/$(USER)/.kubeadm-dind-cluster:/root/.kubeadm-dind-cluster \
-	    -e CALICO_NODE_IMAGE=$(BUILD_IMAGE):latest-$(ARCH) \
 	    --privileged \
 	    --net host \
         $(TEST_CONTAINER_NAME) \
