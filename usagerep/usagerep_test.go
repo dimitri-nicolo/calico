@@ -29,9 +29,10 @@ import (
 
 	"github.com/projectcalico/felix/buildinfo"
 	"github.com/projectcalico/felix/calc"
+	"github.com/projectcalico/felix/collector"
 )
 
-const expectedNumberOfURLParams = 15
+const expectedNumberOfURLParams = 16
 
 // These tests start a local HTTP server on a random port and tell the usage reporter to
 // connect to it.  Then we can check that it correctly makes HTTP requests at the right times.
@@ -65,6 +66,7 @@ var _ = Describe("UsageReporter with mocked URL and short interval", func() {
 		u.BaseURL = fmt.Sprintf("http://localhost:%d/UsageCheck/calicoVersionCheck?", port)
 
 		ctx, cancel = context.WithCancel(context.Background())
+		collector.FlowLogAvg.ResetFlowLogs()
 		go u.PeriodicallyReportUsage(ctx)
 	})
 

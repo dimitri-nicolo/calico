@@ -38,6 +38,14 @@ type aggregatorRef struct {
 	d []FlowLogDispatcher
 }
 
+var FlowLogAvg *FlowLogAverage
+var flushIntervalDuration float64
+
+type FlowLogAverage struct {
+	totalFlows     int
+	lastReportTime time.Time
+}
+
 // FlowLogsReporter implements the MetricsReporter interface.
 type FlowLogsReporter struct {
 	dispatchers   map[string]FlowLogDispatcher
@@ -57,12 +65,43 @@ const (
 	healthInterval = 10 * time.Second
 )
 
+func (f *FlowLogAverage) updateFlowLogs(numFlows int) {
+	f.totalFlows += numFlows
+}
+
+func (f *FlowLogAverage) ResetFlowLogs() {
+	FlowLogAvg = &FlowLogAverage{
+		totalFlows:     0,
+		lastReportTime: time.Now(),
+	}
+}
+
+func GetAndResetFlowsPerMinute() (flowsPerMinute float64) {
+	if FlowLogAvg.totalFlows != 0 {
+		currentTime := time.Now()
+		elapsedTime := currentTime.Sub(FlowLogAvg.lastReportTime)
+
+		if elapsedTime.Seconds() < flushIntervalDuration {
+			return
+		}
+
+		flowsPerMinute = float64(FlowLogAvg.totalFlows) / elapsedTime.Minutes()
+		FlowLogAvg.ResetFlowLogs()
+	}
+	return
+}
+
 // NewFlowLogsReporter constructs a FlowLogs MetricsReporter using
 // a dispatcher and aggregator.
 func NewFlowLogsReporter(dispatchers map[string]FlowLogDispatcher, flushInterval time.Duration, healthAggregator *health.HealthAggregator, hepEnabled bool) *FlowLogsReporter {
 	if healthAggregator != nil {
 		healthAggregator.RegisterReporter(healthName, &health.HealthReport{Live: true, Ready: true}, healthInterval*2)
 	}
+
+	// Initialize FlowLogAverage struct
+	FlowLogAvg.ResetFlowLogs()
+	flushIntervalDuration = flushInterval.Seconds()
+
 	return &FlowLogsReporter{
 		dispatchers:      dispatchers,
 		flushTicker:      jitter.NewTicker(flushInterval, flushInterval/10),
@@ -121,6 +160,7 @@ func (c *FlowLogsReporter) run() {
 			log.Debug("Flow log flush tick")
 			for _, agg := range c.aggregators {
 				fl := agg.a.Get()
+				FlowLogAvg.updateFlowLogs(len(fl))
 				if len(fl) > 0 {
 					for _, d := range agg.d {
 						log.WithFields(log.Fields{
