@@ -363,7 +363,6 @@ $(NODE_CONTAINER_CREATED): ./Dockerfile.$(ARCH) $(NODE_CONTAINER_FILES) $(NODE_C
 	  echo; echo calico-node-$(ARCH) -v;         /go/bin/calico-node-$(ARCH) -v; \
 	"
 	docker build --pull -t $(BUILD_IMAGE):latest-$(ARCH) . --build-arg BIRD_IMAGE=$(BIRD_IMAGE) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --build-arg ver=$(CALICO_GIT_VER) -f ./Dockerfile.$(ARCH)
-	docker tag $(BUILD_IMAGE):latest-$(ARCH) calico/node:latest-$(ARCH)
 	touch $@
 
 # ensure we have a real imagetag
@@ -637,7 +636,6 @@ DIND_SCR?=dind-cluster-$(K8ST_VERSION).sh
 
 .PHONY: k8s-test
 ## Run the k8s tests
-k8s-test: export BUILD_IMAGE=calico/node
 k8s-test:
 	$(MAKE) k8s-stop
 	$(MAKE) k8s-start
