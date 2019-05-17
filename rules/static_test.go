@@ -73,6 +73,13 @@ var _ = Describe("Static", func() {
 					ipVersion := ipVersion
 					ipSetThisHost := fmt.Sprintf("cali%d0this-host", ipVersion)
 
+					var trustedServerIP string
+					if ipVersion == 4 {
+						trustedServerIP = "1.2.3.4"
+					} else {
+						trustedServerIP = "fd5f:83a5::34:2"
+					}
+
 					var portRanges []*proto.PortRange
 					portRange := &proto.PortRange{
 						First: 30030,
@@ -171,12 +178,6 @@ var _ = Describe("Static", func() {
 					}
 
 					It("should include the expected forward chain in the filter chains", func() {
-						var trustedServerIP string
-						if ipVersion == 4 {
-							trustedServerIP = "1.2.3.4"
-						} else {
-							trustedServerIP = "fd5f:83a5::34:2"
-						}
 						Expect(findChain(rr.StaticFilterTableChains(ipVersion), "cali-FORWARD")).To(Equal(&Chain{
 							Name: "cali-FORWARD",
 							Rules: []Rule{
@@ -275,6 +276,10 @@ var _ = Describe("Static", func() {
 										Action: GotoAction{Target: ChainForwardEndpointMark},
 									},
 
+									// DNS response capture.
+									{Match: Match().OutInterface("cali+").Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
+										Action: NflogAction{Group: 3, Prefix: "DNS", Size: 1024}},
+
 									// To workload traffic.
 									{Match: Match().OutInterface("cali+"), Action: ReturnAction{}},
 
@@ -296,6 +301,10 @@ var _ = Describe("Static", func() {
 									{Match: Match().MarkSingleBitSet(0x10),
 										Action: AcceptAction{},
 									},
+
+									// DNS response capture.
+									{Match: Match().OutInterface("cali+").Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
+										Action: NflogAction{Group: 3, Prefix: "DNS", Size: 1024}},
 
 									// To workload traffic.
 									{Match: Match().OutInterface("cali+"), Action: ReturnAction{}},

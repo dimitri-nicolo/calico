@@ -6,6 +6,7 @@ package fv_test
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -28,11 +29,72 @@ import (
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
+	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
+var dnsDir string
+
 type mapping struct {
 	lhs, rhs string
+}
+
+func mappingMatchesLine(m *mapping, line string) bool {
+	return strings.Contains(line, "\""+m.lhs+"\"") && strings.Contains(line, "\""+m.rhs+"\"")
+}
+
+func fileHasMappingsAndNot(mappings []mapping, notMappings []mapping) func() bool {
+	mset := set.FromArray(mappings)
+	notset := set.FromArray(notMappings)
+	return func() bool {
+		f, err := os.Open(path.Join(dnsDir, "dnsinfo.txt"))
+		if err == nil {
+			scanner := bufio.NewScanner(f)
+			for scanner.Scan() {
+				line := scanner.Text()
+				mset.Iter(func(item interface{}) error {
+					m := item.(mapping)
+					if mappingMatchesLine(&m, line) {
+						return set.RemoveItem
+					}
+					return nil
+				})
+				foundWrongMapping := false
+				notset.Iter(func(item interface{}) error {
+					m := item.(mapping)
+					if mappingMatchesLine(&m, line) {
+						log.Infof("Found wrong mapping: %v", m)
+						foundWrongMapping = true
+					}
+					return nil
+				})
+				if foundWrongMapping {
+					return false
+				}
+			}
+			if mset.Len() == 0 {
+				log.Info("All expected mappings found")
+				return true
+			} else {
+				log.Infof("Missing %v expected mappings", mset.Len())
+				mset.Iter(func(item interface{}) error {
+					m := item.(mapping)
+					log.Infof("Missed mapping: %v", m)
+					return nil
+				})
+			}
+		}
+		log.Info("Returning false by default")
+		return false
+	}
+}
+
+func fileHasMappings(mappings []mapping) func() bool {
+	return fileHasMappingsAndNot(mappings, nil)
+}
+
+func fileHasMapping(lname, rname string) func() bool {
+	return fileHasMappings([]mapping{{lhs: lname, rhs: rname}})
 }
 
 var _ = Describe("DNS Policy", func() {
@@ -43,7 +105,6 @@ var _ = Describe("DNS Policy", func() {
 		felix        *infrastructure.Felix
 		client       client.Interface
 		w            [1]*workload.Workload
-		dnsDir       string
 	)
 
 	BeforeEach(func() {
@@ -93,64 +154,6 @@ var _ = Describe("DNS Policy", func() {
 		}
 		etcd.Stop()
 	})
-
-	mappingMatchesLine := func(m *mapping, line string) bool {
-		return strings.Contains(line, "\""+m.lhs+"\"") && strings.Contains(line, "\""+m.rhs+"\"")
-	}
-
-	fileHasMappingsAndNot := func(mappings []mapping, notMappings []mapping) func() bool {
-		mset := set.FromArray(mappings)
-		notset := set.FromArray(notMappings)
-		return func() bool {
-			f, err := os.Open(path.Join(dnsDir, "dnsinfo.txt"))
-			if err == nil {
-				scanner := bufio.NewScanner(f)
-				for scanner.Scan() {
-					line := scanner.Text()
-					mset.Iter(func(item interface{}) error {
-						m := item.(mapping)
-						if mappingMatchesLine(&m, line) {
-							return set.RemoveItem
-						}
-						return nil
-					})
-					foundWrongMapping := false
-					notset.Iter(func(item interface{}) error {
-						m := item.(mapping)
-						if mappingMatchesLine(&m, line) {
-							log.Infof("Found wrong mapping: %v", m)
-							foundWrongMapping = true
-						}
-						return nil
-					})
-					if foundWrongMapping {
-						return false
-					}
-				}
-				if mset.Len() == 0 {
-					log.Info("All expected mappings found")
-					return true
-				} else {
-					log.Infof("Missing %v expected mappings", mset.Len())
-					mset.Iter(func(item interface{}) error {
-						m := item.(mapping)
-						log.Infof("Missed mapping: %v", m)
-						return nil
-					})
-				}
-			}
-			log.Info("Returning false by default")
-			return false
-		}
-	}
-
-	fileHasMappings := func(mappings []mapping) func() bool {
-		return fileHasMappingsAndNot(mappings, nil)
-	}
-
-	fileHasMapping := func(lname, rname string) func() bool {
-		return fileHasMappings([]mapping{{lhs: lname, rhs: rname}})
-	}
 
 	dnsServerSetup := func(scapy *containers.Container) {
 		// Establish conntrack state, in Felix, as though the workload just sent a DNS
@@ -548,4 +551,115 @@ var _ = Describe("DNS Policy", func() {
 			})
 		})
 	})
+})
+
+var _ = Describe("DNS Policy with server on host", func() {
+
+	var (
+		scapyTrusted *containers.Container
+		etcd         *containers.Container
+		felix        *infrastructure.Felix
+		client       client.Interface
+		w            [1]*workload.Workload
+	)
+
+	BeforeEach(func() {
+		opts := infrastructure.DefaultTopologyOptions()
+		var err error
+		dnsDir, err = ioutil.TempDir("", "dnsinfo")
+		Expect(err).NotTo(HaveOccurred())
+
+		// Start etcd and Felix, with no trusted DNS server IPs yet.
+		opts.ExtraVolumes[dnsDir] = "/dnsinfo"
+		opts.ExtraEnvVars["FELIX_DNSCACHEFILE"] = "/dnsinfo/dnsinfo.txt"
+		opts.ExtraEnvVars["FELIX_DNSCACHESAVEINTERVAL"] = "1"
+		opts.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico"
+		felix, etcd, client = infrastructure.StartSingleNodeEtcdTopology(opts)
+		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")
+
+		// Create a workload, using that profile.
+		for ii := range w {
+			iiStr := strconv.Itoa(ii)
+			w[ii] = workload.Run(felix, "w"+iiStr, "default", "10.65.0.1"+iiStr, "8055", "tcp")
+			w[ii].Configure(client)
+		}
+
+		// Start scapy, in the same namespace as Felix.
+		scapyTrusted = containers.Run("scapy",
+			containers.RunOpts{AutoRemove: true, WithStdinPipe: true, SameNamespace: felix.Container},
+			"-i", "--privileged", "tigera-test/scapy")
+
+		// Configure Felix to trust its own IP as a DNS server.
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		c := api.NewFelixConfiguration()
+		c.Name = "default"
+		c.Spec.DNSTrustedServers = &[]string{felix.IP}
+		_, err = client.FelixConfigurations().Create(ctx, c, options.SetOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		// Allow time for Felix to restart before we send the DNS response from scapy.
+		time.Sleep(3 * time.Second)
+	})
+
+	// Stop etcd and workloads, collecting some state if anything failed.
+	AfterEach(func() {
+		if CurrentGinkgoTestDescription().Failed {
+			felix.Exec("ipset", "list")
+			felix.Exec("iptables-save", "-c")
+			felix.Exec("ip", "r")
+			felix.Exec("conntrack", "-L")
+		}
+
+		for ii := range w {
+			w[ii].Stop()
+		}
+		felix.Stop()
+
+		if CurrentGinkgoTestDescription().Failed {
+			etcd.Exec("etcdctl", "ls", "--recursive", "/")
+		}
+		etcd.Stop()
+	})
+
+	dnsServerSetup := func(scapy *containers.Container) {
+		// Establish conntrack state, in Felix, as though the workload just sent a DNS
+		// request to the specified scapy.
+		felix.Exec("conntrack", "-I", "-s", w[0].IP, "-d", felix.IP, "-p", "UDP", "-t", "10", "--sport", "53", "--dport", "53")
+	}
+
+	sendDNSResponses := func(scapy *containers.Container, dnsSpecs []string) {
+		// Drive scapy.
+		for _, dnsSpec := range dnsSpecs {
+			// Because we're sending from scapy in the same network namespace as Felix,
+			// we need to use normal Linux sending instead of scapy's send function, as
+			// the latter bypasses iptables.  We just use scapy to build the DNS
+			// payload.
+			io.WriteString(scapy.Stdin,
+				fmt.Sprintf("dns = %v\n", dnsSpec))
+			io.WriteString(scapy.Stdin, "import socket\n")
+			io.WriteString(scapy.Stdin, "sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)\n")
+			io.WriteString(scapy.Stdin,
+				fmt.Sprintf("sock.bind(('%v', 53))\n", felix.IP))
+			io.WriteString(scapy.Stdin,
+				fmt.Sprintf("sock.sendto(dns.__bytes__(), ('%v', 53))\n", w[0].IP))
+		}
+	}
+
+	DescribeTable("DNS response processing",
+		func(dnsSpecs []string, check func() bool) {
+			dnsServerSetup(scapyTrusted)
+			sendDNSResponses(scapyTrusted, dnsSpecs)
+			scapyTrusted.Stdin.Close()
+			Eventually(check, "5s", "1s").Should(BeTrue())
+		},
+
+		Entry("A record", []string{
+			"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='bankofsteve.com',qtype='A'),an=(DNSRR(rrname='bankofsteve.com',type='A',ttl=36000,rdata='192.168.56.1')))",
+		},
+			func() bool {
+				return fileHasMapping("bankofsteve.com", "192.168.56.1")()
+			},
+		),
+	)
 })
