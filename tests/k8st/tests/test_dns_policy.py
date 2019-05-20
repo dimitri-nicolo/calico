@@ -27,15 +27,15 @@ class TestDNSPolicy(TestBase):
         calicoctl("delete gnp default.deny-all-egress-except-dns || true")
         calicoctl("get gnp")
 
-    def deny_all_egress_except_dns(self):
-        # Deny egress from all pods, except for DNS.
+    def deny_all_egress_except_dns(self, selector):
+        # Deny egress from selected pods, except for DNS.
         calicoctl("""apply -f - << EOF
 apiVersion: projectcalico.org/v3
 kind: GlobalNetworkPolicy
 metadata:
   name: deny-all-egress-except-dns
 spec:
-  selector: all()
+  selector: %s
   types:
   - Egress
   egress:
@@ -46,7 +46,7 @@ spec:
       - 53
   - action: Deny
 EOF
-""")
+""" % selector)
 
     def allow_egress_to_domains(self, pod_selector, domains):
         domain_string = """
@@ -73,7 +73,7 @@ EOF
 
     def test_internet_service(self):
         kubectl("run " + self.test1 + " --generator=run-pod/v1 " +
-                "--image=laurenceman/alpine")
+                "--image=laurenceman/alpine --labels=\"egress=restricted\"")
         kubectl("wait --for=condition=ready pod/%s" % self.test1)
 
         def should_connect():
@@ -91,10 +91,10 @@ EOF
         should_connect()
 
         # Deny all egress.
-        self.deny_all_egress_except_dns()
+        self.deny_all_egress_except_dns("egress == 'restricted'")
         retry_until_success(should_not_connect, retries=2)
 
         # DNS policy.
-        self.allow_egress_to_domains("all()",
+        self.allow_egress_to_domains("egress == 'restricted'",
                                      ["microsoft.com", "www.microsoft.com"])
         retry_until_success(should_connect, retries=2)
