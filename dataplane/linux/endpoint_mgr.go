@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -486,6 +486,7 @@ func (m *endpointManager) resolveWorkloadEndpoints() {
 		} else {
 			logCxt.Info("Workload removed, deleting its chains.")
 			m.filterTable.RemoveChains(m.activeWlIDToChains[id])
+			delete(m.activeWlIDToChains, id)
 			if oldWorkload != nil {
 				m.epMarkMapper.ReleaseEndpointMark(oldWorkload.Name)
 				// Remove any routes from the routing table.  The RouteTable will
