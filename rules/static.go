@@ -506,28 +506,7 @@ func (r *DefaultRuleRenderer) StaticFilterForwardChains(ipVersion uint8) []*Chai
 	for _, prefix := range r.WorkloadIfacePrefixes {
 		log.WithField("ifacePrefix", prefix).Debug("Adding workload match rules")
 		ifaceMatch := prefix + "+"
-		for _, serverIP := range r.DNSTrustedServers {
-			if (ipVersion == 4) && strings.Contains(serverIP, ":") {
-				continue
-			}
-			if (ipVersion == 6) && !strings.Contains(serverIP, ":") {
-				continue
-			}
-			rules = append(rules,
-				Rule{
-					Match: Match().OutInterface(ifaceMatch).Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53).ConntrackOrigDst(serverIP),
-					Action: NflogAction{
-						Group:       NFLOGDomainGroup,
-						Prefix:      "DNS",
-						SizeEnabled: r.EnableNflogSize,
-						// Traditional DNS over UDP has a maximum size of 512 bytes,
-						// but we need to allow for headers as well (Ethernet, IP
-						// and UDP); 1024 will amply cover what we need.
-						Size: 1024,
-					},
-				},
-			)
-		}
+		rules = append(rules, r.dnsSnoopingRules(ifaceMatch, ipVersion)...)
 		rules = append(rules,
 			Rule{
 				Match:  Match().InInterface(ifaceMatch),
@@ -561,6 +540,32 @@ func (r *DefaultRuleRenderer) StaticFilterForwardChains(ipVersion uint8) []*Chai
 		Name:  ChainFilterForward,
 		Rules: rules,
 	}}
+}
+
+func (r *DefaultRuleRenderer) dnsSnoopingRules(ifaceMatch string, ipVersion uint8) (rules []Rule) {
+	for _, serverIP := range r.DNSTrustedServers {
+		if (ipVersion == 4) && strings.Contains(serverIP, ":") {
+			continue
+		}
+		if (ipVersion == 6) && !strings.Contains(serverIP, ":") {
+			continue
+		}
+		rules = append(rules,
+			Rule{
+				Match: Match().OutInterface(ifaceMatch).Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53).ConntrackOrigDst(serverIP),
+				Action: NflogAction{
+					Group:       NFLOGDomainGroup,
+					Prefix:      "DNS",
+					SizeEnabled: r.EnableNflogSize,
+					// Traditional DNS over UDP has a maximum size of 512 bytes,
+					// but we need to allow for headers as well (Ethernet, IP
+					// and UDP); 1024 will amply cover what we need.
+					Size: 1024,
+				},
+			},
+		)
+	}
+	return
 }
 
 func (r *DefaultRuleRenderer) StaticFilterOutputChains(ipVersion uint8) []*Chain {
@@ -609,6 +614,7 @@ func (r *DefaultRuleRenderer) filterOutputChain(ipVersion uint8) *Chain {
 		// belongs to an IPVS connection and return at the end.
 		log.WithField("ifacePrefix", prefix).Debug("Adding workload match rules")
 		ifaceMatch := prefix + "+"
+		rules = append(rules, r.dnsSnoopingRules(ifaceMatch, ipVersion)...)
 		rules = append(rules,
 			Rule{
 				// if packet goes to a workload endpoint. set return action properly.

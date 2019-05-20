@@ -154,6 +154,7 @@ func (c *Container) Signal(sig os.Signal) {
 type RunOpts struct {
 	AutoRemove    bool
 	WithStdinPipe bool
+	SameNamespace *Container
 }
 
 func NextContainerIndex() int {
@@ -168,10 +169,16 @@ func Run(namePrefix string, opts RunOpts, args ...string) (c *Container) {
 
 	// Prep command to run the container.
 	log.WithField("container", c).Info("About to run container")
-	runArgs := []string{"run", "--name", c.Name, "--hostname", c.Name}
+	runArgs := []string{"run", "--name", c.Name}
 
 	if opts.AutoRemove {
 		runArgs = append(runArgs, "--rm")
+	}
+
+	if opts.SameNamespace != nil {
+		runArgs = append(runArgs, "--network=container:"+opts.SameNamespace.Name)
+	} else {
+		runArgs = append(runArgs, "--hostname", c.Name)
 	}
 
 	// Add remaining args
