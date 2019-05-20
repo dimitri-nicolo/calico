@@ -98,3 +98,6 @@ EOF
         self.allow_egress_to_domains("egress == 'restricted'",
                                      ["microsoft.com", "www.microsoft.com"])
         retry_until_success(should_connect, retries=2)
+
+
+TestDNSPolicy.needs_tsee = True
