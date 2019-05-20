@@ -146,7 +146,8 @@ class TestBase(TestCase):
         kubectl("-n %s rollout status deployment/%s" % (ns, name))
         kubectl("get pods -n %s -o wide" % ns)
 
-    def create_service(self, name, app, ns, port, svc_type="NodePort", traffic_policy="Local", cluster_ip=None):
+    def create_service(self, name, app, ns, port, svc_type="NodePort",
+                       traffic_policy="Local", cluster_ip=None):
         service = client.V1Service(
             metadata=client.V1ObjectMeta(
                 name=name,
@@ -161,12 +162,12 @@ class TestBase(TestCase):
         if traffic_policy:
             service.spec["externalTrafficPolicy"] = traffic_policy
         if cluster_ip:
-          service.spec["clusterIP"] = cluster_ip
+            service.spec["clusterIP"] = cluster_ip
         api_response = self.cluster.create_namespaced_service(
             body=service,
             namespace=ns,
         )
-        logger.debug("Additional Service created. status='%s'" % str(api_response.status))
+        logger.debug("service created, status='%s'" % str(api_response.status))
 
     def wait_until_exists(self, name, resource_type, ns="default"):
         retry_until_success(kubectl, function_args=["get %s %s -n%s" %

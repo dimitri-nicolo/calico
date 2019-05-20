@@ -641,6 +641,7 @@ TSEE_TEST_LICENSE?=${HOME}/new-test-customer-license.yaml
 k8s-test:
 	$(MAKE) k8s-stop
 	$(MAKE) k8s-start
+	$(MAKE) k8s-check-setup
 	$(MAKE) k8s-run-test
 	#$(MAKE) k8s-stop
 
@@ -656,6 +657,15 @@ k8s-start: $(NODE_CONTAINER_CREATED) tests/k8st/$(DIND_SCR)
 	TSEE_TEST_LICENSE=$(TSEE_TEST_LICENSE) \
 	tests/k8st/$(DIND_SCR) up
 
+.PHONY: k8s-check-setup
+k8s-check-setup:
+	ls -l ${HOME}/.kubeadm-dind-cluster/
+	${HOME}/.kubeadm-dind-cluster/kubectl get no -o wide
+	${HOME}/.kubeadm-dind-cluster/kubectl get po -o wide --all-namespaces
+	${HOME}/.kubeadm-dind-cluster/kubectl get svc -o wide --all-namespaces
+	${HOME}/.kubeadm-dind-cluster/kubectl get deployments -o wide --all-namespaces
+	${HOME}/.kubeadm-dind-cluster/kubectl get ds -o wide --all-namespaces
+
 .PHONY: k8s-stop
 ## Stop k8s cluster
 k8s-stop: tests/k8st/$(DIND_SCR)
@@ -664,12 +674,18 @@ k8s-stop: tests/k8st/$(DIND_SCR)
 
 .PHONY: k8s-run-test
 ## Run k8st in an existing k8s cluster
+##
+## Note: if you're developing and want to see test output as it
+## happens, instead of only later and if the test fails, add "-s
+## --nocapture --nologcapture" to K8ST_TO_RUN.  For example:
+##
+## make k8s-test K8ST_TO_RUN="tests/test_dns_policy.py -s --nocapture --nologcapture"
 k8s-run-test: calico_test.created
 ## Only execute remove-go-build-image if flag is set
 ifeq ($(REMOVE_GOBUILD_IMG),true)
 	$(MAKE) remove-go-build-image
 endif
-	docker run \
+	docker run -t \
 	    -v $(CURDIR):/code \
 	    -v /var/run/docker.sock:/var/run/docker.sock \
 	    -v /home/$(USER)/.kube/config:/root/.kube/config \
@@ -677,7 +693,7 @@ endif
 	    --privileged \
 	    --net host \
         $(TEST_CONTAINER_NAME) \
-	    sh -c 'cp /root/.kubeadm-dind-cluster/kubectl /bin/kubectl && ls -ltr /bin/kubectl && which kubectl && cd /code/tests/k8st && \
+	    sh -c 'cp /root/.kubeadm-dind-cluster/kubectl /bin/kubectl && cd /code/tests/k8st && \
 	           nosetests $(K8ST_TO_RUN) -v --with-xunit --xunit-file="/code/report/k8s-tests.xml" --with-timer'
 
 # Needed for Semaphore CI (where disk space is a real issue during k8s-test)
