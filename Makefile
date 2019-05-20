@@ -743,14 +743,14 @@ PREVIOUS_RELEASE=$(shell git describe --tags --abbrev=0)
 
 ## Tags and builds a release from start to finish.
 release: release-prereqs
-	$(MAKE) VERSION=$(VERSION) release-tag
-	$(MAKE) VERSION=$(VERSION) release-build
-	$(MAKE) VERSION=$(VERSION) release-verify
+	$(MAKE) CALICO_GIT_VER=$(CALICO_GIT_VER_RELEASE) VERSION=$(VERSION) release-tag
+	$(MAKE) CALICO_GIT_VER=$(CALICO_GIT_VER_RELEASE) VERSION=$(VERSION) release-build
+	$(MAKE) CALICO_GIT_VER=$(CALICO_GIT_VER_RELEASE) VERSION=$(VERSION) release-verify
 
 	@echo ""
 	@echo "Release build complete. Next, push the produced images."
 	@echo ""
-	@echo "  make VERSION=$(VERSION) release-publish"
+	@echo "  make CALICO_GIT_VER=$(CALICO_GIT_VER_RELEASE) VERSION=$(VERSION) release-publish"
 	@echo ""
 
 ## Produces a git tag for the release.
@@ -829,6 +829,9 @@ ifndef VERSION
 endif
 ifdef LOCAL_BUILD
 	$(error LOCAL_BUILD must not be set for a release)
+endif
+ifndef CALICO_GIT_VER_RELEASE
+	$(error CALICO_GIT_VER_RELEASE is undefined - run using make release CALICO_GIT_VER_RELEASE=vX.Y.Z)
 endif
 
 ###############################################################################
