@@ -1,7 +1,7 @@
 ---
 layout: null
 ---
-{% helm --execute templates/calico-config.yaml --execute templates/calico-etcd-secrets.yaml --execute templates/calico-typha.yaml --execute templates/tigera-federation-sa.yaml --execute templates/tigera-federation-controller.yaml --execute templates/calico-node.yaml --execute templates/configure-canal.yaml --execute templates/calico-kube-controllers.yaml --execute templates/kdd-crds.yaml --execute templates/ee-specific-kdd-crds.yaml --execute templates/rbac.yaml %}
+{% helm --execute templates/calico-config.yaml --execute templates/calico-etcd-secrets.yaml --execute templates/calico-typha.yaml --execute templates/tigera-federation-sa.yaml --execute templates/tigera-federation-controller.yaml --execute templates/calico-node.yaml --execute templates/configure-canal.yaml --execute templates/calico-kube-controllers.yaml --execute templates/kdd-crds.yaml --execute templates/ee-specific-kdd-crds.yaml --execute templates/rbac.yaml --execute templates/cluster-role.yaml %}
 datastore: etcd
 network: calico
 disable_ipip: true
