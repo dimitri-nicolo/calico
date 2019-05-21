@@ -105,6 +105,29 @@ FOSSA_CALICO_BUILD?=calico/go-build:$(FOSSA_GO_BUILD_VER)
 LIBCALICOGO_PATH?=none
 LOCAL_USER_ID?=$(shell id -u $$USER)
 
+#This is a version with known container with compatible versions of sed/grep etc. 
+TOOLING_BUILD?=calico/go-build:v0.20	
+
+# Allow libcalico-go and the ssh auth sock to be mapped into the build container.
+ifdef LIBCALICOGO_PATH
+  EXTRA_DOCKER_ARGS += -v $(LIBCALICOGO_PATH):/go/src/github.com/projectcalico/libcalico-go:ro
+endif
+ifdef SSH_AUTH_SOCK
+  EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
+endif
+
+# TODO: update all the docker run commands in this make file to use this var
+DOCKER_RUN := mkdir -p .go-pkg-cache && \
+              docker run --rm \
+                         --net=host \
+                         $(EXTRA_DOCKER_ARGS) \
+                         -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+                         -v $${PWD}:/go/src/$(PACKAGE_NAME):rw \
+                         -v $${PWD}/.go-pkg-cache:/go/pkg:rw \
+                         -w /go/src/$(PACKAGE_NAME) 
+
+
+
 # Get version from git.
 GIT_VERSION?=$(shell git describe --tags --dirty --always)
 ifeq ($(LOCAL_BUILD),true)
@@ -149,36 +172,6 @@ vendor: glide.yaml
 		-w /go/src/$(PACKAGE_NAME) \
 		$(CALICO_BUILD) glide install -strip-vendor
 
-# Default the felix repo and version but allow them to be overridden
-FELIX_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
-FELIX_REPO?=github.com/tigera/felix-private
-FELIX_VERSION?=$(shell git ls-remote git@github.com:tigera/felix-private $(FELIX_BRANCH) 2>/dev/null | cut -f 1)
-
-## Update felix pin in glide.yaml.  That will also update the felix
-## and libcalico-go pins in glide.lock, so we also keep the
-## 'update-libcalico' name for this target.  (CI for the node repo
-## expects there to be an 'update-libcalico' target here.)
-update-pins update-felix update-libcalico:
-	if [ -n "$(SSH_AUTH_SOCK)" ]; then \
-		EXTRA_DOCKER_ARGS="-v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent"; \
-	fi; \
-	docker run --rm \
-		$$EXTRA_DOCKER_ARGS \
-		-v $(CURDIR):/go/src/$(PACKAGE_NAME):rw $$EXTRA_DOCKER_BIND \
-		-v $(HOME)/.glide:/home/user/.glide:rw \
-		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-		-w /go/src/$(PACKAGE_NAME) \
-		$(CALICO_BUILD) sh -c '\
-        echo "Updating felix to $(FELIX_VERSION) from $(FELIX_REPO)"; \
-        export OLD_VER=$$(grep --after 50 felix glide.yaml |grep --max-count=1 --only-matching --perl-regexp "version:\s*\K[^\s]+") ;\
-        echo "Old version: $$OLD_VER";\
-        if [ $(FELIX_VERSION) != $$OLD_VER ]; then \
-            sed -i "s/$$OLD_VER/$(FELIX_VERSION)/" glide.yaml && \
-            if [ $(FELIX_REPO) != "github.com/tigera/felix-private" ]; then \
-              glide mirror set https://github.com/tigera/felix-private $(FELIX_REPO) --vcs git; glide mirror list; \
-            fi;\
-          glide up --strip-vendor || glide up --strip-vendor; \
-        fi'
 
 bin/kube-controllers-linux-$(ARCH): vendor $(SRCFILES)
 	mkdir -p bin
@@ -274,6 +267,101 @@ endif
 tag-images-all: imagetag $(addprefix sub-tag-images-,$(VALIDARCHES))
 sub-tag-images-%:
 	$(MAKE) tag-images ARCH=$* IMAGETAG=$(IMAGETAG)
+
+
+
+###############################################################################
+# Managing the upstream library pins
+###############################################################################
+
+## Update dependency pins in glide.yaml
+update-pins: update-felix-pin update-licensing-pin
+
+## deprecated target alias
+update-libcalico: update-pins
+	$(warning !! Update update-libcalico is deprecated, use update-pins !!)
+
+## Guard so we don't run this on osx because of ssh-agent to docker forwarding bug
+guard-ssh-forwarding-bug:
+	@if [ "$(shell uname)" = "Darwin" ]; then \
+		echo "ERROR: This target requires ssh-agent to docker key forwarding and is not compatible with OSX/Mac OS"; \
+		echo "$(MAKECMDGOALS)"; \
+		exit 1; \
+	fi;
+
+
+###############################################################################
+## felix
+
+## Set the default FELIX source for this project 
+FELIX_PROJECT_DEFAULT=tigera/felix-private.git
+FELIX_GLIDE_LABEL=projectcalico/felix
+
+## Default the FELIX repo and version but allow them to be overridden (master or release-vX.Y)
+## default FELIX branch to the same branch name as the current checked out repo
+FELIX_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
+FELIX_REPO?=github.com/$(FELIX_PROJECT_DEFAULT)
+FELIX_VERSION?=$(shell git ls-remote git@github.com:$(FELIX_PROJECT_DEFAULT) $(FELIX_BRANCH) 2>/dev/null | cut -f 1)
+
+## Guard to ensure FELIX repo and branch are reachable
+guard-git-felix: 
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(FELIX_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ; 
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(FELIX_PROJECT_DEFAULT) "$(FELIX_BRANCH)" "Ensure the branch exists, or set FELIX_BRANCH variable";
+	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(FELIX_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
+	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(FELIX_PROJECT_DEFAULT) "$(FELIX_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
+	@if [ "$(strip $(FELIX_VERSION))" = "" ]; then \
+		echo "ERROR: FELIX version could not be determined"; \
+		exit 1; \
+	fi;
+
+## Update libary pin in glide.yaml
+update-felix-pin: guard-ssh-forwarding-bug guard-git-felix
+	@$(DOCKER_RUN) $(TOOLING_BUILD) /bin/sh -c '\
+		LABEL="$(FELIX_GLIDE_LABEL)" \
+		REPO="$(FELIX_REPO)" \
+		VERSION="$(FELIX_VERSION)" \
+		DEFAULT_REPO="$(FELIX_PROJECT_DEFAULT)" \
+		BRANCH="$(FELIX_BRANCH)" \
+		GLIDE="glide.yaml" \
+		_scripts/update-pin.sh '
+
+###############################################################################
+## licensing
+
+## Set the default LICENSING source for this project 
+LICENSING_PROJECT_DEFAULT=tigera/licensing
+LICENSING_GLIDE_LABEL=tigera/licensing
+
+## Default the LICENSING repo and version but allow them to be overridden (master or release-vX.Y)
+## default LICENSING branch to the same branch name as the current checked out repo
+LICENSING_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
+LICENSING_REPO?=github.com/$(LICENSING_PROJECT_DEFAULT)
+LICENSING_VERSION?=$(shell git ls-remote git@github.com:$(LICENSING_PROJECT_DEFAULT) $(LICENSING_BRANCH) 2>/dev/null | cut -f 1)
+
+## Guard to ensure LICENSING repo and branch are reachable
+guard-git-licensing: 
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ; 
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "$(LICENSING_BRANCH)" "Ensure the branch exists, or set LICENSING_BRANCH variable";
+	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
+	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "$(LICENSING_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
+	@if [ "$(strip $(LICENSING_VERSION))" = "" ]; then \
+		echo "ERROR: LICENSING version could not be determined"; \
+		exit 1; \
+	fi;
+
+## Update libary pin in glide.yaml
+update-licensing-pin: guard-ssh-forwarding-bug guard-git-licensing
+	@$(DOCKER_RUN) $(TOOLING_BUILD) /bin/sh -c '\
+		LABEL="$(LICENSING_GLIDE_LABEL)" \
+		REPO="$(LICENSING_REPO)" \
+		VERSION="$(LICENSING_VERSION)" \
+		DEFAULT_REPO="$(LICENSING_PROJECT_DEFAULT)" \
+		BRANCH="$(LICENSING_BRANCH)" \
+		GLIDE="glide.yaml" \
+		_scripts/update-pin.sh '
+
+
+
 
 ###############################################################################
 # Static checks
