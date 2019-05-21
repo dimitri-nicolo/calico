@@ -114,6 +114,9 @@ GO_BUILD_VER?=v0.20
 # we do not need to use the arch since go-build:v0.15 now is multi-arch manifest
 CALICO_BUILD=calico/go-build:$(GO_BUILD_VER)
 
+#This is a version with known container with compatible versions of sed/grep etc. 
+TOOLING_BUILD?=calico/go-build:v0.20	
+
 # Figure out version information.  To support builds from release tarballs, we default to
 # <unknown> if this isn't a git checkout.
 PKG_VERSION?=$(shell git describe --tags --dirty --always || echo '<unknown>')
@@ -194,42 +197,15 @@ clean:
 
 
 ###############################################################################
-# Managing the upstream library pin
+# Managing the upstream library pins
 ###############################################################################
 
-## Set the default library source for this project (libcalico/apiserver/typha/etc..)
-LIBRARY_PROJECT_DEFAULT=tigera/calico-k8sapiserver.git
-LIBRARY_GLIDE_LABEL=calico-k8sapiserver
+## Update dependency pins in glide.yaml
+update-pins: update-apiserver-pin update-felix-pin update-licensing-pin 
 
-## Default the library repo and version but allow them to be overridden (master or release-vX.Y)
-## default library branch to the same branch name as the current checked out repo
-LIBRARY_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
-LIBRARY_REPO?=github.com/$(LIBRARY_PROJECT_DEFAULT)
-LIBRARY_VERSION?=$(shell git ls-remote git@github.com:$(LIBRARY_PROJECT_DEFAULT) $(LIBRARY_BRANCH) 2>/dev/null | cut -f 1)
-
-## set up some test scripts so we can fail with useful information
-CAN_REACH_LIBRARY_MASTER=$(shell git ls-remote --exit-code git@github.com:$(LIBRARY_PROJECT_DEFAULT) master >/dev/null 2>&1; echo $$?;)
-CAN_REACH_LIBRARY_BRANCH=$(shell git ls-remote --exit-code git@github.com:$(LIBRARY_PROJECT_DEFAULT) $(LIBRARY_BRANCH) >/dev/null 2>&1; echo $$?;)
-CAN_REACH_LIBRARY_BRANCH_IN_CONTAINER=$(shell $(DOCKER_RUN) $(CALICO_BUILD) sh -c '\
-	git ls-remote git@github.com:$(LIBRARY_PROJECT_DEFAULT) $(LIBRARY_BRANCH) >/dev/null 2>&1; echo $$?;')
-
-
-## Guard to ensure library repo and branch are reachable
-guard-git-lc: 
-	@if [ "$(strip $(CAN_REACH_LIBRARY_MASTER))" != "0" ]; then \
-		echo "ERROR: git@github.com:$(LIBRARY_PROJECT_DEFAULT) is not reachable."; \
-		echo "Ensure your ssh keys are correct and that you can access github" ; \
-		exit 1; \
-	fi;
-	@if [ "$(strip $(CAN_REACH_LIBRARY_BRANCH))" != "0" ]; then \
-		echo "ERROR: git@github.com:$(LIBRARY_PROJECT_DEFAULT)/$(LIBRARY_BRANCH) not reachable."; \
-		echo "Ensure branch '$(LIBRARY_BRANCH)' exists, or set LIBRARY_BRANCH variable"; \
-		exit 1; \
-	fi;
-	@if [ "$(strip $(LIBRARY_VERSION))" = "" ]; then \
-		echo "ERROR: libcalico version could not be determined"; \
-		exit 1; \
-	fi;
+## deprecated target alias
+update-libcalico: update-pins
+	$(warning !! Update update-libcalico is deprecated, use update-pins !!)
 
 ## Guard so we don't run this on osx because of ssh-agent to docker forwarding bug
 guard-ssh-forwarding-bug:
@@ -238,42 +214,114 @@ guard-ssh-forwarding-bug:
 		echo "$(MAKECMDGOALS)"; \
 		exit 1; \
 	fi;
-	@if [ "$(strip $(CAN_REACH_LIBRARY_BRANCH_IN_CONTAINER))" != "0" ]; then \
-		echo "ERROR: git@github.com:$(LIBRARY_PROJECT_DEFAULT)/$(LIBRARY_BRANCH) not reachable in the container."; \
-		echo "Ensure your ssh-agent is forwarding the correct keys"; \
+
+
+###############################################################################
+## apiserver
+
+## Set the default APISERVER source for this project 
+APISERVER_PROJECT_DEFAULT=tigera/calico-k8sapiserver.git
+APISERVER_GLIDE_LABEL=tigera/calico-k8sapiserver
+
+## Default the APISERVER repo and version but allow them to be overridden (master or release-vX.Y)
+## default APISERVER branch to the same branch name as the current checked out repo
+APISERVER_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
+APISERVER_REPO?=github.com/$(APISERVER_PROJECT_DEFAULT)
+APISERVER_VERSION?=$(shell git ls-remote git@github.com:$(APISERVER_PROJECT_DEFAULT) $(APISERVER_BRANCH) 2>/dev/null | cut -f 1)
+
+## Guard to ensure APISERVER repo and branch are reachable
+guard-git-apiserver: 
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(APISERVER_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ; 
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(APISERVER_PROJECT_DEFAULT) "$(APISERVER_BRANCH)" "Ensure the branch exists, or set APISERVER_BRANCH variable";
+	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(APISERVER_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
+	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(APISERVER_PROJECT_DEFAULT) "$(APISERVER_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
+	@if [ "$(strip $(APISERVER_VERSION))" = "" ]; then \
+		echo "ERROR: APISERVER version could not be determined"; \
 		exit 1; \
 	fi;
 
+## Update libary pin in glide.yaml
+update-apiserver-pin: guard-ssh-forwarding-bug guard-git-apiserver
+	@$(DOCKER_RUN) $(TOOLING_BUILD) /bin/sh -c '\
+		LABEL="$(APISERVER_GLIDE_LABEL)" \
+		REPO="$(APISERVER_REPO)" \
+		VERSION="$(APISERVER_VERSION)" \
+		DEFAULT_REPO="$(APISERVER_PROJECT_DEFAULT)" \
+		BRANCH="$(APISERVER_BRANCH)" \
+		GLIDE="glide.yaml" \
+		_scripts/update-pin.sh '
 
-## Update dependency pins in glide.yaml
-update-pins: update-library-pin 
+
+###############################################################################
+## felix
+
+## Set the default FELIX source for this project 
+FELIX_PROJECT_DEFAULT=tigera/felix-private.git
+FELIX_GLIDE_LABEL=projectcalico/felix
+
+## Default the FELIX repo and version but allow them to be overridden (master or release-vX.Y)
+## default FELIX branch to the same branch name as the current checked out repo
+FELIX_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
+FELIX_REPO?=github.com/$(FELIX_PROJECT_DEFAULT)
+FELIX_VERSION?=$(shell git ls-remote git@github.com:$(FELIX_PROJECT_DEFAULT) $(FELIX_BRANCH) 2>/dev/null | cut -f 1)
+
+## Guard to ensure FELIX repo and branch are reachable
+guard-git-felix: 
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(FELIX_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ; 
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(FELIX_PROJECT_DEFAULT) "$(FELIX_BRANCH)" "Ensure the branch exists, or set FELIX_BRANCH variable";
+	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(FELIX_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
+	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(FELIX_PROJECT_DEFAULT) "$(FELIX_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
+	@if [ "$(strip $(FELIX_VERSION))" = "" ]; then \
+		echo "ERROR: FELIX version could not be determined"; \
+		exit 1; \
+	fi;
 
 ## Update libary pin in glide.yaml
-update-library-pin: guard-ssh-forwarding-bug guard-git-lc 
-	@$(DOCKER_RUN) $(CALICO_BUILD) /bin/sh -c '\
-        echo "Updating $(LIBRARY_GLIDE_LABEL) to $(LIBRARY_VERSION) from $(LIBRARY_REPO)"; \
-		L=$$(grep --after 10 $(LIBRARY_GLIDE_LABEL) glide.yaml); \
-		P=$$(echo $$L | grep -b -o 'package:' | head -2 | tail -n1 | cut -f1 -d:); \
-		V=$$(echo $$L | grep -b -o 'version:' | head -1 | cut -f1 -d:); \
-		if [[ $$V -gt $$P ]]; then \
-			sed -i -r "/package:[[:print:]]*$(LIBRARY_GLIDE_LABEL)/a\ \ version: MissingLibraryVersion" glide.yaml; \
-		fi; \
-        OLD_VER=$$(grep --after 10 $(LIBRARY_GLIDE_LABEL) glide.yaml |grep --max-count=1 --only-matching --perl-regexp "version:\s*\K[^\s]+") ;\
-        echo "Old version: $$OLD_VER";\
-        echo "New version: $(LIBRARY_VERSION)";\
-        echo "Repo: github.com:$(LIBRARY_PROJECT_DEFAULT) $(LIBRARY_BRANCH)" ; \
-        if [[ "$(LIBRARY_VERSION)" != "$$OLD_VER" ]]; then \
-            sed -i "s/$$OLD_VER/$(LIBRARY_VERSION)/" glide.yaml && \
-            if [ $(LIBRARY_REPO) != "github.com/$(LIBRARY_PROJECT_DEFAULT)" ]; then \
-              glide mirror set https://github.com/$(LIBRARY_PROJECT_DEFAULT) $(LIBRARY_REPO) --vcs git; echo "GLIDE MIRRORS UPDATED"; glide mirror list; \
-            fi;\
-          glide up --strip-vendor || glide up --strip-vendor; \
-        else \
-          echo "No change to $(LIBRARY_GLIDE_LABEL)."; \
-        fi;'
+update-felix-pin: guard-ssh-forwarding-bug guard-git-felix
+	@$(DOCKER_RUN) $(TOOLING_BUILD) /bin/sh -c '\
+		LABEL="$(FELIX_GLIDE_LABEL)" \
+		REPO="$(FELIX_REPO)" \
+		VERSION="$(FELIX_VERSION)" \
+		DEFAULT_REPO="$(FELIX_PROJECT_DEFAULT)" \
+		BRANCH="$(FELIX_BRANCH)" \
+		GLIDE="glide.yaml" \
+		_scripts/update-pin.sh '
 
-## deprecated target alias
-update-libcalico: update-library-pin
+
+###############################################################################
+## licensing
+
+## Set the default LICENSING source for this project 
+LICENSING_PROJECT_DEFAULT=tigera/licensing
+LICENSING_GLIDE_LABEL=tigera/licensing
+
+## Default the LICENSING repo and version but allow them to be overridden (master or release-vX.Y)
+## default LICENSING branch to the same branch name as the current checked out repo
+LICENSING_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
+LICENSING_REPO?=github.com/$(LICENSING_PROJECT_DEFAULT)
+LICENSING_VERSION?=$(shell git ls-remote git@github.com:$(LICENSING_PROJECT_DEFAULT) $(LICENSING_BRANCH) 2>/dev/null | cut -f 1)
+
+## Guard to ensure LICENSING repo and branch are reachable
+guard-git-licensing: 
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ; 
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "$(LICENSING_BRANCH)" "Ensure the branch exists, or set LICENSING_BRANCH variable";
+	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
+	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "$(LICENSING_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
+	@if [ "$(strip $(LICENSING_VERSION))" = "" ]; then \
+		echo "ERROR: LICENSING version could not be determined"; \
+		exit 1; \
+	fi;
+
+## Update libary pin in glide.yaml
+update-licensing-pin: guard-ssh-forwarding-bug guard-git-licensing
+	@$(DOCKER_RUN) $(TOOLING_BUILD) /bin/sh -c '\
+		LABEL="$(LICENSING_GLIDE_LABEL)" \
+		REPO="$(LICENSING_REPO)" \
+		VERSION="$(LICENSING_VERSION)" \
+		DEFAULT_REPO="$(LICENSING_PROJECT_DEFAULT)" \
+		BRANCH="$(LICENSING_BRANCH)" \
+		GLIDE="glide.yaml" \
+		_scripts/update-pin.sh '
 
 
 
