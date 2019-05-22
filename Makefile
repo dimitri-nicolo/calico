@@ -103,6 +103,9 @@ GO_BUILD_VER?=v0.20
 # we do not need to use the arch since go-build:v0.15 now is multi-arch manifest
 CALICO_BUILD=calico/go-build:$(GO_BUILD_VER)
 
+#This is a version with known container with compatible versions of sed/grep etc. 
+TOOLING_BUILD?=calico/go-build:v0.20	
+
 # Figure out version information.  To support builds from release tarballs, we default to
 # <unknown> if this isn't a git checkout.
 GIT_COMMIT:=$(shell git rev-parse HEAD || echo '<unknown>')
@@ -145,6 +148,7 @@ endif
 ifdef SSH_AUTH_SOCK
   EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
 endif
+
 DOCKER_RUN := mkdir -p .go-pkg-cache && \
                    docker run --rm \
                               --net=host \
@@ -198,24 +202,6 @@ vendor vendor/.up-to-date: glide.lock
 	$(DOCKER_RUN) $(CALICO_BUILD) glide install --strip-vendor
 	touch vendor/.up-to-date
 
-# Default the libcalico repo and version but allow them to be overridden
-LIBCALICO_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
-LIBCALICO_REPO?=github.com/tigera/libcalico-go-private
-LIBCALICO_VERSION?=$(shell git ls-remote git@github.com:tigera/libcalico-go-private $(LIBCALICO_BRANCH) 2>/dev/null | cut -f 1)
-
-## Update libcalico pin in glide.yaml
-update-libcalico:
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '\
-        echo "Updating libcalico to $(LIBCALICO_VERSION) from $(LIBCALICO_REPO)"; \
-        export OLD_VER=$$(grep --after 50 libcalico-go glide.yaml |grep --max-count=1 --only-matching --perl-regexp "version:\s*\K[^\s]+") ;\
-        echo "Old version: $$OLD_VER";\
-        if [ $(LIBCALICO_VERSION) != $$OLD_VER ]; then \
-            sed -i "s/$$OLD_VER/$(LIBCALICO_VERSION)/" glide.yaml && \
-            if [ $(LIBCALICO_REPO) != "github.com/tigera/libcalico-go-private" ]; then \
-              glide mirror set https://github.com/tigera/libcalico-go-private $(LIBCALICO_REPO) --vcs git; glide mirror list; \
-            fi;\
-          glide up --strip-vendor || glide up --strip-vendor; \
-        fi'
 
 bin/calico-typha: bin/calico-typha-$(ARCH)
 	ln -f bin/calico-typha-$(ARCH) bin/calico-typha
@@ -237,6 +223,7 @@ bin/typha-client-$(ARCH): $(SRC_FILES) vendor/.up-to-date
 		( ldd $@ 2>&1 | grep -q -e "Not a valid dynamic program" \
 		-e "not a dynamic executable" || \
 		( echo "Error: bin/typha-client was not statically linked"; false ) )'
+
 ###############################################################################
 # Building the image
 ###############################################################################
@@ -310,6 +297,64 @@ endif
 tag-images-all: imagetag $(addprefix sub-tag-images-,$(VALIDARCHES))
 sub-tag-images-%:
 	$(MAKE) tag-images ARCH=$* IMAGETAG=$(IMAGETAG)
+
+
+
+###############################################################################
+# Managing the upstream library pins
+###############################################################################
+
+## Update dependency pins in glide.yaml
+update-pins: update-libcalico-pin 
+
+## deprecated target alias
+update-libcalico: update-pins
+	$(warning !! Update update-libcalico is deprecated, use update-pins !!)
+
+## Guard so we don't run this on osx because of ssh-agent to docker forwarding bug
+guard-ssh-forwarding-bug:
+	@if [ "$(shell uname)" = "Darwin" ]; then \
+		echo "ERROR: This target requires ssh-agent to docker key forwarding and is not compatible with OSX/Mac OS"; \
+		echo "$(MAKECMDGOALS)"; \
+		exit 1; \
+	fi;
+
+###############################################################################
+## libcalico
+
+## Set the default LIBCALICO source for this project 
+LIBCALICO_PROJECT_DEFAULT=tigera/libcalico-go-private.git
+LIBCALICO_GLIDE_LABEL=projectcalico/libcalico-go
+
+## Default the LIBCALICO repo and version but allow them to be overridden (master or release-vX.Y)
+## default LIBCALICO branch to the same branch name as the current checked out repo
+LIBCALICO_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
+LIBCALICO_REPO?=github.com/$(LIBCALICO_PROJECT_DEFAULT)
+LIBCALICO_VERSION?=$(shell git ls-remote git@github.com:$(LIBCALICO_PROJECT_DEFAULT) $(LIBCALICO_BRANCH) 2>/dev/null | cut -f 1)
+
+## Guard to ensure LIBCALICO repo and branch are reachable
+guard-git-libcalico: 
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ; 
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "$(LIBCALICO_BRANCH)" "Ensure the branch exists, or set LIBCALICO_BRANCH variable";
+	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
+	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "$(LIBCALICO_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
+	@if [ "$(strip $(LIBCALICO_VERSION))" = "" ]; then \
+		echo "ERROR: LIBCALICO version could not be determined"; \
+		exit 1; \
+	fi;
+
+## Update libary pin in glide.yaml
+update-libcalico-pin: #guard-ssh-forwarding-bug guard-git-libcalico
+	@$(DOCKER_RUN) $(TOOLING_BUILD) /bin/sh -c '\
+		LABEL="$(LIBCALICO_GLIDE_LABEL)" \
+		REPO="$(LIBCALICO_REPO)" \
+		VERSION="$(LIBCALICO_VERSION)" \
+		DEFAULT_REPO="$(LIBCALICO_PROJECT_DEFAULT)" \
+		BRANCH="$(LIBCALICO_BRANCH)" \
+		GLIDE="glide.yaml" \
+		_scripts/update-pin.sh '
+
+
 
 ###############################################################################
 # Static checks
