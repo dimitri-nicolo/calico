@@ -30,8 +30,8 @@ type mockCallbacks struct {
 	statusUpdates []syncer.StatusUpdate
 }
 
-func (cb *mockCallbacks) OnUpdate(u syncer.Update) {
-	cb.updates = append(cb.updates, u)
+func (cb *mockCallbacks) OnUpdates(u []syncer.Update) {
+	cb.updates = append(cb.updates, u...)
 }
 
 func (cb *mockCallbacks) OnStatusUpdate(su syncer.StatusUpdate) {

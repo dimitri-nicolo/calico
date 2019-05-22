@@ -31,11 +31,19 @@ var _ = Describe("xref cache", func() {
 })
 
 type callbacks struct {
+	deletes int
+	sets    int
 	updated map[apiv3.ResourceID]*xrefcache.CacheEntryEndpoint
 }
 
 func (c *callbacks) onUpdate(update syncer.Update) {
-	c.updated[update.ResourceID] = update.Resource.(*xrefcache.CacheEntryEndpoint)
+	if update.Type&xrefcache.EventResourceDeleted != 0 {
+		delete(c.updated, update.ResourceID)
+		c.deletes++
+	} else {
+		c.updated[update.ResourceID] = update.Resource.(*xrefcache.CacheEntryEndpoint)
+		c.sets++
+	}
 }
 
 var _ = Describe("xref cache in-scope callbacks", func() {
@@ -78,6 +86,7 @@ var _ = Describe("xref cache in-scope callbacks", func() {
 
 	It("should flag in-scope endpoints with no endpoint selector", func() {
 		tester.RegisterInScopeEndpoints(nil)
+		Expect(cb.updated).To(HaveLen(0))
 		tester.OnStatusUpdate(syncer.StatusUpdate{
 			Type: syncer.StatusTypeInSync,
 		})
@@ -92,6 +101,7 @@ var _ = Describe("xref cache in-scope callbacks", func() {
 		tester.RegisterInScopeEndpoints(&apiv3.EndpointsSelection{
 			Selector: tester.GetSelector(Select1),
 		})
+		Expect(cb.updated).To(HaveLen(0))
 		tester.OnStatusUpdate(syncer.StatusUpdate{
 			Type: syncer.StatusTypeInSync,
 		})
@@ -107,6 +117,7 @@ var _ = Describe("xref cache in-scope callbacks", func() {
 				Names: []string{nsID1.Name},
 			},
 		})
+		Expect(cb.updated).To(HaveLen(0))
 		tester.OnStatusUpdate(syncer.StatusUpdate{
 			Type: syncer.StatusTypeInSync,
 		})
@@ -121,6 +132,7 @@ var _ = Describe("xref cache in-scope callbacks", func() {
 				Selector: tester.GetSelector(Select2),
 			},
 		})
+		Expect(cb.updated).To(HaveLen(0))
 		tester.OnStatusUpdate(syncer.StatusUpdate{
 			Type: syncer.StatusTypeInSync,
 		})
@@ -140,6 +152,7 @@ var _ = Describe("xref cache in-scope callbacks", func() {
 				Names: []string{saName1},
 			},
 		})
+		Expect(cb.updated).To(HaveLen(0))
 		tester.OnStatusUpdate(syncer.StatusUpdate{
 			Type: syncer.StatusTypeInSync,
 		})
@@ -154,6 +167,7 @@ var _ = Describe("xref cache in-scope callbacks", func() {
 				Selector: tester.GetSelector(Select2),
 			},
 		})
+		Expect(cb.updated).To(HaveLen(0))
 		tester.OnStatusUpdate(syncer.StatusUpdate{
 			Type: syncer.StatusTypeInSync,
 		})
@@ -182,6 +196,7 @@ var _ = Describe("xref cache in-scope callbacks", func() {
 				Selector: tester.GetSelector(Select2),
 			},
 		})
+		Expect(cb.updated).To(HaveLen(0))
 		tester.OnStatusUpdate(syncer.StatusUpdate{
 			Type: syncer.StatusTypeInSync,
 		})
@@ -196,6 +211,7 @@ var _ = Describe("xref cache in-scope callbacks", func() {
 				Names: []string{saName1, saName2},
 			},
 		})
+		Expect(cb.updated).To(HaveLen(0))
 		tester.OnStatusUpdate(syncer.StatusUpdate{
 			Type: syncer.StatusTypeInSync,
 		})
@@ -204,5 +220,148 @@ var _ = Describe("xref cache in-scope callbacks", func() {
 		Expect(cb.updated).To(HaveKey(podID2))
 		Expect(cb.updated).To(HaveKey(podID3))
 		Expect(cb.updated).To(HaveKey(podID4))
+	})
+})
+
+var _ = Describe("xref cache multiple update transactions", func() {
+	It("should handle an update transaction containing create and delete of the same resource when in-sync", func() {
+		tester := NewXrefCacheTester()
+		By("Setting in-sync")
+		tester.OnStatusUpdate(syncer.StatusUpdate{
+			Type: syncer.StatusTypeInSync,
+		})
+		cb := &callbacks{
+			updated: make(map[apiv3.ResourceID]*xrefcache.CacheEntryEndpoint),
+		}
+
+		By("Registering all endpoints as in-scope and registering for inscope events")
+		tester.RegisterInScopeEndpoints(&apiv3.EndpointsSelection{})
+		for _, k := range xrefcache.KindsEndpoint {
+			tester.RegisterOnUpdateHandler(k, xrefcache.EventInScope, cb.onUpdate)
+		}
+
+		By("Setting tester to accumlate updates and creating a pod and service account")
+		tester.AccumlateUpdates = true
+		tester.SetNamespace(Namespace1, Label1)
+		tester.SetPod(Name1, Namespace1, Label1, IP1, Name2, NoPodOptions)
+
+		By("Setting tester to no longer accumlate updates and deleting the pod")
+		tester.AccumlateUpdates = false
+		tester.DeletePod(Name1, Namespace1)
+
+		By("Checking both updates")
+		Expect(cb.updated).To(HaveLen(0))
+		Expect(cb.sets).To(Equal(1))
+		Expect(cb.deletes).To(Equal(1))
+	})
+
+	It("should handle an update transaction containing create, delete, recreate of the same resource when in-sync", func() {
+		tester := NewXrefCacheTester()
+		By("Setting in-sync")
+		tester.OnStatusUpdate(syncer.StatusUpdate{
+			Type: syncer.StatusTypeInSync,
+		})
+		cb := &callbacks{
+			updated: make(map[apiv3.ResourceID]*xrefcache.CacheEntryEndpoint),
+		}
+
+		By("Registering all endpoints as in-scope and registering for inscope events")
+		tester.RegisterInScopeEndpoints(&apiv3.EndpointsSelection{})
+		for _, k := range xrefcache.KindsEndpoint {
+			tester.RegisterOnUpdateHandler(k, xrefcache.EventInScope, cb.onUpdate)
+		}
+
+		By("Setting tester to accumlate updates and creating a pod and service account")
+		tester.AccumlateUpdates = true
+		tester.SetNamespace(Namespace1, Label1)
+		tester.SetPod(Name1, Namespace1, Label1, IP1, Name2, NoPodOptions)
+
+		By("Deleting the pod")
+		tester.DeletePod(Name1, Namespace1)
+
+		By("Setting tester to no longer accumlate updates and recreating the pod")
+		tester.AccumlateUpdates = false
+		pod := tester.SetPod(Name1, Namespace1, Label1, IP1, Name2, NoPodOptions)
+		podID1 := resources.GetResourceID(pod)
+
+		By("Checking for all three updates and newly created pod")
+		Expect(cb.updated).To(HaveLen(1))
+		Expect(cb.updated).To(HaveKey(podID1))
+		Expect(cb.sets).To(Equal(2))
+		Expect(cb.deletes).To(Equal(1))
+	})
+
+	It("should handle an update transaction containing create and delete of the same resource before being in-sync", func() {
+		tester := NewXrefCacheTester()
+		cb := &callbacks{
+			updated: make(map[apiv3.ResourceID]*xrefcache.CacheEntryEndpoint),
+		}
+
+		By("Registering all endpoints as in-scope and registering for inscope events")
+		tester.RegisterInScopeEndpoints(&apiv3.EndpointsSelection{})
+		for _, k := range xrefcache.KindsEndpoint {
+			tester.RegisterOnUpdateHandler(k, xrefcache.EventInScope, cb.onUpdate)
+		}
+
+		By("Setting tester to accumlate updates and creating a pod and service account")
+		tester.AccumlateUpdates = true
+		tester.SetNamespace(Namespace1, Label1)
+		tester.SetPod(Name1, Namespace1, Label1, IP1, Name2, NoPodOptions)
+
+		By("Setting tester to no longer accumlate updates and deleting the pod")
+		tester.AccumlateUpdates = false
+		tester.DeletePod(Name1, Namespace1)
+
+		By("Setting in-sync")
+		tester.OnStatusUpdate(syncer.StatusUpdate{
+			Type: syncer.StatusTypeInSync,
+		})
+
+		By("Checking for no updates")
+		Expect(cb.updated).To(HaveLen(0))
+		Expect(cb.sets).To(Equal(0))
+		Expect(cb.deletes).To(Equal(0))
+	})
+
+	It("should handle an update transaction containing create, delete, recreate of the same resource before being in-sync", func() {
+		tester := NewXrefCacheTester()
+		cb := &callbacks{
+			updated: make(map[apiv3.ResourceID]*xrefcache.CacheEntryEndpoint),
+		}
+
+		By("Registering all endpoints as in-scope and registering for inscope events")
+		tester.RegisterInScopeEndpoints(&apiv3.EndpointsSelection{})
+		for _, k := range xrefcache.KindsEndpoint {
+			tester.RegisterOnUpdateHandler(k, xrefcache.EventInScope, cb.onUpdate)
+		}
+
+		By("Setting tester to accumlate updates and creating a pod and service account")
+		tester.AccumlateUpdates = true
+		tester.SetNamespace(Namespace1, Label1)
+		tester.SetPod(Name1, Namespace1, Label1, IP1, Name2, NoPodOptions)
+
+		By("Deleting the pod")
+		tester.DeletePod(Name1, Namespace1)
+
+		By("Setting tester to no longer accumlate updates and recreating the pod")
+		tester.AccumlateUpdates = false
+		pod := tester.SetPod(Name1, Namespace1, Label1, IP1, Name2, NoPodOptions)
+		podID1 := resources.GetResourceID(pod)
+
+		By("Checking for no updates")
+		Expect(cb.updated).To(HaveLen(0))
+		Expect(cb.sets).To(Equal(0))
+		Expect(cb.deletes).To(Equal(0))
+
+		By("Setting in-sync")
+		tester.OnStatusUpdate(syncer.StatusUpdate{
+			Type: syncer.StatusTypeInSync,
+		})
+
+		By("Checking for just a single update for the newly created pod")
+		Expect(cb.updated).To(HaveLen(1))
+		Expect(cb.updated).To(HaveKey(podID1))
+		Expect(cb.deletes).To(Equal(0))
+		Expect(cb.sets).To(Equal(1))
 	})
 })

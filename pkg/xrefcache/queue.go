@@ -1,16 +1,14 @@
 // Copyright (c) 2019 Tigera, Inc. All rights reserved.
-package resources
+package xrefcache
 
 import (
 	"container/heap"
-
-	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 )
 
 // An QueueItem is an item in a resources.PriorityQueue used to prioritise apiv3.ResourceID actions.
 type QueueItem struct {
 	// The ID of the resource requiring recalculation.
-	ResourceID apiv3.ResourceID
+	Entry CacheEntry
 
 	// The Priority of this queue entry.
 	Priority int8
@@ -52,8 +50,8 @@ func (pq *PriorityQueue) Pop() interface{} {
 }
 
 // update modifies the Priority and value of an QueueItem in the queue.
-func (pq *PriorityQueue) update(item *QueueItem, id apiv3.ResourceID, priority int8) {
-	item.ResourceID = id
+func (pq *PriorityQueue) update(item *QueueItem, entry CacheEntry, priority int8) {
+	item.Entry = entry
 	item.Priority = priority
 	heap.Fix(pq, item.index)
 }

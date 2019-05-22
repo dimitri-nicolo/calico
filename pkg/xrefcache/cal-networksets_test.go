@@ -6,6 +6,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	. "github.com/tigera/compliance/internal/testutils"
+	"github.com/tigera/compliance/pkg/syncer"
 	"github.com/tigera/compliance/pkg/xrefcache"
 )
 
@@ -14,6 +15,7 @@ var _ = Describe("Basic CRUD of network sets with no other resources present", f
 
 	BeforeEach(func() {
 		tester = NewXrefCacheTester()
+		tester.OnStatusUpdate(syncer.NewStatusUpdateInSync())
 	})
 
 	// Ensure  the client resource list is in-sync with the resource helper.

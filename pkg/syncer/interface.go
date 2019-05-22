@@ -17,7 +17,7 @@ type Starter interface {
 
 type SyncerCallbacks interface {
 	OnStatusUpdate(status StatusUpdate)
-	OnUpdate(update Update)
+	OnUpdates(updates []Update)
 }
 
 type Update struct {

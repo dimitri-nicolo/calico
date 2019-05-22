@@ -58,6 +58,10 @@ type CacheEntry interface {
 	addUpdateTypes(syncer.UpdateType)
 	resetUpdateTypes()
 	getInScopeFlag() syncer.UpdateType
+	isDeleted() bool
+	setDeleted()
+	setResourceID(id apiv3.ResourceID)
+	getResourceID() apiv3.ResourceID
 }
 
 // VersionedResource is an extension to the Resource interface to add some additional versioning

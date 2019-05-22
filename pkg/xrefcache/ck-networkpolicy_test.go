@@ -11,6 +11,7 @@ import (
 
 	. "github.com/tigera/compliance/internal/testutils"
 	"github.com/tigera/compliance/pkg/resources"
+	"github.com/tigera/compliance/pkg/syncer"
 	"github.com/tigera/compliance/pkg/xrefcache"
 )
 
@@ -19,6 +20,7 @@ var _ = Describe("Basic CRUD of network policies with no other resources present
 
 	BeforeEach(func() {
 		tester = NewXrefCacheTester()
+		tester.OnStatusUpdate(syncer.NewStatusUpdateInSync())
 	})
 
 	It("should handle basic CRUD of GlobalNetworkPolicy and determine non-xref state", func() {

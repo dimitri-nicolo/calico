@@ -21,27 +21,16 @@ func NewEventFetcher() *Fetcher {
 	return &Fetcher{data: make(map[metav1.TypeMeta][]*event.AuditEventResult)}
 }
 
-func (f *Fetcher) GetAuditEvents(ctx context.Context, tm *metav1.TypeMeta, from, to *time.Time) <-chan *event.AuditEventResult {
+func (f *Fetcher) GetAuditEvents(ctx context.Context, from, to *time.Time) <-chan *event.AuditEventResult {
 	ch := make(chan *event.AuditEventResult)
 	go func() {
 		defer close(ch)
 
-		// All type metas.
-		if tm == nil {
-			for _, events := range f.data {
-				for _, ev := range events {
-					if ev.StageTimestamp.Time.After(*from) && ev.StageTimestamp.Time.Before(*to) {
-						ch <- ev
-					}
+		for _, events := range f.data {
+			for _, ev := range events {
+				if ev.StageTimestamp.Time.After(*from) && ev.StageTimestamp.Time.Before(*to) {
+					ch <- ev
 				}
-			}
-			return
-		}
-
-		// Single type meta.
-		for _, ev := range f.data[*tm] {
-			if ev.StageTimestamp.Time.After(*from) && ev.StageTimestamp.Time.Before(*to) {
-				ch <- ev
 			}
 		}
 	}()

@@ -64,7 +64,8 @@ type resourceCacheEngine interface {
 	// resourceUpdated is called *after* a CacheEntry has been updated in the cache. The CacheEntry will contain the
 	// VersionedResource created from the syncer event. The method should return the set of updates for any changes that
 	// occurred as an immediate result of this method invocation. Generally, this method should only update
-	// configuration that is directly determined from the VersionedResource and not from related resources.
+	// configuration that is directly determined from the VersionedResource and not from related resources. All cross
+	// reference processing should be handled synchronously from this call (e.g. by updating the label or key handlers).
 	resourceUpdated(id apiv3.ResourceID, entry CacheEntry, prev VersionedResource)
 
 	// resourceDeleted is called from a syncer delete event *before* the CacheEntry has been deleted. The entry
@@ -147,6 +148,7 @@ func (c *resourceCache) onNewOrUpdated(id apiv3.ResourceID, res resources.Resour
 		// Create a new cache entry and set the versioned resource.
 		entry = c.engine.newCacheEntry()
 		c.resources[id] = entry
+		entry.setResourceID(id)
 		entry.setVersionedResource(v)
 
 		// Requeue this resource for recalculation.
@@ -161,13 +163,6 @@ func (c *resourceCache) onNewOrUpdated(id apiv3.ResourceID, res resources.Resour
 func (c *resourceCache) onDeleted(id apiv3.ResourceID) {
 	log.Debugf("Deleting resource from cache: %s", id)
 	if entry, ok := c.resources[id]; ok {
-		// Send the delete to the consumer dispatcher before we make any updates.
-		c.xc.consumerDispatcher.OnUpdate(syncer.Update{
-			Type:       EventResourceDeleted,
-			ResourceID: id,
-			Resource:   entry,
-		})
-
 		// Call through to the engine to perform any additional processing for this resource creation.
 		c.engine.resourceDeleted(id, entry)
 
@@ -178,19 +173,6 @@ func (c *resourceCache) onDeleted(id apiv3.ResourceID) {
 
 func (c *resourceCache) get(id apiv3.ResourceID) CacheEntry {
 	return c.resources[id]
-}
-
-// dumpResourcesAsUpdate is called from the in-sync processing to get each cache to send updates to the consumer for
-// all entries currently in the cache. Up until this point, no updates will have been sent to the consumer. After this
-// point all updates will be sent to the consumer (at least those registered for).
-func (c *resourceCache) dumpResourcesAsUpdate() {
-	for id, cacheEntry := range c.resources {
-		c.xc.consumerDispatcher.OnUpdate(syncer.Update{
-			ResourceID: id,
-			Resource:   cacheEntry,
-			Type:       EventResourceAdded | cacheEntry.getInScopeFlag(),
-		})
-	}
 }
 
 // Called by the main cache to register itself with this sub-cache.
@@ -223,7 +205,7 @@ func (c *resourceCache) kinds() []metav1.TypeMeta {
 	return c.engine.kinds()
 }
 
-// resourceEngineCache implements the engineCache. This limits access fo cache innards from the engine implementation,
+// resourceEngineCache implements the engineCache. This limits access to cache innards from the engine implementation,
 // and more importantly provides a level of indirection between the engine and the cache dispatcher.
 type resourceEngineCache struct {
 	ours *resourceCache
