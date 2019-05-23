@@ -31,6 +31,8 @@ func NewStorage(opts Options) (storage.Interface, factory.DestroyFunc) {
 		return NewGlobalReportStorage(opts)
 	case "projectcalico.org/globalreporttypes":
 		return NewGlobalReportTypeStorage(opts)
+	case "projectcalico.org/ippools":
+		return NewIPPoolStorage(opts)
 	default:
 		glog.Fatalf("Unable to create storage for resource %v", opts.RESTOptions.ResourcePrefix)
 		return nil, nil

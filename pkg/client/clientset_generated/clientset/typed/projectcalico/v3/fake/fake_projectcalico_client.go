@@ -38,6 +38,10 @@ func (c *FakeProjectcalicoV3) HostEndpoints() v3.HostEndpointInterface {
 	return &FakeHostEndpoints{c}
 }
 
+func (c *FakeProjectcalicoV3) IPPools() v3.IPPoolInterface {
+	return &FakeIPPools{c}
+}
+
 func (c *FakeProjectcalicoV3) LicenseKeys() v3.LicenseKeyInterface {
 	return &FakeLicenseKeys{c}
 }

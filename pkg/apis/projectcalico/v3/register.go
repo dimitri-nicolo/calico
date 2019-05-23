@@ -51,6 +51,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&GlobalReportList{},
 		&GlobalReportType{},
 		&GlobalReportTypeList{},
+		&IPPool{},
+		&IPPoolList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil

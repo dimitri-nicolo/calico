@@ -28,6 +28,10 @@ type GlobalThreatFeedListerExpansion interface{}
 // HostEndpointLister.
 type HostEndpointListerExpansion interface{}
 
+// IPPoolListerExpansion allows custom methods to be added to
+// IPPoolLister.
+type IPPoolListerExpansion interface{}
+
 // LicenseKeyListerExpansion allows custom methods to be added to
 // LicenseKeyLister.
 type LicenseKeyListerExpansion interface{}

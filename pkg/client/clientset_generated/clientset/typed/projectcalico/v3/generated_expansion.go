@@ -16,6 +16,8 @@ type GlobalThreatFeedExpansion interface{}
 
 type HostEndpointExpansion interface{}
 
+type IPPoolExpansion interface{}
+
 type LicenseKeyExpansion interface{}
 
 type NetworkPolicyExpansion interface{}

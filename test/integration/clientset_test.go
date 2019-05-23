@@ -1232,3 +1232,73 @@ func testGlobalReportTypeClient(client calicoclient.Interface, name string) erro
 
 	return nil
 }
+
+// TestIPPoolClient exercises the IPPool client.
+func TestIPPoolClient(t *testing.T) {
+	const name = "test-ippool"
+	rootTestFunc := func() func(t *testing.T) {
+		return func(t *testing.T) {
+			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+				return &projectcalico.IPPool{}
+			})
+			defer shutdownServer()
+			if err := testIPPoolClient(client, name); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	if !t.Run(name, rootTestFunc()) {
+		t.Errorf("test-ippool test failed")
+
+	}
+
+}
+
+func testIPPoolClient(client calicoclient.Interface, name string) error {
+	ippoolClient := client.ProjectcalicoV3().IPPools()
+	ippool := &v3.IPPool{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Spec: calico.IPPoolSpec{
+			CIDR: "192.168.0.0/16",
+		},
+	}
+
+	// start from scratch
+	ippools, err := ippoolClient.List(metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing ippools (%s)", err)
+	}
+	if ippools.Items == nil {
+		return fmt.Errorf("Items field should not be set to nil")
+	}
+
+	ippoolServer, err := ippoolClient.Create(ippool)
+	if nil != err {
+		return fmt.Errorf("error creating the ippool '%v' (%v)", ippool, err)
+	}
+	if name != ippoolServer.Name {
+		return fmt.Errorf("didn't get the same ippool back from the server \n%+v\n%+v", ippool, ippoolServer)
+	}
+
+	ippools, err = ippoolClient.List(metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing ippools (%s)", err)
+	}
+
+	ippoolServer, err = ippoolClient.Get(name, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("error getting ippool %s (%s)", name, err)
+	}
+	if name != ippoolServer.Name &&
+		ippool.ResourceVersion == ippoolServer.ResourceVersion {
+		return fmt.Errorf("didn't get the same ippool back from the server \n%+v\n%+v", ippool, ippoolServer)
+	}
+
+	err = ippoolClient.Delete(name, &metav1.DeleteOptions{})
+	if nil != err {
+		return fmt.Errorf("ippool should be deleted (%s)", err)
+	}
+
+	return nil
+}

@@ -22,6 +22,8 @@ type Interface interface {
 	GlobalThreatFeeds() GlobalThreatFeedInformer
 	// HostEndpoints returns a HostEndpointInformer.
 	HostEndpoints() HostEndpointInformer
+	// IPPools returns a IPPoolInformer.
+	IPPools() IPPoolInformer
 	// LicenseKeys returns a LicenseKeyInformer.
 	LicenseKeys() LicenseKeyInformer
 	// NetworkPolicies returns a NetworkPolicyInformer.
@@ -69,6 +71,11 @@ func (v *version) GlobalThreatFeeds() GlobalThreatFeedInformer {
 // HostEndpoints returns a HostEndpointInformer.
 func (v *version) HostEndpoints() HostEndpointInformer {
 	return &hostEndpointInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// IPPools returns a IPPoolInformer.
+func (v *version) IPPools() IPPoolInformer {
+	return &iPPoolInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // LicenseKeys returns a LicenseKeyInformer.
