@@ -1,7 +1,6 @@
 ---
 layout: null
 ---
-{% helm --execute templates/kdd-crds.yaml --execute templates/ee-specific-kdd-crds.yaml --execute templates/rbac.yaml --execute templates/cluster-role.yaml %}
+{% helm --execute templates/kdd-crds.yaml --execute templates/ee-specific-kdd-crds.yaml %}
 datastore: kubernetes
-osType: windows
 {% endhelm %}
