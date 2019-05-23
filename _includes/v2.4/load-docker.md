@@ -181,7 +181,7 @@
 
      ```
      curl -O \
-     {{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/{{include.yaml}}.yaml
+     {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/{{include.yaml}}.yaml
      ```
 
      > **Note**: You can also
@@ -192,7 +192,7 @@
 
      ```
      curl -O \
-     {{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/{{include.yaml}}.yaml
+     {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/{{include.yaml}}.yaml
      ```
 
      > **Note**: You can also
