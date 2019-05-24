@@ -92,6 +92,8 @@ ifeq ($(RELEASE),true)
 PUSH_IMAGES+=$(RELEASE_IMAGES)
 endif
 
+LOCAL_USER_ID?=$(shell id -u $$USER)
+
 # remove from the list to push to manifest any registries that do not support multi-arch
 EXCLUDE_MANIFEST_REGISTRIES ?= quay.io/
 PUSH_MANIFEST_IMAGES=$(PUSH_IMAGES:$(EXCLUDE_MANIFEST_REGISTRIES)%=)
@@ -99,6 +101,30 @@ PUSH_NONMANIFEST_IMAGES=$(filter-out $(PUSH_MANIFEST_IMAGES),$(PUSH_IMAGES))
 
 GO_BUILD_VER?=v0.20
 CALICO_BUILD?=calico/go-build:$(GO_BUILD_VER)
+
+#This is a version with known container with compatible versions of sed/grep etc. 
+TOOLING_BUILD?=calico/go-build:v0.20	
+
+
+# Allow libcalico-go and the ssh auth sock to be mapped into the build container.
+ifdef LIBCALICOGO_PATH
+  EXTRA_DOCKER_ARGS += -v $(LIBCALICOGO_PATH):/go/src/github.com/projectcalico/libcalico-go:ro
+endif
+ifdef SSH_AUTH_SOCK
+  EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
+endif
+
+DOCKER_RUN := mkdir -p .go-pkg-cache && \
+                   docker run --rm \
+                              --net=host \
+                              $(EXTRA_DOCKER_ARGS) \
+                              -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+                              -v $(HOME)/.glide:/home/user/.glide:rw \
+                              -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
+                              -v $(CURDIR)/.go-pkg-cache:/go/pkg:rw \
+                              -w /go/src/$(PACKAGE_NAME) \
+                              -e GOARCH=$(ARCH)
+
 
 # location of docker credentials to push manifests
 DOCKER_CONFIG ?= $(HOME)/.docker/config.json
@@ -193,7 +219,6 @@ ST_OPTIONS?=
 MAKE_SURE_BIN_EXIST := $(shell mkdir -p dist .go-pkg-cache $(NODE_CONTAINER_BIN_DIR))
 NODE_CONTAINER_FILES=$(shell find ./filesystem -type f)
 SRCFILES=$(shell find ./pkg -name '*.go')
-LOCAL_USER_ID?=$(shell id -u $$USER)
 LDFLAGS=-ldflags "-X github.com/projectcalico/node/pkg/startup.CNXVERSION=$(CNX_GIT_VER) -X github.com/projectcalico/node/pkg/startup.CALICOVERSION=$(CALICO_GIT_VER) \
                   -X main.VERSION=$(CALICO_GIT_VER) \
                   -X github.com/projectcalico/node/vendor/github.com/projectcalico/felix/buildinfo.GitVersion=$(CALICO_GIT_VER) \
@@ -247,53 +272,6 @@ vendor: glide.lock
 		-w /go/src/$(PACKAGE_NAME) \
 		$(CALICO_BUILD) glide install -strip-vendor
 
-## Default the repos and versions but allow them to be overridden
-MY_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
-LIBCALICO_BRANCH?=$(MY_BRANCH)
-LIBCALICO_REPO?=github.com/tigera/libcalico-go-private
-LIBCALICO_VERSION?=$(shell git ls-remote git@github.com:tigera/libcalico-go-private $(LIBCALICO_BRANCH) 2>/dev/null | cut -f 1)
-FELIX_BRANCH?=$(MY_BRANCH)
-FELIX_REPO?=github.com/tigera/felix-private
-FELIX_VERSION?=$(shell git ls-remote git@github.com:tigera/felix-private $(FELIX_BRANCH) 2>/dev/null | cut -f 1)
-CONFD_BRANCH?=$(MY_BRANCH)
-CONFD_REPO?=github.com/tigera/confd-private
-CONFD_VERSION?=$(shell git ls-remote git@github.com:tigera/confd-private $(CONFD_BRANCH) 2>/dev/null | cut -f 1)
-CNI_PLUGIN_BRANCH?=$(MY_BRANCH)
-CNI_PLUGIN_REPO?=github.com/tigera/cni-plugin-private
-CNI_PLUGIN_VERSION?=$(shell git ls-remote git@github.com:tigera/cni-plugin-private $(CNI_PLUGIN_BRANCH) 2>/dev/null | cut -f 1)
-
-### Update pins in glide.yaml
-update-felix-confd-libcalico:
-	docker run --rm \
-        -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw $$EXTRA_DOCKER_BIND \
-        -v $(HOME)/.glide:/home/user/.glide:rw \
-        -w /go/src/$(PACKAGE_NAME) \
-        -v $$SSH_AUTH_SOCK:/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent \
-        -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-        $(CALICO_BUILD) sh -c '\
-          echo "Updating libcalico to $(LIBCALICO_VERSION) from $(LIBCALICO_REPO)"; \
-          echo "Updating felix to $(FELIX_VERSION) from $(FELIX_REPO)"; \
-          echo "Updating confd to $(CONFD_VERSION) from $(CONFD_REPO)"; \
-          echo "Updating cni-plugin to $(CNI_PLUGIN_VERSION) from $(CNI_PLUGIN_REPO)"; \
-          export OLD_LIBCALICO_VER=$$(grep --after 50 libcalico glide.yaml |grep --max-count=1 --only-matching --perl-regexp "version:\s*\K[\.0-9a-z]+") ;\
-          export OLD_FELIX_VER=$$(grep --after 50 felix glide.yaml |grep --max-count=1 --only-matching --perl-regexp "version:\s*\K[\.0-9a-z]+") ;\
-          export OLD_CONFD_VER=$$(grep --after 50 confd glide.yaml |grep --max-count=1 --only-matching --perl-regexp "version:\s*\K[\.0-9a-z]+") ;\
-          export OLD_CNI_PLUGIN_VER=$$(grep --after 50 cni-plugin glide.yaml |grep --max-count=1 --only-matching --perl-regexp "version:\s*\K[\.0-9a-z]+") ;\
-          echo "Old libcalico version: $$OLD_LIBCALICO_VER";\
-          echo "Old felix version: $$OLD_FELIX_VER";\
-          echo "Old confd version: $$OLD_CONFD_VER";\
-          echo "Old cni-plugin version: $$OLD_CNI_PLUGIN_VER";\
-          if [ $(LIBCALICO_VERSION) != $$OLD_LIBCALICO_VER ] || \
-             [ $(FELIX_VERSION) != $$OLD_FELIX_VER ] || \
-             [ $(CONFD_VERSION) != $$OLD_CONFD_VER ] || \
-             [ $(CNI_PLUGIN_VERSION) != $$OLD_CNI_PLUGIN_VER ]; \
-          then \
-            sed -i "s/$$OLD_LIBCALICO_VER/$(LIBCALICO_VERSION)/" glide.yaml && \
-            sed -i "s/$$OLD_FELIX_VER/$(FELIX_VERSION)/" glide.yaml && \
-            sed -i "s/$$OLD_CONFD_VER/$(CONFD_VERSION)/" glide.yaml && \
-            sed -i "s/$$OLD_CNI_PLUGIN_VER/$(CNI_PLUGIN_VERSION)/" glide.yaml && \
-            glide up --strip-vendor || glide up --strip-vendor; \
-          fi'
 
 $(NODE_CONTAINER_BINARY): vendor $(SRCFILES)
 	docker run --rm \
@@ -460,6 +438,210 @@ build-windows-archive: $(WINDOWS_ARCHIVE_FILES) windows-packaging/nssm-$(WINDOWS
 
 $(WINDOWS_ARCHIVE_BINARY): $(WINDOWS_BINARY)
 	cp $< $@
+
+
+
+###############################################################################
+# Managing the upstream library pins
+###############################################################################
+
+## Update dependency pins in glide.yaml
+update-pins: update-licensing-pin update-libcalico-pin update-felix-pin update-cni-plugin-pin update-confd-pin
+
+## deprecated target alias
+update-libcalico: update-pins
+	$(warning !! Update update-libcalico is deprecated, use update-pins !!)
+
+update-felix-confd-libcalico: update-pins
+	$(warning !! Update update-felix-confd-libcalico is deprecated, use update-pins !!)
+
+## Guard so we don't run this on osx because of ssh-agent to docker forwarding bug
+guard-ssh-forwarding-bug:
+	@if [ "$(shell uname)" = "Darwin" ]; then \
+		echo "ERROR: This target requires ssh-agent to docker key forwarding and is not compatible with OSX/Mac OS"; \
+		echo "$(MAKECMDGOALS)"; \
+		exit 1; \
+	fi;
+
+
+###############################################################################
+## libcalico
+
+## Set the default LIBCALICO source for this project
+LIBCALICO_PROJECT_DEFAULT=tigera/libcalico-go-private.git
+LIBCALICO_GLIDE_LABEL=projectcalico/libcalico-go
+
+## Default the LIBCALICO repo and version but allow them to be overridden (master or release-vX.Y)
+## default LIBCALICO branch to the same branch name as the current checked out repo
+LIBCALICO_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
+LIBCALICO_REPO?=github.com/$(LIBCALICO_PROJECT_DEFAULT)
+LIBCALICO_VERSION?=$(shell git ls-remote git@github.com:$(LIBCALICO_PROJECT_DEFAULT) $(LIBCALICO_BRANCH) 2>/dev/null | cut -f 1)
+
+## Guard to ensure LIBCALICO repo and branch are reachable
+guard-git-libcalico: 
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ; 
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "$(LIBCALICO_BRANCH)" "Ensure the branch exists, or set LIBCALICO_BRANCH variable";
+	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
+	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "$(LIBCALICO_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
+	@if [ "$(strip $(LIBCALICO_VERSION))" = "" ]; then \
+		echo "ERROR: LIBCALICO version could not be determined"; \
+		exit 1; \
+	fi;
+
+## Update libary pin in glide.yaml
+update-libcalico-pin: guard-ssh-forwarding-bug guard-git-libcalico
+	@$(DOCKER_RUN) $(TOOLING_BUILD) /bin/sh -c '\
+		LABEL="$(LIBCALICO_GLIDE_LABEL)" \
+		REPO="$(LIBCALICO_REPO)" \
+		VERSION="$(LIBCALICO_VERSION)" \
+		DEFAULT_REPO="$(LIBCALICO_PROJECT_DEFAULT)" \
+		BRANCH="$(LIBCALICO_BRANCH)" \
+		GLIDE="glide.yaml" \
+		_scripts/update-pin.sh '
+
+###############################################################################
+## felix
+
+## Set the default FELIX source for this project 
+FELIX_PROJECT_DEFAULT=tigera/felix-private.git
+FELIX_GLIDE_LABEL=projectcalico/felix
+
+## Default the FELIX repo and version but allow them to be overridden (master or release-vX.Y)
+## default FELIX branch to the same branch name as the current checked out repo
+FELIX_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
+FELIX_REPO?=github.com/$(FELIX_PROJECT_DEFAULT)
+FELIX_VERSION?=$(shell git ls-remote git@github.com:$(FELIX_PROJECT_DEFAULT) $(FELIX_BRANCH) 2>/dev/null | cut -f 1)
+
+## Guard to ensure FELIX repo and branch are reachable
+guard-git-felix: 
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(FELIX_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ; 
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(FELIX_PROJECT_DEFAULT) "$(FELIX_BRANCH)" "Ensure the branch exists, or set FELIX_BRANCH variable";
+	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(FELIX_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
+	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(FELIX_PROJECT_DEFAULT) "$(FELIX_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
+	@if [ "$(strip $(FELIX_VERSION))" = "" ]; then \
+		echo "ERROR: FELIX version could not be determined"; \
+		exit 1; \
+	fi;
+
+## Update libary pin in glide.yaml
+update-felix-pin: guard-ssh-forwarding-bug guard-git-felix
+	@$(DOCKER_RUN) $(TOOLING_BUILD) /bin/sh -c '\
+		LABEL="$(FELIX_GLIDE_LABEL)" \
+		REPO="$(FELIX_REPO)" \
+		VERSION="$(FELIX_VERSION)" \
+		DEFAULT_REPO="$(FELIX_PROJECT_DEFAULT)" \
+		BRANCH="$(FELIX_BRANCH)" \
+		GLIDE="glide.yaml" \
+		_scripts/update-pin.sh '
+
+
+###############################################################################
+## cni-plugin
+
+## Set the default CNIPLUGIN source for this project 
+CNIPLUGIN_PROJECT_DEFAULT=tigera/cni-plugin-private.git
+CNIPLUGIN_GLIDE_LABEL=projectcalico/cni-plugin
+
+## Default the CNIPLUGIN repo and version but allow them to be overridden (master or release-vX.Y)
+## default CNIPLUGIN branch to the same branch name as the current checked out repo
+CNIPLUGIN_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
+CNIPLUGIN_REPO?=github.com/$(CNIPLUGIN_PROJECT_DEFAULT)
+CNIPLUGIN_VERSION?=$(shell git ls-remote git@github.com:$(CNIPLUGIN_PROJECT_DEFAULT) $(CNIPLUGIN_BRANCH) 2>/dev/null | cut -f 1)
+
+## Guard to ensure CNIPLUGIN repo and branch are reachable
+guard-git-cni-plugin: 
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(CNIPLUGIN_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ; 
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(CNIPLUGIN_PROJECT_DEFAULT) "$(CNIPLUGIN_BRANCH)" "Ensure the branch exists, or set CNIPLUGIN_BRANCH variable";
+	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(CNIPLUGIN_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
+	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(CNIPLUGIN_PROJECT_DEFAULT) "$(CNIPLUGIN_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
+	@if [ "$(strip $(CNIPLUGIN_VERSION))" = "" ]; then \
+		echo "ERROR: CNIPLUGIN version could not be determined"; \
+		exit 1; \
+	fi;
+
+## Update libary pin in glide.yaml
+update-cni-plugin-pin: guard-ssh-forwarding-bug guard-git-cni-plugin
+	@$(DOCKER_RUN) $(TOOLING_BUILD) /bin/sh -c '\
+		LABEL="$(CNIPLUGIN_GLIDE_LABEL)" \
+		REPO="$(CNIPLUGIN_REPO)" \
+		VERSION="$(CNIPLUGIN_VERSION)" \
+		DEFAULT_REPO="$(CNIPLUGIN_PROJECT_DEFAULT)" \
+		BRANCH="$(CNIPLUGIN_BRANCH)" \
+		GLIDE="glide.yaml" \
+		_scripts/update-pin.sh '
+
+
+###############################################################################
+## licensing
+
+## Set the default LICENSING source for this project 
+LICENSING_PROJECT_DEFAULT=tigera/licensing
+LICENSING_GLIDE_LABEL=tigera/licensing
+
+## Default the LICENSING repo and version but allow them to be overridden (master or release-vX.Y)
+## default LICENSING branch to the same branch name as the current checked out repo
+LICENSING_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
+LICENSING_REPO?=github.com/$(LICENSING_PROJECT_DEFAULT)
+LICENSING_VERSION?=$(shell git ls-remote git@github.com:$(LICENSING_PROJECT_DEFAULT) $(LICENSING_BRANCH) 2>/dev/null | cut -f 1)
+
+## Guard to ensure LICENSING repo and branch are reachable
+guard-git-licensing: 
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ; 
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "$(LICENSING_BRANCH)" "Ensure the branch exists, or set LICENSING_BRANCH variable";
+	@$(DOCKER_RUN) $(TOOLING_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
+	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "$(LICENSING_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
+	@if [ "$(strip $(LICENSING_VERSION))" = "" ]; then \
+		echo "ERROR: LICENSING version could not be determined"; \
+		exit 1; \
+	fi;
+
+## Update libary pin in glide.yaml
+update-licensing-pin: guard-ssh-forwarding-bug guard-git-licensing
+	@$(DOCKER_RUN) $(TOOLING_BUILD) /bin/sh -c '\
+		LABEL="$(LICENSING_GLIDE_LABEL)" \
+		REPO="$(LICENSING_REPO)" \
+		VERSION="$(LICENSING_VERSION)" \
+		DEFAULT_REPO="$(LICENSING_PROJECT_DEFAULT)" \
+		BRANCH="$(LICENSING_BRANCH)" \
+		GLIDE="glide.yaml" \
+		_scripts/update-pin.sh '
+
+
+###############################################################################
+## confd
+
+## Set the default CONFD source for this project 
+CONFD_PROJECT_DEFAULT=tigera/confd-private.git
+CONFD_GLIDE_LABEL=projectcalico/confd
+
+## Default the CONFD repo and version but allow them to be overridden (master or release-vX.Y)
+## default CONFD branch to the same branch name as the current checked out repo
+CONFD_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
+CONFD_REPO?=github.com/$(CONFD_PROJECT_DEFAULT)
+CONFD_VERSION?=$(shell git ls-remote git@github.com:$(CONFD_PROJECT_DEFAULT) $(CONFD_BRANCH) 2>/dev/null | cut -f 1)
+
+## Guard to ensure CONFD repo and branch are reachable
+guard-git-confd: 
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(CONFD_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ; 
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(CONFD_PROJECT_DEFAULT) "$(CONFD_BRANCH)" "Ensure the branch exists, or set CONFD_BRANCH variable";
+	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(CONFD_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
+	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(CONFD_PROJECT_DEFAULT) "$(CONFD_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
+	@if [ "$(strip $(CONFD_VERSION))" = "" ]; then \
+		echo "ERROR: CONFD version could not be determined"; \
+		exit 1; \
+	fi;
+
+## Update libary pin in glide.yaml
+update-confd-pin: guard-ssh-forwarding-bug guard-git-confd
+	@$(DOCKER_RUN) $(TOOLING_BUILD) /bin/sh -c '\
+		LABEL="$(CONFD_GLIDE_LABEL)" \
+		REPO="$(CONFD_REPO)" \
+		VERSION="$(CONFD_VERSION)" \
+		DEFAULT_REPO="$(CONFD_PROJECT_DEFAULT)" \
+		BRANCH="$(CONFD_BRANCH)" \
+		GLIDE="glide.yaml" \
+		_scripts/update-pin.sh '
+
 
 
 ###############################################################################
