@@ -157,6 +157,10 @@ K8S_VERSION?=v1.11.3
 PROTOC_VER?=v0.1
 PROTOC_CONTAINER ?=calico/protoc:$(PROTOC_VER)-$(BUILDARCH)
 
+#This is a version with known container with compatible versions of sed/grep etc. 
+TOOLING_BUILD?=calico/go-build:v0.20	
+
+
 FV_ETCDIMAGE ?= quay.io/coreos/etcd:$(ETCD_VERSION)-$(BUILDARCH)
 FV_K8SIMAGE ?= gcr.io/google_containers/hyperkube-$(BUILDARCH):$(K8S_VERSION)
 FV_TYPHAIMAGE ?= tigera/typha:latest-$(BUILDARCH)
@@ -290,22 +294,6 @@ vendor vendor/.up-to-date: glide.lock
 	  $(DOCKER_RUN) $(CALICO_BUILD) glide install --strip-vendor && \
 	  touch vendor/.up-to-date; \
 	fi
-
-# Default the typha repo and version but allow them to be overridden
-TYPHA_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
-TYPHA_REPO?=github.com/tigera/typha-private
-TYPHA_VERSION?=$(shell git ls-remote git@github.com:tigera/typha-private $(TYPHA_BRANCH) 2>/dev/null | cut -f 1)
-
-## Update typha pin in glide.yaml
-update-typha:
-	    $(DOCKER_RUN) $(CALICO_BUILD) sh -c '\
-        echo "Updating typha to $(TYPHA_VERSION) from $(TYPHA_REPO)"; \
-        export OLD_VER=$$(grep --after 50 typha glide.yaml |grep --max-count=1 --only-matching --perl-regexp "version:\s*\K[^\s]+") ;\
-        echo "Old version: $$OLD_VER";\
-        if [ $(TYPHA_VERSION) != $$OLD_VER ]; then \
-          sed -i "s/$$OLD_VER/$(TYPHA_VERSION)/" glide.yaml && \
-          glide up --strip-vendor || glide up --strip-vendor; \
-        fi'
 
 bin/calico-felix: bin/calico-felix-$(ARCH)
 	ln -f bin/calico-felix-$(ARCH) bin/calico-felix
@@ -507,6 +495,141 @@ calico-build/centos6:
 	  --build-arg=GID=$(LOCAL_GROUP_ID) \
 	  -f centos6-build.Dockerfile.$(ARCH) \
 	  -t calico-build/centos6 .
+
+
+
+
+###############################################################################
+# Managing the upstream library pins
+###############################################################################
+
+## Update dependency pins in glide.yaml
+update-pins: update-licensing-pin update-typha-pin update-libcalico-pin 
+
+## deprecated target alias
+update-libcalico: update-pins
+	$(warning !! Update update-libcalico is deprecated, use update-pins !!)
+
+update-typha: update-pins
+	$(warning !! Update update-typha is deprecated, use update-pins !!)
+
+## Guard so we don't run this on osx because of ssh-agent to docker forwarding bug
+guard-ssh-forwarding-bug:
+	@if [ "$(shell uname)" = "Darwin" ]; then \
+		echo "ERROR: This target requires ssh-agent to docker key forwarding and is not compatible with OSX/Mac OS"; \
+		echo "$(MAKECMDGOALS)"; \
+		exit 1; \
+	fi;
+
+
+###############################################################################
+## libcalico
+
+## Set the default LIBCALICO source for this project
+LIBCALICO_PROJECT_DEFAULT=tigera/libcalico-go-private.git
+LIBCALICO_GLIDE_LABEL=projectcalico/libcalico-go
+
+## Default the LIBCALICO repo and version but allow them to be overridden (master or release-vX.Y)
+## default LIBCALICO branch to the same branch name as the current checked out repo
+LIBCALICO_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
+LIBCALICO_REPO?=github.com/$(LIBCALICO_PROJECT_DEFAULT)
+LIBCALICO_VERSION?=$(shell git ls-remote git@github.com:$(LIBCALICO_PROJECT_DEFAULT) $(LIBCALICO_BRANCH) 2>/dev/null | cut -f 1)
+
+## Guard to ensure LIBCALICO repo and branch are reachable
+guard-git-libcalico: 
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ; 
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "$(LIBCALICO_BRANCH)" "Ensure the branch exists, or set LIBCALICO_BRANCH variable";
+	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
+	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "$(LIBCALICO_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
+	@if [ "$(strip $(LIBCALICO_VERSION))" = "" ]; then \
+		echo "ERROR: LIBCALICO version could not be determined"; \
+		exit 1; \
+	fi;
+
+## Update libary pin in glide.yaml
+update-libcalico-pin: guard-ssh-forwarding-bug guard-git-libcalico
+	@$(DOCKER_RUN) $(TOOLING_BUILD) /bin/sh -c '\
+		LABEL="$(LIBCALICO_GLIDE_LABEL)" \
+		REPO="$(LIBCALICO_REPO)" \
+		VERSION="$(LIBCALICO_VERSION)" \
+		DEFAULT_REPO="$(LIBCALICO_PROJECT_DEFAULT)" \
+		BRANCH="$(LIBCALICO_BRANCH)" \
+		GLIDE="glide.yaml" \
+		_scripts/update-pin.sh '
+
+
+###############################################################################
+## typha
+
+## Set the default TYPHA source for this project
+TYPHA_PROJECT_DEFAULT=tigera/typha-private.git
+TYPHA_GLIDE_LABEL=projectcalico/typha
+
+## Default the TYPHA repo and version but allow them to be overridden (master or release-vX.Y)
+## default TYPHA branch to the same branch name as the current checked out repo
+TYPHA_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
+TYPHA_REPO?=github.com/$(TYPHA_PROJECT_DEFAULT)
+TYPHA_VERSION?=$(shell git ls-remote git@github.com:$(TYPHA_PROJECT_DEFAULT) $(TYPHA_BRANCH) 2>/dev/null | cut -f 1)
+
+## Guard to ensure TYPHA repo and branch are reachable
+guard-git-typha: 
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(TYPHA_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ; 
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(TYPHA_PROJECT_DEFAULT) "$(TYPHA_BRANCH)" "Ensure the branch exists, or set TYPHA_BRANCH variable";
+	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(TYPHA_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
+	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(TYPHA_PROJECT_DEFAULT) "$(TYPHA_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
+	@if [ "$(strip $(TYPHA_VERSION))" = "" ]; then \
+		echo "ERROR: TYPHA version could not be determined"; \
+		exit 1; \
+	fi;
+
+## Update libary pin in glide.yaml
+update-typha-pin: guard-ssh-forwarding-bug guard-git-typha
+	@$(DOCKER_RUN) $(TOOLING_BUILD) /bin/sh -c '\
+		LABEL="$(TYPHA_GLIDE_LABEL)" \
+		REPO="$(TYPHA_REPO)" \
+		VERSION="$(TYPHA_VERSION)" \
+		DEFAULT_REPO="$(TYPHA_PROJECT_DEFAULT)" \
+		BRANCH="$(TYPHA_BRANCH)" \
+		GLIDE="glide.yaml" \
+		_scripts/update-pin.sh '
+
+###############################################################################
+## licensing
+
+## Set the default LICENSING source for this project 
+LICENSING_PROJECT_DEFAULT=tigera/licensing
+LICENSING_GLIDE_LABEL=tigera/licensing
+
+## Default the LICENSING repo and version but allow them to be overridden (master or release-vX.Y)
+## default LICENSING branch to the same branch name as the current checked out repo
+LICENSING_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
+LICENSING_REPO?=github.com/$(LICENSING_PROJECT_DEFAULT)
+LICENSING_VERSION?=$(shell git ls-remote git@github.com:$(LICENSING_PROJECT_DEFAULT) $(LICENSING_BRANCH) 2>/dev/null | cut -f 1)
+
+## Guard to ensure LICENSING repo and branch are reachable
+guard-git-licensing: 
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ; 
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "$(LICENSING_BRANCH)" "Ensure the branch exists, or set LICENSING_BRANCH variable";
+	@$(DOCKER_RUN) $(TOOLING_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
+	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "$(LICENSING_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
+	@if [ "$(strip $(LICENSING_VERSION))" = "" ]; then \
+		echo "ERROR: LICENSING version could not be determined"; \
+		exit 1; \
+	fi;
+
+## Update libary pin in glide.yaml
+update-licensing-pin: guard-ssh-forwarding-bug guard-git-licensing
+	@$(DOCKER_RUN) $(TOOLING_BUILD) /bin/sh -c '\
+		LABEL="$(LICENSING_GLIDE_LABEL)" \
+		REPO="$(LICENSING_REPO)" \
+		VERSION="$(LICENSING_VERSION)" \
+		DEFAULT_REPO="$(LICENSING_PROJECT_DEFAULT)" \
+		BRANCH="$(LICENSING_BRANCH)" \
+		GLIDE="glide.yaml" \
+		_scripts/update-pin.sh '
+
+
+
 
 ###############################################################################
 # Static checks
