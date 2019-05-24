@@ -73,6 +73,10 @@ CALICO_BUILD?=calico/go-build:$(GO_BUILD_VER)
 PROTOC_VER?=v0.1
 PROTOC_CONTAINER?=calico/protoc:$(PROTOC_VER)-$(BUILDARCH)
 
+#This is a version with known container with compatible versions of sed/grep etc. 
+TOOLING_BUILD?=calico/go-build:v0.20	
+
+
 # Get version from git - used for releases.
 GIT_VERSION?=$(shell git describe --tags --dirty --always)
 ifeq ($(LOCAL_BUILD),true)
@@ -85,7 +89,7 @@ endif
 LOCAL_USER_ID:=$(shell id -u)
 MY_GID:=$(shell id -g)
 
-SRC_FILES=$(shell find -name '*.go' |grep -v vendor)
+SRC_FILES=$(shell find . -name '*.go' |grep -v vendor)
 
 ############################################################################
 BUILD_IMAGE?=gcr.io/unique-caldron-775/cnx/tigera/dikastes
@@ -114,6 +118,16 @@ ifdef SSH_AUTH_SOCK
   EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
 endif
 
+
+DOCKER_RUN := mkdir -p .go-pkg-cache && \
+              docker run --rm \
+                         --net=host \
+                         $(EXTRA_DOCKER_ARGS) \
+                         -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+                         -v $${PWD}:/go/src/$(PACKAGE_NAME):rw \
+                         -v $${PWD}/.go-pkg-cache:/go/pkg:rw \
+                         -w /go/src/$(PACKAGE_NAME) 
+
  # Pre-configured docker run command that runs as this user with the repo
  # checked out to /code, uses the --rm flag to avoid leaving the container
  # around afterwards.
@@ -129,11 +143,6 @@ HTTP_STATUS=$(ENVOY_API)/envoy/type/http_status
 
 # Always install the git hooks to prevent publishing closed source code to a non-private repo.
 hooks_installed:=$(shell ./install-git-hooks)
-
-.PHONY: install-git-hooks
-## Install Git hooks
-install-git-hooks:
-	./install-git-hooks
 
 .PHONY: clean
 ## Clean enough that a new release build will be clean
@@ -173,32 +182,6 @@ vendor: glide.yaml
       $(EXTRA_DOCKER_ARGS) \
       $(CALICO_BUILD) glide install -strip-vendor
 
-# Default the libcalico repo and version but allow them to be overridden
-LIBCALICO_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
-LIBCALICO_REPO?=github.com/tigera/libcalico-go-private
-LIBCALICO_VERSION?=$(shell git ls-remote git@github.com:tigera/libcalico-go-private $(LIBCALICO_BRANCH) 2>/dev/null | cut -f 1)
-
-## Update libcalico pin in glide.yaml
-update-libcalico:
-	docker run --rm -i \
-          -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
-          -v $(HOME)/.glide:/home/user/.glide:rw \
-          -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-          -w /go/src/$(PACKAGE_NAME) \
-          $(EXTRA_DOCKER_ARGS) \
-          $(CALICO_BUILD) sh -c '\
-        echo "Updating libcalico to $(LIBCALICO_VERSION) from $(LIBCALICO_REPO)"; \
-        export OLD_VER=$$(grep --after 50 libcalico-go glide.yaml |grep --max-count=1 --only-matching --perl-regexp "version:\s*\K[\.0-9a-z]+") ;\
-        echo "Old version: $$OLD_VER";\
-        if [ $(LIBCALICO_VERSION) != $$OLD_VER ]; then \
-            sed -i "s/$$OLD_VER/$(LIBCALICO_VERSION)/" glide.yaml && \
-            if [ $(LIBCALICO_REPO) != "github.com/tigera/libcalico-go-private" ]; then \
-              glide mirror set https://github.com/tigera/libcalico-go-private $(LIBCALICO_REPO) --vcs git; glide mirror list; \
-            fi;\
-          OUTPUT=`mktemp`;\
-          glide up --strip-vendor 2>&1 | tee $$OUTPUT; \
-          if ! grep "\[WARN\]" $$OUTPUT; then true; else false; fi; \
-        fi'
 
 bin/dikastes-amd64: ARCH=amd64
 bin/dikastes-arm64: ARCH=arm64
@@ -360,12 +343,70 @@ tag-images-all: imagetag $(addprefix sub-tag-images-,$(VALIDARCHES))
 sub-tag-images-%:
 	$(MAKE) tag-images ARCH=$* IMAGETAG=$(IMAGETAG)
 
+
+
+###############################################################################
+# Managing the upstream library pins
+###############################################################################
+
+## Update dependency pins in glide.yaml
+update-pins: update-libcalico-pin 
+
+## deprecated target alias
+update-libcalico: update-pins
+	$(warning !! Update update-libcalico is deprecated, use update-pins !!)
+
+## Guard so we don't run this on osx because of ssh-agent to docker forwarding bug
+guard-ssh-forwarding-bug:
+	@if [ "$(shell uname)" = "Darwin" ]; then \
+		echo "ERROR: This target requires ssh-agent to docker key forwarding and is not compatible with OSX/Mac OS"; \
+		echo "$(MAKECMDGOALS)"; \
+		exit 1; \
+	fi;
+
+###############################################################################
+## libcalico
+
+## Set the default LIBCALICO source for this project 
+LIBCALICO_PROJECT_DEFAULT=tigera/libcalico-go-private.git
+LIBCALICO_GLIDE_LABEL=projectcalico/libcalico-go
+
+## Default the LIBCALICO repo and version but allow them to be overridden (master or release-vX.Y)
+## default LIBCALICO branch to the same branch name as the current checked out repo
+LIBCALICO_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
+LIBCALICO_REPO?=github.com/$(LIBCALICO_PROJECT_DEFAULT)
+LIBCALICO_VERSION?=$(shell git ls-remote git@github.com:$(LIBCALICO_PROJECT_DEFAULT) $(LIBCALICO_BRANCH) 2>/dev/null | cut -f 1)
+
+## Guard to ensure LIBCALICO repo and branch are reachable
+guard-git-libcalico: 
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ; 
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "$(LIBCALICO_BRANCH)" "Ensure the branch exists, or set LIBCALICO_BRANCH variable";
+	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
+	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "$(LIBCALICO_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
+	@if [ "$(strip $(LIBCALICO_VERSION))" = "" ]; then \
+		echo "ERROR: LIBCALICO version could not be determined"; \
+		exit 1; \
+	fi;
+
+## Update libary pin in glide.yaml
+update-libcalico-pin: guard-ssh-forwarding-bug guard-git-libcalico
+	@$(DOCKER_RUN) $(TOOLING_BUILD) /bin/sh -c '\
+		LABEL="$(LIBCALICO_GLIDE_LABEL)" \
+		REPO="$(LIBCALICO_REPO)" \
+		VERSION="$(LIBCALICO_VERSION)" \
+		DEFAULT_REPO="$(LIBCALICO_PROJECT_DEFAULT)" \
+		BRANCH="$(LIBCALICO_BRANCH)" \
+		GLIDE="glide.yaml" \
+		_scripts/update-pin.sh '
+
+
+
 ###############################################################################
 # Static checks
 ###############################################################################
 ## Perform static checks on the code.
 .PHONY: static-checks
-static-checks: vendor
+static-checks: guard-ssh-forwarding-bug vendor 
 	docker run --rm \
 		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
 		-v $(CURDIR):/go/src/$(PACKAGE_NAME) \
