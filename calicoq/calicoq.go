@@ -1,5 +1,4 @@
-// Copyright (c) 2016 Tigera, Inc. All rights reserved.
-
+// Copyright (c) 2012,2015-2019 Tigera, Inc. All rights reserved.
 package main
 
 import (
@@ -208,5 +207,5 @@ func checkLicense(configFile string) error {
 	}
 	// If we get here, it means the license status was not one we understand how to handle.
 	// Unknown should never be returned, and NoLicenseLoaded should already be handled above.
-	return fmt.Errorf("unhandled license status: %f", status)
+	return fmt.Errorf("unhandled license status: %v", status)
 }

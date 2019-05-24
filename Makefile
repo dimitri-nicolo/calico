@@ -12,10 +12,13 @@ LOCAL_USER_ID?=$(shell id -u $$USER)
 BINARY:=bin/calicoq
 
 GO_BUILD_VER?=latest
-GO_BUILD?=calico/go-build:$(GO_BUILD_VER)
+CALICO_BUILD?=calico/go-build:$(GO_BUILD_VER)
 # Specific version for fossa license checks
 FOSSA_GO_BUILD_VER?=v0.18
 FOSSA_GO_BUILD?=calico/go-build:$(FOSSA_GO_BUILD_VER)
+
+#This is a version with known container with compatible versions of sed/grep etc. 
+TOOLING_BUILD?=calico/go-build:v0.20	
 
 CALICOQ_VERSION?=$(shell git describe --tags --dirty --always)
 CALICOQ_BUILD_DATE?=$(shell date -u +'%FT%T%z')
@@ -37,15 +40,14 @@ ifdef SSH_AUTH_SOCK
   EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
 endif
 
-DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
-                   docker run --rm \
-                              --net=host \
-                              $(EXTRA_DOCKER_ARGS) \
-                              -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-                              -v $${PWD}:/go/src/$(PACKAGE_NAME):rw \
-                              -v $${PWD}/.go-pkg-cache:/go/pkg:rw \
-                              -w /go/src/$(PACKAGE_NAME) \
-                              $(GO_BUILD)
+DOCKER_RUN := mkdir -p .go-pkg-cache && \
+              docker run --rm \
+                         --net=host \
+                         $(EXTRA_DOCKER_ARGS) \
+                         -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+                         -v $${PWD}:/go/src/$(PACKAGE_NAME):rw \
+                         -v $${PWD}/.go-pkg-cache:/go/pkg:rw \
+                         -w /go/src/$(PACKAGE_NAME) 
 
 # Always install the git hooks to prevent publishing closed source code to a non-private repo.
 hooks_installed:=$(shell ./install-git-hooks)
@@ -58,13 +60,13 @@ install-git-hooks:
 .PHONY: vendor
 vendor vendor/.up-to-date: glide.lock
 	mkdir -p $$HOME/.glide
-	$(DOCKER_GO_BUILD) glide install --strip-vendor
+	$(DOCKER_RUN) $(CALICO_BUILD) glide install --strip-vendor
 	touch vendor/.up-to-date
 
 .PHONY: update-vendor
 update-vendor:
 	mkdir -p $$HOME/.glide
-	$(DOCKER_GO_BUILD) glide up --strip-vendor
+	$(DOCKER_RUN) $(CALICO_BUILD) glide up --strip-vendor
 	touch vendor/.up-to-date
 
 foss-checks: vendor
@@ -99,7 +101,7 @@ ut-containerized: bin/calicoq
 		-v $(CURDIR):/go/src/$(PACKAGE_NAME) \
 		-w /go/src/$(PACKAGE_NAME) \
 		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-		$(GO_BUILD) \
+		$(CALICO_BUILD) \
 		sh -c 'make ut'
 
 .PHONY: fv
@@ -114,7 +116,7 @@ fv-containerized: build-image run-etcd
 		-v $(CURDIR):/code/$(PACKAGE_NAME) \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-w /code/$(PACKAGE_NAME) \
-		$(GO_BUILD) \
+		$(CALICO_BUILD) \
 		-c 'CALICOQ=`pwd`/$(BINARY) fv/run-test'
 
 .PHONY: st
@@ -129,7 +131,7 @@ st-containerized: build-image
 		-v $(CURDIR):/code/$(PACKAGE_NAME) \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-w /code/$(PACKAGE_NAME) \
-		$(GO_BUILD) \
+		$(CALICO_BUILD) \
 		-c 'CALICOQ=`pwd`/$(BINARY) st/run-test'
 
 .PHONY: scale-test
@@ -144,7 +146,7 @@ scale-test-containerized: build-image
 		-v $(CURDIR):/code/$(PACKAGE_NAME) \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-w /code/$(PACKAGE_NAME) \
-		$(GO_BUILD) \
+		$(CALICO_BUILD) \
 		-c 'CALICOQ=`pwd`/$(BINARY) scale-test/run-test'
 
 # Build image for containerized testing
@@ -211,6 +213,134 @@ tag-image: imagetag build-image
 push-image: imagetag tag-image
 	docker push $(REGISTRY_PREFIX)$(BUILD_IMAGE):$(IMAGETAG)
 
+
+
+###############################################################################
+# Managing the upstream library pins
+###############################################################################
+
+## Update dependency pins in glide.yaml
+update-pins: update-libcalico-pin update-felix-pin update-licensing-pin
+
+## deprecated target alias
+update-libcalico: update-pins
+	$(warning !! Update update-libcalico is deprecated, use update-pins !!)
+
+## Guard so we don't run this on osx because of ssh-agent to docker forwarding bug
+guard-ssh-forwarding-bug:
+	@if [ "$(shell uname)" = "Darwin" ]; then \
+		echo "ERROR: This target requires ssh-agent to docker key forwarding and is not compatible with OSX/Mac OS"; \
+		echo "$(MAKECMDGOALS)"; \
+		exit 1; \
+	fi;
+
+###############################################################################
+## libcalico
+
+## Set the default LIBCALICO source for this project 
+LIBCALICO_PROJECT_DEFAULT=tigera/libcalico-go-private.git
+LIBCALICO_GLIDE_LABEL=projectcalico/libcalico-go
+
+## Default the LIBCALICO repo and version but allow them to be overridden (master or release-vX.Y)
+## default LIBCALICO branch to the same branch name as the current checked out repo
+LIBCALICO_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
+LIBCALICO_REPO?=github.com/$(LIBCALICO_PROJECT_DEFAULT)
+LIBCALICO_VERSION?=$(shell git ls-remote git@github.com:$(LIBCALICO_PROJECT_DEFAULT) $(LIBCALICO_BRANCH) 2>/dev/null | cut -f 1)
+
+## Guard to ensure LIBCALICO repo and branch are reachable
+guard-git-libcalico: 
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ; 
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "$(LIBCALICO_BRANCH)" "Ensure the branch exists, or set LIBCALICO_BRANCH variable";
+	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
+	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "$(LIBCALICO_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
+	@if [ "$(strip $(LIBCALICO_VERSION))" = "" ]; then \
+		echo "ERROR: LIBCALICO version could not be determined"; \
+		exit 1; \
+	fi;
+
+## Update libary pin in glide.yaml
+update-libcalico-pin: guard-ssh-forwarding-bug guard-git-libcalico
+	@$(DOCKER_RUN) $(TOOLING_BUILD) /bin/sh -c '\
+		LABEL="$(LIBCALICO_GLIDE_LABEL)" \
+		REPO="$(LIBCALICO_REPO)" \
+		VERSION="$(LIBCALICO_VERSION)" \
+		DEFAULT_REPO="$(LIBCALICO_PROJECT_DEFAULT)" \
+		BRANCH="$(LIBCALICO_BRANCH)" \
+		GLIDE="glide.yaml" \
+		_scripts/update-pin.sh '
+
+###############################################################################
+## felix
+
+## Set the default FELIX source for this project 
+FELIX_PROJECT_DEFAULT=tigera/felix-private.git
+FELIX_GLIDE_LABEL=projectcalico/felix
+
+## Default the FELIX repo and version but allow them to be overridden (master or release-vX.Y)
+## default FELIX branch to the same branch name as the current checked out repo
+FELIX_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
+FELIX_REPO?=github.com/$(FELIX_PROJECT_DEFAULT)
+FELIX_VERSION?=$(shell git ls-remote git@github.com:$(FELIX_PROJECT_DEFAULT) $(FELIX_BRANCH) 2>/dev/null | cut -f 1)
+
+## Guard to ensure FELIX repo and branch are reachable
+guard-git-felix: 
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(FELIX_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ; 
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(FELIX_PROJECT_DEFAULT) "$(FELIX_BRANCH)" "Ensure the branch exists, or set FELIX_BRANCH variable";
+	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(FELIX_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
+	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(FELIX_PROJECT_DEFAULT) "$(FELIX_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
+	@if [ "$(strip $(FELIX_VERSION))" = "" ]; then \
+		echo "ERROR: FELIX version could not be determined"; \
+		exit 1; \
+	fi;
+
+## Update libary pin in glide.yaml
+update-felix-pin: guard-ssh-forwarding-bug guard-git-felix
+	@$(DOCKER_RUN) $(TOOLING_BUILD) /bin/sh -c '\
+		LABEL="$(FELIX_GLIDE_LABEL)" \
+		REPO="$(FELIX_REPO)" \
+		VERSION="$(FELIX_VERSION)" \
+		DEFAULT_REPO="$(FELIX_PROJECT_DEFAULT)" \
+		BRANCH="$(FELIX_BRANCH)" \
+		GLIDE="glide.yaml" \
+		_scripts/update-pin.sh '
+
+###############################################################################
+## licensing
+
+## Set the default LICENSING source for this project 
+LICENSING_PROJECT_DEFAULT=tigera/licensing
+LICENSING_GLIDE_LABEL=tigera/licensing
+
+## Default the LICENSING repo and version but allow them to be overridden (master or release-vX.Y)
+## default LICENSING branch to the same branch name as the current checked out repo
+LICENSING_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
+LICENSING_REPO?=github.com/$(LICENSING_PROJECT_DEFAULT)
+LICENSING_VERSION?=$(shell git ls-remote git@github.com:$(LICENSING_PROJECT_DEFAULT) $(LICENSING_BRANCH) 2>/dev/null | cut -f 1)
+
+## Guard to ensure LICENSING repo and branch are reachable
+guard-git-licensing: 
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ; 
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "$(LICENSING_BRANCH)" "Ensure the branch exists, or set LICENSING_BRANCH variable";
+	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
+	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "$(LICENSING_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
+	@if [ "$(strip $(LICENSING_VERSION))" = "" ]; then \
+		echo "ERROR: LICENSING version could not be determined"; \
+		exit 1; \
+	fi;
+
+## Update libary pin in glide.yaml
+update-licensing-pin: guard-ssh-forwarding-bug guard-git-licensing
+	@$(DOCKER_RUN) $(TOOLING_BUILD) /bin/sh -c '\
+		LABEL="$(LICENSING_GLIDE_LABEL)" \
+		REPO="$(LICENSING_REPO)" \
+		VERSION="$(LICENSING_VERSION)" \
+		DEFAULT_REPO="$(LICENSING_PROJECT_DEFAULT)" \
+		BRANCH="$(LICENSING_BRANCH)" \
+		GLIDE="glide.yaml" \
+		_scripts/update-pin.sh '
+
+
+
 ###############################################################################
 # Static checks
 ###############################################################################
@@ -220,7 +350,7 @@ static-checks: vendor
 	docker run --rm \
 		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
 		-v $(CURDIR):/go/src/$(PACKAGE_NAME) \
-		$(GO_BUILD) sh -c '\
+		$(CALICO_BUILD) sh -c '\
 			cd  /go/src/$(PACKAGE_NAME) && \
 			gometalinter --deadline=300s --disable-all --enable=vet --enable=goimports  --vendor ./...'
 
