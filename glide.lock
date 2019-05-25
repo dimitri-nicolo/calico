@@ -1,5 +1,5 @@
-hash: 034e3bf4c212deca83eb24d4d25ca7d9b587e627a2d30465d4d3ce7c440ed6f8
-updated: 2019-05-22T05:12:27.33666827Z
+hash: 246b7a39b204cf2088b4cff83c2b440ca178ae7b0b5ffd4c16b0035da374c09c
+updated: 2019-05-25T05:06:47.091969852Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -307,7 +307,7 @@ imports:
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
 - name: github.com/projectcalico/cni-plugin
-  version: b7f755f8a6324ef850f444d1ce7ca4d36341ccca
+  version: 306b5ae1118c5870bef71c1f9373c44a70f5985e
   repo: git@github.com:tigera/cni-plugin-private.git
   subpackages:
   - internal/pkg/azure
@@ -319,7 +319,7 @@ imports:
   - pkg/types
   - pkg/upgrade
 - name: github.com/projectcalico/felix
-  version: b2e5a0edaf30747ed6b625a2cc82e7d80957c023
+  version: 80f2e8598b6e318c4b66189e7692e0e6cd03e22d
   repo: git@github.com:tigera/felix-private.git
   subpackages:
   - buildinfo
@@ -466,7 +466,7 @@ imports:
 - name: github.com/spf13/pflag
   version: 583c0c0531f06d5278b7d917446061adc344b5cd
 - name: github.com/tigera/licensing
-  version: c9432e3124d3f9da2f3e34a703d815b072f6b0b4
+  version: 02d1f482fe4d3a2dbc4a3bce530471eba75d5029
   repo: git@github.com:tigera/licensing
   vcs: git
   subpackages:
