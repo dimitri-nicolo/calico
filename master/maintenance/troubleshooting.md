@@ -19,7 +19,7 @@ To view logs, use the following command:
 `kubectl logs -n kube-system <pod_name>`
 
 
-To view debug logs on some Calico components, set the `LogSeverityScreen` through the associated environment variable. 
+To view debug logs on some {{site.prodname}} components, set the `LogSeverityScreen` through the associated environment variable. 
 
 
 To report a problem, contact Tigera Support.
@@ -31,8 +31,7 @@ To report a problem, contact Tigera Support.
 
 If you notice that a workload has not received network connectivity, check
 that the node name for that host is properly configured. The name for the [node resource](../reference/calicoctl/resources/node) must match
-the node name in the [workload endpoint resources](../reference/calicoctl/resources/workloadendpoint) on that host. If the names are mismatched,
-it is likely that all workloads on that node will not receive networking.
+the node name in the [workload endpoint resources](../reference/calicoctl/resources/workloadendpoint) on that host. If the names are mismatched, it is likely that all workloads on that node will not receive networking.
 
 To check this, query one of the broken workload endpoints and check its node name:
 
@@ -42,8 +41,7 @@ Then, check to see if a single corresponding node resource exists:
 
 	calicoctl get nodes
 
-If the node resource either does not exist or there are multiple node resources representing the bad node, it is likely that the node's hostname has changed. This often happens
-as a result of switching a node's hostname between its FQDN and its short DNS name.
+If the node resource either does not exist or there are multiple node resources representing the bad node, it is likely that the node's hostname has changed. This often happens as a result of switching a node's hostname between its FQDN and its short DNS name.
 
 To correct this, you must perform the following steps (with examples shown using Kubernetes):
 
@@ -139,10 +137,7 @@ varies by Linux distribution. The following steps work best on Ubuntu systems.
    It should return output indicating that the `cali` and `tunl` interfaces
    are `unmanaged`.
 
-   If this does not to prevent NetworkManager from interfering with {{site.prodname}}
-   networking, try disabling NetworkManager. If disabling NetworkManager does not
-   stop it from interfering with {{site.prodname}} networking, you may need to remove
-   NetworkManager. This will require manual network configuration.
+   If this does not to prevent NetworkManager from interfering with {{site.prodname}} networking, try disabling NetworkManager. If disabling NetworkManager does not stop it from interfering with {{site.prodname}} networking, you may need to remove NetworkManager. This will require manual network configuration.
 
 
 ### Errors when running sudo calicoctl
@@ -161,9 +156,7 @@ or you can set environment variables for `sudo` commands like this:
 sudo ETCD_ENDPOINTS=http://172.25.0.1:2379 calicoctl node run
 ```
 
-Also be aware that connection information can be specified as a config
-file rather than using environment variables.  See [Installing calicoctl](../getting-started/calicoctl/install)
-for details.
+Also be aware that connection information can be specified as a config file rather than using environment variables.  See [Installing calicoctl](../getting-started/calicoctl/install) for details.
 
 ### Error: {{site.nodecontainer}} is not ready: BIRD is not ready: BGP not established with 10.0.0.1
 
@@ -180,8 +173,7 @@ for more information.
 
 A common problem on Linux systems is running out of space in the conntrack table, which can cause poor iptables performance. This can
 happen if you run a lot of workloads on a given host, or if your workloads create a lot of TCP connections or bidirectional UDP streams.
-
-To avoid this becoming a problem, we recommend increasing the conntrack table size using the following commands:
+To avoid this problem, we recommend increasing the conntrack table size using the following commands:
 
     sysctl -w net.netfilter.nf_conntrack_max=1000000
     echo "net.netfilter.nf_conntrack_max=1000000" >> /etc/sysctl.conf
