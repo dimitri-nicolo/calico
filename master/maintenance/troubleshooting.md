@@ -29,9 +29,7 @@ To report a problem, contact Tigera Support.
 
 #### Check for mismatched node names
 
-If you notice that a workload has not received network connectivity, check
-that the node name for that host is properly configured. The name for the [node resource](../reference/calicoctl/resources/node) must match
-the node name in the [workload endpoint resources](../reference/calicoctl/resources/workloadendpoint) on that host. If the names are mismatched, it is likely that all workloads on that node will not receive networking.
+If you notice that a workload has not received network connectivity, check that the node name for that host is properly configured. The name for the [node resource](../reference/calicoctl/resources/node) must match the node name in the [workload endpoint resources](../reference/calicoctl/resources/workloadendpoint) on that host. If the names are mismatched, it is likely that all workloads on that node will not receive networking.
 
 To check this, query one of the broken workload endpoints and check its node name:
 
@@ -142,9 +140,7 @@ varies by Linux distribution. The following steps work best on Ubuntu systems.
 
 ### Errors when running sudo calicoctl
 
-If you use `sudo` for commands like `calicoctl node run`, remember that your environment
-variables will not be transferred to the `sudo` environment.  You can run `sudo` with
-the `-E` flag to include your environment variables:
+If you use `sudo` for commands like `calicoctl node run`, remember that your environment variables will not be transferred to the `sudo` environment.  You can run `sudo` with the `-E` flag to include your environment variables:
 
 ```shell
 sudo -E calicoctl node run
@@ -164,10 +160,7 @@ The {{site.nodecontainer}} container may report an "unready" status in Kubernete
 
 This can also occur when inactive Node resources are configured when using node-to-node mesh. Resolve cases like this by [decommissioning the stale nodes](../maintenance/decommissioning-a-node).
 
-Lastly this can occur when BGP connections to non-mesh peers go down. If this
-is a common occurrence in your BGP topology, you can disable BIRD readiness checks. See [node readiness]({{site.url}}/{{page.version}}/reference/node/configuration#node-readiness)
-for more information.
-
+Lastly this can occur when BGP connections to non-mesh peers go down. If this is a common occurrence in your BGP topology, you can disable BIRD readiness checks. See [node readiness]({{site.url}}/{{page.version}}/reference/node/configuration#node-readiness) for more information.
 
 ### Linux conntrack table is out of space 
 
