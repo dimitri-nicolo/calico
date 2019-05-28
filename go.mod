@@ -2,4 +2,7 @@ module github.com/tigera/voltron
 
 go 1.11
 
-require rsc.io/quote v1.5.2
+require (
+	github.com/caarlos0/env v3.5.0+incompatible
+	rsc.io/quote v1.5.2
+)
