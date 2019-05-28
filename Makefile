@@ -69,10 +69,10 @@ YOUR_APP_BUILD_DATE?=$(shell date -u +'%FT%T%z')
 YOUR_APP_GIT_REVISION?=$(shell git rev-parse --short HEAD)
 YOUR_APP_GIT_DESCRIPTION?=$(shell git describe --tags)
 
-VERSION_FLAGS=-X main.VERSION=$(CONTROLLER_VERSION) \
-	-X main.BUILD_DATE=$(CONTROLLER_BUILD_DATE) \
-	-X main.GIT_DESCRIPTION=$(CONTROLLER_GIT_DESCRIPTION) \
-	-X main.GIT_REVISION=$(CONTROLLER_GIT_REVISION)
+VERSION_FLAGS=-X main.VERSION=$(YOUR_APP_VERSION) \
+	-X main.BUILD_DATE=$(YOUR_APP_BUILD_DATE) \
+	-X main.GIT_DESCRIPTION=$(YOUR_APP_GIT_DESCRIPTION) \
+	-X main.GIT_REVISION=$(YOUR_APP_GIT_REVISION)
 BUILD_LDFLAGS=-ldflags "$(VERSION_FLAGS)"
 RELEASE_LDFLAGS=-ldflags "$(VERSION_FLAGS) -s -w"
 
@@ -80,10 +80,12 @@ RELEASE_LDFLAGS=-ldflags "$(VERSION_FLAGS) -s -w"
 # Env vars related to building, packaging 
 # and releasing
 #############################################
-BUILD_IMAGE?=tigera/YOUR_APP
+YOUR_APP?=hello
+BUILD_IMAGE?=tigera/$(YOUR_APP)
 PUSH_IMAGES?=gcr.io/unique-caldron-775/cnx/$(BUILD_IMAGE)
 RELEASE_IMAGES?=quay.io/$(BUILD_IMAGE)
-PACKAGE_NAME?=github.com/tigera/YOUR_APP
+PACKAGE_NAME?=github.com/tigera/$(YOUR_APP)
+RELEASE_BUILD?=""
 
 # Figure out the users UID/GID.  These are needed to run docker containers
 # as the current user and ensure that files built inside containers are
@@ -109,17 +111,17 @@ DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
                               -e LOCAL_USER_ID=$(MY_UID) \
                               -e GOARCH=$(ARCH) \
                               -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
-                              -v $${PWD}/../:/:rw \
-                              -v $${PWD}/.go-pkg-cache:/go/pkg:rw \
-                              -v $${PWD}/.go-build-cache:/home/user/.cache/go-build:rw \
-                              -w /YOUR_APP \
+                              -v ${PWD}:/$(PACKAGE_NAME):rw \
+                              -v ${PWD}/.go-pkg-cache:/go/pkg:rw \
+                              -v ${PWD}/.go-build-cache:/home/user/.cache/go-build:rw \
+                              -w /$(PACKAGE_NAME) \
                               $(CALICO_BUILD)
 
 ##########################################################################################
 # Display usage output
 ##########################################################################################
 help:
-	@echo "Tigera YOUR_APP Makefile"
+	@echo "Tigera $(YOUR_APP) Makefile"
 	@echo "Builds:"
 	@echo
 	@echo "  make all                   Build all the binary packages."
@@ -158,24 +160,25 @@ all: $(BUILD_IMAGE)
 
 # Some will have dedicated targets to make it easier to type, for example
 # "YOUR_APP" instead of "$(BINDIR)/YOUR_APP".
-YOUR_APP: $(BINDIR)/YOUR_APP
+$(YOUR_APP): $(BINDIR)/$(YOUR_APP)
 
-$(BINDIR)/YOUR_APP: $(BINDIR)/YOUR_APP-amd64
-	cd $(BINDIR) && (rm YOUR_APP || ln -s -T YOUR_APP-$(ARCH) YOUR_APP)
+$(BINDIR)/$(YOUR_APP): $(BINDIR)/$(YOUR_APP)-amd64
+	cd $(BINDIR) && (rm -f $(YOUR_APP); ln -s $(YOUR_APP)-$(ARCH) $(YOUR_APP))
 
-$(BINDIR)/YOUR_APP-$(ARCH): $(GO_FILES)
+
+$(BINDIR)/$(YOUR_APP)-$(ARCH): $(GO_FILES)
 ifndef RELEASE_BUILD
 	$(eval LDFLAGS:=$(RELEASE_LDFLAGS))
 else
 	$(eval LDFLAGS:=$(BUILD_LDFLAGS))
 endif
-	@echo Building YOUR_APP...
+	@echo Building $(YOUR_APP)...
 	mkdir -p bin
 	$(DOCKER_GO_BUILD) \
 	    sh -c 'git config --global url."git@github.com:tigera".insteadOf "https://github.com/tigera" && \
-	           go build -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/YOUR_APP" && \
-               ( ldd $(BINDIR)/YOUR_APP-$(ARCH) 2>&1 | grep -q "Not a valid dynamic program" || \
-	             ( echo "Error: $(BINDIR)/YOUR_APP-$(ARCH) was not statically linked"; false ) )'
+	           go build -o $@ -v $(LDFLAGS) cmd/$(YOUR_APP)/*.go && \
+               ( ldd $(BINDIR)/$(YOUR_APP)-$(ARCH) 2>&1 | grep -q "Not a valid dynamic program" || \
+	             ( echo "Error: $(BINDIR)/$(YOUR_APP)-$(ARCH) was not statically linked"; false ) )'
 
 #############################################
 # Docker Image
@@ -183,10 +186,10 @@ endif
 
 image: $(BUILD_IMAGE)
 $(BUILD_IMAGE): $(BUILD_IMAGE)-$(ARCH)
-$(BUILD_IMAGE)-$(ARCH): $(BINDIR)/YOUR_APP-$(ARCH)
+$(BUILD_IMAGE)-$(ARCH): $(BINDIR)/$(YOUR_APP)-$(ARCH)
 	rm -rf docker-image/bin
 	mkdir -p docker-image/bin
-	cp $(BINDIR)/YOUR_APP-$(ARCH) docker-image/bin/
+	cp $(BINDIR)/$(YOUR_APP)-$(ARCH) docker-image/bin/
 	docker build --pull -t $(BUILD_IMAGE):latest-$(ARCH) --file ./docker-image/Dockerfile.$(ARCH) docker-image
 ifeq ($(ARCH),amd64)
 	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(BUILD_IMAGE):latest
