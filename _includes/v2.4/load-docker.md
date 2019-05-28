@@ -217,6 +217,13 @@
    ```bash
    alias {{include.yaml}}="kubectl exec -i -n kube-system {{include.yaml}} /{{include.yaml}} -- "
    ```
+
+   **Note**: In order to use the `{{include.yaml}}` alias
+   when reading manifests, redirect the file into stdin, for example:
+   ```
+   {{include.yaml}} create -f - < my_manifest.yaml
+   ```
+   {: .alert .alert-success}
 {% endif %}
 
 {% endif %}
