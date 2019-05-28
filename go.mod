@@ -1,4 +1,4 @@
-module github.com/tigera/golang-template
+module github.com/tigera/voltron
 
 go 1.12
 
