@@ -158,7 +158,7 @@ func main() {
 		e, e, e)
 	s.Run(context.Background())
 	defer s.Close()
-	hs := health.NewServer(s, s, healthzSockPort)
+	hs := health.NewServer(health.Pingers{s}, health.Readiers{s}, healthzSockPort)
 	go func() {
 		err := hs.Serve()
 		if err != nil {
