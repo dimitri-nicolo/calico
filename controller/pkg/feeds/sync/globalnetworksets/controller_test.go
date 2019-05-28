@@ -13,7 +13,7 @@ import (
 
 	"github.com/tigera/intrusion-detection/controller/pkg/calico"
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
-	"github.com/tigera/intrusion-detection/controller/pkg/statser"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/statser"
 	"github.com/tigera/intrusion-detection/controller/pkg/util"
 )
 

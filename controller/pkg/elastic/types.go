@@ -45,7 +45,7 @@ func (o *OpenDatafeedOptions) MarshalJSON() ([]byte, error) {
 
 type CloseDatafeedOptions struct {
 	Force   bool
-	Timeout *time.Duration
+	Timeout *Duration
 }
 
 func (o *CloseDatafeedOptions) MarshalJSON() ([]byte, error) {
@@ -72,7 +72,7 @@ func (o *OpenJobOptions) MarshalJSON() ([]byte, error) {
 
 type CloseJobOptions struct {
 	Force   bool
-	Timeout *time.Duration
+	Timeout *Duration
 }
 
 func (o *CloseJobOptions) MarshalJSON() ([]byte, error) {
@@ -91,15 +91,15 @@ type PageOptionsSpec struct {
 }
 
 type GetBucketsOptions struct {
-	Timestamp      *time.Time
+	Timestamp      *Time
 	AnomalyScore   float64
 	Desc           bool
-	End            *time.Time
+	End            *Time
 	ExcludeInterim bool
 	Expand         bool
 	Page           *PageOptionsSpec
 	Sort           *string
-	Start          *time.Time
+	Start          *Time
 }
 
 func (o *GetBucketsOptions) MarshalJSON() ([]byte, error) {
@@ -127,12 +127,12 @@ func (o *GetBucketsOptions) MarshalJSON() ([]byte, error) {
 
 type GetRecordsOptions struct {
 	Desc           bool
-	End            *time.Time
+	End            *Time
 	ExcludeInterim bool
 	Page           *PageOptionsSpec
 	RecordScore    int
 	Sort           *string
-	Start          *time.Time
+	Start          *Time
 }
 
 func (o *GetRecordsOptions) MarshalJSON() ([]byte, error) {
@@ -415,12 +415,14 @@ type InfluencerSpec struct {
 	FieldValues []interface{} `json:"influencer_field_values"`
 }
 
-type Duration time.Duration
+type Duration struct {
+	time.Duration
+}
 
 func (f *Duration) UnmarshalJSON(data []byte) error {
 	var i int64
 	if err := json.Unmarshal(data, &i); err == nil {
-		*f = Duration(time.Second * time.Duration(i))
+		f.Duration = time.Second * time.Duration(i)
 		return nil
 	}
 	var s string
@@ -431,21 +433,23 @@ func (f *Duration) UnmarshalJSON(data []byte) error {
 	if err != nil {
 		return err
 	}
-	*f = Duration(d)
+	f.Duration = d
 	return nil
 }
 
 func (f *Duration) MarshalJSON() ([]byte, error) {
-	s := time.Duration(*f).String()
+	s := time.Duration(f.Duration).String()
 	return json.Marshal(&s)
 }
 
-type Time time.Time
+type Time struct {
+	time.Time
+}
 
 func (t *Time) UnmarshalJSON(data []byte) error {
 	var i int64
 	if err := json.Unmarshal(data, &i); err == nil {
-		*t = Time(time.Unix(i/1000, (time.Duration(i%1000) * time.Millisecond).Nanoseconds()))
+		t.Time = time.Time(time.Unix(i/1000, (time.Duration(i%1000) * time.Millisecond).Nanoseconds()))
 		return nil
 	}
 	var s string
@@ -456,11 +460,11 @@ func (t *Time) UnmarshalJSON(data []byte) error {
 	if err != nil {
 		return err
 	}
-	*t = Time(tm)
+	t.Time = tm
 	return nil
 }
 
 func (t *Time) MarshalJSON() ([]byte, error) {
-	s := time.Time(*t).Format(time.RFC3339)
+	s := time.Time(t.Time).Format(time.RFC3339)
 	return json.Marshal(&s)
 }

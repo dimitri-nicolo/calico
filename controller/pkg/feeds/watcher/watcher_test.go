@@ -18,10 +18,10 @@ import (
 
 	"github.com/tigera/intrusion-detection/controller/pkg/calico"
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
-	"github.com/tigera/intrusion-detection/controller/pkg/puller"
-	"github.com/tigera/intrusion-detection/controller/pkg/statser"
-	"github.com/tigera/intrusion-detection/controller/pkg/sync/elasticipsets"
-	"github.com/tigera/intrusion-detection/controller/pkg/sync/globalnetworksets"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/puller"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/statser"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/sync/elasticipsets"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/sync/globalnetworksets"
 	"github.com/tigera/intrusion-detection/controller/pkg/util"
 )
 

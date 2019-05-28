@@ -11,9 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/sync/elasticipsets"
-
-	"github.com/tigera/intrusion-detection/controller/pkg/sync/globalnetworksets"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/sync/elasticipsets"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/sync/globalnetworksets"
 
 	. "github.com/onsi/gomega"
 	v32 "github.com/projectcalico/libcalico-go/lib/apis/v3"
@@ -22,7 +21,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
-	"github.com/tigera/intrusion-detection/controller/pkg/statser"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/statser"
 	"github.com/tigera/intrusion-detection/controller/pkg/util"
 )
 

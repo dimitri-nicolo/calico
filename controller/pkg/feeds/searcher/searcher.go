@@ -11,8 +11,8 @@ import (
 	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/statser"
 	"github.com/tigera/intrusion-detection/controller/pkg/runloop"
-	"github.com/tigera/intrusion-detection/controller/pkg/statser"
 )
 
 type FlowSearcher interface {

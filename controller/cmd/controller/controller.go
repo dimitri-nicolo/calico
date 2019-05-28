@@ -23,10 +23,10 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/elastic"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/sync/elasticipsets"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/sync/globalnetworksets"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/watcher"
 	"github.com/tigera/intrusion-detection/controller/pkg/health"
-	"github.com/tigera/intrusion-detection/controller/pkg/sync/elasticipsets"
-	"github.com/tigera/intrusion-detection/controller/pkg/sync/globalnetworksets"
-	"github.com/tigera/intrusion-detection/controller/pkg/watcher"
 )
 
 const (

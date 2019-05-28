@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
-	"github.com/tigera/intrusion-detection/controller/pkg/statser"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/statser"
 )
 
 type MockGlobalNetworkSetController struct {

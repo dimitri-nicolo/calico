@@ -19,12 +19,12 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/puller"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/searcher"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/statser"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/sync/elasticipsets"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/sync/globalnetworksets"
 	"github.com/tigera/intrusion-detection/controller/pkg/health"
-	"github.com/tigera/intrusion-detection/controller/pkg/puller"
-	"github.com/tigera/intrusion-detection/controller/pkg/searcher"
-	"github.com/tigera/intrusion-detection/controller/pkg/statser"
-	"github.com/tigera/intrusion-detection/controller/pkg/sync/elasticipsets"
-	"github.com/tigera/intrusion-detection/controller/pkg/sync/globalnetworksets"
 	"github.com/tigera/intrusion-detection/controller/pkg/util"
 )
 

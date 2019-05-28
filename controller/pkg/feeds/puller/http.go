@@ -20,10 +20,10 @@ import (
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/statser"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/sync/elasticipsets"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/sync/globalnetworksets"
 	"github.com/tigera/intrusion-detection/controller/pkg/runloop"
-	"github.com/tigera/intrusion-detection/controller/pkg/statser"
-	"github.com/tigera/intrusion-detection/controller/pkg/sync/elasticipsets"
-	"github.com/tigera/intrusion-detection/controller/pkg/sync/globalnetworksets"
 	"github.com/tigera/intrusion-detection/controller/pkg/util"
 )
 
