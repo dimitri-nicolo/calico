@@ -80,7 +80,6 @@ RELEASE_LDFLAGS=-ldflags "$(VERSION_FLAGS) -s -w"
 # Env vars related to building, packaging 
 # and releasing
 #############################################
-YOUR_APP?=hello
 BUILD_IMAGE?=tigera/$(YOUR_APP)
 PUSH_IMAGES?=gcr.io/unique-caldron-775/cnx/$(BUILD_IMAGE)
 RELEASE_IMAGES?=quay.io/$(BUILD_IMAGE)
@@ -190,7 +189,7 @@ $(BUILD_IMAGE)-$(ARCH): $(BINDIR)/$(YOUR_APP)-$(ARCH)
 	rm -rf docker-image/bin
 	mkdir -p docker-image/bin
 	cp $(BINDIR)/$(YOUR_APP)-$(ARCH) docker-image/bin/
-	docker build --pull -t $(BUILD_IMAGE):latest-$(ARCH) --file ./docker-image/Dockerfile.$(ARCH) docker-image
+	docker build --pull -t $(BUILD_IMAGE):latest-$(ARCH) --file ./docker-image/Dockerfile-$(YOUR_APP).$(ARCH) docker-image
 ifeq ($(ARCH),amd64)
 	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(BUILD_IMAGE):latest
 endif

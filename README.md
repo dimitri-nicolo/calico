@@ -1,6 +1,20 @@
 # voltron
 Components for managing multiple clusters through a single management plane
 
+## Build apps
+
+Build demux:
+
+```
+YOUR_APP=demux make demux
+```
+
+Build agent:
+
+```
+YOUR_APP=agent make agent
+```
+
 ## 1. Go Directories
 
 ### `/cmd`
