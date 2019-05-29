@@ -44,7 +44,7 @@ func ConvertFlowLog(flowLog FlowLogJSONOutput, key string, hit *elastic.SearchHi
 		DestNamespace:    flowLog.DestNamespace,
 		DestName:         flowLog.DestName,
 		FlowAction:       flowLog.Action,
-		Feeds:            append(feeds),
+		Sources:          append(feeds),
 		SuspiciousPrefix: nil,
 	}
 }

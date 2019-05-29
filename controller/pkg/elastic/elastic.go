@@ -124,7 +124,7 @@ func (e *Elastic) PutIPSet(ctx context.Context, name string, set db.IPSetSpec) e
 }
 
 func (e *Elastic) ensureIndexExists(ctx context.Context, idx, mapping string) error {
-	// Ensure Index exists
+	// Ensure Index exists, or update mappings if it does
 	exists, err := e.c.IndexExists(idx).Do(ctx)
 	if err != nil {
 		return err
@@ -136,6 +136,14 @@ func (e *Elastic) ensureIndexExists(ctx context.Context, idx, mapping string) er
 		}
 		if !r.Acknowledged {
 			return fmt.Errorf("not acknowledged index %s create", idx)
+		}
+	} else {
+		r, err := e.c.PutMapping().Index(idx).BodyString(mapping).Do(ctx)
+		if err != nil {
+			return err
+		}
+		if !r.Acknowledged {
+			return fmt.Errorf("not acknowledged index %s update", idx)
 		}
 	}
 	return nil

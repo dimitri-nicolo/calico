@@ -22,6 +22,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
+	watcher2 "github.com/tigera/intrusion-detection/controller/pkg/anomaly/watcher"
 	"github.com/tigera/intrusion-detection/controller/pkg/elastic"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/sync/elasticipsets"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/sync/globalnetworksets"
@@ -158,7 +159,12 @@ func main() {
 		e, e, e)
 	s.Run(context.Background())
 	defer s.Close()
-	hs := health.NewServer(health.Pingers{s}, health.Readiers{s}, healthzSockPort)
+
+	a := watcher2.NewWatcher(e, e)
+	a.Run(context.Background())
+	defer a.Close()
+
+	hs := health.NewServer(health.Pingers{s, a}, health.Readiers{s, a}, healthzSockPort)
 	go func() {
 		err := hs.Serve()
 		if err != nil {

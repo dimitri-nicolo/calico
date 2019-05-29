@@ -35,6 +35,7 @@ require (
 	github.com/sirupsen/logrus v1.4.0
 	github.com/spf13/pflag v1.0.3 // indirect
 	github.com/tigera/calico-k8sapiserver v2.4.0-0.dev.0.20190415231917-ffe2bbf68dd1+incompatible
+	golang.org/x/sync v0.0.0-20181108010431-42b317875d0f
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	k8s.io/api v0.0.0-20180308224125-73d903622b73

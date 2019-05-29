@@ -75,11 +75,14 @@ const eventMapping = `{
         "flow_action": {
             "type": "keyword"
         },
-        "feeds": {
+        "sources": {
             "type": "keyword"
         },
         "suspicious_prefix": {
             "type": "keyword"
+        },
+        "anomaly_record": {
+            "type": "object"
         }
       }   
     }

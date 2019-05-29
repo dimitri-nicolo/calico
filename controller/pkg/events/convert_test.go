@@ -72,11 +72,11 @@ func TestConvertFlowLogSourceIP(t *testing.T) {
 		DestNamespace:    "internet",
 		DestName:         "dest-foo",
 		FlowAction:       "allow",
-		Feeds:            []string{"testfeed"},
+		Sources:          []string{"testfeed"},
 		SuspiciousPrefix: nil,
 	}
 
-	actual := ConvertFlowLog(tc, "source_ip", hit, expected.Feeds...)
+	actual := ConvertFlowLog(tc, "source_ip", hit, expected.Sources...)
 
 	g.Expect(actual).Should(Equal(expected), "Generated SecurityEvent matches expectations")
 	g.Expect(actual.ID()).Should(Equal("testfeed-123-tcp-1.2.3.4-443-2.3.4.5-80"))
@@ -143,11 +143,11 @@ func TestConvertFlowLogDestIP(t *testing.T) {
 		DestNamespace:    "internet",
 		DestName:         "dest-foo",
 		FlowAction:       "allow",
-		Feeds:            []string{"testfeed"},
+		Sources:          []string{"testfeed"},
 		SuspiciousPrefix: nil,
 	}
 
-	actual := ConvertFlowLog(tc, "dest_ip", hit, expected.Feeds...)
+	actual := ConvertFlowLog(tc, "dest_ip", hit, expected.Sources...)
 
 	g.Expect(actual).Should(Equal(expected), "Generated SecurityEvent matches expectations")
 	g.Expect(actual.ID()).Should(Equal("testfeed-123-tcp-1.2.3.4-443-2.3.4.5-80"))
@@ -214,11 +214,11 @@ func TestConvertFlowLogUnknown(t *testing.T) {
 		DestNamespace:    "internet",
 		DestName:         "dest-foo",
 		FlowAction:       "allow",
-		Feeds:            []string{"testfeed"},
+		Sources:          []string{"testfeed"},
 		SuspiciousPrefix: nil,
 	}
 
-	actual := ConvertFlowLog(tc, "unknown", hit, expected.Feeds...)
+	actual := ConvertFlowLog(tc, "unknown", hit, expected.Sources...)
 
 	g.Expect(actual).Should(Equal(expected), "Generated SecurityEvent matches expectations")
 	g.Expect(actual.ID()).Should(Equal("testfeed-123-tcp-1.2.3.4-443-2.3.4.5-80"))
