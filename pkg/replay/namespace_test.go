@@ -244,7 +244,8 @@ func (c *mockNamespaceTestClient) GetAuditEvents(cxt context.Context, start *tim
 	if (c.getAuditCalls == 1 && c.deleteBeforeSync) || (c.getAuditCalls == 2 && !c.deleteBeforeSync) {
 		ch <- &event.AuditEventResult{
 			Event: &auditv1.Event{
-				Verb: event.VerbDelete,
+				Stage: auditv1.StageResponseComplete,
+				Verb:  event.VerbDelete,
 				ObjectRef: &auditv1.ObjectReference{
 					Resource:        "namespaces",
 					Name:            namespace1,

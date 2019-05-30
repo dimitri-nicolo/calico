@@ -30,14 +30,14 @@ var (
 )
 
 type tester struct {
-	l        labelselector.Interface
+	l        labelselector.LabelSelector
 	policies set.Set
 	pods     set.Set
 }
 
 func newTester() *tester {
 	return &tester{
-		l:        labelselector.NewLabelSelection(),
+		l:        labelselector.New(),
 		policies: set.New(),
 		pods:     set.New(),
 	}

@@ -1,3 +1,4 @@
+// Copyright (c) 2019 Tigera, Inc. All rights reserved.
 package main
 
 import (
@@ -5,7 +6,6 @@ import (
 	"flag"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 
 	log "github.com/sirupsen/logrus"
@@ -16,6 +16,11 @@ import (
 	"github.com/tigera/compliance/pkg/elastic"
 	"github.com/tigera/compliance/pkg/report"
 	"github.com/tigera/compliance/pkg/version"
+)
+
+const (
+	// The health name for the reporter component.
+	healthReporterName = "compliance-reporter"
 )
 
 func main() {
@@ -32,6 +37,16 @@ func main() {
 	cfg := config.MustLoadConfig()
 	cfg.InitializeLogging()
 
+	// Create a health check aggregator and start the health check service.
+	h := health.NewHealthAggregator()
+	h.ServeHTTP(cfg.HealthEnabled, cfg.HealthHost, cfg.HealthPort)
+	h.RegisterReporter(healthReporterName, &health.HealthReport{Live: true}, cfg.HealthTimeout)
+
+	// Define a function that can be used to report health.
+	healthy := func() {
+		h.Report(healthReporterName, &health.HealthReport{Live: true})
+	}
+
 	// Init elastic.
 	elasticClient := elastic.MustGetElasticClient(cfg)
 
@@ -45,22 +60,12 @@ func main() {
 		cancel()
 	}()
 
-	// Create a health check aggregator and start the health check service.
-	h := health.NewHealthAggregator()
-	h.ServeHTTP(cfg.HealthEnabled, cfg.HealthHost, cfg.HealthPort)
+	// Indicate healthy.
+	healthy()
 
 	// Run the reporter.
-	log.Debugf("Elastic: %v", elasticClient)
-	wg := sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		err := report.Run(cxt, cfg, h, elasticClient, elasticClient, elasticClient, elasticClient, elasticClient)
-		if err != nil {
-			log.Errorf("Hit terminating error in reporter: %v", err)
-		}
-		wg.Done()
-	}()
-
-	// Wait until all snapshotters have exited.
-	wg.Wait()
+	log.Debug("Running reporter")
+	if err := report.Run(cxt, cfg, healthy, elasticClient, elasticClient, elasticClient, elasticClient, elasticClient); err != nil {
+		log.Panicf("Hit terminating error in reporter: %v", err)
+	}
 }

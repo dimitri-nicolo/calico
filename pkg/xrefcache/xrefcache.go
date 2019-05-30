@@ -4,13 +4,13 @@ package xrefcache
 import (
 	"container/heap"
 
-	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
+	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/dispatcher"
 	"github.com/tigera/compliance/pkg/keyselector"
 	"github.com/tigera/compliance/pkg/labelselector"
@@ -18,16 +18,19 @@ import (
 )
 
 // NewXrefCache creates a new cross-referenced XrefCache.
-func NewXrefCache(healthy func()) XrefCache {
-	// Create a dispatcher for use internally within the cross reference cache. The resources passed around in this
-	// dispatcher will be augmented from the basic resource provided by the syncer.
-	cacheDispatcher := dispatcher.NewDispatcher("cache")
-
+func NewXrefCache(cfg *config.Config, healthy func()) XrefCache {
 	// Create a dispatcher for the syncer. This simply fans out the original update to the appropriate cache responsible
-	// for storing that resource kind.
+	// for storing that resource kind. The resources contained will be the original Calico or Kubernetes resource types.
 	syncerDispatcher := dispatcher.NewDispatcher("syncer")
 
-	// Create a dispatcher sending events to the consumer of the cross reference cache.
+	// Create a dispatcher for use internally within the cross reference cache. The resources passed around in this
+	// dispatcher will be augmented from the basic resource provided by the syncer - these will be the various
+	// CacheEntry**** resource types.
+	cacheDispatcher := dispatcher.NewDispatcher("cache")
+
+	// Create a dispatcher sending events to the consumer of the cross reference cache. The resources passed around in
+	// dispatcher will be augmented from the basic resource provided by the syncer - these will be the various
+	// CacheEntry**** resource types.
 	consumerDispatcher := dispatcher.NewDispatcher("consumer")
 
 	// Register the cache dispatcher as a consumer of status events with the syncer dispatcher (basically this passes
@@ -35,28 +38,24 @@ func NewXrefCache(healthy func()) XrefCache {
 	syncerDispatcher.RegisterOnStatusUpdateHandler(cacheDispatcher.OnStatusUpdate)
 
 	// Label handler for endpoint matches.
-	endpointLabelSelection := labelselector.NewLabelSelection()
+	endpointLabelSelection := labelselector.New()
 
 	// Label handler for positive network set matches. We don't currently need to track negated matches.
-	netsetLabelSelection := labelselector.NewLabelSelection()
+	netsetLabelSelection := labelselector.New()
 
 	// Policy to rule selection manager
 	networkPolicyRuleSelectorManager := NewNetworkPolicyRuleSelectorManager(syncerDispatcher.OnUpdate)
 
-	// Initialize the config.
-	config := &Config{}
-	envconfig.MustProcess("TIGERA_COMPLIANCE", config)
-
 	// Create the various engines that underpin the separate resource caches. This list is ordered by recalculation
 	// queue priority (highest index, highest priority).
-	allEngines := []resourceCacheEngine{
-		newEndpointsEngine(config),
-		newK8sServiceEndpointsEngine(),
-		newK8sNamespacesEngine(),
-		newK8sServiceAccountsEngine(),
-		newNetworkPoliciesEngine(),
+	allEngines := []resourceHandler{
+		newEndpointHandler(cfg),
+		newServiceEndpointsHandler(),
+		newNamespacesHandler(),
+		newServiceAccountHandler(),
+		newNetworkPolicyHandler(),
 		newNetworkPolicyRuleSelectorsEngine(),
-		newCalicoGlobalNetworkSetEngine(),
+		newNetworkSetHandler(),
 	}
 
 	c := &xrefCache{
@@ -87,6 +86,10 @@ func NewXrefCache(healthy func()) XrefCache {
 		}
 	}
 
+	// Register the endpoints label selector with the xrefcache in-scope callbacks to track which resources are
+	// flagged as in-scope.
+	c.endpointLabelSelector.RegisterCallbacks(KindsInScopeSelection, c.inScopeStarted, c.inScopeStopped)
+
 	return c
 }
 
@@ -97,10 +100,10 @@ type xrefCache struct {
 	syncerDispatcher                 dispatcher.Dispatcher
 	cacheDispatcher                  dispatcher.Dispatcher
 	consumerDispatcher               dispatcher.Dispatcher
-	endpointLabelSelector            labelselector.Interface
-	networkSetLabelSelector          labelselector.Interface
+	endpointLabelSelector            labelselector.LabelSelector
+	networkSetLabelSelector          labelselector.LabelSelector
 	networkPolicyRuleSelectorManager NetworkPolicyRuleSelectorManager
-	ipOrEndpointManager              keyselector.Interface
+	ipOrEndpointManager              keyselector.KeySelector
 	caches                           map[metav1.TypeMeta]*resourceCache
 	priorities                       map[metav1.TypeMeta]int8
 	modified                         PriorityQueue
@@ -238,7 +241,7 @@ func (x *xrefCache) processQueue() {
 		if updates&^EventsNotRequiringRecalculation != 0 {
 			// The set of updates that have been queued do require some recalculation, therefore recalculate the entry,
 			// combine the response with the existing set of update types.
-			updates |= cache.engine.recalculate(id, entry)
+			updates |= cache.handler.recalculate(id, entry)
 		}
 
 		// Notify interested caches of changes to this entry. Always include the in-scope flag if the entry is in-scope.
@@ -289,6 +292,26 @@ func (x *xrefCache) RegisterInScopeEndpoints(selection *apiv3.EndpointsSelection
 	}
 	x.endpointLabelSelector.UpdateSelector(resId, sel)
 	return nil
+}
+
+// inScopeStarted is called from the endpointLabelSelector when an endpoint matches the in-scope selector.
+func (x *xrefCache) inScopeStarted(sel, id apiv3.ResourceID) {
+	r := x.Get(id)
+	if r == nil {
+		// This is called synchronously from the resource update methods, so we don't expect the entries to have been
+		// removed from the cache at this point.
+		log.Errorf("In-scope match started, but resource is not in cache: %s matches %s", sel, id)
+		return
+	}
+	// Set the resource as in-scope and queue an update so that listeners are notified.
+	log.Debugf("Setting entry as in-scope: %s", id)
+	r.setInscope()
+	x.queueUpdate(id, r, EventInScope)
+}
+
+// inScopeStarted is called from the endpointLabelSelector when an endpoint no longer matches the in-scope selector.
+func (x *xrefCache) inScopeStopped(sel, epId apiv3.ResourceID) {
+	// no-op - we don't care about endpoints going out of scope.
 }
 
 // queueUpdate adds this update to the priority queue. The priority is determined by the resource kind.

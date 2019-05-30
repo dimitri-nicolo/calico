@@ -13,6 +13,7 @@ import (
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
+	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/resources"
 	"github.com/tigera/compliance/pkg/syncer"
 	"github.com/tigera/compliance/pkg/xrefcache"
@@ -22,7 +23,7 @@ import (
 // resource types, and to query current state of the cache.
 func NewXrefCacheTester() *XrefCacheTester {
 	return &XrefCacheTester{
-		XrefCache: xrefcache.NewXrefCache(func() {
+		XrefCache: xrefcache.NewXrefCache(config.MustLoadConfig(), func() {
 			log.Info("Healthy notification from xref cache")
 		}),
 	}
@@ -219,13 +220,13 @@ func (t *XrefCacheTester) DeleteHostEndpoint(nameIdx Name) {
 // -- Tier access --
 //
 
-func (t *XrefCacheTester) GetTier(nameIdx Name) *xrefcache.CacheEntryCalicoNetworkSet {
+func (t *XrefCacheTester) GetTier(nameIdx Name) *xrefcache.CacheEntryNetworkSet {
 	r := getResourceId(resources.TypeCalicoTiers, nameIdx, 0)
 	e := t.Get(r)
 	if e == nil {
 		return nil
 	}
-	return e.(*xrefcache.CacheEntryCalicoNetworkSet)
+	return e.(*xrefcache.CacheEntryNetworkSet)
 }
 
 func (t *XrefCacheTester) SetTier(nameIdx Name, order float64) {
@@ -255,13 +256,13 @@ func (t *XrefCacheTester) DeleteTier(nameIdx Name) {
 // -- GlobalNetworkSet access --
 //
 
-func (t *XrefCacheTester) GetGlobalNetworkSet(nameIdx Name) *xrefcache.CacheEntryCalicoNetworkSet {
+func (t *XrefCacheTester) GetGlobalNetworkSet(nameIdx Name) *xrefcache.CacheEntryNetworkSet {
 	r := getResourceId(resources.TypeCalicoGlobalNetworkSets, nameIdx, 0)
 	e := t.Get(r)
 	if e == nil {
 		return nil
 	}
-	return e.(*xrefcache.CacheEntryCalicoNetworkSet)
+	return e.(*xrefcache.CacheEntryNetworkSet)
 }
 
 func (t *XrefCacheTester) SetGlobalNetworkSet(nameIdx Name, labels Label, nets Net) {
@@ -507,13 +508,13 @@ func (t *XrefCacheTester) DeletePod(nameIdx Name, namespaceIdx Namespace) {
 // -- K8s Endpoints access --
 //
 
-func (t *XrefCacheTester) GetEndpoints(nameIdx Name, namespaceIdx Namespace) *xrefcache.CacheEntryK8sServiceEndpoints {
+func (t *XrefCacheTester) GetEndpoints(nameIdx Name, namespaceIdx Namespace) *xrefcache.CacheEntryServiceEndpoints {
 	r := getResourceId(resources.TypeK8sEndpoints, nameIdx, namespaceIdx)
 	e := t.Get(r)
 	if e == nil {
 		return nil
 	}
-	return e.(*xrefcache.CacheEntryK8sServiceEndpoints)
+	return e.(*xrefcache.CacheEntryServiceEndpoints)
 }
 
 func (t *XrefCacheTester) SetEndpoints(nameIdx Name, namespaceIdx Namespace, ips IP, pods ...apiv3.ResourceID) resources.Resource {
@@ -582,13 +583,13 @@ func (t *XrefCacheTester) DeleteEndpoints(nameIdx Name, namespaceIdx Namespace) 
 // -- K8s ServiceAccounts access --
 //
 
-func (t *XrefCacheTester) GetServiceAccount(nameIdx Name, namespaceIdx Namespace) *xrefcache.CacheEntryK8sServiceAccount {
+func (t *XrefCacheTester) GetServiceAccount(nameIdx Name, namespaceIdx Namespace) *xrefcache.CacheEntryServiceAccount {
 	r := getResourceId(resources.TypeK8sServiceAccounts, nameIdx, namespaceIdx)
 	e := t.Get(r)
 	if e == nil {
 		return nil
 	}
-	return e.(*xrefcache.CacheEntryK8sServiceAccount)
+	return e.(*xrefcache.CacheEntryServiceAccount)
 }
 
 func (t *XrefCacheTester) SetServiceAccount(nameIdx Name, namespaceIdx Namespace, labels Label) resources.Resource {
@@ -617,13 +618,13 @@ func (t *XrefCacheTester) DeleteServiceAccount(nameIdx Name, namespaceIdx Namesp
 // -- K8s Namespaces access --
 //
 
-func (t *XrefCacheTester) GetNamespace(namespaceIdx Namespace) *xrefcache.CacheEntryK8sNamespace {
+func (t *XrefCacheTester) GetNamespace(namespaceIdx Namespace) *xrefcache.CacheEntryNamespace {
 	r := getResourceId(resources.TypeK8sNamespaces, 0, namespaceIdx)
 	e := t.Get(r)
 	if e == nil {
 		return nil
 	}
-	return e.(*xrefcache.CacheEntryK8sNamespace)
+	return e.(*xrefcache.CacheEntryNamespace)
 }
 
 func (t *XrefCacheTester) SetNamespace(namespaceIdx Namespace, labels Label) resources.Resource {

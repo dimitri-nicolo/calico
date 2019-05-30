@@ -179,20 +179,20 @@ func (v *versionedK8sNetworkPolicy) isNamespaced() bool {
 	return true
 }
 
-// newNetworkPoliciesEngine creates a new engine used for the NetworkPolicy cache.
-func newNetworkPoliciesEngine() resourceCacheEngine {
-	return &networkPolicyEngine{}
+// newNetworkPolicyHandler creates a new handler used for the NetworkPolicy cache.
+func newNetworkPolicyHandler() resourceHandler {
+	return &networkPolicyHandler{}
 }
 
-// networkPolicyEngine implements the resourceCacheEngine interface for the NetworkPolicy cache.
-type networkPolicyEngine struct {
-	engineCache
+// networkPolicyHandler implements the resourceHandler interface for the NetworkPolicy cache.
+type networkPolicyHandler struct {
+	CacheAccessor
 	converter conversion.Converter
 }
 
-// register implements the resourceCacheEngine interface.
-func (c *networkPolicyEngine) register(cache engineCache) {
-	c.engineCache = cache
+// register implements the resourceHandler interface.
+func (c *networkPolicyHandler) register(cache CacheAccessor) {
+	c.CacheAccessor = cache
 
 	// Register with the endpoint and netset label selectors for notification of match start/stops.
 	c.EndpointLabelSelector().RegisterCallbacks(c.kinds(), c.endpointMatchStarted, c.endpointMatchStopped)
@@ -210,13 +210,13 @@ func (c *networkPolicyEngine) register(cache engineCache) {
 	}
 }
 
-// register implements the resourceCacheEngine interface.
-func (c *networkPolicyEngine) kinds() []metav1.TypeMeta {
+// register implements the resourceHandler interface.
+func (c *networkPolicyHandler) kinds() []metav1.TypeMeta {
 	return KindsNetworkPolicy
 }
 
-// newCacheEntry implements the resourceCacheEngine interface.
-func (c *networkPolicyEngine) newCacheEntry() CacheEntry {
+// newCacheEntry implements the resourceHandler interface.
+func (c *networkPolicyHandler) newCacheEntry() CacheEntry {
 	return &CacheEntryNetworkPolicy{
 		AllowRuleSelectors:    resources.NewSet(),
 		SelectedPods:          resources.NewSet(),
@@ -224,8 +224,8 @@ func (c *networkPolicyEngine) newCacheEntry() CacheEntry {
 	}
 }
 
-// resourceAdded implements the resourceCacheEngine interface.
-func (c *networkPolicyEngine) resourceAdded(id apiv3.ResourceID, entry CacheEntry) {
+// resourceAdded implements the resourceHandler interface.
+func (c *networkPolicyHandler) resourceAdded(id apiv3.ResourceID, entry CacheEntry) {
 	// Set the context log.
 	entry.(*CacheEntryNetworkPolicy).clog = log.WithField("policy", id)
 
@@ -233,8 +233,8 @@ func (c *networkPolicyEngine) resourceAdded(id apiv3.ResourceID, entry CacheEntr
 	c.resourceUpdated(id, entry, nil)
 }
 
-// resourceUpdated implements the resourceCacheEngine interface.
-func (c *networkPolicyEngine) resourceUpdated(id apiv3.ResourceID, entry CacheEntry, prev VersionedResource) {
+// resourceUpdated implements the resourceHandler interface.
+func (c *networkPolicyHandler) resourceUpdated(id apiv3.ResourceID, entry CacheEntry, prev VersionedResource) {
 	// Get the augmented resource data.
 	x := entry.(*CacheEntryNetworkPolicy)
 
@@ -246,8 +246,8 @@ func (c *networkPolicyEngine) resourceUpdated(id apiv3.ResourceID, entry CacheEn
 	c.updateRuleSelectors(id, x)
 }
 
-// resourceDeleted implements the resourceCacheEngine interface.
-func (c *networkPolicyEngine) resourceDeleted(id apiv3.ResourceID, res CacheEntry) {
+// resourceDeleted implements the resourceHandler interface.
+func (c *networkPolicyHandler) resourceDeleted(id apiv3.ResourceID, res CacheEntry) {
 	// Delete the label selector for this policy.
 	c.EndpointLabelSelector().DeleteSelector(id)
 
@@ -255,8 +255,8 @@ func (c *networkPolicyEngine) resourceDeleted(id apiv3.ResourceID, res CacheEntr
 	c.NetworkPolicyRuleSelectorManager().DeletePolicy(id)
 }
 
-// recalculate implements the resourceCacheEngine interface.
-func (c *networkPolicyEngine) recalculate(id apiv3.ResourceID, entry CacheEntry) syncer.UpdateType {
+// recalculate implements the resourceHandler interface.
+func (c *networkPolicyHandler) recalculate(id apiv3.ResourceID, entry CacheEntry) syncer.UpdateType {
 	// Async recalculation is required due to any rule/selector updates.
 	x := entry.(*CacheEntryNetworkPolicy)
 
@@ -269,8 +269,8 @@ func (c *networkPolicyEngine) recalculate(id apiv3.ResourceID, entry CacheEntry)
 	return syncer.UpdateType(changed)
 }
 
-// convertToVersioned implements the resourceCacheEngine interface.
-func (c *networkPolicyEngine) convertToVersioned(res resources.Resource) (VersionedResource, error) {
+// convertToVersioned implements the resourceHandler interface.
+func (c *networkPolicyHandler) convertToVersioned(res resources.Resource) (VersionedResource, error) {
 	switch in := res.(type) {
 	case *apiv3.NetworkPolicy:
 		v1, err := updateprocessors.ConvertNetworkPolicyV3ToV1Value(in)
@@ -313,7 +313,7 @@ func (c *networkPolicyEngine) convertToVersioned(res resources.Resource) (Versio
 // updateRuleSelectors reads the set of policy rule selectors and tracks any allow rules selectors (since these are the
 // only ones that could cause exposure to IPs via network sets). To reduce churn, we group identical selector values
 // across all rules and all Policies (so there is a little book keeping required here).
-func (c *networkPolicyEngine) updateRuleSelectors(id apiv3.ResourceID, x *CacheEntryNetworkPolicy) {
+func (c *networkPolicyHandler) updateRuleSelectors(id apiv3.ResourceID, x *CacheEntryNetworkPolicy) {
 	// We care about newSelectors on Allow rules, so lets get the set of newSelectors that we care about for this policy.
 	newSelectors := resources.NewSet()
 
@@ -342,7 +342,7 @@ func (c *networkPolicyEngine) updateRuleSelectors(id apiv3.ResourceID, x *CacheE
 }
 
 // scanIngressRules scans the ingress rules and updates the augmented data for a policy.
-func (c *networkPolicyEngine) scanIngressRules(x *CacheEntryNetworkPolicy) syncer.UpdateType {
+func (c *networkPolicyHandler) scanIngressRules(x *CacheEntryNetworkPolicy) syncer.UpdateType {
 	oldFlags := x.Flags
 
 	// Reset ingress stats based on rules
@@ -416,7 +416,7 @@ func (c *networkPolicyEngine) scanIngressRules(x *CacheEntryNetworkPolicy) synce
 }
 
 // scanEgressRules scans the egress rules and updates the augmented data for a policy.
-func (c *networkPolicyEngine) scanEgressRules(x *CacheEntryNetworkPolicy) syncer.UpdateType {
+func (c *networkPolicyHandler) scanEgressRules(x *CacheEntryNetworkPolicy) syncer.UpdateType {
 	oldFlags := x.Flags
 
 	// Reset egress stats based on rules
@@ -491,7 +491,7 @@ func (c *networkPolicyEngine) scanEgressRules(x *CacheEntryNetworkPolicy) syncer
 
 // scanProtected scans whether the policy has ingress or egress protection and updates its augmented data. This is
 // independent of other resources and may therefore be calculated as part of the resourceAdded or resourceUpdated call.
-func (c *networkPolicyEngine) scanProtected(id apiv3.ResourceID, x *CacheEntryNetworkPolicy) syncer.UpdateType {
+func (c *networkPolicyHandler) scanProtected(id apiv3.ResourceID, x *CacheEntryNetworkPolicy) syncer.UpdateType {
 	oldFlags := x.Flags
 
 	// The policy type can be ingress and/or egress. In terms of statistics, this equates to ingress and/or egress
@@ -512,7 +512,7 @@ func (c *networkPolicyEngine) scanProtected(id apiv3.ResourceID, x *CacheEntryNe
 	return syncer.UpdateType(x.Flags ^ oldFlags)
 }
 
-func (c *networkPolicyEngine) queuePoliciesForRecalculation(update syncer.Update) {
+func (c *networkPolicyHandler) queuePoliciesForRecalculation(update syncer.Update) {
 	// We have only registered for notifications from NetworkSets and for changes to configuration that we care about.
 	x := update.Resource.(*CacheEntryNetworkPolicyRuleSelector)
 
@@ -522,64 +522,64 @@ func (c *networkPolicyEngine) queuePoliciesForRecalculation(update syncer.Update
 	})
 }
 
-func (c *networkPolicyEngine) ruleSelectorMatchStarted(polId, selId apiv3.ResourceID) {
-	x, ok := c.GetFromOurCache(polId).(*CacheEntryNetworkPolicy)
-	if !ok {
-		log.Errorf("Match started on policy, but policy is not in cache: %s matches %s", polId, selId)
-		return
-	}
-	x.clog.Debugf("Adding %s to allowRuleSelectors for %s", selId, polId)
-	x.AllowRuleSelectors.Add(selId)
-	c.QueueUpdate(polId, nil, EventPolicyRuleSelectorMatchStarted)
-}
-
-func (c *networkPolicyEngine) ruleSelectorMatchStopped(polId, selId apiv3.ResourceID) {
-	x, ok := c.GetFromOurCache(polId).(*CacheEntryNetworkPolicy)
-	if !ok {
-		log.Errorf("Match stopped on policy, but policy is not in cache: %s matches %s", polId, selId)
-		return
-	}
-	x.clog.Debugf("Removing %s from allowRuleSelectors for %s", selId, polId)
-	x.AllowRuleSelectors.Discard(selId)
-	c.QueueUpdate(polId, nil, EventPolicyRuleSelectorMatchStopped)
-}
-
-func (c *networkPolicyEngine) endpointMatchStarted(policyId, epId apiv3.ResourceID) {
+func (c *networkPolicyHandler) ruleSelectorMatchStarted(policyId, selectorId apiv3.ResourceID) {
 	x, ok := c.GetFromOurCache(policyId).(*CacheEntryNetworkPolicy)
 	if !ok {
-		log.Errorf("Match started on policy, but policy is not in cache: %s matches %s", policyId, epId)
+		log.Errorf("Match started on policy, but policy is not in cache: %s matches %s", policyId, selectorId)
 		return
 	}
-	switch epId.TypeMeta {
+	x.clog.Debugf("Adding %s to allowRuleSelectors for %s", selectorId, policyId)
+	x.AllowRuleSelectors.Add(selectorId)
+	c.QueueUpdate(policyId, nil, EventPolicyRuleSelectorMatchStarted)
+}
+
+func (c *networkPolicyHandler) ruleSelectorMatchStopped(policyId, selectorId apiv3.ResourceID) {
+	x, ok := c.GetFromOurCache(policyId).(*CacheEntryNetworkPolicy)
+	if !ok {
+		log.Errorf("Match stopped on policy, but policy is not in cache: %s matches %s", policyId, selectorId)
+		return
+	}
+	x.clog.Debugf("Removing %s from allowRuleSelectors for %s", selectorId, policyId)
+	x.AllowRuleSelectors.Discard(selectorId)
+	c.QueueUpdate(policyId, nil, EventPolicyRuleSelectorMatchStopped)
+}
+
+func (c *networkPolicyHandler) endpointMatchStarted(policyId, endpointId apiv3.ResourceID) {
+	x, ok := c.GetFromOurCache(policyId).(*CacheEntryNetworkPolicy)
+	if !ok {
+		log.Errorf("Match started on policy, but policy is not in cache: %s matches %s", policyId, endpointId)
+		return
+	}
+	switch endpointId.TypeMeta {
 	case resources.TypeK8sPods:
 		// Update the pod list in our policy data. No need to queue any policy recalculations since the endpoint
 		// data does not directly affect it.
-		x.clog.Debugf("Adding %s to pods for %s", epId, policyId)
-		x.SelectedPods.Add(epId)
+		x.clog.Debugf("Adding %s to pods for %s", endpointId, policyId)
+		x.SelectedPods.Add(endpointId)
 	case resources.TypeCalicoHostEndpoints:
 		// Update the HEP list in our policy data. No need to queue any policy recalculations since the endpoint
 		// data does not directly affect it.
-		x.clog.Debugf("Adding %s to heps for %s", epId, policyId)
-		x.SelectedHostEndpoints.Add(epId)
+		x.clog.Debugf("Adding %s to heps for %s", endpointId, policyId)
+		x.SelectedHostEndpoints.Add(endpointId)
 	}
 }
 
-func (c *networkPolicyEngine) endpointMatchStopped(policyId, epId apiv3.ResourceID) {
+func (c *networkPolicyHandler) endpointMatchStopped(policyId, endpointId apiv3.ResourceID) {
 	x, ok := c.GetFromOurCache(policyId).(*CacheEntryNetworkPolicy)
 	if !ok {
-		log.Errorf("Match stopped on policy, but policy is not in cache: %s matches %s", policyId, epId)
+		log.Errorf("Match stopped on policy, but policy is not in cache: %s matches %s", policyId, endpointId)
 		return
 	}
-	switch epId.TypeMeta {
+	switch endpointId.TypeMeta {
 	case resources.TypeK8sPods:
 		// Update the pod list in our policy data. No need to queue any policy recalculations since the endpoint
 		// data does not directly affect it.
-		x.clog.Debugf("Removing %s from pods for %s", epId, policyId)
-		x.SelectedPods.Discard(epId)
+		x.clog.Debugf("Removing %s from pods for %s", endpointId, policyId)
+		x.SelectedPods.Discard(endpointId)
 	case resources.TypeCalicoHostEndpoints:
 		// Update the HEP list in our policy data. No need to queue any policy recalculations since the endpoint
 		// data does not directly affect it.
-		x.clog.Debugf("Removing %s from heps for %s", epId, policyId)
-		x.SelectedHostEndpoints.Discard(epId)
+		x.clog.Debugf("Removing %s from heps for %s", endpointId, policyId)
+		x.SelectedHostEndpoints.Discard(endpointId)
 	}
 }

@@ -32,7 +32,7 @@ type VersionedServiceEndpointsResource interface {
 	getIPAndEndpointIDs() (set.Set, error)
 }
 
-type CacheEntryK8sServiceEndpoints struct {
+type CacheEntryServiceEndpoints struct {
 	// The versioned policy resource.
 	VersionedServiceEndpointsResource
 
@@ -46,11 +46,11 @@ type CacheEntryK8sServiceEndpoints struct {
 	clog *log.Entry
 }
 
-func (c *CacheEntryK8sServiceEndpoints) getVersionedResource() VersionedResource {
+func (c *CacheEntryServiceEndpoints) getVersionedResource() VersionedResource {
 	return c.VersionedServiceEndpointsResource
 }
 
-func (c *CacheEntryK8sServiceEndpoints) setVersionedResource(r VersionedResource) {
+func (c *CacheEntryServiceEndpoints) setVersionedResource(r VersionedResource) {
 	c.VersionedServiceEndpointsResource = r.(VersionedServiceEndpointsResource)
 }
 
@@ -95,34 +95,34 @@ func (v *versionedK8sServiceEndpoints) getIPAndEndpointIDs() (set.Set, error) {
 	return s, lastErr
 }
 
-func newK8sServiceEndpointsEngine() resourceCacheEngine {
-	return &K8sServiceEndpointsEngine{}
+func newServiceEndpointsHandler() resourceHandler {
+	return &serviceEndpointsHandler{}
 }
 
-type K8sServiceEndpointsEngine struct {
-	engineCache
+type serviceEndpointsHandler struct {
+	CacheAccessor
 	converter conversion.Converter
 }
 
-func (c *K8sServiceEndpointsEngine) register(cache engineCache) {
-	c.engineCache = cache
+func (c *serviceEndpointsHandler) register(cache CacheAccessor) {
+	c.CacheAccessor = cache
 }
 
-func (c *K8sServiceEndpointsEngine) kinds() []metav1.TypeMeta {
+func (c *serviceEndpointsHandler) kinds() []metav1.TypeMeta {
 	return KindsServiceEndpoints
 }
 
-func (c *K8sServiceEndpointsEngine) newCacheEntry() CacheEntry {
-	return &CacheEntryK8sServiceEndpoints{}
+func (c *serviceEndpointsHandler) newCacheEntry() CacheEntry {
+	return &CacheEntryServiceEndpoints{}
 }
 
-func (c *K8sServiceEndpointsEngine) convertToVersioned(res resources.Resource) (VersionedResource, error) {
+func (c *serviceEndpointsHandler) convertToVersioned(res resources.Resource) (VersionedResource, error) {
 	in := res.(*corev1.Endpoints)
 	return &versionedK8sServiceEndpoints{Endpoints: in}, nil
 }
 
-func (c *K8sServiceEndpointsEngine) resourceAdded(id apiv3.ResourceID, entry CacheEntry) {
-	x := entry.(*CacheEntryK8sServiceEndpoints)
+func (c *serviceEndpointsHandler) resourceAdded(id apiv3.ResourceID, entry CacheEntry) {
+	x := entry.(*CacheEntryServiceEndpoints)
 	x.clog = log.WithField("id", id)
 
 	// Set the Service ID since this is basically the same as the Endpoints with a different kind.
@@ -135,8 +135,8 @@ func (c *K8sServiceEndpointsEngine) resourceAdded(id apiv3.ResourceID, entry Cac
 	c.resourceUpdated(id, entry, nil)
 }
 
-func (c *K8sServiceEndpointsEngine) resourceUpdated(id apiv3.ResourceID, entry CacheEntry, prev VersionedResource) {
-	x := entry.(*CacheEntryK8sServiceEndpoints)
+func (c *serviceEndpointsHandler) resourceUpdated(id apiv3.ResourceID, entry CacheEntry, prev VersionedResource) {
+	x := entry.(*CacheEntryServiceEndpoints)
 	i, err := x.getIPAndEndpointIDs()
 	if err != nil {
 		x.clog.Info("Unable to determine IP addresses or Pod IDs")
@@ -144,13 +144,13 @@ func (c *K8sServiceEndpointsEngine) resourceUpdated(id apiv3.ResourceID, entry C
 	c.IPOrEndpointManager().SetClientKeys(x.Service, i)
 }
 
-func (c *K8sServiceEndpointsEngine) resourceDeleted(id apiv3.ResourceID, entry CacheEntry) {
-	x := entry.(*CacheEntryK8sServiceEndpoints)
+func (c *serviceEndpointsHandler) resourceDeleted(id apiv3.ResourceID, entry CacheEntry) {
+	x := entry.(*CacheEntryServiceEndpoints)
 	c.IPOrEndpointManager().DeleteClient(x.Service)
 }
 
-// recalculate implements the resourceCacheEngine interface.
-func (c *K8sServiceEndpointsEngine) recalculate(podId apiv3.ResourceID, podEntry CacheEntry) syncer.UpdateType {
+// recalculate implements the resourceHandler interface.
+func (c *serviceEndpointsHandler) recalculate(podId apiv3.ResourceID, podEntry CacheEntry) syncer.UpdateType {
 	// We calculate all state in the resourceUpdated/resourceAdded callbacks.
 	return 0
 }

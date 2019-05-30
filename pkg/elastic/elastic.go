@@ -20,6 +20,11 @@ import (
 	"github.com/tigera/compliance/pkg/report"
 )
 
+const (
+	createIndexMaxRetries    = 3
+	createIndexRetryInterval = 1 * time.Second
+)
+
 type Client interface {
 	report.AuditLogReportHandler
 	report.FlowLogReportHandler
@@ -105,13 +110,32 @@ func New(
 	return nil, err
 }
 
+func (c *client) ensureIndexExistsWithRetry(index, mapping string) error {
+	// If multiple threads attempt to create the index at the same time we can end up with errors during the creation
+	// which don't seem to match sensible error codes. Let's just add a retry mechanism and retry the creation a few
+	// times.
+	var err error
+	for i := 0; i < createIndexMaxRetries; i++ {
+		if err = c.ensureIndexExists(index, mapping); err == nil {
+			break
+		}
+		time.Sleep(createIndexRetryInterval)
+	}
+
+	if err != nil {
+		return fmt.Errorf("unable to create index: %v", err)
+	}
+
+	return err
+}
+
 func (c *client) ensureIndexExists(index, mapping string) error {
 	clog := log.WithField("index", index)
 
 	// Check if index exists.
 	exists, err := c.IndexExists(index).Do(context.Background())
 	if err != nil {
-		clog.WithError(err).Error("failed to check if index exists")
+		clog.WithError(err).Info("failed to check if index exists")
 		return err
 	}
 
@@ -132,7 +156,7 @@ func (c *client) ensureIndexExists(index, mapping string) error {
 			clog.Info("index already exists")
 			return nil
 		}
-		clog.WithError(err).Error("failed to create index")
+		clog.WithError(err).Info("failed to create index")
 		return err
 	}
 

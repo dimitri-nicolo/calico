@@ -37,35 +37,36 @@ func (f *Fetcher) GetAuditEvents(ctx context.Context, from, to *time.Time) <-cha
 	return ch
 }
 
-func (f *Fetcher) LoadAuditEvent(verb string, objRef resources.Resource, respObj interface{}, timestamp time.Time, resVer string) {
-	ev := new(auditv1.Event)
-	ev.Verb = verb
-
+func (f *Fetcher) LoadAuditEvent(verb string, stage auditv1.Stage, objRef resources.Resource, respObj interface{}, timestamp time.Time, resVer string) {
 	// Get the resource helper.
 	tm := resources.GetTypeMeta(objRef)
 	rh := resources.GetResourceHelperByTypeMeta(tm)
 
-	// Set the objectRef
-	ev.ObjectRef = &auditv1.ObjectReference{
-		Name:       objRef.GetObjectMeta().GetName(),
-		Namespace:  objRef.GetObjectMeta().GetNamespace(),
-		APIGroup:   objRef.GetObjectKind().GroupVersionKind().Group,
-		APIVersion: objRef.GetObjectKind().GroupVersionKind().Version,
-		Resource:   rh.Plural(),
+	// Create the audit event.
+	ev := &auditv1.Event{
+		Verb:  verb,
+		Stage: stage,
+		ObjectRef: &auditv1.ObjectReference{
+			Name:       objRef.GetObjectMeta().GetName(),
+			Namespace:  objRef.GetObjectMeta().GetNamespace(),
+			APIGroup:   objRef.GetObjectKind().GroupVersionKind().Group,
+			APIVersion: objRef.GetObjectKind().GroupVersionKind().Version,
+			Resource:   rh.Plural(),
+		},
+		StageTimestamp: metav1.MicroTime{timestamp},
 	}
 
-	// Set the resource version
-	objRef.GetObjectMeta().SetResourceVersion(resVer)
-
-	// Set the response object.
-	resJson, err := json.Marshal(respObj)
-	ev.ResponseObject = &runtime.Unknown{Raw: resJson}
-	if err != nil {
-		panic(err)
+	// Set the response object if this is a response complete stage event.
+	if stage == auditv1.StageResponseComplete {
+		if obj, ok := respObj.(resources.Resource); ok {
+			obj.GetObjectMeta().SetResourceVersion(resVer)
+		}
+		resJson, err := json.Marshal(respObj)
+		ev.ResponseObject = &runtime.Unknown{Raw: resJson}
+		if err != nil {
+			panic(err)
+		}
 	}
-
-	// Set the timestamp.
-	ev.StageTimestamp = metav1.MicroTime{timestamp}
 
 	// Append to event array
 	f.data[tm] = append(f.data[tm], &event.AuditEventResult{ev, nil})

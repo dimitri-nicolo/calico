@@ -29,9 +29,9 @@ type VersionedNetworkSetResource interface {
 	isNamespaced() bool
 }
 
-// CacheEntryCalicoNetworkSet is a cache entry in the network set cache. Each entry implements the CacheEntry
+// CacheEntryNetworkSet is a cache entry in the network set cache. Each entry implements the CacheEntry
 // interface.
-type CacheEntryCalicoNetworkSet struct {
+type CacheEntryNetworkSet struct {
 	// The versioned network set resource.
 	VersionedNetworkSetResource
 
@@ -47,12 +47,12 @@ type CacheEntryCalicoNetworkSet struct {
 }
 
 // getVersionedResource implements the CacheEntry interface.
-func (c *CacheEntryCalicoNetworkSet) getVersionedResource() VersionedResource {
+func (c *CacheEntryNetworkSet) getVersionedResource() VersionedResource {
 	return c.VersionedNetworkSetResource
 }
 
 // setVersionedResource implements the CacheEntry interface.
-func (c *CacheEntryCalicoNetworkSet) setVersionedResource(r VersionedResource) {
+func (c *CacheEntryNetworkSet) setVersionedResource(r VersionedResource) {
 	c.VersionedNetworkSetResource = r.(VersionedNetworkSetResource)
 }
 
@@ -82,60 +82,60 @@ func (v *versionedCalicoGlobalNetworkSet) isNamespaced() bool {
 	return false
 }
 
-// newCalicoGlobalNetworkSetEngine creates a new engine used for the NetworkSet cache.
-func newCalicoGlobalNetworkSetEngine() resourceCacheEngine {
-	return &calicoNetworkSetEngine{}
+// newNetworkSetHandler creates a new handler used for the NetworkSet cache.
+func newNetworkSetHandler() resourceHandler {
+	return &networkSetHandler{}
 }
 
-// calicoNetworkSetEngine implements the resourceCacheEngine interface for the network set cache.
-type calicoNetworkSetEngine struct {
-	engineCache
+// networkSetHandler implements the resourceHandler interface for the network set cache.
+type networkSetHandler struct {
+	CacheAccessor
 }
 
-// register implements the resourceCacheEngine interface.
-func (c *calicoNetworkSetEngine) register(cache engineCache) {
-	c.engineCache = cache
+// register implements the resourceHandler interface.
+func (c *networkSetHandler) register(cache CacheAccessor) {
+	c.CacheAccessor = cache
 
 	// Register with the allow-rule label seletor so that we can track which allow rules are using this NetworkSet.
 	c.NetworkSetLabelSelector().RegisterCallbacks(c.kinds(), c.selectorMatchStarted, c.selectorMatchStopped)
 }
 
-// kinds implements the resourceCacheEngine interface.
-func (c *calicoNetworkSetEngine) kinds() []metav1.TypeMeta {
+// kinds implements the resourceHandler interface.
+func (c *networkSetHandler) kinds() []metav1.TypeMeta {
 	return KindsNetworkSet
 }
 
-// newCacheEntry implements the resourceCacheEngine interface.
-func (c *calicoNetworkSetEngine) newCacheEntry() CacheEntry {
-	return &CacheEntryCalicoNetworkSet{
+// newCacheEntry implements the resourceHandler interface.
+func (c *networkSetHandler) newCacheEntry() CacheEntry {
+	return &CacheEntryNetworkSet{
 		PolicyRuleSelectors: resources.NewSet(),
 	}
 }
 
-// resourceAdded implements the resourceCacheEngine interface.
-func (c *calicoNetworkSetEngine) resourceAdded(id apiv3.ResourceID, entry CacheEntry) {
-	entry.(*CacheEntryCalicoNetworkSet).clog = log.WithField("id", id)
+// resourceAdded implements the resourceHandler interface.
+func (c *networkSetHandler) resourceAdded(id apiv3.ResourceID, entry CacheEntry) {
+	entry.(*CacheEntryNetworkSet).clog = log.WithField("id", id)
 	c.resourceUpdated(id, entry, nil)
 }
 
-// resourceUpdated implements the resourceCacheEngine interface.
-func (c *calicoNetworkSetEngine) resourceUpdated(id apiv3.ResourceID, entry CacheEntry, prev VersionedResource) {
+// resourceUpdated implements the resourceHandler interface.
+func (c *networkSetHandler) resourceUpdated(id apiv3.ResourceID, entry CacheEntry, prev VersionedResource) {
 	// Use the V1 labels to register with the label selection handler.
-	x := entry.(*CacheEntryCalicoNetworkSet)
+	x := entry.(*CacheEntryNetworkSet)
 
 	// Update the labels for this network set. Always update the labels first so that each cache can get a view of the
 	// links before we start sending updates.
 	c.NetworkSetLabelSelector().UpdateLabels(id, x.getV1NetworkSet().Labels, nil)
 }
 
-// resourceDeleted implements the resourceCacheEngine interface.
-func (c *calicoNetworkSetEngine) resourceDeleted(id apiv3.ResourceID, entry CacheEntry) {
+// resourceDeleted implements the resourceHandler interface.
+func (c *networkSetHandler) resourceDeleted(id apiv3.ResourceID, entry CacheEntry) {
 	c.NetworkSetLabelSelector().DeleteLabels(id)
 }
 
-// recalculate implements the resourceCacheEngine interface.
-func (c *calicoNetworkSetEngine) recalculate(id apiv3.ResourceID, entry CacheEntry) syncer.UpdateType {
-	x := entry.(*CacheEntryCalicoNetworkSet)
+// recalculate implements the resourceHandler interface.
+func (c *networkSetHandler) recalculate(id apiv3.ResourceID, entry CacheEntry) syncer.UpdateType {
+	x := entry.(*CacheEntryNetworkSet)
 
 	// Determine whether this network set contains any internet addresses.
 	changed := c.scanNets(x)
@@ -143,8 +143,8 @@ func (c *calicoNetworkSetEngine) recalculate(id apiv3.ResourceID, entry CacheEnt
 	return changed
 }
 
-// convertToVersioned implements the resourceCacheEngine interface.
-func (c *calicoNetworkSetEngine) convertToVersioned(res resources.Resource) (VersionedResource, error) {
+// convertToVersioned implements the resourceHandler interface.
+func (c *networkSetHandler) convertToVersioned(res resources.Resource) (VersionedResource, error) {
 	in := res.(*apiv3.GlobalNetworkSet)
 
 	v1, err := updateprocessors.ConvertGlobalNetworkSetV3ToV1(&model.KVPair{
@@ -166,7 +166,7 @@ func (c *calicoNetworkSetEngine) convertToVersioned(res resources.Resource) (Ver
 
 // scanNets checks the nets in the resource for certain properties (currently just if it contains any non-private
 // CIDRs.
-func (c *calicoNetworkSetEngine) scanNets(x *CacheEntryCalicoNetworkSet) syncer.UpdateType {
+func (c *networkSetHandler) scanNets(x *CacheEntryNetworkSet) syncer.UpdateType {
 	old := x.Flags
 	// Toggle the InternetAddressExposed flag
 	x.Flags &^= CacheEntryInternetExposed
@@ -183,8 +183,8 @@ func (c *calicoNetworkSetEngine) scanNets(x *CacheEntryCalicoNetworkSet) syncer.
 
 // selectorMatchStarted is called synchronously from the rule selector or network set resource update methods when a
 // selector<->netset match has started. We update our set of matched selectors.
-func (c *calicoNetworkSetEngine) selectorMatchStarted(selId, netsetId apiv3.ResourceID) {
-	x, ok := c.GetFromOurCache(netsetId).(*CacheEntryCalicoNetworkSet)
+func (c *networkSetHandler) selectorMatchStarted(selId, netsetId apiv3.ResourceID) {
+	x, ok := c.GetFromOurCache(netsetId).(*CacheEntryNetworkSet)
 	if !ok {
 		// This is called synchronously from the resource update methods, so we don't expect the entries to have been
 		// removed from the cache at this point.
@@ -199,8 +199,8 @@ func (c *calicoNetworkSetEngine) selectorMatchStarted(selId, netsetId apiv3.Reso
 
 // selectorMatchStopped is called synchronously from the rule selector or network set resource update methods when a
 // selector<->netset match has stopped. We update our set of matched selectors.
-func (c *calicoNetworkSetEngine) selectorMatchStopped(selId, netsetId apiv3.ResourceID) {
-	x, ok := c.GetFromOurCache(netsetId).(*CacheEntryCalicoNetworkSet)
+func (c *networkSetHandler) selectorMatchStopped(selId, netsetId apiv3.ResourceID) {
+	x, ok := c.GetFromOurCache(netsetId).(*CacheEntryNetworkSet)
 	if !ok {
 		// This is called synchronously from the resource update methods, so we don't expect the entries to have been
 		// removed from the cache at this point.

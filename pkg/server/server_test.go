@@ -84,7 +84,7 @@ type tester struct {
 
 	// Internal data for managing the server and client.
 	addr   string
-	server server.Server
+	server server.ServerControl
 	client *http.Client
 }
 

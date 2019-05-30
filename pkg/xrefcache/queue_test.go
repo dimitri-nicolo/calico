@@ -11,10 +11,10 @@ import (
 )
 
 var (
-	tr1 = &xrefcache.CacheEntryK8sServiceEndpoints{}
+	tr1 = &xrefcache.CacheEntryServiceEndpoints{}
 	tr2 = &xrefcache.CacheEntryNetworkPolicy{}
-	tr3 = &xrefcache.CacheEntryK8sNamespace{}
-	tr4 = &xrefcache.CacheEntryCalicoTier{}
+	tr3 = &xrefcache.CacheEntryNamespace{}
+	tr4 = &xrefcache.CacheEntryTier{}
 )
 
 var _ = Describe("Resource priority queue", func() {

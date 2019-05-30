@@ -64,6 +64,8 @@ func GetResourceHelperByTypeMeta(tm metav1.TypeMeta) ResourceHelper {
 	return nil
 }
 
+// GetResourceHelperByObjectRef returns the appropriate ResourceHelper from an audit log ObjectRef. The audit log
+// ObjectRef uses the lowercase plural form of the resource kind.
 func GetResourceHelperByObjectRef(reference auditv1.ObjectReference) ResourceHelper {
 	a := apiv3.AuditResource{
 		Resource:   reference.Resource,

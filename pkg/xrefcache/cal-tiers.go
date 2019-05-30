@@ -23,7 +23,7 @@ type VersionedTierResource interface {
 	getV1Tier() *model.Tier
 }
 
-type CacheEntryCalicoTier struct {
+type CacheEntryTier struct {
 	// The versioned network set resource.
 	VersionedTierResource
 
@@ -34,11 +34,11 @@ type CacheEntryCalicoTier struct {
 	cacheEntryCommon
 }
 
-func (c *CacheEntryCalicoTier) getVersionedResource() VersionedResource {
+func (c *CacheEntryTier) getVersionedResource() VersionedResource {
 	return c.VersionedTierResource
 }
 
-func (c *CacheEntryCalicoTier) setVersionedResource(r VersionedResource) {
+func (c *CacheEntryTier) setVersionedResource(r VersionedResource) {
 	c.VersionedTierResource = r.(VersionedTierResource)
 }
 
@@ -62,43 +62,43 @@ func (v *versionedCalicoTier) getV1Tier() *model.Tier {
 	return v.v1
 }
 
-func newCalicoTiersEngine() resourceCacheEngine {
-	return &calicoTiersEngine{}
+func newTierHandler() resourceHandler {
+	return &tierHandler{}
 }
 
-type calicoTiersEngine struct {
-	engineCache
+type tierHandler struct {
+	CacheAccessor
 }
 
-func (c *calicoTiersEngine) register(cache engineCache) {
-	c.engineCache = cache
+func (c *tierHandler) register(cache CacheAccessor) {
+	c.CacheAccessor = cache
 }
 
-func (c *calicoTiersEngine) kinds() []metav1.TypeMeta {
+func (c *tierHandler) kinds() []metav1.TypeMeta {
 	return KindsTier
 }
 
-func (c *calicoTiersEngine) newCacheEntry() CacheEntry {
-	return &CacheEntryCalicoTier{}
+func (c *tierHandler) newCacheEntry() CacheEntry {
+	return &CacheEntryTier{}
 }
 
-func (c *calicoTiersEngine) resourceAdded(id apiv3.ResourceID, entry CacheEntry) {
+func (c *tierHandler) resourceAdded(id apiv3.ResourceID, entry CacheEntry) {
 	c.resourceUpdated(id, entry, nil)
 }
 
-func (c *calicoTiersEngine) resourceUpdated(id apiv3.ResourceID, entry CacheEntry, prev VersionedResource) {
+func (c *tierHandler) resourceUpdated(id apiv3.ResourceID, entry CacheEntry, prev VersionedResource) {
 }
 
-func (c *calicoTiersEngine) resourceDeleted(id apiv3.ResourceID, _ CacheEntry) {
+func (c *tierHandler) resourceDeleted(id apiv3.ResourceID, _ CacheEntry) {
 }
 
-// recalculate implements the resourceCacheEngine interface.
-func (c *calicoTiersEngine) recalculate(podId apiv3.ResourceID, podEntry CacheEntry) syncer.UpdateType {
+// recalculate implements the resourceHandler interface.
+func (c *tierHandler) recalculate(podId apiv3.ResourceID, podEntry CacheEntry) syncer.UpdateType {
 	// We calculate all state in the resourceUpdated/resourceAdded callbacks.
 	return 0
 }
 
-func (c *calicoTiersEngine) convertToVersioned(res resources.Resource) (VersionedResource, error) {
+func (c *tierHandler) convertToVersioned(res resources.Resource) (VersionedResource, error) {
 	in := res.(*apiv3.Tier)
 
 	v1, err := updateprocessors.ConvertTierV3ToV1Value(in)

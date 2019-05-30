@@ -18,6 +18,11 @@ import (
 	"github.com/tigera/compliance/pkg/version"
 )
 
+const (
+	// The health name for the snapshotter component.
+	healthReporterName = "compliance-snapshotter"
+)
+
 func main() {
 	var ver bool
 	flag.BoolVar(&ver, "version", false, "Print version information")
@@ -32,6 +37,16 @@ func main() {
 	cfg := config.MustLoadConfig()
 	cfg.InitializeLogging()
 
+	// Create a health check aggregator and start the health check service.
+	h := health.NewHealthAggregator()
+	h.ServeHTTP(cfg.HealthEnabled, cfg.HealthHost, cfg.HealthPort)
+	h.RegisterReporter(healthReporterName, &health.HealthReport{Live: true}, cfg.HealthTimeout)
+
+	// Define a function that can be used to report health.
+	healthy := func(healthy bool) {
+		h.Report(healthReporterName, &health.HealthReport{Live: healthy})
+	}
+
 	// Init elastic.
 	elasticClient, err := elastic.NewFromConfig(cfg)
 	if err != nil {
@@ -40,6 +55,9 @@ func main() {
 
 	// Create clientset.
 	datastoreClient := datastore.MustGetClientSet()
+
+	// Indicate healthy.
+	healthy(true)
 
 	// Setup signals.
 	sigs := make(chan os.Signal, 1)
@@ -51,13 +69,8 @@ func main() {
 		cancel()
 	}()
 
-	// Setup healthchecker.
-	healthAgg := health.NewHealthAggregator()
-	healthAgg.RegisterReporter(snapshot.HealthName, &health.HealthReport{true, true}, cfg.HealthTimeout)
-	healthAgg.ServeHTTP(true, cfg.HealthHost, cfg.HealthPort)
-
 	// Run snapshotter.
-	if err := snapshot.Run(cxt, cfg, datastoreClient, elasticClient, healthAgg); err != nil {
+	if err := snapshot.Run(cxt, cfg, datastoreClient, elasticClient, healthy); err != nil {
 		log.WithError(err).Error("Hit terminating error")
 	}
 }

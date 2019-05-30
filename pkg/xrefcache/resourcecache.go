@@ -18,16 +18,16 @@ import (
 	"github.com/tigera/compliance/pkg/syncer"
 )
 
-// engineCache is the interface provided to the engine in registration processing to call back into the cache. This
-// simply hides the internals of the cache from the resource specific engine implementations.
-type engineCache interface {
+// CacheAccessor is the interface provided to the handler in registration processing to call back into the cache. This
+// simply hides the internals of the cache from the resource specific handler implementations.
+type CacheAccessor interface {
 	GetFromOurCache(res apiv3.ResourceID) CacheEntry
 	GetFromXrefCache(res apiv3.ResourceID) CacheEntry
 
-	EndpointLabelSelector() labelselector.Interface
-	NetworkSetLabelSelector() labelselector.Interface
+	EndpointLabelSelector() labelselector.LabelSelector
+	NetworkSetLabelSelector() labelselector.LabelSelector
 	NetworkPolicyRuleSelectorManager() NetworkPolicyRuleSelectorManager
-	IPOrEndpointManager() keyselector.Interface
+	IPOrEndpointManager() keyselector.KeySelector
 
 	// Register for updates for other resource types. This registers with the xref cache dispatcher, so the updates
 	// will be CacheEntry types and the available updateTypes are defined by the events in flags.go.
@@ -38,15 +38,15 @@ type engineCache interface {
 	QueueUpdate(apiv3.ResourceID, CacheEntry, syncer.UpdateType)
 }
 
-// resourceCacheEngine is the interface a specific engine must implement for a resourceCache.
-type resourceCacheEngine interface {
-	// kinds returns the kinds of resources managed by a particular cache engine. Only a single engine should register
+// resourceHandler is the interface a specific handler must implement for a resourceCache.
+type resourceHandler interface {
+	// kinds returns the kinds of resources managed by a particular cache handler. Only a single handler should register
 	// for each resource type.
 	kinds() []metav1.TypeMeta
 
-	// register initializes the engine with details of the owning cache, this allows the engine to call into the cache
+	// register initializes the handler with details of the owning cache, this allows the handler to call into the cache
 	// to get resources, and to register with the label-selectors for match stopped/started events.
-	register(c engineCache)
+	register(c CacheAccessor)
 
 	// newCacheEntry creates and initializes a new CacheEntry specific to the cache.
 	newCacheEntry() CacheEntry
@@ -79,11 +79,11 @@ type resourceCacheEngine interface {
 	recalculate(id apiv3.ResourceID, entry CacheEntry) syncer.UpdateType
 }
 
-// newResourceCache creates a new resourceCache backed by a specific implementation of a resourceCacheEngine.
-func newResourceCache(engine resourceCacheEngine) *resourceCache {
+// newResourceCache creates a new resourceCache backed by a specific implementation of a resourceHandler.
+func newResourceCache(handler resourceHandler) *resourceCache {
 	return &resourceCache{
 		resources: make(map[apiv3.ResourceID]CacheEntry, 0),
-		engine:    engine,
+		handler:   handler,
 	}
 }
 
@@ -91,28 +91,28 @@ func newResourceCache(engine resourceCacheEngine) *resourceCache {
 type resourceCache struct {
 	xc        *xrefCache
 	resources map[apiv3.ResourceID]CacheEntry
-	engine    resourceCacheEngine
+	handler   resourceHandler
 }
 
-// Callback for the syncer updates. Fan out to the onNewOrUpdated and onDeleted methods.
+// Callback for the syncer updates. Fan out to the onSet and onDeleted methods.
 func (c *resourceCache) onUpdate(update syncer.Update) {
 	switch update.Type {
 	case syncer.UpdateTypeDeleted:
 		c.onDeleted(update.ResourceID)
 	case syncer.UpdateTypeSet:
-		c.onNewOrUpdated(update.ResourceID, update.Resource)
+		c.onSet(update.ResourceID, update.Resource)
 	default:
 		log.Errorf("Unexpected update type from syncer: %d (%s)", update.Type, strconv.FormatInt(int64(update.Type), 2))
 		return
 	}
 }
 
-// onNewOrUpdated checks cache for existing entry and treats as new or updated based on that rather than on what
+// onSet checks cache for existing entry and treats as new or updated based on that rather than on what
 // the syncer indicated - just to more gracefully handle discrepencies.
-func (c *resourceCache) onNewOrUpdated(id apiv3.ResourceID, res resources.Resource) {
+func (c *resourceCache) onSet(id apiv3.ResourceID, res resources.Resource) {
 	// Convert the resource to a versioned resource (this contains the various versioned representations of the
 	// resource required by our cache processing).
-	v, err := c.engine.convertToVersioned(res)
+	v, err := c.handler.convertToVersioned(res)
 	if err != nil {
 		if _, ok := err.(errors.ErrorResourceDoesNotExist); ok {
 			log.WithField("id", id).Debug("Cache has indicated an explicit delete of resource")
@@ -141,12 +141,12 @@ func (c *resourceCache) onNewOrUpdated(id apiv3.ResourceID, res resources.Resour
 		// until the resourceUpdated() call returns.
 		c.xc.queueUpdate(id, entry, EventResourceModified)
 
-		// Call through to the engine to perform any additional processing for this resource update.
-		c.engine.resourceUpdated(id, entry, prev)
+		// Call through to the handler to perform any additional processing for this resource update.
+		c.handler.resourceUpdated(id, entry, prev)
 	} else {
 		log.Debugf("Add new resource to cache: %s", id)
 		// Create a new cache entry and set the versioned resource.
-		entry = c.engine.newCacheEntry()
+		entry = c.handler.newCacheEntry()
 		c.resources[id] = entry
 		entry.setResourceID(id)
 		entry.setVersionedResource(v)
@@ -154,17 +154,17 @@ func (c *resourceCache) onNewOrUpdated(id apiv3.ResourceID, res resources.Resour
 		// Requeue this resource for recalculation.
 		c.xc.queueUpdate(id, entry, EventResourceAdded)
 
-		// Call through to the engine to perform any additional processing for this resource creation, in particular
+		// Call through to the handler to perform any additional processing for this resource creation, in particular
 		// setting up any xrefs. Calculation of data is performed asynchronously.
-		c.engine.resourceAdded(id, entry)
+		c.handler.resourceAdded(id, entry)
 	}
 }
 
 func (c *resourceCache) onDeleted(id apiv3.ResourceID) {
 	log.Debugf("Deleting resource from cache: %s", id)
 	if entry, ok := c.resources[id]; ok {
-		// Call through to the engine to perform any additional processing for this resource creation.
-		c.engine.resourceDeleted(id, entry)
+		// Call through to the handler to perform any additional processing for this resource creation.
+		c.handler.resourceDeleted(id, entry)
 
 		// Delete the entry from the cache.
 		delete(c.resources, id)
@@ -180,15 +180,15 @@ func (c *resourceCache) register(xc *xrefCache) {
 	// Store the main cache.
 	c.xc = xc
 
-	// Create the cache interface for the engine.
-	ci := &resourceEngineCache{
+	// Create the cache interface for the handler.
+	ci := &cacheAccessor{
 		ours: c,
 		xc:   xc,
 	}
 
 	// Register the cache with the syncer dispatcher to get updates for actual resource updates for the resources
 	// managed by this cache.
-	for _, kind := range c.engine.kinds() {
+	for _, kind := range c.handler.kinds() {
 		xc.syncerDispatcher.RegisterOnUpdateHandler(
 			kind,
 			syncer.UpdateTypeSet|syncer.UpdateTypeDeleted,
@@ -196,52 +196,52 @@ func (c *resourceCache) register(xc *xrefCache) {
 		)
 	}
 
-	// Register with the engine class so that it can register for xref updates (i.e. updates from indirectly generated
+	// Register with the handler class so that it can register for xref updates (i.e. updates from indirectly generated
 	// data).
-	c.engine.register(ci)
+	c.handler.register(ci)
 }
 
 func (c *resourceCache) kinds() []metav1.TypeMeta {
-	return c.engine.kinds()
+	return c.handler.kinds()
 }
 
-// resourceEngineCache implements the engineCache. This limits access to cache innards from the engine implementation,
-// and more importantly provides a level of indirection between the engine and the cache dispatcher.
-type resourceEngineCache struct {
+// cacheAccessor implements the CacheAccessor interface. This limits access to cache innards from the handler
+// implementation, and more importantly provides a level of indirection between the handler and the cache dispatcher.
+type cacheAccessor struct {
 	ours *resourceCache
 	xc   *xrefCache
 }
 
-func (c *resourceEngineCache) GetFromOurCache(res apiv3.ResourceID) CacheEntry {
+func (c *cacheAccessor) GetFromOurCache(res apiv3.ResourceID) CacheEntry {
 	log.WithField("id", res).Debug("Get resource from our own cache")
 	return c.ours.resources[res]
 }
 
-func (c *resourceEngineCache) GetFromXrefCache(res apiv3.ResourceID) CacheEntry {
+func (c *cacheAccessor) GetFromXrefCache(res apiv3.ResourceID) CacheEntry {
 	log.WithField("id", res).Debug("Get resource from x-ref cache")
 	return c.xc.Get(res)
 }
 
-func (c *resourceEngineCache) EndpointLabelSelector() labelselector.Interface {
+func (c *cacheAccessor) EndpointLabelSelector() labelselector.LabelSelector {
 	return c.xc.endpointLabelSelector
 }
 
-func (c *resourceEngineCache) NetworkSetLabelSelector() labelselector.Interface {
+func (c *cacheAccessor) NetworkSetLabelSelector() labelselector.LabelSelector {
 	return c.xc.networkSetLabelSelector
 }
 
-func (c *resourceEngineCache) NetworkPolicyRuleSelectorManager() NetworkPolicyRuleSelectorManager {
+func (c *cacheAccessor) NetworkPolicyRuleSelectorManager() NetworkPolicyRuleSelectorManager {
 	return c.xc.networkPolicyRuleSelectorManager
 }
 
-func (c *resourceEngineCache) IPOrEndpointManager() keyselector.Interface {
+func (c *cacheAccessor) IPOrEndpointManager() keyselector.KeySelector {
 	return c.xc.ipOrEndpointManager
 }
 
-func (c *resourceEngineCache) QueueUpdate(id apiv3.ResourceID, entry CacheEntry, update syncer.UpdateType) {
+func (c *cacheAccessor) QueueUpdate(id apiv3.ResourceID, entry CacheEntry, update syncer.UpdateType) {
 	c.xc.queueUpdate(id, entry, update)
 }
 
-func (c *resourceEngineCache) RegisterOnUpdateHandler(kind metav1.TypeMeta, updateTypes syncer.UpdateType, callback dispatcher.DispatcherOnUpdate) {
+func (c *cacheAccessor) RegisterOnUpdateHandler(kind metav1.TypeMeta, updateTypes syncer.UpdateType, callback dispatcher.DispatcherOnUpdate) {
 	c.xc.cacheDispatcher.RegisterOnUpdateHandler(kind, updateTypes, callback)
 }

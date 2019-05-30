@@ -51,7 +51,6 @@ import (
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
-	"github.com/projectcalico/libcalico-go/lib/health"
 	"github.com/projectcalico/libcalico-go/lib/jitter"
 
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
@@ -73,13 +72,24 @@ var (
 )
 
 const (
-	healthReporter = "compliance-controller"
-	maxNameLen     = 63
+	maxNameLen = 63
+
+	// Event types
+	unexpectedJob          = "UnexpectedJob"
+	sawFailedJob           = "SawFailedJob"
+	sawCompletedJob        = "SawCompletedJob"
+	failedDelete           = "FailedDelete"
+	successfulDelete       = "SuccessfulDelete"
+	failedNeedsStart       = "FailedNeedsStart"
+	failedNeedsPodTemplate = "FailedNeedsPodTemplate"
+	failedBadPodTemplate   = "FailedBadPodTemplate"
+	failedCreate           = "FailedCreate"
+	successfulCreate       = "SuccessfulCreate"
 )
 
 type ComplianceController struct {
 	cfg                 *config.Config
-	health              healthControlInterface
+	healthy             func()
 	clientSet           datastore.ClientSet
 	jobControl          jobControlInterface
 	reportControl       reportControlInterface
@@ -94,36 +104,31 @@ type ComplianceController struct {
 
 func NewComplianceController(
 	cfg *config.Config, clientSet datastore.ClientSet, reportRetriever report.ReportRetriever,
-	healthAggr *health.HealthAggregator,
+	healthy func(),
 ) (*ComplianceController, error) {
-	/* TODO(rlb): Get events working
 	recorderObj := &v1.Pod{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
-			Kind: "Pod",
+			Kind:       "Pod",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: cfg.Name,
+			Name:      "compliance-controller",
 			Namespace: cfg.Namespace,
 		},
 	}
 
-	eventBroadcaster := record.NewBroadcaster()
-	eventBroadcaster.StartLogging(log.Infof)
-	eventBroadcaster.StartRecordingToSink(&v1core.EventSinkImpl{Interface: clientSet.CoreV1().Events(cfg.Namespace)})
-	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, v1.EventSource{Component: "tigera-compliance-controller"})
-	*/
+	recorder := newEventRecorder(cfg, clientSet)
 	cc := &ComplianceController{
 		cfg:                 cfg,
-		health:              &realHealthControl{cfg: cfg, healthAggr: healthAggr},
+		healthy:             healthy,
 		clientSet:           clientSet,
 		jobControl:          &realJobControl{clientSet: clientSet},
 		reportControl:       &realReportControl{clientSet: clientSet},
 		podControl:          &realPodControl{clientSet: clientSet},
 		archivedReportQuery: &realArchivedReportQuery{reportRetriever: reportRetriever},
 		podTemplateQuery:    &realPodTemplateQuery{clientSet: clientSet},
-		//recorderObj:         recorderObj,
-		//recorder:            recorder,
+		recorderObj:         recorderObj,
+		recorder:            recorder,
 	}
 
 	return cc, nil
@@ -133,8 +138,8 @@ func NewComplianceController(
 func (cc *ComplianceController) Run(ctx context.Context) {
 	defer utilruntime.HandleCrash()
 
-	// Register ourselves to the health aggregator.
-	cc.health.Register()
+	// Indicate healthy.
+	cc.healthy()
 
 	log.Infof("Starting Compliance Controller")
 
@@ -155,7 +160,7 @@ func (cc *ComplianceController) syncAll(ctx context.Context) {
 	log.Debug("Perform sync")
 
 	// Indicate we are healthy.
-	cc.health.ReportHealthy()
+	cc.healthy()
 
 	// List children (Jobs) before parents (Reports).
 	// This guarantees that if we see any Job that got orphaned by the GC orphan finalizer,
@@ -175,10 +180,10 @@ func (cc *ComplianceController) syncAll(ctx context.Context) {
 		return
 	}
 	js := jl.Items
-	log.Infof("Found %d jobs", len(js))
+	log.Debugf("Found %d jobs", len(js))
 
 	// Indicate we are healthy.
-	cc.health.ReportHealthy()
+	cc.healthy()
 
 	reportListFunc := func(opts metav1.ListOptions) (runtime.Object, error) {
 		return cc.clientSet.GlobalReports().List(opts)
@@ -189,7 +194,7 @@ func (cc *ComplianceController) syncAll(ctx context.Context) {
 		return
 	}
 	// Indicate we are healthy.
-	cc.health.ReportHealthy()
+	cc.healthy()
 
 	reportl, ok := reportlTmp.(*v3.GlobalReportList)
 	if !ok {
@@ -197,13 +202,13 @@ func (cc *ComplianceController) syncAll(ctx context.Context) {
 		return
 	}
 	reports := reportl.Items
-	log.Infof("Found %d reports", len(reports))
+	log.Debugf("Found %d reports", len(reports))
 
 	// Indicate we are healthy.
-	cc.health.ReportHealthy()
+	cc.healthy()
 
 	jobsByReport := groupJobsByReport(js)
-	log.Infof("Found %d groups", len(jobsByReport))
+	log.Debugf("Found %d groups", len(jobsByReport))
 
 	for _, rep := range reports {
 		log.Debugf("Processing report: %s", rep.Name)
@@ -229,7 +234,7 @@ func (cc *ComplianceController) syncOne(rep *v3.GlobalReport, js []batchv1.Job, 
 	}
 
 	// Indicate we are healthy.
-	cc.health.ReportHealthy()
+	cc.healthy()
 
 	// Remove the oldest jobs from the successful and the failed set.
 	if !cc.removeOldestJobs(rep) {
@@ -237,7 +242,7 @@ func (cc *ComplianceController) syncOne(rep *v3.GlobalReport, js []batchv1.Job, 
 	}
 
 	// Indicate we are healthy.
-	cc.health.ReportHealthy()
+	cc.healthy()
 
 	// Start new jobs.
 	if !cc.startReportJobs(rep, now) {
@@ -245,7 +250,7 @@ func (cc *ComplianceController) syncOne(rep *v3.GlobalReport, js []batchv1.Job, 
 	}
 
 	// Indicate we are healthy.
-	cc.health.ReportHealthy()
+	cc.healthy()
 
 	return
 }
@@ -304,12 +309,18 @@ func (cc *ComplianceController) updateStatus(rep *v3.GlobalReport, js []batchv1.
 	for _, j := range js {
 		start, end := getJobStartEndTime(&j)
 		if start == nil || end == nil {
-			//cc.recorder.Eventf(cc.recorderObj, v1.EventTypeWarning, "UnexpectedJob", "Saw a job that the controller did not create: %s/%s", j.Namespace, j.Name)
+			cc.recorder.Eventf(
+				cc.recorderObj, v1.EventTypeWarning, unexpectedJob,
+				"Saw a job that the controller did not create: Job(%s/%s)", j.Namespace, j.Name,
+			)
 			continue
 		}
 		jref, err := getRef(&j)
 		if err != nil {
-			//cc.recorder.Eventf(cc.recorderObj, v1.EventTypeWarning, "UnexpectedJob", "Saw a job that the controller did not create: %s/%s", j.Namespace, j.Name)
+			cc.recorder.Eventf(
+				cc.recorderObj, v1.EventTypeWarning, unexpectedJob,
+				"Saw a job that the controller did not create: Job(%s/%s)", j.Namespace, j.Name,
+			)
 			continue
 		}
 		finished, status := getFinishedStatus(&j)
@@ -329,11 +340,11 @@ func (cc *ComplianceController) updateStatus(rep *v3.GlobalReport, js []batchv1.
 
 		if !finished {
 			// The job is not finished, include in our active set.
-			log.Infof("Job active: %s/%s", j.Namespace, j.Name)
+			log.Debugf("Job active: %s/%s", j.Namespace, j.Name)
 			active = append(active, job)
 		} else if status == batchv1.JobFailed {
 			// The job failed, include in our failed set.
-			log.Infof("Job failed: %s/%s", j.Namespace, j.Name)
+			log.Debugf("Job failed: %s/%s", j.Namespace, j.Name)
 			failed = append(failed, apiv3.CompletedReportJob{
 				ReportJob:         job,
 				JobCompletionTime: j.Status.CompletionTime,
@@ -341,20 +352,26 @@ func (cc *ComplianceController) updateStatus(rep *v3.GlobalReport, js []batchv1.
 
 			// If previously in active list then record an event.
 			if inActiveList {
-				log.Info("Job was previously active")
-				//cc.recorder.Eventf(cc.recorderObj, v1.EventTypeWarning, "SawFailedJob", "Saw failed job: %s/%s", j.Namespace, j.Name)
+				log.Debugf("Job was previously active and has now failed: %s/%s", j.Namespace, j.Name)
+				cc.recorder.Eventf(
+					cc.recorderObj, v1.EventTypeWarning, sawFailedJob,
+					"Saw failed job: Job(%s/%s)", j.Namespace, j.Name,
+				)
 			}
 		} else {
 			// The job completed, include in our successful set.
-			log.Infof("Job successful: %s/%s", j.Namespace, j.Name)
+			log.Debugf("Job successful: %s/%s", j.Namespace, j.Name)
 			successful = append(successful, apiv3.CompletedReportJob{
 				ReportJob:         job,
 				JobCompletionTime: j.Status.CompletionTime,
 			})
 			// If previously in active list then record an event.
 			if inActiveList {
-				log.Info("Job was previously active")
-				//cc.recorder.Eventf(cc.recorderObj, v1.EventTypeNormal, "SawCompletedJob", "Saw completed job: %s/%s", j.Namespace, j.Name)
+				log.Debugf("Job was previously active and has now completed successfully: %s/%s", j.Namespace, j.Name)
+				cc.recorder.Eventf(
+					cc.recorderObj, v1.EventTypeNormal, sawCompletedJob,
+					"Saw completed job: Job(%s/%s)", j.Namespace, j.Name,
+				)
 			}
 		}
 	}
@@ -410,11 +427,17 @@ func (cc *ComplianceController) removeOldestJobs(rep *v3.GlobalReport) bool {
 	// Delete the old jobs.
 	for _, j := range jobsToDelete {
 		if err := cc.jobControl.DeleteJob(j.Job.Namespace, j.Job.Name); err != nil {
-			log.Errorf("Error deleting job %s/%s: %v", j.Job.Namespace, j.Job.Name, err)
-			//cc.recorder.Eventf(cc.recorderObj, v1.EventTypeWarning, "FailedDelete", "Failed to delete job %s/%s: %v", j.Job.Namespace, j.Job.Name, err)
+			log.WithError(err).Debugf("Error deleting job %s/%s: %v", j.Job.Namespace, j.Job.Name, err)
+			cc.recorder.Eventf(
+				cc.recorderObj, v1.EventTypeWarning, failedDelete,
+				"Failed to delete job: Job(%s/%s): %v", j.Job.Namespace, j.Job.Name, err,
+			)
 		} else {
-			log.Infof("Deleted job %s/%s", j.Job.Namespace, j.Job.Name)
-			//cc.recorder.Eventf(cc.recorderObj, v1.EventTypeNormal, "SuccessfulDelete", "Deleted job %s/%s", j.Job.Namespace, j.Job.Name)
+			log.Debugf("Deleted job %s/%s", j.Job.Namespace, j.Job.Name)
+			cc.recorder.Eventf(
+				cc.recorderObj, v1.EventTypeNormal, successfulDelete,
+				"Deleted job: Job(%s/%s)", j.Job.Namespace, j.Job.Name,
+			)
 		}
 	}
 
@@ -422,7 +445,7 @@ func (cc *ComplianceController) removeOldestJobs(rep *v3.GlobalReport) bool {
 	// the status that still exists. This does not matter, it will right itself next iteration.
 	updatedReport, err := cc.reportControl.UpdateStatus(rep)
 	if err != nil {
-		log.Errorf("Unable to update status for %s (rv = %s): %v", rep.Name, rep.ResourceVersion, err)
+		log.Warnf("Unable to update status for %s (rv = %s): %v", rep.Name, rep.ResourceVersion, err)
 		return false
 	}
 	*rep = *updatedReport
@@ -436,37 +459,43 @@ func (cc *ComplianceController) removeOldestJobs(rep *v3.GlobalReport) bool {
 func (cc *ComplianceController) startReportJobs(rep *v3.GlobalReport, now time.Time) bool {
 	if rep.DeletionTimestamp != nil {
 		// The Report is being deleted.
-		log.Infof("Not starting job for %s because it is being deleted", rep.Name)
+		log.Debugf("Not starting job for %s because it is being deleted", rep.Name)
 		return false
 	}
 
 	if rep.Spec.Suspend != nil && *rep.Spec.Suspend {
-		log.Infof("Not starting job for %s because it is suspended", rep.Name)
+		log.Debugf("Not starting job for %s because it is suspended", rep.Name)
 		return false
 	}
 
 	if rep.Spec.Schedule == "" {
-		log.Infof("Not starting job for %s because no schedule has been specified", rep.Name)
+		log.Debugf("Not starting job for %s because no schedule has been specified", rep.Name)
 		return false
 	}
 
 	// Get a list of the jobs that we need to start. This method returns a max number of jobs based on our configuration.
 	jobTimes, err := cc.getRecentUnmetScheduleTimes(*rep, now, cc.reportControl)
 	if err != nil {
-		log.Errorf("Cannot determine if report jobs %s need to be started: %v", rep.Name, err)
-		//cc.recorder.Eventf(cc.recorderObj, v1.EventTypeWarning, "FailedNeedsStart", "Cannot determine if rep jobs for %s need to be started: %v", rep.Name, err)
+		log.Infof("Cannot determine if report jobs %s need to be started: %v", rep.Name, err)
+		cc.recorder.Eventf(
+			cc.recorderObj, v1.EventTypeWarning, failedNeedsStart,
+			"Cannot determine if rep jobs for GlobalReport(%s) need to be started: %v", rep.Name, err,
+		)
 		return false
 	}
 
 	if len(jobTimes) == 0 {
-		log.Infof("No unmet start times, or too many active jobs for %s", rep.Name)
+		log.Debugf("No unmet start times, or too many active jobs for %s", rep.Name)
 		return false
 	}
 
 	pt, err := cc.podTemplateQuery.GetPodTemplate(cc.cfg.Namespace, rep.Name)
 	if err != nil {
 		log.Errorf("Unable to locate pod template in %s: %v", rep.Name, err)
-		//cc.recorder.Eventf(cc.recorderObj, v1.EventTypeWarning, "FailedNeedsPodTemplate", "Cannot locate valid PodTemplate for %s: %v", rep.Name, err)
+		cc.recorder.Eventf(
+			cc.recorderObj, v1.EventTypeWarning, failedNeedsPodTemplate,
+			"Cannot locate valid PodTemplate for GlobalReport(%s): %v", rep.Name, err,
+		)
 		return false
 	}
 
@@ -475,7 +504,10 @@ func (cc *ComplianceController) startReportJobs(rep *v3.GlobalReport, now time.T
 	container := getReportContainer(&pt.Template.Spec)
 	if container == nil {
 		log.Errorf("Unable to locate reporter container in pod template in %s: %v", rep.Name, err)
-		//cc.recorder.Eventf(cc.recorderObj, v1.EventTypeWarning, "FailedBadPodTemplate", "Cannot locate %s container in PodTemplate for %s: %v", reportContainer, rep.Name, err)
+		cc.recorder.Eventf(
+			cc.recorderObj, v1.EventTypeWarning, failedBadPodTemplate,
+			"Cannot locate %s container in PodTemplate for GlobalReport(%s): %v", reportContainer, rep.Name, err,
+		)
 		return false
 	}
 
@@ -491,23 +523,29 @@ func (cc *ComplianceController) startReportJobs(rep *v3.GlobalReport, now time.T
 		if err != nil {
 			if !errors.IsAlreadyExists(err) {
 				log.Warnf("Failed to create job: %v", err)
-				//cc.recorder.Eventf(cc.recorderObj, v1.EventTypeWarning, "FailedCreate", "Error creating job: %v", err)
+				cc.recorder.Eventf(
+					cc.recorderObj, v1.EventTypeWarning, failedCreate,
+					"Error creating job for GlobalReport(%s): %v", rep.Name, err,
+				)
 				return false
 			}
 
 			// The job already exists. We can't update the status just yet, so just continue. We'll update the status
 			// as soon as we are able to view the job.
-			log.Infof("Job already exists for %s", rep.Name)
+			log.Debugf("Job already exists for %s", rep.Name)
 			continue
 		} else {
-			log.Infof("Created Job %s for %s", jobResp.Name, rep.Name)
-			//cc.recorder.Eventf(cc.recorderObj, v1.EventTypeNormal, "SuccessfulCreate", "Created job %s/%s", jobResp.Namespace, jobResp.Name)
+			log.Debugf("Created Job %s for %s", jobResp.Name, rep.Name)
+			cc.recorder.Eventf(
+				cc.recorderObj, v1.EventTypeNormal, successfulCreate,
+				"Created job: Job(%s/%s)", jobResp.Namespace, jobResp.Name,
+			)
 		}
 
 		// Add the just-started job to the status list.
 		jref, err := getRef(jobResp)
 		if err != nil {
-			log.Infof("Unable to make object reference for job for %s", rep.Name)
+			log.Debugf("Unable to make object reference for job for %s", rep.Name)
 			continue
 		}
 		job := apiv3.ReportJob{
@@ -519,7 +557,7 @@ func (cc *ComplianceController) startReportJobs(rep *v3.GlobalReport, now time.T
 		rep.Status.LastScheduledReportJob = &job
 
 		if _, err := cc.reportControl.UpdateStatus(rep); err != nil {
-			log.Infof("Unable to update status for %s (rv = %s): %v", rep.Name, rep.ResourceVersion, err)
+			log.Debugf("Unable to update status for %s (rv = %s): %v", rep.Name, rep.ResourceVersion, err)
 			return false
 		}
 	}
@@ -626,7 +664,13 @@ func (cc *ComplianceController) getJobFromTemplate(rep *v3.GlobalReport, jt Repo
 		},
 	}...)
 
-	// Make sure the restart policy is either Never or OnFailure.
+	// Make sure the restart policy is either Never or OnFailure. The pod restart policy tells Kubernetes when (if ever)
+	// to restart a pod that has completed or failed. The report jobs are designed to be single shot, and by default we
+	// use the job retry mechanism to retry a failed pod (which uses exponential back off timer and limits the number
+	// of retries). We make it possible to also use the pod restart mechanism through modification of the pod template -
+	// however pod restart has no retry limit so will retry forever if it is inherently broken. We therefore allow the
+	// restart policy to be modified, but do not allow it to be set to RestartPolicyAlways because we do not want to
+	// retry a successful job.
 	if template.Spec.RestartPolicy != v1.RestartPolicyNever && template.Spec.RestartPolicy != v1.RestartPolicyOnFailure {
 		template.Spec.RestartPolicy = v1.RestartPolicyNever
 	}
@@ -641,7 +685,7 @@ func (cc *ComplianceController) getJobFromTemplate(rep *v3.GlobalReport, jt Repo
 		for k, v := range rep.Spec.JobNodeSelector {
 			// Check if the key already exists in the PodTemplate.
 			if templateV, exists := template.Spec.NodeSelector[k]; exists {
-				log.WithFields(log.Fields{"key": k, "templateValue": templateV, "reportValue": v}).Info("key already exists in template, refusing to overwrite")
+				log.WithFields(log.Fields{"key": k, "templateValue": templateV, "reportValue": v}).Debug("key already exists in template - using value in template")
 				continue
 			}
 

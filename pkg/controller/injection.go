@@ -29,10 +29,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/errors"
 
-	"github.com/projectcalico/libcalico-go/lib/health"
-
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
-	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/datastore"
 	"github.com/tigera/compliance/pkg/report"
 )
@@ -300,43 +297,4 @@ var _ reportControlInterface = &fakeReportControl{}
 
 func (c *fakePodTemplateQuery) GetPodTemplate(namespace, name string) (*v1.PodTemplate, error) {
 	return c.t, c.err
-}
-
-// healthControlInterface is an interface that knows how to update GlobalHealth status
-// created as an interface to allow testing.
-type healthControlInterface interface {
-	Register()
-	ReportHealthy()
-}
-
-// realHealthControl is the default implementation of healthControlInterface.
-type realHealthControl struct {
-	cfg        *config.Config
-	healthAggr *health.HealthAggregator
-}
-
-var _ healthControlInterface = &realHealthControl{}
-
-func (c *realHealthControl) Register() {
-	c.healthAggr.RegisterReporter(healthReporter, &health.HealthReport{Live: true}, c.cfg.HealthTimeout)
-}
-
-func (c *realHealthControl) ReportHealthy() {
-	c.healthAggr.Report(healthReporter, &health.HealthReport{Live: true})
-}
-
-// fakeHealthControl is the default implementation of healthControlInterface.
-type fakeHealthControl struct {
-	registers int
-	reports   int
-}
-
-var _ healthControlInterface = &fakeHealthControl{}
-
-func (c *fakeHealthControl) Register() {
-	c.registers++
-}
-
-func (c *fakeHealthControl) ReportHealthy() {
-	c.reports++
 }

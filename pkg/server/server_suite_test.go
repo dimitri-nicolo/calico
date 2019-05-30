@@ -13,5 +13,5 @@ import (
 func TestResourceTypes(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Server Suite")
+	RunSpecs(t, "ServerControl Suite")
 }

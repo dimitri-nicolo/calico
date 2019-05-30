@@ -68,7 +68,7 @@ func (c *client) RetrieveArchivedReport(id string) (*report.ArchivedReportData, 
 
 func (c *client) StoreArchivedReport(r *report.ArchivedReportData, t time.Time) error {
 	index := c.clusterIndex(reportsIndex, t.Format(IndexTimeFormat))
-	if err := c.ensureIndexExists(index, reportsMapping); err != nil {
+	if err := c.ensureIndexExistsWithRetry(index, reportsMapping); err != nil {
 		return err
 	}
 	res, err := c.Index().

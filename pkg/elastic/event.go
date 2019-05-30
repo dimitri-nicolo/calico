@@ -81,7 +81,12 @@ func (c *client) SearchAuditEvents(ctx context.Context, filter *v3.AuditEventsSe
 }
 
 func constructAuditEventsQuery(filter *v3.AuditEventsSelection, start, end *time.Time) elastic.Query {
-	queries := []elastic.Query{}
+	// Limit query to include ResponseComplete stage only since that has that has the most information, and only
+	// to the configuration event verb types.
+	queries := []elastic.Query{
+		elastic.NewMatchQuery("stage", auditv1.StageResponseComplete),
+		auditConfigurationEventQuery(),
+	}
 
 	// Query by filter if specified.
 	if filter != nil {
@@ -100,6 +105,14 @@ func constructAuditEventsQuery(filter *v3.AuditEventsSelection, start, end *time
 		queries = append(queries, rangeQuery)
 	}
 	return elastic.NewBoolQuery().Must(queries...)
+}
+
+func auditConfigurationEventQuery() elastic.Query {
+	queries := []elastic.Query{}
+	for _, verb := range event.ConfigurationVerbs {
+		queries = append(queries, elastic.NewMatchQuery("verb", verb))
+	}
+	return elastic.NewBoolQuery().Should(queries...)
 }
 
 func auditEventQueryFromAuditEventsSelection(filter *v3.AuditEventsSelection) elastic.Query {
