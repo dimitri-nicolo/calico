@@ -11,6 +11,7 @@ import (
 	"golang.org/x/sync/semaphore"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/anomaly/filters"
+	"github.com/tigera/intrusion-detection/controller/pkg/anomaly/statser"
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/elastic"
 	"github.com/tigera/intrusion-detection/controller/pkg/events"
@@ -34,7 +35,7 @@ func init() {
 }
 
 type Puller interface {
-	Run(context.Context)
+	Run(context.Context, statser.Statser)
 	Close()
 }
 
@@ -56,7 +57,7 @@ func NewPuller(name string, xPack elastic.XPack, events db.Events, filter filter
 	}
 }
 
-func (p *puller) Run(ctx context.Context) {
+func (p *puller) Run(ctx context.Context, st statser.Statser) {
 	p.once.Do(func() {
 		ctx, p.cancel = context.WithCancel(ctx)
 
@@ -68,7 +69,7 @@ func (p *puller) Run(ctx context.Context) {
 				if err := sem.Acquire(ctx, 1); err != nil {
 					return
 				}
-				if err := p.pull(ctx); err != nil {
+				if err := p.pull(ctx, st); err != nil {
 					_ = reschedule()
 				}
 				sem.Release(1)
@@ -82,7 +83,7 @@ func (p *puller) Close() {
 	p.cancel()
 }
 
-func (p *puller) pull(ctx context.Context) error {
+func (p *puller) pull(ctx context.Context, st statser.Statser) error {
 	fields := log.Fields{
 		"name": p.name,
 	}
@@ -90,25 +91,32 @@ func (p *puller) pull(ctx context.Context) error {
 	log.WithFields(fields).Debug("Fetching")
 	rs, err := p.fetch(ctx)
 	if err != nil {
+		st.Error(statser.XPackRecordsFailed, err)
 		log.WithFields(fields).WithError(err).Error("Error fetching records from XPack")
 		return err
 	}
+	st.ClearError(statser.XPackRecordsFailed)
 
 	log.WithFields(fields).Debug("Filtering")
 	rs, err = p.filter.Filter(rs)
 	if err != nil {
+		st.Error(statser.FilterFailed, err)
 		log.WithFields(fields).WithError(err).Error("Error filtering records")
 		return err
 	}
+	st.ClearError(statser.FilterFailed)
 
 	log.WithFields(fields).Debug("Putting events")
 	for _, r := range rs {
 		if err := p.events.PutSecurityEvent(ctx, p.generateEvent(r)); err != nil {
+			st.Error(statser.StoreEventsFailed, err)
 			log.WithFields(fields).WithError(err).Error("Error putting security event")
 			return err
 		}
 	}
+	st.ClearError(statser.StoreEventsFailed)
 
+	st.SuccessfulSync()
 	return nil
 }
 

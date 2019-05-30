@@ -11,9 +11,8 @@ import (
 )
 
 type MockStatser struct {
-	LastSuccessfulSync   time.Time
-	LastSuccessfulSearch time.Time
-	ErrorConditions      []v3.ErrorCondition
+	LastSuccessfulSync time.Time
+	ErrorConditions    []v3.ErrorCondition
 }
 
 func (s *MockStatser) Run(context.Context) {
@@ -22,20 +21,15 @@ func (s *MockStatser) Run(context.Context) {
 func (s *MockStatser) Close() {
 }
 
-func (s *MockStatser) Status() v3.GlobalThreatFeedStatus {
-	return v3.GlobalThreatFeedStatus{
-		LastSuccessfulSync:   v1.Time{Time: s.LastSuccessfulSync},
-		LastSuccessfulSearch: v1.Time{Time: s.LastSuccessfulSearch},
-		ErrorConditions:      append(s.ErrorConditions),
+func (s *MockStatser) Status() Status {
+	return Status{
+		LastSuccessfulSync: v1.Time{Time: s.LastSuccessfulSync},
+		ErrorConditions:    append(s.ErrorConditions),
 	}
 }
 
 func (s *MockStatser) SuccessfulSync() {
 	s.LastSuccessfulSync = time.Now()
-}
-
-func (s *MockStatser) SuccessfulSearch() {
-	s.LastSuccessfulSearch = time.Now()
 }
 
 func (s *MockStatser) Error(t string, err error) {

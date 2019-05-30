@@ -8,6 +8,7 @@ import (
 
 	"github.com/tigera/intrusion-detection/controller/pkg/anomaly/filters"
 	"github.com/tigera/intrusion-detection/controller/pkg/anomaly/puller"
+	"github.com/tigera/intrusion-detection/controller/pkg/anomaly/statser"
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/elastic"
 	"github.com/tigera/intrusion-detection/controller/pkg/health"
@@ -32,8 +33,9 @@ type watcher struct {
 }
 
 type jobWatcher struct {
-	name   string
-	puller puller.Puller
+	name    string
+	puller  puller.Puller
+	statser statser.Statser
 }
 
 func NewWatcher(events db.Events, xPack elastic.XPack) Watcher {
@@ -50,12 +52,16 @@ func (w *watcher) Run(ctx context.Context) {
 
 		go func() {
 			for jid, _ := range Jobs {
+				statser := statser.NewStatser(jid)
+
 				w.jobWatchers[jid] = &jobWatcher{
-					name:   jid,
-					puller: puller.NewPuller(jid, w.xPack, w.events, filters.NilFilter{}),
+					name:    jid,
+					puller:  puller.NewPuller(jid, w.xPack, w.events, filters.NilFilter{}),
+					statser: statser,
 				}
 
-				w.jobWatchers[jid].puller.Run(ctx)
+				statser.Run(ctx)
+				w.jobWatchers[jid].puller.Run(ctx, statser)
 			}
 			w.watching = true
 		}()
@@ -71,5 +77,16 @@ func (w *watcher) Ping(context.Context) error {
 }
 
 func (w *watcher) Ready() bool {
-	return w.watching
+	if !w.watching {
+		return false
+	}
+
+	for _, jw := range w.jobWatchers {
+		status := jw.statser.Status()
+		if len(status.ErrorConditions) > 0 {
+			return false
+		}
+	}
+
+	return true
 }

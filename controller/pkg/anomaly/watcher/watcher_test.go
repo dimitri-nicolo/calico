@@ -4,6 +4,7 @@ package watcher
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -13,14 +14,23 @@ import (
 	"github.com/tigera/intrusion-detection/controller/pkg/elastic"
 )
 
-func TestPing(t *testing.T) {
+func TestReady(t *testing.T) {
 	g := NewWithT(t)
 
-	w := NewWatcher(&db.MockEvents{}, &elastic.MockXPack{})
+	w := NewWatcher(&db.MockEvents{}, &elastic.MockXPack{}).(*watcher)
 	g.Expect(w.Ready()).Should(BeFalse())
 
 	ctx, cancel := context.WithTimeout(context.TODO(), time.Minute)
 	defer cancel()
 	w.Run(ctx)
 	g.Eventually(w.Ready).Should(BeTrue())
+
+	var jid string
+	for jid, _ = range Jobs {
+		break
+	}
+	g.Expect(jid).ShouldNot(Equal(""))
+
+	w.jobWatchers[jid].statser.Error("test", errors.New("test"))
+	g.Expect(w.Ready()).Should(BeFalse())
 }
