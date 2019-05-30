@@ -1,7 +1,10 @@
+// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+
 package main
 
 import (
 	"fmt"
+	targets2 "github.com/tigera/voltron/internal/pkg/targets"
 	"net/http"
 
 	"github.com/kelseyhightower/envconfig"
@@ -18,16 +21,16 @@ func main() {
 	}
 
 	bootstrap.ConfigureLogging(cfg.LogLevel)
-	log.Error("Starting with configuration ", cfg)
+	log.Infof("Starting VOLTRON_AGENT with configuration %v", cfg)
 
-	handler := proxy.New(proxy.CreateStaticTargets(), proxy.Path())
+	targets := targets2.CreateStaticTargets()
+	log.Infof("Targets are: %v", targets)
+	handler := proxy.New(proxy.NewPathMatcher(targets))
 	http.Handle("/", handler)
-
-	log.Infof("Targets are: %v", handler.Targets)
 
 	url := fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)
 	log.Infof("Starting web server on %v", url)
 	if err := http.ListenAndServe(url, nil); err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 }

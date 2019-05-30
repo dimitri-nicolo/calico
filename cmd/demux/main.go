@@ -1,13 +1,18 @@
+// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+
 package main
 
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/tigera/voltron/internal/pkg/bootstrap"
+	"github.com/tigera/voltron/internal/pkg/targets"
 	"net/http"
 	"net/url"
 	"sort"
 
-	"github.com/caarlos0/env"
+	"github.com/kelseyhightower/envconfig"
+	log "github.com/sirupsen/logrus"
 	"github.com/tigera/voltron/internal/pkg/config"
 
 	demuxproxy "github.com/tigera/voltron/internal/pkg/proxy"
@@ -23,7 +28,21 @@ func returnJSON(w http.ResponseWriter, data interface{}) {
 //-------------------------------------------------
 
 type demuxProxyHandler struct {
-	proxy demuxproxy.DemuxProxy
+	targets *targets.Targets
+}
+
+func (dp demuxProxyHandler) Add(target string, destination *url.URL) {
+	dp.targets.Add(target, destination)
+}
+
+func (dp demuxProxyHandler) List() []string {
+	targets := make([]string, 0, len(dp.targets.List()))
+	for target := range dp.targets.List() {
+		targets = append(targets, target)
+	}
+	sort.Strings(targets)
+
+	return targets
 }
 
 func (dph *demuxProxyHandler) handle(w http.ResponseWriter, r *http.Request) {
@@ -44,38 +63,38 @@ func (dph *demuxProxyHandler) updateTargets(w http.ResponseWriter, r *http.Reque
 	}
 	// no validations... for now
 	// WARNING: there's a race condition in the write to Targets
-	dph.proxy.Targets[r.Form["name"][0]], _ = url.Parse(r.Form["target"][0])
+	name := r.Form["name"][0]
+	url, _ := url.Parse(r.Form["target"][0])
+	dph.Add(name, url)
 	returnJSON(w, r.Form)
 }
 
 func (dph *demuxProxyHandler) listTargets(w http.ResponseWriter, r *http.Request) {
-	targets := make([]string, 0, len(dph.proxy.Targets))
-	for target := range dph.proxy.Targets {
-		targets = append(targets, target)
-	}
-	sort.Strings(targets)
-	returnJSON(w, targets)
+	returnJSON(w, dph.List())
 }
 
 //-------------------------------------------------
 
 func main() {
 	cfg := config.Config{}
-	if err := env.Parse(&cfg); err != nil {
-		panic(err)
+	if err := envconfig.Process("VOLTRON", &cfg); err != nil {
+		log.Fatal(err)
 	}
-	fmt.Printf("Starting with configuration %v\n", cfg)
 
-	proxy := demuxproxy.New(demuxproxy.CreateStaticTargetsForAgent(), demuxproxy.XTarget())
-	http.Handle("/", proxy)
-	proxyHandler := demuxProxyHandler{proxy: proxy}
+	bootstrap.ConfigureLogging(cfg.LogLevel)
+	log.Infof("Starting VOLTRON with configuration %v", cfg)
+
+	targets := targets.CreateStaticTargetsForServer()
+	log.Infof("Targets are: %v", targets)
+	handler := demuxproxy.New(demuxproxy.NewHeaderMatcher(targets, "x-target"))
+
+	http.Handle("/", handler)
+	proxyHandler := demuxProxyHandler{targets: targets}
 	http.HandleFunc("/targets", proxyHandler.handle)
 
-	fmt.Printf("Targets are: %v\n", proxy.Targets)
-
 	url := fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)
-	fmt.Println("Starting web server on", url)
+	log.Infof("Starting web server on", url)
 	if err := http.ListenAndServe(url, nil); err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 }

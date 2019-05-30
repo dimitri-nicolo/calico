@@ -1,40 +1,41 @@
+// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+
 package proxy
 
 import (
-	"fmt"
+	log "github.com/sirupsen/logrus"
 	"net/http"
 	"net/http/httputil"
-	"net/url"
 )
 
-// MuxProxy knows about different destination
-// and proxies requests according to some "hook" -- currently hardcoded to query param "target"
 type DemuxProxy struct {
-	Targets         map[string]*url.URL
-	TargetExtractor func(r *http.Request) string
+	matcher         Matcher
 }
 
-// New returns an initialized MuxProxy
-func New(targets map[string]*url.URL, targetExtractor func(r *http.Request) string) DemuxProxy {
-	return DemuxProxy{Targets: targets, TargetExtractor: targetExtractor}
+// New returns an initialized Proxy
+func New(matcher Matcher) DemuxProxy {
+	return DemuxProxy{matcher: matcher}
 }
 
 // ServeHTTP knows how to proxy HTTP requests to different named targets
 func (mp DemuxProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	target := mp.TargetExtractor(r)
-	if len(target) == 0 {
-		http.Error(w, "Could not extract target from request", 400)
+	log.Debugf("Received request %v", r)
+
+	url, err := mp.matcher.Match(r)
+
+	if err != nil {
+		http.Error(w, err.Error(), 400)
 		return
 	}
-	url, ok := mp.Targets[target]
-	if !ok {
-		http.Error(w, fmt.Sprintf("Configuration missing for target %#v", target), 400)
-		return
-	}
+
+	log.Debugf("Will proxy it to %v", url)
+
 	r.URL.Host = url.Host
 	r.URL.Scheme = url.Scheme
 	r.Header.Set("X-Forwarded-Host", r.Header.Get("Host"))
 	r.Host = url.Host
+
+	log.Debugf("New http request is %v", r)
 
 	httputil.NewSingleHostReverseProxy(url).ServeHTTP(w, r)
 }
