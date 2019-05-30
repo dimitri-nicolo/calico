@@ -1,7 +1,7 @@
-# voltron
+# Voltron
 Components for managing multiple clusters through a single management plane
 
-## Build apps
+# Build apps
 
 Build demux:
 
@@ -14,6 +14,19 @@ Build agent:
 ```
 YOUR_APP=agent make agent
 ```
+
+# Voltron Agent
+
+## Configurations
+
+Name | Type | Default
+--- | --- | ---
+VOLTRON_AGENT_LOGLEVEL | Environment | WARN
+VOLTRON_AGENT_PORT | Environment | 3000
+VOLTRON_AGENT_HOST | Environment | localhost
+
+
+# Project structure
 
 ## 1. Go Directories
 

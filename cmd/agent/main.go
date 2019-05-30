@@ -4,25 +4,29 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/caarlos0/env"
+	"github.com/kelseyhightower/envconfig"
+	log "github.com/sirupsen/logrus"
+	"github.com/tigera/voltron/internal/pkg/bootstrap"
 	"github.com/tigera/voltron/internal/pkg/config"
 	"github.com/tigera/voltron/internal/pkg/proxy"
 )
 
 func main() {
 	cfg := config.Config{}
-	if err := env.Parse(&cfg); err != nil {
-		panic(err)
+	if err := envconfig.Process("VOLTRON_AGENT", &cfg); err != nil {
+		log.Fatal(err)
 	}
-	fmt.Printf("Starting with configuration %v\n", cfg)
+
+	bootstrap.ConfigureLogging(cfg.LogLevel)
+	log.Error("Starting with configuration ", cfg)
 
 	handler := proxy.New(proxy.CreateStaticTargets(), proxy.Path())
 	http.Handle("/", handler)
 
-	fmt.Printf("Targets are: %v\n", handler.Targets)
+	log.Infof("Targets are: %v", handler.Targets)
 
 	url := fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)
-	fmt.Println("Starting web server on", url)
+	log.Infof("Starting web server on %v", url)
 	if err := http.ListenAndServe(url, nil); err != nil {
 		panic(err)
 	}
