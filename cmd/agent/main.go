@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
+	"net/http"
+
 	"github.com/caarlos0/env"
 	"github.com/tigera/voltron/internal/pkg/config"
 	"github.com/tigera/voltron/internal/pkg/proxy"
-	"net/http"
 )
 
 func main() {
@@ -13,15 +14,15 @@ func main() {
 	if err := env.Parse(&cfg); err != nil {
 		panic(err)
 	}
-	fmt.Println(fmt.Sprintf("Starting with configuration %v", cfg))
+	fmt.Printf("Starting with configuration %v\n", cfg)
 
 	handler := proxy.New(proxy.CreateStaticTargets(), proxy.Path())
-	http.Handle("/",handler)
+	http.Handle("/", handler)
 
-	fmt.Println(fmt.Sprintf("Targets are: %v", handler.Targets))
+	fmt.Printf("Targets are: %v\n", handler.Targets)
 
-	fmt.Println(fmt.Sprintf("Starting web server on %v:%v", cfg.Host, cfg.Port))
 	url := fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)
+	fmt.Println("Starting web server on", url)
 	if err := http.ListenAndServe(url, nil); err != nil {
 		panic(err)
 	}

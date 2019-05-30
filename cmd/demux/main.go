@@ -3,11 +3,12 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/tigera/voltron/internal/pkg/config"
 	"net/http"
 	"net/url"
 	"sort"
+
 	"github.com/caarlos0/env"
+	"github.com/tigera/voltron/internal/pkg/config"
 
 	demuxproxy "github.com/tigera/voltron/internal/pkg/proxy"
 )
@@ -42,6 +43,7 @@ func (dph *demuxProxyHandler) updateTargets(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	// no validations... for now
+	// WARNING: there's a race condition in the write to Targets
 	dph.proxy.Targets[r.Form["name"][0]], _ = url.Parse(r.Form["target"][0])
 	returnJSON(w, r.Form)
 }
@@ -62,14 +64,17 @@ func main() {
 	if err := env.Parse(&cfg); err != nil {
 		panic(err)
 	}
+	fmt.Printf("Starting with configuration %v\n", cfg)
 
 	proxy := demuxproxy.New(demuxproxy.CreateStaticTargetsForAgent(), demuxproxy.XTarget())
 	http.Handle("/", proxy)
 	proxyHandler := demuxProxyHandler{proxy: proxy}
 	http.HandleFunc("/targets", proxyHandler.handle)
 
-	fmt.Println(fmt.Sprintf("Starting web server on %v:%v", cfg.Host, cfg.Port))
+	fmt.Printf("Targets are: %v\n", proxy.Targets)
+
 	url := fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)
+	fmt.Println("Starting web server on", url)
 	if err := http.ListenAndServe(url, nil); err != nil {
 		panic(err)
 	}

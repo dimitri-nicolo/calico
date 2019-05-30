@@ -5,14 +5,14 @@ import (
 	"net/url"
 )
 
-func XTarget() func (r *http.Request) string {
-	return func (r *http.Request) string {
+func XTarget() func(r *http.Request) string {
+	return func(r *http.Request) string {
 		return r.Header.Get("x-target")
 	}
 }
 
-func Path() func (r *http.Request) string {
-	return func (r *http.Request) string {
+func Path() func(r *http.Request) string {
+	return func(r *http.Request) string {
 		return "api"
 	}
 }
@@ -34,7 +34,7 @@ func CreateStaticTargetsForAgent() map[string]*url.URL {
 	return targets
 }
 
-func parse(rawUrl string) *url.URL{
+func parse(rawUrl string) *url.URL {
 	url, err := url.Parse(rawUrl)
 	if err != nil {
 		panic(err)
