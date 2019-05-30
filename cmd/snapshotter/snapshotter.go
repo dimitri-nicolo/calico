@@ -35,7 +35,7 @@ func main() {
 	// Init elastic.
 	elasticClient, err := elastic.NewFromConfig(cfg)
 	if err != nil {
-		panic(err)
+		log.Panicf("Unable to connect to Elasticsearch: %v", err)
 	}
 
 	// Create clientset.

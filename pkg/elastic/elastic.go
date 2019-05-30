@@ -40,7 +40,7 @@ type client struct {
 func MustGetElasticClient(cfg *config.Config) Client {
 	c, err := NewFromConfig(cfg)
 	if err != nil {
-		panic(err)
+		log.Panicf("Unable to connect to Elasticsearch: %v", err)
 	}
 	return c
 }
@@ -51,20 +51,23 @@ func NewFromConfig(cfg *config.Config) (Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	if cfg.ElasticCA != "" {
-		cert, err := ioutil.ReadFile(cfg.ElasticCA)
-		if err != nil {
-			return nil, err
-		}
-		ok := ca.AppendCertsFromPEM(cert)
-		if !ok {
-			return nil, fmt.Errorf("failed to add CA")
-		}
-	}
+
 	h := &http.Client{}
 	if cfg.ParsedElasticURL.Scheme == "https" {
+		if cfg.ElasticCA != "" {
+			cert, err := ioutil.ReadFile(cfg.ElasticCA)
+			if err != nil {
+				return nil, err
+			}
+			ok := ca.AppendCertsFromPEM(cert)
+			if !ok {
+				return nil, fmt.Errorf("invalid Elasticsearch CA in environment variable ELASTIC_CA")
+			}
+		}
+
 		h.Transport = &http.Transport{TLSClientConfig: &tls.Config{RootCAs: ca}}
 	}
+
 	return New(
 		h, cfg.ParsedElasticURL, cfg.ElasticUser, cfg.ElasticPassword, cfg.ElasticIndexSuffix,
 		cfg.ElasticConnRetries, cfg.ElasticConnRetryInterval, cfg.ParsedLogLevel == log.DebugLevel)

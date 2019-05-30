@@ -35,8 +35,7 @@ func MustGetKubernetesClient() kubernetes.Interface {
 	// Build k8s client
 	k8sClient, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		log.WithError(err).Debug("Failed to load k8s client")
-		panic(err)
+		log.WithError(err).Panic("Failed to load k8s client")
 	}
 	return k8sClient
 }
@@ -49,15 +48,13 @@ func MustGetConfig() *rest.Config {
 		// creates the in-cluster config
 		config, err = rest.InClusterConfig()
 		if err != nil {
-			log.WithError(err).Debug("Could not get in cluster config")
-			panic(err.Error())
+			log.WithError(err).Panic("Error getting in-cluster config")
 		}
 	} else {
 		// creates a config from supplied kubeconfig
 		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
 		if err != nil {
-			log.WithError(err).Debug("Could not process kubeconfig file")
-			panic(err.Error())
+			log.WithError(err).Panic("Error processing kubeconfig file in environment variable KUBECONFIG")
 		}
 	}
 	config.Timeout = 15 * time.Second
@@ -71,7 +68,7 @@ func MustGetCalicoClient() clientv3.ProjectcalicoV3Interface {
 	// Build calico client
 	calicoClient, err := calicoclient.NewForConfig(config)
 	if err != nil {
-		panic(err.Error())
+		log.Panicf("Failed to load Calico client: %v", err)
 	}
 
 	return calicoClient.ProjectcalicoV3()
