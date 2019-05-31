@@ -19,7 +19,7 @@ cluster without the need for a dedicated load balancer.
 **BGP peers**
 
 You must have established BGP connections to one or more routers outside of your Kubernetes cluster.
-See [configuring BGP peers][bgp] for more information.
+See [configuring BGP peers][bgp-peers] for more information.
 
 For ECMP load balancing to services, the upstream routers must be configured to use BGP multipath.
 
@@ -59,6 +59,19 @@ In order to implement this behavior, {{site.prodname}} does the following.
    cluster IP for that service is advertised as a /32 route from the
    nodes that have endpoints for that service.
 
+## Enabling service advertisement for `ClusterIP` services
+
+Service cluster IP advertisement of /32 routes, by default, is enabled only for `NodePort` and `LoadBalancer` type services.
+In some routing infrastructures, you may want to advertise /32 routes of `ClusterIP` services as well. This is enabled on a 
+per-service basis by adding the annotation `projectcalico.org/AdvertiseClusterIP: true` to the service. For example:
+
+```bash
+kubectl annotate service your-service "projectcalico.org/AdvertiseClusterIP=true"
+```
+
+> **Note**: you will still need to enable service cluster IP advertisement via the `CALICO_ADVERTISE_CLUSTER_IPS` environment variable.
+
 [external-traffic-policy]: https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/#preserving-the-client-source-ip
 [apiserver]: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/
 [reference]: {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/config-options#configuring-service-advertisement
+[bgp-peers]: {{site.baseurl}}/{{page.version}}/networking/bgp

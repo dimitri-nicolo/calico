@@ -19,7 +19,7 @@ cluster without the need for a dedicated load balancer.
 **BGP peers**
 
 You must have established BGP connections to one or more routers outside of your Kubernetes cluster.
-See [configuring BGP peers][bgp] for more information.
+See [configuring BGP peers][bgp-peers] for more information.
 
 For ECMP load balancing to services, the upstream routers must be configured to use BGP multipath.
 
@@ -74,3 +74,4 @@ kubectl annotate service your-service "projectcalico.org/AdvertiseClusterIP=true
 [external-traffic-policy]: https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/#preserving-the-client-source-ip
 [apiserver]: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/
 [reference]: {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/config-options#configuring-service-advertisement
+[bgp-peers]: {{site.baseurl}}/{{page.version}}/networking/bgp
