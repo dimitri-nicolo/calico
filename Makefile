@@ -427,6 +427,14 @@ tag-images-all: imagetag $(addprefix sub-tag-images-,$(VALIDARCHES))
 sub-tag-images-%:
 	$(MAKE) tag-images ARCH=$* IMAGETAG=$(IMAGETAG)
 
+## tag version number build images i.e.  tigera/felix:latest-amd64 -> tigera/felix:v1.1.1-amd64
+tag-base-images-all: $(addprefix sub-base-tag-images-,$(VALIDARCHES))
+sub-base-tag-images-%:
+	docker tag $(BUILD_IMAGE):latest-$* $(call unescapefs,$(BUILD_IMAGE):$(VERSION)-$*)
+	docker tag $(BUILD_IMAGE):latest-$* $(call unescapefs,quay.io/$(BUILD_IMAGE):$(VERSION)-$*)
+
+
+
 ###############################################################################
 # Building OS Packages (debs/RPMS)
 ###############################################################################
@@ -888,6 +896,7 @@ release: release-prereqs
 	$(MAKE) VERSION=$(VERSION) release-tag
 	$(MAKE) VERSION=$(VERSION) release-build
 	$(MAKE) VERSION=$(VERSION) release-windows-archive
+	$(MAKE) VERSION=$(VERSION) tag-base-images-all
 	$(MAKE) VERSION=$(VERSION) release-verify
 
 	@echo ""
