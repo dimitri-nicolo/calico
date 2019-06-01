@@ -10,13 +10,11 @@ import (
 	"github.com/olivere/elastic"
 	log "github.com/sirupsen/logrus"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	auditv1 "k8s.io/apiserver/pkg/apis/audit"
 
 	"github.com/projectcalico/libcalico-go/lib/apis/v3"
 
 	"github.com/tigera/compliance/pkg/event"
-	"github.com/tigera/compliance/pkg/resources"
 )
 
 const (
@@ -24,16 +22,8 @@ const (
 	pageSize      = 100
 )
 
-func (c *client) GetAuditEvents(ctx context.Context, tm *metav1.TypeMeta, start, end *time.Time) <-chan *event.AuditEventResult {
-	// create the channel that the retrieved events will fill into.
-	var filter *v3.AuditEventsSelection
-
-	// Create an audit event filter if needed
-	if tm != nil {
-		filter = resources.GetResourceHelperByTypeMeta(*tm).GetAuditEventsSelection()
-	}
-
-	return c.SearchAuditEvents(ctx, filter, start, end)
+func (c *client) GetAuditEvents(ctx context.Context, start, end *time.Time) <-chan *event.AuditEventResult {
+	return c.SearchAuditEvents(ctx, nil, start, end)
 }
 
 // Query for audit events in a paginated fashion

@@ -9,6 +9,7 @@ import (
 
 	. "github.com/tigera/compliance/internal/testutils"
 	"github.com/tigera/compliance/pkg/resources"
+	"github.com/tigera/compliance/pkg/syncer"
 	"github.com/tigera/compliance/pkg/xrefcache"
 )
 
@@ -20,6 +21,9 @@ var _ = Describe("Pods cache verification", func() {
 	})
 
 	It("should handle basic CRUD of a pod with no other resources", func() {
+		By("sending in-sync")
+		tester.OnStatusUpdate(syncer.NewStatusUpdateInSync())
+
 		By("applying a pod")
 		tester.SetPod(Name1, Namespace1, NoLabels, IP1, NoServiceAccount, NoPodOptions)
 
@@ -59,6 +63,9 @@ var _ = Describe("Pods cache verification", func() {
 		By("applying a pod")
 		tester.SetPod(Name1, Namespace1, NoLabels, IP1, NoServiceAccount, PodOptEnvoyEnabled)
 
+		By("sending in-sync")
+		tester.OnStatusUpdate(syncer.NewStatusUpdateInSync())
+
 		By("checking the cache settings")
 		ep := tester.GetPod(Name1, Namespace1)
 		Expect(ep).NotTo(BeNil())
@@ -75,6 +82,9 @@ var _ = Describe("Pods cache verification", func() {
 	})
 
 	It("should handle a pod with generate name", func() {
+		By("sending in-sync")
+		tester.OnStatusUpdate(syncer.NewStatusUpdateInSync())
+
 		By("applying a pod")
 		tester.SetPod(Name1, Namespace1, NoLabels, IP1, NoServiceAccount, PodOptSetGenerateName)
 
@@ -94,6 +104,9 @@ var _ = Describe("Pods cache verification", func() {
 	})
 
 	It("should handle basic CRUD of a host endpoint", func() {
+		By("sending in-sync")
+		tester.OnStatusUpdate(syncer.NewStatusUpdateInSync())
+
 		By("applying a host endpoint")
 		tester.SetHostEndpoint(Name1, NoLabels, IP1)
 
@@ -172,16 +185,25 @@ var _ = Describe("Pods cache verification", func() {
 		gnp1 := tester.GetGlobalNetworkPolicy(Name1)
 		Expect(gnp1).NotTo(BeNil())
 		Expect(gnp1.SelectedPods.Len()).To(Equal(1))
-		Expect(gnp1.Flags).To(Equal(
-			xrefcache.CacheEntryProtectedIngress | xrefcache.CacheEntryInternetExposedIngress |
-				xrefcache.CacheEntryOtherNamespaceExposedIngress,
-		))
 		gnp2 := tester.GetGlobalNetworkPolicy(Name2)
 		Expect(gnp2).NotTo(BeNil())
 		Expect(gnp2.SelectedPods.Len()).To(Equal(0))
 		np1 := tester.GetNetworkPolicy(Name1, Namespace1)
 		Expect(np1).NotTo(BeNil())
 		Expect(np1.SelectedPods.Len()).To(Equal(1))
+
+		By("checking cross-ref calculated flags are not yet set")
+		Expect(gnp1.Flags).To(BeZero())
+		Expect(np1.Flags).To(BeZero())
+
+		By("sending in-sync")
+		tester.OnStatusUpdate(syncer.NewStatusUpdateInSync())
+
+		By("checking cross-ref calculated flags")
+		Expect(gnp1.Flags).To(Equal(
+			xrefcache.CacheEntryProtectedIngress | xrefcache.CacheEntryInternetExposedIngress |
+				xrefcache.CacheEntryOtherNamespaceExposedIngress,
+		))
 		Expect(np1.Flags).To(Equal(
 			xrefcache.CacheEntryProtectedEgress, // no egress internet because NP won't match a global NS
 		))
@@ -219,6 +241,9 @@ var _ = Describe("Pods cache verification", func() {
 	})
 
 	It("should handle tracking matching services", func() {
+		By("sending in-sync")
+		tester.OnStatusUpdate(syncer.NewStatusUpdateInSync())
+
 		By("applying pod1 IP1")
 		tester.SetPod(Name1, Namespace1, NoLabels, IP1, NoServiceAccount, NoPodOptions)
 

@@ -25,10 +25,16 @@ const (
 type DispatcherOnStatusUpdate func(syncer.StatusUpdate)
 type DispatcherOnUpdate func(syncer.Update)
 
-// Dispatcher implements the SyncerCallbacks.
-// Register for status and update handling.
+// Dispatcher provides methods to send status and updates, and for handlers to register for status and update
+// notifications.
+//
+// Note: Unlike the syncer which can handle multiple updates in a single request the dispatcher only handles
+// single updates at a time - this greatly simplifies the filtering processing. The upshot of this is that any
+// correlation between a single set of resources in a syncer request needs to be handled at the syncer update
+// stage.
 type Dispatcher interface {
-	syncer.SyncerCallbacks
+	OnStatusUpdate(status syncer.StatusUpdate)
+	OnUpdate(update syncer.Update)
 	RegisterOnStatusUpdateHandler(callback DispatcherOnStatusUpdate)
 	RegisterOnUpdateHandler(kind metav1.TypeMeta, updateTypes syncer.UpdateType, callback DispatcherOnUpdate)
 }
@@ -79,12 +85,12 @@ func (d *dispatcher) RegisterOnUpdateHandler(kind metav1.TypeMeta, updateTypes s
 	rt.registrations = append(rt.registrations, onUpdateRegistration{updateTypes, callback})
 }
 
-// OnUpdates is a callback from the SyncerQuerySerializer to update our cache from a syncer
-// update.  It is guaranteed not to be called at the same time as RunQuery and OnStatusUpdated.
+// OnUpdate callback distributes the update across the set of components that registered for this resource type and
+// update type. It is guaranteed not to be called at the same time as OnStatusUpdate.
 func (d *dispatcher) OnUpdate(update syncer.Update) {
 	registration, ok := d.resourceTypes[update.ResourceID.TypeMeta]
 	if !ok {
-		d.clog.WithField("resourceTypes", d.resourceTypes).Infof("Update for unregistered resource type: %s", update.ResourceID)
+		d.clog.WithField("resourceTypes", d.resourceTypes).Debugf("Update for unregistered resource type: %s", update.ResourceID)
 		return
 	}
 

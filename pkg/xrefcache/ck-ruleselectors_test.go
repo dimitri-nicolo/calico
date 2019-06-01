@@ -8,6 +8,7 @@ import (
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
 	. "github.com/tigera/compliance/internal/testutils"
+	"github.com/tigera/compliance/pkg/syncer"
 	"github.com/tigera/compliance/pkg/xrefcache"
 )
 
@@ -24,6 +25,7 @@ var _ = Describe("Basic CRUD of network policies rule selector pseudo resource t
 
 	BeforeEach(func() {
 		tester = NewXrefCacheTester()
+		tester.OnStatusUpdate(syncer.NewStatusUpdateInSync())
 	})
 
 	It("should handle basic CRUD of a single rule selector pseudo resource", func() {

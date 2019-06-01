@@ -45,7 +45,7 @@ func (r *replayer) Start(ctx context.Context) {
 	r.cb.OnStatusUpdate(syncer.NewStatusUpdateInSync())
 
 	log.Info("replaying audit events to end time")
-	if err := r.replay(ctx, nil, &r.start, &r.end, true); err != nil {
+	if err := r.replay(ctx, &r.start, &r.end, true); err != nil {
 		r.cb.OnStatusUpdate(syncer.NewStatusUpdateFailed(err))
 		return
 	}
@@ -57,6 +57,7 @@ func (r *replayer) Start(ctx context.Context) {
 // - Retrieve events from the list's timestamp up until the specified start time.
 // - Replay the retrieve events on top of the list.
 func (r *replayer) initialize(ctx context.Context) error {
+	var firstSnapshot *metav1.Time
 	for _, rh := range resources.GetAllResourceHelpers() {
 		kind := rh.TypeMeta()
 		clog := log.WithField("kind", kind.String())
@@ -71,6 +72,12 @@ func (r *replayer) initialize(ctx context.Context) error {
 			return err
 		}
 		clog.Debug("retrieved list")
+
+		// Track the earliest snapshot that we use - we need to play event stream back from this earliest point
+		// to ensure we capture any namespace delete/create events.
+		if firstSnapshot == nil || l.RequestStartedTimestamp.Before(firstSnapshot) {
+			firstSnapshot = &l.RequestStartedTimestamp
+		}
 
 		// Extract the list into an array of runtime.Objects.
 		objs, err := meta.ExtractList(l.ResourceList)
@@ -91,27 +98,28 @@ func (r *replayer) initialize(ctx context.Context) error {
 			r.resources[kind][id] = res
 		}
 		clog.Debug("stored objects into internal cache, replaying events to start time")
-
-		// Replay events into the internal cache from the list time to the desired start time.
-		if err = r.replay(ctx, &kind, &l.RequestStartedTimestamp.Time, &r.start, false); err != nil {
-			return err
-		}
-		clog.Debug("internal cache replayed to start time, publishing syncer updates")
 	}
 
+	// Replay events into the internal cache from the list time to the desired start time.
+	if err := r.replay(ctx, &firstSnapshot.Time, &r.start, false); err != nil {
+		return err
+	}
+	log.Debug("internal cache replayed to start time, publishing syncer updates")
+
 	// Send Update to callbacks.
-	for kind, resList := range r.resources {
-		for _, res := range resList {
-			log.WithFields(log.Fields{"kind": kind, "resID": resources.GetResourceID(res)}).Debug("publishing syncer updates")
-			r.cb.OnUpdate(syncer.Update{Type: syncer.UpdateTypeSet, ResourceID: resources.GetResourceID(res), Resource: res})
+	for tm, cache := range r.resources {
+		log.Infof("Sending initial snapshot for %s", tm)
+		for id, res := range cache {
+			log.WithField("id", id).Debug("publishing syncer updates")
+			r.cb.OnUpdates([]syncer.Update{{Type: syncer.UpdateTypeSet, ResourceID: id, Resource: res}})
 		}
 	}
 	return nil
 }
 
 // replay fetches events for the given resource from the list's timestamp up until the specified start time.
-func (r *replayer) replay(ctx context.Context, filterTM *metav1.TypeMeta, from, to *time.Time, notifyUpdates bool) error {
-	for ev := range r.eventer.GetAuditEvents(ctx, filterTM, from, to) {
+func (r *replayer) replay(ctx context.Context, from, to *time.Time, notifyUpdates bool) error {
+	for ev := range r.eventer.GetAuditEvents(ctx, from, to) {
 		if ev.Err != nil {
 			return ev.Err
 		}
@@ -170,14 +178,67 @@ func (r *replayer) replay(ctx context.Context, filterTM *metav1.TypeMeta, from, 
 			resMap[id] = res
 		case event.VerbDelete:
 			clog.Debug("deleting event")
+
+			// Delete events will not actually contain the resource, so fix up the update from the cached value.
+			if res, ok := resMap[id]; ok {
+				update.Resource = res
+			}
 			update.Type = syncer.UpdateTypeDeleted
 			delete(resMap, id)
 		default:
 			clog.Warn("invalid verb")
 		}
+
+		// Convert the update to a slice.
+		var updates []syncer.Update
+
+		if update.Type == syncer.UpdateTypeDeleted && update.ResourceID.TypeMeta == resources.TypeK8sNamespaces {
+			// This is a namespace deletion, perform some additional deletion and, if notifying, obtain the additional
+			// set of updates.
+			log.Infof("Handling deletion of namespace: %s", update.ResourceID.Name)
+			updates = r.handleNamespaceDeletion(update.ResourceID.Name, notifyUpdates)
+		}
+
+		// Send the updates. We send in a single hit so that the xref cache can handle the updates as a group to avoid
+		// extra churn.
 		if notifyUpdates {
-			r.cb.OnUpdate(update)
+			updates = append(updates, update)
+			log.Infof("Sending %d updates", len(updates))
+			r.cb.OnUpdates(updates)
 		}
 	}
 	return nil
+}
+
+// handleNamespaceDeletion is responsible for performing cross-resource updates when deleting a namespace.
+func (r *replayer) handleNamespaceDeletion(namespace string, notifyUpdates bool) []syncer.Update {
+	// Special processing is required for namespace deletion. Iterate through all of the caches and delete entries for
+	// all resources in the same namespace. We'll end up iterating through non-namespaced resource types, but none will
+	// match so we'll just skip - not the most efficient, but simple, and namespace deletion is not a frequent event.
+	var updates []syncer.Update
+	for tm, cache := range r.resources {
+		log.Infof("Handling deletion %s in namespace %s", tm, namespace)
+		for id, res := range cache {
+			if id.Namespace != namespace {
+				continue
+			}
+
+			// Namespace of this resource is the same as the deleted namespace, remove from the cache and add to our
+			// updates.
+			log.Infof("Deleting %s from replayer cache", id)
+
+			if notifyUpdates {
+				updates = append(updates, syncer.Update{
+					Type:       syncer.UpdateTypeDeleted,
+					ResourceID: id,
+					Resource:   res,
+				})
+			}
+
+			// Remove the entry from the cache. It is safe to modify the map during enumeration with golang.
+			delete(cache, id)
+		}
+	}
+
+	return updates
 }

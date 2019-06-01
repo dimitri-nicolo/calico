@@ -7,7 +7,6 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	auditv1 "k8s.io/apiserver/pkg/apis/audit"
 
 	"github.com/tigera/compliance/pkg/resources"
@@ -26,7 +25,7 @@ type AuditEventResult struct {
 }
 
 type Fetcher interface {
-	GetAuditEvents(context.Context, *metav1.TypeMeta, *time.Time, *time.Time) <-chan *AuditEventResult
+	GetAuditEvents(context.Context, *time.Time, *time.Time) <-chan *AuditEventResult
 }
 
 // ExtractResourceFromAuditEvent determines the resource kind located within an audit event

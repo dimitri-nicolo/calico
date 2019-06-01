@@ -25,8 +25,6 @@ var (
 		APIVersion: "internal.tigera.io/v1",
 	}
 
-	// The network policy cache is populated by both Kubernetes and Calico policy types. Include KindSelector in here so
-	// the queued recalculation processing knows where to send those updates.
 	KindsNetworkPolicyRuleSelectors = []metav1.TypeMeta{
 		KindSelector,
 	}

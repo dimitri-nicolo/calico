@@ -160,6 +160,17 @@ func getObjectMeta(r apiv3.ResourceID, labels Label) metav1.ObjectMeta {
 // XrefCacheTester is the XrefCache tester.
 type XrefCacheTester struct {
 	xrefcache.XrefCache
+	AccumlateUpdates   bool
+	accumulatedUpdates []syncer.Update
+}
+
+// OnUpdate is a wrapper around OnUpdates to simplify code.
+func (t *XrefCacheTester) OnUpdate(u syncer.Update) {
+	t.accumulatedUpdates = append(t.accumulatedUpdates, u)
+	if !t.AccumlateUpdates {
+		t.OnUpdates(t.accumulatedUpdates)
+		t.accumulatedUpdates = nil
+	}
 }
 
 // GetSelector returns the selector for a given selector bitmask value.

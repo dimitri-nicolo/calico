@@ -21,8 +21,7 @@ import (
 )
 
 var (
-	// The network policy cache is populated by both Kubernetes and Calico policy types. Include KindSelector in here so
-	// the queued recalculation processing knows where to send those updates.
+	// The network policy cache is populated by both Kubernetes and Calico policy types.
 	KindsNetworkPolicy = []metav1.TypeMeta{
 		resources.TypeCalicoGlobalNetworkPolicies,
 		resources.TypeCalicoNetworkPolicies,
