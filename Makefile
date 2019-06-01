@@ -276,6 +276,13 @@ else
 	$(NOECHO) $(NOOP)
 endif
 
+
+## tag version number build images i.e.  tigera/cni:latest-amd64 -> tigera/cni:v1.1.1-amd64
+tag-base-images-all: $(addprefix sub-base-tag-images-,$(VALIDARCHES))
+sub-base-tag-images-%:
+	docker tag $(BUILD_IMAGE):latest-$* $(call unescapefs,$(BUILD_IMAGE):$(VERSION)-$*)
+
+
 ## tag images of all archs
 tag-images-all: imagetag $(addprefix sub-tag-images-,$(VALIDARCHES))
 sub-tag-images-%:
@@ -534,6 +541,7 @@ PREVIOUS_RELEASE=$(shell git describe --tags --abbrev=0)
 release: release-prereqs
 	$(MAKE) VERSION=$(VERSION) release-tag
 	$(MAKE) VERSION=$(VERSION) release-build
+	$(MAKE) VERSION=$(VERSION) tag-base-images-all
 	$(MAKE) VERSION=$(VERSION) release-verify
 
 	@echo ""
