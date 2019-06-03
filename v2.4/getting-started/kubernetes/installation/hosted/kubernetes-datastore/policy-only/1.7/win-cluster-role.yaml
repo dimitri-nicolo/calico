@@ -1,6 +1,6 @@
 ---
 layout: null
 ---
-{% helm --execute templates/rbac.yaml --execute templates/cluster-role.yaml %}
+{% helm --execute templates/cluster-role.yaml %}
 osType: windows
 {% endhelm %}
