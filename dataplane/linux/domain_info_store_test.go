@@ -10,6 +10,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
 func makeA(name, ip string) layers.DNSResourceRecord {
@@ -194,4 +196,41 @@ var _ = Describe("Domain Info Store", func() {
 	domainStoreTestValidRec(mockDNSRecAAAA1, mockDNSRecAAAA2)
 	domainStoreTestInvalidRec(invalidDNSRec)
 	domainStoreTestCNAME(mockDNSRecCNAME, mockDNSRecA1)
+
+	expectChangesFor := func(domains ...string) {
+		domainsSignaled := set.New()
+	loop:
+		for {
+			select {
+			case signal := <-domainStore.domainInfoChanges:
+				domainsSignaled.Add(signal.domain)
+			default:
+				break loop
+			}
+		}
+		Expect(domainsSignaled).To(Equal(set.FromArray(domains)))
+	}
+
+	// Test where:
+	// - a1.com and a2.com are both aliases for b.com
+	// - b.com is an alias for c.com
+	// - c.com resolves to an IP address
+	// The ipsets manager is interested in both a1.com and a2.com.
+	//
+	// The key point is that when the IP address for c.com changes, the ipsets manager
+	// should be notified that domain info has changed for both a1.com and a2.com.
+	It("should handle a branched DNS graph", func() {
+		domainStoreCreate()
+		programDNSAnswer(domainStore, makeCNAME("a1.com", "b.com"))
+		programDNSAnswer(domainStore, makeCNAME("a2.com", "b.com"))
+		programDNSAnswer(domainStore, makeCNAME("b.com", "c.com"))
+		programDNSAnswer(domainStore, makeA("c.com", "3.4.5.6"))
+		expectChangesFor("a1.com", "a2.com", "b.com", "c.com")
+		Expect(domainStore.GetDomainIPs("a1.com")).To(Equal([]string{"3.4.5.6"}))
+		Expect(domainStore.GetDomainIPs("a2.com")).To(Equal([]string{"3.4.5.6"}))
+		programDNSAnswer(domainStore, makeA("c.com", "7.8.9.10"))
+		expectChangesFor("a1.com", "a2.com", "b.com", "c.com")
+		Expect(domainStore.GetDomainIPs("a1.com")).To(Equal([]string{"7.8.9.10"}))
+		Expect(domainStore.GetDomainIPs("a2.com")).To(Equal([]string{"7.8.9.10"}))
+	})
 })
