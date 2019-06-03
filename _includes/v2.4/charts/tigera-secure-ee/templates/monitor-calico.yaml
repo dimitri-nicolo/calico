@@ -607,6 +607,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
+{{- if ne .Values.fluentd.logFileMountPath "/var/log/calico" }}
+            - name: KUBE_AUDIT_LOG
+              value: {{ .Values.fluentd.logFileMountPath }}/audit/kube-audit.log
+{{- end }}
 {{- if .Values.fluentd.env }}
 {{ toYaml .Values.fluentd.env | indent 12 }}
 {{- end }}
@@ -616,7 +620,7 @@ spec:
 {{- end }}
           volumeMounts:
             - name: var-log-calico
-              mountPath: /var/log/calico
+              mountPath: {{ .Values.fluentd.logFileMountPath }}
             - name: es-config
               mountPath: /etc/fluentd/flow-filters.conf
               subPath: tigera.elasticsearch.flow-filters.conf
@@ -645,7 +649,7 @@ spec:
         - name: var-log-calico
           hostPath:
             type: DirectoryOrCreate
-            path: /var/log/calico
+            path: {{ .Values.fluentd.logFileMountPath }}
         - name: es-config
           configMap:
             name: tigera-es-config

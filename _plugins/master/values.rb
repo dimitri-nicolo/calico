@@ -121,6 +121,8 @@ def gen_chart_specific_values_master(versions, imageNames, imageRegistry, chart)
       # it to ingest logs volume-mounted from the host in environments where doing
       # so is restricted.
       runAsPrivileged: false
+      # Optional configuration for changing the Fluentd mount path for log files to ingest.
+      logFileMountPath: "/var/log/calico"
     
       env:
         # Optional environment variables for configuring the Tigera fluentd.

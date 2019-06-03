@@ -127,7 +127,7 @@ For more details on configuration parameters and their values, please reference 
 1. Either set the appropriate ansible variable (adjust paths as necessary):
 
    ```
-   openshift_master_audit_config={"enabled": true, auditFilePath: "/var/log/calico/audit/kube-audit.log", "logFormat": "json", "policyFile": "/etc/origin/master/audit.yaml"
+   openshift_master_audit_config={"enabled": true, "auditFilePath": "/var/lib/origin/audit/kube-audit.log", "logFormat": "json", "policyFile": "/etc/origin/master/audit.yaml"
    ```
 
    Or add the following to the master configuration file (adjust paths as necessary).
@@ -135,7 +135,7 @@ For more details on configuration parameters and their values, please reference 
    ```
    auditConfig:
      enabled: true
-     auditFilePath: "/var/log/calico/audit/kube-audit.log"
+     auditFilePath: "/var/lib/origin/audit/kube-audit.log"
      policyFile: "/etc/origin/master/audit.yaml"
      logFormat: "json"
    ```

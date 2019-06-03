@@ -5,4 +5,5 @@ layout: null
 createCustomResources: false
 fluentd:
   runAsPrivileged: true
+  logFileMountPath: /var/lib/origin
 {% endhelm %}
