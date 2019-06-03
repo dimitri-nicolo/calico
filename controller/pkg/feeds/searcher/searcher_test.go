@@ -11,14 +11,14 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
-	"github.com/tigera/intrusion-detection/controller/pkg/events"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/events"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/statser"
 	"github.com/tigera/intrusion-detection/controller/pkg/util"
 )
 
 // TestDoIPSet tests the case where everything is working
 func TestDoIPSet(t *testing.T) {
-	expected := []events.SecurityEvent{
+	expected := []events.SuspiciousIPSecurityEvent{
 		{
 			SourceIP:   util.Sptr("1.2.3.4"),
 			SourceName: "source",
@@ -37,18 +37,18 @@ func TestDoIPSet(t *testing.T) {
 
 // TestDoIPSetNoResults tests the case where no results are returned
 func TestDoIPSetNoResults(t *testing.T) {
-	expected := []events.SecurityEvent{}
+	expected := []events.SuspiciousIPSecurityEvent{}
 	runTest(t, true, expected, nil, -1, -1)
 }
 
 // TestDoIPSetSuspiciousIPFails tests the case where suspiciousIP fails after the first result
 func TestDoIPSetSuspiciousIPFails(t *testing.T) {
-	expected := []events.SecurityEvent{}
+	expected := []events.SuspiciousIPSecurityEvent{}
 	runTest(t, false, expected, errors.New("fail"), -1, -1)
 }
 
 func TestDoIPSetSuspiciousIPIterationFails(t *testing.T) {
-	expected := []events.SecurityEvent{
+	expected := []events.SuspiciousIPSecurityEvent{
 		{
 			SourceIP:   util.Sptr("1.2.3.4"),
 			SourceName: "source",
@@ -67,7 +67,7 @@ func TestDoIPSetSuspiciousIPIterationFails(t *testing.T) {
 
 // TestDoIPSetEventsFails tests the case where the first call to events.PutSecurityEvent fails but the second does not
 func TestDoIPSetEventsFails(t *testing.T) {
-	expected := []events.SecurityEvent{
+	expected := []events.SuspiciousIPSecurityEvent{
 		{
 			SourceIP:   util.Sptr("1.2.3.4"),
 			SourceName: "source",
@@ -84,12 +84,15 @@ func TestDoIPSetEventsFails(t *testing.T) {
 	runTest(t, false, expected, nil, -1, 0)
 }
 
-func runTest(t *testing.T, successful bool, expected []events.SecurityEvent, err error, suspiciousErrorIdx, eventsErrorIdx int) {
+func runTest(t *testing.T, successful bool, expected []events.SuspiciousIPSecurityEvent, err error, suspiciousErrorIdx, eventsErrorIdx int) {
 	g := NewGomegaWithT(t)
 
 	f := util.NewGlobalThreatFeedFromName("mock")
-	suspiciousIP := &db.MockSuspiciousIP{Error: err, ErrorIndex: suspiciousErrorIdx, FlowLogs: expected}
-	eventsDB := &db.MockEvents{ErrorIndex: eventsErrorIdx, FlowLogs: []events.SecurityEvent{}}
+	suspiciousIP := &db.MockSuspiciousIP{Error: err, ErrorIndex: suspiciousErrorIdx}
+	for _, e := range expected {
+		suspiciousIP.FlowLogs = append(suspiciousIP.FlowLogs, e)
+	}
+	eventsDB := &db.MockEvents{ErrorIndex: eventsErrorIdx, FlowLogs: []db.SecurityEventInterface{}}
 	searcher := NewFlowSearcher(f, 0, suspiciousIP, eventsDB).(*flowSearcher)
 	s := &statser.MockStatser{}
 
@@ -99,7 +102,7 @@ func runTest(t *testing.T, successful bool, expected []events.SecurityEvent, err
 	searcher.doIPSet(ctx, s)
 
 	if successful {
-		g.Expect(eventsDB.FlowLogs).Should(Equal(expected), "Logs in DB should match expected")
+		g.Expect(eventsDB.FlowLogs).Should(ConsistOf(expected), "Logs in DB should match expected")
 		g.Expect(suspiciousIP.FlowLogs).Should(HaveLen(0), "All flowLogs from suspiciousIP were consumed")
 	} else {
 		if eventsErrorIdx >= 0 {

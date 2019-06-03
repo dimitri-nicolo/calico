@@ -5,8 +5,6 @@ package db
 import (
 	"context"
 	"time"
-
-	"github.com/tigera/intrusion-detection/controller/pkg/events"
 )
 
 type IPSetMeta struct {
@@ -29,14 +27,18 @@ type SuspiciousIP interface {
 	QueryIPSet(ctx context.Context, name string) (SecurityEventIterator, error)
 }
 
+type SecurityEventInterface interface {
+	ID() string
+}
+
 type SecurityEventIterator interface {
 	Next() bool
-	Value() events.SecurityEvent
+	Value() SecurityEventInterface
 	Err() error
 }
 
 type Events interface {
-	PutSecurityEvent(context.Context, events.SecurityEvent) error
+	PutSecurityEvent(context.Context, SecurityEventInterface) error
 }
 
 type IPSetSpec []string

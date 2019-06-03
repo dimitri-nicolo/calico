@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/olivere/elastic"
-
 	"github.com/tigera/intrusion-detection/controller/pkg/util"
 )
 
@@ -16,7 +15,7 @@ const (
 	Severity       = 100
 )
 
-func ConvertFlowLog(flowLog FlowLogJSONOutput, key string, hit *elastic.SearchHit, feeds ...string) SecurityEvent {
+func ConvertFlowLog(flowLog FlowLogJSONOutput, key string, hit *elastic.SearchHit, feeds ...string) SuspiciousIPSecurityEvent {
 	var description string
 	switch key {
 	case "source_ip":
@@ -27,7 +26,7 @@ func ConvertFlowLog(flowLog FlowLogJSONOutput, key string, hit *elastic.SearchHi
 		description = fmt.Sprintf("%s %s connected to %s %s", flowLog.SourceType, util.StringPtrWrapper{S: flowLog.SourceIP}, flowLog.DestType, util.StringPtrWrapper{S: flowLog.DestIP})
 	}
 
-	return SecurityEvent{
+	return SuspiciousIPSecurityEvent{
 		Time:             flowLog.StartTime,
 		Type:             SuspiciousFlow,
 		Description:      description,
@@ -44,7 +43,7 @@ func ConvertFlowLog(flowLog FlowLogJSONOutput, key string, hit *elastic.SearchHi
 		DestNamespace:    flowLog.DestNamespace,
 		DestName:         flowLog.DestName,
 		FlowAction:       flowLog.Action,
-		Sources:          append(feeds),
+		Feeds:            append(feeds),
 		SuspiciousPrefix: nil,
 	}
 }

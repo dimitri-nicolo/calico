@@ -51,12 +51,12 @@ func (w *watcher) Run(ctx context.Context) {
 		ctx, w.cancel = context.WithCancel(ctx)
 
 		go func() {
-			for jid, _ := range Jobs {
+			for jid, info := range Jobs {
 				statser := statser.NewStatser(jid)
 
 				w.jobWatchers[jid] = &jobWatcher{
 					name:    jid,
-					puller:  puller.NewPuller(jid, w.xPack, w.events, filters.NilFilter{}),
+					puller:  puller.NewPuller(jid, w.xPack, w.events, filters.NilFilter{}, info.Description, info.Detectors),
 					statser: statser,
 				}
 

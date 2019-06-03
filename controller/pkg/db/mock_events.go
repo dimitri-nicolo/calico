@@ -5,19 +5,17 @@ package db
 import (
 	"context"
 	"errors"
-
-	"github.com/tigera/intrusion-detection/controller/pkg/events"
 )
 
 type MockEvents struct {
 	Error         error
 	ErrorIndex    int
 	ErrorReturned bool
-	FlowLogs      []events.SecurityEvent
-	value         events.SecurityEvent
+	FlowLogs      []SecurityEventInterface
+	value         SecurityEventInterface
 }
 
-func (m *MockEvents) PutSecurityEvent(ctx context.Context, l events.SecurityEvent) error {
+func (m *MockEvents) PutSecurityEvent(ctx context.Context, l SecurityEventInterface) error {
 	if len(m.FlowLogs) == m.ErrorIndex && !m.ErrorReturned {
 		m.ErrorReturned = true
 		return errors.New("PutSecurityEvent error")

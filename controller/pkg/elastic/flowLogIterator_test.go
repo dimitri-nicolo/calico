@@ -12,7 +12,7 @@ import (
 	"github.com/olivere/elastic"
 	. "github.com/onsi/gomega"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/events"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/events"
 	"github.com/tigera/intrusion-detection/controller/pkg/util"
 )
 
@@ -87,9 +87,9 @@ func TestElasticFlowLogIterator(t *testing.T) {
 		ctx:       ctx,
 	}
 
-	var actual []events.SecurityEvent
+	var actual []events.SuspiciousIPSecurityEvent
 	for i.Next() {
-		actual = append(actual, i.Value())
+		actual = append(actual, i.Value().(events.SuspiciousIPSecurityEvent))
 	}
 	g.Expect(i.Err()).ShouldNot(HaveOccurred())
 
@@ -194,9 +194,9 @@ func TestElasticFlowLogIteratorWithTwoScrollers(t *testing.T) {
 		name:      "mock",
 	}
 
-	var results []events.SecurityEvent
+	var results []events.SuspiciousIPSecurityEvent
 	for i.Next() {
-		results = append(results, i.Value())
+		results = append(results, i.Value().(events.SuspiciousIPSecurityEvent))
 	}
 	g.Expect(i.Err()).ShouldNot(HaveOccurred(), "No errors from the iterator")
 	g.Expect(results).Should(HaveLen(2), "Should have gotten back two results")

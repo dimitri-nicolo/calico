@@ -10,7 +10,8 @@ import (
 	"github.com/olivere/elastic"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/events"
+	"github.com/tigera/intrusion-detection/controller/pkg/db"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/events"
 )
 
 type Scroller interface {
@@ -29,7 +30,7 @@ type flowLogIterator struct {
 	name      string
 	hits      []*elastic.SearchHit
 	key       string
-	val       events.SecurityEvent
+	val       events.SuspiciousIPSecurityEvent
 	err       error
 }
 
@@ -74,7 +75,7 @@ func (i *flowLogIterator) Next() bool {
 	return false
 }
 
-func (i *flowLogIterator) Value() events.SecurityEvent {
+func (i *flowLogIterator) Value() db.SecurityEventInterface {
 	return i.val
 }
 

@@ -4,28 +4,30 @@ package puller
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/semaphore"
 
+	"github.com/tigera/intrusion-detection/controller/pkg/anomaly/events"
 	"github.com/tigera/intrusion-detection/controller/pkg/anomaly/filters"
 	"github.com/tigera/intrusion-detection/controller/pkg/anomaly/statser"
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/elastic"
-	"github.com/tigera/intrusion-detection/controller/pkg/events"
 	"github.com/tigera/intrusion-detection/controller/pkg/runloop"
 )
 
 const (
-	maxConcurrency   = 1
-	PullPeriod       = time.Minute
-	RetryPeriod      = time.Minute * 2
-	MinAnomalyScore  = 80
-	LookbackPeriod   = 24 * time.Hour
-	AnomalyDetection = "anomaly_detection"
-	Severity         = 100
+	maxConcurrency  = 1
+	PullPeriod      = time.Minute
+	RetryPeriod     = time.Minute * 2
+	MinAnomalyScore = 80
+	LookbackPeriod  = 24 * time.Hour
+
+	Severity        = 100
+	UnknownDetector = "unknown"
 )
 
 var sem *semaphore.Weighted
@@ -40,20 +42,24 @@ type Puller interface {
 }
 
 type puller struct {
-	name   string
-	xPack  elastic.XPack
-	events db.Events
-	filter filters.Filter
-	cancel context.CancelFunc
-	once   sync.Once
+	name        string
+	xPack       elastic.XPack
+	events      db.Events
+	filter      filters.Filter
+	description string
+	detectors   map[int]string
+	cancel      context.CancelFunc
+	once        sync.Once
 }
 
-func NewPuller(name string, xPack elastic.XPack, events db.Events, filter filters.Filter) Puller {
+func NewPuller(name string, xPack elastic.XPack, events db.Events, filter filters.Filter, description string, detectors map[int]string) Puller {
 	return &puller{
-		name:   name,
-		xPack:  xPack,
-		events: events,
-		filter: filter,
+		name:        name,
+		xPack:       xPack,
+		events:      events,
+		filter:      filter,
+		description: description,
+		detectors:   detectors,
 	}
 }
 
@@ -128,12 +134,14 @@ func (p *puller) fetch(ctx context.Context) ([]elastic.RecordSpec, error) {
 	})
 }
 
-func (p *puller) generateEvent(r elastic.RecordSpec) events.SecurityEvent {
-	return events.SecurityEvent{
-		Time:          r.Timestamp.Time.Unix(),
-		Type:          AnomalyDetection,
-		Severity:      Severity,
-		Sources:       []string{p.name},
-		AnomalyRecord: r,
+func (p *puller) generateEvent(r elastic.RecordSpec) events.XPackSecurityEvent {
+	detector, ok := p.detectors[r.DetectorIndex]
+	if !ok {
+		detector = UnknownDetector
+	}
+	return events.XPackSecurityEvent{
+		Severity:    Severity,
+		Description: fmt.Sprintf("%s: %s", p.description, detector),
+		Record:      r,
 	}
 }

@@ -350,30 +350,30 @@ type GetRecordsResponseSpec struct {
 }
 
 type RecordSpec struct {
-	Actual              []interface{}    `json:"actual"`
-	BucketSpan          int              `json:"bucket_span"`
-	ByFieldName         string           `json:"by_field_name"`
-	ByFieldValue        string           `json:"by_field_value"`
-	Causes              []interface{}    `json:"causes"`
-	DetectorIndex       int              `json:"detector_index"`
-	FieldName           string           `json:"field_name"`
-	Function            string           `json:"function"`
-	FunctionDescription string           `json:"function_description"`
-	Influencers         []InfluencerSpec `json:"influencers"`
-	InitialRecordScore  float64          `json:"initial_record_score"`
-	IsInterim           bool             `json:"is_interim"`
-	Id                  string           `json:"job_id"`
-	OverFieldName       string           `json:"over_field_name"`
-	OverFieldValue      string           `json:"over_field_value"`
-	PartitionFieldName  string           `json:"partition_field_name"`
-	PartitionFieldValue string           `json:"partition_field_value"`
-	Probability         float64          `json:"probability"`
-	MultiBucketImpact   float64          `json:"multi_bucket_impact"`
-	RecordScore         float64          `json:"record_score"`
-	ResultType          string           `json:"result_type"`
-	Timestamp           Time             `json:"timestamp"`
-	Typical             []interface{}    `json:"typical"`
-	Fields              map[string]interface{}
+	Actual              []interface{}          `json:"actual,omitempty"`
+	BucketSpan          int                    `json:"bucket_span,omitempty"`
+	ByFieldName         string                 `json:"by_field_name,omitempty"`
+	ByFieldValue        string                 `json:"by_field_value,omitempty"`
+	Causes              []interface{}          `json:"causes,omitempty"`
+	DetectorIndex       int                    `json:"detector_index,omitempty"`
+	FieldName           string                 `json:"field_name,omitempty"`
+	Function            string                 `json:"function,omitempty"`
+	FunctionDescription string                 `json:"function_description,omitempty"`
+	Influencers         []InfluencerSpec       `json:"influencers,omitempty"`
+	InitialRecordScore  float64                `json:"initial_record_score,omitempty"`
+	IsInterim           bool                   `json:"is_interim,omitempty"`
+	Id                  string                 `json:"job_id,omitempty"`
+	OverFieldName       string                 `json:"over_field_name,omitempty"`
+	OverFieldValue      string                 `json:"over_field_value,omitempty"`
+	PartitionFieldName  string                 `json:"partition_field_name,omitempty"`
+	PartitionFieldValue string                 `json:"partition_field_value,omitempty"`
+	Probability         float64                `json:"probability,omitempty"`
+	MultiBucketImpact   float64                `json:"multi_bucket_impact,omitempty"`
+	RecordScore         float64                `json:"record_score,omitempty"`
+	ResultType          string                 `json:"result_type,omitempty"`
+	Timestamp           Time                   `json:"timestamp,omitempty"`
+	Typical             []interface{}          `json:"typical,omitempty"`
+	Fields              map[string]interface{} `json:"-"`
 }
 
 type _recordSpec *RecordSpec

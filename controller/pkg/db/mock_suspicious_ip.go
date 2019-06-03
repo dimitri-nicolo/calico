@@ -5,16 +5,14 @@ package db
 import (
 	"context"
 	"errors"
-
-	"github.com/tigera/intrusion-detection/controller/pkg/events"
 )
 
 type MockSuspiciousIP struct {
 	Error         error
 	ErrorIndex    int
 	ErrorReturned bool
-	FlowLogs      []events.SecurityEvent
-	value         events.SecurityEvent
+	FlowLogs      []SecurityEventInterface
+	value         SecurityEventInterface
 }
 
 func (m *MockSuspiciousIP) QueryIPSet(ctx context.Context, name string) (SecurityEventIterator, error) {
@@ -33,7 +31,7 @@ func (m *MockSuspiciousIP) Next() bool {
 	return false
 }
 
-func (m *MockSuspiciousIP) Value() events.SecurityEvent {
+func (m *MockSuspiciousIP) Value() SecurityEventInterface {
 	return m.value
 }
 

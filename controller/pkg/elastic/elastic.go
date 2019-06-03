@@ -19,7 +19,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
-	"github.com/tigera/intrusion-detection/controller/pkg/events"
 )
 
 const (
@@ -261,7 +260,7 @@ func (e *Elastic) DeleteIPSet(ctx context.Context, m db.IPSetMeta) error {
 	return err
 }
 
-func (e *Elastic) PutSecurityEvent(ctx context.Context, f events.SecurityEvent) error {
+func (e *Elastic) PutSecurityEvent(ctx context.Context, f db.SecurityEventInterface) error {
 	err := e.ensureIndexExists(ctx, EventIndex, eventMapping)
 	if err != nil {
 		return err
