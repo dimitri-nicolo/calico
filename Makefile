@@ -395,6 +395,14 @@ tag-images-all: imagetag $(addprefix sub-tag-images-,$(VALIDARCHES))
 sub-tag-images-%:
 	$(MAKE) tag-images ARCH=$* IMAGETAG=$(IMAGETAG)
 
+
+## tag version number build images i.e.  tigera/node:latest-amd64 -> tigera/node:v1.1.1-amd64
+tag-base-images-all: $(addprefix sub-base-tag-images-,$(VALIDARCHES))
+sub-base-tag-images-%:
+	docker tag $(BUILD_IMAGE):latest-$* $(call unescapefs,$(BUILD_IMAGE):$(VERSION)-$*)
+
+
+
 ###############################################################################
 # Windows packaging
 ###############################################################################
@@ -943,6 +951,7 @@ PREVIOUS_RELEASE=$(shell git describe --tags --abbrev=0)
 release: release-prereqs
 	$(MAKE) CALICO_GIT_VER=$(CALICO_GIT_VER_RELEASE) VERSION=$(VERSION) release-tag
 	$(MAKE) CALICO_GIT_VER=$(CALICO_GIT_VER_RELEASE) VERSION=$(VERSION) release-build
+	$(MAKE) VERSION=$(VERSION) tag-base-images-all
 	$(MAKE) CALICO_GIT_VER=$(CALICO_GIT_VER_RELEASE) VERSION=$(VERSION) release-verify
 
 	@echo ""
