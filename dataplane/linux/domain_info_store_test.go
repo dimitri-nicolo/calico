@@ -3,55 +3,59 @@
 package intdataplane
 
 import (
-	"fmt"
 	"net"
 	"time"
 
 	"github.com/google/gopacket/layers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	log "github.com/sirupsen/logrus"
 )
+
+func makeA(name, ip string) layers.DNSResourceRecord {
+	return layers.DNSResourceRecord{
+		Name:       []byte(name),
+		Type:       layers.DNSTypeA,
+		Class:      layers.DNSClassIN,
+		TTL:        0,
+		DataLength: 4,
+		Data:       []byte(ip),
+		IP:         net.ParseIP(ip),
+	}
+}
+
+func makeAAAA(name, ip string) layers.DNSResourceRecord {
+	return layers.DNSResourceRecord{
+		Name:       []byte(name),
+		Type:       layers.DNSTypeAAAA,
+		Class:      layers.DNSClassIN,
+		TTL:        0,
+		DataLength: 16,
+		Data:       []byte(ip),
+		IP:         net.ParseIP(ip),
+	}
+}
+
+func makeCNAME(name, rname string) layers.DNSResourceRecord {
+	return layers.DNSResourceRecord{
+		Name:       []byte(name),
+		Type:       layers.DNSTypeCNAME,
+		Class:      layers.DNSClassIN,
+		TTL:        1,
+		DataLength: 4,
+		IP:         nil,
+		CNAME:      []byte(rname),
+	}
+}
 
 var _ = Describe("Domain Info Store", func() {
 	var (
-		domainStore  *domainInfoStore
-		mockDNSRecA1 = layers.DNSResourceRecord{
-			Name:       []byte("a.com"),
-			Type:       layers.DNSTypeA,
-			Class:      layers.DNSClassIN,
-			TTL:        0,
-			DataLength: 4,
-			Data:       []byte("10.0.0.10"),
-			IP:         net.ParseIP("10.0.0.10"),
-		}
-		mockDNSRecA2 = layers.DNSResourceRecord{
-			Name:       []byte("b.com"),
-			Type:       layers.DNSTypeA,
-			Class:      layers.DNSClassIN,
-			TTL:        0,
-			DataLength: 4,
-			Data:       []byte("10.0.0.20"),
-			IP:         net.ParseIP("10.0.0.20"),
-		}
-		mockDNSRecAAAA1 = layers.DNSResourceRecord{
-			Name:       []byte("aaaa.com"),
-			Type:       layers.DNSTypeAAAA,
-			Class:      layers.DNSClassIN,
-			TTL:        0,
-			DataLength: 16,
-			Data:       []byte("fe80:fe11::1"),
-			IP:         net.ParseIP("fe80:fe11::1"),
-		}
-		mockDNSRecAAAA2 = layers.DNSResourceRecord{
-			Name:       []byte("bbbb.com"),
-			Type:       layers.DNSTypeAAAA,
-			Class:      layers.DNSClassIN,
-			TTL:        0,
-			DataLength: 16,
-			Data:       []byte("fe80:fe11::2"),
-			IP:         net.ParseIP("fe80:fe11::2"),
-		}
-		invalidDNSRec = layers.DNSResourceRecord{
+		domainStore     *domainInfoStore
+		mockDNSRecA1    = makeA("a.com", "10.0.0.10")
+		mockDNSRecA2    = makeA("b.com", "10.0.0.20")
+		mockDNSRecAAAA1 = makeAAAA("aaaa.com", "fe80:fe11::1")
+		mockDNSRecAAAA2 = makeAAAA("bbbb.com", "fe80:fe11::2")
+		invalidDNSRec   = layers.DNSResourceRecord{
 			Name:       []byte("invalid#rec.com"),
 			Type:       layers.DNSTypeMX,
 			Class:      layers.DNSClassAny,
@@ -61,33 +65,9 @@ var _ = Describe("Domain Info Store", func() {
 			IP:         net.ParseIP("999.000.999.000"),
 		}
 		mockDNSRecCNAME = []layers.DNSResourceRecord{
-			{
-				Name:       []byte("cname1.com"),
-				Type:       layers.DNSTypeCNAME,
-				Class:      layers.DNSClassIN,
-				TTL:        1,
-				DataLength: 4,
-				IP:         nil,
-				CNAME:      []byte("cname2.com"),
-			},
-			{
-				Name:       []byte("cname2.com"),
-				Type:       layers.DNSTypeCNAME,
-				Class:      layers.DNSClassIN,
-				TTL:        1,
-				DataLength: 4,
-				IP:         nil,
-				CNAME:      []byte("cname3.com"),
-			},
-			{
-				Name:       []byte("cname3.com"),
-				Type:       layers.DNSTypeCNAME,
-				Class:      layers.DNSClassIN,
-				TTL:        1,
-				DataLength: 4,
-				IP:         nil,
-				CNAME:      []byte("a.com"),
-			},
+			makeCNAME("cname1.com", "cname2.com"),
+			makeCNAME("cname2.com", "cname3.com"),
+			makeCNAME("cname3.com", "a.com"),
 		}
 	)
 
@@ -108,7 +88,7 @@ var _ = Describe("Domain Info Store", func() {
 	// Assert that the domain store accepted and signaled the given record (and reason).
 	AssertDomainChanged := func(domainStore *domainInfoStore, d string, r string) {
 		receivedInfo := <-domainStore.domainInfoChanges
-		fmt.Printf("-->  %s %s expected %s\n", receivedInfo.domain, receivedInfo.reason, d)
+		log.Infof("-->  %s %s expected %s", receivedInfo.domain, receivedInfo.reason, d)
 		Expect(receivedInfo).To(Equal(&domainInfoChanged{domain: d, reason: r}))
 	}
 
