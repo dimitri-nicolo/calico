@@ -1,6 +1,6 @@
 ---
 title: Troubleshooting
-canonical_url: 'https://docs.tigera.io/v2.4/maintenance/troubleshooting/'
+canonical_url: 'https://docs.tigera.io/v2.4/maintenance/troubleshooting'
 ---
 
 * TOC
