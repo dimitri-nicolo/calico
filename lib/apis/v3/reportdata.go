@@ -358,3 +358,49 @@ func (f FlowEndpoint) String() string {
 	}
 	return fmt.Sprintf("%s(%s/%s)", f.Kind, f.Namespace, f.Name)
 }
+
+// CISBenchmark describes a CIS benchmarking result across an entire cluster.
+type CISBenchmark struct {
+	Type      string             `json:"type"`
+	HighCount int                `json:"highCount"`
+	MedCount  int                `json:"medCount"`
+	LowCount  int                `json:"lowCount"`
+	Nodes     []CISBenchmarkNode `json:"nodes"`
+}
+
+// CISBenchmarkNode describes a CIS benchmarking result on a single node.
+type CISBenchmarkNode struct {
+	NodeName string                    `json:"nodeName"`
+	Summary  CISBenchmarkSummary       `json:"summary"`
+	Results  CISBenchmarkSectionResult `json:"results"`
+}
+
+// CISBenchmarkSummary keeps count of tests passed, failed, and marked as info.
+// Also has a status field to describe whether it is in HIGH, MED, or LOW status (based on [high|med]Threshold).
+type CISBenchmarkSummary struct {
+	Status    string `json:"status"`
+	TotalPass int    `json:"totalPass"`
+	TotalFail int    `json:"totalFail"`
+	TotalInfo int    `json:"totalInfo"`
+	Total     int    `json:"total"`
+}
+
+// CISBenchmarkSectionResult describes the result of running the CIS benchmark on a single component.
+type CISBenchmarkSectionResult struct {
+	Status  string               `json:"status"`
+	Section string               `json:"section"`
+	Desc    string               `json:"desc"`
+	Pass    int                  `json:"pass"`
+	Fail    int                  `json:"fail"`
+	Info    int                  `json:"info"`
+	Results []CISBenchmarkResult `json:"results"`
+}
+
+// CISBenchmarkResult describes the result of a single CIS benchmark check.
+type CISBenchmarkResult struct {
+	TestNumber string   `json:"testNumber"`
+	TestDesc   string   `json:"testDesc"`
+	TestInfo   []string `json:"testInfo"`
+	Status     string   `json:"status"`
+	Scored     bool     `json:"scored"`
+}

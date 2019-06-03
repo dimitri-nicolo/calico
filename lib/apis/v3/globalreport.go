@@ -64,6 +64,30 @@ type ReportSpec struct {
 	// started jobs. If jobs are resumed then the controller will start creating jobs for any reports that were missed
 	// while the job was suspended.
 	Suspend *bool `json:"suspend,omitempty" validate:"omitempty"`
+
+	// This field contain all the parameters for configuring a CIS benchmark report.
+	CIS *CISBenchmarkParams `json:"cis,omitempty"`
+}
+
+// CISBenchmarkParams contains the parameters for configuring a CIS benchmark report.
+type CISBenchmarkParams struct {
+	// Specifies if the report should also show results for scored/not-scored tests.
+	IncludeUnscoredTests bool `json:"includeUnscoredTests"`
+
+	// Exclude is an array of test indices to exclude from the report.
+	Exclude []string `json:"exclude"`
+
+	// Include is an array of test indices to show in the report.
+	// Is additive if IncludeUnscoredTests is true.
+	// Takes precedence over Exclude.
+	Include []string `json:"include"`
+
+	// Interpretted as a percentage to indicate at what levels of passing tests a node should be considered HIGH, MED, and LOW.
+	HighThreshold *int `json:"highThreshold" validate:"gte=0,lte=100" default:"100"`
+	MedThreshold  *int `json:"medThreshold" validate:"gte=0,lte=100" default:"50"`
+
+	// Configure the number of top failed tests to show up on the report.
+	NumFailedTests int `json:"numFailedTests"`
 }
 
 // ReportStatus contains the status of the automated report generation.
