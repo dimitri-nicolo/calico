@@ -268,6 +268,10 @@ tag-images-all: imagetag $(addprefix sub-tag-images-,$(VALIDARCHES))
 sub-tag-images-%:
 	$(MAKE) tag-images ARCH=$* IMAGETAG=$(IMAGETAG)
 
+## tag version number build images i.e.  tigera/kube-controllers:latest-amd64 -> tigera/kube-controllers:v1.1.1-amd64
+tag-base-images-all: $(addprefix sub-base-tag-images-,$(VALIDARCHES))
+sub-base-tag-images-%:
+	docker tag $(BUILD_IMAGE):latest-$* $(call unescapefs,$(BUILD_IMAGE):$(VERSION)-$*)
 
 
 ###############################################################################
@@ -280,6 +284,12 @@ update-pins: update-felix-pin update-licensing-pin
 ## deprecated target alias
 update-libcalico: update-pins
 	$(warning !! Update update-libcalico is deprecated, use update-pins !!)
+
+
+## deprecated target alias
+update-felix: update-pins
+	$(warning !! Update update-felix is deprecated, use update-pins !!)
+
 
 ## Guard so we don't run this on osx because of ssh-agent to docker forwarding bug
 guard-ssh-forwarding-bug:
@@ -471,6 +481,7 @@ PREVIOUS_RELEASE=$(shell git describe --tags --abbrev=0)
 release: release-prereqs
 	$(MAKE) VERSION=$(VERSION) release-tag
 	$(MAKE) VERSION=$(VERSION) release-build
+	$(MAKE) VERSION=$(VERSION) tag-base-images-all
 	$(MAKE) VERSION=$(VERSION) release-verify
 
 	@echo ""
