@@ -15,7 +15,7 @@ canonical_url: https://docs.tigera.io/v2.3/getting-started/openshift/requirement
 Refer to the OpenShift documentation for additional requirements.
 
 - [OpenShift Kubernetes Distribution](https://docs.openshift.org/latest/install/prerequisites.html)
-- [OpenShift Container Platform](https://docs.openshift.com/container-platform/latest/install/prerequisites.html)
+- [OpenShift Container Platform](https://docs.openshift.com/container-platform/3.11/install/prerequisites.html)
 
 {% include {{page.version}}/reqs-kernel.md %}
 
