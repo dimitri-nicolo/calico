@@ -214,7 +214,7 @@
 
 {% if include.orchestrator == "openshift" %}
 
-1. Modify the Ansible inventory file to include [the location of the registry](https://docs.openshift.com/container-platform/latest/install/configuring_inventory_file.html#advanced-install-configuring-registry-location) which
+1. Modify the Ansible inventory file to include [the location of the registry](https://docs.openshift.com/container-platform/3.11/install/configuring_inventory_file.html#advanced-install-configuring-registry-location) which
    contains the private images and [the credentials needed to authenticate to it](https://github.com/openshift/openshift-ansible/blob/master/inventory/hosts.example#L223).
 
 {% endif %}
