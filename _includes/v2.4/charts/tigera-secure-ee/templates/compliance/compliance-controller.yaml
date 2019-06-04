@@ -37,6 +37,11 @@ rules:
   verbs:
     - update
     - list
+- apiGroups: ["projectcalico.org"]
+  resources:
+    - globalreports/finalizers
+  verbs:
+    - update
 
 ---
 
