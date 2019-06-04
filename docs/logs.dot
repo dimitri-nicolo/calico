@@ -1,0 +1,129 @@
+digraph G {
+size="7.5,10"
+labeljust="l"
+fontname=Helvetica;
+node [fontname=Helvetica]
+edge [fontname=Helvetica,fontsize=10]
+
+conntrack -> flCollector [label="conntrack data"];
+nflog -> flCollector [label="packet headers"];
+
+flCollector -> reporterMgr [label="MetricUpdate"];
+
+reporterMgr -> prometheusReporter [label="MetricUpdate"];
+reporterMgr -> flowLogsReporter [label="MetricUpdate"];
+reporterMgr -> cloudWatchMetricsReporter [label="MetricUpdate"];
+reporterMgr -> syslogReporter [label="MetricUpdate"];
+
+prometheusReporter -> policyRulesAggregator [label="MetricUpdate"];
+prometheusReporter -> deniedPacketsAggregator [label="MetricUpdate"];
+
+flowLogsReporter -> cwlAggregators [label="MetricUpdate"];
+cwlAggregators -> cloudWatchDispatcher [label="FlowLog"];
+flowLogsReporter -> fileAggregators [label="MetricUpdate"];
+fileAggregators -> fileDispatcher [label="FlowLog"];
+
+cloudWatchMetricsReporter -> cwmAggregator [label="MetricUpdate"];
+cwmAggregator -> cwmDispatcher [label="MetricData"];
+
+flCollector [label=<<table BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4">
+          <tr><td><font point-size="14">collector</font></td></tr>
+          <tr><td><font point-size="10">Central point for flow log data.<br/>
+Manages Data objects, 1 per Tuple<br/>
+NewData(...) *Data<br/>
+Data.Report(chan MetricUpdate, expired bool)<br/>
+</font></td></tr>
+        </table>>, shape=none, margin=0];
+
+reporterMgr [label=<<table BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4">
+          <tr><td><font point-size="14">ReporterManager</font></td></tr>
+          <tr><td><font point-size="10">Fan out to reporters.<br/>
+</font></td></tr>
+        </table>>, shape=none, margin=0];
+
+prometheusReporter [label=<<table BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4">
+          <tr><td><font point-size="14">PrometheusReporter</font></td></tr>
+          <tr><td><font point-size="10">Fan out to aggregators.<br/>
+</font></td></tr>
+        </table>>, shape=none, margin=0];
+
+flowLogsReporter [label=<<table BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4">
+          <tr><td><font point-size="14">FlowLogsReporter</font></td></tr>
+          <tr><td><font point-size="10">Fan out to dispatchers, via aggregators<br/>
+</font></td></tr>
+        </table>>, shape=none, margin=0];
+
+cloudWatchMetricsReporter [label=<<table BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4">
+          <tr><td><font point-size="14">CloudWatchMetricsReporter</font></td></tr>
+          <tr><td><font point-size="10">Forward via aggregator to dispatcher.<br/>
+</font></td></tr>
+        </table>>, shape=none, margin=0];
+
+syslogReporter [label=<<table BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4">
+          <tr><td><font point-size="14">SyslogReporter</font></td></tr>
+          <tr><td><font point-size="10">Writes to syslog in JSON format.<br/>
+</font></td></tr>
+        </table>>, shape=none, margin=0];
+
+policyRulesAggregator [label=<<table BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4">
+          <tr><td><font point-size="14">PolicyRulesAggregator</font></td></tr>
+          <tr><td><font point-size="10">Aggregates counts of packets, bytes and connections<br/>
+allowed and denied by particular rules, and<br/>
+publishes those as Prometheus metrics.
+</font></td></tr>
+        </table>>, shape=none, margin=0];
+
+deniedPacketsAggregator [label=<<table BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4">
+          <tr><td><font point-size="14">DeniedPacketsAggregator</font></td></tr>
+          <tr><td><font point-size="10">Sums total counts of denied packets and bytes<br/>
+and publishes those as Prometheus metrics.
+</font></td></tr>
+        </table>>, shape=none, margin=0];
+
+cwlAggregators [label=<<table BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4">
+          <tr><td><font point-size="14">FlowLogAggregator</font></td></tr>
+          <tr><td><font point-size="10">Aggregator for allowed flows.<br/>
+Aggregator for denied flows.
+</font></td></tr>
+        </table>>, shape=none, margin=0];
+
+fileAggregators [label=<<table BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4">
+          <tr><td><font point-size="14">FlowLogAggregator</font></td></tr>
+          <tr><td><font point-size="10">Aggregator for allowed flows.<br/>
+Aggregator for denied flows.
+</font></td></tr>
+        </table>>, shape=none, margin=0];
+
+cloudWatchDispatcher [label=<<table BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4">
+          <tr><td><font point-size="14">CloudWatchDispatcher</font></td></tr>
+          <tr><td><font point-size="10">Writes logs to AWS CloudWatch.<br/>
+</font></td></tr>
+        </table>>, shape=none, margin=0];
+
+fileDispatcher [label=<<table BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4">
+          <tr><td><font point-size="14">FileDispatcher</font></td></tr>
+          <tr><td><font point-size="10">Writes logs to flows.log file.<br/>
+</font></td></tr>
+        </table>>, shape=none, margin=0];
+
+cwmAggregator [label=<<table BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4">
+          <tr><td><font point-size="14">CloudWatchMetricsAggregator</font></td></tr>
+          <tr><td><font point-size="10">Aggregates denied packet counts.<br/>
+</font></td></tr>
+        </table>>, shape=none, margin=0];
+
+cwmDispatcher [label=<<table BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4">
+          <tr><td><font point-size="14">CloudWatchMetricsDispatcher</font></td></tr>
+          <tr><td><font point-size="10">Publishes to CloudWatch metrics.<br/>
+</font></td></tr>
+        </table>>, shape=none, margin=0];
+
+conntrack [label=<<table BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4">
+          <tr><td><font point-size="14">Periodic "conntrack list" polling</font></td></tr>
+        </table>>, shape=none, margin=0];
+
+nflog [label=<<table BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4">
+          <tr><td><font point-size="14">iptables NFLOG rules</font></td></tr>
+        </table>>, shape=none, margin=0];
+
+}

@@ -54,3 +54,4 @@ htmlcov/
 /fv/cwlogs
 /rpm/felix.spec
 /debian/changelog
+/docs/*.pdf
