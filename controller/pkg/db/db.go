@@ -41,4 +41,9 @@ type Events interface {
 	PutSecurityEvent(context.Context, SecurityEventInterface) error
 }
 
+type AuditLog interface {
+	ObjectCreatedBetween(kind, namespace, name string, before, after time.Time) (bool, error)
+	ObjectDeletedBetween(kind, namespace, name string, before, after time.Time) (bool, error)
+}
+
 type IPSetSpec []string
