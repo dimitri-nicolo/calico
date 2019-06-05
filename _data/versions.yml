@@ -123,7 +123,7 @@ v2.4:
     elasticsearch-operator:
       version: 0.2.0
     kibana:
-      version: 6.4.3
+      version: master
     elasticsearch:
       version: 6.4.3
     cloud-controllers:
