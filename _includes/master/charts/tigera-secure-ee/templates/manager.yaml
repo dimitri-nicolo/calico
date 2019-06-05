@@ -183,17 +183,6 @@ spec:
         - name: {{ $key }}
 {{- end }}
 {{- end }}
-      # cnx-manager-init-pem writes a "pem" file into a volume shared by
-      # cnx-manager-proxy.
-      initContainers:
-      - name: cnx-manager-init-pem # create /cache/pem for cnx-manager-proxy
-        image: alpine:3.7
-        command: ['sh', '-c', 'cat /etc/cnx-manager-web-tls/cert /etc/cnx-manager-web-tls/key > /cache/pem']
-        volumeMounts:
-        - mountPath: /cache
-          name: cnx-cache-volume
-        - mountPath: /etc/cnx-manager-web-tls
-          name: cnx-manager-tls
       containers:
       - name: cnx-manager
         image: {{.Values.manager.image}}:{{.Values.manager.tag}}
@@ -312,8 +301,6 @@ spec:
         volumeMounts:
         - mountPath: /etc/cnx-manager-web-tls
           name: cnx-manager-tls
-        - mountPath: /cache
-          name: cnx-cache-volume
         livenessProbe:
           httpGet:
             path: /
@@ -385,8 +372,6 @@ spec:
         - mountPath: /etc/ssl/elastic/
           name: tigera-es-proxy-tls
       volumes:
-      - name: cnx-cache-volume
-        emptyDir: {}
       - name: cnx-manager-tls
         secret:
           secretName: cnx-manager-tls
