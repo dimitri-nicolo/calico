@@ -77,7 +77,7 @@ func (f *FlowLogAverage) ResetFlowLogs() {
 }
 
 func GetAndResetFlowsPerMinute() (flowsPerMinute float64) {
-	if FlowLogAvg.totalFlows != 0 {
+	if FlowLogAvg != nil && FlowLogAvg.totalFlows != 0 {
 		currentTime := time.Now()
 		elapsedTime := currentTime.Sub(FlowLogAvg.lastReportTime)
 
