@@ -443,6 +443,9 @@ spec:
       serviceAccountName: tigera-fluentd
       imagePullSecrets:
         - name: cnx-pull-secret
+{%- if  include.orch == "openshift" %}
+        - name: calico-pull-secret
+{%- endif %}
       containers:
         - name: fluentd
           image: {{page.registry}}{{site.imageNames["fluentd"]}}:{{site.data.versions[page.version].first.components["fluentd"].version}}
@@ -594,12 +597,18 @@ spec:
                 fieldRef:
                   fieldPath: spec.nodeName
 {%- if include.orch == "openshift" %}
+            - name: KUBE_AUDIT_LOG
+              value: /var/lib/origin/audit/kube-audit.log
           securityContext:
             privileged: true
 {%- endif %}
           volumeMounts:
             - name: var-log-calico
+{%- if include.orch == "openshift" %}
+              mountPath: /var/lib/origin
+{%- else %}
               mountPath: /var/log/calico
+{%- endif %}
             - name: es-config
               mountPath: /etc/fluentd/flow-filters.conf
               subPath: tigera.elasticsearch.flow-filters.conf
@@ -630,7 +639,11 @@ spec:
         - name: var-log-calico
           hostPath:
             type: DirectoryOrCreate
+{%- if include.orch == "openshift" %}
+            path: /var/lib/origin
+{%- else %}
             path: /var/log/calico
+{%- endif %}
         - name: es-config
           configMap:
             name: tigera-es-config
@@ -673,6 +686,9 @@ spec:
               effect: NoSchedule
           imagePullSecrets:
             - name: cnx-pull-secret
+{%- if include.orch == "openshift" %}
+            - name: calico-pull-secret
+{%- endif %}
           containers:
             - name: tigera-es-curator
               image: {{page.registry}}{{site.imageNames["es-curator"]}}:{{site.data.versions[page.version].first.components["es-curator"].version}}
@@ -758,6 +774,9 @@ spec:
       restartPolicy: OnFailure
       imagePullSecrets:
         - name: cnx-pull-secret
+{%- if include.orch == "openshift" %}
+        - name: calico-pull-secret
+{%- endif %}
       containers:
       - name: install
         image: {{page.registry}}{{site.imageNames["elastic-tsee-installer"]}}:{{site.data.versions[page.version].first.components["elastic-tsee-installer"].version}}
