@@ -1,11 +1,12 @@
 import os
 import yaml
 import requests
+import tests
 
 
 PATH = os.path.abspath(os.path.dirname(__file__))
-RELEASE_STREAM = os.environ.get('RELEASE_STREAM')
-QUAY_API_TOKEN = os.environ.get('QUAY_API_TOKEN')
+RELEASE_STREAM = tests.RELEASE_STREAM
+QUAY_API_TOKEN = tests.QUAY_API_TOKEN
 
 # images not tied to a release
 EXCLUDED_IMAGES = ['calico-upgrade',
@@ -49,6 +50,8 @@ with open('%s/../_data/versions.yml' % PATH) as f:
     print '[INFO] using _data/versions.yaml, discovered version: %s' % RELEASE_VERSION
 
 def test_release_tag_present():
+    assert QUAY_API_TOKEN != 'fake-token', '[ERROR] need a real QUAY_API_TOKEN env value'
+
     headers = {'content-type': 'application/json', 'authorization': 'Bearer %s' % QUAY_API_TOKEN}
     for image in ALL_IMAGES:
         if image in VERSIONS_MAPPED_IMAGES:
