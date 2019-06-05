@@ -75,19 +75,19 @@ func (c *CacheEntryNetworkPolicyRuleSelector) setVersionedResource(r VersionedRe
 	c.VersionedResource = r
 }
 
-// newNetworkPolicyRuleSelectorsEngine creates a new engine used for the NetworkPolicy cache.
-func newNetworkPolicyRuleSelectorsEngine() resourceCacheEngine {
+// newNetworkPolicyRuleSelectorsEngine creates a new handler used for the NetworkPolicy cache.
+func newNetworkPolicyRuleSelectorsEngine() resourceHandler {
 	return &networkPolicyRuleSelectorsEngine{}
 }
 
-// networkPolicyRuleSelectorsEngine implements the resourceCacheEngine interface for the NetworkPolicy rule selector.
+// networkPolicyRuleSelectorsEngine implements the resourceHandler interface for the NetworkPolicy rule selector.
 type networkPolicyRuleSelectorsEngine struct {
-	engineCache
+	CacheAccessor
 }
 
-// register implements the resourceCacheEngine interface.
-func (c *networkPolicyRuleSelectorsEngine) register(cache engineCache) {
-	c.engineCache = cache
+// register implements the resourceHandler interface.
+func (c *networkPolicyRuleSelectorsEngine) register(cache CacheAccessor) {
+	c.CacheAccessor = cache
 
 	// Register with the netset label selectors for notification of match start/stops.
 	c.NetworkSetLabelSelector().RegisterCallbacks(c.kinds(), c.netsetMatchStarted, c.netsetMatchStopped)
@@ -104,12 +104,12 @@ func (c *networkPolicyRuleSelectorsEngine) register(cache engineCache) {
 	}
 }
 
-// register implements the resourceCacheEngine interface.
+// register implements the resourceHandler interface.
 func (c *networkPolicyRuleSelectorsEngine) kinds() []metav1.TypeMeta {
 	return KindsNetworkPolicyRuleSelectors
 }
 
-// newCacheEntry implements the resourceCacheEngine interface.
+// newCacheEntry implements the resourceHandler interface.
 func (c *networkPolicyRuleSelectorsEngine) newCacheEntry() CacheEntry {
 	return &CacheEntryNetworkPolicyRuleSelector{
 		NetworkSets: resources.NewSet(),
@@ -117,24 +117,24 @@ func (c *networkPolicyRuleSelectorsEngine) newCacheEntry() CacheEntry {
 	}
 }
 
-// resourceAdded implements the resourceCacheEngine interface.
+// resourceAdded implements the resourceHandler interface.
 func (c *networkPolicyRuleSelectorsEngine) resourceAdded(id apiv3.ResourceID, entry CacheEntry) {
 	// Just call through to our update processsing.
 	entry.(*CacheEntryNetworkPolicyRuleSelector).clog = log.WithField("id", id)
 	c.resourceUpdated(id, entry, nil)
 }
 
-// resourceUpdated implements the resourceCacheEngine interface.
+// resourceUpdated implements the resourceHandler interface.
 func (c *networkPolicyRuleSelectorsEngine) resourceUpdated(id apiv3.ResourceID, entry CacheEntry, prev VersionedResource) {
 	c.NetworkSetLabelSelector().UpdateSelector(id, selectorIDToSelector(id))
 }
 
-// resourceDeleted implements the resourceCacheEngine interface.
+// resourceDeleted implements the resourceHandler interface.
 func (c *networkPolicyRuleSelectorsEngine) resourceDeleted(id apiv3.ResourceID, res CacheEntry) {
 	c.NetworkSetLabelSelector().DeleteSelector(id)
 }
 
-// recalculate implements the resourceCacheEngine interface.
+// recalculate implements the resourceHandler interface.
 func (c *networkPolicyRuleSelectorsEngine) recalculate(id apiv3.ResourceID, entry CacheEntry) syncer.UpdateType {
 	x := entry.(*CacheEntryNetworkPolicyRuleSelector)
 
@@ -147,7 +147,7 @@ func (c *networkPolicyRuleSelectorsEngine) recalculate(id apiv3.ResourceID, entr
 			log.Errorf("Cannot find referenced NetworkSet in cache when recalculating rule selector flags")
 			return nil
 		}
-		x.NetworkSetFlags |= netset.(*CacheEntryCalicoNetworkSet).Flags
+		x.NetworkSetFlags |= netset.(*CacheEntryNetworkSet).Flags
 		return nil
 	})
 
@@ -157,14 +157,14 @@ func (c *networkPolicyRuleSelectorsEngine) recalculate(id apiv3.ResourceID, entr
 	return changed
 }
 
-// convertToVersioned implements the resourceCacheEngine interface.
+// convertToVersioned implements the resourceHandler interface.
 func (c *networkPolicyRuleSelectorsEngine) convertToVersioned(res resources.Resource) (VersionedResource, error) {
 	return &VersionedNetworkPolicyRuleSelector{}, nil
 }
 
 func (c *networkPolicyRuleSelectorsEngine) queueRuleSelectorsForRecalculation(update syncer.Update) {
 	// We have only registered for notifications from NetworkSets and for changes to configuration that we care about.
-	x := update.Resource.(*CacheEntryCalicoNetworkSet)
+	x := update.Resource.(*CacheEntryNetworkSet)
 
 	x.PolicyRuleSelectors.Iter(func(id apiv3.ResourceID) error {
 		c.QueueUpdate(id, nil, update.Type)

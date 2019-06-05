@@ -37,18 +37,21 @@ func New(start, end time.Time, lister list.Destination, eventer event.Fetcher, c
 //   replay all the audit events between the start and end Times,
 //   and then send a complete update.
 func (r *replayer) Start(ctx context.Context) {
-	log.Info("initializing replayer cache to start time")
+	log.Info("Initializing replayer cache to start time")
 	if err := r.initialize(ctx); err != nil {
 		r.cb.OnStatusUpdate(syncer.NewStatusUpdateFailed(err))
 		return
 	}
+	log.Info("Syncer status: in-sync")
 	r.cb.OnStatusUpdate(syncer.NewStatusUpdateInSync())
 
-	log.Info("replaying audit events to end time")
+	log.Info("Replaying audit events to end time")
 	if err := r.replay(ctx, &r.start, &r.end, true); err != nil {
+		log.Info("Syncer status: failed")
 		r.cb.OnStatusUpdate(syncer.NewStatusUpdateFailed(err))
 		return
 	}
+	log.Info("Syncer status: complete")
 	r.cb.OnStatusUpdate(syncer.NewStatusUpdateComplete())
 }
 
@@ -61,7 +64,7 @@ func (r *replayer) initialize(ctx context.Context) error {
 	for _, rh := range resources.GetAllResourceHelpers() {
 		kind := rh.TypeMeta()
 		clog := log.WithField("kind", kind.String())
-		clog.Debug("initializing replayer")
+		clog.Debug("Initializing replayer")
 
 		// Allocate map for resource.
 		r.resources[kind] = make(map[apiv3.ResourceID]resources.Resource)
@@ -71,7 +74,7 @@ func (r *replayer) initialize(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		clog.Debug("retrieved list")
+		clog.Debug("Retrieved list")
 
 		// Track the earliest snapshot that we use - we need to play event stream back from this earliest point
 		// to ensure we capture any namespace delete/create events.
@@ -84,33 +87,33 @@ func (r *replayer) initialize(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		clog.WithField("length", len(objs)).Debug("extracted list into array")
+		clog.WithField("length", len(objs)).Debug("Extracted list into array")
 
 		// Iterate over objects and store into map.
 		for i := 0; i < len(objs); i++ {
 			res, ok := objs[i].(resources.Resource)
 			if !ok {
-				clog.WithField("obj", objs[i]).Warn("failed to type assert resource")
+				clog.WithField("obj", objs[i]).Warn("Failed to type assert resource")
 				continue
 			}
 			res.GetObjectKind().SetGroupVersionKind((&kind).GroupVersionKind())
 			id := resources.GetResourceID(res)
 			r.resources[kind][id] = res
 		}
-		clog.Debug("stored objects into internal cache, replaying events to start time")
+		clog.Debug("Stored snapshots into internal cache - replaying events to start time")
 	}
 
 	// Replay events into the internal cache from the list time to the desired start time.
 	if err := r.replay(ctx, &firstSnapshot.Time, &r.start, false); err != nil {
 		return err
 	}
-	log.Debug("internal cache replayed to start time, publishing syncer updates")
+	log.Debug("Replayed events to start time - publishing syncer updates")
 
 	// Send Update to callbacks.
 	for tm, cache := range r.resources {
 		log.Infof("Sending initial snapshot for %s", tm)
 		for id, res := range cache {
-			log.WithField("id", id).Debug("publishing syncer updates")
+			log.WithField("id", id).Debug("Publishing syncer updates")
 			r.cb.OnUpdates([]syncer.Update{{Type: syncer.UpdateTypeSet, ResourceID: id, Resource: res}})
 		}
 	}
@@ -153,7 +156,7 @@ func (r *replayer) replay(ctx context.Context, from, to *time.Time, notifyUpdate
 		clog = clog.WithFields(log.Fields{"resID": id, "kind": kind})
 		switch ev.Event.Verb {
 		case event.VerbCreate, event.VerbUpdate, event.VerbPatch:
-			clog.Debug("Setting event")
+			clog.Debug("Set event")
 			update.Type = syncer.UpdateTypeSet
 
 			// Refuse to apply audit event if resource version of old resource is higher
@@ -177,7 +180,7 @@ func (r *replayer) replay(ctx context.Context, from, to *time.Time, notifyUpdate
 			}
 			resMap[id] = res
 		case event.VerbDelete:
-			clog.Debug("deleting event")
+			clog.Debug("Delete event")
 
 			// Delete events will not actually contain the resource, so fix up the update from the cached value.
 			if res, ok := resMap[id]; ok {
@@ -186,7 +189,7 @@ func (r *replayer) replay(ctx context.Context, from, to *time.Time, notifyUpdate
 			update.Type = syncer.UpdateTypeDeleted
 			delete(resMap, id)
 		default:
-			clog.Warn("invalid verb")
+			clog.Info("Unhandled event type")
 		}
 
 		// Convert the update to a slice.

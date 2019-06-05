@@ -27,8 +27,8 @@ type VersionedNamespaceResource interface {
 	getV3Profile() *apiv3.Profile
 }
 
-// CacheEntryK8sNamespace implements the CacheEntry interface, and is what we stored in the Namespaces cache.
-type CacheEntryK8sNamespace struct {
+// CacheEntryNamespace implements the CacheEntry interface, and is what we stored in the Namespaces cache.
+type CacheEntryNamespace struct {
 	// The versioned policy resource.
 	VersionedNamespaceResource
 
@@ -37,12 +37,12 @@ type CacheEntryK8sNamespace struct {
 }
 
 // getVersionedResource implements the CacheEntry interface.
-func (c *CacheEntryK8sNamespace) getVersionedResource() VersionedResource {
+func (c *CacheEntryNamespace) getVersionedResource() VersionedResource {
 	return c.VersionedNamespaceResource
 }
 
 // setVersionedResource implements the CacheEntry interface.
-func (c *CacheEntryK8sNamespace) setVersionedResource(r VersionedResource) {
+func (c *CacheEntryNamespace) setVersionedResource(r VersionedResource) {
 	c.VersionedNamespaceResource = r.(VersionedNamespaceResource)
 }
 
@@ -73,34 +73,34 @@ func (v *versionedK8sNamespace) getV3Profile() *apiv3.Profile {
 	return v.v3
 }
 
-// newK8sNamespacesEngine creates a resourceCacheEngine used to handle the Namespaces cache.
-func newK8sNamespacesEngine() resourceCacheEngine {
-	return &k8sNamespaceEngine{}
+// newNamespacesHandler creates a resourceHandler used to handle the Namespaces cache.
+func newNamespacesHandler() resourceHandler {
+	return &namespaceHandler{}
 }
 
-// k8sNamespaceEngine implements the resourceCacheEngine.
-type k8sNamespaceEngine struct {
-	engineCache
+// namespaceHandler implements the resourceHandler.
+type namespaceHandler struct {
+	CacheAccessor
 	converter conversion.Converter
 }
 
-// kinds implements the resourceCacheEngine interface.
-func (c *k8sNamespaceEngine) kinds() []metav1.TypeMeta {
+// kinds implements the resourceHandler interface.
+func (c *namespaceHandler) kinds() []metav1.TypeMeta {
 	return KindsNamespace
 }
 
-// register implements the resourceCacheEngine interface.
-func (c *k8sNamespaceEngine) register(cache engineCache) {
-	c.engineCache = cache
+// register implements the resourceHandler interface.
+func (c *namespaceHandler) register(cache CacheAccessor) {
+	c.CacheAccessor = cache
 }
 
-// newCacheEntry implements the resourceCacheEngine interface.
-func (c *k8sNamespaceEngine) newCacheEntry() CacheEntry {
-	return &CacheEntryK8sNamespace{}
+// newCacheEntry implements the resourceHandler interface.
+func (c *namespaceHandler) newCacheEntry() CacheEntry {
+	return &CacheEntryNamespace{}
 }
 
-// convertToVersioned implements the resourceCacheEngine interface.
-func (c *k8sNamespaceEngine) convertToVersioned(res resources.Resource) (VersionedResource, error) {
+// convertToVersioned implements the resourceHandler interface.
+func (c *namespaceHandler) convertToVersioned(res resources.Resource) (VersionedResource, error) {
 	in := res.(*corev1.Namespace)
 
 	kvp, err := c.converter.NamespaceToProfile(in)
@@ -121,29 +121,29 @@ func (c *k8sNamespaceEngine) convertToVersioned(res resources.Resource) (Version
 	}, nil
 }
 
-// resourceAdded implements the resourceCacheEngine interface.
-func (c *k8sNamespaceEngine) resourceAdded(id apiv3.ResourceID, entry CacheEntry) {
+// resourceAdded implements the resourceHandler interface.
+func (c *namespaceHandler) resourceAdded(id apiv3.ResourceID, entry CacheEntry) {
 	c.resourceUpdated(id, entry, nil)
 }
 
-// resourceUpdated implements the resourceCacheEngine interface.
-func (c *k8sNamespaceEngine) resourceUpdated(id apiv3.ResourceID, entry CacheEntry, prev VersionedResource) {
+// resourceUpdated implements the resourceHandler interface.
+func (c *namespaceHandler) resourceUpdated(id apiv3.ResourceID, entry CacheEntry, prev VersionedResource) {
 	// Kubernetes namespaces are configured as Calico profiles. Use the V3 version of the name and the V1 version of the
 	// labels since they will have been modified to match the selector modifications in the pod.
-	x := entry.(*CacheEntryK8sNamespace)
+	x := entry.(*CacheEntryNamespace)
 	c.EndpointLabelSelector().UpdateParentLabels(x.getV3Profile().Name, x.getV1Profile().Labels)
 }
 
-// resourceDeleted implements the resourceCacheEngine interface.
-func (c *k8sNamespaceEngine) resourceDeleted(id apiv3.ResourceID, entry CacheEntry) {
+// resourceDeleted implements the resourceHandler interface.
+func (c *namespaceHandler) resourceDeleted(id apiv3.ResourceID, entry CacheEntry) {
 	// Kubernetes namespaces are configured as Calico profiles. Use the V3 version of the name since it will have been
 	// modified to match the selector modifications in the pod.
-	x := entry.(*CacheEntryK8sNamespace)
+	x := entry.(*CacheEntryNamespace)
 	c.EndpointLabelSelector().DeleteParentLabels(x.getV3Profile().Name)
 }
 
-// recalculate implements the resourceCacheEngine interface.
-func (c *k8sNamespaceEngine) recalculate(id apiv3.ResourceID, res CacheEntry) syncer.UpdateType {
+// recalculate implements the resourceHandler interface.
+func (c *namespaceHandler) recalculate(id apiv3.ResourceID, res CacheEntry) syncer.UpdateType {
 	// We don't store any additional Namespace state at the moment.
 	return 0
 }

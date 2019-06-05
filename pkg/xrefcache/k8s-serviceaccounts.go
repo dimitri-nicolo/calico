@@ -30,8 +30,8 @@ type VersionedServiceAccountResource interface {
 	getV3Profile() *apiv3.Profile
 }
 
-// CacheEntryK8sServiceAccount implements the CacheEntry interface, and is what we stored in the ServiceAccounts cache.
-type CacheEntryK8sServiceAccount struct {
+// CacheEntryServiceAccount implements the CacheEntry interface, and is what we stored in the ServiceAccounts cache.
+type CacheEntryServiceAccount struct {
 	// The versioned policy resource.
 	VersionedServiceAccountResource
 
@@ -40,12 +40,12 @@ type CacheEntryK8sServiceAccount struct {
 }
 
 // getVersionedResource implements the CacheEntry interface.
-func (c *CacheEntryK8sServiceAccount) getVersionedResource() VersionedResource {
+func (c *CacheEntryServiceAccount) getVersionedResource() VersionedResource {
 	return c.VersionedServiceAccountResource
 }
 
 // setVersionedResource implements the CacheEntry interface.
-func (c *CacheEntryK8sServiceAccount) setVersionedResource(r VersionedResource) {
+func (c *CacheEntryServiceAccount) setVersionedResource(r VersionedResource) {
 	c.VersionedServiceAccountResource = r.(VersionedServiceAccountResource)
 }
 
@@ -76,34 +76,34 @@ func (v *versionedK8sServiceAccount) getV3Profile() *apiv3.Profile {
 	return v.v3
 }
 
-// newK8sServiceAccountsEngine creates a resourceCacheEngine used to handle the ServiceAccounts cache.
-func newK8sServiceAccountsEngine() resourceCacheEngine {
-	return &k8sServiceAccountEngine{}
+// newServiceAccountHandler creates a resourceHandler used to handle the ServiceAccounts cache.
+func newServiceAccountHandler() resourceHandler {
+	return &serviceAccountHandler{}
 }
 
-// k8sServiceAccountEngine implements the resourceCacheEngine.
-type k8sServiceAccountEngine struct {
-	engineCache
+// serviceAccountHandler implements the resourceHandler.
+type serviceAccountHandler struct {
+	CacheAccessor
 	converter conversion.Converter
 }
 
-// register implements the resourceCacheEngine.
-func (c *k8sServiceAccountEngine) register(cache engineCache) {
-	c.engineCache = cache
+// register implements the resourceHandler.
+func (c *serviceAccountHandler) register(cache CacheAccessor) {
+	c.CacheAccessor = cache
 }
 
-// kinds implements the resourceCacheEngine.
-func (c *k8sServiceAccountEngine) kinds() []metav1.TypeMeta {
+// kinds implements the resourceHandler.
+func (c *serviceAccountHandler) kinds() []metav1.TypeMeta {
 	return KindsServiceAccount
 }
 
-// newCacheEntry implements the resourceCacheEngine.
-func (c *k8sServiceAccountEngine) newCacheEntry() CacheEntry {
-	return &CacheEntryK8sServiceAccount{}
+// newCacheEntry implements the resourceHandler.
+func (c *serviceAccountHandler) newCacheEntry() CacheEntry {
+	return &CacheEntryServiceAccount{}
 }
 
-// convertToVersioned implements the resourceCacheEngine.
-func (c *k8sServiceAccountEngine) convertToVersioned(res resources.Resource) (VersionedResource, error) {
+// convertToVersioned implements the resourceHandler.
+func (c *serviceAccountHandler) convertToVersioned(res resources.Resource) (VersionedResource, error) {
 	in := res.(*corev1.ServiceAccount)
 
 	kvp, err := c.converter.ServiceAccountToProfile(in)
@@ -124,30 +124,30 @@ func (c *k8sServiceAccountEngine) convertToVersioned(res resources.Resource) (Ve
 	}, nil
 }
 
-// resourceAdded implements the resourceCacheEngine.
-func (c *k8sServiceAccountEngine) resourceAdded(id apiv3.ResourceID, entry CacheEntry) {
+// resourceAdded implements the resourceHandler.
+func (c *serviceAccountHandler) resourceAdded(id apiv3.ResourceID, entry CacheEntry) {
 	c.resourceUpdated(id, entry, nil)
 }
 
-// resourceUpdated implements the resourceCacheEngine.
-func (c *k8sServiceAccountEngine) resourceUpdated(id apiv3.ResourceID, entry CacheEntry, prev VersionedResource) {
+// resourceUpdated implements the resourceHandler.
+func (c *serviceAccountHandler) resourceUpdated(id apiv3.ResourceID, entry CacheEntry, prev VersionedResource) {
 	// Kubernetes service accounts are configured as Calico profiles. Use the V3 version of the name and the V1 version
 	// of the labels since they will have been modified to match the selector modifications in the pod.
-	x := entry.(*CacheEntryK8sServiceAccount)
+	x := entry.(*CacheEntryServiceAccount)
 	logrus.Debugf("Configure profile %s with labels %v", x.getV3Profile().Name, x.getV1Profile().Labels)
 	c.EndpointLabelSelector().UpdateParentLabels(x.getV3Profile().Name, x.getV1Profile().Labels)
 }
 
-// resourceDeleted implements the resourceCacheEngine.
-func (c *k8sServiceAccountEngine) resourceDeleted(id apiv3.ResourceID, entry CacheEntry) {
+// resourceDeleted implements the resourceHandler.
+func (c *serviceAccountHandler) resourceDeleted(id apiv3.ResourceID, entry CacheEntry) {
 	// Kubernetes service accounts are configured as Calico profiles. Use the V3 version of the name since it will have
 	// been modified to match the selector modifications in the pod.
-	x := entry.(*CacheEntryK8sServiceAccount)
+	x := entry.(*CacheEntryServiceAccount)
 	c.EndpointLabelSelector().DeleteParentLabels(x.getV3Profile().Name)
 }
 
-// recalculate implements the resourceCacheEngine interface.
-func (c *k8sServiceAccountEngine) recalculate(id apiv3.ResourceID, entry CacheEntry) syncer.UpdateType {
+// recalculate implements the resourceHandler interface.
+func (c *serviceAccountHandler) recalculate(id apiv3.ResourceID, entry CacheEntry) syncer.UpdateType {
 	// We don't store any additional ServiceAccount state at the moment.
 	return 0
 }

@@ -10,6 +10,7 @@ import (
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
 	. "github.com/tigera/compliance/internal/testutils"
+	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/resources"
 	"github.com/tigera/compliance/pkg/syncer"
 	"github.com/tigera/compliance/pkg/xrefcache"
@@ -18,7 +19,7 @@ import (
 var _ = Describe("xref cache", func() {
 	// Ensure  the client resource list is in-sync with the resource helper.
 	It("should support in-sync and complete with no injected configuration", func() {
-		cache := xrefcache.NewXrefCache(func() {
+		cache := xrefcache.NewXrefCache(config.MustLoadConfig(), func() {
 			log.Info("Healthy notification from xref cache")
 		})
 		cache.OnStatusUpdate(syncer.StatusUpdate{

@@ -27,8 +27,8 @@ import (
 type MatchStarted func(owner, client apiv3.ResourceID, key string, firstKey bool)
 type MatchStopped func(owner, client apiv3.ResourceID, key string, lastKey bool)
 
-// KeyManager interface.
-type Interface interface {
+// KeySelector interface. Used for handling callbacks and managing resource label and selectors.
+type KeySelector interface {
 	RegisterCallbacks(kinds []metav1.TypeMeta, started MatchStarted, stopped MatchStopped)
 	SetOwnerKeys(owner apiv3.ResourceID, keys set.Set)
 	SetClientKeys(client apiv3.ResourceID, keys set.Set)
@@ -37,7 +37,7 @@ type Interface interface {
 }
 
 // New creates a new KeyManager.
-func New() Interface {
+func New() KeySelector {
 	keym := &keySelector{
 		keysByOwner:       make(map[apiv3.ResourceID]set.Set),
 		keysByClient:      make(map[apiv3.ResourceID]set.Set),

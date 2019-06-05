@@ -126,7 +126,7 @@ func (d *dispatcher) OnUpdate(update syncer.Update) {
 	}
 }
 
-// InSync is a callback to indicate an initial self-consistent set of configuration has now been loaded.
+// OnStatusUpdate is a callback to indicate a change in synchronization state.
 func (d *dispatcher) OnStatusUpdate(status syncer.StatusUpdate) {
 	log.WithField("status", status).Debug("OnStatusUpdate")
 	for _, cb := range d.onStatusUpdateCallbacks {

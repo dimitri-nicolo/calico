@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -19,6 +20,12 @@ const (
 	VerbDelete = "delete"
 )
 
+var (
+	ConfigurationVerbs = []string{
+		VerbCreate, VerbUpdate, VerbPatch, VerbDelete,
+	}
+)
+
 type AuditEventResult struct {
 	*auditv1.Event
 	Err error
@@ -32,22 +39,31 @@ type Fetcher interface {
 // and coerces the response object into the appropriate type. This may return a nil resource with
 // no error if the resource is not handled by the reporter code.
 func ExtractResourceFromAuditEvent(event *auditv1.Event) (resources.Resource, error) {
+	// Check this is a ResponseComplete stage.
+	switch event.Stage {
+	case auditv1.StageResponseComplete:
+		log.Debug("Stage is ResponseComplete - continue processing")
+	default:
+		log.Debugf("Event stage is %s - skipping", event.Stage)
+		return nil, nil
+	}
+
 	// Check that the event is configuration event.
 	switch event.Verb {
 	case VerbCreate, VerbUpdate, VerbPatch, VerbDelete:
-		log.Debug("Event is a configuration event - process")
+		log.Debug("Event is a configuration event - continue processing")
 	default:
-		log.Debug("Event is not a configuration event - skipping")
+		log.Debugf("Event verb is %s - skipping", event.Verb)
 		return nil, nil
 	}
 
 	// Extract the Object reference and use that to instantiate a new instance of the resource. We always expect
 	// this to be set for a configuration event.
 	if event.ObjectRef == nil {
-		logEventError(event, "No objectRef specified for configuration event")
+		logEventError(event, "No objectRef specified in audit log")
 		return nil, errors.New("no objectRef specified in audit log")
 	} else if event.ObjectRef.Resource == "" {
-		logEventError(event, "No objectRef.Resource specified for configuration event")
+		logEventError(event, "No objectRef.Resource specified in audit log")
 		return nil, errors.New("no objectRef.Resource specified in audit log")
 	}
 
@@ -59,7 +75,7 @@ func ExtractResourceFromAuditEvent(event *auditv1.Event) (resources.Resource, er
 	// to not have an associated resource helper, just skip.
 	rh := resources.GetResourceHelperByObjectRef(*event.ObjectRef)
 	if rh == nil {
-		clog.Info("Object type is not required for report processing - skipping")
+		clog.Debug("Object type is not required for report processing - skipping")
 		return nil, nil
 	}
 
@@ -80,19 +96,20 @@ func ExtractResourceFromAuditEvent(event *auditv1.Event) (resources.Resource, er
 		return res, nil
 	}
 
+	if event.ResponseObject == nil {
+		logEventError(event, "responseObject is missing from audit log - audit policy must be incorrect")
+		return nil, errors.New("responseObject is missing from audit log - audit policy must be incorrect")
+	}
+
 	if err := json.Unmarshal(event.ResponseObject.Raw, res); err != nil {
-		clog.WithError(err).WithField("ResponseObject.Raw", string(event.ResponseObject.Raw)).Errorf("Failed to unmarshal responseObject")
+		logEventError(event, fmt.Sprintf("Failed to unmarshal responseObject: %v", err))
 		return nil, err
 	}
 
 	// Ensure that we haven't received a status audit log or some other invalid type.
 	if tm := resources.GetTypeMeta(res); tm == resources.TypeK8sStatus {
-		clog.Info("Skipping status audit event")
+		clog.Debug("Skipping status audit event")
 		return nil, nil
-	} else if rh2 := resources.GetResourceHelperByTypeMeta(resources.GetTypeMeta(res)); rh2 == nil {
-		return nil, errors.New("received unknown type " + tm.String())
-	} else if tm2 := rh2.TypeMeta(); tm != tm2 {
-		return nil, errors.New("objRef typeMeta " + tm.String() + " does not match respObj typeMeta " + tm2.String())
 	}
 
 	return res, nil

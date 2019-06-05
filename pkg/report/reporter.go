@@ -11,7 +11,6 @@ import (
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/compliance"
-	"github.com/projectcalico/libcalico-go/lib/health"
 
 	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/event"
@@ -47,28 +46,21 @@ const (
 // Run is the entrypoint to start running the reporter.
 func Run(
 	ctx context.Context, cfg *config.Config,
-	healthAggr *health.HealthAggregator,
+	healthy func(),
 	lister list.Destination,
 	eventer event.Fetcher,
 	auditer AuditLogReportHandler,
 	flowlogger FlowLogReportHandler,
 	archiver ReportStorer,
 ) error {
-	// Register that we will be reporting health liveness.
-	healthAggr.RegisterReporter(healthReporter, &health.HealthReport{Live: true}, cfg.HealthTimeout)
-
-	// Define a function that can be used to report health. We pass this to the xrefcache - since it isn't a long
-	// running process, it shouldn't have it's owner reporter type.
-	healthy := func() {
-		healthAggr.Report(healthReporter, &health.HealthReport{Live: true})
-	}
+	// Inidicate healthy.
 	healthy()
 
 	// Get the report config.
 	reportCfg := MustLoadReportConfig(cfg)
 
 	// Create the cross-reference cache that we use to monitor for changes in the relevant data.
-	xc := xrefcache.NewXrefCache(healthy)
+	xc := xrefcache.NewXrefCache(cfg, healthy)
 	replayer := replay.New(cfg.ParsedReportStart, cfg.ParsedReportEnd, lister, eventer, xc)
 
 	r := &reporter{
@@ -142,7 +134,7 @@ func (r *reporter) run() error {
 
 	if r.cfg.ReportType.Spec.IncludeEndpointData ||
 		(r.cfg.ReportType.Spec.AuditEventsSelection != nil && r.cfg.Report.Spec.Endpoints != nil) {
-		// We either want endpoint data in the report, or we are gathering audit logs and have specified and in-scope
+		// We either want endpoint data in the report, or we are gathering audit logs and have specified an in-scope
 		// endpoints filter with which we will filter in-scope resources.
 		r.clog.Debug("Including endpoint data in report, or require endpoints for filtering")
 
@@ -222,22 +214,22 @@ func (r *reporter) onUpdate(update syncer.Update) {
 		// timeframe.
 		return
 	}
-	x := update.Resource.(*xrefcache.CacheEntryEndpoint)
+	xref := update.Resource.(*xrefcache.CacheEntryEndpoint)
 	ep := r.getEndpoint(update.ResourceID)
-	zeroTrustFlags, _ := zeroTrustFlags(update.Type, x.Flags)
+	zeroTrustFlags, _ := zeroTrustFlags(update.Type, xref.Flags)
 
 	// Update the endpoint and namespaces policies and services
 	//TODO(rlb): Performance improvement here - we only need to update what has actually changed in particular no
 	//           need to update policies or services set if not changed. However, I have not UTd that the correct
 	//           update flags are returned, so let's not trust to luck.
 	ep.zeroTrustFlags |= zeroTrustFlags
-	ep.policies.AddSet(x.AppliedPolicies)
-	ep.services.AddSet(x.Services)
+	ep.policies.AddSet(xref.AppliedPolicies)
+	ep.services.AddSet(xref.Services)
 
 	// Track the full set of Policies and ServiceAccounts for all our in-scope endpoints.
-	r.policies.AddSet(x.AppliedPolicies)
-	if x.ServiceAccount != nil {
-		r.serviceAccounts.Add(*x.ServiceAccount)
+	r.policies.AddSet(xref.AppliedPolicies)
+	if xref.ServiceAccount != nil {
+		r.serviceAccounts.Add(*xref.ServiceAccount)
 	}
 
 	// Loop through and update the flags on the services.
@@ -246,7 +238,7 @@ func (r *reporter) onUpdate(update syncer.Update) {
 		return nil
 	})
 
-	ep.flowAggrName = x.GetFlowLogAggregationName()
+	ep.flowAggrName = xref.GetFlowLogAggregationName()
 
 	// Update the namespace flags.
 	if update.ResourceID.Namespace != "" {

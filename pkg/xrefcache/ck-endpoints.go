@@ -19,6 +19,7 @@ import (
 	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/set"
 
+	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/ips"
 	"github.com/tigera/compliance/pkg/resources"
 	"github.com/tigera/compliance/pkg/syncer"
@@ -48,7 +49,7 @@ type VersionedEndpointResource interface {
 	getV1Labels() map[string]string
 	getV1Profiles() []string
 	getIPOrEndpointIDs() (set.Set, error)
-	getEnvoyEnabled(engine *endpointEngine) bool
+	getEnvoyEnabled(engine *endpointHandler) bool
 	getServiceAccount() *apiv3.ResourceID
 }
 
@@ -133,7 +134,7 @@ func (v *versionedK8sPod) getIPOrEndpointIDs() (set.Set, error) {
 	return set.From(id), nil
 }
 
-func (v *versionedK8sPod) getEnvoyEnabled(engine *endpointEngine) bool {
+func (v *versionedK8sPod) getEnvoyEnabled(engine *endpointHandler) bool {
 	// If all of the required checks passed then return true.
 	var checked bool
 
@@ -230,7 +231,7 @@ func (v *versionedCalicoHostEndpoint) getIPOrEndpointIDs() (set.Set, error) {
 	return ips.NormalizedIPSet(v.Spec.ExpectedIPs...)
 }
 
-func (v *versionedCalicoHostEndpoint) getEnvoyEnabled(engine *endpointEngine) bool {
+func (v *versionedCalicoHostEndpoint) getEnvoyEnabled(engine *endpointHandler) bool {
 	return false
 }
 
@@ -238,8 +239,8 @@ func (v *versionedCalicoHostEndpoint) getServiceAccount() *apiv3.ResourceID {
 	return nil
 }
 
-// newEndpointsEngine creates a resourceCacheEngine used to handle the Pods cache.
-func newEndpointsEngine(config *Config) resourceCacheEngine {
+// newEndpointHandler creates a resourceHandler used to handle the Pods cache.
+func newEndpointHandler(config *config.Config) resourceHandler {
 	var podIstioContainerRegex, podIstioInitContainerRegex *regexp.Regexp
 	if config.PodIstioContainerRegex != "" {
 		log.Debugf("Using regex for istio container: %s", config.PodIstioContainerRegex)
@@ -249,16 +250,16 @@ func newEndpointsEngine(config *Config) resourceCacheEngine {
 		log.Debugf("Using regex for istio init container: %s", config.PodIstioInitContainerRegex)
 		podIstioInitContainerRegex = regexp.MustCompile(config.PodIstioInitContainerRegex)
 	}
-	return &endpointEngine{
+	return &endpointHandler{
 		podIstioSidecarAnnotation:  config.PodIstioSidecarAnnotation,
 		podIstioContainerRegex:     podIstioContainerRegex,
 		podIstioInitContainerRegex: podIstioInitContainerRegex,
 	}
 }
 
-// endpointEngine implements the resourceCacheEngine.
-type endpointEngine struct {
-	engineCache
+// endpointHandler implements the resourceHandler.
+type endpointHandler struct {
+	CacheAccessor
 	converter conversion.Converter
 
 	// Istio checks to determine if Envoy is enabled.
@@ -267,14 +268,14 @@ type endpointEngine struct {
 	podIstioContainerRegex     *regexp.Regexp
 }
 
-// kinds implements the resourceCacheEngine interface.
-func (c *endpointEngine) kinds() []metav1.TypeMeta {
+// kinds implements the resourceHandler interface.
+func (c *endpointHandler) kinds() []metav1.TypeMeta {
 	return KindsEndpoint
 }
 
-// register implements the resourceCacheEngine interface.
-func (c *endpointEngine) register(cache engineCache) {
-	c.engineCache = cache
+// register implements the resourceHandler interface.
+func (c *endpointHandler) register(cache CacheAccessor) {
+	c.CacheAccessor = cache
 	c.EndpointLabelSelector().RegisterCallbacks(KindsNetworkPolicy, c.policyMatchStarted, c.policyMatchStopped)
 	c.IPOrEndpointManager().RegisterCallbacks(KindsServices, c.ipMatchStarted, c.ipMatchStopped)
 
@@ -287,21 +288,18 @@ func (c *endpointEngine) register(cache engineCache) {
 			c.queueEndpointsForRecalculation,
 		)
 	}
-
-	// Register for updates for the "in-scope" resource type.
-	c.EndpointLabelSelector().RegisterCallbacks(KindsInScopeSelection, c.inScopeStarted, c.inScopeStopped)
 }
 
-// newCacheEntry implements the resourceCacheEngine interface.
-func (c *endpointEngine) newCacheEntry() CacheEntry {
+// newCacheEntry implements the resourceHandler interface.
+func (c *endpointHandler) newCacheEntry() CacheEntry {
 	return &CacheEntryEndpoint{
 		AppliedPolicies: resources.NewSet(),
 		Services:        resources.NewSet(),
 	}
 }
 
-// convertToVersioned implements the resourceCacheEngine interface.
-func (c *endpointEngine) convertToVersioned(res resources.Resource) (VersionedResource, error) {
+// convertToVersioned implements the resourceHandler interface.
+func (c *endpointHandler) convertToVersioned(res resources.Resource) (VersionedResource, error) {
 	switch in := res.(type) {
 	case *apiv3.HostEndpoint:
 		v1, err := updateprocessors.ConvertHostEndpointV3ToV1(&model.KVPair{
@@ -386,8 +384,8 @@ func (c *endpointEngine) convertToVersioned(res resources.Resource) (VersionedRe
 	return nil, nil
 }
 
-// resourceAdded implements the resourceCacheEngine interface.
-func (c *endpointEngine) resourceAdded(id apiv3.ResourceID, entry CacheEntry) {
+// resourceAdded implements the resourceHandler interface.
+func (c *endpointHandler) resourceAdded(id apiv3.ResourceID, entry CacheEntry) {
 	x := entry.(*CacheEntryEndpoint)
 	x.clog = log.WithField("id", id)
 
@@ -398,8 +396,8 @@ func (c *endpointEngine) resourceAdded(id apiv3.ResourceID, entry CacheEntry) {
 	c.resourceUpdated(id, entry, nil)
 }
 
-// resourceUpdated implements the resourceCacheEngine interface.
-func (c *endpointEngine) resourceUpdated(id apiv3.ResourceID, entry CacheEntry, prev VersionedResource) {
+// resourceUpdated implements the resourceHandler interface.
+func (c *endpointHandler) resourceUpdated(id apiv3.ResourceID, entry CacheEntry, prev VersionedResource) {
 	x := entry.(*CacheEntryEndpoint)
 
 	x.clog.Debugf("Configuring profiles: %v", x.getV1Profiles())
@@ -416,8 +414,8 @@ func (c *endpointEngine) resourceUpdated(id apiv3.ResourceID, entry CacheEntry, 
 	c.IPOrEndpointManager().SetOwnerKeys(id, i)
 }
 
-// resourceDeleted implements the resourceCacheEngine interface.
-func (c *endpointEngine) resourceDeleted(id apiv3.ResourceID, _ CacheEntry) {
+// resourceDeleted implements the resourceHandler interface.
+func (c *endpointHandler) resourceDeleted(id apiv3.ResourceID, _ CacheEntry) {
 	// Delete the labels associated with this pod. Default cache processing will remove this cache entry.
 	c.EndpointLabelSelector().DeleteLabels(id)
 
@@ -425,8 +423,8 @@ func (c *endpointEngine) resourceDeleted(id apiv3.ResourceID, _ CacheEntry) {
 	c.IPOrEndpointManager().DeleteOwner(id)
 }
 
-// recalculate implements the resourceCacheEngine interface.
-func (c *endpointEngine) recalculate(podId apiv3.ResourceID, epEntry CacheEntry) syncer.UpdateType {
+// recalculate implements the resourceHandler interface.
+func (c *endpointHandler) recalculate(podId apiv3.ResourceID, epEntry CacheEntry) syncer.UpdateType {
 	x := epEntry.(*CacheEntryEndpoint)
 
 	// ------
@@ -477,7 +475,7 @@ func (c *endpointEngine) recalculate(podId apiv3.ResourceID, epEntry CacheEntry)
 	return changed
 }
 
-func (c *endpointEngine) queueEndpointsForRecalculation(update syncer.Update) {
+func (c *endpointHandler) queueEndpointsForRecalculation(update syncer.Update) {
 	x := update.Resource.(*CacheEntryNetworkPolicy)
 	x.SelectedPods.Iter(func(podId apiv3.ResourceID) error {
 		c.QueueUpdate(podId, nil, update.Type)
@@ -492,7 +490,7 @@ func (c *endpointEngine) queueEndpointsForRecalculation(update syncer.Update) {
 // policyMatchStarted is called synchronously from the policy or pod resource update methods when a policy<->pod match
 // has started. We update  our set of applied Policies and then queue for asynchronous recalculation - this ensures we
 // wait until all related changes to have occurred further up the casading chain of events before we recalculate.
-func (c *endpointEngine) policyMatchStarted(policyId, podId apiv3.ResourceID) {
+func (c *endpointHandler) policyMatchStarted(policyId, podId apiv3.ResourceID) {
 	x, ok := c.GetFromOurCache(podId).(*CacheEntryEndpoint)
 	if !ok {
 		// This is called synchronously from the resource update methods, so we don't expect the entries to have been
@@ -509,7 +507,7 @@ func (c *endpointEngine) policyMatchStarted(policyId, podId apiv3.ResourceID) {
 // policyMatchStopped is called synchronously from the policy or pod resource update methods when a policy<->pod match
 // has stopped. We update  our set of applied Policies and then queue for asynchronous recalculation - this ensures we
 // wait until all related changes to have occurred further up the chain of events before we recalculate.
-func (c *endpointEngine) policyMatchStopped(policyId, podId apiv3.ResourceID) {
+func (c *endpointHandler) policyMatchStopped(policyId, podId apiv3.ResourceID) {
 	x, ok := c.GetFromOurCache(podId).(*CacheEntryEndpoint)
 	if !ok {
 		// This is called synchronously from the resource update methods, so we don't expect the entries to have been
@@ -523,7 +521,7 @@ func (c *endpointEngine) policyMatchStopped(policyId, podId apiv3.ResourceID) {
 	c.QueueUpdate(podId, x, EventPolicyMatchStopped)
 }
 
-func (c *endpointEngine) ipMatchStarted(ep, service apiv3.ResourceID, ip string, firstIP bool) {
+func (c *endpointHandler) ipMatchStarted(ep, service apiv3.ResourceID, ip string, firstIP bool) {
 	x, ok := c.GetFromOurCache(ep).(*CacheEntryEndpoint)
 	if !ok {
 		// This is called synchronously from the resource update methods, so we don't expect the entries to have been
@@ -539,7 +537,7 @@ func (c *endpointEngine) ipMatchStarted(ep, service apiv3.ResourceID, ip string,
 	}
 }
 
-func (c *endpointEngine) ipMatchStopped(ep, service apiv3.ResourceID, ip string, lastIP bool) {
+func (c *endpointHandler) ipMatchStopped(ep, service apiv3.ResourceID, ip string, lastIP bool) {
 	x, ok := c.GetFromOurCache(ep).(*CacheEntryEndpoint)
 	if !ok {
 		// This is called synchronously from the resource update methods, so we don't expect the entries to have been
@@ -553,22 +551,4 @@ func (c *endpointEngine) ipMatchStopped(ep, service apiv3.ResourceID, ip string,
 		x.Services.Discard(service)
 		c.QueueUpdate(ep, x, EventServiceDeleted)
 	}
-}
-
-func (c *endpointEngine) inScopeStarted(sel, epId apiv3.ResourceID) {
-	x, ok := c.GetFromOurCache(epId).(*CacheEntryEndpoint)
-	if !ok {
-		// This is called synchronously from the resource update methods, so we don't expect the entries to have been
-		// removed from the cache at this point.
-		log.Errorf("Match started on EP, but EP is not in cache: %s matches %s", sel, epId)
-		return
-	}
-	// Set the endpoint as in-scope and queue an update so that listeners are notified.
-	x.clog.Debug("Setting endpoint as in-scope")
-	x.setInscope()
-	c.QueueUpdate(epId, x, EventInScope)
-}
-
-func (c *endpointEngine) inScopeStopped(sel, epId apiv3.ResourceID) {
-	// no-op - we don't care about endpoints going out of scope.
 }

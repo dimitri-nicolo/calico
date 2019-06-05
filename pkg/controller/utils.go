@@ -18,6 +18,7 @@ limitations under the License.
 package controller
 
 import (
+	"fmt"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -25,12 +26,16 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	"github.com/tigera/compliance/pkg/config"
+	"github.com/tigera/compliance/pkg/datastore"
+	"github.com/tigera/compliance/pkg/resources"
 )
 
 // Utilities for dealing with Jobs and GlobalReports and time.
@@ -54,7 +59,7 @@ func getReportUIDFromJob(j batchv1.Job) (types.UID, bool) {
 	}
 
 	if controllerRef.Kind != controllerKind.Kind {
-		log.Infof("Job with non-%s parent, name %s namespace %s", controllerKind.Kind, j.Name, j.Namespace)
+		log.Debugf("Job with non-%s parent, name %s namespace %s", controllerKind.Kind, j.Name, j.Namespace)
 		return types.UID(""), false
 	}
 
@@ -68,7 +73,7 @@ func groupJobsByReport(js []batchv1.Job) map[types.UID][]batchv1.Job {
 	for _, job := range js {
 		parentUID, found := getReportUIDFromJob(job)
 		if !found {
-			log.Infof("Unable to get parent uid from job %s in namespace %s", job.Name, job.Namespace)
+			log.Debugf("Unable to get parent uid from job %s in namespace %s", job.Name, job.Namespace)
 			continue
 		}
 		jobsByReport[parentUID] = append(jobsByReport[parentUID], job)
@@ -158,4 +163,54 @@ func (o byCompletedReportEndTime) Less(i, j int) bool {
 		return o[i].Job.Name < o[j].Job.Name
 	}
 	return o[i].End.Before(&o[j].End)
+}
+
+// eventRecorder implements the EventRecorder interface but simply logs rather than generating events.
+type eventRecorder struct {
+	recorder record.EventRecorder
+}
+
+func newEventRecorder(cfg *config.Config, clientSet datastore.ClientSet) *eventRecorder {
+	/*TODO: Get event broadcasts working
+	eventBroadcaster := record.NewBroadcaster()
+	eventBroadcaster.StartLogging(log.Infof)
+	eventBroadcaster.StartRecordingToSink(&v1core.EventSinkImpl{Interface: clientSet.CoreV1().Events(cfg.Namespace)})
+	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, v1.EventSource{Component: "tigera-compliance-controller"})
+	*/
+	return &eventRecorder{
+		//recorder: recorder,
+	}
+}
+
+func (e *eventRecorder) Event(object runtime.Object, eventtype, reason, message string) {
+	if eventtype == v1.EventTypeWarning {
+		log.Warnf("[EVENT] %s: %s: %s: %s", eventtype, reason, getSummaryName(object), message)
+	} else {
+		log.Infof("[EVENT] %s: %s: %s: %s", eventtype, reason, getSummaryName(object), message)
+	}
+}
+
+func (e *eventRecorder) Eventf(object runtime.Object, eventtype, reason, messageFmt string, args ...interface{}) {
+	message := fmt.Sprintf(messageFmt, args...)
+	if eventtype == v1.EventTypeWarning {
+		log.Warnf("[EVENT] %s: %s: %s: %s", eventtype, reason, getSummaryName(object), message)
+	} else {
+		log.Infof("[EVENT] %s: %s: %s: %s", eventtype, reason, getSummaryName(object), message)
+	}
+}
+
+func (e *eventRecorder) PastEventf(object runtime.Object, timestamp metav1.Time, eventtype, reason, messageFmt string, args ...interface{}) {
+	e.Eventf(object, eventtype, reason, messageFmt, args)
+}
+
+func (e *eventRecorder) AnnotatedEventf(object runtime.Object, annotations map[string]string, eventtype, reason, messageFmt string, args ...interface{}) {
+	e.Eventf(object, eventtype, reason, messageFmt, args)
+}
+
+func getSummaryName(object runtime.Object) string {
+	if r, ok := object.(resources.Resource); ok {
+		return resources.GetResourceID(r).String()
+	} else {
+		return object.GetObjectKind().GroupVersionKind().String()
+	}
 }

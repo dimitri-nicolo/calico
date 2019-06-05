@@ -16,7 +16,7 @@ import (
 )
 
 // New creates a new server.
-func New(rr report.ReportRetriever, rcg ReportConfigurationGetter, rhf RbacHelperFactory, addr string, key string, cert string) Server {
+func New(rr report.ReportRetriever, rcg ReportConfigurationGetter, rhf RbacHelperFactory, addr string, key string, cert string) ServerControl {
 	s := &server{
 		key:  key,
 		cert: cert,
@@ -42,7 +42,7 @@ func New(rr report.ReportRetriever, rcg ReportConfigurationGetter, rhf RbacHelpe
 	return s
 }
 
-// server implements the compliance server, and implements the Server interface.
+// server implements the compliance server, and implements the ServerControl interface.
 type server struct {
 	running bool
 	server  *http.Server
@@ -94,7 +94,7 @@ func (s *server) Stop() {
 		log.WithField("Addr", s.server.Addr).Info("Stopping HTTPS server")
 		e := s.server.Shutdown(context.Background())
 		if e != nil {
-			log.Fatal("Server graceful shutdown fail")
+			log.Fatal("ServerControl graceful shutdown fail")
 			os.Exit(1)
 		}
 		s.wg.Wait()

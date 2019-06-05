@@ -18,6 +18,11 @@ import (
 	"github.com/tigera/compliance/pkg/version"
 )
 
+const (
+	// The health name for the controller component.
+	healthReporterName = "compliance-controller"
+)
+
 func main() {
 	var ver bool
 	flag.BoolVar(&ver, "version", false, "Print version information")
@@ -32,17 +37,27 @@ func main() {
 	cfg := config.MustLoadConfig()
 	cfg.InitializeLogging()
 
+	// Create a health check aggregator and start the health check service.
+	h := health.NewHealthAggregator()
+	h.ServeHTTP(cfg.HealthEnabled, cfg.HealthHost, cfg.HealthPort)
+	h.RegisterReporter(healthReporterName, &health.HealthReport{Live: true}, cfg.HealthTimeout)
+
+	// Define a function that can be used to report health.
+	healthy := func() {
+		h.Report(healthReporterName, &health.HealthReport{Live: true})
+	}
+
 	// Create the clientset.
 	cs := datastore.MustGetClientSet()
 
 	// Create the elastic client. We only use this to determine the last recorded report.
 	rr := elastic.MustGetElasticClient(cfg)
 
-	// Create a health check aggregator and start the health check service.
-	h := health.NewHealthAggregator()
-	h.ServeHTTP(cfg.HealthEnabled, cfg.HealthHost, cfg.HealthPort)
+	// Indicate healthy.
+	healthy()
 
-	ctrl, err := controller.NewComplianceController(cfg, cs, rr, h)
+	// Create and run the controller.
+	ctrl, err := controller.NewComplianceController(cfg, cs, rr, healthy)
 	if err != nil {
 		panic(err)
 	}

@@ -40,7 +40,7 @@ type cb struct {
 }
 
 type tester struct {
-	k            Interface
+	k            KeySelector
 	matchStarted set.Set
 	matchStopped set.Set
 }

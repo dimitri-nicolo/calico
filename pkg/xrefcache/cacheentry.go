@@ -7,12 +7,8 @@ import (
 	"github.com/tigera/compliance/pkg/syncer"
 )
 
-// TODO(rlb): This is currently an embedded struct in the cache entry data for each sub-cache. This is not necessary.
-// This structure should be private to the cross ref cache internals and should contain the converted and augmented
-// cache entry rather than the other way around. This should not be passed to the sub-cache at all.
-
-// cacheEntryCommon is embedded in each concrete CacheEntry type to provide the updateInProgress identifiers used
-// by the cache processing to handle sending of updates only at the end of a syncer update.
+// cacheEntryCommon should be embedded in each concrete CacheEntry type to provide the various internal handling methods
+// for each.
 type cacheEntryCommon struct {
 	updateTypes syncer.UpdateType
 	inScope     bool

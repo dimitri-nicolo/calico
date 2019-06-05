@@ -19,7 +19,8 @@ import (
 // specific resource and thie helper calls with match start and stop events between the linked and unlinked selector and
 // labels.
 
-type Interface interface {
+// LabelSelector interface. Used for handling callbacks and managing resource label and selectors.
+type LabelSelector interface {
 	RegisterCallbacks(kinds []metav1.TypeMeta, started MatchStarted, stopped MatchStopped)
 
 	UpdateLabels(res apiv3.ResourceID, labels map[string]string, parentIDs []string)
@@ -33,13 +34,13 @@ type Interface interface {
 type MatchStarted func(selector, labels apiv3.ResourceID)
 type MatchStopped func(selector, labels apiv3.ResourceID)
 
-func NewLabelSelection() Interface {
-	ls := &labelSelection{}
+func New() LabelSelector {
+	ls := &labelSelector{}
 	ls.index = labelindex.NewInheritIndex(ls.onMatchStarted, ls.onMatchStopped)
 	return ls
 }
 
-type labelSelection struct {
+type labelSelector struct {
 	// InheritIndex helper.  This is used to track correlations between endpoints and
 	// registered selectors.
 	index *labelindex.InheritIndex
@@ -54,7 +55,7 @@ type callbacksWithKind struct {
 	kind    metav1.TypeMeta
 }
 
-func (ls *labelSelection) RegisterCallbacks(kinds []metav1.TypeMeta, started MatchStarted, stopped MatchStopped) {
+func (ls *labelSelector) RegisterCallbacks(kinds []metav1.TypeMeta, started MatchStarted, stopped MatchStopped) {
 	for _, kind := range kinds {
 		ls.cbs = append(ls.cbs, callbacksWithKind{
 			started: started,
@@ -64,23 +65,23 @@ func (ls *labelSelection) RegisterCallbacks(kinds []metav1.TypeMeta, started Mat
 	}
 }
 
-func (ls *labelSelection) UpdateLabels(res apiv3.ResourceID, labels map[string]string, parentIDs []string) {
+func (ls *labelSelector) UpdateLabels(res apiv3.ResourceID, labels map[string]string, parentIDs []string) {
 	ls.index.UpdateLabels(res, labels, parentIDs)
 }
 
-func (ls *labelSelection) DeleteLabels(res apiv3.ResourceID) {
+func (ls *labelSelector) DeleteLabels(res apiv3.ResourceID) {
 	ls.index.DeleteLabels(res)
 }
 
-func (ls *labelSelection) UpdateParentLabels(parentID string, labels map[string]string) {
+func (ls *labelSelector) UpdateParentLabels(parentID string, labels map[string]string) {
 	ls.index.UpdateParentLabels(parentID, labels)
 }
 
-func (ls *labelSelection) DeleteParentLabels(parentID string) {
+func (ls *labelSelector) DeleteParentLabels(parentID string) {
 	ls.index.DeleteParentLabels(parentID)
 }
 
-func (ls *labelSelection) UpdateSelector(res apiv3.ResourceID, sel string) {
+func (ls *labelSelector) UpdateSelector(res apiv3.ResourceID, sel string) {
 	parsedSel, err := selector.Parse(sel)
 	if err != nil {
 		// The selector is bad, remove the associated resource from the helper.
@@ -91,13 +92,13 @@ func (ls *labelSelection) UpdateSelector(res apiv3.ResourceID, sel string) {
 	ls.index.UpdateSelector(res, parsedSel)
 }
 
-func (ls *labelSelection) DeleteSelector(res apiv3.ResourceID) {
+func (ls *labelSelector) DeleteSelector(res apiv3.ResourceID) {
 	ls.index.DeleteSelector(res)
 }
 
 // onMatchStarted is called from the InheritIndex helper when a selector-endpoint match has
 // started.
-func (c *labelSelection) onMatchStarted(selId, labelsId interface{}) {
+func (c *labelSelector) onMatchStarted(selId, labelsId interface{}) {
 	selRes := selId.(apiv3.ResourceID)
 	labelsRes := labelsId.(apiv3.ResourceID)
 
@@ -110,7 +111,7 @@ func (c *labelSelection) onMatchStarted(selId, labelsId interface{}) {
 
 // onMatchStopped is called from the InheritIndex helper when a selector-endpoint match has
 // stopped.
-func (c *labelSelection) onMatchStopped(selId, labelsId interface{}) {
+func (c *labelSelector) onMatchStopped(selId, labelsId interface{}) {
 	selRes := selId.(apiv3.ResourceID)
 	labelsRes := labelsId.(apiv3.ResourceID)
 

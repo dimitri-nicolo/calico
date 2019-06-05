@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/projectcalico/libcalico-go/lib/errors"
-	"github.com/projectcalico/libcalico-go/lib/health"
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -18,26 +17,20 @@ import (
 )
 
 const (
-	// Snapshot frequency is hard coded to be daily.
-	defaultSnapshotHour = 22
-	oneDay              = 24 * time.Hour
-
-	// Health aggregator values.
-	HealthName = "snapshotter"
+	oneDay            = 24 * time.Hour
+	keepAliveInterval = 10 * time.Second
 )
 
 var (
-	keepAliveInterval = 10 * time.Second
-
 	allResources = resources.GetAllResourceHelpers()
 )
 
 // Run is the entrypoint to start running the snapshotter.
-func Run(ctx context.Context, cfg *config.Config, listSrc list.Source, listDest list.Destination, healthAgg *health.HealthAggregator) error {
+func Run(ctx context.Context, cfg *config.Config, listSrc list.Source, listDest list.Destination, healthy func(bool)) error {
 	return (&snapshotter{
 		ctx:      ctx,
 		cfg:      cfg,
-		health:   healthAgg,
+		healthy:  healthy,
 		listSrc:  listSrc,
 		listDest: listDest,
 	}).run()
@@ -46,19 +39,18 @@ func Run(ctx context.Context, cfg *config.Config, listSrc list.Source, listDest 
 type snapshotter struct {
 	ctx      context.Context
 	cfg      *config.Config
-	health   *health.HealthAggregator
+	healthy  func(bool)
 	listSrc  list.Source
 	listDest list.Destination
 }
 
-func healthy(isAlive bool) *health.HealthReport {
-	return &health.HealthReport{Live: isAlive, Ready: true}
-}
-
 // Run aligns the current state with the last time a snapshot was made with the expected time of the next snapshot and
-// then continuously snapshots with 'freq' periodicity.
+// then continuously snapshots with daily periodicity.
 func (s *snapshotter) run() error {
-	log.Info("Executing snapshot continuously once every day at required time")
+	log.Infof("Executing snapshot continuously once every day at required time (%0.2d00hr)", s.cfg.SnapshotHour)
+
+	// Assume we are initially healthy.
+	s.healthy(true)
 
 	// Initialize keep alive ticker.
 	keepAliveTicker := time.NewTicker(keepAliveInterval)
@@ -101,7 +93,7 @@ func (s *snapshotter) run() error {
 		for err := range errChan {
 			if err != nil {
 				log.WithError(err).Error("Snapshot failed")
-				s.health.Report(HealthName, healthy(false))
+				s.healthy(false)
 				break
 			}
 		}
@@ -115,8 +107,8 @@ func (s *snapshotter) run() error {
 
 		case <-keepAliveTicker.C:
 			// Keep alive timer fired; notify health aggregator.
-			log.Info("Waking up from keep-alive timer")
-			s.health.Report(HealthName, healthy(true))
+			log.Debug("Waking up from keep-alive timer")
+			s.healthy(true)
 		}
 	}
 }
@@ -132,11 +124,6 @@ func (s *snapshotter) timeOfNextSnapshot() (time.Time, time.Time) {
 	return fireTime.Add(-oneDay), fireTime
 }
 
-type resourceResponse struct {
-	tm  metav1.TypeMeta
-	err error
-}
-
 type resourceSnapshotter struct {
 	ctx                context.Context
 	kind               metav1.TypeMeta
@@ -149,41 +136,41 @@ type resourceSnapshotter struct {
 func (r *resourceSnapshotter) maybeTakeSnapshot(prev, next time.Time) error {
 	// If timeOfLastSnapshot is not known then populate from an elastic search query.
 	if r.timeOfLastSnapshot == nil {
-		dayAgo := time.Now().Add(-24 * time.Hour)
+		dayAgo := time.Now().Add(-oneDay)
 		trlist, err := r.listDest.RetrieveList(r.kind, &dayAgo, nil, false)
 		if err != nil {
 			if _, ok := err.(errors.ErrorResourceDoesNotExist); ok {
-				r.clog.Debug("No snapshot exists")
+				r.clog.Info("No archived snapshot")
 				r.timeOfLastSnapshot = &time.Time{}
 			} else {
-				r.clog.WithError(err).Error("failed to retrieve last list query")
+				r.clog.WithError(err).Error("Failed to retrieve most recent archived snapshot")
 				return err
 			}
 		} else if trlist != nil {
-			r.clog.WithField("lastSnapshotTime", trlist.RequestCompletedTimestamp).Debug("Found last snapshot")
+			r.clog.WithField("lastSnapshotTime", trlist.RequestCompletedTimestamp).Info("Found most recent archived snapshot")
 			r.timeOfLastSnapshot = &trlist.RequestCompletedTimestamp.Time
 		}
 	}
 
 	// If timeOfLastSnapshot is < prev then we haven't taken a snapshot in this interval. Take a snapshot.
 	if r.timeOfLastSnapshot.Before(prev) {
-		r.clog.Debug("Querying list")
+		r.clog.Info("Taking snapshot")
 		trlist, err := r.listSrc.RetrieveList(r.kind)
 		if err != nil {
-			r.clog.WithError(err).Error("Failed to query list")
+			r.clog.WithError(err).Error("Failed to take snapshot")
 			return err
 		}
 
-		r.clog.Debug("Writing list")
+		r.clog.Info("Archiving snapshot")
 		if err = r.listDest.StoreList(r.kind, trlist); err != nil {
-			r.clog.WithError(err).Error("Failed to write list")
+			r.clog.WithError(err).Error("Failed to archive snapshot")
 			return err
 		}
 
 		r.timeOfLastSnapshot = &trlist.RequestCompletedTimestamp.Time
-		r.clog.Info("Successfully snapshotted the list source!")
+		r.clog.Info("Successfully archived snapshot")
 	} else {
-		r.clog.WithField("nextSnapshot", next.Sub(*r.timeOfLastSnapshot)).Info("Time to next snapshot.")
+		r.clog.WithField("nextSnapshot", next.Sub(*r.timeOfLastSnapshot)).Debug("Time to next snapshot.")
 	}
 	return nil
 }

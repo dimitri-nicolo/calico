@@ -15,21 +15,25 @@ const (
 	UrlVersion  = "/compliance/version"
 )
 
-type Server interface {
+// ServerControl is the interface used to control the state of the compliance server.
+type ServerControl interface {
 	Start()
 	Stop()
 	Wait()
 }
 
+// ReportConfigurationGetter is the interface required by the server for querying the report and report types.
 type ReportConfigurationGetter interface {
 	clientv3.GlobalReportsGetter
 	clientv3.GlobalReportTypesGetter
 }
 
+// ReportList is a list of reports. This is serialized as json when returned over http.
 type ReportList struct {
 	Reports []Report `json:"reports"`
 }
 
+// Report is a single rendered report (summary). This is serialized as json when returned over http.
 type Report struct {
 	Id              string      `json:"id"`
 	Name            string      `json:"name"`
@@ -42,11 +46,13 @@ type Report struct {
 	GenerationTime  metav1.Time `json:"generationTime"`
 }
 
+// A format that the report may be downloaded as.
 type Format struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 }
 
+// The version of the compliance-server. This is serialized as json and returned on the version uri.
 type VersionData struct {
 	Version   string `json:"version"`
 	BuildDate string `json:"buildDate"`

@@ -76,7 +76,7 @@ func (c *client) RetrieveList(kind metav1.TypeMeta, from, to *time.Time, ascendi
 func (c *client) StoreList(_ metav1.TypeMeta, l *list.TimestampedResourceList) error {
 	dateSuffix := l.RequestCompletedTimestamp.Format(IndexTimeFormat)
 	index := c.clusterIndex(snapshotsIndex, dateSuffix)
-	if err := c.ensureIndexExists(index, snapshotsMapping); err != nil {
+	if err := c.ensureIndexExistsWithRetry(index, snapshotsMapping); err != nil {
 		return err
 	}
 	res, err := c.Index().

@@ -69,7 +69,8 @@ func (a *fakeAuditer) SearchAuditEvents(ctx context.Context, filter *apiv3.Audit
 			}
 			ch <- &event.AuditEventResult{
 				Event: &auditv1.Event{
-					Verb: verb,
+					Stage: auditv1.StageResponseComplete,
+					Verb:  verb,
 					ObjectRef: &auditv1.ObjectReference{
 						Name:       r.GetObjectMeta().GetName(),
 						Namespace:  r.GetObjectMeta().GetNamespace(),
