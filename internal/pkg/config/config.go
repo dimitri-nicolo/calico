@@ -1,7 +1,8 @@
 package config
 
 type Config struct {
-	Port int    `default:"3000"`
+	Port int    `default:"5555"`
 	Host string `default:"localhost"`
-	LogLevel string `default:"WARN"`
+	LogLevel string `default:"DEBUG"`
+	CertPath string `default:"certs"`
 }

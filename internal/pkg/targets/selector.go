@@ -9,7 +9,7 @@ import (
 func CreateStaticTargets() *Targets {
 	targets := make(map[string]*url.URL)
 
-	targets["^/api"] = parse("http://localhost:8001")
+	targets["^/api"] = parse("https://kubernetes.default")
 	targets["^/tigera-elasticsearch*"] = parse("http://localhost:8002")
 
 	return &Targets{targets: targets}

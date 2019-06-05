@@ -94,7 +94,9 @@ func main() {
 
 	url := fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)
 	log.Infof("Starting web server on", url)
-	if err := http.ListenAndServe(url, nil); err != nil {
+	cert := fmt.Sprintf("%s/ca.crt", cfg.CertPath)
+	key := fmt.Sprintf("%s/ca.key", cfg.CertPath)
+	if err := http.ListenAndServeTLS(url, cert, key, nil); err != nil {
 		log.Fatal(err)
 	}
 }

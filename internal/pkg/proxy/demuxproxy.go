@@ -3,9 +3,11 @@
 package proxy
 
 import (
+	"crypto/tls"
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"net/http/httputil"
+	"time"
 )
 
 type DemuxProxy struct {
@@ -37,5 +39,8 @@ func (mp DemuxProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	log.Debugf("New http request is %v", r)
 
-	httputil.NewSingleHostReverseProxy(url).ServeHTTP(w, r)
+	reverseProxy := httputil.NewSingleHostReverseProxy(url)
+	reverseProxy.FlushInterval = 100 * time.Millisecond
+	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	reverseProxy.ServeHTTP(w, r)
 }
