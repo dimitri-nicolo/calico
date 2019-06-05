@@ -19,6 +19,8 @@ const (
 	certFilePathEnv = "CERT_FILE_PATH"
 	keyFilePathEnv  = "KEY_FILE_PATH"
 
+	keyCertGenPathEnv = "KEY_CERT_GEN_PATH"
+
 	elasticAccessModeEnv         = "ELASTIC_ACCESS_MODE"
 	elasticSchemeEnv             = "ELASTIC_SCHEME"
 	elasticHostEnv               = "ELASTIC_HOST"
@@ -53,6 +55,15 @@ const (
 	InsecureMode = "insecure"
 )
 
+// Certificate file paths. If explicit certificates aren't provided
+// then self-signed certificates are generated and stored on these
+// paths.
+const (
+	defaultKeyCertGenPath = "/etc/es-proxy/ssl/"
+	defaultCertFileName   = "cert"
+	defaultKeyFileName    = "key"
+)
+
 // Config stores various configuration information for the es-proxy
 // server.
 type Config struct {
@@ -65,6 +76,13 @@ type Config struct {
 	// for serving requests over TLS.
 	CertFile string
 	KeyFile  string
+
+	// If specific a CertFile and KeyFile are not provided this is the
+	// location to autogenerate the files
+	DefaultSSLPath string
+	// Default cert and key file paths calculated from the DefaultSSLPath
+	DefaultCertFile string
+	DefaultKeyFile  string
 
 	// AccessMode controls how we access es-proxy is configured to enforce
 	// Elasticsearch access.
@@ -90,6 +108,10 @@ func NewConfigFromEnv() (*Config, error) {
 	listenAddr := getEnvOrDefaultString(listenAddrEnv, defaultListenAddr)
 	certFilePath := getEnv(certFilePathEnv)
 	keyFilePath := getEnv(keyFilePathEnv)
+	keyCertGenPath := getEnvOrDefaultString(keyCertGenPathEnv, defaultKeyCertGenPath)
+
+	defaultCertFile := keyCertGenPath + defaultCertFileName
+	defaultKeyFile := keyCertGenPath + defaultKeyFileName
 
 	accessMode, err := parseAccessMode(getEnv(elasticAccessModeEnv))
 	if err != nil {
@@ -126,6 +148,9 @@ func NewConfigFromEnv() (*Config, error) {
 		ListenAddr:                listenAddr,
 		CertFile:                  certFilePath,
 		KeyFile:                   keyFilePath,
+		DefaultSSLPath:            keyCertGenPath,
+		DefaultCertFile:           defaultCertFile,
+		DefaultKeyFile:            defaultKeyFile,
 		AccessMode:                accessMode,
 		ElasticURL:                elasticURL,
 		ElasticCAPath:             elasticCAPath,

@@ -1,5 +1,11 @@
 package pip
 
+import (
+	"context"
+
+	"github.com/tigera/es-proxy/pkg/pip/flow"
+)
+
 type PIP interface {
-	CalculateFlowImpact(npcs []NetworkPolicyChange, flows []Flow) []Flow
+	CalculateFlowImpact(ctx context.Context, npcs []NetworkPolicyChange, flows []flow.Flow) ([]flow.Flow, error)
 }

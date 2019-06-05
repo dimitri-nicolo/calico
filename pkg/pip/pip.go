@@ -11,6 +11,9 @@ import (
 	"github.com/tigera/compliance/pkg/resources"
 	"github.com/tigera/compliance/pkg/syncer"
 	"github.com/tigera/compliance/pkg/xrefcache"
+	"github.com/tigera/es-proxy/pkg/pip/flow"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type Action int
@@ -42,8 +45,8 @@ type pip struct {
 	inScope map[v3.ResourceID]*xrefcache.CacheEntryEndpoint
 }
 
-func New(listSrc list.Source) pip {
-	return pip{
+func New(listSrc list.Source) PIP {
+	return &pip{
 		listSrc: listSrc,
 	}
 }
@@ -52,7 +55,7 @@ func New(listSrc list.Source) pip {
 // through the policy chains, and then determines the Action of the flow. It then does the same operation a second time,
 // after making the passed-in NetworkPolicyChanges to the policy chain. The end-result is a set of flows with a new
 // attribute on each: "preview_action".
-func (s *pip) CalculateFlowImpact(ctx context.Context, npcs []NetworkPolicyChange, flows []Flow) ([]Flow, error) {
+func (s *pip) CalculateFlowImpact(ctx context.Context, npcs []NetworkPolicyChange, flows []flow.Flow) ([]flow.Flow, error) {
 	// Create a new x-ref cache. Use a blank compliance config for the config settings since the XrefCache currently
 	// requires it but doesn't use any fields except the istio config (which we're not concerned with in the pip use case).
 	s.xc = xrefcache.NewXrefCache(&config.Config{}, func() {})
@@ -155,4 +158,12 @@ func (s *pip) loadInitialPolicy() error {
 func buildSelector(npcs []NetworkPolicyChange) string {
 	// TODO: loop through policy change, create a set, and union the results in this format: "() | () | ()"
 	return "all()"
+}
+
+//Because... where does this come from ?
+type DummySource struct {
+}
+
+func (d *DummySource) RetrieveList(kind metav1.TypeMeta) (*list.TimestampedResourceList, error) {
+	return &list.TimestampedResourceList{}, nil
 }

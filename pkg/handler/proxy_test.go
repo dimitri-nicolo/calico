@@ -14,17 +14,24 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+const insertedHeaderValue = "This is an test header inserted by a response modifier"
+
 var _ = Describe("Proxy Handler", func() {
 	targetName := "target"
 	var proxyServer, target *httptest.Server
 
-	requestAndCheckResult := func(path string, expectedStatusCode int, expectedTarget string) {
+	requestResult := func(path string) *http.Response {
 		client := proxyServer.Client()
 		proxyServerURL, err := url.Parse(proxyServer.URL)
 		Expect(err).ShouldNot(HaveOccurred())
 		proxyServerURL.Path = path
 		resp, err := client.Get(proxyServerURL.String())
 		Expect(err).ShouldNot(HaveOccurred())
+		return resp
+	}
+
+	requestAndCheckResult := func(path string, expectedStatusCode int, expectedTarget string) {
+		resp := requestResult(path)
 		Expect(resp.StatusCode).Should(Equal(expectedStatusCode))
 		Expect(resp.Header.Get("X-Target-Name")).Should(Equal(expectedTarget))
 	}
@@ -41,6 +48,22 @@ var _ = Describe("Proxy Handler", func() {
 			w.Header().Add("X-Target-Name", targetName)
 		}))
 		return testmux
+	}
+
+	assertsWhenTestHeaderHasBeenAdded := func() {
+		It("should respond with a header inserted by the response modifier", func() {
+			By("Requesting an available resource should include inserted header.")
+			resp := requestResult("/test200")
+			Expect(resp.Header.Get("X-TestResponseModified")).Should(Equal(insertedHeaderValue))
+		})
+	}
+
+	assertsWhenTestHeaderHasNotBeenAdded := func() {
+		It("should respond without a header inserted by the response modifier", func() {
+			By("Requesting an available resource should not include the inserted header.")
+			resp := requestResult("/test200")
+			Expect(resp.Header.Get("X-TestResponseModified")).Should(Equal(""))
+		})
 	}
 
 	assertsWhenTargetAvailable := func(startTLSTarget bool) {
@@ -78,7 +101,17 @@ var _ = Describe("Proxy Handler", func() {
 		})
 	}
 
-	setupServers := func(tlsTarget bool) {
+	nilResponseModifier := func(r *http.Response) error {
+		//does not modify the response
+		return nil
+	}
+
+	insertingResponseModifier := func(r *http.Response) error {
+		r.Header.Add("X-TestResponseModified", insertedHeaderValue)
+		return nil
+	}
+
+	setupServers := func(tlsTarget bool, responseModifier handler.ResponseModifier) {
 		testmux := getTestMux()
 
 		var tc *tls.Config
@@ -104,21 +137,27 @@ var _ = Describe("Proxy Handler", func() {
 			KeepAlivePeriod: time.Second,
 			IdleConnTimeout: time.Second,
 		}
-		proxyServer = httptest.NewServer(handler.NewProxy(pc))
+		proxy := handler.NewProxy(pc)
+
+		proxy.AddResponseModifier(responseModifier)
+
+		proxyServer = httptest.NewServer(proxy)
 	}
 
 	Context("No TLS", func() {
 		BeforeEach(func() {
-			setupServers(false)
+			setupServers(false, nilResponseModifier)
 		})
 		assertsWhenTargetAvailable(false)
+		assertsWhenTestHeaderHasNotBeenAdded()
 		assertsWhenTargetDown(false)
 	})
 	Context("TLS", func() {
 		BeforeEach(func() {
-			setupServers(true)
+			setupServers(true, insertingResponseModifier)
 		})
 		assertsWhenTargetAvailable(true)
+		assertsWhenTestHeaderHasBeenAdded()
 		assertsWhenTargetDown(true)
 	})
 	AfterEach(func() {

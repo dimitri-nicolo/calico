@@ -17,6 +17,8 @@ import (
 
 	"github.com/tigera/es-proxy/pkg/handler"
 	"github.com/tigera/es-proxy/pkg/middleware"
+	"github.com/tigera/es-proxy/pkg/mutator"
+	"github.com/tigera/es-proxy/pkg/pip"
 )
 
 var (
@@ -47,6 +49,12 @@ func Start(config *Config) error {
 		IdleConnTimeout: config.ProxyIdleConnTimeout,
 	}
 	proxy := handler.NewProxy(pc)
+
+	//hook up the pip response modifier
+	listSrc := &pip.DummySource{} //TODO: not sure what listSrc is or where it is supposed to come from
+	p := pip.New(listSrc)
+	piphook := mutator.NewResponseHook(p)
+	proxy.AddResponseModifier(piphook.ModifyResponse)
 
 	k8sClient, k8sConfig := getKubernetestClientAndConfig()
 	k8sAuth := middleware.NewK8sAuth(k8sClient, k8sConfig)

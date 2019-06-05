@@ -14,14 +14,6 @@ import (
 	"github.com/tigera/es-proxy/pkg/server"
 )
 
-// Certificate file paths. If explicit certificates aren't provided
-// then self-signed certificates are generated and stored on these
-// paths.
-const (
-	defaultCertFilePath = "/etc/es-proxy/ssl/cert"
-	defaultKeyFilePath  = "/etc/es-proxy/ssl/key"
-)
-
 func main() {
 	logLevel := log.InfoLevel
 	logLevelStr := os.Getenv("LOG_LEVEL")
@@ -41,10 +33,10 @@ func main() {
 	// If configuration for certificates isn't provided, then generate one ourseles and
 	// set the correct paths.
 	if config.CertFile == "" || config.KeyFile == "" {
-		log.Warnf("Generating self-signed cert: (%s, %s)", defaultCertFilePath, defaultKeyFilePath)
-		config.CertFile = defaultCertFilePath
-		config.KeyFile = defaultKeyFilePath
-		err := MaybeDefaultWithSelfSignedCerts("localhost", nil, []net.IP{net.ParseIP("127.0.0.1"), net.ParseIP("::1")})
+		log.Warnf("Generating self-signed cert: (%s, %s)", config.DefaultCertFile, config.DefaultKeyFile)
+		config.CertFile = config.DefaultCertFile
+		config.KeyFile = config.DefaultKeyFile
+		err := MaybeDefaultWithSelfSignedCerts("localhost", nil, []net.IP{net.ParseIP("127.0.0.1"), net.ParseIP("::1")}, config.DefaultCertFile, config.DefaultKeyFile)
 		if err != nil {
 			log.WithError(err).Fatal("Error creating self-signed certificates", err)
 		}
@@ -57,7 +49,7 @@ func main() {
 
 // Copied from "k8s.io/apiserver/pkg/server/options" for self signed certificate generation.
 // Original source is licensed under the Apache License, Version 2.0.
-func MaybeDefaultWithSelfSignedCerts(publicAddress string, alternateDNS []string, alternateIPs []net.IP) error {
+func MaybeDefaultWithSelfSignedCerts(publicAddress string, alternateDNS []string, alternateIPs []net.IP, defaultCertFilePath string, defaultKeyFilePath string) error {
 	canReadCertAndKey, err := certutil.CanReadCertAndKey(defaultCertFilePath, defaultKeyFilePath)
 	if err != nil {
 		return err
