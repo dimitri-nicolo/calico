@@ -23,7 +23,7 @@ for more details.
 
 VPC members must have a network interface and be able to be added to a
 [security group](https://docs.aws.amazon.com/vpc/latest/userguide/VPC_SecurityGroups.html).
-This includes but is not limited to [interface VPC endpoints](https://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/vpce-interface.html) as well as
+This includes but is not limited to [interface VPC endpoints](https://docs.aws.amazon.com/vpc/latest/userguide/vpce-interface.html) as well as
 [RDS](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Overview.DBInstance.html)
 and [EC2](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Instances.html)
 instances.
