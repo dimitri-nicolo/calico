@@ -22,8 +22,9 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/projectcalico/libcalico-go/lib/apis/v3"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/libcalico-go/lib/apis/v3"
 
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
@@ -59,6 +60,7 @@ func newBlock(cidr cnet.IPNet, windowsHost bool) allocationBlock {
 		log.Debugf("Block %s reserving IPs for windows", b.CIDR.String())
 		// nil attributes
 		winAttrs := make(map[string]string)
+		winAttrs["note"] = "reserved for Windows networking"
 		handleID := windowsReservedHandle
 		// use first 3 Unallocated values which are 0,1,2 by default
 		b.Unallocated = b.Unallocated[3 : numAddresses-1]
