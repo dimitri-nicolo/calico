@@ -7,6 +7,7 @@ edge [fontname=Helvetica,fontsize=10]
 
 conntrack -> flCollector [label="conntrack data"];
 nflog -> flCollector [label="packet headers"];
+dikastes -> flCollector [label="proto.DataplaneStats"];
 
 flCollector -> reporterMgr [label="MetricUpdate"];
 
@@ -124,6 +125,12 @@ conntrack [label=<<table BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="
 
 nflog [label=<<table BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4">
           <tr><td><font point-size="14">iptables NFLOG rules</font></td></tr>
+        </table>>, shape=none, margin=0];
+
+dikastes [label=<<table BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4">
+          <tr><td><font point-size="14">Dikastes (ALP)</font></td></tr>
+          <tr><td><font point-size="10">Provides packet counts for HTTP connections.<br/>
+</font></td></tr>
         </table>>, shape=none, margin=0];
 
 }
