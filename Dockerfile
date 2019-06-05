@@ -3,7 +3,7 @@ COPY kibana /kibana
 RUN apk add --no-cache zip
 RUN zip -r /tigera_customization.zip kibana
 
-FROM docker.elastic.co/kibana/kibana:6.4.1
+FROM docker.elastic.co/kibana/kibana:6.4.3
 
 # custom favicons
 COPY favicons/* /usr/share/kibana/src/ui/public/assets/favicons/
