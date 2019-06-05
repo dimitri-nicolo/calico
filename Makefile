@@ -204,7 +204,9 @@ test: ut fv
 #############################################
 .PHONY: ut
 ut:
-	echo "UT not implemented yet"
+	docker run --rm -v $(CURDIR):/build-dir/$(PACKAGE_NAME):rw \
+		-e LOCAL_USER_ID=$(MY_UID) \
+		$(CALICO_BUILD) sh -c 'cd /build-dir/$(PACKAGE_NAME) && ginkgo -cover -r pkg/* internal/* $(GINKGO_ARGS)'
 
 #############################################
 # Run package level functional level tests
