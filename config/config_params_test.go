@@ -58,6 +58,7 @@ var _ = Describe("FelixConfig vs ConfigParams parity", func() {
 		// Moved to Node.
 		"IpInIpTunnelAddr",
 		"IPv4VXLANTunnelAddr",
+		"VXLANTunnelMACAddr",
 		"NodeIP",
 
 		// The rekey time is used by the IPsec tests but it isn't exposed in FelixConfiguration.

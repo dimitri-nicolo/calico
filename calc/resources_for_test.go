@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -590,6 +590,11 @@ var remoteHost2VXLANTunnelConfigKey = HostConfigKey{
 	Name:     "IPv4VXLANTunnelAddr",
 }
 
+var remoteHostVXLANTunnelMACConfigKey = HostConfigKey{
+	Hostname: remoteHostname,
+	Name:     "VXLANTunnelMACAddr",
+}
+
 var ipPoolKey = IPPoolKey{
 	CIDR: mustParseNet("10.0.0.0/16"),
 }
@@ -705,4 +710,6 @@ func intPtr(i int) *int {
 
 var localHostVXLANTunnelIP = "10.0.0.0"
 var remoteHostVXLANTunnelIP = "10.0.1.0"
+var remoteHostVXLANTunnelIP2 = "10.0.1.1"
 var remoteHost2VXLANTunnelIP = "10.0.2.0"
+var remoteHostVXLANTunnelMAC = "66:74:c5:72:3f:01"
