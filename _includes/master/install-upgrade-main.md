@@ -277,7 +277,7 @@ for each [remote cluster](/{{page.version}}/networking/federation/index#terminol
 
 1. Continue to [Applying your license key](#applying-your-license-key).
 
-{% include {{page.version}}/apply-license.md %}
+{% include {{page.version}}/apply-license.md cli="kubectl" %}
 
 {% if include.upgrade %}
 ## Installing metrics and logs

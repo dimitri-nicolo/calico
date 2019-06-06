@@ -97,7 +97,7 @@ such that {{site.prodname}} connects to an etcd you have already set up by follo
 
 1. Continue to [Applying your license key](#applying-your-license-key).
 
-{% include {{page.version}}/apply-license.md init="openshift" %}
+{% include {{page.version}}/apply-license.md init="openshift" cli="oc" %}
 
 {% if include.upgrade %}
 ## Installing metrics and logs
