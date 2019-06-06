@@ -244,5 +244,5 @@ ci: test
 #############################################
 cd: clean $(YOUR_APP) image deploy
 deploy:
-	docker tag ${BUILD_IMAGE}:latest gcr.io/tigera-dev/cnx/${BUILD_IMAGE}:latest
-    gcloud docker -- push gcr.io/tigera-dev/cnx/${BUILD_IMAGE}:latest
+	docker tag $(BUILD_IMAGE):latest gcr.io/tigera-dev/cnx/${BUILD_IMAGE}:latest
+	gcloud docker -- push gcr.io/tigera-dev/cnx/${BUILD_IMAGE}:latest
