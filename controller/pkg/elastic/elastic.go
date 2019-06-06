@@ -22,12 +22,13 @@ import (
 )
 
 const (
-	IPSetIndexPattern   = ".tigera.ipset.%s"
-	StandardType        = "_doc"
-	FlowLogIndexPattern = "tigera_secure_ee_flows.%s.*"
-	EventIndexPattern   = "tigera_secure_ee_events.%s"
-	QuerySize           = 1000
-	MaxClauseCount      = 1024
+	IPSetIndexPattern       = ".tigera.ipset.%s"
+	StandardType            = "_doc"
+	FlowLogIndexPattern     = "tigera_secure_ee_flows.%s.*"
+	EventIndexPattern       = "tigera_secure_ee_events.%s"
+	QuerySize               = 1000
+	MaxClauseCount          = 1024
+	CreateIndexFailureDelay = time.Minute
 )
 
 var IPSetIndex string
@@ -50,7 +51,9 @@ type ipSetDoc struct {
 }
 
 type Elastic struct {
-	c *elastic.Client
+	c                   *elastic.Client
+	ipSetMappingCreated chan (struct{})
+	eventMappingCreated chan (struct{})
 }
 
 func NewElastic(h *http.Client, url *url.URL, username, password string) (*Elastic, error) {
@@ -70,18 +73,19 @@ func NewElastic(h *http.Client, url *url.URL, username, password string) (*Elast
 	if err != nil {
 		return nil, err
 	}
-	e := &Elastic{c}
-	go func() {
-		ctx := context.Background()
-		err := e.ensureIndexExists(ctx, IPSetIndex, ipSetMapping)
-		if err != nil {
-			log.WithError(err).WithField("index", IPSetIndex).Errorf("Could not create index")
-		}
-		err = e.ensureIndexExists(ctx, EventIndex, eventMapping)
-		if err != nil {
-			log.WithError(err).WithField("index", EventIndex).Errorf("Could not create index")
-		}
-	}()
+	e := &Elastic{
+		c:                   c,
+		ipSetMappingCreated: make(chan (struct{})),
+		eventMappingCreated: make(chan (struct{})),
+	}
+
+	ctx := context.Background()
+	// We drop the error on the floor because the above-created Context can never
+	// be cancelled and thus the function never returns an error. If this is ever changed
+	// the implementor will need to handle the error.
+	go e.createOrUpdateIndex(ctx, IPSetIndex, ipSetMapping, e.ipSetMappingCreated)
+	go e.createOrUpdateIndex(ctx, EventIndex, eventMapping, e.eventMappingCreated)
+
 	return e, nil
 }
 
@@ -109,17 +113,45 @@ func (e *Elastic) ListIPSets(ctx context.Context) ([]db.IPSetMeta, error) {
 }
 
 func (e *Elastic) PutIPSet(ctx context.Context, name string, set db.IPSetSpec) error {
-	err := e.ensureIndexExists(ctx, IPSetIndex, ipSetMapping)
-	if err != nil {
-		return err
+	// Wait for the IPSet Mapping to be created
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-e.ipSetMappingCreated:
+		break
 	}
 
 	// Put document
 	body := ipSetDoc{CreatedAt: time.Now(), IPs: set}
-	_, err = e.c.Index().Index(IPSetIndex).Type(StandardType).Id(name).BodyJson(body).Do(ctx)
+	_, err := e.c.Index().Index(IPSetIndex).Type(StandardType).Id(name).BodyJson(body).Do(ctx)
 	log.WithField("name", name).Info("IP set stored")
 
 	return err
+}
+
+func (e *Elastic) createOrUpdateIndex(ctx context.Context, index, mapping string, ch chan struct{}) error {
+	attempt := 0
+	for {
+		attempt++
+		err := e.ensureIndexExists(ctx, index, mapping)
+		if err != nil {
+			log.WithError(err).WithFields(log.Fields{
+				"index":       index,
+				"attempt":     attempt,
+				"retry_delay": CreateIndexFailureDelay,
+			}).Errorf("Failed to create index")
+
+			select {
+			case <-ctx.Done():
+				return err
+			case <-time.After(CreateIndexFailureDelay):
+				// noop
+			}
+		} else {
+			close(ch)
+			return nil
+		}
+	}
 }
 
 func (e *Elastic) ensureIndexExists(ctx context.Context, idx, mapping string) error {
@@ -137,12 +169,25 @@ func (e *Elastic) ensureIndexExists(ctx context.Context, idx, mapping string) er
 			return fmt.Errorf("not acknowledged index %s create", idx)
 		}
 	} else {
-		r, err := e.c.PutMapping().Index(idx).BodyString(mapping).Do(ctx)
+		var m map[string]map[string]interface{}
+		err := json.Unmarshal([]byte(mapping), &m)
 		if err != nil {
 			return err
 		}
-		if !r.Acknowledged {
-			return fmt.Errorf("not acknowledged index %s update", idx)
+
+		for k, v := range m["mappings"] {
+			b, err := json.Marshal(&v)
+			if err != nil {
+				return err
+			}
+
+			r, err := e.c.PutMapping().Index(idx).Type(k).BodyString(string(b)).Do(ctx)
+			if err != nil {
+				return err
+			}
+			if !r.Acknowledged {
+				return fmt.Errorf("not acknowledged index %s update", idx)
+			}
 		}
 	}
 	return nil
@@ -261,12 +306,14 @@ func (e *Elastic) DeleteIPSet(ctx context.Context, m db.IPSetMeta) error {
 }
 
 func (e *Elastic) PutSecurityEvent(ctx context.Context, f db.SecurityEventInterface) error {
-	err := e.ensureIndexExists(ctx, EventIndex, eventMapping)
-	if err != nil {
-		return err
+	// Wait for the SecurityEvent Mapping to be created
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-e.eventMappingCreated:
+		break
 	}
-
-	_, err = e.c.Index().Index(EventIndex).Type(StandardType).Id(f.ID()).BodyJson(f).Do(ctx)
+	_, err := e.c.Index().Index(EventIndex).Type(StandardType).Id(f.ID()).BodyJson(f).Do(ctx)
 	return err
 }
 
