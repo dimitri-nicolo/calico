@@ -10,17 +10,18 @@ import (
 	"time"
 )
 
+// DemuxProxy proxies HTTP based on the provided matcher
 type DemuxProxy struct {
-	matcher         Matcher
+	matcher Matcher
 }
 
 // New returns an initialized Proxy
-func New(matcher Matcher) DemuxProxy {
-	return DemuxProxy{matcher: matcher}
+func New(matcher Matcher) *DemuxProxy {
+	return &DemuxProxy{matcher: matcher}
 }
 
 // ServeHTTP knows how to proxy HTTP requests to different named targets
-func (mp DemuxProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (mp *DemuxProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log.Debugf("Received request %v", r)
 
 	url, err := mp.matcher.Match(r)
