@@ -367,6 +367,8 @@ spec:
     beta.kubernetes.io/os: linux
     # If necessary, uncomment the line below and edit key:value pair with appropriate value for your environment.
     #node.role: infrastructure
+  image-pull-secrets:
+    - name: cnx-pull-secret
   kibana:
     image: {{.Values.kibana.image}}:{{.Values.kibana.tag}}
   elastic-search-image: docker.elastic.co/elasticsearch/elasticsearch:{{.Values.elasticsearch.tag}}
