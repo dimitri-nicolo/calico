@@ -6230,6 +6230,13 @@ func schema_libcalico_go_lib_apis_v3_NodeSpec(ref common.ReferenceCallback) comm
 							Format:      "",
 						},
 					},
+					"vxlanTunnelMACAddr": {
+						SchemaProps: spec.SchemaProps{
+							Description: "VXLANTunnelMACAddr is the MAC address of the VXLAN tunnel.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 					"orchRefs": {
 						SchemaProps: spec.SchemaProps{
 							Description: "OrchRefs for this node.",

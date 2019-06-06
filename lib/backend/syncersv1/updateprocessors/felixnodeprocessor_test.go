@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 
 package updateprocessors_test
 
@@ -17,7 +17,7 @@ var _ = Describe("Test the (Felix) Node update processor", func() {
 		Kind: apiv3.KindNode,
 		Name: "mynode",
 	}
-	numFelixConfigs := 4
+	numFelixConfigs := 5
 	up := updateprocessors.NewFelixNodeUpdateProcessor()
 
 	BeforeEach(func() {
