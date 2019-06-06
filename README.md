@@ -1,13 +1,18 @@
 # Voltron
 Components for managing multiple clusters through a single management plane
 
-# Build apps
+# Voltron Agent
 
-Build demux:
+## Configurations
 
-```
-YOUR_APP=demux make demux
-```
+Name | Type | Default
+--- | --- | ---
+VOLTRON_AGENT_LOGLEVEL | Environment | DEBUG
+VOLTRON_AGENT_PORT | Environment | 5555
+VOLTRON_AGENT_HOST | Environment | localhost
+VOLTRON_AGENT_CERTPATH | Environment | /certs
+
+## Build and deploy
 
 Build agent:
 
@@ -15,16 +20,44 @@ Build agent:
 YOUR_APP=agent make agent
 ```
 
-# Voltron Agent
+Build image:
+```
+YOUR_APP=agent make image
+```
+
+Push image
+```
+YOUR_APP=agent make cd
+```
+
+# Voltron Server
 
 ## Configurations
 
 Name | Type | Default
 --- | --- | ---
-VOLTRON_AGENT_LOGLEVEL | Environment | WARN
-VOLTRON_AGENT_PORT | Environment | 3000
-VOLTRON_AGENT_HOST | Environment | localhost
+VOLTRON_LOGLEVEL | Environment | DEBUG
+VOLTRON_PORT | Environment | 5555
+VOLTRON_HOST | Environment | localhost
+VOLTRON_CERTPATH | Environment | /certs
 
+## Build and deploy
+
+Build agent:
+
+```
+YOUR_APP=demux make agent
+```
+
+Build image:
+```
+YOUR_APP=demux make image
+```
+
+Push image
+```
+YOUR_APP=demux make cd
+```
 
 # Project structure
 
