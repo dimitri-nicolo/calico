@@ -242,5 +242,7 @@ ci: test
 #############################################
 # Deploy images to registry
 #############################################
-cd:
-	echo "CD not implemented yet"
+cd: clean $(YOUR_APP) image deploy
+deploy:
+	docker tag ${BUILD_IMAGE}:latest gcr.io/tigera-dev/cnx/${BUILD_IMAGE}:latest
+    gcloud docker -- push gcr.io/tigera-dev/cnx/${BUILD_IMAGE}:latest
