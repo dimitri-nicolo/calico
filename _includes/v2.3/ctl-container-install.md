@@ -30,11 +30,10 @@
 
 1. Save and close the file.
 
-1. Use the following commands to pull the `{{include.cli}}` image from the Tigera
-   registry.
+1. Use the following commands to pull the `{{include.cli}}` image from the Tigera registry.
 
    ```bash
-   docker pull {{site.imageNames[include.cli]}}:{{site.data.versions[page.version].first.components[include.cli].version}}
+   docker pull {{page.registry}}{{site.imageNames[include.cli]}}:{{site.data.versions[page.version].first.components[include.cli].version}}
    ```
 
 1. Confirm that the image has loaded by typing `docker images`.

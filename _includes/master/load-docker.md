@@ -144,7 +144,7 @@
    registry.
 
    ```bash
-   docker pull {{site.imageNames[include.yaml]}}:{{site.data.versions[page.version].first.components[include.yaml].version}}
+   docker pull {{page.registry}}{{site.imageNames[include.yaml]}}:{{site.data.versions[page.version].first.components[include.yaml].version}}
    ```
 
 1. Retag the image with the name of your private registry.
