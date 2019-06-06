@@ -372,6 +372,9 @@ spec:
           effect: NoSchedule
       imagePullSecrets:
         - name: cnx-pull-secret
+{%- if include.orch == "openshift" %}
+        - name: calico-pull-secret
+{%- endif %}
       containers:
       - name: cnx-apiserver
         image: {{page.registry}}{{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
@@ -584,6 +587,9 @@ spec:
         operator: Exists
       imagePullSecrets:
         - name: cnx-pull-secret
+{%- if include.orch == "openshift" %}
+        - name: calico-pull-secret
+{%- endif %}
       # cnx-manager-init-pem writes a "pem" file into a volume shared by
       # cnx-manager-proxy.
       initContainers:
