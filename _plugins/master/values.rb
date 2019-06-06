@@ -499,6 +499,8 @@ def gen_chart_specific_values_master(versions, imageNames, imageRegistry, chart)
         crt:
         key:
       runAsPrivileged: false
+      # Optional configuration for changing the audit log file path.
+      logFileMountPath: "/var/log/calico"
       env:
         # Optional environment variables for configuring the Calico API Server.
         # These should match the EnvVar spec of the corev1 Kubernetes API. For example:
