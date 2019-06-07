@@ -23,12 +23,19 @@ spec:
           - name: FELIX_FLOWLOGSENABLENETWORKSETS
             value: "true"
         volumeMounts:
-          - mountPath: /var/lib/origin
+          - mountPath: /var/log/calico
             name: var-log-calico
+            readOnly: false
+          - mountPath: /var/lib/origin
+            name: var-lib-origin
             readOnly: false
      volumes:
        # Used for calico logs
        - name: var-log-calico
+         hostPath:
+           type: DirectoryOrCreate
+           path: /var/log/calico
+       - name: var-lib-origin
          hostPath:
            type: DirectoryOrCreate
            path: /var/lib/origin
