@@ -385,7 +385,11 @@ spec:
           - "--requestheader-client-ca-file=/code/certificates/requestheader-client-ca-file"
 {%- endif %}
           - "--audit-policy-file=/etc/tigera/audit/policy.conf"
+{%- if include.orch == "openshift" %}
+          - "--audit-log-path=/var/lib/origin/audit/tsee-audit.log"
+{%- else %}
           - "--audit-log-path=/var/log/calico/audit/tsee-audit.log"
+{%- endif %}
         env:
 {%- if include.datastore == "etcd" %}
           - name: ETCD_ENDPOINTS
@@ -421,7 +425,11 @@ spec:
             value: "kubernetes"
         volumeMounts:
 {%- endif %}
+{%- if include.orch == "openshift" %}
+          - mountPath: /var/lib/origin/audit
+{%- else %}
           - mountPath: /var/log/calico/audit
+{%- endif %}
             name: var-log-calico-audit
           - mountPath: /etc/tigera/audit
             name: audit-policy-ee
@@ -523,7 +531,11 @@ spec:
         # Volume for audit logs output
         - name: var-log-calico-audit
           hostPath:
+{%- if include.orch == "openshift" %}
+            path: /var/lib/origin/audit
+{%- else %}
             path: /var/log/calico/audit
+{%- endif %}
             type: DirectoryOrCreate
         - name: audit-policy-ee
           configMap:
