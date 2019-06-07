@@ -604,7 +604,7 @@ spec:
 {%- endif %}
           volumeMounts:
 {%- if include.orch == "openshift" %}
-            - name: var-lib-origin
+            - name: kube-audit-logs
               mountPath: /var/lib/origin
 {%- endif %}
             - name: var-log-calico
@@ -637,7 +637,7 @@ spec:
             periodSeconds: 60
       volumes:
 {%- if include.orch == "openshift" %}
-        - name: var-lib-origin
+        - name: kube-audit-logs
           hostPath:
             type: DirectoryOrCreate
             path: /var/lib/origin
