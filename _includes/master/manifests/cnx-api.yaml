@@ -302,7 +302,7 @@ spec:
           - "--requestheader-client-ca-file=/code/certificates/requestheader-client-ca-file"
 {{- end }}
           - "--audit-policy-file=/etc/tigera/audit/policy.conf"
-          - "--audit-log-path={{.Values.apiserver.logFileMountPath}}/audit/tsee-audit.log"
+          - "--audit-log-path=/var/log/calico/audit/tsee-audit.log"
         env:
 {{- if .Values.apiserver.env }}
 {{ toYaml .Values.apiserver.env | indent 10 }}
@@ -341,7 +341,7 @@ spec:
             value: "kubernetes"
         volumeMounts:
 {{- end }}
-          - mountPath: {{.Values.apiserver.logFileMountPath}}/audit
+          - mountPath: /var/log/calico/audit
             name: var-log-calico-audit
           - mountPath: /etc/tigera/audit
             name: audit-policy-ee
@@ -450,7 +450,7 @@ spec:
         # Volume for audit logs output
         - name: var-log-calico-audit
           hostPath:
-            path: {{.Values.apiserver.logFileMountPath}}/audit
+            path: /var/log/calico/audit
             type: DirectoryOrCreate
         - name: audit-policy-ee
           configMap:
