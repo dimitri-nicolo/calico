@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -906,6 +906,19 @@ var vxlanWithBlock = empty.withKVUpdates(
 	},
 )
 
+// Minimal VXLAN set-up with a MAC address.
+var vxlanWithMAC = vxlanWithBlock.withKVUpdates(
+	KVPair{Key: remoteHostVXLANTunnelMACConfigKey, Value: remoteHostVXLANTunnelMAC},
+).withName("VXLAN MAC").withVTEPs(
+	// VTEP for the remote node.
+	proto.VXLANTunnelEndpointUpdate{
+		Node:           remoteHostname,
+		Mac:            remoteHostVXLANTunnelMAC,
+		Ipv4Addr:       remoteHostVXLANTunnelIP,
+		ParentDeviceIp: remoteHostIP.String(),
+	},
+)
+
 // As above but with a more complex block.  The block has some allocated IPs on the same
 // node as well as one that's borrowed by a second node.  We add the extra VTEP config for the
 // other node.
@@ -938,6 +951,48 @@ var vxlanWithBlockAndBorrows = vxlanWithBlock.withKVUpdates(
 		Node: remoteHostname2,
 		Gw:   remoteHost2VXLANTunnelIP,
 		Dst:  "10.0.1.2/32",
+	},
+)
+
+// vxlanWithBlock but with a different tunnel IP.
+var vxlanWithBlockAndDifferentTunnelIP = vxlanWithBlock.withKVUpdates(
+	KVPair{Key: remoteHostVXLANTunnelConfigKey, Value: remoteHostVXLANTunnelIP2},
+).withName("VXLAN different tunnel IP").withVTEPs(
+	// VTEP for the remote node.
+	proto.VXLANTunnelEndpointUpdate{
+		Node:           remoteHostname,
+		Mac:            "66:3e:ca:a4:db:65",
+		Ipv4Addr:       remoteHostVXLANTunnelIP2,
+		ParentDeviceIp: remoteHostIP.String(),
+	},
+).withRoutes(
+	// Single route for the block.
+	proto.RouteUpdate{
+		Node: remoteHostname,
+		Dst:  "10.0.1.0/29",
+		Gw:   remoteHostVXLANTunnelIP2,
+		Type: proto.RouteType_VXLAN,
+	},
+)
+
+// vxlanWithBlock but with a different node IP.
+var vxlanWithBlockAndDifferentNodeIP = vxlanWithBlock.withKVUpdates(
+	KVPair{Key: remoteHostIPKey, Value: &remoteHost2IP},
+).withName("VXLAN different node IP").withVTEPs(
+	// VTEP for the remote node.
+	proto.VXLANTunnelEndpointUpdate{
+		Node:           remoteHostname,
+		Mac:            "66:3e:ca:a4:db:65",
+		Ipv4Addr:       remoteHostVXLANTunnelIP,
+		ParentDeviceIp: remoteHost2IP.String(),
+	},
+).withRoutes(
+	// Single route for the block.
+	proto.RouteUpdate{
+		Node: remoteHostname,
+		Dst:  "10.0.1.0/29",
+		Gw:   remoteHostVXLANTunnelIP,
+		Type: proto.RouteType_VXLAN,
 	},
 )
 
@@ -1084,9 +1139,14 @@ func reverseKVOrder(baseTests StateList) (desc string, mappedTests []StateList) 
 func insertEmpties(baseTest StateList) (desc string, mappedTests []StateList) {
 	desc = "with empty state inserted between each state"
 	mappedTest := StateList{}
+	first := true
 	for _, state := range baseTest {
+		if !first {
+			mappedTest = append(mappedTest, empty)
+		} else {
+			first = false
+		}
 		mappedTest = append(mappedTest, state)
-		mappedTest = append(mappedTest, empty)
 	}
 	mappedTests = append(mappedTests, mappedTest)
 	return
