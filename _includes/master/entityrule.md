@@ -19,7 +19,7 @@ entityrule.md acccepts the following include flags:
 | domains | Positive match on domain names. (See note below.) | List of domain names | list of strings |
 {%- endif %}
 | notPorts | Negative match on the specified ports | | list of [ports](#ports) | |
-| serviceAccounts | Match endpoints running under service accounts. If a `namespaceSelector` is also defined, the set of service accounts this applies to is limited to the service accounts in the selected namespaces. Application layer policy must be enabled to use this field. | | [ServiceAccountMatch](#serviceaccountmatch) | |
+| serviceAccounts | Match endpoints running under service accounts. If a `namespaceSelector` is also defined, the set of service accounts this applies to is limited to the service accounts in the selected namespaces. | | [ServiceAccountMatch](#serviceaccountmatch) | |
 
 {% if include.global == "true" %}
 The `domains` field is only valid for egress Allow rules in GlobalNetworkPolicy.  It restricts the
