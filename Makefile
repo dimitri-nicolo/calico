@@ -51,7 +51,7 @@ SRC_DIRS       = $(shell sh -c "find $(TOP_SRC_DIRS) -name \\*.go \
                    -exec dirname {} \\; | sort | uniq")
 TEST_DIRS     ?= $(shell sh -c "find $(TOP_SRC_DIRS) -name \\*_test.go \
                    -exec dirname {} \\; | sort | uniq")
-GO_FILES       = $(shell sh -c "find pkg cmd -name \\*.go")
+GO_FILES       = $(shell sh -c "find . -type f -name '*.go' -not -path './.go-pkg-cache/*' | sort -u")
 ifeq ($(shell uname -s),Darwin)
 STAT           = stat -f '%c %N'
 else
@@ -223,6 +223,23 @@ clean-bin:
 	rm -rf $(BINDIR) \
 			docker-image/bin
 
+###############################################################################
+# Static checks
+###############################################################################
+.PHONY: static-checks
+static-checks:
+	docker run --rm -v $(CURDIR):/build-dir/$(PACKAGE_NAME):rw \
+		-e LOCAL_USER_ID=$(MY_UID) \
+		$(CALICO_BUILD) sh -c 'cd /build-dir/$(PACKAGE_NAME); ./static-checks.sh'
+
+# Always install the git hooks to prevent publishing closed source code to a non-private repo.
+hooks_installed:=$(shell ./install-git-hooks.sh)
+
+.PHONY: install-git-hooks
+## Install Git hooks
+install-git-hooks:
+	./install-git-hooks.sh
+
 ##########################################################################################
 # CI/CD
 ##########################################################################################
@@ -231,8 +248,7 @@ clean-bin:
 #############################################
 # Run CI cycle - build, test, etc.
 #############################################
-ci: test 
-	echo "CI not implemented yet"
+ci: clean test
 
 #############################################
 # Deploy images to registry
