@@ -192,6 +192,7 @@ func DoNetworking(
 
 func EnsureVXLANTunnelAddr(ctx context.Context, calicoClient calicoclient.Interface, nodeName string, ipNet *net.IPNet) error {
 	logrus.Debug("Checking the node's VXLAN tunnel address")
+	var changeFlag int
 	node, err := calicoClient.Nodes().Get(ctx, nodeName, options.GetOptions{})
 	if err != nil {
 		return err
@@ -200,7 +201,9 @@ func EnsureVXLANTunnelAddr(ctx context.Context, calicoClient calicoclient.Interf
 	expectedIP := getNthIP(ipNet, 1).String()
 	if node.Spec.IPv4VXLANTunnelAddr == expectedIP {
 		logrus.WithField("ip", expectedIP).Debug("VXLAN tunnel IP is already correct")
-		return nil
+	} else {
+		logrus.WithField("ip", expectedIP).Debug("VXLAN tunnel IP to be updated")
+		changeFlag = 1
 	}
 
 	mac, err := updateDrMacAddr()
@@ -208,13 +211,19 @@ func EnsureVXLANTunnelAddr(ctx context.Context, calicoClient calicoclient.Interf
 		return err
 	}
 	expectedMAC := mac.String()
-	if node.Spec.MacVXLANTunnelAddr == expectedMAC {
+	if node.Spec.VXLANTunnelMACAddr == expectedMAC {
 		logrus.WithField("mac", expectedMAC).Debug("VXLAN tunnel MAC is already correct")
+	} else {
+		logrus.WithField("mac", expectedMAC).Debug("VXLAN tunnel MAC to be updated")
+		changeFlag = 1
+	}
+
+	if changeFlag == 0 {
 		return nil
 	}
 
 	node.Spec.IPv4VXLANTunnelAddr = expectedIP
-	node.Spec.MacVXLANTunnelAddr = expectedMAC
+	node.Spec.VXLANTunnelMACAddr = expectedMAC
 	_, err = calicoClient.Nodes().Update(ctx, node, options.SetOptions{})
 	return err
 }
@@ -222,56 +231,65 @@ func EnsureVXLANTunnelAddr(ctx context.Context, calicoClient calicoclient.Interf
 func updateDrMacAddr() (net.HardwareAddr, error) {
 	hnsNetwork, err := hcsshim.GetHNSNetworkByName("External")
 	if err != nil {
+		logrus.Infof("hns network external not found")
 		return nil, err
 	}
 
 	hcnNetwork, err := hcn.GetNetworkByName("External")
 	if err != nil {
+		logrus.Infof("hcn network external not found")
 		return nil, err
 	}
 
 	err = hcn.RemoteSubnetSupported()
 	if err != nil {
+		logrus.Infof("remote subnet not supported")
 		return nil, err
 	}
 
-	var remoteDrMac string
+	var remoteDRMAC string
 	var providerAddress string
 	logrus.Infof("Checking HNS network for DR MAC : [%+v]", hnsNetwork)
 	for _, policy := range hcnNetwork.Policies {
+		logrus.Infof("inside for loop. policy = [%+v]", policy)
 		if policy.Type == hcn.DrMacAddress {
+			logrus.Infof("policy type is drmacaddress")
 			policySettings := hcn.DrMacAddressNetworkPolicySetting{}
 			err = json.Unmarshal(policy.Settings, &policySettings)
 			if err != nil {
 				return nil, fmt.Errorf("Failed to unmarshal settings")
 			}
-			remoteDrMac = policySettings.Address
+			remoteDRMAC = policySettings.Address
+			logrus.Infof("remote dr mac = %v", remoteDRMAC)
 		}
 		if policy.Type == hcn.ProviderAddress {
+			logrus.Infof("policy type is provideraddress")
 			policySettings := hcn.ProviderAddressEndpointPolicySetting{}
 			err = json.Unmarshal(policy.Settings, &policySettings)
 			if err != nil {
 				return nil, fmt.Errorf("Failed to unmarshal settings")
 			}
 			providerAddress = policySettings.ProviderAddress
+			logrus.Infof("providerAddress = %v", providerAddress)
 		}
 	}
 	if providerAddress != hnsNetwork.ManagementIP {
-		logrus.Infof("Cannot use DR MAC %v since PA %v does not match %v", remoteDrMac, providerAddress, hnsNetwork.ManagementIP)
-		remoteDrMac = ""
+		logrus.Infof("Cannot use DR MAC %v since PA %v does not match %v", remoteDRMAC, providerAddress, hnsNetwork.ManagementIP)
+		remoteDRMAC = ""
 	}
 
 	if len(providerAddress) == 0 {
 		return nil, fmt.Errorf("Cannot find network with Management IP %v", hnsNetwork.ManagementIP)
 	}
-	if len(remoteDrMac) == 0 {
+	if len(remoteDRMAC) == 0 {
 		return nil, fmt.Errorf("Could not find remote DR MAC for Management IP %v", hnsNetwork.ManagementIP)
 	}
-	mac, err := net.ParseMAC(string(remoteDrMac))
+	mac, err := net.ParseMAC(string(remoteDRMAC))
 	if err != nil {
-		return nil, fmt.Errorf("Cannot parse DR MAC %v: %+v", remoteDrMac, err)
+		return nil, fmt.Errorf("Cannot parse DR MAC %v: %+v", remoteDRMAC, err)
 	}
 
+	logrus.Infof("mac address = %v", mac)
 	return mac, nil
 }
 
