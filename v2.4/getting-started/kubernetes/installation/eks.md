@@ -73,7 +73,7 @@ This guide covers installing {{site.prodname}} for policy enforcement on Amazon 
 
 1. Continue to [Applying your license key](#applying-your-license-key).
 
-{% include {{page.version}}/apply-license.md platform="eks" %}
+{% include {{page.version}}/apply-license.md platform="eks" cli="kubectl" %}
 
 {% include {{page.version}}/cnx-monitor-install.md elasticsearch="operator" platform="eks" %}
 
