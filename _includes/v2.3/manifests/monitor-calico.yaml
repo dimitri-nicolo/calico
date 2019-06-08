@@ -603,12 +603,12 @@ spec:
             privileged: true
 {%- endif %}
           volumeMounts:
-            - name: var-log-calico
 {%- if include.orch == "openshift" %}
+            - name: kube-audit-logs
               mountPath: /var/lib/origin
-{%- else %}
-              mountPath: /var/log/calico
 {%- endif %}
+            - name: var-log-calico
+              mountPath: /var/log/calico
             - name: es-config
               mountPath: /etc/fluentd/flow-filters.conf
               subPath: tigera.elasticsearch.flow-filters.conf
@@ -636,14 +636,16 @@ spec:
             initialDelaySeconds: 60
             periodSeconds: 60
       volumes:
+{%- if include.orch == "openshift" %}
+        - name: kube-audit-logs
+          hostPath:
+            type: DirectoryOrCreate
+            path: /var/lib/origin
+{%- endif %}
         - name: var-log-calico
           hostPath:
             type: DirectoryOrCreate
-{%- if include.orch == "openshift" %}
-            path: /var/lib/origin
-{%- else %}
             path: /var/log/calico
-{%- endif %}
         - name: es-config
           configMap:
             name: tigera-es-config
