@@ -167,7 +167,7 @@ kubectl get pods --all-namespaces
 
    Wait until each pod has the `STATUS` of `Running`.
 
-{% include {{page.version}}/apply-license.md %}
+{% include {{page.version}}/apply-license.md cli="kubectl" %}
 {% include {{page.version}}/cnx-monitor-install.md elasticsearch="operator" platform="docker-ee" %}
 
 1. Continue to [Installing the {{site.prodname}} Manager](#install-cnx-mgr)
