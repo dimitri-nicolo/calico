@@ -13,6 +13,22 @@ spec:
     plural: felixconfigurations
     singular: felixconfiguration
 ---
+
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: blockaffinities.crd.projectcalico.org
+spec:
+  scope: Cluster
+  group: crd.projectcalico.org
+  version: v1
+  names:
+    kind: BlockAffinity
+    plural: blockaffinities
+    singular: blockaffinity
+
+---
+
 {{- if eq .Values.network "calico" }}
 
 apiVersion: apiextensions.k8s.io/v1beta1
@@ -27,21 +43,6 @@ spec:
     kind: IPAMBlock
     plural: ipamblocks
     singular: ipamblock
-
----
-
-apiVersion: apiextensions.k8s.io/v1beta1
-kind: CustomResourceDefinition
-metadata:
-  name: blockaffinities.crd.projectcalico.org
-spec:
-  scope: Cluster
-  group: crd.projectcalico.org
-  version: v1
-  names:
-    kind: BlockAffinity
-    plural: blockaffinities
-    singular: blockaffinity
 
 ---
 

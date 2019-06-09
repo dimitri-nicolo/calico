@@ -185,6 +185,7 @@ rules:
       - networkpolicies
       - clusterinformations
       - hostendpoints
+      - blockaffinities
     verbs:
       - get
       - list
