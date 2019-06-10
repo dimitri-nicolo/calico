@@ -44,7 +44,7 @@ optionally Elasticsearch and Kibana{% endif %} in order to enable logs.
 
 {% unless include.upgrade %}
 1. For production installs, we recommend using your own Elasticsearch cluster. If you are performing a
-   production install, do not complete any more steps on this page. Instead, refer to
+   production install, do not complete any more steps in this section. Instead, refer to
    [Using your own Elasticsearch for logs](byo-elasticsearch) for the final steps.
 
    For demonstration or proof of concept installs, you can use the bundled
