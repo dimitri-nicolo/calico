@@ -1,7 +1,7 @@
 # Copyright 2019 Tigera Inc. All rights reserved.
 
-# The following is a generic Makefile, simply find & replace all mentions of YOUR_APP with 
-# whatever the name of your component is.
+APP_NAME=voltron
+COMPONENTS=demux agent
 
 ##########################################################################################
 # Define some constants
@@ -64,15 +64,15 @@ endif
 #############################################
 # Env vars for 
 #############################################
-YOUR_APP_VERSION?=$(shell git describe --tags --dirty --always)
-YOUR_APP_BUILD_DATE?=$(shell date -u +'%FT%T%z')
-YOUR_APP_GIT_REVISION?=$(shell git rev-parse --short HEAD)
-YOUR_APP_GIT_DESCRIPTION?=$(shell git describe --tags)
+BUILD_VERSION?=$(shell git describe --tags --dirty --always)
+BUILD_BUILD_DATE?=$(shell date -u +'%FT%T%z')
+BUILD_GIT_REVISION?=$(shell git rev-parse --short HEAD)
+BUILD_GIT_DESCRIPTION?=$(shell git describe --tags)
 
-VERSION_FLAGS=-X main.VERSION=$(YOUR_APP_VERSION) \
-	-X main.BUILD_DATE=$(YOUR_APP_BUILD_DATE) \
-	-X main.GIT_DESCRIPTION=$(YOUR_APP_GIT_DESCRIPTION) \
-	-X main.GIT_REVISION=$(YOUR_APP_GIT_REVISION)
+VERSION_FLAGS=-X main.VERSION=$(BUILD_VERSION) \
+	-X main.BUILD_DATE=$(BUILD_BUILD_DATE) \
+	-X main.GIT_DESCRIPTION=$(BUILD_GIT_DESCRIPTION) \
+	-X main.GIT_REVISION=$(BUILD_GIT_REVISION)
 BUILD_LDFLAGS=-ldflags "$(VERSION_FLAGS)"
 RELEASE_LDFLAGS=-ldflags "$(VERSION_FLAGS) -s -w"
 
@@ -80,10 +80,8 @@ RELEASE_LDFLAGS=-ldflags "$(VERSION_FLAGS) -s -w"
 # Env vars related to building, packaging 
 # and releasing
 #############################################
-BUILD_IMAGE?=tigera/$(YOUR_APP)
-PUSH_IMAGES?=gcr.io/unique-caldron-775/cnx/$(BUILD_IMAGE)
-RELEASE_IMAGES?=quay.io/$(BUILD_IMAGE)
-PACKAGE_NAME?=github.com/tigera/$(YOUR_APP)
+BUILD_IMAGES?=$(addprefix tigera/, $(COMPONENTS))
+PACKAGE_NAME?=github.com/tigera/$(APP_NAME)
 RELEASE_BUILD?=""
 
 # Figure out the users UID/GID.  These are needed to run docker containers
@@ -120,13 +118,13 @@ DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
 # Display usage output
 ##########################################################################################
 help:
-	@echo "Tigera $(YOUR_APP) Makefile"
+	@echo "Tigera $(APP_NAME) Makefile"
 	@echo "Builds:"
 	@echo
 	@echo "  make all                   Build all the binary packages."
-	@echo "  make YOUR_APP:             Build binary package for YOUR_APP."
-	@echo "  make tigera/YOUR_APP       Build $(BUILD_IMAGE) docker image."
-	@echo "  make image                 Build $(BUILD_IMAGE) docker image."
+	@echo "  make <component>:          Build <component> binary."
+	@echo "  make tigera/<component>    Build the components docker image."
+	@echo "  make images                Build all app docker images."
 	@echo
 	@echo "CI & CD:"
 	@echo
@@ -147,7 +145,7 @@ help:
 # considerably.
 .SUFFIXES:
 
-all: $(BUILD_IMAGE)
+all: images
 
 ##########################################################################################
 # BUILD
@@ -157,41 +155,38 @@ all: $(BUILD_IMAGE)
 # Golang Binary
 #############################################
 
-# Some will have dedicated targets to make it easier to type, for example
-# "YOUR_APP" instead of "$(BINDIR)/YOUR_APP".
-$(YOUR_APP): $(BINDIR)/$(YOUR_APP)
+$(COMPONENTS): %: $(BINDIR)/% ;
 
-$(BINDIR)/$(YOUR_APP): $(BINDIR)/$(YOUR_APP)-amd64
-	cd $(BINDIR) && (rm -f $(YOUR_APP); ln -s $(YOUR_APP)-$(ARCH) $(YOUR_APP))
+$(BINDIR)/%: $(BINDIR)/%-$(ARCH)
+	rm -f $@; ln -s $< $@
 
-
-$(BINDIR)/$(YOUR_APP)-$(ARCH): $(GO_FILES)
+$(BINDIR)/%-$(ARCH): $(GO_FILES)
 ifndef RELEASE_BUILD
 	$(eval LDFLAGS:=$(RELEASE_LDFLAGS))
 else
 	$(eval LDFLAGS:=$(BUILD_LDFLAGS))
 endif
-	@echo Building $(YOUR_APP)...
+	@echo Building $* ...
 	mkdir -p bin
 	$(DOCKER_GO_BUILD) \
 	    sh -c 'git config --global url."git@github.com:tigera".insteadOf "https://github.com/tigera" && \
-	           go build -o $@ -v $(LDFLAGS) cmd/$(YOUR_APP)/*.go && \
-               ( ldd $(BINDIR)/$(YOUR_APP)-$(ARCH) 2>&1 | grep -q "Not a valid dynamic program" || \
-	             ( echo "Error: $(BINDIR)/$(YOUR_APP)-$(ARCH) was not statically linked"; false ) )'
+	           go build -o $@ -v $(LDFLAGS) cmd/$*/*.go && \
+               ( ldd $@ 2>&1 | grep -q "Not a valid dynamic program" || \
+	             ( echo "Error: $@ was not statically linked"; false ) )'
 
 #############################################
 # Docker Image
 #############################################
 
-image: $(BUILD_IMAGE)
-$(BUILD_IMAGE): $(BUILD_IMAGE)-$(ARCH)
-$(BUILD_IMAGE)-$(ARCH): $(BINDIR)/$(YOUR_APP)-$(ARCH)
+images: $(BUILD_IMAGES)
+tigera/%: tigera/%-$(ARCH) ;
+tigera/%-$(ARCH): $(BINDIR)/%-$(ARCH)
 	rm -rf docker-image/bin
 	mkdir -p docker-image/bin
-	cp $(BINDIR)/$(YOUR_APP)-$(ARCH) docker-image/bin/
-	docker build --pull -t $(BUILD_IMAGE):latest-$(ARCH) --file ./docker-image/Dockerfile-$(YOUR_APP).$(ARCH) docker-image
+	cp $(BINDIR)/$*-$(ARCH) docker-image/bin/
+	docker build --pull -t tigera/$*:latest-$(ARCH) --file ./docker-image/Dockerfile-$*.$(ARCH) docker-image
 ifeq ($(ARCH),amd64)
-	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(BUILD_IMAGE):latest
+	docker tag tigera/$*:latest-$(ARCH) tigera/$*:latest
 endif
 
 ##########################################################################################
@@ -222,7 +217,7 @@ fv:
 clean: clean-bin clean-build-image
 
 clean-build-image:
-	docker rmi -f $(BUILD_IMAGE) > /dev/null 2>&1 || true
+	docker rmi -f $(BUILD_IMAGES) > /dev/null 2>&1 || true
 
 clean-bin:
 	rm -rf $(BINDIR) \
@@ -242,7 +237,8 @@ ci: test
 #############################################
 # Deploy images to registry
 #############################################
-cd: clean $(YOUR_APP) image deploy
-deploy:
-	docker tag $(BUILD_IMAGE):latest gcr.io/tigera-dev/cnx/${BUILD_IMAGE}:latest
-	gcloud docker -- push gcr.io/tigera-dev/cnx/${BUILD_IMAGE}:latest
+cd: clean images deploy
+deploy: $(addprefix deploy-, $(BUILD_IMAGES))
+deploy-%:
+	docker tag $*:latest gcr.io/tigera-dev/cnx/$*:latest
+	gcloud docker -- push gcr.io/tigera-dev/cnx/$*:latest
