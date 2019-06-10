@@ -15,14 +15,6 @@ func CreateStaticTargets() *Targets {
 	return &Targets{targets: targets}
 }
 
-func CreateStaticTargetsForServer() *Targets {
-	targets := make(map[string]*url.URL)
-
-	targets["api"] = parse("http://localhost:3000")
-
-	return &Targets{targets: targets}
-}
-
 func parse(rawUrl string) *url.URL {
 	url, err := url.Parse(rawUrl)
 	if err != nil {
