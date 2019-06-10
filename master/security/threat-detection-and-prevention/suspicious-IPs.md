@@ -3,7 +3,7 @@ title: Trace and block suspicious IPs
 canonical_url: https://docs.tigera.io/v2.4/security/threat-detection-and-prevention/suspicious-IPs
 ---
 
-### Big Picture 
+### Big picture 
 
 Add threat intelligence feeds to Tigera Secure EE to trace network flows of suspicious IP addresses, and optionally block traffic to suspicious IPs. 
 
@@ -13,10 +13,10 @@ Tigera Secure EE integrates with threat intelligence feeds so you can detect whe
 
 ### Features
 
-This how-to article uses the following Tigera Secure EE features:
+This how-to guide uses the following Tigera Secure EE features:
 
-- A global threat feed resource to add threat intelligence feeds for tracking and analysis in the UI
-- A global network policy to block suspicious IPs
+- **GlobalThreatFeedresource** to add threat intelligence feeds for tracking and analysis in the UI
+- **GlobalNetworkPolicy** to block suspicious IPs
 
 ### Concepts
 
@@ -31,9 +31,11 @@ There are many different types of threat intelligence feeds (community-curated, 
 ### Before you begin...
 
 #### Required
+
 Privileges to manage GlobalThreatFeed and GlobalNetworkPolicy.
 
 #### Recommended
+
 We recommend that you turn down the aggregation of flow logs sent to Elasticsearch for configuring threat feeds. If you do not adjust flow logs, Tigera Secure aggregates over the external IPs for allowed traffic, and threat feed searches will not provide useful results (unless the traffic is denied by policy). Go to: [FelixConfiguration]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/felixconfig) and set the field, **flowLogsFileAggregationKindForAllowed** to **1**. 
 
 ### How to
@@ -107,7 +109,7 @@ Use the push method if your threat feeds that are not in newline-delimited forma
 
 Create a new/edit existing threat feed to include the globalNetworkSet stanza, setting the labels you want to use to represent the blacklisted IPs. This stanza instructs Tigera Secure EE to search for flows to and from the listed IP addresses, and maintain a GlobalNetworkSet containing the IP addresses.
 
-<pre>
+```yaml
 apiVersion: projectcalico.org/v3
 kind: GlobalThreatFeed
 metadata:
@@ -116,10 +118,10 @@ spec:
   pull:
     http:
       url: https://an.example.threat.feed/blacklist
-  <b>globalNetworkSet:
+  globalNetworkSet:
     labels:
-      security-action: block</b>
-</pre>
+      security-action: block
+```
   
 1. Add the global threat feed to the cluster.
 
@@ -304,4 +306,4 @@ We will verify the policy from the test workload that we created earlier.
 
 ### Above and beyond
 
-See [GlobalThreatFeed]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalthreatfeed) resource definition for all configuration options
+See [GlobalThreatFeed]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalthreatfeed) resource definition for all configuration options.

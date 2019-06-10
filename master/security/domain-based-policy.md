@@ -3,41 +3,29 @@ title: Using domain names in policy rules
 canonical_url: 'https://docs.tigera.io/master/security/domain-based-policy'
 ---
 
-### Big Picture
+### Big picture
 
 Use domain names to allow traffic to destinations outside of a cluster.
 
 ### Value
 
-Using domain names in policies to identify services outside of the
-cluster is often operationally simpler and more robust than using IP
-addresses. In particular, they are useful when an external service
-does not map to a well known set of static IP addresses.
+Using domain names in policies to identify services outside of the cluster is often operationally simpler and more robust than using IP
+addresses. In particular, they are useful when an external service does not map to a well known set of static IP addresses.
 
 ### Features
 
 This how-to guide uses the following {{site.prodname}} features:
 
-- [**Global network
-  policy**]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy)
+- [**GlobalNetworkPolicy**]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy)
   with domain names in the policy
-
-- [**Global network
-  set**]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkset)
-  with domain names, where the network set is referenced in a [global
-  network
-  policy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy)
+- [**GlobalNetworkSet**]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkset)
+  with domain names, where the network set is referenced in a [GlobalNetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy)
 
 ### Concepts
 
 #### Allowed egress domains
 
-Using domain names in policy rules is limited to only egress allow
-rules. {{site.prodname}} allows connections only to IP addresses
-returned from DNS lookups to trusted DNS servers. The supported DNS
-types are: A, AAAA, and CNAME records. The domain name must be an
-exact match; for example, **google.com** is treated as distinct from
-**www.google.com**.
+Using domain names in policy rules is limited to only egress allow rules. {{site.prodname}} allows connections only to IP addresses returned from DNS lookups to trusted DNS servers. The supported DNS types are: A, AAAA, and CNAME records. The domain name must be an exact match; for example, **google.com** is treated as distinct from **www.google.com**.
 
 > **Note:** Kubernetes labels provide a similar convenience for
 > services within the cluster. Tigera Secure EE does not support using
@@ -47,57 +35,45 @@ exact match; for example, **google.com** is treated as distinct from
 
 #### Trusted DNS servers
 
-{{site.prodname}} trusts DNS information only from its list of DNS
-trusted servers. Using trusted DNS servers to back domain names in
-policy, prevents malicious workload from using IPs returned by a fake
-DNS server to hijack domain names in policy rules.
+{{site.prodname}} trusts DNS information only from its list of DNS trusted servers. Using trusted DNS servers to back domain names in
+policy, prevents malicious workload from using IPs returned by a fake DNS server to hijack domain names in policy rules.
 
-By default, {{site.prodname}} trusts the Kubernetes cluster’s DNS
-service (kube-dns or CoreDNS). These out-of-the-box defaults work with
+By default, {{site.prodname}} trusts the Kubernetes cluster’s DNS service (kube-dns or CoreDNS). These out-of-the-box defaults work with
 standard Kubernetes installs, so normally you won’t change them.
 
 ### How to
 
-You can specify allowed domain names directly in a **global network
-policy**, or specify domain names in a **global network set** (and then
+You can specify allowed domain names directly in a **global network policy**, or specify domain names in a **global network set** (and then
 reference the global network set in a global network policy).
 
-- [Use domain names in a global network
-  policy](#use-domain-names-in-a-global-network-policy)
-
-- [Use domain names in a global network set, reference the set in a
-  global network policy](#use-domain-names-in-a-global-network-set)
+- [Use domain names in a global network policy](#use-domain-names-in-a-global-network-policy)
+- [Use domain names in a global network set, reference the set in a global network policy](#use-domain-names-in-a-global-network-set)
 
 #### Best practice
 
-Use a **global network set** when the same set of domains needs to be
-referenced in multiple policies, or when you want the allowed
-destinations to be a mix of domains and IPs from global network sets,
-or IPs from workload endpoints and host endpoints. By using a single
-destination selector in a global network set, you can potentially
-match all of these resources.
+Use a **global network set** when the same set of domains needs to be referenced in multiple policies, or when you want the allowed
+destinations to be a mix of domains and IPs from global network sets, or IPs from workload endpoints and host endpoints. By using a single
+destination selector in a global network set, you can potentially match all of these resources.
 
 #### Use domain names in a global network policy
 
-In this method, you create a **global network policy** with egress rules
-with `action: Allow` and a `destination.domains` field specifying the
+In this method, you create a **GlobalNetworkPolicy** with egress rules with `action: Allow` and a `destination.domains` field specifying the
 domain names to which egress traffic is allowed.
 
-In the following example, the first rule allows DNS traffic, and the
-second rule allows connections outside the cluster to domains
+In the following example, the first rule allows DNS traffic, and the second rule allows connections outside the cluster to domains
 **api.alice.com** and **bob.example.com**.
 
-<pre>
+```
 apiVersion: projectcalico.org/v3
-kind: <b>GlobalNetworkPolicy</b>
+kind: GlobalNetworkPolicy
 metadata:
-  name: <b>allow-egress-to-domains</b>
+  name: allow-egress-to-domains
 spec:
   order: 1
-  <b>selector: my-pod-label == 'my-value'</b>
+  selector: my-pod-label == 'my-value'
   types:
   - Egress
-  <b>egress:
+  egress:
   - action: Allow
     protocol: UDP
     destination:
@@ -107,38 +83,34 @@ spec:
     destination:
       domains:
       - api.alice.com
-      - bob.example.com</b>
-</pre>
+      - bob.example.com
+```
 
 #### Use domain names in a global network set
 
-In this method, you create a **global network set** with the allowed
-destination domain names in the `allowedEgressDomains` field. Then,
-you create a global network policy with a `destination.selector` that
-matches that global network set.
+In this method, you create a **GlobalNetworkSet** with the allowed destination domain names in the `allowedEgressDomains` field. Then,
+you create a global network policy with a `destination.selector` that matches that global network set.
 
-In the following example, the allowed egress domains
-(**api.alice.com** and **bob.example.com**) are specified in the
-global network set.
+In the following example, the allowed egress domains (**api.alice.com** and **bob.example.com**) are specified in the global network set.
 
-<pre>
+```
 apiVersion: projectcalico.org/v3
-kind: <b>GlobalNetworkSet</b>
+kind: GlobalNetworkSet
 metadata:
   name: allowed-domains-1
   labels:
     color: red
 spec:
-  <b>allowedEgressDomains:
+  allowedEgressDomains:
   - api.alice.com
-  - bob.example.com</b>
-</pre>
+  - bob.example.com
+```
 
 Then, you reference the global network set in a global network policy using a destination label selector.
 
-<pre>
+```
 apiVersion: projectcalico.org/v3
-kind: <b>GlobalNetworkPolicy</b>
+kind: GlobalNetworkPolicy
 metadata:
   name: allow-egress-to-domain
 spec:
@@ -149,10 +121,9 @@ spec:
   egress:
   - action: Allow
     destination:
-      <b>selector: color == 'red'</b>
-</pre>
+      selector: color == 'red'
+```
 
-### Above and Beyond
+### Above and beyond
 
-To configure DNS trusted servers, see the [DNSTrustedServers
-parameter]({{site.baseurl}}/{{page.version}}/reference/felix/configuration).
+To configure DNS trusted servers, see the [DNSTrustedServers parameter]({{site.baseurl}}/{{page.version}}/reference/felix/configuration).
