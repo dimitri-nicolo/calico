@@ -1163,7 +1163,7 @@ master:
     elasticsearch-operator:
       version: 0.3.0
     kibana:
-      version: 6.4.3
+      version: master
     elasticsearch:
       version: 6.4.3
     cloud-controllers:
