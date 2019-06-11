@@ -147,6 +147,89 @@ v2.4:
 
 
 v2.3:
+- title: v2.3.2
+  note: |
+    10 June 2019
+  components:
+    cnx-manager:
+      version: v2.3.1
+      url: ""
+    cnx-manager-proxy:
+      version: v2.3.1
+      url: ""
+    cnx-apiserver:
+      version: v2.3.1
+      url: ""
+    cnx-queryserver:
+      version: v2.3.1
+      url: ""
+    cnx-kube-controllers:
+      version: v2.3.1
+      url: ""
+    calicoq:
+      version: v2.3.1
+      url: ""
+    typha:
+      version: v2.3.1
+      url: ""
+    calicoctl:
+      version: v2.3.1
+      url: ""
+      download_url: ""
+    cnx-node:
+      version: v2.3.2
+      url: ""
+    calico/cni:
+      version: v3.4.4
+      url: ""
+      download_calico_url: ""
+      download_calico_ipam_url: ""
+    calico/routereflector:
+      version: v0.6.1
+      url: ""
+    calico:
+      version: v3.4.4
+      minor_version: v3.4
+      url: https://github.com/projectcalico/calico/releases/tag/v3.4.4
+    prometheus-operator:
+      version: v0.18.1
+      url: ""
+    prometheus:
+      version: v2.2.1
+      url: ""
+    alertmanager:
+      version: v0.14.0
+      url: ""
+    prometheus-config-reloader:
+      version: v0.0.3
+      url: ""
+    configmap-reload:
+      version: v0.0.1
+      url: ""
+    dikastes:
+      version: v2.3.1
+    flexvol:
+      version: v3.4.4
+    fluentd:
+      version: v2.3.1
+    es-proxy:
+      version: v2.3.1
+    elasticsearch-operator:
+      version: 0.2.0
+      url: ""
+    kibana:
+      version: 6.4.3
+      url: ""
+    elasticsearch:
+      version: 6.4.3
+      url: ""
+    cloud-controllers:
+      version: v2.3.1
+    elastic-tsee-installer:
+      version: v2.3.1
+    es-curator:
+      version: v2.3.1
+
 - title: v2.3.1
   note: |
     03 April 2019
