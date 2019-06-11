@@ -13,6 +13,10 @@ enforce() {
   fi
 }
 
+# preemptively download modules
+# to prevent STDERR from being filled with "go mod" output later
+go mod download
+
 enforce "formatting" "$(gofmt -l -s $GO_DIRS)"
 enforce "vetting"    "$(go vet "${PROJECT_DIR}/..." 2>&1)"
 enforce "linting"    "$(golint "${PROJECT_DIR}/..." 2>&1)"
