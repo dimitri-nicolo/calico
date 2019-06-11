@@ -226,6 +226,8 @@ func (s *domainInfoStore) saveMappingsV1() error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
+	log.WithField("file", s.saveFile).Info("Saving DNS mappings...")
+
 	// Write first to a temporary save file, so that we can atomically rename it to the intended
 	// file once it contains new data.  Thus we avoid overwriting a previous version of the file
 	// (which may still be useful) until we're sure we have a complete new file prepared.
@@ -275,6 +277,8 @@ func (s *domainInfoStore) saveMappingsV1() error {
 	if err = os.Rename(tmpSaveFile, s.saveFile); err != nil {
 		return err
 	}
+
+	log.WithField("file", s.saveFile).Info("Finished saving DNS mappings")
 
 	return nil
 }
