@@ -49,9 +49,9 @@ type nameData struct {
 	// Known values for this name.  Map keys are the actual values (i.e. IPs or alias names),
 	// and valueData is as above.
 	values map[string]*valueData
-	// Other names whose cached IP list should be invalidated when the info for _this_ name
-	// changes.
-	ancestorNames []string
+	// Other names that we should notify a "change of information" for, and whose cached IP list
+	// should be invalidated, when the info for _this_ name changes.
+	namesToNotify []string
 }
 
 type domainInfoStore struct {
@@ -301,7 +301,7 @@ func (s *domainInfoStore) processMappingExpiry(name, value string) {
 		if valueData := nameData.values[value]; (valueData != nil) && valueData.expiryTime.Before(time.Now()) {
 			log.Debugf("Mapping expiry for %v -> %v", name, value)
 			delete(nameData.values, value)
-			if len(nameData.values)+len(nameData.ancestorNames) == 0 {
+			if len(nameData.values)+len(nameData.namesToNotify) == 0 {
 				delete(s.mappings, name)
 			}
 			s.signalDomainInfoChange(name, "mapping expired")
@@ -397,20 +397,20 @@ func (s *domainInfoStore) GetDomainIPs(domain string) []string {
 	ips := s.resultsCache[domain]
 	if ips == nil {
 		var collectIPsForName func(string, []string)
-		collectIPsForName = func(domain string, ancestorNames []string) {
+		collectIPsForName = func(domain string, namesToNotify []string) {
 			nameData := s.mappings[domain]
 			log.WithFields(log.Fields{
 				"domain":        domain,
-				"ancestorNames": ancestorNames,
+				"namesToNotify": namesToNotify,
 				"nameData":      nameData,
 			}).Debug("Collect IPs for name")
 			if nameData != nil {
-				nameData.ancestorNames = ancestorNames
+				nameData.namesToNotify = namesToNotify
 				for value, valueData := range nameData.values {
 					if valueData.isName {
 						// The RHS of the mapping is another name, so we recurse to pick up
 						// its IPs.
-						collectIPsForName(value, append(ancestorNames, domain))
+						collectIPsForName(value, append(namesToNotify, domain))
 					} else {
 						// The RHS of the mapping is an IP, so add it to the list that we
 						// will return.
@@ -430,7 +430,7 @@ func (s *domainInfoStore) signalDomainInfoChange(name, reason string) {
 	changedNames := set.From(name)
 	delete(s.resultsCache, name)
 	if nameData := s.mappings[name]; nameData != nil {
-		for _, ancestor := range nameData.ancestorNames {
+		for _, ancestor := range nameData.namesToNotify {
 			changedNames.Add(ancestor)
 			delete(s.resultsCache, ancestor)
 		}
