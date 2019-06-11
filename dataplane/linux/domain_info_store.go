@@ -264,10 +264,7 @@ func (s *domainInfoStore) saveMappingsV1() error {
 		}
 	}
 
-	// Sync and close the temporary save file.
-	if err = f.Sync(); err != nil {
-		return err
-	}
+	// Close the temporary save file.
 	if err = f.Close(); err != nil {
 		return err
 	}
