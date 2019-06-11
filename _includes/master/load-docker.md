@@ -40,7 +40,7 @@
 
    ```bash
    docker pull docker.elastic.co/elasticsearch/elasticsearch:{{site.data.versions[page.version].first.components["elasticsearch"].version}}
-   docker pull docker.elastic.co/kibana/kibana:{{site.data.versions[page.version].first.components["kibana"].version}}
+   docker pull {{page.registry}}{{site.imageNames["kibana"]}}:{{site.data.versions[page.version].first.components["kibana"].version}}
    docker pull {{page.registry}}{{site.imageNames["calicoctl"]}}:{{site.data.versions[page.version].first.components["calicoctl"].version}}
    docker pull {{page.registry}}{{site.imageNames["calicoq"]}}:{{site.data.versions[page.version].first.components["calicoctl"].version}}
    docker pull {{page.registry}}{{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
@@ -72,7 +72,7 @@
 
    ```bash
    docker tag docker.elastic.co/elasticsearch/elasticsearch:{{site.data.versions[page.version].first.components["elasticsearch"].version}} <YOUR-REGISTRY>/docker.elastic.co/elasticsearch/elasticsearch:{{site.data.versions[page.version].first.components["elasticsearch"].version}}
-   docker tag docker.elastic.co/kibana/kibana:{{site.data.versions[page.version].first.components["kibana"].version}} <YOUR-REGISTRY>/docker.elastic.co/kibana/kibana:{{site.data.versions[page.version].first.components["kibana"].version}}
+   docker tag {{page.registry}}{{site.imageNames["kibana"]}}:{{site.data.versions[page.version].first.components["kibana"].version}} <YOUR-REGISTRY>/tigera/kibana:{{site.data.versions[page.version].first.components["kibana"].version}}
    docker tag {{page.registry}}{{site.imageNames["calicoctl"]}}:{{site.data.versions[page.version].first.components["calicoctl"].version}} <YOUR-REGISTRY>/{{site.imageNames["calicoctl"]}}:{{site.data.versions[page.version].first.components["calicoctl"].version}}
    docker tag {{page.registry}}{{site.imageNames["calicoq"]}}:{{site.data.versions[page.version].first.components["calicoq"].version}} <YOUR-REGISTRY>/{{site.imageNames["calicoq"]}}:{{site.data.versions[page.version].first.components["calicoq"].version}}
    docker tag {{page.registry}}{{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}} <YOUR-REGISTRY>/{{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
@@ -107,7 +107,7 @@
 
    ```bash
    docker push <YOUR-REGISTRY>/docker.elastic.co/elasticsearch/elasticsearch:{{site.data.versions[page.version].first.components["elasticsearch"].version}}
-   docker push <YOUR-REGISTRY>/docker.elastic.co/kibana/kibana:{{site.data.versions[page.version].first.components["kibana"].version}}
+   docker push <YOUR-REGISTRY>/tigera/kibana:{{site.data.versions[page.version].first.components["kibana"].version}}
    docker push <YOUR-REGISTRY>/tigera/calicoctl:{{site.data.versions[page.version].first.components["calicoctl"].version}}
    docker push <YOUR-REGISTRY>/tigera/calicoq:{{site.data.versions[page.version].first.components["calicoq"].version}}
    docker push <YOUR-REGISTRY>/tigera/cnx-apiserver:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
