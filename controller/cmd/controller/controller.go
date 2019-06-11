@@ -52,6 +52,9 @@ func main() {
 		return
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	kubeconfig := os.Getenv("KUBECONFIG")
 	var config *rest.Config
 	var err error
@@ -146,6 +149,9 @@ func main() {
 	if err != nil {
 		log.WithError(err).Fatal("Could not connect to Elastic")
 	}
+	e.Run(ctx)
+	defer e.Cancel()
+
 	gns := globalnetworksets.NewController(calicoClient.ProjectcalicoV3().GlobalNetworkSets())
 	eip := elasticipsets.NewController(e)
 
@@ -157,14 +163,14 @@ func main() {
 		eip,
 		&http.Client{},
 		e, e, e)
-	s.Run(context.Background())
+	s.Run(ctx)
 	defer s.Close()
 
 	a := watcher2.NewWatcher(e, e)
-	a.Run(context.Background())
+	a.Run(ctx)
 	defer a.Close()
 
-	hs := health.NewServer(health.Pingers{s, a}, health.Readiers{s, a}, healthzSockPort)
+	hs := health.NewServer(health.Pingers{s, a}, health.Readiers{s, a, e}, healthzSockPort)
 	go func() {
 		err := hs.Serve()
 		if err != nil {

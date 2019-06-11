@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/araddon/dateparse"
@@ -19,6 +20,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
+	"github.com/tigera/intrusion-detection/controller/pkg/runloop"
 )
 
 const (
@@ -28,7 +30,10 @@ const (
 	EventIndexPattern       = "tigera_secure_ee_events.%s"
 	QuerySize               = 1000
 	MaxClauseCount          = 1024
-	CreateIndexFailureDelay = time.Minute
+	CreateIndexFailureDelay = time.Second * 15
+	CreateIndexWaitTimeout  = time.Minute
+	PingTimeout             = time.Second * 5
+	PingPeriod              = time.Minute
 )
 
 var IPSetIndex string
@@ -52,8 +57,12 @@ type ipSetDoc struct {
 
 type Elastic struct {
 	c                   *elastic.Client
+	url                 *url.URL
 	ipSetMappingCreated chan (struct{})
 	eventMappingCreated chan (struct{})
+	elasticIsAlive      bool
+	cancel              context.CancelFunc
+	once                sync.Once
 }
 
 func NewElastic(h *http.Client, url *url.URL, username, password string) (*Elastic, error) {
@@ -75,18 +84,74 @@ func NewElastic(h *http.Client, url *url.URL, username, password string) (*Elast
 	}
 	e := &Elastic{
 		c:                   c,
+		url:                 url,
 		ipSetMappingCreated: make(chan (struct{})),
 		eventMappingCreated: make(chan (struct{})),
 	}
 
-	ctx := context.Background()
-	// We drop the error on the floor because the above-created Context can never
-	// be cancelled and thus the function never returns an error. If this is ever changed
-	// the implementor will need to handle the error.
-	go e.createOrUpdateIndex(ctx, IPSetIndex, ipSetMapping, e.ipSetMappingCreated)
-	go e.createOrUpdateIndex(ctx, EventIndex, eventMapping, e.eventMappingCreated)
-
 	return e, nil
+}
+
+func (e *Elastic) Run(ctx context.Context) {
+	e.once.Do(func() {
+		ctx, e.cancel = context.WithCancel(ctx)
+		go func() {
+			if err := e.createOrUpdateIndex(ctx, IPSetIndex, ipSetMapping, e.ipSetMappingCreated); err != nil {
+				log.WithError(err).WithFields(log.Fields{
+					"index": IPSetIndex,
+				}).Error("Could not create index")
+			}
+		}()
+
+		go func() {
+			if err := e.createOrUpdateIndex(ctx, EventIndex, eventMapping, e.eventMappingCreated); err != nil {
+				log.WithError(err).WithFields(log.Fields{
+					"index": EventIndex,
+				}).Error("Could not create index")
+			}
+		}()
+
+		go func() {
+			if err := runloop.RunLoop(ctx, func() {
+				childCtx, cancel := context.WithTimeout(ctx, PingTimeout)
+				defer cancel()
+
+				_, code, err := e.c.Ping(e.url.String()).Do(childCtx)
+				switch {
+				case err != nil:
+					log.WithError(err).Warn("Elastic ping failed")
+					e.elasticIsAlive = false
+				case code < http.StatusOK || code >= http.StatusBadRequest:
+					log.WithField("code", code).Warn("Elastic ping failed")
+					e.elasticIsAlive = false
+				default:
+					e.elasticIsAlive = true
+				}
+			}, PingPeriod); err != nil {
+				log.WithError(err).Error("Elastic ping failed")
+			}
+		}()
+	})
+}
+
+func (e *Elastic) Cancel() {
+	e.cancel()
+}
+
+func (e *Elastic) Ready() bool {
+	select {
+	case <-e.eventMappingCreated:
+		break
+	default:
+		return false
+	}
+
+	select {
+	case <-e.ipSetMappingCreated:
+		return e.elasticIsAlive
+	default:
+		return false
+	}
 }
 
 func (e *Elastic) ListIPSets(ctx context.Context) ([]db.IPSetMeta, error) {
@@ -117,6 +182,8 @@ func (e *Elastic) PutIPSet(ctx context.Context, name string, set db.IPSetSpec) e
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
+	case <-time.After(CreateIndexWaitTimeout):
+		return errors.New("Timeout waiting for index creation")
 	case <-e.ipSetMappingCreated:
 		break
 	}
@@ -310,6 +377,8 @@ func (e *Elastic) PutSecurityEvent(ctx context.Context, f db.SecurityEventInterf
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
+	case <-time.After(CreateIndexWaitTimeout):
+		return errors.New("Timeout waiting for index creation")
 	case <-e.eventMappingCreated:
 		break
 	}
