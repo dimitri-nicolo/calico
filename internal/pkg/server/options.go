@@ -1,3 +1,5 @@
+// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+
 package server
 
 // Option is a common format for New() options
@@ -24,7 +26,7 @@ type ProxyTarget struct {
 func WithProxyTargets(tgts []ProxyTarget) Option {
 	return func(s *Server) error {
 		for _, t := range tgts {
-			if err := s.proxyTgts.Add(t.Pattern, t.Dest); err != nil {
+			if err := s.clusters.GetTargets().Add(t.Pattern, t.Dest); err != nil {
 				return err
 			}
 		}

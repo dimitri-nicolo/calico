@@ -1,3 +1,5 @@
+// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+
 package server_test
 
 import (

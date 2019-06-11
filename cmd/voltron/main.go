@@ -13,14 +13,19 @@ import (
 	"github.com/tigera/voltron/internal/pkg/server"
 )
 
+const (
+	// EnvConfigPrefix represents the prefix used to load ENV variables required for startup
+	EnvConfigPrefix = "VOLTRON"
+)
+
 func main() {
 	cfg := config.Config{}
-	if err := envconfig.Process("VOLTRON", &cfg); err != nil {
+	if err := envconfig.Process(EnvConfigPrefix, &cfg); err != nil {
 		log.Fatal(err)
 	}
 
 	bootstrap.ConfigureLogging(cfg.LogLevel)
-	log.Infof("Starting VOLTRON with configuration %v", cfg)
+	log.Infof("Starting %s with configuration %v", EnvConfigPrefix, cfg)
 
 	cert := fmt.Sprintf("%s/ca.crt", cfg.CertPath)
 	key := fmt.Sprintf("%s/ca.key", cfg.CertPath)
@@ -29,9 +34,6 @@ func main() {
 
 	srv, err := server.New(
 		server.WithDefaultAddr(addr),
-		server.WithProxyTargets(
-			[]server.ProxyTarget{{Pattern: "api", Dest: "http://localhost:3000"}},
-		),
 		server.WithCredsFiles(cert, key),
 	)
 
@@ -39,7 +41,7 @@ func main() {
 		log.Fatalf("Failed to create server: %s", err)
 	}
 
-	log.Infof("Starting web server on", addr)
+	log.Infof("Starting web server on %s", addr)
 	if err := srv.ListenAndServeHTTPS(); err != nil {
 		log.Fatal(err)
 	}

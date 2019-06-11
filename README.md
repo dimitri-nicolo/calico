@@ -1,5 +1,9 @@
 # Voltron
-Components for managing multiple clusters through a single management plane
+Components for managing multiple clusters through a single management plane. 
+
+There are currently two components: 
+* Voltron - a backend server component running in Management Plane
+* Guardian - an agent running in each App Cluster that communicates with Voltron and proxies requests to its local Kube API server
 
 ## Build and deploy
 
@@ -14,21 +18,38 @@ Push images
 make cd
 ```
 
-# Voltron Agent
+## Guardian
 
-## Configurations
+### Configurations
 
 Name | Type | Default
 --- | --- | ---
-VOLTRON_AGENT_LOGLEVEL | Environment | DEBUG
-VOLTRON_AGENT_PORT | Environment | 5555
-VOLTRON_AGENT_HOST | Environment | localhost
-VOLTRON_AGENT_CERTPATH | Environment | /certs
+GUARDIAN_LOGLEVEL | Environment | DEBUG
+GUARDIAN_PORT | Environment | 5555
+GUARDIAN_HOST | Environment | localhost
+GUARDIAN_CERTPATH | Environment | /certs
 
+### Build and deploy
 
-# Voltron Server
+Build guardian:
 
-## Configurations
+```
+make guardian
+```
+
+Build image:
+```
+make tigera/guardian
+```
+
+Push image
+```
+make cd
+```
+
+## Voltron
+
+### Configurations
 
 Name | Type | Default
 --- | --- | ---
@@ -36,6 +57,24 @@ VOLTRON_LOGLEVEL | Environment | DEBUG
 VOLTRON_PORT | Environment | 5555
 VOLTRON_HOST | Environment | localhost
 VOLTRON_CERTPATH | Environment | /certs
+
+### Build and deploy
+
+Build voltron:
+
+```
+make voltron
+```
+
+Build image:
+```
+make tigera/voltron
+```
+
+Push image
+```
+make cd
+```
 
 # Project structure
 

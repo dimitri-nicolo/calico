@@ -1,7 +1,7 @@
 # Copyright 2019 Tigera Inc. All rights reserved.
 
 APP_NAME=voltron
-COMPONENTS=demux agent
+COMPONENTS=guardian voltron
 
 ##########################################################################################
 # Define some constants

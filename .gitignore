@@ -10,3 +10,15 @@
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
+
+bin
+vendor
+.go-build-cache
+.go-pkg-cache
+
+# Below binaries are generated when you use debugger in VS Code 
+cmd/guardian/debug
+cmd/voltron/debug
+
+# Testing
+*.coverprofile

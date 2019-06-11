@@ -4,23 +4,29 @@ package main
 
 import (
 	"fmt"
+	"net/http"
+
 	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/voltron/internal/pkg/bootstrap"
 	"github.com/tigera/voltron/internal/pkg/config"
 	"github.com/tigera/voltron/internal/pkg/proxy"
 	targets2 "github.com/tigera/voltron/internal/pkg/targets"
-	"net/http"
+)
+
+const (
+	// EnvConfigPrefix represents the prefix used to load ENV variables required for startup
+	EnvConfigPrefix = "GUARDIAN"
 )
 
 func main() {
 	cfg := config.Config{}
-	if err := envconfig.Process("VOLTRON_AGENT", &cfg); err != nil {
+	if err := envconfig.Process(EnvConfigPrefix, &cfg); err != nil {
 		log.Fatal(err)
 	}
 
 	bootstrap.ConfigureLogging(cfg.LogLevel)
-	log.Infof("Starting VOLTRON_AGENT with configuration %v", cfg)
+	log.Infof("Starting %s with configuration %v", EnvConfigPrefix, cfg)
 
 	targets := targets2.CreateStaticTargets()
 	log.Infof("Targets are: %v", targets)

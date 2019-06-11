@@ -1,6 +1,9 @@
+// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+
 package server_test
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -9,6 +12,8 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"sync"
+
+	"github.com/tigera/voltron/internal/pkg/clusters"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -44,7 +49,7 @@ var _ = Describe("Server", func() {
 		lis, e = net.Listen("tcp", "localhost:0")
 		Expect(e).NotTo(HaveOccurred())
 
-		srv, e = server.New()
+		srv, err = server.New()
 		Expect(err).NotTo(HaveOccurred())
 		wg.Add(1)
 		go func() {
@@ -66,7 +71,7 @@ var _ = Describe("Server", func() {
 		It("should be able to list the cluster", func() {
 			list := listClusters(lis.Addr().String())
 			Expect(len(list)).To(Equal(1))
-			Expect(list[0]).To(Equal("clusterA"))
+			Expect(list[0].DisplayName).To(Equal("clusterA"))
 		})
 
 		It("should be able to register another cluster", func() {
@@ -76,8 +81,8 @@ var _ = Describe("Server", func() {
 		It("should be able to get sorted list of clusters", func() {
 			list := listClusters(lis.Addr().String())
 			Expect(len(list)).To(Equal(2))
-			Expect(list[0]).To(Equal("clusterA"))
-			Expect(list[1]).To(Equal("clusterB"))
+			Expect(list[0].DisplayName).To(Equal("clusterA"))
+			Expect(list[1].DisplayName).To(Equal("clusterB"))
 		})
 	})
 
@@ -104,7 +109,7 @@ var _ = Describe("Server Header Test", func() {
 		lis, e = net.Listen("tcp", "localhost:0")
 		Expect(e).NotTo(HaveOccurred())
 
-		srv, e = server.New()
+		srv, err = server.New()
 		Expect(err).NotTo(HaveOccurred())
 		wg.Add(1)
 		go func() {
@@ -137,7 +142,7 @@ var _ = Describe("Server Header Test", func() {
 		It("Should proxy to clusterA", func() {
 			req, err := http.NewRequest("GET", "http://"+lis.Addr().String()+"/", nil)
 			Expect(err).NotTo(HaveOccurred())
-			req.Header.Add("X-Target", "clusterA")
+			req.Header.Add("x-cluster-id", "clusterA")
 			resp, err := http.DefaultClient.Do(req)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -152,7 +157,7 @@ var _ = Describe("Server Header Test", func() {
 		It("Should not proxy anywhere - invalid cluster", func() {
 			req, err := http.NewRequest("GET", "http://"+lis.Addr().String()+"/", nil)
 			Expect(err).NotTo(HaveOccurred())
-			req.Header.Add("X-Target", "zzzzzzz")
+			req.Header.Add("x-cluster-id", "zzzzzzz")
 			resp, err := http.DefaultClient.Do(req)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(400))
@@ -161,8 +166,8 @@ var _ = Describe("Server Header Test", func() {
 		It("Should not proxy anywhere - multiple headers", func() {
 			req, err := http.NewRequest("GET", "http://"+lis.Addr().String()+"/", nil)
 			Expect(err).NotTo(HaveOccurred())
-			req.Header.Add("X-Target", "clusterA")
-			req.Header.Add("X-Target", "helloworld")
+			req.Header.Add("x-cluster-id", "clusterA")
+			req.Header.Add("x-cluster-id", "helloworld")
 			resp, err := http.DefaultClient.Do(req)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(400))
@@ -182,21 +187,22 @@ var _ = Describe("Server Header Test", func() {
 })
 
 func addCluster(server, name, dest string) {
-	v := url.Values{}
-	v.Add("name", name)
-	v.Add("target", dest)
+	addr, err := url.Parse(dest)
+	Expect(err).NotTo(HaveOccurred())
+	cluster, err := clusters.Cluster{ID: name, DisplayName: name, TargetURL: *addr}.MarshalJSON()
+	Expect(err).NotTo(HaveOccurred())
 
-	req, err := http.NewRequest("PUT", "http://"+server+"/targets?"+v.Encode(), nil)
+	req, err := http.NewRequest("PUT", "http://"+server+"/voltron/api/clusters?", bytes.NewBuffer(cluster))
 	Expect(err).NotTo(HaveOccurred())
 	_, err = http.DefaultClient.Do(req)
 	Expect(err).NotTo(HaveOccurred())
 }
 
-func listClusters(server string) []string {
-	resp, err := http.Get("http://" + server + "/targets")
+func listClusters(server string) []clusters.Cluster {
+	resp, err := http.Get("http://" + server + "/voltron/api/clusters")
 	Expect(err).NotTo(HaveOccurred())
 
-	var list []string
+	var list []clusters.Cluster
 
 	dec := json.NewDecoder(resp.Body)
 	err = dec.Decode(&list)
