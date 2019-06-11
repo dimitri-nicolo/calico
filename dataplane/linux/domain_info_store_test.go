@@ -197,12 +197,9 @@ var _ = Describe("Domain Info Store", func() {
 				// us from asserting their specific values. But we can still check that the correct number of signals
 				// are sent based on the length of the CNAME chain passed in.
 				domainStoreCreate()
-				for i, r := range CNAMErecs {
+				for _, r := range CNAMErecs {
 					programDNSAnswer(domainStore, r)
 					Expect(domainStore.domainInfoChanges).Should(Receive())
-					for j := 0; j < i; j++ {
-						Expect(domainStore.domainInfoChanges).Should(Receive())
-					}
 				}
 				programDNSAnswer(domainStore, aRec)
 				Expect(domainStore.domainInfoChanges).Should(Receive())

@@ -375,10 +375,7 @@ func (s *domainInfoStore) storeInfo(name, value string, ttl time.Duration, isNam
 		// hand.  Then, when we get information for the descendant name, we can correctly
 		// signal changes for the name in hand and any of its ancestors.
 		if isName && s.mappings[value] == nil {
-			s.mappings[value] = &nameData{
-				values:        make(map[string]*valueData),
-				ancestorNames: append(s.mappings[name].ancestorNames, name),
-			}
+			s.mappings[value] = &nameData{values: make(map[string]*valueData)}
 		}
 	} else {
 		newExpiryTime := time.Now().Add(ttl)
