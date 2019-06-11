@@ -54,6 +54,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&GlobalReportTypeList{},
 		&IPPool{},
 		&IPPoolList{},
+		&BGPConfiguration{},
+		&BGPConfigurationList{},
 	)
 	return nil
 }

@@ -208,21 +208,38 @@ type GlobalReportType struct {
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
+<<<<<<< HEAD
 // IPPoolList contains a list of IPPool resources.
 type IPPoolList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
 	Items []IPPool `json:"items" protobuf:"bytes,2,rep,name=items"`
+=======
+// BGPConfigurationList is a list of BGPConfiguration resources.
+type BGPConfigurationList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
+	Items []BGPConfiguration `json:"items" protobuf:"bytes,2,rep,name=items"`
+>>>>>>> 1f9fbe90... Added BGPConfiguration resource to AAPI server
 }
 
 // +genclient
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
+<<<<<<< HEAD
 type IPPool struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
 	Spec calico.IPPoolSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
+=======
+type BGPConfiguration struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
+	Spec calico.BGPConfigurationSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
+>>>>>>> 1f9fbe90... Added BGPConfiguration resource to AAPI server
 }

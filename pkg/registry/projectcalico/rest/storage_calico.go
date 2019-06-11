@@ -24,6 +24,7 @@ import (
 	"k8s.io/apiserver/pkg/storage"
 
 	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
+	calicobgpconfiguration "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/bgpconfiguration"
 	calicognetworkset "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/globalnetworkset"
 	calicogpolicy "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/globalpolicy"
 	calicoglobalreport "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/globalreport"
@@ -240,6 +241,7 @@ func (p RESTStorageProvider) NewV3Storage(
 		authorizer,
 	)
 
+<<<<<<< HEAD
 	ipPoolRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("ippools"))
 	if err != nil {
 		return nil, err
@@ -256,6 +258,24 @@ func (p RESTStorageProvider) NewV3Storage(
 		},
 		calicostorage.Options{
 			RESTOptions: ipPoolRESTOptions,
+=======
+	bgpConfigurationRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("bgpconfigurations"))
+	if err != nil {
+		return nil, err
+	}
+	bgpConfigurationOpts := server.NewOptions(
+		etcd.Options{
+			RESTOptions:   bgpConfigurationRESTOptions,
+			Capacity:      1000,
+			ObjectType:    calicobgpconfiguration.EmptyObject(),
+			ScopeStrategy: calicobgpconfiguration.NewStrategy(scheme),
+			NewListFunc:   calicobgpconfiguration.NewList,
+			GetAttrsFunc:  calicobgpconfiguration.GetAttrs,
+			Trigger:       storage.NoTriggerPublisher,
+		},
+		calicostorage.Options{
+			RESTOptions: bgpConfigurationRESTOptions,
+>>>>>>> 1f9fbe90... Added BGPConfiguration resource to AAPI server
 		},
 		p.StorageType,
 		authorizer,
@@ -267,7 +287,11 @@ func (p RESTStorageProvider) NewV3Storage(
 	storage["globalnetworkpolicies"] = calicogpolicy.NewREST(scheme, *gpolicyOpts)
 	storage["globalnetworksets"] = calicognetworkset.NewREST(scheme, *gNetworkSetOpts)
 	storage["licensekeys"] = calicolicensekey.NewREST(scheme, *licenseKeysSetOpts)
+<<<<<<< HEAD
 	storage["ippools"] = calicoippool.NewREST(scheme, *ipPoolSetOpts)
+=======
+	storage["bgpconfigurations"] = calicobgpconfiguration.NewREST(scheme, *bgpConfigurationOpts)
+>>>>>>> 1f9fbe90... Added BGPConfiguration resource to AAPI server
 
 	globalThreatFeedsStorage, globalThreatFeedsStatusStorage := calicogthreatfeed.NewREST(scheme, *gThreatFeedOpts)
 	storage["globalthreatfeeds"] = globalThreatFeedsStorage

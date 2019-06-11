@@ -31,8 +31,13 @@ func NewStorage(opts Options) (storage.Interface, factory.DestroyFunc) {
 		return NewGlobalReportStorage(opts)
 	case "projectcalico.org/globalreporttypes":
 		return NewGlobalReportTypeStorage(opts)
+<<<<<<< HEAD
 	case "projectcalico.org/ippools":
 		return NewIPPoolStorage(opts)
+=======
+	case "projectcalico.org/bgpconfigurations":
+		return NewBGPConfigurationStorage(opts)
+>>>>>>> 1f9fbe90... Added BGPConfiguration resource to AAPI server
 	default:
 		glog.Fatalf("Unable to create storage for resource %v", opts.RESTOptions.ResourcePrefix)
 		return nil, nil

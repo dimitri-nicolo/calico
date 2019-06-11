@@ -1233,6 +1233,7 @@ func testGlobalReportTypeClient(client calicoclient.Interface, name string) erro
 	return nil
 }
 
+<<<<<<< HEAD
 // TestIPPoolClient exercises the IPPool client.
 func TestIPPoolClient(t *testing.T) {
 	const name = "test-ippool"
@@ -1243,12 +1244,25 @@ func TestIPPoolClient(t *testing.T) {
 			})
 			defer shutdownServer()
 			if err := testIPPoolClient(client, name); err != nil {
+=======
+// TestBGPConfigurationClient exercises the BGPConfiguration client.
+func TestBGPConfigurationClient(t *testing.T) {
+	const name = "test-bgpconfig"
+	rootTestFunc := func() func(t *testing.T) {
+		return func(t *testing.T) {
+			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+				return &projectcalico.BGPConfiguration{}
+			})
+			defer shutdownServer()
+			if err := testBGPConfigurationClient(client, name); err != nil {
+>>>>>>> 1f9fbe90... Added BGPConfiguration resource to AAPI server
 				t.Fatal(err)
 			}
 		}
 	}
 
 	if !t.Run(name, rootTestFunc()) {
+<<<<<<< HEAD
 		t.Errorf("test-ippool test failed")
 
 	}
@@ -1261,10 +1275,25 @@ func testIPPoolClient(client calicoclient.Interface, name string) error {
 		ObjectMeta: metav1.ObjectMeta{Name: name},
 		Spec: calico.IPPoolSpec{
 			CIDR: "192.168.0.0/16",
+=======
+		t.Errorf("test-bgpconfig test failed")
+
+	}
+}
+
+func testBGPConfigurationClient(client calicoclient.Interface, name string) error {
+	bgpConfigClient := client.ProjectcalicoV3().BGPConfigurations()
+	resName := "bgpconfig-test"
+	bgpConfig := &v3.BGPConfiguration{
+		ObjectMeta: metav1.ObjectMeta{Name: resName},
+		Spec: calico.BGPConfigurationSpec{
+			LogSeverityScreen: "Info",
+>>>>>>> 1f9fbe90... Added BGPConfiguration resource to AAPI server
 		},
 	}
 
 	// start from scratch
+<<<<<<< HEAD
 	ippools, err := ippoolClient.List(metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing ippools (%s)", err)
@@ -1298,6 +1327,32 @@ func testIPPoolClient(client calicoclient.Interface, name string) error {
 	err = ippoolClient.Delete(name, &metav1.DeleteOptions{})
 	if nil != err {
 		return fmt.Errorf("ippool should be deleted (%s)", err)
+=======
+	bgpConfigList, err := bgpConfigClient.List(metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing bgpConfiguration (%s)", err)
+	}
+	if bgpConfigList.Items == nil {
+		return fmt.Errorf("Items field should not be set to nil")
+	}
+
+	bgpRes, err := bgpConfigClient.Create(bgpConfig)
+	if nil != err {
+		return fmt.Errorf("error creating the bgpConfiguration '%v' (%v)", bgpConfig, err)
+	}
+	if resName != bgpRes.Name {
+		return fmt.Errorf("didn't get the same bgpConfig back from server\n%+v\n%+v", bgpConfig, bgpRes)
+	}
+
+	bgpRes, err = bgpConfigClient.Get(resName, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("error getting bgpConfiguration %s (%s)", resName, err)
+	}
+
+	err = bgpConfigClient.Delete(resName, &metav1.DeleteOptions{})
+	if nil != err {
+		return fmt.Errorf("BGPConfiguration should be deleted (%s)", err)
+>>>>>>> 1f9fbe90... Added BGPConfiguration resource to AAPI server
 	}
 
 	return nil
