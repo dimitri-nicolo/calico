@@ -91,7 +91,15 @@ func (t *Tunnel) AcceptStream() (io.ReadWriteCloser, error) {
 
 // Addr returns the address of this tunnel sides endpoint.
 func (t *Tunnel) Addr() net.Addr {
-	return addr{"voltron-tunnel"}
+	a := addr{
+		net: "voltron-tunnel",
+	}
+
+	if n, ok := t.stream.(net.Conn); ok {
+		a.addr = n.LocalAddr().String()
+	}
+
+	return a
 }
 
 // Open opens a new net.Conn to the other side of the tunnel. Returns when
@@ -115,7 +123,8 @@ func (t *Tunnel) Identity() Identity {
 }
 
 type addr struct {
-	net string
+	net  string
+	addr string
 }
 
 func (a addr) Network() string {
@@ -123,7 +132,7 @@ func (a addr) Network() string {
 }
 
 func (a addr) String() string {
-	return a.net
+	return a.addr
 }
 
 // Dial returns a client side Tunnel or an error
