@@ -48,7 +48,7 @@ v2.4:
     es-proxy:
       version: v2.4.0
     elasticsearch-operator:
-      version: 0.2.0
+      version: 0.3.0
     kibana:
       version: 6.4.3
     elasticsearch:
