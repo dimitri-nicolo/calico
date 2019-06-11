@@ -27,11 +27,11 @@ var _ = Describe("Selector", func() {
 		},
 		Entry("should match GET using localhost and port with /api",
 			request("http://localhost:123/api"),
-			map[string]*url.URL{RegexStartsWithApi: parse("http://localhost:123"),},
+			map[string]*url.URL{RegexStartsWithApi: parse("http://localhost:123")},
 			"http://localhost:123"),
 		Entry("should match GET with /api",
 			request(ApiUrl),
-			map[string]*url.URL{RegexStartsWithApi: parse(ApiUrl),},
+			map[string]*url.URL{RegexStartsWithApi: parse(ApiUrl)},
 			ApiUrl),
 	)
 
@@ -58,7 +58,7 @@ var _ = Describe("Selector", func() {
 		},
 		Entry("should match GET with /api",
 			requestWithHeader(headers),
-			map[string]*url.URL{RegexApi: parse(ApiUrl),},
+			map[string]*url.URL{RegexApi: parse(ApiUrl)},
 			ApiUrl),
 	)
 
@@ -70,7 +70,7 @@ var _ = Describe("Selector", func() {
 		},
 		Entry("should return an error when passing multiple headers",
 			requestWithHeader(map[string][]string{header: {"api", "abc"}}),
-			map[string]*url.URL{RegexApi: parse(ApiUrl),}),
+			map[string]*url.URL{RegexApi: parse(ApiUrl)}),
 	)
 
 	DescribeTable("matches regex",
@@ -81,11 +81,11 @@ var _ = Describe("Selector", func() {
 		},
 		Entry("should match /apis",
 			"/apis",
-			map[string]*url.URL{RegexStartsWithApi: parse(ApisUrl),},
+			map[string]*url.URL{RegexStartsWithApi: parse(ApisUrl)},
 			ApisUrl),
 		Entry("should match /apis and ignore invalid regex",
 			"/apis",
-			map[string]*url.URL{`(?!\/)`: parse(ApiUrl), RegexStartsWithApi: parse(ApisUrl),},
+			map[string]*url.URL{`(?!\/)`: parse(ApiUrl), RegexStartsWithApi: parse(ApisUrl)},
 			ApisUrl),
 	)
 
