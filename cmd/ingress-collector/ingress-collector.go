@@ -3,6 +3,8 @@
 package main
 
 import (
+	"context"
+
 	"github.com/tigera/ingress-collector/pkg/collector"
 	"github.com/tigera/ingress-collector/pkg/config"
 	"github.com/tigera/ingress-collector/pkg/felixclient"
@@ -20,10 +22,10 @@ func main() {
 
 	// TODO: Clean this up
 	// Start the log collector
-	StartCollector(collector, cfg)
+	StartCollector(nginxCollector, cfg)
 }
 
-func StartCollector(collector IngressCollector, config *config.Config) {
+func StartCollector(collector collector.IngressCollector, config *config.Config) {
 	opts := uds.GetDialOptions()
 	felixClient := felixclient.NewFelixClient(config.DialTarget, opts)
 	felixClient.SendLoop(context.Background(), collector)

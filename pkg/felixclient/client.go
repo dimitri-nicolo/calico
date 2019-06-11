@@ -15,6 +15,7 @@ import (
 
 type FelixClient interface {
 	SendStats(context.Context, proto.PolicySyncClient, collector.IngressLog) error
+	SendLoop(context.Context, collector.IngressCollector)
 }
 
 // felixClient provides the means to send data to Felix
