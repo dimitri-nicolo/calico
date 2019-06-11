@@ -4,15 +4,29 @@ package db
 
 import "time"
 
+type MockAuditLogArgs struct {
+	Kind      string
+	Namespace string
+	Name      string
+	Before    time.Time
+	After     time.Time
+}
+
 type MockAuditLog struct {
-	Ok  bool
-	Err error
+	CreatedOk   bool
+	CreatedErr  error
+	CreatedArgs *MockAuditLogArgs
+	DeletedOk   bool
+	DeletedErr  error
+	DeletedArgs *MockAuditLogArgs
 }
 
 func (al *MockAuditLog) ObjectCreatedBetween(kind, namespace, name string, before, after time.Time) (bool, error) {
-	return al.Ok, al.Err
+	al.CreatedArgs = &MockAuditLogArgs{kind, namespace, name, before, after}
+	return al.CreatedOk, al.CreatedErr
 }
 
 func (al *MockAuditLog) ObjectDeletedBetween(kind, namespace, name string, before, after time.Time) (bool, error) {
-	return al.Ok, al.Err
+	al.DeletedArgs = &MockAuditLogArgs{kind, namespace, name, before, after}
+	return al.DeletedOk, al.DeletedErr
 }

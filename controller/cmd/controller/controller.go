@@ -150,7 +150,7 @@ func main() {
 		log.WithError(err).Fatal("Could not connect to Elastic")
 	}
 	e.Run(ctx)
-	defer e.Cancel()
+	defer e.Close()
 
 	gns := globalnetworksets.NewController(calicoClient.ProjectcalicoV3().GlobalNetworkSets())
 	eip := elasticipsets.NewController(e)
@@ -166,7 +166,7 @@ func main() {
 	s.Run(ctx)
 	defer s.Close()
 
-	a := watcher2.NewWatcher(e, e)
+	a := watcher2.NewWatcher(e, e, e)
 	a.Run(ctx)
 	defer a.Close()
 

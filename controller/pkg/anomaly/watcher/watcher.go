@@ -25,6 +25,7 @@ type Watcher interface {
 
 type watcher struct {
 	events      db.Events
+	auditLog    db.AuditLog
 	xPack       elastic.XPack
 	jobWatchers map[string]*jobWatcher
 	cancel      context.CancelFunc
@@ -38,9 +39,10 @@ type jobWatcher struct {
 	statser statser.Statser
 }
 
-func NewWatcher(events db.Events, xPack elastic.XPack) Watcher {
+func NewWatcher(events db.Events, auditLog db.AuditLog, xPack elastic.XPack) Watcher {
 	return &watcher{
 		events:      events,
+		auditLog:    auditLog,
 		xPack:       xPack,
 		jobWatchers: make(map[string]*jobWatcher),
 	}
@@ -55,8 +57,11 @@ func (w *watcher) Run(ctx context.Context) {
 				statser := statser.NewStatser(jid)
 
 				w.jobWatchers[jid] = &jobWatcher{
-					name:    jid,
-					puller:  puller.NewPuller(jid, w.xPack, w.events, filters.NilFilter{}, info.Description, info.Detectors),
+					name: jid,
+					puller: puller.NewPuller(
+						jid, w.xPack, w.events,
+						filters.NewAuditLog(w.auditLog),
+						info.Description, info.Detectors),
 					statser: statser,
 				}
 

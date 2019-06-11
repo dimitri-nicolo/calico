@@ -134,7 +134,7 @@ func (e *Elastic) Run(ctx context.Context) {
 	})
 }
 
-func (e *Elastic) Cancel() {
+func (e *Elastic) Close() {
 	e.cancel()
 }
 
@@ -601,4 +601,12 @@ func (e *Elastic) GetRecords(ctx context.Context, jobID string, options *GetReco
 	}
 
 	return getRecordsResponse.Records, nil
+}
+
+func (e *Elastic) ObjectCreatedBetween(kind, namespace, name string, before, after time.Time) (bool, error) {
+	return false, nil
+}
+
+func (e *Elastic) ObjectDeletedBetween(kind, namespace, name string, before, after time.Time) (bool, error) {
+	return false, nil
 }

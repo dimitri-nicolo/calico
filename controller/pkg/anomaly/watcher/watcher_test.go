@@ -17,7 +17,7 @@ import (
 func TestReady(t *testing.T) {
 	g := NewWithT(t)
 
-	w := NewWatcher(&db.MockEvents{}, &elastic.MockXPack{}).(*watcher)
+	w := NewWatcher(&db.MockEvents{}, &db.MockAuditLog{}, &elastic.MockXPack{}).(*watcher)
 	g.Expect(w.Ready()).Should(BeFalse())
 
 	ctx, cancel := context.WithTimeout(context.TODO(), time.Minute)
