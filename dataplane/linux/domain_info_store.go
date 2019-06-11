@@ -51,7 +51,7 @@ type nameData struct {
 	values map[string]*valueData
 	// Other names that we should notify a "change of information" for, and whose cached IP list
 	// should be invalidated, when the info for _this_ name changes.
-	namesToNotify []string
+	namesToNotify set.Set
 }
 
 type domainInfoStore struct {
@@ -301,7 +301,7 @@ func (s *domainInfoStore) processMappingExpiry(name, value string) {
 		if valueData := nameData.values[value]; (valueData != nil) && valueData.expiryTime.Before(time.Now()) {
 			log.Debugf("Mapping expiry for %v -> %v", name, value)
 			delete(nameData.values, value)
-			if len(nameData.values)+len(nameData.namesToNotify) == 0 {
+			if len(nameData.values)+nameData.namesToNotify.Len() == 0 {
 				delete(s.mappings, name)
 			}
 			s.signalDomainInfoChange(name, "mapping expired")
@@ -364,7 +364,10 @@ func (s *domainInfoStore) storeInfo(name, value string, ttl time.Duration, isNam
 		})
 	}
 	if s.mappings[name] == nil {
-		s.mappings[name] = &nameData{values: make(map[string]*valueData)}
+		s.mappings[name] = &nameData{
+			values:        make(map[string]*valueData),
+			namesToNotify: set.New(),
+		}
 	}
 	existing := s.mappings[name].values[value]
 	if existing == nil {
@@ -379,7 +382,10 @@ func (s *domainInfoStore) storeInfo(name, value string, ttl time.Duration, isNam
 		// hand.  Then, when we get information for the descendant name, we can correctly
 		// signal changes for the name in hand and any of its ancestors.
 		if isName && s.mappings[value] == nil {
-			s.mappings[value] = &nameData{values: make(map[string]*valueData)}
+			s.mappings[value] = &nameData{
+				values:        make(map[string]*valueData),
+				namesToNotify: set.New(),
+			}
 		}
 	} else {
 		newExpiryTime := time.Now().Add(ttl)
@@ -396,21 +402,20 @@ func (s *domainInfoStore) GetDomainIPs(domain string) []string {
 	defer s.mutex.Unlock()
 	ips := s.resultsCache[domain]
 	if ips == nil {
-		var collectIPsForName func(string, []string)
-		collectIPsForName = func(domain string, namesToNotify []string) {
-			nameData := s.mappings[domain]
+		var collectIPsForName func(string)
+		collectIPsForName = func(name string) {
+			nameData := s.mappings[name]
 			log.WithFields(log.Fields{
-				"domain":        domain,
-				"namesToNotify": namesToNotify,
-				"nameData":      nameData,
+				"name":     name,
+				"nameData": nameData,
 			}).Debug("Collect IPs for name")
 			if nameData != nil {
-				nameData.namesToNotify = namesToNotify
+				nameData.namesToNotify.Add(domain)
 				for value, valueData := range nameData.values {
 					if valueData.isName {
 						// The RHS of the mapping is another name, so we recurse to pick up
 						// its IPs.
-						collectIPsForName(value, append(namesToNotify, domain))
+						collectIPsForName(value)
 					} else {
 						// The RHS of the mapping is an IP, so add it to the list that we
 						// will return.
@@ -419,7 +424,7 @@ func (s *domainInfoStore) GetDomainIPs(domain string) []string {
 				}
 			}
 		}
-		collectIPsForName(domain, nil)
+		collectIPsForName(domain)
 		s.resultsCache[domain] = ips
 	}
 	log.Infof("GetDomainIPs(%v) -> %v", domain, ips)
@@ -430,10 +435,12 @@ func (s *domainInfoStore) signalDomainInfoChange(name, reason string) {
 	changedNames := set.From(name)
 	delete(s.resultsCache, name)
 	if nameData := s.mappings[name]; nameData != nil {
-		for _, ancestor := range nameData.namesToNotify {
+		nameData.namesToNotify.Iter(func(item interface{}) error {
+			ancestor := item.(string)
 			changedNames.Add(ancestor)
 			delete(s.resultsCache, ancestor)
-		}
+			return nil
+		})
 	}
 	// Release the mutex to send change signals, so that we can't get a deadlock between this
 	// thread and the int_dataplane thread.
