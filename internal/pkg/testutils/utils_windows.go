@@ -65,7 +65,7 @@ func WipeK8sPods(netconf string) {
 func CreateContainerUsingDocker() (string, error) {
 	var image string
 	if os.Getenv("WINDOWS_OS") == "Windows1903container" {
-		image = "mcr.microsoft.com/windows/servercore/insider:10.0.18317.1000"
+		image = "mcr.microsoft.com/windows/servercore/insider:10.0.18362.113"
 	} else if os.Getenv("WINDOWS_OS") == "Windows1809container" {
 		image = "mcr.microsoft.com/windows/servercore:1809"
 	}

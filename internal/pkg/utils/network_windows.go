@@ -206,7 +206,7 @@ func EnsureVXLANTunnelAddr(ctx context.Context, calicoClient calicoclient.Interf
 		changeFlag = 1
 	}
 
-	mac, err := updateDrMacAddr()
+	mac, err := UpdateDrMacAddr()
 	if err != nil {
 		return err
 	}
@@ -228,7 +228,7 @@ func EnsureVXLANTunnelAddr(ctx context.Context, calicoClient calicoclient.Interf
 	return err
 }
 
-func updateDrMacAddr() (net.HardwareAddr, error) {
+func UpdateDrMacAddr() (net.HardwareAddr, error) {
 	hnsNetwork, err := hcsshim.GetHNSNetworkByName("External")
 	if err != nil {
 		logrus.Infof("hns network external not found")
