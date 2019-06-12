@@ -49,6 +49,8 @@ The following resources are supported:
 - [HostEndpoint]({{site.url}}/{{page.version}}/reference/calicoctl/resources/hostendpoint)
 - [NetworkPolicy]({{site.url}}/{{page.version}}/reference/calicoctl/resources/networkpolicy)
 - [GlobalNetworkPolicy]({{site.url}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy)
+- [GlobalNetworkSet]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkset)
+- [Node]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/node)
 - [IPPool]({{site.url}}/{{page.version}}/reference/calicoctl/resources/ippool)
 - [Profile]({{site.url}}/{{page.version}}/reference/calicoctl/resources/profile)
 - [FelixConfiguration]({{site.url}}/{{page.version}}/reference/calicoctl/resources/felixconfig)
