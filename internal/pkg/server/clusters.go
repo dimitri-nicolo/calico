@@ -7,11 +7,22 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"sync"
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/tigera/voltron/internal/pkg/clusters"
+	jclust "github.com/tigera/voltron/internal/pkg/clusters"
 )
+
+type cluster struct {
+	DisplayName string
+	// TODO tunnel info will be here
+}
+
+type clusters struct {
+	sync.RWMutex
+	clusters map[string]*cluster
+}
 
 func returnJSON(w http.ResponseWriter, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
@@ -20,22 +31,16 @@ func returnJSON(w http.ResponseWriter, data interface{}) {
 	}
 }
 
-type clusterHandler struct {
-	clusters *clusters.Clusters
-}
-
-// Add a cluster
-func (c clusterHandler) Add(target string, cluster *clusters.Cluster) {
-	c.clusters.Add(target, cluster)
-}
-
 // List all clusters in sorted order by DisplayName field
-func (c clusterHandler) List() []*clusters.Cluster {
-	clusterList := make([]*clusters.Cluster, 0, len(c.clusters.List()))
-	for _, c := range c.clusters.List() {
+func (c *clusters) List() []*jclust.Cluster {
+	c.RLock()
+	defer c.RUnlock()
+
+	clusterList := make([]*jclust.Cluster, 0, len(c.clusters))
+	for id, c := range c.clusters {
 		// Only incldue non-sensitive fields
-		clusterList = append(clusterList, &clusters.Cluster{
-			ID:          c.ID,
+		clusterList = append(clusterList, &jclust.Cluster{
+			ID:          id,
 			DisplayName: c.DisplayName,
 		})
 	}
@@ -48,31 +53,42 @@ func (c clusterHandler) List() []*clusters.Cluster {
 }
 
 // Handler to create a new or update an existing cluster
-func (c *clusterHandler) updateCluster(w http.ResponseWriter, r *http.Request) {
+func (c *clusters) updateCluster(w http.ResponseWriter, r *http.Request) {
+	c.Lock()
+	defer c.Unlock()
+
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "Error while parsing body", 400)
 		return
 	}
-	// no validations... for now
-	// WARNING: there's a race condition in the write
-	decoder := json.NewDecoder(r.Body)
-	cluster := &clusters.Cluster{}
-	err := decoder.Decode(cluster)
-	if err != nil {
-		panic(err)
-	}
-	log.Debugf("cluster = %+v\n", cluster)
-	c.Add(cluster.ID, cluster)
-	returnJSON(w, cluster)
-}
 
-// Handler to return a listing of clusters
-func (c *clusterHandler) listClusters(w http.ResponseWriter, r *http.Request) {
-	returnJSON(w, c.List())
+	// no validations... for now
+	decoder := json.NewDecoder(r.Body)
+	jc := &jclust.Cluster{}
+	err := decoder.Decode(jc)
+	if err != nil {
+		http.Error(w, "Invalid JSON body", 400)
+		return
+	}
+
+	action := "Adding"
+	if _, ok := c.clusters[jc.ID]; ok {
+		//TODO when updating, we must take into account an existing tunnel to the cluster
+		action = "Updating"
+	}
+
+	log.Infof("%s cluster ID: %q DisplayName: %q", action, jc.ID, jc.DisplayName)
+
+	c.clusters[jc.ID] = &cluster{
+		DisplayName: jc.DisplayName,
+	}
+
+	// TODO we will return clusters credentials
+	returnJSON(w, jc)
 }
 
 // Determine which handler to execute based on HTTP method.
-func (c *clusterHandler) handle(w http.ResponseWriter, r *http.Request) {
+func (c *clusters) handle(w http.ResponseWriter, r *http.Request) {
 	log.Debugf("%s for %s from %s", r.Method, r.URL, r.RemoteAddr)
 	switch r.Method {
 	// TODO We need a MethodPost handler as well, should use instead of Put for
@@ -82,7 +98,7 @@ func (c *clusterHandler) handle(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPut:
 		c.updateCluster(w, r)
 	case http.MethodGet:
-		c.listClusters(w, r)
+		returnJSON(w, c.List())
 	default:
 		http.NotFound(w, r)
 	}

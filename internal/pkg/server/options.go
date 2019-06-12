@@ -21,20 +21,6 @@ type ProxyTarget struct {
 	Dest    string
 }
 
-// WithProxyTargets sets the proxying targets, can be used multiple times to add
-// to a union of target.
-func WithProxyTargets(tgts []ProxyTarget) Option {
-	return func(s *Server) error {
-		for _, t := range tgts {
-			if err := s.clusters.GetTargets().Add(t.Pattern, t.Dest); err != nil {
-				return err
-			}
-		}
-
-		return nil
-	}
-}
-
 // WithCredsFiles sets the default cert and key to be used for TLS connections
 func WithCredsFiles(cert, key string) Option {
 	return func(s *Server) error {

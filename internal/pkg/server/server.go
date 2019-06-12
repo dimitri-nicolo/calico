@@ -6,11 +6,7 @@ import (
 	"net"
 	"net/http"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/pkg/errors"
-	"github.com/tigera/voltron/internal/pkg/clusters"
-	demuxproxy "github.com/tigera/voltron/internal/pkg/proxy"
 )
 
 const (
@@ -24,7 +20,8 @@ const (
 type Server struct {
 	http     *http.Server
 	proxyMux *http.ServeMux
-	clusters *clusters.Clusters
+
+	clusters *clusters
 
 	certFile string
 	keyFile  string
@@ -33,8 +30,10 @@ type Server struct {
 // New returns a new Server
 func New(opts ...Option) (*Server, error) {
 	srv := &Server{
-		http:     new(http.Server),
-		clusters: clusters.New(),
+		http: new(http.Server),
+		clusters: &clusters{
+			clusters: make(map[string]*cluster),
+		},
 	}
 
 	for _, o := range opts {
@@ -43,18 +42,22 @@ func New(opts ...Option) (*Server, error) {
 		}
 	}
 
-	log.Infof("Targets are: %s", srv.clusters.GetTargets())
 	srv.proxyMux = http.NewServeMux()
 	srv.http.Handler = srv.proxyMux
 
+	/* XXX this will be replaced by https://github.com/tigera/voltron/pull/23
 	srv.proxyMux.Handle("/", demuxproxy.New(
 		demuxproxy.NewHeaderMatcher(
 			srv.clusters.GetTargets(),
 			ClusterHeaderField,
 		),
 	))
-	proxyHandler := clusterHandler{clusters: srv.clusters}
-	srv.proxyMux.HandleFunc("/voltron/api/clusters", proxyHandler.handle)
+	*/
+	srv.proxyMux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "PROXYING DOES NOT WORK YET", 400)
+	})
+
+	srv.proxyMux.HandleFunc("/voltron/api/clusters", srv.clusters.handle)
 
 	return srv, nil
 }

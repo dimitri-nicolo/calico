@@ -6,53 +6,13 @@ import (
 	"encoding/json"
 	"net/url"
 	"strings"
-
-	"github.com/tigera/voltron/internal/pkg/targets"
 )
-
-// Clusters is a mapping of Cluster objects keyed by their IDs
-type Clusters struct {
-	clusterMap map[string]*Cluster
-	targets    *targets.Targets
-}
 
 // Cluster contains metadata used to track a specific cluster
 type Cluster struct {
 	ID          string  `json:"id"`
 	DisplayName string  `json:"displayName"`
 	TargetURL   url.URL `json:"targetURL,omitempty"`
-}
-
-// New creates a new cluster list
-func New() *Clusters {
-	c := make(map[string]*Cluster)
-	t := targets.NewEmpty()
-
-	return &Clusters{
-		clusterMap: c,
-		targets:    t,
-	}
-}
-
-// Add inserts a new Cluster into the map
-func (clusters *Clusters) Add(id string, cluster *Cluster) {
-	clusters.clusterMap[id] = cluster
-	clusters.targets.Add(id, cluster.TargetURL.String())
-}
-
-// List returns the full listing of Cluster entries
-func (clusters *Clusters) List() map[string]*Cluster {
-	return clusters.clusterMap
-}
-
-// ListTargets returns the full listing of targets from the Cluster entries
-func (clusters *Clusters) ListTargets() map[string]*url.URL {
-	return clusters.targets.List()
-}
-
-// GetTargets returns the Targets object
-func (clusters *Clusters) GetTargets() *targets.Targets {
-	return clusters.targets
 }
 
 // UnmarshalJSON implements the Unmarshaler interface, which allows us to handle
