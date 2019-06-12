@@ -14,6 +14,14 @@ type FakeProjectcalico struct {
 	*testing.Fake
 }
 
+func (c *FakeProjectcalico) BGPConfigurations() internalversion.BGPConfigurationInterface {
+	return &FakeBGPConfigurations{c}
+}
+
+func (c *FakeProjectcalico) BGPPeers() internalversion.BGPPeerInterface {
+	return &FakeBGPPeers{c}
+}
+
 func (c *FakeProjectcalico) GlobalNetworkPolicies() internalversion.GlobalNetworkPolicyInterface {
 	return &FakeGlobalNetworkPolicies{c}
 }

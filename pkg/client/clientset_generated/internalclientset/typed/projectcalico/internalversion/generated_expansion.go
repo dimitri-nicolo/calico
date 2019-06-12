@@ -4,6 +4,10 @@
 
 package internalversion
 
+type BGPConfigurationExpansion interface{}
+
+type BGPPeerExpansion interface{}
+
 type GlobalNetworkPolicyExpansion interface{}
 
 type GlobalNetworkSetExpansion interface{}

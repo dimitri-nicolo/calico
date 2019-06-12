@@ -35,6 +35,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 
+	"github.com/projectcalico/libcalico-go/lib/numorstring"
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
 	_ "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/install"
 	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
@@ -1233,7 +1234,6 @@ func testGlobalReportTypeClient(client calicoclient.Interface, name string) erro
 	return nil
 }
 
-<<<<<<< HEAD
 // TestIPPoolClient exercises the IPPool client.
 func TestIPPoolClient(t *testing.T) {
 	const name = "test-ippool"
@@ -1244,29 +1244,15 @@ func TestIPPoolClient(t *testing.T) {
 			})
 			defer shutdownServer()
 			if err := testIPPoolClient(client, name); err != nil {
-=======
-// TestBGPConfigurationClient exercises the BGPConfiguration client.
-func TestBGPConfigurationClient(t *testing.T) {
-	const name = "test-bgpconfig"
-	rootTestFunc := func() func(t *testing.T) {
-		return func(t *testing.T) {
-			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &projectcalico.BGPConfiguration{}
-			})
-			defer shutdownServer()
-			if err := testBGPConfigurationClient(client, name); err != nil {
->>>>>>> 1f9fbe90... Added BGPConfiguration resource to AAPI server
 				t.Fatal(err)
 			}
 		}
 	}
 
 	if !t.Run(name, rootTestFunc()) {
-<<<<<<< HEAD
 		t.Errorf("test-ippool test failed")
 
 	}
-
 }
 
 func testIPPoolClient(client calicoclient.Interface, name string) error {
@@ -1275,25 +1261,10 @@ func testIPPoolClient(client calicoclient.Interface, name string) error {
 		ObjectMeta: metav1.ObjectMeta{Name: name},
 		Spec: calico.IPPoolSpec{
 			CIDR: "192.168.0.0/16",
-=======
-		t.Errorf("test-bgpconfig test failed")
-
-	}
-}
-
-func testBGPConfigurationClient(client calicoclient.Interface, name string) error {
-	bgpConfigClient := client.ProjectcalicoV3().BGPConfigurations()
-	resName := "bgpconfig-test"
-	bgpConfig := &v3.BGPConfiguration{
-		ObjectMeta: metav1.ObjectMeta{Name: resName},
-		Spec: calico.BGPConfigurationSpec{
-			LogSeverityScreen: "Info",
->>>>>>> 1f9fbe90... Added BGPConfiguration resource to AAPI server
 		},
 	}
 
 	// start from scratch
-<<<<<<< HEAD
 	ippools, err := ippoolClient.List(metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing ippools (%s)", err)
@@ -1327,7 +1298,42 @@ func testBGPConfigurationClient(client calicoclient.Interface, name string) erro
 	err = ippoolClient.Delete(name, &metav1.DeleteOptions{})
 	if nil != err {
 		return fmt.Errorf("ippool should be deleted (%s)", err)
-=======
+	}
+
+	return nil
+}
+
+// TestBGPConfigurationClient exercises the BGPConfiguration client.
+func TestBGPConfigurationClient(t *testing.T) {
+	const name = "test-bgpconfig"
+	rootTestFunc := func() func(t *testing.T) {
+		return func(t *testing.T) {
+			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+				return &projectcalico.BGPConfiguration{}
+			})
+			defer shutdownServer()
+			if err := testBGPConfigurationClient(client, name); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	if !t.Run(name, rootTestFunc()) {
+		t.Errorf("test-bgpconfig test failed")
+	}
+}
+
+func testBGPConfigurationClient(client calicoclient.Interface, name string) error {
+	bgpConfigClient := client.ProjectcalicoV3().BGPConfigurations()
+	resName := "bgpconfig-test"
+	bgpConfig := &v3.BGPConfiguration{
+		ObjectMeta: metav1.ObjectMeta{Name: resName},
+		Spec: calico.BGPConfigurationSpec{
+			LogSeverityScreen: "Info",
+		},
+	}
+
+	// start from scratch
 	bgpConfigList, err := bgpConfigClient.List(metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing bgpConfiguration (%s)", err)
@@ -1352,7 +1358,68 @@ func testBGPConfigurationClient(client calicoclient.Interface, name string) erro
 	err = bgpConfigClient.Delete(resName, &metav1.DeleteOptions{})
 	if nil != err {
 		return fmt.Errorf("BGPConfiguration should be deleted (%s)", err)
->>>>>>> 1f9fbe90... Added BGPConfiguration resource to AAPI server
+	}
+
+	return nil
+}
+
+// TestBGPPeerClient exercises the BGPPeer client.
+func TestBGPPeerClient(t *testing.T) {
+	const name = "test-bgppeer"
+	rootTestFunc := func() func(t *testing.T) {
+		return func(t *testing.T) {
+			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+				return &projectcalico.BGPPeer{}
+			})
+			defer shutdownServer()
+			if err := testBGPPeerClient(client, name); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	if !t.Run(name, rootTestFunc()) {
+		t.Errorf("test-bgppeer test failed")
+	}
+}
+
+func testBGPPeerClient(client calicoclient.Interface, name string) error {
+	bgpPeerClient := client.ProjectcalicoV3().BGPPeers()
+	resName := "bgppeer-test"
+	bgpPeer := &v3.BGPPeer{
+		ObjectMeta: metav1.ObjectMeta{Name: resName},
+		Spec: calico.BGPPeerSpec{
+			Node:     "node1",
+			PeerIP:   "10.0.0.1",
+			ASNumber: numorstring.ASNumber(6512),
+		},
+	}
+
+	// start from scratch
+	bgpPeerList, err := bgpPeerClient.List(metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing bgpPeer (%s)", err)
+	}
+	if bgpPeerList.Items == nil {
+		return fmt.Errorf("Items field should not be set to nil")
+	}
+
+	bgpRes, err := bgpPeerClient.Create(bgpPeer)
+	if nil != err {
+		return fmt.Errorf("error creating the bgpPeer '%v' (%v)", bgpPeer, err)
+	}
+	if resName != bgpRes.Name {
+		return fmt.Errorf("didn't get the same bgpPeer back from server\n%+v\n%+v", bgpPeer, bgpRes)
+	}
+
+	bgpRes, err = bgpPeerClient.Get(resName, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("error getting bgpPeer %s (%s)", resName, err)
+	}
+
+	err = bgpPeerClient.Delete(resName, &metav1.DeleteOptions{})
+	if nil != err {
+		return fmt.Errorf("BGPPeer should be deleted (%s)", err)
 	}
 
 	return nil

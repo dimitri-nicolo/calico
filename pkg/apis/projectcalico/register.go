@@ -56,6 +56,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&IPPoolList{},
 		&BGPConfiguration{},
 		&BGPConfigurationList{},
+		&BGPPeer{},
+		&BGPPeerList{},
 	)
 	return nil
 }

@@ -77,17 +77,20 @@ func convertToAAPI(libcalicoObject runtime.Object) (res runtime.Object) {
 		aapi := &aapi.GlobalReportType{}
 		GlobalReportTypeConverter{}.convertToAAPI(lcg, aapi)
 		return aapi
-<<<<<<< HEAD
 	case *libcalicoapi.IPPool:
 		lcg := libcalicoObject.(*libcalicoapi.IPPool)
 		aapi := &aapi.IPPool{}
 		IPPoolConverter{}.convertToAAPI(lcg, aapi)
-=======
+		return aapi
 	case *libcalicoapi.BGPConfiguration:
 		lcg := libcalicoObject.(*libcalicoapi.BGPConfiguration)
 		aapi := &aapi.BGPConfiguration{}
 		BGPConfigurationConverter{}.convertToAAPI(lcg, aapi)
->>>>>>> 1f9fbe90... Added BGPConfiguration resource to AAPI server
+		return aapi
+	case *libcalicoapi.BGPPeer:
+		lcg := libcalicoObject.(*libcalicoapi.BGPPeer)
+		aapi := &aapi.BGPPeer{}
+		BGPPeerConverter{}.convertToAAPI(lcg, aapi)
 		return aapi
 	default:
 		glog.Infof("Unrecognized libcalico object (type %v)", reflect.TypeOf(libcalicoObject))

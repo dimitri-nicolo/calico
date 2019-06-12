@@ -51,13 +51,12 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&GlobalReportList{},
 		&GlobalReportType{},
 		&GlobalReportTypeList{},
-<<<<<<< HEAD
 		&IPPool{},
 		&IPPoolList{},
-=======
 		&BGPConfiguration{},
 		&BGPConfigurationList{},
->>>>>>> 1f9fbe90... Added BGPConfiguration resource to AAPI server
+		&BGPPeer{},
+		&BGPPeerList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil

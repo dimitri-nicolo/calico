@@ -10,6 +10,10 @@ import (
 
 // Interface provides access to all the informers in this group version.
 type Interface interface {
+	// BGPConfigurations returns a BGPConfigurationInformer.
+	BGPConfigurations() BGPConfigurationInformer
+	// BGPPeers returns a BGPPeerInformer.
+	BGPPeers() BGPPeerInformer
 	// GlobalNetworkPolicies returns a GlobalNetworkPolicyInformer.
 	GlobalNetworkPolicies() GlobalNetworkPolicyInformer
 	// GlobalNetworkSets returns a GlobalNetworkSetInformer.
@@ -41,6 +45,16 @@ type version struct {
 // New returns a new Interface.
 func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakListOptions internalinterfaces.TweakListOptionsFunc) Interface {
 	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
+}
+
+// BGPConfigurations returns a BGPConfigurationInformer.
+func (v *version) BGPConfigurations() BGPConfigurationInformer {
+	return &bGPConfigurationInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// BGPPeers returns a BGPPeerInformer.
+func (v *version) BGPPeers() BGPPeerInformer {
+	return &bGPPeerInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // GlobalNetworkPolicies returns a GlobalNetworkPolicyInformer.

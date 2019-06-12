@@ -4,6 +4,10 @@
 
 package v3
 
+type BGPConfigurationExpansion interface{}
+
+type BGPPeerExpansion interface{}
+
 type GlobalNetworkPolicyExpansion interface{}
 
 type GlobalNetworkSetExpansion interface{}

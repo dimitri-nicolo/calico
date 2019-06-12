@@ -39,6 +39,10 @@ func (f *genericInformer) Lister() cache.GenericLister {
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
 	switch resource {
 	// Group=projectcalico.org, Version=internalVersion
+	case projectcalico.SchemeGroupVersion.WithResource("bgpconfigurations"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Projectcalico().InternalVersion().BGPConfigurations().Informer()}, nil
+	case projectcalico.SchemeGroupVersion.WithResource("bgppeers"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Projectcalico().InternalVersion().BGPPeers().Informer()}, nil
 	case projectcalico.SchemeGroupVersion.WithResource("globalnetworkpolicies"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Projectcalico().InternalVersion().GlobalNetworkPolicies().Informer()}, nil
 	case projectcalico.SchemeGroupVersion.WithResource("globalnetworksets"):

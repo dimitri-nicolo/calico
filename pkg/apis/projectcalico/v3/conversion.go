@@ -136,11 +136,35 @@ func addConversionFuncs(scheme *runtime.Scheme) error {
 		return err
 	}
 
-<<<<<<< HEAD
 	err = scheme.AddFieldLabelConversionFunc("projectcalico.org/v3", "IPPool",
-=======
+		func(label, value string) (string, string, error) {
+			switch label {
+			case "metadata.name":
+				return label, value, nil
+			default:
+				return "", "", fmt.Errorf("field label not supported: %s", label)
+			}
+		},
+	)
+	if err != nil {
+		return err
+	}
+
 	err = scheme.AddFieldLabelConversionFunc("projectcalico.org/v3", "BGPConfiguration",
->>>>>>> 1f9fbe90... Added BGPConfiguration resource to AAPI server
+		func(label, value string) (string, string, error) {
+			switch label {
+			case "metadata.name":
+				return label, value, nil
+			default:
+				return "", "", fmt.Errorf("field label not supported: %s", label)
+			}
+		},
+	)
+	if err != nil {
+		return err
+	}
+
+	err = scheme.AddFieldLabelConversionFunc("projectcalico.org/v3", "BGPPeer",
 		func(label, value string) (string, string, error) {
 			switch label {
 			case "metadata.name":
