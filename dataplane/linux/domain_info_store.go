@@ -80,6 +80,10 @@ type domainInfoStore struct {
 	// Persistence.
 	saveFile     string
 	saveInterval time.Duration
+
+	// Reclaiming memory for mappings that are now useless.
+	gcMayBeUseful bool
+	gcInterval    time.Duration
 }
 
 // Signal sent by the domain info store to the ipsets manager when the information for a given
@@ -105,6 +109,7 @@ func newDomainInfoStore(domainInfoChanges chan *domainInfoChanged, saveFile stri
 		mappingExpiryChannel: make(chan *domainMappingExpired),
 		saveFile:             saveFile,
 		saveInterval:         saveInterval,
+		gcInterval:           10 * time.Second,
 	}
 	return s
 }
@@ -131,13 +136,15 @@ func (s *domainInfoStore) Start() {
 		log.WithError(err).Warning("Failed to read mappings from file")
 	}
 
-	// Start a repeating timer for periodically saving DNS info to a persistent file.
+	// Start repeating timers for periodically saving DNS info to a persistent file, and for
+	// garbage collection.
 	saveTimerC := time.NewTicker(s.saveInterval).C
+	gcTimerC := time.NewTicker(s.gcInterval).C
 
-	go s.loop(saveTimerC)
+	go s.loop(saveTimerC, gcTimerC)
 }
 
-func (s *domainInfoStore) loop(saveTimerC <-chan time.Time) {
+func (s *domainInfoStore) loop(saveTimerC, gcTimerC <-chan time.Time) {
 	for {
 		select {
 		case msg := <-s.msgChannel:
@@ -152,6 +159,8 @@ func (s *domainInfoStore) loop(saveTimerC <-chan time.Time) {
 			if err := s.saveMappingsV1(); err != nil {
 				log.WithError(err).Warning("Failed to save mappings to file")
 			}
+		case <-gcTimerC:
+			_ = s.collectGarbage()
 		}
 	}
 }
@@ -298,9 +307,7 @@ func (s *domainInfoStore) processMappingExpiry(name, value string) {
 		if valueData := nameData.values[value]; (valueData != nil) && valueData.expiryTime.Before(time.Now()) {
 			log.Debugf("Mapping expiry for %v -> %v", name, value)
 			delete(nameData.values, value)
-			if len(nameData.values)+nameData.namesToNotify.Len() == 0 {
-				delete(s.mappings, name)
-			}
+			s.gcMayBeUseful = true
 			s.signalDomainInfoChange(name, "mapping expired")
 		} else if valueData != nil {
 			log.Debugf("Too early mapping expiry for %v -> %v", name, value)
@@ -447,4 +454,48 @@ func (s *domainInfoStore) signalDomainInfoChange(name, reason string) {
 		s.domainInfoChanges <- &domainInfoChanged{domain: item.(string), reason: reason}
 		return nil
 	})
+}
+
+func (s *domainInfoStore) collectGarbage() (numDeleted int) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	if s.gcMayBeUseful {
+		// Accumulate the mappings that are still useful.
+		namesToKeep := set.New()
+		for name, nameData := range s.mappings {
+			// A mapping is still useful if it has any unexpired values, because policy
+			// might be configured at any moment for that mapping's name, and then we'd
+			// want to be able to return the corresponding IPs.
+			if len(nameData.values) > 0 {
+				namesToKeep.Add(name)
+			}
+			// A mapping X is also still useful it its name is the RHS of another
+			// mapping Y, even if we don't currently have any values for X, because
+			// there could be a GetDomainIPs(Y) call, and later a new value for X, and
+			// in that case we need to be able to signal that the information for Y has
+			// changed.
+			for rhs, valueData := range nameData.values {
+				if valueData.isName {
+					namesToKeep.Add(rhs)
+					// There must be a mapping for the RHS name.
+					if s.mappings[rhs] == nil {
+						log.Panicf("Missing mapping for %v, which is a RHS value for %v", rhs, name)
+					}
+				}
+			}
+		}
+		// Delete the mappings that are now useless.
+		for name := range s.mappings {
+			if !namesToKeep.Contains(name) {
+				log.WithField("name", name).Debug("Delete useless mapping")
+				delete(s.mappings, name)
+				numDeleted += 1
+			}
+		}
+		// Reset the flag that will trigger the next GC.
+		s.gcMayBeUseful = false
+	}
+
+	return
 }

@@ -102,6 +102,7 @@ var _ = Describe("Domain Info Store", func() {
 		It("should expire and signal a domain change", func() {
 			domainStore.processMappingExpiry(string(dnsRec.Name), dnsRec.IP.String())
 			AssertDomainChanged(domainStore, string(dnsRec.Name), "mapping expired")
+			Expect(domainStore.collectGarbage()).To(Equal(1))
 		})
 	}
 
@@ -236,5 +237,7 @@ var _ = Describe("Domain Info Store", func() {
 		expectChangesFor("a1.com", "a2.com", "c.com")
 		Expect(domainStore.GetDomainIPs("a1.com")).To(Equal([]string{"7.8.9.10"}))
 		Expect(domainStore.GetDomainIPs("a2.com")).To(Equal([]string{"7.8.9.10"}))
+		// No garbage yet, because c.com still has a value and is the RHS of other mappings.
+		Expect(domainStore.collectGarbage()).To(Equal(0))
 	})
 })
