@@ -10,7 +10,7 @@ import:
   - pkg/transport
 - package: github.com/projectcalico/libcalico-go
   repo: git@github.com:tigera/libcalico-go-private.git
-  version: 7979a9a33f89116caf4e3ff9862b76a707b2a09a
+  version: 688f5ee533fd9d6e864d2a05e13cae3af2390902
   subpackages:
   - lib/apiconfig
   - lib/apis/v3
@@ -69,3 +69,6 @@ import:
 # Using the pin used by Masterminds/sprig to address missing function issue.
 - package: github.com/imdario/mergo
   version: ~0.3.7
+# Explicitly specify vcs
+- package: bitbucket.org/ww/goautoneg
+  vcs: hg
