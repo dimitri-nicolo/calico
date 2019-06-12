@@ -20,4 +20,10 @@ rule to apply only to traffic to one of the specified domains.  If this field is
 parent [Rule](#rule)'s `action` must be `Allow`, and `nets` and `selector` must both be left empty.
 
 {% include {{page.version}}/domain-names.md %}
+
+> **Note**: {{site.prodname}} implements policy for domain names by learning the
+> corresponding IPs from DNS, then programming rules to allow those IPs.  This means that
+> if multiple domain names A, B and C all map to the same IP, and there is domain-based
+> policy to allow A, traffic to B and C will be allowed as well.
+{: .alert .alert-info}
 {%- endif %}
