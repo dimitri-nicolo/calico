@@ -1405,7 +1405,7 @@ func validateReportTemplate(structLevel validator.StructLevel) {
 				reflect.ValueOf(rt.Template),
 				"Template",
 				"template",
-				reason("Invalid template defined in: "+rt.Name),
+				reason("Invalid template defined in: "+rt.Name+": "+err.Error()),
 				"",
 			)
 
@@ -1422,7 +1422,7 @@ func validateReportTemplate(structLevel validator.StructLevel) {
 					"Template",
 					"template",
 					reason("Template does not handle nil pointer in reportData field: "+
-						compliance.ReportDataNilEntries[i].ReportName),
+						compliance.ReportDataNilEntries[i].ReportName+": "+err.Error()),
 					"",
 				)
 			}

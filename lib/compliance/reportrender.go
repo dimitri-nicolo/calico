@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"fmt"
 	"reflect"
+	"sort"
 	"strings"
 	"text/template"
 	"time"
@@ -204,6 +205,7 @@ var (
 					Selector: "serviceaccount-selector",
 				},
 			},
+			CIS: &api.CISBenchmarkParams{NumFailedTests: 5},
 		},
 		EndpointsSummary: api.EndpointsSummary{
 			NumTotal:                     1,
@@ -223,6 +225,73 @@ var (
 			AuditEventSample,
 		},
 		Flows: []api.EndpointsReportFlow{FlowSample1, FlowSample2, FlowSample3},
+		CISBenchmark: []api.CISBenchmarkNode{
+			api.CISBenchmarkNode{
+				Results: []api.CISBenchmarkSectionResult{
+					api.CISBenchmarkSectionResult{
+						Results: []api.CISBenchmarkResult{
+							api.CISBenchmarkResult{"1.1.1", "Test1", "fix1", "PASS", true},
+							api.CISBenchmarkResult{"1.1.2", "Test1", "fix1", "PASS", true},
+							api.CISBenchmarkResult{"1.1.3", "Test1", "fix1", "PASS", true},
+							api.CISBenchmarkResult{"1.1.4", "Test1", "fix1", "PASS", true},
+							api.CISBenchmarkResult{"1.1.5", "Test1", "fix1", "PASS", true},
+						},
+					},
+				},
+			},
+			api.CISBenchmarkNode{
+				Results: []api.CISBenchmarkSectionResult{
+					api.CISBenchmarkSectionResult{
+						Results: []api.CISBenchmarkResult{
+							api.CISBenchmarkResult{"1.1.1", "Test1", "fix1", "PASS", true},
+							api.CISBenchmarkResult{"1.1.2", "Test2", "fix2", "FAIL", true},
+							api.CISBenchmarkResult{"1.1.3", "Test3", "fix3", "FAIL", true},
+							api.CISBenchmarkResult{"1.1.4", "Test4", "fix4", "PASS", true},
+							api.CISBenchmarkResult{"1.1.5", "Test5", "fix5", "PASS", true},
+						},
+					},
+				},
+			},
+			api.CISBenchmarkNode{
+				Results: []api.CISBenchmarkSectionResult{
+					api.CISBenchmarkSectionResult{
+						Results: []api.CISBenchmarkResult{
+							api.CISBenchmarkResult{"1.1.1", "Test1", "fix1", "PASS", true},
+							api.CISBenchmarkResult{"1.1.2", "Test2", "fix2", "FAIL", true},
+							api.CISBenchmarkResult{"1.1.3", "Test3", "fix3", "PASS", true},
+							api.CISBenchmarkResult{"1.1.4", "Test4", "fix4", "PASS", true},
+							api.CISBenchmarkResult{"1.1.5", "Test5", "fix5", "PASS", true},
+						},
+					},
+				},
+			},
+			api.CISBenchmarkNode{
+				Results: []api.CISBenchmarkSectionResult{
+					api.CISBenchmarkSectionResult{
+						Results: []api.CISBenchmarkResult{
+							api.CISBenchmarkResult{"1.1.1", "Test1", "fix1", "PASS", true},
+							api.CISBenchmarkResult{"1.1.2", "Test2", "fix2", "FAIL", true},
+							api.CISBenchmarkResult{"1.1.3", "Test3", "fix3", "FAIL", true},
+							api.CISBenchmarkResult{"1.1.4", "Test4", "fix4", "FAIL", true},
+							api.CISBenchmarkResult{"1.1.5", "Test5", "fix5", "FAIL", true},
+						},
+					},
+				},
+			},
+			api.CISBenchmarkNode{
+				Results: []api.CISBenchmarkSectionResult{
+					api.CISBenchmarkSectionResult{
+						Results: []api.CISBenchmarkResult{
+							api.CISBenchmarkResult{"1.1.1", "Test1", "fix1", "PASS", true},
+							api.CISBenchmarkResult{"1.1.2", "Test2", "fix2", "FAIL", true},
+							api.CISBenchmarkResult{"1.1.3", "Test3", "fix3", "FAIL", true},
+							api.CISBenchmarkResult{"1.1.4", "Test4", "fix4", "PASS", true},
+							api.CISBenchmarkResult{"1.1.5", "Test5", "fix5", "FAIL", true},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	// These are used by the validation code to check that any nil entries will not break the template. Note that
@@ -359,7 +428,57 @@ func templateFuncs(reportData *api.ReportData) template.FuncMap {
 	// renders after. This makes the template look significantly better and is much easier to read.
 	funcs["csv"] = func() *csv { return &csv{funcs: funcs} }
 
+	//
+	funcs["cisTopFailedTests"] = computeTopFailedCISBenchmarkTests
+
 	return template.FuncMap(funcs)
+}
+
+// SortableCISBenchmarkTests wraps an array of cis benchmark result counts to be sortable.
+type SortableCISBenchmarkTests []*api.CISBenchmarkResultCount
+
+// Len is part of sort.Interface.
+func (s SortableCISBenchmarkTests) Len() int {
+	return len(s)
+}
+
+// Swap is part of sort.Interface.
+func (s SortableCISBenchmarkTests) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+
+// Less is part of sort.Interface.
+// Since we want top failed tests first, we reverse the inequality.
+func (s SortableCISBenchmarkTests) Less(i, j int) bool {
+	return s[i].Count > s[j].Count
+}
+
+func computeTopFailedCISBenchmarkTests(d *api.ReportData) SortableCISBenchmarkTests {
+	// Maintain a mapping of cis benchmark test result failures to their frequency of occurence.
+	counter := map[api.CISBenchmarkResult]int{}
+	for _, node := range d.CISBenchmark {
+		for _, section := range node.Results {
+			for _, test := range section.Results {
+				if test.Status == "FAIL" {
+					counter[test]++
+				}
+			}
+		}
+	}
+
+	// Coerce map values into an array and sort.
+	sortedTests := SortableCISBenchmarkTests{}
+	for test, count := range counter {
+		sortedTests = append(sortedTests, &api.CISBenchmarkResultCount{test, count})
+	}
+	sort.Sort(sortedTests)
+
+	// Avoid out of bounds error by capping numTests to be the length of sortedTests if needed.
+	numTests := d.ReportSpec.CIS.NumFailedTests
+	if numTests > len(sortedTests) {
+		numTests = len(sortedTests)
+	}
+	return sortedTests[:numTests]
 }
 
 // getFlowsLookupFuncs creates ReportData specific flow lookup functions to determine the

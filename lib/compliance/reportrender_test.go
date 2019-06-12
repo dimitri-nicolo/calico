@@ -163,4 +163,11 @@ Pod.v1(ns1/pod-abcdef),pod-*,,Pod.v1(ns3/pod-*);Pod.v1(ns2/pod-*)
 		_, err := compliance.RenderTemplate(tmpl, &compliance.ReportDataSample)
 		Expect(err).ToNot(HaveOccurred())
 	})
+
+	It("should properly determine the top failed tests from a list of CIS benchmark node results", func() {
+		tmpl := "{{ $tests := cisTopFailedTests . }}{{ range $i, $test := $tests }}{{ $test.TestNumber }}:{{ end }}"
+		rendered, err := compliance.RenderTemplate(tmpl, &compliance.ReportDataSample)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(rendered).To(Equal("1.1.2:1.1.3:1.1.5:1.1.4:"))
+	})
 })
