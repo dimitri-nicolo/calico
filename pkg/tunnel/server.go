@@ -4,9 +4,14 @@ package tunnel
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"encoding/pem"
+	"fmt"
 	"io"
 	"net"
 	"sync"
+	"time"
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -19,12 +24,62 @@ type Server struct {
 	cancel  context.CancelFunc
 	wg      sync.WaitGroup
 	streamC chan *ServerStream
+
+	certs    []tls.Certificate
+	certPool *x509.CertPool
+
+	tlsHandshakeTimeout time.Duration
+}
+
+// ServerOption is option for NewServer
+type ServerOption func(*Server) error
+
+// X509PairPEM is a pair of PEM blocks used by WithCert
+type X509PairPEM struct {
+	Cert, Key []byte
+}
+
+// WithCert installs server certificate, can be used multiple times
+func WithCert(pair X509PairPEM) ServerOption {
+	return func(s *Server) error {
+		cert, err := tls.X509KeyPair(pair.Cert, pair.Key)
+		if err != nil {
+			return errors.Errorf("WithCert failed to create tsl.Certificate: %s", err)
+		}
+
+		block, _ := pem.Decode(pair.Cert)
+		if block == nil {
+			return errors.Errorf("no block in cert key")
+		}
+
+		xCert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			return errors.Errorf("parsing public failed: %s", err)
+		}
+		s.certs = append(s.certs, cert)
+		s.certPool.AddCert(xCert)
+		return nil
+	}
+}
+
+// WithTLSHandshakeTimeout overrides the default 1s timeout for TLS handshake
+func WithTLSHandshakeTimeout(to time.Duration) ServerOption {
+	return func(s *Server) error {
+		s.tlsHandshakeTimeout = to
+		return nil
+	}
 }
 
 // NewServer returns a new server
-func NewServer() *Server {
+func NewServer(opts ...ServerOption) *Server {
 	s := &Server{
-		streamC: make(chan *ServerStream),
+		streamC:             make(chan *ServerStream),
+		certPool:            x509.NewCertPool(),
+		tlsHandshakeTimeout: time.Second,
+	}
+
+	for _, opt := range opts {
+		opt(s)
 	}
 
 	s.ctx, s.cancel = context.WithCancel(context.Background())
@@ -44,6 +99,8 @@ func (s *Server) Serve(lis net.Listener) error {
 				s.cancel()
 				return
 			}
+
+			log.Debugf("tunnel.Server: new connection from %s", c.RemoteAddr().String())
 
 			ss := &ServerStream{
 				Conn: c,
@@ -75,10 +132,50 @@ func (s *Server) Serve(lis net.Listener) error {
 	return nil
 }
 
+// ServeTLS starts serving TSL connections using the provided listener and the
+// configured certs
+func (s *Server) ServeTLS(lis net.Listener) error {
+	config := &tls.Config{
+		Certificates: s.certs,
+		ClientAuth:   tls.RequireAndVerifyClientCert,
+		ClientCAs:    s.certPool,
+	}
+	config.BuildNameToCertificate()
+
+	return s.Serve(tls.NewListener(lis, config))
+}
+
 // Accept returns the next available stream or returns an error
 func (s *Server) Accept() (io.ReadWriteCloser, error) {
 	select {
 	case ss := <-s.streamC:
+		ctyp := ""
+		if tlsc, ok := ss.Conn.(*tls.Conn); ok {
+			if !tlsc.ConnectionState().HandshakeComplete {
+				// Set timeout not to hang for ever
+				tlsc.SetReadDeadline(time.Now().Add(s.tlsHandshakeTimeout))
+				err := tlsc.Handshake()
+				if err != nil {
+					msg := fmt.Sprintf("tunnel.Server TLS handshake error from %s: %s",
+						tlsc.RemoteAddr().String(), err)
+					log.Errorf(msg)
+					ss.Close()
+					return nil, errors.Errorf(msg)
+				}
+				// reset the deadline to no timeout
+				tlsc.SetReadDeadline(time.Time{})
+				log.Debugf("TLS HandshakeComplete %t certs %d",
+					tlsc.ConnectionState().HandshakeComplete,
+					len(tlsc.ConnectionState().PeerCertificates))
+				log.Debugf("cert emails: %v",
+					tlsc.ConnectionState().PeerCertificates[0].EmailAddresses)
+			}
+			ctyp = "tls "
+		}
+
+		log.Debugf("tunnel.Server accepted %sconnection from %s",
+			ctyp, ss.Conn.RemoteAddr().String())
+
 		return ss, nil
 	case <-s.ctx.Done():
 		return nil, errors.Errorf("server is exitting")
@@ -130,6 +227,11 @@ type ServerStream struct {
 
 // Identity returns net.Addr of the remote end
 func (ss *ServerStream) Identity() Identity {
+	if tlsc, ok := ss.Conn.(*tls.Conn); ok {
+		if len(tlsc.ConnectionState().PeerCertificates) > 0 {
+			return tlsc.ConnectionState().PeerCertificates[0]
+		}
+	}
 	return ss.Conn.RemoteAddr()
 }
 

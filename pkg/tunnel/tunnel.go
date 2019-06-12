@@ -5,6 +5,7 @@
 package tunnel
 
 import (
+	"crypto/tls"
 	"io"
 	"net"
 	"time"
@@ -140,6 +141,20 @@ func Dial(target string) (*Tunnel, error) {
 	c, err := net.Dial("tcp", target)
 	if err != nil {
 		return nil, errors.Errorf("tcp.Dial failed: %s", err)
+	}
+
+	return NewClientTunnel(c)
+}
+
+// DialTLS creates a TLS connection based on the config, must not be nil.
+func DialTLS(target string, config *tls.Config) (*Tunnel, error) {
+	if config == nil {
+		return nil, errors.Errorf("nil config")
+	}
+
+	c, err := tls.Dial("tcp", target, config)
+	if err != nil {
+		return nil, errors.Errorf("tcp.tls.Dial failed: %s", err)
 	}
 
 	return NewClientTunnel(c)

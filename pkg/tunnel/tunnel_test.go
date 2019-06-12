@@ -3,14 +3,18 @@
 package tunnel_test
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"io"
 	"net"
 	"sync"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/tigera/voltron/internal/pkg/test"
 	"github.com/tigera/voltron/pkg/tunnel"
 )
 
@@ -306,3 +310,105 @@ func testDataFlow(r io.Reader, w io.Writer, msg string) {
 
 	wg.Wait()
 }
+
+var _ = Describe("TLS Stream", func() {
+	var (
+		err     error
+		srvCert *x509.Certificate
+		clnCert *x509.Certificate
+	)
+
+	It("should  create a cert for server", func() {
+		srvCert, err = test.CreateSelfSignedX509Cert("voltron", true)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(len(srvCert.EmailAddresses)).To(Equal(1))
+		Expect(srvCert.EmailAddresses[0]).To(Equal("voltron"))
+	})
+
+	It("should  create a cert for client", func() {
+		clnCert, err = test.CreateSignedX509Cert("guardian", srvCert)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(len(clnCert.EmailAddresses)).To(Equal(1))
+		Expect(clnCert.EmailAddresses[0]).To(Equal("guardian"))
+	})
+
+	var (
+		lis net.Listener
+		srv *tunnel.Server
+	)
+
+	It("should start TLS server", func() {
+		lis, err = net.Listen("tcp", "localhost:0")
+		Expect(err).ShouldNot(HaveOccurred())
+
+		srv = tunnel.NewServer(
+			tunnel.WithCert(tunnel.X509PairPEM{
+				Cert: test.PemEncodeCert(srvCert),
+				Key:  []byte(test.PrivateRSA),
+			}),
+			tunnel.WithTLSHandshakeTimeout(200*time.Millisecond),
+		)
+		Expect(srv.ServeTLS(lis)).Should(Succeed())
+	})
+
+	var srvS, clnS io.ReadWriteCloser
+
+	It("should be possible to open a mTLS connection with a correct cert", func() {
+		var (
+			err error
+			wg  sync.WaitGroup
+		)
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			var err error
+			srvS, err = srv.Accept()
+			Expect(err).ShouldNot(HaveOccurred())
+		}()
+
+		certPem := test.PemEncodeCert(clnCert)
+		cert, err := tls.X509KeyPair(certPem, []byte(test.PrivateRSA))
+
+		rootCAs := x509.NewCertPool()
+		rootCAs.AddCert(srvCert)
+		clnS, err = tls.Dial("tcp", lis.Addr().String(), &tls.Config{
+			Certificates: []tls.Certificate{cert},
+			RootCAs:      rootCAs,
+		})
+		Expect(err).ShouldNot(HaveOccurred())
+		wg.Wait()
+	})
+
+	Context("when tls stream is open", func() {
+		It("should be able to send data s -> c", func(done Done) {
+			testDataFlow(clnS, srvS, "HELLO")
+			close(done)
+		})
+
+		It("should be able to send data s <- c", func(done Done) {
+			testDataFlow(srvS, clnS, "WORLD")
+			close(done)
+		})
+	})
+
+	var clnC net.Conn
+
+	It("should be ok to initiate non-TLS connection", func() {
+		var err error
+		clnC, err = net.Dial("tcp", lis.Addr().String())
+		Expect(err).ShouldNot(HaveOccurred())
+	})
+
+	It("should fail to accept non-TLS connection", func() {
+		_, err := srv.Accept()
+		Expect(err).Should(HaveOccurred())
+	})
+
+	It("eventually server closes and it should not be possible to use the client side", func() {
+		Eventually(func() error {
+			_, err := clnC.Write([]byte("blah"))
+			return err
+		}).ShouldNot(Succeed())
+	})
+})
