@@ -142,7 +142,7 @@ var _ = Describe("Server Header Test", func() {
 		It("Should proxy to clusterA", func() {
 			req, err := http.NewRequest("GET", "http://"+lis.Addr().String()+"/", nil)
 			Expect(err).NotTo(HaveOccurred())
-			req.Header.Add("x-cluster-id", "clusterA")
+			req.Header.Add(server.ClusterHeaderField, "clusterA")
 			resp, err := http.DefaultClient.Do(req)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -157,7 +157,7 @@ var _ = Describe("Server Header Test", func() {
 		It("Should not proxy anywhere - invalid cluster", func() {
 			req, err := http.NewRequest("GET", "http://"+lis.Addr().String()+"/", nil)
 			Expect(err).NotTo(HaveOccurred())
-			req.Header.Add("x-cluster-id", "zzzzzzz")
+			req.Header.Add(server.ClusterHeaderField, "zzzzzzz")
 			resp, err := http.DefaultClient.Do(req)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(400))
@@ -166,8 +166,8 @@ var _ = Describe("Server Header Test", func() {
 		It("Should not proxy anywhere - multiple headers", func() {
 			req, err := http.NewRequest("GET", "http://"+lis.Addr().String()+"/", nil)
 			Expect(err).NotTo(HaveOccurred())
-			req.Header.Add("x-cluster-id", "clusterA")
-			req.Header.Add("x-cluster-id", "helloworld")
+			req.Header.Add(server.ClusterHeaderField, "clusterA")
+			req.Header.Add(server.ClusterHeaderField, "helloworld")
 			resp, err := http.DefaultClient.Do(req)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(400))
