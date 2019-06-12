@@ -1,14 +1,16 @@
 import os
 import re
 import requests
+import tests
 from bs4 import BeautifulSoup
 
-RELEASE_STREAM = os.environ.get('RELEASE_STREAM')
-REGISTRY = 'quay.io' if os.environ.get('REGISTRY') is None else os.environ.get('REGISTRY')
+RELEASE_STREAM = tests.RELEASE_STREAM
+DOCS_URL = tests.DOCS_URL
+REGISTRY = tests.REGISTRY
 
 
 def test_image_registry_updated():
-    req = requests.get("https://docs.tigera.io/%s/getting-started/kubernetes/installation/calico" % RELEASE_STREAM)
+    req = requests.get("%s/%s/getting-started/kubernetes/installation/calico" % (DOCS_URL, RELEASE_STREAM))
     assert req.status_code == 200
 
     page = BeautifulSoup(req.content, features="html.parser").find("p", text="Use the following commands to pull the required Tigera Secure EE images.").find_next('code')

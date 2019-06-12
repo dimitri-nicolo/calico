@@ -5,4 +5,7 @@ layout: null
 prometheus:
   createFinalizers: true
 createCustomResources: false
+# Add the imagePullSecret calico-pull-secret since that is the pull secret our ansible scripts create in openshift-ansible
+imagePullSecrets:
+  calico-pull-secret: ""
 {% endhelm %}

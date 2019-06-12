@@ -6,14 +6,14 @@ canonical_url: https://docs.tigera.io/v2.3/usage/logs/elastic/ee-audit
 This document describes how to set up audit logging for {{site.prodname}}
 resources in OpenShift versions 3.7+.
 
-In OpenShift, you need to set up an [OpenShift Audit Configuration](https://docs.openshift.com/container-platform/latest/install_config/master_node_configuration.html#master-node-config-audit-config){:target="_blank"}
+In OpenShift, you need to set up an [OpenShift Audit Configuration](https://docs.openshift.com/container-platform/3.10/install_config/master_node_configuration.html#master-node-config-audit-config){:target="_blank"}
 using the `openshift_master_audit_config` variable in Ansible or `auditConfig` in the master config file.
 At minimum you need to set the following configuration parameters:
 1.  `enabled`: Boolean flag used to enable audit logging.
 2. `auditFilePath`: The path to the file that audit logs are written to.
 3. `policyFile`: Path to the audit policy configuration.
 4. `logFormat`: Format of the audit logs. Can be either `legacy` or `json`.
-For more details on configuration parameters and their values, please reference the [OpenShift Advanced Audit documentation](https://docs.openshift.com/container-platform/latest/install_config/master_node_configuration.html#master-node-config-advanced-audit){:target="_blank"}.
+For more details on configuration parameters and their values, please reference the [OpenShift Advanced Audit documentation](https://docs.openshift.com/container-platform/3.10/install_config/master_node_configuration.html#master-node-config-advanced-audit){:target="_blank"}.
 
 Example Ansible setup:
 

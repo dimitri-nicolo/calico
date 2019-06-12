@@ -40,7 +40,7 @@
 
    ```bash
    docker pull docker.elastic.co/elasticsearch/elasticsearch:{{site.data.versions[page.version].first.components["elasticsearch"].version}}
-   docker pull docker.elastic.co/kibana/kibana:{{site.data.versions[page.version].first.components["kibana"].version}}
+   docker pull {{page.registry}}{{site.imageNames["kibana"]}}:{{site.data.versions[page.version].first.components["kibana"].version}}
    docker pull {{page.registry}}{{site.imageNames["calicoctl"]}}:{{site.data.versions[page.version].first.components["calicoctl"].version}}
    docker pull {{page.registry}}{{site.imageNames["calicoq"]}}:{{site.data.versions[page.version].first.components["calicoctl"].version}}
    docker pull {{page.registry}}{{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
@@ -72,7 +72,7 @@
 
    ```bash
    docker tag docker.elastic.co/elasticsearch/elasticsearch:{{site.data.versions[page.version].first.components["elasticsearch"].version}} <YOUR-REGISTRY>/docker.elastic.co/elasticsearch/elasticsearch:{{site.data.versions[page.version].first.components["elasticsearch"].version}}
-   docker tag docker.elastic.co/kibana/kibana:{{site.data.versions[page.version].first.components["kibana"].version}} <YOUR-REGISTRY>/docker.elastic.co/kibana/kibana:{{site.data.versions[page.version].first.components["kibana"].version}}
+   docker tag {{page.registry}}{{site.imageNames["kibana"]}}:{{site.data.versions[page.version].first.components["kibana"].version}} <YOUR-REGISTRY>/tigera/kibana:{{site.data.versions[page.version].first.components["kibana"].version}}
    docker tag {{page.registry}}{{site.imageNames["calicoctl"]}}:{{site.data.versions[page.version].first.components["calicoctl"].version}} <YOUR-REGISTRY>/{{site.imageNames["calicoctl"]}}:{{site.data.versions[page.version].first.components["calicoctl"].version}}
    docker tag {{page.registry}}{{site.imageNames["calicoq"]}}:{{site.data.versions[page.version].first.components["calicoq"].version}} <YOUR-REGISTRY>/{{site.imageNames["calicoq"]}}:{{site.data.versions[page.version].first.components["calicoq"].version}}
    docker tag {{page.registry}}{{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}} <YOUR-REGISTRY>/{{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
@@ -107,7 +107,7 @@
 
    ```bash
    docker push <YOUR-REGISTRY>/docker.elastic.co/elasticsearch/elasticsearch:{{site.data.versions[page.version].first.components["elasticsearch"].version}}
-   docker push <YOUR-REGISTRY>/docker.elastic.co/kibana/kibana:{{site.data.versions[page.version].first.components["kibana"].version}}
+   docker push <YOUR-REGISTRY>/tigera/kibana:{{site.data.versions[page.version].first.components["kibana"].version}}
    docker push <YOUR-REGISTRY>/tigera/calicoctl:{{site.data.versions[page.version].first.components["calicoctl"].version}}
    docker push <YOUR-REGISTRY>/tigera/calicoq:{{site.data.versions[page.version].first.components["calicoq"].version}}
    docker push <YOUR-REGISTRY>/tigera/cnx-apiserver:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
@@ -144,7 +144,7 @@
    registry.
 
    ```bash
-   docker pull {{site.imageNames[include.yaml]}}:{{site.data.versions[page.version].first.components[include.yaml].version}}
+   docker pull {{page.registry}}{{site.imageNames[include.yaml]}}:{{site.data.versions[page.version].first.components[include.yaml].version}}
    ```
 
 1. Retag the image with the name of your private registry.
@@ -168,7 +168,7 @@
 
 {% if include.orchestrator == "openshift" %}
 
-1. Modify the Ansible inventory file to include [the location of the registry](https://docs.openshift.com/container-platform/latest/install/configuring_inventory_file.html#advanced-install-configuring-registry-location) which
+1. Modify the Ansible inventory file to include [the location of the registry](https://docs.openshift.com/container-platform/3.11/install/configuring_inventory_file.html#advanced-install-configuring-registry-location) which
    contains the private images and [the credentials needed to authenticate to it](https://github.com/openshift/openshift-ansible/blob/master/inventory/hosts.example#L223).
 
 {% endif %}
@@ -181,7 +181,7 @@
 
      ```
      curl -O \
-     {{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/{{include.yaml}}.yaml
+     {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/{{include.yaml}}.yaml
      ```
 
      > **Note**: You can also
@@ -192,7 +192,7 @@
 
      ```
      curl -O \
-     {{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/{{include.yaml}}.yaml
+     {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/{{include.yaml}}.yaml
      ```
 
      > **Note**: You can also
@@ -217,6 +217,13 @@
    ```bash
    alias {{include.yaml}}="kubectl exec -i -n kube-system {{include.yaml}} /{{include.yaml}} -- "
    ```
+
+   **Note**: In order to use the `{{include.yaml}}` alias
+   when reading manifests, redirect the file into stdin, for example:
+   ```
+   {{include.yaml}} create -f - < my_manifest.yaml
+   ```
+   {: .alert .alert-success}
 {% endif %}
 
 {% endif %}

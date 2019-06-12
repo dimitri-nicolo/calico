@@ -239,7 +239,7 @@ Apply the manifest appropriate to your cluster configuration.
 
 1. Continue to [Applying your license key](#applying-your-license-key).
 
-{% include {{page.version}}/apply-license.md %}
+{% include {{page.version}}/apply-license.md cli="kubectl" %}
 
 {% include {{page.version}}/cnx-monitor-install.md elasticsearch="operator" %}
 

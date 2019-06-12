@@ -44,7 +44,7 @@ optionally Elasticsearch and Kibana{% endif %} in order to enable logs.
 
 {% unless include.upgrade %}
 1. For production installs, we recommend using your own Elasticsearch cluster. If you are performing a
-   production install, do not complete any more steps on this page. Instead, refer to
+   production install, do not complete any more steps in this section. Instead, refer to
    [Using your own Elasticsearch for logs](byo-elasticsearch) for the final steps.
 
    For demonstration or proof of concept installs, you can use the bundled
@@ -169,6 +169,7 @@ optionally Elasticsearch and Kibana{% endif %} in order to enable logs.
     ```
 {% endif %}
 
+{% if include.elasticsearch != "operator" %}
 1. Update the `tigera-es-config` configmap with information on how to reach the BYO Elasticsearch cluster.
    Replace `<elasticsearch-host>` with the hostname (or IP) {{site.prodname}} should access Elasticsearch through.
    Replace `<kibana-host>` with the hostname (or IP) {{site.prodname}} should access Kibana through.
@@ -176,7 +177,7 @@ optionally Elasticsearch and Kibana{% endif %} in order to enable logs.
    sed -i -e "s?__ELASTICSEARCH_HOST__?<elasticsearch-host>?g" monitor-calico.yaml
    sed -i -e "s?__KIBANA_HOST__?<kibana-host>?g" monitor-calico.yaml
    ```
-
+{% endif %}
 
 {% include {{page.version}}/cnx-cred-sed.md yaml="monitor-calico" %}
 {% if include.platform == "docker-ee" %}
@@ -362,7 +363,7 @@ optionally Elasticsearch and Kibana{% endif %} in order to enable logs.
 1. Optionally enable either or both of the following:
    * To enforce application layer policies and secure workload-to-workload
     communications with mutually-authenticated TLS, continue to
-	[Enabling application layer policy]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/app-layer-policy).
+    [Enabling application layer policy]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/app-layer-policy).
 
    * If you are using the AWS CNI plugin and want to enforce granular access
     control between pods and AWS VPC resources, continue to

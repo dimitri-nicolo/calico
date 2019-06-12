@@ -1,15 +1,16 @@
 import os
 import yaml
 import tarfile
+import tests
 import requests
 
 
 # default vars
 PATH = os.path.abspath(os.path.dirname(__file__))
-RELEASE_STREAM = os.environ.get('RELEASE_STREAM')
-S3_BASE_URL = "https://s3.amazonaws.com/tigera-public/ee/charts"
-EE_CORE_URL = "{0}/tigera-secure-ee-core-{1}-{2}.tgz"
-EE_URL = "{0}/tigera-secure-ee-{1}-{2}.tgz"
+RELEASE_STREAM = tests.RELEASE_STREAM
+S3_BASE_URL = tests.S3_BASE_URL
+EE_CORE_URL = tests.EE_CORE_URL
+EE_URL = tests.EE_URL
 
 # we don't have a 1:1 naming scheme in values.yaml and versions.yml
 CORE_MAPPED_IMAGES = {'cnxApiserver': 'apiserver',

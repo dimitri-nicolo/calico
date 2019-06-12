@@ -1,14 +1,15 @@
 import os
 import requests
 import yaml
+import tests
 from bs4 import BeautifulSoup
 
 
 PATH = os.path.abspath(os.path.dirname(__file__))
-RELEASE_STREAM = os.environ.get('RELEASE_STREAM')
-S3_BASE_URL = "https://s3.amazonaws.com/tigera-public/ee/charts"
-EE_CORE_URL = "{0}/tigera-secure-ee-core-{1}-{2}.tgz"
-EE_URL = "{0}/tigera-secure-ee-{1}-{2}.tgz"
+RELEASE_STREAM = tests.RELEASE_STREAM
+S3_BASE_URL = tests.S3_BASE_URL
+EE_CORE_URL = tests.EE_CORE_URL
+EE_URL = tests.EE_URL
 
 with open('%s/../_data/versions.yml' % PATH) as f:
     versions = yaml.safe_load(f)

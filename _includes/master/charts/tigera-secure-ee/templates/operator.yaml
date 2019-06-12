@@ -204,6 +204,8 @@ spec:
       containers:
       - name: operator
         image: upmcenterprises/elasticsearch-operator:{{.Values.elasticsearchOperator.tag}}
+        command: ["/usr/local/bin/elasticsearch-operator"]
+        args: ["-initDaemonsetNamespace", "calico-monitoring"]
         imagePullPolicy: Always
         env:
         - name: NAMESPACE

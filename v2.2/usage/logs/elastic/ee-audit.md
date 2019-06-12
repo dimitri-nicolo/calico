@@ -114,14 +114,14 @@ advantage of the {{site.prodname}} Elasticsearch and Kibana dashboards, send you
 
 ### OpenShift
 
-Set up an [OpenShift Audit Configuration](https://docs.openshift.com/container-platform/latest/install_config/master_node_configuration.html#master-node-config-audit-config){:target="_blank"}
+Set up an [OpenShift Audit Configuration](https://docs.openshift.com/container-platform/3.10/install_config/master_node_configuration.html#master-node-config-audit-config){:target="_blank"}
 using the `openshift_master_audit_config` variable in Ansible or `auditConfig` in the master configuration file.
 At minimum you need to set the following configuration parameters:
 - `enabled`: Boolean flag used to enable audit logging.
 - `auditFilePath`: The path to the file that audit logs are written to.
 - `policyFile`: Path to the audit policy configuration.
 - `logFormat`: Format of the audit logs. Should be `json` if using sending the logs to the {{site.prodname}} Elasticsearch.
-For more details on configuration parameters and their values, please reference the [OpenShift Advanced Audit documentation](https://docs.openshift.com/container-platform/latest/install_config/master_node_configuration.html#master-node-config-advanced-audit){:target="_blank"}.
+For more details on configuration parameters and their values, please reference the [OpenShift Advanced Audit documentation](https://docs.openshift.com/container-platform/3.10/install_config/master_node_configuration.html#master-node-config-advanced-audit){:target="_blank"}.
 
 1. Either set the appropriate ansible variable (adjust paths as necessary):
 

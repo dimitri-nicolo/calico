@@ -6,7 +6,7 @@ canonical_url: https://docs.tigera.io/v2.3/getting-started/openshift/installatio
 
 Installation of {{site.prodname}} in OpenShift is integrated in openshift-ansible.
 The information below explains the variables which must be set during the standard
-[Advanced Installation](https://docs.openshift.org/latest/install_config/install/advanced_install.html#configuring-cluster-variables).
+[Advanced Installation](https://docs.openshift.com/container-platform/3.11/install/configuring_inventory_file.html#configuring-cluster-variables).
 
 ## Before you begin
 

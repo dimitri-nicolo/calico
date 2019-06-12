@@ -30,7 +30,8 @@ For OpenShift Container Platform 3.11 also specify the following variables:
   - `oreg_auth_user`
   - `oreg_auth_password`
 
-If your private registry requires a pull secret, specify the path on each host to your pull secret in the following variable:
+If your private registry requires a pull secret, specify the path on each host to your
+private registry credentials (typically a `~/.docker/config.json` file) in the following variable:
   - `calico_image_credentials`
 
 Also ensure that you have an explicitly defined host in the `[etcd]` group.
@@ -97,7 +98,7 @@ such that {{site.prodname}} connects to an etcd you have already set up by follo
 
 1. Continue to [Applying your license key](#applying-your-license-key).
 
-{% include {{page.version}}/apply-license.md init="openshift" %}
+{% include {{page.version}}/apply-license.md init="openshift" cli="oc" %}
 
 {% if include.upgrade %}
 ## Installing metrics and logs

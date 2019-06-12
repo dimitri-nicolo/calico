@@ -129,7 +129,7 @@
    registry.
 
    ```bash
-   docker pull {{site.imageNames[include.yaml]}}:{{site.data.versions[page.version].first.components[include.yaml].version}}
+   docker pull {{page.registry}}{{site.imageNames[include.yaml]}}:{{site.data.versions[page.version].first.components[include.yaml].version}}
    ```
 
 1. Retag the image with the name of your private registry.
@@ -214,7 +214,7 @@
 
 {% if include.orchestrator == "openshift" %}
 
-1. Modify the Ansible inventory file to include [the location of the registry](https://docs.openshift.com/container-platform/latest/install/configuring_inventory_file.html#advanced-install-configuring-registry-location) which
+1. Modify the Ansible inventory file to include [the location of the registry](https://docs.openshift.com/container-platform/3.11/install/configuring_inventory_file.html#advanced-install-configuring-registry-location) which
    contains the private images and [the credentials needed to authenticate to it](https://github.com/openshift/openshift-ansible/blob/master/inventory/hosts.example#L223).
 
 {% endif %}
@@ -263,6 +263,13 @@
    ```bash
    alias {{include.yaml}}="kubectl exec -i -n kube-system {{include.yaml}} /{{include.yaml}} -- "
    ```
+
+   **Note**: In order to use the `{{include.yaml}}` alias
+   when reading manifests, redirect the file into stdin, for example:
+   ```
+   {{include.yaml}} create -f - < my_manifest.yaml
+   ```
+   {: .alert .alert-success}
 {% endif %}
 
 {% endif %}

@@ -1258,9 +1258,9 @@ checkCRDs() {
   svcCRD="servicemonitors.monitoring.coreos.com"
   elasticCRD="elasticsearchclusters.enterprises.upmc.com"
 
-  echo -n "waiting for Custom Resource Definitions to be created: "
+  count=60
+  echo -n "waiting up to $count seconds for Custom Resource Definitions to be created: "
 
-  count=30
   while [[ $count -ne 0 ]]; do
     if (doesCRDExist $alertCRD) && (doesCRDExist $promCRD) && (doesCRDExist $svcCRD) && (doesCRDExist $elasticCRD); then
         echo "all CRDs exist!"

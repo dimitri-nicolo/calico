@@ -443,6 +443,9 @@ spec:
       serviceAccountName: tigera-fluentd
       imagePullSecrets:
         - name: cnx-pull-secret
+{%- if  include.orch == "openshift" %}
+        - name: calico-pull-secret
+{%- endif %}
       containers:
         - name: fluentd
           image: {{page.registry}}{{site.imageNames["fluentd"]}}:{{site.data.versions[page.version].first.components["fluentd"].version}}
@@ -594,10 +597,16 @@ spec:
                 fieldRef:
                   fieldPath: spec.nodeName
 {%- if include.orch == "openshift" %}
+            - name: KUBE_AUDIT_LOG
+              value: /var/lib/origin/audit/kube-audit.log
           securityContext:
             privileged: true
 {%- endif %}
           volumeMounts:
+{%- if include.orch == "openshift" %}
+            - name: kube-audit-logs
+              mountPath: /var/lib/origin
+{%- endif %}
             - name: var-log-calico
               mountPath: /var/log/calico
             - name: es-config
@@ -627,6 +636,12 @@ spec:
             initialDelaySeconds: 60
             periodSeconds: 60
       volumes:
+{%- if include.orch == "openshift" %}
+        - name: kube-audit-logs
+          hostPath:
+            type: DirectoryOrCreate
+            path: /var/lib/origin
+{%- endif %}
         - name: var-log-calico
           hostPath:
             type: DirectoryOrCreate
@@ -673,6 +688,9 @@ spec:
               effect: NoSchedule
           imagePullSecrets:
             - name: cnx-pull-secret
+{%- if include.orch == "openshift" %}
+            - name: calico-pull-secret
+{%- endif %}
           containers:
             - name: tigera-es-curator
               image: {{page.registry}}{{site.imageNames["es-curator"]}}:{{site.data.versions[page.version].first.components["es-curator"].version}}
@@ -758,6 +776,9 @@ spec:
       restartPolicy: OnFailure
       imagePullSecrets:
         - name: cnx-pull-secret
+{%- if include.orch == "openshift" %}
+        - name: calico-pull-secret
+{%- endif %}
       containers:
       - name: install
         image: {{page.registry}}{{site.imageNames["elastic-tsee-installer"]}}:{{site.data.versions[page.version].first.components["elastic-tsee-installer"].version}}

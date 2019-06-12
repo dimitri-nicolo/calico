@@ -121,6 +121,8 @@ def gen_chart_specific_values_v2_4(versions, imageNames, imageRegistry, chart)
       # it to ingest logs volume-mounted from the host in environments where doing
       # so is restricted.
       runAsPrivileged: false
+      # Optional configurating for changing the Fluentd mount path for kube audit log files to ingest.
+      kubeAuditMountPath: "/var/log/calico"
     
       env:
         # Optional environment variables for configuring the Tigera fluentd.

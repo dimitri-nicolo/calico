@@ -192,7 +192,7 @@ for each [remote cluster](../../../networking/federation/index#terminology). Ens
 
 1. Continue to [Applying your license key](#applying-your-license-key).
 
-{% include {{page.version}}/apply-license.md %}
+{% include {{page.version}}/apply-license.md cli="kubectl" %}
 
 {% include {{page.version}}/cnx-monitor-install.md elasticsearch="operator" type="policy-only" %}
 

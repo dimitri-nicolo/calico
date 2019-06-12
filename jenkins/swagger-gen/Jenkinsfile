@@ -78,7 +78,7 @@ pipeline {
                             sh "cp $DOCKER_AUTH docker_auth.json"
                             sh "terraform init"
                             sh "make master_ssh_key"
-                            sh "terraform apply"
+                            sh "terraform apply -auto-approve"
                             // Remove the taint from master, but expect an error as this command tries to remove the taint from nodes (which do not have it).
                             sh '$(terraform output master_connect_command) /usr/bin/kubectl taint nodes --all node-role.kubernetes.io/master- || true'
                         }

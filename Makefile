@@ -93,7 +93,7 @@ test: docs_test.created
 	-e QUAY_API_TOKEN=$(QUAY_API_TOKEN) \
 	-e GIT_HASH=$(GIT_HASH) \
 	$(DOCS_TEST_CONTAINER) sh -c \
-	"nosetests . -e "$(EXCLUDE_REGEX)" -v --nocapture --with-xunit \
+	"nosetests . $(EXCLUDE_PARAMS) -v --nocapture --with-xunit \
 	--xunit-file='/code/tests/report/nosetests.xml' \
 	--with-timer"
 
