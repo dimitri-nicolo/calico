@@ -47,6 +47,7 @@ import:
 - package: github.com/spf13/cobra
   version: ~0.0.3
 - package: github.com/projectcalico/libcalico-go
+  version: e9a74b29328b7376cb88fc539b7c7e000e47d278
   repo:    git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib/apiconfig
@@ -73,7 +74,7 @@ import:
   - lib/validator/v1
 - package: github.com/projectcalico/typha
   repo:    git@github.com:tigera/typha-private
-  version: 29068fbb971fa15c1fcd3dfb40aeda9d581c8c79
+  version: 085d3c3f83a814c2761ac2a95f0ee91809a5876b
   subpackages:
   - pkg/syncclient
   - pkg/tlsutils
@@ -163,7 +164,7 @@ import:
 - package: github.com/tigera/licensing
   repo: git@github.com:tigera/licensing
   vcs: git
-  version: c9432e3124d3f9da2f3e34a703d815b072f6b0b4
+  version: 4ef30a4e6de92153a6589af226e77c567f530541
   subpackages:
   - client
   - monitor
