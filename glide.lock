@@ -1,5 +1,5 @@
-hash: cde95337b7b2eaef765225b280c9d7c610480c737cf7c8a9c5766ffa5c4f7607
-updated: 2019-05-05T16:22:03.320533948Z
+hash: 34ba3b4d8c8e6f6d973d4e3eb26e80f30b5c7f82ecb58bdf0e062c76ae61afab
+updated: 2019-06-13T20:49:40.021838296Z
 imports:
 - name: github.com/docopt/docopt-go
   version: 784ddc588536785e7299f7272f39101f7faccc3f
@@ -13,13 +13,13 @@ imports:
   subpackages:
   - google/rpc
 - name: github.com/gogo/protobuf
-  version: c0656edd0d9eab7c66d1eb0c568f9039345796f7
+  version: dadb625850898f31a8e40e83492f4a7132e520a2
   subpackages:
   - proto
   - sortkeys
   - types
 - name: github.com/golang/protobuf
-  version: 1643683e1b54a9e88ad26d98f81400c8c9d9f4f9
+  version: b285ee9cfc6c881bb20c0d8dc73370ea9b9ec90f
   subpackages:
   - proto
 - name: github.com/konsorten/go-windows-terminal-sequences
@@ -41,8 +41,8 @@ imports:
   - matchers/support/goraph/util
   - types
 - name: github.com/projectcalico/libcalico-go
-  version: 7dfa0676b8ea724cb5786a912697253e3c8bdb08
-  repo: git@github.com:tigera/libcalico-go-private
+  version: e9a74b29328b7376cb88fc539b7c7e000e47d278
+  repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apis/v3
   - lib/client
@@ -51,26 +51,26 @@ imports:
   - lib/selector/parser
   - lib/selector/tokenizer
 - name: github.com/sirupsen/logrus
-  version: 8bdbc7bcc01dcbb8ec23dc8a28e332258d25251f
+  version: 839c75faf7f98a33d445d181f3018b5c3409a45e
 - name: golang.org/x/net
-  version: 1c05540f6879653db88113bc4a2b70aec4bd491f
+  version: d28f0bde5980168871434b95cfc858db9f2a7a99
   subpackages:
   - context
   - html
   - html/atom
   - html/charset
+  - http/httpguts
   - http2
   - http2/hpack
   - idna
   - internal/timeseries
-  - lex/httplex
   - trace
 - name: golang.org/x/sys
-  version: 1b2967e3c290b7c545b3db0deeda16e9be4f98a2
+  version: 5ed2794edfdc1c54dfb61d619c5944285f35d444
   subpackages:
   - unix
 - name: golang.org/x/text
-  version: b19bf474d317b857955b12035d2c5acb57ce8b01
+  version: 342b2e1fbaa52c93f31447ad2c6abc048c63e475
   subpackages:
   - encoding
   - encoding/charmap
@@ -82,6 +82,8 @@ imports:
   - encoding/simplifiedchinese
   - encoding/traditionalchinese
   - encoding/unicode
+  - internal/language
+  - internal/language/compact
   - internal/tag
   - internal/utf8internal
   - language
@@ -111,4 +113,4 @@ imports:
   - pkg/util/validation
 testImports:
 - name: gopkg.in/yaml.v2
-  version: 670d4cfef0544295bc27a114dbac37980d83185a
+  version: 51d6538a90f86fe93ac480b35f37b2be17fef232
