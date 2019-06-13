@@ -103,8 +103,8 @@ GO_BUILD_VER?=v0.20
 # we do not need to use the arch since go-build:v0.15 now is multi-arch manifest
 CALICO_BUILD=calico/go-build:$(GO_BUILD_VER)
 
-#This is a version with known container with compatible versions of sed/grep etc. 
-TOOLING_BUILD?=calico/go-build:v0.20	
+#This is a version with known container with compatible versions of sed/grep etc.
+TOOLING_BUILD?=calico/go-build:v0.20
 
 # Figure out version information.  To support builds from release tarballs, we default to
 # <unknown> if this isn't a git checkout.
@@ -201,7 +201,6 @@ vendor vendor/.up-to-date: glide.lock
 	mkdir -p $$HOME/.glide
 	$(DOCKER_RUN) $(CALICO_BUILD) glide install --strip-vendor
 	touch vendor/.up-to-date
-
 
 bin/calico-typha: bin/calico-typha-$(ARCH)
 	ln -f bin/calico-typha-$(ARCH) bin/calico-typha
@@ -309,7 +308,7 @@ sub-base-tag-images-%:
 ###############################################################################
 
 ## Update dependency pins in glide.yaml
-update-pins: update-libcalico-pin 
+update-pins: update-libcalico-pin
 
 ## deprecated target alias
 update-libcalico: update-pins
@@ -326,7 +325,7 @@ guard-ssh-forwarding-bug:
 ###############################################################################
 ## libcalico
 
-## Set the default LIBCALICO source for this project 
+## Set the default LIBCALICO source for this project
 LIBCALICO_PROJECT_DEFAULT=tigera/libcalico-go-private.git
 LIBCALICO_GLIDE_LABEL=projectcalico/libcalico-go
 
@@ -337,8 +336,8 @@ LIBCALICO_REPO?=github.com/$(LIBCALICO_PROJECT_DEFAULT)
 LIBCALICO_VERSION?=$(shell git ls-remote git@github.com:$(LIBCALICO_PROJECT_DEFAULT) $(LIBCALICO_BRANCH) 2>/dev/null | cut -f 1)
 
 ## Guard to ensure LIBCALICO repo and branch are reachable
-guard-git-libcalico: 
-	@_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ; 
+guard-git-libcalico:
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ;
 	@_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "$(LIBCALICO_BRANCH)" "Ensure the branch exists, or set LIBCALICO_BRANCH variable";
 	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
 	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "$(LIBCALICO_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
