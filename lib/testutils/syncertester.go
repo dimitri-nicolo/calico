@@ -24,6 +24,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	gomegatypes "github.com/onsi/gomega/types"
+
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 )
@@ -299,7 +300,7 @@ func (st *SyncerTester) GetCacheEntries() []model.KVPair {
 	return es
 }
 
-// waitForNumUpdates waits up to 2s and exits if the number of stored updates is equal to
+// waitForNumUpdates waits up to 4s and exits if the number of stored updates is equal to
 // the number of expected updates.
 func (st *SyncerTester) waitForNumUpdates(expected []api.Update) {
 	// Poll until we have at least the correct number of updates to check.
@@ -317,7 +318,7 @@ func (st *SyncerTester) waitForNumUpdates(expected []api.Update) {
 	}
 }
 
-// waitForNumOnUpdates waits up to 2s and exits if the number of stored OnUpdates is equal to
+// waitForNumOnUpdates waits up to 4s and exits if the number of stored OnUpdates is equal to
 // the number of expected OnUpdates.
 func (st *SyncerTester) waitForNumOnUpdates(expected [][]api.Update) {
 	// Poll until we have at least the correct number of updates to check.

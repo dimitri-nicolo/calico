@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 
 package felixsyncer_test
 
@@ -467,7 +467,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests", testutils.
 			Expect(outError).NotTo(HaveOccurred())
 
 			// Keep track of the set of events we will expect from the Felix syncer. Start with the remote
-			// cluster staus updates as the connection succeeds.
+			// cluster status updates as the connection succeeds.
 			expectedEvents := []api.Update{
 				{
 					KVPair: model.KVPair{
