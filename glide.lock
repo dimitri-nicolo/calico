@@ -1,5 +1,5 @@
-hash: 3ab6bfa27ba6988f4974242fdbf627165baee92eae90aebfe104c4176977118c
-updated: 2019-06-12T10:21:52.118779-07:00
+hash: 3ab0da23fb53395c8118e004f1833d42bb6c1d33205eaaaa97a2b4a183185516
+updated: 2019-06-13T10:01:43.83663547-07:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -72,11 +72,11 @@ imports:
 - name: github.com/go-openapi/jsonreference
   version: 13c6e3589ad90f49bd3e3bbe2c2cb3d7a4142272
 - name: github.com/go-openapi/spec
-  version: 1de3e0542de65ad8d75452a595886fdd0befb363
+  version: b2056d62a953adee01fed8ee65a046bd8f0419d5
 - name: github.com/go-openapi/swag
   version: f3f9494671f93fcff853e3c6e9e948b3eb71e590
 - name: github.com/go-playground/locales
-  version: f63010822830b6fe52288ee52d5a1151088ce039
+  version: 630ebbb602847eba93e75ae38bbc7bb7abcf1ff3
   subpackages:
   - currency
 - name: github.com/go-playground/universal-translator
@@ -131,7 +131,7 @@ imports:
 - name: github.com/json-iterator/go
   version: 13f86432b882000a51c6e610c620974462691a97
 - name: github.com/kelseyhightower/envconfig
-  version: dd1402a4d99de9ac2f396cd6fcb957bc2c695ec1
+  version: 0b417c4ec4a8a82eecc22a1459a504aa55163d61
 - name: github.com/kubernetes/repo-infra
   version: df02ded38f9506e5bbcbf21702034b4fef815f2f
 - name: github.com/leodido/go-urn
@@ -147,7 +147,7 @@ imports:
 - name: github.com/Masterminds/semver
   version: 59c29afe1a994eacb71c833025ca7acf874bb1da
 - name: github.com/Masterminds/sprig
-  version: 9f8fceff796fb9f4e992cd2bece016be0121ab74
+  version: 2625cd487a689ca112e1301a58b89b347ba2c994
 - name: github.com/matttproud/golang_protobuf_extensions
   version: fc2b8d3a73c4867e51861bbdd5ae3c1f0869dd6a
   subpackages:
@@ -167,7 +167,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 688f5ee533fd9d6e864d2a05e13cae3af2390902
+  version: e9a74b29328b7376cb88fc539b7c7e000e47d278
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
@@ -176,6 +176,7 @@ imports:
   - lib/apis/v3
   - lib/backend
   - lib/backend/api
+  - lib/backend/encap
   - lib/backend/etcdv3
   - lib/backend/k8s
   - lib/backend/k8s/conversion
@@ -186,7 +187,6 @@ imports:
   - lib/errors
   - lib/hash
   - lib/ipam
-  - lib/ipip
   - lib/names
   - lib/namespace
   - lib/net
@@ -232,7 +232,7 @@ imports:
 - name: github.com/spf13/pflag
   version: 4c012f6dcd9546820e378d0bdda4d8fc772cdfea
 - name: github.com/tigera/licensing
-  version: c9432e3124d3f9da2f3e34a703d815b072f6b0b4
+  version: 4ef30a4e6de92153a6589af226e77c567f530541
   repo: git@github.com:tigera/licensing
   vcs: git
   subpackages:
@@ -296,11 +296,11 @@ imports:
   subpackages:
   - rate
 - name: golang.org/x/tools
-  version: 5a8dccf5b48ae388eebac31f4077f14adda4dbc6
+  version: 149740340b5f650cf618fb4e02716f04efac92bb
   subpackages:
   - import
 - name: google.golang.org/appengine
-  version: 54a98f90d1c46b7731eb8fb305d2a321c30ef610
+  version: b2f4a3cf3c67576a2ee09e1fe62656a5086ce880
   subpackages:
   - internal
   - internal/app_identity
@@ -337,7 +337,7 @@ imports:
   - tap
   - transport
 - name: gopkg.in/go-playground/validator.v9
-  version: b199fa0642d29caca62b6a99d65cc981ba5edc3b
+  version: 884d31b8cad6a1ec877f2400d555924cea03bbea
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: gopkg.in/natefinch/lumberjack.v2
