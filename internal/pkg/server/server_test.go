@@ -70,7 +70,6 @@ var _ = Describe("Server", func() {
 		})
 
 		It("should be able to get sorted list of clusters", func() {
-			Skip("FIXME")
 			list := listClusters(lis.Addr().String())
 			Expect(len(list)).To(Equal(2))
 			Expect(list[0].DisplayName).To(Equal("clusterA"))
