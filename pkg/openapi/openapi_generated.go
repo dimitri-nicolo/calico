@@ -362,6 +362,12 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Format: "",
 							},
 						},
+						"etcdDiscoverySrv": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
+						},
 						"etcdUsername": {
 							SchemaProps: spec.SchemaProps{
 								Type:   []string{"string"},
@@ -393,7 +399,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							},
 						},
 					},
-					Required: []string{"etcdScheme", "etcdAuthority", "etcdEndpoints", "etcdUsername", "etcdPassword", "etcdKeyFile", "etcdCertFile", "etcdCACertFile"},
+					Required: []string{"etcdScheme", "etcdAuthority", "etcdEndpoints", "etcdDiscoverySrv", "etcdUsername", "etcdPassword", "etcdKeyFile", "etcdCertFile", "etcdCACertFile"},
 				},
 			},
 			Dependencies: []string{},
@@ -2203,6 +2209,297 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 			},
 			Dependencies: []string{},
 		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmark": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "CISBenchmark describes a CIS benchmarking result across an entire cluster.",
+					Properties: map[string]spec.Schema{
+						"type": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
+						},
+						"highCount": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"integer"},
+								Format: "int32",
+							},
+						},
+						"medCount": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"integer"},
+								Format: "int32",
+							},
+						},
+						"lowCount": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"integer"},
+								Format: "int32",
+							},
+						},
+						"nodes": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkNode"),
+										},
+									},
+								},
+							},
+						},
+					},
+					Required: []string{"type", "highCount", "medCount", "lowCount", "nodes"},
+				},
+			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkNode"},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkNode": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "CISBenchmarkNode describes a CIS benchmarking result on a single node.",
+					Properties: map[string]spec.Schema{
+						"nodeName": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
+						},
+						"summary": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkSummary"),
+							},
+						},
+						"results": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkSectionResult"),
+							},
+						},
+					},
+					Required: []string{"nodeName", "summary", "results"},
+				},
+			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkSectionResult", "github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkSummary"},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkParams": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "CISBenchmarkParams contains the parameters for configuring a CIS benchmark report.",
+					Properties: map[string]spec.Schema{
+						"includeUnscoredTests": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Specifies if the report should also show results for scored/not-scored tests.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
+						},
+						"exclude": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Exclude is an array of test indices to exclude from the report.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
+									},
+								},
+							},
+						},
+						"include": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Include is an array of test indices to show in the report. Is additive if IncludeUnscoredTests is true. Takes precedence over Exclude.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
+									},
+								},
+							},
+						},
+						"highThreshold": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Interpretted as a percentage to indicate at what levels of passing tests a node should be considered HIGH, MED, and LOW.",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
+						},
+						"medThreshold": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"integer"},
+								Format: "int32",
+							},
+						},
+						"numFailedTests": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Configure the number of top failed tests to show up on the report.",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
+						},
+					},
+					Required: []string{"includeUnscoredTests", "exclude", "include", "highThreshold", "medThreshold", "numFailedTests"},
+				},
+			},
+			Dependencies: []string{},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkResult": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "CISBenchmarkResult describes the result of a single CIS benchmark check.",
+					Properties: map[string]spec.Schema{
+						"testNumber": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
+						},
+						"testDesc": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
+						},
+						"testInfo": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
+									},
+								},
+							},
+						},
+						"status": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
+						},
+						"scored": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"boolean"},
+								Format: "",
+							},
+						},
+					},
+					Required: []string{"testNumber", "testDesc", "testInfo", "status", "scored"},
+				},
+			},
+			Dependencies: []string{},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkSectionResult": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "CISBenchmarkSectionResult describes the result of running the CIS benchmark on a single component.",
+					Properties: map[string]spec.Schema{
+						"status": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
+						},
+						"section": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
+						},
+						"desc": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
+						},
+						"pass": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"integer"},
+								Format: "int32",
+							},
+						},
+						"fail": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"integer"},
+								Format: "int32",
+							},
+						},
+						"info": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"integer"},
+								Format: "int32",
+							},
+						},
+						"results": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkResult"),
+										},
+									},
+								},
+							},
+						},
+					},
+					Required: []string{"status", "section", "desc", "pass", "fail", "info", "results"},
+				},
+			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkResult"},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkSummary": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "CISBenchmarkSummary keeps count of tests passed, failed, and marked as info. Also has a status field to describe whether it is in HIGH, MED, or LOW status (based on [high|med]Threshold).",
+					Properties: map[string]spec.Schema{
+						"status": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
+						},
+						"totalPass": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"integer"},
+								Format: "int32",
+							},
+						},
+						"totalFail": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"integer"},
+								Format: "int32",
+							},
+						},
+						"totalInfo": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"integer"},
+								Format: "int32",
+							},
+						},
+						"total": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"integer"},
+								Format: "int32",
+							},
+						},
+					},
+					Required: []string{"status", "totalPass", "totalFail", "totalInfo", "total"},
+				},
+			},
+			Dependencies: []string{},
+		},
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ClusterInformation": {
 			Schema: spec.Schema{
 				SchemaProps: spec.SchemaProps{
@@ -3067,6 +3364,12 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Format: "int32",
 							},
 						},
+						"XDPRefreshInterval": {
+							SchemaProps: spec.SchemaProps{
+								Description: "XDPRefreshInterval is the period at which Felix re-checks all XDP state to ensure that no other process has accidentally broken Calico's BPF maps or attached programs. Set to 0 to disable XDP refresh. [Default: 90s]",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+							},
+						},
 						"netlinkTimeout": {
 							SchemaProps: spec.SchemaProps{
 								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
@@ -3102,7 +3405,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 						},
 						"interfaceExclude": {
 							SchemaProps: spec.SchemaProps{
-								Description: "InterfaceExclude is a list of interfaces that Felix should exclude when monitoring for host endpoints.  The default value ensures that Felix ignores Kubernetes' IPVS dummy interface, which is used internally by kube-proxy.  [Default: kube-ipvs0]",
+								Description: "InterfaceExclude is a comma-separated list of interfaces that Felix should exclude when monitoring for host endpoints. The default value ensures that Felix ignores Kubernetes' IPVS dummy interface, which is used internally by kube-proxy. If you want to exclude multiple interface names using a single value, the list supports regular expressions. For regular expressions you must wrap the value with '/'. For example having values '/^kube/,veth1' will exclude all interfaces that begin with 'kube' and also the interface 'veth1'. [Default: kube-ipvs0]",
 								Type:        []string{"string"},
 								Format:      "",
 							},
@@ -3186,6 +3489,31 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Description: "IPIPMTU is the MTU to set on the tunnel device. See Configuring MTU [Default: 1440]",
 								Type:        []string{"integer"},
 								Format:      "int32",
+							},
+						},
+						"vxlanEnabled": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"boolean"},
+								Format: "",
+							},
+						},
+						"vxlanMTU": {
+							SchemaProps: spec.SchemaProps{
+								Description: "VXLANMTU is the MTU to set on the tunnel device. See Configuring MTU [Default: 1440]",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
+						},
+						"vxlanPort": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"integer"},
+								Format: "int32",
+							},
+						},
+						"vxlanVNI": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"integer"},
+								Format: "int32",
 							},
 						},
 						"reportingInterval": {
@@ -3360,6 +3688,13 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Ref:         ref("github.com/projectcalico/libcalico-go/lib/numorstring.Port"),
 							},
 						},
+						"natOutgoingAddress": {
+							SchemaProps: spec.SchemaProps{
+								Description: "NATOutgoingAddress specifies an address to use when performing source NAT for traffic in a natOutgoing pool that is leaving the network. By default the address used is an address on the interface the traffic is leaving on (ie it uses the iptables MASQUERADE target)",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
 						"externalNodesList": {
 							SchemaProps: spec.SchemaProps{
 								Description: "ExternalNodesCIDRList is a list of CIDR's of external-non-calico-nodes which may source tunnel traffic and have the tunneled traffic be accepted at calico nodes.",
@@ -3456,6 +3791,27 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							SchemaProps: spec.SchemaProps{
 								Type:   []string{"string"},
 								Format: "",
+							},
+						},
+						"sidecarAccelerationEnabled": {
+							SchemaProps: spec.SchemaProps{
+								Description: "SidecarAccelerationEnabled enables experimental sidecar acceleration [Default: false]",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
+						},
+						"xdpEnabled": {
+							SchemaProps: spec.SchemaProps{
+								Description: "XDPEnabled enables XDP acceleration for suitable untracked incoming deny rules. [Default: true]",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
+						},
+						"genericXDPEnabled": {
+							SchemaProps: spec.SchemaProps{
+								Description: "GenericXDPEnabled enables Generic XDP so network cards that don't support XDP offload or driver modes can use XDP. This is not recommended since it doesn't provide better performance than iptables. [Default: false]",
+								Type:        []string{"boolean"},
+								Format:      "",
 							},
 						},
 						"syslogReporterNetwork": {
@@ -3737,7 +4093,15 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 							},
 						},
+						"windowsNetworkName": {
+							SchemaProps: spec.SchemaProps{
+								Description: "WindowsNetworkName specifies which Windows HNS networks Felix should operate on.  The default is to match networks that start with \"calico\".  Supports regular expression syntax.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
 					},
+					Required: []string{"XDPRefreshInterval"},
 				},
 			},
 			Dependencies: []string{
@@ -5204,6 +5568,13 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Format:      "",
 							},
 						},
+						"vxlanMode": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Contains configuration for VXLAN tunneling for this pool. If not specified, then this is defaulted to \"Never\" (i.e. VXLAN tunelling is disabled).",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
 						"ipipMode": {
 							SchemaProps: spec.SchemaProps{
 								Description: "Contains configuration for IPIP tunneling for this pool. If not specified, then this is defaulted to \"Never\" (i.e. IPIP tunelling is disabled).",
@@ -5604,6 +5975,110 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 			Dependencies: []string{
 				"github.com/projectcalico/libcalico-go/lib/apis/v3.Rule"},
 		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkSet": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "NetworkSet is the Namespaced-equivalent of the GlobalNetworkSet.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Standard object's metadata.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							},
+						},
+						"spec": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Specification of the NetworkSet.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkSetSpec"),
+							},
+						},
+					},
+				},
+			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkSetSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkSetList": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "NetworkSetList contains a list of NetworkSet resources.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+							},
+						},
+						"items": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkSet"),
+										},
+									},
+								},
+							},
+						},
+					},
+					Required: []string{"metadata", "items"},
+				},
+			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkSet", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkSetSpec": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "NetworkSetSpec contains the specification for a NetworkSet resource.",
+					Properties: map[string]spec.Schema{
+						"nets": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The list of IP networks that belong to this set.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			Dependencies: []string{},
+		},
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.Node": {
 			Schema: spec.Schema{
 				SchemaProps: spec.SchemaProps{
@@ -5738,6 +6213,20 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							SchemaProps: spec.SchemaProps{
 								Description: "BGP configuration for this node.",
 								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.NodeBGPSpec"),
+							},
+						},
+						"ipv4VXLANTunnelAddr": {
+							SchemaProps: spec.SchemaProps{
+								Description: "IPv4VXLANTunnelAddr is the IPv4 address of the VXLAN tunnel.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"vxlanTunnelMACAddr": {
+							SchemaProps: spec.SchemaProps{
+								Description: "VXLANTunnelMACAddr is the MAC address of the VXLAN tunnel.",
+								Type:        []string{"string"},
+								Format:      "",
 							},
 						},
 						"orchRefs": {
@@ -6362,12 +6851,18 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Format:      "",
 							},
 						},
+						"cis": {
+							SchemaProps: spec.SchemaProps{
+								Description: "This field contain all the parameters for configuring a CIS benchmark report.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkParams"),
+							},
+						},
 					},
 					Required: []string{"reportType"},
 				},
 			},
 			Dependencies: []string{
-				"github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsSelection"},
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkParams", "github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsSelection"},
 		},
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ReportStatus": {
 			Schema: spec.Schema{

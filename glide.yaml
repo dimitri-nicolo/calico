@@ -10,7 +10,7 @@ import:
   - pkg/transport
 - package: github.com/projectcalico/libcalico-go
   repo: git@github.com:tigera/libcalico-go-private.git
-  version: 688f5ee533fd9d6e864d2a05e13cae3af2390902
+  version: e9a74b29328b7376cb88fc539b7c7e000e47d278
   subpackages:
   - lib/apiconfig
   - lib/apis/v3
@@ -20,7 +20,7 @@ import:
   - lib/options
   - lib/watch
 - package: github.com/tigera/licensing
-  version: c9432e3124d3f9da2f3e34a703d815b072f6b0b4
+  version: 4ef30a4e6de92153a6589af226e77c567f530541
   repo: git@github.com:tigera/licensing
   vcs: git
   subpackages:
