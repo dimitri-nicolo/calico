@@ -114,7 +114,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 						UpdateType: api.UpdateTypeKVNew,
 					})
 				}
-				for _, n := range []string{"default", "kube-public", "kube-system", "namespace-1", "namespace-2"} {
+				for _, n := range []string{"default", "kube-public", "kube-system", "namespace-1", "namespace-2", "kube-node-lease"} {
 					expectedEvents = append(expectedEvents, api.Update{
 						KVPair: model.KVPair{
 							Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "ksa." + n + ".default"}},
@@ -271,7 +271,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 						UpdateType: api.UpdateTypeKVNew,
 					})
 				}
-				for _, n := range []string{"default", "kube-public", "kube-system", "namespace-1", "namespace-2"} {
+				for _, n := range []string{"default", "kube-public", "kube-system", "namespace-1", "namespace-2", "kube-node-lease"} {
 					expectedEvents = append(expectedEvents, api.Update{
 						KVPair: model.KVPair{
 							Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "ksa." + n + ".default"}},
@@ -368,7 +368,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 						UpdateType: api.UpdateTypeKVNew,
 					})
 				}
-				for _, n := range []string{"default", "kube-public", "kube-system", "namespace-1", "namespace-2"} {
+				for _, n := range []string{"default", "kube-public", "kube-system", "namespace-1", "namespace-2", "kube-node-lease"} {
 					expectedEvents = append(expectedEvents, api.Update{
 						KVPair: model.KVPair{
 							Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "ksa." + n + ".default"}},
@@ -641,7 +641,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests", testutils.
 						UpdateType: api.UpdateTypeKVNew,
 					})
 				}
-				for _, n := range []string{"default", "kube-public", "kube-system", "namespace-1", "namespace-2"} {
+				for _, n := range []string{"default", "kube-public", "kube-system", "namespace-1", "namespace-2", "kube-node-lease"} {
 					expectedEvents = append(expectedEvents, api.Update{
 						KVPair: model.KVPair{
 							Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "ksa." + n + ".default"}},
@@ -772,7 +772,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests", testutils.
 						UpdateType: api.UpdateTypeKVNew,
 					})
 				}
-				for _, n := range []string{"default", "kube-public", "kube-system", "namespace-1", "namespace-2"} {
+				for _, n := range []string{"default", "kube-public", "kube-system", "namespace-1", "namespace-2", "kube-node-lease"} {
 					expectedEvents = append(expectedEvents, api.Update{
 						KVPair: model.KVPair{
 							Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "ksa." + n + ".default"}},
@@ -927,7 +927,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests", testutils.
 						UpdateType: api.UpdateTypeKVNew,
 					})
 				}
-				for _, n := range []string{"default", "kube-public", "kube-system", "namespace-1", "namespace-2"} {
+				for _, n := range []string{"default", "kube-public", "kube-system", "namespace-1", "namespace-2", "kube-node-lease"} {
 					expectedEvents = append(expectedEvents, api.Update{
 						KVPair: model.KVPair{
 							Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "ksa." + n + ".default"}},
