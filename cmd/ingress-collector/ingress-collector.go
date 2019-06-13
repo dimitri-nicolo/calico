@@ -28,6 +28,6 @@ func main() {
 func StartCollector(collector collector.IngressCollector, config *config.Config) {
 	opts := uds.GetDialOptions()
 	felixClient := felixclient.NewFelixClient(config.DialTarget, opts)
-	felixClient.SendLoop(context.Background(), collector)
+	felixClient.CollectAndSend(context.Background(), collector)
 	return
 }

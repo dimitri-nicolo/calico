@@ -12,8 +12,9 @@ import (
 type Config struct {
 	// LogLevel
 	LogLevel string `envconfig:"LOG_LEVEL"`
+
 	// Socket to dial
-	DialTarget string `envconfig: "FELIX_DIAL_TARGET"`
+	DialTarget string `envconfig:"FELIX_DIAL_TARGET"`
 
 	// Parsed values
 	ParsedLogLevel log.Level
