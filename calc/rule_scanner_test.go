@@ -268,10 +268,6 @@ var _ = Describe("ParsedRule", func() {
 		mrFields := set.New()
 		for i := 0; i < numMRFields; i++ {
 			name := mrType.Field(i).Name
-			if name == "DstDomains" {
-				// FIXME Skip until DNS policy gets merged in felix.
-				continue
-			}
 			if strings.Contains(name, "Tag") ||
 				(strings.Contains(name, "Selector") &&
 					!strings.Contains(name, "Original") &&
