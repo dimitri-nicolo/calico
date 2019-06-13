@@ -157,3 +157,8 @@ spec:
 
 To configure DNS trusted servers, see the [DNSTrustedServers
 parameter]({{site.baseurl}}/{{page.version}}/reference/felix/configuration).
+
+For more detail about the relevant resources, see
+[GlobalNetworkSet]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkset)
+and
+[GlobalNetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy)
