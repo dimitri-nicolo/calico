@@ -1,0 +1,10 @@
+nodeName,testIndex,status,scored
+{{ range $i, $node := .CISBenchmark }}
+{{- range $j, $section := $node.Results }}
+{{- range $k, $result := $section.Results }}
+{{- if eq $result.Status "FAIL" }}
+{{- $node.NodeName }},{{ $result.TestNumber }},{{ $result.Status }},{{ $result.Scored }}
+{{ end }}
+{{- end }}
+{{- end }}
+{{- end }}

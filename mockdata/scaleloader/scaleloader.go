@@ -188,7 +188,7 @@ func (sl *scaleloader) writeStep(s Step, es elastic.Client, t time.Time, log *lo
 			BodyString(msg).
 			Do(context.Background())
 		if err == nil {
-			log.WithFields(logrus.Fields{"result": res, "Rev": msgRev}).Trace("successfully indexed document")
+			log.WithFields(logrus.Fields{"result": res, "Rev": msgRev}).Debug("successfully indexed document")
 			return
 		}
 		if r >= maxRetriesPerIndex {

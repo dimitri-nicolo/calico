@@ -3,15 +3,16 @@ import:
 - package: github.com/satori/go.uuid
   version: ^1.2.0
 - package: github.com/sirupsen/logrus
-  version: ^1.0.4
+  repo: https://github.com/projectcalico/logrus
+  version: v1.0.4-calico
 - package: github.com/tigera/licensing
-  version: cb027c7c879597e0e02f2411c0c201752bab39c8
+  version: 02d1f482fe4d3a2dbc4a3bce530471eba75d5029
   repo: git@github.com:tigera/licensing
   vcs: git
   subpackages:
   - client
 - package: github.com/projectcalico/felix
-  version: 51d5200862f2f306c0a0ffadffd6d5f59602d995
+  version: c00322e56455b84a9c099feee8004b7cc02dc9ef
   repo: git@github.com:tigera/felix-private.git
   vcs: git
   subpackages:
@@ -25,10 +26,14 @@ import:
 - package: github.com/mailru/easyjson
   version: 03f2033d19d5860aef995fe360ac7d395cd8ce65
 - package: github.com/tigera/calico-k8sapiserver
-  version: 0e59242294781b92aded5bcf53168d1ccd6813d8
+  version: f8400d2c4088fdcdd849b68ff1af3e1bfd7fd48f
   repo: git@github.com:tigera/calico-k8sapiserver.git
   vcs: git
 - package: github.com/tigera/es-proxy-image
   version: ad8d517e8d6431c9429be735766e7b971efdad80
   repo: git@github.com:tigera/es-proxy-image
   vcs: git
+- package: github.com/projectcalico/libcalico-go
+  repo: git@github.com:tigera/libcalico-go-private.git
+  vcs: git
+- package: github.com/spf13/cobra
