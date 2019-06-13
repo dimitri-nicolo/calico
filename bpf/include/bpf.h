@@ -1,5 +1,7 @@
 // from kernel headers
 #include <asm/byteorder.h>
+#include <stdint.h>
+#include <endian.h>
 
 #ifndef __section
 # define __section(NAME)                  \
@@ -46,3 +48,7 @@
 
 static void *BPF_FUNC(map_lookup_elem, void *map, const void *key);
 static int BPF_FUNC(skb_load_bytes, void *ctx, int off, void *to, int len);
+static int BPF_FUNC(map_update_elem, void *map, const void *key,
+		    const void *value, uint32_t flags);
+static int BPF_FUNC(sock_hash_update, struct bpf_sock_ops *skops, void *map, void *key, uint64_t flags);
+static int BPF_FUNC(msg_redirect_hash, struct sk_msg_md *md, void *map, void *key, uint64_t flags);

@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"math"
 	"net"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -38,16 +39,31 @@ import (
 const usage = `test-connection: test connection to some target, for Felix FV testing.
 
 Usage:
-  test-connection <namespace-path> <ip-address> <port> [--source-port=<source>] [--protocol=<protocol>] [--duration=<seconds>]
+  test-connection <namespace-path> <ip-address> <port> [--source-port=<source>] [--protocol=<protocol>] [--duration=<seconds>] [--loop-with-file=<file>]
 
 Options:
   --source-port=<source>  Source port to use for the connection [default: 0].
   --protocol=<protocol>  Protocol to test [default: tcp].
   --duration=<seconds>   Total seconds test should run. 0 means run a one off connectivity check. Non-Zero means packets loss test.[default: 0]
+  --loop-with-file=<file>  Whether to send messages repeatedly, file is used for synchronization
 
 If connection is successful, test-connection exits successfully.
 
 If connection is unsuccessful, test-connection panics and so exits with a failure status.`
+
+// Note about the --loop-with-file=<FILE> flag:
+//
+// This flag takes a path to a file as a value. The file existence is
+// used as a means of synchronization.
+//
+// Before this program is started, the file should exist. When the
+// program establishes a long-running connection and sends the first
+// message, it will remove the file. That way other process can assume
+// that the connection is here when the file disappears and can
+// perform some checks.
+//
+// If the other process creates the file again, it will tell this
+// program to close the connection, remove the file and quit.
 
 func main() {
 	log.SetLevel(log.DebugLevel)
@@ -69,20 +85,26 @@ func main() {
 		// panic on error
 		panic(fmt.Sprintf("invalid duration argument - %s", duration))
 	}
+	loopFile := ""
+	if arg, ok := arguments["--loop-with-file"]; ok && arg != nil {
+		loopFile = arg.(string)
+	}
 
 	log.Infof("Test connection from %v:%v to IP %v port %v proto %v max duration %d seconds", namespacePath, sourcePort, ipAddress, port, protocol, seconds)
 
-	// I found that configuring the timeouts on all the network calls was a bit fiddly.  Since
-	// it leaves the process hung if one of them is missed, use a global timeout instead.
-	go func() {
-		timeout := time.Duration(seconds + 2)
-		time.Sleep(timeout * time.Second)
-		panic("Timed out")
-	}()
+	if loopFile == "" {
+		// I found that configuring the timeouts on all the network calls was a bit fiddly.  Since
+		// it leaves the process hung if one of them is missed, use a global timeout instead.
+		go func() {
+			timeout := time.Duration(seconds + 2)
+			time.Sleep(timeout * time.Second)
+			panic("Timed out")
+		}()
+	}
 
 	if namespacePath == "-" {
 		// Test connection from wherever we are already running.
-		err = tryConnect(ipAddress, port, sourcePort, protocol, seconds)
+		err = tryConnect(ipAddress, port, sourcePort, protocol, seconds, loopFile)
 	} else {
 		// Get the specified network namespace (representing a workload).
 		var namespace ns.NetNS
@@ -94,7 +116,7 @@ func main() {
 
 		// Now, in that namespace, try connecting to the target.
 		err = namespace.Do(func(_ ns.NetNS) error {
-			return tryConnect(ipAddress, port, sourcePort, protocol, seconds)
+			return tryConnect(ipAddress, port, sourcePort, protocol, seconds, loopFile)
 		})
 	}
 
@@ -117,7 +139,7 @@ type testConn struct {
 	duration time.Duration
 }
 
-func NewTestConn(ipAddress, port string, sourcePort string, protocol string, duration time.Duration) (*testConn, error) {
+func NewTestConn(ipAddress, port, sourcePort, protocol string, duration time.Duration, loopFile string) (*testConn, error) {
 	err := utils.RunCommand("ip", "r")
 	if err != nil {
 		return nil, err
@@ -137,21 +159,68 @@ func NewTestConn(ipAddress, port string, sourcePort string, protocol string, dur
 		remoteAddr = ipAddress + ":" + port
 	}
 
-	log.Infof("Trying new connection from %v to %v", localAddr, remoteAddr)
+	ls := newLoopState(loopFile)
+	log.Infof("Connecting from %v to %v over %s", localAddr, remoteAddr, protocol)
 	if protocol == "udp" {
 		d.D.LocalAddr, _ = net.ResolveUDPAddr("udp", localAddr)
-		conn, err = d.Dial("udp", remoteAddr)
+		log.WithFields(log.Fields{
+			"addr":     localAddr,
+			"resolved": d.D.LocalAddr,
+		}).Infof("Resolved udp addr")
+		conn, err := d.Dial("udp", remoteAddr)
+		log.Infof(`UDP "connection" established`)
 		if err != nil {
 			panic(err)
+		}
+		defer conn.Close()
+
+		for {
+			fmt.Fprintf(conn, testMessage+"\n")
+			log.WithField("message", testMessage).Info("Sent message over udp")
+			reply, err := bufio.NewReader(conn).ReadString('\n')
+			if err != nil {
+				panic(err)
+			}
+			reply = strings.TrimSpace(reply)
+			log.WithField("reply", reply).Info("Got reply")
+			if reply != testMessage {
+				panic(errors.New("Unexpected reply: " + reply))
+			}
+			if !ls.Next() {
+				break
+			}
 		}
 	} else {
 		d.D.LocalAddr, err = net.ResolveTCPAddr("tcp", localAddr)
 		if err != nil {
 			return nil, err
 		}
-		conn, err = d.Dial("tcp", remoteAddr)
+		log.WithFields(log.Fields{
+			"addr":     localAddr,
+			"resolved": d.D.LocalAddr,
+		}).Infof("Resolved tcp addr")
+		conn, err := d.Dial("tcp", remoteAddr)
 		if err != nil {
 			return nil, err
+		}
+		defer conn.Close()
+		log.Infof("TCP connection established")
+
+		for {
+			fmt.Fprintf(conn, testMessage+"\n")
+			log.WithField("message", testMessage).Info("Sent message over tcp")
+			reply, err := bufio.NewReader(conn).ReadString('\n')
+			if err != nil {
+				return err
+			}
+			reply = strings.TrimSpace(reply)
+			log.WithField("reply", reply).Info("Got reply")
+			if reply != testMessage {
+				return errors.New("Unexpected reply: " + reply)
+			}
+			if !ls.Next() {
+				break
+			}
 		}
 	}
 
@@ -175,8 +244,8 @@ func NewTestConn(ipAddress, port string, sourcePort string, protocol string, dur
 
 }
 
-func tryConnect(ipAddress, port string, sourcePort string, protocol string, seconds int) error {
-	tc, err := NewTestConn(ipAddress, port, sourcePort, protocol, time.Duration(seconds)*time.Second)
+func tryConnect(ipAddress, port, sourcePort, protocol string, seconds int, loopFile string) error {
+	tc, err := NewTestConn(ipAddress, port, sourcePort, protocol, time.Duration(seconds)*time.Second, loopFile)
 	if err != nil {
 		panic(err)
 	}
@@ -311,4 +380,52 @@ func (tc *testConn) tryConnectWithPacketLoss() error {
 	log.Infof("Stat -- %s", utils.FormPacketStatString(tc.stat.totalReq, tc.stat.totalReply))
 
 	return nil
+}
+
+type loopState struct {
+	sentInitial bool
+	loopFile    string
+}
+
+func newLoopState(loopFile string) *loopState {
+	return &loopState{
+		sentInitial: false,
+		loopFile:    loopFile,
+	}
+}
+
+func (l *loopState) Next() bool {
+	if l.loopFile == "" {
+		return false
+	}
+
+	if l.sentInitial {
+		// This is after the connection was established in
+		// previous iteration, so we wait for the loop file to
+		// appear (it should be created by other process). If
+		// the file exists, it means that the other process
+		// wants us to delete the file, drop the connection
+		// and quit.
+		if _, err := os.Stat(l.loopFile); err != nil {
+			if !os.IsNotExist(err) {
+				panic(fmt.Errorf("Failed to stat loop file %s: %v", l.loopFile, err))
+			}
+		} else {
+			if err := os.Remove(l.loopFile); err != nil {
+				panic(fmt.Errorf("Could not remove loop file %s: %v", l.loopFile, err))
+			}
+			return false
+		}
+	} else {
+		// A connection was just established and the initial
+		// message was sent so we set the flag to true and
+		// delete the loop file, so other process can continue
+		// with the appropriate checks
+		if err := os.Remove(l.loopFile); err != nil {
+			panic(fmt.Errorf("Could not remove loop file %s: %v", l.loopFile, err))
+		}
+		l.sentInitial = true
+	}
+	time.Sleep(500 * time.Millisecond)
+	return true
 }

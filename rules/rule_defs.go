@@ -331,6 +331,8 @@ type Config struct {
 	NATPortRange                       numorstring.Port
 	IptablesNATOutgoingInterfaceFilter string
 
+	NATOutgoingAddress net.IP
+
 	EnableNflogSize bool
 	IPSecEnabled    bool
 

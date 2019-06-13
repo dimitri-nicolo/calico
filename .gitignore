@@ -15,6 +15,7 @@
 # Build directories.
 /bin/
 /bpf/xdp/generated/
+/bpf/sockmap/generated/
 /docker-image/bin/
 /build/
 /dist/
@@ -57,3 +58,4 @@ htmlcov/
 /rpm/felix.spec
 /debian/changelog
 /docs/*.pdf
+/.built-bpf-clang-builder-*

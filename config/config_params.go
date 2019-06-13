@@ -260,6 +260,7 @@ type Config struct {
 
 	KubeNodePortRanges []numorstring.Port `config:"portrange-list;30000:32767"`
 	NATPortRange       numorstring.Port   `config:"portrange;"`
+	NATOutgoingAddress net.IP             `config:"ipv4;"`
 
 	UsageReportingEnabled          bool          `config:"bool;true"`
 	UsageReportingInitialDelaySecs time.Duration `config:"seconds;300"`
@@ -314,8 +315,9 @@ type Config struct {
 	DNSCacheSaveInterval time.Duration `config:"seconds;60"`
 	DNSTrustedServers    []string      `config:"server-list;k8s-service:kube-dns"`
 
-	XDPEnabled        bool `config:"bool;true"`
-	GenericXDPEnabled bool `config:"bool;false"`
+	SidecarAccelerationEnabled bool `config:"bool;false"`
+	XDPEnabled                 bool `config:"bool;true"`
+	GenericXDPEnabled          bool `config:"bool;false"`
 }
 
 type ProtoPort struct {

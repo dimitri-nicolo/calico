@@ -540,34 +540,40 @@ func describeAsyncTests(baseTests []StateList, l license) {
 }
 
 func expectCorrectDataplaneState(mockDataplane *mock.MockDataplane, state State) {
+	log.WithField("state", state.Name).Info("Doing assertions on state")
 	Expect(mockDataplane.IPSets()).To(Equal(state.ExpectedIPSets),
 		"IP sets didn't match expected state after moving to state: %v",
 		state.Name)
-
 	Expect(mockDataplane.ActivePolicies()).To(Equal(state.ExpectedPolicyIDs),
 		"Active policy IDs were incorrect after moving to state: %v",
 		state.Name)
-
 	Expect(mockDataplane.ActiveProfiles()).To(Equal(state.ExpectedProfileIDs),
 		"Active profile IDs were incorrect after moving to state: %v",
 		state.Name)
-
+	Expect(mockDataplane.ActiveVTEPs()).To(Equal(state.ExpectedVTEPs),
+		"Active VTEPs were incorrect after moving to state: %v",
+		state.Name)
+	Expect(mockDataplane.ActiveRoutes()).To(Equal(state.ExpectedRoutes),
+		"Active routes were incorrect after moving to state: %v",
+		state.Name)
 	Expect(mockDataplane.EndpointToPolicyOrder()).To(Equal(state.ExpectedEndpointPolicyOrder),
 		"Endpoint policy order incorrect after moving to state: %v",
 		state.Name)
-
 	Expect(mockDataplane.EndpointToPreDNATPolicyOrder()).To(Equal(state.ExpectedPreDNATEndpointPolicyOrder),
 		"Endpoint pre-DNAT policy order incorrect after moving to state: %v",
 		state.Name)
-
 	Expect(mockDataplane.EndpointToUntrackedPolicyOrder()).To(Equal(state.ExpectedUntrackedEndpointPolicyOrder),
 		"Endpoint untracked policy order incorrect after moving to state: %v",
 		state.Name)
-
+	Expect(mockDataplane.ActiveUntrackedPolicies()).To(Equal(state.ExpectedUntrackedPolicyIDs),
+		"Untracked policies incorrect after moving to state: %v",
+		state.Name)
+	Expect(mockDataplane.ActivePreDNATPolicies()).To(Equal(state.ExpectedPreDNATPolicyIDs),
+		"PreDNAT policies incorrect after moving to state: %v",
+		state.Name)
 	Expect(mockDataplane.ActiveIPSecBindings()).To(Equal(state.ExpectedIPSecBindings),
 		"IPsec bindings incorrect after moving to state: %v",
 		state.Name)
-
 	if state.ExpectedIPSecBlacklist != nil {
 		Expect(mockDataplane.ActiveIPSecBlacklist()).To(Equal(state.ExpectedIPSecBlacklist),
 			"IPsec blacklist incorrect after moving to state: %v",
@@ -633,8 +639,7 @@ func doStateSequenceTest(expandedTest StateList, licenseMonitor featureChecker, 
 					ii, lastState.Name, state.Name))
 				kvDeltas := state.KVDeltas(lastState)
 				for _, kv := range kvDeltas {
-					_, _ = fmt.Fprintf(GinkgoWriter, "       -> Injecting KV: %#v = %#v\n",
-						kv.Key, kv.Value)
+					_, _ = fmt.Fprintf(GinkgoWriter, "       -> Injecting KV: %v\n", kv)
 					validationFilter.OnUpdates([]api.Update{kv})
 					if flushStrategy == afterEachKV || flushStrategy == afterEachKVAndDupe {
 						if !sentInSync {
@@ -690,22 +695,6 @@ func doStateSequenceTest(expandedTest StateList, licenseMonitor featureChecker, 
 		expectCorrectDataplaneState(mockDataplane, state)
 
 		// We only track stats in the sync tests.
-		Expect(mockDataplane.ActiveVTEPs()).To(Equal(state.ExpectedVTEPs),
-			"Active VTEPs were incorrect after moving to state: %v",
-			state.Name)
-
-		Expect(mockDataplane.ActiveRoutes()).To(Equal(state.ExpectedRoutes),
-			"Active routes were incorrect after moving to state: %v",
-			state.Name)
-
-		Expect(mockDataplane.ActiveUntrackedPolicies()).To(Equal(state.ExpectedUntrackedPolicyIDs),
-			"Untracked policies incorrect after moving to state: %v",
-			state.Name)
-
-		Expect(mockDataplane.ActivePreDNATPolicies()).To(Equal(state.ExpectedPreDNATPolicyIDs),
-			"PreDNAT policies incorrect after moving to state: %v",
-			state.Name)
-
 		Expect(lastStats.NumTiers).To(Equal(state.NumTiers()),
 			"number of tiers stat incorrect after moving to state: %v\n%+v",
 			state.Name, spew.Sdump(state.DatastoreState))
