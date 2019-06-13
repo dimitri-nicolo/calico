@@ -26,15 +26,15 @@
   version = "v1.1.1"
 
 [[projects]]
-  digest = "1:4407e93a89da65e7f7e51768c1a4b20ba035e463f78b3027b791dd4f29174ced"
+  digest = "1:b2754ad67d4ed5a0741d69396c6f5cbe1e426a8adc2e8e97e09a1ee5a4621653"
   name = "github.com/emicklei/go-restful"
   packages = [
     ".",
     "log",
   ]
   pruneopts = "UT"
-  revision = "b9bbc5664f49b6deec52393bd68f39830687a347"
-  version = "v2.9.3"
+  revision = "6ac3b8eb89d325e5c750d77f344a6870464d03c3"
+  version = "v2.9.6"
 
 [[projects]]
   digest = "1:953a2628e4c5c72856b53f5470ed5e071c55eccf943d798d42908102af2a610f"
@@ -120,12 +120,12 @@
   version = "v1.1.6"
 
 [[projects]]
-  digest = "1:edbef42561faa44c19129b68d1e109fbc1647f63239250391eadc8d0e7c9f669"
+  digest = "1:fd9bea48bbc5bba66d9891c72af7255fbebecdff845c37c679406174ece5ca1b"
   name = "github.com/kelseyhightower/envconfig"
   packages = ["."]
   pruneopts = "UT"
-  revision = "f611eb38b3875cc3bd991ca91c51d06446afa14c"
-  version = "v1.3.0"
+  revision = "0b417c4ec4a8a82eecc22a1459a504aa55163d61"
+  version = "v1.4.0"
 
 [[projects]]
   digest = "1:31e761d97c76151dde79e9d28964a812c46efc5baee4085b86f68f0c654450de"
@@ -197,8 +197,8 @@
   name = "github.com/projectcalico/felix"
   packages = ["jitter"]
   pruneopts = "UT"
-  revision = "f0dde4bc7c1d40c0bddf47600465ed1d372c1f17"
-  version = "v3.6.1"
+  revision = "dee587e683498068d3bf4ea3923fdbf25a994d96"
+  version = "v3.7.3"
 
 [[projects]]
   branch = "calico"
@@ -226,16 +226,16 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:5c9f3ab72e90e0756453a6a16b151b397999ca6223c506943b5a3dbd6d02b9f8"
+  digest = "1:8fa6da907b1081260adafd535d0b84aeeb9a877b6279c835de2dc9c147a858bb"
   name = "github.com/projectcalico/libcalico-go"
   packages = [
     "lib/apis/v1",
     "lib/apis/v1/unversioned",
     "lib/apis/v3",
+    "lib/backend/encap",
     "lib/backend/model",
     "lib/errors",
     "lib/hash",
-    "lib/ipip",
     "lib/namespace",
     "lib/net",
     "lib/numorstring",
@@ -246,7 +246,7 @@
     "lib/set",
   ]
   pruneopts = "UT"
-  revision = "564e1f2493547b1727b0071a9c65d87d7ed68bd2"
+  revision = "e9a74b29328b7376cb88fc539b7c7e000e47d278"
   source = "github.com/tigera/libcalico-go-private"
 
 [[projects]]
@@ -258,12 +258,12 @@
   version = "v1.2.0"
 
 [[projects]]
-  digest = "1:fd61cf4ae1953d55df708acb6b91492d538f49c305b364a014049914495db426"
+  digest = "1:04457f9f6f3ffc5fea48e71d62f2ca256637dee0a04d710288e27e05c8b41976"
   name = "github.com/sirupsen/logrus"
   packages = ["."]
   pruneopts = "UT"
-  revision = "8bdbc7bcc01dcbb8ec23dc8a28e332258d25251f"
-  version = "v1.4.1"
+  revision = "839c75faf7f98a33d445d181f3018b5c3409a45e"
+  version = "v1.4.2"
 
 [[projects]]
   digest = "1:1cf15260bbe39a6128bbeabea688a388e28b078daf3343a8d2e60ddc7a2ac34d"
@@ -300,11 +300,11 @@
     "pbkdf2",
   ]
   pruneopts = "UT"
-  revision = "c05e17bb3b2dca130fc919668a96b4bec9eb9442"
+  revision = "5c40567a22f818bd14a1ea7245dad9f8ef0691aa"
 
 [[projects]]
   branch = "master"
-  digest = "1:bd0cb8163c68965418ce71b57a78f732b55b897f4adf44876cb0d7fc380e1b0b"
+  digest = "1:f565192ccfd2dababfa0b9322a40eed0eccf9d371be116892da485ee4cbb53a3"
   name = "golang.org/x/net"
   packages = [
     "html",
@@ -316,15 +316,15 @@
     "idna",
   ]
   pruneopts = "UT"
-  revision = "4829fb13d2c62012c17688fa7f629f371014946d"
+  revision = "3f473d35a33aa6fdd203e306dc439b797820e3f1"
 
 [[projects]]
   branch = "master"
-  digest = "1:157e5158a7f29d6633eed502880463aa43de3c36d451c7051591efd12f455ac8"
+  digest = "1:010311506e3917b54487c35a4277e2709678a40c1587d82492c40b78b6a0a01d"
   name = "golang.org/x/sys"
   packages = ["unix"]
   pruneopts = "UT"
-  revision = "16072639606ea9e22c7d86e4cbd6af6314f4193c"
+  revision = "5ed2794edfdc1c54dfb61d619c5944285f35d444"
 
 [[projects]]
   digest = "1:0b5dc8c3581fc3ea2b80cc2e360dfb9c2d61dd0cba0d2fe247e8edd3e83f7551"
@@ -369,8 +369,8 @@
   name = "google.golang.org/appengine"
   packages = ["cloudsql"]
   pruneopts = "UT"
-  revision = "54a98f90d1c46b7731eb8fb305d2a321c30ef610"
-  version = "v1.5.0"
+  revision = "b2f4a3cf3c67576a2ee09e1fe62656a5086ce880"
+  version = "v1.6.1"
 
 [[projects]]
   digest = "1:2d1fbdc6777e5408cabeb02bf336305e724b925ff4546ded0fa8715a7267922a"
@@ -402,11 +402,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:451ce7a3ba3680101f97d5738ea978d43be2c4e3601b19f438b56e10c47ccdb1"
+  digest = "1:9d5352ef8744149aca21ca4f7cd21eac9f05932edda625c2b343edd105b6acca"
   name = "k8s.io/api"
   packages = ["core/v1"]
   pruneopts = "UT"
-  revision = "181e1f9c52c1a4e72e64db906923efc79a76a8e3"
+  revision = "db0771252981291218c9395d960fddca45a62c55"
 
 [[projects]]
   digest = "1:7116931b73584478f7cb59567da0a0ff50935d5a41c1b3aab34d78b7aeea81c9"
@@ -438,11 +438,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:b186771a736146568f36c80b8b54d0525682768ae5d8d7d56585533ea43012c1"
+  digest = "1:8918a5f4584888ad08a25844b3c6327c71451fa9cef064d6bb57d468faea38fd"
   name = "k8s.io/apiserver"
   packages = ["pkg/apis/audit"]
   pruneopts = "UT"
-  revision = "48fa00984a63411ba1a92e31d8e0beaaed9447ba"
+  revision = "88b97c97967fc99d340a030ef37a9304b5a4e0dd"
 
 [[projects]]
   branch = "master"
@@ -450,7 +450,7 @@
   name = "k8s.io/kube-openapi"
   packages = ["pkg/common"]
   pruneopts = "UT"
-  revision = "07b8972065522ba66df16032247530e1dbaca011"
+  revision = "db7b694dc208eead64d38030265f702db593fcf2"
 
 [solve-meta]
   analyzer-name = "dep"
