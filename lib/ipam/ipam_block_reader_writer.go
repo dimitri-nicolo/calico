@@ -396,18 +396,25 @@ func (rw blockReaderWriter) deleteHandle(ctx context.Context, kvp *model.KVPair)
 
 // getPoolForIP returns the pool if the given IP is within a configured
 // Calico pool, and nil otherwise.
-func (rw blockReaderWriter) getPoolForIP(ip cnet.IP, enabledPools []v3.IPPool) *v3.IPPool {
+func (rw blockReaderWriter) getPoolForIP(ip cnet.IP, enabledPools []v3.IPPool) (*v3.IPPool, error) {
 	if enabledPools == nil {
-		enabledPools, _ = rw.pools.GetEnabledPools(ip.Version())
+		var err error
+		enabledPools, err = rw.pools.GetEnabledPools(ip.Version())
+		if err != nil {
+			return nil, err
+		}
 	}
 	for _, p := range enabledPools {
 		// Compare any enabled pools.
 		_, pool, err := cnet.ParseCIDR(p.Spec.CIDR)
-		if err == nil && pool.Contains(ip.IP) {
-			return &p
+		if err != nil {
+			fields := log.Fields{"pool": p.Name, "cidr": p.Spec.CIDR}
+			log.WithError(err).WithFields(fields).Warn("Pool has invalid CIDR")
+		} else if pool.Contains(ip.IP) {
+			return &p, nil
 		}
 	}
-	return nil
+	return nil, nil
 }
 
 // Generator to get list of block CIDRs which
@@ -433,7 +440,7 @@ func blockGenerator(pool *v3.IPPool, cidr cnet.IPNet) func() *cnet.IPNet {
 		if cidr.Contains(ip.IP) {
 			ipnet := net.IPNet{IP: returnIP.IP, Mask: blockMask}
 			cidr := cnet.IPNet{IPNet: ipnet}
-			ip = incrementIP(ip, blockSize)
+			ip = cnet.IncrementIP(ip, blockSize)
 			return &cidr
 		} else {
 			return nil
@@ -507,7 +514,7 @@ func randomBlockGenerator(ipPool v3.IPPool, hostName string) func() *cnet.IPNet 
 	return func() *cnet.IPNet {
 		// The `big.NewInt(0)` part creates a temp variable and assigns the result of multiplication of `i` and `big.NewInt(blockSize)`
 		// Note: we are not using `i.Mul()` because that will assign the result of the multiplication to `i`, which will cause unexpected issues
-		ip := incrementIP(baseIP, big.NewInt(0).Mul(i, blockSize))
+		ip := cnet.IncrementIP(baseIP, big.NewInt(0).Mul(i, blockSize))
 
 		ipnet := net.IPNet{ip.IP, blockMask}
 

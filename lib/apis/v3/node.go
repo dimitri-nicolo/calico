@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -41,6 +41,12 @@ type Node struct {
 type NodeSpec struct {
 	// BGP configuration for this node.
 	BGP *NodeBGPSpec `json:"bgp,omitempty" validate:"omitempty"`
+
+	// IPv4VXLANTunnelAddr is the IPv4 address of the VXLAN tunnel.
+	IPv4VXLANTunnelAddr string `json:"ipv4VXLANTunnelAddr,omitempty" validate:"omitempty,ipv4"`
+
+	// VXLANTunnelMACAddr is the MAC address of the VXLAN tunnel.
+	VXLANTunnelMACAddr string `json:"vxlanTunnelMACAddr,omitempty" validate:"omitempty,mac"`
 
 	// OrchRefs for this node.
 	OrchRefs []OrchRef `json:"orchRefs,omitempty" validate:"omitempty"`

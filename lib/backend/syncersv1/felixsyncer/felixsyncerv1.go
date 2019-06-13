@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ import (
 )
 
 // New creates a new Felix v1 Syncer.
-func New(client api.Client, callbacks api.SyncerCallbacks) api.Syncer {
+func New(client api.Client, cfg apiconfig.CalicoAPIConfigSpec, callbacks api.SyncerCallbacks) api.Syncer {
 	// Create the set of ResourceTypes required for Felix.  Since the update processors
 	// also cache state, we need to create individual ones per syncer rather than create
 	// a common global set.
@@ -73,6 +73,10 @@ func New(client api.Client, callbacks api.SyncerCallbacks) api.Syncer {
 			UpdateProcessor: updateprocessors.NewNetworkPolicyUpdateProcessor(),
 		},
 		{
+			ListInterface:   model.ResourceListOptions{Kind: apiv3.KindNetworkSet},
+			UpdateProcessor: updateprocessors.NewNetworkSetUpdateProcessor(),
+		},
+		{
 			ListInterface:   model.ResourceListOptions{Kind: apiv3.KindTier},
 			UpdateProcessor: updateprocessors.NewTierUpdateProcessor(),
 		},
@@ -84,6 +88,11 @@ func New(client api.Client, callbacks api.SyncerCallbacks) api.Syncer {
 			ListInterface:   model.ResourceListOptions{Kind: apiv3.KindRemoteClusterConfiguration},
 			UpdateProcessor: nil, // No need to process the updates so pass nil
 		},
+	}
+
+	// If using Calico IPAM, include IPAM resources the felix cares about.
+	if !cfg.K8sUsePodCIDR {
+		resourceTypes = append(resourceTypes, watchersyncer.ResourceType{ListInterface: model.BlockListOptions{}})
 	}
 
 	// The "main" watchersyncer will spawn additional watchersyncers for any remote clusters that are found.

@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 
 package updateprocessors_test
 
@@ -17,7 +17,7 @@ var _ = Describe("Test the (Felix) Node update processor", func() {
 		Kind: apiv3.KindNode,
 		Name: "mynode",
 	}
-	numFelixConfigs := 3
+	numFelixConfigs := 5
 	up := updateprocessors.NewFelixNodeUpdateProcessor()
 
 	BeforeEach(func() {
@@ -175,9 +175,10 @@ var _ = Describe("Test the (Felix) Node update processor", func() {
 		})
 		Expect(err).To(HaveOccurred())
 		expected := map[string]interface{}{
-			hostIPMarker:       nil,
-			"IpInIpTunnelAddr": "192.100.100.100",
-			"NodeIP":           nil,
+			hostIPMarker:          nil,
+			"IpInIpTunnelAddr":    "192.100.100.100",
+			"IPv4VXLANTunnelAddr": nil,
+			"NodeIP":              nil,
 		}
 		checkExpectedConfigs(
 			kvps,
@@ -200,9 +201,10 @@ var _ = Describe("Test the (Felix) Node update processor", func() {
 		Expect(err).To(HaveOccurred())
 		ip := net.MustParseIP("1.2.3.4")
 		expected = map[string]interface{}{
-			hostIPMarker:       &ip,
-			"IpInIpTunnelAddr": nil,
-			"NodeIP":           "1.2.3.4",
+			hostIPMarker:          &ip,
+			"IpInIpTunnelAddr":    nil,
+			"IPv4VXLANTunnelAddr": nil,
+			"NodeIP":              "1.2.3.4",
 		}
 		checkExpectedConfigs(
 			kvps,

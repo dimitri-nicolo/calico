@@ -160,11 +160,11 @@ func KeyToValueType(key Key) (reflect.Type, error) {
 //
 // For example,
 // 	KeyToDefaultDeletePaths(WorkloadEndpointKey{
-//		Nodename: "h",
-//		OrchestratorID: "o",
-//		WorkloadID: "w",
-//		EndpointID: "e",
-//	})
+// 		Nodename: "h",
+// 		OrchestratorID: "o",
+// 		WorkloadID: "w",
+// 		EndpointID: "e",
+// 	})
 // returns
 //
 // ["/calico/v1/host/h/workload/o/w/endpoint",
@@ -199,7 +199,7 @@ func ListOptionsToDefaultPathRoot(listOptions ListInterface) string {
 // ListOptionsIsFullyQualified returns true if the options actually specify a fully
 // qualified resource rather than a partial match.
 func ListOptionsIsFullyQualified(listOptions ListInterface) bool {
-	// Contruct the path prefix and then check to see if that actually corresponds to
+	// Construct the path prefix and then check to see if that actually corresponds to
 	// the path of a resource instance.
 	return listOptions.KeyFromDefaultPath(listOptions.defaultPathRoot()) != nil
 }
@@ -292,9 +292,21 @@ func KeyFromDefaultPath(path string) Key {
 		return k
 	} else if k := (BlockAffinityListOptions{}).KeyFromDefaultPath(path); k != nil {
 		return k
+	} else if k := (BlockListOptions{}).KeyFromDefaultPath(path); k != nil {
+		return k
 	} else if k := (ResourceListOptions{Kind: v3.KindNode}).KeyFromDefaultPath(path); k != nil {
 		return k
 	} else if k := (ResourceListOptions{Kind: v3.KindBGPPeer}).KeyFromDefaultPath(path); k != nil {
+		return k
+	} else if k := (ResourceListOptions{Kind: v3.KindNetworkPolicy}).KeyFromDefaultPath(path); k != nil {
+		return k
+	} else if k := (ResourceListOptions{Kind: v3.KindIPPool}).KeyFromDefaultPath(path); k != nil {
+		return k
+	} else if k := (ResourceListOptions{Kind: v3.KindK8sService}).KeyFromDefaultPath(path); k != nil {
+		return k
+	} else if k := (ResourceListOptions{Kind: v3.KindK8sEndpoints}).KeyFromDefaultPath(path); k != nil {
+		return k
+	} else if k := (ResourceListOptions{Kind: v3.KindRemoteClusterConfiguration}).KeyFromDefaultPath(path); k != nil {
 		return k
 	} else if k := (HostEndpointStatusListOptions{}).KeyFromDefaultPath(path); k != nil {
 		return k

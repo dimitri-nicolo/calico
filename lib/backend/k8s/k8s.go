@@ -32,7 +32,7 @@ import (
 	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/net"
 
-	kcorev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -72,6 +72,8 @@ func init() {
 				&apiv3.LicenseKeyList{},
 				&apiv3.GlobalNetworkSet{},
 				&apiv3.GlobalNetworkSetList{},
+				&apiv3.NetworkSet{},
+				&apiv3.NetworkSetList{},
 				&apiv3.GlobalNetworkPolicy{},
 				&apiv3.GlobalNetworkPolicyList{},
 				&apiv3.NetworkPolicy{},
@@ -175,6 +177,12 @@ func NewKubeClient(ca *apiconfig.CalicoAPIConfigSpec) (api.Client, error) {
 	kubeClient.registerResourceClient(
 		reflect.TypeOf(model.ResourceKey{}),
 		reflect.TypeOf(model.ResourceListOptions{}),
+		apiv3.KindNetworkSet,
+		resources.NewNetworkSetClient(cs, crdClientV1),
+	)
+	kubeClient.registerResourceClient(
+		reflect.TypeOf(model.ResourceKey{}),
+		reflect.TypeOf(model.ResourceListOptions{}),
 		apiv3.KindTier,
 		resources.NewTierClient(cs, crdClientV1),
 	)
@@ -212,7 +220,7 @@ func NewKubeClient(ca *apiconfig.CalicoAPIConfigSpec) (api.Client, error) {
 		reflect.TypeOf(model.ResourceKey{}),
 		reflect.TypeOf(model.ResourceListOptions{}),
 		apiv3.KindNode,
-		resources.NewNodeClient(cs),
+		resources.NewNodeClient(cs, ca.K8sUsePodCIDR),
 	)
 	kubeClient.registerResourceClient(
 		reflect.TypeOf(model.ResourceKey{}),
@@ -239,30 +247,6 @@ func NewKubeClient(ca *apiconfig.CalicoAPIConfigSpec) (api.Client, error) {
 		resources.NewGlobalThreatFeedClient(cs, crdClientV1),
 	)
 	kubeClient.registerResourceClient(
-		reflect.TypeOf(model.BlockAffinityKey{}),
-		reflect.TypeOf(model.BlockAffinityListOptions{}),
-		apiv3.KindBlockAffinity,
-		resources.NewBlockAffinityClient(cs, crdClientV1),
-	)
-	kubeClient.registerResourceClient(
-		reflect.TypeOf(model.BlockKey{}),
-		reflect.TypeOf(model.BlockListOptions{}),
-		apiv3.KindIPAMBlock,
-		resources.NewIPAMBlockClient(cs, crdClientV1),
-	)
-	kubeClient.registerResourceClient(
-		reflect.TypeOf(model.IPAMHandleKey{}),
-		reflect.TypeOf(model.IPAMHandleListOptions{}),
-		apiv3.KindIPAMHandle,
-		resources.NewIPAMHandleClient(cs, crdClientV1),
-	)
-	kubeClient.registerResourceClient(
-		reflect.TypeOf(model.IPAMConfigKey{}),
-		nil,
-		apiv3.KindIPAMConfig,
-		resources.NewIPAMConfigClient(cs, crdClientV1),
-	)
-	kubeClient.registerResourceClient(
 		reflect.TypeOf(model.ResourceKey{}),
 		reflect.TypeOf(model.ResourceListOptions{}),
 		apiv3.KindRemoteClusterConfiguration,
@@ -280,6 +264,44 @@ func NewKubeClient(ca *apiconfig.CalicoAPIConfigSpec) (api.Client, error) {
 		apiv3.KindGlobalReportType,
 		resources.NewGlobalReportTypeClient(cs, crdClientV1),
 	)
+
+	if ca.K8sUsePodCIDR {
+		// Using host-local IPAM. Use Kubernetes pod CIDRs to back IPAM.
+		log.Info("Using host-local IPAM")
+		kubeClient.registerResourceClient(
+			reflect.TypeOf(model.BlockAffinityKey{}),
+			reflect.TypeOf(model.BlockAffinityListOptions{}),
+			apiv3.KindBlockAffinity,
+			resources.NewPodCIDRBlockAffinityClient(cs),
+		)
+	} else {
+		// Using Calico IPAM - use CRDs to back IPAM resources.
+		log.Info("Using Calico IPAM")
+		kubeClient.registerResourceClient(
+			reflect.TypeOf(model.BlockAffinityKey{}),
+			reflect.TypeOf(model.BlockAffinityListOptions{}),
+			apiv3.KindBlockAffinity,
+			resources.NewBlockAffinityClient(cs, crdClientV1),
+		)
+		kubeClient.registerResourceClient(
+			reflect.TypeOf(model.BlockKey{}),
+			reflect.TypeOf(model.BlockListOptions{}),
+			apiv3.KindIPAMBlock,
+			resources.NewIPAMBlockClient(cs, crdClientV1),
+		)
+		kubeClient.registerResourceClient(
+			reflect.TypeOf(model.IPAMHandleKey{}),
+			reflect.TypeOf(model.IPAMHandleListOptions{}),
+			apiv3.KindIPAMHandle,
+			resources.NewIPAMHandleClient(cs, crdClientV1),
+		)
+		kubeClient.registerResourceClient(
+			reflect.TypeOf(model.IPAMConfigKey{}),
+			nil,
+			apiv3.KindIPAMConfig,
+			resources.NewIPAMConfigClient(cs, crdClientV1),
+		)
+	}
 
 	return kubeClient, nil
 }
@@ -427,6 +449,8 @@ func (c *KubeClient) Clean() error {
 		apiv3.KindNetworkPolicy,
 		apiv3.KindTier,
 		apiv3.KindGlobalNetworkSet,
+		apiv3.KindNetworkPolicy,
+		apiv3.KindNetworkSet,
 		apiv3.KindIPPool,
 		apiv3.KindHostEndpoint,
 		apiv3.KindRemoteClusterConfiguration,
@@ -453,6 +477,7 @@ func (c *KubeClient) Clean() error {
 		model.BlockListOptions{},
 		model.BlockAffinityListOptions{},
 		model.BlockAffinityListOptions{},
+		model.IPAMHandleListOptions{},
 	} {
 		if rs, err := c.List(ctx, li, ""); err != nil {
 			log.WithError(err).WithField("Kind", li).Warning("Failed to list resources")
@@ -506,6 +531,43 @@ func buildCRDClientV1(cfg rest.Config) (*rest.RESTClient, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// We also need to register resources.
+	schemeBuilder := runtime.NewSchemeBuilder(
+		func(scheme *runtime.Scheme) error {
+			scheme.AddKnownTypes(
+				*cfg.GroupVersion,
+				&apiv3.FelixConfiguration{},
+				&apiv3.FelixConfigurationList{},
+				&apiv3.IPPool{},
+				&apiv3.IPPoolList{},
+				&apiv3.BGPPeer{},
+				&apiv3.BGPPeerList{},
+				&apiv3.BGPConfiguration{},
+				&apiv3.BGPConfigurationList{},
+				&apiv3.ClusterInformation{},
+				&apiv3.ClusterInformationList{},
+				&apiv3.GlobalNetworkSet{},
+				&apiv3.GlobalNetworkSetList{},
+				&apiv3.GlobalNetworkPolicy{},
+				&apiv3.GlobalNetworkPolicyList{},
+				&apiv3.NetworkPolicy{},
+				&apiv3.NetworkPolicyList{},
+				&apiv3.HostEndpoint{},
+				&apiv3.HostEndpointList{},
+				&apiv3.BlockAffinity{},
+				&apiv3.BlockAffinityList{},
+				&apiv3.IPAMBlock{},
+				&apiv3.IPAMBlockList{},
+				&apiv3.IPAMHandle{},
+				&apiv3.IPAMHandleList{},
+				&apiv3.IPAMConfig{},
+				&apiv3.IPAMConfigList{},
+			)
+			return nil
+		})
+
+	schemeBuilder.AddToScheme(scheme.Scheme)
 
 	return cli, nil
 }
@@ -697,7 +759,7 @@ func (c *KubeClient) listHostConfig(ctx context.Context, l model.HostConfigListO
 	}, nil
 }
 
-func getTunIp(n *kcorev1.Node) (*model.KVPair, error) {
+func getTunIp(n *v1.Node) (*model.KVPair, error) {
 	if n.Spec.PodCIDR == "" {
 		log.Warnf("Node %s does not have podCIDR for HostConfig", n.Name)
 		return nil, nil

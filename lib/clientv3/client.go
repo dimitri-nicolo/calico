@@ -79,12 +79,12 @@ func (c client) Nodes() NodeInterface {
 	return nodes{client: c}
 }
 
-// Policies returns an interface for managing policy resources.
+// NetworkPolicies returns an interface for managing policy resources.
 func (c client) NetworkPolicies() NetworkPolicyInterface {
 	return networkPolicies{client: c}
 }
 
-// Policies returns an interface for managing policy resources.
+// GlobalNetworkPolicies returns an interface for managing policy resources.
 func (c client) GlobalNetworkPolicies() GlobalNetworkPolicyInterface {
 	return globalNetworkPolicies{client: c}
 }
@@ -102,6 +102,11 @@ func (c client) Profiles() ProfileInterface {
 // GlobalNetworkSets returns an interface for managing host endpoint resources.
 func (c client) GlobalNetworkSets() GlobalNetworkSetInterface {
 	return globalNetworkSets{client: c}
+}
+
+// NetworkSets returns an interface for managing host endpoint resources.
+func (c client) NetworkSets() NetworkSetInterface {
+	return networkSets{client: c}
 }
 
 // HostEndpoints returns an interface for managing host endpoint resources.
@@ -179,6 +184,7 @@ func (p poolAccessor) GetEnabledPools(ipVersion int) ([]v3.IPPool, error) {
 	var enabled []v3.IPPool
 	for _, pool := range pools.Items {
 		if pool.Spec.Disabled {
+			log.Debugf("Skipping disabled IP pool (%s)", pool.Name)
 			continue
 		} else if _, cidr, err := net.ParseCIDR(pool.Spec.CIDR); err == nil && cidr.Version() == ipVersion {
 			log.Debugf("Adding pool (%s) to the enabled IPPool list", cidr.String())

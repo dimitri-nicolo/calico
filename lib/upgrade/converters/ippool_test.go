@@ -20,10 +20,10 @@ import (
 
 	apiv1 "github.com/projectcalico/libcalico-go/lib/apis/v1"
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/libcalico-go/lib/backend/encap"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
-	"github.com/projectcalico/libcalico-go/lib/ipip"
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var poolTable = []TableEntry{
@@ -35,7 +35,7 @@ var poolTable = []TableEntry{
 			Spec: apiv1.IPPoolSpec{
 				IPIP: &apiv1.IPIPConfiguration{
 					Enabled: true,
-					Mode:    ipip.Undefined,
+					Mode:    encap.Undefined,
 				},
 				NATOutgoing: false,
 				Disabled:    false,
@@ -48,7 +48,7 @@ var poolTable = []TableEntry{
 			Value: &model.IPPool{
 				CIDR:          cnet.MustParseCIDR("10.0.0.1/24"),
 				IPIPInterface: "tunl0",
-				IPIPMode:      ipip.Undefined,
+				IPIPMode:      encap.Undefined,
 				Masquerade:    false,
 				Disabled:      false,
 				IPAM:          true,
@@ -61,6 +61,7 @@ var poolTable = []TableEntry{
 			Spec: apiv3.IPPoolSpec{
 				CIDR:         "10.0.0.1/24",
 				IPIPMode:     apiv3.IPIPModeAlways,
+				VXLANMode:    apiv3.VXLANModeNever,
 				NATOutgoing:  false,
 				Disabled:     false,
 				BlockSize:    26,
@@ -76,7 +77,7 @@ var poolTable = []TableEntry{
 			Spec: apiv1.IPPoolSpec{
 				IPIP: &apiv1.IPIPConfiguration{
 					Enabled: true,
-					Mode:    ipip.Always,
+					Mode:    encap.Always,
 				},
 				NATOutgoing: false,
 				Disabled:    true,
@@ -89,7 +90,7 @@ var poolTable = []TableEntry{
 			Value: &model.IPPool{
 				CIDR:          cnet.MustParseCIDR("2001::/120"),
 				IPIPInterface: "tunl0",
-				IPIPMode:      ipip.Always,
+				IPIPMode:      encap.Always,
 				Masquerade:    false,
 				Disabled:      true,
 				IPAM:          false,
@@ -102,6 +103,7 @@ var poolTable = []TableEntry{
 			Spec: apiv3.IPPoolSpec{
 				CIDR:         "2001::/120",
 				IPIPMode:     apiv3.IPIPModeAlways,
+				VXLANMode:    apiv3.VXLANModeNever,
 				NATOutgoing:  false,
 				Disabled:     true,
 				BlockSize:    122,
@@ -109,7 +111,7 @@ var poolTable = []TableEntry{
 			},
 		},
 	),
-	Entry("IPv4 IPPool with IPIPMode blank, should be converted to IPIPMode Always",
+	Entry("IPv4 IPPool with IPIPMode blank, should be converted to IPIPMode Never",
 		&apiv1.IPPool{
 			Metadata: apiv1.IPPoolMetadata{
 				CIDR: cnet.MustParseCIDR("5.5.5.5/25"),
@@ -117,7 +119,7 @@ var poolTable = []TableEntry{
 			Spec: apiv1.IPPoolSpec{
 				IPIP: &apiv1.IPIPConfiguration{
 					Enabled: false,
-					Mode:    ipip.Undefined,
+					Mode:    encap.Undefined,
 				},
 				NATOutgoing: true,
 				Disabled:    true,
@@ -143,6 +145,7 @@ var poolTable = []TableEntry{
 			Spec: apiv3.IPPoolSpec{
 				CIDR:         "5.5.5.5/25",
 				IPIPMode:     apiv3.IPIPModeNever,
+				VXLANMode:    apiv3.VXLANModeNever,
 				NATOutgoing:  true,
 				Disabled:     true,
 				BlockSize:    26,
@@ -150,7 +153,7 @@ var poolTable = []TableEntry{
 			},
 		},
 	),
-	Entry("IPv4 IPPool with IPIPMode unspecified, should be converted to IPIPMode Always",
+	Entry("IPv4 IPPool with IPIPMode unspecified, should be converted to IPIPMode Never",
 		&apiv1.IPPool{
 			Metadata: apiv1.IPPoolMetadata{
 				CIDR: cnet.MustParseCIDR("6.6.6.6/26"),
@@ -181,6 +184,7 @@ var poolTable = []TableEntry{
 			Spec: apiv3.IPPoolSpec{
 				CIDR:         "6.6.6.6/26",
 				IPIPMode:     apiv3.IPIPModeNever,
+				VXLANMode:    apiv3.VXLANModeNever,
 				NATOutgoing:  true,
 				Disabled:     true,
 				BlockSize:    26,
@@ -196,7 +200,7 @@ var poolTable = []TableEntry{
 			Spec: apiv1.IPPoolSpec{
 				IPIP: &apiv1.IPIPConfiguration{
 					Enabled: true,
-					Mode:    ipip.CrossSubnet,
+					Mode:    encap.CrossSubnet,
 				},
 				NATOutgoing: false,
 				Disabled:    true,
@@ -210,7 +214,7 @@ var poolTable = []TableEntry{
 				CIDR:          cnet.MustParseCIDR("1.1.1.1/11"),
 				Masquerade:    false,
 				IPIPInterface: "tunl0",
-				IPIPMode:      ipip.CrossSubnet,
+				IPIPMode:      encap.CrossSubnet,
 				Disabled:      true,
 				IPAM:          false,
 			},
@@ -222,6 +226,7 @@ var poolTable = []TableEntry{
 			Spec: apiv3.IPPoolSpec{
 				CIDR:         "1.1.1.1/11",
 				IPIPMode:     apiv3.IPIPModeCrossSubnet,
+				VXLANMode:    apiv3.VXLANModeNever,
 				NATOutgoing:  false,
 				Disabled:     true,
 				BlockSize:    26,
