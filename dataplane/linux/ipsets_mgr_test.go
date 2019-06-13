@@ -79,7 +79,7 @@ var _ = Describe("IP Sets manager", func() {
 	BeforeEach(func() {
 		domainStore = &mockDomainStore{mappings: make(map[string][]string)}
 		ipSets = newMockIPSets()
-		ipsetsMgr = newIPSetsManager(ipSets, 1024, domainStore)
+		ipsetsMgr = newIPSetsManager(ipSets, 1024, domainStore, newCallbacks())
 	})
 
 	// Generic assumptions used during tests. Having them here reduces code duplication and improves readability.

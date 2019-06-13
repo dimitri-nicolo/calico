@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -563,7 +563,8 @@ func chainsForIfaces(ifaceTierNames []string,
 }
 
 type mockRouteTable struct {
-	currentRoutes map[string][]routetable.Target
+	currentRoutes   map[string][]routetable.Target
+	currentL2Routes map[string][]routetable.L2Target
 }
 
 func (t *mockRouteTable) SetRoutes(ifaceName string, targets []routetable.Target) {
@@ -574,8 +575,20 @@ func (t *mockRouteTable) SetRoutes(ifaceName string, targets []routetable.Target
 	t.currentRoutes[ifaceName] = targets
 }
 
+func (t *mockRouteTable) SetL2Routes(ifaceName string, targets []routetable.L2Target) {
+	log.WithFields(log.Fields{
+		"ifaceName": ifaceName,
+		"targets":   targets,
+	}).Debug("SetL2Routes")
+	t.currentL2Routes[ifaceName] = targets
+}
+
 func (t *mockRouteTable) checkRoutes(ifaceName string, expected []routetable.Target) {
 	Expect(t.currentRoutes[ifaceName]).To(Equal(expected))
+}
+
+func (t *mockRouteTable) checkL2Routes(ifaceName string, expected []routetable.Target) {
+	Expect(t.currentL2Routes[ifaceName]).To(Equal(expected))
 }
 
 type statusReportRecorder struct {
@@ -673,6 +686,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 				[]string{"cali"},
 				statusReportRec.endpointStatusUpdateCallback,
 				mockProcSys.write,
+				newCallbacks(),
 			)
 		})
 

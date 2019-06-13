@@ -1,6 +1,6 @@
 // +build fvtests
 
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -327,6 +327,32 @@ var _ = Describe("health tests", func() {
 		})
 	})
 
+	Describe("with Felix unable to connect to Typha at first", func() {
+		BeforeEach(func() {
+			// We have to start Typha first so we can pass its IP to Felix.
+			startTypha(k8sInfra.GetDockerArgs)
+			// Start felix with the wrong Typha port so it won't be able to connect initially.  Then, we'll add a
+			// NAT rule to steer the traffic to the right port below.
+			startFelix(typhaContainer.IP+":5474" /*wrong port!*/, k8sInfra.GetDockerArgs, "", "", "0.0.0.0")
+		})
+
+		AfterEach(func() {
+			felixContainer.Stop()
+			typhaContainer.Stop()
+		})
+
+		It("should report not ready until it connects to Typha, then report ready", func() {
+			Eventually(felixReady, "5s", "100ms").Should(BeBad())
+			Consistently(felixReady, "5s", "100ms").Should(BeBad())
+
+			// Add a NAT rule to steer traffic from the port that Felix is using to the correct Typha port.
+			felixContainer.Exec("iptables", "-t", "nat", "-A", "OUTPUT", "-p", "tcp",
+				"--destination", typhaContainer.IP, "--dport", "5474", "-j", "DNAT", "--to-destination", ":5473")
+
+			Eventually(felixReady, "5s", "100ms").Should(BeGood())
+		})
+	})
+
 	Describe("with typha connected to bad API endpoint", func() {
 		BeforeEach(func() {
 			startTypha(k8sInfra.GetBadEndpointDockerArgs)
@@ -396,6 +422,18 @@ var _ = Describe("health tests", func() {
 		It("felix should report live", func() {
 			Eventually(felixLiveness, "5s", "100ms").Should(BeGood())
 			Consistently(felixLiveness, "10s", "1s").Should(BeGood())
+		})
+	})
+
+	Describe("with Felix connected to bad typha port", func() {
+		BeforeEach(func() {
+			startTypha(k8sInfra.GetDockerArgs)
+			startFelix(typhaContainer.IP+":5474", k8sInfra.GetDockerArgs, "", "", "0.0.0.0")
+		})
+		It("should become unready, then die", func() {
+			Eventually(felixReady, "5s", "1s").ShouldNot(BeGood())
+			Consistently(felixContainer.Stopped, "20s").Should(BeFalse()) // Should stay up for 20+s
+			Eventually(felixContainer.Stopped, "15s").Should(BeTrue())    // Should die at roughly 30s.
 		})
 	})
 })

@@ -27,8 +27,8 @@ import (
 
 	"github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/felix/config"
-	"github.com/projectcalico/felix/dataplane/external"
-	"github.com/projectcalico/felix/dataplane/linux"
+	extdataplane "github.com/projectcalico/felix/dataplane/external"
+	intdataplane "github.com/projectcalico/felix/dataplane/linux"
 	"github.com/projectcalico/felix/ifacemonitor"
 	"github.com/projectcalico/felix/ipsets"
 	"github.com/projectcalico/felix/logutils"
@@ -101,8 +101,9 @@ func StartDataplaneDriver(configParams *config.Config,
 		}).Info("Calculated iptables mark bits")
 
 		dpConfig := intdataplane.Config{
+			Hostname: configParams.FelixHostname,
 			IfaceMonitorConfig: ifacemonitor.Config{
-				InterfaceExcludes: configParams.InterfaceExcludes(),
+				InterfaceExcludes: configParams.InterfaceExclude,
 			},
 			RulesConfig: rules.Config{
 				WorkloadIfacePrefixes: configParams.InterfacePrefixes(),
@@ -136,8 +137,13 @@ func StartDataplaneDriver(configParams *config.Config,
 				IptablesMarkEndpoint:        markEndpointMark,
 				IptablesMarkNonCaliEndpoint: markEndpointNonCaliEndpoint,
 
-				IPIPEnabled:       configParams.IpInIpEnabled,
-				IPIPTunnelAddress: configParams.IpInIpTunnelAddr,
+				VXLANEnabled: configParams.VXLANEnabled,
+				VXLANPort:    configParams.VXLANPort,
+				VXLANVNI:     configParams.VXLANVNI,
+
+				IPIPEnabled:        configParams.IpInIpEnabled,
+				IPIPTunnelAddress:  configParams.IpInIpTunnelAddr,
+				VXLANTunnelAddress: configParams.IPv4VXLANTunnelAddr,
 
 				IPSecEnabled: configParams.IPSecEnabled(),
 
@@ -161,6 +167,7 @@ func StartDataplaneDriver(configParams *config.Config,
 			},
 
 			IPIPMTU:                        configParams.IpInIpMtu,
+			VXLANMTU:                       configParams.VXLANMTU,
 			IptablesRefreshInterval:        configParams.IptablesRefreshInterval,
 			RouteRefreshInterval:           configParams.RouteRefreshInterval,
 			IPSetsRefreshInterval:          configParams.IpsetsRefreshInterval,
@@ -173,6 +180,7 @@ func StartDataplaneDriver(configParams *config.Config,
 			IgnoreLooseRPF:                 configParams.IgnoreLooseRPF,
 			IPv6Enabled:                    configParams.Ipv6Support,
 			StatusReportingInterval:        configParams.ReportingIntervalSecs,
+			XDPRefreshInterval:             configParams.XDPRefreshInterval,
 
 			NetlinkTimeout: configParams.NetlinkTimeoutSecs,
 
@@ -203,6 +211,8 @@ func StartDataplaneDriver(configParams *config.Config,
 			DebugUseShortPollIntervals:      configParams.DebugUseShortPollIntervals,
 			FelixHostname:                   configParams.FelixHostname,
 			ExternalNodesCidrs:              configParams.ExternalNodesCIDRList,
+			XDPEnabled:                      configParams.XDPEnabled,
+			XDPAllowGeneric:                 configParams.GenericXDPEnabled,
 			Collector:                       collector,
 			DNSCacheFile:                    configParams.DNSCacheFile,
 			DNSCacheSaveInterval:            configParams.DNSCacheSaveInterval,

@@ -18,6 +18,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/felix/config"
 	"github.com/projectcalico/felix/dispatcher"
 	"github.com/projectcalico/felix/ip"
 	"github.com/projectcalico/felix/labelindex"
@@ -79,6 +80,16 @@ type passthruCallbacks interface {
 	OnNamespaceRemove(proto.NamespaceID)
 }
 
+type routeCallbacks interface {
+	OnRouteUpdate(update *proto.RouteUpdate)
+	OnRouteRemove(dst string)
+}
+
+type vxlanCallbacks interface {
+	OnVTEPUpdate(update *proto.VXLANTunnelEndpointUpdate)
+	OnVTEPRemove(node string)
+}
+
 type ipsecCallbacks interface {
 	OnIPSecBindingAdded(b IPSecBinding)
 	OnIPSecBindingRemoved(b IPSecBinding)
@@ -94,6 +105,8 @@ type PipelineCallbacks interface {
 	endpointCallbacks
 	configCallbacks
 	passthruCallbacks
+	routeCallbacks
+	vxlanCallbacks
 	ipsecCallbacks
 }
 
@@ -108,7 +121,8 @@ type CalcGraph struct {
 	activeRulesCalculator *ActiveRulesCalculator
 }
 
-func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, hostname string, tiersEnabled bool) *CalcGraph {
+func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf *config.Config, tiersEnabled bool) *CalcGraph {
+	hostname := conf.FelixHostname
 	log.Infof("Creating calculation graph, filtered to hostname %v", hostname)
 
 	// The source of the processing graph, this dispatcher will be fed all the updates from the
@@ -324,6 +338,23 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, hostn
 	//
 	hostIPPassthru := NewDataplanePassthru(callbacks)
 	hostIPPassthru.RegisterWith(allUpdDispatcher)
+
+	// Calculate VXLAN routes.
+	//        ...
+	//     Dispatcher (all updates)
+	//         |
+	//         | host IPs, host config, IP pools, IPAM blocks
+	//         |
+	//       vxlan resolver
+	//         |
+	//         | VTEPs, routes
+	//         |
+	//      <dataplane>
+	//
+	if conf.VXLANEnabled {
+		vxlanResolver := NewVXLANResolver(hostname, callbacks)
+		vxlanResolver.RegisterWith(allUpdDispatcher)
+	}
 
 	// Register for config updates.
 	//

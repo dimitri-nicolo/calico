@@ -34,11 +34,18 @@ import (
 )
 
 var (
-	IfaceListRegexp  = regexp.MustCompile(`^[a-zA-Z0-9_-]{1,15}(,[a-zA-Z0-9_-]{1,15})*$`)
-	AuthorityRegexp  = regexp.MustCompile(`^[^:/]+:\d+$`)
-	HostnameRegexp   = regexp.MustCompile(`^[a-zA-Z0-9_.-]+$`)
-	StringRegexp     = regexp.MustCompile(`^.*$`)
-	IfaceParamRegexp = regexp.MustCompile(`^[a-zA-Z0-9:._+-]{1,15}$`)
+	// RegexpIfaceElemRegexp matches an individual element in the overall interface list;
+	// assumes the value represents a regular expression and is marked by '/' at the start
+	// and end and cannot have spaces
+	RegexpIfaceElemRegexp = regexp.MustCompile(`^\/[^\s]+\/$`)
+	// NonRegexpIfaceElemRegexp matches an individual element in the overall interface list;
+	// assumes the value is between 1-15 chars long and only be alphanumeric or - or _
+	NonRegexpIfaceElemRegexp = regexp.MustCompile(`^[a-zA-Z0-9_-]{1,15}$`)
+	IfaceListRegexp          = regexp.MustCompile(`^[a-zA-Z0-9_-]{1,15}(,[a-zA-Z0-9_-]{1,15})*$`)
+	AuthorityRegexp          = regexp.MustCompile(`^[^:/]+:\d+$`)
+	HostnameRegexp           = regexp.MustCompile(`^[a-zA-Z0-9_.-]+$`)
+	StringRegexp             = regexp.MustCompile(`^.*$`)
+	IfaceParamRegexp         = regexp.MustCompile(`^[a-zA-Z0-9:._+-]{1,15}$`)
 )
 
 const (
@@ -137,6 +144,9 @@ type Config struct {
 	IptablesLockProbeIntervalMillis    time.Duration `config:"millis;50"`
 	IpsetsRefreshInterval              time.Duration `config:"seconds;10"`
 	MaxIpsetSize                       int           `config:"int;1048576;non-zero"`
+	XDPRefreshInterval                 time.Duration `config:"seconds;90"`
+
+	WindowsNetworkName *regexp.Regexp `config:"regexp-pattern;(?i)calico.*"`
 
 	PolicySyncPathPrefix string `config:"file;;"`
 
@@ -147,8 +157,8 @@ type Config struct {
 
 	OpenstackRegion string `config:"region;;die-on-fail"`
 
-	InterfacePrefix  string `config:"iface-list;cali;non-zero,die-on-fail"`
-	InterfaceExclude string `config:"iface-list;kube-ipvs0"`
+	InterfacePrefix  string           `config:"iface-list;cali;non-zero,die-on-fail"`
+	InterfaceExclude []*regexp.Regexp `config:"iface-list-regexp;kube-ipvs0"`
 
 	ChainInsertMode             string `config:"oneof(insert,append);insert;non-zero,die-on-fail"`
 	DefaultEndpointToHostAction string `config:"oneof(DROP,RETURN,ACCEPT);DROP;non-zero,die-on-fail"`
@@ -163,6 +173,13 @@ type Config struct {
 	LogSeverityFile   string `config:"oneof(DEBUG,INFO,WARNING,ERROR,FATAL);INFO"`
 	LogSeverityScreen string `config:"oneof(DEBUG,INFO,WARNING,ERROR,FATAL);INFO"`
 	LogSeveritySys    string `config:"oneof(DEBUG,INFO,WARNING,ERROR,FATAL);INFO"`
+
+	VXLANEnabled        bool   `config:"bool;false"`
+	VXLANPort           int    `config:"int;4789"`
+	VXLANVNI            int    `config:"int;4096"`
+	VXLANMTU            int    `config:"int;1410;non-zero"`
+	IPv4VXLANTunnelAddr net.IP `config:"ipv4;"`
+	VXLANTunnelMACAddr  string `config:"string;"`
 
 	IpInIpEnabled    bool   `config:"bool;false"`
 	IpInIpMtu        int    `config:"int;1440;non-zero"`
@@ -296,6 +313,9 @@ type Config struct {
 	DNSCacheFile         string        `config:"file;/var/run/calico/felix-dns-cache.txt"`
 	DNSCacheSaveInterval time.Duration `config:"seconds;60"`
 	DNSTrustedServers    []string      `config:"server-list;k8s-service:kube-dns"`
+
+	XDPEnabled        bool `config:"bool;true"`
+	GenericXDPEnabled bool `config:"bool;false"`
 }
 
 type ProtoPort struct {
@@ -330,10 +350,6 @@ func (config *Config) UpdateFrom(rawData map[string]string, source Source) (chan
 
 func (c *Config) InterfacePrefixes() []string {
 	return strings.Split(c.InterfacePrefix, ",")
-}
-
-func (c *Config) InterfaceExcludes() []string {
-	return strings.Split(c.InterfaceExclude, ",")
 }
 
 func (config *Config) OpenstackActive() bool {
@@ -552,10 +568,10 @@ func (config *Config) DatastoreConfig() apiconfig.CalicoAPIConfig {
 		}
 	}
 
-	if !config.IpInIpEnabled && !config.IPSecEnabled() {
+	if !config.IpInIpEnabled && !config.VXLANEnabled && !config.IPSecEnabled() {
 		// Polling k8s for node updates is expensive (because we get many superfluous
 		// updates) so disable if we don't need it.
-		log.Info("IPIP and IPsec disabled, disabling node poll (if KDD is in use).")
+		log.Info("Encap disabled, disabling node poll (if KDD is in use).")
 		cfg.Spec.K8sDisableNodePoll = true
 	}
 	return *cfg
@@ -716,6 +732,17 @@ func loadParams() {
 		case "iface-list":
 			param = &RegexpParam{Regexp: IfaceListRegexp,
 				Msg: "invalid Linux interface name"}
+		case "regexp-pattern":
+			param = &RegexpPatternParam{
+				Msg: "invalid regex pattern",
+			}
+		case "iface-list-regexp":
+			param = &RegexpPatternListParam{
+				NonRegexpElemRegexp: NonRegexpIfaceElemRegexp,
+				RegexpElemRegexp:    RegexpIfaceElemRegexp,
+				Delimiter:           ",",
+				Msg:                 "list contains invalid Linux interface name or regex pattern",
+			}
 		case "iface-param":
 			param = &RegexpParam{Regexp: IfaceParamRegexp,
 				Msg: "invalid Linux interface parameter"}

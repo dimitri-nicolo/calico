@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ import (
 	"github.com/containernetworking/cni/pkg/ns"
 	"github.com/docopt/docopt-go"
 	reuse "github.com/jbenet/go-reuseport"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/fv/utils"
@@ -298,7 +298,7 @@ func (tc *testConn) tryConnectWithPacketLoss() error {
 				// which is not the right kind of packet loss we want to trace.
 				// watch -n 1 'cat  /proc/net/udp' to monitor udp buffer overflow.
 
-				//Max 5000 packets per second
+				// Max 5000 packets per second
 				time.Sleep(200 * time.Microsecond)
 			}
 		}

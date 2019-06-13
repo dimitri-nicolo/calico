@@ -288,6 +288,17 @@ func (m MatchCriteria) NotICMPV6TypeAndCode(t, c uint8) MatchCriteria {
 	return append(m, fmt.Sprintf("-m icmp6 ! --icmpv6-type %d/%d", t, c))
 }
 
+// VXLANVNI matches on the VNI contained within the VXLAN header.  It assumes that this is indeed a VXLAN
+// packet; i.e. it should be used with a protocol==UDP and port==VXLAN port match.
+func (m MatchCriteria) VXLANVNI(vni uint32) MatchCriteria {
+	// This uses the U32 module, a simple VM for extracting bytes from a packet.  See
+	// http://www.stearns.org/doc/iptables-u32.current.html
+	return append(m, fmt.Sprintf(`-m u32 --u32 "`+
+		`0>>22&0x3C@` /* jump over the IP header */ +
+		`12>>8=0x%x` /* skip over 8 bytes of UDP header and 4 of VXLAN and compare 3 bytes with the expected VNI */ +
+		`"`, vni))
+}
+
 func PortsToMultiport(ports []uint16) string {
 	portFragments := make([]string, len(ports))
 	for i, port := range ports {

@@ -57,8 +57,9 @@ const (
 	IPSetIDNATOutgoingAllPools  = "all-ipam-pools"
 	IPSetIDNATOutgoingMasqPools = "masq-ipam-pools"
 
-	IPSetIDAllHostNets = "all-hosts-net"
-	IPSetIDThisHostIPs = "this-host"
+	IPSetIDAllHostNets        = "all-hosts-net"
+	IPSetIDAllVXLANSourceNets = "all-vxlan-net"
+	IPSetIDThisHostIPs        = "this-host"
 
 	ChainFIPDnat = ChainNamePrefix + "fip-dnat"
 	ChainFIPSnat = ChainNamePrefix + "fip-snat"
@@ -304,10 +305,16 @@ type Config struct {
 	OpenStackMetadataPort        uint16
 	OpenStackSpecialCasesEnabled bool
 
+	VXLANEnabled bool
+	VXLANPort    int
+	VXLANVNI     int
+
 	IPIPEnabled bool
 	// IPIPTunnelAddress is an address chosen from an IPAM pool, used as a source address
 	// by the host when sending traffic to a workload over IPIP.
 	IPIPTunnelAddress net.IP
+	// Same for VXLAN.
+	VXLANTunnelAddress net.IP
 
 	IptablesLogPrefix         string
 	IncludeDropActionInPrefix bool
@@ -404,7 +411,7 @@ func NewRenderer(config Config) RuleRenderer {
 		inputAcceptActions = []iptables.Action{iptables.ReturnAction{}}
 	}
 
-	//What should we do with packets that are accepted in the forwarding chain
+	// What should we do with packets that are accepted in the forwarding chain
 	var filterAllowAction, mangleAllowAction iptables.Action
 	switch config.IptablesFilterAllowAction {
 	case "RETURN":

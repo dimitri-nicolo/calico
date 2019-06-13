@@ -57,7 +57,7 @@ type endpointManager struct {
 	addressToEndpointId map[string]string
 	// lastCacheUpdate records the last time that the addressToEndpointId map was refreshed.
 	lastCacheUpdate time.Time
-	hns             hns.API
+	hns             hnsInterface
 
 	// pendingHostAddrs is either nil if no update is pending for the host addresses, or it contains the new set of IPs.
 	pendingHostAddrs []string
@@ -65,7 +65,12 @@ type endpointManager struct {
 	hostAddrs []string
 }
 
-func newEndpointManager(hns hns.API, policysets policysets.PolicySetsDataplane) *endpointManager {
+type hnsInterface interface {
+	GetHNSSupportedFeatures() hns.HNSSupportedFeatures
+	HNSListEndpointRequest() ([]hns.HNSEndpoint, error)
+}
+
+func newEndpointManager(hns hnsInterface, policysets policysets.PolicySetsDataplane) *endpointManager {
 	var networkName string
 	if os.Getenv(envNetworkName) != "" {
 		networkName = os.Getenv(envNetworkName)

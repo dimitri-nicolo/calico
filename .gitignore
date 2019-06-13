@@ -14,6 +14,7 @@
 
 # Build directories.
 /bin/
+/bpf/xdp/generated/
 /docker-image/bin/
 /build/
 /dist/
@@ -23,6 +24,7 @@
 
 # IDE files.
 /.idea/
+/.vscode/
 
 # Patterns to match files from older releases (prevents lots of
 # untracked files from showing up when switching from a maintenance branch.

@@ -18,6 +18,10 @@ service PolicySync {
   //  - ServiceAccountRemove
   //  - NamespaceUpdate
   //  - NamespaceRemove
+  //  - RouteUpdate
+  //  - RouteRemove
+  //  - VXLANTunnelEndpointUpdate
+  //  - VXLANTunnelEndpointRemove
   //  - ConfigUpdate
   //
   // The ConfigUpdate payload is only sent if the receiver has features enabled that
@@ -115,15 +119,27 @@ message ToDataplane {
     // NamespaceRemove is sent when a Namespace is removed.
     NamespaceRemove namespace_remove = 22;
 
+    // RouteUpdate is send when a route is added/updated.
+    RouteUpdate route_update = 23;
+    // RouteRemove is send when a route is deleted.
+    RouteRemove route_remove = 24;
+
+    // VXLANTunnelEndpointUpdate is send when a vtep is added/updated.
+    VXLANTunnelEndpointUpdate vtep_update = 25;
+    // VXLANTunnelEndpointRemove is send when a route is deleted.
+    VXLANTunnelEndpointRemove vtep_remove = 26;
+
+    // Private members below here; use ids >100 to avoid merge conflicts.
+
     // Sent when the set of IPs behind one of our IPsec tunnels changes.
-    IPSecTunnelAdd ipsec_tunnel_add = 26;
-    IPSecTunnelRemove ipsec_tunnel_remove = 27;
-    IPSecBindingUpdate ipsec_binding_update = 23;
+    IPSecTunnelAdd ipsec_tunnel_add = 126;
+    IPSecTunnelRemove ipsec_tunnel_remove = 127;
+    IPSecBindingUpdate ipsec_binding_update = 123;
 
     // Send when one or more IPs is blacklisted.
-    IPSecBlacklistAdd ipsec_binding_add = 24;
+    IPSecBlacklistAdd ipsec_binding_add = 124;
     // Send when one or more IPs is un-blacklisted.
-    IPSecBlacklistRemove ipsec_binding_remove = 25;
+    IPSecBlacklistRemove ipsec_binding_remove = 125;
   }
 }
 
@@ -500,6 +516,33 @@ message NamespaceRemove {
 
 message NamespaceID {
   string name = 1;
+}
+
+enum RouteType {
+  VXLAN = 0;
+}
+
+message RouteUpdate {
+  RouteType type = 1;
+  string dst = 2;
+  string node = 3;
+  string gw = 4;
+}
+
+message RouteRemove {
+  RouteType type = 1;
+  string dst = 2;
+}
+
+message VXLANTunnelEndpointUpdate {
+  string node = 1;
+  string mac = 2;
+  string ipv4_addr = 3;
+  string parent_device_ip = 4;
+}
+
+message VXLANTunnelEndpointRemove {
+  string node = 1;
 }
 
 message ReportResult {
