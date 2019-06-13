@@ -115,7 +115,7 @@ spec:
 {{ tuple .Values.complianceController.resources | include "tigera-secure-ee.resourceLimits" | indent 10 -}}
           env:
             - name: LOG_LEVEL
-              value: "warning"
+              value: "info"
             # This environment is used to configure how many failed jobs are maintained before the controller starts
             # deleting them. Persisting failed jobs gives the operator an opportunity to examine the associated pod
             # logs to determine the cause of the failure. Only one job is created by the controller for each scheduled

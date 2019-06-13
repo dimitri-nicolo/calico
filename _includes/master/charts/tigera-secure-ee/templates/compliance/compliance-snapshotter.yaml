@@ -92,7 +92,7 @@ spec:
 {{ tuple .Values.complianceSnapshotter.resources | include "tigera-secure-ee.resourceLimits" | indent 10 -}}
           env:
             - name: LOG_LEVEL
-              value: "warning"
+              value: "info"
             - name: TIGERA_COMPLIANCE_SNAPSHOT_HOUR
               value: "0"
             - name: ELASTIC_INDEX_SUFFIX
