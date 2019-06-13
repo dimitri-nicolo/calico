@@ -106,6 +106,11 @@ func init() {
 		reflect.TypeOf(apiv3.NetworkPolicy{}),
 	)
 	registerResourceInfo(
+		apiv3.KindNetworkSet,
+		"networksets",
+		reflect.TypeOf(apiv3.NetworkSet{}),
+	)
+	registerResourceInfo(
 		apiv3.KindTier,
 		"tiers",
 		reflect.TypeOf(apiv3.Tier{}),

@@ -452,6 +452,12 @@ func schema_libcalico_go_lib_apis_v1_EtcdConfig(ref common.ReferenceCallback) co
 							Format: "",
 						},
 					},
+					"etcdDiscoverySrv": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
 					"etcdUsername": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"string"},
@@ -483,7 +489,7 @@ func schema_libcalico_go_lib_apis_v1_EtcdConfig(ref common.ReferenceCallback) co
 						},
 					},
 				},
-				Required: []string{"etcdScheme", "etcdAuthority", "etcdEndpoints", "etcdUsername", "etcdPassword", "etcdKeyFile", "etcdCertFile", "etcdCACertFile"},
+				Required: []string{"etcdScheme", "etcdAuthority", "etcdEndpoints", "etcdDiscoverySrv", "etcdUsername", "etcdPassword", "etcdKeyFile", "etcdCertFile", "etcdCACertFile"},
 			},
 		},
 		Dependencies: []string{},

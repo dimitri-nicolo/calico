@@ -22,7 +22,7 @@ import (
 
 	apiv1 "github.com/projectcalico/libcalico-go/lib/apis/v1"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
-	"github.com/projectcalico/libcalico-go/lib/ipip"
+	"github.com/projectcalico/libcalico-go/lib/backend/encap"
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
 	v3 "github.com/projectcalico/libcalico-go/lib/validator/v3"
 )
@@ -328,6 +328,64 @@ func init() {
 			},
 			false,
 		),
+		Entry("should accept NetworkSetSpec with CIDRs and IPs",
+			api.NetworkSetSpec{
+				Nets: []string{
+					"10.0.0.1",
+					"11.0.0.0/8",
+					"dead:beef::",
+					"dead:beef::/96",
+				},
+			},
+			true,
+		),
+		Entry("should reject NetworkSetSpec with bad CIDR",
+			api.NetworkSetSpec{
+				Nets: []string{
+					"garbage",
+				},
+			},
+			false,
+		),
+		Entry("should accept NetworkSet with labels",
+			api.NetworkSet{
+				ObjectMeta: v1.ObjectMeta{
+					Name: "testset",
+					Labels: map[string]string{
+						"a": "b",
+					},
+				},
+				Spec: api.NetworkSetSpec{
+					Nets: []string{"10.0.0.1"},
+				},
+			},
+			true,
+		),
+		Entry("should reject NetworkSet with reserved labels",
+			api.NetworkSet{
+				ObjectMeta: v1.ObjectMeta{
+					Name: "testset",
+					Labels: map[string]string{
+						"projectcalico.org/namespace": "foo",
+					},
+				},
+				Spec: api.NetworkSetSpec{
+					Nets: []string{"10.0.0.1"},
+				},
+			},
+			false,
+		),
+		Entry("should reject NetworkSet with bad name",
+			api.NetworkSet{
+				ObjectMeta: v1.ObjectMeta{
+					Name: "test$set",
+				},
+				Spec: api.NetworkSetSpec{
+					Nets: []string{"10.0.0.1"},
+				},
+			},
+			false,
+		),
 
 		Entry("should accept a valid BGP logging level: Info", api.BGPConfigurationSpec{LogSeverityScreen: "Info"}, true),
 		Entry("should reject an invalid BGP logging level: info", api.BGPConfigurationSpec{LogSeverityScreen: "info"}, false),
@@ -556,6 +614,9 @@ func init() {
 		Entry("should accept an valid IPSecLogLevel value 'Verbose'", api.FelixConfigurationSpec{IPSecLogLevel: "Verbose"}, true),
 		Entry("should reject an invalid IPSecLogLevel value 'Warning'", api.FelixConfigurationSpec{IPSecLogLevel: "Warning"}, false),
 
+		Entry("should accept a valid WindowsNetworkName value '(?i)calico'", api.FelixConfigurationSpec{WindowsNetworkName: strPtr("(?i)calico")}, true),
+		Entry("should reject an invalid WindowsNetworkName value '('", api.FelixConfigurationSpec{WindowsNetworkName: strPtr("(")}, false),
+
 		Entry("should accept an valid CloudWatchAggregationKind value '0'", api.FelixConfigurationSpec{CloudWatchLogsAggregationKindForAllowed: &noAggKind}, true),
 		Entry("should accept an valid CloudWatchAggregationKind value '1'", api.FelixConfigurationSpec{CloudWatchLogsAggregationKindForAllowed: &srcPortAggKind}, true),
 		Entry("should accept an valid CloudWatchAggregationKind value '2'", api.FelixConfigurationSpec{CloudWatchLogsAggregationKindForAllowed: &podPfxAddKind}, true),
@@ -742,14 +803,18 @@ func init() {
 		Entry("should accept IP pool with IPv6 CIDR /122",
 			api.IPPool{ObjectMeta: v1.ObjectMeta{Name: "pool.name"},
 				Spec: api.IPPoolSpec{
-					CIDR:     netv6_3,
-					IPIPMode: api.IPIPModeNever},
+					CIDR:      netv6_3,
+					IPIPMode:  api.IPIPModeNever,
+					VXLANMode: api.VXLANModeNever,
+				},
 			}, true),
 		Entry("should accept IP pool with IPv6 CIDR /10",
 			api.IPPool{ObjectMeta: v1.ObjectMeta{Name: "pool.name"},
 				Spec: api.IPPoolSpec{
-					CIDR:     netv6_4,
-					IPIPMode: api.IPIPModeNever},
+					CIDR:      netv6_4,
+					IPIPMode:  api.IPIPModeNever,
+					VXLANMode: api.VXLANModeNever,
+				},
 			}, true),
 		Entry("should accept a disabled IP pool with IPv4 CIDR /27",
 			api.IPPool{
@@ -762,9 +827,10 @@ func init() {
 			api.IPPool{
 				ObjectMeta: v1.ObjectMeta{Name: "pool.name"},
 				Spec: api.IPPoolSpec{
-					CIDR:     netv6_1,
-					IPIPMode: api.IPIPModeNever,
-					Disabled: true},
+					CIDR:      netv6_1,
+					IPIPMode:  api.IPIPModeNever,
+					VXLANMode: api.VXLANModeNever,
+					Disabled:  true},
 			}, true),
 		Entry("should reject IP pool with IPv4 CIDR /27", api.IPPool{ObjectMeta: v1.ObjectMeta{Name: "pool.name"}, Spec: api.IPPoolSpec{CIDR: netv4_5}}, false),
 		Entry("should reject IP pool with IPv6 CIDR /128", api.IPPool{ObjectMeta: v1.ObjectMeta{Name: "pool.name"}, Spec: api.IPPoolSpec{CIDR: netv6_1}}, false),
@@ -774,8 +840,19 @@ func init() {
 			api.IPPool{
 				ObjectMeta: v1.ObjectMeta{Name: "pool.name"},
 				Spec: api.IPPoolSpec{
-					CIDR:     netv6_1,
-					IPIPMode: api.IPIPModeAlways},
+					CIDR:      netv6_1,
+					IPIPMode:  api.IPIPModeAlways,
+					VXLANMode: api.VXLANModeNever,
+				},
+			}, false),
+		Entry("should reject VXLANMode 'Always' for IPv6 pool",
+			api.IPPool{
+				ObjectMeta: v1.ObjectMeta{Name: "pool.name"},
+				Spec: api.IPPoolSpec{
+					CIDR:      netv6_1,
+					VXLANMode: api.VXLANModeAlways,
+					IPIPMode:  api.IPIPModeNever,
+				},
 			}, false),
 		Entry("should reject IPv4 pool with a CIDR range overlapping with Link Local range",
 			api.IPPool{ObjectMeta: v1.ObjectMeta{Name: "pool.name"}, Spec: api.IPPoolSpec{CIDR: "169.254.5.0/24"}}, false),
@@ -784,17 +861,24 @@ func init() {
 
 		// (API) IPIPMode
 		Entry("should accept IPPool with no IPIP mode specified", api.IPPoolSpec{CIDR: "1.2.3.0/24"}, true),
-		Entry("should accept IPIP mode Never (api)", api.IPPoolSpec{CIDR: "1.2.3.0/24", IPIPMode: api.IPIPModeNever}, true),
+		Entry("should accept IPIP mode Never (api)", api.IPPoolSpec{CIDR: "1.2.3.0/24", IPIPMode: api.IPIPModeNever, VXLANMode: api.VXLANModeNever}, true),
 		Entry("should accept IPIP mode Never", api.IPPoolSpec{CIDR: "1.2.3.0/24", IPIPMode: "Never"}, true),
 		Entry("should accept IPIP mode Always", api.IPPoolSpec{CIDR: "1.2.3.0/24", IPIPMode: "Always"}, true),
 		Entry("should accept IPIP mode CrossSubnet", api.IPPoolSpec{CIDR: "1.2.3.0/24", IPIPMode: "CrossSubnet"}, true),
 		Entry("should reject IPIP mode badVal", api.IPPoolSpec{CIDR: "1.2.3.0/24", IPIPMode: "badVal"}, false),
 		Entry("should reject IPIP mode never (lower case)", api.IPPoolSpec{CIDR: "1.2.3.0/24", IPIPMode: "never"}, false),
 
+		// (API) VXLANMode
+		Entry("should reject IPIP mode and VXLAN mode", api.IPPoolSpec{CIDR: "1.2.3.0/24", IPIPMode: "Always", VXLANMode: "Always"}, false),
+		Entry("should accept VXLAN mode Always", api.IPPoolSpec{CIDR: "1.2.3.0/24", VXLANMode: "Always"}, true),
+		Entry("should accept VXLAN mode Never ", api.IPPoolSpec{CIDR: "1.2.3.0/24", VXLANMode: "Never"}, true),
+		Entry("should reject VXLAN mode never", api.IPPoolSpec{CIDR: "1.2.3.0/24", VXLANMode: "never"}, false),
+		Entry("should reject VXLAN mode badVal", api.IPPoolSpec{CIDR: "1.2.3.0/24", VXLANMode: "badVal"}, false),
+
 		// (API) IPIP APIv1 backwards compatibility. Read-only field IPIP
 		Entry("should accept a nil IPIP field", api.IPPoolSpec{CIDR: "1.2.3.0/24", IPIPMode: "Never", IPIP: nil}, true),
 		Entry("should accept it when the IPIP field is not specified", api.IPPoolSpec{CIDR: "1.2.3.0/24", IPIPMode: "Never"}, true),
-		Entry("should reject a non-nil IPIP field", api.IPPoolSpec{CIDR: "1.2.3.0/24", IPIPMode: "Never", IPIP: &apiv1.IPIPConfiguration{Enabled: true, Mode: ipip.Always}}, false),
+		Entry("should reject a non-nil IPIP field", api.IPPoolSpec{CIDR: "1.2.3.0/24", IPIPMode: "Never", IPIP: &apiv1.IPIPConfiguration{Enabled: true, Mode: encap.Always}}, false),
 
 		// (API) NatOutgoing APIv1 backwards compatibility. Read-only field NatOutgoingV1
 		Entry("should accept NATOutgoingV1 field set to true", api.IPPoolSpec{CIDR: "1.2.3.0/24", IPIPMode: "Never", NATOutgoingV1: false}, true),
@@ -1198,6 +1282,23 @@ func init() {
 				Action: "Deny",
 				HTTP:   &api.HTTPMatch{Methods: []string{"GET"}},
 			}, false),
+		Entry("should reject non-TCP protocol with HTTP clause",
+			api.Rule{
+				Action:   "Allow",
+				Protocol: protocolFromString("UDP"),
+				HTTP:     &api.HTTPMatch{Methods: []string{"GET"}},
+			}, false),
+		Entry("should accept TCP protocol with HTTP clause",
+			api.Rule{
+				Action:   "Allow",
+				Protocol: protocolFromString("TCP"),
+				HTTP:     &api.HTTPMatch{Methods: []string{"GET"}},
+			}, true),
+		Entry("should accept missing protocol with HTTP clause",
+			api.Rule{
+				Action: "Allow",
+				HTTP:   &api.HTTPMatch{Methods: []string{"GET"}},
+			}, true),
 		Entry("should allow Allow Rule with Destination Domains",
 			api.Rule{
 				Action: "Allow",
@@ -1852,6 +1953,18 @@ func init() {
 		Entry("disallow HTTP Method with duplicate match clause",
 			&api.HTTPMatch{Methods: []string{"GET", "GET", "Foo"}},
 			false,
+		),
+		Entry("should not accept an invalid IP address",
+			api.FelixConfigurationSpec{NATOutgoingAddress: bad_ipv4_1}, false,
+		),
+		Entry("should not accept a masked IP",
+			api.FelixConfigurationSpec{NATOutgoingAddress: netv4_1}, false,
+		),
+		Entry("should not accept an IPV6 address",
+			api.FelixConfigurationSpec{NATOutgoingAddress: ipv6_1}, false,
+		),
+		Entry("should accept a valid IP address",
+			api.FelixConfigurationSpec{NATOutgoingAddress: ipv4_1}, true,
 		),
 
 		// GlobalThreatFeed
@@ -2571,6 +2684,10 @@ func init() {
 			false,
 		),
 	)
+}
+
+func strPtr(s string) *string {
+	return &s
 }
 
 func protocolFromString(s string) *numorstring.Protocol {

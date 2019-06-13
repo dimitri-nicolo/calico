@@ -81,6 +81,11 @@ type FelixConfigurationSpec struct {
 	IpsetsRefreshInterval *metav1.Duration `json:"ipsetsRefreshInterval,omitempty" configv1timescale:"seconds"`
 	MaxIpsetSize          *int             `json:"maxIpsetSize,omitempty"`
 
+	// XDPRefreshInterval is the period at which Felix re-checks all XDP state to ensure that no
+	// other process has accidentally broken Calico's BPF maps or attached programs. Set to 0 to
+	// disable XDP refresh. [Default: 90s]
+	XDPRefreshInterval *metav1.Duration `json"xdpRefreshInterval,omitempty" configv1timescale:"seconds"`
+
 	NetlinkTimeout *metav1.Duration `json:"netlinkTimeout,omitempty" configv1timescale:"seconds" confignamev1:"NetlinkTimeoutSecs"`
 
 	// MetadataAddr is the IP address or domain name of the server that can answer VM queries for
@@ -104,9 +109,12 @@ type FelixConfigurationSpec struct {
 	// configure this appropriately. For example our Kubernetes and Docker integrations set the ‘cali’ value,
 	// and our OpenStack integration sets the ‘tap’ value. [Default: cali]
 	InterfacePrefix string `json:"interfacePrefix,omitempty"`
-	// InterfaceExclude is a list of interfaces that Felix should exclude when monitoring for host
-	// endpoints.  The default value ensures that Felix ignores Kubernetes' IPVS dummy interface,
-	// which is used internally by kube-proxy.  [Default: kube-ipvs0]
+	// InterfaceExclude is a comma-separated list of interfaces that Felix should exclude when monitoring for host
+	// endpoints. The default value ensures that Felix ignores Kubernetes' IPVS dummy interface, which is used
+	// internally by kube-proxy. If you want to exclude multiple interface names using a single value, the list
+	// supports regular expressions. For regular expressions you must wrap the value with '/'. For example
+	// having values '/^kube/,veth1' will exclude all interfaces that begin with 'kube' and also the interface
+	// 'veth1'. [Default: kube-ipvs0]
 	InterfaceExclude string `json:"interfaceExclude,omitempty"`
 
 	// ChainInsertMode controls whether Felix hooks the kernel’s top-level iptables chains by inserting a rule
@@ -145,6 +153,12 @@ type FelixConfigurationSpec struct {
 	IPIPEnabled *bool `json:"ipipEnabled,omitempty" confignamev1:"IpInIpEnabled"`
 	// IPIPMTU is the MTU to set on the tunnel device. See Configuring MTU [Default: 1440]
 	IPIPMTU *int `json:"ipipMTU,omitempty" confignamev1:"IpInIpMtu"`
+
+	VXLANEnabled *bool `json:"vxlanEnabled,omitempty"`
+	// VXLANMTU is the MTU to set on the tunnel device. See Configuring MTU [Default: 1440]
+	VXLANMTU  *int `json:"vxlanMTU,omitempty"`
+	VXLANPort *int `json:"vxlanPort,omitempty"`
+	VXLANVNI  *int `json:"vxlanVNI,omitempty"`
 
 	// ReportingInterval is the interval at which Felix reports its status into the datastore or 0 to disable.
 	// Must be non-zero in OpenStack deployments. [Default: 30s]
@@ -215,6 +229,11 @@ type FelixConfigurationSpec struct {
 	// network stack is used.
 	NATPortRange *numorstring.Port `json:"natPortRange,omitempty"`
 
+	// NATOutgoingAddress specifies an address to use when performing source NAT for traffic in a natOutgoing pool that
+	// is leaving the network. By default the address used is an address on the interface the traffic is leaving on
+	// (ie it uses the iptables MASQUERADE target)
+	NATOutgoingAddress string `json:"natOutgoingAddress,omitempty"`
+
 	// ExternalNodesCIDRList is a list of CIDR's of external-non-calico-nodes which may source tunnel traffic and have
 	// the tunneled traffic be accepted at calico nodes.
 	ExternalNodesCIDRList *[]string `json:"externalNodesList,omitempty"`
@@ -240,6 +259,17 @@ type FelixConfigurationSpec struct {
 	DebugSimulateDataplaneHangAfter *metav1.Duration `json:"debugSimulateDataplaneHangAfter,omitempty" configv1timescale:"seconds"`
 
 	IptablesNATOutgoingInterfaceFilter string `json:"iptablesNATOutgoingInterfaceFilter,omitempty" validate:"omitempty,ifaceFilter"`
+
+	// SidecarAccelerationEnabled enables experimental sidecar acceleration [Default: false]
+	SidecarAccelerationEnabled *bool `json:"sidecarAccelerationEnabled,omitempty"`
+
+	// XDPEnabled enables XDP acceleration for suitable untracked incoming deny rules. [Default: true]
+	XDPEnabled *bool `json:"xdpEnabled,omitempty" confignamev1:"XDPEnabled"`
+
+	// GenericXDPEnabled enables Generic XDP so network cards that don't support XDP offload or driver
+	// modes can use XDP. This is not recommended since it doesn't provide better performance than
+	// iptables. [Default: false]
+	GenericXDPEnabled *bool `json:"genericXDPEnabled,omitempty" confignamev1:"GenericXDPEnabled"`
 
 	SyslogReporterNetwork string `json:"syslogReporterNetwork,omitempty"`
 	SyslogReporterAddress string `json:"syslogReporterAddress,omitempty"`
@@ -361,6 +391,10 @@ type FelixConfigurationSpec struct {
 	// The periodic interval at which Felix saves learnt DNS information to the cache file. [Default:
 	// 60s].
 	DNSCacheSaveInterval *metav1.Duration `json:"dnsCacheSaveInterval,omitempty" configv1timescale:"seconds"`
+
+	// WindowsNetworkName specifies which Windows HNS networks Felix should operate on.  The default is to match
+	// networks that start with "calico".  Supports regular expression syntax.
+	WindowsNetworkName *string `json:"windowsNetworkName,omitempty"`
 }
 
 // ProtoPort is combination of protocol and port, both must be specified.

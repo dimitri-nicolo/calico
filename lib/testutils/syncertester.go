@@ -15,6 +15,7 @@ package testutils
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -23,6 +24,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	gomegatypes "github.com/onsi/gomega/types"
+
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 )
@@ -75,15 +77,9 @@ func (st *SyncerTester) OnStatusUpdated(status api.SyncStatus) {
 	// If this is not the first status event then perform additional validation on the status.
 	if current != UnsetSyncStatus {
 		// None of the concrete syncers that we are testing expect should have the same
-		// status update repeated, nor should the status decrease.  Log and panic.
+		// status update repeated.  Log and panic.
 		if status == current {
 			log.WithField("Status", status).Panic("Duplicate identical status updates from syncer")
-		}
-		if status < current {
-			log.WithFields(log.Fields{
-				"NewStatus": status,
-				"OldStatus": st.status,
-			}).Panic("Decrementing status updates from syncer")
 		}
 	}
 
@@ -133,6 +129,16 @@ func (st *SyncerTester) OnUpdates(updates []api.Update) {
 				Expect(u.Value).NotTo(BeNil())
 				st.cache[k] = u.KVPair
 			}
+
+			// Check that KeyFromDefaultPath supports parsing the path again;
+			// this is required for typha to support this resource.
+			parsedKey := model.KeyFromDefaultPath(k)
+			if !strings.HasPrefix(k, "/calico/felix/v1/remotecluster/") &&
+				!strings.HasPrefix(k, "remote-cluster:") {
+				Expect(parsedKey).NotTo(BeNil(), fmt.Sprintf(
+					"KeyFromDefaultPath unable to parse %s, generated from %+v; typha won't support this key",
+					k, u.Key))
+			}
 		}
 	}()
 
@@ -148,10 +154,9 @@ func (st *SyncerTester) ParseFailed(rawKey string, rawValue string) {
 }
 
 // ExpectStatusUpdate verifies a status update message has been received.  This should only
-// be called *after* a new status change has occurred.  Since the concrete implementations
-// of the syncer API only migrate status in increasing readiness, this means it should be
-// called once each for the following statuses in order:  WaitingForDatastore, ResyncInProgress, InSync.
-// The OnStatusUpdate callback will panic if the above is not true.
+// be called *after* a new status change has occurred.  The possible state changes are:
+// WaitingForDatastore -> ResyncInProgress -> InSync -> WaitingForDatastore.
+// ExpectStatusUpdate will panic if called with the same status twice in a row.
 func (st *SyncerTester) ExpectStatusUpdate(status api.SyncStatus, timeout ...time.Duration) {
 	log.Infof("Expecting status of: %s", status)
 	cs := func() api.SyncStatus {
@@ -209,7 +214,7 @@ func (st *SyncerTester) ExpectCacheSize(size int) {
 // revision number is not stable).
 func (st *SyncerTester) ExpectData(kvp model.KVPair) {
 	key, err := model.KeyToDefaultPath(kvp.Key)
-	Expect(err).NotTo(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("failed to convert key to default path: %v", kvp.Key))
 
 	if kvp.Revision == "" {
 		value := func() interface{} {
@@ -295,7 +300,7 @@ func (st *SyncerTester) GetCacheEntries() []model.KVPair {
 	return es
 }
 
-// waitForNumUpdates waits up to 2s and exits if the number of stored updates is equal to
+// waitForNumUpdates waits up to 4s and exits if the number of stored updates is equal to
 // the number of expected updates.
 func (st *SyncerTester) waitForNumUpdates(expected []api.Update) {
 	// Poll until we have at least the correct number of updates to check.
@@ -313,7 +318,7 @@ func (st *SyncerTester) waitForNumUpdates(expected []api.Update) {
 	}
 }
 
-// waitForNumOnUpdates waits up to 2s and exits if the number of stored OnUpdates is equal to
+// waitForNumOnUpdates waits up to 4s and exits if the number of stored OnUpdates is equal to
 // the number of expected OnUpdates.
 func (st *SyncerTester) waitForNumOnUpdates(expected [][]api.Update) {
 	// Poll until we have at least the correct number of updates to check.

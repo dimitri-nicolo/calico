@@ -155,6 +155,9 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkPolicy":                  schema_libcalico_go_lib_apis_v3_NetworkPolicy(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkPolicyList":              schema_libcalico_go_lib_apis_v3_NetworkPolicyList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkPolicySpec":              schema_libcalico_go_lib_apis_v3_NetworkPolicySpec(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkSet":                     schema_libcalico_go_lib_apis_v3_NetworkSet(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkSetList":                 schema_libcalico_go_lib_apis_v3_NetworkSetList(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkSetSpec":                 schema_libcalico_go_lib_apis_v3_NetworkSetSpec(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.Node":                           schema_libcalico_go_lib_apis_v3_Node(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeBGPSpec":                    schema_libcalico_go_lib_apis_v3_NodeBGPSpec(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeList":                       schema_libcalico_go_lib_apis_v3_NodeList(ref),
@@ -562,6 +565,12 @@ func schema_libcalico_go_lib_apis_v1_EtcdConfig(ref common.ReferenceCallback) co
 							Format: "",
 						},
 					},
+					"etcdDiscoverySrv": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
 					"etcdUsername": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"string"},
@@ -593,7 +602,7 @@ func schema_libcalico_go_lib_apis_v1_EtcdConfig(ref common.ReferenceCallback) co
 						},
 					},
 				},
-				Required: []string{"etcdScheme", "etcdAuthority", "etcdEndpoints", "etcdUsername", "etcdPassword", "etcdKeyFile", "etcdCertFile", "etcdCACertFile"},
+				Required: []string{"etcdScheme", "etcdAuthority", "etcdEndpoints", "etcdDiscoverySrv", "etcdUsername", "etcdPassword", "etcdKeyFile", "etcdCertFile", "etcdCACertFile"},
 			},
 		},
 		Dependencies: []string{},
@@ -3771,6 +3780,12 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							Format: "int32",
 						},
 					},
+					"XDPRefreshInterval": {
+						SchemaProps: spec.SchemaProps{
+							Description: "XDPRefreshInterval is the period at which Felix re-checks all XDP state to ensure that no other process has accidentally broken Calico's BPF maps or attached programs. Set to 0 to disable XDP refresh. [Default: 90s]",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
 					"netlinkTimeout": {
 						SchemaProps: spec.SchemaProps{
 							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
@@ -3806,7 +3821,7 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 					},
 					"interfaceExclude": {
 						SchemaProps: spec.SchemaProps{
-							Description: "InterfaceExclude is a list of interfaces that Felix should exclude when monitoring for host endpoints.  The default value ensures that Felix ignores Kubernetes' IPVS dummy interface, which is used internally by kube-proxy.  [Default: kube-ipvs0]",
+							Description: "InterfaceExclude is a comma-separated list of interfaces that Felix should exclude when monitoring for host endpoints. The default value ensures that Felix ignores Kubernetes' IPVS dummy interface, which is used internally by kube-proxy. If you want to exclude multiple interface names using a single value, the list supports regular expressions. For regular expressions you must wrap the value with '/'. For example having values '/^kube/,veth1' will exclude all interfaces that begin with 'kube' and also the interface 'veth1'. [Default: kube-ipvs0]",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -3890,6 +3905,31 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							Description: "IPIPMTU is the MTU to set on the tunnel device. See Configuring MTU [Default: 1440]",
 							Type:        []string{"integer"},
 							Format:      "int32",
+						},
+					},
+					"vxlanEnabled": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"boolean"},
+							Format: "",
+						},
+					},
+					"vxlanMTU": {
+						SchemaProps: spec.SchemaProps{
+							Description: "VXLANMTU is the MTU to set on the tunnel device. See Configuring MTU [Default: 1440]",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"vxlanPort": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"integer"},
+							Format: "int32",
+						},
+					},
+					"vxlanVNI": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"integer"},
+							Format: "int32",
 						},
 					},
 					"reportingInterval": {
@@ -4064,6 +4104,13 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							Ref:         ref("github.com/projectcalico/libcalico-go/lib/numorstring.Port"),
 						},
 					},
+					"natOutgoingAddress": {
+						SchemaProps: spec.SchemaProps{
+							Description: "NATOutgoingAddress specifies an address to use when performing source NAT for traffic in a natOutgoing pool that is leaving the network. By default the address used is an address on the interface the traffic is leaving on (ie it uses the iptables MASQUERADE target)",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 					"externalNodesList": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ExternalNodesCIDRList is a list of CIDR's of external-non-calico-nodes which may source tunnel traffic and have the tunneled traffic be accepted at calico nodes.",
@@ -4160,6 +4207,27 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"string"},
 							Format: "",
+						},
+					},
+					"sidecarAccelerationEnabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SidecarAccelerationEnabled enables experimental sidecar acceleration [Default: false]",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"xdpEnabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "XDPEnabled enables XDP acceleration for suitable untracked incoming deny rules. [Default: true]",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"genericXDPEnabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "GenericXDPEnabled enables Generic XDP so network cards that don't support XDP offload or driver modes can use XDP. This is not recommended since it doesn't provide better performance than iptables. [Default: false]",
+							Type:        []string{"boolean"},
+							Format:      "",
 						},
 					},
 					"syslogReporterNetwork": {
@@ -4441,7 +4509,15 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
+					"windowsNetworkName": {
+						SchemaProps: spec.SchemaProps{
+							Description: "WindowsNetworkName specifies which Windows HNS networks Felix should operate on.  The default is to match networks that start with \"calico\".  Supports regular expression syntax.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 				},
+				Required: []string{"XDPRefreshInterval"},
 			},
 		},
 		Dependencies: []string{
@@ -6022,6 +6098,13 @@ func schema_libcalico_go_lib_apis_v3_IPPoolSpec(ref common.ReferenceCallback) co
 							Format:      "",
 						},
 					},
+					"vxlanMode": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Contains configuration for VXLAN tunneling for this pool. If not specified, then this is defaulted to \"Never\" (i.e. VXLAN tunelling is disabled).",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 					"ipipMode": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Contains configuration for IPIP tunneling for this pool. If not specified, then this is defaulted to \"Never\" (i.e. IPIP tunelling is disabled).",
@@ -6448,6 +6531,119 @@ func schema_libcalico_go_lib_apis_v3_NetworkPolicySpec(ref common.ReferenceCallb
 	}
 }
 
+func schema_libcalico_go_lib_apis_v3_NetworkSet(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "NetworkSet is the Namespaced-equivalent of the GlobalNetworkSet.",
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Standard object's metadata.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Specification of the NetworkSet.",
+							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkSetSpec"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkSetSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_NetworkSetList(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "NetworkSetList contains a list of NetworkSet resources.",
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						},
+					},
+					"items": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkSet"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"metadata", "items"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkSet", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_NetworkSetSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "NetworkSetSpec contains the specification for a NetworkSet resource.",
+				Properties: map[string]spec.Schema{
+					"nets": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The list of IP networks that belong to this set.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{},
+	}
+}
+
 func schema_libcalico_go_lib_apis_v3_Node(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -6592,6 +6788,20 @@ func schema_libcalico_go_lib_apis_v3_NodeSpec(ref common.ReferenceCallback) comm
 						SchemaProps: spec.SchemaProps{
 							Description: "BGP configuration for this node.",
 							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.NodeBGPSpec"),
+						},
+					},
+					"ipv4VXLANTunnelAddr": {
+						SchemaProps: spec.SchemaProps{
+							Description: "IPv4VXLANTunnelAddr is the IPv4 address of the VXLAN tunnel.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"vxlanTunnelMACAddr": {
+						SchemaProps: spec.SchemaProps{
+							Description: "VXLANTunnelMACAddr is the MAC address of the VXLAN tunnel.",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 					"orchRefs": {

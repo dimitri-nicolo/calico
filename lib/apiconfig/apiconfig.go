@@ -49,12 +49,13 @@ type CalicoAPIConfigSpec struct {
 }
 
 type EtcdConfig struct {
-	EtcdEndpoints  string `json:"etcdEndpoints" envconfig:"ETCD_ENDPOINTS"`
-	EtcdUsername   string `json:"etcdUsername" envconfig:"ETCD_USERNAME"`
-	EtcdPassword   string `json:"etcdPassword" envconfig:"ETCD_PASSWORD"`
-	EtcdKeyFile    string `json:"etcdKeyFile" envconfig:"ETCD_KEY_FILE"`
-	EtcdCertFile   string `json:"etcdCertFile" envconfig:"ETCD_CERT_FILE"`
-	EtcdCACertFile string `json:"etcdCACertFile" envconfig:"ETCD_CA_CERT_FILE"`
+	EtcdEndpoints    string `json:"etcdEndpoints" envconfig:"ETCD_ENDPOINTS"`
+	EtcdDiscoverySrv string `json:"etcdDiscoverySrv" envconfig:"ETCD_DISCOVERY_SRV"`
+	EtcdUsername     string `json:"etcdUsername" envconfig:"ETCD_USERNAME"`
+	EtcdPassword     string `json:"etcdPassword" envconfig:"ETCD_PASSWORD"`
+	EtcdKeyFile      string `json:"etcdKeyFile" envconfig:"ETCD_KEY_FILE"`
+	EtcdCertFile     string `json:"etcdCertFile" envconfig:"ETCD_CERT_FILE"`
+	EtcdCACertFile   string `json:"etcdCACertFile" envconfig:"ETCD_CA_CERT_FILE"`
 
 	// These config file parameters are to support inline certificates, keys and CA / Trusted certificate.
 	// There are no corresponding environment variables to avoid accidental exposure.
@@ -72,6 +73,10 @@ type KubeConfig struct {
 	K8sAPIToken              string `json:"k8sAPIToken" ignore:"true"`
 	K8sInsecureSkipTLSVerify bool   `json:"k8sInsecureSkipTLSVerify" envconfig:"K8S_INSECURE_SKIP_TLS_VERIFY" default:""`
 	K8sDisableNodePoll       bool   `json:"k8sDisableNodePoll" envconfig:"K8S_DISABLE_NODE_POLL" default:""`
+
+	// K8sUsePodCIDR controls whether or not IPAM blocks are generated based on Node.Spec.PodCIDR. Set this
+	// to true when using host-local IPAM, and set to false when using calico-ipam.
+	K8sUsePodCIDR bool `json:"usePodCIDR" envconfig:"USE_POD_CIDR" default:""`
 }
 
 // NewCalicoAPIConfig creates a new (zeroed) CalicoAPIConfig struct with the

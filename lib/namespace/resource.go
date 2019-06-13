@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import (
 
 func IsNamespaced(kind string) bool {
 	switch kind {
-	case apiv3.KindWorkloadEndpoint, apiv3.KindNetworkPolicy, apiv3.KindK8sService, apiv3.KindK8sEndpoints:
+	case apiv3.KindWorkloadEndpoint, apiv3.KindNetworkPolicy, apiv3.KindK8sService, apiv3.KindK8sEndpoints, apiv3.KindNetworkSet:
 		return true
 	default:
 		return false

@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 
 package felixsyncer_test
 
@@ -74,7 +74,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 
 			By("Creating and starting a syncer")
 			syncTester = testutils.NewSyncerTester()
-			syncer = felixsyncer.New(be, syncTester)
+			syncer = felixsyncer.New(be, config.Spec, syncTester)
 			syncer.Start()
 
 			By("Checking status is updated to sync'd at start of day")
@@ -114,7 +114,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 						UpdateType: api.UpdateTypeKVNew,
 					})
 				}
-				for _, n := range []string{"default", "kube-public", "kube-system", "namespace-1", "namespace-2"} {
+				for _, n := range []string{"default", "kube-public", "kube-system", "namespace-1", "namespace-2", "kube-node-lease"} {
 					expectedEvents = append(expectedEvents, api.Update{
 						KVPair: model.KVPair{
 							Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "ksa." + n + ".default"}},
@@ -210,7 +210,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 
 			By("Creating and starting a syncer")
 			syncTester = testutils.NewSyncerTester()
-			syncer = felixsyncer.New(be, syncTester)
+			syncer = felixsyncer.New(be, config.Spec, syncTester)
 			syncer.Start()
 
 			By("Checking status is updated to sync'd at start of day")
@@ -271,7 +271,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 						UpdateType: api.UpdateTypeKVNew,
 					})
 				}
-				for _, n := range []string{"default", "kube-public", "kube-system", "namespace-1", "namespace-2"} {
+				for _, n := range []string{"default", "kube-public", "kube-system", "namespace-1", "namespace-2", "kube-node-lease"} {
 					expectedEvents = append(expectedEvents, api.Update{
 						KVPair: model.KVPair{
 							Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "ksa." + n + ".default"}},
@@ -339,7 +339,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 
 			By("Creating and starting a syncer")
 			syncTester = testutils.NewSyncerTester()
-			syncer = felixsyncer.New(be, syncTester)
+			syncer = felixsyncer.New(be, config.Spec, syncTester)
 			syncer.Start()
 
 			By("Checking status is updated to resync in progress")
@@ -368,7 +368,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 						UpdateType: api.UpdateTypeKVNew,
 					})
 				}
-				for _, n := range []string{"default", "kube-public", "kube-system", "namespace-1", "namespace-2"} {
+				for _, n := range []string{"default", "kube-public", "kube-system", "namespace-1", "namespace-2", "kube-node-lease"} {
 					expectedEvents = append(expectedEvents, api.Update{
 						KVPair: model.KVPair{
 							Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "ksa." + n + ".default"}},
@@ -467,7 +467,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests", testutils.
 			Expect(outError).NotTo(HaveOccurred())
 
 			// Keep track of the set of events we will expect from the Felix syncer. Start with the remote
-			// cluster staus updates as the connection succeeds.
+			// cluster status updates as the connection succeeds.
 			expectedEvents := []api.Update{
 				{
 					KVPair: model.KVPair{
@@ -623,7 +623,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests", testutils.
 
 			By("Creating and starting a syncer")
 			syncTester = testutils.NewSyncerTester()
-			syncer = felixsyncer.New(localBackend, syncTester)
+			syncer = felixsyncer.New(localBackend, localConfig.Spec, syncTester)
 			syncer.Start()
 
 			By("Checking status is updated to sync'd at start of day")
@@ -641,7 +641,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests", testutils.
 						UpdateType: api.UpdateTypeKVNew,
 					})
 				}
-				for _, n := range []string{"default", "kube-public", "kube-system", "namespace-1", "namespace-2"} {
+				for _, n := range []string{"default", "kube-public", "kube-system", "namespace-1", "namespace-2", "kube-node-lease"} {
 					expectedEvents = append(expectedEvents, api.Update{
 						KVPair: model.KVPair{
 							Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "ksa." + n + ".default"}},
@@ -754,7 +754,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests", testutils.
 
 			By("Creating and starting a syncer")
 			syncTester = testutils.NewSyncerTester()
-			syncer = felixsyncer.New(localBackend, syncTester)
+			syncer = felixsyncer.New(localBackend, localConfig.Spec, syncTester)
 			syncer.Start()
 
 			By("Checking status is updated to sync'd at start of day")
@@ -772,7 +772,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests", testutils.
 						UpdateType: api.UpdateTypeKVNew,
 					})
 				}
-				for _, n := range []string{"default", "kube-public", "kube-system", "namespace-1", "namespace-2"} {
+				for _, n := range []string{"default", "kube-public", "kube-system", "namespace-1", "namespace-2", "kube-node-lease"} {
 					expectedEvents = append(expectedEvents, api.Update{
 						KVPair: model.KVPair{
 							Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "ksa." + n + ".default"}},
@@ -909,7 +909,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests", testutils.
 
 			By("Creating and starting a syncer")
 			syncTester = testutils.NewSyncerTester()
-			syncer = felixsyncer.New(localBackend, syncTester)
+			syncer = felixsyncer.New(localBackend, localConfig.Spec, syncTester)
 			syncer.Start()
 
 			By("Checking status is updated to sync'd at start of day")
@@ -927,7 +927,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests", testutils.
 						UpdateType: api.UpdateTypeKVNew,
 					})
 				}
-				for _, n := range []string{"default", "kube-public", "kube-system", "namespace-1", "namespace-2"} {
+				for _, n := range []string{"default", "kube-public", "kube-system", "namespace-1", "namespace-2", "kube-node-lease"} {
 					expectedEvents = append(expectedEvents, api.Update{
 						KVPair: model.KVPair{
 							Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "ksa." + n + ".default"}},

@@ -20,8 +20,9 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-	"github.com/projectcalico/libcalico-go/lib/ipam"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/projectcalico/libcalico-go/lib/ipam"
 
 	"context"
 
@@ -44,6 +45,7 @@ var _ = testutils.E2eDatastoreDescribe("IPPool tests", testutils.DatastoreAll, f
 	spec1 := apiv3.IPPoolSpec{
 		CIDR:         "1.2.3.0/24",
 		IPIPMode:     apiv3.IPIPModeAlways,
+		VXLANMode:    apiv3.VXLANModeNever,
 		BlockSize:    26,
 		NodeSelector: "all()",
 	}
@@ -51,6 +53,7 @@ var _ = testutils.E2eDatastoreDescribe("IPPool tests", testutils.DatastoreAll, f
 		CIDR:         "1.2.3.0/24",
 		NATOutgoing:  true,
 		IPIPMode:     apiv3.IPIPModeNever,
+		VXLANMode:    apiv3.VXLANModeAlways,
 		BlockSize:    26,
 		NodeSelector: `foo == "bar"`,
 	}
@@ -58,12 +61,14 @@ var _ = testutils.E2eDatastoreDescribe("IPPool tests", testutils.DatastoreAll, f
 		CIDR:         "2001::/120",
 		NATOutgoing:  true,
 		IPIPMode:     apiv3.IPIPModeNever,
+		VXLANMode:    apiv3.VXLANModeNever,
 		BlockSize:    122,
 		NodeSelector: "all()",
 	}
 	spec2_1 := apiv3.IPPoolSpec{
 		CIDR:         "2001::/120",
 		IPIPMode:     apiv3.IPIPModeNever,
+		VXLANMode:    apiv3.VXLANModeNever,
 		BlockSize:    122,
 		NodeSelector: "all()",
 	}
@@ -485,6 +490,152 @@ var _ = testutils.E2eDatastoreDescribe("IPPool tests", testutils.DatastoreAll, f
 				},
 			})
 			testWatcher4.Stop()
+		})
+	})
+
+	Describe("Verify handling of VXLAN mode", func() {
+
+		var missingVxlanPool = apiv3.IPPool{
+			ObjectMeta: metav1.ObjectMeta{Name: "ippool1"},
+			Spec: apiv3.IPPoolSpec{
+				CIDR: "192.168.0.0/16",
+			},
+		}
+
+		var err error
+		var c clientv3.Interface
+
+		BeforeEach(func() {
+			c, err = clientv3.New(config)
+			Expect(err).NotTo(HaveOccurred())
+
+			be, err := backend.NewClient(config)
+			Expect(err).NotTo(HaveOccurred())
+			be.Clean()
+		})
+
+		getGlobalSetting := func() (*bool, error) {
+			cfg, err := c.FelixConfigurations().Get(ctx, "default", options.GetOptions{})
+			if err != nil {
+				return nil, err
+			}
+			return cfg.Spec.VXLANEnabled, nil
+		}
+
+		It("should create/update an IPPool when VXLAN is missing", func() {
+			// create an ipppol with missing vxlan
+			ipPoolV1 := missingVxlanPool.DeepCopy()
+			ipPoolV2, err := c.IPPools().Create(ctx, ipPoolV1, options.SetOptions{})
+			Expect(err).NotTo(HaveOccurred())
+
+			// update an ipppol with missing vxlan
+			ipPoolV2.Spec.VXLANMode = ""
+			_, err = c.IPPools().Update(ctx, ipPoolV2, options.SetOptions{})
+			Expect(err).NotTo(HaveOccurred())
+
+			// delete the ipppol
+			_, err = c.IPPools().Delete(ctx, ipPoolV2.Name, options.DeleteOptions{})
+			Expect(err).NotTo(HaveOccurred())
+
+		})
+
+		It("should enable VXLAN globally on an IPPool Create (VXLANModeAlways) if the global setting is not configured", func() {
+			By("Getting the current felix configuration - checking does not exist")
+			_, err = getGlobalSetting()
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(BeAssignableToTypeOf(errors.ErrorResourceDoesNotExist{}))
+
+			By("Creating a non-VXLAN pool and verifying no felix configuration still and default VXLANMode set to Never")
+			pool, err := c.IPPools().Create(ctx, &apiv3.IPPool{
+				ObjectMeta: metav1.ObjectMeta{Name: "ippool1"},
+				Spec: apiv3.IPPoolSpec{
+					CIDR: "1.2.3.0/24",
+				},
+			}, options.SetOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(pool.Spec.VXLANMode).To(Equal(apiv3.VXLANModeNever))
+			_, err = getGlobalSetting()
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(BeAssignableToTypeOf(errors.ErrorResourceDoesNotExist{}))
+
+			By("Attempting to create a VXLAN IPv6 pool and verifying no felix configuration still")
+			_, err = c.IPPools().Create(ctx, &apiv3.IPPool{
+				ObjectMeta: metav1.ObjectMeta{Name: "ippool1"},
+				Spec: apiv3.IPPoolSpec{
+					CIDR:      "aa:bb::cc/120",
+					VXLANMode: apiv3.VXLANModeAlways,
+				},
+			}, options.SetOptions{})
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(BeAssignableToTypeOf(errors.ErrorValidation{}))
+			_, err = getGlobalSetting()
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(BeAssignableToTypeOf(errors.ErrorResourceDoesNotExist{}))
+
+			By("Creating an VXLANModeAlways pool and verifying global felix config is updated")
+			_, err = c.IPPools().Create(ctx, &apiv3.IPPool{
+				ObjectMeta: metav1.ObjectMeta{Name: "ippool2"},
+				Spec: apiv3.IPPoolSpec{
+					CIDR:      "1.2.4.0/24",
+					VXLANMode: apiv3.VXLANModeAlways,
+				},
+			}, options.SetOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			enabled, err := getGlobalSetting()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(*enabled).To(BeTrue())
+		})
+
+		It("should enable VXLAN globally on an IPPool Update if the global setting is not configured", func() {
+			By("Getting the current felix configuration - checking does not exist")
+			_, err = getGlobalSetting()
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(BeAssignableToTypeOf(errors.ErrorResourceDoesNotExist{}))
+
+			By("Creating a non-VXLAN pool and verifying no felix configuration still")
+			pool, err := c.IPPools().Create(ctx, &apiv3.IPPool{
+				ObjectMeta: metav1.ObjectMeta{Name: "ippool1"},
+				Spec: apiv3.IPPoolSpec{
+					CIDR: "1.2.3.0/24",
+				},
+			}, options.SetOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			_, err = getGlobalSetting()
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(BeAssignableToTypeOf(errors.ErrorResourceDoesNotExist{}))
+
+			By("Updating the pool to enabled VXLAN and checking felix configuration is added")
+			pool.Spec.VXLANMode = apiv3.VXLANModeAlways
+			_, err = c.IPPools().Update(ctx, pool, options.SetOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			enabled, err := getGlobalSetting()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(*enabled).To(BeTrue())
+		})
+
+		It("should not enable VXLAN globally on an IPPool Create if the global setting already configured to false", func() {
+			By("Setting the global felix VXLAN enabled to false")
+			ipipEnabled := false
+			_, err = c.FelixConfigurations().Create(ctx, &apiv3.FelixConfiguration{
+				ObjectMeta: metav1.ObjectMeta{Name: "default"},
+				Spec: apiv3.FelixConfigurationSpec{
+					VXLANEnabled: &ipipEnabled,
+				},
+			}, options.SetOptions{})
+			Expect(err).NotTo(HaveOccurred())
+
+			By("Creating an VXLANModeAlways pool and verifying global felix config is not updated")
+			_, err = c.IPPools().Create(ctx, &apiv3.IPPool{
+				ObjectMeta: metav1.ObjectMeta{Name: "ippool1"},
+				Spec: apiv3.IPPoolSpec{
+					CIDR:      "1.2.4.0/24",
+					VXLANMode: apiv3.VXLANModeAlways,
+				},
+			}, options.SetOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			enabled, err := getGlobalSetting()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(*enabled).To(BeFalse())
 		})
 	})
 

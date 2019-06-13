@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 
 package updateprocessors
 
@@ -41,7 +41,7 @@ func (c *FelixNodeUpdateProcessor) Process(kvp *model.KVPair) ([]*model.KVPair, 
 	// KVPair{} literals below.  If we used non-interface types here then we'd end up with zero values for
 	// the non=interface types in the KVPair.Value field instead of nil interface{} values (and we want nil
 	// interface{} values).
-	var ipv4, ipv4Tunl, ipv4Str interface{}
+	var ipv4, ipv4Tunl, ipv4Str, vxlanTunlIp, vxlanTunlMac interface{}
 	if kvp.Value != nil {
 		node, ok := kvp.Value.(*apiv3.Node)
 		if !ok {
@@ -78,6 +78,32 @@ func (c *FelixNodeUpdateProcessor) Process(kvp *model.KVPair) ([]*model.KVPair, 
 				}
 			}
 		}
+
+		// Parse the IPv4 VXLAN tunnel address, Felix expects this as a HostConfigKey.  If we fail to parse then
+		// treat as a delete (i.e. leave ipv4Tunl as nil).
+		if len(node.Spec.IPv4VXLANTunnelAddr) != 0 {
+			ip := cnet.ParseIP(node.Spec.IPv4VXLANTunnelAddr)
+			if ip != nil {
+				log.WithField("ip", ip).Debug("Parsed VXLAN tunnel address")
+				vxlanTunlIp = ip.String()
+			} else {
+				log.WithField("IPv4VXLANTunnelAddr", node.Spec.IPv4VXLANTunnelAddr).Warn("Failed to parse IPv4VXLANTunnelAddr")
+				err = fmt.Errorf("failed to parsed IPv4VXLANTunnelAddr as an IP address")
+			}
+		}
+
+		// Parse the VXLAN tunnel MAC address, Felix expects this as a HostConfigKey.  If we fail to parse then
+		// treat as a delete (i.e. leave ipv4Tunl as nil).
+		if len(node.Spec.VXLANTunnelMACAddr) != 0 {
+			mac := node.Spec.VXLANTunnelMACAddr
+			if mac != "" {
+				log.WithField("mac addr", mac).Debug("Parsed VXLAN tunnel MAC address")
+				vxlanTunlMac = mac
+			} else {
+				log.WithField("VXLANTunnelMACAddr", node.Spec.VXLANTunnelMACAddr).Warn("VXLANTunnelMACAddr not populated")
+				err = fmt.Errorf("failed to update VXLANTunnelMACAddr")
+			}
+		}
 	}
 
 	// Return the add/delete updates and any errors.
@@ -103,6 +129,22 @@ func (c *FelixNodeUpdateProcessor) Process(kvp *model.KVPair) ([]*model.KVPair, 
 				Name:     "IpInIpTunnelAddr",
 			},
 			Value:    ipv4Tunl,
+			Revision: kvp.Revision,
+		},
+		{
+			Key: model.HostConfigKey{
+				Hostname: name,
+				Name:     "IPv4VXLANTunnelAddr",
+			},
+			Value:    vxlanTunlIp,
+			Revision: kvp.Revision,
+		},
+		{
+			Key: model.HostConfigKey{
+				Hostname: name,
+				Name:     "VXLANTunnelMACAddr",
+			},
+			Value:    vxlanTunlMac,
 			Revision: kvp.Revision,
 		},
 	}, err

@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017,2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import (
 	"crypto/tls"
 
 	"github.com/coreos/etcd/clientv3"
+	"github.com/coreos/etcd/pkg/srv"
 	"github.com/coreos/etcd/pkg/transport"
 	log "github.com/sirupsen/logrus"
 
@@ -45,10 +46,23 @@ type etcdV3Client struct {
 }
 
 func NewEtcdV3Client(config *apiconfig.EtcdConfig) (api.Client, error) {
+	if config.EtcdEndpoints != "" && config.EtcdDiscoverySrv != "" {
+		log.Warning("Multiple etcd endpoint discovery methods specified in etcdv3 API config")
+		return nil, errors.New("multiple discovery or bootstrap options specified, use either \"etcdEndpoints\" or \"etcdDiscoverySrv\"")
+	}
+
 	// Split the endpoints into a location slice.
 	etcdLocation := []string{}
 	if config.EtcdEndpoints != "" {
 		etcdLocation = strings.Split(config.EtcdEndpoints, ",")
+	}
+
+	if config.EtcdDiscoverySrv != "" {
+		srvs, srvErr := srv.GetClient("etcd-client", config.EtcdDiscoverySrv)
+		if srvErr != nil {
+			return nil, fmt.Errorf("failed to discover etcd endpoints through SRV discovery: %v", srvErr)
+		}
+		etcdLocation = srvs.Endpoints
 	}
 
 	if len(etcdLocation) == 0 {
@@ -305,7 +319,7 @@ func (c *etcdV3Client) Delete(ctx context.Context, k model.Key, revision string)
 
 		getResp := txnResp.Responses[0].GetResponseRange()
 		if len(getResp.Kvs) == 0 {
-			logCxt.Debug("Delete transaction failed due resource not existing")
+			logCxt.Debug("Delete transaction failed due to resource not existing")
 			return nil, cerrors.ErrorResourceDoesNotExist{Identifier: k}
 		}
 		latestValue, err := etcdToKVPair(k, getResp.Kvs[0])
@@ -318,7 +332,7 @@ func (c *etcdV3Client) Delete(ctx context.Context, k model.Key, revision string)
 	// The delete response should have succeeded since the Get response did.
 	delResp := txnResp.Responses[0].GetResponseDeleteRange()
 	if delResp.Deleted == 0 {
-		logCxt.Debug("Delete transaction failed due resource not existing")
+		logCxt.Debug("Delete transaction failed due to resource not existing")
 		return nil, cerrors.ErrorResourceDoesNotExist{Identifier: k}
 	}
 
@@ -369,32 +383,8 @@ func (c *etcdV3Client) List(ctx context.Context, l model.ListInterface, revision
 	logCxt := log.WithFields(log.Fields{"list-interface": l, "rev": revision})
 	logCxt.Debug("Processing List request")
 
-	// To list entries, we enumerate from the common root based on the supplied
-	// IDs, and then filter the results.
-	key := model.ListOptionsToDefaultPathRoot(l)
-
-	// -  If the final name segment of the name is itself a prefix, then just perform a prefix Get
-	//    using the constructed key.
-	// -  If the etcdKey is actually fully qualified, then perform an exact Get using the constructed
-	//    key.
-	// -  If the etcdKey is not fully qualified then it is a path prefix but the last segment is complete.
-	//    Append a terminating "/" and perform a prefix Get.  The terminating / for a prefix Get ensures
-	//    for a prefix of "/a" we only return "child entries" of "/a" such as "/a/x" and not siblings
-	//    such as "/ab".
-	ops := []clientv3.OpOption{}
-	if model.IsListOptionsLastSegmentPrefix(l) {
-		// The last segment is a prefix, perform a prefix Get without adding a segment
-		// delimiter.
-		logCxt.Debug("Performing a name-prefix query")
-		ops = append(ops, clientv3.WithPrefix())
-	} else if l.KeyFromDefaultPath(key) == nil {
-		// The etcdKey not a fully qualified etcdKey - it must be a prefix.
-		logCxt.Debug("Performing a parent-prefix query")
-		if !strings.HasSuffix(key, "/") {
-			key += "/"
-		}
-		ops = append(ops, clientv3.WithPrefix())
-	}
+	// To list entries, we enumerate from the common root based on the supplied IDs, and then filter the results.
+	key, ops := calculateListKeyAndOptions(logCxt, l)
 	logCxt = logCxt.WithField("etcdv3-etcdKey", key)
 
 	// We may also need to perform a get based on a particular revision.
@@ -426,6 +416,35 @@ func (c *etcdV3Client) List(ctx context.Context, l model.ListInterface, revision
 		KVPairs:  list,
 		Revision: strconv.FormatInt(resp.Header.Revision, 10),
 	}, nil
+}
+
+func calculateListKeyAndOptions(logCxt *log.Entry, l model.ListInterface) (string, []clientv3.OpOption) {
+	// -  If the final name segment of the name is itself a prefix, then just perform a prefix Get
+	//    using the constructed key.
+	// -  If the etcdKey is actually fully qualified, then perform an exact Get using the constructed
+	//    key.
+	// -  If the etcdKey is not fully qualified then it is a path prefix but the last segment is complete.
+	//    Append a terminating "/" and perform a prefix Get.  The terminating / for a prefix Get ensures
+	//    for a prefix of "/a" we only return "child entries" of "/a" such as "/a/x" and not siblings
+	//    such as "/ab".
+	key := model.ListOptionsToDefaultPathRoot(l)
+	var ops []clientv3.OpOption
+	if model.IsListOptionsLastSegmentPrefix(l) {
+		// The last segment is a prefix, perform a prefix Get without adding a segment
+		// delimiter.
+		logCxt.Debug("List options is a name prefix, don't add a / to the path")
+		ops = append(ops, clientv3.WithPrefix())
+	} else if !model.ListOptionsIsFullyQualified(l) {
+		// The etcdKey not a fully qualified etcdKey - it must be a prefix.
+		logCxt.Debug("List options is a parent prefix, ensure path ends in /")
+		if !strings.HasSuffix(key, "/") {
+			logCxt.Debug("Adding / to path")
+			key += "/"
+		}
+		ops = append(ops, clientv3.WithPrefix())
+	}
+
+	return key, ops
 }
 
 // EnsureInitialized makes sure that the etcd data is initialized for use by

@@ -92,4 +92,7 @@ type Interface interface {
 	// RemoveIPAMHost does not release any IP addresses claimed on the given host.
 	// If an empty string is passed as the host then the value returned by os.Hostname is used.
 	RemoveIPAMHost(ctx context.Context, host string) error
+
+	// GetUtilization returns IP utilization info for the specified pools, or for all pools.
+	GetUtilization(ctx context.Context, args GetUtilizationArgs) ([]*PoolUtilization, error)
 }

@@ -19,8 +19,10 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/felixsyncer"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/projectcalico/libcalico-go/lib/backend/encap"
+	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/felixsyncer"
 
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
@@ -28,7 +30,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
-	"github.com/projectcalico/libcalico-go/lib/ipip"
+	"github.com/projectcalico/libcalico-go/lib/ipam"
 	"github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
 	"github.com/projectcalico/libcalico-go/lib/options"
@@ -36,7 +38,7 @@ import (
 )
 
 // Kubernetes will have a profile for each of the namespaces that is configured.
-// We expect:  default, kube-system, kube-public, namespace-1, namespace-2
+// We expect:  default, kube-system, kube-public, namespace-1, namespace-2, kube-node-lease.
 var defaultKubernetesResource = []model.KVPair{
 	{
 		Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "kns.default"}},
@@ -74,6 +76,13 @@ var defaultKubernetesResource = []model.KVPair{
 		},
 	},
 	{
+		Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "kns.kube-node-lease"}},
+		Value: &model.ProfileRules{
+			InboundRules:  []model.Rule{{Action: "allow"}},
+			OutboundRules: []model.Rule{{Action: "allow"}},
+		},
+	},
+	{
 		Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "default"}},
 		Value: &model.ProfileRules{
 			InboundRules:  []model.Rule{{Action: "allow"}},
@@ -84,24 +93,45 @@ var defaultKubernetesResource = []model.KVPair{
 
 var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.DatastoreAll, func(config apiconfig.CalicoAPIConfig) {
 
-	ctx := context.Background()
+	var ctx context.Context
+	var c clientv3.Interface
+	var be api.Client
+	var syncTester *testutils.SyncerTester
+	var err error
+	var datamodelCleanups []func()
+
+	addCleanup := func(cleanup func()) {
+		datamodelCleanups = append(datamodelCleanups, cleanup)
+	}
+
+	BeforeEach(func() {
+		ctx = context.Background()
+		// Create a v3 client to drive data changes (luckily because this is the _test module,
+		// we don't get circular imports.
+		c, err = clientv3.New(config)
+		Expect(err).NotTo(HaveOccurred())
+
+		// Create the backend client to obtain a syncer interface.
+		be, err = backend.NewClient(config)
+		Expect(err).NotTo(HaveOccurred())
+		be.Clean()
+
+		// Create a SyncerTester to receive the BGP syncer callback events and to allow us
+		// to assert state.
+		syncTester = testutils.NewSyncerTester()
+
+		datamodelCleanups = nil
+	})
+
+	AfterEach(func() {
+		for _, cleanup := range datamodelCleanups {
+			cleanup()
+		}
+	})
 
 	Describe("Felix syncer functionality", func() {
 		It("should receive the synced after return all current data", func() {
-			// Create a v3 client to drive data changes (luckily because this is the _test module,
-			// we don't get circular imports.
-			c, err := clientv3.New(config)
-			Expect(err).NotTo(HaveOccurred())
-
-			// Create the backend client to obtain a syncer interface.
-			be, err := backend.NewClient(config)
-			Expect(err).NotTo(HaveOccurred())
-			be.Clean()
-
-			// Create a SyncerTester to receive the BGP syncer callback events and to allow us
-			// to assert state.
-			syncTester := testutils.NewSyncerTester()
-			syncer := felixsyncer.New(be, syncTester)
+			syncer := felixsyncer.New(be, config.Spec, syncTester)
 			syncer.Start()
 			expectedCacheSize := 0
 
@@ -127,7 +157,7 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 						})
 					}
 					return len(namespaces)
-				}(syncTester, []string{"default", "kube-public", "kube-system", "namespace-1", "namespace-2"})
+				}(syncTester, []string{"default", "kube-public", "kube-system", "namespace-1", "namespace-2", "kube-node-lease"})
 				syncTester.ExpectCacheSize(expectedCacheSize)
 			}
 			syncTester.ExpectCacheSize(expectedCacheSize)
@@ -135,31 +165,64 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 			var node *apiv3.Node
 			if config.Spec.DatastoreType == apiconfig.Kubernetes {
 				// For Kubernetes, update the existing node config to have some BGP configuration.
-				By("Configuring a node with an IP address")
+				By("Configuring a node with an IP address and tunnel MAC address")
+				var (
+					oldValuesSaved        bool
+					oldBGPSpec            *apiv3.NodeBGPSpec
+					oldVXLANTunnelMACAddr string
+				)
 				for i := 0; i < 5; i++ {
 					// This can fail due to an update conflict, so we allow a few retries.
 					node, err = c.Nodes().Get(ctx, "127.0.0.1", options.GetOptions{})
 					Expect(err).NotTo(HaveOccurred())
+					if !oldValuesSaved {
+						if node.Spec.BGP == nil {
+							oldBGPSpec = nil
+						} else {
+							bgpSpecCopy := *node.Spec.BGP
+							oldBGPSpec = &bgpSpecCopy
+						}
+						oldVXLANTunnelMACAddr = node.Spec.VXLANTunnelMACAddr
+						oldValuesSaved = true
+					}
 					node.Spec.BGP = &apiv3.NodeBGPSpec{
 						IPv4Address:        "1.2.3.4/24",
 						IPv6Address:        "aa:bb::cc/120",
 						IPv4IPIPTunnelAddr: "10.10.10.1",
 					}
+					node.Spec.VXLANTunnelMACAddr = "66:cf:23:df:22:07"
 					node, err = c.Nodes().Update(ctx, node, options.SetOptions{})
 					if err == nil {
 						break
 					}
 				}
 				Expect(err).NotTo(HaveOccurred())
-
+				addCleanup(func() {
+					for i := 0; i < 5; i++ {
+						// This can fail due to an update conflict, so we allow a few retries.
+						node, err = c.Nodes().Get(ctx, "127.0.0.1", options.GetOptions{})
+						Expect(err).NotTo(HaveOccurred())
+						node.Spec.BGP = oldBGPSpec
+						node.Spec.VXLANTunnelMACAddr = oldVXLANTunnelMACAddr
+						node, err = c.Nodes().Update(ctx, node, options.SetOptions{})
+						if err == nil {
+							break
+						}
+					}
+					Expect(err).NotTo(HaveOccurred())
+				})
 				syncTester.ExpectData(model.KVPair{
 					Key:   model.HostConfigKey{Hostname: "127.0.0.1", Name: "IpInIpTunnelAddr"},
 					Value: "10.10.10.1",
 				})
-				expectedCacheSize += 1
+				syncTester.ExpectData(model.KVPair{
+					Key:   model.HostConfigKey{Hostname: "127.0.0.1", Name: "VXLANTunnelMACAddr"},
+					Value: "66:cf:23:df:22:07",
+				})
+				expectedCacheSize += 2
 			} else {
 				// For non-Kubernetes, add a new node with valid BGP configuration.
-				By("Creating a node with an IP address")
+				By("Creating a node with an IP address and tunnel MAC address")
 				node, err = c.Nodes().Create(
 					ctx,
 					&apiv3.Node{
@@ -170,6 +233,7 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 								IPv6Address:        "aa:bb::cc/120",
 								IPv4IPIPTunnelAddr: "10.10.10.1",
 							},
+							VXLANTunnelMACAddr: "66:cf:23:df:22:07",
 						},
 					},
 					options.SetOptions{},
@@ -194,7 +258,11 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 					Key:   model.HostConfigKey{Hostname: "127.0.0.1", Name: "IpInIpTunnelAddr"},
 					Value: "10.10.10.1",
 				})
-				expectedCacheSize += 4
+				syncTester.ExpectData(model.KVPair{
+					Key:   model.HostConfigKey{Hostname: "127.0.0.1", Name: "VXLANTunnelMACAddr"},
+					Value: "66:cf:23:df:22:07",
+				})
+				expectedCacheSize += 5
 			}
 
 			// The HostIP will be added for the IPv4 address
@@ -221,6 +289,7 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 						CIDR:        poolCIDR,
 						IPIPMode:    apiv3.IPIPModeCrossSubnet,
 						NATOutgoing: true,
+						BlockSize:   30,
 					},
 				},
 				options.SetOptions{},
@@ -235,7 +304,7 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 				Value: &model.IPPool{
 					CIDR:          poolCIDRNet,
 					IPIPInterface: "tunl0",
-					IPIPMode:      ipip.CrossSubnet,
+					IPIPMode:      encap.CrossSubnet,
 					Masquerade:    true,
 					IPAM:          true,
 					Disabled:      false,
@@ -267,7 +336,7 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 			)
 			expectedCacheSize++
 			syncTester.ExpectCacheSize(expectedCacheSize)
-			_, expNet, err := net.ParseCIDROrIP("11.0.0.0/16")
+			_, expGNet, err := net.ParseCIDROrIP("11.0.0.0/16")
 			Expect(err).NotTo(HaveOccurred())
 			syncTester.ExpectData(model.KVPair{
 				Key: model.NetworkSetKey{Name: "anetworkset"},
@@ -276,7 +345,7 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 						"a": "b",
 					},
 					Nets: []net.IPNet{
-						*expNet,
+						*expGNet,
 					},
 					AllowedEgressDomains: []string{
 						"direct.gov.uk",
@@ -284,6 +353,39 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 					},
 				},
 				Revision: gns.ResourceVersion,
+			})
+
+			By("Creating a NetworkSet")
+			ns := apiv3.NewNetworkSet()
+			ns.Name = "anetworkset"
+			ns.Namespace = "namespace-1"
+			ns.Labels = map[string]string{
+				"a": "b",
+			}
+			ns.Spec.Nets = []string{
+				"11.0.0.0/16",
+			}
+			ns, err = c.NetworkSets().Create(
+				ctx,
+				ns,
+				options.SetOptions{},
+			)
+			expectedCacheSize++
+			syncTester.ExpectCacheSize(expectedCacheSize)
+			_, expNet, err := net.ParseCIDROrIP("11.0.0.0/16")
+			Expect(err).NotTo(HaveOccurred())
+			syncTester.ExpectData(model.KVPair{
+				Key: model.NetworkSetKey{Name: "namespace-1/anetworkset"},
+				Value: &model.NetworkSet{
+					Labels: map[string]string{
+						"a":                           "b",
+						"projectcalico.org/namespace": "namespace-1",
+					},
+					Nets: []net.IPNet{
+						*expNet,
+					},
+				},
+				Revision: ns.ResourceVersion,
 			})
 
 			By("Creating a LicenseKey")
@@ -369,6 +471,31 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 				Revision: hep.ResourceVersion,
 			})
 
+			By("Allocating an IP")
+			err = c.IPAM().AssignIP(ctx, ipam.AssignIPArgs{
+				Hostname: "127.0.0.1",
+				IP:       net.MustParseIP("192.124.0.1"),
+			})
+			Expect(err).NotTo(HaveOccurred())
+			expectedCacheSize += 1
+
+			_, cidr, _ := net.ParseCIDR("192.124.0.0/30")
+			affinity := "host:127.0.0.1"
+			zero := 0
+			syncTester.ExpectData(model.KVPair{
+				Key: model.BlockKey{CIDR: *cidr},
+				Value: &model.AllocationBlock{
+					CIDR:           *cidr,
+					Affinity:       &affinity,
+					StrictAffinity: false,
+					Allocations:    []*int{nil, &zero, nil, nil},
+					Unallocated:    []int{0, 2, 3},
+					Attributes: []model.AllocationAttribute{
+						{},
+					},
+				},
+			})
+
 			By("Creating a Tier")
 			tierName := "mytier"
 			order := float64(100.00)
@@ -397,7 +524,7 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 			// We need to create a new syncTester and syncer.
 			current := syncTester.GetCacheEntries()
 			syncTester = testutils.NewSyncerTester()
-			syncer = felixsyncer.New(be, syncTester)
+			syncer = felixsyncer.New(be, config.Spec, syncTester)
 			syncer.Start()
 
 			// Verify the data is the same as the data from the previous cache.  We got the cache in the previous
@@ -414,5 +541,42 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 			}
 			syncTester.ExpectStatusUpdate(api.InSync)
 		})
+	})
+})
+
+var _ = testutils.E2eDatastoreDescribe("Felix syncer tests (KDD only)", testutils.DatastoreK8s, func(config apiconfig.CalicoAPIConfig) {
+	var be api.Client
+	var syncTester *testutils.SyncerTester
+	var err error
+
+	BeforeEach(func() {
+		// Create the backend client to obtain a syncer interface.
+		config.Spec.K8sUsePodCIDR = true
+		be, err = backend.NewClient(config)
+		Expect(err).NotTo(HaveOccurred())
+		be.Clean()
+
+		// Create a SyncerTester to receive the BGP syncer callback events and to allow us
+		// to assert state.
+		syncTester = testutils.NewSyncerTester()
+	})
+
+	It("should handle IPAM blocks properly for host-local IPAM", func() {
+		config.Spec.K8sUsePodCIDR = true
+		syncer := felixsyncer.New(be, config.Spec, syncTester)
+		syncer.Start()
+
+		// Verify we start a resync.
+		syncTester.ExpectStatusUpdate(api.WaitForDatastore)
+		syncTester.ExpectStatusUpdate(api.ResyncInProgress)
+
+		// Expect a felix config for the IPIP tunnel address, generated from the podCIDR.
+		syncTester.ExpectData(model.KVPair{
+			Key:   model.HostConfigKey{Hostname: "127.0.0.1", Name: "IpInIpTunnelAddr"},
+			Value: "10.10.10.1",
+		})
+
+		// Expect to be in-sync.
+		syncTester.ExpectStatusUpdate(api.InSync)
 	})
 })
