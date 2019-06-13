@@ -19,9 +19,10 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/projectcalico/libcalico-go/lib/backend/encap"
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/felixsyncer"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
@@ -37,7 +38,7 @@ import (
 )
 
 // Kubernetes will have a profile for each of the namespaces that is configured.
-// We expect:  default, kube-system, kube-public, namespace-1, namespace-2
+// We expect:  default, kube-system, kube-public, namespace-1, namespace-2, kube-node-lease.
 var defaultKubernetesResource = []model.KVPair{
 	{
 		Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "kns.default"}},
@@ -69,6 +70,13 @@ var defaultKubernetesResource = []model.KVPair{
 	},
 	{
 		Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "kns.namespace-2"}},
+		Value: &model.ProfileRules{
+			InboundRules:  []model.Rule{{Action: "allow"}},
+			OutboundRules: []model.Rule{{Action: "allow"}},
+		},
+	},
+	{
+		Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "kns.kube-node-lease"}},
 		Value: &model.ProfileRules{
 			InboundRules:  []model.Rule{{Action: "allow"}},
 			OutboundRules: []model.Rule{{Action: "allow"}},
@@ -137,7 +145,7 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 						})
 					}
 					return len(namespaces)
-				}(syncTester, []string{"default", "kube-public", "kube-system", "namespace-1", "namespace-2"})
+				}(syncTester, []string{"default", "kube-public", "kube-system", "namespace-1", "namespace-2", "kube-node-lease"})
 				syncTester.ExpectCacheSize(expectedCacheSize)
 			}
 			syncTester.ExpectCacheSize(expectedCacheSize)

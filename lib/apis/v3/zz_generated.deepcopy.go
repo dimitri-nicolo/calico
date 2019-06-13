@@ -1129,6 +1129,11 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 		*out = new(v1.Duration)
 		**out = **in
 	}
+	if in.SidecarAccelerationEnabled != nil {
+		in, out := &in.SidecarAccelerationEnabled, &out.SidecarAccelerationEnabled
+		*out = new(bool)
+		**out = **in
+	}
 	if in.XDPEnabled != nil {
 		in, out := &in.XDPEnabled, &out.XDPEnabled
 		*out = new(bool)

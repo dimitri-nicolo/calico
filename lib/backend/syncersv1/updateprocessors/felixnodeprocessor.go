@@ -91,6 +91,7 @@ func (c *FelixNodeUpdateProcessor) Process(kvp *model.KVPair) ([]*model.KVPair, 
 				err = fmt.Errorf("failed to parsed IPv4VXLANTunnelAddr as an IP address")
 			}
 		}
+
 		// Parse the VXLAN tunnel MAC address, Felix expects this as a HostConfigKey.  If we fail to parse then
 		// treat as a delete (i.e. leave ipv4Tunl as nil).
 		if len(node.Spec.VXLANTunnelMACAddr) != 0 {

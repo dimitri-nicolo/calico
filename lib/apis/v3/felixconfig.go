@@ -229,6 +229,11 @@ type FelixConfigurationSpec struct {
 	// network stack is used.
 	NATPortRange *numorstring.Port `json:"natPortRange,omitempty"`
 
+	// NATOutgoingAddress specifies an address to use when performing source NAT for traffic in a natOutgoing pool that
+	// is leaving the network. By default the address used is an address on the interface the traffic is leaving on
+	// (ie it uses the iptables MASQUERADE target)
+	NATOutgoingAddress string `json:"natOutgoingAddress,omitempty"`
+
 	// ExternalNodesCIDRList is a list of CIDR's of external-non-calico-nodes which may source tunnel traffic and have
 	// the tunneled traffic be accepted at calico nodes.
 	ExternalNodesCIDRList *[]string `json:"externalNodesList,omitempty"`
@@ -254,6 +259,9 @@ type FelixConfigurationSpec struct {
 	DebugSimulateDataplaneHangAfter *metav1.Duration `json:"debugSimulateDataplaneHangAfter,omitempty" configv1timescale:"seconds"`
 
 	IptablesNATOutgoingInterfaceFilter string `json:"iptablesNATOutgoingInterfaceFilter,omitempty" validate:"omitempty,ifaceFilter"`
+
+	// SidecarAccelerationEnabled enables experimental sidecar acceleration [Default: false]
+	SidecarAccelerationEnabled *bool `json:"sidecarAccelerationEnabled,omitempty"`
 
 	// XDPEnabled enables XDP acceleration for suitable untracked incoming deny rules. [Default: true]
 	XDPEnabled *bool `json:"xdpEnabled,omitempty" confignamev1:"XDPEnabled"`

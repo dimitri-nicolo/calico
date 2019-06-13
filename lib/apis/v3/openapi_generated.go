@@ -565,6 +565,12 @@ func schema_libcalico_go_lib_apis_v1_EtcdConfig(ref common.ReferenceCallback) co
 							Format: "",
 						},
 					},
+					"etcdDiscoverySrv": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
 					"etcdUsername": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"string"},
@@ -596,7 +602,7 @@ func schema_libcalico_go_lib_apis_v1_EtcdConfig(ref common.ReferenceCallback) co
 						},
 					},
 				},
-				Required: []string{"etcdScheme", "etcdAuthority", "etcdEndpoints", "etcdUsername", "etcdPassword", "etcdKeyFile", "etcdCertFile", "etcdCACertFile"},
+				Required: []string{"etcdScheme", "etcdAuthority", "etcdEndpoints", "etcdDiscoverySrv", "etcdUsername", "etcdPassword", "etcdKeyFile", "etcdCertFile", "etcdCACertFile"},
 			},
 		},
 		Dependencies: []string{},
@@ -4098,6 +4104,13 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							Ref:         ref("github.com/projectcalico/libcalico-go/lib/numorstring.Port"),
 						},
 					},
+					"natOutgoingAddress": {
+						SchemaProps: spec.SchemaProps{
+							Description: "NATOutgoingAddress specifies an address to use when performing source NAT for traffic in a natOutgoing pool that is leaving the network. By default the address used is an address on the interface the traffic is leaving on (ie it uses the iptables MASQUERADE target)",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 					"externalNodesList": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ExternalNodesCIDRList is a list of CIDR's of external-non-calico-nodes which may source tunnel traffic and have the tunneled traffic be accepted at calico nodes.",
@@ -4194,6 +4207,13 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"string"},
 							Format: "",
+						},
+					},
+					"sidecarAccelerationEnabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SidecarAccelerationEnabled enables experimental sidecar acceleration [Default: false]",
+							Type:        []string{"boolean"},
+							Format:      "",
 						},
 					},
 					"xdpEnabled": {

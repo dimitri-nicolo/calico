@@ -169,7 +169,6 @@ func init() {
 	registerFieldValidator("ifaceFilter", validateIfaceFilter)
 	registerFieldValidator("cloudWatchAggregationKind", validateCloudWatchAggregationKind)
 	registerFieldValidator("cloudWatchRetentionDays", validateCloudWatchRetentionDays)
-
 	registerFieldValidator("mac", validateMAC)
 
 	// Register network validators (i.e. validating a correctly masked CIDR).  Also
@@ -689,6 +688,14 @@ func validateFelixConfigSpec(structLevel validator.StructLevel) {
 				"WindowsNetworkName", "", reason("must be a valid regular expression"), "")
 		}
 	}
+
+	if c.NATOutgoingAddress != "" {
+		parsedAddress := cnet.ParseIP(c.NATOutgoingAddress)
+		if parsedAddress == nil || parsedAddress.Version() != 4 {
+			structLevel.ReportError(reflect.ValueOf(c.NATOutgoingAddress),
+				"NATOutgoingAddress", "", reason("is not a valid IP address"), "")
+		}
+	}
 }
 
 func validateWorkloadEndpointSpec(structLevel validator.StructLevel) {
@@ -840,6 +847,12 @@ func validateIPPoolSpec(structLevel validator.StructLevel) {
 	if cidr.Version() == 6 && pool.IPIPMode != api.IPIPModeNever {
 		structLevel.ReportError(reflect.ValueOf(pool.IPIPMode),
 			"IPpool.IPIPMode", "", reason("IPIPMode other than 'Never' is not supported on an IPv6 IP pool"), "")
+	}
+
+	// VXLAN cannot be enabled for IPv6.
+	if cidr.Version() == 6 && pool.VXLANMode != api.VXLANModeNever {
+		structLevel.ReportError(reflect.ValueOf(pool.VXLANMode),
+			"IPpool.VXLANMode", "", reason("VXLANMode other than 'Never' is not supported on an IPv6 IP pool"), "")
 	}
 
 	// Cannot have both VXLAN and IPIP on the same IP pool.
