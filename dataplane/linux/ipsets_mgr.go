@@ -94,9 +94,9 @@ type DomainInfoChangeHandler interface {
 	OnDomainInfoChange(msg *domainInfoChanged) (dataplaneSyncNeeded bool)
 }
 
-func newIPSetsManager(ipsets ipsetsDataplane, maxIPSetSize int, domainInfoStore store, callbacks *callbacks) *ipSetsManager {
+func newIPSetsManager(ipsets_ ipsetsDataplane, maxIPSetSize int, domainInfoStore store, callbacks *callbacks) *ipSetsManager {
 	return &ipSetsManager{
-		ipsetsDataplane: ipsets,
+		ipsetsDataplane: ipsets_,
 		maxSize:         maxIPSetSize,
 		callbacks:       newIPSetsManagerCallbacks(callbacks, ipsets_.GetIPFamily()),
 		domainInfoStore: domainInfoStore,
