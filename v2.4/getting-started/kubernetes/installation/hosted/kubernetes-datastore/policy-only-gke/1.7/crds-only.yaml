@@ -1,4 +1,6 @@
 ---
 layout: null
 ---
-{% include {{page.version}}/manifests/kdd-crds.yaml  platform="gke" %}
+{% helm --execute templates/kdd-crds.yaml --execute templates/ee-specific-kdd-crds.yaml %}
+platform: gke
+{% endhelm %}
