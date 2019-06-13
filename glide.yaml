@@ -64,6 +64,12 @@ import:
 # with missing symbols in unix package.
 - package: github.com/vishvananda/netns
   version: 13995c7128ccc8e51e9a6bd2b551020a27180abd
+# Lots of things want golang.org/x/sys, and many pin to an older version.
+# Make sure we're using a relatively modern one since they generally just add
+# new symbols. Specifically, netlink requires a number of symbols from the
+# unix package.
+- package: golang.org/x/sys
+  version: c2f5717e611cf8e89a852a41081355194d80c943
 # Note to Open Source mergers: ginkgo and gomega are imported *not* as testImport
 # in some dependencies, so we can't import them as testImport here.
 # Pin to a compatible version. Later versions cause build to fail

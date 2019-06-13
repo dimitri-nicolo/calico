@@ -16,7 +16,6 @@ package commands
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/docopt/docopt-go"
@@ -25,9 +24,9 @@ import (
 	"github.com/projectcalico/calicoctl/calicoctl/commands/constants"
 )
 
-func Delete(args []string) {
+func Delete(args []string) error {
 	doc := constants.DatastoreIntro + `Usage:
-  calicoctl delete ( (<KIND> [<NAME>]) |
+  calicoctl delete ( (<KIND> [<NAME>...]) |
                    --filename=<FILE>)
                    [--skip-not-exists] [--config=<CONFIG>] [--namespace=<NS>]
 
@@ -38,8 +37,8 @@ Examples:
   # Delete a policy based on the type and name in the YAML passed into stdin.
   cat policy.yaml | calicoctl delete -f -
 
-  # Delete policy with name "foo"
-  calicoctl delete policy foo
+  # Delete policies with names "foo" and "bar"
+  calicoctl delete policy foo bar
 
 Options:
   -h --help                 Show this screen.
@@ -98,46 +97,40 @@ Description:
 `
 	parsedArgs, err := docopt.Parse(doc, args, true, "", false, false)
 	if err != nil {
-		fmt.Printf("Invalid option: 'calicoctl %s'. Use flag '--help' to read about a specific subcommand.\n", strings.Join(args, " "))
-		os.Exit(1)
+		return fmt.Errorf("Invalid option: 'calicoctl %s'. Use flag '--help' to read about a specific subcommand.", strings.Join(args, " "))
 	}
 	if len(parsedArgs) == 0 {
-		return
+		return nil
 	}
 
 	results := executeConfigCommand(parsedArgs, actionDelete)
 	log.Infof("results: %+v", results)
 
 	if results.fileInvalid {
-		fmt.Printf("Failed to execute command: %v\n", results.err)
-		os.Exit(1)
-	} else if results.numHandled == 0 {
-		if results.numResources == 0 {
-			fmt.Printf("No resources specified in file\n")
-		} else if results.numResources == 1 {
-			fmt.Printf("Failed to delete '%s' resource: %v\n", results.singleKind, results.err)
-		} else if results.singleKind != "" {
-			fmt.Printf("Failed to delete any '%s' resources: %v\n", results.singleKind, results.err)
-		} else {
-			fmt.Printf("Failed to delete any resources: %v\n", results.err)
-		}
-		os.Exit(1)
-	} else if results.err == nil {
+		return fmt.Errorf("Failed to execute command: %v", results.err)
+	} else if results.numResources == 0 {
+		return fmt.Errorf("No resources specified")
+	} else if results.err == nil && results.numHandled > 0 {
 		if results.singleKind != "" {
 			fmt.Printf("Successfully deleted %d '%s' resource(s)\n", results.numHandled, results.singleKind)
 		} else {
 			fmt.Printf("Successfully deleted %d resource(s)\n", results.numHandled)
 		}
-	} else {
-		fmt.Printf("Partial success: ")
-		if results.singleKind != "" {
-			fmt.Printf("deleted the first %d out of %d '%s' resources:\n",
-				results.numHandled, results.numResources, results.singleKind)
-		} else {
-			fmt.Printf("deleted the first %d out of %d resources:\n",
-				results.numHandled, results.numResources)
-		}
-		fmt.Printf("Hit error: %v\n", results.err)
-		os.Exit(1)
+	} else if results.err != nil {
+		return fmt.Errorf("Hit error: %v", results.err)
 	}
+
+	if len(results.resErrs) > 0 {
+		var errStr string
+		for _, err := range results.resErrs {
+			if results.singleKind != "" {
+				errStr += fmt.Sprintf("Failed to delete '%s' resource: %v\n", results.singleKind, err)
+			} else {
+				errStr += fmt.Sprintf("Failed to delete resource: %v\n", err)
+			}
+		}
+		return fmt.Errorf(errStr)
+	}
+
+	return nil
 }

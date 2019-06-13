@@ -15,8 +15,6 @@
 package commands
 
 import (
-	"os"
-
 	"github.com/docopt/docopt-go"
 
 	"fmt"
@@ -28,9 +26,9 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func Get(args []string) {
+func Get(args []string) error {
 	doc := constants.DatastoreIntro + `Usage:
-  calicoctl get ( (<KIND> [<NAME>]) |
+  calicoctl get ( (<KIND> [<NAME>...]) |
                 --filename=<FILENAME>)
                 [--output=<OUTPUT>] [--config=<CONFIG>] [--namespace=<NS>] [--all-namespaces] [--export]
 
@@ -38,8 +36,8 @@ Examples:
   # List all policy in default output format.
   calicoctl get policy
 
-  # List a specific policy in YAML format
-  calicoctl get -o yaml policy my-policy-1
+  # List specific policies in YAML format
+  calicoctl get -o yaml policy my-policy-1 my-policy-2
 
 Options:
   -h --help                    Show this screen.
@@ -119,11 +117,10 @@ Description:
 `
 	parsedArgs, err := docopt.Parse(doc, args, true, "", false, false)
 	if err != nil {
-		fmt.Printf("Invalid option: 'calicoctl %s'. Use flag '--help' to read about a specific subcommand.\n", strings.Join(args, " "))
-		os.Exit(1)
+		return fmt.Errorf("Invalid option: 'calicoctl %s'. Use flag '--help' to read about a specific subcommand.", strings.Join(args, " "))
 	}
 	if len(parsedArgs) == 0 {
-		return
+		return nil
 	}
 
 	printNamespace := false
@@ -158,28 +155,24 @@ Description:
 		switch outputKey {
 		case "go-template":
 			if outputValue == "" {
-				fmt.Printf("need to specify a template\n")
-				os.Exit(1)
+				return fmt.Errorf("need to specify a template")
 			}
 			rp = resourcePrinterTemplate{template: outputValue}
 		case "go-template-file":
 			if outputValue == "" {
-				fmt.Printf("need to specify a template file\n")
-				os.Exit(1)
+				return fmt.Errorf("need to specify a template file")
 			}
 			rp = resourcePrinterTemplateFile{templateFile: outputValue}
 		case "custom-columns":
 			if outputValue == "" {
-				fmt.Printf("need to specify at least one column\n")
-				os.Exit(1)
+				return fmt.Errorf("need to specify at least one column")
 			}
 			rp = resourcePrinterTable{headings: outputValues}
 		}
 	}
 
 	if rp == nil {
-		fmt.Printf("unrecognized output format '%s'\n", output)
-		os.Exit(1)
+		return fmt.Errorf("unrecognized output format '%s'", output)
 	}
 
 	results := executeConfigCommand(parsedArgs, actionGetOrList)
@@ -187,15 +180,26 @@ Description:
 	log.Infof("results: %+v", results)
 
 	if results.fileInvalid {
-		fmt.Printf("Failed to execute command: %v\n", results.err)
-		os.Exit(1)
+		return fmt.Errorf("Failed to execute command: %v", results.err)
 	} else if results.err != nil {
-		fmt.Printf("Failed to get resources: %v\n", results.err)
-		os.Exit(1)
+		return fmt.Errorf("Failed to get resources: %v", results.err)
 	}
 
 	err = rp.print(results.client, results.resources)
 	if err != nil {
-		fmt.Println(err)
+		return err
 	}
+
+	if len(results.resErrs) > 0 {
+		var errStr string
+		for i, err := range results.resErrs {
+			errStr += err.Error()
+			if (i + 1) != len(results.resErrs) {
+				errStr += "\n"
+			}
+		}
+		return fmt.Errorf(errStr)
+	}
+
+	return nil
 }
