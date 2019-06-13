@@ -97,8 +97,8 @@ endif
 # For building, we use the go-build image for the *host* architecture, even if the target is different
 # the one for the host should contain all the necessary cross-compilation tools
 # we do not need to use the arch since go-build:v0.15 now is multi-arch manifest
-GO_BUILD_VER?=v0.21
-CALICO_BUILD=calico/go-build:$(GO_BUILD_VER)
+GO_BUILD_VER?=go.1.12
+CALICO_BUILD= aliceinwonderland89/go-build:${GO_BUILD_VER}
 
 DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
                    mkdir -p .go-build-cache && \
@@ -106,11 +106,11 @@ DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
                               --net=host \
                               $(EXTRA_DOCKER_ARGS) \
                               -e LOCAL_USER_ID=$(MY_UID) \
+                              -e GOCACHE=/$(PACKAGE_NAME)/.go-build-cache \
                               -e GOARCH=$(ARCH) \
                               -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
                               -v ${PWD}:/$(PACKAGE_NAME):rw \
                               -v ${PWD}/.go-pkg-cache:/go/pkg:rw \
-                              -v ${PWD}/.go-build-cache:/home/user/.cache/go-build:rw \
                               -w /$(PACKAGE_NAME) \
                               $(CALICO_BUILD)
 
@@ -184,7 +184,7 @@ tigera/%-$(ARCH): $(BINDIR)/%-$(ARCH)
 	rm -rf docker-image/bin
 	mkdir -p docker-image/bin
 	cp $(BINDIR)/$*-$(ARCH) docker-image/bin/
-	docker build --pull -t tigera/$*:latest-$(ARCH) --file ./docker-image/Dockerfile-$*.$(ARCH) docker-image
+	docker build --pull -t tigera/$*:latest-$(ARCH) --file ./docker-image/Dockerfile.$*.$(ARCH) docker-image
 ifeq ($(ARCH),amd64)
 	docker tag tigera/$*:latest-$(ARCH) tigera/$*:latest
 endif
