@@ -18,6 +18,7 @@ import (
 	"github.com/containernetworking/cni/pkg/types/current"
 	"github.com/containernetworking/plugins/pkg/hns"
 	"github.com/juju/clock"
+	"github.com/juju/errors"
 	"github.com/juju/mutex"
 	"github.com/projectcalico/cni-plugin/internal/pkg/utils/winpol"
 	"github.com/projectcalico/cni-plugin/pkg/types"
@@ -199,9 +200,7 @@ func EnsureVXLANTunnelAddr(ctx context.Context, calicoClient calicoclient.Interf
 	}
 
 	expectedIP := getNthIP(ipNet, 1).String()
-	if node.Spec.IPv4VXLANTunnelAddr == expectedIP {
-		logrus.WithField("ip", expectedIP).Debug("VXLAN tunnel IP is already correct")
-	} else {
+	if node.Spec.IPv4VXLANTunnelAddr != expectedIP {
 		logrus.WithField("ip", expectedIP).Debug("VXLAN tunnel IP to be updated")
 		updateRequired = true
 	}
@@ -213,14 +212,12 @@ func EnsureVXLANTunnelAddr(ctx context.Context, calicoClient calicoclient.Interf
 		networkName = CreateNetworkName(conf.Name, ipNet)
 	}
 
-	mac, err := UpdateDrMacAddr(networkName, ipNet)
+	mac, err := GetDRMACAddr(networkName, ipNet)
 	if err != nil {
 		return err
 	}
 	expectedMAC := mac.String()
-	if node.Spec.VXLANTunnelMACAddr == expectedMAC {
-		logrus.WithField("mac", expectedMAC).Debug("VXLAN tunnel MAC is already correct")
-	} else {
+	if node.Spec.VXLANTunnelMACAddr != expectedMAC {
 		logrus.WithField("mac", expectedMAC).Debug("VXLAN tunnel MAC to be updated")
 		updateRequired = true
 	}
@@ -235,7 +232,7 @@ func EnsureVXLANTunnelAddr(ctx context.Context, calicoClient calicoclient.Interf
 	return err
 }
 
-func UpdateDrMacAddr(networkName string, subNet *net.IPNet) (net.HardwareAddr, error) {
+func GetDRMACAddr(networkName string, subNet *net.IPNet) (net.HardwareAddr, error) {
 	hnsNetwork, err := hcsshim.GetHNSNetworkByName(networkName)
 	if err != nil {
 		logrus.Infof("hns network %s not found", networkName)
@@ -387,13 +384,13 @@ func ensureVxlanNetworkExists(networkName string, subNet *net.IPNet, conf types.
 		// Config request params
 		jsonRequest, err := json.Marshal(expectedNetwork)
 		if err != nil {
-			return nil, fmt.Errorf("failed to marshal %+v", expectedNetwork)
+			return nil, errors.Annotatef(err, "failed to marshal %+v", expectedNetwork)
 		}
 
 		logger.Infof("Attempting to create HNSNetwork %s", string(jsonRequest))
 		newNetwork, err := hcsshim.HNSNetworkRequest("POST", "", string(jsonRequest))
 		if err != nil {
-			return nil, fmt.Errorf("failed to create HNSNetwork %s", networkName)
+			return nil, errors.Annotatef(err, "failed to create HNSNetwork %s", networkName)
 		}
 
 		var waitErr, lastErr error
@@ -404,7 +401,7 @@ func ensureVxlanNetworkExists(networkName string, subNet *net.IPNet, conf types.
 			return newNetwork != nil && len(newNetwork.ManagementIP) != 0, nil
 		})
 		if waitErr == wait.ErrWaitTimeout {
-			return nil, fmt.Errorf("timeout, failed to get management IP from HNSNetwork %s", networkName)
+			return nil, errors.Annotatef(lastErr, "timeout, failed to get management IP from HNSNetwork %s", networkName)
 		}
 
 		// Wait for the interface with the management IP
@@ -415,7 +412,7 @@ func ensureVxlanNetworkExists(networkName string, subNet *net.IPNet, conf types.
 			return lastErr == nil, nil
 		})
 		if waitErr == wait.ErrWaitTimeout {
-			return nil, fmt.Errorf("timeout, failed to get net interface for HNSNetwork %s (%s)", networkName, newNetwork.ManagementIP)
+			return nil, errors.Annotatef(lastErr, "timeout, failed to get net interface for HNSNetwork %s (%s)", networkName, newNetwork.ManagementIP)
 		}
 
 		logger.Infof("Created HNSNetwork %s", networkName)
@@ -424,7 +421,7 @@ func ensureVxlanNetworkExists(networkName string, subNet *net.IPNet, conf types.
 
 	existingNetworkV2, err := hcn.GetNetworkByID(existingNetwork.Id)
 	if err != nil {
-		return nil, fmt.Errorf("Could not find vxlan0 in V2")
+		return nil, errors.Annotatef(err, "Could not find vxlan0 in V2")
 	}
 
 	addHostRoute := true
@@ -533,7 +530,7 @@ func CreateAndAttachVxlanHostEP(epName string, hnsNetwork *hcsshim.HNSNetwork, s
 	// 2. Create a new HNSNetwork
 	if existingEndpoint != nil {
 		if _, err := existingEndpoint.Delete(); err != nil {
-			return nil, fmt.Errorf("failed to delete existing remote HNSEndpoint %s", epName)
+			return nil, errors.Annotatef(err, "failed to delete existing remote HNSEndpoint %s", epName)
 		}
 		logger.Infof("Deleted stale HNSEndpoint %s", epName)
 	}
@@ -551,7 +548,7 @@ func CreateAndAttachVxlanHostEP(epName string, hnsNetwork *hcsshim.HNSNetwork, s
 		},
 	}
 	if _, err := newEndpoint.Create(); err != nil {
-		return nil, fmt.Errorf("failed to create remote HNSEndpoint %s", epName)
+		return nil, errors.Annotatef(err, "failed to create remote HNSEndpoint %s", epName)
 	}
 	logger.Infof("Created HNSEndpoint %s", epName)
 

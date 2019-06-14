@@ -1764,7 +1764,8 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(node.Spec.IPv4VXLANTunnelAddr).Should(Equal("10.254.112.1"))
 			_, subNet, _ := net.ParseCIDR(result.IPs[0].Address.String())
-			mac, err := utils.UpdateDrMacAddr(networkName, subNet)
+			mac, err := utils.GetDRMACAddr(networkName, subNet)
+			Expect(mac).ShouldNot(Equal(""))
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(node.Spec.VXLANTunnelMACAddr).Should(Equal(mac.String()))
 
