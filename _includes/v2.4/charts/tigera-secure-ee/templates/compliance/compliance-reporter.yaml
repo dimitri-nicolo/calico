@@ -138,7 +138,6 @@ template:
         httpGet:
           path: /liveness
           port: 9099
-          host: localhost
     volumes:
     - name: elastic-ca-cert-volume
       secret:
