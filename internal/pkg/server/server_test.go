@@ -4,13 +4,18 @@ package server_test
 
 import (
 	"bytes"
+	"crypto/rsa"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"net"
 	"net/http"
 	"strings"
 	"sync"
 
 	"github.com/tigera/voltron/internal/pkg/clusters"
+	"github.com/tigera/voltron/internal/pkg/test"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -20,9 +25,23 @@ import (
 	"github.com/tigera/voltron/pkg/tunnel"
 )
 
+var (
+	srvCert    *x509.Certificate
+	srvPrivKey *rsa.PrivateKey
+	rootCAs    *x509.CertPool
+)
+
 func init() {
 	log.SetOutput(GinkgoWriter)
 	log.SetLevel(log.DebugLevel)
+
+	srvCert, _ = test.CreateSelfSignedX509Cert("voltron", true)
+
+	block, _ := pem.Decode([]byte(test.PrivateRSA))
+	srvPrivKey, _ = x509.ParsePKCS1PrivateKey(block.Bytes)
+
+	rootCAs = x509.NewCertPool()
+	rootCAs.AddCert(srvCert)
 }
 
 var _ = Describe("Server", func() {
@@ -45,7 +64,10 @@ var _ = Describe("Server", func() {
 		lis, e = net.Listen("tcp", "localhost:0")
 		Expect(e).NotTo(HaveOccurred())
 
-		srv, err = server.New()
+		srv, err = server.New(
+			server.WithKeepClusterKeys(),
+			server.WithTunnelCreds(srvCert, srvPrivKey),
+		)
 		Expect(err).NotTo(HaveOccurred())
 		wg.Add(1)
 		go func() {
@@ -62,6 +84,12 @@ var _ = Describe("Server", func() {
 
 		It("should be able to register a new cluster", func() {
 			addCluster(lis.Addr().String(), "clusterA", "A")
+		})
+
+		It("should be able to get the clusters creds", func() {
+			cert, key, err := srv.ClusterCreds("clusterA")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(cert != nil && key != nil).To(BeTrue())
 		})
 
 		It("should be able to list the cluster", func() {
@@ -129,7 +157,10 @@ var _ = Describe("Server Proxy to tunnel", func() {
 		lisTun, e = net.Listen("tcp", "localhost:0")
 		Expect(e).NotTo(HaveOccurred())
 
-		srv, err = server.New()
+		srv, err = server.New(
+			server.WithKeepClusterKeys(),
+			server.WithTunnelCreds(srvCert, srvPrivKey),
+		)
 		Expect(err).NotTo(HaveOccurred())
 
 		wg.Add(1)
@@ -141,7 +172,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			srv.ServeTunnels(lisTun)
+			srv.ServeTunnelsTLS(lisTun)
 		}()
 
 	})
@@ -186,12 +217,18 @@ var _ = Describe("Server Proxy to tunnel", func() {
 		var clnT *tunnel.Tunnel
 
 		It("should be possible to open a tunnel", func() {
-			clnT, err = tunnel.Dial(lisTun.Addr().String())
+			certPem, keyPem, err := srv.ClusterCreds("clusterA")
 			Expect(err).NotTo(HaveOccurred())
-		})
 
-		It("should be possible to open another tunnel", func() {
-			_, err = tunnel.Dial(lisTun.Addr().String())
+			cert, err := tls.X509KeyPair(certPem, keyPem)
+			Expect(err).NotTo(HaveOccurred())
+
+			cfg := &tls.Config{
+				Certificates: []tls.Certificate{cert},
+				RootCAs:      rootCAs,
+			}
+
+			clnT, err = tunnel.DialTLS(lisTun.Addr().String(), cfg)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -213,10 +250,115 @@ var _ = Describe("Server Proxy to tunnel", func() {
 					c.Close()
 				}()
 
-				clientHelloReq(lis.Addr().String(), clnT.Addr().String(), 502 /* due to the EOF */)
+				clientHelloReq(lis.Addr().String(), "clusterA", 502 /* due to the EOF */)
 
 				wg.Wait()
 				Expect(acceptErr).NotTo(HaveOccurred())
+			})
+		})
+
+		When("opening another tunnel", func() {
+			var certPem, keyPem []byte
+
+			It("should fail to get creds if it does not exist yet", func() {
+				var err error
+				certPem, keyPem, err = srv.ClusterCreds("clusterB")
+				Expect(err).To(HaveOccurred())
+			})
+
+			It("should be able to register another cluster", func() {
+				addCluster(lis.Addr().String(), "clusterB", "BB")
+			})
+
+			When("another cluster is registered", func() {
+				var cfgB *tls.Config
+
+				It("shold be possible to get creds for clusterB", func() {
+					var err error
+					certPem, keyPem, err = srv.ClusterCreds("clusterB")
+					Expect(err).NotTo(HaveOccurred())
+
+					cert, err := tls.X509KeyPair(certPem, keyPem)
+					Expect(err).NotTo(HaveOccurred())
+
+					cfgB = &tls.Config{
+						Certificates: []tls.Certificate{cert},
+						RootCAs:      rootCAs,
+					}
+				})
+
+				var tunB *tunnel.Tunnel
+
+				It("should be possible to open tunnel from clusterB", func() {
+					var err error
+
+					tunB, err = tunnel.DialTLS(lisTun.Addr().String(), cfgB)
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("eventually accepting connections succeeds", func() {
+					var wg sync.WaitGroup
+
+					wg.Add(1)
+					go func() {
+						defer wg.Done()
+						clientHelloReq(lis.Addr().String(), "clusterB", 502 /* due to the EOF */)
+					}()
+
+					c, err := tunB.Accept()
+					Expect(err).ShouldNot(HaveOccurred())
+					c.Close()
+					wg.Wait()
+				})
+
+				It("should be possible to open a second tunnel from clusterB", func() {
+					var err error
+
+					tunB, err = tunnel.DialTLS(lisTun.Addr().String(), cfgB)
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("eventually accepting connections fails as the tunnel is rejected", func() {
+					_, err := tunB.Accept()
+					Expect(err).Should(HaveOccurred())
+				})
+
+				It("should be possible to delete the cluster", func() {
+					Expect(deleteCluster(lis.Addr().String(), "clusterB")).To(BeTrue())
+				})
+
+				It("eventually accepting connections fails", func() {
+					_, err := tunB.Accept()
+					Expect(err).Should(HaveOccurred())
+				})
+
+				It("should be possible to open tunnel from unregistered clusterB", func() {
+					var err error
+
+					tunB, err = tunnel.DialTLS(lisTun.Addr().String(), cfgB)
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("eventually accepting connections fails as the tunnel is rejected", func() {
+					_, err := tunB.Accept()
+					Expect(err).Should(HaveOccurred())
+				})
+
+				It("should be able to register clusterB again", func() {
+					addCluster(lis.Addr().String(), "clusterB", "B again")
+				})
+
+				It("should be possible to open tunnel from clusterB with outdated creds", func() {
+					var err error
+
+					tunB, err = tunnel.DialTLS(lisTun.Addr().String(), cfgB)
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("eventually accepting connections fails as the tunnel is rejected", func() {
+					_, err := tunB.Accept()
+					Expect(err).Should(HaveOccurred())
+				})
 			})
 		})
 	})

@@ -4,6 +4,7 @@ package tunnel
 
 import (
 	"context"
+	"crypto"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
@@ -15,6 +16,8 @@ import (
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/tigera/voltron/internal/pkg/utils"
 )
 
 // Server is a connection server that accepts connections from the provided
@@ -34,31 +37,21 @@ type Server struct {
 // ServerOption is option for NewServer
 type ServerOption func(*Server) error
 
-// X509PairPEM is a pair of PEM blocks used by WithCert
-type X509PairPEM struct {
-	Cert, Key []byte
+// WithCredsPEM installs server certificate, can be used multiple times
+func WithCredsPEM(certPem, keyPem []byte) ServerOption {
+	return func(s *Server) error {
+		return s.setCredsPEM(certPem, keyPem)
+	}
 }
 
-// WithCert installs server certificate, can be used multiple times
-func WithCert(pair X509PairPEM) ServerOption {
+// WithCreds installs parsed cert/key
+func WithCreds(cert *x509.Certificate, key crypto.Signer) ServerOption {
 	return func(s *Server) error {
-		cert, err := tls.X509KeyPair(pair.Cert, pair.Key)
+		pem, err := utils.KeyPEMEncode(key)
 		if err != nil {
-			return errors.Errorf("WithCert failed to create tsl.Certificate: %s", err)
+			return err
 		}
-
-		block, _ := pem.Decode(pair.Cert)
-		if block == nil {
-			return errors.Errorf("no block in cert key")
-		}
-
-		xCert, err := x509.ParseCertificate(block.Bytes)
-		if err != nil {
-			return errors.Errorf("parsing public failed: %s", err)
-		}
-		s.certs = append(s.certs, cert)
-		s.certPool.AddCert(xCert)
-		return nil
+		return s.setCredsPEM(utils.CertPEMEncode(cert), pem)
 	}
 }
 
@@ -71,7 +64,7 @@ func WithTLSHandshakeTimeout(to time.Duration) ServerOption {
 }
 
 // NewServer returns a new server
-func NewServer(opts ...ServerOption) *Server {
+func NewServer(opts ...ServerOption) (*Server, error) {
 	s := &Server{
 		streamC:             make(chan *ServerStream),
 		certPool:            x509.NewCertPool(),
@@ -79,12 +72,15 @@ func NewServer(opts ...ServerOption) *Server {
 	}
 
 	for _, opt := range opts {
-		opt(s)
+		err := opt(s)
+		if err != nil {
+			return nil, errors.WithMessage(err, "tunnel.Server.New")
+		}
 	}
 
 	s.ctx, s.cancel = context.WithCancel(context.Background())
 
-	return s
+	return s, nil
 }
 
 // Serve start serving connections on the given Listener
@@ -196,6 +192,30 @@ func (s *Server) AcceptTunnel() (*Tunnel, error) {
 func (s *Server) Stop() {
 	s.cancel()
 	s.wg.Wait()
+}
+
+func (s *Server) setCredsPEM(certPem, keyPem []byte) error {
+	cert, err := tls.X509KeyPair(certPem, keyPem)
+	if err != nil {
+		return errors.Errorf("WithCert failed to create tsl.Certificate: %s", err)
+	}
+
+	block, _ := pem.Decode(certPem)
+	if block == nil {
+		return errors.Errorf("no block in cert key")
+	}
+
+	xCert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return errors.Errorf("parsing cert PEM failed: %s", err)
+	}
+
+	s.certs = append(s.certs, cert)
+	s.certPool.AddCert(xCert)
+
+	log.Debugf("tunnel.Server: TLS creds set")
+
+	return nil
 }
 
 type atomicBool struct {

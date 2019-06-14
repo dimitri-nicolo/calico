@@ -223,7 +223,8 @@ func startServer() (*tunnel.Server, net.Addr) {
 	lis, err := net.Listen("tcp", "localhost:0")
 	Expect(err).ShouldNot(HaveOccurred())
 
-	srv := tunnel.NewServer()
+	srv, err := tunnel.NewServer()
+	Expect(err).NotTo(HaveOccurred())
 	Expect(srv.Serve(lis)).Should(Succeed())
 
 	return srv, lis.Addr()
@@ -311,13 +312,12 @@ var _ = Describe("TLS Stream", func() {
 		lis, err = net.Listen("tcp", "localhost:0")
 		Expect(err).ShouldNot(HaveOccurred())
 
-		srv = tunnel.NewServer(
-			tunnel.WithCert(tunnel.X509PairPEM{
-				Cert: test.PemEncodeCert(srvCert),
-				Key:  []byte(test.PrivateRSA),
-			}),
+		var err error
+		srv, err = tunnel.NewServer(
+			tunnel.WithCredsPEM(test.PemEncodeCert(srvCert), []byte(test.PrivateRSA)),
 			tunnel.WithTLSHandshakeTimeout(200*time.Millisecond),
 		)
+		Expect(err).NotTo(HaveOccurred())
 		Expect(srv.ServeTLS(lis)).Should(Succeed())
 	})
 

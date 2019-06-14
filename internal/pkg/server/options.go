@@ -3,6 +3,8 @@
 package server
 
 import (
+	"crypto"
+	"crypto/x509"
 	"os"
 
 	"github.com/pkg/errors"
@@ -27,7 +29,8 @@ type ProxyTarget struct {
 	Dest    string
 }
 
-// WithCredsFiles sets the default cert and key to be used for TLS connections
+// WithCredsFiles sets the default cert and key to be used for the TLS
+// connections and for the tunnel.
 func WithCredsFiles(cert, key string) Option {
 	return func(s *Server) error {
 		// Check if files exist
@@ -42,6 +45,26 @@ func WithCredsFiles(cert, key string) Option {
 		s.certFile = cert
 		s.keyFile = key
 
+		return nil
+	}
+}
+
+// WithTunnelCreds sets the credentials to be used for the tunnel server and to
+// be used to generate creds for guardians. If not populated WithCredsFiles
+// creds will be used.
+func WithTunnelCreds(cert *x509.Certificate, key crypto.Signer) Option {
+	return func(s *Server) error {
+		s.tunnelCert = cert
+		s.tunnelKey = key
+		return nil
+	}
+}
+
+// WithKeepClusterKeys allows the server to keep the generated private keys.
+// This is to be used only for debugging and testing
+func WithKeepClusterKeys() Option {
+	return func(s *Server) error {
+		s.clusters.keepKeys = true
 		return nil
 	}
 }

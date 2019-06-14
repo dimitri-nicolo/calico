@@ -4,6 +4,8 @@ package server
 
 import (
 	"context"
+	"crypto"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -26,11 +28,18 @@ type cluster struct {
 
 	tunnel *tunnel.Tunnel
 	proxy  *httputil.ReverseProxy
+
+	cert *x509.Certificate
+	key  crypto.Signer
 }
 
 type clusters struct {
 	sync.RWMutex
-	clusters map[string]*cluster
+	clusters      map[string]*cluster
+	generateCreds func(*jclust.Cluster) (*x509.Certificate, crypto.Signer, error)
+
+	// keep the generated keys, only for testing and debugging
+	keepKeys bool
 }
 
 func returnJSON(w http.ResponseWriter, data interface{}) {
@@ -97,10 +106,24 @@ func (cs *clusters) updateCluster(w http.ResponseWriter, r *http.Request) {
 		c.Unlock()
 	} else {
 		log.Infof("Adding cluster ID: %q DisplayName: %q", jc.ID, jc.DisplayName)
-		cs.add(jc.ID,
-			&cluster{
-				Cluster: *jc,
-			})
+
+		cert, key, err := cs.generateCreds(jc)
+		if err != nil {
+			msg := "Failed to generate cluster credentials: "
+			log.Errorf(msg+"%+v", err)
+			http.Error(w, msg+err.Error(), 500)
+			return
+		}
+
+		c := &cluster{
+			Cluster: *jc,
+			cert:    cert,
+		}
+		if cs.keepKeys {
+			c.key = key
+		}
+
+		cs.add(jc.ID, c)
 	}
 
 	// TODO we will return clusters credentials
