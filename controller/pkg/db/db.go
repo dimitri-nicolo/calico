@@ -42,8 +42,8 @@ type Events interface {
 }
 
 type AuditLog interface {
-	ObjectCreatedBetween(kind, namespace, name string, before, after time.Time) (bool, error)
-	ObjectDeletedBetween(kind, namespace, name string, before, after time.Time) (bool, error)
+	ObjectCreatedBetween(ctx context.Context, kind, namespace, name string, before, after time.Time) (bool, error)
+	ObjectDeletedBetween(ctx context.Context, kind, namespace, name string, before, after time.Time) (bool, error)
 }
 
 type IPSetSpec []string

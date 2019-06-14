@@ -3,6 +3,7 @@
 package filters
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -19,7 +20,7 @@ func TestFilters_NilFilter(t *testing.T) {
 		{RecordScore: 90},
 	}
 
-	out, err := Filters{NilFilter{}}.Filter(in)
+	out, err := Filters{NilFilter{}}.Filter(context.TODO(), in)
 	g.Expect(err).ShouldNot(HaveOccurred())
 	g.Expect(out).Should(Equal(in))
 }
@@ -48,29 +49,29 @@ func TestFilters(t *testing.T) {
 		Err: errors.New("test"),
 	}
 
-	out, err := Filters{f1}.Filter(in)
+	out, err := Filters{f1}.Filter(context.TODO(), in)
 	g.Expect(err).ShouldNot(HaveOccurred())
 	g.Expect(out).Should(Equal(f1.RS))
 
-	out, err = Filters{f2}.Filter(in)
+	out, err = Filters{f2}.Filter(context.TODO(), in)
 	g.Expect(err).ShouldNot(HaveOccurred())
 	g.Expect(out).Should(Equal(f2.RS))
 
-	_, err = Filters{f3}.Filter(in)
+	_, err = Filters{f3}.Filter(context.TODO(), in)
 	g.Expect(err).Should(HaveOccurred())
 
-	out, err = Filters{f1, f2}.Filter(in)
+	out, err = Filters{f1, f2}.Filter(context.TODO(), in)
 	g.Expect(err).ShouldNot(HaveOccurred())
 	g.Expect(out).Should(Equal(f2.RS))
 
-	out, err = Filters{f2, f1}.Filter(in)
+	out, err = Filters{f2, f1}.Filter(context.TODO(), in)
 	g.Expect(err).ShouldNot(HaveOccurred())
 	g.Expect(out).Should(Equal(f1.RS))
 
-	_, err = Filters{f1, f2, f3}.Filter(in)
+	_, err = Filters{f1, f2, f3}.Filter(context.TODO(), in)
 	g.Expect(err).Should(HaveOccurred())
-	_, err = Filters{f1, f3, f2}.Filter(in)
+	_, err = Filters{f1, f3, f2}.Filter(context.TODO(), in)
 	g.Expect(err).Should(HaveOccurred())
-	_, err = Filters{f3, f2, f1}.Filter(in)
+	_, err = Filters{f3, f2, f1}.Filter(context.TODO(), in)
 	g.Expect(err).Should(HaveOccurred())
 }

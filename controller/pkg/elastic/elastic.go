@@ -28,17 +28,24 @@ const (
 	StandardType            = "_doc"
 	FlowLogIndexPattern     = "tigera_secure_ee_flows.%s.*"
 	EventIndexPattern       = "tigera_secure_ee_events.%s"
+	AuditIndexPattern       = "tigera_secure_ee_audit_*.%s.*"
 	QuerySize               = 1000
+	AuditQuerySize          = 0
 	MaxClauseCount          = 1024
 	CreateIndexFailureDelay = time.Second * 15
 	CreateIndexWaitTimeout  = time.Minute
 	PingTimeout             = time.Second * 5
 	PingPeriod              = time.Minute
+	Create                  = "create"
+	Delete                  = "delete"
 )
 
-var IPSetIndex string
-var EventIndex string
-var FlowLogIndex string
+var (
+	IPSetIndex   string
+	EventIndex   string
+	FlowLogIndex string
+	AuditIndex   string
+)
 
 func init() {
 	cluster := os.Getenv("CLUSTER_NAME")
@@ -48,6 +55,7 @@ func init() {
 	IPSetIndex = fmt.Sprintf(IPSetIndexPattern, cluster)
 	EventIndex = fmt.Sprintf(EventIndexPattern, cluster)
 	FlowLogIndex = fmt.Sprintf(FlowLogIndexPattern, cluster)
+	AuditIndex = fmt.Sprintf(FlowLogIndexPattern, cluster)
 }
 
 type ipSetDoc struct {
@@ -603,10 +611,64 @@ func (e *Elastic) GetRecords(ctx context.Context, jobID string, options *GetReco
 	return getRecordsResponse.Records, nil
 }
 
-func (e *Elastic) ObjectCreatedBetween(kind, namespace, name string, before, after time.Time) (bool, error) {
-	return false, nil
+func (e *Elastic) ObjectCreatedBetween(
+	ctx context.Context, resource, namespace, name string, before, after time.Time,
+) (bool, error) {
+	return e.auditObjectCreatedDeletedBetween(ctx, Create, resource, namespace, name, before, after)
 }
 
-func (e *Elastic) ObjectDeletedBetween(kind, namespace, name string, before, after time.Time) (bool, error) {
-	return false, nil
+func (e *Elastic) ObjectDeletedBetween(
+	ctx context.Context, resource, namespace, name string, before, after time.Time,
+) (bool, error) {
+	return e.auditObjectCreatedDeletedBetween(ctx, Delete, resource, namespace, name, before, after)
+}
+
+func (e *Elastic) auditObjectCreatedDeletedBetween(
+	ctx context.Context,
+	verb, resource, namespace, name string,
+	before, after time.Time,
+) (bool, error) {
+	switch {
+	case verb == "":
+		panic("missing verb parameter")
+	case resource == "":
+		panic("missing resource parameter")
+	case name == "":
+		return false, errors.New("missing name parameter")
+	}
+
+	// Build query using given fields.
+	queries := []elastic.Query{
+		elastic.NewRangeQuery("stageTimestamp").Gte(after).Lte(before),
+		elastic.NewMatchQuery("verb", verb),
+		elastic.NewMatchQuery("objectRef.resource", resource),
+		elastic.NewMatchQuery("objectRef.name", name),
+	}
+
+	if namespace != "" {
+		queries = append(queries, elastic.NewMatchQuery("objectRef.namespace", namespace))
+	}
+
+	query := elastic.NewBoolQuery().Filter(queries...)
+
+	// Get the number of matching entries.
+	result, err := elastic.NewSearchService(e.c).Index(AuditIndex).Size(AuditQuerySize).Query(query).Do(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	rval := result.TotalHits() > 0
+
+	log.WithFields(log.Fields{
+		"verb":      verb,
+		"resource":  resource,
+		"namespace": namespace,
+		"name":      name,
+		"before":    fmt.Sprint(before),
+		"after":     fmt.Sprint(after),
+		"totalHits": result.TotalHits(),
+		"found":     rval,
+	}).Debug("AuditLog query results")
+
+	return rval, nil
 }

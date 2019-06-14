@@ -2,7 +2,10 @@
 
 package db
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 type MockAuditLogArgs struct {
 	Kind      string
@@ -21,12 +24,12 @@ type MockAuditLog struct {
 	DeletedArgs *MockAuditLogArgs
 }
 
-func (al *MockAuditLog) ObjectCreatedBetween(kind, namespace, name string, before, after time.Time) (bool, error) {
+func (al *MockAuditLog) ObjectCreatedBetween(ctx context.Context, kind, namespace, name string, before, after time.Time) (bool, error) {
 	al.CreatedArgs = &MockAuditLogArgs{kind, namespace, name, before, after}
 	return al.CreatedOk, al.CreatedErr
 }
 
-func (al *MockAuditLog) ObjectDeletedBetween(kind, namespace, name string, before, after time.Time) (bool, error) {
+func (al *MockAuditLog) ObjectDeletedBetween(ctx context.Context, kind, namespace, name string, before, after time.Time) (bool, error) {
 	al.DeletedArgs = &MockAuditLogArgs{kind, namespace, name, before, after}
 	return al.DeletedOk, al.DeletedErr
 }

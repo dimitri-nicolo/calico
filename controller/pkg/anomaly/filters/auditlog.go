@@ -3,6 +3,7 @@
 package filters
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -39,13 +40,13 @@ func NewAuditLog(al db.AuditLog) Filter {
 	}
 }
 
-func (al *auditLogFilter) Filter(in []elastic.RecordSpec) ([]elastic.RecordSpec, error) {
+func (al *auditLogFilter) Filter(ctx context.Context, in []elastic.RecordSpec) ([]elastic.RecordSpec, error) {
 	cache := newAuditLogCache(al.auditLogDB)
 
 	var out []elastic.RecordSpec
 
 	for _, r := range in {
-		if filtered, err := cache.areKeysFiltered(getAuditKeys(r)...); err != nil {
+		if filtered, err := cache.areKeysFiltered(ctx, getAuditKeys(r)...); err != nil {
 			return nil, err
 		} else if !filtered {
 			out = append(out, r)

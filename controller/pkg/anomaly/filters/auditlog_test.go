@@ -3,6 +3,7 @@
 package filters
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
@@ -119,7 +120,7 @@ type filterMockAuditLog struct {
 	trueBefore       int
 }
 
-func (al *filterMockAuditLog) ObjectCreatedBetween(kind, namespace, name string, before, after time.Time) (bool, error) {
+func (al *filterMockAuditLog) ObjectCreatedBetween(ctx context.Context, kind, namespace, name string, before, after time.Time) (bool, error) {
 	if al.returnTrueAfter {
 		al.trueAfter--
 		if al.trueAfter < 0 {
@@ -132,11 +133,11 @@ func (al *filterMockAuditLog) ObjectCreatedBetween(kind, namespace, name string,
 			return true, nil
 		}
 	}
-	return al.MockAuditLog.ObjectCreatedBetween(kind, namespace, name, before, after)
+	return al.MockAuditLog.ObjectCreatedBetween(ctx, kind, namespace, name, before, after)
 }
 
-func (al *filterMockAuditLog) ObjectDeletedBetween(kind, namespace, name string, before, after time.Time) (bool, error) {
-	return al.MockAuditLog.ObjectDeletedBetween(kind, namespace, name, before, after)
+func (al *filterMockAuditLog) ObjectDeletedBetween(ctx context.Context, kind, namespace, name string, before, after time.Time) (bool, error) {
+	return al.MockAuditLog.ObjectDeletedBetween(ctx, kind, namespace, name, before, after)
 }
 
 func TestAuditLog_Filter(t *testing.T) {
@@ -171,19 +172,19 @@ func TestAuditLog_Filter(t *testing.T) {
 
 	// Test that errors are returned correctly
 	al.CreatedErr = errors.New("error")
-	_, err := f.Filter(in)
+	_, err := f.Filter(context.TODO(), in)
 	g.Expect(err).Should(HaveOccurred())
 	al.CreatedErr = nil
 
 	// Test with a filter that passes everything
-	out, err := f.Filter(in)
+	out, err := f.Filter(context.TODO(), in)
 	g.Expect(err).ShouldNot(HaveOccurred())
 	g.Expect(out).Should(ConsistOf(in))
 
 	// Test with a filter that passes only the first two
 	al.returnTrueAfter = true
 	al.trueAfter = 2
-	out, err = f.Filter(in)
+	out, err = f.Filter(context.TODO(), in)
 	g.Expect(err).ShouldNot(HaveOccurred())
 	g.Expect(out).Should(ConsistOf(in[:2]))
 
@@ -191,7 +192,7 @@ func TestAuditLog_Filter(t *testing.T) {
 	al.returnTrueAfter = false
 	al.returnTrueBefore = true
 	al.trueBefore = 2
-	out, err = f.Filter(in)
+	out, err = f.Filter(context.TODO(), in)
 	g.Expect(err).ShouldNot(HaveOccurred())
 	g.Expect(out).Should(ConsistOf(in[2:]))
 

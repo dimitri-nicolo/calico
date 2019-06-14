@@ -3,6 +3,7 @@
 package filters
 
 import (
+	"context"
 	"time"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
@@ -20,7 +21,7 @@ func newAuditLogCache(al db.AuditLog) *auditLogCache {
 	}
 }
 
-func (c *auditLogCache) isKeyFiltered(k auditKey) (bool, error) {
+func (c *auditLogCache) isKeyFiltered(ctx context.Context, k auditKey) (bool, error) {
 	keyString := k.String()
 
 	if cached, ok := c.cache[keyString]; ok {
@@ -28,7 +29,7 @@ func (c *auditLogCache) isKeyFiltered(k auditKey) (bool, error) {
 	}
 
 	filtered, err := c.auditLogDB.ObjectCreatedBetween(
-		k.kind, k.namespace, k.name,
+		ctx, k.kind, k.namespace, k.name,
 		k.timestamp.Add(CreatedBefore),
 		k.timestamp.Add(time.Second*time.Duration(k.bucketSpan)).Add(CreatedAfter),
 	)
@@ -41,7 +42,7 @@ func (c *auditLogCache) isKeyFiltered(k auditKey) (bool, error) {
 	}
 
 	filtered, err = c.auditLogDB.ObjectDeletedBetween(
-		k.kind, k.namespace, k.name,
+		ctx, k.kind, k.namespace, k.name,
 		k.timestamp.Add(DeletedBefore),
 		k.timestamp.Add(time.Second*time.Duration(k.bucketSpan)).Add(DeletedAfter),
 	)
@@ -53,9 +54,9 @@ func (c *auditLogCache) isKeyFiltered(k auditKey) (bool, error) {
 	return filtered, nil
 }
 
-func (c *auditLogCache) areKeysFiltered(keys ...auditKey) (bool, error) {
+func (c *auditLogCache) areKeysFiltered(ctx context.Context, keys ...auditKey) (bool, error) {
 	for _, k := range keys {
-		if filtered, err := c.isKeyFiltered(k); err != nil {
+		if filtered, err := c.isKeyFiltered(ctx, k); err != nil {
 			return false, err
 		} else if filtered {
 			return true, nil

@@ -104,7 +104,7 @@ func (p *puller) pull(ctx context.Context, st statser.Statser) error {
 	st.ClearError(statser.XPackRecordsFailed)
 
 	log.WithFields(fields).Debug("Filtering")
-	rs, err = p.filter.Filter(rs)
+	rs, err = p.filter.Filter(ctx, rs)
 	if err != nil {
 		st.Error(statser.FilterFailed, err)
 		log.WithFields(fields).WithError(err).Error("Error filtering records")

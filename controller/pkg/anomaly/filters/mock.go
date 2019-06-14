@@ -2,13 +2,17 @@
 
 package filters
 
-import "github.com/tigera/intrusion-detection/controller/pkg/elastic"
+import (
+	"context"
+
+	"github.com/tigera/intrusion-detection/controller/pkg/elastic"
+)
 
 type MockFilter struct {
 	RS  []elastic.RecordSpec
 	Err error
 }
 
-func (f MockFilter) Filter([]elastic.RecordSpec) ([]elastic.RecordSpec, error) {
+func (f MockFilter) Filter(context.Context, []elastic.RecordSpec) ([]elastic.RecordSpec, error) {
 	return f.RS, f.Err
 }
