@@ -1,4 +1,4 @@
-// Copyright (c) 2016,2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,7 +15,6 @@
 package commands
 
 import (
-	"os"
 	"strings"
 
 	"github.com/docopt/docopt-go"
@@ -26,7 +25,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func Replace(args []string) {
+func Replace(args []string) error {
 	doc := constants.DatastoreIntro + `Usage:
   calicoctl replace --filename=<FILENAME> [--config=<CONFIG>] [--namespace=<NS>]
 
@@ -44,9 +43,9 @@ Options:
   -c --config=<CONFIG>       Path to the file containing connection
                              configuration in YAML or JSON format.
                              [default: ` + constants.DefaultConfigPath + `]
-  -n --namespace=<NS>       Namespace of the resource.
-                            Only applicable to NetworkPolicy and WorkloadEndpoint.
-                            Uses the default namespace if not specified.
+  -n --namespace=<NS>        Namespace of the resource.
+                             Only applicable to NetworkPolicy, NetworkSet, and WorkloadEndpoint.
+                             Uses the default namespace if not specified.
 
 Description:
   The replace command is used to replace a set of resources by filename or
@@ -64,6 +63,7 @@ Description:
     * ipPool
     * tier
     * networkPolicy
+    * networkSet
     * node
     * profile
     * workloadEndpoint
@@ -85,30 +85,27 @@ Description:
 `
 	parsedArgs, err := docopt.Parse(doc, args, true, "", false, false)
 	if err != nil {
-		fmt.Printf("Invalid option: 'calicoctl %s'. Use flag '--help' to read about a specific subcommand.\n", strings.Join(args, " "))
-		os.Exit(1)
+		return fmt.Errorf("Invalid option: 'calicoctl %s'. Use flag '--help' to read about a specific subcommand.", strings.Join(args, " "))
 	}
 	if len(parsedArgs) == 0 {
-		return
+		return nil
 	}
 
 	results := executeConfigCommand(parsedArgs, actionUpdate)
 	log.Infof("results: %+v", results)
 
 	if results.fileInvalid {
-		fmt.Printf("Failed to execute command: %v\n", results.err)
-		os.Exit(1)
+		return fmt.Errorf("Failed to execute command: %v", results.err)
 	} else if results.numHandled == 0 {
 		if results.numResources == 0 {
-			fmt.Printf("No resources specified in file\n")
+			return fmt.Errorf("No resources specified in file")
 		} else if results.numResources == 1 {
-			fmt.Printf("Failed to replace '%s' resource: %v\n", results.singleKind, results.err)
+			return fmt.Errorf("Failed to replace '%s' resource: %v", results.singleKind, results.err)
 		} else if results.singleKind != "" {
-			fmt.Printf("Failed to replace any '%s' resources: %v\n", results.singleKind, results.err)
+			return fmt.Errorf("Failed to replace any '%s' resources: %v", results.singleKind, results.err)
 		} else {
-			fmt.Printf("Failed to replace any resources: %v\n", results.err)
+			return fmt.Errorf("Failed to replace any resources: %v", results.err)
 		}
-		os.Exit(1)
 	} else if results.err == nil {
 		if results.singleKind != "" {
 			fmt.Printf("Successfully replaced %d '%s' resource(s)\n", results.numHandled, results.singleKind)
@@ -124,7 +121,8 @@ Description:
 			fmt.Printf("replaced the first %d out of %d resources:\n",
 				results.numHandled, results.numResources)
 		}
-		fmt.Printf("Hit error: %v\n", results.err)
-		os.Exit(1)
+		return fmt.Errorf("Hit error: %v", results.err)
 	}
+
+	return nil
 }

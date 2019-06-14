@@ -26,13 +26,14 @@ import (
 	"time"
 
 	"github.com/docopt/docopt-go"
+	log "github.com/sirupsen/logrus"
+
 	"github.com/projectcalico/calicoctl/calicoctl/commands/argutils"
 	"github.com/projectcalico/calicoctl/calicoctl/commands/clientmgr"
 	"github.com/projectcalico/calicoctl/calicoctl/commands/constants"
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	"github.com/projectcalico/libcalico-go/lib/names"
 	"github.com/projectcalico/libcalico-go/lib/net"
-	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -53,7 +54,7 @@ var (
 )
 
 // Run function collects diagnostic information and logs
-func Run(args []string) {
+func Run(args []string) error {
 	var err error
 	doc := `Usage:
   calicoctl node run [--ip=<IP>] [--ip6=<IP6>] [--as=<AS_NUM>]
@@ -109,7 +110,7 @@ Options:
                              destination IP or domain name.
                            > interface=<IFACE NAME REGEX LIST>
                              Use the first valid IP address found on interfaces
-                             named as per the first matching supplied interface 
+                             named as per the first matching supplied interface
 			     name regex. Regexes are separated by commas
 			     (e.g. eth.*,enp0s.*).
 			   > skip-interface=<IFACE NAME REGEX LIST>
@@ -167,11 +168,10 @@ Description:
 	arguments, err := docopt.Parse(doc, args, true, "", false, false)
 	if err != nil {
 		log.Info(err)
-		fmt.Printf("Invalid option: 'calicoctl %s'. Use flag '--help' to read about a specific subcommand.\n", strings.Join(args, " "))
-		os.Exit(1)
+		return fmt.Errorf("Invalid option: 'calicoctl %s'. Use flag '--help' to read about a specific subcommand.", strings.Join(args, " "))
 	}
 	if len(arguments) == 0 {
-		return
+		return nil
 	}
 
 	// Extract all the parameters.
@@ -196,15 +196,13 @@ Description:
 	if ipv4 != "" && ipv4 != "autodetect" {
 		ip := argutils.ValidateIP(ipv4)
 		if ip.Version() != 4 {
-			fmt.Println("Error executing command: --ip is wrong IP version")
-			os.Exit(1)
+			return fmt.Errorf("Error executing command: --ip is wrong IP version")
 		}
 	}
 	if ipv6 != "" && ipv6 != "autodetect" {
 		ip := argutils.ValidateIP(ipv6)
 		if ip.Version() != 6 {
-			fmt.Println("Error executing command: --ip6 is wrong IP version")
-			os.Exit(1)
+			return fmt.Errorf("Error executing command: --ip6 is wrong IP version")
 		}
 	}
 	if asNumber != "" {
@@ -214,13 +212,16 @@ Description:
 	}
 
 	if !backendMatch.MatchString(backend) {
-		fmt.Printf("Error executing command: unknown backend '%s'\n", backend)
-		os.Exit(1)
+		return fmt.Errorf("Error executing command: unknown backend '%s'", backend)
 	}
 
 	// Validate the IP autodetection methods if specified.
-	validateIpAutodetectionMethod(ipv4ADMethod, 4)
-	validateIpAutodetectionMethod(ipv6ADMethod, 6)
+	if err := validateIpAutodetectionMethod(ipv4ADMethod, 4); err != nil {
+		return err
+	}
+	if err := validateIpAutodetectionMethod(ipv6ADMethod, 6); err != nil {
+		return err
+	}
 
 	// Use the hostname if a name is not specified.  We should always
 	// pass in a fixed value to the node container so that if the user
@@ -229,20 +230,17 @@ Description:
 	if name == "" {
 		name, err = names.Hostname()
 		if err != nil || name == "" {
-			fmt.Println("Error executing command: unable to determine node name")
-			os.Exit(1)
+			return fmt.Errorf("Error executing command: unable to determine node name")
 		}
 	}
 
 	// Load the etcd configuraiton.
 	cfg, err := clientmgr.LoadClientConfig(config)
 	if err != nil {
-		fmt.Println("Error executing command: invalid config file")
-		os.Exit(1)
+		return fmt.Errorf("Error executing command: invalid config file")
 	}
 	if cfg.Spec.DatastoreType != apiconfig.EtcdV3 {
-		fmt.Println("Error executing command: unsupported backend specified in config")
-		os.Exit(1)
+		return fmt.Errorf("Error executing command: unsupported backend specified in config")
 	}
 	etcdcfg := cfg.Spec.EtcdConfig
 
@@ -255,13 +253,11 @@ Description:
 
 	// Validate the ifprefix to only allow alphanumeric characters
 	if !ifprefixMatch.MatchString(ifprefix) {
-		fmt.Printf("Error executing command: invalid interface prefix '%s'\n", ifprefix)
-		os.Exit(1)
+		return fmt.Errorf("Error executing command: invalid interface prefix '%s'", ifprefix)
 	}
 
 	if disableDockerNw && useDockerContainerLabels {
-		fmt.Printf("Error executing command: invalid to disable Docker Networking and enable Container labels\n")
-		os.Exit(1)
+		return fmt.Errorf("Error executing command: invalid to disable Docker Networking and enable Container labels")
 	}
 
 	// Set CALICO_LIBNETWORK_IFPREFIX env variable if Docker network is enabled and set to non-default value.
@@ -316,6 +312,7 @@ Description:
 	}
 
 	envs["ETCD_ENDPOINTS"] = etcdcfg.EtcdEndpoints
+	envs["ETCD_DISCOVERY_SRV"] = etcdcfg.EtcdDiscoverySrv
 	if etcdcfg.EtcdCACertFile != "" {
 		envs["ETCD_CA_CERT_FILE"] = ETCD_CA_CERT_NODE_FILE
 		vols = append(vols, vol{hostPath: etcdcfg.EtcdCACertFile, containerPath: ETCD_CA_CERT_NODE_FILE})
@@ -366,7 +363,7 @@ Description:
 			fmt.Println("Use the following command to stop the tigera/cnx-node container:")
 			fmt.Printf("\ndocker stop cnx-node\n\n")
 		}
-		return
+		return nil
 	}
 
 	// This is not a dry run.  Check that we are running as root.
@@ -380,7 +377,9 @@ Description:
 	if !runningInContainer() {
 		log.Info("Running in container")
 		loadModules()
-		setupIPForwarding()
+		if err := setupIPForwarding(); err != nil {
+			return err
+		}
 		setNFConntrackMax()
 	}
 
@@ -401,11 +400,11 @@ Description:
 	// unable to find image message.
 	runCmd := exec.Command(cmd[0], cmd[1:]...)
 	if output, err := runCmd.CombinedOutput(); err != nil {
-		fmt.Printf("Error executing command: %v\n", err)
+		errStr := fmt.Sprintf("Error executing command: %v\n", err)
 		for _, line := range strings.Split(string(output), "/n") {
-			fmt.Printf(" | %s/n", line)
+			errStr += fmt.Sprintf(" | %s/n", line)
 		}
-		os.Exit(1)
+		return fmt.Errorf(errStr)
 	}
 
 	// Create the command to follow the docker logs for the tigera/cnx-node
@@ -415,17 +414,14 @@ Description:
 	// Get the stdout pipe
 	outPipe, err := logCmd.StdoutPipe()
 	if err != nil {
-		fmt.Printf("Error executing command:  unable to check tigera/cnx-node logs: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error executing command:  unable to check tigera/cnx-node logs: %v", err)
 	}
 	outScanner := bufio.NewScanner(outPipe)
 
 	// Start following the logs.
 	err = logCmd.Start()
 	if err != nil {
-		fmt.Printf("Error executing command:  unable to check tigera/cnx-node logs: %v\n", err)
-		fmt.Println(err)
-		os.Exit(1)
+		return fmt.Errorf("Error executing command:  unable to check tigera/cnx-node logs: %v", err)
 	}
 
 	// Protect against calico processes taking too long to start, or docker
@@ -452,12 +448,12 @@ Description:
 
 	// If we didn't successfully start then notify the user.
 	if outScanner.Err() != nil {
-		fmt.Println("Error executing command: error reading tigera/cnx-node logs, check logs for details")
-		os.Exit(1)
+		return fmt.Errorf("Error executing command: error reading tigera/cnx-node logs, check logs for details")
 	} else if !started {
-		fmt.Println("Error executing command: tigera/cnx-node has terminated, check logs for details")
-		os.Exit(1)
+		return fmt.Errorf("Error executing command: tigera/cnx-node has terminated, check logs for details")
 	}
+
+	return nil
 }
 
 // runningInContainer returns whether we are running calicoctl within a container.
@@ -475,13 +471,12 @@ func loadModules() {
 	}
 }
 
-func setupIPForwarding() {
+func setupIPForwarding() error {
 	fmt.Println("Enabling IPv4 forwarding")
 	err := ioutil.WriteFile("/proc/sys/net/ipv4/ip_forward",
 		[]byte("1"), 0)
 	if err != nil {
-		fmt.Println("ERROR: Could not enable ipv4 forwarding")
-		os.Exit(1)
+		return fmt.Errorf("ERROR: Could not enable ipv4 forwarding")
 	}
 
 	if _, err := os.Stat("/proc/sys/net/ipv6"); err == nil {
@@ -489,10 +484,11 @@ func setupIPForwarding() {
 		err := ioutil.WriteFile("/proc/sys/net/ipv6/conf/all/forwarding",
 			[]byte("1"), 0)
 		if err != nil {
-			fmt.Println("ERROR: Could not enable ipv6 forwarding")
-			os.Exit(1)
+			return fmt.Errorf("ERROR: Could not enable ipv6 forwarding")
 		}
 	}
+
+	return nil
 }
 
 func setNFConntrackMax() {
@@ -512,29 +508,27 @@ func setNFConntrackMax() {
 }
 
 // Validate the IP autodection method string.
-func validateIpAutodetectionMethod(method string, version int) {
+func validateIpAutodetectionMethod(method string, version int) error {
 	if method == AUTODETECTION_METHOD_FIRST {
 		// Auto-detection method is "first-found", no additional validation
 		// required.
-		return
+		return nil
 	} else if strings.HasPrefix(method, AUTODETECTION_METHOD_CAN_REACH) {
 		// Auto-detection method is "can-reach", validate that the address
 		// resolves to at least one IP address of the required version.
 		addrStr := strings.TrimPrefix(method, AUTODETECTION_METHOD_CAN_REACH)
 		ips, err := gonet.LookupIP(addrStr)
 		if err != nil {
-			fmt.Printf("Error executing command: cannot resolve address specified for IP autodetection: %s\n", addrStr)
-			os.Exit(1)
+			return fmt.Errorf("Error executing command: cannot resolve address specified for IP autodetection: %s", addrStr)
 		}
 
 		for _, ip := range ips {
 			cip := net.IP{ip}
 			if cip.Version() == version {
-				return
+				return nil
 			}
 		}
-		fmt.Printf("Error executing command: address for IP autodetection does not resolve to an IPv%d address: %s\n", version, addrStr)
-		os.Exit(1)
+		return fmt.Errorf("Error executing command: address for IP autodetection does not resolve to an IPv%d address: %s", version, addrStr)
 	} else if strings.HasPrefix(method, AUTODETECTION_METHOD_INTERFACE) {
 		// Auto-detection method is "interface", validate that the interface
 		// regex is a valid golang regex.
@@ -544,11 +538,10 @@ func validateIpAutodetectionMethod(method string, version int) {
 		ifRegexes := strings.Split(ifStr, ",")
 		for _, ifRegex := range ifRegexes {
 			if _, err := regexp.Compile(ifStr); err != nil {
-				fmt.Printf("Error executing command: invalid interface regex specified for IP autodetection: %s\n", ifRegex)
-				os.Exit(1)
+				return fmt.Errorf("Error executing command: invalid interface regex specified for IP autodetection: %s", ifRegex)
 			}
 		}
-		return
+		return nil
 	} else if strings.HasPrefix(method, AUTODETECTION_METHOD_SKIP_INTERFACE) {
 		// Auto-detection method is "skip-interface", validate that the
 		// interface regexes used are valid golang regexes.
@@ -558,13 +551,11 @@ func validateIpAutodetectionMethod(method string, version int) {
 		ifRegexes := strings.Split(ifStr, ",")
 		for _, ifRegex := range ifRegexes {
 			if _, err := regexp.Compile(ifRegex); err != nil {
-				fmt.Printf("Error executing command: invalid interface regex specified for IP autodetection: %s\n", ifRegex)
-				os.Exit(1)
+				return fmt.Errorf("Error executing command: invalid interface regex specified for IP autodetection: %s", ifRegex)
 			}
 		}
-		return
+		return nil
 	}
 
-	fmt.Printf("Error executing command: invalid IP autodetection method: %s\n", method)
-	os.Exit(1)
+	return fmt.Errorf("Error executing command: invalid IP autodetection method: %s", method)
 }

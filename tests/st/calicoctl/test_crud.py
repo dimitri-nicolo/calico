@@ -1,4 +1,4 @@
-# Copyright (c) 2015-2017 Tigera, Inc. All rights reserved.
+# Copyright (c) 2015-2019 Tigera, Inc. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,9 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import json
 import logging
 import copy
+import os
 
 from nose_parameterized import parameterized
 
@@ -25,7 +25,6 @@ from tests.st.utils.data import *
 
 logging.basicConfig(level=logging.DEBUG, format="%(message)s")
 logger = logging.getLogger(__name__)
-
 
 class TestCalicoctlCommands(TestBase):
     """
@@ -45,6 +44,7 @@ class TestCalicoctlCommands(TestBase):
         """
         Test that a basic CRUD flow for pool commands works.
         """
+
         # Create the ipv6 pool using calicoctl, and read it out using an
         # exact get and a list query.
         rc = calicoctl("create", data=ippool_name2_rev1_v6)
@@ -82,6 +82,134 @@ class TestCalicoctlCommands(TestBase):
         # Assert that deleting the pool again fails.
         rc = calicoctl("delete ippool %s" % name(ippool_name2_rev1_v6))
         rc.assert_error(text=NOT_FOUND)
+
+    def test_no_config(self):
+        """
+        Test that broken store configuration does not crash
+        """
+
+        rc = calicoctl("get policy", no_config=True)
+        rc.assert_error()
+
+        rc = calicoctl("get policy x", no_config=True)
+        rc.assert_error()
+
+        rc = calicoctl("create", data=ippool_name2_rev1_v6, no_config=True)
+        rc.assert_error()
+
+        rc = calicoctl("apply", data=bgppeer_name1_rev2_v4, no_config=True)
+        rc.assert_error()
+
+        rc = calicoctl("replace", data=networkpolicy_name1_rev2, no_config=True)
+        rc.assert_error()
+
+        rc = calicoctl("label workloadendpoint node1-k8s-abcd-eth0 app=web --namespace=namespace1", no_config=True)
+        rc.assert_error()
+
+        rc = calicoctl("ipam show", no_config=True)
+        rc.assert_error()
+
+    def test_get_delete_multiple_names(self):
+        """
+        Test get/delete resource kind works with multiple names
+        """
+        # Create ipv6 and ipv4 pools (2 IPPool resources)
+        rc = calicoctl("create", data=ippool_name2_rev1_v6)
+        rc.assert_no_error()
+        rc = calicoctl("create", data=ippool_name1_rev1_v4)
+        rc.assert_no_error()
+
+        # Get the 2 resources by name
+        rc = calicoctl("get ippool %s %s" % (name(ippool_name1_rev1_v4), name(ippool_name2_rev1_v6)))
+        rc.assert_no_error()
+        rc.assert_output_equals(ippool_name1_rev1_table + "   \n\n" + ippool_name2_rev1_table)
+
+        rcNoErr = rc
+
+        # Get the 2 + one that does not exist
+        rc = calicoctl("get ippool %s %s %s" % (name(ippool_name1_rev1_v4), "blah", name(ippool_name2_rev1_v6)))
+        rc.assert_error()
+        rc.assert_output_equals(ippool_name1_rev1_table +
+                "   \n\n" +
+                ippool_name2_rev1_table +
+                "      \n\n" +
+                "resource does not exist: IPPool(blah) with error: <nil>\n")
+
+        rc = calicoctl("get ippool %s %s %s" % (name(ippool_name1_rev1_v4), "blah", name(ippool_name2_rev1_v6)),
+                only_stdout=True)
+
+        # Check that the output with no errors and with some errors equal for
+        # the good cases (XXX some weird benign printer whitespaces at the end)
+        rc.assert_output_equals(rcNoErr.output + "      \n\n")
+
+        # Delete both by name
+        rc = calicoctl("delete ippool %s %s" % (name(ippool_name1_rev1_v4), name(ippool_name2_rev1_v6)))
+        rc.assert_no_error()
+
+        # Assert pools are now deleted
+        rc = calicoctl("get ippool -o yaml")
+        rc.assert_empty_list("IPPool")
+
+        # Create ipv6 and ipv4 pools (2 IPPool resources)
+        rc = calicoctl("create", data=ippool_name2_rev1_v6)
+        rc.assert_no_error()
+        rc = calicoctl("create", data=ippool_name1_rev1_v4)
+        rc.assert_no_error()
+
+        # Delete the 2 + one that does not exist
+        rc = calicoctl("delete ippool %s %s %s" %
+                (name(ippool_name1_rev1_v4), "blah", name(ippool_name2_rev1_v6)))
+        rc.assert_error()
+
+        # Assert pools are now deleted
+        rc = calicoctl("get ippool -o yaml")
+        rc.assert_empty_list("IPPool")
+
+        # Create ipv6 and ipv4 pools (2 IPPool resources)
+        rc = calicoctl("create", data=ippool_name2_rev1_v6)
+        rc.assert_no_error()
+        rc = calicoctl("create", data=ippool_name1_rev1_v4)
+        rc.assert_no_error()
+
+        # Make sure that we do not delete anything unintentionally
+        rcYaml= calicoctl("get ippool -o yaml")
+        rcYaml.assert_no_error()
+
+        rc = calicoctl("delete ippool x y z")
+        rc.assert_error()
+
+        rc= calicoctl("get ippool -o yaml")
+        rc.assert_no_error()
+        rc.assert_output_equals(rcYaml.output)
+
+    def test_reject_unknown_resource(self):
+        """
+        Test that we error if a resource is not know
+        """
+
+        rc = calicoctl("get somekind somename")
+        rc.assert_error()
+        rc.assert_output_contains("Failed to get resources: resource type 'somekind' is not supported")
+
+    def test_empty_name_is_ilegal(self):
+        """
+        Test that we error if empty name is provided
+        """
+
+        rc = calicoctl("get policy \"\"")
+        rc.assert_error()
+
+        rc = calicoctl("get policy x \"\" y")
+        rc.assert_error()
+
+        rc = calicoctl("get delete \"\"")
+        rc.assert_error()
+
+        rc = calicoctl("get delete x \"\" y")
+        rc.assert_error()
+
+        rc = calicoctl("get label \"\" key --remove")
+        rc.assert_error()
 
     def test_delete_with_resource_version(self):
         """
@@ -437,28 +565,44 @@ class TestCalicoctlCommands(TestBase):
         rc = calicoctl("delete", data=data1)
         rc.assert_no_error()
 
-    def test_nets_truncation(self):
+    @parameterized.expand([
+        (globalnetworkset_name1_rev1_large,),
+        (networkset_name1_rev1_large,),
+    ])
+    def test_nets_truncation(self, data):
         """
         Test that the list of nets is truncated if it's too long.
         """
-        rc = calicoctl("create", data=globalnetworkset_name1_rev1_large)
+        rc = calicoctl("create", data)
         rc.assert_no_error()
-        rc = calicoctl("get globalnetworkset -o wide")
+
+        kind = data['kind']
+        if kind == "GlobalNetworkSet":
+            rc = calicoctl("get %s -o wide" % kind)
+        else:
+            rc = calicoctl("get %s -o wide -n %s" % (kind, data['metadata']['namespace']))
+
         rc.assert_no_error()
         rc.assert_output_contains("10.0.0.0/28,10.0.1.0/28,10.0.2.0/28,10.0.3.0/28,10.0.4.0/28,10.0.5.0/28,10.0....")
 
-    def test_nets_no_truncation(self):
+    @parameterized.expand([
+        (globalnetworkset_name1_rev1,),
+        (networkset_name1_rev1,),
+    ])
+    def test_nets_no_truncation(self, data):
         """
         Test that the list of nets is shown in full if not too long.
         """
-        rc = calicoctl("create", data=globalnetworkset_name1_rev1)
+        rc = calicoctl("create", data)
         rc.assert_no_error()
-        rc = calicoctl("get globalnetworkset -o wide")
+
+        rc = calicoctl("get %s -o wide" % data['kind'])
         rc.assert_no_error()
         rc.assert_output_contains("10.0.0.1,11.0.0.0/16,feed:beef::1,dead:beef::96")
 
     @parameterized.expand([
         (networkpolicy_name1_rev1,),
+        (networkset_name1_rev1,),
         (workloadendpoint_name1_rev1,),
     ])
     def test_namespaced(self, data):
@@ -536,7 +680,7 @@ class TestCalicoctlCommands(TestBase):
         if kind == "WorkloadEndpoint":
             data1['metadata']['labels']['projectcalico.org/namespace'] = 'default'
 
-        # Get the resource with name1 and namespace2.  For a namespaced
+        # Get the resource with name1 and default namespace.  For a namespaced
         # resource this should match the modified data to default the
         # namespace.
         rc = calicoctl("get %s %s --namespace default -o yaml" % (kind, data1['metadata']['name']))
@@ -2106,8 +2250,8 @@ class InvalidData(TestBase):
                        'metadata': {'name': 'pool-invalid-net-1'},
                        'spec': {
                            'ipipMode': 'Always',
-                           'cidr': "10.0.250.0"}  # no mask
-                   }, "error with field IPpool.CIDR = '10.0.250.0/32' "
+                           'cidr': "10.0.250.0/32"}  # no mask
+                   }, "error with field IPPool.Spec.CIDR = '10.0.250.0/32' "
                       "(IP pool size is too small for use with Calico IPAM. It must be equal to or greater than the block size.)"),
                    ("pool-invalidNet4", {
                        'apiVersion': API_VERSION,
@@ -2132,10 +2276,11 @@ class InvalidData(TestBase):
                        'metadata': {'name': 'invalid-net-6'},
                        'spec': {
                            'ipipMode': 'Never',
+                           'vxlanMode': 'Never',
                            'cidr': "::/128",
                        }
                        # nothing
-                   }, "error with field IPpool.CIDR = '::/128' "
+                   }, "error with field IPPool.Spec.CIDR = '::/128' "
                       "(IP pool size is too small for use with Calico IPAM. It must be equal to or greater than the block size.)"),
                    ("pool-invalidNet7", {
                        'apiVersion': API_VERSION,
@@ -2143,7 +2288,7 @@ class InvalidData(TestBase):
                        'metadata': {'name': 'invalid-net-7'},
                        'spec': {
                            'cidr': "192.168.0.0/27"}  # invalid mask
-                   }, "error with field IPpool.CIDR = '192.168.0.0/27' "
+                   }, "error with field IPPool.Spec.CIDR = '192.168.0.0/27' "
                       "(IP pool size is too small for use with Calico IPAM. It must be equal to or greater than the block size.)"),
                    ("pool-invalidNet8", {
                        'apiVersion': API_VERSION,
@@ -2153,7 +2298,7 @@ class InvalidData(TestBase):
                            'ipipMode': 'Never',
                            'cidr': "fd5f::1/123",
                        }  # invalid mask
-                   }, "CIDR = 'fd5f::1/123'"),
+                   }, "IPPool.Spec.CIDR = 'fd5f::/123'"),
                    ("pool-invalidIpIp1", {
                        'apiVersion': API_VERSION,
                        'kind': 'IPPool',
@@ -2207,63 +2352,75 @@ class InvalidData(TestBase):
                                         'source': {}}],
                        }
                    }, "error with field Code = '256'"),
-                   ("compound-config", [{
-                       'apiVersion': API_VERSION,
-                       'kind': 'BGPPeer',
-                       'metadata': {
-                           'name': "compound-config",
-                       },
-                       'spec': {
-                           'node': 'node1',
-                           'peerIP': '192.168.0.250',
-                           'asNumber': 64513
-                       }
-                   },
-                   {
-                       'apiVersion': API_VERSION,
-                       'kind': 'Profile',
-                       'metadata': {
-                           'name': 'profile2',
-                       },
-                       'spec': {
-                           'Egress': [{'action': 'Allow',
-                                       'destination': {},
-                                       'source': {}}],
-                           'Ingress': [{'ipVersion': 4,
-                                        'ICMP': {'type': 256,  # 1-byte field
-                                                 'code': 255},
-                                        'action': 'Deny',
-                                        'protocol': 'ICMP',
-                                        'destination': {},
-                                        'source': {}}],
-                           },
-                   }], "error with field Type = '256'"),
                ]
+
+    compound_test_data = [("compound-config", [{
+        'apiVersion': API_VERSION,
+        'kind': 'BGPPeer',
+        'metadata': {
+            'name': "compound-config",
+        },
+        'spec': {
+            'node': 'node1',
+            'peerIP': '192.168.0.250',
+            'asNumber': 64513
+        }
+    },
+        {
+            'apiVersion': API_VERSION,
+            'kind': 'Profile',
+            'metadata': {
+                'name': 'profile2',
+            },
+            'spec': {
+                'Egress': [{'action': 'Allow',
+                            'destination': {},
+                            'source': {}}],
+                'Ingress': [{'ipVersion': 4,
+                             'ICMP': {'type': 256,  # 1-byte field
+                                      'code': 255},
+                             'action': 'Deny',
+                             'protocol': 'ICMP',
+                             'destination': {},
+                             'source': {}}],
+            },
+        }],{"profile2": "error with field Type = '256'"})]
+
+    def check_no_data_in_store(self, testdata):
+        out = calicoctl("get %s --output=yaml" % testdata['kind'])
+        out.assert_output_contains(
+        'apiVersion: %s\n'
+        'items: []\n'
+        'kind: %sList\n'
+        'metadata:\n'
+        '  resourceVersion: ' % (API_VERSION, testdata['kind'])
+    )
+
 
     @parameterized.expand(testdata)
     def test_invalid_profiles_rejected(self, name, testdata, error):
 
-        def check_no_data_in_store(testdata):
-            out = calicoctl("get %s --output=yaml" % testdata['kind'])
-            out.assert_output_contains(
-                'apiVersion: %s\n'
-                'items: []\n'
-                'kind: %sList\n'
-                'metadata:\n'
-                '  resourceVersion: ' % (API_VERSION, testdata['kind'])
-            )
+        log_and_run("cat << EOF > %s\n%s" % ("/tmp/testfile.yaml", testdata))
+        ctl = calicoctl("create", testdata)
+
+        self.check_no_data_in_store(testdata)
+
+        # Assert that we saw the correct error being reported
+        ctl.assert_error(error)
+
+    @parameterized.expand(compound_test_data)
+    def test_invalid_compound_profiles_rejected(self, name, testdata, errors):
 
         log_and_run("cat << EOF > %s\n%s" % ("/tmp/testfile.yaml", testdata))
         ctl = calicoctl("create", testdata)
 
-        if name.startswith('compound'):
-            for data in testdata:
-                check_no_data_in_store(data)
-        else:
-            check_no_data_in_store(testdata)
+        for data in testdata:
+            if data['metadata']['name'] in errors:
+                self.check_no_data_in_store(data)
 
         # Assert that we saw the correct error being reported
-        ctl.assert_error(error)
+        for value in errors.values():
+            ctl.assert_error(value)
 
 # TODO: uncomment this once we have default field handling in libcalico
 # class TestTypes(TestBase):

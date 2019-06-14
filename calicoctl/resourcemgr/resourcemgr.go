@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -31,9 +31,8 @@ import (
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
-	validator "github.com/projectcalico/libcalico-go/lib/validator/v3"
 	log "github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -289,27 +288,47 @@ func GetResourceManager(resource runtime.Object) ResourceManager {
 	return helpers[resource.GetObjectKind().GroupVersionKind()]
 }
 
-// Gets resource from arguments.
+// GetResourcesFromArgs gets resources from arguments.
 // This function also inserts resource name, namespace if specified.
 // Example "calicoctl get bgppeer peer123" will return
 // a BGPPeer resource with name field populated to "peer123".
-func GetResourceFromArgs(args map[string]interface{}) (ResourceObject, error) {
+func GetResourcesFromArgs(args map[string]interface{}) ([]ResourceObject, error) {
 	kind := args["<KIND>"].(string)
-	name := argutils.ArgStringOrBlank(args, "<NAME>")
+	argname := "<NAME>"
+
+	var names []string
+
+	switch args[argname].(type) {
+	case string:
+		name := argutils.ArgStringOrBlank(args, argname)
+		names = append(names, name)
+	case []string:
+		names = argutils.ArgStringsOrBlank(args, argname)
+	default:
+		panic(fmt.Errorf("Wrong name format, unexpected type: %T", args[argname]))
+	}
+
 	namespace := argutils.ArgStringOrBlank(args, "--namespace")
 
-	res, ok := kindToRes[strings.ToLower(kind)]
-	if !ok {
-		return nil, fmt.Errorf("resource type '%s' is not supported", kind)
-	}
-	res.(ResourceObject).GetObjectMeta().SetName(name)
+	var ret []ResourceObject
 
-	// Set the namespace if the object kind is namespaced.
-	if helpers[res.GetObjectKind().GroupVersionKind()].isNamespaced {
-		res.(ResourceObject).GetObjectMeta().SetNamespace(namespace)
+	for _, name := range names {
+		res, ok := kindToRes[strings.ToLower(kind)]
+		if !ok {
+			return nil, fmt.Errorf("resource type '%s' is not supported", kind)
+		}
+		res = res.DeepCopyObject().(ResourceObject)
+		res.(ResourceObject).GetObjectMeta().SetName(name)
+
+		// Set the namespace if the object kind is namespaced.
+		if helpers[res.GetObjectKind().GroupVersionKind()].isNamespaced {
+			res.(ResourceObject).GetObjectMeta().SetNamespace(namespace)
+		}
+
+		ret = append(ret, res)
 	}
 
-	return res, nil
+	return ret, nil
 }
 
 // Check if the resource kind is namespaced.
@@ -383,12 +402,7 @@ func unmarshalResource(tm unstructured.Unstructured, b []byte) ([]runtime.Object
 		return nil, err
 	}
 
-	log.Infof("Type of unpacked data: %v", reflect.TypeOf(unpacked))
-	if err = validator.Validate(unpacked); err != nil {
-		return nil, err
-	}
-
-	log.Infof("Unpacked: %+v", unpacked)
+	log.Infof("Type of unpacked data: %v. Unpacked %+v", reflect.TypeOf(unpacked), unpacked)
 
 	return []runtime.Object{unpacked}, nil
 }
@@ -412,14 +426,6 @@ func unmarshalSliceOfResources(tml []unstructured.Unstructured, b []byte) ([]run
 
 	if err := yaml.UnmarshalStrict(b, &unpacked); err != nil {
 		return nil, err
-	}
-
-	// Validate the data in the structures.  The validator does not handle slices, so
-	// validate each resource separately.
-	for _, r := range unpacked {
-		if err := validator.Validate(r); err != nil {
-			return nil, err
-		}
 	}
 
 	log.Infof("Unpacked: %+v", unpacked)

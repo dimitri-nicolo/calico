@@ -5,7 +5,7 @@ default: build
 all: build
 
 ## Run the tests for the current platform/architecture
-test: ut st
+test: ut fv st
 
 ###############################################################################
 # Both native and cross architecture builds are supported.
@@ -92,8 +92,14 @@ PUSH_NONMANIFEST_IMAGES=$(filter-out $(PUSH_MANIFEST_IMAGES),$(PUSH_IMAGES))
 DOCKER_CONFIG ?= $(HOME)/.docker/config.json
 
 CALICOCTL_DIR=calicoctl
-CALICOCTL_FILES=$(shell find $(CALICOCTL_DIR) -name '*.go')
 CTL_CONTAINER_CREATED=$(CALICOCTL_DIR)/.calico_ctl.created-$(ARCH)
+SRC_FILES=$(shell find $(CALICOCTL_DIR) -name '*.go')
+
+# If local build is set, then always build the binary since we might not
+# detect when another local repository has been modified.
+ifeq ($(LOCAL_BUILD),true)
+.PHONY: $(SRC_FILES)
+endif
 
 TEST_CONTAINER_NAME ?= calico/test
 
@@ -117,7 +123,7 @@ LIBCALICOGO_PATH?=none
 ## Clean enough that a new release build will be clean
 clean:
 	find . -name '*.created-$(ARCH)' -exec rm -f {} +
-	rm -rf bin build certs *.tar vendor
+	rm -rf bin build certs *.tar vendor .go-pkg-cache
 	docker rmi $(BUILD_IMAGE):latest-$(ARCH) || true
 	docker rmi $(BUILD_IMAGE):$(VERSION)-$(ARCH) || true
 ifeq ($(ARCH),amd64)
@@ -161,7 +167,7 @@ build-all: $(addprefix bin/calicoctl-linux-,$(VALIDARCHES)) bin/calicoctl-window
 build: bin/calicoctl-$(OS)-$(ARCH)
 
 ## Create the vendor directory
-vendor: glide.yaml
+vendor: glide.lock
 	# Ensure that the glide cache directory exists.
 	mkdir -p $(HOME)/.glide
 
@@ -187,7 +193,7 @@ bin/calicoctl-darwin-amd64: OS=darwin
 bin/calicoctl-windows-amd64: OS=windows
 bin/calicoctl-linux-%: OS=linux
 
-bin/calicoctl-%: $(CALICOCTL_FILES) vendor
+bin/calicoctl-%: $(SRC_FILES) vendor
 	mkdir -p bin
 	-mkdir -p .go-pkg-cache
 	docker run --rm \
@@ -423,6 +429,21 @@ ut: bin/calicoctl-linux-amd64
 		$(CALICO_BUILD) sh -c 'cd /go/src/$(PACKAGE_NAME) && ginkgo -cover -r --skipPackage vendor calicoctl/* $(GINKGO_ARGS)'
 
 ###############################################################################
+# FVs
+###############################################################################
+.PHONY: fv
+## Run the tests in a container. Useful for CI, Mac dev.
+fv: bin/calicoctl-linux-amd64
+	$(MAKE) run-etcd-host
+	docker run --rm -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
+		--net=host -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+		$(LOCAL_BUILD_MOUNTS) \
+	        -v $(CURDIR)/.go-pkg-cache:/go-cache/:rw \
+                -e GOCACHE=/go-cache \
+		$(CALICO_BUILD) sh -c 'cd /go/src/$(PACKAGE_NAME) && go test ./tests/fv'
+	$(MAKE) stop-etcd
+
+###############################################################################
 # STs
 ###############################################################################
 LOCAL_IP_ENV?=$(shell ip route get 8.8.8.8 | head -1 | awk '{print $$7}')
@@ -432,7 +453,8 @@ ST_OPTIONS?=
 
 .PHONY: st
 ## Run the STs in a container
-st: bin/calicoctl-linux-amd64 run-etcd-host
+st: bin/calicoctl-linux-amd64
+	$(MAKE) run-etcd-host
 	# Use the host, PID and network namespaces from the host.
 	# Privileged is needed since 'calico node' write to /proc (to enable ip_forwarding)
 	# Map the docker socket in so docker can be used from inside the container
@@ -445,7 +467,6 @@ st: bin/calicoctl-linux-amd64 run-etcd-host
 	           -v /var/run/docker.sock:/var/run/docker.sock \
 	           $(TEST_CONTAINER_NAME) \
 	           sh -c 'nosetests $(ST_TO_RUN) -sv --nologcapture  --with-xunit --xunit-file="/code/report/nosetests.xml" --with-timer $(ST_OPTIONS)'
-
 	$(MAKE) stop-etcd
 
 ## Etcd is used by the STs
@@ -487,7 +508,7 @@ foss-checks: vendor
 ###############################################################################
 .PHONY: ci
 ## Run what CI runs
-ci: clean build-all static-checks ut st image-all
+ci: clean build-all static-checks test image-all
 
 ###############################################################################
 # CD

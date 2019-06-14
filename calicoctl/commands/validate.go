@@ -21,14 +21,15 @@ import (
 	"strings"
 
 	"github.com/docopt/docopt-go"
+	"github.com/tigera/licensing/client"
+	"gopkg.in/yaml.v2"
+
 	"github.com/projectcalico/calicoctl/calicoctl/commands/argutils"
 	"github.com/projectcalico/calicoctl/calicoctl/commands/constants"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
-	"github.com/tigera/licensing/client"
-	"gopkg.in/yaml.v2"
 )
 
-func Validate(args []string) {
+func Validate(args []string) error {
 	doc := constants.DatastoreIntro + `Usage:
   calicoctl validate --filename=<FILENAME>
 
@@ -41,41 +42,39 @@ Options:
   -f --filename=<FILENAME>      Filename to validate.
 
 Description:
-  Validate a license file and report license status. 
+  Validate a license file and report license status.
 
   The default output will be printed to stdout.
 `
 	parsedArgs, err := docopt.Parse(doc, args, true, "", false, false)
 	if err != nil {
-		fmt.Printf("Invalid option: 'calicoctl %s'. Use flag '--help' to read about a specific subcommand.\n", strings.Join(args, " "))
+		return fmt.Errorf("Invalid option: 'calicoctl %s'. Use flag '--help' to read about a specific subcommand.", strings.Join(args, " "))
 		os.Exit(1)
 	}
 	if len(parsedArgs) == 0 {
-		return
+		return nil
 	}
 
 	filename := argutils.ArgStringOrBlank(parsedArgs, "--filename")
 
 	f, err := ioutil.ReadFile(filename)
 	if err != nil {
-		fmt.Printf("error reading license file '%v'\n", err)
-		os.Exit(1)
+		return fmt.Errorf("error reading license file '%v'", err)
 	}
 
 	lic := api.NewLicenseKey()
 
 	err = yaml.Unmarshal(f, lic)
 	if err != nil {
-		fmt.Printf("error unmarshalling license file '%v'\n", err)
-		os.Exit(1)
+		return fmt.Errorf("error unmarshalling license file '%v'", err)
 	}
 
 	cl, err := client.Decode(*lic)
 	if err != nil {
-		fmt.Printf("error decoding license file '%v'\n", err)
-		os.Exit(1)
+		return fmt.Errorf("error decoding license file '%v'", err)
 	}
 
 	licenseStatus := cl.Validate()
 	fmt.Printf("License status: %s\n", licenseStatus.String())
+	return nil
 }

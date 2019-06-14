@@ -16,7 +16,7 @@ import:
 - package: github.com/projectcalico/go-yaml-wrapper
 # Pinning to old version until client code is updated.
 - package: github.com/tigera/licensing
-  version: 4ab60de6cc1fe70e197d62e57963165c66268294
+  version: 4ef30a4e6de92153a6589af226e77c567f530541
   repo: git@github.com:tigera/licensing
   vcs: git
   subpackages:
@@ -29,7 +29,7 @@ import:
   - jwt
 - package: github.com/projectcalico/libcalico-go
   repo: git@github.com:tigera/libcalico-go-private.git
-  version: 2806b1a9c38f9c6fd0f7cb5644c7e0aa8fb1efb6
+  version: e9a74b29328b7376cb88fc539b7c7e000e47d278
   subpackages:
   - lib/apiconfig
   - lib/apis/v1
@@ -58,21 +58,26 @@ import:
   - pkg/runtime
   - pkg/runtime/schema
 # Later versions don't seem to work with glide.
-- package: github.com/influxdata/influxdb 
+- package: github.com/influxdata/influxdb
   version: dd481f35df2c3b50c42087e2f8e3890e0f889711
+# Pin to a compatible version. Later versions cause build to fail
+# with missing symbols in unix package.
+- package: github.com/vishvananda/netns
+  version: 13995c7128ccc8e51e9a6bd2b551020a27180abd
+# Lots of things want golang.org/x/sys, and many pin to an older version.
+# Make sure we're using a relatively modern one since they generally just add
+# new symbols. Specifically, netlink requires a number of symbols from the
+# unix package.
+- package: golang.org/x/sys
+  version: c2f5717e611cf8e89a852a41081355194d80c943
 # Note to Open Source mergers: ginkgo and gomega are imported *not* as testImport
 # in some dependencies, so we can't import them as testImport here.
+# Pin to a compatible version. Later versions cause build to fail
+# with missing symbols in unix package.
 - package: github.com/onsi/ginkgo
   subpackages:
   - extensions/table
 - package: github.com/onsi/gomega
-# github.com/vishvananda/netlink is incompatible with newer version of sys, but
-# doesn't pin, so we have to here.
-- package: golang.org/x/sys
-  version: 1b2967e3c290b7c545b3db0deeda16e9be4f98a2
-  subpackages:
-    - unix
-    - windows
 - package: github.com/Azure/go-autorest
   version: 1ff28809256a84bb6966640ff3d0371af82ccba4
   subpackages:

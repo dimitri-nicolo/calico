@@ -123,12 +123,13 @@ class CalicoctlOutput:
 
     def assert_error(self, text=None):
         """
-        Assert the calicoctl command exited with an error.
+        Assert the calicoctl command exited with an error and did not panic
         Args:
             text:   (optional) Expected text in the command output.
         """
         assert self.error, "Expected error running command; \n" \
             "command=" + self.command + "\noutput=" + self.output
+        assert not "panic" in self.output, "Exited with an error due to a panic"
         self.assert_output_contains(text)
 
     def assert_no_error(self, text=None):
@@ -168,8 +169,20 @@ class CalicoctlOutput:
             "command=" + self.command + "\noutput=\n" + self.output + \
             "\nexpected=\n" + text
 
+    def assert_output_not_contains(self, text):
+        """
+        Assert the calicoctl command output does not contain the supplied text.
+        Args:
+            text:   Expected text in the command output.
+        """
+        if not text:
+            return
+        assert not text in self.output, "Unxpected text in output; \n" + \
+            "command=" + self.command + "\noutput=\n" + self.output + \
+            "\nunexpected=\n" + text
 
-def calicoctl(command, data=None, load_as_stdin=False, format="yaml"):
+
+def calicoctl(command, data=None, load_as_stdin=False, format="yaml", only_stdout=False, no_config=False):
     """
     Convenience function for abstracting away calling the calicoctl
     command.
@@ -180,6 +193,7 @@ def calicoctl(command, data=None, load_as_stdin=False, format="yaml"):
     :param load_as_stdin:  Load the input data through stdin rather than by
     loading from file.
     :param format:  Specify the format for loading the data.
+    :param only_stdout: Return only the stdout
     :return: The output from the command with leading and trailing
     whitespace removed.
     """
@@ -208,6 +222,7 @@ def calicoctl(command, data=None, load_as_stdin=False, format="yaml"):
         etcd_auth = "%s:2379" % ETCD_HOSTNAME_SSL
     else:
         etcd_auth = "%s:2379" % get_ip()
+
     # Export the environment, in case the command has multiple parts, e.g.
     # use of | or ;
     #
@@ -219,10 +234,12 @@ def calicoctl(command, data=None, load_as_stdin=False, format="yaml"):
                 "export DATASTORE_TYPE=%s; %s %s" % \
                 (ETCD_SCHEME+"://"+etcd_auth, ETCD_CA, ETCD_CERT, ETCD_KEY,
                  "etcdv3", stdin, calicoctl_bin)
+    if no_config :
+        calicoctl_env_cmd = calicoctl_bin
     full_cmd = calicoctl_env_cmd + " " + command + option_file
 
     try:
-        output = log_and_run(full_cmd)
+        output = log_and_run(full_cmd, stderr=(None if only_stdout else STDOUT))
         return CalicoctlOutput(full_cmd, output)
     except CalledProcessError as e:
         return CalicoctlOutput(full_cmd, e.output, error=e.returncode)
@@ -385,7 +402,7 @@ def get_ip(v6=False):
 _term_settings = termios.tcgetattr(sys.stdin.fileno())
 
 
-def log_and_run(command, raise_exception_on_failure=True):
+def log_and_run(command, raise_exception_on_failure=True, stderr=STDOUT):
     def log_output(results):
         if results is None:
             logger.info("  # <no output>")
@@ -397,7 +414,7 @@ def log_and_run(command, raise_exception_on_failure=True):
     try:
         logger.info("%s", command)
         try:
-            results = check_output(command, shell=True, stderr=STDOUT).rstrip()
+            results = check_output(command, shell=True, stderr=stderr).rstrip()
         finally:
             # Restore terminal settings in case the command we ran manipulated
             # them. Note: under concurrent access, this is still not a perfect

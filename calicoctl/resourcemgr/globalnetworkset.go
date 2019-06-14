@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ func init() {
 		api.NewGlobalNetworkSet(),
 		api.NewGlobalNetworkSetList(),
 		false,
-		[]string{"globalnetworkset", "globalnetworksets"},
+		[]string{"globalnetworkset", "globalnetworksets", "gnetsets"},
 		[]string{"NAME"},
 		[]string{"NAME", "NETS"},
 		map[string]string{

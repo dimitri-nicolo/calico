@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017,2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,40 +24,36 @@ import (
 
 func init() {
 	registerResource(
-		api.NewIPPool(),
-		api.NewIPPoolList(),
-		false,
-		[]string{"ippool", "ippools", "ipp", "ipps", "pool", "pools"},
-		[]string{"NAME", "CIDR", "SELECTOR"},
-		[]string{"NAME", "CIDR", "NAT", "IPIPMODE", "VXLANMODE", "DISABLED", "SELECTOR"},
+		api.NewNetworkSet(),
+		api.NewNetworkSetList(),
+		true,
+		[]string{"networkset", "networksets", "netsets"},
+		[]string{"NAME"},
+		[]string{"NAME", "NETS"},
 		map[string]string{
 			"NAME":      "{{.ObjectMeta.Name}}",
-			"CIDR":      "{{.Spec.CIDR}}",
-			"NAT":       "{{.Spec.NATOutgoing}}",
-			"IPIPMODE":  "{{if .Spec.IPIPMode}}{{.Spec.IPIPMode}}{{else}}Never{{end}}",
-			"VXLANMODE": "{{if .Spec.VXLANMode}}{{.Spec.VXLANMode}}{{else}}Never{{end}}",
-			"DISABLED":  "{{.Spec.Disabled}}",
-			"SELECTOR":  "{{.Spec.NodeSelector}}",
+			"NAMESPACE": "{{.ObjectMeta.Namespace}}",
+			"NETS":      "{{joinAndTruncate .Spec.Nets \",\" 80}}",
 		},
 		func(ctx context.Context, client client.Interface, resource ResourceObject) (ResourceObject, error) {
-			r := resource.(*api.IPPool)
-			return client.IPPools().Create(ctx, r, options.SetOptions{})
+			r := resource.(*api.NetworkSet)
+			return client.NetworkSets().Create(ctx, r, options.SetOptions{})
 		},
 		func(ctx context.Context, client client.Interface, resource ResourceObject) (ResourceObject, error) {
-			r := resource.(*api.IPPool)
-			return client.IPPools().Update(ctx, r, options.SetOptions{})
+			r := resource.(*api.NetworkSet)
+			return client.NetworkSets().Update(ctx, r, options.SetOptions{})
 		},
 		func(ctx context.Context, client client.Interface, resource ResourceObject) (ResourceObject, error) {
-			r := resource.(*api.IPPool)
-			return client.IPPools().Delete(ctx, r.Name, options.DeleteOptions{ResourceVersion: r.ResourceVersion})
+			r := resource.(*api.NetworkSet)
+			return client.NetworkSets().Delete(ctx, r.Namespace, r.Name, options.DeleteOptions{ResourceVersion: r.ResourceVersion})
 		},
 		func(ctx context.Context, client client.Interface, resource ResourceObject) (ResourceObject, error) {
-			r := resource.(*api.IPPool)
-			return client.IPPools().Get(ctx, r.Name, options.GetOptions{ResourceVersion: r.ResourceVersion})
+			r := resource.(*api.NetworkSet)
+			return client.NetworkSets().Get(ctx, r.Namespace, r.Name, options.GetOptions{ResourceVersion: r.ResourceVersion})
 		},
 		func(ctx context.Context, client client.Interface, resource ResourceObject) (ResourceListObject, error) {
-			r := resource.(*api.IPPool)
-			return client.IPPools().List(ctx, options.ListOptions{ResourceVersion: r.ResourceVersion, Name: r.Name})
+			r := resource.(*api.NetworkSet)
+			return client.NetworkSets().List(ctx, options.ListOptions{ResourceVersion: r.ResourceVersion, Namespace: r.Namespace, Name: r.Name})
 		},
 	)
 }
