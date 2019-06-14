@@ -15,8 +15,9 @@ bin
 vendor
 .go-build-cache
 .go-pkg-cache
+go.sum
 
-# Below binaries are generated when you use debugger in VS Code 
+# Below binaries are generated when you use debugger in VS Code
 cmd/guardian/debug
 cmd/voltron/debug
 
