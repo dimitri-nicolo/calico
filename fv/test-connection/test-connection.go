@@ -139,7 +139,7 @@ type testConn struct {
 	duration time.Duration
 }
 
-func NewTestConn(ipAddress, port, sourcePort, protocol string, duration time.Duration, loopFile string) (*testConn, error) {
+func NewTestConn(ipAddress, port, sourcePort, protocol string, duration time.Duration) (*testConn, error) {
 	err := utils.RunCommand("ip", "r")
 	if err != nil {
 		return nil, err
@@ -159,7 +159,6 @@ func NewTestConn(ipAddress, port, sourcePort, protocol string, duration time.Dur
 		remoteAddr = ipAddress + ":" + port
 	}
 
-	ls := newLoopState(loopFile)
 	log.Infof("Connecting from %v to %v over %s", localAddr, remoteAddr, protocol)
 	if protocol == "udp" {
 		d.D.LocalAddr, _ = net.ResolveUDPAddr("udp", localAddr)
@@ -167,28 +166,10 @@ func NewTestConn(ipAddress, port, sourcePort, protocol string, duration time.Dur
 			"addr":     localAddr,
 			"resolved": d.D.LocalAddr,
 		}).Infof("Resolved udp addr")
-		conn, err := d.Dial("udp", remoteAddr)
+		conn, err = d.Dial("udp", remoteAddr)
 		log.Infof(`UDP "connection" established`)
 		if err != nil {
 			panic(err)
-		}
-		defer conn.Close()
-
-		for {
-			fmt.Fprintf(conn, testMessage+"\n")
-			log.WithField("message", testMessage).Info("Sent message over udp")
-			reply, err := bufio.NewReader(conn).ReadString('\n')
-			if err != nil {
-				panic(err)
-			}
-			reply = strings.TrimSpace(reply)
-			log.WithField("reply", reply).Info("Got reply")
-			if reply != testMessage {
-				panic(errors.New("Unexpected reply: " + reply))
-			}
-			if !ls.Next() {
-				break
-			}
 		}
 	} else {
 		d.D.LocalAddr, err = net.ResolveTCPAddr("tcp", localAddr)
@@ -199,29 +180,11 @@ func NewTestConn(ipAddress, port, sourcePort, protocol string, duration time.Dur
 			"addr":     localAddr,
 			"resolved": d.D.LocalAddr,
 		}).Infof("Resolved tcp addr")
-		conn, err := d.Dial("tcp", remoteAddr)
+		conn, err = d.Dial("tcp", remoteAddr)
 		if err != nil {
 			return nil, err
 		}
-		defer conn.Close()
 		log.Infof("TCP connection established")
-
-		for {
-			fmt.Fprintf(conn, testMessage+"\n")
-			log.WithField("message", testMessage).Info("Sent message over tcp")
-			reply, err := bufio.NewReader(conn).ReadString('\n')
-			if err != nil {
-				return err
-			}
-			reply = strings.TrimSpace(reply)
-			log.WithField("reply", reply).Info("Got reply")
-			if reply != testMessage {
-				return errors.New("Unexpected reply: " + reply)
-			}
-			if !ls.Next() {
-				break
-			}
-		}
 	}
 
 	var connType string
@@ -245,17 +208,44 @@ func NewTestConn(ipAddress, port, sourcePort, protocol string, duration time.Dur
 }
 
 func tryConnect(ipAddress, port, sourcePort, protocol string, seconds int, loopFile string) error {
-	tc, err := NewTestConn(ipAddress, port, sourcePort, protocol, time.Duration(seconds)*time.Second, loopFile)
+	tc, err := NewTestConn(ipAddress, port, sourcePort, protocol, time.Duration(seconds)*time.Second)
 	if err != nil {
 		panic(err)
 	}
 	defer tc.conn.Close()
+
+	if loopFile != "" {
+		return tc.tryLoopFile(loopFile)
+	}
 
 	if tc.config.ConnType == utils.ConnectionTypePing {
 		return tc.tryConnectOnceOff()
 	}
 
 	return tc.tryConnectWithPacketLoss()
+}
+
+func (tc *testConn) tryLoopFile(loopFile string) error {
+	testMessage := tc.config.GetTestMessage(0)
+
+	ls := newLoopState(loopFile)
+	for {
+		fmt.Fprintf(tc.conn, testMessage+"\n")
+		log.WithField("message", testMessage).Infof("Sent message over %v", tc.protocol)
+		reply, err := bufio.NewReader(tc.conn).ReadString('\n')
+		if err != nil {
+			return err
+		}
+		reply = strings.TrimSpace(reply)
+		log.WithField("reply", reply).Info("Got reply")
+		if reply != testMessage {
+			return errors.New("Unexpected reply: " + reply)
+		}
+		if !ls.Next() {
+			break
+		}
+	}
+	return nil
 }
 
 func (tc *testConn) tryConnectOnceOff() error {
