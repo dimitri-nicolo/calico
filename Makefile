@@ -73,7 +73,7 @@ PUSH_NONMANIFEST_IMAGES=$(filter-out $(PUSH_MANIFEST_IMAGES),$(PUSH_IMAGES))
 # location of docker credentials to push manifests
 DOCKER_CONFIG ?= $(HOME)/.docker/config.json
 
-GO_BUILD_VER?=v0.21
+GO_BUILD_VER?=master
 # For building, we use the go-build image for the *host* architecture, even if the target is different
 # the one for the host should contain all the necessary cross-compilation tools
 # we do not need to use the arch since go-build:v0.15 now is multi-arch manifest
@@ -148,7 +148,6 @@ DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
                               -e GOARCH=$(ARCH) \
                               -v $(CURDIR):/$(PACKAGE_NAME):rw \
                               -v $(CURDIR)/.go-pkg-cache:/go/pkg:rw \
-                              -v $(CURDIR)/.go-build-cache:/home/user/.cache/go-build:rw \
                               -v $(CURDIR)/report:/report:rw \
                               -w /$(PACKAGE_NAME) \
                               $(CALICO_BUILD)
@@ -174,8 +173,12 @@ else
 endif
 	@echo Building es-proxy...
 	mkdir -p bin
+	# configure git to use ssh instead of https so that go mod can pull private libraries.
+	# note this will require the user have their SSH agent running and configured with valid private keys
+	# but the Makefile logic here will load the local SSH agent into the container automatically.
 	$(DOCKER_GO_BUILD) \
-	    sh -c 'go build -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/server" && \
+		sh -c 'git config --global url.ssh://git@github.com.insteadOf https://github.com && \
+			go build -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/server" && \
                ( ldd $(BINDIR)/es-proxy-$(ARCH) 2>&1 | grep -q "Not a valid dynamic program" || \
 	             ( echo "Error: $(BINDIR)/es-proxy-$(ARCH) was not statically linked"; false ) )'
 
@@ -256,7 +259,8 @@ report-dir:
 .PHONY: ut
 ut: report-dir
 	$(DOCKER_GO_BUILD) \
-		sh -c 'go test $(UNIT_TEST_FLAGS) \
+		sh -c 'git config --global url.ssh://git@github.com.insteadOf https://github.com && \
+			go test $(UNIT_TEST_FLAGS) \
 			$(addprefix $(PACKAGE_NAME)/,$(TEST_DIRS))'
 
 .PHONY: fv
