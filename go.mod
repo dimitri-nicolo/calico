@@ -2,38 +2,37 @@ module github.com/tigera/es-proxy
 
 go 1.11
 
+replace (
+	github.com/projectcalico/felix => github.com/tigera/felix-private v2.4.1-0.20190605125757-c00322e56455+incompatible
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v2.4.0+incompatible
+)
+
 require (
-	github.com/docker/spdystream v0.0.0-20160310174837-449fdfce4d96 // indirect
-	github.com/elazarl/goproxy v0.0.0-20170405201442-c4fc26588b6e // indirect
-	github.com/evanphx/json-patch v0.0.0-20190203023257-5858425f7550 // indirect
-	github.com/gogo/protobuf v1.1.1 // indirect
-	github.com/golang/groupcache v0.0.0-20160516000752-02826c3e7903 // indirect
-	github.com/google/btree v1.0.0 // indirect
-	github.com/google/gofuzz v0.0.0-20170612174753-24818f796faf // indirect
-	github.com/google/uuid v0.0.0-20171113160352-8c31c18f31ed // indirect
+	github.com/go-openapi/spec v0.19.0 // indirect
+	github.com/google/gofuzz v1.0.0 // indirect
 	github.com/googleapis/gnostic v0.2.0 // indirect
-	github.com/gregjones/httpcache v0.0.0-20190212212710-3befbb6ad0cc // indirect
-	github.com/hashicorp/golang-lru v0.5.0 // indirect
-	github.com/imdario/mergo v0.3.7 // indirect
-	github.com/json-iterator/go v0.0.0-20180701071628-ab8a2e0c74be // indirect
-	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
-	github.com/modern-go/reflect2 v1.0.1 // indirect
-	github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f // indirect
+	github.com/imdario/mergo v0.3.8-0.20190531063913-f757d8626a73 // indirect
+	github.com/kelseyhightower/envconfig v1.4.0 // indirect
 	github.com/onsi/ginkgo v1.8.0
 	github.com/onsi/gomega v1.5.0
-	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
-	github.com/prometheus/client_golang v0.9.2 // indirect
-	github.com/sirupsen/logrus v1.4.0
-	github.com/spf13/pflag v1.0.1 // indirect
-	golang.org/x/net v0.0.0-20190206173232-65e2d4e15006 // indirect
-	golang.org/x/oauth2 v0.0.0-20190402181905-9f3314589c9a // indirect
-	golang.org/x/sys v0.0.0-20181116152217-5ac8a444bdc5 // indirect
+	github.com/projectcalico/felix v3.7.3+incompatible // indirect
+	github.com/projectcalico/go-json v0.0.0-20161128004156-6219dc7339ba // indirect
+	github.com/projectcalico/go-yaml v0.0.0-20161201183616-955bc3e451ef // indirect
+	github.com/projectcalico/go-yaml-wrapper v0.0.0-20161127220527-598e54215bee // indirect
+	github.com/projectcalico/libcalico-go v1.7.3
+	github.com/prometheus/client_golang v0.9.4 // indirect
+	github.com/satori/go.uuid v1.2.0 // indirect
+	github.com/sirupsen/logrus v1.4.2
+	github.com/spf13/pflag v1.0.3 // indirect
+	github.com/tigera/calico-k8sapiserver v0.0.0-20190503214445-0e5924229478
+	github.com/tigera/compliance v0.0.0-20190605204849-a853f494f2e7
+	golang.org/x/crypto v0.0.0-20190611184440-5c40567a22f8 // indirect
+	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45 // indirect
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
-	gopkg.in/inf.v0 v0.9.0 // indirect
-	k8s.io/api v0.0.0-20190222213804-5cb15d344471
-	k8s.io/apimachinery v0.0.0-20190221213512-86fb29eff628
-	k8s.io/client-go v0.0.0-20190228174230-b40b2a5939e4
-	k8s.io/klog v0.2.0 // indirect
-	k8s.io/kube-openapi v0.0.0-20190228160746-b3a7cee44a30 // indirect
-	sigs.k8s.io/yaml v1.1.0 // indirect
+	gopkg.in/inf.v0 v0.9.1 // indirect
+	k8s.io/api v0.0.0-20190612125737-db0771252981
+	k8s.io/apimachinery v0.0.0-20190612125636-6a5db36e93ad
+	k8s.io/apiserver v0.0.0-20190614050300-7d950a3fe954 // indirect
+	k8s.io/client-go v0.0.0-20190614045934-f1a699f1fd21
+	k8s.io/kube-openapi v0.0.0-20190603182131-db7b694dc208 // indirect
 )

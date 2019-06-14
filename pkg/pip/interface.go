@@ -1,5 +1,5 @@
 package pip
 
 type PIP interface {
-	CalculateFlowImpact(oldPolicy, newPolicy Policy, flows []Flow) []Flow
+	CalculateFlowImpact(npcs []NetworkPolicyChange, flows []Flow) []Flow
 }
