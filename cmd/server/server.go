@@ -9,6 +9,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	certutil "k8s.io/client-go/util/cert"
+	"k8s.io/client-go/util/keyutil"
 
 	"github.com/tigera/es-proxy/pkg/server"
 )
@@ -72,7 +73,7 @@ func MaybeDefaultWithSelfSignedCerts(publicAddress string, alternateDNS []string
 				return err
 			}
 
-			if err := certutil.WriteKey(defaultKeyFilePath, key); err != nil {
+			if err := keyutil.WriteKey(defaultKeyFilePath, key); err != nil {
 				return err
 			}
 			log.Infof("Generated self-signed cert (%s, %s)", defaultCertFilePath, defaultKeyFilePath)
