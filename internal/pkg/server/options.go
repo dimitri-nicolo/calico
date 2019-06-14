@@ -2,6 +2,12 @@
 
 package server
 
+import (
+	"os"
+
+	"github.com/pkg/errors"
+)
+
 // Option is a common format for New() options
 type Option func(*Server) error
 
@@ -24,9 +30,18 @@ type ProxyTarget struct {
 // WithCredsFiles sets the default cert and key to be used for TLS connections
 func WithCredsFiles(cert, key string) Option {
 	return func(s *Server) error {
+		// Check if files exist
+		if _, err := os.Stat(cert); os.IsNotExist(err) {
+			return errors.Errorf("cert file: %s", err)
+		}
+
+		if _, err := os.Stat(key); os.IsNotExist(err) {
+			return errors.Errorf("cert file: %s", err)
+		}
+
 		s.certFile = cert
 		s.keyFile = key
-		// XXX perhaps check if the files exist?
+
 		return nil
 	}
 }

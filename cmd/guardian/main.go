@@ -4,14 +4,12 @@ package main
 
 import (
 	"fmt"
-	"net/http"
 
 	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/voltron/internal/pkg/bootstrap"
+	"github.com/tigera/voltron/internal/pkg/client"
 	"github.com/tigera/voltron/internal/pkg/config"
-	"github.com/tigera/voltron/internal/pkg/proxy"
-	targets2 "github.com/tigera/voltron/internal/pkg/targets"
 )
 
 const (
@@ -28,16 +26,28 @@ func main() {
 	bootstrap.ConfigureLogging(cfg.LogLevel)
 	log.Infof("Starting %s with configuration %v", EnvConfigPrefix, cfg)
 
-	targets := targets2.CreateStaticTargets()
-	log.Infof("Targets are: %v", targets)
-	handler := proxy.New(proxy.NewPathMatcher(targets))
-	http.Handle("/", handler)
-
 	url := fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)
-	log.Infof("Starting web server on %v", url)
 	cert := fmt.Sprintf("%s/ca.crt", cfg.CertPath)
 	key := fmt.Sprintf("%s/ca.key", cfg.CertPath)
-	if err := http.ListenAndServeTLS(url, cert, key, nil); err != nil {
+	log.Infof("Path: %s %s", cert, key)
+	client, err := client.New(
+		client.WithProxyTargets(
+			[]client.ProxyTarget{
+				{Pattern: "^/api", Dest: "https://kubernetes.default"},
+				{Pattern: "^/tigera-elasticsearch", Dest: "http://localhost:8002"},
+			},
+		),
+		client.WithDefaultAddr(url),
+		client.WithCredsFiles(cert, key),
+	)
+
+	if err != nil {
+		log.Fatalf("Failed to create server: %s", err)
+	}
+
+	log.Infof("Starting web server on %v", url)
+
+	if err := client.ListenAndServeTLS(); err != nil {
 		log.Fatal(err)
 	}
 }

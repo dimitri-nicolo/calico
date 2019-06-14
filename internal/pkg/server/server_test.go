@@ -34,6 +34,13 @@ var _ = Describe("Server", func() {
 		lis net.Listener
 	)
 
+	It("should fail to use invalid path", func() {
+		_, err := server.New(
+			server.WithCredsFiles("dog/gopher.crt", "dog/gopher.key"),
+		)
+		Expect(err).To(HaveOccurred())
+	})
+
 	It("should start a server", func() {
 		var e error
 		lis, e = net.Listen("tcp", "localhost:0")
