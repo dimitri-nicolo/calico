@@ -192,7 +192,7 @@ func DoNetworking(
 
 func EnsureVXLANTunnelAddr(ctx context.Context, calicoClient calicoclient.Interface, nodeName string, ipNet *net.IPNet, conf types.NetConf) error {
 	logrus.Debug("Checking the node's VXLAN tunnel address")
-	var changeFlag int
+	var updateRequired bool
 	node, err := calicoClient.Nodes().Get(ctx, nodeName, options.GetOptions{})
 	if err != nil {
 		return err
@@ -203,7 +203,7 @@ func EnsureVXLANTunnelAddr(ctx context.Context, calicoClient calicoclient.Interf
 		logrus.WithField("ip", expectedIP).Debug("VXLAN tunnel IP is already correct")
 	} else {
 		logrus.WithField("ip", expectedIP).Debug("VXLAN tunnel IP to be updated")
-		changeFlag = 1
+		updateRequired = true
 	}
 
 	var networkName string
@@ -222,10 +222,10 @@ func EnsureVXLANTunnelAddr(ctx context.Context, calicoClient calicoclient.Interf
 		logrus.WithField("mac", expectedMAC).Debug("VXLAN tunnel MAC is already correct")
 	} else {
 		logrus.WithField("mac", expectedMAC).Debug("VXLAN tunnel MAC to be updated")
-		changeFlag = 1
+		updateRequired = true
 	}
 
-	if changeFlag == 0 {
+	if updateRequired == false {
 		return nil
 	}
 
