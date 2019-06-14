@@ -20,10 +20,11 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"reflect"
 	"strings"
 	"sync"
 
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
@@ -300,13 +301,21 @@ func (c *client) SetPrefixes(keys []string) error {
 }
 
 // OnStatusUpdated is called from the BGP syncer to indicate that the sync status is updated.
-// This client only cares about the InSync status as we use that to unlock the GetValues
-// processing.
+// This client handles InSync and WaitForDatastore statuses. When we receive InSync, we unblock GetValues calls.
+// When we receive WaitForDatastore and are already InSync, we reset the client's syncer status which blocks
+// GetValues calls.
 func (c *client) OnStatusUpdated(status api.SyncStatus) {
-	// We should only get a single in-sync status update.  When we do, unblock the GetValues
-	// calls.
-	if status == api.InSync {
-		c.OnInSync(SourceSyncer)
+	log.Debugf("Got status update: %s, syncer ready: %t", status, c.syncerReady)
+	switch status {
+	case api.InSync:
+		if !c.syncerReady {
+			c.OnInSync(SourceSyncer)
+		}
+	case api.WaitForDatastore:
+		if c.syncerReady {
+			c.syncerReady = false
+			c.waitForSync.Add(1)
+		}
 	}
 }
 
@@ -673,16 +682,23 @@ func (c *client) OnUpdates(updates []api.Update) {
 			for _, kvp := range kvps {
 				log.Debugf("KVP: %#v", kvp)
 				if kvp.Value == nil {
-					c.updateCache(api.UpdateTypeKVDeleted, kvp)
+					if c.updateCache(api.UpdateTypeKVDeleted, kvp) {
+						needUpdatePeersV1 = true
+					}
 				} else {
-					c.updateCache(u.UpdateType, kvp)
+					if c.updateCache(u.UpdateType, kvp) {
+						needUpdatePeersV1 = true
+					}
 				}
 			}
 
 			// Update our cache of node labels.
 			if u.Value == nil {
 				// This was a delete - remove node labels.
-				delete(c.nodeLabels, v3key.Name)
+				if _, ok := c.nodeLabels[v3key.Name]; ok {
+					delete(c.nodeLabels, v3key.Name)
+					needUpdatePeersV1 = true
+				}
 			} else {
 				// This was a create or update - update node labels.
 				v3res, ok := u.Value.(*apiv3.Node)
@@ -690,12 +706,12 @@ func (c *client) OnUpdates(updates []api.Update) {
 					log.Warning("Bad value for Node resource")
 					continue
 				}
-
-				c.nodeLabels[v3key.Name] = v3res.Labels
+				existingLabels, isSet := c.nodeLabels[v3key.Name]
+				if !isSet || !reflect.DeepEqual(existingLabels, v3res.Labels) {
+					c.nodeLabels[v3key.Name] = v3res.Labels
+					needUpdatePeersV1 = true
+				}
 			}
-
-			// Note need to recompute BGP v1 peerings.
-			needUpdatePeersV1 = true
 		}
 
 		if v3key.Kind == apiv3.KindBGPPeer {
@@ -750,12 +766,15 @@ func (c *client) onNewUpdates() {
 	}
 }
 
-func (c *client) updateCache(updateType api.UpdateType, kvp *model.KVPair) {
+// updateChache will update a cache entry. It returns true if the entry was
+// updated and false if there was an error or if the cache was already
+// up-to-date.
+func (c *client) updateCache(updateType api.UpdateType, kvp *model.KVPair) bool {
 	// Update our cache of current entries.
 	k, err := model.KeyToDefaultPath(kvp.Key)
 	if err != nil {
 		log.Errorf("Ignoring update: unable to create path from Key %v: %v", kvp.Key, err)
-		return
+		return false
 	}
 
 	switch updateType {
@@ -763,23 +782,34 @@ func (c *client) updateCache(updateType api.UpdateType, kvp *model.KVPair) {
 		// The bird templates that confd is used to render assume that some global
 		// defaults are always configured.
 		if globalDefault, ok := globalDefaults[k]; ok {
+			if currentValue, hasKey := c.cache[k]; hasKey && currentValue == globalDefault {
+				return false
+			}
 			c.cache[k] = globalDefault
 		} else {
+			if _, hasValue := c.cache[k]; !hasValue {
+				return false
+			}
 			delete(c.cache, k)
 		}
 	case api.UpdateTypeKVNew, api.UpdateTypeKVUpdated:
 		value, err := model.SerializeValue(kvp)
 		if err != nil {
 			log.Errorf("Ignoring update: unable to serialize value %v: %v", kvp.Value, err)
-			return
+			return false
 		}
-		c.cache[k] = string(value)
+		newValue := string(value)
+		if currentValue, isSet := c.cache[k]; isSet && currentValue == newValue {
+			return false
+		}
+		c.cache[k] = newValue
 	}
 
 	log.Debugf("Cache entry updated from event type %d: %s=%s", updateType, k, c.cache[k])
 	if c.synced {
 		c.keyUpdated(k)
 	}
+	return true
 }
 
 // ParseFailed is called from the BGP syncer when an event could not be parsed.

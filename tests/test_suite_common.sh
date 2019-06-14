@@ -303,6 +303,7 @@ execute_tests_oneshot() {
         run_individual_test_oneshot 'mesh/ipip-always'
         run_individual_test_oneshot 'mesh/ipip-cross-subnet'
         run_individual_test_oneshot 'mesh/ipip-off'
+        run_individual_test_oneshot 'mesh/vxlan-always'
         run_individual_test_oneshot 'explicit_peering/global'
         run_individual_test_oneshot 'explicit_peering/specific_node'
         run_edited_individual_test_oneshot 'extensions/bgpconfig' "# Test Value: {{(json (getv \"/global/extensions\")).testKey}}"
@@ -394,6 +395,9 @@ run_individual_test_oneshot() {
     if [ "$DATASTORE_TYPE" = kubernetes ]; then
 	start_typha
     fi
+
+    # Clean up the output directory.
+    rm -f /etc/calico/confd/config/*
 
     # Run confd in oneshot mode.
     BGP_LOGSEVERITYSCREEN="debug" confd -confdir=/etc/calico/confd -onetime >$LOGPATH/logss 2>&1 || true

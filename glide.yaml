@@ -3,6 +3,7 @@ import:
 - package: github.com/BurntSushi/toml
 - package: github.com/kelseyhightower/memkv
 - package: github.com/projectcalico/libcalico-go
+  version: e9a74b29328b7376cb88fc539b7c7e000e47d278
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
@@ -21,5 +22,6 @@ import:
 - package: github.com/sirupsen/logrus
   version: v1.0.4
 - package: github.com/projectcalico/typha
+  version: 085d3c3f83a814c2761ac2a95f0ee91809a5876b
   repo: git@github.com:tigera/typha-private.git
-  version: b48d19b5fcefcf22a487b7ec8d2447021eca0dc2
+  version: 97b5f0a050c8d0b79249667ea05517e32b10ad61
