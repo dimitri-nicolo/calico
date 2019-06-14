@@ -190,7 +190,7 @@ func DoNetworking(
 	return hostVethName, contVethMAC, err
 }
 
-func EnsureVXLANTunnelAddr(ctx context.Context, calicoClient calicoclient.Interface, nodeName string, ipNet *net.IPNet) error {
+func EnsureVXLANTunnelAddr(ctx context.Context, calicoClient calicoclient.Interface, nodeName string, ipNet *net.IPNet, conf types.NetConf) error {
 	logrus.Debug("Checking the node's VXLAN tunnel address")
 	var changeFlag int
 	node, err := calicoClient.Nodes().Get(ctx, nodeName, options.GetOptions{})
@@ -206,7 +206,14 @@ func EnsureVXLANTunnelAddr(ctx context.Context, calicoClient calicoclient.Interf
 		changeFlag = 1
 	}
 
-	mac, err := UpdateDrMacAddr()
+	var networkName string
+	if conf.WindowsUseSingleNetwork {
+		networkName = conf.Name
+	} else {
+		networkName = CreateNetworkName(conf.Name, ipNet)
+	}
+
+	mac, err := UpdateDrMacAddr(networkName, ipNet)
 	if err != nil {
 		return err
 	}
@@ -228,16 +235,16 @@ func EnsureVXLANTunnelAddr(ctx context.Context, calicoClient calicoclient.Interf
 	return err
 }
 
-func UpdateDrMacAddr() (net.HardwareAddr, error) {
-	hnsNetwork, err := hcsshim.GetHNSNetworkByName("External")
+func UpdateDrMacAddr(networkName string, subNet *net.IPNet) (net.HardwareAddr, error) {
+	hnsNetwork, err := hcsshim.GetHNSNetworkByName(networkName)
 	if err != nil {
-		logrus.Infof("hns network external not found")
+		logrus.Infof("hns network %s not found", networkName)
 		return nil, err
 	}
 
-	hcnNetwork, err := hcn.GetNetworkByName("External")
+	hcnNetwork, err := hcn.GetNetworkByName(networkName)
 	if err != nil {
-		logrus.Infof("hcn network external not found")
+		logrus.Infof("hcn network %s not found", networkName)
 		return nil, err
 	}
 

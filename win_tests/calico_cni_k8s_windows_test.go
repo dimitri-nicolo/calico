@@ -1763,7 +1763,8 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			node, err := calicoClient.Nodes().Get(ctx, hostname, options.GetOptions{})
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(node.Spec.IPv4VXLANTunnelAddr).Should(Equal("10.254.112.1"))
-			mac, err := utils.UpdateDrMacAddr()
+			_, subNet, _ := net.ParseCIDR(result.IPs[0].Address.String())
+			mac, err := utils.UpdateDrMacAddr(networkName, subNet)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(node.Spec.VXLANTunnelMACAddr).Should(Equal(mac.String()))
 
