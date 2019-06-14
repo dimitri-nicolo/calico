@@ -118,6 +118,12 @@ var knownProtoRuleFields = set.From(
 
 	// Commercial fields
 	"LogPrefix",
+
+	// DstDomainIpSetIds is part of the implementation of DNS
+	// policy, which is for egress only.  Therefore it has no
+	// functional intersection with our XDP usage, which is for
+	// ingress only.
+	"DstDomainIpSetIds",
 )
 
 func testAllProtoRuleFieldsAreKnown() {
