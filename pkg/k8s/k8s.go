@@ -1,4 +1,4 @@
-// Copyright 2015 Tigera Inc
+// Copyright (c) 2015-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/containernetworking/cni/pkg/skel"
 	cnitypes "github.com/containernetworking/cni/pkg/types"
@@ -426,6 +427,23 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 	endpoint.Spec.InterfaceName = hostVethName
 	endpoint.Spec.ContainerID = epIDs.ContainerID
 	logger.WithField("endpoint", endpoint).Info("Added Mac, interface name, and active container ID to endpoint")
+
+	if conf.Mode == "vxlan" {
+		_, subNet, _ := net.ParseCIDR(result.IPs[0].Address.String())
+		var err error
+		for attempts := 3; attempts > 0; attempts-- {
+			err = utils.EnsureVXLANTunnelAddr(ctx, calicoClient, epIDs.Node, subNet, conf)
+			if err != nil {
+				logger.WithError(err).Warn("Failed to set node's VXLAN tunnel IP, node may not receive traffic.  May retry...")
+				time.Sleep(1 * time.Second)
+				continue
+			}
+			break
+		}
+		if err != nil {
+			logger.WithError(err).Error("Failed to set node's VXLAN tunnel IP after retries, node may not receive traffic.")
+		}
+	}
 
 	// List of DNAT ipaddrs to map to this workload endpoint
 	floatingIPs := annot["cni.projectcalico.org/floatingIPs"]

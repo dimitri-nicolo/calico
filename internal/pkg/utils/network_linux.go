@@ -467,3 +467,7 @@ func updateHostLocalIPAMDataForOS(subnet string, ipamData map[string]interface{}
 func NetworkApplicationContainer(args *skel.CmdArgs) error {
 	return nil
 }
+
+func EnsureVXLANTunnelAddr(ctx context.Context, calicoClient calicoclient.Interface, nodeName string, ipNet *net.IPNet, conf types.NetConf) error {
+	return nil // No-op on Linux.
+}

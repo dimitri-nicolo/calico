@@ -143,7 +143,7 @@ imports:
 - name: github.com/juju/mutex
   version: d21b13acf4bfd8a8b0482a3a78e44d98880b40d3
 - name: github.com/kelseyhightower/envconfig
-  version: dd1402a4d99de9ac2f396cd6fcb957bc2c695ec1
+  version: f611eb38b3875cc3bd991ca91c51d06446afa14c
 - name: github.com/leodido/go-urn
   version: a67a23e1c1af3c66528573bb86a87246477277c1
 - name: github.com/mailru/easyjson
@@ -167,17 +167,23 @@ imports:
 - name: github.com/Microsoft/go-winio
   version: 97e4973ce50b2ff5f09635a57e2b88a037aae829
 - name: github.com/Microsoft/hcsshim
-  version: 548046cb2f0495eb2acd7682a0035d465bf05ea9
+  version: 5f3c4ba7af30b0c3a6aee5b98982b8b2a9886aa1
   subpackages:
+  - hcn
+  - internal/cni
   - internal/guid
   - internal/hcs
   - internal/hcserror
   - internal/hns
   - internal/interop
+  - internal/logfields
   - internal/longpath
   - internal/mergemaps
+  - internal/regstate
+  - internal/runhcs
   - internal/safefile
   - internal/schema1
+  - internal/schema2
   - internal/timeout
   - internal/wclayer
 - name: github.com/modern-go/concurrent
@@ -242,6 +248,7 @@ imports:
   - lib/apis/v3
   - lib/backend
   - lib/backend/api
+  - lib/backend/encap
   - lib/backend/etcdv3
   - lib/backend/k8s
   - lib/backend/k8s/conversion
@@ -252,7 +259,6 @@ imports:
   - lib/errors
   - lib/hash
   - lib/ipam
-  - lib/ipip
   - lib/logutils
   - lib/names
   - lib/namespace
@@ -313,7 +319,7 @@ imports:
 - name: github.com/vishvananda/netns
   version: 54f0e4339ce73702a0607f49922aaa1e749b418d
 - name: golang.org/x/crypto
-  version: 94eea52f7b742c7cbe0b03b22f0c4c8631ece122
+  version: 49796115aa4b964c318aad4f3084fdb41e9aa067
   subpackages:
   - pbkdf2
   - scrypt
@@ -341,6 +347,7 @@ imports:
   subpackages:
   - unix
   - windows
+  - windows/registry
 - name: golang.org/x/text
   version: b19bf474d317b857955b12035d2c5acb57ce8b01
   subpackages:

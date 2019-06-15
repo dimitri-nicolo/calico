@@ -65,7 +65,7 @@ import:
 - package: github.com/Microsoft/go-winio
   version: 97e4973ce50b2ff5f09635a57e2b88a037aae829
 - package: github.com/Microsoft/hcsshim
-  version: 548046cb2f0495eb2acd7682a0035d465bf05ea9
+  version: 5f3c4ba7af30b0c3a6aee5b98982b8b2a9886aa1
   subpackages:
   - internal/guid
   - internal/hcs
