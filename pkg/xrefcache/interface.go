@@ -47,6 +47,9 @@ type XrefCache interface {
 	// GetCachedResourceIDs is a helper method (primarily used for testing), to obtain the current list of resource
 	// IDs cached for a particular resource kind.
 	GetCachedResourceIDs(kind metav1.TypeMeta) []apiv3.ResourceID
+
+	// GetOrderedTiers returns the ordered set of tiers. The tiers can be queried to obtain the ordered set of Policies.
+	GetOrderedTiers() []*CacheEntryTier
 }
 
 // All internal caches store types that implement the CacheEntry interface.

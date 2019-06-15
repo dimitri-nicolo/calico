@@ -12,11 +12,11 @@ import:
   subpackages:
   - client
 - package: github.com/projectcalico/felix
-  version: c00322e56455b84a9c099feee8004b7cc02dc9ef
   repo: git@github.com:tigera/felix-private.git
   vcs: git
   subpackages:
   - labelindex
+  - calc
 - package: k8s.io/client-go
   version: v8.0.0
 - package: k8s.io/apiserver

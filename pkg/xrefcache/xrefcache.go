@@ -46,6 +46,9 @@ func NewXrefCache(cfg *config.Config, healthy func()) XrefCache {
 	// Policy to rule selection manager
 	networkPolicyRuleSelectorManager := NewNetworkPolicyRuleSelectorManager(syncerDispatcher.OnUpdate)
 
+	// Create the policy sorter.
+	policySorter := newPolicySorter()
+
 	// Create the various engines that underpin the separate resource caches. This list is ordered by recalculation
 	// queue priority (highest index, highest priority).
 	allEngines := []resourceHandler{
@@ -53,6 +56,7 @@ func NewXrefCache(cfg *config.Config, healthy func()) XrefCache {
 		newServiceEndpointsHandler(),
 		newNamespacesHandler(),
 		newServiceAccountHandler(),
+		newTierHandler(),
 		newNetworkPolicyHandler(),
 		newNetworkPolicyRuleSelectorsEngine(),
 		newNetworkSetHandler(),
@@ -69,11 +73,12 @@ func NewXrefCache(cfg *config.Config, healthy func()) XrefCache {
 		ipOrEndpointManager:              keyselector.New(),
 		caches:                           map[metav1.TypeMeta]*resourceCache{},
 		priorities:                       map[metav1.TypeMeta]int8{},
+		policySorter:                     policySorter,
 	}
 	// Initialise the priority queue used for handling asynchronous resource recalculations.
 	heap.Init(&c.modified)
 
-	// Create caches and determine priorities of resource types.
+	// Create resource caches, determine priorities of resource types, and register xrefcache with each resource cache.
 	for i, engine := range allEngines {
 		cache := newResourceCache(engine)
 		cache.register(c)
@@ -106,6 +111,7 @@ type xrefCache struct {
 	ipOrEndpointManager              keyselector.KeySelector
 	caches                           map[metav1.TypeMeta]*resourceCache
 	priorities                       map[metav1.TypeMeta]int8
+	policySorter                     PolicySorter
 	modified                         PriorityQueue
 	inSync                           bool
 }
@@ -292,6 +298,11 @@ func (x *xrefCache) RegisterInScopeEndpoints(selection *apiv3.EndpointsSelection
 	}
 	x.endpointLabelSelector.UpdateSelector(resId, sel)
 	return nil
+}
+
+// GetOrderedTiers implements the XrefCache interface.
+func (x *xrefCache) GetOrderedTiers() []*CacheEntryTier {
+	return x.policySorter.GetOrderedTiers()
 }
 
 // inScopeStarted is called from the endpointLabelSelector when an endpoint matches the in-scope selector.

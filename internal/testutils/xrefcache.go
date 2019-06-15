@@ -133,7 +133,10 @@ func selectorByteToK8sSelector(s Selector) *metav1.LabelSelector {
 
 // getResourceId converts index values to an actual resource ID.
 func getResourceId(kind metav1.TypeMeta, nameIdx Name, namespaceIdx Namespace) apiv3.ResourceID {
-	name := fmt.Sprintf("%s-%d", strings.ToLower(kind.Kind), nameIdx)
+	name := "default"
+	if nameIdx != NameDefault {
+		name = fmt.Sprintf("%s-%d", strings.ToLower(kind.Kind), nameIdx)
+	}
 	var namespace string
 	if namespaceIdx > 0 {
 		namespace = fmt.Sprintf("namespace-%d", namespaceIdx)
@@ -147,6 +150,17 @@ func getResourceId(kind metav1.TypeMeta, nameIdx Name, namespaceIdx Namespace) a
 		Name:      name,
 		Namespace: namespace,
 	}
+}
+
+// getPolicyResourceId converts index values to an actual resource ID for a Calico policy resource type.
+func getPolicyResourceId(kind metav1.TypeMeta, tierIdx Name, nameIdx Name, namespaceIdx Namespace) (apiv3.ResourceID, string) {
+	id := getResourceId(kind, nameIdx, namespaceIdx)
+	tier := "default"
+	if tierIdx != NameDefault {
+		tier = fmt.Sprintf("tier-%d", tierIdx)
+	}
+	id.Name = tier + "." + id.Name
+	return id, tier
 }
 
 // getObjectMeta returns a ObjectMeta for a given resource ID and set of labels.
@@ -220,13 +234,13 @@ func (t *XrefCacheTester) DeleteHostEndpoint(nameIdx Name) {
 // -- Tier access --
 //
 
-func (t *XrefCacheTester) GetTier(nameIdx Name) *xrefcache.CacheEntryNetworkSet {
+func (t *XrefCacheTester) GetTier(nameIdx Name) *xrefcache.CacheEntryTier {
 	r := getResourceId(resources.TypeCalicoTiers, nameIdx, 0)
 	e := t.Get(r)
 	if e == nil {
 		return nil
 	}
-	return e.(*xrefcache.CacheEntryNetworkSet)
+	return e.(*xrefcache.CacheEntryTier)
 }
 
 func (t *XrefCacheTester) SetTier(nameIdx Name, order float64) {
@@ -246,6 +260,44 @@ func (t *XrefCacheTester) SetTier(nameIdx Name, order float64) {
 
 func (t *XrefCacheTester) DeleteTier(nameIdx Name) {
 	r := getResourceId(resources.TypeCalicoTiers, nameIdx, 0)
+	t.OnUpdate(syncer.Update{
+		Type:       syncer.UpdateTypeDeleted,
+		ResourceID: r,
+	})
+}
+
+func (t *XrefCacheTester) GetDefaultTier() *xrefcache.CacheEntryTier {
+	r := apiv3.ResourceID{
+		TypeMeta: resources.TypeCalicoTiers,
+		Name:     "default",
+	}
+	e := t.Get(r)
+	if e == nil {
+		return nil
+	}
+	return e.(*xrefcache.CacheEntryTier)
+}
+
+func (t *XrefCacheTester) SetDefaultTier() {
+	r := apiv3.ResourceID{
+		TypeMeta: resources.TypeCalicoTiers,
+		Name:     "default",
+	}
+	t.OnUpdate(syncer.Update{
+		Type:       syncer.UpdateTypeSet,
+		ResourceID: r,
+		Resource: &apiv3.Tier{
+			TypeMeta:   r.TypeMeta,
+			ObjectMeta: getObjectMeta(r, 0),
+		},
+	})
+}
+
+func (t *XrefCacheTester) DeleteDefaultTier() {
+	r := apiv3.ResourceID{
+		TypeMeta: resources.TypeCalicoTiers,
+		Name:     "default",
+	}
 	t.OnUpdate(syncer.Update{
 		Type:       syncer.UpdateTypeDeleted,
 		ResourceID: r,
@@ -292,8 +344,8 @@ func (t *XrefCacheTester) DeleteGlobalNetworkSet(nameIdx Name) {
 // -- Calico GlobalNetworkPolicy access --
 //
 
-func (t *XrefCacheTester) GetGlobalNetworkPolicy(nameIdx Name) *xrefcache.CacheEntryNetworkPolicy {
-	r := getResourceId(resources.TypeCalicoGlobalNetworkPolicies, nameIdx, 0)
+func (t *XrefCacheTester) GetGlobalNetworkPolicy(tierIdx Name, nameIdx Name) *xrefcache.CacheEntryNetworkPolicy {
+	r, _ := getPolicyResourceId(resources.TypeCalicoGlobalNetworkPolicies, tierIdx, nameIdx, 0)
 	e := t.Get(r)
 	if e == nil {
 		return nil
@@ -301,8 +353,8 @@ func (t *XrefCacheTester) GetGlobalNetworkPolicy(nameIdx Name) *xrefcache.CacheE
 	return e.(*xrefcache.CacheEntryNetworkPolicy)
 }
 
-func (t *XrefCacheTester) SetGlobalNetworkPolicy(nameIdx Name, s Selector, ingress, egress []apiv3.Rule) resources.Resource {
-	r := getResourceId(resources.TypeCalicoGlobalNetworkPolicies, nameIdx, 0)
+func (t *XrefCacheTester) SetGlobalNetworkPolicy(tierIdx Name, nameIdx Name, s Selector, ingress, egress []apiv3.Rule, order *float64) resources.Resource {
+	r, tier := getPolicyResourceId(resources.TypeCalicoGlobalNetworkPolicies, tierIdx, nameIdx, 0)
 	types := []apiv3.PolicyType{}
 	if ingress != nil {
 		types = append(types, apiv3.PolicyTypeIngress)
@@ -314,6 +366,8 @@ func (t *XrefCacheTester) SetGlobalNetworkPolicy(nameIdx Name, s Selector, ingre
 		TypeMeta:   r.TypeMeta,
 		ObjectMeta: getObjectMeta(r, NoLabels),
 		Spec: apiv3.GlobalNetworkPolicySpec{
+			Tier:     tier,
+			Order:    order,
 			Selector: selectorByteToSelector(s),
 			Ingress:  ingress,
 			Egress:   egress,
@@ -328,8 +382,8 @@ func (t *XrefCacheTester) SetGlobalNetworkPolicy(nameIdx Name, s Selector, ingre
 	return res
 }
 
-func (t *XrefCacheTester) DeleteGlobalNetworkPolicy(nameIdx Name) {
-	r := getResourceId(resources.TypeCalicoGlobalNetworkPolicies, nameIdx, 0)
+func (t *XrefCacheTester) DeleteGlobalNetworkPolicy(tierIdx Name, nameIdx Name) {
+	r, _ := getPolicyResourceId(resources.TypeCalicoGlobalNetworkPolicies, tierIdx, nameIdx, 0)
 	t.OnUpdate(syncer.Update{
 		Type:       syncer.UpdateTypeDeleted,
 		ResourceID: r,
@@ -340,8 +394,8 @@ func (t *XrefCacheTester) DeleteGlobalNetworkPolicy(nameIdx Name) {
 // -- Calico NetworkPolicy access --
 //
 
-func (t *XrefCacheTester) GetNetworkPolicy(nameIdx Name, namespaceIdx Namespace) *xrefcache.CacheEntryNetworkPolicy {
-	r := getResourceId(resources.TypeCalicoNetworkPolicies, nameIdx, namespaceIdx)
+func (t *XrefCacheTester) GetNetworkPolicy(tierIdx Name, nameIdx Name, namespaceIdx Namespace) *xrefcache.CacheEntryNetworkPolicy {
+	r, _ := getPolicyResourceId(resources.TypeCalicoGlobalNetworkPolicies, tierIdx, nameIdx, namespaceIdx)
 	e := t.Get(r)
 	if e == nil {
 		return nil
@@ -349,8 +403,8 @@ func (t *XrefCacheTester) GetNetworkPolicy(nameIdx Name, namespaceIdx Namespace)
 	return e.(*xrefcache.CacheEntryNetworkPolicy)
 }
 
-func (t *XrefCacheTester) SetNetworkPolicy(nameIdx Name, namespaceIdx Namespace, s Selector, ingress, egress []apiv3.Rule) resources.Resource {
-	r := getResourceId(resources.TypeCalicoNetworkPolicies, nameIdx, namespaceIdx)
+func (t *XrefCacheTester) SetNetworkPolicy(tierIdx Name, nameIdx Name, namespaceIdx Namespace, s Selector, ingress, egress []apiv3.Rule, order *float64) resources.Resource {
+	r, tier := getPolicyResourceId(resources.TypeCalicoGlobalNetworkPolicies, tierIdx, nameIdx, namespaceIdx)
 	types := []apiv3.PolicyType{}
 	if ingress != nil {
 		types = append(types, apiv3.PolicyTypeIngress)
@@ -362,6 +416,8 @@ func (t *XrefCacheTester) SetNetworkPolicy(nameIdx Name, namespaceIdx Namespace,
 		TypeMeta:   r.TypeMeta,
 		ObjectMeta: getObjectMeta(r, NoLabels),
 		Spec: apiv3.NetworkPolicySpec{
+			Tier:     tier,
+			Order:    order,
 			Selector: selectorByteToSelector(s),
 			Ingress:  ingress,
 			Egress:   egress,
@@ -376,8 +432,8 @@ func (t *XrefCacheTester) SetNetworkPolicy(nameIdx Name, namespaceIdx Namespace,
 	return res
 }
 
-func (t *XrefCacheTester) DeleteNetworkPolicy(nameIdx Name, namespaceIdx Namespace) {
-	r := getResourceId(resources.TypeCalicoNetworkPolicies, nameIdx, namespaceIdx)
+func (t *XrefCacheTester) DeleteNetworkPolicy(tierIdx Name, nameIdx Name, namespaceIdx Namespace) {
+	r, _ := getPolicyResourceId(resources.TypeCalicoGlobalNetworkPolicies, tierIdx, nameIdx, namespaceIdx)
 	t.OnUpdate(syncer.Update{
 		Type:       syncer.UpdateTypeDeleted,
 		ResourceID: r,

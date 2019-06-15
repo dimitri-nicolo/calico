@@ -24,10 +24,12 @@ type CacheAccessor interface {
 	GetFromOurCache(res apiv3.ResourceID) CacheEntry
 	GetFromXrefCache(res apiv3.ResourceID) CacheEntry
 
+	// Access to helper modules that provide linkage between the different caches.
 	EndpointLabelSelector() labelselector.LabelSelector
 	NetworkSetLabelSelector() labelselector.LabelSelector
 	NetworkPolicyRuleSelectorManager() NetworkPolicyRuleSelectorManager
 	IPOrEndpointManager() keyselector.KeySelector
+	PolicySorter() PolicySorter
 
 	// Register for updates for other resource types. This registers with the xref cache dispatcher, so the updates
 	// will be CacheEntry types and the available updateTypes are defined by the events in flags.go.
@@ -236,6 +238,10 @@ func (c *cacheAccessor) NetworkPolicyRuleSelectorManager() NetworkPolicyRuleSele
 
 func (c *cacheAccessor) IPOrEndpointManager() keyselector.KeySelector {
 	return c.xc.ipOrEndpointManager
+}
+
+func (c *cacheAccessor) PolicySorter() PolicySorter {
+	return c.xc.policySorter
 }
 
 func (c *cacheAccessor) QueueUpdate(id apiv3.ResourceID, entry CacheEntry, update syncer.UpdateType) {
