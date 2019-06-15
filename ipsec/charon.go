@@ -137,7 +137,7 @@ func (charon *CharonIKEDaemon) Start(ctx context.Context, doneWG *sync.WaitGroup
 		return err
 	}
 
-	cmd, err := charon.runAndCaptureLogs("/usr/lib/strongswan/charon", doneWG)
+	cmd, err := charon.runAndCaptureLogs("/usr/lib/ipsec/charon", doneWG)
 
 	if err != nil {
 		log.Errorf("Error starting charon daemon: %v", err)

@@ -122,7 +122,7 @@ var _ = Describe("Charon", func() {
 		})
 
 		It("should start the daemon", func() {
-			Expect(runProcExecPath).To(Equal("/usr/lib/strongswan/charon"))
+			Expect(runProcExecPath).To(Equal("/usr/lib/ipsec/charon"))
 			Expect(runProcDoneWG).To(Equal(doneWG))
 		})
 

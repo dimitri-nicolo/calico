@@ -156,7 +156,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec lifecycle tests", []apiconfig.Da
 
 		// Get felix/charon's PID so we can check that it restarts...
 		felixPID := felix.GetFelixPID()
-		charonPID := felix.GetSinglePID("/usr/lib/strongswan/charon")
+		charonPID := felix.GetSinglePID("/usr/lib/ipsec/charon")
 
 		// Kill charon daemon
 		killProcess(felix, fmt.Sprint(charonPID))
@@ -165,7 +165,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec lifecycle tests", []apiconfig.Da
 			"Felix failed to restart after killing the charon")
 
 		Eventually(func() int {
-			return felix.GetSinglePID("/usr/lib/strongswan/charon")
+			return felix.GetSinglePID("/usr/lib/ipsec/charon")
 		}, "3s").ShouldNot(Equal(charonPID), "New charon process")
 	})
 })
