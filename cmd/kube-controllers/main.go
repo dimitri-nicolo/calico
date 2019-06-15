@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"net/http"
 	"os"
@@ -23,12 +24,13 @@ import (
 	"time"
 
 	"github.com/coreos/etcd/clientv3"
+	"github.com/coreos/etcd/pkg/srv"
 	"github.com/coreos/etcd/pkg/transport"
 	log "github.com/sirupsen/logrus"
-	flag "github.com/spf13/pflag"
 	"k8s.io/apiserver/pkg/storage/etcd3"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/klog"
 
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
@@ -62,30 +64,45 @@ type backendClientAccessor interface {
 
 // VERSION is filled out during the build process (using git describe output)
 var VERSION string
+var version bool
+
+func init() {
+	// Tell glog (used by client-go) to log into STDERR. Otherwise, we risk
+	// certain kinds of API errors getting logged into a directory not
+	// available in a `FROM scratch` Docker container, causing glog to abort
+	err := flag.Set("logtostderr", "true")
+	if err != nil {
+		log.WithError(err).Fatal("Failed to set logging configuration")
+	}
+
+	// Add a flag to check the version.
+	flag.BoolVar(&version, "version", false, "Display version")
+
+	// Also tell klog to log to STDERR.
+	var flags flag.FlagSet
+	klog.InitFlags(&flags)
+	err = flags.Set("logtostderr", "true")
+	if err != nil {
+		log.WithError(err).Fatal("Failed to set logging configuration")
+	}
+}
 
 func main() {
+	flag.Parse()
+	if version {
+		fmt.Println(VERSION)
+		os.Exit(0)
+	}
+
 	// Configure log formatting.
 	log.SetFormatter(&logutils.Formatter{})
 
 	// Install a hook that adds file/line no information.
 	log.AddHook(&logutils.ContextHook{})
 
-	// If `-v` is passed, display the version and exit.
-	// Use a new flag set so as not to conflict with existing libraries which use "flag"
-	flagSet := flag.NewFlagSet("Calico", flag.ExitOnError)
-	version := flagSet.BoolP("version", "v", false, "Display version")
-	err := flagSet.Parse(os.Args[1:])
-	if err != nil {
-		log.WithError(err).Fatal("Failed to parse flags")
-	}
-	if *version {
-		fmt.Println(VERSION)
-		os.Exit(0)
-	}
-
 	// Attempt to load configuration.
 	config := new(config.Config)
-	if err = config.Parse(); err != nil {
+	if err := config.Parse(); err != nil {
 		log.WithError(err).Fatal("Failed to parse config")
 	}
 	log.WithField("config", config).Info("Loaded configuration from environment")
@@ -315,10 +332,23 @@ func newEtcdV3Client() (*clientv3.Client, error) {
 		return nil, err
 	}
 
+	if config.Spec.EtcdEndpoints != "" && config.Spec.EtcdDiscoverySrv != "" {
+		log.Warning("Multiple etcd endpoint discovery methods specified in etcdv3 API config")
+		return nil, fmt.Errorf("multiple discovery or bootstrap options specified, use either \"etcdEndpoints\" or \"etcdDiscoverySrv\"")
+	}
+
 	// Split the endpoints into a location slice.
 	etcdLocation := []string{}
 	if config.Spec.EtcdEndpoints != "" {
 		etcdLocation = strings.Split(config.Spec.EtcdEndpoints, ",")
+	}
+
+	if config.Spec.EtcdDiscoverySrv != "" {
+		srvs, srvErr := srv.GetClient("etcd-client", config.Spec.EtcdDiscoverySrv)
+		if srvErr != nil {
+			return nil, fmt.Errorf("failed to discover etcd endpoints through SRV discovery: %v", srvErr)
+		}
+		etcdLocation = srvs.Endpoints
 	}
 
 	if len(etcdLocation) == 0 {

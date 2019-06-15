@@ -1,5 +1,5 @@
 package: github.com/projectcalico/kube-controllers
-description: Calico Policy Controller
+description: Calico controllers for Kubernetes
 homepage: https://projectcalico.org
 license: Apache-2.0
 import:
@@ -15,6 +15,16 @@ import:
 - package: github.com/projectcalico/libcalico-go
   repo: git@github.com:tigera/libcalico-go-private.git
   vcs: git
+  subpackages:
+  - lib/apiconfig
+  - lib/apis/v3
+  - lib/backend
+  - lib/backend/api
+  - lib/backend/k8s/conversion
+  - lib/clientv3
+  - lib/errors
+  - lib/logutils
+  - lib/options
 - package: github.com/tigera/licensing
   version: 02d1f482fe4d3a2dbc4a3bce530471eba75d5029
   repo: git@github.com:tigera/licensing
@@ -22,12 +32,19 @@ import:
   subpackages:
   - client
   - monitor
+- package: k8s.io/api
+  subpackages:
+  - core/v1
+  - networking/v1
+- package: k8s.io/apimachinery
 - package: github.com/projectcalico/felix
   version: e54bb027f0d6d8076f894db5879d2648f2416ddd
   repo: git@github.com:tigera/felix-private.git
   vcs: git
 - package: k8s.io/apiserver
   version: f881eae9ec04b8c996ef0d24309c860ea188acd1
+  subpackages:
+  - pkg/storage/etcd3
 - package: github.com/Azure/go-autorest
   version: 1ff28809256a84bb6966640ff3d0371af82ccba4
   subpackages:
@@ -35,3 +52,16 @@ import:
   - autorest/adal
   - autorest/azure
   - autorest/date
+- package: k8s.io/client-go
+  subpackages:
+  - kubernetes
+  - tools/cache
+  - tools/clientcmd
+  - util/workqueue
+# The version of k8s.io/ client libraries pinned in libcalico-go import some Azure
+# dependencies that require an older version go-autorest. We can probably ditch this
+# pin once we've updated to a newer version of client-go and friends.
+- package: github.com/Azure/go-autorest
+  version: 1ff28809256a84bb6966640ff3d0371af82ccba4
+- package: github.com/onsi/ginkgo
+- package: github.com/spf13/pflag
