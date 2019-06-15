@@ -1,4 +1,4 @@
-// Copyright 2015 Tigera Inc
+// Copyright 2015-2019 Tigera Inc
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,6 +27,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	corev1 "k8s.io/api/core/v1"
+
 	"github.com/projectcalico/cni-plugin/internal/pkg/utils"
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
@@ -37,7 +39,6 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/net"
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/projectcalico/libcalico-go/lib/options"
-	corev1 "k8s.io/api/core/v1"
 )
 
 const (
@@ -90,7 +91,7 @@ func Migrate(ctxt context.Context, c client.Interface, nodename string) error {
 			return fmt.Errorf("PodCIDR %s did not parse successfully: %s", k8sNode.Spec.PodCIDR, err)
 		} else if cidr.Version() == 4 {
 			// We need to get the IP for the podCIDR and increment it to the
-			// first IP in the CIDR.
+			// first IP in the CIDR to match the behavior used by Calico when using host-local IPAM.
 			tunIp := ip.To4()
 			if tunIp == nil {
 				return fmt.Errorf("Cannot pick an IPv4 tunnel address from the given CIDR: %s", k8sNode.Spec.PodCIDR)
@@ -116,7 +117,7 @@ func Migrate(ctxt context.Context, c client.Interface, nodename string) error {
 				if _, ok := err.(errors.ErrorResourceAlreadyExists); !ok {
 					return fmt.Errorf("failed to get add IPIP tunnel addr %s: %s", node.Spec.BGP.IPv4IPIPTunnelAddr, err)
 				}
-				log.Info("IPIP tunnel address already assigned, continuing...")
+				log.Info("IPIP tunnel address already assigned in IPAM, continuing...")
 			}
 
 			// Save the calico node object to the datastore.
@@ -124,10 +125,11 @@ func Migrate(ctxt context.Context, c client.Interface, nodename string) error {
 				return fmt.Errorf("failed to save newly updated node object: %s", err)
 			}
 
-			log.Info("Successfully assigned and updated IPIP tunnel address")
+			log.WithField("ip", node.Spec.BGP.IPv4IPIPTunnelAddr).Info("Assigned IPIP tunnel address to node")
+		} else if cidr.Version() == 6 {
+			log.Info("IPv6 podCIDR - no need to migrate IPIP address")
 		}
 	}
-	log.WithField("ip", node.Spec.BGP.IPv4IPIPTunnelAddr).Info("node has IPIP tunnel address")
 
 	// Open k8s-pod-directory to check for emptiness.
 	log.Info("checking if host-local IPAM data dir dir is empty...")
@@ -160,19 +162,21 @@ func Migrate(ctxt context.Context, c client.Interface, nodename string) error {
 		return fmt.Errorf("failed to close host-local IPAM data dir directory: %s", err)
 	}
 
-	// Disable cni by setting datastoreReady to false.
+	// Disable cni by setting DatastoreReady to false.
 	log.Info("setting datastore readiness to false")
-	clusterInfo, err := c.ClusterInformation().Get(ctxt, "default", options.GetOptions{})
-	if err != nil {
-		return fmt.Errorf("failed to fetch cluster information: %s", err)
-	}
-	if *clusterInfo.Spec.DatastoreReady {
-		*clusterInfo.Spec.DatastoreReady = false
-		for i := uint(0); i < 5; i++ {
+	var clusterInfo *v3.ClusterInformation
+	for i := uint(0); i < 5; i++ {
+		clusterInfo, err = c.ClusterInformation().Get(ctxt, "default", options.GetOptions{})
+		if err != nil {
+			return fmt.Errorf("failed to fetch cluster information: %s", err)
+		}
+		if clusterInfo.Spec.DatastoreReady == nil || *clusterInfo.Spec.DatastoreReady {
+			f := false
+			clusterInfo.Spec.DatastoreReady = &f
 			if clusterInfo, err = c.ClusterInformation().Update(ctxt, clusterInfo, options.SetOptions{}); err != nil {
 				if _, ok := err.(errors.ErrorResourceUpdateConflict); ok {
 					log.Info("Encountered update conflict, retrying...")
-					time.Sleep((1 << i) * time.Second)
+					time.Sleep(1 * time.Second)
 					continue
 				}
 				return fmt.Errorf("failed to disable cluster: %s", err)
@@ -180,7 +184,7 @@ func Migrate(ctxt context.Context, c client.Interface, nodename string) error {
 			break
 		}
 	}
-	log.Info("successfully set datastore readiness to false!")
+	log.Info("successfully set datastore readiness to false")
 
 	// Also disable cni by deleting the binaries.
 	log.Info("removing cni binaries...")
@@ -196,14 +200,14 @@ func Migrate(ctxt context.Context, c client.Interface, nodename string) error {
 	// against racing with any remaining host-local processes which might be allocating
 	// IP addresses.
 	log.Info("acquiring lock on host-local IPAM")
-	hostLocal, err := disk.New(ipAllocPath, "")
+	hostLocal, err := disk.New("", ipAllocPath)
 	if err != nil {
 		return fmt.Errorf("failed to initialize host-local IPAM: %s", err)
 	}
 	if err = hostLocal.Lock(); err != nil {
 		return fmt.Errorf("failed to acquire lock on host-local IPAM: %s", err)
 	}
-	log.Info("successfully acquired lock on host-local IPAM!")
+	log.Info("successfully acquired lock on host-local IPAM")
 	defer func() {
 		// Release the lock on host local backend
 		log.Info("releasing lock on host-local backend...")
@@ -250,7 +254,7 @@ func Migrate(ctxt context.Context, c client.Interface, nodename string) error {
 			if err = os.Remove(fname); err != nil && !os.IsNotExist(err) {
 				return fmt.Errorf("failed to remove file %s: %s", fname, err)
 			}
-			logCtxt.Info("successfully removed last reserved ip file!")
+			logCtxt.Info("removed last reserved ip file")
 			continue
 		}
 
@@ -296,7 +300,7 @@ func Migrate(ctxt context.Context, c client.Interface, nodename string) error {
 				ipam.AttributeNamespace: pod.Namespace,
 			},
 		}); err != nil {
-			if _, ok := err.(errors.ErrorResourceAlreadyExists); !ok {
+			if _, ok := err.(errors.ErrorResourceAlreadyExists); !(ok || strings.Contains(err.Error(), "already assigned")) {
 				return fmt.Errorf("failed to assign IP to calico backend: %s", err)
 			}
 			// Pod IP already assigned - likely failed to remove the file on the last attempt.
@@ -310,7 +314,7 @@ func Migrate(ctxt context.Context, c client.Interface, nodename string) error {
 		if err = os.Remove(fname); err != nil && !os.IsNotExist(err) {
 			return fmt.Errorf("failed to remove file %s: %s", fname, err)
 		}
-		logCtxt.Info("successfully removed file!")
+		logCtxt.Info("successfully removed file")
 	}
 
 	// Release the lock.
@@ -333,7 +337,8 @@ func Migrate(ctxt context.Context, c client.Interface, nodename string) error {
 	// calicoDS, err := k8sClient.AppsV1().DaemonSets("kube-system").Get("calico-node", metav1.GetOptions{})
 	// if (calicoDS.Status.UpdatedNumberScheduled == calicoDS.Status.DesiredNumberScheduled-calicoDS.Spec.UpdateStrategy.RollingUpdate.MaxUnavailable.IntVal)
 	log.Info("setting Calico datastore readiness to true...")
-	*clusterInfo.Spec.DatastoreReady = true
+	t := true
+	clusterInfo.Spec.DatastoreReady = &t
 	if _, err = c.ClusterInformation().Update(ctxt, clusterInfo, options.SetOptions{}); err != nil {
 		return fmt.Errorf("failed to re-enable cluster: %s", err)
 	}
