@@ -2,6 +2,7 @@ package pip
 
 import (
 	"context"
+	"fmt"
 
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -36,9 +37,11 @@ func (s *pip) CalculateFlowImpact(ctx context.Context, npcs []NetworkPolicyChang
 	// requires it but doesn't use any fields except the istio config (which we're not concerned with in the pip use case).
 	s.xc = xrefcache.NewXrefCache(&config.Config{}, func() {})
 
-	// Set the in-scope endpoints by combining (OR-ing) the selectors of all of the modified policies.
+	// to prevent the xrefcache from unnecessarily computing relations on endpoints that this policy does not select,
+	// we'll only add endpoints to the xrefcache if any of the input policies select them. As such, we can set the
+	// xrefcache inscope selector to all(), since we've already done the selector logic out of band.
 	s.xc.RegisterInScopeEndpoints(&v3.EndpointsSelection{
-		Selector: buildSelector(npcs),
+		Selector: "all()",
 	})
 
 	// Register for notification of in-scope endpoints.
@@ -53,6 +56,39 @@ func (s *pip) CalculateFlowImpact(ctx context.Context, npcs []NetworkPolicyChang
 
 	// Set in-sync, so we get updates as we feed in the endpoints.
 	s.xc.OnStatusUpdate(syncer.NewStatusUpdateComplete())
+
+	// create a selector set which is used later to determine if each flow is impacted by this policy change.
+	ss := NewSelectorSet(npcs)
+
+	for _, f := range flows {
+		// create endpoint from flow
+		_, destEp := EndpointsFromFlow(f)
+
+		// before we process this endpoint, check if it's even selected by any of our input policies
+		if !ss.anySelectorSelects(destEp) {
+			fmt.Printf("skipping flow because no policy applies to it")
+			continue
+		}
+
+		s.xc.OnUpdates([]syncer.Update{{
+			Type:       syncer.UpdateTypeSet,
+			Resource:   destEp,
+			ResourceID: resources.GetResourceID(destEp),
+		}})
+
+		// grab that endpoint from the other end of xrefcache to see it's computed relations.
+		// note that we iterate through, but there should only be two endpoints because we only fed it two.
+		for _, val := range s.inScope {
+			f.PreviewAction = computeAction(f, val.GetOrderedTiersAndPolicies())
+		}
+
+		// flush the cache of endpoints for the next flow log to come through
+		s.xc.OnUpdates([]syncer.Update{{
+			Type:       syncer.UpdateTypeDeleted,
+			Resource:   destEp,
+			ResourceID: resources.GetResourceID(destEp),
+		}})
+	}
 
 	// TODO: modify flows using policy before returning them
 	return flows, nil
@@ -134,4 +170,9 @@ func (s *pip) loadInitialPolicy() error {
 func buildSelector(npcs []NetworkPolicyChange) string {
 	// TODO: loop through policy change, create a set, and union the results in this format: "() | () | ()"
 	return "all()"
+}
+
+// TODO: compute action
+func computeAction(f flow.Flow, tops []*xrefcache.TierWithOrderedPolicies) string {
+	return PreviewActionUnknown
 }
