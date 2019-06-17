@@ -332,7 +332,7 @@ func (c *Container) GetHostname() string {
 }
 
 func (c *Container) GetPIDs(processName string) []int {
-	out, err := c.ExecOutput("pgrep", fmt.Sprintf("^%s$", processName))
+	out, err := c.ExecOutput("pgrep", "-f", fmt.Sprintf("^%s$", processName))
 	if err != nil {
 		log.WithError(err).Warn("pgrep failed, assuming no PIDs")
 		return nil
