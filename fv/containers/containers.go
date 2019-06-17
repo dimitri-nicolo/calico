@@ -80,7 +80,7 @@ func (c *Container) Stop() {
 	startTime := time.Now()
 	for {
 		if !c.ListedInDockerPS() {
-			// Container has stopped.  Mkae sure the docker CLI command is dead (it should be already)
+			// Container has stopped.  Make sure the docker CLI command is dead (it should be already)
 			// and wait for its log.
 			logCxt.Info("Container stopped (no longer listed in 'docker ps')")
 			withTimeoutPanic(logCxt, 5*time.Second, func() { c.signalDockerRun(os.Kill) })
@@ -332,7 +332,7 @@ func (c *Container) GetHostname() string {
 }
 
 func (c *Container) GetPIDs(processName string) []int {
-	out, err := c.ExecOutput("pgrep", fmt.Sprintf("^%s$", processName))
+	out, err := c.ExecOutput("pgrep", "-f", fmt.Sprintf("^%s$", processName))
 	if err != nil {
 		log.WithError(err).Warn("pgrep failed, assuming no PIDs")
 		return nil
@@ -379,7 +379,7 @@ func (c *Container) WaitUntilRunning() {
 	}()
 
 	for {
-		Expect(stoppedChan).NotTo(BeClosed(), "Container failed before being listed in 'docker ps'")
+		Expect(stoppedChan).NotTo(BeClosed(), fmt.Sprintf("Container %s failed before being listed in 'docker ps'", c.Name))
 
 		cmd := utils.Command("docker", "ps")
 		out, err := cmd.CombinedOutput()

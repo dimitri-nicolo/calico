@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 // Copyright 2017 flannel authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -137,7 +137,7 @@ func (charon *CharonIKEDaemon) Start(ctx context.Context, doneWG *sync.WaitGroup
 		return err
 	}
 
-	cmd, err := charon.runAndCaptureLogs("/usr/lib/strongswan/charon", doneWG)
+	cmd, err := charon.runAndCaptureLogs("/usr/lib/ipsec/charon", doneWG)
 
 	if err != nil {
 		log.Errorf("Error starting charon daemon: %v", err)
@@ -246,7 +246,7 @@ func (charon *CharonIKEDaemon) LoadConnection(localIP, remoteIP string) error {
 			ReqID:         fmt.Sprint(ReqID),
 			RekeyTime:     fmt.Sprintf("%ds", int(charon.rekeyTime.Seconds())), //Can set this to a low time to check that rekeys are handled properly
 			InstallPolicy: "no",
-			HWOffload:     "auto",
+			//HWOffload:     "auto",
 		}
 
 		childSAConfName := formatName(localIP, remoteIP)

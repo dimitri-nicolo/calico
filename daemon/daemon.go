@@ -51,6 +51,7 @@ import (
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/felix/statusrep"
 	"github.com/projectcalico/felix/usagerep"
+	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend"
 	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
@@ -180,6 +181,7 @@ func Run(configFile string) {
 	// loop until the datastore is ready.
 	log.Info("Loading configuration...")
 	var backendClient bapi.Client
+	var datastoreConfig apiconfig.CalicoAPIConfig
 	var configParams *config.Config
 	var typhaAddr string
 	var numClientsCreated int
@@ -230,7 +232,7 @@ configRetry:
 
 		// We should now have enough config to connect to the datastore
 		// so we can load the remainder of the config.
-		datastoreConfig := configParams.DatastoreConfig()
+		datastoreConfig = configParams.DatastoreConfig()
 		// Can't dump the whole config because it may have sensitive information...
 		log.WithField("datastore", datastoreConfig.Spec.DatastoreType).Info("Connecting to datastore")
 		backendClient, err = backend.NewClient(datastoreConfig)
@@ -435,7 +437,7 @@ configRetry:
 		)
 	} else {
 		// Use the syncer locally.
-		syncer = felixsyncer.New(backendClient, syncerToValidator)
+		syncer = felixsyncer.New(backendClient, datastoreConfig.Spec, syncerToValidator)
 	}
 	log.WithField("syncer", syncer).Info("Created Syncer")
 
@@ -513,7 +515,24 @@ configRetry:
 		log.Infof("Starting the Typha connection")
 		err := typhaConnection.Start(context.Background())
 		if err != nil {
-			log.WithError(err).Fatal("Failed to connect to Typha")
+			log.WithError(err).Error("Failed to connect to Typha. Retrying...")
+			startTime := time.Now()
+			for err != nil && time.Since(startTime) < 30*time.Second {
+				// Set Ready to false and Live to true when unable to connect to typha
+				healthAggregator.Report(healthName, &health.HealthReport{Live: true, Ready: false})
+				err = typhaConnection.Start(context.Background())
+				if err == nil {
+					break
+				}
+				log.WithError(err).Debug("Retrying Typha connection")
+				time.Sleep(1 * time.Second)
+			}
+			if err != nil {
+				log.WithError(err).Fatal("Failed to connect to Typha")
+			} else {
+				log.Info("Connected to Typha after retries.")
+				healthAggregator.Report(healthName, &health.HealthReport{Live: true, Ready: true})
+			}
 		}
 		go func() {
 			typhaConnection.Finished.Wait()

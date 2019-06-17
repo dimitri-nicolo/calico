@@ -67,6 +67,10 @@ type EventSequencer struct {
 	pendingServiceAccountDeletes set.Set
 	pendingNamespaceUpdates      map[proto.NamespaceID]*proto.NamespaceUpdate
 	pendingNamespaceDeletes      set.Set
+	pendingRouteUpdates          map[string]*proto.RouteUpdate
+	pendingRouteDeletes          set.Set
+	pendingVTEPUpdates           map[string]*proto.VXLANTunnelEndpointUpdate
+	pendingVTEPDeletes           set.Set
 	pendingIPSecTunnelAdds       set.Set
 	pendingIPSecTunnelRemoves    set.Set
 	pendingIPSecBindingAdds      set.Set
@@ -83,6 +87,8 @@ type EventSequencer struct {
 	sentIPPools         set.Set
 	sentServiceAccounts set.Set
 	sentNamespaces      set.Set
+	sentRoutes          set.Set
+	sentVTEPs           set.Set
 
 	Callback EventHandler
 }
@@ -120,6 +126,10 @@ func NewEventSequencer(conf configInterface) *EventSequencer {
 		pendingServiceAccountDeletes: set.New(),
 		pendingNamespaceUpdates:      map[proto.NamespaceID]*proto.NamespaceUpdate{},
 		pendingNamespaceDeletes:      set.New(),
+		pendingRouteUpdates:          map[string]*proto.RouteUpdate{},
+		pendingRouteDeletes:          set.New(),
+		pendingVTEPUpdates:           map[string]*proto.VXLANTunnelEndpointUpdate{},
+		pendingVTEPDeletes:           set.New(),
 		pendingIPSecTunnelAdds:       set.New(),
 		pendingIPSecTunnelRemoves:    set.New(),
 		pendingIPSecBindingAdds:      set.New(),
@@ -136,6 +146,8 @@ func NewEventSequencer(conf configInterface) *EventSequencer {
 		sentIPPools:         set.New(),
 		sentServiceAccounts: set.New(),
 		sentNamespaces:      set.New(),
+		sentRoutes:          set.New(),
+		sentVTEPs:           set.New(),
 	}
 	return buf
 }
@@ -583,6 +595,15 @@ func (buf *EventSequencer) Flush() {
 	buf.flushServiceAccounts()
 	buf.flushNamespaces()
 
+	// Flush VXLAN data. Order such that no routes are present in the data plane unless
+	// they have a corresponding VTEP in the data plane as well. Do this by sending VTEP adds
+	// before flushsing route adds, and route removes before flushing VTEP removes. We also send
+	// route removes before route adds in order to minimize maximum occupancy.
+	buf.flushRouteRemoves()
+	buf.flushVTEPRemoves()
+	buf.flushVTEPAdds()
+	buf.flushRouteAdds()
+
 	// Flush IPSec bindings, these have no particular ordering with other updates.
 	buf.flushIPSecBindings()
 
@@ -858,6 +879,78 @@ func (buf *EventSequencer) flushNamespaces() {
 	}
 	buf.pendingNamespaceUpdates = make(map[proto.NamespaceID]*proto.NamespaceUpdate)
 	log.Debug("Done flushing Namespaces")
+}
+
+func (buf *EventSequencer) OnVTEPUpdate(update *proto.VXLANTunnelEndpointUpdate) {
+	node := update.Node
+	log.WithFields(log.Fields{"id": node}).Debug("VTEP update")
+	buf.pendingVTEPDeletes.Discard(node)
+	buf.pendingVTEPUpdates[node] = update
+}
+
+func (buf *EventSequencer) OnVTEPRemove(dst string) {
+	log.WithFields(log.Fields{"dst": dst}).Debug("VTEP removed")
+	delete(buf.pendingVTEPUpdates, dst)
+	if buf.sentVTEPs.Contains(dst) {
+		buf.pendingVTEPDeletes.Add(dst)
+	}
+}
+
+func (buf *EventSequencer) flushVTEPRemoves() {
+	buf.pendingVTEPDeletes.Iter(func(item interface{}) error {
+		node := item.(string)
+		msg := proto.VXLANTunnelEndpointRemove{Node: node}
+		buf.Callback(&msg)
+		buf.sentVTEPs.Discard(node)
+		return nil
+	})
+	buf.pendingVTEPDeletes.Clear()
+	log.Debug("Done flushing VTEP removes")
+}
+
+func (buf *EventSequencer) flushVTEPAdds() {
+	for _, msg := range buf.pendingVTEPUpdates {
+		buf.Callback(msg)
+		buf.sentVTEPs.Add(msg.Node)
+	}
+	buf.pendingVTEPUpdates = make(map[string]*proto.VXLANTunnelEndpointUpdate)
+	log.Debug("Done flushing VTEP adds")
+}
+
+func (buf *EventSequencer) OnRouteUpdate(update *proto.RouteUpdate) {
+	dst := update.Dst
+	log.WithFields(log.Fields{"dst": dst}).Debug("Route update")
+	buf.pendingRouteDeletes.Discard(dst)
+	buf.pendingRouteUpdates[dst] = update
+}
+
+func (buf *EventSequencer) OnRouteRemove(dst string) {
+	log.WithFields(log.Fields{"dst": dst}).Debug("Route removed")
+	delete(buf.pendingRouteUpdates, dst)
+	if buf.sentRoutes.Contains(dst) {
+		buf.pendingRouteDeletes.Add(dst)
+	}
+}
+
+func (buf *EventSequencer) flushRouteAdds() {
+	for _, msg := range buf.pendingRouteUpdates {
+		buf.Callback(msg)
+		buf.sentRoutes.Add(msg.Dst)
+	}
+	buf.pendingRouteUpdates = make(map[string]*proto.RouteUpdate)
+	log.Debug("Done flushing route adds")
+}
+
+func (buf *EventSequencer) flushRouteRemoves() {
+	buf.pendingRouteDeletes.Iter(func(item interface{}) error {
+		dst := item.(string)
+		msg := proto.RouteRemove{Dst: dst}
+		buf.Callback(&msg)
+		buf.sentRoutes.Discard(dst)
+		return nil
+	})
+	buf.pendingRouteDeletes.Clear()
+	log.Debug("Done flushing route deletes")
 }
 
 func cidrToIPPoolID(cidr ip.CIDR) string {

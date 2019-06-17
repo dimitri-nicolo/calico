@@ -1,6 +1,6 @@
 // +build fvtests
 
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -67,9 +67,7 @@ var _ = Context("Latency tests with initialized Felix and etcd datastore", func(
 		_ = felix.GetFelixPID()
 
 		// Install the hping tool, which we use for latency measurments.
-		felix.Exec("sh", "-c", "echo http://dl-cdn.alpinelinux.org/alpine/edge/testing >> /etc/apk/repositories")
-		felix.Exec("apk", "update")
-		felix.Exec("apk", "add", "hping3")
+		felix.Exec("apt-get", "install", "-y", "hping3")
 
 		var err error
 		resultsFile, err = os.OpenFile("latency.log", os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
@@ -162,7 +160,7 @@ var _ = Context("Latency tests with initialized Felix and etcd datastore", func(
 		It("with allow-all should have good latency", func() {
 			meanRtt := w[0].LatencyTo(w[1].IP, w[1].DefaultPort)
 			_, err := fmt.Fprintf(resultsFile, "allow-all: %v\n", meanRtt)
-			Expect(meanRtt).To(BeNumerically("<", 10*time.Millisecond))
+			Expect(meanRtt).To(BeNumerically("<", 100*time.Millisecond))
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -178,7 +176,7 @@ var _ = Context("Latency tests with initialized Felix and etcd datastore", func(
 			It("should have good latency", func() {
 				meanRtt := w[0].LatencyTo(w[1].IP, w[1].DefaultPort)
 				_, err := fmt.Fprintf(resultsFile, "all-selector: %v\n", meanRtt)
-				Expect(meanRtt).To(BeNumerically("<", 10*time.Millisecond))
+				Expect(meanRtt).To(BeNumerically("<", 100*time.Millisecond))
 				Expect(err).NotTo(HaveOccurred())
 			})
 
@@ -205,7 +203,7 @@ var _ = Context("Latency tests with initialized Felix and etcd datastore", func(
 				It("should have good latency", func() {
 					meanRtt := w[0].LatencyTo(w[1].IP, w[1].DefaultPort)
 					_, err := fmt.Fprintf(resultsFile, "all-selector-10k: %v\n", meanRtt)
-					Expect(meanRtt).To(BeNumerically("<", 10*time.Millisecond))
+					Expect(meanRtt).To(BeNumerically("<", 100*time.Millisecond))
 					Expect(err).NotTo(HaveOccurred())
 				})
 			})

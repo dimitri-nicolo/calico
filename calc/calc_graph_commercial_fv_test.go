@@ -373,8 +373,6 @@ var localEp1WithNodesSharingIP = localEp1WithPolicy.withKVUpdates(
 	"192.168.0.1", "10.0.0.2",
 ).withName("Local endpoint 1 with pair of hosts sharing IP")
 
-const remoteHostname2 = "remotehostname2"
-
 var localEp1With3NodesSharingIP = localEp1WithPolicy.withKVUpdates(
 	KVPair{Key: HostIPKey{Hostname: localHostname}, Value: calinet.ParseIP("192.168.0.1")},
 	KVPair{Key: HostIPKey{Hostname: remoteHostname}, Value: calinet.ParseIP("192.168.0.1")},

@@ -25,6 +25,11 @@ func StartDataplaneDriver(configParams *config.Config,
 	dpConfig := windataplane.Config{
 		IPv6Enabled:      configParams.Ipv6Support,
 		HealthAggregator: healthAggregator,
+
+		Hostname:     configParams.FelixHostname,
+		VXLANEnabled: configParams.VXLANEnabled,
+		VXLANID:      configParams.VXLANVNI,
+		VXLANPort:    configParams.VXLANPort,
 	}
 
 	winDP := windataplane.NewWinDataplaneDriver(hns.API{}, dpConfig)
