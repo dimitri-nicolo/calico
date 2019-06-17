@@ -35,7 +35,7 @@ copyright_owner="Tigera, Inc"
 # Run goimports over the changed files.
 format_failed=false
 repo_loc_failed=false
-if[[ uname == "Darwin" ]]; then
+if [[ uname == "Darwin" ]]; then
   echo "Skipping code format checks on MacOS"
 else
   echo "Running code format checks..."
