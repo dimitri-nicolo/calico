@@ -99,7 +99,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 	utils.ConfigureLogging("info")
 	cniVersion := os.Getenv("CNI_SPEC_VERSION")
 
-	Context("using host-local IPAM", func() {
+	Context("l2bridge network::using host-local IPAM", func() {
 		var nsName, name string
 		var clientset *kubernetes.Clientset
 		netconf := fmt.Sprintf(`
@@ -956,7 +956,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 		})
 	})
 
-	Context("after a pod has already been networked once", func() {
+	Context("l2bridge network::after a pod has already been networked once", func() {
 		var nc types.NetConf
 		var netconf string
 		var workloadName, containerID, name string
@@ -1109,7 +1109,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 		})
 	})
 
-	Context("With a /29 IPAM blockSize", func() {
+	Context("l2bridge network::With a /29 IPAM blockSize", func() {
 		var nsName string
 		var clientset *kubernetes.Clientset
 		netconf := fmt.Sprintf(`
@@ -1245,7 +1245,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			Expect(err).Should(HaveOccurred())
 		})
 	})
-	Context("With a /29 IPAM blockSize, without single network flag", func() {
+	Context("l2bridge network::With a /29 IPAM blockSize, without single network flag", func() {
 		var nsName string
 		var nwsName []string
 		lastNWName := ""
@@ -1464,7 +1464,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 		})
 	})
 
-	Context("With DNS capability in Runtime Config", func() {
+	Context("l2bridge network::With DNS capability in Runtime Config", func() {
 		var nsName, name string
 		var clientset *kubernetes.Clientset
 		netconf := fmt.Sprintf(`
@@ -1611,6 +1611,190 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				Expect(containerEP.DNSServerList).Should(Equal("10.96.0.11"))
 
 			})
+		})
+	})
+
+	Context("overlay network::using host-local IPAM", func() {
+		var nsName, name string
+		var clientset *kubernetes.Clientset
+		vxlanConf := fmt.Sprintf(`
+		{
+			"cniVersion": "%s",
+			"name": "%s",
+			"type": "calico",
+			"mode": "vxlan",
+			"vxlan_mac_prefix": "%s",
+			"vxlan_vni": 4096,
+			"etcd_endpoints": "%s",
+			"datastore_type": "%s",
+			"windows_use_single_network":true,
+			"ipam": {
+				"type": "host-local",
+				"subnet": "10.254.112.0/20"
+			},
+			"kubernetes": {
+				"k8s_api_root": "%s",
+				"kubeconfig": "C:\\k\\config"
+			},
+			"policy": {"type": "k8s"},
+			"nodename_file_optional": true,
+			"log_level":"debug"
+		}`, cniVersion, networkName, os.Getenv("MAC_PREFIX"), os.Getenv("ETCD_ENDPOINTS"), os.Getenv("DATASTORE_TYPE"), os.Getenv("KUBERNETES_MASTER"))
+
+		cleanup := func() {
+			// Cleanup hns network
+			hnsNetwork, _ := hcsshim.GetHNSNetworkByName(networkName)
+			if hnsNetwork != nil {
+				_, err := hnsNetwork.Delete()
+				Expect(err).NotTo(HaveOccurred())
+			}
+
+			// Delete node
+			_ = clientset.CoreV1().Nodes().Delete(hostname, &metav1.DeleteOptions{})
+		}
+
+		BeforeEach(func() {
+			testutils.WipeK8sPods(vxlanConf)
+			conf := types.NetConf{}
+			if err := json.Unmarshal([]byte(vxlanConf), &conf); err != nil {
+				panic(err)
+			}
+			logger := log.WithFields(log.Fields{
+				"Namespace": testutils.HnsNoneNs,
+			})
+			clientset, err = k8s.NewK8sClient(conf, logger)
+			if err != nil {
+				panic(err)
+			}
+
+			nsName = fmt.Sprintf("ns%d", rand.Uint32())
+			name = fmt.Sprintf("run%d", rand.Uint32())
+			cleanup()
+
+			// Create namespace
+			ensureNamespace(clientset, nsName)
+
+			// Create a K8s Node object with PodCIDR and name equal to hostname.
+			_, err = clientset.CoreV1().Nodes().Create(&v1.Node{
+				ObjectMeta: metav1.ObjectMeta{Name: hostname},
+				Spec: v1.NodeSpec{
+					PodCIDR: "10.0.0.0/24",
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Create a K8s pod w/o any special params
+			_, err = clientset.CoreV1().Pods(nsName).Create(&v1.Pod{
+				ObjectMeta: metav1.ObjectMeta{Name: name},
+				Spec: v1.PodSpec{
+					Containers: []v1.Container{{
+						Name:  name,
+						Image: "ignore",
+					}},
+					NodeName: hostname,
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		AfterEach(func() {
+			cleanup()
+			// Delete namespace
+			deleteNamespace(clientset, nsName)
+		})
+
+		It("successfully creates overlay network", func() {
+
+			log.Infof("Creating container")
+			containerID, result, contVeth, contAddresses, contRoutes, err := testutils.CreateContainer(vxlanConf, name, testutils.HnsNoneNs, "", nsName)
+			Expect(err).ShouldNot(HaveOccurred())
+			defer func() {
+				log.Infof("Container Delete  call")
+				_, err = testutils.DeleteContainerWithId(vxlanConf, name, testutils.HnsNoneNs, containerID, nsName)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				// Make sure there are no endpoints anymore
+				endpoints, err := calicoClient.WorkloadEndpoints().List(ctx, options.ListOptions{})
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(endpoints.Items).Should(HaveLen(0))
+			}()
+			log.Debugf("containerID :%v , result: %v ,icontVeth : %v , contAddresses : %v ,contRoutes : %v ", containerID, result, contVeth, contAddresses, contRoutes)
+
+			Expect(len(result.IPs)).Should(Equal(1))
+			ip := result.IPs[0].Address.IP.String()
+			log.Debugf("ip is %v ", ip)
+			result.IPs[0].Address.IP = result.IPs[0].Address.IP.To4() // Make sure the IP is respresented as 4 bytes
+			Expect(result.IPs[0].Address.Mask.String()).Should(Equal("fffff000"))
+
+			// datastore things:
+			ids := names.WorkloadEndpointIdentifiers{
+				Node:         hostname,
+				Orchestrator: api.OrchestratorKubernetes,
+				Endpoint:     "eth0",
+				Pod:          name,
+				ContainerID:  containerID,
+			}
+
+			wrkload, err := ids.CalculateWorkloadEndpointName(false)
+			log.Debugf("workload endpoint: %v", wrkload)
+			Expect(err).NotTo(HaveOccurred())
+
+			// The endpoint is created
+			endpoints, err := calicoClient.WorkloadEndpoints().List(ctx, options.ListOptions{})
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(endpoints.Items).Should(HaveLen(1))
+
+			Expect(endpoints.Items[0].Name).Should(Equal(wrkload))
+			Expect(endpoints.Items[0].Namespace).Should(Equal(nsName))
+			Expect(endpoints.Items[0].Labels).Should(Equal(map[string]string{
+				"projectcalico.org/namespace":      nsName,
+				"projectcalico.org/orchestrator":   api.OrchestratorKubernetes,
+				"projectcalico.org/serviceaccount": "default",
+			}))
+			Expect(endpoints.Items[0].Spec.Pod).Should(Equal(name))
+			Expect(endpoints.Items[0].Spec.IPNetworks[0]).Should(Equal(result.IPs[0].Address.IP.String() + "/32"))
+			Expect(endpoints.Items[0].Spec.Node).Should(Equal(hostname))
+			Expect(endpoints.Items[0].Spec.Endpoint).Should(Equal("eth0"))
+			Expect(endpoints.Items[0].Spec.Workload).Should(Equal(""))
+			Expect(endpoints.Items[0].Spec.ContainerID).Should(Equal(containerID))
+			Expect(endpoints.Items[0].Spec.Orchestrator).Should(Equal(api.OrchestratorKubernetes))
+
+			// Ensure tunnel mac address and ip are updated correctly
+			node, err := calicoClient.Nodes().Get(ctx, hostname, options.GetOptions{})
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(node.Spec.IPv4VXLANTunnelAddr).Should(Equal("10.254.112.1"))
+			_, subNet, _ := net.ParseCIDR(result.IPs[0].Address.String())
+			mac, err := utils.GetDRMACAddr(networkName, subNet)
+			Expect(mac).ShouldNot(Equal(""))
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(node.Spec.VXLANTunnelMACAddr).Should(Equal(mac.String()))
+
+			// Ensure network is created
+			hnsNetwork, err := hcsshim.GetHNSNetworkByName(networkName)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(hnsNetwork.Subnets[0].AddressPrefix).Should(Equal("10.254.112.0/20"))
+			Expect(hnsNetwork.Subnets[0].GatewayAddress).Should(Equal("10.254.112.1"))
+			Expect(hnsNetwork.Type).Should(Equal("Overlay"))
+
+			mgmtIP := hnsNetwork.ManagementIP
+			macAddr := utils.GetMacAddr(mgmtIP)
+
+			// Ensure host and container endpoints are created
+			hostEP, err := hcsshim.GetHNSEndpointByName("calico-fv_ep")
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(hostEP.IPAddress.String()).Should(Equal("10.254.112.2"))
+			Expect(hostEP.VirtualNetwork).Should(Equal(hnsNetwork.Id))
+			Expect(hostEP.VirtualNetworkName).Should(Equal(hnsNetwork.Name))
+			Expect(hostEP.MacAddress).Should(Equal(macAddr))
+
+			containerEP, err := hcsshim.GetHNSEndpointByName(containerID + "_calico-fv")
+			Expect(containerEP.IPAddress.String()).Should(Equal(ip))
+			Expect(containerEP.GatewayAddress).Should(Equal("10.254.112.1"))
+			ipBytes := containerEP.IPAddress.To4()
+			epMacAddr := fmt.Sprintf("%v-%02x-%02x-%02x-%02x", os.Getenv("MAC_PREFIX"), ipBytes[0], ipBytes[1], ipBytes[2], ipBytes[3])
+			Expect(containerEP.MacAddress).Should(Equal(epMacAddr))
+			Expect(containerEP.VirtualNetwork).Should(Equal(hnsNetwork.Id))
+			Expect(containerEP.VirtualNetworkName).Should(Equal(hnsNetwork.Name))
 		})
 	})
 })

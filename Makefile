@@ -65,18 +65,22 @@ join_platforms = $(subst $(space),$(comma),$(call prefix_linux,$(strip $1)))
 ###############################################################################
 GO_BUILD_VER ?= v0.20
 
-SRCFILES=$(shell find pkg cmd internal -name '*.go')
-TEST_SRCFILES=$(shell find tests win_tests -name '*.go')
+SRC_FILES=$(shell find pkg cmd internal -name '*.go')
+TEST_SRC_FILES=$(shell find tests -name '*.go')
 WINFV_SRCFILES=$(shell find win_tests -name '*.go')
 LOCAL_IP_ENV?=$(shell ip route get 8.8.8.8 | head -1 | awk '{print $$7}')
 
-
+# If local build is set, then always build the binary since we might not
+# detect when another local repository has been modified.
+ifeq ($(LOCAL_BUILD),true)
+.PHONY: $(SRC_FILES) $(TEST_SRC_FILES)
+endif
 
 # fail if unable to download
-CURL=curl -sSf
+CURL=curl -C - -sSf
 
-K8S_VERSION?=v1.11.3
-CNI_VERSION=v0.7.1
+K8S_VERSION?=v1.14.1
+CNI_VERSION=v0.8.0
 
 # Get version from git.
 GIT_VERSION:=$(shell git describe --tags --dirty --always)
@@ -94,8 +98,8 @@ BIN=bin/$(ARCH)
 MAKE_SURE_BIN_EXIST := $(shell mkdir -p $(BIN))
 CALICO_BUILD?=$(BUILD_IMAGE_ORG)/go-build:$(GO_BUILD_VER)
 
-#This is a version with known container with compatible versions of sed/grep etc. 
-TOOLING_BUILD?=calico/go-build:v0.20	
+#This is a version with known container with compatible versions of sed/grep etc.
+TOOLING_BUILD?=calico/go-build:v0.20
 
 
 PACKAGE_NAME?=github.com/projectcalico/cni-plugin
@@ -153,7 +157,7 @@ DOCKER_RUN := mkdir -p .go-pkg-cache && \
                          -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
                          -v $${PWD}:/go/src/$(PACKAGE_NAME):rw \
                          -v $${PWD}/.go-pkg-cache:/go/pkg:rw \
-                         -w /go/src/$(PACKAGE_NAME) 
+                         -w /go/src/$(PACKAGE_NAME)
 
 
 .PHONY: clean
@@ -208,7 +212,7 @@ DOCKER_BUILD_ARGS:= \
 	-e GOCACHE=/go-cache \
 
 ## Build the Calico network plugin and ipam plugins
-$(BIN)/calico $(BIN)/calico-ipam: $(SRCFILES) vendor
+$(BIN)/calico $(BIN)/calico-ipam: $(SRC_FILES) vendor
 	-mkdir -p .go-pkg-cache
 	-mkdir -p $(BIN)
 	docker run $(DOCKER_BUILD_ARGS) $(CALICO_BUILD) sh -c '\
@@ -216,7 +220,7 @@ $(BIN)/calico $(BIN)/calico-ipam: $(SRCFILES) vendor
             go build -v -o $(BIN)/calico-ipam $(GO_BUILD_ARGS) ./cmd/calico-ipam'
 
 ## Build the Calico network plugin and ipam plugins for Windows
-$(BIN)/calico.exe $(BIN)/calico-ipam.exe: $(SRCFILES) vendor
+$(BIN)/calico.exe $(BIN)/calico-ipam.exe: $(SRC_FILES) vendor
 	-mkdir -p .go-pkg-cache
 	-mkdir -p $(BIN)
 	docker run -e GOOS=windows $(DOCKER_BUILD_ARGS) $(CALICO_BUILD) sh -c '\
@@ -297,11 +301,11 @@ endif
 	touch $@
 
 .PHONY: fetch-cni-bins
-fetch-cni-bins: $(BIN)/flannel $(BIN)/loopback $(BIN)/host-local $(BIN)/portmap $(BIN)/tuning
+fetch-cni-bins: $(BIN)/flannel $(BIN)/loopback $(BIN)/host-local $(BIN)/portmap $(BIN)/tuning $(BIN)/bandwidth
 
-$(BIN)/flannel $(BIN)/loopback $(BIN)/host-local $(BIN)/portmap $(BIN)/tuning:
+$(BIN)/flannel $(BIN)/loopback $(BIN)/host-local $(BIN)/portmap $(BIN)/tuning $(BIN)/bandwidth:
 	mkdir -p $(BIN)
-	$(CURL) -L --retry 5 https://github.com/containernetworking/plugins/releases/download/$(CNI_VERSION)/cni-plugins-$(ARCH)-$(CNI_VERSION).tgz | tar -xz -C $(BIN) ./flannel ./loopback ./host-local ./portmap ./tuning
+	$(CURL) -L --retry 5 https://github.com/containernetworking/plugins/releases/download/$(CNI_VERSION)/cni-plugins-linux-$(ARCH)-$(CNI_VERSION).tgz | tar -xz -C $(BIN) ./flannel ./loopback ./host-local ./portmap ./tuning ./bandwidth
 
 
 
@@ -310,7 +314,7 @@ $(BIN)/flannel $(BIN)/loopback $(BIN)/host-local $(BIN)/portmap $(BIN)/tuning:
 ###############################################################################
 
 ## Update dependency pins in glide.yaml
-update-pins: update-libcalico-pin 
+update-pins: update-libcalico-pin
 
 ## deprecated target alias
 update-libcalico: update-pins
@@ -327,7 +331,7 @@ guard-ssh-forwarding-bug:
 ###############################################################################
 ## libcalico
 
-## Set the default LIBCALICO source for this project 
+## Set the default LIBCALICO source for this project
 LIBCALICO_PROJECT_DEFAULT=tigera/libcalico-go-private.git
 LIBCALICO_GLIDE_LABEL=projectcalico/libcalico-go
 
@@ -338,8 +342,8 @@ LIBCALICO_REPO?=github.com/$(LIBCALICO_PROJECT_DEFAULT)
 LIBCALICO_VERSION?=$(shell git ls-remote git@github.com:$(LIBCALICO_PROJECT_DEFAULT) $(LIBCALICO_BRANCH) 2>/dev/null | cut -f 1)
 
 ## Guard to ensure LIBCALICO repo and branch are reachable
-guard-git-libcalico: 
-	@_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ; 
+guard-git-libcalico:
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ;
 	@_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "$(LIBCALICO_BRANCH)" "Ensure the branch exists, or set LIBCALICO_BRANCH variable";
 	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
 	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "$(LIBCALICO_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
@@ -376,7 +380,7 @@ static-checks: vendor
 .PHONY: fix
 ## Fix static checks
 fix:
-	goimports -w $(SRCFILES) $(TEST_SRCFILES)
+	goimports -w $(SRC_FILES) $(TEST_SRC_FILES)
 
 # Always install the git hooks to prevent publishing closed source code to a non-private repo.
 hooks_installed:=$(shell ./install-git-hooks)

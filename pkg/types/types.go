@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -63,10 +63,13 @@ type NetworkInfo struct {
 
 // NetConf stores the common network config for Calico CNI plugin
 type NetConf struct {
-	CNIVersion string `json:"cniVersion,omitempty"`
-	Name       string `json:"name"`
-	Type       string `json:"type"`
-	IPAM       struct {
+	CNIVersion     string `json:"cniVersion,omitempty"`
+	Name           string `json:"name"`
+	Type           string `json:"type"`
+	Mode           string `json:"mode"`
+	VXLANMacPrefix string `json:"vxlan_mac_prefix"`
+	VXLANVNI       uint64 `json:"vxlan_vni"`
+	IPAM           struct {
 		Name       string
 		Type       string   `json:"type"`
 		Subnet     string   `json:"subnet"`
@@ -82,6 +85,7 @@ type NetConf struct {
 	NodenameFileOptional bool              `json:"nodename_file_optional"`
 	DatastoreType        string            `json:"datastore_type"`
 	EtcdEndpoints        string            `json:"etcd_endpoints"`
+	EtcdDiscoverySrv     string            `json:"etcd_discovery_srv"`
 	LogLevel             string            `json:"log_level"`
 	Policy               Policy            `json:"policy"`
 	Kubernetes           Kubernetes        `json:"kubernetes"`

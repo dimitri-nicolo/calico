@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 
 package testutils
 
@@ -63,7 +63,15 @@ func WipeK8sPods(netconf string) {
 }
 
 func CreateContainerUsingDocker() (string, error) {
-	cmd := exec.Command("powershell.exe", "docker run --net none -d -i microsoft/powershell:nanoserver pwsh")
+	var image string
+	if os.Getenv("WINDOWS_OS") == "Windows1903container" {
+		image = "mcr.microsoft.com/windows/servercore/insider:10.0.18362.113"
+	} else if os.Getenv("WINDOWS_OS") == "Windows1809container" {
+		image = "mcr.microsoft.com/windows/servercore:1809"
+	}
+	command := fmt.Sprintf("docker run --net none -d -i %s powershell", image)
+	cmd := exec.Command("powershell.exe", command)
+
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		log.Fatal(err)

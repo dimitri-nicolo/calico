@@ -12,10 +12,13 @@ import (
 	"time"
 
 	"github.com/Microsoft/hcsshim"
+	"github.com/Microsoft/hcsshim/hcn"
+	"github.com/buger/jsonparser"
 	"github.com/containernetworking/cni/pkg/skel"
 	"github.com/containernetworking/cni/pkg/types/current"
 	"github.com/containernetworking/plugins/pkg/hns"
 	"github.com/juju/clock"
+	"github.com/juju/errors"
 	"github.com/juju/mutex"
 	"github.com/projectcalico/cni-plugin/internal/pkg/utils/winpol"
 	"github.com/projectcalico/cni-plugin/pkg/types"
@@ -23,6 +26,8 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/rakelkar/gonetsh/netsh"
 	"github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/util/wait"
+	utilexec "k8s.io/utils/exec"
 )
 
 var (
@@ -31,6 +36,10 @@ var (
 	// IPv6AllNet represents the IPv6 all-addresses CIDR ::/0.
 	IPv6AllNet    *net.IPNet
 	DefaultRoutes []*net.IPNet
+)
+
+const (
+	DefaultVNI = 4096
 )
 
 func init() {
@@ -86,7 +95,6 @@ func DoNetworking(
 	routes []*net.IPNet,
 ) (hostVethName, contVethMAC string, err error) {
 	// Not used on Windows.
-	_ = conf
 	_ = desiredVethName
 	if len(routes) > 0 {
 		logrus.WithField("routes", routes).Debug("Ignoring in-container routes; not supported on Windows.")
@@ -136,7 +144,13 @@ func DoNetworking(
 	} else {
 		networkName = CreateNetworkName(n.Name, subNet)
 	}
-	hnsNetwork, err := EnsureNetworkExists(networkName, subNet, result, logger)
+
+	var hnsNetwork *hcsshim.HNSNetwork
+	if conf.Mode == "vxlan" {
+		hnsNetwork, err = ensureVxlanNetworkExists(networkName, subNet, conf, result, logger)
+	} else {
+		hnsNetwork, err = EnsureNetworkExists(networkName, subNet, result, logger)
+	}
 	if err != nil {
 		logger.Errorf("Unable to create hns network %s", networkName)
 		return "", "", err
@@ -144,7 +158,12 @@ func DoNetworking(
 
 	// Create host hns endpoint
 	epName := networkName + "_ep"
-	hnsEndpoint, err := CreateAndAttachHostEP(epName, hnsNetwork, subNet, result, logger)
+	var hnsEndpoint *hcsshim.HNSEndpoint
+	if conf.Mode == "vxlan" {
+		hnsEndpoint, err = CreateAndAttachVxlanHostEP(epName, hnsNetwork, subNet, conf, result, logger)
+	} else {
+		hnsEndpoint, err = CreateAndAttachHostEP(epName, hnsNetwork, subNet, result, logger)
+	}
 	if err != nil {
 		logger.Errorf("Unable to create host hns endpoint %s", epName)
 		return "", "", err
@@ -153,10 +172,12 @@ func DoNetworking(
 	// Check for management ip getting assigned to the network, interface with the management ip
 	// and then enable forwarding on management interface as well as endpoint.
 	// Update the hnsNetwork variable with management ip
-	hnsNetwork, err = chkMgmtIPandEnableForwarding(networkName, hnsEndpoint, logger)
-	if err != nil {
-		logger.Errorf("Failed to enable forwarding : %v", err)
-		return "", "", err
+	if conf.Mode != "vxlan" {
+		hnsNetwork, err = chkMgmtIPandEnableForwarding(networkName, hnsEndpoint, logger)
+		if err != nil {
+			logger.Errorf("Failed to enable forwarding : %v", err)
+			return "", "", err
+		}
 	}
 
 	// Create endpoint for container
@@ -168,6 +189,112 @@ func DoNetworking(
 
 	contVethMAC = hnsEndpointCont.MacAddress
 	return hostVethName, contVethMAC, err
+}
+
+func EnsureVXLANTunnelAddr(ctx context.Context, calicoClient calicoclient.Interface, nodeName string, ipNet *net.IPNet, conf types.NetConf) error {
+	logrus.Debug("Checking the node's VXLAN tunnel address")
+	var updateRequired bool
+	node, err := calicoClient.Nodes().Get(ctx, nodeName, options.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	expectedIP := getNthIP(ipNet, 1).String()
+	if node.Spec.IPv4VXLANTunnelAddr != expectedIP {
+		logrus.WithField("ip", expectedIP).Debug("VXLAN tunnel IP to be updated")
+		updateRequired = true
+	}
+
+	var networkName string
+	if conf.WindowsUseSingleNetwork {
+		networkName = conf.Name
+	} else {
+		networkName = CreateNetworkName(conf.Name, ipNet)
+	}
+
+	mac, err := GetDRMACAddr(networkName, ipNet)
+	if err != nil {
+		return err
+	}
+	expectedMAC := mac.String()
+	if node.Spec.VXLANTunnelMACAddr != expectedMAC {
+		logrus.WithField("mac", expectedMAC).Debug("VXLAN tunnel MAC to be updated")
+		updateRequired = true
+	}
+
+	if updateRequired == false {
+		return nil
+	}
+
+	node.Spec.IPv4VXLANTunnelAddr = expectedIP
+	node.Spec.VXLANTunnelMACAddr = expectedMAC
+	_, err = calicoClient.Nodes().Update(ctx, node, options.SetOptions{})
+	return err
+}
+
+func GetDRMACAddr(networkName string, subNet *net.IPNet) (net.HardwareAddr, error) {
+	hnsNetwork, err := hcsshim.GetHNSNetworkByName(networkName)
+	if err != nil {
+		logrus.Infof("hns network %s not found", networkName)
+		return nil, err
+	}
+
+	hcnNetwork, err := hcn.GetNetworkByName(networkName)
+	if err != nil {
+		logrus.Infof("hcn network %s not found", networkName)
+		return nil, err
+	}
+
+	err = hcn.RemoteSubnetSupported()
+	if err != nil {
+		logrus.Infof("remote subnet not supported")
+		return nil, err
+	}
+
+	var remoteDRMAC string
+	var providerAddress string
+	logrus.Infof("Checking HNS network for DR MAC : [%+v]", hnsNetwork)
+	for _, policy := range hcnNetwork.Policies {
+		logrus.Infof("inside for loop. policy = [%+v]", policy)
+		if policy.Type == hcn.DrMacAddress {
+			logrus.Infof("policy type is drmacaddress")
+			policySettings := hcn.DrMacAddressNetworkPolicySetting{}
+			err = json.Unmarshal(policy.Settings, &policySettings)
+			if err != nil {
+				return nil, fmt.Errorf("Failed to unmarshal settings")
+			}
+			remoteDRMAC = policySettings.Address
+			logrus.Infof("remote dr mac = %v", remoteDRMAC)
+		}
+		if policy.Type == hcn.ProviderAddress {
+			logrus.Infof("policy type is provideraddress")
+			policySettings := hcn.ProviderAddressEndpointPolicySetting{}
+			err = json.Unmarshal(policy.Settings, &policySettings)
+			if err != nil {
+				return nil, fmt.Errorf("Failed to unmarshal settings")
+			}
+			providerAddress = policySettings.ProviderAddress
+			logrus.Infof("providerAddress = %v", providerAddress)
+		}
+	}
+	if providerAddress != hnsNetwork.ManagementIP {
+		logrus.Infof("Cannot use DR MAC %v since PA %v does not match %v", remoteDRMAC, providerAddress, hnsNetwork.ManagementIP)
+		remoteDRMAC = ""
+	}
+
+	if len(providerAddress) == 0 {
+		return nil, fmt.Errorf("Cannot find network with Management IP %v", hnsNetwork.ManagementIP)
+	}
+	if len(remoteDRMAC) == 0 {
+		return nil, fmt.Errorf("Could not find remote DR MAC for Management IP %v", hnsNetwork.ManagementIP)
+	}
+	mac, err := net.ParseMAC(string(remoteDRMAC))
+	if err != nil {
+		return nil, fmt.Errorf("Cannot parse DR MAC %v: %+v", remoteDRMAC, err)
+	}
+
+	logrus.Infof("mac address = %v", mac)
+	return mac, nil
 }
 
 func lookupIPAMPools(
@@ -198,6 +325,127 @@ func lookupIPAMPools(
 		}
 	}
 	return
+}
+
+func ensureVxlanNetworkExists(networkName string, subNet *net.IPNet, conf types.NetConf, result *current.Result, logger *logrus.Entry) (*hcsshim.HNSNetwork, error) {
+	var err error
+	createNetwork := true
+	expectedAddressPrefix := subNet.String()
+	expectedGW := getNthIP(subNet, 1)
+	var expectedVNI uint64
+
+	expectedNetwork := &hcsshim.HNSNetwork{
+		Name:    networkName,
+		Type:    "Overlay",
+		Subnets: make([]hcsshim.Subnet, 0, 1),
+	}
+
+	if conf.VXLANVNI == 0 {
+		expectedVNI = DefaultVNI
+	} else if conf.VXLANVNI < DefaultVNI {
+		return nil, fmt.Errorf("Windows does not support VXLANVNI < 4096")
+	} else {
+		expectedVNI = conf.VXLANVNI
+	}
+
+	// Checking if HNS network exists
+	existingNetwork, _ := hcsshim.GetHNSNetworkByName(networkName)
+	if existingNetwork != nil {
+		if existingNetwork.Type == expectedNetwork.Type {
+			for _, subnet := range existingNetwork.Subnets {
+				if subnet.AddressPrefix == expectedAddressPrefix && subnet.GatewayAddress == expectedGW.String() {
+					createNetwork = false
+					logger.Infof("Found existing HNS network [%+v]", existingNetwork)
+					break
+				}
+			}
+		}
+	}
+
+	if createNetwork {
+		// Delete stale network
+		if existingNetwork != nil {
+			if _, err := existingNetwork.Delete(); err != nil {
+				logger.Errorf("Unable to delete existing network [%v], error: %v", existingNetwork.Name, err)
+				return nil, err
+			}
+			logger.Infof("Deleted stale HNS network [%v]")
+		}
+
+		// Add a VxLan subnet
+		expectedNetwork.Subnets = append(expectedNetwork.Subnets, hcsshim.Subnet{
+			AddressPrefix:  expectedAddressPrefix,
+			GatewayAddress: expectedGW.String(),
+			Policies: []json.RawMessage{
+				[]byte(fmt.Sprintf(`{"Type":"VSID","VSID":%d}`, expectedVNI)),
+			},
+		})
+
+		// Config request params
+		jsonRequest, err := json.Marshal(expectedNetwork)
+		if err != nil {
+			return nil, errors.Annotatef(err, "failed to marshal %+v", expectedNetwork)
+		}
+
+		logger.Infof("Attempting to create HNSNetwork %s", string(jsonRequest))
+		newNetwork, err := hcsshim.HNSNetworkRequest("POST", "", string(jsonRequest))
+		if err != nil {
+			return nil, errors.Annotatef(err, "failed to create HNSNetwork %s", networkName)
+		}
+
+		var waitErr, lastErr error
+		// Wait for the network to populate Management IP
+		logger.Infof("Waiting to get ManagementIP from HNSNetwork %s", networkName)
+		waitErr = wait.Poll(500*time.Millisecond, 5*time.Second, func() (done bool, err error) {
+			newNetwork, lastErr = hcsshim.HNSNetworkRequest("GET", newNetwork.Id, "")
+			return newNetwork != nil && len(newNetwork.ManagementIP) != 0, nil
+		})
+		if waitErr == wait.ErrWaitTimeout {
+			return nil, errors.Annotatef(lastErr, "timeout, failed to get management IP from HNSNetwork %s", networkName)
+		}
+
+		// Wait for the interface with the management IP
+		netshHelper := netsh.New(utilexec.New())
+		logger.Infof("Waiting to get net interface for HNSNetwork %s (%s)", networkName, newNetwork.ManagementIP)
+		waitErr = wait.Poll(500*time.Millisecond, 5*time.Second, func() (done bool, err error) {
+			_, lastErr = netshHelper.GetInterfaceByIP(newNetwork.ManagementIP)
+			return lastErr == nil, nil
+		})
+		if waitErr == wait.ErrWaitTimeout {
+			return nil, errors.Annotatef(lastErr, "timeout, failed to get net interface for HNSNetwork %s (%s)", networkName, newNetwork.ManagementIP)
+		}
+
+		logger.Infof("Created HNSNetwork %s", networkName)
+		existingNetwork = newNetwork
+	}
+
+	existingNetworkV2, err := hcn.GetNetworkByID(existingNetwork.Id)
+	if err != nil {
+		return nil, errors.Annotatef(err, "Could not find vxlan0 in V2")
+	}
+
+	addHostRoute := true
+	for _, policy := range existingNetworkV2.Policies {
+		if policy.Type == hcn.HostRoute {
+			addHostRoute = false
+		}
+	}
+	if addHostRoute {
+		hostRoutePolicy := hcn.NetworkPolicy{
+			Type:     hcn.HostRoute,
+			Settings: []byte("{}"),
+		}
+
+		networkRequest := hcn.PolicyNetworkRequest{
+			Policies: []hcn.NetworkPolicy{hostRoutePolicy},
+		}
+		err := existingNetworkV2.AddPolicy(networkRequest)
+		if err != nil {
+			logger.Warnf("Error adding policy to network : %v", err)
+		}
+	}
+
+	return existingNetwork, nil
 }
 
 func EnsureNetworkExists(networkName string, subNet *net.IPNet, result *current.Result, logger *logrus.Entry) (*hcsshim.HNSNetwork, error) {
@@ -256,6 +504,55 @@ func EnsureNetworkExists(networkName string, subNet *net.IPNet, result *current.
 		logger.Infof("Created HNS network [%v] as %+v", networkName, hnsNetwork)
 	}
 	return hnsNetwork, err
+}
+
+func CreateAndAttachVxlanHostEP(epName string, hnsNetwork *hcsshim.HNSNetwork, subNet *net.IPNet, conf types.NetConf, result *current.Result, logger *logrus.Entry) (*hcsshim.HNSEndpoint, error) {
+	var err error
+	endpointAddress := getNthIP(subNet, 2)
+
+	// 1. Check if the HNSEndpoint exists and has the expected settings
+	existingEndpoint, err := hcsshim.GetHNSEndpointByName(epName)
+	if err == nil && existingEndpoint.VirtualNetwork == hnsNetwork.Id {
+		// Check policies if there is PA type
+		targetType := "PA"
+		for _, policy := range existingEndpoint.Policies {
+			policyType, _ := jsonparser.GetUnsafeString(policy, "Type")
+			if policyType == targetType {
+				actualPaIP, _ := jsonparser.GetUnsafeString(policy, targetType)
+				if actualPaIP == hnsNetwork.ManagementIP {
+					logger.Infof("Found existing remote HNSEndpoint %s", epName)
+					return existingEndpoint, nil
+				}
+			}
+		}
+	}
+
+	// 2. Create a new HNSNetwork
+	if existingEndpoint != nil {
+		if _, err := existingEndpoint.Delete(); err != nil {
+			return nil, errors.Annotatef(err, "failed to delete existing remote HNSEndpoint %s", epName)
+		}
+		logger.Infof("Deleted stale HNSEndpoint %s", epName)
+	}
+
+	macAddr := GetMacAddr(hnsNetwork.ManagementIP)
+
+	newEndpoint := &hcsshim.HNSEndpoint{
+		Name:             epName,
+		IPAddress:        endpointAddress,
+		MacAddress:       macAddr,
+		VirtualNetwork:   hnsNetwork.Id,
+		IsRemoteEndpoint: true,
+		Policies: []json.RawMessage{
+			[]byte(fmt.Sprintf(`{"Type":"PA","PA":"%s"}`, hnsNetwork.ManagementIP)),
+		},
+	}
+	if _, err := newEndpoint.Create(); err != nil {
+		return nil, errors.Annotatef(err, "failed to create remote HNSEndpoint %s", epName)
+	}
+	logger.Infof("Created HNSEndpoint %s", epName)
+
+	return newEndpoint, nil
 }
 
 func CreateAndAttachHostEP(epName string, hnsNetwork *hcsshim.HNSNetwork, subNet *net.IPNet, result *current.Result, logger *logrus.Entry) (*hcsshim.HNSEndpoint, error) {
@@ -387,7 +684,12 @@ func createAndAttachContainerEP(args *skel.CmdArgs,
 	n *hns.NetConf,
 	logger *logrus.Entry) (*hcsshim.HNSEndpoint, error) {
 
-	gatewayAddress := getNthIP(affineBlockSubnet, 2).String()
+	var gatewayAddress string
+	if ourNetconf.Mode == "vxlan" {
+		gatewayAddress = getNthIP(affineBlockSubnet, 1).String()
+	} else {
+		gatewayAddress = getNthIP(affineBlockSubnet, 2).String()
+	}
 
 	natExclusions := allIPAMPools
 
@@ -417,6 +719,25 @@ func createAndAttachContainerEP(args *skel.CmdArgs,
 
 	endpointName := hns.ConstructEndpointName(args.ContainerID, args.Netns, n.Name)
 	epIP := result.IPs[0].Address.IP
+	epIPBytes := epIP.To4()
+	macAddr := ""
+
+	if ourNetconf.Mode == "vxlan" {
+		if len(ourNetconf.VXLANMacPrefix) != 0 {
+			if len(ourNetconf.VXLANMacPrefix) != 5 || ourNetconf.VXLANMacPrefix[2] != '-' {
+				return nil, fmt.Errorf("endpointMacPrefix [%v] is invalid, value must be of the format xx-xx", ourNetconf.VXLANMacPrefix)
+			}
+		} else {
+			ourNetconf.VXLANMacPrefix = "0E-2A"
+		}
+		// conjure a MAC based on the IP for Overlay
+		macAddr = fmt.Sprintf("%v-%02x-%02x-%02x-%02x", ourNetconf.VXLANMacPrefix, epIPBytes[0], epIPBytes[1], epIPBytes[2], epIPBytes[3])
+
+		pols = append(pols, []json.RawMessage{
+			[]byte(fmt.Sprintf(`{"Type":"PA","PA":"%s"}`, hnsNetwork.ManagementIP)),
+		}...)
+
+	}
 
 	attempts := 3
 	for {
@@ -429,6 +750,7 @@ func createAndAttachContainerEP(args *skel.CmdArgs,
 				DNSSuffix:      strings.Join(result.DNS.Search, ","),
 				GatewayAddress: gatewayAddress,
 				IPAddress:      epIP,
+				MacAddress:     macAddr,
 				Policies:       pols,
 			}
 			return hnsEP, nil
@@ -604,4 +926,26 @@ func NetworkApplicationContainer(args *skel.CmdArgs) error {
 
 func updateHostLocalIPAMDataForOS(subnet string, ipamData map[string]interface{}) error {
 	return UpdateHostLocalIPAMDataForWindows(subnet, ipamData)
+}
+
+// GetMacAddr gets the MAC hardware
+// address of the host machine
+func GetMacAddr(mgmtIp string) (addr string) {
+	interfaces, err := net.Interfaces()
+	if err == nil {
+	outerLoop:
+		for _, i := range interfaces {
+			addrs, err := i.Addrs()
+			if err == nil {
+				for _, j := range addrs {
+					ip := strings.Split(j.String(), "/")
+					if strings.Compare(ip[0], mgmtIp) == 0 {
+						addr = i.HardwareAddr.String()
+						break outerLoop
+					}
+				}
+			}
+		}
+	}
+	return
 }

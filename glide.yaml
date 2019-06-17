@@ -27,7 +27,7 @@ import:
   - gexec
 - package: github.com/projectcalico/libcalico-go
   repo:    git@github.com:tigera/libcalico-go-private
-  version: 63a9437e28fd073bd0e731d96e5c831bb21ffd11
+  version: e9a74b29328b7376cb88fc539b7c7e000e47d278
   subpackages:
   - lib/apiconfig
   - lib/apis/v3
@@ -65,7 +65,7 @@ import:
 - package: github.com/Microsoft/go-winio
   version: 97e4973ce50b2ff5f09635a57e2b88a037aae829
 - package: github.com/Microsoft/hcsshim
-  version: 548046cb2f0495eb2acd7682a0035d465bf05ea9
+  version: 5f3c4ba7af30b0c3a6aee5b98982b8b2a9886aa1
   subpackages:
   - internal/guid
   - internal/hcs
