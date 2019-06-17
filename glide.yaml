@@ -26,7 +26,7 @@ import:
   - lib/logutils
   - lib/options
 - package: github.com/tigera/licensing
-  version: 02d1f482fe4d3a2dbc4a3bce530471eba75d5029
+  version: 4ef30a4e6de92153a6589af226e77c567f530541
   repo: git@github.com:tigera/licensing
   vcs: git
   subpackages:
@@ -38,7 +38,7 @@ import:
   - networking/v1
 - package: k8s.io/apimachinery
 - package: github.com/projectcalico/felix
-  version: e54bb027f0d6d8076f894db5879d2648f2416ddd
+  version: c0c1fe1d9306d1f1677e5f2adf6fa0c203ccd688
   repo: git@github.com:tigera/felix-private.git
   vcs: git
 - package: k8s.io/apiserver
