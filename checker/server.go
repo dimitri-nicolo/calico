@@ -21,7 +21,7 @@ import (
 	"github.com/projectcalico/app-policy/statscache"
 
 	"github.com/envoyproxy/data-plane-api/envoy/api/v2/core"
-	authz "github.com/envoyproxy/data-plane-api/envoy/service/auth/v2alpha"
+	authz "github.com/envoyproxy/data-plane-api/envoy/service/auth/v2"
 	"github.com/gogo/googleapis/google/rpc"
 	log "github.com/sirupsen/logrus"
 )

@@ -23,8 +23,8 @@ import (
 
 	"fmt"
 
-	"github.com/envoyproxy/data-plane-api/envoy/api/v2/core"
-	authz "github.com/envoyproxy/data-plane-api/envoy/service/auth/v2alpha"
+	core "github.com/envoyproxy/data-plane-api/envoy/api/v2/core"
+	authz "github.com/envoyproxy/data-plane-api/envoy/service/auth/v2"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -165,7 +165,7 @@ func matchLabels(selectorStr string, labels map[string]string) bool {
 		log.Warnf("Could not parse label selector %v, %v", selectorStr, err)
 		return false
 	}
-	log.Debugf("Parsed selector: %v", sel)
+	log.Debugf("Parsed selector.")
 	return sel.Evaluate(labels)
 }
 
