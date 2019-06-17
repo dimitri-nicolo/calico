@@ -17,7 +17,7 @@ function Test-CalicoConfiguration()
     {
         throw "Config not loaded?."
     }
-    if ($env:CALICO_NETWORKING_BACKEND -EQ "windows-bgp") {
+    if ($env:CALICO_NETWORKING_BACKEND -EQ "windows-bgp" -OR $env:CALICO_NETWORKING_BACKEND -EQ "vxlan") {
         if (fileIsMissing($env:CNI_BIN_DIR))
         {
             throw "CNI binary directory $env:CNI_BIN_DIR doesn't exist.  Please create it and ensure kubelet " +  `
@@ -28,6 +28,9 @@ function Test-CalicoConfiguration()
             throw "CNI config directory $env:CNI_CONF_DIR doesn't exist.  Please create it and ensure kubelet " +  `
                     "is configured with matching --cni-conf-dir."
         }
+    }
+    if ($env:CALICO_NETWORKING_BACKEND -EQ "vxlan" -AND $env:CNI_IPAM_TYPE -NE "calico-ipam") {
+        throw "Calico VXLAN requires IPAM type calico-ipam, not $env:CNI_IPAM_TYPE."
     }
     if ($env:CALICO_DATASTORE_TYPE -EQ "kubernetes")
     {
@@ -72,12 +75,15 @@ function Install-CNIPlugin()
 
     $cniConfFile = $env:CNI_CONF_DIR + "\" + $env:CNI_CONF_FILENAME
     Write-Host "Writing CNI configuration to $cniConfFile."
-    $ipamType = "calico-ipam"
     $nodeNameFile = "$baseDir\nodename".replace('\', '\\')
     $etcdKeyFile = "$env:ETCD_KEY_FILE".replace('\', '\\')
     $etcdCertFile = "$env:ETCD_CERT_FILE".replace('\', '\\')
     $etcdCACertFile = "$env:ETCD_CA_CERT_FILE".replace('\', '\\')
     $kubeconfigFile = "$env:KUBECONFIG".replace('\', '\\')
+    $mode = ""
+    if ($env:CALICO_NETWORKING_BACKEND -EQ "vxlan") {
+        $mode = "vxlan"
+    }
 
     (Get-Content "$baseDir\cni.conf.template") | ForEach-Object {
         $_.replace('__NODENAME_FILE__', $nodeNameFile).
@@ -88,7 +94,10 @@ function Install-CNIPlugin()
                 replace('__ETCD_KEY_FILE__', $etcdKeyFile).
                 replace('__ETCD_CERT_FILE__', $etcdCertFile).
                 replace('__ETCD_CA_CERT_FILE__', $etcdCACertFile).
-                replace('__IPAM_TYPE__', $ipamType)
+                replace('__IPAM_TYPE__', $env:CNI_IPAM_TYPE).
+                replace('__MODE__', $mode).
+                replace('__VNI__', $env:VXLAN_VNI).
+                replace('__MAC_PREFIX__', $env:VXLAN_MAC_PREFIX)
     } | Set-Content "$cniConfFile"
     Write-Host "Wrote CNI configuration."
 }
@@ -106,6 +115,9 @@ function Install-NodeService()
     Write-Host "Installing node startup service..."
 
     ensureRegistryKey
+
+    # Ensure our service file can run.
+    Unblock-File $baseDir\node\node-service.ps1
 
     & $NSSMPath install TigeraNode $powerShellPath
     & $NSSMPath set TigeraNode AppParameters $baseDir\node\node-service.ps1
@@ -150,6 +162,9 @@ function Install-FelixService()
 {
     Write-Host "Installing Felix service..."
 
+    # Ensure our service file can run.
+    Unblock-File $baseDir\felix\felix-service.ps1
+
     # We run Felix via a wrapper script to make it easier to update env vars.
     & $NSSMPath install TigeraFelix $powerShellPath
     & $NSSMPath set TigeraFelix AppParameters $baseDir\felix\felix-service.ps1
@@ -193,6 +208,9 @@ function Remove-FelixService() {
 function Install-ConfdService()
 {
     Write-Host "Installing confd service..."
+
+    # Ensure our service file can run.
+    Unblock-File $baseDir\confd\confd-service.ps1
 
     # We run confd via a wrapper script to make it easier to update env vars.
     & $NSSMPath install TigeraConfd $powerShellPath

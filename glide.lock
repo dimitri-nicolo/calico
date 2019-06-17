@@ -133,6 +133,33 @@ imports:
   - currency
 - name: github.com/go-playground/universal-translator
   version: 71201497bace774495daed26a3874fd339e0b538
+- name: github.com/gobuffalo/envy
+  version: 043cb4b8af871b49563291e32c66bb84378a60ac
+- name: github.com/gobuffalo/genny
+  version: 3ca520ef0d9ea4981534aae98bf9a003d9b18678
+- name: github.com/gobuffalo/gogen
+  version: 8f38393713f59beb43221f903c07f58f0377a063
+  subpackages:
+  - goimports
+  - gomods
+- name: github.com/gobuffalo/logger
+  version: 86e12af44bc273e0063fad5b6ad588890b8cfe6b
+- name: github.com/gobuffalo/mapi
+  version: 0bb5e840be332d4280e40f2e6c50777c615bbac5
+- name: github.com/gobuffalo/packd
+  version: a385830c7fc0495b810318788a043c7655da337d
+- name: github.com/gobuffalo/packr
+  version: 68a5fdc58d980600c4622a82472ebe415048f141
+  subpackages:
+  - v2
+  - v2/file
+  - v2/file/resolver
+  - v2/file/resolver/encoding/hex
+  - v2/jam/parser
+  - v2/packr2
+  - v2/plog
+- name: github.com/gobuffalo/syncx
+  version: 33c29581e754bd354236e977dfe426e55331c45d
 - name: github.com/gogo/protobuf
   version: c0656edd0d9eab7c66d1eb0c568f9039345796f7
   subpackages:
@@ -198,6 +225,8 @@ imports:
   version: 7c29201646fa3de8506f701213473dd407f19646
 - name: github.com/jmespath/go-jmespath
   version: 3433f3ea46d9f8019119e7dd41274e112a2359a9
+- name: github.com/joho/godotenv
+  version: 5c0e6c6ab1a0a9ef0a8822cba3a05d62f7dad941
 - name: github.com/json-iterator/go
   version: f2b4162afba35581b6d4a50d3b8f34e33c144682
 - name: github.com/juju/clock
@@ -208,6 +237,8 @@ imports:
   version: d21b13acf4bfd8a8b0482a3a78e44d98880b40d3
 - name: github.com/kardianos/osext
   version: ae77be60afb1dcacde03767a8c37337fad28ac14
+- name: github.com/karrick/godirwalk
+  version: 4e17292779dcc7ed08e10c03bfdd022f7c28b3c3
 - name: github.com/kelseyhightower/confd
   version: e286ae58e2d459de49ff88f7c776ec48cd5a2317
   repo: git@github.com:tigera/confd-private.git
@@ -242,19 +273,25 @@ imports:
   subpackages:
   - pbutil
 - name: github.com/Microsoft/go-winio
-  version: 97e4973ce50b2ff5f09635a57e2b88a037aae829
+  version: 84b4ab48a50763fe7b3abcef38e5205c12027fac
 - name: github.com/Microsoft/hcsshim
-  version: 548046cb2f0495eb2acd7682a0035d465bf05ea9
+  version: 063ae4a83d78bdb93f76b18cc894c6342fa85c15
   subpackages:
+  - hcn
+  - internal/cni
   - internal/guid
   - internal/hcs
   - internal/hcserror
   - internal/hns
   - internal/interop
+  - internal/logfields
   - internal/longpath
   - internal/mergemaps
+  - internal/regstate
+  - internal/runhcs
   - internal/safefile
   - internal/schema1
+  - internal/schema2
   - internal/timeout
   - internal/wclayer
 - name: github.com/Microsoft/SDN
@@ -306,6 +343,8 @@ imports:
   version: ca53cad383cad2479bbba7f7a1a05797ec1386e4
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
+- name: github.com/pkg/errors
+  version: 27936f6d90f9c8e1145f11ed52ffffbfdb9e0af7
 - name: github.com/projectcalico/cni-plugin
   version: b39393902f1a0b41f2b28b5edf716f6db1c6f86a
   repo: git@github.com:tigera/cni-plugin-private.git
@@ -322,6 +361,8 @@ imports:
   version: c00322e56455b84a9c099feee8004b7cc02dc9ef
   repo: git@github.com:tigera/felix-private.git
   subpackages:
+  - bpf
+  - bpf/packrd
   - buildinfo
   - calc
   - collector
@@ -333,6 +374,7 @@ imports:
   - dataplane/external
   - dataplane/linux
   - dataplane/windows
+  - dataplane/windows/hcn
   - dataplane/windows/hns
   - dataplane/windows/ipsets
   - dataplane/windows/policysets
@@ -357,6 +399,7 @@ imports:
   - stringutils
   - throttle
   - usagerep
+  - versionparse
 - name: github.com/projectcalico/go-json
   version: 6219dc7339ba20ee4c57df0a8baac62317d19cb1
   subpackages:
@@ -375,6 +418,7 @@ imports:
   - lib/apis/v3
   - lib/backend
   - lib/backend/api
+  - lib/backend/encap
   - lib/backend/etcdv3
   - lib/backend/k8s
   - lib/backend/k8s/conversion
@@ -391,7 +435,6 @@ imports:
   - lib/hash
   - lib/health
   - lib/ipam
-  - lib/ipip
   - lib/logutils
   - lib/names
   - lib/namespace
@@ -421,7 +464,7 @@ imports:
   subpackages:
   - binder
 - name: github.com/projectcalico/typha
-  version: b48d19b5fcefcf22a487b7ec8d2447021eca0dc2
+  version: 97b5f0a050c8d0b79249667ea05517e32b10ad61
   repo: git@github.com:tigera/typha-private.git
   subpackages:
   - pkg/syncclient
@@ -457,12 +500,19 @@ imports:
   - netsh
 - name: github.com/robfig/cron
   version: b41be1df696709bb6395fe435af20370037c0b4c
+- name: github.com/rogpeppe/go-internal
+  version: 438578804ca6f31be148c27683afc419ce47c06e
+  subpackages:
+  - modfile
+  - module
+  - semver
 - name: github.com/safchain/ethtool
   version: 7ff1ba29eca231991280817541cb3903f6be15d1
 - name: github.com/satori/go.uuid
   version: f58768cc1a7a7e77a3bd49e98cdd21419399b6a3
 - name: github.com/sirupsen/logrus
-  version: d682213848ed68c0a260ca37d6dd5ace8423f5ba
+  version: 1f80e3709dfafa8ca8727ba7eb392a11827ac8e2
+  repo: https://github.com/projectcalico/logrus
 - name: github.com/spf13/pflag
   version: 583c0c0531f06d5278b7d917446061adc344b5cd
 - name: github.com/tigera/licensing
@@ -525,6 +575,7 @@ imports:
   subpackages:
   - unix
   - windows
+  - windows/registry
 - name: golang.org/x/text
   version: b19bf474d317b857955b12035d2c5acb57ce8b01
   subpackages:
@@ -554,6 +605,19 @@ imports:
   version: f51c12702a4d776e4c1fa9b0fabab841babae631
   subpackages:
   - rate
+- name: golang.org/x/tools
+  version: 5a8dccf5b48ae388eebac31f4077f14adda4dbc6
+  subpackages:
+  - go/ast/astutil
+  - go/gcexportdata
+  - go/internal/gcimporter
+  - go/internal/packagesdriver
+  - go/packages
+  - imports
+  - internal/fastwalk
+  - internal/gopathwalk
+  - internal/module
+  - internal/semver
 - name: google.golang.org/appengine
   version: 4a4468ece617fc8205e99368fa2200e9d1fad421
   subpackages:

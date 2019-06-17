@@ -46,8 +46,8 @@ LOCAL_BUILD_MOUNTS ?=
 ifeq ($(LOCAL_BUILD),true)
 LOCAL_BUILD_MOUNTS = -v $(CURDIR)/../libcalico-go:/go/src/$(PACKAGE_NAME)/vendor/github.com/projectcalico/libcalico-go:ro \
 	-v $(CURDIR)/.empty:/go/src/$(PACKAGE_NAME)/vendor/github.com/projectcalico/libcalico-go/vendor:ro \
-	-v $(CURDIR)/../confd:/go/src/$(PACKAGE_NAME)/vendor/github.com/projectcalico/confd:ro \
-	-v $(CURDIR)/.empty:/go/src/$(PACKAGE_NAME)/vendor/github.com/projectcalico/confd/vendor:ro \
+	-v $(CURDIR)/../confd:/go/src/$(PACKAGE_NAME)/vendor/github.com/kelseyhightower/confd:ro \
+	-v $(CURDIR)/.empty:/go/src/$(PACKAGE_NAME)/vendor/github.com/kelseyhightower/confd/vendor:ro \
 	-v $(CURDIR)/../felix:/go/src/$(PACKAGE_NAME)/vendor/github.com/projectcalico/felix:ro \
 	-v $(CURDIR)/.empty:/go/src/$(PACKAGE_NAME)/vendor/github.com/projectcalico/felix/vendor:ro
 endif
@@ -102,8 +102,8 @@ PUSH_NONMANIFEST_IMAGES=$(filter-out $(PUSH_MANIFEST_IMAGES),$(PUSH_IMAGES))
 GO_BUILD_VER?=v0.20
 CALICO_BUILD?=calico/go-build:$(GO_BUILD_VER)
 
-#This is a version with known container with compatible versions of sed/grep etc. 
-TOOLING_BUILD?=calico/go-build:v0.20	
+#This is a version with known container with compatible versions of sed/grep etc.
+TOOLING_BUILD?=calico/go-build:v0.20
 
 
 # Allow libcalico-go and the ssh auth sock to be mapped into the build container.
@@ -130,7 +130,7 @@ DOCKER_RUN := mkdir -p .go-pkg-cache && \
 DOCKER_CONFIG ?= $(HOME)/.docker/config.json
 
 # Version of this repository as reported by git.
-CALICO_GIT_VER=v3.6.0
+CALICO_GIT_VER=v3.7.0
 CNX_GIT_VER := $(shell git describe --tags --dirty --always)
 ifeq ($(LOCAL_BUILD),true)
 	CNX_GIT_VER = $(shell git describe --tags --dirty --always)-dev-build
@@ -486,8 +486,8 @@ LIBCALICO_REPO?=github.com/$(LIBCALICO_PROJECT_DEFAULT)
 LIBCALICO_VERSION?=$(shell git ls-remote git@github.com:$(LIBCALICO_PROJECT_DEFAULT) $(LIBCALICO_BRANCH) 2>/dev/null | cut -f 1)
 
 ## Guard to ensure LIBCALICO repo and branch are reachable
-guard-git-libcalico: 
-	@_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ; 
+guard-git-libcalico:
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ;
 	@_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "$(LIBCALICO_BRANCH)" "Ensure the branch exists, or set LIBCALICO_BRANCH variable";
 	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
 	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "$(LIBCALICO_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
@@ -510,7 +510,7 @@ update-libcalico-pin: guard-ssh-forwarding-bug guard-git-libcalico
 ###############################################################################
 ## felix
 
-## Set the default FELIX source for this project 
+## Set the default FELIX source for this project
 FELIX_PROJECT_DEFAULT=tigera/felix-private.git
 FELIX_GLIDE_LABEL=projectcalico/felix
 
@@ -521,8 +521,8 @@ FELIX_REPO?=github.com/$(FELIX_PROJECT_DEFAULT)
 FELIX_VERSION?=$(shell git ls-remote git@github.com:$(FELIX_PROJECT_DEFAULT) $(FELIX_BRANCH) 2>/dev/null | cut -f 1)
 
 ## Guard to ensure FELIX repo and branch are reachable
-guard-git-felix: 
-	@_scripts/functions.sh ensure_can_reach_repo_branch $(FELIX_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ; 
+guard-git-felix:
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(FELIX_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ;
 	@_scripts/functions.sh ensure_can_reach_repo_branch $(FELIX_PROJECT_DEFAULT) "$(FELIX_BRANCH)" "Ensure the branch exists, or set FELIX_BRANCH variable";
 	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(FELIX_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
 	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(FELIX_PROJECT_DEFAULT) "$(FELIX_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
@@ -546,7 +546,7 @@ update-felix-pin: guard-ssh-forwarding-bug guard-git-felix
 ###############################################################################
 ## cni-plugin
 
-## Set the default CNIPLUGIN source for this project 
+## Set the default CNIPLUGIN source for this project
 CNIPLUGIN_PROJECT_DEFAULT=tigera/cni-plugin-private.git
 CNIPLUGIN_GLIDE_LABEL=projectcalico/cni-plugin
 
@@ -557,8 +557,8 @@ CNIPLUGIN_REPO?=github.com/$(CNIPLUGIN_PROJECT_DEFAULT)
 CNIPLUGIN_VERSION?=$(shell git ls-remote git@github.com:$(CNIPLUGIN_PROJECT_DEFAULT) $(CNIPLUGIN_BRANCH) 2>/dev/null | cut -f 1)
 
 ## Guard to ensure CNIPLUGIN repo and branch are reachable
-guard-git-cni-plugin: 
-	@_scripts/functions.sh ensure_can_reach_repo_branch $(CNIPLUGIN_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ; 
+guard-git-cni-plugin:
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(CNIPLUGIN_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ;
 	@_scripts/functions.sh ensure_can_reach_repo_branch $(CNIPLUGIN_PROJECT_DEFAULT) "$(CNIPLUGIN_BRANCH)" "Ensure the branch exists, or set CNIPLUGIN_BRANCH variable";
 	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(CNIPLUGIN_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
 	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(CNIPLUGIN_PROJECT_DEFAULT) "$(CNIPLUGIN_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
@@ -582,7 +582,7 @@ update-cni-plugin-pin: guard-ssh-forwarding-bug guard-git-cni-plugin
 ###############################################################################
 ## licensing
 
-## Set the default LICENSING source for this project 
+## Set the default LICENSING source for this project
 LICENSING_PROJECT_DEFAULT=tigera/licensing
 LICENSING_GLIDE_LABEL=tigera/licensing
 
@@ -593,8 +593,8 @@ LICENSING_REPO?=github.com/$(LICENSING_PROJECT_DEFAULT)
 LICENSING_VERSION?=$(shell git ls-remote git@github.com:$(LICENSING_PROJECT_DEFAULT) $(LICENSING_BRANCH) 2>/dev/null | cut -f 1)
 
 ## Guard to ensure LICENSING repo and branch are reachable
-guard-git-licensing: 
-	@_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ; 
+guard-git-licensing:
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ;
 	@_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "$(LICENSING_BRANCH)" "Ensure the branch exists, or set LICENSING_BRANCH variable";
 	@$(DOCKER_RUN) $(TOOLING_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
 	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "$(LICENSING_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
@@ -618,7 +618,7 @@ update-licensing-pin: guard-ssh-forwarding-bug guard-git-licensing
 ###############################################################################
 ## confd
 
-## Set the default CONFD source for this project 
+## Set the default CONFD source for this project
 CONFD_PROJECT_DEFAULT=tigera/confd-private.git
 CONFD_GLIDE_LABEL=projectcalico/confd
 
@@ -629,8 +629,8 @@ CONFD_REPO?=github.com/$(CONFD_PROJECT_DEFAULT)
 CONFD_VERSION?=$(shell git ls-remote git@github.com:$(CONFD_PROJECT_DEFAULT) $(CONFD_BRANCH) 2>/dev/null | cut -f 1)
 
 ## Guard to ensure CONFD repo and branch are reachable
-guard-git-confd: 
-	@_scripts/functions.sh ensure_can_reach_repo_branch $(CONFD_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ; 
+guard-git-confd:
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(CONFD_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ;
 	@_scripts/functions.sh ensure_can_reach_repo_branch $(CONFD_PROJECT_DEFAULT) "$(CONFD_BRANCH)" "Ensure the branch exists, or set CONFD_BRANCH variable";
 	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(CONFD_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
 	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(CONFD_PROJECT_DEFAULT) "$(CONFD_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
@@ -702,7 +702,7 @@ fv: vendor run-k8s-apiserver
 	-e ETCD_ENDPOINTS=http://$(LOCAL_IP_ENV):2379 \
 	--net=host \
 	-w /go/src/$(PACKAGE_NAME) \
-	$(CALICO_BUILD) ginkgo -cover -r -skipPackage vendor pkg/startup pkg/allocateipip $(GINKGO_ARGS)
+	$(CALICO_BUILD) ginkgo -cover -r -skipPackage vendor pkg/startup pkg/allocateip $(GINKGO_ARGS)
 
 # etcd is used by the STs
 .PHONY: run-etcd
@@ -987,7 +987,7 @@ release-windows-archive $(WINDOWS_ARCHIVE): release-prereqs
 ## Verifies the release artifacts produces by `make release-build` are correct.
 release-verify: release-prereqs
 	# Check the reported version is correct for each release artifact.
-	if ! docker run $(BUILD_IMAGE):$(VERSION)-$(ARCH) versions | grep "^$(VERSION)$$"; then echo "Reported version:" `docker run $(BUILD_IMAGE):$(VERSION)-$(ARCH) versions` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
+	if ! docker run $(BUILD_IMAGE):$(VERSION)-$(ARCH) versions | grep '^$(VERSION)$$'; then echo "Reported version:" `docker run $(BUILD_IMAGE):$(VERSION)-$(ARCH) versions` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
 
 ## Generates release notes based on commits in this version.
 release-notes: release-prereqs
