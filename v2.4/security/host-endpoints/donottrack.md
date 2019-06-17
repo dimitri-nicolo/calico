@@ -1,5 +1,6 @@
 ---
 title: Untracked policy
+redirect_from: latest/security/host-endpoints/donottrack
 canonical_url: 'https://docs.tigera.io/v2.3/getting-started/bare-metal/policy/donottrack'
 ---
 

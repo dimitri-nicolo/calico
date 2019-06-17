@@ -1,5 +1,6 @@
 ---
 title: Compliance reports
+redirect_from: latest/reference/compliance-reports/index
 ---
 
 The {{ site.prodname }} compliance reporting feature provides the following compliance reports:

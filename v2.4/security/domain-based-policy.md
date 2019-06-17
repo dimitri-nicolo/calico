@@ -1,5 +1,6 @@
 ---
 title: Using domain names in policy rules
+redirect_from: latest/security/domain-based-policy
 canonical_url: 'https://docs.tigera.io/master/security/domain-based-policy'
 ---
 

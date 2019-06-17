@@ -1,6 +1,5 @@
 ---
 title: Configuring encryption and authentication
-redirect_from: latest/usage/encrypt-comms
 canonical_url: https://docs.tigera.io/v2.3/usage/encrypt-comms
 ---
 

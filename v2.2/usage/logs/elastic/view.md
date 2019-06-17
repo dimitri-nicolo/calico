@@ -1,6 +1,5 @@
 ---
 title: Accessing logs
-redirect_from: latest/usage/logs/elastic/view
 canonical_url: https://docs.tigera.io/v2.3/usage/logs/elastic/view
 ---
 

@@ -1,6 +1,5 @@
 ---
 title: Binary install
-redirect_from: latest/getting-started/bare-metal/installation/binary
 canonical_url: https://docs.tigera.io/v2.3/getting-started/bare-metal/installation/binary
 ---
 

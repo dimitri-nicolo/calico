@@ -1,6 +1,5 @@
 ---
 title: Creating Users and Roles in etcd
-redirect_from: latest/reference/advanced/etcd-rbac/users-and-roles
 canonical_url: https://docs.tigera.io/v2.3/reference/advanced/etcd-rbac/users-and-roles
 ---
 

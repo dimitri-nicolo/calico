@@ -1,5 +1,6 @@
 ---
 title: Creating host endpoint objects
+redirect_from: latest/security/host-endpoints/objects
 canonical_url: 'https://docs.tigera.io/v2.3/getting-started/bare-metal/policy/objects'
 ---
 

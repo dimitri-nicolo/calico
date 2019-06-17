@@ -1,5 +1,6 @@
 ---
 title: Global Network Policy Resource (GlobalNetworkPolicy)
+redirect_from: latest/reference/calicoctl/resources/globalnetworkpolicy
 canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/resources/globalnetworkpolicy
 ---
 

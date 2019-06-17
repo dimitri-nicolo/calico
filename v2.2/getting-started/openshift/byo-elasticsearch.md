@@ -1,6 +1,5 @@
 ---
 title: Using your own Elasticsearch for logs
-redirect_from: latest/getting-started/openshift/byo-elasticsearch
 ---
 
 {% include {{page.version}}/byo-intro.md orch="openshift" %}

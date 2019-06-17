@@ -1,5 +1,6 @@
 ---
 title: Policy Audit report (policy-audit)
+redirect_from: latest/reference/compliance-reports/policy-audit
 ---
 
 To create a Policy Audit report, create a [`GlobalReport`](../calicoctl/resources/globalreport) with the `reportType` 

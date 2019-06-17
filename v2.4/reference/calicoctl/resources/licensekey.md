@@ -1,5 +1,6 @@
 ---
 title: License Key (LicenseKey)
+redirect_from: latest/reference/calicoctl/resources/licensekey
 canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/resources/licensekey
 ---
 

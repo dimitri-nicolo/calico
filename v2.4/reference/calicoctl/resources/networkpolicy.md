@@ -1,5 +1,6 @@
 ---
 title: Network Policy Resource (NetworkPolicy)
+redirect_from: latest/reference/calicoctl/resources/networkpolicy
 canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/resources/networkpolicy
 ---
 

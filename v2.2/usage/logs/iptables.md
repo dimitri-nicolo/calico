@@ -1,6 +1,5 @@
 ---
 title: iptables logs
-redirect_from: latest/usage/logs/iptables
 canonical_url: https://docs.tigera.io/v2.3/usage/logs/iptables
 ---
 

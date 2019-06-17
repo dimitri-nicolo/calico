@@ -1,6 +1,5 @@
 ---
 title: calicoctl node checksystem
-redirect_from: latest/reference/calicoctl/commands/node/checksystem
 canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/commands/node/checksystem
 ---
 

@@ -1,5 +1,6 @@
 ---
 title: Compliance reports
+redirect_from: latest/security/compliance-reports
 ---
 
 ### Big Picture

@@ -1,6 +1,5 @@
 ---
 title: Getting started with Tigera Secure EE
-redirect_from: latest/getting-started/
 canonical_url: https://docs.tigera.io/v2.3/getting-started/
 ---
 

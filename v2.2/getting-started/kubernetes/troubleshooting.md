@@ -1,6 +1,5 @@
 ---
 title: Troubleshooting Tigera Secure EE for Kubernetes
-redirect_from: latest/getting-started/kubernetes/troubleshooting
 canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/troubleshooting
 ---
 

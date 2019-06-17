@@ -1,6 +1,5 @@
 ---
 title: Simple Policy Demo
-redirect_from: latest/getting-started/kubernetes/tutorials/simple-policy
 canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/tutorials/simple-policy
 ---
 
