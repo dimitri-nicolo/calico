@@ -30,8 +30,8 @@ import (
 	"github.com/projectcalico/app-policy/syncher"
 	"github.com/projectcalico/app-policy/uds"
 
-	"github.com/docopt/docopt-go"
-	authz "github.com/envoyproxy/data-plane-api/envoy/service/auth/v2alpha"
+	authz "github.com/envoyproxy/data-plane-api/envoy/service/auth/v2"
+	authzv2alpha "github.com/envoyproxy/data-plane-api/envoy/service/auth/v2alpha"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 )
@@ -109,6 +109,7 @@ func runServer(arguments map[string]interface{}) {
 	dpStats := make(chan statscache.DPStats, maxPendingDataplaneStats)
 	checkServer := checker.NewServer(ctx, stores, dpStats)
 	authz.RegisterAuthorizationServer(gs, checkServer)
+	authzv2alpha.RegisterAuthorizationServer(gs, checkServer)
 
 	// Synchronize the policy store and start reporting stats.
 	opts := uds.GetDialOptions()

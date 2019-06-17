@@ -73,8 +73,8 @@ CALICO_BUILD?=calico/go-build:$(GO_BUILD_VER)
 PROTOC_VER?=v0.1
 PROTOC_CONTAINER?=calico/protoc:$(PROTOC_VER)-$(BUILDARCH)
 
-#This is a version with known container with compatible versions of sed/grep etc. 
-TOOLING_BUILD?=calico/go-build:v0.20	
+#This is a version with known container with compatible versions of sed/grep etc.
+TOOLING_BUILD?=calico/go-build:v0.20
 
 
 # Get version from git - used for releases.
@@ -90,6 +90,12 @@ LOCAL_USER_ID:=$(shell id -u)
 MY_GID:=$(shell id -g)
 
 SRC_FILES=$(shell find . -name '*.go' |grep -v vendor)
+
+# If local build is set, then always build the binary since we might not
+# detect when another local repository has been modified.
+ifeq ($(LOCAL_BUILD),true)
+.PHONY: $(SRC_FILES)
+endif
 
 ############################################################################
 BUILD_IMAGE?=gcr.io/unique-caldron-775/cnx/tigera/dikastes
@@ -126,7 +132,7 @@ DOCKER_RUN := mkdir -p .go-pkg-cache && \
                          -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
                          -v $${PWD}:/go/src/$(PACKAGE_NAME):rw \
                          -v $${PWD}/.go-pkg-cache:/go/pkg:rw \
-                         -w /go/src/$(PACKAGE_NAME) 
+                         -w /go/src/$(PACKAGE_NAME)
 
  # Pre-configured docker run command that runs as this user with the repo
  # checked out to /code, uses the --rm flag to avoid leaving the container
@@ -136,10 +142,12 @@ DOCKER_RUN_RM:=docker run --rm \
                --user $(LOCAL_USER_ID):$(MY_GID) -v $(CURDIR):/code
 
 ENVOY_API=vendor/github.com/envoyproxy/data-plane-api
-EXT_AUTH=$(ENVOY_API)/envoy/service/auth/v2alpha/
+EXT_AUTH=$(ENVOY_API)/envoy/service/auth/v2/
+EXT_AUTH_V2_ALPHA=$(ENVOY_API)/envoy/service/auth/v2alpha/
 ADDRESS=$(ENVOY_API)/envoy/api/v2/core/address
 V2_BASE=$(ENVOY_API)/envoy/api/v2/core/base
 HTTP_STATUS=$(ENVOY_API)/envoy/type/http_status
+PERCENT=$(ENVOY_API)/envoy/type/percent
 
 # Always install the git hooks to prevent publishing closed source code to a non-private repo.
 hooks_installed:=$(shell ./install-git-hooks)
@@ -234,15 +242,22 @@ PROTOC_IMPORTS =  -I $(ENVOY_API) \
                   -I proto\
                   -I ./
 # Also remap the output modules to gogo versions of google/protobuf and google/rpc
-PROTOC_MAPPINGS = Menvoy/api/v2/core/address.proto=github.com/envoyproxy/data-plane-api/envoy/api/v2/core,Menvoy/api/v2/core/base.proto=github.com/envoyproxy/data-plane-api/envoy/api/v2/core,Menvoy/type/http_status.proto=github.com/envoyproxy/data-plane-api/envoy/type,Mgogoproto/gogo.proto=github.com/gogo/protobuf/gogoproto,Mgoogle/protobuf/any.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/duration.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/struct.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/timestamp.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/wrappers.proto=github.com/gogo/protobuf/types,Mgoogle/rpc/status.proto=github.com/gogo/googleapis/google/rpc
+PROTOC_MAPPINGS = Menvoy/api/v2/core/address.proto=github.com/envoyproxy/data-plane-api/envoy/api/v2/core,Menvoy/api/v2/core/base.proto=github.com/envoyproxy/data-plane-api/envoy/api/v2/core,Menvoy/type/http_status.proto=github.com/envoyproxy/data-plane-api/envoy/type,Menvoy/type/percent.proto=github.com/envoyproxy/data-plane-api/envoy/type,Mgogoproto/gogo.proto=github.com/gogo/protobuf/gogoproto,Mgoogle/protobuf/any.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/duration.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/struct.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/timestamp.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/wrappers.proto=github.com/gogo/protobuf/types,Mgoogle/rpc/status.proto=github.com/gogo/googleapis/google/rpc,Menvoy/service/auth/v2/external_auth.proto=github.com/envoyproxy/data-plane-api/envoy/service/auth/v2
 
-proto: $(EXT_AUTH)external_auth.pb.go $(ADDRESS).pb.go $(V2_BASE).pb.go $(HTTP_STATUS).pb.go $(EXT_AUTH)attribute_context.pb.go proto/felixbackend.pb.go proto/healthz.proto
+proto: $(EXT_AUTH)external_auth.pb.go $(EXT_AUTH_V2_ALPHA)external_auth.pb.go $(ADDRESS).pb.go $(V2_BASE).pb.go $(HTTP_STATUS).pb.go $(PERCENT).pb.go $(EXT_AUTH)attribute_context.pb.go proto/felixbackend.pb.go proto/healthz.proto
 
 $(EXT_AUTH)external_auth.pb.go $(EXT_AUTH)attribute_context.pb.go: $(EXT_AUTH)external_auth.proto $(EXT_AUTH)attribute_context.proto
 	$(DOCKER_RUN_RM) -v $(CURDIR):/src:rw \
 	              $(PROTOC_CONTAINER) \
 	              $(PROTOC_IMPORTS) \
 	              $(EXT_AUTH)*.proto \
+	              --gogofast_out=plugins=grpc,$(PROTOC_MAPPINGS):$(ENVOY_API)
+
+$(EXT_AUTH_V2_ALPHA)external_auth.pb.go: $(EXT_AUTH_V2_ALPHA)external_auth.proto
+	$(DOCKER_RUN_RM) -v $(CURDIR):/src:rw \
+	              $(PROTOC_CONTAINER) \
+	              $(PROTOC_IMPORTS) \
+	              $(EXT_AUTH_V2_ALPHA)*.proto \
 	              --gogofast_out=plugins=grpc,$(PROTOC_MAPPINGS):$(ENVOY_API)
 
 $(ADDRESS).pb.go $(V2_BASE).pb.go: $(ADDRESS).proto $(V2_BASE).proto
@@ -259,7 +274,14 @@ $(HTTP_STATUS).pb.go: $(HTTP_STATUS).proto
 	              $(HTTP_STATUS).proto \
 	              --gogofast_out=plugins=grpc,$(PROTOC_MAPPINGS):$(ENVOY_API)
 
-$(EXT_AUTH)external_auth.proto $(ADDRESS).proto $(V2_BASE).proto $(HTTP_STATUS).proto $(EXT_AUTH)attribute_context.proto: vendor
+$(PERCENT).pb.go: $(PERCENT).proto
+	$(DOCKER_RUN_RM) -v $(CURDIR):/src:rw \
+	              $(PROTOC_CONTAINER) \
+	              $(PROTOC_IMPORTS) \
+	              $(PERCENT).proto \
+	              --gogofast_out=plugins=grpc,$(PROTOC_MAPPINGS):$(ENVOY_API)
+
+$(EXT_AUTH)external_auth.proto $(EXT_AUTH_V2_ALPHA)external_auth.proto $(ADDRESS).proto $(V2_BASE).proto $(HTTP_STATUS).proto $(PERCENT).proto $(EXT_AUTH)attribute_context.proto: vendor
 
 proto/felixbackend.pb.go: proto/felixbackend.proto
 	$(DOCKER_RUN_RM) -v $(CURDIR):/src:rw \
@@ -350,7 +372,7 @@ sub-tag-images-%:
 ###############################################################################
 
 ## Update dependency pins in glide.yaml
-update-pins: update-libcalico-pin 
+update-pins: update-libcalico-pin
 
 ## deprecated target alias
 update-libcalico: update-pins
@@ -367,7 +389,7 @@ guard-ssh-forwarding-bug:
 ###############################################################################
 ## libcalico
 
-## Set the default LIBCALICO source for this project 
+## Set the default LIBCALICO source for this project
 LIBCALICO_PROJECT_DEFAULT=tigera/libcalico-go-private.git
 LIBCALICO_GLIDE_LABEL=projectcalico/libcalico-go
 
@@ -378,8 +400,8 @@ LIBCALICO_REPO?=github.com/$(LIBCALICO_PROJECT_DEFAULT)
 LIBCALICO_VERSION?=$(shell git ls-remote git@github.com:$(LIBCALICO_PROJECT_DEFAULT) $(LIBCALICO_BRANCH) 2>/dev/null | cut -f 1)
 
 ## Guard to ensure LIBCALICO repo and branch are reachable
-guard-git-libcalico: 
-	@_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ; 
+guard-git-libcalico:
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ;
 	@_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "$(LIBCALICO_BRANCH)" "Ensure the branch exists, or set LIBCALICO_BRANCH variable";
 	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
 	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "$(LIBCALICO_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
@@ -406,7 +428,7 @@ update-libcalico-pin: guard-ssh-forwarding-bug guard-git-libcalico
 ###############################################################################
 ## Perform static checks on the code.
 .PHONY: static-checks
-static-checks: guard-ssh-forwarding-bug vendor 
+static-checks: guard-ssh-forwarding-bug vendor
 	docker run --rm \
 		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
 		-v $(CURDIR):/go/src/$(PACKAGE_NAME) \
