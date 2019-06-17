@@ -1,5 +1,5 @@
-hash: d0a20e6894d963a24daafbeb44cdbd7bc11ae2c1e9913d2a93415dc187b1c1fc
-updated: 2019-05-12T21:09:55.158537083Z
+hash: 78385931aedc9dd1519cf4bb0c6639017e6ebcd7a311de57fdf9543644905e34
+updated: 2019-06-17T21:06:39.774909948Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -61,6 +61,7 @@ imports:
   - etcdserver/api/v3rpc/rpctypes
   - etcdserver/etcdserverpb
   - mvcc/mvccpb
+  - pkg/srv
   - pkg/tlsutil
   - pkg/transport
   - pkg/types
@@ -161,7 +162,7 @@ imports:
 - name: github.com/kardianos/osext
   version: 2bc1f35cddc0cc527b4bc3dce8578fc2a6c11384
 - name: github.com/kelseyhightower/envconfig
-  version: dd1402a4d99de9ac2f396cd6fcb957bc2c695ec1
+  version: 0b417c4ec4a8a82eecc22a1459a504aa55163d61
 - name: github.com/konsorten/go-windows-terminal-sequences
   version: f55edac94c9bbba5d6182a4be46d86a2c9b5b50e
 - name: github.com/leodido/go-urn
@@ -228,7 +229,7 @@ imports:
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
 - name: github.com/projectcalico/felix
-  version: e54bb027f0d6d8076f894db5879d2648f2416ddd
+  version: c0c1fe1d9306d1f1677e5f2adf6fa0c203ccd688
   repo: git@github.com:tigera/felix-private.git
   vcs: git
   subpackages:
@@ -251,6 +252,7 @@ imports:
   - proto
   - rules
   - stringutils
+  - versionparse
 - name: github.com/projectcalico/go-json
   version: 6219dc7339ba20ee4c57df0a8baac62317d19cb1
   subpackages:
@@ -260,7 +262,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 7979a9a33f89116caf4e3ff9862b76a707b2a09a
+  version: e9a74b29328b7376cb88fc539b7c7e000e47d278
   repo: git@github.com:tigera/libcalico-go-private.git
   vcs: git
   subpackages:
@@ -270,6 +272,7 @@ imports:
   - lib/apis/v3
   - lib/backend
   - lib/backend/api
+  - lib/backend/encap
   - lib/backend/etcdv3
   - lib/backend/k8s
   - lib/backend/k8s/conversion
@@ -284,7 +287,6 @@ imports:
   - lib/hash
   - lib/health
   - lib/ipam
-  - lib/ipip
   - lib/logutils
   - lib/names
   - lib/namespace
@@ -302,7 +304,7 @@ imports:
   - lib/validator/v3
   - lib/watch
 - name: github.com/projectcalico/typha
-  version: 29068fbb971fa15c1fcd3dfb40aeda9d581c8c79
+  version: 085d3c3f83a814c2761ac2a95f0ee91809a5876b
   repo: git@github.com:tigera/typha-private
   subpackages:
   - pkg/syncclient
@@ -331,15 +333,15 @@ imports:
 - name: github.com/PuerkitoBio/urlesc
   version: 5bd2802263f21d8788851d5305584c82a5c75d7e
 - name: github.com/robfig/cron
-  version: b41be1df696709bb6395fe435af20370037c0b4c
+  version: 61d93e07d1be270591d43ede700aa3ae69a2326f
 - name: github.com/satori/go.uuid
   version: f58768cc1a7a7e77a3bd49e98cdd21419399b6a3
 - name: github.com/sirupsen/logrus
-  version: 8bdbc7bcc01dcbb8ec23dc8a28e332258d25251f
+  version: 839c75faf7f98a33d445d181f3018b5c3409a45e
 - name: github.com/spf13/pflag
-  version: e57e3eeb33f795204c1ca35f56c44f83227c6e66
+  version: 24fa6976df40757dce6aea913e7b81ade90530e1
 - name: github.com/tigera/licensing
-  version: 02d1f482fe4d3a2dbc4a3bce530471eba75d5029
+  version: 4ef30a4e6de92153a6589af226e77c567f530541
   repo: git@github.com:tigera/licensing
   vcs: git
   subpackages:
@@ -426,7 +428,7 @@ imports:
   subpackages:
   - rate
 - name: google.golang.org/appengine
-  version: 54a98f90d1c46b7731eb8fb305d2a321c30ef610
+  version: b2f4a3cf3c67576a2ee09e1fe62656a5086ce880
   subpackages:
   - internal
   - internal/app_identity
@@ -465,7 +467,7 @@ imports:
 - name: gopkg.in/fsnotify/fsnotify.v1
   version: c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9
 - name: gopkg.in/go-playground/validator.v9
-  version: 46b4b1e301c24cac870ffcb4ba5c8a703d1ef475
+  version: 884d31b8cad6a1ec877f2400d555924cea03bbea
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: gopkg.in/natefinch/lumberjack.v2
@@ -633,7 +635,7 @@ imports:
 - name: k8s.io/klog
   version: 8e90cee79f823779174776412c13478955131846
 - name: k8s.io/kube-openapi
-  version: b3a7cee44a305be0a69e1b9ac03018307287e1b0
+  version: db7b694dc208eead64d38030265f702db593fcf2
   subpackages:
   - pkg/common
 - name: k8s.io/utils
