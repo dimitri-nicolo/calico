@@ -67,6 +67,7 @@ GO_BUILD_VER ?= v0.20
 
 SRC_FILES=$(shell find pkg cmd internal -name '*.go')
 TEST_SRC_FILES=$(shell find tests -name '*.go')
+WINFV_SRCFILES=$(shell find win_tests -name '*.go')
 LOCAL_IP_ENV?=$(shell ip route get 8.8.8.8 | head -1 | awk '{print $$7}')
 
 # If local build is set, then always build the binary since we might not
@@ -196,10 +197,10 @@ vendor: glide.yaml
       -w /go/src/$(PACKAGE_NAME) \
       $(CALICO_BUILD) glide install -strip-vendor
 
-## Build the Calico network plugin and ipam plugins
-$(BIN)/calico $(BIN)/calico-ipam: $(SRC_FILES) vendor
-	-mkdir -p .go-pkg-cache
-	docker run --rm \
+
+GO_BUILD_ARGS:=-ldflags "-X main.VERSION=$(GIT_VERSION) -s -w"
+DOCKER_BUILD_ARGS:= \
+	 --rm \
 	-e ARCH=$(ARCH) \
 	-e GOARCH=$(ARCH) \
 	-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
@@ -209,7 +210,20 @@ $(BIN)/calico $(BIN)/calico-ipam: $(SRC_FILES) vendor
 	$(LOCAL_BUILD_MOUNTS) \
 	-w /go/src/$(PACKAGE_NAME) \
 	-e GOCACHE=/go-cache \
-	$(CALICO_BUILD) sh -c '\
+
+## Build the Calico network plugin and ipam plugins
+$(BIN)/calico $(BIN)/calico-ipam: $(SRC_FILES) vendor
+	-mkdir -p .go-pkg-cache
+	-mkdir -p $(BIN)
+	docker run $(DOCKER_BUILD_ARGS) $(CALICO_BUILD) sh -c '\
+			go build -v -o $(BIN)/calico $(GO_BUILD_ARGS) ./cmd/calico && \
+            go build -v -o $(BIN)/calico-ipam $(GO_BUILD_ARGS) ./cmd/calico-ipam'
+
+## Build the Calico network plugin and ipam plugins for Windows
+$(BIN)/calico.exe $(BIN)/calico-ipam.exe: $(SRC_FILES) vendor
+	-mkdir -p .go-pkg-cache
+	-mkdir -p $(BIN)
+	docker run -e GOOS=windows $(DOCKER_BUILD_ARGS) $(CALICO_BUILD) sh -c '\
 	  go build -v -o $(BIN)/calico.exe $(GO_BUILD_ARGS) ./cmd/calico && \
 	  go build -v -o $(BIN)/calico-ipam.exe $(GO_BUILD_ARGS) ./cmd/calico-ipam'
 
