@@ -47,7 +47,8 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     # Felix FV tests require wget
     wget \
-    strongswan
+    strongswan \
+    strongswan-swanctl
 
 ADD felix.cfg /etc/calico/felix.cfg
 ADD calico-felix-wrapper /usr/bin
