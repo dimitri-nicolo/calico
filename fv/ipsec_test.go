@@ -360,7 +360,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("felix should program bad policies and then restore the policies once we restore the IP", func() {
+		PIt("felix should program bad policies and then restore the policies once we restore the IP", func() {
 			Eventually(felixes[0].GetFelixPID, "5s", "100ms").ShouldNot(Equal(felixPID))
 
 			Eventually(func() int { return policyCount(felixes[0], felixes[0].IP) }, "5s", "100ms").Should(BeZero())
