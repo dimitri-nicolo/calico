@@ -58,6 +58,9 @@ type ReportTypeSpec struct {
 	// What audit log data should be included in the report. If not specified, the report will contain no audit log
 	// data. The selection may be further filtered by the Report.
 	AuditEventsSelection *AuditEventsSelection `json:"auditEventsSelection,omitempty" validate:"omitempty"`
+
+	// Whether to include the full cis benchmark test results in the report.
+	IncludeCISBenchmarkData bool `json:"includeCISBenchmarkData,omitempty"`
 }
 
 // ReportTemplate defines a template used to render a report into downloadable or UI compatible format.

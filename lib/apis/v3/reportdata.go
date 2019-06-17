@@ -61,6 +61,12 @@ type ReportData struct {
 
 	// Flows for in-scope endpoints that have been recorded within the reporting period.
 	Flows []EndpointsReportFlow `json:"flows,omitempty"`
+
+	// CISBenchmark contains the per-node results of a cis benchmark scan.
+	CISBenchmark []CISBenchmarkNode `json:"cisBenchmark,omitempty"`
+
+	// CISBenchmarkSummary high level test results.
+	CISBenchmarkSummary CISBenchmarkSummary `json:"cisBenchmarkSummary,omitempty"`
 }
 
 // This tracks different statistics for Endpoints, Summary and Services.
@@ -359,25 +365,24 @@ func (f FlowEndpoint) String() string {
 	return fmt.Sprintf("%s(%s/%s)", f.Kind, f.Namespace, f.Name)
 }
 
-// CISBenchmark describes a CIS benchmarking result across an entire cluster.
-type CISBenchmark struct {
-	Type      string             `json:"type"`
-	HighCount int                `json:"highCount"`
-	MedCount  int                `json:"medCount"`
-	LowCount  int                `json:"lowCount"`
-	Nodes     []CISBenchmarkNode `json:"nodes"`
+// CISBenchmarkSummary describes a CIS benchmarking result across an entire cluster.
+type CISBenchmarkSummary struct {
+	Type      string `json:"type"`
+	HighCount int    `json:"highCount"`
+	MedCount  int    `json:"medCount"`
+	LowCount  int    `json:"lowCount"`
 }
 
 // CISBenchmarkNode describes a CIS benchmarking result on a single node.
 type CISBenchmarkNode struct {
-	NodeName string                    `json:"nodeName"`
-	Summary  CISBenchmarkSummary       `json:"summary"`
-	Results  CISBenchmarkSectionResult `json:"results"`
+	NodeName string                      `json:"nodeName"`
+	Summary  CISBenchmarkNodeSummary     `json:"summary"`
+	Results  []CISBenchmarkSectionResult `json:"results"`
 }
 
-// CISBenchmarkSummary keeps count of tests passed, failed, and marked as info.
+// CISBenchmarkNodeSummary keeps count of tests passed, failed, and marked as info on a single node.
 // Also has a status field to describe whether it is in HIGH, MED, or LOW status (based on [high|med]Threshold).
-type CISBenchmarkSummary struct {
+type CISBenchmarkNodeSummary struct {
 	Status    string `json:"status"`
 	TotalPass int    `json:"totalPass"`
 	TotalFail int    `json:"totalFail"`
@@ -398,9 +403,15 @@ type CISBenchmarkSectionResult struct {
 
 // CISBenchmarkResult describes the result of a single CIS benchmark check.
 type CISBenchmarkResult struct {
-	TestNumber string   `json:"testNumber"`
-	TestDesc   string   `json:"testDesc"`
-	TestInfo   []string `json:"testInfo"`
-	Status     string   `json:"status"`
-	Scored     bool     `json:"scored"`
+	TestNumber string `json:"testNumber"`
+	TestDesc   string `json:"testDesc"`
+	TestInfo   string `json:"testInfo"`
+	Status     string `json:"status"`
+	Scored     bool   `json:"scored"`
+}
+
+// CISBenchmarkResultCount keeps track of how many nodes had a certain test result.
+type CISBenchmarkResultCount struct {
+	CISBenchmarkResult
+	Count int `json:"count"`
 }

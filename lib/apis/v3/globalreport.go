@@ -87,7 +87,7 @@ type CISBenchmarkParams struct {
 	MedThreshold  *int `json:"medThreshold" validate:"gte=0,lte=100" default:"50"`
 
 	// Configure the number of top failed tests to show up on the report.
-	NumFailedTests int `json:"numFailedTests"`
+	NumFailedTests int `json:"numFailedTests" default:"5"`
 }
 
 // ReportStatus contains the status of the automated report generation.

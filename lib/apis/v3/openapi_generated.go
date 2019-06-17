@@ -86,10 +86,11 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.BlockAffinity":                  schema_libcalico_go_lib_apis_v3_BlockAffinity(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.BlockAffinityList":              schema_libcalico_go_lib_apis_v3_BlockAffinityList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.BlockAffinitySpec":              schema_libcalico_go_lib_apis_v3_BlockAffinitySpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmark":                   schema_libcalico_go_lib_apis_v3_CISBenchmark(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkNode":               schema_libcalico_go_lib_apis_v3_CISBenchmarkNode(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkNodeSummary":        schema_libcalico_go_lib_apis_v3_CISBenchmarkNodeSummary(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkParams":             schema_libcalico_go_lib_apis_v3_CISBenchmarkParams(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkResult":             schema_libcalico_go_lib_apis_v3_CISBenchmarkResult(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkResultCount":        schema_libcalico_go_lib_apis_v3_CISBenchmarkResultCount(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkSectionResult":      schema_libcalico_go_lib_apis_v3_CISBenchmarkSectionResult(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkSummary":            schema_libcalico_go_lib_apis_v3_CISBenchmarkSummary(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ClusterInformation":             schema_libcalico_go_lib_apis_v3_ClusterInformation(ref),
@@ -2558,57 +2559,6 @@ func schema_libcalico_go_lib_apis_v3_BlockAffinitySpec(ref common.ReferenceCallb
 	}
 }
 
-func schema_libcalico_go_lib_apis_v3_CISBenchmark(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "CISBenchmark describes a CIS benchmarking result across an entire cluster.",
-				Properties: map[string]spec.Schema{
-					"type": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
-						},
-					},
-					"highCount": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"integer"},
-							Format: "int32",
-						},
-					},
-					"medCount": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"integer"},
-							Format: "int32",
-						},
-					},
-					"lowCount": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"integer"},
-							Format: "int32",
-						},
-					},
-					"nodes": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkNode"),
-									},
-								},
-							},
-						},
-					},
-				},
-				Required: []string{"type", "highCount", "medCount", "lowCount", "nodes"},
-			},
-		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkNode"},
-	}
-}
-
 func schema_libcalico_go_lib_apis_v3_CISBenchmarkNode(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -2623,12 +2573,19 @@ func schema_libcalico_go_lib_apis_v3_CISBenchmarkNode(ref common.ReferenceCallba
 					},
 					"summary": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkSummary"),
+							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkNodeSummary"),
 						},
 					},
 					"results": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkSectionResult"),
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkSectionResult"),
+									},
+								},
+							},
 						},
 					},
 				},
@@ -2636,7 +2593,51 @@ func schema_libcalico_go_lib_apis_v3_CISBenchmarkNode(ref common.ReferenceCallba
 			},
 		},
 		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkSectionResult", "github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkSummary"},
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkNodeSummary", "github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkSectionResult"},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_CISBenchmarkNodeSummary(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "CISBenchmarkNodeSummary keeps count of tests passed, failed, and marked as info on a single node. Also has a status field to describe whether it is in HIGH, MED, or LOW status (based on [high|med]Threshold).",
+				Properties: map[string]spec.Schema{
+					"status": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"totalPass": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"integer"},
+							Format: "int32",
+						},
+					},
+					"totalFail": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"integer"},
+							Format: "int32",
+						},
+					},
+					"totalInfo": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"integer"},
+							Format: "int32",
+						},
+					},
+					"total": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"integer"},
+							Format: "int32",
+						},
+					},
+				},
+				Required: []string{"status", "totalPass", "totalFail", "totalInfo", "total"},
+			},
+		},
+		Dependencies: []string{},
 	}
 }
 
@@ -2729,15 +2730,8 @@ func schema_libcalico_go_lib_apis_v3_CISBenchmarkResult(ref common.ReferenceCall
 					},
 					"testInfo": {
 						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
-									},
-								},
-							},
+							Type:   []string{"string"},
+							Format: "",
 						},
 					},
 					"status": {
@@ -2757,6 +2751,32 @@ func schema_libcalico_go_lib_apis_v3_CISBenchmarkResult(ref common.ReferenceCall
 			},
 		},
 		Dependencies: []string{},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_CISBenchmarkResultCount(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "CISBenchmarkResultCount keeps track of how many nodes had a certain test result.",
+				Properties: map[string]spec.Schema{
+					"CISBenchmarkResult": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkResult"),
+						},
+					},
+					"count": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"integer"},
+							Format: "int32",
+						},
+					},
+				},
+				Required: []string{"CISBenchmarkResult", "count"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkResult"},
 	}
 }
 
@@ -2827,40 +2847,34 @@ func schema_libcalico_go_lib_apis_v3_CISBenchmarkSummary(ref common.ReferenceCal
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "CISBenchmarkSummary keeps count of tests passed, failed, and marked as info. Also has a status field to describe whether it is in HIGH, MED, or LOW status (based on [high|med]Threshold).",
+				Description: "CISBenchmarkSummary describes a CIS benchmarking result across an entire cluster.",
 				Properties: map[string]spec.Schema{
-					"status": {
+					"type": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"string"},
 							Format: "",
 						},
 					},
-					"totalPass": {
+					"highCount": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"integer"},
 							Format: "int32",
 						},
 					},
-					"totalFail": {
+					"medCount": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"integer"},
 							Format: "int32",
 						},
 					},
-					"totalInfo": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"integer"},
-							Format: "int32",
-						},
-					},
-					"total": {
+					"lowCount": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"integer"},
 							Format: "int32",
 						},
 					},
 				},
-				Required: []string{"status", "totalPass", "totalFail", "totalInfo", "total"},
+				Required: []string{"type", "highCount", "medCount", "lowCount"},
 			},
 		},
 		Dependencies: []string{},
@@ -7373,12 +7387,31 @@ func schema_libcalico_go_lib_apis_v3_ReportData(ref common.ReferenceCallback) co
 							},
 						},
 					},
+					"cisBenchmark": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CISBenchmark contains the per-node results of a cis benchmark scan.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkNode"),
+									},
+								},
+							},
+						},
+					},
+					"cisBenchmarkSummary": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CISBenchmarkSummary high level test results.",
+							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkSummary"),
+						},
+					},
 				},
 				Required: []string{"reportName", "reportTypeName", "reportSpec", "reportTypeSpec", "startTime", "endTime", "generationTime"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.AuditSummary", "github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportEndpoint", "github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportFlow", "github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportNamespace", "github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportService", "github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsSummary", "github.com/projectcalico/libcalico-go/lib/apis/v3.ReportSpec", "github.com/projectcalico/libcalico-go/lib/apis/v3.ReportTypeSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.Time", "k8s.io/apiserver/pkg/apis/audit.Event"},
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.AuditSummary", "github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkNode", "github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkSummary", "github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportEndpoint", "github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportFlow", "github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportNamespace", "github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportService", "github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsSummary", "github.com/projectcalico/libcalico-go/lib/apis/v3.ReportSpec", "github.com/projectcalico/libcalico-go/lib/apis/v3.ReportTypeSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.Time", "k8s.io/apiserver/pkg/apis/audit.Event"},
 	}
 }
 
@@ -7613,6 +7646,13 @@ func schema_libcalico_go_lib_apis_v3_ReportTypeSpec(ref common.ReferenceCallback
 						SchemaProps: spec.SchemaProps{
 							Description: "What audit log data should be included in the report. If not specified, the report will contain no audit log data. The selection may be further filtered by the Report.",
 							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.AuditEventsSelection"),
+						},
+					},
+					"includeCISBenchmarkData": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Whether to include the full cis benchmark test results in the report.",
+							Type:        []string{"boolean"},
+							Format:      "",
 						},
 					},
 				},
