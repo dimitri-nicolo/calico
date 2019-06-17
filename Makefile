@@ -153,7 +153,7 @@ ifneq ($(BUILDARCH),amd64)
         ETCD_IMAGE=$(ETCD_IMAGE)-$(ARCH)
 endif
 
-K8S_VERSION?=v1.11.3
+K8S_VERSION?=v1.14.1
 HYPERKUBE_IMAGE?=gcr.io/google_containers/hyperkube-$(ARCH):$(K8S_VERSION)
 TEST_CONTAINER_FILES=$(shell find tests/ -type f ! -name '*.created')
 
@@ -218,13 +218,20 @@ ST_OPTIONS?=
 # Variables for building the local binaries that go into the image
 MAKE_SURE_BIN_EXIST := $(shell mkdir -p dist .go-pkg-cache $(NODE_CONTAINER_BIN_DIR))
 NODE_CONTAINER_FILES=$(shell find ./filesystem -type f)
-SRCFILES=$(shell find ./pkg -name '*.go')
 LDFLAGS=-ldflags "-X github.com/projectcalico/node/pkg/startup.CNXVERSION=$(CNX_GIT_VER) -X github.com/projectcalico/node/pkg/startup.CALICOVERSION=$(CALICO_GIT_VER) \
                   -X main.VERSION=$(CALICO_GIT_VER) \
                   -X github.com/projectcalico/node/vendor/github.com/projectcalico/felix/buildinfo.GitVersion=$(CALICO_GIT_VER) \
                   -X github.com/projectcalico/node/vendor/github.com/projectcalico/felix/buildinfo.GitRevision=$(shell git rev-parse HEAD || echo '<unknown>')"
 PACKAGE_NAME?=github.com/projectcalico/node
 LIBCALICOGO_PATH?=none
+
+SRC_FILES=$(shell find ./pkg -name '*.go')
+
+# If local build is set, then always build the binary since we might not
+# detect when another local repository has been modified.
+ifeq ($(LOCAL_BUILD),true)
+.PHONY: $(SRC_FILES)
+endif
 
 # Always install the git hooks to prevent publishing closed source code to a non-private repo.
 hooks_installed:=$(shell ./install-git-hooks)
@@ -245,6 +252,8 @@ clean:
 	rm -f $(WINDOWS_ARCHIVE_ROOT)/confd/templates/*
 	rm -f $(WINDOWS_ARCHIVE_ROOT)/libs/hns/hns.psm1
 	rm -f $(WINDOWS_ARCHIVE_ROOT)/libs/hns/License.txt
+	rm -rf dist
+
 	# Delete images that we built in this repo
 	docker rmi $(BUILD_IMAGE):latest-$(ARCH) || true
 	docker rmi $(TEST_CONTAINER_NAME) || true
@@ -273,7 +282,7 @@ vendor: glide.lock
 		$(CALICO_BUILD) glide install -strip-vendor
 
 
-$(NODE_CONTAINER_BINARY): vendor $(SRCFILES)
+$(NODE_CONTAINER_BINARY): vendor $(SRC_FILES)
 	docker run --rm \
 		-e GOARCH=$(ARCH) \
 		-e GOOS=linux \
@@ -334,6 +343,10 @@ sub-image-%:
 $(BUILD_IMAGE): $(NODE_CONTAINER_CREATED)
 $(NODE_CONTAINER_CREATED): ./Dockerfile.$(ARCH) $(NODE_CONTAINER_FILES) $(NODE_CONTAINER_BINARY)
 	$(MAKE) register
+ifeq ($(LOCAL_BUILD),true)
+	# If doing a local build, copy in local confd templates in case there are changes.
+	cp -r ../confd/etc/calico/confd/templates vendor/github.com/kelseyhightower/confd/etc/calico/confd
+endif
 	# Check versions of the binaries that we're going to use to build the image.
 	# Since the binaries are built for Linux, run them in a container to allow the
 	# make target to be run on different platforms (e.g. MacOS).
@@ -667,7 +680,7 @@ static-checks: vendor
 .PHONY: fix
 ## Fix static checks
 fix:
-	goimports -w $(SRCFILES)
+	goimports -w $(SRC_FILES)
 
 foss-checks: vendor
 	@echo Running $@...
@@ -897,7 +910,7 @@ remove-go-build-image:
 st: dist/calicoctl busybox.tar cnx-node.tar workload.tar run-etcd calico_test.created dist/calico-cni-plugin dist/calico-ipam-plugin
 	# Check versions of Calico binaries that ST execution will use.
 	docker run --rm -v $(CURDIR)/dist:/go/bin:rw $(CALICO_BUILD) /bin/sh -c "\
-	  echo; echo calicoctl --version;        /go/bin/calicoctl --version; \
+	  echo; echo calicoctl version;          /go/bin/calicoctl version; \
 	  echo; echo calico-cni-plugin -v;       /go/bin/calico-cni-plugin -v; \
 	  echo; echo calico-ipam-plugin -v;      /go/bin/calico-ipam-plugin -v; echo; \
 	"
