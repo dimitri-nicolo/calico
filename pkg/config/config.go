@@ -26,7 +26,7 @@ type Config struct {
 	// Health checks common to all components.
 	HealthEnabled bool          `envconfig:"HEALTH_ENABLED" default:"true"`
 	HealthPort    int           `envconfig:"HEALTH_PORT" default:"9099"`
-	HealthHost    string        `envconfig:"HEALTH_HOST" default:"localhost"`
+	HealthHost    string        `envconfig:"HEALTH_HOST" default:"0.0.0.0"`
 	HealthTimeout time.Duration `envconfig:"HEALTH_TIMEOUT" default:"30s"`
 
 	// Elastic parameters

@@ -36,6 +36,7 @@ func main() {
 	// Load config.
 	cfg := config.MustLoadConfig()
 	cfg.InitializeLogging()
+	log.WithField("config", cfg).Info("Loaded configuration")
 
 	// Create a health check aggregator and start the health check service.
 	h := health.NewHealthAggregator()
@@ -65,7 +66,8 @@ func main() {
 	cxt, cancel := context.WithCancel(context.Background())
 
 	go func() {
-		<-sigs
+		signal := <-sigs
+		log.WithField("signal", signal).Warn("Received signal, canceling context")
 		cancel()
 	}()
 
