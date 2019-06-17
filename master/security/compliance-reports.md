@@ -2,7 +2,7 @@
 title: Compliance reports
 ---
 
-### Big Picture
+### Big picture
 
 Assess Kubernetes workloads and environments for regulatory compliance to enforce controls, and generate audit 
 and evidence data -- so you can prove compliance for these highly dynamic and ephemeral workloads.
@@ -67,8 +67,6 @@ To ensure accurate timestamps for audit logs, time synchronize all nodes in your
 
 ### How To
 
-This section describes how to:
-
 - [Configure audit logs](#configure-audit-logs)
 - [Configure report permissions](#configure-report-permissions)
 - [Configure and schedule reports](#configure-and-schedule-reports)
@@ -79,9 +77,9 @@ This section describes how to:
 
 By default, {{ site.prodname }} provides audit logs in Elasticsearch for the following {{ site.prodname }} resources:
 
-- Global network policy
-- Global network set
-- Network policy
+- GlobalNetworkPolicy
+- GlobalNetworkSet
+- NetworkPolicy
 - Tier
 - HostEndpoint
 
@@ -223,8 +221,9 @@ To configure and schedule a compliance report, create a [GlobalReport](/{{page.v
 | jobNodeSelector | **Optional**. Limits report generation jobs to specific nodes. |
 | suspend         | **Optional**. Suspends report generation. All in-flight reports will complete, and future scheduled reports are suspended. |
 
-**Note**: GlobalReports can only be configured using kubectl (not calicoctl); and they cannot be edited in the Tigera 
+>**Note**: GlobalReports can only be configured using kubectl (not calicoctl); and they cannot be edited in the Tigera 
 Secure EE Manager UI.
+{: .alert .alert-info} 
 
 The following sections provide sample schedules for the predefined reports. 
 
@@ -385,7 +384,8 @@ To manually run a report:
    kubectl get pod <podname> -n=calico-monitoring
    ```
 
-**Note**: Manually-generated reports do not appear in GlobalReport status.
+>**Note**: Manually-generated reports do not appear in GlobalReport status.
+{: .alert .alert-info}
 
 ### Above and beyond
 
