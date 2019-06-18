@@ -1,7 +1,9 @@
 package client_test
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -12,6 +14,7 @@ import (
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/voltron/internal/pkg/client"
+	"github.com/tigera/voltron/pkg/tunnel"
 )
 
 func init() {
@@ -19,76 +22,113 @@ func init() {
 	log.SetLevel(log.DebugLevel)
 }
 
-var _ = Describe("Client", func() {
+var _ = Describe("Client Tunneling", func() {
 	var (
-		err error
-		wg  sync.WaitGroup
-		cl  *client.Client
-		lis net.Listener
-		ts  *httptest.Server
+		lis       net.Listener
+		err       error
+		wg        sync.WaitGroup
+		cl        *client.Client
+		srv       *tunnel.Server
+		srvTunnel *tunnel.Tunnel
+		ts        *httptest.Server
+		srvRW     io.ReadWriteCloser
 	)
 
 	It("should fail to use invalid cert file paths", func() {
 		_, err := client.New(
+			"localhost:0",
 			client.WithCredsFiles("dog/gopher.crt", "dog/gopher.key"),
 		)
 		Expect(err).To(HaveOccurred())
 	})
 
-	It("Starts up mock server", func() {
-		ts = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			fmt.Fprint(w, "Proxied to test!")
-		}))
+	It("Should start up a tunnel server, serve connections", func() {
+		lis, err = net.Listen("tcp", "localhost:0")
+		Expect(err).ShouldNot(HaveOccurred())
+
+		srv, err = tunnel.NewServer()
+		Expect(err).ToNot(HaveOccurred())
+		Expect(srv.Serve(lis)).Should(Succeed())
+
+		err = srv.Serve(lis)
+		Expect(err).ToNot(HaveOccurred())
 	})
 
-	It("Starts up the client", func() {
-		var e error
-		lis, e = net.Listen("tcp", "localhost:0")
-		Expect(e).NotTo(HaveOccurred())
-
-		cl, err = client.New(
-			client.WithProxyTargets(
-				[]client.ProxyTarget{{Pattern: "^/test", Dest: ts.URL}},
-			),
-		)
-		Expect(err).NotTo(HaveOccurred())
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			err = cl.ServeHTTP(lis)
-		}()
-	})
-
-	Context("When client is up", func() {
-		It("should send a request to nonexistant target", func() {
-			resp, err := http.Get("http://" + lis.Addr().String() + "/gopher")
-			Expect(err).NotTo(HaveOccurred())
-			Expect(resp.StatusCode).To(Equal(400))
+	Context("While Tunnel Server is serving", func() {
+		It("Starts up mock server", func() {
+			ts = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				fmt.Fprint(w, "Proxied and Received!")
+			}))
 		})
 
-		It("should send a request to the test target", func() {
-			resp, err := http.Get("http://" + lis.Addr().String() + "/test")
+		It("Starts up the client", func() {
+			cl, err = client.New(
+				lis.Addr().String(),
+				client.WithProxyTargets(
+					[]client.ProxyTarget{{Pattern: "^/test", Dest: ts.URL}},
+				),
+			)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(resp.StatusCode).To(Equal(200))
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				err = cl.ServeHTTP()
+			}()
+		})
 
+		It("Server should start accepting tunnels", func() {
+			srvTunnel, err = srv.AcceptTunnel()
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("Should open the stream for the tunnel", func() {
+			srvRW, err = srvTunnel.OpenStream()
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("Sends a request through the tunnel, srv -> cln", func() {
+			req, err := http.NewRequest("GET", "http://"+lis.Addr().String()+"/test", nil)
+			Expect(err).ToNot(HaveOccurred())
+			err = req.Write(srvRW)
+			Expect(err).ToNot(HaveOccurred())
+
+			reader := bufio.NewReader(srvRW)
+
+			resp, err := http.ReadResponse(reader, req)
 			message, err := ioutil.ReadAll(resp.Body)
 
 			Expect(err).NotTo(HaveOccurred())
 			resp.Body.Close()
 
-			Expect(string(message)).To(Equal("Proxied to test!"))
+			Expect(string(message)).To(Equal("Proxied and Received!"))
 		})
+
+		It("Sends a request through the tunnel with invalid path, srv -> cln", func() {
+			req, err := http.NewRequest("GET", "http://"+lis.Addr().String()+"/gopher", nil)
+			Expect(err).ToNot(HaveOccurred())
+			err = req.Write(srvRW)
+			Expect(err).ToNot(HaveOccurred())
+
+			reader := bufio.NewReader(srvRW)
+
+			resp, err := http.ReadResponse(reader, req)
+			message, err := ioutil.ReadAll(resp.Body)
+
+			Expect(err).NotTo(HaveOccurred())
+			resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(400))
+			Expect(string(message)).ToNot(Equal("Proxied and Received!"))
+		})
+
 	})
 
-	It("should stop the client", func(done Done) {
-		cerr := cl.Close()
-		Expect(cerr).NotTo(HaveOccurred())
-		wg.Wait()
-		Expect(err).To(HaveOccurred())
-		if ts != nil {
-			ts.Close()
-		}
-		close(done)
+	It("should stop the client end of the tunnel", func() {
+		err = cl.Close()
+		Expect(err).ToNot(HaveOccurred())
+	})
+
+	It("Should stop the tunnel server", func() {
+		srv.Stop()
 	})
 
 })

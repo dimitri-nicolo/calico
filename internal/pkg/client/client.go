@@ -1,13 +1,13 @@
 package client
 
 import (
-	"net"
 	"net/http"
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/voltron/internal/pkg/proxy"
 	"github.com/tigera/voltron/internal/pkg/targets"
+	"github.com/tigera/voltron/pkg/tunnel"
 )
 
 // Client is the voltron client. It accepts requests from voltron server
@@ -16,17 +16,22 @@ type Client struct {
 	http     *http.Server
 	proxyMux *http.ServeMux
 	targets  *targets.Targets
+	tunnel   *tunnel.Tunnel
 
-	certFile string
-	keyFile  string
+	tunnelAddr string
+	certFile   string
+	keyFile    string
 }
 
 // New returns a new Client
-func New(opts ...Option) (*Client, error) {
+func New(addr string, opts ...Option) (*Client, error) {
 	client := &Client{
 		http:    new(http.Server),
 		targets: targets.NewEmpty(),
 	}
+
+	client.tunnelAddr = addr
+	log.Infof("Tunnel Address: %v", client.tunnelAddr)
 
 	for _, o := range opts {
 		if err := o(client); err != nil {
@@ -52,11 +57,21 @@ func (c *Client) ListenAndServeTLS() error {
 }
 
 // ServeHTTP starts serving HTTP requests
-func (c *Client) ServeHTTP(lis net.Listener) error {
-	return c.http.Serve(lis)
+func (c *Client) ServeHTTP() error {
+	var err error
+	c.tunnel, err = tunnel.Dial(c.tunnelAddr)
+	if err != nil {
+		return err
+	}
+
+	return c.http.Serve(c.tunnel)
 }
 
 // Close stops the server.
 func (c *Client) Close() error {
+	if err := c.tunnel.Close(); err != nil {
+		return err
+	}
+
 	return c.http.Close()
 }
