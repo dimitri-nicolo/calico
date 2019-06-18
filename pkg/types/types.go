@@ -105,6 +105,12 @@ type NetConf struct {
 	// subnet.  The NAT exclusion is generally required for pod-to-host communication but that communication can also
 	// be enabled by manually setting an exclusion or by creating a dummy IP pool.
 	WindowsDisableHostSubnetNATExclusion bool `json:"windows_disable_host_subnet_nat_exclusion,omitempty"`
+	// WindowsDisableDefaultBlockAllPolicy disables the default "block all traffic" policy on the endpoint.
+	// By default, WindowsDisableDefaultBlockAllPolicy = false, as the default "block all traffic" policy is place at
+	// the time of endpoint creation.
+	// If WindowsDisableDefaultBlockAllPolicy = true, then the default policy is disabled and container endpoint is created
+	// with "allow all traffic policy".
+	WindowsDisableDefaultDenyAllPolicy bool `json:"windows_disable_default_deny_all_policy"`
 
 	RuntimeConfig RuntimeConfig
 

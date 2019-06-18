@@ -187,6 +187,19 @@ func DoNetworking(
 		return "", "", err
 	}
 
+	if conf.WindowsDisableDefaultDenyAllPolicy == false {
+		defaultDenyAllACL := &hcsshim.ACLPolicy{
+			Id:        "CNIDefaultDenyAllPolicy",
+			Type:      hcsshim.ACL,
+			RuleType:  hcsshim.Switch,
+			Action:    hcsshim.Block,
+			Direction: hcsshim.In,
+			Protocol:  256,
+			Priority:  65500,
+		}
+
+		hnsEndpointCont.ApplyACLPolicy(defaultDenyAllACL)
+	}
 	contVethMAC = hnsEndpointCont.MacAddress
 	return hostVethName, contVethMAC, err
 }
