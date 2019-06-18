@@ -9,13 +9,17 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
+	"fmt"
+	"golang.org/x/net/http2"
 	"net"
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/tigera/voltron/internal/pkg/clusters"
 	"github.com/tigera/voltron/internal/pkg/test"
+	"github.com/tigera/voltron/internal/pkg/utils"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -146,6 +150,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 		wg     sync.WaitGroup
 		srv    *server.Server
 		lis    net.Listener
+		lis2   net.Listener
 		lisTun net.Listener
 	)
 
@@ -153,6 +158,17 @@ var _ = Describe("Server Proxy to tunnel", func() {
 		var e error
 		lis, e = net.Listen("tcp", "localhost:0")
 		Expect(e).NotTo(HaveOccurred())
+
+		// we need some credentials
+		key, _ := utils.KeyPEMEncode(srvPrivKey)
+		cert := utils.CertPEMEncode(srvCert)
+
+		xcert, _ := tls.X509KeyPair(cert, key)
+
+		lis2, e = tls.Listen("tcp", "localhost:0", &tls.Config{
+			Certificates: []tls.Certificate{xcert},
+			NextProtos:   []string{"h2"},
+		})
 
 		lisTun, e = net.Listen("tcp", "localhost:0")
 		Expect(e).NotTo(HaveOccurred())
@@ -167,6 +183,12 @@ var _ = Describe("Server Proxy to tunnel", func() {
 		go func() {
 			defer wg.Done()
 			err = srv.ServeHTTP(lis)
+		}()
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			err = srv.ServeHTTP(lis2)
 		}()
 
 		wg.Add(1)
@@ -254,6 +276,44 @@ var _ = Describe("Server Proxy to tunnel", func() {
 
 				wg.Wait()
 				Expect(acceptErr).NotTo(HaveOccurred())
+			})
+
+			It("should be possible to make HTTP/2 connection", func() {
+				var wg sync.WaitGroup
+
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+					http2Srv(clnT)
+				}()
+
+				clnt := &http.Client{
+					Transport: &http2.Transport{
+						TLSClientConfig: &tls.Config{
+							InsecureSkipVerify: true,
+						},
+					},
+				}
+
+				req, err := http.NewRequest("GET",
+					"https://"+lis2.Addr().String()+"/some/path", strings.NewReader("HELLO"))
+				Expect(err).NotTo(HaveOccurred())
+				req.Header[server.ClusterHeaderField] = []string{"clusterA"}
+				resp, err := clnt.Do(req)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resp.StatusCode).To(Equal(200))
+
+				i := 0
+				for {
+					data := make([]byte, 100)
+					n, err := resp.Body.Read(data)
+					if err != nil {
+						break
+					}
+					Expect(string(data[:n])).To(Equal(fmt.Sprintf("tick %d\n", i)))
+					i++
+				}
+				wg.Wait()
 			})
 		})
 
@@ -422,4 +482,49 @@ func clientHelloReq(addr string, target string, expectStatus int) *http.Response
 	Expect(resp.StatusCode).To(Equal(expectStatus))
 
 	return resp
+}
+
+func http2Srv(t *tunnel.Tunnel) {
+	// we need some credentials
+	key, _ := utils.KeyPEMEncode(srvPrivKey)
+	cert := utils.CertPEMEncode(srvCert)
+
+	xcert, _ := tls.X509KeyPair(cert, key)
+
+	mux := http.NewServeMux()
+	httpsrv := &http.Server{
+		TLSConfig: &tls.Config{
+			Certificates: []tls.Certificate{xcert},
+		},
+		Handler: mux,
+	}
+
+	var reqWg sync.WaitGroup
+	reqWg.Add(1)
+
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		defer reqWg.Done()
+		f, ok := w.(http.Flusher)
+		Expect(ok).To(BeTrue())
+
+		for i := 0; i < 3; i++ {
+			fmt.Fprintf(w, "tick %d\n", i)
+			f.Flush()
+			time.Sleep(300 * time.Millisecond)
+		}
+	})
+
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		httpsrv.Serve(t)
+	}()
+
+	// we only handle one request, we wait until it is done
+	reqWg.Wait()
+
+	httpsrv.Close()
+	wg.Wait()
 }
