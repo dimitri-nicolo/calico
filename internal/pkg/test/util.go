@@ -7,8 +7,10 @@ import (
 	"crypto/rand"
 	"crypto/x509"
 	"encoding/pem"
+	"io"
 	"math/big"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/pkg/errors"
@@ -133,4 +135,59 @@ func PemEncodeCert(cert *x509.Certificate) []byte {
 	}
 
 	return pem.EncodeToMemory(block)
+}
+
+// DataFlow sends a message from the io Reader to the io Writer. Returns the sent message.
+func DataFlow(r io.Reader, w io.Writer, msg []byte) ([]byte, error) {
+	var wg sync.WaitGroup
+
+	errChan := make(chan error, 1)
+	resChan := make(chan []byte, 1)
+	defer close(errChan)
+	defer close(resChan)
+
+	// Writer sends the msg
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for len(msg) > 0 {
+			n, err := w.Write(msg)
+			if err != nil {
+				errChan <- errors.WithMessage(err, "Failed to Write")
+				return
+			}
+			msg = msg[n:]
+		}
+	}()
+
+	// Reader reads the message
+	wg.Add(1)
+	go func() {
+		var res []byte
+		defer wg.Done()
+
+		for len(res) < len(msg) {
+			data := make([]byte, 100)
+			n, err := r.Read(data)
+			if err != nil {
+				errChan <- errors.WithMessage(err, "Failed to Read")
+				return
+			}
+			res = append(res, data[:n]...)
+		}
+
+		// Verify that the message is correct
+		resChan <- res
+	}()
+
+	wg.Wait()
+
+	var err error
+	var res []byte
+
+	select {
+	case err = <-errChan:
+	case res = <-resChan:
+	}
+	return res, err
 }

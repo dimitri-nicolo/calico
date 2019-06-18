@@ -109,12 +109,16 @@ var _ = Describe("Tunnel server", func() {
 
 	Context("when regular stream is open", func() {
 		It("should be able to send data s -> c", func(done Done) {
-			testDataFlow(clnS, srvS, "HELLO")
+			recvMsg, err := test.DataFlow(clnS, srvS, []byte("HELLO"))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(string(recvMsg)).To(Equal("HELLO"))
 			close(done)
 		})
 
 		It("should be able to send data s <- c", func(done Done) {
-			testDataFlow(srvS, clnS, "WORLD")
+			recvMsg, err := test.DataFlow(srvS, clnS, []byte("WORLD"))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(string(recvMsg)).To(Equal("WORLD"))
 			close(done)
 		})
 	})
@@ -125,12 +129,16 @@ var _ = Describe("Tunnel server", func() {
 
 	Context("when reverse stream is open", func() {
 		It("should be able to send data s -> c", func(done Done) {
-			testDataFlow(clnS, srvS, "HELLO")
+			recvMsg, err := test.DataFlow(clnS, srvS, []byte("HELLO"))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(string(recvMsg)).To(Equal("HELLO"))
 			close(done)
 		})
 
 		It("should be able to send data s <- c", func(done Done) {
-			testDataFlow(srvS, clnS, "WORLD")
+			recvMsg, err := test.DataFlow(srvS, clnS, []byte("WORLD"))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(string(recvMsg)).To(Equal("WORLD"))
 			close(done)
 		})
 
@@ -147,7 +155,7 @@ var _ = Describe("Tunnel server", func() {
 				wg.Add(1)
 				go func() {
 					defer wg.Done()
-					testDataFlow(r, w, msg)
+					test.DataFlow(r, w, []byte(msg))
 				}()
 			}
 
@@ -273,44 +281,6 @@ func setupTunneledStream(srvT, clnT *tunnel.Tunnel,
 	return s, c
 }
 
-func testDataFlow(r io.Reader, w io.Writer, msg string) {
-	var wg sync.WaitGroup
-
-	// Writer sends the msg
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-
-		data := msg
-		for len(data) > 0 {
-			n, err := w.Write([]byte(data))
-			Expect(err).ShouldNot(HaveOccurred())
-			data = data[n:]
-		}
-	}()
-
-	// Reader reads the message
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-
-		var res []byte
-
-		for len(res) < len(msg) {
-			data := make([]byte, 100)
-			n, err := r.Read(data)
-			Expect(err).ShouldNot(HaveOccurred())
-			res = append(res, data[:n]...)
-		}
-
-		// Verify that the message is correct
-		resStr := string(res)
-		Expect(msg).To(Equal(resStr))
-	}()
-
-	wg.Wait()
-}
-
 var _ = Describe("TLS Stream", func() {
 	var (
 		err     error
@@ -382,12 +352,16 @@ var _ = Describe("TLS Stream", func() {
 
 	Context("when tls stream is open", func() {
 		It("should be able to send data s -> c", func(done Done) {
-			testDataFlow(clnS, srvS, "HELLO")
+			recvMsg, err := test.DataFlow(clnS, srvS, []byte("HELLO"))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(string(recvMsg)).To(Equal("HELLO"))
 			close(done)
 		})
 
 		It("should be able to send data s <- c", func(done Done) {
-			testDataFlow(srvS, clnS, "WORLD")
+			recvMsg, err := test.DataFlow(srvS, clnS, []byte("WORLD"))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(string(recvMsg)).To(Equal("WORLD"))
 			close(done)
 		})
 	})
