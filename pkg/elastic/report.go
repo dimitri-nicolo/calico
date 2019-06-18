@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	summaryFields = []string{
+	reportSummaryFields = []string{
 		"reportName", "reportTypeName", "reportSpec", "reportTypeSpec", "startTime", "endTime",
 		"generationTime", "endpointsSummary", "namespacesSummary", "servicesSummary", "auditSummary",
 		"uiSummary",
@@ -98,7 +98,7 @@ func (c *client) RetrieveArchivedReportSummaries() ([]*report.ArchivedReportData
 		res, err := c.Search().
 			Index(searchIndex).
 			Sort("startTime", false).
-			FetchSourceContext(elastic.NewFetchSourceContext(true).Include(summaryFields...)).From(i).Size(pageSize).Do(context.Background())
+			FetchSourceContext(elastic.NewFetchSourceContext(true).Include(reportSummaryFields...)).From(i).Size(pageSize).Do(context.Background())
 		if err != nil {
 			log.WithError(err).Error("failed to query for raw report data")
 			return nil, err
@@ -168,7 +168,7 @@ func (c *client) retrieveArchivedReportSummary(queries []elastic.Query, includeR
 		Index(searchIndex).
 		Query(elastic.NewBoolQuery().Must(queries...)).
 		FetchSourceContext(elastic.NewFetchSourceContext(true).
-			Include(summaryFields...)).Size(1)
+			Include(reportSummaryFields...)).Size(1)
 	if includeReverseSort {
 		q = q.Sort("endTime", false)
 	}

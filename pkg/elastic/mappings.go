@@ -40,4 +40,31 @@ const (
     }
   }
 }`
+
+	benchmarksIndex   = "tigera_secure_ee_benchmark_results"
+	benchmarksMapping = `{
+  "mappings": {
+    "_doc": {
+      "properties": {
+        "version": { "type": "keyword" },
+        "type": { "type": "keyword" },
+        "node_name": { "type": "keyword" },
+        "timestamp": { "type": "date" },
+        "error": { "type": "text" },
+        "tests": {
+          "type": "nested",
+          "properties": {
+            "section": { "type": "keyword" },
+            "section_desc": { "type": "text" },
+            "test_number": { "type": "keyword" },
+            "test_desc": { "type": "text" },
+            "test_info": { "type": "text" },
+            "status": { "type": "text" },
+            "scored": { "type": "boolean" }
+          }
+        }
+      }
+    }
+  }
+}`
 )

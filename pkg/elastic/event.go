@@ -66,7 +66,7 @@ func (c *client) SearchAuditEvents(ctx context.Context, filter *v3.AuditEventsSe
 				ev := new(auditv1.Event)
 				if err := json.Unmarshal(*hit.Source, ev); err != nil {
 					log.WithFields(log.Fields{"index": hit.Index, "id": hit.Id}).WithError(err).Warn("failed to unmarshal event json")
-					ch <- &event.AuditEventResult{nil, err}
+					continue
 				}
 				ch <- &event.AuditEventResult{ev, nil}
 			}

@@ -14,6 +14,7 @@ import (
 	"github.com/olivere/elastic"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/tigera/compliance/pkg/benchmark"
 	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/event"
 	"github.com/tigera/compliance/pkg/list"
@@ -26,6 +27,9 @@ const (
 )
 
 type Client interface {
+	benchmark.BenchmarksQuery
+	benchmark.BenchmarksStore
+	benchmark.BenchmarksGetter
 	report.AuditLogReportHandler
 	report.FlowLogReportHandler
 	report.ReportRetriever
@@ -141,7 +145,7 @@ func (c *client) ensureIndexExists(index, mapping string) error {
 
 	// Return if index exists
 	if exists {
-		clog.Info("index already exists, bailing out...")
+		clog.Info("index already exists")
 		return nil
 	}
 
@@ -162,7 +166,7 @@ func (c *client) ensureIndexExists(index, mapping string) error {
 
 	// Check if acknowledged
 	if !createIndex.Acknowledged {
-		clog.Warn("index creation has not yet been acknowledged...")
+		clog.Warn("index creation has not yet been acknowledged")
 	}
 	clog.Info("index successfully created!")
 	return nil
@@ -181,5 +185,6 @@ func (c *client) Reset() {
 		c.clusterIndex(reportsIndex, "*"),
 		c.clusterIndex(snapshotsIndex, "*"),
 		c.clusterIndex(auditLogIndex, "*"),
+		c.clusterIndex(benchmarksIndex, "*"),
 	).Do(context.Background())
 }
