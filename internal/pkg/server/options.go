@@ -5,6 +5,7 @@ package server
 import (
 	"crypto"
 	"crypto/x509"
+	"io/ioutil"
 	"os"
 
 	"github.com/pkg/errors"
@@ -18,6 +19,27 @@ type Option func(*Server) error
 func WithDefaultAddr(addr string) Option {
 	return func(s *Server) error {
 		s.http.Addr = addr
+		return nil
+	}
+}
+
+// WithTemplate adds the path to the manifest template
+func WithTemplate(templatePath string) Option {
+	return func(s *Server) error {
+		templateContent, err := ioutil.ReadFile(templatePath)
+		if err != nil {
+			return errors.Errorf("Could not read template from path %v", err)
+		}
+
+		s.template = string(templateContent)
+		return nil
+	}
+}
+
+// WithPublicAddr assigns a public address
+func WithPublicAddr(address string) Option {
+	return func(s *Server) error {
+		s.publicAddress = address
 		return nil
 	}
 }

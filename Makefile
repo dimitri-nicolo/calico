@@ -186,6 +186,8 @@ tigera/%-$(ARCH): $(BINDIR)/%-$(ARCH)
 	rm -rf docker-image/bin
 	mkdir -p docker-image/bin
 	cp $(BINDIR)/$*-$(ARCH) docker-image/bin/
+	mkdir -p docker-image/templates
+	cp manifests/guardian.yaml docker-image/templates/
 	docker build --pull -t tigera/$*:latest-$(ARCH) --file ./docker-image/Dockerfile.$*.$(ARCH) docker-image
 ifeq ($(ARCH),amd64)
 	docker tag tigera/$*:latest-$(ARCH) tigera/$*:latest

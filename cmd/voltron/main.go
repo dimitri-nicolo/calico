@@ -11,7 +11,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/tigera/voltron/internal/pkg/bootstrap"
-	"github.com/tigera/voltron/internal/pkg/config"
 	"github.com/tigera/voltron/internal/pkg/server"
 )
 
@@ -20,8 +19,18 @@ const (
 	EnvConfigPrefix = "VOLTRON"
 )
 
+// Config is a configuration used for Voltron
+type Config struct {
+	Port         int    `default:"5555"`
+	Host         string `default:"localhost"`
+	LogLevel     string `default:"DEBUG"`
+	CertPath     string `default:"certs"`
+	TemplatePath string `default:"/tmp/guardian.yaml"`
+	PublicIP     string `default:"127.0.0.1:32453"`
+}
+
 func main() {
-	cfg := config.Config{}
+	cfg := Config{}
 	if err := envconfig.Process(EnvConfigPrefix, &cfg); err != nil {
 		log.Fatal(err)
 	}
@@ -42,6 +51,9 @@ func main() {
 	srv, err := server.New(
 		server.WithDefaultAddr(addr),
 		server.WithCredsFiles(cert, key),
+		server.WithTemplate(cfg.TemplatePath),
+		server.WithPublicAddr(cfg.PublicIP),
+		server.WithKeepClusterKeys(),
 		server.WithTunnelCreds(tunnelCert, tunnelKey),
 	)
 

@@ -1,0 +1,153 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cnx-guardian
+  namespace: calico-monitoring
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: cnx-guardian-config
+  namespace: calico-monitoring
+data:
+  # Server port for Guardian
+  cnx-guardian.port: "9443"
+  # Logging level
+  cnx-guardian.log-level: "INFO"
+  # This tells Guardian how to reach Voltron
+  cnx-guardian.voltron-url: {{ .VoltronURL }}
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRole
+metadata:
+  name: cnx-guardian-impersonator-role
+rules:
+  - apiGroups: [""]
+    resources: ["users", "groups", "serviceaccounts"]
+    verbs: ["impersonate"]
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: cnx-guardian-impersonator
+roleRef:
+  kind: ClusterRole
+  name: cnx-guardian-impersonator-role
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+  - kind: ServiceAccount
+    name: cnx-guardian
+    namespace: calico-monitoring
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cnx-guardian-tls
+  namespace: calico-monitoring
+type: Opaque
+data:
+  ca.crt: {{ .GuardianTLSCert | base64 }}
+  ca.key: {{ .GuardianTLSKey | base64 }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cnx-guardian-credentials
+  namespace: calico-monitoring
+type: Opaque
+data:
+  # This validation token is signed by Voltron and contains metadata
+  # about the Guardian's corresponding App Cluster (i.e. cluster ID,
+  # display name, etc.)
+  cnx-guardian.voltron-cert: {{ .VoltronCert | base64 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cnx-guardian
+  namespace: calico-monitoring
+  labels:
+    k8s-app: cnx-guardian
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      k8s-app: cnx-guardian
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      name: cnx-guardian
+      namespace: calico-monitoring
+      labels:
+        k8s-app: cnx-guardian
+      annotations:
+        # Mark this pod as a critical add-on; when enabled,
+        # the critical add-on scheduler reserves resources
+        # for critical add-on pods so that they can be rescheduled
+        # after a failure.  This annotation works in tandem
+        # with the toleration below.
+        scheduler.alpha.kubernetes.io/critical-pod: ''
+    spec:
+      nodeSelector:
+        beta.kubernetes.io/os: linux
+      serviceAccountName: cnx-guardian
+      tolerations:
+        - key: node-role.kubernetes.io/master
+          effect: NoSchedule
+        # Allow this pod to be rescheduled while the node is in
+        # "critical add-ons only" mode. This, along with the
+        # annotation above marks this pod as a critical add-on.
+        - key: CriticalAddonsOnly
+          operator: Exists
+      # Use the same pull secret as the rest of TSEE
+      imagePullSecrets:
+        - name: cnx-pull-secret
+      containers:
+        - name: cnx-guardian
+          image: gcr.io/tigera-dev/cnx/tigera/guardian:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: GUARDIAN_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: cnx-guardian-config
+                  key: cnx-guardian.port
+            - name: GUARDIAN_LOGLEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: cnx-guardian-config
+                  key: cnx-guardian.log-level
+            - name: GUARDIAN_VOLTRON_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: cnx-guardian-config
+                  key: cnx-guardian.voltron-url
+          # QUESTION: Should we have resource limits defined?
+          resources: {}
+          volumeMounts:
+            - mountPath: /certs/
+              name: cnx-guardian-tls
+              readOnly: true
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 9443
+              scheme: HTTPS
+            initialDelaySeconds: 90
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 9443
+              scheme: HTTPS
+            initialDelaySeconds: 10
+            periodSeconds: 5
+      volumes:
+        - name: cnx-guardian-tls
+          secret:
+            secretName: cnx-guardian-tls
+        - name: cnx-guardian-credentials
+          secret:
+            secretName: cnx-guardian-credentials

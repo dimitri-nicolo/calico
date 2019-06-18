@@ -53,6 +53,9 @@ type Server struct {
 	// If not set, will be populated from certFile and keyFile
 	tunnelCert *x509.Certificate
 	tunnelKey  crypto.Signer
+
+	template      string
+	publicAddress string
 }
 
 // New returns a new Server
@@ -110,6 +113,10 @@ func New(opts ...Option) (*Server, error) {
 		return nil, errors.WithMessage(err, "tunnel server")
 	}
 	go srv.acceptTunnels()
+	srv.clusters.renderer, err = NewRenderer(srv.template, srv.publicAddress, srv.tunnelCert)
+	if err != nil {
+		return nil, errors.WithMessage(err, "Could not create a template to render manifests")
+	}
 
 	return srv, nil
 }

@@ -58,6 +58,8 @@ VOLTRON_LOGLEVEL | Environment | DEBUG
 VOLTRON_PORT | Environment | 5555
 VOLTRON_HOST | Environment | localhost
 VOLTRON_CERTPATH | Environment | /certs
+VOLTRON_TEMPLATEPATH | Environment | /tmp/guardian.yaml
+VOLTRON_PUBLICIP | Environment | 127.0.0.1:32453
 
 ### Build and deploy
 

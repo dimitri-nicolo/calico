@@ -21,6 +21,9 @@ import (
 	"github.com/tigera/voltron/pkg/tunnel"
 )
 
+// AppYaml is the content-type that will be returned when returning a yaml file
+const AppYaml = "application/vnd.yaml"
+
 type cluster struct {
 	jclust.Cluster
 
@@ -40,6 +43,7 @@ type clusters struct {
 
 	// keep the generated keys, only for testing and debugging
 	keepKeys bool
+	renderer *Renderer
 }
 
 func returnJSON(w http.ResponseWriter, data interface{}) {
@@ -49,6 +53,14 @@ func returnJSON(w http.ResponseWriter, data interface{}) {
 		// TODO: We need named errors, with predefined
 		// error codes and user-friendly error messages here
 		http.Error(w, "\"An error occurred\"", 500)
+	}
+}
+
+func returnManifests(w http.ResponseWriter, cert *x509.Certificate, key crypto.Signer, renderer *Renderer) {
+	w.Header().Set("Content-Type", AppYaml)
+	ok := renderer.RenderManifest(w, cert, key)
+	if !ok {
+		http.Error(w, "\"Could not renderer manifest\"", 500)
 	}
 }
 
@@ -124,10 +136,8 @@ func (cs *clusters) updateCluster(w http.ResponseWriter, r *http.Request) {
 		}
 
 		cs.add(jc.ID, c)
+		returnManifests(w, cert, key, cs.renderer)
 	}
-
-	// TODO we will return clusters credentials
-	returnJSON(w, jc)
 }
 
 func (cs *clusters) deleteCluster(w http.ResponseWriter, r *http.Request) {
