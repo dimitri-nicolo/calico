@@ -234,13 +234,15 @@ var _ = Describe("Report tests", func() {
 		xc.SetPod(Name2, Namespace1, Label2, IP2, Name2, NoPodOptions)
 
 		By("Setting GNP1, NP1 and k8sNP1 to match pod1 only")
-		gnp1 := xc.SetGlobalNetworkPolicy(Name1, Select1,
+		gnp1 := xc.SetGlobalNetworkPolicy(TierDefault, Name1, Select1,
 			nil,
 			[]apiv3.Rule{},
+			&Order1,
 		)
-		np1 := xc.SetNetworkPolicy(Name1, Namespace1, Select1,
+		np1 := xc.SetNetworkPolicy(TierDefault, Name1, Namespace1, Select1,
 			nil,
 			[]apiv3.Rule{},
+			&Order1,
 		)
 		knp1 := xc.SetK8sNetworkPolicy(Name1, Namespace1, Select1,
 			nil,
@@ -248,13 +250,15 @@ var _ = Describe("Report tests", func() {
 		)
 
 		By("Setting GNP2, NP2 and k8sNP2 to match pod2 only")
-		gnp2 := xc.SetGlobalNetworkPolicy(Name2, Select2,
+		gnp2 := xc.SetGlobalNetworkPolicy(TierDefault, Name2, Select2,
 			nil,
 			[]apiv3.Rule{},
+			&Order1,
 		)
-		np2 := xc.SetNetworkPolicy(Name2, Namespace1, Select2,
+		np2 := xc.SetNetworkPolicy(TierDefault, Name2, Namespace1, Select2,
 			nil,
 			[]apiv3.Rule{},
+			&Order1,
 		)
 		knp2 := xc.SetK8sNetworkPolicy(Name2, Namespace1, Select2,
 			nil,
@@ -262,13 +266,15 @@ var _ = Describe("Report tests", func() {
 		)
 
 		By("Updating GNP1, NP1 and k8sNP1 to match pod2 only -  they should all remain in-scope though")
-		gnp1_2 := xc.SetGlobalNetworkPolicy(Name1, Select2,
+		gnp1_2 := xc.SetGlobalNetworkPolicy(TierDefault, Name1, Select2,
 			nil,
 			[]apiv3.Rule{},
+			&Order1,
 		)
-		np1_2 := xc.SetNetworkPolicy(Name1, Namespace1, Select2,
+		np1_2 := xc.SetNetworkPolicy(TierDefault, Name1, Namespace1, Select2,
 			nil,
 			[]apiv3.Rule{},
+			&Order1,
 		)
 		knp1_2 := xc.SetK8sNetworkPolicy(Name1, Namespace1, Select2,
 			nil,

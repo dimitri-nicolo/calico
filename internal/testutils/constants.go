@@ -44,10 +44,18 @@ const (
 type Name int
 
 const (
-	Name1 Name = 1 + iota
+	NameDefault Name = 0 + iota
+	Name1
 	Name2
 	Name3
 	Name4
+)
+
+const (
+	// Redefine names as tiers to make method calls clearer.
+	TierDefault = NameDefault
+	Tier1       = Name1
+	Tier2       = Name2
 )
 
 // Name value. This is rendered as a string containing the value by the helper methods.
@@ -101,4 +109,21 @@ type PodOpt byte
 const (
 	PodOptEnvoyEnabled PodOpt = 1 << iota
 	PodOptSetGenerateName
+)
+
+// Additional policy options, indicating what features to configure in the pod.
+type PolicyOpt byte
+
+const (
+	PolicyOptOrder1 PolicyOpt = 1 << iota
+	PolicyOptOrder10
+	PolicyOptOrder10000
+	PolicyOptTier1
+	PolicyOptTier2
+)
+
+var (
+	Order1     float64 = 1.0
+	Order10            = 10.0
+	Order10000         = 10000.0
 )

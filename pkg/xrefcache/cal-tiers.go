@@ -20,6 +20,7 @@ var (
 
 type VersionedTierResource interface {
 	VersionedResource
+	getV1Key() model.TierKey
 	getV1Tier() *model.Tier
 }
 
@@ -32,6 +33,15 @@ type CacheEntryTier struct {
 
 	// --- Internal data ---
 	cacheEntryCommon
+	policySorter    PolicySorter
+	orderedPolicies []*CacheEntryNetworkPolicy
+}
+
+func (c *CacheEntryTier) GetOrderedPolicies() []*CacheEntryNetworkPolicy {
+	// Invoke the policy sorter sort(). This will call back into the tier cache entries to update the ordered
+	// sets of policy.
+	c.policySorter.sort()
+	return c.orderedPolicies
 }
 
 func (c *CacheEntryTier) getVersionedResource() VersionedResource {
@@ -58,6 +68,13 @@ func (v *versionedCalicoTier) getV1() interface{} {
 	return v.v1
 }
 
+// getV1Key implements the VersionedPolicyResource interface.
+func (v *versionedCalicoTier) getV1Key() model.TierKey {
+	return model.TierKey{
+		Name: v.Name,
+	}
+}
+
 func (v *versionedCalicoTier) getV1Tier() *model.Tier {
 	return v.v1
 }
@@ -79,7 +96,9 @@ func (c *tierHandler) kinds() []metav1.TypeMeta {
 }
 
 func (c *tierHandler) newCacheEntry() CacheEntry {
-	return &CacheEntryTier{}
+	return &CacheEntryTier{
+		policySorter: c.PolicySorter(),
+	}
 }
 
 func (c *tierHandler) resourceAdded(id apiv3.ResourceID, entry CacheEntry) {
@@ -87,9 +106,15 @@ func (c *tierHandler) resourceAdded(id apiv3.ResourceID, entry CacheEntry) {
 }
 
 func (c *tierHandler) resourceUpdated(id apiv3.ResourceID, entry CacheEntry, prev VersionedResource) {
+	// Update the policy sorter.
+	x := entry.(*CacheEntryTier)
+	c.PolicySorter().updateTier(x)
 }
 
-func (c *tierHandler) resourceDeleted(id apiv3.ResourceID, _ CacheEntry) {
+func (c *tierHandler) resourceDeleted(id apiv3.ResourceID, entry CacheEntry) {
+	// Delete the tier from the policy sorter.
+	x := entry.(*CacheEntryTier)
+	c.PolicySorter().deleteTier(x)
 }
 
 // recalculate implements the resourceHandler interface.

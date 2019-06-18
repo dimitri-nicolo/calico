@@ -25,50 +25,54 @@ var _ = Describe("Basic CRUD of network policies with no other resources present
 
 	It("should handle basic CRUD of GlobalNetworkPolicy and determine non-xref state", func() {
 		By("applying a GlobalNetworkPolicy, ingress no rules")
-		tester.SetGlobalNetworkPolicy(Name1, SelectAll,
+		tester.SetGlobalNetworkPolicy(TierDefault, Name1, SelectAll,
 			[]apiv3.Rule{},
 			nil,
+			&Order1,
 		)
 
 		By("checking the cache settings")
-		np := tester.GetGlobalNetworkPolicy(Name1)
+		np := tester.GetGlobalNetworkPolicy(TierDefault, Name1)
 		Expect(np).ToNot(BeNil())
 		Expect(np.Flags).To(Equal(xrefcache.CacheEntryProtectedIngress))
 
 		By("applying a GlobalNetworkPolicy, egress no rules")
-		tester.SetGlobalNetworkPolicy(Name1, SelectAll,
+		tester.SetGlobalNetworkPolicy(TierDefault, Name1, SelectAll,
 			nil,
 			[]apiv3.Rule{},
+			&Order1,
 		)
 
 		By("checking the cache settings")
-		np = tester.GetGlobalNetworkPolicy(Name1)
+		np = tester.GetGlobalNetworkPolicy(TierDefault, Name1)
 		Expect(np).ToNot(BeNil())
 		Expect(np.Flags).To(Equal(xrefcache.CacheEntryProtectedEgress))
 
 		By("applying a GlobalNetworkPolicy, ingress, one allow source rule with internet CIDR")
-		tester.SetGlobalNetworkPolicy(Name1, SelectAll,
+		tester.SetGlobalNetworkPolicy(TierDefault, Name1, SelectAll,
 			[]apiv3.Rule{
 				CalicoRuleNets(Allow, Source, Public),
 			},
 			nil,
+			&Order1,
 		)
 
 		By("checking the cache settings")
-		np = tester.GetGlobalNetworkPolicy(Name1)
+		np = tester.GetGlobalNetworkPolicy(TierDefault, Name1)
 		Expect(np).ToNot(BeNil())
 		Expect(np.Flags).To(Equal(xrefcache.CacheEntryProtectedIngress | xrefcache.CacheEntryInternetExposedIngress))
 
 		By("applying a GlobalNetworkPolicy, ingress, one allow destination rule with internet CIDR")
-		tester.SetGlobalNetworkPolicy(Name1, SelectAll,
+		tester.SetGlobalNetworkPolicy(TierDefault, Name1, SelectAll,
 			[]apiv3.Rule{
 				CalicoRuleNets(Allow, Destination, Public),
 			},
 			nil,
+			&Order1,
 		)
 
 		By("checking the cache settings - dest CIDR not relevant for ingress rule")
-		np = tester.GetGlobalNetworkPolicy(Name1)
+		np = tester.GetGlobalNetworkPolicy(TierDefault, Name1)
 		Expect(np).ToNot(BeNil())
 		Expect(np.Flags).To(Equal(
 			xrefcache.CacheEntryProtectedIngress |
@@ -77,52 +81,56 @@ var _ = Describe("Basic CRUD of network policies with no other resources present
 		))
 
 		By("applying a GlobalNetworkPolicy, ingress, one allow source rule with private CIDR")
-		tester.SetGlobalNetworkPolicy(Name1, SelectAll,
+		tester.SetGlobalNetworkPolicy(TierDefault, Name1, SelectAll,
 			[]apiv3.Rule{
 				CalicoRuleNets(Allow, Source, Private),
 			},
 			nil,
+			&Order1,
 		)
 
 		By("checking the cache settings")
-		np = tester.GetGlobalNetworkPolicy(Name1)
+		np = tester.GetGlobalNetworkPolicy(TierDefault, Name1)
 		Expect(np).ToNot(BeNil())
 		Expect(np.Flags).To(Equal(xrefcache.CacheEntryProtectedIngress))
 
 		By("applying a GlobalNetworkPolicy, ingress and egress no rules")
-		tester.SetGlobalNetworkPolicy(Name1, SelectAll,
+		tester.SetGlobalNetworkPolicy(TierDefault, Name1, SelectAll,
 			[]apiv3.Rule{},
 			[]apiv3.Rule{},
+			&Order1,
 		)
 
 		By("checking the cache settings")
-		np = tester.GetGlobalNetworkPolicy(Name1)
+		np = tester.GetGlobalNetworkPolicy(TierDefault, Name1)
 		Expect(np).ToNot(BeNil())
 		Expect(np.Flags).To(Equal(xrefcache.CacheEntryProtectedIngress | xrefcache.CacheEntryProtectedEgress))
 
 		By("applying a GlobalNetworkPolicy, egress, one allow destination rule with internet CIDR")
-		tester.SetGlobalNetworkPolicy(Name1, SelectAll,
+		tester.SetGlobalNetworkPolicy(TierDefault, Name1, SelectAll,
 			nil,
 			[]apiv3.Rule{
 				CalicoRuleNets(Allow, Destination, Public),
 			},
+			&Order1,
 		)
 
 		By("checking the cache settings")
-		np = tester.GetGlobalNetworkPolicy(Name1)
+		np = tester.GetGlobalNetworkPolicy(TierDefault, Name1)
 		Expect(np).ToNot(BeNil())
 		Expect(np.Flags).To(Equal(xrefcache.CacheEntryProtectedEgress | xrefcache.CacheEntryInternetExposedEgress))
 
 		By("applying a GlobalNetworkPolicy, egress, one allow source rule with internet CIDR")
-		tester.SetGlobalNetworkPolicy(Name1, SelectAll,
+		tester.SetGlobalNetworkPolicy(TierDefault, Name1, SelectAll,
 			nil,
 			[]apiv3.Rule{
 				CalicoRuleNets(Allow, Source, Public),
 			},
+			&Order1,
 		)
 
 		By("checking the cache settings - source CIDR not relevant for egress rule")
-		np = tester.GetGlobalNetworkPolicy(Name1)
+		np = tester.GetGlobalNetworkPolicy(TierDefault, Name1)
 		Expect(np).ToNot(BeNil())
 		Expect(np.Flags).To(Equal(
 			xrefcache.CacheEntryProtectedEgress |
@@ -131,59 +139,63 @@ var _ = Describe("Basic CRUD of network policies with no other resources present
 		))
 
 		By("applying a GlobalNetworkPolicy, egress, one allow destination rule with private CIDR")
-		tester.SetGlobalNetworkPolicy(Name1, SelectAll,
+		tester.SetGlobalNetworkPolicy(TierDefault, Name1, SelectAll,
 			nil,
 			[]apiv3.Rule{
 				CalicoRuleNets(Allow, Destination, Private),
 			},
+			&Order1,
 		)
 
 		By("checking the cache settings")
-		np = tester.GetGlobalNetworkPolicy(Name1)
+		np = tester.GetGlobalNetworkPolicy(TierDefault, Name1)
 		Expect(np).ToNot(BeNil())
 		Expect(np.Flags).To(Equal(xrefcache.CacheEntryProtectedEgress))
 
 		By("deleting the first network policy")
-		tester.DeleteGlobalNetworkPolicy(Name1)
+		tester.DeleteGlobalNetworkPolicy(TierDefault, Name1)
 
 		By("checking the cache settings")
-		np = tester.GetGlobalNetworkPolicy(Name1)
+		np = tester.GetGlobalNetworkPolicy(TierDefault, Name1)
 		Expect(np).To(BeNil())
 	})
 
 	It("should handle basic CRUD of Calico NetworkPolicy and determine non-xref state", func() {
 		By("applying a NetworkPolicy, ingress no rules")
-		tester.SetNetworkPolicy(Name1, Namespace1, SelectAll,
+		tester.SetNetworkPolicy(TierDefault, Name1, Namespace1, SelectAll,
 			[]apiv3.Rule{},
 			nil,
+			&Order1,
 		)
 
 		By("checking the cache settings")
-		np := tester.GetNetworkPolicy(Name1, Namespace1)
+		np := tester.GetNetworkPolicy(TierDefault, Name1, Namespace1)
 		Expect(np).ToNot(BeNil())
 		Expect(np.Flags).To(Equal(xrefcache.CacheEntryProtectedIngress))
 
 		By("applying a NetworkPolicy, egress no rules")
-		tester.SetNetworkPolicy(Name1, Namespace1, SelectAll,
+		tester.SetNetworkPolicy(TierDefault, Name1, Namespace1, SelectAll,
 			nil,
 			[]apiv3.Rule{},
+			&Order1,
 		)
 
 		By("checking the cache settings")
-		np = tester.GetNetworkPolicy(Name1, Namespace1)
+		np = tester.GetNetworkPolicy(TierDefault, Name1, Namespace1)
 		Expect(np).ToNot(BeNil())
 		Expect(np.Flags).To(Equal(xrefcache.CacheEntryProtectedEgress))
 
 		By("applying a NetworkPolicy, ingress, one allow source rule with internet CIDR")
-		tester.SetNetworkPolicy(Name1, Namespace1, SelectAll,
+		tester.SetNetworkPolicy(TierDefault, Name1, Namespace1, SelectAll,
 			[]apiv3.Rule{
 				CalicoRuleNets(Allow, Source, Public),
 			},
 			nil,
+			&Order1,
 		)
 
 		By("checking the cache settings")
-		np = tester.GetNetworkPolicy(Name1, Namespace1)
+		np = tester.GetNetworkPolicy(TierDefault, Name1, Namespace1)
 		Expect(np).ToNot(BeNil())
 		Expect(np.Flags).To(Equal(
 			xrefcache.CacheEntryProtectedIngress |
@@ -191,41 +203,44 @@ var _ = Describe("Basic CRUD of network policies with no other resources present
 		))
 
 		By("applying a NetworkPolicy, ingress, one allow source rule with private CIDR")
-		tester.SetNetworkPolicy(Name1, Namespace1, SelectAll,
+		tester.SetNetworkPolicy(TierDefault, Name1, Namespace1, SelectAll,
 			[]apiv3.Rule{
 				CalicoRuleNets(Allow, Source, Private),
 			},
 			nil,
+			&Order1,
 		)
 
 		By("checking the cache settings")
-		np = tester.GetNetworkPolicy(Name1, Namespace1)
+		np = tester.GetNetworkPolicy(TierDefault, Name1, Namespace1)
 		Expect(np).ToNot(BeNil())
 		Expect(np.Flags).To(Equal(xrefcache.CacheEntryProtectedIngress))
 
 		By("applying a NetworkPolicy, ingress, one allow source rule with selector")
-		tester.SetNetworkPolicy(Name1, Namespace1, SelectAll,
+		tester.SetNetworkPolicy(TierDefault, Name1, Namespace1, SelectAll,
 			[]apiv3.Rule{
 				CalicoRuleSelectors(Allow, Source, Select1, NoNamespaceSelector),
 			},
 			nil,
+			&Order1,
 		)
 
 		By("checking the cache settings")
-		np = tester.GetNetworkPolicy(Name1, Namespace1)
+		np = tester.GetNetworkPolicy(TierDefault, Name1, Namespace1)
 		Expect(np).ToNot(BeNil())
 		Expect(np.Flags).To(Equal(xrefcache.CacheEntryProtectedIngress))
 
 		By("applying a NetworkPolicy, ingress, one allow source rule with namespace selector")
-		tester.SetNetworkPolicy(Name1, Namespace1, SelectAll,
+		tester.SetNetworkPolicy(TierDefault, Name1, Namespace1, SelectAll,
 			[]apiv3.Rule{
 				CalicoRuleSelectors(Allow, Source, NoSelector, Select1),
 			},
 			nil,
+			&Order1,
 		)
 
 		By("checking the cache settings")
-		np = tester.GetNetworkPolicy(Name1, Namespace1)
+		np = tester.GetNetworkPolicy(TierDefault, Name1, Namespace1)
 		Expect(np).ToNot(BeNil())
 		Expect(np.Flags).To(Equal(
 			xrefcache.CacheEntryProtectedIngress |
@@ -233,15 +248,16 @@ var _ = Describe("Basic CRUD of network policies with no other resources present
 		))
 
 		By("applying a NetworkPolicy, ingress, one allow destination rule with internet CIDR")
-		tester.SetNetworkPolicy(Name1, Namespace1, SelectAll,
+		tester.SetNetworkPolicy(TierDefault, Name1, Namespace1, SelectAll,
 			[]apiv3.Rule{
 				CalicoRuleNets(Allow, Destination, Public),
 			},
 			nil,
+			&Order1,
 		)
 
 		By("checking the cache settings - dest CIDR not relevant for ingress rule")
-		np = tester.GetNetworkPolicy(Name1, Namespace1)
+		np = tester.GetNetworkPolicy(TierDefault, Name1, Namespace1)
 		Expect(np).ToNot(BeNil())
 		Expect(np.Flags).To(Equal(
 			xrefcache.CacheEntryProtectedIngress |
@@ -250,15 +266,16 @@ var _ = Describe("Basic CRUD of network policies with no other resources present
 		))
 
 		By("applying a NetworkPolicy, ingress, one allow destination rule with selector")
-		tester.SetNetworkPolicy(Name1, Namespace1, SelectAll,
+		tester.SetNetworkPolicy(TierDefault, Name1, Namespace1, SelectAll,
 			[]apiv3.Rule{
 				CalicoRuleSelectors(Allow, Destination, Select1, NoNamespaceSelector),
 			},
 			nil,
+			&Order1,
 		)
 
 		By("checking the cache settings - dest selector not relevant for ingress rule")
-		np = tester.GetNetworkPolicy(Name1, Namespace1)
+		np = tester.GetNetworkPolicy(TierDefault, Name1, Namespace1)
 		Expect(np).ToNot(BeNil())
 		Expect(np.Flags).To(Equal(
 			xrefcache.CacheEntryProtectedIngress |
@@ -267,65 +284,70 @@ var _ = Describe("Basic CRUD of network policies with no other resources present
 		))
 
 		By("applying a NetworkPolicy, ingress and egress no rules")
-		tester.SetNetworkPolicy(Name1, Namespace1, SelectAll,
+		tester.SetNetworkPolicy(TierDefault, Name1, Namespace1, SelectAll,
 			[]apiv3.Rule{},
 			[]apiv3.Rule{},
+			&Order1,
 		)
 
 		By("checking the cache settings")
-		np = tester.GetNetworkPolicy(Name1, Namespace1)
+		np = tester.GetNetworkPolicy(TierDefault, Name1, Namespace1)
 		Expect(np).ToNot(BeNil())
 		Expect(np.Flags).To(Equal(xrefcache.CacheEntryProtectedIngress | xrefcache.CacheEntryProtectedEgress))
 
 		By("applying a NetworkPolicy, egress, one allow destination rule with internet CIDR")
-		tester.SetNetworkPolicy(Name1, Namespace1, SelectAll,
+		tester.SetNetworkPolicy(TierDefault, Name1, Namespace1, SelectAll,
 			nil,
 			[]apiv3.Rule{
 				CalicoRuleNets(Allow, Destination, Public),
 			},
+			&Order1,
 		)
 
 		By("checking the cache settings")
-		np = tester.GetNetworkPolicy(Name1, Namespace1)
+		np = tester.GetNetworkPolicy(TierDefault, Name1, Namespace1)
 		Expect(np).ToNot(BeNil())
 		Expect(np.Flags).To(Equal(xrefcache.CacheEntryProtectedEgress | xrefcache.CacheEntryInternetExposedEgress))
 
 		By("applying a NetworkPolicy, egress, one allow destination rule with private CIDR")
-		tester.SetNetworkPolicy(Name1, Namespace1, SelectAll,
+		tester.SetNetworkPolicy(TierDefault, Name1, Namespace1, SelectAll,
 			nil,
 			[]apiv3.Rule{
 				CalicoRuleNets(Allow, Destination, Private),
 			},
+			&Order1,
 		)
 
 		By("checking the cache settings")
-		np = tester.GetNetworkPolicy(Name1, Namespace1)
+		np = tester.GetNetworkPolicy(TierDefault, Name1, Namespace1)
 		Expect(np).ToNot(BeNil())
 		Expect(np.Flags).To(Equal(xrefcache.CacheEntryProtectedEgress))
 
 		By("applying a NetworkPolicy, egress, one allow destination rule with selector")
-		tester.SetNetworkPolicy(Name1, Namespace1, SelectAll,
+		tester.SetNetworkPolicy(TierDefault, Name1, Namespace1, SelectAll,
 			nil,
 			[]apiv3.Rule{
 				CalicoRuleSelectors(Allow, Destination, Select1, NoNamespaceSelector),
 			},
+			&Order1,
 		)
 
 		By("checking the cache settings")
-		np = tester.GetNetworkPolicy(Name1, Namespace1)
+		np = tester.GetNetworkPolicy(TierDefault, Name1, Namespace1)
 		Expect(np).ToNot(BeNil())
 		Expect(np.Flags).To(Equal(xrefcache.CacheEntryProtectedEgress))
 
 		By("applying a NetworkPolicy, egress, one allow destination rule with namespace selector")
-		tester.SetNetworkPolicy(Name1, Namespace1, SelectAll,
+		tester.SetNetworkPolicy(TierDefault, Name1, Namespace1, SelectAll,
 			nil,
 			[]apiv3.Rule{
 				CalicoRuleSelectors(Allow, Destination, NoSelector, Select1),
 			},
+			&Order1,
 		)
 
 		By("checking the cache settings")
-		np = tester.GetNetworkPolicy(Name1, Namespace1)
+		np = tester.GetNetworkPolicy(TierDefault, Name1, Namespace1)
 		Expect(np).ToNot(BeNil())
 		Expect(np.Flags).To(Equal(
 			xrefcache.CacheEntryProtectedEgress |
@@ -333,15 +355,16 @@ var _ = Describe("Basic CRUD of network policies with no other resources present
 		))
 
 		By("applying a NetworkPolicy, egress, one allow source rule with internet CIDR")
-		tester.SetNetworkPolicy(Name1, Namespace1, SelectAll,
+		tester.SetNetworkPolicy(TierDefault, Name1, Namespace1, SelectAll,
 			nil,
 			[]apiv3.Rule{
 				CalicoRuleNets(Allow, Source, Public),
 			},
+			&Order1,
 		)
 
 		By("checking the cache settings - source CIDR not relevant for egress rule")
-		np = tester.GetNetworkPolicy(Name1, Namespace1)
+		np = tester.GetNetworkPolicy(TierDefault, Name1, Namespace1)
 		Expect(np).ToNot(BeNil())
 		Expect(np.Flags).To(Equal(
 			xrefcache.CacheEntryProtectedEgress |
@@ -350,15 +373,16 @@ var _ = Describe("Basic CRUD of network policies with no other resources present
 		))
 
 		By("applying a NetworkPolicy, egress, one allow source rule with selector")
-		tester.SetNetworkPolicy(Name1, Namespace1, SelectAll,
+		tester.SetNetworkPolicy(TierDefault, Name1, Namespace1, SelectAll,
 			nil,
 			[]apiv3.Rule{
 				CalicoRuleSelectors(Allow, Source, Select1, NoNamespaceSelector),
 			},
+			&Order1,
 		)
 
 		By("checking the cache settings - source selector not relevant for egress rule")
-		np = tester.GetNetworkPolicy(Name1, Namespace1)
+		np = tester.GetNetworkPolicy(TierDefault, Name1, Namespace1)
 		Expect(np).ToNot(BeNil())
 		Expect(np.Flags).To(Equal(
 			xrefcache.CacheEntryProtectedEgress |
@@ -367,10 +391,10 @@ var _ = Describe("Basic CRUD of network policies with no other resources present
 		))
 
 		By("deleting the first network policy")
-		tester.DeleteNetworkPolicy(Name1, Namespace1)
+		tester.DeleteNetworkPolicy(TierDefault, Name1, Namespace1)
 
 		By("checking the cache settings")
-		np = tester.GetNetworkPolicy(Name1, Namespace1)
+		np = tester.GetNetworkPolicy(TierDefault, Name1, Namespace1)
 		Expect(np).To(BeNil())
 	})
 
@@ -539,51 +563,251 @@ var _ = Describe("Basic CRUD of network policies with no other resources present
 		hep := tester.GetHostEndpoint(Name2)
 
 		By("applying a GlobalNetworkPolicy matching select all()")
-		tester.SetGlobalNetworkPolicy(Name1, SelectAll,
+		tester.SetGlobalNetworkPolicy(TierDefault, Name1, SelectAll,
 			[]apiv3.Rule{},
 			[]apiv3.Rule{},
+			&Order1,
 		)
 
 		By("checking the pod and hep are linked in the policy")
-		gnp := tester.GetGlobalNetworkPolicy(Name1)
+		gnp := tester.GetGlobalNetworkPolicy(TierDefault, Name1)
 		Expect(gnp.SelectedHostEndpoints.Len()).To(Equal(1))
 		Expect(gnp.SelectedPods.Len()).To(Equal(1))
 		Expect(gnp.SelectedHostEndpoints.Contains(resources.GetResourceID(hep))).To(BeTrue())
 		Expect(gnp.SelectedPods.Contains(resources.GetResourceID(pod))).To(BeTrue())
 
 		By("updating GlobalNetworkPolicy to match Label1")
-		tester.SetGlobalNetworkPolicy(Name1, Select1,
+		tester.SetGlobalNetworkPolicy(TierDefault, Name1, Select1,
 			[]apiv3.Rule{},
 			[]apiv3.Rule{},
+			&Order1,
 		)
 
 		By("checking the pod is linked in the policy and the hep is now unlinked")
-		gnp = tester.GetGlobalNetworkPolicy(Name1)
+		gnp = tester.GetGlobalNetworkPolicy(TierDefault, Name1)
 		Expect(gnp.SelectedHostEndpoints.Len()).To(Equal(0))
 		Expect(gnp.SelectedPods.Len()).To(Equal(1))
 		Expect(gnp.SelectedPods.Contains(resources.GetResourceID(pod))).To(BeTrue())
 
 		By("updating GlobalNetworkPolicy to match Label2")
-		tester.SetGlobalNetworkPolicy(Name1, Select2,
+		tester.SetGlobalNetworkPolicy(TierDefault, Name1, Select2,
 			[]apiv3.Rule{},
 			[]apiv3.Rule{},
+			&Order1,
 		)
 
 		By("checking the hep is linked in the policy and the pod is now unlinked")
-		gnp = tester.GetGlobalNetworkPolicy(Name1)
+		gnp = tester.GetGlobalNetworkPolicy(TierDefault, Name1)
 		Expect(gnp.SelectedHostEndpoints.Len()).To(Equal(1))
 		Expect(gnp.SelectedPods.Len()).To(Equal(0))
 		Expect(gnp.SelectedHostEndpoints.Contains(resources.GetResourceID(hep))).To(BeTrue())
 
 		By("updating GlobalNetworkPolicy to match Label3")
-		tester.SetGlobalNetworkPolicy(Name1, Select3,
+		tester.SetGlobalNetworkPolicy(TierDefault, Name1, Select3,
 			[]apiv3.Rule{},
 			[]apiv3.Rule{},
+			&Order1,
 		)
 
 		By("checking the policy has no linked endpoints")
-		gnp = tester.GetGlobalNetworkPolicy(Name1)
+		gnp = tester.GetGlobalNetworkPolicy(TierDefault, Name1)
 		Expect(gnp.SelectedHostEndpoints.Len()).To(Equal(0))
 		Expect(gnp.SelectedPods.Len()).To(Equal(0))
+	})
+})
+
+var _ = Describe("Basic CRUD of network policies with no other resources present - policy ordering", func() {
+	var tester *XrefCacheTester
+	var tier1, tier2, tierDefault *xrefcache.CacheEntryTier
+	var gnp1Tier1, np1Tier1, np1Default, knp1Default, gnp1Default, gnp1Tier2, np1Tier2 *xrefcache.CacheEntryNetworkPolicy
+
+	BeforeEach(func() {
+		tester = NewXrefCacheTester()
+		tester.OnStatusUpdate(syncer.NewStatusUpdateInSync())
+
+		By("applying tier 2 order 10")
+		tester.SetTier(Name2, Order10)
+		tier2 = tester.GetTier(Name2)
+
+		By("applying a GlobalNetworkPolicy order 10 in tier1")
+		tester.SetGlobalNetworkPolicy(Tier1, Name1, SelectAll,
+			[]apiv3.Rule{},
+			nil,
+			&Order10,
+		)
+		gnp1Tier1 = tester.GetGlobalNetworkPolicy(Tier1, Name1)
+
+		By("applying a Calico NetworkPolicy order 1 in tier2")
+		tester.SetNetworkPolicy(Tier2, Name1, Namespace1, SelectAll,
+			[]apiv3.Rule{},
+			nil,
+			&Order1,
+		)
+		np1Tier2 = tester.GetNetworkPolicy(Tier2, Name1, Namespace1)
+
+		By("applying a Calico NetworkPolicy order 1 in default tier")
+		tester.SetNetworkPolicy(TierDefault, Name1, Namespace1, SelectAll,
+			[]apiv3.Rule{},
+			nil,
+			&Order1,
+		)
+		np1Default = tester.GetNetworkPolicy(TierDefault, Name1, Namespace1)
+
+		By("applying a k8s NetworkPolicy in default tier")
+		tester.SetK8sNetworkPolicy(Name1, Namespace1, SelectAll,
+			[]networkingv1.NetworkPolicyIngressRule{},
+			nil,
+		)
+		knp1Default = tester.GetK8sNetworkPolicy(Name1, Namespace1)
+
+		By("applying a GlobalNetworkPolicy order 10000 in default tier")
+		tester.SetGlobalNetworkPolicy(TierDefault, Name1, SelectAll,
+			[]apiv3.Rule{},
+			nil,
+			&Order10000,
+		)
+		gnp1Default = tester.GetGlobalNetworkPolicy(TierDefault, Name1)
+
+		By("applying a GlobalNetworkPolicy order 10 in tier2")
+		tester.SetGlobalNetworkPolicy(Tier2, Name1, SelectAll,
+			[]apiv3.Rule{},
+			nil,
+			&Order10,
+		)
+		gnp1Tier2 = tester.GetGlobalNetworkPolicy(Tier2, Name1)
+
+		By("applying a Calico NetworkPolicy order 1 in tier1")
+		tester.SetNetworkPolicy(Tier1, Name1, Namespace1, SelectAll,
+			[]apiv3.Rule{},
+			nil,
+			&Order1,
+		)
+		np1Tier1 = tester.GetNetworkPolicy(Tier1, Name1, Namespace1)
+
+		By("applying tier 1 order 1")
+		tester.SetTier(Name1, Order1)
+		tier1 = tester.GetTier(Name1)
+
+		By("applying default tier infinite order")
+		tester.SetDefaultTier()
+		tierDefault = tester.GetDefaultTier()
+	})
+
+	It("should handle ordering of tiers and policies when querying GetOrderedTiers", func() {
+		By("calling GetOrderedTiers and checking tier order")
+		tiers := tester.XrefCache.GetOrderedTiers()
+		Expect(tiers).To(Equal([]*xrefcache.CacheEntryTier{tier1, tier2, tierDefault}))
+
+		By("checking sorted policies in each tier")
+		Expect(tiers[0].GetOrderedPolicies()).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Tier1, gnp1Tier1}))
+		Expect(tiers[1].GetOrderedPolicies()).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Tier2, gnp1Tier2}))
+		Expect(tiers[2].GetOrderedPolicies()).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Default, knp1Default, gnp1Default}))
+	})
+
+	It("should handle ordering of tiers and policies when querying GetOrderedPolicies without querying the tier order", func() {
+		By("checking sorted policies in each tier")
+		Expect(tier1.GetOrderedPolicies()).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Tier1, gnp1Tier1}))
+		Expect(tier2.GetOrderedPolicies()).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Tier2, gnp1Tier2}))
+		Expect(tierDefault.GetOrderedPolicies()).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Default, knp1Default, gnp1Default}))
+	})
+
+	It("should handle querying GetOrderedTiers reordering tiers and then requerying", func() {
+		By("calling GetOrderedTiers")
+		tiers := tester.XrefCache.GetOrderedTiers()
+		Expect(tiers).To(Equal([]*xrefcache.CacheEntryTier{tier1, tier2, tierDefault}))
+
+		By("reordering tier1 and tier2, calling GetOrderedTiers again and checking tier order")
+		tester.SetTier(Name1, Order10000)
+		tiers = tester.XrefCache.GetOrderedTiers()
+		Expect(tiers).To(Equal([]*xrefcache.CacheEntryTier{tier2, tier1, tierDefault}))
+
+		By("checking sorted policies in each tier")
+		Expect(tiers[0].GetOrderedPolicies()).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Tier2, gnp1Tier2}))
+		Expect(tiers[1].GetOrderedPolicies()).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Tier1, gnp1Tier1}))
+		Expect(tiers[2].GetOrderedPolicies()).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Default, knp1Default, gnp1Default}))
+	})
+
+	It("should handle querying GetOrderedPolicies reordering policies and then requerying", func() {
+		By("checking sorted policies in each tier")
+		Expect(tier1.GetOrderedPolicies()).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Tier1, gnp1Tier1}))
+		Expect(tier2.GetOrderedPolicies()).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Tier2, gnp1Tier2}))
+		Expect(tierDefault.GetOrderedPolicies()).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Default, knp1Default, gnp1Default}))
+
+		By("reordering default tier policies")
+		tester.SetNetworkPolicy(TierDefault, Name1, Namespace1, SelectAll,
+			[]apiv3.Rule{},
+			nil,
+			&Order10,
+		)
+		tester.SetK8sNetworkPolicy(Name1, Namespace1, SelectAll,
+			[]networkingv1.NetworkPolicyIngressRule{},
+			nil,
+		)
+		tester.SetGlobalNetworkPolicy(TierDefault, Name1, SelectAll,
+			[]apiv3.Rule{},
+			nil,
+			&Order1,
+		)
+		Expect(tierDefault.GetOrderedPolicies()).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{gnp1Default, np1Default, knp1Default}))
+	})
+
+	It("should handle ordering of tiers and policies when querying GetOrderedTiers", func() {
+		By("calling GetOrderedTiers and checking tier order")
+		tiers := tester.XrefCache.GetOrderedTiers()
+		Expect(tiers).To(Equal([]*xrefcache.CacheEntryTier{tier1, tier2, tierDefault}))
+
+		By("reordering tier1 and tier2, calling GetOrderedTiers again and checking tier order")
+		tester.SetTier(Name1, Order10000)
+
+		By("reordering gnp1Tier1 and np1Tier1")
+		tester.SetGlobalNetworkPolicy(Tier1, Name1, SelectAll,
+			[]apiv3.Rule{},
+			nil,
+			&Order1,
+		)
+		tester.SetNetworkPolicy(Tier1, Name1, Namespace1, SelectAll,
+			[]apiv3.Rule{},
+			nil,
+			&Order10,
+		)
+
+		By("calling GetOrderedTiers and checking tier order")
+		tiers = tester.XrefCache.GetOrderedTiers()
+		Expect(tiers).To(Equal([]*xrefcache.CacheEntryTier{tier2, tier1, tierDefault}))
+
+		By("checking sorted policies in each tier")
+		Expect(tiers[0].GetOrderedPolicies()).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Tier2, gnp1Tier2}))
+		Expect(tiers[1].GetOrderedPolicies()).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{gnp1Tier1, np1Tier1}))
+		Expect(tiers[2].GetOrderedPolicies()).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Default, knp1Default, gnp1Default}))
+	})
+
+	It("should handle reordering of policies when deleting a policy", func() {
+		By("checking sorted policies in each tier")
+		Expect(tier1.GetOrderedPolicies()).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Tier1, gnp1Tier1}))
+		Expect(tier2.GetOrderedPolicies()).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Tier2, gnp1Tier2}))
+		Expect(tierDefault.GetOrderedPolicies()).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Default, knp1Default, gnp1Default}))
+
+		By("deleting a policy in each tier")
+		tester.DeleteNetworkPolicy(Tier1, Name1, Namespace1)
+		tester.DeleteGlobalNetworkPolicy(Tier2, Name1)
+		tester.DeleteK8sNetworkPolicy(Name1, Namespace1)
+
+		By("checking sorted policies in each tier")
+		Expect(tier1.GetOrderedPolicies()).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{gnp1Tier1}))
+		Expect(tier2.GetOrderedPolicies()).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Tier2}))
+		Expect(tierDefault.GetOrderedPolicies()).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Default, gnp1Default}))
+	})
+
+	It("should handle reordering of tiers when deleting a tier", func() {
+		By("checking tier order")
+		tiers := tester.XrefCache.GetOrderedTiers()
+		Expect(tiers).To(Equal([]*xrefcache.CacheEntryTier{tier1, tier2, tierDefault}))
+
+		By("deleting tier2")
+		tester.DeleteTier(Tier2)
+
+		By("checking tier order")
+		tiers = tester.XrefCache.GetOrderedTiers()
+		Expect(tiers).To(Equal([]*xrefcache.CacheEntryTier{tier1, tierDefault}))
 	})
 })

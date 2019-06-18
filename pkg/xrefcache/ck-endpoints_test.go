@@ -146,27 +146,30 @@ var _ = Describe("Pods cache verification", func() {
 
 	It("should track the set of applied policies and overall settings", func() {
 		By("applying np1 select1 with an ingress allow select1 rule")
-		tester.SetGlobalNetworkPolicy(Name1, Select1,
+		tester.SetGlobalNetworkPolicy(TierDefault, Name1, Select1,
 			[]apiv3.Rule{
 				CalicoRuleSelectors(Allow, Source, Select1, NoNamespaceSelector),
 			},
 			nil,
+			&Order1,
 		)
 
 		By("applying np2 select2 with an ingress allow select2 rule")
-		tester.SetGlobalNetworkPolicy(Name2, Select2,
+		tester.SetGlobalNetworkPolicy(TierDefault, Name2, Select2,
 			[]apiv3.Rule{
 				CalicoRuleSelectors(Allow, Source, Select2, NoNamespaceSelector),
 			},
 			nil,
+			&Order1,
 		)
 
 		By("applying np1 select1 with an egress allow select1 rule")
-		tester.SetNetworkPolicy(Name1, Namespace1, Select1,
+		tester.SetNetworkPolicy(TierDefault, Name1, Namespace1, Select1,
 			nil,
 			[]apiv3.Rule{
 				CalicoRuleSelectors(Allow, Destination, Select1, NoNamespaceSelector),
 			},
+			&Order1,
 		)
 
 		By("creating ns1 with label3 and internet exposed")
@@ -182,13 +185,13 @@ var _ = Describe("Pods cache verification", func() {
 		pod := tester.GetPod(Name1, Namespace1)
 		Expect(pod).NotTo(BeNil())
 		Expect(pod.AppliedPolicies.Len()).To(Equal(2))
-		gnp1 := tester.GetGlobalNetworkPolicy(Name1)
+		gnp1 := tester.GetGlobalNetworkPolicy(TierDefault, Name1)
 		Expect(gnp1).NotTo(BeNil())
 		Expect(gnp1.SelectedPods.Len()).To(Equal(1))
-		gnp2 := tester.GetGlobalNetworkPolicy(Name2)
+		gnp2 := tester.GetGlobalNetworkPolicy(TierDefault, Name2)
 		Expect(gnp2).NotTo(BeNil())
 		Expect(gnp2.SelectedPods.Len()).To(Equal(0))
-		np1 := tester.GetNetworkPolicy(Name1, Namespace1)
+		np1 := tester.GetNetworkPolicy(TierDefault, Name1, Namespace1)
 		Expect(np1).NotTo(BeNil())
 		Expect(np1.SelectedPods.Len()).To(Equal(1))
 
@@ -215,15 +218,16 @@ var _ = Describe("Pods cache verification", func() {
 		))
 
 		By("updating np1 to include a namespace selector")
-		tester.SetNetworkPolicy(Name1, Namespace1, Select1,
+		tester.SetNetworkPolicy(TierDefault, Name1, Namespace1, Select1,
 			nil,
 			[]apiv3.Rule{
 				CalicoRuleSelectors(Allow, Destination, Select1, Select1),
 			},
+			&Order1,
 		)
 
 		By("checking the np1 flags have been updated")
-		np1 = tester.GetNetworkPolicy(Name1, Namespace1)
+		np1 = tester.GetNetworkPolicy(TierDefault, Name1, Namespace1)
 		Expect(np1).NotTo(BeNil())
 		Expect(np1.SelectedPods.Len()).To(Equal(1))
 		Expect(np1.Flags).To(Equal(

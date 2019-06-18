@@ -33,6 +33,7 @@ var (
 // helper methods.
 type VersionedPolicyResource interface {
 	VersionedResource
+	getV1Key() model.PolicyKey
 	getV1Policy() *model.Policy
 	getV3IngressRules() []apiv3.Rule
 	getV3EgressRules() []apiv3.Rule
@@ -96,6 +97,14 @@ func (v *versionedCalicoNetworkPolicy) getV1() interface{} {
 	return v.v1
 }
 
+// getV1Key implements the VersionedPolicyResource interface.
+func (v *versionedCalicoNetworkPolicy) getV1Key() model.PolicyKey {
+	return model.PolicyKey{
+		Name: v.Namespace + "/" + v.Name,
+		Tier: v.Spec.Tier,
+	}
+}
+
 // getV1Policy implements the VersionedPolicyResource interface.
 func (v *versionedCalicoNetworkPolicy) getV1Policy() *model.Policy {
 	return v.v1
@@ -130,6 +139,14 @@ func (v *versionedCalicoGlobalNetworkPolicy) getV3EgressRules() []apiv3.Rule {
 // getV1 implements the VersionedPolicyResource interface.
 func (v *versionedCalicoGlobalNetworkPolicy) getV1() interface{} {
 	return v.v1
+}
+
+// getV1Key implements the VersionedPolicyResource interface.
+func (v *versionedCalicoGlobalNetworkPolicy) getV1Key() model.PolicyKey {
+	return model.PolicyKey{
+		Name: v.Name,
+		Tier: v.Spec.Tier,
+	}
 }
 
 // getV1Policy implements the VersionedPolicyResource interface.
@@ -167,6 +184,14 @@ func (v *versionedK8sNetworkPolicy) getV3EgressRules() []apiv3.Rule {
 // getV1 implements the VersionedPolicyResource interface.
 func (v *versionedK8sNetworkPolicy) getV1() interface{} {
 	return v.v1
+}
+
+// getV1Key implements the VersionedPolicyResource interface.
+func (v *versionedK8sNetworkPolicy) getV1Key() model.PolicyKey {
+	return model.PolicyKey{
+		Name: v.Namespace + "/" + v.v3.Name,
+		Tier: "default",
+	}
 }
 
 // getV1Policy implements the VersionedPolicyResource interface.
@@ -244,15 +269,24 @@ func (c *networkPolicyHandler) resourceUpdated(id apiv3.ResourceID, entry CacheE
 
 	// Update the label selectors for the policy rules.
 	c.updateRuleSelectors(id, x)
+
+	// Update the policy sorter.
+	c.PolicySorter().updatePolicy(x)
 }
 
 // resourceDeleted implements the resourceHandler interface.
-func (c *networkPolicyHandler) resourceDeleted(id apiv3.ResourceID, res CacheEntry) {
+func (c *networkPolicyHandler) resourceDeleted(id apiv3.ResourceID, entry CacheEntry) {
+	// Get the augmented resource data.
+	x := entry.(*CacheEntryNetworkPolicy)
+
 	// Delete the label selector for this policy.
 	c.EndpointLabelSelector().DeleteSelector(id)
 
 	// Delete the rule selectors associated with this policy.
 	c.NetworkPolicyRuleSelectorManager().DeletePolicy(id)
+
+	// Delete the policy from the policy sorter.
+	c.PolicySorter().deletePolicy(x)
 }
 
 // recalculate implements the resourceHandler interface.
