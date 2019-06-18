@@ -1,0 +1,142 @@
+---
+
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: cnx-voltron-config
+  namespace: calico-monitoring
+data:
+  # Server port for Voltron
+  cnx-voltron.port: "9443"
+  # Server host for Voltron
+  cnx-voltron.host: "0.0.0.0"
+  # Logging level
+  cnx-voltron.log-level: "INFO"
+
+---
+
+apiVersion: v1
+data:
+  cert: VGhpcyBpcyBqdXN0IGEgdGVzdC4K
+  key: VGhpcyBpcyBqdXN0IGEgdGVzdC4K
+kind: Secret
+metadata:
+  name: cnx-voltron-tls
+  namespace: calico-monitoring
+type: Opaque
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    k8s-app: cnx-voltron
+  name: cnx-voltron
+  namespace: calico-monitoring
+spec:
+  selector:
+    k8s-app: cnx-voltron
+  ports:
+    - port: 9443
+      protocol: TCP
+      targetPort: 9443
+      nodePort: 32453
+      name: https
+  # TODO: Use NodePort for now so that Guardian 
+  # is able to connect (but need better solution)
+  type: NodePort
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cnx-voltron
+  namespace: calico-monitoring
+  labels:
+    k8s-app: cnx-voltron
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      k8s-app: cnx-voltron
+  template:
+    metadata:
+      name: cnx-voltron
+      namespace: calico-monitoring
+      labels:
+        k8s-app: cnx-voltron
+      annotations:
+        # Mark this pod as a critical add-on; when enabled, 
+        # the critical add-on scheduler reserves resources 
+        # for critical add-on pods so that they can be rescheduled 
+        # after a failure.  This annotation works in tandem 
+        # with the toleration below.
+        scheduler.alpha.kubernetes.io/critical-pod: ''
+    spec:
+      nodeSelector:
+        beta.kubernetes.io/os: linux
+      # TODO: We are currently piggybacking off the existing 
+      # ServiceAccount for cnx-manager 
+      serviceAccountName: cnx-manager
+      tolerations:
+      - key: node-role.kubernetes.io/master
+        effect: NoSchedule
+      # Allow this pod to be rescheduled while the node is in 
+      # "critical add-ons only" mode. This, along with the 
+      # annotation above marks this pod as a critical add-on.
+      - key: CriticalAddonsOnly
+        operator: Exists
+      # Use the same pull secret as the rest of TSEE   
+      imagePullSecrets:
+        - name: cnx-pull-secret
+      containers:
+      - name: cnx-voltron
+        # Currently using latest tag, should switch to specific 
+        # version tag as we get closer to release time
+        image: gcr.io/tigera-dev/cnx/tigera/voltron:latest
+        imagePullPolicy: Always
+        env:
+          - name: VOLTRON_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: cnx-voltron-config
+                key: cnx-voltron.port
+          - name: VOLTRON_HOST
+            valueFrom:
+              configMapKeyRef:
+                name: cnx-voltron-config
+                key: cnx-voltron.host
+          - name: VOLTRON_LOGLEVEL
+            valueFrom:
+              configMapKeyRef:
+                name: cnx-voltron-config
+                key: cnx-voltron.log-level
+        # TODO: Should we have resource limits defined?
+        resources: {}
+        volumeMounts:
+        # TODO: This should be switched to /certs/ when we actually 
+        # have valid cert values from cnx-voltron-tls
+        - mountPath: /certs2/
+          name: cnx-voltron-tls
+        livenessProbe:
+          httpGet:
+            path: /voltron/api/health
+            port: 9443
+            scheme: HTTPS
+          initialDelaySeconds: 90
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /voltron/api/health
+            port: 9443
+            scheme: HTTPS
+          initialDelaySeconds: 10
+          periodSeconds: 5
+      volumes:
+      - name: cnx-voltron-tls
+        secret:
+          secretName: cnx-voltron-tls
