@@ -65,7 +65,10 @@ func main() {
 
 	// Run the reporter.
 	log.Debug("Running reporter")
-	if err := report.Run(cxt, cfg, healthy, elasticClient, elasticClient, elasticClient, elasticClient, elasticClient); err != nil {
+	if err := report.Run(
+		cxt, cfg, healthy, elasticClient, elasticClient, elasticClient,
+		elasticClient, elasticClient, elasticClient,
+	); err != nil {
 		log.Panicf("Hit terminating error in reporter: %v", err)
 	}
 }

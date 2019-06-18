@@ -12,6 +12,7 @@ import (
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/compliance"
 
+	"github.com/tigera/compliance/pkg/benchmark"
 	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/event"
 	"github.com/tigera/compliance/pkg/flow"
@@ -38,11 +39,6 @@ const (
 	ZeroTrustFlags = ZeroTrustWhenEndpointFlagsSet | ZeroTrustWhenEndpointFlagsUnset
 )
 
-const (
-	// The health name for the reporter component.
-	healthReporter = "compliance-reporter"
-)
-
 // Run is the entrypoint to start running the reporter.
 func Run(
 	ctx context.Context, cfg *config.Config,
@@ -52,6 +48,7 @@ func Run(
 	auditer AuditLogReportHandler,
 	flowlogger FlowLogReportHandler,
 	archiver ReportStorer,
+	benchmarker benchmark.BenchmarksQuery,
 ) error {
 	// Inidicate healthy.
 	healthy()
@@ -77,6 +74,7 @@ func Run(
 		archiver:         archiver,
 		xc:               xc,
 		replayer:         replayer,
+		benchmarker:      benchmarker,
 		healthy:          healthy,
 		inScopeEndpoints: make(map[apiv3.ResourceID]*reportEndpoint),
 		services:         make(map[apiv3.ResourceID]xrefcache.CacheEntryFlags),
@@ -97,16 +95,17 @@ func Run(
 }
 
 type reporter struct {
-	ctx        context.Context
-	cfg        *Config
-	clog       *logrus.Entry
-	listDest   list.Destination
-	xc         xrefcache.XrefCache
-	replayer   syncer.Starter
-	auditer    AuditLogReportHandler
-	flowlogger FlowLogReportHandler
-	archiver   ReportStorer
-	healthy    func()
+	ctx         context.Context
+	cfg         *Config
+	clog        *logrus.Entry
+	listDest    list.Destination
+	xc          xrefcache.XrefCache
+	replayer    syncer.Starter
+	auditer     AuditLogReportHandler
+	benchmarker benchmark.BenchmarksQuery
+	flowlogger  FlowLogReportHandler
+	archiver    ReportStorer
+	healthy     func()
 
 	// Consolidate the tracked in-scope endpoint events into a local cache, which will get converted and copied into
 	// the report data structure.
@@ -132,6 +131,7 @@ func (r *reporter) run() error {
 	// Report healthy.
 	r.healthy()
 
+	// Include endpoint data if required.
 	if r.cfg.ReportType.Spec.IncludeEndpointData ||
 		(r.cfg.ReportType.Spec.AuditEventsSelection != nil && r.cfg.Report.Spec.Endpoints != nil) {
 		// We either want endpoint data in the report, or we are gathering audit logs and have specified an in-scope
@@ -162,6 +162,7 @@ func (r *reporter) run() error {
 			r.transferAggregatedData()
 		}
 
+		// Include flow logs if required.
 		if r.cfg.ReportType.Spec.IncludeEndpointFlowLogData {
 			// We also need to include flow logs data for the in-scope endpoints.
 			r.clog.Debug("Including flow log data in report")
@@ -173,11 +174,25 @@ func (r *reporter) run() error {
 	// Indicate we are healthy.
 	r.healthy()
 
+	// Include audit data if required.
 	if r.cfg.ReportType.Spec.AuditEventsSelection != nil {
 		// We need to include audit log data in the report.
 		r.clog.Debug("Including audit event data in report")
 		if err := r.addAuditEvents(); err != nil {
 			r.clog.WithError(err).Error("Hit error gathering audit logs")
+			return err
+		}
+	}
+
+	// Indicate we are healthy.
+	r.healthy()
+
+	// Include benchmarks if required.
+	if r.cfg.ReportType.Spec.IncludeCISBenchmarkData {
+		// We need to include benchmarks in the report.
+		r.clog.Debug("Including benchmarks in report")
+		if err := r.addBenchmarks(); err != nil {
+			r.clog.WithError(err).Error("Hit error gathering benchmarks")
 			return err
 		}
 	}
@@ -303,7 +318,7 @@ func (r *reporter) addFlowLogEntries() {
 func (r *reporter) addAuditEvents() error {
 	for e := range r.auditer.SearchAuditEvents(r.ctx, r.cfg.ReportType.Spec.AuditEventsSelection,
 		&r.cfg.ParsedReportStart, &r.cfg.ParsedReportEnd) {
-		// If we received an error then log, but carry on as best we can.
+		// If we received an error then log and exit.
 		if e.Err != nil {
 			r.clog.WithError(e.Err).Error("Error querying audit logs from store")
 			return e.Err
