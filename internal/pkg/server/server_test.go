@@ -87,6 +87,20 @@ var _ = Describe("Server", func() {
 			Expect(list[1].ID).To(Equal("clusterB"))
 			Expect(list[1].DisplayName).To(Equal("BB"))
 		})
+
+		It("should be able to delete a cluster", func() {
+			Expect(deleteCluster(lis.Addr().String(), "clusterB")).To(BeTrue())
+		})
+
+		It("should be able to get list without the deleted cluster", func() {
+			list := listClusters(lis.Addr().String())
+			Expect(len(list)).To(Equal(1))
+			Expect(list[0].ID).To(Equal("clusterA"))
+		})
+
+		It("should not be able to delete the cluster again", func() {
+			Expect(deleteCluster(lis.Addr().String(), "clusterB")).NotTo(BeTrue())
+		})
 	})
 
 	It("should stop the server", func(done Done) {
@@ -220,10 +234,25 @@ func addCluster(server, id, name string) {
 	cluster, err := json.Marshal(&clusters.Cluster{ID: id, DisplayName: name})
 	Expect(err).NotTo(HaveOccurred())
 
-	req, err := http.NewRequest("PUT", "http://"+server+"/voltron/api/clusters?", bytes.NewBuffer(cluster))
+	req, err := http.NewRequest("PUT",
+		"http://"+server+"/voltron/api/clusters?", bytes.NewBuffer(cluster))
 	Expect(err).NotTo(HaveOccurred())
-	_, err = http.DefaultClient.Do(req)
+	resp, err := http.DefaultClient.Do(req)
 	Expect(err).NotTo(HaveOccurred())
+	Expect(resp.StatusCode).To(Equal(200))
+}
+
+func deleteCluster(server, id string) bool {
+	cluster, err := json.Marshal(&clusters.Cluster{ID: id})
+	Expect(err).NotTo(HaveOccurred())
+
+	req, err := http.NewRequest("DELETE",
+		"http://"+server+"/voltron/api/clusters?", bytes.NewBuffer(cluster))
+	Expect(err).NotTo(HaveOccurred())
+	resp, err := http.DefaultClient.Do(req)
+	Expect(err).NotTo(HaveOccurred())
+
+	return resp.StatusCode == 200
 }
 
 func listClusters(server string) []clusters.Cluster {

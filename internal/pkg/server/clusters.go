@@ -104,9 +104,49 @@ func (cs *clusters) updateCluster(w http.ResponseWriter, r *http.Request) {
 	returnJSON(w, jc)
 }
 
+func (cs *clusters) deleteCluster(w http.ResponseWriter, r *http.Request) {
+	cs.Lock()
+
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Error while parsing body", 400)
+		return
+	}
+
+	decoder := json.NewDecoder(r.Body)
+
+	jc := new(jclust.Cluster)
+	if err := decoder.Decode(jc); err != nil {
+		http.Error(w, "Invalid JSON body", 400)
+		return
+	}
+
+	if c, ok := cs.clusters[jc.ID]; ok {
+		// remove from the map so nobody can get it, but whoever uses it can
+		// keep doing so
+		delete(cs.clusters, jc.ID)
+		cs.Unlock()
+		// close the tunnel to disconnect. Closing is thread save, but we need
+		// to hold the RLock to access the tunnel
+		c.RLock()
+		if c.tunnel != nil {
+			c.tunnel.Close()
+		}
+		c.RUnlock()
+		fmt.Fprintf(w, "Deleted")
+	} else {
+		cs.Unlock()
+		msg := fmt.Sprintf("Cluster id %q does not exist", jc.ID)
+		log.Debugf(msg)
+		http.Error(w, msg, 404)
+	}
+}
+
 // Determine which handler to execute based on HTTP method.
 func (cs *clusters) apiHandle(w http.ResponseWriter, r *http.Request) {
 	log.Debugf("%s for %s from %s", r.Method, r.URL, r.RemoteAddr)
+
+	// TODO auth the request
+
 	switch r.Method {
 	// TODO We need a MethodPost handler as well, should use instead of Put for
 	// creating a cluster entity (whcih will auto-generate the ID)
@@ -116,6 +156,8 @@ func (cs *clusters) apiHandle(w http.ResponseWriter, r *http.Request) {
 		cs.updateCluster(w, r)
 	case http.MethodGet:
 		returnJSON(w, cs.List())
+	case http.MethodDelete:
+		cs.deleteCluster(w, r)
 	default:
 		http.NotFound(w, r)
 	}
