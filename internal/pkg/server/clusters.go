@@ -36,7 +36,10 @@ type clusters struct {
 func returnJSON(w http.ResponseWriter, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(data); err != nil {
-		http.Error(w, fmt.Sprintf("Error while encoding %#v", data), 500)
+		log.Errorf("Error while encoding data for response %#v", data)
+		// TODO: We need named errors, with predefined
+		// error codes and user-friendly error messages here
+		http.Error(w, "\"An error occurred\"", 500)
 	}
 }
 

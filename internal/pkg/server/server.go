@@ -32,6 +32,7 @@ type Server struct {
 	proxyMux *http.ServeMux
 
 	clusters *clusters
+	health   *health
 
 	tunSrv *tunnel.Server
 
@@ -60,6 +61,7 @@ func New(opts ...Option) (*Server, error) {
 	srv.http.Handler = srv.proxyMux
 
 	srv.proxyMux.HandleFunc("/", srv.clusterMuxer)
+	srv.proxyMux.HandleFunc("/voltron/api/health", srv.health.apiHandle)
 	srv.proxyMux.HandleFunc("/voltron/api/clusters", srv.clusters.apiHandle)
 
 	srv.tunSrv = tunnel.NewServer()
