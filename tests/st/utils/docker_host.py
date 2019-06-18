@@ -663,7 +663,7 @@ class DockerHost(object):
         :param resource: string, resource type to delete
         """
         # Grab all objects of a resource type
-        objects = yaml.load(self.calicoctl("get %s -o yaml" % resource))
+        objects = yaml.safe_load(self.calicoctl("get %s -o yaml" % resource))
         # and delete them (if there are any)
         if len(objects) > 0:
             if 'items' in objects and len(objects['items']) == 0:
@@ -692,6 +692,8 @@ class DockerHost(object):
         self.calicoctl("%s -f new_data" % action)
 
     def log_extra_diags(self):
+        # Check for OOM kills.
+        log_and_run("dmesg | grep -i kill", raise_exception_on_failure=False)
         # Run a set of commands to trace ip routes, iptables and ipsets.
         self.execute("ip route", raise_exception_on_failure=False)
         self.execute("iptables-save -c", raise_exception_on_failure=False)

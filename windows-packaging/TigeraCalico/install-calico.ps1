@@ -13,6 +13,9 @@ if ($env:PROCESSOR_ARCHITEW6432 -eq "AMD64") {
 
 ipmo "$PSScriptRoot\libs\calico\calico.psm1" -Force
 
+# Ensure our scripts are allowed to run.
+Unblock-File $PSScriptRoot\*.ps1
+
 . $PSScriptRoot\config.ps1
 
 Test-CalicoConfiguration
@@ -22,6 +25,15 @@ Install-FelixService
 if ($env:CALICO_NETWORKING_BACKEND -EQ "windows-bgp")
 {
     Install-ConfdService
+    Install-CNIPlugin
+}
+elseif ($env:CALICO_NETWORKING_BACKEND -EQ "vxlan")
+{
+    if (($env:VXLAN_VNI -as [int]) -lt 4096)
+    {
+        Write-Host "Windows does not support VXLANVNI < 4096."
+        exit 1
+    }
     Install-CNIPlugin
 }
 

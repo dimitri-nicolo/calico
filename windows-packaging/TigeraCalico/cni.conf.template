@@ -4,6 +4,11 @@
 
   "cniVersion": "0.3.0",
   "type": "calico",
+  "mode": "__MODE__",
+
+  "vxlan_mac_prefix":  "__MAC_PREFIX__",
+  "vxlan_vni": __VNI__,
+
   "policy": {
     "type": "k8s"
   },

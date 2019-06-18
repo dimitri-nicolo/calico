@@ -1,7 +1,7 @@
 # Handle old CALICO_NETWORKING environment by converting to the new config.
 if [ -n "$CALICO_NETWORKING" ]; then
-	echo 'WARNING: $CALICO_NETWORKING will be deprecated: use $CALICO_NETWORKING_BACKEND instead'
-	if [ "$CALICO_NETWORKING" == "false" ]; then
+	echo "WARNING: $CALICO_NETWORKING will be deprecated: use $CALICO_NETWORKING_BACKEND instead"
+	if [ "$CALICO_NETWORKING" = "false" ]; then
 		export CALICO_NETWORKING_BACKEND=none
 	else
 		export CALICO_NETWORKING_BACKEND=bird
@@ -17,10 +17,11 @@ if [ ! -f "/var/lib/calico/nodename" ]; then
 	echo "/var/lib/calico/nodename does not exist, exiting"
 	exit 1
 fi
-export NODENAME=$(cat /var/lib/calico/nodename)
+NODENAME=$(cat /var/lib/calico/nodename)
+export NODENAME
 
-# If possible pre-allocate the IP address on the IPIP tunnel.
-calico-node -allocate-ipip-addr || exit 1
+# If possible pre-allocate any tunnel addresses.
+calico-node -allocate-tunnel-addrs || exit 1
 
 # Create a directly to put enabled service files
 mkdir /etc/service/enabled
@@ -40,6 +41,10 @@ case "$CALICO_NETWORKING_BACKEND" in
 	# If running in policy only mode, we don't need to run BIRD / Confd.
 	echo "CALICO_NETWORKING_BACKEND is none - no BGP daemon running"
 	;;
+	"vxlan" )
+	# If running in VXLAN-only mode, we don't need to run BIRD / Confd.
+	echo "CALICO_NETWORKING_BACKEND is vxlan - no need to run a BGP daemon"
+	;;
 	"gobgp" )
 	# Run calico-bgp-daemon instead of BIRD / Confd.
 	echo "CALICO_NETWORKING_BACKEND is gobgp - run calico-bgp-daemon"
@@ -56,7 +61,7 @@ case "$CALICO_NETWORKING_BACKEND" in
 	;;
 esac
 
-if [ "$CALICO_DISABLE_FILE_LOGGING" == "true" ]; then
+if [ "$CALICO_DISABLE_FILE_LOGGING" = "true" ]; then
 	rm -rf /etc/service/enabled/bird/log
 	rm -rf /etc/service/enabled/bird6/log
 	rm -rf /etc/service/enabled/confd/log

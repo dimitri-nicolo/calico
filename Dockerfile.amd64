@@ -12,15 +12,41 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ARG BIRD_IMAGE=calico/bird:latest
+
+FROM calico/bpftool:v5.0-amd64 as bpftool
 FROM ${BIRD_IMAGE} as bird
 
-FROM alpine:3.8
-MAINTAINER Tom Denham <tom@projectcalico.org>
+FROM debian:9.8-slim
+LABEL maintainer "Casey Davenport <casey@tigera.io>"
 
 ARG ARCH=amd64
 
+# Install a backported version of iptables to ensure we have version 1.6.2
+# Similarly for iproute2, we want a more recent version for BPF support.
+RUN printf "deb http://deb.debian.org/debian stretch-backports main\n" > /etc/apt/sources.list.d/backports.list \
+    && apt-get update \
+    && apt-get -t stretch-backports install -y iptables iproute2
+
 # Install remaining runtime deps required for felix from the global repository
-RUN apk add --no-cache ip6tables ipset iputils iproute2 conntrack-tools net-tools runit strongswan ca-certificates
+RUN apt-get update && apt-get install -y \
+    ipset \
+    iputils-arping \
+    iputils-ping \
+    iputils-tracepath \
+    # Need arp
+    net-tools \
+    conntrack \
+    runit \
+    # Need kmod to ensure ip6tables-save works correctly
+    kmod \
+    # Need netbase in order for ipset to work correctly
+    # See https://github.com/kubernetes/kubernetes/issues/68703
+    netbase \
+    # Also needed (provides utilities for browsing procfs like ps)
+    procps \
+    strongswan \
+    strongswan-swanctl \
+    ca-certificates
 
 # Copy our bird binaries in
 COPY --from=bird /bird* /bin/
@@ -33,5 +59,7 @@ COPY vendor/github.com/kelseyhightower/confd/etc/calico/ /etc/calico/
 
 # Copy in the calico-node binary
 COPY dist/bin/calico-node-${ARCH} /bin/calico-node
+
+COPY --from=bpftool /bpftool /bin
 
 CMD ["start_runit"]

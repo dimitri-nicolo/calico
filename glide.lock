@@ -1,5 +1,5 @@
-hash: 54977e5e451b54311c20897a30aee67fbbdf01bea006158e1b830cceacc020e0
-updated: 2019-06-12T05:20:21.358014423Z
+hash: 3dd08318c87daa4295c659c7fa77e846cc012d050dc2d4f4192eeac6c3bed006
+updated: 2019-06-18T00:11:59.356168158Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -114,25 +114,52 @@ imports:
   subpackages:
   - log
 - name: github.com/gavv/monotime
-  version: 6f8212e8d10df7383609d3c377ca08884d8f3ec0
+  version: 30dba43534243e3484a34676a0f068d12b989f84
 - name: github.com/ghodss/yaml
   version: 73d445a93680fa1a78ae23a5839bad48f32ba1ee
 - name: github.com/go-ini/ini
-  version: 9c8236e659b76e87bf02044d06fde8683008ff3e
+  version: 3be5ad479f69d4e08d7fe25edf79bf3346bd658e
 - name: github.com/go-openapi/jsonpointer
-  version: 46af16f9f7b149af66e5d1bd010e3574dc06de98
+  version: ef5f0afec364d3b9396b7b77b43dbe26bf1f8004
 - name: github.com/go-openapi/jsonreference
-  version: 3fb327e6747da3043567ee86abd02bb6376b6be2
+  version: 8483a886a90412cd6858df4ea3483dce9c8e35a3
 - name: github.com/go-openapi/spec
   version: 384415f06ee238aae1df5caad877de6ceac3a5c4
 - name: github.com/go-openapi/swag
   version: becd2f08beafcca035645a8a101e0e3e18140458
 - name: github.com/go-playground/locales
-  version: f63010822830b6fe52288ee52d5a1151088ce039
+  version: 630ebbb602847eba93e75ae38bbc7bb7abcf1ff3
   subpackages:
   - currency
 - name: github.com/go-playground/universal-translator
   version: 71201497bace774495daed26a3874fd339e0b538
+- name: github.com/gobuffalo/envy
+  version: 043cb4b8af871b49563291e32c66bb84378a60ac
+- name: github.com/gobuffalo/genny
+  version: 34bef62e8202ea5e6dd1f9ee3d5ac217f1290352
+- name: github.com/gobuffalo/gogen
+  version: 5482e6ef5d999f8cfa9b038a53953c9b4ee090af
+  subpackages:
+  - goimports
+  - gomods
+- name: github.com/gobuffalo/logger
+  version: 86e12af44bc273e0063fad5b6ad588890b8cfe6b
+- name: github.com/gobuffalo/mapi
+  version: 0bb5e840be332d4280e40f2e6c50777c615bbac5
+- name: github.com/gobuffalo/packd
+  version: 9efbb667f2024a9370cadda45a57a0657c88a6fb
+- name: github.com/gobuffalo/packr
+  version: 68a5fdc58d980600c4622a82472ebe415048f141
+  subpackages:
+  - v2
+  - v2/file
+  - v2/file/resolver
+  - v2/file/resolver/encoding/hex
+  - v2/jam/parser
+  - v2/packr2
+  - v2/plog
+- name: github.com/gobuffalo/syncx
+  version: 33c29581e754bd354236e977dfe426e55331c45d
 - name: github.com/gogo/protobuf
   version: c0656edd0d9eab7c66d1eb0c568f9039345796f7
   subpackages:
@@ -159,7 +186,7 @@ imports:
   subpackages:
   - layers
 - name: github.com/google/uuid
-  version: 064e2069ce9c359c118179501254f67d7d37ba24
+  version: d460ce9f8df2e77fb1ba55ca87fafed96c607494
 - name: github.com/googleapis/gnostic
   version: 0c5108395e2debce0d731cf0287ddf7242066aba
   subpackages:
@@ -186,7 +213,7 @@ imports:
   subpackages:
   - simplelru
 - name: github.com/hpcloud/tail
-  version: a1dbeea552b7c8df4b542c66073e393de198a800
+  version: a30252cb686a21eb2d0b98132633053ec2f7f1e5
   subpackages:
   - ratelimiter
   - util
@@ -198,6 +225,8 @@ imports:
   version: 7c29201646fa3de8506f701213473dd407f19646
 - name: github.com/jmespath/go-jmespath
   version: 3433f3ea46d9f8019119e7dd41274e112a2359a9
+- name: github.com/joho/godotenv
+  version: 5c0e6c6ab1a0a9ef0a8822cba3a05d62f7dad941
 - name: github.com/json-iterator/go
   version: f2b4162afba35581b6d4a50d3b8f34e33c144682
 - name: github.com/juju/clock
@@ -207,9 +236,11 @@ imports:
 - name: github.com/juju/mutex
   version: d21b13acf4bfd8a8b0482a3a78e44d98880b40d3
 - name: github.com/kardianos/osext
-  version: ae77be60afb1dcacde03767a8c37337fad28ac14
+  version: 2bc1f35cddc0cc527b4bc3dce8578fc2a6c11384
+- name: github.com/karrick/godirwalk
+  version: 5e617d9cfec6f870e63b168e9a2fb7c490a1c108
 - name: github.com/kelseyhightower/confd
-  version: e286ae58e2d459de49ff88f7c776ec48cd5a2317
+  version: 5195e06dc17e23e31a736262bf475ce906d6863f
   repo: git@github.com:tigera/confd-private.git
   subpackages:
   - pkg/backends
@@ -220,7 +251,7 @@ imports:
   - pkg/resource/template
   - pkg/run
 - name: github.com/kelseyhightower/envconfig
-  version: dd1402a4d99de9ac2f396cd6fcb957bc2c695ec1
+  version: 0b417c4ec4a8a82eecc22a1459a504aa55163d61
 - name: github.com/kelseyhightower/memkv
   version: 892bfd468afa0fa476556e7bd7734a087cda08b3
 - name: github.com/leodido/go-urn
@@ -231,30 +262,40 @@ imports:
   - buffer
   - jlexer
   - jwriter
+- name: github.com/markbates/oncer
+  version: bf2de49a0be218916e69a11d22866e6cd0a560f2
+- name: github.com/markbates/safe
+  version: 6fea05a5732486546a4836b7a1d596c5ec687b98
 - name: github.com/Masterminds/goutils
   version: 41ac8693c5c10a92ea1ff5ac3a7f95646f6123b0
 - name: github.com/Masterminds/semver
   version: 59c29afe1a994eacb71c833025ca7acf874bb1da
 - name: github.com/Masterminds/sprig
-  version: 9f8fceff796fb9f4e992cd2bece016be0121ab74
+  version: 40a817194fa6bb2cd370b302c30b27d3706f122d
 - name: github.com/matttproud/golang_protobuf_extensions
   version: c12348ce28de40eed0136aa2b644d0ee0650e56c
   subpackages:
   - pbutil
 - name: github.com/Microsoft/go-winio
-  version: 97e4973ce50b2ff5f09635a57e2b88a037aae829
+  version: 84b4ab48a50763fe7b3abcef38e5205c12027fac
 - name: github.com/Microsoft/hcsshim
-  version: 548046cb2f0495eb2acd7682a0035d465bf05ea9
+  version: 063ae4a83d78bdb93f76b18cc894c6342fa85c15
   subpackages:
+  - hcn
+  - internal/cni
   - internal/guid
   - internal/hcs
   - internal/hcserror
   - internal/hns
   - internal/interop
+  - internal/logfields
   - internal/longpath
   - internal/mergemaps
+  - internal/regstate
+  - internal/runhcs
   - internal/safefile
   - internal/schema1
+  - internal/schema2
   - internal/timeout
   - internal/wclayer
 - name: github.com/Microsoft/SDN
@@ -306,8 +347,10 @@ imports:
   version: ca53cad383cad2479bbba7f7a1a05797ec1386e4
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
+- name: github.com/pkg/errors
+  version: 645ef00459ed84a119197bfb8d8205042c6df63d
 - name: github.com/projectcalico/cni-plugin
-  version: b39393902f1a0b41f2b28b5edf716f6db1c6f86a
+  version: 418b2b69e8f9d6174d62644b3dcece5f1f717b6c
   repo: git@github.com:tigera/cni-plugin-private.git
   subpackages:
   - internal/pkg/azure
@@ -319,9 +362,11 @@ imports:
   - pkg/types
   - pkg/upgrade
 - name: github.com/projectcalico/felix
-  version: c00322e56455b84a9c099feee8004b7cc02dc9ef
+  version: c0c1fe1d9306d1f1677e5f2adf6fa0c203ccd688
   repo: git@github.com:tigera/felix-private.git
   subpackages:
+  - bpf
+  - bpf/packrd
   - buildinfo
   - calc
   - collector
@@ -333,6 +378,7 @@ imports:
   - dataplane/external
   - dataplane/linux
   - dataplane/windows
+  - dataplane/windows/hcn
   - dataplane/windows/hns
   - dataplane/windows/ipsets
   - dataplane/windows/policysets
@@ -357,6 +403,7 @@ imports:
   - stringutils
   - throttle
   - usagerep
+  - versionparse
 - name: github.com/projectcalico/go-json
   version: 6219dc7339ba20ee4c57df0a8baac62317d19cb1
   subpackages:
@@ -366,7 +413,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 688f5ee533fd9d6e864d2a05e13cae3af2390902
+  version: 53dc22e6fb643a06f9db11b9a41d0e8fe85318b9
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
@@ -375,6 +422,7 @@ imports:
   - lib/apis/v3
   - lib/backend
   - lib/backend/api
+  - lib/backend/encap
   - lib/backend/etcdv3
   - lib/backend/k8s
   - lib/backend/k8s/conversion
@@ -391,7 +439,6 @@ imports:
   - lib/hash
   - lib/health
   - lib/ipam
-  - lib/ipip
   - lib/logutils
   - lib/names
   - lib/namespace
@@ -421,7 +468,7 @@ imports:
   subpackages:
   - binder
 - name: github.com/projectcalico/typha
-  version: b48d19b5fcefcf22a487b7ec8d2447021eca0dc2
+  version: 97b5f0a050c8d0b79249667ea05517e32b10ad61
   repo: git@github.com:tigera/typha-private.git
   subpackages:
   - pkg/syncclient
@@ -434,11 +481,11 @@ imports:
   - prometheus/internal
   - prometheus/promhttp
 - name: github.com/prometheus/client_model
-  version: 6f3806018612930941127f2a7c6c453ba2c527d2
+  version: 5c3871d89910bfb32f5fcab2aa4b9ec68e65a99f
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 13ba4ddd0caa9c28ca7b7bffe1dfa9ed8d5ef207
+  version: 4724e9255275ce38f7179b2478abeae4e28c904f
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
@@ -448,25 +495,32 @@ imports:
   subpackages:
   - xfs
 - name: github.com/PuerkitoBio/purell
-  version: 8a290539e2e8629dbc4e6bad948158f790ec31f4
+  version: 0bcb03f4b4d0a9428594752bd2a3b9aa0a9d4bd4
 - name: github.com/PuerkitoBio/urlesc
-  version: 5bd2802263f21d8788851d5305584c82a5c75d7e
+  version: de5bf2ad457846296e2031421a34e2568e304e35
 - name: github.com/rakelkar/gonetsh
   version: 758b1f7c9d1ca5acaca0b909f06ff9ed9fe35de1
   subpackages:
   - netsh
 - name: github.com/robfig/cron
   version: b41be1df696709bb6395fe435af20370037c0b4c
+- name: github.com/rogpeppe/go-internal
+  version: 6f68bf1e81f8552c7dbd47f3bc4371c2db0941a6
+  subpackages:
+  - modfile
+  - module
+  - semver
 - name: github.com/safchain/ethtool
   version: 7ff1ba29eca231991280817541cb3903f6be15d1
 - name: github.com/satori/go.uuid
   version: f58768cc1a7a7e77a3bd49e98cdd21419399b6a3
 - name: github.com/sirupsen/logrus
-  version: d682213848ed68c0a260ca37d6dd5ace8423f5ba
+  version: 1f80e3709dfafa8ca8727ba7eb392a11827ac8e2
+  repo: https://github.com/projectcalico/logrus
 - name: github.com/spf13/pflag
   version: 583c0c0531f06d5278b7d917446061adc344b5cd
 - name: github.com/tigera/licensing
-  version: 02d1f482fe4d3a2dbc4a3bce530471eba75d5029
+  version: 4ef30a4e6de92153a6589af226e77c567f530541
   repo: git@github.com:tigera/licensing
   vcs: git
   subpackages:
@@ -525,10 +579,10 @@ imports:
   subpackages:
   - unix
   - windows
+  - windows/registry
 - name: golang.org/x/text
   version: b19bf474d317b857955b12035d2c5acb57ce8b01
   subpackages:
-  - cases
   - encoding
   - encoding/charmap
   - encoding/htmlindex
@@ -539,13 +593,11 @@ imports:
   - encoding/simplifiedchinese
   - encoding/traditionalchinese
   - encoding/unicode
-  - internal
   - internal/tag
   - internal/utf8internal
   - language
   - runes
   - secure/bidirule
-  - secure/precis
   - transform
   - unicode/bidi
   - unicode/norm
@@ -554,8 +606,22 @@ imports:
   version: f51c12702a4d776e4c1fa9b0fabab841babae631
   subpackages:
   - rate
+- name: golang.org/x/tools
+  version: aa82965741a9fecd12b026fbb3d3c6ed3231b8f8
+  subpackages:
+  - go/ast/astutil
+  - go/gcexportdata
+  - go/internal/cgo
+  - go/internal/gcimporter
+  - go/internal/packagesdriver
+  - go/packages
+  - imports
+  - internal/fastwalk
+  - internal/gopathwalk
+  - internal/module
+  - internal/semver
 - name: google.golang.org/appengine
-  version: 4a4468ece617fc8205e99368fa2200e9d1fad421
+  version: 54a98f90d1c46b7731eb8fb305d2a321c30ef610
   subpackages:
   - internal
   - internal/app_identity
@@ -590,10 +656,10 @@ imports:
   - status
   - tap
   - transport
-- name: gopkg.in/fsnotify/fsnotify.v1
+- name: gopkg.in/fsnotify.v1
   version: c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9
 - name: gopkg.in/go-playground/validator.v9
-  version: b199fa0642d29caca62b6a99d65cc981ba5edc3b
+  version: 884d31b8cad6a1ec877f2400d555924cea03bbea
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: gopkg.in/natefinch/lumberjack.v2
@@ -605,7 +671,7 @@ imports:
   - json
   - jwt
 - name: gopkg.in/tomb.v1
-  version: c131134a1947e9afd9cecfe11f4c6dff0732ae58
+  version: dd632973f1e7218eb1089048e0798ec9ae7dceb8
 - name: gopkg.in/yaml.v2
   version: 670d4cfef0544295bc27a114dbac37980d83185a
 - name: k8s.io/api
@@ -683,7 +749,7 @@ imports:
   - pkg/watch
   - third_party/forked/golang/reflect
 - name: k8s.io/apiserver
-  version: f1dab8c342623e75f0484f20b150183d9e73f406
+  version: 5c46724251501f79ee9f5a20b5f4f8f80b9ba53a
   subpackages:
   - pkg/apis/audit
 - name: k8s.io/client-go

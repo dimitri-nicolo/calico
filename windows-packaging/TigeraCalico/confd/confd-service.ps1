@@ -5,6 +5,13 @@
 
 ipmo .\libs\calico\calico.psm1 -Force
 
+# Autoconfigure the IPAM block mode.
+if ($env:CNI_IPAM_TYPE -EQ "host-local") {
+  $env:USE_POD_CIDR = "true"
+} else {
+  $env:USE_POD_CIDR = "false"
+}
+
 if($env:CALICO_NETWORKING_BACKEND = "windows-bgp")
 {
   Wait-ForCalicoInit
