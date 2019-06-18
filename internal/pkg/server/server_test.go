@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"net"
 	"net/http"
-	"net/url"
 	"strings"
 	"sync"
 
@@ -68,7 +67,12 @@ var _ = Describe("Server", func() {
 		It("should be able to list the cluster", func() {
 			list := listClusters(lis.Addr().String())
 			Expect(len(list)).To(Equal(1))
-			Expect(list[0].DisplayName).To(Equal("clusterA"))
+			Expect(list[0].ID).To(Equal("clusterA"))
+			Expect(list[0].DisplayName).To(Equal("A"))
+		})
+
+		It("should be able to update a cluster", func() {
+			addCluster(lis.Addr().String(), "clusterA", "AAA")
 		})
 
 		It("should be able to register another cluster", func() {
@@ -78,8 +82,10 @@ var _ = Describe("Server", func() {
 		It("should be able to get sorted list of clusters", func() {
 			list := listClusters(lis.Addr().String())
 			Expect(len(list)).To(Equal(2))
-			Expect(list[0].DisplayName).To(Equal("clusterA"))
-			Expect(list[1].DisplayName).To(Equal("clusterB"))
+			Expect(list[0].ID).To(Equal("clusterA"))
+			Expect(list[0].DisplayName).To(Equal("AAA"))
+			Expect(list[1].ID).To(Equal("clusterB"))
+			Expect(list[1].DisplayName).To(Equal("BB"))
 		})
 	})
 
@@ -210,10 +216,8 @@ var _ = Describe("Server Proxy to tunnel", func() {
 	})
 })
 
-func addCluster(server, name, dest string) {
-	addr, err := url.Parse(dest)
-	Expect(err).NotTo(HaveOccurred())
-	cluster, err := clusters.Cluster{ID: name, DisplayName: name, TargetURL: *addr}.MarshalJSON()
+func addCluster(server, id, name string) {
+	cluster, err := json.Marshal(&clusters.Cluster{ID: id, DisplayName: name})
 	Expect(err).NotTo(HaveOccurred())
 
 	req, err := http.NewRequest("PUT", "http://"+server+"/voltron/api/clusters?", bytes.NewBuffer(cluster))

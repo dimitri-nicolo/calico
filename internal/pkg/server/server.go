@@ -137,7 +137,9 @@ func (s *Server) acceptTunnels() {
 			log.Errorf("cluster %q does not exist", clusterID)
 
 			// XXX for now, we add a cluster eve if it does not exist
-			c = &cluster{DisplayName: clusterID}
+			c = new(cluster)
+			c.ID = clusterID
+			c.DisplayName = clusterID
 			s.clusters.Lock()
 			s.clusters.add(clusterID, c)
 			s.clusters.Unlock()

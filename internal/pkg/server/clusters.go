@@ -20,10 +20,12 @@ import (
 )
 
 type cluster struct {
+	jclust.Cluster
+
 	sync.RWMutex
-	DisplayName string
-	tunnel      *tunnel.Tunnel
-	proxy       *httputil.ReverseProxy
+
+	tunnel *tunnel.Tunnel
+	proxy  *httputil.ReverseProxy
 }
 
 type clusters struct {
@@ -43,23 +45,24 @@ func (cs *clusters) add(id string, c *cluster) {
 }
 
 // List all clusters in sorted order by DisplayName field
-func (cs *clusters) List() []*jclust.Cluster {
+func (cs *clusters) List() []jclust.Cluster {
 	cs.RLock()
 	defer cs.RUnlock()
 
-	clusterList := make([]*jclust.Cluster, 0, len(cs.clusters))
-	for id, c := range cs.clusters {
+	clusterList := make([]jclust.Cluster, 0, len(cs.clusters))
+	for _, c := range cs.clusters {
 		// Only incldue non-sensitive fields
-		clusterList = append(clusterList, &jclust.Cluster{
-			ID:          id,
-			DisplayName: c.DisplayName,
-		})
+
+		c.RLock()
+		clusterList = append(clusterList, c.Cluster)
+		c.RUnlock()
 	}
 
 	sort.Slice(clusterList, func(i, j int) bool {
 		return clusterList[i].DisplayName < clusterList[j].DisplayName
 	})
 
+	log.Debugf("clusterList = %+v\n", clusterList)
 	return clusterList
 }
 
@@ -75,25 +78,27 @@ func (cs *clusters) updateCluster(w http.ResponseWriter, r *http.Request) {
 
 	// no validations... for now
 	decoder := json.NewDecoder(r.Body)
-	jc := &jclust.Cluster{}
+
+	jc := new(jclust.Cluster)
 	err := decoder.Decode(jc)
 	if err != nil {
 		http.Error(w, "Invalid JSON body", 400)
 		return
 	}
 
-	action := "Adding"
-	if _, ok := cs.clusters[jc.ID]; ok {
-		//TODO when updating, we must take into account an existing tunnel to the cluster
-		action = "Updating"
+	if c, ok := cs.clusters[jc.ID]; ok {
+		c.Lock()
+		log.Infof("Updating cluster ID: %q DisplayName: %q", c.ID, c.DisplayName)
+		c.Cluster = *jc
+		log.Infof("New cluster ID: %q DisplayName: %q", c.ID, c.DisplayName)
+		c.Unlock()
+	} else {
+		log.Infof("Adding cluster ID: %q DisplayName: %q", jc.ID, jc.DisplayName)
+		cs.add(jc.ID,
+			&cluster{
+				Cluster: *jc,
+			})
 	}
-
-	log.Infof("%s cluster ID: %q DisplayName: %q", action, jc.ID, jc.DisplayName)
-
-	cs.add(jc.ID,
-		&cluster{
-			DisplayName: jc.DisplayName,
-		})
 
 	// TODO we will return clusters credentials
 	returnJSON(w, jc)
