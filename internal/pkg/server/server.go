@@ -83,10 +83,10 @@ func New(opts ...Option) (*Server, error) {
 	var tunOpts []tunnel.ServerOption
 
 	if srv.tunnelCert == nil || srv.tunnelKey == nil {
-		if srv.tunnelCert != nil {
+		if srv.tunnelCert == nil {
 			return nil, errors.Errorf("tunnel cert not provided")
 		}
-		if srv.tunnelKey != nil {
+		if srv.tunnelKey == nil {
 			return nil, errors.Errorf("tunnel key not provided")
 		}
 
