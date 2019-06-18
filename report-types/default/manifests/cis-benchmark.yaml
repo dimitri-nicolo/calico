@@ -1,0 +1,52 @@
+apiVersion: projectcalico.org/v3
+kind: GlobalReportType
+metadata:
+  creationTimestamp: null
+  labels:
+    global-report-type: cis-benchmark
+  name: cis-benchmark
+spec:
+  downloadTemplates:
+  - name: all-tests.csv
+    template: |
+      nodeName,testIndex,status,scored
+      {{ range $i, $node := .CISBenchmark -}}
+      {{- range $j, $section := $node.Results -}}
+      {{- range $k, $result := $section.Results -}}
+      {{- $node.NodeName }},{{ $result.TestNumber }},{{ $result.Status }},{{ $result.Scored }}
+      {{ end }}
+      {{- end }}
+      {{- end }}
+  - name: failed-tests.csv
+    template: |
+      nodeName,testIndex,status,scored
+      {{ range $i, $node := .CISBenchmark }}
+      {{- range $j, $section := $node.Results }}
+      {{- range $k, $result := $section.Results }}
+      {{- if eq $result.Status "FAIL" }}
+      {{- $node.NodeName }},{{ $result.TestNumber }},{{ $result.Status }},{{ $result.Scored }}
+      {{ end }}
+      {{- end }}
+      {{- end }}
+      {{- end }}
+  includeCISBenchmarkData: true
+  uiSummaryTemplate:
+    name: ui-summary.json
+    template: "{{ $n := len .CISBenchmark }}\n{\n\t\"heading\": \"Kubernetes CIS Benchmark\",\n\t\"type\":
+      \"panel\",\n\t\"widgets\": [{\n\t\t\"heading\": \"Node Failure Summary\",\n\t\t\"type\":
+      \"cis-benchmark-nodes\",\n\t\t\"summary\": {\n\t\t\t\"label\": \"Total\",\n\t\t\t\"total\":
+      {{ $n }}\n\t\t},\n\t\t\"data\": [{\n\t\t\t\"label\": \"HIGH\",\n\t\t\t\"value\":
+      {{ .CISBenchmarkSummary.HighCount }},\n\t\t\t\"desc\": \"Nodes with more than
+      {{ if .ReportSpec.CIS }}{{ .ReportSpec.CIS.HighThreshold }}{{ end }}% tests
+      passing\"\n\t\t}, {\n\t\t\t\"label\": \"MED\",\n\t\t\t\"value\": {{ .CISBenchmarkSummary.MedCount
+      }},\n\t\t\t\"desc\": \"Nodes with more than {{ if .ReportSpec.CIS }}{{ .ReportSpec.CIS.MedThreshold
+      }}{{ end }}% tests passing\"\n\t\t}, {\n\t\t\t\"label\": \"HIGH\",\n\t\t\t\"value\":
+      {{ .CISBenchmarkSummary.LowCount }},\n\t\t\t\"desc\": \"Nodes with less than
+      {{ if .ReportSpec.CIS }}{{ .ReportSpec.CIS.MedThreshold }}{{ end }}% tests passing\"\n\t\t}]\n\t}\n{{
+      if .CISBenchmark }}\n\t, {\n\t\t\"heading\": \"Top Failed Tests\",\n\t\t\"type\":
+      \"cis-benchmark-tests\",\n\t\t\"topFailedTests\": {\n\t\t\t\"tests\": [\n{{
+      $tests := cisTopFailedTests . }}\n{{ $nTests := len $tests }}\n{{ range $i,
+      $test := $tests }}\n\t\t\t{\n\t\t\t\t\"index\": \"{{ $test.TestNumber }}\",\n\t\t\t\t\"description\":
+      \"{{ $test.TestDesc }}\",\n\t\t\t\t\"failedCount\": \"{{ $test.Count }}\"\n\t\t\t}
+      {{ $i1 := add1 $i }}{{ if ne $i1 $nTests }}, {{ end }}\n{{ end }}\n\t\t\t]}
+      \n\t}\n{{ end }}\n\t]\n}\n"

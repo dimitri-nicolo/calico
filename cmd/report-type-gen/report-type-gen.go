@@ -16,119 +16,90 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
-	"os"
 	"path"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 
 	yaml "github.com/projectcalico/go-yaml-wrapper"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	validator "github.com/projectcalico/libcalico-go/lib/validator/v3"
 )
 
-func main() {
-	const manifestsDir = "manifests"
+// TODO(bk): could probably extend this command to generate Global Report manifests as well.
+var genCmd = &cobra.Command{
+	Use:     "generate",
+	Aliases: []string{"gen"},
+	Short:   "Generate manifests",
+	Long:    "Generate the full Global Report Type manifests by defining your report output as go-templates",
+	Run: func(cmd *cobra.Command, args []string) {
+		runGenCmd(args)
+	},
+}
 
+func runGenCmd(args []string) {
 	// Always start with local "default" directory, unless specified.
-	dirs := []string{"default"}
-	if len(os.Args) >= 2 {
-		dirs = os.Args[1:]
+	dirs := defaultDirs
+	if len(args) >= 1 {
+		dirs = args[0:]
 	}
 
 	// Get list of yaml files inside the 1st level of given directories.
-	fmt.Print("Reading yaml manifests in directory\n\n")
-	var files []string
 	for _, dir := range dirs {
-		yamls, err := getYamlFiles(dir)
-		if err != nil {
-			log.Fatal(err)
-		}
-		files = append(files, yamls...)
-	}
+		if err := traverseDir(dir, true, ".yaml", func(f string) error {
+			clog := log.WithField("file", f)
+			clog.Info("Processing file")
 
-	for _, file := range files {
-		fmt.Printf("Processing file: %s\n", file)
-
-		defer func() {
-			if r := recover(); r != nil {
-				fmt.Printf("-  Error parsing yaml: %v\n", r)
+			contents, err := ioutil.ReadFile(f)
+			if err != nil {
+				return err
 			}
-		}()
 
-		contents, err := ioutil.ReadFile(file)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		reportType := api.GlobalReportType{}
-		if err := yaml.UnmarshalStrict(contents, &reportType); err != nil {
-			log.Fatal(err)
-		}
-
-		// get the directory for template files.
-		inDirName := path.Join(path.Dir(file), reportType.Name)
-
-		if templ, err := getTemplate(inDirName, reportType.Spec.UISummaryTemplate.Name); err == nil {
-			reportType.Spec.UISummaryTemplate.Template = string(templ)
-			maybeCompressJSON(&reportType.Spec.UISummaryTemplate)
-		}
-
-		for i := 0; i < len(reportType.Spec.DownloadTemplates); i++ {
-			if templ, err := getTemplate(inDirName, reportType.Spec.DownloadTemplates[i].Name); err == nil {
-				reportType.Spec.DownloadTemplates[i].Template = string(templ)
-				maybeCompressJSON(&reportType.Spec.DownloadTemplates[i])
+			reportType := api.GlobalReportType{}
+			if err := yaml.UnmarshalStrict(contents, &reportType); err != nil {
+				return err
 			}
-		}
 
-		// Validate the report type contents.
-		if err := validator.Validate(reportType); err != nil {
-			fmt.Printf("-  Manifest failed validation: %v\n", err)
-			continue
-		}
+			// get the directory for template files.
+			inDirName := path.Join(path.Dir(f), reportType.Name)
 
-		// Generate manifest.
-		manifestContent, err := yaml.Marshal(reportType)
-		if err != nil {
-			log.Fatal(err)
+			if templ, err := getTemplate(inDirName, reportType.Spec.UISummaryTemplate.Name); err == nil {
+				reportType.Spec.UISummaryTemplate.Template = string(templ)
+				maybeCompressJSON(&reportType.Spec.UISummaryTemplate)
+			}
+
+			for i := 0; i < len(reportType.Spec.DownloadTemplates); i++ {
+				if templ, err := getTemplate(inDirName, reportType.Spec.DownloadTemplates[i].Name); err == nil {
+					reportType.Spec.DownloadTemplates[i].Template = string(templ)
+					maybeCompressJSON(&reportType.Spec.DownloadTemplates[i])
+				}
+			}
+
+			// Validate the report type contents.
+			if err := validator.Validate(reportType); err != nil {
+				clog.WithError(err).Error("Failed to validate manifest: skipping...")
+				return nil
+			}
+
+			// Generate manifest.
+			manifestContent, err := yaml.Marshal(reportType)
+			if err != nil {
+				clog.WithError(err).Error("Failed to marshal resulting report type: skipping...")
+				return nil
+			}
+			manifestFullPath := path.Join(path.Dir(f), manifestsDir, path.Base(f))
+			if err := ioutil.WriteFile(manifestFullPath, manifestContent, 0644); err != nil {
+				log.WithError(err).Error("Failed to write report type to file: skipping...")
+			}
+
+			log.WithField("file", manifestFullPath).Info("Successfully generated manifest")
+			return nil
+		}); err != nil {
+			log.WithError(err).Fatal("Fatal error occurred while attempting to generate manifests")
 		}
-		manifestFullPath := path.Join(path.Dir(file), manifestsDir, path.Base(file))
-		if err := ioutil.WriteFile(manifestFullPath, manifestContent, 0644); err != nil {
-			log.Fatal(err)
-		}
-		fmt.Printf("Generated %s\n\n", manifestFullPath)
 	}
-}
-
-/*
-Given a list of directory, return yaml files inside the directory.
-*/
-func getYamlFiles(dir string) (yamls []string, err error) {
-	files, err := ioutil.ReadDir(dir)
-	if err != nil {
-		return yamls, err
-	}
-
-	var ret []string
-	for _, file := range files {
-		// Avoid directories.
-		if file.IsDir() {
-			continue
-		}
-
-		fileName := file.Name()
-		fileNameExt := path.Ext(fileName)
-		// Process only yaml files.
-		if strings.ToLower(fileNameExt) == "yaml" {
-			continue
-		}
-
-		ret = append(ret, path.Join(dir, fileName))
-	}
-
-	return ret, nil
 }
 
 // getTemplate returns the contents of the specified template file
@@ -144,8 +115,10 @@ func getTemplate(dirName string, templName string) (template []byte, err error) 
 
 // maybeCompressJSON takes the json template and compresses it.
 func maybeCompressJSON(template *api.ReportTemplate) {
+	clog := log.WithField("template", template.Name)
 	// Only attempt to compress if the format ends with .json.
 	if !strings.HasSuffix(template.Name, ".json") {
+		clog.Debug("Refusing to compress non-json file")
 		return
 	}
 
@@ -153,13 +126,14 @@ func maybeCompressJSON(template *api.ReportTemplate) {
 	v := new(interface{})
 	err := json.Unmarshal([]byte(template.Template), v)
 	if err != nil {
-		fmt.Printf("-  Unable to process JSON in field %s - not attempting to compress. Check value is valid.\n", template.Name)
+		clog.WithError(err).Warn("Failed to unmarshal json, refusing to compress")
 		return
 	}
 
 	// Now convert the interface back to JSON
 	j, err := json.Marshal(v)
 	if err != nil {
+		clog.WithError(err).Warn("Failed to marshal json, refusing to compress")
 		return
 	}
 

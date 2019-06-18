@@ -1,5 +1,5 @@
-hash: fa4e2df6ff338ef18b5f895154a10aeca534c9fb86c33e7a94e373ee7673b505
-updated: 2019-05-03T14:48:37.023312-07:00
+hash: f5b19979cd973ab5062dcdaf1befa998cc5290e2c362c7904fa23bf7c42fd750
+updated: 2019-06-17T17:00:01.418695-07:00
 imports:
 - name: github.com/beorn7/perks
   version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
@@ -79,12 +79,12 @@ imports:
   version: f02667b379e2fb5916c3cda2cf31e0eb885d79f8
 - name: github.com/imdario/mergo
   version: 9316a62528ac99aaecb4e47eadd6dc8aa6533d58
+- name: github.com/inconshreveable/mousetrap
+  version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
 - name: github.com/json-iterator/go
   version: f2b4162afba35581b6d4a50d3b8f34e33c144682
 - name: github.com/kelseyhightower/envconfig
   version: dd1402a4d99de9ac2f396cd6fcb957bc2c695ec1
-- name: github.com/konsorten/go-windows-terminal-sequences
-  version: f55edac94c9bbba5d6182a4be46d86a2c9b5b50e
 - name: github.com/leodido/go-urn
   version: a67a23e1c1af3c66528573bb86a87246477277c1
 - name: github.com/mailru/easyjson
@@ -158,7 +158,7 @@ imports:
 - name: github.com/pkg/errors
   version: 27936f6d90f9c8e1145f11ed52ffffbfdb9e0af7
 - name: github.com/projectcalico/felix
-  version: 51d5200862f2f306c0a0ffadffd6d5f59602d995
+  version: c00322e56455b84a9c099feee8004b7cc02dc9ef
   repo: git@github.com:tigera/felix-private.git
   vcs: git
   subpackages:
@@ -174,7 +174,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 7979a9a33f89116caf4e3ff9862b76a707b2a09a
+  version: 53dc22e6fb643a06f9db11b9a41d0e8fe85318b9
   repo: git@github.com:tigera/libcalico-go-private.git
   vcs: git
   subpackages:
@@ -183,6 +183,7 @@ imports:
   - lib/apis/v1/unversioned
   - lib/apis/v3
   - lib/backend/api
+  - lib/backend/encap
   - lib/backend/k8s/conversion
   - lib/backend/model
   - lib/backend/syncersv1/updateprocessors
@@ -191,7 +192,6 @@ imports:
   - lib/errors
   - lib/hash
   - lib/health
-  - lib/ipip
   - lib/jitter
   - lib/logutils
   - lib/names
@@ -233,11 +233,14 @@ imports:
 - name: github.com/satori/go.uuid
   version: f58768cc1a7a7e77a3bd49e98cdd21419399b6a3
 - name: github.com/sirupsen/logrus
-  version: 8bdbc7bcc01dcbb8ec23dc8a28e332258d25251f
+  version: 1f80e3709dfafa8ca8727ba7eb392a11827ac8e2
+  repo: https://github.com/projectcalico/logrus
+- name: github.com/spf13/cobra
+  version: f2b07da1e2c38d5f12845a4f607e2e1018cbb1f5
 - name: github.com/spf13/pflag
-  version: 583c0c0531f06d5278b7d917446061adc344b5cd
+  version: 298182f68c66c05229eb03ac171abe6e309ee79a
 - name: github.com/tigera/calico-k8sapiserver
-  version: 0e59242294781b92aded5bcf53168d1ccd6813d8
+  version: f8400d2c4088fdcdd849b68ff1af3e1bfd7fd48f
   repo: git@github.com:tigera/calico-k8sapiserver.git
   vcs: git
   subpackages:
@@ -254,7 +257,7 @@ imports:
   subpackages:
   - pkg/middleware
 - name: github.com/tigera/licensing
-  version: cb027c7c879597e0e02f2411c0c201752bab39c8
+  version: 02d1f482fe4d3a2dbc4a3bce530471eba75d5029
   repo: git@github.com:tigera/licensing
   vcs: git
   subpackages:
