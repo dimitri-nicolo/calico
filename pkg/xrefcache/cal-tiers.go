@@ -28,20 +28,9 @@ type CacheEntryTier struct {
 	// The versioned network set resource.
 	VersionedTierResource
 
-	// Augmented policy data.
-	AugmentedTierData
-
 	// --- Internal data ---
 	cacheEntryCommon
-	policySorter    PolicySorter
-	orderedPolicies []*CacheEntryNetworkPolicy
-}
-
-func (c *CacheEntryTier) GetOrderedPolicies() []*CacheEntryNetworkPolicy {
-	// Invoke the policy sorter sort(). This will call back into the tier cache entries to update the ordered
-	// sets of policy.
-	c.policySorter.sort()
-	return c.orderedPolicies
+	policySorter PolicySorter
 }
 
 func (c *CacheEntryTier) getVersionedResource() VersionedResource {
@@ -50,9 +39,6 @@ func (c *CacheEntryTier) getVersionedResource() VersionedResource {
 
 func (c *CacheEntryTier) setVersionedResource(r VersionedResource) {
 	c.VersionedTierResource = r.(VersionedTierResource)
-}
-
-type AugmentedTierData struct {
 }
 
 type versionedCalicoTier struct {

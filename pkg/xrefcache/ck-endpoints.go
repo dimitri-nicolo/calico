@@ -72,7 +72,8 @@ type CacheEntryEndpoint struct {
 
 	// --- Internal data ---
 	cacheEntryCommon
-	clog *log.Entry
+	clog         *log.Entry
+	policySorter PolicySorter
 }
 
 // getVersionedResource implements the CacheEntry interface.
@@ -83,6 +84,32 @@ func (c *CacheEntryEndpoint) getVersionedResource() VersionedResource {
 // setVersionedResource implements the CacheEntry interface.
 func (c *CacheEntryEndpoint) setVersionedResource(r VersionedResource) {
 	c.VersionedEndpointResource = r.(VersionedEndpointResource)
+}
+
+// GetOrderedTiersAndPolicies returns the ordered set of tiers with their policies that apply to this endpoint.
+func (c *CacheEntryEndpoint) GetOrderedTiersAndPolicies() []*TierWithOrderedPolicies {
+	allTiers := c.policySorter.GetOrderedTiersAndPolicies()
+
+	// TODO(rlb): We don't cache the results at the moment. We can do some revision based processing and cache if we
+	//            find that we need to. Basic idea would be to give the policySorter a revision so we can tell if the
+	//            ourRevision is out of date. Our revision would also be reset if there was a change to which policies
+	//            applied to this endpoint.
+	var filteredTiers []*TierWithOrderedPolicies
+	for _, t := range allTiers {
+		var filteredPols []*CacheEntryNetworkPolicy
+		for _, p := range t.OrderedPolicies {
+			if c.AppliedPolicies.Contains(p.getResourceID()) {
+				filteredPols = append(filteredPols, p)
+			}
+		}
+		if len(filteredPols) > 0 {
+			filteredTiers = append(filteredTiers, &TierWithOrderedPolicies{
+				Tier:            t.Tier,
+				OrderedPolicies: filteredPols,
+			})
+		}
+	}
+	return filteredTiers
 }
 
 // versionedK8sNamespace implements the VersionedEndpointResource interface.
@@ -295,6 +322,7 @@ func (c *endpointHandler) newCacheEntry() CacheEntry {
 	return &CacheEntryEndpoint{
 		AppliedPolicies: resources.NewSet(),
 		Services:        resources.NewSet(),
+		policySorter:    c.PolicySorter(),
 	}
 }
 

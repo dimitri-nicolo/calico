@@ -300,9 +300,9 @@ func (x *xrefCache) RegisterInScopeEndpoints(selection *apiv3.EndpointsSelection
 	return nil
 }
 
-// GetOrderedTiers implements the XrefCache interface.
-func (x *xrefCache) GetOrderedTiers() []*CacheEntryTier {
-	return x.policySorter.GetOrderedTiers()
+// GetOrderedTiersAndPolicies returns the ordered set of all tiers with all of their policies.
+func (x *xrefCache) GetOrderedTiersAndPolicies() []*TierWithOrderedPolicies {
+	return x.policySorter.GetOrderedTiersAndPolicies()
 }
 
 // inScopeStarted is called from the endpointLabelSelector when an endpoint matches the in-scope selector.

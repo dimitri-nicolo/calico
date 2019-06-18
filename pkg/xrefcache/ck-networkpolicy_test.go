@@ -695,43 +695,43 @@ var _ = Describe("Basic CRUD of network policies with no other resources present
 
 	It("should handle ordering of tiers and policies when querying GetOrderedTiers", func() {
 		By("calling GetOrderedTiers and checking tier order")
-		tiers := tester.XrefCache.GetOrderedTiers()
-		Expect(tiers).To(Equal([]*xrefcache.CacheEntryTier{tier1, tier2, tierDefault}))
+		tiers := tester.XrefCache.GetOrderedTiersAndPolicies()
+		Expect(tiers).To(HaveLen(3))
+		Expect(tiers[0].Tier).To(Equal(tier1))
+		Expect(tiers[1].Tier).To(Equal(tier2))
+		Expect(tiers[2].Tier).To(Equal(tierDefault))
 
 		By("checking sorted policies in each tier")
-		Expect(tiers[0].GetOrderedPolicies()).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Tier1, gnp1Tier1}))
-		Expect(tiers[1].GetOrderedPolicies()).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Tier2, gnp1Tier2}))
-		Expect(tiers[2].GetOrderedPolicies()).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Default, knp1Default, gnp1Default}))
-	})
-
-	It("should handle ordering of tiers and policies when querying GetOrderedPolicies without querying the tier order", func() {
-		By("checking sorted policies in each tier")
-		Expect(tier1.GetOrderedPolicies()).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Tier1, gnp1Tier1}))
-		Expect(tier2.GetOrderedPolicies()).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Tier2, gnp1Tier2}))
-		Expect(tierDefault.GetOrderedPolicies()).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Default, knp1Default, gnp1Default}))
+		Expect(tiers[0].OrderedPolicies).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Tier1, gnp1Tier1}))
+		Expect(tiers[1].OrderedPolicies).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Tier2, gnp1Tier2}))
+		Expect(tiers[2].OrderedPolicies).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Default, knp1Default, gnp1Default}))
 	})
 
 	It("should handle querying GetOrderedTiers reordering tiers and then requerying", func() {
-		By("calling GetOrderedTiers")
-		tiers := tester.XrefCache.GetOrderedTiers()
-		Expect(tiers).To(Equal([]*xrefcache.CacheEntryTier{tier1, tier2, tierDefault}))
+		By("calling GetOrderedTiers and checking tier order")
+		tiers := tester.XrefCache.GetOrderedTiersAndPolicies()
+		Expect(tiers).To(HaveLen(3))
+		Expect(tiers[0].Tier).To(Equal(tier1))
+		Expect(tiers[1].Tier).To(Equal(tier2))
+		Expect(tiers[2].Tier).To(Equal(tierDefault))
 
-		By("reordering tier1 and tier2, calling GetOrderedTiers again and checking tier order")
+		By("reordering tier1 and tier2")
 		tester.SetTier(Name1, Order10000)
-		tiers = tester.XrefCache.GetOrderedTiers()
-		Expect(tiers).To(Equal([]*xrefcache.CacheEntryTier{tier2, tier1, tierDefault}))
 
-		By("checking sorted policies in each tier")
-		Expect(tiers[0].GetOrderedPolicies()).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Tier2, gnp1Tier2}))
-		Expect(tiers[1].GetOrderedPolicies()).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Tier1, gnp1Tier1}))
-		Expect(tiers[2].GetOrderedPolicies()).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Default, knp1Default, gnp1Default}))
+		By("calling GetOrderedTiers and checking tier order and sorted policies in the tiers")
+		tiers = tester.XrefCache.GetOrderedTiersAndPolicies()
+		Expect(tiers).To(HaveLen(3))
+		Expect(tiers[0].Tier).To(Equal(tier2))
+		Expect(tiers[1].Tier).To(Equal(tier1))
+		Expect(tiers[2].Tier).To(Equal(tierDefault))
+		Expect(tiers[0].OrderedPolicies).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Tier2, gnp1Tier2}))
+		Expect(tiers[1].OrderedPolicies).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Tier1, gnp1Tier1}))
+		Expect(tiers[2].OrderedPolicies).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Default, knp1Default, gnp1Default}))
 	})
 
 	It("should handle querying GetOrderedPolicies reordering policies and then requerying", func() {
-		By("checking sorted policies in each tier")
-		Expect(tier1.GetOrderedPolicies()).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Tier1, gnp1Tier1}))
-		Expect(tier2.GetOrderedPolicies()).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Tier2, gnp1Tier2}))
-		Expect(tierDefault.GetOrderedPolicies()).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Default, knp1Default, gnp1Default}))
+		By("calling GetOrderedTiers to perform initial ordering")
+		tester.XrefCache.GetOrderedTiersAndPolicies()
 
 		By("reordering default tier policies")
 		tester.SetNetworkPolicy(TierDefault, Name1, Namespace1, SelectAll,
@@ -748,13 +748,21 @@ var _ = Describe("Basic CRUD of network policies with no other resources present
 			nil,
 			&Order1,
 		)
-		Expect(tierDefault.GetOrderedPolicies()).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{gnp1Default, np1Default, knp1Default}))
+
+		By("Getting ordered tiers and policies and checking default policies are re-ordered")
+		tiers := tester.XrefCache.GetOrderedTiersAndPolicies()
+		Expect(tiers).To(HaveLen(3))
+		Expect(tiers[2].Tier).To(Equal(tierDefault))
+		Expect(tiers[2].OrderedPolicies).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{gnp1Default, np1Default, knp1Default}))
 	})
 
 	It("should handle ordering of tiers and policies when querying GetOrderedTiers", func() {
 		By("calling GetOrderedTiers and checking tier order")
-		tiers := tester.XrefCache.GetOrderedTiers()
-		Expect(tiers).To(Equal([]*xrefcache.CacheEntryTier{tier1, tier2, tierDefault}))
+		tiers := tester.XrefCache.GetOrderedTiersAndPolicies()
+		Expect(tiers).To(HaveLen(3))
+		Expect(tiers[0].Tier).To(Equal(tier1))
+		Expect(tiers[1].Tier).To(Equal(tier2))
+		Expect(tiers[2].Tier).To(Equal(tierDefault))
 
 		By("reordering tier1 and tier2, calling GetOrderedTiers again and checking tier order")
 		tester.SetTier(Name1, Order10000)
@@ -772,42 +780,81 @@ var _ = Describe("Basic CRUD of network policies with no other resources present
 		)
 
 		By("calling GetOrderedTiers and checking tier order")
-		tiers = tester.XrefCache.GetOrderedTiers()
-		Expect(tiers).To(Equal([]*xrefcache.CacheEntryTier{tier2, tier1, tierDefault}))
+		tiers = tester.XrefCache.GetOrderedTiersAndPolicies()
+		Expect(tiers).To(HaveLen(3))
+		Expect(tiers[0].Tier).To(Equal(tier2))
+		Expect(tiers[1].Tier).To(Equal(tier1))
+		Expect(tiers[2].Tier).To(Equal(tierDefault))
 
 		By("checking sorted policies in each tier")
-		Expect(tiers[0].GetOrderedPolicies()).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Tier2, gnp1Tier2}))
-		Expect(tiers[1].GetOrderedPolicies()).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{gnp1Tier1, np1Tier1}))
-		Expect(tiers[2].GetOrderedPolicies()).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Default, knp1Default, gnp1Default}))
+		Expect(tiers[0].OrderedPolicies).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Tier2, gnp1Tier2}))
+		Expect(tiers[1].OrderedPolicies).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{gnp1Tier1, np1Tier1}))
+		Expect(tiers[2].OrderedPolicies).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Default, knp1Default, gnp1Default}))
 	})
 
 	It("should handle reordering of policies when deleting a policy", func() {
+		By("calling GetOrderedTiers to perform initial ordering")
+		tiers := tester.XrefCache.GetOrderedTiersAndPolicies()
+		Expect(tiers).To(HaveLen(3))
+		Expect(tiers[0].Tier).To(Equal(tier1))
+		Expect(tiers[1].Tier).To(Equal(tier2))
+		Expect(tiers[2].Tier).To(Equal(tierDefault))
+
 		By("checking sorted policies in each tier")
-		Expect(tier1.GetOrderedPolicies()).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Tier1, gnp1Tier1}))
-		Expect(tier2.GetOrderedPolicies()).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Tier2, gnp1Tier2}))
-		Expect(tierDefault.GetOrderedPolicies()).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Default, knp1Default, gnp1Default}))
+		Expect(tiers[0].OrderedPolicies).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Tier1, gnp1Tier1}))
+		Expect(tiers[1].OrderedPolicies).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Tier2, gnp1Tier2}))
+		Expect(tiers[2].OrderedPolicies).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Default, knp1Default, gnp1Default}))
 
 		By("deleting a policy in each tier")
 		tester.DeleteNetworkPolicy(Tier1, Name1, Namespace1)
 		tester.DeleteGlobalNetworkPolicy(Tier2, Name1)
 		tester.DeleteK8sNetworkPolicy(Name1, Namespace1)
 
+		By("calling GetOrderedTiers to perform reordering")
+		tiers = tester.XrefCache.GetOrderedTiersAndPolicies()
+		Expect(tiers).To(HaveLen(3))
+
 		By("checking sorted policies in each tier")
-		Expect(tier1.GetOrderedPolicies()).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{gnp1Tier1}))
-		Expect(tier2.GetOrderedPolicies()).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Tier2}))
-		Expect(tierDefault.GetOrderedPolicies()).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Default, gnp1Default}))
+		Expect(tiers[0].OrderedPolicies).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{gnp1Tier1}))
+		Expect(tiers[1].OrderedPolicies).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Tier2}))
+		Expect(tiers[2].OrderedPolicies).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Default, gnp1Default}))
 	})
 
 	It("should handle reordering of tiers when deleting a tier", func() {
 		By("checking tier order")
-		tiers := tester.XrefCache.GetOrderedTiers()
-		Expect(tiers).To(Equal([]*xrefcache.CacheEntryTier{tier1, tier2, tierDefault}))
+		tiers := tester.XrefCache.GetOrderedTiersAndPolicies()
+		Expect(tiers).To(HaveLen(3))
+		Expect(tiers[0].Tier).To(Equal(tier1))
+		Expect(tiers[1].Tier).To(Equal(tier2))
+		Expect(tiers[2].Tier).To(Equal(tierDefault))
 
 		By("deleting tier2")
 		tester.DeleteTier(Tier2)
 
 		By("checking tier order")
-		tiers = tester.XrefCache.GetOrderedTiers()
-		Expect(tiers).To(Equal([]*xrefcache.CacheEntryTier{tier1, tierDefault}))
+		tiers = tester.XrefCache.GetOrderedTiersAndPolicies()
+		Expect(tiers).To(HaveLen(2))
+		Expect(tiers[0].Tier).To(Equal(tier1))
+		Expect(tiers[1].Tier).To(Equal(tierDefault))
+	})
+
+	It("should filter policies and tiers based on endpoint applied policies", func() {
+		By("creating a pod and hack the applied policies to contain some in tier1 and default tier")
+		res := tester.SetPod(Name1, Namespace1, NoLabels, IP1, Name1, 0)
+		ep := tester.XrefCache.Get(resources.GetResourceID(res)).(*xrefcache.CacheEntryEndpoint)
+		ep.AppliedPolicies = resources.NewSet()
+		ep.AppliedPolicies.Add(resources.GetResourceID(gnp1Tier1))
+		ep.AppliedPolicies.Add(resources.GetResourceID(knp1Default))
+		ep.AppliedPolicies.Add(resources.GetResourceID(np1Default))
+
+		By("checking tier order")
+		tiers := ep.GetOrderedTiersAndPolicies()
+		Expect(tiers).To(HaveLen(2))
+		Expect(tiers[0].Tier).To(Equal(tier1))
+		Expect(tiers[1].Tier).To(Equal(tierDefault))
+
+		By("checking sorted policies in each tier")
+		Expect(tiers[0].OrderedPolicies).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{gnp1Tier1}))
+		Expect(tiers[1].OrderedPolicies).To(Equal([]*xrefcache.CacheEntryNetworkPolicy{np1Default, knp1Default}))
 	})
 })
