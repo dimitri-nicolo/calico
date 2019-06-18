@@ -45,6 +45,7 @@ RUN apt-get update && apt-get install -y \
     # Also needed (provides utilities for browsing procfs like ps)
     procps \
     strongswan \
+    strongswan-swanctl \
     ca-certificates
 
 # Copy our bird binaries in
