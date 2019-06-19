@@ -3,7 +3,6 @@ package mutator
 
 import (
 	"bytes"
-	"context"
 	"io/ioutil"
 	"net/http"
 
@@ -12,34 +11,37 @@ import (
 	"github.com/tigera/es-proxy/pkg/pip/flow"
 )
 
-type ResponseHook interface {
-	ModifyResponse(*http.Response) error
-}
-
-type responseHook struct {
+type pipResponseHook struct {
 	pip pip.PIP
 }
 
-func NewResponseHook(p pip.PIP) ResponseHook {
-	return &responseHook{
+func NewPIPResponseHook(p pip.PIP) ResponseHook {
+	return &pipResponseHook{
 		pip: p,
 	}
 }
 
 // ModifyResponse alters the flows in the response by calling the
 // CalculateFlowImpact method of the PIP object with the extracted flow data
-func (rh *responseHook) ModifyResponse(r *http.Response) error {
-	log.Info("PIP response hook")
+func (rh *pipResponseHook) ModifyResponse(r *http.Response) error {
+	log.Debug("PIP modify response")
 
-	//TODO: get these from the response.request if it's there. Otherwise store it
-	// somewhere when it comes in with the request and then retrieve it here
-	changes := make([]pip.NetworkPolicyChange, 0)
+	//extract the context from the request
+	context := r.Request.Context()
 
-	context := context.TODO()
+	//look for the policy impact request data in the context
+	changes := context.Value(pip.PolicyImpactContextKey)
+
+	//if there were no changes, no need to modify the response
+	if changes == nil {
+		return nil
+	}
+
+	//assert that we have network policy changes
+	npcs := changes.([]pip.NetworkPolicyChange)
 
 	//read the flows from the response body
 	b, err := ioutil.ReadAll(r.Body)
-
 	if err != nil {
 		return err
 	}
@@ -47,7 +49,6 @@ func (rh *responseHook) ModifyResponse(r *http.Response) error {
 	//create a flow manager and unmarshal the data
 	v := flow.NewFlowManager()
 	err = v.Unmarshal(b)
-
 	if err != nil {
 		return err
 	}
@@ -64,8 +65,10 @@ func (rh *responseHook) ModifyResponse(r *http.Response) error {
 	}
 
 	//calculate the flow impact
-	outflows, _ := rh.pip.CalculateFlowImpact(context, changes, inflows)
-	//TODO: check the error from above
+	outflows, err := rh.pip.CalculateFlowImpact(context, npcs, inflows)
+	if err != nil {
+		return err
+	}
 
 	//put the returned flows back into the response body and remarshal
 	v.ReplaceFlows(outflows)

@@ -110,7 +110,7 @@ function run_proxy()
 }
 
 # Run a batch of tests that don't require elasticsearch first.
-run_fvs "-skip Elasticsearch"
+run_fvs "-skip \"(Elasticsearch)|(Policyimpact)\""
 
 # Setup elasticsearch and run a second batch with insecure access.
 run_elasticsearch "http" "insecure"
@@ -122,3 +122,8 @@ run_elasticsearch "http" "serviceuser"
 run_proxy "http" "serviceuser" "127.0.0.1" "9200" "elastic" ${BOOTSTRAP_PASSWORD}
 run_fvs "-focus Elasticsearch"
 # TODO(doublek): Enable TLS for TLS backend tests.
+
+# Setup elasticsearch and run policy impact fv test
+run_elasticsearch "http" "insecure"
+run_proxy "http" "insecure" "127.0.0.1" "9200"
+run_fvs "-focus Policyimpact"

@@ -16,28 +16,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type Action int
-
-const (
-	PASS Action = iota
-	ALLOW
-	DENY
-	UNKNOWN
-)
-
-type ChangeType int
-
-const (
-	CREATE ChangeType = iota
-	DELETE
-	UPDATE
-)
-
-type NetworkPolicyChange struct {
-	ChangeType    ChangeType
-	NetworkPolicy v3.NetworkPolicy
-}
-
 type pip struct {
 	xc      xrefcache.XrefCache
 	listSrc list.Source

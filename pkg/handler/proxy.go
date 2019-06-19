@@ -84,6 +84,14 @@ func NewProxy(proxyConfig *ProxyConfig) *Proxy {
 	// fiddling.
 	p.Director = func(req *http.Request) {
 		req.Header.Add("X-Forwarded-Host", req.Host)
+
+		//convert to a get request if need be so es is happy
+		if req.Method == http.MethodPost {
+			req.Method = http.MethodGet
+			req.Body = nil
+			req.ContentLength = 0
+		}
+
 		origDirector(req)
 		req.Host = proxyConfig.TargetURL.Host
 	}
@@ -123,6 +131,7 @@ func (p *Proxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 // Iterates over the defined response modifiers calling each in turn
 func (p *Proxy) modifyResponse(resp *http.Response) error {
+
 	for _, fm := range p.modifiers {
 		err := fm(resp)
 		if err != nil {

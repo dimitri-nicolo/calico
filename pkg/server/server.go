@@ -10,6 +10,8 @@ import (
 	"os"
 	"sync"
 
+	"github.com/tigera/es-proxy/pkg/pip/installer"
+
 	log "github.com/sirupsen/logrus"
 	k8s "k8s.io/client-go/kubernetes"
 	restclient "k8s.io/client-go/rest"
@@ -17,8 +19,6 @@ import (
 
 	"github.com/tigera/es-proxy/pkg/handler"
 	"github.com/tigera/es-proxy/pkg/middleware"
-	"github.com/tigera/es-proxy/pkg/mutator"
-	"github.com/tigera/es-proxy/pkg/pip"
 )
 
 var (
@@ -48,13 +48,10 @@ func Start(config *Config) error {
 		KeepAlivePeriod: config.ProxyKeepAlivePeriod,
 		IdleConnTimeout: config.ProxyIdleConnTimeout,
 	}
-	proxy := handler.NewProxy(pc)
+	rootProxy := handler.NewProxy(pc)
 
-	//hook up the pip response modifier
-	listSrc := &pip.DummySource{} //TODO: not sure what listSrc is or where it is supposed to come from
-	p := pip.New(listSrc)
-	piphook := mutator.NewResponseHook(p)
-	proxy.AddResponseModifier(piphook.ModifyResponse)
+	//install pip middleware and mutator
+	proxy := installer.InstallPolicyImpactPreview(rootProxy)
 
 	k8sClient, k8sConfig := getKubernetestClientAndConfig()
 	k8sAuth := middleware.NewK8sAuth(k8sClient, k8sConfig)
