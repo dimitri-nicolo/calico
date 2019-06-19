@@ -411,6 +411,7 @@ func listClusters(server string) []clusters.Cluster {
 }
 
 func clientHelloReq(addr string, target string, expectStatus int) *http.Response {
+	defer GinkgoRecover()
 	req, err := http.NewRequest("GET", "http://"+addr+"/some/path", strings.NewReader("HELLO"))
 	Expect(err).NotTo(HaveOccurred())
 
