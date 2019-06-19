@@ -46,7 +46,7 @@ type valueData struct {
 
 // The data that we hold for each name.
 type nameData struct {
-	// Known values for this name.  Map keys are the actual values (i.e. IPs or alias names),
+	// Known values for this name.  Map keys are the actual values (i.e. IPs or CNAME names),
 	// and valueData is as above.
 	values map[string]*valueData
 	// Other names that we should notify a "change of information" for, and whose cached IP list
@@ -82,8 +82,8 @@ type domainInfoStore struct {
 	saveInterval time.Duration
 
 	// Reclaiming memory for mappings that are now useless.
-	gcMayBeUseful bool
-	gcInterval    time.Duration
+	gcTrigger  bool
+	gcInterval time.Duration
 }
 
 // Signal sent by the domain info store to the ipsets manager when the information for a given
@@ -109,7 +109,7 @@ func newDomainInfoStore(domainInfoChanges chan *domainInfoChanged, saveFile stri
 		mappingExpiryChannel: make(chan *domainMappingExpired),
 		saveFile:             saveFile,
 		saveInterval:         saveInterval,
-		gcInterval:           10 * time.Second,
+		gcInterval:           13 * time.Second,
 	}
 	return s
 }
@@ -307,7 +307,7 @@ func (s *domainInfoStore) processMappingExpiry(name, value string) {
 		if valueData := nameData.values[value]; (valueData != nil) && valueData.expiryTime.Before(time.Now()) {
 			log.Debugf("Mapping expiry for %v -> %v", name, value)
 			delete(nameData.values, value)
-			s.gcMayBeUseful = true
+			s.gcTrigger = true
 			s.signalDomainInfoChange(name, "mapping expired")
 		} else if valueData != nil {
 			log.Debugf("Too early mapping expiry for %v -> %v", name, value)
@@ -460,7 +460,7 @@ func (s *domainInfoStore) collectGarbage() (numDeleted int) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	if s.gcMayBeUseful {
+	if s.gcTrigger {
 		// Accumulate the mappings that are still useful.
 		namesToKeep := set.New()
 		for name, nameData := range s.mappings {
@@ -494,7 +494,7 @@ func (s *domainInfoStore) collectGarbage() (numDeleted int) {
 			}
 		}
 		// Reset the flag that will trigger the next GC.
-		s.gcMayBeUseful = false
+		s.gcTrigger = false
 	}
 
 	return

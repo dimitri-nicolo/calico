@@ -213,8 +213,8 @@ var _ = Describe("Domain Info Store", func() {
 	}
 
 	// Test where:
-	// - a1.com and a2.com are both aliases for b.com
-	// - b.com is an alias for c.com
+	// - a1.com and a2.com are both CNAMEs for b.com
+	// - b.com is a CNAME for c.com
 	// - c.com resolves to an IP address
 	// The ipsets manager is interested in both a1.com and a2.com.
 	//
