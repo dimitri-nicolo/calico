@@ -187,6 +187,10 @@ func DoNetworking(
 		return "", "", err
 	}
 
+	// The Priority is set to the largest value (65500) with which
+	// the ACL policy when applied on windows works.
+	// The Priority has to be set to a large enough value for the default
+	// policy so that if other policies exist then they take precedence.
 	if conf.WindowsDisableDefaultDenyAllPolicy == false {
 		defaultDenyAllACL := &hcsshim.ACLPolicy{
 			Id:        "CNIDefaultDenyAllPolicy",
