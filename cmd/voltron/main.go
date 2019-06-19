@@ -5,6 +5,8 @@ package main
 import (
 	"fmt"
 
+	"github.com/tigera/voltron/internal/pkg/utils"
+
 	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
 
@@ -32,9 +34,16 @@ func main() {
 
 	addr := fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)
 
+	//TODO: These should be different that the ones baked in
+	pemCert, _ := utils.LoadPEMFromFile(cert)
+	pemKey, _ := utils.LoadPEMFromFile(key)
+	tunnelCert, tunnelKey, _ := utils.LoadX509KeyPairFromPEM(pemCert, pemKey)
+
 	srv, err := server.New(
 		server.WithDefaultAddr(addr),
 		server.WithCredsFiles(cert, key),
+		server.WithKeepClusterKeys(),
+		server.WithTunnelCreds(tunnelCert, tunnelKey),
 	)
 
 	if err != nil {
