@@ -80,13 +80,15 @@ func (t *Tunnel) Close() error {
 
 // Accept waits for a new connection, returns net.Conn or an error
 func (t *Tunnel) Accept() (net.Conn, error) {
-	log.Debugf("Tunnel: Accepting")
-	defer log.Debugf("Tunnel: Accepted")
+	log.Debugf("Tunnel: Accepting connections")
+	defer log.Debugf("Tunnel: Accepted connection")
 	return t.mux.Accept()
 }
 
 // AcceptStream waits for a new connection, returns io.ReadWriteCloser or an error
 func (t *Tunnel) AcceptStream() (io.ReadWriteCloser, error) {
+	log.Debugf("Tunnel: Accepting stream")
+	defer log.Debugf("Tunnel: Accepted stream")
 	return t.mux.AcceptStream()
 }
 

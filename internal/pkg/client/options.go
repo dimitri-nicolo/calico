@@ -3,7 +3,7 @@
 package client
 
 import (
-	"os"
+	"crypto/x509"
 
 	"github.com/pkg/errors"
 )
@@ -41,21 +41,15 @@ func WithDefaultAddr(addr string) Option {
 	}
 }
 
-// WithCredsFiles sets the default cert and key to be used for TLS connections
-func WithCredsFiles(cert, key string) Option {
+// WithTunnelCreds sets the credential to be used when establishing the tunnel
+func WithTunnelCreds(certPEM []byte, keyPEM []byte, ca *x509.CertPool) Option {
 	return func(c *Client) error {
-		// Check if files exist
-		if _, err := os.Stat(cert); os.IsNotExist(err) {
-			return errors.Errorf("cert file: %s", err)
+		if certPEM == nil || keyPEM == nil {
+			return errors.Errorf("WithTunnelCreds: cert and key are required")
 		}
-
-		if _, err := os.Stat(key); os.IsNotExist(err) {
-			return errors.Errorf("key file: %s", err)
-		}
-
-		c.certFile = cert
-		c.keyFile = key
-
+		c.tunnelCertPEM = certPEM
+		c.tunnelKeyPEM = keyPEM
+		c.tunnelRootCAs = ca
 		return nil
 	}
 }

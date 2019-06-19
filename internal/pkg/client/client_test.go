@@ -34,14 +34,6 @@ var _ = Describe("Client Tunneling", func() {
 		srvRW     io.ReadWriteCloser
 	)
 
-	It("should fail to use invalid cert file paths", func() {
-		_, err := client.New(
-			"localhost:0",
-			client.WithCredsFiles("dog/gopher.crt", "dog/gopher.key"),
-		)
-		Expect(err).To(HaveOccurred())
-	})
-
 	It("Should start up a tunnel server, serve connections", func() {
 		lis, err = net.Listen("tcp", "localhost:0")
 		Expect(err).ShouldNot(HaveOccurred())
@@ -72,7 +64,7 @@ var _ = Describe("Client Tunneling", func() {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				err = cl.ServeHTTP()
+				err = cl.ServeTunnelHTTP()
 			}()
 		})
 

@@ -7,8 +7,10 @@ import (
 
 	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
+
 	"github.com/tigera/voltron/internal/pkg/bootstrap"
 	"github.com/tigera/voltron/internal/pkg/client"
+	"github.com/tigera/voltron/internal/pkg/utils"
 )
 
 const (
@@ -37,7 +39,16 @@ func main() {
 	cert := fmt.Sprintf("%s/ca.crt", cfg.CertPath)
 	key := fmt.Sprintf("%s/ca.key", cfg.CertPath)
 	guardianURL := fmt.Sprintf("Voltron Address: %s", cfg.URL)
-	log.Infof("Path: %s %s", cert, key)
+
+	pemCert, err := utils.LoadPEMFromFile(cert)
+	if err != nil {
+		log.Fatalf("Failed to load cert: %+v", err)
+	}
+	pemKey, err := utils.LoadPEMFromFile(key)
+	if err != nil {
+		log.Fatalf("Failed to load key: %+v", err)
+	}
+
 	client, err := client.New(
 		guardianURL,
 		client.WithProxyTargets(
@@ -47,7 +58,7 @@ func main() {
 			},
 		),
 		client.WithDefaultAddr(url),
-		client.WithCredsFiles(cert, key),
+		client.WithTunnelCreds(pemCert, pemKey, nil /* XXX use system CAs */),
 	)
 
 	if err != nil {
@@ -56,7 +67,7 @@ func main() {
 
 	log.Infof("Starting web server on %v", url)
 
-	if err := client.ListenAndServeTLS(); err != nil {
+	if err := client.ServeTunnelHTTP(); err != nil {
 		log.Fatal(err)
 	}
 }
