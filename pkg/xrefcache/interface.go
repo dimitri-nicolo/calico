@@ -72,8 +72,8 @@ type CacheEntry interface {
 // (converting the original resource into the v3 Calico model and then the v1 Calico model).
 type VersionedResource interface {
 	resources.Resource
-	getV3() resources.Resource
-	getV1() interface{}
+	GetCalicoV3() resources.Resource
+	GetCalicoV1() interface{}
 }
 
 // TierWithOrderedPolicies contains a tier reference along with references to the tiers ordered set of

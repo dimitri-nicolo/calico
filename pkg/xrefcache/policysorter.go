@@ -84,12 +84,12 @@ func (p *policySorter) sort() {
 
 // updatePolicy is called when a policy resource is updated.
 func (p *policySorter) updatePolicy(entry *CacheEntryNetworkPolicy) {
-	v1Key := entry.getV1Key()
+	v1Key := entry.GetCalicoV1Key()
 	dirty := p.sorter.OnUpdate(api.Update{
 		UpdateType: api.UpdateTypeKVUpdated,
 		KVPair: model.KVPair{
 			Key:   v1Key,
-			Value: entry.getV1Policy(),
+			Value: entry.GetCalicoV1Policy(),
 		},
 	})
 	p.policies[v1Key.Name] = entry
@@ -98,7 +98,7 @@ func (p *policySorter) updatePolicy(entry *CacheEntryNetworkPolicy) {
 
 // deletePolicy is called when a policy resource is deleted.
 func (p *policySorter) deletePolicy(entry *CacheEntryNetworkPolicy) {
-	v1Key := entry.getV1Key()
+	v1Key := entry.GetCalicoV1Key()
 	dirty := p.sorter.OnUpdate(api.Update{
 		UpdateType: api.UpdateTypeKVDeleted,
 		KVPair: model.KVPair{
@@ -111,12 +111,12 @@ func (p *policySorter) deletePolicy(entry *CacheEntryNetworkPolicy) {
 
 // updateTier is called when a tier resource is updated.
 func (p *policySorter) updateTier(entry *CacheEntryTier) {
-	v1Key := entry.getV1Key()
+	v1Key := entry.GetCalicoV1Key()
 	dirty := p.sorter.OnUpdate(api.Update{
 		UpdateType: api.UpdateTypeKVUpdated,
 		KVPair: model.KVPair{
 			Key:   v1Key,
-			Value: entry.getV1Tier(),
+			Value: entry.GetCalicoV1Tier(),
 		},
 	})
 	p.tiers[v1Key.Name] = entry
@@ -125,7 +125,7 @@ func (p *policySorter) updateTier(entry *CacheEntryTier) {
 
 // deleteTier is called when a tier resource is deleted.
 func (p *policySorter) deleteTier(entry *CacheEntryTier) {
-	v1Key := entry.getV1Key()
+	v1Key := entry.GetCalicoV1Key()
 	dirty := p.sorter.OnUpdate(api.Update{
 		UpdateType: api.UpdateTypeKVDeleted,
 		KVPair: model.KVPair{

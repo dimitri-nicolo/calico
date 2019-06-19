@@ -58,11 +58,11 @@ type versionedK8sServiceEndpoints struct {
 	*corev1.Endpoints
 }
 
-func (v *versionedK8sServiceEndpoints) getV3() resources.Resource {
+func (v *versionedK8sServiceEndpoints) GetCalicoV3() resources.Resource {
 	return nil
 }
 
-func (v *versionedK8sServiceEndpoints) getV1() interface{} {
+func (v *versionedK8sServiceEndpoints) GetCalicoV1() interface{} {
 	return nil
 }
 

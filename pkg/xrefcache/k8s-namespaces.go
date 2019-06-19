@@ -23,8 +23,8 @@ var (
 // VersionedNamespaceResource is an extension of the VersionedResource interface, specific to handling Namespaces.
 type VersionedNamespaceResource interface {
 	VersionedResource
-	getV1Profile() *model.Profile
-	getV3Profile() *apiv3.Profile
+	GetCalicoV1Profile() *model.Profile
+	GetCalicoV3Profile() *apiv3.Profile
 }
 
 // CacheEntryNamespace implements the CacheEntry interface, and is what we stored in the Namespaces cache.
@@ -36,7 +36,7 @@ type CacheEntryNamespace struct {
 	cacheEntryCommon
 }
 
-// getVersionedResource implements the CacheEntry interface.
+// GetCalicoVersionedResource implements the CacheEntry interface.
 func (c *CacheEntryNamespace) getVersionedResource() VersionedResource {
 	return c.VersionedNamespaceResource
 }
@@ -53,23 +53,23 @@ type versionedK8sNamespace struct {
 	v1 *model.Profile
 }
 
-// getV3 implements the VersionedNamespaceResource interface.
-func (v *versionedK8sNamespace) getV3() resources.Resource {
+// GetCalicoV3 implements the VersionedNamespaceResource interface.
+func (v *versionedK8sNamespace) GetCalicoV3() resources.Resource {
 	return v.v3
 }
 
-// getV1 implements the VersionedNamespaceResource interface.
-func (v *versionedK8sNamespace) getV1() interface{} {
+// getCalicoV1 implements the VersionedNamespaceResource interface.
+func (v *versionedK8sNamespace) GetCalicoV1() interface{} {
 	return v.v1
 }
 
-// getV1Profile implements the VersionedNamespaceResource interface.
-func (v *versionedK8sNamespace) getV1Profile() *model.Profile {
+// GetCalicoV1Profile implements the VersionedNamespaceResource interface.
+func (v *versionedK8sNamespace) GetCalicoV1Profile() *model.Profile {
 	return v.v1
 }
 
-// getV3Profile implements the VersionedNamespaceResource interface.
-func (v *versionedK8sNamespace) getV3Profile() *apiv3.Profile {
+// GetCalicoV3Profile implements the VersionedNamespaceResource interface.
+func (v *versionedK8sNamespace) GetCalicoV3Profile() *apiv3.Profile {
 	return v.v3
 }
 
@@ -131,7 +131,7 @@ func (c *namespaceHandler) resourceUpdated(id apiv3.ResourceID, entry CacheEntry
 	// Kubernetes namespaces are configured as Calico profiles. Use the V3 version of the name and the V1 version of the
 	// labels since they will have been modified to match the selector modifications in the pod.
 	x := entry.(*CacheEntryNamespace)
-	c.EndpointLabelSelector().UpdateParentLabels(x.getV3Profile().Name, x.getV1Profile().Labels)
+	c.EndpointLabelSelector().UpdateParentLabels(x.GetCalicoV3Profile().Name, x.GetCalicoV1Profile().Labels)
 }
 
 // resourceDeleted implements the resourceHandler interface.
@@ -139,7 +139,7 @@ func (c *namespaceHandler) resourceDeleted(id apiv3.ResourceID, entry CacheEntry
 	// Kubernetes namespaces are configured as Calico profiles. Use the V3 version of the name since it will have been
 	// modified to match the selector modifications in the pod.
 	x := entry.(*CacheEntryNamespace)
-	c.EndpointLabelSelector().DeleteParentLabels(x.getV3Profile().Name)
+	c.EndpointLabelSelector().DeleteParentLabels(x.GetCalicoV3Profile().Name)
 }
 
 // recalculate implements the resourceHandler interface.
