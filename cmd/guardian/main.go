@@ -9,7 +9,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/voltron/internal/pkg/bootstrap"
 	"github.com/tigera/voltron/internal/pkg/client"
-	"github.com/tigera/voltron/internal/pkg/config"
 )
 
 const (
@@ -17,8 +16,16 @@ const (
 	EnvConfigPrefix = "GUARDIAN"
 )
 
+type config struct {
+	Port     int    `default:"5555"`
+	Host     string `default:"localhost"`
+	LogLevel string `default:"DEBUG"`
+	CertPath string `default:"certs"`
+	URL      string `required:"true" envconfig:"GUARDIAN_VOLTRON_URL"`
+}
+
 func main() {
-	cfg := config.Config{}
+	cfg := config{}
 	if err := envconfig.Process(EnvConfigPrefix, &cfg); err != nil {
 		log.Fatal(err)
 	}
@@ -29,8 +36,10 @@ func main() {
 	url := fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)
 	cert := fmt.Sprintf("%s/ca.crt", cfg.CertPath)
 	key := fmt.Sprintf("%s/ca.key", cfg.CertPath)
+	guardianURL := fmt.Sprintf("Voltron Address: %s", cfg.URL)
 	log.Infof("Path: %s %s", cert, key)
 	client, err := client.New(
+		guardianURL,
 		client.WithProxyTargets(
 			[]client.ProxyTarget{
 				{Pattern: "^/api", Dest: "https://kubernetes.default"},

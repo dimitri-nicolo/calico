@@ -22,12 +22,13 @@ make cd
 
 ### Configurations
 
-Name | Type | Default
---- | --- | ---
-GUARDIAN_LOGLEVEL | Environment | DEBUG
-GUARDIAN_PORT | Environment | 5555
-GUARDIAN_HOST | Environment | localhost
-GUARDIAN_CERTPATH | Environment | /certs
+Name | Type | Default | Required
+--- | --- | --- | ---
+GUARDIAN_LOGLEVEL | Environment | DEBUG | no
+GUARDIAN_PORT | Environment | 5555 | no
+GUARDIAN_HOST | Environment | localhost | no
+GUARDIAN_CERTPATH | Environment | /certs | no
+GUARDIAN_VOLTRON_URL | Environment | | yes
 
 ### Build and deploy
 
