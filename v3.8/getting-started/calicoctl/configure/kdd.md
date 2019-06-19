@@ -6,7 +6,6 @@ canonical_url: 'https://docs.tigera.io/v2.3/usage/calicoctl/configure/kdd'
 
 {% include {{page.version}}/cli-config-kdd.md %}
 
-
 ## Examples
 
 #### Kubernetes command line
@@ -62,8 +61,8 @@ issue then try again.
 
 Now you are ready to read and configure most aspects of {{site.prodname}}.  You can
 find the full list of commands in the
-[Command Reference]({{site.url}}/{{page.version}}/reference/calicoctl/commands/).
+[Command Reference]({{site.baseurl}}/{{page.version}}/reference/calicoctl/).
 
 The full list of resources that can be managed, including a description of each,
 can be found in the
-[Resource Definitions]({{site.url}}/{{page.version}}/reference/calicoctl/resources/).
+[Resource Definitions]({{site.baseurl}}/{{page.version}}/reference/resources/).

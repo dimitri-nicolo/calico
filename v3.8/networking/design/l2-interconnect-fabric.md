@@ -168,7 +168,7 @@ below.
 
 ![A diagram showing the Ethernet spine planes. Each color represents a
 distinct Ethernet network, transporting a unique IP
-network.]({{site.url}}/images/l2-spine-planes.png)
+network.]({{site.baseurl}}/images/l2-spine-planes.png)
 
 I am not showing the end points in this diagram, and the end points
 would be unaware of anything in the fabric (as noted above).

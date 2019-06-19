@@ -42,6 +42,7 @@ The {{site.prodname}} Kubernetes controllers support the following environment v
 | Environment         | Description | Schema |
 | ------------------- | ----------- | ------ |
 | `ETCD_ENDPOINTS`    | Comma-delimited list of etcd endpoints to connect to. Example: `http://10.0.0.1:2379,http://10.0.0.2:2379`.
+| `ETCD_DISCOVERY_SRV` | Domain name to discover etcd endpoints via SRV records. Mutually exclusive with `ETCD_ENDPOINTS`. Example: `example.com` | string
 | `ETCD_CA_CERT_FILE` | Path to the file containing the root certificate of the CA that issued the etcd server certificate. Configures the Kubernetes controllers to trust the signature on the certificates provided by the etcd server. To disable authentication of the server by the Kubernetes controllers, set the value to `none`. | path
 | `ETCD_CERT_FILE`    | Path to the file containing the client certificate issued to the Kubernetes controllers. Enables the Kubernetes controllers to participate in mutual TLS authentication and identify themselves to the etcd server. Example: `/etc/kube-controllers/cert.pem` | path
 | `ETCD_KEY_FILE`     | Path to the file containing the private key of the Kubernetes controllers' client certificate. Enables the Kubernetes controllers to participate in mutual TLS authentication and identify themselves to the etcd server. Example: `/etc/kube-controllers/key.pem` | path

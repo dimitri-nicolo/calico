@@ -19,17 +19,19 @@ To view logs, use the following command:
 `kubectl logs -n kube-system <pod_name>`
 
 
-To view debug logs on some {{site.prodname}} components, set the `LogSeverityScreen` through the associated environment variable. 
+To view debug logs on some {{site.prodname}} components, set the `LogSeverityScreen` through the associated environment variable.
 
 
 To report a problem, contact Tigera Support.
-
 
 ### Containers do not have network connectivity
 
 #### Check for mismatched node names
 
-If you notice that a workload has not received network connectivity, check that the node name for that host is properly configured. The name for the [node resource](../reference/calicoctl/resources/node) must match the node name in the [workload endpoint resources](../reference/calicoctl/resources/workloadendpoint) on that host. If the names are mismatched, it is likely that all workloads on that node will not receive networking.
+If you notice that a workload has not received network connectivity, check
+that the node name for that host is properly configured. The name for the [node resource](../reference/resources/node) must match
+the node name in the [workload endpoint resources](../reference/resources/workloadendpoint) on that host. If the names are mismatched,
+it is likely that all workloads on that node will not receive networking.
 
 To check this, query one of the broken workload endpoints and check its node name:
 
@@ -39,7 +41,8 @@ Then, check to see if a single corresponding node resource exists:
 
 	calicoctl get nodes
 
-If the node resource either does not exist or there are multiple node resources representing the bad node, it is likely that the node's hostname has changed. This often happens as a result of switching a node's hostname between its FQDN and its short DNS name.
+If the node resource either does not exist or there are multiple node resources representing the bad node, it is likely that the node's hostname has changed. This often happens
+as a result of switching a node's hostname between its FQDN and its short DNS name.
 
 To correct this, you must perform the following steps (with examples shown using Kubernetes):
 
@@ -101,7 +104,10 @@ If you do not see this, please check the following.
 
 - Make sure your network allows the requisite BGP traffic on TCP port 179.
 
-#### Prevent NetworkManager from controlling {{site.prodname}} interfaces
+#### Configure NetworkManager
+
+Configure [NetworkManager](https://help.ubuntu.com/community/NetworkManager) before
+attempting to use {{site.prodname}} networking.
 
 NetworkManager manipulates the routing table for interfaces in the default network
 namespace where {{site.prodname}} veth pairs are anchored for connections to containers.
@@ -152,21 +158,23 @@ or you can set environment variables for `sudo` commands like this:
 sudo ETCD_ENDPOINTS=http://172.25.0.1:2379 calicoctl node run
 ```
 
-Also be aware that connection information can be specified as a config file rather than using environment variables.  See [Installing calicoctl](../getting-started/calicoctl/install) for details.
+Also be aware that connection information can be specified as a config file rather than using environment variables.  See [Installing calicoctl](../getting-started/calicoctl/install)
+for details.
 
 ### Error: {{site.nodecontainer}} is not ready: BIRD is not ready: BGP not established with 10.0.0.1
 
-The {{site.nodecontainer}} container may report an "unready" status in Kubernetes with this message. In most cases, this means a particular peer is unreachable in the cluster. Users should ensure BGP connectivity between the two peers is allowed in their environment.
+In most cases, this "unready" status error in Kubernetes means that a particular peer is unreachable in the cluster. Check that BGP connectivity between the two peers is allowed in the environment.
 
-This can also occur when inactive Node resources are configured when using node-to-node mesh. Resolve cases like this by [decommissioning the stale nodes](../maintenance/decommissioning-a-node).
+This error can also occur if inactive Node resources are configured for node-to-node mesh. To fix this, [decommission the stale nodes](../maintenance/decommissioning-a-node).
 
-Lastly this can occur when BGP connections to non-mesh peers go down. If this is a common occurrence in your BGP topology, you can disable BIRD readiness checks. See [node readiness]({{site.url}}/{{page.version}}/reference/node/configuration#node-readiness) for more information.
+This error can also occur when BGP connections to non-mesh peers go down. If this is a common occurrence in your BGP topology, you can disable BIRD readiness checks. See [node readiness]({{site.baseurl}}/{{page.version}}/reference/node/configuration#node-readiness)
+for more information.
 
-### Linux conntrack table is out of space 
+
+### Linux conntrack table is out of space
 
 A common problem on Linux systems is running out of space in the conntrack table, which can cause poor iptables performance. This can
-happen if you run a lot of workloads on a given host, or if your workloads create a lot of TCP connections or bidirectional UDP streams.
-To avoid this problem, we recommend increasing the conntrack table size using the following commands:
+happen if you run a lot of workloads on a given host, or if your workloads create a lot of TCP connections or bidirectional UDP streams. To avoid this problem, we recommend increasing the conntrack table size using the following commands:
 
     sysctl -w net.netfilter.nf_conntrack_max=1000000
     echo "net.netfilter.nf_conntrack_max=1000000" >> /etc/sysctl.conf

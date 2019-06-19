@@ -93,7 +93,7 @@ documents *mandates* the use of VLANs.
 2. Modify IP pool config.
 
    Modify the pool's spec to enable IP-in-IP and NAT outgoing. (See
-   [IP pools]({{site.url}}/{{page.version}}/reference/calicoctl/resources/ippool)
+   [IP pools]({{site.url}}/{{page.version}}/reference/resources/ippool)
    for other settings that can be edited.)
 
    ```shell

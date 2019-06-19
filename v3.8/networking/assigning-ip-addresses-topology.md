@@ -163,11 +163,11 @@ EOF
 
 > **Note**: {{site.prodname}} IPAM will not reassign IP addresses to workloads
 > that are already running. To update running workloads with IP addresses from
-> a newly configured IP pool, they must be recreated. We recommmend doing this
+> a newly configured IP pool, they must be recreated. We recommend doing this
 > before going into production or during a maintenance window.
 {: .alert .alert-info}
 
 ## Related links
 
 For more information on the structure of the IP pool resource, see
-[the IP pools reference]({{ site.url }}/{{ page.version }}/reference/calicoctl/resources/ippool).
+[the IP pools reference]({{ site.baseurl }}/{{ page.version }}/reference/resources/ippool).

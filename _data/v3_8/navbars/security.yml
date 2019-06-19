@@ -4,10 +4,12 @@ order: 3
 toc:
 - title: Security
   path: /security/
+- title: Kubernetes network policy
+  path: /security/kubernetes-network-policy
+- title: Tigera Secure EE network policy
+  path: /security/calico-network-policy
 - title: Tigera Secure EE policy tutorial
   path: /security/simple-policy-cnx
-- title: Simple policy tutorial
-  path: /security/simple-policy
 - title: Stars policy tutorial
   path: /security/stars-policy/
 - title: Tiered policy
@@ -116,3 +118,7 @@ toc:
     path: /security/threat-detection-and-prevention/suspicious-IPs 
 - title: Tigera Secure EE compliance reports
   path: /security/compliance-reports
+- title: Defend against DoS attacks
+  path: /security/defend-dos-attack
+- title: Apply policy to Kubernetes node ports
+  path: /security/kubernetes-node-ports

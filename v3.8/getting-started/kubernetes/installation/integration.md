@@ -226,13 +226,13 @@ Apply the manifest appropriate to your cluster configuration.
 - **Kubernetes API datastore with {{site.prodname}} networking**:
 
    ```
-   kubectl apply -f {{site.url}}/{{page.version}}/manifests/rbac-kdd-calico.yaml
+   kubectl apply -f {{site.url}}/{{page.version}}/manifests/rbac/rbac-kdd-calico.yaml
    ```
 
 - **etcd datastore with {{site.prodname}} networking**:
 
    ```
-   kubectl apply -f {{site.url}}/{{page.version}}/manifests/rbac-etcd-calico.yaml
+   kubectl apply -f {{site.url}}/{{page.version}}/manifests/rbac/rbac-etcd-calico.yaml
    ```
 
 {% include {{page.version}}/cnx-mgr-install.md init="systemd" %}

@@ -11,7 +11,6 @@ development.
 
 To deploy a cluster suitable for production, refer to [Installation](installation).
 
-
 ### Host requirements
 
 - AMD64 processor

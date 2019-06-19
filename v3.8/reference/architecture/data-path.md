@@ -3,7 +3,6 @@ title: 'The Tigera Secure EE Data Path: IP Routing and iptables'
 canonical_url: https://docs.tigera.io/v2.3/reference/architecture/data-path
 ---
 
-
 One of {{site.prodname}}’s key features is how packets flow between workloads in a
 data center, or between a workload and the Internet, without additional
 encapsulation.

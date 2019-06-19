@@ -55,4 +55,3 @@ EOF
 > [policy spec]({{site.url}}/{{page.version}}/reference/calicoctl/resources/networkpolicy#spec) for
 > more discussion.
 {: .alert .alert-info}
-

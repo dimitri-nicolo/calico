@@ -1,12 +1,3 @@
-{% comment %}
-entityrule.md acccepts the following include flags:
-
-| Name             | Accepted Values               |
-|------------------|-------------------------------|
-| global           | true, false                   |
-
-{% endcomment -%}
-
 | Field       | Description                 | Accepted Values   | Schema | Default    |
 |-------------|-----------------------------|-------------------|--------|------------|
 | nets                  | Match packets with IP in any of the listed CIDRs. | List of valid IPv4 or IPv6 CIDRs  | list of cidrs |

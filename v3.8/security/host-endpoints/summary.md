@@ -92,4 +92,3 @@ For packets that are sent from a local workload out of a host interface:
   rules of the normal policies that apply to the outgoing interface. (The reverse
   direction is allowed by conntrack state.) Normal policies do not apply if
   `applyOnForward` is `false`.
-
