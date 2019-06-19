@@ -9,7 +9,7 @@ import (
 )
 
 type PolicySorter interface {
-	GetOrderedTiers() []*CacheEntryTier
+	GetOrderedTiersAndPolicies() []*TierWithOrderedPolicies
 	sort()
 	updatePolicy(resource *CacheEntryNetworkPolicy)
 	deletePolicy(resource *CacheEntryNetworkPolicy)
@@ -21,7 +21,7 @@ type PolicySorter interface {
 type policySorter struct {
 	sorter       *calc.PolicySorter
 	dirty        bool
-	orderedTiers []*CacheEntryTier
+	orderedTiers []*TierWithOrderedPolicies
 
 	// Store our own map of tiers and policies keyed off the v1 key. This is required because the felix policy
 	// sorter will return a set of ordered v1 tiers and policies and we need to map that to our multi-version
@@ -42,7 +42,7 @@ func newPolicySorter() PolicySorter {
 
 // GetOrderedTiers returns the ordered list of tiers. Each tier may be queried to obtain the ordered set of policies
 // within the tier.
-func (p *policySorter) GetOrderedTiers() []*CacheEntryTier {
+func (p *policySorter) GetOrderedTiersAndPolicies() []*TierWithOrderedPolicies {
 	p.sort()
 	return p.orderedTiers
 }
@@ -55,7 +55,7 @@ func (p *policySorter) sort() {
 
 	log.Info("Tier/policy ordering needs to be recalculated")
 	tierInfos := p.sorter.Sorted()
-	p.orderedTiers = make([]*CacheEntryTier, 0, len(tierInfos))
+	p.orderedTiers = make([]*TierWithOrderedPolicies, 0, len(tierInfos))
 	for _, t := range tierInfos {
 		// Get the tier cache entry for this tier. We have the v1 model to hand, so need to convert this to
 		// the v3 ResourceID to lookup our cache entry.
@@ -64,18 +64,19 @@ func (p *policySorter) sort() {
 			log.WithField("tier", t.Name).Error("Tier is not in cache")
 			continue
 		}
-		p.orderedTiers = append(p.orderedTiers, te)
+		twp := &TierWithOrderedPolicies{Tier: te}
+		p.orderedTiers = append(p.orderedTiers, twp)
 
 		// Now loop through the policies in the tier and construct the ordered set of network policy cache entries
 		// and assign to the tier cache entry.
-		te.orderedPolicies = make([]*CacheEntryNetworkPolicy, 0, len(t.OrderedPolicies))
+		twp.OrderedPolicies = make([]*CacheEntryNetworkPolicy, 0, len(t.OrderedPolicies))
 		for _, pol := range t.OrderedPolicies {
 			entry := p.policies[pol.Key.Name]
 			if entry == nil {
 				log.WithField("policy", pol.Key).Error("Policy is not in cache")
 				continue
 			}
-			te.orderedPolicies = append(te.orderedPolicies, entry)
+			twp.OrderedPolicies = append(twp.OrderedPolicies, entry)
 		}
 	}
 	p.dirty = false

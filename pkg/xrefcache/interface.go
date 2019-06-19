@@ -48,8 +48,8 @@ type XrefCache interface {
 	// IDs cached for a particular resource kind.
 	GetCachedResourceIDs(kind metav1.TypeMeta) []apiv3.ResourceID
 
-	// GetOrderedTiers returns the ordered set of tiers. The tiers can be queried to obtain the ordered set of Policies.
-	GetOrderedTiers() []*CacheEntryTier
+	// GetOrderedTiersAndPolicies returns the ordered set of all tiers with all of their policies.
+	GetOrderedTiersAndPolicies() []*TierWithOrderedPolicies
 }
 
 // All internal caches store types that implement the CacheEntry interface.
@@ -74,4 +74,11 @@ type VersionedResource interface {
 	resources.Resource
 	getV3() resources.Resource
 	getV1() interface{}
+}
+
+// TierWithOrderedPolicies contains a tier reference along with references to the tiers ordered set of
+// policies.
+type TierWithOrderedPolicies struct {
+	Tier            *CacheEntryTier
+	OrderedPolicies []*CacheEntryNetworkPolicy
 }
