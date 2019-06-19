@@ -42,7 +42,6 @@ func main() {
 	srv, err := server.New(
 		server.WithDefaultAddr(addr),
 		server.WithCredsFiles(cert, key),
-		server.WithKeepClusterKeys(),
 		server.WithTunnelCreds(tunnelCert, tunnelKey),
 	)
 
