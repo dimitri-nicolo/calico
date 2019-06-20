@@ -30,9 +30,9 @@ require (
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45 // indirect
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
-	k8s.io/api v0.0.0-20190612125737-db0771252981
-	k8s.io/apimachinery v0.0.0-20190612125636-6a5db36e93ad
-	k8s.io/apiserver v0.0.0-20190614050300-7d950a3fe954 // indirect
-	k8s.io/client-go v0.0.0-20190614045934-f1a699f1fd21
-	k8s.io/kube-openapi v0.0.0-20190603182131-db7b694dc208 // indirect
+	k8s.io/api v0.0.0-20180308224125-73d903622b73
+	k8s.io/apimachinery v0.0.0-20180228050457-302974c03f7e
+	k8s.io/apiserver v0.0.0-20190402105105-9b20910895af // indirect
+	k8s.io/client-go v7.0.0+incompatible
+	k8s.io/kube-openapi v0.0.0-20180216212618-50ae88d24ede // indirect
 )
