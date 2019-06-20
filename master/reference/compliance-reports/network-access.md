@@ -2,7 +2,7 @@
 title: Network Access report (network-access)
 ---
 
-To create an Inventory report, create a [`GlobalReport`](../calicoctl/resources/globalreport) with the `reportType` 
+To create an Inventory report, create a [`GlobalReport`](../resources/globalreport) with the `reportType`
 set to `network-access`.
 
 The following sample command creates a GlobalReport that results in a daily network access report for
@@ -27,7 +27,7 @@ EOF
 ```
 
 > **Note**: There is a known issue that audit logs do not contain deletion events for resources that were
-> deleted implicitly as part of a namespace deletion event. Currently, this means policies and pods that have been 
+> deleted implicitly as part of a namespace deletion event. Currently, this means policies and pods that have been
 > deleted in this way may still appear in the reports that cover any period within the next day.
 {: .alert .alert-danger}
 
@@ -76,12 +76,12 @@ An endpoints CSV file that includes per-endpoint information.
 | endpointsGeneratingTrafficToThisEndpoint\*  | The set of endpoints that were generating traffic to this endpoint. | ";" separated list of service names |
 | endpointsReceivingTrafficFromThisEndpoint\* | The set of endpoints that this endpoint is generating traffic to.| ";" separated list of service names |
 
-\* Traffic data is determined from flow logs. By default, {{site.prodname}} aggregates flow logs so that flows to 
-   and from pods in the same replica set are summarized if the flows are accepted. (Denied flows are not aggregated this 
+\* Traffic data is determined from flow logs. By default, {{site.prodname}} aggregates flow logs so that flows to
+   and from pods in the same replica set are summarized if the flows are accepted. (Denied flows are not aggregated this
    way by default). This means that the per-endpoint traffic details do not refer specifically to that endpoint, but
    rather the set of endpoints specified by the trafficAggregationPrefix.
-   
+
    If you want per-endpoint detail you should turn down the level of aggregation.  To do so,
    set the value of `flowLogsFileAggregationKindForAllowed` to 1 using a [FelixConfiguration][felixconfig]
 
-[felixconfig]: /{{page.version}}/reference/calicoctl/resources/felixconfig
+[felixconfig]: /{{page.version}}/reference/resources/felixconfig

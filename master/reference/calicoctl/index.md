@@ -11,11 +11,11 @@ commands to allow you to create, modify, delete, and view the different {{site.p
 resources.
 
 The full list of commands is described in the
-[Command reference]({{site.url}}/{{page.version}}/reference/calicoctl/commands/)
+[Command reference]({{site.url}}/{{page.version}}/reference/calicoctl/)
 section.
 
 The full list of resources that can be managed, including a description of each,
-is described in the [Resource Definitions]({{site.url}}/{{page.version}}/reference/calicoctl/resources/)
+is described in the [Resource Definitions]({{site.url}}/{{page.version}}/reference/resources/)
 section.
 
 > **Note**: This section provides full reference information for `calicoctl`. To learn

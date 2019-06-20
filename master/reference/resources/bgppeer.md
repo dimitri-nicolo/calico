@@ -1,6 +1,6 @@
 ---
 title: BGP peer
-canonical_url: 'https://docs.projectcalico.org/v3.7/reference/calicoctl/resources/bgppeer'
+canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/resources/bgppeer
 ---
 
 A BGP peer resource (`BGPPeer`) represents a remote BGP peer with
@@ -8,10 +8,13 @@ which the node(s) in a {{site.prodname}} cluster will peer.
 Configuring BGP peers allows you to peer a {{site.prodname}} network
 with your datacenter fabric (e.g. ToR). For more
 information on cluster layouts, see {{site.prodname}}'s documentation on
-[{{site.prodname}} over IP fabrics]({{site.baseurl}}/{{page.version}}/networking/design/l3-interconnect-fabric).
+[{{site.prodname}} over IP fabrics]({{site.url}}/{{page.version}}/networking/design/l3-interconnect-fabric).
 
-For `calicoctl` [commands]({{site.baseurl}}/{{page.version}}/reference/calicoctl/) that specify a resource type on the CLI, the following
-aliases are supported (all case insensitive): `bgppeer`, `bgppeers`, `bgpp`, `bgpps`, `bp`, `bps`.
+For `calicoctl` [commands]({{site.url}}/{{page.version}}/reference/calicoctl/), the following case-insensitive aliases
+may be used to specify the resource type on the CLI:
+`bgppeer`, `bgppeers`, `bgpp`, `bgpps`, `bp`, `bps`.
+
+This resource is not supported in `kubectl`.
 
 ### Sample YAML
 
@@ -43,6 +46,7 @@ spec:
 | asNumber | The remote AS Number of the peer. | A valid AS Number, may be specified in dotted notation. | integer/string |
 | nodeSelector | Selector for the nodes that should have this peering.  When this is set, the `node` field must be empty. | | [selector](networkpolicy#selector) |
 | peerSelector | Selector for the remote nodes to peer with.  When this is set, the `peerIP` and `asNumber` fields must be empty. | | [selector](networkpolicy#selector) |
+| extensions | Additional mapping of keys and values. Used for setting values in custom BGP configurations. | valid strings for both keys and values | map | |
 
 > **Tip**: the cluster-wide default local AS number used when speaking with a peer is controlled by the
 > [BGPConfiguration resource](./bgpconfig).  That value can be overriden per-node by using the `bgp` field of

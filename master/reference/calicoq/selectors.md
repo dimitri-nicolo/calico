@@ -22,8 +22,8 @@ security policy definitions:
   (`destination.notSelector`).
 
 Note: the use of selectors in {{site.prodname}} policy is described in detail by
-[NetworkPolicy]({{site.url}}/{{page.version}}/reference/calicoctl/resources/networkpolicy) and
-[GlobalNetworkPolicy]({{site.url}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy).
+[NetworkPolicy]({{site.url}}/{{page.version}}/reference/resources/networkpolicy) and
+[GlobalNetworkPolicy]({{site.url}}/{{page.version}}/reference/resources/globalnetworkpolicy).
 
 Kubernetes NetworkPolicy definitions are similar but less general: they do
 not support egress rules or the `notSelector` options.

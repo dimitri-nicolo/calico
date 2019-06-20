@@ -37,7 +37,7 @@ cluster's datastore type.
 
 ### About adding a Remote Cluster Configuration resource
 
-Each instance of the [Remote Cluster Configuration](/{{page.version}}/reference/calicoctl/resources/remoteclusterconfiguration)
+Each instance of the [Remote Cluster Configuration](/{{page.version}}/reference/resources/remoteclusterconfiguration)
 resource represents a single remote cluster from which the local cluster can retrieve endpoint information.
 
 The resource definition varies according to your datastore type. Refer to the section that corresponds to your datastore
@@ -77,7 +77,7 @@ to `kubernetes` and populate the `kubeconfig` or `k8s*` fields.
 
 As long as you followed the installation instructions, the files in the
 [`tigera-federation-remotecluster` secret created during installation](/{{page.version}}/getting-started/kubernetes/installation/calico#installing-with-federation-using-kubernetes-api-datastore)
-will appear in the Typha pod in the `/etc/tigera-federation-remotecluster` directory and the [RemoteClusterConfiguration](/{{page.version}}/reference/calicoctl/resources/remoteclusterconfiguration)
+will appear in the Typha pod in the `/etc/tigera-federation-remotecluster` directory and the [RemoteClusterConfiguration](/{{page.version}}/reference/resources/remoteclusterconfiguration)
 can reference the files using this path.
 
 An example Remote Cluster Configuration resource for the Kubernetes API datastore follows.

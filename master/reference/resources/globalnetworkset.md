@@ -1,15 +1,20 @@
 ---
 title: Global network set
-canonical_url: 'https://docs.projectcalico.org/v3.7/reference/calicoctl/resources/globalnetworkset'
+canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/resources/globalnetworkset
 ---
 
 A global network set resource (GlobalNetworkSet) represents an arbitrary set of IP subnetworks/CIDRs,
 allowing it to be matched by {{site.prodname}} policy.  Network sets are useful for applying policy to traffic
 coming from (or going to) external, non-{{site.prodname}}, networks.
 
+GlobalNetworkSets can also include domain names, whose effect is to allow egress traffic to those
+domain names, when the GlobalNetworkSet is matched by the destination selector of an egress rule
+with action Allow.  Domain names have no effect in ingress rules, or in a rule whose action is not
+Allow.
+
 The metadata for each network set includes a set of labels.  When {{site.prodname}} is calculating the set of
 IPs that should match a source/destination selector within a
-[global network policy]({{site.baseurl}}/{{page.version}}/reference/resources/globalnetworkpolicy) rule, it includes
+[global network policy]({{site.url}}/{{page.version}}/reference/resources/globalnetworkpolicy) rule, it includes
 the CIDRs from any network sets that match the selector.
 
 > **Important**: Since {{site.prodname}} matches packets based on their source/destination IP addresses,
@@ -19,8 +24,14 @@ the CIDRs from any network sets that match the selector.
 > policy will see the kube-proxy's host's IP as the source instead of the real source.
 {: .alert .alert-danger}
 
-For `calicoctl` commands that specify a resource type on the CLI, the following
-aliases are supported (all case insensitive): `globalnetworkset`, `globalnetworksets`.
+For `calicoctl` [commands]({{site.url}}/{{page.version}}/reference/calicoctl/), the following case-insensitive aliases
+may be used to specify the resource type on the CLI:
+`globalnetworkset`, `globalnetworksets`.
+
+For `kubectl` [commands](https://kubernetes.io/docs/reference/kubectl/overview/), the following case-insensitive aliases
+may be used to specify the resource type on the CLI:
+`globalnetworkset.projectcalico.org`, `globalnetworksets.projectcalico.org` and abbreviations such as
+`globalnetworkset.p` and `globalnetworksets.p`.
 
 ### Sample YAML
 
@@ -41,13 +52,14 @@ spec:
 
 #### Metadata
 
-| Field       | Description                                | Accepted Values                                     | Schema  |
-|-------------|--------------------------------------------|-----------------------------------------------------|---------|
-| name        | The name of this network set.              | Lower-case alphanumeric with optional `-` or `-`.   | string  |
-| labels      | A set of labels to apply to this endpoint. |                                                     | map     |
+| Field       | Description                                | Accepted Values   | Schema  |
+|-------------|--------------------------------------------|-------------------|---------|
+| name        | The name of this network set.              | Lower-case alphanumeric with optional `-`  | string  |
+| labels      | A set of labels to apply to this endpoint. |                   | map     |
 
 #### Spec
 
 | Field       | Description                                  | Accepted Values                                         | Schema | Default    |
 |-------------|----------------------------------------------|---------------------------------------------------------|--------|------------|
 | nets        | The IP networks/CIDRs to include in the set. | Valid IPv4 or IPv6 CIDRs, for example "192.0.2.128/25"  | list   |            |
+| allowedEgressDomains | The list of domain names that belong to this set and are honored in egress allow rules only.  Domain names specified here only work to allow egress traffic from the cluster to external destinations.  They don't work to _deny_ traffic to destinations specified by domain name, or to allow ingress traffic from _sources_ specified by domain name. | Valid domain names, for example "docs.tigera.io"  | list   |            |

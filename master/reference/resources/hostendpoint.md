@@ -1,6 +1,6 @@
 ---
 title: Host endpoint
-canonical_url: 'https://docs.projectcalico.org/v3.7/reference/calicoctl/resources/hostendpoint'
+canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/resources/hostendpoint
 ---
 
 A host endpoint resource (`HostEndpoint`) represents one or more real or virtual interfaces
@@ -17,17 +17,23 @@ interfaces.
 
 Each host endpoint may include a set of labels and list of profiles that {{site.prodname}}
 will use to apply
-[policy]({{site.baseurl}}/{{page.version}}/reference/resources/networkpolicy)
+[policy]({{site.url}}/{{page.version}}/reference/resources/networkpolicy)
 to the interface.  If no profiles or labels are applied, {{site.prodname}} will not apply
 any policy.
 
 > **Note**: Currently, for host endpoints with `interfaceName: *`, only [pre-DNAT
-> policy]({{site.baseurl}}/{{page.version}}/security/host-endpoints/pre-dnat) is
+> policy]({{site.url}}/{{page.version}}/security/host-endpoints/pre-dnat) is
 > implemented.
 {: .alert .alert-info}
 
-For `calicoctl` [commands]({{site.baseurl}}/{{page.version}}/reference/calicoctl/) that specify a resource type on the CLI, the following
-aliases are supported (all case insensitive): `hostendpoint`, `hostendpoints`, `hep`, `heps`.
+For `calicoctl` [commands]({{site.url}}/{{page.version}}/reference/calicoctl/), the following case-insensitive aliases
+may be used to specify the resource type on the CLI:
+`hostendpoint`, `hostendpoints`, `hep`, `heps`.
+
+For `kubectl` [commands](https://kubernetes.io/docs/reference/kubectl/overview/), the following case-insensitive aliases
+may be used to specify the resource type on the CLI:
+`hostendpoint.projectcalico.org`, `hostendpoints.projectcalico.org` and abbreviations such as
+`hostendpoint.p` and `hostendpoints.p`.
 
 > **Important**: When rendering security rules on other hosts, {{site.prodname}} uses the
 > `expectedIPs` field to resolve label selectors to IP addresses. If the `expectedIPs` field

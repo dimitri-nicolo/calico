@@ -2,7 +2,7 @@
 title: Inventory report (inventory)
 ---
 
-To create an Inventory report, create a [`GlobalReport`](../calicoctl/resources/globalreport) with the `reportType` 
+To create an Inventory report, create a [`GlobalReport`](../resources/globalreport) with the `reportType`
 set to `inventory`.
 
 The following sample command creates a GlobalReport that results in a daily inventory report for
@@ -27,7 +27,7 @@ EOF
 ```
 
 > **Note**: There is a known issue that audit logs do not contain deletion events for resources that were
-> deleted implicitly as part of a namespace deletion event. Currently, this means policies and pods that have been 
+> deleted implicitly as part of a namespace deletion event. Currently, this means policies and pods that have been
 > deleted in this way may still appear in the reports that cover any period within the next day.
 {: .alert .alert-danger}
 

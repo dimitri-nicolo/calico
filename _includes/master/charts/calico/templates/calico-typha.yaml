@@ -1,50 +1,49 @@
-{{- if and (eq .Values.datastore "kubernetes") .Values.typha.enabled -}}
+{{- if .Values.typha.enabled -}}
 # This manifest creates a Service, which will be backed by Calico's Typha daemon.
 # Typha sits in between Felix and the API server, reducing Calico's load on the API server.
+# It is a requirement when using Kubernetes API datastore with more than 50 nodes, or when
+# using the Federated Identity feature with any datastore type.
 
 apiVersion: v1
 kind: Service
 metadata:
-  name: calico-typha
+  name: {{include "typha_service_name" . }}
   namespace: kube-system
   labels:
-    k8s-app: calico-typha
+    k8s-app: {{include "typha_service_name" . }}
 spec:
   ports:
     - port: 5473
       protocol: TCP
-      targetPort: calico-typha
+      targetPort: {{include "typha_service_name" . }}
       name: calico-typha
   selector:
-    k8s-app: calico-typha
+    k8s-app: {{include "typha_service_name" . }}
 
 ---
 
 # This manifest creates a Deployment of Typha to back the above service.
 
-apiVersion: apps/v1
+apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
-  name: calico-typha
+  name: {{include "typha_service_name" . }}
   namespace: kube-system
   labels:
-    k8s-app: calico-typha
+    k8s-app: {{include "typha_service_name" . }}
 spec:
   # Number of Typha replicas.  To enable Typha, set this to a non-zero value *and* set the
   # typha_service_name variable in the calico-config ConfigMap above.
   #
-  # We recommend using Typha if you have more than 50 nodes.  Above 100 nodes it is essential
-  # (when using the Kubernetes datastore).  Use one replica for every 100-200 nodes.  In
-  # production, we recommend running at least 3 replicas to reduce the impact of rolling upgrade.
+  # We recommend using Typha if you have more than 50 nodes or if you are using Federated Endpoint Identity.
+  # Above 100 nodes it is essential (when using the Kubernetes datastore).  Use one replica for every 100-200
+  # nodes.  In production, we recommend running at least 3 replicas to reduce the impact of rolling upgrade.
   replicas: 1
   revisionHistoryLimit: 2
-  selector:
-    matchLabels:
-      k8s-app: calico-typha
   template:
     metadata:
       labels:
-        k8s-app: calico-typha
+        k8s-app: {{include "typha_service_name" . }}
       annotations:
         # This, along with the CriticalAddonsOnly toleration below, marks the pod as a critical
         # add-on, ensuring it gets priority scheduling and that its resources are reserved
@@ -52,6 +51,21 @@ spec:
         scheduler.alpha.kubernetes.io/critical-pod: ''
         cluster-autoscaler.kubernetes.io/safe-to-evict: 'true'
     spec:
+      # For HA and to avoid port clashes, avoid scheduling multiple Typha instances on the same node.
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: k8s-app
+                  operator: In
+                  values:
+                  # Avoid all variants of Typha that may be running.
+                  - calico-typha
+                  - calico-typha-ee
+              topologyKey: kubernetes.io/hostname
       nodeSelector:
         beta.kubernetes.io/os: linux
       hostNetwork: true
@@ -62,15 +76,40 @@ spec:
       # Since Calico can't network a pod until Typha is up, we need to run Typha itself
       # as a host-networked pod.
       serviceAccountName: calico-node
-      priorityClassName: system-cluster-critical
+{{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+{{- range $key, $value := .Values.imagePullSecrets }}
+        - name: {{ $key }}
+{{- end }}
+{{- end }}
       containers:
-      - image: {{ .Values.typha.image }}:{{ .Values.typha.tag }}
-        name: calico-typha
+      - name: calico-typha
+        image: {{.Values.typha.image}}:{{.Values.typha.tag}}
+{{ tuple .Values.typha.resources | include "calico.resourceLimits" | indent 8 -}}
+{{- if or .Values.federation.enabled (eq .Values.datastore "etcd") }}
+        volumeMounts:
+{{- end }}
+{{- if .Values.federation.enabled }}
+        # These lines enable a secrets volume for use with federated endpoint identity. Add
+        # multiple entries to the volumeMounts if you are mounting in multiple secrets (e.g. one for each remote cluster)
+        - name: tigera-federation-remotecluster
+          mountPath: "/etc/tigera-federation-remotecluster"
+          readOnly: true
+{{- end }}
+{{- if eq .Values.datastore "etcd" }}
+        - name: etcd-certs
+          mountPath:  "/calico-secrets"
+          readOnly: true
+{{- end }}
         ports:
         - containerPort: 5473
-          name: calico-typha
+          name: {{include "typha_service_name" . }}
           protocol: TCP
         env:
+{{- if eq .Values.network "ecs" }}
+          - name: FELIX_INTERFACEPREFIX
+            value: "eni"
+{{- end }}
           # Enable "info" logging by default.  Can be set to "debug" to increase verbosity.
           - name: TYPHA_LOGSEVERITYSCREEN
             value: "info"
@@ -83,8 +122,38 @@ spec:
           # connections.
           - name: TYPHA_CONNECTIONREBALANCINGMODE
             value: "kubernetes"
+{{- if eq .Values.datastore "etcd" }}
+          - name: TYPHA_DATASTORETYPE
+            value: "etcdv3"
+          # The location of the etcd cluster.
+          - name: TYPHA_ETCDENDPOINTS
+            valueFrom:
+              configMapKeyRef:
+                name: {{include "variant_name" . | lower}}-config
+                key: etcd_endpoints
+          # Location of the CA certificate for etcd.
+          - name: TYPHA_ETCDCAFILE
+            valueFrom:
+              configMapKeyRef:
+                name: {{include "variant_name" . | lower}}-config
+                key: etcd_ca
+          # Location of the client key for etcd.
+          - name: TYPHA_ETCDKEYFILE
+            valueFrom:
+              configMapKeyRef:
+                name: {{include "variant_name" . | lower}}-config
+                key: etcd_key
+          # Location of the client certificate for etcd.
+          - name: TYPHA_ETCDCERTFILE
+            valueFrom:
+              configMapKeyRef:
+                name: {{include "variant_name" . | lower}}-config
+                key: etcd_cert
+{{- else if eq .Values.datastore "kubernetes" }}
+          # Use Kubernetes API as the backing datastore.
           - name: TYPHA_DATASTORETYPE
             value: "kubernetes"
+{{- end }}
           - name: TYPHA_HEALTHENABLED
             value: "true"
 {{- if eq .Values.ipam "host-local" }}
@@ -92,6 +161,20 @@ spec:
           - name: USE_POD_CIDR
             value: "true"
 {{- end }}
+          # Sets Default Security Groups if tigera-aws-config exists
+          - name: TIGERA_DEFAULT_SECURITY_GROUPS
+            valueFrom:
+              configMapKeyRef:
+                name: tigera-aws-config
+                key: default_sgs
+                optional: true
+          # Sets Pod Security Group if tigera-aws-config exists
+          - name: TIGERA_POD_SECURITY_GROUP
+            valueFrom:
+              configMapKeyRef:
+                name: tigera-aws-config
+                key: pod_sg
+                optional: true
           # Uncomment these lines to enable prometheus metrics.  Since Typha is host-networked,
           # this opens a port on the host, which may need to be secured.
           #- name: TYPHA_PROMETHEUSMETRICSENABLED
@@ -114,6 +197,25 @@ spec:
             port: 9098
             host: localhost
           periodSeconds: 10
+{{- if or .Values.federation.enabled (eq .Values.datastore "etcd") }}
+      volumes:
+{{- end }}
+{{- if .Values.federation.enabled }}
+      # These lines enable a secrets volume for use with federated endpoint identity. Add
+      # multiple entries to the volumes if you are mounting in multiple secrets (e.g. one for each remote cluster)
+      # The secret should be created with: kubectl create secret generic tigera-federation-remotecluster --from-file=...
+      - name: tigera-federation-remotecluster
+        secret:
+          secretName: tigera-federation-remotecluster
+          defaultMode: 0400
+{{- end }}
+{{- if eq .Values.datastore "etcd" }}
+      # Mount in the etcd TLS secrets with mode 400.
+      # See https://kubernetes.io/docs/concepts/configuration/secret/
+      - name: etcd-certs
+        secret:
+          secretName: calico-etcd-secrets
+{{- end }}
 
 ---
 
@@ -122,13 +224,13 @@ spec:
 apiVersion: policy/v1beta1
 kind: PodDisruptionBudget
 metadata:
-  name: calico-typha
+  name: {{include "typha_service_name" . }}
   namespace: kube-system
   labels:
-    k8s-app: calico-typha
+    k8s-app: {{include "typha_service_name" . }}
 spec:
   maxUnavailable: 1
   selector:
     matchLabels:
-      k8s-app: calico-typha
-{{- end -}}
+      k8s-app: {{include "typha_service_name" . }}
+{{- end }}

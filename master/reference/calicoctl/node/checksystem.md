@@ -1,11 +1,11 @@
 ---
 title: calicoctl node checksystem
-canonical_url: 'https://docs.projectcalico.org/v3.7/reference/calicoctl/commands/node/checksystem'
+canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/commands/node/checksystem
 ---
 
 This section describes the `calicoctl node checksystem` command.
 
-Read the [calicoctl Overview]({{site.baseurl}}/{{page.version}}/reference/calicoctl)
+Read the [calicoctl Overview]({{site.url}}/{{page.version}}/reference/calicoctl)
 for a full list of calicoctl commands.
 
 ## Displaying the help text for 'calicoctl checksystem' command

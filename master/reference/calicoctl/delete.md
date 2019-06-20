@@ -1,17 +1,17 @@
 ---
 title: calicoctl delete
-canonical_url: 'https://docs.projectcalico.org/v3.7/reference/calicoctl/commands/delete'
+canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/commands/delete
 ---
 
 This sections describes the `calicoctl delete` command.
 
-Read the [calicoctl command line interface user reference]({{site.baseurl}}/{{page.version}}/reference/calicoctl/)
+Read the [calicoctl command line interface user reference]({{site.url}}/{{page.version}}/reference/calicoctl/)
 for a full list of calicoctl commands.
 
 > **Note**: The available actions for a specific resource type may be
 > limited based on the datastore used for {{site.prodname}} (etcdv3 / Kubernetes API).
 > Please refer to the
-> [Resources section]({{site.baseurl}}/{{page.version}}/reference/resources/)
+> [Resources section]({{site.url}}/{{page.version}}/reference/resources/)
 > for details about each resource type.
 {: .alert .alert-info}
 
@@ -23,7 +23,7 @@ command.
 
 ```
 Usage:
-  calicoctl delete ( (<KIND> [<NAME...>]) |
+  calicoctl delete ( (<KIND> [<NAME>]) |
                    --filename=<FILE>)
                    [--skip-not-exists] [--config=<CONFIG>] [--namespace=<NS>]
 
@@ -31,12 +31,11 @@ Examples:
   # Delete a policy using the type and name specified in policy.yaml.
   calicoctl delete -f ./policy.yaml
 
-
   # Delete a policy based on the type and name in the YAML passed into stdin.
   cat policy.yaml | calicoctl delete -f -
 
-  # Delete policies with names "foo" and "bar"
-  calicoctl delete policy foo bar
+  # Delete policy with name "foo"
+  calicoctl delete policy foo
 
 Options:
   -h --help                 Show this screen.
@@ -48,7 +47,7 @@ Options:
                             configuration in YAML or JSON format.
                             [default: /etc/calico/calicoctl.cfg]
   -n --namespace=<NS>       Namespace of the resource.
-                            Only applicable to NetworkPolicy and WorkloadEndpoint.
+                            Only applicable to NetworkPolicy, NetworkSet, and WorkloadEndpoint.
                             Uses the default namespace if not specified.
 
 Description:
@@ -64,6 +63,7 @@ Description:
     * globalNetworkPolicy
     * hostEndpoint
     * ipPool
+    * tier
     * networkPolicy
     * node
     * profile
@@ -141,7 +141,7 @@ Description:
 
 ## See also
 
--  [Installing calicoctl]({{site.baseurl}}/{{page.version}}/getting-started/calicoctl/install).
--  [Resources]({{site.baseurl}}/{{page.version}}/reference/resources/) for details on all valid resources, including file format
+-  [Installing calicoctl]({{site.url}}/{{page.version}}/getting-started/calicoctl/install).
+-  [Resources]({{site.url}}/{{page.version}}/reference/resources/) for details on all valid resources, including file format
    and schema
--  [NetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/resources/networkpolicy) for details on the {{site.prodname}} selector-based policy model
+-  [NetworkPolicy]({{site.url}}/{{page.version}}/reference/resources/networkpolicy) for details on the {{site.prodname}} selector-based policy model

@@ -1,17 +1,17 @@
 ---
 title: calicoctl get
-canonical_url: 'https://docs.projectcalico.org/v3.7/reference/calicoctl/commands/get'
+canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/commands/get
 ---
 
 This sections describes the `calicoctl get` command.
 
-Read the [calicoctl command line interface user reference]({{site.baseurl}}/{{page.version}}/reference/calicoctl/)
+Read the [calicoctl command line interface user reference]({{site.url}}/{{page.version}}/reference/calicoctl/)
 for a full list of calicoctl commands.
 
 > **Note**: The available actions for a specific resource type may be
 > limited based on the datastore used for {{site.prodname}} (etcdv3 / Kubernetes API).
 > Please refer to the
-> [Resources section]({{site.baseurl}}/{{page.version}}/reference/resources/)
+> [Resources section]({{site.url}}/{{page.version}}/reference/resources/)
 > for details about each resource type.
 {: .alert .alert-info}
 
@@ -23,7 +23,7 @@ command.
 
 ```
 Usage:
-  calicoctl get ( (<KIND> [<NAME...>]) |
+  calicoctl get ( (<KIND> [<NAME>]) |
                 --filename=<FILENAME>)
                 [--output=<OUTPUT>] [--config=<CONFIG>] [--namespace=<NS>] [--all-namespaces]
 
@@ -31,9 +31,8 @@ Examples:
   # List all policy in default output format.
   calicoctl get policy
 
-  # List specific policies in YAML format
-  calicoctl get -o yaml policy my-policy-1 my-policy-2
-
+  # List a specific policy in YAML format
+  calicoctl get -o yaml policy my-policy-1
 
 Options:
   -h --help                    Show this screen.
@@ -46,7 +45,7 @@ Options:
                                configuration in YAML or JSON format.
                                [default: /etc/calico/calicoctl.cfg]
   -n --namespace=<NS>          Namespace of the resource.
-                               Only applicable to NetworkPolicy and WorkloadEndpoint.
+                               Only applicable to NetworkPolicy, NetworkSet, and WorkloadEndpoint.
                                Uses the default namespace if not specified.
   -a --all-namespaces          If present, list the requested object(s) across
                                all namespaces.
@@ -68,8 +67,8 @@ Description:
     * globalNetworkPolicy
     * hostEndpoint
     * ipPool
+    * tier
     * networkPolicy
-    * networkSet
     * node
     * profile
     * workloadEndpoint
@@ -119,7 +118,7 @@ Description:
                              custom-columns=..., go-template=...,
                              go-template-file=...   [Default: ps]
 -n --namespace=<NS>          Namespace of the resource.
-                             Only applicable to NetworkPolicy, NetworkSet, and WorkloadEndpoint.
+                             Only applicable to NetworkPolicy and WorkloadEndpoint.
                              Uses the default namespace if not specified.
 -a --all-namespaces          If present, list the requested object(s) across
                              all namespaces.
@@ -155,7 +154,7 @@ calicoctl get hostEndpoint
 
 Response:
 ```bash
-NAME          NODE       
+NAME          NODE
 endpoint1     host1
 myhost-eth0   myhost
 ```
@@ -184,7 +183,7 @@ myhost-eth0    myhost                                  profile1
 
 Similar to the `ps` format, the `custom-columns` option displays output in ps-style table output but allows the user
 to specify and ordered, comma-separated list of columns to display in the output.  The valid heading names for each
-resource type is documented in the [Resources]({{site.baseurl}}/{{page.version}}/reference/resources/) guide.
+resource type is documented in the [Resources]({{site.url}}/{{page.version}}/reference/resources/) guide.
 
 Example:
 ```
@@ -195,14 +194,14 @@ Response:
 ```
 NAME        IPS
 endpoint1   1.2.3.4,0:bb::aa
-myhost-eth0                           
+myhost-eth0
 ```
 {: .no-select-button}
 
 #### `yaml / json`
 
 The `yaml` and `json` options display the output as a list of YAML documents or JSON dictionaries.  The fields for
-resource type are documented in the [Resources]({{site.baseurl}}/{{page.version}}/reference/resources/) guide.
+resource type are documented in the [Resources]({{site.url}}/{{page.version}}/reference/resources/) guide.
 
 The output from either of these formats may be used as input for all of the resource management commands.
 
@@ -243,7 +242,7 @@ Response:
 The `go-template` and `go-template-file` options display the output using a golang template specified as a string
 on the CLI, or defined in a separate file.
 When writing a template, be aware that the data passed to the template is a golang slice of resource-lists.  The
-resource-lists are defined in the [libcalico API]({{site.baseurl}}/{{page.version}}/reference/resources/) and there is a resource-list defined for
+resource-lists are defined in the [libcalico API]({{site.url}}/{{page.version}}/reference/resources/) and there is a resource-list defined for
 each resource type.  A resource-list contains an Items field which is itself a slice of resources.  Thus, to output
 the "Name" field from the supplied data, it is necessary to enumerate over the slice of resource-lists and the items
 within that list.
@@ -258,7 +257,7 @@ endpoint1,eth0,
 
 ## See also
 
--  [Installing calicoctl]({{site.baseurl}}/{{page.version}}/getting-started/calicoctl/install).
--  [Resources]({{site.baseurl}}/{{page.version}}/reference/resources/) for details on all valid resources, including file format
+-  [Installing calicoctl]({{site.url}}/{{page.version}}/getting-started/calicoctl/install).
+-  [Resources]({{site.url}}/{{page.version}}/reference/resources/) for details on all valid resources, including file format
    and schema
--  [NetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/resources/networkpolicy) for details on the {{site.prodname}} selector-based policy model
+-  [NetworkPolicy]({{site.url}}/{{page.version}}/reference/resources/networkpolicy) for details on the {{site.prodname}} selector-based policy model

@@ -21,6 +21,7 @@ spec:
         # Writes basic flannel configuration to etcd.
         - name: configure-flannel
           image: quay.io/coreos/etcd:v3.1.5
+{{ tuple .Values.configureCanal.resources | include "calico.resourceLimits" | indent 10 -}}
           command:
           - "etcdctl"
           # Uncomment the following lines if using TLS to etcd.

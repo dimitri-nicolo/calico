@@ -13,7 +13,7 @@ resource]({{site.url}}/{{page.version}}/reference/resources/node).
 
 To run a standalone route reflector outside the cluster, you can also use the
 {{site.nodecontainer}} image.  Use [calicoctl node
-run]({{site.url}}/{{page.version}}/reference/calicoctl/commands/node/run) to run a
+run]({{site.url}}/{{page.version}}/reference/calicoctl/node/run) to run a
 {{site.nodecontainer}} container, then modify the relevant node resource similarly as in the
 in-cluster case.
 

@@ -4,7 +4,7 @@
 1. [Install calicoctl]({{site.baseurl}}/{{page.version}}/getting-started/calicoctl/install#installing-calicoctl-as-a-kubernetes-pod).
 {% endif %}
 
-1. Use the following command to apply your [license key]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/licensekey).
+1. Use the following command to apply your [license key]({{site.baseurl}}/{{page.version}}/reference/resources/licensekey).
 
    **Command**
 {% if include.cli == 'calicoctl' %}

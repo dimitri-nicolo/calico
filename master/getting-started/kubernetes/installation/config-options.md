@@ -38,7 +38,7 @@ The sections that follow discuss the configurable parameters in greater depth.
 
 ### Configuring the pod IP range
 
-{{site.prodname}} IPAM assigns IP addresses from [IP pools]({{site.url}}/{{page.version}}/reference/calicoctl/resources/ippool).
+{{site.prodname}} IPAM assigns IP addresses from [IP pools]({{site.url}}/{{page.version}}/reference/resources/ippool).
 
 To change the default IP range used for pods, modify the `CALICO_IPV4POOL_CIDR`
 section of the `calico.yaml` manifest.  For more information, see

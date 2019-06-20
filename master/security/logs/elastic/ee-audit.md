@@ -9,11 +9,11 @@ Our manifests include a policy that enables audit logging on the following {{sit
 
 | Resource              | Description                                                                           |
 | --------------------- | ------------------------------------------------------------------------------------- |
-| `GlobalNetworkPolicy` | [Reference documentation](../../../reference/calicoctl/resources/globalnetworkpolicy) |
-| `GlobalNetworkSet`    | [Reference documentation](../../../reference/calicoctl/resources/globalnetworkset)    |
-| `NetworkPolicy`       | [Reference documentation](../../../reference/calicoctl/resources/networkpolicy)       |
-| `Tier`                | [Reference documentation](../../../reference/calicoctl/resources/tier)                |
-| `HostEndpoint`        | [Reference documentation](../../../reference/calicoctl/resources/hostendpoint)        |
+| `GlobalNetworkPolicy` | [Reference documentation](../../../reference/resources/globalnetworkpolicy) |
+| `GlobalNetworkSet`    | [Reference documentation](../../../reference/resources/globalnetworkset)    |
+| `NetworkPolicy`       | [Reference documentation](../../../reference/resources/networkpolicy)       |
+| `Tier`                | [Reference documentation](../../../reference/resources/tier)                |
+| `HostEndpoint`        | [Reference documentation](../../../reference/resources/hostendpoint)        |
 
 By default, the logs:
 - Include `create`, `patch`, `update`, and `delete` events.
@@ -51,7 +51,7 @@ follow these steps.
 As part of setting up your cluster we recommend you enable auditing for
 Kubernetes/OpenShift resources as well.
 The following sections describe setting up auditing on the Kubernetes/OpenShift API Server for the following
-resources that are directly involved in network policy evaluation and are required for {{site.prodname}} Compliance 
+resources that are directly involved in network policy evaluation and are required for {{site.prodname}} Compliance
 Analytics, similar to the {{site.prodname}} resources above:
 
 - `Pod`

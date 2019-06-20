@@ -1,17 +1,17 @@
 ---
-title: Resource definitions
-canonical_url: 'https://docs.projectcalico.org/v3.7/reference/calicoctl/resources/index'
+title: Resource Definitions
+canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/resources/
 ---
 
 This section describes the set of valid resource types that can be managed
-through `calicoctl`.  
+through `calicoctl`.
 
 While resources may be supplied in YAML or JSON format, this guide provides examples in YAML.
 
 ## Overview of resource structure
 
 The calicoctl commands for resource management (create, apply, delete, replace, get)
-all take resource manifests as input.  
+all take resource manifests as input.
 
 Each manifest may contain a single resource
 (e.g. a profile resource), or a list of multiple resources (e.g. a profile and two
@@ -44,18 +44,16 @@ spec:
 
 The following resources are supported:
 
-- [BGPConfiguration]({{site.baseurl}}/{{page.version}}/reference/resources/bgpconfig)
-- [BGPPeer]({{site.baseurl}}/{{page.version}}/reference/resources/bgppeer)
-- [FelixConfiguration]({{site.baseurl}}/{{page.version}}/reference/resources/felixconfig)
-- [GlobalNetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/resources/globalnetworkpolicy)
-- [GlobalNetworkSet]({{site.baseurl}}/{{page.version}}/reference/resources/globalnetworkset)
-- [HostEndpoint]({{site.baseurl}}/{{page.version}}/reference/resources/hostendpoint)
-- [IPPool]({{site.baseurl}}/{{page.version}}/reference/resources/ippool)
-- [NetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/resources/networkpolicy)
-- [NetworkSet]({{site.baseurl}}/{{page.version}}/reference/resources/networkset)
-- [Node]({{site.baseurl}}/{{page.version}}/reference/resources/node)
-- [Profile]({{site.baseurl}}/{{page.version}}/reference/resources/profile)
-- [WorkloadEndpoint]({{site.baseurl}}/{{page.version}}/reference/resources/workloadendpoint)
+- [BGPPeer]({{site.url}}/{{page.version}}/reference/resources/bgppeer)
+- [BGPConfiguration]({{site.url}}/{{page.version}}/reference/resources/bgpconfig)
+- [HostEndpoint]({{site.url}}/{{page.version}}/reference/resources/hostendpoint)
+- [NetworkPolicy]({{site.url}}/{{page.version}}/reference/resources/networkpolicy)
+- [GlobalNetworkPolicy]({{site.url}}/{{page.version}}/reference/resources/globalnetworkpolicy)
+- [IPPool]({{site.url}}/{{page.version}}/reference/resources/ippool)
+- [Profile]({{site.url}}/{{page.version}}/reference/resources/profile)
+- [FelixConfiguration]({{site.url}}/{{page.version}}/reference/resources/felixconfig)
+- [Tier]({{site.url}}/{{page.version}}/reference/resources/tier)
+- [WorkloadEndpoint]({{site.url}}/{{page.version}}/reference/resources/workloadendpoint)
 
 ### Resource name requirements
 

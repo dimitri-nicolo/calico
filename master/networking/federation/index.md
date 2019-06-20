@@ -42,7 +42,7 @@ This requires coordination between clusters for the following:
    -  Host Endpoint label names and values
    -  Pod label names and values within the namespace
 
-Configuration for this feature is through the [Remote Cluster Configuration](/{{page.version}}/reference/calicoctl/resources/remoteclusterconfiguration)
+Configuration for this feature is through the [Remote Cluster Configuration](/{{page.version}}/reference/resources/remoteclusterconfiguration)
 resource. A Remote Cluster Configuration resource should be added for each remote cluster that you want to include.
 Similar configuration should be applied on the remote clusters if you require Federated Endpoint Identity on those
 clusters.
@@ -59,7 +59,7 @@ Tigera Federated Services Controller is used alongside Federated Endpoint
 Identity to provide discovery of remote pods. It extends the standard Kubernetes service and endpoints functionality to
 provide federation of [Kubernetes endpoints](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.10/#endpoints-v1-core) across all of the clusters.
 
-Configuration for this feature is also through the [Remote Cluster Configuration](/{{page.version}}/reference/calicoctl/resources/remoteclusterconfiguration)
+Configuration for this feature is also through the [Remote Cluster Configuration](/{{page.version}}/reference/resources/remoteclusterconfiguration)
 resource. In addition, a [service annotation](/{{page.version}}/networking/federation/services-controller) is used to configure
 a federated service.
 

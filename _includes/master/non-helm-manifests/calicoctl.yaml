@@ -20,6 +20,8 @@ spec:
   nodeSelector:
     beta.kubernetes.io/os: linux
   hostNetwork: true
+  imagePullSecrets:
+  - name: cnx-pull-secret
   serviceAccountName: calicoctl
   containers:
   - name: calicoctl
@@ -56,17 +58,26 @@ rules:
       - pods/status
     verbs:
       - update
+  - apiGroups: ["networking.k8s.io"]
+    resources:
+      - networkpolicies
+    verbs:
+      - watch
+      - list
+      - get
   - apiGroups: ["crd.projectcalico.org"]
     resources:
       - bgppeers
       - bgpconfigurations
       - clusterinformations
+      - licensekeys
       - felixconfigurations
       - globalnetworkpolicies
       - globalnetworksets
+      - remoteclusterconfigurations
       - ippools
       - networkpolicies
-      - networksets
+      - tiers
       - hostendpoints
       - ipamblocks
       - blockaffinities

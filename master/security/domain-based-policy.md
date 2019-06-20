@@ -16,10 +16,10 @@ addresses. In particular, they are useful when an external service does not map 
 
 This how-to guide uses the following {{site.prodname}} features:
 
-- [**GlobalNetworkPolicy**]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy)
+- [**GlobalNetworkPolicy**]({{site.baseurl}}/{{page.version}}/reference/resources/globalnetworkpolicy)
   with domain names in the policy
-- [**GlobalNetworkSet**]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkset)
-  with domain names, where the network set is referenced in a [GlobalNetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy)
+- [**GlobalNetworkSet**]({{site.baseurl}}/{{page.version}}/reference/resources/globalnetworkset)
+  with domain names, where the network set is referenced in a [GlobalNetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/resources/globalnetworkpolicy)
 
 ### Concepts
 

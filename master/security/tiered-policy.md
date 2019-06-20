@@ -4,7 +4,7 @@ canonical_url: https://docs.tigera.io/v2.3/getting-started/cnx/tiered-policy-cnx
 ---
 
 This guide will introduce tiered policies and walk through a simple example
-for working with the [Tiers](/{{page.version}}/reference/calicoctl/resources/tier) resource.
+for working with the [Tiers](/{{page.version}}/reference/resources/tier) resource.
 
 Some use cases for using tiers and tiered policies are:
 

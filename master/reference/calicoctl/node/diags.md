@@ -1,11 +1,11 @@
 ---
 title: calicoctl node diags
-canonical_url: 'https://docs.projectcalico.org/v3.7/reference/calicoctl/commands/node/diags'
+canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/commands/node/diags
 ---
 
 This section describes the `calicoctl node diags` command.
 
-Read the [calicoctl Overview]({{site.baseurl}}/{{page.version}}/reference/calicoctl)
+Read the [calicoctl Overview]({{site.url}}/{{page.version}}/reference/calicoctl)
 for a full list of calicoctl commands.
 
 ## Displaying the help text for 'calicoctl node diags' command

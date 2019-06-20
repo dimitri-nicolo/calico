@@ -1,11 +1,11 @@
 ---
 title: calicoctl ipam
-canonical_url: 'https://docs.projectcalico.org/v3.7/reference/calicoctl/commands/ipam/release'
+canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/commands/ipam/release
 ---
 
 This section describes the `calicoctl ipam release` command.
 
-Read the [calicoctl overview]({{site.baseurl}}/{{page.version}}/reference/calicoctl/) for a full list of calicoctl commands.
+Read the [calicoctl overview]({{site.url}}/{{page.version}}/reference/calicoctl/) for a full list of calicoctl commands.
 
 ## Displaying the help text for 'calicoctl ipam release' command
 
@@ -51,4 +51,4 @@ calicoctl ipam release --ip=192.168.1.2
 
 ## See also
 
--  [Installing calicoctl]({{site.baseurl}}/{{page.version}}/getting-started/calicoctl/install)
+-  [Installing calicoctl]({{site.url}}/{{page.version}}/getting-started/calicoctl/install)

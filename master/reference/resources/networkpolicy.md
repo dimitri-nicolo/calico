@@ -1,22 +1,31 @@
 ---
 title: Network policy
-canonical_url: 'https://docs.projectcalico.org/v3.7/reference/calicoctl/resources/networkpolicy'
+canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/resources/networkpolicy
 ---
 
 A network policy resource (`NetworkPolicy`) represents an ordered set of rules which are applied
 to a collection of endpoints that match a [label selector](#selector).
 
 `NetworkPolicy` is a namespaced resource. `NetworkPolicy` in a specific namespace
-only applies to [workload endpoint resources]({{site.baseurl}}/{{page.version}}/reference/resources/workloadendpoint)
+only applies to [workload endpoint resources]({{site.url}}/{{page.version}}/reference/resources/workloadendpoint)
 in that namespace. Two resources are in the same namespace if the `namespace`
 value is set the same on both.
-See [global network policy resource]({{site.baseurl}}/{{page.version}}/reference/resources/globalnetworkpolicy) for non-namespaced network policy.
+See [global network policy resource]({{site.url}}/{{page.version}}/reference/resources/globalnetworkpolicy) for non-namespaced network policy.
 
 `NetworkPolicy` resources can be used to define network connectivity rules between groups of {{site.prodname}} endpoints and host endpoints, and
-take precedence over [profile resources]({{site.baseurl}}/{{page.version}}/reference/resources/profile) if any are defined.
+take precedence over [profile resources]({{site.url}}/{{page.version}}/reference/resources/profile) if any are defined.
 
-For `calicoctl` [commands]({{site.baseurl}}/{{page.version}}/reference/calicoctl/) that specify a resource type on the CLI, the following
-aliases are supported (all case insensitive): `networkpolicy`, `networkpolicies`, `policy`, `np`, `policies`, `pol`, `pols`.
+NetworkPolicies are organized into [tiers]({{site.url}}/{{page.version}}/reference/resources/tier), which provide an additional layer of ordering—in particular, note that the `Pass` action skips to the
+next [tier]({{site.url}}/{{page.version}}/reference/resources/tier), to enable hierarchical security policy.
+
+For `calicoctl` [commands]({{site.url}}/{{page.version}}/reference/calicoctl/), the following case-insensitive aliases
+may be used to specify the resource type on the CLI:
+`networkpolicy`, `networkpolicies`, `policy`, `np`, `policies`, `pol`, `pols`.
+
+For `kubectl` [commands](https://kubernetes.io/docs/reference/kubectl/overview/), the following case-insensitive aliases
+may be used to specify the resource type on the CLI:
+`networkpolicy.projectcalico.org`, `networkpolicies.projectcalico.org` and abbreviations such as
+`networkpolicy.p` and `networkpolicies.p`.
 
 ### Sample YAML
 
@@ -27,9 +36,10 @@ This sample policy allows TCP traffic from `frontend` endpoints to port 6379 on
 apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
-  name: allow-tcp-6379
+  name: internal-access.allow-tcp-6379
   namespace: production
 spec:
+  tier: internal-access
   selector: role == 'database'
   types:
   - Ingress
@@ -53,7 +63,7 @@ spec:
 | Field     | Description                                                        | Accepted Values                                     | Schema | Default   |
 |-----------|--------------------------------------------------------------------|-----------------------------------------------------|--------|-----------|
 | name      | The name of the network policy. Required.                          | Alphanumeric string with optional `.`, `_`, or `-`. | string |           |
-| namespace | Namespace provides an additional qualification to a resource name. |                                                     | string | "default" |
+| namespace | Namespace provides an additional qualification to a resource name. |                                                     | map    | "default" |
 
 
 #### Spec
@@ -61,6 +71,7 @@ spec:
 | Field    | Description                                                                                         | Accepted Values | Schema                | Default |
 |----------|-----------------------------------------------------------------------------------------------------|-----------------|-----------------------|---------|
 | order    | Controls the order of precedence. {{site.prodname}} applies the policy with the lowest value first. |                 | float                 |         |
+| tier     | Name of the [tier]({{site.url}}/{{page.version}}/reference/resources/tier) this policy belongs to.                                                   |                 | string                 |  `default` |
 | selector | Selects the endpoints to which this policy applies.                                                 |                 | [selector](#selector) | all()   |
 | types    | Applies the policy based on the direction of the traffic. To apply the policy to inbound traffic, set to `Ingress`. To apply the policy to outbound traffic, set to `Egress`. To apply the policy to both, set to `Ingress, Egress`. | `Ingress`, `Egress` | List of strings | Depends on presence of ingress/egress rules\* |
 | ingress  | Ordered list of ingress rules applied by policy.                                                    |                 | List of [Rule](#rule) |         |
@@ -86,7 +97,7 @@ spec:
 
 #### EntityRule
 
-{% include {{page.version}}/entityrule.md %}
+{% include {{page.version}}/entityrule.md global="false" %}
 
 #### Selector
 
@@ -103,7 +114,7 @@ spec:
 ### Application layer policy
 
 Application layer policy is an optional feature of {{site.prodname}} and
-[must be enabled]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/app-layer-policy)
+[must be enabled]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/app-layer-policy)
 in order to use the following match criteria.
 
 > **NOTE**: Application layer policy match criteria are supported with the following restrictions.

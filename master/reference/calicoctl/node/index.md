@@ -1,11 +1,11 @@
 ---
 title: calicoctl node
-canonical_url: 'https://docs.projectcalico.org/v3.7/reference/calicoctl/commands/node/index'
+canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/commands/node/
 ---
 
 This section describes the `calicoctl node` commands.
 
-Read the [calicoctl Overview]({{site.baseurl}}/{{page.version}}/reference/calicoctl/)
+Read the [calicoctl Overview]({{site.url}}/{{page.version}}/reference/calicoctl/)
 for a full list of calicoctl commands.
 
 Note that if you run `calicoctl` in a container, `calicoctl node ...` commands will
@@ -20,7 +20,6 @@ commands.
 Usage:
   calicoctl node <command> [<args>...]
 
-    run          Run the Calico node container image
     status       View the current status of a Calico node.
     diags        Gather a diagnostics bundle for a Calico node.
     checksystem  Verify the compute host is able to run a Calico node instance.
@@ -41,7 +40,6 @@ Description:
 Details on the `calicoctl node` commands are described in the documents linked below
 organized by sub command.
 
--  [calicoctl node run]({{site.baseurl}}/{{page.version}}/reference/calicoctl/node/run)
--  [calicoctl node status]({{site.baseurl}}/{{page.version}}/reference/calicoctl/node/status)
--  [calicoctl node diags]({{site.baseurl}}/{{page.version}}/reference/calicoctl/node/diags)
--  [calicoctl node checksystem]({{site.baseurl}}/{{page.version}}/reference/calicoctl/node/checksystem)
+-  [calicoctl node status]({{site.url}}/{{page.version}}/reference/calicoctl/node/status)
+-  [calicoctl node diags]({{site.url}}/{{page.version}}/reference/calicoctl/node/diags)
+-  [calicoctl node checksystem]({{site.url}}/{{page.version}}/reference/calicoctl/node/checksystem)

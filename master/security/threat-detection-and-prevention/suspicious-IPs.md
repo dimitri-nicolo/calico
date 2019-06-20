@@ -3,13 +3,13 @@ title: Trace and block suspicious IPs
 canonical_url: https://docs.tigera.io/v2.4/security/threat-detection-and-prevention/suspicious-IPs
 ---
 
-### Big picture 
+### Big picture
 
-Add threat intelligence feeds to Tigera Secure EE to trace network flows of suspicious IP addresses, and optionally block traffic to suspicious IPs. 
+Add threat intelligence feeds to Tigera Secure EE to trace network flows of suspicious IP addresses, and optionally block traffic to suspicious IPs.
 
 ### Value
 
-Tigera Secure EE integrates with threat intelligence feeds so you can detect when your Kubernetes clusters communicate with suspicious IPs. When communications are detected, an anomaly detection dashboard in the UI shows the full context, including which pod(s) were involved so you can analyze and remediate. You can also use a threat intelligence feed to power a dynamic blocklist, either to or from a specific group of sensitive pods, or your entire cluster.  
+Tigera Secure EE integrates with threat intelligence feeds so you can detect when your Kubernetes clusters communicate with suspicious IPs. When communications are detected, an anomaly detection dashboard in the UI shows the full context, including which pod(s) were involved so you can analyze and remediate. You can also use a threat intelligence feed to power a dynamic blocklist, either to or from a specific group of sensitive pods, or your entire cluster.
 
 ### Features
 
@@ -22,7 +22,7 @@ This how-to guide uses the following Tigera Secure EE features:
 
 #### Pull or push threat feeds?
 
-Tigera Secure EE supports both push and pull methods for updating threat feeds. Pull method supports fully automated threat feed updates driven by Tigera Secure EE without user intervention. Push method can be used for manually updating a threat feed. The push method is useful for threat feeds that Tigera cannot pull updates from (for example, if they are not available over HTTP/HTTPS), or if you prefer to manually update threat feeds based on your own schedule. 
+Tigera Secure EE supports both push and pull methods for updating threat feeds. Pull method supports fully automated threat feed updates driven by Tigera Secure EE without user intervention. Push method can be used for manually updating a threat feed. The push method is useful for threat feeds that Tigera cannot pull updates from (for example, if they are not available over HTTP/HTTPS), or if you prefer to manually update threat feeds based on your own schedule.
 
 #### Suspicious IPs: test before you block
 
@@ -36,7 +36,7 @@ Privileges to manage GlobalThreatFeed and GlobalNetworkPolicy.
 
 #### Recommended
 
-We recommend that you turn down the aggregation of flow logs sent to Elasticsearch for configuring threat feeds. If you do not adjust flow logs, Tigera Secure aggregates over the external IPs for allowed traffic, and threat feed searches will not provide useful results (unless the traffic is denied by policy). Go to: [FelixConfiguration]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/felixconfig) and set the field, **flowLogsFileAggregationKindForAllowed** to **1**. 
+We recommend that you turn down the aggregation of flow logs sent to Elasticsearch for configuring threat feeds. If you do not adjust flow logs, Tigera Secure aggregates over the external IPs for allowed traffic, and threat feed searches will not provide useful results (unless the traffic is denied by policy). Go to: [FelixConfiguration]({{site.baseurl}}/{{page.version}}/reference/resources/felixconfig) and set the field, **flowLogsFileAggregationKindForAllowed** to **1**.
 
 ### How to
 
@@ -46,11 +46,11 @@ This section describes how to pull or push threat feeds to Tigera Secure EE, and
 - [Push threat feed updates](#push-threat-feed-updates)
 - [Block traffic to a cluster](#block-traffic-to-a-cluster)
 
-#### Pull threat feed updates 
+#### Pull threat feed updates
 
-To add threat feeds to Tigera Secure EE for automatic updates (default is once a day), the threat feed(s) must be available using HTTP(S), and return a newline-separated list of IP addresses or prefixes in CIDR notation. 
+To add threat feeds to Tigera Secure EE for automatic updates (default is once a day), the threat feed(s) must be available using HTTP(S), and return a newline-separated list of IP addresses or prefixes in CIDR notation.
 
-1. Create the GlobalThreatFeed YAML and save it to file.  
+1. Create the GlobalThreatFeed YAML and save it to file.
    The simplest example of this looks like the following. Replace the **name** and the **URL** with your feed.
 
    ```yaml
@@ -62,11 +62,11 @@ To add threat feeds to Tigera Secure EE for automatic updates (default is once a
      pull:
        http:
          url: https://my.threatfeed.com/blacklist
-   ```   
+   ```
 
 2. Add the global threat feed to the cluster.
 
-   ```shell  
+   ```shell
    kubectl apply -f <your_threatfeed_filename>
    ```
 
@@ -76,7 +76,7 @@ To add threat feeds to Tigera Secure EE for automatic updates (default is once a
 
 Use the push method if your threat feeds that are not in newline-delimited format and available over HTTP, or if you prefer to manually update threat feeds on your own schedule.
 
-1. Create the GlobalThreatFeed YAML and save it to file.  
+1. Create the GlobalThreatFeed YAML and save it to file.
    Replace the **name** field with your own name. The name is important in the later steps so make note of it.
 
    ```yaml
@@ -84,11 +84,11 @@ Use the push method if your threat feeds that are not in newline-delimited forma
    kind: GlobalThreatFeed
    metadata:
      name: my-threat-feed
-   ```  
-  
+   ```
+
 2. Add the global threat feed to the cluster.
-   
-   ```shell  
+
+   ```shell
    kubectl apply -f <your_threatfeed_filename>
    ```
 
@@ -122,10 +122,10 @@ spec:
     labels:
       security-action: block
 ```
-  
+
 1. Add the global threat feed to the cluster.
 
-   ```shell  
+   ```shell
    kubectl apply -f <your_threatfeed_filename>
    ```
 
@@ -146,18 +146,18 @@ spec:
        source:
          selector: security-action == 'block'
   ```
-  
+
 3. Add the global network policy to the cluster.
 
-   ```shell  
+   ```shell
    kubectl apply -f <your_policy_filename>
    ```
 
-### Tutorial 
+### Tutorial
 
 In this tutorial, we’ll walk through setting up a threat feed to search for connections to suspicious IPs. Then, we’ll use the same threat feed to block traffic to those IPs.
 
-We will use the free [FEODO botnet tracker](https://feodotracker.abuse.ch/) from abuse.ch that lists IP addresses associated with command and control servers. But the steps are the same for your commercial or internal threat feeds. 
+We will use the free [FEODO botnet tracker](https://feodotracker.abuse.ch/) from abuse.ch that lists IP addresses associated with command and control servers. But the steps are the same for your commercial or internal threat feeds.
 
 If you haven’t already adjusted your [aggregation flows](#before-you-begin), we recommend it before you start.
 
@@ -175,15 +175,15 @@ If you haven’t already adjusted your [aggregation flows](#before-you-begin), w
        http:
          url: https://feodotracker.abuse.ch/downloads/ipblocklist.txt
    ```
-  
-   This pulls updates using the default period of once per day. See the [Global Resource Threat Feed API]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalthreatfeed) for all configuration options.
+
+   This pulls updates using the default period of once per day. See the [Global Resource Threat Feed API]({{site.baseurl}}/{{page.version}}/reference/resources/globalthreatfeed) for all configuration options.
 
 2. Add the feed to your cluster.
 
-   ```shell  
+   ```shell
    kubectl apply -f feodo-tracker.yaml
    ```
-   
+
 #### Check search results
 
 Open Tigera Secure EE Manager, and navigate to the “Anomaly Detection” page. If any of your pods have been communicating with the IP addresses in the FEODO tracker feed, you will see the results listed on this page. It is normal to not see any events listed on this page.
@@ -219,8 +219,8 @@ In this demo, we will apply the policy only to a test workload (so we do not imp
    ```shell
    kubectl apply -f tf-ubuntu.yaml
    ```
-  
-3. Edit the feodo-tracker.yaml to include a globalNetworkSet stanza:  
+
+3. Edit the feodo-tracker.yaml to include a globalNetworkSet stanza:
 
    ```yaml
    apiVersion: projectcalico.org/v3
@@ -234,17 +234,17 @@ In this demo, we will apply the policy only to a test workload (so we do not imp
      globalNetworkSet:
        labels:
          docs.tigera.io/threatfeed: feodo
-   ```     
+   ```
 
 4. Reapply the new YAML.
 
-   ```shell  
+   ```shell
    kubectl apply -f feodo-tracker.yaml
    ```
 
 5. Verify that the GlobalNetworkSet is created.
 
-   ```shell  
+   ```shell
    kubectl get globalnetworksets threatfeed.feodo-tracker -o yaml
    ```
 
@@ -279,7 +279,7 @@ We will now apply a GlobalNetworkPolicy that blocks the test workload from conne
 
 #### Verify policy on test workload
 
-We will verify the policy from the test workload that we created earlier.  
+We will verify the policy from the test workload that we created earlier.
 
 1. Get a shell in the pod by executing
 
@@ -287,7 +287,7 @@ We will verify the policy from the test workload that we created earlier.
    kubectl exec -ti tf-ubuntu bash
    ```
 
-   You should get a prompt inside the pod.  
+   You should get a prompt inside the pod.
 
 2. Install the ping command.
 
@@ -301,9 +301,9 @@ We will verify the policy from the test workload that we created earlier.
    ping 8.8.8.8
    ```
 
-4. Open the [FEODO tracker list](https://feodotracker.abuse.ch/downloads/ipblocklist.txt) and choose an IP on the list to ping. 
+4. Open the [FEODO tracker list](https://feodotracker.abuse.ch/downloads/ipblocklist.txt) and choose an IP on the list to ping.
    You should not get connectivity, and the pings will show up as denied traffic in the flow logs.
 
 ### Above and beyond
 
-See [GlobalThreatFeed]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalthreatfeed) resource definition for all configuration options.
+See [GlobalThreatFeed]({{site.baseurl}}/{{page.version}}/reference/resources/globalthreatfeed) resource definition for all configuration options.

@@ -1,17 +1,20 @@
 ---
 title: Profile
-canonical_url: 'https://docs.projectcalico.org/v3.7/reference/calicoctl/resources/profile'
+canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/resources/profile
 ---
 
-Profiles provide a way to group multiple endpoints so that they inherit a shared set of labels. For historic reasons, Profiles can also include
-policy rules, but that feature is deprecated in favor of the much more
-flexible [NetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/resources/networkpolicy) and
-[GlobalNetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/resources/globalnetworkpolicy) resources.
+A profile resource (`Profile`) represents a set of rules which are applied
+to the individual endpoints to which this profile has been assigned.
 
 Each {{site.prodname}} endpoint or host endpoint can be assigned to zero or more profiles.
 
-For `calicoctl` [commands]({{site.baseurl}}/{{page.version}}/reference/calicoctl/) that specify a resource type on the CLI, the following
-aliases are supported (all case insensitive): `profile`, `profiles`, `pro`, `pros`.
+Also see the [NetworkPolicy]({{site.url}}/{{page.version}}/reference/resources/networkpolicy) and [GlobalNetworkPolicy]({{site.url}}/{{page.version}}/reference/resources/globalnetworkpolicy) which provide an alternate way to select what policy is applied to an endpoint.
+
+For `calicoctl` [commands]({{site.url}}/{{page.version}}/reference/calicoctl/), the following case-insensitive aliases
+may be used to specify the resource type on the CLI:
+`profile`, `profiles`, `pro`, `pros`.
+
+This resource is not supported in `kubectl`.
 
 ### Sample YAML
 
@@ -53,8 +56,8 @@ spec:
 
 | Field       | Description                 | Accepted Values   | Schema | Default    |
 |-------------|-----------------------------|-------------------|--------|------------|
-| ingress (deprecated) | The ingress rules belonging to this profile. | | List of [Rule](#rule) |
-| egress  (deprecated) | The egress rules belonging to this profile. | | List of [Rule](#rule)  |
+| ingress  | The ingress rules belonging to this profile. | | List of [Rule](#rule) |
+| egress   | The egress rules belonging to this profile. | | List of [Rule](#rule)  |
 | labelsToApply | An optional set of labels to apply to each endpoint in this profile (in addition to the endpoint's own labels) |  | map |
 
 #### Rule
@@ -84,7 +87,7 @@ spec:
 ### Application layer policy
 
 Application layer policy is an optional feature of {{site.prodname}} and
-[must be enabled]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/app-layer-policy)
+[must be enabled]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/app-layer-policy)
 in order to use the following match criteria.
 
 > **NOTE**: Application layer policy match criteria are supported with the following restrictions.

@@ -6,14 +6,14 @@ canonical_url: https://docs.tigera.io/v2.3/usage/logs/iptables
 ## About iptables logs
 
 iptables logs are produced by [policy audit mode](#policy-audit-mode) or by using the `Log` action in either
-[Network Policy](../../reference/calicoctl/resources/networkpolicy) or [Global Network Policy](../../reference/calicoctl/resources/globalnetworkpolicy).
+[Network Policy](../../reference/resources/networkpolicy) or [Global Network Policy](../../reference/resources/globalnetworkpolicy).
 These logs are written to syslog (specifically the `/dev/log` socket) on the nodes where the events are generated.
 Collection, rotation and other management of these logs is provided by your syslog agent, for example, journald or rsyslogd.
 
 ## Policy audit mode
 
 {{site.prodname}} adds a Felix option `DropActionOverride` that configures how the
-`deny` `action` in a [Rule](/{{page.version}}/reference/calicoctl/resources/networkpolicy#Rule) is interpreted.
+`deny` `action` in a [Rule](/{{page.version}}/reference/resources/networkpolicy#Rule) is interpreted.
 It can add logs for denied packets, or even allow the traffic through.
 
 See the
@@ -49,7 +49,7 @@ setting.  Specifically, if packets that would normally be denied are being
 allowed through by a setting of `Accept` or `LogAndAccept`, those packets
 still contribute to the denied packet metrics as normal.
 
-One way to configure `DropActionOverride`, would be to use the [calicoctl replace](/{{page.version}}/reference/calicoctl/commands/replace)
+One way to configure `DropActionOverride`, would be to use the [calicoctl replace](/{{page.version}}/reference/calicoctl/replace)
 command. For example, to set a `DropActionOverride` for `myhost` to log then drop denied packets:
 
 Get current felix configuration for the node and save it to a file.
