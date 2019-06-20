@@ -20,8 +20,8 @@ var (
 
 type VersionedTierResource interface {
 	VersionedResource
-	getV1Key() model.TierKey
-	getV1Tier() *model.Tier
+	GetCalicoV1Key() model.TierKey
+	GetCalicoV1Tier() *model.Tier
 }
 
 type CacheEntryTier struct {
@@ -46,22 +46,22 @@ type versionedCalicoTier struct {
 	v1 *model.Tier
 }
 
-func (v *versionedCalicoTier) getV3() resources.Resource {
+func (v *versionedCalicoTier) GetCalicoV3() resources.Resource {
 	return v.Tier
 }
 
-func (v *versionedCalicoTier) getV1() interface{} {
+func (v *versionedCalicoTier) GetCalicoV1() interface{} {
 	return v.v1
 }
 
-// getV1Key implements the VersionedPolicyResource interface.
-func (v *versionedCalicoTier) getV1Key() model.TierKey {
+// GetCalicoV1Key implements the VersionedPolicyResource interface.
+func (v *versionedCalicoTier) GetCalicoV1Key() model.TierKey {
 	return model.TierKey{
 		Name: v.Name,
 	}
 }
 
-func (v *versionedCalicoTier) getV1Tier() *model.Tier {
+func (v *versionedCalicoTier) GetCalicoV1Tier() *model.Tier {
 	return v.v1
 }
 

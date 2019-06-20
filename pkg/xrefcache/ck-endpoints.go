@@ -46,8 +46,8 @@ var (
 type VersionedEndpointResource interface {
 	VersionedResource
 	GetFlowLogAggregationName() string
-	getV1Labels() map[string]string
-	getV1Profiles() []string
+	GetCalicoV1Labels() map[string]string
+	GetCalicoV1Profiles() []string
 	getIPOrEndpointIDs() (set.Set, error)
 	getEnvoyEnabled(engine *endpointHandler) bool
 	getServiceAccount() *apiv3.ResourceID
@@ -129,23 +129,23 @@ func (v *versionedK8sPod) GetFlowLogAggregationName() string {
 	}
 }
 
-// getV3 implements the VersionedEndpointResource interface.
-func (v *versionedK8sPod) getV3() resources.Resource {
+// GetCalicoV3 implements the VersionedEndpointResource interface.
+func (v *versionedK8sPod) GetCalicoV3() resources.Resource {
 	return v.v3
 }
 
-// getV1 implements the VersionedEndpointResource interface.
-func (v *versionedK8sPod) getV1() interface{} {
+// getCalicoV1 implements the VersionedEndpointResource interface.
+func (v *versionedK8sPod) GetCalicoV1() interface{} {
 	return v.v1
 }
 
 // getLabels implements the VersionedEndpointResource interface.
-func (v *versionedK8sPod) getV1Labels() map[string]string {
+func (v *versionedK8sPod) GetCalicoV1Labels() map[string]string {
 	return v.v1.Labels
 }
 
 // getLabels implements the VersionedEndpointResource interface.
-func (v *versionedK8sPod) getV1Profiles() []string {
+func (v *versionedK8sPod) GetCalicoV1Profiles() []string {
 	return v.v1.ProfileIDs
 }
 
@@ -231,23 +231,23 @@ func (v *versionedCalicoHostEndpoint) GetFlowLogAggregationName() string {
 	return v.Spec.Node
 }
 
-// getV3 implements the VersionedEndpointResource interface.
-func (v *versionedCalicoHostEndpoint) getV3() resources.Resource {
+// GetCalicoV3 implements the VersionedEndpointResource interface.
+func (v *versionedCalicoHostEndpoint) GetCalicoV3() resources.Resource {
 	return v.HostEndpoint
 }
 
-// getV1 implements the VersionedEndpointResource interface.
-func (v *versionedCalicoHostEndpoint) getV1() interface{} {
+// getCalicoV1 implements the VersionedEndpointResource interface.
+func (v *versionedCalicoHostEndpoint) GetCalicoV1() interface{} {
 	return v.v1
 }
 
 // getLabels implements the VersionedEndpointResource interface.
-func (v *versionedCalicoHostEndpoint) getV1Labels() map[string]string {
+func (v *versionedCalicoHostEndpoint) GetCalicoV1Labels() map[string]string {
 	return v.v1.Labels
 }
 
 // getLabels implements the VersionedEndpointResource interface.
-func (v *versionedCalicoHostEndpoint) getV1Profiles() []string {
+func (v *versionedCalicoHostEndpoint) GetCalicoV1Profiles() []string {
 	return v.v1.ProfileIDs
 }
 
@@ -428,11 +428,11 @@ func (c *endpointHandler) resourceAdded(id apiv3.ResourceID, entry CacheEntry) {
 func (c *endpointHandler) resourceUpdated(id apiv3.ResourceID, entry CacheEntry, prev VersionedResource) {
 	x := entry.(*CacheEntryEndpoint)
 
-	x.clog.Debugf("Configuring profiles: %v", x.getV1Profiles())
+	x.clog.Debugf("Configuring profiles: %v", x.GetCalicoV1Profiles())
 
 	// Update the labels associated with this pod. Use the labels and profile from the v1 model since these are
 	// modified to include namespace and service account details.
-	c.EndpointLabelSelector().UpdateLabels(id, x.getV1Labels(), x.getV1Profiles())
+	c.EndpointLabelSelector().UpdateLabels(id, x.GetCalicoV1Labels(), x.GetCalicoV1Profiles())
 
 	// Update the IP manager with the entries updated IP addresses or if the IP address is unknown the endpoint ID.
 	i, err := x.getIPOrEndpointIDs()

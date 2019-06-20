@@ -25,8 +25,8 @@ var (
 // helper methods.
 type VersionedNetworkSetResource interface {
 	VersionedResource
-	getV1NetworkSet() *model.NetworkSet
-	isNamespaced() bool
+	GetCalicoV1NetworkSet() *model.NetworkSet
+	IsNamespaced() bool
 }
 
 // CacheEntryNetworkSet is a cache entry in the network set cache. Each entry implements the CacheEntry
@@ -62,23 +62,23 @@ type versionedCalicoGlobalNetworkSet struct {
 	v1 *model.NetworkSet
 }
 
-// getV3 implements the VersionedNetworkSetResource interface.
-func (v *versionedCalicoGlobalNetworkSet) getV3() resources.Resource {
+// GetCalicoV3 implements the VersionedNetworkSetResource interface.
+func (v *versionedCalicoGlobalNetworkSet) GetCalicoV3() resources.Resource {
 	return v.GlobalNetworkSet
 }
 
-// getV1 implements the VersionedNetworkSetResource interface.
-func (v *versionedCalicoGlobalNetworkSet) getV1() interface{} {
+// getCalicoV1 implements the VersionedNetworkSetResource interface.
+func (v *versionedCalicoGlobalNetworkSet) GetCalicoV1() interface{} {
 	return v.v1
 }
 
-// getV1NetworkSet implements the VersionedNetworkSetResource interface.
-func (v *versionedCalicoGlobalNetworkSet) getV1NetworkSet() *model.NetworkSet {
+// GetCalicoV1NetworkSet implements the VersionedNetworkSetResource interface.
+func (v *versionedCalicoGlobalNetworkSet) GetCalicoV1NetworkSet() *model.NetworkSet {
 	return v.v1
 }
 
-// isNamespaced implements the VersionedNetworkSetResource interface.
-func (v *versionedCalicoGlobalNetworkSet) isNamespaced() bool {
+// IsNamespaced implements the VersionedNetworkSetResource interface.
+func (v *versionedCalicoGlobalNetworkSet) IsNamespaced() bool {
 	return false
 }
 
@@ -125,7 +125,7 @@ func (c *networkSetHandler) resourceUpdated(id apiv3.ResourceID, entry CacheEntr
 
 	// Update the labels for this network set. Always update the labels first so that each cache can get a view of the
 	// links before we start sending updates.
-	c.NetworkSetLabelSelector().UpdateLabels(id, x.getV1NetworkSet().Labels, nil)
+	c.NetworkSetLabelSelector().UpdateLabels(id, x.GetCalicoV1NetworkSet().Labels, nil)
 }
 
 // resourceDeleted implements the resourceHandler interface.
@@ -170,7 +170,7 @@ func (c *networkSetHandler) scanNets(x *CacheEntryNetworkSet) syncer.UpdateType 
 	old := x.Flags
 	// Toggle the InternetAddressExposed flag
 	x.Flags &^= CacheEntryInternetExposed
-	if internet.NetsContainInternetAddr(x.getV1NetworkSet().Nets) {
+	if internet.NetsContainInternetAddr(x.GetCalicoV1NetworkSet().Nets) {
 		x.Flags |= CacheEntryInternetExposed
 	}
 

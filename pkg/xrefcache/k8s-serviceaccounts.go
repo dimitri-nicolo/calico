@@ -26,8 +26,8 @@ var (
 // ServiceAccounts.
 type VersionedServiceAccountResource interface {
 	VersionedResource
-	getV1Profile() *model.Profile
-	getV3Profile() *apiv3.Profile
+	GetCalicoV1Profile() *model.Profile
+	GetCalicoV3Profile() *apiv3.Profile
 }
 
 // CacheEntryServiceAccount implements the CacheEntry interface, and is what we stored in the ServiceAccounts cache.
@@ -56,23 +56,23 @@ type versionedK8sServiceAccount struct {
 	v1 *model.Profile
 }
 
-// getV3 implements the VersionedServiceAccountResource interface.
-func (v *versionedK8sServiceAccount) getV3() resources.Resource {
+// GetCalicoV3 implements the VersionedServiceAccountResource interface.
+func (v *versionedK8sServiceAccount) GetCalicoV3() resources.Resource {
 	return v.v3
 }
 
-// getV1 implements the VersionedServiceAccountResource interface.
-func (v *versionedK8sServiceAccount) getV1() interface{} {
+// getCalicoV1 implements the VersionedServiceAccountResource interface.
+func (v *versionedK8sServiceAccount) GetCalicoV1() interface{} {
 	return v.v1
 }
 
-// getV1Profile implements the VersionedServiceAccountResource interface.
-func (v *versionedK8sServiceAccount) getV1Profile() *model.Profile {
+// GetCalicoV1Profile implements the VersionedServiceAccountResource interface.
+func (v *versionedK8sServiceAccount) GetCalicoV1Profile() *model.Profile {
 	return v.v1
 }
 
-// getV3Profile implements the VersionedServiceAccountResource interface.
-func (v *versionedK8sServiceAccount) getV3Profile() *apiv3.Profile {
+// GetCalicoV3Profile implements the VersionedServiceAccountResource interface.
+func (v *versionedK8sServiceAccount) GetCalicoV3Profile() *apiv3.Profile {
 	return v.v3
 }
 
@@ -134,8 +134,8 @@ func (c *serviceAccountHandler) resourceUpdated(id apiv3.ResourceID, entry Cache
 	// Kubernetes service accounts are configured as Calico profiles. Use the V3 version of the name and the V1 version
 	// of the labels since they will have been modified to match the selector modifications in the pod.
 	x := entry.(*CacheEntryServiceAccount)
-	logrus.Debugf("Configure profile %s with labels %v", x.getV3Profile().Name, x.getV1Profile().Labels)
-	c.EndpointLabelSelector().UpdateParentLabels(x.getV3Profile().Name, x.getV1Profile().Labels)
+	logrus.Debugf("Configure profile %s with labels %v", x.GetCalicoV3Profile().Name, x.GetCalicoV1Profile().Labels)
+	c.EndpointLabelSelector().UpdateParentLabels(x.GetCalicoV3Profile().Name, x.GetCalicoV1Profile().Labels)
 }
 
 // resourceDeleted implements the resourceHandler.
@@ -143,7 +143,7 @@ func (c *serviceAccountHandler) resourceDeleted(id apiv3.ResourceID, entry Cache
 	// Kubernetes service accounts are configured as Calico profiles. Use the V3 version of the name since it will have
 	// been modified to match the selector modifications in the pod.
 	x := entry.(*CacheEntryServiceAccount)
-	c.EndpointLabelSelector().DeleteParentLabels(x.getV3Profile().Name)
+	c.EndpointLabelSelector().DeleteParentLabels(x.GetCalicoV3Profile().Name)
 }
 
 // recalculate implements the resourceHandler interface.

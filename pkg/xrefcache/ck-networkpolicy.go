@@ -33,11 +33,11 @@ var (
 // helper methods.
 type VersionedPolicyResource interface {
 	VersionedResource
-	getV1Key() model.PolicyKey
-	getV1Policy() *model.Policy
-	getV3IngressRules() []apiv3.Rule
-	getV3EgressRules() []apiv3.Rule
-	isNamespaced() bool
+	GetCalicoV1Key() model.PolicyKey
+	GetCalicoV1Policy() *model.Policy
+	GetCalicoV3IngressRules() []apiv3.Rule
+	GetCalicoV3EgressRules() []apiv3.Rule
+	IsNamespaced() bool
 }
 
 // CacheEntryNetworkPolicy is a cache entry in the NetworkPolicy cache. Each entry implements the CacheEntry
@@ -77,41 +77,41 @@ type versionedCalicoNetworkPolicy struct {
 	v1 *model.Policy
 }
 
-// getV3 implements the VersionedPolicyResource interface.
-func (v *versionedCalicoNetworkPolicy) getV3() resources.Resource {
+// GetCalicoV3 implements the VersionedPolicyResource interface.
+func (v *versionedCalicoNetworkPolicy) GetCalicoV3() resources.Resource {
 	return v.NetworkPolicy
 }
 
-// getV3IngressRules implements the VersionedPolicyResource interface.
-func (v *versionedCalicoNetworkPolicy) getV3IngressRules() []apiv3.Rule {
+// GetCalicoV3IngressRules implements the VersionedPolicyResource interface.
+func (v *versionedCalicoNetworkPolicy) GetCalicoV3IngressRules() []apiv3.Rule {
 	return v.NetworkPolicy.Spec.Ingress
 }
 
-// getV3EgressRules implements the VersionedPolicyResource interface.
-func (v *versionedCalicoNetworkPolicy) getV3EgressRules() []apiv3.Rule {
+// GetCalicoV3EgressRules implements the VersionedPolicyResource interface.
+func (v *versionedCalicoNetworkPolicy) GetCalicoV3EgressRules() []apiv3.Rule {
 	return v.NetworkPolicy.Spec.Egress
 }
 
-// getV1 implements the VersionedPolicyResource interface.
-func (v *versionedCalicoNetworkPolicy) getV1() interface{} {
+// getCalicoV1 implements the VersionedPolicyResource interface.
+func (v *versionedCalicoNetworkPolicy) GetCalicoV1() interface{} {
 	return v.v1
 }
 
-// getV1Key implements the VersionedPolicyResource interface.
-func (v *versionedCalicoNetworkPolicy) getV1Key() model.PolicyKey {
+// GetCalicoV1Key implements the VersionedPolicyResource interface.
+func (v *versionedCalicoNetworkPolicy) GetCalicoV1Key() model.PolicyKey {
 	return model.PolicyKey{
 		Name: v.Namespace + "/" + v.Name,
 		Tier: v.Spec.Tier,
 	}
 }
 
-// getV1Policy implements the VersionedPolicyResource interface.
-func (v *versionedCalicoNetworkPolicy) getV1Policy() *model.Policy {
+// GetCalicoV1Policy implements the VersionedPolicyResource interface.
+func (v *versionedCalicoNetworkPolicy) GetCalicoV1Policy() *model.Policy {
 	return v.v1
 }
 
-// isNamespaced implements the VersionedPolicyResource interface.
-func (v *versionedCalicoNetworkPolicy) isNamespaced() bool {
+// IsNamespaced implements the VersionedPolicyResource interface.
+func (v *versionedCalicoNetworkPolicy) IsNamespaced() bool {
 	return true
 }
 
@@ -121,41 +121,41 @@ type versionedCalicoGlobalNetworkPolicy struct {
 	v1 *model.Policy
 }
 
-// getV3 implements the VersionedPolicyResource interface.
-func (v *versionedCalicoGlobalNetworkPolicy) getV3() resources.Resource {
+// GetCalicoV3 implements the VersionedPolicyResource interface.
+func (v *versionedCalicoGlobalNetworkPolicy) GetCalicoV3() resources.Resource {
 	return v.GlobalNetworkPolicy
 }
 
-// getV3IngressRules implements the VersionedPolicyResource interface.
-func (v *versionedCalicoGlobalNetworkPolicy) getV3IngressRules() []apiv3.Rule {
+// GetCalicoV3IngressRules implements the VersionedPolicyResource interface.
+func (v *versionedCalicoGlobalNetworkPolicy) GetCalicoV3IngressRules() []apiv3.Rule {
 	return v.GlobalNetworkPolicy.Spec.Ingress
 }
 
-// getV3EgressRules implements the VersionedPolicyResource interface.
-func (v *versionedCalicoGlobalNetworkPolicy) getV3EgressRules() []apiv3.Rule {
+// GetCalicoV3EgressRules implements the VersionedPolicyResource interface.
+func (v *versionedCalicoGlobalNetworkPolicy) GetCalicoV3EgressRules() []apiv3.Rule {
 	return v.GlobalNetworkPolicy.Spec.Egress
 }
 
-// getV1 implements the VersionedPolicyResource interface.
-func (v *versionedCalicoGlobalNetworkPolicy) getV1() interface{} {
+// getCalicoV1 implements the VersionedPolicyResource interface.
+func (v *versionedCalicoGlobalNetworkPolicy) GetCalicoV1() interface{} {
 	return v.v1
 }
 
-// getV1Key implements the VersionedPolicyResource interface.
-func (v *versionedCalicoGlobalNetworkPolicy) getV1Key() model.PolicyKey {
+// GetCalicoV1Key implements the VersionedPolicyResource interface.
+func (v *versionedCalicoGlobalNetworkPolicy) GetCalicoV1Key() model.PolicyKey {
 	return model.PolicyKey{
 		Name: v.Name,
 		Tier: v.Spec.Tier,
 	}
 }
 
-// getV1Policy implements the VersionedPolicyResource interface.
-func (v *versionedCalicoGlobalNetworkPolicy) getV1Policy() *model.Policy {
+// GetCalicoV1Policy implements the VersionedPolicyResource interface.
+func (v *versionedCalicoGlobalNetworkPolicy) GetCalicoV1Policy() *model.Policy {
 	return v.v1
 }
 
-// isNamespaced implements the VersionedPolicyResource interface.
-func (v *versionedCalicoGlobalNetworkPolicy) isNamespaced() bool {
+// IsNamespaced implements the VersionedPolicyResource interface.
+func (v *versionedCalicoGlobalNetworkPolicy) IsNamespaced() bool {
 	return false
 }
 
@@ -166,41 +166,41 @@ type versionedK8sNetworkPolicy struct {
 	v1 *model.Policy
 }
 
-// getV3 implements the VersionedPolicyResource interface.
-func (v *versionedK8sNetworkPolicy) getV3() resources.Resource {
+// GetCalicoV3 implements the VersionedPolicyResource interface.
+func (v *versionedK8sNetworkPolicy) GetCalicoV3() resources.Resource {
 	return v.v3
 }
 
-// getV3IngressRules implements the VersionedPolicyResource interface.
-func (v *versionedK8sNetworkPolicy) getV3IngressRules() []apiv3.Rule {
+// GetCalicoV3IngressRules implements the VersionedPolicyResource interface.
+func (v *versionedK8sNetworkPolicy) GetCalicoV3IngressRules() []apiv3.Rule {
 	return v.v3.Spec.Ingress
 }
 
-// getV3EgressRules implements the VersionedPolicyResource interface.
-func (v *versionedK8sNetworkPolicy) getV3EgressRules() []apiv3.Rule {
+// GetCalicoV3EgressRules implements the VersionedPolicyResource interface.
+func (v *versionedK8sNetworkPolicy) GetCalicoV3EgressRules() []apiv3.Rule {
 	return v.v3.Spec.Egress
 }
 
-// getV1 implements the VersionedPolicyResource interface.
-func (v *versionedK8sNetworkPolicy) getV1() interface{} {
+// getCalicoV1 implements the VersionedPolicyResource interface.
+func (v *versionedK8sNetworkPolicy) GetCalicoV1() interface{} {
 	return v.v1
 }
 
-// getV1Key implements the VersionedPolicyResource interface.
-func (v *versionedK8sNetworkPolicy) getV1Key() model.PolicyKey {
+// GetCalicoV1Key implements the VersionedPolicyResource interface.
+func (v *versionedK8sNetworkPolicy) GetCalicoV1Key() model.PolicyKey {
 	return model.PolicyKey{
 		Name: v.Namespace + "/" + v.v3.Name,
 		Tier: "default",
 	}
 }
 
-// getV1Policy implements the VersionedPolicyResource interface.
-func (v *versionedK8sNetworkPolicy) getV1Policy() *model.Policy {
+// GetCalicoV1Policy implements the VersionedPolicyResource interface.
+func (v *versionedK8sNetworkPolicy) GetCalicoV1Policy() *model.Policy {
 	return v.v1
 }
 
-// isNamespaced implements the VersionedPolicyResource interface.
-func (v *versionedK8sNetworkPolicy) isNamespaced() bool {
+// IsNamespaced implements the VersionedPolicyResource interface.
+func (v *versionedK8sNetworkPolicy) IsNamespaced() bool {
 	return true
 }
 
@@ -265,7 +265,7 @@ func (c *networkPolicyHandler) resourceUpdated(id apiv3.ResourceID, entry CacheE
 
 	// Update the label selector for this policy. This may result in callbacks that will update the links between the
 	// policy and the selected endpoints.
-	c.EndpointLabelSelector().UpdateSelector(id, x.getV1Policy().Selector)
+	c.EndpointLabelSelector().UpdateSelector(id, x.GetCalicoV1Policy().Selector)
 
 	// Update the label selectors for the policy rules.
 	c.updateRuleSelectors(id, x)
@@ -353,8 +353,8 @@ func (c *networkPolicyHandler) updateRuleSelectors(id apiv3.ResourceID, x *Cache
 
 	// Loop through the rules to check if exposed to another namespace. This is determined by checking allow rules to
 	// see if any Namespace newSelectors have been specified.
-	ingressV3 := x.getV3IngressRules()
-	ingressV1 := x.getV1Policy().InboundRules
+	ingressV3 := x.GetCalicoV3IngressRules()
+	ingressV1 := x.GetCalicoV1Policy().InboundRules
 
 	for i, irV3 := range ingressV3 {
 		if irV3.Action == apiv3.Allow && ingressV1[i].SrcSelector != "" {
@@ -362,8 +362,8 @@ func (c *networkPolicyHandler) updateRuleSelectors(id apiv3.ResourceID, x *Cache
 		}
 	}
 
-	egressV3 := x.getV3EgressRules()
-	egressV1 := x.getV1Policy().OutboundRules
+	egressV3 := x.GetCalicoV3EgressRules()
+	egressV1 := x.GetCalicoV1Policy().OutboundRules
 
 	for i, erV3 := range egressV3 {
 		if erV3.Action == apiv3.Allow && egressV1[i].DstSelector != "" {
@@ -384,8 +384,8 @@ func (c *networkPolicyHandler) scanIngressRules(x *CacheEntryNetworkPolicy) sync
 
 	// Loop through the rules to check if exposed to another namespace. This is determined by checking allow rules to
 	// see if any Namespace selectors have been specified.
-	ingressV3 := x.getV3IngressRules()
-	ingressV1 := x.getV1Policy().InboundRules
+	ingressV3 := x.GetCalicoV3IngressRules()
+	ingressV1 := x.GetCalicoV1Policy().InboundRules
 
 	for i, irV3 := range ingressV3 {
 		// Only allow rules can impact our exposure.
@@ -405,7 +405,7 @@ func (c *networkPolicyHandler) scanIngressRules(x *CacheEntryNetworkPolicy) sync
 			// Use the v3 settings to check if there is a NamespaceSelector specified. It is hard to do this with the v1
 			// settings since the selectors are munged together.
 			x.clog.Debugf("Checking if exposed to other namespace")
-			if !x.isNamespaced() || irV3.Source.NamespaceSelector != "" {
+			if !x.IsNamespaced() || irV3.Source.NamespaceSelector != "" {
 				x.clog.Debugf("Policy is not namespaced, or namespace selector is configured")
 				if len(irV1.SrcNets) == 0 {
 					x.clog.Debugf("Not matching on nets, therefore exposed to other namespaces")
@@ -458,8 +458,8 @@ func (c *networkPolicyHandler) scanEgressRules(x *CacheEntryNetworkPolicy) synce
 
 	// Loop through the rules to check if exposed to another namespace. This is determined by checking allow rules to
 	// see if any Namespace selectors have been specified.
-	egressV3 := x.getV3EgressRules()
-	egressV1 := x.getV1Policy().OutboundRules
+	egressV3 := x.GetCalicoV3EgressRules()
+	egressV1 := x.GetCalicoV1Policy().OutboundRules
 
 	for i, erV3 := range egressV3 {
 		// Only allow rules can impact our exposure.
@@ -479,7 +479,7 @@ func (c *networkPolicyHandler) scanEgressRules(x *CacheEntryNetworkPolicy) synce
 			// Use the v3 settings to check if there is a NamespaceSelector specified. It is hard to do this with the v1
 			// settings since the selectors are munged together.
 			x.clog.Debugf("Checking if exposed to other namespace")
-			if !x.isNamespaced() || erV3.Destination.NamespaceSelector != "" {
+			if !x.IsNamespaced() || erV3.Destination.NamespaceSelector != "" {
 				x.clog.Debugf("Policy is not namespaced, or namespace selector is configured")
 				if len(erV1.DstNets) == 0 {
 					x.clog.Debugf("Not matching on nets, therefore exposed to other namespaces")
@@ -532,7 +532,7 @@ func (c *networkPolicyHandler) scanProtected(id apiv3.ResourceID, x *CacheEntryN
 	// protected. Assume both are unprotected unless we determine otherwise.
 	x.Flags &^= CacheEntryProtectedEgress | CacheEntryProtectedIngress
 
-	for _, t := range x.getV1Policy().Types {
+	for _, t := range x.GetCalicoV1Policy().Types {
 		switch strings.ToLower(t) {
 		case "ingress":
 			x.clog.Debug("Flagging as ingress protected")
