@@ -218,15 +218,19 @@ fv:
 # CLEAN UP 
 ##########################################################################################
 .PHONY: clean
-clean: clean-bin clean-build-image
+clean: clean-bin clean-build-image clean-docker-image-templates
 
 clean-build-image:
-	docker rmi -f $(BUILD_IMAGES) > /dev/null 2>&1 || true
+	# Remove all variations e.g. tigera/voltron:latest + tigera/voltron:latest-amd64
+	docker rmi -f $(BUILD_IMAGES) $(addsuffix :latest-$(ARCH), $(BUILD_IMAGES)) > /dev/null 2>&1 || true
 
 clean-bin:
 	rm -rf $(BINDIR) \
 			docker-image/bin
 
+clean-docker-image-templates: 
+	rm -rf docker-image/templates
+	
 ###############################################################################
 # Static checks
 ###############################################################################
@@ -259,6 +263,8 @@ ci: clean test
 #############################################
 cd: clean images deploy
 deploy: $(addprefix deploy-, $(BUILD_IMAGES))
+# FIXME: This doesn't work (cannot have % with / in it) 
+# https://stackoverflow.com/questions/21182990/makefile-is-it-possible-to-have-stem-with-slash
 deploy-%:
 	docker tag $*:latest gcr.io/tigera-dev/cnx/$*:latest
 	gcloud docker -- push gcr.io/tigera-dev/cnx/$*:latest

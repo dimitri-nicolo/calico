@@ -21,5 +21,8 @@ go.sum
 cmd/guardian/debug
 cmd/voltron/debug
 
+# Docker image folders 
+docker-image/templates
+
 # Testing
 *.coverprofile
