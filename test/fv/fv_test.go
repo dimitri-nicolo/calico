@@ -100,9 +100,10 @@ func (s *testServer) handler(w http.ResponseWriter, r *http.Request) {
 
 var _ = Describe("Voltron-Guardian interaction", func() {
 	var (
-		voltron  *server.Server
-		lisHTTP2 net.Listener
-		lisTun   net.Listener
+		voltron   *server.Server
+		lisHTTP11 net.Listener
+		lisHTTP2  net.Listener
+		lisTun    net.Listener
 
 		guardian  *client.Client
 		guardian2 *client.Client
@@ -165,10 +166,14 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 
 		xcert, _ := tls.X509KeyPair(cert, key)
 
+		lisHTTP11, err = net.Listen("tcp", "localhost:0")
+		Expect(err).NotTo(HaveOccurred())
+
 		lisHTTP2, err = tls.Listen("tcp", "localhost:0", &tls.Config{
 			Certificates: []tls.Certificate{xcert},
 			NextProtos:   []string{"h2"},
 		})
+		Expect(err).NotTo(HaveOccurred())
 
 		lisTun, err = net.Listen("tcp", "localhost:0")
 		Expect(err).NotTo(HaveOccurred())
@@ -178,6 +183,12 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 			server.WithTunnelCreds(srvCert, srvPrivKey),
 		)
 		Expect(err).NotTo(HaveOccurred())
+
+		wgSrvCnlt.Add(1)
+		go func() {
+			defer wgSrvCnlt.Done()
+			voltron.ServeHTTP(lisHTTP11)
+		}()
 
 		wgSrvCnlt.Add(1)
 		go func() {
@@ -262,16 +273,29 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	It("should be possible to reach the test server", func() {
+	It("should be possible to reach the test server on http2", func() {
 		msg, err := ui.doRequest(clusterID)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(msg).To(Equal(ts.msg))
 	})
 
-	It("should be possible to reach the other test server", func() {
+	It("should be possible to reach the other test server on http2", func() {
 		msg, err := ui.doRequest(clusterID2)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(msg).To(Equal(ts2.msg))
+	})
+
+	It("should be possible to reach the test server on http", func() {
+		req, err := http.NewRequest("GET", "http://"+lisHTTP11.Addr().String()+"/some/path",
+			strings.NewReader("HELLO"))
+		Expect(err).NotTo(HaveOccurred())
+
+		req.Header[server.ClusterHeaderField] = []string{clusterID}
+		Expect(err).NotTo(HaveOccurred())
+		resp, err := http.DefaultClient.Do(req)
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(resp.StatusCode).To(Equal(200))
 	})
 
 	It("should clean up", func(done Done) {
@@ -298,6 +322,7 @@ func newTestServer(msg string) *testServer {
 		http: &http.Server{
 			TLSConfig: &tls.Config{
 				Certificates: []tls.Certificate{xcert},
+				NextProtos:   []string{"h2"},
 			},
 			Handler: mux,
 		},
