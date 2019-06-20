@@ -64,6 +64,12 @@ var _ = Describe("DNS Policy", func() {
 		saveFileMappedOutsideContainer = true
 	})
 
+	wgetMicrosoftErr := func() error {
+		out, err := w[0].ExecOutput("wget", "-T", "10", "microsoft.com")
+		log.WithError(err).Infof("wget said:\n%v", out)
+		return err
+	}
+
 	Context("with save file in initially non-existent directory", func() {
 		BeforeEach(func() {
 			saveFile = "/a/b/c/d/e/dnsinfo.txt"
@@ -71,9 +77,7 @@ var _ = Describe("DNS Policy", func() {
 		})
 
 		It("can wget microsoft.com", func() {
-			out, err := w[0].ExecOutput("wget", "-T", "10", "microsoft.com")
-			log.WithError(err).Infof("wget said:\n%v", out)
-			Expect(err).NotTo(HaveOccurred())
+			Eventually(wgetMicrosoftErr, "5s", "1s").ShouldNot(HaveOccurred())
 		})
 	})
 
@@ -132,9 +136,7 @@ var _ = Describe("DNS Policy", func() {
 	})
 
 	It("can wget microsoft.com", func() {
-		out, err := w[0].ExecOutput("wget", "-T", "10", "microsoft.com")
-		log.WithError(err).Infof("wget said:\n%v", out)
-		Expect(err).NotTo(HaveOccurred())
+		Eventually(wgetMicrosoftErr, "5s", "1s").ShouldNot(HaveOccurred())
 	})
 
 	Context("with default-deny egress policy", func() {
@@ -150,9 +152,7 @@ var _ = Describe("DNS Policy", func() {
 		})
 
 		It("cannot wget microsoft.com", func() {
-			out, err := w[0].ExecOutput("wget", "-T", "10", "microsoft.com")
-			log.WithError(err).Infof("wget said:\n%v", out)
-			Expect(err).To(HaveOccurred())
+			Eventually(wgetMicrosoftErr, "5s", "1s").Should(HaveOccurred())
 		})
 
 		Context("with domain-allow egress policy", func() {
@@ -189,9 +189,7 @@ var _ = Describe("DNS Policy", func() {
 			})
 
 			It("can wget microsoft.com", func() {
-				out, err := w[0].ExecOutput("wget", "-T", "10", "microsoft.com")
-				log.WithError(err).Infof("wget said:\n%v", out)
-				Expect(err).NotTo(HaveOccurred())
+				Eventually(wgetMicrosoftErr, "5s", "1s").ShouldNot(HaveOccurred())
 			})
 		})
 
@@ -238,9 +236,7 @@ var _ = Describe("DNS Policy", func() {
 			})
 
 			It("can wget microsoft.com", func() {
-				out, err := w[0].ExecOutput("wget", "-T", "10", "microsoft.com")
-				log.WithError(err).Infof("wget said:\n%v", out)
-				Expect(err).NotTo(HaveOccurred())
+				Eventually(wgetMicrosoftErr, "5s", "1s").ShouldNot(HaveOccurred())
 			})
 
 			It("handles a domain set update", func() {
@@ -255,9 +251,7 @@ var _ = Describe("DNS Policy", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				time.Sleep(2 * time.Second)
-				out, err := w[0].ExecOutput("wget", "-T", "10", "microsoft.com")
-				log.WithError(err).Infof("wget said:\n%v", out)
-				Expect(err).NotTo(HaveOccurred())
+				Eventually(wgetMicrosoftErr, "5s", "1s").ShouldNot(HaveOccurred())
 			})
 		})
 	})
