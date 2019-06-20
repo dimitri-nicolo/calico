@@ -157,8 +157,10 @@ all: images
 
 $(COMPONENTS): %: $(BINDIR)/% ;
 
+.PRECIOUS:$(BINDIR)/%-$(ARCH)
+
 $(BINDIR)/%: $(BINDIR)/%-$(ARCH)
-	rm -f $@; ln -s $< $@
+	rm -f $@; ln -s $*-$(ARCH) $@
 
 $(BINDIR)/%-$(ARCH): $(GO_FILES)
 ifndef RELEASE_BUILD
