@@ -12,8 +12,6 @@ import (
 	"github.com/tigera/compliance/pkg/syncer"
 	"github.com/tigera/compliance/pkg/xrefcache"
 	"github.com/tigera/es-proxy/pkg/pip/flow"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type pip struct {
@@ -136,12 +134,4 @@ func (s *pip) loadInitialPolicy() error {
 func buildSelector(npcs []NetworkPolicyChange) string {
 	// TODO: loop through policy change, create a set, and union the results in this format: "() | () | ()"
 	return "all()"
-}
-
-//Because... where does this come from ?
-type DummySource struct {
-}
-
-func (d *DummySource) RetrieveList(kind metav1.TypeMeta) (*list.TimestampedResourceList, error) {
-	return &list.TimestampedResourceList{}, nil
 }

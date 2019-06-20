@@ -10,6 +10,8 @@ import (
 	"os"
 	"sync"
 
+	"github.com/tigera/es-proxy/pkg/pip/datastore"
+
 	"github.com/tigera/es-proxy/pkg/pip/installer"
 
 	log "github.com/sirupsen/logrus"
@@ -50,11 +52,15 @@ func Start(config *Config) error {
 	}
 	rootProxy := handler.NewProxy(pc)
 
-	//install pip middleware and mutator
-	proxy := installer.InstallPolicyImpactPreview(rootProxy)
-
 	k8sClient, k8sConfig := getKubernetestClientAndConfig()
 	k8sAuth := middleware.NewK8sAuth(k8sClient, k8sConfig)
+
+	//install pip middleware and mutator
+	pipClient, err := datastore.GetClientSet(k8sConfig)
+	if err != nil {
+		log.WithError(err).Fatal("could not initialize pip client")
+	}
+	proxy := installer.InstallPolicyImpactPreview(pipClient, rootProxy)
 
 	sm.Handle("/version", http.HandlerFunc(handler.VersionHandler))
 

@@ -3,6 +3,8 @@ package installer
 import (
 	"net/http"
 
+	"github.com/tigera/es-proxy/pkg/pip/datastore"
+
 	"github.com/tigera/es-proxy/pkg/middleware"
 	"github.com/tigera/es-proxy/pkg/pip"
 
@@ -20,10 +22,8 @@ import (
 // to call the primary PIP calculation and then replace the flow data
 // destined for the client with the modified flow data returned from the
 // PIP calculation
-func InstallPolicyImpactPreview(proxy *handler.Proxy) http.Handler {
-
+func InstallPolicyImpactPreview(listSrc datastore.ClientSet, proxy *handler.Proxy) http.Handler {
 	//hook up the pip response modifier
-	listSrc := &pip.DummySource{} //TODO: list will come from somewhere, maybe passed in
 	p := pip.New(listSrc)
 	piphook := mutator.NewPIPResponseHook(p)
 	proxy.AddResponseModifier(piphook.ModifyResponse)

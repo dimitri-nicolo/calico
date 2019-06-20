@@ -8,9 +8,13 @@ replace (
 )
 
 require (
+	github.com/emicklei/go-restful v2.9.6+incompatible // indirect
+	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/go-openapi/spec v0.19.0 // indirect
+	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b // indirect
 	github.com/google/gofuzz v1.0.0 // indirect
 	github.com/googleapis/gnostic v0.2.0 // indirect
+	github.com/howeyc/gopass v0.0.0-20170109162249-bf9dde6d0d2c // indirect
 	github.com/imdario/mergo v0.3.8-0.20190531063913-f757d8626a73 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0 // indirect
 	github.com/onsi/ginkgo v1.8.0
