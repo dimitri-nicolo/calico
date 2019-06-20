@@ -37,3 +37,4 @@ import:
   repo: git@github.com:tigera/libcalico-go-private.git
   vcs: git
 - package: github.com/spf13/cobra
+- package: github.com/aquasecurity/kube-bench

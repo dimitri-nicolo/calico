@@ -18,6 +18,7 @@ import (
 
 func newArchivedReportData(reportName, reportTypeName string) *report.ArchivedReportData {
 	return &report.ArchivedReportData{
+		UISummary: "hello-100-goodbye",
 		ReportData: &calicov3.ReportData{
 			ReportName:     reportName,
 			ReportTypeName: reportTypeName,
@@ -92,14 +93,12 @@ var _ = Describe("List tests with Gettable Report and ReportType", func() {
 		By("Running a list query")
 		t.list(http.StatusOK, []server.Report{
 			{
-				Id:        reportGetTypeGet.UID(),
-				Name:      reportGetTypeGet.ReportName,
-				Type:      reportGetTypeGet.ReportTypeName,
-				StartTime: now,
-				EndTime:   nowPlusHour,
-				UISummary: map[string]interface{}{
-					"foobar": "hello-100-goodbye",
-				},
+				Id:          reportGetTypeGet.UID(),
+				Name:        reportGetTypeGet.ReportName,
+				Type:        reportGetTypeGet.ReportTypeName,
+				StartTime:   now,
+				EndTime:     nowPlusHour,
+				UISummary:   "hello-100-goodbye",
 				DownloadURL: "/compliance/reports/" + reportGetTypeGet.UID() + "/download",
 				DownloadFormats: []server.Format{
 					{
@@ -114,14 +113,12 @@ var _ = Describe("List tests with Gettable Report and ReportType", func() {
 				GenerationTime: now,
 			},
 			{
-				Id:        reportGetTypeNoGet.UID(),
-				Name:      reportGetTypeNoGet.ReportName,
-				Type:      reportGetTypeNoGet.ReportTypeName,
-				StartTime: now,
-				EndTime:   nowPlusHour,
-				UISummary: map[string]interface{}{
-					"foobar": "hello-100-goodbye",
-				},
+				Id:              reportGetTypeNoGet.UID(),
+				Name:            reportGetTypeNoGet.ReportName,
+				Type:            reportGetTypeNoGet.ReportTypeName,
+				StartTime:       now,
+				EndTime:         nowPlusHour,
+				UISummary:       "hello-100-goodbye",
 				DownloadURL:     "",
 				DownloadFormats: nil,
 				GenerationTime:  now,
@@ -169,14 +166,12 @@ var _ = Describe("List tests with Not Gettable ReportType", func() {
 		By("Running a list query")
 		t.list(http.StatusOK, []server.Report{
 			{
-				Id:        reportGetTypeGet.UID(),
-				Name:      reportGetTypeGet.ReportName,
-				Type:      reportGetTypeGet.ReportTypeName,
-				StartTime: now,
-				EndTime:   nowPlusHour,
-				UISummary: map[string]interface{}{
-					"foobar": "hello-100-goodbye",
-				},
+				Id:          reportGetTypeGet.UID(),
+				Name:        reportGetTypeGet.ReportName,
+				Type:        reportGetTypeGet.ReportTypeName,
+				StartTime:   now,
+				EndTime:     nowPlusHour,
+				UISummary:   "hello-100-goodbye",
 				DownloadURL: "/compliance/reports/" + reportGetTypeGet.UID() + "/download",
 				DownloadFormats: []server.Format{
 					{
@@ -191,14 +186,12 @@ var _ = Describe("List tests with Not Gettable ReportType", func() {
 				GenerationTime: now,
 			},
 			{
-				Id:        reportGetTypeNoGet.UID(),
-				Name:      reportGetTypeNoGet.ReportName,
-				Type:      reportGetTypeNoGet.ReportTypeName,
-				StartTime: now,
-				EndTime:   nowPlusHour,
-				UISummary: map[string]interface{}{
-					"foobar": "hello-100-goodbye",
-				},
+				Id:              reportGetTypeNoGet.UID(),
+				Name:            reportGetTypeNoGet.ReportName,
+				Type:            reportGetTypeNoGet.ReportTypeName,
+				StartTime:       now,
+				EndTime:         nowPlusHour,
+				UISummary:       "hello-100-goodbye",
 				DownloadURL:     "",
 				DownloadFormats: nil,
 				GenerationTime:  now,

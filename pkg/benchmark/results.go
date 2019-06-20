@@ -6,6 +6,7 @@ import (
 
 	"time"
 
+	"github.com/aquasecurity/kube-bench/check"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -14,6 +15,10 @@ type BenchmarkType string
 
 const (
 	TypeKubernetes BenchmarkType = "kube"
+)
+
+var (
+	AllBenchmarkTypes = []BenchmarkType{TypeKubernetes}
 )
 
 // Benchmarks is a set of benchmarks for a given node.
@@ -30,6 +35,27 @@ type Benchmarks struct {
 // UID is a unique identifier for a set of benchmarks.
 func (b Benchmarks) UID() string {
 	return fmt.Sprintf("%s::%s::%s", b.Timestamp.Format(time.RFC3339), b.Type, b.NodeName)
+}
+
+// Equal computes equality between benchmark results. Does not include Timestamp in the calculation.
+func (b Benchmarks) Equal(other Benchmarks) bool {
+	// First check the error field.
+	if b.Error != "" {
+		return b.Error == other.Error
+	}
+
+	// Initial equality determined by metadata fields.
+	if b.Version != other.Version || b.Type != other.Type || b.NodeName != other.NodeName {
+		return false
+	}
+
+	// Finally, check the tests. Assumes that the tests in both structures are positioned in the same order.
+	for i, test := range b.Tests {
+		if test != other.Tests[i] {
+			return false
+		}
+	}
+	return true
 }
 
 // Test is a given test within a set of benchmarks.
@@ -54,4 +80,28 @@ type Filter struct {
 type BenchmarksResult struct {
 	Benchmarks *Benchmarks
 	Err        error
+}
+
+// TestsFromKubeBenchControls transforms the kube-bench results into the compliance benchmark structure.
+func TestsFromKubeBenchControls(ctrls []*check.Controls) []Test {
+	tests := []Test{}
+	for _, ctrl := range ctrls {
+		for _, section := range ctrl.Groups {
+			for _, check := range section.Checks {
+				test := Test{
+					Section:     section.ID,
+					SectionDesc: section.Text,
+					TestNumber:  check.ID,
+					TestDesc:    check.Text,
+					Status:      string(check.State),
+					Scored:      check.Scored,
+				}
+				if len(check.TestInfo) > 0 {
+					test.TestInfo = check.TestInfo[0]
+				}
+				tests = append(tests, test)
+			}
+		}
+	}
+	return tests
 }

@@ -90,6 +90,7 @@ BUILD_IMAGE_CONTROLLER=tigera/compliance-controller
 BUILD_IMAGE_SNAPSHOTTER=tigera/compliance-snapshotter
 BUILD_IMAGE_REPORTER=tigera/compliance-reporter
 BUILD_IMAGE_SCALELOADER=tigera/compliance-scaleloader
+BUILD_IMAGE_BENCHMARKER=tigera/compliance-benchmarker
 PACKAGE_NAME?=github.com/tigera/compliance
 GCR_REPO?=gcr.io/unique-caldron-775/cnx
 
@@ -182,6 +183,7 @@ clean:
 	       docker-image/snapshotter/bin \
 	       docker-image/reporter/bin \
 	       docker-image/scaleloader/bin \
+	       docker-image/benchmarker/bin \
 	       build \
 	       $(GENERATED_GO_FILES) \
 	       .glide \
@@ -288,7 +290,7 @@ update-licensing-pin: guard-ssh-forwarding-bug guard-git-licensing
 ###############################################################################
 # Building the binary
 ###############################################################################
-build: bin/server bin/controller bin/snapshotter bin/reporter bin/report-type-gen
+build: bin/server bin/controller bin/snapshotter bin/reporter bin/report-type-gen bin/benchmarker
 build-all: $(addprefix sub-build-,$(VALIDARCHES))
 sub-build-%:
 	$(MAKE) build ARCH=$*
@@ -390,6 +392,18 @@ bin/scaleloader-$(ARCH): $(SRC_FILES) vendor/.up-to-date
 		-e "not a dynamic executable" || \
 		( echo "Error: bin/scaleloader was not statically linked"; false ) )'
 
+bin/benchmarker: bin/benchmarker-$(ARCH)
+	cp -f bin/benchmarker-$(ARCH) bin/benchmarker
+
+bin/benchmarker-$(ARCH): $(SRC_FILES) vendor/.up-to-date
+	@echo Building benchmarker...
+	mkdir -p bin
+	$(DOCKER_RUN) $(LOCAL_BUILD_MOUNTS) $(CALICO_BUILD) \
+	    sh -c 'go build -v -i -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/benchmarker" && \
+		( ldd $@ 2>&1 | grep -q -e "Not a valid dynamic program" \
+		-e "not a dynamic executable" || \
+		( echo "Error: bin/benchmarker was not statically linked"; false ) )'
+
 ###############################################################################
 # Building the images
 ###############################################################################
@@ -398,10 +412,11 @@ bin/scaleloader-$(ARCH): $(SRC_FILES) vendor/.up-to-date
 .PHONY: $(BUILD_IMAGE_SNAPSHOTTER) $(BUILD_IMAGE_SNAPSHOTTER)-$(ARCH)
 .PHONY: $(BUILD_IMAGE_REPORTER) $(BUILD_IMAGE_REPORTER)-$(ARCH)
 .PHONY: $(BUILD_IMAGE_SCALELOADER) $(BUILD_IMAGE_SCALELOADER)-$(ARCH)
+.PHONY: $(BUILD_IMAGE_BENCHMARKER) $(BUILD_IMAGE_BENCHMARKER)-$(ARCH)
 .PHONY: images
 .PHONY: image
 
-images image: $(BUILD_IMAGE_SERVER) $(BUILD_IMAGE_CONTROLLER) $(BUILD_IMAGE_SNAPSHOTTER) $(BUILD_IMAGE_REPORTER) $(BUILD_IMAGE_SCALELOADER)
+images image: $(BUILD_IMAGE_SERVER) $(BUILD_IMAGE_CONTROLLER) $(BUILD_IMAGE_SNAPSHOTTER) $(BUILD_IMAGE_REPORTER) $(BUILD_IMAGE_SCALELOADER) $(BUILD_IMAGE_BENCHMARKER)
 
 # Build the images for the target architecture
 .PHONY: images-all
@@ -463,6 +478,17 @@ ifeq ($(ARCH),amd64)
 	docker tag $(BUILD_IMAGE_SCALELOADER):latest-$(ARCH) $(BUILD_IMAGE_SCALELOADER):latest
 endif
 
+# Build the tigera/compliance-benchmarker docker image, which contains only Compliance benchmarker.
+$(BUILD_IMAGE_BENCHMARKER): bin/benchmarker-$(ARCH) register
+	rm -rf docker-image/benchmarker/bin
+	mkdir -p docker-image/benchmarker/bin
+	cp bin/benchmarker-$(ARCH) docker-image/benchmarker/bin/
+	cp -r vendor/github.com/aquasecurity/kube-bench/cfg docker-image/benchmarker
+	docker build --pull -t $(BUILD_IMAGE_BENCHMARKER):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --file ./docker-image/benchmarker/Dockerfile.$(ARCH) docker-image/benchmarker
+ifeq ($(ARCH),amd64)
+	docker tag $(BUILD_IMAGE_BENCHMARKER):latest-$(ARCH) $(BUILD_IMAGE_BENCHMARKER):latest
+endif
+
 # ensure we have a real imagetag
 imagetag:
 ifndef IMAGETAG
@@ -477,6 +503,7 @@ sub-single-push-%:
 	docker push $(call unescapefs,$*$(BUILD_IMAGE_CONTROLLER):$(IMAGETAG)-$(ARCH))
 	docker push $(call unescapefs,$*$(BUILD_IMAGE_SNAPSHOTTER):$(IMAGETAG)-$(ARCH))
 	docker push $(call unescapefs,$*$(BUILD_IMAGE_REPORTER):$(IMAGETAG)-$(ARCH))
+	docker push $(call unescapefs,$*$(BUILD_IMAGE_BENCHMARKER):$(IMAGETAG)-$(ARCH))
 ifneq ("",$(findstring $(GCR_REPO),$(call unescapefs,$*)))
 	docker push $(call unescapefs,$*$(BUILD_IMAGE_SCALELOADER):$(IMAGETAG)-$(ARCH))
 endif
@@ -494,6 +521,7 @@ sub-manifest-%:
 	docker run -t --entrypoint /bin/sh -v $(DOCKER_CONFIG):/root/.docker/config.json $(CALICO_BUILD) -c "/usr/bin/manifest-tool push from-args --platforms $(call join_platforms,$(VALIDARCHES)) --template $(call unescapefs,$*$(BUILD_IMAGE_CONTROLLER):$(IMAGETAG))-ARCH --target $(call unescapefs,$*$(BUILD_IMAGE_CONTROLLER):$(IMAGETAG))"
 	docker run -t --entrypoint /bin/sh -v $(DOCKER_CONFIG):/root/.docker/config.json $(CALICO_BUILD) -c "/usr/bin/manifest-tool push from-args --platforms $(call join_platforms,$(VALIDARCHES)) --template $(call unescapefs,$*$(BUILD_IMAGE_SNAPSHOTTER):$(IMAGETAG))-ARCH --target $(call unescapefs,$*$(BUILD_IMAGE_SNAPSHOTTER):$(IMAGETAG))"
 	docker run -t --entrypoint /bin/sh -v $(DOCKER_CONFIG):/root/.docker/config.json $(CALICO_BUILD) -c "/usr/bin/manifest-tool push from-args --platforms $(call join_platforms,$(VALIDARCHES)) --template $(call unescapefs,$*$(BUILD_IMAGE_REPORTER):$(IMAGETAG))-ARCH --target $(call unescapefs,$*$(BUILD_IMAGE_REPORTER):$(IMAGETAG))"
+	docker run -t --entrypoint /bin/sh -v $(DOCKER_CONFIG):/root/.docker/config.json $(CALICO_BUILD) -c "/usr/bin/manifest-tool push from-args --platforms $(call join_platforms,$(VALIDARCHES)) --template $(call unescapefs,$*$(BUILD_IMAGE_BENCHMARKER):$(IMAGETAG))-ARCH --target $(call unescapefs,$*$(BUILD_IMAGE_BENCHMARKER):$(IMAGETAG))"
 ifneq ("",$(findstring $(GCR_REPO),$(call unescapefs,$*)))
 	docker run -t --entrypoint /bin/sh -v $(DOCKER_CONFIG):/root/.docker/config.json $(CALICO_BUILD) -c "/usr/bin/manifest-tool push from-args --platforms $(call join_platforms,$(VALIDARCHES)) --template $(call unescapefs,$*$(BUILD_IMAGE_SCALELOADER):$(IMAGETAG))-ARCH --target $(call unescapefs,$*$(BUILD_IMAGE_SCALELOADER):$(IMAGETAG))"
 endif
@@ -506,6 +534,7 @@ ifeq ($(ARCH),amd64)
 	docker push $(call unescapefs,$*$(BUILD_IMAGE_CONTROLLER):$(IMAGETAG))
 	docker push $(call unescapefs,$*$(BUILD_IMAGE_SHAPSHOTTER):$(IMAGETAG))
 	docker push $(call unescapefs,$*$(BUILD_IMAGE_REPORTER):$(IMAGETAG))
+	docker push $(call unescapefs,$*$(BUILD_IMAGE_BENCHMARKER):$(IMAGETAG))
 ifneq ("",$(findstring $(GCR_REPO),$(call unescapefs,$*)))
 	docker push $(call unescapefs,$*$(BUILD_IMAGE_SCALELOADER):$(IMAGETAG))
 endif
@@ -520,6 +549,7 @@ sub-single-tag-images-arch-%:
 	docker tag $(BUILD_IMAGE_CONTROLLER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_CONTROLLER):$(IMAGETAG)-$(ARCH))
 	docker tag $(BUILD_IMAGE_SNAPSHOTTER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_SNAPSHOTTER):$(IMAGETAG)-$(ARCH))
 	docker tag $(BUILD_IMAGE_REPORTER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_REPORTER):$(IMAGETAG)-$(ARCH))
+	docker tag $(BUILD_IMAGE_BENCHMARKER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_BENCHMARKER):$(IMAGETAG)-$(ARCH))
 ifneq ("",$(findstring $(GCR_REPO),$(call unescapefs,$*)))
 	docker tag $(BUILD_IMAGE_SCALELOADER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_SCALELOADER):$(IMAGETAG)-$(ARCH))
 endif
@@ -531,6 +561,7 @@ ifeq ($(ARCH),amd64)
 	docker tag $(BUILD_IMAGE_CONTROLLER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_CONTROLLER):$(IMAGETAG))
 	docker tag $(BUILD_IMAGE_SNAPSHOTTER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_SNAPSHOTTER):$(IMAGETAG))
 	docker tag $(BUILD_IMAGE_REPORTER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_REPORTER):$(IMAGETAG))
+	docker tag $(BUILD_IMAGE_BENCHMARKER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_BENCHMARKER):$(IMAGETAG))
 ifneq ("",$(findstring $(GCR_REPO),$(call unescapefs,$*)))
 	docker tag $(BUILD_IMAGE_SCALELOADER):latest-$(ARCH) $(call unescapefs,$*$(BUILD_IMAGE_SCALELOADER):$(IMAGETAG))
 endif
@@ -710,6 +741,7 @@ version: images
 	docker run --rm $(BUILD_IMAGE_CONTROLLER):latest-$(ARCH) --version
 	docker run --rm $(BUILD_IMAGE_SNAPSHOTTER):latest-$(ARCH) --version
 	docker run --rm $(BUILD_IMAGE_REPORTER):latest-$(ARCH) --version
+	docker run --rm $(BUILD_IMAGE_BENCHMARKER):latest-$(ARCH) --version
 
 ## Builds the code and runs all tests.
 ci: images-all version static-checks ut
@@ -773,6 +805,7 @@ release-verify: release-prereqs
 	docker run --rm quay.io/$(BUILD_IMAGE_SNAPSHOTTER):$(VERSION)-$(ARCH) --version | grep $(VERSION) || ( echo "Reported version:" `docker run --rm quay.io/$(BUILD_IMAGE_SNAPSHOTTER):$(VERSION)-$(ARCH) --version | grep -x $(VERSION)` "\nExpected version: $(VERSION)" && exit 1 )
 	docker run --rm $(BUILD_IMAGE_REPORTER):$(VERSION)-$(ARCH) --version | grep $(VERSION) || ( echo "Reported version:" `docker run --rm $(BUILD_IMAGE_REPORTER):$(VERSION)-$(ARCH) --version` "\nExpected version: $(VERSION)" && exit 1 )
 	docker run --rm quay.io/$(BUILD_IMAGE_REPORTER):$(VERSION)-$(ARCH) --version | grep $(VERSION) || ( echo "Reported version:" `docker run --rm quay.io/$(BUILD_IMAGE_REPORTER):$(VERSION)-$(ARCH) --version | grep -x $(VERSION)` "\nExpected version: $(VERSION)" && exit 1 )
+	docker run --rm quay.io/$(BUILD_IMAGE_BENCHMARKER):$(VERSION)-$(ARCH) --version | grep $(VERSION) || ( echo "Reported version:" `docker run --rm quay.io/$(BUILD_IMAGE_BENCHMARKER):$(VERSION)-$(ARCH) --version | grep -x $(VERSION)` "\nExpected version: $(VERSION)" && exit 1 )
 
 	# TODO: Some sort of quick validation of the produced binaries.
 
@@ -813,6 +846,7 @@ release-publish-latest: release-prereqs
 	if ! docker run quay.io/$(BUILD_IMAGE_SNAPSHOTTER):latest-$(ARCH) --version | grep '$(VERSION)'; then echo "Reported version:" `docker run quay.io/$(BUILD_IMAGE_SNAPSHOTTER):latest-$(ARCH) --version` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
 	if ! docker run $(BUILD_IMAGE_REPORTER):latest-$(ARCH) --version | grep '$(VERSION)'; then echo "Reported version:" `docker run $(BUILD_IMAGE_REPORTER):latest-$(ARCH) --version` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
 	if ! docker run quay.io/$(BUILD_IMAGE_REPORTER):latest-$(ARCH) --version | grep '$(VERSION)'; then echo "Reported version:" `docker run quay.io/$(BUILD_IMAGE_REPORTER):latest-$(ARCH) --version` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
+	if ! docker run quay.io/$(BUILD_IMAGE_BENCHMARKER):latest-$(ARCH) --version | grep '$(VERSION)'; then echo "Reported version:" `docker run quay.io/$(BUILD_IMAGE_BENCHMARKER):latest-$(ARCH) --version` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
 
 	$(MAKE) push-all push-manifests push-non-manifests RELEASE=true IMAGETAG=latest
 
@@ -878,6 +912,9 @@ bin/reporter.transfer-url: bin/reporter-$(ARCH)
 
 bin/scaleloader.transfer-url: bin/scaleloader-$(ARCH)
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -c 'curl --upload-file bin/scaleloader-$(ARCH) https://transfer.sh/tigera-compliance-scaleloader > $@'
+
+bin/benchmarker.transfer-url: bin/benchmarker-$(ARCH)
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c 'curl --upload-file bin/benchmarker-$(ARCH) https://transfer.sh/tigera-compliance-benchmarker > $@'
 
 # Install or update the tools used by the build
 .PHONY: update-tools

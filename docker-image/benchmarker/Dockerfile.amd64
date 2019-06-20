@@ -1,0 +1,21 @@
+FROM debian
+WORKDIR /opt
+RUN apt-get update && apt-get install -y curl tar procps
+RUN curl -OL https://github.com/aquasecurity/kube-bench/releases/download/v0.0.29/kube-bench_0.0.29_linux_amd64.tar.gz 
+RUN tar -xf kube-bench_0.0.29_linux_amd64.tar.gz
+RUN mv kube-bench /bin
+COPY cfg cfg
+
+# FROM scratch
+# COPY --from=0 /usr /usr
+# COPY --from=0 /lib /lib
+# COPY --from=0 /lib64 /lib64
+
+# COPY --from=0 /bin/grep /bin/grep
+# COPY --from=0 /bin/ps /bin/ps
+# COPY --from=0 /bin/sh /bin/sh
+# COPY --from=0 /opt/kube-bench /bin/kube-bench
+
+ADD bin/benchmarker-amd64 /bin/benchmarker
+
+ENTRYPOINT ["benchmarker"]

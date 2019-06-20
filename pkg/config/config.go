@@ -71,6 +71,9 @@ type Config struct {
 	ParsedReportEnd   time.Time
 	ParsedElasticURL  *url.URL
 	ParsedLogLevel    log.Level
+
+	// Nodename
+	NodeName string `envconfig:"NODENAME"`
 }
 
 func MustLoadConfig() *Config {
