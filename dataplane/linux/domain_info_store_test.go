@@ -90,7 +90,7 @@ var _ = Describe("Domain Info Store", func() {
 	// Assert that the domain store accepted and signaled the given record (and reason).
 	AssertDomainChanged := func(domainStore *domainInfoStore, d string, r string) {
 		receivedInfo := <-domainStore.domainInfoChanges
-		log.Infof("-->  %s %s expected %s", receivedInfo.domain, receivedInfo.reason, d)
+		log.Infof("domainInfoChanged:  %s %s expected %s", receivedInfo.domain, receivedInfo.reason, d)
 		Expect(receivedInfo).To(Equal(&domainInfoChanged{domain: d, reason: r}))
 	}
 
