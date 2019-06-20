@@ -320,6 +320,21 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 		},
 	})
 
+	// VXLAN and IPinIP encapped packets that originated in a pod should be dropped, as the encapsulation can be used to
+	// bypass restrictive egress policies.
+	rules = append(rules, Rule{
+		Match: Match().ProtocolNum(ProtoUDP).
+			DestPorts(uint16(r.Config.VXLANPort)).
+			VXLANVNI(uint32(r.Config.VXLANVNI)),
+		Action:  DropAction{},
+		Comment: "Drop VXLAN encapped packets originating in pods",
+	})
+	rules = append(rules, Rule{
+		Match:   Match().ProtocolNum(ProtoIPIP),
+		Action:  DropAction{},
+		Comment: "Drop IPinIP encapped packets originating in pods",
+	})
+
 	for _, tier := range tiers {
 		var policies []string
 		if policyType == ingressPolicy {

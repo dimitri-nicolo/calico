@@ -136,11 +136,19 @@ func chainsForIfaces(ifaceTierNames []string,
 	epMarkMapper rules.EndpointMarkMapper,
 	host bool,
 	tableKind string) []*iptables.Chain {
+	const (
+		ProtoUDP  = 17
+		ProtoIPIP = 4
+		VXLANPort = 0
+		VXLANVNI  = 0
+	)
+
 	log.WithFields(log.Fields{
 		"ifaces":    ifaceTierNames,
 		"host":      host,
 		"tableKind": tableKind,
 	}).Info("Calculating chains for interface")
+
 	chains := []*iptables.Chain{}
 	dispatchOut := []iptables.Rule{}
 	dispatchIn := []iptables.Rule{}
@@ -156,6 +164,20 @@ func chainsForIfaces(ifaceTierNames []string,
 	epMarkFromName := "cali-from-endpoint-mark"
 	epMarkSetOnePrefix := "cali-sm-"
 	epmarkFromPrefix := outPrefix[:6]
+	dropEncapRules := []iptables.Rule{
+		{
+			Match: iptables.Match().ProtocolNum(ProtoUDP).
+				DestPorts(uint16(VXLANPort)).
+				VXLANVNI(uint32(VXLANVNI)),
+			Action:  iptables.DropAction{},
+			Comment: "Drop VXLAN encapped packets originating in pods",
+		},
+		{
+			Match:   iptables.Match().ProtocolNum(ProtoIPIP),
+			Action:  iptables.DropAction{},
+			Comment: "Drop IPinIP encapped packets originating in pods",
+		},
+	}
 
 	if host {
 		hostOrWlLetter = "h"
@@ -252,6 +274,8 @@ func chainsForIfaces(ifaceTierNames []string,
 			Match:  iptables.Match(),
 			Action: iptables.ClearMarkAction{Mark: 136}, // 0x8 + 0x80 (IptablesMarkAccept + IptablesMarkDrop)
 		})
+		outRules = append(outRules, dropEncapRules...)
+
 		if egress && tierName != "" && tableKind == ifaceKind {
 			outRules = append(outRules, iptables.Rule{
 				Match:   iptables.Match(),
@@ -344,6 +368,8 @@ func chainsForIfaces(ifaceTierNames []string,
 			Match:  iptables.Match(),
 			Action: iptables.ClearMarkAction{Mark: 136}, // 0x8 + 0x80 (IptablesMarkAccept + IptablesMarkDrop)
 		})
+		inRules = append(inRules, dropEncapRules...)
+
 		if ingress && tierName != "" && tableKind == ifaceKind {
 			inRules = append(inRules, iptables.Rule{
 				Match:   iptables.Match(),
