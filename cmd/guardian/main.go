@@ -4,13 +4,13 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 
 	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/tigera/voltron/internal/pkg/bootstrap"
 	"github.com/tigera/voltron/internal/pkg/client"
-	"github.com/tigera/voltron/internal/pkg/utils"
 )
 
 const (
@@ -38,26 +38,25 @@ func main() {
 	url := fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)
 	cert := fmt.Sprintf("%s/ca.crt", cfg.CertPath)
 	key := fmt.Sprintf("%s/ca.key", cfg.CertPath)
-	guardianURL := fmt.Sprintf("Voltron Address: %s", cfg.URL)
+	log.Infof("Voltron Address: %s", cfg.URL)
 
-	pemCert, err := utils.LoadPEMFromFile(cert)
+	pemCert, err := ioutil.ReadFile(cert)
 	if err != nil {
 		log.Fatalf("Failed to load cert: %+v", err)
 	}
-	pemKey, err := utils.LoadPEMFromFile(key)
+	pemKey, err := ioutil.ReadFile(key)
 	if err != nil {
 		log.Fatalf("Failed to load key: %+v", err)
 	}
 
 	client, err := client.New(
-		guardianURL,
+		cfg.URL,
 		client.WithProxyTargets(
 			[]client.ProxyTarget{
 				{Pattern: "^/api", Dest: "https://kubernetes.default"},
 				{Pattern: "^/tigera-elasticsearch", Dest: "http://localhost:8002"},
 			},
 		),
-		client.WithDefaultAddr(url),
 		client.WithTunnelCreds(pemCert, pemKey, nil /* XXX use system CAs */),
 	)
 
