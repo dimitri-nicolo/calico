@@ -51,12 +51,18 @@ func (r *reporter) addBenchmarks() error {
 		}
 	}
 
-	// Grab the latest benchmarks for each node. We go back in time as far as the previous day and a half to ensure we
-	// get results. This means the results aren't truly for the actual report interval, but to do that we'd actually
-	// to track which nodes have appeared and disappeared within the interval and tbh it's not really worth it at
-	// this stage.
+	// We need to grab the latest benchmarks for each node. We always go back in time at least as far as 1.5x the
+	// benchmark snapshot interval, or use the report start time if it is earlier. This means the results aren't
+	// truly for the actual report interval, but to do that we'd need to track which nodes have been created and
+	// deleted within the interval which is quite a bit more work for very little actual gain.
+	start, end := r.cfg.ParsedReportStart, r.cfg.ParsedReportEnd
+	if end.Sub(start) < DayAndHalf {
+		r.clog.Debugf("Searching for benchmarks as far back as %v from the report end time", DayAndHalf)
+		start = end.Add(-DayAndHalf)
+	}
+	r.clog.Infof("Query benchmarks from %v to %v", start, end)
 	for b := range r.benchmarker.RetrieveLatestBenchmarks(
-		r.ctx, benchmark.TypeKubernetes, nil, r.cfg.ParsedReportEnd.Add(-DayAndHalf), r.cfg.ParsedReportEnd,
+		r.ctx, benchmark.TypeKubernetes, nil, start, end,
 	) {
 		// If we received an error then log and exit.
 		if b.Err != nil {
