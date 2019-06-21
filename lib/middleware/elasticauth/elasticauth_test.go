@@ -1,11 +1,11 @@
 // Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
-package middleware_test
+package elasticauth_test
 
 import (
 	"net/http"
 	"net/http/httptest"
 
-	"github.com/projectcalico/libcalico-go/lib/middleware"
+	"github.com/projectcalico/libcalico-go/lib/middleware/elasticauth"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -33,7 +33,7 @@ var _ = Describe("Basic auth injector middleware", func() {
 			w := httptest.NewRecorder()
 			req := &http.Request{Header: make(http.Header)}
 			ah := &basicAuthAssertingHandler{expectedUsername: user, expectedPassword: pass}
-			bah := middleware.BasicAuthHeaderInjector(user, pass, ah)
+			bah := elasticauth.BasicAuthHeaderInjector(user, pass, ah)
 			bah.ServeHTTP(w, req)
 
 			Expect(ah.handlerCalled).To(Equal(expectHandlerCalled))

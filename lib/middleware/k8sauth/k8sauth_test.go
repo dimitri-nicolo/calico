@@ -1,6 +1,6 @@
 // Copyright (c) 2019 Tigera, Inc. All rights reserved.
 
-package middleware
+package k8sauth
 
 import (
 	"net/http"

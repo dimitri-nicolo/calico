@@ -1,5 +1,5 @@
 // Copyright (c) 2019 Tigera, Inc. All rights reserved.
-package middleware
+package elasticauth
 
 import (
 	"net/http"
