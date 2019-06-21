@@ -196,7 +196,7 @@ endif
 ##########################################################################################
 # TESTING 
 ##########################################################################################
-test: ut fv
+test: ut fv st
 
 #############################################
 # Run unit level tests
@@ -215,6 +215,16 @@ fv:
 	docker run --rm -v $(CURDIR):/build-dir/$(PACKAGE_NAME):rw \
 		-e LOCAL_USER_ID=$(MY_UID) \
 		$(CALICO_BUILD) sh -c 'cd /build-dir/$(PACKAGE_NAME) && go mod download && ginkgo -cover -r test/fv $(GINKGO_ARGS)'
+
+#############################################
+# Run system integration tests
+#############################################
+.PHONY: st
+st: $(COMPONENTS)
+	docker run --rm -v $(CURDIR):/build-dir/$(PACKAGE_NAME):rw \
+		-e LOCAL_USER_ID=$(MY_UID) \
+		$(CALICO_BUILD) sh -c 'cd /build-dir/$(PACKAGE_NAME) && go mod download && ginkgo -cover -r test/st/ $(GINKGO_ARGS)'
+
 
 ##########################################################################################
 # CLEAN UP 
