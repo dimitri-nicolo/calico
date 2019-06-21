@@ -161,7 +161,7 @@ func (r *reporter) addBenchmarks() error {
 			// Update the section status based on section results and thresholds.
 			var p int
 			if len(section.Results) > 0 {
-				p = 100 * section.Fail / len(section.Results)
+				p = 100 * section.Pass / len(section.Results)
 			}
 			switch {
 			case p >= highThreshold:
@@ -186,12 +186,10 @@ func (r *reporter) addBenchmarks() error {
 		// Update the node status and benchmark summaries based on the node stats and thresholds.
 		var p int
 		if node.Summary.Total > 0 {
-			p = 100 * node.Summary.TotalFail / node.Summary.Total
+			p = 100 * node.Summary.TotalPass / node.Summary.Total
 		}
 		switch {
-		case p >= highThreshold || b.Benchmarks.Error != "":
-			// Either we have tipped the high threshold, or the benchmark did not run. In either case flag as
-			// high.
+		case p >= highThreshold:
 			//TODO(rlb): Status values should be declared in libcalico-go?
 			node.Summary.Status = "HIGH"
 			r.data.CISBenchmarkSummary.HighCount++
