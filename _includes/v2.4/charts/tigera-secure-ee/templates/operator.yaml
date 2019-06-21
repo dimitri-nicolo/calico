@@ -205,7 +205,9 @@ spec:
       - name: operator
         image: upmcenterprises/elasticsearch-operator:{{.Values.elasticsearchOperator.tag}}
         command: ["/usr/local/bin/elasticsearch-operator"]
-        args: ["-initDaemonsetNamespace", "calico-monitoring"]
+        args:
+          - -initDaemonsetNamespace=calico-monitoring
+          - -busybox-image=busybox:1.26.2
         imagePullPolicy: Always
         env:
         - name: NAMESPACE
