@@ -36,7 +36,6 @@ func main() {
 	bootstrap.ConfigureLogging(cfg.LogLevel)
 	log.Infof("Starting %s with configuration %v", EnvConfigPrefix, cfg)
 
-	url := fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)
 	cert := fmt.Sprintf("%s/guardian.crt", cfg.CertPath)
 	key := fmt.Sprintf("%s/guardian.key", cfg.CertPath)
 	serverCrt := fmt.Sprintf("%s/voltron.crt", cfg.CertPath)
@@ -72,9 +71,7 @@ func main() {
 		log.Fatalf("Failed to create server: %s", err)
 	}
 
-	log.Infof("Starting web server on %v", url)
-
 	if err := client.ServeTunnelHTTP(); err != nil {
-		log.Fatal(err)
+		log.Fatalf("Tunnel exited with error: %s", err)
 	}
 }
