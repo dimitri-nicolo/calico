@@ -218,6 +218,18 @@ func (cs *clusters) get(id string) *cluster {
 	return c
 }
 
+func (c *cluster) checkTunnelState() {
+	err := c.tunnel.WaitForError()
+
+	c.Lock()
+	defer c.Unlock()
+
+	c.proxy = nil
+	c.tunnel.Close()
+	c.tunnel = nil
+	log.Errorf("Cluster %s tunnel is broken (%s), deleted", c.ID, err)
+}
+
 func (c *cluster) DialContext(ctx context.Context, network, addr string) (net.Conn, error) {
 	return c.tunnel.Open()
 }
@@ -252,6 +264,9 @@ func (c *cluster) assignTunnel(t *tunnel.Tunnel) {
 			AllowHTTP:       true,
 		},
 	}
+
+	// will clean up the tunnel if it breaks, will exit once the tunnel is gone
+	go c.checkTunnelState()
 }
 
 func proxyVoidDirector(*http.Request) {

@@ -298,6 +298,51 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 		Expect(resp.StatusCode).To(Equal(200))
 	})
 
+	It("should be possible to stop guardian", func() {
+		guardian.Close()
+	})
+
+	It("should not be possible to reach the test server", func() {
+		_, err := ui.doRequest(clusterID)
+		Expect(err).To(HaveOccurred())
+	})
+
+	It("should start guardian again", func() {
+		cert, key, err := voltron.ClusterCreds(clusterID)
+		Expect(err).NotTo(HaveOccurred())
+
+		guardian, err = client.New(
+			lisTun.Addr().String(),
+			client.WithTunnelCreds(cert, key, rootCAs),
+			client.WithProxyTargets(
+				[]client.ProxyTarget{
+					{
+						Pattern: "^/some/path",
+						Dest:    "http://" + lisTs.Addr().String(),
+					},
+				},
+			),
+		)
+		Expect(err).NotTo(HaveOccurred())
+
+		wgSrvCnlt.Add(1)
+		go func() {
+			defer wgSrvCnlt.Done()
+			guardian.ServeTunnelHTTP()
+		}()
+	})
+
+	It("should wait for tunnel to come up again", func() {
+		err := guardian.WaitForTunnel()
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("should be possible to reach the test server again", func() {
+		msg, err := ui.doRequest(clusterID)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(msg).To(Equal(ts.msg))
+	})
+
 	It("should clean up", func(done Done) {
 		voltron.Close()
 		guardian.Close()

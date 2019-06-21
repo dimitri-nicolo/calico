@@ -8,6 +8,7 @@ import (
 	"crypto/tls"
 	"io"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/hashicorp/yamux"
@@ -20,11 +21,16 @@ import (
 type Tunnel struct {
 	stream io.ReadWriteCloser
 	mux    *yamux.Session
+
+	errOnce sync.Once
+	errCh   chan struct{}
+	err     error
 }
 
 func newTunnel(stream io.ReadWriteCloser, isServer bool) (*Tunnel, error) {
 	t := &Tunnel{
 		stream: stream,
+		errCh:  make(chan struct{}),
 	}
 
 	var mux *yamux.Session
@@ -38,7 +44,11 @@ func newTunnel(stream io.ReadWriteCloser, isServer bool) (*Tunnel, error) {
 	config.KeepAliveInterval = 100 * time.Millisecond
 
 	if isServer {
-		mux, err = yamux.Server(stream, config)
+		mux, err = yamux.Server(&serverCloser{
+			ReadWriteCloser: stream,
+			t:               t,
+		},
+			config)
 	} else {
 		mux, err = yamux.Client(stream, config)
 	}
@@ -108,12 +118,16 @@ func (t *Tunnel) Addr() net.Addr {
 // Open opens a new net.Conn to the other side of the tunnel. Returns when
 // the the new connection is set up
 func (t *Tunnel) Open() (net.Conn, error) {
-	return t.mux.Open()
+	c, err := t.mux.Open()
+	t.checkErr(err)
+	return c, err
 }
 
 // OpenStream returns, unlike NewConn, an io.ReadWriteCloser
 func (t *Tunnel) OpenStream() (io.ReadWriteCloser, error) {
-	return t.mux.OpenStream()
+	s, err := t.mux.OpenStream()
+	t.checkErr(err)
+	return s, err
 }
 
 // Identity provides the identity of the remote side that initiated the tunnel
@@ -123,6 +137,32 @@ func (t *Tunnel) Identity() Identity {
 	}
 
 	return nil
+}
+
+// WaitForError blocks as long as the tunnel exists and will return the reason
+// why the tunnel exited
+func (t *Tunnel) WaitForError() error {
+	<-t.errCh
+	return t.err
+}
+
+func (t *Tunnel) checkErr(err error) {
+	if err != nil {
+		t.errOnce.Do(func() {
+			t.err = err
+			close(t.errCh)
+		})
+	}
+}
+
+type serverCloser struct {
+	io.ReadWriteCloser
+	t *Tunnel
+}
+
+func (sc *serverCloser) Close() error {
+	sc.t.checkErr(errors.Errorf("closed by multiplexer"))
+	return sc.ReadWriteCloser.Close()
 }
 
 type addr struct {
