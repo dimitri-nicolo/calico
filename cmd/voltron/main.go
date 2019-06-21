@@ -4,6 +4,7 @@ package main
 
 import (
 	"fmt"
+	"net"
 
 	"github.com/tigera/voltron/internal/pkg/utils"
 
@@ -23,6 +24,8 @@ const (
 type Config struct {
 	Port         int    `default:"5555"`
 	Host         string `default:"localhost"`
+	TunnelPort   int    `default:"5566"`
+	TunnelHost   string `default:"localhost"`
 	LogLevel     string `default:"DEBUG"`
 	CertPath     string `default:"certs"`
 	TemplatePath string `default:"/tmp/guardian.yaml"`
@@ -61,7 +64,17 @@ func main() {
 		log.Fatalf("Failed to create server: %s", err)
 	}
 
-	log.Infof("Starting web server on %s", addr)
+	lisTun, err := net.Listen("tcp", fmt.Sprintf("%s:%d", cfg.TunnelHost, cfg.TunnelPort))
+	if err != nil {
+		log.Fatalf("Failedto create tunnel listener: %s", err)
+	}
+	err = srv.ServeTunnelsTLS(lisTun)
+	if err != nil {
+		log.Fatalf("Tunnel server did not start: %s", err)
+	}
+	log.Infof("Voltron listens for tunnels at %s", lisTun.Addr().String())
+
+	log.Infof("Voltron listens for HTTP request at %s", addr)
 	if err := srv.ListenAndServeHTTPS(); err != nil {
 		log.Fatal(err)
 	}
