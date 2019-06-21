@@ -39,6 +39,9 @@ var _ = Describe("Integration Tests", func() {
 	It("should set env variables pointing to docker-image/ for certs", func() {
 		err := os.Setenv("VOLTRON_CERTPATH", "docker-image")
 		Expect(err).ToNot(HaveOccurred())
+
+		err = os.Setenv("VOLTRON_TEMPLATEPATH", "manifests/guardian.yaml")
+		Expect(err).ToNot(HaveOccurred())
 	})
 
 	It("Should fail to ping cluster endpoint", func() {
@@ -92,7 +95,10 @@ var _ = Describe("Integration Tests", func() {
 
 			Expect(err).ToNot(HaveOccurred())
 
-			ExpectRequestResponse(req, `{"id":"ClusterA","displayName":"A"}`)
+			resp, err := http.DefaultClient.Do(req)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(resp.StatusCode).To(Equal(200))
+
 		})
 
 		It("Should List one cluster", func() {
