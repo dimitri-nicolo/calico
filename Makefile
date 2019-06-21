@@ -212,7 +212,9 @@ ut:
 #############################################
 .PHONY: fv
 fv:
-	echo "FV not implemented yet"
+	docker run --rm -v $(CURDIR):/build-dir/$(PACKAGE_NAME):rw \
+		-e LOCAL_USER_ID=$(MY_UID) \
+		$(CALICO_BUILD) sh -c 'cd /build-dir/$(PACKAGE_NAME) && go mod download && ginkgo -cover -r test/fv $(GINKGO_ARGS)'
 
 ##########################################################################################
 # CLEAN UP 
