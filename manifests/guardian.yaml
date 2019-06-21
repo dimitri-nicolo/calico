@@ -140,6 +140,3 @@ spec:
         - name: cnx-guardian-certs
           secret:
             secretName: cnx-guardian-certs
-        - name: cnx-guardian-credentials
-          secret:
-            secretName: cnx-guardian-credentials
