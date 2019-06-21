@@ -22,10 +22,10 @@ const (
 
 // Config is a configuration used for Voltron
 type Config struct {
-	Port         int    `default:"5555"`
-	Host         string `default:"localhost"`
-	TunnelPort   int    `default:"5566"`
-	TunnelHost   string `default:"localhost"`
+	Port         int `default:"5555"`
+	Host         string
+	Tunnel_Port  int `default:"5566"`
+	Tunnel_Host  string
 	LogLevel     string `default:"DEBUG"`
 	CertPath     string `default:"certs"`
 	TemplatePath string `default:"/tmp/guardian.yaml"`
@@ -64,7 +64,7 @@ func main() {
 		log.Fatalf("Failed to create server: %s", err)
 	}
 
-	lisTun, err := net.Listen("tcp", fmt.Sprintf("%s:%d", cfg.TunnelHost, cfg.TunnelPort))
+	lisTun, err := net.Listen("tcp", fmt.Sprintf("%s:%d", cfg.Tunnel_Host, cfg.Tunnel_Port))
 	if err != nil {
 		log.Fatalf("Failedto create tunnel listener: %s", err)
 	}

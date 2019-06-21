@@ -56,9 +56,9 @@ Name | Type | Default
 --- | --- | ---
 VOLTRON_LOGLEVEL | Environment | DEBUG
 VOLTRON_PORT | Environment | 5555
-VOLTRON_HOST | Environment | localhost
-VOLTRON_TUNNELPORT | Environment | 5566
-VOLTRON_TUNNELHOST | Environment | localhost
+VOLTRON_HOST | Environment | any
+VOLTRON_TUNNEL_PORT | Environment | 5566
+VOLTRON_TUNNEL_HOST | Environment | any
 VOLTRON_CERTPATH | Environment | /certs
 VOLTRON_TEMPLATEPATH | Environment | /tmp/guardian.yaml
 VOLTRON_PUBLICIP | Environment | 127.0.0.1:32453
