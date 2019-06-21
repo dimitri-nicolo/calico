@@ -3,6 +3,7 @@
 package main
 
 import (
+	"crypto/x509"
 	"fmt"
 	"io/ioutil"
 
@@ -36,8 +37,9 @@ func main() {
 	log.Infof("Starting %s with configuration %v", EnvConfigPrefix, cfg)
 
 	url := fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)
-	cert := fmt.Sprintf("%s/ca.crt", cfg.CertPath)
-	key := fmt.Sprintf("%s/ca.key", cfg.CertPath)
+	cert := fmt.Sprintf("%s/guardian.crt", cfg.CertPath)
+	key := fmt.Sprintf("%s/guardian.key", cfg.CertPath)
+	serverCrt := fmt.Sprintf("%s/voltron.crt", cfg.CertPath)
 	log.Infof("Voltron Address: %s", cfg.URL)
 
 	pemCert, err := ioutil.ReadFile(cert)
@@ -49,6 +51,12 @@ func main() {
 		log.Fatalf("Failed to load key: %+v", err)
 	}
 
+	ca := x509.NewCertPool()
+	content, _ := ioutil.ReadFile(serverCrt)
+	if ok := ca.AppendCertsFromPEM(content); !ok {
+		log.Fatalf("Cannot append voltron cert to ca pool: %+v", err)
+	}
+
 	client, err := client.New(
 		cfg.URL,
 		client.WithProxyTargets(
@@ -57,7 +65,7 @@ func main() {
 				{Pattern: "^/tigera-elasticsearch", Dest: "http://localhost:8002"},
 			},
 		),
-		client.WithTunnelCreds(pemCert, pemKey, nil /* XXX use system CAs */),
+		client.WithTunnelCreds(pemCert, pemKey, ca),
 	)
 
 	if err != nil {
