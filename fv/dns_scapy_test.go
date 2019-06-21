@@ -178,7 +178,7 @@ var _ = Describe("DNS Policy", func() {
 			dnsServerSetup(scapyTrusted)
 			sendDNSResponses(scapyTrusted, dnsSpecs)
 			scapyTrusted.Stdin.Close()
-			Eventually(check, "5s", "1s").Should(BeTrue())
+			Eventually(check, "10s", "2s").Should(BeTrue())
 		},
 
 		Entry("A record", []string{
@@ -267,7 +267,7 @@ var _ = Describe("DNS Policy", func() {
 			Eventually(fileHasMappings([]mapping{
 				{lhs: "bankofsteve.com", rhs: "192.168.56.1"},
 				{lhs: "fidget.com", rhs: "2.3.4.5"},
-			}), "5s", "1s").Should(BeTrue())
+			}), "10s", "2s").Should(BeTrue())
 		},
 		Entry("MX",
 			"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='bankofsteve.com',qtype='MX'),an=(DNSRR(rrname='bankofsteve.com',type='MX',ttl=36000,rdata='mail.bankofsteve.com')))",
@@ -346,7 +346,7 @@ var _ = Describe("DNS Policy", func() {
 				{lhs: "alice.com", rhs: "10.10.10.2"},
 				{lhs: "alice.com", rhs: "10.10.10.4"},
 				{lhs: "alice.com", rhs: "10.10.10.6"},
-			}), "5s", "1s").Should(BeTrue())
+			}), "10s", "2s").Should(BeTrue())
 		})
 	})
 
@@ -412,8 +412,8 @@ var _ = Describe("DNS Policy", func() {
 		})
 
 		It("workload can ping etcd", func() {
-			// Allow a second for Felix to see the DNS responses and update ipsets.
-			time.Sleep(1 * time.Second)
+			// Allow 4 seconds for Felix to see the DNS responses and update ipsets.
+			time.Sleep(4 * time.Second)
 			// Ping should now go through.
 			Expect(workloadCanPingEtcd()).NotTo(HaveOccurred())
 		})
@@ -452,7 +452,7 @@ var _ = Describe("DNS Policy", func() {
 			})
 
 			It("workload cannot ping etcd", func() {
-				Eventually(workloadCanPingEtcd, "5s", "1s").Should(HaveOccurred())
+				Eventually(workloadCanPingEtcd, "10s", "2s").Should(HaveOccurred())
 			})
 
 			Context("with domain-allow egress policy", func() {
@@ -651,7 +651,7 @@ var _ = Describe("DNS Policy with server on host", func() {
 			dnsServerSetup(scapyTrusted)
 			sendDNSResponses(scapyTrusted, dnsSpecs)
 			scapyTrusted.Stdin.Close()
-			Eventually(check, "5s", "1s").Should(BeTrue())
+			Eventually(check, "10s", "2s").Should(BeTrue())
 		},
 
 		Entry("A record", []string{

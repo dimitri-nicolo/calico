@@ -3,55 +3,61 @@
 package intdataplane
 
 import (
-	"fmt"
 	"net"
 	"time"
 
 	"github.com/google/gopacket/layers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	log "github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/libcalico-go/lib/set"
 )
+
+func makeA(name, ip string) layers.DNSResourceRecord {
+	return layers.DNSResourceRecord{
+		Name:       []byte(name),
+		Type:       layers.DNSTypeA,
+		Class:      layers.DNSClassIN,
+		TTL:        0,
+		DataLength: 4,
+		Data:       []byte(ip),
+		IP:         net.ParseIP(ip),
+	}
+}
+
+func makeAAAA(name, ip string) layers.DNSResourceRecord {
+	return layers.DNSResourceRecord{
+		Name:       []byte(name),
+		Type:       layers.DNSTypeAAAA,
+		Class:      layers.DNSClassIN,
+		TTL:        0,
+		DataLength: 16,
+		Data:       []byte(ip),
+		IP:         net.ParseIP(ip),
+	}
+}
+
+func makeCNAME(name, rname string) layers.DNSResourceRecord {
+	return layers.DNSResourceRecord{
+		Name:       []byte(name),
+		Type:       layers.DNSTypeCNAME,
+		Class:      layers.DNSClassIN,
+		TTL:        1,
+		DataLength: 4,
+		IP:         nil,
+		CNAME:      []byte(rname),
+	}
+}
 
 var _ = Describe("Domain Info Store", func() {
 	var (
-		domainStore  *domainInfoStore
-		mockDNSRecA1 = layers.DNSResourceRecord{
-			Name:       []byte("a.com"),
-			Type:       layers.DNSTypeA,
-			Class:      layers.DNSClassIN,
-			TTL:        0,
-			DataLength: 4,
-			Data:       []byte("10.0.0.10"),
-			IP:         net.ParseIP("10.0.0.10"),
-		}
-		mockDNSRecA2 = layers.DNSResourceRecord{
-			Name:       []byte("b.com"),
-			Type:       layers.DNSTypeA,
-			Class:      layers.DNSClassIN,
-			TTL:        0,
-			DataLength: 4,
-			Data:       []byte("10.0.0.20"),
-			IP:         net.ParseIP("10.0.0.20"),
-		}
-		mockDNSRecAAAA1 = layers.DNSResourceRecord{
-			Name:       []byte("aaaa.com"),
-			Type:       layers.DNSTypeAAAA,
-			Class:      layers.DNSClassIN,
-			TTL:        0,
-			DataLength: 16,
-			Data:       []byte("fe80:fe11::1"),
-			IP:         net.ParseIP("fe80:fe11::1"),
-		}
-		mockDNSRecAAAA2 = layers.DNSResourceRecord{
-			Name:       []byte("bbbb.com"),
-			Type:       layers.DNSTypeAAAA,
-			Class:      layers.DNSClassIN,
-			TTL:        0,
-			DataLength: 16,
-			Data:       []byte("fe80:fe11::2"),
-			IP:         net.ParseIP("fe80:fe11::2"),
-		}
-		invalidDNSRec = layers.DNSResourceRecord{
+		domainStore     *domainInfoStore
+		mockDNSRecA1    = makeA("a.com", "10.0.0.10")
+		mockDNSRecA2    = makeA("b.com", "10.0.0.20")
+		mockDNSRecAAAA1 = makeAAAA("aaaa.com", "fe80:fe11::1")
+		mockDNSRecAAAA2 = makeAAAA("bbbb.com", "fe80:fe11::2")
+		invalidDNSRec   = layers.DNSResourceRecord{
 			Name:       []byte("invalid#rec.com"),
 			Type:       layers.DNSTypeMX,
 			Class:      layers.DNSClassAny,
@@ -61,33 +67,9 @@ var _ = Describe("Domain Info Store", func() {
 			IP:         net.ParseIP("999.000.999.000"),
 		}
 		mockDNSRecCNAME = []layers.DNSResourceRecord{
-			{
-				Name:       []byte("cname1.com"),
-				Type:       layers.DNSTypeCNAME,
-				Class:      layers.DNSClassIN,
-				TTL:        1,
-				DataLength: 4,
-				IP:         nil,
-				CNAME:      []byte("cname2.com"),
-			},
-			{
-				Name:       []byte("cname2.com"),
-				Type:       layers.DNSTypeCNAME,
-				Class:      layers.DNSClassIN,
-				TTL:        1,
-				DataLength: 4,
-				IP:         nil,
-				CNAME:      []byte("cname3.com"),
-			},
-			{
-				Name:       []byte("cname3.com"),
-				Type:       layers.DNSTypeCNAME,
-				Class:      layers.DNSClassIN,
-				TTL:        1,
-				DataLength: 4,
-				IP:         nil,
-				CNAME:      []byte("a.com"),
-			},
+			makeCNAME("cname1.com", "cname2.com"),
+			makeCNAME("cname2.com", "cname3.com"),
+			makeCNAME("cname3.com", "a.com"),
 		}
 	)
 
@@ -108,7 +90,7 @@ var _ = Describe("Domain Info Store", func() {
 	// Assert that the domain store accepted and signaled the given record (and reason).
 	AssertDomainChanged := func(domainStore *domainInfoStore, d string, r string) {
 		receivedInfo := <-domainStore.domainInfoChanges
-		fmt.Printf("-->  %s %s expected %s\n", receivedInfo.domain, receivedInfo.reason, d)
+		log.Infof("domainInfoChanged:  %s %s expected %s", receivedInfo.domain, receivedInfo.reason, d)
 		Expect(receivedInfo).To(Equal(&domainInfoChanged{domain: d, reason: r}))
 	}
 
@@ -120,6 +102,7 @@ var _ = Describe("Domain Info Store", func() {
 		It("should expire and signal a domain change", func() {
 			domainStore.processMappingExpiry(string(dnsRec.Name), dnsRec.IP.String())
 			AssertDomainChanged(domainStore, string(dnsRec.Name), "mapping expired")
+			Expect(domainStore.collectGarbage()).To(Equal(1))
 		})
 	}
 
@@ -197,12 +180,9 @@ var _ = Describe("Domain Info Store", func() {
 				// us from asserting their specific values. But we can still check that the correct number of signals
 				// are sent based on the length of the CNAME chain passed in.
 				domainStoreCreate()
-				for i, r := range CNAMErecs {
+				for _, r := range CNAMErecs {
 					programDNSAnswer(domainStore, r)
 					Expect(domainStore.domainInfoChanges).Should(Receive())
-					for j := 0; j < i; j++ {
-						Expect(domainStore.domainInfoChanges).Should(Receive())
-					}
 				}
 				programDNSAnswer(domainStore, aRec)
 				Expect(domainStore.domainInfoChanges).Should(Receive())
@@ -217,4 +197,47 @@ var _ = Describe("Domain Info Store", func() {
 	domainStoreTestValidRec(mockDNSRecAAAA1, mockDNSRecAAAA2)
 	domainStoreTestInvalidRec(invalidDNSRec)
 	domainStoreTestCNAME(mockDNSRecCNAME, mockDNSRecA1)
+
+	expectChangesFor := func(domains ...string) {
+		domainsSignaled := set.New()
+	loop:
+		for {
+			select {
+			case signal := <-domainStore.domainInfoChanges:
+				domainsSignaled.Add(signal.domain)
+			default:
+				break loop
+			}
+		}
+		Expect(domainsSignaled).To(Equal(set.FromArray(domains)))
+	}
+
+	// Test where:
+	// - a1.com and a2.com are both CNAMEs for b.com
+	// - b.com is a CNAME for c.com
+	// - c.com resolves to an IP address
+	// The ipsets manager is interested in both a1.com and a2.com.
+	//
+	// The key point is that when the IP address for c.com changes, the ipsets manager
+	// should be notified that domain info has changed for both a1.com and a2.com.
+	It("should handle a branched DNS graph", func() {
+		domainStoreCreate()
+		programDNSAnswer(domainStore, makeCNAME("a1.com", "b.com"))
+		programDNSAnswer(domainStore, makeCNAME("a2.com", "b.com"))
+		programDNSAnswer(domainStore, makeCNAME("b.com", "c.com"))
+		programDNSAnswer(domainStore, makeA("c.com", "3.4.5.6"))
+		expectChangesFor("a1.com", "a2.com", "b.com", "c.com")
+		Expect(domainStore.GetDomainIPs("a1.com")).To(Equal([]string{"3.4.5.6"}))
+		Expect(domainStore.GetDomainIPs("a2.com")).To(Equal([]string{"3.4.5.6"}))
+		programDNSAnswer(domainStore, makeA("c.com", "7.8.9.10"))
+		expectChangesFor("a1.com", "a2.com", "c.com")
+		Expect(domainStore.GetDomainIPs("a1.com")).To(ConsistOf("3.4.5.6", "7.8.9.10"))
+		Expect(domainStore.GetDomainIPs("a2.com")).To(ConsistOf("3.4.5.6", "7.8.9.10"))
+		domainStore.processMappingExpiry("c.com", "3.4.5.6")
+		expectChangesFor("a1.com", "a2.com", "c.com")
+		Expect(domainStore.GetDomainIPs("a1.com")).To(Equal([]string{"7.8.9.10"}))
+		Expect(domainStore.GetDomainIPs("a2.com")).To(Equal([]string{"7.8.9.10"}))
+		// No garbage yet, because c.com still has a value and is the RHS of other mappings.
+		Expect(domainStore.collectGarbage()).To(Equal(0))
+	})
 })

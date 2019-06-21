@@ -46,12 +46,12 @@ type valueData struct {
 
 // The data that we hold for each name.
 type nameData struct {
-	// Known values for this name.  Map keys are the actual values (i.e. IPs or alias names),
+	// Known values for this name.  Map keys are the actual values (i.e. IPs or CNAME names),
 	// and valueData is as above.
 	values map[string]*valueData
-	// Other names whose cached IP list should be invalidated when the info for _this_ name
-	// changes.
-	ancestorNames []string
+	// Other names that we should notify a "change of information" for, and whose cached IP list
+	// should be invalidated, when the info for _this_ name changes.
+	namesToNotify set.Set
 }
 
 type domainInfoStore struct {
@@ -80,6 +80,10 @@ type domainInfoStore struct {
 	// Persistence.
 	saveFile     string
 	saveInterval time.Duration
+
+	// Reclaiming memory for mappings that are now useless.
+	gcTrigger  bool
+	gcInterval time.Duration
 }
 
 // Signal sent by the domain info store to the ipsets manager when the information for a given
@@ -105,6 +109,7 @@ func newDomainInfoStore(domainInfoChanges chan *domainInfoChanged, saveFile stri
 		mappingExpiryChannel: make(chan *domainMappingExpired),
 		saveFile:             saveFile,
 		saveInterval:         saveInterval,
+		gcInterval:           13 * time.Second,
 	}
 	return s
 }
@@ -131,13 +136,15 @@ func (s *domainInfoStore) Start() {
 		log.WithError(err).Warning("Failed to read mappings from file")
 	}
 
-	// Start a repeating timer for periodically saving DNS info to a persistent file.
+	// Start repeating timers for periodically saving DNS info to a persistent file, and for
+	// garbage collection.
 	saveTimerC := time.NewTicker(s.saveInterval).C
+	gcTimerC := time.NewTicker(s.gcInterval).C
 
-	go s.loop(saveTimerC)
+	go s.loop(saveTimerC, gcTimerC)
 }
 
-func (s *domainInfoStore) loop(saveTimerC <-chan time.Time) {
+func (s *domainInfoStore) loop(saveTimerC, gcTimerC <-chan time.Time) {
 	for {
 		select {
 		case msg := <-s.msgChannel:
@@ -152,6 +159,8 @@ func (s *domainInfoStore) loop(saveTimerC <-chan time.Time) {
 			if err := s.saveMappingsV1(); err != nil {
 				log.WithError(err).Warning("Failed to save mappings to file")
 			}
+		case <-gcTimerC:
+			_ = s.collectGarbage()
 		}
 	}
 }
@@ -226,6 +235,8 @@ func (s *domainInfoStore) saveMappingsV1() error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
+	log.WithField("file", s.saveFile).Info("Saving DNS mappings...")
+
 	// Write first to a temporary save file, so that we can atomically rename it to the intended
 	// file once it contains new data.  Thus we avoid overwriting a previous version of the file
 	// (which may still be useful) until we're sure we have a complete new file prepared.
@@ -262,10 +273,7 @@ func (s *domainInfoStore) saveMappingsV1() error {
 		}
 	}
 
-	// Sync and close the temporary save file.
-	if err = f.Sync(); err != nil {
-		return err
-	}
+	// Close the temporary save file.
 	if err = f.Close(); err != nil {
 		return err
 	}
@@ -275,6 +283,8 @@ func (s *domainInfoStore) saveMappingsV1() error {
 	if err = os.Rename(tmpSaveFile, s.saveFile); err != nil {
 		return err
 	}
+
+	log.WithField("file", s.saveFile).Info("Finished saving DNS mappings")
 
 	return nil
 }
@@ -297,9 +307,7 @@ func (s *domainInfoStore) processMappingExpiry(name, value string) {
 		if valueData := nameData.values[value]; (valueData != nil) && valueData.expiryTime.Before(time.Now()) {
 			log.Debugf("Mapping expiry for %v -> %v", name, value)
 			delete(nameData.values, value)
-			if len(nameData.values)+len(nameData.ancestorNames) == 0 {
-				delete(s.mappings, name)
-			}
+			s.gcTrigger = true
 			s.signalDomainInfoChange(name, "mapping expired")
 		} else if valueData != nil {
 			log.Debugf("Too early mapping expiry for %v -> %v", name, value)
@@ -360,7 +368,10 @@ func (s *domainInfoStore) storeInfo(name, value string, ttl time.Duration, isNam
 		})
 	}
 	if s.mappings[name] == nil {
-		s.mappings[name] = &nameData{values: make(map[string]*valueData)}
+		s.mappings[name] = &nameData{
+			values:        make(map[string]*valueData),
+			namesToNotify: set.New(),
+		}
 	}
 	existing := s.mappings[name].values[value]
 	if existing == nil {
@@ -377,7 +388,7 @@ func (s *domainInfoStore) storeInfo(name, value string, ttl time.Duration, isNam
 		if isName && s.mappings[value] == nil {
 			s.mappings[value] = &nameData{
 				values:        make(map[string]*valueData),
-				ancestorNames: append(s.mappings[name].ancestorNames, name),
+				namesToNotify: set.New(),
 			}
 		}
 	} else {
@@ -395,21 +406,20 @@ func (s *domainInfoStore) GetDomainIPs(domain string) []string {
 	defer s.mutex.Unlock()
 	ips := s.resultsCache[domain]
 	if ips == nil {
-		var collectIPsForName func(string, []string)
-		collectIPsForName = func(domain string, ancestorNames []string) {
-			nameData := s.mappings[domain]
+		var collectIPsForName func(string)
+		collectIPsForName = func(name string) {
+			nameData := s.mappings[name]
 			log.WithFields(log.Fields{
-				"domain":        domain,
-				"ancestorNames": ancestorNames,
-				"nameData":      nameData,
+				"name":     name,
+				"nameData": nameData,
 			}).Debug("Collect IPs for name")
 			if nameData != nil {
-				nameData.ancestorNames = ancestorNames
+				nameData.namesToNotify.Add(domain)
 				for value, valueData := range nameData.values {
 					if valueData.isName {
 						// The RHS of the mapping is another name, so we recurse to pick up
 						// its IPs.
-						collectIPsForName(value, append(ancestorNames, domain))
+						collectIPsForName(value)
 					} else {
 						// The RHS of the mapping is an IP, so add it to the list that we
 						// will return.
@@ -418,7 +428,7 @@ func (s *domainInfoStore) GetDomainIPs(domain string) []string {
 				}
 			}
 		}
-		collectIPsForName(domain, nil)
+		collectIPsForName(domain)
 		s.resultsCache[domain] = ips
 	}
 	log.Infof("GetDomainIPs(%v) -> %v", domain, ips)
@@ -429,10 +439,12 @@ func (s *domainInfoStore) signalDomainInfoChange(name, reason string) {
 	changedNames := set.From(name)
 	delete(s.resultsCache, name)
 	if nameData := s.mappings[name]; nameData != nil {
-		for _, ancestor := range nameData.ancestorNames {
+		nameData.namesToNotify.Iter(func(item interface{}) error {
+			ancestor := item.(string)
 			changedNames.Add(ancestor)
 			delete(s.resultsCache, ancestor)
-		}
+			return nil
+		})
 	}
 	// Release the mutex to send change signals, so that we can't get a deadlock between this
 	// thread and the int_dataplane thread.
@@ -442,4 +454,48 @@ func (s *domainInfoStore) signalDomainInfoChange(name, reason string) {
 		s.domainInfoChanges <- &domainInfoChanged{domain: item.(string), reason: reason}
 		return nil
 	})
+}
+
+func (s *domainInfoStore) collectGarbage() (numDeleted int) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	if s.gcTrigger {
+		// Accumulate the mappings that are still useful.
+		namesToKeep := set.New()
+		for name, nameData := range s.mappings {
+			// A mapping is still useful if it has any unexpired values, because policy
+			// might be configured at any moment for that mapping's name, and then we'd
+			// want to be able to return the corresponding IPs.
+			if len(nameData.values) > 0 {
+				namesToKeep.Add(name)
+			}
+			// A mapping X is also still useful it its name is the RHS of another
+			// mapping Y, even if we don't currently have any values for X, because
+			// there could be a GetDomainIPs(Y) call, and later a new value for X, and
+			// in that case we need to be able to signal that the information for Y has
+			// changed.
+			for rhs, valueData := range nameData.values {
+				if valueData.isName {
+					namesToKeep.Add(rhs)
+					// There must be a mapping for the RHS name.
+					if s.mappings[rhs] == nil {
+						log.Panicf("Missing mapping for %v, which is a RHS value for %v", rhs, name)
+					}
+				}
+			}
+		}
+		// Delete the mappings that are now useless.
+		for name := range s.mappings {
+			if !namesToKeep.Contains(name) {
+				log.WithField("name", name).Debug("Delete useless mapping")
+				delete(s.mappings, name)
+				numDeleted += 1
+			}
+		}
+		// Reset the flag that will trigger the next GC.
+		s.gcTrigger = false
+	}
+
+	return
 }
