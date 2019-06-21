@@ -222,16 +222,6 @@ func (c *cluster) DialContext(ctx context.Context, network, addr string) (net.Co
 	return c.tunnel.Open()
 }
 
-func (c *cluster) DialTLS(network, addr string) (net.Conn, error) {
-	conn, err := c.tunnel.Open()
-	if err != nil {
-		return nil, errors.WithMessage(err, "c.tunnel.Open")
-	}
-
-	// We are dialing through a securted tunnel, we are already verified
-	return tls.Client(conn, &tls.Config{InsecureSkipVerify: true}), nil
-}
-
 func (c *cluster) DialTLS2(network, addr string, cfg *tls.Config) (net.Conn, error) {
 	conn, err := c.tunnel.Open()
 	if err != nil {
