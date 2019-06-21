@@ -270,7 +270,12 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// We proxy through a secure tunnel, therefore we only enforce https for HTTP/2
+	// XXX What if we set http2.Transport.AllowHTTP = true ?
 	r.URL.Scheme = "http"
+	if r.ProtoMajor == 2 {
+		r.URL.Scheme = "https"
+	}
 	// N.B. Host is only set to make the ReverseProxy happy, DialContext ignores
 	// this as the destinatination has been decided by choosing the tunnel.
 	r.URL.Host = "voltron-tunnel"

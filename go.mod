@@ -9,5 +9,6 @@ require (
 	github.com/onsi/gomega v1.5.0
 	github.com/pkg/errors v0.8.1
 	github.com/sirupsen/logrus v1.4.0
+	golang.org/x/net v0.0.0-20180906233101-161cd47e91fd
 	golang.org/x/text v0.3.2 // indirect
 )

@@ -291,6 +291,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 					Transport: &http2.Transport{
 						TLSClientConfig: &tls.Config{
 							InsecureSkipVerify: true,
+							NextProtos:         []string{"h2"},
 						},
 					},
 				}
@@ -493,9 +494,6 @@ func http2Srv(t *tunnel.Tunnel) {
 
 	mux := http.NewServeMux()
 	httpsrv := &http.Server{
-		TLSConfig: &tls.Config{
-			Certificates: []tls.Certificate{xcert},
-		},
 		Handler: mux,
 	}
 
@@ -514,12 +512,17 @@ func http2Srv(t *tunnel.Tunnel) {
 		}
 	})
 
+	lisTLS := tls.NewListener(t, &tls.Config{
+		Certificates: []tls.Certificate{xcert},
+		NextProtos:   []string{"h2"},
+	})
+
 	var wg sync.WaitGroup
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		httpsrv.Serve(t)
+		httpsrv.Serve(lisTLS)
 	}()
 
 	// we only handle one request, we wait until it is done

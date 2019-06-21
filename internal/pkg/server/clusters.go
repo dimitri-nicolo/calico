@@ -5,6 +5,7 @@ package server
 import (
 	"context"
 	"crypto"
+	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
@@ -15,7 +16,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/net/http2"
 
 	jclust "github.com/tigera/voltron/internal/pkg/clusters"
 	"github.com/tigera/voltron/pkg/tunnel"
@@ -219,8 +222,23 @@ func (c *cluster) DialContext(ctx context.Context, network, addr string) (net.Co
 	return c.tunnel.Open()
 }
 
-func (c *cluster) Dial(network, addr string) (net.Conn, error) {
-	return c.tunnel.Open()
+func (c *cluster) DialTLS(network, addr string) (net.Conn, error) {
+	conn, err := c.tunnel.Open()
+	if err != nil {
+		return nil, errors.WithMessage(err, "c.tunnel.Open")
+	}
+
+	// We are dialing through a securted tunnel, we are already verified
+	return tls.Client(conn, &tls.Config{InsecureSkipVerify: true}), nil
+}
+
+func (c *cluster) DialTLS2(network, addr string, cfg *tls.Config) (net.Conn, error) {
+	conn, err := c.tunnel.Open()
+	if err != nil {
+		return nil, errors.WithMessage(err, "c.tunnel.Open")
+	}
+
+	return tls.Client(conn, cfg), nil
 }
 
 func (c *cluster) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -228,6 +246,7 @@ func (c *cluster) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("Cluster %s unreachable, no connection", c.DisplayName), 503)
 		return
 	}
+
 	c.proxy.ServeHTTP(w, r)
 }
 
@@ -237,9 +256,10 @@ func (c *cluster) assignTunnel(t *tunnel.Tunnel) {
 		Director:      proxyVoidDirector,
 		FlushInterval: 100 * time.Millisecond,
 		// TODO set the error logger
-		Transport: &http.Transport{
-			DialContext: c.DialContext,
-			DialTLS:     c.Dial, // to avoid TLS in a TLSed tunnel
+		Transport: &http2.Transport{
+			DialTLS:         c.DialTLS2,
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			AllowHTTP:       true,
 		},
 	}
 }

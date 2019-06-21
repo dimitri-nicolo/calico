@@ -3,6 +3,7 @@ package client
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"net"
 	"net/http"
 	"sync"
 
@@ -65,6 +66,8 @@ func (c *Client) WaitForTunnel() error {
 
 // ServeTunnelHTTP starts serving HTTP requests through a tunnel
 func (c *Client) ServeTunnelHTTP() error {
+	var lis net.Listener
+
 	err := func() error {
 		var err error
 
@@ -74,6 +77,8 @@ func (c *Client) ServeTunnelHTTP() error {
 			if err != nil {
 				return err
 			}
+
+			lis = c.tunnel
 		} else {
 			cert, err := tls.X509KeyPair(c.tunnelCertPEM, c.tunnelKeyPEM)
 			if err != nil {
@@ -90,6 +95,14 @@ func (c *Client) ServeTunnelHTTP() error {
 			if err != nil {
 				return err
 			}
+
+			// we need to upgrade the tunnel to a TLS listener to support HTTP2
+			// on this side.
+			lis = tls.NewListener(c.tunnel, &tls.Config{
+				Certificates: []tls.Certificate{cert},
+				NextProtos:   []string{"h2"},
+			})
+			log.Infof("serving HTTP/2 enabled")
 		}
 
 		return nil
@@ -101,7 +114,7 @@ func (c *Client) ServeTunnelHTTP() error {
 		return err
 	}
 
-	return c.http.Serve(c.tunnel)
+	return c.http.Serve(lis)
 }
 
 // Close stops the server.
