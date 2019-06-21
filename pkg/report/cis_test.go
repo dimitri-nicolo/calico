@@ -156,11 +156,15 @@ type fakeBenchmarker struct {
 	started bool
 	stopped bool
 	results []benchmark.BenchmarksResult
+	start   time.Time
+	end     time.Time
 }
 
 func (b *fakeBenchmarker) RetrieveLatestBenchmarks(
 	ctx context.Context, ct benchmark.BenchmarkType, filters []benchmark.Filter, start, end time.Time,
 ) <-chan benchmark.BenchmarksResult {
+	b.start = start
+	b.end = end
 	ch := make(chan benchmark.BenchmarksResult)
 	go func() {
 		defer close(ch)
@@ -274,6 +278,30 @@ var _ = Describe("CIS report tests", func() {
 		Expect(rerr).NotTo(HaveOccurred())
 		Expect(reportStorer.data).ToNot(BeNil())
 		Expect(reportStorer.data.CISBenchmark).To(HaveLen(0))
+	})
+
+	It("should fix start/end times that are too close", func() {
+		By("Setting end-start to be less than 1.5xsnapshot interval")
+		cfg.ParsedReportEnd = now
+		cfg.ParsedReportStart = now.Add(-DayAndHalf + time.Hour)
+		run()
+
+		By("Checking start time was adjusted to 1.5xsnapshot interval from end")
+		Expect(rerr).NotTo(HaveOccurred())
+		Expect(benchmarker.end).To(Equal(cfg.ParsedReportEnd))
+		Expect(benchmarker.start).To(Equal(cfg.ParsedReportEnd.Add(-DayAndHalf)))
+	})
+
+	It("should not fix start/end times that are sufficiently far apart", func() {
+		By("Setting end-start to be greater than 1.5xsnapshot interval")
+		cfg.ParsedReportEnd = now
+		cfg.ParsedReportStart = now.Add(-DayAndHalf - time.Hour)
+		run()
+
+		By("Checking start time was not adjusted")
+		Expect(rerr).NotTo(HaveOccurred())
+		Expect(benchmarker.end).To(Equal(cfg.ParsedReportEnd))
+		Expect(benchmarker.start).To(Equal(cfg.ParsedReportStart))
 	})
 
 	It("should handle a few reports with including all tests", func() {
