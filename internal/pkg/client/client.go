@@ -68,6 +68,7 @@ func (c *Client) WaitForTunnel() error {
 func (c *Client) ServeTunnelHTTP() error {
 	var lis net.Listener
 
+	log.Infof("Dialing tunnel to %s ...", c.tunnelAddr)
 	err := func() error {
 		var err error
 
@@ -111,9 +112,11 @@ func (c *Client) ServeTunnelHTTP() error {
 	c.tunnelReady <- err
 	close(c.tunnelReady)
 	if err != nil {
+		log.Errorf("Failed to dial tunnel: %s", err)
 		return err
 	}
 
+	log.Infof("Tunnel established, starting to server tunneled HTTP")
 	return c.http.Serve(lis)
 }
 
