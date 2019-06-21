@@ -149,7 +149,7 @@ v2.4:
 v2.3:
 - title: v2.3.3
   note: |
-    10 June 2019
+    21 June 2019
   components:
     cnx-manager:
       version: v2.3.1
