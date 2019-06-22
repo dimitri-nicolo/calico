@@ -15,7 +15,7 @@ import:
   - pkg/run
 - package: github.com/projectcalico/felix
   repo: git@github.com:tigera/felix-private.git
-  version: 10d159640f1904918ba9f972f99d8eec8ba1330b
+  version: a91a3a5ba6b2807e0e8f91f687f37b3ee6ce9ada
   subpackages:
   - daemon
 - package: github.com/projectcalico/cni-plugin
@@ -23,7 +23,7 @@ import:
   version: e9419cfc5f0c1d2c55f17dbfc2f562187357d6ba
 - package: github.com/projectcalico/libcalico-go
   repo: git@github.com:tigera/libcalico-go-private.git
-  version: 53dc22e6fb643a06f9db11b9a41d0e8fe85318b9
+  version: 8dc7bc820846ec5c35f943ce2f673dad348a9c4a
   subpackages:
   - lib/apiconfig
   - lib/apis/v3
