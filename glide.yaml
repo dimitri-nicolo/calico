@@ -25,3 +25,4 @@ import:
 - package: github.com/gogo/protobuf
   subpackages:
   - proto
+- package: github.com/hpcloud/tail

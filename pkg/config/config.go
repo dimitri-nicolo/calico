@@ -15,6 +15,14 @@ type Config struct {
 
 	// Socket to dial
 	DialTarget string `envconfig:"FELIX_DIAL_TARGET"`
+	// Location of the ingress log files to read from
+	IngressLogPath string `envconfig:"INGRESS_LOG_PATH"`
+	// How long the collector will wait in seconds to collect
+	// logs before sending them as a batch.
+	IngressLogIntervalSecs int `envconfig:"INGRESS_LOG_INTERVAL_SECONDS"`
+	// Number requests sent in the batch of logs from the collector.
+	// A negative number will return as many requests as possible.
+	IngressRequestsPerInterval int `envconfig:"INGRESS_LOG_REQUESTS_PER_INTERVAL"`
 
 	// Parsed values
 	ParsedLogLevel log.Level
@@ -38,6 +46,21 @@ func LoadConfig() (*Config, error) {
 
 	// Parse log level.
 	config.ParsedLogLevel = logutils.SafeParseLogLevel(config.LogLevel)
+
+	// Default the IngressLogPath to /var/log/calico/ingress/ingress.log
+	if config.IngressLogPath == "" {
+		config.IngressLogPath = "/var/log/calico/ingress/ingress.log"
+	}
+
+	// Default the IngressLogInterval to 5 seconds
+	if config.IngressLogIntervalSecs == 0 {
+		config.IngressLogIntervalSecs = 5
+	}
+
+	// Default the INgressLogBatchSize to 10
+	if config.IngressRequestsPerInterval == 0 {
+		config.IngressRequestsPerInterval = 10
+	}
 
 	return config, nil
 }
