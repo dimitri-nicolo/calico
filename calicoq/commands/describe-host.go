@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
 
 package commands
 
@@ -127,8 +127,8 @@ func DescribeEndpointOrHost(configFile, endpointSubstring, hostname string, hide
 	disp.Register(model.ProfileRulesKey{}, arc.OnUpdate)
 	disp.Register(model.RemoteClusterStatusKey{}, cbs.rcc.OnUpdate)
 
-	bclient := GetClient(configFile)
-	syncer := felixsyncer.New(bclient, cbs)
+	bclient, cfg := GetClient(configFile)
+	syncer := felixsyncer.New(bclient, cfg.Spec, cbs)
 	syncer.Start()
 
 	// The describeCmd will notify us once it's in sync and has finished outputting.

@@ -4,18 +4,25 @@ import:
 - package: github.com/docopt/docopt-go
 - package: github.com/projectcalico/felix
   vcs: git
-  version: 993b702fdfb62341cf593ffd490a2a1076aab6d2
+  version: a91a3a5ba6b2807e0e8f91f687f37b3ee6ce9ada
   repo: git@github.com:tigera/felix-private.git
 - package: github.com/projectcalico/libcalico-go
   vcs: git
   repo: git@github.com:tigera/libcalico-go-private.git
-  version: 5e05209688ae1fb40a2916e40dc17f9c22e7b556
+  version: 8dc7bc820846ec5c35f943ce2f673dad348a9c4a
 - package: github.com/tigera/licensing
   repo: git@github.com:tigera/licensing
   vcs: git
-  version: c9432e3124d3f9da2f3e34a703d815b072f6b0b4
+  version: 4ef30a4e6de92153a6589af226e77c567f530541
   subpackages:
   - client
 - package: github.com/projectcalico/go-yaml-wrapper
 - package: github.com/onsi/ginkgo
 - package: github.com/onsi/gomega
+- package: github.com/Azure/go-autorest
+  version: 1ff28809256a84bb6966640ff3d0371af82ccba4
+  subpackages:
+  - autorest
+  - autorest/adal
+  - autorest/azure
+  - autorest/date
