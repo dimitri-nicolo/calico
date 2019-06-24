@@ -202,7 +202,10 @@ func DoNetworking(
 			Priority:  65500,
 		}
 
-		hnsEndpointCont.ApplyACLPolicy(defaultDenyAllACL)
+		err := hnsEndpointCont.ApplyACLPolicy(defaultDenyAllACL)
+		if err != nil {
+			return "", "", err
+		}
 	}
 	contVethMAC = hnsEndpointCont.MacAddress
 	return hostVethName, contVethMAC, err
