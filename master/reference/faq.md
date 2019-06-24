@@ -93,7 +93,7 @@ documents *mandates* the use of VLANs.
 2. Modify IP pool config.
 
    Modify the pool's spec to enable IP-in-IP and NAT outgoing. (See
-   [IP pools]({{site.url}}/{{page.version}}/reference/calicoctl/resources/ippool)
+   [IP pools]({{site.url}}/{{page.version}}/reference/resources/ippool)
    for other settings that can be edited.)
 
    ```shell
@@ -402,7 +402,7 @@ For example add the following arguments to the kubelet-wrapper service:
 ```
 
 Without the above volume mounts, the kubelet will not call the {{site.prodname}} CNI binaries, and so
-{{site.prodname}} [workload endpoints]({{site.url}}/{{page.version}}/reference/calicoctl/resources/workloadendpoint) will
+{{site.prodname}} [workload endpoints]({{site.url}}/{{page.version}}/reference/resources/workloadendpoint) will
 not be created, and {{site.prodname}} policy will not be enforced.
 
 ### How do I view {{site.prodname}} CNI logs?
@@ -415,7 +415,7 @@ key `log_level`.  See [the configuration guide]({{site.url}}/{{page.version}}/re
 
 ### How do I configure the Pod IP range?
 
-When using {{site.prodname}} IPAM, IP addresses are assigned from [IP Pools]({{site.url}}/{{page.version}}/reference/calicoctl/resources/ippool).
+When using {{site.prodname}} IPAM, IP addresses are assigned from [IP Pools]({{site.url}}/{{page.version}}/reference/resources/ippool).
 
 By default, all enabled IP Pool are used. However, you can specify which IP Pools to use for IP address management in the [CNI network config]({{site.url}}/{{page.version}}/reference/cni-plugin/configuration#ipam),
 or on a per-Pod basis using [Kubernetes annotations]({{site.url}}/{{page.version}}/reference/cni-plugin/configuration#using-kubernetes-annotations).

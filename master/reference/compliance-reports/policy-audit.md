@@ -2,7 +2,7 @@
 title: Policy Audit report (policy-audit)
 ---
 
-To create a Policy Audit report, create a [`GlobalReport`](../calicoctl/resources/globalreport) with the `reportType` 
+To create a Policy Audit report, create a [`GlobalReport`](../resources/globalreport) with the `reportType`
 set to `policy-audit`.
 
 The following sample command creates a GlobalReport that results in a daily policy audit report for

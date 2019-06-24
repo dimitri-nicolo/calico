@@ -7,13 +7,13 @@ The {{ site.prodname }} compliance reporting feature provides the following comp
 -  [Network Access](./network-access)
 -  [Policy Audit](./policy-audit)
 
-Create a [`GlobalReport`](../calicoctl/resources/globalreport) resource to automatically schedule report generation, and  specify the report scope (resources to include in the report).
+Create a [`GlobalReport`](../resources/globalreport) resource to automatically schedule report generation, and  specify the report scope (resources to include in the report).
 
 ### Concepts
 
 #### In-scope asset
 
-An asset (Pod or HostEndpoint) is flagged as in-scope by endpoint labels, namespace and/or namespace labels, and service 
+An asset (Pod or HostEndpoint) is flagged as in-scope by endpoint labels, namespace and/or namespace labels, and service
 account and/or service account labels.
 
 _How this applies to the report_:
@@ -38,20 +38,20 @@ As per ingress, but with egress policy rules. Note that egress statistics are no
 
 #### Allows ingress traffic from another namespace
 
-An endpoint is flagged as allowing ingress traffic from another namespace if it has one or more policies that apply to 
+An endpoint is flagged as allowing ingress traffic from another namespace if it has one or more policies that apply to
 it with an ingress allow rule that:
 -  has an explicit namespace selector configured, or
 -  has no source selector or source CIDR configured, or
 -  (for GlobalNetworkPolicy) has no source CIDR.
 
-A service is flagged as allowing ingress traffic from another namespace if any of the inscope endpoints within that 
+A service is flagged as allowing ingress traffic from another namespace if any of the inscope endpoints within that
 service are flagged.
 
-A namespace is flagged as allowing ingress traffic from another namespace if all of the inscope endpoints within that 
+A namespace is flagged as allowing ingress traffic from another namespace if all of the inscope endpoints within that
 namespace are flagged.
 
 _How this applies to the report_:
-An endpoint is flagged as allowing ingress traffic from another namespace if it was flagged at any time during the 
+An endpoint is flagged as allowing ingress traffic from another namespace if it was flagged at any time during the
 report interval.
 
 #### Allows egress traffic to another namespace
@@ -59,20 +59,20 @@ As per ingress, but with egress policy rules and destination selector/CIDR. Note
 for services.
 
 #### Allows ingress traffic from the internet
-An endpoint is flagged as allowing ingress traffic from the internet if it has one or more policies that apply to it 
+An endpoint is flagged as allowing ingress traffic from the internet if it has one or more policies that apply to it
 with an ingress allow rule that:
 -  has no source selector or source CIDR configured, or
 -  has a source CIDR in the non-private IP ranges and has no source selector, or
 -  has a source selector that matches one or more NetworkSets that contain at least one non-private IP.
 
-A service is flagged as allowing ingress traffic from the internet if any of the inscope endpoints within that service 
+A service is flagged as allowing ingress traffic from the internet if any of the inscope endpoints within that service
 are flagged.
 
-A namespace is flagged as allowing ingress traffic from the internet if all of the inscope endpoints within that 
+A namespace is flagged as allowing ingress traffic from the internet if all of the inscope endpoints within that
 namespace are flagged.
 
 _How this applies to the report_:
-An endpoint is flagged as allowing ingress traffic from the internet if it was flagged as such at any time during the 
+An endpoint is flagged as allowing ingress traffic from the internet if it was flagged as such at any time during the
 report interval.
 
 #### Allows egress traffic to the internet

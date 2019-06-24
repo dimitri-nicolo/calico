@@ -5,8 +5,6 @@ layout: null
 datastore: kubernetes
 typha:
   enabled: false
-app_layer_policy:
-  configured: true
 network: none
 ipam: host-local
 {% endhelm %}

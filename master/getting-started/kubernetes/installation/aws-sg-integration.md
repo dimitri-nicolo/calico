@@ -18,7 +18,7 @@ Your Kubernetes cluster must meet the following specifications:
   [Tigera Secure EE for policy]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/other#installing-tigera-secure-ee-for-policy-only)
   on your cluster. The AWS security group integration requires the Kubernetes API datastore.
 - You have not created any
-  [host endpoints]({{site.url}}/{{page.version}}/reference/calicoctl/resources/hostendpoint)
+  [host endpoints]({{site.url}}/{{page.version}}/reference/resources/hostendpoint)
   that have a `spec.node` value that matches any of your Kubernetes nodes. See the [AWS security group integration guide](/{{page.version}}/security/aws-security-group-integration/host-endpoints) for more information.
 
 

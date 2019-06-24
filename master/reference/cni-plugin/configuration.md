@@ -57,6 +57,7 @@ Configure access to your etcd cluster using the following options.
 | Option name         | Default | Description
 |---------------------|---------|-------------
 | `etcd_endpoints`    | None    | Comma-separated list of endpoints. Example: `http://127.0.0.1:2379,http://127.0.0.2:2379` | string
+| `etcd_discovery_srv` | None    | Domain name to discover etcd endpoints via SRV records. Mutually exclusive with `etcdEndpoints`. Example: `example.com` (optional) | string
 | `etcd_key_file`     | None    | Path to the file containing the private key matching the CNI plugin's client certificate. Enables the CNI plugin to participate in mutual TLS authentication and identify itself to the etcd server. Example: `/etc/calico-cni/key.pem` (optional) | string
 | `etcd_cert_file`    | None    | Path to the file containing the client certificate issued to the CNI plugin. Enables the CNI plugin to participate in mutual TLS authentication and identify itself to the etcd server. Example: `/etc/calico-cni/cert.pem` (optional) | string
 | `etcd_ca_cert_file` | None    | Path to the file containing the root certificate of the certificate authority (CA) that issued the etcd server certificate. Configures the CNI plugin to trust the CA that signed the root certificate. The file may contain multiple root certificates, causing the CNI plugin to trust each of the CAs included. | string
@@ -207,7 +208,7 @@ When using `type: k8s`, the {{site.prodname}} CNI plugin requires read-only Kube
 
 ## IPAM
 
-### Using CNI configuration
+### Using host-local IPAM
 
 When using the CNI `host-local` IPAM plugin, a special value `usePodCidr` is allowed for the subnet field (either at the top-level, or in a "range").  This tells the plugin to determine the subnet to use from the Kubernetes API based on the Node.podCIDR field. {{site.prodname}} does not use the `gateway` field of a range so that field is not required and it will be ignored if present.
 
@@ -255,6 +256,12 @@ When using the CNI `host-local` IPAM plugin, a special value `usePodCidr` is all
 
 When making use of the `usePodCidr` option, the {{site.prodname}} CNI plugin requires read-only Kubernetes API access to the `Nodes` resource.
 
+#### BGP route aggregation using host-local IPAM
+
+When using {{side.prodname}} IPAM, routes are automatically aggregated based on per-node allocations. However, when using `host-local` IPAM with the Kubernetes API
+datastore, you must enable BGP route aggregation based on the `Node.podCIDR` field by setting the environment variable `USE_POD_CIDR=true` in {{site.nodecontainer}}. We highly recommend
+setting this to achieve more efficient route distribution.
+
 ### Using Kubernetes annotations
 
 #### Specifying IP pools on a per-namespace or per-pod basis
@@ -284,7 +291,7 @@ If provided, these IP pools will override any IP pools specified in the CNI conf
 > **Note**: This requires the IP pools to exist before `ipv4pools` or
 > `ipv6pools` annotations are used. Requesting a subset of an IP pool
 > is not supported. IP pools requested in the annotations must exactly
-> match a configured [IPPool]({{site.url}}/{{page.version}}/reference/calicoctl/resources/ippool) resource.
+> match a configured [IPPool]({{site.baseurl}}/{{page.version}}/reference/resources/ippool) resource.
 {: .alert .alert-info}
 
 > **Note**: The {{site.prodname}} CNI plugin supports specifying an annotation per namespace.
@@ -292,7 +299,6 @@ If provided, these IP pools will override any IP pools specified in the CNI conf
 > Otherwise, if only the namespace has the annotation the annotation of the namespace will
 > be used for each pod in it.
 {: .alert .alert-info}
-
 
 #### Requesting a specific IP address
 
@@ -386,7 +392,7 @@ You can request a floating IP address for a pod through [Kubernetes annotations]
 Nodes will only assign workload addresses from IP pools which select them. By
 default, IP pools select all nodes, but this can be configured using the
 `nodeSelector` field. Check out the [IP pool resource
-document]({{site.url}}/{{page.version}}/reference/calicoctl/resources/ippool)
+document]({{site.baseurl}}/{{page.version}}/reference/resources/ippool)
 for more details.
 
 Example:
@@ -415,7 +421,7 @@ Example:
    ```
 
 Check out the usage guide on [assigning IP addresses based on
-topology]({{site.url}}/{{page.version}}/networking/assigning-ip-addresses-topology)
+topology]({{site.baseurl}}/{{page.version}}/networking/assigning-ip-addresses-topology)
 for a full example.
 
 ### CNI network configuration lists

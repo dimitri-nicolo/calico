@@ -1175,7 +1175,7 @@ master:
     intrusion-detection-controller:
       version: master
     flannel:
-      version: v0.9.1
+      version: v0.11.0
     compliance-controller:
       version: master
     compliance-reporter:

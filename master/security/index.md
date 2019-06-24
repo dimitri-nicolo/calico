@@ -1,6 +1,6 @@
 ---
 title: Security
-canonical_url: 'https://docs.projectcalico.org/master/security/'
+canonical_url: 'https://docs.tigera.io/v2.4/security/index'
 ---
 
 This section provides policy tutorials and describes how to secure {{site.prodname}} component

@@ -16,8 +16,8 @@ bin
 vendor
 backport*.patch
 
-# This prevents us from accidentally checking actual files into
-# the helm templates directory, since (for now) we should be
-# using a symlink.
-_includes/*/charts/calico/templates/*
-_includes/*/charts/*/values.yaml
+pinned_versions.yml
+pinned_images.yml
+
+# This prevents us from checking in a supplementary values.yaml file
+_includes/*/charts/calico/values.yaml

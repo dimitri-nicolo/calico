@@ -124,8 +124,8 @@ kubectl apply -f calico.yaml
 It is also important to note that you may need to provide specific values to be
 rendered as a part of your BGP configuration by the BIRD confd templates. These
 values can be set in the
-[BGP Configuration]({{site.url}}/{{page.version}}/reference/calicoctl/resources/bgpconfig)
-and [BGP Peer]({{site.url}}/{{page.version}}/reference/calicoctl/resources/bgppeer)
+[BGP Configuration]({{site.url}}/{{page.version}}/reference/resources/bgpconfig)
+and [BGP Peer]({{site.url}}/{{page.version}}/reference/resources/bgppeer)
 objects through [calicoctl]({{site.url}}/{{page.version}}/reference/calicoctl).
 Follow the directions provided with the templates you have received in order to ensure
 that all of the correct values are set for your BIRD configuration to render appropriately.

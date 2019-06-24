@@ -1,6 +1,6 @@
 ---
 title: Calico over IP fabrics
-canonical_url: 'https://docs.tigera.io/v2.3/reference/private-cloud/l3-interconnect-fabric'
+canonical_url: 'https://docs.tigera.io/v2.4/networking/design/l3-interconnect-fabric'
 ---
 
 
@@ -12,7 +12,7 @@ which {{site.prodname}} operates [^2].
 While {{site.prodname}} is designed to work with any underlying interconnect fabric
 that can support IP traffic, the fabric that has the least
 considerations attached to its implementation is an Ethernet fabric as
-discussed in our earlier [technical note]({{site.url}}/{{page.version}}/networking/design/l2-interconnect-fabric).
+discussed in our earlier [technical note]({{site.baseurl}}/{{page.version}}/networking/design/l2-interconnect-fabric).
 
 In most cases, the Ethernet fabric is the appropriate choice, but there
 are infrastructures where L3 (an IP fabric) has already been deployed,

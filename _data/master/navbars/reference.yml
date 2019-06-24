@@ -8,84 +8,80 @@ toc:
   section:
   - title: Overview
     path: /reference/calicoctl/
-  - title: Command reference
-    path: /reference/calicoctl/commands
+  - title: create
+    path: /reference/calicoctl/create
+  - title: replace
+    path: /reference/calicoctl/replace
+  - title: apply
+    path: /reference/calicoctl/apply
+  - title: delete
+    path: /reference/calicoctl/delete
+  - title: get
+    path: /reference/calicoctl/get
+  - title: label
+    path: /reference/calicoctl/label
+  - title: convert
+    path: /reference/calicoctl/convert
+  - title: ipam
     section:
     - title: Overview
-      path: /reference/calicoctl/commands/
-    - title: get
-      path: /reference/calicoctl/commands/get
-    - title: create
-      path: /reference/calicoctl/commands/create
-    - title: replace
-      path: /reference/calicoctl/commands/replace
-    - title: apply
-      path: /reference/calicoctl/commands/apply
-    - title: delete
-      path: /reference/calicoctl/commands/delete
-    - title: convert
-      path: /reference/calicoctl/commands/convert
-    - title: label
-      path: /reference/calicoctl/commands/label
-    - title: ipam
-      section:
-      - title: Overview
-        path: /reference/calicoctl/commands/ipam/
-      - title: release
-        path: /reference/calicoctl/commands/ipam/release
-      - title: show
-        path: /reference/calicoctl/commands/ipam/show
-    - title: node
-      section:
-      - title: Overview
-        path: /reference/calicoctl/commands/node/
-      - title: run
-        path: /reference/calicoctl/commands/node/run
-      - title: status
-        path: /reference/calicoctl/commands/node/status
-      - title: diags
-        path: /reference/calicoctl/commands/node/diags
-      - title: checksystem
-        path: /reference/calicoctl/commands/node/checksystem
-    - title: version
-      path: /reference/calicoctl/commands/version
-  - title: Resource definitions
-    path: /reference/calicoctl/resources
+      path: /reference/calicoctl/ipam/
+    - title: release
+      path: /reference/calicoctl/ipam/release
+    - title: show
+      path: /reference/calicoctl/ipam/show
+  - title: node
     section:
-      - title: Overview
-        path: /reference/calicoctl/resources/
-      - title: BGP Configuration
-        path: /reference/calicoctl/resources/bgpconfig
-      - title: BGP Peer
-        path: /reference/calicoctl/resources/bgppeer
-      - title: Felix Configuration
-        path: /reference/calicoctl/resources/felixconfig
-      - title: Global Network Policy
-        path: /reference/calicoctl/resources/globalnetworkpolicy
-      - title: Global Network Set
-        path: /reference/calicoctl/resources/globalnetworkset
-      - title: Global Report
-        path: /reference/calicoctl/resources/globalreport
-      - title: Global Threat Feed
-        path: /reference/calicoctl/resources/globalthreatfeed
-      - title: Host Endpoint
-        path: /reference/calicoctl/resources/hostendpoint
-      - title: IP Pool
-        path: /reference/calicoctl/resources/ippool
-      - title: License Key
-        path: /reference/calicoctl/resources/licensekey
-      - title: Network Policy
-        path: /reference/calicoctl/resources/networkpolicy
-      - title: Node
-        path: /reference/calicoctl/resources/node
-      - title: Profile
-        path: /reference/calicoctl/resources/profile
-      - title: Remote Cluster Configuration
-        path: /reference/calicoctl/resources/remoteclusterconfiguration
-      - title: Tier
-        path: /reference/calicoctl/resources/tier
-      - title: Workload Endpoint
-        path: /reference/calicoctl/resources/workloadendpoint
+    - title: Overview
+      path: /reference/calicoctl/node/
+    - title: run
+      path: /reference/calicoctl/node/run
+    - title: status
+      path: /reference/calicoctl/node/status
+    - title: diags
+      path: /reference/calicoctl/node/diags
+    - title: checksystem
+      path: /reference/calicoctl/node/checksystem
+  - title: version
+    path: /reference/calicoctl/version
+- title: Resource definitions
+  section:
+    - title: Overview
+      path: /reference/resources/
+    - title: BGP configuration
+      path: /reference/resources/bgpconfig
+    - title: BGP peer
+      path: /reference/resources/bgppeer
+    - title: Felix configuration
+      path: /reference/resources/felixconfig
+    - title: Global network policy
+      path: /reference/resources/globalnetworkpolicy
+    - title: Global network set
+      path: /reference/resources/globalnetworkset
+    - title: Global Report
+      path: /reference/resources/globalreport
+    - title: Global Threat Feed
+      path: /reference/resources/globalthreatfeed
+    - title: Host endpoint
+      path: /reference/resources/hostendpoint
+    - title: IP pool
+      path: /reference/resources/ippool
+    - title: License Key
+      path: /reference/resources/licensekey
+    - title: Network policy
+      path: /reference/resources/networkpolicy
+    - title: Network set
+      path: /reference/resources/networkset
+    - title: Node
+      path: /reference/resources/node
+    - title: Profile
+      path: /reference/resources/profile
+    - title: Remote Cluster Configuration
+      path: /reference/resources/remoteclusterconfiguration
+    - title: Tier
+      path: /reference/resources/tier
+    - title: Workload endpoint
+      path: /reference/resources/workloadendpoint
 - title: Configuring etcd RBAC
   section:
   - title: Overview
@@ -101,9 +97,7 @@ toc:
   - title: Calico key and path prefixes
     path: /reference/etcd-rbac/calico-etcdv3-paths
 - title: cnx-node
-  section:
-  - title: Configuration
-    path: /reference/node/configuration
+  path: /reference/node/configuration
 - title: calicoq
   section:
   - title: Overview
@@ -124,7 +118,7 @@ toc:
   section:
   - title: Configuration
     path: /reference/felix/configuration
-  - title: Prometheus Statistics
+  - title: Prometheus statistics
     path: /reference/felix/prometheus
 - title: Typha
   path: /reference/typha/configuration
@@ -140,9 +134,9 @@ toc:
       path: /reference/compliance-reports/network-access
     - title: Policy Audit Report
       path: /reference/compliance-reports/policy-audit
-- title: Tigera Secure EE CNI Plugins
+- title: Tigera Secure EE CNI plugins
   path: /reference/cni-plugin/configuration
-- title: Tigera Secure EE Kubernetes Controllers
+- title: Tigera Secure EE Kubernetes controllers
   path: /reference/kube-controllers/configuration
 - title: Tigera Secure EE Manager
   section:
@@ -160,12 +154,12 @@ toc:
   path: /reference/cnx/apidocs
 - title: Configuration on public clouds
   section:
-    - title: Amazon Web Services
-      path: /reference/public-cloud/aws
-    - title: Azure
-      path: /reference/public-cloud/azure
-    - title: Google Compute Engine
-      path: /reference/public-cloud/gce
+  - title: Amazon Web Services
+    path: /reference/public-cloud/aws
+  - title: Azure
+    path: /reference/public-cloud/azure
+  - title: Google Compute Engine
+    path: /reference/public-cloud/gce
 - title: Architecture
   section:
   - title: Introduction

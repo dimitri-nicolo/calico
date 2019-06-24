@@ -25,6 +25,6 @@ to host endpoints available:
 - Configure the security groups that are applied to the instances to police traffic to nodes.
 - For AWS resources: apply labels to host endpoints for selecting  by AWS Security Group
 - For other resources create
-[GlobalNetworkSets](/{{page.version}}/reference/calicoctl/resources/globalnetworkset)
+[GlobalNetworkSets](/{{page.version}}/reference/resources/globalnetworkset)
 and use custom labels for selection in policy.
 

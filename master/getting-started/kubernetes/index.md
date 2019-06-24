@@ -11,7 +11,6 @@ development.
 
 To deploy a cluster suitable for production, refer to [Installation](installation).
 
-
 ### Host requirements
 
 - AMD64 processor
@@ -30,7 +29,7 @@ To deploy a cluster suitable for production, refer to [Installation](installatio
 <br><br>
 - Ensure that {{site.prodname}} can manage `cali` and `tunl` interfaces on the host.
   If NetworkManager is present on the host, refer to
-  [Configure NetworkManager](../../maintenance/troubleshooting#prevent-networkManager-from-controlling-{{site.prodnamedash}}-interfaces)
+  [Configure NetworkManager](../../maintenance/troubleshooting#configure-networkmanager)
 .
 
 - [Follow the Kubernetes instructions to install kubeadm](https://kubernetes.io/docs/setup/independent/install-kubeadm/){:target="_blank"}.

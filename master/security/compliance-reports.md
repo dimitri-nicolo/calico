@@ -4,18 +4,18 @@ title: Compliance reports
 
 ### Big picture
 
-Assess Kubernetes workloads and environments for regulatory compliance to enforce controls, and generate audit 
+Assess Kubernetes workloads and environments for regulatory compliance to enforce controls, and generate audit
 and evidence data -- so you can prove compliance for these highly dynamic and ephemeral workloads.
 
 ### Value
 
-{{ site.prodname }} provides compliance reports and a dashboard so you can easily assess Kubernetes workloads for 
-regulatory compliance. 
+{{ site.prodname }} provides compliance reports and a dashboard so you can easily assess Kubernetes workloads for
+regulatory compliance.
 
-Existing compliance tools that rely on periodic snapshots, do not provide accurate assessments of Kubernetes workloads 
-against your compliance standards. {{ site.prodname }} compliance reports provide a complete inventory of regulated 
-workloads, along with evidence of enforcement of network controls for these workloads. Additionally, audit reports are 
-available to see changes to any network security controls. These reports are essential tools for compliance managers to 
+Existing compliance tools that rely on periodic snapshots, do not provide accurate assessments of Kubernetes workloads
+against your compliance standards. {{ site.prodname }} compliance reports provide a complete inventory of regulated
+workloads, along with evidence of enforcement of network controls for these workloads. Additionally, audit reports are
+available to see changes to any network security controls. These reports are essential tools for compliance managers to
 prove compliance for regulated workloads.
 
 ### Features
@@ -23,7 +23,7 @@ prove compliance for regulated workloads.
 This how-to guide uses the following {{ site.prodname }} features:
 
 - Predefined **compliance reports** (Inventory, Network Access, Policy Audit) that are installed with {{ site.prodname }}
-- A **GlobalReport** resource to schedule periodic report generation, specify which nodes to include, and manually run reports 
+- A **GlobalReport** resource to schedule periodic report generation, specify which nodes to include, and manually run reports
 - The **compliance dashboard** in {{ site.prodname }} Manager to view and export reports from Elasticsearch
 - Kubernetes RBAC to grant report view/manage permissions
 
@@ -48,14 +48,14 @@ Compliance reports provide the following high-level information:
   - Endpoints explicitly protected using ingress or egress policy
   - Endpoints with Envoy enabled
 
-- **Policies and services** 
+- **Policies and services**
   - Policies and services associated with endpoints
   - Policy audit logs
 
-- **Traffic**   
+- **Traffic**
   - Allowed ingress/egress traffic to/from namespaces
   - Allowed ingress/egress traffic to/from the internet
-  
+
 From {{ site.prodname }} Manager, you can export:
 
 - Compliance report contents (csv file)
@@ -63,7 +63,7 @@ From {{ site.prodname }} Manager, you can export:
 
 ### Before you begin...
 
-To ensure accurate timestamps for audit logs, time synchronize all nodes in your Kubernetes clusters using NTP or similar. 
+To ensure accurate timestamps for audit logs, time synchronize all nodes in your Kubernetes clusters using NTP or similar.
 
 ### How To
 
@@ -71,9 +71,9 @@ To ensure accurate timestamps for audit logs, time synchronize all nodes in your
 - [Configure report permissions](#configure-report-permissions)
 - [Configure and schedule reports](#configure-and-schedule-reports)
 - [View report generation status](#view-report-generation-status)
-- [Manually run reports](#manually-run-reports)  
+- [Manually run reports](#manually-run-reports)
 
-#### Configure audit logs 
+#### Configure audit logs
 
 By default, {{ site.prodname }} provides audit logs in Elasticsearch for the following {{ site.prodname }} resources:
 
@@ -99,7 +99,7 @@ Follow these steps to configure and produce audit logs:
 
 #### Configure report permissions
 
-Report permissions are granted using the standard Kubernetes RBAC based on ClusterRole and ClusterRoleBindings. The 
+Report permissions are granted using the standard Kubernetes RBAC based on ClusterRole and ClusterRoleBindings. The
 following table outlines the required RBAC verbs for each resource type for a specific user actions.
 
 | **Action**                                              | **globalreporttypes**           | **globalreports**                 | **globalreports/status** |
@@ -109,11 +109,11 @@ following table outlines the required RBAC verbs for each resource type for a sp
 | List the generated reports and summary status in the UI |                                 | list + get (for required reports) |                          |
 | Export the generated reports from the UI                | get (for the particular report) | get (for required reports)        |                          |
 
-The following sample manifest creates RBAC for three users: Paul, Candice and David. 
+The following sample manifest creates RBAC for three users: Paul, Candice and David.
 
 - Paul has permissions to create/modify/delete the report schedules and configuration, but does not have permission to export generated reports from the UI.
 - Candice has permissions to list and export generated reports from the UI, but cannot modify the report schedule or configuration.
-- David has permissions to list and export generated `dev-inventory` reports from the UI, but cannot list or download other reports, nor modify the report 
+- David has permissions to list and export generated `dev-inventory` reports from the UI, but cannot list or download other reports, nor modify the report
   schedule or configuration.
 
 ```
@@ -210,7 +210,7 @@ roleRef:
 
 #### Configure and schedule reports
 
-To configure and schedule a compliance report, create a [GlobalReport](/{{page.version}}/reference/calicoctl/resources/globalreport) with the following information.
+To configure and schedule a compliance report, create a [GlobalReport](/{{page.version}}/reference/resources/globalreport) with the following information.
 
 | **Fields**      | **Description**                                              |
 | --------------- | ------------------------------------------------------------ |
@@ -221,15 +221,15 @@ To configure and schedule a compliance report, create a [GlobalReport](/{{page.v
 | jobNodeSelector | **Optional**. Limits report generation jobs to specific nodes. |
 | suspend         | **Optional**. Suspends report generation. All in-flight reports will complete, and future scheduled reports are suspended. |
 
->**Note**: GlobalReports can only be configured using kubectl (not calicoctl); and they cannot be edited in the Tigera 
+>**Note**: GlobalReports can only be configured using kubectl (not calicoctl); and they cannot be edited in the Tigera
 Secure EE Manager UI.
-{: .alert .alert-info} 
+{: .alert .alert-info}
 
-The following sections provide sample schedules for the predefined reports. 
+The following sections provide sample schedules for the predefined reports.
 
 #### Weekly reports, all endpoints
 
-The following report schedules weekly inventory reports for *all* endpoints. The jobs that create the reports will run 
+The following report schedules weekly inventory reports for *all* endpoints. The jobs that create the reports will run
 on the infrastructure nodes (e.g. nodetype == 'infrastructure').
 
 ```
@@ -262,7 +262,7 @@ spec:
 
 #### Hourly reports, endpoints in named namespaces
 
-The following report schedules hourly network-access reports for the accounts department endpoints, that are 
+The following report schedules hourly network-access reports for the accounts department endpoints, that are
 specified using the namespace names: **payable**, **collections** and **payroll**.
 
 ```
@@ -298,7 +298,7 @@ spec:
 
 #### Monthly reports, endpoints for named service accounts in named namespaces
 
-The following schedules monthly audit reports. The audited policy is restricted to policy that applies to 
+The following schedules monthly audit reports. The audited policy is restricted to policy that applies to
 widgets/controller endpoints specified by the namespace **widgets** and service account **controller**.
 
 ```
@@ -326,26 +326,26 @@ kubectl get globalreports.projectcalico.org daily-inventory.p -o yaml
 
 In a report, the job status types are:
 
-- **lastScheduledReportJob**:   
-  The most recently scheduled job for generating the report. Because reports are scheduled in order, the “end time” of 
-  this report will be the “start time” of the next scheduled report.  
-- **activeReportJobs**:   
+- **lastScheduledReportJob**:
+  The most recently scheduled job for generating the report. Because reports are scheduled in order, the “end time” of
+  this report will be the “start time” of the next scheduled report.
+- **activeReportJobs**:
   Default = allows up to 5 concurrent report generation jobs.
-- **lastFailedReportJobs**:     
+- **lastFailedReportJobs**:
   Default = keeps the 3 most recent failed jobs and deletes older ones. A single report generation job will be retried
   up to 6 times (by default) before it is marked as failed.
-- **lastSuccessfulReportJobs**:   
-  Default = keeps the 2 most recent successful jobs and deletes older ones. 
+- **lastSuccessfulReportJobs**:
+  Default = keeps the 2 most recent successful jobs and deletes older ones.
 
 ##### Change the default report generation time
 
-By default, reports are generated 30 minutes after the end of the report, to ensure all of the audit data is archived. 
+By default, reports are generated 30 minutes after the end of the report, to ensure all of the audit data is archived.
 (However, this gap does not affect the data collected “start/end time” for a report.)
 
-You can adjust the time for audit data for cases like initial report testing, to demo a report, or when manually 
-creating a report that is not counted in global report status. 
+You can adjust the time for audit data for cases like initial report testing, to demo a report, or when manually
+creating a report that is not counted in global report status.
 
-To change the delay, go to the installation manifest, and uncomment and set the environment 
+To change the delay, go to the installation manifest, and uncomment and set the environment
 `TIGERA_COMPLIANCE_JOB_START_DELAY`. Specify value as a [Duration string][parse-duration].
 
 #### Manually run reports
@@ -355,8 +355,8 @@ You can manually run reports at any time. For example, run a manual report:
 - To specify a different start/end time
 - If a scheduled report fails
 
-{{ site.prodname }} GlobalReport schedules Kubernetes Jobs which create a single-run pod to generate a report and store it 
-in Elasticsearch. Because you need to run manual reports as a pod, you need higher permissions: allow `create` access 
+{{ site.prodname }} GlobalReport schedules Kubernetes Jobs which create a single-run pod to generate a report and store it
+in Elasticsearch. Because you need to run manual reports as a pod, you need higher permissions: allow `create` access
 access for pods in namespace `calico-monitoring` using the `tigera-compliance-reporter` service account.
 
 To manually run a report:
@@ -366,17 +366,17 @@ To manually run a report:
    ```bash
    curl -O {{site.url}}/{{page.version}}/manifests/compliance-reporter-pod.yaml
    ```
-   
-1. Edit the template as follows:  
-   - Edit the pod name if required.  
+
+1. Edit the template as follows:
+   - Edit the pod name if required.
    - If you are using your own docker repository, update the container image name with your repo and image tag.
-   - Set the following environments according to the instructions in the downloaded manifest:         
+   - Set the following environments according to the instructions in the downloaded manifest:
      - `TIGERA_COMPLIANCE_REPORT_NAME`
      - `TIGERA_COMPLIANCE_REPORT_START_TIME`
      - `TIGERA_COMPLIANCE_REPORT_END_TIME`
-1. Apply the updated manifest, and query the status of the pod to ensure it completes. 
-   Upon completion, the report is available in {{ site.prodname }} Manager.  
-   
+1. Apply the updated manifest, and query the status of the pod to ensure it completes.
+   Upon completion, the report is available in {{ site.prodname }} Manager.
+
    ```bash
    # Apply the compliance report pod
    kubectl apply -f compliance-reporter-pod.yaml
@@ -389,7 +389,7 @@ To manually run a report:
 
 ### Above and beyond
 
-- For details on configuring and scheduling reports, see [Global Reports](/{{page.version}}/reference/calicoctl/resources/globalreport).
+- For details on configuring and scheduling reports, see [Global Reports](/{{page.version}}/reference/resources/globalreport).
 - For report field descriptions, see [Compliance Reports](/{{page.version}}/reference/compliance-reports/).
 
 [parse-duration]: https://golang.org/pkg/time/#ParseDuration

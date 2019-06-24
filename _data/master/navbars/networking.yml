@@ -4,8 +4,8 @@ order: 2
 toc:
 - title: Networking
   path: /networking/
-- title: Configuring IP-in-IP
-  path: /networking/ip-in-ip
+- title: Connecting workloads across networks that you do not control
+  path: /networking/vxlan-ipip
 - title: Changing IP pools
   path: /networking/changing-ip-pools
 - title: Route reflectors
@@ -48,4 +48,3 @@ toc:
     path: /networking/federation/aws
   - title: Querying remote clusters with calicoq
     path: /networking/federation/calicoq
-

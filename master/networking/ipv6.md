@@ -60,7 +60,7 @@ To enable IPv6, set the following flags.
 | Flag | Value/Content |
 | ---- | ------------- |
 | `--master` | Should be set with the IPv6 address where the kube-apiserver can be accessed. |
-master
+
 ##### kubelet
 
 | Flag | Value/Content |
@@ -108,8 +108,13 @@ steps below.
 
 If you wish to only use IPv6 (by disabling IPv4) or your hosts only have
 IPv6 addresses, you must disable autodetection of IPv4 by setting `IP`
-to `none`.  With that set you must also pass a `CALICO_ROUTER_ID` to each
-calico-node pod.
+to `none`.
+
+With IPv4 enabled, Calico uses the node's IPv4 address as the BGP router ID. With IPv4 disabled,
+you must configure another method to calculate the BGP router ID. There are two ways to do this:
+
+- Set the environment variable `CALICO_ROUTER_ID=hash` on {{site.nodecontainer}}. This will configure {{site.prodname}} to calculate the router ID based on the hostname.
+- Pass a unique value for `CALICO_ROUTER_ID` to each node individually.
 
 ### Modifying your DNS for IPv6
 
