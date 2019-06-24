@@ -1,4 +1,77 @@
 v2.4:
+- title: v2.4.2
+  helmRelease: 0
+  note: |
+    21 June 2019
+  components:
+    cnx-manager:
+      version: v2.4.2
+    cnx-manager-proxy:
+      version: v2.4.2
+    cnx-apiserver:
+      version: v2.4.0
+    cnx-queryserver:
+      version: v2.4.0
+    cnx-kube-controllers:
+      version: v2.4.2
+    calicoq:
+      version: v2.4.0
+    typha:
+      version: v2.4.2
+    calicoctl:
+      version: v2.4.2
+    cnx-node:
+      version: v2.4.2
+    calico/cni:
+      version: v3.6.3
+    calico/routereflector:
+      version: v0.6.1
+    calico:
+      version: v3.6.3
+      minor_version: v3.6
+    prometheus-operator:
+      version: v0.29.0
+    prometheus:
+      version: v2.7.1
+    alertmanager:
+      version: v0.16.1
+    prometheus-config-reloader:
+      version: v0.29.0
+    configmap-reload:
+      version: v0.0.1
+    dikastes:
+      version: v2.4.2
+    flexvol:
+      version: v3.6.3
+    fluentd:
+      version: v2.4.0
+    es-proxy:
+      version: v2.4.0
+    elasticsearch-operator:
+      version: 0.3.0
+    kibana:
+      version: v2.4.2
+    elasticsearch:
+      version: 6.4.3
+    cloud-controllers:
+      version: v2.4.0
+    elastic-tsee-installer:
+      version: v2.4.2
+    es-curator:
+      version: v2.4.0
+    intrusion-detection-controller:
+      version: v2.4.2
+    flannel:
+      version: v0.9.1
+    compliance-controller:
+      version: v2.4.2
+    compliance-reporter:
+      version: v2.4.2
+    compliance-snapshotter:
+      version: v2.4.2
+    compliance-server:
+      version: v2.4.2
+
 - title: v2.4.1
   helmRelease: 0
   note: |

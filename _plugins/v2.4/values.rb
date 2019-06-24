@@ -271,6 +271,7 @@ def gen_chart_specific_values_v2_4(versions, imageNames, imageRegistry, chart)
       createFinalizers: false
     
     kibana:
+      image: #{imageRegistry}#{imageNames["kibana"]}
       tag: #{versions["kibana"]}
       # The address of your kibana instance.
       host:

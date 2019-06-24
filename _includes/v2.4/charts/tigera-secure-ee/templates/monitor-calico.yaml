@@ -5,7 +5,7 @@
 #   quay.io/prometheus/alertmanager:{{.Values.alertmanager.tag}}
 {{- if eq $elasticMode "operator" }}
 #   docker.elastic.co/elasticsearch/elasticsearch:{{.Values.elasticsearch.tag}}
-#   docker.elastic.co/kibana/kibana:{{.Values.kibana.tag}}
+#   {{.Values.kibana.image}}:{{.Values.kibana.tag}}
 {{- end }}
 
 # This ConfigMap contains customizations for Elasticsearch and Curator.
@@ -367,8 +367,10 @@ spec:
     beta.kubernetes.io/os: linux
     # If necessary, uncomment the line below and edit key:value pair with appropriate value for your environment.
     #node.role: infrastructure
+  image-pull-secrets:
+    - name: cnx-pull-secret
   kibana:
-    image: docker.elastic.co/kibana/kibana:{{.Values.kibana.tag}}
+    image: {{.Values.kibana.image}}:{{.Values.kibana.tag}}
   elastic-search-image: docker.elastic.co/elasticsearch/elasticsearch:{{.Values.elasticsearch.tag}}
   # For production deployments, modify the number of elasticsearch replicas accordingly
   client-node-replicas: 1
