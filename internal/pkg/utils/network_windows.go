@@ -204,6 +204,7 @@ func DoNetworking(
 
 		err := hnsEndpointCont.ApplyACLPolicy(defaultDenyAllACL)
 		if err != nil {
+			logger.Errorf("Error applying ACL policy DenyAll")
 			return "", "", err
 		}
 	}
