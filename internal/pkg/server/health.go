@@ -13,7 +13,7 @@ type health struct {
 
 // Determine which handler to execute based on HTTP method.
 func (h *health) apiHandle(w http.ResponseWriter, r *http.Request) {
-	log.Debugf("%s for %s from %s", r.Method, r.URL, r.RemoteAddr)
+	log.Tracef("%s for %s from %s", r.Method, r.URL, r.RemoteAddr)
 	switch r.Method {
 	case http.MethodGet:
 		returnJSON(w, "OK")
