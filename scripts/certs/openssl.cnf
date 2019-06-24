@@ -3,6 +3,8 @@
 # This is mostly being used for generation of certificate requests.
 #
 
+prompt=no
+
 # This definition stops the following lines choking if HOME isn't
 # defined.
 HOME			= .
@@ -125,31 +127,17 @@ string_mask = utf8only
 # req_extensions = v3_req # The extensions to add to a certificate request
 
 [ req_distinguished_name ]
-countryName			= Country Name (2 letter code)
-countryName_default		= AU
-countryName_min			= 2
-countryName_max			= 2
+countryName		= US
 
-stateOrProvinceName		= State or Province Name (full name)
-stateOrProvinceName_default	= Some-State
+stateOrProvinceName	= California
 
-localityName			= Locality Name (eg, city)
+localityName	= San Francisco
 
-0.organizationName		= Organization Name (eg, company)
-0.organizationName_default	= Internet Widgits Pty Ltd
+0.organizationName	= Tigera, Inc
 
-# we can do this but it is not needed normally :-)
-#1.organizationName		= Second Organization Name (eg, company)
-#1.organizationName_default	= World Wide Web Pty Ltd
+commonName=tigera-voltron
 
-organizationalUnitName		= Organizational Unit Name (eg, section)
-#organizationalUnitName_default	=
-
-commonName			= Common Name (e.g. server FQDN or YOUR name)
-commonName_max			= 64
-
-emailAddress			= Email Address
-emailAddress_max		= 64
+emailAddress    = contact@tigera.io
 
 # SET-ex3			= SET extension number 3
 
@@ -218,27 +206,29 @@ authorityKeyIdentifier=keyid,issuer
 
 # Extensions to add to a certificate request
 
-basicConstraints = CA:FALSE
-keyUsage = nonRepudiation, digitalSignature, keyEncipherment
+basicConstraints = CA:TRUE
+keyUsage = nonRepudiation, digitalSignature, keyEncipherment, keyCertSign
 
 [ v3_ca ]
 
 
 # Extensions for a typical CA
 
+subjectAltName=DNS:voltron
+
 
 # PKIX recommendation.
 
 subjectKeyIdentifier=hash
 
-authorityKeyIdentifier=keyid:always,issuer
+#authorityKeyIdentifier=keyid:always,issuer
 
 basicConstraints = critical,CA:true
 
 # Key usage: this is typical for a CA certificate. However since it will
 # prevent it being used as an test self-signed certificate it is best
 # left out by default.
-# keyUsage = cRLSign, keyCertSign
+keyUsage = nonRepudiation, digitalSignature, keyEncipherment, keyCertSign
 
 # Some might want this also
 # nsCertType = sslCA, emailCA

@@ -91,6 +91,7 @@ func (c *Client) ServeTunnelHTTP() error {
 				&tls.Config{
 					Certificates: []tls.Certificate{cert},
 					RootCAs:      c.tunnelRootCAs,
+					ServerName:   "voltron",
 				},
 			)
 			if err != nil {

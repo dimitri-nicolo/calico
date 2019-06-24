@@ -92,6 +92,7 @@ func createCert(email string, parent *x509.Certificate, isCA bool) (*x509.Certif
 		IsCA:                  isCA,
 		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
 		IPAddresses:           []net.IP{net.IPv4(127, 0, 0, 1)},
+		DNSNames:              []string{"voltron"},
 	}
 
 	if isCA {
