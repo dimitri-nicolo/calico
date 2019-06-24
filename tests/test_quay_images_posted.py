@@ -23,7 +23,8 @@ EXCLUDED_IMAGES_BY_VER = {'v2.3': ['compliance-snapshotter',
                       'intrusion-detection-controller',
                       'compliance-server',
                       'compliance-controller',
-                      'compliance-reporter']}
+                      'compliance-reporter',
+                      'kibana']}
 
 # _config.yml and _data/versions.yml have diff names
 VERSIONS_MAPPED_IMAGES = {'node': 'cnx-node',
