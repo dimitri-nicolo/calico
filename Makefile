@@ -200,30 +200,41 @@ test: ut fv st
 #############################################
 # Run unit level tests
 #############################################
+
+DOCKER_CALICO_BUILD = docker run --rm -v $(CURDIR):/build-dir/$(PACKAGE_NAME):rw -e LOCAL_USER_ID=$(MY_UID) $(CALICO_BUILD) sh -c
+
 .PHONY: ut
+ut: CMD = go mod download && ginkgo -cover -r pkg/* internal/* $(GINKGO_ARGS)
 ut:
-	docker run --rm -v $(CURDIR):/build-dir/$(PACKAGE_NAME):rw \
-		-e LOCAL_USER_ID=$(MY_UID) \
-		$(CALICO_BUILD) sh -c 'cd /build-dir/$(PACKAGE_NAME) && go mod download && ginkgo -cover -r pkg/* internal/* $(GINKGO_ARGS)'
+ifdef LOCAL
+	$(CMD)
+else
+	$(DOCKER_CALICO_BUILD) 'cd /build-dir/$(PACKAGE_NAME) && $(CMD)'
+endif
 
 #############################################
 # Run package level functional level tests
 #############################################
 .PHONY: fv
+fv: CMD = go mod download && ginkgo -cover -r test/fv $(GINKGO_ARGS)
 fv:
-	docker run --rm -v $(CURDIR):/build-dir/$(PACKAGE_NAME):rw \
-		-e LOCAL_USER_ID=$(MY_UID) \
-		$(CALICO_BUILD) sh -c 'cd /build-dir/$(PACKAGE_NAME) && go mod download && ginkgo -cover -r test/fv $(GINKGO_ARGS)'
+ifdef LOCAL
+	$(CMD)
+else
+	$(DOCKER_CALICO_BUILD) 'cd /build-dir/$(PACKAGE_NAME) && $(CMD)'
+endif
 
 #############################################
 # Run system integration tests
 #############################################
 .PHONY: st
+st: CMD = go mod download && ginkgo -cover -r test/st/ $(GINKGO_ARGS)
 st: $(COMPONENTS)
-	docker run --rm -v $(CURDIR):/build-dir/$(PACKAGE_NAME):rw \
-		-e LOCAL_USER_ID=$(MY_UID) \
-		$(CALICO_BUILD) sh -c 'cd /build-dir/$(PACKAGE_NAME) && go mod download && ginkgo -cover -r test/st/ $(GINKGO_ARGS)'
-
+ifdef LOCAL
+	$(CMD)
+else
+	$(DOCKER_CALICO_BUILD) 'cd /build-dir/$(PACKAGE_NAME) && $(CMD)'
+endif
 
 ##########################################################################################
 # CLEAN UP 
