@@ -15,6 +15,7 @@ type Flow struct {
 	Dest_labels   map[string]string
 	Src_labels    map[string]string
 	PreviewAction string
+	Proto         string
 }
 
 type FlowPolicy struct {

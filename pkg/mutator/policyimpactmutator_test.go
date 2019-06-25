@@ -88,6 +88,7 @@ func (p mockPip) CalculateFlowImpact(ctx context.Context, changes []pip.NetworkP
 		flows[i].Src_name = evolve(f.Src_NS)
 		flows[i].Dest_NS = evolve(f.Dest_NS)
 		flows[i].Dest_name = evolve(f.Dest_name)
+		flows[i].Proto = evolve(f.Proto)
 
 		flows[i] = addPreviewAction(flows[i])
 
@@ -220,7 +221,7 @@ var bucketsTemplate = `"buckets":[
         { "key": {
                 "reporter":"src", "source_type": "wep", "dest_type": "wep", "dest_port": "9200", "action":"allow", 
                 "source_namespace": "@@PK1@@" , "source_name": "@@PK1@@" , 
-                "dest_name": "@@PK1@@" , "dest_namespace": "@@PK1@@" 
+                "dest_name": "@@PK1@@" , "dest_namespace": "@@PK1@@", "proto":"@@PK1@@"
                 @@ACT1@@
                 },
                 "policies": {"by_tiered_policy": {"buckets": [
@@ -232,7 +233,7 @@ var bucketsTemplate = `"buckets":[
         { "key": {
                 "reporter":"src", "source_type": "wep", "dest_type": "wep", "dest_port": "9200", "action":"allow", 
                 "source_namespace": "@@PK2@@" , "source_name": "@@PK2@@" , 
-                "dest_name": "@@PK2@@" , "dest_namespace": "@@PK2@@" 
+                "dest_name": "@@PK2@@" , "dest_namespace": "@@PK2@@", "proto":"@@PK2@@" 
                 @@ACT2@@
                 },
                 "policies": { "by_tiered_policy":{"buckets":[{"key": "2|__PROFILE__|__PROFILE__.kns.calico-monitoring|allow"}]}},
@@ -242,7 +243,7 @@ var bucketsTemplate = `"buckets":[
         { "key": {
                 "reporter":"src", "source_type": "wep", "dest_type": "wep", "dest_port": "9200", "action":"allow", 
                 "source_namespace": "@@PK3@@" ,"source_name": "@@PK3@@" , 
-                "dest_name": "@@PK3@@" , "dest_namespace": "@@PK3@@" 
+                "dest_name": "@@PK3@@" , "dest_namespace": "@@PK3@@" , "proto":"@@PK3@@"
                 @@ACT3@@
                 },
                 "policies": { "by_tiered_policy":{"buckets":[]}},

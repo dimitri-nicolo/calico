@@ -34,6 +34,7 @@ func (es *es_flow) toFlow() Flow {
 		Dest_port:     es.Key.Dest_port,
 		Action:        es.Key.Action,
 		PreviewAction: es.Key.PreviewAction,
+		Proto:         es.Key.Proto,
 	}
 
 	F.Src_labels = es.Source_labels.toFlowLabelMap()
@@ -57,6 +58,7 @@ func (es *es_flow) fromFlow(F Flow) {
 		Dest_port:     F.Dest_port,
 		Action:        F.Action,
 		PreviewAction: F.PreviewAction,
+		Proto:         F.Proto,
 	}
 	es.Source_labels.fromFlowLabelMap(F.Src_labels)
 	es.Dest_labels.fromFlowLabelMap(F.Dest_labels)
@@ -131,6 +133,7 @@ type es_key struct {
 	Dest_port     string `json:"dest_port"`
 	Action        string `json:"action"`
 	PreviewAction string `json:"preview_action,omitempty"`
+	Proto         string `json:"proto",omitempty`
 }
 
 type es_flog_buckets struct {
