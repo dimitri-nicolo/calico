@@ -21,25 +21,25 @@ const (
 )
 
 // Config is a configuration used for Voltron
-type Config struct {
+type config struct {
 	Port         int `default:"5555"`
 	Host         string
-	Tunnel_Port  int `default:"5566"`
-	Tunnel_Host  string
+	TunnelPort   int    `default:"5566" split_words:"true"`
+	TunnelHost   string `split_words:"true"`
 	LogLevel     string `default:"DEBUG"`
-	CertPath     string `default:"certs"`
-	TemplatePath string `default:"/tmp/guardian.yaml"`
-	PublicIP     string `default:"127.0.0.1:32453"`
+	CertPath     string `default:"/certs" split_words:"true"`
+	TemplatePath string `default:"/tmp/guardian.yaml" split_words:"true"`
+	PublicIP     string `default:"127.0.0.1:32453" split_words:"true"`
 }
 
 func main() {
-	cfg := Config{}
+	cfg := config{}
 	if err := envconfig.Process(EnvConfigPrefix, &cfg); err != nil {
 		log.Fatal(err)
 	}
 
 	bootstrap.ConfigureLogging(cfg.LogLevel)
-	log.Infof("Starting %s with configuration %v", EnvConfigPrefix, cfg)
+	log.Infof("Starting %s with configuration %+v", EnvConfigPrefix, cfg)
 
 	cert := fmt.Sprintf("%s/ca.crt", cfg.CertPath)
 	key := fmt.Sprintf("%s/ca.key", cfg.CertPath)
@@ -64,7 +64,7 @@ func main() {
 		log.Fatalf("Failed to create server: %s", err)
 	}
 
-	lisTun, err := net.Listen("tcp", fmt.Sprintf("%s:%d", cfg.Tunnel_Host, cfg.Tunnel_Port))
+	lisTun, err := net.Listen("tcp", fmt.Sprintf("%s:%d", cfg.TunnelHost, cfg.TunnelPort))
 	if err != nil {
 		log.Fatalf("Failedto create tunnel listener: %s", err)
 	}

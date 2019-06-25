@@ -18,6 +18,7 @@ enforce() {
 go mod download
 
 enforce "formatting" "$(gofmt -l -s $GO_DIRS)"
+enforce "imports"    "$(goimports -l $GO_DIRS)"
 enforce "vetting"    "$(go vet "${PROJECT_DIR}/..." 2>&1)"
 enforce "linting"    "$(golint "${PROJECT_DIR}/..." 2>&1)"
 

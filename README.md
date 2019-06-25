@@ -25,10 +25,11 @@ make cd
 Name | Type | Default | Required
 --- | --- | --- | ---
 GUARDIAN_LOGLEVEL | Environment | DEBUG | no
-GUARDIAN_PORT | Environment | 5555 | no
-GUARDIAN_HOST | Environment | localhost | no
+<!-- until health check restored -->
+<!--GUARDIAN_PORT | Environment | 5555 | no-->
+<!--GUARDIAN_HOST | Environment | localhost | no-->
 GUARDIAN_CERTPATH | Environment | /certs | no
-GUARDIAN_VOLTRON_URL | Environment | | yes
+GUARDIAN_VOLTRON_URL | Environment | none | yes
 
 ### Build and deploy
 
@@ -59,9 +60,9 @@ VOLTRON_PORT | Environment | 5555
 VOLTRON_HOST | Environment | any
 VOLTRON_TUNNEL_PORT | Environment | 5566
 VOLTRON_TUNNEL_HOST | Environment | any
-VOLTRON_CERTPATH | Environment | /certs
-VOLTRON_TEMPLATEPATH | Environment | /tmp/guardian.yaml
-VOLTRON_PUBLICIP | Environment | 127.0.0.1:32453
+VOLTRON_CERT_PATH | Environment | /certs
+VOLTRON_TEMPLATE_PATH | Environment | /tmp/guardian.yaml
+VOLTRON_PUBLIC_IP | Environment | 127.0.0.1:32453
 
 ### Build and deploy
 

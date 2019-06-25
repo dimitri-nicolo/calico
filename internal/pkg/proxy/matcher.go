@@ -3,12 +3,13 @@
 package proxy
 
 import (
-	"github.com/pkg/errors"
-	"github.com/tigera/voltron/internal/pkg/targets"
 	"net/http"
 	"net/textproto"
 	"net/url"
 	"regexp"
+
+	"github.com/pkg/errors"
+	"github.com/tigera/voltron/internal/pkg/targets"
 )
 
 type Matcher interface {
@@ -17,6 +18,13 @@ type Matcher interface {
 
 type PathMatcher struct {
 	targets *targets.Targets
+}
+
+// Matches path value against different patterns. The value returned is the full URL or an error
+// if no match is found
+func (matcher *PathMatcher) Match(request *http.Request) (*url.URL, error) {
+	path := request.URL.Path
+	return Match(path, matcher.targets.List())
 }
 
 func NewPathMatcher(tgt *targets.Targets) *PathMatcher {
@@ -30,20 +38,6 @@ type HeaderMatcher struct {
 	header  string
 }
 
-func NewHeaderMatcher(tgt *targets.Targets, header string) *HeaderMatcher {
-	return &HeaderMatcher{
-		targets: tgt,
-		header:  header,
-	}
-}
-
-// Matches path value against different patterns. The value returned is the full URL or an error
-// if no match is found
-func (matcher *PathMatcher) Match(request *http.Request) (*url.URL, error) {
-	path := request.URL.Path
-	return Match(path, matcher.targets.List())
-}
-
 // Matches header value against different patterns. The value returned is the full URL or an error
 // if no match is found
 func (matcher HeaderMatcher) Match(request *http.Request) (*url.URL, error) {
@@ -52,6 +46,13 @@ func (matcher HeaderMatcher) Match(request *http.Request) (*url.URL, error) {
 	}
 	header := request.Header.Get(matcher.header)
 	return Match(header, matcher.targets.List())
+}
+
+func NewHeaderMatcher(tgt *targets.Targets, header string) *HeaderMatcher {
+	return &HeaderMatcher{
+		targets: tgt,
+		header:  header,
+	}
 }
 
 func hasMultipleValues(header string, request *http.Request) bool {

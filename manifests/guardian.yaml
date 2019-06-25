@@ -16,7 +16,7 @@ data:
   # Logging level
   cnx-guardian.log-level: "INFO"
   # This tells Guardian how to reach Voltron
-  cnx-guardian.voltron-url: {{ .VoltronURL }}
+  cnx-guardian.voltron-url: {{.VoltronURL}}
 ---
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRole
@@ -47,12 +47,12 @@ metadata:
   namespace: calico-monitoring
 type: Opaque
 data:
-  guardian.crt: {{ .GuardianTLSCert | base64 }}
-  guardian.key: {{ .GuardianTLSKey | base64 }}
+  guardian.crt: {{.GuardianTLSCert | base64}}
+  guardian.key: {{.GuardianTLSKey | base64}}
   # This validation token is signed by Voltron and contains metadata
   # about the Guardian's corresponding App Cluster (i.e. cluster ID,
   # display name, etc.)
-  voltron.crt: {{ .VoltronCert | base64 }}
+  voltron.crt: {{.VoltronCert | base64}}
 ---
 apiVersion: apps/v1
 kind: Deployment

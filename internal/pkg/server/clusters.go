@@ -89,7 +89,7 @@ func (cs *clusters) List() []jclust.Cluster {
 		return clusterList[i].DisplayName < clusterList[j].DisplayName
 	})
 
-	log.Debugf("clusterList = %+v\n", clusterList)
+	log.Debugf("clusterList = %+v", clusterList)
 	return clusterList
 }
 

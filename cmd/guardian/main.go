@@ -19,12 +19,14 @@ const (
 	EnvConfigPrefix = "GUARDIAN"
 )
 
+// Config is a configuration used for Guardian
 type config struct {
-	Port     int    `default:"5555"`
-	Host     string `default:"localhost"`
-	LogLevel string `default:"DEBUG"`
-	CertPath string `default:"certs"`
-	URL      string `required:"true" envconfig:"GUARDIAN_VOLTRON_URL"`
+	// until health check restored
+	//Port       int    `default:"5555"`
+	//Host       string `default:"localhost"`
+	LogLevel   string `default:"DEBUG"`
+	CertPath   string `default:"/certs" split_words:"true"`
+	VoltronURL string `required:"true" split_words:"true"`
 }
 
 func main() {
@@ -34,12 +36,12 @@ func main() {
 	}
 
 	bootstrap.ConfigureLogging(cfg.LogLevel)
-	log.Infof("Starting %s with configuration %v", EnvConfigPrefix, cfg)
+	log.Infof("Starting %s with configuration %+v", EnvConfigPrefix, cfg)
 
 	cert := fmt.Sprintf("%s/guardian.crt", cfg.CertPath)
 	key := fmt.Sprintf("%s/guardian.key", cfg.CertPath)
 	serverCrt := fmt.Sprintf("%s/voltron.crt", cfg.CertPath)
-	log.Infof("Voltron Address: %s", cfg.URL)
+	log.Infof("Voltron Address: %s", cfg.VoltronURL)
 
 	pemCert, err := ioutil.ReadFile(cert)
 	if err != nil {
@@ -57,7 +59,7 @@ func main() {
 	}
 
 	client, err := client.New(
-		cfg.URL,
+		cfg.VoltronURL,
 		client.WithProxyTargets(
 			[]client.ProxyTarget{
 				{Pattern: "^/api", Dest: "https://kubernetes.default"},
