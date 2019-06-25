@@ -21,7 +21,7 @@ const APPLICABLE_ENDPOINTS = "applicable endpoints"
 
 func EvalPolicySelectors(configFile, policyName string, hideSelectors, hideRuleMatches bool, outputFormat string) (err error) {
 
-	bclient := GetClient(configFile)
+	bclient, _ := GetClient(configFile)
 	ctx := context.Background()
 
 	// Get all appropriately named policies from any tier.

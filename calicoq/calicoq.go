@@ -158,7 +158,7 @@ func main() {
 }
 
 func checkLicense(configFile string) error {
-	client := commands.GetClient(configFile)
+	client, _ := commands.GetClient(configFile)
 	ctx := context.Background()
 	// Get the LicenseKey resource directly from the backend datastore client.
 	lic, err := client.Get(ctx, model.ResourceKey{

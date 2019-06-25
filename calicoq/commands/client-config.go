@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 
 package commands
 
@@ -25,7 +25,7 @@ func LoadClientConfig(cf string) (*apiconfig.CalicoAPIConfig, error) {
 	return apiconfig.LoadClientConfig(cf)
 }
 
-func GetClient(cf string) bapi.Client {
+func GetClient(cf string) (bapi.Client, *apiconfig.CalicoAPIConfig) {
 	apiConfig, err := LoadClientConfig(cf)
 	if err != nil {
 		log.Fatal("Failed loading client config")
@@ -48,5 +48,5 @@ func GetClient(cf string) bapi.Client {
 		}
 	*/
 
-	return bclient
+	return bclient, apiConfig
 }
