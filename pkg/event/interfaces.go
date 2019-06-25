@@ -39,6 +39,12 @@ type Fetcher interface {
 // and coerces the response object into the appropriate type. This may return a nil resource with
 // no error if the resource is not handled by the reporter code.
 func ExtractResourceFromAuditEvent(event *auditv1.Event) (resources.Resource, error) {
+	// We only need to extract successful configuration updates.
+	if event.ResponseStatus != nil && (event.ResponseStatus.Code < 200 || event.ResponseStatus.Code > 299) {
+		log.Debugf("Skipping unsuccessful event, code: %d", event.ResponseStatus.Code)
+		return nil, nil
+	}
+
 	// Check this is a ResponseComplete stage.
 	switch event.Stage {
 	case auditv1.StageResponseComplete:
@@ -104,12 +110,6 @@ func ExtractResourceFromAuditEvent(event *auditv1.Event) (resources.Resource, er
 	if err := json.Unmarshal(event.ResponseObject.Raw, res); err != nil {
 		logEventError(event, fmt.Sprintf("Failed to unmarshal responseObject: %v", err))
 		return nil, err
-	}
-
-	// Ensure that we haven't received a status audit log or some other invalid type.
-	if tm := resources.GetTypeMeta(res); tm == resources.TypeK8sStatus {
-		clog.Debug("Skipping status audit event")
-		return nil, nil
 	}
 
 	return res, nil
