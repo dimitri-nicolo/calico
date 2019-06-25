@@ -28,7 +28,7 @@ type config struct {
 	TunnelHost   string `split_words:"true"`
 	LogLevel     string `default:"DEBUG"`
 	CertPath     string `default:"/certs" split_words:"true"`
-	TemplatePath string `default:"/tmp/guardian.yaml" split_words:"true"`
+	TemplatePath string `default:"/tmp/guardian.yaml.tmpl" split_words:"true"`
 	PublicIP     string `default:"127.0.0.1:32453" split_words:"true"`
 }
 
@@ -41,8 +41,8 @@ func main() {
 	bootstrap.ConfigureLogging(cfg.LogLevel)
 	log.Infof("Starting %s with configuration %+v", EnvConfigPrefix, cfg)
 
-	cert := fmt.Sprintf("%s/ca.crt", cfg.CertPath)
-	key := fmt.Sprintf("%s/ca.key", cfg.CertPath)
+	cert := fmt.Sprintf("%s/voltron.crt", cfg.CertPath)
+	key := fmt.Sprintf("%s/voltron.key", cfg.CertPath)
 
 	addr := fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)
 

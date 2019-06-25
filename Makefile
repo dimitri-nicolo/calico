@@ -180,14 +180,10 @@ endif
 images: $(BUILD_IMAGES)
 tigera/%: tigera/%-$(ARCH) ;
 tigera/%-$(ARCH): $(BINDIR)/%-$(ARCH)
-	rm -rf docker-image/bin
-	mkdir -p docker-image/bin
-	cp $(BINDIR)/$*-$(ARCH) docker-image/bin/
-	mkdir -p docker-image/templates
-	cp manifests/guardian.yaml docker-image/templates/
-	mkdir -p docker-image/scripts
-	cp scripts/dev/register.bash docker-image/scripts/
-	docker build --pull -t tigera/$*:latest-$(ARCH) --file ./docker-image/Dockerfile.$*.$(ARCH) docker-image
+	rm -rf docker-image/$*/bin
+	mkdir -p docker-image/$*/bin
+	cp $(BINDIR)/$*-$(ARCH) docker-image/$*/bin/
+	docker build --pull -t tigera/$*:latest-$(ARCH) ./docker-image/$*
 ifeq ($(ARCH),amd64)
 	docker tag tigera/$*:latest-$(ARCH) tigera/$*:latest
 endif

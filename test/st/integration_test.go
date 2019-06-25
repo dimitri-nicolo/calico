@@ -37,10 +37,10 @@ var _ = Describe("Integration Tests", func() {
 	})
 
 	It("should set env variables pointing to docker-image/ for certs", func() {
-		err := os.Setenv("VOLTRON_CERT_PATH", "docker-image")
+		err := os.Setenv("VOLTRON_CERT_PATH", "test")
 		Expect(err).ToNot(HaveOccurred())
 
-		err = os.Setenv("VOLTRON_TEMPLATE_PATH", "manifests/guardian.yaml")
+		err = os.Setenv("VOLTRON_TEMPLATE_PATH", "docker-image/voltron/templates/guardian.yaml.tmpl")
 		Expect(err).ToNot(HaveOccurred())
 	})
 
