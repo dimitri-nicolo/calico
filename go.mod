@@ -10,13 +10,18 @@ replace (
 require (
 	github.com/emicklei/go-restful v2.9.6+incompatible // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
+	github.com/go-ini/ini v1.42.0 // indirect
 	github.com/go-openapi/spec v0.19.0 // indirect
-	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b // indirect
+	github.com/go-playground/locales v0.12.1 // indirect
+	github.com/go-playground/universal-translator v0.16.0 // indirect
 	github.com/google/gofuzz v1.0.0 // indirect
 	github.com/googleapis/gnostic v0.2.0 // indirect
+	github.com/hashicorp/go-version v1.2.0 // indirect
 	github.com/howeyc/gopass v0.0.0-20170109162249-bf9dde6d0d2c // indirect
 	github.com/imdario/mergo v0.3.8-0.20190531063913-f757d8626a73 // indirect
+	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0 // indirect
+	github.com/leodido/go-urn v1.1.0 // indirect
 	github.com/onsi/ginkgo v1.8.0
 	github.com/onsi/gomega v1.5.0
 	github.com/projectcalico/felix v3.7.3+incompatible // indirect
@@ -30,10 +35,14 @@ require (
 	github.com/spf13/pflag v1.0.3 // indirect
 	github.com/tigera/calico-k8sapiserver v0.0.0-20190503214445-0e5924229478
 	github.com/tigera/compliance v0.0.0-20190621174449-f9e4e373d34a
+	github.com/tigera/licensing v2.2.3+incompatible // indirect
 	golang.org/x/crypto v0.0.0-20190611184440-5c40567a22f8 // indirect
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45 // indirect
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
+	google.golang.org/grpc v1.21.1 // indirect
+	gopkg.in/go-playground/validator.v9 v9.29.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
+	gopkg.in/square/go-jose.v2 v2.3.1 // indirect
 	k8s.io/api v0.0.0-20180308224125-73d903622b73
 	k8s.io/apimachinery v0.0.0-20180228050457-302974c03f7e
 	k8s.io/apiserver v0.0.0-20190402105105-9b20910895af // indirect

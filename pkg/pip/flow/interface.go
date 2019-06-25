@@ -10,6 +10,7 @@ type Flow struct {
 	Dest_NS       string
 	Dest_name     string
 	Dest_port     string
+	Dest_IP string
 	Action        string
 	Policies      []FlowPolicy
 	Dest_labels   map[string]string

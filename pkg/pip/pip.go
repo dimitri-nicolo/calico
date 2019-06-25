@@ -2,10 +2,14 @@ package pip
 
 import (
 	"context"
-	"fmt"
+	"strings"
+
+	log "github.com/sirupsen/logrus"
 
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/list"
@@ -60,38 +64,70 @@ func (s *pip) CalculateFlowImpact(ctx context.Context, npcs []NetworkPolicyChang
 	// create a selector set which is used later to determine if each flow is impacted by this policy change.
 	ss := NewSelectorSet(npcs)
 
+	var retFlows = []flow.Flow{}
 	for _, f := range flows {
-		// create endpoint from flow
-		_, destEp := EndpointsFromFlow(f)
-
 		// before we process this endpoint, check if it's even selected by any of our input policies
-		if !ss.anySelectorSelects(destEp) {
-			fmt.Printf("skipping flow because no policy applies to it")
+		if !ss.anySelectorSelects(f.Dest_labels) && !!ss.anySelectorSelects(f.Src_labels) {
+			log.Info("skipping flow because no policy applies to it")
 			continue
 		}
 
-		s.xc.OnUpdates([]syncer.Update{{
-			Type:       syncer.UpdateTypeSet,
-			Resource:   destEp,
-			ResourceID: resources.GetResourceID(destEp),
-		}})
+		// clear any data in the cache from the previous flow
+		for rid, ep := range s.inScope {
+			s.xc.OnUpdates([]syncer.Update{{
+				Type:       syncer.UpdateTypeDeleted,
+				Resource:   ep,
+				ResourceID: rid,
+			}})
+		}
+
+		switch f.Dest_type {
+		case "wep":
+			pod := &corev1.Pod{
+				ObjectMeta: v1.ObjectMeta{
+					Name:      f.Dest_name,
+					Namespace: f.Dest_NS,
+					Labels:    f.Dest_labels,
+				},
+				Status: corev1.PodStatus{
+					PodIP: f.Dest_IP,
+				},
+			}
+
+			s.xc.OnUpdates([]syncer.Update{{
+				Type:       syncer.UpdateTypeSet,
+				Resource:   pod,
+				ResourceID: resources.GetResourceID(pod),
+			}})
+		case "hep":
+			hep := &v3.HostEndpoint{
+				ObjectMeta: v1.ObjectMeta{
+					Name:      f.Dest_name,
+					Namespace: f.Dest_NS,
+					Labels:    f.Dest_labels,
+				},
+				Spec: v3.HostEndpointSpec{
+					Node: strings.TrimSuffix(f.Dest_name, "-*"),
+				},
+			}
+
+			s.xc.OnUpdates([]syncer.Update{{
+				Type:       syncer.UpdateTypeSet,
+				Resource:   hep,
+				ResourceID: resources.GetResourceID(hep),
+			}})
+		}
 
 		// grab that endpoint from the other end of xrefcache to see it's computed relations.
-		// note that we iterate through, but there should only be two endpoints because we only fed it two.
+		// note that we iterate through, but there should only be one endpoint because we only fed it one.
 		for _, val := range s.inScope {
 			f.PreviewAction = computeAction(f, val.GetOrderedTiersAndPolicies())
 		}
 
-		// flush the cache of endpoints for the next flow log to come through
-		s.xc.OnUpdates([]syncer.Update{{
-			Type:       syncer.UpdateTypeDeleted,
-			Resource:   destEp,
-			ResourceID: resources.GetResourceID(destEp),
-		}})
+		retFlows = append(retFlows, f)
 	}
 
-	// TODO: modify flows using policy before returning them
-	return flows, nil
+	return retFlows, nil
 }
 
 func (s *pip) onUpdate(update syncer.Update) {

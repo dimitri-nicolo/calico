@@ -1,7 +1,6 @@
 package pip
 
 import (
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/selector"
 )
 
@@ -22,9 +21,9 @@ func NewSelectorSet(npcs []NetworkPolicyChange) selectorSet {
 	return ss
 }
 
-func (s *selectorSet) anySelectorSelects(ep *v3.WorkloadEndpoint) bool {
+func (s *selectorSet) anySelectorSelects(labels map[string]string) bool {
 	for _, sel := range s.selectors {
-		if sel.Evaluate(ep.Labels) {
+		if sel.Evaluate(labels) {
 			return true
 		}
 	}
