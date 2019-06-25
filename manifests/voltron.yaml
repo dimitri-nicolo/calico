@@ -11,6 +11,10 @@ data:
   cnx-voltron.host: "0.0.0.0"
   # Logging level
   cnx-voltron.log-level: "INFO"
+  # We currently use a NodePort service to expose Voltron so that 
+  # Guardian can reach it to establish tunnel connections; set the 
+  # IP address to an externally reachable IP for your cluster 
+  cnx-voltron.public-ip: "127.0.0.0:32453"
 ---
 apiVersion: v1
 data:
@@ -108,6 +112,11 @@ spec:
                 configMapKeyRef:
                   name: cnx-voltron-config
                   key: cnx-voltron.log-level
+            - name: VOLTRON_PUBLIC_IP
+              valueFrom:
+                configMapKeyRef:
+                  name: cnx-voltron-config
+                  key: cnx-voltron.public-ip
           # TODO: Should we have resource limits defined?
           resources: {}
           volumeMounts:
