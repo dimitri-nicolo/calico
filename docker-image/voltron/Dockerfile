@@ -4,7 +4,6 @@ RUN apk update && apk add ca-certificates
 
 # Add your binary to the image
 ADD bin/voltron-amd64 /voltron
-COPY ca.* /certs/
 COPY scripts/*.bash /scripts/
 COPY templates/*.yaml.tmpl /tmp/
 

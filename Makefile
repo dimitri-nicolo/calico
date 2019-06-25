@@ -177,7 +177,7 @@ endif
 # Docker Image
 #############################################
 
-images: $(BUILD_IMAGES)
+images: $(BUILD_IMAGES) manifests
 tigera/%: tigera/%-$(ARCH) ;
 tigera/%-$(ARCH): $(BINDIR)/%-$(ARCH)
 	rm -rf docker-image/$*/bin
@@ -187,6 +187,19 @@ tigera/%-$(ARCH): $(BINDIR)/%-$(ARCH)
 ifeq ($(ARCH),amd64)
 	docker tag tigera/$*:latest-$(ARCH) tigera/$*:latest
 endif
+
+.PHONY: manifests
+manifests: manifests/voltron.yaml
+
+manifests/voltron.yaml: manifests/voltron.yaml.tmpl
+	scripts/certs/self-signed.sh scripts/certs
+	CERT64=`base64 -w 0 scripts/certs/voltron.crt` && \
+		KEY64=`base64 -w 0 scripts/certs/voltron.key` && \
+		cat $< | sed "s;VOLTRON_CRT_BASE64;$$CERT64;" | sed "s;VOLTRON_KEY_BASE64;$$KEY64;" > $@
+	rm -f scripts/certs/voltron.*
+
+clean-manifests:
+	rm -f manifests/voltron.yaml
 
 ##########################################################################################
 # TESTING 
@@ -236,7 +249,7 @@ endif
 # CLEAN UP 
 ##########################################################################################
 .PHONY: clean
-clean: clean-bin clean-build-image clean-docker-image
+clean: clean-bin clean-build-image clean-docker-image clean-manifests
 
 clean-build-image:
 	# Remove all variations e.g. tigera/voltron:latest + tigera/voltron:latest-amd64

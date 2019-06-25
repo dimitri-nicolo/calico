@@ -18,8 +18,8 @@ data:
 ---
 apiVersion: v1
 data:
-  cert: VGhpcyBpcyBqdXN0IGEgdGVzdC4K
-  key: VGhpcyBpcyBqdXN0IGEgdGVzdC4K
+  voltron.crt: VOLTRON_CRT_BASE64
+  voltron.key: VOLTRON_KEY_BASE64
 kind: Secret
 metadata:
   name: cnx-voltron-tls
@@ -120,9 +120,7 @@ spec:
           # TODO: Should we have resource limits defined?
           resources: {}
           volumeMounts:
-            # TODO: This should be switched to /certs/ when we actually
-            # have valid cert values from cnx-voltron-tls
-            - mountPath: /certs2/
+            - mountPath: /certs/
               name: cnx-voltron-tls
           livenessProbe:
             httpGet:
