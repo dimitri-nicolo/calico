@@ -2,6 +2,7 @@ package pip
 
 import (
 	"context"
+	"math/rand"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -208,7 +209,7 @@ func buildSelector(npcs []NetworkPolicyChange) string {
 	return "all()"
 }
 
-// TODO: compute action
+// TODO: compute action instead of returning a random action
 func computeAction(f flow.Flow, tops []*xrefcache.TierWithOrderedPolicies) string {
-	return PreviewActionUnknown
+	return []string{PreviewActionAllow, PreviewActionDeny, PreviewActionPass, PreviewActionUnknown}[rand.Int()]
 }
