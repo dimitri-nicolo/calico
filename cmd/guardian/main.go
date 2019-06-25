@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io/ioutil"
+	"strings"
 
 	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
@@ -19,20 +20,46 @@ const (
 	EnvConfigPrefix = "GUARDIAN"
 )
 
+type proxyTarget []client.ProxyTarget
+
+// Decode deserializes the list of proxytargets
+func (pt *proxyTarget) Decode(envVar string) error {
+	targetConfig := []client.ProxyTarget{}
+
+	targetSlice := strings.Split(envVar, ",")
+	for _, target := range targetSlice {
+		targetTrimmed := strings.Trim(target, " ")
+		splitted := strings.SplitN(targetTrimmed, ":", 2)
+
+		pattern := splitted[0]
+		endpoint := splitted[1]
+		targetConfig = append(targetConfig, client.ProxyTarget{Pattern: pattern, Dest: endpoint})
+	}
+
+	*pt = targetConfig
+	return nil
+}
+
 // Config is a configuration used for Guardian
 type config struct {
 	// until health check restored
 	//Port       int    `default:"5555"`
 	//Host       string `default:"localhost"`
-	LogLevel   string `default:"DEBUG"`
-	CertPath   string `default:"/certs" split_words:"true"`
-	VoltronURL string `required:"true" split_words:"true"`
+	LogLevel     string      `default:"DEBUG"`
+	CertPath     string      `default:"/certs" split_words:"true"`
+	VoltronURL   string      `required:"true" split_words:"true"`
+	ProxyTargets proxyTarget `default:"" split_words:"true"`
 }
 
 func main() {
 	cfg := config{}
 	if err := envconfig.Process(EnvConfigPrefix, &cfg); err != nil {
 		log.Fatal(err)
+	}
+
+	// Configure ProxyTarget
+	if len(cfg.ProxyTargets) == 0 {
+		log.Fatal("No targets configured")
 	}
 
 	bootstrap.ConfigureLogging(cfg.LogLevel)
@@ -61,10 +88,7 @@ func main() {
 	client, err := client.New(
 		cfg.VoltronURL,
 		client.WithProxyTargets(
-			[]client.ProxyTarget{
-				{Pattern: "^/api", Dest: "https://kubernetes.default"},
-				{Pattern: "^/tigera-elasticsearch", Dest: "http://localhost:8002"},
-			},
+			cfg.ProxyTargets,
 		),
 		client.WithTunnelCreds(pemCert, pemKey, ca),
 	)

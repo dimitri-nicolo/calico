@@ -30,6 +30,7 @@ Name | Type | Default | Required
 GUARDIAN_LOGLEVEL | Environment | DEBUG | no
 GUARDIAN_CERTPATH | Environment | /certs | no
 GUARDIAN_VOLTRON_URL | Environment | none | yes
+GUARDIAN_PROXY_TARGETS | Environment | `^/api:https://kubernetes.default`<br>`^/tigera-elasticsearch:http://localhost:8002` | yes
 
 ### Build and deploy
 

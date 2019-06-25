@@ -15,6 +15,10 @@ data:
   cnx-guardian.port: "9443"
   # Logging level
   cnx-guardian.log-level: "INFO"
+  # Proxy Targets - "^pattern:dest,^pattern2:dest2"
+  cnx-guardian.proxy-targets: >-
+    ^/api:https://kubernetes.default,
+    ^/tigera-elasticsearch:http://localhost:8002
   # This tells Guardian how to reach Voltron
   cnx-guardian.voltron-url: {{.VoltronURL}}
 ---
@@ -111,6 +115,11 @@ spec:
                 configMapKeyRef:
                   name: cnx-guardian-config
                   key: cnx-guardian.log-level
+            - name: GUARDIAN_PROXY_TARGETS
+              valueFrom:
+                configMapKeyRef:
+                  name: cnx-guardian-config
+                  key: cnx-guardian.proxy-targets
             - name: GUARDIAN_VOLTRON_URL
               valueFrom:
                 configMapKeyRef:
