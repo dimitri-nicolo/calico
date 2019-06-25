@@ -22,12 +22,12 @@ make cd
 
 ### Configurations
 
-Name | Type | Default | Required
---- | --- | --- | ---
-GUARDIAN_LOGLEVEL | Environment | DEBUG | no
 <!-- until health check restored -->
 <!--GUARDIAN_PORT | Environment | 5555 | no-->
 <!--GUARDIAN_HOST | Environment | localhost | no-->
+Name | Type | Default | Required
+--- | --- | --- | ---
+GUARDIAN_LOGLEVEL | Environment | DEBUG | no
 GUARDIAN_CERTPATH | Environment | /certs | no
 GUARDIAN_VOLTRON_URL | Environment | none | yes
 
