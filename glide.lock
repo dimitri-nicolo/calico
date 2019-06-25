@@ -1,5 +1,5 @@
-hash: c6bee22d46faf5709ebb95ba3b5ffbbfce8d46c34a105cda8688ba876dfb9ae7
-updated: 2019-06-22T05:10:46.801830796Z
+hash: 624b4e0fb4b72b2356d6f21a250672bb404f053da847156e878b208ac090520a
+updated: 2019-06-25T05:20:57.550777686Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -350,7 +350,7 @@ imports:
 - name: github.com/pkg/errors
   version: 645ef00459ed84a119197bfb8d8205042c6df63d
 - name: github.com/projectcalico/cni-plugin
-  version: e9419cfc5f0c1d2c55f17dbfc2f562187357d6ba
+  version: b9d0f802db4c102ea8595bfcec7d07e6598f77b4
   repo: git@github.com:tigera/cni-plugin-private.git
   subpackages:
   - internal/pkg/azure
