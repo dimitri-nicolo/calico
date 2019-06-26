@@ -5,12 +5,13 @@ type Flow struct {
 	Reporter      string
 	Src_type      string
 	Src_NS        string
+	Src_IP        string
 	Src_name      string
 	Dest_type     string
 	Dest_NS       string
 	Dest_name     string
 	Dest_port     string
-	Dest_IP string
+	Dest_IP       string
 	Action        string
 	Policies      []FlowPolicy
 	Dest_labels   map[string]string

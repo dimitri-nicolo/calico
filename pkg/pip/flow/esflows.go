@@ -13,6 +13,13 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const (
+	EndpointTypeWep = "wep"
+	EndpointTypeHep = "hep"
+	EndpointTypeNs  = "ns"
+	EndpointTypeNet = "net"
+)
+
 // es flow is used to marshal/unmarshal from elastic search
 type es_flow struct {
 	Key           es_key           `json:"key"`

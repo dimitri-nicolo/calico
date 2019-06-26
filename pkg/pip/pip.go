@@ -24,7 +24,7 @@ type pip struct {
 	xc      xrefcache.XrefCache
 	listSrc list.Source
 
-	inScope map[v3.ResourceID]*xrefcache.CacheEntryEndpoint
+	inScope *xrefcache.CacheEntryEndpoint
 }
 
 func New(listSrc list.Source) PIP {
@@ -72,64 +72,51 @@ func (s *pip) CalculateFlowImpact(ctx context.Context, npcs []NetworkPolicyChang
 
 	var retFlows = []flow.Flow{}
 	for _, f := range flows {
-		// before we process this endpoint, check if it's even selected by any of our input policies
-		if !ss.anySelectorSelects(f.Dest_labels) && !!ss.anySelectorSelects(f.Src_labels) {
-			log.Info("skipping flow because no policy applies to it")
+		clog := log.WithFields(log.Fields{
+			"flowSrc":  f.Src_name,
+			"flowDest": f.Dest_name,
+		})
+
+		// before we process this endpoint, check if it's even selected by any of our input policies.
+		if !ss.anySelectorSelects(f.Src_labels) && !!ss.anySelectorSelects(f.Dest_labels) {
+			clog.Debug("skipping flow because no policy applies to it")
 			continue
 		}
 
-		// clear any data in the cache from the previous flow
-		for rid, ep := range s.inScope {
-			s.xc.OnUpdates([]syncer.Update{{
-				Type:       syncer.UpdateTypeDeleted,
-				Resource:   ep,
-				ResourceID: rid,
-			}})
-		}
+		// each flow falls under one of three categories:
+		// 1. the source is an endpoint
+		// 2. the dest is a endpoint
+		// 3. both the src & dest are endpoints
+		// For the third case, the policymap of the request leaving the source is different
+		// than the policymap of the request arriving at the dest. as such, we'll check
+		// the flow against the source first to see if it would be allowed. if it is, we
+		// still have to check the dest next.
+		var predictedAction string
 
-		switch f.Dest_type {
-		case "wep":
-			pod := &corev1.Pod{
-				ObjectMeta: v1.ObjectMeta{
-					Name:      f.Dest_name,
-					Namespace: f.Dest_NS,
-					Labels:    f.Dest_labels,
-				},
-				Status: corev1.PodStatus{
-					PodIP: f.Dest_IP,
-				},
+		// if the flow came from the cluster, see if it would have left the source.
+		if f.Src_type != flow.EndpointTypeNet {
+			if srcEp := getSrcResource(f); srcEp != nil {
+				predictedAction = s.getAction(f, srcEp)
+			} else {
+				clog.WithField("srcType", f.Src_type).Warn("skipping flow with unexpected source type")
+				continue
 			}
+		}
 
-			s.xc.OnUpdates([]syncer.Update{{
-				Type:       syncer.UpdateTypeSet,
-				Resource:   pod,
-				ResourceID: resources.GetResourceID(pod),
-			}})
-		case "hep":
-			hep := &v3.HostEndpoint{
-				ObjectMeta: v1.ObjectMeta{
-					Name:      f.Dest_name,
-					Namespace: f.Dest_NS,
-					Labels:    f.Dest_labels,
-				},
-				Spec: v3.HostEndpointSpec{
-					Node: strings.TrimSuffix(f.Dest_name, "-*"),
-				},
+		// a blank predictedAction
+		if predictedAction == "" ||
+			predictedAction == PreviewActionAllow ||
+			predictedAction == PreviewActionPass {
+			if destEp := getDstResource(f); destEp != nil {
+				predictedAction = s.getAction(f, destEp)
+			} else {
+				clog.WithField("destType", f.Dest_type).Warn("skipping flow with unexpected dest type")
+				continue
 			}
-
-			s.xc.OnUpdates([]syncer.Update{{
-				Type:       syncer.UpdateTypeSet,
-				Resource:   hep,
-				ResourceID: resources.GetResourceID(hep),
-			}})
 		}
 
-		// grab that endpoint from the other end of xrefcache to see it's computed relations.
-		// note that we iterate through, but there should only be one endpoint because we only fed it one.
-		for _, val := range s.inScope {
-			f.PreviewAction = computeAction(f, val.GetOrderedTiersAndPolicies())
-		}
-
+		clog.WithField("predictedAction", predictedAction).Debug("computed flow action")
+		f.Action = predictedAction
 		retFlows = append(retFlows, f)
 	}
 
@@ -163,8 +150,26 @@ func (s *pip) applyPolicyChanges(npcs []NetworkPolicyChange) error {
 	return nil
 }
 
+func (s *pip) getAction(f flow.Flow, ep resources.Resource) string {
+	// add the endpoint to the cache
+	s.xc.OnUpdates([]syncer.Update{{
+		Type:       syncer.UpdateTypeSet,
+		Resource:   ep,
+		ResourceID: resources.GetResourceID(ep),
+	}})
+
+	// remove the endpoint from the cache after we compute the flow action
+	defer s.xc.OnUpdates([]syncer.Update{{
+		Type:       syncer.UpdateTypeDeleted,
+		Resource:   ep,
+		ResourceID: resources.GetResourceID(ep),
+	}})
+
+	return computeAction(f, s.inScope.GetOrderedTiersAndPolicies())
+}
+
 func (s *pip) onUpdate(update syncer.Update) {
-	s.inScope[update.ResourceID] = update.Resource.(*xrefcache.CacheEntryEndpoint)
+	s.inScope = update.Resource.(*xrefcache.CacheEntryEndpoint)
 }
 
 func (s *pip) loadInitialPolicy() error {
@@ -233,6 +238,68 @@ func (s *pip) loadInitialPolicy() error {
 		}})
 	}
 
+	return nil
+}
+
+// getSrcResource generates a 'pretend' resource from the source data of a flow.
+// It returns nil if the source is not a known resource type or if the traffic originated
+// from outside the cluster.
+func getSrcResource(f flow.Flow) resources.Resource {
+	switch f.Src_type {
+	case flow.EndpointTypeWep:
+		return &corev1.Pod{
+			ObjectMeta: v1.ObjectMeta{
+				Name:      f.Src_name,
+				Namespace: f.Src_NS,
+				Labels:    f.Src_labels,
+			},
+			Status: corev1.PodStatus{
+				PodIP: f.Src_IP,
+			},
+		}
+	case flow.EndpointTypeHep:
+		return &v3.HostEndpoint{
+			ObjectMeta: v1.ObjectMeta{
+				Name:      f.Src_name,
+				Namespace: f.Src_NS,
+				Labels:    f.Src_labels,
+			},
+			Spec: v3.HostEndpointSpec{
+				Node: strings.TrimSuffix(f.Src_name, "-*"),
+			},
+		}
+	}
+	return nil
+}
+
+// getDstResource generates a 'pretend' resource from the destination data of a flow.
+// It returns nil if the destination is not a known resource type or if the traffic was sent
+// outside the cluster.
+func getDstResource(f flow.Flow) resources.Resource {
+	switch f.Dest_type {
+	case flow.EndpointTypeWep:
+		return &corev1.Pod{
+			ObjectMeta: v1.ObjectMeta{
+				Name:      f.Dest_name,
+				Namespace: f.Dest_NS,
+				Labels:    f.Dest_labels,
+			},
+			Status: corev1.PodStatus{
+				PodIP: f.Dest_IP,
+			},
+		}
+	case flow.EndpointTypeHep:
+		return &v3.HostEndpoint{
+			ObjectMeta: v1.ObjectMeta{
+				Name:      f.Dest_name,
+				Namespace: f.Dest_NS,
+				Labels:    f.Dest_labels,
+			},
+			Spec: v3.HostEndpointSpec{
+				Node: strings.TrimSuffix(f.Src_name, "-*"),
+			},
+		}
+	}
 	return nil
 }
 
