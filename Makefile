@@ -114,7 +114,7 @@ GO_BUILD_VER?=v0.20
 # we do not need to use the arch since go-build:v0.15 now is multi-arch manifest
 CALICO_BUILD=calico/go-build:$(GO_BUILD_VER)
 
-#This is a version with known container with compatible versions of sed/grep etc. 
+#This is a version with known container with compatible versions of sed/grep etc.
 TOOLING_BUILD?=calico/go-build:v0.20	
 
 # Figure out version information.  To support builds from release tarballs, we default to
@@ -201,11 +201,7 @@ clean:
 ###############################################################################
 
 ## Update dependency pins in glide.yaml
-update-pins: update-apiserver-pin update-felix-pin update-licensing-pin 
-
-## deprecated target alias
-update-libcalico: update-pins
-	$(warning !! Update update-libcalico is deprecated, use update-pins !!)
+update-pins: update-apiserver-pin update-licensing-pin
 
 ## Guard so we don't run this on osx because of ssh-agent to docker forwarding bug
 guard-ssh-forwarding-bug:
@@ -219,7 +215,7 @@ guard-ssh-forwarding-bug:
 ###############################################################################
 ## apiserver
 
-## Set the default APISERVER source for this project 
+## Set the default APISERVER source for this project
 APISERVER_PROJECT_DEFAULT=tigera/calico-k8sapiserver.git
 APISERVER_GLIDE_LABEL=tigera/calico-k8sapiserver
 
@@ -230,8 +226,8 @@ APISERVER_REPO?=github.com/$(APISERVER_PROJECT_DEFAULT)
 APISERVER_VERSION?=$(shell git ls-remote git@github.com:$(APISERVER_PROJECT_DEFAULT) $(APISERVER_BRANCH) 2>/dev/null | cut -f 1)
 
 ## Guard to ensure APISERVER repo and branch are reachable
-guard-git-apiserver: 
-	@_scripts/functions.sh ensure_can_reach_repo_branch $(APISERVER_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ; 
+guard-git-apiserver:
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(APISERVER_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ;
 	@_scripts/functions.sh ensure_can_reach_repo_branch $(APISERVER_PROJECT_DEFAULT) "$(APISERVER_BRANCH)" "Ensure the branch exists, or set APISERVER_BRANCH variable";
 	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(APISERVER_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
 	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(APISERVER_PROJECT_DEFAULT) "$(APISERVER_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
@@ -253,45 +249,9 @@ update-apiserver-pin: guard-ssh-forwarding-bug guard-git-apiserver
 
 
 ###############################################################################
-## felix
-
-## Set the default FELIX source for this project 
-FELIX_PROJECT_DEFAULT=tigera/felix-private.git
-FELIX_GLIDE_LABEL=projectcalico/felix
-
-## Default the FELIX repo and version but allow them to be overridden (master or release-vX.Y)
-## default FELIX branch to the same branch name as the current checked out repo
-FELIX_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
-FELIX_REPO?=github.com/$(FELIX_PROJECT_DEFAULT)
-FELIX_VERSION?=$(shell git ls-remote git@github.com:$(FELIX_PROJECT_DEFAULT) $(FELIX_BRANCH) 2>/dev/null | cut -f 1)
-
-## Guard to ensure FELIX repo and branch are reachable
-guard-git-felix: 
-	@_scripts/functions.sh ensure_can_reach_repo_branch $(FELIX_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ; 
-	@_scripts/functions.sh ensure_can_reach_repo_branch $(FELIX_PROJECT_DEFAULT) "$(FELIX_BRANCH)" "Ensure the branch exists, or set FELIX_BRANCH variable";
-	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(FELIX_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
-	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(FELIX_PROJECT_DEFAULT) "$(FELIX_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
-	@if [ "$(strip $(FELIX_VERSION))" = "" ]; then \
-		echo "ERROR: FELIX version could not be determined"; \
-		exit 1; \
-	fi;
-
-## Update libary pin in glide.yaml
-update-felix-pin: guard-ssh-forwarding-bug guard-git-felix
-	@$(DOCKER_RUN) $(TOOLING_BUILD) /bin/sh -c '\
-		LABEL="$(FELIX_GLIDE_LABEL)" \
-		REPO="$(FELIX_REPO)" \
-		VERSION="$(FELIX_VERSION)" \
-		DEFAULT_REPO="$(FELIX_PROJECT_DEFAULT)" \
-		BRANCH="$(FELIX_BRANCH)" \
-		GLIDE="glide.yaml" \
-		_scripts/update-pin.sh '
-
-
-###############################################################################
 ## licensing
 
-## Set the default LICENSING source for this project 
+## Set the default LICENSING source for this project
 LICENSING_PROJECT_DEFAULT=tigera/licensing
 LICENSING_GLIDE_LABEL=tigera/licensing
 
@@ -302,8 +262,8 @@ LICENSING_REPO?=github.com/$(LICENSING_PROJECT_DEFAULT)
 LICENSING_VERSION?=$(shell git ls-remote git@github.com:$(LICENSING_PROJECT_DEFAULT) $(LICENSING_BRANCH) 2>/dev/null | cut -f 1)
 
 ## Guard to ensure LICENSING repo and branch are reachable
-guard-git-licensing: 
-	@_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ; 
+guard-git-licensing:
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ;
 	@_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "$(LICENSING_BRANCH)" "Ensure the branch exists, or set LICENSING_BRANCH variable";
 	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
 	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "$(LICENSING_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';

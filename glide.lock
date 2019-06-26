@@ -1,6 +1,8 @@
-hash: 4471ef75c7b54fde9e15fe2b4cadeb98e9ba2374dd0328fc76e7d6b555ae4872
-updated: 2019-06-17T17:48:38.105863-07:00
+hash: 1a8067d8c15ec7b3c95260f44a5fdd017eced35c6a69bc9c8502d997863b3853
+updated: 2019-06-26T03:47:57.116390688Z
 imports:
+- name: github.com/aokoli/goutils
+  version: 41ac8693c5c10a92ea1ff5ac3a7f95646f6123b0
 - name: github.com/beorn7/perks
   version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
   subpackages:
@@ -30,7 +32,7 @@ imports:
 - name: github.com/go-openapi/swag
   version: becd2f08beafcca035645a8a101e0e3e18140458
 - name: github.com/go-playground/locales
-  version: f63010822830b6fe52288ee52d5a1151088ce039
+  version: 630ebbb602847eba93e75ae38bbc7bb7abcf1ff3
   subpackages:
   - currency
 - name: github.com/go-playground/universal-translator
@@ -73,7 +75,7 @@ imports:
 - name: github.com/hashicorp/go-version
   version: ac23dc3fea5d1a983c43f6a0f6e2c13f0195d8bd
 - name: github.com/hpcloud/tail
-  version: a1dbeea552b7c8df4b542c66073e393de198a800
+  version: a30252cb686a21eb2d0b98132633053ec2f7f1e5
   subpackages:
   - ratelimiter
   - util
@@ -99,16 +101,14 @@ imports:
   - buffer
   - jlexer
   - jwriter
-- name: github.com/Masterminds/goutils
-  version: 41ac8693c5c10a92ea1ff5ac3a7f95646f6123b0
 - name: github.com/Masterminds/semver
   version: 59c29afe1a994eacb71c833025ca7acf874bb1da
 - name: github.com/Masterminds/sprig
-  version: 9f8fceff796fb9f4e992cd2bece016be0121ab74
+  version: 544a9b1d90f323f6509491b389714fbbd126bee3
 - name: github.com/mattn/go-colorable
   version: 3a70a971f94a22f2fa562ffcc7a0eb45f5daf045
 - name: github.com/mattn/go-isatty
-  version: c2a7a6ca930a4cd0bc33a3f298eb71960732a3a7
+  version: c1975dc15c1d481e8da23f6ed313bb071136b98f
 - name: github.com/matttproud/golang_protobuf_extensions
   version: c12348ce28de40eed0136aa2b644d0ee0650e56c
   subpackages:
@@ -162,9 +162,9 @@ imports:
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
 - name: github.com/pkg/errors
-  version: 27936f6d90f9c8e1145f11ed52ffffbfdb9e0af7
+  version: 645ef00459ed84a119197bfb8d8205042c6df63d
 - name: github.com/projectcalico/felix
-  version: c00322e56455b84a9c099feee8004b7cc02dc9ef
+  version: 357836b476ccac08adb84a54b68b306927b9b137
   repo: git@github.com:tigera/felix-private.git
   vcs: git
   subpackages:
@@ -181,6 +181,7 @@ imports:
   - proto
   - rules
   - stringutils
+  - versionparse
 - name: github.com/projectcalico/go-json
   version: 6219dc7339ba20ee4c57df0a8baac62317d19cb1
   subpackages:
@@ -190,7 +191,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 53dc22e6fb643a06f9db11b9a41d0e8fe85318b9
+  version: 8dc7bc820846ec5c35f943ce2f673dad348a9c4a
   repo: git@github.com:tigera/libcalico-go-private.git
   vcs: git
   subpackages:
@@ -224,9 +225,10 @@ imports:
   - lib/validator/v3
   - lib/watch
 - name: github.com/prometheus/client_golang
-  version: e7e903064f5e9eb5da98208bae10b475d4db0f8c
+  version: 505eaef017263e299324067d40ca2c48f6a2cf50
   subpackages:
   - prometheus
+  - prometheus/internal
 - name: github.com/prometheus/client_model
   version: fa8ad6fec33561be4280a8f0514318c79d7f6cb6
   subpackages:
@@ -246,7 +248,7 @@ imports:
 - name: github.com/PuerkitoBio/urlesc
   version: 5bd2802263f21d8788851d5305584c82a5c75d7e
 - name: github.com/robfig/cron
-  version: df38d32658d8788cd446ba74db4bb5375c4b0cb3
+  version: b41be1df696709bb6395fe435af20370037c0b4c
 - name: github.com/satori/go.uuid
   version: f58768cc1a7a7e77a3bd49e98cdd21419399b6a3
 - name: github.com/sirupsen/logrus
@@ -257,7 +259,7 @@ imports:
 - name: github.com/spf13/pflag
   version: 583c0c0531f06d5278b7d917446061adc344b5cd
 - name: github.com/tigera/calico-k8sapiserver
-  version: f8400d2c4088fdcdd849b68ff1af3e1bfd7fd48f
+  version: 57963fa51900154b1c3cc0446f275d508fdef1bc
   repo: git@github.com:tigera/calico-k8sapiserver.git
   vcs: git
   subpackages:
@@ -274,7 +276,7 @@ imports:
   subpackages:
   - pkg/middleware
 - name: github.com/tigera/licensing
-  version: 02d1f482fe4d3a2dbc4a3bce530471eba75d5029
+  version: 8231bc0944780772f74f934d8982d22b6eea4b6f
   repo: git@github.com:tigera/licensing
   vcs: git
   subpackages:
@@ -372,10 +374,10 @@ imports:
   - status
   - tap
   - transport
-- name: gopkg.in/fsnotify/fsnotify.v1
-  version: c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9
+- name: gopkg.in/fsnotify.v1
+  version: 7be54206639f256967dd82fa767397ba5f8f48f5
 - name: gopkg.in/go-playground/validator.v9
-  version: b199fa0642d29caca62b6a99d65cc981ba5edc3b
+  version: 46b4b1e301c24cac870ffcb4ba5c8a703d1ef475
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: gopkg.in/square/go-jose.v2
