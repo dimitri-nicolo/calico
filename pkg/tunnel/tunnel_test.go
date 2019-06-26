@@ -225,7 +225,10 @@ func startServer() (*tunnel.Server, net.Addr) {
 
 	srv, err := tunnel.NewServer()
 	Expect(err).NotTo(HaveOccurred())
-	Expect(srv.Serve(lis)).Should(Succeed())
+
+	go func() {
+		srv.Serve(lis)
+	}()
 
 	return srv, lis.Addr()
 }
@@ -318,7 +321,10 @@ var _ = Describe("TLS Stream", func() {
 			tunnel.WithTLSHandshakeTimeout(200*time.Millisecond),
 		)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(srv.ServeTLS(lis)).Should(Succeed())
+
+		go func() {
+			srv.ServeTLS(lis)
+		}()
 	})
 
 	var srvS, clnS io.ReadWriteCloser

@@ -68,10 +68,12 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failedto create tunnel listener: %s", err)
 	}
-	err = srv.ServeTunnelsTLS(lisTun)
-	if err != nil {
-		log.Fatalf("Tunnel server did not start: %s", err)
-	}
+
+	go func() {
+		err = srv.ServeTunnelsTLS(lisTun)
+		log.Fatalf("Tunnel server exited: %s", err)
+	}()
+
 	log.Infof("Voltron listens for tunnels at %s", lisTun.Addr().String())
 
 	log.Infof("Voltron listens for HTTP request at %s", addr)

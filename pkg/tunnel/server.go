@@ -88,44 +88,36 @@ func (s *Server) Serve(lis net.Listener) error {
 	s.wg.Add(1)
 	go func() {
 		defer s.wg.Done()
-
-		for {
-			c, err := lis.Accept()
-			if err != nil {
-				s.cancel()
-				return
-			}
-
-			log.Debugf("tunnel.Server: new connection from %s", c.RemoteAddr().String())
-
-			ss := &ServerStream{
-				Conn: c,
-			}
-			ss.ctx, ss.cancel = context.WithCancel(s.ctx)
-
-			s.wg.Add(1)
-			go func() {
-				defer s.wg.Done()
-				ss.watchServerStop()
-			}()
-
-			select {
-			case s.streamC <- ss:
-			case <-s.ctx.Done():
-				return
-			}
-		}
-
-	}()
-
-	s.wg.Add(1)
-	go func() {
-		defer s.wg.Done()
 		<-s.ctx.Done()
 		lis.Close()
 	}()
 
-	return nil
+	for {
+		c, err := lis.Accept()
+		if err != nil {
+			s.cancel()
+			return errors.WithMessage(err, "lis.Accept")
+		}
+
+		log.Debugf("tunnel.Server: new connection from %s", c.RemoteAddr().String())
+
+		ss := &ServerStream{
+			Conn: c,
+		}
+		ss.ctx, ss.cancel = context.WithCancel(s.ctx)
+
+		s.wg.Add(1)
+		go func() {
+			defer s.wg.Done()
+			ss.watchServerStop()
+		}()
+
+		select {
+		case s.streamC <- ss:
+		case <-s.ctx.Done():
+			return errors.Errorf("server stopped")
+		}
+	}
 }
 
 // ServeTLS starts serving TSL connections using the provided listener and the

@@ -40,10 +40,12 @@ var _ = Describe("Client Tunneling", func() {
 
 		srv, err = tunnel.NewServer()
 		Expect(err).ToNot(HaveOccurred())
-		Expect(srv.Serve(lis)).Should(Succeed())
 
-		err = srv.Serve(lis)
-		Expect(err).ToNot(HaveOccurred())
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			srv.Serve(lis)
+		}()
 	})
 
 	Context("While Tunnel Server is serving", func() {
@@ -114,13 +116,11 @@ var _ = Describe("Client Tunneling", func() {
 
 	})
 
-	It("should stop the client end of the tunnel", func() {
+	It("should clean up", func() {
 		err = cl.Close()
 		Expect(err).ToNot(HaveOccurred())
-	})
-
-	It("Should stop the tunnel server", func() {
 		srv.Stop()
+		wg.Wait()
 	})
 
 })
