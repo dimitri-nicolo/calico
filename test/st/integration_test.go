@@ -12,7 +12,6 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"sync"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -198,7 +197,6 @@ var _ = Describe("Integration Tests", func() {
 
 	It("Should start up guardian binary", func() {
 		var startErr error
-		var wg sync.WaitGroup
 		guardianCmd = exec.Command("./bin/guardian")
 
 		// Prints logs to OS' Stdout and Stderr
@@ -217,24 +215,18 @@ var _ = Describe("Integration Tests", func() {
 			guardianCmd.Wait()
 		}()
 
-		// Wait for guardian tunnel to be established. Listen to Stdout until we see connection establish
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			scanner := bufio.NewScanner(r)
-			for scanner.Scan() {
-				text := scanner.Text()
-				if contain := strings.Contains(text, "Tunnel: Accepting connections"); contain == true {
-					return
-				}
-			}
-		}()
-
-		// Wait for tunnel to be established.
-		wg.Wait()
-
 		// Check if startError
 		Expect(startErr).ToNot(HaveOccurred())
+
+		// Wait for guardian tunnel to be established. Listen to Stdout until we see connection establish
+		scanner := bufio.NewScanner(r)
+		for scanner.Scan() {
+			text := scanner.Text()
+			if contain := strings.Contains(text, "Tunnel: Accepting connections"); contain == true {
+				break
+			}
+		}
+
 	})
 
 	Context("While Guardian is running", func() {
