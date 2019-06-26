@@ -375,9 +375,20 @@ type CISBenchmarkSummary struct {
 
 // CISBenchmarkNode describes a CIS benchmarking result on a single node.
 type CISBenchmarkNode struct {
-	NodeName string                      `json:"nodeName"`
-	Summary  CISBenchmarkNodeSummary     `json:"summary"`
-	Results  []CISBenchmarkSectionResult `json:"results"`
+	// NodeName is the name of the node the this set of benchmark results is from.
+	NodeName string `json:"nodeName"`
+
+	// KubernetesVersion is the version of the kubelet running on this node.
+	KubernetesVersion string `json:"kubernetesVersion"`
+
+	// BenchmarksVersion is the version of the benchmarks that ran on this node.
+	BenchmarksVersion string `json:"benchmarksVersion"`
+
+	// Summary is a set of summary stats for this set of node-specific benchmarks.
+	Summary CISBenchmarkNodeSummary `json:"summary"`
+
+	// Results is the detailed set of results for this set of node-specific benchmarks.
+	Results []CISBenchmarkSectionResult `json:"results"`
 }
 
 // CISBenchmarkNodeSummary keeps count of tests passed, failed, and marked as info on a single node.

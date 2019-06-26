@@ -74,6 +74,27 @@ type CISBenchmarkParams struct {
 	// Specifies if the report should also show results for scored/not-scored tests.
 	IncludeUnscoredTests bool `json:"includeUnscoredTests"`
 
+	// Configure the number of top failed tests to show up on the report.
+	NumFailedTests int `json:"numFailedTests" default:"5"`
+
+	// Benchmark results filters. The first matching set of filters is applied to each set of benchmark results.
+	// If there are no matching filters, the full set of benchmark results will be included in the report.
+	ResultsFilters []CISBenchmarkFilter `json:"resultsFilters"`
+
+	// Interpretted as a percentage to indicate at what levels of passing tests a node should be considered
+	// HIGH, MED, and LOW.
+	// - If >= HighThreshold flag as high
+	// - Otherwise, if > MedThreshold flag as med
+	// - Otherwise flag as low.
+	HighThreshold *int `json:"highThreshold" validate:"gte=0,lte=100" default:"100"`
+	MedThreshold  *int `json:"medThreshold" validate:"gte=0,lte=100" default:"50"`
+}
+
+// CISBenchmarkFilter provides filters for a set of benchmarks that match particular selection criteria.
+type CISBenchmarkFilter struct {
+	// BenchmarkSelection specifies which benchmarks this filter applies to. If not specified, applies to all.
+	BenchmarkSelection *CISBenchmarkSelection `json:"benchmarkSelection,omitempty" validate:"omitempty"`
+
 	// Exclude is an array of test indices to exclude from the report.
 	Exclude []string `json:"exclude"`
 
@@ -81,13 +102,15 @@ type CISBenchmarkParams struct {
 	// Is additive if IncludeUnscoredTests is true.
 	// Takes precedence over Exclude.
 	Include []string `json:"include"`
+}
 
-	// Interpretted as a percentage to indicate at what levels of passing tests a node should be considered HIGH, MED, and LOW.
-	HighThreshold *int `json:"highThreshold" validate:"gte=0,lte=100" default:"100"`
-	MedThreshold  *int `json:"medThreshold" validate:"gte=0,lte=100" default:"50"`
-
-	// Configure the number of top failed tests to show up on the report.
-	NumFailedTests int `json:"numFailedTests" default:"5"`
+// CISBenchmarkSelection selects a particular set of benchmarks.
+type CISBenchmarkSelection struct {
+	// KubernetesVersion is used select nodes that are running a specific version of kubelet. The full version need not
+	// be fully specified down to the patch level, in which case the significant parts of the version are matched.
+	// e.g. "1.0" will match versions "1.0.1" and "1.0.2"
+	// If not specified, matches all versions.
+	KubernetesVersion string `json:"kubernetesVersion,omitempty"`
 }
 
 // ReportStatus contains the status of the automated report generation.
