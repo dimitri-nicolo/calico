@@ -135,9 +135,16 @@ RELEASE_LDFLAGS=-ldflags "$(VERSION_FLAGS) -s -w"
 MY_UID:=$(shell id -u)
 MY_GID:=$(shell id -g)
 
+
+# SSH_AUTH_SOCK doesn't work with MacOS but we can optionally volume mount keys 
+ifdef SSH_AUTH_DIR
+	EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_DIR):/home/user/.ssh:ro 
+endif
+
 ifdef SSH_AUTH_SOCK
   EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
 endif
+
 
 DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
                    mkdir -p .go-build-cache && \
@@ -264,7 +271,7 @@ ut: report-dir
 			$(addprefix $(PACKAGE_NAME)/,$(TEST_DIRS))'
 
 .PHONY: fv
-fv: image report-dir run-k8s-apiserver
+fv: signpost image report-dir run-k8s-apiserver
 	$(MAKE) fv-no-setup
 
 ## Developer friendly target to only run fvs and skip other
@@ -285,6 +292,11 @@ clean-build-image:
 
 clean-bin:
 	rm -rf $(BINDIR) bin
+
+
+.PHONY: signpost
+signpost: 
+	@echo "------------------------------------------------------------------------------"
 
 ###############################################################################
 # CI/CD

@@ -1,6 +1,8 @@
 package pip
 
-import v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+import (
+	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+)
 
 const (
 	PreviewActionPass    = "pass"

@@ -40,8 +40,8 @@ const (
 )
 
 var _ = Describe("Elasticsearch access", func() {
-	proxyScheme := "https"
-	proxyHost := "127.0.0.1:8000"
+	proxyScheme := getEnvOrDefaultString("TEST_PROXY_SCHEME", "https")
+	proxyHost := getEnvOrDefaultString("TEST_PROXY_HOST", "127.0.0.1:8000")
 	var client *http.Client
 
 	BeforeEach(func() {

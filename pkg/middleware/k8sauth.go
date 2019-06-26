@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
 	authnv1 "k8s.io/api/authentication/v1"
 	authzv1 "k8s.io/api/authorization/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -36,10 +37,10 @@ func (ka *k8sauth) KubernetesAuthnAuthz(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		stat, err := ka.Authorize(req)
 		if err != nil {
+			log.WithError(err).Debug("Kubernetes auth failure")
 			http.Error(w, err.Error(), stat)
 			return
 		}
-
 		h.ServeHTTP(w, req)
 	})
 }

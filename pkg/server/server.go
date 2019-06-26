@@ -12,7 +12,7 @@ import (
 
 	"github.com/tigera/es-proxy/pkg/pip/datastore"
 
-	"github.com/tigera/es-proxy/pkg/pip/installer"
+	pipinit "github.com/tigera/es-proxy/pkg/pip/installer"
 
 	log "github.com/sirupsen/logrus"
 	k8s "k8s.io/client-go/kubernetes"
@@ -50,28 +50,30 @@ func Start(config *Config) error {
 		KeepAlivePeriod: config.ProxyKeepAlivePeriod,
 		IdleConnTimeout: config.ProxyIdleConnTimeout,
 	}
-	rootProxy := handler.NewProxy(pc)
+	proxy := handler.NewProxy(pc)
 
 	k8sClient, k8sConfig := getKubernetestClientAndConfig()
 	k8sAuth := middleware.NewK8sAuth(k8sClient, k8sConfig)
 
-	//install pip middleware and mutator
-	pipClient, err := datastore.GetClientSet(k8sConfig)
+	//install pip mutator
+	clientset, err := datastore.GetClientSet(k8sConfig)
 	if err != nil {
-		log.WithError(err).Fatal("could not initialize pip client")
+		log.WithError(err).Fatal("could not initialize client set")
 	}
-	proxy := installer.InstallPolicyImpactPreview(pipClient, rootProxy)
+	pipinit.InstallPolicyImpactReponseHook(proxy, clientset)
 
 	sm.Handle("/version", http.HandlerFunc(handler.VersionHandler))
 
 	switch config.AccessMode {
 	case InsecureMode:
 		sm.Handle("/", middleware.RequestToResource(
-			k8sAuth.KubernetesAuthnAuthz(proxy)))
+			middleware.PolicyImpactParamsHandler(k8sAuth,
+				k8sAuth.KubernetesAuthnAuthz(proxy))))
 	case ServiceUserMode:
 		sm.Handle("/", middleware.RequestToResource(
 			k8sAuth.KubernetesAuthnAuthz(
-				middleware.BasicAuthHeaderInjector(config.ElasticUsername, config.ElasticPassword, proxy))))
+				middleware.PolicyImpactParamsHandler(k8sAuth,
+					middleware.BasicAuthHeaderInjector(config.ElasticUsername, config.ElasticPassword, proxy)))))
 	case PassThroughMode:
 		log.Fatal("PassThroughMode not implemented yet")
 	default:

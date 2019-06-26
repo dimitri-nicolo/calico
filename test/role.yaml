@@ -8,7 +8,19 @@ rules:
   resourceNames: ["flows", "audit*", "audit_kube", "audit_ee", "events"]
   verbs: ["get"]
 ---
+   
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: tigera-access-networkpolicy
+rules:
+- apiGroups: ["projectcalico.org"]
+  resources: ["networkpolicy"]
+  resourceNames: ["*"]
+  verbs: ["get","put","post","delete"]   
 
+---
+    
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
