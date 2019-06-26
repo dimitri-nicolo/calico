@@ -1,11 +1,14 @@
 package st_test
 
 import (
+	"bufio"
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
 	"strings"
@@ -27,7 +30,9 @@ func init() {
 var _ = Describe("Integration Tests", func() {
 
 	var (
-		voltronCmd *exec.Cmd
+		voltronCmd  *exec.Cmd
+		guardianCmd *exec.Cmd
+		ts          *httptest.Server
 	)
 
 	It("Should change directory to bin folder", func() {
@@ -98,7 +103,6 @@ var _ = Describe("Integration Tests", func() {
 			resp, err := http.DefaultClient.Do(req)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(200))
-
 		})
 
 		It("Should List one cluster", func() {
@@ -131,8 +135,136 @@ var _ = Describe("Integration Tests", func() {
 		})
 	})
 
-	It("Should kill the process", func() {
+	It("should set up guardian environment variables", func() {
+		err := os.Setenv("GUARDIAN_PORT", "6666")
+		Expect(err).ToNot(HaveOccurred())
+
+		err = os.Setenv("GUARDIAN_VOLTRON_URL", "localhost:5566")
+		Expect(err).ToNot(HaveOccurred())
+	})
+
+	It("Should add a new test cluster to Voltron", func() {
+		cluster, err := json.Marshal(&clusters.Cluster{ID: "TestCluster", DisplayName: "TestCluster"})
+		Expect(err).NotTo(HaveOccurred())
+
+		req, err := http.NewRequest("PUT", clustersEndpoint,
+			bytes.NewBuffer(cluster))
+
+		Expect(err).ToNot(HaveOccurred())
+
+		resp, err := http.DefaultClient.Do(req)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(resp.StatusCode).To(Equal(200))
+
+		// Save results to a file
+		message, err := ioutil.ReadAll(resp.Body)
+
+		Expect(err).NotTo(HaveOccurred())
+		resp.Body.Close()
+
+		err = ioutil.WriteFile("/tmp/guardian.yaml", message, 0644)
+		Expect(err).NotTo(HaveOccurred())
+
+		cmd1 := exec.Command("sh", "./scripts/dev/yaml-extract-creds.sh", "/tmp/guardian.yaml")
+		err = cmd1.Run()
+
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("should check for existance of generated guardian files", func() {
+		// Test
+		out, err := exec.Command("ls", "/tmp/").Output()
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(string(out)).To(ContainSubstring("guardian.crt"))
+		Expect(string(out)).To(ContainSubstring("guardian.key"))
+	})
+
+	It("Should start up a mock server/target - TestCluster", func() {
+		ts = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			fmt.Fprint(w, "Received by TestCluster!")
+		}))
+	})
+
+	It("should set guardian environment variables", func() {
+		err := os.Setenv("GUARDIAN_CERT_PATH", "/tmp/")
+		Expect(err).NotTo(HaveOccurred())
+
+		err = os.Setenv("GUARDIAN_PROXY_TARGETS", "^/test:"+ts.URL)
+		Expect(err).NotTo(HaveOccurred())
+
+	})
+
+	It("Should start up guardian binary", func() {
+		var startErr error
+		guardianCmd = exec.Command("./bin/guardian")
+
+		// Prints logs to OS' Stdout and Stderr
+		guardianCmd.Stderr = os.Stderr
+
+		// Switch STDOut into a pipe
+		r, w, err := os.Pipe()
+		Expect(err).ToNot(HaveOccurred())
+
+		guardianCmd.Stdout = w
+
+		go func() {
+			startErr = guardianCmd.Start()
+
+			// Blocking
+			guardianCmd.Wait()
+		}()
+
+		// Check if startError
+		Expect(startErr).ToNot(HaveOccurred())
+
+		// Wait for guardian tunnel to be established. Listen to Stdout until we see connection establish
+		scanner := bufio.NewScanner(r)
+		for scanner.Scan() {
+			text := scanner.Text()
+			if contain := strings.Contains(text, "Tunnel: Accepting connections"); contain == true {
+				break
+			}
+		}
+
+	})
+
+	Context("While Guardian is running", func() {
+		It("Should send a request to nonexistant endpoint/", func() {
+			req, err := http.NewRequest("GET", "https://localhost:5555/", nil)
+			Expect(err).NotTo(HaveOccurred())
+
+			req.Header.Add("x-cluster-id", "TestCluster")
+
+			ExpectRequestResponse(req, "configuration missing for path \"/\"")
+		})
+
+		It("Should send a request to test endpoint/target", func() {
+			req, err := http.NewRequest("GET", "https://localhost:5555/test", nil)
+			Expect(err).NotTo(HaveOccurred())
+
+			req.Header.Add("x-cluster-id", "TestCluster")
+
+			ExpectRequestResponse(req, "Received by TestCluster!")
+		})
+
+		It("Should send a request to wrong cluster id", func() {
+			req, err := http.NewRequest("GET", "https://localhost:5555/test", nil)
+			Expect(err).NotTo(HaveOccurred())
+
+			req.Header.Add("x-cluster-id", "ClusterZ")
+			resp, err := http.DefaultClient.Do(req)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.StatusCode).To(Equal(400))
+		})
+	})
+
+	It("Should kill the voltron and guardian processes", func() {
 		err := voltronCmd.Process.Kill()
+		Expect(err).ToNot(HaveOccurred())
+
+		err = guardianCmd.Process.Kill()
 		Expect(err).ToNot(HaveOccurred())
 	})
 })
