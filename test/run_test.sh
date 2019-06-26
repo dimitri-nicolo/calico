@@ -110,7 +110,7 @@ function run_proxy()
 }
 
 # Run a batch of tests that don't require elasticsearch first.
-run_fvs "-skip \"(Elasticsearch)|(Policyimpact)\""
+run_fvs "-skip \"(Elasticsearch)|(PolicyimpactFV)\""
 
 # Setup elasticsearch and run a second batch with insecure access.
 run_elasticsearch "http" "insecure"
@@ -126,4 +126,4 @@ run_fvs "-focus Elasticsearch"
 # Setup elasticsearch and run policy impact fv test
 run_elasticsearch "http" "insecure"
 run_proxy "http" "insecure" "127.0.0.1" "9200"
-run_fvs "-focus Policyimpact"
+run_fvs "-focus PolicyimpactFV"

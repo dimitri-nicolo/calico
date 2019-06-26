@@ -13,7 +13,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Policyimpact", func() {
+var _ = Describe("PolicyimpactFV", func() {
 	proxyScheme := "https"
 	proxyHost := "127.0.0.1:8000"
 	var client *http.Client
@@ -33,13 +33,17 @@ var _ = Describe("Policyimpact", func() {
 	AfterEach(func() {
 	})
 	// We only verify access from the clients point of view.
-	verify := func(reqPath string, userAuth authInjector, reqbody string, expectedStatusCode int) {
+	verify := func(reqPath string, userAuth authInjector, postRequestBody string, expectedStatusCode int) {
 
 		urlStr := fmt.Sprintf("%s://%s/%s", proxyScheme, proxyHost, reqPath)
+		requestVerb := http.MethodPost
+		bodyreader := strings.NewReader(postRequestBody)
 
-		bodyreader := strings.NewReader(reqbody)
-
-		req, err := http.NewRequest("POST", urlStr, bodyreader)
+		req, err := http.NewRequest(requestVerb, urlStr, bodyreader)
+		if requestVerb == http.MethodPost {
+			req.Header.Add("content-length", fmt.Sprintf("%d", len(postRequestBody)))
+			req.Header.Add("Content-Type", "application/json")
+		}
 
 		Expect(err).To(BeNil())
 		userAuth.setAuthHeader(req)
@@ -49,10 +53,27 @@ var _ = Describe("Policyimpact", func() {
 		Expect(resp.StatusCode).To(Equal(expectedStatusCode))
 	}
 
-	It("does not error on pip request", func() {
+	It("does not error on a good pip request", func() {
 		path := "tigera_secure_ee_flows*/_search"
 		auth := basicAuthMech{"basicuserflowonly", "basicpwf"}
-		body := `{"policyActions":[{"policy":{
+		body := goodPipPostRequestBody
+		verify(path, auth, body, http.StatusOK)
+	})
+
+	It("does error on a bad pip request", func() {
+		path := "tigera_secure_ee_flows*/_search"
+		auth := basicAuthMech{"basicuserflowonly", "basicpwf"}
+		body := badPipPostRequestBody
+		verify(path, auth, body, http.StatusBadRequest)
+	})
+
+})
+
+var badPipPostRequestBody = `{"query":{"bool":{"must":[{"match_all":{}}],"must_not":[],"should":[]}},"from":0,"size":10,"sort":[],"aggs":{},
+"policyActions":[{"policy":{ "spec":{ "order":"xyz" } } ,"action":"create"}] }`
+
+var goodPipPostRequestBody = `{"query":{"bool":{"must":[{"match_all":{}}],"must_not":[],"should":[]}},"from":0,"size":10,"sort":[],"aggs":{},
+"policyActions":[{"policy":{
 			"metadata":{
 				"name":"p-name",
 				"generateName":"p-gen-name",
@@ -64,10 +85,8 @@ var _ = Describe("Policyimpact", func() {
 				"tier":"default",
 				"order":1,
 				"selector":"a|bogus|selector|string"
-			}		
+			}
 		}
-		,"action":"create"}]}`
-		verify(path, auth, body, http.StatusOK)
-	})
+		,"action":"create"}]
 
-})
+}`

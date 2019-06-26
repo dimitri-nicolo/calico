@@ -85,13 +85,6 @@ func NewProxy(proxyConfig *ProxyConfig) *Proxy {
 	p.Director = func(req *http.Request) {
 		req.Header.Add("X-Forwarded-Host", req.Host)
 
-		//convert to a get request if need be so es is happy
-		if req.Method == http.MethodPost {
-			req.Method = http.MethodGet
-			req.Body = nil
-			req.ContentLength = 0
-		}
-
 		origDirector(req)
 		req.Host = proxyConfig.TargetURL.Host
 	}

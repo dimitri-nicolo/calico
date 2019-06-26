@@ -43,7 +43,10 @@ func (m *flowManager) ExtractFlows() ([]Flow, error) {
 	//drill down to the flow log buckets
 	fb := m.data.(map[string]interface{})["aggregations"].(map[string]interface{})["flog_buckets"]
 
-	rb, _ := json.Marshal(fb)
+	rb, err := json.Marshal(fb)
+	if err != nil {
+		return nil, err
+	}
 
 	return jsonToFlows(rb)
 }

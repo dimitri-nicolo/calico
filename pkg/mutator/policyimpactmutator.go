@@ -24,7 +24,6 @@ func NewPIPResponseHook(p pip.PIP) ResponseHook {
 // ModifyResponse alters the flows in the response by calling the
 // CalculateFlowImpact method of the PIP object with the extracted flow data
 func (rh *pipResponseHook) ModifyResponse(r *http.Response) error {
-	log.Debug("PIP modify response")
 
 	//extract the context from the request
 	context := r.Request.Context()
@@ -36,6 +35,8 @@ func (rh *pipResponseHook) ModifyResponse(r *http.Response) error {
 	if changes == nil {
 		return nil
 	}
+
+	log.Debug("Policy Impact ModifyResponse executing")
 
 	//assert that we have network policy changes
 	npcs := changes.([]pip.NetworkPolicyChange)

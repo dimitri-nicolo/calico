@@ -5,7 +5,9 @@ package fv_test
 import (
 	"crypto/tls"
 	"fmt"
+	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -57,11 +59,21 @@ var _ = Describe("Elasticsearch access", func() {
 	AfterEach(func() {
 	})
 	// We only verify access from the clients point of view.
-	verify := func(reqPath string, userAuth authInjector, expectedStatusCode int) {
+	verify := func(reqPath string, userAuth authInjector, expectedStatusCode int, requestVerb string) {
 
 		urlStr := fmt.Sprintf("%s://%s/%s", proxyScheme, proxyHost, reqPath)
 
-		req, err := http.NewRequest("GET", urlStr, nil)
+		var bodyreader io.Reader
+		if requestVerb == http.MethodPost {
+			bodyreader = strings.NewReader(postRequestBody)
+		}
+
+		req, err := http.NewRequest(requestVerb, urlStr, bodyreader)
+		if requestVerb == http.MethodPost {
+			req.Header.Add("content-length", fmt.Sprintf("%d", len(postRequestBody)))
+			req.Header.Add("Content-Type", "application/json")
+		}
+
 		Expect(err).To(BeNil())
 		userAuth.setAuthHeader(req)
 
@@ -70,56 +82,79 @@ var _ = Describe("Elasticsearch access", func() {
 		Expect(resp.StatusCode).To(Equal(expectedStatusCode))
 	}
 
-	nonExistentAuth := func(ai authInjector) {
+	nonExistentAuth := func(ai authInjector, requestVerb string) {
 		By("checking auth access for non existent user")
-		verify("tigera_secure_ee_flows*/_search", ai, http.StatusUnauthorized)
+		verify("tigera_secure_ee_flows*/_search", ai, http.StatusUnauthorized, requestVerb)
 	}
 
-	accessEverything := func(ai authInjector) {
+	accessEverything := func(ai authInjector, requestVerb string) {
 		By("checking auth access for to all indices")
-		verify("tigera_secure_ee_flows*/_search", ai, http.StatusOK)
-		verify("tigera_secure_ee_audit*/_search", ai, http.StatusOK)
-		verify("tigera_secure_ee_events*/_search", ai, http.StatusOK)
+		verify("tigera_secure_ee_flows*/_search", ai, http.StatusOK, requestVerb)
+		verify("tigera_secure_ee_audit*/_search", ai, http.StatusOK, requestVerb)
+		verify("tigera_secure_ee_events*/_search", ai, http.StatusOK, requestVerb)
 	}
 
-	accessFlowOnly := func(ai authInjector) {
+	accessFlowOnly := func(ai authInjector, requestVerb string) {
 		By("checking auth access for flow index only")
-		verify("tigera_secure_ee_flows*/_search", ai, http.StatusOK)
-		verify("tigera_secure_ee_audit*/_search", ai, http.StatusForbidden)
-		verify("tigera_secure_ee_events*/_search", ai, http.StatusForbidden)
+		verify("tigera_secure_ee_flows*/_search", ai, http.StatusOK, requestVerb)
+		verify("tigera_secure_ee_audit*/_search", ai, http.StatusForbidden, requestVerb)
+		verify("tigera_secure_ee_events*/_search", ai, http.StatusForbidden, requestVerb)
 	}
 
-	accessAuditOnly := func(ai authInjector) {
+	accessAuditOnly := func(ai authInjector, requestVerb string) {
 		By("checking auth access for audit index only")
-		verify("tigera_secure_ee_flows*/_search", ai, http.StatusForbidden)
-		verify("tigera_secure_ee_audit*/_search", ai, http.StatusOK)
-		verify("tigera_secure_ee_events*/_search", ai, http.StatusForbidden)
+		verify("tigera_secure_ee_flows*/_search", ai, http.StatusForbidden, requestVerb)
+		verify("tigera_secure_ee_audit*/_search", ai, http.StatusOK, requestVerb)
+		verify("tigera_secure_ee_events*/_search", ai, http.StatusForbidden, requestVerb)
 	}
 
-	accessNone := func(ai authInjector) {
+	accessNone := func(ai authInjector, requestVerb string) {
 		By("checking auth access for audit index only")
-		verify("tigera_secure_ee_flows*/_search", ai, http.StatusForbidden)
-		verify("tigera_secure_ee_audit*/_search", ai, http.StatusForbidden)
-		verify("tigera_secure_ee_events*/_search", ai, http.StatusForbidden)
+		verify("tigera_secure_ee_flows*/_search", ai, http.StatusForbidden, requestVerb)
+		verify("tigera_secure_ee_audit*/_search", ai, http.StatusForbidden, requestVerb)
+		verify("tigera_secure_ee_events*/_search", ai, http.StatusForbidden, requestVerb)
 	}
 
-	It("enforces RBAC for basic auth", func() {
-		nonExistentAuth(basicAuthMech{"idontexist", "guessme"})
-		accessEverything(basicAuthMech{"basicuserall", "basicpw"})
-		accessEverything(basicAuthMech{"basicuserallgrp", "basicpwgrp"})
-		accessFlowOnly(basicAuthMech{"basicuserflowonly", "basicpwf"})
-		accessAuditOnly(basicAuthMech{"basicuserauditonly", "basicpwaa"})
-		accessNone(basicAuthMech{"basicusernone", "basicpw0"})
-		accessNone(basicAuthMech{"basicusernoselfaccess", "basicpwnos"})
+	It("enforces RBAC for basic auth GET requests", func() {
+		nonExistentAuth(basicAuthMech{"idontexist", "guessme"}, http.MethodGet)
+		accessEverything(basicAuthMech{"basicuserall", "basicpw"}, http.MethodGet)
+		accessEverything(basicAuthMech{"basicuserallgrp", "basicpwgrp"}, http.MethodGet)
+		accessFlowOnly(basicAuthMech{"basicuserflowonly", "basicpwf"}, http.MethodGet)
+		accessAuditOnly(basicAuthMech{"basicuserauditonly", "basicpwaa"}, http.MethodGet)
+		accessNone(basicAuthMech{"basicusernone", "basicpw0"}, http.MethodGet)
+		accessNone(basicAuthMech{"basicusernoselfaccess", "basicpwnos"}, http.MethodGet)
 	})
-	It("enforces RBAC for token auth", func() {
-		nonExistentAuth(tokenAuthMech{"adeadbeef"})
-		accessEverything(tokenAuthMech{"deadbeef"})
-		accessFlowOnly(tokenAuthMech{"deadbeeff"})
-		accessAuditOnly(tokenAuthMech{"deadbeefaa"})
-		accessNone(tokenAuthMech{"deadbeef0"})
+	It("enforces RBAC for token auth GET requests", func() {
+		nonExistentAuth(tokenAuthMech{"adeadbeef"}, http.MethodGet)
+		accessEverything(tokenAuthMech{"deadbeef"}, http.MethodGet)
+		accessFlowOnly(tokenAuthMech{"deadbeeff"}, http.MethodGet)
+		accessAuditOnly(tokenAuthMech{"deadbeefaa"}, http.MethodGet)
+		accessNone(tokenAuthMech{"deadbeef0"}, http.MethodGet)
 	})
-	It("rejects request to unknown URLS", func() {
-		verify("tigera_secure_cloud_edition_flows*/_search", basicAuthMech{"basicuserall", "basicpw"}, http.StatusForbidden)
+	It("rejects GET request to unknown URLS", func() {
+		verify("tigera_secure_cloud_edition_flows*/_search", basicAuthMech{"basicuserall", "basicpw"}, http.StatusForbidden, http.MethodGet)
 	})
+
+	It("enforces RBAC for basic auth POST requests", func() {
+		nonExistentAuth(basicAuthMech{"idontexist", "guessme"}, http.MethodPost)
+		accessEverything(basicAuthMech{"basicuserall", "basicpw"}, http.MethodPost)
+		accessEverything(basicAuthMech{"basicuserallgrp", "basicpwgrp"}, http.MethodPost)
+		accessFlowOnly(basicAuthMech{"basicuserflowonly", "basicpwf"}, http.MethodPost)
+		accessAuditOnly(basicAuthMech{"basicuserauditonly", "basicpwaa"}, http.MethodPost)
+		accessNone(basicAuthMech{"basicusernone", "basicpw0"}, http.MethodPost)
+		accessNone(basicAuthMech{"basicusernoselfaccess", "basicpwnos"}, http.MethodPost)
+	})
+	It("enforces RBAC for token auth POST requests", func() {
+		nonExistentAuth(tokenAuthMech{"adeadbeef"}, http.MethodPost)
+		accessEverything(tokenAuthMech{"deadbeef"}, http.MethodPost)
+		accessFlowOnly(tokenAuthMech{"deadbeeff"}, http.MethodPost)
+		accessAuditOnly(tokenAuthMech{"deadbeefaa"}, http.MethodPost)
+		accessNone(tokenAuthMech{"deadbeef0"}, http.MethodPost)
+	})
+	It("rejects POST request to unknown URLS", func() {
+		verify("tigera_secure_cloud_edition_flows*/_search", basicAuthMech{"basicuserall", "basicpw"}, http.StatusForbidden, http.MethodPost)
+	})
+
 })
+
+var postRequestBody = `{"query":{"bool":{"must":[{"match_all":{}}],"must_not":[],"should":[]}},"from":0,"size":10,"sort":[],"aggs":{}}`
