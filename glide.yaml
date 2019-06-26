@@ -24,6 +24,8 @@ import:
   version: b4deda0973fb4c70b50d226b1af49f3da59f5265
   subpackages:
   - proto
+- package: github.com/jbenet/go-reuseport
+  version: 8cfd5f2973c8e2476813120b9a516d9a82eb7c7a
 # Need to pin to an older version as our code uses some deprecated functionality.
 - package: github.com/libp2p/go-reuseport
   version: gx/v0.1.18
