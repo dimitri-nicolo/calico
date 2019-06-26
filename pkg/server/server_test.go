@@ -4,20 +4,20 @@ package server_test
 import (
 	"archive/zip"
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"strings"
 
 	"github.com/sirupsen/logrus"
 
@@ -31,7 +31,7 @@ import (
 // startTester starts and returns a server tester. This can be used to issue summary and report queries and to
 // validate the response.
 //
-// The Calico and Report stores are mocked out, and the responses controlled via the control paraameters in the
+// The Calico and Report stores are mocked out, and the responses controlled via the control parameters in the
 // tester struct.
 func startTester() *tester {
 	// Create a new tester, defaulting permissions to allow lists.
@@ -42,8 +42,9 @@ func startTester() *tester {
 	// Choose an arbitrary port for the server to listen on.
 	By("Choosing an arbitrary available local port for the queryserver")
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	Expect(err).NotTo(HaveOccurred())
 	t.addr = listener.Addr().String()
-	listener.Close()
+	err = listener.Close()
 	Expect(err).NotTo(HaveOccurred())
 
 	By("Starting the compliance server")
@@ -211,9 +212,26 @@ func (t *tester) RetrieveArchivedReport(id string) (*report.ArchivedReportData, 
 	return t.report, t.reportErr
 }
 
+func (t *tester) RetrieveArchivedReportTypeAndNames(_ context.Context, q report.QueryParams) ([]report.ReportTypeAndName, error) {
+	if t.summariesErr != nil {
+		return nil, t.summariesErr
+	}
+	var r []report.ReportTypeAndName
+	for _, s := range t.summaries {
+		r = append(r, report.ReportTypeAndName{
+			ReportTypeName: s.ReportTypeName,
+			ReportName:     s.ReportName,
+		})
+	}
+	return r, nil
+}
+
 // RetrieveArchivedReportSummaries implements the ReportRetriever interface.
-func (t *tester) RetrieveArchivedReportSummaries() ([]*report.ArchivedReportData, error) {
-	return t.summaries, t.summariesErr
+func (t *tester) RetrieveArchivedReportSummaries(_ context.Context, q report.QueryParams) (*report.ArchivedReportSummaries, error) {
+	return &report.ArchivedReportSummaries{
+		Count:   len(t.summaries),
+		Reports: t.summaries,
+	}, t.summariesErr
 }
 
 // RetrieveArchivedReportSummary implements the ReportRetriever interface.

@@ -85,7 +85,7 @@ func (c *client) StoreBenchmarks(ctx context.Context, b *benchmark.Benchmarks) e
 //
 // Filters are OR'd together. Options within the filter are ANDed.
 func (c *client) RetrieveLatestBenchmarks(ctx context.Context, ct benchmark.BenchmarkType, filters []benchmark.Filter, start, end time.Time) <-chan benchmark.BenchmarksResult {
-	ch := make(chan benchmark.BenchmarksResult, pageSize)
+	ch := make(chan benchmark.BenchmarksResult, DefaultPageSize)
 	searchIndex := c.ClusterIndex(BenchmarksIndex, "*")
 
 	// Keep track of the latest results set from each node.
@@ -104,7 +104,7 @@ func (c *client) RetrieveLatestBenchmarks(ctx context.Context, ct benchmark.Benc
 		scroll := c.Scroll(searchIndex).
 			Query(getBenchmarksQuery(ct, filters, start, end)).
 			Sort("timestamp", false).
-			Size(pageSize)
+			Size(DefaultPageSize)
 		for {
 			log.Debug("Running scroll to return next set of Benchmarks")
 			res, err := scroll.Do(context.Background())
@@ -224,16 +224,7 @@ func getBenchmarksFilterQuery(filter benchmark.Filter) elastic.Query {
 		queries = append(queries, elastic.NewMatchQuery("version", filter.Version))
 	}
 	if len(filter.NodeNames) != 0 {
-		queries = append(queries, getBenchmarksNodesQuery(filter.NodeNames))
+		queries = append(queries, getAnyStringValueQuery("node_name", filter.NodeNames))
 	}
 	return elastic.NewBoolQuery().Must(queries...)
-}
-
-// getBenchmarksFilterQuery calculates the query for a set of benchmark nodes.
-func getBenchmarksNodesQuery(nodes []string) elastic.Query {
-	queries := []elastic.Query{}
-	for _, node := range nodes {
-		queries = append(queries, elastic.NewMatchQuery("node_name", node))
-	}
-	return elastic.NewBoolQuery().Should(queries...)
 }
