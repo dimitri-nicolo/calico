@@ -1,6 +1,7 @@
 package st_test
 
 import (
+	"bufio"
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
@@ -11,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -196,11 +198,17 @@ var _ = Describe("Integration Tests", func() {
 
 	It("Should start up guardian binary", func() {
 		var startErr error
+		var wg sync.WaitGroup
 		guardianCmd = exec.Command("./bin/guardian")
 
 		// Prints logs to OS' Stdout and Stderr
-		guardianCmd.Stdout = os.Stdout
 		guardianCmd.Stderr = os.Stderr
+
+		// Switch STDOut into a pipe
+		r, w, err := os.Pipe()
+		Expect(err).ToNot(HaveOccurred())
+
+		guardianCmd.Stdout = w
 
 		go func() {
 			startErr = guardianCmd.Start()
@@ -209,8 +217,21 @@ var _ = Describe("Integration Tests", func() {
 			guardianCmd.Wait()
 		}()
 
-		// Wait for Server to start up
-		time.Sleep(2 * time.Second)
+		// Wait for guardian tunnel to be established. Listen to Stdout until we see connection establish
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			scanner := bufio.NewScanner(r)
+			for scanner.Scan() {
+				text := scanner.Text()
+				if contain := strings.Contains(text, "Tunnel: Accepting connections"); contain == true {
+					return
+				}
+			}
+		}()
+
+		// Wait for tunnel to be established.
+		wg.Wait()
 
 		// Check if startError
 		Expect(startErr).ToNot(HaveOccurred())
@@ -240,8 +261,10 @@ var _ = Describe("Integration Tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			req.Header.Add("x-cluster-id", "ClusterZ")
+			resp, err := http.DefaultClient.Do(req)
 
-			ExpectRequestResponse(req, "Unknown target cluster \"ClusterZ\"")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.StatusCode).To(Equal(400))
 		})
 	})
 
