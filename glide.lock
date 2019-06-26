@@ -1,5 +1,5 @@
-hash: 624b4e0fb4b72b2356d6f21a250672bb404f053da847156e878b208ac090520a
-updated: 2019-06-25T05:20:57.550777686Z
+hash: 580d10af718732d76298719cce1bc19d4b83eba56dfa2010dea72a85ec3266df
+updated: 2019-06-26T05:21:21.876608977Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -362,7 +362,7 @@ imports:
   - pkg/types
   - pkg/upgrade
 - name: github.com/projectcalico/felix
-  version: a91a3a5ba6b2807e0e8f91f687f37b3ee6ce9ada
+  version: 357836b476ccac08adb84a54b68b306927b9b137
   repo: git@github.com:tigera/felix-private.git
   subpackages:
   - bpf
@@ -520,7 +520,7 @@ imports:
 - name: github.com/spf13/pflag
   version: 583c0c0531f06d5278b7d917446061adc344b5cd
 - name: github.com/tigera/licensing
-  version: 4ef30a4e6de92153a6589af226e77c567f530541
+  version: 8231bc0944780772f74f934d8982d22b6eea4b6f
   repo: git@github.com:tigera/licensing
   vcs: git
   subpackages:
