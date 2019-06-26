@@ -6,7 +6,7 @@ import:
   repo: https://github.com/projectcalico/logrus
   version: v1.0.4-calico
 - package: github.com/tigera/licensing
-  version: 02d1f482fe4d3a2dbc4a3bce530471eba75d5029
+  version: 8231bc0944780772f74f934d8982d22b6eea4b6f
   repo: git@github.com:tigera/licensing
   vcs: git
   subpackages:
@@ -26,7 +26,7 @@ import:
 - package: github.com/mailru/easyjson
   version: 03f2033d19d5860aef995fe360ac7d395cd8ce65
 - package: github.com/tigera/calico-k8sapiserver
-  version: f8400d2c4088fdcdd849b68ff1af3e1bfd7fd48f
+  version: 57963fa51900154b1c3cc0446f275d508fdef1bc
   repo: git@github.com:tigera/calico-k8sapiserver.git
   vcs: git
 - package: github.com/tigera/es-proxy-image
