@@ -1,5 +1,5 @@
-hash: 78385931aedc9dd1519cf4bb0c6639017e6ebcd7a311de57fdf9543644905e34
-updated: 2019-06-17T21:06:39.774909948Z
+hash: d52010151bba355503ab87a13ccc0573b54766cee6515fd38b2545b6565e7213
+updated: 2019-06-26T01:37:54.404144862Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -229,7 +229,7 @@ imports:
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
 - name: github.com/projectcalico/felix
-  version: c0c1fe1d9306d1f1677e5f2adf6fa0c203ccd688
+  version: 357836b476ccac08adb84a54b68b306927b9b137
   repo: git@github.com:tigera/felix-private.git
   vcs: git
   subpackages:
@@ -262,7 +262,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: e9a74b29328b7376cb88fc539b7c7e000e47d278
+  version: 8dc7bc820846ec5c35f943ce2f673dad348a9c4a
   repo: git@github.com:tigera/libcalico-go-private.git
   vcs: git
   subpackages:
@@ -304,7 +304,7 @@ imports:
   - lib/validator/v3
   - lib/watch
 - name: github.com/projectcalico/typha
-  version: 085d3c3f83a814c2761ac2a95f0ee91809a5876b
+  version: f6211d8cdce0561275e75d13e6fe3ef40f12c416
   repo: git@github.com:tigera/typha-private
   subpackages:
   - pkg/syncclient
@@ -341,7 +341,7 @@ imports:
 - name: github.com/spf13/pflag
   version: 24fa6976df40757dce6aea913e7b81ade90530e1
 - name: github.com/tigera/licensing
-  version: 4ef30a4e6de92153a6589af226e77c567f530541
+  version: 8231bc0944780772f74f934d8982d22b6eea4b6f
   repo: git@github.com:tigera/licensing
   vcs: git
   subpackages:
@@ -361,7 +361,7 @@ imports:
   subpackages:
   - nl
 - name: github.com/vishvananda/netns
-  version: 13995c7128ccc8e51e9a6bd2b551020a27180abd
+  version: 7109fa855b0ff1ebef7fbd2f6aa613e8db7cfbc0
 - name: golang.org/x/crypto
   version: 9419663f5a44be8b34ca85f08abc5fe1be11f8a3
   subpackages:
