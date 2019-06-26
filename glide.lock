@@ -1,5 +1,5 @@
-hash: 934f55d0202ad0abec57c7bd6487aeb12fdab7f80dcffe1517c7f2066fe281ef
-updated: 2019-06-13T22:30:20.468683785Z
+hash: 67916a328b597deaa5059a49f95d094913e35fc11a323346f0d4a863609e379d
+updated: 2019-06-26T00:20:19.113170084Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -340,7 +340,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: e9a74b29328b7376cb88fc539b7c7e000e47d278
+  version: 8dc7bc820846ec5c35f943ce2f673dad348a9c4a
   repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib/apiconfig
@@ -386,7 +386,7 @@ imports:
   subpackages:
   - binder
 - name: github.com/projectcalico/typha
-  version: 085d3c3f83a814c2761ac2a95f0ee91809a5876b
+  version: f6211d8cdce0561275e75d13e6fe3ef40f12c416
   repo: git@github.com:tigera/typha-private
   subpackages:
   - pkg/syncclient
@@ -435,7 +435,7 @@ imports:
 - name: github.com/spf13/pflag
   version: 583c0c0531f06d5278b7d917446061adc344b5cd
 - name: github.com/tigera/licensing
-  version: 4ef30a4e6de92153a6589af226e77c567f530541
+  version: 8231bc0944780772f74f934d8982d22b6eea4b6f
   repo: git@github.com:tigera/licensing
   vcs: git
   subpackages:
