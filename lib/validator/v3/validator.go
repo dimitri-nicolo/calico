@@ -61,6 +61,11 @@ var (
 	// more restrictive naming requirements.
 	nameRegex = regexp.MustCompile("^" + nameSubdomainFmt + "$")
 
+	// Like the above, but also allowing a wildcard (*) instead of each name component.
+	wildNameLabelFmt     = "(" + nameLabelFmt + "|\\*)"
+	wildNameSubdomainFmt = wildNameLabelFmt + "(\\." + wildNameLabelFmt + ")*"
+	wildNameRegex        = regexp.MustCompile("^" + wildNameSubdomainFmt + "$")
+
 	// Tiers must have simple names with no dots, since they appear as sub-components of other
 	// names.
 	tierNameRegex = regexp.MustCompile("^" + nameLabelFmt + "$")
@@ -150,6 +155,7 @@ func init() {
 	registerFieldValidator("interface", validateInterface)
 	registerFieldValidator("datastoreType", validateDatastoreType)
 	registerFieldValidator("name", validateName)
+	registerFieldValidator("wildname", ValidateWildName)
 	registerFieldValidator("containerID", validateContainerID)
 	registerFieldValidator("selector", validateSelector)
 	registerFieldValidator("labels", validateLabels)
@@ -276,6 +282,13 @@ func validateName(fl validator.FieldLevel) bool {
 	s := fl.Field().String()
 	log.Debugf("Validate name: %s", s)
 	return nameRegex.MatchString(s)
+}
+
+// Public because also useful for the v1 validator.
+func ValidateWildName(fl validator.FieldLevel) bool {
+	s := fl.Field().String()
+	log.Debugf("Validate wild name: %s", s)
+	return wildNameRegex.MatchString(s)
 }
 
 func validateContainerID(fl validator.FieldLevel) bool {
