@@ -12,7 +12,7 @@ Use domain names to allow traffic to destinations outside of a cluster.
 Using domain names in policies to identify services outside of the cluster is often operationally simpler and more robust than using IP
 addresses. In particular, they are useful when an external service does not map to a well known set of static IP addresses.
 
-Specified domain names can include a wildcard (`*`), making it easier to manage large numbers of domains/subdomains.
+Domain names can include a wildcard (`*`), making it easier to manage large numbers of domains/subdomains.
 
 ### Features
 
@@ -35,23 +35,7 @@ Using domain names in policy rules is limited to only egress allow rules. {{site
 
 #### Domain name matching
 
-When a configured domain name has no wildcard (`*`), it matches exactly that domain name.  For example:
-
-- `microsoft.com`
-- `tigera.io`
-
-With a single asterisk in any part of the domain name, it matches 1 or more path components at that position.  For example:
-
-- `*.google.com` matches `www.google.com` and `www.ipv6.google.com`, but not `google.com`
-- `www.*.com` matches `www.sun.com` and `www.apple.com`, but not `www.com`
-- `www.google.*` matches `www.google.net`, `www.google.io`, and so on
-- `update.*.mycompany.com` matches `update.tools.mycompany.com`, `update.secure.suite.mycompany.com`, and so on
-
-Not supported are:
-
-- Multiple wildcards in the same domain, for example: `*.*.mycompany.com`
-- Asterisks that are not the entire component, for example: `www.g*.com`
-- More general wildcards, such as regular expressions
+{% include {{page.version}}/domain-names.md %}
 
 #### Trusted DNS servers
 
