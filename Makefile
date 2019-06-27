@@ -158,7 +158,7 @@ $(COMPONENTS): %: $(BINDIR)/% ;
 
 $(BINDIR)/%: $(BINDIR)/%-$(ARCH)
 	rm -f $@; ln -s $*-$(ARCH) $@
-
+ 
 $(BINDIR)/%-$(ARCH): $(GO_FILES)
 ifndef RELEASE_BUILD
 	$(eval LDFLAGS:=$(RELEASE_LDFLAGS))
@@ -192,14 +192,24 @@ endif
 manifests: manifests/voltron.yaml
 
 manifests/voltron.yaml: manifests/voltron.yaml.tmpl
+	scripts/certs/clean-self-signed.sh scripts/certs
 	scripts/certs/self-signed.sh scripts/certs
+# Handle differences in base64 between OS 
+ifeq ($(shell uname -s),Darwin)
+	CERT64=`base64 scripts/certs/voltron.crt` && \
+		KEY64=`base64 scripts/certs/voltron.key` && \
+		cat $< | sed "s;VOLTRON_CRT_BASE64;$$CERT64;" | sed "s;VOLTRON_KEY_BASE64;$$KEY64;" > $@
+else
 	CERT64=`base64 -w 0 scripts/certs/voltron.crt` && \
 		KEY64=`base64 -w 0 scripts/certs/voltron.key` && \
 		cat $< | sed "s;VOLTRON_CRT_BASE64;$$CERT64;" | sed "s;VOLTRON_KEY_BASE64;$$KEY64;" > $@
-	rm -f scripts/certs/voltron.*
+endif
+	scripts/certs/clean-self-signed.sh scripts/certs
 
 clean-manifests:
 	rm -f manifests/voltron.yaml
+	scripts/certs/clean-self-signed.sh scripts/certs
+
 
 ##########################################################################################
 # TESTING 

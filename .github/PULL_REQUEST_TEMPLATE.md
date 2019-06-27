@@ -1,4 +1,6 @@
 ## Description
+This closes [ISSUE_NUMBER](https://tigera.atlassian.net/browse/ISSUE_NUMBER).
+
 <!-- A few sentences describing the overall goals of the pull request's commits.
 Please include
 - the type of fix - (e.g. bug fix, new feature, documentation)

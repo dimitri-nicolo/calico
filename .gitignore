@@ -21,6 +21,10 @@ go.sum
 cmd/guardian/debug
 cmd/voltron/debug
 
+# Generated Manifests
+**/voltron.yaml
+**/guardian.yaml
+
 # Docker image folders
 docker-image/templates
 docker-image/scripts
