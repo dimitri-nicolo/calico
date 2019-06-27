@@ -286,7 +286,7 @@ install-git-hooks:
 #############################################
 # Run CI cycle - build, test, etc.
 #############################################
-ci: clean test
+ci: clean test static-checks
 
 #############################################
 # Deploy images to registry
