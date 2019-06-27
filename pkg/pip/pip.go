@@ -59,6 +59,11 @@ func (s *pip) CalculateFlowImpact(ctx context.Context, npcs []NetworkPolicyChang
 		return flows, err
 	}
 
+	// apply the preview changes
+	if err := s.applyPolicyChanges(npcs); err != nil {
+		return flows, err
+	}
+
 	// Set in-sync, so we get updates as we feed in the endpoints.
 	s.xc.OnStatusUpdate(syncer.NewStatusUpdateComplete())
 
@@ -129,6 +134,33 @@ func (s *pip) CalculateFlowImpact(ctx context.Context, npcs []NetworkPolicyChang
 	}
 
 	return retFlows, nil
+}
+
+func (s *pip) applyPolicyChanges(npcs []NetworkPolicyChange) error {
+	for _, npc := range npcs {
+		switch npc.ChangeAction {
+		case "update":
+			s.xc.OnUpdates([]syncer.Update{{
+				Type:       syncer.UpdateTypeSet,
+				Resource:   &npc.NetworkPolicy,
+				ResourceID: resources.GetResourceID(&npc.NetworkPolicy),
+			}})
+
+		case "delete":
+			s.xc.OnUpdates([]syncer.Update{{
+				Type:       syncer.UpdateTypeDeleted,
+				Resource:   &npc.NetworkPolicy,
+				ResourceID: resources.GetResourceID(&npc.NetworkPolicy),
+			}})
+		case "create":
+			s.xc.OnUpdates([]syncer.Update{{
+				Type:       syncer.UpdateTypeSet,
+				Resource:   &npc.NetworkPolicy,
+				ResourceID: resources.GetResourceID(&npc.NetworkPolicy),
+			}})
+		}
+	}
+	return nil
 }
 
 func (s *pip) onUpdate(update syncer.Update) {
