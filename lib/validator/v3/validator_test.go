@@ -328,6 +328,39 @@ func init() {
 			},
 			false,
 		),
+		Entry("should accept GlobalNetworkSet with non-wild domain names",
+			api.GlobalNetworkSet{
+				ObjectMeta: v1.ObjectMeta{
+					Name: "test",
+				},
+				Spec: api.GlobalNetworkSetSpec{
+					AllowedEgressDomains: []string{"microsoft.com", "www.microsoft.com"},
+				},
+			},
+			true,
+		),
+		Entry("should accept GlobalNetworkSet with wildcard domain names",
+			api.GlobalNetworkSet{
+				ObjectMeta: v1.ObjectMeta{
+					Name: "test",
+				},
+				Spec: api.GlobalNetworkSetSpec{
+					AllowedEgressDomains: []string{"microsoft.*", "*.microsoft.com"},
+				},
+			},
+			true,
+		),
+		Entry("should reject GlobalNetworkSet with invalid wildcard use",
+			api.GlobalNetworkSet{
+				ObjectMeta: v1.ObjectMeta{
+					Name: "test",
+				},
+				Spec: api.GlobalNetworkSetSpec{
+					AllowedEgressDomains: []string{"*example.com"},
+				},
+			},
+			false,
+		),
 		Entry("should accept NetworkSetSpec with CIDRs and IPs",
 			api.NetworkSetSpec{
 				Nets: []string{
@@ -1334,6 +1367,20 @@ func init() {
 				Destination: api.EntityRule{
 					Domains:  []string{"example.com"},
 					Selector: "role == 'fish'",
+				},
+			}, false),
+		Entry("should allow Allow Rule with wildcard domain",
+			api.Rule{
+				Action: "Allow",
+				Destination: api.EntityRule{
+					Domains: []string{"*.example.com"},
+				},
+			}, true),
+		Entry("should reject Allow Rule with invalid wildcard use",
+			api.Rule{
+				Action: "Allow",
+				Destination: api.EntityRule{
+					Domains: []string{"*example.com"},
 				},
 			}, false),
 

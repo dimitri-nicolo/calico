@@ -149,7 +149,7 @@ type EntityRule struct {
 	// Domains is an optional field, valid for egress Allow rules only, that restricts the rule
 	// to apply only to traffic to one of the specified domains.  If this field is specified,
 	// Action must be Allow, and Nets and Selector must both be left empty.
-	Domains []string `json:"domains,omitempty" validate:"omitempty,dive,name"`
+	Domains []string `json:"domains,omitempty" validate:"omitempty,dive,wildname"`
 
 	// NotNets is the negated version of the Nets field.
 	NotNets []string `json:"notNets,omitempty" validate:"omitempty,dive,net"`
