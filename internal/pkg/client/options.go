@@ -53,3 +53,11 @@ func WithTunnelCreds(certPEM []byte, keyPEM []byte, ca *x509.CertPool) Option {
 		return nil
 	}
 }
+
+// WithAuthBearerToken sets the bearer token to be used when proxying
+func WithAuthBearerToken(token string) Option {
+	return func(c *Client) error {
+		c.authBearerToken = token
+		return nil
+	}
+}

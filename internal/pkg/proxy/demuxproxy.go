@@ -14,11 +14,20 @@ import (
 // DemuxProxy proxies HTTP based on the provided matcher
 type DemuxProxy struct {
 	matcher Matcher
+	token   string
 }
 
 // New returns an initialized Proxy
-func New(matcher Matcher) *DemuxProxy {
-	return &DemuxProxy{matcher: matcher}
+func New(matcher Matcher, token string) *DemuxProxy {
+
+	if token != "" {
+		token = "Bearer " + token
+	}
+
+	return &DemuxProxy{
+		matcher: matcher,
+		token:   token,
+	}
 }
 
 // ServeHTTP knows how to proxy HTTP requests to different named targets
@@ -37,6 +46,9 @@ func (mp *DemuxProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	r.URL.Host = url.Host
 	r.URL.Scheme = url.Scheme
 	r.Header.Set("X-Forwarded-Host", r.Header.Get("Host"))
+	if mp.token != "" {
+		r.Header.Set("Authorization", mp.token)
+	}
 	r.Host = url.Host
 
 	log.Debugf("New http request is %v", r)

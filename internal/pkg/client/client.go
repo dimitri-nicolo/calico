@@ -29,6 +29,8 @@ type Client struct {
 	tunnelRootCAs *x509.CertPool
 
 	tunnelReady chan error
+
+	authBearerToken string
 }
 
 // New returns a new Client
@@ -53,7 +55,7 @@ func New(addr string, opts ...Option) (*Client, error) {
 	client.proxyMux = http.NewServeMux()
 	client.http.Handler = client.proxyMux
 
-	handler := proxy.New(proxy.NewPathMatcher(client.targets))
+	handler := proxy.New(proxy.NewPathMatcher(client.targets), client.authBearerToken)
 	client.proxyMux.Handle("/", handler)
 
 	return client, nil

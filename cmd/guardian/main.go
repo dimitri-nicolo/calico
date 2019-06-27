@@ -45,10 +45,11 @@ type config struct {
 	// until health check restored
 	//Port       int    `default:"5555"`
 	//Host       string `default:"localhost"`
-	LogLevel     string      `default:"DEBUG"`
-	CertPath     string      `default:"/certs" split_words:"true"`
-	VoltronURL   string      `required:"true" split_words:"true"`
-	ProxyTargets proxyTarget `default:"" split_words:"true"`
+	LogLevel            string      `default:"DEBUG"`
+	CertPath            string      `default:"/certs" split_words:"true"`
+	VoltronURL          string      `required:"true" split_words:"true"`
+	ProxyTargets        proxyTarget `default:"" split_words:"true"`
+	ServiceAccountToken string      `default:"/var/run/secrets/kubernetes.io/serviceaccount/token" split_words:"true"`
 }
 
 func main() {
@@ -85,13 +86,23 @@ func main() {
 		log.Fatalf("Cannot append voltron cert to ca pool: %+v", err)
 	}
 
-	client, err := client.New(
-		cfg.VoltronURL,
+	opts := []client.Option{
 		client.WithProxyTargets(
 			cfg.ProxyTargets,
 		),
 		client.WithTunnelCreds(pemCert, pemKey, ca),
-	)
+	}
+
+	if cfg.ServiceAccountToken != "" {
+		token, err := ioutil.ReadFile(cfg.ServiceAccountToken)
+		if err != nil {
+			log.Fatalf("Failed to read ServiceAccountToken from %s: %s",
+				cfg.ServiceAccountToken, err)
+		}
+		opts = append(opts, client.WithAuthBearerToken(string(token)))
+	}
+
+	client, err := client.New(cfg.VoltronURL, opts...)
 
 	if err != nil {
 		log.Fatalf("Failed to create server: %s", err)

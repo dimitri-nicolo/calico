@@ -51,6 +51,12 @@ var _ = Describe("Client Tunneling", func() {
 	Context("While Tunnel Server is serving", func() {
 		It("Starts up mock server", func() {
 			ts = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				token := r.Header.Get("Authorization")
+				if token != "Bearer some-token" {
+					http.Error(w, "Bad token", 401)
+					return
+				}
+
 				fmt.Fprint(w, "Proxied and Received!")
 			}))
 		})
@@ -61,6 +67,7 @@ var _ = Describe("Client Tunneling", func() {
 				client.WithProxyTargets(
 					[]client.ProxyTarget{{Pattern: "^/test", Dest: ts.URL}},
 				),
+				client.WithAuthBearerToken("some-token"),
 			)
 			Expect(err).NotTo(HaveOccurred())
 			wg.Add(1)

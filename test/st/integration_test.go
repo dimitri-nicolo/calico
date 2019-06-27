@@ -141,6 +141,10 @@ var _ = Describe("Integration Tests", func() {
 
 		err = os.Setenv("GUARDIAN_VOLTRON_URL", "localhost:5566")
 		Expect(err).ToNot(HaveOccurred())
+
+		// do not read any token
+		err = os.Setenv("GUARDIAN_SERVICE_ACCOUNT_TOKEN", "")
+		Expect(err).ToNot(HaveOccurred())
 	})
 
 	It("Should add a new test cluster to Voltron", func() {
