@@ -50,7 +50,7 @@ type Rule struct {
 	DstNet      *net.IPNet         `json:"dst_net,omitempty" validate:"omitempty"`
 	DstNets     []*net.IPNet       `json:"dst_nets,omitempty" validate:"omitempty"`
 	DstPorts    []numorstring.Port `json:"dst_ports,omitempty" validate:"omitempty,dive"`
-	DstDomains  []string           `json:"dst_domains,omitempty" validate:"omitempty,dive,name"`
+	DstDomains  []string           `json:"dst_domains,omitempty" validate:"omitempty,dive,wildname"`
 
 	NotSrcTag      string             `json:"!src_tag,omitempty" validate:"omitempty,tag"`
 	NotSrcNet      *net.IPNet         `json:"!src_net,omitempty" validate:"omitempty"`

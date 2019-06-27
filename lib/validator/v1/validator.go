@@ -32,6 +32,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/scope"
 	"github.com/projectcalico/libcalico-go/lib/selector"
 	"github.com/projectcalico/libcalico-go/lib/selector/tokenizer"
+	"github.com/projectcalico/libcalico-go/lib/validator/v3"
 )
 
 var validate *validator.Validate
@@ -94,6 +95,7 @@ func init() {
 	registerFieldValidator("interface", validateInterface)
 	registerFieldValidator("backendAction", validateBackendAction)
 	registerFieldValidator("name", validateName)
+	registerFieldValidator("wildname", v3.ValidateWildName)
 	registerFieldValidator("namespacedName", validateNamespacedName)
 	registerFieldValidator("selector", validateSelector)
 	registerFieldValidator("tag", validateTag)

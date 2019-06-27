@@ -155,7 +155,7 @@ func init() {
 	registerFieldValidator("interface", validateInterface)
 	registerFieldValidator("datastoreType", validateDatastoreType)
 	registerFieldValidator("name", validateName)
-	registerFieldValidator("wildname", validateWildName)
+	registerFieldValidator("wildname", ValidateWildName)
 	registerFieldValidator("containerID", validateContainerID)
 	registerFieldValidator("selector", validateSelector)
 	registerFieldValidator("labels", validateLabels)
@@ -284,7 +284,8 @@ func validateName(fl validator.FieldLevel) bool {
 	return nameRegex.MatchString(s)
 }
 
-func validateWildName(fl validator.FieldLevel) bool {
+// Public because also useful for the v1 validator.
+func ValidateWildName(fl validator.FieldLevel) bool {
 	s := fl.Field().String()
 	log.Debugf("Validate wild name: %s", s)
 	return wildNameRegex.MatchString(s)
