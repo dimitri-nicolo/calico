@@ -1180,6 +1180,27 @@ removeMasterTaints() {
 }
 
 #
+# createCNXAPICerts
+#
+createCNXAPICerts() {
+  openssl req -x509 -newkey rsa:4096 \
+                    -keyout apiserver.key \
+                    -nodes \
+                    -out apiserver.crt \
+                    -subj "/CN=cnx-api.kube-system.svc" \
+                    -days 365
+  if [ "$DATASTORE" == "kubernetes" ]; then
+    apimanifest="cnx-api-kdd.yaml"
+  elif [ "$DATASTORE" == "etcdv3" ]; then
+    apimanifest="cnx-api-etcd.yaml"
+  fi
+  sed -e "s/<replace with base64 encoded certificate>/$(cat apiserver.crt | base64 -w 0)/" \
+      -e "s/<replace with base64 encoded private key>/$(cat apiserver.key | base64 -w 0)/" \
+      -e "s/<replace with base64 encoded Certificate Authority bundle>/$(cat apiserver.crt | base64 -w 0)/" \
+      -i $apimanifest
+}
+
+#
 # applyCNXAPIManifest()
 #
 applyCNXAPIManifest() {
@@ -1661,6 +1682,7 @@ installCNX() {
   applyCalicoManifest             # Apply calico.yaml
 
   removeMasterTaints              # Remove master taints
+  createCNXAPICerts               # Create TLS certificates for the CNX APIServer
   applyCNXAPIManifest             # Apply cnx-api-[etcd|kdd].yaml
 
   applyLicenseManifest            # If the user specified a license file, apply it

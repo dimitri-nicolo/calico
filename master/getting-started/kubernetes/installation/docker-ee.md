@@ -136,38 +136,10 @@ running. Verify the containers are running with the following cmd
 kubectl get pods --all-namespaces
 ```
 
-## <a name="install-api-server"></a>Installing the {{site.prodname}} API Server
-1. Download the {{site.prodname}} etcd manifest and save the file as cnx-api.yaml. That is how we will refer to it in later steps.
-
-    ```bash
-    curl --compressed -o cnx-api.yaml \
-    {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-api-etcd.yaml
-    ```
-
-    > **Note**: If you are upgrading from {{site.prodname}} v2.2 or earlier you will need to make some modifications prior
-    > to upgrade to ensure RBAC behavior for tiered policy is unchanged. Please refer to the instructions in the comments for
-    > `ClusterRole "ee-calico-tiered-policy-passthru"` in the `cnx-api.yaml` manifest, or the
-    > [Configuring {{site.prodname}} RBAC]({{site.url}}/{{page.version}}/reference/cnx/rbac-tiered-policies) documentation
-    > for more details.
-    {: .alert .alert-info}
-
-{% include {{page.version}}/cnx-cred-sed.md yaml="cnx-api" %}
-
-1. Apply the manifest to install the {{site.prodname}} API server.
-
-   ```bash
-   kubectl apply -f cnx-api.yaml
-   ```
-
-1. Confirm that all of the pods are running with the following command.
-
-   ```bash
-   watch kubectl get pods --all-namespaces
-   ```
-
-   Wait until each pod has the `STATUS` of `Running`.
+{% include {{page.version}}/cnx-api-install.md init="docker" net="calico" upgrade=include.upgrade %}
 
 {% include {{page.version}}/apply-license.md cli="kubectl" %}
+
 {% include {{page.version}}/cnx-monitor-install.md elasticsearch="operator" platform="docker-ee" %}
 
 1. Continue to [Installing the {{site.prodname}} Manager](#install-cnx-mgr)

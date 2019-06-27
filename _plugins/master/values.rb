@@ -499,6 +499,7 @@ def gen_chart_specific_values_master(versions, imageNames, imageRegistry, chart)
       tls:
         crt:
         key:
+        cabundle:
       runAsPrivileged: false
       env:
         # Optional environment variables for configuring the Calico API Server.

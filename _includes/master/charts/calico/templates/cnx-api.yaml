@@ -1,3 +1,10 @@
+{{- /* Make certs generated automatically last 100 years. Why? We're doing this automatically for customers
+       who haven't provided their own certificates, meaning they might be blissfully unaware that these certs
+       are even in use. If we put it at a "recommended" value like 1 year, there is a reasonable chance that
+       a year from when they install, they will not have reissued a new cert, and they will have an outage. That's
+       really bad. */ -}}
+{{- $apicert := genSelfSignedCert "cnx-api.kube-system.svc" (list ) (list "cnx-api.kube-system.svc") 36500 -}}
+
 {{- if eq .Values.datastore "kubernetes" }}
 # This manifest adds the additional Tigera Secure EE components to a cluster
 # that has already had the Calico part of Tigera Secure EE deployed.
@@ -18,9 +25,6 @@
 #   between the Tigera Secure EE API server and Kubernetes API server.
 {{- end }}
 
-{{- if ne .Values.platform "eks" }}
-# Optionally update this ConfigMap to enable TLS with certificate verification when Tigera Secure EE API
-# server communicates with the Kubernetes API server.
 apiVersion: v1
 kind: Secret
 type: Opaque
@@ -28,21 +32,29 @@ metadata:
   name: cnx-apiserver-certs
   namespace: kube-system
 data:
-{{- if include "calico.apiserver.tls" . }}
-  apiserver.key: {{ .Values.apiserver.tls.key | b64enc }}
-  apiserver.crt: {{ .Values.apiserver.tls.crt | b64enc }}
+{{- if or (or .Values.apiserver.tls.crt .Values.apiserver.tls.key) .Values.apiserver.tls.cabundle -}}
+{{- $_ := required "Must specify all or none of apiserver crt, key, and cabundle" .Values.apiserver.tls.crt -}}
+{{- $_ := required "Must specify all or none of apiserver crt, key, and cabundle" .Values.apiserver.tls.key -}}
+{{- $_ := required "Must specify all or none of apiserver crt, key, and cabundle" .Values.apiserver.tls.cabundle -}}
+
+{{- /* Used for docs site; don't encode values of the form <something in brackets> so we can
+       output templates we expect the end user to fill in. */ -}}
+{{- if hasPrefix "<" .Values.apiserver.tls.crt }}
+  apiserver.crt: {{ .Values.apiserver.tls.crt }}
 {{- else }}
-  # Populate the following files with apiserver TLS configuration if desired,
-  # but leave blank if not using TLS with certificate verification.
-  # This self-hosted install expects two files with the following names. The values
-  # should be base64 encoded strings of the entire contents of each file.
-  #apiserver.key:
-  #apiserver.crt:
+  apiserver.crt: {{ .Values.apiserver.tls.crt | b64enc }}
+{{- end -}}
+{{- if hasPrefix "<" .Values.apiserver.tls.key }}
+  apiserver.key: {{ .Values.apiserver.tls.key }}
+{{- else }}
+  apiserver.key: {{ .Values.apiserver.tls.key | b64enc }}
+{{- end -}}
+{{- else }}
+  apiserver.crt: {{ $apicert.Cert | b64enc }}
+  apiserver.key: {{ $apicert.Key | b64enc }}
 {{- end }}
 ---
-{{- end }}
 
-# Optionally update this ConfigMap to use your own caBundle.
 apiVersion: apiregistration.k8s.io/v1beta1
 kind: APIService
 metadata:
@@ -55,11 +67,21 @@ spec:
     name: cnx-api
     namespace: kube-system
   version: v3
-  # Optionally update the caBundle and disable insecureSkipTLSVerify in order
-  # to enable TLS certificate verification.
-  insecureSkipTLSVerify: true
-  #caBundle:
+{{- if or (or .Values.apiserver.tls.crt .Values.apiserver.tls.key) .Values.apiserver.tls.cabundle -}}
+{{- $_ := required "Must specify all or none of apiserver crt, key, and cabundle" .Values.apiserver.tls.crt -}}
+{{- $_ := required "Must specify all or none of apiserver crt, key, and cabundle" .Values.apiserver.tls.key -}}
+{{- $_ := required "Must specify all or none of apiserver crt, key, and cabundle" .Values.apiserver.tls.cabundle }}
 
+{{- /* Used for docs site; don't encode values of the form <something in brackets> so we can 
+       output templates we expect the end user to fill in. */ -}}
+{{- if hasPrefix "<" .Values.apiserver.tls.crt}}
+  caBundle: {{ .Values.apiserver.tls.cabundle }}
+{{- else }}
+  caBundle: {{ .Values.apiserver.tls.cabundle | b64enc }}
+{{- end -}}
+{{- else }}
+  caBundle: {{ $apicert.Cert | b64enc }}
+{{- end }}
 ---
 
 # This ClusterRole is used to control the RBAC mechanism for Calico tiered policy.
@@ -347,15 +369,11 @@ spec:
             name: audit-policy-ee
 {{- if eq .Values.platform "eks" }}
           - mountPath: /code/certificates/requestheader-client-ca-file
-            name: apiserver-certs
+            name: requestheader-client-ca-file
             subPath: requestheader-client-ca-file
-{{- else if include "calico.apiserver.tls" . }}
+{{- end }}
           - mountPath: /code/apiserver.local.config/certificates
             name: apiserver-certs
-{{- else }}
-          # - mountPath: /code/apiserver.local.config/certificates
-          #   name: apiserver-certs
-{{- end }}
         livenessProbe:
           httpGet:
             path: /version
@@ -466,17 +484,10 @@ spec:
             secretName: calico-etcd-secrets
 {{- end }}
 {{- if eq .Values.platform "eks" }}
-        - name: apiserver-certs
+        - name: requestheader-client-ca-file
           configMap:
             name: extension-apiserver-authentication
-{{- else if include "calico.apiserver.tls" . }}
+{{- end }}
         - name: apiserver-certs
           secret:
             secretName: cnx-apiserver-certs
-{{- else }}
-        # If you're using TLS with certificate verification then
-        # uncomment the following.
-        # - name: apiserver-certs
-        #   secret:
-        #     secretName: cnx-apiserver-certs
-{{- end }}

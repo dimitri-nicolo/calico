@@ -40,15 +40,6 @@ true
 {{- end -}}
 {{- end -}}
 
-
-{{- define "calico.apiserver.tls" -}}
-{{- if or .Values.apiserver.tls.crt .Values.apiserver.tls.key -}}
-{{- $_ := required "Must specify both or neither of apiserver crt or apiserver key" .Values.apiserver.tls.crt -}}
-{{- $_ := required "Must specify both or neither of apiserver crt or apiserver key" .Values.apiserver.tls.key -}}
-true
-{{- end -}}
-{{- end -}}
-
 {{- define "calico.resourceLimits" -}}
 {{- $component := index . 0 -}}
 {{- if or (or (or $component.limits.cpu $component.limits.memory) $component.requests.cpu) $component.requests.memory -}}
