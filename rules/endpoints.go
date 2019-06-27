@@ -25,6 +25,8 @@ import (
 const (
 	ingressPolicy = "ingress"
 	egressPolicy  = "egress"
+	dropEncap     = true
+	dontDropEncap = false
 )
 
 func (r *DefaultRuleRenderer) WorkloadEndpointToIptablesChains(
@@ -51,6 +53,7 @@ func (r *DefaultRuleRenderer) WorkloadEndpointToIptablesChains(
 			RuleDirIngress,
 			ingressPolicy,
 			r.filterAllowAction, // Workload endpoint chains are only used in the filter table
+			dontDropEncap,
 		),
 		// Chain for traffic _from_ the endpoint.
 		r.endpointIptablesChain(
@@ -67,6 +70,7 @@ func (r *DefaultRuleRenderer) WorkloadEndpointToIptablesChains(
 			RuleDirEgress,
 			egressPolicy,
 			r.filterAllowAction, // Workload endpoint chains are only used in the filter table
+			dropEncap,
 		),
 	)
 
@@ -109,6 +113,7 @@ func (r *DefaultRuleRenderer) HostEndpointToFilterChains(
 			RuleDirEgress,
 			egressPolicy,
 			r.filterAllowAction,
+			dontDropEncap,
 		),
 		// Chain for input traffic _from_ the endpoint.
 		r.endpointIptablesChain(
@@ -125,6 +130,7 @@ func (r *DefaultRuleRenderer) HostEndpointToFilterChains(
 			RuleDirIngress,
 			ingressPolicy,
 			r.filterAllowAction,
+			dontDropEncap,
 		),
 		// Chain for forward traffic _to_ the endpoint.
 		r.endpointIptablesChain(
@@ -141,6 +147,7 @@ func (r *DefaultRuleRenderer) HostEndpointToFilterChains(
 			RuleDirEgress,
 			egressPolicy,
 			r.filterAllowAction,
+			dontDropEncap,
 		),
 		// Chain for forward traffic _from_ the endpoint.
 		r.endpointIptablesChain(
@@ -157,6 +164,7 @@ func (r *DefaultRuleRenderer) HostEndpointToFilterChains(
 			RuleDirIngress,
 			ingressPolicy,
 			r.filterAllowAction,
+			dontDropEncap,
 		),
 	)
 
@@ -195,6 +203,7 @@ func (r *DefaultRuleRenderer) HostEndpointToRawChains(
 			RuleDirEgress,
 			egressPolicy,
 			AcceptAction{},
+			dontDropEncap,
 		),
 		// Chain for traffic _from_ the endpoint.
 		r.endpointIptablesChain(
@@ -211,6 +220,7 @@ func (r *DefaultRuleRenderer) HostEndpointToRawChains(
 			RuleDirIngress,
 			ingressPolicy,
 			AcceptAction{},
+			dontDropEncap,
 		),
 	}
 }
@@ -237,6 +247,7 @@ func (r *DefaultRuleRenderer) HostEndpointToMangleChains(
 			RuleDirIngress,
 			ingressPolicy,
 			r.mangleAllowAction,
+			dontDropEncap,
 		),
 	}
 }
@@ -286,6 +297,7 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 	dir RuleDir,
 	policyType string,
 	allowAction Action,
+	dropEncap bool,
 ) *Chain {
 	rules := []Rule{}
 	chainName := EndpointChainName(endpointPrefix, name)
@@ -320,20 +332,22 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 		},
 	})
 
-	// VXLAN and IPinIP encapped packets that originated in a pod should be dropped, as the encapsulation can be used to
-	// bypass restrictive egress policies.
-	rules = append(rules, Rule{
-		Match: Match().ProtocolNum(ProtoUDP).
-			DestPorts(uint16(r.Config.VXLANPort)).
-			VXLANVNI(uint32(r.Config.VXLANVNI)),
-		Action:  DropAction{},
-		Comment: "Drop VXLAN encapped packets originating in pods",
-	})
-	rules = append(rules, Rule{
-		Match:   Match().ProtocolNum(ProtoIPIP),
-		Action:  DropAction{},
-		Comment: "Drop IPinIP encapped packets originating in pods",
-	})
+	if dropEncap {
+		// VXLAN and IPinIP encapped packets that originated in a pod should be dropped, as the encapsulation can be used to
+		// bypass restrictive egress policies.
+		rules = append(rules, Rule{
+			Match: Match().ProtocolNum(ProtoUDP).
+				DestPorts(uint16(r.Config.VXLANPort)).
+				VXLANVNI(uint32(r.Config.VXLANVNI)),
+			Action:  DropAction{},
+			Comment: "Drop VXLAN encapped packets originating in pods",
+		})
+		rules = append(rules, Rule{
+			Match:   Match().ProtocolNum(ProtoIPIP),
+			Action:  DropAction{},
+			Comment: "Drop IPinIP encapped packets originating in pods",
+		})
+	}
 
 	for _, tier := range tiers {
 		var policies []string
