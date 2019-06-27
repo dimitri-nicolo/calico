@@ -2209,6 +2209,52 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 			},
 			Dependencies: []string{},
 		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkFilter": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "CISBenchmarkFilter provides filters for a set of benchmarks that match particular selection criteria.",
+					Properties: map[string]spec.Schema{
+						"benchmarkSelection": {
+							SchemaProps: spec.SchemaProps{
+								Description: "BenchmarkSelection specifies which benchmarks this filter applies to. If not specified, applies to all.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkSelection"),
+							},
+						},
+						"exclude": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Exclude is an array of test indices to exclude from the report.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
+									},
+								},
+							},
+						},
+						"include": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Include is an array of test indices to show in the report. Is additive if IncludeUnscoredTests is true. Takes precedence over Exclude.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
+									},
+								},
+							},
+						},
+					},
+					Required: []string{"exclude", "include"},
+				},
+			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkSelection"},
+		},
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkNode": {
 			Schema: spec.Schema{
 				SchemaProps: spec.SchemaProps{
@@ -2216,18 +2262,35 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 					Properties: map[string]spec.Schema{
 						"nodeName": {
 							SchemaProps: spec.SchemaProps{
-								Type:   []string{"string"},
-								Format: "",
+								Description: "NodeName is the name of the node the this set of benchmark results is from.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"kubernetesVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "KubernetesVersion is the version of the kubelet running on this node.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"benchmarksVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "BenchmarksVersion is the version of the benchmarks that ran on this node.",
+								Type:        []string{"string"},
+								Format:      "",
 							},
 						},
 						"summary": {
 							SchemaProps: spec.SchemaProps{
-								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkNodeSummary"),
+								Description: "Summary is a set of summary stats for this set of node-specific benchmarks.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkNodeSummary"),
 							},
 						},
 						"results": {
 							SchemaProps: spec.SchemaProps{
-								Type: []string{"array"},
+								Description: "Results is the detailed set of results for this set of node-specific benchmarks.",
+								Type:        []string{"array"},
 								Items: &spec.SchemaOrArray{
 									Schema: &spec.Schema{
 										SchemaProps: spec.SchemaProps{
@@ -2238,7 +2301,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							},
 						},
 					},
-					Required: []string{"nodeName", "summary", "results"},
+					Required: []string{"nodeName", "kubernetesVersion", "benchmarksVersion", "summary", "results"},
 				},
 			},
 			Dependencies: []string{
@@ -2297,29 +2360,21 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Format:      "",
 							},
 						},
-						"exclude": {
+						"numFailedTests": {
 							SchemaProps: spec.SchemaProps{
-								Description: "Exclude is an array of test indices to exclude from the report.",
-								Type:        []string{"array"},
-								Items: &spec.SchemaOrArray{
-									Schema: &spec.Schema{
-										SchemaProps: spec.SchemaProps{
-											Type:   []string{"string"},
-											Format: "",
-										},
-									},
-								},
+								Description: "Configure the number of top failed tests to show up on the report.",
+								Type:        []string{"integer"},
+								Format:      "int32",
 							},
 						},
-						"include": {
+						"resultsFilters": {
 							SchemaProps: spec.SchemaProps{
-								Description: "Include is an array of test indices to show in the report. Is additive if IncludeUnscoredTests is true. Takes precedence over Exclude.",
+								Description: "Benchmark results filters. The first matching set of filters is applied to each set of benchmark results. If there are no matching filters, the full set of benchmark results will be included in the report.",
 								Type:        []string{"array"},
 								Items: &spec.SchemaOrArray{
 									Schema: &spec.Schema{
 										SchemaProps: spec.SchemaProps{
-											Type:   []string{"string"},
-											Format: "",
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkFilter"),
 										},
 									},
 								},
@@ -2327,7 +2382,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 						},
 						"highThreshold": {
 							SchemaProps: spec.SchemaProps{
-								Description: "Interpretted as a percentage to indicate at what levels of passing tests a node should be considered HIGH, MED, and LOW.",
+								Description: "Interpretted as a percentage to indicate at what levels of passing tests a node should be considered HIGH, MED, and LOW. - If >= HighThreshold flag as high - Otherwise, if > MedThreshold flag as med - Otherwise flag as low.",
 								Type:        []string{"integer"},
 								Format:      "int32",
 							},
@@ -2338,18 +2393,12 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Format: "int32",
 							},
 						},
-						"numFailedTests": {
-							SchemaProps: spec.SchemaProps{
-								Description: "Configure the number of top failed tests to show up on the report.",
-								Type:        []string{"integer"},
-								Format:      "int32",
-							},
-						},
 					},
-					Required: []string{"includeUnscoredTests", "exclude", "include", "highThreshold", "medThreshold", "numFailedTests"},
+					Required: []string{"includeUnscoredTests", "numFailedTests", "resultsFilters", "highThreshold", "medThreshold"},
 				},
 			},
-			Dependencies: []string{},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkFilter"},
 		},
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkResult": {
 			Schema: spec.Schema{
@@ -2474,6 +2523,23 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 			},
 			Dependencies: []string{
 				"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkResult"},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkSelection": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "CISBenchmarkSelection selects a particular set of benchmarks.",
+					Properties: map[string]spec.Schema{
+						"kubernetesVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "KubernetesVersion is used select nodes that are running a specific version of kubelet. The full version need not be fully specified down to the patch level, in which case the significant parts of the version are matched. e.g. \"1.0\" will match versions \"1.0.1\" and \"1.0.2\" If not specified, matches all versions.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+					},
+				},
+			},
+			Dependencies: []string{},
 		},
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkSummary": {
 			Schema: spec.Schema{
