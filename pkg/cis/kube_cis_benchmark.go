@@ -59,10 +59,11 @@ func (b *Benchmarker) executeKubeBenchmark(ctx context.Context, nodename string)
 	}
 
 	return &benchmark.Benchmarks{
-		Version:   ctrls[0].Version,
-		Type:      benchmark.TypeKubernetes,
-		NodeName:  nodename,
-		Timestamp: metav1.Time{Time: ts},
-		Tests:     benchmark.TestsFromKubeBenchControls(ctrls),
+		Version:           ctrls[0].Version,
+		KubernetesVersion: ctrls[0].Version,
+		Type:              benchmark.TypeKubernetes,
+		NodeName:          nodename,
+		Timestamp:         metav1.Time{Time: ts},
+		Tests:             benchmark.TestsFromKubeBenchControls(ctrls),
 	}, nil
 }
