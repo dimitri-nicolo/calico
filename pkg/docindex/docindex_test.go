@@ -49,4 +49,38 @@ var _ = Describe("Document index tests", func() {
 			Expect(randomOrder).To(Equal(correctOrder))
 		}
 	})
+
+	It("should handle one index containing another", func() {
+		By("Creating a bunch of ids")
+		id1 := docindex.New("1")
+		id2 := docindex.New("1.1")
+		id3 := docindex.New("1.1.1")
+		id4 := docindex.New("2")
+		id5 := docindex.New("1.abc")
+		id6 := docindex.New("1.abc.1")
+		id7 := docindex.New("2.1.1.1.1")
+
+		By("Validating 1 contains 1.1")
+		Expect(id1.Contains(id2)).To(BeTrue())
+		Expect(id2.Contains(id1)).To(BeFalse())
+
+		By("Validating 1 contains 1.1.1")
+		Expect(id1.Contains(id3)).To(BeTrue())
+		Expect(id3.Contains(id1)).To(BeFalse())
+
+		By("Validating 1.1 contains 1.1")
+		Expect(id2.Contains(id2)).To(BeTrue())
+
+		By("Validating 2 does not contain 1.1")
+		Expect(id4.Contains(id2)).To(BeFalse())
+		Expect(id2.Contains(id4)).To(BeFalse())
+
+		By("Validating 1.abc contains 1.abc.1")
+		Expect(id5.Contains(id6)).To(BeTrue())
+		Expect(id6.Contains(id5)).To(BeFalse())
+
+		By("Validating 2 contains 2.1.1.1.1")
+		Expect(id4.Contains(id7)).To(BeTrue())
+		Expect(id7.Contains(id4)).To(BeFalse())
+	})
 })

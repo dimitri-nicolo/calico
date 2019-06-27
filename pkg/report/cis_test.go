@@ -24,10 +24,11 @@ import (
 
 var (
 	node1 = &benchmark.Benchmarks{
-		Version:   "1.1.2",
-		Type:      benchmark.TypeKubernetes,
-		NodeName:  "node-1",
-		Timestamp: metav1.Now(),
+		Version:           "1.1.2",
+		KubernetesVersion: "1.13.1",
+		Type:              benchmark.TypeKubernetes,
+		NodeName:          "node-1",
+		Timestamp:         metav1.Now(),
 		Tests: []benchmark.Test{
 			{
 				Section:     "2.0",
@@ -209,8 +210,6 @@ var _ = Describe("CIS report tests", func() {
 					Schedule:   "@daily",
 					CIS: &apiv3.CISBenchmarkParams{
 						IncludeUnscoredTests: true,
-						Exclude:              []string{},
-						Include:              []string{},
 						HighThreshold:        nil,
 						MedThreshold:         nil,
 						NumFailedTests:       5,
@@ -914,7 +913,9 @@ var _ = Describe("CIS report tests", func() {
 
 	It("should handle excluded with no included", func() {
 		By("Setting the report filter exclude a couple of tests")
-		cfg.Report.Spec.CIS.Exclude = []string{"1.0.2", "1.1.0"}
+		cfg.Report.Spec.CIS.ResultsFilters = []apiv3.CISBenchmarkFilter{{
+			Exclude: []string{"1.0.2", "1.1.0"},
+		}}
 
 		By("Setting the results to return 1 node")
 		benchmarker.results = []benchmark.BenchmarksResult{
@@ -996,7 +997,9 @@ var _ = Describe("CIS report tests", func() {
 
 	It("should handle included with on excluded", func() {
 		By("Setting the report filter to include one test")
-		cfg.Report.Spec.CIS.Include = []string{"1.0.2"}
+		cfg.Report.Spec.CIS.ResultsFilters = []apiv3.CISBenchmarkFilter{{
+			Include: []string{"1.0.2"},
+		}}
 
 		By("Setting the results to return 1 node")
 		benchmarker.results = []benchmark.BenchmarksResult{
@@ -1052,9 +1055,26 @@ var _ = Describe("CIS report tests", func() {
 		}))
 	})
 
-	It("should handle section-wide exclude", func() {
-		By("Setting the report filter to exclude a section")
-		cfg.Report.Spec.CIS.Exclude = []string{"1.0"}
+	It("should handle section-wide exclude and choose the first matching filter", func() {
+		By("Setting the matching report filter to exclude a section")
+		cfg.Report.Spec.CIS.ResultsFilters = []apiv3.CISBenchmarkFilter{
+			{
+				BenchmarkSelection: &apiv3.CISBenchmarkSelection{
+					KubernetesVersion: "1.12",
+				},
+			},
+			{
+				BenchmarkSelection: &apiv3.CISBenchmarkSelection{
+					KubernetesVersion: "1.13",
+				},
+				Exclude: []string{"1.0"},
+			},
+			{
+				BenchmarkSelection: &apiv3.CISBenchmarkSelection{
+					KubernetesVersion: "1.13.1",
+				},
+			},
+		}
 
 		By("Setting the results to return 1 node")
 		benchmarker.results = []benchmark.BenchmarksResult{
@@ -1129,7 +1149,9 @@ var _ = Describe("CIS report tests", func() {
 
 	It("should handle section-wide include", func() {
 		By("Setting the report filter to include a section")
-		cfg.Report.Spec.CIS.Include = []string{"1.0"}
+		cfg.Report.Spec.CIS.ResultsFilters = []apiv3.CISBenchmarkFilter{{
+			Include: []string{"1.0"},
+		}}
 
 		By("Setting the results to return 1 node")
 		benchmarker.results = []benchmark.BenchmarksResult{
@@ -1201,8 +1223,10 @@ var _ = Describe("CIS report tests", func() {
 
 	It("should handle test exclusion over section inclustion", func() {
 		By("Setting the report filter to include 1.0 and exclude 1.0.2")
-		cfg.Report.Spec.CIS.Include = []string{"1.0"}
-		cfg.Report.Spec.CIS.Exclude = []string{"1.0.2"}
+		cfg.Report.Spec.CIS.ResultsFilters = []apiv3.CISBenchmarkFilter{{
+			Include: []string{"1.0"},
+			Exclude: []string{"1.0.2"},
+		}}
 
 		By("Setting the results to return 1 node")
 		benchmarker.results = []benchmark.BenchmarksResult{
