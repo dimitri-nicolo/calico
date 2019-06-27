@@ -47,33 +47,6 @@ var _ = Describe("Selector", func() {
 			map[string]*url.URL{"/v1/api": parse(ApiUrl)}),
 	)
 
-	const header = "x-target"
-	headers := map[string][]string{header: {"api"}}
-
-	DescribeTable("matches header regex from any HTTP request",
-		func(request *http.Request, tgts map[string]*url.URL, expectedValue string) {
-			headerMatcher := proxy.NewHeaderMatcher(targets.New(tgts), header)
-			path, err := headerMatcher.Match(request)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(path).To(Equal(parse(expectedValue)))
-		},
-		Entry("should match GET with /api",
-			requestWithHeader(headers),
-			map[string]*url.URL{RegexApi: parse(ApiUrl)},
-			ApiUrl),
-	)
-
-	DescribeTable("not matches header regex from any HTTP request",
-		func(request *http.Request, tgts map[string]*url.URL) {
-			headerMatcher := proxy.NewHeaderMatcher(targets.New(tgts), header)
-			_, err := headerMatcher.Match(request)
-			Expect(err).To(HaveOccurred())
-		},
-		Entry("should return an error when passing multiple headers",
-			requestWithHeader(map[string][]string{header: {"api", "abc"}}),
-			map[string]*url.URL{RegexApi: parse(ApiUrl)}),
-	)
-
 	DescribeTable("matches regex",
 		func(value string, tgts map[string]*url.URL, expectedValue string) {
 			target, err := proxy.Match(value, tgts)
@@ -109,16 +82,6 @@ var _ = Describe("Selector", func() {
 
 func request(rawUrl string) *http.Request {
 	return &http.Request{URL: parse(rawUrl)}
-}
-
-func requestWithHeader(headers map[string][]string) *http.Request {
-	request := &http.Request{Header: http.Header{}}
-	for key, values := range headers {
-		for _, value := range values {
-			request.Header.Set(key, value)
-		}
-	}
-	return request
 }
 
 func parse(rawUrl string) *url.URL {

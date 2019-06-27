@@ -331,10 +331,10 @@ func (s *Server) ClusterCreds(id string) ([]byte, []byte, error) {
 
 	cPem := utils.CertPEMEncode(c.cert)
 
-	kPem, err := utils.KeyPEMEncode(c.key)
+	pem, err := utils.KeyPEMEncode(c.key)
 	if err != nil {
 		return nil, nil, errors.WithMessage(err, "generated key - NEVER HAPPENS")
 	}
 
-	return cPem, kPem, nil
+	return cPem, pem, nil
 }
