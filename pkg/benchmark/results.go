@@ -18,12 +18,13 @@ const (
 
 // Benchmarks is a set of benchmarks for a given node.
 type Benchmarks struct {
-	Version   string        `json:"version"`
-	Type      BenchmarkType `json:"type"`
-	NodeName  string        `json:"node_name"`
-	Timestamp metav1.Time   `json:"timestamp"`
-	Error     string        `json:"error,omitempty"`
-	Tests     []Test        `json:"tests,omitempty"`
+	Version           string        `json:"version"`
+	KubernetesVersion string        `json:"kubernetesVersion"`
+	Type              BenchmarkType `json:"type"`
+	NodeName          string        `json:"node_name"`
+	Timestamp         metav1.Time   `json:"timestamp"`
+	Error             string        `json:"error,omitempty"`
+	Tests             []Test        `json:"tests,omitempty"`
 }
 
 // UID is a unique identifier for a set of benchmarks.

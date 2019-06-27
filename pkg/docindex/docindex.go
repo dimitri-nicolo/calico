@@ -11,6 +11,7 @@ import (
 type DocIndex interface {
 	Index() string
 	LessThan(d DocIndex) bool
+	Contains(d DocIndex) bool
 }
 
 // New creates a new DocIndex from the document index string.
@@ -52,6 +53,22 @@ func (d *docIndex) LessThan(other DocIndex) bool {
 			return true
 		}
 		if odi.parts[idx].lessThan(p) {
+			return false
+		}
+	}
+	return true
+}
+
+// Contains determines if this doc index contains the other index.
+// For example, 2.1 contains 2.1.1 and 2.1.2
+func (d *docIndex) Contains(other DocIndex) bool {
+	odi := other.(*docIndex)
+	if len(odi.parts) < len(d.parts) {
+		return false
+	}
+
+	for idx, p := range d.parts {
+		if p != odi.parts[idx] {
 			return false
 		}
 	}

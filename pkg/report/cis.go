@@ -29,8 +29,8 @@ func (r *reporter) addBenchmarks() error {
 		Type: string(benchmark.TypeKubernetes),
 	}
 
-	// Create a filter from the report spec configuration.
-	filter := r.newTestFilter()
+	// Create a filter set from the report spec configuration.
+	filters := r.newTestFilters()
 
 	// Track node results along with the node names so that we can present them in sorted order.
 	nodeResults := make(map[string]*apiv3.CISBenchmarkNode)
@@ -76,6 +76,9 @@ func (r *reporter) addBenchmarks() error {
 			"Type":     b.Benchmarks.Type,
 			"NumTests": len(b.Benchmarks.Tests),
 		}).Debugf("Processing set of benchmark results")
+
+		// Locate the filter for these benchmarks
+		filter := filters.getFilter(b.Benchmarks)
 
 		// Benchmarks are returned for a given node, so create an entry for this node.
 		//TODO(rlb): What about nodes that are failing to gather results (i.e. Err != nil).
@@ -224,37 +227,84 @@ func (r *reporter) addBenchmarks() error {
 }
 
 // newTestFilter creates a new testFilter from the supplied Report configuration.
-func (r *reporter) newTestFilter() *testFilter {
-	f := &testFilter{
-		clog: r.clog,
+func (r *reporter) newTestFilters() *testFilters {
+	rs := r.cfg.Report.Spec
+
+	var includeUnscored bool
+	if rs.CIS != nil {
+		includeUnscored = rs.CIS.IncludeUnscoredTests
+	}
+	fs := &testFilters{
+		// Default filter is just an include-all filter.
+		def: &testFilter{
+			includeUnscored: includeUnscored,
+			clog:            r.clog,
+		},
 	}
 
-	rs := r.cfg.Report.Spec
+	// Create the filters from the report configuration.
 	if rs.CIS != nil {
-		f.includeUnscored = rs.CIS.IncludeUnscoredTests
-
-		if len(rs.CIS.Include) != 0 || len(rs.CIS.Exclude) != 0 {
-			f.includes = make(map[string]bool)
-
-			for _, e := range rs.CIS.Exclude {
-				f.includes[e] = false
+		for _, rf := range rs.CIS.ResultsFilters {
+			f := &testFilter{
+				includeUnscored: includeUnscored,
+				clog:            r.clog,
 			}
-			for _, e := range rs.CIS.Include {
-				f.includes[e] = true
+			if rf.BenchmarkSelection != nil {
+				if rf.BenchmarkSelection.KubernetesVersion != "" {
+					// A Kubernetes version is specified. Use the docindex to handle the version matches since they
+					// use the same formats.
+					f.k8sVersion = docindex.New(rf.BenchmarkSelection.KubernetesVersion)
+				}
 			}
+			if len(rf.Include) != 0 || len(rf.Exclude) != 0 {
+				f.includes = make(map[string]bool)
 
-			// Keep track of whether only excludes have been specified.
-			f.excludesOnly = len(rs.CIS.Include) == 0
+				for _, e := range rf.Exclude {
+					f.includes[e] = false
+				}
+				for _, e := range rf.Include {
+					f.includes[e] = true
+				}
+
+				// Keep track of whether only excludes have been specified.
+				f.excludesOnly = len(rf.Include) == 0
+			}
+			fs.filters = append(fs.filters, f)
 		}
 	}
 
-	return f
+	return fs
+}
+
+// testFilters is the "compiled" set of filters for the report.
+type testFilters struct {
+	// All of the filters for this report.
+	filters []*testFilter
+
+	// Default filter
+	def *testFilter
+}
+
+// getFilter returns the filter to use on a specific set of benchmarks.
+func (t *testFilters) getFilter(b *benchmark.Benchmarks) *testFilter {
+	// We use the first matching filter, so loop through to find the match.
+	for _, f := range t.filters {
+		if f.matches(b) {
+			return f
+		}
+	}
+	return t.def
 }
 
 // testFilter is used to filter in or out benchmark tests from the report.
 type testFilter struct {
 	// Logger
 	clog *logrus.Entry
+
+	// --- Filter match criteria ---
+	k8sVersion docindex.DocIndex
+
+	// --- Filter parameters ---
 
 	// Whether the filter contains excludes only.
 	excludesOnly bool
@@ -300,4 +350,15 @@ func (f *testFilter) include(t benchmark.Test) bool {
 	// Otherwise, we include if the filter only contains exclusions, or exclude if the filter contains
 	// inclusions which we didn't match.
 	return f.excludesOnly
+}
+
+// matches returns whether or not the match critera match the supplied benchmarks.
+func (f *testFilter) matches(b *benchmark.Benchmarks) bool {
+	if f.k8sVersion != nil {
+		bv := docindex.New(b.KubernetesVersion)
+		if !f.k8sVersion.Contains(bv) {
+			return false
+		}
+	}
+	return true
 }

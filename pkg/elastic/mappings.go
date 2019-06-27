@@ -47,6 +47,7 @@ const (
     "_doc": {
       "properties": {
         "version": { "type": "keyword" },
+        "kubernetesVersion": { "type": "keyword" },
         "type": { "type": "keyword" },
         "node_name": { "type": "keyword" },
         "timestamp": { "type": "date" },
