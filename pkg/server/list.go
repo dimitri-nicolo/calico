@@ -1,14 +1,11 @@
 package server
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-
-	"github.com/projectcalico/libcalico-go/lib/compliance"
 )
 
 // handleListReports returns a json list of the reports available to the client
@@ -74,21 +71,7 @@ func (s *server) handleListReports(response http.ResponseWriter, request *http.R
 			rt = &v.ReportTypeSpec
 		}
 
-		// Create the UI summary from the template in the global report type and the report data. If we are unable
-		// to render the data just don't include the summary.
-		var uiSummaryTxt string
-		var uiSummary interface{}
 		var formats []Format
-		if uiSummaryTxt, err = compliance.RenderTemplate(rt.UISummaryTemplate.Template, v.ReportData); err != nil {
-			log.WithError(err).Debug("Unable to render report data summary")
-		} else {
-			// We rendered the UI summary. This is expected to be JSON that we'll embed directly under the UISummary
-			// field. To do this unmarshal the rendered string into a generic interface type.
-			if err = json.Unmarshal([]byte(uiSummaryTxt), &uiSummary); err != nil {
-				log.WithError(err).Debug("UI summary is not JSON")
-			}
-		}
-
 		var downloadUrl = ""
 
 		// If the user can view the report then include the download url and formats
@@ -118,7 +101,7 @@ func (s *server) handleListReports(response http.ResponseWriter, request *http.R
 			Type:            v.ReportTypeName,
 			StartTime:       v.StartTime,
 			EndTime:         v.EndTime,
-			UISummary:       uiSummary,
+			UISummary:       v.UISummary,
 			DownloadURL:     downloadUrl,
 			DownloadFormats: formats,
 			GenerationTime:  v.GenerationTime,

@@ -20,3 +20,8 @@ type BenchmarksQuery interface {
 type BenchmarksGetter interface {
 	GetBenchmarks(ctx context.Context, id string) (*Benchmarks, error)
 }
+
+// BenchmarksExecutor is the interface for executing a specific set of benchmark tests.
+type BenchmarksExecutor interface {
+	ExecuteBenchmarks(ctx context.Context, ct BenchmarkType, nodename string) (*Benchmarks, error)
+}
