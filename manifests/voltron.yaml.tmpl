@@ -5,10 +5,10 @@ metadata:
   name: cnx-voltron-config
   namespace: calico-monitoring
 data:
-  # Server port for Voltron
+  # Server port UI / mgmt
   cnx-voltron.port: "9443"
-  # Server host for Voltron
-  cnx-voltron.host: "0.0.0.0"
+  # Server port for the tunnels
+  cnx-voltron.tunnel-port: "9449"
   # Logging level
   cnx-voltron.log-level: "INFO"
   # Tunnel port for Voltron to listen for incoming tunnel connections 
@@ -41,26 +41,13 @@ spec:
   ports:
     - port: 9443
       protocol: TCP
-      targetPort: 9443
-      name: https
-  type: ClusterIP
----
-apiVersion: v1
-kind: Service
-metadata:
-  labels:
-    k8s-app: cnx-voltron
-  name: cnx-voltron-tunnel
-  namespace: calico-monitoring
-spec:
-  selector:
-    k8s-app: cnx-voltron
-  ports:
-    - port: 5567
+      nodePort: 32443
+      name: mgmt
+      # tunnels
+    - port: 9449
       protocol: TCP
-      targetPort: 5567
-      nodePort: 32453
-      name: tunnel
+      nodePort: 32449
+      name: tunnels
   # TODO: Use NodePort for now so that Guardian
   # is able to connect (but need better solution)
   type: NodePort
@@ -121,11 +108,6 @@ spec:
                 configMapKeyRef:
                   name: cnx-voltron-config
                   key: cnx-voltron.port
-            - name: VOLTRON_HOST
-              valueFrom:
-                configMapKeyRef:
-                  name: cnx-voltron-config
-                  key: cnx-voltron.host
             - name: VOLTRON_LOGLEVEL
               valueFrom:
                 configMapKeyRef:
