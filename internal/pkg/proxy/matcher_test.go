@@ -3,13 +3,14 @@
 package proxy_test
 
 import (
+	"net/http"
+	"net/url"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	"github.com/tigera/voltron/internal/pkg/proxy"
 	"github.com/tigera/voltron/internal/pkg/targets"
-	"net/http"
-	"net/url"
 )
 
 var _ = Describe("Selector", func() {

@@ -4,10 +4,11 @@ package proxy
 
 import (
 	"crypto/tls"
-	log "github.com/sirupsen/logrus"
 	"net/http"
 	"net/http/httputil"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // DemuxProxy proxies HTTP based on the provided matcher

@@ -10,12 +10,13 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"golang.org/x/net/http2"
 	"net"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
+
+	"golang.org/x/net/http2"
 
 	"github.com/tigera/voltron/internal/pkg/clusters"
 	"github.com/tigera/voltron/internal/pkg/test"
