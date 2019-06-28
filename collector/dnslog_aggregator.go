@@ -1,0 +1,45 @@
+package collector
+
+import (
+	"sync"
+	"time"
+
+	"github.com/projectcalico/felix/rules"
+)
+
+// dnsLogAggregator builds and implements the DNSLogAggregator and
+// DNSLogGetter interfaces.
+// The dnsLogAggregator is responsible for creating, aggregating, and storing
+// aggregated dns logs until the dns logs are exported.
+type dnsLogAggregator struct {
+	kind                 AggregationKind
+	dnsStore             map[DNSMeta]DNSSpec
+	flMutex              sync.RWMutex
+	includeLabels        bool
+	aggregationStartTime time.Time
+	handledAction        rules.RuleAction
+}
+
+// NewDNSLogAggregator constructs a DNSLogAggregator
+func NewDNSLogAggregator() DNSLogAggregator {
+	return &dnsLogAggregator{
+		kind:                 Default,
+		dnsStore:             make(map[DNSMeta]DNSSpec),
+		flMutex:              sync.RWMutex{},
+		aggregationStartTime: time.Now(),
+	}
+}
+
+func (d *dnsLogAggregator) IncludeLabels(b bool) DNSLogAggregator {
+	d.includeLabels = b
+	return d
+}
+
+func (d *dnsLogAggregator) AggregateOver(k AggregationKind) DNSLogAggregator {
+	d.kind = k
+	return d
+}
+
+func (d *dnsLogAggregator) Get() []*DNSLog {
+	panic("implement me")
+}

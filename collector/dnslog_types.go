@@ -8,6 +8,7 @@ import (
 	"net"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/google/gopacket/layers"
 )
@@ -392,4 +393,25 @@ type DNSLabels map[string]string
 
 type DNSStats struct {
 	Count uint `json:"count"`
+}
+
+type DNSData struct {
+	DNSMeta
+	DNSSpec
+}
+
+type DNSLog struct {
+	StartTime, EndTime time.Time
+	DNSMeta
+	// TODO
+}
+
+func (d *DNSData) ToDNSLog(startTime, endTime time.Time, includeLabels bool) DNSLog {
+	dl := DNSLog{
+		StartTime: startTime,
+		EndTime:   endTime,
+		DNSMeta:   d.DNSMeta,
+	}
+
+	return dl
 }
