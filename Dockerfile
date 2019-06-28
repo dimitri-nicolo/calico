@@ -4,7 +4,7 @@ MAINTAINER spike@tigera.io
 RUN apk add --update --virtual .build-deps \
         sudo build-base ruby-dev \
  && sudo gem install \
-        fluent-plugin-elasticsearch fluent-plugin-s3 \
+        fluent-plugin-elasticsearch fluent-plugin-s3 fluent-plugin-splunk-hec fluent-plugin-sumologic_output \
  && sudo fluent-gem install fluent-plugin-remote_syslog \
  && sudo gem sources --clear-all \
  && apk del .build-deps \
@@ -35,13 +35,27 @@ ENV ELASTIC_FLOWS_INDEX_SHARDS=5
 COPY readiness.sh /bin/
 RUN chmod +x /bin/readiness.sh
 
+COPY liveness.sh /bin/
+RUN chmod +x /bin/liveness.sh
+
+COPY splunk-environment.sh /bin/
+RUN chmod +x /bin/splunk-environment.sh
+
+COPY splunk-config.sh /bin/
+RUN chmod +x /bin/splunk-config.sh
+
+COPY sumo-environment.sh /bin/
+RUN chmod +x /bin/sumo-environment.sh
+
+COPY sumo-config.sh /bin/
+RUN chmod +x /bin/sumo-config.sh
+
 COPY ee_entrypoint.sh /bin/
 RUN chmod +x /bin/ee_entrypoint.sh
 
 RUN mkdir /fluentd/etc/output_flows
 RUN mkdir /fluentd/etc/output_tsee_audit
 RUN mkdir /fluentd/etc/output_kube_audit
-
 
 EXPOSE 24284
 
