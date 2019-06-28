@@ -4,6 +4,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/gopacket/layers"
+
 	"github.com/projectcalico/felix/rules"
 )
 
@@ -38,6 +40,22 @@ func (d *dnsLogAggregator) IncludeLabels(b bool) DNSLogAggregator {
 func (d *dnsLogAggregator) AggregateOver(k AggregationKind) DNSLogAggregator {
 	d.kind = k
 	return d
+}
+
+func (d *dnsLogAggregator) FeedUpdate(dns *layers.DNS) error {
+	meta, spec, err := NewDNSMetaSpecFromGoPacket(dns)
+
+	if err != nil {
+		return err
+	}
+
+	if _, ok := d.dnsStore[meta]; ok {
+		d.dnsStore[meta].Merge(spec)
+	} else {
+		d.dnsStore[meta] = spec
+	}
+
+	return nil
 }
 
 func (d *dnsLogAggregator) Get() []*DNSLog {
