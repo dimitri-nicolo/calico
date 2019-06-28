@@ -1108,6 +1108,50 @@ deleteTigeraFederationSecretManifest() {
 }
 
 #
+# createTyphaCerts()
+#
+createTyphaCerts() {
+  openssl req -x509 -newkey rsa:4096 \
+                    -keyout typhaca.key \
+                    -nodes \
+                    -out typhaca.crt \
+                    -subj "/CN=Calico Typha CA" \
+                    -days 365
+  openssl req -newkey rsa:4096 \
+              -keyout typha.key \
+              -nodes \
+              -out typha.csr \
+              -subj "/CN=calico-typha"
+  openssl x509 -req -in typha.csr \
+                    -CA typhaca.crt \
+                    -CAkey typhaca.key \
+                    -CAcreateserial \
+                    -out typha.crt \
+                    -days 365
+  openssl req -newkey rsa:4096 \
+              -keyout felix.key \
+              -nodes \
+              -out felix.csr \
+              -subj "/CN=calico-felix"
+  openssl x509 -req -in felix.csr \
+                    -CA typhaca.crt \
+                    -CAkey typhaca.key \
+                    -out felix.crt \
+                    -days 3650
+  sed -e "s/<replace with base64-encoded Typha certificate>/$(cat typha.crt | base64 -w 0)/" \
+      -e "s/<replace with base64-encoded Typha private key>/$(cat typha.key | base64 -w 0)/" \
+      -e "s/<replace with base64-encoded Felix certificate>/$(cat felix.crt | base64 -w 0)/" \
+      -e "s/<replace with base64-encoded Felix private key>/$(cat felix.key | base64 -w 0)/" \
+      -i calico.yaml 
+  sed -e 's/^/    /' < typhaca.crt > typhaca_indented.crt
+  sed '/<replace with PEM-encoded (not base64) Certificate Authority bundle>/ {
+    r typhaca_indented.crt
+    d
+  }' -i calico.yaml
+  rm typhaca_indented.crt  
+}
+
+#
 # applyCalicoManifest()
 #
 applyCalicoManifest() {
@@ -1679,6 +1723,9 @@ installCNX() {
 
   applyRbacManifest               # Apply RBAC resources based on the configured datastore type.
   applyEtcdDeployment             # Install a single-node etcd (etcd datastore only)
+  if [ "$DEPLOYMENT_TYPE" == "typha" ] || [ "$DEPLOYMENT_TYPE" == "federation" ]; then
+    createTyphaCerts              # Create TLS certificates for Felix and Typha communication
+  fi
   applyCalicoManifest             # Apply calico.yaml
 
   removeMasterTaints              # Remove master taints

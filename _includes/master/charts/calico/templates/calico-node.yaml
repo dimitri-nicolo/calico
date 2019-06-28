@@ -348,6 +348,20 @@ spec:
             # Enable processing network sets in EE Flow Logs
             - name: FELIX_FLOWLOGSENABLENETWORKSETS
               value: "true"
+{{- if .Values.typha.enabled }}
+            # Location of the CA bundle Felix uses to authenticate Typha; volume mount
+            - name: FELIX_TYPHACAFILE
+              value: /calico-typha-ca/caBundle
+            # Common name on the Typha certificate; used to verify we are talking to an authentic typha
+            - name: FELIX_TYPHACN
+              value: {{.Values.typha.tls.typhaCommonName}}
+            # Location of the client certificate for connecting to Typha; volume mount
+            - name: FELIX_TYPHACERTFILE
+              value: /calico-felix-certs/felix.crt
+            # Location of the client certificate key for connecting to Typha; volume mount
+            - name: FELIX_TYPHAKEYFILE
+              value: /calico-felix-certs/felix.key
+{{- end }}
             # Sets Default Security Groups if tigera-aws-config exists
             - name: TIGERA_DEFAULT_SECURITY_GROUPS
               valueFrom:
@@ -410,6 +424,14 @@ spec:
             - mountPath: /var/log/calico
               name: var-log-calico
               readOnly: false
+{{- if .Values.typha.enabled }}
+            - mountPath: "/calico-typha-ca"
+              name: calico-typha-ca
+              readOnly: true
+            - mountPath: /calico-felix-certs
+              name: calico-felix-certs
+              readOnly: true
+{{- end }}
 {{- if eq .Values.datastore "etcd" }}
             - mountPath: /calico-secrets
               name: etcd-certs
@@ -617,6 +639,14 @@ spec:
           hostPath:
             type: DirectoryOrCreate
             path: /var/log/calico
+{{- if .Values.typha.enabled }}
+        - name: calico-typha-ca
+          configMap:
+            name: calico-typha-ca
+        - name: calico-felix-certs
+          secret:
+            secretName: calico-felix-certs
+{{- end }}
 
 ---
 

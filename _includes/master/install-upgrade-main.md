@@ -79,33 +79,7 @@ and your datastore type. Refer to the section that matches your configuration.
 
 {% include {{page.version}}/cnx-pod-cidr-sed.md yaml="calico" %}
 
-1. Modify the replica count in the`Deployment` named `calico-typha`
-   to the desired number of replicas.
-
-   ```
-   apiVersion: apps/v1beta1
-   kind: Deployment
-   metadata:
-     name: calico-typha
-     ...
-   spec:
-     ...
-     replicas: <number of replicas>
-   ```
-   {: .no-select-button}
-
-   We recommend at least one replica for every 200 nodes and no more than
-   20 replicas. In production, we recommend a minimum of three replicas to reduce
-   the impact of rolling upgrades and failures.  The number of replicas should
-   always be less than the number of nodes, otherwise rolling upgrades will stall.
-   In addition, Typha only helps with scale if there are fewer Typha instances than
-   there are nodes.
-
-
-   > **Warning**: If you set `typha_service_name` without increasing the replica
-   > count from its default of `0` Felix will try to connect to Typha, find no
-   > Typha instances to connect to, and fail to start.
-   {: .alert .alert-danger}
+{% include {{page.version}}/config-typha.md %}
 
 1. Apply the manifest.
 
@@ -157,29 +131,7 @@ for each [remote cluster](/{{page.version}}/networking/federation/index#terminol
    > **Tip**: You can specify more than one using commas as delimiters.
    {: .alert .alert-success}
 
-1. Modify the replica count in the `Deployment` named `calico-typha`
-   to the desired number of replicas.
-
-   ```
-   apiVersion: apps/v1beta1
-   kind: Deployment
-   metadata:
-     name: calico-typha
-     ...
-   spec:
-     ...
-     replicas: <number of replicas>
-   ```
-   {: .no-select-button}
-
-   We recommend at least one replica for every 200 nodes and no more than
-   20 replicas. In production, we recommend a minimum of three replicas to reduce
-   the impact of rolling upgrades and failures.
-
-   > **Warning**: If you do not increase the replica
-   > count from its default of `0` Felix will try to connect to Typha, find no
-   > Typha instances to connect to, and fail to start.
-   {: .alert .alert-danger}
+{% include {{page.version}}/config-typha.md %}
 
 {% include {{page.version}}/cnx-pod-cidr-sed.md yaml="calico" %}
 
@@ -237,29 +189,7 @@ for each [remote cluster](/{{page.version}}/networking/federation/index#terminol
    -O
    ```
 
-1. Open the manifest in your favorite editor and modify the replica count in the
-   `Deployment` named `calico-typha` to the desired number of replicas.
-
-   ```
-   apiVersion: apps/v1beta1
-   kind: Deployment
-   metadata:
-     name: calico-typha
-     ...
-   spec:
-     ...
-     replicas: <number of replicas>
-   ```
-   {: .no-select-button}
-
-   We recommend at least one replica for every 200 nodes and no more than
-   20 replicas. In production, we recommend a minimum of three replicas to reduce
-   the impact of rolling upgrades and failures.
-
-   > **Warning**: If you do not increase the replica
-   > count from its default of `0` Felix will try to connect to Typha, find no
-   > Typha instances to connect to, and fail to start.
-   {: .alert .alert-danger}
+{% include {{page.version}}/config-typha.md %}
 
 {% include {{page.version}}/cnx-pod-cidr-sed.md yaml="calico" %}
 

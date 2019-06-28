@@ -94,3 +94,14 @@ true
 true
 {{- end -}}
 {{- end -}}
+
+{{- define "calico.typha.tls" -}}
+{{- if or (or (or (or .Values.typha.tls.typhaCrt .Values.typha.tls.typhaKey) .Values.typha.tls.caBundle) .Values.typha.tls.felixCrt) .Values.typha.tls.felixKey -}}
+{{- $_ := required "Must specify all or none of typhaCrt, typhaKey, felixCrt, felixKey and caBundle" .Values.typha.tls.typhaCrt -}}
+{{- $_ := required "Must specify all or none of typhaCrt, typhaKey, felixCrt, felixKey and caBundle" .Values.typha.tls.typhaKey -}}
+{{- $_ := required "Must specify all or none of typhaCrt, typhaKey, felixCrt, felixKey and caBundle" .Values.typha.tls.felixCrt -}}
+{{- $_ := required "Must specify all or none of typhaCrt, typhaKey, felixCrt, felixKey and caBundle" .Values.typha.tls.felixKey -}}
+{{- $_ := required "Must specify all or none of typhaCrt, typhaKey, felixCrt, felixKey and caBundle" .Values.typha.tls.caBundle -}}
+true
+{{- end -}}
+{{- end -}}
