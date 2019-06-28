@@ -2,6 +2,7 @@ package collector
 
 import (
 	"errors"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -62,11 +63,11 @@ func getRRDecoded(rr layers.DNSResourceRecord) interface{} {
 	case layers.DNSTypeA, layers.DNSTypeAAAA:
 		return rr.IP
 	case layers.DNSTypeNS:
-		return rr.NS
+		return string(rr.NS)
 	case layers.DNSTypeCNAME:
-		return rr.CNAME
+		return string(rr.CNAME)
 	case layers.DNSTypePTR:
-		return rr.PTR
+		return string(rr.PTR)
 	case layers.DNSTypeTXT:
 		return rr.TXTs
 	case layers.DNSTypeSOA:
@@ -81,5 +82,5 @@ func getRRDecoded(rr layers.DNSResourceRecord) interface{} {
 }
 
 func canonicalizeDNSName(name []byte) string {
-	return strings.ToLower(strings.TrimRight(string(name), "."))
+	return regexp.MustCompile(`\.\.+`).ReplaceAllString(strings.ToLower(strings.Trim(string(name), ".")), ".")
 }
