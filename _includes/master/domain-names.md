@@ -10,7 +10,7 @@ With a single asterisk in any part of the domain name, it matches 1 or more path
 - `www.google.*` matches `www.google.net`, `www.google.io`, and so on
 - `update.*.mycompany.com` matches `update.tools.mycompany.com`, `update.secure.suite.mycompany.com`, and so on
 
-Not supported are:
+**Not** supported are:
 
 - Multiple wildcards in the same domain, for example: `*.*.mycompany.com`
 - Asterisks that are not the entire component, for example: `www.g*.com`
