@@ -12,14 +12,14 @@ Use domain names to allow traffic to destinations outside of a cluster.
 Using domain names in policies to identify services outside of the cluster is often operationally simpler and more robust than using IP
 addresses. In particular, they are useful when an external service does not map to a well known set of static IP addresses.
 
+Domain names can include a wildcard (`*`), making it easier to manage large numbers of domains/subdomains.
+
 ### Features
 
 This how-to guide uses the following {{site.prodname}} features:
 
-- [**GlobalNetworkPolicy**]({{site.baseurl}}/{{page.version}}/reference/resources/globalnetworkpolicy)
-  with domain names in the policy
-- [**GlobalNetworkSet**]({{site.baseurl}}/{{page.version}}/reference/resources/globalnetworkset)
-  with domain names, where the network set is referenced in a [GlobalNetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/resources/globalnetworkpolicy)
+- **GlobalNetworkPolicy** with exact or wildcard domain names
+- **GlobalNetworkSet** with exact or wildcard domain names, where the network set is referenced in a GlobalNetworkPolicy
 
 ### Concepts
 
@@ -32,6 +32,10 @@ Using domain names in policy rules is limited to only egress allow rules. {{site
 > domain names for services within the cluster. Use Kubernetes labels
 > for services within the cluster.
 {: .alert .alert-info}
+
+#### Domain name matching
+
+{% include {{page.version}}/domain-names.md %}
 
 #### Trusted DNS servers
 
@@ -61,7 +65,7 @@ In this method, you create a **GlobalNetworkPolicy** with egress rules with `act
 domain names to which egress traffic is allowed.
 
 In the following example, the first rule allows DNS traffic, and the second rule allows connections outside the cluster to domains
-**api.alice.com** and **bob.example.com**.
+**api.alice.com** and ***.example.com** (which means `<anything>.example.com`, such as **bob.example.com**).
 
 ```
 apiVersion: projectcalico.org/v3
@@ -83,15 +87,14 @@ spec:
     destination:
       domains:
       - api.alice.com
-      - bob.example.com
+      - "*.example.com"
 ```
-
 #### Use domain names in a global network set
 
 In this method, you create a **GlobalNetworkSet** with the allowed destination domain names in the `allowedEgressDomains` field. Then,
-you create a global network policy with a `destination.selector` that matches that global network set.
+you create a **GlobalNetworkPolicy** with a `destination.selector` that matches that GlobalNetworkSet.
 
-In the following example, the allowed egress domains (**api.alice.com** and **bob.example.com**) are specified in the global network set.
+In the following example, the allowed egress domains (`api.alice.com` and `*.example.com`) are specified in the GlobalNetworkSet.
 
 ```
 apiVersion: projectcalico.org/v3
@@ -103,10 +106,10 @@ metadata:
 spec:
   allowedEgressDomains:
   - api.alice.com
-  - bob.example.com
+  - "*.example.com"
 ```
 
-Then, you reference the global network set in a global network policy using a destination label selector.
+Then, you reference the global network set in a **GlobalNetworkPolicy** using a destination label selector.
 
 ```
 apiVersion: projectcalico.org/v3
@@ -126,4 +129,4 @@ spec:
 
 ### Above and beyond
 
-To configure DNS trusted servers, see the [DNSTrustedServers parameter]({{site.baseurl}}/{{page.version}}/reference/felix/configuration).
+To change the default DNS trusted servers, use the [DNSTrustedServers parameter]({{site.baseurl}}/{{page.version}}/reference/felix/configuration).
