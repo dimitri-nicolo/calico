@@ -162,19 +162,11 @@ var _ = Describe("DNS Policy", func() {
 				order := float64(20)
 				policy.Spec.Order = &order
 				policy.Spec.Selector = "all()"
-				tcp := numorstring.ProtocolFromString(numorstring.ProtocolTCP)
 				udp := numorstring.ProtocolFromString(numorstring.ProtocolUDP)
 				policy.Spec.Egress = []api.Rule{
 					{
 						Action:      api.Allow,
 						Destination: api.EntityRule{Domains: []string{"microsoft.com", "www.microsoft.com"}},
-					},
-					{
-						Action:   api.Allow,
-						Protocol: &tcp,
-						Destination: api.EntityRule{
-							Ports: []numorstring.Port{numorstring.SinglePort(53)},
-						},
 					},
 					{
 						Action:   api.Allow,
@@ -200,19 +192,11 @@ var _ = Describe("DNS Policy", func() {
 				order := float64(20)
 				policy.Spec.Order = &order
 				policy.Spec.Selector = "all()"
-				tcp := numorstring.ProtocolFromString(numorstring.ProtocolTCP)
 				udp := numorstring.ProtocolFromString(numorstring.ProtocolUDP)
 				policy.Spec.Egress = []api.Rule{
 					{
 						Action:      api.Allow,
 						Destination: api.EntityRule{Domains: []string{"microsoft.*", "*.microsoft.com"}},
-					},
-					{
-						Action:   api.Allow,
-						Protocol: &tcp,
-						Destination: api.EntityRule{
-							Ports: []numorstring.Port{numorstring.SinglePort(53)},
-						},
 					},
 					{
 						Action:   api.Allow,
@@ -245,20 +229,12 @@ var _ = Describe("DNS Policy", func() {
 				order := float64(20)
 				policy.Spec.Order = &order
 				policy.Spec.Selector = "all()"
-				tcp := numorstring.ProtocolFromString(numorstring.ProtocolTCP)
 				udp := numorstring.ProtocolFromString(numorstring.ProtocolUDP)
 				policy.Spec.Egress = []api.Rule{
 					{
 						Action: api.Allow,
 						Destination: api.EntityRule{
 							Selector: "founder == 'billg'",
-						},
-					},
-					{
-						Action:   api.Allow,
-						Protocol: &tcp,
-						Destination: api.EntityRule{
-							Ports: []numorstring.Port{numorstring.SinglePort(53)},
 						},
 					},
 					{
@@ -307,20 +283,12 @@ var _ = Describe("DNS Policy", func() {
 				order := float64(20)
 				policy.Spec.Order = &order
 				policy.Spec.Selector = "all()"
-				tcp := numorstring.ProtocolFromString(numorstring.ProtocolTCP)
 				udp := numorstring.ProtocolFromString(numorstring.ProtocolUDP)
 				policy.Spec.Egress = []api.Rule{
 					{
 						Action: api.Allow,
 						Destination: api.EntityRule{
 							Selector: "founder == 'billg'",
-						},
-					},
-					{
-						Action:   api.Allow,
-						Protocol: &tcp,
-						Destination: api.EntityRule{
-							Ports: []numorstring.Port{numorstring.SinglePort(53)},
 						},
 					},
 					{

@@ -344,6 +344,5 @@ var _ = Describe("Domain Info Store", func() {
 				Expect(domainStore.GetDomainIPs("*.google.com")).To(Equal([]string{"1.2.3.5"}))
 			})
 		})
-
 	})
 })
