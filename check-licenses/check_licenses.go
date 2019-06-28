@@ -94,6 +94,12 @@ var (
 			license: "MIT License (96%)"},
 		{pkgName: "github.com/projectcalico/felix/vendor/github.com/google/gopacket/layers",
 			license: "BSD 3-clause \"New\" or \"Revised\" License (96%)"},
+		{pkgName: "github.com/projectcalico/felix/vendor/github.com/Masterminds/semver",
+			license: "MIT License (98%)"},
+		{pkgName: "github.com/projectcalico/felix/vendor/github.com/Masterminds/sprig",
+			license: "MIT License (98%)"},
+		{pkgName: "github.com/projectcalico/felix/vendor/github.com/google/uuid",
+			license: "BSD 3-clause \"New\" or \"Revised\" License (96%)"},
 
 		// Mixed license, Apache and some files under BSD-like.
 		{pkgName: "github.com/projectcalico/felix/vendor/github.com/ghodss/yaml",

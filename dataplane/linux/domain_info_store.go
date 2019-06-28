@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -69,6 +70,10 @@ type domainInfoStore struct {
 	mutex    sync.Mutex
 	mappings map[string]*nameData
 
+	// Wildcard domain names that consumers are interested in (i.e. have called GetDomainIPs
+	// for).
+	wildcards map[string]*regexp.Regexp
+
 	// Cache for "what are the IPs for <domain>?".  We have this to halve our processing,
 	// because there are two copies of the IPSets Manager (one for v4 and one for v6) that will
 	// call us to make identical queries.
@@ -105,6 +110,7 @@ func newDomainInfoStore(domainInfoChanges chan *domainInfoChanged, saveFile stri
 	s := &domainInfoStore{
 		domainInfoChanges:    domainInfoChanges,
 		mappings:             make(map[string]*nameData),
+		wildcards:            make(map[string]*regexp.Regexp),
 		resultsCache:         make(map[string][]string),
 		mappingExpiryChannel: make(chan *domainMappingExpired),
 		saveFile:             saveFile,
@@ -375,6 +381,15 @@ func (s *domainInfoStore) storeInfo(name, value string, ttl time.Duration, isNam
 	}
 	existing := s.mappings[name].values[value]
 	if existing == nil {
+		// If this is the first value for this name, check whether the name matches any
+		// existing wildcards.
+		if len(s.mappings[name].values) == 0 {
+			for wildcard, regex := range s.wildcards {
+				if regex.MatchString(name) {
+					s.mappings[name].namesToNotify.Add(wildcard)
+				}
+			}
+		}
 		s.mappings[name].values[value] = &valueData{
 			expiryTime: time.Now().Add(ttl),
 			timer:      makeTimer(),
@@ -428,11 +443,42 @@ func (s *domainInfoStore) GetDomainIPs(domain string) []string {
 				}
 			}
 		}
-		collectIPsForName(domain)
+		if isWildcard(domain) {
+			regex := s.wildcards[domain]
+			if regex == nil {
+				// Need to build corresponding regexp.
+				regexpString := wildcardToRegexpString(domain)
+				var err error
+				regex, err = regexp.Compile(regexpString)
+				if err != nil {
+					log.WithError(err).Panicf("Couldn't compile regexp %v for wildcard %v", regexpString, domain)
+				}
+				s.wildcards[domain] = regex
+			}
+			for name := range s.mappings {
+				if regex.MatchString(name) {
+					collectIPsForName(name)
+				}
+			}
+		} else {
+			collectIPsForName(domain)
+		}
 		s.resultsCache[domain] = ips
 	}
 	log.Infof("GetDomainIPs(%v) -> %v", domain, ips)
 	return ips
+}
+
+func isWildcard(domain string) bool {
+	return strings.Contains(domain, "*")
+}
+
+func wildcardToRegexpString(wildcard string) string {
+	nonWildParts := strings.Split(wildcard, "*")
+	for i := range nonWildParts {
+		nonWildParts[i] = regexp.QuoteMeta(nonWildParts[i])
+	}
+	return "^" + strings.Join(nonWildParts, ".*") + "$"
 }
 
 func (s *domainInfoStore) signalDomainInfoChange(name, reason string) {

@@ -4,10 +4,12 @@ package intdataplane
 
 import (
 	"net"
+	"regexp"
 	"time"
 
 	"github.com/google/gopacket/layers"
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 
@@ -209,7 +211,11 @@ var _ = Describe("Domain Info Store", func() {
 				break loop
 			}
 		}
-		Expect(domainsSignaled).To(Equal(set.FromArray(domains)))
+		// We shouldn't care if _more_ domains are signaled than we expect.  Just check that
+		// the expected ones _are_ signaled.
+		for _, domain := range domains {
+			Expect(domainsSignaled.Contains(domain)).To(BeTrue())
+		}
 	}
 
 	// Test where:
@@ -239,5 +245,104 @@ var _ = Describe("Domain Info Store", func() {
 		Expect(domainStore.GetDomainIPs("a2.com")).To(Equal([]string{"7.8.9.10"}))
 		// No garbage yet, because c.com still has a value and is the RHS of other mappings.
 		Expect(domainStore.collectGarbage()).To(Equal(0))
+	})
+
+	DescribeTable("it should identify wildcards",
+		func(domain string, expectedIsWildcard bool) {
+			Expect(isWildcard(domain)).To(Equal(expectedIsWildcard))
+		},
+		Entry("*.com",
+			"*.com", true),
+		Entry(".com",
+			".com", false),
+		Entry("google.com",
+			"google.com", false),
+		Entry("*.google.com",
+			"*.google.com", true),
+		Entry("update.*.tigera.io",
+			"update.*.tigera.io", true),
+		Entry("cpanel.blog.org",
+			"cpanel.blog.org", false),
+	)
+
+	DescribeTable("it should build correct wildcard regexps",
+		func(wildcard, expectedRegexp string) {
+			Expect(wildcardToRegexpString(wildcard)).To(Equal(expectedRegexp))
+		},
+		Entry("*.com",
+			"*.com", "^.*\\.com$"),
+		Entry("*.google.com",
+			"*.google.com", "^.*\\.google\\.com$"),
+		Entry("update.*.tigera.io",
+			"update.*.tigera.io", "^update\\..*\\.tigera\\.io$"),
+	)
+
+	DescribeTable("wildcards match as expected",
+		func(wildcard, name string, expectedMatch bool) {
+			regex, err := regexp.Compile(wildcardToRegexpString(wildcard))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(regex.MatchString(name)).To(Equal(expectedMatch))
+		},
+		Entry("*.com",
+			"*.com", "google.com", true),
+		Entry("*.com",
+			"*.com", "www.google.com", true),
+		Entry("*.com",
+			"*.com", "com", false),
+		Entry("*.com",
+			"*.com", "tigera.io", false),
+		Entry("*.google.com",
+			"*.google.com", "www.google.com", true),
+		Entry("*.google.com",
+			"*.google.com", "ipv6.google.com", true),
+		Entry("*.google.com",
+			"*.google.com", "ipv6google.com", false),
+		Entry("*.google.com",
+			"*.google.com", "ipv6.experimental.google.com", true),
+		Entry("update.*.tigera.io",
+			"update.*.tigera.io", "update.calico.tigera.io", true),
+		Entry("update.*.tigera.io",
+			"update.*.tigera.io", "update.tsee.tigera.io", true),
+		Entry("update.*.tigera.io",
+			"update.*.tigera.io", "update.security.tsee.tigera.io", true),
+		Entry("update.*.tigera.io",
+			"update.*.tigera.io", "update.microsoft.com", false),
+	)
+
+	Context("wildcard handling", func() {
+		BeforeEach(func() {
+			domainStoreCreate()
+		})
+
+		// Test where wildcard is configured in the data model before we have any DNS
+		// information that matches it.
+		Context("with client interested in *.google.com", func() {
+			BeforeEach(func() {
+				Expect(domainStore.GetDomainIPs("*.google.com")).To(BeEmpty())
+			})
+
+			Context("with IP for update.google.com", func() {
+				BeforeEach(func() {
+					programDNSAnswer(domainStore, makeA("update.google.com", "1.2.3.5"))
+				})
+
+				It("should update *.google.com", func() {
+					expectChangesFor("*.google.com")
+					Expect(domainStore.GetDomainIPs("*.google.com")).To(Equal([]string{"1.2.3.5"}))
+				})
+			})
+		})
+
+		// Test where wildcard is configured in the data model when we already have DNS
+		// information that matches it.
+		Context("with IP for update.google.com", func() {
+			BeforeEach(func() {
+				programDNSAnswer(domainStore, makeA("update.google.com", "1.2.3.5"))
+			})
+
+			It("should get that IP for *.google.com", func() {
+				Expect(domainStore.GetDomainIPs("*.google.com")).To(Equal([]string{"1.2.3.5"}))
+			})
+		})
 	})
 })
