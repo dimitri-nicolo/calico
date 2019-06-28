@@ -307,3 +307,13 @@ deploy-%:
 	docker tag tigera/$*:latest gcr.io/tigera-dev/cnx/tigera/$*:latest
 	gcloud docker -- push gcr.io/tigera-dev/cnx/tigera/$*:latest
 
+##########################################################################################
+# LOCAL RUN
+##########################################################################################
+
+run-voltron:
+	VOLTRON_TEMPLATE_PATH=docker-image/voltron/templates/guardian.yaml.tmpl VOLTRON_CERT_PATH=test go run cmd/voltron/main.go
+
+run-guardian:
+	GUARDIAN_VOLTRON_URL=127.0.0.1:5555 go run cmd/guardian/main.go
+
