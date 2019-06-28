@@ -194,7 +194,9 @@ var _ = Describe("Integration Tests", func() {
 		err := os.Setenv("GUARDIAN_CERT_PATH", "/tmp/")
 		Expect(err).NotTo(HaveOccurred())
 
-		err = os.Setenv("GUARDIAN_PROXY_TARGETS", "^/test:"+ts.URL)
+		proxyTarget := fmt.Sprintf(`{"^/test":"%s"}`, ts.URL)
+
+		err = os.Setenv("GUARDIAN_PROXY_TARGETS", proxyTarget)
 		Expect(err).NotTo(HaveOccurred())
 
 	})

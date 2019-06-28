@@ -4,9 +4,9 @@ package main
 
 import (
 	"crypto/x509"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"strings"
 
 	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
@@ -24,16 +24,16 @@ type proxyTarget []client.ProxyTarget
 
 // Decode deserializes the list of proxytargets
 func (pt *proxyTarget) Decode(envVar string) error {
+	var mapping map[string]string
 	targetConfig := []client.ProxyTarget{}
 
-	targetSlice := strings.Split(envVar, ",")
-	for _, target := range targetSlice {
-		targetTrimmed := strings.Trim(target, " ")
-		splitted := strings.SplitN(targetTrimmed, ":", 2)
+	err := json.Unmarshal([]byte(envVar), &mapping)
+	if err != nil {
+		return err
+	}
 
-		pattern := splitted[0]
-		endpoint := splitted[1]
-		targetConfig = append(targetConfig, client.ProxyTarget{Pattern: pattern, Dest: endpoint})
+	for k, v := range mapping {
+		targetConfig = append(targetConfig, client.ProxyTarget{Pattern: k, Dest: v})
 	}
 
 	*pt = targetConfig
@@ -48,7 +48,7 @@ type config struct {
 	LogLevel            string      `default:"DEBUG"`
 	CertPath            string      `default:"/certs" split_words:"true"`
 	VoltronURL          string      `required:"true" split_words:"true"`
-	ProxyTargets        proxyTarget `default:"" split_words:"true"`
+	ProxyTargets        proxyTarget `required:"true" split_words:"true"`
 	ServiceAccountToken string      `default:"/var/run/secrets/kubernetes.io/serviceaccount/token" split_words:"true"`
 }
 
