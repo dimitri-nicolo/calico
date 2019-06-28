@@ -239,6 +239,42 @@ var _ = Describe("DNS log type tests", func() {
 				}, "\n")))
 			})
 		})
+
+		Context("Add function", func() {
+			It("Empty set should add a record", func() {
+				r := make(DNSRRSets)
+				name := DNSName{"tigera.io", 1, 1}
+
+				r.Add(name, DNSRData{Raw: []byte("2"), Decoded: "test1"})
+				Expect(r).Should(HaveLen(1))
+				Expect(r[name]).Should(HaveLen(1))
+			})
+
+			It("Set with a duplicate key should add records in the right order", func() {
+				r := make(DNSRRSets)
+				name := DNSName{"tigera.io", 1, 1}
+
+				r.Add(name, DNSRData{Raw: []byte("2"), Decoded: "test1"})
+				r.Add(name, DNSRData{Raw: []byte("1"), Decoded: "test2"})
+				r.Add(name, DNSRData{Raw: []byte("3"), Decoded: "test3"})
+
+				Expect(r).Should(HaveLen(1))
+				Expect(r[name]).Should(Equal(DNSRDatas{
+					{Raw: []byte("1"), Decoded: "test2"},
+					{Raw: []byte("2"), Decoded: "test1"},
+					{Raw: []byte("3"), Decoded: "test3"},
+				}))
+			})
+
+			It("Set with a different key should add a second record", func() {
+				r := make(DNSRRSets)
+
+				r.Add(DNSName{"tigera.io", 1, 1}, DNSRData{Raw: []byte("1"), Decoded: "test1"})
+				r.Add(DNSName{"tigera.io", 1, 2}, DNSRData{Raw: []byte("2"), Decoded: "test2"})
+
+				Expect(r).Should(HaveLen(2))
+			})
+		})
 	})
 
 	Describe("DNSSpec", func() {

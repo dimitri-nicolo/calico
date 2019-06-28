@@ -100,3 +100,145 @@ var _ = Describe("DNS log utility functions", func() {
 		})
 	})
 })
+
+var _ = Describe("gopacket to DNS log conversion function", func() {
+	Describe("NewDNSMetaSpecFromGoPacket", func() {
+		It("returns an error with no questions", func() {
+			_, _, err := NewDNSMetaSpecFromGoPacket(&layers.DNS{})
+			Expect(err).Should(HaveOccurred())
+		})
+
+		It("all works together", func() {
+			meta, spec, err := NewDNSMetaSpecFromGoPacket(&layers.DNS{
+				Questions: []layers.DNSQuestion{{Name: []byte("tigera.io.")}},
+				Answers: []layers.DNSResourceRecord{
+					{Name: []byte("tigera.io."), Class: layers.DNSClassIN, Type: layers.DNSTypeA},
+				},
+			})
+
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(meta.Question.Name).Should(Equal("tigera.io"))
+			Expect(spec.Count).Should(BeNumerically("==", 1))
+			Expect(meta.RRSetsString).Should(Equal(spec.RRSets.String()))
+		})
+	})
+
+	Describe("newDNSSpecFromGoPacket", func() {
+		It("sets count to 1", func() {
+			spec := newDNSSpecFromGoPacket(&layers.DNS{})
+			Expect(spec.Count).Should(BeNumerically("==", 1))
+		})
+
+		It("includes all RRs", func() {
+			spec := newDNSSpecFromGoPacket(&layers.DNS{
+				Answers: []layers.DNSResourceRecord{
+					{Name: []byte("www1.tigera.io."), Class: layers.DNSClassIN, Type: layers.DNSTypeA, Data: []byte("2"), IP: net.ParseIP("127.0.0.1")},
+					{Name: []byte("www1.tigera.io."), Class: layers.DNSClassIN, Type: layers.DNSTypeA, Data: []byte("1"), IP: net.ParseIP("127.0.0.2")},
+					{Name: []byte("www1.tigera.io."), Class: layers.DNSClassIN, Type: layers.DNSTypeA, Data: []byte("3"), IP: net.ParseIP("127.0.0.3")},
+				},
+				Additionals: []layers.DNSResourceRecord{
+					{Name: []byte("www.tigera.io."), Class: layers.DNSClassIN, Type: layers.DNSTypeCNAME, Data: []byte("4"), CNAME: []byte("www1.tigera.io.")},
+				},
+				Authorities: []layers.DNSResourceRecord{
+					{Name: []byte("tigera.io."), Class: layers.DNSClassIN, Type: layers.DNSTypeNS, Data: []byte("6"), NS: []byte("ns1.tigera.io.")},
+					{Name: []byte("tigera.io."), Class: layers.DNSClassIN, Type: layers.DNSTypeNS, Data: []byte("5"), NS: []byte("ns2.tigera.io.")},
+				},
+			})
+
+			expected := DNSRRSets{
+				{Name: "www1.tigera.io", Class: DNSClass(layers.DNSClassIN), Type: DNSType(layers.DNSTypeA)}: {
+					{Raw: []byte("1"), Decoded: net.ParseIP("127.0.0.2")},
+					{Raw: []byte("2"), Decoded: net.ParseIP("127.0.0.1")},
+					{Raw: []byte("3"), Decoded: net.ParseIP("127.0.0.3")},
+				},
+				{Name: "www.tigera.io", Class: DNSClass(layers.DNSClassIN), Type: DNSType(layers.DNSTypeCNAME)}: {
+					{Raw: []byte("4"), Decoded: "www1.tigera.io."},
+				},
+				{Name: "tigera.io", Class: DNSClass(layers.DNSClassIN), Type: DNSType(layers.DNSTypeNS)}: {
+					{Raw: []byte("5"), Decoded: "ns2.tigera.io."},
+					{Raw: []byte("6"), Decoded: "ns1.tigera.io."},
+				},
+			}
+			Expect(spec.RRSets).Should(Equal(expected))
+		})
+
+		It("initializes servers", func() {
+			spec := newDNSSpecFromGoPacket(&layers.DNS{})
+			Expect(spec.Servers).ShouldNot(BeNil())
+		})
+
+	})
+
+	Describe("newDNSMetaFromSpecAndGoPacket", func() {
+		It("fills in the question", func() {
+			meta := newDNSMetaFromSpecAndGoPacket(&layers.DNS{
+				Questions: []layers.DNSQuestion{
+					{Name: []byte("tigera.io."), Type: layers.DNSTypeA, Class: layers.DNSClassIN},
+				},
+			}, DNSSpec{})
+
+			Expect(meta.Question).Should(Equal(DNSName{
+				Name:  "tigera.io",
+				Class: DNSClass(layers.DNSClassIN),
+				Type:  DNSType(layers.DNSTypeA),
+			}))
+		})
+
+		It("sets the rcode", func() {
+			meta := newDNSMetaFromSpecAndGoPacket(&layers.DNS{
+				ResponseCode: layers.DNSResponseCodeNXDomain,
+				Questions:    []layers.DNSQuestion{{}},
+			}, DNSSpec{})
+
+			Expect(meta.ResponseCode).Should(Equal(layers.DNSResponseCodeNXDomain))
+		})
+
+		It("sets the rrset string", func() {
+			spec := DNSSpec{
+				RRSets: DNSRRSets{
+					{
+						Name:  "tigera.io",
+						Class: DNSClass(layers.DNSClassIN),
+						Type:  DNSType(layers.DNSTypeA),
+					}: {
+						{Decoded: "127.0.0.1"},
+					},
+				},
+			}
+
+			meta := newDNSMetaFromSpecAndGoPacket(&layers.DNS{
+				Questions: []layers.DNSQuestion{{}},
+			}, spec)
+
+			Expect(meta.RRSetsString).Should(Equal(spec.RRSets.String()))
+		})
+	})
+
+	Describe("newDNSNameRDataFromGoPacketRR", func() {
+		It("returns name as expected", func() {
+			name, _ := newDNSNameRDataFromGoPacketRR(layers.DNSResourceRecord{
+				Name:  []byte("tigeRa.Io.."),
+				Class: layers.DNSClassIN,
+				Type:  layers.DNSTypeA,
+			})
+
+			Expect(name).Should(Equal(DNSName{"tigera.io", DNSClass(layers.DNSClassIN), DNSType(layers.DNSTypeA)}))
+		})
+
+		It("returns rdata as expected", func() {
+			raw := []byte("1234")
+			decoded := net.ParseIP("127.0.0.1")
+
+			_, rdata := newDNSNameRDataFromGoPacketRR(layers.DNSResourceRecord{
+				Type: layers.DNSTypeA,
+				Data: raw,
+				IP:   decoded,
+			})
+
+			Expect(rdata).Should(Equal(DNSRData{
+				Raw:     raw,
+				Decoded: decoded,
+			}))
+		})
+	})
+})

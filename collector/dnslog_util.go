@@ -3,18 +3,24 @@ package collector
 import (
 	"errors"
 	"regexp"
-	"sort"
 	"strings"
 
 	"github.com/google/gopacket/layers"
 )
 
-func NewDNSMetaSpecFromGoPacket(dns *layers.DNS) (*DNSMeta, *DNSSpec, error) {
+func NewDNSMetaSpecFromGoPacket(dns *layers.DNS) (DNSMeta, DNSSpec, error) {
 	if len(dns.Questions) == 0 {
-		return nil, nil, errors.New("No questions in DNS packet")
+		return DNSMeta{}, DNSSpec{}, errors.New("No questions in DNS packet")
 	}
 
-	spec := &DNSSpec{
+	spec := newDNSSpecFromGoPacket(dns)
+	meta := newDNSMetaFromSpecAndGoPacket(dns, spec)
+
+	return meta, spec, nil
+}
+
+func newDNSSpecFromGoPacket(dns *layers.DNS) DNSSpec {
+	spec := DNSSpec{
 		RRSets:       make(DNSRRSets),
 		Servers:      make(map[EndpointMetadata]DNSLabels),
 		ClientLabels: nil,
@@ -22,30 +28,16 @@ func NewDNSMetaSpecFromGoPacket(dns *layers.DNS) (*DNSMeta, *DNSSpec, error) {
 			Count: 1,
 		},
 	}
-
 	for _, rr := range append(append(dns.Answers, dns.Additionals...), dns.Authorities...) {
-		name := DNSName{
-			Name:  canonicalizeDNSName(rr.Name),
-			Class: DNSClass(rr.Class),
-			Type:  DNSType(rr.Type),
-		}
-
-		rdata := DNSRData{
-			Raw:     rr.Data,
-			Decoded: getRRDecoded(rr),
-		}
-
-		spec.RRSets[name] = append(spec.RRSets[name], rdata)
+		spec.RRSets.Add(newDNSNameRDataFromGoPacketRR(rr))
 	}
-	for _, rrset := range spec.RRSets {
-		sort.Stable(rrset)
-	}
-
 	// TODO server metadata
-
 	// TODO client labels
+	return spec
+}
 
-	meta := &DNSMeta{
+func newDNSMetaFromSpecAndGoPacket(dns *layers.DNS, spec DNSSpec) DNSMeta {
+	return DNSMeta{
 		// TODO ClientMeta
 		Question: DNSName{
 			Name:  canonicalizeDNSName(dns.Questions[0].Name),
@@ -55,7 +47,21 @@ func NewDNSMetaSpecFromGoPacket(dns *layers.DNS) (*DNSMeta, *DNSSpec, error) {
 		ResponseCode: dns.ResponseCode,
 		RRSetsString: spec.RRSets.String(),
 	}
-	return meta, spec, nil
+}
+
+func newDNSNameRDataFromGoPacketRR(rr layers.DNSResourceRecord) (DNSName, DNSRData) {
+	name := DNSName{
+		Name:  canonicalizeDNSName(rr.Name),
+		Class: DNSClass(rr.Class),
+		Type:  DNSType(rr.Type),
+	}
+
+	rdata := DNSRData{
+		Raw:     rr.Data,
+		Decoded: getRRDecoded(rr),
+	}
+
+	return name, rdata
 }
 
 func getRRDecoded(rr layers.DNSResourceRecord) interface{} {

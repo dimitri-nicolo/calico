@@ -279,6 +279,14 @@ func (d DNSRRSets) String() string {
 	return strings.Join(s, "\n")
 }
 
+// Add inserts a DNSRData into the appropriate DNSRDatas in sorted order
+func (d DNSRRSets) Add(name DNSName, rdata DNSRData) {
+	index := sort.Search(len(d[name]), func(i int) bool { return !d[name][i].Less(rdata) })
+	d[name] = append(d[name], DNSRData{})
+	copy(d[name][index+1:], d[name][index:])
+	d[name][index] = rdata
+}
+
 type dnsRRSetsEncoded struct {
 	dnsNameEncoded
 	RData DNSRDatas `json:"rdata"`
@@ -319,7 +327,7 @@ func (d DNSRDatas) Len() int {
 }
 
 func (d DNSRDatas) Less(i, j int) bool {
-	return bytes.Compare(d[i].Raw, d[j].Raw) < 0
+	return d[i].Less(d[j])
 }
 
 func (d DNSRDatas) Swap(i, j int) {
@@ -329,6 +337,10 @@ func (d DNSRDatas) Swap(i, j int) {
 type DNSRData struct {
 	Raw     []byte
 	Decoded interface{}
+}
+
+func (a DNSRData) Less(b DNSRData) bool {
+	return bytes.Compare(a.Raw, b.Raw) < 0
 }
 
 func (d DNSRData) String() string {
