@@ -11,7 +11,7 @@ COMPONENTS = guardian voltron
 # The target architecture is select by setting the ARCH variable.
 # When ARCH is undefined it is set to the detected host architecture.
 # When ARCH differs from the host architecture a crossbuild will be performed.
-ARCHES=$(patsubst docker-image/Dockerfile.%,%,$(wildcard docker-image/Dockerfile.*))
+ARCHES = amd64
 
 # BUILDARCH is the host architecture
 # ARCH is the target architecture
@@ -77,6 +77,7 @@ RELEASE_LDFLAGS = -ldflags "$(VERSION_FLAGS) -s -w"
 # Env vars related to building, packaging 
 # and releasing
 #############################################
+PUSH_REPO     ?= gcr.io/unique-caldron-775/cnx/
 BUILD_IMAGES  ?= $(addprefix tigera/, $(COMPONENTS))
 PACKAGE_NAME  ?= github.com/tigera/$(APP_NAME)
 RELEASE_BUILD ?= ""
@@ -259,18 +260,15 @@ endif
 # CLEAN UP 
 ##########################################################################################
 .PHONY: clean
-clean: clean-bin clean-build-image clean-docker-image clean-manifests
+clean: clean-build-image
+	rm -rf $(BINDIR) docker-image/bin
+	find . -name "*.coverprofile" -type f -delete
+	rm -rf docker-image/templates docker-image/scripts
 
 clean-build-image:
 	# Remove all variations e.g. tigera/voltron:latest + tigera/voltron:latest-amd64
 	docker rmi -f $(BUILD_IMAGES) $(addsuffix :latest-$(ARCH), $(BUILD_IMAGES)) > /dev/null 2>&1 || true
 
-clean-bin:
-	rm -rf $(BINDIR) docker-image/bin
-
-clean-docker-image: 
-	rm -rf docker-image/templates docker-image/scripts
-	
 ###############################################################################
 # Static checks
 ###############################################################################
@@ -296,16 +294,32 @@ install-git-hooks:
 #############################################
 # Run CI cycle - build, test, etc.
 #############################################
-ci: clean test static-checks
+ci: clean static-checks test images
 
 #############################################
 # Deploy images to registry
 #############################################
-cd: clean images deploy
-deploy: $(addprefix deploy-, $(COMPONENTS))
-deploy-%:
-	docker tag tigera/$*:latest gcr.io/tigera-dev/cnx/tigera/$*:latest
-	gcloud docker -- push gcr.io/tigera-dev/cnx/tigera/$*:latest
+cd:
+ifndef CONFIRM
+	$(error CONFIRM is undefined - run using make <target> CONFIRM=true)
+endif
+ifndef BRANCH_NAME
+	$(error BRANCH_NAME is undefined - run using make <target> BRANCH_NAME=var or set an environment variable)
+endif
+	$(MAKE) --silent tag-images push-images IMAGETAG=${BRANCH_NAME}
+	$(MAKE) --silent tag-images push-images IMAGETAG=$(shell git describe --tags --dirty --always --long)
+
+# ensure we have a real imagetag
+imagetag:
+ifndef IMAGETAG
+	$(error IMAGETAG is undefined - run using make <target> IMAGETAG=X.Y.Z)
+endif
+
+tag-images: imagetag
+	ARCHES="$(ARCHES)" BUILD_IMAGES="$(BUILD_IMAGES)" PUSH_REPO="$(PUSH_REPO)" IMAGETAG="$(IMAGETAG)" make-helpers/tag-images
+
+push-images: imagetag
+	ARCHES="$(ARCHES)" BUILD_IMAGES="$(BUILD_IMAGES)" PUSH_REPO="$(PUSH_REPO)" IMAGETAG="$(IMAGETAG)" make-helpers/push-images
 
 ##########################################################################################
 # LOCAL RUN

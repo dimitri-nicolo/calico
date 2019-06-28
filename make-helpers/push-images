@@ -1,0 +1,10 @@
+#!/bin/bash
+
+set -e
+
+for ARCH in $ARCHES; do
+  for BUILD_IMAGE in $BUILD_IMAGES; do
+    docker push "${PUSH_REPO}${BUILD_IMAGE}:${IMAGETAG}-${ARCH}"
+  done
+done
+
