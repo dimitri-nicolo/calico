@@ -648,7 +648,7 @@ spec:
               command:
                 - sh
                 - -c
-                - /usr/bin/fluentd -c /fluentd/etc/fluent.conf -p /fluentd/plugins --dry-run && curl -s http://localhost:24220/api/plugins.json
+                - /bin/liveness.sh
             initialDelaySeconds: 60
             periodSeconds: 60
       volumes:
