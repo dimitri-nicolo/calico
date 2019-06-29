@@ -130,7 +130,7 @@ DOCKER_RUN := mkdir -p .go-pkg-cache && \
 DOCKER_CONFIG ?= $(HOME)/.docker/config.json
 
 # Version of this repository as reported by git.
-CALICO_GIT_VER=v3.7.0
+CALICO_GIT_VER=v3.8.0
 CNX_GIT_VER := $(shell git describe --tags --dirty --always)
 ifeq ($(LOCAL_BUILD),true)
 	CNX_GIT_VER = $(shell git describe --tags --dirty --always)-dev-build
