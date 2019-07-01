@@ -55,7 +55,8 @@ hooks_installed:=$(shell ./install-git-hooks)
 ## Install Git hooks
 install-git-hooks:
 	./install-git-hooks
-
+	
+## Serve a local view of your current site on port 4000
 serve: bin/helm
 	# We have to override JEKYLL_DOCKER_TAG which is usually set to 'pages'.
 	# When set to 'pages', jekyll starts in safe mode which means it will not

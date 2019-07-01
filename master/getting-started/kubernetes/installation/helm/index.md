@@ -219,7 +219,7 @@ manager:
 
 ## Step 6: Grant access to user interface
 
-Grant users permission to access the Tigera Secure EE Manager in your cluster. Run one of the following commands, replacing <USER> with the name of the user you wish to grant access.
+In this step, we are going to grant a user permission to access the Tigera Secure EE Manager in your cluster. For instructions on how to create a user, please consult our ["Configuring user authentication to Tigera Secure EE Manager" document](/{{page.version}}/reference/cnx/authentication#basic-authentication). Once you have a user, you can run the following commands, replacing `<USER>` with the name of the user you wish to grant access.
 
 **User manager**
 
