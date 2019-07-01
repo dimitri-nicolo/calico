@@ -20,21 +20,22 @@ require (
 	github.com/howeyc/gopass v0.0.0-20170109162249-bf9dde6d0d2c // indirect
 	github.com/imdario/mergo v0.3.8-0.20190531063913-f757d8626a73 // indirect
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0 // indirect
-	github.com/kelseyhightower/envconfig v1.4.0 // indirect
+	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/leodido/go-urn v1.1.0 // indirect
 	github.com/onsi/ginkgo v1.8.0
 	github.com/onsi/gomega v1.5.0
-	github.com/projectcalico/felix v3.7.3+incompatible // indirect
+	github.com/projectcalico/felix v3.7.3+incompatible
 	github.com/projectcalico/go-json v0.0.0-20161128004156-6219dc7339ba // indirect
 	github.com/projectcalico/go-yaml v0.0.0-20161201183616-955bc3e451ef // indirect
 	github.com/projectcalico/go-yaml-wrapper v0.0.0-20161127220527-598e54215bee // indirect
 	github.com/projectcalico/libcalico-go v1.7.3
 	github.com/prometheus/client_golang v0.9.4 // indirect
+	github.com/prometheus/common v0.4.1
 	github.com/satori/go.uuid v1.2.0 // indirect
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/pflag v1.0.3 // indirect
 	github.com/tigera/calico-k8sapiserver v0.0.0-20190503214445-0e5924229478
-	github.com/tigera/compliance v0.0.0-20190621174449-f9e4e373d34a
+	github.com/tigera/compliance v0.0.0-20190708180936-7285e770f61c
 	github.com/tigera/licensing v2.2.3+incompatible // indirect
 	golang.org/x/crypto v0.0.0-20190611184440-5c40567a22f8 // indirect
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45 // indirect

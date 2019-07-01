@@ -1,12 +1,12 @@
 package installer
 
 import (
-	"github.com/tigera/es-proxy/pkg/pip/datastore"
-
-	"github.com/tigera/es-proxy/pkg/pip"
+	"github.com/tigera/compliance/pkg/datastore"
 
 	"github.com/tigera/es-proxy/pkg/handler"
+	"github.com/tigera/es-proxy/pkg/middleware"
 	"github.com/tigera/es-proxy/pkg/mutator"
+	"github.com/tigera/es-proxy/pkg/pip"
 )
 
 // InstallPolicyImpactResponseHook connects up the pip response mutator

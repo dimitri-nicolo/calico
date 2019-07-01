@@ -1,7 +1,7 @@
 package flow
 
 // The structs in this file are elastic search based flow structures
-// they are unexported they are used internatlly by the flow package
+// they are unexported they are used internally by the flow package
 // strictly for marshaling Flow objects to and from elastic search
 // based flow structures
 
@@ -47,8 +47,8 @@ func (es *es_flow) toFlow() Flow {
 		},
 		Action:        es.Key.Action,
 		PreviewAction: es.Key.PreviewAction,
-		Proto:         es.Key.Proto,
-		Policies:      es.Policies.toFlowPolicies(),
+		//Proto:         es.Key.Proto,
+		Policies: es.Policies.toFlowPolicies(),
 	}
 }
 
@@ -65,7 +65,7 @@ func (es *es_flow) fromFlow(F Flow) {
 		Dest_port:     F.Dest.Port,
 		Action:        F.Action,
 		PreviewAction: F.PreviewAction,
-		Proto:         F.Proto,
+		//Proto:         F.Proto,
 	}
 	es.Source_labels.fromFlowLabelMap(F.Source.Labels)
 	es.Dest_labels.fromFlowLabelMap(F.Dest.Labels)
@@ -130,17 +130,17 @@ func (es *es_flow_policies) fromFlowPolicies(pol []FlowPolicy) {
 
 // es flow sub structs -------------------------------------------------
 type es_key struct {
-	Reporter      string `json:"reporter"`
-	Src_type      string `json:"source_type"`
-	Src_NS        string `json:"source_namespace"`
-	Src_name      string `json:"source_name"`
-	Dest_type     string `json:"dest_type"`
-	Dest_NS       string `json:"dest_namespace"`
-	Dest_name     string `json:"dest_name"`
-	Dest_port     string `json:"dest_port"`
-	Action        string `json:"action"`
-	PreviewAction string `json:"preview_action,omitempty"`
-	Proto         string `json:"proto",omitempty`
+	Reporter      string  `json:"reporter"`
+	Src_type      string  `json:"source_type"`
+	Src_NS        string  `json:"source_namespace"`
+	Src_name      string  `json:"source_name"`
+	Dest_type     string  `json:"dest_type"`
+	Dest_NS       string  `json:"dest_namespace"`
+	Dest_name     string  `json:"dest_name"`
+	Dest_port     *uint16 `json:"dest_port"`
+	Action        string  `json:"action"`
+	PreviewAction string  `json:"preview_action,omitempty"`
+	Proto         string  `json:"proto,omitempty"`
 }
 
 type es_flog_buckets struct {

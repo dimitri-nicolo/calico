@@ -192,7 +192,7 @@ func parseAccessMode(am string) (ElasticAccessMode, error) {
 	case "insecure":
 		return InsecureMode, nil
 	default:
-		return ElasticAccessMode(""), fmt.Errorf("Unknown access mode %v", am)
+		return ElasticAccessMode(""), fmt.Errorf("Indeterminate access mode %v", am)
 	}
 }
 

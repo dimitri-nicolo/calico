@@ -1,5 +1,7 @@
 package flow
 
+import "github.com/projectcalico/libcalico-go/lib/net"
+
 // A simplified Flow structure
 type Flow struct {
 	Source        FlowEndpointData
@@ -8,18 +10,20 @@ type Flow struct {
 	Action        string
 	PreviewAction string
 	Policies      []FlowPolicy
-	Proto         string
+	Proto         *uint8
+	IPVersion     *int
 }
 
 // FlowEndpointData can be used to describe the source or destination
 // of a flow log.
 type FlowEndpointData struct {
-	Type      string
-	Namespace string
-	IP        string
-	Name      string
-	Labels    map[string]string
-	Port      string
+	Type           string
+	Namespace      string
+	IP             *net.IP
+	Name           string
+	Labels         map[string]string
+	Port           *uint16
+	ServiceAccount *string
 }
 
 type FlowPolicy struct {

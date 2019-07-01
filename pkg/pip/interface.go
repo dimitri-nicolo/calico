@@ -3,9 +3,9 @@ package pip
 import (
 	"context"
 
-	"github.com/tigera/es-proxy/pkg/pip/flow"
+	"github.com/tigera/es-proxy/pkg/pip/policycalc"
 )
 
 type PIP interface {
-	CalculateFlowImpact(ctx context.Context, npcs []NetworkPolicyChange, flows []flow.Flow) ([]flow.Flow, error)
+	CalculateFlowImpact(ctx context.Context, f *policycalc.Flow) (processed bool, before, after policycalc.Action)
 }

@@ -1,7 +1,7 @@
 package pip
 
 import (
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	"github.com/tigera/compliance/pkg/resources"
 )
 
 const (
@@ -15,9 +15,9 @@ const (
 	ChangeActionUpdate = "update"
 )
 
-type NetworkPolicyChange struct {
-	ChangeAction  string           `json:"action"`
-	NetworkPolicy v3.NetworkPolicy `json:"policy"`
+type ResourceChange struct {
+	Action   string             `json:"action"`
+	Resource resources.Resource `json:"resource"`
 }
 
 type contextKey int

@@ -55,11 +55,16 @@ func (m *flowManager) ExtractFlows() ([]Flow, error) {
 func (m *flowManager) ReplaceFlows(inflows []Flow) ([]byte, error) {
 
 	//convert the flows back to json
-	b, _ := flowsToJson(inflows)
+	b, err := flowsToJson(inflows)
+	if err != nil {
+		return nil, err
+	}
 
 	//unmarshal to an interface map
 	var fl interface{}
-	json.Unmarshal(b, &fl)
+	if err = json.Unmarshal(b, &fl); err != nil {
+		return nil, err
+	}
 
 	//grab a handle to the flow log buckets
 	flog_buckets := m.data.(map[string]interface{})["aggregations"].(map[string]interface{})["flog_buckets"]

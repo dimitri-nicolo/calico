@@ -10,7 +10,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/tigera/es-proxy/pkg/pip/datastore"
+	"github.com/tigera/compliance/pkg/datastore"
 
 	pipinit "github.com/tigera/es-proxy/pkg/pip/installer"
 
@@ -56,10 +56,7 @@ func Start(config *Config) error {
 	k8sAuth := middleware.NewK8sAuth(k8sClient, k8sConfig)
 
 	//install pip mutator
-	clientset, err := datastore.GetClientSet(k8sConfig)
-	if err != nil {
-		log.WithError(err).Fatal("could not initialize client set")
-	}
+	clientset := datastore.MustGetClientSet()
 	pipinit.InstallPolicyImpactReponseHook(proxy, clientset)
 
 	sm.Handle("/version", http.HandlerFunc(handler.VersionHandler))
@@ -77,7 +74,7 @@ func Start(config *Config) error {
 	case PassThroughMode:
 		log.Fatal("PassThroughMode not implemented yet")
 	default:
-		log.WithField("AccessMode", config.AccessMode).Fatal("Unknown Elasticsearch access mode.")
+		log.WithField("AccessMode", config.AccessMode).Fatal("Indeterminate Elasticsearch access mode.")
 	}
 
 	server = &http.Server{
@@ -103,7 +100,9 @@ func Wait() {
 }
 
 func Stop() {
-	server.Shutdown(context.Background())
+	if err := server.Shutdown(context.Background()); err != nil {
+		log.WithError(err).Error("Error when stopping server")
+	}
 }
 
 func addCertToCertPool(caPath string) *x509.CertPool {

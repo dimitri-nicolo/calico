@@ -11,7 +11,9 @@ github.com/PuerkitoBio/purell v1.1.0/go.mod h1:c11w/QuzBsJSee3cPx9rAFu61PvFxuPbt
 github.com/PuerkitoBio/urlesc v0.0.0-20160726150825-5bd2802263f2/go.mod h1:uGdkoq3SwY9Y+13GIhn11/XLaGBb4BfwItxLd5jeuXE=
 github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 h1:d+Bc7a5rLufV/sSk/8dngufqelfh6jnri85riMAaF/M=
 github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578/go.mod h1:uGdkoq3SwY9Y+13GIhn11/XLaGBb4BfwItxLd5jeuXE=
+github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc h1:cAKDfWh5VpdgMhJosfJnn5/FoN2SRZ4p7fJNX58YPaU=
 github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
+github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf h1:qet1QNfXsQxTZqLG4oE62mJzwPIB8+Tee4RNCL9ulrY=
 github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf/go.mod h1:ybxpYRFXyAe+OPACYpWeL0wqObRcbAqCMya13uyzqw0=
 github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973 h1:xJ4a3vCFaGF/jqvzLMYoU8P317H5OQ+Via4RmuPwCS0=
 github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973/go.mod h1:Dwedo/Wpr24TaqPxmxbtue+5NUziq4I4S80YR8gNf3Q=
@@ -211,7 +213,10 @@ github.com/tigera/compliance v0.0.0-20190605204849-a853f494f2e7 h1:OBVGF1H26BoCh
 github.com/tigera/compliance v0.0.0-20190605204849-a853f494f2e7/go.mod h1:Gzhim0mzJ3D6EDYGC1Z/IisLS2b5CRB2Ols3UvhcUMc=
 github.com/tigera/compliance v0.0.0-20190621174449-f9e4e373d34a h1:vO4YLDy3S/uIB+hlVVdmEUN6ze3XFCRwRTXYpjQRB5c=
 github.com/tigera/compliance v0.0.0-20190621174449-f9e4e373d34a/go.mod h1:Gzhim0mzJ3D6EDYGC1Z/IisLS2b5CRB2Ols3UvhcUMc=
+github.com/tigera/compliance v0.0.0-20190708180936-7285e770f61c h1:YbKY+AJwnZCJOMR27xvMguWyQ4ScJNXCgDl8B9BDbOs=
+github.com/tigera/compliance v0.0.0-20190708180936-7285e770f61c/go.mod h1:Gzhim0mzJ3D6EDYGC1Z/IisLS2b5CRB2Ols3UvhcUMc=
 github.com/tigera/compliance v2.4.2+incompatible h1:sJYI7wH1TQD0jdk0W+NWZHxuqwQQGYWn4G/3alkS6BE=
+github.com/tigera/compliance v2.4.2+incompatible/go.mod h1:Gzhim0mzJ3D6EDYGC1Z/IisLS2b5CRB2Ols3UvhcUMc=
 github.com/tigera/felix-private v2.4.1-0.20190605125757-c00322e56455+incompatible h1:mwNmwAqy00+/WCzHQ8+JRRbM4bACO9CCoZRB/1fz9cc=
 github.com/tigera/felix-private v2.4.1-0.20190605125757-c00322e56455+incompatible/go.mod h1:ngqL7jmwUBRutsnw3NGa0r4ArS9w24AE7GWzQIf7CfE=
 github.com/tigera/libcalico-go-private v2.4.0+incompatible h1:/r3Qq/3psBMvyYVwVJMbR0kdDe8Lu5ZZ6gh6ofYzylM=
@@ -281,6 +286,7 @@ google.golang.org/genproto v0.0.0-20180817151627-c66870c02cf8/go.mod h1:JiN7NxoA
 google.golang.org/grpc v1.13.0/go.mod h1:yo6s7OP7yaDglbqo1J04qKzAhqBH6lvTonzMVmEdcZw=
 google.golang.org/grpc v1.21.1 h1:j6XxA85m/6txkUCHvzlV5f+HBNl/1r5cZ2A/3IEFOO8=
 google.golang.org/grpc v1.21.1/go.mod h1:oYelfM1adQP15Ek0mdvEgi9Df8B9CZIaU1084ijfRaM=
+gopkg.in/alecthomas/kingpin.v2 v2.2.6 h1:jMFz6MfLP0/4fUyZle81rXUoxOBFi19VUFKVDOQfozc=
 gopkg.in/alecthomas/kingpin.v2 v2.2.6/go.mod h1:FMv+mEhP44yOT+4EoQTLFTRgOQ1FBLkstjWtayDeSgw=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/fsnotify.v1 v1.4.7 h1:xOHLXZwVvI9hhs+cLKq5+I5onOuwQLhQwiu63xxlHs4=

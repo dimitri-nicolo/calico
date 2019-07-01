@@ -2,15 +2,14 @@ package pip
 
 import (
 	"context"
-	"math/rand"
-	"strings"
+
+	"github.com/tigera/es-proxy/pkg/pip/policycalc"
+	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	log "github.com/sirupsen/logrus"
 
-	libv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
-	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/tigera/compliance/pkg/config"
@@ -18,291 +17,179 @@ import (
 	"github.com/tigera/compliance/pkg/resources"
 	"github.com/tigera/compliance/pkg/syncer"
 	"github.com/tigera/compliance/pkg/xrefcache"
-	"github.com/tigera/es-proxy/pkg/pip/flow"
 )
 
+var (
+	// These are the resource types that we need to query from the k8s API to populate our internal cache.
+	requiredTypes = []v1.TypeMeta{
+		resources.TypeCalicoTiers,
+		resources.TypeCalicoNetworkPolicies,
+		resources.TypeCalicoGlobalNetworkPolicies,
+		resources.TypeCalicoGlobalNetworkSets,
+		resources.TypeK8sNamespaces,
+		resources.TypeK8sServiceAccounts,
+	}
+)
+
+// New returns a new PIP instance.
+func New(ctx context.Context, listSrc list.Source, r []ResourceChange) PIP {
+	p := &pip{
+		listSrc: listSrc,
+	}
+	p.load()
+	return p
+}
+
+// pip implements the PIP interface.
 type pip struct {
 	xc      xrefcache.XrefCache
 	listSrc list.Source
+	calc    *policycalc.PolicyCalculator
 }
 
-func New(listSrc list.Source) PIP {
-	return &pip{
-		listSrc: listSrc,
-	}
-}
-
-// CalculateFlowImpact is the meat of the PIP API. It loads all network policy data from k8s, runs the passed-in flows
-// through the policy chains, and then determines the Action of the flow. It then does the same operation a second time,
-// after making the passed-in NetworkPolicyChanges to the policy chain. The end-result is a set of flows with a new
-// attribute on each: "preview_action".
-func (s *pip) CalculateFlowImpact(ctx context.Context, npcs []NetworkPolicyChange, flows []flow.Flow) ([]flow.Flow, error) {
-	// Create a new x-ref cache. Use a blank compliance config for the config settings since the XrefCache currently
-	// requires it but doesn't use any fields except the istio config (which we're not concerned with in the pip use case).
-	s.xc = xrefcache.NewXrefCache(&config.Config{}, func() {})
-
-	// to prevent the xrefcache from unnecessarily computing relations on endpoints that this policy does not select,
-	// we'll only add endpoints to the xrefcache if any of the input policies select them. As such, we can set the
-	// xrefcache inscope selector to all(), since we've already done the selector logic out of band.
-	s.xc.RegisterInScopeEndpoints(&libv3.EndpointsSelection{
-		Selector: "all()",
+// CalculateFlowImpact is the meat of the PIP API. Given a single Flow, it determines if the flow is potentially
+// impacted by the configuration change, and if so calculates the effective flow action before and after the change.
+//
+// If the flow did not undergo any calculation
+func (s *pip) CalculateFlowImpact(ctx context.Context, f *policycalc.Flow) (processed bool, before, after policycalc.Action) {
+	clog := log.WithFields(log.Fields{
+		"flowSrc":  f.Source.Name,
+		"flowDest": f.Destination.Name,
 	})
+
+	// Check the impact of the policy change.
+	processed, before, after = s.calc.Action(f)
+
+	clog.WithFields(log.Fields{
+		"originalAction":   f.Action,
+		"calculatedBefore": before,
+		"calculatedAfter":  after,
+	}).Debug("Computed flow action")
+
+	return processed, before, after
+}
+
+// load loads the initial configuration and updated configuration, priming the internal cache for policy impact
+// calculations.
+func (s *pip) load() error {
+	// Create a new x-ref cache. Use a blank compliance config for the config settings since the XrefCache currently
+	// requires it but doesn't use any fields except the istio config (which we're not concerned with in the pip use
+	// case).
+	//
+	// We just use the xref cache to determine the ordered set of tiers and policies before and after the updates. Set
+	// in-sync immediately since we aren't interested in callbacks.
+	s.xc = xrefcache.NewXrefCache(&config.Config{}, func() {})
+	s.xc.OnStatusUpdate(syncer.NewStatusUpdateComplete())
 
 	// Load the initial set of policy.
 	if err := s.loadInitialPolicy(); err != nil {
-		return flows, err
+		return err
 	}
 
-	// apply the preview changes
-	if err := s.applyPolicyChanges(npcs); err != nil {
-		return flows, err
+	// Extract the current set of config from the xrefcache.
+	resourceDataBefore := s.resourceDataFromXrefCache()
+
+	// Apply the preview changes to the xref cache. This also constructs the set of modified resources for use by the
+	// policy calculator.
+	modified, err := s.applyPolicyChanges(r)
+	if err != nil {
+		return err
 	}
 
-	// Set in-sync, so we get updates as we feed in the endpoints.
-	s.xc.OnStatusUpdate(syncer.NewStatusUpdateComplete())
+	// Extract the updated set of config from the xrefcache.
+	resourceDataAfter := s.resourceDataFromXrefCache()
 
-	// create a selector set which is used later to determine if each flow is impacted by this policy change.
-	ss := NewSelectorSet(npcs)
+	// Get the policy calc config from env.
+	cfg := policycalc.MustLoadConfig()
 
-	var retFlows = []flow.Flow{}
-	for _, f := range flows {
-		clog := log.WithFields(log.Fields{
-			"flowSrc":  f.Source.Name,
-			"flowDest": f.Dest.Name,
-		})
+	// Create the policy calculator.
+	s.calc = policycalc.NewPolicyCalculator(cfg, resourceDataBefore, resourceDataAfter, modified)
 
-		// before we process this endpoint, check if it's even selected by any of our input policies.
-		if !ss.anySelectorSelects(f.Source.Labels) && !!ss.anySelectorSelects(f.Dest.Labels) {
-			clog.Debug("skipping flow because no policy applies to it")
-			continue
-		}
-
-		// each flow falls under one of three categories:
-		// 1. the source is an endpoint
-		// 2. the dest is a endpoint
-		// 3. both the src & dest are endpoints
-		// For the third case, the policymap of the request leaving the source is different
-		// than the policymap of the request arriving at the dest. as such, we'll check
-		// the flow against the source first to see if it would be allowed. if it is, we
-		// still have to check the dest next.
-		var predictedAction string
-		orderedTiersAndPolicies := s.xc.GetOrderedTiersAndPolicies()
-
-		// if the flow came from the cluster, see if it would have left the source.
-		if f.Source.Type != flow.EndpointTypeNet {
-			if srcEp := getSrcResource(f); srcEp != nil {
-				predictedAction = computeAction(f, orderedTiersAndPolicies)
-			} else {
-				clog.WithField("srcType", f.Source.Type).Warn("skipping flow with unexpected source type")
-				continue
-			}
-		}
-
-		// a blank predictedAction
-		if predictedAction == "" ||
-			predictedAction == PreviewActionAllow ||
-			predictedAction == PreviewActionPass {
-			if destEp := getDstResource(f); destEp != nil {
-				predictedAction = computeAction(f, orderedTiersAndPolicies)
-			} else {
-				clog.WithField("destType", f.Dest.Type).Warn("skipping flow with unexpected dest type")
-				continue
-			}
-		}
-
-		clog.WithField("predictedAction", predictedAction).Debug("computed flow action")
-		f.PreviewAction = predictedAction
-		retFlows = append(retFlows, f)
-	}
-
-	return retFlows, nil
+	return nil
 }
 
-func (s *pip) applyPolicyChanges(npcs []NetworkPolicyChange) error {
-	for _, npc := range npcs {
-		switch npc.ChangeAction {
+// loadInitialPolicy will load the initial set of policy and related resources from the k8s API into the xrefcache.
+func (s *pip) loadInitialPolicy() error {
+	for _, t := range requiredTypes {
+		l, err := s.listSrc.RetrieveList(t)
+		if err != nil {
+			return err
+		}
+
+		err = meta.EachListItem(l, func(obj runtime.Object) error {
+			res := obj.(resources.Resource)
+			s.xc.OnUpdates([]syncer.Update{{
+				Type:       syncer.UpdateTypeSet,
+				Resource:   res,
+				ResourceID: resources.GetResourceID(res),
+			}})
+			return nil
+		})
+
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// applyPolicyChanges applies the supplied resource updates on top of the loaded configuration in the xrefcache.
+func (s *pip) applyPolicyChanges(rs []ResourceChange) (policycalc.ModifiedResources, error) {
+	modified := make(policycalc.ModifiedResources)
+
+	for _, r := range rs {
+		id := resources.GetResourceID(r.Resource)
+		modified.Add(r.Resource)
+
+		switch r.Action {
 		case "update":
 			s.xc.OnUpdates([]syncer.Update{{
 				Type:       syncer.UpdateTypeSet,
-				Resource:   &npc.NetworkPolicy,
-				ResourceID: resources.GetResourceID(&npc.NetworkPolicy),
+				Resource:   r.Resource,
+				ResourceID: id,
 			}})
 
 		case "delete":
 			s.xc.OnUpdates([]syncer.Update{{
 				Type:       syncer.UpdateTypeDeleted,
-				Resource:   &npc.NetworkPolicy,
-				ResourceID: resources.GetResourceID(&npc.NetworkPolicy),
+				Resource:   r.Resource,
+				ResourceID: id,
 			}})
 		case "create":
 			s.xc.OnUpdates([]syncer.Update{{
 				Type:       syncer.UpdateTypeSet,
-				Resource:   &npc.NetworkPolicy,
-				ResourceID: resources.GetResourceID(&npc.NetworkPolicy),
+				Resource:   r.Resource,
+				ResourceID: id,
 			}})
 		}
 	}
-	return nil
+	return modified, nil
 }
 
-func (s *pip) loadInitialPolicy() error {
-	list, err := s.listSrc.RetrieveList(resources.TypeCalicoTiers)
-	if err != nil {
-		return err
-	}
-	for i := range list.ResourceList.(*v3.TierList).Items {
-		clientRes := &list.ResourceList.(*v3.TierList).Items[i]
-		res := &libv3.Tier{
-			TypeMeta:   resources.TypeCalicoTiers,
-			ObjectMeta: clientRes.ObjectMeta,
-			Spec:       clientRes.Spec,
-		}
-		s.xc.OnUpdates([]syncer.Update{{
-			Type:       syncer.UpdateTypeSet,
-			Resource:   res,
-			ResourceID: resources.GetResourceID(res),
-		}})
-	}
+// Create the policy configuration from the data stored in the xrefcache.
+func (s *pip) resourceDataFromXrefCache() *policycalc.ResourceData {
+	// Create an empty config.
+	rd := &policycalc.ResourceData{}
 
-	list, err = s.listSrc.RetrieveList(resources.TypeK8sNetworkPolicies)
-	if err != nil {
-		return err
-	}
-	for i := range list.ResourceList.(*networkingv1.NetworkPolicyList).Items {
-		res := &list.ResourceList.(*networkingv1.NetworkPolicyList).Items[i]
-		res.TypeMeta = resources.TypeK8sNetworkPolicies
-		s.xc.OnUpdates([]syncer.Update{{
-			Type:       syncer.UpdateTypeSet,
-			Resource:   res,
-			ResourceID: resources.GetResourceID(res),
-		}})
-	}
-
-	list, err = s.listSrc.RetrieveList(resources.TypeCalicoNetworkPolicies)
-	if err != nil {
-		return err
-	}
-	for i := range list.ResourceList.(*v3.NetworkPolicyList).Items {
-		clientRes := &list.ResourceList.(*v3.NetworkPolicyList).Items[i]
-		res := &libv3.NetworkPolicy{
-			TypeMeta:   resources.TypeCalicoNetworkPolicies,
-			ObjectMeta: clientRes.ObjectMeta,
-			Spec:       clientRes.Spec,
-		}
-		s.xc.OnUpdates([]syncer.Update{{
-			Type:       syncer.UpdateTypeSet,
-			Resource:   res,
-			ResourceID: resources.GetResourceID(res),
-		}})
-	}
-
-	list, err = s.listSrc.RetrieveList(resources.TypeCalicoGlobalNetworkPolicies)
-	if err != nil {
-		return err
-	}
-	for i := range list.ResourceList.(*v3.GlobalNetworkPolicyList).Items {
-		clientRes := &list.ResourceList.(*v3.GlobalNetworkPolicyList).Items[i]
-		res := &libv3.GlobalNetworkPolicy{
-			TypeMeta:   resources.TypeCalicoGlobalNetworkPolicies,
-			ObjectMeta: clientRes.ObjectMeta,
-			Spec:       clientRes.Spec,
-		}
-		s.xc.OnUpdates([]syncer.Update{{
-			Type:       syncer.UpdateTypeSet,
-			Resource:   res,
-			ResourceID: resources.GetResourceID(res),
-		}})
-	}
-
-	list, err = s.listSrc.RetrieveList(resources.TypeCalicoGlobalNetworkSets)
-	if err != nil {
-		return err
-	}
-	for i := range list.ResourceList.(*v3.GlobalNetworkSetList).Items {
-		clientRes := &list.ResourceList.(*v3.GlobalNetworkSetList).Items[i]
-		res := &libv3.GlobalNetworkSet{
-			TypeMeta:   resources.TypeCalicoGlobalNetworkSets,
-			ObjectMeta: clientRes.ObjectMeta,
-			Spec:       clientRes.Spec,
-		}
-		s.xc.OnUpdates([]syncer.Update{{
-			Type:       syncer.UpdateTypeSet,
-			Resource:   res,
-			ResourceID: resources.GetResourceID(res),
-		}})
-	}
-
-	return nil
-}
-
-// getSrcResource generates a 'pretend' resource from the source data of a flow.
-// It returns nil if the source is not a known resource type or if the traffic originated
-// from outside the cluster.
-func getSrcResource(f flow.Flow) resources.Resource {
-	switch f.Source.Type {
-	case flow.EndpointTypeWep:
-		return &corev1.Pod{
-			ObjectMeta: v1.ObjectMeta{
-				Name:      f.Source.Name,
-				Namespace: f.Source.Namespace,
-				Labels:    f.Source.Labels,
-			},
-			Status: corev1.PodStatus{
-				PodIP: f.Source.IP,
-			},
-		}
-	case flow.EndpointTypeHep:
-		return &libv3.HostEndpoint{
-			ObjectMeta: v1.ObjectMeta{
-				Name:      f.Source.Name,
-				Namespace: f.Source.Namespace,
-				Labels:    f.Source.Labels,
-			},
-			Spec: libv3.HostEndpointSpec{
-				Node: strings.TrimSuffix(f.Source.Name, "-*"),
-			},
+	// Grab the ordered tiers and policies from the xrefcache and convert to the required type.
+	xrefTiers := s.xc.GetOrderedTiersAndPolicies()
+	rd.Tiers = make(policycalc.Tiers, len(xrefTiers))
+	for i := range xrefTiers {
+		for _, t := range xrefTiers[i].OrderedPolicies {
+			rd.Tiers[i] = append(rd.Tiers[i], t.GetCalicoV3())
 		}
 	}
-	return nil
-}
 
-// getDstResource generates a 'pretend' resource from the destination data of a flow.
-// It returns nil if the destination is not a known resource type or if the traffic was sent
-// outside the cluster.
-func getDstResource(f flow.Flow) resources.Resource {
-	switch f.Dest.Type {
-	case flow.EndpointTypeWep:
-		return &corev1.Pod{
-			ObjectMeta: v1.ObjectMeta{
-				Name:      f.Dest.Name,
-				Namespace: f.Dest.Namespace,
-				Labels:    f.Dest.Labels,
-			},
-			Status: corev1.PodStatus{
-				PodIP: f.Dest.IP,
-			},
-		}
-	case flow.EndpointTypeHep:
-		return &libv3.HostEndpoint{
-			ObjectMeta: v1.ObjectMeta{
-				Name:      f.Dest.Name,
-				Namespace: f.Dest.Namespace,
-				Labels:    f.Dest.Labels,
-			},
-			Spec: libv3.HostEndpointSpec{
-				Node: strings.TrimSuffix(f.Source.Name, "-*"),
-			},
-		}
-	}
-	return nil
-}
+	// Grab the namespaces and the service accounts.
+	_ = s.xc.EachCacheEntry(resources.TypeK8sNamespaces, func(ce xrefcache.CacheEntry) error {
+		rd.Namespaces = append(rd.Namespaces, ce.GetPrimary().(*corev1.Namespace))
+		return nil
+	})
+	_ = s.xc.EachCacheEntry(resources.TypeK8sServiceAccounts, func(ce xrefcache.CacheEntry) error {
+		rd.ServiceAccounts = append(rd.ServiceAccounts, ce.GetPrimary().(*corev1.ServiceAccount))
+		return nil
+	})
 
-func buildSelector(npcs []NetworkPolicyChange) string {
-	// TODO: loop through policy change, create a set, and union the results in this format: "() | () | ()"
-	return "all()"
-}
-
-// TODO: compute action instead of returning a random action
-func computeAction(f flow.Flow, tops []*xrefcache.TierWithOrderedPolicies) string {
-	return []string{PreviewActionAllow, PreviewActionDeny, PreviewActionPass, PreviewActionUnknown}[rand.Int()%4]
+	return rd
 }
