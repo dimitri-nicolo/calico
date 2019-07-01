@@ -110,7 +110,15 @@
                 "properties": {
                         "labels": {"type": "keyword"}
                 }
-	}
+	},
+        "original_source_ips": {
+            /* This is an array of IP addresses. It is not necessary to declare this as an array. Elastic will automatically accept a list of IP addresses here */
+            "type": "ip",
+            "null_value": "0.0.0.0"
+        },
+        "num_original_source_ips": {
+            "type": "long"
+        }
       }   
     }
   }
