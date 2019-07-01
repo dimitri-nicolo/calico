@@ -61,7 +61,7 @@ The full list of parameters which can be set is as follows.
 | `VXLANTunnelMACAddr`              |                                         | MAC address of the VXLAN tunnel. This is system configured and should not be updated manually. | string |
 | `VXLANVNI`                        | `FELIX_VXLANVNI`                        | The virtual network ID to use for VXLAN. [Default: `4096`] | int |
 | `XDPRefreshInterval`              | `FELIX_XDPREFRESHINTERVAL`              | Period, in seconds, at which Felix re-checks the XDP state in the dataplane to ensure that no other process has accidentally broken {{site.prodname}}'s rules. Set to 0 to disable XDP refresh. [Default: `90`] | int |
-| `XDPEnabled`                      | `FELIX_XDPENABLED`                      | Enable XDP acceleration for host endpoint policies. [Default: `true`] | boolean |
+| `XDPEnabled`                      | `FELIX_XDPENABLED`                      | Enable XDP acceleration for host endpoint policies.  Note: XDP mode is incompatible with flow log generation; if host endpoint flow logs and XDP are both enabled, no flow logs will be generated for the XDP-optimised rules. [Default: `true`] | boolean |
 | `TyphaAddr`                       | `FELIX_TYPHAADDR`                       | IPv4 address at which Felix should connect to Typha. [Default: none] | string |
 | `TyphaK8sServiceName`             | `FELIX_TYPHAK8SSERVICENAME`             | Name of the Typha Kubernetes service | string |
 | `Ipv6Support`                     | `FELIX_IPV6SUPPORT`                     | Enable {{site.prodname}} networking and security for IPv6 traffic as well as for IPv4. | boolean |
