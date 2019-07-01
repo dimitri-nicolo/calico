@@ -74,3 +74,14 @@ resources:
 true
 {{- end }}
 {{- end -}}
+
+{{- /* Used for docs site; don't encode values of the form <something in brackets> so we can 
+       output templates we expect the end user to fill in. */ -}}
+{{- define "calico.maybeBase64Encode" -}}
+{{- if hasPrefix "<" . -}}
+{{ . }}
+{{- else -}}
+{{ . | b64enc }}
+{{- end -}}
+{{- end -}}
+

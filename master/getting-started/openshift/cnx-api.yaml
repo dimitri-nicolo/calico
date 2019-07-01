@@ -8,9 +8,4 @@ apiserver:
 # Add the imagePullSecret calico-pull-secret since that is the pull secret our ansible scripts create in openshift-ansible
 imagePullSecrets:
   calico-pull-secret: ""
-apiserver:
-  tls:
-    crt: "<replace with base64 encoded certificate>"
-    key: "<replace with base64 encoded private key>"
-    cabundle: "<replace with base64 encoded Certificate Authority bundle>"
 {% endhelm %}

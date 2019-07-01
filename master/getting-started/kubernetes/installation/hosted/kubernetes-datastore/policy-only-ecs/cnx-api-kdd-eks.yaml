@@ -4,9 +4,4 @@ layout: null
 {% helm --execute templates/cnx-api.yaml %}
 datastore: kubernetes
 platform: eks
-apiserver:
-  tls:
-    crt: "<replace with base64 encoded certificate>"
-    key: "<replace with base64 encoded private key>"
-    cabundle: "<replace with base64 encoded Certificate Authority bundle>"
 {% endhelm %}

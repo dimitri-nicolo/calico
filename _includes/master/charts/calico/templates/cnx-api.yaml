@@ -35,20 +35,9 @@ data:
 {{- if or (or .Values.apiserver.tls.crt .Values.apiserver.tls.key) .Values.apiserver.tls.cabundle -}}
 {{- $_ := required "Must specify all or none of apiserver crt, key, and cabundle" .Values.apiserver.tls.crt -}}
 {{- $_ := required "Must specify all or none of apiserver crt, key, and cabundle" .Values.apiserver.tls.key -}}
-{{- $_ := required "Must specify all or none of apiserver crt, key, and cabundle" .Values.apiserver.tls.cabundle -}}
-
-{{- /* Used for docs site; don't encode values of the form <something in brackets> so we can
-       output templates we expect the end user to fill in. */ -}}
-{{- if hasPrefix "<" .Values.apiserver.tls.crt }}
-  apiserver.crt: {{ .Values.apiserver.tls.crt }}
-{{- else }}
-  apiserver.crt: {{ .Values.apiserver.tls.crt | b64enc }}
-{{- end -}}
-{{- if hasPrefix "<" .Values.apiserver.tls.key }}
-  apiserver.key: {{ .Values.apiserver.tls.key }}
-{{- else }}
-  apiserver.key: {{ .Values.apiserver.tls.key | b64enc }}
-{{- end -}}
+{{- $_ := required "Must specify all or none of apiserver crt, key, and cabundle" .Values.apiserver.tls.cabundle }}
+  apiserver.crt: {{ template "calico.maybeBase64Encode" .Values.apiserver.tls.crt }}
+  apiserver.key: {{ template "calico.maybeBase64Encode" .Values.apiserver.tls.key }}
 {{- else }}
   apiserver.crt: {{ $apicert.Cert | b64enc }}
   apiserver.key: {{ $apicert.Key | b64enc }}
@@ -71,14 +60,7 @@ spec:
 {{- $_ := required "Must specify all or none of apiserver crt, key, and cabundle" .Values.apiserver.tls.crt -}}
 {{- $_ := required "Must specify all or none of apiserver crt, key, and cabundle" .Values.apiserver.tls.key -}}
 {{- $_ := required "Must specify all or none of apiserver crt, key, and cabundle" .Values.apiserver.tls.cabundle }}
-
-{{- /* Used for docs site; don't encode values of the form <something in brackets> so we can 
-       output templates we expect the end user to fill in. */ -}}
-{{- if hasPrefix "<" .Values.apiserver.tls.crt}}
-  caBundle: {{ .Values.apiserver.tls.cabundle }}
-{{- else }}
-  caBundle: {{ .Values.apiserver.tls.cabundle | b64enc }}
-{{- end -}}
+  caBundle: {{ template "calico.maybeBase64Encode" .Values.apiserver.tls.cabundle }}
 {{- else }}
   caBundle: {{ $apicert.Cert | b64enc }}
 {{- end }}
