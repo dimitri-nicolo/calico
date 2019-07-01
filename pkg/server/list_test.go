@@ -18,7 +18,7 @@ import (
 
 func newArchivedReportData(reportName, reportTypeName string) *report.ArchivedReportData {
 	return &report.ArchivedReportData{
-		UISummary: "hello-100-goodbye",
+		UISummary: `{"foobar":"hello-100-goodbye"}`,
 		ReportData: &calicov3.ReportData{
 			ReportName:     reportName,
 			ReportTypeName: reportTypeName,
@@ -98,7 +98,7 @@ var _ = Describe("List tests with Gettable Report and ReportType", func() {
 				Type:        reportGetTypeGet.ReportTypeName,
 				StartTime:   now,
 				EndTime:     nowPlusHour,
-				UISummary:   "hello-100-goodbye",
+				UISummary:   map[string]interface{}{"foobar": "hello-100-goodbye"},
 				DownloadURL: "/compliance/reports/" + reportGetTypeGet.UID() + "/download",
 				DownloadFormats: []server.Format{
 					{
@@ -118,7 +118,7 @@ var _ = Describe("List tests with Gettable Report and ReportType", func() {
 				Type:            reportGetTypeNoGet.ReportTypeName,
 				StartTime:       now,
 				EndTime:         nowPlusHour,
-				UISummary:       "hello-100-goodbye",
+				UISummary:       map[string]interface{}{"foobar": "hello-100-goodbye"},
 				DownloadURL:     "",
 				DownloadFormats: nil,
 				GenerationTime:  now,
@@ -171,7 +171,7 @@ var _ = Describe("List tests with Not Gettable ReportType", func() {
 				Type:        reportGetTypeGet.ReportTypeName,
 				StartTime:   now,
 				EndTime:     nowPlusHour,
-				UISummary:   "hello-100-goodbye",
+				UISummary:   map[string]interface{}{"foobar": "hello-100-goodbye"},
 				DownloadURL: "/compliance/reports/" + reportGetTypeGet.UID() + "/download",
 				DownloadFormats: []server.Format{
 					{
@@ -191,7 +191,7 @@ var _ = Describe("List tests with Not Gettable ReportType", func() {
 				Type:            reportGetTypeNoGet.ReportTypeName,
 				StartTime:       now,
 				EndTime:         nowPlusHour,
-				UISummary:       "hello-100-goodbye",
+				UISummary:       map[string]interface{}{"foobar": "hello-100-goodbye"},
 				DownloadURL:     "",
 				DownloadFormats: nil,
 				GenerationTime:  now,

@@ -36,11 +36,11 @@ spec:
       \"panel\",\n\t\"widgets\": [{\n\t\t\"heading\": \"Node Failure Summary\",\n\t\t\"type\":
       \"cis-benchmark-nodes\",\n\t\t\"summary\": {\n\t\t\t\"label\": \"Total\",\n\t\t\t\"total\":
       {{ $n }}\n\t\t},\n\t\t\"data\": [{\n\t\t\t\"label\": \"HIGH\",\n\t\t\t\"value\":
-      {{ .CISBenchmarkSummary.HighCount }},\n\t\t\t\"desc\": \"Nodes with more than
-      {{ if .ReportSpec.CIS }}{{ .ReportSpec.CIS.HighThreshold }}{{ end }}% tests
-      passing\"\n\t\t}, {\n\t\t\t\"label\": \"MED\",\n\t\t\t\"value\": {{ .CISBenchmarkSummary.MedCount
-      }},\n\t\t\t\"desc\": \"Nodes with more than {{ if .ReportSpec.CIS }}{{ .ReportSpec.CIS.MedThreshold
-      }}{{ end }}% tests passing\"\n\t\t}, {\n\t\t\t\"label\": \"HIGH\",\n\t\t\t\"value\":
+      {{ .CISBenchmarkSummary.HighCount }},\n\t\t\t\"desc\": \"Nodes with {{ if .ReportSpec.CIS
+      }}{{ .ReportSpec.CIS.HighThreshold }}{{ end }}% or more tests passing\"\n\t\t},
+      {\n\t\t\t\"label\": \"MED\",\n\t\t\t\"value\": {{ .CISBenchmarkSummary.MedCount
+      }},\n\t\t\t\"desc\": \"Nodes with {{ if .ReportSpec.CIS }}{{ .ReportSpec.CIS.MedThreshold
+      }}{{ end }}% or more tests passing\"\n\t\t}, {\n\t\t\t\"label\": \"LOW\",\n\t\t\t\"value\":
       {{ .CISBenchmarkSummary.LowCount }},\n\t\t\t\"desc\": \"Nodes with less than
       {{ if .ReportSpec.CIS }}{{ .ReportSpec.CIS.MedThreshold }}{{ end }}% tests passing\"\n\t\t}]\n\t}\n{{
       if .CISBenchmark }}\n\t, {\n\t\t\"heading\": \"Top Failed Tests\",\n\t\t\"type\":
