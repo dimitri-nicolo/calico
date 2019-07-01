@@ -130,7 +130,7 @@ DOCKER_RUN := mkdir -p .go-pkg-cache && \
 DOCKER_CONFIG ?= $(HOME)/.docker/config.json
 
 # Version of this repository as reported by git.
-CALICO_GIT_VER=v3.7.0
+CALICO_GIT_VER=v3.8.0
 CNX_GIT_VER := $(shell git describe --tags --dirty --always)
 ifeq ($(LOCAL_BUILD),true)
 	CNX_GIT_VER = $(shell git describe --tags --dirty --always)-dev-build
@@ -264,6 +264,7 @@ clean:
 build:  $(NODE_CONTAINER_BINARY)
 # Use this to populate the vendor directory after checking out the repository.
 # To update upstream dependencies, delete the glide.lock file first.
+
 vendor: glide.lock
 	# Ensure that the glide cache directory exists.
 	mkdir -p $(HOME)/.glide
@@ -280,7 +281,6 @@ vendor: glide.lock
 		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
 		-w /go/src/$(PACKAGE_NAME) \
 		$(CALICO_BUILD) glide install -strip-vendor
-
 
 $(NODE_CONTAINER_BINARY): vendor $(SRC_FILES)
 	docker run --rm \
@@ -464,10 +464,25 @@ $(WINDOWS_ARCHIVE_BINARY): $(WINDOWS_BINARY)
 
 ###############################################################################
 # Managing the upstream library pins
+#
+# If you're updating the pins with a non-release branch checked out,
+# set PIN_BRANCH to the parent branch, e.g.:
+#
+#     PIN_BRANCH=release-v2.5 make update-pins
+#        - or -
+#     PIN_BRANCH=master make update-pins
+#
 ###############################################################################
 
 ## Update dependency pins in glide.yaml
 update-pins: update-licensing-pin update-libcalico-pin update-felix-pin update-cni-plugin-pin update-confd-pin
+	docker run --rm \
+        -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw $$EXTRA_DOCKER_BIND \
+        -v $(HOME)/.glide:/home/user/.glide:rw \
+        -v $$SSH_AUTH_SOCK:/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent \
+        -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+        -w /go/src/$(PACKAGE_NAME) \
+        $(CALICO_BUILD) glide up --strip-vendor
 
 ## deprecated target alias
 update-libcalico: update-pins
@@ -486,15 +501,19 @@ guard-ssh-forwarding-bug:
 
 
 ###############################################################################
+## Set the default upstream repo branch to the current repo's branch,
+## e.g. "master" or "release-vX.Y", but allow it to be overridden.
+PIN_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
+
+###############################################################################
 ## libcalico
 
 ## Set the default LIBCALICO source for this project
 LIBCALICO_PROJECT_DEFAULT=tigera/libcalico-go-private.git
 LIBCALICO_GLIDE_LABEL=projectcalico/libcalico-go
 
-## Default the LIBCALICO repo and version but allow them to be overridden (master or release-vX.Y)
 ## default LIBCALICO branch to the same branch name as the current checked out repo
-LIBCALICO_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
+LIBCALICO_BRANCH?=$(PIN_BRANCH)
 LIBCALICO_REPO?=github.com/$(LIBCALICO_PROJECT_DEFAULT)
 LIBCALICO_VERSION?=$(shell git ls-remote git@github.com:$(LIBCALICO_PROJECT_DEFAULT) $(LIBCALICO_BRANCH) 2>/dev/null | cut -f 1)
 
@@ -529,7 +548,7 @@ FELIX_GLIDE_LABEL=projectcalico/felix
 
 ## Default the FELIX repo and version but allow them to be overridden (master or release-vX.Y)
 ## default FELIX branch to the same branch name as the current checked out repo
-FELIX_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
+FELIX_BRANCH?=$(PIN_BRANCH)
 FELIX_REPO?=github.com/$(FELIX_PROJECT_DEFAULT)
 FELIX_VERSION?=$(shell git ls-remote git@github.com:$(FELIX_PROJECT_DEFAULT) $(FELIX_BRANCH) 2>/dev/null | cut -f 1)
 
@@ -563,9 +582,8 @@ update-felix-pin: guard-ssh-forwarding-bug guard-git-felix
 CNIPLUGIN_PROJECT_DEFAULT=tigera/cni-plugin-private.git
 CNIPLUGIN_GLIDE_LABEL=projectcalico/cni-plugin
 
-## Default the CNIPLUGIN repo and version but allow them to be overridden (master or release-vX.Y)
-## default CNIPLUGIN branch to the same branch name as the current checked out repo
-CNIPLUGIN_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
+# CNIPLUGIN is only used for testing and we only maintain "master" branch in cni-plugin-private
+CNIPLUGIN_BRANCH?="master"
 CNIPLUGIN_REPO?=github.com/$(CNIPLUGIN_PROJECT_DEFAULT)
 CNIPLUGIN_VERSION?=$(shell git ls-remote git@github.com:$(CNIPLUGIN_PROJECT_DEFAULT) $(CNIPLUGIN_BRANCH) 2>/dev/null | cut -f 1)
 
@@ -599,9 +617,7 @@ update-cni-plugin-pin: guard-ssh-forwarding-bug guard-git-cni-plugin
 LICENSING_PROJECT_DEFAULT=tigera/licensing
 LICENSING_GLIDE_LABEL=tigera/licensing
 
-## Default the LICENSING repo and version but allow them to be overridden (master or release-vX.Y)
-## default LICENSING branch to the same branch name as the current checked out repo
-LICENSING_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
+LICENSING_BRANCH?=$(PIN_BRANCH)
 LICENSING_REPO?=github.com/$(LICENSING_PROJECT_DEFAULT)
 LICENSING_VERSION?=$(shell git ls-remote git@github.com:$(LICENSING_PROJECT_DEFAULT) $(LICENSING_BRANCH) 2>/dev/null | cut -f 1)
 
@@ -633,11 +649,9 @@ update-licensing-pin: guard-ssh-forwarding-bug guard-git-licensing
 
 ## Set the default CONFD source for this project
 CONFD_PROJECT_DEFAULT=tigera/confd-private.git
-CONFD_GLIDE_LABEL=projectcalico/confd
+CONFD_GLIDE_LABEL=kelseyhightower/confd
 
-## Default the CONFD repo and version but allow them to be overridden (master or release-vX.Y)
-## default CONFD branch to the same branch name as the current checked out repo
-CONFD_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
+CONFD_BRANCH?=$(PIN_BRANCH)
 CONFD_REPO?=github.com/$(CONFD_PROJECT_DEFAULT)
 CONFD_VERSION?=$(shell git ls-remote git@github.com:$(CONFD_PROJECT_DEFAULT) $(CONFD_BRANCH) 2>/dev/null | cut -f 1)
 
