@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -13,19 +13,23 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
-const FlowLogFilename = "flows.log"
+const (
+	FlowLogFilename = "flows.log"
+	DNSLogFilename  = "dns.log"
+)
 
-// fileDispatcher is a FlowLogDispatcher that writes the flow logs to a local,
-// auto-rotated log file.  We write one JSON-encoded flow log per line.
+// fileDispatcher is a LogDispatcher that writes logs to a local,
+// auto-rotated log file.  We write one JSON-encoded log per line.
 type fileDispatcher struct {
 	directory string
+	fileName  string
 	maxMB     int
 	numFiles  int
 	logger    io.WriteCloser
 }
 
-func NewFileDispatcher(directory string, maxMB, numFiles int) FlowLogDispatcher {
-	return &fileDispatcher{directory: directory, maxMB: maxMB, numFiles: numFiles}
+func NewFileDispatcher(directory, fileName string, maxMB, numFiles int) LogDispatcher {
+	return &fileDispatcher{directory: directory, fileName: fileName, maxMB: maxMB, numFiles: numFiles}
 }
 
 func (d *fileDispatcher) Initialize() error {
@@ -41,29 +45,19 @@ func (d *fileDispatcher) Initialize() error {
 		return fmt.Errorf("can't make directories for new logfile: %s", err)
 	}
 	d.logger = &lumberjack.Logger{
-		Filename:   path.Join(d.directory, FlowLogFilename),
+		Filename:   path.Join(d.directory, d.fileName),
 		MaxSize:    d.maxMB,
 		MaxBackups: d.numFiles,
 	}
 	return nil
 }
 
-func (d *fileDispatcher) Dispatch(fl []*FlowLog) error {
-	log.Debug("Dispatching flow logs to file")
-	for _, l := range fl {
-		o := toOutput(l)
-		b, err := json.Marshal(o)
-		if err != nil {
-			// This indicates a bug, not a runtime error since we should always
-			// be able to serialize.
-			log.WithError(err).
-				WithField("FlowLog", o).
-				Panic("unable to serialize flow log to JSON")
-		}
+func (d *fileDispatcher) Dispatch(logSlice interface{}) error {
+	writeLog := func(b []byte) error {
 		b = append(b, '\n')
 		// It is an error to call Dispatch before Initialize, so it's safe to
 		// assume d.logger is non-nil.
-		_, err = d.logger.Write(b)
+		_, err := d.logger.Write(b)
 		if err != nil {
 			// NOTE: the FlowLogsReporter ignores errors returned by Dispatch,
 			// so log the error here.  We don't want to do anything more drastic
@@ -71,6 +65,25 @@ func (d *fileDispatcher) Dispatch(fl []*FlowLog) error {
 			// recoverable.
 			log.WithError(err).Error("unable to write flow log to file")
 			return err
+		}
+		return nil
+	}
+	switch fl := logSlice.(type) {
+	case []*FlowLog:
+		log.Debug("Dispatching flow logs to file")
+		for _, l := range fl {
+			o := toOutput(l)
+			b, err := json.Marshal(o)
+			if err != nil {
+				// This indicates a bug, not a runtime error since we should always
+				// be able to serialize.
+				log.WithError(err).
+					WithField("FlowLog", o).
+					Panic("unable to serialize flow log to JSON")
+			}
+			if err = writeLog(b); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

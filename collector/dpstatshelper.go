@@ -1,6 +1,6 @@
 // +build !windows
 
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -46,7 +46,7 @@ func StartDataplaneStatsCollector(configParams *config.Config, lookupsCache *cal
 		rm.RegisterMetricsReporter(pr)
 	}
 	log.Debugf("CloudWatchLogsReporterEnabled %v", configParams.CloudWatchLogsReporterEnabled)
-	dispatchers := map[string]FlowLogDispatcher{}
+	dispatchers := map[string]LogDispatcher{}
 	if configParams.CloudWatchLogsReporterEnabled {
 		logGroupName := strings.Replace(
 			configParams.CloudWatchLogsLogGroupName,
@@ -79,6 +79,7 @@ func StartDataplaneStatsCollector(configParams *config.Config, lookupsCache *cal
 		}).Info("Creating Flow Logs FileDispatcher")
 		fd := NewFileDispatcher(
 			configParams.FlowLogsFileDirectory,
+			FlowLogFilename,
 			configParams.FlowLogsFileMaxFileSizeMB,
 			configParams.FlowLogsFileMaxFiles,
 		)

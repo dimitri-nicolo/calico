@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -28,14 +28,14 @@ type FlowLogAggregator interface {
 	FeedUpdate(MetricUpdate) error
 }
 
-type FlowLogDispatcher interface {
+type LogDispatcher interface {
 	Initialize() error
-	Dispatch([]*FlowLog) error
+	Dispatch(logSlice interface{}) error
 }
 
 type aggregatorRef struct {
 	a FlowLogAggregator
-	d []FlowLogDispatcher
+	d []LogDispatcher
 }
 
 var FlowLogAvg *FlowLogAverage
@@ -48,7 +48,7 @@ type FlowLogAverage struct {
 
 // FlowLogsReporter implements the MetricsReporter interface.
 type FlowLogsReporter struct {
-	dispatchers   map[string]FlowLogDispatcher
+	dispatchers   map[string]LogDispatcher
 	aggregators   []aggregatorRef
 	flushInterval time.Duration
 	flushTicker   *jitter.Ticker
@@ -93,7 +93,7 @@ func GetAndResetFlowsPerMinute() (flowsPerMinute float64) {
 
 // NewFlowLogsReporter constructs a FlowLogs MetricsReporter using
 // a dispatcher and aggregator.
-func NewFlowLogsReporter(dispatchers map[string]FlowLogDispatcher, flushInterval time.Duration, healthAggregator *health.HealthAggregator, hepEnabled bool) *FlowLogsReporter {
+func NewFlowLogsReporter(dispatchers map[string]LogDispatcher, flushInterval time.Duration, healthAggregator *health.HealthAggregator, hepEnabled bool) *FlowLogsReporter {
 	if healthAggregator != nil {
 		healthAggregator.RegisterReporter(healthName, &health.HealthReport{Live: true, Ready: true}, healthInterval*2)
 	}
