@@ -258,6 +258,11 @@ type Config struct {
 	FlowLogsFileEnabledForAllowed         bool   `config:"bool;true"`
 	FlowLogsFileEnabledForDenied          bool   `config:"bool;true"`
 
+	DNSLogsFileDirectory     string        `config:"string;/var/log/calico/dnslogs"`
+	DNSLogsFileMaxFiles      int           `config:"int;5"`
+	DNSLogsFileMaxFileSizeMB int           `config:"int;100"`
+	DNSLogsFlushInterval     time.Duration `config:"seconds;1"`
+
 	KubeNodePortRanges []numorstring.Port `config:"portrange-list;30000:32767"`
 	NATPortRange       numorstring.Port   `config:"portrange;"`
 	NATOutgoingAddress net.IP             `config:"ipv4;"`

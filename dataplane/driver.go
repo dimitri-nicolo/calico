@@ -218,6 +218,10 @@ func StartDataplaneDriver(configParams *config.Config,
 			Collector:                       collector,
 			DNSCacheFile:                    configParams.DNSCacheFile,
 			DNSCacheSaveInterval:            configParams.DNSCacheSaveInterval,
+			DNSLogsFileDirectory:            configParams.DNSLogsFileDirectory,
+			DNSLogsFileMaxFileSizeMB:        configParams.DNSLogsFileMaxFileSizeMB,
+			DNSLogsFileMaxFiles:             configParams.DNSLogsFileMaxFiles,
+			DNSLogsFlushInterval:            configParams.DNSLogsFlushInterval,
 		}
 		stopChan := make(chan *sync.WaitGroup, 1)
 		intDP := intdataplane.NewIntDataplaneDriver(dpConfig, stopChan)

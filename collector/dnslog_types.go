@@ -1,3 +1,5 @@
+// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+
 package collector
 
 import (
@@ -406,8 +408,8 @@ type DNSLog struct {
 	// TODO
 }
 
-func (d *DNSData) ToDNSLog(startTime, endTime time.Time, includeLabels bool) DNSLog {
-	dl := DNSLog{
+func (d *DNSData) ToDNSLog(startTime, endTime time.Time, includeLabels bool) *DNSLog {
+	dl := &DNSLog{
 		StartTime: startTime,
 		EndTime:   endTime,
 		DNSMeta:   d.DNSMeta,

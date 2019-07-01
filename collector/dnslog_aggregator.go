@@ -1,3 +1,5 @@
+// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+
 package collector
 
 import (
@@ -50,7 +52,9 @@ func (d *dnsLogAggregator) FeedUpdate(dns *layers.DNS) error {
 	}
 
 	if _, ok := d.dnsStore[meta]; ok {
-		d.dnsStore[meta].Merge(spec)
+		existing := d.dnsStore[meta]
+		existing.Merge(spec)
+		d.dnsStore[meta] = existing
 	} else {
 		d.dnsStore[meta] = spec
 	}
@@ -59,5 +63,14 @@ func (d *dnsLogAggregator) FeedUpdate(dns *layers.DNS) error {
 }
 
 func (d *dnsLogAggregator) Get() []*DNSLog {
-	panic("implement me")
+	var dnsLogs []*DNSLog
+	for meta, spec := range d.dnsStore {
+		dnsData := DNSData{meta, spec}
+		dnsLogs = append(dnsLogs, dnsData.ToDNSLog(
+			time.Now(),
+			time.Now(),
+			false,
+		))
+	}
+	return dnsLogs
 }

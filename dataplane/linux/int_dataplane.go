@@ -165,6 +165,12 @@ type Config struct {
 	// Config for DNS policy.
 	DNSCacheFile         string
 	DNSCacheSaveInterval time.Duration
+
+	// Config for DNS activity logging
+	DNSLogsFileDirectory     string
+	DNSLogsFileMaxFileSizeMB int
+	DNSLogsFileMaxFiles      int
+	DNSLogsFlushInterval     time.Duration
 }
 
 // InternalDataplane implements an in-process Felix dataplane driver based on iptables
@@ -403,11 +409,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	}
 
 	dp.endpointStatusCombiner = newEndpointStatusCombiner(dp.fromDataplane, config.IPv6Enabled)
-	dp.domainInfoStore = newDomainInfoStore(
-		dp.domainInfoChanges,
-		config.DNSCacheFile,
-		config.DNSCacheSaveInterval,
-	)
+	dp.domainInfoStore = newDomainInfoStore(dp.domainInfoChanges, &config)
 
 	callbacks := newCallbacks()
 	dp.callbacks = callbacks
