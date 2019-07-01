@@ -30,7 +30,7 @@ The earliest point in the packet processing pipeline that packets can be dropped
 | Kernel          | The kernel supports **XDP generic mode** and Calico is configured to explicitly use it. This mode is rarely used and has no performance benefits over iptables raw mode below. To enable, see [Felix Configuration]({{site.baseurl}}/{{page.version}}/reference/resources/felixconfig).   | Fast        |
 | Kernel          | If none of the modes above are available, **iptables raw** mode is used. | Fast        |
 
->**Note**: XDP modes require Linux kernel v4.16 or later.
+>**Note**: XDP modes require Linux kernel v4.16 or later.  XDP mode is incompatible with flow log generation; if host endpoint flow logs and XDP are both enabled, no flow logs will be generated for the XDP-optimised rules.
 {: .alert .alert-info}
 
 ### How to
