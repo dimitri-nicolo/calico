@@ -231,9 +231,10 @@ type Config struct {
 	SyslogReporterAddress       string        `config:"string;"`
 	DeletedMetricsRetentionSecs time.Duration `config:"seconds;30"`
 
-	FlowLogsEnableHostEndpoint bool          `config:"bool;false"`
-	FlowLogsFlushInterval      time.Duration `config:"seconds;300"`
-	FlowLogsEnableNetworkSets  bool          `config:"bool;false"`
+	FlowLogsEnableHostEndpoint     bool          `config:"bool;false"`
+	FlowLogsFlushInterval          time.Duration `config:"seconds;300"`
+	FlowLogsEnableNetworkSets      bool          `config:"bool;false"`
+	FlowLogsMaxOriginalIPsIncluded int           `config:"int;50"`
 
 	CloudWatchLogsReporterEnabled           bool          `config:"bool;false"`
 	CloudWatchLogsFlushInterval             time.Duration `config:"seconds;0"` // Deprecated

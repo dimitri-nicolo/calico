@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -24,7 +24,10 @@ const (
 	FlowPrefixName
 )
 
-const noRuleActionDefined = 0
+const (
+	noRuleActionDefined  = 0
+	defaultMaxOrigIPSize = 50
+)
 
 // flowLogAggregator builds and implements the FlowLogAggregator and
 // FlowLogGetter interfaces.
@@ -36,6 +39,7 @@ type flowLogAggregator struct {
 	flMutex              sync.RWMutex
 	includeLabels        bool
 	includePolicies      bool
+	maxOriginalIPsSize   int
 	aggregationStartTime time.Time
 	handledAction        rules.RuleAction
 }
@@ -46,6 +50,7 @@ func NewFlowLogAggregator() FlowLogAggregator {
 		kind:                 FlowDefault,
 		flowStore:            make(map[FlowMeta]FlowSpec),
 		flMutex:              sync.RWMutex{},
+		maxOriginalIPsSize:   defaultMaxOrigIPSize,
 		aggregationStartTime: time.Now(),
 	}
 }
@@ -62,6 +67,11 @@ func (c *flowLogAggregator) IncludeLabels(b bool) FlowLogAggregator {
 
 func (c *flowLogAggregator) IncludePolicies(b bool) FlowLogAggregator {
 	c.includePolicies = b
+	return c
+}
+
+func (c *flowLogAggregator) MaxOriginalIPsSize(s int) FlowLogAggregator {
+	c.maxOriginalIPsSize = s
 	return c
 }
 
@@ -92,7 +102,7 @@ func (c *flowLogAggregator) FeedUpdate(mu MetricUpdate) error {
 	defer c.flMutex.Unlock()
 	fl, ok := c.flowStore[flowMeta]
 	if !ok {
-		fl = NewFlowSpec(mu)
+		fl = NewFlowSpec(mu, c.maxOriginalIPsSize)
 	} else {
 		fl.aggregateMetricUpdate(mu)
 	}

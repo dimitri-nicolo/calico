@@ -23,6 +23,7 @@ type FlowLogAggregator interface {
 	FlowLogGetter
 	IncludeLabels(bool) FlowLogAggregator
 	IncludePolicies(bool) FlowLogAggregator
+	MaxOriginalIPsSize(int) FlowLogAggregator
 	AggregateOver(FlowAggregationKind) FlowLogAggregator
 	ForAction(rules.RuleAction) FlowLogAggregator
 	FeedUpdate(MetricUpdate) error

@@ -1,14 +1,18 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 
 package collector
 
 import (
+	"net"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 )
+
+const testMaxBoundedSetSize = 5
 
 // Common MetricUpdate definitions
 var (
@@ -84,6 +88,58 @@ var (
 		},
 
 		dstEp: nil,
+
+		ruleIDs:      []*calc.RuleID{ingressRule1Allow},
+		isConnection: false,
+		inMetric: MetricValue{
+			deltaPackets: 1,
+			deltaBytes:   20,
+		},
+	}
+
+	muWithOrigSourceIPs = MetricUpdate{
+		updateType: UpdateTypeReport,
+		tuple:      tuple1,
+
+		srcEp: nil,
+
+		dstEp: &calc.EndpointData{
+			Key: model.WorkloadEndpointKey{
+				Hostname:       "node-02",
+				OrchestratorID: "k8s",
+				WorkloadID:     "default/nginx-412354-5123451",
+				EndpointID:     "4352",
+			},
+			Endpoint: &model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "true"}},
+		},
+
+		origSourceIPs: NewBoundedSetFromSlice(testMaxBoundedSetSize, []net.IP{net.ParseIP(publicIP1Str)}),
+
+		ruleIDs:      []*calc.RuleID{ingressRule1Allow},
+		isConnection: false,
+		inMetric: MetricValue{
+			deltaPackets: 1,
+			deltaBytes:   20,
+		},
+	}
+
+	muWithMultipleOrigSourceIPs = MetricUpdate{
+		updateType: UpdateTypeReport,
+		tuple:      tuple1,
+
+		srcEp: nil,
+
+		dstEp: &calc.EndpointData{
+			Key: model.WorkloadEndpointKey{
+				Hostname:       "node-02",
+				OrchestratorID: "k8s",
+				WorkloadID:     "default/nginx-412354-5123451",
+				EndpointID:     "4352",
+			},
+			Endpoint: &model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "true"}},
+		},
+
+		origSourceIPs: NewBoundedSetFromSlice(testMaxBoundedSetSize, []net.IP{net.ParseIP(publicIP1Str), net.ParseIP(publicIP2Str)}),
 
 		ruleIDs:      []*calc.RuleID{ingressRule1Allow},
 		isConnection: false,
@@ -359,6 +415,25 @@ var _ = Describe("Flow log types tests", func() {
 				Reporter: "dst",
 			}
 			Expect(flowMeta).Should(Equal(expectedFlowMeta))
+		})
+	})
+	Context("FlowExtraRef from MetricUpdate", func() {
+		It("generates the correct flowExtrasRef", func() {
+			By("Extracting the correct information")
+			fe := NewFlowExtrasRef(muWithOrigSourceIPs, testMaxBoundedSetSize)
+			expectedFlowExtraRef := flowExtrasRef{
+				originalSourceIPs: NewBoundedSetFromSlice(testMaxBoundedSetSize, []net.IP{net.ParseIP("1.0.0.1")}),
+			}
+			Expect(fe.originalSourceIPs.ToIPSlice()).Should(ConsistOf(expectedFlowExtraRef.originalSourceIPs.ToIPSlice()))
+			Expect(fe.originalSourceIPs.TotalCount()).Should(Equal(expectedFlowExtraRef.originalSourceIPs.TotalCount()))
+
+			By("aggregating the metric update")
+			fe.aggregateFlowExtrasRef(muWithMultipleOrigSourceIPs)
+			expectedFlowExtraRef = flowExtrasRef{
+				originalSourceIPs: NewBoundedSetFromSlice(testMaxBoundedSetSize, []net.IP{net.ParseIP("1.0.0.1"), net.ParseIP("2.0.0.2")}),
+			}
+			Expect(fe.originalSourceIPs.ToIPSlice()).Should(ConsistOf(expectedFlowExtraRef.originalSourceIPs.ToIPSlice()))
+			Expect(fe.originalSourceIPs.TotalCount()).Should(Equal(expectedFlowExtraRef.originalSourceIPs.TotalCount()))
 		})
 	})
 

@@ -4,6 +4,7 @@ package collector
 
 import (
 	"fmt"
+	"net"
 	"strconv"
 	"strings"
 	"time"
@@ -109,13 +110,15 @@ type FlowSpec struct {
 	FlowLabels
 	FlowPolicies
 	FlowStats
+	flowExtrasRef
 }
 
-func NewFlowSpec(mu MetricUpdate) FlowSpec {
+func NewFlowSpec(mu MetricUpdate, maxOriginalIPsSize int) FlowSpec {
 	return FlowSpec{
-		FlowLabels:   NewFlowLabels(mu),
-		FlowPolicies: NewFlowPolicies(mu),
-		FlowStats:    NewFlowStats(mu),
+		FlowLabels:    NewFlowLabels(mu),
+		FlowPolicies:  NewFlowPolicies(mu),
+		FlowStats:     NewFlowStats(mu),
+		flowExtrasRef: NewFlowExtrasRef(mu, maxOriginalIPsSize),
 	}
 }
 
@@ -123,6 +126,7 @@ func (f *FlowSpec) aggregateMetricUpdate(mu MetricUpdate) {
 	f.aggregateFlowLabels(mu)
 	f.FlowPolicies.aggregateMetricUpdate(mu)
 	f.aggregateFlowStats(mu)
+	f.aggregateFlowExtrasRef(mu)
 }
 
 // FlowSpec has FlowStats that are stats assocated with a given FlowMeta
@@ -136,6 +140,9 @@ func (f FlowSpec) reset() FlowSpec {
 	f.flowsRefs = f.flowsRefsActive.Copy()
 	f.FlowReportedStats = FlowReportedStats{
 		NumFlows: f.flowsRefs.Len(),
+	}
+	if f.flowExtrasRef.originalSourceIPs != nil {
+		f.flowExtrasRef.originalSourceIPs.Reset()
 	}
 
 	return f
@@ -223,6 +230,32 @@ type FlowReportedStats struct {
 	NumFlowsCompleted     int `json:"numFlowsCompleted"`
 }
 
+type flowExtrasRef struct {
+	originalSourceIPs *boundedSet
+}
+
+func NewFlowExtrasRef(mu MetricUpdate, maxOriginalIPsSize int) flowExtrasRef {
+	var osip *boundedSet
+	if mu.origSourceIPs != nil {
+		osip = NewBoundedSetFromSliceWithTotalCount(maxOriginalIPsSize, mu.origSourceIPs.ToIPSlice(), mu.origSourceIPs.TotalCount())
+	} else {
+		osip = NewBoundedSet(maxOriginalIPsSize)
+	}
+	return flowExtrasRef{originalSourceIPs: osip}
+}
+
+func (fer *flowExtrasRef) aggregateFlowExtrasRef(mu MetricUpdate) {
+	if mu.origSourceIPs != nil {
+		fer.originalSourceIPs.Combine(mu.origSourceIPs)
+	}
+}
+
+// FlowExtras contains some additional useful information for flows.
+type FlowExtras struct {
+	OriginalSourceIPs    []net.IP `json:"originalSourceIPs"`
+	NumOriginalSourceIPs int      `json:"numOriginalSourceIPs"`
+}
+
 // flowReferences are internal only stats used for computing numbers of flows
 type flowReferences struct {
 	// The set of unique flows that were started within the reporting interval. This is added to when a new flow
@@ -280,7 +313,6 @@ func NewFlowStats(mu MetricUpdate) FlowStats {
 }
 
 func (f *FlowStats) aggregateFlowStats(mu MetricUpdate) {
-	// TODO(doublek): Handle metadata updates.
 	switch {
 	case mu.updateType == UpdateTypeReport && !f.flowsRefsActive.Contains(mu.tuple):
 		f.flowsStartedRefs.Add(mu.tuple)
@@ -321,6 +353,7 @@ type FlowLog struct {
 	FlowLabels
 	FlowPolicies
 	FlowReportedStats
+	FlowExtras
 }
 
 // ToFlowLog converts a FlowData to a FlowLog
@@ -330,6 +363,13 @@ func (f FlowData) ToFlowLog(startTime, endTime time.Time, includeLabels bool, in
 	fl.FlowReportedStats = f.FlowReportedStats
 	fl.StartTime = startTime
 	fl.EndTime = endTime
+	if f.flowExtrasRef.originalSourceIPs != nil {
+		fe := FlowExtras{
+			OriginalSourceIPs:    f.flowExtrasRef.originalSourceIPs.ToIPSlice(),
+			NumOriginalSourceIPs: f.flowExtrasRef.originalSourceIPs.TotalCount(),
+		}
+		fl.FlowExtras = fe
+	}
 
 	if includeLabels {
 		fl.FlowLabels = f.FlowLabels
@@ -348,7 +388,7 @@ func (f *FlowLog) Deserialize(fl string) error {
 	// Format is
 	// startTime endTime srcType srcNamespace srcName srcLabels dstType dstNamespace dstName dstLabels srcIP dstIP proto srcPort dstPort numFlows numFlowsStarted numFlowsCompleted flowReporter packetsIn packetsOut bytesIn bytesOut action policies
 	// Sample entry with no aggregation and no labels.
-	// 1529529591 1529529892 wep policy-demo nginx-7d98456675-2mcs4 nginx-7d98456675-* - wep kube-system kube-dns-7cc87d595-pxvxb kube-dns-7cc87d595-* - 192.168.224.225 192.168.135.53 17 36486 53 1 1 1 in 1 1 73 119 allow ["0|tier|namespace/tier.policy|allow"]
+	// 1529529591 1529529892 wep policy-demo nginx-7d98456675-2mcs4 nginx-7d98456675-* - wep kube-system kube-dns-7cc87d595-pxvxb kube-dns-7cc87d595-* - 192.168.224.225 192.168.135.53 17 36486 53 1 1 1 in 1 1 73 119 allow ["0|tier|namespace/tier.policy|allow"] [1.0.0.1] 1
 
 	var (
 		srcType, dstType FlowLogEndpointType
@@ -441,6 +481,25 @@ func (f *FlowLog) Deserialize(fl string) error {
 		for _, p := range polParts {
 			f.FlowPolicies[p] = emptyValue
 		}
+	}
+
+	// Parse original source IPs, empty ones are just -
+	if parts[27] == "-" {
+		f.FlowExtras = FlowExtras{}
+	} else if len(parts[27]) > 1 {
+		ips := []net.IP{}
+		exParts := strings.Split(parts[27][1:len(parts[27])-1], ",")
+		for _, ipStr := range exParts {
+			ip := net.ParseIP(ipStr)
+			if ip == nil {
+				continue
+			}
+			ips = append(ips, ip)
+		}
+		f.FlowExtras = FlowExtras{
+			OriginalSourceIPs: ips,
+		}
+		f.FlowExtras.NumOriginalSourceIPs, _ = strconv.Atoi(parts[28])
 	}
 
 	return nil

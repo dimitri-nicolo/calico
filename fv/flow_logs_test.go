@@ -1,6 +1,6 @@
 // +build fvtests
 
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 
 package fv_test
 
@@ -573,9 +573,9 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 					// Build a FlowMeta with the metadata and IPs that we are looking for.
 					var template string
 					if dstIP != "" {
-						template = "1 2 " + srcMeta + " - " + dstMeta + " - " + srcIP + " " + dstIP + " 6 0 8055 1 1 0 " + reporter + " 4 6 260 364 " + action + " " + expectedPoliciesStr
+						template = "1 2 " + srcMeta + " - " + dstMeta + " - " + srcIP + " " + dstIP + " 6 0 8055 1 1 0 " + reporter + " 4 6 260 364 " + action + " " + expectedPoliciesStr + " - 0"
 					} else {
-						template = "1 2 " + srcMeta + " - " + dstMeta + " - - - 6 0 8055 1 1 0 " + reporter + " 4 6 260 364 " + action + " " + expectedPoliciesStr
+						template = "1 2 " + srcMeta + " - " + dstMeta + " - - - 6 0 8055 1 1 0 " + reporter + " 4 6 260 364 " + action + " " + expectedPoliciesStr + " - 0"
 					}
 					fl := &collector.FlowLog{}
 					fl.Deserialize(template)

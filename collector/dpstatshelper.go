@@ -107,15 +107,16 @@ func StartDataplaneStatsCollector(configParams *config.Config, lookupsCache *cal
 		lookupsCache,
 		rm,
 		&Config{
-			StatsDumpFilePath:        configParams.StatsDumpFilePath,
-			NfNetlinkBufSize:         configParams.NfNetlinkBufSize,
-			IngressGroup:             1,
-			EgressGroup:              2,
-			AgeTimeout:               DefaultAgeTimeout,
-			InitialReportingDelay:    DefaultInitialReportingDelay,
-			ExportingInterval:        DefaultExportingInterval,
-			ConntrackPollingInterval: DefaultConntrackPollingInterval,
-			EnableNetworkSets:        configParams.FlowLogsEnableNetworkSets,
+			StatsDumpFilePath:            configParams.StatsDumpFilePath,
+			NfNetlinkBufSize:             configParams.NfNetlinkBufSize,
+			IngressGroup:                 1,
+			EgressGroup:                  2,
+			AgeTimeout:                   DefaultAgeTimeout,
+			InitialReportingDelay:        DefaultInitialReportingDelay,
+			ExportingInterval:            DefaultExportingInterval,
+			ConntrackPollingInterval:     DefaultConntrackPollingInterval,
+			EnableNetworkSets:            configParams.FlowLogsEnableNetworkSets,
+			MaxOriginalSourceIPsIncluded: configParams.FlowLogsMaxOriginalIPsIncluded,
 		},
 	)
 
@@ -157,6 +158,7 @@ func configureFlowAggregation(configParams *config.Config, cw *FlowLogsReporter)
 				AggregateOver(FlowAggregationKind(configParams.CloudWatchLogsAggregationKindForAllowed)).
 				IncludeLabels(configParams.CloudWatchLogsIncludeLabels).
 				IncludePolicies(configParams.CloudWatchLogsIncludePolicies).
+				MaxOriginalIPsSize(configParams.FlowLogsMaxOriginalIPsIncluded).
 				ForAction(rules.RuleActionAllow)
 
 			// Can we use the same aggregator for file logging?
@@ -179,6 +181,7 @@ func configureFlowAggregation(configParams *config.Config, cw *FlowLogsReporter)
 				AggregateOver(FlowAggregationKind(configParams.CloudWatchLogsAggregationKindForDenied)).
 				IncludeLabels(configParams.CloudWatchLogsIncludeLabels).
 				IncludePolicies(configParams.CloudWatchLogsIncludePolicies).
+				MaxOriginalIPsSize(configParams.FlowLogsMaxOriginalIPsIncluded).
 				ForAction(rules.RuleActionDeny)
 			// Can we use the same aggregator for file logging?
 			if configParams.FlowLogsFileEnabled &&
@@ -203,6 +206,7 @@ func configureFlowAggregation(configParams *config.Config, cw *FlowLogsReporter)
 				AggregateOver(FlowAggregationKind(configParams.FlowLogsFileAggregationKindForAllowed)).
 				IncludeLabels(configParams.FlowLogsFileIncludeLabels).
 				IncludePolicies(configParams.FlowLogsFileIncludePolicies).
+				MaxOriginalIPsSize(configParams.FlowLogsMaxOriginalIPsIncluded).
 				ForAction(rules.RuleActionAllow)
 			log.Info("Adding Flow Logs Aggregator (allowed) for File logs")
 			cw.AddAggregator(caa, []string{FlowLogsFileDispatcherName})
@@ -213,6 +217,7 @@ func configureFlowAggregation(configParams *config.Config, cw *FlowLogsReporter)
 				AggregateOver(FlowAggregationKind(configParams.FlowLogsFileAggregationKindForDenied)).
 				IncludeLabels(configParams.FlowLogsFileIncludeLabels).
 				IncludePolicies(configParams.FlowLogsFileIncludePolicies).
+				MaxOriginalIPsSize(configParams.FlowLogsMaxOriginalIPsIncluded).
 				ForAction(rules.RuleActionDeny)
 			log.Info("Adding Flow Logs Aggregator (denied) for File logs")
 			cw.AddAggregator(cad, []string{FlowLogsFileDispatcherName})

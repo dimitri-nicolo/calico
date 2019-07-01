@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"net"
 	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -256,4 +258,55 @@ func stringToLabels(labelStr string) map[string]string {
 
 	labels := strings.Split(labelStr[1:len(labelStr)-1], ",")
 	return unflattenLabels(labels)
+}
+
+func flattenIPSlice(ips []net.IP) []string {
+	ipSlice := []string{}
+	for _, ip := range ips {
+		ipSlice = append(ipSlice, ip.String())
+	}
+
+	return ipSlice
+}
+
+func unflattenIPSlice(ipSlice []string) []net.IP {
+	ips := []net.IP{}
+	for _, ipStr := range ipSlice {
+		ip := net.ParseIP(ipStr)
+		if ip == nil {
+			continue
+		}
+		ips = append(ips, ip)
+	}
+
+	return ips
+}
+
+func flowExtrasToString(extras FlowExtras) string {
+	if len(extras.OriginalSourceIPs) == 0 {
+		return "- 0"
+	}
+	s := fmt.Sprintf("[%v] %v", strings.Join(flattenIPSlice(extras.OriginalSourceIPs), ","), extras.NumOriginalSourceIPs)
+	return s
+}
+
+func stringToFlowExtras(origIPsStr string, numOrigIPStr string) FlowExtras {
+	if origIPsStr == "-" {
+		return FlowExtras{}
+	}
+
+	ips := strings.Split(origIPsStr[1:len(origIPsStr)-1], ",")
+	var (
+		numOrigIP int
+		err       error
+	)
+	numOrigIP, err = strconv.Atoi(numOrigIPStr)
+	if err != nil {
+		log.WithError(err).Warn("Could not convert NumOriginalSourceIPs to integer")
+		numOrigIP = 0
+	}
+	return FlowExtras{
+		OriginalSourceIPs:    unflattenIPSlice(ips),
+		NumOriginalSourceIPs: numOrigIP,
+	}
 }

@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -55,6 +55,9 @@ type FlowLogJSONOutput struct {
 	PacketsOut            int64 `json:"packets_out"`
 	HTTPRequestsAllowedIn int64 `json:"http_requests_allowed_in"`
 	HTTPRequestsDeniedIn  int64 `json:"http_requests_denied_in"`
+
+	OrigSourceIPs    []net.IP `json:"original_source_ips"`
+	NumOrigSourceIPs int64    `json:"num_original_source_ips"`
 }
 
 type FlowLogLabelsJSONOutput struct {
@@ -132,6 +135,14 @@ func toOutput(l *FlowLog) FlowLogJSONOutput {
 		out.Policies = &FlowLogPoliciesJSONOutput{
 			AllPolicies: all_p,
 		}
+	}
+
+	if l.FlowExtras.OriginalSourceIPs == nil || len(l.FlowExtras.OriginalSourceIPs) == 0 {
+		out.OrigSourceIPs = nil
+		out.NumOrigSourceIPs = int64(0)
+	} else {
+		out.OrigSourceIPs = l.FlowExtras.OriginalSourceIPs
+		out.NumOrigSourceIPs = int64(l.FlowExtras.NumOriginalSourceIPs)
 	}
 
 	out.BytesIn = int64(l.BytesIn)
@@ -249,6 +260,15 @@ func (o FlowLogJSONOutput) ToFlowLog() (FlowLog, error) {
 		fl.FlowPolicies = make(FlowPolicies)
 		for _, pol := range o.Policies.AllPolicies {
 			fl.FlowPolicies[pol] = emptyValue
+		}
+	}
+
+	if o.OrigSourceIPs == nil {
+		fl.FlowExtras = FlowExtras{}
+	} else {
+		fl.FlowExtras = FlowExtras{
+			OriginalSourceIPs:    o.OrigSourceIPs,
+			NumOriginalSourceIPs: int(o.NumOrigSourceIPs),
 		}
 	}
 
