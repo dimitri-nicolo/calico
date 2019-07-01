@@ -40,7 +40,9 @@ if [[ $V -gt $P ]] || [[ $V -gt $E ]] ; then
  	sed -i -r "\|package:[[:print:]]*$LABEL|a\ \ version: MissingLibraryVersion" "$GLIDE"; 
 fi; 
 
+# Extract the original version of the repo's pin
 OLD_VER=$(grep -A 30 $LABEL $GLIDE |grep --max-count=1 --only-matching --perl-regexp "version:\s*\K[^\s]+") ;
+if [[ -z "$OLD_VER" ]]; then echo "unable to determine current version of $LABEL pin"; exit 1; fi
 
 echo "Old version: $OLD_VER";
 echo "New version: $VERSION";
@@ -51,7 +53,6 @@ if [[ "$VERSION" != "$OLD_VER" ]]; then
      if [ $REPO != "github.com/$DEFAULT_REPO" ]; then 
        glide mirror set https://github.com/$DEFAULT_REPO $REPO --vcs git; echo "GLIDE MIRRORS UPDATED"; glide mirror list; 
      fi;
-   glide up --strip-vendor || glide up --strip-vendor; 
  else 
    echo "No change to $LABEL."; 
 fi;
