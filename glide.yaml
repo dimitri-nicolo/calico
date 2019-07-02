@@ -6,7 +6,7 @@ import:
 - package: github.com/satori/go.uuid
   version: ^1.2.0
 - package: github.com/sirupsen/logrus
-  version: ^1.0.4
+  repo: https://github.com/projectcalico/logrus
 - package: github.com/coreos/etcd
   version: v3.3.8
   subpackages:
@@ -38,7 +38,7 @@ import:
   - networking/v1
 - package: k8s.io/apimachinery
 - package: github.com/projectcalico/felix
-  version: 357836b476ccac08adb84a54b68b306927b9b137
+  version: 7d4ef43953ca7627f9bbb5ae3afe2472718eee62
   repo: git@github.com:tigera/felix-private.git
   vcs: git
 - package: k8s.io/apiserver
