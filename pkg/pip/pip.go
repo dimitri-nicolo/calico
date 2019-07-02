@@ -67,12 +67,12 @@ func (s *pip) CalculateFlowImpact(ctx context.Context, npcs []NetworkPolicyChang
 	var retFlows = []flow.Flow{}
 	for _, f := range flows {
 		clog := log.WithFields(log.Fields{
-			"flowSrc":  f.Src_name,
-			"flowDest": f.Dest_name,
+			"flowSrc":  f.Source.Name,
+			"flowDest": f.Dest.Name,
 		})
 
 		// before we process this endpoint, check if it's even selected by any of our input policies.
-		if !ss.anySelectorSelects(f.Src_labels) && !!ss.anySelectorSelects(f.Dest_labels) {
+		if !ss.anySelectorSelects(f.Source.Labels) && !!ss.anySelectorSelects(f.Dest.Labels) {
 			clog.Debug("skipping flow because no policy applies to it")
 			continue
 		}
@@ -89,11 +89,11 @@ func (s *pip) CalculateFlowImpact(ctx context.Context, npcs []NetworkPolicyChang
 		orderedTiersAndPolicies := s.xc.GetOrderedTiersAndPolicies()
 
 		// if the flow came from the cluster, see if it would have left the source.
-		if f.Src_type != flow.EndpointTypeNet {
+		if f.Source.Type != flow.EndpointTypeNet {
 			if srcEp := getSrcResource(f); srcEp != nil {
 				predictedAction = computeAction(f, orderedTiersAndPolicies)
 			} else {
-				clog.WithField("srcType", f.Src_type).Warn("skipping flow with unexpected source type")
+				clog.WithField("srcType", f.Source.Type).Warn("skipping flow with unexpected source type")
 				continue
 			}
 		}
@@ -105,7 +105,7 @@ func (s *pip) CalculateFlowImpact(ctx context.Context, npcs []NetworkPolicyChang
 			if destEp := getDstResource(f); destEp != nil {
 				predictedAction = computeAction(f, orderedTiersAndPolicies)
 			} else {
-				clog.WithField("destType", f.Dest_type).Warn("skipping flow with unexpected dest type")
+				clog.WithField("destType", f.Dest.Type).Warn("skipping flow with unexpected dest type")
 				continue
 			}
 		}
@@ -239,27 +239,27 @@ func (s *pip) loadInitialPolicy() error {
 // It returns nil if the source is not a known resource type or if the traffic originated
 // from outside the cluster.
 func getSrcResource(f flow.Flow) resources.Resource {
-	switch f.Src_type {
+	switch f.Source.Type {
 	case flow.EndpointTypeWep:
 		return &corev1.Pod{
 			ObjectMeta: v1.ObjectMeta{
-				Name:      f.Src_name,
-				Namespace: f.Src_NS,
-				Labels:    f.Src_labels,
+				Name:      f.Source.Name,
+				Namespace: f.Source.Namespace,
+				Labels:    f.Source.Labels,
 			},
 			Status: corev1.PodStatus{
-				PodIP: f.Src_IP,
+				PodIP: f.Source.IP,
 			},
 		}
 	case flow.EndpointTypeHep:
 		return &libv3.HostEndpoint{
 			ObjectMeta: v1.ObjectMeta{
-				Name:      f.Src_name,
-				Namespace: f.Src_NS,
-				Labels:    f.Src_labels,
+				Name:      f.Source.Name,
+				Namespace: f.Source.Namespace,
+				Labels:    f.Source.Labels,
 			},
 			Spec: libv3.HostEndpointSpec{
-				Node: strings.TrimSuffix(f.Src_name, "-*"),
+				Node: strings.TrimSuffix(f.Source.Name, "-*"),
 			},
 		}
 	}
@@ -270,27 +270,27 @@ func getSrcResource(f flow.Flow) resources.Resource {
 // It returns nil if the destination is not a known resource type or if the traffic was sent
 // outside the cluster.
 func getDstResource(f flow.Flow) resources.Resource {
-	switch f.Dest_type {
+	switch f.Dest.Type {
 	case flow.EndpointTypeWep:
 		return &corev1.Pod{
 			ObjectMeta: v1.ObjectMeta{
-				Name:      f.Dest_name,
-				Namespace: f.Dest_NS,
-				Labels:    f.Dest_labels,
+				Name:      f.Dest.Name,
+				Namespace: f.Dest.Namespace,
+				Labels:    f.Dest.Labels,
 			},
 			Status: corev1.PodStatus{
-				PodIP: f.Dest_IP,
+				PodIP: f.Dest.IP,
 			},
 		}
 	case flow.EndpointTypeHep:
 		return &libv3.HostEndpoint{
 			ObjectMeta: v1.ObjectMeta{
-				Name:      f.Dest_name,
-				Namespace: f.Dest_NS,
-				Labels:    f.Dest_labels,
+				Name:      f.Dest.Name,
+				Namespace: f.Dest.Namespace,
+				Labels:    f.Dest.Labels,
 			},
 			Spec: libv3.HostEndpointSpec{
-				Node: strings.TrimSuffix(f.Src_name, "-*"),
+				Node: strings.TrimSuffix(f.Source.Name, "-*"),
 			},
 		}
 	}

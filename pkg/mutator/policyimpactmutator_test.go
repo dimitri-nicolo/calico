@@ -84,15 +84,15 @@ type mockPip struct {
 // It will also add preview actions fields to select items
 func (p mockPip) CalculateFlowImpact(ctx context.Context, changes []pip.NetworkPolicyChange, flows []flow.Flow) ([]flow.Flow, error) {
 	for i, f := range flows {
-		flows[i].Src_NS = evolve(f.Src_NS)
-		flows[i].Src_name = evolve(f.Src_NS)
-		flows[i].Dest_NS = evolve(f.Dest_NS)
-		flows[i].Dest_name = evolve(f.Dest_name)
+		flows[i].Source.Namespace = evolve(f.Source.Namespace)
+		flows[i].Source.Name = evolve(f.Source.Namespace)
+		flows[i].Dest.Namespace = evolve(f.Dest.Namespace)
+		flows[i].Dest.Name = evolve(f.Dest.Name)
 		flows[i].Proto = evolve(f.Proto)
 
 		flows[i] = addPreviewAction(flows[i])
 
-		log.Info("EVOLVED ", f.Src_NS, " TO ", flows[i].Src_NS)
+		log.Info("EVOLVED ", f.Source.Namespace, " TO ", flows[i].Source.Namespace)
 	}
 	return flows, nil
 }
@@ -113,13 +113,13 @@ func evolve(s string) string {
 
 // inserts preview actions at particular places in certain requests
 func addPreviewAction(flow flow.Flow) flow.Flow {
-	if flow.Src_name == "Metapod" {
+	if flow.Source.Name == "Metapod" {
 		flow.PreviewAction = "allow"
 	}
-	if flow.Src_name == "Blastoise" {
+	if flow.Source.Name == "Blastoise" {
 		flow.PreviewAction = "deny"
 	}
-	if flow.Src_name == "Pidgeotto" {
+	if flow.Source.Name == "Pidgeotto" {
 		flow.PreviewAction = "unknown"
 	}
 	return flow

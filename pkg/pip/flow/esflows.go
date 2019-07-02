@@ -30,45 +30,45 @@ type es_flow struct {
 
 // convert this elastic search flow to a real Flow
 func (es *es_flow) toFlow() Flow {
-	F := Flow{
-		Reporter:      es.Key.Reporter,
-		Src_type:      es.Key.Src_type,
-		Src_NS:        es.Key.Src_NS,
-		Src_name:      es.Key.Src_name,
-		Dest_type:     es.Key.Dest_type,
-		Dest_NS:       es.Key.Dest_NS,
-		Dest_name:     es.Key.Dest_name,
-		Dest_port:     es.Key.Dest_port,
+	return Flow{
+		Reporter: es.Key.Reporter,
+		Source: FlowEndpointData{
+			Type:      es.Key.Src_type,
+			Namespace: es.Key.Src_NS,
+			Name:      es.Key.Src_name,
+			Labels:    es.Source_labels.toFlowLabelMap(),
+		},
+		Dest: FlowEndpointData{
+			Type:      es.Key.Dest_type,
+			Namespace: es.Key.Dest_NS,
+			Name:      es.Key.Dest_name,
+			Port:      es.Key.Dest_port,
+			Labels:    es.Dest_labels.toFlowLabelMap(),
+		},
 		Action:        es.Key.Action,
 		PreviewAction: es.Key.PreviewAction,
 		Proto:         es.Key.Proto,
+		Policies:      es.Policies.toFlowPolicies(),
 	}
-
-	F.Src_labels = es.Source_labels.toFlowLabelMap()
-	F.Dest_labels = es.Dest_labels.toFlowLabelMap()
-
-	F.Policies = es.Policies.toFlowPolicies()
-
-	return F
 }
 
 // populate this elastic search from from a real Flow
 func (es *es_flow) fromFlow(F Flow) {
 	es.Key = es_key{
 		Reporter:      F.Reporter,
-		Src_type:      F.Src_type,
-		Src_NS:        F.Src_NS,
-		Src_name:      F.Src_name,
-		Dest_type:     F.Dest_type,
-		Dest_NS:       F.Dest_NS,
-		Dest_name:     F.Dest_name,
-		Dest_port:     F.Dest_port,
+		Src_type:      F.Source.Type,
+		Src_NS:        F.Source.Namespace,
+		Src_name:      F.Source.Name,
+		Dest_type:     F.Dest.Type,
+		Dest_NS:       F.Dest.Namespace,
+		Dest_name:     F.Dest.Name,
+		Dest_port:     F.Dest.Port,
 		Action:        F.Action,
 		PreviewAction: F.PreviewAction,
 		Proto:         F.Proto,
 	}
-	es.Source_labels.fromFlowLabelMap(F.Src_labels)
-	es.Dest_labels.fromFlowLabelMap(F.Dest_labels)
+	es.Source_labels.fromFlowLabelMap(F.Source.Labels)
+	es.Dest_labels.fromFlowLabelMap(F.Dest.Labels)
 	es.Policies.fromFlowPolicies(F.Policies)
 }
 

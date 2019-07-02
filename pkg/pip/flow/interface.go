@@ -2,22 +2,24 @@ package flow
 
 // A simplified Flow structure
 type Flow struct {
+	Source        FlowEndpointData
+	Dest          FlowEndpointData
 	Reporter      string
-	Src_type      string
-	Src_NS        string
-	Src_IP        string
-	Src_name      string
-	Dest_type     string
-	Dest_NS       string
-	Dest_name     string
-	Dest_port     string
-	Dest_IP       string
 	Action        string
-	Policies      []FlowPolicy
-	Dest_labels   map[string]string
-	Src_labels    map[string]string
 	PreviewAction string
+	Policies      []FlowPolicy
 	Proto         string
+}
+
+// FlowEndpointData can be used to describe the source or destination
+// of a flow log.
+type FlowEndpointData struct {
+	Type      string
+	Namespace string
+	IP        string
+	Name      string
+	Labels    map[string]string
+	Port      string
 }
 
 type FlowPolicy struct {
