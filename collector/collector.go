@@ -561,15 +561,8 @@ func (c *collector) LogDNS(src, dst net.IP, dns *layers.DNS) {
 	}
 	// DNS responses come through here, so the source IP is the DNS server and the dest IP is
 	// the client.
-	var srcAddr, dstAddr [16]byte
-	for i := 0; i < len(src); i++ {
-		srcAddr[i] = src[i]
-	}
-	for i := 0; i < len(src); i++ {
-		dstAddr[i] = dst[i]
-	}
-	serverEP, _ := c.luc.GetEndpoint(srcAddr)
-	clientEP, _ := c.luc.GetEndpoint(dstAddr)
+	serverEP, _ := c.luc.GetEndpoint(ipTo16Byte(src))
+	clientEP, _ := c.luc.GetEndpoint(ipTo16Byte(dst))
 	log.Infof("Src %v -> Server %v", src, serverEP)
 	log.Infof("Dst %v -> Client %v", dst, clientEP)
 	update := DNSUpdate{

@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -42,33 +42,13 @@ func newFlowMeta(mu MetricUpdate) (FlowMeta, error) {
 	f.Tuple = mu.tuple
 
 	// Extract EndpointMetadata info
-	var (
-		srcMeta, dstMeta EndpointMetadata
-		err              error
-	)
-	if mu.srcEp != nil {
-		srcMeta, err = getFlowLogEndpointMetadata(mu.srcEp)
-		if err != nil {
-			return FlowMeta{}, fmt.Errorf("Could not extract metadata for source %v", mu.srcEp)
-		}
-	} else {
-		srcMeta = EndpointMetadata{Type: FlowLogEndpointTypeNet,
-			Namespace:      flowLogFieldNotIncluded,
-			Name:           flowLogFieldNotIncluded,
-			AggregatedName: string(getSubnetType(mu.tuple.src)),
-		}
+	srcMeta, err := getFlowLogEndpointMetadata(mu.srcEp, mu.tuple.src)
+	if err != nil {
+		return FlowMeta{}, fmt.Errorf("Could not extract metadata for source %v", mu.srcEp)
 	}
-	if mu.dstEp != nil {
-		dstMeta, err = getFlowLogEndpointMetadata(mu.dstEp)
-		if err != nil {
-			return FlowMeta{}, fmt.Errorf("Could not extract metadata for destination %v", mu.dstEp)
-		}
-	} else {
-		dstMeta = EndpointMetadata{Type: FlowLogEndpointTypeNet,
-			Namespace:      flowLogFieldNotIncluded,
-			Name:           flowLogFieldNotIncluded,
-			AggregatedName: string(getSubnetType(mu.tuple.dst)),
-		}
+	dstMeta, err := getFlowLogEndpointMetadata(mu.dstEp, mu.tuple.dst)
+	if err != nil {
+		return FlowMeta{}, fmt.Errorf("Could not extract metadata for destination %v", mu.dstEp)
 	}
 
 	f.SrcMeta = srcMeta

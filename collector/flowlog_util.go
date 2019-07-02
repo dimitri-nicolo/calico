@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -94,8 +94,16 @@ func getEndpointNamePrefix(ed *calc.EndpointData) (prefix string) {
 	return
 }
 
-func getFlowLogEndpointMetadata(ed *calc.EndpointData) (EndpointMetadata, error) {
+func getFlowLogEndpointMetadata(ed *calc.EndpointData, ip [16]byte) (EndpointMetadata, error) {
 	var em EndpointMetadata
+	if ed == nil {
+		return EndpointMetadata{
+			Type:           FlowLogEndpointTypeNet,
+			Namespace:      flowLogFieldNotIncluded,
+			Name:           flowLogFieldNotIncluded,
+			AggregatedName: string(getSubnetType(ip)),
+		}, nil
+	}
 
 	switch k := ed.Key.(type) {
 	case model.WorkloadEndpointKey:
@@ -179,6 +187,10 @@ func getFlowLogActionAndReporterFromRuleID(r *calc.RuleID) (fla FlowLogAction, f
 
 func ipStrTo16Byte(ipStr string) [16]byte {
 	addr := net.ParseIP(ipStr)
+	return ipTo16Byte(addr)
+}
+
+func ipTo16Byte(addr net.IP) [16]byte {
 	var addrB [16]byte
 	copy(addrB[:], addr.To16()[:16])
 	return addrB

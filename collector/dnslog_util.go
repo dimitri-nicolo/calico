@@ -16,13 +16,13 @@ func NewDNSMetaSpecFromUpdate(update DNSUpdate) (DNSMeta, DNSSpec, error) {
 		return DNSMeta{}, DNSSpec{}, errors.New("No questions in DNS packet")
 	}
 
-	clientEM, err := getFlowLogEndpointMetadata(update.ClientEP)
+	clientEM, err := getFlowLogEndpointMetadata(update.ClientEP, ipTo16Byte(update.ClientIP))
 	if err != nil {
 		return DNSMeta{}, DNSSpec{}, fmt.Errorf("Could not extract metadata for client %v", update.ClientEP)
 	}
 	clientLabels := getFlowLogEndpointLabels(update.ClientEP)
 
-	serverEM, err := getFlowLogEndpointMetadata(update.ServerEP)
+	serverEM, err := getFlowLogEndpointMetadata(update.ServerEP, ipTo16Byte(update.ServerIP))
 	if err != nil {
 		return DNSMeta{}, DNSSpec{}, fmt.Errorf("Could not extract metadata for server %v", update.ServerEP)
 	}
