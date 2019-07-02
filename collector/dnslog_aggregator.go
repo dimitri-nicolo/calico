@@ -64,12 +64,13 @@ func (d *dnsLogAggregator) FeedUpdate(dns *layers.DNS) error {
 
 func (d *dnsLogAggregator) Get() []*DNSLog {
 	var dnsLogs []*DNSLog
+	aggregationEndTime := time.Now()
 	for meta, spec := range d.dnsStore {
 		dnsData := DNSData{meta, spec}
 		dnsLogs = append(dnsLogs, dnsData.ToDNSLog(
-			time.Now(),
-			time.Now(),
-			false,
+			d.aggregationStartTime,
+			aggregationEndTime,
+			d.includeLabels,
 		))
 	}
 	return dnsLogs
