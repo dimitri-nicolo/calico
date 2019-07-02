@@ -30,16 +30,16 @@ func NewDNSMetaSpecFromGoPacket(clientEP, serverEP *calc.EndpointData, dns *laye
 	}
 	serverLabels := getFlowLogEndpointLabels(serverEP)
 
-	spec := newDNSSpecFromGoPacket(clientLabels, serverEM, serverLabels, dns)
-	meta := newDNSMetaFromSpecAndGoPacket(clientEM, dns, spec)
+	spec := newDNSSpecFromGoPacket(clientLabels, EndpointMetadataWithIP{serverEM, ""}, serverLabels, dns)
+	meta := newDNSMetaFromSpecAndGoPacket(EndpointMetadataWithIP{clientEM, ""}, dns, spec)
 
 	return meta, spec, nil
 }
 
-func newDNSSpecFromGoPacket(clientLabels DNSLabels, serverEM EndpointMetadata, serverLabels DNSLabels, dns *layers.DNS) DNSSpec {
+func newDNSSpecFromGoPacket(clientLabels DNSLabels, serverEM EndpointMetadataWithIP, serverLabels DNSLabels, dns *layers.DNS) DNSSpec {
 	spec := DNSSpec{
 		RRSets:       make(DNSRRSets),
-		Servers:      make(map[EndpointMetadata]DNSLabels),
+		Servers:      make(map[EndpointMetadataWithIP]DNSLabels),
 		ClientLabels: nil,
 		DNSStats: DNSStats{
 			Count: 1,
@@ -53,7 +53,7 @@ func newDNSSpecFromGoPacket(clientLabels DNSLabels, serverEM EndpointMetadata, s
 	return spec
 }
 
-func newDNSMetaFromSpecAndGoPacket(clientEM EndpointMetadata, dns *layers.DNS, spec DNSSpec) DNSMeta {
+func newDNSMetaFromSpecAndGoPacket(clientEM EndpointMetadataWithIP, dns *layers.DNS, spec DNSSpec) DNSMeta {
 	return DNSMeta{
 		ClientMeta: clientEM,
 		Question: DNSName{

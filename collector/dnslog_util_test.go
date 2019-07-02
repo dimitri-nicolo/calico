@@ -136,7 +136,7 @@ var _ = Describe("gopacket to DNS log conversion function", func() {
 
 	Describe("newDNSSpecFromGoPacket", func() {
 		var clientLabels, serverLabels DNSLabels
-		var serverEM EndpointMetadata
+		var serverEM EndpointMetadataWithIP
 
 		It("sets count to 1", func() {
 			spec := newDNSSpecFromGoPacket(clientLabels, serverEM, serverLabels, &layers.DNS{})
@@ -184,7 +184,7 @@ var _ = Describe("gopacket to DNS log conversion function", func() {
 	})
 
 	Describe("newDNSMetaFromSpecAndGoPacket", func() {
-		var serverEM EndpointMetadata
+		var serverEM EndpointMetadataWithIP
 
 		It("fills in the question", func() {
 			meta := newDNSMetaFromSpecAndGoPacket(serverEM, &layers.DNS{

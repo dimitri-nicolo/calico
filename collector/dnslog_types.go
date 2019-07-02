@@ -15,16 +15,21 @@ import (
 	"github.com/google/gopacket/layers"
 )
 
+type EndpointMetadataWithIP struct {
+	EndpointMetadata
+	IP string
+}
+
 type DNSMeta struct {
-	ClientMeta   EndpointMetadata       `json:"clientMeta"`
-	Question     DNSName                `json:"dnsQuestion"`
-	ResponseCode layers.DNSResponseCode `json:"dnsResponseCode"`
-	RRSetsString string                 `json:"-"`
+	ClientMeta   EndpointMetadataWithIP
+	Question     DNSName
+	ResponseCode layers.DNSResponseCode
+	RRSetsString string
 }
 
 type DNSSpec struct {
 	RRSets       DNSRRSets
-	Servers      map[EndpointMetadata]DNSLabels
+	Servers      map[EndpointMetadataWithIP]DNSLabels
 	ClientLabels DNSLabels
 	DNSStats
 }
@@ -58,21 +63,6 @@ func (a *DNSSpec) Encode() *DNSSpecEncoded {
 		b.Servers = append(b.Servers, DNSServer{e, l})
 	}
 	return b
-}
-
-func (e *DNSSpecEncoded) Decode() *DNSSpec {
-	a := &DNSSpec{
-		RRSets:       e.RRSets,
-		ClientLabels: e.ClientLabels,
-		Servers:      make(map[EndpointMetadata]DNSLabels),
-		DNSStats: DNSStats{
-			Count: e.Count,
-		},
-	}
-	for _, s := range e.Servers {
-		a.Servers[s.EndpointMetadata] = s.Labels
-	}
-	return a
 }
 
 type DNSName struct {
@@ -278,15 +268,15 @@ func (d DNSRData) MarshalJSON() ([]byte, error) {
 }
 
 type DNSServer struct {
-	EndpointMetadata
-	Labels DNSLabels `json:"labels,omitempty"`
+	EndpointMetadataWithIP
+	Labels DNSLabels
 }
 
 type dnsServerEncoded struct {
 	Name      string `json:"name"`
 	NameAggr  string `json:"name_aggr"`
 	Namespace string `json:"namespace"`
-	IP        net.IP `json:"ip"`
+	IP        string `json:"ip"`
 }
 
 func (d DNSServer) MarshalJSON() ([]byte, error) {
@@ -294,7 +284,7 @@ func (d DNSServer) MarshalJSON() ([]byte, error) {
 		Name:      d.Name,
 		NameAggr:  d.AggregatedName,
 		Namespace: d.Namespace,
-		IP:        nil, // TODO
+		IP:        d.IP,
 	})
 }
 
@@ -316,7 +306,7 @@ type DNSLog struct {
 	ClientName      string            `json:"client_name"`
 	ClientNameAggr  string            `json:"client_name_aggr"`
 	ClientNamespace string            `json:"client_namespace"`
-	ClientIP        net.IP            `json:"client_ip"`
+	ClientIP        string            `json:"client_ip"`
 	ClientLabels    map[string]string `json:"client_labels"`
 	Servers         []DNSServer       `json:"servers"`
 	QName           string            `json:"qname"`
@@ -336,7 +326,7 @@ func (d *DNSData) ToDNSLog(startTime, endTime time.Time, includeLabels bool) *DN
 		ClientName:      d.ClientMeta.Name,
 		ClientNameAggr:  d.ClientMeta.AggregatedName,
 		ClientNamespace: d.ClientMeta.Namespace,
-		ClientIP:        nil, // TODO
+		ClientIP:        d.ClientMeta.IP,
 		ClientLabels:    d.ClientLabels,
 		Servers:         e.Servers,
 		QName:           d.Question.Name,

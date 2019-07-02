@@ -284,9 +284,9 @@ var _ = Describe("DNS log type tests", func() {
 				origCount := uint(2)
 
 				a := DNSSpec{
-					Servers: map[EndpointMetadata]DNSLabels{
-						{Name: "ns1"}: {"a": "b"},
-						{Name: "ns2"}: {"d": "e"},
+					Servers: map[EndpointMetadataWithIP]DNSLabels{
+						{EndpointMetadata: EndpointMetadata{Name: "ns1"}}: {"a": "b"},
+						{EndpointMetadata: EndpointMetadata{Name: "ns2"}}: {"d": "e"},
 					},
 					ClientLabels: map[string]string{
 						"0": "0",
@@ -296,9 +296,9 @@ var _ = Describe("DNS log type tests", func() {
 					},
 				}
 				b := DNSSpec{
-					Servers: map[EndpointMetadata]DNSLabels{
-						{Name: "ns1"}: {"b": "c"},
-						{Name: "ns3"}: {"f": "g"},
+					Servers: map[EndpointMetadataWithIP]DNSLabels{
+						{EndpointMetadata: EndpointMetadata{Name: "ns1"}}: {"b": "c"},
+						{EndpointMetadata: EndpointMetadata{Name: "ns3"}}: {"f": "g"},
 					},
 					ClientLabels: map[string]string{
 						"1": "2",
@@ -311,10 +311,10 @@ var _ = Describe("DNS log type tests", func() {
 				a.Merge(b)
 				Expect(a.ClientLabels).Should(Equal(b.ClientLabels))
 				Expect(a.Count).Should(Equal(origCount + b.Count))
-				Expect(a.Servers).Should(Equal(map[EndpointMetadata]DNSLabels{
-					{Name: "ns1"}: {"b": "c"},
-					{Name: "ns2"}: {"d": "e"},
-					{Name: "ns3"}: {"f": "g"},
+				Expect(a.Servers).Should(Equal(map[EndpointMetadataWithIP]DNSLabels{
+					{EndpointMetadata: EndpointMetadata{Name: "ns1"}}: {"b": "c"},
+					{EndpointMetadata: EndpointMetadata{Name: "ns2"}}: {"d": "e"},
+					{EndpointMetadata: EndpointMetadata{Name: "ns3"}}: {"f": "g"},
 				}))
 			})
 		})
@@ -331,17 +331,19 @@ var _ = Describe("DNS log type tests", func() {
 				ClientName:      "test-1",
 				ClientNameAggr:  "test-*",
 				ClientNamespace: "test-ns",
-				ClientIP:        nil,
+				ClientIP:        "",
 				ClientLabels: map[string]string{
 					"t1": "a",
 				},
 				Servers: []DNSServer{
 					{
-						EndpointMetadata: EndpointMetadata{
-							Type:           "Pod",
-							Namespace:      "test2-ns",
-							Name:           "test-2",
-							AggregatedName: "test-*",
+						EndpointMetadataWithIP: EndpointMetadataWithIP{
+							EndpointMetadata: EndpointMetadata{
+								Type:           "Pod",
+								Namespace:      "test2-ns",
+								Name:           "test-2",
+								AggregatedName: "test-*",
+							},
 						},
 						Labels: map[string]string{
 							"t2": "b",
