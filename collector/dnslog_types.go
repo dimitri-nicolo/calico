@@ -29,7 +29,7 @@ type DNSSpec struct {
 	DNSStats
 }
 
-type dnsSpecEncoded struct {
+type DNSSpecEncoded struct {
 	RRSets       DNSRRSets   `json:"rrsets"`
 	Servers      []DNSServer `json:"servers"`
 	ClientLabels DNSLabels   `json:"clientLabels"`
@@ -45,7 +45,11 @@ func (a *DNSSpec) Merge(b DNSSpec) {
 }
 
 func (a *DNSSpec) MarshalJSON() ([]byte, error) {
-	b := dnsSpecEncoded{
+	return json.Marshal(a.Encode())
+}
+
+func (a *DNSSpec) Encode() *DNSSpecEncoded {
+	b := &DNSSpecEncoded{
 		RRSets:       a.RRSets,
 		ClientLabels: a.ClientLabels,
 		DNSStats:     a.DNSStats,
@@ -53,25 +57,32 @@ func (a *DNSSpec) MarshalJSON() ([]byte, error) {
 	for e, l := range a.Servers {
 		b.Servers = append(b.Servers, DNSServer{e, l})
 	}
-	return json.Marshal(&b)
+	return b
 }
 
 func (a *DNSSpec) UnmarshalJSON(data []byte) error {
-	var b dnsSpecEncoded
+	var b DNSSpecEncoded
 	err := json.Unmarshal(data, &b)
 	if err != nil {
 		return err
 	}
+	*a = *b.Decode()
+	return nil
+}
 
-	a.RRSets = b.RRSets
-	a.ClientLabels = b.ClientLabels
-	a.Count = b.Count
-	a.Servers = make(map[EndpointMetadata]DNSLabels)
-	for _, s := range b.Servers {
+func (e *DNSSpecEncoded) Decode() *DNSSpec {
+	a := &DNSSpec{
+		RRSets:       e.RRSets,
+		ClientLabels: e.ClientLabels,
+		Servers:      make(map[EndpointMetadata]DNSLabels),
+		DNSStats: DNSStats{
+			Count: e.Count,
+		},
+	}
+	for _, s := range e.Servers {
 		a.Servers[s.EndpointMetadata] = s.Labels
 	}
-
-	return nil
+	return a
 }
 
 type DNSName struct {
@@ -405,14 +416,15 @@ type DNSData struct {
 type DNSLog struct {
 	StartTime, EndTime time.Time
 	DNSMeta
-	// TODO
+	DNSSpecEncoded
 }
 
 func (d *DNSData) ToDNSLog(startTime, endTime time.Time, includeLabels bool) *DNSLog {
 	dl := &DNSLog{
-		StartTime: startTime,
-		EndTime:   endTime,
-		DNSMeta:   d.DNSMeta,
+		StartTime:      startTime,
+		EndTime:        endTime,
+		DNSMeta:        d.DNSMeta,
+		DNSSpecEncoded: *d.DNSSpec.Encode(),
 	}
 
 	return dl
