@@ -73,5 +73,6 @@ func (d *dnsLogAggregator) Get() []*DNSLog {
 			d.includeLabels,
 		))
 	}
+	d.dnsStore = make(map[DNSMeta]DNSSpec)
 	return dnsLogs
 }
