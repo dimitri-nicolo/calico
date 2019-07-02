@@ -10,6 +10,7 @@ import (
 	"github.com/google/gopacket/layers"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/jitter"
 	"github.com/projectcalico/libcalico-go/lib/health"
 )
@@ -22,7 +23,7 @@ type DNSLogAggregator interface {
 	DNSLogGetter
 	IncludeLabels(bool) DNSLogAggregator
 	AggregateOver(AggregationKind) DNSLogAggregator
-	FeedUpdate(*layers.DNS) error
+	FeedUpdate(*calc.EndpointData, *calc.EndpointData, *layers.DNS) error
 }
 
 type dnsAggregatorRef struct {
@@ -85,10 +86,10 @@ func (c *DNSLogsReporter) Start() {
 	go c.run()
 }
 
-func (c *DNSLogsReporter) Log(dns *layers.DNS) error {
+func (c *DNSLogsReporter) Log(clientEP, serverEP *calc.EndpointData, dns *layers.DNS) error {
 	log.Info("DNS Logs Reporter got a packet to log")
 	for _, agg := range c.aggregators {
-		if err := agg.a.FeedUpdate(dns); err != nil {
+		if err := agg.a.FeedUpdate(clientEP, serverEP, dns); err != nil {
 			return err
 		}
 	}

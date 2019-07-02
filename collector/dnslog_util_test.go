@@ -8,6 +8,9 @@ import (
 	"github.com/google/gopacket/layers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/projectcalico/libcalico-go/lib/backend/model"
+
+	"github.com/projectcalico/felix/calc"
 )
 
 var _ = Describe("DNS log utility functions", func() {
@@ -105,13 +108,19 @@ var _ = Describe("DNS log utility functions", func() {
 
 var _ = Describe("gopacket to DNS log conversion function", func() {
 	Describe("NewDNSMetaSpecFromGoPacket", func() {
+		var clientEP, serverEP *calc.EndpointData
+		BeforeEach(func() {
+			clientEP = &calc.EndpointData{Key: model.HostEndpointKey{}, Endpoint: &model.HostEndpoint{}}
+			serverEP = &calc.EndpointData{Key: model.HostEndpointKey{}, Endpoint: &model.HostEndpoint{}}
+		})
+
 		It("returns an error with no questions", func() {
-			_, _, err := NewDNSMetaSpecFromGoPacket(&layers.DNS{})
+			_, _, err := NewDNSMetaSpecFromGoPacket(clientEP, serverEP, &layers.DNS{})
 			Expect(err).Should(HaveOccurred())
 		})
 
 		It("all works together", func() {
-			meta, spec, err := NewDNSMetaSpecFromGoPacket(&layers.DNS{
+			meta, spec, err := NewDNSMetaSpecFromGoPacket(clientEP, serverEP, &layers.DNS{
 				Questions: []layers.DNSQuestion{{Name: []byte("tigera.io.")}},
 				Answers: []layers.DNSResourceRecord{
 					{Name: []byte("tigera.io."), Class: layers.DNSClassIN, Type: layers.DNSTypeA},
@@ -126,13 +135,16 @@ var _ = Describe("gopacket to DNS log conversion function", func() {
 	})
 
 	Describe("newDNSSpecFromGoPacket", func() {
+		var clientLabels, serverLabels DNSLabels
+		var serverEM EndpointMetadata
+
 		It("sets count to 1", func() {
-			spec := newDNSSpecFromGoPacket(&layers.DNS{})
+			spec := newDNSSpecFromGoPacket(clientLabels, serverEM, serverLabels, &layers.DNS{})
 			Expect(spec.Count).Should(BeNumerically("==", 1))
 		})
 
 		It("includes all RRs", func() {
-			spec := newDNSSpecFromGoPacket(&layers.DNS{
+			spec := newDNSSpecFromGoPacket(clientLabels, serverEM, serverLabels, &layers.DNS{
 				Answers: []layers.DNSResourceRecord{
 					{Name: []byte("www1.tigera.io."), Class: layers.DNSClassIN, Type: layers.DNSTypeA, Data: []byte("2"), IP: net.ParseIP("127.0.0.1")},
 					{Name: []byte("www1.tigera.io."), Class: layers.DNSClassIN, Type: layers.DNSTypeA, Data: []byte("1"), IP: net.ParseIP("127.0.0.2")},
@@ -165,15 +177,17 @@ var _ = Describe("gopacket to DNS log conversion function", func() {
 		})
 
 		It("initializes servers", func() {
-			spec := newDNSSpecFromGoPacket(&layers.DNS{})
+			spec := newDNSSpecFromGoPacket(clientLabels, serverEM, serverLabels, &layers.DNS{})
 			Expect(spec.Servers).ShouldNot(BeNil())
 		})
 
 	})
 
 	Describe("newDNSMetaFromSpecAndGoPacket", func() {
+		var serverEM EndpointMetadata
+
 		It("fills in the question", func() {
-			meta := newDNSMetaFromSpecAndGoPacket(&layers.DNS{
+			meta := newDNSMetaFromSpecAndGoPacket(serverEM, &layers.DNS{
 				Questions: []layers.DNSQuestion{
 					{Name: []byte("tigera.io."), Type: layers.DNSTypeA, Class: layers.DNSClassIN},
 				},
@@ -187,7 +201,7 @@ var _ = Describe("gopacket to DNS log conversion function", func() {
 		})
 
 		It("sets the rcode", func() {
-			meta := newDNSMetaFromSpecAndGoPacket(&layers.DNS{
+			meta := newDNSMetaFromSpecAndGoPacket(serverEM, &layers.DNS{
 				ResponseCode: layers.DNSResponseCodeNXDomain,
 				Questions:    []layers.DNSQuestion{{}},
 			}, DNSSpec{})
@@ -208,7 +222,7 @@ var _ = Describe("gopacket to DNS log conversion function", func() {
 				},
 			}
 
-			meta := newDNSMetaFromSpecAndGoPacket(&layers.DNS{
+			meta := newDNSMetaFromSpecAndGoPacket(serverEM, &layers.DNS{
 				Questions: []layers.DNSQuestion{{}},
 			}, spec)
 

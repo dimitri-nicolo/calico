@@ -176,7 +176,8 @@ func (s *domainInfoStore) loop(saveTimerC, gcTimerC <-chan time.Time) {
 			packet := gopacket.NewPacket(msg, layers.LayerTypeIPv4, gopacket.Default)
 			if dnsLayer := packet.Layer(layers.LayerTypeDNS); dnsLayer != nil {
 				dns, _ := dnsLayer.(*layers.DNS)
-				if err := s.dnsLogReporter.Log(dns); err != nil {
+				// TODO clientEP, serverEP
+				if err := s.dnsLogReporter.Log(nil, nil, dns); err != nil {
 					log.WithError(err).Warning("Error from DNS logger")
 				}
 				s.processDNSPacket(dns)

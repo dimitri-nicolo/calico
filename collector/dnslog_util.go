@@ -4,24 +4,39 @@ package collector
 
 import (
 	"errors"
+	"fmt"
 	"regexp"
 	"strings"
 
 	"github.com/google/gopacket/layers"
+
+	"github.com/projectcalico/felix/calc"
 )
 
-func NewDNSMetaSpecFromGoPacket(dns *layers.DNS) (DNSMeta, DNSSpec, error) {
+func NewDNSMetaSpecFromGoPacket(clientEP, serverEP *calc.EndpointData, dns *layers.DNS) (DNSMeta, DNSSpec, error) {
 	if len(dns.Questions) == 0 {
 		return DNSMeta{}, DNSSpec{}, errors.New("No questions in DNS packet")
 	}
 
-	spec := newDNSSpecFromGoPacket(dns)
-	meta := newDNSMetaFromSpecAndGoPacket(dns, spec)
+	clientEM, err := getFlowLogEndpointMetadata(clientEP)
+	if err != nil {
+		return DNSMeta{}, DNSSpec{}, fmt.Errorf("Could not extract metadata for client %v", clientEP)
+	}
+	clientLabels := getFlowLogEndpointLabels(clientEP)
+
+	serverEM, err := getFlowLogEndpointMetadata(serverEP)
+	if err != nil {
+		return DNSMeta{}, DNSSpec{}, fmt.Errorf("Could not extract metadata for server %v", serverEP)
+	}
+	serverLabels := getFlowLogEndpointLabels(serverEP)
+
+	spec := newDNSSpecFromGoPacket(clientLabels, serverEM, serverLabels, dns)
+	meta := newDNSMetaFromSpecAndGoPacket(clientEM, dns, spec)
 
 	return meta, spec, nil
 }
 
-func newDNSSpecFromGoPacket(dns *layers.DNS) DNSSpec {
+func newDNSSpecFromGoPacket(clientLabels DNSLabels, serverEM EndpointMetadata, serverLabels DNSLabels, dns *layers.DNS) DNSSpec {
 	spec := DNSSpec{
 		RRSets:       make(DNSRRSets),
 		Servers:      make(map[EndpointMetadata]DNSLabels),
@@ -33,14 +48,14 @@ func newDNSSpecFromGoPacket(dns *layers.DNS) DNSSpec {
 	for _, rr := range append(append(dns.Answers, dns.Additionals...), dns.Authorities...) {
 		spec.RRSets.Add(newDNSNameRDataFromGoPacketRR(rr))
 	}
-	// TODO server metadata
-	// TODO client labels
+	spec.Servers[serverEM] = serverLabels
+	spec.ClientLabels = clientLabels
 	return spec
 }
 
-func newDNSMetaFromSpecAndGoPacket(dns *layers.DNS, spec DNSSpec) DNSMeta {
+func newDNSMetaFromSpecAndGoPacket(clientEM EndpointMetadata, dns *layers.DNS, spec DNSSpec) DNSMeta {
 	return DNSMeta{
-		// TODO ClientMeta
+		ClientMeta: clientEM,
 		Question: DNSName{
 			Name:  canonicalizeDNSName(dns.Questions[0].Name),
 			Class: DNSClass(dns.Questions[0].Class),

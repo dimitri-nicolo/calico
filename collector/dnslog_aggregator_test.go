@@ -8,15 +8,20 @@ import (
 	"time"
 
 	"github.com/google/gopacket/layers"
+	"github.com/projectcalico/libcalico-go/lib/backend/model"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/projectcalico/felix/calc"
 )
 
 var _ = Describe("DNS log aggregator", func() {
 	var l *dnsLogAggregator
+	var clientEP, serverEP *calc.EndpointData
 	BeforeEach(func() {
 		l = NewDNSLogAggregator().(*dnsLogAggregator)
+		clientEP = &calc.EndpointData{Key: model.HostEndpointKey{}, Endpoint: &model.HostEndpoint{}}
+		serverEP = &calc.EndpointData{Key: model.HostEndpointKey{}, Endpoint: &model.HostEndpoint{}}
 	})
 
 	Describe("constructor", func() {
@@ -50,7 +55,7 @@ var _ = Describe("DNS log aggregator", func() {
 
 	Describe("feed update", func() {
 		BeforeEach(func() {
-			err := l.FeedUpdate(&layers.DNS{
+			err := l.FeedUpdate(clientEP, serverEP, &layers.DNS{
 				ResponseCode: layers.DNSResponseCodeNoErr,
 				Questions: []layers.DNSQuestion{
 					{Name: []byte("tigera.io."), Type: layers.DNSTypeA, Class: layers.DNSClassIN},
@@ -65,7 +70,7 @@ var _ = Describe("DNS log aggregator", func() {
 		})
 
 		It("new entry", func() {
-			err := l.FeedUpdate(&layers.DNS{
+			err := l.FeedUpdate(clientEP, serverEP, &layers.DNS{
 				ResponseCode: layers.DNSResponseCodeNoErr,
 				Questions: []layers.DNSQuestion{
 					{Name: []byte("tigera.io."), Type: layers.DNSTypeAAAA, Class: layers.DNSClassIN},
@@ -82,7 +87,7 @@ var _ = Describe("DNS log aggregator", func() {
 		})
 
 		It("update with same rdata", func() {
-			err := l.FeedUpdate(&layers.DNS{
+			err := l.FeedUpdate(clientEP, serverEP, &layers.DNS{
 				ResponseCode: layers.DNSResponseCodeNoErr,
 				Questions: []layers.DNSQuestion{
 					{Name: []byte("tigera.io."), Type: layers.DNSTypeA, Class: layers.DNSClassIN},
@@ -99,7 +104,7 @@ var _ = Describe("DNS log aggregator", func() {
 		})
 
 		It("update with different rdata", func() {
-			err := l.FeedUpdate(&layers.DNS{
+			err := l.FeedUpdate(clientEP, serverEP, &layers.DNS{
 				ResponseCode: layers.DNSResponseCodeNoErr,
 				Questions: []layers.DNSQuestion{
 					{Name: []byte("tigera.io."), Type: layers.DNSTypeA, Class: layers.DNSClassIN},
@@ -123,7 +128,7 @@ var _ = Describe("DNS log aggregator", func() {
 
 		Describe("populated", func() {
 			BeforeEach(func() {
-				err := l.FeedUpdate(&layers.DNS{
+				err := l.FeedUpdate(clientEP, serverEP, &layers.DNS{
 					ResponseCode: layers.DNSResponseCodeNoErr,
 					Questions: []layers.DNSQuestion{
 						{Name: []byte("tigera.io."), Type: layers.DNSTypeA, Class: layers.DNSClassIN},
@@ -134,7 +139,7 @@ var _ = Describe("DNS log aggregator", func() {
 				})
 				Expect(err).ShouldNot(HaveOccurred())
 
-				err = l.FeedUpdate(&layers.DNS{
+				err = l.FeedUpdate(clientEP, serverEP, &layers.DNS{
 					ResponseCode: layers.DNSResponseCodeNoErr,
 					Questions: []layers.DNSQuestion{
 						{Name: []byte("tigera.io."), Type: layers.DNSTypeA, Class: layers.DNSClassIN},
