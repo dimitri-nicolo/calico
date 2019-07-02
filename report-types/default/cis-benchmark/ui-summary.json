@@ -12,15 +12,15 @@
 		"data": [{
 			"label": "HIGH",
 			"value": {{ .CISBenchmarkSummary.HighCount }},
-			"desc": "Nodes with {{ if .ReportSpec.CIS }}{{ .ReportSpec.CIS.HighThreshold }}{{ end }}% or more tests passing"
+			"desc": "Nodes with {{ if .ReportSpec.CIS }}{{ if .ReportSpec.CIS.HighThreshold }}{{ .ReportSpec.CIS.HighThreshold }}{{ else }}100{{ end }}{{ else }}100{{ end }}% or more tests passing"
 		}, {
 			"label": "MED",
 			"value": {{ .CISBenchmarkSummary.MedCount }},
-			"desc": "Nodes with {{ if .ReportSpec.CIS }}{{ .ReportSpec.CIS.MedThreshold }}{{ end }}% or more tests passing"
+			"desc": "Nodes with {{ if .ReportSpec.CIS }}{{ if .ReportSpec.CIS.MedThreshold }}{{ .ReportSpec.CIS.MedThreshold }}{{ else }}50{{ end }}{{ else }}50{{ end }}% or more tests passing"
 		}, {
 			"label": "LOW",
 			"value": {{ .CISBenchmarkSummary.LowCount }},
-			"desc": "Nodes with less than {{ if .ReportSpec.CIS }}{{ .ReportSpec.CIS.MedThreshold }}{{ end }}% tests passing"
+			"desc": "Nodes with less than {{ if .ReportSpec.CIS }}{{ if .ReportSpec.CIS.MedThreshold }}{{ .ReportSpec.CIS.MedThreshold }}{{ else }}50{{ end }}{{ else }}50{{ end }}% tests passing"
 		}]
 	}
 {{ if .CISBenchmark }}
