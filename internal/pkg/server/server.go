@@ -29,7 +29,9 @@ const (
 	ClusterHeaderField = "x-cluster-id"
 )
 
-var clusterHeaderFieldCanon = textproto.CanonicalMIMEHeaderKey(ClusterHeaderField)
+// ClusterHeaderFieldCanon represents the request header key used to determine which
+// cluster to proxy for (Canonical)
+var ClusterHeaderFieldCanon = textproto.CanonicalMIMEHeaderKey(ClusterHeaderField)
 
 // Server is the voltron server that accepts tunnels from the app clusters. It
 // serves HTTP requests and proxies them to the tunnels.
@@ -245,14 +247,14 @@ func (s *Server) acceptTunnels() {
 }
 
 func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
-	if _, ok := r.Header[clusterHeaderFieldCanon]; !ok {
+	if _, ok := r.Header[ClusterHeaderFieldCanon]; !ok {
 		msg := fmt.Sprintf("missing %q header", ClusterHeaderField)
 		log.Errorf("clusterMuxer: %s", msg)
 		http.Error(w, msg, 400)
 		return
 	}
 
-	if len(r.Header[clusterHeaderFieldCanon]) > 1 {
+	if len(r.Header[ClusterHeaderFieldCanon]) > 1 {
 		msg := fmt.Sprintf("multiple %q headers", ClusterHeaderField)
 		log.Errorf("clusterMuxer: %s", msg)
 		http.Error(w, msg, 400)
@@ -283,6 +285,8 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 	// TODO this is the place for the impersonation hook
 
 	log.Debugf("tunneling %q from %q through %q", r.URL, r.RemoteAddr, clusterID)
+	r.Header.Del(ClusterHeaderField)
+
 	c.ServeHTTP(w, r)
 	c.RUnlock()
 }

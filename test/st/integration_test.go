@@ -18,6 +18,7 @@ import (
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/voltron/internal/pkg/clusters"
+	"github.com/tigera/voltron/internal/pkg/server"
 )
 
 func init() {
@@ -186,6 +187,8 @@ var _ = Describe("Integration Tests", func() {
 
 	It("Should start up a mock server/target - TestCluster", func() {
 		ts = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			_, ok := r.Header[server.ClusterHeaderFieldCanon]
+			Expect(ok).To(BeFalse())
 			fmt.Fprint(w, "Received by TestCluster!")
 		}))
 	})
