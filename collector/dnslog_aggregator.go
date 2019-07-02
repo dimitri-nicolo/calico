@@ -74,5 +74,6 @@ func (d *dnsLogAggregator) Get() []*DNSLog {
 		))
 	}
 	d.dnsStore = make(map[DNSMeta]DNSSpec)
+	d.aggregationStartTime = aggregationEndTime
 	return dnsLogs
 }
