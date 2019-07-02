@@ -4,6 +4,7 @@ package proxy
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -18,6 +19,7 @@ type Target struct {
 	Path  string
 	Dest  *url.URL
 	Token string
+	CA    *x509.Certificate
 
 	// Transport to use for this target. If nil, Proxy will provide one
 	Transport http.RoundTripper
@@ -25,8 +27,7 @@ type Target struct {
 
 // Proxy proxies HTTP based on the provided list of targets
 type Proxy struct {
-	mux   *http.ServeMux
-	token string
+	mux *http.ServeMux
 }
 
 // New returns an initialized Proxy
@@ -46,6 +47,9 @@ func New(tgts []Target) (*Proxy, error) {
 		for i, t := range tgts {
 			if t.Dest == nil {
 				return errors.Errorf("bad target %d, no destination", i)
+			}
+			if t.CA != nil && t.Dest.Scheme != "https" {
+				return errors.Errorf("CA configured for url scheme %q", t.Dest.Scheme)
 			}
 			p.mux.HandleFunc(t.Path, newTargetHandler(t))
 			log.Debugf("Proxy target %q -> %q", t.Path, t.Dest)
@@ -67,11 +71,23 @@ func newTargetHandler(tgt Target) func(http.ResponseWriter, *http.Request) {
 
 	if tgt.Transport != nil {
 		p.Transport = tgt.Transport
-	} else {
-		p.Transport = &http.Transport{
-			TLSClientConfig: &tls.Config{
+	} else if tgt.Dest.Scheme == "https" {
+		var tlscfg *tls.Config
+
+		if tgt.CA == nil {
+			tlscfg = &tls.Config{
 				InsecureSkipVerify: true,
-			},
+			}
+		} else {
+			ca := x509.NewCertPool()
+			ca.AddCert(tgt.CA)
+			tlscfg = &tls.Config{
+				RootCAs: ca,
+			}
+		}
+
+		p.Transport = &http.Transport{
+			TLSClientConfig: tlscfg,
 		}
 	}
 

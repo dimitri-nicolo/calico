@@ -1,6 +1,7 @@
 package proxy_test
 
 import (
+	"crypto/tls"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -13,6 +14,8 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/tigera/voltron/internal/pkg/proxy"
+	"github.com/tigera/voltron/internal/pkg/test"
+	"github.com/tigera/voltron/internal/pkg/utils"
 )
 
 func init() {
@@ -21,7 +24,7 @@ func init() {
 }
 
 var _ = Describe("Proxy", func() {
-	Describe("When proxy is empty", func() {
+	Describe("When empty", func() {
 		It("should return error to any request", func() {
 			p, err := proxy.New(nil)
 			Expect(err).NotTo(HaveOccurred())
@@ -75,7 +78,7 @@ var _ = Describe("Proxy", func() {
 		})
 	})
 
-	Describe("When proxy is configured", func() {
+	Describe("When configured", func() {
 		t := &transport{
 			func(*http.Request) (*http.Response, error) {
 				return &http.Response{StatusCode: 200, Body: body("")}, nil
@@ -210,6 +213,104 @@ var _ = Describe("Proxy", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(string(msg)).To(Equal(noToken))
+		})
+	})
+
+	Describe("When CA bundle configured", func() {
+		ca, _ := test.CreateSelfSignedX509Cert("xyz", true)
+
+		It("Should fail for http target", func() {
+			_, err := proxy.New([]proxy.Target{
+				{
+					Path: "/path",
+					Dest: &url.URL{
+						Scheme: "http",
+						Host:   "some",
+					},
+					CA: ca,
+				},
+			})
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("Should work if the certs match", func() {
+			server := httptest.NewUnstartedServer(
+				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					// just returns 200
+				}),
+			)
+
+			certPem := test.PemEncodeCert(ca)
+			cert, err := tls.X509KeyPair(certPem, []byte(test.PrivateRSA))
+			Expect(err).NotTo(HaveOccurred())
+
+			server.TLS = &tls.Config{
+				Certificates: []tls.Certificate{cert},
+			}
+
+			server.StartTLS()
+			defer server.Close()
+
+			srvURL, err := url.Parse(server.URL)
+			Expect(err).NotTo(HaveOccurred())
+
+			p, err := proxy.New([]proxy.Target{
+				{
+					Path: "/path",
+					Dest: srvURL,
+					CA:   ca,
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			r, err := http.NewRequest("GET", server.URL+"/path", nil)
+			Expect(err).NotTo(HaveOccurred())
+			w := httptest.NewRecorder()
+			p.ServeHTTP(w, r)
+
+			res := w.Result()
+			Expect(res.StatusCode).To(Equal(200))
+		})
+
+		It("Should fail if the certs do not match", func() {
+			server := httptest.NewUnstartedServer(
+				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					// just returns 200
+				}),
+			)
+
+			badCert, key, _ := test.CreateSelfSignedX509CertRandom()
+			certPem := utils.CertPEMEncode(badCert)
+			keyPem, _ := utils.KeyPEMEncode(key)
+			cert, err := tls.X509KeyPair(certPem, keyPem)
+			Expect(err).NotTo(HaveOccurred())
+
+			server.TLS = &tls.Config{
+				Certificates: []tls.Certificate{cert},
+			}
+
+			server.StartTLS()
+			defer server.Close()
+
+			srvURL, err := url.Parse(server.URL)
+			Expect(err).NotTo(HaveOccurred())
+
+			p, err := proxy.New([]proxy.Target{
+				{
+					Path: "/path",
+					Dest: srvURL,
+					CA:   ca,
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			r, err := http.NewRequest("GET", server.URL+"/path", nil)
+			Expect(err).NotTo(HaveOccurred())
+			w := httptest.NewRecorder()
+			p.ServeHTTP(w, r)
+
+			res := w.Result()
+			Expect(res.StatusCode).NotTo(Equal(200))
 		})
 	})
 })

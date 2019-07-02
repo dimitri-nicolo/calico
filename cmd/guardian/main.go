@@ -16,6 +16,7 @@ import (
 	"github.com/tigera/voltron/internal/pkg/bootstrap"
 	"github.com/tigera/voltron/internal/pkg/client"
 	"github.com/tigera/voltron/internal/pkg/proxy"
+	"github.com/tigera/voltron/internal/pkg/utils"
 )
 
 const (
@@ -30,6 +31,9 @@ type target struct {
 	Dest string `json:"url"`
 	// TokenPath is where we read the Bearer token from (if non-empty)
 	TokenPath string `json:"tokenPath,omitempty"`
+	// CABundlePath is where we read the CA bundle from to authenticate the
+	// destination (if non-empty)
+	CABundlePath string `json:"caBundlePath,omitempty"`
 }
 
 type proxyTarget []target
@@ -76,6 +80,13 @@ func fillTargets(tgts proxyTarget) ([]proxy.Target, error) {
 			}
 
 			pt.Token = string(token)
+		}
+
+		if t.CABundlePath != "" {
+			pt.CA, err = utils.LoadX509FromFile(t.CABundlePath)
+			if err != nil {
+				return nil, errors.WithMessage(err, "LoadX509FromFile")
+			}
 		}
 
 		ret = append(ret, pt)

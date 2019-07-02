@@ -4,7 +4,9 @@
 package test
 
 import (
+	"crypto"
 	"crypto/rand"
+	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
 	"io"
@@ -126,6 +128,36 @@ func CreateSelfSignedX509Cert(email string, isCA bool) (*x509.Certificate, error
 // keys that includes the given email
 func CreateSignedX509Cert(email string, parent *x509.Certificate) (*x509.Certificate, error) {
 	return createCert(email, parent, false)
+}
+
+// CreateSelfSignedX509CertRandom returns a random self-signed X509 cert and its key
+func CreateSelfSignedX509CertRandom() (*x509.Certificate, crypto.Signer, error) {
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+
+	if err != nil {
+		return nil, nil, errors.Errorf("generating RSA key: %s", err)
+	}
+
+	tmpl := &x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		NotBefore:    time.Now(),
+		NotAfter:     time.Now().Add(1000000 * time.Hour),
+		KeyUsage:     x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		IPAddresses:  []net.IP{net.IPv4(127, 0, 0, 1)},
+	}
+
+	bytes, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, &key.PublicKey, key)
+	if err != nil {
+		return nil, nil, errors.Errorf("creating X509 cert: %s", err)
+	}
+
+	cert, err := x509.ParseCertificate(bytes)
+	if err != nil {
+		// should never happen, we just generated the key
+		return nil, nil, errors.Errorf("parsing X509 cert: %s", err)
+	}
+
+	return cert, key, nil
 }
 
 // PemEncodeCert encde a cert as PEM
