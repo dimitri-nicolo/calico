@@ -24,8 +24,6 @@ import (
 type pip struct {
 	xc      xrefcache.XrefCache
 	listSrc list.Source
-
-	inScope *xrefcache.CacheEntryEndpoint
 }
 
 func New(listSrc list.Source) PIP {
@@ -49,11 +47,6 @@ func (s *pip) CalculateFlowImpact(ctx context.Context, npcs []NetworkPolicyChang
 	s.xc.RegisterInScopeEndpoints(&libv3.EndpointsSelection{
 		Selector: "all()",
 	})
-
-	// Register for notification of in-scope endpoints.
-	for _, k := range xrefcache.KindsEndpoint {
-		s.xc.RegisterOnUpdateHandler(k, xrefcache.EventInScope, s.onUpdate)
-	}
 
 	// Load the initial set of policy.
 	if err := s.loadInitialPolicy(); err != nil {
@@ -93,11 +86,12 @@ func (s *pip) CalculateFlowImpact(ctx context.Context, npcs []NetworkPolicyChang
 		// the flow against the source first to see if it would be allowed. if it is, we
 		// still have to check the dest next.
 		var predictedAction string
+		orderedTiersAndPlicies := s.xc.GetOrderedTiersAndPolicies()
 
 		// if the flow came from the cluster, see if it would have left the source.
 		if f.Src_type != flow.EndpointTypeNet {
 			if srcEp := getSrcResource(f); srcEp != nil {
-				predictedAction = s.getAction(f, srcEp)
+				predictedAction = computeAction(f, orderedTiersAndPlicies)
 			} else {
 				clog.WithField("srcType", f.Src_type).Warn("skipping flow with unexpected source type")
 				continue
@@ -109,7 +103,7 @@ func (s *pip) CalculateFlowImpact(ctx context.Context, npcs []NetworkPolicyChang
 			predictedAction == PreviewActionAllow ||
 			predictedAction == PreviewActionPass {
 			if destEp := getDstResource(f); destEp != nil {
-				predictedAction = s.getAction(f, destEp)
+				predictedAction = computeAction(f, orderedTiersAndPlicies)
 			} else {
 				clog.WithField("destType", f.Dest_type).Warn("skipping flow with unexpected dest type")
 				continue
@@ -149,28 +143,6 @@ func (s *pip) applyPolicyChanges(npcs []NetworkPolicyChange) error {
 		}
 	}
 	return nil
-}
-
-func (s *pip) getAction(f flow.Flow, ep resources.Resource) string {
-	// add the endpoint to the cache
-	s.xc.OnUpdates([]syncer.Update{{
-		Type:       syncer.UpdateTypeSet,
-		Resource:   ep,
-		ResourceID: resources.GetResourceID(ep),
-	}})
-
-	// remove the endpoint from the cache after we compute the flow action
-	defer s.xc.OnUpdates([]syncer.Update{{
-		Type:       syncer.UpdateTypeDeleted,
-		Resource:   ep,
-		ResourceID: resources.GetResourceID(ep),
-	}})
-
-	return computeAction(f, s.inScope.GetOrderedTiersAndPolicies())
-}
-
-func (s *pip) onUpdate(update syncer.Update) {
-	s.inScope = update.Resource.(*xrefcache.CacheEntryEndpoint)
 }
 
 func (s *pip) loadInitialPolicy() error {
@@ -331,6 +303,7 @@ func buildSelector(npcs []NetworkPolicyChange) string {
 }
 
 // TODO: compute action instead of returning a random action
+// TODO: split into source and dest
 func computeAction(f flow.Flow, tops []*xrefcache.TierWithOrderedPolicies) string {
 	return []string{PreviewActionAllow, PreviewActionDeny, PreviewActionPass, PreviewActionUnknown}[rand.Int()%4]
 }
