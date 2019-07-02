@@ -310,8 +310,7 @@ endif
 ifndef BRANCH_NAME
 	$(error BRANCH_NAME is undefined - run using make <target> BRANCH_NAME=var or set an environment variable)
 endif
-	$(MAKE) --silent tag-images push-images IMAGETAG=${BRANCH_NAME}
-	$(MAKE) --silent tag-images push-images IMAGETAG=$(shell git describe --tags --dirty --always --long)
+	$(MAKE) tag-images push-images IMAGETAG=${BRANCH_NAME}
 
 # ensure we have a real imagetag
 imagetag:
