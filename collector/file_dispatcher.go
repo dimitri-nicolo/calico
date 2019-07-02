@@ -85,6 +85,21 @@ func (d *fileDispatcher) Dispatch(logSlice interface{}) error {
 				return err
 			}
 		}
+	case []*DNSLog:
+		log.Info("Dispatching DNS logs to file")
+		for _, l := range fl {
+			b, err := json.Marshal(l)
+			if err != nil {
+				// This indicates a bug, not a runtime error since we should always
+				// be able to serialize.
+				log.WithError(err).
+					WithField("DNSLog", l).
+					Panic("unable to serialize flow log to JSON")
+			}
+			if err = writeLog(b); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }
