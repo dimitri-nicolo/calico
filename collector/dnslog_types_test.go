@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"strings"
+	"time"
 
 	"github.com/google/gopacket/layers"
 
@@ -317,59 +318,56 @@ var _ = Describe("DNS log type tests", func() {
 				}))
 			})
 		})
-		Context("JSON", func() {
-			It("Encodes correctly", func() {
-				a := DNSSpec{
-					RRSets: DNSRRSets{
-						{
-							Name:  "tigera.io.",
-							Class: DNSClass(layers.DNSClassIN),
-							Type:  DNSType(layers.DNSTypeCNAME),
-						}: {{
-							Decoded: "www.tigera.io.",
-						}},
-					},
-					Servers: map[EndpointMetadata]DNSLabels{
-						{Name: "ns1"}: {"b": "c"},
-					},
-					ClientLabels: map[string]string{
-						"1": "2",
-					},
-					DNSStats: DNSStats{
-						Count: 2,
-					},
-				}
+	})
 
-				b, err := json.Marshal(&a)
-				Expect(err).ShouldNot(HaveOccurred())
-				Expect(string(b)).Should(Equal(`{"rrsets":[{"name":"tigera.io.","class":"IN","type":"CNAME","rdata":["www.tigera.io."]}],"servers":[{"type":"","namespace":"","name":"ns1","aggregated_name":"","labels":{"b":"c"}}],"clientLabels":{"1":"2"},"count":2}`))
-			})
-			It("Decodes correctly", func() {
-				b := []byte(`{"rrsets":[{"name":"tigera.io.","class":"IN","type":"CNAME","rdata":["www.tigera.io."]}],"servers":[{"type":"","namespace":"","name":"ns1","aggregated_name":"","labels":{"b":"c"}}],"clientLabels":{"1":"2"},"count":2}`)
-				var a DNSSpec
-				err := json.Unmarshal(b, &a)
-				Expect(err).ShouldNot(HaveOccurred())
-				Expect(a).Should(Equal(DNSSpec{
-					RRSets: DNSRRSets{
-						{
-							Name:  "tigera.io.",
-							Class: DNSClass(layers.DNSClassIN),
-							Type:  DNSType(layers.DNSTypeCNAME),
-						}: {{
-							Decoded: "www.tigera.io.",
-						}},
+	Describe("DNSLog Tests", func() {
+		It("marshals correctly", func() {
+			t := time.Date(2019, 07, 02, 0, 0, 0, 0, time.UTC)
+
+			l := &DNSLog{
+				StartTime:       t,
+				EndTime:         t.Add(time.Minute),
+				Count:           5,
+				ClientName:      "test-1",
+				ClientNameAggr:  "test-*",
+				ClientNamespace: "test-ns",
+				ClientIP:        nil,
+				ClientLabels: map[string]string{
+					"t1": "a",
+				},
+				Servers: []DNSServer{
+					{
+						EndpointMetadata: EndpointMetadata{
+							Type:           "Pod",
+							Namespace:      "test2-ns",
+							Name:           "test-2",
+							AggregatedName: "test-*",
+						},
+						Labels: map[string]string{
+							"t2": "b",
+						},
 					},
-					Servers: map[EndpointMetadata]DNSLabels{
-						{Name: "ns1"}: {"b": "c"},
+				},
+				QName:  "tigera.io",
+				QClass: DNSClass(layers.DNSClassIN),
+				QType:  DNSType(layers.DNSTypeA),
+				RCode:  "NOERROR",
+				RRSets: DNSRRSets{
+					{
+						Name:  "tigera.io",
+						Class: DNSClass(layers.DNSClassIN),
+						Type:  DNSType(layers.DNSTypeA),
+					}: {
+						{Decoded: net.ParseIP("127.0.0.1")},
+						{Decoded: net.ParseIP("127.0.0.2")},
 					},
-					ClientLabels: map[string]string{
-						"1": "2",
-					},
-					DNSStats: DNSStats{
-						Count: 2,
-					},
-				}))
-			})
+				},
+			}
+
+			b, err := json.Marshal(l)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(string(b)).Should(Equal(`{"start_time":"2019-07-02T00:00:00Z","end_time":"2019-07-02T00:01:00Z","count":5,"client_name":"test-1","client_name_aggr":"test-*","client_namespace":"test-ns","client_ip":"","client_labels":{"t1":"a"},"servers":[{"name":"test-2","name_aggr":"test-*","namespace":"test2-ns","ip":""}],"qname":"tigera.io","qclass":"IN","qtype":"A","rcode":"NOERROR","rrsets":[{"name":"tigera.io","class":"IN","type":"A","rdata":["127.0.0.1","127.0.0.2"]}]}`))
 		})
+
 	})
 })

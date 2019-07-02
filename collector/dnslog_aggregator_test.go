@@ -126,6 +126,29 @@ var _ = Describe("DNS log aggregator", func() {
 			Expect(l.Get()).Should(HaveLen(0))
 		})
 
+		It("updates aggregationStartTime", func() {
+			startTime := l.aggregationStartTime
+			l.Get()
+			Expect(l.aggregationStartTime).Should(BeTemporally(">", startTime))
+		})
+
+		It("resets dnsStore", func() {
+			err := l.FeedUpdate(clientEP, serverEP, &layers.DNS{
+				ResponseCode: layers.DNSResponseCodeNoErr,
+				Questions: []layers.DNSQuestion{
+					{Name: []byte("tigera.io."), Type: layers.DNSTypeA, Class: layers.DNSClassIN},
+				},
+				Answers: []layers.DNSResourceRecord{
+					{Name: []byte("tigera.io."), Type: layers.DNSTypeA, Class: layers.DNSClassIN, IP: net.ParseIP("127.0.0.1")},
+				},
+			})
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(l.dnsStore).Should(HaveLen(1))
+
+			l.Get()
+			Expect(l.dnsStore).Should(HaveLen(0))
+		})
+
 		Describe("populated", func() {
 			BeforeEach(func() {
 				err := l.FeedUpdate(clientEP, serverEP, &layers.DNS{
@@ -156,21 +179,24 @@ var _ = Describe("DNS log aggregator", func() {
 				var logs []*DNSLog
 
 				Describe(fmt.Sprintf("withLabels: %t", withLabels), func() {
-					BeforeEach(func() {
+					It("sets startTime correctly", func() {
 						l.IncludeLabels(withLabels)
+						startTime := l.aggregationStartTime
 						logs = l.Get()
 						Expect(logs).Should(HaveLen(2))
-					})
 
-					It("sets startTime correctly", func() {
 						for _, log := range logs {
-							Expect(log.StartTime).Should(BeTemporally("==", l.aggregationStartTime))
+							Expect(log.StartTime).Should(BeTemporally("==", startTime))
 						}
 					})
 
 					It("sets endTime correctly", func() {
+						l.IncludeLabels(withLabels)
+						logs = l.Get()
+						Expect(logs).Should(HaveLen(2))
+
 						for _, log := range logs {
-							Expect(log.EndTime).Should(BeTemporally("~", time.Now(), time.Minute))
+							Expect(log.EndTime).Should(BeTemporally("==", l.aggregationStartTime))
 						}
 					})
 
@@ -181,6 +207,10 @@ var _ = Describe("DNS log aggregator", func() {
 						})
 					case false:
 						It("excludes labels", func() {
+							l.IncludeLabels(withLabels)
+							logs = l.Get()
+							Expect(logs).Should(HaveLen(2))
+
 							for _, log := range logs {
 								Expect(log.ClientLabels).Should(HaveLen(0))
 								for _, server := range log.Servers {

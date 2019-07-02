@@ -60,16 +60,6 @@ func (a *DNSSpec) Encode() *DNSSpecEncoded {
 	return b
 }
 
-func (a *DNSSpec) UnmarshalJSON(data []byte) error {
-	var b DNSSpecEncoded
-	err := json.Unmarshal(data, &b)
-	if err != nil {
-		return err
-	}
-	*a = *b.Decode()
-	return nil
-}
-
 func (e *DNSSpecEncoded) Decode() *DNSSpec {
 	a := &DNSSpec{
 		RRSets:       e.RRSets,
@@ -118,94 +108,6 @@ func (d DNSName) encodeDNSName() dnsNameEncoded {
 	return n
 }
 
-func (d *DNSName) UnmarshalJSON(data []byte) error {
-	var n dnsNameEncoded
-	err := json.Unmarshal(data, &n)
-	if err != nil {
-		return err
-	}
-
-	return d.decodeDNSName(n)
-}
-
-func (d *DNSName) decodeDNSName(n dnsNameEncoded) error {
-	d.Name = n.Name
-
-	switch v := n.Class.(type) {
-	case string:
-		switch v {
-		// Brittle. I don't know how to do this with reflection but that would be the best way to do it.
-		case "IN":
-			d.Class = DNSClass(layers.DNSClassIN)
-		case "CS":
-			d.Class = DNSClass(layers.DNSClassCS)
-		case "CH":
-			d.Class = DNSClass(layers.DNSClassCH)
-		case "HS":
-			d.Class = DNSClass(layers.DNSClassHS)
-		case "ANY":
-			d.Class = DNSClass(layers.DNSClassAny)
-		default:
-			return fmt.Errorf("Unknown class: %q", v)
-		}
-	case int:
-		d.Class = DNSClass(v)
-	default:
-		return fmt.Errorf("Unknown class: %v", v)
-	}
-
-	switch v := n.Type.(type) {
-	case string:
-		switch v {
-		// Brittle. I don't know how to do this with reflection but that would be the best way to do it.
-		case "A":
-			d.Type = DNSType(layers.DNSTypeA)
-		case "NS":
-			d.Type = DNSType(layers.DNSTypeNS)
-		case "MD":
-			d.Type = DNSType(layers.DNSTypeMD)
-		case "MF":
-			d.Type = DNSType(layers.DNSTypeMF)
-		case "CNAME":
-			d.Type = DNSType(layers.DNSTypeCNAME)
-		case "SOA":
-			d.Type = DNSType(layers.DNSTypeSOA)
-		case "MB":
-			d.Type = DNSType(layers.DNSTypeMB)
-		case "MG":
-			d.Type = DNSType(layers.DNSTypeMG)
-		case "MR":
-			d.Type = DNSType(layers.DNSTypeMR)
-		case "NULL":
-			d.Type = DNSType(layers.DNSTypeNULL)
-		case "WKS":
-			d.Type = DNSType(layers.DNSTypeWKS)
-		case "PTR":
-			d.Type = DNSType(layers.DNSTypePTR)
-		case "HINFO":
-			d.Type = DNSType(layers.DNSTypeHINFO)
-		case "MINFO":
-			d.Type = DNSType(layers.DNSTypeMINFO)
-		case "MX":
-			d.Type = DNSType(layers.DNSTypeMX)
-		case "TXT":
-			d.Type = DNSType(layers.DNSTypeTXT)
-		case "AAAA":
-			d.Type = DNSType(layers.DNSTypeAAAA)
-		case "SRV":
-			d.Type = DNSType(layers.DNSTypeSRV)
-		default:
-			return fmt.Errorf("Unknown type: %q", v)
-		}
-	case int:
-		d.Type = DNSType(v)
-	default:
-		return fmt.Errorf("Unknown type: %v", v)
-	}
-
-	return nil
-}
-
 func (d DNSName) String() string {
 	return fmt.Sprintf("%s %s %s", d.Name, d.Class, d.Type)
 }
@@ -250,6 +152,11 @@ func (d DNSClass) String() string {
 	return fmt.Sprintf("#%d", d)
 }
 
+func (d DNSClass) MarshalJSON() ([]byte, error) {
+	s := d.String()
+	return json.Marshal(&s)
+}
+
 type DNSType layers.DNSType
 
 func (d DNSType) String() string {
@@ -258,6 +165,11 @@ func (d DNSType) String() string {
 		return t
 	}
 	return fmt.Sprintf("#%d", d)
+}
+
+func (d DNSType) MarshalJSON() ([]byte, error) {
+	s := d.String()
+	return json.Marshal(&s)
 }
 
 type DNSNames []DNSName
@@ -315,25 +227,6 @@ func (d DNSRRSets) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func (d *DNSRRSets) UnmarshalJSON(data []byte) error {
-	var r []dnsRRSetsEncoded
-	err := json.Unmarshal(data, &r)
-	if err != nil {
-		return err
-	}
-
-	*d = make(DNSRRSets)
-	for _, a := range r {
-		n := DNSName{}
-		err = n.decodeDNSName(a.dnsNameEncoded)
-		if err != nil {
-			return err
-		}
-		(*d)[n] = a.RData
-	}
-	return nil
-}
-
 type DNSRDatas []DNSRData
 
 func (d DNSRDatas) Len() int {
@@ -384,22 +277,25 @@ func (d DNSRData) MarshalJSON() ([]byte, error) {
 	return json.Marshal(d.String())
 }
 
-func (d *DNSRData) UnmarshalJSON(data []byte) error {
-	var s string
-	err := json.Unmarshal(data, &s)
-	if err != nil {
-		return err
-	}
-
-	d.Raw = nil
-	d.Decoded = s
-
-	return nil
-}
-
 type DNSServer struct {
 	EndpointMetadata
 	Labels DNSLabels `json:"labels,omitempty"`
+}
+
+type dnsServerEncoded struct {
+	Name      string `json:"name"`
+	NameAggr  string `json:"name_aggr"`
+	Namespace string `json:"namespace"`
+	IP        net.IP `json:"ip"`
+}
+
+func (d DNSServer) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&dnsServerEncoded{
+		Name:      d.Name,
+		NameAggr:  d.AggregatedName,
+		Namespace: d.Namespace,
+		IP:        nil, // TODO
+	})
 }
 
 type DNSLabels map[string]string
@@ -414,18 +310,39 @@ type DNSData struct {
 }
 
 type DNSLog struct {
-	StartTime, EndTime time.Time
-	DNSMeta
-	DNSSpecEncoded
+	StartTime       time.Time         `json:"start_time"`
+	EndTime         time.Time         `json:"end_time"`
+	Count           uint              `json:"count"`
+	ClientName      string            `json:"client_name"`
+	ClientNameAggr  string            `json:"client_name_aggr"`
+	ClientNamespace string            `json:"client_namespace"`
+	ClientIP        net.IP            `json:"client_ip"`
+	ClientLabels    map[string]string `json:"client_labels"`
+	Servers         []DNSServer       `json:"servers"`
+	QName           string            `json:"qname"`
+	QClass          DNSClass          `json:"qclass"`
+	QType           DNSType           `json:"qtype"`
+	RCode           string            `json:"rcode"`
+	RRSets          DNSRRSets         `json:"rrsets"`
 }
 
 func (d *DNSData) ToDNSLog(startTime, endTime time.Time, includeLabels bool) *DNSLog {
-	dl := &DNSLog{
-		StartTime:      startTime,
-		EndTime:        endTime,
-		DNSMeta:        d.DNSMeta,
-		DNSSpecEncoded: *d.DNSSpec.Encode(),
-	}
+	e := d.DNSSpec.Encode()
 
-	return dl
+	return &DNSLog{
+		StartTime:       startTime,
+		EndTime:         endTime,
+		Count:           d.Count,
+		ClientName:      d.ClientMeta.Name,
+		ClientNameAggr:  d.ClientMeta.AggregatedName,
+		ClientNamespace: d.ClientMeta.Namespace,
+		ClientIP:        nil, // TODO
+		ClientLabels:    d.ClientLabels,
+		Servers:         e.Servers,
+		QName:           d.Question.Name,
+		QClass:          d.Question.Class,
+		QType:           d.Question.Type,
+		RCode:           d.ResponseCode.String(),
+		RRSets:          e.RRSets,
+	}
 }
