@@ -86,12 +86,12 @@ func (s *pip) CalculateFlowImpact(ctx context.Context, npcs []NetworkPolicyChang
 		// the flow against the source first to see if it would be allowed. if it is, we
 		// still have to check the dest next.
 		var predictedAction string
-		orderedTiersAndPlicies := s.xc.GetOrderedTiersAndPolicies()
+		orderedTiersAndPolicies := s.xc.GetOrderedTiersAndPolicies()
 
 		// if the flow came from the cluster, see if it would have left the source.
 		if f.Src_type != flow.EndpointTypeNet {
 			if srcEp := getSrcResource(f); srcEp != nil {
-				predictedAction = computeAction(f, orderedTiersAndPlicies)
+				predictedAction = computeAction(f, orderedTiersAndPolicies)
 			} else {
 				clog.WithField("srcType", f.Src_type).Warn("skipping flow with unexpected source type")
 				continue
@@ -103,7 +103,7 @@ func (s *pip) CalculateFlowImpact(ctx context.Context, npcs []NetworkPolicyChang
 			predictedAction == PreviewActionAllow ||
 			predictedAction == PreviewActionPass {
 			if destEp := getDstResource(f); destEp != nil {
-				predictedAction = computeAction(f, orderedTiersAndPlicies)
+				predictedAction = computeAction(f, orderedTiersAndPolicies)
 			} else {
 				clog.WithField("destType", f.Dest_type).Warn("skipping flow with unexpected dest type")
 				continue
@@ -303,7 +303,6 @@ func buildSelector(npcs []NetworkPolicyChange) string {
 }
 
 // TODO: compute action instead of returning a random action
-// TODO: split into source and dest
 func computeAction(f flow.Flow, tops []*xrefcache.TierWithOrderedPolicies) string {
 	return []string{PreviewActionAllow, PreviewActionDeny, PreviewActionPass, PreviewActionUnknown}[rand.Int()%4]
 }

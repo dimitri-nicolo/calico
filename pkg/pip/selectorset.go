@@ -9,7 +9,9 @@ type selectorSet struct {
 }
 
 func NewSelectorSet(npcs []NetworkPolicyChange) selectorSet {
-	var ss = selectorSet{}
+	var ss = selectorSet{
+		selectors: map[string]selector.Selector{},
+	}
 	for _, npc := range npcs {
 		sel, err := selector.Parse(npc.NetworkPolicy.Spec.Selector)
 		if err != nil {
