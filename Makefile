@@ -624,13 +624,25 @@ calico-build/centos6:
 
 ###############################################################################
 # Managing the upstream library pins
+#
+# If you're updating the pins with a non-release branch checked out,
+# set PIN_BRANCH to the parent branch, e.g.:
+#
+#     PIN_BRANCH=release-v2.5 make update-pins
+#        - or -
+#     PIN_BRANCH=master make update-pins
+#
 ###############################################################################
 
 ## Update dependency pins in glide.yaml
 update-pins: update-licensing-pin update-typha-pin
-
-update-typha: update-pins
-	$(warning !! Update update-typha is deprecated, use update-pins !!)
+	docker run --rm \
+        -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw $$EXTRA_DOCKER_BIND \
+        -v $(HOME)/.glide:/home/user/.glide:rw \
+        -v $$SSH_AUTH_SOCK:/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent \
+        -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+        -w /go/src/$(PACKAGE_NAME) \
+        $(CALICO_BUILD) glide up --strip-vendor
 
 ## Guard so we don't run this on osx because of ssh-agent to docker forwarding bug
 guard-ssh-forwarding-bug:
@@ -641,15 +653,18 @@ guard-ssh-forwarding-bug:
 	fi;
 
 ###############################################################################
+## Set the default upstream repo branch to the current repo's branch,
+## e.g. "master" or "release-vX.Y", but allow it to be overridden.
+PIN_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
+
+###############################################################################
 ## typha
 
 ## Set the default TYPHA source for this project
 TYPHA_PROJECT_DEFAULT=tigera/typha-private.git
 TYPHA_GLIDE_LABEL=projectcalico/typha
 
-## Default the TYPHA repo and version but allow them to be overridden (master or release-vX.Y)
-## default TYPHA branch to the same branch name as the current checked out repo
-TYPHA_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
+TYPHA_BRANCH?=$(PIN_BRANCH)
 TYPHA_REPO?=github.com/$(TYPHA_PROJECT_DEFAULT)
 TYPHA_VERSION?=$(shell git ls-remote git@github.com:$(TYPHA_PROJECT_DEFAULT) $(TYPHA_BRANCH) 2>/dev/null | cut -f 1)
 
@@ -682,9 +697,7 @@ update-typha-pin: guard-ssh-forwarding-bug guard-git-typha
 LICENSING_PROJECT_DEFAULT=tigera/licensing
 LICENSING_GLIDE_LABEL=tigera/licensing
 
-## Default the LICENSING repo and version but allow them to be overridden (master or release-vX.Y)
-## default LICENSING branch to the same branch name as the current checked out repo
-LICENSING_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
+LICENSING_BRANCH?=$(PIN_BRANCH)
 LICENSING_REPO?=github.com/$(LICENSING_PROJECT_DEFAULT)
 LICENSING_VERSION?=$(shell git ls-remote git@github.com:$(LICENSING_PROJECT_DEFAULT) $(LICENSING_BRANCH) 2>/dev/null | cut -f 1)
 
