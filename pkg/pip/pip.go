@@ -111,7 +111,7 @@ func (s *pip) CalculateFlowImpact(ctx context.Context, npcs []NetworkPolicyChang
 		}
 
 		clog.WithField("predictedAction", predictedAction).Debug("computed flow action")
-		f.Action = predictedAction
+		f.PreviewAction = predictedAction
 		retFlows = append(retFlows, f)
 	}
 
