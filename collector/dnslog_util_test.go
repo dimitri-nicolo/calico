@@ -8,6 +8,7 @@ import (
 	"github.com/google/gopacket/layers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 
 	"github.com/projectcalico/felix/calc"
@@ -109,18 +110,21 @@ var _ = Describe("DNS log utility functions", func() {
 var _ = Describe("gopacket to DNS log conversion function", func() {
 	Describe("NewDNSMetaSpecFromUpdate", func() {
 		var clientEP, serverEP *calc.EndpointData
+		var clientIP, serverIP net.IP
 		BeforeEach(func() {
 			clientEP = &calc.EndpointData{Key: model.HostEndpointKey{}, Endpoint: &model.HostEndpoint{}}
 			serverEP = &calc.EndpointData{Key: model.HostEndpointKey{}, Endpoint: &model.HostEndpoint{}}
+			clientIP = net.ParseIP("1.2.3.4")
+			serverIP = net.ParseIP("8.8.8.8")
 		})
 
 		It("returns an error with no questions", func() {
-			_, _, err := NewDNSMetaSpecFromUpdate(DNSUpdate{ClientEP: clientEP, ServerEP: serverEP, DNS: &layers.DNS{}})
+			_, _, err := NewDNSMetaSpecFromUpdate(DNSUpdate{ClientIP: clientIP, ServerIP: serverIP, ClientEP: clientEP, ServerEP: serverEP, DNS: &layers.DNS{}})
 			Expect(err).Should(HaveOccurred())
 		})
 
 		It("all works together", func() {
-			meta, spec, err := NewDNSMetaSpecFromUpdate(DNSUpdate{ClientEP: clientEP, ServerEP: serverEP, DNS: &layers.DNS{
+			meta, spec, err := NewDNSMetaSpecFromUpdate(DNSUpdate{ClientIP: clientIP, ServerIP: serverIP, ClientEP: clientEP, ServerEP: serverEP, DNS: &layers.DNS{
 				Questions: []layers.DNSQuestion{{Name: []byte("tigera.io.")}},
 				Answers: []layers.DNSResourceRecord{
 					{Name: []byte("tigera.io."), Class: layers.DNSClassIN, Type: layers.DNSTypeA},

@@ -8,20 +8,25 @@ import (
 	"time"
 
 	"github.com/google/gopacket/layers"
+
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
 	"github.com/projectcalico/felix/calc"
 )
 
 var _ = Describe("DNS log aggregator", func() {
 	var l *dnsLogAggregator
 	var clientEP, serverEP *calc.EndpointData
+	var clientIP, serverIP net.IP
 	BeforeEach(func() {
 		l = NewDNSLogAggregator().(*dnsLogAggregator)
 		clientEP = &calc.EndpointData{Key: model.HostEndpointKey{}, Endpoint: &model.HostEndpoint{}}
 		serverEP = &calc.EndpointData{Key: model.HostEndpointKey{}, Endpoint: &model.HostEndpoint{}}
+		clientIP = net.ParseIP("1.2.3.4")
+		serverIP = net.ParseIP("8.8.8.8")
 	})
 
 	Describe("constructor", func() {
@@ -55,7 +60,7 @@ var _ = Describe("DNS log aggregator", func() {
 
 	Describe("feed update", func() {
 		BeforeEach(func() {
-			err := l.FeedUpdate(DNSUpdate{ClientEP: clientEP, ServerEP: serverEP, DNS: &layers.DNS{
+			err := l.FeedUpdate(DNSUpdate{ClientIP: clientIP, ServerIP: serverIP, ClientEP: clientEP, ServerEP: serverEP, DNS: &layers.DNS{
 				ResponseCode: layers.DNSResponseCodeNoErr,
 				Questions: []layers.DNSQuestion{
 					{Name: []byte("tigera.io."), Type: layers.DNSTypeA, Class: layers.DNSClassIN},
@@ -70,7 +75,7 @@ var _ = Describe("DNS log aggregator", func() {
 		})
 
 		It("new entry", func() {
-			err := l.FeedUpdate(DNSUpdate{ClientEP: clientEP, ServerEP: serverEP, DNS: &layers.DNS{
+			err := l.FeedUpdate(DNSUpdate{ClientIP: clientIP, ServerIP: serverIP, ClientEP: clientEP, ServerEP: serverEP, DNS: &layers.DNS{
 				ResponseCode: layers.DNSResponseCodeNoErr,
 				Questions: []layers.DNSQuestion{
 					{Name: []byte("tigera.io."), Type: layers.DNSTypeAAAA, Class: layers.DNSClassIN},
@@ -87,7 +92,7 @@ var _ = Describe("DNS log aggregator", func() {
 		})
 
 		It("update with same rdata", func() {
-			err := l.FeedUpdate(DNSUpdate{ClientEP: clientEP, ServerEP: serverEP, DNS: &layers.DNS{
+			err := l.FeedUpdate(DNSUpdate{ClientIP: clientIP, ServerIP: serverIP, ClientEP: clientEP, ServerEP: serverEP, DNS: &layers.DNS{
 				ResponseCode: layers.DNSResponseCodeNoErr,
 				Questions: []layers.DNSQuestion{
 					{Name: []byte("tigera.io."), Type: layers.DNSTypeA, Class: layers.DNSClassIN},
@@ -104,7 +109,7 @@ var _ = Describe("DNS log aggregator", func() {
 		})
 
 		It("update with different rdata", func() {
-			err := l.FeedUpdate(DNSUpdate{ClientEP: clientEP, ServerEP: serverEP, DNS: &layers.DNS{
+			err := l.FeedUpdate(DNSUpdate{ClientIP: clientIP, ServerIP: serverIP, ClientEP: clientEP, ServerEP: serverEP, DNS: &layers.DNS{
 				ResponseCode: layers.DNSResponseCodeNoErr,
 				Questions: []layers.DNSQuestion{
 					{Name: []byte("tigera.io."), Type: layers.DNSTypeA, Class: layers.DNSClassIN},
@@ -133,7 +138,7 @@ var _ = Describe("DNS log aggregator", func() {
 		})
 
 		It("resets dnsStore", func() {
-			err := l.FeedUpdate(DNSUpdate{ClientEP: clientEP, ServerEP: serverEP, DNS: &layers.DNS{
+			err := l.FeedUpdate(DNSUpdate{ClientIP: clientIP, ServerIP: serverIP, ClientEP: clientEP, ServerEP: serverEP, DNS: &layers.DNS{
 				ResponseCode: layers.DNSResponseCodeNoErr,
 				Questions: []layers.DNSQuestion{
 					{Name: []byte("tigera.io."), Type: layers.DNSTypeA, Class: layers.DNSClassIN},
@@ -151,7 +156,7 @@ var _ = Describe("DNS log aggregator", func() {
 
 		Describe("populated", func() {
 			BeforeEach(func() {
-				err := l.FeedUpdate(DNSUpdate{ClientEP: clientEP, ServerEP: serverEP, DNS: &layers.DNS{
+				err := l.FeedUpdate(DNSUpdate{ClientIP: clientIP, ServerIP: serverIP, ClientEP: clientEP, ServerEP: serverEP, DNS: &layers.DNS{
 					ResponseCode: layers.DNSResponseCodeNoErr,
 					Questions: []layers.DNSQuestion{
 						{Name: []byte("tigera.io."), Type: layers.DNSTypeA, Class: layers.DNSClassIN},
@@ -162,7 +167,7 @@ var _ = Describe("DNS log aggregator", func() {
 				}})
 				Expect(err).ShouldNot(HaveOccurred())
 
-				err = l.FeedUpdate(DNSUpdate{ClientEP: clientEP, ServerEP: serverEP, DNS: &layers.DNS{
+				err = l.FeedUpdate(DNSUpdate{ClientIP: clientIP, ServerIP: serverIP, ClientEP: clientEP, ServerEP: serverEP, DNS: &layers.DNS{
 					ResponseCode: layers.DNSResponseCodeNoErr,
 					Questions: []layers.DNSQuestion{
 						{Name: []byte("tigera.io."), Type: layers.DNSTypeA, Class: layers.DNSClassIN},
