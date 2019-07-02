@@ -7,7 +7,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	libv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -45,7 +46,7 @@ func (s *pip) CalculateFlowImpact(ctx context.Context, npcs []NetworkPolicyChang
 	// to prevent the xrefcache from unnecessarily computing relations on endpoints that this policy does not select,
 	// we'll only add endpoints to the xrefcache if any of the input policies select them. As such, we can set the
 	// xrefcache inscope selector to all(), since we've already done the selector logic out of band.
-	s.xc.RegisterInScopeEndpoints(&v3.EndpointsSelection{
+	s.xc.RegisterInScopeEndpoints(&libv3.EndpointsSelection{
 		Selector: "all()",
 	})
 
@@ -178,7 +179,12 @@ func (s *pip) loadInitialPolicy() error {
 		return err
 	}
 	for i := range list.ResourceList.(*v3.TierList).Items {
-		res := &list.ResourceList.(*v3.TierList).Items[i]
+		clientRes := &list.ResourceList.(*v3.TierList).Items[i]
+		res := &libv3.Tier{
+			TypeMeta:   resources.TypeCalicoTiers,
+			ObjectMeta: clientRes.ObjectMeta,
+			Spec:       clientRes.Spec,
+		}
 		s.xc.OnUpdates([]syncer.Update{{
 			Type:       syncer.UpdateTypeSet,
 			Resource:   res,
@@ -192,6 +198,7 @@ func (s *pip) loadInitialPolicy() error {
 	}
 	for i := range list.ResourceList.(*networkingv1.NetworkPolicyList).Items {
 		res := &list.ResourceList.(*networkingv1.NetworkPolicyList).Items[i]
+		res.TypeMeta = resources.TypeK8sNetworkPolicies
 		s.xc.OnUpdates([]syncer.Update{{
 			Type:       syncer.UpdateTypeSet,
 			Resource:   res,
@@ -204,7 +211,12 @@ func (s *pip) loadInitialPolicy() error {
 		return err
 	}
 	for i := range list.ResourceList.(*v3.NetworkPolicyList).Items {
-		res := &list.ResourceList.(*v3.NetworkPolicyList).Items[i]
+		clientRes := &list.ResourceList.(*v3.NetworkPolicyList).Items[i]
+		res := &libv3.NetworkPolicy{
+			TypeMeta:   resources.TypeCalicoNetworkPolicies,
+			ObjectMeta: clientRes.ObjectMeta,
+			Spec:       clientRes.Spec,
+		}
 		s.xc.OnUpdates([]syncer.Update{{
 			Type:       syncer.UpdateTypeSet,
 			Resource:   res,
@@ -217,7 +229,12 @@ func (s *pip) loadInitialPolicy() error {
 		return err
 	}
 	for i := range list.ResourceList.(*v3.GlobalNetworkPolicyList).Items {
-		res := &list.ResourceList.(*v3.GlobalNetworkPolicyList).Items[i]
+		clientRes := &list.ResourceList.(*v3.GlobalNetworkPolicyList).Items[i]
+		res := &libv3.GlobalNetworkPolicy{
+			TypeMeta:   resources.TypeCalicoGlobalNetworkPolicies,
+			ObjectMeta: clientRes.ObjectMeta,
+			Spec:       clientRes.Spec,
+		}
 		s.xc.OnUpdates([]syncer.Update{{
 			Type:       syncer.UpdateTypeSet,
 			Resource:   res,
@@ -230,7 +247,12 @@ func (s *pip) loadInitialPolicy() error {
 		return err
 	}
 	for i := range list.ResourceList.(*v3.GlobalNetworkSetList).Items {
-		res := &list.ResourceList.(*v3.GlobalNetworkSetList).Items[i]
+		clientRes := &list.ResourceList.(*v3.GlobalNetworkSetList).Items[i]
+		res := &libv3.GlobalNetworkSet{
+			TypeMeta:   resources.TypeCalicoGlobalNetworkSets,
+			ObjectMeta: clientRes.ObjectMeta,
+			Spec:       clientRes.Spec,
+		}
 		s.xc.OnUpdates([]syncer.Update{{
 			Type:       syncer.UpdateTypeSet,
 			Resource:   res,
@@ -258,13 +280,13 @@ func getSrcResource(f flow.Flow) resources.Resource {
 			},
 		}
 	case flow.EndpointTypeHep:
-		return &v3.HostEndpoint{
+		return &libv3.HostEndpoint{
 			ObjectMeta: v1.ObjectMeta{
 				Name:      f.Src_name,
 				Namespace: f.Src_NS,
 				Labels:    f.Src_labels,
 			},
-			Spec: v3.HostEndpointSpec{
+			Spec: libv3.HostEndpointSpec{
 				Node: strings.TrimSuffix(f.Src_name, "-*"),
 			},
 		}
@@ -289,13 +311,13 @@ func getDstResource(f flow.Flow) resources.Resource {
 			},
 		}
 	case flow.EndpointTypeHep:
-		return &v3.HostEndpoint{
+		return &libv3.HostEndpoint{
 			ObjectMeta: v1.ObjectMeta{
 				Name:      f.Dest_name,
 				Namespace: f.Dest_NS,
 				Labels:    f.Dest_labels,
 			},
-			Spec: v3.HostEndpointSpec{
+			Spec: libv3.HostEndpointSpec{
 				Node: strings.TrimSuffix(f.Src_name, "-*"),
 			},
 		}
@@ -310,5 +332,5 @@ func buildSelector(npcs []NetworkPolicyChange) string {
 
 // TODO: compute action instead of returning a random action
 func computeAction(f flow.Flow, tops []*xrefcache.TierWithOrderedPolicies) string {
-	return []string{PreviewActionAllow, PreviewActionDeny, PreviewActionPass, PreviewActionUnknown}[rand.Int()]
+	return []string{PreviewActionAllow, PreviewActionDeny, PreviewActionPass, PreviewActionUnknown}[rand.Int()%4]
 }
