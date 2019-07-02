@@ -215,6 +215,10 @@ clean-manifests:
 ##########################################################################################
 # TESTING 
 ##########################################################################################
+
+GINKGO_ARGS += -cover -timeout 10m
+GINKGO = ginkgo $(GINKGO_ARGS)
+
 test: ut fv st
 
 #############################################
@@ -224,7 +228,7 @@ test: ut fv st
 DOCKER_CALICO_BUILD = docker run --rm -v $(CURDIR):/build-dir/$(PACKAGE_NAME):rw -e LOCAL_USER_ID=$(MY_UID) $(CALICO_BUILD) sh -c
 
 .PHONY: ut
-ut: CMD = go mod download && ginkgo -cover -r pkg/* internal/* $(GINKGO_ARGS)
+ut: CMD = go mod download && $(GINKGO) -r pkg/* internal/*
 ut:
 ifdef LOCAL
 	$(CMD)
@@ -236,7 +240,7 @@ endif
 # Run package level functional level tests
 #############################################
 .PHONY: fv
-fv: CMD = go mod download && ginkgo -cover -r test/fv $(GINKGO_ARGS)
+fv: CMD = go mod download && $(GINKGO) -r test/fv
 fv:
 ifdef LOCAL
 	$(CMD)
@@ -248,7 +252,7 @@ endif
 # Run system integration tests
 #############################################
 .PHONY: st
-st: CMD = go mod download && ginkgo -cover -r test/st/ $(GINKGO_ARGS)
+st: CMD = go mod download && $(GINKGO) -r test/st/
 st: $(COMPONENTS)
 ifdef LOCAL
 	$(CMD)
