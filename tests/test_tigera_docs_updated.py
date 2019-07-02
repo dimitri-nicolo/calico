@@ -20,7 +20,7 @@ def test_updated_docs_deployed():
     assert req.status_code == 200
 
     git_hash = BeautifulSoup(req.content, features="html.parser").find("div", {"class":"git-hash"})
-    assert GIT_HASH == git_hash.attrs['id']
+    assert GIT_HASH == git_hash.attrs['id'], "%s did not match %s" % (GIT_HASH, git_hash.attrs['id'])
 
 
 def test_latest_redirects_correctly():

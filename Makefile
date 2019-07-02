@@ -1,5 +1,5 @@
 CALICO_DIR=$(shell git rev-parse --show-toplevel)
-GIT_HASH=$(shell git rev-parse --short HEAD)
+GIT_HASH=$(shell git rev-parse --short=9 HEAD)
 VERSIONS_FILE?=$(CALICO_DIR)/_data/versions.yml
 IMAGES_FILE=
 JEKYLL_VERSION=pages
