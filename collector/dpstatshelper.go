@@ -23,6 +23,7 @@ const (
 	// Log dispatcher names
 	CloudWatchLogsDispatcherName = "cloudwatch"
 	FlowLogsFileDispatcherName   = "file"
+	DNSLogsFileDispatcherName    = "dnsfile"
 
 	//TODO: Move these into felix config
 	DefaultAgeTimeout               = time.Duration(10) * time.Second
@@ -117,8 +118,28 @@ func StartDataplaneStatsCollector(configParams *config.Config, lookupsCache *cal
 			EnableNetworkSets:        configParams.FlowLogsEnableNetworkSets,
 		},
 	)
-	statsCollector.Start()
 
+	// Create the reporter, aggregator and dispatcher for DNS logging.
+	dnsLogReporter := NewDNSLogReporter(
+		map[string]LogDispatcher{
+			DNSLogsFileDispatcherName: NewFileDispatcher(
+				configParams.DNSLogsFileDirectory,
+				DNSLogFilename,
+				configParams.DNSLogsFileMaxFileSizeMB,
+				configParams.DNSLogsFileMaxFiles,
+			),
+		},
+		configParams.DNSLogsFlushInterval,
+		nil,
+		false,
+	)
+	dnsLogReporter.AddAggregator(
+		NewDNSLogAggregator(),
+		[]string{DNSLogsFileDispatcherName},
+	)
+	statsCollector.SetDNSLogReporter(dnsLogReporter)
+
+	statsCollector.Start()
 	return statsCollector
 }
 

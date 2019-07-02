@@ -29,8 +29,8 @@ type dnsAggregatorRef struct {
 	d []LogDispatcher
 }
 
-// DNSLogsReporter implements the MetricsReporter interface.
-type DNSLogsReporter struct {
+// DNSLogReporter implements the MetricsReporter interface.
+type DNSLogReporter struct {
 	dispatchers   map[string]LogDispatcher
 	aggregators   []dnsAggregatorRef
 	flushInterval time.Duration
@@ -48,14 +48,13 @@ const (
 	dnsHealthInterval = 10 * time.Second
 )
 
-// NewDNSLogsReporter constructs a DNSLogs MetricsReporter using
-// a dispatcher and aggregator.
-func NewDNSLogsReporter(dispatchers map[string]LogDispatcher, flushInterval time.Duration, healthAggregator *health.HealthAggregator, hepEnabled bool) *DNSLogsReporter {
+// NewDNSLogReporter constructs a DNSLogReporter using a dispatcher and aggregator.
+func NewDNSLogReporter(dispatchers map[string]LogDispatcher, flushInterval time.Duration, healthAggregator *health.HealthAggregator, hepEnabled bool) *DNSLogReporter {
 	if healthAggregator != nil {
 		healthAggregator.RegisterReporter(dnsHealthName, &health.HealthReport{Live: true, Ready: true}, dnsHealthInterval*2)
 	}
 
-	return &DNSLogsReporter{
+	return &DNSLogReporter{
 		dispatchers:      dispatchers,
 		flushTicker:      jitter.NewTicker(flushInterval, flushInterval/10),
 		flushInterval:    flushInterval,
@@ -65,7 +64,7 @@ func NewDNSLogsReporter(dispatchers map[string]LogDispatcher, flushInterval time
 	}
 }
 
-func (c *DNSLogsReporter) AddAggregator(agg DNSLogAggregator, dispatchers []string) {
+func (c *DNSLogReporter) AddAggregator(agg DNSLogAggregator, dispatchers []string) {
 	var ref dnsAggregatorRef
 	ref.a = agg
 	for _, d := range dispatchers {
@@ -79,12 +78,12 @@ func (c *DNSLogsReporter) AddAggregator(agg DNSLogAggregator, dispatchers []stri
 	c.aggregators = append(c.aggregators, ref)
 }
 
-func (c *DNSLogsReporter) Start() {
-	log.WithField("flushInterval", c.flushInterval).Info("Starting DNSLogsReporter")
+func (c *DNSLogReporter) Start() {
+	log.WithField("flushInterval", c.flushInterval).Info("Starting DNSLogReporter")
 	go c.run()
 }
 
-func (c *DNSLogsReporter) Log(update DNSUpdate) error {
+func (c *DNSLogReporter) Log(update DNSUpdate) error {
 	log.Info("DNS Logs Reporter got a packet to log")
 	for _, agg := range c.aggregators {
 		if err := agg.a.FeedUpdate(update); err != nil {
@@ -94,7 +93,7 @@ func (c *DNSLogsReporter) Log(update DNSUpdate) error {
 	return nil
 }
 
-func (c *DNSLogsReporter) run() {
+func (c *DNSLogReporter) run() {
 	healthTicks := time.NewTicker(dnsHealthInterval)
 	defer healthTicks.Stop()
 	c.reportHealth()
@@ -127,7 +126,7 @@ func (c *DNSLogsReporter) run() {
 	}
 }
 
-func (c *DNSLogsReporter) canPublishDNSLogs() bool {
+func (c *DNSLogReporter) canPublishDNSLogs() bool {
 	for name, d := range c.dispatchers {
 		err := d.Initialize()
 		if err != nil {
@@ -140,7 +139,7 @@ func (c *DNSLogsReporter) canPublishDNSLogs() bool {
 	return true
 }
 
-func (c *DNSLogsReporter) reportHealth() {
+func (c *DNSLogReporter) reportHealth() {
 	readiness := c.canPublishDNSLogs()
 	if c.healthAggregator != nil {
 		c.healthAggregator.Report(dnsHealthName, &health.HealthReport{

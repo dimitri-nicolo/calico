@@ -18,7 +18,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"net"
 	"os"
 	"path"
 	"regexp"
@@ -31,7 +30,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/nfnetlink"
 
-	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/libcalico-go/lib/set"
@@ -94,7 +92,7 @@ type domainInfoStore struct {
 	gcInterval time.Duration
 
 	// Activity logging.
-	dnsLogReporter *collector.DNSLogsReporter
+	collector collector.Collector
 }
 
 // Signal sent by the domain info store to the ipsets manager when the information for a given
@@ -122,19 +120,8 @@ func newDomainInfoStore(domainInfoChanges chan *domainInfoChanged, config *Confi
 		saveFile:             config.DNSCacheFile,
 		saveInterval:         config.DNSCacheSaveInterval,
 		gcInterval:           13 * time.Second,
+		collector:            config.Collector,
 	}
-	s.dnsLogReporter = collector.NewDNSLogsReporter(
-		map[string]collector.LogDispatcher{"file": collector.NewFileDispatcher(
-			config.DNSLogsFileDirectory,
-			collector.DNSLogFilename,
-			config.DNSLogsFileMaxFileSizeMB,
-			config.DNSLogsFileMaxFiles,
-		)},
-		config.DNSLogsFlushInterval,
-		nil,
-		false,
-	)
-	s.dnsLogReporter.AddAggregator(collector.NewDNSLogAggregator(), []string{"file"})
 	return s
 }
 
@@ -166,38 +153,21 @@ func (s *domainInfoStore) Start() {
 	gcTimerC := time.NewTicker(s.gcInterval).C
 
 	go s.loop(saveTimerC, gcTimerC)
-
-	// Start DNS logging infrastructure.
-	s.dnsLogReporter.Start()
 }
 
 func (s *domainInfoStore) loop(saveTimerC, gcTimerC <-chan time.Time) {
 	for {
 		select {
 		case msg := <-s.msgChannel:
+			// TODO: Test and fix handling of DNS over IPv6.  The `layers.LayerTypeIPv4`
+			// in the next line is clearly a v4 assumption, and some of the code inside
+			// `nfnetlink.SubscribeDNS` also looks v4-specific.
 			packet := gopacket.NewPacket(msg, layers.LayerTypeIPv4, gopacket.Default)
-
-			var clientIP, serverIP net.IP
-			if ipLayer := packet.Layer(layers.LayerTypeIPv6); ipLayer != nil {
-				ip, _ := ipLayer.(*layers.IPv6)
-				serverIP = ip.SrcIP
-				clientIP = ip.DstIP
-			} else if ipLayer := packet.Layer(layers.LayerTypeIPv4); ipLayer != nil {
-				ip, _ := ipLayer.(*layers.IPv4)
-				serverIP = ip.SrcIP
-				clientIP = ip.DstIP
-			}
-
-			var clientEP, serverEP *calc.EndpointData
-			// TODO how are these filled in?
-			clientEP = &calc.EndpointData{}
-			serverEP = &calc.EndpointData{}
-
 			if dnsLayer := packet.Layer(layers.LayerTypeDNS); dnsLayer != nil {
 				dns, _ := dnsLayer.(*layers.DNS)
-				update := collector.DNSUpdate{ClientEP: clientEP, ClientIP: clientIP, ServerEP: serverEP, ServerIP: serverIP, DNS: dns}
-				if err := s.dnsLogReporter.Log(update); err != nil {
-					log.WithError(err).Warning("Error from DNS logger")
+				if s.collector != nil {
+					ipv4, _ := packet.Layer(layers.LayerTypeIPv4).(*layers.IPv4)
+					s.collector.LogDNS(ipv4.SrcIP, ipv4.DstIP, dns)
 				}
 				s.processDNSPacket(dns)
 			}
