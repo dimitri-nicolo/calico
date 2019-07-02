@@ -1,5 +1,5 @@
-hash: c76a569210392c324322b9e814f83a751f9291720d3acd1bbfbedfec27d6e9c6
-updated: 2019-07-02T16:44:50.369092501Z
+hash: f79aaff2a41e3d02a02e7a773826f8d70b4489f02f64d689f0ffcafc3ec99ec7
+updated: 2019-07-02T17:53:32.761548484Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -213,6 +213,7 @@ imports:
   - lib/errors
   - lib/hash
   - lib/ipam
+  - lib/ipip
   - lib/logutils
   - lib/names
   - lib/namespace
@@ -265,6 +266,7 @@ imports:
   version: f58768cc1a7a7e77a3bd49e98cdd21419399b6a3
 - name: github.com/sirupsen/logrus
   version: d682213848ed68c0a260ca37d6dd5ace8423f5ba
+  repo: https://github.com/projectcalico/logrus
 - name: github.com/spf13/pflag
   version: 583c0c0531f06d5278b7d917446061adc344b5cd
 - name: golang.org/x/crypto
@@ -524,7 +526,7 @@ imports:
   - util/jsonpath
   - util/retry
 - name: k8s.io/kube-openapi
-  version: db7b694dc208eead64d38030265f702db593fcf2
+  version: 91cfa479c814065e420cee7ed227db0f63a5854e
   subpackages:
   - pkg/common
 testImports: []

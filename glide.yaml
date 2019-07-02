@@ -6,6 +6,7 @@ import:
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
+  - lib/ipip
   - lib/backend/api
   - lib/backend/model
   - lib/backend/syncersv1/bgpsyncer
@@ -22,4 +23,4 @@ import:
   version: 80e11bcdb20baf366d54577eef9801d490fb04cc
   repo: git@github.com:tigera/typha-private.git
 - package: github.com/sirupsen/logrus
-  version: v1.0.4
+  repo: https://github.com/projectcalico/logrus
