@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -71,7 +72,14 @@ func (s *server) handleListReports(response http.ResponseWriter, request *http.R
 			rt = &v.ReportTypeSpec
 		}
 
+		// Convert the JSON string UI summary into an object that we'll embed directly under the UISummary
+		// field. To do this unmarshal the rendered string into a generic interface type.
+		var uiSummary interface{}
 		var formats []Format
+		if err = json.Unmarshal([]byte(v.UISummary), &uiSummary); err != nil {
+			log.WithError(err).Debug("UI summary is not JSON")
+		}
+
 		var downloadUrl = ""
 
 		// If the user can view the report then include the download url and formats
@@ -101,7 +109,7 @@ func (s *server) handleListReports(response http.ResponseWriter, request *http.R
 			Type:            v.ReportTypeName,
 			StartTime:       v.StartTime,
 			EndTime:         v.EndTime,
-			UISummary:       v.UISummary,
+			UISummary:       uiSummary,
 			DownloadURL:     downloadUrl,
 			DownloadFormats: formats,
 			GenerationTime:  v.GenerationTime,
