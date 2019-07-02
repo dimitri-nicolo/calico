@@ -1,5 +1,5 @@
-hash: d52010151bba355503ab87a13ccc0573b54766cee6515fd38b2545b6565e7213
-updated: 2019-06-26T01:37:54.404144862Z
+hash: ec6764518e74d484393e8404d6c5b1d3b7e3a58a2768c24aa1a8ae93f1540e76
+updated: 2019-07-02T20:42:20.410770696Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -163,8 +163,6 @@ imports:
   version: 2bc1f35cddc0cc527b4bc3dce8578fc2a6c11384
 - name: github.com/kelseyhightower/envconfig
   version: 0b417c4ec4a8a82eecc22a1459a504aa55163d61
-- name: github.com/konsorten/go-windows-terminal-sequences
-  version: f55edac94c9bbba5d6182a4be46d86a2c9b5b50e
 - name: github.com/leodido/go-urn
   version: a67a23e1c1af3c66528573bb86a87246477277c1
 - name: github.com/mailru/easyjson
@@ -229,7 +227,7 @@ imports:
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
 - name: github.com/projectcalico/felix
-  version: 357836b476ccac08adb84a54b68b306927b9b137
+  version: 7d4ef43953ca7627f9bbb5ae3afe2472718eee62
   repo: git@github.com:tigera/felix-private.git
   vcs: git
   subpackages:
@@ -262,7 +260,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 8dc7bc820846ec5c35f943ce2f673dad348a9c4a
+  version: fe10f211caf00641500842123c9066584e9c16c3
   repo: git@github.com:tigera/libcalico-go-private.git
   vcs: git
   subpackages:
@@ -304,7 +302,7 @@ imports:
   - lib/validator/v3
   - lib/watch
 - name: github.com/projectcalico/typha
-  version: f6211d8cdce0561275e75d13e6fe3ef40f12c416
+  version: 80e11bcdb20baf366d54577eef9801d490fb04cc
   repo: git@github.com:tigera/typha-private
   subpackages:
   - pkg/syncclient
@@ -337,9 +335,10 @@ imports:
 - name: github.com/satori/go.uuid
   version: f58768cc1a7a7e77a3bd49e98cdd21419399b6a3
 - name: github.com/sirupsen/logrus
-  version: 839c75faf7f98a33d445d181f3018b5c3409a45e
+  version: f006c2ac4710855cf0f916dd6b77acf6b048dc6e
+  repo: https://github.com/projectcalico/logrus
 - name: github.com/spf13/pflag
-  version: 24fa6976df40757dce6aea913e7b81ade90530e1
+  version: e57e3eeb33f795204c1ca35f56c44f83227c6e66
 - name: github.com/tigera/licensing
   version: 8231bc0944780772f74f934d8982d22b6eea4b6f
   repo: git@github.com:tigera/licensing
@@ -635,7 +634,7 @@ imports:
 - name: k8s.io/klog
   version: 8e90cee79f823779174776412c13478955131846
 - name: k8s.io/kube-openapi
-  version: db7b694dc208eead64d38030265f702db593fcf2
+  version: b3a7cee44a305be0a69e1b9ac03018307287e1b0
   subpackages:
   - pkg/common
 - name: k8s.io/utils
