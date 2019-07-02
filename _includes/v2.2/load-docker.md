@@ -42,7 +42,7 @@
    docker pull docker.elastic.co/elasticsearch/elasticsearch-oss:{{site.data.versions[page.version].first.components["elasticsearch"].version}}
    docker pull docker.elastic.co/kibana/kibana-oss:{{site.data.versions[page.version].first.components["kibana"].version}}
    docker pull {{page.registry}}{{site.imageNames["calicoctl"]}}:{{site.data.versions[page.version].first.components["calicoctl"].version}}
-   docker pull {{page.registry}}{{site.imageNames["calicoq"]}}:{{site.data.versions[page.version].first.components["calicoctl"].version}}
+   docker pull {{page.registry}}{{site.imageNames["calicoq"]}}:{{site.data.versions[page.version].first.components["calicoq"].version}}
    docker pull {{page.registry}}{{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
    docker pull {{page.registry}}{{site.imageNames["cnxManager"]}}:{{site.data.versions[page.version].first.components["cnx-manager"].version}}
    docker pull {{page.registry}}{{site.imageNames["cnxManagerProxy"]}}:{{site.data.versions[page.version].first.components["cnx-manager-proxy"].version}}
