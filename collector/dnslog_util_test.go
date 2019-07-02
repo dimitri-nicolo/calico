@@ -107,7 +107,7 @@ var _ = Describe("DNS log utility functions", func() {
 })
 
 var _ = Describe("gopacket to DNS log conversion function", func() {
-	Describe("NewDNSMetaSpecFromGoPacket", func() {
+	Describe("NewDNSMetaSpecFromUpdate", func() {
 		var clientEP, serverEP *calc.EndpointData
 		BeforeEach(func() {
 			clientEP = &calc.EndpointData{Key: model.HostEndpointKey{}, Endpoint: &model.HostEndpoint{}}
@@ -115,17 +115,17 @@ var _ = Describe("gopacket to DNS log conversion function", func() {
 		})
 
 		It("returns an error with no questions", func() {
-			_, _, err := NewDNSMetaSpecFromGoPacket(clientEP, serverEP, &layers.DNS{})
+			_, _, err := NewDNSMetaSpecFromUpdate(DNSUpdate{ClientEP: clientEP, ServerEP: serverEP, DNS: &layers.DNS{}})
 			Expect(err).Should(HaveOccurred())
 		})
 
 		It("all works together", func() {
-			meta, spec, err := NewDNSMetaSpecFromGoPacket(clientEP, serverEP, &layers.DNS{
+			meta, spec, err := NewDNSMetaSpecFromUpdate(DNSUpdate{ClientEP: clientEP, ServerEP: serverEP, DNS: &layers.DNS{
 				Questions: []layers.DNSQuestion{{Name: []byte("tigera.io.")}},
 				Answers: []layers.DNSResourceRecord{
 					{Name: []byte("tigera.io."), Class: layers.DNSClassIN, Type: layers.DNSTypeA},
 				},
-			})
+			}})
 
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(meta.Question.Name).Should(Equal("tigera.io"))

@@ -18,6 +18,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"net"
 	"os"
 	"path"
 	"regexp"
@@ -30,6 +31,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/nfnetlink"
 
+	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/libcalico-go/lib/set"
@@ -174,10 +176,27 @@ func (s *domainInfoStore) loop(saveTimerC, gcTimerC <-chan time.Time) {
 		select {
 		case msg := <-s.msgChannel:
 			packet := gopacket.NewPacket(msg, layers.LayerTypeIPv4, gopacket.Default)
+
+			var clientIP, serverIP net.IP
+			if ipLayer := packet.Layer(layers.LayerTypeIPv6); ipLayer != nil {
+				ip, _ := ipLayer.(*layers.IPv6)
+				serverIP = ip.SrcIP
+				clientIP = ip.DstIP
+			} else if ipLayer := packet.Layer(layers.LayerTypeIPv4); ipLayer != nil {
+				ip, _ := ipLayer.(*layers.IPv4)
+				serverIP = ip.SrcIP
+				clientIP = ip.DstIP
+			}
+
+			var clientEP, serverEP *calc.EndpointData
+			// TODO how are these filled in?
+			clientEP = &calc.EndpointData{}
+			serverEP = &calc.EndpointData{}
+
 			if dnsLayer := packet.Layer(layers.LayerTypeDNS); dnsLayer != nil {
 				dns, _ := dnsLayer.(*layers.DNS)
-				// TODO clientEP, serverEP
-				if err := s.dnsLogReporter.Log(nil, nil, dns); err != nil {
+				update := collector.DNSUpdate{ClientEP: clientEP, ClientIP: clientIP, ServerEP: serverEP, ServerIP: serverIP, DNS: dns}
+				if err := s.dnsLogReporter.Log(update); err != nil {
 					log.WithError(err).Warning("Error from DNS logger")
 				}
 				s.processDNSPacket(dns)

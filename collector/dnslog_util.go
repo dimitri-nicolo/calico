@@ -9,29 +9,27 @@ import (
 	"strings"
 
 	"github.com/google/gopacket/layers"
-
-	"github.com/projectcalico/felix/calc"
 )
 
-func NewDNSMetaSpecFromGoPacket(clientEP, serverEP *calc.EndpointData, dns *layers.DNS) (DNSMeta, DNSSpec, error) {
-	if len(dns.Questions) == 0 {
+func NewDNSMetaSpecFromUpdate(update DNSUpdate) (DNSMeta, DNSSpec, error) {
+	if len(update.DNS.Questions) == 0 {
 		return DNSMeta{}, DNSSpec{}, errors.New("No questions in DNS packet")
 	}
 
-	clientEM, err := getFlowLogEndpointMetadata(clientEP)
+	clientEM, err := getFlowLogEndpointMetadata(update.ClientEP)
 	if err != nil {
-		return DNSMeta{}, DNSSpec{}, fmt.Errorf("Could not extract metadata for client %v", clientEP)
+		return DNSMeta{}, DNSSpec{}, fmt.Errorf("Could not extract metadata for client %v", update.ClientEP)
 	}
-	clientLabels := getFlowLogEndpointLabels(clientEP)
+	clientLabels := getFlowLogEndpointLabels(update.ClientEP)
 
-	serverEM, err := getFlowLogEndpointMetadata(serverEP)
+	serverEM, err := getFlowLogEndpointMetadata(update.ServerEP)
 	if err != nil {
-		return DNSMeta{}, DNSSpec{}, fmt.Errorf("Could not extract metadata for server %v", serverEP)
+		return DNSMeta{}, DNSSpec{}, fmt.Errorf("Could not extract metadata for server %v", update.ServerEP)
 	}
-	serverLabels := getFlowLogEndpointLabels(serverEP)
+	serverLabels := getFlowLogEndpointLabels(update.ServerEP)
 
-	spec := newDNSSpecFromGoPacket(clientLabels, EndpointMetadataWithIP{serverEM, ""}, serverLabels, dns)
-	meta := newDNSMetaFromSpecAndGoPacket(EndpointMetadataWithIP{clientEM, ""}, dns, spec)
+	spec := newDNSSpecFromGoPacket(clientLabels, EndpointMetadataWithIP{serverEM, update.ClientIP.String()}, serverLabels, update.DNS)
+	meta := newDNSMetaFromSpecAndGoPacket(EndpointMetadataWithIP{clientEM, update.ServerIP.String()}, update.DNS, spec)
 
 	return meta, spec, nil
 }

@@ -55,7 +55,7 @@ var _ = Describe("DNS log aggregator", func() {
 
 	Describe("feed update", func() {
 		BeforeEach(func() {
-			err := l.FeedUpdate(clientEP, serverEP, &layers.DNS{
+			err := l.FeedUpdate(DNSUpdate{ClientEP: clientEP, ServerEP: serverEP, DNS: &layers.DNS{
 				ResponseCode: layers.DNSResponseCodeNoErr,
 				Questions: []layers.DNSQuestion{
 					{Name: []byte("tigera.io."), Type: layers.DNSTypeA, Class: layers.DNSClassIN},
@@ -63,14 +63,14 @@ var _ = Describe("DNS log aggregator", func() {
 				Answers: []layers.DNSResourceRecord{
 					{Name: []byte("tigera.io."), Type: layers.DNSTypeA, Class: layers.DNSClassIN, IP: net.ParseIP("127.0.0.1")},
 				},
-			})
+			}})
 
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(l.dnsStore).Should(HaveLen(1))
 		})
 
 		It("new entry", func() {
-			err := l.FeedUpdate(clientEP, serverEP, &layers.DNS{
+			err := l.FeedUpdate(DNSUpdate{ClientEP: clientEP, ServerEP: serverEP, DNS: &layers.DNS{
 				ResponseCode: layers.DNSResponseCodeNoErr,
 				Questions: []layers.DNSQuestion{
 					{Name: []byte("tigera.io."), Type: layers.DNSTypeAAAA, Class: layers.DNSClassIN},
@@ -78,7 +78,7 @@ var _ = Describe("DNS log aggregator", func() {
 				Answers: []layers.DNSResourceRecord{
 					{Name: []byte("tigera.io."), Type: layers.DNSTypeAAAA, Class: layers.DNSClassIN, IP: net.ParseIP("::1")},
 				},
-			})
+			}})
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(l.dnsStore).Should(HaveLen(2))
 			for _, v := range l.dnsStore {
@@ -87,7 +87,7 @@ var _ = Describe("DNS log aggregator", func() {
 		})
 
 		It("update with same rdata", func() {
-			err := l.FeedUpdate(clientEP, serverEP, &layers.DNS{
+			err := l.FeedUpdate(DNSUpdate{ClientEP: clientEP, ServerEP: serverEP, DNS: &layers.DNS{
 				ResponseCode: layers.DNSResponseCodeNoErr,
 				Questions: []layers.DNSQuestion{
 					{Name: []byte("tigera.io."), Type: layers.DNSTypeA, Class: layers.DNSClassIN},
@@ -95,7 +95,7 @@ var _ = Describe("DNS log aggregator", func() {
 				Answers: []layers.DNSResourceRecord{
 					{Name: []byte("tigera.io."), Type: layers.DNSTypeA, Class: layers.DNSClassIN, IP: net.ParseIP("127.0.0.1")},
 				},
-			})
+			}})
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(l.dnsStore).Should(HaveLen(1))
 			for _, v := range l.dnsStore {
@@ -104,7 +104,7 @@ var _ = Describe("DNS log aggregator", func() {
 		})
 
 		It("update with different rdata", func() {
-			err := l.FeedUpdate(clientEP, serverEP, &layers.DNS{
+			err := l.FeedUpdate(DNSUpdate{ClientEP: clientEP, ServerEP: serverEP, DNS: &layers.DNS{
 				ResponseCode: layers.DNSResponseCodeNoErr,
 				Questions: []layers.DNSQuestion{
 					{Name: []byte("tigera.io."), Type: layers.DNSTypeA, Class: layers.DNSClassIN},
@@ -112,7 +112,7 @@ var _ = Describe("DNS log aggregator", func() {
 				Answers: []layers.DNSResourceRecord{
 					{Name: []byte("tigera.io."), Type: layers.DNSTypeA, Class: layers.DNSClassIN, IP: net.ParseIP("127.0.0.2")},
 				},
-			})
+			}})
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(l.dnsStore).Should(HaveLen(2))
 			for _, v := range l.dnsStore {
@@ -133,7 +133,7 @@ var _ = Describe("DNS log aggregator", func() {
 		})
 
 		It("resets dnsStore", func() {
-			err := l.FeedUpdate(clientEP, serverEP, &layers.DNS{
+			err := l.FeedUpdate(DNSUpdate{ClientEP: clientEP, ServerEP: serverEP, DNS: &layers.DNS{
 				ResponseCode: layers.DNSResponseCodeNoErr,
 				Questions: []layers.DNSQuestion{
 					{Name: []byte("tigera.io."), Type: layers.DNSTypeA, Class: layers.DNSClassIN},
@@ -141,7 +141,7 @@ var _ = Describe("DNS log aggregator", func() {
 				Answers: []layers.DNSResourceRecord{
 					{Name: []byte("tigera.io."), Type: layers.DNSTypeA, Class: layers.DNSClassIN, IP: net.ParseIP("127.0.0.1")},
 				},
-			})
+			}})
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(l.dnsStore).Should(HaveLen(1))
 
@@ -151,7 +151,7 @@ var _ = Describe("DNS log aggregator", func() {
 
 		Describe("populated", func() {
 			BeforeEach(func() {
-				err := l.FeedUpdate(clientEP, serverEP, &layers.DNS{
+				err := l.FeedUpdate(DNSUpdate{ClientEP: clientEP, ServerEP: serverEP, DNS: &layers.DNS{
 					ResponseCode: layers.DNSResponseCodeNoErr,
 					Questions: []layers.DNSQuestion{
 						{Name: []byte("tigera.io."), Type: layers.DNSTypeA, Class: layers.DNSClassIN},
@@ -159,10 +159,10 @@ var _ = Describe("DNS log aggregator", func() {
 					Answers: []layers.DNSResourceRecord{
 						{Name: []byte("tigera.io."), Type: layers.DNSTypeA, Class: layers.DNSClassIN, IP: net.ParseIP("127.0.0.1")},
 					},
-				})
+				}})
 				Expect(err).ShouldNot(HaveOccurred())
 
-				err = l.FeedUpdate(clientEP, serverEP, &layers.DNS{
+				err = l.FeedUpdate(DNSUpdate{ClientEP: clientEP, ServerEP: serverEP, DNS: &layers.DNS{
 					ResponseCode: layers.DNSResponseCodeNoErr,
 					Questions: []layers.DNSQuestion{
 						{Name: []byte("tigera.io."), Type: layers.DNSTypeA, Class: layers.DNSClassIN},
@@ -170,7 +170,7 @@ var _ = Describe("DNS log aggregator", func() {
 					Answers: []layers.DNSResourceRecord{
 						{Name: []byte("tigera.io."), Type: layers.DNSTypeA, Class: layers.DNSClassIN, IP: net.ParseIP("127.0.0.2")},
 					},
-				})
+				}})
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 

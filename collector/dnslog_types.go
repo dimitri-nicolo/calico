@@ -13,7 +13,17 @@ import (
 	"time"
 
 	"github.com/google/gopacket/layers"
+
+	"github.com/projectcalico/felix/calc"
 )
+
+type DNSUpdate struct {
+	ClientIP net.IP
+	ClientEP *calc.EndpointData
+	ServerIP net.IP
+	ServerEP *calc.EndpointData
+	DNS      *layers.DNS
+}
 
 type EndpointMetadataWithIP struct {
 	EndpointMetadata

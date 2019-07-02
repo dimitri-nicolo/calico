@@ -6,9 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/gopacket/layers"
-
-	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/rules"
 )
 
@@ -45,8 +42,8 @@ func (d *dnsLogAggregator) AggregateOver(k AggregationKind) DNSLogAggregator {
 	return d
 }
 
-func (d *dnsLogAggregator) FeedUpdate(clientEP, serverEP *calc.EndpointData, dns *layers.DNS) error {
-	meta, spec, err := NewDNSMetaSpecFromGoPacket(clientEP, serverEP, dns)
+func (d *dnsLogAggregator) FeedUpdate(update DNSUpdate) error {
+	meta, spec, err := NewDNSMetaSpecFromUpdate(update)
 
 	if err != nil {
 		return err
