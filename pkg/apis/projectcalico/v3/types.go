@@ -204,3 +204,25 @@ type GlobalReportType struct {
 
 	Spec calico.ReportTypeSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
 }
+
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// IPPoolList contains a list of IPPool resources.
+type IPPoolList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
+	Items []IPPool `json:"items" protobuf:"bytes,2,rep,name=items"`
+}
+
+// +genclient
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type IPPool struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
+	Spec calico.IPPoolSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
+}

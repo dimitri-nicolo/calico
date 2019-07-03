@@ -52,6 +52,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&GlobalReportList{},
 		&GlobalReportType{},
 		&GlobalReportTypeList{},
+		&IPPool{},
+		&IPPoolList{},
 	)
 	return nil
 }
