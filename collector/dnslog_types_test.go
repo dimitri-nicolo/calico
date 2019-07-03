@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"sort"
 	"strings"
 	"time"
 
@@ -195,6 +196,21 @@ var _ = Describe("DNS log type tests", func() {
 			It("Different types", func() {
 				Expect(DNSName{Name: "a.", Type: DNSType(1)}.Less(DNSName{Name: "a.", Type: DNSType(2)})).Should(BeTrue())
 				Expect(DNSName{Name: "a.", Type: DNSType(2)}.Less(DNSName{Name: "a.", Type: DNSType(1)})).Should(BeFalse())
+			})
+			It("sorts correctly", func() {
+				a := DNSNames{
+					DNSName{Name: "b."},
+					DNSName{Name: "a."},
+					DNSName{Name: "c."},
+					DNSName{Name: "a.", Type: DNSType(1)},
+				}
+				sort.Stable(a)
+				Expect(a).Should(Equal(DNSNames{
+					DNSName{Name: "a."},
+					DNSName{Name: "a.", Type: DNSType(1)},
+					DNSName{Name: "b."},
+					DNSName{Name: "c."},
+				}))
 			})
 		})
 		Context("JSON", func() {
