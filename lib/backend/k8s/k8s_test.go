@@ -25,6 +25,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
 	"github.com/projectcalico/libcalico-go/lib/backend/k8s"
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/felixsyncer"
 	"github.com/projectcalico/libcalico-go/lib/net"
@@ -2184,18 +2185,21 @@ var _ = testutils.E2eDatastoreDescribe("Test Watch support", testutils.Datastore
 		It("supports watching a specific profile (from namespace)", func() {
 			watch, err := c.Watch(ctx, model.ResourceListOptions{Name: "kns.default", Kind: apiv3.KindProfile}, "")
 			Expect(err).NotTo(HaveOccurred())
+			defer watch.Stop()
 			event := ExpectAddedEvent(watch.ResultChan())
 			Expect(event.New.Key.String()).To(Equal("Profile(kns.default)"))
 		})
 		It("supports watching a specific profile (from serviceAccount)", func() {
 			watch, err := c.Watch(ctx, model.ResourceListOptions{Name: "ksa.default.test-sa-1", Kind: apiv3.KindProfile}, "")
 			Expect(err).NotTo(HaveOccurred())
+			defer watch.Stop()
 			event := ExpectAddedEvent(watch.ResultChan())
 			Expect(event.New.Key.String()).To(Equal("Profile(ksa.default.test-sa-1)"))
 		})
 		It("supports watching all profiles", func() {
 			watch, err := c.Watch(ctx, model.ResourceListOptions{Kind: apiv3.KindProfile}, "")
 			Expect(err).NotTo(HaveOccurred())
+			defer watch.Stop()
 			ExpectAddedEvent(watch.ResultChan())
 		})
 		It("rejects names without prefixes", func() {
@@ -2230,6 +2234,7 @@ var _ = testutils.E2eDatastoreDescribe("Test Watch support", testutils.Datastore
 		It("supports watching a specific networkpolicy", func() {
 			watch, err := c.Watch(ctx, model.ResourceListOptions{Name: "knp.default.test-net-policy-1", Namespace: "default", Kind: apiv3.KindNetworkPolicy}, "")
 			Expect(err).NotTo(HaveOccurred())
+			defer watch.Stop()
 			event := ExpectAddedEvent(watch.ResultChan())
 			Expect(event.New.Key.String()).To(Equal("NetworkPolicy(default/knp.default.test-net-policy-1)"))
 		})
@@ -2241,6 +2246,7 @@ var _ = testutils.E2eDatastoreDescribe("Test Watch support", testutils.Datastore
 		It("supports watching all networkpolicies", func() {
 			watch, err := c.Watch(ctx, model.ResourceListOptions{Kind: apiv3.KindNetworkPolicy}, "")
 			Expect(err).NotTo(HaveOccurred())
+			defer watch.Stop()
 			ExpectAddedEvent(watch.ResultChan())
 		})
 	})
@@ -2281,6 +2287,7 @@ var _ = testutils.E2eDatastoreDescribe("Test Watch support", testutils.Datastore
 		It("supports watching a specific networkpolicy", func() {
 			watch, err := c.Watch(ctx, model.ResourceListOptions{Name: "test-net-policy-3", Namespace: "default", Kind: apiv3.KindNetworkPolicy}, "")
 			Expect(err).NotTo(HaveOccurred())
+			defer watch.Stop()
 			event := ExpectAddedEvent(watch.ResultChan())
 			Expect(event.New.Key.String()).To(Equal("NetworkPolicy(default/test-net-policy-3)"))
 		})
@@ -2292,6 +2299,7 @@ var _ = testutils.E2eDatastoreDescribe("Test Watch support", testutils.Datastore
 		It("supports watching all networkpolicies", func() {
 			watch, err := c.Watch(ctx, model.ResourceListOptions{Kind: apiv3.KindNetworkPolicy}, "")
 			Expect(err).NotTo(HaveOccurred())
+			defer watch.Stop()
 			ExpectAddedEvent(watch.ResultChan())
 		})
 	})
@@ -2334,12 +2342,14 @@ var _ = testutils.E2eDatastoreDescribe("Test Watch support", testutils.Datastore
 		It("supports watching a specific custom resource (IPPool)", func() {
 			watch, err := c.Watch(ctx, model.ResourceListOptions{Name: "test-ippool-1", Kind: apiv3.KindIPPool}, "")
 			Expect(err).NotTo(HaveOccurred())
+			defer watch.Stop()
 			event := ExpectAddedEvent(watch.ResultChan())
 			Expect(event.New.Key.String()).To(Equal("IPPool(test-ippool-1)"))
 		})
 		It("supports watching all custom resources (IPPool)", func() {
 			watch, err := c.Watch(ctx, model.ResourceListOptions{Kind: apiv3.KindIPPool}, "")
 			Expect(err).NotTo(HaveOccurred())
+			defer watch.Stop()
 			ExpectAddedEvent(watch.ResultChan())
 		})
 	})
@@ -2380,6 +2390,7 @@ var _ = testutils.E2eDatastoreDescribe("Test Watch support", testutils.Datastore
 		It("supports watching a specific workloadEndpoint", func() {
 			watch, err := c.Watch(ctx, model.ResourceListOptions{Name: "127.0.0.1-k8s-test--pod--1-eth0", Namespace: "default", Kind: apiv3.KindWorkloadEndpoint}, "")
 			Expect(err).NotTo(HaveOccurred())
+			defer watch.Stop()
 			event := ExpectAddedEvent(watch.ResultChan())
 			Expect(event.New.Key.String()).To(Equal("WorkloadEndpoint(default/127.0.0.1-k8s-test--pod--1-eth0)"))
 		})
@@ -2391,6 +2402,7 @@ var _ = testutils.E2eDatastoreDescribe("Test Watch support", testutils.Datastore
 		It("supports watching all workloadEndpoints", func() {
 			watch, err := c.Watch(ctx, model.ResourceListOptions{Kind: apiv3.KindWorkloadEndpoint}, "")
 			Expect(err).NotTo(HaveOccurred())
+			defer watch.Stop()
 			ExpectAddedEvent(watch.ResultChan())
 		})
 	})
@@ -2400,6 +2412,7 @@ var _ = testutils.E2eDatastoreDescribe("Test Watch support", testutils.Datastore
 			name := "127.0.0.1" // Node created by test/mock-node.yaml
 			watch, err := c.Watch(ctx, model.ResourceListOptions{Name: name, Kind: apiv3.KindNode}, "")
 			Expect(err).NotTo(HaveOccurred())
+			defer watch.Stop()
 
 			// We should get at least one event from the watch.
 			var receivedEvent bool
@@ -2421,6 +2434,7 @@ var _ = testutils.E2eDatastoreDescribe("Test Watch support", testutils.Datastore
 		By("Watching all nodes", func() {
 			watch, err := c.Watch(ctx, model.ResourceListOptions{Kind: apiv3.KindNode}, "")
 			Expect(err).NotTo(HaveOccurred())
+			defer watch.Stop()
 
 			// We should get at least one event from the watch.
 			var receivedEvent bool
@@ -2444,6 +2458,7 @@ var _ = testutils.E2eDatastoreDescribe("Test Watch support", testutils.Datastore
 		By("watching all affinities", func() {
 			watch, err := c.Watch(ctx, model.BlockAffinityListOptions{}, "")
 			Expect(err).NotTo(HaveOccurred())
+			defer watch.Stop()
 
 			// Create a block affinity.
 			_, err = c.Create(ctx, &model.KVPair{
@@ -2477,6 +2492,7 @@ var _ = testutils.E2eDatastoreDescribe("Test Watch support", testutils.Datastore
 		By("watching all blocks", func() {
 			watch, err := c.Watch(ctx, model.BlockListOptions{}, "")
 			Expect(err).NotTo(HaveOccurred())
+			defer watch.Stop()
 
 			// Create a block.
 			_, err = c.Create(ctx, &model.KVPair{
