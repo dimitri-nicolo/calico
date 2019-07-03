@@ -369,14 +369,25 @@ sub-tag-images-%:
 
 ###############################################################################
 # Managing the upstream library pins
+#
+# If you're updating the pins with a non-release branch checked out,
+# set PIN_BRANCH to the parent branch, e.g.:
+#
+#     PIN_BRANCH=release-v2.5 make update-pins
+#        - or -
+#     PIN_BRANCH=master make update-pins
+#
 ###############################################################################
 
 ## Update dependency pins in glide.yaml
 update-pins: update-libcalico-pin
-
-## deprecated target alias
-update-libcalico: update-pins
-	$(warning !! Update update-libcalico is deprecated, use update-pins !!)
+	docker run --rm \
+        -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw $$EXTRA_DOCKER_BIND \
+        -v $(HOME)/.glide:/home/user/.glide:rw \
+        -v $$SSH_AUTH_SOCK:/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent \
+        -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+        -w /go/src/$(PACKAGE_NAME) \
+        $(CALICO_BUILD) glide up --strip-vendor
 
 ## Guard so we don't run this on osx because of ssh-agent to docker forwarding bug
 guard-ssh-forwarding-bug:
@@ -387,15 +398,18 @@ guard-ssh-forwarding-bug:
 	fi;
 
 ###############################################################################
+## Set the default upstream repo branch to the current repo's branch,
+## e.g. "master" or "release-vX.Y", but allow it to be overridden.
+PIN_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
+
+###############################################################################
 ## libcalico
 
 ## Set the default LIBCALICO source for this project
 LIBCALICO_PROJECT_DEFAULT=tigera/libcalico-go-private.git
 LIBCALICO_GLIDE_LABEL=projectcalico/libcalico-go
 
-## Default the LIBCALICO repo and version but allow them to be overridden (master or release-vX.Y)
-## default LIBCALICO branch to the same branch name as the current checked out repo
-LIBCALICO_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
+LIBCALICO_BRANCH?=$(PIN_BRANCH)
 LIBCALICO_REPO?=github.com/$(LIBCALICO_PROJECT_DEFAULT)
 LIBCALICO_VERSION?=$(shell git ls-remote git@github.com:$(LIBCALICO_PROJECT_DEFAULT) $(LIBCALICO_BRANCH) 2>/dev/null | cut -f 1)
 
