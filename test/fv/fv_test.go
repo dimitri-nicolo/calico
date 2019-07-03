@@ -274,14 +274,22 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 	})
 
 	It("should be possible to reach the test server on http2", func() {
-		msg, err := ui.doRequest(clusterID)
-		Expect(err).NotTo(HaveOccurred())
+		var msg string
+		Eventually(func() error {
+			var err error
+			msg, err = ui.doRequest(clusterID)
+			return err
+		}).ShouldNot(HaveOccurred())
 		Expect(msg).To(Equal(ts.msg))
 	})
 
 	It("should be possible to reach the other test server on http2", func() {
-		msg, err := ui.doRequest(clusterID2)
-		Expect(err).NotTo(HaveOccurred())
+		var msg string
+		Eventually(func() error {
+			var err error
+			msg, err = ui.doRequest(clusterID2)
+			return err
+		}).ShouldNot(HaveOccurred())
 		Expect(msg).To(Equal(ts2.msg))
 	})
 
@@ -338,8 +346,12 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 	})
 
 	It("should be possible to reach the test server again", func() {
-		msg, err := ui.doRequest(clusterID)
-		Expect(err).NotTo(HaveOccurred())
+		var msg string
+		Eventually(func() error {
+			var err error
+			msg, err = ui.doRequest(clusterID)
+			return err
+		}).ShouldNot(HaveOccurred())
 		Expect(msg).To(Equal(ts.msg))
 	})
 
