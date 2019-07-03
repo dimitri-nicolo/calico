@@ -126,17 +126,19 @@ var _ = Describe("DNS log type tests", func() {
 		})
 
 		Context("Swap function", func() {
-			r := DNSRDatas{{Raw: []byte("a")}, {Raw: []byte("b")}}
-			e := DNSRDatas{{Raw: []byte("b")}, {Raw: []byte("a")}}
-
-			r.Swap(0, 1)
-			It("Swapped", func() {
-				Expect(r).Should(Equal(e))
+			var r DNSRDatas
+			BeforeEach(func() {
+				r = DNSRDatas{{Raw: []byte("a")}, {Raw: []byte("b")}}
 			})
 
-			r.Swap(0, 0)
+			It("Swapped", func() {
+				r.Swap(0, 1)
+				Expect(r).Should(Equal(DNSRDatas{{Raw: []byte("b")}, {Raw: []byte("a")}}))
+			})
+
 			It("Swapped same", func() {
-				Expect(r).Should(Equal(e))
+				r.Swap(0, 0)
+				Expect(r).Should(Equal(DNSRDatas{{Raw: []byte("a")}, {Raw: []byte("b")}}))
 			})
 		})
 
