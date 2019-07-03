@@ -17,8 +17,6 @@ const (
 	DNSDefault DNSAggregationKind = iota
 	// DNSPrefixNameAndIP accumulates tuples with everything same but the prefix name and IP
 	DNSPrefixNameAndIP
-	// DNSQName accumulates tuples by aggregating query names
-	DNSQName
 )
 
 // dnsLogAggregator builds and implements the DNSLogAggregator and

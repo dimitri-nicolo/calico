@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/google/gopacket/layers"
-	"golang.org/x/net/publicsuffix"
 )
 
 func NewDNSMetaSpecFromUpdate(update DNSUpdate, kind DNSAggregationKind) (DNSMeta, DNSSpec, error) {
@@ -30,7 +29,7 @@ func NewDNSMetaSpecFromUpdate(update DNSUpdate, kind DNSAggregationKind) (DNSMet
 	serverLabels := getFlowLogEndpointLabels(update.ServerEP)
 
 	spec := newDNSSpecFromGoPacket(clientLabels, EndpointMetadataWithIP{serverEM, update.ServerIP.String()}, serverLabels, update.DNS)
-	meta := newDNSMetaFromSpecAndGoPacket(aggregateEndpointMetadataWithIP(EndpointMetadataWithIP{clientEM, update.ClientIP.String()}, kind), update.DNS, spec, kind)
+	meta := newDNSMetaFromSpecAndGoPacket(aggregateEndpointMetadataWithIP(EndpointMetadataWithIP{clientEM, update.ClientIP.String()}, kind), update.DNS, spec)
 
 	return meta, spec, nil
 }
@@ -61,11 +60,11 @@ func newDNSSpecFromGoPacket(clientLabels DNSLabels, serverEM EndpointMetadataWit
 	return spec
 }
 
-func newDNSMetaFromSpecAndGoPacket(clientEM EndpointMetadataWithIP, dns *layers.DNS, spec DNSSpec, kind DNSAggregationKind) DNSMeta {
+func newDNSMetaFromSpecAndGoPacket(clientEM EndpointMetadataWithIP, dns *layers.DNS, spec DNSSpec) DNSMeta {
 	return DNSMeta{
 		ClientMeta: clientEM,
 		Question: DNSName{
-			Name:  aggregateDNSName(canonicalizeDNSName(dns.Questions[0].Name), kind),
+			Name:  canonicalizeDNSName(dns.Questions[0].Name),
 			Class: DNSClass(dns.Questions[0].Class),
 			Type:  DNSType(dns.Questions[0].Type),
 		},
@@ -114,17 +113,4 @@ func getRRDecoded(rr layers.DNSResourceRecord) interface{} {
 
 func canonicalizeDNSName(name []byte) string {
 	return regexp.MustCompile(`\.\.+`).ReplaceAllString(strings.ToLower(strings.Trim(string(name), ".")), ".")
-}
-
-func aggregateDNSName(name string, kind DNSAggregationKind) string {
-	switch kind {
-	case DNSQName:
-		if domain, err := publicsuffix.EffectiveTLDPlusOne(name); err == nil {
-			if domain != name {
-				return "*." + domain
-			}
-		}
-	}
-
-	return name
 }

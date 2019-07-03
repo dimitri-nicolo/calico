@@ -196,7 +196,7 @@ var _ = Describe("gopacket to DNS log conversion function", func() {
 				Questions: []layers.DNSQuestion{
 					{Name: []byte("tigera.io."), Type: layers.DNSTypeA, Class: layers.DNSClassIN},
 				},
-			}, DNSSpec{}, DNSDefault)
+			}, DNSSpec{})
 
 			Expect(meta.Question).Should(Equal(DNSName{
 				Name:  "tigera.io",
@@ -209,7 +209,7 @@ var _ = Describe("gopacket to DNS log conversion function", func() {
 			meta := newDNSMetaFromSpecAndGoPacket(serverEM, &layers.DNS{
 				ResponseCode: layers.DNSResponseCodeNXDomain,
 				Questions:    []layers.DNSQuestion{{}},
-			}, DNSSpec{}, DNSDefault)
+			}, DNSSpec{})
 
 			Expect(meta.ResponseCode).Should(BeNumerically("==", layers.DNSResponseCodeNXDomain))
 		})
@@ -229,7 +229,7 @@ var _ = Describe("gopacket to DNS log conversion function", func() {
 
 			meta := newDNSMetaFromSpecAndGoPacket(serverEM, &layers.DNS{
 				Questions: []layers.DNSQuestion{{}},
-			}, spec, DNSDefault)
+			}, spec)
 
 			Expect(meta.RRSetsString).Should(Equal(spec.RRSets.String()))
 		})
@@ -260,32 +260,6 @@ var _ = Describe("gopacket to DNS log conversion function", func() {
 				Raw:     raw,
 				Decoded: decoded,
 			}))
-		})
-	})
-
-	Describe("aggregate DNS name", func() {
-		It("aggregates TLD correctly", func() {
-			Expect(aggregateDNSName("io", DNSDefault)).Should(Equal("io"))
-			Expect(aggregateDNSName("io", DNSPrefixNameAndIP)).Should(Equal("io"))
-			Expect(aggregateDNSName("io", DNSQName)).Should(Equal("io"))
-		})
-		It("aggregates eTLD correctly", func() {
-			Expect(aggregateDNSName("co.uk", DNSDefault)).Should(Equal("co.uk"))
-			Expect(aggregateDNSName("co.uk", DNSPrefixNameAndIP)).Should(Equal("co.uk"))
-			Expect(aggregateDNSName("co.uk", DNSQName)).Should(Equal("co.uk"))
-		})
-		It("aggregates eTLD+1 correctly", func() {
-			Expect(aggregateDNSName("tigera.io", DNSDefault)).Should(Equal("tigera.io"))
-			Expect(aggregateDNSName("tigera.io", DNSPrefixNameAndIP)).Should(Equal("tigera.io"))
-			Expect(aggregateDNSName("tigera.io", DNSQName)).Should(Equal("tigera.io"))
-		})
-		It("aggregates eTLD+2 correctly", func() {
-			Expect(aggregateDNSName("www.tigera.io", DNSDefault)).Should(Equal("www.tigera.io"))
-			Expect(aggregateDNSName("www.tigera.io", DNSPrefixNameAndIP)).Should(Equal("www.tigera.io"))
-			Expect(aggregateDNSName("www.tigera.io", DNSQName)).Should(Equal("*.tigera.io"))
-		})
-		It("aggregates eTLD+3 correctly", func() {
-			Expect(aggregateDNSName("www.www.tigera.io", DNSQName)).Should(Equal("*.tigera.io"))
 		})
 	})
 })
