@@ -1,5 +1,5 @@
-hash: aa6518e566ccb0c12eb676a8956934f044a4f8c1f0a4e464e7769b4e3d7c5a8d
-updated: 2019-06-25T15:55:56.045499344-07:00
+hash: 106a887ed9004d10b46dce1953ee28880fc3ae7b4908dc779051d3fc07957a16
+updated: 2019-07-03T02:54:15.414909724Z
 imports:
 - name: cloud.google.com/go
   version: 0ebda48a7f143b1cce9eb37a8c1106ac762a3430
@@ -36,7 +36,7 @@ imports:
 - name: github.com/dgrijalva/jwt-go
   version: 01aeca54ebda6e0fbfafd0a524d234159c05ec20
 - name: github.com/docopt/docopt-go
-  version: ee0de3bc6815ee19d4a46c7eb90f829db0e014b1
+  version: 784ddc588536785e7299f7272f39101f7faccc3f
 - name: github.com/emicklei/go-restful
   version: b993709ae1a4f6dd19cfa475232614441b11c9d5
   subpackages:
@@ -46,7 +46,7 @@ imports:
 - name: github.com/go-ini/ini
   version: 3be5ad479f69d4e08d7fe25edf79bf3346bd658e
 - name: github.com/go-openapi/jsonpointer
-  version: ef5f0afec364d3b9396b7b77b43dbe26bf1f8004
+  version: a105a905c5e6ad147f08504784917f3e178e0ba5
 - name: github.com/go-openapi/jsonreference
   version: 2903bfd4bfbaf188694f1edf731f2725a8fa344f
 - name: github.com/go-openapi/spec
@@ -80,6 +80,8 @@ imports:
   version: 7d79101e329e5a3adf994758c578dab82b90c017
 - name: github.com/google/gofuzz
   version: 44d81051d367757e1c7c6a5a86423ece9afcf63c
+- name: github.com/google/uuid
+  version: 0cd6bf5da1e1c83f8b45653022c74f71af0538a4
 - name: github.com/googleapis/gnostic
   version: 0c5108395e2debce0d731cf0287ddf7242066aba
   subpackages:
@@ -105,6 +107,8 @@ imports:
   version: a0d98a5f288019575c6d1f4bb1573fef2d1fcdc4
   subpackages:
   - simplelru
+- name: github.com/huandu/xstrings
+  version: f02667b379e2fb5916c3cda2cf31e0eb885d79f8
 - name: github.com/imdario/mergo
   version: 9316a62528ac99aaecb4e47eadd6dc8aa6533d58
 - name: github.com/json-iterator/go
@@ -121,6 +125,12 @@ imports:
   - buffer
   - jlexer
   - jwriter
+- name: github.com/Masterminds/goutils
+  version: 41ac8693c5c10a92ea1ff5ac3a7f95646f6123b0
+- name: github.com/Masterminds/semver
+  version: 59c29afe1a994eacb71c833025ca7acf874bb1da
+- name: github.com/Masterminds/sprig
+  version: 8e5f7788fea6472ca71d5ad92887798a54b4b0f9
 - name: github.com/matttproud/golang_protobuf_extensions
   version: c12348ce28de40eed0136aa2b644d0ee0650e56c
   subpackages:
@@ -166,7 +176,7 @@ imports:
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
 - name: github.com/projectcalico/felix
-  version: a91a3a5ba6b2807e0e8f91f687f37b3ee6ce9ada
+  version: d71555588ae60e00c96fa79d4ab7be1067631abc
   repo: git@github.com:tigera/felix-private.git
   vcs: git
   subpackages:
@@ -193,7 +203,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: e9a74b29328b7376cb88fc539b7c7e000e47d278
+  version: fe10f211caf00641500842123c9066584e9c16c3
   repo: git@github.com:tigera/libcalico-go-private.git
   vcs: git
   subpackages:
@@ -213,6 +223,7 @@ imports:
   - lib/backend/syncersv1/remotecluster
   - lib/backend/syncersv1/updateprocessors
   - lib/backend/watchersyncer
+  - lib/compliance
   - lib/errors
   - lib/hash
   - lib/health
@@ -226,6 +237,7 @@ imports:
   - lib/selector/tokenizer
   - lib/set
   - lib/validator/v1
+  - lib/validator/v3
 - name: github.com/prometheus/client_golang
   version: 773f5027234d0b08adf766be34f55df2f312abf7
   subpackages:
@@ -248,9 +260,11 @@ imports:
   subpackages:
   - xfs
 - name: github.com/PuerkitoBio/purell
-  version: 0bcb03f4b4d0a9428594752bd2a3b9aa0a9d4bd4
+  version: 44968752391892e1b0d0b821ee79e9a85fa13049
 - name: github.com/PuerkitoBio/urlesc
   version: de5bf2ad457846296e2031421a34e2568e304e35
+- name: github.com/robfig/cron
+  version: 61d93e07d1be270591d43ede700aa3ae69a2326f
 - name: github.com/sirupsen/logrus
   version: 1f80e3709dfafa8ca8727ba7eb392a11827ac8e2
   repo: https://github.com/projectcalico/logrus
@@ -270,6 +284,7 @@ imports:
   - ed25519
   - ed25519/internal/edwards25519
   - pbkdf2
+  - scrypt
   - ssh/terminal
 - name: golang.org/x/net
   version: 1c05540f6879653db88113bc4a2b70aec4bd491f
@@ -446,7 +461,7 @@ imports:
   - pkg/watch
   - third_party/forked/golang/reflect
 - name: k8s.io/apiserver
-  version: fbed0ffc300f09cdb8414c1dab89b28184696f33
+  version: bf12d466f6282def0ab436ca052bb603cccbcfc6
   subpackages:
   - pkg/apis/audit
 - name: k8s.io/client-go
