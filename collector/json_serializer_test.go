@@ -124,12 +124,12 @@ var _ = Describe("FlowLog JSON serialization", func() {
 		out := toOutput(&flowLog)
 
 		zeroFieldNames := map[string]interface{}{
-			"SourceIP":       nil,
-			"DestIP":         nil,
-			"FlowSourcePort": nil,
-			"SourceLabels":   nil,
-			"DestLabels":     nil,
-			"Policies":       nil,
+			"SourceIP":     nil,
+			"DestIP":       nil,
+			"SourcePort":   nil,
+			"SourceLabels": nil,
+			"DestLabels":   nil,
+			"Policies":     nil,
 		}
 		// Use reflection to loop over the fields and ensure they all have non
 		// zero values
@@ -198,13 +198,13 @@ var _ = Describe("FlowLog JSON serialization", func() {
 		out := toOutput(&flowLog)
 
 		zeroFieldNames := map[string]interface{}{
-			"SourceIP":       nil,
-			"DestIP":         nil,
-			"FlowSourcePort": nil,
-			"DestPort":       nil,
-			"SourceLabels":   nil,
-			"DestLabels":     nil,
-			"Policies":       nil,
+			"SourceIP":     nil,
+			"DestIP":       nil,
+			"SourcePort":   nil,
+			"DestPort":     nil,
+			"SourceLabels": nil,
+			"DestLabels":   nil,
+			"Policies":     nil,
 		}
 		// Use reflection to loop over the fields and ensure they all have non
 		// zero values
