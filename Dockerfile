@@ -14,6 +14,7 @@ RUN apk add --no-cache curl
 RUN apk add --no-cache jq
 
 ADD elastic_mapping_flows.template /fluentd/etc/elastic_mapping_flows.template
+ADD elastic_mapping_dns.template /fluentd/etc/elastic_mapping_dns.template
 ADD elastic_mapping_audits.template /fluentd/etc/elastic_mapping_audits.template
 COPY fluent_sources.conf /fluentd/etc/fluent_sources.conf
 COPY fluent_transforms.conf /fluentd/etc/fluent_transforms.conf
@@ -21,6 +22,7 @@ COPY fluent_output.conf /fluentd/etc/fluent_output.conf
 COPY outputs /fluentd/etc/outputs
 
 ENV FLOW_LOG_FILE=/var/log/calico/flowlogs/flows.log
+ENV DNS_LOG_FILE=/var/log/calico/dnslogs/dns.log
 ENV POS_DIR=/var/log/calico
 ENV ELASTIC_HOST=elasticsearch
 ENV ELASTIC_PORT=9200
@@ -54,6 +56,7 @@ COPY ee_entrypoint.sh /bin/
 RUN chmod +x /bin/ee_entrypoint.sh
 
 RUN mkdir /fluentd/etc/output_flows
+RUN mkdir /fluentd/etc/output_dns
 RUN mkdir /fluentd/etc/output_tsee_audit
 RUN mkdir /fluentd/etc/output_kube_audit
 

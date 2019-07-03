@@ -53,6 +53,7 @@ ELASTIC_INDEX_SUFFIX=test-cluster-name
 ELASTIC_FLOWS_INDEX_SHARDS=5
 FLUENTD_FLOW_FILTERS=# not a real filter
 FLOW_LOG_FILE=/var/log/calico/flowlogs/flows.log
+DNS_LOG_FILE=/var/log/calico/dnslogs/dns.log
 ELASTIC_HOST=elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local
 ELASTIC_PORT=9200
 EOM

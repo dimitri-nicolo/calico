@@ -1,0 +1,112 @@
+{
+  "template": "tigera_secure_ee_dns*",
+  "settings": {
+    "analysis": {
+      "normalizer": {
+        "lowercase": {
+          "type": "custom",
+          "filter": "lowercase"
+        },
+        "uppercase": {
+          "type": "custom",
+          "filter": "uppercase"
+        }
+      }
+    }
+  },
+  "mappings": {
+    "_default_": {
+      "start_time": {
+        "type": "date"
+      },
+      "end_time": {
+        "type": "date"
+      },
+      "count": {
+        "type": "integer"
+      },
+      "client_name": {
+        "type": "keyword",
+        "normalizer": "lowercase"
+      },
+      "client_name_aggr": {
+        "type": "keyword",
+        "normalizer": "lowercase"
+      },
+      "client_namespace": {
+        "type": "keyword",
+        "normalizer": "lowercase"
+      },
+      "client_ip": {
+        "type": "ip"
+      },
+      "client_labels": {
+        "type": "keyword"
+      },
+      "observations": {
+        "properties": {
+          "name": {
+            "type": "keyword",
+            "normalizer": "lowercase"
+          },
+          "name_aggr": {
+            "type": "keyword",
+            "normalizer": "lowercase"
+          },
+          "namespace": {
+            "type": "keyword",
+            "normalizer": "lowercase"
+          },
+          "ip": {
+            "type": "ip"
+          }
+        }
+      },
+      "qname": {
+        "type": "keyword",
+        "normalizer": "lowercase"
+      },
+      "qtype": {
+        "type": "keyword",
+        "normalizer": "uppercase"
+      },
+      "qclass": {
+        "type": "keyword",
+        "normalizer": "uppercase"
+      },
+      "rcode": {
+        "type": "keyword",
+        "normalizer": "uppercase"
+      },
+      "rrsets": {
+        "type": "nested",
+        "properties": {
+          "name": {
+            "type": "keyword",
+            "normalizer": "lowercase"
+          },
+          "type": {
+            "type": "keyword",
+            "normalizer": "uppercase"
+          },
+          "class": {
+            "type": "keyword",
+            "normalizer": "uppercase"
+          },
+          "rdata": {
+            "type": "keyword",
+            "fields": {
+              "ip": {
+                "type": "ip"
+              },
+              "domain": {
+                "type": "keyword",
+                "normalizer": "lowercase"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
