@@ -1340,3 +1340,5 @@ master:
       version: master
     compliance-server:
       version: master
+    compliance-benchmarker:
+      version: master

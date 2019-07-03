@@ -247,6 +247,25 @@ def gen_chart_specific_values_master(versions, imageNames, imageRegistry, chart)
           cpu: #"500m"
           memory: #"1024Mi"
     
+    # Configuration for the compliance benchmarker.
+    complianceBenchmarker:
+      image: #{imageRegistry}#{imageNames["compliance-benchmarker"]}
+      tag: #{versions["compliance-benchmarker"]}
+      runAsPrivileged: false
+      env:
+        # Optional environment variables for configuring the compliance server.
+        # These should match the EnvVar spec of the corev1 Kubernetes API. For example:
+        # - name: LOG_LEVEL
+        #   value: "warning"
+      # Optional configuration for setting resource limits on the compliance server container.
+      resources:
+        requests:
+          cpu: #"100m"
+          memory: #"128Mi"
+        limits:
+          cpu: #"500m"
+          memory: #"1024Mi"
+    
     alertmanager:
       image: #{imageNames["alertmanager"]}
       tag: #{versions["alertmanager"]}

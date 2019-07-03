@@ -1121,6 +1121,13 @@ spec:
   - action: Allow
     destination:
       ports:
+      - 9200
+    protocol: TCP
+    source:
+      selector: k8s-app == 'compliance-benchmarker'
+  - action: Allow
+    destination:
+      ports:
         - 9200
     protocol: TCP
     source:
