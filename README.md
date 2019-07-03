@@ -1,3 +1,5 @@
+[![Build Status](https://semaphoreci.com/api/v1/projects/cdb95b8c-1d8c-4870-a15b-ba61c2eca39d/2613789/badge.svg)](https://semaphoreci.com/calico/calico-k8sapiserver)
+
 # calico-k8sapiserver
 
 k8s styled API server to interact with Calico resources.
