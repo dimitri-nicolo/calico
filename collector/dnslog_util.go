@@ -28,7 +28,7 @@ func NewDNSMetaSpecFromUpdate(update DNSUpdate, kind DNSAggregationKind) (DNSMet
 	}
 	serverLabels := getFlowLogEndpointLabels(update.ServerEP)
 
-	spec := newDNSSpecFromGoPacket(clientLabels, aggregateEndpointMetadataWithIP(EndpointMetadataWithIP{serverEM, update.ServerIP.String()}, kind), serverLabels, update.DNS)
+	spec := newDNSSpecFromGoPacket(clientLabels, EndpointMetadataWithIP{serverEM, update.ServerIP.String()}, serverLabels, update.DNS)
 	meta := newDNSMetaFromSpecAndGoPacket(aggregateEndpointMetadataWithIP(EndpointMetadataWithIP{clientEM, update.ClientIP.String()}, kind), update.DNS, spec)
 
 	return meta, spec, nil
