@@ -108,8 +108,10 @@ var (
 
 	dropActionOverrideRegex = regexp.MustCompile("^(Drop|Accept|LogAndDrop|LogAndAccept)$")
 
-	minAggregationKindValue = 0
-	maxAggregationKindValue = 2
+	minAggregationKindValue    = 0
+	maxAggregationKindValue    = 2
+	minDNSAggregationKindValue = 0
+	maxDNSAggregationKindValue = 1
 
 	ipv4LinkLocalNet = net.IPNet{
 		IP:   net.ParseIP("169.254.0.0"),
@@ -173,6 +175,7 @@ func init() {
 	registerFieldValidator("mustBeNil", validateMustBeNil)
 	registerFieldValidator("mustBeFalse", validateMustBeFalse)
 	registerFieldValidator("ifaceFilter", validateIfaceFilter)
+	registerFieldValidator("dnsAggregationKind", validateDNSAggregationKind)
 	registerFieldValidator("cloudWatchAggregationKind", validateCloudWatchAggregationKind)
 	registerFieldValidator("cloudWatchRetentionDays", validateCloudWatchRetentionDays)
 	registerFieldValidator("mac", validateMAC)
@@ -375,6 +378,12 @@ func validateDropActionOverride(fl validator.FieldLevel) bool {
 	s := fl.Field().String()
 	log.Debugf("Validate DropActionOverride: %s", s)
 	return dropActionOverrideRegex.MatchString(s)
+}
+
+func validateDNSAggregationKind(fl validator.FieldLevel) bool {
+	kind := int(fl.Field().Int())
+	log.Debugf("Validate DNS logs aggregation kind: %d", kind)
+	return kind >= minDNSAggregationKindValue && kind <= maxDNSAggregationKindValue
 }
 
 func validateCloudWatchAggregationKind(fl validator.FieldLevel) bool {
