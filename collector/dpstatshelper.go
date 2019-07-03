@@ -119,27 +119,29 @@ func StartDataplaneStatsCollector(configParams *config.Config, lookupsCache *cal
 		},
 	)
 
-	// Create the reporter, aggregator and dispatcher for DNS logging.
-	dnsLogReporter := NewDNSLogReporter(
-		map[string]LogDispatcher{
-			DNSLogsFileDispatcherName: NewFileDispatcher(
-				configParams.DNSLogsFileDirectory,
-				DNSLogFilename,
-				configParams.DNSLogsFileMaxFileSizeMB,
-				configParams.DNSLogsFileMaxFiles,
-			),
-		},
-		configParams.DNSLogsFlushInterval,
-		nil,
-		false,
-	)
-	dnsLogReporter.AddAggregator(
-		NewDNSLogAggregator().
-			AggregateOver(DNSAggregationKind(configParams.DNSLogsFileAggregationKind)).
-			IncludeLabels(configParams.DNSLogsFileIncludeLabels),
-		[]string{DNSLogsFileDispatcherName},
-	)
-	statsCollector.SetDNSLogReporter(dnsLogReporter)
+	if configParams.DNSLogsFileEnabled {
+		// Create the reporter, aggregator and dispatcher for DNS logging.
+		dnsLogReporter := NewDNSLogReporter(
+			map[string]LogDispatcher{
+				DNSLogsFileDispatcherName: NewFileDispatcher(
+					configParams.DNSLogsFileDirectory,
+					DNSLogFilename,
+					configParams.DNSLogsFileMaxFileSizeMB,
+					configParams.DNSLogsFileMaxFiles,
+				),
+			},
+			configParams.DNSLogsFlushInterval,
+			nil,
+			false,
+		)
+		dnsLogReporter.AddAggregator(
+			NewDNSLogAggregator().
+				AggregateOver(DNSAggregationKind(configParams.DNSLogsFileAggregationKind)).
+				IncludeLabels(configParams.DNSLogsFileIncludeLabels),
+			[]string{DNSLogsFileDispatcherName},
+		)
+		statsCollector.SetDNSLogReporter(dnsLogReporter)
+	}
 
 	statsCollector.Start()
 	return statsCollector
