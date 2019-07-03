@@ -672,9 +672,6 @@ var _ = Describe("Test the generic configuration update processor and the concre
 				}
 				Expect(kvp.Key).To(BeAssignableToTypeOf(model.GlobalConfigKey{}))
 				name := kvp.Key.(model.GlobalConfigKey).Name
-				//Expect(kvp.Value).To(BeAssignableToTypeOf(""))
-				//value := kvp.Value.(string)
-				//Expect(expectedConfig[name]).To(Equal(value))
 				Expect(expectedConfig[name]).To(Equal(kvp.Value), "For "+name+":")
 				delete(expectedConfig, name)
 			}
@@ -709,6 +706,30 @@ var _ = Describe("Test the generic configuration update processor and the concre
 			},
 			map[string]string{
 				"DNSTrustedServers": "none",
+			},
+		),
+		Entry("Non-default settings for DNS logging config",
+			func(fc *apiv3.FelixConfiguration) {
+				oneHour := metav1.Duration{time.Hour}
+				fc.Spec.DNSLogsFlushInterval = &oneHour
+				disabled := false
+				fc.Spec.DNSLogsFileEnabled = &disabled
+				fc.Spec.DNSLogsFileIncludeLabels = &disabled
+				two := 2
+				fc.Spec.DNSLogsFileMaxFiles = &two
+				fc.Spec.DNSLogsFileMaxFileSizeMB = &two
+				fc.Spec.DNSLogsFileAggregationKind = &two
+				path := "/dnslogging"
+				fc.Spec.DNSLogsFileDirectory = &path
+			},
+			map[string]string{
+				"DNSLogsFlushInterval":       "3600",
+				"DNSLogsFileEnabled":         "false",
+				"DNSLogsFileMaxFiles":        "2",
+				"DNSLogsFileMaxFileSizeMB":   "2",
+				"DNSLogsFileDirectory":       "/dnslogging",
+				"DNSLogsFileIncludeLabels":   "false",
+				"DNSLogsFileAggregationKind": "2",
 			},
 		),
 	)
