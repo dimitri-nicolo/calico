@@ -48,13 +48,11 @@ var _ = Describe("DNS log aggregator", func() {
 		})
 
 		It("aggregate over", func() {
-			Expect(l.kind).Should(Equal(Default))
-			Expect(l.AggregateOver(SourcePort)).Should(Equal(l))
-			Expect(l.kind).Should(Equal(SourcePort))
-			Expect(l.AggregateOver(PrefixName)).Should(Equal(l))
-			Expect(l.kind).Should(Equal(PrefixName))
-			Expect(l.AggregateOver(Default)).Should(Equal(l))
-			Expect(l.kind).Should(Equal(Default))
+			Expect(l.kind).Should(Equal(DNSDefault))
+			Expect(l.AggregateOver(DNSPrefixNameAndIP)).Should(Equal(l))
+			Expect(l.kind).Should(Equal(DNSPrefixNameAndIP))
+			Expect(l.AggregateOver(DNSDefault)).Should(Equal(l))
+			Expect(l.kind).Should(Equal(DNSDefault))
 		})
 	})
 

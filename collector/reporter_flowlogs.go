@@ -23,7 +23,7 @@ type FlowLogAggregator interface {
 	FlowLogGetter
 	IncludeLabels(bool) FlowLogAggregator
 	IncludePolicies(bool) FlowLogAggregator
-	AggregateOver(AggregationKind) FlowLogAggregator
+	AggregateOver(FlowAggregationKind) FlowLogAggregator
 	ForAction(rules.RuleAction) FlowLogAggregator
 	FeedUpdate(MetricUpdate) error
 }

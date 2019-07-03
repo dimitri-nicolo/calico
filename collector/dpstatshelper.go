@@ -151,7 +151,7 @@ func configureFlowAggregation(configParams *config.Config, cw *FlowLogsReporter)
 		if configParams.CloudWatchLogsEnabledForAllowed {
 			log.Info("Creating Flow Logs Aggregator for allowed")
 			caa := NewFlowLogAggregator().
-				AggregateOver(AggregationKind(configParams.CloudWatchLogsAggregationKindForAllowed)).
+				AggregateOver(FlowAggregationKind(configParams.CloudWatchLogsAggregationKindForAllowed)).
 				IncludeLabels(configParams.CloudWatchLogsIncludeLabels).
 				IncludePolicies(configParams.CloudWatchLogsIncludePolicies).
 				ForAction(rules.RuleActionAllow)
@@ -173,7 +173,7 @@ func configureFlowAggregation(configParams *config.Config, cw *FlowLogsReporter)
 		if configParams.CloudWatchLogsEnabledForDenied {
 			log.Info("Creating Flow Logs Aggregator for denied")
 			cad := NewFlowLogAggregator().
-				AggregateOver(AggregationKind(configParams.CloudWatchLogsAggregationKindForDenied)).
+				AggregateOver(FlowAggregationKind(configParams.CloudWatchLogsAggregationKindForDenied)).
 				IncludeLabels(configParams.CloudWatchLogsIncludeLabels).
 				IncludePolicies(configParams.CloudWatchLogsIncludePolicies).
 				ForAction(rules.RuleActionDeny)
@@ -197,7 +197,7 @@ func configureFlowAggregation(configParams *config.Config, cw *FlowLogsReporter)
 		if !addedFileAllow && configParams.FlowLogsFileEnabledForAllowed {
 			log.Info("Creating Flow Logs Aggregator for allowed")
 			caa := NewFlowLogAggregator().
-				AggregateOver(AggregationKind(configParams.FlowLogsFileAggregationKindForAllowed)).
+				AggregateOver(FlowAggregationKind(configParams.FlowLogsFileAggregationKindForAllowed)).
 				IncludeLabels(configParams.FlowLogsFileIncludeLabels).
 				IncludePolicies(configParams.FlowLogsFileIncludePolicies).
 				ForAction(rules.RuleActionAllow)
@@ -207,7 +207,7 @@ func configureFlowAggregation(configParams *config.Config, cw *FlowLogsReporter)
 		if !addedFileDeny && configParams.FlowLogsFileEnabledForDenied {
 			log.Info("Creating Flow Logs Aggregator for denied")
 			cad := NewFlowLogAggregator().
-				AggregateOver(AggregationKind(configParams.FlowLogsFileAggregationKindForDenied)).
+				AggregateOver(FlowAggregationKind(configParams.FlowLogsFileAggregationKindForDenied)).
 				IncludeLabels(configParams.FlowLogsFileIncludeLabels).
 				IncludePolicies(configParams.FlowLogsFileIncludePolicies).
 				ForAction(rules.RuleActionDeny)

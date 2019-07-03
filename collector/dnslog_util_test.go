@@ -119,7 +119,7 @@ var _ = Describe("gopacket to DNS log conversion function", func() {
 		})
 
 		It("returns an error with no questions", func() {
-			_, _, err := NewDNSMetaSpecFromUpdate(DNSUpdate{ClientIP: clientIP, ServerIP: serverIP, ClientEP: clientEP, ServerEP: serverEP, DNS: &layers.DNS{}})
+			_, _, err := NewDNSMetaSpecFromUpdate(DNSUpdate{ClientIP: clientIP, ServerIP: serverIP, ClientEP: clientEP, ServerEP: serverEP, DNS: &layers.DNS{}}, DNSDefault)
 			Expect(err).Should(HaveOccurred())
 		})
 
@@ -129,7 +129,7 @@ var _ = Describe("gopacket to DNS log conversion function", func() {
 				Answers: []layers.DNSResourceRecord{
 					{Name: []byte("tigera.io."), Class: layers.DNSClassIN, Type: layers.DNSTypeA},
 				},
-			}})
+			}}, DNSDefault)
 
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(meta.Question.Name).Should(Equal("tigera.io"))

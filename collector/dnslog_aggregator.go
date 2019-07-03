@@ -9,12 +9,22 @@ import (
 	"github.com/projectcalico/felix/rules"
 )
 
+// FlowAggregationKind determines the flow log key
+type DNSAggregationKind int
+
+const (
+	// DNSDefault is based on purely duration.
+	DNSDefault DNSAggregationKind = iota
+	// DNSPrefixNameAndIP accumulates tuples with everything same but the prefix name and IP
+	DNSPrefixNameAndIP
+)
+
 // dnsLogAggregator builds and implements the DNSLogAggregator and
 // DNSLogGetter interfaces.
 // The dnsLogAggregator is responsible for creating, aggregating, and storing
 // aggregated dns logs until the dns logs are exported.
 type dnsLogAggregator struct {
-	kind                 AggregationKind
+	kind                 DNSAggregationKind
 	dnsStore             map[DNSMeta]DNSSpec
 	flMutex              sync.RWMutex
 	includeLabels        bool
@@ -25,7 +35,7 @@ type dnsLogAggregator struct {
 // NewDNSLogAggregator constructs a DNSLogAggregator
 func NewDNSLogAggregator() DNSLogAggregator {
 	return &dnsLogAggregator{
-		kind:                 Default,
+		kind:                 DNSDefault,
 		dnsStore:             make(map[DNSMeta]DNSSpec),
 		flMutex:              sync.RWMutex{},
 		aggregationStartTime: time.Now(),
@@ -37,13 +47,13 @@ func (d *dnsLogAggregator) IncludeLabels(b bool) DNSLogAggregator {
 	return d
 }
 
-func (d *dnsLogAggregator) AggregateOver(k AggregationKind) DNSLogAggregator {
+func (d *dnsLogAggregator) AggregateOver(k DNSAggregationKind) DNSLogAggregator {
 	d.kind = k
 	return d
 }
 
 func (d *dnsLogAggregator) FeedUpdate(update DNSUpdate) error {
-	meta, spec, err := NewDNSMetaSpecFromUpdate(update)
+	meta, spec, err := NewDNSMetaSpecFromUpdate(update, d.kind)
 
 	if err != nil {
 		return err

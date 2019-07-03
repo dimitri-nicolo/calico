@@ -92,13 +92,13 @@ func newFlowMetaWithPrefixNameAggregation(mu MetricUpdate) (FlowMeta, error) {
 	return f, nil
 }
 
-func NewFlowMeta(mu MetricUpdate, kind AggregationKind) (FlowMeta, error) {
+func NewFlowMeta(mu MetricUpdate, kind FlowAggregationKind) (FlowMeta, error) {
 	switch kind {
-	case Default:
+	case FlowDefault:
 		return newFlowMeta(mu)
-	case SourcePort:
+	case FlowSourcePort:
 		return newFlowMetaWithSourcePortAggregation(mu)
-	case PrefixName:
+	case FlowPrefixName:
 		return newFlowMetaWithPrefixNameAggregation(mu)
 	}
 

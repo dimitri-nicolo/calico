@@ -20,7 +20,7 @@ type DNSLogGetter interface {
 type DNSLogAggregator interface {
 	DNSLogGetter
 	IncludeLabels(bool) DNSLogAggregator
-	AggregateOver(AggregationKind) DNSLogAggregator
+	AggregateOver(DNSAggregationKind) DNSLogAggregator
 	FeedUpdate(DNSUpdate) error
 }
 

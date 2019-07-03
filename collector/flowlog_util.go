@@ -42,7 +42,7 @@ const (
 //   destination IP and protocol makes sense.
 func extractPartsFromAggregatedTuple(t Tuple) (srcIP, dstIP, proto, l4Src, l4Dst string) {
 	// Try to extract source and destination IP address.
-	// This field is aggregated over when using PrefixName aggregation.
+	// This field is aggregated over when using FlowPrefixName aggregation.
 	sip := net.IP(t.src[:16])
 	if sip.IsUnspecified() {
 		srcIP = flowLogFieldNotIncluded
@@ -59,7 +59,7 @@ func extractPartsFromAggregatedTuple(t Tuple) (srcIP, dstIP, proto, l4Src, l4Dst
 	proto = fmt.Sprintf("%d", t.proto)
 
 	if t.proto != 1 {
-		// Check if SourcePort has been aggregated over.
+		// Check if FlowSourcePort has been aggregated over.
 		if t.l4Src == unsetIntField {
 			l4Src = flowLogFieldNotIncluded
 		} else {

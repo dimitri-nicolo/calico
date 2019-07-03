@@ -11,7 +11,7 @@ import (
 	"github.com/google/gopacket/layers"
 )
 
-func NewDNSMetaSpecFromUpdate(update DNSUpdate) (DNSMeta, DNSSpec, error) {
+func NewDNSMetaSpecFromUpdate(update DNSUpdate, kind DNSAggregationKind) (DNSMeta, DNSSpec, error) {
 	if len(update.DNS.Questions) == 0 {
 		return DNSMeta{}, DNSSpec{}, errors.New("No questions in DNS packet")
 	}
@@ -28,10 +28,19 @@ func NewDNSMetaSpecFromUpdate(update DNSUpdate) (DNSMeta, DNSSpec, error) {
 	}
 	serverLabels := getFlowLogEndpointLabels(update.ServerEP)
 
-	spec := newDNSSpecFromGoPacket(clientLabels, EndpointMetadataWithIP{serverEM, update.ServerIP.String()}, serverLabels, update.DNS)
-	meta := newDNSMetaFromSpecAndGoPacket(EndpointMetadataWithIP{clientEM, update.ClientIP.String()}, update.DNS, spec)
+	spec := newDNSSpecFromGoPacket(clientLabels, aggregateEndpointMetadataWithIP(EndpointMetadataWithIP{serverEM, update.ServerIP.String()}, kind), serverLabels, update.DNS)
+	meta := newDNSMetaFromSpecAndGoPacket(aggregateEndpointMetadataWithIP(EndpointMetadataWithIP{clientEM, update.ClientIP.String()}, kind), update.DNS, spec)
 
 	return meta, spec, nil
+}
+
+func aggregateEndpointMetadataWithIP(em EndpointMetadataWithIP, kind DNSAggregationKind) EndpointMetadataWithIP {
+	switch kind {
+	case DNSPrefixNameAndIP:
+		em.Name = flowLogFieldNotIncluded
+		em.IP = flowLogFieldNotIncluded
+	}
+	return em
 }
 
 func newDNSSpecFromGoPacket(clientLabels DNSLabels, serverEM EndpointMetadataWithIP, serverLabels DNSLabels, dns *layers.DNS) DNSSpec {
