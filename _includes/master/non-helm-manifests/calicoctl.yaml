@@ -22,6 +22,7 @@ spec:
   hostNetwork: true
   imagePullSecrets:
   - name: cnx-pull-secret
+  - name: calico-pull-secret
   serviceAccountName: calicoctl
   containers:
   - name: calicoctl

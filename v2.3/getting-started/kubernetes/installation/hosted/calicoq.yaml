@@ -15,6 +15,7 @@ spec:
   hostNetwork: true
   imagePullSecrets:
   - name: cnx-pull-secret
+  - name: calico-pull-secret
   containers:
   - name: calicoq
     image: {{page.registry}}{{site.imageNames["calicoq"]}}:{{site.data.versions[page.version].first.components["calicoq"].version}}
