@@ -53,9 +53,13 @@ type DNSSpecEncoded struct {
 
 func (a *DNSSpec) Merge(b DNSSpec) {
 	for e, l := range b.Servers {
-		a.Servers[e] = l
+		if _, ok := a.Servers[e]; ok {
+			a.Servers[e] = intersectLabels(a.Servers[e], l)
+		} else {
+			a.Servers[e] = l
+		}
 	}
-	a.ClientLabels = b.ClientLabels
+	a.ClientLabels = intersectLabels(a.ClientLabels, b.ClientLabels)
 	a.Count += b.Count
 }
 

@@ -349,7 +349,7 @@ var _ = Describe("DNS log type tests", func() {
 						{EndpointMetadata: EndpointMetadata{Name: "ns1"}}: {"a": "b"},
 						{EndpointMetadata: EndpointMetadata{Name: "ns2"}}: {"d": "e"},
 					},
-					ClientLabels: map[string]string{
+					ClientLabels: DNSLabels{
 						"0": "0",
 					},
 					DNSStats: DNSStats{
@@ -358,10 +358,10 @@ var _ = Describe("DNS log type tests", func() {
 				}
 				b := DNSSpec{
 					Servers: map[EndpointMetadataWithIP]DNSLabels{
-						{EndpointMetadata: EndpointMetadata{Name: "ns1"}}: {"b": "c"},
+						{EndpointMetadata: EndpointMetadata{Name: "ns1"}}: {"b": "c", "a": "h"},
 						{EndpointMetadata: EndpointMetadata{Name: "ns3"}}: {"f": "g"},
 					},
-					ClientLabels: map[string]string{
+					ClientLabels: DNSLabels{
 						"1": "2",
 					},
 					DNSStats: DNSStats{
@@ -370,10 +370,10 @@ var _ = Describe("DNS log type tests", func() {
 				}
 
 				a.Merge(b)
-				Expect(a.ClientLabels).Should(Equal(b.ClientLabels))
+				Expect(a.ClientLabels).Should(HaveLen(0))
 				Expect(a.Count).Should(Equal(origCount + b.Count))
 				Expect(a.Servers).Should(Equal(map[EndpointMetadataWithIP]DNSLabels{
-					{EndpointMetadata: EndpointMetadata{Name: "ns1"}}: {"b": "c"},
+					{EndpointMetadata: EndpointMetadata{Name: "ns1"}}: {},
 					{EndpointMetadata: EndpointMetadata{Name: "ns2"}}: {"d": "e"},
 					{EndpointMetadata: EndpointMetadata{Name: "ns3"}}: {"f": "g"},
 				}))
