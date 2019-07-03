@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"net/http/httptest"
 	"os"
 	"os/exec"
 	"strings"
@@ -18,7 +17,6 @@ import (
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/voltron/internal/pkg/clusters"
-	"github.com/tigera/voltron/internal/pkg/server"
 )
 
 func init() {
@@ -33,7 +31,6 @@ var _ = Describe("Integration Tests", func() {
 	var (
 		voltronCmd  *exec.Cmd
 		guardianCmd *exec.Cmd
-		ts          *httptest.Server
 	)
 
 	It("Should change directory to bin folder", func() {
@@ -168,10 +165,10 @@ var _ = Describe("Integration Tests", func() {
 		Expect(err).NotTo(HaveOccurred())
 		resp.Body.Close()
 
-		err = ioutil.WriteFile("/tmp/guardian.yaml", message, 0644)
+		err = ioutil.WriteFile("./test/st/tmp/guardian.yaml", message, 0644)
 		Expect(err).NotTo(HaveOccurred())
 
-		cmd1 := exec.Command("sh", "./scripts/dev/yaml-extract-creds.sh", "/tmp/guardian.yaml")
+		cmd1 := exec.Command("sh", "./scripts/dev/yaml-extract-creds.sh", "./test/st/tmp/guardian.yaml")
 		err = cmd1.Run()
 
 		Expect(err).NotTo(HaveOccurred())
@@ -186,20 +183,12 @@ var _ = Describe("Integration Tests", func() {
 		Expect(string(out)).To(ContainSubstring("guardian.key"))
 	})
 
-	It("Should start up a mock server/target - TestCluster", func() {
-		ts = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			_, ok := r.Header[server.ClusterHeaderFieldCanon]
-			Expect(ok).To(BeFalse())
-			fmt.Fprint(w, "Received by TestCluster!")
-		}))
-	})
-
 	It("should set guardian environment variables", func() {
 		err := os.Setenv("GUARDIAN_CERT_PATH", "/tmp/")
 		Expect(err).NotTo(HaveOccurred())
 
-		proxyTarget := fmt.Sprintf(`[{"path": "/test", "url": "%s"}]`, ts.URL)
-
+		proxyTarget := fmt.Sprintf(`[{"path": "/api/", "url": "https://localhost:6443", ` +
+			`"tokenPath":"./test/st/tmp/token", "caBundlePath":"./test/st/k8s-api-certs/k8s.crt"}]`)
 		err = os.Setenv("GUARDIAN_PROXY_TARGETS", proxyTarget)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -250,16 +239,14 @@ var _ = Describe("Integration Tests", func() {
 		})
 
 		It("Should send a request to test endpoint/target", func() {
-			req, err := http.NewRequest("GET", "https://localhost:5555/test", nil)
+			req, err := http.NewRequest("GET", "https://localhost:5555/api/v1/namespaces", nil)
 			Expect(err).NotTo(HaveOccurred())
 
 			req.Header.Add("x-cluster-id", "TestCluster")
-
-			ExpectRespMsg(req, "Received by TestCluster!")
 		})
 
 		It("Should send a request to wrong cluster id", func() {
-			req, err := http.NewRequest("GET", "https://localhost:5555/test", nil)
+			req, err := http.NewRequest("GET", "https://localhost:5555/api/v1", nil)
 			Expect(err).NotTo(HaveOccurred())
 
 			req.Header.Add("x-cluster-id", "ClusterZ")

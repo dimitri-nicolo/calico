@@ -250,12 +250,13 @@ endif
 #############################################
 .PHONY: st
 st: CMD = go mod download && $(GINKGO) -r test/st/
-st: $(COMPONENTS)
 ifdef LOCAL
-	$(CMD)
+st: export TEST_CMD=$(CMD)
 else
-	$(DOCKER_GO_BUILD) sh -c '$(CMD)'
+st: export TEST_CMD=$(DOCKER_GO_BUILD) sh -c '$(CMD)'
 endif
+st: $(COMPONENTS)
+	sh test/st/run.sh
 
 ##########################################################################################
 # CLEAN UP 
