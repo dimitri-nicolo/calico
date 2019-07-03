@@ -13,7 +13,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("PolicyimpactFV", func() {
+var _ = Describe("PolicyimpactFV Elasticsearch", func() {
 	proxyScheme := "https"
 	proxyHost := "127.0.0.1:8000"
 	var client *http.Client
