@@ -28,6 +28,16 @@ func LoadPEMFromFile(f string) ([]byte, error) {
 	return block.Bytes, nil
 }
 
+// LoadX509FromFile returns a x509 certificate from a file
+func LoadX509FromFile(f string) (*x509.Certificate, error) {
+	bytes, err := LoadPEMFromFile(f)
+	if err != nil {
+		return nil, errors.WithMessage(err, "LoadPEMFromFile")
+	}
+
+	return x509.ParseCertificate(bytes)
+}
+
 // LoadX509KeyPairFromPEM parse PEM blocks and returns the cert and key (as a
 // crypto.Signer)
 func LoadX509KeyPairFromPEM(cert []byte, key []byte) (*x509.Certificate, crypto.Signer, error) {

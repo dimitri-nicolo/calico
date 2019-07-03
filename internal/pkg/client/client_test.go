@@ -8,12 +8,14 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"sync"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/voltron/internal/pkg/client"
+	"github.com/tigera/voltron/internal/pkg/proxy"
 	"github.com/tigera/voltron/pkg/tunnel"
 )
 
@@ -62,12 +64,16 @@ var _ = Describe("Client Tunneling", func() {
 		})
 
 		It("Starts up the client", func() {
+			dest, _ := url.Parse(ts.URL)
 			cl, err = client.New(
 				lis.Addr().String(),
 				client.WithProxyTargets(
-					[]client.ProxyTarget{{Pattern: "^/test", Dest: ts.URL}},
+					[]proxy.Target{{
+						Path:  "/test",
+						Dest:  dest,
+						Token: "some-token",
+					}},
 				),
-				client.WithAuthBearerToken("some-token"),
 			)
 			Expect(err).NotTo(HaveOccurred())
 			wg.Add(1)
@@ -113,12 +119,10 @@ var _ = Describe("Client Tunneling", func() {
 			reader := bufio.NewReader(srvRW)
 
 			resp, err := http.ReadResponse(reader, req)
-			message, err := ioutil.ReadAll(resp.Body)
 
 			Expect(err).NotTo(HaveOccurred())
 			resp.Body.Close()
-			Expect(resp.StatusCode).To(Equal(400))
-			Expect(string(message)).ToNot(Equal("Proxied and Received!"))
+			Expect(resp.StatusCode).To(Equal(404))
 		})
 
 	})

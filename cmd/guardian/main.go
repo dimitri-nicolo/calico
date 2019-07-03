@@ -7,12 +7,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/url"
 
 	"github.com/kelseyhightower/envconfig"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/tigera/voltron/internal/pkg/bootstrap"
 	"github.com/tigera/voltron/internal/pkg/client"
+	"github.com/tigera/voltron/internal/pkg/proxy"
 )
 
 const (
@@ -20,23 +23,24 @@ const (
 	EnvConfigPrefix = "GUARDIAN"
 )
 
-type proxyTarget []client.ProxyTarget
+type target struct {
+	// Path is the path portion of the URL based on which we proxy
+	Path string `json:"path"`
+	// Dest is the destination URL
+	Dest string `json:"url"`
+	// TokenPath is where we read the Bearer token from (if non-empty)
+	TokenPath string `json:"tokenPath,omitempty"`
+}
+
+type proxyTarget []target
 
 // Decode deserializes the list of proxytargets
 func (pt *proxyTarget) Decode(envVar string) error {
-	var mapping map[string]string
-	targetConfig := []client.ProxyTarget{}
-
-	err := json.Unmarshal([]byte(envVar), &mapping)
+	err := json.Unmarshal([]byte(envVar), pt)
 	if err != nil {
 		return err
 	}
 
-	for k, v := range mapping {
-		targetConfig = append(targetConfig, client.ProxyTarget{Pattern: k, Dest: v})
-	}
-
-	*pt = targetConfig
 	return nil
 }
 
@@ -45,11 +49,39 @@ type config struct {
 	// until health check restored
 	//Port       int    `default:"5555"`
 	//Host       string `default:"localhost"`
-	LogLevel            string      `default:"DEBUG"`
-	CertPath            string      `default:"/certs" split_words:"true"`
-	VoltronURL          string      `required:"true" split_words:"true"`
-	ProxyTargets        proxyTarget `required:"true" split_words:"true"`
-	ServiceAccountToken string      `default:"/var/run/secrets/kubernetes.io/serviceaccount/token" split_words:"true"`
+	LogLevel     string      `default:"DEBUG"`
+	CertPath     string      `default:"/certs" split_words:"true"`
+	VoltronURL   string      `required:"true" split_words:"true"`
+	ProxyTargets proxyTarget `required:"true" split_words:"true"`
+}
+
+func fillTargets(tgts proxyTarget) ([]proxy.Target, error) {
+	var ret []proxy.Target
+
+	for _, t := range tgts {
+		pt := proxy.Target{
+			Path: t.Path,
+		}
+
+		var err error
+		pt.Dest, err = url.Parse(t.Dest)
+		if err != nil {
+			return nil, errors.Errorf("Incorrect URL %q for path %q: %s", t.Dest, t.Path, err)
+		}
+
+		if t.TokenPath != "" {
+			token, err := ioutil.ReadFile(t.TokenPath)
+			if err != nil {
+				return nil, errors.Errorf("Failed reading token from %s: %s", t.TokenPath, err)
+			}
+
+			pt.Token = string(token)
+		}
+
+		ret = append(ret, pt)
+	}
+
+	return ret, nil
 }
 
 func main() {
@@ -86,23 +118,16 @@ func main() {
 		log.Fatalf("Cannot append voltron cert to ca pool: %+v", err)
 	}
 
-	opts := []client.Option{
-		client.WithProxyTargets(
-			cfg.ProxyTargets,
-		),
+	tgts, err := fillTargets(cfg.ProxyTargets)
+	if err != nil {
+		log.Fatalf("Failed to fill targets: %s", err)
+	}
+
+	client, err := client.New(
+		cfg.VoltronURL,
+		client.WithProxyTargets(tgts),
 		client.WithTunnelCreds(pemCert, pemKey, ca),
-	}
-
-	if cfg.ServiceAccountToken != "" {
-		token, err := ioutil.ReadFile(cfg.ServiceAccountToken)
-		if err != nil {
-			log.Fatalf("Failed to read ServiceAccountToken from %s: %s",
-				cfg.ServiceAccountToken, err)
-		}
-		opts = append(opts, client.WithAuthBearerToken(string(token)))
-	}
-
-	client, err := client.New(cfg.VoltronURL, opts...)
+	)
 
 	if err != nil {
 		log.Fatalf("Failed to create server: %s", err)

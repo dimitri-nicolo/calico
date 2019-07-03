@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 
@@ -23,6 +24,7 @@ import (
 
 	"github.com/tigera/voltron/internal/pkg/client"
 	"github.com/tigera/voltron/internal/pkg/clusters"
+	"github.com/tigera/voltron/internal/pkg/proxy"
 	"github.com/tigera/voltron/internal/pkg/server"
 	"github.com/tigera/voltron/internal/pkg/test"
 	"github.com/tigera/voltron/internal/pkg/utils"
@@ -221,10 +223,10 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 			lisTun.Addr().String(),
 			client.WithTunnelCreds(cert, key, rootCAs),
 			client.WithProxyTargets(
-				[]client.ProxyTarget{
+				[]proxy.Target{
 					{
-						Pattern: "^/some/path",
-						Dest:    "http://" + lisTs.Addr().String(),
+						Path: "/some/path",
+						Dest: listenerURL(lisTs),
 					},
 				},
 			),
@@ -251,10 +253,10 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 			lisTun.Addr().String(),
 			client.WithTunnelCreds(cert, key, rootCAs),
 			client.WithProxyTargets(
-				[]client.ProxyTarget{
+				[]proxy.Target{
 					{
-						Pattern: "^/some/path",
-						Dest:    "http://" + lisTs2.Addr().String(),
+						Path: "/some/path",
+						Dest: listenerURL(lisTs2),
 					},
 				},
 			),
@@ -323,10 +325,10 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 			lisTun.Addr().String(),
 			client.WithTunnelCreds(cert, key, rootCAs),
 			client.WithProxyTargets(
-				[]client.ProxyTarget{
+				[]proxy.Target{
 					{
-						Pattern: "^/some/path",
-						Dest:    "http://" + lisTs.Addr().String(),
+						Path: "/some/path",
+						Dest: listenerURL(lisTs),
 					},
 				},
 			),
@@ -388,4 +390,10 @@ func newTestServer(msg string) *testServer {
 	mux.HandleFunc("/", ts.handler)
 
 	return ts
+}
+
+func listenerURL(l net.Listener) *url.URL {
+	u, err := url.Parse("http://" + l.Addr().String())
+	Expect(err).NotTo(HaveOccurred())
+	return u
 }

@@ -89,7 +89,7 @@ var _ = Describe("Integration Tests", func() {
 			req, err := http.NewRequest("GET", clustersEndpoint, nil)
 			Expect(err).ToNot(HaveOccurred())
 
-			ExpectRequestResponse(req, "[]")
+			ExpectRespMsg(req, "[]")
 		})
 
 		It("Should add a cluster", func() {
@@ -110,7 +110,7 @@ var _ = Describe("Integration Tests", func() {
 			req, err := http.NewRequest("GET", clustersEndpoint, nil)
 			Expect(err).ToNot(HaveOccurred())
 
-			ExpectRequestResponse(req, `[{"id":"ClusterA","displayName":"A"}]`)
+			ExpectRespMsg(req, `[{"id":"ClusterA","displayName":"A"}]`)
 		})
 
 		It("Should delete ClusterA", func() {
@@ -122,7 +122,7 @@ var _ = Describe("Integration Tests", func() {
 
 			Expect(err).ToNot(HaveOccurred())
 
-			ExpectRequestResponse(req, "Deleted")
+			ExpectRespMsg(req, "Deleted")
 		})
 
 		It("Should fail to delete nonexistant cluster", func() {
@@ -132,7 +132,7 @@ var _ = Describe("Integration Tests", func() {
 			req, err := http.NewRequest("DELETE", clustersEndpoint,
 				bytes.NewBuffer(cluster))
 
-			ExpectRequestResponse(req, `Cluster id "ClusterZ" does not exist`)
+			ExpectRespMsg(req, `Cluster id "ClusterZ" does not exist`)
 		})
 	})
 
@@ -141,10 +141,6 @@ var _ = Describe("Integration Tests", func() {
 		Expect(err).ToNot(HaveOccurred())
 
 		err = os.Setenv("GUARDIAN_VOLTRON_URL", "localhost:5566")
-		Expect(err).ToNot(HaveOccurred())
-
-		// do not read any token
-		err = os.Setenv("GUARDIAN_SERVICE_ACCOUNT_TOKEN", "")
 		Expect(err).ToNot(HaveOccurred())
 	})
 
@@ -197,7 +193,7 @@ var _ = Describe("Integration Tests", func() {
 		err := os.Setenv("GUARDIAN_CERT_PATH", "/tmp/")
 		Expect(err).NotTo(HaveOccurred())
 
-		proxyTarget := fmt.Sprintf(`{"^/test":"%s"}`, ts.URL)
+		proxyTarget := fmt.Sprintf(`[{"path": "/test", "url": "%s"}]`, ts.URL)
 
 		err = os.Setenv("GUARDIAN_PROXY_TARGETS", proxyTarget)
 		Expect(err).NotTo(HaveOccurred())
@@ -245,7 +241,7 @@ var _ = Describe("Integration Tests", func() {
 
 			req.Header.Add("x-cluster-id", "TestCluster")
 
-			ExpectRequestResponse(req, "configuration missing for path \"/\"")
+			ExpectRequestResponse(req, expResponseCode(404))
 		})
 
 		It("Should send a request to test endpoint/target", func() {
@@ -254,7 +250,7 @@ var _ = Describe("Integration Tests", func() {
 
 			req.Header.Add("x-cluster-id", "TestCluster")
 
-			ExpectRequestResponse(req, "Received by TestCluster!")
+			ExpectRespMsg(req, "Received by TestCluster!")
 		})
 
 		It("Should send a request to wrong cluster id", func() {
@@ -278,13 +274,34 @@ var _ = Describe("Integration Tests", func() {
 	})
 })
 
-func ExpectRequestResponse(request *http.Request, expected string) {
+type responseChecker func(*http.Response)
+
+func expResponseMessage(expected string) responseChecker {
+	return func(resp *http.Response) {
+		message, err := ioutil.ReadAll(resp.Body)
+
+		Expect(err).NotTo(HaveOccurred())
+		resp.Body.Close()
+		trimmedMsg := strings.TrimRight(string(message), "\n")
+		Expect(trimmedMsg).To(Equal(expected))
+	}
+}
+
+func expResponseCode(code int) responseChecker {
+	return func(resp *http.Response) {
+		Expect(resp.StatusCode).To(Equal(code))
+	}
+}
+
+func ExpectRequestResponse(request *http.Request, checks ...responseChecker) {
 	resp, err := http.DefaultClient.Do(request)
 	Expect(err).ToNot(HaveOccurred())
-	message, err := ioutil.ReadAll(resp.Body)
 
-	Expect(err).NotTo(HaveOccurred())
-	resp.Body.Close()
-	trimmedMsg := strings.TrimRight(string(message), "\n")
-	Expect(trimmedMsg).To(Equal(expected))
+	for _, check := range checks {
+		check(resp)
+	}
+}
+
+func ExpectRespMsg(r *http.Request, expected string) {
+	ExpectRequestResponse(r, expResponseMessage(expected))
 }

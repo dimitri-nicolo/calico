@@ -10,7 +10,6 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/voltron/internal/pkg/proxy"
-	"github.com/tigera/voltron/internal/pkg/targets"
 	"github.com/tigera/voltron/pkg/tunnel"
 )
 
@@ -19,7 +18,7 @@ import (
 type Client struct {
 	http      *http.Server
 	proxyMux  *http.ServeMux
-	targets   *targets.Targets
+	targets   []proxy.Target
 	tunnel    *tunnel.Tunnel
 	closeOnce sync.Once
 
@@ -29,15 +28,12 @@ type Client struct {
 	tunnelRootCAs *x509.CertPool
 
 	tunnelReady chan error
-
-	authBearerToken string
 }
 
 // New returns a new Client
 func New(addr string, opts ...Option) (*Client, error) {
 	client := &Client{
 		http:        new(http.Server),
-		targets:     targets.NewEmpty(),
 		tunnelReady: make(chan error, 1),
 	}
 
@@ -55,7 +51,10 @@ func New(addr string, opts ...Option) (*Client, error) {
 	client.proxyMux = http.NewServeMux()
 	client.http.Handler = client.proxyMux
 
-	handler := proxy.New(proxy.NewPathMatcher(client.targets), client.authBearerToken)
+	handler, err := proxy.New(client.targets)
+	if err != nil {
+		return nil, errors.WithMessage(err, "proxy.New")
+	}
 	client.proxyMux.Handle("/", handler)
 
 	return client, nil
