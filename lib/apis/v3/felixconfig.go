@@ -415,7 +415,7 @@ type FelixConfigurationSpec struct {
 	// Accepted values are 0 and 1.
 	// 0 - No aggregation
 	// 1 - Aggregate over clients with the same name prefix
-	DNSLogsFileAggregationKind *int `json:"dnsLogsFileAggregationKind,omitempty" validate:"omitempty,cloudWatchAggregationKind"`
+	DNSLogsFileAggregationKind *int `json:"dnsLogsFileAggregationKind,omitempty" validate:"omitempty,dnsAggregationKind"`
 
 	// WindowsNetworkName specifies which Windows HNS networks Felix should operate on.  The default is to match
 	// networks that start with "calico".  Supports regular expression syntax.

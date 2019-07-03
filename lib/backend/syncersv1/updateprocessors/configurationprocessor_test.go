@@ -715,10 +715,11 @@ var _ = Describe("Test the generic configuration update processor and the concre
 				disabled := false
 				fc.Spec.DNSLogsFileEnabled = &disabled
 				fc.Spec.DNSLogsFileIncludeLabels = &disabled
+				zero := 0
 				two := 2
 				fc.Spec.DNSLogsFileMaxFiles = &two
 				fc.Spec.DNSLogsFileMaxFileSizeMB = &two
-				fc.Spec.DNSLogsFileAggregationKind = &two
+				fc.Spec.DNSLogsFileAggregationKind = &zero
 				path := "/dnslogging"
 				fc.Spec.DNSLogsFileDirectory = &path
 			},
@@ -729,7 +730,7 @@ var _ = Describe("Test the generic configuration update processor and the concre
 				"DNSLogsFileMaxFileSizeMB":   "2",
 				"DNSLogsFileDirectory":       "/dnslogging",
 				"DNSLogsFileIncludeLabels":   "false",
-				"DNSLogsFileAggregationKind": "2",
+				"DNSLogsFileAggregationKind": "0",
 			},
 		),
 	)
