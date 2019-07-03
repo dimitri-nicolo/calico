@@ -1,5 +1,5 @@
-hash: 32d9b6662362b6f5a6328853afa1be42a3ff8a5f3274be1f4414507e99cb80af
-updated: 2019-06-23T05:04:41.619765801Z
+hash: 2b9534b47f21b8a98760cd1e57b5c388249eaa6372cfc16bb0cd220dac4dae8b
+updated: 2019-07-03T00:28:09.916897573Z
 imports:
 - name: github.com/docopt/docopt-go
   version: 784ddc588536785e7299f7272f39101f7faccc3f
@@ -20,7 +20,7 @@ imports:
   - sortkeys
   - types
 - name: github.com/golang/protobuf
-  version: b285ee9cfc6c881bb20c0d8dc73370ea9b9ec90f
+  version: 6c65a5562fc06764971b7c5d05c76c75e84bdbf7
   subpackages:
   - proto
 - name: github.com/konsorten/go-windows-terminal-sequences
@@ -42,7 +42,7 @@ imports:
   - matchers/support/goraph/util
   - types
 - name: github.com/projectcalico/libcalico-go
-  version: 8dc7bc820846ec5c35f943ce2f673dad348a9c4a
+  version: fe10f211caf00641500842123c9066584e9c16c3
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apis/v3
@@ -54,7 +54,7 @@ imports:
 - name: github.com/sirupsen/logrus
   version: 839c75faf7f98a33d445d181f3018b5c3409a45e
 - name: golang.org/x/net
-  version: 3b0461eec859c4b73bb64fdc8285971fd33e3938
+  version: da137c7871d730100384dbcf36e6f8fa493aef5b
   subpackages:
   - context
   - html
@@ -67,7 +67,7 @@ imports:
   - internal/timeseries
   - trace
 - name: golang.org/x/sys
-  version: d432491b91382bba9c2a91776aa47c9430183a6f
+  version: 04f50cda93cbb67f2afa353c52f342100e80e625
   subpackages:
   - unix
 - name: golang.org/x/text
