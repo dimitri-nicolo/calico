@@ -372,7 +372,7 @@ type DNSLog struct {
 func (d *DNSData) ToDNSLog(startTime, endTime time.Time, includeLabels bool) *DNSLog {
 	e := d.DNSSpec.Encode()
 
-	return &DNSLog{
+	res := &DNSLog{
 		StartTime:       startTime,
 		EndTime:         endTime,
 		Count:           d.Count,
@@ -388,4 +388,15 @@ func (d *DNSData) ToDNSLog(startTime, endTime time.Time, includeLabels bool) *DN
 		RCode:           d.ResponseCode,
 		RRSets:          e.RRSets,
 	}
+
+	if !includeLabels {
+		res.ClientLabels = nil
+		res.Servers = nil
+		for _, server := range e.Servers {
+			server.Labels = nil
+			res.Servers = append(res.Servers, server)
+		}
+	}
+
+	return res
 }

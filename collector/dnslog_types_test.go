@@ -296,6 +296,49 @@ var _ = Describe("DNS log type tests", func() {
 		})
 	})
 
+	Describe("DNSData", func() {
+		var d DNSData
+		BeforeEach(func() {
+			d = DNSData{
+				DNSMeta: DNSMeta{},
+				DNSSpec: DNSSpec{
+					Servers: map[EndpointMetadataWithIP]DNSLabels{
+						{}: {
+							"c": "d",
+						},
+					},
+					ClientLabels: map[string]string{
+						"a": "b",
+					},
+				},
+			}
+		})
+
+		It("includes labels when desired", func() {
+			l := d.ToDNSLog(time.Time{}, time.Time{}, true)
+			Expect(l.ClientLabels).ShouldNot(HaveLen(0))
+			for _, s := range l.Servers {
+				Expect(s.Labels).ShouldNot(HaveLen(0))
+			}
+		})
+
+		It("excludes labels when desired", func() {
+			l := d.ToDNSLog(time.Time{}, time.Time{}, false)
+			Expect(l.ClientLabels).Should(HaveLen(0))
+			for _, s := range l.Servers {
+				Expect(s.Labels).Should(HaveLen(0))
+			}
+		})
+
+		It("excluding labels has no side effects", func() {
+			d.ToDNSLog(time.Time{}, time.Time{}, false)
+			Expect(d.ClientLabels).ShouldNot(HaveLen(0))
+			for _, l := range d.Servers {
+				Expect(l).ShouldNot(HaveLen(0))
+			}
+		})
+	})
+
 	Describe("DNSSpec", func() {
 		Context("Merge", func() {
 			It("Merges correctly", func() {
