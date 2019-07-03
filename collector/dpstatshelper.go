@@ -134,7 +134,9 @@ func StartDataplaneStatsCollector(configParams *config.Config, lookupsCache *cal
 		false,
 	)
 	dnsLogReporter.AddAggregator(
-		NewDNSLogAggregator(),
+		NewDNSLogAggregator().
+			AggregateOver(DNSAggregationKind(configParams.DNSLogsFileAggregationKind)).
+			IncludeLabels(configParams.DNSLogsFileIncludeLabels),
 		[]string{DNSLogsFileDispatcherName},
 	)
 	statsCollector.SetDNSLogReporter(dnsLogReporter)
