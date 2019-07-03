@@ -13,7 +13,6 @@
 
 bin
 vendor
-.go-build-cache
 .go-pkg-cache
 go.sum
 

@@ -99,12 +99,11 @@ GO_BUILD_VER ?= go.1.12
 CALICO_BUILD  = aliceinwonderland89/go-build:${GO_BUILD_VER}
 
 DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
-                   mkdir -p .go-build-cache && \
                    docker run --rm \
                               --net=host \
                               $(EXTRA_DOCKER_ARGS) \
                               -e LOCAL_USER_ID=$(MY_UID) \
-                              -e GOCACHE=/$(PACKAGE_NAME)/.go-build-cache \
+                              -e LOCAL_GROUP_ID=$(MY_GID) \
                               -e GOARCH=$(ARCH) \
                               -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
                               -v ${PWD}:/$(PACKAGE_NAME):rw \
@@ -225,15 +224,13 @@ test: ut fv st
 # Run unit level tests
 #############################################
 
-DOCKER_CALICO_BUILD = docker run --rm -v $(CURDIR):/build-dir/$(PACKAGE_NAME):rw -e LOCAL_USER_ID=$(MY_UID) $(CALICO_BUILD) sh -c
-
 .PHONY: ut
 ut: CMD = go mod download && $(GINKGO) -r pkg/* internal/*
 ut:
 ifdef LOCAL
 	$(CMD)
 else
-	$(DOCKER_CALICO_BUILD) 'cd /build-dir/$(PACKAGE_NAME) && $(CMD)'
+	$(DOCKER_GO_BUILD) sh -c '$(CMD)'
 endif
 
 #############################################
@@ -245,7 +242,7 @@ fv:
 ifdef LOCAL
 	$(CMD)
 else
-	$(DOCKER_CALICO_BUILD) 'cd /build-dir/$(PACKAGE_NAME) && $(CMD)'
+	$(DOCKER_GO_BUILD) sh -c '$(CMD)'
 endif
 
 #############################################
@@ -257,7 +254,7 @@ st: $(COMPONENTS)
 ifdef LOCAL
 	$(CMD)
 else
-	$(DOCKER_CALICO_BUILD) 'cd /build-dir/$(PACKAGE_NAME) && $(CMD)'
+	$(DOCKER_GO_BUILD) sh -c '$(CMD)'
 endif
 
 ##########################################################################################
@@ -266,6 +263,7 @@ endif
 .PHONY: clean
 clean: clean-build-image
 	rm -rf $(BINDIR) docker-image/bin
+	if test -d .go-pkg-cache; then chmod -R +w .go-pkg-cache && rm -rf .go-pkg-cache; fi
 	find . -name "*.coverprofile" -type f -delete
 	rm -rf docker-image/templates docker-image/scripts
 
