@@ -211,7 +211,7 @@ var _ = Describe("gopacket to DNS log conversion function", func() {
 				Questions:    []layers.DNSQuestion{{}},
 			}, DNSSpec{})
 
-			Expect(meta.ResponseCode).Should(Equal(layers.DNSResponseCodeNXDomain))
+			Expect(meta.ResponseCode).Should(BeNumerically("==", layers.DNSResponseCodeNXDomain))
 		})
 
 		It("sets the rrset string", func() {

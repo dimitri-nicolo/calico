@@ -59,7 +59,7 @@ func newDNSMetaFromSpecAndGoPacket(clientEM EndpointMetadataWithIP, dns *layers.
 			Class: DNSClass(dns.Questions[0].Class),
 			Type:  DNSType(dns.Questions[0].Type),
 		},
-		ResponseCode: dns.ResponseCode,
+		ResponseCode: DNSResponseCode(dns.ResponseCode),
 		RRSetsString: spec.RRSets.String(),
 	}
 }

@@ -33,7 +33,7 @@ type EndpointMetadataWithIP struct {
 type DNSMeta struct {
 	ClientMeta   EndpointMetadataWithIP
 	Question     DNSName
-	ResponseCode layers.DNSResponseCode
+	ResponseCode DNSResponseCode
 	RRSetsString string
 }
 
@@ -140,6 +140,49 @@ func (a DNSName) Less(b DNSName) bool {
 	}
 
 	return a.Type < b.Type
+}
+
+type DNSResponseCode layers.DNSResponseCode
+
+func (d DNSResponseCode) String() string {
+	if res, ok := dnsResponseCodeTable[d]; ok {
+		return res
+	}
+
+	return fmt.Sprintf("#%d", d)
+}
+
+func (d DNSResponseCode) MarshalJSON() ([]byte, error) {
+	if res, ok := dnsResponseCodeTable[d]; ok {
+		return json.Marshal(&res)
+	}
+
+	i := uint(d)
+	return json.Marshal(&i)
+}
+
+// Formatting from IANA DNS Parameters
+var dnsResponseCodeTable = map[DNSResponseCode]string{
+	0:  "NoError",
+	1:  "FormErr",
+	2:  "ServFail",
+	3:  "NXDomain",
+	4:  "NotImp",
+	5:  "Refused",
+	6:  "YXDomain",
+	7:  "YXRRSet",
+	8:  "NXRRSet",
+	9:  "NotAuth",
+	10: "NotZone",
+	11: "DSOTYPENI",
+	16: "BADSIG",
+	17: "BADKEY",
+	18: "BADTIME",
+	19: "BADMODE",
+	20: "BADNAME",
+	21: "BADALG",
+	22: "BADTRUNC",
+	23: "BADCOOKIE",
 }
 
 type DNSClass layers.DNSClass
@@ -322,7 +365,7 @@ type DNSLog struct {
 	QName           string            `json:"qname"`
 	QClass          DNSClass          `json:"qclass"`
 	QType           DNSType           `json:"qtype"`
-	RCode           string            `json:"rcode"`
+	RCode           DNSResponseCode   `json:"rcode"`
 	RRSets          DNSRRSets         `json:"rrsets"`
 }
 
@@ -342,7 +385,7 @@ func (d *DNSData) ToDNSLog(startTime, endTime time.Time, includeLabels bool) *DN
 		QName:           d.Question.Name,
 		QClass:          d.Question.Class,
 		QType:           d.Question.Type,
-		RCode:           d.ResponseCode.String(),
+		RCode:           d.ResponseCode,
 		RRSets:          e.RRSets,
 	}
 }
