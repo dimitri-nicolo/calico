@@ -393,16 +393,22 @@ type FelixConfigurationSpec struct {
 	DNSCacheSaveInterval *metav1.Duration `json:"dnsCacheSaveInterval,omitempty" configv1timescale:"seconds"`
 
 	// DNSLogsFlushInterval configures the interval at which Felix exports DNS logs.
+	// [Default: 300s]
 	DNSLogsFlushInterval *metav1.Duration `json:"dnsLogsFlushInterval,omitempty" configv1timescale:"seconds"`
 	// DNSLogsFileEnabled controls logging DNS logs to a file. If false no DNS logging to file will occur.
+	// [Default: true]
 	DNSLogsFileEnabled *bool `json:"dnsLogsFileEnabled,omitempty"`
 	// DNSLogsFileMaxFiles sets the number of DNS log files to keep.
+	// [Default: 5]
 	DNSLogsFileMaxFiles *int `json:"dnsLogsFileMaxFiles,omitempty"`
 	// DNSLogsFileMaxFileSizeMB sets the max size in MB of DNS log files before rotation.
+	// [Default: 100]
 	DNSLogsFileMaxFileSizeMB *int `json:"dnsLogsFileMaxFileSizeMB,omitempty"`
 	// DNSLogsFileDirectory sets the directory where DNS log files are stored.
+	// [Default: /var/log/calico/dnslogs]
 	DNSLogsFileDirectory *string `json:"dnsLogsFileDirectory,omitempty"`
 	// DNSLogsFileIncludeLabels is used to configure if endpoint labels are included in a DNS log entry written to file.
+	// [Default: true]
 	DNSLogsFileIncludeLabels *bool `json:"dnsLogsFileIncludeLabels,omitempty"`
 	// DNSLogsFileAggregationKind is used to choose the type of aggregation for DNS log entries.
 	// [Default: 1 - client name prefix aggregation].
