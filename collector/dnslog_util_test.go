@@ -135,6 +135,7 @@ var _ = Describe("gopacket to DNS log conversion function", func() {
 			Expect(meta.Question.Name).Should(Equal("tigera.io"))
 			Expect(spec.Count).Should(BeNumerically("==", 1))
 			Expect(meta.RRSetsString).Should(Equal(spec.RRSets.String()))
+			Expect(meta.ClientMeta.IP).To(Equal("1.2.3.4"))
 		})
 	})
 

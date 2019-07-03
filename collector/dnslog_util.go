@@ -28,8 +28,8 @@ func NewDNSMetaSpecFromUpdate(update DNSUpdate) (DNSMeta, DNSSpec, error) {
 	}
 	serverLabels := getFlowLogEndpointLabels(update.ServerEP)
 
-	spec := newDNSSpecFromGoPacket(clientLabels, EndpointMetadataWithIP{serverEM, update.ClientIP.String()}, serverLabels, update.DNS)
-	meta := newDNSMetaFromSpecAndGoPacket(EndpointMetadataWithIP{clientEM, update.ServerIP.String()}, update.DNS, spec)
+	spec := newDNSSpecFromGoPacket(clientLabels, EndpointMetadataWithIP{serverEM, update.ServerIP.String()}, serverLabels, update.DNS)
+	meta := newDNSMetaFromSpecAndGoPacket(EndpointMetadataWithIP{clientEM, update.ClientIP.String()}, update.DNS, spec)
 
 	return meta, spec, nil
 }
