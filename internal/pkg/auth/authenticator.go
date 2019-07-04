@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 	authn "k8s.io/api/authentication/v1"
 	k8s "k8s.io/client-go/kubernetes"
 )
@@ -43,7 +44,9 @@ func (id BearerAuthenticator) Authenticate(token string) (*User, error) {
 	}
 
 	if result.Status.Authenticated {
-		return &User{Name: result.Status.User.Username, Groups: result.Status.User.Groups}, nil
+		user := &User{Name: result.Status.User.Username, Groups: result.Status.User.Groups}
+		log.Debugf("User was authenticated as %v", user)
+		return user, nil
 	}
 
 	return nil, errors.New("Token does not authenticate the user")
@@ -64,5 +67,7 @@ func (id BasicAuthenticator) Authenticate(token string) (*User, error) {
 		return nil, errors.New("Could not parse basic token")
 	}
 
-	return &User{Name: slice[0], Groups: []string{}}, nil
+	user := &User{Name: slice[0], Groups: []string{}}
+	log.Debugf("User was authenticated as %v", user)
+	return user, nil
 }

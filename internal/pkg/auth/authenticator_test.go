@@ -5,6 +5,8 @@ package auth_test
 import (
 	"encoding/base64"
 
+	"github.com/tigera/voltron/internal/pkg/test"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	k8stesting "k8s.io/client-go/testing"
@@ -37,22 +39,7 @@ var _ = Describe("Authenticator", func() {
 			})
 
 			It("should authenticate a valid token for jane", func() {
-				client.Fake.PrependReactor("create", "tokenreviews", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
-					review := &authn.TokenReview{
-						Spec: authn.TokenReviewSpec{
-							Token: "jane's token",
-						},
-						Status: authn.TokenReviewStatus{
-							Authenticated: true,
-							User: authn.UserInfo{
-								Username: "jane",
-								Groups:   []string{"developers"},
-							},
-						},
-					}
-					return true, review, nil
-				})
-
+				test.AddJaneIdentity(client)
 				user, err := authenticator.Authenticate("jane's token")
 				Expect(user.Name).To(Equal("jane"))
 				Expect(user.Groups).To(Equal([]string{"developers"}))

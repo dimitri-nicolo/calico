@@ -64,6 +64,8 @@ VOLTRON_TUNNEL_HOST | Environment | any
 VOLTRON_CERT_PATH | Environment | /certs
 VOLTRON_TEMPLATE_PATH | Environment | /tmp/guardian.yaml
 VOLTRON_PUBLIC_IP | Environment | 127.0.0.1:32453
+VOLTRON_K8S_CONFIG_PATH | Environment | <empty string>
+VOLTRON_AUTHN_ON | Environment | true
 
 ### Build and deploy
 

@@ -8,7 +8,7 @@ import (
 )
 
 // Token type for different authorization methods against K8S
-type Token = int
+type Token int
 
 const (
 	// Unknown Token type
@@ -20,6 +20,10 @@ const (
 	// Bearer Token type
 	Bearer
 )
+
+func (t Token) String() string {
+	return []string{"Unknown", "Basic", "Bearer"}[t]
+}
 
 // Extract extracts a token and token type from an HTTP request
 func Extract(r *http.Request) (token string, tokenType Token) {

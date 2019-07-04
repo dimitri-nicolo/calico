@@ -15,6 +15,8 @@ import (
 	"net/textproto"
 	"time"
 
+	"github.com/tigera/voltron/internal/pkg/auth"
+
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
@@ -58,6 +60,14 @@ type Server struct {
 
 	template      string
 	publicAddress string
+
+	auth    *auth.Identity
+	toggles *Toggles
+}
+
+// Toggles are the toggles that enable or disable a feature
+type Toggles struct {
+	AuthNOn bool
 }
 
 // New returns a new Server
@@ -69,6 +79,7 @@ func New(opts ...Option) (*Server, error) {
 		},
 	}
 
+	srv.toggles = &Toggles{}
 	srv.ctx, srv.cancel = context.WithCancel(context.Background())
 	srv.clusters.generateCreds = srv.generateCreds
 
@@ -282,13 +293,35 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 	// this as the destinatination has been decided by choosing the tunnel.
 	r.URL.Host = "voltron-tunnel"
 
-	// TODO this is the place for the impersonation hook
+	if s.toggles.AuthNOn {
+		user, err := s.auth.Authenticate(r)
+		if err != nil {
+			log.Errorf("Could not authenticate user from request: %v", err)
+			http.Error(w, err.Error(), 401)
+			return
+		}
+		addImpersonationHeaders(r, user)
+		removeAuthHeaders(r)
+	}
 
 	log.Debugf("tunneling %q from %q through %q", r.URL, r.RemoteAddr, clusterID)
 	r.Header.Del(ClusterHeaderField)
 
 	c.ServeHTTP(w, r)
 	c.RUnlock()
+}
+
+func removeAuthHeaders(r *http.Request) {
+	r.Header.Del("Authorization")
+	r.Header.Del("Auth")
+}
+
+func addImpersonationHeaders(r *http.Request, user *auth.User) {
+	r.Header.Add("Impersonate-User", user.Name)
+	for _, group := range user.Groups {
+		r.Header.Add("Impersonate-Group", group)
+	}
+	log.Debugf("Setting headers %v", r.Header)
 }
 
 func (s *Server) generateCreds(clusterInfo *jclust.Cluster) (*x509.Certificate, crypto.Signer, error) {

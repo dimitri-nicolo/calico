@@ -8,7 +8,10 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/tigera/voltron/internal/pkg/auth"
+
 	"github.com/pkg/errors"
+	"k8s.io/client-go/kubernetes"
 )
 
 // Option is a common format for New() options
@@ -87,6 +90,17 @@ func WithTunnelCreds(cert *x509.Certificate, key crypto.Signer) Option {
 func WithKeepClusterKeys() Option {
 	return func(s *Server) error {
 		s.clusters.keepKeys = true
+		return nil
+	}
+}
+
+// WithAuthentication sets the kubernetes client that will be used to interact with its api
+func WithAuthentication(authNOn bool, k8sAPI kubernetes.Interface) Option {
+	return func(s *Server) error {
+		s.toggles.AuthNOn = authNOn
+		if authNOn {
+			s.auth = auth.NewIdentity(k8sAPI)
+		}
 		return nil
 	}
 }

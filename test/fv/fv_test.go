@@ -21,6 +21,7 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/http2"
+	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/tigera/voltron/internal/pkg/client"
 	"github.com/tigera/voltron/internal/pkg/clusters"
@@ -50,8 +51,9 @@ func init() {
 }
 
 type testClient struct {
-	http    *http.Client
-	voltron string
+	http         *http.Client
+	voltronHTTPS string
+	voltronHTTP  string
 }
 
 func (c *testClient) addCluster(id string) error {
@@ -59,7 +61,7 @@ func (c *testClient) addCluster(id string) error {
 	Expect(err).NotTo(HaveOccurred())
 
 	req, err := http.NewRequest("PUT",
-		"https://"+c.voltron+"/voltron/api/clusters?", bytes.NewBuffer(cluster))
+		"https://"+c.voltronHTTPS+"/voltron/api/clusters?", bytes.NewBuffer(cluster))
 	Expect(err).NotTo(HaveOccurred())
 
 	resp, err := c.http.Do(req)
@@ -73,10 +75,7 @@ func (c *testClient) addCluster(id string) error {
 }
 
 func (c *testClient) doRequest(clusterID string) (string, error) {
-	req, err := http.NewRequest("GET", "https://"+c.voltron+"/some/path", strings.NewReader("HELLO"))
-	Expect(err).NotTo(HaveOccurred())
-
-	req.Header[server.ClusterHeaderField] = []string{clusterID}
+	req, err := c.request(clusterID, "https", c.voltronHTTPS)
 	Expect(err).NotTo(HaveOccurred())
 	resp, err := c.http.Do(req)
 	Expect(err).NotTo(HaveOccurred())
@@ -89,6 +88,31 @@ func (c *testClient) doRequest(clusterID string) (string, error) {
 	Expect(err).NotTo(HaveOccurred())
 
 	return string(body), nil
+}
+
+func (c *testClient) doHTTPRequest(clusterID string) (string, error) {
+	req, err := c.request(clusterID, "http", c.voltronHTTP)
+	Expect(err).NotTo(HaveOccurred())
+	resp, err := http.DefaultClient.Do(req)
+	Expect(err).NotTo(HaveOccurred())
+
+	if resp.StatusCode != 200 {
+		return "", errors.Errorf("error status: %d", resp.StatusCode)
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	Expect(err).NotTo(HaveOccurred())
+
+	return string(body), nil
+}
+
+func (c *testClient) request(clusterID string, schema string, address string) (*http.Request, error) {
+	req, err := http.NewRequest("GET", schema+"://"+address+"/some/path", strings.NewReader("HELLO"))
+	Expect(err).NotTo(HaveOccurred())
+	req.Header[server.ClusterHeaderField] = []string{clusterID}
+	test.AddJaneToken(req)
+	Expect(err).NotTo(HaveOccurred())
+	return req, err
 }
 
 type testServer struct {
@@ -121,6 +145,9 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 
 	clusterID := "cluster"
 	clusterID2 := "other-cluster"
+
+	k8sAPI := fake.NewSimpleClientset()
+	test.AddJaneIdentity(k8sAPI)
 
 	// client to be used to interact with voltron (mimic UI)
 	ui := &testClient{
@@ -183,6 +210,7 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 		voltron, err = server.New(
 			server.WithKeepClusterKeys(),
 			server.WithTunnelCreds(srvCert, srvPrivKey),
+			server.WithAuthentication(true, k8sAPI),
 		)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -204,7 +232,8 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 			voltron.ServeTunnelsTLS(lisTun)
 		}()
 
-		ui.voltron = lisHTTP2.Addr().String()
+		ui.voltronHTTPS = lisHTTP2.Addr().String()
+		ui.voltronHTTP = lisHTTP11.Addr().String()
 	})
 
 	It("should register 2 clusters", func() {
@@ -296,16 +325,9 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 	})
 
 	It("should be possible to reach the test server on http", func() {
-		req, err := http.NewRequest("GET", "http://"+lisHTTP11.Addr().String()+"/some/path",
-			strings.NewReader("HELLO"))
+		msg, err := ui.doHTTPRequest(clusterID)
 		Expect(err).NotTo(HaveOccurred())
-
-		req.Header[server.ClusterHeaderField] = []string{clusterID}
-		Expect(err).NotTo(HaveOccurred())
-		resp, err := http.DefaultClient.Do(req)
-		Expect(err).NotTo(HaveOccurred())
-
-		Expect(resp.StatusCode).To(Equal(200))
+		Expect(msg).To(Equal(ts.msg))
 	})
 
 	It("should be possible to stop guardian", func() {

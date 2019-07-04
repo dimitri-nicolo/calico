@@ -28,6 +28,7 @@ import (
 
 	"github.com/tigera/voltron/internal/pkg/server"
 	"github.com/tigera/voltron/pkg/tunnel"
+	"k8s.io/client-go/kubernetes/fake"
 )
 
 var (
@@ -57,6 +58,9 @@ var _ = Describe("Server", func() {
 		lis net.Listener
 	)
 
+	client := fake.NewSimpleClientset()
+	test.AddJaneIdentity(client)
+
 	It("should fail to use invalid path", func() {
 		_, err := server.New(
 			server.WithCredsFiles("dog/gopher.crt", "dog/gopher.key"),
@@ -72,6 +76,7 @@ var _ = Describe("Server", func() {
 		srv, err = server.New(
 			server.WithKeepClusterKeys(),
 			server.WithTunnelCreds(srvCert, srvPrivKey),
+			server.WithAuthentication(true, client),
 		)
 		Expect(err).NotTo(HaveOccurred())
 		wg.Add(1)
@@ -155,6 +160,9 @@ var _ = Describe("Server Proxy to tunnel", func() {
 		lisTun net.Listener
 	)
 
+	client := fake.NewSimpleClientset()
+	test.AddJaneIdentity(client)
+
 	It("should start a server", func() {
 		var e error
 		lis, e = net.Listen("tcp", "localhost:0")
@@ -177,6 +185,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 		srv, err = server.New(
 			server.WithKeepClusterKeys(),
 			server.WithTunnelCreds(srvCert, srvPrivKey),
+			server.WithAuthentication(true, client),
 		)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -301,6 +310,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 					"https://"+lis2.Addr().String()+"/some/path", strings.NewReader("HELLO"))
 				Expect(err).NotTo(HaveOccurred())
 				req.Header[server.ClusterHeaderField] = []string{"clusterA"}
+				test.AddJaneToken(req)
 				resp, err := clnt.Do(req)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(200))
@@ -434,6 +444,166 @@ var _ = Describe("Server Proxy to tunnel", func() {
 	})
 })
 
+var _ = Describe("Server authenticates user", func() {
+	Context("Server is up and running with a working tunnel for clusterA", func() {
+
+		k8sAPI := fake.NewSimpleClientset()
+		var wg sync.WaitGroup
+		var srv *server.Server
+		var tun *tunnel.Tunnel
+		var lisHTTPS net.Listener
+		var lisHTTP net.Listener
+		var lisTun net.Listener
+		var xCert tls.Certificate
+
+		By("Reading creating credentials for server", func() {
+			srvCert, _ = test.CreateSelfSignedX509Cert("voltron", true)
+
+			block, _ := pem.Decode([]byte(test.PrivateRSA))
+			srvPrivKey, _ = x509.ParsePKCS1PrivateKey(block.Bytes)
+
+			rootCAs = x509.NewCertPool()
+			rootCAs.AddCert(srvCert)
+
+			key, _ := utils.KeyPEMEncode(srvPrivKey)
+			cert := utils.CertPEMEncode(srvCert)
+
+			xCert, _ = tls.X509KeyPair(cert, key)
+		})
+		By("Starting the server", func() {
+			lisHTTP, _ = net.Listen("tcp", "localhost:0")
+			lisHTTPS, _ = tls.Listen("tcp", "localhost:0", &tls.Config{
+				Certificates: []tls.Certificate{xCert},
+				NextProtos:   []string{"h2"},
+			})
+			lisTun, _ = net.Listen("tcp", "localhost:0")
+
+			srv, _ = server.New(
+				server.WithKeepClusterKeys(),
+				server.WithTunnelCreds(srvCert, srvPrivKey),
+				server.WithAuthentication(true, k8sAPI),
+			)
+
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				_ = srv.ServeHTTP(lisHTTPS)
+			}()
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				_ = srv.ServeHTTP(lisHTTP)
+			}()
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				_ = srv.ServeTunnelsTLS(lisTun)
+			}()
+		})
+		By("Adding cluster A", func() {
+			cluster, _ := json.Marshal(&clusters.Cluster{ID: "clusterA", DisplayName: "ClusterA"})
+			req, _ := http.NewRequest("PUT",
+				"http://"+lisHTTP.Addr().String()+"/voltron/api/clusters?", bytes.NewBuffer(cluster))
+			_, _ = http.DefaultClient.Do(req)
+		})
+		By("Opening a tunnel to cluster A", func() {
+			certPem, keyPem, _ := srv.ClusterCreds("clusterA")
+			cert, _ := tls.X509KeyPair(certPem, keyPem)
+
+			cfg := &tls.Config{
+				Certificates: []tls.Certificate{cert},
+				RootCAs:      rootCAs,
+			}
+
+			tun, _ = tunnel.DialTLS(lisTun.Addr().String(), cfg)
+		})
+
+		It("should authenticate Jane", func() {
+			test.AddJaneIdentity(k8sAPI)
+
+			var wg sync.WaitGroup
+
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				test.HTTPSBin(tun, xCert, func(r *http.Request) {
+					Expect(r.Header.Get("Impersonate-User")).To(Equal(test.Jane))
+					Expect(r.Header.Get("Impersonate-Group")).To(Equal(test.Developers))
+					Expect(r.Header.Get("Authorization")).NotTo(Equal(test.JaneBearerToken))
+				})
+			}()
+
+			clnt := configureHTTPSClient()
+			req := requestToClusterA(lisHTTPS.Addr().String())
+			test.AddJaneToken(req)
+			resp, err := clnt.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.StatusCode).To(Equal(200))
+		})
+		It("should not authenticate Bob", func() {
+			test.AddBobIdentity(k8sAPI)
+
+			var wg sync.WaitGroup
+
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				test.HTTPSBin(tun, xCert, func(r *http.Request) {
+					Expect(r.Header.Get("Impersonate-User")).To(Equal(""))
+					Expect(r.Header.Get("Impersonate-Group")).To(Equal(""))
+					Expect(r.Header.Get("Authorization")).To(Equal(""))
+				})
+			}()
+
+			clnt := configureHTTPSClient()
+			req := requestToClusterA(lisHTTPS.Addr().String())
+			test.AddBobToken(req)
+			resp, err := clnt.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.StatusCode).To(Equal(401))
+		})
+		It("should return 401 on missing tokens", func() {
+			var wg sync.WaitGroup
+
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				test.HTTPSBin(tun, xCert, func(r *http.Request) {
+					Expect(r.Header.Get("Impersonate-User")).To(Equal(""))
+					Expect(r.Header.Get("Impersonate-Group")).To(Equal(""))
+					Expect(r.Header.Get("Authorization")).To(Equal(""))
+				})
+			}()
+
+			clnt := configureHTTPSClient()
+			req := requestToClusterA(lisHTTPS.Addr().String())
+			resp, err := clnt.Do(req)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.StatusCode).To(Equal(401))
+		})
+	})
+})
+
+func requestToClusterA(address string) *http.Request {
+	defer GinkgoRecover()
+	req, err := http.NewRequest("GET",
+		"https://"+address+"/some/path", strings.NewReader("HELLO"))
+	req.Header[server.ClusterHeaderField] = []string{"clusterA"}
+	Expect(err).NotTo(HaveOccurred())
+	return req
+}
+
+func configureHTTPSClient() *http.Client {
+	return &http.Client{
+		Transport: &http2.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+				NextProtos:         []string{"h2"},
+			},
+		},
+	}
+}
+
 func addCluster(server, id, name string) {
 	cluster, err := json.Marshal(&clusters.Cluster{ID: id, DisplayName: name})
 	Expect(err).NotTo(HaveOccurred())
@@ -478,6 +648,7 @@ func clientHelloReq(addr string, target string, expectStatus int) *http.Response
 	Expect(err).NotTo(HaveOccurred())
 
 	req.Header[server.ClusterHeaderField] = []string{target}
+	test.AddJaneToken(req)
 
 	resp, err := http.DefaultClient.Do(req)
 	Expect(err).NotTo(HaveOccurred())

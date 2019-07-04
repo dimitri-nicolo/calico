@@ -11,8 +11,8 @@ import (
 	"net/http"
 
 	"github.com/pkg/errors"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
+	log "github.com/sirupsen/logrus"
+	k8s "k8s.io/client-go/kubernetes"
 )
 
 // User identifies a user by Name and group
@@ -32,23 +32,13 @@ type Identity struct {
 }
 
 // NewIdentity creates a new Identity using the in-cluster config for K8S
-func NewIdentity() (*Identity, error) {
-	// creates the in-cluster config
-	config, err := rest.InClusterConfig()
-	if err != nil {
-		return nil, err
-	}
-	// creates the client for k8s
-	client, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return nil, err
-	}
+func NewIdentity(k8sAPI k8s.Interface) *Identity {
 	// creates the authenticators Basic and Bearer
 	authenticators := make(map[Token]Authenticator)
 	authenticators[Basic] = &BasicAuthenticator{}
-	authenticators[Bearer] = NewBearerAuthenticator(client)
+	authenticators[Bearer] = NewBearerAuthenticator(k8sAPI)
 
-	return &Identity{authenticators}, nil
+	return &Identity{authenticators}
 
 }
 
@@ -56,7 +46,9 @@ func NewIdentity() (*Identity, error) {
 // against k8s api. The following types of authentication are supported: Basic and Bearer
 // If a User cannot be authenticated it will return an error
 func (id *Identity) Authenticate(r *http.Request) (*User, error) {
+	log.Debugf("Will extract token of out request %v", r)
 	token, tokenType := Extract(r)
+	log.Debugf("Extracted token %v with type %v", token, tokenType)
 	authenticator, ok := id.authenticators[tokenType]
 	if !ok {
 		return nil, errors.New("Token type not supported")

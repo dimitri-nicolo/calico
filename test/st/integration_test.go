@@ -48,6 +48,11 @@ var _ = Describe("Integration Tests", func() {
 
 		err = os.Setenv("VOLTRON_TEMPLATE_PATH", "docker-image/voltron/templates/guardian.yaml.tmpl")
 		Expect(err).ToNot(HaveOccurred())
+
+		// disable toggle for authentication
+		err = os.Setenv("VOLTRON_AUTHN_ON", "false")
+		Expect(err).ToNot(HaveOccurred())
+
 	})
 
 	It("Should fail to ping cluster endpoint", func() {
