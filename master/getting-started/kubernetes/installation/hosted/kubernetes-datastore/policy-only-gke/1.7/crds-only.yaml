@@ -3,4 +3,5 @@ layout: null
 ---
 {% helm --execute templates/kdd-crds.yaml --execute templates/ee-specific-kdd-crds.yaml %}
 platform: gke
+network: gke
 {% endhelm %}
