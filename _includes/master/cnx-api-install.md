@@ -104,6 +104,16 @@
    {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only-ecs/cnx-api-kdd-eks.yaml
    ```
 
+{% elsif include.platform == "gke" %}
+
+1. Download the GKE {{site.prodname}} manifest and save the file
+   as cnx-api.yaml. That is how we will refer to it in later steps.
+
+   ```bash
+   curl --compressed -o cnx-api.yaml \
+   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only-gke/cnx-api-kdd-eks.yaml
+   ```
+
 {% elsif include.init != "openshift" and include.net == "other" %}
 
 1. Download the networking manifest for the Kubernetes API datastore and save the file

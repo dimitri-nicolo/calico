@@ -40,6 +40,8 @@ toc:
         path: /getting-started/kubernetes/installation/docker-ee
       - title: Installing Tigera Secure EE on Amazon EKS
         path: /getting-started/kubernetes/installation/eks
+      - title: Installing Tigera Secure EE on Google GKE
+        path: /getting-started/kubernetes/installation/gke
   - title: Upgrade from Calico to Tigera Secure EE
     path: /getting-started/kubernetes/upgrade/upgrade-to-tsee
 
