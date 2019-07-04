@@ -1,7 +1,19 @@
 {
   "template": "tigera_secure_ee_dns*",
   "settings": {
-    "number_of_shards": 5
+    "number_of_shards": 5,
+    "analysis": {
+      "normalizer": {
+        "lowercase": {
+          "type": "custom",
+          "filter": "lowercase"
+        },
+        "uppercase": {
+          "type": "custom",
+          "filter": "uppercase"
+        }
+      }
+    }
   },
   "mappings": {
     "_default_": {
@@ -16,13 +28,16 @@
           "type": "long"
         },
         "client_name": {
-          "type": "keyword"
+          "type": "keyword",
+          "normalizer": "lowercase"
         },
         "client_name_aggr": {
-          "type": "keyword"
+          "type": "keyword",
+          "normalizer": "lowercase"
         },
         "client_namespace": {
-          "type": "keyword"
+          "type": "keyword",
+          "normalizer": "lowercase"
         },
         "client_ip": {
           "type": "ip",
@@ -40,13 +55,16 @@
           "type": "nested",
           "properties": {
             "name": {
-              "type": "keyword"
+              "type": "keyword",
+              "normalizer": "lowercase"
             },
             "name_aggr": {
-              "type": "keyword"
+              "type": "keyword",
+              "normalizer": "lowercase"
             },
             "namespace": {
-              "type": "keyword"
+              "type": "keyword",
+              "normalizer": "lowercase"
             },
             "labels": {
               "type": "nested",
@@ -63,28 +81,35 @@
           }
         },
         "qname": {
-          "type": "keyword"
+          "type": "keyword",
+          "normalizer": "lowercase"
         },
         "qtype": {
-          "type": "keyword"
+          "type": "keyword",
+          "normalizer": "uppercase"
         },
         "qclass": {
-          "type": "keyword"
+          "type": "keyword",
+          "normalizer": "uppercase"
         },
         "rcode": {
-          "type": "keyword"
+          "type": "keyword",
+          "normalizer": "uppercase"
         },
         "rrsets": {
           "type": "nested",
           "properties": {
             "name": {
-              "type": "keyword"
+              "type": "keyword",
+              "normalizer": "lowercase"
             },
             "type": {
-              "type": "keyword"
+              "type": "keyword",
+              "normalizer": "uppercase"
             },
             "class": {
-              "type": "keyword"
+              "type": "keyword",
+              "normalizer": "uppercase"
             },
             "rdata": {
               "type": "keyword",
