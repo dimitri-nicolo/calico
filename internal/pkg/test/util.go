@@ -142,7 +142,7 @@ func PemEncodeCert(cert *x509.Certificate) []byte {
 func DataFlow(r io.Reader, w io.Writer, msg []byte) ([]byte, error) {
 	var wg sync.WaitGroup
 
-	errChan := make(chan error, 1)
+	errChan := make(chan error, 2)
 	resChan := make(chan []byte, 1)
 	defer close(errChan)
 	defer close(resChan)
@@ -151,13 +151,16 @@ func DataFlow(r io.Reader, w io.Writer, msg []byte) ([]byte, error) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		for len(msg) > 0 {
-			n, err := w.Write(msg)
+
+		buf := msg
+
+		for len(buf) > 0 {
+			n, err := w.Write(buf)
 			if err != nil {
 				errChan <- errors.WithMessage(err, "Failed to Write")
 				return
 			}
-			msg = msg[n:]
+			buf = buf[n:]
 		}
 	}()
 
@@ -177,7 +180,6 @@ func DataFlow(r io.Reader, w io.Writer, msg []byte) ([]byte, error) {
 			res = append(res, data[:n]...)
 		}
 
-		// Verify that the message is correct
 		resChan <- res
 	}()
 
@@ -190,5 +192,6 @@ func DataFlow(r io.Reader, w io.Writer, msg []byte) ([]byte, error) {
 	case err = <-errChan:
 	case res = <-resChan:
 	}
+
 	return res, err
 }
