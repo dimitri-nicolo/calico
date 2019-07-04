@@ -1,79 +1,99 @@
 {
   "template": "tigera_secure_ee_dns*",
+  "settings": {
+    "number_of_shards": 5
+  },
   "mappings": {
     "_default_": {
-      "start_time": {
-        "type": "date"
-      },
-      "end_time": {
-        "type": "date"
-      },
-      "count": {
-        "type": "integer"
-      },
-      "client_name": {
-        "type": "keyword"
-      },
-      "client_name_aggr": {
-        "type": "keyword"
-      },
-      "client_namespace": {
-        "type": "keyword"
-      },
-      "client_ip": {
-        "type": "ip"
-      },
-      "client_labels": {
-        "type": "keyword"
-      },
-      "servers": {
-        "properties": {
-          "name": {
-            "type": "keyword"
-          },
-          "name_aggr": {
-            "type": "keyword"
-          },
-          "namespace": {
-            "type": "keyword"
-          },
-          "ip": {
-            "type": "ip"
+      "properties": {
+        "start_time": {
+          "type": "date"
+        },
+        "end_time": {
+          "type": "date"
+        },
+        "count": {
+          "type": "long"
+        },
+        "client_name": {
+          "type": "keyword"
+        },
+        "client_name_aggr": {
+          "type": "keyword"
+        },
+        "client_namespace": {
+          "type": "keyword"
+        },
+        "client_ip": {
+          "type": "ip",
+          "null_value": "0.0.0.0"
+        },
+        "client_labels": {
+          "type": "nested",
+          "properties": {
+            "labels": {
+              "type": "keyword"
+            }
           }
-        }
-      },
-      "qname": {
-        "type": "keyword"
-      },
-      "qtype": {
-        "type": "keyword"
-      },
-      "qclass": {
-        "type": "keyword"
-      },
-      "rcode": {
-        "type": "keyword"
-      },
-      "rrsets": {
-        "type": "nested",
-        "properties": {
-          "name": {
-            "type": "keyword"
-          },
-          "type": {
-            "type": "keyword"
-          },
-          "class": {
-            "type": "keyword"
-          },
-          "rdata": {
-            "type": "keyword",
-            "fields": {
-              "ip": {
-                "type": "ip"
-              },
-              "domain": {
-                "type": "keyword"
+        },
+        "servers": {
+          "properties": {
+            "name": {
+              "type": "keyword"
+            },
+            "name_aggr": {
+              "type": "keyword"
+            },
+            "namespace": {
+              "type": "keyword"
+            },
+            "labels": {
+              "type": "nested",
+              "properties": {
+                "labels": {
+                  "type": "keyword"
+                }
+              }
+            },
+            "ip": {
+              "type": "ip",
+              "null_value": "0.0.0.0"
+            }
+          }
+        },
+        "qname": {
+          "type": "keyword"
+        },
+        "qtype": {
+          "type": "keyword"
+        },
+        "qclass": {
+          "type": "keyword"
+        },
+        "rcode": {
+          "type": "keyword"
+        },
+        "rrsets": {
+          "type": "nested",
+          "properties": {
+            "name": {
+              "type": "keyword"
+            },
+            "type": {
+              "type": "keyword"
+            },
+            "class": {
+              "type": "keyword"
+            },
+            "rdata": {
+              "type": "keyword",
+              "fields": {
+                "ip": {
+                  "type": "ip"
+                },
+                "domain": {
+                  "type": "keyword"
+                }
               }
             }
           }
