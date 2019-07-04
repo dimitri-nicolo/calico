@@ -40,7 +40,7 @@ subjects:
 ---
 
 apiVersion: apps/v1
-kind: Deployment
+kind: DaemonSet
 metadata:
   name: compliance-benchmarker
   namespace: calico-monitoring
@@ -63,6 +63,7 @@ spec:
       nodeSelector:
         beta.kubernetes.io/os: linux
       serviceAccountName: tigera-compliance-benchmarker
+      # Used to determine what flags that the kubernetes components are run with.
       hostPID: true
       tolerations:
         - effect: NoSchedule
