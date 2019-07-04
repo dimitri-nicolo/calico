@@ -43,7 +43,7 @@
       "client_labels": {
         "type": "keyword"
       },
-      "observations": {
+      "servers": {
         "properties": {
           "name": {
             "type": "keyword",
