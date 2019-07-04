@@ -166,8 +166,11 @@ func (s *domainInfoStore) loop(saveTimerC, gcTimerC <-chan time.Time) {
 			if dnsLayer := packet.Layer(layers.LayerTypeDNS); dnsLayer != nil {
 				dns, _ := dnsLayer.(*layers.DNS)
 				if s.collector != nil {
-					ipv4, _ := packet.Layer(layers.LayerTypeIPv4).(*layers.IPv4)
-					s.collector.LogDNS(ipv4.SrcIP, ipv4.DstIP, dns)
+					if ipv4, ok := packet.Layer(layers.LayerTypeIPv4).(*layers.IPv4); ok {
+						s.collector.LogDNS(ipv4.SrcIP, ipv4.DstIP, dns)
+					} else {
+						log.Warning("Not logging non-IPv4 DNS packet")
+					}
 				}
 				s.processDNSPacket(dns)
 			}

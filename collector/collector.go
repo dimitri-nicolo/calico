@@ -573,6 +573,10 @@ func (c *collector) LogDNS(src, dst net.IP, dns *layers.DNS) {
 		DNS:      dns,
 	}
 	if err := c.dnsLogReporter.Log(update); err != nil {
-		log.WithError(err).Warning("Error from DNS logger")
+		log.WithError(err).WithFields(log.Fields{
+			"src": src,
+			"dst": dst,
+			"dns": dns,
+		}).Error("Failed to log DNS packet")
 	}
 }

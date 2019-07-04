@@ -100,6 +100,8 @@ func (d *fileDispatcher) Dispatch(logSlice interface{}) error {
 				return err
 			}
 		}
+	default:
+		log.Panic("Unexpected kind of log in file dispatcher")
 	}
 	return nil
 }
