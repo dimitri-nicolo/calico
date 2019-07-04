@@ -1,19 +1,5 @@
 {
   "template": "tigera_secure_ee_dns*",
-  "settings": {
-    "analysis": {
-      "normalizer": {
-        "lowercase": {
-          "type": "custom",
-          "filter": "lowercase"
-        },
-        "uppercase": {
-          "type": "custom",
-          "filter": "uppercase"
-        }
-      }
-    }
-  },
   "mappings": {
     "_default_": {
       "start_time": {
@@ -26,16 +12,13 @@
         "type": "integer"
       },
       "client_name": {
-        "type": "keyword",
-        "normalizer": "lowercase"
+        "type": "keyword"
       },
       "client_name_aggr": {
-        "type": "keyword",
-        "normalizer": "lowercase"
+        "type": "keyword"
       },
       "client_namespace": {
-        "type": "keyword",
-        "normalizer": "lowercase"
+        "type": "keyword"
       },
       "client_ip": {
         "type": "ip"
@@ -46,16 +29,13 @@
       "servers": {
         "properties": {
           "name": {
-            "type": "keyword",
-            "normalizer": "lowercase"
+            "type": "keyword"
           },
           "name_aggr": {
-            "type": "keyword",
-            "normalizer": "lowercase"
+            "type": "keyword"
           },
           "namespace": {
-            "type": "keyword",
-            "normalizer": "lowercase"
+            "type": "keyword"
           },
           "ip": {
             "type": "ip"
@@ -63,35 +43,28 @@
         }
       },
       "qname": {
-        "type": "keyword",
-        "normalizer": "lowercase"
+        "type": "keyword"
       },
       "qtype": {
-        "type": "keyword",
-        "normalizer": "uppercase"
+        "type": "keyword"
       },
       "qclass": {
-        "type": "keyword",
-        "normalizer": "uppercase"
+        "type": "keyword"
       },
       "rcode": {
-        "type": "keyword",
-        "normalizer": "uppercase"
+        "type": "keyword"
       },
       "rrsets": {
         "type": "nested",
         "properties": {
           "name": {
-            "type": "keyword",
-            "normalizer": "lowercase"
+            "type": "keyword"
           },
           "type": {
-            "type": "keyword",
-            "normalizer": "uppercase"
+            "type": "keyword"
           },
           "class": {
-            "type": "keyword",
-            "normalizer": "uppercase"
+            "type": "keyword"
           },
           "rdata": {
             "type": "keyword",
@@ -100,8 +73,7 @@
                 "type": "ip"
               },
               "domain": {
-                "type": "keyword",
-                "normalizer": "lowercase"
+                "type": "keyword"
               }
             }
           }
