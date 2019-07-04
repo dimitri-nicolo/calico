@@ -1,6 +1,6 @@
 FROM alpine:3.9
 
-RUN apk update && apk add ca-certificates
+RUN apk update && apk add ca-certificates curl
 
 # Add your binary to the image
 ADD bin/voltron-amd64 /voltron

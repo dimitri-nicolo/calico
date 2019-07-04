@@ -13,7 +13,7 @@ export TOP_PID=$$
 #   ${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/calico.yaml
 #      - resolves to -
 #   https://docs.tigera.io/v2.1/getting-started/kubernetes/installation/hosted/calico.yaml
-VERSION=${VERSION:="v2.4"}
+VERSION=${VERSION:="master"}
 
 # Override DOCS_LOCATION to point to alternate Tigera Secure EE docs location, e.g.
 #   DOCS_LOCATION="https://docs.tigera.io" ./install-cnx.sh
@@ -83,6 +83,9 @@ KUBE_CONTROLLER_MANIFEST=${KUBE_CONTROLLER_MANIFEST:="/etc/kubernetes/manifests/
 # Kubernetes installer type - "KOPS" or "KUBEADM" or "ACS-ENGINE"
 INSTALL_TYPE=${INSTALL_TYPE:="KUBEADM"}
 
+# Authentication type - "BASIC" or "OIDC"
+AUTH_TYPE=${AUTH_TYPE:="BASIC"}
+
 INSTALL_AWS_SG=${INSTALL_AWS_SG:=false}
 
 SKIP_EE_INSTALLATION=${SKIP_EE_INSTALLATION:=false}
@@ -130,6 +133,7 @@ checkSettings() {
   echo '  NETWORKING='${NETWORKING}
   echo '  LICENSE_FILE='${LICENSE_FILE}
   echo '  INSTALL_TYPE='${INSTALL_TYPE}
+  echo '  AUTH_TYPE='${AUTH_TYPE}
   echo '  ELASTIC_STORAGE='${ELASTIC_STORAGE}
   [ "$DOWNLOAD_MANIFESTS_ONLY" == 1 ] && echo '  DOWNLOAD_MANIFESTS_ONLY='${DOWNLOAD_MANIFESTS_ONLY}
   [ "$ETCD_ENDPOINTS" ] && echo '  ETCD_ENDPOINTS='${ETCD_ENDPOINTS}
@@ -217,6 +221,9 @@ validateSettings() {
 
   # Validate $INSTALL_TYPE is either "KOPS" or "KUBEADM" or "ACS-ENGINE"
   [ "$INSTALL_TYPE" == "KOPS" ] || [ "$INSTALL_TYPE" == "KUBEADM" ] || [ "$INSTALL_TYPE" == "ACS-ENGINE" ] || fatalError "Installation type \"$INSTALL_TYPE\" is not valid, must be either \"KOPS\" or \"KUBEADM\" or \"ACS-ENGINE\"."
+
+  # Validate $AUTH_TYPE is either "BASIC" or "OIDC"
+  [ "$AUTH_TYPE" == "BASIC" ] || [ "$AUTH_TYPE" == "OIDC" ] || fatalError "Auth type \"$AUTH_TYPE\" is not valid, must be either \"BASIC\" or \"OIDC\"."
 
   # Validate $ELASTIC_STORAGE is either "none" or "local"
   [ "$ELASTIC_STORAGE" == "local" ] || [ "$ELASTIC_STORAGE" == "none" ] || fatalError "Elasticsearch storage \"$ELASTIC_STORAGE\" is not valid, must be either \"local\" or \"none\"."
@@ -641,6 +648,37 @@ EOF
 }
 
 #
+# setupOIDCAuthKubeadm() - specialized function for Kubeadm-based kubernetes
+# clusters
+#
+setupOIDCAuthKubeadm() {
+
+  # Append basic auth setting into kube-apiserver command line
+  cat > sedcmd.txt <<EOF
+/- kube-apiserver/a\    - --oidc-issuer-url=https://accounts.google.com\n    - --oidc-username-claim=email\n    - --oidc-client-id="${OIDC_CLIENT_ID}"
+EOF
+
+  # Insert OIDC option into kube-apiserver manifest
+  runAsRoot sed -i -f sedcmd.txt "$KUBE_APISERVER_MANIFEST"
+  run rm -f sedcmd.txt
+
+  # Restart kubelet in order to make auth settings take effect
+  runAsRoot systemctl restart kubelet
+  blockUntilSuccess "kubectl get nodes" 60
+
+  # Give authenticated users (those with @tigera.io emails) cluster admin permissions
+  runAsRoot kubectl create clusterrolebinding permissive-binding --clusterrole=cluster-admin --group=system:authenticated
+
+  # Edit the cnx.yaml manifest to configure EE Manager with OIDC
+  cat > sedcmd.txt <<EOF
+s?tigera.cnx-manager.authentication-type: \"Basic\"?tigera.cnx-manager.authentication-type: \"OIDC\"?g
+s?tigera.cnx-manager.oidc-client-id: \"<oidc-client-id>\"?tigera.cnx-manager.oidc-client-id: \"${OIDC_CLIENT_ID}\"?g
+EOF
+  runAsRoot sed -i -f sedcmd.txt "cnx.yaml"
+  run rm -f sedcmd.txt
+}
+
+#
 # setupBasicAuthAcsEngine() - specialized function for acs-engine-based kubernetes
 # clusters
 #
@@ -689,7 +727,11 @@ setupBasicAuthKops() {
 setupBasicAuth() {
 
   if [ "$INSTALL_TYPE" == "KUBEADM" ]; then
-    setupBasicAuthKubeadm
+    if [ "$AUTH_TYPE" == "BASIC" ]; then
+        setupBasicAuthKubeadm
+    elif [ "$AUTH_TYPE" == "OIDC" ]; then
+        setupOIDCAuthKubeadm
+    fi
   elif [ "$INSTALL_TYPE" == "KOPS" ]; then
     setupBasicAuthKops
   elif [ "$INSTALL_TYPE" == "ACS-ENGINE" ]; then
@@ -1211,6 +1253,14 @@ deleteCNXAPIManifest() {
 # applyCNXManifest()
 #
 applyCNXManifest() {
+  # Edit the cnx.yaml manifest to configure EE Manager with multicluster image
+  cat > sedcmd.txt <<EOF
+s?image: gcr.io/unique-caldron-775/cnx/tigera/cnx-manager:master?image: gcr.io/unique-caldron-775/cnx/tigera/cnx-manager:cluster-selection\n        env:\n          - name: CNX_VOLTRON_API_URL\n            valueFrom:\n              configMapKeyRef:\n                name: tigera-cnx-manager-config\n                key: tigera.cnx-manager.voltron-api-url?g
+s?tigera.cnx-manager.cluster-name: \"cluster\"?tigera.cnx-manager.cluster-name: \"cluster\"\n  tigera.cnx-manager.voltron-api-url: \"https://127.0.0.1:30003\"?g
+EOF
+  runAsRoot sed -i -f sedcmd.txt "cnx.yaml"
+  run rm -f sedcmd.txt
+
   echo -n "Applying \"cnx.yaml\" manifest: "
   run kubectl apply -f cnx.yaml
   blockUntilPodIsReady "k8s-app=cnx-manager" 180 "cnx-manager"      # Block until cnx-manager pod is running & ready
@@ -1219,6 +1269,17 @@ applyCNXManifest() {
   #TODO: uncomment when snapshotter is working
   #blockUntilPodIsReady "k8s-app=compliance-snapshotter" 180 "compliance-snapshotter"
   countDownSecs 10 "Waiting for cnx-manager to stabilize"         # Wait until cnx-manager starts to run.
+}
+
+#
+# applyVoltronManifest()
+#
+
+applyVoltronManifest() {
+  echo -n "Applying \"voltron.yaml\" manifest: "
+  run kubectl apply -f voltron.yaml
+  blockUntilPodIsReady "k8s-app=cnx-voltron" 180 "cnx-voltron"      # Block until cnx-voltron pod is running & ready
+  run calicoctl apply -f allow-cnx.allow-voltron-access.yaml
 }
 
 #
@@ -1667,7 +1728,9 @@ installCNX() {
   applyElasticStorageManifest     # Apply elastic-storage.yaml
   applyMonitorCalicoManifest      # Apply monitor-calico.yaml
   createCNXManagerSecret          # Create cnx-manager-tls to enable manager/apiserver communication
+  applyVoltronManifest            # Apply voltron.yaml
   applyCNXManifest                # Apply cnx.yaml
+  #TODO: install guardian if specified
 }
 
 #

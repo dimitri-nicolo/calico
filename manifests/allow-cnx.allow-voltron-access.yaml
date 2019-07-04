@@ -17,5 +17,6 @@ spec:
       destination:
         ports:
           - '9443'
+          - '9449'
   types:
     - Ingress

@@ -21,11 +21,17 @@ data:
       "path": "/api/",
       "url": "https://kubernetes.default",
       "tokenPath": "/var/run/secrets/kubernetes.io/serviceaccount/token",
-      "caBundlePath": "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
+      "caBundlePath": "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
     },
     {
-      "path": "/tigera-elasticsearch/",
-      "url": "http://localhost:8002",
+      "path": "/apis/",
+      "url": "https://kubernetes.default",
+      "tokenPath": "/var/run/secrets/kubernetes.io/serviceaccount/token",
+      "caBundlePath": "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+    },
+    {
+          "path": "/tigera-elasticseach/",
+          "url": "https://locahost:8002"
     }]'
   # This tells Guardian how to reach Voltron
   cnx-guardian.voltron-url: {{.VoltronURL}}
