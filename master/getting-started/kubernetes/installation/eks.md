@@ -15,6 +15,8 @@ This guide covers installing {{site.prodname}} for policy enforcement on Amazon 
 - Ensure that you have the [credentials for the Tigera private registry](../../../getting-started/#obtain-the-private-registry-credentials)
   and a [license key](../../../getting-started/#obtain-a-license-key).
 
+- To follow the TLS certificate and key creation instructions below you'll need openssl.
+
 {% include {{page.version}}/load-docker.md yaml="calico" orchestrator="kubernetes" %}
 
 {% include {{page.version}}/pull-secret.md %}

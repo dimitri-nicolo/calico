@@ -111,7 +111,7 @@
 
    ```bash
    curl --compressed -o cnx-api.yaml \
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only-gke/cnx-api-kdd-eks.yaml
+   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only-gke/cnx-api-kdd-gke.yaml
    ```
 
 {% elsif include.init != "openshift" and include.net == "other" %}

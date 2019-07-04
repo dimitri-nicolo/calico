@@ -33,7 +33,7 @@
    sed -i -e 's?tigera.cnx-manager.oauth-authority:.*$?tigera.cnx-manager.oauth-authority: "https://master.openshift.example.com:8443/oauth/authorize"?g' cnx.yaml
    ```
 
-{% elsif include.platform != "eks" %}
+{% elsif include.platform != "eks" and include.platform != "gke" %}
 
 1. Refer to the bullet that corresponds to your chosen authentication method.
 
@@ -60,11 +60,10 @@
 
 {% endif %}
 
-1. Create a secret containing a TLS certificate and the private key used to
-   sign it. The following commands use a self-signed certificate and key
-   found in many deployments for a quick start.
-
 {% if include.init == "openshift" %}
+
+1. Create a secret containing a TLS certificate and the private key used to
+   sign it. The following commands re-use the certificate created for the cluster.
 
    ```bash
    oc create secret generic cnx-manager-tls \
@@ -72,7 +71,10 @@
    --from-file=key=/etc/origin/master/master.server.key -n calico-monitoring
    ```
 
-{% elsif include.platform == "eks" %}
+{% elsif include.platform == "eks" or include.platform == "gke" %}
+
+1. Create a secret containing a TLS certificate and the private key used to
+   sign it. The following commands create a self-signed certificate and key.
 
    ```bash
    openssl req -out cnxmanager.csr -newkey rsa:2048 -nodes -keyout cnxmanager.key -subj "/CN=cnxmanager.cluster.local"
@@ -96,6 +98,10 @@
    ```
 
 {% else %}
+
+1. Create a secret containing a TLS certificate and the private key used to
+   sign it. The following commands use a self-signed certificate and key
+   found in many deployments for a quick start.
 
    - **kubeadm deployments**
      ```bash
@@ -216,6 +222,27 @@
    to it.  Use the value of `$USER` as `<USER>` and `$NAMESPACE` as `<NAMESPACE>` in the following step.
 
 {% include {{page.version}}/cnx-grant-user-manager-permissions.md usertype="serviceaccount" %}
+{% elsif include.platform == "gke" %}
+
+1. To log into {{site.prodname}} Manager running in GKE, you'll need a token for a user
+   with appropriate permissions on the cluster.
+
+   The easiest way to create such a token is to create a service account, assign it permissions
+   and get a token for it to use for login.  Update `USER` to change the name to give
+   to the service account and update `NAMESPACE` to change the namespace where the
+   service account is created. Create the namespace if needed.
+
+   ```bash
+   export USER=ui-user
+   export NAMESPACE=ui-namespace
+   {{cli}} create serviceaccount -n $NAMESPACE $USER
+   kubectl get secret -n $NAMESPACE -o jsonpath='{.data.token}' $(kubectl -n $NAMESPACE get secret | grep $USER | awk '{print $1}') | base64 --decode
+   ```
+
+   Save the token - you'll use it to log in to {{site.prodname}} Manager.  Next we'll assign permissions to do so
+   to it.  Use the value of `$USER` as `<USER>` and `$NAMESPACE` as `<NAMESPACE>` in the following step.
+
+{% include {{page.version}}/cnx-grant-user-manager-permissions.md usertype="serviceaccount" %}
 {% else %}
 {% include {{page.version}}/cnx-grant-user-manager-permissions.md %}
 {% endif %}
@@ -244,6 +271,6 @@
 {% endif %}
 {% endif %}
 
-{% if include.platform == "eks" %}
+{% if include.platform == "eks" or include.platform == "gke" %}
    Log in to {{site.prodname}} Manager using the token you created earlier in the process.
 {% endif %}
