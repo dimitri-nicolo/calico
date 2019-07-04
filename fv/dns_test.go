@@ -57,11 +57,14 @@ var _ = Describe("DNS Policy", func() {
 		// (Whereas dnsDir is the directory outside the container.)
 		saveFile                       string
 		saveFileMappedOutsideContainer bool
+
+		disableLogs bool
 	)
 
 	BeforeEach(func() {
 		saveFile = "/dnsinfo/dnsinfo.txt"
 		saveFileMappedOutsideContainer = true
+		disableLogs = false
 	})
 
 	wgetMicrosoftErr := func() error {
@@ -93,6 +96,32 @@ var _ = Describe("DNS Policy", func() {
 		})
 	})
 
+	Context("after wget microsoft.com", func() {
+		JustBeforeEach(func() {
+			time.Sleep(time.Second)
+			canWgetMicrosoft()
+		})
+
+		It("should emit DNS logs", func() {
+			logFile := path.Join(dnsDir, "dns.log")
+			Eventually(logFile, "10s", "1s").Should(BeARegularFile())
+			logs, err := ioutil.ReadFile(logFile)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(logs).To(ContainSubstring(`"qname":"microsoft.com"`))
+			Expect(logs).To(ContainSubstring(`"qtype":"A"`))
+		})
+
+		Context("with DNS logs disabled", func() {
+			BeforeEach(func() {
+				disableLogs = true
+			})
+
+			It("should not emit DNS logs", func() {
+				Consistently(path.Join(dnsDir, "dns.log"), "5s", "1s").ShouldNot(BeARegularFile())
+			})
+		})
+	})
+
 	JustBeforeEach(func() {
 		opts := infrastructure.DefaultTopologyOptions()
 		var err error
@@ -106,6 +135,12 @@ var _ = Describe("DNS Policy", func() {
 		opts.ExtraEnvVars["FELIX_DNSCACHESAVEINTERVAL"] = "3600"
 		opts.ExtraEnvVars["FELIX_DNSTRUSTEDSERVERS"] = strings.Join(GetLocalNameservers(), ",")
 		opts.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico"
+		opts.ExtraEnvVars["FELIX_DNSLOGSFILEDIRECTORY"] = "/dnsinfo"
+		opts.ExtraEnvVars["FELIX_DNSLOGSFLUSHINTERVAL"] = "1"
+		if disableLogs {
+			// Default for this is true.  Set "false" to disable.
+			opts.ExtraEnvVars["FELIX_DNSLOGSFILEENABLED"] = "false"
+		}
 		felix, etcd, client = infrastructure.StartSingleNodeEtcdTopology(opts)
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")
 
