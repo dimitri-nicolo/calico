@@ -4597,6 +4597,54 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
+					"dnsLogsFlushInterval": {
+						SchemaProps: spec.SchemaProps{
+							Description: "DNSLogsFlushInterval configures the interval at which Felix exports DNS logs. [Default: 300s]",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"dnsLogsFileEnabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "DNSLogsFileEnabled controls logging DNS logs to a file. If false no DNS logging to file will occur. [Default: true]",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"dnsLogsFileMaxFiles": {
+						SchemaProps: spec.SchemaProps{
+							Description: "DNSLogsFileMaxFiles sets the number of DNS log files to keep. [Default: 5]",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"dnsLogsFileMaxFileSizeMB": {
+						SchemaProps: spec.SchemaProps{
+							Description: "DNSLogsFileMaxFileSizeMB sets the max size in MB of DNS log files before rotation. [Default: 100]",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"dnsLogsFileDirectory": {
+						SchemaProps: spec.SchemaProps{
+							Description: "DNSLogsFileDirectory sets the directory where DNS log files are stored. [Default: /var/log/calico/dnslogs]",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"dnsLogsFileIncludeLabels": {
+						SchemaProps: spec.SchemaProps{
+							Description: "DNSLogsFileIncludeLabels is used to configure if endpoint labels are included in a DNS log entry written to file. [Default: true]",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"dnsLogsFileAggregationKind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "DNSLogsFileAggregationKind is used to choose the type of aggregation for DNS log entries. [Default: 1 - client name prefix aggregation]. Accepted values are 0 and 1. 0 - No aggregation 1 - Aggregate over clients with the same name prefix",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
 					"windowsNetworkName": {
 						SchemaProps: spec.SchemaProps{
 							Description: "WindowsNetworkName specifies which Windows HNS networks Felix should operate on.  The default is to match networks that start with \"calico\".  Supports regular expression syntax.",

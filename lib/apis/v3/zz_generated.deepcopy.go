@@ -1356,6 +1356,41 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 		*out = new(v1.Duration)
 		**out = **in
 	}
+	if in.DNSLogsFlushInterval != nil {
+		in, out := &in.DNSLogsFlushInterval, &out.DNSLogsFlushInterval
+		*out = new(v1.Duration)
+		**out = **in
+	}
+	if in.DNSLogsFileEnabled != nil {
+		in, out := &in.DNSLogsFileEnabled, &out.DNSLogsFileEnabled
+		*out = new(bool)
+		**out = **in
+	}
+	if in.DNSLogsFileMaxFiles != nil {
+		in, out := &in.DNSLogsFileMaxFiles, &out.DNSLogsFileMaxFiles
+		*out = new(int)
+		**out = **in
+	}
+	if in.DNSLogsFileMaxFileSizeMB != nil {
+		in, out := &in.DNSLogsFileMaxFileSizeMB, &out.DNSLogsFileMaxFileSizeMB
+		*out = new(int)
+		**out = **in
+	}
+	if in.DNSLogsFileDirectory != nil {
+		in, out := &in.DNSLogsFileDirectory, &out.DNSLogsFileDirectory
+		*out = new(string)
+		**out = **in
+	}
+	if in.DNSLogsFileIncludeLabels != nil {
+		in, out := &in.DNSLogsFileIncludeLabels, &out.DNSLogsFileIncludeLabels
+		*out = new(bool)
+		**out = **in
+	}
+	if in.DNSLogsFileAggregationKind != nil {
+		in, out := &in.DNSLogsFileAggregationKind, &out.DNSLogsFileAggregationKind
+		*out = new(int)
+		**out = **in
+	}
 	if in.WindowsNetworkName != nil {
 		in, out := &in.WindowsNetworkName, &out.WindowsNetworkName
 		*out = new(string)

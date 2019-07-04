@@ -77,12 +77,12 @@ func init() {
 	// Max name length
 	maxNameLength := 253
 
-	// CloudWatch Flow logs aggregation settings
-	noAggKind := 0
-	srcPortAggKind := 1
-	podPfxAddKind := 2
-	invalidAggKind := 3
-	invalidAggKindNegative := -1
+	// Flow and DNS log aggregation settings
+	zero := 0
+	one := 1
+	two := 2
+	three := 3
+	minusOne := -1
 
 	// Perform validation on error messages from validator
 	DescribeTable("Validator errors",
@@ -650,16 +650,21 @@ func init() {
 		Entry("should accept a valid WindowsNetworkName value '(?i)calico'", api.FelixConfigurationSpec{WindowsNetworkName: strPtr("(?i)calico")}, true),
 		Entry("should reject an invalid WindowsNetworkName value '('", api.FelixConfigurationSpec{WindowsNetworkName: strPtr("(")}, false),
 
-		Entry("should accept an valid CloudWatchAggregationKind value '0'", api.FelixConfigurationSpec{CloudWatchLogsAggregationKindForAllowed: &noAggKind}, true),
-		Entry("should accept an valid CloudWatchAggregationKind value '1'", api.FelixConfigurationSpec{CloudWatchLogsAggregationKindForAllowed: &srcPortAggKind}, true),
-		Entry("should accept an valid CloudWatchAggregationKind value '2'", api.FelixConfigurationSpec{CloudWatchLogsAggregationKindForAllowed: &podPfxAddKind}, true),
-		Entry("should reject an invalid CloudWatchAggregationKind value '3'", api.FelixConfigurationSpec{CloudWatchLogsAggregationKindForAllowed: &invalidAggKind}, false),
-		Entry("should reject an invalid CloudWatchAggregationKind value '-1'", api.FelixConfigurationSpec{CloudWatchLogsAggregationKindForAllowed: &invalidAggKindNegative}, false),
+		Entry("should accept an valid CloudWatchAggregationKind value '0'", api.FelixConfigurationSpec{CloudWatchLogsAggregationKindForAllowed: &zero}, true),
+		Entry("should accept an valid CloudWatchAggregationKind value '1'", api.FelixConfigurationSpec{CloudWatchLogsAggregationKindForAllowed: &one}, true),
+		Entry("should accept an valid CloudWatchAggregationKind value '2'", api.FelixConfigurationSpec{CloudWatchLogsAggregationKindForAllowed: &two}, true),
+		Entry("should reject an invalid CloudWatchAggregationKind value '3'", api.FelixConfigurationSpec{CloudWatchLogsAggregationKindForAllowed: &three}, false),
+		Entry("should reject an invalid CloudWatchAggregationKind value '-1'", api.FelixConfigurationSpec{CloudWatchLogsAggregationKindForAllowed: &minusOne}, false),
 
 		Entry("should accept valid CloudWatchLogsRetentionDays value '7'", api.FelixConfigurationSpec{CloudWatchLogsRetentionDays: intptr(7)}, true),
 		Entry("should accept valid CloudWatchLogsRetentionDays value '365'", api.FelixConfigurationSpec{CloudWatchLogsRetentionDays: intptr(365)}, true),
 		Entry("should accept valid CloudWatchLogsRetentionDays value '30'", api.FelixConfigurationSpec{CloudWatchLogsRetentionDays: intptr(30)}, true),
 		Entry("should reject invalid CloudWatchLogsRetentionDays value '31'", api.FelixConfigurationSpec{CloudWatchLogsRetentionDays: intptr(31)}, false),
+
+		Entry("should accept an valid DNSLogsFileAggregationKind value '0'", api.FelixConfigurationSpec{DNSLogsFileAggregationKind: &zero}, true),
+		Entry("should accept an valid DNSLogsFileAggregationKind value '1'", api.FelixConfigurationSpec{DNSLogsFileAggregationKind: &one}, true),
+		Entry("should reject an invalid DNSLogsFileAggregationKind value '2'", api.FelixConfigurationSpec{DNSLogsFileAggregationKind: &two}, false),
+		Entry("should reject an invalid DNSLogsFileAggregationKind value '-1'", api.FelixConfigurationSpec{DNSLogsFileAggregationKind: &minusOne}, false),
 
 		// (API) Protocol
 		Entry("should accept protocol TCP", protocolFromString("TCP"), true),
