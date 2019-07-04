@@ -9,13 +9,15 @@ import (
 	"github.com/projectcalico/felix/rules"
 )
 
-// FlowAggregationKind determines the flow log key
+// DNSAggregationKind determines how DNS logs are aggregated
 type DNSAggregationKind int
 
 const (
-	// DNSDefault is based on purely duration.
+	// DNSDefault means no aggregation, other than for identical logs within the aggregation
+	// time period (aka flush interval).
 	DNSDefault DNSAggregationKind = iota
-	// DNSPrefixNameAndIP accumulates tuples with everything same but the prefix name and IP
+	// DNSPrefixNameAndIP aggregates logs with the same DNS information and client name prefix,
+	// i.e. masking the client name and IP.
 	DNSPrefixNameAndIP
 )
 

@@ -94,7 +94,7 @@ func (d *fileDispatcher) Dispatch(logSlice interface{}) error {
 				// be able to serialize.
 				log.WithError(err).
 					WithField("DNSLog", l).
-					Panic("unable to serialize flow log to JSON")
+					Panic("unable to serialize DNS log to JSON")
 			}
 			if err = writeLog(b); err != nil {
 				return err

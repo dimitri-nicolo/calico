@@ -563,8 +563,8 @@ func (c *collector) LogDNS(src, dst net.IP, dns *layers.DNS) {
 	// the client.
 	serverEP, _ := c.luc.GetEndpoint(ipTo16Byte(src))
 	clientEP, _ := c.luc.GetEndpoint(ipTo16Byte(dst))
-	log.Infof("Src %v -> Server %v", src, serverEP)
-	log.Infof("Dst %v -> Client %v", dst, clientEP)
+	log.Debugf("Src %v -> Server %v", src, serverEP)
+	log.Debugf("Dst %v -> Client %v", dst, clientEP)
 	update := DNSUpdate{
 		ClientIP: dst,
 		ClientEP: clientEP,

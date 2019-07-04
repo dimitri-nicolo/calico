@@ -29,13 +29,11 @@ type dnsAggregatorRef struct {
 	d []LogDispatcher
 }
 
-// DNSLogReporter implements the MetricsReporter interface.
 type DNSLogReporter struct {
 	dispatchers   map[string]LogDispatcher
 	aggregators   []dnsAggregatorRef
 	flushInterval time.Duration
 	flushTicker   *jitter.Ticker
-	hepEnabled    bool
 
 	healthAggregator *health.HealthAggregator
 
@@ -49,7 +47,7 @@ const (
 )
 
 // NewDNSLogReporter constructs a DNSLogReporter using a dispatcher and aggregator.
-func NewDNSLogReporter(dispatchers map[string]LogDispatcher, flushInterval time.Duration, healthAggregator *health.HealthAggregator, hepEnabled bool) *DNSLogReporter {
+func NewDNSLogReporter(dispatchers map[string]LogDispatcher, flushInterval time.Duration, healthAggregator *health.HealthAggregator) *DNSLogReporter {
 	if healthAggregator != nil {
 		healthAggregator.RegisterReporter(dnsHealthName, &health.HealthReport{Live: true, Ready: true}, dnsHealthInterval*2)
 	}
@@ -60,7 +58,6 @@ func NewDNSLogReporter(dispatchers map[string]LogDispatcher, flushInterval time.
 		flushInterval:    flushInterval,
 		timeNowFn:        monotime.Now,
 		healthAggregator: healthAggregator,
-		hepEnabled:       hepEnabled,
 	}
 }
 

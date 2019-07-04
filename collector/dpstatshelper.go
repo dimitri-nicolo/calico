@@ -131,8 +131,7 @@ func StartDataplaneStatsCollector(configParams *config.Config, lookupsCache *cal
 				),
 			},
 			configParams.DNSLogsFlushInterval,
-			nil,
-			false,
+			healthAggregator,
 		)
 		dnsLogReporter.AddAggregator(
 			NewDNSLogAggregator().

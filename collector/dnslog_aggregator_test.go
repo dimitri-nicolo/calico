@@ -225,6 +225,5 @@ var _ = Describe("DNS log aggregator", func() {
 				})
 			}
 		})
-
 	})
 })
