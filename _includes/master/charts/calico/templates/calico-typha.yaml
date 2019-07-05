@@ -109,6 +109,9 @@ spec:
 {{- if eq .Values.network "ecs" }}
           - name: FELIX_INTERFACEPREFIX
             value: "eni"
+{{- else if eq .Values.network "gke" }}
+          - name: FELIX_INTERFACEPREFIX
+            value: "gke"
 {{- end }}
           # Enable "info" logging by default.  Can be set to "debug" to increase verbosity.
           - name: TYPHA_LOGSEVERITYSCREEN
