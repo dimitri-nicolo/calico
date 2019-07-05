@@ -113,14 +113,7 @@
             },
             "rdata": {
               "type": "keyword",
-              "fields": {
-                "ip": {
-                  "type": "ip"
-                },
-                "domain": {
-                  "type": "keyword"
-                }
-              }
+              "normalizer": "uppercase"
             }
           }
         }
