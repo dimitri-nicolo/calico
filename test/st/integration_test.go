@@ -1,7 +1,6 @@
 package st_test
 
 import (
-	"bufio"
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
@@ -62,34 +61,39 @@ var _ = Describe("Integration Tests", func() {
 	})
 
 	It("Should start up voltron binary", func() {
-		var startErr error
 		voltronCmd = exec.Command("./bin/voltron")
 
 		// Prints logs to OS' Stdout and Stderr
 		voltronCmd.Stdout = os.Stdout
 		voltronCmd.Stderr = os.Stderr
 
+		errC := make(chan error)
+
 		go func() {
-			startErr = voltronCmd.Start()
+			errC <- voltronCmd.Start()
 
 			// Blocking
 			voltronCmd.Wait()
 		}()
 
-		// Wait for Server to start up
-		time.Sleep(2 * time.Second)
-
-		// Check if startError
-		Expect(startErr).ToNot(HaveOccurred())
+		Expect(<-errC).ToNot(HaveOccurred())
 
 	})
 
 	clustersEndpoint := "https://localhost:5555/voltron/api/clusters"
 
 	Context("While Voltron is running", func() {
-		It("Should successfully ping cluster endpoint, no clusters added", func() {
+		It("Should eventually successfully ping cluster endpoint, no clusters added", func() {
 			req, err := http.NewRequest("GET", clustersEndpoint, nil)
 			Expect(err).ToNot(HaveOccurred())
+
+			Eventually(func() bool {
+				resp, err := http.DefaultClient.Do(req)
+				if err != nil {
+					return false
+				}
+				return resp.StatusCode == 200
+			}).Should(BeTrue())
 
 			ExpectRespMsg(req, "[]")
 		})
@@ -199,13 +203,8 @@ var _ = Describe("Integration Tests", func() {
 		guardianCmd = exec.Command("./bin/guardian")
 
 		// Prints logs to OS' Stdout and Stderr
+		guardianCmd.Stdout = os.Stdout
 		guardianCmd.Stderr = os.Stderr
-
-		// Switch STDOut into a pipe
-		r, w, err := os.Pipe()
-		Expect(err).ToNot(HaveOccurred())
-
-		guardianCmd.Stdout = w
 
 		go func() {
 			startErr = guardianCmd.Start()
@@ -217,18 +216,23 @@ var _ = Describe("Integration Tests", func() {
 		// Check if startError
 		Expect(startErr).ToNot(HaveOccurred())
 
-		// Wait for guardian tunnel to be established. Listen to Stdout until we see connection establish
-		scanner := bufio.NewScanner(r)
-		for scanner.Scan() {
-			text := scanner.Text()
-			if contain := strings.Contains(text, "Tunnel: Accepting connections"); contain == true {
-				break
-			}
-		}
-
 	})
 
 	Context("While Guardian is running", func() {
+		It("Should eventually send a request to test endpoint/target", func() {
+			req, err := http.NewRequest("GET", "https://localhost:5555/api/v1/namespaces", nil)
+			Expect(err).NotTo(HaveOccurred())
+
+			req.Header.Add("x-cluster-id", "TestCluster")
+			Eventually(func() bool {
+				resp, err := http.DefaultClient.Do(req)
+				if err != nil {
+					return false
+				}
+				return resp.StatusCode == 200
+			}, "1s", "200ms").Should(BeTrue())
+		})
+
 		It("Should send a request to nonexistant endpoint/", func() {
 			req, err := http.NewRequest("GET", "https://localhost:5555/", nil)
 			Expect(err).NotTo(HaveOccurred())
@@ -236,13 +240,6 @@ var _ = Describe("Integration Tests", func() {
 			req.Header.Add("x-cluster-id", "TestCluster")
 
 			ExpectRequestResponse(req, expResponseCode(404))
-		})
-
-		It("Should send a request to test endpoint/target", func() {
-			req, err := http.NewRequest("GET", "https://localhost:5555/api/v1/namespaces", nil)
-			Expect(err).NotTo(HaveOccurred())
-
-			req.Header.Add("x-cluster-id", "TestCluster")
 		})
 
 		It("Should send a request to wrong cluster id", func() {

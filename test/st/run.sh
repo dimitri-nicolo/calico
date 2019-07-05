@@ -40,6 +40,8 @@ docker run \
                         --allocate-node-cidrs=true \
                         --cluster-cidr=10.10.0.0/16 \
                         --v=5 \
+                        --cluster-signing-cert-file /root/certs/k8s.crt \
+                        --cluster-signing-key-file /root/certs/k8s.key \
                         --service-account-private-key-file /root/certs/k8s.key
 
 
@@ -87,7 +89,7 @@ TMPDIR=${BASEDIR}/tmp
 mkdir -p $TMPDIR
 
 # get the service account token so that we can fake mounting it into a pod
-kubectl -s 127.0.0.1:8080 get secret `kubectl -s 127.0.0.1:8080 get secrets | grep cnx-guardian | cut -f 1 -d\ ` -o yaml | grep "token:" | sed "s/.*token: //" > $TMPDIR/token
+kubectl -s 127.0.0.1:8080 get secret `kubectl -s 127.0.0.1:8080 get secrets | grep cnx-guardian | cut -f 1 -d\ ` -o yaml | grep "token:" | sed "s/.*token: //" | tr -d '\n' | base64 -d -w 0 > $TMPDIR/token
 
 eval $TEST_CMD
 
