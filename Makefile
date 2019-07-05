@@ -205,17 +205,17 @@ manifests/voltron.yaml: manifests/voltron.yaml.tmpl
 	scripts/certs/self-signed.sh scripts/certs
 	CERT64=`base64 $(BASE64_ARGS) scripts/certs/voltron.crt` && \
 		KEY64=`base64 $(BASE64_ARGS) scripts/certs/voltron.key` && \
-		sed -e "s;VOLTRON_CRT_BASE64;$$CERT64;" \
-			-e "s;VOLTRON_KEY_BASE64;$$KEY64;" \
-			-e "s;VOLTRON_DOCKER_PUSH_REPO;$(PUSH_REPO);" \
-			-e "s;VOLTRON_DOCKER_TAG;$(BRANCH_NAME);" $< > $@
+		sed -e "s;{{VOLTRON_CRT_BASE64}};$$CERT64;" \
+			-e "s;{{VOLTRON_KEY_BASE64}};$$KEY64;" \
+			-e "s;{{VOLTRON_DOCKER_PUSH_REPO}};$(PUSH_REPO);" \
+			-e "s;{{VOLTRON_DOCKER_TAG}};$(BRANCH_NAME);" $< > $@
 	scripts/certs/clean-self-signed.sh scripts/certs
 
 docker-image/voltron/templates/guardian.yaml.tmpl: manifests/guardian.yaml.tmpl
 	mkdir -p docker-image/voltron/templates/
 	cat $< | \
-		sed -e "s;VOLTRON_DOCKER_PUSH_REPO;$(PUSH_REPO);" \
-		    -e "s;VOLTRON_DOCKER_TAG;$(BRANCH_NAME);" $< > $@
+		sed -e "s;{{VOLTRON_DOCKER_PUSH_REPO}};$(PUSH_REPO);" \
+		    -e "s;{{VOLTRON_DOCKER_TAG}};$(BRANCH_NAME);" $< > $@
 
 clean-manifests:
 	rm -f $(MANIFESTS)

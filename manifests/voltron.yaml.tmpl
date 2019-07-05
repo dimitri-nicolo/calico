@@ -20,8 +20,8 @@ data:
 ---
 apiVersion: v1
 data:
-  voltron.crt: VOLTRON_CRT_BASE64
-  voltron.key: VOLTRON_KEY_BASE64
+  voltron.crt: {{VOLTRON_CRT_BASE64}}
+  voltron.key: {{VOLTRON_KEY_BASE64}}
 kind: Secret
 metadata:
   name: cnx-voltron-tls
@@ -100,7 +100,7 @@ spec:
         - name: cnx-voltron
           # Currently using latest tag, should switch to specific
           # version tag as we get closer to release time
-          image: VOLTRON_DOCKER_PUSH_REPO/tigera/voltron:VOLTRON_DOCKER_TAG
+          image: {{VOLTRON_DOCKER_PUSH_REPO}}/tigera/voltron:{{VOLTRON_DOCKER_TAG}}
           imagePullPolicy: Always
           env:
             - name: VOLTRON_PORT
