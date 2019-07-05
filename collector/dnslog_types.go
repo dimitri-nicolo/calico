@@ -363,7 +363,7 @@ type DNSLog struct {
 	ClientName      string            `json:"client_name"`
 	ClientNameAggr  string            `json:"client_name_aggr"`
 	ClientNamespace string            `json:"client_namespace"`
-	ClientIP        string            `json:"client_ip"`
+	ClientIP        *string           `json:"client_ip"`
 	ClientLabels    map[string]string `json:"client_labels"`
 	Servers         []DNSServer       `json:"servers"`
 	QName           string            `json:"qname"`
@@ -383,7 +383,6 @@ func (d *DNSData) ToDNSLog(startTime, endTime time.Time, includeLabels bool) *DN
 		ClientName:      d.ClientMeta.Name,
 		ClientNameAggr:  d.ClientMeta.AggregatedName,
 		ClientNamespace: d.ClientMeta.Namespace,
-		ClientIP:        d.ClientMeta.IP,
 		ClientLabels:    d.ClientLabels,
 		Servers:         e.Servers,
 		QName:           d.Question.Name,
@@ -391,6 +390,10 @@ func (d *DNSData) ToDNSLog(startTime, endTime time.Time, includeLabels bool) *DN
 		QType:           d.Question.Type,
 		RCode:           d.ResponseCode,
 		RRSets:          e.RRSets,
+	}
+
+	if d.ClientMeta.IP != flowLogFieldNotIncluded {
+		res.ClientIP = &d.ClientMeta.IP
 	}
 
 	if !includeLabels {
