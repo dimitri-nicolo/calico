@@ -19,6 +19,8 @@ ARCHES = amd64
 BUILDARCH ?= $(shell uname -m)
 BUILDOS ?= $(shell uname -s | tr A-Z a-z)
 
+BRANCH_NAME ?= $(shell git rev-parse --abbrev-ref HEAD)
+
 # canonicalized names for host architecture
 ifeq ($(BUILDARCH),aarch64)
   BUILDARCH=arm64
@@ -177,7 +179,7 @@ endif
 # Docker Image
 #############################################
 
-images: $(BUILD_IMAGES) manifests
+images: manifests $(BUILD_IMAGES)
 tigera/%: tigera/%-$(ARCH) ;
 tigera/%-$(ARCH): $(BINDIR)/%-$(ARCH)
 	rm -rf docker-image/$*/bin
@@ -188,26 +190,35 @@ ifeq ($(ARCH),amd64)
 	docker tag tigera/$*:latest-$(ARCH) tigera/$*:latest
 endif
 
+MANIFESTS = manifests/voltron.yaml docker-image/voltron/templates/guardian.yaml.tmpl
+
 .PHONY: manifests
-manifests: manifests/voltron.yaml
+manifests: $(MANIFESTS)
+
+# Handle differences in base64 between OS
+ifeq ($(shell uname -s),Linux)
+BASE64_ARGS=-w 0
+endif
 
 manifests/voltron.yaml: manifests/voltron.yaml.tmpl
 	scripts/certs/clean-self-signed.sh scripts/certs
 	scripts/certs/self-signed.sh scripts/certs
-# Handle differences in base64 between OS 
-ifeq ($(shell uname -s),Darwin)
-	CERT64=`base64 scripts/certs/voltron.crt` && \
-		KEY64=`base64 scripts/certs/voltron.key` && \
-		cat $< | sed "s;VOLTRON_CRT_BASE64;$$CERT64;" | sed "s;VOLTRON_KEY_BASE64;$$KEY64;" > $@
-else
-	CERT64=`base64 -w 0 scripts/certs/voltron.crt` && \
-		KEY64=`base64 -w 0 scripts/certs/voltron.key` && \
-		cat $< | sed "s;VOLTRON_CRT_BASE64;$$CERT64;" | sed "s;VOLTRON_KEY_BASE64;$$KEY64;" > $@
-endif
+	CERT64=`base64 $(BASE64_ARGS) scripts/certs/voltron.crt` && \
+		KEY64=`base64 $(BASE64_ARGS) scripts/certs/voltron.key` && \
+		sed -e "s;VOLTRON_CRT_BASE64;$$CERT64;" \
+			-e "s;VOLTRON_KEY_BASE64;$$KEY64;" \
+			-e "s;VOLTRON_DOCKER_PUSH_REPO;$(PUSH_REPO);" \
+			-e "s;VOLTRON_DOCKER_TAG;$(BRANCH_NAME);" $< > $@
 	scripts/certs/clean-self-signed.sh scripts/certs
 
+docker-image/voltron/templates/guardian.yaml.tmpl: manifests/guardian.yaml.tmpl
+	mkdir -p docker-image/voltron/templates/
+	cat $< | \
+		sed -e "s;VOLTRON_DOCKER_PUSH_REPO;$(PUSH_REPO);" \
+		    -e "s;VOLTRON_DOCKER_TAG;$(BRANCH_NAME);" $< > $@
+
 clean-manifests:
-	rm -f manifests/voltron.yaml
+	rm -f $(MANIFESTS)
 	scripts/certs/clean-self-signed.sh scripts/certs
 
 
@@ -262,7 +273,7 @@ st: $(COMPONENTS)
 # CLEAN UP 
 ##########################################################################################
 .PHONY: clean
-clean: clean-build-image
+clean: clean-build-image clean-manifests
 	rm -rf $(BINDIR) docker-image/bin
 	if test -d .go-pkg-cache; then chmod -R +w .go-pkg-cache && rm -rf .go-pkg-cache; fi
 	find . -name "*.coverprofile" -type f -delete

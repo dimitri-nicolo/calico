@@ -110,7 +110,7 @@ spec:
         - name: cnx-pull-secret
       containers:
         - name: cnx-guardian
-          image: gcr.io/tigera-dev/cnx/tigera/guardian:latest
+          image: VOLTRON_DOCKER_PUSH_REPO/tigera/guardian:VOLTRON_DOCKER_TAG
           imagePullPolicy: IfNotPresent
           env:
             - name: GUARDIAN_PORT
