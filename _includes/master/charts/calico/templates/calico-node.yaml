@@ -290,9 +290,11 @@ spec:
             # GKE CNI requires loose RPF because it hairpins traffic through the default gateway.
             - name: FELIX_IGNORELOOSERPF
               value: "true"
-            # GKE CNI has its own mangle rules, let those run before ours.
-            - name: FELIX_CHAININSERTMODE
-              value: "append"
+            # GKE CNI has its own iptables rules, defer to those after ours have run.
+            - name: FELIX_IPTABLESMANGLEALLOWACTION
+              value: "Return"
+            - name: FELIX_IPTABLESFILTERALLOWACTION
+              value: "Return"
             # Cluster type to identify the deployment type
             - name: CLUSTER_TYPE
               value: "k8s,gke"
