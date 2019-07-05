@@ -8,16 +8,17 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
-	corev1 "k8s.io/api/core/v1"
-
 	"github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/updateprocessors"
 	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/set"
+
+	pcv3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 
 	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/ips"
@@ -129,6 +130,11 @@ func (v *versionedK8sPod) GetFlowLogAggregationName() string {
 	}
 }
 
+// GetPrimary implements the VersionedNetworkSetResource interface.
+func (v *versionedK8sPod) GetPrimary() resources.Resource {
+	return v.Pod
+}
+
 // GetCalicoV3 implements the VersionedEndpointResource interface.
 func (v *versionedK8sPod) GetCalicoV3() resources.Resource {
 	return v.v3
@@ -231,6 +237,11 @@ func (v *versionedCalicoHostEndpoint) GetFlowLogAggregationName() string {
 	return v.Spec.Node
 }
 
+// GetPrimary implements the VersionedNetworkSetResource interface.
+func (v *versionedCalicoHostEndpoint) GetPrimary() resources.Resource {
+	return v.HostEndpoint
+}
+
 // GetCalicoV3 implements the VersionedEndpointResource interface.
 func (v *versionedCalicoHostEndpoint) GetCalicoV3() resources.Resource {
 	return v.HostEndpoint
@@ -328,6 +339,16 @@ func (c *endpointHandler) newCacheEntry() CacheEntry {
 
 // convertToVersioned implements the resourceHandler interface.
 func (c *endpointHandler) convertToVersioned(res resources.Resource) (VersionedResource, error) {
+	// Accept AAPIS versions of the Calico resources, but convert them to the libcalico-go versions.
+	switch tr := res.(type) {
+	case *pcv3.HostEndpoint:
+		res = &apiv3.HostEndpoint{
+			TypeMeta:   tr.TypeMeta,
+			ObjectMeta: tr.ObjectMeta,
+			Spec:       tr.Spec,
+		}
+	}
+
 	switch in := res.(type) {
 	case *apiv3.HostEndpoint:
 		v1, err := updateprocessors.ConvertHostEndpointV3ToV1(&model.KVPair{

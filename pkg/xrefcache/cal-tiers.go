@@ -8,6 +8,8 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/updateprocessors"
 
+	pcv3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
+
 	"github.com/tigera/compliance/pkg/resources"
 	"github.com/tigera/compliance/pkg/syncer"
 )
@@ -44,6 +46,11 @@ func (c *CacheEntryTier) setVersionedResource(r VersionedResource) {
 type versionedCalicoTier struct {
 	*apiv3.Tier
 	v1 *model.Tier
+}
+
+// GetPrimary implements the VersionedNetworkSetResource interface.
+func (v *versionedCalicoTier) GetPrimary() resources.Resource {
+	return v.Tier
 }
 
 func (v *versionedCalicoTier) GetCalicoV3() resources.Resource {
@@ -110,6 +117,16 @@ func (c *tierHandler) recalculate(podId apiv3.ResourceID, podEntry CacheEntry) s
 }
 
 func (c *tierHandler) convertToVersioned(res resources.Resource) (VersionedResource, error) {
+	// Accept AAPIS versions of the Calico resources, but convert them to the libcalico-go versions.
+	switch tr := res.(type) {
+	case *pcv3.Tier:
+		res = &apiv3.Tier{
+			TypeMeta:   tr.TypeMeta,
+			ObjectMeta: tr.ObjectMeta,
+			Spec:       tr.Spec,
+		}
+	}
+
 	in := res.(*apiv3.Tier)
 
 	v1, err := updateprocessors.ConvertTierV3ToV1Value(in)

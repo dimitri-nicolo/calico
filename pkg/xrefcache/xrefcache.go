@@ -280,14 +280,28 @@ func (x *xrefCache) RegisterOnUpdateHandler(kind metav1.TypeMeta, updateTypes sy
 
 // GetCachedResourceIDs implements the XrefCache interface.
 func (x *xrefCache) GetCachedResourceIDs(kind metav1.TypeMeta) []apiv3.ResourceID {
-	var ids []apiv3.ResourceID
 	cache := x.caches[kind]
+	ids := make([]apiv3.ResourceID, 0, len(cache.resources))
 	for k := range cache.resources {
 		if k.TypeMeta == kind {
 			ids = append(ids, k)
 		}
 	}
 	return ids
+}
+
+func (x *xrefCache) EachCacheEntry(kind metav1.TypeMeta, cb func(CacheEntry) error) error {
+	cache := x.caches[kind]
+	for k, e := range cache.resources {
+		if k.TypeMeta != kind {
+			log.WithField("resource", k).Debug("Not including resource - wrong type")
+			continue
+		}
+		if err := cb(e); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // RegisterInScopeEndpoints implements the XrefCache interface.

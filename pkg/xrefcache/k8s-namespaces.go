@@ -53,6 +53,11 @@ type versionedK8sNamespace struct {
 	v1 *model.Profile
 }
 
+// GetPrimary implements the VersionedNetworkSetResource interface.
+func (v *versionedK8sNamespace) GetPrimary() resources.Resource {
+	return v.Namespace
+}
+
 // GetCalicoV3 implements the VersionedNamespaceResource interface.
 func (v *versionedK8sNamespace) GetCalicoV3() resources.Resource {
 	return v.v3

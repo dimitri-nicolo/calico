@@ -9,6 +9,8 @@ import (
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
+	pcv3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
+
 	. "github.com/tigera/compliance/internal/testutils"
 	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/resources"
@@ -99,9 +101,10 @@ var _ = Describe("xref cache in-scope callbacks", func() {
 	})
 
 	It("should flag in-scope endpoints matching endpoint selector", func() {
-		tester.RegisterInScopeEndpoints(&apiv3.EndpointsSelection{
+		err := tester.RegisterInScopeEndpoints(&apiv3.EndpointsSelection{
 			Selector: tester.GetSelector(Select1),
 		})
+		Expect(err).NotTo(HaveOccurred())
 		Expect(cb.updated).To(HaveLen(0))
 		tester.OnStatusUpdate(syncer.StatusUpdate{
 			Type: syncer.StatusTypeInSync,
@@ -112,12 +115,13 @@ var _ = Describe("xref cache in-scope callbacks", func() {
 	})
 
 	It("should flag in-scope endpoints matching endpoint selector and namespace name", func() {
-		tester.RegisterInScopeEndpoints(&apiv3.EndpointsSelection{
+		err := tester.RegisterInScopeEndpoints(&apiv3.EndpointsSelection{
 			Selector: tester.GetSelector(Select1),
 			Namespaces: &apiv3.NamesAndLabelsMatch{
 				Names: []string{nsID1.Name},
 			},
 		})
+		Expect(err).NotTo(HaveOccurred())
 		Expect(cb.updated).To(HaveLen(0))
 		tester.OnStatusUpdate(syncer.StatusUpdate{
 			Type: syncer.StatusTypeInSync,
@@ -127,12 +131,13 @@ var _ = Describe("xref cache in-scope callbacks", func() {
 	})
 
 	It("should flag in-scope endpoints matching endpoint selector and namespace selector", func() {
-		tester.RegisterInScopeEndpoints(&apiv3.EndpointsSelection{
+		err := tester.RegisterInScopeEndpoints(&apiv3.EndpointsSelection{
 			Selector: tester.GetSelector(Select1),
 			Namespaces: &apiv3.NamesAndLabelsMatch{
 				Selector: tester.GetSelector(Select2),
 			},
 		})
+		Expect(err).NotTo(HaveOccurred())
 		Expect(cb.updated).To(HaveLen(0))
 		tester.OnStatusUpdate(syncer.StatusUpdate{
 			Type: syncer.StatusTypeInSync,
@@ -147,12 +152,13 @@ var _ = Describe("xref cache in-scope callbacks", func() {
 	})
 
 	It("should flag in-scope endpoints matching endpoint selector and service account name", func() {
-		tester.RegisterInScopeEndpoints(&apiv3.EndpointsSelection{
+		err := tester.RegisterInScopeEndpoints(&apiv3.EndpointsSelection{
 			Selector: tester.GetSelector(Select2),
 			ServiceAccounts: &apiv3.NamesAndLabelsMatch{
 				Names: []string{saName1},
 			},
 		})
+		Expect(err).NotTo(HaveOccurred())
 		Expect(cb.updated).To(HaveLen(0))
 		tester.OnStatusUpdate(syncer.StatusUpdate{
 			Type: syncer.StatusTypeInSync,
@@ -163,11 +169,12 @@ var _ = Describe("xref cache in-scope callbacks", func() {
 	})
 
 	It("should flag in-scope endpoints by service account selector", func() {
-		tester.RegisterInScopeEndpoints(&apiv3.EndpointsSelection{
+		err := tester.RegisterInScopeEndpoints(&apiv3.EndpointsSelection{
 			ServiceAccounts: &apiv3.NamesAndLabelsMatch{
 				Selector: tester.GetSelector(Select2),
 			},
 		})
+		Expect(err).NotTo(HaveOccurred())
 		Expect(cb.updated).To(HaveLen(0))
 		tester.OnStatusUpdate(syncer.StatusUpdate{
 			Type: syncer.StatusTypeInSync,
@@ -191,12 +198,13 @@ var _ = Describe("xref cache in-scope callbacks", func() {
 	})
 
 	It("should flag in-scope endpoints matching endpoint selector and service account selector", func() {
-		tester.RegisterInScopeEndpoints(&apiv3.EndpointsSelection{
+		err := tester.RegisterInScopeEndpoints(&apiv3.EndpointsSelection{
 			Selector: tester.GetSelector(Select1),
 			ServiceAccounts: &apiv3.NamesAndLabelsMatch{
 				Selector: tester.GetSelector(Select2),
 			},
 		})
+		Expect(err).NotTo(HaveOccurred())
 		Expect(cb.updated).To(HaveLen(0))
 		tester.OnStatusUpdate(syncer.StatusUpdate{
 			Type: syncer.StatusTypeInSync,
@@ -207,11 +215,12 @@ var _ = Describe("xref cache in-scope callbacks", func() {
 	})
 
 	It("should flag in-scope endpoints multiple service account names", func() {
-		tester.RegisterInScopeEndpoints(&apiv3.EndpointsSelection{
+		err := tester.RegisterInScopeEndpoints(&apiv3.EndpointsSelection{
 			ServiceAccounts: &apiv3.NamesAndLabelsMatch{
 				Names: []string{saName1, saName2},
 			},
 		})
+		Expect(err).NotTo(HaveOccurred())
 		Expect(cb.updated).To(HaveLen(0))
 		tester.OnStatusUpdate(syncer.StatusUpdate{
 			Type: syncer.StatusTypeInSync,
@@ -236,7 +245,8 @@ var _ = Describe("xref cache multiple update transactions", func() {
 		}
 
 		By("Registering all endpoints as in-scope and registering for inscope events")
-		tester.RegisterInScopeEndpoints(&apiv3.EndpointsSelection{})
+		err := tester.RegisterInScopeEndpoints(&apiv3.EndpointsSelection{})
+		Expect(err).NotTo(HaveOccurred())
 		for _, k := range xrefcache.KindsEndpoint {
 			tester.RegisterOnUpdateHandler(k, xrefcache.EventInScope, cb.onUpdate)
 		}
@@ -267,7 +277,8 @@ var _ = Describe("xref cache multiple update transactions", func() {
 		}
 
 		By("Registering all endpoints as in-scope and registering for inscope events")
-		tester.RegisterInScopeEndpoints(&apiv3.EndpointsSelection{})
+		err := tester.RegisterInScopeEndpoints(&apiv3.EndpointsSelection{})
+		Expect(err).NotTo(HaveOccurred())
 		for _, k := range xrefcache.KindsEndpoint {
 			tester.RegisterOnUpdateHandler(k, xrefcache.EventInScope, cb.onUpdate)
 		}
@@ -299,7 +310,8 @@ var _ = Describe("xref cache multiple update transactions", func() {
 		}
 
 		By("Registering all endpoints as in-scope and registering for inscope events")
-		tester.RegisterInScopeEndpoints(&apiv3.EndpointsSelection{})
+		err := tester.RegisterInScopeEndpoints(&apiv3.EndpointsSelection{})
+		Expect(err).NotTo(HaveOccurred())
 		for _, k := range xrefcache.KindsEndpoint {
 			tester.RegisterOnUpdateHandler(k, xrefcache.EventInScope, cb.onUpdate)
 		}
@@ -331,7 +343,8 @@ var _ = Describe("xref cache multiple update transactions", func() {
 		}
 
 		By("Registering all endpoints as in-scope and registering for inscope events")
-		tester.RegisterInScopeEndpoints(&apiv3.EndpointsSelection{})
+		err := tester.RegisterInScopeEndpoints(&apiv3.EndpointsSelection{})
+		Expect(err).NotTo(HaveOccurred())
 		for _, k := range xrefcache.KindsEndpoint {
 			tester.RegisterOnUpdateHandler(k, xrefcache.EventInScope, cb.onUpdate)
 		}
@@ -364,5 +377,109 @@ var _ = Describe("xref cache multiple update transactions", func() {
 		Expect(cb.updated).To(HaveKey(podID1))
 		Expect(cb.deletes).To(Equal(0))
 		Expect(cb.sets).To(Equal(1))
+	})
+
+	It("should handle AAPIS versions of each calico resource type", func() {
+		tester := NewXrefCacheTester()
+
+		By("Creating, storing and then deleting a calico tier")
+		var tier *apiv3.Tier
+		tester.SetTier(Name1, Order1)
+		Expect(tester.XrefCache.GetCachedResourceIDs(resources.TypeCalicoTiers)).To(HaveLen(1))
+		_ = tester.XrefCache.EachCacheEntry(resources.TypeCalicoTiers, func(ce xrefcache.CacheEntry) error {
+			tier = ce.GetCalicoV3().(*apiv3.Tier)
+			tester.XrefCache.OnUpdates([]syncer.Update{
+				{Type: syncer.UpdateTypeDeleted, ResourceID: resources.GetResourceID(ce.GetCalicoV3())},
+			})
+			return nil
+		})
+		Expect(tester.XrefCache.GetCachedResourceIDs(resources.TypeCalicoTiers)).To(HaveLen(0))
+
+		By("Creating a AAPIS tier (from the original calico tier) and checking the cached result matches")
+		tester.OnUpdates([]syncer.Update{
+			{
+				Type:       syncer.UpdateTypeSet,
+				ResourceID: resources.GetResourceID(tier),
+				Resource:   &pcv3.Tier{TypeMeta: tier.TypeMeta, ObjectMeta: tier.ObjectMeta, Spec: tier.Spec},
+			},
+		})
+		res := tester.XrefCache.Get(resources.GetResourceID(tier))
+		Expect(res).ToNot(BeNil())
+		Expect(res.GetCalicoV3()).To(Equal(tier))
+
+		By("Creating, storing and then deleting a calico global network set")
+		var gns *apiv3.GlobalNetworkSet
+		tester.SetGlobalNetworkSet(Name1, Label1, Public|Private)
+		Expect(tester.XrefCache.GetCachedResourceIDs(resources.TypeCalicoGlobalNetworkSets)).To(HaveLen(1))
+		_ = tester.XrefCache.EachCacheEntry(resources.TypeCalicoGlobalNetworkSets, func(ce xrefcache.CacheEntry) error {
+			gns = ce.GetCalicoV3().(*apiv3.GlobalNetworkSet)
+			tester.XrefCache.OnUpdates([]syncer.Update{
+				{Type: syncer.UpdateTypeDeleted, ResourceID: resources.GetResourceID(ce.GetCalicoV3())},
+			})
+			return nil
+		})
+		Expect(tester.XrefCache.GetCachedResourceIDs(resources.TypeCalicoGlobalNetworkSets)).To(HaveLen(0))
+
+		By("Creating a AAPIS gns (from the original calico gns) and checking the cached result matches")
+		tester.OnUpdates([]syncer.Update{
+			{
+				Type:       syncer.UpdateTypeSet,
+				ResourceID: resources.GetResourceID(gns),
+				Resource:   &pcv3.GlobalNetworkSet{TypeMeta: gns.TypeMeta, ObjectMeta: gns.ObjectMeta, Spec: gns.Spec},
+			},
+		})
+		res = tester.XrefCache.Get(resources.GetResourceID(gns))
+		Expect(res).ToNot(BeNil())
+		Expect(res.GetCalicoV3()).To(Equal(gns))
+
+		By("Creating, storing and then deleting a calico global network policy")
+		var gnp *apiv3.GlobalNetworkPolicy
+		tester.SetGlobalNetworkPolicy(Name1, Name1, Select1, []apiv3.Rule{}, nil, &Order1)
+		Expect(tester.XrefCache.GetCachedResourceIDs(resources.TypeCalicoGlobalNetworkPolicies)).To(HaveLen(1))
+		_ = tester.XrefCache.EachCacheEntry(resources.TypeCalicoGlobalNetworkPolicies, func(ce xrefcache.CacheEntry) error {
+			gnp = ce.GetCalicoV3().(*apiv3.GlobalNetworkPolicy)
+			tester.XrefCache.OnUpdates([]syncer.Update{
+				{Type: syncer.UpdateTypeDeleted, ResourceID: resources.GetResourceID(ce.GetCalicoV3())},
+			})
+			return nil
+		})
+		Expect(tester.XrefCache.GetCachedResourceIDs(resources.TypeCalicoGlobalNetworkPolicies)).To(HaveLen(0))
+
+		By("Creating a AAPIS gnp (from the original calico gnp) and checking the cached result matches")
+		tester.OnUpdates([]syncer.Update{
+			{
+				Type:       syncer.UpdateTypeSet,
+				ResourceID: resources.GetResourceID(gnp),
+				Resource:   &pcv3.GlobalNetworkPolicy{TypeMeta: gnp.TypeMeta, ObjectMeta: gnp.ObjectMeta, Spec: gnp.Spec},
+			},
+		})
+		res = tester.XrefCache.Get(resources.GetResourceID(gnp))
+		Expect(res).ToNot(BeNil())
+		Expect(res.GetCalicoV3()).To(Equal(gnp))
+
+		By("Creating, storing and then deleting a calico network policy")
+		var np *apiv3.NetworkPolicy
+		tester.SetNetworkPolicy(Name1, Name1, Namespace1, Select1, nil, []apiv3.Rule{}, &Order10)
+		Expect(tester.XrefCache.GetCachedResourceIDs(resources.TypeCalicoNetworkPolicies)).To(HaveLen(1))
+		_ = tester.XrefCache.EachCacheEntry(resources.TypeCalicoNetworkPolicies, func(ce xrefcache.CacheEntry) error {
+			np = ce.GetCalicoV3().(*apiv3.NetworkPolicy)
+			tester.XrefCache.OnUpdates([]syncer.Update{
+				{Type: syncer.UpdateTypeDeleted, ResourceID: resources.GetResourceID(ce.GetCalicoV3())},
+			})
+			return nil
+		})
+		Expect(tester.XrefCache.GetCachedResourceIDs(resources.TypeCalicoNetworkPolicies)).To(HaveLen(0))
+
+		By("Creating a AAPIS np (from the original calico np) and checking the cached result matches")
+		tester.OnUpdates([]syncer.Update{
+			{
+				Type:       syncer.UpdateTypeSet,
+				ResourceID: resources.GetResourceID(np),
+				Resource:   &pcv3.NetworkPolicy{TypeMeta: np.TypeMeta, ObjectMeta: np.ObjectMeta, Spec: np.Spec},
+			},
+		})
+		res = tester.XrefCache.Get(resources.GetResourceID(np))
+		Expect(res).ToNot(BeNil())
+		Expect(res.GetCalicoV3()).To(Equal(np))
 	})
 })
