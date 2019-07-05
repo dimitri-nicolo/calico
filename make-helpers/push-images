@@ -8,9 +8,9 @@ for ARCH in $ARCHES; do
   for BUILD_IMAGE in $BUILD_IMAGES; do
     if [ "$NUM_ARCHES" == 1 ]; then
       # push without -$ARCH suffix
-      docker push "${PUSH_REPO}${BUILD_IMAGE}:${IMAGETAG}"
+      docker push "${PUSH_REPO}/${BUILD_IMAGE}:${IMAGETAG}"
     else
-      docker push "${PUSH_REPO}${BUILD_IMAGE}:${IMAGETAG}-${ARCH}"
+      docker push "${PUSH_REPO}/${BUILD_IMAGE}:${IMAGETAG}-${ARCH}"
     fi
   done
 done

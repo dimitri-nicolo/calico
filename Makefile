@@ -77,7 +77,7 @@ RELEASE_LDFLAGS = -ldflags "$(VERSION_FLAGS) -s -w"
 # Env vars related to building, packaging 
 # and releasing
 #############################################
-PUSH_REPO     ?= gcr.io/unique-caldron-775/cnx/
+PUSH_REPO     ?= gcr.io/unique-caldron-775/cnx
 BUILD_IMAGES  ?= $(addprefix tigera/, $(COMPONENTS))
 PACKAGE_NAME  ?= github.com/tigera/$(APP_NAME)
 RELEASE_BUILD ?= ""
