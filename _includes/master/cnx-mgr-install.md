@@ -3,9 +3,11 @@
   {% assign manifestPath = "getting-started/openshift" %}
 {% elsif include.platform == "eks" %}
   {% assign cli = "kubectl" %}
+  {% assign cloudServiceInitials = "EKS" %}
   {% assign manifestPath = "getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only-ecs" %}
 {% elsif include.platform == "gke" %}
   {% assign cli = "kubectl" %}
+  {% assign cloudServiceInitials = "GKE" %}
   {% assign manifestPath = "getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only-gke" %}
 {% else %}
   {% assign cli = "kubectl" %}
@@ -201,30 +203,9 @@
 
    Wait until each pod has the `STATUS` of `Running`.
 
-{% if include.platform == "eks" %}
+{% if include.platform == "eks" or include.platform == "gke" %}
 
-1. To log into {{site.prodname}} Manager running in EKS, you'll need a token for a user
-   with appropriate permissions on the cluster.
-
-   The easiest way to create such a token is to create a service account, assign it permissions
-   and get a token for it to use for login.  Update `USER` to change the name to give
-   to the service account and update `NAMESPACE` to change the namespace where the
-   service account is created. Create the namespace if needed.
-
-   ```bash
-   export USER=ui-user
-   export NAMESPACE=ui-namespace
-   {{cli}} create serviceaccount -n $NAMESPACE $USER
-   kubectl get secret -n $NAMESPACE -o jsonpath='{.data.token}' $(kubectl -n $NAMESPACE get secret | grep $USER | awk '{print $1}') | base64 --decode
-   ```
-
-   Save the token - you'll use it to log in to {{site.prodname}} Manager.  Next we'll assign permissions to do so
-   to it.  Use the value of `$USER` as `<USER>` and `$NAMESPACE` as `<NAMESPACE>` in the following step.
-
-{% include {{page.version}}/cnx-grant-user-manager-permissions.md usertype="serviceaccount" %}
-{% elsif include.platform == "gke" %}
-
-1. To log into {{site.prodname}} Manager running in GKE, you'll need a token for a user
+1. To log into {{site.prodname}} Manager running in {{cloudServiceInitials}}, you'll need a token for a user
    with appropriate permissions on the cluster.
 
    The easiest way to create such a token is to create a service account, assign it permissions
