@@ -97,8 +97,8 @@ endif
 # For building, we use the go-build image for the *host* architecture, even if the target is different
 # the one for the host should contain all the necessary cross-compilation tools
 # we do not need to use the arch since go-build:v0.15 now is multi-arch manifest
-GO_BUILD_VER ?= go.1.12
-CALICO_BUILD  = aliceinwonderland89/go-build:${GO_BUILD_VER}
+GO_BUILD_VER ?= v0.22
+CALICO_BUILD  = calico/go-build:${GO_BUILD_VER}
 
 DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
                    docker run --rm \
