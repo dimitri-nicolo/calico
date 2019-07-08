@@ -15,7 +15,9 @@ make all
 
 Push images
 ```
-make cd
+make cd CONFIRM=true BRANCH_NAME=branch-name
+# or, automatic current branch
+make cd CONFIRM=true
 ```
 
 ## Guardian
@@ -47,7 +49,9 @@ make tigera/guardian
 
 Push image
 ```
-make cd
+make cd CONFIRM=true BRANCH_NAME=branch-name BUILD_IMAGES="tigera/guardian"
+# or, automatic current branch
+make cd CONFIRM=true BUILD_IMAGES="tigera/guardian"
 ```
 
 ## Voltron
@@ -82,7 +86,9 @@ make tigera/voltron
 
 Push image
 ```
-make cd
+make cd CONFIRM=true BRANCH_NAME=branch-name BUILD_IMAGES="tigera/voltron"
+# or, automatic current branch
+make cd CONFIRM=true BUILD_IMAGES="tigera/voltron"
 ```
 
 # Project structure
