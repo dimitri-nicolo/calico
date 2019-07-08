@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -27,14 +28,19 @@ type Client struct {
 	tunnelKeyPEM  []byte
 	tunnelRootCAs *x509.CertPool
 
+	tunnelEnableKeepAlive   bool
+	tunnelKeepAliveInterval time.Duration
+
 	tunnelReady chan error
 }
 
 // New returns a new Client
 func New(addr string, opts ...Option) (*Client, error) {
 	client := &Client{
-		http:        new(http.Server),
-		tunnelReady: make(chan error, 1),
+		http:                    new(http.Server),
+		tunnelReady:             make(chan error, 1),
+		tunnelEnableKeepAlive:   true,
+		tunnelKeepAliveInterval: 100 * time.Millisecond,
 	}
 
 	client.tunnelAddr = addr
@@ -75,7 +81,10 @@ func (c *Client) ServeTunnelHTTP() error {
 
 		if c.tunnelCertPEM == nil || c.tunnelKeyPEM == nil {
 			log.Warnf("no tunnel creds, using unsecured tunnel")
-			c.tunnel, err = tunnel.Dial(c.tunnelAddr)
+			c.tunnel, err = tunnel.Dial(
+				c.tunnelAddr,
+				tunnel.WithKeepAliveSettings(c.tunnelEnableKeepAlive, c.tunnelKeepAliveInterval),
+			)
 			if err != nil {
 				return err
 			}
@@ -94,6 +103,7 @@ func (c *Client) ServeTunnelHTTP() error {
 					RootCAs:      c.tunnelRootCAs,
 					ServerName:   "voltron",
 				},
+				tunnel.WithKeepAliveSettings(c.tunnelEnableKeepAlive, c.tunnelKeepAliveInterval),
 			)
 			if err != nil {
 				return err

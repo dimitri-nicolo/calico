@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"io/ioutil"
 	"os"
+	"time"
 
 	"github.com/tigera/voltron/internal/pkg/auth"
 
@@ -101,6 +102,15 @@ func WithAuthentication(authNOn bool, k8sAPI kubernetes.Interface) Option {
 		if authNOn {
 			s.auth = auth.NewIdentity(k8sAPI)
 		}
+		return nil
+	}
+}
+
+// WithKeepAliveSettings sets the Keep Alive settings for the tunnel.
+func WithKeepAliveSettings(enable bool, intervalMs int) Option {
+	return func(s *Server) error {
+		s.tunnelEnableKeepAlive = enable
+		s.tunnelKeepAliveInterval = time.Duration(intervalMs) * time.Millisecond
 		return nil
 	}
 }

@@ -25,23 +25,36 @@ type Tunnel struct {
 	errOnce sync.Once
 	errCh   chan struct{}
 	err     error
+
+	keepAliveEnable   bool
+	keepAliveInterval time.Duration
 }
 
-func newTunnel(stream io.ReadWriteCloser, isServer bool) (*Tunnel, error) {
+func newTunnel(stream io.ReadWriteCloser, isServer bool, opts ...Option) (*Tunnel, error) {
 	t := &Tunnel{
 		stream: stream,
 		errCh:  make(chan struct{}),
+
+		// Defaults
+		keepAliveEnable:   true,
+		keepAliveInterval: 100 * time.Millisecond,
 	}
 
 	var mux *yamux.Session
 	var err error
 
+	for _, o := range opts {
+		if err := o(t); err != nil {
+			return nil, errors.WithMessage(err, "applying option failed")
+		}
+	}
+
 	// XXX all the config options should probably become options taken by New()
 	// XXX that can override the defaults set here
 	config := yamux.DefaultConfig()
 	config.AcceptBacklog = 1
-	config.EnableKeepAlive = true
-	config.KeepAliveInterval = 100 * time.Millisecond
+	config.EnableKeepAlive = t.keepAliveEnable
+	config.KeepAliveInterval = t.keepAliveInterval
 
 	if isServer {
 		mux, err = yamux.Server(&serverCloser{
@@ -64,14 +77,14 @@ func newTunnel(stream io.ReadWriteCloser, isServer bool) (*Tunnel, error) {
 
 // NewServerTunnel returns a new tunnel that uses the provided stream as the
 // carrier. The stream must be the server side of the stream
-func NewServerTunnel(stream io.ReadWriteCloser) (*Tunnel, error) {
-	return newTunnel(stream, true)
+func NewServerTunnel(stream io.ReadWriteCloser, opts ...Option) (*Tunnel, error) {
+	return newTunnel(stream, true, opts...)
 }
 
 // NewClientTunnel returns a new tunnel that uses the provided stream as the
 // carrier. The stream must be the client side of the stream
-func NewClientTunnel(stream io.ReadWriteCloser) (*Tunnel, error) {
-	return newTunnel(stream, false)
+func NewClientTunnel(stream io.ReadWriteCloser, opts ...Option) (*Tunnel, error) {
+	return newTunnel(stream, false, opts...)
 }
 
 // Identity represents remote peer identity
@@ -179,17 +192,17 @@ func (a addr) String() string {
 }
 
 // Dial returns a client side Tunnel or an error
-func Dial(target string) (*Tunnel, error) {
+func Dial(target string, opts ...Option) (*Tunnel, error) {
 	c, err := net.Dial("tcp", target)
 	if err != nil {
 		return nil, errors.Errorf("tcp.Dial failed: %s", err)
 	}
 
-	return NewClientTunnel(c)
+	return NewClientTunnel(c, opts...)
 }
 
 // DialTLS creates a TLS connection based on the config, must not be nil.
-func DialTLS(target string, config *tls.Config) (*Tunnel, error) {
+func DialTLS(target string, config *tls.Config, opts ...Option) (*Tunnel, error) {
 	if config == nil {
 		return nil, errors.Errorf("nil config")
 	}
@@ -199,5 +212,5 @@ func DialTLS(target string, config *tls.Config) (*Tunnel, error) {
 		return nil, errors.Errorf("tcp.tls.Dial failed: %s", err)
 	}
 
-	return NewClientTunnel(c)
+	return NewClientTunnel(c, opts...)
 }

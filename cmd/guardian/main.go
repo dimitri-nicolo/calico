@@ -53,10 +53,12 @@ type config struct {
 	// until health check restored
 	//Port       int    `default:"5555"`
 	//Host       string `default:"localhost"`
-	LogLevel     string      `default:"DEBUG"`
-	CertPath     string      `default:"/certs" split_words:"true"`
-	VoltronURL   string      `required:"true" split_words:"true"`
-	ProxyTargets proxyTarget `required:"true" split_words:"true"`
+	LogLevel          string      `default:"DEBUG"`
+	CertPath          string      `default:"/certs" split_words:"true"`
+	VoltronURL        string      `required:"true" split_words:"true"`
+	ProxyTargets      proxyTarget `required:"true" split_words:"true"`
+	KeepAliveEnable   bool        `default:"true" split_words:"true"`
+	KeepAliveInterval int         `default:"100" split_words:"true"`
 }
 
 func fillTargets(tgts proxyTarget) ([]proxy.Target, error) {
@@ -136,6 +138,7 @@ func main() {
 
 	client, err := client.New(
 		cfg.VoltronURL,
+		client.WithKeepAliveSettings(cfg.KeepAliveEnable, cfg.KeepAliveInterval),
 		client.WithProxyTargets(tgts),
 		client.WithTunnelCreds(pemCert, pemKey, ca),
 	)

@@ -33,6 +33,8 @@ GUARDIAN_LOGLEVEL | Environment | DEBUG | no
 GUARDIAN_CERT_PATH | Environment | /certs | no
 GUARDIAN_VOLTRON_URL | Environment | none | yes
 GUARDIAN_PROXY_TARGETS | Environment | `^/api:https://kubernetes.default`<br>`^/tigera-elasticsearch:http://localhost:8002` | yes
+GUARDIAN_KEEP_ALIVE_ENABLE | Environment | true | no
+GUARDIAN_KEEP_ALIVE_INTERVAL | Environment | 100 ms | no
 
 ### Build and deploy
 
@@ -70,6 +72,8 @@ VOLTRON_TEMPLATE_PATH | Environment | /tmp/guardian.yaml
 VOLTRON_PUBLIC_IP | Environment | 127.0.0.1:32453
 VOLTRON_K8S_CONFIG_PATH | Environment | <empty string>
 VOLTRON_AUTHN_ON | Environment | true
+VOLTRON_KEEP_ALIVE_ENABLE | Environment | true | no
+VOLTRON_KEEP_ALIVE_INTERVAL | Environment | 100 ms | no
 
 ### Build and deploy
 

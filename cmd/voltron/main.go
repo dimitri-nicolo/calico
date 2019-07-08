@@ -22,16 +22,18 @@ const (
 
 // Config is a configuration used for Voltron
 type config struct {
-	Port          int `default:"5555"`
-	Host          string
-	TunnelPort    int    `default:"5566" split_words:"true"`
-	TunnelHost    string `split_words:"true"`
-	LogLevel      string `default:"DEBUG"`
-	CertPath      string `default:"/certs" split_words:"true"`
-	TemplatePath  string `default:"/tmp/guardian.yaml.tmpl" split_words:"true"`
-	PublicIP      string `default:"127.0.0.1:32453" split_words:"true"`
-	AuthnOn       bool   `default:"true" split_words:"true"`
-	K8sConfigPath string `split_words:"true"`
+	Port              int `default:"5555"`
+	Host              string
+	TunnelPort        int    `default:"5566" split_words:"true"`
+	TunnelHost        string `split_words:"true"`
+	LogLevel          string `default:"DEBUG"`
+	CertPath          string `default:"/certs" split_words:"true"`
+	TemplatePath      string `default:"/tmp/guardian.yaml.tmpl" split_words:"true"`
+	PublicIP          string `default:"127.0.0.1:32453" split_words:"true"`
+	AuthnOn           bool   `default:"true" split_words:"true"`
+	K8sConfigPath     string `split_words:"true"`
+	KeepAliveEnable   bool   `default:"true" split_words:"true"`
+	KeepAliveInterval int    `default:"100" split_words:"true"`
 }
 
 func main() {
@@ -55,6 +57,7 @@ func main() {
 
 	srv, err := server.New(
 		server.WithDefaultAddr(addr),
+		server.WithKeepAliveSettings(cfg.KeepAliveEnable, cfg.KeepAliveInterval),
 		server.WithCredsFiles(cert, key),
 		server.WithTemplate(cfg.TemplatePath),
 		server.WithPublicAddr(cfg.PublicIP),

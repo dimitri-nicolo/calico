@@ -4,6 +4,7 @@ package client
 
 import (
 	"crypto/x509"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -40,6 +41,15 @@ func WithTunnelCreds(certPEM []byte, keyPEM []byte, ca *x509.CertPool) Option {
 		c.tunnelCertPEM = certPEM
 		c.tunnelKeyPEM = keyPEM
 		c.tunnelRootCAs = ca
+		return nil
+	}
+}
+
+// WithKeepAliveSettings sets the Keep Alive settings for the tunnel.
+func WithKeepAliveSettings(enable bool, intervalMs int) Option {
+	return func(c *Client) error {
+		c.tunnelEnableKeepAlive = enable
+		c.tunnelKeepAliveInterval = time.Duration(intervalMs) * time.Millisecond
 		return nil
 	}
 }

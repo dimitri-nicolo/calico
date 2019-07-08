@@ -58,6 +58,9 @@ type Server struct {
 	tunnelCert *x509.Certificate
 	tunnelKey  crypto.Signer
 
+	tunnelEnableKeepAlive   bool
+	tunnelKeepAliveInterval time.Duration
+
 	template      string
 	publicAddress string
 
@@ -77,6 +80,8 @@ func New(opts ...Option) (*Server, error) {
 		clusters: &clusters{
 			clusters: make(map[string]*cluster),
 		},
+		tunnelEnableKeepAlive:   true,
+		tunnelKeepAliveInterval: 100 * time.Millisecond,
 	}
 
 	srv.toggles = &Toggles{}
@@ -125,7 +130,9 @@ func New(opts ...Option) (*Server, error) {
 	if err != nil {
 		return nil, errors.WithMessage(err, "tunnel server")
 	}
-	go srv.acceptTunnels()
+	go srv.acceptTunnels(
+		tunnel.WithKeepAliveSettings(srv.tunnelEnableKeepAlive, srv.tunnelKeepAliveInterval),
+	)
 	srv.clusters.renderer, err = NewRenderer(srv.template, srv.publicAddress, srv.tunnelCert)
 	if err != nil {
 		return nil, errors.WithMessage(err, "Could not create a template to render manifests")
@@ -183,11 +190,11 @@ func (s *Server) ServeTunnelsTLS(lis net.Listener) error {
 	return nil
 }
 
-func (s *Server) acceptTunnels() {
+func (s *Server) acceptTunnels(opts ...tunnel.Option) {
 	defer log.Debugf("acceptTunnels exited")
 
 	for {
-		t, err := s.tunSrv.AcceptTunnel()
+		t, err := s.tunSrv.AcceptTunnel(opts...)
 		if err != nil {
 			select {
 			case <-s.ctx.Done():
