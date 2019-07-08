@@ -320,7 +320,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 			Eventually(felixes[0].GetFelixPID, "5s", "100ms").ShouldNot(Equal(felixPID))
 		})
 
-		PIt("should have no workload to workload connectivity until we restore the host IP", func() {
+		It("should have no workload to workload connectivity until we restore the host IP", func() {
 			By("Having no connectivity initially")
 			cc.ExpectNone(w[0], w[1])
 			cc.ExpectNone(w[1], w[0])
