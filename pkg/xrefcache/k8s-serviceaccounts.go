@@ -56,6 +56,11 @@ type versionedK8sServiceAccount struct {
 	v1 *model.Profile
 }
 
+// GetPrimary implements the VersionedNetworkSetResource interface.
+func (v *versionedK8sServiceAccount) GetPrimary() resources.Resource {
+	return v.ServiceAccount
+}
+
 // GetCalicoV3 implements the VersionedServiceAccountResource interface.
 func (v *versionedK8sServiceAccount) GetCalicoV3() resources.Resource {
 	return v.v3

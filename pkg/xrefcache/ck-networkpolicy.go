@@ -15,6 +15,8 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/updateprocessors"
 
+	pcv3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
+
 	"github.com/tigera/compliance/pkg/internet"
 	"github.com/tigera/compliance/pkg/resources"
 	"github.com/tigera/compliance/pkg/syncer"
@@ -77,6 +79,11 @@ type versionedCalicoNetworkPolicy struct {
 	v1 *model.Policy
 }
 
+// GetPrimary implements the VersionedNetworkSetResource interface.
+func (v *versionedCalicoNetworkPolicy) GetPrimary() resources.Resource {
+	return v.NetworkPolicy
+}
+
 // GetCalicoV3 implements the VersionedPolicyResource interface.
 func (v *versionedCalicoNetworkPolicy) GetCalicoV3() resources.Resource {
 	return v.NetworkPolicy
@@ -119,6 +126,11 @@ func (v *versionedCalicoNetworkPolicy) IsNamespaced() bool {
 type versionedCalicoGlobalNetworkPolicy struct {
 	*apiv3.GlobalNetworkPolicy
 	v1 *model.Policy
+}
+
+// GetPrimary implements the VersionedNetworkSetResource interface.
+func (v *versionedCalicoGlobalNetworkPolicy) GetPrimary() resources.Resource {
+	return v.GlobalNetworkPolicy
 }
 
 // GetCalicoV3 implements the VersionedPolicyResource interface.
@@ -164,6 +176,11 @@ type versionedK8sNetworkPolicy struct {
 	*networkingv1.NetworkPolicy
 	v3 *apiv3.NetworkPolicy
 	v1 *model.Policy
+}
+
+// GetPrimary implements the VersionedNetworkSetResource interface.
+func (v *versionedK8sNetworkPolicy) GetPrimary() resources.Resource {
+	return v.NetworkPolicy
 }
 
 // GetCalicoV3 implements the VersionedPolicyResource interface.
@@ -305,6 +322,22 @@ func (c *networkPolicyHandler) recalculate(id apiv3.ResourceID, entry CacheEntry
 
 // convertToVersioned implements the resourceHandler interface.
 func (c *networkPolicyHandler) convertToVersioned(res resources.Resource) (VersionedResource, error) {
+	// Accept AAPIS versions of the Calico resources, but convert them to the libcalico-go versions.
+	switch tr := res.(type) {
+	case *pcv3.NetworkPolicy:
+		res = &apiv3.NetworkPolicy{
+			TypeMeta:   tr.TypeMeta,
+			ObjectMeta: tr.ObjectMeta,
+			Spec:       tr.Spec,
+		}
+	case *pcv3.GlobalNetworkPolicy:
+		res = &apiv3.GlobalNetworkPolicy{
+			TypeMeta:   tr.TypeMeta,
+			ObjectMeta: tr.ObjectMeta,
+			Spec:       tr.Spec,
+		}
+	}
+
 	switch in := res.(type) {
 	case *apiv3.NetworkPolicy:
 		v1, err := updateprocessors.ConvertNetworkPolicyV3ToV1Value(in)

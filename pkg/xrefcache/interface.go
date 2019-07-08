@@ -48,6 +48,10 @@ type XrefCache interface {
 	// IDs cached for a particular resource kind.
 	GetCachedResourceIDs(kind metav1.TypeMeta) []apiv3.ResourceID
 
+	// EachCacheEntry is a helper method which iterates through all cached entries of a specific kind and invokes the
+	// supplied callback for each entry.
+	EachCacheEntry(kind metav1.TypeMeta, cb func(CacheEntry) error) error
+
 	// GetOrderedTiersAndPolicies returns the ordered set of all tiers with all of their policies.
 	GetOrderedTiersAndPolicies() []*TierWithOrderedPolicies
 }
@@ -72,6 +76,7 @@ type CacheEntry interface {
 // (converting the original resource into the v3 Calico model and then the v1 Calico model).
 type VersionedResource interface {
 	resources.Resource
+	GetPrimary() resources.Resource
 	GetCalicoV3() resources.Resource
 	GetCalicoV1() interface{}
 }

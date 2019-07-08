@@ -58,6 +58,11 @@ type versionedK8sServiceEndpoints struct {
 	*corev1.Endpoints
 }
 
+// GetPrimary implements the VersionedNetworkSetResource interface.
+func (v *versionedK8sServiceEndpoints) GetPrimary() resources.Resource {
+	return v.Endpoints
+}
+
 func (v *versionedK8sServiceEndpoints) GetCalicoV3() resources.Resource {
 	return nil
 }

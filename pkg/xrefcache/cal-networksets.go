@@ -10,6 +10,8 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/updateprocessors"
 
+	pcv3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
+
 	"github.com/tigera/compliance/pkg/internet"
 	"github.com/tigera/compliance/pkg/resources"
 	"github.com/tigera/compliance/pkg/syncer"
@@ -60,6 +62,11 @@ func (c *CacheEntryNetworkSet) setVersionedResource(r VersionedResource) {
 type versionedCalicoGlobalNetworkSet struct {
 	*apiv3.GlobalNetworkSet
 	v1 *model.NetworkSet
+}
+
+// GetPrimary implements the VersionedNetworkSetResource interface.
+func (v *versionedCalicoGlobalNetworkSet) GetPrimary() resources.Resource {
+	return v.GlobalNetworkSet
 }
 
 // GetCalicoV3 implements the VersionedNetworkSetResource interface.
@@ -145,6 +152,16 @@ func (c *networkSetHandler) recalculate(id apiv3.ResourceID, entry CacheEntry) s
 
 // convertToVersioned implements the resourceHandler interface.
 func (c *networkSetHandler) convertToVersioned(res resources.Resource) (VersionedResource, error) {
+	// Accept AAPIS versions of the Calico resources, but convert them to the libcalico-go versions.
+	switch tr := res.(type) {
+	case *pcv3.GlobalNetworkSet:
+		res = &apiv3.GlobalNetworkSet{
+			TypeMeta:   tr.TypeMeta,
+			ObjectMeta: tr.ObjectMeta,
+			Spec:       tr.Spec,
+		}
+	}
+
 	in := res.(*apiv3.GlobalNetworkSet)
 
 	v1, err := updateprocessors.ConvertGlobalNetworkSetV3ToV1(&model.KVPair{
