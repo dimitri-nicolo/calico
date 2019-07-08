@@ -23,6 +23,7 @@ LABEL maintainer "Shaun Crampton <shaun@tigera.io>"
 
 # Set up a buster repo so that we can pull in backports of some packages.  Default to
 # the stable repo for other packages.  We need iptables 1.8.x for nftables compatibility.
+# We want Strongswan 5.6.x or above for various re-keying window fixes.
 RUN echo 'APT::Default-Release "stable";' > /etc/apt/apt.conf.d/99defaultrelease
 RUN echo 'deb     http://ftp.debian.org/debian/    buster main contrib non-free' > /etc/apt/sources.list.d/buster.list
 RUN apt-get update && apt-get install -y -t buster \
