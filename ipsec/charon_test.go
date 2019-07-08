@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018 Tigera, Inc. All rights reserved.
 
 package ipsec_test
 
@@ -214,7 +214,7 @@ var _ = Describe("Charon", func() {
 									RekeyTime:     "10s",
 									Mode:          "tunnel",
 									InstallPolicy: "no",
-									//HWOffload:     "auto",
+									HWOffload:     "auto",
 								},
 							},
 							Mobike: "no",
