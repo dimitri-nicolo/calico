@@ -17,5 +17,5 @@ COPY cfg cfg
 # COPY --from=0 /opt/kube-bench /bin/kube-bench
 
 ADD bin/benchmarker-amd64 /bin/benchmarker
-
+ENV PATH=/bin:$PATH
 ENTRYPOINT ["benchmarker"]

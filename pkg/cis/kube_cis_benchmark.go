@@ -34,9 +34,17 @@ func (b *Benchmarker) ExecuteBenchmarks(ctx context.Context, ct benchmark.Benchm
 
 // executeKubeBenchmark executes kube-bench.
 func (b *Benchmarker) executeKubeBenchmark(ctx context.Context, nodename string) (*benchmark.Benchmarks, error) {
+	// Determine Openshift args if any.
+	args, err := determineOpenshiftArgs(nodename)
+	if err != nil {
+		return nil, err
+	}
+	args = append(args, "--json")
+	log.WithField("cmd", args).Debug("executing benchmarker")
+
 	// Execute the benchmarker
 	ts := time.Now()
-	cmd := exec.Command("kube-bench", "--json")
+	cmd := exec.Command("kube-bench", args...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		log.WithError(err).Error("Failed to execute kubernetes benchmarker")
