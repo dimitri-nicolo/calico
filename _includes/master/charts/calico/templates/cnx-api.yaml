@@ -32,10 +32,7 @@ metadata:
   name: cnx-apiserver-certs
   namespace: kube-system
 data:
-{{- if or (or .Values.apiserver.tls.crt .Values.apiserver.tls.key) .Values.apiserver.tls.cabundle -}}
-{{- $_ := required "Must specify all or none of apiserver crt, key, and cabundle" .Values.apiserver.tls.crt -}}
-{{- $_ := required "Must specify all or none of apiserver crt, key, and cabundle" .Values.apiserver.tls.key -}}
-{{- $_ := required "Must specify all or none of apiserver crt, key, and cabundle" .Values.apiserver.tls.cabundle }}
+{{- if include "calico.apiserver.tls" . }}
   apiserver.crt: {{ template "calico.maybeBase64Encode" .Values.apiserver.tls.crt }}
   apiserver.key: {{ template "calico.maybeBase64Encode" .Values.apiserver.tls.key }}
 {{- else }}
@@ -56,10 +53,7 @@ spec:
     name: cnx-api
     namespace: kube-system
   version: v3
-{{- if or (or .Values.apiserver.tls.crt .Values.apiserver.tls.key) .Values.apiserver.tls.cabundle -}}
-{{- $_ := required "Must specify all or none of apiserver crt, key, and cabundle" .Values.apiserver.tls.crt -}}
-{{- $_ := required "Must specify all or none of apiserver crt, key, and cabundle" .Values.apiserver.tls.key -}}
-{{- $_ := required "Must specify all or none of apiserver crt, key, and cabundle" .Values.apiserver.tls.cabundle }}
+{{- if include "calico.apiserver.tls" . }}
   caBundle: {{ template "calico.maybeBase64Encode" .Values.apiserver.tls.cabundle }}
 {{- else }}
   caBundle: {{ $apicert.Cert | b64enc }}

@@ -85,3 +85,12 @@ true
 {{- end -}}
 {{- end -}}
 
+
+{{- define "calico.apiserver.tls" -}}
+{{- if or (or .Values.apiserver.tls.crt .Values.apiserver.tls.key) .Values.apiserver.tls.cabundle -}}
+{{- $_ := required "Must specify all or none of apiserver crt, key, and cabundle" .Values.apiserver.tls.crt -}}
+{{- $_ := required "Must specify all or none of apiserver crt, key, and cabundle" .Values.apiserver.tls.key -}}
+{{- $_ := required "Must specify all or none of apiserver crt, key, and cabundle" .Values.apiserver.tls.cabundle -}}
+true
+{{- end -}}
+{{- end -}}
