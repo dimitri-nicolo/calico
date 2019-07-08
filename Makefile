@@ -266,7 +266,7 @@ st: export TEST_CMD=$(CMD)
 else
 st: export TEST_CMD=$(DOCKER_GO_BUILD) sh -c '$(CMD)'
 endif
-st: $(COMPONENTS)
+st: $(MANIFESTS) $(COMPONENTS)
 	sh test/st/run.sh
 
 ##########################################################################################
