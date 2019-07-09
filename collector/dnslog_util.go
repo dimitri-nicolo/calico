@@ -18,13 +18,13 @@ func NewDNSMetaSpecFromUpdate(update DNSUpdate, kind DNSAggregationKind) (DNSMet
 
 	clientEM, err := getFlowLogEndpointMetadata(update.ClientEP, ipTo16Byte(update.ClientIP))
 	if err != nil {
-		return DNSMeta{}, DNSSpec{}, fmt.Errorf("Could not extract metadata for client %v", update.ClientEP)
+		return DNSMeta{}, DNSSpec{}, fmt.Errorf("Could not extract metadata for client %v: %v", update.ClientEP, err)
 	}
 	clientLabels := getFlowLogEndpointLabels(update.ClientEP)
 
 	serverEM, err := getFlowLogEndpointMetadata(update.ServerEP, ipTo16Byte(update.ServerIP))
 	if err != nil {
-		return DNSMeta{}, DNSSpec{}, fmt.Errorf("Could not extract metadata for server %v", update.ServerEP)
+		return DNSMeta{}, DNSSpec{}, fmt.Errorf("Could not extract metadata for server %v: %v", update.ServerEP, err)
 	}
 	serverLabels := getFlowLogEndpointLabels(update.ServerEP)
 
