@@ -1253,16 +1253,16 @@ deleteCNXAPIManifest() {
 # applyCNXManifest()
 #
 applyCNXManifest() {
-  # Edit the cnx.yaml manifest to configure EE Manager with multicluster image
-  cat > sedcmd.txt <<EOF
-s?image: gcr.io/unique-caldron-775/cnx/tigera/cnx-manager:master?image: gcr.io/unique-caldron-775/cnx/tigera/cnx-manager:cluster-selection\n        env:\n          - name: CNX_VOLTRON_API_URL\n            valueFrom:\n              configMapKeyRef:\n                name: tigera-cnx-manager-config\n                key: tigera.cnx-manager.voltron-api-url?g
-s?tigera.cnx-manager.cluster-name: \"cluster\"?tigera.cnx-manager.cluster-name: \"cluster\"\n  tigera.cnx-manager.voltron-api-url: \"https://127.0.0.1:30003\"?g
-EOF
-  runAsRoot sed -i -f sedcmd.txt "cnx.yaml"
-  run rm -f sedcmd.txt
-
   echo -n "Applying \"cnx.yaml\" manifest: "
   run kubectl apply -f cnx.yaml
+  echo -n "Applying \"cnx.yaml\" manifest: "
+  run kubectl patch deployment -n calico-monitoring cnx-manager --patch \
+    '{"spec": {"template": {"spec": {"containers": [{"name": "cnx-manager", "image":"gcr.io/unique-caldron-775/cnx/tigera/cnx-manager:cluster-selection"}]}}}}'
+  run kubectl patch deployment -n calico-monitoring cnx-manager --patch \
+    '{"spec": {"template": {"spec": {"containers": [{"name": "cnx-manager-proxy", "env": [{"name": "CNX_KUBE_APISERVER", "value": "cnx-voltron-server.calico-monitoring.svc.cluster.local:9443"}]}]}}}}'
+  run kubectl patch deployment -n calico-monitoring cnx-manager --patch \
+    '{"spec": {"template": {"spec": {"containers": [{"name": "cnx-manager", "env": [{"name": "CNX_VOLTRON_API_URL", "value": "https://127.0.0.1:30003"}]}]}}}}'
+
   blockUntilPodIsReady "k8s-app=cnx-manager" 180 "cnx-manager"      # Block until cnx-manager pod is running & ready
   blockUntilPodIsReady "k8s-app=compliance-controller" 180 "compliance-controller"
   blockUntilPodIsReady "k8s-app=compliance-server" 180 "compliance-server"

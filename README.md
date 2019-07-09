@@ -135,8 +135,8 @@ AUTH_TYPE=OIDC OIDC_CLIENT_ID=114913197347-dvlgarrcfbp5dsjb2c3dkl607434eg42.apps
 
 ```
 kubectl exec -it <voltron_pod> -ncalico-monitoring -- sh /scripts/register.bash
-kubectl cp calico-monitoring/<voltorn_pod>:/guardian1.yaml guardian1.yaml
-kubectl cp calico-monitoring/<voltorn_pod>:/guardian2.yaml guardian2.yaml
+kubectl cp calico-monitoring/<voltorn_pod>:guardian1.yaml guardian1.yaml
+kubectl cp calico-monitoring/<voltorn_pod>:guardian2.yaml guardian2.yaml
 ```
 
 # Project structure
