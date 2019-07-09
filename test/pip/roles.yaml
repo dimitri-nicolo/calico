@@ -140,5 +140,74 @@ rules:
   verbs: ["get","watch","list","delete"]
 
 
+---
 
+
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: global-policy-crud
+rules:
+# To access Calico policy in a tier, the user requires get access to that tier. This provides get
+# access to all tiers.
+- apiGroups: ["projectcalico.org"]
+  resources: ["tiers"]
+  verbs: ["get"]
+# This allows read  GlobalNetworkPolicy resources in all tiers.
+- apiGroups: ["projectcalico.org"]
+  resources: ["tier.globalnetworkpolicies"]
+  verbs: ["*"]
+
+
+---
+
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: global-policy-creator
+rules:
+# To access Calico policy in a tier, the user requires get access to that tier. This provides get
+# access to all tiers.
+- apiGroups: ["projectcalico.org"]
+  resources: ["tiers"]
+  verbs: ["get"]
+# This allows read  GlobalNetworkPolicy resources in all tiers.
+- apiGroups: ["projectcalico.org"]
+  resources: ["tier.globalnetworkpolicies"]
+  verbs: ["get","watch","list","create"]
+
+
+---
+
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: global-policy-updater
+rules:
+# To access Calico policy in a tier, the user requires get access to that tier. This provides get
+# access to all tiers.
+- apiGroups: ["projectcalico.org"]
+  resources: ["tiers"]
+  verbs: ["get"]
+# This allows read  GlobalNetworkPolicy resources in all tiers.
+- apiGroups: ["projectcalico.org"]
+  resources: ["tier.globalnetworkpolicies"]
+  verbs: ["get","watch","list","update"]
+
+---
+
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: global-policy-deleter
+rules:
+# To access Calico policy in a tier, the user requires get access to that tier. This provides get
+# access to all tiers.
+- apiGroups: ["projectcalico.org"]
+  resources: ["tiers"]
+  verbs: ["get"]
+# This allows read  GlobalNetworkPolicy resources in all tiers.
+- apiGroups: ["projectcalico.org"]
+  resources: ["tier.globalnetworkpolicies"]
+  verbs: ["get","watch","list","delete"]
 

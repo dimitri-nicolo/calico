@@ -13,7 +13,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	v1 "k8s.io/api/networking/v1"
 
 	"github.com/tigera/es-proxy/pkg/pip"
 	"github.com/tigera/es-proxy/pkg/pip/flow"
@@ -43,7 +43,7 @@ var _ = Describe("Test pip response hook modify response", func() {
 		// need to remove the preview action tags from the input test body json
 		// and insert the preview action tags into the expected test body json
 		Entry("Evolve First", body(clearPreviewActionTags(bucketsA)), body(insertPreviewActionTags(bucketsB))),
-		Entry("Evolve Second", body(clearPreviewActionTags(bucketsB)), body(insertPreviewActionTags(bucketsC))),
+		Entry("Evovle Second", body(clearPreviewActionTags(bucketsB)), body(insertPreviewActionTags(bucketsC))),
 		Entry("No evolution", body(clearPreviewActionTags(bucketsC)), body(insertPreviewActionTags(bucketsC))),
 	)
 
@@ -78,16 +78,11 @@ func newMockPip() pip.PIP {
 type mockPip struct {
 }
 
-
-func (p mockPip) Load(ctx context.Context, r []pip.ResourceChange) error {
-	return nil
-}
-
 // CalculateFlowImpact satisfies the PIP interface
 // this test mock version "Evolves" pokemon labels embeded in the
 // test json.
 // It will also add preview actions fields to select items
-func (p mockPip) CalculateFlowImpact(ctx context.Context, flows []flow.Flow) ([]flow.Flow, error) {
+func (p mockPip) CalculateFlowImpact(ctx context.Context, changes []pip.NetworkPolicyChange, flows []flow.Flow) ([]flow.Flow, error) {
 	for i, f := range flows {
 		flows[i].Source.Namespace = evolve(f.Source.Namespace)
 		flows[i].Source.Name = evolve(f.Source.Namespace)
@@ -143,10 +138,10 @@ func mockHttpResponse(s string) *http.Response {
 	body := ioutil.NopCloser(b)
 	r.Body = body
 
-	changes := make([]pip.ResourceChange, 1)
-	changes[0] = pip.ResourceChange{
-		Action:  "update",
-		Resource: &v3.NetworkPolicy{},
+	changes := make([]pip.NetworkPolicyChange, 1)
+	changes[0] = pip.NetworkPolicyChange{
+		ChangeAction:  "update",
+		NetworkPolicy: &v1.NetworkPolicy{},
 	}
 
 	//add the context

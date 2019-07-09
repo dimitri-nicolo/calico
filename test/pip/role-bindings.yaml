@@ -31,8 +31,8 @@ roleRef:
   name: default-tier-policy-cruder
   apiGroup: rbac.authorization.k8s.io
 
----
 
+---
 
 # basicpolicyreadcreate read and create access to default tier and default namespace.
 kind: RoleBinding
@@ -115,6 +115,60 @@ roleRef:
 
 ---
 
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: basicpolcrud-global-policy-create
+subjects:
+- kind: User
+  name: basicpolicyreadcreate
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: global-policy-creator
+  apiGroup: rbac.authorization.k8s.io
 
 
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: basicpolcrud-global-policy-crud
+subjects:
+- kind: User
+  name: basicpolicycrud
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: global-policy-crud
+  apiGroup: rbac.authorization.k8s.io
 
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: basicpolcrud-global-policy-update
+subjects:
+- kind: User
+  name: basicpolicyreadupdate
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: global-policy-updater
+  apiGroup: rbac.authorization.k8s.io
+
+
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: basicpolcrud-global-policy-delete
+subjects:
+- kind: User
+  name: basicpolicyreaddelete
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: global-policy-deleter
+  apiGroup: rbac.authorization.k8s.io

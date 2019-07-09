@@ -37,7 +37,7 @@ var _ = Describe("PolicyimpactFV Elasticsearch", func() {
 	})
 
 	// We only verify access from the clients point of view.
-	DescribeTable("permissions for policy impact requests should be validated ",
+	DescribeTable("Users can only preview policy changes they can perform ",
 		func(userAuth authInjector, postRequestBody string, expectedStatusCode int) {
 
 			//build the request
@@ -64,33 +64,81 @@ var _ = Describe("PolicyimpactFV Elasticsearch", func() {
 		},
 		Entry("Malformed request errors correctly", authFullCRUDDefault, badBody, http.StatusBadRequest),
 
-		Entry("Full CRUD user can preview create in default", authFullCRUDDefault, bodyCreateDefault, http.StatusOK),
-		Entry("Full CRUD user can preview update in default", authFullCRUDDefault, bodyUpdateDefault, http.StatusOK),
-		Entry("Full CRUD user can preview delete in default", authFullCRUDDefault, bodyDeleteDefault, http.StatusOK),
+		Entry("Full CRUD user can preview k8s policy create in default", authFullCRUDDefault, bodyCreateDefaultK8s, http.StatusOK),
+		Entry("Full CRUD user can preview k8s policy update in default", authFullCRUDDefault, bodyUpdateDefaultK8s, http.StatusOK),
+		Entry("Full CRUD user can preview k8s policy delete in default", authFullCRUDDefault, bodyDeleteDefaultK8s, http.StatusOK),
 
-		Entry("Read Only user cannot preview create in default", authReadOnlyDefault, bodyCreateDefault, http.StatusUnauthorized),
-		Entry("Read Only user cannot preview update in default", authReadOnlyDefault, bodyUpdateDefault, http.StatusUnauthorized),
-		Entry("Read Only user cannot preview delete in default", authReadOnlyDefault, bodyDeleteDefault, http.StatusUnauthorized),
+		Entry("Read Only user cannot preview k8s policy create in default", authReadOnlyDefault, bodyCreateDefaultK8s, http.StatusUnauthorized),
+		Entry("Read Only user cannot preview k8s policy update in default", authReadOnlyDefault, bodyUpdateDefaultK8s, http.StatusUnauthorized),
+		Entry("Read Only user cannot preview k8s policy delete in default", authReadOnlyDefault, bodyDeleteDefaultK8s, http.StatusUnauthorized),
 
-		Entry("Read Create user can preview create in default", authReadCreateDefault, bodyCreateDefault, http.StatusOK),
-		Entry("Read Create user cannot preview update in default", authReadCreateDefault, bodyUpdateDefault, http.StatusUnauthorized),
-		Entry("Read Create user cannot preview delete in default", authReadCreateDefault, bodyDeleteDefault, http.StatusUnauthorized),
+		Entry("Read Create user can preview k8s policy create in default", authReadCreateDefault, bodyCreateDefaultK8s, http.StatusOK),
+		Entry("Read Create user cannot preview k8s policy update in default", authReadCreateDefault, bodyUpdateDefaultK8s, http.StatusUnauthorized),
+		Entry("Read Create user cannot preview k8s policy delete in default", authReadCreateDefault, bodyDeleteDefaultK8s, http.StatusUnauthorized),
 
-		Entry("Read Update user cannot preview create in default", authReadUpdateDefault, bodyCreateDefault, http.StatusUnauthorized),
-		Entry("Read Update user can preview update in default", authReadUpdateDefault, bodyUpdateDefault, http.StatusOK),
-		Entry("Read Update user cannot preview delete in default", authReadUpdateDefault, bodyDeleteDefault, http.StatusUnauthorized),
+		Entry("Read Update user cannot preview k8s policy create in default", authReadUpdateDefault, bodyCreateDefaultK8s, http.StatusUnauthorized),
+		Entry("Read Update user can preview k8s policy update in default", authReadUpdateDefault, bodyUpdateDefaultK8s, http.StatusOK),
+		Entry("Read Update user cannot preview k8s policy delete in default", authReadUpdateDefault, bodyDeleteDefaultK8s, http.StatusUnauthorized),
 
-		Entry("Read Delete user cannot preview create in default", authReadDeleteDefault, bodyCreateDefault, http.StatusUnauthorized),
-		Entry("Read Delete user cannot preview update in default", authReadDeleteDefault, bodyUpdateDefault, http.StatusUnauthorized),
-		Entry("Read Delete user can preview delete in default", authReadDeleteDefault, bodyDeleteDefault, http.StatusOK),
+		Entry("Read Delete user cannot preview k8s policy create in default", authReadDeleteDefault, bodyCreateDefaultK8s, http.StatusUnauthorized),
+		Entry("Read Delete user cannot preview k8s policy update in default", authReadDeleteDefault, bodyUpdateDefaultK8s, http.StatusUnauthorized),
+		Entry("Read Delete user can preview k8s policy delete in default", authReadDeleteDefault, bodyDeleteDefaultK8s, http.StatusOK),
 
-		Entry("Full CRUD user cannot preview create in alt-ns", authFullCRUDDefault, bodyCreateAltNS, http.StatusUnauthorized),
-		Entry("Full CRUD user cannot preview update in alt-ns", authFullCRUDDefault, bodyUpdateAltNS, http.StatusUnauthorized),
-		Entry("Full CRUD user cannot preview delete in alt-ns", authFullCRUDDefault, bodyDeleteAltNS, http.StatusUnauthorized),
+		Entry("Full CRUD user cannot preview k8s policy create in alt-ns", authFullCRUDDefault, bodyCreateAltNSK8s, http.StatusUnauthorized),
+		Entry("Full CRUD user cannot preview k8s policy update in alt-ns", authFullCRUDDefault, bodyUpdateAltNSK8s, http.StatusUnauthorized),
+		Entry("Full CRUD user cannot preview k8s policy delete in alt-ns", authFullCRUDDefault, bodyDeleteAltNSK8s, http.StatusUnauthorized),
 
-		Entry("Read Create user cannot preview create in alt-ns", authReadCreateDefault, bodyCreateAltNS, http.StatusUnauthorized),
-		Entry("Read Update user cannot preview update in alt-ns", authReadUpdateDefault, bodyUpdateAltNS, http.StatusUnauthorized),
-		Entry("Read Delete user cannot preview delete in alt-ns", authReadDeleteDefault, bodyDeleteAltNS, http.StatusUnauthorized),
+		Entry("Read Create user cannot preview k8s policy create in alt-ns", authReadCreateDefault, bodyCreateAltNSK8s, http.StatusUnauthorized),
+		Entry("Read Update user cannot preview k8s policy update in alt-ns", authReadUpdateDefault, bodyUpdateAltNSK8s, http.StatusUnauthorized),
+		Entry("Read Delete user cannot preview k8s policy delete in alt-ns", authReadDeleteDefault, bodyDeleteAltNSK8s, http.StatusUnauthorized),
+
+		Entry("Full CRUD user can preview Calico policy create in default", authFullCRUDDefault, bodyCreateDefaultCalico, http.StatusOK),
+		Entry("Full CRUD user can preview Calico policy update in default", authFullCRUDDefault, bodyUpdateDefaultCalico, http.StatusOK),
+		Entry("Full CRUD user can preview Calico policy delete in default", authFullCRUDDefault, bodyDeleteDefaultCalico, http.StatusOK),
+
+		Entry("Read Only user cannot preview Calico policy create in default", authReadOnlyDefault, bodyCreateDefaultCalico, http.StatusUnauthorized),
+		Entry("Read Only user cannot preview Calico policy update in default", authReadOnlyDefault, bodyUpdateDefaultCalico, http.StatusUnauthorized),
+		Entry("Read Only user cannot preview Calico policy delete in default", authReadOnlyDefault, bodyDeleteDefaultCalico, http.StatusUnauthorized),
+
+		Entry("Read Create user can preview Calico policy create in default", authReadCreateDefault, bodyCreateDefaultCalico, http.StatusOK),
+		Entry("Read Create user cannot preview Calico policy update in default", authReadCreateDefault, bodyUpdateDefaultCalico, http.StatusUnauthorized),
+		Entry("Read Create user cannot preview Calico policy delete in default", authReadCreateDefault, bodyDeleteDefaultCalico, http.StatusUnauthorized),
+
+		Entry("Read Update user cannot preview Calico policy create in default", authReadUpdateDefault, bodyCreateDefaultCalico, http.StatusUnauthorized),
+		Entry("Read Update user can preview Calico policy update in default", authReadUpdateDefault, bodyUpdateDefaultCalico, http.StatusOK),
+		Entry("Read Update user cannot preview Calico policy delete in default", authReadUpdateDefault, bodyDeleteDefaultCalico, http.StatusUnauthorized),
+
+		Entry("Read Delete user cannot preview Calico policy create in default", authReadDeleteDefault, bodyCreateDefaultCalico, http.StatusUnauthorized),
+		Entry("Read Delete user cannot preview Calico policy update in default", authReadDeleteDefault, bodyUpdateDefaultCalico, http.StatusUnauthorized),
+		Entry("Read Delete user can preview Calico policy delete in default", authReadDeleteDefault, bodyDeleteDefaultCalico, http.StatusOK),
+
+		Entry("Full CRUD user cannot preview Calico policy create in alt-ns", authFullCRUDDefault, bodyCreateAltNSCalico, http.StatusUnauthorized),
+		Entry("Full CRUD user cannot preview Calico policy update in alt-ns", authFullCRUDDefault, bodyUpdateAltNSCalico, http.StatusUnauthorized),
+		Entry("Full CRUD user cannot preview Calico policy delete in alt-ns", authFullCRUDDefault, bodyDeleteAltNSCalico, http.StatusUnauthorized),
+
+		Entry("Read Create user cannot preview Calico policy create in alt-ns", authReadCreateDefault, bodyCreateAltNSCalico, http.StatusUnauthorized),
+		Entry("Read Update user cannot preview Calico policy update in alt-ns", authReadUpdateDefault, bodyUpdateAltNSCalico, http.StatusUnauthorized),
+		Entry("Read Delete user cannot preview Calico policy delete in alt-ns", authReadDeleteDefault, bodyDeleteAltNSCalico, http.StatusUnauthorized),
+
+		Entry("Full CRUD user can preview Global policy create in default", authFullCRUDDefault, bodyCreateDefaultGlobal, http.StatusOK),
+		Entry("Full CRUD user can preview Global policy update in default", authFullCRUDDefault, bodyUpdateDefaultGlobal, http.StatusOK),
+		Entry("Full CRUD user can preview Global policy delete in default", authFullCRUDDefault, bodyDeleteDefaultGlobal, http.StatusOK),
+
+		Entry("Read Only user cannot preview Global policy create", authReadOnlyDefault, bodyCreateDefaultGlobal, http.StatusUnauthorized),
+		Entry("Read Only user cannot preview Global policy update", authReadOnlyDefault, bodyUpdateDefaultGlobal, http.StatusUnauthorized),
+		Entry("Read Only user cannot preview Global policy delete", authReadOnlyDefault, bodyDeleteDefaultGlobal, http.StatusUnauthorized),
+
+		Entry("Read Create user can preview Global policy create", authReadCreateDefault, bodyCreateDefaultGlobal, http.StatusOK),
+		Entry("Read Create user cannot preview Global policy update", authReadCreateDefault, bodyUpdateDefaultGlobal, http.StatusUnauthorized),
+		Entry("Read Create user cannot preview Global policy delete", authReadCreateDefault, bodyDeleteDefaultGlobal, http.StatusUnauthorized),
+
+		Entry("Read Update user cannot preview Global policy create", authReadUpdateDefault, bodyCreateDefaultGlobal, http.StatusUnauthorized),
+		Entry("Read Update user can preview Global policy update", authReadUpdateDefault, bodyUpdateDefaultGlobal, http.StatusOK),
+		Entry("Read Update user cannot preview Global policy delete", authReadUpdateDefault, bodyDeleteDefaultGlobal, http.StatusUnauthorized),
+
+		Entry("Read Delete user cannot preview Global policy create", authReadDeleteDefault, bodyCreateDefaultGlobal, http.StatusUnauthorized),
+		Entry("Read Delete user cannot preview Global policy update", authReadDeleteDefault, bodyUpdateDefaultGlobal, http.StatusUnauthorized),
+		Entry("Read Delete user can preview Global policy delete", authReadDeleteDefault, bodyDeleteDefaultGlobal, http.StatusOK),
 	)
 
 })
@@ -98,6 +146,14 @@ var _ = Describe("PolicyimpactFV Elasticsearch", func() {
 func modBody(b string, act string, ns string) string {
 	b = strings.Replace(b, "@@ACTION@@", act, -1)
 	b = strings.Replace(b, "@@NAMESPACE@@", ns, -1)
+	return b
+}
+
+func patchVars(b string) string {
+	b = strings.Replace(b, "@@QUERY@@", query, -1)
+	b = strings.Replace(b, "@@PA_CALICO@@", calicoPolicyActions, -1)
+	b = strings.Replace(b, "@@PA_K8S@@", k8sPolicyActions, -1)
+	b = strings.Replace(b, "@@PA_GLOBAL@@", globalPolicyActions, -1)
 	return b
 }
 
@@ -110,32 +166,95 @@ var (
 )
 
 var (
-	bodyCreateDefault = modBody(body, "create", "default")
-	bodyUpdateDefault = modBody(body, "update", "default")
-	bodyDeleteDefault = modBody(body, "delete", "default")
-	bodyCreateAltNS   = modBody(body, "create", "alt-ns")
-	bodyUpdateAltNS   = modBody(body, "update", "alt-ns")
-	bodyDeleteAltNS   = modBody(body, "delete", "alt-ns")
+	bodyCreateDefaultK8s = modBody(baseBodyK8s, "create", "default")
+	bodyUpdateDefaultK8s = modBody(baseBodyK8s, "update", "default")
+	bodyDeleteDefaultK8s = modBody(baseBodyK8s, "delete", "default")
+	bodyCreateAltNSK8s   = modBody(baseBodyK8s, "create", "alt-ns")
+	bodyUpdateAltNSK8s   = modBody(baseBodyK8s, "update", "alt-ns")
+	bodyDeleteAltNSK8s   = modBody(baseBodyK8s, "delete", "alt-ns")
+
+	bodyCreateDefaultCalico = modBody(baseBodyCalico, "create", "default")
+	bodyUpdateDefaultCalico = modBody(baseBodyCalico, "update", "default")
+	bodyDeleteDefaultCalico = modBody(baseBodyCalico, "delete", "default")
+	bodyCreateAltNSCalico   = modBody(baseBodyCalico, "create", "alt-ns")
+	bodyUpdateAltNSCalico   = modBody(baseBodyCalico, "update", "alt-ns")
+	bodyDeleteAltNSCalico   = modBody(baseBodyCalico, "delete", "alt-ns")
+
+	bodyCreateDefaultGlobal = modBody(baseBodyGlobal, "create", "")
+	bodyUpdateDefaultGlobal = modBody(baseBodyGlobal, "update", "")
+	bodyDeleteDefaultGlobal = modBody(baseBodyGlobal, "delete", "")
+	bodyCreateAltNSGlobal   = modBody(baseBodyGlobal, "create", "")
+	bodyUpdateAltNSGlobal   = modBody(baseBodyGlobal, "update", "")
+	bodyDeleteAltNSGlobal   = modBody(baseBodyGlobal, "delete", "")
+)
+
+var (
+	baseBodyK8s    = patchVars("{@@QUERY@@,@@PA_K8S@@}")
+	baseBodyCalico = patchVars("{@@QUERY@@,@@PA_CALICO@@}")
+	baseBodyGlobal = patchVars("{@@QUERY@@,@@PA_GLOBAL@@}")
 )
 
 var badBody = `{"query":{"bool":{"must":[{"match_all":{}}],"must_not":[],"should":[]}},"from":0,"size":10,"sort":[],"aggs":{},
-"policyActions":[{"policy":{ "spec":{ "order":"xyz" } } ,"action":"create"}] }`
+"policyActions":[{"policy":{ "apiVersion": "projectcalico.org/v3","kind":"NetworkPolicy", "spec":{ "order":"xyz" } } ,"action":"create"}] }`
 
-var body = `{"query":{"bool":{"must":[{"match_all":{}}],"must_not":[],"should":[]}},"from":0,"size":10,"sort":[],"aggs":{},
-"policyActions":[{"policy":{
-			"metadata":{
-				"name":"p-name",
-				"generateName":"p-gen-name",
-				"namespace":"@@NAMESPACE@@",
-				"selfLink":"p-self-link",
-				"resourceVersion":"p-res-ver"
-			},
-			"spec":{
-				"tier":"default",
-				"order":1,
-				"selector":"a|bogus|selector|string"
-			}
-		}
-		,"action":"@@ACTION@@"}]
+var query = `"query":{"bool":{"must":[{"match_all":{}}],"must_not":[],"should":[]}},"from":0,"size":10,"sort":[],"aggs":{}`
 
-}`
+var calicoPolicyActions = `"policyActions":[{"policy":{
+	"apiVersion": "projectcalico.org/v3",
+	"kind":"NetworkPolicy",
+	"metadata":{
+		"name":"p-name",
+		"generateName":"p-gen-name",
+		"namespace":"@@NAMESPACE@@",
+		"selfLink":"p-self-link",
+		"resourceVersion":"p-res-ver",
+		"creationTimestamp": null
+	},
+	"spec":{
+		"tier":"default",
+		"order":1,
+		"selector":"a|bogus|selector|string"
+	}
+}
+,"action":"@@ACTION@@"}]`
+
+var k8sPolicyActions = `"policyActions":[{"policy":{
+	"apiVersion": "networking.k8s.io/v1",
+	"kind": "NetworkPolicy",
+	"metadata": {
+		"name": "a-kubernetes-network-policy",
+		"uid": "7dfbb617-a1ea-11e9-bd43-001c42e3cabd",
+		"namespace": "@@NAMESPACE@@",
+		"resourceVersion": "758945",
+		 "creationTimestamp": null
+	},
+	"spec": {
+		"podSelector": {},
+		"ingress": [
+		{"from": [{"podSelector": {"matchLabels": {"color": "blue"}}}],
+			"ports": [{"port": 111,"protocol": "TCP"}]},
+		{"from": [{"namespaceSelector": {"matchExpressions": [{
+			"key": "name","operator": "In","values": ["es-client-tigera-elasticsearch"]}
+		]}}, {"podSelector": {}}]}],
+		"policyTypes": ["Ingress"]
+	}
+}
+,"action":"@@ACTION@@"}]`
+
+var globalPolicyActions = `"policyActions":[{"policy":{
+	"apiVersion": "projectcalico.org/v3",
+	"kind": "GlobalNetworkPolicy",
+	"metadata": { "creationTimestamp": null,"name": "test.a-global-policy"	},
+	"spec": {
+		"tier": "test",
+		"order": 100,
+		"selector": "all()",
+		"ingress": [{
+			"action": "Allow",
+			"source": {	"namespaceSelector": "name == \"kibana-tigera-elasticsearch\"" },
+			"destination": {}
+		}],
+		"types": ["Ingress"]
+	}
+}
+,"action":"@@ACTION@@"}]`

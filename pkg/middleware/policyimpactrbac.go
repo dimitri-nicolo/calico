@@ -1,11 +1,13 @@
 package middleware
 
 import (
+	"fmt"
 	"net/http"
 
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
-	log "github.com/sirupsen/logrus"
 
+	log "github.com/sirupsen/logrus"
+	"github.com/tigera/compliance/pkg/resources"
 	authzv1 "k8s.io/api/authorization/v1"
 )
 
@@ -29,7 +31,7 @@ func NewStandardPolicyImpactRbacHelperFactory(auth K8sAuthInterface) PolicyImpac
 }
 
 type PolicyImpactRbacHelper interface {
-	CanPreviewPolicyAction(action string, policy v3.NetworkPolicy) (bool, error)
+	CanPreviewPolicyAction(action string, policy resources.Resource) (bool, error)
 }
 
 // policyImpactRbacHelper is used by a single API request to to determine if a user can
@@ -41,9 +43,9 @@ type policyImpactRbacHelper struct {
 
 // CanPreviewPolicyAction returns true if the user can perform the preview action on the requested
 // policy. Regardless of action ability to view the policy is also required
-func (h *policyImpactRbacHelper) CanPreviewPolicyAction(action string, policy v3.NetworkPolicy) (bool, error) {
+func (h *policyImpactRbacHelper) CanPreviewPolicyAction(action string, policy resources.Resource) (bool, error) {
 
-	log.Debugf("Checking policy impact permissions %v %v", action, policy.Name)
+	log.Debugf("Checking policy impact permissions %v %v", action, policy.GetObjectMeta().GetName())
 
 	//to preview anything we must be able to view the policy
 	canViewPolicy, err := h.canPerformPolicyAction("get", policy)
@@ -58,15 +60,45 @@ func (h *policyImpactRbacHelper) CanPreviewPolicyAction(action string, policy v3
 	return h.canPerformPolicyAction(action, policy)
 }
 
-func (h *policyImpactRbacHelper) canPerformPolicyAction(verb string, policy v3.NetworkPolicy) (bool, error) {
-	log.Debugf("Checking policy action permissions %v %v", verb, policy.Name)
+func (h *policyImpactRbacHelper) canPerformPolicyAction(verb string, policy resources.Resource) (bool, error) {
+	log.Debugf("Checking policy action permissions %v %v", verb, policy.GetObjectMeta().GetName())
+
+	group := policy.GetObjectKind().GroupVersionKind().Group
+	kind := policy.GetObjectKind().GroupVersionKind().Kind
+	name := policy.GetObjectMeta().GetName()
+	namespace := policy.GetObjectMeta().GetNamespace()
+
+	var res string
+	if group == "networking.k8s.io" && kind == "NetworkPolicy" {
+		//k8s network policies
+		res = "networkpolicies"
+	} else if group == "projectcalico.org" && kind == "NetworkPolicy" {
+		//calico network policy
+		res = "tier.networkpolicies"
+		np := policy.(*v3.NetworkPolicy)
+		name = fmt.Sprintf("%v.*", np.Spec.Tier)
+	} else if group == "projectcalico.org" && kind == "GlobalNetworkPolicy" {
+		//calico global network policy
+		res = "tier.globalnetworkpolicies"
+		name = ""
+		namespace = ""
+	}
+
+	log.WithFields(log.Fields{
+		"verb":      verb,
+		"group":     group,
+		"kind":      kind,
+		"resource":  res,
+		"name":      name,
+		"namespace": namespace,
+	}).Debug("CAN-I")
 
 	resAtr := &authzv1.ResourceAttributes{
 		Verb:      verb,
-		Group:     "networking.k8s.io",
-		Resource:  "networkpolicies", //TODO: accept other resources and groups
-		Name:      policy.Name,
-		Namespace: policy.Namespace,
+		Group:     group,
+		Resource:  res,
+		Name:      name,
+		Namespace: namespace,
 	}
 	return h.checkAuthorized(*resAtr)
 }

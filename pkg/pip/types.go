@@ -1,9 +1,5 @@
 package pip
 
-import (
-	"github.com/tigera/compliance/pkg/resources"
-)
-
 const (
 	PreviewActionPass    = "pass"
 	PreviewActionAllow   = "allow"
@@ -14,11 +10,6 @@ const (
 	ChangeActionDelete = "delete"
 	ChangeActionUpdate = "update"
 )
-
-type ResourceChange struct {
-	Action   string             `json:"action"`
-	Resource resources.Resource `json:"resource"`
-}
 
 type contextKey int
 
