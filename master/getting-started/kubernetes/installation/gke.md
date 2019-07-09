@@ -33,7 +33,7 @@ This guide covers installing {{site.prodname}} for policy enforcement on Google 
 
 {% include {{page.version}}/pull-secret.md %}
 
-### <a name="install-ee-typha-nofed"></a>Installing {{site.prodname}} without federation
+### <a name="install-cnx"></a><a name="install-ee-typha-nofed"></a>Installing {{site.prodname}} without federation
 
 1. Download the {{site.prodname}} policy-only manifest for the Kubernetes API datastore with GKE CNI plugin support.
 
