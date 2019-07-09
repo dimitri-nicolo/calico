@@ -1,5 +1,5 @@
-def gen_values_master(versions, imageNames, imageRegistry, chart)
-    versionsYml = gen_chart_specific_values_master(versions, imageNames, imageRegistry, chart)
+def gen_values_master(versions, imageNames, imageRegistry, chart, forDocs)
+    versionsYml = gen_chart_specific_values_master(versions, imageNames, imageRegistry, chart, forDocs)
     versionsYml += <<~EOF
     calicoctl:
       image: #{imageRegistry}#{imageNames["calicoctl"]}
@@ -30,7 +30,13 @@ def gen_values_master(versions, imageNames, imageRegistry, chart)
 end
 
 
-def gen_chart_specific_values_master(versions, imageNames, imageRegistry, chart)
+def gen_chart_specific_values_master(versions, imageNames, imageRegistry, chart, forDocs)
+  docsOverrides = Hash.new("")
+  if forDocs
+    docsOverrides["core.apiserver.tls.crt"] = "<replace with base64 encoded certificate>"
+    docsOverrides["core.apiserver.tls.key"] = "<replace with base64 encoded private key>"
+    docsOverrides["core.apiserver.tls.cabundle"] = "<replace with base64 encoded Certificate Authority bundle>"
+  end
   if chart == "tigera-secure-ee"
     versionsYml = <<~EOF
     runElasticsearchOperatorClusterAdmin: false
@@ -516,8 +522,9 @@ def gen_chart_specific_values_master(versions, imageNames, imageRegistry, chart)
       # Authentication information for securing communications between TSEE manager and TSEE apiserver.
       # Leave blank to use self-signed certs.
       tls:
-        crt:
-        key:
+        crt: #{docsOverrides["core.apiserver.tls.crt"]}
+        key: #{docsOverrides["core.apiserver.tls.key"]}
+        cabundle: #{docsOverrides["core.apiserver.tls.cabundle"]}
       runAsPrivileged: false
       env:
         # Optional environment variables for configuring the Calico API Server.

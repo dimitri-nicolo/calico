@@ -77,7 +77,16 @@
 
 {% endif %}
 
-{% if include.init != "openshift" and include.net == "calico" %}
+{% if include.init == "docker" %}
+
+1. Download the {{site.prodname}} etcd manifest and save the file as cnx-api.yaml. That is how we will refer to it in later steps.
+
+    ```bash
+    curl --compressed -o cnx-api.yaml \
+    {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-api-etcd.yaml
+    ```
+
+{% elsif include.init != "openshift" and include.net == "calico" %}
 
 1. Download the manifest that corresponds to your datastore type and save the file
    as cnx-api.yaml. That is how we will refer to it in later steps.
@@ -142,6 +151,40 @@
 {% endif %}
 
 {% include {{page.version}}/cnx-cred-sed.md yaml="cnx-api" %}
+
+1. Generate TLS certificates for the {{site.prodname}} API server to use. The following example creates a self-signed certificate
+   using OpenSSL, but you may generate then using any X.509-compatible tool or obtain them from your organization's Certificate Authority.
+
+   ```bash
+   openssl req -x509 -newkey rsa:4096 \
+                     -keyout apiserver.key \
+                     -nodes \
+                     -out apiserver.crt \
+                     -subj "/CN=cnx-api.kube-system.svc" \
+                     -days 3650
+   ```
+
+   > **Note**: The above example certificate is valid for 10 years. You are encouraged to choose a shorter
+   > window of validity (365 days is typical), but note that you *must* rotate the certificate before it expires
+   > or the {{site.prodname}} API Server will no longer function correctly.
+   {: .alert .alert-info}
+
+1. Copy the certificates into the `cnx-api.yaml` file as base64 encoded strings. You will find three places `cnx-api.yaml`
+   with text in angle brackets like `<replace with base64 encoded ....>`. Replace each one with the corresponding base64 encoded
+   strings.  The following example command does this replacement using `sed` and the base64 encoding using the `base64` utility
+   available on many Linux distributions.
+
+   ```bash
+   sed -e "s/<replace with base64 encoded certificate>/$(cat apiserver.crt | base64 -w 0)/" \
+       -e "s/<replace with base64 encoded private key>/$(cat apiserver.key | base64 -w 0)/" \
+       -e "s/<replace with base64 encoded Certificate Authority bundle>/$(cat apiserver.crt | base64 -w 0)/" \
+       -i cnx-api.yaml 
+   ```
+
+   > **Note**: The above example uses the `apiserver.crt` certificate as the Certificate Authority bundle, which is appropriate
+   > for self-signed certificates as our earlier example creates. If you are not using a self-signed certificate, be sure to
+   > use the Certificate Authority bundle for the third replacement.
+   {: .alert .alert-info}
 
 1. Apply the manifest to install the {{site.prodname}} API server.
 

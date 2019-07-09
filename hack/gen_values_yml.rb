@@ -62,4 +62,4 @@ imageNames = config["imageNames"]
 versions_yml = YAML::load_file(@path_to_versions)
 versions = parse_versions(versions_yml, @version)
 
-print gen_values(@version, versions, imageNames, @image_registry, @chart)
+print gen_values(@version, versions, imageNames, @image_registry, @chart, false)

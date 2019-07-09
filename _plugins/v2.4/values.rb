@@ -1,4 +1,4 @@
-def gen_values_v2_4(versions, imageNames, imageRegistry, chart)
+def gen_values_v2_4(versions, imageNames, imageRegistry, chart, forDocs)
     versionsYml = gen_chart_specific_values_v2_4(versions, imageNames, imageRegistry, chart)
     versionsYml += <<~EOF
     calicoctl:

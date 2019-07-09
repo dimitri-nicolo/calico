@@ -40,15 +40,6 @@ true
 {{- end -}}
 {{- end -}}
 
-
-{{- define "calico.apiserver.tls" -}}
-{{- if or .Values.apiserver.tls.crt .Values.apiserver.tls.key -}}
-{{- $_ := required "Must specify both or neither of apiserver crt or apiserver key" .Values.apiserver.tls.crt -}}
-{{- $_ := required "Must specify both or neither of apiserver crt or apiserver key" .Values.apiserver.tls.key -}}
-true
-{{- end -}}
-{{- end -}}
-
 {{- define "calico.resourceLimits" -}}
 {{- $component := index . 0 -}}
 {{- if or (or (or $component.limits.cpu $component.limits.memory) $component.requests.cpu) $component.requests.memory -}}
@@ -82,4 +73,24 @@ resources:
 {{- $_ := required "Must specify all or none of birdConfigTemplate, birdIpamConfigTemplate, bird6ConfigTemplate, bird6IpamConfigTemplate" .Values.bgp.bird6IpamConfigTemplate -}}
 true
 {{- end }}
+{{- end -}}
+
+{{- /* Used for docs site; don't encode values of the form <something in brackets> so we can 
+       output templates we expect the end user to fill in. */ -}}
+{{- define "calico.maybeBase64Encode" -}}
+{{- if hasPrefix "<" . -}}
+{{ . }}
+{{- else -}}
+{{ . | b64enc }}
+{{- end -}}
+{{- end -}}
+
+
+{{- define "calico.apiserver.tls" -}}
+{{- if or (or .Values.apiserver.tls.crt .Values.apiserver.tls.key) .Values.apiserver.tls.cabundle -}}
+{{- $_ := required "Must specify all or none of apiserver crt, key, and cabundle" .Values.apiserver.tls.crt -}}
+{{- $_ := required "Must specify all or none of apiserver crt, key, and cabundle" .Values.apiserver.tls.key -}}
+{{- $_ := required "Must specify all or none of apiserver crt, key, and cabundle" .Values.apiserver.tls.cabundle -}}
+true
+{{- end -}}
 {{- end -}}
