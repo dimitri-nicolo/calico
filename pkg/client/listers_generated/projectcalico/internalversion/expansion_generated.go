@@ -4,6 +4,14 @@
 
 package internalversion
 
+// BGPConfigurationListerExpansion allows custom methods to be added to
+// BGPConfigurationLister.
+type BGPConfigurationListerExpansion interface{}
+
+// BGPPeerListerExpansion allows custom methods to be added to
+// BGPPeerLister.
+type BGPPeerListerExpansion interface{}
+
 // GlobalNetworkPolicyListerExpansion allows custom methods to be added to
 // GlobalNetworkPolicyLister.
 type GlobalNetworkPolicyListerExpansion interface{}

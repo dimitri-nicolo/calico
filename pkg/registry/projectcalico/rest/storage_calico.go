@@ -24,6 +24,8 @@ import (
 	"k8s.io/apiserver/pkg/storage"
 
 	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
+	calicobgpconfiguration "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/bgpconfiguration"
+	calicobgppeer "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/bgppeer"
 	calicognetworkset "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/globalnetworkset"
 	calicogpolicy "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/globalpolicy"
 	calicoglobalreport "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/globalreport"
@@ -261,13 +263,54 @@ func (p RESTStorageProvider) NewV3Storage(
 		authorizer,
 	)
 
+	bgpConfigurationRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("bgpconfigurations"))
+	if err != nil {
+		return nil, err
+	}
+	bgpConfigurationOpts := server.NewOptions(
+		etcd.Options{
+			RESTOptions:   bgpConfigurationRESTOptions,
+			Capacity:      1000,
+			ObjectType:    calicobgpconfiguration.EmptyObject(),
+			ScopeStrategy: calicobgpconfiguration.NewStrategy(scheme),
+			NewListFunc:   calicobgpconfiguration.NewList,
+			GetAttrsFunc:  calicobgpconfiguration.GetAttrs,
+			Trigger:       storage.NoTriggerPublisher,
+		},
+		calicostorage.Options{
+			RESTOptions: bgpConfigurationRESTOptions,
+		},
+		p.StorageType,
+		authorizer,
+	)
+
+	bgpPeerRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("bgppeers"))
+	if err != nil {
+		return nil, err
+	}
+	bgpPeerOpts := server.NewOptions(
+		etcd.Options{
+			RESTOptions:   bgpPeerRESTOptions,
+			Capacity:      1000,
+			ObjectType:    calicobgppeer.EmptyObject(),
+			ScopeStrategy: calicobgppeer.NewStrategy(scheme),
+			NewListFunc:   calicobgppeer.NewList,
+			GetAttrsFunc:  calicobgppeer.GetAttrs,
+			Trigger:       storage.NoTriggerPublisher,
+		},
+		calicostorage.Options{
+			RESTOptions: bgpPeerRESTOptions,
+		},
+		p.StorageType,
+		authorizer,
+	)
+
 	storage := map[string]rest.Storage{}
 	storage["networkpolicies"] = calicopolicy.NewREST(scheme, *policyOpts)
 	storage["tiers"] = calicotier.NewREST(scheme, *tierOpts)
 	storage["globalnetworkpolicies"] = calicogpolicy.NewREST(scheme, *gpolicyOpts)
 	storage["globalnetworksets"] = calicognetworkset.NewREST(scheme, *gNetworkSetOpts)
 	storage["licensekeys"] = calicolicensekey.NewREST(scheme, *licenseKeysSetOpts)
-	storage["ippools"] = calicoippool.NewREST(scheme, *ipPoolSetOpts)
 
 	globalThreatFeedsStorage, globalThreatFeedsStatusStorage := calicogthreatfeed.NewREST(scheme, *gThreatFeedOpts)
 	storage["globalthreatfeeds"] = globalThreatFeedsStorage
@@ -280,6 +323,9 @@ func (p RESTStorageProvider) NewV3Storage(
 	storage["globalreports/status"] = globalReportsStatusStorage
 
 	storage["globalreporttypes"] = calicoglobalreporttype.NewREST(scheme, *globalReportTypeOpts)
+	storage["ippools"] = calicoippool.NewREST(scheme, *ipPoolSetOpts)
+	storage["bgpconfigurations"] = calicobgpconfiguration.NewREST(scheme, *bgpConfigurationOpts)
+	storage["bgppeers"] = calicobgppeer.NewREST(scheme, *bgpPeerOpts)
 
 	return storage, nil
 }

@@ -228,3 +228,47 @@ type IPPool struct {
 
 	Spec calico.IPPoolSpec
 }
+
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// BGPConfigurationList is a list of BGPConfiguration objects.
+type BGPConfigurationList struct {
+	metav1.TypeMeta
+	metav1.ListMeta
+
+	Items []BGPConfiguration
+}
+
+// +genclient
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type BGPConfiguration struct {
+	metav1.TypeMeta
+	metav1.ObjectMeta
+
+	Spec calico.BGPConfigurationSpec
+}
+
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// BGPPeerList is a list of BGPPeer objects.
+type BGPPeerList struct {
+	metav1.TypeMeta
+	metav1.ListMeta
+
+	Items []BGPPeer
+}
+
+// +genclient
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type BGPPeer struct {
+	metav1.TypeMeta
+	metav1.ObjectMeta
+
+	Spec calico.BGPPeerSpec
+}
