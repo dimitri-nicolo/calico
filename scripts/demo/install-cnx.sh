@@ -1277,9 +1277,26 @@ applyCNXManifest() {
 
 applyVoltronManifest() {
   echo -n "Applying \"voltron.yaml\" manifest: "
+  run calicoctl apply -f allow-cnx.allow-voltron-access.yaml
   run kubectl apply -f voltron.yaml
   blockUntilPodIsReady "k8s-app=cnx-voltron" 180 "cnx-voltron"      # Block until cnx-voltron pod is running & ready
-  run calicoctl apply -f allow-cnx.allow-voltron-access.yaml
+}
+
+
+#
+# installMgmtGuardian
+#
+
+installMgmtGuardian() {
+    IP=`kubectl get svc cnx-voltron-server -n calico-monitoring -o=jsonpath='{.spec.clusterIP}'`
+    PORT=`kubectl get svc cnx-voltron-server -n calico-monitoring -o=jsonpath='{.spec.ports[?(@.name=="mgmt")].port}'`
+    curl --insecure https://${IP}:${PORT}/voltron/api/clusters \
+        -X PUT -H "Content-type: application/json" -d '{"id":"mgmt", "displayName":"Local cluster - Mgmt"}' \
+        -o guardian-mgmt.yaml
+    PORT=`kubectl get svc cnx-voltron-server -n calico-monitoring -o=jsonpath='{.spec.ports[?(@.name=="tunnels")].port}'`
+    sed -e "s/127.0.0.0:32453/cnx-voltron-server.calico-monitoring.svc.cluster.local:${PORT}/" < guardian-mgmt.yaml | kubectl apply -f -
+
+    blockUntilPodIsReady "k8s-app=cnx-guardian" 180 "cnx-guardian"
 }
 
 #
@@ -1729,6 +1746,7 @@ installCNX() {
   applyMonitorCalicoManifest      # Apply monitor-calico.yaml
   createCNXManagerSecret          # Create cnx-manager-tls to enable manager/apiserver communication
   applyVoltronManifest            # Apply voltron.yaml
+  installMgmtGuardian             # Register the cluster as mgmt and start guardian for it
   applyCNXManifest                # Apply cnx.yaml
   #TODO: install guardian if specified
 }
