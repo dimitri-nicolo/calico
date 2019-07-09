@@ -153,7 +153,7 @@
 {% include {{page.version}}/cnx-cred-sed.md yaml="cnx-api" %}
 
 1. Generate TLS certificates for the {{site.prodname}} API server to use. The following example creates a self-signed certificate
-   using OpenSSL, but you may generate then using any X.509-compatible tool or obtain them from your organization's Certificate Authority.
+   using OpenSSL, but you may generate them using any X.509-compatible tool or obtain them from your organization's Certificate Authority.
 
    ```bash
    openssl req -x509 -newkey rsa:4096 \

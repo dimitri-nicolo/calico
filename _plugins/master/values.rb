@@ -36,6 +36,11 @@ def gen_chart_specific_values_master(versions, imageNames, imageRegistry, chart,
     docsOverrides["core.apiserver.tls.crt"] = "<replace with base64 encoded certificate>"
     docsOverrides["core.apiserver.tls.key"] = "<replace with base64 encoded private key>"
     docsOverrides["core.apiserver.tls.cabundle"] = "<replace with base64 encoded Certificate Authority bundle>"
+    docsOverrides["core.typha.tls.caBundle"] = "<replace with PEM-encoded (not base64) Certificate Authority bundle>"
+    docsOverrides["core.typha.tls.typhaCrt"] = "<replace with base64-encoded Typha certificate>" 
+    docsOverrides["core.typha.tls.typhaKey"] = "<replace with base64-encoded Typha private key>"
+    docsOverrides["core.typha.tls.felixCrt"] = "<replace with base64-encoded Felix certificate>"
+    docsOverrides["core.typha.tls.felixKey"] = "<replace with base64-encoded Felix private key>"
   end
   if chart == "tigera-secure-ee"
     versionsYml = <<~EOF
@@ -514,7 +519,18 @@ def gen_chart_specific_values_master(versions, imageNames, imageRegistry, chart,
         limits:
           cpu: #"2000m"
           memory: #"1024Mi"
-    
+      # Authentication information for securing communications between Typha and Felix.
+      tls:
+        # Leave these blank to use self-signed certs.
+        caBundle: #{docsOverrides["core.typha.tls.caBundle"]}
+        typhaCrt: #{docsOverrides["core.typha.tls.typhaCrt"]}
+        typhaKey: #{docsOverrides["core.typha.tls.typhaKey"]}
+        felixCrt: #{docsOverrides["core.typha.tls.felixCrt"]}
+        felixKey: #{docsOverrides["core.typha.tls.felixKey"]}
+        # Change these if you generated certs with different common names on them
+        typhaCommonName: calico-typha
+        felixCommonName: calico-felix
+
     # Configuration for the Calico aggregated API server.
     apiserver:
       image: #{imageRegistry}#{imageNames["cnxApiserver"]}
