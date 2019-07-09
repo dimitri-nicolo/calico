@@ -85,6 +85,8 @@ func NewProxy(proxyConfig *ProxyConfig) *Proxy {
 	p.Director = func(req *http.Request) {
 		req.Header.Add("X-Forwarded-Host", req.Host)
 
+		// TODO: handle gzip requests to elasticsearch instead of disabling it.
+		req.Header.Del("Accept-Encoding")
 		origDirector(req)
 		req.Host = proxyConfig.TargetURL.Host
 	}
