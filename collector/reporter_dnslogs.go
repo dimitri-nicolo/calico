@@ -81,7 +81,6 @@ func (c *DNSLogReporter) Start() {
 }
 
 func (c *DNSLogReporter) Log(update DNSUpdate) error {
-	log.Info("DNS Logs Reporter got a packet to log")
 	for _, agg := range c.aggregators {
 		if err := agg.a.FeedUpdate(update); err != nil {
 			return err
