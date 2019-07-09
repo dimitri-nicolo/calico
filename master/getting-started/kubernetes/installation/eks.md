@@ -27,7 +27,7 @@ This guide covers installing {{site.prodname}} for policy enforcement on Amazon 
 > to install {{site.prodname}} for policy only using the etcd datastore type, contact Tigera support.
 {: .alert .alert-danger}
 
-### <a name="install-ee-typha-nofed"></a>Installing {{site.prodname}} for policy only without federation, more than 50 nodes
+### <a name="install-ee-typha-nofed"></a>Installing {{site.prodname}} without federation
 
 1. Download the {{site.prodname}} policy-only manifest for the Kubernetes API datastore with AWS VPC CNI plugin.
 

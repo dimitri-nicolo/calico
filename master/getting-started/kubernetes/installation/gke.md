@@ -33,19 +33,13 @@ This guide covers installing {{site.prodname}} for policy enforcement on Google 
 
 {% include {{page.version}}/pull-secret.md %}
 
-## <a name="install-cnx"></a>Installing {{site.prodname}} for policy only
-
-> **Important**: Due to use of the GKE CNI plugin, {{site.prodname}} support for GKE requires the Kubernetes API 
-> datastore. Should you wish to install {{site.prodname}} for policy only using the etcd datastore type, contact Tigera support.
-{: .alert .alert-danger}
-
-### <a name="install-ee-typha-nofed"></a>Installing {{site.prodname}} for policy only without federation, more than 50 nodes
+### <a name="install-ee-typha-nofed"></a>Installing {{site.prodname}} without federation
 
 1. Download the {{site.prodname}} policy-only manifest for the Kubernetes API datastore with GKE CNI plugin support.
 
    ```bash
    curl \
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only-gke/1.7/calico-typha.yaml \
+   {{site.url}}/{{page.version}}/manifests/gke/calico-typha.yaml \
    -o calico.yaml
    ```
 
@@ -82,7 +76,7 @@ This guide covers installing {{site.prodname}} for policy enforcement on Google 
 
 1. Continue to [Applying your license key](#applying-your-license-key).
 
-{% include {{page.version}}/apply-license.md platform="eks" cli="kubectl" %}
+{% include {{page.version}}/apply-license.md platform="gke" cli="kubectl" %}
 
 {% include {{page.version}}/cnx-monitor-install.md elasticsearch="operator" platform="gke" %}
 

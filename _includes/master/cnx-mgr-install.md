@@ -8,7 +8,7 @@
 {% elsif include.platform == "gke" %}
   {% assign cli = "kubectl" %}
   {% assign cloudServiceInitials = "GKE" %}
-  {% assign manifestPath = "getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only-gke" %}
+  {% assign manifestPath = "manifests/gke" %}
 {% else %}
   {% assign cli = "kubectl" %}
   {% assign manifestPath = "getting-started/kubernetes/installation/hosted/cnx/1.7" %}
