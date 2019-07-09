@@ -1255,9 +1255,10 @@ deleteCNXAPIManifest() {
 applyCNXManifest() {
   echo -n "Applying \"cnx.yaml\" manifest: "
   run kubectl apply -f cnx.yaml
-  echo -n "Applying \"cnx.yaml\" manifest: "
   run kubectl patch deployment -n calico-monitoring cnx-manager --patch \
     '{"spec": {"template": {"spec": {"containers": [{"name": "cnx-manager", "image":"gcr.io/unique-caldron-775/cnx/tigera/cnx-manager:cluster-selection"}]}}}}'
+  run kubectl patch deployment -n calico-monitoring cnx-manager --patch \
+    '{"spec": {"template": {"spec": {"containers": [{"name": "cnx-manager-proxy", "image":"gcr.io/tigera-dev/cnx/tigera/cnx-manager-proxy:voltron-ssl-no-verify"}]}}}}'
   run kubectl patch deployment -n calico-monitoring cnx-manager --patch \
     '{"spec": {"template": {"spec": {"containers": [{"name": "cnx-manager-proxy", "env": [{"name": "CNX_KUBE_APISERVER", "value": "cnx-voltron-server.calico-monitoring.svc.cluster.local:9443"}]}]}}}}'
   run kubectl patch deployment -n calico-monitoring cnx-manager --patch \
