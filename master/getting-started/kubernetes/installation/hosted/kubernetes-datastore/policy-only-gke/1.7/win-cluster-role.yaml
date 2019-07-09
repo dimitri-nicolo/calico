@@ -1,7 +1,0 @@
----
-layout: null
----
-{% helm --execute templates/cluster-role.yaml %}
-datastore: kubernetes
-osType: windows
-{% endhelm %}

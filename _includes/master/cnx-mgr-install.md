@@ -3,7 +3,12 @@
   {% assign manifestPath = "getting-started/openshift" %}
 {% elsif include.platform == "eks" %}
   {% assign cli = "kubectl" %}
+  {% assign cloudServiceInitials = "EKS" %}
   {% assign manifestPath = "getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only-ecs" %}
+{% elsif include.platform == "gke" %}
+  {% assign cli = "kubectl" %}
+  {% assign cloudServiceInitials = "GKE" %}
+  {% assign manifestPath = "manifests/gke" %}
 {% else %}
   {% assign cli = "kubectl" %}
   {% assign manifestPath = "getting-started/kubernetes/installation/hosted/cnx/1.7" %}
@@ -30,7 +35,7 @@
    sed -i -e 's?tigera.cnx-manager.oauth-authority:.*$?tigera.cnx-manager.oauth-authority: "https://master.openshift.example.com:8443/oauth/authorize"?g' cnx.yaml
    ```
 
-{% elsif include.platform != "eks" %}
+{% elsif include.platform != "eks" and include.platform != "gke" %}
 
 1. Refer to the bullet that corresponds to your chosen authentication method.
 
@@ -57,11 +62,10 @@
 
 {% endif %}
 
-1. Create a secret containing a TLS certificate and the private key used to
-   sign it. The following commands use a self-signed certificate and key
-   found in many deployments for a quick start.
-
 {% if include.init == "openshift" %}
+
+1. Create a secret containing a TLS certificate and the private key used to
+   sign it. The following commands re-use the certificate created for the cluster.
 
    ```bash
    oc create secret generic cnx-manager-tls \
@@ -69,7 +73,10 @@
    --from-file=key=/etc/origin/master/master.server.key -n calico-monitoring
    ```
 
-{% elsif include.platform == "eks" %}
+{% elsif include.platform == "eks" or include.platform == "gke" %}
+
+1. Create a secret containing a TLS certificate and the private key used to
+   sign it. The following commands create a self-signed certificate and key.
 
    ```bash
    openssl req -out cnxmanager.csr -newkey rsa:2048 -nodes -keyout cnxmanager.key -subj "/CN=cnxmanager.cluster.local"
@@ -93,6 +100,10 @@
    ```
 
 {% else %}
+
+1. Create a secret containing a TLS certificate and the private key used to
+   sign it. The following commands use a self-signed certificate and key
+   found in many deployments for a quick start.
 
    - **kubeadm deployments**
      ```bash
@@ -192,9 +203,9 @@
 
    Wait until each pod has the `STATUS` of `Running`.
 
-{% if include.platform == "eks" %}
+{% if include.platform == "eks" or include.platform == "gke" %}
 
-1. To log into {{site.prodname}} Manager running in EKS, you'll need a token for a user
+1. To log into {{site.prodname}} Manager running in {{cloudServiceInitials}}, you'll need a token for a user
    with appropriate permissions on the cluster.
 
    The easiest way to create such a token is to create a service account, assign it permissions
@@ -241,6 +252,6 @@
 {% endif %}
 {% endif %}
 
-{% if include.platform == "eks" %}
+{% if include.platform == "eks" or include.platform == "gke" %}
    Log in to {{site.prodname}} Manager using the token you created earlier in the process.
 {% endif %}

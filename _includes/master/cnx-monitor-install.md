@@ -1,5 +1,5 @@
 {% if include.orch != "openshift" %}
-  {% capture docpath %}{{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7{% endcapture %}
+  {% capture docpath %}{{site.url}}/{{page.version}}/manifests{% endcapture %}
   {% assign cli = "kubectl" %}
 {% else %}
   {% capture docpath %}{{site.url}}/{{page.version}}/getting-started/openshift{% endcapture %}
@@ -85,11 +85,11 @@ optionally Elasticsearch and Kibana{% endif %} in order to enable logs.
 
    ```bash
    {{cli}} apply -f \
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml
+   {{site.url}}/{{page.version}}/manifests/cnx-policy.yaml
    ```
 
    > **Note**: You can also
-   > [view the manifest in a new tab]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml){:target="_blank"}.
+   > [view the manifest in a new tab]({{site.url}}/{{page.version}}/manifests/cnx-policy.yaml){:target="_blank"}.
    {: .alert .alert-info}
 
 1. Download the `operator.yaml` manifest.

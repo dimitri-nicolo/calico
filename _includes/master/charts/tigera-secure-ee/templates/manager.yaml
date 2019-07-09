@@ -13,7 +13,7 @@ metadata:
   namespace: calico-monitoring
 data:
   # Authentication type.  Must be set to "OIDC", "Basic", "Token", or "OAuth".
-{{- if eq .Values.platform "eks" }}
+{{- if or (eq .Values.platform "eks") (eq .Values.platform "gke") }}
   tigera.cnx-manager.authentication-type: "Token"
 {{- else if .Values.manager.auth }}
   tigera.cnx-manager.authentication-type: {{ .Values.manager.auth.type | default "Basic" | quote }}
