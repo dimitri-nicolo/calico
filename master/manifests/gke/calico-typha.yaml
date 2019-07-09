@@ -5,6 +5,7 @@ layout: null
 datastore: kubernetes
 typha:
   enabled: true
+  autoscale: true
 platform: gke
 network: gke
 app_layer_policy:

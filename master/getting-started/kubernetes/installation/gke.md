@@ -45,25 +45,6 @@ This guide covers installing {{site.prodname}} for policy enforcement on Google 
 
 {% include {{page.version}}/cnx-cred-sed.md yaml="calico" %}
 
-1. Open the manifest in your favorite editor and modify the replica count in the
-   `Deployment` named `calico-typha` to the desired number of replicas.
-
-   ```yaml
-   apiVersion: apps/v1beta1
-   kind: Deployment
-   metadata:
-     name: calico-typha
-     ...
-   spec:
-     ...
-     replicas: <number of replicas>
-   ```
-   {: .no-select-button}
-
-   We recommend at least one replica for every 200 nodes and no more than
-   20 replicas. In production, we recommend a minimum of three replicas to reduce
-   the impact of rolling upgrades and failures.  The default replica count is 1.
-
 1. Apply the manifest using the following command.
 
    ```bash
