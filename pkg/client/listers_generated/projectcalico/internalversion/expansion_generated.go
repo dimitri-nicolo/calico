@@ -52,6 +52,14 @@ type NetworkPolicyListerExpansion interface{}
 // NetworkPolicyNamespaceLister.
 type NetworkPolicyNamespaceListerExpansion interface{}
 
+// ProfileListerExpansion allows custom methods to be added to
+// ProfileLister.
+type ProfileListerExpansion interface{}
+
+// RemoteClusterConfigurationListerExpansion allows custom methods to be added to
+// RemoteClusterConfigurationLister.
+type RemoteClusterConfigurationListerExpansion interface{}
+
 // TierListerExpansion allows custom methods to be added to
 // TierLister.
 type TierListerExpansion interface{}

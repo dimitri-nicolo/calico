@@ -26,4 +26,8 @@ type LicenseKeyExpansion interface{}
 
 type NetworkPolicyExpansion interface{}
 
+type ProfileExpansion interface{}
+
+type RemoteClusterConfigurationExpansion interface{}
+
 type TierExpansion interface{}

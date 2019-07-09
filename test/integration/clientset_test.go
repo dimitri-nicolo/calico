@@ -1251,7 +1251,6 @@ func TestIPPoolClient(t *testing.T) {
 
 	if !t.Run(name, rootTestFunc()) {
 		t.Errorf("test-ippool test failed")
-
 	}
 }
 
@@ -1420,6 +1419,134 @@ func testBGPPeerClient(client calicoclient.Interface, name string) error {
 	err = bgpPeerClient.Delete(resName, &metav1.DeleteOptions{})
 	if nil != err {
 		return fmt.Errorf("BGPPeer should be deleted (%s)", err)
+	}
+
+	return nil
+}
+
+// TestProfileClient exercises the Profile client.
+func TestProfileClient(t *testing.T) {
+	const name = "test-profile"
+	rootTestFunc := func() func(t *testing.T) {
+		return func(t *testing.T) {
+			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+				return &projectcalico.Profile{}
+			})
+			defer shutdownServer()
+			if err := testProfileClient(client, name); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	if !t.Run(name, rootTestFunc()) {
+		t.Errorf("test-profile test failed")
+	}
+}
+
+func testProfileClient(client calicoclient.Interface, name string) error {
+	profileClient := client.ProjectcalicoV3().Profiles()
+	resName := "profile-test"
+	profile := &v3.Profile{
+		ObjectMeta: metav1.ObjectMeta{Name: resName},
+		Spec: calico.ProfileSpec{
+			LabelsToApply: map[string]string{
+				"aa": "bb",
+			},
+		},
+	}
+
+	// start from scratch
+	profileList, err := profileClient.List(metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing profile (%s)", err)
+	}
+	if profileList.Items == nil {
+		return fmt.Errorf("Items field should not be set to nil")
+	}
+
+	profileRes, err := profileClient.Create(profile)
+	if nil != err {
+		return fmt.Errorf("error creating the profile '%v' (%v)", profile, err)
+	}
+	if resName != profileRes.Name {
+		return fmt.Errorf("didn't get the same profile back from server\n%+v\n%+v", profile, profileRes)
+	}
+
+	profileRes, err = profileClient.Get(resName, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("error getting profile %s (%s)", resName, err)
+	}
+
+	err = profileClient.Delete(resName, &metav1.DeleteOptions{})
+	if nil != err {
+		return fmt.Errorf("Profile should be deleted (%s)", err)
+	}
+
+	return nil
+}
+
+// TestRemoteClusterConfigurationClient exercises the RemoteClusterConfiguration client.
+func TestRemoteClusterConfigurationClient(t *testing.T) {
+	const name = "test-remoteclusterconfig"
+	rootTestFunc := func() func(t *testing.T) {
+		return func(t *testing.T) {
+			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+				return &projectcalico.RemoteClusterConfiguration{}
+			})
+			defer shutdownServer()
+			if err := testRemoteClusterConfigurationClient(client, name); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	if !t.Run(name, rootTestFunc()) {
+		t.Errorf("test-remoteclusterconfig test failed")
+
+	}
+}
+
+func testRemoteClusterConfigurationClient(client calicoclient.Interface, name string) error {
+	rccClient := client.ProjectcalicoV3().RemoteClusterConfigurations()
+	resName := "rcc-test"
+	rcc := &v3.RemoteClusterConfiguration{
+		ObjectMeta: metav1.ObjectMeta{Name: resName},
+		Spec: calico.RemoteClusterConfigurationSpec{
+			DatastoreType: "etcdv3",
+			EtcdConfig: calico.EtcdConfig{
+				EtcdEndpoints: "https://127.0.0.1:999",
+				EtcdUsername:  "user",
+				EtcdPassword:  "abc123",
+			},
+		},
+	}
+
+	// start from scratch
+	rccList, err := rccClient.List(metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing remoteClusterConfiguration (%s)", err)
+	}
+	if rccList.Items == nil {
+		return fmt.Errorf("Items field should not be set to nil")
+	}
+
+	rccRes, err := rccClient.Create(rcc)
+	if nil != err {
+		return fmt.Errorf("error creating the remoteClusterConfiguration '%v' (%v)", rcc, err)
+	}
+	if resName != rccRes.Name {
+		return fmt.Errorf("didn't get the same remoteClusterConfiguration back from server\n%+v\n%+v", rcc, rccRes)
+	}
+
+	rccRes, err = rccClient.Get(resName, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("error getting remoteClusterConfiguration %s (%s)", resName, err)
+	}
+
+	err = rccClient.Delete(resName, &metav1.DeleteOptions{})
+	if nil != err {
+		return fmt.Errorf("RemoteClusterConfiguration should be deleted (%s)", err)
 	}
 
 	return nil

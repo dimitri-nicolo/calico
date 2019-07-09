@@ -32,6 +32,10 @@ type Interface interface {
 	LicenseKeys() LicenseKeyInformer
 	// NetworkPolicies returns a NetworkPolicyInformer.
 	NetworkPolicies() NetworkPolicyInformer
+	// Profiles returns a ProfileInformer.
+	Profiles() ProfileInformer
+	// RemoteClusterConfigurations returns a RemoteClusterConfigurationInformer.
+	RemoteClusterConfigurations() RemoteClusterConfigurationInformer
 	// Tiers returns a TierInformer.
 	Tiers() TierInformer
 }
@@ -100,6 +104,16 @@ func (v *version) LicenseKeys() LicenseKeyInformer {
 // NetworkPolicies returns a NetworkPolicyInformer.
 func (v *version) NetworkPolicies() NetworkPolicyInformer {
 	return &networkPolicyInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// Profiles returns a ProfileInformer.
+func (v *version) Profiles() ProfileInformer {
+	return &profileInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// RemoteClusterConfigurations returns a RemoteClusterConfigurationInformer.
+func (v *version) RemoteClusterConfigurations() RemoteClusterConfigurationInformer {
+	return &remoteClusterConfigurationInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // Tiers returns a TierInformer.

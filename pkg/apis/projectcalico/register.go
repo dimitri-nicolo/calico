@@ -58,6 +58,10 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&BGPConfigurationList{},
 		&BGPPeer{},
 		&BGPPeerList{},
+		&Profile{},
+		&ProfileList{},
+		&RemoteClusterConfiguration{},
+		&RemoteClusterConfigurationList{},
 	)
 	return nil
 }

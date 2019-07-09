@@ -58,6 +58,14 @@ func (c *FakeProjectcalico) NetworkPolicies(namespace string) internalversion.Ne
 	return &FakeNetworkPolicies{c, namespace}
 }
 
+func (c *FakeProjectcalico) Profiles() internalversion.ProfileInterface {
+	return &FakeProfiles{c}
+}
+
+func (c *FakeProjectcalico) RemoteClusterConfigurations() internalversion.RemoteClusterConfigurationInterface {
+	return &FakeRemoteClusterConfigurations{c}
+}
+
 func (c *FakeProjectcalico) Tiers() internalversion.TierInterface {
 	return &FakeTiers{c}
 }

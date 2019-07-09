@@ -35,6 +35,8 @@ import (
 	calicoippool "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/ippool"
 	calicolicensekey "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/licensekey"
 	calicopolicy "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/networkpolicy"
+	calicoprofile "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/profile"
+	calicoremoteclusterconfig "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/remoteclusterconfig"
 	"github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/server"
 	calicotier "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/tier"
 	calicostorage "github.com/tigera/calico-k8sapiserver/pkg/storage/calico"
@@ -305,6 +307,48 @@ func (p RESTStorageProvider) NewV3Storage(
 		authorizer,
 	)
 
+	profileRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("profiles"))
+	if err != nil {
+		return nil, err
+	}
+	profileOpts := server.NewOptions(
+		etcd.Options{
+			RESTOptions:   profileRESTOptions,
+			Capacity:      1000,
+			ObjectType:    calicoprofile.EmptyObject(),
+			ScopeStrategy: calicoprofile.NewStrategy(scheme),
+			NewListFunc:   calicoprofile.NewList,
+			GetAttrsFunc:  calicoprofile.GetAttrs,
+			Trigger:       storage.NoTriggerPublisher,
+		},
+		calicostorage.Options{
+			RESTOptions: profileRESTOptions,
+		},
+		p.StorageType,
+		authorizer,
+	)
+
+	remoteclusterconfigRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("remoteclusterconfigurations"))
+	if err != nil {
+		return nil, err
+	}
+	remoteclusterconfigOpts := server.NewOptions(
+		etcd.Options{
+			RESTOptions:   remoteclusterconfigRESTOptions,
+			Capacity:      1000,
+			ObjectType:    calicoremoteclusterconfig.EmptyObject(),
+			ScopeStrategy: calicoremoteclusterconfig.NewStrategy(scheme),
+			NewListFunc:   calicoremoteclusterconfig.NewList,
+			GetAttrsFunc:  calicoremoteclusterconfig.GetAttrs,
+			Trigger:       storage.NoTriggerPublisher,
+		},
+		calicostorage.Options{
+			RESTOptions: remoteclusterconfigRESTOptions,
+		},
+		p.StorageType,
+		authorizer,
+	)
+
 	storage := map[string]rest.Storage{}
 	storage["networkpolicies"] = calicopolicy.NewREST(scheme, *policyOpts)
 	storage["tiers"] = calicotier.NewREST(scheme, *tierOpts)
@@ -326,6 +370,8 @@ func (p RESTStorageProvider) NewV3Storage(
 	storage["ippools"] = calicoippool.NewREST(scheme, *ipPoolSetOpts)
 	storage["bgpconfigurations"] = calicobgpconfiguration.NewREST(scheme, *bgpConfigurationOpts)
 	storage["bgppeers"] = calicobgppeer.NewREST(scheme, *bgpPeerOpts)
+	storage["profiles"] = calicoprofile.NewREST(scheme, *profileOpts)
+	storage["remoteclusterconfigurations"] = calicoremoteclusterconfig.NewREST(scheme, *remoteclusterconfigOpts)
 
 	return storage, nil
 }

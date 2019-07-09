@@ -92,6 +92,16 @@ func convertToAAPI(libcalicoObject runtime.Object) (res runtime.Object) {
 		aapi := &aapi.BGPPeer{}
 		BGPPeerConverter{}.convertToAAPI(lcg, aapi)
 		return aapi
+	case *libcalicoapi.Profile:
+		lcg := libcalicoObject.(*libcalicoapi.Profile)
+		aapi := &aapi.Profile{}
+		ProfileConverter{}.convertToAAPI(lcg, aapi)
+		return aapi
+	case *libcalicoapi.RemoteClusterConfiguration:
+		lcg := libcalicoObject.(*libcalicoapi.RemoteClusterConfiguration)
+		aapi := &aapi.RemoteClusterConfiguration{}
+		RemoteClusterConfigurationConverter{}.convertToAAPI(lcg, aapi)
+		return aapi
 	default:
 		glog.Infof("Unrecognized libcalico object (type %v)", reflect.TypeOf(libcalicoObject))
 		return nil

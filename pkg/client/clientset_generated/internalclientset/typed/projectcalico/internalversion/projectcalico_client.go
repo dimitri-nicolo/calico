@@ -22,6 +22,8 @@ type ProjectcalicoInterface interface {
 	IPPoolsGetter
 	LicenseKeysGetter
 	NetworkPoliciesGetter
+	ProfilesGetter
+	RemoteClusterConfigurationsGetter
 	TiersGetter
 }
 
@@ -72,6 +74,14 @@ func (c *ProjectcalicoClient) LicenseKeys() LicenseKeyInterface {
 
 func (c *ProjectcalicoClient) NetworkPolicies(namespace string) NetworkPolicyInterface {
 	return newNetworkPolicies(c, namespace)
+}
+
+func (c *ProjectcalicoClient) Profiles() ProfileInterface {
+	return newProfiles(c)
+}
+
+func (c *ProjectcalicoClient) RemoteClusterConfigurations() RemoteClusterConfigurationInterface {
+	return newRemoteClusterConfigurations(c)
 }
 
 func (c *ProjectcalicoClient) Tiers() TierInterface {

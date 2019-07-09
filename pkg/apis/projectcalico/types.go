@@ -272,3 +272,47 @@ type BGPPeer struct {
 
 	Spec calico.BGPPeerSpec
 }
+
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// ProfileList is a list of Profile objects.
+type ProfileList struct {
+	metav1.TypeMeta
+	metav1.ListMeta
+
+	Items []Profile
+}
+
+// +genclient
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type Profile struct {
+	metav1.TypeMeta
+	metav1.ObjectMeta
+
+	Spec calico.ProfileSpec
+}
+
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// RemoteClusterConfigurationList is a list of RemoteClusterConfiguration objects.
+type RemoteClusterConfigurationList struct {
+	metav1.TypeMeta
+	metav1.ListMeta
+
+	Items []RemoteClusterConfiguration
+}
+
+// +genclient
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type RemoteClusterConfiguration struct {
+	metav1.TypeMeta
+	metav1.ObjectMeta
+
+	Spec calico.RemoteClusterConfigurationSpec
+}
