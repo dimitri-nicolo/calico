@@ -30,10 +30,9 @@ type dnsAggregatorRef struct {
 }
 
 type DNSLogReporter struct {
-	dispatchers   map[string]LogDispatcher
-	aggregators   []dnsAggregatorRef
-	flushInterval time.Duration
-	flushTicker   *jitter.Ticker
+	dispatchers  map[string]LogDispatcher
+	aggregators  []dnsAggregatorRef
+	flushTrigger <-chan time.Time
 
 	healthAggregator *health.HealthAggregator
 
@@ -48,14 +47,16 @@ const (
 
 // NewDNSLogReporter constructs a DNSLogReporter using a dispatcher and aggregator.
 func NewDNSLogReporter(dispatchers map[string]LogDispatcher, flushInterval time.Duration, healthAggregator *health.HealthAggregator) *DNSLogReporter {
+	return NewDNSLogReporterWithShims(dispatchers, jitter.NewTicker(flushInterval, flushInterval/10).C, healthAggregator)
+}
+
+func NewDNSLogReporterWithShims(dispatchers map[string]LogDispatcher, flushTrigger <-chan time.Time, healthAggregator *health.HealthAggregator) *DNSLogReporter {
 	if healthAggregator != nil {
 		healthAggregator.RegisterReporter(dnsHealthName, &health.HealthReport{Live: true, Ready: true}, dnsHealthInterval*2)
 	}
-
 	return &DNSLogReporter{
 		dispatchers:      dispatchers,
-		flushTicker:      jitter.NewTicker(flushInterval, flushInterval/10),
-		flushInterval:    flushInterval,
+		flushTrigger:     flushTrigger,
 		timeNowFn:        monotime.Now,
 		healthAggregator: healthAggregator,
 	}
@@ -76,7 +77,6 @@ func (c *DNSLogReporter) AddAggregator(agg DNSLogAggregator, dispatchers []strin
 }
 
 func (c *DNSLogReporter) Start() {
-	log.WithField("flushInterval", c.flushInterval).Info("Starting DNSLogReporter")
 	go c.run()
 }
 
@@ -98,7 +98,7 @@ func (c *DNSLogReporter) run() {
 
 		// TODO(doublek): Stop and flush cases.
 		select {
-		case <-c.flushTicker.C:
+		case <-c.flushTrigger:
 			// Fetch from different aggregators and then dispatch them to wherever
 			// the flow logs need to end up.
 			log.Debug("DNS log flush tick")
