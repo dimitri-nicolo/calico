@@ -9,11 +9,11 @@
 
    ```bash
    {{cli}} apply -f \
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/elastic-storage-local.yaml
+   {{site.url}}/{{page.version}}/manifests/elastic-storage-local.yaml
    ```
 
    > **Note**: You can also
-   > [view the manifest in a new tab]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/elastic-storage-local.yaml){:target="_blank"}.
+   > [view the manifest in a new tab]({{site.url}}/{{page.version}}/manifests/elastic-storage-local.yaml){:target="_blank"}.
    {: .alert .alert-info}
 
    > **Tip**: To use storage other than local, refer to the
