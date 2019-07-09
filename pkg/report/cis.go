@@ -152,6 +152,7 @@ func (r *reporter) addBenchmarks() error {
 			sort.Sort(resultIds)
 
 			// Add the results in result ID order and increment section stats.
+			sectionTotalTests := 0
 			for _, rid := range resultIds {
 				r.clog.Debugf("Handling result %s", rid)
 				result := results[rid.Index()]
@@ -159,9 +160,11 @@ func (r *reporter) addBenchmarks() error {
 				switch result.Status {
 				case "PASS":
 					section.Pass++
+					sectionTotalTests++
 				case "FAIL":
 					section.Fail++
-				case "INFO":
+					sectionTotalTests++
+				case "INFO", "WARN":
 					section.Info++
 				}
 				section.Results = append(section.Results, *result)
@@ -169,8 +172,8 @@ func (r *reporter) addBenchmarks() error {
 
 			// Update the section status based on section results and thresholds.
 			var p int
-			if len(section.Results) > 0 {
-				p = 100 * section.Pass / len(section.Results)
+			if sectionTotalTests > 0 {
+				p = 100 * section.Pass / sectionTotalTests
 			}
 			switch {
 			case p >= highThreshold:
@@ -186,7 +189,7 @@ func (r *reporter) addBenchmarks() error {
 			node.Summary.TotalPass += section.Pass
 			node.Summary.TotalFail += section.Fail
 			node.Summary.TotalInfo += section.Info
-			node.Summary.Total += len(section.Results)
+			node.Summary.Total += sectionTotalTests
 
 			// Add the section to the node data.
 			node.Results = append(node.Results, *section)
