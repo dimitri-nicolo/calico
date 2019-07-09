@@ -316,3 +316,25 @@ type RemoteClusterConfiguration struct {
 
 	Spec calico.RemoteClusterConfigurationSpec
 }
+
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// FelixConfigurationList is a list of FelixConfiguration objects.
+type FelixConfigurationList struct {
+	metav1.TypeMeta
+	metav1.ListMeta
+
+	Items []FelixConfiguration
+}
+
+// +genclient
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type FelixConfiguration struct {
+	metav1.TypeMeta
+	metav1.ObjectMeta
+
+	Spec calico.FelixConfigurationSpec
+}

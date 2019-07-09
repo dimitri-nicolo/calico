@@ -12,6 +12,10 @@ type BGPConfigurationListerExpansion interface{}
 // BGPPeerLister.
 type BGPPeerListerExpansion interface{}
 
+// FelixConfigurationListerExpansion allows custom methods to be added to
+// FelixConfigurationLister.
+type FelixConfigurationListerExpansion interface{}
+
 // GlobalNetworkPolicyListerExpansion allows custom methods to be added to
 // GlobalNetworkPolicyLister.
 type GlobalNetworkPolicyListerExpansion interface{}

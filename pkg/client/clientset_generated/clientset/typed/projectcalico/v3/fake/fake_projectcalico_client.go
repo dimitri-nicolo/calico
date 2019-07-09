@@ -22,6 +22,10 @@ func (c *FakeProjectcalicoV3) BGPPeers() v3.BGPPeerInterface {
 	return &FakeBGPPeers{c}
 }
 
+func (c *FakeProjectcalicoV3) FelixConfigurations() v3.FelixConfigurationInterface {
+	return &FakeFelixConfigurations{c}
+}
+
 func (c *FakeProjectcalicoV3) GlobalNetworkPolicies() v3.GlobalNetworkPolicyInterface {
 	return &FakeGlobalNetworkPolicies{c}
 }

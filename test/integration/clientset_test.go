@@ -1551,3 +1551,75 @@ func testRemoteClusterConfigurationClient(client calicoclient.Interface, name st
 
 	return nil
 }
+
+// TestFelixConfigurationClient exercises the FelixConfiguration client.
+func TestFelixConfigurationClient(t *testing.T) {
+	const name = "test-felixconfig"
+	rootTestFunc := func() func(t *testing.T) {
+		return func(t *testing.T) {
+			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+				return &projectcalico.FelixConfiguration{}
+			})
+			defer shutdownServer()
+			if err := testFelixConfigurationClient(client, name); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	if !t.Run(name, rootTestFunc()) {
+		t.Errorf("test-felixConfig test failed")
+	}
+}
+
+func testFelixConfigurationClient(client calicoclient.Interface, name string) error {
+	felixConfigClient := client.ProjectcalicoV3().FelixConfigurations()
+	ptrTrue := true
+	ptrInt := 1432
+	felixConfig := &v3.FelixConfiguration{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Spec: calico.FelixConfigurationSpec{
+			UseInternalDataplaneDriver: &ptrTrue,
+			DataplaneDriver:            "test-dataplane-driver",
+			MetadataPort:               &ptrInt,
+		},
+	}
+
+	// start from scratch
+	felixConfigs, err := felixConfigClient.List(metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing felixConfigs (%s)", err)
+	}
+	if felixConfigs.Items == nil {
+		return fmt.Errorf("Items field should not be set to nil")
+	}
+
+	felixConfigServer, err := felixConfigClient.Create(felixConfig)
+	if nil != err {
+		return fmt.Errorf("error creating the felixConfig '%v' (%v)", felixConfig, err)
+	}
+	if name != felixConfigServer.Name {
+		return fmt.Errorf("didn't get the same felixConfig back from the server \n%+v\n%+v", felixConfig, felixConfigServer)
+	}
+
+	felixConfigs, err = felixConfigClient.List(metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing felixConfigs (%s)", err)
+	}
+
+	felixConfigServer, err = felixConfigClient.Get(name, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("error getting felixConfig %s (%s)", name, err)
+	}
+	if name != felixConfigServer.Name &&
+		felixConfig.ResourceVersion == felixConfigServer.ResourceVersion {
+		return fmt.Errorf("didn't get the same felixConfig back from the server \n%+v\n%+v", felixConfig, felixConfigServer)
+	}
+
+	err = felixConfigClient.Delete(name, &metav1.DeleteOptions{})
+	if nil != err {
+		return fmt.Errorf("felixConfig should be deleted (%s)", err)
+	}
+
+	return nil
+}

@@ -14,6 +14,8 @@ type Interface interface {
 	BGPConfigurations() BGPConfigurationInformer
 	// BGPPeers returns a BGPPeerInformer.
 	BGPPeers() BGPPeerInformer
+	// FelixConfigurations returns a FelixConfigurationInformer.
+	FelixConfigurations() FelixConfigurationInformer
 	// GlobalNetworkPolicies returns a GlobalNetworkPolicyInformer.
 	GlobalNetworkPolicies() GlobalNetworkPolicyInformer
 	// GlobalNetworkSets returns a GlobalNetworkSetInformer.
@@ -59,6 +61,11 @@ func (v *version) BGPConfigurations() BGPConfigurationInformer {
 // BGPPeers returns a BGPPeerInformer.
 func (v *version) BGPPeers() BGPPeerInformer {
 	return &bGPPeerInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// FelixConfigurations returns a FelixConfigurationInformer.
+func (v *version) FelixConfigurations() FelixConfigurationInformer {
+	return &felixConfigurationInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // GlobalNetworkPolicies returns a GlobalNetworkPolicyInformer.

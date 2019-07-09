@@ -61,6 +61,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&ProfileList{},
 		&RemoteClusterConfiguration{},
 		&RemoteClusterConfigurationList{},
+		&FelixConfiguration{},
+		&FelixConfigurationList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil
