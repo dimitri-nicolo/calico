@@ -38,13 +38,13 @@ var _ = Describe("Token", func() {
 			})
 
 			It("should extract Basic Token {Basic:Pwd}", func() {
-				token, tokenType := auth.Extract(requestWithHeader(map[string][]string{"Auth": {"Basic"}}))
-				Expect(token).To(Equal("Basic"))
+				token, tokenType := auth.Extract(requestWithHeader(map[string][]string{"Authorization": {"Basic Token"}}))
+				Expect(token).To(Equal("Token"))
 				Expect(tokenType).To(Equal(auth.Basic))
 			})
 
 			It("should not extract invalid Basic Token", func() {
-				token, tokenType := auth.Extract(requestWithHeader(map[string][]string{"Auth": {""}}))
+				token, tokenType := auth.Extract(requestWithHeader(map[string][]string{"Authorization": {"Basic  "}}))
 				Expect(token).To(Equal(""))
 				Expect(tokenType).To(Equal(auth.Unknown))
 			})
@@ -53,12 +53,6 @@ var _ = Describe("Token", func() {
 				token, tokenType := auth.Extract(requestWithHeader(map[string][]string{}))
 				Expect(token).To(Equal(""))
 				Expect(tokenType).To(Equal(auth.Unknown))
-			})
-
-			It("should extract Bearer token before Basic", func() {
-				token, tokenType := auth.Extract(requestWithHeader(map[string][]string{"Authorization": {"Bearer Token"}, "Auth": {"Basic"}}))
-				Expect(token).To(Equal("Token"))
-				Expect(tokenType).To(Equal(auth.Bearer))
 			})
 
 		})
