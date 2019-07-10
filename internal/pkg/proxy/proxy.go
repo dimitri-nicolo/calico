@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
-	"time"
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -67,7 +66,7 @@ func New(tgts []Target) (*Proxy, error) {
 
 func newTargetHandler(tgt Target) func(http.ResponseWriter, *http.Request) {
 	p := httputil.NewSingleHostReverseProxy(tgt.Dest)
-	p.FlushInterval = 100 * time.Millisecond
+	p.FlushInterval = -1
 
 	if tgt.Transport != nil {
 		p.Transport = tgt.Transport

@@ -14,7 +14,6 @@ import (
 	"net/http/httputil"
 	"sort"
 	"sync"
-	"time"
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -257,7 +256,7 @@ func (c *cluster) assignTunnel(t *tunnel.Tunnel) {
 	c.tunnel = t
 	c.proxy = &httputil.ReverseProxy{
 		Director:      proxyVoidDirector,
-		FlushInterval: 100 * time.Millisecond,
+		FlushInterval: -1,
 		// TODO set the error logger
 		Transport: &http2.Transport{
 			DialTLS:         c.DialTLS2,
