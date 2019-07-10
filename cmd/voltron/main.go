@@ -12,6 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/tigera/voltron/internal/pkg/bootstrap"
+	"github.com/tigera/voltron/internal/pkg/proxy"
 	"github.com/tigera/voltron/internal/pkg/server"
 )
 
@@ -34,6 +35,7 @@ type config struct {
 	K8sConfigPath     string `split_words:"true"`
 	KeepAliveEnable   bool   `default:"true" split_words:"true"`
 	KeepAliveInterval int    `default:"100" split_words:"true"`
+	DefaultK8sProxy   bool   `default:"true" split_words:"true"`
 }
 
 func main() {
@@ -55,7 +57,7 @@ func main() {
 	pemKey, _ := utils.LoadPEMFromFile(key)
 	tunnelCert, tunnelKey, _ := utils.LoadX509KeyPairFromPEM(pemCert, pemKey)
 
-	srv, err := server.New(
+	opts := []server.Option{
 		server.WithDefaultAddr(addr),
 		server.WithKeepAliveSettings(cfg.KeepAliveEnable, cfg.KeepAliveInterval),
 		server.WithCredsFiles(cert, key),
@@ -64,7 +66,36 @@ func main() {
 		server.WithKeepClusterKeys(),
 		server.WithTunnelCreds(tunnelCert, tunnelKey),
 		server.WithAuthentication(bootstrap.ConfigureK8sClient(cfg.AuthnOn, cfg.K8sConfigPath)),
-	)
+	}
+
+	if cfg.DefaultK8sProxy {
+		tgts, err := bootstrap.ProxyTargets([]bootstrap.Target{
+			{
+				Path:         "/api/",
+				Dest:         "https://kubernetes.default",
+				TokenPath:    "/var/run/secrets/kubernetes.io/serviceaccount/token",
+				CABundlePath: "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
+			},
+			{
+				Path:         "/apis/",
+				Dest:         "https://kubernetes.default",
+				TokenPath:    "/var/run/secrets/kubernetes.io/serviceaccount/token",
+				CABundlePath: "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
+			},
+		})
+
+		if err != nil {
+			log.Fatalf("Failed to parse default proxy targets: %s", err)
+		}
+
+		defaultK8sProxy, err := proxy.New(tgts)
+		if err != nil {
+			log.Fatalf("Failed to create a default k8s proxy: %s", err)
+		}
+		opts = append(opts, server.WithDefaultProxy(defaultK8sProxy))
+	}
+
+	srv, err := server.New(opts...)
 
 	if err != nil {
 		log.Fatalf("Failed to create server: %s", err)

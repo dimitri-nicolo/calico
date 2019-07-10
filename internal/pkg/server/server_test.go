@@ -12,21 +12,23 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
 
 	"golang.org/x/net/http2"
 
-	"github.com/tigera/voltron/internal/pkg/clusters"
-	"github.com/tigera/voltron/internal/pkg/test"
-	"github.com/tigera/voltron/internal/pkg/utils"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/tigera/voltron/internal/pkg/clusters"
+	"github.com/tigera/voltron/internal/pkg/proxy"
 	"github.com/tigera/voltron/internal/pkg/server"
+	"github.com/tigera/voltron/internal/pkg/test"
+	"github.com/tigera/voltron/internal/pkg/utils"
 	"github.com/tigera/voltron/pkg/tunnel"
 	"k8s.io/client-go/kubernetes/fake"
 )
@@ -139,6 +141,12 @@ var _ = Describe("Server", func() {
 		It("should not be able to delete the cluster again", func() {
 			Expect(deleteCluster(lis.Addr().String(), "clusterB")).NotTo(BeTrue())
 		})
+
+		It("Should not proxy anywhere - no header", func() {
+			resp, err := http.Get("http://" + lis.Addr().String() + "/")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.StatusCode).To(Equal(400))
+		})
 	})
 
 	It("should stop the server", func(done Done) {
@@ -163,6 +171,9 @@ var _ = Describe("Server Proxy to tunnel", func() {
 	client := fake.NewSimpleClientset()
 	test.AddJaneIdentity(client)
 
+	defaultServer := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+
 	It("should start a server", func() {
 		var e error
 		lis, e = net.Listen("tcp", "localhost:0")
@@ -182,10 +193,20 @@ var _ = Describe("Server Proxy to tunnel", func() {
 		lisTun, e = net.Listen("tcp", "localhost:0")
 		Expect(e).NotTo(HaveOccurred())
 
+		defaultURL, e := url.Parse(defaultServer.URL)
+		Expect(e).NotTo(HaveOccurred())
+
+		defaultProxy, e := proxy.New([]proxy.Target{{
+			Path: "/",
+			Dest: defaultURL,
+		}})
+		Expect(e).NotTo(HaveOccurred())
+
 		srv, err = server.New(
 			server.WithKeepClusterKeys(),
 			server.WithTunnelCreds(srvCert, srvPrivKey),
 			server.WithAuthentication(true, client),
+			server.WithDefaultProxy(defaultProxy),
 		)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -210,18 +231,6 @@ var _ = Describe("Server Proxy to tunnel", func() {
 	})
 
 	Context("when server is up", func() {
-		It("Should not proxy anywhere - return 400", func() {
-			resp, err := http.Get("http://" + lis.Addr().String() + "/")
-			Expect(err).NotTo(HaveOccurred())
-			Expect(resp.StatusCode).To(Equal(400))
-		})
-
-		It("Should not proxy anywhere - no header", func() {
-			resp, err := http.Get("http://" + lis.Addr().String() + "/")
-			Expect(err).NotTo(HaveOccurred())
-			Expect(resp.StatusCode).To(Equal(400))
-		})
-
 		It("Should not proxy anywhere - invalid cluster", func() {
 			req, err := http.NewRequest("GET", "http://"+lis.Addr().String()+"/", nil)
 			Expect(err).NotTo(HaveOccurred())
@@ -244,6 +253,12 @@ var _ = Describe("Server Proxy to tunnel", func() {
 		It("should not be able to proxy to a cluster without a tunnel", func() {
 			addCluster(lis.Addr().String(), "clusterA", "A")
 			clientHelloReq(lis.Addr().String(), "clusterA", 503)
+		})
+
+		It("Should proxy to default if no header", func() {
+			resp, err := http.Get(defaultServer.URL)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.StatusCode).To(Equal(200))
 		})
 
 		var clnT *tunnel.Tunnel

@@ -49,6 +49,9 @@ var _ = Describe("Integration Tests", func() {
 		err = os.Setenv("VOLTRON_AUTHN_ON", "false")
 		Expect(err).ToNot(HaveOccurred())
 
+		// do not use the default proxy, not needed
+		err = os.Setenv("VOLTRON_DEFAULT_K8S_PROXY", "false")
+		Expect(err).ToNot(HaveOccurred())
 	})
 
 	It("Should fail to ping cluster endpoint", func() {

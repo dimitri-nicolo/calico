@@ -21,6 +21,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	jclust "github.com/tigera/voltron/internal/pkg/clusters"
+	"github.com/tigera/voltron/internal/pkg/proxy"
 	"github.com/tigera/voltron/internal/pkg/utils"
 	"github.com/tigera/voltron/pkg/tunnel"
 )
@@ -42,6 +43,8 @@ type Server struct {
 	cancel   context.CancelFunc
 	http     *http.Server
 	proxyMux *http.ServeMux
+
+	defaultProxy *proxy.Proxy
 
 	clusters *clusters
 	health   *health
@@ -266,6 +269,11 @@ func (s *Server) acceptTunnels(opts ...tunnel.Option) {
 
 func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 	if _, ok := r.Header[ClusterHeaderFieldCanon]; !ok {
+		if s.defaultProxy != nil {
+			s.defaultProxy.ServeHTTP(w, r)
+			return
+		}
+
 		msg := fmt.Sprintf("missing %q header", ClusterHeaderField)
 		log.Errorf("clusterMuxer: %s", msg)
 		http.Error(w, msg, 400)

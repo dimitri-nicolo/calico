@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/tigera/voltron/internal/pkg/auth"
+	"github.com/tigera/voltron/internal/pkg/proxy"
 
 	"github.com/pkg/errors"
 	"k8s.io/client-go/kubernetes"
@@ -111,6 +112,16 @@ func WithKeepAliveSettings(enable bool, intervalMs int) Option {
 	return func(s *Server) error {
 		s.tunnelEnableKeepAlive = enable
 		s.tunnelKeepAliveInterval = time.Duration(intervalMs) * time.Millisecond
+		return nil
+	}
+}
+
+// WithDefaultProxy set the default proxy if no x-cluster-id header is present.
+// it is optional. If not set, server returns 400 error if a request does not
+// have the x-cluster-id set.
+func WithDefaultProxy(p *proxy.Proxy) Option {
+	return func(s *Server) error {
+		s.defaultProxy = p
 		return nil
 	}
 }
