@@ -1,5 +1,5 @@
-hash: 50fd2159c74c207f564e858391deee064144d00f85647eb2008f5746e36ab36a
-updated: 2019-07-05T05:28:04.130789368Z
+hash: d5dd6193e49d7e8414111cfe046ef4e0435e0e5983fac0689fda17e297d1c387
+updated: 2019-07-10T14:05:32.756233762-07:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -130,38 +130,11 @@ imports:
 - name: github.com/go-openapi/swag
   version: becd2f08beafcca035645a8a101e0e3e18140458
 - name: github.com/go-playground/locales
-  version: 630ebbb602847eba93e75ae38bbc7bb7abcf1ff3
+  version: f63010822830b6fe52288ee52d5a1151088ce039
   subpackages:
   - currency
 - name: github.com/go-playground/universal-translator
   version: 71201497bace774495daed26a3874fd339e0b538
-- name: github.com/gobuffalo/envy
-  version: 043cb4b8af871b49563291e32c66bb84378a60ac
-- name: github.com/gobuffalo/genny
-  version: 34bef62e8202ea5e6dd1f9ee3d5ac217f1290352
-- name: github.com/gobuffalo/gogen
-  version: 5482e6ef5d999f8cfa9b038a53953c9b4ee090af
-  subpackages:
-  - goimports
-  - gomods
-- name: github.com/gobuffalo/logger
-  version: 86e12af44bc273e0063fad5b6ad588890b8cfe6b
-- name: github.com/gobuffalo/mapi
-  version: 0bb5e840be332d4280e40f2e6c50777c615bbac5
-- name: github.com/gobuffalo/packd
-  version: 9efbb667f2024a9370cadda45a57a0657c88a6fb
-- name: github.com/gobuffalo/packr
-  version: 68a5fdc58d980600c4622a82472ebe415048f141
-  subpackages:
-  - v2
-  - v2/file
-  - v2/file/resolver
-  - v2/file/resolver/encoding/hex
-  - v2/jam/parser
-  - v2/packr2
-  - v2/plog
-- name: github.com/gobuffalo/syncx
-  version: 33c29581e754bd354236e977dfe426e55331c45d
 - name: github.com/gogo/protobuf
   version: c0656edd0d9eab7c66d1eb0c568f9039345796f7
   subpackages:
@@ -215,7 +188,7 @@ imports:
   subpackages:
   - simplelru
 - name: github.com/hpcloud/tail
-  version: a30252cb686a21eb2d0b98132633053ec2f7f1e5
+  version: a1dbeea552b7c8df4b542c66073e393de198a800
   subpackages:
   - ratelimiter
   - util
@@ -227,8 +200,6 @@ imports:
   version: 7c29201646fa3de8506f701213473dd407f19646
 - name: github.com/jmespath/go-jmespath
   version: 3433f3ea46d9f8019119e7dd41274e112a2359a9
-- name: github.com/joho/godotenv
-  version: 5c0e6c6ab1a0a9ef0a8822cba3a05d62f7dad941
 - name: github.com/json-iterator/go
   version: f2b4162afba35581b6d4a50d3b8f34e33c144682
 - name: github.com/juju/clock
@@ -239,10 +210,8 @@ imports:
   version: d21b13acf4bfd8a8b0482a3a78e44d98880b40d3
 - name: github.com/kardianos/osext
   version: 2bc1f35cddc0cc527b4bc3dce8578fc2a6c11384
-- name: github.com/karrick/godirwalk
-  version: 5e617d9cfec6f870e63b168e9a2fb7c490a1c108
 - name: github.com/kelseyhightower/confd
-  version: fce0cc213b5a4b810cfd5490fab84d2edfa7b4ec
+  version: 8efd4a6d6a684c927c5b3b288f007aba97c9ea84
   repo: git@github.com:tigera/confd-private.git
   subpackages:
   - pkg/backends
@@ -264,10 +233,6 @@ imports:
   - buffer
   - jlexer
   - jwriter
-- name: github.com/markbates/oncer
-  version: bf2de49a0be218916e69a11d22866e6cd0a560f2
-- name: github.com/markbates/safe
-  version: 6fea05a5732486546a4836b7a1d596c5ec687b98
 - name: github.com/Masterminds/semver
   version: 59c29afe1a994eacb71c833025ca7acf874bb1da
 - name: github.com/Masterminds/sprig
@@ -347,8 +312,6 @@ imports:
   version: ca53cad383cad2479bbba7f7a1a05797ec1386e4
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
-- name: github.com/pkg/errors
-  version: 645ef00459ed84a119197bfb8d8205042c6df63d
 - name: github.com/projectcalico/cni-plugin
   version: a46c89f9c71b112dc0c966ed32d75e28ca63067a
   repo: git@github.com:tigera/cni-plugin-private.git
@@ -362,11 +325,10 @@ imports:
   - pkg/types
   - pkg/upgrade
 - name: github.com/projectcalico/felix
-  version: d71555588ae60e00c96fa79d4ab7be1067631abc
+  version: a5bda8c77ce04dc6c92978c47a3d17c707de053a
   repo: git@github.com:tigera/felix-private.git
   subpackages:
   - bpf
-  - bpf/packrd
   - buildinfo
   - calc
   - collector
@@ -413,7 +375,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 5e256d1d3a6de51cb0019a88e1dab922c7ea5a78
+  version: c68fc5e8980136a5ed6e2ec66109d1064235a653
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
@@ -468,7 +430,7 @@ imports:
   subpackages:
   - binder
 - name: github.com/projectcalico/typha
-  version: 80e11bcdb20baf366d54577eef9801d490fb04cc
+  version: acd6accda3bab22293165f9f69c31b35a411a40e
   repo: git@github.com:tigera/typha-private.git
   subpackages:
   - pkg/syncclient
@@ -504,12 +466,6 @@ imports:
   - netsh
 - name: github.com/robfig/cron
   version: b41be1df696709bb6395fe435af20370037c0b4c
-- name: github.com/rogpeppe/go-internal
-  version: 6f68bf1e81f8552c7dbd47f3bc4371c2db0941a6
-  subpackages:
-  - modfile
-  - module
-  - semver
 - name: github.com/safchain/ethtool
   version: 7ff1ba29eca231991280817541cb3903f6be15d1
 - name: github.com/satori/go.uuid
@@ -609,20 +565,6 @@ imports:
   version: f51c12702a4d776e4c1fa9b0fabab841babae631
   subpackages:
   - rate
-- name: golang.org/x/tools
-  version: aa82965741a9fecd12b026fbb3d3c6ed3231b8f8
-  subpackages:
-  - go/ast/astutil
-  - go/gcexportdata
-  - go/internal/cgo
-  - go/internal/gcimporter
-  - go/internal/packagesdriver
-  - go/packages
-  - imports
-  - internal/fastwalk
-  - internal/gopathwalk
-  - internal/module
-  - internal/semver
 - name: google.golang.org/appengine
   version: 54a98f90d1c46b7731eb8fb305d2a321c30ef610
   subpackages:
@@ -659,10 +601,10 @@ imports:
   - status
   - tap
   - transport
-- name: gopkg.in/fsnotify.v1
-  version: 7be54206639f256967dd82fa767397ba5f8f48f5
+- name: gopkg.in/fsnotify/fsnotify.v1
+  version: c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9
 - name: gopkg.in/go-playground/validator.v9
-  version: 46b4b1e301c24cac870ffcb4ba5c8a703d1ef475
+  version: b199fa0642d29caca62b6a99d65cc981ba5edc3b
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: gopkg.in/natefinch/lumberjack.v2
