@@ -65,19 +65,21 @@ var _ = Describe("DNS Policy", func() {
 	})
 
 	wgetMicrosoftErr := func() error {
-		out, err := w[0].ExecOutput("wget", "-T", "1", "microsoft.com")
+		// Need to allow a timeout of more than 1 second here so that wget has time for the
+		// initial TCP connection packet at t=0s and the first retry packet at t=1s.
+		out, err := w[0].ExecOutput("wget", "-T", "2", "microsoft.com")
 		log.WithError(err).Infof("wget said:\n%v", out)
 		return err
 	}
 
 	canWgetMicrosoft := func() {
 		Eventually(wgetMicrosoftErr, "10s", "1s").ShouldNot(HaveOccurred())
-		Consistently(wgetMicrosoftErr, "3s", "1s").ShouldNot(HaveOccurred())
+		Consistently(wgetMicrosoftErr, "4s", "1s").ShouldNot(HaveOccurred())
 	}
 
 	cannotWgetMicrosoft := func() {
 		Eventually(wgetMicrosoftErr, "10s", "1s").Should(HaveOccurred())
-		Consistently(wgetMicrosoftErr, "3s", "1s").Should(HaveOccurred())
+		Consistently(wgetMicrosoftErr, "4s", "1s").Should(HaveOccurred())
 	}
 
 	Context("with save file in initially non-existent directory", func() {
