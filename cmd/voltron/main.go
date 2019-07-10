@@ -73,13 +73,11 @@ func main() {
 			{
 				Path:         "/api/",
 				Dest:         "https://kubernetes.default",
-				TokenPath:    "/var/run/secrets/kubernetes.io/serviceaccount/token",
 				CABundlePath: "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
 			},
 			{
 				Path:         "/apis/",
 				Dest:         "https://kubernetes.default",
-				TokenPath:    "/var/run/secrets/kubernetes.io/serviceaccount/token",
 				CABundlePath: "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
 			},
 		})
