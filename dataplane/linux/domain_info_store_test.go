@@ -80,7 +80,9 @@ var _ = Describe("Domain Info Store", func() {
 			DNSCacheFile:         "/dnsinfo",
 			DNSCacheSaveInterval: time.Minute,
 		}
-		domainStore = newDomainInfoStore(domainChannel, config)
+		// For UT purposes, arrange that mappings always appear to have expired when UT code
+		// calls processMappingExpiry.
+		domainStore = newDomainInfoStoreWithShims(domainChannel, config, func(time.Time) bool { return true })
 	}
 
 	// Basic validation tests that add/expire one or two DNS records of A and AAAA type to the data store.
