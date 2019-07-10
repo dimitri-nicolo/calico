@@ -28,510 +28,319 @@ import (
 
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
 	return map[string]common.OpenAPIDefinition{
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.BGPPeer":                        schema_libcalico_go_lib_apis_v1_BGPPeer(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.BGPPeerList":                    schema_libcalico_go_lib_apis_v1_BGPPeerList(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.BGPPeerMetadata":                schema_libcalico_go_lib_apis_v1_BGPPeerMetadata(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.BGPPeerSpec":                    schema_libcalico_go_lib_apis_v1_BGPPeerSpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.CalicoAPIConfig":                schema_libcalico_go_lib_apis_v1_CalicoAPIConfig(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.CalicoAPIConfigMetadata":        schema_libcalico_go_lib_apis_v1_CalicoAPIConfigMetadata(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.CalicoAPIConfigSpec":            schema_libcalico_go_lib_apis_v1_CalicoAPIConfigSpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.EndpointPort":                   schema_libcalico_go_lib_apis_v1_EndpointPort(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.EntityRule":                     schema_libcalico_go_lib_apis_v1_EntityRule(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.EtcdConfig":                     schema_libcalico_go_lib_apis_v1_EtcdConfig(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.HostEndpoint":                   schema_libcalico_go_lib_apis_v1_HostEndpoint(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.HostEndpointList":               schema_libcalico_go_lib_apis_v1_HostEndpointList(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.HostEndpointMetadata":           schema_libcalico_go_lib_apis_v1_HostEndpointMetadata(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.HostEndpointSpec":               schema_libcalico_go_lib_apis_v1_HostEndpointSpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.ICMPFields":                     schema_libcalico_go_lib_apis_v1_ICMPFields(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.IPIPConfiguration":              schema_libcalico_go_lib_apis_v1_IPIPConfiguration(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.IPNAT":                          schema_libcalico_go_lib_apis_v1_IPNAT(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.IPPool":                         schema_libcalico_go_lib_apis_v1_IPPool(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.IPPoolList":                     schema_libcalico_go_lib_apis_v1_IPPoolList(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.IPPoolMetadata":                 schema_libcalico_go_lib_apis_v1_IPPoolMetadata(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.IPPoolSpec":                     schema_libcalico_go_lib_apis_v1_IPPoolSpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.KubeConfig":                     schema_libcalico_go_lib_apis_v1_KubeConfig(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.Node":                           schema_libcalico_go_lib_apis_v1_Node(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.NodeBGPSpec":                    schema_libcalico_go_lib_apis_v1_NodeBGPSpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.NodeList":                       schema_libcalico_go_lib_apis_v1_NodeList(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.NodeMetadata":                   schema_libcalico_go_lib_apis_v1_NodeMetadata(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.NodeSpec":                       schema_libcalico_go_lib_apis_v1_NodeSpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.OrchRef":                        schema_libcalico_go_lib_apis_v1_OrchRef(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.Policy":                         schema_libcalico_go_lib_apis_v1_Policy(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.PolicyList":                     schema_libcalico_go_lib_apis_v1_PolicyList(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.PolicyMetadata":                 schema_libcalico_go_lib_apis_v1_PolicyMetadata(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.PolicySpec":                     schema_libcalico_go_lib_apis_v1_PolicySpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.Profile":                        schema_libcalico_go_lib_apis_v1_Profile(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.ProfileList":                    schema_libcalico_go_lib_apis_v1_ProfileList(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.ProfileMetadata":                schema_libcalico_go_lib_apis_v1_ProfileMetadata(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.ProfileSpec":                    schema_libcalico_go_lib_apis_v1_ProfileSpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.Rule":                           schema_libcalico_go_lib_apis_v1_Rule(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.Tier":                           schema_libcalico_go_lib_apis_v1_Tier(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.TierList":                       schema_libcalico_go_lib_apis_v1_TierList(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.TierMetadata":                   schema_libcalico_go_lib_apis_v1_TierMetadata(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.TierSpec":                       schema_libcalico_go_lib_apis_v1_TierSpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.WorkloadEndpoint":               schema_libcalico_go_lib_apis_v1_WorkloadEndpoint(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.WorkloadEndpointList":           schema_libcalico_go_lib_apis_v1_WorkloadEndpointList(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.WorkloadEndpointMetadata":       schema_libcalico_go_lib_apis_v1_WorkloadEndpointMetadata(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v1.WorkloadEndpointSpec":           schema_libcalico_go_lib_apis_v1_WorkloadEndpointSpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.AllocationAttribute":            schema_libcalico_go_lib_apis_v3_AllocationAttribute(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.AuditEventsSelection":           schema_libcalico_go_lib_apis_v3_AuditEventsSelection(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.AuditResource":                  schema_libcalico_go_lib_apis_v3_AuditResource(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.AuditSummary":                   schema_libcalico_go_lib_apis_v3_AuditSummary(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.BGPConfiguration":               schema_libcalico_go_lib_apis_v3_BGPConfiguration(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.BGPConfigurationList":           schema_libcalico_go_lib_apis_v3_BGPConfigurationList(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.BGPConfigurationSpec":           schema_libcalico_go_lib_apis_v3_BGPConfigurationSpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.BGPPeer":                        schema_libcalico_go_lib_apis_v3_BGPPeer(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.BGPPeerList":                    schema_libcalico_go_lib_apis_v3_BGPPeerList(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.BGPPeerSpec":                    schema_libcalico_go_lib_apis_v3_BGPPeerSpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.BlockAffinity":                  schema_libcalico_go_lib_apis_v3_BlockAffinity(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.BlockAffinityList":              schema_libcalico_go_lib_apis_v3_BlockAffinityList(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.BlockAffinitySpec":              schema_libcalico_go_lib_apis_v3_BlockAffinitySpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkFilter":             schema_libcalico_go_lib_apis_v3_CISBenchmarkFilter(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkNode":               schema_libcalico_go_lib_apis_v3_CISBenchmarkNode(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkNodeSummary":        schema_libcalico_go_lib_apis_v3_CISBenchmarkNodeSummary(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkParams":             schema_libcalico_go_lib_apis_v3_CISBenchmarkParams(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkResult":             schema_libcalico_go_lib_apis_v3_CISBenchmarkResult(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkResultCount":        schema_libcalico_go_lib_apis_v3_CISBenchmarkResultCount(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkSectionResult":      schema_libcalico_go_lib_apis_v3_CISBenchmarkSectionResult(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkSelection":          schema_libcalico_go_lib_apis_v3_CISBenchmarkSelection(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkSummary":            schema_libcalico_go_lib_apis_v3_CISBenchmarkSummary(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.ClusterInformation":             schema_libcalico_go_lib_apis_v3_ClusterInformation(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.ClusterInformationList":         schema_libcalico_go_lib_apis_v3_ClusterInformationList(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.ClusterInformationSpec":         schema_libcalico_go_lib_apis_v3_ClusterInformationSpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.CompletedReportJob":             schema_libcalico_go_lib_apis_v3_CompletedReportJob(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointPort":                   schema_libcalico_go_lib_apis_v3_EndpointPort(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportEndpoint":        schema_libcalico_go_lib_apis_v3_EndpointsReportEndpoint(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportFlow":            schema_libcalico_go_lib_apis_v3_EndpointsReportFlow(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportNamespace":       schema_libcalico_go_lib_apis_v3_EndpointsReportNamespace(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportService":         schema_libcalico_go_lib_apis_v3_EndpointsReportService(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsSelection":             schema_libcalico_go_lib_apis_v3_EndpointsSelection(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsSummary":               schema_libcalico_go_lib_apis_v3_EndpointsSummary(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.EntityRule":                     schema_libcalico_go_lib_apis_v3_EntityRule(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.ErrorCondition":                 schema_libcalico_go_lib_apis_v3_ErrorCondition(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.EtcdConfig":                     schema_libcalico_go_lib_apis_v3_EtcdConfig(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.FelixConfiguration":             schema_libcalico_go_lib_apis_v3_FelixConfiguration(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.FelixConfigurationList":         schema_libcalico_go_lib_apis_v3_FelixConfigurationList(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.FelixConfigurationSpec":         schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.FlowEndpoint":                   schema_libcalico_go_lib_apis_v3_FlowEndpoint(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkPolicy":            schema_libcalico_go_lib_apis_v3_GlobalNetworkPolicy(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkPolicyList":        schema_libcalico_go_lib_apis_v3_GlobalNetworkPolicyList(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkPolicySpec":        schema_libcalico_go_lib_apis_v3_GlobalNetworkPolicySpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkSet":               schema_libcalico_go_lib_apis_v3_GlobalNetworkSet(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkSetList":           schema_libcalico_go_lib_apis_v3_GlobalNetworkSetList(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkSetSpec":           schema_libcalico_go_lib_apis_v3_GlobalNetworkSetSpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkSetSync":           schema_libcalico_go_lib_apis_v3_GlobalNetworkSetSync(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalReport":                   schema_libcalico_go_lib_apis_v3_GlobalReport(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalReportList":               schema_libcalico_go_lib_apis_v3_GlobalReportList(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalReportType":               schema_libcalico_go_lib_apis_v3_GlobalReportType(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalReportTypeList":           schema_libcalico_go_lib_apis_v3_GlobalReportTypeList(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeed":               schema_libcalico_go_lib_apis_v3_GlobalThreatFeed(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeedList":           schema_libcalico_go_lib_apis_v3_GlobalThreatFeedList(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeedSpec":           schema_libcalico_go_lib_apis_v3_GlobalThreatFeedSpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeedStatus":         schema_libcalico_go_lib_apis_v3_GlobalThreatFeedStatus(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPHeader":                     schema_libcalico_go_lib_apis_v3_HTTPHeader(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPHeaderSource":               schema_libcalico_go_lib_apis_v3_HTTPHeaderSource(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPMatch":                      schema_libcalico_go_lib_apis_v3_HTTPMatch(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPPath":                       schema_libcalico_go_lib_apis_v3_HTTPPath(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPPull":                       schema_libcalico_go_lib_apis_v3_HTTPPull(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.HostEndpoint":                   schema_libcalico_go_lib_apis_v3_HostEndpoint(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.HostEndpointList":               schema_libcalico_go_lib_apis_v3_HostEndpointList(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.HostEndpointSpec":               schema_libcalico_go_lib_apis_v3_HostEndpointSpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.ICMPFields":                     schema_libcalico_go_lib_apis_v3_ICMPFields(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMBlock":                      schema_libcalico_go_lib_apis_v3_IPAMBlock(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMBlockList":                  schema_libcalico_go_lib_apis_v3_IPAMBlockList(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMBlockSpec":                  schema_libcalico_go_lib_apis_v3_IPAMBlockSpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMConfig":                     schema_libcalico_go_lib_apis_v3_IPAMConfig(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMConfigList":                 schema_libcalico_go_lib_apis_v3_IPAMConfigList(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMConfigSpec":                 schema_libcalico_go_lib_apis_v3_IPAMConfigSpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMHandle":                     schema_libcalico_go_lib_apis_v3_IPAMHandle(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMHandleList":                 schema_libcalico_go_lib_apis_v3_IPAMHandleList(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMHandleSpec":                 schema_libcalico_go_lib_apis_v3_IPAMHandleSpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPNAT":                          schema_libcalico_go_lib_apis_v3_IPNAT(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPPool":                         schema_libcalico_go_lib_apis_v3_IPPool(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPPoolList":                     schema_libcalico_go_lib_apis_v3_IPPoolList(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPPoolSpec":                     schema_libcalico_go_lib_apis_v3_IPPoolSpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.KubeConfig":                     schema_libcalico_go_lib_apis_v3_KubeConfig(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.LicenseKey":                     schema_libcalico_go_lib_apis_v3_LicenseKey(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.LicenseKeyList":                 schema_libcalico_go_lib_apis_v3_LicenseKeyList(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.LicenseKeySpec":                 schema_libcalico_go_lib_apis_v3_LicenseKeySpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.NamesAndLabelsMatch":            schema_libcalico_go_lib_apis_v3_NamesAndLabelsMatch(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkPolicy":                  schema_libcalico_go_lib_apis_v3_NetworkPolicy(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkPolicyList":              schema_libcalico_go_lib_apis_v3_NetworkPolicyList(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkPolicySpec":              schema_libcalico_go_lib_apis_v3_NetworkPolicySpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkSet":                     schema_libcalico_go_lib_apis_v3_NetworkSet(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkSetList":                 schema_libcalico_go_lib_apis_v3_NetworkSetList(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkSetSpec":                 schema_libcalico_go_lib_apis_v3_NetworkSetSpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.Node":                           schema_libcalico_go_lib_apis_v3_Node(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeBGPSpec":                    schema_libcalico_go_lib_apis_v3_NodeBGPSpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeList":                       schema_libcalico_go_lib_apis_v3_NodeList(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeSpec":                       schema_libcalico_go_lib_apis_v3_NodeSpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.OrchRef":                        schema_libcalico_go_lib_apis_v3_OrchRef(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.Profile":                        schema_libcalico_go_lib_apis_v3_Profile(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.ProfileList":                    schema_libcalico_go_lib_apis_v3_ProfileList(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.ProfileSpec":                    schema_libcalico_go_lib_apis_v3_ProfileSpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.ProtoPort":                      schema_libcalico_go_lib_apis_v3_ProtoPort(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.Pull":                           schema_libcalico_go_lib_apis_v3_Pull(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.RemoteClusterConfiguration":     schema_libcalico_go_lib_apis_v3_RemoteClusterConfiguration(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.RemoteClusterConfigurationList": schema_libcalico_go_lib_apis_v3_RemoteClusterConfigurationList(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.RemoteClusterConfigurationSpec": schema_libcalico_go_lib_apis_v3_RemoteClusterConfigurationSpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.ReportData":                     schema_libcalico_go_lib_apis_v3_ReportData(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.ReportJob":                      schema_libcalico_go_lib_apis_v3_ReportJob(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.ReportSpec":                     schema_libcalico_go_lib_apis_v3_ReportSpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.ReportStatus":                   schema_libcalico_go_lib_apis_v3_ReportStatus(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.ReportTemplate":                 schema_libcalico_go_lib_apis_v3_ReportTemplate(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.ReportTypeSpec":                 schema_libcalico_go_lib_apis_v3_ReportTypeSpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.ResourceID":                     schema_libcalico_go_lib_apis_v3_ResourceID(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.Rule":                           schema_libcalico_go_lib_apis_v3_Rule(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.ServiceAccountMatch":            schema_libcalico_go_lib_apis_v3_ServiceAccountMatch(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.Tier":                           schema_libcalico_go_lib_apis_v3_Tier(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.TierList":                       schema_libcalico_go_lib_apis_v3_TierList(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.TierSpec":                       schema_libcalico_go_lib_apis_v3_TierSpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.WorkloadEndpoint":               schema_libcalico_go_lib_apis_v3_WorkloadEndpoint(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.WorkloadEndpointList":           schema_libcalico_go_lib_apis_v3_WorkloadEndpointList(ref),
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.WorkloadEndpointSpec":           schema_libcalico_go_lib_apis_v3_WorkloadEndpointSpec(ref),
-		"github.com/projectcalico/libcalico-go/lib/numorstring.Port":                       numorstring.Port{}.OpenAPIDefinition(),
-		"github.com/projectcalico/libcalico-go/lib/numorstring.Protocol":                   numorstring.Protocol{}.OpenAPIDefinition(),
-		"github.com/projectcalico/libcalico-go/lib/numorstring.Uint8OrString":              numorstring.Uint8OrString{}.OpenAPIDefinition(),
-	}
-}
-
-func schema_libcalico_go_lib_apis_v1_BGPPeer(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "BGPPeer contains information about a BGP peer resource that is a peer of a Calico compute node.",
-				Properties: map[string]spec.Schema{
-					"TypeMetadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
-						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Metadata for a BGPPeer.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v1.BGPPeerMetadata"),
-						},
-					},
-					"spec": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Specification for a BGPPeer.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v1.BGPPeerSpec"),
-						},
-					},
-				},
-				Required: []string{"TypeMetadata"},
-			},
-		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v1.BGPPeerMetadata", "github.com/projectcalico/libcalico-go/lib/apis/v1.BGPPeerSpec", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v1_BGPPeerList(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "BGPPeerList contains a list of BGP Peer resources.  List types are returned from List() enumerations in the client interface.",
-				Properties: map[string]spec.Schema{
-					"TypeMetadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
-						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ListMetadata"),
-						},
-					},
-					"items": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.BGPPeer"),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.BGPPeer": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "BGPPeer contains information about a BGP peer resource that is a peer of a Calico compute node.",
+					Properties: map[string]spec.Schema{
+						"TypeMetadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
+							},
+						},
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Metadata for a BGPPeer.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v1.BGPPeerMetadata"),
+							},
+						},
+						"spec": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Specification for a BGPPeer.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v1.BGPPeerSpec"),
+							},
+						},
+					},
+					Required: []string{"TypeMetadata"},
+				},
+			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v1.BGPPeerMetadata", "github.com/projectcalico/libcalico-go/lib/apis/v1.BGPPeerSpec", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.BGPPeerList": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "BGPPeerList contains a list of BGP Peer resources.  List types are returned from List() enumerations in the client interface.",
+					Properties: map[string]spec.Schema{
+						"TypeMetadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
+							},
+						},
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ListMetadata"),
+							},
+						},
+						"items": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.BGPPeer"),
+										},
 									},
 								},
 							},
 						},
 					},
+					Required: []string{"TypeMetadata", "items"},
 				},
-				Required: []string{"TypeMetadata", "items"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v1.BGPPeer", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ListMetadata", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v1.BGPPeer", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ListMetadata", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v1_BGPPeerMetadata(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "BGPPeerMetadata contains the metadata for a BGPPeer resource.",
-				Properties: map[string]spec.Schema{
-					"ObjectMetadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.BGPPeerMetadata": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "BGPPeerMetadata contains the metadata for a BGPPeer resource.",
+					Properties: map[string]spec.Schema{
+						"ObjectMetadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"),
+							},
 						},
-					},
-					"scope": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The scope of the peer.  This may be global or node.  A global peer is a BGP device that peers with all Calico nodes.  A node peer is a BGP device that peers with the specified Calico node (specified by the node hostname).",
-							Type:        []string{"string"},
-							Format:      "",
+						"scope": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The scope of the peer.  This may be global or node.  A global peer is a BGP device that peers with all Calico nodes.  A node peer is a BGP device that peers with the specified Calico node (specified by the node hostname).",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"node": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The node name identifying the Calico node instance that is peering with this peer. When modifying a BGP peer, the node must be specified when the scope is `node`, and must be omitted when the scope is `global`.",
-							Type:        []string{"string"},
-							Format:      "",
+						"node": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The node name identifying the Calico node instance that is peering with this peer. When modifying a BGP peer, the node must be specified when the scope is `node`, and must be omitted when the scope is `global`.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"peerIP": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The IP address of the peer.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/net.IP"),
+						"peerIP": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The IP address of the peer.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/net.IP"),
+							},
 						},
 					},
+					Required: []string{"ObjectMetadata", "scope", "peerIP"},
 				},
-				Required: []string{"ObjectMetadata", "scope", "peerIP"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata", "github.com/projectcalico/libcalico-go/lib/net.IP"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata", "github.com/projectcalico/libcalico-go/lib/net.IP"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v1_BGPPeerSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "BGPPeerSpec contains the specification for a BGPPeer resource.",
-				Properties: map[string]spec.Schema{
-					"asNumber": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The AS Number of the peer.",
-							Type:        []string{"integer"},
-							Format:      "int64",
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.BGPPeerSpec": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "BGPPeerSpec contains the specification for a BGPPeer resource.",
+					Properties: map[string]spec.Schema{
+						"asNumber": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The AS Number of the peer.",
+								Type:        []string{"integer"},
+								Format:      "int64",
+							},
 						},
 					},
+					Required: []string{"asNumber"},
 				},
-				Required: []string{"asNumber"},
 			},
+			Dependencies: []string{},
 		},
-		Dependencies: []string{},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v1_CalicoAPIConfig(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "CalicoAPIConfig contains the connection information for a Calico CalicoAPIConfig resource",
-				Properties: map[string]spec.Schema{
-					"TypeMetadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.CalicoAPIConfig": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "CalicoAPIConfig contains the connection information for a Calico CalicoAPIConfig resource",
+					Properties: map[string]spec.Schema{
+						"TypeMetadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.CalicoAPIConfigMetadata"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.CalicoAPIConfigMetadata"),
+							},
 						},
-					},
-					"spec": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.CalicoAPIConfigSpec"),
+						"spec": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.CalicoAPIConfigSpec"),
+							},
 						},
 					},
+					Required: []string{"TypeMetadata"},
 				},
-				Required: []string{"TypeMetadata"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v1.CalicoAPIConfigMetadata", "github.com/projectcalico/libcalico-go/lib/apis/v1.CalicoAPIConfigSpec", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v1.CalicoAPIConfigMetadata", "github.com/projectcalico/libcalico-go/lib/apis/v1.CalicoAPIConfigSpec", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v1_CalicoAPIConfigMetadata(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "CalicoAPIConfigMetadata contains the metadata for a Calico CalicoAPIConfig resource.",
-				Properties: map[string]spec.Schema{
-					"ObjectMetadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.CalicoAPIConfigMetadata": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "CalicoAPIConfigMetadata contains the metadata for a Calico CalicoAPIConfig resource.",
+					Properties: map[string]spec.Schema{
+						"ObjectMetadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"),
+							},
 						},
 					},
+					Required: []string{"ObjectMetadata"},
 				},
-				Required: []string{"ObjectMetadata"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v1_CalicoAPIConfigSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "CalicoAPIConfigSpec contains the specification for a Calico CalicoAPIConfig resource.",
-				Properties: map[string]spec.Schema{
-					"datastoreType": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.CalicoAPIConfigSpec": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "CalicoAPIConfigSpec contains the specification for a Calico CalicoAPIConfig resource.",
+					Properties: map[string]spec.Schema{
+						"datastoreType": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"EtcdConfig": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Inline the ectd config fields",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v1.EtcdConfig"),
+						"EtcdConfig": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Inline the ectd config fields",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v1.EtcdConfig"),
+							},
 						},
-					},
-					"KubeConfig": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Inline the k8s config fields.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v1.KubeConfig"),
+						"KubeConfig": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Inline the k8s config fields.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v1.KubeConfig"),
+							},
 						},
 					},
+					Required: []string{"datastoreType", "EtcdConfig", "KubeConfig"},
 				},
-				Required: []string{"datastoreType", "EtcdConfig", "KubeConfig"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v1.EtcdConfig", "github.com/projectcalico/libcalico-go/lib/apis/v1.KubeConfig"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v1.EtcdConfig", "github.com/projectcalico/libcalico-go/lib/apis/v1.KubeConfig"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v1_EndpointPort(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Properties: map[string]spec.Schema{
-					"name": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.EndpointPort": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Properties: map[string]spec.Schema{
+						"name": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"protocol": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/numorstring.Protocol"),
+						"protocol": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/numorstring.Protocol"),
+							},
 						},
-					},
-					"port": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"integer"},
-							Format: "int32",
+						"port": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"integer"},
+								Format: "int32",
+							},
 						},
 					},
+					Required: []string{"name", "protocol", "port"},
 				},
-				Required: []string{"name", "protocol", "port"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/numorstring.Protocol"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/numorstring.Protocol"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v1_EntityRule(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "An EntityRule is a sub-component of a Rule comprising the match criteria specific to a particular entity (that is either the source or destination).\n\nA source EntityRule matches the source endpoint and originating traffic. A destination EntityRule matches the destination endpoint and terminating traffic.",
-				Properties: map[string]spec.Schema{
-					"tag": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Tag is an optional field that restricts the rule to only apply to traffic that originates from (or terminates at) endpoints that have profiles with the given tag in them.",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.EntityRule": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "An EntityRule is a sub-component of a Rule comprising the match criteria specific to a particular entity (that is either the source or destination).\n\nA source EntityRule matches the source endpoint and originating traffic. A destination EntityRule matches the destination endpoint and terminating traffic.",
+					Properties: map[string]spec.Schema{
+						"tag": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Tag is an optional field that restricts the rule to only apply to traffic that originates from (or terminates at) endpoints that have profiles with the given tag in them.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"net": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Net is an optional field that restricts the rule to only apply to traffic that originates from (or terminates at) IP addresses in the given subnet. Deprecated: superseded by the Nets field.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/net.IPNet"),
+						"net": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Net is an optional field that restricts the rule to only apply to traffic that originates from (or terminates at) IP addresses in the given subnet. Deprecated: superseded by the Nets field.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/net.IPNet"),
+							},
 						},
-					},
-					"nets": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Nets is an optional field that restricts the rule to only apply to traffic that originates from (or terminates at) IP addresses in any of the given subnets.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/net.IPNet"),
+						"nets": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Nets is an optional field that restricts the rule to only apply to traffic that originates from (or terminates at) IP addresses in any of the given subnets.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/net.IPNet"),
+										},
 									},
 								},
 							},
 						},
-					},
-					"selector": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Selector is an optional field that contains a selector expression (see Policy for sample syntax).  Only traffic that originates from (terminates at) endpoints matching the selector will be matched.\n\nNote that: in addition to the negated version of the Selector (see NotSelector below), the selector expression syntax itself supports negation.  The two types of negation are subtly different. One negates the set of matched endpoints, the other negates the whole match:\n\n\tSelector = \"!has(my_label)\" matches packets that are from other Calico-controlled\n\tendpoints that do not have the label “my_label”.\n\n\tNotSelector = \"has(my_label)\" matches packets that are not from Calico-controlled\n\tendpoints that do have the label “my_label”.\n\nThe effect is that the latter will accept packets from non-Calico sources whereas the former is limited to packets from Calico-controlled endpoints.",
-							Type:        []string{"string"},
-							Format:      "",
+						"selector": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Selector is an optional field that contains a selector expression (see Policy for sample syntax).  Only traffic that originates from (terminates at) endpoints matching the selector will be matched.\n\nNote that: in addition to the negated version of the Selector (see NotSelector below), the selector expression syntax itself supports negation.  The two types of negation are subtly different. One negates the set of matched endpoints, the other negates the whole match:\n\n\tSelector = \"!has(my_label)\" matches packets that are from other Calico-controlled\n\tendpoints that do not have the label “my_label”.\n\n\tNotSelector = \"has(my_label)\" matches packets that are not from Calico-controlled\n\tendpoints that do have the label “my_label”.\n\nThe effect is that the latter will accept packets from non-Calico sources whereas the former is limited to packets from Calico-controlled endpoints.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"ports": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Ports is an optional field that restricts the rule to only apply to traffic that has a source (destination) port that matches one of these ranges/values. This value is a list of integers or strings that represent ranges of ports.\n\nSince only some protocols have ports, if any ports are specified it requires the Protocol match in the Rule to be set to \"tcp\" or \"udp\".",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/numorstring.Port"),
+						"ports": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Ports is an optional field that restricts the rule to only apply to traffic that has a source (destination) port that matches one of these ranges/values. This value is a list of integers or strings that represent ranges of ports.\n\nSince only some protocols have ports, if any ports are specified it requires the Protocol match in the Rule to be set to \"tcp\" or \"udp\".",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/numorstring.Port"),
+										},
 									},
 								},
 							},
 						},
-					},
-					"notTag": {
-						SchemaProps: spec.SchemaProps{
-							Description: "NotTag is the negated version of the Tag field.",
-							Type:        []string{"string"},
-							Format:      "",
+						"notTag": {
+							SchemaProps: spec.SchemaProps{
+								Description: "NotTag is the negated version of the Tag field.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"notNet": {
-						SchemaProps: spec.SchemaProps{
-							Description: "NotNet is an optional field that restricts the rule to only apply to traffic that does not originate from (or terminate at) an IP address in the given subnet. Deprecated: superseded by NotNets.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/net.IPNet"),
+						"notNet": {
+							SchemaProps: spec.SchemaProps{
+								Description: "NotNet is an optional field that restricts the rule to only apply to traffic that does not originate from (or terminate at) an IP address in the given subnet. Deprecated: superseded by NotNets.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/net.IPNet"),
+							},
 						},
-					},
-					"notNets": {
-						SchemaProps: spec.SchemaProps{
-							Description: "NotNets is an optional field that restricts the rule to only apply to traffic that does not originate from (or terminate at) an IP address in any of the given subnets.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/net.IPNet"),
+						"notNets": {
+							SchemaProps: spec.SchemaProps{
+								Description: "NotNets is an optional field that restricts the rule to only apply to traffic that does not originate from (or terminate at) an IP address in any of the given subnets.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/net.IPNet"),
+										},
 									},
 								},
 							},
 						},
-					},
-					"notSelector": {
-						SchemaProps: spec.SchemaProps{
-							Description: "NotSelector is the negated version of the Selector field.  See Selector field for subtleties with negated selectors.",
-							Type:        []string{"string"},
-							Format:      "",
+						"notSelector": {
+							SchemaProps: spec.SchemaProps{
+								Description: "NotSelector is the negated version of the Selector field.  See Selector field for subtleties with negated selectors.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"notPorts": {
-						SchemaProps: spec.SchemaProps{
-							Description: "NotPorts is the negated version of the Ports field.\n\nSince only some protocols have ports, if any ports are specified it requires the Protocol match in the Rule to be set to \"tcp\" or \"udp\".",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/numorstring.Port"),
+						"notPorts": {
+							SchemaProps: spec.SchemaProps{
+								Description: "NotPorts is the negated version of the Ports field.\n\nSince only some protocols have ports, if any ports are specified it requires the Protocol match in the Rule to be set to \"tcp\" or \"udp\".",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/numorstring.Port"),
+										},
 									},
 								},
 							},
@@ -539,242 +348,227 @@ func schema_libcalico_go_lib_apis_v1_EntityRule(ref common.ReferenceCallback) co
 					},
 				},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/net.IPNet", "github.com/projectcalico/libcalico-go/lib/numorstring.Port"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/net.IPNet", "github.com/projectcalico/libcalico-go/lib/numorstring.Port"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v1_EtcdConfig(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Properties: map[string]spec.Schema{
-					"etcdScheme": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.EtcdConfig": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Properties: map[string]spec.Schema{
+						"etcdScheme": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"etcdAuthority": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+						"etcdAuthority": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"etcdEndpoints": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+						"etcdEndpoints": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"etcdDiscoverySrv": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+						"etcdDiscoverySrv": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"etcdUsername": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+						"etcdUsername": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"etcdPassword": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+						"etcdPassword": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"etcdKeyFile": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+						"etcdKeyFile": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"etcdCertFile": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+						"etcdCertFile": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"etcdCACertFile": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+						"etcdCACertFile": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
 					},
+					Required: []string{"etcdScheme", "etcdAuthority", "etcdEndpoints", "etcdDiscoverySrv", "etcdUsername", "etcdPassword", "etcdKeyFile", "etcdCertFile", "etcdCACertFile"},
 				},
-				Required: []string{"etcdScheme", "etcdAuthority", "etcdEndpoints", "etcdDiscoverySrv", "etcdUsername", "etcdPassword", "etcdKeyFile", "etcdCertFile", "etcdCACertFile"},
 			},
+			Dependencies: []string{},
 		},
-		Dependencies: []string{},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v1_HostEndpoint(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "HostEndpoint contains information about a “bare-metal” interfaces attached to the host that is running Calico’s agent, Felix. By default, Calico doesn’t apply any policy to such interfaces.",
-				Properties: map[string]spec.Schema{
-					"TypeMetadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.HostEndpoint": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "HostEndpoint contains information about a “bare-metal” interfaces attached to the host that is running Calico’s agent, Felix. By default, Calico doesn’t apply any policy to such interfaces.",
+					Properties: map[string]spec.Schema{
+						"TypeMetadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.HostEndpointMetadata"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.HostEndpointMetadata"),
+							},
 						},
-					},
-					"spec": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.HostEndpointSpec"),
+						"spec": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.HostEndpointSpec"),
+							},
 						},
 					},
+					Required: []string{"TypeMetadata"},
 				},
-				Required: []string{"TypeMetadata"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v1.HostEndpointMetadata", "github.com/projectcalico/libcalico-go/lib/apis/v1.HostEndpointSpec", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v1.HostEndpointMetadata", "github.com/projectcalico/libcalico-go/lib/apis/v1.HostEndpointSpec", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v1_HostEndpointList(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "HostEndpointList contains a list of Host Endpoint resources.  List types are returned from List() enumerations in the client interface.",
-				Properties: map[string]spec.Schema{
-					"TypeMetadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.HostEndpointList": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "HostEndpointList contains a list of Host Endpoint resources.  List types are returned from List() enumerations in the client interface.",
+					Properties: map[string]spec.Schema{
+						"TypeMetadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ListMetadata"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ListMetadata"),
+							},
 						},
-					},
-					"items": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.HostEndpoint"),
+						"items": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.HostEndpoint"),
+										},
 									},
 								},
 							},
 						},
 					},
+					Required: []string{"TypeMetadata", "items"},
 				},
-				Required: []string{"TypeMetadata", "items"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v1.HostEndpoint", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ListMetadata", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v1.HostEndpoint", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ListMetadata", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v1_HostEndpointMetadata(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "HostEndpointMetadata contains the Metadata for a HostEndpoint resource.",
-				Properties: map[string]spec.Schema{
-					"ObjectMetadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.HostEndpointMetadata": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "HostEndpointMetadata contains the Metadata for a HostEndpoint resource.",
+					Properties: map[string]spec.Schema{
+						"ObjectMetadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"),
+							},
 						},
-					},
-					"name": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The name of the endpoint.",
-							Type:        []string{"string"},
-							Format:      "",
+						"name": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The name of the endpoint.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"node": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The node name identifying the Calico node instance.",
-							Type:        []string{"string"},
-							Format:      "",
+						"node": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The node name identifying the Calico node instance.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"labels": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The labels applied to the host endpoint.  It is expected that many endpoints share the same labels. For example, they could be used to label all “production” workloads with “deployment=prod” so that security policy can be applied to production workloads.",
-							Type:        []string{"object"},
-							AdditionalProperties: &spec.SchemaOrBool{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
+						"labels": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The labels applied to the host endpoint.  It is expected that many endpoints share the same labels. For example, they could be used to label all “production” workloads with “deployment=prod” so that security policy can be applied to production workloads.",
+								Type:        []string{"object"},
+								AdditionalProperties: &spec.SchemaOrBool{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
 									},
 								},
 							},
 						},
 					},
+					Required: []string{"ObjectMetadata"},
 				},
-				Required: []string{"ObjectMetadata"},
-			},
-		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v1_HostEndpointSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "HostEndpointSpec contains the specification for a HostEndpoint resource.",
-				Properties: map[string]spec.Schema{
-					"interfaceName": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The name of the linux interface to apply policy to; for example “eth0”. If \"InterfaceName\" is not present then at least one expected IP must be specified.",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"expectedIPs": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The expected IP addresses (IPv4 and IPv6) of the endpoint. If \"InterfaceName\" is not present, Calico will look for an interface matching any of the IPs in the list and apply policy to that.\n\nNote:\n\tWhen using the selector|tag match criteria in an ingress or egress security Policy\n\tor Profile, Calico converts the selector into a set of IP addresses. For host\n\tendpoints, the ExpectedIPs field is used for that purpose. (If only the interface\n\tname is specified, Calico does not learn the IPs of the interface for use in match\n\tcriteria.)",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/net.IP"),
+			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.HostEndpointSpec": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "HostEndpointSpec contains the specification for a HostEndpoint resource.",
+					Properties: map[string]spec.Schema{
+						"interfaceName": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The name of the linux interface to apply policy to; for example “eth0”. If \"InterfaceName\" is not present then at least one expected IP must be specified.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"expectedIPs": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The expected IP addresses (IPv4 and IPv6) of the endpoint. If \"InterfaceName\" is not present, Calico will look for an interface matching any of the IPs in the list and apply policy to that.\n\nNote:\n\tWhen using the selector|tag match criteria in an ingress or egress security Policy\n\tor Profile, Calico converts the selector into a set of IP addresses. For host\n\tendpoints, the ExpectedIPs field is used for that purpose. (If only the interface\n\tname is specified, Calico does not learn the IPs of the interface for use in match\n\tcriteria.)",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/net.IP"),
+										},
 									},
 								},
 							},
 						},
-					},
-					"profiles": {
-						SchemaProps: spec.SchemaProps{
-							Description: "A list of identifiers of security Profile objects that apply to this endpoint. Each profile is applied in the order that they appear in this list.  Profile rules are applied after the selector-based security policy.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
+						"profiles": {
+							SchemaProps: spec.SchemaProps{
+								Description: "A list of identifiers of security Profile objects that apply to this endpoint. Each profile is applied in the order that they appear in this list.  Profile rules are applied after the selector-based security policy.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
 									},
 								},
 							},
 						},
-					},
-					"ports": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Ports contains the endpoint's named ports, which may be referenced in security policy rules.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.EndpointPort"),
+						"ports": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Ports contains the endpoint's named ports, which may be referenced in security policy rules.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.EndpointPort"),
+										},
 									},
 								},
 							},
@@ -782,426 +576,387 @@ func schema_libcalico_go_lib_apis_v1_HostEndpointSpec(ref common.ReferenceCallba
 					},
 				},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v1.EndpointPort", "github.com/projectcalico/libcalico-go/lib/net.IP"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v1.EndpointPort", "github.com/projectcalico/libcalico-go/lib/net.IP"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v1_ICMPFields(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "ICMPFields defines structure for ICMP and NotICMP sub-struct for ICMP code and type",
-				Properties: map[string]spec.Schema{
-					"type": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Match on a specific ICMP type.  For example a value of 8 refers to ICMP Echo Request (i.e. pings).",
-							Type:        []string{"integer"},
-							Format:      "int32",
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.ICMPFields": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "ICMPFields defines structure for ICMP and NotICMP sub-struct for ICMP code and type",
+					Properties: map[string]spec.Schema{
+						"type": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Match on a specific ICMP type.  For example a value of 8 refers to ICMP Echo Request (i.e. pings).",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
 						},
-					},
-					"code": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Match on a specific ICMP code.  If specified, the Type value must also be specified. This is a technical limitation imposed by the kernel’s iptables firewall, which Calico uses to enforce the rule.",
-							Type:        []string{"integer"},
-							Format:      "int32",
+						"code": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Match on a specific ICMP code.  If specified, the Type value must also be specified. This is a technical limitation imposed by the kernel’s iptables firewall, which Calico uses to enforce the rule.",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{},
 		},
-		Dependencies: []string{},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v1_IPIPConfiguration(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Properties: map[string]spec.Schema{
-					"enabled": {
-						SchemaProps: spec.SchemaProps{
-							Description: "When enabled is true, ipip tunneling will be used to deliver packets to destinations within this pool.",
-							Type:        []string{"boolean"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.IPIPConfiguration": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Properties: map[string]spec.Schema{
+						"enabled": {
+							SchemaProps: spec.SchemaProps{
+								Description: "When enabled is true, ipip tunneling will be used to deliver packets to destinations within this pool.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"mode": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The IPIP mode.  This can be one of \"always\" or \"cross-subnet\".  A mode of \"always\" will also use IPIP tunneling for routing to destination IP addresses within this pool.  A mode of \"cross-subnet\" will only use IPIP tunneling when the destination node is on a different subnet to the originating node.  The default value (if not specified) is \"always\".",
-							Type:        []string{"string"},
-							Format:      "",
+						"mode": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The IPIP mode.  This can be one of \"always\" or \"cross-subnet\".  A mode of \"always\" will also use IPIP tunneling for routing to destination IP addresses within this pool.  A mode of \"cross-subnet\" will only use IPIP tunneling when the destination node is on a different subnet to the originating node.  The default value (if not specified) is \"always\".",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{},
 		},
-		Dependencies: []string{},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v1_IPNAT(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "IPNat contains a single NAT mapping for a WorkloadEndpoint resource.",
-				Properties: map[string]spec.Schema{
-					"internalIP": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The internal IP address which must be associated with the owning endpoint via the configured IPNetworks for the endpoint.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/net.IP"),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.IPNAT": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "IPNat contains a single NAT mapping for a WorkloadEndpoint resource.",
+					Properties: map[string]spec.Schema{
+						"internalIP": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The internal IP address which must be associated with the owning endpoint via the configured IPNetworks for the endpoint.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/net.IP"),
+							},
 						},
-					},
-					"externalIP": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The external IP address.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/net.IP"),
+						"externalIP": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The external IP address.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/net.IP"),
+							},
 						},
 					},
+					Required: []string{"internalIP", "externalIP"},
 				},
-				Required: []string{"internalIP", "externalIP"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/net.IP"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/net.IP"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v1_IPPool(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "IPPool contains the details of a Calico IP pool resource. A pool resource is used by Calico in two ways:\n\t- to provide a set of IP addresses from which Calico IPAM assigns addresses\n\t  for workloads.\n\t- to provide configuration specific to IP address range, such as configuration\n\t  for the BGP daemon (e.g. when to use a GRE tunnel to encapsulate packets\n\t  between compute hosts).",
-				Properties: map[string]spec.Schema{
-					"TypeMetadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.IPPool": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "IPPool contains the details of a Calico IP pool resource. A pool resource is used by Calico in two ways:\n\t- to provide a set of IP addresses from which Calico IPAM assigns addresses\n\t  for workloads.\n\t- to provide configuration specific to IP address range, such as configuration\n\t  for the BGP daemon (e.g. when to use a GRE tunnel to encapsulate packets\n\t  between compute hosts).",
+					Properties: map[string]spec.Schema{
+						"TypeMetadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.IPPoolMetadata"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.IPPoolMetadata"),
+							},
 						},
-					},
-					"spec": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.IPPoolSpec"),
+						"spec": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.IPPoolSpec"),
+							},
 						},
 					},
+					Required: []string{"TypeMetadata"},
 				},
-				Required: []string{"TypeMetadata"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v1.IPPoolMetadata", "github.com/projectcalico/libcalico-go/lib/apis/v1.IPPoolSpec", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v1.IPPoolMetadata", "github.com/projectcalico/libcalico-go/lib/apis/v1.IPPoolSpec", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v1_IPPoolList(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "IPPoolList contains a list of IP pool resources.  List types are returned from List() enumerations in the client interface.",
-				Properties: map[string]spec.Schema{
-					"TypeMetadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.IPPoolList": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "IPPoolList contains a list of IP pool resources.  List types are returned from List() enumerations in the client interface.",
+					Properties: map[string]spec.Schema{
+						"TypeMetadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ListMetadata"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ListMetadata"),
+							},
 						},
-					},
-					"items": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.IPPool"),
+						"items": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.IPPool"),
+										},
 									},
 								},
 							},
 						},
 					},
+					Required: []string{"TypeMetadata", "items"},
 				},
-				Required: []string{"TypeMetadata", "items"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v1.IPPool", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ListMetadata", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v1.IPPool", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ListMetadata", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v1_IPPoolMetadata(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "IPPoolMetadata contains the metadata for an IP pool resource.",
-				Properties: map[string]spec.Schema{
-					"ObjectMetadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.IPPoolMetadata": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "IPPoolMetadata contains the metadata for an IP pool resource.",
+					Properties: map[string]spec.Schema{
+						"ObjectMetadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"),
+							},
 						},
-					},
-					"cidr": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/net.IPNet"),
+						"cidr": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/net.IPNet"),
+							},
 						},
 					},
+					Required: []string{"ObjectMetadata", "cidr"},
 				},
-				Required: []string{"ObjectMetadata", "cidr"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata", "github.com/projectcalico/libcalico-go/lib/net.IPNet"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata", "github.com/projectcalico/libcalico-go/lib/net.IPNet"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v1_IPPoolSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "IPPoolSpec contains the specification for an IP pool resource.",
-				Properties: map[string]spec.Schema{
-					"ipip": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Contains configuration for ipip tunneling for this pool. If not specified, then ipip tunneling is disabled for this pool.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v1.IPIPConfiguration"),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.IPPoolSpec": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "IPPoolSpec contains the specification for an IP pool resource.",
+					Properties: map[string]spec.Schema{
+						"ipip": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Contains configuration for ipip tunneling for this pool. If not specified, then ipip tunneling is disabled for this pool.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v1.IPIPConfiguration"),
+							},
 						},
-					},
-					"nat-outgoing": {
-						SchemaProps: spec.SchemaProps{
-							Description: "When nat-outgoing is true, packets sent from Calico networked containers in this pool to destinations outside of this pool will be masqueraded.",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"nat-outgoing": {
+							SchemaProps: spec.SchemaProps{
+								Description: "When nat-outgoing is true, packets sent from Calico networked containers in this pool to destinations outside of this pool will be masqueraded.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"disabled": {
-						SchemaProps: spec.SchemaProps{
-							Description: "When disabled is true, Calico IPAM will not assign addresses from this pool.",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"disabled": {
+							SchemaProps: spec.SchemaProps{
+								Description: "When disabled is true, Calico IPAM will not assign addresses from this pool.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v1.IPIPConfiguration"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v1.IPIPConfiguration"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v1_KubeConfig(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Properties: map[string]spec.Schema{
-					"kubeconfig": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.KubeConfig": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Properties: map[string]spec.Schema{
+						"kubeconfig": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"k8sAPIEndpoint": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+						"k8sAPIEndpoint": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"k8sKeyFile": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+						"k8sKeyFile": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"k8sCertFile": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+						"k8sCertFile": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"k8sCAFile": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+						"k8sCAFile": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"k8sAPIToken": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+						"k8sAPIToken": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"k8sInsecureSkipTLSVerify": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"boolean"},
-							Format: "",
+						"k8sInsecureSkipTLSVerify": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"boolean"},
+								Format: "",
+							},
 						},
-					},
-					"k8sDisableNodePoll": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"boolean"},
-							Format: "",
+						"k8sDisableNodePoll": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"boolean"},
+								Format: "",
+							},
 						},
 					},
+					Required: []string{"kubeconfig", "k8sAPIEndpoint", "k8sKeyFile", "k8sCertFile", "k8sCAFile", "k8sAPIToken", "k8sInsecureSkipTLSVerify", "k8sDisableNodePoll"},
 				},
-				Required: []string{"kubeconfig", "k8sAPIEndpoint", "k8sKeyFile", "k8sCertFile", "k8sCAFile", "k8sAPIToken", "k8sInsecureSkipTLSVerify", "k8sDisableNodePoll"},
 			},
+			Dependencies: []string{},
 		},
-		Dependencies: []string{},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v1_Node(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "Node contains the details of a node resource which contains the configuration for a Calico node instance running on a compute host.\n\nIn addition to creating a Node resource through calicoctl or the Calico API, the Calico node instance must also be running on the specific host and should be provided the same Name as that configured on the Node resource.  Note that, by default, the Calico node instance uses the hostname of the compute host when it is not explicitly specified - in this case, the equivalent Node resource should be created using the same hostname as the Name of the Node resource.\n\nOperations on the Node resources is expected to be required when adding a new host into a Calico network, and when removing a host from a Calico network, and occasionally to modify certain configuration.  Care should be taken when operating on Node resources: deleting a Node resource will remove all Node specific data.",
-				Properties: map[string]spec.Schema{
-					"TypeMetadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.Node": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "Node contains the details of a node resource which contains the configuration for a Calico node instance running on a compute host.\n\nIn addition to creating a Node resource through calicoctl or the Calico API, the Calico node instance must also be running on the specific host and should be provided the same Name as that configured on the Node resource.  Note that, by default, the Calico node instance uses the hostname of the compute host when it is not explicitly specified - in this case, the equivalent Node resource should be created using the same hostname as the Name of the Node resource.\n\nOperations on the Node resources is expected to be required when adding a new host into a Calico network, and when removing a host from a Calico network, and occasionally to modify certain configuration.  Care should be taken when operating on Node resources: deleting a Node resource will remove all Node specific data.",
+					Properties: map[string]spec.Schema{
+						"TypeMetadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.NodeMetadata"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.NodeMetadata"),
+							},
 						},
-					},
-					"spec": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.NodeSpec"),
+						"spec": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.NodeSpec"),
+							},
 						},
 					},
+					Required: []string{"TypeMetadata"},
 				},
-				Required: []string{"TypeMetadata"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v1.NodeMetadata", "github.com/projectcalico/libcalico-go/lib/apis/v1.NodeSpec", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v1.NodeMetadata", "github.com/projectcalico/libcalico-go/lib/apis/v1.NodeSpec", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v1_NodeBGPSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "NodeSpec contains the specification for a Calico Node resource.",
-				Properties: map[string]spec.Schema{
-					"asNumber": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The AS Number of the node.  If this is not specified, the global default value will be used.",
-							Type:        []string{"integer"},
-							Format:      "int64",
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.NodeBGPSpec": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "NodeSpec contains the specification for a Calico Node resource.",
+					Properties: map[string]spec.Schema{
+						"asNumber": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The AS Number of the node.  If this is not specified, the global default value will be used.",
+								Type:        []string{"integer"},
+								Format:      "int64",
+							},
 						},
-					},
-					"ipv4Address": {
-						SchemaProps: spec.SchemaProps{
-							Description: "IPv4Address is the IPv4 address and network of this node.  At least one of the IPv4 and IPv6 addresses should be specified.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/net.IPNet"),
+						"ipv4Address": {
+							SchemaProps: spec.SchemaProps{
+								Description: "IPv4Address is the IPv4 address and network of this node.  At least one of the IPv4 and IPv6 addresses should be specified.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/net.IPNet"),
+							},
 						},
-					},
-					"ipv6Address": {
-						SchemaProps: spec.SchemaProps{
-							Description: "IPv6Address is the IPv6 address and network of this node.  At least one of the IPv4 and IPv6 addresses should be specified.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/net.IPNet"),
+						"ipv6Address": {
+							SchemaProps: spec.SchemaProps{
+								Description: "IPv6Address is the IPv6 address and network of this node.  At least one of the IPv4 and IPv6 addresses should be specified.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/net.IPNet"),
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/net.IPNet"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/net.IPNet"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v1_NodeList(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "A NodeList contains a list of Node resources.  List types are returned from List() enumerations on the client interface.",
-				Properties: map[string]spec.Schema{
-					"TypeMetadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.NodeList": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "A NodeList contains a list of Node resources.  List types are returned from List() enumerations on the client interface.",
+					Properties: map[string]spec.Schema{
+						"TypeMetadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ListMetadata"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ListMetadata"),
+							},
 						},
-					},
-					"items": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.Node"),
+						"items": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.Node"),
+										},
 									},
 								},
 							},
 						},
 					},
+					Required: []string{"TypeMetadata", "items"},
 				},
-				Required: []string{"TypeMetadata", "items"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v1.Node", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ListMetadata", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v1.Node", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ListMetadata", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v1_NodeMetadata(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "NodeMetadata contains the metadata for a Calico Node resource.",
-				Properties: map[string]spec.Schema{
-					"ObjectMetadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.NodeMetadata": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "NodeMetadata contains the metadata for a Calico Node resource.",
+					Properties: map[string]spec.Schema{
+						"ObjectMetadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"),
+							},
 						},
-					},
-					"name": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The name of the node.",
-							Type:        []string{"string"},
-							Format:      "",
+						"name": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The name of the node.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
 					},
+					Required: []string{"ObjectMetadata"},
 				},
-				Required: []string{"ObjectMetadata"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v1_NodeSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "NodeSpec contains the specification for a Calico Node resource.",
-				Properties: map[string]spec.Schema{
-					"bgp": {
-						SchemaProps: spec.SchemaProps{
-							Description: "BGP configuration for this node.  If this omitted, the Calico node will be run in policy-only mode.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v1.NodeBGPSpec"),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.NodeSpec": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "NodeSpec contains the specification for a Calico Node resource.",
+					Properties: map[string]spec.Schema{
+						"bgp": {
+							SchemaProps: spec.SchemaProps{
+								Description: "BGP configuration for this node.  If this omitted, the Calico node will be run in policy-only mode.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v1.NodeBGPSpec"),
+							},
 						},
-					},
-					"orchRefs": {
-						SchemaProps: spec.SchemaProps{
-							Description: "OrchRefs for this node.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.OrchRef"),
+						"orchRefs": {
+							SchemaProps: spec.SchemaProps{
+								Description: "OrchRefs for this node.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.OrchRef"),
+										},
 									},
 								},
 							},
@@ -1209,387 +964,360 @@ func schema_libcalico_go_lib_apis_v1_NodeSpec(ref common.ReferenceCallback) comm
 					},
 				},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v1.NodeBGPSpec", "github.com/projectcalico/libcalico-go/lib/apis/v1.OrchRef"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v1.NodeBGPSpec", "github.com/projectcalico/libcalico-go/lib/apis/v1.OrchRef"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v1_OrchRef(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "OrchRef is used to correlate a Calico node to its corresponding representation in a given orchestrator",
-				Properties: map[string]spec.Schema{
-					"nodeName": {
-						SchemaProps: spec.SchemaProps{
-							Description: "NodeName represents the name for this node according to the orchestrator.",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.OrchRef": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "OrchRef is used to correlate a Calico node to its corresponding representation in a given orchestrator",
+					Properties: map[string]spec.Schema{
+						"nodeName": {
+							SchemaProps: spec.SchemaProps{
+								Description: "NodeName represents the name for this node according to the orchestrator.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"orchestrator": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Orchestrator represents the orchestrator using this node.",
-							Type:        []string{"string"},
-							Format:      "",
+						"orchestrator": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Orchestrator represents the orchestrator using this node.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
 					},
+					Required: []string{"orchestrator"},
 				},
-				Required: []string{"orchestrator"},
 			},
+			Dependencies: []string{},
 		},
-		Dependencies: []string{},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v1_Policy(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "Policy contains information about a tiered security Policy resource.  This contains a set of security rules to apply.  Security policies allow a selector-based security model which can override the security profiles directly referenced by an endpoint.\n\nEach policy must do one of the following:\n\n \t- Match the packet and apply a “next-tier” action; this skips the rest of the tier, deferring\n       to the next tier (or the explicit profiles if this is the last tier.\n \t- Match the packet and apply an “allow” action; this immediately accepts the packet, skipping\n       all further tiers and profiles. This is not recommended in general, because it prevents\n       further policy from being executed.\n\t- Match the packet and apply a “deny” action; this drops the packet immediately, skipping all\n       further tiers and profiles.\n\t- Fail to match the packet; in which case the packet proceeds to the next policy in the tier.\n       If there are no more policies in the tier then the packet is dropped.\n\nNote:\n\tIf no policies in a tier match an endpoint then the packet skips the tier completely. The\n\t“default deny” behavior described above only applies if some of the policies in a tier match\n\tthe endpoint.\n\nCalico implements the security policy for each endpoint individually and only the policies that have matching selectors are implemented. This ensures that the number of rules that actually need to be inserted into the kernel is proportional to the number of local endpoints rather than the total amount of policy. If no policies in a tier match a given endpoint then that tier is skipped.",
-				Properties: map[string]spec.Schema{
-					"TypeMetadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.Policy": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "Policy contains information about a tiered security Policy resource.  This contains a set of security rules to apply.  Security policies allow a selector-based security model which can override the security profiles directly referenced by an endpoint.\n\nEach policy must do one of the following:\n\n \t- Match the packet and apply a “next-tier” action; this skips the rest of the tier, deferring\n       to the next tier (or the explicit profiles if this is the last tier.\n \t- Match the packet and apply an “allow” action; this immediately accepts the packet, skipping\n       all further tiers and profiles. This is not recommended in general, because it prevents\n       further policy from being executed.\n\t- Match the packet and apply a “deny” action; this drops the packet immediately, skipping all\n       further tiers and profiles.\n\t- Fail to match the packet; in which case the packet proceeds to the next policy in the tier.\n       If there are no more policies in the tier then the packet is dropped.\n\nNote:\n\tIf no policies in a tier match an endpoint then the packet skips the tier completely. The\n\t“default deny” behavior described above only applies if some of the policies in a tier match\n\tthe endpoint.\n\nCalico implements the security policy for each endpoint individually and only the policies that have matching selectors are implemented. This ensures that the number of rules that actually need to be inserted into the kernel is proportional to the number of local endpoints rather than the total amount of policy. If no policies in a tier match a given endpoint then that tier is skipped.",
+					Properties: map[string]spec.Schema{
+						"TypeMetadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.PolicyMetadata"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.PolicyMetadata"),
+							},
 						},
-					},
-					"spec": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.PolicySpec"),
+						"spec": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.PolicySpec"),
+							},
 						},
 					},
+					Required: []string{"TypeMetadata"},
 				},
-				Required: []string{"TypeMetadata"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v1.PolicyMetadata", "github.com/projectcalico/libcalico-go/lib/apis/v1.PolicySpec", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v1.PolicyMetadata", "github.com/projectcalico/libcalico-go/lib/apis/v1.PolicySpec", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v1_PolicyList(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "PolicyList contains a list of selector-based security Policy resources.  List types are returned from List() enumerations on the client interface.",
-				Properties: map[string]spec.Schema{
-					"TypeMetadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.PolicyList": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "PolicyList contains a list of selector-based security Policy resources.  List types are returned from List() enumerations on the client interface.",
+					Properties: map[string]spec.Schema{
+						"TypeMetadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ListMetadata"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ListMetadata"),
+							},
 						},
-					},
-					"items": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.Policy"),
+						"items": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.Policy"),
+										},
 									},
 								},
 							},
 						},
 					},
+					Required: []string{"TypeMetadata", "items"},
 				},
-				Required: []string{"TypeMetadata", "items"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v1.Policy", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ListMetadata", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v1.Policy", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ListMetadata", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v1_PolicyMetadata(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "PolicyMetadata contains the metadata for a selector-based security Policy resource.",
-				Properties: map[string]spec.Schema{
-					"ObjectMetadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.PolicyMetadata": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "PolicyMetadata contains the metadata for a selector-based security Policy resource.",
+					Properties: map[string]spec.Schema{
+						"ObjectMetadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"),
+							},
 						},
-					},
-					"name": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The name of the selector-based security policy.",
-							Type:        []string{"string"},
-							Format:      "",
+						"name": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The name of the selector-based security policy.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"tier": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The name of the tier that this policy belongs to.  If this is omitted, the default tier (name is \"default\") is assumed.  The specified tier must exist in order to create security policies within the tier, the \"default\" tier is created automatically if it does not exist, this means for deployments requiring only a single Tier, the tier name may be omitted on all policy management requests.",
-							Type:        []string{"string"},
-							Format:      "",
+						"tier": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The name of the tier that this policy belongs to.  If this is omitted, the default tier (name is \"default\") is assumed.  The specified tier must exist in order to create security policies within the tier, the \"default\" tier is created automatically if it does not exist, this means for deployments requiring only a single Tier, the tier name may be omitted on all policy management requests.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"annotations": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Arbitrary key-value information to be used by clients.",
-							Type:        []string{"object"},
-							AdditionalProperties: &spec.SchemaOrBool{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
+						"annotations": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Arbitrary key-value information to be used by clients.",
+								Type:        []string{"object"},
+								AdditionalProperties: &spec.SchemaOrBool{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
 									},
 								},
 							},
 						},
 					},
+					Required: []string{"ObjectMetadata"},
 				},
-				Required: []string{"ObjectMetadata"},
-			},
-		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v1_PolicySpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "PolicySpec contains the specification for a selector-based security Policy resource.",
-				Properties: map[string]spec.Schema{
-					"order": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Order is an optional field that specifies the order in which the policy is applied within a given tier.  Policies with higher \"order\" are applied after those with lower order.  If the order is omitted, it may be considered to be \"infinite\" - i.e. the policy will be applied last.  Policies with identical order and within the same Tier will be applied in alphanumerical order based on the Policy \"Name\".",
-							Type:        []string{"number"},
-							Format:      "double",
-						},
-					},
-					"ingress": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The ordered set of ingress rules.  Each rule contains a set of packet match criteria and a corresponding action to apply.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.Rule"),
+			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.PolicySpec": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "PolicySpec contains the specification for a selector-based security Policy resource.",
+					Properties: map[string]spec.Schema{
+						"order": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Order is an optional field that specifies the order in which the policy is applied within a given tier.  Policies with higher \"order\" are applied after those with lower order.  If the order is omitted, it may be considered to be \"infinite\" - i.e. the policy will be applied last.  Policies with identical order and within the same Tier will be applied in alphanumerical order based on the Policy \"Name\".",
+								Type:        []string{"number"},
+								Format:      "double",
+							},
+						},
+						"ingress": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The ordered set of ingress rules.  Each rule contains a set of packet match criteria and a corresponding action to apply.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.Rule"),
+										},
 									},
 								},
 							},
 						},
-					},
-					"egress": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The ordered set of egress rules.  Each rule contains a set of packet match criteria and a corresponding action to apply.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.Rule"),
+						"egress": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The ordered set of egress rules.  Each rule contains a set of packet match criteria and a corresponding action to apply.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.Rule"),
+										},
 									},
 								},
 							},
 						},
-					},
-					"selector": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The selector is an expression used to pick pick out the endpoints that the policy should be applied to.\n\nSelector expressions follow this syntax:\n\n\tlabel == \"string_literal\"  ->  comparison, e.g. my_label == \"foo bar\"\n\tlabel != \"string_literal\"   ->  not equal; also matches if label is not present\n\tlabel in { \"a\", \"b\", \"c\", ... }  ->  true if the value of label X is one of \"a\", \"b\", \"c\"\n\tlabel not in { \"a\", \"b\", \"c\", ... }  ->  true if the value of label X is not one of \"a\", \"b\", \"c\"\n\thas(label_name)  -> True if that label is present\n\t! expr -> negation of expr\n\texpr && expr  -> Short-circuit and\n\texpr || expr  -> Short-circuit or\n\t( expr ) -> parens for grouping\n\tall() or the empty selector -> matches all endpoints.\n\nLabel names are allowed to contain alphanumerics, -, _ and /. String literals are more permissive but they do not support escape characters.\n\nExamples (with made-up labels):\n\n\ttype == \"webserver\" && deployment == \"prod\"\n\ttype in {\"frontend\", \"backend\"}\n\tdeployment != \"dev\"\n\t! has(label_name)",
-							Type:        []string{"string"},
-							Format:      "",
+						"selector": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The selector is an expression used to pick pick out the endpoints that the policy should be applied to.\n\nSelector expressions follow this syntax:\n\n\tlabel == \"string_literal\"  ->  comparison, e.g. my_label == \"foo bar\"\n\tlabel != \"string_literal\"   ->  not equal; also matches if label is not present\n\tlabel in { \"a\", \"b\", \"c\", ... }  ->  true if the value of label X is one of \"a\", \"b\", \"c\"\n\tlabel not in { \"a\", \"b\", \"c\", ... }  ->  true if the value of label X is not one of \"a\", \"b\", \"c\"\n\thas(label_name)  -> True if that label is present\n\t! expr -> negation of expr\n\texpr && expr  -> Short-circuit and\n\texpr || expr  -> Short-circuit or\n\t( expr ) -> parens for grouping\n\tall() or the empty selector -> matches all endpoints.\n\nLabel names are allowed to contain alphanumerics, -, _ and /. String literals are more permissive but they do not support escape characters.\n\nExamples (with made-up labels):\n\n\ttype == \"webserver\" && deployment == \"prod\"\n\ttype in {\"frontend\", \"backend\"}\n\tdeployment != \"dev\"\n\t! has(label_name)",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"doNotTrack": {
-						SchemaProps: spec.SchemaProps{
-							Description: "DoNotTrack indicates whether packets matched by the rules in this policy should go through the data plane's connection tracking, such as Linux conntrack.  If True, the rules in this policy are applied before any data plane connection tracking, and packets allowed by this policy are marked as not to be tracked.",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"doNotTrack": {
+							SchemaProps: spec.SchemaProps{
+								Description: "DoNotTrack indicates whether packets matched by the rules in this policy should go through the data plane's connection tracking, such as Linux conntrack.  If True, the rules in this policy are applied before any data plane connection tracking, and packets allowed by this policy are marked as not to be tracked.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"preDNAT": {
-						SchemaProps: spec.SchemaProps{
-							Description: "PreDNAT indicates to apply the rules in this policy before any DNAT.",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"preDNAT": {
+							SchemaProps: spec.SchemaProps{
+								Description: "PreDNAT indicates to apply the rules in this policy before any DNAT.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"types": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Types indicates whether this policy applies to ingress, or to egress, or to both.  When not explicitly specified (and so the value on creation is empty or nil), Calico defaults Types according to what IngressRules and EgressRules are present in the policy.  The default is:\n\n- [ PolicyTypeIngress ], if there are no EgressRules (including the case where there are\n  also no IngressRules)\n\n- [ PolicyTypeEgress ], if there are EgressRules but no IngressRules\n\n- [ PolicyTypeIngress, PolicyTypeEgress ], if there are both IngressRules and EgressRules.\n\nWhen the policy is read back again, Types will always be one of these values, never empty or nil.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
+						"types": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Types indicates whether this policy applies to ingress, or to egress, or to both.  When not explicitly specified (and so the value on creation is empty or nil), Calico defaults Types according to what IngressRules and EgressRules are present in the policy.  The default is:\n\n- [ PolicyTypeIngress ], if there are no EgressRules (including the case where there are\n  also no IngressRules)\n\n- [ PolicyTypeEgress ], if there are EgressRules but no IngressRules\n\n- [ PolicyTypeIngress, PolicyTypeEgress ], if there are both IngressRules and EgressRules.\n\nWhen the policy is read back again, Types will always be one of these values, never empty or nil.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
 									},
 								},
 							},
 						},
 					},
+					Required: []string{"selector"},
 				},
-				Required: []string{"selector"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v1.Rule"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v1.Rule"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v1_Profile(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "Profile contains the details a security profile resource.  A profile is set of security rules to apply on an endpoint.  An endpoint (either a host endpoint or an endpoint on a workload) can reference zero or more profiles.  The profile rules are applied directly to the endpoint *after* the selector-based security policy has been applied, and in the order the profiles are declared on the endpoint.",
-				Properties: map[string]spec.Schema{
-					"TypeMetadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.Profile": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "Profile contains the details a security profile resource.  A profile is set of security rules to apply on an endpoint.  An endpoint (either a host endpoint or an endpoint on a workload) can reference zero or more profiles.  The profile rules are applied directly to the endpoint *after* the selector-based security policy has been applied, and in the order the profiles are declared on the endpoint.",
+					Properties: map[string]spec.Schema{
+						"TypeMetadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.ProfileMetadata"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.ProfileMetadata"),
+							},
 						},
-					},
-					"spec": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.ProfileSpec"),
+						"spec": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.ProfileSpec"),
+							},
 						},
 					},
+					Required: []string{"TypeMetadata"},
 				},
-				Required: []string{"TypeMetadata"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v1.ProfileMetadata", "github.com/projectcalico/libcalico-go/lib/apis/v1.ProfileSpec", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v1.ProfileMetadata", "github.com/projectcalico/libcalico-go/lib/apis/v1.ProfileSpec", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v1_ProfileList(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "A ProfileList contains a list of security Profile resources.  List types are returned from List() enumerations on the client interface.",
-				Properties: map[string]spec.Schema{
-					"TypeMetadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.ProfileList": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "A ProfileList contains a list of security Profile resources.  List types are returned from List() enumerations on the client interface.",
+					Properties: map[string]spec.Schema{
+						"TypeMetadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ListMetadata"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ListMetadata"),
+							},
 						},
-					},
-					"items": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.Profile"),
+						"items": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.Profile"),
+										},
 									},
 								},
 							},
 						},
 					},
+					Required: []string{"TypeMetadata", "items"},
 				},
-				Required: []string{"TypeMetadata", "items"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v1.Profile", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ListMetadata", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v1.Profile", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ListMetadata", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v1_ProfileMetadata(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "ProfileMetadata contains the metadata for a security Profile resource.",
-				Properties: map[string]spec.Schema{
-					"ObjectMetadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.ProfileMetadata": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "ProfileMetadata contains the metadata for a security Profile resource.",
+					Properties: map[string]spec.Schema{
+						"ObjectMetadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"),
+							},
 						},
-					},
-					"name": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The name of the endpoint.",
-							Type:        []string{"string"},
-							Format:      "",
+						"name": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The name of the endpoint.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"tags": {
-						SchemaProps: spec.SchemaProps{
-							Description: "A list of tags that are applied to each endpoint that references this profile.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
+						"tags": {
+							SchemaProps: spec.SchemaProps{
+								Description: "A list of tags that are applied to each endpoint that references this profile.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
 									},
 								},
 							},
 						},
-					},
-					"labels": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The labels to apply to each endpoint that references this profile.  It is expected that many endpoints share the same labels. For example, they could be used to label all “production” workloads with “deployment=prod” so that security policy can be applied to production workloads.",
-							Type:        []string{"object"},
-							AdditionalProperties: &spec.SchemaOrBool{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
+						"labels": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The labels to apply to each endpoint that references this profile.  It is expected that many endpoints share the same labels. For example, they could be used to label all “production” workloads with “deployment=prod” so that security policy can be applied to production workloads.",
+								Type:        []string{"object"},
+								AdditionalProperties: &spec.SchemaOrBool{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
 									},
 								},
 							},
 						},
 					},
+					Required: []string{"ObjectMetadata"},
 				},
-				Required: []string{"ObjectMetadata"},
-			},
-		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v1_ProfileSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "ProfileSpec contains the specification for a security Profile resource.",
-				Properties: map[string]spec.Schema{
-					"ingress": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The ordered set of ingress rules.  Each rule contains a set of packet match criteria and a corresponding action to apply.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.Rule"),
+			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.ProfileSpec": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "ProfileSpec contains the specification for a security Profile resource.",
+					Properties: map[string]spec.Schema{
+						"ingress": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The ordered set of ingress rules.  Each rule contains a set of packet match criteria and a corresponding action to apply.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.Rule"),
+										},
 									},
 								},
 							},
 						},
-					},
-					"egress": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The ordered set of egress rules.  Each rule contains a set of packet match criteria and a corresponding action to apply.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.Rule"),
+						"egress": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The ordered set of egress rules.  Each rule contains a set of packet match criteria and a corresponding action to apply.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.Rule"),
+										},
 									},
 								},
 							},
@@ -1597,403 +1325,376 @@ func schema_libcalico_go_lib_apis_v1_ProfileSpec(ref common.ReferenceCallback) c
 					},
 				},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v1.Rule"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v1.Rule"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v1_Rule(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "A Rule encapsulates a set of match criteria and an action.  Both selector-based security Policy and security Profiles reference rules - separated out as a list of rules for both ingress and egress packet matching.\n\nEach positive match criteria has a negated version, prefixed with ”Not”. All the match criteria within a rule must be satisfied for a packet to match. A single rule can contain the positive and negative version of a match and both must be satisfied for the rule to match.",
-				Properties: map[string]spec.Schema{
-					"action": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.Rule": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "A Rule encapsulates a set of match criteria and an action.  Both selector-based security Policy and security Profiles reference rules - separated out as a list of rules for both ingress and egress packet matching.\n\nEach positive match criteria has a negated version, prefixed with ”Not”. All the match criteria within a rule must be satisfied for a packet to match. A single rule can contain the positive and negative version of a match and both must be satisfied for the rule to match.",
+					Properties: map[string]spec.Schema{
+						"action": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"ipVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "IPVersion is an optional field that restricts the rule to only match a specific IP version.",
-							Type:        []string{"integer"},
-							Format:      "int32",
+						"ipVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "IPVersion is an optional field that restricts the rule to only match a specific IP version.",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
 						},
-					},
-					"protocol": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Protocol is an optional field that restricts the rule to only apply to traffic of a specific IP protocol. Required if any of the EntityRules contain Ports (because ports only apply to certain protocols).\n\nMust be one of these string values: \"tcp\", \"udp\", \"icmp\", \"icmpv6\", \"sctp\", \"udplite\" or an integer in the range 1-255.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/numorstring.Protocol"),
+						"protocol": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Protocol is an optional field that restricts the rule to only apply to traffic of a specific IP protocol. Required if any of the EntityRules contain Ports (because ports only apply to certain protocols).\n\nMust be one of these string values: \"tcp\", \"udp\", \"icmp\", \"icmpv6\", \"sctp\", \"udplite\" or an integer in the range 1-255.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/numorstring.Protocol"),
+							},
 						},
-					},
-					"icmp": {
-						SchemaProps: spec.SchemaProps{
-							Description: "ICMP is an optional field that restricts the rule to apply to a specific type and code of ICMP traffic.  This should only be specified if the Protocol field is set to \"icmp\" or \"icmpv6\".",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v1.ICMPFields"),
+						"icmp": {
+							SchemaProps: spec.SchemaProps{
+								Description: "ICMP is an optional field that restricts the rule to apply to a specific type and code of ICMP traffic.  This should only be specified if the Protocol field is set to \"icmp\" or \"icmpv6\".",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v1.ICMPFields"),
+							},
 						},
-					},
-					"notProtocol": {
-						SchemaProps: spec.SchemaProps{
-							Description: "NotProtocol is the negated version of the Protocol field.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/numorstring.Protocol"),
+						"notProtocol": {
+							SchemaProps: spec.SchemaProps{
+								Description: "NotProtocol is the negated version of the Protocol field.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/numorstring.Protocol"),
+							},
 						},
-					},
-					"notICMP": {
-						SchemaProps: spec.SchemaProps{
-							Description: "NotICMP is the negated version of the ICMP field.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v1.ICMPFields"),
+						"notICMP": {
+							SchemaProps: spec.SchemaProps{
+								Description: "NotICMP is the negated version of the ICMP field.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v1.ICMPFields"),
+							},
 						},
-					},
-					"source": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Source contains the match criteria that apply to source entity.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v1.EntityRule"),
+						"source": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Source contains the match criteria that apply to source entity.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v1.EntityRule"),
+							},
 						},
-					},
-					"destination": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Destination contains the match criteria that apply to destination entity.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v1.EntityRule"),
+						"destination": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Destination contains the match criteria that apply to destination entity.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v1.EntityRule"),
+							},
 						},
 					},
+					Required: []string{"action"},
 				},
-				Required: []string{"action"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v1.EntityRule", "github.com/projectcalico/libcalico-go/lib/apis/v1.ICMPFields", "github.com/projectcalico/libcalico-go/lib/numorstring.Protocol"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v1.EntityRule", "github.com/projectcalico/libcalico-go/lib/apis/v1.ICMPFields", "github.com/projectcalico/libcalico-go/lib/numorstring.Protocol"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v1_Tier(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "Tier contains the details of a security policy tier resource.  A tier contains a set of policies that are applied to packets. Multiple tiers may be created and each tier is applied in the order specified in the tier specification.\n\nSee Policy for more information.",
-				Properties: map[string]spec.Schema{
-					"TypeMetadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.Tier": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "Tier contains the details of a security policy tier resource.  A tier contains a set of policies that are applied to packets. Multiple tiers may be created and each tier is applied in the order specified in the tier specification.\n\nSee Policy for more information.",
+					Properties: map[string]spec.Schema{
+						"TypeMetadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.TierMetadata"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.TierMetadata"),
+							},
 						},
-					},
-					"spec": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.TierSpec"),
+						"spec": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.TierSpec"),
+							},
 						},
 					},
+					Required: []string{"TypeMetadata"},
 				},
-				Required: []string{"TypeMetadata"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v1.TierMetadata", "github.com/projectcalico/libcalico-go/lib/apis/v1.TierSpec", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v1.TierMetadata", "github.com/projectcalico/libcalico-go/lib/apis/v1.TierSpec", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v1_TierList(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "A TierList contains a list of tier resources.  List types are returned from List() enumerations in the client interface.",
-				Properties: map[string]spec.Schema{
-					"TypeMetadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.TierList": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "A TierList contains a list of tier resources.  List types are returned from List() enumerations in the client interface.",
+					Properties: map[string]spec.Schema{
+						"TypeMetadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ListMetadata"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ListMetadata"),
+							},
 						},
-					},
-					"items": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.Tier"),
+						"items": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.Tier"),
+										},
 									},
 								},
 							},
 						},
 					},
+					Required: []string{"TypeMetadata", "items"},
 				},
-				Required: []string{"TypeMetadata", "items"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v1.Tier", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ListMetadata", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v1.Tier", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ListMetadata", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v1_TierMetadata(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "TierMetadata contains the metadata for a security policy Tier.",
-				Properties: map[string]spec.Schema{
-					"ObjectMetadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.TierMetadata": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "TierMetadata contains the metadata for a security policy Tier.",
+					Properties: map[string]spec.Schema{
+						"ObjectMetadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"),
+							},
 						},
-					},
-					"name": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+						"name": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
 					},
+					Required: []string{"ObjectMetadata"},
 				},
-				Required: []string{"ObjectMetadata"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v1_TierSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "TierSpec contains the specification for a security policy Tier.",
-				Properties: map[string]spec.Schema{
-					"order": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Order is an optional field that specifies the order in which the tier is applied. Tiers with higher \"order\" are applied after those with lower order.  If the order is omitted, it may be considered to be \"infinite\" - i.e. the tier will be applied last.  Tiers with identical order will be applied in alphanumerical order based on the Tier \"Name\".",
-							Type:        []string{"number"},
-							Format:      "double",
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.TierSpec": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "TierSpec contains the specification for a security policy Tier.",
+					Properties: map[string]spec.Schema{
+						"order": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Order is an optional field that specifies the order in which the tier is applied. Tiers with higher \"order\" are applied after those with lower order.  If the order is omitted, it may be considered to be \"infinite\" - i.e. the tier will be applied last.  Tiers with identical order will be applied in alphanumerical order based on the Tier \"Name\".",
+								Type:        []string{"number"},
+								Format:      "double",
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{},
 		},
-		Dependencies: []string{},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v1_WorkloadEndpoint(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Properties: map[string]spec.Schema{
-					"TypeMetadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.WorkloadEndpoint": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Properties: map[string]spec.Schema{
+						"TypeMetadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.WorkloadEndpointMetadata"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.WorkloadEndpointMetadata"),
+							},
 						},
-					},
-					"spec": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.WorkloadEndpointSpec"),
+						"spec": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.WorkloadEndpointSpec"),
+							},
 						},
 					},
+					Required: []string{"TypeMetadata"},
 				},
-				Required: []string{"TypeMetadata"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v1.WorkloadEndpointMetadata", "github.com/projectcalico/libcalico-go/lib/apis/v1.WorkloadEndpointSpec", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v1.WorkloadEndpointMetadata", "github.com/projectcalico/libcalico-go/lib/apis/v1.WorkloadEndpointSpec", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v1_WorkloadEndpointList(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "WorkloadEndpointList contains a list of Workload Endpoint resources.  List types are returned from List() enumerations in the client interface.",
-				Properties: map[string]spec.Schema{
-					"TypeMetadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.WorkloadEndpointList": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "WorkloadEndpointList contains a list of Workload Endpoint resources.  List types are returned from List() enumerations in the client interface.",
+					Properties: map[string]spec.Schema{
+						"TypeMetadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"),
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ListMetadata"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ListMetadata"),
+							},
 						},
-					},
-					"items": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.WorkloadEndpoint"),
+						"items": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.WorkloadEndpoint"),
+										},
 									},
 								},
 							},
 						},
 					},
+					Required: []string{"TypeMetadata", "items"},
 				},
-				Required: []string{"TypeMetadata", "items"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v1.WorkloadEndpoint", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ListMetadata", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v1.WorkloadEndpoint", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ListMetadata", "github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.TypeMetadata"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v1_WorkloadEndpointMetadata(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "WorkloadEndpointMetadata contains the Metadata for a WorkloadEndpoint resource.",
-				Properties: map[string]spec.Schema{
-					"ObjectMetadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"),
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.WorkloadEndpointMetadata": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "WorkloadEndpointMetadata contains the Metadata for a WorkloadEndpoint resource.",
+					Properties: map[string]spec.Schema{
+						"ObjectMetadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"),
+							},
 						},
-					},
-					"name": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The name of the endpoint.  This may be omitted on a create, in which case an endpoint ID will be automatically created, and the endpoint ID will be included in the response.",
-							Type:        []string{"string"},
-							Format:      "",
+						"name": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The name of the endpoint.  This may be omitted on a create, in which case an endpoint ID will be automatically created, and the endpoint ID will be included in the response.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"workload": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The name of the workload.",
-							Type:        []string{"string"},
-							Format:      "",
+						"workload": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The name of the workload.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"orchestrator": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The name of the orchestrator.",
-							Type:        []string{"string"},
-							Format:      "",
+						"orchestrator": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The name of the orchestrator.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"node": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The node name identifying the Calico node instance.",
-							Type:        []string{"string"},
-							Format:      "",
+						"node": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The node name identifying the Calico node instance.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"activeInstanceID": {
-						SchemaProps: spec.SchemaProps{
-							Description: "ActiveInstanceID is an optional field that orchestrators may use to store additional information about the endpoint. The primary use case is to store a unique identifier for the active instance of a container. For example, with Calico CNI, a re-spawned container may use the same endpoint indexing (Node, Orchestrator, Workload, Endpoint) for the new container as for the old - the ActiveInstanceID is used to store an additional unique ID which the CNI plugin uses to determine whether the DEL operation needs to delete the Calico WorkloadEndpoint. This field is not an index field of the WorkloadEndpoint resource.",
-							Type:        []string{"string"},
-							Format:      "",
+						"activeInstanceID": {
+							SchemaProps: spec.SchemaProps{
+								Description: "ActiveInstanceID is an optional field that orchestrators may use to store additional information about the endpoint. The primary use case is to store a unique identifier for the active instance of a container. For example, with Calico CNI, a re-spawned container may use the same endpoint indexing (Node, Orchestrator, Workload, Endpoint) for the new container as for the old - the ActiveInstanceID is used to store an additional unique ID which the CNI plugin uses to determine whether the DEL operation needs to delete the Calico WorkloadEndpoint. This field is not an index field of the WorkloadEndpoint resource.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"labels": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The labels applied to the workload endpoint.  It is expected that many endpoints share the same labels. For example, they could be used to label all “production” workloads with “deployment=prod” so that security policy can be applied to production workloads.",
-							Type:        []string{"object"},
-							AdditionalProperties: &spec.SchemaOrBool{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
+						"labels": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The labels applied to the workload endpoint.  It is expected that many endpoints share the same labels. For example, they could be used to label all “production” workloads with “deployment=prod” so that security policy can be applied to production workloads.",
+								Type:        []string{"object"},
+								AdditionalProperties: &spec.SchemaOrBool{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
 									},
 								},
 							},
 						},
 					},
+					Required: []string{"ObjectMetadata"},
 				},
-				Required: []string{"ObjectMetadata"},
-			},
-		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v1_WorkloadEndpointSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "WorkloadEndpointMetadata contains the specification for a WorkloadEndpoint resource.",
-				Properties: map[string]spec.Schema{
-					"ipNetworks": {
-						SchemaProps: spec.SchemaProps{
-							Description: "IPNetworks is a list of subnets allocated to this endpoint. IP packets will only be allowed to leave this interface if they come from an address in one of these subnets.\n\nCurrently only /32 for IPv4 and /128 for IPv6 networks are supported.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/net.IPNet"),
+			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned.ObjectMetadata"},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v1.WorkloadEndpointSpec": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "WorkloadEndpointMetadata contains the specification for a WorkloadEndpoint resource.",
+					Properties: map[string]spec.Schema{
+						"ipNetworks": {
+							SchemaProps: spec.SchemaProps{
+								Description: "IPNetworks is a list of subnets allocated to this endpoint. IP packets will only be allowed to leave this interface if they come from an address in one of these subnets.\n\nCurrently only /32 for IPv4 and /128 for IPv6 networks are supported.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/net.IPNet"),
+										},
 									},
 								},
 							},
 						},
-					},
-					"ipNATs": {
-						SchemaProps: spec.SchemaProps{
-							Description: "IPNATs is a list of 1:1 NAT mappings to apply to the endpoint. Inbound connections to the external IP will be forwarded to the internal IP. Connections initiated from the internal IP will not have their source address changed, except when an endpoint attempts to connect one of its own external IPs. Each internal IP must be associated with the same endpoint via the configured IPNetworks.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.IPNAT"),
+						"ipNATs": {
+							SchemaProps: spec.SchemaProps{
+								Description: "IPNATs is a list of 1:1 NAT mappings to apply to the endpoint. Inbound connections to the external IP will be forwarded to the internal IP. Connections initiated from the internal IP will not have their source address changed, except when an endpoint attempts to connect one of its own external IPs. Each internal IP must be associated with the same endpoint via the configured IPNetworks.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.IPNAT"),
+										},
 									},
 								},
 							},
 						},
-					},
-					"ipv4Gateway": {
-						SchemaProps: spec.SchemaProps{
-							Description: "IPv4Gateway is the gateway IPv4 address for traffic from the workload.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/net.IP"),
+						"ipv4Gateway": {
+							SchemaProps: spec.SchemaProps{
+								Description: "IPv4Gateway is the gateway IPv4 address for traffic from the workload.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/net.IP"),
+							},
 						},
-					},
-					"ipv6Gateway": {
-						SchemaProps: spec.SchemaProps{
-							Description: "IPv6Gateway is the gateway IPv6 address for traffic from the workload.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/net.IP"),
+						"ipv6Gateway": {
+							SchemaProps: spec.SchemaProps{
+								Description: "IPv6Gateway is the gateway IPv6 address for traffic from the workload.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/net.IP"),
+							},
 						},
-					},
-					"profiles": {
-						SchemaProps: spec.SchemaProps{
-							Description: "A list of security Profile resources that apply to this endpoint. Each profile is applied in the order that they appear in this list.  Profile rules are applied after the selector-based security policy.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
+						"profiles": {
+							SchemaProps: spec.SchemaProps{
+								Description: "A list of security Profile resources that apply to this endpoint. Each profile is applied in the order that they appear in this list.  Profile rules are applied after the selector-based security policy.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
 									},
 								},
 							},
 						},
-					},
-					"interfaceName": {
-						SchemaProps: spec.SchemaProps{
-							Description: "InterfaceName the name of the Linux interface on the host: for example, tap80.",
-							Type:        []string{"string"},
-							Format:      "",
+						"interfaceName": {
+							SchemaProps: spec.SchemaProps{
+								Description: "InterfaceName the name of the Linux interface on the host: for example, tap80.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"mac": {
-						SchemaProps: spec.SchemaProps{
-							Description: "MAC is the MAC address of the endpoint interface.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/net.MAC"),
+						"mac": {
+							SchemaProps: spec.SchemaProps{
+								Description: "MAC is the MAC address of the endpoint interface.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/net.MAC"),
+							},
 						},
-					},
-					"ports": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Ports contains the endpoint's named ports, which may be referenced in security policy rules.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.EndpointPort"),
+						"ports": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Ports contains the endpoint's named ports, which may be referenced in security policy rules.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v1.EndpointPort"),
+										},
 									},
 								},
 							},
@@ -2001,58 +1702,52 @@ func schema_libcalico_go_lib_apis_v1_WorkloadEndpointSpec(ref common.ReferenceCa
 					},
 				},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v1.EndpointPort", "github.com/projectcalico/libcalico-go/lib/apis/v1.IPNAT", "github.com/projectcalico/libcalico-go/lib/net.IP", "github.com/projectcalico/libcalico-go/lib/net.IPNet", "github.com/projectcalico/libcalico-go/lib/net.MAC"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v1.EndpointPort", "github.com/projectcalico/libcalico-go/lib/apis/v1.IPNAT", "github.com/projectcalico/libcalico-go/lib/net.IP", "github.com/projectcalico/libcalico-go/lib/net.IPNet", "github.com/projectcalico/libcalico-go/lib/net.MAC"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_AllocationAttribute(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Properties: map[string]spec.Schema{
-					"handle_id": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.AllocationAttribute": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Properties: map[string]spec.Schema{
+						"handle_id": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"secondary": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"object"},
-							AdditionalProperties: &spec.SchemaOrBool{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
+						"secondary": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"object"},
+								AdditionalProperties: &spec.SchemaOrBool{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
 									},
 								},
 							},
 						},
 					},
+					Required: []string{"handle_id", "secondary"},
 				},
-				Required: []string{"handle_id", "secondary"},
-			},
-		},
-		Dependencies: []string{},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_AuditEventsSelection(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "AuditEventsSelection defines which set of resources should be audited.",
-				Properties: map[string]spec.Schema{
-					"resources": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Resources lists the resources that will be included in the audit logs in the ReportData.  Blank fields in the listed ResourceID structs are treated as wildcards.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.AuditResource"),
+			},
+			Dependencies: []string{},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.AuditEventsSelection": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "AuditEventsSelection defines which set of resources should be audited.",
+					Properties: map[string]spec.Schema{
+						"resources": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Resources lists the resources that will be included in the audit logs in the ReportData.  Blank fields in the listed ResourceID structs are treated as wildcards.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.AuditResource"),
+										},
 									},
 								},
 							},
@@ -2060,222 +1755,207 @@ func schema_libcalico_go_lib_apis_v3_AuditEventsSelection(ref common.ReferenceCa
 					},
 				},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.AuditResource"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.AuditResource"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_AuditResource(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "AuditResource is used to filter Audit events in the Report configuration.\n\nAn empty field value indicates a wildcard. For example, if Resource is set to \"networkpolicies\" and all other fields are blank then this filter would include all NetworkPolicy resources across all namespaces, and would include both Calico and Kubernetes resource types.",
-				Properties: map[string]spec.Schema{
-					"resource": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The resource type. The format is the lowercase plural as used in audit event selection and RBAC configuration.",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.AuditResource": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "AuditResource is used to filter Audit events in the Report configuration.\n\nAn empty field value indicates a wildcard. For example, if Resource is set to \"networkpolicies\" and all other fields are blank then this filter would include all NetworkPolicy resources across all namespaces, and would include both Calico and Kubernetes resource types.",
+					Properties: map[string]spec.Schema{
+						"resource": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The resource type. The format is the lowercase plural as used in audit event selection and RBAC configuration.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"apiGroup": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIGroup is the name of the API group that contains the referred object (e.g. projectcalico.org).",
-							Type:        []string{"string"},
-							Format:      "",
+						"apiGroup": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIGroup is the name of the API group that contains the referred object (e.g. projectcalico.org).",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion is the version of the API group that contains the referred object (e.g. v3).",
-							Type:        []string{"string"},
-							Format:      "",
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion is the version of the API group that contains the referred object (e.g. v3).",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"name": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The resource name.",
-							Type:        []string{"string"},
-							Format:      "",
+						"name": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The resource name.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"namespace": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The resource namespace.",
-							Type:        []string{"string"},
-							Format:      "",
+						"namespace": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The resource namespace.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{},
 		},
-		Dependencies: []string{},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_AuditSummary(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Properties: map[string]spec.Schema{
-					"numTotal": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The total number of in-scope audit logs.",
-							Type:        []string{"integer"},
-							Format:      "int32",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.AuditSummary": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Properties: map[string]spec.Schema{
+						"numTotal": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The total number of in-scope audit logs.",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
 						},
-					},
-					"numCreate": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The number of in-scope audit log create events.",
-							Type:        []string{"integer"},
-							Format:      "int32",
+						"numCreate": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The number of in-scope audit log create events.",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
 						},
-					},
-					"numModify": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The number of in-scope audit log patch or replace events.",
-							Type:        []string{"integer"},
-							Format:      "int32",
+						"numModify": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The number of in-scope audit log patch or replace events.",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
 						},
-					},
-					"numDelete": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The number of in-scope audit log delete events.",
-							Type:        []string{"integer"},
-							Format:      "int32",
+						"numDelete": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The number of in-scope audit log delete events.",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{},
 		},
-		Dependencies: []string{},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_BGPConfiguration(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "BGPConfiguration contains the configuration for any BGP routing.",
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.BGPConfiguration": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "BGPConfiguration contains the configuration for any BGP routing.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Standard object's metadata.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Standard object's metadata.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							},
 						},
-					},
-					"spec": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Specification of the BGPConfiguration.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.BGPConfigurationSpec"),
+						"spec": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Specification of the BGPConfiguration.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.BGPConfigurationSpec"),
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.BGPConfigurationSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.BGPConfigurationSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_BGPConfigurationList(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "BGPConfigurationList contains a list of BGPConfiguration resources.",
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.BGPConfigurationList": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "BGPConfigurationList contains a list of BGPConfiguration resources.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+							},
 						},
-					},
-					"items": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.BGPConfiguration"),
+						"items": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.BGPConfiguration"),
+										},
 									},
 								},
 							},
 						},
 					},
+					Required: []string{"metadata", "items"},
 				},
-				Required: []string{"metadata", "items"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.BGPConfiguration", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.BGPConfiguration", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_BGPConfigurationSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "BGPConfigurationSpec contains the values of the BGP configuration.",
-				Properties: map[string]spec.Schema{
-					"logSeverityScreen": {
-						SchemaProps: spec.SchemaProps{
-							Description: "LogSeverityScreen is the log severity above which logs are sent to the stdout. [Default: INFO]",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.BGPConfigurationSpec": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "BGPConfigurationSpec contains the values of the BGP configuration.",
+					Properties: map[string]spec.Schema{
+						"logSeverityScreen": {
+							SchemaProps: spec.SchemaProps{
+								Description: "LogSeverityScreen is the log severity above which logs are sent to the stdout. [Default: INFO]",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"nodeToNodeMeshEnabled": {
-						SchemaProps: spec.SchemaProps{
-							Description: "NodeToNodeMeshEnabled sets whether full node to node BGP mesh is enabled. [Default: true]",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"nodeToNodeMeshEnabled": {
+							SchemaProps: spec.SchemaProps{
+								Description: "NodeToNodeMeshEnabled sets whether full node to node BGP mesh is enabled. [Default: true]",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"asNumber": {
-						SchemaProps: spec.SchemaProps{
-							Description: "ASNumber is the default AS number used by a node. [Default: 64512]",
-							Type:        []string{"integer"},
-							Format:      "int64",
+						"asNumber": {
+							SchemaProps: spec.SchemaProps{
+								Description: "ASNumber is the default AS number used by a node. [Default: 64512]",
+								Type:        []string{"integer"},
+								Format:      "int64",
+							},
 						},
-					},
-					"extensions": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Extensions is a mapping of keys to values that can be used in custom BGP templates",
-							Type:        []string{"object"},
-							AdditionalProperties: &spec.SchemaOrBool{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
+						"extensions": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Extensions is a mapping of keys to values that can be used in custom BGP templates",
+								Type:        []string{"object"},
+								AdditionalProperties: &spec.SchemaOrBool{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
 									},
 								},
 							},
@@ -2283,2722 +1963,2612 @@ func schema_libcalico_go_lib_apis_v3_BGPConfigurationSpec(ref common.ReferenceCa
 					},
 				},
 			},
+			Dependencies: []string{},
 		},
-		Dependencies: []string{},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_BGPPeer(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "BGPPeer contains information about a BGPPeer resource that is a peer of a Calico compute node.",
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.BGPPeer": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "BGPPeer contains information about a BGPPeer resource that is a peer of a Calico compute node.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Standard object's metadata.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Standard object's metadata.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							},
 						},
-					},
-					"spec": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Specification of the BGPPeer.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.BGPPeerSpec"),
+						"spec": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Specification of the BGPPeer.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.BGPPeerSpec"),
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.BGPPeerSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.BGPPeerSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_BGPPeerList(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "BGPPeerList contains a list of BGPPeer resources.",
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.BGPPeerList": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "BGPPeerList contains a list of BGPPeer resources.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+							},
 						},
-					},
-					"items": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.BGPPeer"),
+						"items": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.BGPPeer"),
+										},
 									},
 								},
 							},
 						},
 					},
+					Required: []string{"metadata", "items"},
 				},
-				Required: []string{"metadata", "items"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.BGPPeer", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.BGPPeer", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_BGPPeerSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "BGPPeerSpec contains the specification for a BGPPeer resource.",
-				Properties: map[string]spec.Schema{
-					"node": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The node name identifying the Calico node instance that is peering with this peer. If this is not set, this represents a global peer, i.e. a peer that peers with every node in the deployment.",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.BGPPeerSpec": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "BGPPeerSpec contains the specification for a BGPPeer resource.",
+					Properties: map[string]spec.Schema{
+						"node": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The node name identifying the Calico node instance that is peering with this peer. If this is not set, this represents a global peer, i.e. a peer that peers with every node in the deployment.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"peerIP": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The IP address of the peer.",
-							Type:        []string{"string"},
-							Format:      "",
+						"peerIP": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The IP address of the peer.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"asNumber": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The AS Number of the peer.",
-							Type:        []string{"integer"},
-							Format:      "int64",
+						"asNumber": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The AS Number of the peer.",
+								Type:        []string{"integer"},
+								Format:      "int64",
+							},
 						},
-					},
-					"extensions": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Extensions is a mapping of keys to values that can be used in custom BGP templates",
-							Type:        []string{"object"},
-							AdditionalProperties: &spec.SchemaOrBool{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
+						"extensions": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Extensions is a mapping of keys to values that can be used in custom BGP templates",
+								Type:        []string{"object"},
+								AdditionalProperties: &spec.SchemaOrBool{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
 									},
 								},
 							},
 						},
-					},
-					"nodeSelector": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Selector for the nodes that should have this peering.  When this is set, the Node field must be empty.",
-							Type:        []string{"string"},
-							Format:      "",
+						"nodeSelector": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Selector for the nodes that should have this peering.  When this is set, the Node field must be empty.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"peerSelector": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Selector for the remote nodes to peer with.  When this is set, the PeerIP and ASNumber fields must be empty.  For each peering between the local node and selected remote nodes, we configure an IPv4 peering if both ends have NodeBGPSpec.IPv4Address specified, and an IPv6 peering if both ends have NodeBGPSpec.IPv6Address specified.  The remote AS number comes from the remote node’s NodeBGPSpec.ASNumber, or the global default if that is not set.",
-							Type:        []string{"string"},
-							Format:      "",
+						"peerSelector": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Selector for the remote nodes to peer with.  When this is set, the PeerIP and ASNumber fields must be empty.  For each peering between the local node and selected remote nodes, we configure an IPv4 peering if both ends have NodeBGPSpec.IPv4Address specified, and an IPv6 peering if both ends have NodeBGPSpec.IPv6Address specified.  The remote AS number comes from the remote node’s NodeBGPSpec.ASNumber, or the global default if that is not set.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
 					},
+					Required: []string{"peerIP", "asNumber"},
 				},
-				Required: []string{"peerIP", "asNumber"},
 			},
+			Dependencies: []string{},
 		},
-		Dependencies: []string{},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_BlockAffinity(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "BlockAffinity maintains a block affinity's state",
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.BlockAffinity": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "BlockAffinity maintains a block affinity's state",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Standard object's metadata.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Standard object's metadata.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							},
 						},
-					},
-					"spec": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Specification of the BlockAffinity.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.BlockAffinitySpec"),
+						"spec": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Specification of the BlockAffinity.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.BlockAffinitySpec"),
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.BlockAffinitySpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.BlockAffinitySpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_BlockAffinityList(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "BlockAffinityList contains a list of BlockAffinity resources.",
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.BlockAffinityList": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "BlockAffinityList contains a list of BlockAffinity resources.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+							},
 						},
-					},
-					"items": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.BlockAffinity"),
+						"items": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.BlockAffinity"),
+										},
 									},
 								},
 							},
 						},
 					},
+					Required: []string{"metadata", "items"},
 				},
-				Required: []string{"metadata", "items"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.BlockAffinity", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.BlockAffinity", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_BlockAffinitySpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "BlockAffinitySpec contains the specification for a BlockAffinity resource.",
-				Properties: map[string]spec.Schema{
-					"state": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.BlockAffinitySpec": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "BlockAffinitySpec contains the specification for a BlockAffinity resource.",
+					Properties: map[string]spec.Schema{
+						"state": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"node": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+						"node": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"cidr": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+						"cidr": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"deleted": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+						"deleted": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
 					},
+					Required: []string{"state", "node", "cidr", "deleted"},
 				},
-				Required: []string{"state", "node", "cidr", "deleted"},
 			},
+			Dependencies: []string{},
 		},
-		Dependencies: []string{},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_CISBenchmarkFilter(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "CISBenchmarkFilter provides filters for a set of benchmarks that match particular selection criteria.",
-				Properties: map[string]spec.Schema{
-					"benchmarkSelection": {
-						SchemaProps: spec.SchemaProps{
-							Description: "BenchmarkSelection specifies which benchmarks this filter applies to. If not specified, applies to all.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkSelection"),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkFilter": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "CISBenchmarkFilter provides filters for a set of benchmarks that match particular selection criteria.",
+					Properties: map[string]spec.Schema{
+						"benchmarkSelection": {
+							SchemaProps: spec.SchemaProps{
+								Description: "BenchmarkSelection specifies which benchmarks this filter applies to. If not specified, applies to all.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkSelection"),
+							},
 						},
-					},
-					"exclude": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Exclude is an array of test indices to exclude from the report.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
+						"exclude": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Exclude is an array of test indices to exclude from the report.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
 									},
 								},
 							},
 						},
-					},
-					"include": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Include is an array of test indices to show in the report. Is additive if IncludeUnscoredTests is true. Takes precedence over Exclude.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
+						"include": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Include is an array of test indices to show in the report. Is additive if IncludeUnscoredTests is true. Takes precedence over Exclude.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
 									},
 								},
 							},
 						},
 					},
+					Required: []string{"exclude", "include"},
 				},
-				Required: []string{"exclude", "include"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkSelection"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkSelection"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_CISBenchmarkNode(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "CISBenchmarkNode describes a CIS benchmarking result on a single node.",
-				Properties: map[string]spec.Schema{
-					"nodeName": {
-						SchemaProps: spec.SchemaProps{
-							Description: "NodeName is the name of the node the this set of benchmark results is from.",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkNode": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "CISBenchmarkNode describes a CIS benchmarking result on a single node.",
+					Properties: map[string]spec.Schema{
+						"nodeName": {
+							SchemaProps: spec.SchemaProps{
+								Description: "NodeName is the name of the node the this set of benchmark results is from.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"kubernetesVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "KubernetesVersion is the version of the kubelet running on this node.",
-							Type:        []string{"string"},
-							Format:      "",
+						"kubernetesVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "KubernetesVersion is the version of the kubelet running on this node.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"benchmarksVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "BenchmarksVersion is the version of the benchmarks that ran on this node.",
-							Type:        []string{"string"},
-							Format:      "",
+						"benchmarksVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "BenchmarksVersion is the version of the benchmarks that ran on this node.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"summary": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Summary is a set of summary stats for this set of node-specific benchmarks.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkNodeSummary"),
+						"summary": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Summary is a set of summary stats for this set of node-specific benchmarks.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkNodeSummary"),
+							},
 						},
-					},
-					"results": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Results is the detailed set of results for this set of node-specific benchmarks.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkSectionResult"),
+						"results": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Results is the detailed set of results for this set of node-specific benchmarks.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkSectionResult"),
+										},
 									},
 								},
 							},
 						},
 					},
+					Required: []string{"nodeName", "kubernetesVersion", "benchmarksVersion", "summary", "results"},
 				},
-				Required: []string{"nodeName", "kubernetesVersion", "benchmarksVersion", "summary", "results"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkNodeSummary", "github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkSectionResult"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkNodeSummary", "github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkSectionResult"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_CISBenchmarkNodeSummary(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "CISBenchmarkNodeSummary keeps count of tests passed, failed, and marked as info on a single node. Also has a status field to describe whether it is in HIGH, MED, or LOW status (based on [high|med]Threshold).",
-				Properties: map[string]spec.Schema{
-					"status": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkNodeSummary": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "CISBenchmarkNodeSummary keeps count of tests passed, failed, and marked as info on a single node. Also has a status field to describe whether it is in HIGH, MED, or LOW status (based on [high|med]Threshold).",
+					Properties: map[string]spec.Schema{
+						"status": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"totalPass": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"integer"},
-							Format: "int32",
+						"totalPass": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"integer"},
+								Format: "int32",
+							},
 						},
-					},
-					"totalFail": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"integer"},
-							Format: "int32",
+						"totalFail": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"integer"},
+								Format: "int32",
+							},
 						},
-					},
-					"totalInfo": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"integer"},
-							Format: "int32",
+						"totalInfo": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"integer"},
+								Format: "int32",
+							},
 						},
-					},
-					"total": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"integer"},
-							Format: "int32",
+						"total": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"integer"},
+								Format: "int32",
+							},
 						},
 					},
+					Required: []string{"status", "totalPass", "totalFail", "totalInfo", "total"},
 				},
-				Required: []string{"status", "totalPass", "totalFail", "totalInfo", "total"},
 			},
+			Dependencies: []string{},
 		},
-		Dependencies: []string{},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_CISBenchmarkParams(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "CISBenchmarkParams contains the parameters for configuring a CIS benchmark report.",
-				Properties: map[string]spec.Schema{
-					"includeUnscoredTests": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Specifies if the report should also show results for scored/not-scored tests.",
-							Type:        []string{"boolean"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkParams": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "CISBenchmarkParams contains the parameters for configuring a CIS benchmark report.",
+					Properties: map[string]spec.Schema{
+						"includeUnscoredTests": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Specifies if the report should also show results for scored/not-scored tests.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"numFailedTests": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Configure the number of top failed tests to show up on the report.",
-							Type:        []string{"integer"},
-							Format:      "int32",
+						"numFailedTests": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Configure the number of top failed tests to show up on the report.",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
 						},
-					},
-					"resultsFilters": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Benchmark results filters. The first matching set of filters is applied to each set of benchmark results. If there are no matching filters, the full set of benchmark results will be included in the report.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkFilter"),
+						"resultsFilters": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Benchmark results filters. The first matching set of filters is applied to each set of benchmark results. If there are no matching filters, the full set of benchmark results will be included in the report.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkFilter"),
+										},
 									},
 								},
 							},
 						},
-					},
-					"highThreshold": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Interpretted as a percentage to indicate at what levels of passing tests a node should be considered HIGH, MED, and LOW. - If >= HighThreshold flag as high - Otherwise, if > MedThreshold flag as med - Otherwise flag as low.",
-							Type:        []string{"integer"},
-							Format:      "int32",
+						"highThreshold": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Interpretted as a percentage to indicate at what levels of passing tests a node should be considered HIGH, MED, and LOW. - If >= HighThreshold flag as high - Otherwise, if > MedThreshold flag as med - Otherwise flag as low.",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
 						},
-					},
-					"medThreshold": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"integer"},
-							Format: "int32",
+						"medThreshold": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"integer"},
+								Format: "int32",
+							},
 						},
 					},
+					Required: []string{"includeUnscoredTests", "numFailedTests", "resultsFilters", "highThreshold", "medThreshold"},
 				},
-				Required: []string{"includeUnscoredTests", "numFailedTests", "resultsFilters", "highThreshold", "medThreshold"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkFilter"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkFilter"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_CISBenchmarkResult(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "CISBenchmarkResult describes the result of a single CIS benchmark check.",
-				Properties: map[string]spec.Schema{
-					"testNumber": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkResult": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "CISBenchmarkResult describes the result of a single CIS benchmark check.",
+					Properties: map[string]spec.Schema{
+						"testNumber": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"testDesc": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+						"testDesc": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"testInfo": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+						"testInfo": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"status": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+						"status": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"scored": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"boolean"},
-							Format: "",
+						"scored": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"boolean"},
+								Format: "",
+							},
 						},
 					},
+					Required: []string{"testNumber", "testDesc", "testInfo", "status", "scored"},
 				},
-				Required: []string{"testNumber", "testDesc", "testInfo", "status", "scored"},
 			},
+			Dependencies: []string{},
 		},
-		Dependencies: []string{},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_CISBenchmarkResultCount(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "CISBenchmarkResultCount keeps track of how many nodes had a certain test result.",
-				Properties: map[string]spec.Schema{
-					"CISBenchmarkResult": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkResult"),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkResultCount": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "CISBenchmarkResultCount keeps track of how many nodes had a certain test result.",
+					Properties: map[string]spec.Schema{
+						"CISBenchmarkResult": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkResult"),
+							},
 						},
-					},
-					"count": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"integer"},
-							Format: "int32",
+						"count": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"integer"},
+								Format: "int32",
+							},
 						},
 					},
+					Required: []string{"CISBenchmarkResult", "count"},
 				},
-				Required: []string{"CISBenchmarkResult", "count"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkResult"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkResult"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_CISBenchmarkSectionResult(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "CISBenchmarkSectionResult describes the result of running the CIS benchmark on a single component.",
-				Properties: map[string]spec.Schema{
-					"status": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkSectionResult": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "CISBenchmarkSectionResult describes the result of running the CIS benchmark on a single component.",
+					Properties: map[string]spec.Schema{
+						"status": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"section": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+						"section": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"desc": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+						"desc": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"pass": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"integer"},
-							Format: "int32",
+						"pass": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"integer"},
+								Format: "int32",
+							},
 						},
-					},
-					"fail": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"integer"},
-							Format: "int32",
+						"fail": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"integer"},
+								Format: "int32",
+							},
 						},
-					},
-					"info": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"integer"},
-							Format: "int32",
+						"info": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"integer"},
+								Format: "int32",
+							},
 						},
-					},
-					"results": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkResult"),
+						"results": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkResult"),
+										},
 									},
 								},
 							},
 						},
 					},
+					Required: []string{"status", "section", "desc", "pass", "fail", "info", "results"},
 				},
-				Required: []string{"status", "section", "desc", "pass", "fail", "info", "results"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkResult"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkResult"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_CISBenchmarkSelection(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "CISBenchmarkSelection selects a particular set of benchmarks.",
-				Properties: map[string]spec.Schema{
-					"kubernetesVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "KubernetesVersion is used select nodes that are running a specific version of kubelet. The full version need not be fully specified down to the patch level, in which case the significant parts of the version are matched. e.g. \"1.0\" will match versions \"1.0.1\" and \"1.0.2\" If not specified, matches all versions.",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkSelection": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "CISBenchmarkSelection selects a particular set of benchmarks.",
+					Properties: map[string]spec.Schema{
+						"kubernetesVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "KubernetesVersion is used select nodes that are running a specific version of kubelet. The full version need not be fully specified down to the patch level, in which case the significant parts of the version are matched. e.g. \"1.0\" will match versions \"1.0.1\" and \"1.0.2\" If not specified, matches all versions.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{},
 		},
-		Dependencies: []string{},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_CISBenchmarkSummary(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "CISBenchmarkSummary describes a CIS benchmarking result across an entire cluster.",
-				Properties: map[string]spec.Schema{
-					"type": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkSummary": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "CISBenchmarkSummary describes a CIS benchmarking result across an entire cluster.",
+					Properties: map[string]spec.Schema{
+						"type": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"highCount": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"integer"},
-							Format: "int32",
+						"highCount": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"integer"},
+								Format: "int32",
+							},
 						},
-					},
-					"medCount": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"integer"},
-							Format: "int32",
+						"medCount": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"integer"},
+								Format: "int32",
+							},
 						},
-					},
-					"lowCount": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"integer"},
-							Format: "int32",
+						"lowCount": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"integer"},
+								Format: "int32",
+							},
 						},
 					},
+					Required: []string{"type", "highCount", "medCount", "lowCount"},
 				},
-				Required: []string{"type", "highCount", "medCount", "lowCount"},
 			},
+			Dependencies: []string{},
 		},
-		Dependencies: []string{},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_ClusterInformation(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "ClusterInformation contains the cluster specific information.",
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.ClusterInformation": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "ClusterInformation contains the cluster specific information.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Standard object's metadata.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Standard object's metadata.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							},
 						},
-					},
-					"spec": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Specification of the ClusterInformation.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ClusterInformationSpec"),
+						"spec": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Specification of the ClusterInformation.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ClusterInformationSpec"),
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.ClusterInformationSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.ClusterInformationSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_ClusterInformationList(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "ClusterInformationList contains a list of ClusterInformation resources (even though there should only be one).",
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.ClusterInformationList": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "ClusterInformationList contains a list of ClusterInformation resources (even though there should only be one).",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+							},
 						},
-					},
-					"items": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ClusterInformation"),
+						"items": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ClusterInformation"),
+										},
 									},
 								},
 							},
 						},
 					},
+					Required: []string{"metadata", "items"},
 				},
-				Required: []string{"metadata", "items"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.ClusterInformation", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.ClusterInformation", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_ClusterInformationSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "ClusterInformationSpec contains the values of describing the cluster.",
-				Properties: map[string]spec.Schema{
-					"clusterGUID": {
-						SchemaProps: spec.SchemaProps{
-							Description: "ClusterGUID is the GUID of the cluster",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.ClusterInformationSpec": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "ClusterInformationSpec contains the values of describing the cluster.",
+					Properties: map[string]spec.Schema{
+						"clusterGUID": {
+							SchemaProps: spec.SchemaProps{
+								Description: "ClusterGUID is the GUID of the cluster",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"clusterType": {
-						SchemaProps: spec.SchemaProps{
-							Description: "ClusterType describes the type of the cluster",
-							Type:        []string{"string"},
-							Format:      "",
+						"clusterType": {
+							SchemaProps: spec.SchemaProps{
+								Description: "ClusterType describes the type of the cluster",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"calicoVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "CalicoVersion is the version of Calico that the cluster is running",
-							Type:        []string{"string"},
-							Format:      "",
+						"calicoVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "CalicoVersion is the version of Calico that the cluster is running",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"cnxVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "CNXVersion is the version of CNX that the cluster is running",
-							Type:        []string{"string"},
-							Format:      "",
+						"cnxVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "CNXVersion is the version of CNX that the cluster is running",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"datastoreReady": {
-						SchemaProps: spec.SchemaProps{
-							Description: "DatastoreReady is used during significant datastore migrations to signal to components such as Felix that it should wait before accessing the datastore.",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"datastoreReady": {
+							SchemaProps: spec.SchemaProps{
+								Description: "DatastoreReady is used during significant datastore migrations to signal to components such as Felix that it should wait before accessing the datastore.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
 					},
+					Required: []string{"datastoreReady"},
 				},
-				Required: []string{"datastoreReady"},
 			},
+			Dependencies: []string{},
 		},
-		Dependencies: []string{},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_CompletedReportJob(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "CompletedReportJob augments the ReportJob with completion details.",
-				Properties: map[string]spec.Schema{
-					"start": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The start time of the report.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.CompletedReportJob": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "CompletedReportJob augments the ReportJob with completion details.",
+					Properties: map[string]spec.Schema{
+						"start": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The start time of the report.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+							},
 						},
-					},
-					"end": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The end time of the report.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						"end": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The end time of the report.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+							},
 						},
-					},
-					"job": {
-						SchemaProps: spec.SchemaProps{
-							Description: "A reference to the report creation job if known.",
-							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
+						"job": {
+							SchemaProps: spec.SchemaProps{
+								Description: "A reference to the report creation job if known.",
+								Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
+							},
 						},
-					},
-					"jobCompletionTime": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The time the report job completed.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						"jobCompletionTime": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The time the report job completed.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+							},
 						},
 					},
+					Required: []string{"start", "end", "job"},
 				},
-				Required: []string{"start", "end", "job"},
 			},
+			Dependencies: []string{
+				"k8s.io/api/core/v1.ObjectReference", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 		},
-		Dependencies: []string{
-			"k8s.io/api/core/v1.ObjectReference", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_EndpointPort(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Properties: map[string]spec.Schema{
-					"name": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointPort": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Properties: map[string]spec.Schema{
+						"name": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"protocol": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/numorstring.Protocol"),
+						"protocol": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/numorstring.Protocol"),
+							},
 						},
-					},
-					"port": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"integer"},
-							Format: "int32",
+						"port": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"integer"},
+								Format: "int32",
+							},
 						},
 					},
+					Required: []string{"name", "protocol", "port"},
 				},
-				Required: []string{"name", "protocol", "port"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/numorstring.Protocol"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/numorstring.Protocol"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_EndpointsReportEndpoint(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Properties: map[string]spec.Schema{
-					"endpoint": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ResourceID"),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportEndpoint": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Properties: map[string]spec.Schema{
+						"endpoint": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ResourceID"),
+							},
 						},
-					},
-					"ingressProtected": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Whether ingress traffic to this endpoint was always protected during the reporting interval.\n\nIngress protection is defined as denying ingress traffic unless explicitly whitelisted. This is translated as the endpoint having some explicit ingress policy applied to it.\n\nSource: Calculated from the set of ingress policies that apply to each endpoint.\n\nSet to: - false if there are no ingress policies applied to the endpoint at any point during the reporting interval. - true otherwise.\n\nNote: Policy is not inspected for protection bypass: for example match-all-and-allow rules which would effectively\n      short-circuit the default tier-drop behavior, in this case the match-all-and-allow would be considered to be\n      an explicit whitelist of all traffic. We could include simplistic all-match rules and check that they\n      don't result in an allow. To check for more circuitous match-all allows is much trickier (e.g. you have one\n      rule that allows for src!=1.2.3.0/24 and another rule that allows for src==1.2.3.0/24, which combined\n      is essentially an allow-all).",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"ingressProtected": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Whether ingress traffic to this endpoint was always protected during the reporting interval.\n\nIngress protection is defined as denying ingress traffic unless explicitly whitelisted. This is translated as the endpoint having some explicit ingress policy applied to it.\n\nSource: Calculated from the set of ingress policies that apply to each endpoint.\n\nSet to: - false if there are no ingress policies applied to the endpoint at any point during the reporting interval. - true otherwise.\n\nNote: Policy is not inspected for protection bypass: for example match-all-and-allow rules which would effectively\n      short-circuit the default tier-drop behavior, in this case the match-all-and-allow would be considered to be\n      an explicit whitelist of all traffic. We could include simplistic all-match rules and check that they\n      don't result in an allow. To check for more circuitous match-all allows is much trickier (e.g. you have one\n      rule that allows for src!=1.2.3.0/24 and another rule that allows for src==1.2.3.0/24, which combined\n      is essentially an allow-all).",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"egressProtected": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Whether egress traffic to this endpoint was always protected during the reporting interval.\n\nEgress protection is defined as denying egress traffic unless explicitly whitelisted. This is translated as the endpoint having some explicit egress policy applied to it.\n\nSource: Calculated from the set of egress policies that apply to each endpoint.\n\nSet to: - false if there are no egress policies applied to the endpoint at any point during the reporting interval. - true otherwise.\n\nNote: Policy is not inspected for protection bypass: for example match-all-and-allow rules which would effectively\n      short-circuit the default tier-drop behavior, in this case the match-all-and-allow would be considered to be\n      an explicit whitelist of all traffic. We could include simplistic all-match rules and check that they\n      don't result in an allow. To check for more circuitous match-all allows is much trickier (e.g. you have one\n      rule that allows for src!=1.2.3.0/24 and another rule that allows for src==1.2.3.0/24, which combined\n      is essentially an allow-all). Similarly, policy that only contains pass rules would still count as being\n      protected.",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"egressProtected": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Whether egress traffic to this endpoint was always protected during the reporting interval.\n\nEgress protection is defined as denying egress traffic unless explicitly whitelisted. This is translated as the endpoint having some explicit egress policy applied to it.\n\nSource: Calculated from the set of egress policies that apply to each endpoint.\n\nSet to: - false if there are no egress policies applied to the endpoint at any point during the reporting interval. - true otherwise.\n\nNote: Policy is not inspected for protection bypass: for example match-all-and-allow rules which would effectively\n      short-circuit the default tier-drop behavior, in this case the match-all-and-allow would be considered to be\n      an explicit whitelist of all traffic. We could include simplistic all-match rules and check that they\n      don't result in an allow. To check for more circuitous match-all allows is much trickier (e.g. you have one\n      rule that allows for src!=1.2.3.0/24 and another rule that allows for src==1.2.3.0/24, which combined\n      is essentially an allow-all). Similarly, policy that only contains pass rules would still count as being\n      protected.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"ingressFromInternet": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Whether the matching policy has any ingress allow rules from a public IP address (as defined by the complement of the private addresses; private addresses default to those defined in RFC 1918, but may also be configured separately).\n\nSource: Calculated from the policies applied to the endpoint. The ingress allow rules in each policy are checked\n        to determine if any CIDR specified in the rule, either directly or through a matching network set, is an\n        internet address. Endpoint addresses are not included - therefore ingress from a pod that has a public\n        IP address will not be considered as “from internet”.\n\nNote: This is a simplification since it does not examine the policies to determine if it's actually possible to\n      hit one of these allow rules (e.g. a previous rule may be a match-all-deny).",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"ingressFromInternet": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Whether the matching policy has any ingress allow rules from a public IP address (as defined by the complement of the private addresses; private addresses default to those defined in RFC 1918, but may also be configured separately).\n\nSource: Calculated from the policies applied to the endpoint. The ingress allow rules in each policy are checked\n        to determine if any CIDR specified in the rule, either directly or through a matching network set, is an\n        internet address. Endpoint addresses are not included - therefore ingress from a pod that has a public\n        IP address will not be considered as “from internet”.\n\nNote: This is a simplification since it does not examine the policies to determine if it's actually possible to\n      hit one of these allow rules (e.g. a previous rule may be a match-all-deny).",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"egressToInternet": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Whether the matching policy has any egress allow rules to a public IP address (as defined by the complement of the private addresses; private addresses default to those defined in RFC 1918, but may also be configured separately).\n\nSource: Calculated from the policies applied to the endpoint. The egress allow rules in each policy are checked\n        to determine if any CIDR specified in the rule, either directly or through a matching network set, is an\n        internet address. Endpoint addresses are not included - therefore egress to a pod that has a public\n        IP address will not be considered as “to internet”.\n\nNote 1: This is a simplification since it does not examine the policies to determine if it's actually possible to\n        hit one of these allow rules (e.g. a previous rule may be a match-all-deny).",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"egressToInternet": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Whether the matching policy has any egress allow rules to a public IP address (as defined by the complement of the private addresses; private addresses default to those defined in RFC 1918, but may also be configured separately).\n\nSource: Calculated from the policies applied to the endpoint. The egress allow rules in each policy are checked\n        to determine if any CIDR specified in the rule, either directly or through a matching network set, is an\n        internet address. Endpoint addresses are not included - therefore egress to a pod that has a public\n        IP address will not be considered as “to internet”.\n\nNote 1: This is a simplification since it does not examine the policies to determine if it's actually possible to\n        hit one of these allow rules (e.g. a previous rule may be a match-all-deny).",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"ingressFromOtherNamespace": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Whether the matching policy has any ingress allow rules from another namespace.\n\nSource: Calculated from the policies applied to the endpoint.\n\nSet to true if: - this is a pod (i.e. namespaced) with an applied GlobalNetworkPolicy with an ingress allow rule with no CIDR match. - this is a pod with an applied NetworkPolicy with an ingress allow rule with a non-empty NamespaceSelector.\n\nNote: This is a simplification since it does not examine the policies to determine if it's actually possible to\n      hit one of these allow rules (e.g. a previous rule may be a match-all-deny, or endpoint selector may not\n      match any endpoints within the namespace).",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"ingressFromOtherNamespace": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Whether the matching policy has any ingress allow rules from another namespace.\n\nSource: Calculated from the policies applied to the endpoint.\n\nSet to true if: - this is a pod (i.e. namespaced) with an applied GlobalNetworkPolicy with an ingress allow rule with no CIDR match. - this is a pod with an applied NetworkPolicy with an ingress allow rule with a non-empty NamespaceSelector.\n\nNote: This is a simplification since it does not examine the policies to determine if it's actually possible to\n      hit one of these allow rules (e.g. a previous rule may be a match-all-deny, or endpoint selector may not\n      match any endpoints within the namespace).",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"egressToOtherNamespace": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Whether the matching policy has any egress allow rules to another namespace.\n\nSource: Calculated from the policies applied to the endpoint.\n\nSet to true if: - this is a pod endpoint (i.e. namespaced) matches a GlobalNetworkPolicy with an egress allow rule with no CIDR match. - this is a pod endpoint which matches a NetworkPolicy with an egress allow rule with a non-empty NamespaceSelector.\n\nNote: This is a simplification since it does not examine the policies to determine if it's actually possible to\n      hit one of these allow rules (e.g. a previous rule may be a match-all-deny, or endpoint selector may not\n      match any endpoints within the namespace).",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"egressToOtherNamespace": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Whether the matching policy has any egress allow rules to another namespace.\n\nSource: Calculated from the policies applied to the endpoint.\n\nSet to true if: - this is a pod endpoint (i.e. namespaced) matches a GlobalNetworkPolicy with an egress allow rule with no CIDR match. - this is a pod endpoint which matches a NetworkPolicy with an egress allow rule with a non-empty NamespaceSelector.\n\nNote: This is a simplification since it does not examine the policies to determine if it's actually possible to\n      hit one of these allow rules (e.g. a previous rule may be a match-all-deny, or endpoint selector may not\n      match any endpoints within the namespace).",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"envoyEnabled": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Whether this pod is envoy-enabled. This is simply an indicator of whether an Envoy container is running within the pod. Provided Istio is configured appropriately, this can provide a simplistic determination of whether the pod is mTLS enabled.\n\nSource: Pod spec.\n\nSet to: - true if envoy is running within the pod - false if envoy is not running within the pod",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"envoyEnabled": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Whether this pod is envoy-enabled. This is simply an indicator of whether an Envoy container is running within the pod. Provided Istio is configured appropriately, this can provide a simplistic determination of whether the pod is mTLS enabled.\n\nSource: Pod spec.\n\nSet to: - true if envoy is running within the pod - false if envoy is not running within the pod",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"appliedPolicies": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The set of policies that apply to an endpoint may change within the reporting interval, this is the superset of all policies that applied to the endpoint during that interval.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ResourceID"),
+						"appliedPolicies": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The set of policies that apply to an endpoint may change within the reporting interval, this is the superset of all policies that applied to the endpoint during that interval.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ResourceID"),
+										},
 									},
 								},
 							},
 						},
-					},
-					"services": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The list of services that exposed this endpoint at any moment during the reporting interval.\n\nSource: Determined from the Kubernetes endpoints resource associated with the service.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ResourceID"),
+						"services": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The list of services that exposed this endpoint at any moment during the reporting interval.\n\nSource: Determined from the Kubernetes endpoints resource associated with the service.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ResourceID"),
+										},
 									},
 								},
 							},
 						},
-					},
-					"serviceAccount": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The ServiceAccount configured on this endpoint.",
-							Type:        []string{"string"},
-							Format:      "",
+						"serviceAccount": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The ServiceAccount configured on this endpoint.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"flowLogAggregationName": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The flow log aggregation name. This is used to locate flow logs associated with this endpoint when flow log aggregation is turned on.",
-							Type:        []string{"string"},
-							Format:      "",
+						"flowLogAggregationName": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The flow log aggregation name. This is used to locate flow logs associated with this endpoint when flow log aggregation is turned on.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.ResourceID"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.ResourceID"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_EndpointsReportFlow(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Properties: map[string]spec.Schema{
-					"source": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The source of the flow log.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.FlowEndpoint"),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportFlow": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Properties: map[string]spec.Schema{
+						"source": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The source of the flow log.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.FlowEndpoint"),
+							},
 						},
-					},
-					"destination": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The destination of the flow log.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.FlowEndpoint"),
+						"destination": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The destination of the flow log.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.FlowEndpoint"),
+							},
 						},
 					},
+					Required: []string{"source", "destination"},
 				},
-				Required: []string{"source", "destination"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.FlowEndpoint"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.FlowEndpoint"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_EndpointsReportNamespace(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Properties: map[string]spec.Schema{
-					"namespace": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ResourceID"),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportNamespace": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Properties: map[string]spec.Schema{
+						"namespace": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ResourceID"),
+							},
 						},
-					},
-					"ingressProtected": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Whether ingress traffic was protected for all endpoints within this namespace within the reporting interval. This is a summary of information contained in the endpoints data.",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"ingressProtected": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Whether ingress traffic was protected for all endpoints within this namespace within the reporting interval. This is a summary of information contained in the endpoints data.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"egressProtected": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Whether egress traffic was protected for all endpoints within this namespace within the reporting interval. This is a summary of information contained in the endpoints data.",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"egressProtected": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Whether egress traffic was protected for all endpoints within this namespace within the reporting interval. This is a summary of information contained in the endpoints data.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"ingressFromInternet": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Whether ingress traffic was allowed from the internet for any endpoint within this namespace within the reporting interval.",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"ingressFromInternet": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Whether ingress traffic was allowed from the internet for any endpoint within this namespace within the reporting interval.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"egressToInternet": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Whether ingress traffic was allowed from the internet for any endpoint within this namespace within the reporting interval.",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"egressToInternet": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Whether ingress traffic was allowed from the internet for any endpoint within this namespace within the reporting interval.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"ingressFromOtherNamespace": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Whether ingress traffic was allowed from another namespace for any endpoint within this namespace within the reporting interval.",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"ingressFromOtherNamespace": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Whether ingress traffic was allowed from another namespace for any endpoint within this namespace within the reporting interval.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"egressToOtherNamespace": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Whether ingress traffic was allowed from another namespace for any endpoint within this namespace within the reporting interval.",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"egressToOtherNamespace": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Whether ingress traffic was allowed from another namespace for any endpoint within this namespace within the reporting interval.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"envoyEnabled": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Whether envoy was enabled for all endpoints within this namespace within the reporting interval. This is a summary of information contained in the endpoints data.",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"envoyEnabled": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Whether envoy was enabled for all endpoints within this namespace within the reporting interval. This is a summary of information contained in the endpoints data.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.ResourceID"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.ResourceID"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_EndpointsReportService(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Properties: map[string]spec.Schema{
-					"service": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ResourceID"),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportService": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Properties: map[string]spec.Schema{
+						"service": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ResourceID"),
+							},
 						},
-					},
-					"ingressProtected": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Whether ingress traffic was protected for all endpoints within this namespace within the reporting interval. This is a summary of information contained in the endpoints data.",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"ingressProtected": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Whether ingress traffic was protected for all endpoints within this namespace within the reporting interval. This is a summary of information contained in the endpoints data.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"ingressFromInternet": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Whether ingress traffic was allowed from the internet for any endpoint exposed by this service within the reporting interval.",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"ingressFromInternet": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Whether ingress traffic was allowed from the internet for any endpoint exposed by this service within the reporting interval.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"ingressFromOtherNamespace": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Whether ingress traffic was allowed from another namespace for any endpoint exposed by this service within the reporting interval.",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"ingressFromOtherNamespace": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Whether ingress traffic was allowed from another namespace for any endpoint exposed by this service within the reporting interval.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"envoyEnabled": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Whether envoy was enabled for all endpoints that were exposed by this service within the reporting interval. This is a summary of information contained in the endpoints data.",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"envoyEnabled": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Whether envoy was enabled for all endpoints that were exposed by this service within the reporting interval. This is a summary of information contained in the endpoints data.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.ResourceID"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.ResourceID"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_EndpointsSelection(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "EndpointsSelection is a set of selectors used to select the endpoints that are considered to be in-scope for the report. An empty selector is equivalent to all(). All three selectors are ANDed together.",
-				Properties: map[string]spec.Schema{
-					"selector": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Selector, selects endpoints by endpoint labels. If omitted, all endpoints are included in the report data.",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsSelection": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "EndpointsSelection is a set of selectors used to select the endpoints that are considered to be in-scope for the report. An empty selector is equivalent to all(). All three selectors are ANDed together.",
+					Properties: map[string]spec.Schema{
+						"selector": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Selector, selects endpoints by endpoint labels. If omitted, all endpoints are included in the report data.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"namespaces": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Namespace match restricts endpoint selection to those in the selected namespaces.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.NamesAndLabelsMatch"),
+						"namespaces": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Namespace match restricts endpoint selection to those in the selected namespaces.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.NamesAndLabelsMatch"),
+							},
 						},
-					},
-					"serviceAccounts": {
-						SchemaProps: spec.SchemaProps{
-							Description: "ServiceAccount match restricts endpoint selection to those in the selected service accounts.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.NamesAndLabelsMatch"),
+						"serviceAccounts": {
+							SchemaProps: spec.SchemaProps{
+								Description: "ServiceAccount match restricts endpoint selection to those in the selected service accounts.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.NamesAndLabelsMatch"),
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.NamesAndLabelsMatch"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.NamesAndLabelsMatch"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_EndpointsSummary(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "This tracks different statistics for Endpoints, Summary and Services.",
-				Properties: map[string]spec.Schema{
-					"numTotal": {
-						SchemaProps: spec.SchemaProps{
-							Description: "For endpoints: the total number of in-scope endpoints.\n   Namespaces: the total number of namespaces containing in-scope endpoints.\n     Services: the total number of services containing in-scope endpoints.\n\nSource: Calculated from pod/wep, hep, namespace and service account labels.",
-							Type:        []string{"integer"},
-							Format:      "int32",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsSummary": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "This tracks different statistics for Endpoints, Summary and Services.",
+					Properties: map[string]spec.Schema{
+						"numTotal": {
+							SchemaProps: spec.SchemaProps{
+								Description: "For endpoints: the total number of in-scope endpoints.\n   Namespaces: the total number of namespaces containing in-scope endpoints.\n     Services: the total number of services containing in-scope endpoints.\n\nSource: Calculated from pod/wep, hep, namespace and service account labels.",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
 						},
-					},
-					"numServiceAccounts": {
-						SchemaProps: spec.SchemaProps{
-							Description: "For endpoints: the total number of service accounts for in-scope endpoints.\n   Namespaces: n/a.\n     Services: n/a.",
-							Type:        []string{"integer"},
-							Format:      "int32",
+						"numServiceAccounts": {
+							SchemaProps: spec.SchemaProps{
+								Description: "For endpoints: the total number of service accounts for in-scope endpoints.\n   Namespaces: n/a.\n     Services: n/a.",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
 						},
-					},
-					"numIngressProtected": {
-						SchemaProps: spec.SchemaProps{
-							Description: "For endpoints: the number of in-scope endpoints that were ingress protected during the reporting interval.\n   Namespaces: the number of namespaces whose in-scope endpoints were ingress protected during\n               the reporting interval.\n     Services: the number of services whose in-scope endpoints were ingress protected during the reporting\n               interval.\n\nSee below for defn of ingress-protected.",
-							Type:        []string{"integer"},
-							Format:      "int32",
+						"numIngressProtected": {
+							SchemaProps: spec.SchemaProps{
+								Description: "For endpoints: the number of in-scope endpoints that were ingress protected during the reporting interval.\n   Namespaces: the number of namespaces whose in-scope endpoints were ingress protected during\n               the reporting interval.\n     Services: the number of services whose in-scope endpoints were ingress protected during the reporting\n               interval.\n\nSee below for defn of ingress-protected.",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
 						},
-					},
-					"numEgressProtected": {
-						SchemaProps: spec.SchemaProps{
-							Description: "For endpoints: the number of in-scope endpoints that were egress protected during the reporting interval.\n   Namespaces: the number of namespaces whose in-scope endpoints were egress protected during the reporting\n               interval.\n\nSee below for defn of egress-protected.",
-							Type:        []string{"integer"},
-							Format:      "int32",
+						"numEgressProtected": {
+							SchemaProps: spec.SchemaProps{
+								Description: "For endpoints: the number of in-scope endpoints that were egress protected during the reporting interval.\n   Namespaces: the number of namespaces whose in-scope endpoints were egress protected during the reporting\n               interval.\n\nSee below for defn of egress-protected.",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
 						},
-					},
-					"numIngressFromInternet": {
-						SchemaProps: spec.SchemaProps{
-							Description: "For endpoints: the number of in-scope endpoints whose policy would allow ingress traffic from the Internet\n               for *any* period within the reporting interval.\n               (See below for how this is calculated for an endpoint.)\n   Namespaces: the number of namespaces that contained in-scope endpoints that would allow ingress traffic\n               from the Internet for *any* period within the reporting interval.\n     Services: the number of services that contained in-scope endpoints that would allow ingress traffic\n               from the Internet for *any* period within the reporting interval.",
-							Type:        []string{"integer"},
-							Format:      "int32",
+						"numIngressFromInternet": {
+							SchemaProps: spec.SchemaProps{
+								Description: "For endpoints: the number of in-scope endpoints whose policy would allow ingress traffic from the Internet\n               for *any* period within the reporting interval.\n               (See below for how this is calculated for an endpoint.)\n   Namespaces: the number of namespaces that contained in-scope endpoints that would allow ingress traffic\n               from the Internet for *any* period within the reporting interval.\n     Services: the number of services that contained in-scope endpoints that would allow ingress traffic\n               from the Internet for *any* period within the reporting interval.",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
 						},
-					},
-					"numEgressToInternet": {
-						SchemaProps: spec.SchemaProps{
-							Description: "For endpoints: the number of in-scope endpoints whose policy would allow egress traffic to the Internet\n               for *any* period within the reporting interval.\n               (See below for how this is calculated for an endpoint.)\n   Namespaces: the number of namespaces that contained in-scope endpoints that would allow egress traffic\n               to the Internet for *any* period within the reporting interval.",
-							Type:        []string{"integer"},
-							Format:      "int32",
+						"numEgressToInternet": {
+							SchemaProps: spec.SchemaProps{
+								Description: "For endpoints: the number of in-scope endpoints whose policy would allow egress traffic to the Internet\n               for *any* period within the reporting interval.\n               (See below for how this is calculated for an endpoint.)\n   Namespaces: the number of namespaces that contained in-scope endpoints that would allow egress traffic\n               to the Internet for *any* period within the reporting interval.",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
 						},
-					},
-					"numIngressFromOtherNamespace": {
-						SchemaProps: spec.SchemaProps{
-							Description: "For endpoints: the number of in-scope endpoints whose policy would allow ingress traffic from a\n               different namespace for *any* period within the reporting interval.\n               (See below for how this is calculated for an endpoint.)\n   Namespaces: the number of namespaces that contained in-scope endpoints that would allow ingress\n               traffic from another namespace for *any* period within the reporting interval.\n     Services: the number of services that contained in-scope endpoints that would allow ingress\n               traffic from another namespace for *any* period within the reporting interval.",
-							Type:        []string{"integer"},
-							Format:      "int32",
+						"numIngressFromOtherNamespace": {
+							SchemaProps: spec.SchemaProps{
+								Description: "For endpoints: the number of in-scope endpoints whose policy would allow ingress traffic from a\n               different namespace for *any* period within the reporting interval.\n               (See below for how this is calculated for an endpoint.)\n   Namespaces: the number of namespaces that contained in-scope endpoints that would allow ingress\n               traffic from another namespace for *any* period within the reporting interval.\n     Services: the number of services that contained in-scope endpoints that would allow ingress\n               traffic from another namespace for *any* period within the reporting interval.",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
 						},
-					},
-					"numEgressToOtherNamespace": {
-						SchemaProps: spec.SchemaProps{
-							Description: "For endpoints: the number of in-scope endpoints whose policy would allow ingress traffic from\n               a different namespace for *any* period within the reporting interval.\n               (See below for how this is calculated for an endpoint.)\n   Namespaces: the number of namespaces that contained in-scope endpoints that would allow egress\n               traffic to another namespace for *any* period within the reporting interval.",
-							Type:        []string{"integer"},
-							Format:      "int32",
+						"numEgressToOtherNamespace": {
+							SchemaProps: spec.SchemaProps{
+								Description: "For endpoints: the number of in-scope endpoints whose policy would allow ingress traffic from\n               a different namespace for *any* period within the reporting interval.\n               (See below for how this is calculated for an endpoint.)\n   Namespaces: the number of namespaces that contained in-scope endpoints that would allow egress\n               traffic to another namespace for *any* period within the reporting interval.",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
 						},
-					},
-					"numEnvoyEnabled": {
-						SchemaProps: spec.SchemaProps{
-							Description: "For endpoints: the number of in-scope endpoints that were envoy-enabled within the reporting interval.\n   Namespaces: the number of namespaces whose in-scope endpoints were always Envoy-enabled\n     Services: the number of services whose in-scope endpoints were always Envoy-enabled\n\nSee below for defn of envoy-enabled",
-							Type:        []string{"integer"},
-							Format:      "int32",
+						"numEnvoyEnabled": {
+							SchemaProps: spec.SchemaProps{
+								Description: "For endpoints: the number of in-scope endpoints that were envoy-enabled within the reporting interval.\n   Namespaces: the number of namespaces whose in-scope endpoints were always Envoy-enabled\n     Services: the number of services whose in-scope endpoints were always Envoy-enabled\n\nSee below for defn of envoy-enabled",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{},
 		},
-		Dependencies: []string{},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_EntityRule(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "An EntityRule is a sub-component of a Rule comprising the match criteria specific to a particular entity (that is either the source or destination).\n\nA source EntityRule matches the source endpoint and originating traffic. A destination EntityRule matches the destination endpoint and terminating traffic.",
-				Properties: map[string]spec.Schema{
-					"nets": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Nets is an optional field that restricts the rule to only apply to traffic that originates from (or terminates at) IP addresses in any of the given subnets.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.EntityRule": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "An EntityRule is a sub-component of a Rule comprising the match criteria specific to a particular entity (that is either the source or destination).\n\nA source EntityRule matches the source endpoint and originating traffic. A destination EntityRule matches the destination endpoint and terminating traffic.",
+					Properties: map[string]spec.Schema{
+						"nets": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Nets is an optional field that restricts the rule to only apply to traffic that originates from (or terminates at) IP addresses in any of the given subnets.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
 									},
 								},
 							},
 						},
-					},
-					"selector": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Selector is an optional field that contains a selector expression (see Policy for sample syntax).  Only traffic that originates from (terminates at) endpoints matching the selector will be matched.\n\nNote that: in addition to the negated version of the Selector (see NotSelector below), the selector expression syntax itself supports negation.  The two types of negation are subtly different. One negates the set of matched endpoints, the other negates the whole match:\n\n\tSelector = \"!has(my_label)\" matches packets that are from other Calico-controlled\n\tendpoints that do not have the label “my_label”.\n\n\tNotSelector = \"has(my_label)\" matches packets that are not from Calico-controlled\n\tendpoints that do have the label “my_label”.\n\nThe effect is that the latter will accept packets from non-Calico sources whereas the former is limited to packets from Calico-controlled endpoints.",
-							Type:        []string{"string"},
-							Format:      "",
+						"selector": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Selector is an optional field that contains a selector expression (see Policy for sample syntax).  Only traffic that originates from (terminates at) endpoints matching the selector will be matched.\n\nNote that: in addition to the negated version of the Selector (see NotSelector below), the selector expression syntax itself supports negation.  The two types of negation are subtly different. One negates the set of matched endpoints, the other negates the whole match:\n\n\tSelector = \"!has(my_label)\" matches packets that are from other Calico-controlled\n\tendpoints that do not have the label “my_label”.\n\n\tNotSelector = \"has(my_label)\" matches packets that are not from Calico-controlled\n\tendpoints that do have the label “my_label”.\n\nThe effect is that the latter will accept packets from non-Calico sources whereas the former is limited to packets from Calico-controlled endpoints.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"namespaceSelector": {
-						SchemaProps: spec.SchemaProps{
-							Description: "NamespaceSelector is an optional field that contains a selector expression. Only traffic that originates from (or terminates at) endpoints within the selected namespaces will be matched. When both NamespaceSelector and Selector are defined on the same rule, then only workload endpoints that are matched by both selectors will be selected by the rule.\n\nFor NetworkPolicy, an empty NamespaceSelector implies that the Selector is limited to selecting only workload endpoints in the same namespace as the NetworkPolicy.\n\nFor GlobalNetworkPolicy, an empty NamespaceSelector implies the Selector applies to workload endpoints across all namespaces.",
-							Type:        []string{"string"},
-							Format:      "",
+						"namespaceSelector": {
+							SchemaProps: spec.SchemaProps{
+								Description: "NamespaceSelector is an optional field that contains a selector expression. Only traffic that originates from (or terminates at) endpoints within the selected namespaces will be matched. When both NamespaceSelector and Selector are defined on the same rule, then only workload endpoints that are matched by both selectors will be selected by the rule.\n\nFor NetworkPolicy, an empty NamespaceSelector implies that the Selector is limited to selecting only workload endpoints in the same namespace as the NetworkPolicy.\n\nFor GlobalNetworkPolicy, an empty NamespaceSelector implies the Selector applies to workload endpoints across all namespaces.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"ports": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Ports is an optional field that restricts the rule to only apply to traffic that has a source (destination) port that matches one of these ranges/values. This value is a list of integers or strings that represent ranges of ports.\n\nSince only some protocols have ports, if any ports are specified it requires the Protocol match in the Rule to be set to \"TCP\" or \"UDP\".",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/numorstring.Port"),
+						"ports": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Ports is an optional field that restricts the rule to only apply to traffic that has a source (destination) port that matches one of these ranges/values. This value is a list of integers or strings that represent ranges of ports.\n\nSince only some protocols have ports, if any ports are specified it requires the Protocol match in the Rule to be set to \"TCP\" or \"UDP\".",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/numorstring.Port"),
+										},
 									},
 								},
 							},
 						},
-					},
-					"domains": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Domains is an optional field, valid for egress Allow rules only, that restricts the rule to apply only to traffic to one of the specified domains.  If this field is specified, Action must be Allow, and Nets and Selector must both be left empty.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
+						"domains": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Domains is an optional field, valid for egress Allow rules only, that restricts the rule to apply only to traffic to one of the specified domains.  If this field is specified, Action must be Allow, and Nets and Selector must both be left empty.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
 									},
 								},
 							},
 						},
-					},
-					"notNets": {
-						SchemaProps: spec.SchemaProps{
-							Description: "NotNets is the negated version of the Nets field.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
+						"notNets": {
+							SchemaProps: spec.SchemaProps{
+								Description: "NotNets is the negated version of the Nets field.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
 									},
 								},
 							},
 						},
-					},
-					"notSelector": {
-						SchemaProps: spec.SchemaProps{
-							Description: "NotSelector is the negated version of the Selector field.  See Selector field for subtleties with negated selectors.",
-							Type:        []string{"string"},
-							Format:      "",
+						"notSelector": {
+							SchemaProps: spec.SchemaProps{
+								Description: "NotSelector is the negated version of the Selector field.  See Selector field for subtleties with negated selectors.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"notPorts": {
-						SchemaProps: spec.SchemaProps{
-							Description: "NotPorts is the negated version of the Ports field. Since only some protocols have ports, if any ports are specified it requires the Protocol match in the Rule to be set to \"TCP\" or \"UDP\".",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/numorstring.Port"),
+						"notPorts": {
+							SchemaProps: spec.SchemaProps{
+								Description: "NotPorts is the negated version of the Ports field. Since only some protocols have ports, if any ports are specified it requires the Protocol match in the Rule to be set to \"TCP\" or \"UDP\".",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/numorstring.Port"),
+										},
 									},
 								},
 							},
 						},
-					},
-					"serviceAccounts": {
-						SchemaProps: spec.SchemaProps{
-							Description: "ServiceAccounts is an optional field that restricts the rule to only apply to traffic that originates from (or terminates at) a pod running as a matching service account.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ServiceAccountMatch"),
+						"serviceAccounts": {
+							SchemaProps: spec.SchemaProps{
+								Description: "ServiceAccounts is an optional field that restricts the rule to only apply to traffic that originates from (or terminates at) a pod running as a matching service account.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ServiceAccountMatch"),
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.ServiceAccountMatch", "github.com/projectcalico/libcalico-go/lib/numorstring.Port"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.ServiceAccountMatch", "github.com/projectcalico/libcalico-go/lib/numorstring.Port"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_ErrorCondition(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Properties: map[string]spec.Schema{
-					"type": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.ErrorCondition": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Properties: map[string]spec.Schema{
+						"type": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"message": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+						"message": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
 					},
+					Required: []string{"type", "message"},
 				},
-				Required: []string{"type", "message"},
 			},
+			Dependencies: []string{},
 		},
-		Dependencies: []string{},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_EtcdConfig(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Properties: map[string]spec.Schema{
-					"etcdEndpoints": {
-						SchemaProps: spec.SchemaProps{
-							Description: "A comma separated list of etcd endpoints. Valid if DatastoreType is etcdv3.",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.EtcdConfig": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Properties: map[string]spec.Schema{
+						"etcdEndpoints": {
+							SchemaProps: spec.SchemaProps{
+								Description: "A comma separated list of etcd endpoints. Valid if DatastoreType is etcdv3.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"etcdUsername": {
-						SchemaProps: spec.SchemaProps{
-							Description: "User name for RBAC. Valid if DatastoreType is etcdv3.",
-							Type:        []string{"string"},
-							Format:      "",
+						"etcdUsername": {
+							SchemaProps: spec.SchemaProps{
+								Description: "User name for RBAC. Valid if DatastoreType is etcdv3.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"etcdPassword": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Password for the given user name. Valid if DatastoreType is etcdv3.",
-							Type:        []string{"string"},
-							Format:      "",
+						"etcdPassword": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Password for the given user name. Valid if DatastoreType is etcdv3.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"etcdKeyFile": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Path to the etcd key file. Valid if DatastoreType is etcdv3.",
-							Type:        []string{"string"},
-							Format:      "",
+						"etcdKeyFile": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Path to the etcd key file. Valid if DatastoreType is etcdv3.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"etcdCertFile": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Path to the etcd client certificate. Valid if DatastoreType is etcdv3.",
-							Type:        []string{"string"},
-							Format:      "",
+						"etcdCertFile": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Path to the etcd client certificate. Valid if DatastoreType is etcdv3.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"etcdCACertFile": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Path to the etcd Certificate Authority file. Valid if DatastoreType is etcdv3.",
-							Type:        []string{"string"},
-							Format:      "",
+						"etcdCACertFile": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Path to the etcd Certificate Authority file. Valid if DatastoreType is etcdv3.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{},
 		},
-		Dependencies: []string{},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_FelixConfiguration(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "Felix Configuration contains the configuration for Felix.",
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.FelixConfiguration": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "Felix Configuration contains the configuration for Felix.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Standard object's metadata.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Standard object's metadata.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							},
 						},
-					},
-					"spec": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Specification of the FelixConfiguration.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.FelixConfigurationSpec"),
+						"spec": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Specification of the FelixConfiguration.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.FelixConfigurationSpec"),
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.FelixConfigurationSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.FelixConfigurationSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_FelixConfigurationList(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "FelixConfigurationList contains a list of FelixConfiguration resources.",
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.FelixConfigurationList": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "FelixConfigurationList contains a list of FelixConfiguration resources.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+							},
 						},
-					},
-					"items": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.FelixConfiguration"),
+						"items": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.FelixConfiguration"),
+										},
 									},
 								},
 							},
 						},
 					},
+					Required: []string{"metadata", "items"},
 				},
-				Required: []string{"metadata", "items"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.FelixConfiguration", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.FelixConfiguration", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "FelixConfigurationSpec contains the values of the Felix configuration.",
-				Properties: map[string]spec.Schema{
-					"useInternalDataplaneDriver": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"boolean"},
-							Format: "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.FelixConfigurationSpec": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "FelixConfigurationSpec contains the values of the Felix configuration.",
+					Properties: map[string]spec.Schema{
+						"useInternalDataplaneDriver": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"boolean"},
+								Format: "",
+							},
 						},
-					},
-					"dataplaneDriver": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+						"dataplaneDriver": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"ipv6Support": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"boolean"},
-							Format: "",
+						"ipv6Support": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"boolean"},
+								Format: "",
+							},
 						},
-					},
-					"ignoreLooseRPF": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"boolean"},
-							Format: "",
+						"ignoreLooseRPF": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"boolean"},
+								Format: "",
+							},
 						},
-					},
-					"routeRefreshInterval": {
-						SchemaProps: spec.SchemaProps{
-							Description: "RouterefreshInterval is the period at which Felix re-checks the routes in the dataplane to ensure that no other process has accidentally broken Calico’s rules. Set to 0 to disable route refresh. [Default: 90s]",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						"routeRefreshInterval": {
+							SchemaProps: spec.SchemaProps{
+								Description: "RouterefreshInterval is the period at which Felix re-checks the routes in the dataplane to ensure that no other process has accidentally broken Calico’s rules. Set to 0 to disable route refresh. [Default: 90s]",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+							},
 						},
-					},
-					"iptablesRefreshInterval": {
-						SchemaProps: spec.SchemaProps{
-							Description: "IptablesRefreshInterval is the period at which Felix re-checks the IP sets in the dataplane to ensure that no other process has accidentally broken Calico’s rules. Set to 0 to disable IP sets refresh. Note: the default for this value is lower than the other refresh intervals as a workaround for a Linux kernel bug that was fixed in kernel version 4.11. If you are using v4.11 or greater you may want to set this to, a higher value to reduce Felix CPU usage. [Default: 10s]",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						"iptablesRefreshInterval": {
+							SchemaProps: spec.SchemaProps{
+								Description: "IptablesRefreshInterval is the period at which Felix re-checks the IP sets in the dataplane to ensure that no other process has accidentally broken Calico’s rules. Set to 0 to disable IP sets refresh. Note: the default for this value is lower than the other refresh intervals as a workaround for a Linux kernel bug that was fixed in kernel version 4.11. If you are using v4.11 or greater you may want to set this to, a higher value to reduce Felix CPU usage. [Default: 10s]",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+							},
 						},
-					},
-					"iptablesPostWriteCheckInterval": {
-						SchemaProps: spec.SchemaProps{
-							Description: "IptablesPostWriteCheckInterval is the period after Felix has done a write to the dataplane that it schedules an extra read back in order to check the write was not clobbered by another process. This should only occur if another application on the system doesn’t respect the iptables lock. [Default: 1s]",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						"iptablesPostWriteCheckInterval": {
+							SchemaProps: spec.SchemaProps{
+								Description: "IptablesPostWriteCheckInterval is the period after Felix has done a write to the dataplane that it schedules an extra read back in order to check the write was not clobbered by another process. This should only occur if another application on the system doesn’t respect the iptables lock. [Default: 1s]",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+							},
 						},
-					},
-					"iptablesLockFilePath": {
-						SchemaProps: spec.SchemaProps{
-							Description: "IptablesLockFilePath is the location of the iptables lock file. You may need to change this if the lock file is not in its standard location (for example if you have mapped it into Felix’s container at a different path). [Default: /run/xtables.lock]",
-							Type:        []string{"string"},
-							Format:      "",
+						"iptablesLockFilePath": {
+							SchemaProps: spec.SchemaProps{
+								Description: "IptablesLockFilePath is the location of the iptables lock file. You may need to change this if the lock file is not in its standard location (for example if you have mapped it into Felix’s container at a different path). [Default: /run/xtables.lock]",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"iptablesLockTimeout": {
-						SchemaProps: spec.SchemaProps{
-							Description: "IptablesLockTimeout is the time that Felix will wait for the iptables lock, or 0, to disable. To use this feature, Felix must share the iptables lock file with all other processes that also take the lock. When running Felix inside a container, this requires the /run directory of the host to be mounted into the calico/node or calico/felix container. [Default: 0s disabled]",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						"iptablesLockTimeout": {
+							SchemaProps: spec.SchemaProps{
+								Description: "IptablesLockTimeout is the time that Felix will wait for the iptables lock, or 0, to disable. To use this feature, Felix must share the iptables lock file with all other processes that also take the lock. When running Felix inside a container, this requires the /run directory of the host to be mounted into the calico/node or calico/felix container. [Default: 0s disabled]",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+							},
 						},
-					},
-					"iptablesLockProbeInterval": {
-						SchemaProps: spec.SchemaProps{
-							Description: "IptablesLockProbeInterval is the time that Felix will wait between attempts to acquire the iptables lock if it is not available. Lower values make Felix more responsive when the lock is contended, but use more CPU. [Default: 50ms]",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						"iptablesLockProbeInterval": {
+							SchemaProps: spec.SchemaProps{
+								Description: "IptablesLockProbeInterval is the time that Felix will wait between attempts to acquire the iptables lock if it is not available. Lower values make Felix more responsive when the lock is contended, but use more CPU. [Default: 50ms]",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+							},
 						},
-					},
-					"ipsetsRefreshInterval": {
-						SchemaProps: spec.SchemaProps{
-							Description: "IpsetsRefreshInterval is the period at which Felix re-checks all iptables state to ensure that no other process has accidentally broken Calico’s rules. Set to 0 to disable iptables refresh. [Default: 90s]",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						"ipsetsRefreshInterval": {
+							SchemaProps: spec.SchemaProps{
+								Description: "IpsetsRefreshInterval is the period at which Felix re-checks all iptables state to ensure that no other process has accidentally broken Calico’s rules. Set to 0 to disable iptables refresh. [Default: 90s]",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+							},
 						},
-					},
-					"maxIpsetSize": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"integer"},
-							Format: "int32",
+						"maxIpsetSize": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"integer"},
+								Format: "int32",
+							},
 						},
-					},
-					"XDPRefreshInterval": {
-						SchemaProps: spec.SchemaProps{
-							Description: "XDPRefreshInterval is the period at which Felix re-checks all XDP state to ensure that no other process has accidentally broken Calico's BPF maps or attached programs. Set to 0 to disable XDP refresh. [Default: 90s]",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						"iptablesBackend": {
+							SchemaProps: spec.SchemaProps{
+								Description: "IptablesBackend specifies which backend of iptables will be used. The default is legacy.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"netlinkTimeout": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						"XDPRefreshInterval": {
+							SchemaProps: spec.SchemaProps{
+								Description: "XDPRefreshInterval is the period at which Felix re-checks all XDP state to ensure that no other process has accidentally broken Calico's BPF maps or attached programs. Set to 0 to disable XDP refresh. [Default: 90s]",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+							},
 						},
-					},
-					"metadataAddr": {
-						SchemaProps: spec.SchemaProps{
-							Description: "MetadataAddr is the IP address or domain name of the server that can answer VM queries for cloud-init metadata. In OpenStack, this corresponds to the machine running nova-api (or in Ubuntu, nova-api-metadata). A value of none (case insensitive) means that Felix should not set up any NAT rule for the metadata path. [Default: 127.0.0.1]",
-							Type:        []string{"string"},
-							Format:      "",
+						"netlinkTimeout": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+							},
 						},
-					},
-					"metadataPort": {
-						SchemaProps: spec.SchemaProps{
-							Description: "MetadataPort is the port of the metadata server. This, combined with global.MetadataAddr (if not ‘None’), is used to set up a NAT rule, from 169.254.169.254:80 to MetadataAddr:MetadataPort. In most cases this should not need to be changed [Default: 8775].",
-							Type:        []string{"integer"},
-							Format:      "int32",
+						"metadataAddr": {
+							SchemaProps: spec.SchemaProps{
+								Description: "MetadataAddr is the IP address or domain name of the server that can answer VM queries for cloud-init metadata. In OpenStack, this corresponds to the machine running nova-api (or in Ubuntu, nova-api-metadata). A value of none (case insensitive) means that Felix should not set up any NAT rule for the metadata path. [Default: 127.0.0.1]",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"openstackRegion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "OpenstackRegion is the name of the region that a particular Felix belongs to. In a multi-region Calico/OpenStack deployment, this must be configured somehow for each Felix (here in the datamodel, or in felix.cfg or the environment on each compute node), and must match the [calico] openstack_region value configured in neutron.conf on each node. [Default: Empty]",
-							Type:        []string{"string"},
-							Format:      "",
+						"metadataPort": {
+							SchemaProps: spec.SchemaProps{
+								Description: "MetadataPort is the port of the metadata server. This, combined with global.MetadataAddr (if not ‘None’), is used to set up a NAT rule, from 169.254.169.254:80 to MetadataAddr:MetadataPort. In most cases this should not need to be changed [Default: 8775].",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
 						},
-					},
-					"interfacePrefix": {
-						SchemaProps: spec.SchemaProps{
-							Description: "InterfacePrefix is the interface name prefix that identifies workload endpoints and so distinguishes them from host endpoint interfaces. Note: in environments other than bare metal, the orchestrators configure this appropriately. For example our Kubernetes and Docker integrations set the ‘cali’ value, and our OpenStack integration sets the ‘tap’ value. [Default: cali]",
-							Type:        []string{"string"},
-							Format:      "",
+						"openstackRegion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "OpenstackRegion is the name of the region that a particular Felix belongs to. In a multi-region Calico/OpenStack deployment, this must be configured somehow for each Felix (here in the datamodel, or in felix.cfg or the environment on each compute node), and must match the [calico] openstack_region value configured in neutron.conf on each node. [Default: Empty]",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"interfaceExclude": {
-						SchemaProps: spec.SchemaProps{
-							Description: "InterfaceExclude is a comma-separated list of interfaces that Felix should exclude when monitoring for host endpoints. The default value ensures that Felix ignores Kubernetes' IPVS dummy interface, which is used internally by kube-proxy. If you want to exclude multiple interface names using a single value, the list supports regular expressions. For regular expressions you must wrap the value with '/'. For example having values '/^kube/,veth1' will exclude all interfaces that begin with 'kube' and also the interface 'veth1'. [Default: kube-ipvs0]",
-							Type:        []string{"string"},
-							Format:      "",
+						"interfacePrefix": {
+							SchemaProps: spec.SchemaProps{
+								Description: "InterfacePrefix is the interface name prefix that identifies workload endpoints and so distinguishes them from host endpoint interfaces. Note: in environments other than bare metal, the orchestrators configure this appropriately. For example our Kubernetes and Docker integrations set the ‘cali’ value, and our OpenStack integration sets the ‘tap’ value. [Default: cali]",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"chainInsertMode": {
-						SchemaProps: spec.SchemaProps{
-							Description: "ChainInsertMode controls whether Felix hooks the kernel’s top-level iptables chains by inserting a rule at the top of the chain or by appending a rule at the bottom. insert is the safe default since it prevents Calico’s rules from being bypassed. If you switch to append mode, be sure that the other rules in the chains signal acceptance by falling through to the Calico rules, otherwise the Calico policy will be bypassed. [Default: insert]",
-							Type:        []string{"string"},
-							Format:      "",
+						"interfaceExclude": {
+							SchemaProps: spec.SchemaProps{
+								Description: "InterfaceExclude is a comma-separated list of interfaces that Felix should exclude when monitoring for host endpoints. The default value ensures that Felix ignores Kubernetes' IPVS dummy interface, which is used internally by kube-proxy. If you want to exclude multiple interface names using a single value, the list supports regular expressions. For regular expressions you must wrap the value with '/'. For example having values '/^kube/,veth1' will exclude all interfaces that begin with 'kube' and also the interface 'veth1'. [Default: kube-ipvs0]",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"defaultEndpointToHostAction": {
-						SchemaProps: spec.SchemaProps{
-							Description: "DefaultEndpointToHostAction controls what happens to traffic that goes from a workload endpoint to the host itself (after the traffic hits the endpoint egress policy). By default Calico blocks traffic from workload endpoints to the host itself with an iptables “DROP” action. If you want to allow some or all traffic from endpoint to host, set this parameter to RETURN or ACCEPT. Use RETURN if you have your own rules in the iptables “INPUT” chain; Calico will insert its rules at the top of that chain, then “RETURN” packets to the “INPUT” chain once it has completed processing workload endpoint egress policy. Use ACCEPT to unconditionally accept packets from workloads after processing workload endpoint egress policy. [Default: Drop]",
-							Type:        []string{"string"},
-							Format:      "",
+						"chainInsertMode": {
+							SchemaProps: spec.SchemaProps{
+								Description: "ChainInsertMode controls whether Felix hooks the kernel’s top-level iptables chains by inserting a rule at the top of the chain or by appending a rule at the bottom. insert is the safe default since it prevents Calico’s rules from being bypassed. If you switch to append mode, be sure that the other rules in the chains signal acceptance by falling through to the Calico rules, otherwise the Calico policy will be bypassed. [Default: insert]",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"iptablesFilterAllowAction": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+						"defaultEndpointToHostAction": {
+							SchemaProps: spec.SchemaProps{
+								Description: "DefaultEndpointToHostAction controls what happens to traffic that goes from a workload endpoint to the host itself (after the traffic hits the endpoint egress policy). By default Calico blocks traffic from workload endpoints to the host itself with an iptables “DROP” action. If you want to allow some or all traffic from endpoint to host, set this parameter to RETURN or ACCEPT. Use RETURN if you have your own rules in the iptables “INPUT” chain; Calico will insert its rules at the top of that chain, then “RETURN” packets to the “INPUT” chain once it has completed processing workload endpoint egress policy. Use ACCEPT to unconditionally accept packets from workloads after processing workload endpoint egress policy. [Default: Drop]",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"iptablesMangleAllowAction": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+						"iptablesFilterAllowAction": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"logPrefix": {
-						SchemaProps: spec.SchemaProps{
-							Description: "LogPrefix is the log prefix that Felix uses when rendering LOG rules. [Default: calico-packet]",
-							Type:        []string{"string"},
-							Format:      "",
+						"iptablesMangleAllowAction": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"logDropActionOverride": {
-						SchemaProps: spec.SchemaProps{
-							Description: "LogDropActionOverride specifies whether or not to include the DropActionOverride in the logs when it is triggered.",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"logPrefix": {
+							SchemaProps: spec.SchemaProps{
+								Description: "LogPrefix is the log prefix that Felix uses when rendering LOG rules. [Default: calico-packet]",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"logFilePath": {
-						SchemaProps: spec.SchemaProps{
-							Description: "LogFilePath is the full path to the Felix log. Set to none to disable file logging. [Default: /var/log/calico/felix.log]",
-							Type:        []string{"string"},
-							Format:      "",
+						"logDropActionOverride": {
+							SchemaProps: spec.SchemaProps{
+								Description: "LogDropActionOverride specifies whether or not to include the DropActionOverride in the logs when it is triggered.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"logSeverityFile": {
-						SchemaProps: spec.SchemaProps{
-							Description: "LogSeverityFile is the log severity above which logs are sent to the log file. [Default: Info]",
-							Type:        []string{"string"},
-							Format:      "",
+						"logFilePath": {
+							SchemaProps: spec.SchemaProps{
+								Description: "LogFilePath is the full path to the Felix log. Set to none to disable file logging. [Default: /var/log/calico/felix.log]",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"logSeverityScreen": {
-						SchemaProps: spec.SchemaProps{
-							Description: "LogSeverityScreen is the log severity above which logs are sent to the stdout. [Default: Info]",
-							Type:        []string{"string"},
-							Format:      "",
+						"logSeverityFile": {
+							SchemaProps: spec.SchemaProps{
+								Description: "LogSeverityFile is the log severity above which logs are sent to the log file. [Default: Info]",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"logSeveritySys": {
-						SchemaProps: spec.SchemaProps{
-							Description: "LogSeveritySys is the log severity above which logs are sent to the syslog. Set to None for no logging to syslog. [Default: Info]",
-							Type:        []string{"string"},
-							Format:      "",
+						"logSeverityScreen": {
+							SchemaProps: spec.SchemaProps{
+								Description: "LogSeverityScreen is the log severity above which logs are sent to the stdout. [Default: Info]",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"ipipEnabled": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"boolean"},
-							Format: "",
+						"logSeveritySys": {
+							SchemaProps: spec.SchemaProps{
+								Description: "LogSeveritySys is the log severity above which logs are sent to the syslog. Set to None for no logging to syslog. [Default: Info]",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"ipipMTU": {
-						SchemaProps: spec.SchemaProps{
-							Description: "IPIPMTU is the MTU to set on the tunnel device. See Configuring MTU [Default: 1440]",
-							Type:        []string{"integer"},
-							Format:      "int32",
+						"ipipEnabled": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"boolean"},
+								Format: "",
+							},
 						},
-					},
-					"vxlanEnabled": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"boolean"},
-							Format: "",
+						"ipipMTU": {
+							SchemaProps: spec.SchemaProps{
+								Description: "IPIPMTU is the MTU to set on the tunnel device. See Configuring MTU [Default: 1440]",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
 						},
-					},
-					"vxlanMTU": {
-						SchemaProps: spec.SchemaProps{
-							Description: "VXLANMTU is the MTU to set on the tunnel device. See Configuring MTU [Default: 1440]",
-							Type:        []string{"integer"},
-							Format:      "int32",
+						"vxlanEnabled": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"boolean"},
+								Format: "",
+							},
 						},
-					},
-					"vxlanPort": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"integer"},
-							Format: "int32",
+						"vxlanMTU": {
+							SchemaProps: spec.SchemaProps{
+								Description: "VXLANMTU is the MTU to set on the tunnel device. See Configuring MTU [Default: 1440]",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
 						},
-					},
-					"vxlanVNI": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"integer"},
-							Format: "int32",
+						"vxlanPort": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"integer"},
+								Format: "int32",
+							},
 						},
-					},
-					"reportingInterval": {
-						SchemaProps: spec.SchemaProps{
-							Description: "ReportingInterval is the interval at which Felix reports its status into the datastore or 0 to disable. Must be non-zero in OpenStack deployments. [Default: 30s]",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						"vxlanVNI": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"integer"},
+								Format: "int32",
+							},
 						},
-					},
-					"reportingTTL": {
-						SchemaProps: spec.SchemaProps{
-							Description: "ReportingTTL is the time-to-live setting for process-wide status reports. [Default: 90s]",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						"reportingInterval": {
+							SchemaProps: spec.SchemaProps{
+								Description: "ReportingInterval is the interval at which Felix reports its status into the datastore or 0 to disable. Must be non-zero in OpenStack deployments. [Default: 30s]",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+							},
 						},
-					},
-					"endpointReportingEnabled": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"boolean"},
-							Format: "",
+						"reportingTTL": {
+							SchemaProps: spec.SchemaProps{
+								Description: "ReportingTTL is the time-to-live setting for process-wide status reports. [Default: 90s]",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+							},
 						},
-					},
-					"endpointReportingDelay": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						"endpointReportingEnabled": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"boolean"},
+								Format: "",
+							},
 						},
-					},
-					"iptablesMarkMask": {
-						SchemaProps: spec.SchemaProps{
-							Description: "IptablesMarkMask is the mask that Felix selects its IPTables Mark bits from. Should be a 32 bit hexadecimal number with at least 8 bits set, none of which clash with any other mark bits in use on the system. [Default: 0xff000000]",
-							Type:        []string{"integer"},
-							Format:      "int64",
+						"endpointReportingDelay": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+							},
 						},
-					},
-					"disableConntrackInvalidCheck": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"boolean"},
-							Format: "",
+						"iptablesMarkMask": {
+							SchemaProps: spec.SchemaProps{
+								Description: "IptablesMarkMask is the mask that Felix selects its IPTables Mark bits from. Should be a 32 bit hexadecimal number with at least 8 bits set, none of which clash with any other mark bits in use on the system. [Default: 0xff000000]",
+								Type:        []string{"integer"},
+								Format:      "int64",
+							},
 						},
-					},
-					"healthEnabled": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"boolean"},
-							Format: "",
+						"disableConntrackInvalidCheck": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"boolean"},
+								Format: "",
+							},
 						},
-					},
-					"healthHost": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+						"healthEnabled": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"boolean"},
+								Format: "",
+							},
 						},
-					},
-					"healthPort": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"integer"},
-							Format: "int32",
+						"healthHost": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"prometheusMetricsEnabled": {
-						SchemaProps: spec.SchemaProps{
-							Description: "PrometheusMetricsEnabled enables the experimental Prometheus metrics server in Felix if set to true. [Default: false]",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"healthPort": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"integer"},
+								Format: "int32",
+							},
 						},
-					},
-					"prometheusMetricsPort": {
-						SchemaProps: spec.SchemaProps{
-							Description: "PrometheusMetricsPort is the TCP port that the experimental Prometheus metrics server should bind to. [Default:9091]",
-							Type:        []string{"integer"},
-							Format:      "int32",
+						"prometheusMetricsEnabled": {
+							SchemaProps: spec.SchemaProps{
+								Description: "PrometheusMetricsEnabled enables the experimental Prometheus metrics server in Felix if set to true. [Default: false]",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"prometheusGoMetricsEnabled": {
-						SchemaProps: spec.SchemaProps{
-							Description: "PrometheusGoMetricsEnabled disables Go runtime metrics collection, which the Prometheus client does by default, when set to false. This reduces the number of metrics reported, reducing Prometheus load. [Default: true]",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"prometheusMetricsPort": {
+							SchemaProps: spec.SchemaProps{
+								Description: "PrometheusMetricsPort is the TCP port that the experimental Prometheus metrics server should bind to. [Default:9091]",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
 						},
-					},
-					"prometheusProcessMetricsEnabled": {
-						SchemaProps: spec.SchemaProps{
-							Description: "PrometheusProcessMetricsEnabled disables process metrics collection, which the Prometheus client does by default, when set to false. This reduces the number of metrics reported, reducing Prometheus load. [Default: true]",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"prometheusGoMetricsEnabled": {
+							SchemaProps: spec.SchemaProps{
+								Description: "PrometheusGoMetricsEnabled disables Go runtime metrics collection, which the Prometheus client does by default, when set to false. This reduces the number of metrics reported, reducing Prometheus load. [Default: true]",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"prometheusMetricsCertFile": {
-						SchemaProps: spec.SchemaProps{
-							Description: "TLS credentials for this port.",
-							Type:        []string{"string"},
-							Format:      "",
+						"prometheusProcessMetricsEnabled": {
+							SchemaProps: spec.SchemaProps{
+								Description: "PrometheusProcessMetricsEnabled disables process metrics collection, which the Prometheus client does by default, when set to false. This reduces the number of metrics reported, reducing Prometheus load. [Default: true]",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"prometheusMetricsKeyFile": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+						"prometheusMetricsCertFile": {
+							SchemaProps: spec.SchemaProps{
+								Description: "TLS credentials for this port.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"prometheusMetricsCAFile": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+						"prometheusMetricsKeyFile": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"failsafeInboundHostPorts": {
-						SchemaProps: spec.SchemaProps{
-							Description: "FailsafeInboundHostPorts is a comma-delimited list of UDP/TCP ports that Felix will allow incoming traffic to host endpoints on irrespective of the security policy. This is useful to avoid accidently cutting off a host with incorrect configuration. Each port should be specified as tcp:<port-number> or udp:<port-number>. For back-compatibility, if the protocol is not specified, it defaults to “tcp”. To disable all inbound host ports, use the value none. The default value allows ssh access and DHCP. [Default: tcp:22, udp:68]",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ProtoPort"),
+						"prometheusMetricsCAFile": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
+						},
+						"failsafeInboundHostPorts": {
+							SchemaProps: spec.SchemaProps{
+								Description: "FailsafeInboundHostPorts is a comma-delimited list of UDP/TCP ports that Felix will allow incoming traffic to host endpoints on irrespective of the security policy. This is useful to avoid accidently cutting off a host with incorrect configuration. Each port should be specified as tcp:<port-number> or udp:<port-number>. For back-compatibility, if the protocol is not specified, it defaults to “tcp”. To disable all inbound host ports, use the value none. The default value allows ssh access and DHCP. [Default: tcp:22, udp:68]",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ProtoPort"),
+										},
 									},
 								},
 							},
 						},
-					},
-					"failsafeOutboundHostPorts": {
-						SchemaProps: spec.SchemaProps{
-							Description: "FailsafeOutboundHostPorts is a comma-delimited list of UDP/TCP ports that Felix will allow outgoing traffic from host endpoints to irrespective of the security policy. This is useful to avoid accidently cutting off a host with incorrect configuration. Each port should be specified as tcp:<port-number> or udp:<port-number>. For back-compatibility, if the protocol is not specified, it defaults to “tcp”. To disable all outbound host ports, use the value none. The default value opens etcd’s standard ports to ensure that Felix does not get cut off from etcd as well as allowing DHCP and DNS. [Default: tcp:2379, tcp:2380, tcp:4001, tcp:7001, udp:53, udp:67]",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ProtoPort"),
+						"failsafeOutboundHostPorts": {
+							SchemaProps: spec.SchemaProps{
+								Description: "FailsafeOutboundHostPorts is a comma-delimited list of UDP/TCP ports that Felix will allow outgoing traffic from host endpoints to irrespective of the security policy. This is useful to avoid accidently cutting off a host with incorrect configuration. Each port should be specified as tcp:<port-number> or udp:<port-number>. For back-compatibility, if the protocol is not specified, it defaults to “tcp”. To disable all outbound host ports, use the value none. The default value opens etcd’s standard ports to ensure that Felix does not get cut off from etcd as well as allowing DHCP and DNS. [Default: tcp:2379, tcp:2380, tcp:4001, tcp:7001, udp:53, udp:67]",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ProtoPort"),
+										},
 									},
 								},
 							},
 						},
-					},
-					"kubeNodePortRanges": {
-						SchemaProps: spec.SchemaProps{
-							Description: "KubeNodePortRanges holds list of port ranges used for service node ports. Only used if felix detects kube-proxy running in ipvs mode. Felix uses these ranges to separate host and workload traffic. [Default: 30000:32767].",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/numorstring.Port"),
+						"kubeNodePortRanges": {
+							SchemaProps: spec.SchemaProps{
+								Description: "KubeNodePortRanges holds list of port ranges used for service node ports. Only used if felix detects kube-proxy running in ipvs mode. Felix uses these ranges to separate host and workload traffic. [Default: 30000:32767].",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/numorstring.Port"),
+										},
 									},
 								},
 							},
 						},
-					},
-					"policySyncPathPrefix": {
-						SchemaProps: spec.SchemaProps{
-							Description: "PolicySyncPathPrefix is used to by Felix to communicate policy changes to external services, like Application layer policy. [Default: Empty]",
-							Type:        []string{"string"},
-							Format:      "",
+						"policySyncPathPrefix": {
+							SchemaProps: spec.SchemaProps{
+								Description: "PolicySyncPathPrefix is used to by Felix to communicate policy changes to external services, like Application layer policy. [Default: Empty]",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"usageReportingEnabled": {
-						SchemaProps: spec.SchemaProps{
-							Description: "UsageReportingEnabled reports anonymous Calico version number and cluster size to projectcalico.org. Logs warnings returned by the usage server. For example, if a significant security vulnerability has been discovered in the version of Calico being used. [Default: true]",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"usageReportingEnabled": {
+							SchemaProps: spec.SchemaProps{
+								Description: "UsageReportingEnabled reports anonymous Calico version number and cluster size to projectcalico.org. Logs warnings returned by the usage server. For example, if a significant security vulnerability has been discovered in the version of Calico being used. [Default: true]",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"usageReportingInitialDelay": {
-						SchemaProps: spec.SchemaProps{
-							Description: "UsageReportingInitialDelay controls the minimum delay before Felix makes a report. [Default: 300s]",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						"usageReportingInitialDelay": {
+							SchemaProps: spec.SchemaProps{
+								Description: "UsageReportingInitialDelay controls the minimum delay before Felix makes a report. [Default: 300s]",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+							},
 						},
-					},
-					"usageReportingInterval": {
-						SchemaProps: spec.SchemaProps{
-							Description: "UsageReportingInterval controls the interval at which Felix makes reports. [Default: 86400s]",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						"usageReportingInterval": {
+							SchemaProps: spec.SchemaProps{
+								Description: "UsageReportingInterval controls the interval at which Felix makes reports. [Default: 86400s]",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+							},
 						},
-					},
-					"natPortRange": {
-						SchemaProps: spec.SchemaProps{
-							Description: "NATPortRange specifies the range of ports that is used for port mapping when doing outgoing NAT. When unset the default behavior of the network stack is used.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/numorstring.Port"),
+						"natPortRange": {
+							SchemaProps: spec.SchemaProps{
+								Description: "NATPortRange specifies the range of ports that is used for port mapping when doing outgoing NAT. When unset the default behavior of the network stack is used.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/numorstring.Port"),
+							},
 						},
-					},
-					"natOutgoingAddress": {
-						SchemaProps: spec.SchemaProps{
-							Description: "NATOutgoingAddress specifies an address to use when performing source NAT for traffic in a natOutgoing pool that is leaving the network. By default the address used is an address on the interface the traffic is leaving on (ie it uses the iptables MASQUERADE target)",
-							Type:        []string{"string"},
-							Format:      "",
+						"natOutgoingAddress": {
+							SchemaProps: spec.SchemaProps{
+								Description: "NATOutgoingAddress specifies an address to use when performing source NAT for traffic in a natOutgoing pool that is leaving the network. By default the address used is an address on the interface the traffic is leaving on (ie it uses the iptables MASQUERADE target)",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"externalNodesList": {
-						SchemaProps: spec.SchemaProps{
-							Description: "ExternalNodesCIDRList is a list of CIDR's of external-non-calico-nodes which may source tunnel traffic and have the tunneled traffic be accepted at calico nodes.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
+						"externalNodesList": {
+							SchemaProps: spec.SchemaProps{
+								Description: "ExternalNodesCIDRList is a list of CIDR's of external-non-calico-nodes which may source tunnel traffic and have the tunneled traffic be accepted at calico nodes.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
 									},
 								},
 							},
 						},
-					},
-					"nfNetlinkBufSize": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+						"nfNetlinkBufSize": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"statsDumpFilePath": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+						"statsDumpFilePath": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"prometheusReporterEnabled": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Felix Denied Packet Metrics configuration parameters.",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"prometheusReporterEnabled": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Felix Denied Packet Metrics configuration parameters.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"prometheusReporterPort": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"integer"},
-							Format: "int32",
+						"prometheusReporterPort": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"integer"},
+								Format: "int32",
+							},
 						},
-					},
-					"prometheusReporterCertFile": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+						"prometheusReporterCertFile": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"prometheusReporterKeyFile": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+						"prometheusReporterKeyFile": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"prometheusReporterCAFile": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+						"prometheusReporterCAFile": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"deletedMetricsRetentionSecs": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"integer"},
-							Format: "int32",
+						"deletedMetricsRetentionSecs": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"integer"},
+								Format: "int32",
+							},
 						},
-					},
-					"dropActionOverride": {
-						SchemaProps: spec.SchemaProps{
-							Description: "DropActionOverride overrides the Drop action in Felix, optionally changing the behavior to Accept, and optionally adding Log. Possible values are Drop, LogAndDrop, Accept, LogAndAccept. [Default: Drop]",
-							Type:        []string{"string"},
-							Format:      "",
+						"dropActionOverride": {
+							SchemaProps: spec.SchemaProps{
+								Description: "DropActionOverride overrides the Drop action in Felix, optionally changing the behavior to Accept, and optionally adding Log. Possible values are Drop, LogAndDrop, Accept, LogAndAccept. [Default: Drop]",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"debugMemoryProfilePath": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+						"debugMemoryProfilePath": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"debugDisableLogDropping": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"boolean"},
-							Format: "",
+						"debugDisableLogDropping": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"boolean"},
+								Format: "",
+							},
 						},
-					},
-					"debugSimulateCalcGraphHangAfter": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						"debugSimulateCalcGraphHangAfter": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+							},
 						},
-					},
-					"debugSimulateDataplaneHangAfter": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						"debugSimulateDataplaneHangAfter": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+							},
 						},
-					},
-					"iptablesNATOutgoingInterfaceFilter": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+						"iptablesNATOutgoingInterfaceFilter": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"sidecarAccelerationEnabled": {
-						SchemaProps: spec.SchemaProps{
-							Description: "SidecarAccelerationEnabled enables experimental sidecar acceleration [Default: false]",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"sidecarAccelerationEnabled": {
+							SchemaProps: spec.SchemaProps{
+								Description: "SidecarAccelerationEnabled enables experimental sidecar acceleration [Default: false]",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"xdpEnabled": {
-						SchemaProps: spec.SchemaProps{
-							Description: "XDPEnabled enables XDP acceleration for suitable untracked incoming deny rules. [Default: true]",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"xdpEnabled": {
+							SchemaProps: spec.SchemaProps{
+								Description: "XDPEnabled enables XDP acceleration for suitable untracked incoming deny rules. [Default: true]",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"genericXDPEnabled": {
-						SchemaProps: spec.SchemaProps{
-							Description: "GenericXDPEnabled enables Generic XDP so network cards that don't support XDP offload or driver modes can use XDP. This is not recommended since it doesn't provide better performance than iptables. [Default: false]",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"genericXDPEnabled": {
+							SchemaProps: spec.SchemaProps{
+								Description: "GenericXDPEnabled enables Generic XDP so network cards that don't support XDP offload or driver modes can use XDP. This is not recommended since it doesn't provide better performance than iptables. [Default: false]",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"syslogReporterNetwork": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+						"syslogReporterNetwork": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"syslogReporterAddress": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+						"syslogReporterAddress": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"ipsecMode": {
-						SchemaProps: spec.SchemaProps{
-							Description: "IPSecMode controls which mode IPSec is operating on. Default value means IPSec is not enabled. [Default: \"\"]",
-							Type:        []string{"string"},
-							Format:      "",
+						"ipsecMode": {
+							SchemaProps: spec.SchemaProps{
+								Description: "IPSecMode controls which mode IPSec is operating on. Default value means IPSec is not enabled. [Default: \"\"]",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"ipsecAllowUnsecuredTraffic": {
-						SchemaProps: spec.SchemaProps{
-							Description: "IPSecAllowUnsecuredTraffic controls whether non-IPsec traffic is allowed in addition to IPsec traffic. Enabling this negates the anti-spoofing protections of IPsec but it is useful when migrating to/from IPsec. [Default: false]",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"ipsecAllowUnsecuredTraffic": {
+							SchemaProps: spec.SchemaProps{
+								Description: "IPSecAllowUnsecuredTraffic controls whether non-IPsec traffic is allowed in addition to IPsec traffic. Enabling this negates the anti-spoofing protections of IPsec but it is useful when migrating to/from IPsec. [Default: false]",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"ipsecIKEAlgorithm": {
-						SchemaProps: spec.SchemaProps{
-							Description: "IPSecIKEAlgorithm sets IPSec IKE algorithm. Default is NIST suite B recommendation. [Default: aes128gcm16-prfsha256-ecp256]",
-							Type:        []string{"string"},
-							Format:      "",
+						"ipsecIKEAlgorithm": {
+							SchemaProps: spec.SchemaProps{
+								Description: "IPSecIKEAlgorithm sets IPSec IKE algorithm. Default is NIST suite B recommendation. [Default: aes128gcm16-prfsha256-ecp256]",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"ipsecESPAlgorithm": {
-						SchemaProps: spec.SchemaProps{
-							Description: "IPSecESAlgorithm sets IPSec ESP algorithm. Default is NIST suite B recommendation. [Default: aes128gcm16-ecp256]",
-							Type:        []string{"string"},
-							Format:      "",
+						"ipsecESPAlgorithm": {
+							SchemaProps: spec.SchemaProps{
+								Description: "IPSecESAlgorithm sets IPSec ESP algorithm. Default is NIST suite B recommendation. [Default: aes128gcm16-ecp256]",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"ipsecLogLevel": {
-						SchemaProps: spec.SchemaProps{
-							Description: "IPSecLogLevel controls log level for IPSec components. Set to None for no logging. A generic log level terminology is used [None, Notice, Info, Debug, Verbose]. [Default: Info]",
-							Type:        []string{"string"},
-							Format:      "",
+						"ipsecLogLevel": {
+							SchemaProps: spec.SchemaProps{
+								Description: "IPSecLogLevel controls log level for IPSec components. Set to None for no logging. A generic log level terminology is used [None, Notice, Info, Debug, Verbose]. [Default: Info]",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"ipsecPolicyRefreshInterval": {
-						SchemaProps: spec.SchemaProps{
-							Description: "IPSecPolicyRefreshInterval is the interval at which Felix will check the kernel's IPsec policy tables and repair any inconsistencies. [Default: 600s]",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						"ipsecPolicyRefreshInterval": {
+							SchemaProps: spec.SchemaProps{
+								Description: "IPSecPolicyRefreshInterval is the interval at which Felix will check the kernel's IPsec policy tables and repair any inconsistencies. [Default: 600s]",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+							},
 						},
-					},
-					"flowLogsFlushInterval": {
-						SchemaProps: spec.SchemaProps{
-							Description: "FlowLogsFlushInterval configures the interval at which Felix exports flow logs.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						"flowLogsFlushInterval": {
+							SchemaProps: spec.SchemaProps{
+								Description: "FlowLogsFlushInterval configures the interval at which Felix exports flow logs.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+							},
 						},
-					},
-					"flowLogsEnableHostEndpoint": {
-						SchemaProps: spec.SchemaProps{
-							Description: "FlowLogsEnableHostEndpoint enables Flow logs reporting for HostEndpoints.",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"flowLogsEnableHostEndpoint": {
+							SchemaProps: spec.SchemaProps{
+								Description: "FlowLogsEnableHostEndpoint enables Flow logs reporting for HostEndpoints.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"flowLogsEnableNetworkSets": {
-						SchemaProps: spec.SchemaProps{
-							Description: "FlowLogsEnableNetworkSets enables Flow logs reporting for GlobalNetworkSets.",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"flowLogsEnableNetworkSets": {
+							SchemaProps: spec.SchemaProps{
+								Description: "FlowLogsEnableNetworkSets enables Flow logs reporting for GlobalNetworkSets.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"cloudWatchLogsReporterEnabled": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Enable Flow logs reporting to AWS CloudWatch.",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"cloudWatchLogsReporterEnabled": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Enable Flow logs reporting to AWS CloudWatch.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"cloudWatchLogsFlushInterval": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Deprecated: Use FlowLogsFlushInterval instead.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						"cloudWatchLogsFlushInterval": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Deprecated: Use FlowLogsFlushInterval instead.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+							},
 						},
-					},
-					"cloudWatchLogsLogGroupName": {
-						SchemaProps: spec.SchemaProps{
-							Description: "CloudWatchLogsLogGroupName configures the Log group to use for exporting flow logs. Defaults to \"tigera-flowlogs-<cluster-guid>\".",
-							Type:        []string{"string"},
-							Format:      "",
+						"cloudWatchLogsLogGroupName": {
+							SchemaProps: spec.SchemaProps{
+								Description: "CloudWatchLogsLogGroupName configures the Log group to use for exporting flow logs. Defaults to \"tigera-flowlogs-<cluster-guid>\".",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"cloudWatchLogsLogStreamName": {
-						SchemaProps: spec.SchemaProps{
-							Description: "CloudWatchLogsLogStreamName configures the Log stream to use for exporting flow logs. Defaults to \"<felix-hostname>_Flowlogs\".",
-							Type:        []string{"string"},
-							Format:      "",
+						"cloudWatchLogsLogStreamName": {
+							SchemaProps: spec.SchemaProps{
+								Description: "CloudWatchLogsLogStreamName configures the Log stream to use for exporting flow logs. Defaults to \"<felix-hostname>_Flowlogs\".",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"cloudWatchLogsIncludeLabels": {
-						SchemaProps: spec.SchemaProps{
-							Description: "CloudWatchLogsIncludeLabels is used to configure if endpoint labels are included in a Flow log entry.",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"cloudWatchLogsIncludeLabels": {
+							SchemaProps: spec.SchemaProps{
+								Description: "CloudWatchLogsIncludeLabels is used to configure if endpoint labels are included in a Flow log entry.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"cloudWatchLogsIncludePolicies": {
-						SchemaProps: spec.SchemaProps{
-							Description: "CloudWatchLogsIncludePolicies is used to configure if policy information are included in a Flow log entry.",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"cloudWatchLogsIncludePolicies": {
+							SchemaProps: spec.SchemaProps{
+								Description: "CloudWatchLogsIncludePolicies is used to configure if policy information are included in a Flow log entry.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"cloudWatchLogsAggregationKindForAllowed": {
-						SchemaProps: spec.SchemaProps{
-							Description: "CloudWatchLogsAggregationKindForAllowed is used to choose the type of aggregation for flow log entries created for allowed connections. [Default: 2 - pod prefix name based aggregation]. Accepted values are 0, 1 and 2. 0 - No aggregation 1 - Source port based aggregation 2 - Pod prefix name based aggreagation.",
-							Type:        []string{"integer"},
-							Format:      "int32",
+						"cloudWatchLogsAggregationKindForAllowed": {
+							SchemaProps: spec.SchemaProps{
+								Description: "CloudWatchLogsAggregationKindForAllowed is used to choose the type of aggregation for flow log entries created for allowed connections. [Default: 2 - pod prefix name based aggregation]. Accepted values are 0, 1 and 2. 0 - No aggregation 1 - Source port based aggregation 2 - Pod prefix name based aggreagation.",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
 						},
-					},
-					"cloudWatchLogsAggregationKindForDenied": {
-						SchemaProps: spec.SchemaProps{
-							Description: "CloudWatchLogsAggregationKindForDenied is used to choose the type of aggregation for flow log entries created for denied connections. [Default: 1 - source port based aggregation]. Accepted values are 0, 1 and 2. 0 - No aggregation 1 - Source port based aggregation 2 - Pod prefix name based aggreagation.",
-							Type:        []string{"integer"},
-							Format:      "int32",
+						"cloudWatchLogsAggregationKindForDenied": {
+							SchemaProps: spec.SchemaProps{
+								Description: "CloudWatchLogsAggregationKindForDenied is used to choose the type of aggregation for flow log entries created for denied connections. [Default: 1 - source port based aggregation]. Accepted values are 0, 1 and 2. 0 - No aggregation 1 - Source port based aggregation 2 - Pod prefix name based aggreagation.",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
 						},
-					},
-					"cloudWatchLogsRetentionDays": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Number of days for which to retain logs. See https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutRetentionPolicy.html for allowed values.",
-							Type:        []string{"integer"},
-							Format:      "int32",
+						"cloudWatchLogsRetentionDays": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Number of days for which to retain logs. See https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutRetentionPolicy.html for allowed values.",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
 						},
-					},
-					"cloudWatchLogsEnableHostEndpoint": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Deprecated: Use FlowLogsEnableHostEndpoint.",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"cloudWatchLogsEnableHostEndpoint": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Deprecated: Use FlowLogsEnableHostEndpoint.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"cloudWatchLogsEnabledForAllowed": {
-						SchemaProps: spec.SchemaProps{
-							Description: "CloudWatchLogsEnabledForAllowed is used to enable/disable flow logs entries created for allowed connections. Default is true. This parameter only takes effect when CloudWatchLogsReporterEnabled is set to true.",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"cloudWatchLogsEnabledForAllowed": {
+							SchemaProps: spec.SchemaProps{
+								Description: "CloudWatchLogsEnabledForAllowed is used to enable/disable flow logs entries created for allowed connections. Default is true. This parameter only takes effect when CloudWatchLogsReporterEnabled is set to true.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"cloudWatchLogsEnabledForDenied": {
-						SchemaProps: spec.SchemaProps{
-							Description: "CloudWatchLogsEnabledForDenied is used to enable/disable flow logs entries created for denied flows. Default is true. This parameter only takes effect when CloudWatchLogsReporterEnabled is set to true.",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"cloudWatchLogsEnabledForDenied": {
+							SchemaProps: spec.SchemaProps{
+								Description: "CloudWatchLogsEnabledForDenied is used to enable/disable flow logs entries created for denied flows. Default is true. This parameter only takes effect when CloudWatchLogsReporterEnabled is set to true.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"cloudWatchMetricsReporterEnabled": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Enable reporting metrics to CloudWatch.",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"cloudWatchMetricsReporterEnabled": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Enable reporting metrics to CloudWatch.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"cloudWatchMetricsPushIntervalSecs": {
-						SchemaProps: spec.SchemaProps{
-							Description: "CloudWatchMetricsPushInterval configures the interval at which Felix exports metrics to CloudWatch.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						"cloudWatchMetricsPushIntervalSecs": {
+							SchemaProps: spec.SchemaProps{
+								Description: "CloudWatchMetricsPushInterval configures the interval at which Felix exports metrics to CloudWatch.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+							},
 						},
-					},
-					"cloudWatchNodeHealthStatusEnabled": {
-						SchemaProps: spec.SchemaProps{
-							Description: "CloudWatchNodeHealthStatusEnabled enables pushing node health data to CloudWatch.",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"cloudWatchNodeHealthStatusEnabled": {
+							SchemaProps: spec.SchemaProps{
+								Description: "CloudWatchNodeHealthStatusEnabled enables pushing node health data to CloudWatch.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"cloudWatchNodeHealthPushIntervalSecs": {
-						SchemaProps: spec.SchemaProps{
-							Description: "CloudWatchNodeHealthPushIntervalSecs configures the frequency of pushing the node health metrics to CloudWatch.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						"cloudWatchNodeHealthPushIntervalSecs": {
+							SchemaProps: spec.SchemaProps{
+								Description: "CloudWatchNodeHealthPushIntervalSecs configures the frequency of pushing the node health metrics to CloudWatch.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+							},
 						},
-					},
-					"flowLogsFileEnabled": {
-						SchemaProps: spec.SchemaProps{
-							Description: "FlowLogsFileEnabled when set to true, enables logging flow logs to a file. If false no flow logging to file will occur.",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"flowLogsFileEnabled": {
+							SchemaProps: spec.SchemaProps{
+								Description: "FlowLogsFileEnabled when set to true, enables logging flow logs to a file. If false no flow logging to file will occur.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"flowLogsFileMaxFiles": {
-						SchemaProps: spec.SchemaProps{
-							Description: "FlowLogsFileMaxFiles sets the number of log files to keep.",
-							Type:        []string{"integer"},
-							Format:      "int32",
+						"flowLogsFileMaxFiles": {
+							SchemaProps: spec.SchemaProps{
+								Description: "FlowLogsFileMaxFiles sets the number of log files to keep.",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
 						},
-					},
-					"flowLogsFileMaxFileSizeMB": {
-						SchemaProps: spec.SchemaProps{
-							Description: "FlowLogsFileMaxFileSizeMB sets the max size in MB of flow logs files before rotation.",
-							Type:        []string{"integer"},
-							Format:      "int32",
+						"flowLogsFileMaxFileSizeMB": {
+							SchemaProps: spec.SchemaProps{
+								Description: "FlowLogsFileMaxFileSizeMB sets the max size in MB of flow logs files before rotation.",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
 						},
-					},
-					"flowLogsFileDirectory": {
-						SchemaProps: spec.SchemaProps{
-							Description: "FlowLogsFileDirectory sets the directory where flow logs files are stored.",
-							Type:        []string{"string"},
-							Format:      "",
+						"flowLogsFileDirectory": {
+							SchemaProps: spec.SchemaProps{
+								Description: "FlowLogsFileDirectory sets the directory where flow logs files are stored.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"flowLogsFileIncludeLabels": {
-						SchemaProps: spec.SchemaProps{
-							Description: "FlowLogsFileIncludeLabels is used to configure if endpoint labels are included in a Flow log entry written to file.",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"flowLogsFileIncludeLabels": {
+							SchemaProps: spec.SchemaProps{
+								Description: "FlowLogsFileIncludeLabels is used to configure if endpoint labels are included in a Flow log entry written to file.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"flowLogsFileIncludePolicies": {
-						SchemaProps: spec.SchemaProps{
-							Description: "FlowLogsFileIncludePolicies is used to configure if policy information are included in a Flow log entry written to file.",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"flowLogsFileIncludePolicies": {
+							SchemaProps: spec.SchemaProps{
+								Description: "FlowLogsFileIncludePolicies is used to configure if policy information are included in a Flow log entry written to file.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"flowLogsFileAggregationKindForAllowed": {
-						SchemaProps: spec.SchemaProps{
-							Description: "FlowLogsFileAggregationKindForAllowed is used to choose the type of aggregation for flow log entries created for allowed connections. [Default: 2 - pod prefix name based aggregation]. Accepted values are 0, 1 and 2. 0 - No aggregation 1 - Source port based aggregation 2 - Pod prefix name based aggreagation.",
-							Type:        []string{"integer"},
-							Format:      "int32",
+						"flowLogsFileAggregationKindForAllowed": {
+							SchemaProps: spec.SchemaProps{
+								Description: "FlowLogsFileAggregationKindForAllowed is used to choose the type of aggregation for flow log entries created for allowed connections. [Default: 2 - pod prefix name based aggregation]. Accepted values are 0, 1 and 2. 0 - No aggregation 1 - Source port based aggregation 2 - Pod prefix name based aggreagation.",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
 						},
-					},
-					"flowLogsFileAggregationKindForDenied": {
-						SchemaProps: spec.SchemaProps{
-							Description: "FlowLogsFileAggregationKindForDenied is used to choose the type of aggregation for flow log entries created for denied connections. [Default: 1 - source port based aggregation]. Accepted values are 0, 1 and 2. 0 - No aggregation 1 - Source port based aggregation 2 - Pod prefix name based aggreagation.",
-							Type:        []string{"integer"},
-							Format:      "int32",
+						"flowLogsFileAggregationKindForDenied": {
+							SchemaProps: spec.SchemaProps{
+								Description: "FlowLogsFileAggregationKindForDenied is used to choose the type of aggregation for flow log entries created for denied connections. [Default: 1 - source port based aggregation]. Accepted values are 0, 1 and 2. 0 - No aggregation 1 - Source port based aggregation 2 - Pod prefix name based aggreagation.",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
 						},
-					},
-					"flowLogsFileEnabledForAllowed": {
-						SchemaProps: spec.SchemaProps{
-							Description: "FlowLogsFileEnabledForAllowed is used to enable/disable flow logs entries created for allowed connections. Default is true. This parameter only takes effect when FlowLogsFileReporterEnabled is set to true.",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"flowLogsFileEnabledForAllowed": {
+							SchemaProps: spec.SchemaProps{
+								Description: "FlowLogsFileEnabledForAllowed is used to enable/disable flow logs entries created for allowed connections. Default is true. This parameter only takes effect when FlowLogsFileReporterEnabled is set to true.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"flowLogsFileEnabledForDenied": {
-						SchemaProps: spec.SchemaProps{
-							Description: "FlowLogsFileEnabledForDenied is used to enable/disable flow logs entries created for denied flows. Default is true. This parameter only takes effect when FlowLogsFileReporterEnabled is set to true.",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"flowLogsFileEnabledForDenied": {
+							SchemaProps: spec.SchemaProps{
+								Description: "FlowLogsFileEnabledForDenied is used to enable/disable flow logs entries created for denied flows. Default is true. This parameter only takes effect when FlowLogsFileReporterEnabled is set to true.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"dnsTrustedServers": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The DNS servers that Felix should trust. Each entry here must be an IP, or \"k8s-service:<name>\", where <name> is the name of a Kubernetes Service in the \"kube-system\" namespace. [Default: \"k8s-service:kube-dns\"].",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
+						"dnsTrustedServers": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The DNS servers that Felix should trust. Each entry here must be an IP, or \"k8s-service:<name>\", where <name> is the name of a Kubernetes Service in the \"kube-system\" namespace. [Default: \"k8s-service:kube-dns\"].",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
 									},
 								},
 							},
 						},
-					},
-					"dnsCacheFile": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The name of the file that Felix uses to preserve learnt DNS information when restarting. [Default: \"/var/run/calico/felix-dns-cache.txt\"].",
-							Type:        []string{"string"},
-							Format:      "",
+						"dnsCacheFile": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The name of the file that Felix uses to preserve learnt DNS information when restarting. [Default: \"/var/run/calico/felix-dns-cache.txt\"].",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"dnsCacheSaveInterval": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The periodic interval at which Felix saves learnt DNS information to the cache file. [Default: 60s].",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						"dnsCacheSaveInterval": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The periodic interval at which Felix saves learnt DNS information to the cache file. [Default: 60s].",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+							},
 						},
-					},
-					"dnsLogsFlushInterval": {
-						SchemaProps: spec.SchemaProps{
-							Description: "DNSLogsFlushInterval configures the interval at which Felix exports DNS logs. [Default: 300s]",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						"dnsLogsFlushInterval": {
+							SchemaProps: spec.SchemaProps{
+								Description: "DNSLogsFlushInterval configures the interval at which Felix exports DNS logs. [Default: 300s]",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+							},
 						},
-					},
-					"dnsLogsFileEnabled": {
-						SchemaProps: spec.SchemaProps{
-							Description: "DNSLogsFileEnabled controls logging DNS logs to a file. If false no DNS logging to file will occur. [Default: true]",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"dnsLogsFileEnabled": {
+							SchemaProps: spec.SchemaProps{
+								Description: "DNSLogsFileEnabled controls logging DNS logs to a file. If false no DNS logging to file will occur. [Default: true]",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"dnsLogsFileMaxFiles": {
-						SchemaProps: spec.SchemaProps{
-							Description: "DNSLogsFileMaxFiles sets the number of DNS log files to keep. [Default: 5]",
-							Type:        []string{"integer"},
-							Format:      "int32",
+						"dnsLogsFileMaxFiles": {
+							SchemaProps: spec.SchemaProps{
+								Description: "DNSLogsFileMaxFiles sets the number of DNS log files to keep. [Default: 5]",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
 						},
-					},
-					"dnsLogsFileMaxFileSizeMB": {
-						SchemaProps: spec.SchemaProps{
-							Description: "DNSLogsFileMaxFileSizeMB sets the max size in MB of DNS log files before rotation. [Default: 100]",
-							Type:        []string{"integer"},
-							Format:      "int32",
+						"dnsLogsFileMaxFileSizeMB": {
+							SchemaProps: spec.SchemaProps{
+								Description: "DNSLogsFileMaxFileSizeMB sets the max size in MB of DNS log files before rotation. [Default: 100]",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
 						},
-					},
-					"dnsLogsFileDirectory": {
-						SchemaProps: spec.SchemaProps{
-							Description: "DNSLogsFileDirectory sets the directory where DNS log files are stored. [Default: /var/log/calico/dnslogs]",
-							Type:        []string{"string"},
-							Format:      "",
+						"dnsLogsFileDirectory": {
+							SchemaProps: spec.SchemaProps{
+								Description: "DNSLogsFileDirectory sets the directory where DNS log files are stored. [Default: /var/log/calico/dnslogs]",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"dnsLogsFileIncludeLabels": {
-						SchemaProps: spec.SchemaProps{
-							Description: "DNSLogsFileIncludeLabels is used to configure if endpoint labels are included in a DNS log entry written to file. [Default: true]",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"dnsLogsFileIncludeLabels": {
+							SchemaProps: spec.SchemaProps{
+								Description: "DNSLogsFileIncludeLabels is used to configure if endpoint labels are included in a DNS log entry written to file. [Default: true]",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"dnsLogsFileAggregationKind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "DNSLogsFileAggregationKind is used to choose the type of aggregation for DNS log entries. [Default: 1 - client name prefix aggregation]. Accepted values are 0 and 1. 0 - No aggregation 1 - Aggregate over clients with the same name prefix",
-							Type:        []string{"integer"},
-							Format:      "int32",
+						"dnsLogsFileAggregationKind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "DNSLogsFileAggregationKind is used to choose the type of aggregation for DNS log entries. [Default: 1 - client name prefix aggregation]. Accepted values are 0 and 1. 0 - No aggregation 1 - Aggregate over clients with the same name prefix",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
 						},
-					},
-					"windowsNetworkName": {
-						SchemaProps: spec.SchemaProps{
-							Description: "WindowsNetworkName specifies which Windows HNS networks Felix should operate on.  The default is to match networks that start with \"calico\".  Supports regular expression syntax.",
-							Type:        []string{"string"},
-							Format:      "",
+						"windowsNetworkName": {
+							SchemaProps: spec.SchemaProps{
+								Description: "WindowsNetworkName specifies which Windows HNS networks Felix should operate on.  The default is to match networks that start with \"calico\".  Supports regular expression syntax.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
 					},
+					Required: []string{"XDPRefreshInterval"},
 				},
-				Required: []string{"XDPRefreshInterval"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.ProtoPort", "github.com/projectcalico/libcalico-go/lib/numorstring.Port", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.ProtoPort", "github.com/projectcalico/libcalico-go/lib/numorstring.Port", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_FlowEndpoint(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The endpoint type, indicating whether this is a Pod, HostEndpoint, NetworkSet, or internet.",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.FlowEndpoint": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The endpoint type, indicating whether this is a Pod, HostEndpoint, NetworkSet, or internet.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"name": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The name of the endpoint. Note that this name may actually be a name prefix if flow logs have been aggregated.",
-							Type:        []string{"string"},
-							Format:      "",
+						"name": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The name of the endpoint. Note that this name may actually be a name prefix if flow logs have been aggregated.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"nameIsAggregationPrefix": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Whether the name is an aggregation prefix rather than the actual name.",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"nameIsAggregationPrefix": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Whether the name is an aggregation prefix rather than the actual name.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"namespace": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The namespace of the endpoint.",
-							Type:        []string{"string"},
-							Format:      "",
+						"namespace": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The namespace of the endpoint.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
 					},
+					Required: []string{"kind", "name"},
 				},
-				Required: []string{"kind", "name"},
 			},
+			Dependencies: []string{},
 		},
-		Dependencies: []string{},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_GlobalNetworkPolicy(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "GlobalNetworkPolicy contains information about a security Policy resource.  This contains a set of security rules to apply.  Security policies allow a selector-based security model which can override the security profiles directly referenced by an endpoint.\n\nEach policy must do one of the following:\n\n \t- Match the packet and apply an “allow” action; this immediately accepts the packet, skipping\n       all further policies and profiles. This is not recommended in general, because it prevents\n       further policy from being executed.\n\t- Match the packet and apply a “deny” action; this drops the packet immediately, skipping all\n       further policy and profiles.\n\t- Fail to match the packet; in which case the packet proceeds to the next policy. If there\n\t  are no more policies then the packet is dropped.\n\nCalico implements the security policy for each endpoint individually and only the policies that have matching selectors are implemented. This ensures that the number of rules that actually need to be inserted into the kernel is proportional to the number of local endpoints rather than the total amount of policy.\n\nGlobalNetworkPolicy is globally-scoped (i.e. not Namespaced).",
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkPolicy": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "GlobalNetworkPolicy contains information about a security Policy resource.  This contains a set of security rules to apply.  Security policies allow a selector-based security model which can override the security profiles directly referenced by an endpoint.\n\nEach policy must do one of the following:\n\n \t- Match the packet and apply an “allow” action; this immediately accepts the packet, skipping\n       all further policies and profiles. This is not recommended in general, because it prevents\n       further policy from being executed.\n\t- Match the packet and apply a “deny” action; this drops the packet immediately, skipping all\n       further policy and profiles.\n\t- Fail to match the packet; in which case the packet proceeds to the next policy. If there\n\t  are no more policies then the packet is dropped.\n\nCalico implements the security policy for each endpoint individually and only the policies that have matching selectors are implemented. This ensures that the number of rules that actually need to be inserted into the kernel is proportional to the number of local endpoints rather than the total amount of policy.\n\nGlobalNetworkPolicy is globally-scoped (i.e. not Namespaced).",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Standard object's metadata.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Standard object's metadata.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							},
 						},
-					},
-					"spec": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Specification of the Policy.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkPolicySpec"),
+						"spec": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Specification of the Policy.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkPolicySpec"),
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkPolicySpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkPolicySpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_GlobalNetworkPolicyList(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "GlobalNetworkPolicyList contains a list of GlobalNetworkPolicy resources.",
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkPolicyList": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "GlobalNetworkPolicyList contains a list of GlobalNetworkPolicy resources.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+							},
 						},
-					},
-					"items": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkPolicy"),
+						"items": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkPolicy"),
+										},
 									},
 								},
 							},
 						},
 					},
+					Required: []string{"metadata", "items"},
 				},
-				Required: []string{"metadata", "items"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkPolicy", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkPolicy", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_GlobalNetworkPolicySpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Properties: map[string]spec.Schema{
-					"tier": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The name of the tier that this policy belongs to.  If this is omitted, the default tier (name is \"default\") is assumed.  The specified tier must exist in order to create security policies within the tier, the \"default\" tier is created automatically if it does not exist, this means for deployments requiring only a single Tier, the tier name may be omitted on all policy management requests.",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkPolicySpec": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Properties: map[string]spec.Schema{
+						"tier": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The name of the tier that this policy belongs to.  If this is omitted, the default tier (name is \"default\") is assumed.  The specified tier must exist in order to create security policies within the tier, the \"default\" tier is created automatically if it does not exist, this means for deployments requiring only a single Tier, the tier name may be omitted on all policy management requests.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"order": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Order is an optional field that specifies the order in which the policy is applied. Policies with higher \"order\" are applied after those with lower order within the same tier.  If the order is omitted, it may be considered to be \"infinite\" - i.e. the policy will be applied last.  Policies with identical order will be applied in alphanumerical order based on the Policy \"Name\" within the tier.",
-							Type:        []string{"number"},
-							Format:      "double",
+						"order": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Order is an optional field that specifies the order in which the policy is applied. Policies with higher \"order\" are applied after those with lower order within the same tier.  If the order is omitted, it may be considered to be \"infinite\" - i.e. the policy will be applied last.  Policies with identical order will be applied in alphanumerical order based on the Policy \"Name\" within the tier.",
+								Type:        []string{"number"},
+								Format:      "double",
+							},
 						},
-					},
-					"ingress": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The ordered set of ingress rules.  Each rule contains a set of packet match criteria and a corresponding action to apply.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.Rule"),
+						"ingress": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The ordered set of ingress rules.  Each rule contains a set of packet match criteria and a corresponding action to apply.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.Rule"),
+										},
 									},
 								},
 							},
 						},
-					},
-					"egress": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The ordered set of egress rules.  Each rule contains a set of packet match criteria and a corresponding action to apply.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.Rule"),
+						"egress": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The ordered set of egress rules.  Each rule contains a set of packet match criteria and a corresponding action to apply.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.Rule"),
+										},
 									},
 								},
 							},
 						},
-					},
-					"selector": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The selector is an expression used to pick pick out the endpoints that the policy should be applied to.\n\nSelector expressions follow this syntax:\n\n\tlabel == \"string_literal\"  ->  comparison, e.g. my_label == \"foo bar\"\n\tlabel != \"string_literal\"   ->  not equal; also matches if label is not present\n\tlabel in { \"a\", \"b\", \"c\", ... }  ->  true if the value of label X is one of \"a\", \"b\", \"c\"\n\tlabel not in { \"a\", \"b\", \"c\", ... }  ->  true if the value of label X is not one of \"a\", \"b\", \"c\"\n\thas(label_name)  -> True if that label is present\n\t! expr -> negation of expr\n\texpr && expr  -> Short-circuit and\n\texpr || expr  -> Short-circuit or\n\t( expr ) -> parens for grouping\n\tall() or the empty selector -> matches all endpoints.\n\nLabel names are allowed to contain alphanumerics, -, _ and /. String literals are more permissive but they do not support escape characters.\n\nExamples (with made-up labels):\n\n\ttype == \"webserver\" && deployment == \"prod\"\n\ttype in {\"frontend\", \"backend\"}\n\tdeployment != \"dev\"\n\t! has(label_name)",
-							Type:        []string{"string"},
-							Format:      "",
+						"selector": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The selector is an expression used to pick pick out the endpoints that the policy should be applied to.\n\nSelector expressions follow this syntax:\n\n\tlabel == \"string_literal\"  ->  comparison, e.g. my_label == \"foo bar\"\n\tlabel != \"string_literal\"   ->  not equal; also matches if label is not present\n\tlabel in { \"a\", \"b\", \"c\", ... }  ->  true if the value of label X is one of \"a\", \"b\", \"c\"\n\tlabel not in { \"a\", \"b\", \"c\", ... }  ->  true if the value of label X is not one of \"a\", \"b\", \"c\"\n\thas(label_name)  -> True if that label is present\n\t! expr -> negation of expr\n\texpr && expr  -> Short-circuit and\n\texpr || expr  -> Short-circuit or\n\t( expr ) -> parens for grouping\n\tall() or the empty selector -> matches all endpoints.\n\nLabel names are allowed to contain alphanumerics, -, _ and /. String literals are more permissive but they do not support escape characters.\n\nExamples (with made-up labels):\n\n\ttype == \"webserver\" && deployment == \"prod\"\n\ttype in {\"frontend\", \"backend\"}\n\tdeployment != \"dev\"\n\t! has(label_name)",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"types": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Types indicates whether this policy applies to ingress, or to egress, or to both.  When not explicitly specified (and so the value on creation is empty or nil), Calico defaults Types according to what Ingress and Egress rules are present in the policy.  The default is:\n\n- [ PolicyTypeIngress ], if there are no Egress rules (including the case where there are\n  also no Ingress rules)\n\n- [ PolicyTypeEgress ], if there are Egress rules but no Ingress rules\n\n- [ PolicyTypeIngress, PolicyTypeEgress ], if there are both Ingress and Egress rules.\n\nWhen the policy is read back again, Types will always be one of these values, never empty or nil.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
+						"types": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Types indicates whether this policy applies to ingress, or to egress, or to both.  When not explicitly specified (and so the value on creation is empty or nil), Calico defaults Types according to what Ingress and Egress rules are present in the policy.  The default is:\n\n- [ PolicyTypeIngress ], if there are no Egress rules (including the case where there are\n  also no Ingress rules)\n\n- [ PolicyTypeEgress ], if there are Egress rules but no Ingress rules\n\n- [ PolicyTypeIngress, PolicyTypeEgress ], if there are both Ingress and Egress rules.\n\nWhen the policy is read back again, Types will always be one of these values, never empty or nil.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
 									},
 								},
 							},
 						},
-					},
-					"doNotTrack": {
-						SchemaProps: spec.SchemaProps{
-							Description: "DoNotTrack indicates whether packets matched by the rules in this policy should go through the data plane's connection tracking, such as Linux conntrack.  If True, the rules in this policy are applied before any data plane connection tracking, and packets allowed by this policy are marked as not to be tracked.",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"doNotTrack": {
+							SchemaProps: spec.SchemaProps{
+								Description: "DoNotTrack indicates whether packets matched by the rules in this policy should go through the data plane's connection tracking, such as Linux conntrack.  If True, the rules in this policy are applied before any data plane connection tracking, and packets allowed by this policy are marked as not to be tracked.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"preDNAT": {
-						SchemaProps: spec.SchemaProps{
-							Description: "PreDNAT indicates to apply the rules in this policy before any DNAT.",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"preDNAT": {
+							SchemaProps: spec.SchemaProps{
+								Description: "PreDNAT indicates to apply the rules in this policy before any DNAT.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"applyOnForward": {
-						SchemaProps: spec.SchemaProps{
-							Description: "ApplyOnForward indicates to apply the rules in this policy on forward traffic.",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"applyOnForward": {
+							SchemaProps: spec.SchemaProps{
+								Description: "ApplyOnForward indicates to apply the rules in this policy on forward traffic.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
 					},
+					Required: []string{"selector"},
 				},
-				Required: []string{"selector"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.Rule"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.Rule"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_GlobalNetworkSet(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "GlobalNetworkSet contains a set of arbitrary IP sub-networks/CIDRs and domain names that share labels to allow rules to refer to them via selectors.  The labels of GlobalNetworkSet are not namespaced.",
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkSet": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "GlobalNetworkSet contains a set of arbitrary IP sub-networks/CIDRs and domain names that share labels to allow rules to refer to them via selectors.  The labels of GlobalNetworkSet are not namespaced.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Standard object's metadata.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Standard object's metadata.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							},
 						},
-					},
-					"spec": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Specification of the NetworkSet.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkSetSpec"),
+						"spec": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Specification of the NetworkSet.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkSetSpec"),
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkSetSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkSetSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_GlobalNetworkSetList(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "GlobalNetworkSetList contains a list of NetworkSet resources.",
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkSetList": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "GlobalNetworkSetList contains a list of NetworkSet resources.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+							},
 						},
-					},
-					"items": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkSet"),
+						"items": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkSet"),
+										},
 									},
 								},
 							},
 						},
 					},
+					Required: []string{"metadata", "items"},
 				},
-				Required: []string{"metadata", "items"},
-			},
-		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkSet", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_GlobalNetworkSetSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "GlobalNetworkSetSpec contains the specification for a NetworkSet resource.",
-				Properties: map[string]spec.Schema{
-					"nets": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The list of IP networks that belong to this set.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
+			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkSet", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkSetSpec": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "GlobalNetworkSetSpec contains the specification for a NetworkSet resource.",
+					Properties: map[string]spec.Schema{
+						"nets": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The list of IP networks that belong to this set.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
 									},
 								},
 							},
 						},
-					},
-					"allowedEgressDomains": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The list of domain names that belong to this set and are honored in egress allow rules only.  Domain names specified here only work to allow egress traffic from the cluster to external destinations.  They don't work to _deny_ traffic to destinations specified by domain name, or to allow ingress traffic from _sources_ specified by domain name.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
+						"allowedEgressDomains": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The list of domain names that belong to this set and are honored in egress allow rules only.  Domain names specified here only work to allow egress traffic from the cluster to external destinations.  They don't work to _deny_ traffic to destinations specified by domain name, or to allow ingress traffic from _sources_ specified by domain name.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
 									},
 								},
 							},
@@ -5006,24 +4576,21 @@ func schema_libcalico_go_lib_apis_v3_GlobalNetworkSetSpec(ref common.ReferenceCa
 					},
 				},
 			},
+			Dependencies: []string{},
 		},
-		Dependencies: []string{},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_GlobalNetworkSetSync(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Properties: map[string]spec.Schema{
-					"labels": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"object"},
-							AdditionalProperties: &spec.SchemaOrBool{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkSetSync": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Properties: map[string]spec.Schema{
+						"labels": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"object"},
+								AdditionalProperties: &spec.SchemaOrBool{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
 									},
 								},
 							},
@@ -5031,430 +4598,397 @@ func schema_libcalico_go_lib_apis_v3_GlobalNetworkSetSync(ref common.ReferenceCa
 					},
 				},
 			},
+			Dependencies: []string{},
 		},
-		Dependencies: []string{},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_GlobalReport(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "GlobalReport contains the configuration for a non-namespaced Report.",
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalReport": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "GlobalReport contains the configuration for a non-namespaced Report.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Standard object's metadata.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Standard object's metadata.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							},
 						},
-					},
-					"spec": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Specification of the GlobalReport.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ReportSpec"),
+						"spec": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Specification of the GlobalReport.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ReportSpec"),
+							},
 						},
-					},
-					"status": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ReportStatus"),
+						"status": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ReportStatus"),
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.ReportSpec", "github.com/projectcalico/libcalico-go/lib/apis/v3.ReportStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.ReportSpec", "github.com/projectcalico/libcalico-go/lib/apis/v3.ReportStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_GlobalReportList(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "GlobalReportList contains a list of GlobalReport resources.",
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalReportList": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "GlobalReportList contains a list of GlobalReport resources.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+							},
 						},
-					},
-					"items": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalReport"),
+						"items": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalReport"),
+										},
 									},
 								},
 							},
 						},
 					},
+					Required: []string{"metadata", "items"},
 				},
-				Required: []string{"metadata", "items"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalReport", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalReport", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_GlobalReportType(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "GlobalReportType contains the configuration for a non-namespaced report type.",
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalReportType": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "GlobalReportType contains the configuration for a non-namespaced report type.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Standard object's metadata.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Standard object's metadata.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							},
 						},
-					},
-					"spec": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Specification of the GlobalReport.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ReportTypeSpec"),
+						"spec": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Specification of the GlobalReport.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ReportTypeSpec"),
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.ReportTypeSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.ReportTypeSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_GlobalReportTypeList(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "GlobalReportTypeList contains a list of GlobalReportType resources.",
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalReportTypeList": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "GlobalReportTypeList contains a list of GlobalReportType resources.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+							},
 						},
-					},
-					"items": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalReportType"),
+						"items": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalReportType"),
+										},
 									},
 								},
 							},
 						},
 					},
+					Required: []string{"metadata", "items"},
 				},
-				Required: []string{"metadata", "items"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalReportType", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalReportType", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_GlobalThreatFeed(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "GlobalThreatFeed is a source of intel for possible threats to the cluster. This object configures how Tigera components communicate with the feed and update detection jobs or policy based on the intel.",
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeed": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "GlobalThreatFeed is a source of intel for possible threats to the cluster. This object configures how Tigera components communicate with the feed and update detection jobs or policy based on the intel.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Standard object's metadata.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Standard object's metadata.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							},
 						},
-					},
-					"spec": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Specification of the NetworkSet.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeedSpec"),
+						"spec": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Specification of the NetworkSet.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeedSpec"),
+							},
 						},
-					},
-					"status": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeedStatus"),
+						"status": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeedStatus"),
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeedSpec", "github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeedStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeedSpec", "github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeedStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_GlobalThreatFeedList(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "GlobalThreatFeedList contains a list of NetworkSet resources.",
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeedList": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "GlobalThreatFeedList contains a list of NetworkSet resources.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+							},
 						},
-					},
-					"items": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeed"),
+						"items": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeed"),
+										},
 									},
 								},
 							},
 						},
 					},
+					Required: []string{"metadata", "items"},
 				},
-				Required: []string{"metadata", "items"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeed", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeed", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_GlobalThreatFeedSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "GlobalThreatFeedSpec contains the specification of a GlobalThreatFeed resource.",
-				Properties: map[string]spec.Schema{
-					"content": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Content describes the kind of data the data feed provides.",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeedSpec": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "GlobalThreatFeedSpec contains the specification of a GlobalThreatFeed resource.",
+					Properties: map[string]spec.Schema{
+						"content": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Content describes the kind of data the data feed provides.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"globalNetworkSet": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkSetSync"),
+						"globalNetworkSet": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkSetSync"),
+							},
 						},
-					},
-					"pull": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.Pull"),
+						"pull": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.Pull"),
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkSetSync", "github.com/projectcalico/libcalico-go/lib/apis/v3.Pull"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkSetSync", "github.com/projectcalico/libcalico-go/lib/apis/v3.Pull"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_GlobalThreatFeedStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Properties: map[string]spec.Schema{
-					"lastSuccessfulSync": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeedStatus": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Properties: map[string]spec.Schema{
+						"lastSuccessfulSync": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+							},
 						},
-					},
-					"lastSuccessfulSearch": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						"lastSuccessfulSearch": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+							},
 						},
-					},
-					"errorConditions": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ErrorCondition"),
+						"errorConditions": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ErrorCondition"),
+										},
 									},
 								},
 							},
 						},
 					},
+					Required: []string{"lastSuccessfulSync", "lastSuccessfulSearch", "errorConditions"},
 				},
-				Required: []string{"lastSuccessfulSync", "lastSuccessfulSearch", "errorConditions"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.ErrorCondition", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.ErrorCondition", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_HTTPHeader(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Properties: map[string]spec.Schema{
-					"name": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPHeader": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Properties: map[string]spec.Schema{
+						"name": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"value": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+						"value": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"valueFrom": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPHeaderSource"),
+						"valueFrom": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPHeaderSource"),
+							},
 						},
 					},
+					Required: []string{"name"},
 				},
-				Required: []string{"name"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPHeaderSource"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPHeaderSource"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_HTTPHeaderSource(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Properties: map[string]spec.Schema{
-					"configMapKeyRef": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Selects a key of a ConfigMap.",
-							Ref:         ref("k8s.io/api/core/v1.ConfigMapKeySelector"),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPHeaderSource": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Properties: map[string]spec.Schema{
+						"configMapKeyRef": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Selects a key of a ConfigMap.",
+								Ref:         ref("k8s.io/api/core/v1.ConfigMapKeySelector"),
+							},
 						},
-					},
-					"secretKeyRef": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Selects a key of a secret in the pod's namespace",
-							Ref:         ref("k8s.io/api/core/v1.SecretKeySelector"),
+						"secretKeyRef": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Selects a key of a secret in the pod's namespace",
+								Ref:         ref("k8s.io/api/core/v1.SecretKeySelector"),
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{
+				"k8s.io/api/core/v1.ConfigMapKeySelector", "k8s.io/api/core/v1.SecretKeySelector"},
 		},
-		Dependencies: []string{
-			"k8s.io/api/core/v1.ConfigMapKeySelector", "k8s.io/api/core/v1.SecretKeySelector"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_HTTPMatch(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "HTTPMatch is an optional field that apply only to HTTP requests The Methods and Path fields are joined with AND",
-				Properties: map[string]spec.Schema{
-					"methods": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Methods is an optional field that restricts the rule to apply only to HTTP requests that use one of the listed HTTP Methods (e.g. GET, PUT, etc.) Multiple methods are OR'd together.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPMatch": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "HTTPMatch is an optional field that apply only to HTTP requests The Methods and Path fields are joined with AND",
+					Properties: map[string]spec.Schema{
+						"methods": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Methods is an optional field that restricts the rule to apply only to HTTP requests that use one of the listed HTTP Methods (e.g. GET, PUT, etc.) Multiple methods are OR'd together.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
 									},
 								},
 							},
 						},
-					},
-					"paths": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Paths is an optional field that restricts the rule to apply to HTTP requests that use one of the listed HTTP Paths. Multiple paths are OR'd together. e.g: - exact: /foo - prefix: /bar NOTE: Each entry may ONLY specify either a `exact` or a `prefix` match. The validator will check for it.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPPath"),
+						"paths": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Paths is an optional field that restricts the rule to apply to HTTP requests that use one of the listed HTTP Paths. Multiple paths are OR'd together. e.g: - exact: /foo - prefix: /bar NOTE: Each entry may ONLY specify either a `exact` or a `prefix` match. The validator will check for it.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPPath"),
+										},
 									},
 								},
 							},
@@ -5462,217 +4996,202 @@ func schema_libcalico_go_lib_apis_v3_HTTPMatch(ref common.ReferenceCallback) com
 					},
 				},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPPath"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPPath"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_HTTPPath(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "HTTPPath specifies an HTTP path to match. It may be either of the form: exact: <path>: which matches the path exactly or prefix: <path-prefix>: which matches the path prefix",
-				Properties: map[string]spec.Schema{
-					"exact": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPPath": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "HTTPPath specifies an HTTP path to match. It may be either of the form: exact: <path>: which matches the path exactly or prefix: <path-prefix>: which matches the path prefix",
+					Properties: map[string]spec.Schema{
+						"exact": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"prefix": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+						"prefix": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{},
 		},
-		Dependencies: []string{},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_HTTPPull(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Properties: map[string]spec.Schema{
-					"format": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPPull": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Properties: map[string]spec.Schema{
+						"format": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"url": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+						"url": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"headers": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPHeader"),
+						"headers": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPHeader"),
+										},
 									},
 								},
 							},
 						},
 					},
+					Required: []string{"url"},
 				},
-				Required: []string{"url"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPHeader"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPHeader"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_HostEndpoint(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "HostEndpoint contains information about a HostEndpoint resource that represents a “bare-metal” interface attached to the host that is running Calico’s agent, Felix. By default, Calico doesn’t apply any policy to such interfaces.",
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.HostEndpoint": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "HostEndpoint contains information about a HostEndpoint resource that represents a “bare-metal” interface attached to the host that is running Calico’s agent, Felix. By default, Calico doesn’t apply any policy to such interfaces.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Standard object's metadata.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Standard object's metadata.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							},
 						},
-					},
-					"spec": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Specification of the HostEndpoint.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.HostEndpointSpec"),
+						"spec": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Specification of the HostEndpoint.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.HostEndpointSpec"),
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.HostEndpointSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.HostEndpointSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_HostEndpointList(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "HostEndpointList contains a list of HostEndpoint resources.",
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.HostEndpointList": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "HostEndpointList contains a list of HostEndpoint resources.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+							},
 						},
-					},
-					"items": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.HostEndpoint"),
+						"items": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.HostEndpoint"),
+										},
 									},
 								},
 							},
 						},
 					},
+					Required: []string{"metadata", "items"},
 				},
-				Required: []string{"metadata", "items"},
-			},
-		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.HostEndpoint", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_HostEndpointSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "HostEndpointSpec contains the specification for a HostEndpoint resource.",
-				Properties: map[string]spec.Schema{
-					"node": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The node name identifying the Calico node instance.",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"interfaceName": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Either \"*\", or the name of a specific Linux interface to apply policy to; or empty.  \"*\" indicates that this HostEndpoint governs all traffic to, from or through the default network namespace of the host named by the \"Node\" field; entering and leaving that namespace via any interface, including those from/to non-host-networked local workloads.\n\nIf InterfaceName is not \"*\", this HostEndpoint only governs traffic that enters or leaves the host through the specific interface named by InterfaceName, or - when InterfaceName is empty - through the specific interface that has one of the IPs in ExpectedIPs. Therefore, when InterfaceName is empty, at least one expected IP must be specified.  Only external interfaces (such as “eth0”) are supported here; it isn't possible for a HostEndpoint to protect traffic through a specific local workload interface.\n\nNote: Only some kinds of policy are implemented for \"*\" HostEndpoints; initially just pre-DNAT policy.  Please check Calico documentation for the latest position.",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"expectedIPs": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The expected IP addresses (IPv4 and IPv6) of the endpoint. If \"InterfaceName\" is not present, Calico will look for an interface matching any of the IPs in the list and apply policy to that. Note:\n\tWhen using the selector match criteria in an ingress or egress security Policy\n\tor Profile, Calico converts the selector into a set of IP addresses. For host\n\tendpoints, the ExpectedIPs field is used for that purpose. (If only the interface\n\tname is specified, Calico does not learn the IPs of the interface for use in match\n\tcriteria.)",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
+			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.HostEndpoint", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.HostEndpointSpec": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "HostEndpointSpec contains the specification for a HostEndpoint resource.",
+					Properties: map[string]spec.Schema{
+						"node": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The node name identifying the Calico node instance.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"interfaceName": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Either \"*\", or the name of a specific Linux interface to apply policy to; or empty.  \"*\" indicates that this HostEndpoint governs all traffic to, from or through the default network namespace of the host named by the \"Node\" field; entering and leaving that namespace via any interface, including those from/to non-host-networked local workloads.\n\nIf InterfaceName is not \"*\", this HostEndpoint only governs traffic that enters or leaves the host through the specific interface named by InterfaceName, or - when InterfaceName is empty - through the specific interface that has one of the IPs in ExpectedIPs. Therefore, when InterfaceName is empty, at least one expected IP must be specified.  Only external interfaces (such as “eth0”) are supported here; it isn't possible for a HostEndpoint to protect traffic through a specific local workload interface.\n\nNote: Only some kinds of policy are implemented for \"*\" HostEndpoints; initially just pre-DNAT policy.  Please check Calico documentation for the latest position.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"expectedIPs": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The expected IP addresses (IPv4 and IPv6) of the endpoint. If \"InterfaceName\" is not present, Calico will look for an interface matching any of the IPs in the list and apply policy to that. Note:\n\tWhen using the selector match criteria in an ingress or egress security Policy\n\tor Profile, Calico converts the selector into a set of IP addresses. For host\n\tendpoints, the ExpectedIPs field is used for that purpose. (If only the interface\n\tname is specified, Calico does not learn the IPs of the interface for use in match\n\tcriteria.)",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
 									},
 								},
 							},
 						},
-					},
-					"profiles": {
-						SchemaProps: spec.SchemaProps{
-							Description: "A list of identifiers of security Profile objects that apply to this endpoint. Each profile is applied in the order that they appear in this list.  Profile rules are applied after the selector-based security policy.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
+						"profiles": {
+							SchemaProps: spec.SchemaProps{
+								Description: "A list of identifiers of security Profile objects that apply to this endpoint. Each profile is applied in the order that they appear in this list.  Profile rules are applied after the selector-based security policy.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
 									},
 								},
 							},
 						},
-					},
-					"ports": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Ports contains the endpoint's named ports, which may be referenced in security policy rules.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointPort"),
+						"ports": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Ports contains the endpoint's named ports, which may be referenced in security policy rules.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointPort"),
+										},
 									},
 								},
 							},
@@ -5680,1094 +5199,1019 @@ func schema_libcalico_go_lib_apis_v3_HostEndpointSpec(ref common.ReferenceCallba
 					},
 				},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointPort"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointPort"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_ICMPFields(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "ICMPFields defines structure for ICMP and NotICMP sub-struct for ICMP code and type",
-				Properties: map[string]spec.Schema{
-					"type": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Match on a specific ICMP type.  For example a value of 8 refers to ICMP Echo Request (i.e. pings).",
-							Type:        []string{"integer"},
-							Format:      "int32",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.ICMPFields": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "ICMPFields defines structure for ICMP and NotICMP sub-struct for ICMP code and type",
+					Properties: map[string]spec.Schema{
+						"type": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Match on a specific ICMP type.  For example a value of 8 refers to ICMP Echo Request (i.e. pings).",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
 						},
-					},
-					"code": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Match on a specific ICMP code.  If specified, the Type value must also be specified. This is a technical limitation imposed by the kernel’s iptables firewall, which Calico uses to enforce the rule.",
-							Type:        []string{"integer"},
-							Format:      "int32",
+						"code": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Match on a specific ICMP code.  If specified, the Type value must also be specified. This is a technical limitation imposed by the kernel’s iptables firewall, which Calico uses to enforce the rule.",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{},
 		},
-		Dependencies: []string{},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_IPAMBlock(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "IPAMBlock contains information about a block for IP address assignment.",
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMBlock": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "IPAMBlock contains information about a block for IP address assignment.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Standard object's metadata.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Standard object's metadata.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							},
 						},
-					},
-					"spec": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Specification of the IPAMBlock.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMBlockSpec"),
+						"spec": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Specification of the IPAMBlock.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMBlockSpec"),
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMBlockSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMBlockSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_IPAMBlockList(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "IPAMBlockList contains a list of IPAMBlock resources.",
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMBlockList": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "IPAMBlockList contains a list of IPAMBlock resources.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+							},
 						},
-					},
-					"items": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMBlock"),
+						"items": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMBlock"),
+										},
 									},
 								},
 							},
 						},
 					},
+					Required: []string{"metadata", "items"},
 				},
-				Required: []string{"metadata", "items"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMBlock", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMBlock", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_IPAMBlockSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "IPAMBlockSpec contains the specification for a IPAMBlock resource.",
-				Properties: map[string]spec.Schema{
-					"cidr": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMBlockSpec": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "IPAMBlockSpec contains the specification for a IPAMBlock resource.",
+					Properties: map[string]spec.Schema{
+						"cidr": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"affinity": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+						"affinity": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"strictAffinity": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"boolean"},
-							Format: "",
+						"strictAffinity": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"boolean"},
+								Format: "",
+							},
 						},
-					},
-					"allocations": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"integer"},
-										Format: "int32",
+						"allocations": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"integer"},
+											Format: "int32",
+										},
 									},
 								},
 							},
 						},
-					},
-					"unallocated": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"integer"},
-										Format: "int32",
+						"unallocated": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"integer"},
+											Format: "int32",
+										},
 									},
 								},
 							},
 						},
-					},
-					"attributes": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.AllocationAttribute"),
+						"attributes": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.AllocationAttribute"),
+										},
 									},
 								},
 							},
 						},
-					},
-					"Deleted": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"boolean"},
-							Format: "",
+						"Deleted": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"boolean"},
+								Format: "",
+							},
 						},
 					},
+					Required: []string{"cidr", "affinity", "strictAffinity", "allocations", "unallocated", "attributes", "Deleted"},
 				},
-				Required: []string{"cidr", "affinity", "strictAffinity", "allocations", "unallocated", "attributes", "Deleted"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.AllocationAttribute"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.AllocationAttribute"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_IPAMConfig(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "IPAMConfig contains information about a block for IP address assignment.",
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMConfig": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "IPAMConfig contains information about a block for IP address assignment.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Standard object's metadata.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Standard object's metadata.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							},
 						},
-					},
-					"spec": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Specification of the IPAMConfig.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMConfigSpec"),
+						"spec": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Specification of the IPAMConfig.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMConfigSpec"),
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMConfigSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMConfigSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_IPAMConfigList(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "IPAMConfigList contains a list of IPAMConfig resources.",
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMConfigList": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "IPAMConfigList contains a list of IPAMConfig resources.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+							},
 						},
-					},
-					"items": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMConfig"),
+						"items": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMConfig"),
+										},
 									},
 								},
 							},
 						},
 					},
+					Required: []string{"metadata", "items"},
 				},
-				Required: []string{"metadata", "items"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMConfig", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMConfig", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_IPAMConfigSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "IPAMConfigSpec contains the specification for a IPAMConfig resource.",
-				Properties: map[string]spec.Schema{
-					"strictAffinity": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"boolean"},
-							Format: "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMConfigSpec": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "IPAMConfigSpec contains the specification for a IPAMConfig resource.",
+					Properties: map[string]spec.Schema{
+						"strictAffinity": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"boolean"},
+								Format: "",
+							},
 						},
-					},
-					"autoAllocateBlocks": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"boolean"},
-							Format: "",
+						"autoAllocateBlocks": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"boolean"},
+								Format: "",
+							},
 						},
 					},
+					Required: []string{"strictAffinity", "autoAllocateBlocks"},
 				},
-				Required: []string{"strictAffinity", "autoAllocateBlocks"},
 			},
+			Dependencies: []string{},
 		},
-		Dependencies: []string{},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_IPAMHandle(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "IPAMHandle contains information about a IPAMHandle resource.",
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMHandle": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "IPAMHandle contains information about a IPAMHandle resource.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Standard object's metadata.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Standard object's metadata.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							},
 						},
-					},
-					"spec": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Specification of the IPAMHandle.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMHandleSpec"),
+						"spec": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Specification of the IPAMHandle.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMHandleSpec"),
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMHandleSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMHandleSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_IPAMHandleList(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "IPAMHandleList contains a list of IPAMHandle resources.",
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMHandleList": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "IPAMHandleList contains a list of IPAMHandle resources.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+							},
 						},
-					},
-					"items": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMHandle"),
+						"items": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMHandle"),
+										},
 									},
 								},
 							},
 						},
 					},
+					Required: []string{"metadata", "items"},
 				},
-				Required: []string{"metadata", "items"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMHandle", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMHandle", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_IPAMHandleSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "IPAMHandleSpec contains the specification for a IPAMHandle resource.",
-				Properties: map[string]spec.Schema{
-					"handleID": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPAMHandleSpec": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "IPAMHandleSpec contains the specification for a IPAMHandle resource.",
+					Properties: map[string]spec.Schema{
+						"handleID": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"block": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"object"},
-							AdditionalProperties: &spec.SchemaOrBool{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"integer"},
-										Format: "int32",
+						"block": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"object"},
+								AdditionalProperties: &spec.SchemaOrBool{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"integer"},
+											Format: "int32",
+										},
 									},
 								},
 							},
 						},
 					},
+					Required: []string{"handleID", "block"},
 				},
-				Required: []string{"handleID", "block"},
 			},
+			Dependencies: []string{},
 		},
-		Dependencies: []string{},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_IPNAT(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "IPNat contains a single NAT mapping for a WorkloadEndpoint resource.",
-				Properties: map[string]spec.Schema{
-					"internalIP": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The internal IP address which must be associated with the owning endpoint via the configured IPNetworks for the endpoint.",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPNAT": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "IPNat contains a single NAT mapping for a WorkloadEndpoint resource.",
+					Properties: map[string]spec.Schema{
+						"internalIP": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The internal IP address which must be associated with the owning endpoint via the configured IPNetworks for the endpoint.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"externalIP": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The external IP address.",
-							Type:        []string{"string"},
-							Format:      "",
+						"externalIP": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The external IP address.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
 					},
+					Required: []string{"internalIP", "externalIP"},
 				},
-				Required: []string{"internalIP", "externalIP"},
 			},
+			Dependencies: []string{},
 		},
-		Dependencies: []string{},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_IPPool(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "IPPool contains information about a IPPool resource.",
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPPool": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "IPPool contains information about a IPPool resource.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Standard object's metadata.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Standard object's metadata.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							},
 						},
-					},
-					"spec": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Specification of the IPPool.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.IPPoolSpec"),
+						"spec": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Specification of the IPPool.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.IPPoolSpec"),
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.IPPoolSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.IPPoolSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_IPPoolList(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "IPPoolList contains a list of IPPool resources.",
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPPoolList": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "IPPoolList contains a list of IPPool resources.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+							},
 						},
-					},
-					"items": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.IPPool"),
+						"items": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.IPPool"),
+										},
 									},
 								},
 							},
 						},
 					},
+					Required: []string{"metadata", "items"},
 				},
-				Required: []string{"metadata", "items"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.IPPool", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.IPPool", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_IPPoolSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "IPPoolSpec contains the specification for an IPPool resource.",
-				Properties: map[string]spec.Schema{
-					"cidr": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The pool CIDR.",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.IPPoolSpec": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "IPPoolSpec contains the specification for an IPPool resource.",
+					Properties: map[string]spec.Schema{
+						"cidr": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The pool CIDR.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"vxlanMode": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Contains configuration for VXLAN tunneling for this pool. If not specified, then this is defaulted to \"Never\" (i.e. VXLAN tunelling is disabled).",
-							Type:        []string{"string"},
-							Format:      "",
+						"vxlanMode": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Contains configuration for VXLAN tunneling for this pool. If not specified, then this is defaulted to \"Never\" (i.e. VXLAN tunelling is disabled).",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"ipipMode": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Contains configuration for IPIP tunneling for this pool. If not specified, then this is defaulted to \"Never\" (i.e. IPIP tunelling is disabled).",
-							Type:        []string{"string"},
-							Format:      "",
+						"ipipMode": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Contains configuration for IPIP tunneling for this pool. If not specified, then this is defaulted to \"Never\" (i.e. IPIP tunelling is disabled).",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"natOutgoing": {
-						SchemaProps: spec.SchemaProps{
-							Description: "When nat-outgoing is true, packets sent from Calico networked containers in this pool to destinations outside of this pool will be masqueraded.",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"natOutgoing": {
+							SchemaProps: spec.SchemaProps{
+								Description: "When nat-outgoing is true, packets sent from Calico networked containers in this pool to destinations outside of this pool will be masqueraded.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"disabled": {
-						SchemaProps: spec.SchemaProps{
-							Description: "When disabled is true, Calico IPAM will not assign addresses from this pool.",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"disabled": {
+							SchemaProps: spec.SchemaProps{
+								Description: "When disabled is true, Calico IPAM will not assign addresses from this pool.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"blockSize": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The block size to use for IP address assignments from this pool. Defaults to 26 for IPv4 and 112 for IPv6.",
-							Type:        []string{"integer"},
-							Format:      "int32",
+						"blockSize": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The block size to use for IP address assignments from this pool. Defaults to 26 for IPv4 and 112 for IPv6.",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
 						},
-					},
-					"nodeSelector": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Allows IPPool to allocate for a specific node by label selector.",
-							Type:        []string{"string"},
-							Format:      "",
+						"nodeSelector": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Allows IPPool to allocate for a specific node by label selector.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"ipip": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Deprecated: this field is only used for APIv1 backwards compatibility. Setting this field is not allowed, this field is for internal use only.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v1.IPIPConfiguration"),
+						"ipip": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Deprecated: this field is only used for APIv1 backwards compatibility. Setting this field is not allowed, this field is for internal use only.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v1.IPIPConfiguration"),
+							},
 						},
-					},
-					"nat-outgoing": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Deprecated: this field is only used for APIv1 backwards compatibility. Setting this field is not allowed, this field is for internal use only.",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"nat-outgoing": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Deprecated: this field is only used for APIv1 backwards compatibility. Setting this field is not allowed, this field is for internal use only.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
 					},
+					Required: []string{"cidr"},
 				},
-				Required: []string{"cidr"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v1.IPIPConfiguration"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v1.IPIPConfiguration"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_KubeConfig(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Properties: map[string]spec.Schema{
-					"kubeconfig": {
-						SchemaProps: spec.SchemaProps{
-							Description: "When using the Kubernetes datastore, the location of a kubeconfig file. Valid if DatastoreType is kubernetes.",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.KubeConfig": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Properties: map[string]spec.Schema{
+						"kubeconfig": {
+							SchemaProps: spec.SchemaProps{
+								Description: "When using the Kubernetes datastore, the location of a kubeconfig file. Valid if DatastoreType is kubernetes.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"k8sAPIEndpoint": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Location of the Kubernetes API. Not required if using kubeconfig. Valid if DatastoreType is kubernetes.",
-							Type:        []string{"string"},
-							Format:      "",
+						"k8sAPIEndpoint": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Location of the Kubernetes API. Not required if using kubeconfig. Valid if DatastoreType is kubernetes.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"k8sKeyFile": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Location of a client key for accessing the Kubernetes API. Valid if DatastoreType is kubernetes.",
-							Type:        []string{"string"},
-							Format:      "",
+						"k8sKeyFile": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Location of a client key for accessing the Kubernetes API. Valid if DatastoreType is kubernetes.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"k8sCertFile": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Location of a client certificate for accessing the Kubernetes API. Valid if DatastoreType is kubernetes.",
-							Type:        []string{"string"},
-							Format:      "",
+						"k8sCertFile": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Location of a client certificate for accessing the Kubernetes API. Valid if DatastoreType is kubernetes.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"k8sCAFile": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Location of a CA for accessing the Kubernetes API. Valid if DatastoreType is kubernetes.",
-							Type:        []string{"string"},
-							Format:      "",
+						"k8sCAFile": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Location of a CA for accessing the Kubernetes API. Valid if DatastoreType is kubernetes.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"k8sAPIToken": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Token to be used for accessing the Kubernetes API. Valid if DatastoreType is kubernetes.",
-							Type:        []string{"string"},
-							Format:      "",
+						"k8sAPIToken": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Token to be used for accessing the Kubernetes API. Valid if DatastoreType is kubernetes.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"k8sInsecureSkipTLSVerify": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"boolean"},
-							Format: "",
+						"k8sInsecureSkipTLSVerify": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"boolean"},
+								Format: "",
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{},
 		},
-		Dependencies: []string{},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_LicenseKey(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "LicenseKey contains the Tigera CNX license key for the cluster.",
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.LicenseKey": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "LicenseKey contains the Tigera CNX license key for the cluster.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Standard object's metadata.  This resource is a singleton, always named \"default\".",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Standard object's metadata.  This resource is a singleton, always named \"default\".",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							},
 						},
-					},
-					"spec": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Specification of the LicenseKey.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.LicenseKeySpec"),
+						"spec": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Specification of the LicenseKey.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.LicenseKeySpec"),
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.LicenseKeySpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.LicenseKeySpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_LicenseKeyList(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "LicenseKeyList contains a list of LicenseKey resources (even though there should only be one).",
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.LicenseKeyList": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "LicenseKeyList contains a list of LicenseKey resources (even though there should only be one).",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+							},
 						},
-					},
-					"items": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.LicenseKey"),
+						"items": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.LicenseKey"),
+										},
 									},
 								},
+							},
+						},
+					},
+					Required: []string{"metadata", "items"},
+				},
+			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.LicenseKey", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.LicenseKeySpec": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "LicenseKeySpec contains the license key itself.",
+					Properties: map[string]spec.Schema{
+						"token": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Token is the JWT containing the license claims",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"certificate": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Certificate is used to validate the token.",
+								Type:        []string{"string"},
+								Format:      "",
 							},
 						},
 					},
+					Required: []string{"token"},
 				},
-				Required: []string{"metadata", "items"},
-			},
-		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.LicenseKey", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_LicenseKeySpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "LicenseKeySpec contains the license key itself.",
-				Properties: map[string]spec.Schema{
-					"token": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Token is the JWT containing the license claims",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"certificate": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Certificate is used to validate the token.",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-				},
-				Required: []string{"token"},
-			},
-		},
-		Dependencies: []string{},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_NamesAndLabelsMatch(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "NamesAndLabelsMatch is used to specify resource matches using both label and name selection.",
-				Properties: map[string]spec.Schema{
-					"names": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Names is an optional field that specifies a set of resources by name.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
+			},
+			Dependencies: []string{},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.NamesAndLabelsMatch": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "NamesAndLabelsMatch is used to specify resource matches using both label and name selection.",
+					Properties: map[string]spec.Schema{
+						"names": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Names is an optional field that specifies a set of resources by name.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
 									},
 								},
 							},
 						},
-					},
-					"selector": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Selector is an optional field that selects a set of resources by label. If both Names and Selector are specified then they are AND'ed.",
-							Type:        []string{"string"},
-							Format:      "",
+						"selector": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Selector is an optional field that selects a set of resources by label. If both Names and Selector are specified then they are AND'ed.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{},
 		},
-		Dependencies: []string{},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_NetworkPolicy(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "NetworkPolicy is the Namespaced-equivalent of the GlobalNetworkPolicy.",
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkPolicy": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "NetworkPolicy is the Namespaced-equivalent of the GlobalNetworkPolicy.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Standard object's metadata.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Standard object's metadata.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							},
 						},
-					},
-					"spec": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Specification of the Policy.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkPolicySpec"),
+						"spec": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Specification of the Policy.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkPolicySpec"),
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkPolicySpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkPolicySpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_NetworkPolicyList(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "NetworkPolicyList contains a list of NetworkPolicy resources.",
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkPolicyList": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "NetworkPolicyList contains a list of NetworkPolicy resources.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+							},
 						},
-					},
-					"items": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkPolicy"),
+						"items": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkPolicy"),
+										},
 									},
 								},
 							},
 						},
 					},
+					Required: []string{"metadata", "items"},
 				},
-				Required: []string{"metadata", "items"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkPolicy", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkPolicy", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_NetworkPolicySpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Properties: map[string]spec.Schema{
-					"tier": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The name of the tier that this policy belongs to.  If this is omitted, the default tier (name is \"default\") is assumed.  The specified tier must exist in order to create security policies within the tier, the \"default\" tier is created automatically if it does not exist, this means for deployments requiring only a single Tier, the tier name may be omitted on all policy management requests.",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkPolicySpec": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Properties: map[string]spec.Schema{
+						"tier": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The name of the tier that this policy belongs to.  If this is omitted, the default tier (name is \"default\") is assumed.  The specified tier must exist in order to create security policies within the tier, the \"default\" tier is created automatically if it does not exist, this means for deployments requiring only a single Tier, the tier name may be omitted on all policy management requests.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"order": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Order is an optional field that specifies the order in which the policy is applied. Policies with higher \"order\" are applied after those with lower order within the same tier.  If the order is omitted, it may be considered to be \"infinite\" - i.e. the policy will be applied last.  Policies with identical order will be applied in alphanumerical order based on the Policy \"Name\" within the tier.",
-							Type:        []string{"number"},
-							Format:      "double",
+						"order": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Order is an optional field that specifies the order in which the policy is applied. Policies with higher \"order\" are applied after those with lower order within the same tier.  If the order is omitted, it may be considered to be \"infinite\" - i.e. the policy will be applied last.  Policies with identical order will be applied in alphanumerical order based on the Policy \"Name\" within the tier.",
+								Type:        []string{"number"},
+								Format:      "double",
+							},
 						},
-					},
-					"ingress": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The ordered set of ingress rules.  Each rule contains a set of packet match criteria and a corresponding action to apply.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.Rule"),
+						"ingress": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The ordered set of ingress rules.  Each rule contains a set of packet match criteria and a corresponding action to apply.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.Rule"),
+										},
 									},
 								},
 							},
 						},
-					},
-					"egress": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The ordered set of egress rules.  Each rule contains a set of packet match criteria and a corresponding action to apply.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.Rule"),
+						"egress": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The ordered set of egress rules.  Each rule contains a set of packet match criteria and a corresponding action to apply.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.Rule"),
+										},
 									},
 								},
 							},
 						},
-					},
-					"selector": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The selector is an expression used to pick pick out the endpoints that the policy should be applied to.\n\nSelector expressions follow this syntax:\n\n\tlabel == \"string_literal\"  ->  comparison, e.g. my_label == \"foo bar\"\n\tlabel != \"string_literal\"   ->  not equal; also matches if label is not present\n\tlabel in { \"a\", \"b\", \"c\", ... }  ->  true if the value of label X is one of \"a\", \"b\", \"c\"\n\tlabel not in { \"a\", \"b\", \"c\", ... }  ->  true if the value of label X is not one of \"a\", \"b\", \"c\"\n\thas(label_name)  -> True if that label is present\n\t! expr -> negation of expr\n\texpr && expr  -> Short-circuit and\n\texpr || expr  -> Short-circuit or\n\t( expr ) -> parens for grouping\n\tall() or the empty selector -> matches all endpoints.\n\nLabel names are allowed to contain alphanumerics, -, _ and /. String literals are more permissive but they do not support escape characters.\n\nExamples (with made-up labels):\n\n\ttype == \"webserver\" && deployment == \"prod\"\n\ttype in {\"frontend\", \"backend\"}\n\tdeployment != \"dev\"\n\t! has(label_name)",
-							Type:        []string{"string"},
-							Format:      "",
+						"selector": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The selector is an expression used to pick pick out the endpoints that the policy should be applied to.\n\nSelector expressions follow this syntax:\n\n\tlabel == \"string_literal\"  ->  comparison, e.g. my_label == \"foo bar\"\n\tlabel != \"string_literal\"   ->  not equal; also matches if label is not present\n\tlabel in { \"a\", \"b\", \"c\", ... }  ->  true if the value of label X is one of \"a\", \"b\", \"c\"\n\tlabel not in { \"a\", \"b\", \"c\", ... }  ->  true if the value of label X is not one of \"a\", \"b\", \"c\"\n\thas(label_name)  -> True if that label is present\n\t! expr -> negation of expr\n\texpr && expr  -> Short-circuit and\n\texpr || expr  -> Short-circuit or\n\t( expr ) -> parens for grouping\n\tall() or the empty selector -> matches all endpoints.\n\nLabel names are allowed to contain alphanumerics, -, _ and /. String literals are more permissive but they do not support escape characters.\n\nExamples (with made-up labels):\n\n\ttype == \"webserver\" && deployment == \"prod\"\n\ttype in {\"frontend\", \"backend\"}\n\tdeployment != \"dev\"\n\t! has(label_name)",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"types": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Types indicates whether this policy applies to ingress, or to egress, or to both.  When not explicitly specified (and so the value on creation is empty or nil), Calico defaults Types according to what Ingress and Egress are present in the policy.  The default is:\n\n- [ PolicyTypeIngress ], if there are no Egress rules (including the case where there are\n  also no Ingress rules)\n\n- [ PolicyTypeEgress ], if there are Egress rules but no Ingress rules\n\n- [ PolicyTypeIngress, PolicyTypeEgress ], if there are both Ingress and Egress rules.\n\nWhen the policy is read back again, Types will always be one of these values, never empty or nil.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
+						"types": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Types indicates whether this policy applies to ingress, or to egress, or to both.  When not explicitly specified (and so the value on creation is empty or nil), Calico defaults Types according to what Ingress and Egress are present in the policy.  The default is:\n\n- [ PolicyTypeIngress ], if there are no Egress rules (including the case where there are\n  also no Ingress rules)\n\n- [ PolicyTypeEgress ], if there are Egress rules but no Ingress rules\n\n- [ PolicyTypeIngress, PolicyTypeEgress ], if there are both Ingress and Egress rules.\n\nWhen the policy is read back again, Types will always be one of these values, never empty or nil.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
 									},
 								},
 							},
 						},
 					},
+					Required: []string{"selector"},
 				},
-				Required: []string{"selector"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.Rule"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.Rule"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_NetworkSet(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "NetworkSet is the Namespaced-equivalent of the GlobalNetworkSet.",
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkSet": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "NetworkSet is the Namespaced-equivalent of the GlobalNetworkSet.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Standard object's metadata.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Standard object's metadata.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							},
 						},
-					},
-					"spec": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Specification of the NetworkSet.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkSetSpec"),
+						"spec": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Specification of the NetworkSet.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkSetSpec"),
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkSetSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkSetSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_NetworkSetList(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "NetworkSetList contains a list of NetworkSet resources.",
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkSetList": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "NetworkSetList contains a list of NetworkSet resources.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+							},
 						},
-					},
-					"items": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkSet"),
+						"items": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkSet"),
+										},
 									},
 								},
 							},
 						},
 					},
+					Required: []string{"metadata", "items"},
 				},
-				Required: []string{"metadata", "items"},
-			},
-		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkSet", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_NetworkSetSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "NetworkSetSpec contains the specification for a NetworkSet resource.",
-				Properties: map[string]spec.Schema{
-					"nets": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The list of IP networks that belong to this set.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
+			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkSet", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkSetSpec": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "NetworkSetSpec contains the specification for a NetworkSet resource.",
+					Properties: map[string]spec.Schema{
+						"nets": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The list of IP networks that belong to this set.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
 									},
 								},
 							},
@@ -6775,179 +6219,167 @@ func schema_libcalico_go_lib_apis_v3_NetworkSetSpec(ref common.ReferenceCallback
 					},
 				},
 			},
+			Dependencies: []string{},
 		},
-		Dependencies: []string{},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_Node(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "Node contains information about a Node resource.",
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.Node": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "Node contains information about a Node resource.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Standard object's metadata.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Standard object's metadata.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							},
 						},
-					},
-					"spec": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Specification of the Node.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.NodeSpec"),
+						"spec": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Specification of the Node.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.NodeSpec"),
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_NodeBGPSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "NodeBGPSpec contains the specification for the Node BGP configuration.",
-				Properties: map[string]spec.Schema{
-					"asNumber": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The AS Number of the node.  If this is not specified, the global default value will be used.",
-							Type:        []string{"integer"},
-							Format:      "int64",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeBGPSpec": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "NodeBGPSpec contains the specification for the Node BGP configuration.",
+					Properties: map[string]spec.Schema{
+						"asNumber": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The AS Number of the node.  If this is not specified, the global default value will be used.",
+								Type:        []string{"integer"},
+								Format:      "int64",
+							},
 						},
-					},
-					"ipv4Address": {
-						SchemaProps: spec.SchemaProps{
-							Description: "IPv4Address is the IPv4 address and network of this node.  The IPv4 address should always be specified if you are using BGP.",
-							Type:        []string{"string"},
-							Format:      "",
+						"ipv4Address": {
+							SchemaProps: spec.SchemaProps{
+								Description: "IPv4Address is the IPv4 address and network of this node.  The IPv4 address should always be specified if you are using BGP.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"ipv6Address": {
-						SchemaProps: spec.SchemaProps{
-							Description: "IPv6Address is the IPv6 address and network of this node.  Not required if you are not using BGP or you do not require IPv6 routing.",
-							Type:        []string{"string"},
-							Format:      "",
+						"ipv6Address": {
+							SchemaProps: spec.SchemaProps{
+								Description: "IPv6Address is the IPv6 address and network of this node.  Not required if you are not using BGP or you do not require IPv6 routing.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"ipv4IPIPTunnelAddr": {
-						SchemaProps: spec.SchemaProps{
-							Description: "IPv4IPIPTunnelAddr is the IPv4 address of the IP in IP tunnel.",
-							Type:        []string{"string"},
-							Format:      "",
+						"ipv4IPIPTunnelAddr": {
+							SchemaProps: spec.SchemaProps{
+								Description: "IPv4IPIPTunnelAddr is the IPv4 address of the IP in IP tunnel.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"routeReflectorClusterID": {
-						SchemaProps: spec.SchemaProps{
-							Description: "RouteReflectorClusterID enables this node as a route reflector within the given cluster.",
-							Type:        []string{"string"},
-							Format:      "",
+						"routeReflectorClusterID": {
+							SchemaProps: spec.SchemaProps{
+								Description: "RouteReflectorClusterID enables this node as a route reflector within the given cluster.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{},
 		},
-		Dependencies: []string{},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_NodeList(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "NodeList contains a list of Node resources.",
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeList": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "NodeList contains a list of Node resources.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+							},
 						},
-					},
-					"items": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.Node"),
+						"items": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.Node"),
+										},
 									},
 								},
 							},
 						},
 					},
+					Required: []string{"metadata", "items"},
 				},
-				Required: []string{"metadata", "items"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.Node", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.Node", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_NodeSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "NodeSpec contains the specification for a Node resource.",
-				Properties: map[string]spec.Schema{
-					"bgp": {
-						SchemaProps: spec.SchemaProps{
-							Description: "BGP configuration for this node.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.NodeBGPSpec"),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeSpec": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "NodeSpec contains the specification for a Node resource.",
+					Properties: map[string]spec.Schema{
+						"bgp": {
+							SchemaProps: spec.SchemaProps{
+								Description: "BGP configuration for this node.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.NodeBGPSpec"),
+							},
 						},
-					},
-					"ipv4VXLANTunnelAddr": {
-						SchemaProps: spec.SchemaProps{
-							Description: "IPv4VXLANTunnelAddr is the IPv4 address of the VXLAN tunnel.",
-							Type:        []string{"string"},
-							Format:      "",
+						"ipv4VXLANTunnelAddr": {
+							SchemaProps: spec.SchemaProps{
+								Description: "IPv4VXLANTunnelAddr is the IPv4 address of the VXLAN tunnel.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"vxlanTunnelMACAddr": {
-						SchemaProps: spec.SchemaProps{
-							Description: "VXLANTunnelMACAddr is the MAC address of the VXLAN tunnel.",
-							Type:        []string{"string"},
-							Format:      "",
+						"vxlanTunnelMACAddr": {
+							SchemaProps: spec.SchemaProps{
+								Description: "VXLANTunnelMACAddr is the MAC address of the VXLAN tunnel.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"orchRefs": {
-						SchemaProps: spec.SchemaProps{
-							Description: "OrchRefs for this node.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.OrchRef"),
+						"orchRefs": {
+							SchemaProps: spec.SchemaProps{
+								Description: "OrchRefs for this node.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.OrchRef"),
+										},
 									},
 								},
 							},
@@ -6955,167 +6387,155 @@ func schema_libcalico_go_lib_apis_v3_NodeSpec(ref common.ReferenceCallback) comm
 					},
 				},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeBGPSpec", "github.com/projectcalico/libcalico-go/lib/apis/v3.OrchRef"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.NodeBGPSpec", "github.com/projectcalico/libcalico-go/lib/apis/v3.OrchRef"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_OrchRef(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "OrchRef is used to correlate a Calico node to its corresponding representation in a given orchestrator",
-				Properties: map[string]spec.Schema{
-					"nodeName": {
-						SchemaProps: spec.SchemaProps{
-							Description: "NodeName represents the name for this node according to the orchestrator.",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.OrchRef": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "OrchRef is used to correlate a Calico node to its corresponding representation in a given orchestrator",
+					Properties: map[string]spec.Schema{
+						"nodeName": {
+							SchemaProps: spec.SchemaProps{
+								Description: "NodeName represents the name for this node according to the orchestrator.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"orchestrator": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Orchestrator represents the orchestrator using this node.",
-							Type:        []string{"string"},
-							Format:      "",
+						"orchestrator": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Orchestrator represents the orchestrator using this node.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
 					},
+					Required: []string{"orchestrator"},
 				},
-				Required: []string{"orchestrator"},
 			},
+			Dependencies: []string{},
 		},
-		Dependencies: []string{},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_Profile(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "Profile contains the details a security profile resource.  A profile is set of security rules to apply on an endpoint.  An endpoint (either a host endpoint or an endpoint on a workload) can reference zero or more profiles.  The profile rules are applied directly to the endpoint *after* the selector-based security policy has been applied, and in the order the profiles are declared on the endpoint.",
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.Profile": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "Profile contains the details a security profile resource.  A profile is set of security rules to apply on an endpoint.  An endpoint (either a host endpoint or an endpoint on a workload) can reference zero or more profiles.  The profile rules are applied directly to the endpoint *after* the selector-based security policy has been applied, and in the order the profiles are declared on the endpoint.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Standard object's metadata.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Standard object's metadata.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							},
 						},
-					},
-					"spec": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Specification of the Profile.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ProfileSpec"),
+						"spec": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Specification of the Profile.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ProfileSpec"),
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.ProfileSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.ProfileSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_ProfileList(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "ProfileList contains a list of Profile resources.",
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.ProfileList": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "ProfileList contains a list of Profile resources.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+							},
 						},
-					},
-					"items": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.Profile"),
+						"items": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.Profile"),
+										},
 									},
 								},
 							},
 						},
 					},
+					Required: []string{"metadata", "items"},
 				},
-				Required: []string{"metadata", "items"},
-			},
-		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.Profile", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_ProfileSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "ProfileSpec contains the specification for a security Profile resource.",
-				Properties: map[string]spec.Schema{
-					"ingress": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The ordered set of ingress rules.  Each rule contains a set of packet match criteria and a corresponding action to apply.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.Rule"),
+			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.Profile", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.ProfileSpec": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "ProfileSpec contains the specification for a security Profile resource.",
+					Properties: map[string]spec.Schema{
+						"ingress": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The ordered set of ingress rules.  Each rule contains a set of packet match criteria and a corresponding action to apply.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.Rule"),
+										},
 									},
 								},
 							},
 						},
-					},
-					"egress": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The ordered set of egress rules.  Each rule contains a set of packet match criteria and a corresponding action to apply.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.Rule"),
+						"egress": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The ordered set of egress rules.  Each rule contains a set of packet match criteria and a corresponding action to apply.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.Rule"),
+										},
 									},
 								},
 							},
 						},
-					},
-					"labelsToApply": {
-						SchemaProps: spec.SchemaProps{
-							Description: "An option set of labels to apply to each endpoint (in addition to their own labels) referencing this profile.  If labels configured on the endpoint have keys matching those labels inherited from the profile, the endpoint label values take precedence.",
-							Type:        []string{"object"},
-							AdditionalProperties: &spec.SchemaOrBool{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
+						"labelsToApply": {
+							SchemaProps: spec.SchemaProps{
+								Description: "An option set of labels to apply to each endpoint (in addition to their own labels) referencing this profile.  If labels configured on the endpoint have keys matching those labels inherited from the profile, the endpoint label values take precedence.",
+								Type:        []string{"object"},
+								AdditionalProperties: &spec.SchemaOrBool{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
 									},
 								},
 							},
@@ -7123,1133 +6543,1073 @@ func schema_libcalico_go_lib_apis_v3_ProfileSpec(ref common.ReferenceCallback) c
 					},
 				},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.Rule"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.Rule"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_ProtoPort(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "ProtoPort is combination of protocol and port, both must be specified.",
-				Properties: map[string]spec.Schema{
-					"protocol": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.ProtoPort": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "ProtoPort is combination of protocol and port, both must be specified.",
+					Properties: map[string]spec.Schema{
+						"protocol": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"port": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"integer"},
-							Format: "int32",
+						"port": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"integer"},
+								Format: "int32",
+							},
 						},
 					},
+					Required: []string{"protocol", "port"},
 				},
-				Required: []string{"protocol", "port"},
 			},
+			Dependencies: []string{},
 		},
-		Dependencies: []string{},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_Pull(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Properties: map[string]spec.Schema{
-					"period": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.Pull": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Properties: map[string]spec.Schema{
+						"period": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"http": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPPull"),
+						"http": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPPull"),
+							},
 						},
 					},
+					Required: []string{"http"},
 				},
-				Required: []string{"http"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPPull"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPPull"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_RemoteClusterConfiguration(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "RemoteClusterConfiguration contains the configuration for remote clusters.",
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.RemoteClusterConfiguration": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "RemoteClusterConfiguration contains the configuration for remote clusters.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Standard object's metadata.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Standard object's metadata.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							},
 						},
-					},
-					"spec": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Specification of the RemoteClusterConfiguration.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.RemoteClusterConfigurationSpec"),
+						"spec": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Specification of the RemoteClusterConfiguration.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.RemoteClusterConfigurationSpec"),
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.RemoteClusterConfigurationSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.RemoteClusterConfigurationSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_RemoteClusterConfigurationList(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "RemoteClusterConfigurationList contains a list of RemoteClusterConfiguration resources",
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.RemoteClusterConfigurationList": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "RemoteClusterConfigurationList contains a list of RemoteClusterConfiguration resources",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+							},
 						},
-					},
-					"items": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.RemoteClusterConfiguration"),
+						"items": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.RemoteClusterConfiguration"),
+										},
 									},
 								},
 							},
 						},
 					},
+					Required: []string{"metadata", "items"},
 				},
-				Required: []string{"metadata", "items"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.RemoteClusterConfiguration", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.RemoteClusterConfiguration", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_RemoteClusterConfigurationSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "RemoteClusterConfigurationSpec contains the values of describing the cluster.",
-				Properties: map[string]spec.Schema{
-					"datastoreType": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Indicates the datastore to use. If unspecified, defaults to etcdv3",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.RemoteClusterConfigurationSpec": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "RemoteClusterConfigurationSpec contains the values of describing the cluster.",
+					Properties: map[string]spec.Schema{
+						"datastoreType": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Indicates the datastore to use. If unspecified, defaults to etcdv3",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"etcdEndpoints": {
-						SchemaProps: spec.SchemaProps{
-							Description: "A comma separated list of etcd endpoints. Valid if DatastoreType is etcdv3.",
-							Type:        []string{"string"},
-							Format:      "",
+						"etcdEndpoints": {
+							SchemaProps: spec.SchemaProps{
+								Description: "A comma separated list of etcd endpoints. Valid if DatastoreType is etcdv3.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"etcdUsername": {
-						SchemaProps: spec.SchemaProps{
-							Description: "User name for RBAC. Valid if DatastoreType is etcdv3.",
-							Type:        []string{"string"},
-							Format:      "",
+						"etcdUsername": {
+							SchemaProps: spec.SchemaProps{
+								Description: "User name for RBAC. Valid if DatastoreType is etcdv3.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"etcdPassword": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Password for the given user name. Valid if DatastoreType is etcdv3.",
-							Type:        []string{"string"},
-							Format:      "",
+						"etcdPassword": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Password for the given user name. Valid if DatastoreType is etcdv3.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"etcdKeyFile": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Path to the etcd key file. Valid if DatastoreType is etcdv3.",
-							Type:        []string{"string"},
-							Format:      "",
+						"etcdKeyFile": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Path to the etcd key file. Valid if DatastoreType is etcdv3.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"etcdCertFile": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Path to the etcd client certificate. Valid if DatastoreType is etcdv3.",
-							Type:        []string{"string"},
-							Format:      "",
+						"etcdCertFile": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Path to the etcd client certificate. Valid if DatastoreType is etcdv3.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"etcdCACertFile": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Path to the etcd Certificate Authority file. Valid if DatastoreType is etcdv3.",
-							Type:        []string{"string"},
-							Format:      "",
+						"etcdCACertFile": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Path to the etcd Certificate Authority file. Valid if DatastoreType is etcdv3.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"kubeconfig": {
-						SchemaProps: spec.SchemaProps{
-							Description: "When using the Kubernetes datastore, the location of a kubeconfig file. Valid if DatastoreType is kubernetes.",
-							Type:        []string{"string"},
-							Format:      "",
+						"kubeconfig": {
+							SchemaProps: spec.SchemaProps{
+								Description: "When using the Kubernetes datastore, the location of a kubeconfig file. Valid if DatastoreType is kubernetes.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"k8sAPIEndpoint": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Location of the Kubernetes API. Not required if using kubeconfig. Valid if DatastoreType is kubernetes.",
-							Type:        []string{"string"},
-							Format:      "",
+						"k8sAPIEndpoint": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Location of the Kubernetes API. Not required if using kubeconfig. Valid if DatastoreType is kubernetes.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"k8sKeyFile": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Location of a client key for accessing the Kubernetes API. Valid if DatastoreType is kubernetes.",
-							Type:        []string{"string"},
-							Format:      "",
+						"k8sKeyFile": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Location of a client key for accessing the Kubernetes API. Valid if DatastoreType is kubernetes.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"k8sCertFile": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Location of a client certificate for accessing the Kubernetes API. Valid if DatastoreType is kubernetes.",
-							Type:        []string{"string"},
-							Format:      "",
+						"k8sCertFile": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Location of a client certificate for accessing the Kubernetes API. Valid if DatastoreType is kubernetes.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"k8sCAFile": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Location of a CA for accessing the Kubernetes API. Valid if DatastoreType is kubernetes.",
-							Type:        []string{"string"},
-							Format:      "",
+						"k8sCAFile": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Location of a CA for accessing the Kubernetes API. Valid if DatastoreType is kubernetes.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"k8sAPIToken": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Token to be used for accessing the Kubernetes API. Valid if DatastoreType is kubernetes.",
-							Type:        []string{"string"},
-							Format:      "",
+						"k8sAPIToken": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Token to be used for accessing the Kubernetes API. Valid if DatastoreType is kubernetes.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"k8sInsecureSkipTLSVerify": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"boolean"},
-							Format: "",
+						"k8sInsecureSkipTLSVerify": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"boolean"},
+								Format: "",
+							},
 						},
 					},
+					Required: []string{"datastoreType"},
 				},
-				Required: []string{"datastoreType"},
 			},
+			Dependencies: []string{},
 		},
-		Dependencies: []string{},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_ReportData(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "ReportData contains the aggregated data available for rendering in report templates. The data available is dependent on the selector/report configuration.\n\nThe data is stored directly in elastic search. To reduce nesting and simplify indexing, all summary values are contained at the top level.",
-				Properties: map[string]spec.Schema{
-					"reportName": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.ReportData": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "ReportData contains the aggregated data available for rendering in report templates. The data available is dependent on the selector/report configuration.\n\nThe data is stored directly in elastic search. To reduce nesting and simplify indexing, all summary values are contained at the top level.",
+					Properties: map[string]spec.Schema{
+						"reportName": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"reportTypeName": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+						"reportTypeName": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"reportSpec": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ReportSpec"),
+						"reportSpec": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ReportSpec"),
+							},
 						},
-					},
-					"reportTypeSpec": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ReportTypeSpec"),
+						"reportTypeSpec": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ReportTypeSpec"),
+							},
 						},
-					},
-					"startTime": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						"startTime": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+							},
 						},
-					},
-					"endTime": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						"endTime": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+							},
 						},
-					},
-					"generationTime": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						"generationTime": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+							},
 						},
-					},
-					"endpoints": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The set of in-scope endpoints.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportEndpoint"),
+						"endpoints": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The set of in-scope endpoints.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportEndpoint"),
+										},
 									},
 								},
 							},
 						},
-					},
-					"endpointsSummary": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Endpoint stats in a reporting period.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsSummary"),
+						"endpointsSummary": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Endpoint stats in a reporting period.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsSummary"),
+							},
 						},
-					},
-					"namespaces": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The set of namespaces containing in-scope endpoints.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportNamespace"),
+						"namespaces": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The set of namespaces containing in-scope endpoints.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportNamespace"),
+										},
 									},
 								},
 							},
 						},
-					},
-					"namespacesSummary": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Endpoint stats for given namespaces in a reporting period.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsSummary"),
+						"namespacesSummary": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Endpoint stats for given namespaces in a reporting period.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsSummary"),
+							},
 						},
-					},
-					"services": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The set of services containing in-scope endpoints.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportService"),
+						"services": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The set of services containing in-scope endpoints.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportService"),
+										},
 									},
 								},
 							},
 						},
-					},
-					"servicesSummary": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Endpoint stats for services in a reporting period.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsSummary"),
+						"servicesSummary": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Endpoint stats for services in a reporting period.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsSummary"),
+							},
 						},
-					},
-					"auditEvents": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The time-ordered set of in-scope audit events that occurred within the reporting interval.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("k8s.io/apiserver/pkg/apis/audit.Event"),
+						"auditEvents": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The time-ordered set of in-scope audit events that occurred within the reporting interval.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("k8s.io/apiserver/pkg/apis/audit.Event"),
+										},
 									},
 								},
 							},
 						},
-					},
-					"auditSummary": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Audit log stats in a reporting period.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.AuditSummary"),
+						"auditSummary": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Audit log stats in a reporting period.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.AuditSummary"),
+							},
 						},
-					},
-					"flows": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Flows for in-scope endpoints that have been recorded within the reporting period.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportFlow"),
+						"flows": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Flows for in-scope endpoints that have been recorded within the reporting period.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportFlow"),
+										},
 									},
 								},
 							},
 						},
-					},
-					"cisBenchmark": {
-						SchemaProps: spec.SchemaProps{
-							Description: "CISBenchmark contains the per-node results of a cis benchmark scan.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkNode"),
+						"cisBenchmark": {
+							SchemaProps: spec.SchemaProps{
+								Description: "CISBenchmark contains the per-node results of a cis benchmark scan.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkNode"),
+										},
 									},
 								},
 							},
 						},
-					},
-					"cisBenchmarkSummary": {
-						SchemaProps: spec.SchemaProps{
-							Description: "CISBenchmarkSummary high level test results.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkSummary"),
+						"cisBenchmarkSummary": {
+							SchemaProps: spec.SchemaProps{
+								Description: "CISBenchmarkSummary high level test results.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkSummary"),
+							},
 						},
 					},
+					Required: []string{"reportName", "reportTypeName", "reportSpec", "reportTypeSpec", "startTime", "endTime", "generationTime"},
 				},
-				Required: []string{"reportName", "reportTypeName", "reportSpec", "reportTypeSpec", "startTime", "endTime", "generationTime"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.AuditSummary", "github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkNode", "github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkSummary", "github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportEndpoint", "github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportFlow", "github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportNamespace", "github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportService", "github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsSummary", "github.com/projectcalico/libcalico-go/lib/apis/v3.ReportSpec", "github.com/projectcalico/libcalico-go/lib/apis/v3.ReportTypeSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.Time", "k8s.io/apiserver/pkg/apis/audit.Event"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.AuditSummary", "github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkNode", "github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkSummary", "github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportEndpoint", "github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportFlow", "github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportNamespace", "github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsReportService", "github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsSummary", "github.com/projectcalico/libcalico-go/lib/apis/v3.ReportSpec", "github.com/projectcalico/libcalico-go/lib/apis/v3.ReportTypeSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.Time", "k8s.io/apiserver/pkg/apis/audit.Event"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_ReportJob(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "ReportJob contains",
-				Properties: map[string]spec.Schema{
-					"start": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The start time of the report.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.ReportJob": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "ReportJob contains",
+					Properties: map[string]spec.Schema{
+						"start": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The start time of the report.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+							},
 						},
-					},
-					"end": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The end time of the report.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						"end": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The end time of the report.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+							},
 						},
-					},
-					"job": {
-						SchemaProps: spec.SchemaProps{
-							Description: "A reference to the report creation job if known.",
-							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
+						"job": {
+							SchemaProps: spec.SchemaProps{
+								Description: "A reference to the report creation job if known.",
+								Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
+							},
 						},
 					},
+					Required: []string{"start", "end", "job"},
 				},
-				Required: []string{"start", "end", "job"},
 			},
+			Dependencies: []string{
+				"k8s.io/api/core/v1.ObjectReference", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 		},
-		Dependencies: []string{
-			"k8s.io/api/core/v1.ObjectReference", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_ReportSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "ReportSpec contains the values of the GlobalReport.",
-				Properties: map[string]spec.Schema{
-					"reportType": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The name of the report type.",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.ReportSpec": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "ReportSpec contains the values of the GlobalReport.",
+					Properties: map[string]spec.Schema{
+						"reportType": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The name of the report type.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"endpoints": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Endpoints is used to specify which endpoints are in-scope and stored in the generated report data. Only used if endpoints data and/or audit logs are gathered in the report. If omitted, treated as everything in-scope.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsSelection"),
+						"endpoints": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Endpoints is used to specify which endpoints are in-scope and stored in the generated report data. Only used if endpoints data and/or audit logs are gathered in the report. If omitted, treated as everything in-scope.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsSelection"),
+							},
 						},
-					},
-					"schedule": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The report schedule specified in cron format. This specifies both the start and end times of each report, where the end time of one report becomes the start time of the next report. Separate jobs are created to generate a report, and the job generates the report data from archived audit and traffic data. To ensure this data is actually archived, the jobs to generate each report starts at a configurable time *after* the end time of the report that is being generated. The default job start delay is 30m, but is configurable through the compliance-controller environments. The cron format has minute accuracy, but only up to two values may be configured for the minute column which means you may only have at most two reports for each hour period.",
-							Type:        []string{"string"},
-							Format:      "",
+						"schedule": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The report schedule specified in cron format. This specifies both the start and end times of each report, where the end time of one report becomes the start time of the next report. Separate jobs are created to generate a report, and the job generates the report data from archived audit and traffic data. To ensure this data is actually archived, the jobs to generate each report starts at a configurable time *after* the end time of the report that is being generated. The default job start delay is 30m, but is configurable through the compliance-controller environments. The cron format has minute accuracy, but only up to two values may be configured for the minute column which means you may only have at most two reports for each hour period.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"jobNodeSelector": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The node selector used to specify which nodes the report job may be scheduled on.",
-							Type:        []string{"object"},
-							AdditionalProperties: &spec.SchemaOrBool{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
+						"jobNodeSelector": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The node selector used to specify which nodes the report job may be scheduled on.",
+								Type:        []string{"object"},
+								AdditionalProperties: &spec.SchemaOrBool{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
 									},
 								},
 							},
 						},
-					},
-					"suspend": {
-						SchemaProps: spec.SchemaProps{
-							Description: "This flag tells the controller to suspend subsequent jobs for generating reports, it does not apply to already started jobs. If jobs are resumed then the controller will start creating jobs for any reports that were missed while the job was suspended.",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"suspend": {
+							SchemaProps: spec.SchemaProps{
+								Description: "This flag tells the controller to suspend subsequent jobs for generating reports, it does not apply to already started jobs. If jobs are resumed then the controller will start creating jobs for any reports that were missed while the job was suspended.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"cis": {
-						SchemaProps: spec.SchemaProps{
-							Description: "This field contain all the parameters for configuring a CIS benchmark report.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkParams"),
+						"cis": {
+							SchemaProps: spec.SchemaProps{
+								Description: "This field contain all the parameters for configuring a CIS benchmark report.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkParams"),
+							},
 						},
 					},
+					Required: []string{"reportType"},
 				},
-				Required: []string{"reportType"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkParams", "github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsSelection"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.CISBenchmarkParams", "github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointsSelection"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_ReportStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "ReportStatus contains the status of the automated report generation.",
-				Properties: map[string]spec.Schema{
-					"lastSuccessfulReportJobs": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The configured report jobs that have completed successfully.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.CompletedReportJob"),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.ReportStatus": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "ReportStatus contains the status of the automated report generation.",
+					Properties: map[string]spec.Schema{
+						"lastSuccessfulReportJobs": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The configured report jobs that have completed successfully.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.CompletedReportJob"),
+										},
 									},
 								},
 							},
 						},
-					},
-					"lastFailedReportJobs": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The configured report jobs that have failed.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.CompletedReportJob"),
+						"lastFailedReportJobs": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The configured report jobs that have failed.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.CompletedReportJob"),
+										},
 									},
 								},
 							},
 						},
-					},
-					"activeReportJobs": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The set of active report jobs.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ReportJob"),
+						"activeReportJobs": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The set of active report jobs.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ReportJob"),
+										},
 									},
 								},
 							},
 						},
-					},
-					"lastScheduledReportJob": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The last scheduled report job.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ReportJob"),
+						"lastScheduledReportJob": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The last scheduled report job.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ReportJob"),
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.CompletedReportJob", "github.com/projectcalico/libcalico-go/lib/apis/v3.ReportJob"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.CompletedReportJob", "github.com/projectcalico/libcalico-go/lib/apis/v3.ReportJob"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_ReportTemplate(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "ReportTemplate defines a template used to render a report into downloadable or UI compatible format.",
-				Properties: map[string]spec.Schema{
-					"name": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The name of this template. This should be unique across all template names within a ReportType. This will be used by the UI as the suffix of the downloadable file name.",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.ReportTemplate": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "ReportTemplate defines a template used to render a report into downloadable or UI compatible format.",
+					Properties: map[string]spec.Schema{
+						"name": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The name of this template. This should be unique across all template names within a ReportType. This will be used by the UI as the suffix of the downloadable file name.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"description": {
-						SchemaProps: spec.SchemaProps{
-							Description: "A user-facing description of the template.",
-							Type:        []string{"string"},
-							Format:      "",
+						"description": {
+							SchemaProps: spec.SchemaProps{
+								Description: "A user-facing description of the template.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"template": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The base-64 encoded go template used to render the report data.",
-							Type:        []string{"string"},
-							Format:      "",
+						"template": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The base-64 encoded go template used to render the report data.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{},
 		},
-		Dependencies: []string{},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_ReportTypeSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "ReportTypeSpec contains the various templates, and configuration used to render a specific type of report.",
-				Properties: map[string]spec.Schema{
-					"uiSummaryTemplate": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The summary template, explicitly used by the UI to render a summary version of the report. This should render to json containing a sets of widgets that the UI can use to render the summary. The rendered data is returned on the list query of the reports.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ReportTemplate"),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.ReportTypeSpec": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "ReportTypeSpec contains the various templates, and configuration used to render a specific type of report.",
+					Properties: map[string]spec.Schema{
+						"uiSummaryTemplate": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The summary template, explicitly used by the UI to render a summary version of the report. This should render to json containing a sets of widgets that the UI can use to render the summary. The rendered data is returned on the list query of the reports.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ReportTemplate"),
+							},
 						},
-					},
-					"downloadTemplates": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The set of templates used to render the report for downloads.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ReportTemplate"),
+						"downloadTemplates": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The set of templates used to render the report for downloads.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ReportTemplate"),
+										},
 									},
 								},
 							},
 						},
-					},
-					"includeEndpointData": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Whether to include endpoint data in the report. The actual endpoints included may be filtered by the Report, but will otherwise contain the full set of endpoints.",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"includeEndpointData": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Whether to include endpoint data in the report. The actual endpoints included may be filtered by the Report, but will otherwise contain the full set of endpoints.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"includeEndpointFlowLogData": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Whether to include endpoint-to-endpoint flow log data in the report.",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"includeEndpointFlowLogData": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Whether to include endpoint-to-endpoint flow log data in the report.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
-					},
-					"auditEventsSelection": {
-						SchemaProps: spec.SchemaProps{
-							Description: "What audit log data should be included in the report. If not specified, the report will contain no audit log data. The selection may be further filtered by the Report.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.AuditEventsSelection"),
+						"auditEventsSelection": {
+							SchemaProps: spec.SchemaProps{
+								Description: "What audit log data should be included in the report. If not specified, the report will contain no audit log data. The selection may be further filtered by the Report.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.AuditEventsSelection"),
+							},
 						},
-					},
-					"includeCISBenchmarkData": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Whether to include the full cis benchmark test results in the report.",
-							Type:        []string{"boolean"},
-							Format:      "",
+						"includeCISBenchmarkData": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Whether to include the full cis benchmark test results in the report.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.AuditEventsSelection", "github.com/projectcalico/libcalico-go/lib/apis/v3.ReportTemplate"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.AuditEventsSelection", "github.com/projectcalico/libcalico-go/lib/apis/v3.ReportTemplate"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_ResourceID(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "ResourceID is used to identify a resource instance in the report data.",
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.ResourceID": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "ResourceID is used to identify a resource instance in the report data.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"name": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+						"name": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"namespace": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+						"namespace": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"uuid": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+						"uuid": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{},
 		},
-		Dependencies: []string{},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_Rule(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "A Rule encapsulates a set of match criteria and an action.  Both selector-based security Policy and security Profiles reference rules - separated out as a list of rules for both ingress and egress packet matching.\n\nEach positive match criteria has a negated version, prefixed with ”Not”. All the match criteria within a rule must be satisfied for a packet to match. A single rule can contain the positive and negative version of a match and both must be satisfied for the rule to match.",
-				Properties: map[string]spec.Schema{
-					"action": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.Rule": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "A Rule encapsulates a set of match criteria and an action.  Both selector-based security Policy and security Profiles reference rules - separated out as a list of rules for both ingress and egress packet matching.\n\nEach positive match criteria has a negated version, prefixed with ”Not”. All the match criteria within a rule must be satisfied for a packet to match. A single rule can contain the positive and negative version of a match and both must be satisfied for the rule to match.",
+					Properties: map[string]spec.Schema{
+						"action": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
 						},
-					},
-					"ipVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "IPVersion is an optional field that restricts the rule to only match a specific IP version.",
-							Type:        []string{"integer"},
-							Format:      "int32",
+						"ipVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "IPVersion is an optional field that restricts the rule to only match a specific IP version.",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
 						},
-					},
-					"protocol": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Protocol is an optional field that restricts the rule to only apply to traffic of a specific IP protocol. Required if any of the EntityRules contain Ports (because ports only apply to certain protocols).\n\nMust be one of these string values: \"TCP\", \"UDP\", \"ICMP\", \"ICMPv6\", \"SCTP\", \"UDPLite\" or an integer in the range 1-255.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/numorstring.Protocol"),
+						"protocol": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Protocol is an optional field that restricts the rule to only apply to traffic of a specific IP protocol. Required if any of the EntityRules contain Ports (because ports only apply to certain protocols).\n\nMust be one of these string values: \"TCP\", \"UDP\", \"ICMP\", \"ICMPv6\", \"SCTP\", \"UDPLite\" or an integer in the range 1-255.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/numorstring.Protocol"),
+							},
 						},
-					},
-					"icmp": {
-						SchemaProps: spec.SchemaProps{
-							Description: "ICMP is an optional field that restricts the rule to apply to a specific type and code of ICMP traffic.  This should only be specified if the Protocol field is set to \"ICMP\" or \"ICMPv6\".",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ICMPFields"),
+						"icmp": {
+							SchemaProps: spec.SchemaProps{
+								Description: "ICMP is an optional field that restricts the rule to apply to a specific type and code of ICMP traffic.  This should only be specified if the Protocol field is set to \"ICMP\" or \"ICMPv6\".",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ICMPFields"),
+							},
 						},
-					},
-					"notProtocol": {
-						SchemaProps: spec.SchemaProps{
-							Description: "NotProtocol is the negated version of the Protocol field.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/numorstring.Protocol"),
+						"notProtocol": {
+							SchemaProps: spec.SchemaProps{
+								Description: "NotProtocol is the negated version of the Protocol field.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/numorstring.Protocol"),
+							},
 						},
-					},
-					"notICMP": {
-						SchemaProps: spec.SchemaProps{
-							Description: "NotICMP is the negated version of the ICMP field.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ICMPFields"),
+						"notICMP": {
+							SchemaProps: spec.SchemaProps{
+								Description: "NotICMP is the negated version of the ICMP field.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ICMPFields"),
+							},
 						},
-					},
-					"source": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Source contains the match criteria that apply to source entity.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.EntityRule"),
+						"source": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Source contains the match criteria that apply to source entity.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.EntityRule"),
+							},
 						},
-					},
-					"destination": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Destination contains the match criteria that apply to destination entity.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.EntityRule"),
+						"destination": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Destination contains the match criteria that apply to destination entity.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.EntityRule"),
+							},
 						},
-					},
-					"http": {
-						SchemaProps: spec.SchemaProps{
-							Description: "HTTP contains match criteria that apply to HTTP requests.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPMatch"),
+						"http": {
+							SchemaProps: spec.SchemaProps{
+								Description: "HTTP contains match criteria that apply to HTTP requests.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPMatch"),
+							},
 						},
 					},
+					Required: []string{"action"},
 				},
-				Required: []string{"action"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.EntityRule", "github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPMatch", "github.com/projectcalico/libcalico-go/lib/apis/v3.ICMPFields", "github.com/projectcalico/libcalico-go/lib/numorstring.Protocol"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.EntityRule", "github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPMatch", "github.com/projectcalico/libcalico-go/lib/apis/v3.ICMPFields", "github.com/projectcalico/libcalico-go/lib/numorstring.Protocol"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_ServiceAccountMatch(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Properties: map[string]spec.Schema{
-					"names": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Names is an optional field that restricts the rule to only apply to traffic that originates from (or terminates at) a pod running as a service account whose name is in the list.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.ServiceAccountMatch": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Properties: map[string]spec.Schema{
+						"names": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Names is an optional field that restricts the rule to only apply to traffic that originates from (or terminates at) a pod running as a service account whose name is in the list.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
 									},
 								},
 							},
 						},
-					},
-					"selector": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Selector is an optional field that restricts the rule to only apply to traffic that originates from (or terminates at) a pod running as a service account that matches the given label selector. If both Names and Selector are specified then they are AND'ed.",
-							Type:        []string{"string"},
-							Format:      "",
+						"selector": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Selector is an optional field that restricts the rule to only apply to traffic that originates from (or terminates at) a pod running as a service account that matches the given label selector. If both Names and Selector are specified then they are AND'ed.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{},
 		},
-		Dependencies: []string{},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_Tier(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "Tier contains a set of policies that are applied to packets.  Multiple tiers may be created and each tier is applied in the order specified in the tier specification. Tier is globally-scoped (i.e. not Namespaced).",
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.Tier": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "Tier contains a set of policies that are applied to packets.  Multiple tiers may be created and each tier is applied in the order specified in the tier specification. Tier is globally-scoped (i.e. not Namespaced).",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Standard object's metadata.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Standard object's metadata.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							},
 						},
-					},
-					"spec": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Specification of the Tier.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.TierSpec"),
+						"spec": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Specification of the Tier.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.TierSpec"),
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.TierSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.TierSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_TierList(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "TierList contains a list of Tier resources.",
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.TierList": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "TierList contains a list of Tier resources.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+							},
 						},
-					},
-					"items": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.Tier"),
+						"items": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.Tier"),
+										},
 									},
 								},
 							},
 						},
 					},
+					Required: []string{"metadata", "items"},
 				},
-				Required: []string{"metadata", "items"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.Tier", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.Tier", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_TierSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "TierSpec contains the specification for a security policy tier resource.",
-				Properties: map[string]spec.Schema{
-					"order": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Order is an optional field that specifies the order in which the tier is applied. Tiers with higher \"order\" are applied after those with lower order.  If the order is omitted, it may be considered to be \"infinite\" - i.e. the tier will be applied last.  Tiers with identical order will be applied in alphanumerical order based on the Tier \"Name\".",
-							Type:        []string{"number"},
-							Format:      "double",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.TierSpec": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "TierSpec contains the specification for a security policy tier resource.",
+					Properties: map[string]spec.Schema{
+						"order": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Order is an optional field that specifies the order in which the tier is applied. Tiers with higher \"order\" are applied after those with lower order.  If the order is omitted, it may be considered to be \"infinite\" - i.e. the tier will be applied last.  Tiers with identical order will be applied in alphanumerical order based on the Tier \"Name\".",
+								Type:        []string{"number"},
+								Format:      "double",
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{},
 		},
-		Dependencies: []string{},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_WorkloadEndpoint(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "WorkloadEndpoint contains information about a WorkloadEndpoint resource that is a peer of a Calico compute node.",
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.WorkloadEndpoint": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "WorkloadEndpoint contains information about a WorkloadEndpoint resource that is a peer of a Calico compute node.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Standard object's metadata.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Standard object's metadata.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							},
 						},
-					},
-					"spec": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Specification of the WorkloadEndpoint.",
-							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.WorkloadEndpointSpec"),
+						"spec": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Specification of the WorkloadEndpoint.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.WorkloadEndpointSpec"),
+							},
 						},
 					},
 				},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.WorkloadEndpointSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.WorkloadEndpointSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_WorkloadEndpointList(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "WorkloadEndpointList contains a list of WorkloadEndpoint resources.",
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.WorkloadEndpointList": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "WorkloadEndpointList contains a list of WorkloadEndpoint resources.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+							},
 						},
-					},
-					"items": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.WorkloadEndpoint"),
+						"items": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.WorkloadEndpoint"),
+										},
 									},
 								},
 							},
 						},
 					},
+					Required: []string{"metadata", "items"},
 				},
-				Required: []string{"metadata", "items"},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.WorkloadEndpoint", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.WorkloadEndpoint", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
-	}
-}
-
-func schema_libcalico_go_lib_apis_v3_WorkloadEndpointSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "WorkloadEndpointMetadata contains the specification for a WorkloadEndpoint resource.",
-				Properties: map[string]spec.Schema{
-					"orchestrator": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The name of the orchestrator.",
-							Type:        []string{"string"},
-							Format:      "",
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.WorkloadEndpointSpec": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "WorkloadEndpointMetadata contains the specification for a WorkloadEndpoint resource.",
+					Properties: map[string]spec.Schema{
+						"orchestrator": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The name of the orchestrator.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"workload": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The name of the workload.",
-							Type:        []string{"string"},
-							Format:      "",
+						"workload": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The name of the workload.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"node": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The node name identifying the Calico node instance.",
-							Type:        []string{"string"},
-							Format:      "",
+						"node": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The node name identifying the Calico node instance.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"containerID": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The container ID.",
-							Type:        []string{"string"},
-							Format:      "",
+						"containerID": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The container ID.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"pod": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The Pod name.",
-							Type:        []string{"string"},
-							Format:      "",
+						"pod": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The Pod name.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"endpoint": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The Endpoint name.",
-							Type:        []string{"string"},
-							Format:      "",
+						"endpoint": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The Endpoint name.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"ipNetworks": {
-						SchemaProps: spec.SchemaProps{
-							Description: "IPNetworks is a list of subnets allocated to this endpoint. IP packets will only be allowed to leave this interface if they come from an address in one of these subnets. Currently only /32 for IPv4 and /128 for IPv6 networks are supported.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
+						"ipNetworks": {
+							SchemaProps: spec.SchemaProps{
+								Description: "IPNetworks is a list of subnets allocated to this endpoint. IP packets will only be allowed to leave this interface if they come from an address in one of these subnets. Currently only /32 for IPv4 and /128 for IPv6 networks are supported.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
 									},
 								},
 							},
 						},
-					},
-					"ipNATs": {
-						SchemaProps: spec.SchemaProps{
-							Description: "IPNATs is a list of 1:1 NAT mappings to apply to the endpoint. Inbound connections to the external IP will be forwarded to the internal IP. Connections initiated from the internal IP will not have their source address changed, except when an endpoint attempts to connect one of its own external IPs. Each internal IP must be associated with the same endpoint via the configured IPNetworks.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.IPNAT"),
+						"ipNATs": {
+							SchemaProps: spec.SchemaProps{
+								Description: "IPNATs is a list of 1:1 NAT mappings to apply to the endpoint. Inbound connections to the external IP will be forwarded to the internal IP. Connections initiated from the internal IP will not have their source address changed, except when an endpoint attempts to connect one of its own external IPs. Each internal IP must be associated with the same endpoint via the configured IPNetworks.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.IPNAT"),
+										},
 									},
 								},
 							},
 						},
-					},
-					"ipv4Gateway": {
-						SchemaProps: spec.SchemaProps{
-							Description: "IPv4Gateway is the gateway IPv4 address for traffic from the workload.",
-							Type:        []string{"string"},
-							Format:      "",
+						"ipv4Gateway": {
+							SchemaProps: spec.SchemaProps{
+								Description: "IPv4Gateway is the gateway IPv4 address for traffic from the workload.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"ipv6Gateway": {
-						SchemaProps: spec.SchemaProps{
-							Description: "IPv6Gateway is the gateway IPv6 address for traffic from the workload.",
-							Type:        []string{"string"},
-							Format:      "",
+						"ipv6Gateway": {
+							SchemaProps: spec.SchemaProps{
+								Description: "IPv6Gateway is the gateway IPv6 address for traffic from the workload.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"profiles": {
-						SchemaProps: spec.SchemaProps{
-							Description: "A list of security Profile resources that apply to this endpoint. Each profile is applied in the order that they appear in this list.  Profile rules are applied after the selector-based security policy.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
+						"profiles": {
+							SchemaProps: spec.SchemaProps{
+								Description: "A list of security Profile resources that apply to this endpoint. Each profile is applied in the order that they appear in this list.  Profile rules are applied after the selector-based security policy.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
 									},
 								},
 							},
 						},
-					},
-					"interfaceName": {
-						SchemaProps: spec.SchemaProps{
-							Description: "InterfaceName the name of the Linux interface on the host: for example, tap80.",
-							Type:        []string{"string"},
-							Format:      "",
+						"interfaceName": {
+							SchemaProps: spec.SchemaProps{
+								Description: "InterfaceName the name of the Linux interface on the host: for example, tap80.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"mac": {
-						SchemaProps: spec.SchemaProps{
-							Description: "MAC is the MAC address of the endpoint interface.",
-							Type:        []string{"string"},
-							Format:      "",
+						"mac": {
+							SchemaProps: spec.SchemaProps{
+								Description: "MAC is the MAC address of the endpoint interface.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
 						},
-					},
-					"ports": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Ports contains the endpoint's named ports, which may be referenced in security policy rules.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointPort"),
+						"ports": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Ports contains the endpoint's named ports, which may be referenced in security policy rules.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointPort"),
+										},
 									},
 								},
 							},
@@ -8257,8 +7617,11 @@ func schema_libcalico_go_lib_apis_v3_WorkloadEndpointSpec(ref common.ReferenceCa
 					},
 				},
 			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointPort", "github.com/projectcalico/libcalico-go/lib/apis/v3.IPNAT"},
 		},
-		Dependencies: []string{
-			"github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointPort", "github.com/projectcalico/libcalico-go/lib/apis/v3.IPNAT"},
+		"github.com/projectcalico/libcalico-go/lib/numorstring.Port":          numorstring.Port{}.OpenAPIDefinition(),
+		"github.com/projectcalico/libcalico-go/lib/numorstring.Protocol":      numorstring.Protocol{}.OpenAPIDefinition(),
+		"github.com/projectcalico/libcalico-go/lib/numorstring.Uint8OrString": numorstring.Uint8OrString{}.OpenAPIDefinition(),
 	}
 }
