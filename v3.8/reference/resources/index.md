@@ -1,5 +1,5 @@
 ---
-title: Resource Definitions
+title: Resource definitions
 canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/resources/
 ---
 

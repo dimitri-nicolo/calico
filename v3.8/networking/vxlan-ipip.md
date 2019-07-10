@@ -1,5 +1,6 @@
 ---
 title: Connecting workloads across networks that you do not control
+redirect_from: latest/networking/vxlan-ipip
 ---
 
 ### Big picture
@@ -8,15 +9,15 @@ Enable inter workload communication across networks that are not aware of worklo
 
 ### Value
 
-In general, we recommend running Calico without network overlay/encapsulation. This gives you the highest performance and simplest network; the packet that leaves your workload is the packet that goes on the wire.  
+In general, we recommend running Calico without network overlay/encapsulation. This gives you the highest performance and simplest network; the packet that leaves your workload is the packet that goes on the wire.
 
 However, selectively using overlays/encapsulation can be useful when running on top of an underlying network that cannot easily be made aware of workload IPs. A common example is if you are using Calico networking in AWS across multiple VPCs/subnets.  In this case, Calico can selectively encapsulate only the traffic that is routed between the VPCs/subnets, and run without encapsulation within each VPC/subnet. You might also decide to run your entire Calico network with encapsulation as an overlay network -- as a quick way to get started without setting up BGP peering or other routing information in your underlying network.
 
 ### Features
 
-This how-to guide uses the following features: 
+This how-to guide uses the following features:
 
-**IPPool** resource with:  
+**IPPool** resource with:
 - ipipMode field (IP in IP encapsulation)
 - vxlanMode field (VXLAN encapsulation)
 
@@ -50,11 +51,11 @@ IP in IP and VXLAN support only IPv4 addresses.
 
 For **IP in IP**, Calico has an option to selectively encapsulate only traffic that crosses subnet boundaries.  We recommend using the **cross subnet** option for IP in IP to minimize encapsulation overhead. Cross subnet mode provides better performance in AWS multi-AZ deployments, and on networks where routers are used to connect pools of nodes with L2 connectivity.
 
-Be aware that switching encapsulation modes can cause disruption to in-progress connections. Plan accordingly. 
+Be aware that switching encapsulation modes can cause disruption to in-progress connections. Plan accordingly.
 
 #### Configure IP in IP encapsulation for only cross subnet traffic
 
-IP in IP encapsulation can be performed selectively, and only for traffic crossing subnet boundaries. 
+IP in IP encapsulation can be performed selectively, and only for traffic crossing subnet boundaries.
 
 To enable this feature, set `ipipMode` to `CrossSubnet`.
 

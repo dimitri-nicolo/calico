@@ -1,6 +1,5 @@
 ---
 title: Connecting to a dedicated etcd cluster (optional)
-canonical_url: ""
 ---
 
 {{site.prodname}}'s OpenShift-ansible integration supports connection to a custom etcd which
