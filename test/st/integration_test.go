@@ -181,7 +181,7 @@ var _ = Describe("Integration Tests", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	It("should check for existance of generated guardian files", func() {
+	It("should check for existence of generated guardian files", func() {
 		// Test
 		out, err := exec.Command("ls", "/tmp/").Output()
 		Expect(err).NotTo(HaveOccurred())

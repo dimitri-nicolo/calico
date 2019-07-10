@@ -78,7 +78,7 @@ func (cs *clusters) List() []jclust.Cluster {
 
 	clusterList := make([]jclust.Cluster, 0, len(cs.clusters))
 	for _, c := range cs.clusters {
-		// Only incldue non-sensitive fields
+		// Only include non-sensitive fields
 
 		c.RLock()
 		clusterList = append(clusterList, c.Cluster)
@@ -188,7 +188,7 @@ func (cs *clusters) apiHandle(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	// TODO We need a MethodPost handler as well, should use instead of Put for
-	// creating a cluster entity (whcih will auto-generate the ID)
+	// creating a cluster entity (which will auto-generate the ID)
 	// TODO This Put handler does not behaviour list a standard PUT endpoint
 	// (since it doesn't retrieve the entity ID from the URI) ... fix it later
 	case http.MethodPut:

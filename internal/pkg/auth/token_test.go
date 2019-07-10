@@ -25,7 +25,7 @@ var _ = Describe("Token", func() {
 				Expect(tokenType).To(Equal(auth.Unknown))
 			})
 
-			It("should not extract emtpy Authorization header", func() {
+			It("should not extract empty Authorization header", func() {
 				token, tokenType := auth.Extract(requestWithHeader(map[string][]string{"Authorization": {""}}))
 				Expect(token).To(Equal(""))
 				Expect(tokenType).To(Equal(auth.Unknown))
