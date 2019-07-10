@@ -34,3 +34,5 @@ under the following indices.
 - **Flow logs**: `tigera_secure_ee_flows`
 
 - **Audit logs**: `tigera_secure_ee_audit*`
+
+- **DNS logs**: `tigera_secure_ee_dns*`
