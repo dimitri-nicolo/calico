@@ -1295,7 +1295,7 @@ installMgmtGuardian() {
         -X PUT -H "Content-type: application/json" -d '{"id":"mgmt", "displayName":"Local cluster - Mgmt"}' \
         -o guardian-mgmt.yaml
     PORT=`kubectl get svc cnx-voltron-server -n calico-monitoring -o=jsonpath='{.spec.ports[?(@.name=="tunnels")].port}'`
-    sed -e "s/127.0.0.0:32453/cnx-voltron-server.calico-monitoring.svc.cluster.local:${PORT}/" < guardian-mgmt.yaml | kubectl apply -f -
+    sed -e "s/127.0.0.0:30449/cnx-voltron-server.calico-monitoring.svc.cluster.local:${PORT}/" < guardian-mgmt.yaml | kubectl apply -f -
 
     blockUntilPodIsReady "k8s-app=cnx-guardian" 180 "cnx-guardian"
 }
