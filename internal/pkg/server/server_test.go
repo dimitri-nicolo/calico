@@ -90,7 +90,13 @@ var _ = Describe("Server", func() {
 
 	Context("when server is up", func() {
 		It("should get empty list", func() {
-			list := listClusters(lis.Addr().String())
+			var list []clusters.Cluster
+
+			Eventually(func() int {
+				var code int
+				list, code = listClusters(lis.Addr().String())
+				return code
+			}).Should(Equal(200))
 			Expect(len(list)).To(Equal(0))
 		})
 
@@ -105,7 +111,8 @@ var _ = Describe("Server", func() {
 		})
 
 		It("should be able to list the cluster", func() {
-			list := listClusters(lis.Addr().String())
+			list, code := listClusters(lis.Addr().String())
+			Expect(code).To(Equal(200))
 			Expect(len(list)).To(Equal(1))
 			Expect(list[0].ID).To(Equal("clusterA"))
 			Expect(list[0].DisplayName).To(Equal("A"))
@@ -120,7 +127,8 @@ var _ = Describe("Server", func() {
 		})
 
 		It("should be able to get sorted list of clusters", func() {
-			list := listClusters(lis.Addr().String())
+			list, code := listClusters(lis.Addr().String())
+			Expect(code).To(Equal(200))
 			Expect(len(list)).To(Equal(2))
 			Expect(list[0].ID).To(Equal("clusterA"))
 			Expect(list[0].DisplayName).To(Equal("AAA"))
@@ -133,7 +141,8 @@ var _ = Describe("Server", func() {
 		})
 
 		It("should be able to get list without the deleted cluster", func() {
-			list := listClusters(lis.Addr().String())
+			list, code := listClusters(lis.Addr().String())
+			Expect(code).To(Equal(200))
 			Expect(len(list)).To(Equal(1))
 			Expect(list[0].ID).To(Equal("clusterA"))
 		})
@@ -459,143 +468,166 @@ var _ = Describe("Server Proxy to tunnel", func() {
 	})
 })
 
-var _ = Describe("Server authenticates user", func() {
-	Context("Server is up and running with a working tunnel for clusterA", func() {
+var _ = Describe("Server authenticates requests", func() {
 
-		k8sAPI := fake.NewSimpleClientset()
-		var wg sync.WaitGroup
-		var srv *server.Server
-		var tun *tunnel.Tunnel
-		var lisHTTPS net.Listener
-		var lisHTTP net.Listener
-		var lisTun net.Listener
-		var xCert tls.Certificate
+	k8sAPI := fake.NewSimpleClientset()
+	var wg sync.WaitGroup
+	var srv *server.Server
+	var tun *tunnel.Tunnel
+	var lisHTTPS net.Listener
+	var lisHTTP net.Listener
+	var lisTun net.Listener
+	var xCert tls.Certificate
 
-		By("Reading creating credentials for server", func() {
-			srvCert, _ = test.CreateSelfSignedX509Cert("voltron", true)
+	By("Creating credentials for server", func() {
+		srvCert, _ = test.CreateSelfSignedX509Cert("voltron", true)
 
-			block, _ := pem.Decode([]byte(test.PrivateRSA))
-			srvPrivKey, _ = x509.ParsePKCS1PrivateKey(block.Bytes)
+		block, _ := pem.Decode([]byte(test.PrivateRSA))
+		srvPrivKey, _ = x509.ParsePKCS1PrivateKey(block.Bytes)
 
-			rootCAs = x509.NewCertPool()
-			rootCAs.AddCert(srvCert)
+		rootCAs = x509.NewCertPool()
+		rootCAs.AddCert(srvCert)
 
-			key, _ := utils.KeyPEMEncode(srvPrivKey)
-			cert := utils.CertPEMEncode(srvCert)
+		key, _ := utils.KeyPEMEncode(srvPrivKey)
+		cert := utils.CertPEMEncode(srvCert)
 
-			xCert, _ = tls.X509KeyPair(cert, key)
+		xCert, _ = tls.X509KeyPair(cert, key)
+	})
+
+	It("Should start the server", func() {
+		var err error
+
+		lisHTTP, err = net.Listen("tcp", "localhost:0")
+		Expect(err).NotTo(HaveOccurred())
+
+		lisHTTPS, err = tls.Listen("tcp", "localhost:0", &tls.Config{
+			Certificates: []tls.Certificate{xCert},
+			NextProtos:   []string{"h2"},
 		})
-		By("Starting the server", func() {
-			lisHTTP, _ = net.Listen("tcp", "localhost:0")
-			lisHTTPS, _ = tls.Listen("tcp", "localhost:0", &tls.Config{
-				Certificates: []tls.Certificate{xCert},
-				NextProtos:   []string{"h2"},
-			})
-			lisTun, _ = net.Listen("tcp", "localhost:0")
+		Expect(err).NotTo(HaveOccurred())
 
-			srv, _ = server.New(
-				server.WithKeepClusterKeys(),
-				server.WithTunnelCreds(srvCert, srvPrivKey),
-				server.WithAuthentication(true, k8sAPI),
-			)
+		lisTun, err = net.Listen("tcp", "localhost:0")
+		Expect(err).NotTo(HaveOccurred())
 
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				_ = srv.ServeHTTP(lisHTTPS)
-			}()
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				_ = srv.ServeHTTP(lisHTTP)
-			}()
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				_ = srv.ServeTunnelsTLS(lisTun)
-			}()
-		})
-		By("Adding cluster A", func() {
+		srv, err = server.New(
+			server.WithKeepClusterKeys(),
+			server.WithTunnelCreds(srvCert, srvPrivKey),
+			server.WithAuthentication(true, k8sAPI),
+		)
+		Expect(err).NotTo(HaveOccurred())
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_ = srv.ServeHTTP(lisHTTPS)
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_ = srv.ServeHTTP(lisHTTP)
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_ = srv.ServeTunnelsTLS(lisTun)
+		}()
+	})
+
+	It("Should add cluster A", func() {
+		Eventually(func() bool {
 			cluster, _ := json.Marshal(&clusters.Cluster{ID: "clusterA", DisplayName: "ClusterA"})
 			req, _ := http.NewRequest("PUT",
 				"http://"+lisHTTP.Addr().String()+"/voltron/api/clusters?", bytes.NewBuffer(cluster))
-			_, _ = http.DefaultClient.Do(req)
-		})
-		By("Opening a tunnel to cluster A", func() {
-			certPem, keyPem, _ := srv.ClusterCreds("clusterA")
-			cert, _ := tls.X509KeyPair(certPem, keyPem)
+			resp, err := http.DefaultClient.Do(req)
+			return err == nil && resp.StatusCode == 200
+		}).Should(Equal(true))
+	})
 
-			cfg := &tls.Config{
-				Certificates: []tls.Certificate{cert},
-				RootCAs:      rootCAs,
-			}
+	It("Should open a tunnel for cluster A", func() {
+		certPem, keyPem, _ := srv.ClusterCreds("clusterA")
+		cert, _ := tls.X509KeyPair(certPem, keyPem)
 
-			tun, _ = tunnel.DialTLS(lisTun.Addr().String(), cfg)
-		})
+		cfg := &tls.Config{
+			Certificates: []tls.Certificate{cert},
+			RootCAs:      rootCAs,
+		}
 
-		It("should authenticate Jane", func() {
-			test.AddJaneIdentity(k8sAPI)
+		Eventually(func() error {
+			var err error
+			tun, err = tunnel.DialTLS(lisTun.Addr().String(), cfg)
+			return err
+		}).ShouldNot(HaveOccurred())
+	})
 
-			var wg sync.WaitGroup
+	It("should authenticate Jane", func() {
+		test.AddJaneIdentity(k8sAPI)
 
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				test.HTTPSBin(tun, xCert, func(r *http.Request) {
-					Expect(r.Header.Get("Impersonate-User")).To(Equal(test.Jane))
-					Expect(r.Header.Get("Impersonate-Group")).To(Equal(test.Developers))
-					Expect(r.Header.Get("Authorization")).NotTo(Equal(test.JaneBearerToken))
-				})
-			}()
+		var wg sync.WaitGroup
 
-			clnt := configureHTTPSClient()
-			req := requestToClusterA(lisHTTPS.Addr().String())
-			test.AddJaneToken(req)
-			resp, err := clnt.Do(req)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(resp.StatusCode).To(Equal(200))
-		})
-		It("should not authenticate Bob", func() {
-			test.AddBobIdentity(k8sAPI)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			test.HTTPSBin(tun, xCert, func(r *http.Request) {
+				Expect(r.Header.Get("Impersonate-User")).To(Equal(test.Jane))
+				Expect(r.Header.Get("Impersonate-Group")).To(Equal(test.Developers))
+				Expect(r.Header.Get("Authorization")).NotTo(Equal(test.JaneBearerToken))
+			})
+		}()
 
-			var wg sync.WaitGroup
+		clnt := configureHTTPSClient()
+		req := requestToClusterA(lisHTTPS.Addr().String())
+		test.AddJaneToken(req)
+		resp, err := clnt.Do(req)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(resp.StatusCode).To(Equal(200))
+	})
+	It("should not authenticate Bob", func() {
+		test.AddBobIdentity(k8sAPI)
 
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				test.HTTPSBin(tun, xCert, func(r *http.Request) {
-					Expect(r.Header.Get("Impersonate-User")).To(Equal(""))
-					Expect(r.Header.Get("Impersonate-Group")).To(Equal(""))
-					Expect(r.Header.Get("Authorization")).To(Equal(""))
-				})
-			}()
+		var wg sync.WaitGroup
 
-			clnt := configureHTTPSClient()
-			req := requestToClusterA(lisHTTPS.Addr().String())
-			test.AddBobToken(req)
-			resp, err := clnt.Do(req)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(resp.StatusCode).To(Equal(401))
-		})
-		It("should return 401 on missing tokens", func() {
-			var wg sync.WaitGroup
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			test.HTTPSBin(tun, xCert, func(r *http.Request) {
+				Expect(r.Header.Get("Impersonate-User")).To(Equal(""))
+				Expect(r.Header.Get("Impersonate-Group")).To(Equal(""))
+				Expect(r.Header.Get("Authorization")).To(Equal(""))
+			})
+		}()
 
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				test.HTTPSBin(tun, xCert, func(r *http.Request) {
-					Expect(r.Header.Get("Impersonate-User")).To(Equal(""))
-					Expect(r.Header.Get("Impersonate-Group")).To(Equal(""))
-					Expect(r.Header.Get("Authorization")).To(Equal(""))
-				})
-			}()
+		clnt := configureHTTPSClient()
+		req := requestToClusterA(lisHTTPS.Addr().String())
+		test.AddBobToken(req)
+		resp, err := clnt.Do(req)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(resp.StatusCode).To(Equal(401))
+	})
+	It("should return 401 on missing tokens", func() {
+		var wg sync.WaitGroup
 
-			clnt := configureHTTPSClient()
-			req := requestToClusterA(lisHTTPS.Addr().String())
-			resp, err := clnt.Do(req)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(resp.StatusCode).To(Equal(401))
-		})
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			test.HTTPSBin(tun, xCert, func(r *http.Request) {
+				Expect(r.Header.Get("Impersonate-User")).To(Equal(""))
+				Expect(r.Header.Get("Impersonate-Group")).To(Equal(""))
+				Expect(r.Header.Get("Authorization")).To(Equal(""))
+			})
+		}()
+
+		clnt := configureHTTPSClient()
+		req := requestToClusterA(lisHTTPS.Addr().String())
+		resp, err := clnt.Do(req)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(resp.StatusCode).To(Equal(401))
+	})
+
+	It("should stop the server", func(done Done) {
+		err := srv.Close()
+		Expect(err).NotTo(HaveOccurred())
+		wg.Wait()
+		close(done)
 	})
 })
 
@@ -644,9 +676,13 @@ func deleteCluster(server, id string) bool {
 	return resp.StatusCode == 200
 }
 
-func listClusters(server string) []clusters.Cluster {
+func listClusters(server string) ([]clusters.Cluster, int) {
 	resp, err := http.Get("http://" + server + "/voltron/api/clusters")
 	Expect(err).NotTo(HaveOccurred())
+
+	if resp.StatusCode != 200 {
+		return nil, resp.StatusCode
+	}
 
 	var list []clusters.Cluster
 
@@ -654,7 +690,7 @@ func listClusters(server string) []clusters.Cluster {
 	err = dec.Decode(&list)
 	Expect(err).NotTo(HaveOccurred())
 
-	return list
+	return list, 200
 }
 
 func clientHelloReq(addr string, target string, expectStatus int) *http.Response {
