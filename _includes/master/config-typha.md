@@ -1,3 +1,4 @@
+{% unless include.autoscale == "true" %}
 1. Modify the replica count in the `Deployment` named `calico-typha`
    to the desired number of replicas.
 
@@ -19,12 +20,7 @@
    always be less than the number of nodes, otherwise rolling upgrades will stall.
    In addition, Typha only helps with scale if there are fewer Typha instances than
    there are nodes.
-
-
-   > **Warning**: If you set `typha_service_name` without increasing the replica
-   > count from its default of `0` Felix will try to connect to Typha, find no
-   > Typha instances to connect to, and fail to start.
-   {: .alert .alert-danger}
+{% endunless %}
 
 1. Generate TLS certificates for Felix and Typha to use to communicate. The following example
    uses OpenSSL to generate a CA, keys, and certificates, but you may generate them using any 
