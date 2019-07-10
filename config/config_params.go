@@ -136,6 +136,7 @@ type Config struct {
 	Ipv6Support    bool `config:"bool;true"`
 	IgnoreLooseRPF bool `config:"bool;false"`
 
+	IptablesBackend                    string        `config:"oneof(legacy,nft);legacy"`
 	RouteRefreshInterval               time.Duration `config:"seconds;90"`
 	IptablesRefreshInterval            time.Duration `config:"seconds;90"`
 	IptablesPostWriteCheckIntervalSecs time.Duration `config:"seconds;1"`
@@ -324,7 +325,7 @@ type Config struct {
 	DNSTrustedServers    []string      `config:"server-list;k8s-service:kube-dns"`
 
 	SidecarAccelerationEnabled bool `config:"bool;false"`
-	XDPEnabled                 bool `config:"bool;true"`
+	XDPEnabled                 bool `config:"bool;false"`
 	GenericXDPEnabled          bool `config:"bool;false"`
 }
 
