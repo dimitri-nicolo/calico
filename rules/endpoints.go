@@ -349,16 +349,6 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 		})
 	}
 
-	if len(policyNames) > 0 {
-		// Clear the "pass" mark.  If a policy sets that mark, we'll skip the rest of the policies and
-		// continue processing the profiles, if there are any.
-		rules = append(rules, Rule{
-			Match:   Match().ProtocolNum(ProtoIPIP),
-			Action:  DropAction{},
-			Comment: "Drop IPinIP encapped packets originating in pods",
-		})
-	}
-
 	for _, tier := range tiers {
 		var policies []string
 		if policyType == ingressPolicy {
