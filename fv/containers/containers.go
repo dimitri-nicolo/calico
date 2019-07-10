@@ -460,6 +460,20 @@ func (c *Container) ExecOutput(args ...string) (string, error) {
 	return string(out), nil
 }
 
+func (c *Container) ExecCombinedOutput(args ...string) (string, error) {
+	arg := []string{"exec", c.Name}
+	arg = append(arg, args...)
+	cmd := utils.Command("docker", arg...)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		if out == nil {
+			return "", err
+		}
+		return string(out), err
+	}
+	return string(out), nil
+}
+
 func (c *Container) SourceName() string {
 	return c.Name
 }
