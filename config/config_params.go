@@ -263,7 +263,7 @@ type Config struct {
 	DNSLogsFileDirectory       string        `config:"string;/var/log/calico/dnslogs"`
 	DNSLogsFileMaxFiles        int           `config:"int;5"`
 	DNSLogsFileMaxFileSizeMB   int           `config:"int;100"`
-	DNSLogsFileAggregationKind int           `config:"int(0:2);1"`
+	DNSLogsFileAggregationKind int           `config:"int(0:1);1"`
 	DNSLogsFileIncludeLabels   bool          `config:"bool;true"`
 
 	KubeNodePortRanges []numorstring.Port `config:"portrange-list;30000:32767"`
