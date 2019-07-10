@@ -103,6 +103,9 @@ spec:
 | vxlanMTU                           | MTU to use for the VXLAN tunnel device. | int | int | `1410` |
 | vxlanPort                          | Port to use for VXLAN traffic. A value of `0` means "use the kernel default". | int | int | `4789` |
 | vxlanVNI                           | Virtual network ID to use for VXLAN traffic. A value of `0` means "use the kernel default". | int | int | `4096` |
+| dnsCacheFile                       | The name of the file that Felix uses to preserve learnt DNS information when restarting. | file name | string | `/var/run/calico/felix-dns-cache.txt` |
+| dnsCacheSaveInterval               | The periodic interval at which Felix saves learnt DNS information to the cache file. | int | int | `60` |
+| dnsTrustedServers                  | The DNS servers that Felix should trust. Each entry here must be an IP, or `k8s-service:<name>`, where `<name>` is the name of a Kubernetes Service in the `kube-system` namespace. | IPs or service names | comma-separated strings | `k8s-service:kube-dns` |
 
 
 \* When `dropActionOverride` is set to `LogAndDrop` or `LogAndAccept`, the `syslog` entries look something like the following.
