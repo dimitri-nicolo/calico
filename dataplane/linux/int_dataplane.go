@@ -403,11 +403,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	}
 
 	dp.endpointStatusCombiner = newEndpointStatusCombiner(dp.fromDataplane, config.IPv6Enabled)
-	dp.domainInfoStore = newDomainInfoStore(
-		dp.domainInfoChanges,
-		config.DNSCacheFile,
-		config.DNSCacheSaveInterval,
-	)
+	dp.domainInfoStore = newDomainInfoStore(dp.domainInfoChanges, &config)
 
 	callbacks := newCallbacks()
 	dp.callbacks = callbacks

@@ -112,7 +112,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, pubMeta, nil, nil, expectedFP)
 
 			By("source port")
-			ca = NewFlowLogAggregator().AggregateOver(SourcePort)
+			ca = NewFlowLogAggregator().AggregateOver(FlowSourcePort)
 			ca.FeedUpdate(muNoConn1Rule1AllowUpdate)
 			// Construct a similar update; same tuple but diff src ports.
 			muNoConn1Rule1AllowUpdateCopy := muNoConn1Rule1AllowUpdate
@@ -125,7 +125,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 			Expect(len(messages)).Should(Equal(1))
 
 			By("endpoint prefix names")
-			ca = NewFlowLogAggregator().AggregateOver(PrefixName)
+			ca = NewFlowLogAggregator().AggregateOver(FlowPrefixName)
 			ca.FeedUpdate(muNoConn1Rule1AllowUpdateWithEndpointMeta)
 			// Construct a similar update; same tuple but diff src ports.
 			muNoConn1Rule1AllowUpdateWithEndpointMetaCopy := muNoConn1Rule1AllowUpdateWithEndpointMeta
@@ -192,7 +192,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 			Expect(len(messages)).Should(Equal(1))
 
 			By("by endpoint IP classification as the meta name when meta info is missing")
-			ca = NewFlowLogAggregator().AggregateOver(PrefixName)
+			ca = NewFlowLogAggregator().AggregateOver(FlowPrefixName)
 			endpointMeta := calc.EndpointData{
 				Key: model.WorkloadEndpointKey{
 					Hostname:       "node-01",
@@ -538,7 +538,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 
 		It("Purges only the completed aggregated flowMetas", func() {
 			By("Accounting for only the completed 5-tuple refs when making a purging decision")
-			ca := NewFlowLogAggregator().AggregateOver(PrefixName).(*flowLogAggregator)
+			ca := NewFlowLogAggregator().AggregateOver(FlowPrefixName).(*flowLogAggregator)
 			ca.FeedUpdate(muNoConn1Rule1AllowUpdateWithEndpointMeta)
 			// Construct a similar update; same tuple but diff src ports.
 			muNoConn1Rule1AllowUpdateWithEndpointMetaCopy := muNoConn1Rule1AllowUpdateWithEndpointMeta

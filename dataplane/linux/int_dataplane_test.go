@@ -17,6 +17,7 @@ package intdataplane_test
 import (
 	"net"
 
+	"github.com/google/gopacket/layers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -37,6 +38,10 @@ func (_ *mockCollector) ReportingChannel() chan<- *proto.DataplaneStats { return
 func (_ *mockCollector) SubscribeToNflog() {}
 
 func (_ *mockCollector) Start() {}
+
+func (_ *mockCollector) LogDNS(src, dst net.IP, dns *layers.DNS) {}
+
+func (_ *mockCollector) SetDNSLogReporter(reporter *collector.DNSLogReporter) {}
 
 var _ = Describe("Constructor test", func() {
 	var configParams *config.Config

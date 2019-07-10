@@ -12,16 +12,16 @@ import (
 	"github.com/projectcalico/felix/rules"
 )
 
-// AggregationKind determines the flow log key
-type AggregationKind int
+// FlowAggregationKind determines the flow log key
+type FlowAggregationKind int
 
 const (
-	// Default is based on purely duration.
-	Default AggregationKind = iota
-	// SourcePort accumulates tuples with everything same but the source port
-	SourcePort
-	// PrefixName accumulates tuples with everything same but the prefix name
-	PrefixName
+	// FlowDefault is based on purely duration.
+	FlowDefault FlowAggregationKind = iota
+	// FlowSourcePort accumulates tuples with everything same but the source port
+	FlowSourcePort
+	// FlowPrefixName accumulates tuples with everything same but the prefix name
+	FlowPrefixName
 )
 
 const noRuleActionDefined = 0
@@ -31,7 +31,7 @@ const noRuleActionDefined = 0
 // The flowLogAggregator is responsible for creating, aggregating, and storing
 // aggregated flow logs until the flow logs are exported.
 type flowLogAggregator struct {
-	kind                 AggregationKind
+	kind                 FlowAggregationKind
 	flowStore            map[FlowMeta]FlowSpec
 	flMutex              sync.RWMutex
 	includeLabels        bool
@@ -43,14 +43,14 @@ type flowLogAggregator struct {
 // NewFlowLogAggregator constructs a FlowLogAggregator
 func NewFlowLogAggregator() FlowLogAggregator {
 	return &flowLogAggregator{
-		kind:                 Default,
+		kind:                 FlowDefault,
 		flowStore:            make(map[FlowMeta]FlowSpec),
 		flMutex:              sync.RWMutex{},
 		aggregationStartTime: time.Now(),
 	}
 }
 
-func (c *flowLogAggregator) AggregateOver(kind AggregationKind) FlowLogAggregator {
+func (c *flowLogAggregator) AggregateOver(kind FlowAggregationKind) FlowLogAggregator {
 	c.kind = kind
 	return c
 }

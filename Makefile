@@ -1150,7 +1150,10 @@ bin/calico-felix.transfer-url: bin/calico-felix
 patch-script: bin/calico-felix.transfer-url
 	$(DOCKER_RUN) $(CALICO_BUILD) bash -c 'utils/make-patch-script.sh $$(cat bin/calico-felix.transfer-url)'
 
-# Generate a diagram of Felix's internal calculation graph.
+# Generate diagrams showing Felix internals:
+# - docs/calc.pdf: Felix's internal calculation graph.
+# - docs/flowlogs.pdf: Structures involved in flow log processing.
+# - docs/dnslogs.pdf: Structures involved in DNS log processing.
 docs/%.pdf: docs/%.dot
 	cd docs/ && dot -Tpdf $*.dot -o $*.pdf
 

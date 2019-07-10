@@ -30,6 +30,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/nfnetlink"
 
+	"github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
@@ -89,6 +90,9 @@ type domainInfoStore struct {
 	// Reclaiming memory for mappings that are now useless.
 	gcTrigger  bool
 	gcInterval time.Duration
+
+	// Activity logging.
+	collector collector.Collector
 }
 
 // Signal sent by the domain info store to the ipsets manager when the information for a given
@@ -105,7 +109,7 @@ type domainMappingExpired struct {
 	name, value string
 }
 
-func newDomainInfoStore(domainInfoChanges chan *domainInfoChanged, saveFile string, saveInterval time.Duration) *domainInfoStore {
+func newDomainInfoStore(domainInfoChanges chan *domainInfoChanged, config *Config) *domainInfoStore {
 	log.Info("Creating domain info store")
 	s := &domainInfoStore{
 		domainInfoChanges:    domainInfoChanges,
@@ -113,9 +117,10 @@ func newDomainInfoStore(domainInfoChanges chan *domainInfoChanged, saveFile stri
 		wildcards:            make(map[string]*regexp.Regexp),
 		resultsCache:         make(map[string][]string),
 		mappingExpiryChannel: make(chan *domainMappingExpired),
-		saveFile:             saveFile,
-		saveInterval:         saveInterval,
+		saveFile:             config.DNSCacheFile,
+		saveInterval:         config.DNSCacheSaveInterval,
 		gcInterval:           13 * time.Second,
+		collector:            config.Collector,
 	}
 	return s
 }
@@ -154,9 +159,19 @@ func (s *domainInfoStore) loop(saveTimerC, gcTimerC <-chan time.Time) {
 	for {
 		select {
 		case msg := <-s.msgChannel:
+			// TODO: Test and fix handling of DNS over IPv6.  The `layers.LayerTypeIPv4`
+			// in the next line is clearly a v4 assumption, and some of the code inside
+			// `nfnetlink.SubscribeDNS` also looks v4-specific.
 			packet := gopacket.NewPacket(msg, layers.LayerTypeIPv4, gopacket.Default)
 			if dnsLayer := packet.Layer(layers.LayerTypeDNS); dnsLayer != nil {
 				dns, _ := dnsLayer.(*layers.DNS)
+				if s.collector != nil {
+					if ipv4, ok := packet.Layer(layers.LayerTypeIPv4).(*layers.IPv4); ok {
+						s.collector.LogDNS(ipv4.SrcIP, ipv4.DstIP, dns)
+					} else {
+						log.Warning("Not logging non-IPv4 DNS packet")
+					}
+				}
 				s.processDNSPacket(dns)
 			}
 		case expiry := <-s.mappingExpiryChannel:

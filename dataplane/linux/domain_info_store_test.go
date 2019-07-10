@@ -111,7 +111,11 @@ var _ = Describe("Domain Info Store", func() {
 	// Create a new datastore.
 	domainStoreCreate := func() {
 		domainChannel := make(chan *domainInfoChanged, 100)
-		domainStore = newDomainInfoStore(domainChannel, "/dnsinfo", time.Minute)
+		config := &Config{
+			DNSCacheFile:         "/dnsinfo",
+			DNSCacheSaveInterval: time.Minute,
+		}
+		domainStore = newDomainInfoStore(domainChannel, config)
 	}
 
 	// Basic validation tests that add/expire one or two DNS records of A and AAAA type to the data store.

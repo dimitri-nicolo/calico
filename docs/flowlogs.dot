@@ -29,7 +29,7 @@ cwmAggregator -> cwmDispatcher [label="MetricData"];
 
 flCollector [label=<<table BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4">
           <tr><td><font point-size="14">collector</font></td></tr>
-          <tr><td><font point-size="10">Central point for flow log data.<br/>
+          <tr><td><font point-size="10">Central point for flow and DNS log data.<br/>
 Manages Data objects, 1 per Tuple<br/>
 NewData(...) *Data<br/>
 Data.Report(chan MetricUpdate, expired bool)<br/>
