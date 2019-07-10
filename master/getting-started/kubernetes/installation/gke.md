@@ -45,6 +45,8 @@ This guide covers installing {{site.prodname}} for policy enforcement on Google 
 
 {% include {{page.version}}/cnx-cred-sed.md yaml="calico" %}
 
+{% include {{page.version}}/config-typha.md autoscale="true" %}
+
 1. Apply the manifest using the following command.
 
    ```bash
