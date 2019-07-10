@@ -147,7 +147,7 @@ func chainsForIfaces(ifaceTierNames []string,
 		"ifaces":    ifaceTierNames,
 		"host":      host,
 		"tableKind": tableKind,
-	}).Info("Calculating chains for interface")
+	}).Debug("Calculating chains for interface")
 
 	chains := []*iptables.Chain{}
 	dispatchOut := []iptables.Rule{}
@@ -277,7 +277,7 @@ func chainsForIfaces(ifaceTierNames []string,
 		if !host {
 			outRules = append(outRules, dropEncapRules...)
 		}
-		if egress && tierName != "" && tableKind == ifaceKind {
+		if egress && polName != "" && tierName != "" && tableKind == ifaceKind {
 			outRules = append(outRules, iptables.Rule{
 				Match:   iptables.Match(),
 				Action:  iptables.ClearMarkAction{Mark: 16},

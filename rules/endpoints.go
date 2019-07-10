@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -349,6 +349,16 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 		})
 	}
 
+	if len(policyNames) > 0 {
+		// Clear the "pass" mark.  If a policy sets that mark, we'll skip the rest of the policies and
+		// continue processing the profiles, if there are any.
+		rules = append(rules, Rule{
+			Match:   Match().ProtocolNum(ProtoIPIP),
+			Action:  DropAction{},
+			Comment: "Drop IPinIP encapped packets originating in pods",
+		})
+	}
+
 	for _, tier := range tiers {
 		var policies []string
 		if policyType == ingressPolicy {
@@ -372,6 +382,7 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 					policyPrefix,
 					&proto.PolicyID{Tier: tier.Name, Name: polID},
 				)
+
 				// If a previous policy didn't set the "pass" mark, jump to the policy.
 				rules = append(rules, Rule{
 					Match:  Match().MarkClear(r.IptablesMarkPass),

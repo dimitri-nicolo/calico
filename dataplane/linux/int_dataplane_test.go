@@ -23,7 +23,7 @@ import (
 
 	"github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/felix/config"
-	"github.com/projectcalico/felix/dataplane/linux"
+	intdataplane "github.com/projectcalico/felix/dataplane/linux"
 	"github.com/projectcalico/felix/ifacemonitor"
 	"github.com/projectcalico/felix/ipsets"
 	"github.com/projectcalico/felix/proto"
@@ -95,6 +95,10 @@ var _ = Describe("Constructor test", func() {
 			IPIPMTU:          configParams.IpInIpMtu,
 			HealthAggregator: healthAggregator,
 			Collector:        col,
+
+			LookPathOverride: func(file string) (string, error) {
+				return file, nil
+			},
 		}
 	})
 

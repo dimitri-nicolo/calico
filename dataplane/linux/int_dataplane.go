@@ -111,6 +111,7 @@ type Config struct {
 
 	MaxIPSetSize int
 
+	IptablesBackend                string
 	IPSetsRefreshInterval          time.Duration
 	RouteRefreshInterval           time.Duration
 	IptablesRefreshInterval        time.Duration
@@ -165,6 +166,8 @@ type Config struct {
 	// Config for DNS policy.
 	DNSCacheFile         string
 	DNSCacheSaveInterval time.Duration
+
+	LookPathOverride func(file string) (string, error)
 }
 
 // InternalDataplane implements an in-process Felix dataplane driver based on iptables
@@ -307,6 +310,8 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		PostWriteInterval:     config.IptablesPostWriteCheckInterval,
 		LockTimeout:           config.IptablesLockTimeout,
 		LockProbeInterval:     config.IptablesLockProbeInterval,
+		BackendMode:           config.IptablesBackend,
+		LookPathOverride:      config.LookPathOverride,
 	}
 
 	// However, the NAT tables need an extra cleanup regex.

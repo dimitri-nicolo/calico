@@ -36,7 +36,6 @@ import (
 	"strings"
 	"syscall"
 
-	packr "github.com/gobuffalo/packr/v2"
 	version "github.com/hashicorp/go-version"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
@@ -93,32 +92,32 @@ var (
 	// v4Dot16Dot0 is the first kernel version that has all the
 	// required features we use for XDP filtering
 	v4Dot16Dot0 = versionparse.MustParseVersion("4.16.0")
-	// v4Dot19Dot0 is the first kernel version that has all the
+	// v4Dot20Dot0 is the first kernel version that has all the
 	// required features we use for sidecar acceleration
-	v4Dot19Dot0 = versionparse.MustParseVersion("4.19.0")
+	v4Dot20Dot0 = versionparse.MustParseVersion("4.20.0")
 )
 
-func init() {
-	boxXDP := packr.New("xdp", "./xdp/generated")
-	xdpBytes, err := boxXDP.Find("xdp.o")
-	if err != nil {
-		panic(fmt.Sprintf("cannot find xdp.o: %v\n", err))
-	}
+// func init() {
+// 	boxXDP := packr.New("xdp", "./xdp/generated")
+// 	xdpBytes, err := boxXDP.Find("xdp.o")
+// 	if err != nil {
+// 		panic(fmt.Sprintf("cannot find xdp.o: %v\n", err))
+// 	}
 
-	boxSockmap := packr.New("sockmap", "./sockmap/generated")
-	sockopsBytes, err := boxSockmap.Find("sockops.o")
-	if err != nil {
-		panic(fmt.Sprintf("cannot find sockops.o: %v\n", err))
-	}
-	skmsgBytes, err := boxSockmap.Find("redir.o")
-	if err != nil {
-		panic(fmt.Sprintf("cannot find redir.o: %v\n", err))
-	}
+// 	boxSockmap := packr.New("sockmap", "./sockmap/generated")
+// 	sockopsBytes, err := boxSockmap.Find("sockops.o")
+// 	if err != nil {
+// 		panic(fmt.Sprintf("cannot find sockops.o: %v\n", err))
+// 	}
+// 	skmsgBytes, err := boxSockmap.Find("redir.o")
+// 	if err != nil {
+// 		panic(fmt.Sprintf("cannot find redir.o: %v\n", err))
+// 	}
 
-	xdpAsset = xdpBytes
-	sockopsAsset = sockopsBytes
-	skmsgAsset = skmsgBytes
-}
+// 	xdpAsset = xdpBytes
+// 	sockopsAsset = sockopsBytes
+// 	skmsgAsset = skmsgBytes
+// }
 
 func (m XDPMode) String() string {
 	switch m {
@@ -2285,7 +2284,7 @@ func isAtLeastKernel(v *version.Version) error {
 }
 
 func SupportsSockmap() error {
-	if err := isAtLeastKernel(v4Dot19Dot0); err != nil {
+	if err := isAtLeastKernel(v4Dot20Dot0); err != nil {
 		return err
 	}
 

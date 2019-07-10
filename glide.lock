@@ -101,38 +101,15 @@ imports:
 - name: github.com/go-openapi/swag
   version: becd2f08beafcca035645a8a101e0e3e18140458
 - name: github.com/go-playground/locales
-  version: f63010822830b6fe52288ee52d5a1151088ce039
+  version: 630ebbb602847eba93e75ae38bbc7bb7abcf1ff3
   subpackages:
   - currency
 - name: github.com/go-playground/universal-translator
   version: 71201497bace774495daed26a3874fd339e0b538
-- name: github.com/gobuffalo/envy
-  version: 043cb4b8af871b49563291e32c66bb84378a60ac
-- name: github.com/gobuffalo/genny
-  version: 34bef62e8202ea5e6dd1f9ee3d5ac217f1290352
-- name: github.com/gobuffalo/gogen
-  version: 5482e6ef5d999f8cfa9b038a53953c9b4ee090af
-  subpackages:
-  - goimports
-  - gomods
-- name: github.com/gobuffalo/logger
-  version: 86e12af44bc273e0063fad5b6ad588890b8cfe6b
-- name: github.com/gobuffalo/mapi
-  version: 0bb5e840be332d4280e40f2e6c50777c615bbac5
-- name: github.com/gobuffalo/packd
-  version: 9efbb667f2024a9370cadda45a57a0657c88a6fb
 - name: github.com/gobuffalo/packr
   version: 68a5fdc58d980600c4622a82472ebe415048f141
   subpackages:
-  - v2
-  - v2/file
-  - v2/file/resolver
-  - v2/file/resolver/encoding/hex
-  - v2/jam/parser
   - v2/packr2
-  - v2/plog
-- name: github.com/gobuffalo/syncx
-  version: 33c29581e754bd354236e977dfe426e55331c45d
 - name: github.com/gogo/protobuf
   version: c0656edd0d9eab7c66d1eb0c568f9039345796f7
   subpackages:
@@ -223,7 +200,7 @@ imports:
 - name: github.com/karrick/godirwalk
   version: 5e617d9cfec6f870e63b168e9a2fb7c490a1c108
 - name: github.com/kelseyhightower/envconfig
-  version: dd1402a4d99de9ac2f396cd6fcb957bc2c695ec1
+  version: 0b417c4ec4a8a82eecc22a1459a504aa55163d61
 - name: github.com/leodido/go-urn
   version: a67a23e1c1af3c66528573bb86a87246477277c1
 - name: github.com/libp2p/go-reuseport
@@ -250,7 +227,7 @@ imports:
 - name: github.com/Masterminds/sprig
   version: 544a9b1d90f323f6509491b389714fbbd126bee3
 - name: github.com/mattn/go-colorable
-  version: 3a70a971f94a22f2fa562ffcc7a0eb45f5daf045
+  version: 8029fb3788e5a4a9c00e415f586a6d033f5d38b3
 - name: github.com/mattn/go-isatty
   version: c1975dc15c1d481e8da23f6ed313bb071136b98f
 - name: github.com/matttproud/golang_protobuf_extensions
