@@ -6,7 +6,7 @@ canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/resources/felixco
 
 A [Felix]({{site.url}}/{{page.version}}/reference/architecture/#felix) configuration resource (`FelixConfiguration`) represents Felix configuration options for the cluster.
 
-For `calicoctl` [commands]({{site.url}}/{{page.version}}/reference/calicoctl/commands/), the following case-insensitive aliases 
+For `calicoctl` [commands]({{site.url}}/{{page.version}}/reference/calicoctl/commands/), the following case-insensitive aliases
 may be used to specify the resource type on the CLI:
 `felixconfiguration`, `felixconfig`, `felixconfigurations`, `felixconfigs`.
 
@@ -76,8 +76,7 @@ spec:
 | prometheusMetricsEnabled           | Set to `true` to enable the experimental Prometheus metrics server in Felix. | boolean | boolean | `false` |
 | prometheusMetricsPort              | Experimental: TCP port that the Prometheus metrics server should bind to. | int | int | `9091` |
 | prometheusProcessMetricsEnabled    | Set to `false` to disable process metrics collection, which the Prometheus client does by default. This reduces the number of metrics reported, reducing Prometheus load. | boolean | boolean | `true` |
-| prometheusReporterEnabled | Set to `true` to enable configure Felix to keep count of recently denied packets and publish these as Prometheus metrics. Refer to the
-[Metrics]({{site.url}}/{{page.version}}/security/metrics/metrics) section for more details. Note that denied packet metrics are independent of the `dropActionOverride` setting.  Specifically, if packets that would normally be denied are being allowed through by a setting of `Accept` or `LogAndAccept`, those packets still get counted as denied packets. | `true` `false` | boolean | `false` |
+| prometheusReporterEnabled | Set to `true` to enable configure Felix to keep count of recently denied packets and publish these as Prometheus metrics. Refer to the [Metrics]({{site.url}}/{{page.version}}/security/metrics/metrics) section for more details. Note that denied packet metrics are independent of the `dropActionOverride` setting.  Specifically, if packets that would normally be denied are being allowed through by a setting of `Accept` or `LogAndAccept`, those packets still get counted as denied packets. | `true` `false` | boolean | `false` |
 | prometheusReporterPort | The TCP port on which to report denied packet metrics, if `prometheusReporterEnabled` is set to `true`. |  |  | `9092` |
 | reportingIntervalSecs              | Interval at which Felix reports its status into the datastore or 0 to disable.  Must be non-zero in OpenStack deployments. | int | int | `30` |
 | reportingTTLSecs                   | Time-to-live setting for process-wide status reports. | int | int | `90` |
