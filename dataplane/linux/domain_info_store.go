@@ -463,7 +463,13 @@ func (s *domainInfoStore) GetDomainIPs(domain string) []string {
 	ips := s.resultsCache[domain]
 	if ips == nil {
 		var collectIPsForName func(string)
+		collectedNames := set.New()
 		collectIPsForName = func(name string) {
+			if collectedNames.Contains(name) {
+				// Avoid CNAME loops!
+				return
+			}
+			collectedNames.Add(name)
 			nameData := s.mappings[name]
 			log.WithFields(log.Fields{
 				"name":     name,
