@@ -36,7 +36,7 @@ func PolicyImpactParamsHandler(authz K8sAuthInterface, h http.Handler) http.Hand
 		}
 
 		//check permissions for the policy actions being previewed
-		ok, err := checkPolicyActionsPermissions(params.PolicyActions, req, authz)
+		ok, err := checkPolicyActionsPermissions(params.ResourceActions, req, authz)
 		if err != nil {
 			log.WithError(err).Debug("Error reading policy permissions ")
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -136,9 +136,9 @@ func checkPolicyActionsPermissions(actions []pip.ResourceChange, req *http.Reque
 
 func NewContextWithPolicyImpactActions(ctx context.Context, params PolicyImpactParams) context.Context {
 
-	return context.WithValue(ctx, pip.PolicyImpactContextKey, params.PolicyActions)
+	return context.WithValue(ctx, pip.PolicyImpactContextKey, params.ResourceActions)
 }
 
 type PolicyImpactParams struct {
-	PolicyActions []pip.ResourceChange `json:"policyActions"`
+	ResourceActions []pip.ResourceChange `json:"resourceActions"`
 }

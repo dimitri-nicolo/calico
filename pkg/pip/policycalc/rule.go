@@ -45,8 +45,8 @@ func (c *CompiledRule) Match(flow *Flow) MatchType {
 	return mt
 }
 
-// FromAPI fills in the CompiledRule from the v3 Rule.
-func (c *CompiledRule) FromAPI(m *MatcherFactory, namespace EndpointMatcher, in v3.Rule) {
+// fromAPI fills in the CompiledRule from the v3 Rule.
+func (c *CompiledRule) fromAPI(m *MatcherFactory, namespace EndpointMatcher, in v3.Rule) {
 	// Reset matchers in case we are re-using an existing CompiledRule.
 	c.Matchers = nil
 
@@ -127,4 +127,13 @@ func (r *CompiledRule) add(fm FlowMatcher) {
 	}
 
 	r.Matchers = append(r.Matchers, fm)
+}
+
+// compileRules creates a slice of compiled rules from the supplied v3 parameters.
+func compileRules(m *MatcherFactory, namespace EndpointMatcher, rules []v3.Rule) []CompiledRule {
+	compiled := make([]CompiledRule, len(rules))
+	for i := range rules {
+		compiled[i].fromAPI(m, namespace, rules[i])
+	}
+	return compiled
 }

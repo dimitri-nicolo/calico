@@ -21,8 +21,8 @@ type resourceChangeTrial struct {
 }
 
 // Defined an alias for the ResourceChange so that we can json unmarshal it from the ResourceChange.UnmarshalJSON
-// without causing recursion.
-type AliasedResourceChange ResourceChange
+// without causing recursion (since aliased types do not inherit methods).
+type AliasedResourceChange *ResourceChange
 
 // UnmarshalJSON allows unmarshalling of a ResourceChange from JSON bytes. This is required because the Resource
 // field is an interface, and so it needs to be set with a concrete type before it can be unmarshalled.
@@ -32,16 +32,6 @@ func (c *ResourceChange) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &r); err != nil {
 		return err
 	}
-
-	// Create an AliasedResourceChange containing the actual required resource type, and then unmarshal.
-	alias := AliasedResourceChange{
-		Resource: resources.NewResource(r.Resource),
-	}
-	if err := json.Unmarshal(b, &alias); err != nil {
-		return err
-	}
-
-	// Copy the data into our receiver.
-	*c = ResourceChange(alias)
-	return nil
+	c.Resource = resources.NewResource(r.Resource)
+	return json.Unmarshal(b, AliasedResourceChange(c))
 }

@@ -30,7 +30,7 @@ var (
 	uint8_17    = uint8(17)
 )
 
-var _ = Describe("Compiled policy tests", func() {
+var _ = Describe("Compiled tiers and policies tests", func() {
 	var f *Flow
 	var np *v3.NetworkPolicy
 	var tiers Tiers
@@ -79,7 +79,7 @@ var _ = Describe("Compiled policy tests", func() {
 		}
 
 		compute = func() Action {
-			compiled := compile(cfg, rd, modified, sel)
+			compiled := newCompiledTiersAndPolicies(cfg, rd, modified, sel)
 			f.Source.cachedSelectorResults = sel.CreateSelectorCache()
 			f.Destination.cachedSelectorResults = sel.CreateSelectorCache()
 			return compiled.Action(f)

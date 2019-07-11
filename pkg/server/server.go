@@ -10,17 +10,18 @@ import (
 	"os"
 	"sync"
 
-	"github.com/tigera/compliance/pkg/datastore"
-
-	pipinit "github.com/tigera/es-proxy/pkg/pip/installer"
-
 	log "github.com/sirupsen/logrus"
+
 	k8s "k8s.io/client-go/kubernetes"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
+	"github.com/tigera/compliance/pkg/datastore"
+
 	"github.com/tigera/es-proxy/pkg/handler"
 	"github.com/tigera/es-proxy/pkg/middleware"
+	pipinit "github.com/tigera/es-proxy/pkg/pip/installer"
+	"github.com/tigera/es-proxy/pkg/pip/policycalc"
 )
 
 var (
@@ -57,7 +58,8 @@ func Start(config *Config) error {
 
 	//install pip mutator
 	clientset := datastore.MustGetClientSet()
-	pipinit.InstallPolicyImpactReponseHook(proxy, clientset)
+	policyCalcConfig := policycalc.MustLoadConfig()
+	pipinit.InstallPolicyImpactReponseHook(proxy, policyCalcConfig, clientset)
 
 	sm.Handle("/version", http.HandlerFunc(handler.VersionHandler))
 

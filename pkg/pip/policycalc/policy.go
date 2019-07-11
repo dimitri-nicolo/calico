@@ -4,6 +4,8 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+
+	"github.com/tigera/compliance/pkg/resources"
 )
 
 // CompiledPolicy contains the compiled policy matchers for either ingress _or_ egress policy rules.
@@ -38,7 +40,10 @@ func (p *CompiledPolicy) add(fm FlowMatcher) {
 
 // Action determines the action of this policy on the flow. It is assumed Applies() has already been invoked to
 // determine if this policy actually applies to the flow.
-func (c *CompiledPolicy) Action(flow *Flow, af ActionFlag) (finalActionType ActionFlag, gotoNextPolicy bool) {
+// It returns:
+// -  The computed action for this policy. This may have multiple action flags set.
+// -  Whether we need to enumerate the next policy in the tier.
+func (c *CompiledPolicy) Action(flow *Flow, af ActionFlag) (ActionFlag, bool) {
 	for i := range c.Rules {
 		log.Debugf("Processing rule %d", i)
 		switch c.Rules[i].Match(flow) {
@@ -67,11 +72,60 @@ func (c *CompiledPolicy) Action(flow *Flow, af ActionFlag) (finalActionType Acti
 	return af, true
 }
 
-// CompiledRulesFromAPI creates a slice of compiled rules from the supplied v3 parameters.
-func CompiledRulesFromAPI(m *MatcherFactory, namespace EndpointMatcher, rules []v3.Rule) []CompiledRule {
-	compiled := make([]CompiledRule, len(rules))
-	for i := range rules {
-		compiled[i].FromAPI(m, namespace, rules[i])
+// compilePolicy compiles the Calico v3 policy resource into a CompiledPolicy for both ingress and egress flows.
+// If the policy does not contain ingress or egress matches then the corresponding CompiledPolicy will be nil.
+func compilePolicy(m *MatcherFactory, r resources.Resource) (ingressPol, egressPol *CompiledPolicy) {
+	log.Debugf("Compiling policy %s", resources.GetResourceID(r))
+
+	// From the resource type, determine the namespace matcher, selector matcher and set of rules to use.
+	//
+	// The resource type here will either be a Calico NetworkPolicy or GlobalNetworkPolicy. Any Kubernetes
+	// NetworkPolicies will have been converted to Calico NetworkPolicies prior to this point.
+	var namespace EndpointMatcher
+	var selector EndpointMatcher
+	var ingress, egress []v3.Rule
+	var types []v3.PolicyType
+	switch res := r.(type) {
+	case *v3.NetworkPolicy:
+		namespace = m.Namespace(res.Namespace)
+		selector = m.Selector(res.Spec.Selector)
+		ingress, egress = res.Spec.Ingress, res.Spec.Egress
+		types = res.Spec.Types
+	case *v3.GlobalNetworkPolicy:
+		selector = m.Selector(res.Spec.Selector)
+		ingress, egress = res.Spec.Ingress, res.Spec.Egress
+		types = res.Spec.Types
+	default:
+		log.WithField("res", res).Fatal("Unexpected policy resource type")
 	}
-	return compiled
+
+	// Handle ingress policy matchers
+	if policyTypesContains(types, v3.PolicyTypeIngress) {
+		ingressPol = &CompiledPolicy{
+			Rules: compileRules(m, namespace, ingress),
+		}
+		ingressPol.add(m.Dst(namespace))
+		ingressPol.add(m.Dst(selector))
+	}
+
+	// Handle egress policy matchers
+	if policyTypesContains(types, v3.PolicyTypeEgress) {
+		egressPol = &CompiledPolicy{
+			Rules: compileRules(m, namespace, egress),
+		}
+		egressPol.add(m.Src(namespace))
+		egressPol.add(m.Src(selector))
+	}
+
+	return
+}
+
+// policyTypesContains checks if the supplied policy type is in the policy type slice
+func policyTypesContains(s []v3.PolicyType, e v3.PolicyType) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
 }

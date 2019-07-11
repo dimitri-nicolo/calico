@@ -30,9 +30,10 @@ var (
 )
 
 // New returns a new PIP instance.
-func New(listSrc list.Source) PIP {
+func New(cfg *policycalc.Config, listSrc list.Source) PIP {
 	p := &pip{
 		listSrc: listSrc,
+		cfg:     cfg,
 	}
 	return p
 }
@@ -40,6 +41,7 @@ func New(listSrc list.Source) PIP {
 // pip implements the PIP interface.
 type pip struct {
 	listSrc list.Source
+	cfg     *policycalc.Config
 }
 
 // GetPolicyCalculator loads the initial configuration and updated configuration and returns a primed policyCalculator
@@ -72,11 +74,8 @@ func (s *pip) GetPolicyCalculator(ctx context.Context, r []ResourceChange) (poli
 	// Extract the updated set of config from the xrefcache.
 	resourceDataAfter := s.resourceDataFromXrefCache(xc)
 
-	// Get the policy calc config from env.
-	cfg := policycalc.MustLoadConfig()
-
 	// Create the policy calculator.
-	calc := policycalc.NewPolicyCalculator(cfg, resourceDataBefore, resourceDataAfter, modified)
+	calc := policycalc.NewPolicyCalculator(s.cfg, resourceDataBefore, resourceDataAfter, modified)
 
 	return calc, nil
 }

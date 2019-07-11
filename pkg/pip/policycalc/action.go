@@ -13,7 +13,7 @@ const (
 
 const ActionFlagsAllowAndDeny = ActionFlagAllow | ActionFlagDeny
 
-// Indeterminate returns true if the compile rule actions indicate the action is indeterminate. This is true when
+// Indeterminate returns true if the compiled rule actions indicate the action is indeterminate. This is true when
 // a rule match is uncertain such that both Allow and Deny actions are possible with the limited available information
 // in the flow data.
 func (a ActionFlag) Indeterminate() bool {

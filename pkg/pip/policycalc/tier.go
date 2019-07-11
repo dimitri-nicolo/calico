@@ -2,21 +2,86 @@ package policycalc
 
 import log "github.com/sirupsen/logrus"
 
+// newCompiledTiersAndPolicies compiles the Tiers into CompiledTiersAndPolicies.
+func newCompiledTiersAndPolicies(cfg *Config, rd *ResourceData, modified ModifiedResources, sel *EndpointSelectorHandler) *CompiledTiersAndPolicies {
+	// Create the namespace handler, and populate from the Namespaces and ServiceAccounts.
+	log.Debugf("Creating namespace handler with %d namespaces and %d service accounts", len(rd.Namespaces), len(rd.ServiceAccounts))
+	namespaces := NewNamespaceHandler(rd.Namespaces, rd.ServiceAccounts)
+
+	// Create a new matcher factory which is used to create Matcher functions for the compiled policies.
+	matcherFactory := NewMatcherFactory(cfg, namespaces, sel)
+
+	// Iterate through tiers.
+	c := &CompiledTiersAndPolicies{}
+	for i, tier := range rd.Tiers {
+		log.Debugf("Compiling tier (idx %d)", i)
+		var ingressTier, egressTier CompiledTier
+
+		// Iterate through the policies in a tier.
+		for _, pol := range tier {
+			// newCompiledTiersAndPolicies the policy to get the ingress and egress versions of the policy as appropriate.
+			ingressPol, egressPol := compilePolicy(matcherFactory, pol)
+
+			// Was this policy resource one of the resources modified in the proposed config change.
+			isModified := modified.IsModified(pol)
+
+			// Add the ingress and egress policies to their respective slices. If this is a modified policy, also
+			// track it - we'll use this as a shortcut to determine if a flow is affected by the configuration change
+			// or not.
+			if ingressPol != nil {
+				ingressTier = append(ingressTier, ingressPol)
+				if isModified {
+					c.ModifiedIngressPolicies = append(c.ModifiedIngressPolicies, ingressPol)
+				}
+			}
+			if egressPol != nil {
+				egressTier = append(egressTier, egressPol)
+				if isModified {
+					c.ModifiedEgressPolicies = append(c.ModifiedEgressPolicies, egressPol)
+				}
+			}
+		}
+
+		// Append the ingress and egress tiers if any policies were added to them.
+		if ingressTier != nil {
+			c.IngressTiers = append(c.IngressTiers, ingressTier)
+		}
+		if egressTier != nil {
+			c.EgressTiers = append(c.EgressTiers, egressTier)
+		}
+	}
+
+	return c
+}
+
 // CompiledTiersAndPolicies contains the compiled set of ingress/egress tiers and tracks the ingress and egress
 // policies impacted by the configuration update.
 type CompiledTiersAndPolicies struct {
-	IngressTiers    CompiledTiers
-	EgressTiers     CompiledTiers
-	IngressImpacted []*CompiledPolicy
-	EgressImpacted  []*CompiledPolicy
+	// IngressTiers is the set of compiled tiers and policies, containing only ingress rules. Policies that do not
+	// apply to ingress flows are filtered out, and tiers are omitted if all policies were filtered out.
+	IngressTiers CompiledTiers
+
+	// EgressTiers is the set of compiled tiers and policies, containing only egress rules. Policies that do not
+	// apply to egress flows are filtered out, and tiers are omitted if all policies were filtered out.
+	EgressTiers CompiledTiers
+
+	// ModifiedIngressPolicies is the set of compiled policies containing ingress rules that were modified by the
+	// resource update.
+	ModifiedIngressPolicies []*CompiledPolicy
+
+	// ModifiedEgressPolicies is the set of compiled policies containing egress rules that were modified by the
+	// resource update.
+	ModifiedEgressPolicies []*CompiledPolicy
 }
 
-// FlowImpacted returns whether the supplied flow is potentially impacted by the configuration update.
-func (c *CompiledTiersAndPolicies) FlowImpacted(flow *Flow) bool {
+// FlowSelectedByModifiedPolicies returns whether the flow is selected by any of the policies that were modified.
+// Flows that are not selected cannot be impacted by the policy updates and therefore do not need to be run through
+// the policy calculator.
+func (c *CompiledTiersAndPolicies) FlowSelectedByModifiedPolicies(flow *Flow) bool {
 	// If source is a Calico managed endpoint then check if flow matches impacted egress policies.
 	if flow.Source.Labels != nil {
-		for i := range c.EgressImpacted {
-			if c.EgressImpacted[i].Applies(flow) == MatchTypeTrue {
+		for i := range c.ModifiedEgressPolicies {
+			if c.ModifiedEgressPolicies[i].Applies(flow) == MatchTypeTrue {
 				return true
 			}
 		}
@@ -24,8 +89,8 @@ func (c *CompiledTiersAndPolicies) FlowImpacted(flow *Flow) bool {
 
 	// If destination is a Calico managed endpoint then check if flow matches impacted ingress policies.
 	if flow.Destination.Labels != nil {
-		for i := range c.IngressImpacted {
-			if c.IngressImpacted[i].Applies(flow) == MatchTypeTrue {
+		for i := range c.ModifiedIngressPolicies {
+			if c.ModifiedIngressPolicies[i].Applies(flow) == MatchTypeTrue {
 				return true
 			}
 		}

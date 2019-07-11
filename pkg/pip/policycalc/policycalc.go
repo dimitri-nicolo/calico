@@ -2,11 +2,12 @@ package policycalc
 
 import log "github.com/sirupsen/logrus"
 
+// PolicyCalculator is used to determine the calculated action from a configuration change for a given flow.
 type PolicyCalculator interface {
 	Action(flow *Flow) (processed bool, before, after Action)
 }
 
-// policyCalculator implements the policy impact calculator.
+// policyCalculator implements the PolicyCalculator interface.
 type policyCalculator struct {
 	Config    *Config
 	Before    *CompiledTiersAndPolicies
@@ -14,7 +15,7 @@ type policyCalculator struct {
 	Selectors *EndpointSelectorHandler
 }
 
-// NewPolicyCalculator returns a new policyCalculator.
+// NewPolicyCalculator returns a new PolicyCalculator.
 func NewPolicyCalculator(
 	cfg *Config,
 	resourceDataBefore *ResourceData,
@@ -30,8 +31,8 @@ func NewPolicyCalculator(
 	return &policyCalculator{
 		Config:    cfg,
 		Selectors: selectors,
-		Before:    compile(cfg, resourceDataBefore, modified, selectors),
-		After:     compile(cfg, resourceDataAfter, modified, selectors),
+		Before:    newCompiledTiersAndPolicies(cfg, resourceDataBefore, modified, selectors),
+		After:     newCompiledTiersAndPolicies(cfg, resourceDataAfter, modified, selectors),
 	}
 }
 
@@ -49,7 +50,7 @@ func (fp *policyCalculator) Action(flow *Flow) (processed bool, before, after Ac
 	flow.Destination.cachedSelectorResults = fp.CreateSelectorCache()
 
 	// Check if this flow is impacted.
-	if !fp.Before.FlowImpacted(flow) && !fp.After.FlowImpacted(flow) {
+	if !fp.Before.FlowSelectedByModifiedPolicies(flow) && !fp.After.FlowSelectedByModifiedPolicies(flow) {
 		log.Debug("Flow unaffected")
 		return false, flow.Action, flow.Action
 	}
