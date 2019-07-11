@@ -2756,7 +2756,6 @@ func schema_libcalico_go_lib_apis_v3_CISBenchmarkParams(ref common.ReferenceCall
 						},
 					},
 				},
-				Required: []string{"includeUnscoredTests", "numFailedTests", "resultsFilters", "highThreshold", "medThreshold"},
 			},
 		},
 		Dependencies: []string{

@@ -72,22 +72,22 @@ type ReportSpec struct {
 // CISBenchmarkParams contains the parameters for configuring a CIS benchmark report.
 type CISBenchmarkParams struct {
 	// Specifies if the report should also show results for scored/not-scored tests.
-	IncludeUnscoredTests bool `json:"includeUnscoredTests" default:"true"`
+	IncludeUnscoredTests bool `json:"includeUnscoredTests,omitempty" default:"true"`
 
 	// Configure the number of top failed tests to show up on the report.
-	NumFailedTests *int `json:"numFailedTests" validate:"gt=0" default:"5"`
+	NumFailedTests *int `json:"numFailedTests,omitempty" validate:"gt=0" default:"5"`
 
 	// Benchmark results filters. The first matching set of filters is applied to each set of benchmark results.
 	// If there are no matching filters, the full set of benchmark results will be included in the report.
-	ResultsFilters []CISBenchmarkFilter `json:"resultsFilters"`
+	ResultsFilters []CISBenchmarkFilter `json:"resultsFilters,omitempty"`
 
 	// Interpretted as a percentage to indicate at what levels of passing tests a node should be considered
 	// HIGH, MED, and LOW.
 	// - If >= HighThreshold flag as high
 	// - Otherwise, if > MedThreshold flag as med
 	// - Otherwise flag as low.
-	HighThreshold *int `json:"highThreshold" validate:"gte=0,lte=100,gtfield=MedThreshold" default:"100"`
-	MedThreshold  *int `json:"medThreshold" validate:"gte=0,lte=100" default:"50"`
+	HighThreshold *int `json:"highThreshold,omitempty" validate:"gte=0,lte=100,gtfield=MedThreshold" default:"100"`
+	MedThreshold  *int `json:"medThreshold,omitempty" validate:"gte=0,lte=100" default:"50"`
 }
 
 // CISBenchmarkFilter provides filters for a set of benchmarks that match particular selection criteria.
