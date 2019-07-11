@@ -99,45 +99,10 @@ make cd CONFIRM=true BUILD_IMAGES="tigera/voltron"
 
 ## Deploy a management cluster
 
-
 ![](images/arch1.png)
 
-1. Build the voltron manifest
+Please refer to the [install guide](install-scripts/).
 
-```
-make manifests BRANCH_NAME=master -B
-```
-
-2. Build a management cluster with terraform and [calico-ready-clusters](https://github.com/tigera/calico-ready-clusters/tree/master/kubeadm/1.6)
-
-```
-terraform workspace new <clustername>
-terraform apply -var prefix=<username-clustername>
-cp master_ssh_key <clustername>-master_ssh
-cp admin.conf <clustername>-admin.conf
-```
-
-3. Copy voltron manifest, network policy, licence and docker credentials
-
-- [voltron.yaml](manifests)
-- [tigera-engineering-test-auth.json](https://tigera.atlassian.net/wiki/spaces/ENG/pages/44925032/Files+we+should+neither+lose+nor+give+away+test+licenses+secrets+etc)
-- [new-test-customer-license.yaml](https://tigera.atlassian.net/wiki/spaces/ENG/pages/44925032/Files+we+should+neither+lose+nor+give+away+test+licenses+secrets+etc)
-- [install-cnx.sh](scripts/demo/install-cnx.sh)
-- [allow-cnx.allow-voltron-access.yaml](manifests/allow-cnx.allow-voltron-access.yaml)
-
-4. Run the install-cnx script with the following parameters
-
-```
-AUTH_TYPE=OIDC OIDC_CLIENT_ID=114913197347-dvlgarrcfbp5dsjb2c3dkl607434eg42.apps.googleusercontent.com ./install-cnx.sh -l new-test-customer-license.yaml -c tigera-engineering-test-auth.json
-```
-
-5. Adding application clusters
-
-```
-kubectl exec -it <voltron_pod> -ncalico-monitoring -- sh /scripts/register.bash
-kubectl cp calico-monitoring/<voltorn_pod>:guardian1.yaml guardian1.yaml
-kubectl cp calico-monitoring/<voltorn_pod>:guardian2.yaml guardian2.yaml
-```
 
 # Project structure
 
