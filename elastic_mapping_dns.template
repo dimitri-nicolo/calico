@@ -112,8 +112,7 @@
               "normalizer": "uppercase"
             },
             "rdata": {
-              "type": "keyword",
-              "normalizer": "uppercase"
+              "type": "keyword"
             }
           }
         }
