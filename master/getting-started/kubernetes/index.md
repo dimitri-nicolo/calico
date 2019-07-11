@@ -50,7 +50,7 @@ To deploy a cluster suitable for production, refer to [Installation](installatio
    sudo chown $(id -u):$(id -g) $HOME/.kube/config
    ```
 
-{% include {{page.version}}/helm-install.md %}
+{% include {{page.version}}/helm-install.md method="quick" %}
 
 ### Next steps
 

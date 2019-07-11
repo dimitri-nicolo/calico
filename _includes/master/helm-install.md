@@ -8,22 +8,38 @@ Ensure that you have the following:
 
 The high-level steps to a functioning cluster with access to the user interface are:
 
-- [Step 1: Acquire the helm charts](#step-1-acquire-the-helm-charts)
-- [Step 2: Create values.yaml for {{ site.prodname }} Core](#step-2-create-valuesyaml-for-tigera-secure-ee-core)
-- [Step 3: Install {{ site.prodname }} Core](#step-3-install-tigera-secure-ee-core)
-- [Step 4: Create values.yaml for {{ site.prodname }}](#step-4-create-valuesyaml-for-tigera-secure-ee)
-- [Step 5: Install {{ site.prodname }}](#step-5-install-tigera-secure-ee)
-- [Step 6: Grant access to user interface](#step-6-grant-access-to-user-interface)
-- [Step 7: Log in to the Manager UI](#step-7-log-in-to-the-manager-ui)
+- [Acquire the helm charts](#acquire-the-helm-charts)
 
-### Step 1: Acquire the Helm charts
+{%- if include.method == "full" %}
+
+- [Create values.yaml for {{ site.prodname }} Core](#create-valuesyaml-for-tigera-secure-ee-core)
+
+{% endif %}
+
+- [Install {{ site.prodname }} Core](#install-tigera-secure-ee-core)
+
+{%- if include.method == "full" %}
+
+- [Create values.yaml for {{ site.prodname }}](#create-valuesyaml-for-tigera-secure-ee)
+
+{% endif %}
+
+- [Install {{ site.prodname }}](#install-tigera-secure-ee)
+
+- [Grant access to user interface](#grant-access-to-user-interface)
+
+- [Log in to the Manager UI](#log-in-to-the-manager-ui)
+
+### Acquire the Helm charts
 
 ```
 curl -O -L https://s3.amazonaws.com/tigera-public/ee/charts/tigera-secure-ee-core-{% include chart_version_name %}.tgz
 curl -O -L https://s3.amazonaws.com/tigera-public/ee/charts/tigera-secure-ee-{% include chart_version_name %}.tgz
 ```
 
-### Step 2: Create values.yaml for {{ site.prodname }} Core
+{%- if include.method == "full" %}
+
+### Create values.yaml for {{ site.prodname }} Core
 
 In this step, you create a values.yaml file with your configuration values to build a running cluster.
 
@@ -88,7 +104,9 @@ initialPool:
 >**Note**: This should fall within `--cluster-cidr` configured for the cluster
 {: .alert .alert-info}
 
-### Step 3: Install {{ site.prodname }} Core
+{% endif %}
+
+### Install {{ site.prodname }} Core
 
 1. Install the chart, passing in the `values.yaml` file you created from the previous section, an additionally passing your image pull secrets:
 
@@ -118,7 +136,9 @@ initialPool:
 
 Now that the **{{ site.prodname }} Core** chart is installed, please move on to the next step to install the **{{ site.prodname }}** chart.
 
-### Step 4: Create values.yaml for {{ site.prodname }}
+{%- if include.method == "full" %}
+
+### Create values.yaml for {{ site.prodname }}
 
 Before we install, we must build a helm values file to configure {{ site.prodname }} for your environment. We will refer to this values file as `values.yaml` at the time of installation.
 
@@ -186,7 +206,9 @@ manager:
     clientID: "cnx-manager"
 ```
 
-### Step 5: Install {{ site.prodname }}
+{% endif %}
+
+### Install {{ site.prodname }}
 
 0. Pre-install the CRDs.
 
@@ -211,7 +233,7 @@ manager:
 
    >Note: If you have not chosen to use a preexisting elasticsearch cluster, some pods may crashloop several times until the elasticsearch pods converge.
 
-### Step 6: Grant access to user interface
+### Grant access to user interface
 
 In this step, we are going to grant a user permission to access the Tigera Secure EE Manager in your cluster. For instructions on how to create a user, please consult our ["Configuring user authentication to Tigera Secure EE Manager" document](/{{page.version}}/reference/cnx/authentication#basic-authentication). Once you have a user, you can run the following commands, replacing `<USER>` with the name of the user you wish to grant access.
 
@@ -237,7 +259,7 @@ kubectl create clusterrolebinding <USER>-network-admin \
 
 To grant access to additional tiers, or create your own roles, see the RBAC documentation.
 
-### Step 7. Log in to the Manager UI
+### Log in to the Manager UI
 
 ```
 kubectl port-forward -n calico-monitoring svc/cnx-manager 9443
