@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -29,7 +30,9 @@ var _ = Describe("Integration Tests", func() {
 
 	var (
 		voltronCmd  *exec.Cmd
+		voltronWg   sync.WaitGroup
 		guardianCmd *exec.Cmd
+		guardianWg  sync.WaitGroup
 	)
 
 	It("Should change directory to bin folder", func() {
@@ -71,7 +74,9 @@ var _ = Describe("Integration Tests", func() {
 
 		errC := make(chan error)
 
+		voltronWg.Add(1)
 		go func() {
+			defer voltronWg.Done()
 			errC <- voltronCmd.Start()
 
 			// Blocking
@@ -207,7 +212,9 @@ var _ = Describe("Integration Tests", func() {
 		guardianCmd.Stdout = os.Stdout
 		guardianCmd.Stderr = os.Stderr
 
+		guardianWg.Add(1)
 		go func() {
+			defer guardianWg.Done()
 			startErr = guardianCmd.Start()
 
 			// Blocking
@@ -219,7 +226,7 @@ var _ = Describe("Integration Tests", func() {
 
 	})
 
-	Context("While Guardian is running", func() {
+	guardianTest := func() {
 		It("Should eventually send a request to test endpoint/target", func() {
 			req, err := http.NewRequest("GET", "https://localhost:5555/api/v1/namespaces", nil)
 			Expect(err).NotTo(HaveOccurred())
@@ -253,14 +260,95 @@ var _ = Describe("Integration Tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(400))
 		})
+	}
+
+	Context("While Guardian is running", guardianTest)
+
+	When("voltron dies (tunnel breaks)", func() {
+		It("should make guardian exit", func(done Done) {
+			err := voltronCmd.Process.Kill()
+			Expect(err).ToNot(HaveOccurred())
+			voltronWg.Wait()
+			guardianWg.Wait()
+			close(done)
+		})
 	})
 
-	It("Should kill the voltron and guardian processes", func() {
+	When("voltron restarts", func() {
+		It("Should restart voltron", func() {
+			voltronCmd = exec.Command("./bin/voltron")
+
+			// Prints logs to OS' Stdout and Stderr
+			voltronCmd.Stdout = os.Stdout
+			voltronCmd.Stderr = os.Stderr
+
+			errC := make(chan error)
+
+			voltronWg.Add(1)
+			go func() {
+				defer voltronWg.Done()
+				errC <- voltronCmd.Start()
+
+				// Blocking
+				voltronCmd.Wait()
+			}()
+
+			Expect(<-errC).ToNot(HaveOccurred())
+		})
+
+		It("Should eventually get a list of clusters", func() {
+			// to make sure that voltron is up again
+			req, err := http.NewRequest("GET", clustersEndpoint, nil)
+			Expect(err).ToNot(HaveOccurred())
+
+			Eventually(func() bool {
+				resp, err := http.DefaultClient.Do(req)
+				if err != nil {
+					return false
+				}
+				return resp.StatusCode == 200
+			}).Should(BeTrue())
+
+			// TODO when proper recovery is implemented, the list should
+			// eventually contain all previously registered clusters
+			ExpectRespMsg(req, "[]")
+		})
+
+		It("Should start up guardian again", func() {
+			var startErr error
+			guardianCmd = exec.Command("./bin/guardian")
+
+			// Prints logs to OS' Stdout and Stderr
+			guardianCmd.Stdout = os.Stdout
+			guardianCmd.Stderr = os.Stderr
+
+			guardianWg.Add(1)
+			go func() {
+				defer guardianWg.Done()
+				startErr = guardianCmd.Start()
+
+				// Blocking
+				guardianCmd.Wait()
+			}()
+
+			// Check if startError
+			Expect(startErr).ToNot(HaveOccurred())
+
+		})
+
+		Context("While Guardian is running", guardianTest)
+	})
+
+	It("Should kill the voltron and guardian processes", func(done Done) {
 		err := voltronCmd.Process.Kill()
 		Expect(err).ToNot(HaveOccurred())
 
 		err = guardianCmd.Process.Kill()
 		Expect(err).ToNot(HaveOccurred())
+
+		voltronWg.Wait()
+		guardianWg.Wait()
+		close(done)
 	})
 })
 
