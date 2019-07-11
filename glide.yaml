@@ -9,13 +9,13 @@ import:
   version: 773f5027234d0b08adf766be34f55df2f312abf7
 - package: github.com/kelseyhightower/confd
   repo: git@github.com:tigera/confd-private.git
-  version: 8efd4a6d6a684c927c5b3b288f007aba97c9ea84
+  version: a0c8b370d238a73616e293cb526d889dbd258401
   subpackages:
   - pkg/config
   - pkg/run
 - package: github.com/projectcalico/felix
   repo: git@github.com:tigera/felix-private.git
-  version: a5bda8c77ce04dc6c92978c47a3d17c707de053a
+  version: 9e3c4aabbd4033f75cfd88013e335241f03fa595
   subpackages:
   - daemon
 - package: github.com/projectcalico/cni-plugin
@@ -23,7 +23,7 @@ import:
   version: a46c89f9c71b112dc0c966ed32d75e28ca63067a
 - package: github.com/projectcalico/libcalico-go
   repo: git@github.com:tigera/libcalico-go-private.git
-  version: c68fc5e8980136a5ed6e2ec66109d1064235a653
+  version: e4a4b445ce7acc5160780f77eb3c4680f8f9ff03
   subpackages:
   - lib/apiconfig
   - lib/apis/v3
