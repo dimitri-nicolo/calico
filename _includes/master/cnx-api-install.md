@@ -122,6 +122,16 @@
    curl --compressed -o cnx-api.yaml \
    {{site.url}}/{{page.version}}/manifests/gke/cnx-api-kdd.yaml
    ```
+   
+{% elsif include.platform == "aks" %}
+
+1. Download the AKS {{site.prodname}} manifest and save the file
+   as cnx-api.yaml for use in subsequent steps. That is how we will refer to it in later steps.
+
+   ```bash
+   curl --compressed -o cnx-api.yaml \
+   {{site.url}}/{{page.version}}/manifests/aks/cnx-api-kdd.yaml
+   ```
 
 {% elsif include.init != "openshift" and include.net == "other" %}
 
