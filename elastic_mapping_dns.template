@@ -1,0 +1,123 @@
+{
+  "template": "tigera_secure_ee_dns*",
+  "settings": {
+    "number_of_shards": 5,
+    "analysis": {
+      "normalizer": {
+        "lowercase": {
+          "type": "custom",
+          "filter": "lowercase"
+        },
+        "uppercase": {
+          "type": "custom",
+          "filter": "uppercase"
+        }
+      }
+    }
+  },
+  "mappings": {
+    "_default_": {
+      "properties": {
+        "start_time": {
+          "type": "date"
+        },
+        "end_time": {
+          "type": "date"
+        },
+        "count": {
+          "type": "long"
+        },
+        "client_name": {
+          "type": "keyword",
+          "normalizer": "lowercase"
+        },
+        "client_name_aggr": {
+          "type": "keyword",
+          "normalizer": "lowercase"
+        },
+        "client_namespace": {
+          "type": "keyword",
+          "normalizer": "lowercase"
+        },
+        "client_ip": {
+          "type": "ip",
+          "null_value": "0.0.0.0"
+        },
+        "client_labels": {
+          "type": "nested",
+          "properties": {
+            "labels": {
+              "type": "keyword"
+            }
+          }
+        },
+        "servers": {
+          "type": "nested",
+          "properties": {
+            "name": {
+              "type": "keyword",
+              "normalizer": "lowercase"
+            },
+            "name_aggr": {
+              "type": "keyword",
+              "normalizer": "lowercase"
+            },
+            "namespace": {
+              "type": "keyword",
+              "normalizer": "lowercase"
+            },
+            "labels": {
+              "type": "nested",
+              "properties": {
+                "labels": {
+                  "type": "keyword"
+                }
+              }
+            },
+            "ip": {
+              "type": "ip",
+              "null_value": "0.0.0.0"
+            }
+          }
+        },
+        "qname": {
+          "type": "keyword",
+          "normalizer": "lowercase"
+        },
+        "qtype": {
+          "type": "keyword",
+          "normalizer": "uppercase"
+        },
+        "qclass": {
+          "type": "keyword",
+          "normalizer": "uppercase"
+        },
+        "rcode": {
+          "type": "keyword",
+          "normalizer": "uppercase"
+        },
+        "rrsets": {
+          "type": "nested",
+          "properties": {
+            "name": {
+              "type": "keyword",
+              "normalizer": "lowercase"
+            },
+            "type": {
+              "type": "keyword",
+              "normalizer": "uppercase"
+            },
+            "class": {
+              "type": "keyword",
+              "normalizer": "uppercase"
+            },
+            "rdata": {
+              "type": "keyword",
+              "normalizer": "uppercase"
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -33,5 +33,19 @@ if [[ "${SUMO_AUDIT_LOG}" == "true" || "${SUMO_AUDIT_TSEE_LOG}" == "true" || "${
   if [ "${SUMO_FLOW_LOG}" == "true" ]; then
     cp /fluentd/etc/outputs/out-sumologic-flow.conf /fluentd/etc/output_flows/out-sumologic-flow.conf
   fi
+
+  # Optional SumoLogic dns log output
+  if [ -z "${SUMO_DNS_SOURCE_CATEGORY}" ]; then
+    sed -i 's|source_category .*||g' /fluentd/etc/outputs/out-sumologic-dns.conf
+  fi
+  if [ -z "${SUMO_DNS_SOURCE_NAME}" ]; then
+    sed -i 's|source_name .*||g' /fluentd/etc/outputs/out-sumologic-dns.conf
+  fi
+  if [ -z "${SUMO_DNS_SOURCE_HOST}" ]; then
+    sed -i 's|source_host .*||g' /fluentd/etc/outputs/out-sumologic-dns.conf
+  fi
+  if [ "${SUMO_DNS_LOG}" == "true" ]; then
+    cp /fluentd/etc/outputs/out-sumologic-dns.conf /fluentd/etc/output_dnss/out-sumologic-dns.conf
+  fi
 fi
 

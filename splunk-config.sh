@@ -33,5 +33,19 @@ if [[ "${SPLUNK_AUDIT_LOG}" == "true" || "${SPLUNK_AUDIT_TSEE_LOG}" == "true" ||
   if [ "${SPLUNK_FLOW_LOG}" == "true" ]; then
     cp /fluentd/etc/outputs/out-splunk-flow.conf /fluentd/etc/output_flows/out-splunk-flow.conf
   fi
+  
+  # Optional Splunk dns log output
+  if [ -z "${SPLUNK_DNS_INDEX}" ]; then
+    sed -i 's|index .*||g' /fluentd/etc/outputs/out-splunk-dns.conf
+  fi
+  if [ -z "${SPLUNK_DNS_SOURCETYPE}" ]; then
+    sed -i 's|sourcetype .*||g' /fluentd/etc/outputs/out-splunk-dns.conf
+  fi
+  if [ -z "${SPLUNK_DNS_SOURCE}" ]; then
+    sed -i 's|source .*||g' /fluentd/etc/outputs/out-splunk-dns.conf
+  fi
+  if [ "${SPLUNK_DNS_LOG}" == "true" ]; then
+    cp /fluentd/etc/outputs/out-splunk-dns.conf /fluentd/etc/output_dns/out-splunk-dns.conf
+  fi
 fi
 
