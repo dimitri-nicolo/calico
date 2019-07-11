@@ -4,7 +4,6 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/tigera/es-proxy/pkg/pip/flow"
 
 	v1 "k8s.io/api/core/v1"
 
@@ -123,7 +122,7 @@ func (n *NamespaceHandler) GetServiceAccountEndpointMatchers(sa *v3.ServiceAccou
 
 	// Create a closure to perform the match.
 	matcher := func(ep *FlowEndpointData) MatchType {
-		if ep.Type != flow.EndpointTypeWep {
+		if ep.Type != EndpointTypeWep {
 			return MatchTypeFalse
 		}
 
