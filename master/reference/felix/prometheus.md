@@ -1,5 +1,5 @@
 ---
-title: Felix Prometheus Statistics
+title: Prometheus statistics
 canonical_url: https://docs.tigera.io/v2.3/reference/felix/prometheus
 ---
 

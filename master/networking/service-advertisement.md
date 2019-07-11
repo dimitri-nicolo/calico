@@ -36,7 +36,7 @@ of `10.0.0.0/24`.
 
 ```bash
 kubectl patch ds -n kube-system calico-node --patch \
-    '{"spec": {"template": {"spec": {"containers": [{"name": "calico-node", "env": [{"name": "CALICO_ADVERTISE_CLUSTER_IPS", "value": "10.0.0.0/24"}]}]}}}}’
+    '{"spec": {"template": {"spec": {"containers": [{"name": "calico-node", "env": [{"name": "CALICO_ADVERTISE_CLUSTER_IPS", "value": "10.0.0.0/24"}]}]}}}}'
 ```
 
 ## Behavior
@@ -47,8 +47,7 @@ using normal BGP route processing and ECMP routing.
 -  traffic to the cluster IP for a service with `externalTrafficPolicy: Local` will be load-balanced across the
    nodes with endpoints for that service
 
--  traffic to the cluster IP for a service with `externalTrafficPolicy: Cluster` will be load-balanced across all
-   the nodes in the cluster.
+-  traffic to the cluster IP for other services will be load-balanced across all the nodes in the cluster.
 
 In order to implement this behavior, {{site.prodname}} does the following.
 

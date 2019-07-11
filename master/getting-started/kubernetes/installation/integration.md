@@ -1,5 +1,5 @@
 ---
-title: Integration Guide
+title: Integration guide
 canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/installation/integration
 ---
 

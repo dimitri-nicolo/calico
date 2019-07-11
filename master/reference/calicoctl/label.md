@@ -1,6 +1,5 @@
 ---
 title: calicoctl label
-canonical_url: ""
 ---
 
 This section describes the `calicoctl label` command.
