@@ -82,6 +82,7 @@ type domainInfoStore struct {
 
 	// Channel for domain mapping expiry signals.
 	mappingExpiryChannel chan *domainMappingExpired
+	expiryTimePassed     func(time.Time) bool
 
 	// Persistence.
 	saveFile     string
@@ -110,6 +111,12 @@ type domainMappingExpired struct {
 }
 
 func newDomainInfoStore(domainInfoChanges chan *domainInfoChanged, config *Config) *domainInfoStore {
+	return newDomainInfoStoreWithShims(domainInfoChanges, config, func(expiryTime time.Time) bool {
+		return expiryTime.Before(time.Now())
+	})
+}
+
+func newDomainInfoStoreWithShims(domainInfoChanges chan *domainInfoChanged, config *Config, expiryTimePassed func(time.Time) bool) *domainInfoStore {
 	log.Info("Creating domain info store")
 	s := &domainInfoStore{
 		domainInfoChanges:    domainInfoChanges,
@@ -117,6 +124,7 @@ func newDomainInfoStore(domainInfoChanges chan *domainInfoChanged, config *Confi
 		wildcards:            make(map[string]*regexp.Regexp),
 		resultsCache:         make(map[string][]string),
 		mappingExpiryChannel: make(chan *domainMappingExpired),
+		expiryTimePassed:     expiryTimePassed,
 		saveFile:             config.DNSCacheFile,
 		saveInterval:         config.DNSCacheSaveInterval,
 		gcInterval:           13 * time.Second,
@@ -325,7 +333,7 @@ func (s *domainInfoStore) processMappingExpiry(name, value string) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	if nameData := s.mappings[name]; nameData != nil {
-		if valueData := nameData.values[value]; (valueData != nil) && valueData.expiryTime.Before(time.Now()) {
+		if valueData := nameData.values[value]; (valueData != nil) && s.expiryTimePassed(valueData.expiryTime) {
 			log.Debugf("Mapping expiry for %v -> %v", name, value)
 			delete(nameData.values, value)
 			s.gcTrigger = true
@@ -383,6 +391,24 @@ func (s *domainInfoStore) storeDNSRecordInfo(rec *layers.DNSResourceRecord, sect
 }
 
 func (s *domainInfoStore) storeInfo(name, value string, ttl time.Duration, isName bool) {
+	// Impose a minimum TTL of 2 seconds - i.e. ensure that the mapping that we store here will
+	// not expire for at least 2 seconds.  Otherwise TCP connections that should succeed will
+	// fail if they involve a DNS response with TTL 1.  In detail:
+	//
+	// a. A client does a DNS lookup for an allowed domain.
+	// b. DNS response comes back, and is copied here for processing.
+	// c. Client sees DNS response and immediately connects to the IP.
+	// d. Felix's ipset programming isn't in place yet, so the first connection packet is
+	//    dropped.
+	// e. TCP sends a retry connection packet after 1 second.
+	// f. 1 second should be plenty long enough for Felix's ipset programming, so the retry
+	//    connection packet should go through.
+	//
+	// However, if the mapping learnt from (c) expires after 1 second, the retry connection
+	// packet may be dropped as well.  Imposing a minimum expiry of 2 seconds avoids that.
+	if int64(ttl) < int64(2*time.Second) {
+		ttl = 2 * time.Second
+	}
 	makeTimer := func() *time.Timer {
 		return time.AfterFunc(ttl, func() {
 			s.mappingExpiryChannel <- &domainMappingExpired{name: name, value: value}

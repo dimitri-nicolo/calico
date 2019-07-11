@@ -266,6 +266,11 @@ func (w *Workload) ExecOutput(args ...string) (string, error) {
 	return w.C.ExecOutput(args...)
 }
 
+func (w *Workload) ExecCombinedOutput(args ...string) (string, error) {
+	args = append([]string{"ip", "netns", "exec", w.NamespaceID()}, args...)
+	return w.C.ExecCombinedOutput(args...)
+}
+
 var (
 	rttRegexp = regexp.MustCompile(`rtt=(.*) ms`)
 )
