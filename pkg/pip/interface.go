@@ -7,5 +7,5 @@ import (
 )
 
 type PIP interface {
-	CalculateFlowImpact(ctx context.Context, f *policycalc.Flow) (processed bool, before, after policycalc.Action)
+	GetPolicyCalculator(ctx context.Context, r []ResourceChange) (policycalc.PolicyCalculator, error)
 }

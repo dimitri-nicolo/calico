@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/tigera/es-proxy/pkg/pip/policycalc"
+
 	log "github.com/sirupsen/logrus"
 
 	. "github.com/onsi/ginkgo"
@@ -78,23 +80,30 @@ func newMockPip() pip.PIP {
 type mockPip struct {
 }
 
-// CalculateFlowImpact satisfies the PIP interface
+type mockCalc struct {
+}
+
+// GetPolicyCalculator satisfies the PIP interface
+// this test mock returns the mock calculator
+func (p mockPip) GetPolicyCalculator(ctx context.Context, r []pip.ResourceChange) (policycalc.PolicyCalculator, error) {
+	return mockCalc{}, nil
+}
+
+// Action satisfies the PolicyCalculator interface
 // this test mock version "Evolves" pokemon labels embeded in the
 // test json.
 // It will also add preview actions fields to select items
-func (p mockPip) CalculateFlowImpact(ctx context.Context, changes []pip.NetworkPolicyChange, flows []flow.Flow) ([]flow.Flow, error) {
-	for i, f := range flows {
-		flows[i].Source.Namespace = evolve(f.Source.Namespace)
-		flows[i].Source.Name = evolve(f.Source.Namespace)
-		flows[i].Dest.Namespace = evolve(f.Dest.Namespace)
-		flows[i].Dest.Name = evolve(f.Dest.Name)
-		flows[i].Proto = evolve(f.Proto)
+func (c mockCalc) Action(flow *policycalc.Flow) (processed bool, before, after policycalc.Action) {
+	flow.Source.Namespace = evolve(flow.Source.Namespace)
+	flow.Source.Name = evolve(flow.Source.Namespace)
+	flow.Destination.Namespace = evolve(flow.Destination.Namespace)
+	flow.Destination.Name = evolve(flow.Destination.Name)
+	//flow.Proto = evolve(f.Proto)
 
-		flows[i] = addPreviewAction(flows[i])
+	//flow = addPreviewAction(flow)
 
-		log.Info("EVOLVED ", f.Source.Namespace, " TO ", flows[i].Source.Namespace)
-	}
-	return flows, nil
+	log.Info("EVOLVED ", flow.Source.Namespace, " TO ", flow.Source.Namespace)
+	return true, flow.Action, flow.Action
 }
 
 // evolves the pokemon strings in a particular order
@@ -138,10 +147,10 @@ func mockHttpResponse(s string) *http.Response {
 	body := ioutil.NopCloser(b)
 	r.Body = body
 
-	changes := make([]pip.NetworkPolicyChange, 1)
-	changes[0] = pip.NetworkPolicyChange{
-		ChangeAction:  "update",
-		NetworkPolicy: &v1.NetworkPolicy{},
+	changes := make([]pip.ResourceChange, 1)
+	changes[0] = pip.ResourceChange{
+		Action:   "update",
+		Resource: &v1.NetworkPolicy{},
 	}
 
 	//add the context

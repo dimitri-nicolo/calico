@@ -26,10 +26,10 @@ func NewPIPResponseHook(p pip.PIP) ResponseHook {
 func (rh *pipResponseHook) ModifyResponse(r *http.Response) error {
 
 	//extract the context from the request
-	context := r.Request.Context()
+	cxt := r.Request.Context()
 
 	//look for the policy impact request data in the context
-	changes := context.Value(pip.PolicyImpactContextKey)
+	changes := cxt.Value(pip.PolicyImpactContextKey)
 
 	//if there were no changes, no need to modify the response
 	if changes == nil {
@@ -39,7 +39,7 @@ func (rh *pipResponseHook) ModifyResponse(r *http.Response) error {
 	log.Debug("Policy Impact ModifyResponse executing")
 
 	//assert that we have network policy changes
-	npcs := changes.([]pip.NetworkPolicyChange)
+	res := changes.([]pip.ResourceChange)
 
 	//read the flows from the response body
 	b, err := ioutil.ReadAll(r.Body)
@@ -60,21 +60,35 @@ func (rh *pipResponseHook) ModifyResponse(r *http.Response) error {
 	}
 
 	//extract the flows
-	inflows, err := v.ExtractFlows()
-	if err != nil {
-		return err
-	}
+	/*
+		inflows, err := v.ExtractFlows()
+		if err != nil {
+			return err
+		}
+	*/
 
 	//calculate the flow impact
-	outflows, err := rh.pip.CalculateFlowImpact(context, npcs, inflows)
+	pc, err := rh.pip.GetPolicyCalculator(cxt, res)
 	if err != nil {
 		return err
 	}
 
-	//put the returned flows back into the response body and remarshal
-	v.ReplaceFlows(outflows)
-	newBodyContent, err := v.Marshal()
+	processed, before, after := pc.Action(nil)
+	log.WithFields(log.Fields{
+		"processed": processed,
+		"before":    before,
+		"after":     after,
+	}).Debug("Processed flow")
+	/*
+		outflows, err := rh.pip.CalculateFlowImpact(cxt, res, inflows)
+		if err != nil {
+			return err
+		}
 
+		//put the returned flows back into the response body and remarshal
+		v.ReplaceFlows(ouflows)
+	*/
+	newBodyContent, err := v.Marshal()
 	if err != nil {
 		return err
 	}

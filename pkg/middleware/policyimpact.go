@@ -119,11 +119,11 @@ func PolicyImpactRequestProcessor(req *http.Request) (p *PolicyImpactParams, e e
 	return &pip, nil
 }
 
-func checkPolicyActionsPermissions(actions []pip.NetworkPolicyChange, req *http.Request, authz K8sAuthInterface) (bool, error) {
+func checkPolicyActionsPermissions(actions []pip.ResourceChange, req *http.Request, authz K8sAuthInterface) (bool, error) {
 	factory := NewStandardPolicyImpactRbacHelperFactory(authz)
 	rbac := factory.NewPolicyImpactRbacHelper(req)
 	for i, _ := range actions {
-		ok, err := rbac.CanPreviewPolicyAction(actions[i].ChangeAction, actions[i].NetworkPolicy)
+		ok, err := rbac.CanPreviewPolicyAction(actions[i].Action, actions[i].Resource)
 		if err != nil {
 			return false, err
 		}
@@ -140,5 +140,5 @@ func NewContextWithPolicyImpactActions(ctx context.Context, params PolicyImpactP
 }
 
 type PolicyImpactParams struct {
-	PolicyActions []pip.NetworkPolicyChange `json:"policyActions"`
+	PolicyActions []pip.ResourceChange `json:"policyActions"`
 }

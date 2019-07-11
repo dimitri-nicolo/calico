@@ -7,8 +7,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	log "github.com/sirupsen/logrus"
-
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -32,84 +30,59 @@ var (
 )
 
 // New returns a new PIP instance.
-func New(ctx context.Context, listSrc list.Source, r []ResourceChange) PIP {
+func New(listSrc list.Source) PIP {
 	p := &pip{
 		listSrc: listSrc,
 	}
-	p.load()
 	return p
 }
 
 // pip implements the PIP interface.
 type pip struct {
-	xc      xrefcache.XrefCache
 	listSrc list.Source
-	calc    *policycalc.PolicyCalculator
 }
 
-// CalculateFlowImpact is the meat of the PIP API. Given a single Flow, it determines if the flow is potentially
-// impacted by the configuration change, and if so calculates the effective flow action before and after the change.
-//
-// If the flow did not undergo any calculation
-func (s *pip) CalculateFlowImpact(ctx context.Context, f *policycalc.Flow) (processed bool, before, after policycalc.Action) {
-	clog := log.WithFields(log.Fields{
-		"flowSrc":  f.Source.Name,
-		"flowDest": f.Destination.Name,
-	})
-
-	// Check the impact of the policy change.
-	processed, before, after = s.calc.Action(f)
-
-	clog.WithFields(log.Fields{
-		"originalAction":   f.Action,
-		"calculatedBefore": before,
-		"calculatedAfter":  after,
-	}).Debug("Computed flow action")
-
-	return processed, before, after
-}
-
-// load loads the initial configuration and updated configuration, priming the internal cache for policy impact
-// calculations.
-func (s *pip) load() error {
+// GetPolicyCalculator loads the initial configuration and updated configuration and returns a primed policyCalculator
+// used for checking flow impact.
+func (s *pip) GetPolicyCalculator(ctx context.Context, r []ResourceChange) (policycalc.PolicyCalculator, error) {
 	// Create a new x-ref cache. Use a blank compliance config for the config settings since the XrefCache currently
 	// requires it but doesn't use any fields except the istio config (which we're not concerned with in the pip use
 	// case).
 	//
 	// We just use the xref cache to determine the ordered set of tiers and policies before and after the updates. Set
 	// in-sync immediately since we aren't interested in callbacks.
-	s.xc = xrefcache.NewXrefCache(&config.Config{}, func() {})
-	s.xc.OnStatusUpdate(syncer.NewStatusUpdateComplete())
+	xc := xrefcache.NewXrefCache(&config.Config{}, func() {})
+	xc.OnStatusUpdate(syncer.NewStatusUpdateComplete())
 
 	// Load the initial set of policy.
-	if err := s.loadInitialPolicy(); err != nil {
-		return err
+	if err := s.loadInitialPolicy(xc); err != nil {
+		return nil, err
 	}
 
 	// Extract the current set of config from the xrefcache.
-	resourceDataBefore := s.resourceDataFromXrefCache()
+	resourceDataBefore := s.resourceDataFromXrefCache(xc)
 
 	// Apply the preview changes to the xref cache. This also constructs the set of modified resources for use by the
 	// policy calculator.
-	modified, err := s.applyPolicyChanges(r)
+	modified, err := s.applyPolicyChanges(xc, r)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Extract the updated set of config from the xrefcache.
-	resourceDataAfter := s.resourceDataFromXrefCache()
+	resourceDataAfter := s.resourceDataFromXrefCache(xc)
 
 	// Get the policy calc config from env.
 	cfg := policycalc.MustLoadConfig()
 
 	// Create the policy calculator.
-	s.calc = policycalc.NewPolicyCalculator(cfg, resourceDataBefore, resourceDataAfter, modified)
+	calc := policycalc.NewPolicyCalculator(cfg, resourceDataBefore, resourceDataAfter, modified)
 
-	return nil
+	return calc, nil
 }
 
 // loadInitialPolicy will load the initial set of policy and related resources from the k8s API into the xrefcache.
-func (s *pip) loadInitialPolicy() error {
+func (s *pip) loadInitialPolicy(xc xrefcache.XrefCache) error {
 	for _, t := range requiredTypes {
 		l, err := s.listSrc.RetrieveList(t)
 		if err != nil {
@@ -118,7 +91,7 @@ func (s *pip) loadInitialPolicy() error {
 
 		err = meta.EachListItem(l, func(obj runtime.Object) error {
 			res := obj.(resources.Resource)
-			s.xc.OnUpdates([]syncer.Update{{
+			xc.OnUpdates([]syncer.Update{{
 				Type:       syncer.UpdateTypeSet,
 				Resource:   res,
 				ResourceID: resources.GetResourceID(res),
@@ -135,7 +108,7 @@ func (s *pip) loadInitialPolicy() error {
 }
 
 // applyPolicyChanges applies the supplied resource updates on top of the loaded configuration in the xrefcache.
-func (s *pip) applyPolicyChanges(rs []ResourceChange) (policycalc.ModifiedResources, error) {
+func (s *pip) applyPolicyChanges(xc xrefcache.XrefCache, rs []ResourceChange) (policycalc.ModifiedResources, error) {
 	modified := make(policycalc.ModifiedResources)
 
 	for _, r := range rs {
@@ -144,20 +117,20 @@ func (s *pip) applyPolicyChanges(rs []ResourceChange) (policycalc.ModifiedResour
 
 		switch r.Action {
 		case "update":
-			s.xc.OnUpdates([]syncer.Update{{
+			xc.OnUpdates([]syncer.Update{{
 				Type:       syncer.UpdateTypeSet,
 				Resource:   r.Resource,
 				ResourceID: id,
 			}})
 
 		case "delete":
-			s.xc.OnUpdates([]syncer.Update{{
+			xc.OnUpdates([]syncer.Update{{
 				Type:       syncer.UpdateTypeDeleted,
 				Resource:   r.Resource,
 				ResourceID: id,
 			}})
 		case "create":
-			s.xc.OnUpdates([]syncer.Update{{
+			xc.OnUpdates([]syncer.Update{{
 				Type:       syncer.UpdateTypeSet,
 				Resource:   r.Resource,
 				ResourceID: id,
@@ -168,12 +141,12 @@ func (s *pip) applyPolicyChanges(rs []ResourceChange) (policycalc.ModifiedResour
 }
 
 // Create the policy configuration from the data stored in the xrefcache.
-func (s *pip) resourceDataFromXrefCache() *policycalc.ResourceData {
+func (s *pip) resourceDataFromXrefCache(xc xrefcache.XrefCache) *policycalc.ResourceData {
 	// Create an empty config.
 	rd := &policycalc.ResourceData{}
 
 	// Grab the ordered tiers and policies from the xrefcache and convert to the required type.
-	xrefTiers := s.xc.GetOrderedTiersAndPolicies()
+	xrefTiers := xc.GetOrderedTiersAndPolicies()
 	rd.Tiers = make(policycalc.Tiers, len(xrefTiers))
 	for i := range xrefTiers {
 		for _, t := range xrefTiers[i].OrderedPolicies {
@@ -182,11 +155,11 @@ func (s *pip) resourceDataFromXrefCache() *policycalc.ResourceData {
 	}
 
 	// Grab the namespaces and the service accounts.
-	_ = s.xc.EachCacheEntry(resources.TypeK8sNamespaces, func(ce xrefcache.CacheEntry) error {
+	_ = xc.EachCacheEntry(resources.TypeK8sNamespaces, func(ce xrefcache.CacheEntry) error {
 		rd.Namespaces = append(rd.Namespaces, ce.GetPrimary().(*corev1.Namespace))
 		return nil
 	})
-	_ = s.xc.EachCacheEntry(resources.TypeK8sServiceAccounts, func(ce xrefcache.CacheEntry) error {
+	_ = xc.EachCacheEntry(resources.TypeK8sServiceAccounts, func(ce xrefcache.CacheEntry) error {
 		rd.ServiceAccounts = append(rd.ServiceAccounts, ce.GetPrimary().(*corev1.ServiceAccount))
 		return nil
 	})
