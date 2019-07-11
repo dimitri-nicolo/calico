@@ -99,7 +99,7 @@ func WithKeepClusterKeys() Option {
 // WithAuthentication sets the kubernetes client that will be used to interact with its api
 func WithAuthentication(authNOn bool, k8sAPI kubernetes.Interface) Option {
 	return func(s *Server) error {
-		s.toggles.AuthNOn = authNOn
+		s.toggles.authNOn = authNOn
 		if authNOn {
 			s.auth = auth.NewIdentity(k8sAPI)
 		}
@@ -122,6 +122,16 @@ func WithKeepAliveSettings(enable bool, intervalMs int) Option {
 func WithDefaultProxy(p *proxy.Proxy) Option {
 	return func(s *Server) error {
 		s.defaultProxy = p
+		return nil
+	}
+}
+
+// WithAutoRegister accept tunnels with genuine cert even if there is no cluster
+// registerd for it. This is a poor man's crash recovery and mainly for
+// debugging, should not be used in production.
+func WithAutoRegister() Option {
+	return func(s *Server) error {
+		s.toggles.autoRegister = true
 		return nil
 	}
 }

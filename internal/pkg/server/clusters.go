@@ -66,8 +66,12 @@ func returnManifests(w http.ResponseWriter, cert *x509.Certificate, key crypto.S
 	}
 }
 
-func (cs *clusters) add(id string, c *cluster) {
+func (cs *clusters) add(id string, c *cluster) error {
+	if cs.clusters[id] != nil {
+		return errors.Errorf("cluster id %q already exists", id)
+	}
 	cs.clusters[id] = c
+	return nil
 }
 
 // List all clusters in sorted order by DisplayName field

@@ -66,6 +66,9 @@ func main() {
 		server.WithKeepClusterKeys(),
 		server.WithTunnelCreds(tunnelCert, tunnelKey),
 		server.WithAuthentication(bootstrap.ConfigureK8sClient(cfg.AuthnOn, cfg.K8sConfigPath)),
+
+		// TODO: remove when voltron starts using k8s resources, probably by SAAS-178
+		server.WithAutoRegister(),
 	}
 
 	if cfg.DefaultK8sProxy {

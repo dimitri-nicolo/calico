@@ -67,13 +67,15 @@ type Server struct {
 	template      string
 	publicAddress string
 
-	auth    *auth.Identity
-	toggles *Toggles
+	auth *auth.Identity
+
+	toggles toggles
 }
 
-// Toggles are the toggles that enable or disable a feature
-type Toggles struct {
-	AuthNOn bool
+// toggles are the toggles that enable or disable a feature
+type toggles struct {
+	authNOn      bool
+	autoRegister bool
 }
 
 // New returns a new Server
@@ -87,7 +89,6 @@ func New(opts ...Option) (*Server, error) {
 		tunnelKeepAliveInterval: 100 * time.Millisecond,
 	}
 
-	srv.toggles = &Toggles{}
 	srv.ctx, srv.cancel = context.WithCancel(context.Background())
 	srv.clusters.generateCreds = srv.generateCreds
 
@@ -193,6 +194,33 @@ func (s *Server) ServeTunnelsTLS(lis net.Listener) error {
 	return nil
 }
 
+func (s *Server) autoRegister(id string, ident tunnel.Identity) (*cluster, error) {
+	cert, ok := ident.(*x509.Certificate)
+	if !ok {
+		return nil, errors.Errorf("unexpected identity type: %T", ident)
+	}
+
+	c := &cluster{
+		Cluster: jclust.Cluster{
+			ID:          id,
+			DisplayName: id,
+		},
+		cert: cert,
+	}
+
+	s.clusters.Lock()
+	err := s.clusters.add(id, c)
+	s.clusters.Unlock()
+
+	if err != nil {
+		return nil, err
+	}
+
+	c.RLock()
+
+	return c, nil
+}
+
 func (s *Server) acceptTunnels(opts ...tunnel.Option) {
 	defer log.Debugf("acceptTunnels exited")
 
@@ -238,9 +266,20 @@ func (s *Server) acceptTunnels(opts ...tunnel.Option) {
 		c := s.clusters.get(clusterID)
 
 		if c == nil {
-			log.Errorf("cluster %q does not exist", clusterID)
-			t.Close()
-			continue
+
+			if s.toggles.autoRegister {
+				var err error
+				c, err = s.autoRegister(clusterID, t.Identity())
+				if err != nil {
+					log.Errorf("auto-registration of %q failed: %s", clusterID, err)
+					t.Close()
+					continue
+				}
+			} else {
+				log.Errorf("cluster %q does not exist", clusterID)
+				t.Close()
+				continue
+			}
 		}
 
 		// we call this function so that we can return and unlock on any failed
@@ -308,7 +347,7 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 	// this as the destinatination has been decided by choosing the tunnel.
 	r.URL.Host = "voltron-tunnel"
 
-	if s.toggles.AuthNOn {
+	if s.toggles.authNOn {
 		user, err := s.auth.Authenticate(r)
 		if err != nil {
 			log.Errorf("Could not authenticate user from request: %v", err)

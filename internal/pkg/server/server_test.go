@@ -175,6 +175,8 @@ var _ = Describe("Server Proxy to tunnel", func() {
 		lis    net.Listener
 		lis2   net.Listener
 		lisTun net.Listener
+		key    []byte
+		cert   []byte
 	)
 
 	client := fake.NewSimpleClientset()
@@ -183,14 +185,15 @@ var _ = Describe("Server Proxy to tunnel", func() {
 	defaultServer := httptest.NewServer(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 
-	It("should start a server", func() {
+	It("Should get some credentials for the server", func() {
+		key, _ = utils.KeyPEMEncode(srvPrivKey)
+		cert = utils.CertPEMEncode(srvCert)
+	})
+
+	startServer := func(opts ...server.Option) {
 		var e error
 		lis, e = net.Listen("tcp", "localhost:0")
 		Expect(e).NotTo(HaveOccurred())
-
-		// we need some credentials
-		key, _ := utils.KeyPEMEncode(srvPrivKey)
-		cert := utils.CertPEMEncode(srvCert)
 
 		xcert, _ := tls.X509KeyPair(cert, key)
 
@@ -211,24 +214,28 @@ var _ = Describe("Server Proxy to tunnel", func() {
 		}})
 		Expect(e).NotTo(HaveOccurred())
 
-		srv, err = server.New(
+		opts = append(opts,
 			server.WithKeepClusterKeys(),
 			server.WithTunnelCreds(srvCert, srvPrivKey),
 			server.WithAuthentication(true, client),
 			server.WithDefaultProxy(defaultProxy),
+		)
+
+		srv, err = server.New(
+			opts...,
 		)
 		Expect(err).NotTo(HaveOccurred())
 
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			err = srv.ServeHTTP(lis)
+			srv.ServeHTTP(lis)
 		}()
 
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			err = srv.ServeHTTP(lis2)
+			srv.ServeHTTP(lis2)
 		}()
 
 		wg.Add(1)
@@ -236,7 +243,10 @@ var _ = Describe("Server Proxy to tunnel", func() {
 			defer wg.Done()
 			srv.ServeTunnelsTLS(lisTun)
 		}()
+	}
 
+	It("should start a server", func() {
+		startServer()
 	})
 
 	Context("when server is up", func() {
@@ -272,11 +282,15 @@ var _ = Describe("Server Proxy to tunnel", func() {
 
 		var clnT *tunnel.Tunnel
 
+		var certPemA, keyPemA []byte
+
 		It("should be possible to open a tunnel", func() {
-			certPem, keyPem, err := srv.ClusterCreds("clusterA")
+			var err error
+
+			certPemA, keyPemA, err = srv.ClusterCreds("clusterA")
 			Expect(err).NotTo(HaveOccurred())
 
-			cert, err := tls.X509KeyPair(certPem, keyPem)
+			cert, err := tls.X509KeyPair(certPemA, keyPemA)
 			Expect(err).NotTo(HaveOccurred())
 
 			cfg := &tls.Config{
@@ -288,30 +302,8 @@ var _ = Describe("Server Proxy to tunnel", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		Context("when client tunnel exists", func() {
-			It("should be possible to accept proxied connections", func() {
-				var wg sync.WaitGroup
-				var acceptErr error
-
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
-
-					var c net.Conn
-					c, acceptErr = clnT.Accept()
-					Expect(acceptErr).NotTo(HaveOccurred())
-
-					data := make([]byte, 1)
-					c.Read(data)
-					c.Close()
-				}()
-
-				clientHelloReq(lis.Addr().String(), "clusterA", 502 /* due to the EOF */)
-
-				wg.Wait()
-				Expect(acceptErr).NotTo(HaveOccurred())
-			})
-
+		// assumes clnT to be set to the tunnel we test
+		testClnT := func() {
 			It("should be possible to make HTTP/2 connection", func() {
 				var wg sync.WaitGroup
 
@@ -335,9 +327,14 @@ var _ = Describe("Server Proxy to tunnel", func() {
 				Expect(err).NotTo(HaveOccurred())
 				req.Header[server.ClusterHeaderField] = []string{"clusterA"}
 				test.AddJaneToken(req)
-				resp, err := clnt.Do(req)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(resp.StatusCode).To(Equal(200))
+
+				var resp *http.Response
+
+				Eventually(func() bool {
+					var err error
+					resp, err = clnt.Do(req)
+					return err == nil && resp.StatusCode == 200
+				}).Should(BeTrue())
 
 				i := 0
 				for {
@@ -351,6 +348,10 @@ var _ = Describe("Server Proxy to tunnel", func() {
 				}
 				wg.Wait()
 			})
+		}
+
+		Context("when client tunnel exists", func() {
+			testClnT()
 		})
 
 		When("opening another tunnel", func() {
@@ -393,18 +394,12 @@ var _ = Describe("Server Proxy to tunnel", func() {
 				})
 
 				It("eventually accepting connections succeeds", func() {
-					var wg sync.WaitGroup
+					testSrv := httptest.NewUnstartedServer(
+						http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+					testSrv.Listener = tunB
+					testSrv.Start()
 
-					wg.Add(1)
-					go func() {
-						defer wg.Done()
-						clientHelloReq(lis.Addr().String(), "clusterB", 502 /* due to the EOF */)
-					}()
-
-					c, err := tunB.Accept()
-					Expect(err).ShouldNot(HaveOccurred())
-					c.Close()
-					wg.Wait()
+					clientHelloReq(lis.Addr().String(), "clusterB", 502 /* non-TLS srv -> err */)
 				})
 
 				It("should be possible to open a second tunnel from clusterB", func() {
@@ -457,13 +452,43 @@ var _ = Describe("Server Proxy to tunnel", func() {
 				})
 			})
 		})
+
+		It("should stop the servers", func(done Done) {
+			err := srv.Close()
+			Expect(err).NotTo(HaveOccurred())
+			wg.Wait()
+			close(done)
+		})
+
+		It("should re-start a server with auto registration", func() {
+			startServer(server.WithAutoRegister())
+		})
+
+		Context("When auto-registration is enabled", func() {
+			It("should be possible to open a tunnel with certs for clusterA", func() {
+				cert, err := tls.X509KeyPair(certPemA, keyPemA)
+				Expect(err).NotTo(HaveOccurred())
+
+				cfg := &tls.Config{
+					Certificates: []tls.Certificate{cert},
+					RootCAs:      rootCAs,
+				}
+
+				clnT, err = tunnel.DialTLS(lisTun.Addr().String(), cfg)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			Context("when client tunnel exists", func() {
+				testClnT()
+			})
+		})
+
 	})
 
 	It("should stop the servers", func(done Done) {
-		cerr := srv.Close()
-		Expect(cerr).NotTo(HaveOccurred())
+		err := srv.Close()
+		Expect(err).NotTo(HaveOccurred())
 		wg.Wait()
-		Expect(err).To(HaveOccurred())
 		close(done)
 	})
 })
@@ -701,9 +726,13 @@ func clientHelloReq(addr string, target string, expectStatus int) *http.Response
 	req.Header[server.ClusterHeaderField] = []string{target}
 	test.AddJaneToken(req)
 
-	resp, err := http.DefaultClient.Do(req)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(resp.StatusCode).To(Equal(expectStatus))
+	var resp *http.Response
+
+	Eventually(func() bool {
+		var err error
+		resp, err := http.DefaultClient.Do(req)
+		return err == nil && resp.StatusCode == expectStatus
+	}, 2*time.Second, 400*time.Millisecond).Should(BeTrue())
 
 	return resp
 }
