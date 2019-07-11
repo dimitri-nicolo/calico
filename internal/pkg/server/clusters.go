@@ -3,12 +3,14 @@
 package server
 
 import (
+	"bytes"
 	"context"
 	"crypto"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -58,12 +60,10 @@ func returnJSON(w http.ResponseWriter, data interface{}) {
 	}
 }
 
-func returnManifests(w http.ResponseWriter, cert *x509.Certificate, key crypto.Signer, renderer *Renderer) {
+func returnManifests(w http.ResponseWriter, manifest io.Reader) error {
 	w.Header().Set("Content-Type", AppYaml)
-	ok := renderer.RenderManifest(w, cert, key)
-	if !ok {
-		http.Error(w, "\"Could not renderer manifest\"", 500)
-	}
+	_, err := io.Copy(w, manifest)
+	return err
 }
 
 func (cs *clusters) add(id string, c *cluster) error {
@@ -96,11 +96,72 @@ func (cs *clusters) List() []jclust.Cluster {
 	return clusterList
 }
 
-// Handler to create a new or update an existing cluster
-func (cs *clusters) updateCluster(w http.ResponseWriter, r *http.Request) {
+func (cs *clusters) update(jc *jclust.Cluster) (*bytes.Buffer, error) {
 	cs.Lock()
 	defer cs.Unlock()
 
+	resp := new(bytes.Buffer)
+
+	if c, ok := cs.clusters[jc.ID]; ok {
+		c.Lock()
+		log.Infof("Updating cluster ID: %q DisplayName: %q", c.ID, c.DisplayName)
+		c.Cluster = *jc
+		log.Infof("New cluster ID: %q DisplayName: %q", c.ID, c.DisplayName)
+		c.Unlock()
+	} else {
+		log.Infof("Adding cluster ID: %q DisplayName: %q", jc.ID, jc.DisplayName)
+
+		cert, key, err := cs.generateCreds(jc)
+		if err != nil {
+			return nil, errors.WithMessage(err, "Failed to generate cluster credentials")
+		}
+
+		c := &cluster{
+			Cluster: *jc,
+			cert:    cert,
+		}
+		if cs.keepKeys {
+			c.key = key
+		}
+
+		cs.add(jc.ID, c)
+		ok := cs.renderer.RenderManifest(resp, cert, key)
+		if !ok {
+			return nil, errors.Errorf("could not renderer manifest")
+		}
+	}
+
+	return resp, nil
+}
+
+func (cs *clusters) remove(jc *jclust.Cluster) error {
+	cs.Lock()
+
+	c, ok := cs.clusters[jc.ID]
+	if !ok {
+		cs.Unlock()
+		msg := fmt.Sprintf("Cluster id %q does not exist", jc.ID)
+		log.Debugf(msg)
+		return errors.Errorf(msg)
+	}
+
+	// remove from the map so nobody can get it, but whoever uses it can
+	// keep doing so
+	delete(cs.clusters, jc.ID)
+	cs.Unlock()
+	// close the tunnel to disconnect. Closing is thread save, but we need
+	// to hold the RLock to access the tunnel
+	c.RLock()
+	if c.tunnel != nil {
+		c.tunnel.Close()
+	}
+	c.RUnlock()
+
+	return nil
+}
+
+// Handler to create a new or update an existing cluster
+func (cs *clusters) updateClusterREST(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "Error while parsing body", 400)
 		return
@@ -116,39 +177,19 @@ func (cs *clusters) updateCluster(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if c, ok := cs.clusters[jc.ID]; ok {
-		c.Lock()
-		log.Infof("Updating cluster ID: %q DisplayName: %q", c.ID, c.DisplayName)
-		c.Cluster = *jc
-		log.Infof("New cluster ID: %q DisplayName: %q", c.ID, c.DisplayName)
-		c.Unlock()
-	} else {
-		log.Infof("Adding cluster ID: %q DisplayName: %q", jc.ID, jc.DisplayName)
+	resp, err := cs.update(jc)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
 
-		cert, key, err := cs.generateCreds(jc)
-		if err != nil {
-			msg := "Failed to generate cluster credentials: "
-			log.Errorf(msg+"%+v", err)
-			http.Error(w, msg+err.Error(), 500)
-			return
-		}
-
-		c := &cluster{
-			Cluster: *jc,
-			cert:    cert,
-		}
-		if cs.keepKeys {
-			c.key = key
-		}
-
-		cs.add(jc.ID, c)
-		returnManifests(w, cert, key, cs.renderer)
+	err = returnManifests(w, resp)
+	if err != nil {
+		log.Errorf("Sending manifest to %q failed: %s", r.RemoteAddr, err)
 	}
 }
 
-func (cs *clusters) deleteCluster(w http.ResponseWriter, r *http.Request) {
-	cs.Lock()
-
+func (cs *clusters) deleteClusterREST(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "Error while parsing body", 400)
 		return
@@ -162,25 +203,13 @@ func (cs *clusters) deleteCluster(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if c, ok := cs.clusters[jc.ID]; ok {
-		// remove from the map so nobody can get it, but whoever uses it can
-		// keep doing so
-		delete(cs.clusters, jc.ID)
-		cs.Unlock()
-		// close the tunnel to disconnect. Closing is thread save, but we need
-		// to hold the RLock to access the tunnel
-		c.RLock()
-		if c.tunnel != nil {
-			c.tunnel.Close()
-		}
-		c.RUnlock()
-		fmt.Fprintf(w, "Deleted")
-	} else {
-		cs.Unlock()
-		msg := fmt.Sprintf("Cluster id %q does not exist", jc.ID)
-		log.Debugf(msg)
-		http.Error(w, msg, 404)
+	err := cs.remove(jc)
+	if err != nil {
+		http.Error(w, err.Error(), 404)
+		return
 	}
+
+	fmt.Fprintf(w, "Deleted")
 }
 
 // Determine which handler to execute based on HTTP method.
@@ -195,11 +224,11 @@ func (cs *clusters) apiHandle(w http.ResponseWriter, r *http.Request) {
 	// TODO This Put handler does not behaviour list a standard PUT endpoint
 	// (since it doesn't retrieve the entity ID from the URI) ... fix it later
 	case http.MethodPut:
-		cs.updateCluster(w, r)
+		cs.updateClusterREST(w, r)
 	case http.MethodGet:
 		returnJSON(w, cs.List())
 	case http.MethodDelete:
-		cs.deleteCluster(w, r)
+		cs.deleteClusterREST(w, r)
 	default:
 		http.NotFound(w, r)
 	}

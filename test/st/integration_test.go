@@ -148,7 +148,7 @@ var _ = Describe("Integration Tests", func() {
 			ExpectRespMsg(req, "Deleted")
 		})
 
-		It("Should fail to delete nonexistant cluster", func() {
+		It("Should fail to delete nonexistent cluster", func() {
 			cluster, err := json.Marshal(&clusters.Cluster{ID: "ClusterZ"})
 			Expect(err).NotTo(HaveOccurred())
 
