@@ -127,7 +127,7 @@ var (
 				TestNumber:  "1.0.0",
 				TestDesc:    "test-1.0.0",
 				TestInfo:    "testinfo-1.0.0",
-				Status:      "PASS",
+				Status:      "FAIL",
 				Scored:      false,
 			},
 			{
@@ -461,26 +461,26 @@ var _ = Describe("CIS report tests", func() {
 		Expect(reportStorer.data.CISBenchmark[2]).To(Equal(apiv3.CISBenchmarkNode{
 			NodeName: node3.NodeName,
 			Summary: apiv3.CISBenchmarkNodeSummary{
-				Status:    "HIGH",
-				TotalFail: 0,
-				TotalPass: 2,
+				Status:    "MED",
+				TotalFail: 1,
+				TotalPass: 1,
 				TotalInfo: 1,
 				Total:     2,
 			},
 			Results: []apiv3.CISBenchmarkSectionResult{
 				{
-					Status:  "HIGH",
+					Status:  "LOW",
 					Section: "1.0",
 					Desc:    "desc-1.0",
-					Fail:    0,
-					Pass:    1,
+					Fail:    1,
+					Pass:    0,
 					Info:    0,
 					Results: []apiv3.CISBenchmarkResult{
 						{
 							TestNumber: "1.0.0",
 							TestDesc:   "test-1.0.0",
 							TestInfo:   "testinfo-1.0.0",
-							Status:     "PASS",
+							Status:     "FAIL",
 							Scored:     false,
 						},
 					},
@@ -524,8 +524,8 @@ var _ = Describe("CIS report tests", func() {
 
 		Expect(reportStorer.data.CISBenchmarkSummary).To(Equal(apiv3.CISBenchmarkSummary{
 			Type:      "kube",
-			HighCount: 2,
-			MedCount:  0,
+			HighCount: 1,
+			MedCount:  1,
 			LowCount:  1,
 		}))
 	})
@@ -842,26 +842,26 @@ var _ = Describe("CIS report tests", func() {
 		Expect(reportStorer.data.CISBenchmark[2]).To(Equal(apiv3.CISBenchmarkNode{
 			NodeName: node3.NodeName,
 			Summary: apiv3.CISBenchmarkNodeSummary{
-				Status:    "HIGH",
-				TotalFail: 0,
-				TotalPass: 2,
+				Status:    "MED",
+				TotalFail: 1,
+				TotalPass: 1,
 				TotalInfo: 1,
 				Total:     2,
 			},
 			Results: []apiv3.CISBenchmarkSectionResult{
 				{
-					Status:  "HIGH",
+					Status:  "LOW",
 					Section: "1.0",
 					Desc:    "desc-1.0",
-					Fail:    0,
-					Pass:    1,
+					Fail:    1,
+					Pass:    0,
 					Info:    0,
 					Results: []apiv3.CISBenchmarkResult{
 						{
 							TestNumber: "1.0.0",
 							TestDesc:   "test-1.0.0",
 							TestInfo:   "testinfo-1.0.0",
-							Status:     "PASS",
+							Status:     "FAIL",
 							Scored:     false,
 						},
 					},
@@ -905,8 +905,8 @@ var _ = Describe("CIS report tests", func() {
 
 		Expect(reportStorer.data.CISBenchmarkSummary).To(Equal(apiv3.CISBenchmarkSummary{
 			Type:      "kube",
-			HighCount: 2,
-			MedCount:  0,
+			HighCount: 1,
+			MedCount:  1,
 			LowCount:  1,
 		}))
 	})
