@@ -200,7 +200,7 @@ dev-versions-yaml:
 "      version: master\\n"\
 "     flannel:\\n"\
 "      version: v0.11.1\\n"\
-"     calico/dikastes:\\n"\
+"     dikastes:\\n"\
 "      version: $$APP_POLICY_VER\\n"\
 "     flexvol:\\n"\
 "      version: $$POD2DAEMON_VER\\n" > pinned_versions.yml;
