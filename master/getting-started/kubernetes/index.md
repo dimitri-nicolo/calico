@@ -50,6 +50,44 @@ To deploy a cluster suitable for production, refer to [Installation](installatio
    sudo chown $(id -u):$(id -g) $HOME/.kube/config
    ```
 
+1. Remove master taint in order to allow kubernetes to schedule pods on the master node.
+
+   ```bash
+   kubectl taint nodes --all node-role.kubernetes.io/master-
+   ```
+
+## Install helm and tiller
+
+- [Install the helm](https://helm.sh/docs/using_helm/#install-helm) binary. For
+  example:
+
+  ```bash
+  curl -O https://get.helm.sh/helm-v2.14.2-linux-amd64.tar.gz
+  tar xzvf helm-v2.14.2-linux-amd64.tar.gz
+  sudo install linux-amd64/helm /usr/bin/
+  ```
+
+- Verify `helm` is installed:
+
+  ```bash
+  helm version
+  ```
+
+- Install tiller.
+
+  ```bash
+  kubectl create clusterrolebinding tiller-cluster-rule --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
+  kubectl create serviceaccount --namespace kube-system tiller
+  helm init --net-host --service-account tiller \
+    --override "spec.template.spec.tolerations[0].effect=NoSchedule" \
+    --override "spec.template.spec.tolerations[0].key=node.kubernetes.io/not-ready" \
+    --override "spec.template.spec.tolerations[0].operator=Exists"
+  ```
+
+>**Alert**: This creates an insecure installion of tiller and should not be used
+           for production networks.
+{: .alert .alert-info}
+
 {% include {{page.version}}/helm-install.md method="quick" %}
 
 ### Next steps

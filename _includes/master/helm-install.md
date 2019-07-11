@@ -3,8 +3,14 @@
 Ensure that you have the following:
 
 - [credentials for the Tigera private registry]({{ site.basuerl }}/{{ page.version }}/getting-started/#obtain-the-private-registry-credentials), (`config.json`)
+
 - A [license key]({{ site.baseurl }}/{{ page.version }}/getting-started/#obtain-a-license-key) (`license.yaml`)
+
+{%- if include.method == "full" %}
+
 - Tiller is running, and your local helm CLI tool is configured to speak to it.
+
+{% endif %}
 
 The high-level steps to a functioning cluster with access to the user interface are:
 
@@ -110,11 +116,18 @@ initialPool:
 
 1. Install the chart, passing in the `values.yaml` file you created from the previous section, an additionally passing your image pull secrets:
 
+{%- if include.method == "full" %}
    ```
    helm install ./tigera-secure-ee-core-{% include chart_version_name %}.tgz \
      -f values.yaml \
      --set-file imagePullSecrets.cnx-pull-secret=./config.json
    ```
+{% else %}
+   ```
+   helm install ./tigera-secure-ee-core-{% include chart_version_name %}.tgz \
+     --set-file imagePullSecrets.cnx-pull-secret=./config.json
+   ```
+{% endif %}
 
 2. Wait for the 'cnx-apiserver' pod to become ready:
 
