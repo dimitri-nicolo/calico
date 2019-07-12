@@ -1,8 +1,9 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 
 package calc
 
 import (
+	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
@@ -58,10 +59,14 @@ func (lc *LookupsCache) GetRuleIDFromNFLOGPrefix(prefix [64]byte) *RuleID {
 func (lc *LookupsCache) SetMockData(
 	em map[[16]byte]*EndpointData,
 	nm map[[64]byte]*RuleID,
+	ns map[model.NetworkSetKey]*model.NetworkSet,
 ) {
 	lc.polCache.nflogPrefixHash = nm
 	for ip, ed := range em {
 		lc.epCache.ipToEndpoints[ip] = []*EndpointData{ed}
+	}
+	for k, v := range ns {
+		lc.nsCache.OnUpdate(api.Update{KVPair: model.KVPair{Key: k, Value: v}})
 	}
 }
 
