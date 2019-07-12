@@ -466,7 +466,7 @@ func (s *domainInfoStore) GetDomainIPs(domain string) []string {
 		collectedNames := set.New()
 		collectIPsForName = func(name string) {
 			if collectedNames.Contains(name) {
-				// Avoid CNAME loops!
+				log.Warningf("%v has a CNAME loop back to itself", name)
 				return
 			}
 			collectedNames.Add(name)
