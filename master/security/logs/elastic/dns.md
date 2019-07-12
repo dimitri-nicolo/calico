@@ -43,13 +43,25 @@ containing log.  Its key/value pairs are as follows.
 | `ip`             | ip                | The IP address of the DNS server. |
 | `name`           | keyword           | {::nomarkdown}<p>This field contains one of the following values:<br>&#x25cf;&nbsp;The name of the DNS server pod.<br>&#x25cf;&nbsp;<code>-</code>: the DNS server is not a pod.</p>{:/} |
 | `name_aggr`      | keyword           | {::nomarkdown}<p>This field contains one of the following values:<br>&#x25cf;&nbsp;The aggregated name of the DNS server pod.<br>&#x25cf;&nbsp;<code>pvt</code>: the DNS server is not a pod. Its IP address belongs to a private subnet.<br>&#x25cf;&nbsp;<code>pub</code>: the DNS server is not a pod. Its IP address does not belong to a private subnet. It is probably on the public internet.</p>{:/} |
-| `namespace`      | keyword           | Namespace of the DNS server pod. |
-| `labels`         | array of keywords | Labels applied to the DNS server pod. |
+| `namespace`      | keyword           | Namespace of the DNS server pod, or `-` if the DNS server is not a pod. |
+| `labels`         | array of keywords | Labels applied to the DNS server pod or host endpoint; empty if there are no labels or the DNS server is not a pod or host endpoint. |
 
-## Queries on top-level fields
+## Querying on various DNS log fields
 
-Queries on any of the top-level fields are supported in Kibana and can also be done with the
-Elasticsearch API, for example:
+Once a set of DNS logs has accumulated in Elasticsearch, you can perform many interesting queries.  For example:
+
+-  with a query on the `qname` field, you could find all of the DNS response information that was
+   provided to clients trying to resolve a particular domain name
+
+-  with a query on the `rrsets.rdata` field, you could find all of the DNS lookups that included a
+   particular IP address in their response data.
+
+Different techniques are needed, depending on the field that you want to query on.
+
+### Querying on a top-level field
+
+A top-level field is any of those in the first table above.  Querying on a top-level field is
+supported in the Kibana web UI and can also be done with the Elasticsearch API, for example:
 
 ```shell
 curl 'http://10.111.1.235:9200/tigera_secure_ee_dns.cluster.20190711/_search?q=qname:example.com&pretty=true'
@@ -63,13 +75,14 @@ curl 'http://10.111.1.235:9200/tigera_secure_ee_dns.cluster.20190711/_search?pre
     -H "Content-Type: application/json"
 ```
 
-## Queries on nested fields
+### Querying on a nested object field
 
-Queries on nested object fields are not supported by Kibana, but can be done with the Elasticsearch
-API, for example:
+A nested object field is one of those in the second and third tables above, i.e. within the `rrsets`
+and `servers` objects.  Querying on a nested object field is not supported by Kibana, but can be
+done with the Elasticsearch API, for example:
 
 ```shell
 curl 'http://10.111.1.235:9200/tigera_secure_ee_dns.cluster.20190711/_search?pretty=true' \
-    -d '{"size": 2, "query": {"nested": {"path": "rrsets", "query": {"match": {"rrsets.type": "CNAME"}}}}}' \
+    -d '{"size": 2, "query": {"nested": {"path": "rrsets", "query": {"match": {"rrsets.rdata": "18.103.110.45"}}}}}' \
     -H "Content-Type: application/json"
 ```
