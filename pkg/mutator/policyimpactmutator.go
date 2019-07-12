@@ -32,6 +32,8 @@ const (
 
 var (
 	ipVersion4 = int(4)
+	zeroIPv4   = net.ParseIP("0.0.0.0")
+	zeroIPv6   = net.ParseIP("::")
 )
 
 type pipResponseHook struct {
@@ -48,43 +50,38 @@ func NewPIPResponseHook(p pip.PIP) ResponseHook {
 // CalculateFlowImpact method of the PIP object with the extracted flow data
 func (rh *pipResponseHook) ModifyResponse(r *http.Response) error {
 
-	//extract the context from the request
+	// Extract the context from the request
 	cxt := r.Request.Context()
 
-	//look for the policy impact request data in the context
+	// Look for the policy impact request data in the context
 	changes := cxt.Value(pip.PolicyImpactContextKey)
 
-	//if there were no changes, no need to modify the response
+	// If there were no changes, no need to modify the response
 	if changes == nil {
 		return nil
 	}
 
 	log.Debug("Policy Impact ModifyResponse executing")
 
-	//assert that we have network policy changes
+	// Assert that we have network policy changes
 	res := changes.([]pip.ResourceChange)
 
-	//read the flows from the response body
+	// Read the flows from the response body
 	esResponseBytes, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		return err
 	}
 
-	// unmarshal the data from the request
+	// Unmarshal the data from the request
 	var esResponse map[string]interface{}
 	if err := json.Unmarshal(esResponseBytes, &esResponse); err != nil {
 		return err
 	}
 
-	//calculate the flow impact
-	pc, err := rh.pip.GetPolicyCalculator(cxt, res)
-	if err != nil {
-		return err
-	}
-
 	aggs, ok := esResponse["aggregations"].(map[string]interface{})
 	if !ok {
-		return fmt.Errorf("failed to unpack flow buckets")
+		// If there were no flows, the aggregations will be empty, so this is a valid condition - just exit.
+		return nil
 	}
 
 	flogBuckets, ok := aggs["flog_buckets"].(map[string]interface{})
@@ -95,6 +92,12 @@ func (rh *pipResponseHook) ModifyResponse(r *http.Response) error {
 	flows, ok := flogBuckets["buckets"].([]interface{})
 	if !ok {
 		return fmt.Errorf("failed to extract a flow for bucket: %v", flogBuckets)
+	}
+
+	// Calculate the flow impact
+	pc, err := rh.pip.GetPolicyCalculator(cxt, res)
+	if err != nil {
+		return err
 	}
 
 	for _, f := range flows {
@@ -111,7 +114,7 @@ func (rh *pipResponseHook) ModifyResponse(r *http.Response) error {
 
 		pipFlow := flowFromEs(flowData, esKey)
 
-		//calculate the flow impact
+		// Calculate the flow impact
 		processed, before, after := pc.Action(&pipFlow)
 		log.WithFields(log.Fields{
 			"processed": processed,
@@ -124,14 +127,14 @@ func (rh *pipResponseHook) ModifyResponse(r *http.Response) error {
 		setActionField(esKey, "preview_action", after)
 	}
 
-	//put the returned flows back into the response body and remarshal
+	// Put the returned flows back into the response body and remarshal
 	newBodyContent, err := json.Marshal(esResponse)
 	if err != nil {
 		return err
 	}
 	r.Body = ioutil.NopCloser(bytes.NewReader(newBodyContent))
 
-	// fix the content length as it might have changed
+	// Fix the content length as it might have changed
 	r.ContentLength = int64(len(newBodyContent))
 
 	return nil
@@ -141,12 +144,18 @@ func flowFromEs(flowData map[string]interface{}, esKey map[string]interface{}) p
 	sourceIP := getIP(esKey, "source_ip")
 	destIP := getIP(esKey, "dest_ip")
 
-	// Assume IP version 4 unless we have IP addresses available.
+	// Assume IP version 4 unless we have IP addresses available. Also, if the IPs are zeros - set to nil.
 	ipVersion := ipVersion4
 	if sourceIP != nil {
 		ipVersion = sourceIP.Version()
 	} else if destIP != nil {
 		ipVersion = destIP.Version()
+	}
+	if sourceIP == zeroIPv4 || sourceIP == zeroIPv6 {
+		sourceIP = nil
+	}
+	if destIP == zeroIPv4 || destIP == zeroIPv6 {
+		destIP = nil
 	}
 
 	return policycalc.Flow{
@@ -231,6 +240,16 @@ func parseLabels(labelData interface{}) map[string]string {
 // effectively eliminating any chance of panic when reading the fields.
 func getStringField(esKey map[string]interface{}, field string) string {
 	s, _ := esKey[field].(string)
+	return s
+}
+
+// getNamespaceField is a helper function for getting the value
+// for a namespace field. It handles the fact that the ES data contains a "-" for no namespace.
+func getNamespaceField(esKey map[string]interface{}, field string) string {
+	s := getStringField(esKey, field)
+	if s == "-" {
+		return ""
+	}
 	return s
 }
 

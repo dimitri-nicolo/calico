@@ -72,6 +72,7 @@ func PolicyImpactRequestProcessor(req *http.Request) (p *PolicyImpactParams, e e
 	// Read the body data
 	b, err := ioutil.ReadAll(req.Body)
 	if err != nil {
+		log.WithError(err).Debug("Error reading request body")
 		return nil, err
 	}
 
@@ -87,7 +88,8 @@ func PolicyImpactRequestProcessor(req *http.Request) (p *PolicyImpactParams, e e
 	var query map[string]json.RawMessage
 	err = json.Unmarshal(b, &query)
 	if err != nil {
-		return nil, err
+		log.WithError(err).Debug("Error unmarshaling query - just proxy it")
+		return nil, nil
 	}
 
 	// Extract and remove the resourceActions value if present, if not present just exit immediately.
@@ -101,6 +103,7 @@ func PolicyImpactRequestProcessor(req *http.Request) (p *PolicyImpactParams, e e
 	delete(query, "resourceActions")
 	nb, err := json.Marshal(query)
 	if err != nil {
+		log.WithError(err).Debug("Error marshaling query with pip params removed")
 		return nil, err
 	}
 	req.Body = ioutil.NopCloser(bytes.NewBuffer(nb))
@@ -110,6 +113,7 @@ func PolicyImpactRequestProcessor(req *http.Request) (p *PolicyImpactParams, e e
 	pipParms := &PolicyImpactParams{}
 	err = json.Unmarshal([]byte(resourceActionsRaw), &pipParms.ResourceActions)
 	if err != nil {
+		log.WithError(err).Debug("Error unmarshaling pip params")
 		return nil, err
 	}
 
@@ -122,6 +126,7 @@ func checkPolicyActionsPermissions(actions []pip.ResourceChange, req *http.Reque
 	for i, _ := range actions {
 		ok, err := rbac.CanPreviewPolicyAction(actions[i].Action, actions[i].Resource)
 		if err != nil {
+			log.WithError(err).Debug("Unable to check permissions")
 			return false, err
 		}
 		if ok == false {

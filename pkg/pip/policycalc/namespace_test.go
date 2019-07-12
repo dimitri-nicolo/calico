@@ -10,8 +10,6 @@ import (
 	. "github.com/onsi/gomega"
 
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
-
-	"github.com/tigera/es-proxy/pkg/pip/flow"
 )
 
 var _ = Describe("Namespace handler tests", func() {
@@ -145,11 +143,11 @@ var _ = Describe("Namespace handler tests", func() {
 		m1 := nh.GetServiceAccountEndpointMatchers(&v3.ServiceAccountMatch{
 			Names: []string{"sa1"},
 		})
-		Expect(m1(&FlowEndpointData{Type: flow.EndpointTypeHep})).To(Equal(MatchTypeFalse))
-		Expect(m1(&FlowEndpointData{Type: flow.EndpointTypeWep})).To(Equal(MatchTypeUncertain))
+		Expect(m1(&FlowEndpointData{Type: EndpointTypeHep})).To(Equal(MatchTypeFalse))
+		Expect(m1(&FlowEndpointData{Type: EndpointTypeWep})).To(Equal(MatchTypeUncertain))
 		s := "sa1"
 		Expect(m1(&FlowEndpointData{
-			Type:           flow.EndpointTypeWep,
+			Type:           EndpointTypeWep,
 			Namespace:      "ns1",
 			ServiceAccount: &s,
 		})).To(Equal(MatchTypeTrue))
@@ -165,17 +163,17 @@ var _ = Describe("Namespace handler tests", func() {
 		m3 := nh.GetServiceAccountEndpointMatchers(&v3.ServiceAccountMatch{
 			Selector: "vegetable == 'carrot'",
 		})
-		Expect(m3(&FlowEndpointData{Type: flow.EndpointTypeHep})).To(Equal(MatchTypeFalse))
-		Expect(m3(&FlowEndpointData{Type: flow.EndpointTypeWep})).To(Equal(MatchTypeUncertain))
+		Expect(m3(&FlowEndpointData{Type: EndpointTypeHep})).To(Equal(MatchTypeFalse))
+		Expect(m3(&FlowEndpointData{Type: EndpointTypeWep})).To(Equal(MatchTypeUncertain))
 		s = "sa1"
 		Expect(m3(&FlowEndpointData{
-			Type:           flow.EndpointTypeWep,
+			Type:           EndpointTypeWep,
 			Namespace:      "ns2",
 			ServiceAccount: &s,
 		})).To(Equal(MatchTypeFalse))
 		s = "sa2"
 		Expect(m3(&FlowEndpointData{
-			Type:           flow.EndpointTypeWep,
+			Type:           EndpointTypeWep,
 			Namespace:      "ns2",
 			ServiceAccount: &s,
 		})).To(Equal(MatchTypeTrue))
@@ -193,16 +191,16 @@ var _ = Describe("Namespace handler tests", func() {
 			Names:    []string{"sa1"},
 			Selector: "carb == 'rice'",
 		})
-		Expect(m5(&FlowEndpointData{Type: flow.EndpointTypeHep})).To(Equal(MatchTypeFalse))
-		Expect(m5(&FlowEndpointData{Type: flow.EndpointTypeWep})).To(Equal(MatchTypeUncertain))
+		Expect(m5(&FlowEndpointData{Type: EndpointTypeHep})).To(Equal(MatchTypeFalse))
+		Expect(m5(&FlowEndpointData{Type: EndpointTypeWep})).To(Equal(MatchTypeUncertain))
 		s = "sa1"
 		Expect(m5(&FlowEndpointData{
-			Type:           flow.EndpointTypeWep,
+			Type:           EndpointTypeWep,
 			Namespace:      "ns1",
 			ServiceAccount: &s,
 		})).To(Equal(MatchTypeFalse))
 		Expect(m5(&FlowEndpointData{
-			Type:           flow.EndpointTypeWep,
+			Type:           EndpointTypeWep,
 			Namespace:      "ns2",
 			ServiceAccount: &s,
 		})).To(Equal(MatchTypeTrue))
@@ -212,7 +210,7 @@ var _ = Describe("Namespace handler tests", func() {
 			Names:    []string{"sa1"},
 			Selector: "protein == 'tofu'",
 		})
-		Expect(m6(&FlowEndpointData{Type: flow.EndpointTypeHep})).To(Equal(MatchTypeFalse))
-		Expect(m6(&FlowEndpointData{Type: flow.EndpointTypeWep})).To(Equal(MatchTypeFalse))
+		Expect(m6(&FlowEndpointData{Type: EndpointTypeHep})).To(Equal(MatchTypeFalse))
+		Expect(m6(&FlowEndpointData{Type: EndpointTypeWep})).To(Equal(MatchTypeFalse))
 	})
 })
