@@ -68,7 +68,7 @@ toc:
     path: /security/aws-security-group-integration/tier-management
   - title: Host endpoints
     path: /security/aws-security-group-integration/host-endpoints
-- title: Flow, audit and DNS logs
+- title: Flow audit and DNS logs
   section:
   - title: Elasticsearch
     section:
