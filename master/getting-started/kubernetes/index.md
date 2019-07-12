@@ -3,13 +3,15 @@ title: Quickstart for Tigera Secure EE on Kubernetes
 canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/
 ---
 
-### Overview
+## Overview
 
 This quickstart gets you a single-host Kubernetes cluster with {{site.prodname}}
 in approximately 15 minutes. You can use this cluster for testing and
 development.
 
 To deploy a cluster suitable for production, refer to [Installation](installation).
+
+## Create a Kubernetes cluster
 
 ### Host requirements
 
@@ -21,25 +23,9 @@ To deploy a cluster suitable for production, refer to [Installation](installatio
 - Internet access
 - [Sufficient virtual memory](https://www.elastic.co/guide/en/elasticsearch/reference/current/vm-max-map-count.html){:target="_blank"}
 
-### Before you begin
-
-- Ensure that you have the following files in your current working directory:
-  - [`config.json` containing the Tigera private registry credentials](/{{page.version}}/getting-started/#obtain-the-private-registry-credentials)
-  - [`<customer-name>-license.yaml` containing your license key](/{{page.version}}/getting-started/#obtain-a-license-key)
-<br><br>
-- Ensure that {{site.prodname}} can manage `cali` and `tunl` interfaces on the host.
-  If NetworkManager is present on the host, refer to
-  [Configure NetworkManager](../../maintenance/troubleshooting#configure-networkmanager)
-.
-
-- [Follow the Kubernetes instructions to install kubeadm](https://kubernetes.io/docs/setup/independent/install-kubeadm/){:target="_blank"}.
-
-   > **Note**: After installing kubeadm, do not power down or restart
-   the host. Instead, continue directly to the
-   [next section to create your cluster](#create-a-single-host-kubernetes-cluster).
-   {: .alert .alert-info}
-
 ### Create a single-host Kubernetes cluster
+
+1. [Follow the Kubernetes instructions to install kubeadm](https://kubernetes.io/docs/setup/independent/install-kubeadm/){:target="_blank"}.
 
 1. As a regular user with sudo privileges, open a terminal on the host that
    you installed kubeadm on.
@@ -63,47 +49,46 @@ To deploy a cluster suitable for production, refer to [Installation](installatio
    sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
    sudo chown $(id -u):$(id -g) $HOME/.kube/config
    ```
-1. Download the installation script.
+
+1. Remove master taint in order to allow kubernetes to schedule pods on the master node.
 
    ```bash
-   curl --compressed \
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/install-cnx.sh -O
+   kubectl taint nodes --all node-role.kubernetes.io/master-
    ```
 
-1. Set the `install-cnx.sh` file to be executable.
+## Install helm and tiller
 
-   ```bash
-   chmod +x install-cnx.sh
-   ```
-1. Use the following command to execute the script, replacing `<customer-name>`
-   with your customer name.
+- [Install the helm](https://helm.sh/docs/using_helm/#install-helm) binary. For
+  example:
 
-   **Command**
-   ```bash
-   ./install-cnx.sh -l <customer-name>-license.yaml
-   ```
+  ```bash
+  curl -O https://get.helm.sh/helm-v2.14.2-linux-amd64.tar.gz
+  tar xzvf helm-v2.14.2-linux-amd64.tar.gz
+  sudo install linux-amd64/helm /usr/bin/
+  ```
 
-   **Example**
-   ```bash
-   ./install-cnx.sh -l awesome-corp-license.yaml
-   ```
-   {: .no-select-button}
+- Verify `helm` is installed:
 
-1. Save the username and password printed out at the end of a successful install.
+  ```bash
+  helm version
+  ```
 
-1. Launch a browser and type `https://127.0.0.1:30003` in the address bar.
+- Install tiller.
 
-   > **Note**: Your browser will warn you of an insecure connection due to
-   > the self-signed certificate. Click past this warning to access the
-   > {{site.prodname}} Manager.
-   {: .alert .alert-info}
+  ```bash
+  kubectl create clusterrolebinding tiller-cluster-rule --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
+  kubectl create serviceaccount --namespace kube-system tiller
+  helm init --net-host --service-account tiller \
+    --override "spec.template.spec.tolerations[0].effect=NoSchedule" \
+    --override "spec.template.spec.tolerations[0].key=node.kubernetes.io/not-ready" \
+    --override "spec.template.spec.tolerations[0].operator=Exists"
+  ```
 
-1. In the **Login** and **Password** box enter the username and password
-   printed at the end of the install.
-   Then click **Sign In**.
+>**Alert**: This creates an insecure installion of tiller and should not be used
+           for production networks.
+{: .alert .alert-info}
 
-Congratulations! You now have a single-host Kubernetes cluster
-equipped with {{site.prodname}}.
+{% include {{page.version}}/helm-install.md method="quick" %}
 
 ### Next steps
 
