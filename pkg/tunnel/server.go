@@ -83,7 +83,7 @@ func NewServer(opts ...ServerOption) (*Server, error) {
 	return s, nil
 }
 
-// Serve start serving connections on the given Listener
+// Serve starts serving connections on the given Listener
 func (s *Server) Serve(lis net.Listener) error {
 	s.wg.Add(1)
 	go func() {
@@ -120,7 +120,7 @@ func (s *Server) Serve(lis net.Listener) error {
 	}
 }
 
-// ServeTLS starts serving TSL connections using the provided listener and the
+// ServeTLS starts serving TLS connections using the provided listener and the
 // configured certs
 func (s *Server) ServeTLS(lis net.Listener) error {
 	config := &tls.Config{
@@ -189,7 +189,7 @@ func (s *Server) Stop() {
 func (s *Server) setCredsPEM(certPem, keyPem []byte) error {
 	cert, err := tls.X509KeyPair(certPem, keyPem)
 	if err != nil {
-		return errors.Errorf("WithCert failed to create tsl.Certificate: %s", err)
+		return errors.Errorf("WithCert failed to create tls.Certificate: %s", err)
 	}
 
 	block, _ := pem.Decode(certPem)

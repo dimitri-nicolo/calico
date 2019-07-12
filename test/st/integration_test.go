@@ -35,7 +35,6 @@ var _ = Describe("Integration Tests", func() {
 	It("Should change directory to bin folder", func() {
 		err := os.Chdir("../../")
 		Expect(err).ToNot(HaveOccurred())
-
 	})
 
 	It("should set env variables pointing to docker-image/ for certs", func() {
@@ -198,7 +197,6 @@ var _ = Describe("Integration Tests", func() {
 			`"tokenPath":"./test/st/tmp/token", "caBundlePath":"./test/st/k8s-api-certs/k8s.crt"}]`)
 		err = os.Setenv("GUARDIAN_PROXY_TARGETS", proxyTarget)
 		Expect(err).NotTo(HaveOccurred())
-
 	})
 
 	It("Should start up guardian binary", func() {

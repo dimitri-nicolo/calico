@@ -91,7 +91,7 @@ func NewClientTunnel(stream io.ReadWriteCloser, opts ...Option) (*Tunnel, error)
 // XXX the exact type TBD
 type Identity = interface{}
 
-type hasIndentity interface {
+type hasIdentity interface {
 	Identity() Identity
 }
 
@@ -145,7 +145,7 @@ func (t *Tunnel) OpenStream() (io.ReadWriteCloser, error) {
 
 // Identity provides the identity of the remote side that initiated the tunnel
 func (t *Tunnel) Identity() Identity {
-	if id, ok := t.stream.(hasIndentity); ok {
+	if id, ok := t.stream.(hasIdentity); ok {
 		return id.Identity()
 	}
 
