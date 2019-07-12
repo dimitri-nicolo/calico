@@ -218,6 +218,14 @@ var _ = Describe("Domain Info Store", func() {
 		Expect(domainStore.collectGarbage()).To(Equal(0))
 	})
 
+	It("is not vulnerable to CNAME loops", func() {
+		domainStoreCreate()
+		programDNSAnswer(domainStore, testutils.MakeCNAME("a.com", "b.com"))
+		programDNSAnswer(domainStore, testutils.MakeCNAME("b.com", "c.com"))
+		programDNSAnswer(domainStore, testutils.MakeCNAME("c.com", "a.com"))
+		Expect(domainStore.GetDomainIPs("a.com")).To(BeEmpty())
+	})
+
 	DescribeTable("it should identify wildcards",
 		func(domain string, expectedIsWildcard bool) {
 			Expect(isWildcard(domain)).To(Equal(expectedIsWildcard))
