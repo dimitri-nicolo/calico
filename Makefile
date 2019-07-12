@@ -335,6 +335,23 @@ push-images: imagetag
 	ARCHES="$(ARCHES)" BUILD_IMAGES="$(BUILD_IMAGES)" PUSH_REPO="$(PUSH_REPO)" IMAGETAG="$(IMAGETAG)" make-helpers/push-images
 
 ##########################################################################################
+# GO MODULES SURVIVAL
+##########################################################################################
+
+mod-graph:
+	@if ! command -v dot >/dev/null; then echo "*** please install graphviz first"; exit 1; fi
+	go mod why -m all | bash make-helpers/why2dot | sed -e 's/github.com\//@/g' | sort -u | bash make-helpers/dotify | dot -Tpng -o go.mod.png
+	@echo "=> file://$$PWD/go.mod.png"
+
+mod-tidy:
+	go mod tidy
+	go mod verify
+
+mod-regen-sum:
+	rm go.sum
+	$(MAKE) -s mod-tidy
+
+##########################################################################################
 # LOCAL RUN
 ##########################################################################################
 

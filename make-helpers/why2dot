@@ -1,0 +1,27 @@
+#!/bin/bash
+
+awk '
+
+# line is blank
+NF == 0 {
+  next
+}
+
+# line is comment
+/^#/ {
+  prev = ""
+  next
+}
+
+# this is not the first line
+prev != "" {
+  print prev, $0
+}
+
+# current line saved for next time
+{
+  prev = $0
+}
+
+' "$@"
+

@@ -15,6 +15,7 @@ bin
 vendor
 .go-pkg-cache
 go.sum
+go.mod.png
 
 # Below binaries are generated when you use debugger in VS Code
 cmd/guardian/debug
@@ -30,3 +31,4 @@ docker-image/scripts
 
 # Testing
 *.coverprofile
+
