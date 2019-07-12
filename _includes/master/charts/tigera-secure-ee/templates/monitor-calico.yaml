@@ -21,6 +21,8 @@ data:
   tigera.elasticsearch.cluster-name: "cluster"
   # The number of shards for index tigera_secure_ee_flows.
   tigera.elasticsearch.flows-index-shards: "5"
+  # The number of shards for index tigera_secure_ee_dns.
+  tigera.elasticsearch.dns-index-shards: "5"
   # The retention period for flow logs, in days.  Logs written on a day that started at least this long ago are
   # removed.  To keep logs for at least x days, use a retention period of x+1.
   tigera.elasticsearch.flow-retention: "8"
@@ -39,6 +41,9 @@ data:
   # Logs written on a day that started at least this long ago are
   # removed.  To keep logs for at least x days, use a retention period of x+1.
   tigera.elasticsearch.compliance-report-retention: "367"
+  # The retention period for DNS logs, in days.  Logs written on a day that started at least this long ago are
+  # removed.  To keep logs for at least x days, use a retention period of x+1.
+  tigera.elasticsearch.dns-retention: "8"
   # Whether to include the custom flow filters defined below in the fluentd config
   # file.  Value must be "true" or "false".
   tigera.elasticsearch.flow-filtering: "false"
@@ -54,6 +59,20 @@ data:
       </exclude>
       <exclude>
         key dest_namespace
+        pattern dev
+      </exclude>
+    </filter>
+  # Whether to include the custom DNS filters defined below in the fluentd config
+  # file.  Value must be "true" or "false".
+  tigera.elasticsearch.dns-filtering: "false"
+  # DNS filtering additional fluentd configuration.  This field is only used when
+  # tigera.elasticsearch-dns-filtering is set to "true".  The example here filters
+  # out DNS lookups from the dev namespace.
+  tigera.elasticsearch.dns-filters.conf: |-
+    <filter dns>
+      @type grep
+      <exclude>
+        key client_namespace
         pattern dev
       </exclude>
     </filter>
@@ -475,13 +494,25 @@ spec:
                 configMapKeyRef:
                   name: tigera-es-config
                   key: tigera.elasticsearch.flows-index-shards
+            - name: ELASTIC_DNS_INDEX_SHARDS
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-es-config
+                  key: tigera.elasticsearch.dns-index-shards
             - name: FLUENTD_FLOW_FILTERS
               valueFrom:
                 configMapKeyRef:
                   name: tigera-es-config
                   key: tigera.elasticsearch.flow-filtering
+            - name: FLUENTD_DNS_FILTERS
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-es-config
+                  key: tigera.elasticsearch.dns-filtering
             - name: FLOW_LOG_FILE
               value: /var/log/calico/flowlogs/flows.log
+            - name: DNS_LOG_FILE
+              value: /var/log/calico/dnslogs/dns.log
 {{- if eq $elasticMode "external" }}
             - name: ELASTIC_HOST
               valueFrom:
@@ -630,6 +661,9 @@ spec:
             - name: es-config
               mountPath: /etc/fluentd/flow-filters.conf
               subPath: tigera.elasticsearch.flow-filters.conf
+            - name: es-config
+              mountPath: /etc/fluentd/dns-filters.conf
+              subPath: tigera.elasticsearch.dns-filters.conf
             - name: elastic-ca-cert-volume
               mountPath: /etc/fluentd/elastic
             - name: syslog-config
@@ -740,6 +774,11 @@ spec:
                     configMapKeyRef:
                       name: tigera-es-config
                       key: tigera.elasticsearch.compliance-report-retention
+                - name: EE_DNS_INDEX_RETENTION_PERIOD
+                  valueFrom:
+                    configMapKeyRef:
+                      name: tigera-es-config
+                      key: tigera.elasticsearch.dns-retention
 {{- if eq $elasticMode "external" }}
                 - name: ELASTIC_HOST
                   valueFrom:
