@@ -131,7 +131,7 @@ func flowFromEs(flowData map[string]interface{}, esKey map[string]interface{}) p
 			Name:      getStringField(esKey, "source_name"),
 			Port:      getPortField(esKey, "source_port"),
 			Labels:    parseLabels(flowData["source_labels"]),
-			IP:        parseIP(flowData["source_ip"]),
+			IP:        parseIP(esKey, "source_ip"),
 		},
 		Destination: policycalc.FlowEndpointData{
 			Type:      getEndpointType(esKey, "dest_type"),
@@ -139,7 +139,7 @@ func flowFromEs(flowData map[string]interface{}, esKey map[string]interface{}) p
 			Name:      getStringField(esKey, "dest_name"),
 			Port:      getPortField(esKey, "dest_port"),
 			Labels:    parseLabels(flowData["dest_labels"]),
-			IP:        parseIP(flowData["dest_ip"]),
+			IP:        parseIP(esKey, "dest_ip"),
 		},
 		Proto:  getProtoField(esKey, "proto"),
 		Action: getActionField(esKey, "action"),
