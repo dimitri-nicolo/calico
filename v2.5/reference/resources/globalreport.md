@@ -54,6 +54,20 @@ spec:
       names: ["controller"]
     namespaces:
       names: ["widgets"]
+
+---
+
+apiVersion: projectcalico.org/v3
+kind: GlobalReport
+metadata:
+  name: daily-cis-benchmark
+spec:
+  reportType: cis-benchmark
+  schedule: 0 0 * * *
+  cis:
+    resultsFilter:
+    - benchmarkSelection: { kubernetesVersion: "1.13" }
+      exclude: ["1.1.4", "1.2.5"]
 ```
 
 ### GlobalReport Definition
@@ -74,7 +88,7 @@ spec:
 | schedule        | Configure report frequency by specifying start and end time in [cron-format][cron-format]. Reports are started 30 minutes (configurable) after the scheduled value to allow enough time for data archival. A maximum limit of 12 schedules per hour is enforced (an average of one report every 5 minutes). | Yes || string |
 | jobNodeSelector | Specify the node(s) for scheduling the report jobs using selectors. ||| map |
 | suspend         | Disable future scheduled report jobs. In-flight reports are not affected. ||| bool |
-
+| cis             | Parameters related to generating a CIS benchmark report. ||| [CISBenchmarkParams](#cisbenchmarkparams) |
 
 #### EndpointsSelection
 
@@ -83,6 +97,30 @@ spec:
 | selector        | Endpoint label selector to restrict endpoint selection. | string              |
 | namespaces      | Namespace name and label selector to restrict endpoints by selected namespaces. | NamesAndLabelsMatch |
 | serviceAccounts | Service account name and label selector to restrict endpoints by selected service accounts. | NamesAndLabelsMatch |
+
+#### CISBenchmarkParams
+
+| Fields | Description | Required | Schema |
+| ------ | ----------- | -------- | ------ |
+| highThreshold | Integer percentage value that determines the lower limit of passing tests to consider a node as healthy. Default: 100 | No | int |
+| medThreshold | Integer percentage value that determines the lower limit of passing tests to consider a node as unhealthy. Default: 50 | No | int |
+| includeUnscoredTests | Boolean value that when false, applies a filter to exclude tests that are marked as “Unscored” by the CIS benchmark standard. If true, the tests will be included in the report. Default: false | No | bool |
+| numFailedTests | Integer value that sets the number of tests to display in the Top-failed Tests section of the CIS benchmark report. Default: 5 | No | int |
+| resultsFilters | Specifies an include or exclude filter to apply on the test results that will appear on the report. | No | [CISBenchmarkFilter](#cisbenchmarkfilter) |
+
+#### CISBenchmarkFilter
+
+| Fields | Description | Required | Schema |
+| ------ | ----------- | -------- | ------ |
+| BenchmarkSelection | Specify which set of benchmarks that this filter should apply to. Selects all benchmark types. | No | CISBenchmarkSelection |
+| Exclude | Specify which benchmark tests to exclude | No | array of strings |
+| Include | Specify which benchmark tests to include only (higher precedence than exclude) | No | array of strings |
+
+#### CISBenchmarkSelection
+
+| Fields | Description | Required | Schema |
+| ------ | ----------- | -------- | ------ |
+| KubernetesVersion | Specifies a version of the benchmarks. | Yes | string |
 
 #### NamesAndLabelsMatch
 
