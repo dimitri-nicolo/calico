@@ -250,6 +250,7 @@ proto/felixbackend.pb.go: proto/felixbackend.proto
 	              proto/*.proto \
 	              --gogofast_out=plugins=grpc,$(PROTOC_MAPPINGS):proto
 
+###############################################################################
 # Building the image
 ###############################################################################
 CONTAINER_CREATED=.ingress-collector.created-$(ARCH)
@@ -403,6 +404,9 @@ foss-checks: vendor
 ###############################################################################
 # UTs
 ###############################################################################
+WHAT?=.
+GINKGO_FOCUS?=.*
+
 .PHONY: ut
 ## Run the tests in a container. Useful for CI, Mac dev
 ut: proto
@@ -411,7 +415,7 @@ ut: proto
 		$(LOCAL_BUILD_MOUNTS) \
 		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
 		-w /go/src/$(PACKAGE_NAME) \
-		$(CALICO_BUILD) /bin/bash -c "go test -v ./... | go-junit-report > ./report/tests.xml"
+		$(CALICO_BUILD) /bin/bash -c "ginkgo -r  --skipPackage vendor -focus="$(GINKGO_FOCUS)" $(GINKGO_ARGS) $(WHAT)"
 
 ###############################################################################
 # CI
