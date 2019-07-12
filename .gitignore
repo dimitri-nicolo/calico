@@ -26,8 +26,8 @@ cmd/voltron/debug
 **/guardian.yaml
 
 # Docker image folders
-docker-image/templates
 docker-image/scripts
+docker-image/voltron/templates
 
 # Testing
 *.coverprofile
