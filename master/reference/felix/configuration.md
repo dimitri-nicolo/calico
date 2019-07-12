@@ -152,6 +152,13 @@ The Kubernetes API datastore driver reads its configuration from Kubernetes-prov
 | `DNSCacheFile`         | `FELIX_DNSCACHEFILE`         | `/var/run/calico/felix-dns-cache.txt` | The name of the file that Felix uses to preserve learnt DNS information when restarting. |
 | `DNSCacheSaveInterval` | `FELIX_DNSCACHESAVEINTERVAL` | `60s` | The periodic interval at which Felix saves learnt DNS information to the cache file. |
 | `DNSTrustedServers`    | `FELIX_DNSTRUSTEDSERVERS`    | `k8s-service:kube-dns` | The DNS servers that Felix should trust. Each entry here must be an IP, or `k8s-service:<name>`, where `<name>` is the name of a Kubernetes Service in the `kube-system` namespace. |
+| `DNSLogsFileEnabled`         | `FELIX_DNSLOGSFILEENABLED`        	| `true` | Set to `true`, enables DNS logs. If set to `false` no DNS logging will occur. DNS logs are written to a file `dns.log` and sent to Elasticsearch. The location of this file can be configured using the `DNSLogsFileDirectory` field. File rotation settings for this `dns.log` file can be configured using the fields `DNSLogsFileMaxFiles` and `DNSLogsFileMaxFileSizeMB`. Note that DNS log exports to Elasticsearch are dependent on DNS logs getting written to this file. Setting this parameter to `false` will disable DNS logs. |
+| `DNSLogsFileDirectory`       | `FELIX_DNSLOGSFILEDIRECTORY`      	| `/var/log/calico/dnslogs` | The directory where DNS logs files are stored. This parameter only takes effect when `DNSLogsFileEnabled` is `true`. |
+| `DNSLogsFileMaxFiles`        | `FELIX_DNSLOGSFILEMAXFILES`       	| `5`     | The number of files to keep when rotating DNS log files. This parameter only takes effect when `DNSLogsFileEnabled` is `true`. |
+| `DNSLogsFileMaxFileSizeMB`   | `FELIX_DNSLOGSFILEMAXFILESIZEMB`  	| `100`   | The max size in MB of DNS log files before rotation. This parameter only takes effect when `DNSLogsFileEnabled` is `true`.|
+| `DNSLogsFlushInterval`       | `FELIX_DNSLOGSFLUSHINTERVAL`      	| `300`   | The period, in seconds, at which Felix exports DNS logs. |
+| `DNSLogsFileAggregationKind` | `FELIX_DNSLOGSFILEAGGREGATIONKIND` | `1` | How much to aggregate DNS logs.  Bear in mind that changing this value may have a dramatic impact on the volume of flow logs sent to Elasticsearch.  `0` means no aggregation, `1` means aggregate similar DNS logs from workloads in the same ReplicaSet. |
+| `DNSLogsFileIncludeLabels`   | `FELIX_DNSLOGSFILEINCLUDELABELS`   | `true` | Whether to include client and server workload labels in DNS logs. |
 
 DropActionOverride controls what happens to each packet that is denied by
 the current {{site.prodname}} policy - i.e. by the ordered combination of all the

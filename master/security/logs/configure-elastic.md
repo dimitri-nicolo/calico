@@ -28,6 +28,7 @@ The index names used are:
 - `tigera_secure_ee_flows.<cluster name>.<date>`
 - `tigera_secure_ee_audit_ee.<cluster name>.<date>`
 - `tigera_secure_ee_audit_kube.<cluster name>.<date>`
+- `tigera_secure_ee_dns.<cluster name>.<date>`
 
 Edit the cluster name by following this procedure.  The two values must match for
    {{site.prodname}} Manager to be able to read the correct logs from Elasticsearch.
