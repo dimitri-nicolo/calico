@@ -8,26 +8,27 @@ canonical_url: https://docs.tigera.io/v2.3/getting-started/bare-metal/installati
 1. Use the following command to download the {{site.nodecontainer}} image.
 
    ```bash
-   docker pull {{page.registry}}{{site.nodecontainer}}:{{site.data.versions[page.version].first.components["cnx-node"].version}}
+   docker pull {{page.registry}}{{site.imageNames["node"]}}:{{site.data.versions[page.version].first.components["cnx-node"].version}}
    ```
 
 1. Confirm that the image has loaded by typing `docker images`.
 
-   ```bash
-   REPOSITORY       TAG           IMAGE ID       CREATED         SIZE
-   {{page.registry}}{{site.nodecontainer}}      {{site.data.versions[page.version].first.components["cnx-node"].version}}        e07d59b0eb8a   2 minutes ago   42MB
    ```
+   REPOSITORY       TAG           IMAGE ID       CREATED         SIZE
+   {{page.registry}}{{site.imageNames["node"]}}      {{site.data.versions[page.version].first.components["cnx-node"].version}}        e07d59b0eb8a   2 minutes ago   42MB
+   ```
+   {: .no-select-button}
 
 1. Create a temporary {{site.nodecontainer}} container.
 
    ```bash
-   docker create --name container {{page.registry}}{{site.nodecontainer}}:{{site.data.versions[page.version].first.components["cnx-node"].version}}
+   docker create --name container {{page.registry}}{{site.imageNames["node"]}}:{{site.data.versions[page.version].first.components["cnx-node"].version}}
    ```
 
 1. Copy the calico-node binary from the container to the local file system.
 
    ```bash
-   docker cp container:/bin/calico-node calico-node
+   docker cp container:/bin/calico-node {{site.nodecontainer}}
    ```
 
 1. Delete the temporary container.
@@ -38,8 +39,8 @@ canonical_url: https://docs.tigera.io/v2.3/getting-started/bare-metal/installati
 
 1. Set the extracted binary file to be executable.
 
-   ```
-   chmod +x calico-node
+   ```bash
+   chmod +x {{site.nodecontainer}}
    ```
 
 ## Create a start-up script
@@ -58,7 +59,7 @@ file:
     [Service]
     User=root
     ExecStartPre=/usr/bin/mkdir -p /var/run/calico
-    ExecStart=/usr/local/bin/cnx-node -felix
+    ExecStart=/usr/local/bin/{{site.nodecontainer}} -felix
     KillMode=process
     Restart=on-failure
     LimitNOFILE=32000
@@ -86,7 +87,7 @@ Or, for upstart:
       chown root:root /var/run/calico
     end script
 
-    exec /usr/local/bin/cnx-node -felix
+    exec /usr/local/bin/{{site.nodecontainer}} -felix
 
 ## Configure Felix
 
@@ -118,5 +119,5 @@ For debugging, it's sometimes useful to run Felix manually and tell it
 to emit its logs to screen. You can do that with the following command.
 
 ```bash
-FELIX_LOGSEVERITYSCREEN=INFO /usr/local/bin/cnx-node -felix
+FELIX_LOGSEVERITYSCREEN=INFO /usr/local/bin/{{site.nodecontainer}} -felix
 ```
