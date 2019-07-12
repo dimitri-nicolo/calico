@@ -10,7 +10,7 @@ import (
 )
 
 // InstallPolicyImpactResponseHook connects up the pip response mutator
-// The response mutator uses the policyActions and returned flow data
+// The response mutator uses the resourceActions and returned flow data
 // to call the primary PIP calculation and then replace the flow data
 // destined for the client with the modified flow data returned from the
 // PIP calculation

@@ -195,11 +195,11 @@ var (
 )
 
 var badBody = `{"query":{"bool":{"must":[{"match_all":{}}],"must_not":[],"should":[]}},"from":0,"size":10,"sort":[],"aggs":{},
-"policyActions":[{"policy":{ "apiVersion": "projectcalico.org/v3","kind":"NetworkPolicy", "spec":{ "order":"xyz" } } ,"action":"create"}] }`
+"resourceActions":[{"resource":{ "apiVersion": "projectcalico.org/v3","kind":"NetworkPolicy", "spec":{ "order":"xyz" } } ,"action":"create"}] }`
 
 var query = `"query":{"bool":{"must":[{"match_all":{}}],"must_not":[],"should":[]}},"from":0,"size":10,"sort":[],"aggs":{}`
 
-var calicoPolicyActions = `"policyActions":[{"policy":{
+var calicoPolicyActions = `"resourceActions":[{"resource":{
 	"apiVersion": "projectcalico.org/v3",
 	"kind":"NetworkPolicy",
 	"metadata":{
@@ -218,7 +218,7 @@ var calicoPolicyActions = `"policyActions":[{"policy":{
 }
 ,"action":"@@ACTION@@"}]`
 
-var k8sPolicyActions = `"policyActions":[{"policy":{
+var k8sPolicyActions = `"resourceActions":[{"resource":{
 	"apiVersion": "networking.k8s.io/v1",
 	"kind": "NetworkPolicy",
 	"metadata": {
@@ -241,7 +241,7 @@ var k8sPolicyActions = `"policyActions":[{"policy":{
 }
 ,"action":"@@ACTION@@"}]`
 
-var globalPolicyActions = `"policyActions":[{"policy":{
+var globalPolicyActions = `"resourceActions":[{"resource":{
 	"apiVersion": "projectcalico.org/v3",
 	"kind": "GlobalNetworkPolicy",
 	"metadata": { "creationTimestamp": null,"name": "test.a-global-policy"	},

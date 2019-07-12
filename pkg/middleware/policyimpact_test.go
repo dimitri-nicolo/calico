@@ -97,7 +97,7 @@ var pipK8sExpectedParams = patchVars("{@@PA_K8S@@}")
 
 var query = `"query":{"bool":{"must":[{"match_all":{}}],"must_not":[],"should":[]}},"from":0,"size":10,"sort":[],"aggs":{}`
 
-var calicoPolicyActions = `"policyActions":[{"policy":{
+var calicoPolicyActions = `"resourceActions":[{"resource":{
 	"apiVersion": "projectcalico.org/v3",
 	"kind":"NetworkPolicy",
 	"metadata":{
@@ -116,7 +116,7 @@ var calicoPolicyActions = `"policyActions":[{"policy":{
 }
 ,"action":"create"}]`
 
-var k8sPolicyActions = `"policyActions":[{"policy":{
+var k8sPolicyActions = `"resourceActions":[{"resource":{
 	"apiVersion": "networking.k8s.io/v1",
 	"kind": "NetworkPolicy",
 	"metadata": {
@@ -139,7 +139,7 @@ var k8sPolicyActions = `"policyActions":[{"policy":{
 }
 ,"action":"create"}]`
 
-var globalPolicyActions = `"policyActions":[{"policy":{
+var globalPolicyActions = `"resourceActions":[{"resource":{
 	"apiVersion": "projectcalico.org/v3",
 	"kind": "GlobalNetworkPolicy",
 	"metadata": { "creationTimestamp": null,"name": "test.a-global-policy"	},

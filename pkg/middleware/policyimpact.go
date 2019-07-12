@@ -14,7 +14,7 @@ import (
 )
 
 // PolicyImpactParamsHandler is a middleware http handler that moves
-// policy actions request params, "policyActions:...", from the request body
+// policy actions request params, "resourceActions:...", from the request body
 // into a custom context value.
 // This custom context value is picked up by the the policy impact mutator after
 // the es proxy request has completed and passed to the primary pip function
@@ -59,12 +59,12 @@ func PolicyImpactParamsHandler(authz K8sAuthInterface, h http.Handler) http.Hand
 }
 
 // PolicyImpactRequestProcessor will extract a PolicyImpactParams object if it exists
-// in the request (policyActions) It will also modify the request removing the
-// policyActions from the request body
+// in the request (resourceActions) It will also modify the request removing the
+// resourceActions from the request body
 func PolicyImpactRequestProcessor(req *http.Request) (p *PolicyImpactParams, e error) {
 
-	//if it's not a post request no modifications to the request are needed
-	//pip requests are always post requests
+	// If it's not a post request no modifications to the request are needed.
+	// PIP requests are always post requests
 	if req.Method != http.MethodPost {
 		return nil, nil
 	}
@@ -83,40 +83,37 @@ func PolicyImpactRequestProcessor(req *http.Request) (p *PolicyImpactParams, e e
 		}
 	}()
 
-	//unmarshal the body data to a map
-	var data interface{}
-	err = json.Unmarshal(b, &data)
+	// Unmarshal the body data to a map of raw JSON messages.
+	var query map[string]json.RawMessage
+	err = json.Unmarshal(b, &query)
 	if err != nil {
 		return nil, err
 	}
 
-	//look for the pip parameter in the map if not a pip request
-	//restore the body and return
-	_, ok := data.(map[string]interface{})["resourceActions"]
+	// Extract and remove the resourceActions value if present, if not present just exit immediately.
+	resourceActionsRaw, ok := query["resourceActions"]
 	if !ok {
 		return nil, nil
 	}
+	log.Debug("Policy Impact request found")
 
-	//delete policyActions param and rebuild the request body without it
-	delete(data.(map[string]interface{}), "resourceActions")
-	nb, err := json.Marshal(data)
+	// Delete resourceActions param and rebuild the request body without it.
+	delete(query, "resourceActions")
+	nb, err := json.Marshal(query)
 	if err != nil {
 		return nil, err
 	}
 	req.Body = ioutil.NopCloser(bytes.NewBuffer(nb))
 	req.ContentLength = int64(len(nb))
 
-	//now we know it's is a pip request
-	log.Debug("Policy Impact request found")
-
-	//parse out the pip params
-	pip := PolicyImpactParams{}
-	err = json.Unmarshal(b, &pip)
+	// It's a pip request, parse the resourceActions which should be a slice of pip.ResourceChange struct.
+	pipParms := &PolicyImpactParams{}
+	err = json.Unmarshal([]byte(resourceActionsRaw), &pipParms.ResourceActions)
 	if err != nil {
 		return nil, err
 	}
 
-	return &pip, nil
+	return pipParms, nil
 }
 
 func checkPolicyActionsPermissions(actions []pip.ResourceChange, req *http.Request, authz K8sAuthInterface) (bool, error) {

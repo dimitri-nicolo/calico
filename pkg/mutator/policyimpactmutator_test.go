@@ -18,7 +18,6 @@ import (
 	v1 "k8s.io/api/networking/v1"
 
 	"github.com/tigera/es-proxy/pkg/pip"
-	"github.com/tigera/es-proxy/pkg/pip/flow"
 )
 
 func init() {
@@ -118,20 +117,6 @@ func evolve(s string) string {
 	s = e(s, "Pidgeotto", "Pidgeot")
 	s = e(s, "Pidgey", "Pidgeotto")
 	return s
-}
-
-// inserts preview actions at particular places in certain requests
-func addPreviewAction(flow flow.Flow) flow.Flow {
-	if flow.Source.Name == "Metapod" {
-		flow.PreviewAction = "allow"
-	}
-	if flow.Source.Name == "Blastoise" {
-		flow.PreviewAction = "deny"
-	}
-	if flow.Source.Name == "Pidgeotto" {
-		flow.PreviewAction = "unknown"
-	}
-	return flow
 }
 
 // mockHttpResponse the response object returned here simulates the response
