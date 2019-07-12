@@ -1227,6 +1227,11 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.FlowLogsMaxOriginalIPsIncluded != nil {
+		in, out := &in.FlowLogsMaxOriginalIPsIncluded, &out.FlowLogsMaxOriginalIPsIncluded
+		*out = new(int)
+		**out = **in
+	}
 	if in.CloudWatchLogsReporterEnabled != nil {
 		in, out := &in.CloudWatchLogsReporterEnabled, &out.CloudWatchLogsReporterEnabled
 		*out = new(bool)

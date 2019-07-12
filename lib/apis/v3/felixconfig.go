@@ -304,6 +304,8 @@ type FelixConfigurationSpec struct {
 	FlowLogsEnableHostEndpoint *bool `json:"flowLogsEnableHostEndpoint,omitempty"`
 	// FlowLogsEnableNetworkSets enables Flow logs reporting for GlobalNetworkSets.
 	FlowLogsEnableNetworkSets *bool `json:"flowLogsEnableNetworkSets, omitempty"`
+	// FlowLogsMaxOriginalIPsIncluded specifies the number of unique IP addresses (if relevant) that should be included in Flow logs.
+	FlowLogsMaxOriginalIPsIncluded *int `json:"flowLogsMaxOriginalIPsIncluded, omitempty"`
 
 	// Enable Flow logs reporting to AWS CloudWatch.
 	CloudWatchLogsReporterEnabled *bool `json:"cloudWatchLogsReporterEnabled,omitempty"`
