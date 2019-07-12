@@ -1,6 +1,6 @@
 ---
 title: DNS logs
-canonical_url: https://docs.tigera.io/v2.5/usage/logs/elastic/dns
+canonical_url: https://docs.tigera.io/master/security/logs/elastic/dns
 ---
 
 {{site.prodname}} pushes DNS activity logs to Elasticsearch. The following table
