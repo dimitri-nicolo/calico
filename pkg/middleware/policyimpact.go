@@ -69,13 +69,13 @@ func PolicyImpactRequestProcessor(req *http.Request) (p *PolicyImpactParams, e e
 		return nil, nil
 	}
 
-	//read the body data
+	// Read the body data
 	b, err := ioutil.ReadAll(req.Body)
 	if err != nil {
 		return nil, err
 	}
 
-	//if we later return without returning params, reset the request body
+	// If we later return without returning params, reset the request body
 	defer func() {
 		if p == nil {
 			req.Body = ioutil.NopCloser(bytes.NewBuffer(b))
@@ -92,13 +92,13 @@ func PolicyImpactRequestProcessor(req *http.Request) (p *PolicyImpactParams, e e
 
 	//look for the pip parameter in the map if not a pip request
 	//restore the body and return
-	_, ok := data.(map[string]interface{})["policyActions"]
+	_, ok := data.(map[string]interface{})["resourceActions"]
 	if !ok {
 		return nil, nil
 	}
 
 	//delete policyActions param and rebuild the request body without it
-	delete(data.(map[string]interface{}), "policyActions")
+	delete(data.(map[string]interface{}), "resourceActions")
 	nb, err := json.Marshal(data)
 	if err != nil {
 		return nil, err

@@ -7,14 +7,31 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"strings"
-
-	"github.com/projectcalico/libcalico-go/lib/net"
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/libcalico-go/lib/net"
+	"github.com/projectcalico/libcalico-go/lib/numorstring"
+
 	"github.com/tigera/es-proxy/pkg/pip"
 	"github.com/tigera/es-proxy/pkg/pip/policycalc"
+)
+
+const (
+	EndpointTypeHEP = "hep"
+	EndpointTypeWEP = "wep"
+	EndpointTypeNet = "net"
+	EndpointTypeNS  = "ns"
+
+	ActionAllow   = "allow"
+	ActionDeny    = "deny"
+	ActionUnknown = "unknown"
+)
+
+var (
+	ipVersion4 = int(4)
 )
 
 type pipResponseHook struct {
@@ -51,10 +68,6 @@ func (rh *pipResponseHook) ModifyResponse(r *http.Response) error {
 	esResponseBytes, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		return err
-	}
-
-	if err != nil {
-		return fmt.Errorf("failed to initialize pip: %v", err)
 	}
 
 	// unmarshal the data from the request
@@ -106,8 +119,9 @@ func (rh *pipResponseHook) ModifyResponse(r *http.Response) error {
 			"after":     after,
 		}).Debug("Processed flow")
 
-		// esKey["action"] = string(before)
-		esKey["preview_action"] = string(after)
+		// Set before/after action fields.
+		setActionField(esKey, "action", before)
+		setActionField(esKey, "preview_action", after)
 	}
 
 	//put the returned flows back into the response body and remarshal
@@ -124,6 +138,17 @@ func (rh *pipResponseHook) ModifyResponse(r *http.Response) error {
 }
 
 func flowFromEs(flowData map[string]interface{}, esKey map[string]interface{}) policycalc.Flow {
+	sourceIP := getIP(esKey, "source_ip")
+	destIP := getIP(esKey, "dest_ip")
+
+	// Assume IP version 4 unless we have IP addresses available.
+	ipVersion := ipVersion4
+	if sourceIP != nil {
+		ipVersion = sourceIP.Version()
+	} else if destIP != nil {
+		ipVersion = destIP.Version()
+	}
+
 	return policycalc.Flow{
 		Source: policycalc.FlowEndpointData{
 			Type:      getEndpointType(esKey, "source_type"),
@@ -131,7 +156,7 @@ func flowFromEs(flowData map[string]interface{}, esKey map[string]interface{}) p
 			Name:      getStringField(esKey, "source_name"),
 			Port:      getPortField(esKey, "source_port"),
 			Labels:    parseLabels(flowData["source_labels"]),
-			IP:        parseIP(esKey, "source_ip"),
+			IP:        sourceIP,
 		},
 		Destination: policycalc.FlowEndpointData{
 			Type:      getEndpointType(esKey, "dest_type"),
@@ -139,10 +164,11 @@ func flowFromEs(flowData map[string]interface{}, esKey map[string]interface{}) p
 			Name:      getStringField(esKey, "dest_name"),
 			Port:      getPortField(esKey, "dest_port"),
 			Labels:    parseLabels(flowData["dest_labels"]),
-			IP:        parseIP(esKey, "dest_ip"),
+			IP:        destIP,
 		},
-		Proto:  getProtoField(esKey, "proto"),
-		Action: getActionField(esKey, "action"),
+		Proto:     getProtoField(esKey, "proto"),
+		Action:    getActionField(esKey, "action"),
+		IPVersion: &ipVersion,
 	}
 }
 
@@ -208,49 +234,90 @@ func getStringField(esKey map[string]interface{}, field string) string {
 	return s
 }
 
+// getPortField extracts the port field and converts to a uint8 pointer.
 func getPortField(esKey map[string]interface{}, field string) *uint16 {
-	if port, ok := esKey[field].(uint16); ok {
-		return &port
+	port, ok := esKey[field]
+	if !ok {
+		return nil
 	}
-	return nil
+
+	var portNum uint16
+	switch v := port.(type) {
+	case string:
+		if v == "" {
+			return nil
+		}
+		num, err := strconv.ParseUint(v, 10, 16)
+		if err != nil {
+			return nil
+		}
+		portNum = uint16(num)
+	case float64:
+		portNum = uint16(v)
+	}
+
+	if portNum == 0 {
+		return nil
+	}
+	return &portNum
 }
 
+// getProtoField extracts the protocol string field and converts to a uint8 pointer.
 func getProtoField(esKey map[string]interface{}, field string) *uint8 {
-	proto, ok := esKey[field].(uint8)
+	p, ok := esKey[field].(string)
 	if ok {
-		return &proto
+		proto := numorstring.ProtocolFromString(p)
+		return policycalc.GetProtocolNumber(&proto)
 	}
 	return nil
 }
 
+// getEndpointType extracts the endpoint type string and converts to the policycalc equivalent.
 func getEndpointType(esKey map[string]interface{}, field string) policycalc.EndpointType {
 	ept := getStringField(esKey, field)
 	switch ept {
-	case "hep":
+	case EndpointTypeHEP:
 		return policycalc.EndpointTypeHep
-	case "wep":
+	case EndpointTypeWEP:
 		return policycalc.EndpointTypeWep
-	case "net":
+	case EndpointTypeNet:
 		return policycalc.EndpointTypeNet
-	case "ns":
+	case EndpointTypeNS:
 		return policycalc.EndpointTypeNs
 	default:
-		return policycalc.EndpointType("")
+		return policycalc.EndpointTypeUnknown
 	}
 }
 
+// getActionField extracts the action string and converts to the policycalc equivalent.
 func getActionField(esKey map[string]interface{}, field string) policycalc.Action {
 	a := getStringField(esKey, field)
 	switch a {
-	case "allow":
+	case ActionAllow:
 		return policycalc.ActionAllow
-	case "deny":
+	case ActionDeny:
 		return policycalc.ActionDeny
 	default:
-		return policycalc.Action("")
+		return policycalc.ActionUnknown
 	}
 }
 
-func parseIP(esKey map[string]interface{}, field string) *net.IP {
-	return net.ParseIP(getStringField(esKey, field))
+// setActionField sets the action field (in flow log format) from the policycalc value.
+func setActionField(esKey map[string]interface{}, field string, a policycalc.Action) {
+	switch a {
+	case policycalc.ActionAllow:
+		esKey[field] = ActionAllow
+	case policycalc.ActionDeny:
+		esKey[field] = ActionDeny
+	case policycalc.ActionIndeterminate:
+		esKey[field] = ActionUnknown
+	}
+}
+
+// getIP extracts the IP string and converts to a net.IP value required by the policycalc.
+func getIP(esKey map[string]interface{}, field string) *net.IP {
+	if ipStr := getStringField(esKey, field); ipStr != "" {
+		return net.ParseIP(getStringField(esKey, field))
+	}
+	return nil
 }

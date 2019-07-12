@@ -7,6 +7,7 @@ import (
 )
 
 var (
+	// These string values are the superset of FlowLog definitions and v3 API definitions.
 	protovals = map[string]uint8{
 		"tcp":     6,
 		"udp":     17,
@@ -14,6 +15,9 @@ var (
 		"icmpv6":  58,
 		"sctp":    132,
 		"udplite": 136,
+		"ipip":    4,
+		"esp":     50,
+		"icmp6":   58,
 	}
 )
 
