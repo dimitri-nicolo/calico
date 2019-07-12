@@ -37,16 +37,16 @@ var _ = Describe("Selector handler tests", func() {
 		}
 
 		Expect(ed.cachedSelectorResults).To(HaveLen(2))
-		Expect(ed.cachedSelectorResults[0]).To(Equal(MatchTypeNone))
-		Expect(ed.cachedSelectorResults[1]).To(Equal(MatchTypeNone))
+		Expect(ed.cachedSelectorResults[0]).To(Equal(MatchTypeUnknown))
+		Expect(ed.cachedSelectorResults[1]).To(Equal(MatchTypeUnknown))
 
 		Expect(m1(ed)).To(Equal(MatchTypeTrue))
 		Expect(ed.cachedSelectorResults[0]).To(Equal(MatchTypeTrue))
-		Expect(ed.cachedSelectorResults[1]).To(Equal(MatchTypeNone))
+		Expect(ed.cachedSelectorResults[1]).To(Equal(MatchTypeUnknown))
 
 		Expect(m2(ed)).To(Equal(MatchTypeTrue))
 		Expect(ed.cachedSelectorResults[0]).To(Equal(MatchTypeTrue))
-		Expect(ed.cachedSelectorResults[1]).To(Equal(MatchTypeNone))
+		Expect(ed.cachedSelectorResults[1]).To(Equal(MatchTypeUnknown))
 
 		Expect(m3(ed)).To(Equal(MatchTypeTrue))
 		Expect(ed.cachedSelectorResults[0]).To(Equal(MatchTypeTrue))
@@ -62,16 +62,16 @@ var _ = Describe("Selector handler tests", func() {
 		}
 
 		Expect(ed.cachedSelectorResults).To(HaveLen(2))
-		Expect(ed.cachedSelectorResults[0]).To(Equal(MatchTypeNone))
-		Expect(ed.cachedSelectorResults[1]).To(Equal(MatchTypeNone))
+		Expect(ed.cachedSelectorResults[0]).To(Equal(MatchTypeUnknown))
+		Expect(ed.cachedSelectorResults[1]).To(Equal(MatchTypeUnknown))
 
 		Expect(m1(ed)).To(Equal(MatchTypeTrue))
 		Expect(ed.cachedSelectorResults[0]).To(Equal(MatchTypeTrue))
-		Expect(ed.cachedSelectorResults[1]).To(Equal(MatchTypeNone))
+		Expect(ed.cachedSelectorResults[1]).To(Equal(MatchTypeUnknown))
 
 		Expect(m2(ed)).To(Equal(MatchTypeTrue))
 		Expect(ed.cachedSelectorResults[0]).To(Equal(MatchTypeTrue))
-		Expect(ed.cachedSelectorResults[1]).To(Equal(MatchTypeNone))
+		Expect(ed.cachedSelectorResults[1]).To(Equal(MatchTypeUnknown))
 
 		Expect(m3(ed)).To(Equal(MatchTypeFalse))
 		Expect(ed.cachedSelectorResults[0]).To(Equal(MatchTypeTrue))

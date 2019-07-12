@@ -70,9 +70,11 @@ func (n *NamespaceHandler) GetNamespaceSelectorEndpointMatcher(selStr string) En
 		// If the Endpoint namespace is one of the matched selectors then this matches.
 		for i := range namespaces {
 			if namespaces[i] == ep.Namespace {
+				log.Debugf("Namespace selector: %s", MatchTypeTrue)
 				return MatchTypeTrue
 			}
 		}
+		log.Debugf("Namespace selector: %s", MatchTypeFalse)
 		return MatchTypeFalse
 	}
 
@@ -123,44 +125,52 @@ func (n *NamespaceHandler) GetServiceAccountEndpointMatchers(sa *v3.ServiceAccou
 	// Create a closure to perform the match.
 	matcher := func(ep *FlowEndpointData) MatchType {
 		if ep.Type != EndpointTypeWep {
+			log.Debugf("ServiceAccountMatch: %s (not valid for endpoint type)", MatchTypeFalse)
 			return MatchTypeFalse
 		}
 
 		if saNamesPerNamespace != nil && len(saNamesPerNamespace) == 0 {
 			// If we have a selector match, but the selector doesn't select any validly configured service account
 			// then this is a no match - this trumps the case where the endpoint service account is not known.
+			log.Debugf("ServiceAccountMatch: %s (not in namespace %s)", MatchTypeFalse, ep.Namespace)
 			return MatchTypeFalse
 		}
 
 		if ep.ServiceAccount == nil {
 			// The service account value is not available, so the match type is uncertain.
+			log.Debugf("ServiceAccountMatch: %s (unknown)", MatchTypeUncertain)
 			return MatchTypeUncertain
 		}
 
 		matched := len(saNames) == 0
 		for _, n := range saNames {
 			if n == *ep.ServiceAccount {
+				log.Debugf("ServiceAccountMatch matched by name: %s", n)
 				matched = true
 				break
 			}
 		}
 		if !matched {
+			log.Debugf("ServiceAccountMatch: %s (not matched by name)", MatchTypeFalse)
 			return MatchTypeFalse
 		}
 
 		if saNamesPerNamespace == nil {
 			// No selector specified, so at this point we must match.
+			log.Debugf("ServiceAccountMatch: %s (matched by name)", MatchTypeTrue)
 			return MatchTypeTrue
 		}
 
 		// Check the matching service account names for the endpoints namespace. As soon as we find a match we can exit.
 		for _, n := range saNamesPerNamespace[ep.Namespace] {
 			if n == *ep.ServiceAccount {
+				log.Debugf("ServiceAccountMatch: %s (matched by selector)", MatchTypeTrue)
 				return MatchTypeTrue
 			}
 		}
 
 		// No matching service account name found for the endpoints namespace.
+		log.Debugf("ServiceAccountMatch: %s (not matched by selector)", MatchTypeFalse)
 		return MatchTypeFalse
 	}
 

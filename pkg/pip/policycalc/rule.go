@@ -3,8 +3,6 @@ package policycalc
 import (
 	log "github.com/sirupsen/logrus"
 
-	"reflect"
-
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 )
 
@@ -16,17 +14,13 @@ type CompiledRule struct {
 	// - ActionFlagNextTier
 	Action ActionFlag
 
-	// The best possible match type for this rule. If any of the rules are *always* indeterminate then the best possible
-	// match will be Uncertain.
-	BestMatch MatchType
-
 	// The matchers.
 	Matchers []FlowMatcher
 }
 
 // Match determines whether this rule matches the supplied flow.
 func (c *CompiledRule) Match(flow *Flow) MatchType {
-	mt := c.BestMatch
+	mt := MatchTypeTrue
 	for i := range c.Matchers {
 		log.Debugf("Invoking matcher %d", i)
 		switch c.Matchers[i](flow) {
@@ -45,10 +39,20 @@ func (c *CompiledRule) Match(flow *Flow) MatchType {
 	return mt
 }
 
-// fromAPI fills in the CompiledRule from the v3 Rule.
-func (c *CompiledRule) fromAPI(m *MatcherFactory, namespace EndpointMatcher, in v3.Rule) {
-	// Reset matchers in case we are re-using an existing CompiledRule.
-	c.Matchers = nil
+// compileRules creates a slice of compiled rules from the supplied v3 parameters.
+func compileRules(m *MatcherFactory, namespace EndpointMatcher, rules []v3.Rule) []CompiledRule {
+	compiled := make([]CompiledRule, 0, len(rules))
+	for i := range rules {
+		if c := compileRule(m, namespace, rules[i]); c != nil {
+			compiled = append(compiled, *c)
+		}
+	}
+	return compiled
+}
+
+// compileRule creates a CompiledRule from the v3 Rule.
+func compileRule(m *MatcherFactory, namespace EndpointMatcher, in v3.Rule) *CompiledRule {
+	c := &CompiledRule{}
 
 	// Set the action
 	switch in.Action {
@@ -59,15 +63,8 @@ func (c *CompiledRule) fromAPI(m *MatcherFactory, namespace EndpointMatcher, in 
 	case v3.Pass:
 		c.Action = ActionFlagNextTier
 	default:
-		// Set the best match type to MatchTypeFalse so that we don't stop enumerating when we hit this rule.
-		// Exit without adding any match parameters, since we don't want to add unnecessary overhead.
-		c.BestMatch = MatchTypeFalse
-		return
+		return nil
 	}
-
-	// Assume the best match is MatchTypeTrue. If any of the match options indicates uncertainty this will be
-	// changed to MatchTypeUncertain in the add() method.
-	c.BestMatch = MatchTypeTrue
 
 	// Add top level rule fields.
 	c.add(m.IPVersion(in.IPVersion))
@@ -108,6 +105,8 @@ func (c *CompiledRule) fromAPI(m *MatcherFactory, namespace EndpointMatcher, in 
 	c.add(m.Not(m.Dst(m.Nets(in.Destination.NotNets))))
 	c.add(m.Not(m.Dst(m.Selector(in.Destination.NotSelector))))
 	c.add(m.Not(m.Dst(m.Ports(in.Destination.NotPorts))))
+
+	return c
 }
 
 // add adds the FlowMatcher to the set of matchers for the rule. It may be called with a nil matcher, in which case
@@ -117,23 +116,5 @@ func (r *CompiledRule) add(fm FlowMatcher) {
 		// No matcher to add. This is fine - the short hand notation above may validly return a nil matcher.
 		return
 	}
-	if reflect.ValueOf(fm) == reflect.ValueOf(FlowMatcherUncertain) {
-		// Flow matcher will *always* return an uncertain for this rule match, so modify the best match result for this
-		// rule to be "uncertain" and don't bother adding this matcher to the set of matches for the rule. This is a
-		// minor finesse to avoid processing a match that will always return the same thing.
-		log.Debugf("Rule matcher is always uncertain - best match for this rule is uncertain")
-		r.BestMatch = MatchTypeUncertain
-		return
-	}
-
 	r.Matchers = append(r.Matchers, fm)
-}
-
-// compileRules creates a slice of compiled rules from the supplied v3 parameters.
-func compileRules(m *MatcherFactory, namespace EndpointMatcher, rules []v3.Rule) []CompiledRule {
-	compiled := make([]CompiledRule, len(rules))
-	for i := range rules {
-		compiled[i].fromAPI(m, namespace, rules[i])
-	}
-	return compiled
 }
