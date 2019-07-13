@@ -4398,6 +4398,13 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							Format:      "",
 						},
 					},
+					"flowLogsMaxOriginalIPsIncluded": {
+						SchemaProps: spec.SchemaProps{
+							Description: "FlowLogsMaxOriginalIPsIncluded specifies the number of unique IP addresses (if relevant) that should be included in Flow logs.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
 					"cloudWatchLogsReporterEnabled": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Enable Flow logs reporting to AWS CloudWatch.",
