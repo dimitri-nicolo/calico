@@ -1,5 +1,5 @@
-hash: 8b65940b46c8290a8fbd2d8357585e6e9b7eeefa00c61be1fad073250631d7a2
-updated: 2019-07-11T10:05:47.338329316Z
+hash: d10dd5392edde670243c565146ae85d36d18ffb113a7184ea600ba1f69e418ef
+updated: 2019-07-13T05:15:24.053110242Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -325,7 +325,7 @@ imports:
   - pkg/types
   - pkg/upgrade
 - name: github.com/projectcalico/felix
-  version: 10d13ea10cc669a554334a4a0e2e551ff2dfec9c
+  version: d69fb3c5f66d2305887721ea8886c66b5b6eefff
   repo: git@github.com:tigera/felix-private.git
   subpackages:
   - bpf
@@ -375,7 +375,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: e4a4b445ce7acc5160780f77eb3c4680f8f9ff03
+  version: d49a1c8f7699924e3593c64cc2a47a1ba87a9995
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
