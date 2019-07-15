@@ -40,9 +40,33 @@ type globalReports struct {
 	client client
 }
 
+var (
+	five    = 5
+	fifty   = 50
+	hundred = 100
+)
+
 // Create takes the representation of a GlobalReport and creates it.  Returns the stored
 // representation of the GlobalReport, and an error, if there is any.
 func (r globalReports) Create(ctx context.Context, res *apiv3.GlobalReport, opts options.SetOptions) (*apiv3.GlobalReport, error) {
+	// Set reasonable defaults if certain fields are empty.
+	if res.Spec.CIS != nil {
+		// NumFailedTests
+		if res.Spec.CIS.NumFailedTests == nil {
+			res.Spec.CIS.NumFailedTests = &five
+		}
+
+		// HighThreshold
+		if res.Spec.CIS.HighThreshold == nil {
+			res.Spec.CIS.HighThreshold = &hundred
+		}
+
+		// MedThreshold
+		if res.Spec.CIS.MedThreshold == nil {
+			res.Spec.CIS.MedThreshold = &fifty
+		}
+	}
+
 	if err := validator.Validate(res); err != nil {
 		return nil, err
 	}
