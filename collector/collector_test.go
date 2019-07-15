@@ -937,7 +937,11 @@ var _ = Describe("DNS logging", func() {
 		Expect(r.updates).To(HaveLen(1))
 		update := r.updates[0]
 		Expect(update.ClientEP).NotTo(BeNil())
+		Expect(update.ClientEP.Endpoint).To(BeAssignableToTypeOf(&model.WorkloadEndpoint{}))
+		Expect(*(update.ClientEP.Endpoint.(*model.WorkloadEndpoint))).To(Equal(*localWlEp1))
 		Expect(update.ServerEP).NotTo(BeNil())
+		Expect(update.ServerEP.Networkset).To(BeAssignableToTypeOf(&model.NetworkSet{}))
+		Expect(*(update.ServerEP.Networkset.(*model.NetworkSet))).To(Equal(netSet1))
 	})
 })
 
