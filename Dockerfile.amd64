@@ -1,0 +1,4 @@
+FROM scratch
+
+ADD bin/ingress-collector-amd64 /ingress-collector
+CMD ["/ingress-collector"]
