@@ -58,13 +58,13 @@ var _ = Describe("DNS Policy", func() {
 		saveFile                       string
 		saveFileMappedOutsideContainer bool
 
-		disableLogs bool
+		enableLogs bool
 	)
 
 	BeforeEach(func() {
 		saveFile = "/dnsinfo/dnsinfo.txt"
 		saveFileMappedOutsideContainer = true
-		disableLogs = false
+		enableLogs = true
 	})
 
 	wgetMicrosoftErr := func() error {
@@ -113,7 +113,7 @@ var _ = Describe("DNS Policy", func() {
 
 		Context("with DNS logs disabled", func() {
 			BeforeEach(func() {
-				disableLogs = true
+				enableLogs = false
 			})
 
 			It("should not emit DNS logs", func() {
@@ -137,9 +137,9 @@ var _ = Describe("DNS Policy", func() {
 		opts.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico"
 		opts.ExtraEnvVars["FELIX_DNSLOGSFILEDIRECTORY"] = "/dnsinfo"
 		opts.ExtraEnvVars["FELIX_DNSLOGSFLUSHINTERVAL"] = "1"
-		if disableLogs {
-			// Default for this is true.  Set "false" to disable.
-			opts.ExtraEnvVars["FELIX_DNSLOGSFILEENABLED"] = "false"
+		if enableLogs {
+			// Default for this is false.  Set "true" to enable.
+			opts.ExtraEnvVars["FELIX_DNSLOGSFILEENABLED"] = "true"
 		}
 		felix, etcd, client = infrastructure.StartSingleNodeEtcdTopology(opts)
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")

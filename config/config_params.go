@@ -261,7 +261,7 @@ type Config struct {
 	FlowLogsFileEnabledForDenied          bool   `config:"bool;true"`
 
 	DNSLogsFlushInterval       time.Duration `config:"seconds;300"`
-	DNSLogsFileEnabled         bool          `config:"bool;true"`
+	DNSLogsFileEnabled         bool          `config:"bool;false"`
 	DNSLogsFileDirectory       string        `config:"string;/var/log/calico/dnslogs"`
 	DNSLogsFileMaxFiles        int           `config:"int;5"`
 	DNSLogsFileMaxFileSizeMB   int           `config:"int;100"`
