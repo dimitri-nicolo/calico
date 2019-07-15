@@ -404,7 +404,7 @@ type FelixConfigurationSpec struct {
 	// [Default: 300s]
 	DNSLogsFlushInterval *metav1.Duration `json:"dnsLogsFlushInterval,omitempty" configv1timescale:"seconds"`
 	// DNSLogsFileEnabled controls logging DNS logs to a file. If false no DNS logging to file will occur.
-	// [Default: true]
+	// [Default: false]
 	DNSLogsFileEnabled *bool `json:"dnsLogsFileEnabled,omitempty"`
 	// DNSLogsFileMaxFiles sets the number of DNS log files to keep.
 	// [Default: 5]

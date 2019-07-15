@@ -4617,7 +4617,7 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 					},
 					"dnsLogsFileEnabled": {
 						SchemaProps: spec.SchemaProps{
-							Description: "DNSLogsFileEnabled controls logging DNS logs to a file. If false no DNS logging to file will occur. [Default: true]",
+							Description: "DNSLogsFileEnabled controls logging DNS logs to a file. If false no DNS logging to file will occur. [Default: false]",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
