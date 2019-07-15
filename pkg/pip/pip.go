@@ -2,24 +2,30 @@ package pip
 
 import (
 	"context"
+	"sync"
 
-	"github.com/tigera/es-proxy/pkg/pip/policycalc"
-	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/runtime"
+	log "github.com/sirupsen/logrus"
 
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 
-	"github.com/tigera/compliance/pkg/config"
+	compcfg "github.com/tigera/compliance/pkg/config"
+	"github.com/tigera/compliance/pkg/event"
 	"github.com/tigera/compliance/pkg/list"
+	"github.com/tigera/compliance/pkg/replay"
 	"github.com/tigera/compliance/pkg/resources"
 	"github.com/tigera/compliance/pkg/syncer"
 	"github.com/tigera/compliance/pkg/xrefcache"
+
+	pipcfg "github.com/tigera/es-proxy/pkg/pip/config"
+	"github.com/tigera/es-proxy/pkg/pip/policycalc"
 )
 
 var (
 	// These are the resource types that we need to query from the k8s API to populate our internal cache.
-	requiredTypes = []v1.TypeMeta{
+	requiredPolicyTypes = []metav1.TypeMeta{
 		resources.TypeCalicoTiers,
 		resources.TypeCalicoNetworkPolicies,
 		resources.TypeCalicoGlobalNetworkPolicies,
@@ -27,37 +33,65 @@ var (
 		resources.TypeK8sNamespaces,
 		resources.TypeK8sServiceAccounts,
 	}
+	// These are the resource types that we need to query from the k8s API to populate our internal cache.
+	requiredEndpointTypes = []metav1.TypeMeta{
+		resources.TypeCalicoHostEndpoints,
+		resources.TypeK8sPods,
+	}
 )
 
 // New returns a new PIP instance.
-func New(cfg *policycalc.Config, listSrc list.Source) PIP {
+func New(cfg *pipcfg.Config, listSrc list.Source, archivedLister list.Destination, archivedEventer event.Fetcher) PIP {
 	p := &pip{
-		listSrc: listSrc,
-		cfg:     cfg,
+		listSrc:         listSrc,
+		archivedLister:  archivedLister,
+		archivedEventer: archivedEventer,
+		cfg:             cfg,
 	}
 	return p
 }
 
 // pip implements the PIP interface.
 type pip struct {
-	listSrc list.Source
-	cfg     *policycalc.Config
+	listSrc         list.Source
+	archivedLister  list.Destination
+	archivedEventer event.Fetcher
+	cfg             *pipcfg.Config
 }
 
 // GetPolicyCalculator loads the initial configuration and updated configuration and returns a primed policyCalculator
 // used for checking flow impact.
-func (s *pip) GetPolicyCalculator(ctx context.Context, r []ResourceChange) (policycalc.PolicyCalculator, error) {
+func (s *pip) GetPolicyCalculator(ctx context.Context, params *PolicyImpactParams) (policycalc.PolicyCalculator, error) {
 	// Create a new x-ref cache. Use a blank compliance config for the config settings since the XrefCache currently
 	// requires it but doesn't use any fields except the istio config (which we're not concerned with in the pip use
 	// case).
 	//
 	// We just use the xref cache to determine the ordered set of tiers and policies before and after the updates. Set
 	// in-sync immediately since we aren't interested in callbacks.
-	xc := xrefcache.NewXrefCache(&config.Config{}, func() {})
+	xc := xrefcache.NewXrefCache(&compcfg.Config{}, func() {})
 	xc.OnStatusUpdate(syncer.NewStatusUpdateComplete())
 
-	// Load the initial set of policy.
-	if err := s.loadInitialPolicy(xc); err != nil {
+	// Populate the endpoint cache. Run this on a go-routine so we can double up with the other queries.
+	// Depending on configuration, the endpoint cache may be populated from historical data (snapshots and audit logs),
+	// and/or from current endpoint configuration. The default is neither - we only use flow log data for our
+	// calculations.
+	ec := policycalc.NewEndpointCache()
+	wgEps := sync.WaitGroup{}
+	wgEps.Add(1)
+	go func() {
+		defer wgEps.Done()
+		if s.cfg.AugmentFlowLogDataWithAuditLogData {
+			log.Debug("Augmenting flow log data with audit log data")
+			s.syncFromArchive(ctx, params, ec)
+		}
+		if s.cfg.AugmentFlowLogDataWithCurrentConfiguration {
+			log.Debug("Augmenting flow log data with current datastore configuration")
+			_ = s.syncFromDatastore(ctx, requiredEndpointTypes, ec)
+		}
+	}()
+
+	// Load the initial set of policy. If this errors we cannot continue.
+	if err := s.syncFromDatastore(ctx, requiredPolicyTypes, xc); err != nil {
 		return nil, err
 	}
 
@@ -66,7 +100,7 @@ func (s *pip) GetPolicyCalculator(ctx context.Context, r []ResourceChange) (poli
 
 	// Apply the preview changes to the xref cache. This also constructs the set of modified resources for use by the
 	// policy calculator.
-	modified, err := s.applyPolicyChanges(xc, r)
+	modified, err := s.applyPolicyChanges(xc, params.ResourceActions)
 	if err != nil {
 		return nil, err
 	}
@@ -74,36 +108,14 @@ func (s *pip) GetPolicyCalculator(ctx context.Context, r []ResourceChange) (poli
 	// Extract the updated set of config from the xrefcache.
 	resourceDataAfter := s.resourceDataFromXrefCache(xc)
 
+	// Wait for the archived endpoint query to complete. We don't track if the endpoint cache population errors since
+	// we can still do a PIP query without it, however, chance of indeterminate calculations will be higher.
+	wgEps.Wait()
+
 	// Create the policy calculator.
-	calc := policycalc.NewPolicyCalculator(s.cfg, resourceDataBefore, resourceDataAfter, modified)
+	calc := policycalc.NewPolicyCalculator(s.cfg, ec, resourceDataBefore, resourceDataAfter, modified)
 
 	return calc, nil
-}
-
-// loadInitialPolicy will load the initial set of policy and related resources from the k8s API into the xrefcache.
-func (s *pip) loadInitialPolicy(xc xrefcache.XrefCache) error {
-	for _, t := range requiredTypes {
-		l, err := s.listSrc.RetrieveList(t)
-		if err != nil {
-			return err
-		}
-
-		err = meta.EachListItem(l.ResourceList, func(obj runtime.Object) error {
-			res := obj.(resources.Resource)
-			xc.OnUpdates([]syncer.Update{{
-				Type:       syncer.UpdateTypeSet,
-				Resource:   res,
-				ResourceID: resources.GetResourceID(res),
-			}})
-			return nil
-		})
-
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 // applyPolicyChanges applies the supplied resource updates on top of the loaded configuration in the xrefcache.
@@ -139,7 +151,7 @@ func (s *pip) applyPolicyChanges(xc xrefcache.XrefCache, rs []ResourceChange) (p
 	return modified, nil
 }
 
-// Create the policy configuration from the data stored in the xrefcache.
+// resourceDataFromXrefCache creates the policy configuration from the data stored in the xrefcache.
 func (s *pip) resourceDataFromXrefCache(xc xrefcache.XrefCache) *policycalc.ResourceData {
 	// Create an empty config.
 	rd := &policycalc.ResourceData{}
@@ -164,4 +176,74 @@ func (s *pip) resourceDataFromXrefCache(xc xrefcache.XrefCache) *policycalc.Reso
 	})
 
 	return rd
+}
+
+// syncFromArchive will load archived configuration and invoke the syncer callbacks.
+func (s *pip) syncFromArchive(cxt context.Context, params *PolicyImpactParams, cb syncer.SyncerCallbacks) {
+	// If we could not determine the time interval, then we can't populate the cache from archived data.
+	if params.FromTime == nil || params.ToTime == nil {
+		log.Debug("No From/To time available, so cannot load archived data")
+		return
+	}
+
+	// Populate the cache from the replayer.
+	r := replay.New(*params.FromTime, *params.ToTime, s.archivedLister, s.archivedEventer, cb)
+	r.Start(cxt)
+	return
+}
+
+// syncFromDatastore will load the current set of configuration from the datastore and invoke the syncer callbacks.
+func (s *pip) syncFromDatastore(ctx context.Context, types []metav1.TypeMeta, cb syncer.SyncerCallbacks) error {
+	wg := sync.WaitGroup{}
+	lock := sync.Mutex{}
+	errs := make(chan error, len(requiredPolicyTypes))
+	defer close(errs)
+
+	for _, t := range types {
+		wg.Add(1)
+		go func(t metav1.TypeMeta) {
+			defer wg.Done()
+
+			// List current resource configuration for this type.
+			l, err := s.listSrc.RetrieveList(t)
+			if err != nil {
+				errs <- err
+				return
+			}
+
+			// Invoke the syncer callbacks for each item in the list. We need to lock around the callbacks because the
+			// syncer interfaces are assumed not to be go-routine safe.
+			lock.Lock()
+			err = meta.EachListItem(l.ResourceList, func(obj runtime.Object) error {
+				res := obj.(resources.Resource)
+				cb.OnUpdates([]syncer.Update{{
+					Type:       syncer.UpdateTypeSet,
+					Resource:   res,
+					ResourceID: resources.GetResourceID(res),
+				}})
+				return nil
+			})
+			lock.Unlock()
+
+			if err != nil {
+				errs <- err
+				return
+			}
+		}(t)
+	}
+	wg.Wait()
+
+	// Return the first error if there is one. Use non-blocking version of the channel operator.
+	select {
+	case err := <-errs:
+		log.WithError(err).Warning("Hit error loading configuration from datastore")
+		cb.OnStatusUpdate(syncer.StatusUpdate{
+			Type:  syncer.StatusTypeFailed,
+			Error: err,
+		})
+		return err
+	default:
+		log.Info("Loaded configuration from datastore")
+		return nil
+	}
 }

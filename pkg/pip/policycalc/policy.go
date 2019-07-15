@@ -87,8 +87,8 @@ func (c *CompiledPolicy) Action(flow *Flow, af ActionFlag, tierIdx int, r *Endpo
 	return af, true
 }
 
-// compilePolicy compiles the Calico v3 policy resource into a CompiledPolicy for both ingress and egress flows.
-// If the policy does not contain ingress or egress matches then the corresponding CompiledPolicy will be nil.
+// compilePolicy compiles the Calico v3 policy resource into separate ingress and egress CompiledPolicy structs.
+// If the policy does not contain ingress or egress matches then the corresponding result will be nil.
 func compilePolicy(m *MatcherFactory, r resources.Resource) (ingressPol, egressPol *CompiledPolicy) {
 	log.Debugf("Compiling policy %s", resources.GetResourceID(r))
 

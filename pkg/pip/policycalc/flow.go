@@ -101,10 +101,12 @@ type Flow struct {
 func (f Flow) getUnchangedResponse() *Response {
 	r := &Response{}
 	if f.Reporter == ReporterTypeSource {
+		r.Source.Include = true
 		r.Source.Action = f.Action
 		r.Source.Policies = f.Policies
 	} else {
 		r.Source.Action = ActionAllow
+		r.Destination.Include = true
 		r.Destination.Action = f.Action
 		r.Destination.Policies = f.Policies
 	}
@@ -123,7 +125,8 @@ type FlowEndpointData struct {
 	// Namespace - should only be set for namespaces endpoints.
 	Namespace string
 
-	// Labels - only relevant for Calico endpoints.
+	// Labels - only relevant for Calico endpoints. If not specified on input, this may be filled in by an endpoint
+	// cache lookup.
 	Labels map[string]string
 
 	// IP, or nil if unknown.
@@ -132,10 +135,17 @@ type FlowEndpointData struct {
 	// Port, or nil if unknown.
 	Port *uint16
 
-	// ServiceAccount, or nil if unknown.
+	// ServiceAccount, or nil if unknown. If not specified on input (nil), this may be filled in by an endpoint cache
+	// lookup.
 	ServiceAccount *string
 
-	// Private cache data.
+	// NamedPorts is the set of named ports for this endpoint.  If not specified on input (nil), this may be filled in
+	// by an endpoint cache lookup.
+	NamedPorts []EndpointNamedPort
+
+	// ---- Private data ----
+
+	// Selector cache results
 	cachedSelectorResults []MatchType
 }
 
@@ -149,4 +159,11 @@ func (e *FlowEndpointData) isCalicoEndpoint() bool {
 	default:
 		return false
 	}
+}
+
+// EndpointNamedPort encapsulates details about a named port on an endpoint.
+type EndpointNamedPort struct {
+	Name     string
+	Protocol uint8
+	Port     uint16
 }

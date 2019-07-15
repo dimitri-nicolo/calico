@@ -9,8 +9,9 @@ import (
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
-
 	"github.com/tigera/compliance/pkg/resources"
+
+	pipcfg "github.com/tigera/es-proxy/pkg/pip/config"
 )
 
 // This file contains most of the policy calculation tests, by explicitly testing each match criteria.
@@ -19,9 +20,7 @@ import (
 var (
 	typesIngress = []v3.PolicyType{v3.PolicyTypeIngress}
 	typesEgress  = []v3.PolicyType{v3.PolicyTypeEgress}
-)
 
-var (
 	int_1       = int(1)
 	int_4       = int(4)
 	int_6       = int(6)
@@ -38,7 +37,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 	var sel *EndpointSelectorHandler
 	var compute func() EndpointResponse
 
-	setup := func(cfg *Config) {
+	setup := func(cfg *pipcfg.Config) {
 		np = &v3.NetworkPolicy{
 			TypeMeta: resources.TypeCalicoGlobalNetworkPolicies,
 			ObjectMeta: v1.ObjectMeta{
@@ -93,7 +92,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 	}
 
 	BeforeEach(func() {
-		setup(&Config{})
+		setup(&pipcfg.Config{})
 	})
 
 	// ---- No tier match ----
@@ -117,7 +116,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		r := compute()
 		Expect(r.Action).To(Equal(ActionDeny))
 		Expect(r.Include).To(BeTrue())
-		Expect(r.Policies).To(Equal([]string{"0|__PROFILE__|__PROFILE__.__NO_MATCH__|allow"}))
+		Expect(r.Policies).To(Equal([]string{"0|__PROFILE__|__PROFILE__.__NO_MATCH__|deny"}))
 	})
 
 	// ---- ICMP/NotICMP matcher ----
@@ -153,7 +152,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Ingress = nil
 		np.Spec.Egress[0].ICMP = &v3.ICMPFields{Code: &int_1}
 		// Inexact deny and exact end of tier deny means overall a deny. The policies will contain a repeated entry
-		// for the policy (once for end of tier deny).
+		// for the policy (once for the inexact deny rule match, once for the end of tier deny).
 		r := compute()
 		Expect(r.Action).To(Equal(ActionDeny))
 		Expect(r.Include).To(BeTrue())
@@ -474,6 +473,18 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 	})
 
 	It("checking source egress allow inexact match when Source.Nets is non-nil", func() {
+		By("Checking default behavior for Calico Endpoint is exact non-match")
+		f.Source.Namespace = "ns1"
+		f.Source.Type = EndpointTypeWep
+		np.Spec.Types = typesEgress
+		np.Spec.Ingress = nil
+		np.Spec.Egress[0].Action = v3.Allow
+		np.Spec.Egress[0].Source.Nets = []string{"10.0.0.0/16"}
+		// Inexact allow and exact end of tier deny means overall indeterminate.
+		Expect(compute().Action).To(Equal(ActionDeny))
+
+		By("Checking CalicoEndpointNetMatchAlways=true for Calico Endpoint is inexact match")
+		setup(&pipcfg.Config{CalicoEndpointNetMatchAlways: true})
 		f.Source.Namespace = "ns1"
 		f.Source.Type = EndpointTypeWep
 		np.Spec.Types = typesEgress
@@ -535,6 +546,18 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 	})
 
 	It("checking source egress allow inexact match when Destination.Nets is non-nil", func() {
+		By("Checking default behavior for Calico Endpoint is exact non-match")
+		f.Destination.Type = EndpointTypeWep
+		f.Source.Namespace = "ns1"
+		f.Source.Type = EndpointTypeWep
+		np.Spec.Types = typesEgress
+		np.Spec.Ingress = nil
+		np.Spec.Egress[0].Action = v3.Allow
+		np.Spec.Egress[0].Destination.Nets = []string{"10.0.0.0/16"}
+		Expect(compute().Action).To(Equal(ActionDeny))
+
+		By("Checking CalicoEndpointNetMatchAlways=true for Calico Endpoint is inexact match")
+		setup(&pipcfg.Config{CalicoEndpointNetMatchAlways: true})
 		f.Destination.Type = EndpointTypeWep
 		f.Source.Namespace = "ns1"
 		f.Source.Type = EndpointTypeWep
@@ -597,6 +620,17 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 	})
 
 	It("checking source egress allow inexact match when Source.Nets is non-nil", func() {
+		By("Checking default behavior for Calico Endpoint is exact non-match")
+		f.Source.Namespace = "ns1"
+		f.Source.Type = EndpointTypeWep
+		np.Spec.Types = typesEgress
+		np.Spec.Ingress = nil
+		np.Spec.Egress[0].Action = v3.Allow
+		np.Spec.Egress[0].Source.Nets = []string{"10.0.0.0/16"}
+		Expect(compute().Action).To(Equal(ActionDeny))
+
+		By("Checking CalicoEndpointNetMatchAlways=true for Calico Endpoint is inexact match")
+		setup(&pipcfg.Config{CalicoEndpointNetMatchAlways: true})
 		f.Source.Namespace = "ns1"
 		f.Source.Type = EndpointTypeWep
 		np.Spec.Types = typesEgress

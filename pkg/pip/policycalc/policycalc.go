@@ -5,9 +5,10 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
-
+	"github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/tigera/compliance/pkg/resources"
+
+	pipcfg "github.com/tigera/es-proxy/pkg/pip/config"
 )
 
 // ------
@@ -84,15 +85,17 @@ type EndpointResponse struct {
 
 // policyCalculator implements the PolicyCalculator interface.
 type policyCalculator struct {
-	Config    *Config
+	Config    *pipcfg.Config
+	Selectors *EndpointSelectorHandler
+	Endpoints *EndpointCache
 	Before    *CompiledTiersAndPolicies
 	After     *CompiledTiersAndPolicies
-	Selectors *EndpointSelectorHandler
 }
 
 // NewPolicyCalculator returns a new PolicyCalculator.
 func NewPolicyCalculator(
-	cfg *Config,
+	cfg *pipcfg.Config,
+	endpoints *EndpointCache,
 	resourceDataBefore *ResourceData,
 	resourceDataAfter *ResourceData,
 	modified ModifiedResources,
@@ -106,6 +109,7 @@ func NewPolicyCalculator(
 	return &policyCalculator{
 		Config:    cfg,
 		Selectors: selectors,
+		Endpoints: endpoints,
 		Before:    newCompiledTiersAndPolicies(cfg, resourceDataBefore, modified, selectors),
 		After:     newCompiledTiersAndPolicies(cfg, resourceDataAfter, modified, selectors),
 	}
@@ -120,9 +124,51 @@ func (fp *policyCalculator) Calculate(flow *Flow) (before, after *Response) {
 		"originalAction": flow.Action,
 	})
 
-	// Initialize selector caches
+	// Initialize selector caches.
 	flow.Source.cachedSelectorResults = fp.CreateSelectorCache()
 	flow.Destination.cachedSelectorResults = fp.CreateSelectorCache()
+
+	// If either source or destination are calico endpoints check the cache for information missing from the flow data.
+	if flow.Source.isCalicoEndpoint() {
+		if ed := fp.Endpoints.Get(flow.Source.Namespace, flow.Source.Name); ed != nil {
+			log.Debug("Found source endpoint in cache")
+
+			if flow.Source.ServiceAccount == nil {
+				log.Debugf("Augmenting source endpoint flow data with cached service account: %v", ed.ServiceAccount)
+				flow.Source.ServiceAccount = ed.ServiceAccount
+			}
+
+			if flow.Source.NamedPorts == nil {
+				log.Debugf("Augmenting source endpoint flow data with cached named ports: %v", ed.NamedPorts)
+				flow.Source.NamedPorts = ed.NamedPorts
+			}
+
+			if len(flow.Source.Labels) == 0 {
+				log.Debugf("Augmenting source endpoint flow data with cached labels: %v", ed.Labels)
+				flow.Source.Labels = ed.Labels
+			}
+		}
+	}
+	if flow.Destination.isCalicoEndpoint() {
+		if ed := fp.Endpoints.Get(flow.Destination.Namespace, flow.Destination.Name); ed != nil {
+			log.Debug("Found destination endpoint in cache")
+
+			if flow.Destination.ServiceAccount == nil {
+				log.Debugf("Augmenting destination endpoint flow data with cached service account: %v", ed.ServiceAccount)
+				flow.Destination.ServiceAccount = ed.ServiceAccount
+			}
+
+			if flow.Destination.NamedPorts == nil {
+				log.Debugf("Augmenting destination endpoint flow data with cached named ports: %v", ed.NamedPorts)
+				flow.Destination.NamedPorts = ed.NamedPorts
+			}
+
+			if len(flow.Destination.Labels) == 0 {
+				log.Debugf("Augmenting destination endpoint flow data with cached labels: %v", ed.Labels)
+				flow.Destination.Labels = ed.Labels
+			}
+		}
+	}
 
 	// Check if this flow is impacted.
 	if !fp.Before.FlowSelectedByModifiedPolicies(flow) && !fp.After.FlowSelectedByModifiedPolicies(flow) {
@@ -149,18 +195,26 @@ func (fp *policyCalculator) Calculate(flow *Flow) (before, after *Response) {
 		if before.Source.Include {
 			clog.WithFields(log.Fields{
 				"calculatedBeforeSourceAction":   before.Source.Action,
-				"calculatedAfterSourceAction":    after.Source.Action,
 				"calculatedBeforeSourcePolicies": before.Source.Policies,
-				"calculatedAfterSourcePolicies":  after.Source.Policies,
-			}).Debug("Including source flow")
+			}).Debug("Including source flow before")
+		}
+		if after.Source.Include {
+			clog.WithFields(log.Fields{
+				"calculatedAfterSourceAction":   after.Source.Action,
+				"calculatedAfterSourcePolicies": after.Source.Policies,
+			}).Debug("Including source flow after")
 		}
 		if before.Destination.Include {
 			clog.WithFields(log.Fields{
 				"calculatedBeforeDestAction":   before.Destination.Action,
-				"calculatedAfterDestAction":    after.Destination.Action,
 				"calculatedBeforeDestPolicies": before.Destination.Policies,
-				"calculatedAfterDestPolicies":  after.Destination.Policies,
-			}).Debug("Including destination flow")
+			}).Debug("Including destination flow before")
+		}
+		if after.Destination.Include {
+			clog.WithFields(log.Fields{
+				"calculatedAfterDestAction":   after.Destination.Action,
+				"calculatedAfterDestPolicies": after.Destination.Policies,
+			}).Debug("Including destination flow after")
 		}
 	}
 

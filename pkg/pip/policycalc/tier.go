@@ -2,11 +2,14 @@ package policycalc
 
 import (
 	"fmt"
+
 	log "github.com/sirupsen/logrus"
+
+	pipcfg "github.com/tigera/es-proxy/pkg/pip/config"
 )
 
 // newCompiledTiersAndPolicies compiles the Tiers into CompiledTiersAndPolicies.
-func newCompiledTiersAndPolicies(cfg *Config, rd *ResourceData, modified ModifiedResources, sel *EndpointSelectorHandler) *CompiledTiersAndPolicies {
+func newCompiledTiersAndPolicies(cfg *pipcfg.Config, rd *ResourceData, modified ModifiedResources, sel *EndpointSelectorHandler) *CompiledTiersAndPolicies {
 	// Create the namespace handler, and populate from the Namespaces and ServiceAccounts.
 	log.Debugf("Creating namespace handler with %d namespaces and %d service accounts", len(rd.Namespaces), len(rd.ServiceAccounts))
 	namespaces := NewNamespaceHandler(rd.Namespaces, rd.ServiceAccounts)
@@ -163,6 +166,7 @@ func (ts CompiledTiers) Calculate(flow *Flow, ep *FlowEndpointData, epr *Endpoin
 			// The next tier flag was not set, so we are now done. Since the action is not unknown, then we should
 			// have a concrete allow or deny action at this point. Note that whilst the uncertain flag may be set
 			// all of the possible paths have resulted in the same action. Store the action in the response object.
+			log.Debug("Not required to enumerate next tier - must have final action")
 			epr.Action = af.ToAction()
 			return
 		}
@@ -182,13 +186,14 @@ func (ts CompiledTiers) Calculate(flow *Flow, ep *FlowEndpointData, epr *Endpoin
 
 	// -- END OF TIERS --
 	// This is Allow for Pods, and Deny for HEPs.
+	log.Debug("Hit end of tiers")
 	if ep.Type == EndpointTypeWep {
 		// End of tiers allow is handled by the namespace profile. Add the policy name for this and set the allow flag.
 		epr.Policies = append(epr.Policies, fmt.Sprintf("%d|__PROFILE__|__PROFILE__.kns.%s|allow", tierIdx, ep.Namespace))
 		af |= ActionFlagAllow
 	} else {
 		// End of tiers deny is handled implicitly by Felix and has a very specific pseudo-profile name.
-		epr.Policies = append(epr.Policies, fmt.Sprintf("%d|__PROFILE__|__PROFILE__.__NO_MATCH__|allow", tierIdx))
+		epr.Policies = append(epr.Policies, fmt.Sprintf("%d|__PROFILE__|__PROFILE__.__NO_MATCH__|deny", tierIdx))
 		af |= ActionFlagDeny
 	}
 
@@ -210,11 +215,11 @@ func (tier CompiledTier) Action(flow *Flow, af ActionFlag, tierIdx int, r *Endpo
 	for _, p := range tier {
 		// If the policy does not apply to this Endpoint then skip to the next policy.
 		if p.Applies(flow) != MatchTypeTrue {
-			log.Debugf("Policy does not apply - skipping")
+			log.Debugf("Policy %s does not apply - skipping", p.Name)
 			continue
 		}
 		// Track that at least one policy in this tier matched. This influences end-of-tier behavior (see below).
-		log.Debugf("Policy applies - matches tier")
+		log.Debugf("Policy %s applies - matches tier", p.Name)
 		lastMatchedPolicy = p
 
 		// Calculate the set of action flags from the policy.

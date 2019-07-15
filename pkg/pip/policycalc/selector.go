@@ -40,7 +40,7 @@ func (c *EndpointSelectorHandler) GetSelectorEndpointMatcher(selStr string) Endp
 
 	// Create a closure to perform the selector matching and the caching.
 	cacheIdx := len(c.selectorMatchers)
-	matcher := func(ep *FlowEndpointData) MatchType {
+	matcher := func(_ *Flow, ep *FlowEndpointData) MatchType {
 		if !ep.isCalicoEndpoint() {
 			log.Debugf("Endpoint selector: %s (not Calico Endpoint)", MatchTypeFalse)
 			return MatchTypeFalse

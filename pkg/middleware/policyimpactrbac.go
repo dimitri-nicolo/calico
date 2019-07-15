@@ -125,9 +125,11 @@ func (h *policyImpactRbacHelper) canPerformPolicyAction(verb string, res resourc
 	// access to the policy:
 	// - User has read access to the tier
 	// - User either has:
-	//   - Wildcarded access to policies in the tier
-	//   - Access to the specific policy in the tier
-	// These checks are not performed on Kubernetes network policies or any other Kubernetes resource.
+	//   - Wildcarded access to tiered-policies in the tier
+	//   - Access to the specific tiered-policy in the tier
+	// These checks are not performed on Kubernetes network policies or any other Kubernetes resource. Note that a
+	// different resource kind is used to determine access to "tiered-policy" - this pseudo resource is the same as the
+	// underlying resource kind but prefixed with "tier.", i.e. "tier.networkpolicies" and "tier.globalnetworkpolicies".
 	//
 	// Start by checking tier read access.
 	resAtr = &authzv1.ResourceAttributes{

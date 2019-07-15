@@ -66,7 +66,7 @@ func (n *NamespaceHandler) GetNamespaceSelectorEndpointMatcher(selStr string) En
 	}
 
 	// Create a closure to perform the match.
-	matcher := func(ep *FlowEndpointData) MatchType {
+	matcher := func(_ *Flow, ep *FlowEndpointData) MatchType {
 		// If the Endpoint namespace is one of the matched selectors then this matches.
 		for i := range namespaces {
 			if namespaces[i] == ep.Namespace {
@@ -123,7 +123,7 @@ func (n *NamespaceHandler) GetServiceAccountEndpointMatchers(sa *v3.ServiceAccou
 	}
 
 	// Create a closure to perform the match.
-	matcher := func(ep *FlowEndpointData) MatchType {
+	matcher := func(_ *Flow, ep *FlowEndpointData) MatchType {
 		if ep.Type != EndpointTypeWep {
 			log.Debugf("ServiceAccountMatch: %s (not valid for endpoint type)", MatchTypeFalse)
 			return MatchTypeFalse

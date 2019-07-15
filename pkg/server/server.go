@@ -16,12 +16,14 @@ import (
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
+	compconfig "github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/datastore"
 	"github.com/tigera/compliance/pkg/elastic"
+
 	"github.com/tigera/es-proxy/pkg/handler"
 	"github.com/tigera/es-proxy/pkg/middleware"
 	"github.com/tigera/es-proxy/pkg/pip"
-	"github.com/tigera/es-proxy/pkg/pip/policycalc"
+	pipcfg "github.com/tigera/es-proxy/pkg/pip/config"
 )
 
 var (
@@ -29,52 +31,53 @@ var (
 	wg     sync.WaitGroup
 )
 
-func Start(config *Config) error {
+func Start(cfg *Config) error {
 	sm := http.NewServeMux()
 
 	var rootCAs *x509.CertPool
-	if config.ElasticCAPath != "" {
-		rootCAs = addCertToCertPool(config.ElasticCAPath)
+	if cfg.ElasticCAPath != "" {
+		rootCAs = addCertToCertPool(cfg.ElasticCAPath)
 	}
 	var tlsConfig *tls.Config
 	if rootCAs != nil {
 		tlsConfig = &tls.Config{
 			RootCAs:            rootCAs,
-			InsecureSkipVerify: config.ElasticInsecureSkipVerify,
+			InsecureSkipVerify: cfg.ElasticInsecureSkipVerify,
 		}
 	}
 
 	pc := &handler.ProxyConfig{
-		TargetURL:       config.ElasticURL,
+		TargetURL:       cfg.ElasticURL,
 		TLSConfig:       tlsConfig,
-		ConnectTimeout:  config.ProxyConnectTimeout,
-		KeepAlivePeriod: config.ProxyKeepAlivePeriod,
-		IdleConnTimeout: config.ProxyIdleConnTimeout,
+		ConnectTimeout:  cfg.ProxyConnectTimeout,
+		KeepAlivePeriod: cfg.ProxyKeepAlivePeriod,
+		IdleConnTimeout: cfg.ProxyIdleConnTimeout,
 	}
 	proxy := handler.NewProxy(pc)
 
 	k8sClient, k8sConfig := getKubernetestClientAndConfig()
 	k8sAuth := middleware.NewK8sAuth(k8sClient, k8sConfig)
 
-	//install pip mutator
-	clientset := datastore.MustGetClientSet()
-	policyCalcConfig := policycalc.MustLoadConfig()
+	// Install pip mutator
+	k8sClientSet := datastore.MustGetClientSet()
+	policyCalcConfig := pipcfg.MustLoadConfig()
 
-	p := pip.New(policyCalcConfig, clientset)
+	esClient := elastic.MustGetElasticClient(compconfig.MustLoadConfig())
+	p := pip.New(policyCalcConfig, k8sClientSet, esClient, esClient)
 
 	// initialize the esclient for pip
 	h := &http.Client{}
-	if config.ElasticCAPath != "" {
+	if cfg.ElasticCAPath != "" {
 		h.Transport = &http.Transport{TLSClientConfig: &tls.Config{RootCAs: rootCAs}}
 	}
 	esClient, err := elastic.New(h,
-		config.ElasticURL,
-		config.ElasticUsername,
-		config.ElasticPassword,
-		config.ElasticIndexSuffix,
-		config.ElasticConnRetries,
-		config.ElasticConnRetryInterval,
-		config.ElasticEnableTrace,
+		cfg.ElasticURL,
+		cfg.ElasticUsername,
+		cfg.ElasticPassword,
+		cfg.ElasticIndexSuffix,
+		cfg.ElasticConnRetries,
+		cfg.ElasticConnRetryInterval,
+		cfg.ElasticEnableTrace,
 	)
 	if err != nil {
 		return err
@@ -82,7 +85,7 @@ func Start(config *Config) error {
 
 	sm.Handle("/version", http.HandlerFunc(handler.VersionHandler))
 
-	switch config.AccessMode {
+	switch cfg.AccessMode {
 	case InsecureMode:
 		sm.Handle("/",
 			middleware.RequestToResource(
@@ -95,27 +98,27 @@ func Start(config *Config) error {
 		sm.Handle("/",
 			middleware.RequestToResource(
 				k8sAuth.KubernetesAuthnAuthz(
-					middleware.BasicAuthHeaderInjector(config.ElasticUsername, config.ElasticPassword, proxy))))
+					middleware.BasicAuthHeaderInjector(cfg.ElasticUsername, cfg.ElasticPassword, proxy))))
 		sm.Handle("/tigera_secure_ee_flows*/_search",
 			middleware.RequestToResource(
 				k8sAuth.KubernetesAuthnAuthz(
 					middleware.PolicyImpactHandler(k8sAuth, p, esClient,
-						middleware.BasicAuthHeaderInjector(config.ElasticUsername, config.ElasticPassword, proxy)))))
+						middleware.BasicAuthHeaderInjector(cfg.ElasticUsername, cfg.ElasticPassword, proxy)))))
 	case PassThroughMode:
 		log.Fatal("PassThroughMode not implemented yet")
 	default:
-		log.WithField("AccessMode", config.AccessMode).Fatal("Indeterminate Elasticsearch access mode.")
+		log.WithField("AccessMode", cfg.AccessMode).Fatal("Indeterminate Elasticsearch access mode.")
 	}
 
 	server = &http.Server{
-		Addr:    config.ListenAddr,
+		Addr:    cfg.ListenAddr,
 		Handler: middleware.LogRequestHeaders(sm),
 	}
 
 	wg.Add(1)
 	go func() {
-		log.Infof("Starting server on %v", config.ListenAddr)
-		err := server.ListenAndServeTLS(config.CertFile, config.KeyFile)
+		log.Infof("Starting server on %v", cfg.ListenAddr)
+		err := server.ListenAndServeTLS(cfg.CertFile, cfg.KeyFile)
 		if err != nil {
 			log.WithError(err).Error("Error when starting server")
 		}

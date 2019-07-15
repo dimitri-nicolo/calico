@@ -69,27 +69,27 @@ var _ = Describe("Namespace handler tests", func() {
 
 		By("Creating a matcher on ns1 and ns2")
 		m1 := nh.GetNamespaceSelectorEndpointMatcher("vegetable == 'turnip'")
-		Expect(m1(&FlowEndpointData{Namespace: "ns1"})).To(Equal(MatchTypeTrue))
-		Expect(m1(&FlowEndpointData{Namespace: "ns2"})).To(Equal(MatchTypeTrue))
-		Expect(m1(&FlowEndpointData{Namespace: "ns3"})).To(Equal(MatchTypeFalse))
+		Expect(m1(nil, &FlowEndpointData{Namespace: "ns1"})).To(Equal(MatchTypeTrue))
+		Expect(m1(nil, &FlowEndpointData{Namespace: "ns2"})).To(Equal(MatchTypeTrue))
+		Expect(m1(nil, &FlowEndpointData{Namespace: "ns3"})).To(Equal(MatchTypeFalse))
 
 		By("Creating a matcher on ns2 and ns3")
 		m2 := nh.GetNamespaceSelectorEndpointMatcher("protein == 'beef' && carb == 'rice'")
-		Expect(m2(&FlowEndpointData{Namespace: "ns1"})).To(Equal(MatchTypeFalse))
-		Expect(m2(&FlowEndpointData{Namespace: "ns2"})).To(Equal(MatchTypeTrue))
-		Expect(m2(&FlowEndpointData{Namespace: "ns3"})).To(Equal(MatchTypeTrue))
+		Expect(m2(nil, &FlowEndpointData{Namespace: "ns1"})).To(Equal(MatchTypeFalse))
+		Expect(m2(nil, &FlowEndpointData{Namespace: "ns2"})).To(Equal(MatchTypeTrue))
+		Expect(m2(nil, &FlowEndpointData{Namespace: "ns3"})).To(Equal(MatchTypeTrue))
 
 		By("Getting the same selector matchers and rechecking")
 		m1 = nh.GetNamespaceSelectorEndpointMatcher("vegetable == 'turnip'")
 		m2 = nh.GetNamespaceSelectorEndpointMatcher("protein == 'beef' && carb == 'rice'")
 
-		Expect(m1(&FlowEndpointData{Namespace: "ns1"})).To(Equal(MatchTypeTrue))
-		Expect(m1(&FlowEndpointData{Namespace: "ns2"})).To(Equal(MatchTypeTrue))
-		Expect(m1(&FlowEndpointData{Namespace: "ns3"})).To(Equal(MatchTypeFalse))
+		Expect(m1(nil, &FlowEndpointData{Namespace: "ns1"})).To(Equal(MatchTypeTrue))
+		Expect(m1(nil, &FlowEndpointData{Namespace: "ns2"})).To(Equal(MatchTypeTrue))
+		Expect(m1(nil, &FlowEndpointData{Namespace: "ns3"})).To(Equal(MatchTypeFalse))
 
-		Expect(m2(&FlowEndpointData{Namespace: "ns1"})).To(Equal(MatchTypeFalse))
-		Expect(m2(&FlowEndpointData{Namespace: "ns2"})).To(Equal(MatchTypeTrue))
-		Expect(m2(&FlowEndpointData{Namespace: "ns3"})).To(Equal(MatchTypeTrue))
+		Expect(m2(nil, &FlowEndpointData{Namespace: "ns1"})).To(Equal(MatchTypeFalse))
+		Expect(m2(nil, &FlowEndpointData{Namespace: "ns2"})).To(Equal(MatchTypeTrue))
+		Expect(m2(nil, &FlowEndpointData{Namespace: "ns3"})).To(Equal(MatchTypeTrue))
 
 		By("Checking the size of the selector cache")
 		Expect(nh.selectorMatchers).To(HaveLen(2))
@@ -143,10 +143,10 @@ var _ = Describe("Namespace handler tests", func() {
 		m1 := nh.GetServiceAccountEndpointMatchers(&v3.ServiceAccountMatch{
 			Names: []string{"sa1"},
 		})
-		Expect(m1(&FlowEndpointData{Type: EndpointTypeHep})).To(Equal(MatchTypeFalse))
-		Expect(m1(&FlowEndpointData{Type: EndpointTypeWep})).To(Equal(MatchTypeUncertain))
+		Expect(m1(nil, &FlowEndpointData{Type: EndpointTypeHep})).To(Equal(MatchTypeFalse))
+		Expect(m1(nil, &FlowEndpointData{Type: EndpointTypeWep})).To(Equal(MatchTypeUncertain))
 		s := "sa1"
-		Expect(m1(&FlowEndpointData{
+		Expect(m1(nil, &FlowEndpointData{
 			Type:           EndpointTypeWep,
 			Namespace:      "ns1",
 			ServiceAccount: &s,
@@ -163,16 +163,16 @@ var _ = Describe("Namespace handler tests", func() {
 		m3 := nh.GetServiceAccountEndpointMatchers(&v3.ServiceAccountMatch{
 			Selector: "vegetable == 'carrot'",
 		})
-		Expect(m3(&FlowEndpointData{Type: EndpointTypeHep})).To(Equal(MatchTypeFalse))
-		Expect(m3(&FlowEndpointData{Type: EndpointTypeWep})).To(Equal(MatchTypeUncertain))
+		Expect(m3(nil, &FlowEndpointData{Type: EndpointTypeHep})).To(Equal(MatchTypeFalse))
+		Expect(m3(nil, &FlowEndpointData{Type: EndpointTypeWep})).To(Equal(MatchTypeUncertain))
 		s = "sa1"
-		Expect(m3(&FlowEndpointData{
+		Expect(m3(nil, &FlowEndpointData{
 			Type:           EndpointTypeWep,
 			Namespace:      "ns2",
 			ServiceAccount: &s,
 		})).To(Equal(MatchTypeFalse))
 		s = "sa2"
-		Expect(m3(&FlowEndpointData{
+		Expect(m3(nil, &FlowEndpointData{
 			Type:           EndpointTypeWep,
 			Namespace:      "ns2",
 			ServiceAccount: &s,
@@ -191,15 +191,15 @@ var _ = Describe("Namespace handler tests", func() {
 			Names:    []string{"sa1"},
 			Selector: "carb == 'rice'",
 		})
-		Expect(m5(&FlowEndpointData{Type: EndpointTypeHep})).To(Equal(MatchTypeFalse))
-		Expect(m5(&FlowEndpointData{Type: EndpointTypeWep})).To(Equal(MatchTypeUncertain))
+		Expect(m5(nil, &FlowEndpointData{Type: EndpointTypeHep})).To(Equal(MatchTypeFalse))
+		Expect(m5(nil, &FlowEndpointData{Type: EndpointTypeWep})).To(Equal(MatchTypeUncertain))
 		s = "sa1"
-		Expect(m5(&FlowEndpointData{
+		Expect(m5(nil, &FlowEndpointData{
 			Type:           EndpointTypeWep,
 			Namespace:      "ns1",
 			ServiceAccount: &s,
 		})).To(Equal(MatchTypeFalse))
-		Expect(m5(&FlowEndpointData{
+		Expect(m5(nil, &FlowEndpointData{
 			Type:           EndpointTypeWep,
 			Namespace:      "ns2",
 			ServiceAccount: &s,
@@ -210,7 +210,7 @@ var _ = Describe("Namespace handler tests", func() {
 			Names:    []string{"sa1"},
 			Selector: "protein == 'tofu'",
 		})
-		Expect(m6(&FlowEndpointData{Type: EndpointTypeHep})).To(Equal(MatchTypeFalse))
-		Expect(m6(&FlowEndpointData{Type: EndpointTypeWep})).To(Equal(MatchTypeFalse))
+		Expect(m6(nil, &FlowEndpointData{Type: EndpointTypeHep})).To(Equal(MatchTypeFalse))
+		Expect(m6(nil, &FlowEndpointData{Type: EndpointTypeWep})).To(Equal(MatchTypeFalse))
 	})
 })

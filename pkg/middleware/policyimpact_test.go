@@ -6,15 +6,17 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+
 	"github.com/tigera/es-proxy/pkg/middleware"
+	"github.com/tigera/es-proxy/pkg/pip"
 )
 
 var _ = Describe("The PolicyImpactRequestProcessor properly modifies requests and extracts params", func() {
-
 	DescribeTable("Extracts the correct parameters from the request",
 		func(requestMethod string, originalReqBody string, expectedModifiedBody string, expectedParams string) {
 
@@ -50,19 +52,51 @@ var _ = Describe("The PolicyImpactRequestProcessor properly modifies requests an
 		Entry("Global pip request", http.MethodPost, pipGlobalRequestWithQuery, nullESQuery, pipGlobalExpectedParams),
 		Entry("K8s pip request", http.MethodPost, pipK8sRequestWithQuery, nullESQuery, pipK8sExpectedParams),
 	)
-
 })
 
-func pipParamsToJson(pipParams middleware.PolicyImpactParams) string {
+var _ = Describe("Time parsing works", func() {
+	It("Parses now without error", func() {
+		now := time.Now()
+		s := "now"
+		t := middleware.ParseElasticsearchTime(now, &s)
+		Expect(t).NotTo(BeNil())
+		Expect(t.Sub(now)).To(BeZero())
+	})
+
+	It("Parses now-10m without error", func() {
+		now := time.Now()
+		s := "now-10m"
+		t := middleware.ParseElasticsearchTime(now, &s)
+		Expect(t).NotTo(BeNil())
+		Expect(now.Sub(*t)).To(Equal(10 * time.Minute))
+	})
+
+	It("Does not parse now-xxx", func() {
+		now := time.Now()
+		s := "now-xxx"
+		t := middleware.ParseElasticsearchTime(now, &s)
+		Expect(t).To(BeNil())
+	})
+
+	It("Parses an RFC3339 format time", func() {
+		now := time.Now().UTC()
+		s := now.Add(-5 * time.Second).UTC().Format(time.RFC3339)
+		t := middleware.ParseElasticsearchTime(now, &s)
+		Expect(t).NotTo(BeNil())
+		Expect(now.Sub(*t) / time.Second).To(BeEquivalentTo(5)) // Avoids ms accuracy in `now` but not in `t`.
+	})
+})
+
+func pipParamsToJson(pipParams pip.PolicyImpactParams) string {
 	RegisterFailHandler(Fail)
 	b, err := json.Marshal(pipParams)
 	Expect(err).ToNot(HaveOccurred())
 	return string(b)
 }
 
-func jsonToPipParams(j string) *middleware.PolicyImpactParams {
+func jsonToPipParams(j string) *pip.PolicyImpactParams {
 	RegisterFailHandler(Fail)
-	var data middleware.PolicyImpactParams
+	var data pip.PolicyImpactParams
 	err := json.Unmarshal([]byte(j), &data)
 	Expect(err).ToNot(HaveOccurred())
 	return &data

@@ -22,8 +22,8 @@ type tokenAuthMech struct {
 	token string
 }
 
-func (tah tokenAuthMech) setAuthHeader(req *http.Request) {
-	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", tah.token))
+func (tam tokenAuthMech) setAuthHeader(req *http.Request) {
+	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", tam.token))
 }
 
 type basicAuthMech struct {
@@ -31,8 +31,8 @@ type basicAuthMech struct {
 	password string
 }
 
-func (bah basicAuthMech) setAuthHeader(req *http.Request) {
-	req.SetBasicAuth(bah.username, bah.password)
+func (bam basicAuthMech) setAuthHeader(req *http.Request) {
+	req.SetBasicAuth(bam.username, bam.password)
 }
 
 const (
@@ -47,7 +47,6 @@ var _ = Describe("Elasticsearch access", func() {
 	BeforeEach(func() {
 		// Scripts have already launched Elasticsearch and other containers
 		// Just need to execute tests at this point
-
 		tr := &http.Transport{
 			MaxIdleConns:       10,
 			IdleConnTimeout:    30 * time.Second,
@@ -56,8 +55,7 @@ var _ = Describe("Elasticsearch access", func() {
 		}
 		client = &http.Client{Transport: tr}
 	})
-	AfterEach(func() {
-	})
+
 	// We only verify access from the clients point of view.
 	verify := func(reqPath string, userAuth authInjector, expectedStatusCode int, requestVerb string) {
 
@@ -69,12 +67,11 @@ var _ = Describe("Elasticsearch access", func() {
 		}
 
 		req, err := http.NewRequest(requestVerb, urlStr, bodyreader)
+		Expect(err).To(BeNil())
 		if requestVerb == http.MethodPost {
 			req.Header.Add("content-length", fmt.Sprintf("%d", len(postRequestBody)))
 			req.Header.Add("Content-Type", "application/json")
 		}
-
-		Expect(err).To(BeNil())
 		userAuth.setAuthHeader(req)
 
 		resp, err := client.Do(req)
