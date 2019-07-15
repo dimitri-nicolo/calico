@@ -38,7 +38,7 @@ selector in the top right to select the time range to view.
 The values in the "influenced by" column identify which pods or namespaces are responsible for the anomalous
 behavior, and thus where you should concentrate your subsequent investigations.
 
-[managed using Kibana]: https://www.elastic.co/guide/en/elastic-stack-overview/7.2/ml-gs-job1-manage.html
+[managed using Kibana]: https://www.elastic.co/guide/en/kibana/6.4/xpack-ml.html
 [sizing for machine learning with Elasticsearch]: https://www.elastic.co/blog/sizing-machine-learning-with-elasticsearch
 [Elasticsearch REST API]: https://www.elastic.co/guide/en/elasticsearch/reference/6.4/ml-apis.html
 [Elasticsearch machine learning documentation]: https://www.elastic.co/guide/en/elastic-stack-overview/6.4/xpack-ml.html
