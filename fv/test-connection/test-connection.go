@@ -357,8 +357,8 @@ func (tc *testConn) tryConnectWithPacketLoss() error {
 				// which is not the right kind of packet loss we want to trace.
 				// watch -n 1 'cat  /proc/net/udp' to monitor udp buffer overflow.
 
-				// Max 5000 packets per second
-				time.Sleep(200 * time.Microsecond)
+				// Max 200 packets per second.
+				time.Sleep(5 * time.Millisecond)
 			}
 		}
 
