@@ -46,6 +46,8 @@ type Config struct {
 	InitialReportingDelay time.Duration
 	ExportingInterval     time.Duration
 	EnableNetworkSets     bool
+
+	MaxOriginalSourceIPsIncluded int
 }
 
 // A collector (a StatsManager really) collects StatUpdates from data sources
@@ -172,7 +174,7 @@ func (c *collector) getData(tuple Tuple, createIfMissing bool) *Data {
 	data, ok := c.epStats[tuple]
 	if !ok && createIfMissing {
 		// The entry does not exist. Go ahead and create a new one and add it to the map.
-		data = NewData(tuple, c.config.AgeTimeout)
+		data = NewData(tuple, c.config.AgeTimeout, c.config.MaxOriginalSourceIPsIncluded)
 		c.epStats[tuple] = data
 	}
 	return data
@@ -436,23 +438,52 @@ func (c *collector) convertDataplaneStatsAndApplyUpdate(d *proto.DataplaneStats)
 	// from the dataplane before nflogs or conntrack).
 	data := c.getData(t, true)
 
+	var httpDataCount int
 	for _, s := range d.Stats {
-		if s.Kind != proto.Statistic_HTTP_REQUESTS {
-			// Currently we only expect delta HTTP requests from the dataplane statistics API.
-			log.WithField("kind", s.Kind.String()).Warnf("Received a statistic from the dataplane that Felix cannot process")
-			continue
-		}
 		if s.Relativity != proto.Statistic_DELTA {
 			// Currently we only expect delta HTTP requests from the dataplane statistics API.
 			log.WithField("relativity", s.Relativity.String()).Warning("Received a statistic from the dataplane that Felix cannot process")
 			continue
 		}
-		switch s.Action {
-		case proto.Action_ALLOWED:
-			data.IncreaseHTTPRequestAllowedCounter(int(s.Value))
-		case proto.Action_DENIED:
-			data.IncreaseHTTPRequestDeniedCounter(int(s.Value))
+		switch s.Kind {
+		case proto.Statistic_HTTP_REQUESTS:
+			switch s.Action {
+			case proto.Action_ALLOWED:
+				data.IncreaseHTTPRequestAllowedCounter(int(s.Value))
+			case proto.Action_DENIED:
+				data.IncreaseHTTPRequestDeniedCounter(int(s.Value))
+			}
+		case proto.Statistic_HTTP_DATA:
+			httpDataCount = int(s.Value)
+		default:
+			log.WithField("kind", s.Kind.String()).Warnf("Received a statistic from the dataplane that Felix cannot process")
+			continue
 		}
+
+	}
+	ips := make([]net.IP, 0, len(d.HttpData))
+	for _, hd := range d.HttpData {
+		var origSrcIP string
+		if len(hd.XRealIp) != 0 {
+			origSrcIP = hd.XRealIp
+		} else if len(hd.XForwardedFor) != 0 {
+			origSrcIP = hd.XForwardedFor
+		} else {
+			continue
+		}
+		sip := net.ParseIP(origSrcIP)
+		if sip == nil {
+			log.WithField("IP", origSrcIP).Warn("bad source IP")
+			continue
+		}
+		ips = append(ips, sip)
+	}
+	if len(ips) > 0 {
+		if httpDataCount == 0 {
+			httpDataCount = len(ips)
+		}
+		bs := NewBoundedSetFromSliceWithTotalCount(c.config.MaxOriginalSourceIPsIncluded, ips, httpDataCount)
+		data.AddOriginalSourceIPs(bs)
 	}
 }
 

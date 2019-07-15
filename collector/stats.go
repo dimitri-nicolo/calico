@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -235,6 +235,8 @@ func (t *Tuple) GetDestPort() int {
 type Data struct {
 	Tuple Tuple
 
+	origSourceIPs *boundedSet
+
 	// Contains endpoint information corresponding to source and
 	// destination endpoints. Either of these values can be nil
 	// if we don't have information about the endpoint.
@@ -262,10 +264,11 @@ type Data struct {
 	dirty      bool
 }
 
-func NewData(tuple Tuple, duration time.Duration) *Data {
+func NewData(tuple Tuple, duration time.Duration, maxOriginalIPsSize int) *Data {
 	now := monotime.Now()
 	return &Data{
 		Tuple:            tuple,
+		origSourceIPs:    NewBoundedSet(maxOriginalIPsSize),
 		IngressRuleTrace: NewRuleTrace(),
 		EgressRuleTrace:  NewRuleTrace(),
 		createdAt:        now,
@@ -460,6 +463,18 @@ func (d *Data) ReplaceRuleID(ruleID *calc.RuleID, tierIdx, numPkts, numBytes int
 	return true
 }
 
+func (d *Data) AddOriginalSourceIPs(bs *boundedSet) {
+	d.origSourceIPs.Combine(bs)
+}
+
+func (d *Data) OriginalSourceIps() []net.IP {
+	return d.origSourceIPs.ToIPSlice()
+}
+
+func (d *Data) NumUniqueOriginalSourceIPs() int {
+	return d.origSourceIPs.TotalCount()
+}
+
 func (d *Data) Report(c chan<- MetricUpdate, expired bool) {
 	ut := UpdateTypeReport
 	if expired {
@@ -509,12 +524,13 @@ func (d *Data) Report(c chan<- MetricUpdate, expired bool) {
 // metricUpdateIngressConn creates a metric update for Inbound connection traffic
 func (d *Data) metricUpdateIngressConn(ut UpdateType) MetricUpdate {
 	return MetricUpdate{
-		updateType:   ut,
-		tuple:        d.Tuple,
-		srcEp:        d.srcEp,
-		dstEp:        d.dstEp,
-		ruleIDs:      d.IngressRuleTrace.Path(),
-		isConnection: d.isConnection,
+		updateType:    ut,
+		tuple:         d.Tuple,
+		origSourceIPs: d.origSourceIPs,
+		srcEp:         d.srcEp,
+		dstEp:         d.dstEp,
+		ruleIDs:       d.IngressRuleTrace.Path(),
+		isConnection:  d.isConnection,
 		inMetric: MetricValue{
 			deltaPackets:             d.conntrackPktsCtr.Delta(),
 			deltaBytes:               d.conntrackBytesCtr.Delta(),
@@ -531,12 +547,13 @@ func (d *Data) metricUpdateIngressConn(ut UpdateType) MetricUpdate {
 // metricUpdateEgressConn creates a metric update for Outbound connection traffic
 func (d *Data) metricUpdateEgressConn(ut UpdateType) MetricUpdate {
 	return MetricUpdate{
-		updateType:   ut,
-		tuple:        d.Tuple,
-		srcEp:        d.srcEp,
-		dstEp:        d.dstEp,
-		ruleIDs:      d.EgressRuleTrace.Path(),
-		isConnection: d.isConnection,
+		updateType:    ut,
+		tuple:         d.Tuple,
+		origSourceIPs: d.origSourceIPs,
+		srcEp:         d.srcEp,
+		dstEp:         d.dstEp,
+		ruleIDs:       d.EgressRuleTrace.Path(),
+		isConnection:  d.isConnection,
 		inMetric: MetricValue{
 			deltaPackets: d.conntrackPktsCtrReverse.Delta(),
 			deltaBytes:   d.conntrackBytesCtrReverse.Delta(),
@@ -551,12 +568,13 @@ func (d *Data) metricUpdateEgressConn(ut UpdateType) MetricUpdate {
 // metricUpdateIngressNoConn creates a metric update for Inbound non-connection traffic
 func (d *Data) metricUpdateIngressNoConn(ut UpdateType) MetricUpdate {
 	return MetricUpdate{
-		updateType:   ut,
-		tuple:        d.Tuple,
-		srcEp:        d.srcEp,
-		dstEp:        d.dstEp,
-		ruleIDs:      d.IngressRuleTrace.Path(),
-		isConnection: d.isConnection,
+		updateType:    ut,
+		tuple:         d.Tuple,
+		origSourceIPs: d.origSourceIPs,
+		srcEp:         d.srcEp,
+		dstEp:         d.dstEp,
+		ruleIDs:       d.IngressRuleTrace.Path(),
+		isConnection:  d.isConnection,
 		inMetric: MetricValue{
 			deltaPackets: d.IngressRuleTrace.pktsCtr.Delta(),
 			deltaBytes:   d.IngressRuleTrace.bytesCtr.Delta(),
@@ -567,12 +585,13 @@ func (d *Data) metricUpdateIngressNoConn(ut UpdateType) MetricUpdate {
 // metricUpdateEgressNoConn creates a metric update for Outbound non-connection traffic
 func (d *Data) metricUpdateEgressNoConn(ut UpdateType) MetricUpdate {
 	return MetricUpdate{
-		updateType:   ut,
-		tuple:        d.Tuple,
-		srcEp:        d.srcEp,
-		dstEp:        d.dstEp,
-		ruleIDs:      d.EgressRuleTrace.Path(),
-		isConnection: d.isConnection,
+		updateType:    ut,
+		tuple:         d.Tuple,
+		origSourceIPs: d.origSourceIPs,
+		srcEp:         d.srcEp,
+		dstEp:         d.dstEp,
+		ruleIDs:       d.EgressRuleTrace.Path(),
+		isConnection:  d.isConnection,
 		outMetric: MetricValue{
 			deltaPackets: d.EgressRuleTrace.pktsCtr.Delta(),
 			deltaBytes:   d.EgressRuleTrace.bytesCtr.Delta(),

@@ -51,8 +51,8 @@ var (
 
 var _ = Describe("Flow log aggregator tests", func() {
 	// TODO(SS): Pull out the convenience functions for re-use.
-	expectFlowLog := func(fl FlowLog, t Tuple, nf, nfs, nfc int, a FlowLogAction, fr FlowLogReporter, pi, po, bi, bo int, sm, dm EndpointMetadata, sl, dl map[string]string, fp FlowPolicies) {
-		expectedFlow := newExpectedFlowLog(t, nf, nfs, nfc, a, fr, pi, po, bi, bo, sm, dm, sl, dl, fp)
+	expectFlowLog := func(fl FlowLog, t Tuple, nf, nfs, nfc int, a FlowLogAction, fr FlowLogReporter, pi, po, bi, bo int, sm, dm EndpointMetadata, sl, dl map[string]string, fp FlowPolicies, fe FlowExtras) {
+		expectedFlow := newExpectedFlowLog(t, nf, nfs, nfc, a, fr, pi, po, bi, bo, sm, dm, sl, dl, fp, fe)
 
 		// We don't include the start and end time in the comparison, so copy to a new log without these
 		var flNoTime FlowLog
@@ -78,6 +78,29 @@ var _ = Describe("Flow log aggregator tests", func() {
 		}
 		return
 	}
+
+	extractFlowExtras := func(mus ...MetricUpdate) FlowExtras {
+		var ipBs *boundedSet
+		for _, mu := range mus {
+			if mu.origSourceIPs == nil {
+				continue
+			}
+			if ipBs == nil {
+				ipBs = mu.origSourceIPs.Copy()
+			} else {
+				ipBs.Combine(mu.origSourceIPs)
+			}
+		}
+		if ipBs != nil {
+			return FlowExtras{
+				OriginalSourceIPs:    ipBs.ToIPSlice(),
+				NumOriginalSourceIPs: ipBs.TotalCount(),
+			}
+		} else {
+			return FlowExtras{}
+		}
+	}
+
 	extractFlowPolicies := func(mus ...MetricUpdate) FlowPolicies {
 		fp := make(FlowPolicies)
 		for _, mu := range mus {
@@ -108,8 +131,9 @@ var _ = Describe("Flow log aggregator tests", func() {
 
 			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut := calculatePacketStats(muNoConn1Rule1AllowUpdate)
 			expectedFP := extractFlowPolicies(muNoConn1Rule1AllowUpdate)
+			expectedFlowExtras := extractFlowExtras(muNoConn1Rule1AllowUpdate)
 			expectFlowLog(message, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogReporterDst,
-				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, pubMeta, nil, nil, expectedFP)
+				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, pubMeta, nil, nil, expectedFP, expectedFlowExtras)
 
 			By("source port")
 			ca = NewFlowLogAggregator().AggregateOver(FlowSourcePort)
@@ -391,8 +415,9 @@ var _ = Describe("Flow log aggregator tests", func() {
 			}
 			// The labels should have been intersected correctly.
 			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut := calculatePacketStats(muNoConn1Rule1AllowUpdateWithEndpointMetaCopy)
+			expectedFlowExtras := extractFlowExtras(muNoConn1Rule1AllowUpdateWithEndpointMetaCopy)
 			expectFlowLog(message, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogReporterDst,
-				expectedPacketsIn*2, expectedPacketsOut, expectedBytesIn*2, expectedBytesOut, srcMeta, dstMeta, map[string]string{"test-app": "true"}, map[string]string{}, nil)
+				expectedPacketsIn*2, expectedPacketsOut, expectedBytesIn*2, expectedBytesOut, srcMeta, dstMeta, map[string]string{"test-app": "true"}, map[string]string{}, nil, expectedFlowExtras)
 
 			By("not affecting flow logs when IncludeLabels is disabled")
 			ca = NewFlowLogAggregator().IncludeLabels(false)
@@ -449,8 +474,9 @@ var _ = Describe("Flow log aggregator tests", func() {
 			}
 			// The labels should have been intersected right.
 			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut = calculatePacketStats(muNoConn1Rule1AllowUpdateWithEndpointMetaCopy)
+			expectedFlowExtras = extractFlowExtras(muNoConn1Rule1AllowUpdateWithEndpointMetaCopy)
 			expectFlowLog(message, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogReporterDst,
-				expectedPacketsIn*2, expectedPacketsOut, expectedBytesIn*2, expectedBytesOut, srcMeta, dstMeta, nil, nil, nil) // nil & nil for Src and Dst Labels respectively.
+				expectedPacketsIn*2, expectedPacketsOut, expectedBytesIn*2, expectedBytesOut, srcMeta, dstMeta, nil, nil, nil, expectedFlowExtras) // nil & nil for Src and Dst Labels respectively.
 		})
 	})
 
@@ -499,6 +525,24 @@ var _ = Describe("Flow log aggregator tests", func() {
 			hra, hrd := calculateHTTPRequestStats(muConn1Rule1HTTPReqAllowUpdate, muConn1Rule1HTTPReqAllowUpdate)
 			Expect(flowLog.HTTPRequestsAllowedIn).To(Equal(hra))
 			Expect(flowLog.HTTPRequestsDeniedIn).To(Equal(hrd))
+		})
+	})
+
+	Context("Flow log aggregator original source IP", func() {
+		It("Aggregates original source IPs", func() {
+			By("Feeding in two updates containing HTTP request counts")
+			ca := NewFlowLogAggregator().ForAction(rules.RuleActionAllow).(*flowLogAggregator)
+			ca.FeedUpdate(muWithOrigSourceIPs)
+			ca.FeedUpdate(muWithMultipleOrigSourceIPs)
+			messages := ca.Get()
+			Expect(len(messages)).Should(Equal(1))
+			// StartedFlowRefs count should be 1
+			flowLog := messages[0]
+			Expect(flowLog.NumFlowsStarted).Should(Equal(1))
+
+			flowExtras := extractFlowExtras(muWithOrigSourceIPs, muWithMultipleOrigSourceIPs)
+			Expect(flowLog.FlowExtras.OriginalSourceIPs).To(ConsistOf(flowExtras.OriginalSourceIPs))
+			Expect(flowLog.FlowExtras.NumOriginalSourceIPs).To(Equal(flowExtras.NumOriginalSourceIPs))
 		})
 	})
 

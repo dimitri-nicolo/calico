@@ -53,6 +53,8 @@ type MetricUpdate struct {
 	// Tuple key
 	tuple Tuple
 
+	origSourceIPs *boundedSet
+
 	// Endpoint information.
 	srcEp *calc.EndpointData
 	dstEp *calc.EndpointData
@@ -69,7 +71,10 @@ type MetricUpdate struct {
 }
 
 func (mu MetricUpdate) String() string {
-	var srcName, dstName string
+	var (
+		srcName, dstName string
+		origSrcIPsLen    int
+	)
 	if mu.srcEp != nil {
 		srcName = endpointName(mu.srcEp.Key)
 	} else {
@@ -80,8 +85,13 @@ func (mu MetricUpdate) String() string {
 	} else {
 		dstName = "<unknown>"
 	}
-	return fmt.Sprintf("MetricUpdate: type=%s tuple={%v}, srcEp={%v} dstEp={%v} isConnection={%v}, ruleID={%v}, inMetric={%s} outMetric={%s}",
-		mu.updateType, &(mu.tuple), srcName, dstName, mu.isConnection, mu.ruleIDs, mu.inMetric, mu.outMetric)
+	if mu.origSourceIPs != nil {
+		origSrcIPsLen = mu.origSourceIPs.TotalCount()
+	} else {
+		origSrcIPsLen = 0
+	}
+	return fmt.Sprintf("MetricUpdate: type=%s tuple={%v}, srcEp={%v} dstEp={%v} isConnection={%v}, ruleID={%v}, inMetric={%s} outMetric={%s} len(origSourceIPs)={%d}",
+		mu.updateType, &(mu.tuple), srcName, dstName, mu.isConnection, mu.ruleIDs, mu.inMetric, mu.outMetric, origSrcIPsLen)
 }
 
 func (mu MetricUpdate) GetLastRuleID() *calc.RuleID {

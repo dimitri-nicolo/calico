@@ -1,5 +1,5 @@
-hash: ca2d4b6b4a0ed9960e398b22380d8cb921f43437e47f9c0fc0aeb1454b05eac5
-updated: 2019-07-10T13:40:54.252647103-07:00
+hash: 1d04646d4263631503720c8a2f8023d956cf09fa25d57ecdc382781e81c76c2b
+updated: 2019-07-13T10:26:45.855591-07:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -307,7 +307,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: c68fc5e8980136a5ed6e2ec66109d1064235a653
+  version: d49a1c8f7699924e3593c64cc2a47a1ba87a9995
   repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib/apiconfig
@@ -353,7 +353,7 @@ imports:
   subpackages:
   - binder
 - name: github.com/projectcalico/typha
-  version: acd6accda3bab22293165f9f69c31b35a411a40e
+  version: 936d22ea6aa66155c0b9939c1c0886373a4c7c04
   repo: git@github.com:tigera/typha-private
   subpackages:
   - pkg/syncclient
@@ -416,7 +416,7 @@ imports:
   subpackages:
   - nl
 - name: github.com/vishvananda/netns
-  version: 8ba1072b58e0c2a240eb5f6120165c7776c3e7b8
+  version: 54f0e4339ce73702a0607f49922aaa1e749b418d
 - name: github.com/whyrusleeping/go-logging
   version: 0457bb6b88fc1973573aaf6b5145d8d3ae972390
 - name: golang.org/x/crypto

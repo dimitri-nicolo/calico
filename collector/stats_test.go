@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -130,7 +130,7 @@ var _ = Describe("Rule Trace", func() {
 		copy(src[:], net.ParseIP("127.0.0.1").To16())
 		copy(dst[:], net.ParseIP("127.1.1.1").To16())
 		tuple = NewTuple(src, dst, 6, 12345, 80)
-		data = NewData(*tuple, time.Duration(10)*time.Second)
+		data = NewData(*tuple, time.Duration(10)*time.Second, testMaxBoundedSetSize)
 	})
 
 	Describe("Data with no ingress or egress rule trace ", func() {

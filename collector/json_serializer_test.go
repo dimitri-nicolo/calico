@@ -1,9 +1,10 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 
 package collector
 
 import (
 	"fmt"
+	"net"
 	"reflect"
 	"time"
 
@@ -59,6 +60,10 @@ var _ = Describe("FlowLog JSON serialization", func() {
 				NumFlows:              7,
 				HTTPRequestsAllowedIn: 8,
 				HTTPRequestsDeniedIn:  9,
+			},
+			FlowExtras: FlowExtras{
+				OriginalSourceIPs:    []net.IP{net.ParseIP("10.0.1.1")},
+				NumOriginalSourceIPs: 1,
 			},
 		}
 
@@ -119,17 +124,23 @@ var _ = Describe("FlowLog JSON serialization", func() {
 				HTTPRequestsAllowedIn: 8,
 				HTTPRequestsDeniedIn:  9,
 			},
+			FlowExtras: FlowExtras{
+				OriginalSourceIPs:    []net.IP{},
+				NumOriginalSourceIPs: 0,
+			},
 		}
 
 		out := toOutput(&flowLog)
 
 		zeroFieldNames := map[string]interface{}{
-			"SourceIP":     nil,
-			"DestIP":       nil,
-			"SourcePort":   nil,
-			"SourceLabels": nil,
-			"DestLabels":   nil,
-			"Policies":     nil,
+			"SourceIP":         nil,
+			"DestIP":           nil,
+			"SourcePort":       nil,
+			"SourceLabels":     nil,
+			"DestLabels":       nil,
+			"Policies":         nil,
+			"OrigSourceIPs":    nil,
+			"NumOrigSourceIPs": nil,
 		}
 		// Use reflection to loop over the fields and ensure they all have non
 		// zero values
@@ -193,18 +204,24 @@ var _ = Describe("FlowLog JSON serialization", func() {
 				HTTPRequestsAllowedIn: 8,
 				HTTPRequestsDeniedIn:  9,
 			},
+			FlowExtras: FlowExtras{
+				OriginalSourceIPs:    []net.IP{},
+				NumOriginalSourceIPs: 0,
+			},
 		}
 
 		out := toOutput(&flowLog)
 
 		zeroFieldNames := map[string]interface{}{
-			"SourceIP":     nil,
-			"DestIP":       nil,
-			"SourcePort":   nil,
-			"DestPort":     nil,
-			"SourceLabels": nil,
-			"DestLabels":   nil,
-			"Policies":     nil,
+			"SourceIP":         nil,
+			"DestIP":           nil,
+			"SourcePort":       nil,
+			"DestPort":         nil,
+			"SourceLabels":     nil,
+			"DestLabels":       nil,
+			"Policies":         nil,
+			"OrigSourceIPs":    nil,
+			"NumOrigSourceIPs": nil,
 		}
 		// Use reflection to loop over the fields and ensure they all have non
 		// zero values

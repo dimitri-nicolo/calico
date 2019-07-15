@@ -1,6 +1,6 @@
 // +build !windows
 
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -34,12 +34,16 @@ const (
 var (
 	localIp1Str  = "10.0.0.1"
 	localIp1     = ipStrTo16Byte(localIp1Str)
-	localIp2     = ipStrTo16Byte("10.0.0.2")
+	localIp2Str  = "10.0.0.2"
+	localIp2     = ipStrTo16Byte(localIp2Str)
 	remoteIp1Str = "20.0.0.1"
 	remoteIp1    = ipStrTo16Byte(remoteIp1Str)
-	remoteIp2    = ipStrTo16Byte("20.0.0.2")
+	remoteIp2Str = "20.0.0.2"
+	remoteIp2    = ipStrTo16Byte(remoteIp2Str)
 	localIp1DNAT = ipStrTo16Byte("192.168.0.1")
 	localIp2DNAT = ipStrTo16Byte("192.168.0.2")
+	publicIP1Str = "1.0.0.1"
+	publicIP2Str = "2.0.0.2"
 )
 
 var (
@@ -278,14 +282,15 @@ var _ = Describe("NFLOG Datasource", func() {
 		// Inject info nflogChan
 		var c *collector
 		conf := &Config{
-			StatsDumpFilePath:        "/tmp/qwerty",
-			NfNetlinkBufSize:         65535,
-			IngressGroup:             1200,
-			EgressGroup:              2200,
-			AgeTimeout:               time.Duration(10) * time.Second,
-			ConntrackPollingInterval: time.Duration(1) * time.Second,
-			InitialReportingDelay:    time.Duration(5) * time.Second,
-			ExportingInterval:        time.Duration(1) * time.Second,
+			StatsDumpFilePath:            "/tmp/qwerty",
+			NfNetlinkBufSize:             65535,
+			IngressGroup:                 1200,
+			EgressGroup:                  2200,
+			AgeTimeout:                   time.Duration(10) * time.Second,
+			ConntrackPollingInterval:     time.Duration(1) * time.Second,
+			InitialReportingDelay:        time.Duration(5) * time.Second,
+			ExportingInterval:            time.Duration(1) * time.Second,
+			MaxOriginalSourceIPsIncluded: 5,
 		}
 		rm := NewReporterManager()
 		BeforeEach(func() {
@@ -368,6 +373,31 @@ var inALPEntry = proto.DataplaneStats{
 			Kind:       proto.Statistic_HTTP_REQUESTS,
 			Action:     proto.Action_DENIED,
 			Value:      int64(alpEntryHTTPReqDenied),
+		},
+	},
+}
+
+var dpStatsHTTPDataValue = 23
+var dpStatsEntryWithFwdFor = proto.DataplaneStats{
+	SrcIp:   remoteIp1Str,
+	DstIp:   localIp1Str,
+	SrcPort: int32(srcPort),
+	DstPort: int32(dstPort),
+	Protocol: &proto.Protocol{
+		NumberOrName: &proto.Protocol_Number{proto_tcp},
+	},
+	Stats: []*proto.Statistic{
+		{
+			Direction:  proto.Statistic_IN,
+			Relativity: proto.Statistic_DELTA,
+			Kind:       proto.Statistic_HTTP_DATA,
+			Action:     proto.Action_ALLOWED,
+			Value:      int64(dpStatsHTTPDataValue),
+		},
+	},
+	HttpData: []*proto.HTTPData{
+		{
+			XForwardedFor: publicIP1Str,
 		},
 	},
 }
@@ -468,14 +498,15 @@ var localCtEntryWithDNAT = nfnetlink.CtEntry{
 var _ = Describe("Conntrack Datasource", func() {
 	var c *collector
 	conf := &Config{
-		StatsDumpFilePath:        "/tmp/qwerty",
-		NfNetlinkBufSize:         65535,
-		IngressGroup:             1200,
-		EgressGroup:              2200,
-		AgeTimeout:               time.Duration(10) * time.Second,
-		ConntrackPollingInterval: time.Duration(1) * time.Second,
-		InitialReportingDelay:    time.Duration(5) * time.Second,
-		ExportingInterval:        time.Duration(1) * time.Second,
+		StatsDumpFilePath:            "/tmp/qwerty",
+		NfNetlinkBufSize:             65535,
+		IngressGroup:                 1200,
+		EgressGroup:                  2200,
+		AgeTimeout:                   time.Duration(10) * time.Second,
+		ConntrackPollingInterval:     time.Duration(1) * time.Second,
+		InitialReportingDelay:        time.Duration(5) * time.Second,
+		ExportingInterval:            time.Duration(1) * time.Second,
+		MaxOriginalSourceIPsIncluded: 5,
 	}
 	rm := NewReporterManager()
 	BeforeEach(func() {
@@ -621,6 +652,106 @@ var _ = Describe("Conntrack Datasource", func() {
 			Expect(data.HTTPRequestsDenied()).Should(Equal(*NewCounter(2 * alpEntryHTTPReqDenied)))
 		})
 	})
+	Describe("Test DataplaneStat with HTTPData", func() {
+		It("should process DataplaneStat update with X-Forwarded-For HTTP Data", func() {
+			By("Sending a conntrack update and a dataplane stats update and checking for combined values")
+			t := NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
+			expectedOrigSourceIPs := []net2.IP{net2.ParseIP(publicIP1Str)}
+			c.convertDataplaneStatsAndApplyUpdate(&dpStatsEntryWithFwdFor)
+			c.handleCtEntry(inCtEntry)
+			Expect(c.epStats).Should(HaveKey(*t))
+			data := c.epStats[*t]
+			Expect(data.ConntrackPacketsCounter()).Should(Equal(*NewCounter(inCtEntry.OriginalCounters.Packets)))
+			Expect(data.ConntrackPacketsCounterReverse()).Should(Equal(*NewCounter(inCtEntry.ReplyCounters.Packets)))
+			Expect(data.ConntrackBytesCounter()).Should(Equal(*NewCounter(inCtEntry.OriginalCounters.Bytes)))
+			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*NewCounter(inCtEntry.ReplyCounters.Bytes)))
+			Expect(data.OriginalSourceIps()).Should(ConsistOf(expectedOrigSourceIPs))
+			Expect(data.NumUniqueOriginalSourceIPs()).Should(Equal(dpStatsHTTPDataValue))
+
+			By("Sending in another dataplane stats update and check for updated tracked data")
+			updatedDpStatsEntryWithFwdFor := dpStatsEntryWithFwdFor
+			updatedDpStatsEntryWithFwdFor.HttpData = []*proto.HTTPData{
+				{
+					XForwardedFor: publicIP1Str,
+				},
+				{
+					XForwardedFor: publicIP2Str,
+				},
+			}
+			expectedOrigSourceIPs = []net2.IP{net2.ParseIP(publicIP1Str), net2.ParseIP(publicIP2Str)}
+			c.convertDataplaneStatsAndApplyUpdate(&updatedDpStatsEntryWithFwdFor)
+			Expect(data.OriginalSourceIps()).Should(ConsistOf(expectedOrigSourceIPs))
+			Expect(data.NumUniqueOriginalSourceIPs()).Should(Equal(2*dpStatsHTTPDataValue - 1))
+		})
+		It("should process DataplaneStat update with X-Real-IP HTTP Data", func() {
+			By("Sending a conntrack update and a dataplane stats update and checking for combined values")
+			t := NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
+			expectedOrigSourceIPs := []net2.IP{net2.ParseIP(publicIP1Str)}
+			dpStatsEntryWithRealIP := dpStatsEntryWithFwdFor
+			dpStatsEntryWithRealIP.HttpData = []*proto.HTTPData{
+				{
+					XRealIp: publicIP1Str,
+				},
+			}
+			c.convertDataplaneStatsAndApplyUpdate(&dpStatsEntryWithRealIP)
+			c.handleCtEntry(inCtEntry)
+			Expect(c.epStats).Should(HaveKey(*t))
+			data := c.epStats[*t]
+			Expect(data.ConntrackPacketsCounter()).Should(Equal(*NewCounter(inCtEntry.OriginalCounters.Packets)))
+			Expect(data.ConntrackPacketsCounterReverse()).Should(Equal(*NewCounter(inCtEntry.ReplyCounters.Packets)))
+			Expect(data.ConntrackBytesCounter()).Should(Equal(*NewCounter(inCtEntry.OriginalCounters.Bytes)))
+			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*NewCounter(inCtEntry.ReplyCounters.Bytes)))
+			Expect(data.OriginalSourceIps()).Should(ConsistOf(expectedOrigSourceIPs))
+			Expect(data.NumUniqueOriginalSourceIPs()).Should(Equal(dpStatsHTTPDataValue))
+
+			By("Sending a dataplane stats update with x-real-ip and check for updated tracked data")
+			updatedDpStatsEntryWithRealIP := dpStatsEntryWithRealIP
+			updatedDpStatsEntryWithRealIP.HttpData = []*proto.HTTPData{
+				{
+					XRealIp: publicIP1Str,
+				},
+				{
+					XRealIp: publicIP2Str,
+				},
+			}
+			expectedOrigSourceIPs = []net2.IP{net2.ParseIP(publicIP1Str), net2.ParseIP(publicIP2Str)}
+			c.convertDataplaneStatsAndApplyUpdate(&updatedDpStatsEntryWithRealIP)
+			Expect(data.OriginalSourceIps()).Should(ConsistOf(expectedOrigSourceIPs))
+			Expect(data.NumUniqueOriginalSourceIPs()).Should(Equal(2*dpStatsHTTPDataValue - 1))
+		})
+		It("should process DataplaneStat update with X-Real-IP and X-Forwarded-For HTTP Data", func() {
+			By("Sending a conntrack update and a dataplane stats update and checking for combined values")
+			t := NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
+			expectedOrigSourceIPs := []net2.IP{net2.ParseIP(publicIP1Str)}
+			c.convertDataplaneStatsAndApplyUpdate(&dpStatsEntryWithFwdFor)
+			c.handleCtEntry(inCtEntry)
+			Expect(c.epStats).Should(HaveKey(*t))
+			data := c.epStats[*t]
+			Expect(data.ConntrackPacketsCounter()).Should(Equal(*NewCounter(inCtEntry.OriginalCounters.Packets)))
+			Expect(data.ConntrackPacketsCounterReverse()).Should(Equal(*NewCounter(inCtEntry.ReplyCounters.Packets)))
+			Expect(data.ConntrackBytesCounter()).Should(Equal(*NewCounter(inCtEntry.OriginalCounters.Bytes)))
+			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*NewCounter(inCtEntry.ReplyCounters.Bytes)))
+			Expect(data.OriginalSourceIps()).Should(ConsistOf(expectedOrigSourceIPs))
+			Expect(data.NumUniqueOriginalSourceIPs()).Should(Equal(dpStatsHTTPDataValue))
+
+			By("Sending in another dataplane stats update and check for updated tracked data")
+			updatedDpStatsEntryWithFwdForAndRealIP := dpStatsEntryWithFwdFor
+			updatedDpStatsEntryWithFwdForAndRealIP.HttpData = []*proto.HTTPData{
+				{
+					XForwardedFor: publicIP1Str,
+					XRealIp:       publicIP1Str,
+				},
+				{
+					XRealIp: publicIP2Str,
+				},
+			}
+			expectedOrigSourceIPs = []net2.IP{net2.ParseIP(publicIP1Str), net2.ParseIP(publicIP2Str)}
+			c.convertDataplaneStatsAndApplyUpdate(&updatedDpStatsEntryWithFwdForAndRealIP)
+			Expect(data.OriginalSourceIps()).Should(ConsistOf(expectedOrigSourceIPs))
+			// We subtract 1 because the second update contains an overlapping IP that is accounted for.
+			Expect(data.NumUniqueOriginalSourceIPs()).Should(Equal(2*dpStatsHTTPDataValue - 1))
+		})
+	})
 })
 
 func policyIDStrToRuleIDParts(r *calc.RuleID) [64]byte {
@@ -653,14 +784,15 @@ var _ = Describe("Reporting Metrics", func() {
 		pollingInterval   = time.Duration(1) * time.Second
 	)
 	conf := &Config{
-		StatsDumpFilePath:        "/tmp/qwerty",
-		NfNetlinkBufSize:         65535,
-		IngressGroup:             1200,
-		EgressGroup:              2200,
-		AgeTimeout:               ageTimeout,
-		ConntrackPollingInterval: pollingInterval,
-		InitialReportingDelay:    reportingDelay,
-		ExportingInterval:        exportingInterval,
+		StatsDumpFilePath:            "/tmp/qwerty",
+		NfNetlinkBufSize:             65535,
+		IngressGroup:                 1200,
+		EgressGroup:                  2200,
+		AgeTimeout:                   ageTimeout,
+		ConntrackPollingInterval:     pollingInterval,
+		InitialReportingDelay:        reportingDelay,
+		ExportingInterval:            exportingInterval,
+		MaxOriginalSourceIPsIncluded: 5,
 	}
 	rm := NewReporterManager()
 	mockReporter := newMockReporter()
@@ -849,14 +981,15 @@ func BenchmarkNflogPktToStat(b *testing.B) {
 	}
 
 	conf := &Config{
-		StatsDumpFilePath:        "/tmp/qwerty",
-		NfNetlinkBufSize:         65535,
-		IngressGroup:             1200,
-		EgressGroup:              2200,
-		AgeTimeout:               time.Duration(10) * time.Second,
-		ConntrackPollingInterval: time.Duration(1) * time.Second,
-		InitialReportingDelay:    time.Duration(5) * time.Second,
-		ExportingInterval:        time.Duration(1) * time.Second,
+		StatsDumpFilePath:            "/tmp/qwerty",
+		NfNetlinkBufSize:             65535,
+		IngressGroup:                 1200,
+		EgressGroup:                  2200,
+		AgeTimeout:                   time.Duration(10) * time.Second,
+		ConntrackPollingInterval:     time.Duration(1) * time.Second,
+		InitialReportingDelay:        time.Duration(5) * time.Second,
+		ExportingInterval:            time.Duration(1) * time.Second,
+		MaxOriginalSourceIPsIncluded: 5,
 	}
 	rm := NewReporterManager()
 	lm := newMockLookupsCache(epMap, nflogMap)
@@ -881,14 +1014,15 @@ func BenchmarkApplyStatUpdate(b *testing.B) {
 	}
 
 	conf := &Config{
-		StatsDumpFilePath:        "/tmp/qwerty",
-		NfNetlinkBufSize:         65535,
-		IngressGroup:             1200,
-		EgressGroup:              2200,
-		AgeTimeout:               time.Duration(10) * time.Second,
-		ConntrackPollingInterval: time.Duration(1) * time.Second,
-		InitialReportingDelay:    time.Duration(5) * time.Second,
-		ExportingInterval:        time.Duration(1) * time.Second,
+		StatsDumpFilePath:            "/tmp/qwerty",
+		NfNetlinkBufSize:             65535,
+		IngressGroup:                 1200,
+		EgressGroup:                  2200,
+		AgeTimeout:                   time.Duration(10) * time.Second,
+		ConntrackPollingInterval:     time.Duration(1) * time.Second,
+		InitialReportingDelay:        time.Duration(5) * time.Second,
+		ExportingInterval:            time.Duration(1) * time.Second,
+		MaxOriginalSourceIPsIncluded: 5,
 	}
 	rm := NewReporterManager()
 	lm := newMockLookupsCache(epMap, nflogMap)
