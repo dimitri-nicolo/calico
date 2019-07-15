@@ -88,7 +88,7 @@ func (s *pip) loadInitialPolicy(xc xrefcache.XrefCache) error {
 			return err
 		}
 
-		err = meta.EachListItem(l, func(obj runtime.Object) error {
+		err = meta.EachListItem(l.ResourceList, func(obj runtime.Object) error {
 			res := obj.(resources.Resource)
 			xc.OnUpdates([]syncer.Update{{
 				Type:       syncer.UpdateTypeSet,
