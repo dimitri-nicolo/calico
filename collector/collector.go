@@ -1,6 +1,6 @@
 // +build !windows
 
-// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -16,6 +16,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/google/gopacket/layers"
 	"github.com/mipearson/rfw"
 	log "github.com/sirupsen/logrus"
 
@@ -67,6 +68,7 @@ type collector struct {
 	dumpLog        *log.Logger
 	reporterMgr    *ReporterManager
 	ds             chan *proto.DataplaneStats
+	dnsLogReporter *DNSLogReporter
 }
 
 // newCollector instantiates a new collector. The StartDataplaneStatsCollector function is the only public
@@ -113,6 +115,9 @@ func (c *collector) SubscribeToNflog() {
 func (c *collector) Start() {
 	go c.startStatsCollectionAndReporting()
 	c.setupStatsDumping()
+	if c.dnsLogReporter != nil {
+		c.dnsLogReporter.Start()
+	}
 }
 
 func (c *collector) startStatsCollectionAndReporting() {
@@ -543,4 +548,35 @@ func (f *MessageOnlyFormatter) Format(entry *log.Entry) ([]byte, error) {
 	b.WriteString(entry.Message)
 	b.WriteByte('\n')
 	return b.Bytes(), nil
+}
+
+// DNS activity logging.
+func (c *collector) SetDNSLogReporter(reporter *DNSLogReporter) {
+	c.dnsLogReporter = reporter
+}
+
+func (c *collector) LogDNS(src, dst net.IP, dns *layers.DNS) {
+	if c.dnsLogReporter == nil {
+		return
+	}
+	// DNS responses come through here, so the source IP is the DNS server and the dest IP is
+	// the client.
+	serverEP, _ := c.luc.GetEndpoint(ipTo16Byte(src))
+	clientEP, _ := c.luc.GetEndpoint(ipTo16Byte(dst))
+	log.Debugf("Src %v -> Server %v", src, serverEP)
+	log.Debugf("Dst %v -> Client %v", dst, clientEP)
+	update := DNSUpdate{
+		ClientIP: dst,
+		ClientEP: clientEP,
+		ServerIP: src,
+		ServerEP: serverEP,
+		DNS:      dns,
+	}
+	if err := c.dnsLogReporter.Log(update); err != nil {
+		log.WithError(err).WithFields(log.Fields{
+			"src": src,
+			"dst": dst,
+			"dns": dns,
+		}).Error("Failed to log DNS packet")
+	}
 }

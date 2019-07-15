@@ -335,7 +335,7 @@ func (m *ipSetsManager) removeDomainIPSetTracking(ipSetId string) {
 }
 
 func (m *ipSetsManager) OnDomainInfoChange(msg *domainInfoChanged) (dataplaneSyncNeeded bool) {
-	log.WithField("domain", msg.domain).Info("Domain info changed")
+	log.WithFields(log.Fields{"domain": msg.domain, "reason": msg.reason}).Info("Domain info changed")
 
 	// Find the affected domain sets.
 	domainSetIds := m.domainSetIds[msg.domain]

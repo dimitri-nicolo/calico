@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -76,7 +76,7 @@ func (c *cloudWatchEventsBatcher) batch(inputLogs []*string) {
 	c.eventsBatchChan <- inputEvents[inputEventsOffset:len(inputEvents)]
 }
 
-// cloudWatchDispatcher implements the FlowLogDispatcher interface.
+// cloudWatchDispatcher implements the LogDispatcher interface.
 type cloudWatchDispatcher struct {
 	cwl           cloudwatchlogsiface.CloudWatchLogsAPI
 	logGroupName  string
@@ -91,7 +91,7 @@ type cloudWatchDispatcher struct {
 // and create a CloudWatch Logs client.
 func NewCloudWatchDispatcher(
 	logGroupName, logStreamName string, retentionDays int, cwl cloudwatchlogsiface.CloudWatchLogsAPI,
-) FlowLogDispatcher {
+) LogDispatcher {
 	if cwl == nil {
 		sess := session.Must(session.NewSessionWithOptions(session.Options{
 			SharedConfigState: session.SharedConfigEnable,
@@ -151,13 +151,14 @@ func (c *cloudWatchDispatcher) uploadEventsBatches(eventsBatchChan chan eventsBa
 	return nil
 }
 
-func (c *cloudWatchDispatcher) Dispatch(inputLogs []*FlowLog) error {
+func (c *cloudWatchDispatcher) Dispatch(logSlice interface{}) error {
 	// Keep pushing as many required <1MB sized inputLogs batches for putLogEvents.
 	// Refer: https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/cloudwatch_limits_cwl.html
 	// eventsBatchChan with buffer in case of throttling.
 	eventsBatchChan := make(chan eventsBatch, eventsBatchBufferSize)
 
 	// Serialize the logs
+	inputLogs := logSlice.([]*FlowLog)
 	strBatch := make([]*string, len(inputLogs))
 	for idx, f := range inputLogs {
 		s := serializeCloudWatchFlowLog(f)

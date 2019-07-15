@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -372,6 +372,7 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 					policyPrefix,
 					&proto.PolicyID{Tier: tier.Name, Name: polID},
 				)
+
 				// If a previous policy didn't set the "pass" mark, jump to the policy.
 				rules = append(rules, Rule{
 					Match:  Match().MarkClear(r.IptablesMarkPass),

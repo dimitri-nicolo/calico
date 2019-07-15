@@ -1,6 +1,6 @@
 // +build !windows
 
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -23,6 +23,7 @@ const (
 	// Log dispatcher names
 	CloudWatchLogsDispatcherName = "cloudwatch"
 	FlowLogsFileDispatcherName   = "file"
+	DNSLogsFileDispatcherName    = "dnsfile"
 
 	//TODO: Move these into felix config
 	DefaultAgeTimeout               = time.Duration(10) * time.Second
@@ -46,7 +47,7 @@ func StartDataplaneStatsCollector(configParams *config.Config, lookupsCache *cal
 		rm.RegisterMetricsReporter(pr)
 	}
 	log.Debugf("CloudWatchLogsReporterEnabled %v", configParams.CloudWatchLogsReporterEnabled)
-	dispatchers := map[string]FlowLogDispatcher{}
+	dispatchers := map[string]LogDispatcher{}
 	if configParams.CloudWatchLogsReporterEnabled {
 		logGroupName := strings.Replace(
 			configParams.CloudWatchLogsLogGroupName,
@@ -79,6 +80,7 @@ func StartDataplaneStatsCollector(configParams *config.Config, lookupsCache *cal
 		}).Info("Creating Flow Logs FileDispatcher")
 		fd := NewFileDispatcher(
 			configParams.FlowLogsFileDirectory,
+			FlowLogFilename,
 			configParams.FlowLogsFileMaxFileSizeMB,
 			configParams.FlowLogsFileMaxFiles,
 		)
@@ -116,8 +118,31 @@ func StartDataplaneStatsCollector(configParams *config.Config, lookupsCache *cal
 			EnableNetworkSets:        configParams.FlowLogsEnableNetworkSets,
 		},
 	)
-	statsCollector.Start()
 
+	if configParams.DNSLogsFileEnabled {
+		// Create the reporter, aggregator and dispatcher for DNS logging.
+		dnsLogReporter := NewDNSLogReporter(
+			map[string]LogDispatcher{
+				DNSLogsFileDispatcherName: NewFileDispatcher(
+					configParams.DNSLogsFileDirectory,
+					DNSLogFilename,
+					configParams.DNSLogsFileMaxFileSizeMB,
+					configParams.DNSLogsFileMaxFiles,
+				),
+			},
+			configParams.DNSLogsFlushInterval,
+			healthAggregator,
+		)
+		dnsLogReporter.AddAggregator(
+			NewDNSLogAggregator().
+				AggregateOver(DNSAggregationKind(configParams.DNSLogsFileAggregationKind)).
+				IncludeLabels(configParams.DNSLogsFileIncludeLabels),
+			[]string{DNSLogsFileDispatcherName},
+		)
+		statsCollector.SetDNSLogReporter(dnsLogReporter)
+	}
+
+	statsCollector.Start()
 	return statsCollector
 }
 
@@ -129,7 +154,7 @@ func configureFlowAggregation(configParams *config.Config, cw *FlowLogsReporter)
 		if configParams.CloudWatchLogsEnabledForAllowed {
 			log.Info("Creating Flow Logs Aggregator for allowed")
 			caa := NewFlowLogAggregator().
-				AggregateOver(AggregationKind(configParams.CloudWatchLogsAggregationKindForAllowed)).
+				AggregateOver(FlowAggregationKind(configParams.CloudWatchLogsAggregationKindForAllowed)).
 				IncludeLabels(configParams.CloudWatchLogsIncludeLabels).
 				IncludePolicies(configParams.CloudWatchLogsIncludePolicies).
 				ForAction(rules.RuleActionAllow)
@@ -151,7 +176,7 @@ func configureFlowAggregation(configParams *config.Config, cw *FlowLogsReporter)
 		if configParams.CloudWatchLogsEnabledForDenied {
 			log.Info("Creating Flow Logs Aggregator for denied")
 			cad := NewFlowLogAggregator().
-				AggregateOver(AggregationKind(configParams.CloudWatchLogsAggregationKindForDenied)).
+				AggregateOver(FlowAggregationKind(configParams.CloudWatchLogsAggregationKindForDenied)).
 				IncludeLabels(configParams.CloudWatchLogsIncludeLabels).
 				IncludePolicies(configParams.CloudWatchLogsIncludePolicies).
 				ForAction(rules.RuleActionDeny)
@@ -175,7 +200,7 @@ func configureFlowAggregation(configParams *config.Config, cw *FlowLogsReporter)
 		if !addedFileAllow && configParams.FlowLogsFileEnabledForAllowed {
 			log.Info("Creating Flow Logs Aggregator for allowed")
 			caa := NewFlowLogAggregator().
-				AggregateOver(AggregationKind(configParams.FlowLogsFileAggregationKindForAllowed)).
+				AggregateOver(FlowAggregationKind(configParams.FlowLogsFileAggregationKindForAllowed)).
 				IncludeLabels(configParams.FlowLogsFileIncludeLabels).
 				IncludePolicies(configParams.FlowLogsFileIncludePolicies).
 				ForAction(rules.RuleActionAllow)
@@ -185,7 +210,7 @@ func configureFlowAggregation(configParams *config.Config, cw *FlowLogsReporter)
 		if !addedFileDeny && configParams.FlowLogsFileEnabledForDenied {
 			log.Info("Creating Flow Logs Aggregator for denied")
 			cad := NewFlowLogAggregator().
-				AggregateOver(AggregationKind(configParams.FlowLogsFileAggregationKindForDenied)).
+				AggregateOver(FlowAggregationKind(configParams.FlowLogsFileAggregationKindForDenied)).
 				IncludeLabels(configParams.FlowLogsFileIncludeLabels).
 				IncludePolicies(configParams.FlowLogsFileIncludePolicies).
 				ForAction(rules.RuleActionDeny)

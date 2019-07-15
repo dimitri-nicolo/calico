@@ -13,52 +13,17 @@ import (
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/felix/testutils"
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
-
-func makeA(name, ip string) layers.DNSResourceRecord {
-	return layers.DNSResourceRecord{
-		Name:       []byte(name),
-		Type:       layers.DNSTypeA,
-		Class:      layers.DNSClassIN,
-		TTL:        0,
-		DataLength: 4,
-		Data:       []byte(ip),
-		IP:         net.ParseIP(ip),
-	}
-}
-
-func makeAAAA(name, ip string) layers.DNSResourceRecord {
-	return layers.DNSResourceRecord{
-		Name:       []byte(name),
-		Type:       layers.DNSTypeAAAA,
-		Class:      layers.DNSClassIN,
-		TTL:        0,
-		DataLength: 16,
-		Data:       []byte(ip),
-		IP:         net.ParseIP(ip),
-	}
-}
-
-func makeCNAME(name, rname string) layers.DNSResourceRecord {
-	return layers.DNSResourceRecord{
-		Name:       []byte(name),
-		Type:       layers.DNSTypeCNAME,
-		Class:      layers.DNSClassIN,
-		TTL:        1,
-		DataLength: 4,
-		IP:         nil,
-		CNAME:      []byte(rname),
-	}
-}
 
 var _ = Describe("Domain Info Store", func() {
 	var (
 		domainStore     *domainInfoStore
-		mockDNSRecA1    = makeA("a.com", "10.0.0.10")
-		mockDNSRecA2    = makeA("b.com", "10.0.0.20")
-		mockDNSRecAAAA1 = makeAAAA("aaaa.com", "fe80:fe11::1")
-		mockDNSRecAAAA2 = makeAAAA("bbbb.com", "fe80:fe11::2")
+		mockDNSRecA1    = testutils.MakeA("a.com", "10.0.0.10")
+		mockDNSRecA2    = testutils.MakeA("b.com", "10.0.0.20")
+		mockDNSRecAAAA1 = testutils.MakeAAAA("aaaa.com", "fe80:fe11::1")
+		mockDNSRecAAAA2 = testutils.MakeAAAA("bbbb.com", "fe80:fe11::2")
 		invalidDNSRec   = layers.DNSResourceRecord{
 			Name:       []byte("invalid#rec.com"),
 			Type:       layers.DNSTypeMX,
@@ -69,9 +34,9 @@ var _ = Describe("Domain Info Store", func() {
 			IP:         net.ParseIP("999.000.999.000"),
 		}
 		mockDNSRecCNAME = []layers.DNSResourceRecord{
-			makeCNAME("cname1.com", "cname2.com"),
-			makeCNAME("cname2.com", "cname3.com"),
-			makeCNAME("cname3.com", "a.com"),
+			testutils.MakeCNAME("cname1.com", "cname2.com"),
+			testutils.MakeCNAME("cname2.com", "cname3.com"),
+			testutils.MakeCNAME("cname3.com", "a.com"),
 		}
 	)
 
@@ -111,7 +76,13 @@ var _ = Describe("Domain Info Store", func() {
 	// Create a new datastore.
 	domainStoreCreate := func() {
 		domainChannel := make(chan *domainInfoChanged, 100)
-		domainStore = newDomainInfoStore(domainChannel, "/dnsinfo", time.Minute)
+		config := &Config{
+			DNSCacheFile:         "/dnsinfo",
+			DNSCacheSaveInterval: time.Minute,
+		}
+		// For UT purposes, arrange that mappings always appear to have expired when UT code
+		// calls processMappingExpiry.
+		domainStore = newDomainInfoStoreWithShims(domainChannel, config, func(time.Time) bool { return true })
 	}
 
 	// Basic validation tests that add/expire one or two DNS records of A and AAAA type to the data store.
@@ -228,14 +199,14 @@ var _ = Describe("Domain Info Store", func() {
 	// should be notified that domain info has changed for both a1.com and a2.com.
 	It("should handle a branched DNS graph", func() {
 		domainStoreCreate()
-		programDNSAnswer(domainStore, makeCNAME("a1.com", "b.com"))
-		programDNSAnswer(domainStore, makeCNAME("a2.com", "b.com"))
-		programDNSAnswer(domainStore, makeCNAME("b.com", "c.com"))
-		programDNSAnswer(domainStore, makeA("c.com", "3.4.5.6"))
+		programDNSAnswer(domainStore, testutils.MakeCNAME("a1.com", "b.com"))
+		programDNSAnswer(domainStore, testutils.MakeCNAME("a2.com", "b.com"))
+		programDNSAnswer(domainStore, testutils.MakeCNAME("b.com", "c.com"))
+		programDNSAnswer(domainStore, testutils.MakeA("c.com", "3.4.5.6"))
 		expectChangesFor("a1.com", "a2.com", "b.com", "c.com")
 		Expect(domainStore.GetDomainIPs("a1.com")).To(Equal([]string{"3.4.5.6"}))
 		Expect(domainStore.GetDomainIPs("a2.com")).To(Equal([]string{"3.4.5.6"}))
-		programDNSAnswer(domainStore, makeA("c.com", "7.8.9.10"))
+		programDNSAnswer(domainStore, testutils.MakeA("c.com", "7.8.9.10"))
 		expectChangesFor("a1.com", "a2.com", "c.com")
 		Expect(domainStore.GetDomainIPs("a1.com")).To(ConsistOf("3.4.5.6", "7.8.9.10"))
 		Expect(domainStore.GetDomainIPs("a2.com")).To(ConsistOf("3.4.5.6", "7.8.9.10"))
@@ -245,6 +216,14 @@ var _ = Describe("Domain Info Store", func() {
 		Expect(domainStore.GetDomainIPs("a2.com")).To(Equal([]string{"7.8.9.10"}))
 		// No garbage yet, because c.com still has a value and is the RHS of other mappings.
 		Expect(domainStore.collectGarbage()).To(Equal(0))
+	})
+
+	It("is not vulnerable to CNAME loops", func() {
+		domainStoreCreate()
+		programDNSAnswer(domainStore, testutils.MakeCNAME("a.com", "b.com"))
+		programDNSAnswer(domainStore, testutils.MakeCNAME("b.com", "c.com"))
+		programDNSAnswer(domainStore, testutils.MakeCNAME("c.com", "a.com"))
+		Expect(domainStore.GetDomainIPs("a.com")).To(BeEmpty())
 	})
 
 	DescribeTable("it should identify wildcards",
@@ -323,7 +302,7 @@ var _ = Describe("Domain Info Store", func() {
 
 			Context("with IP for update.google.com", func() {
 				BeforeEach(func() {
-					programDNSAnswer(domainStore, makeA("update.google.com", "1.2.3.5"))
+					programDNSAnswer(domainStore, testutils.MakeA("update.google.com", "1.2.3.5"))
 				})
 
 				It("should update *.google.com", func() {
@@ -337,7 +316,7 @@ var _ = Describe("Domain Info Store", func() {
 		// information that matches it.
 		Context("with IP for update.google.com", func() {
 			BeforeEach(func() {
-				programDNSAnswer(domainStore, makeA("update.google.com", "1.2.3.5"))
+				programDNSAnswer(domainStore, testutils.MakeA("update.google.com", "1.2.3.5"))
 			})
 
 			It("should get that IP for *.google.com", func() {

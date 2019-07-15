@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -36,7 +36,7 @@ const CWDispatcher = "cloudwatch"
 var _ = Describe("FlowLog Reporter verification", func() {
 	var (
 		cr *FlowLogsReporter
-		cd FlowLogDispatcher
+		cd LogDispatcher
 		ca FlowLogAggregator
 		cl cloudwatchlogsiface.CloudWatchLogsAPI
 	)
@@ -96,7 +96,7 @@ var _ = Describe("FlowLog Reporter verification", func() {
 			cd = NewCloudWatchDispatcher(logGroupName, logStreamName, 7, cl)
 			ca = NewFlowLogAggregator()
 			ca.IncludePolicies(true)
-			ds := map[string]FlowLogDispatcher{CWDispatcher: cd}
+			ds := map[string]LogDispatcher{CWDispatcher: cd}
 			cr = NewFlowLogsReporter(ds, flushInterval, nil, false)
 			cr.AddAggregator(ca, []string{CWDispatcher})
 			cr.timeNowFn = mt.getMockTime
@@ -268,7 +268,7 @@ var _ = Describe("FlowLog Reporter verification", func() {
 			cd = NewCloudWatchDispatcher(logGroupName, logStreamName, 7, cl)
 			ca = NewFlowLogAggregator()
 			ca.IncludePolicies(true)
-			ds := map[string]FlowLogDispatcher{CWDispatcher: cd}
+			ds := map[string]LogDispatcher{CWDispatcher: cd}
 			cr = NewFlowLogsReporter(ds, flushInterval, nil, true)
 			cr.AddAggregator(ca, []string{CWDispatcher})
 			cr.timeNowFn = mt.getMockTime
@@ -299,7 +299,7 @@ var _ = Describe("FlowLog Reporter verification", func() {
 var _ = Describe("CloudWatch Reporter health verification", func() {
 	var (
 		cr *FlowLogsReporter
-		cd FlowLogDispatcher
+		cd LogDispatcher
 		cl cloudwatchlogsiface.CloudWatchLogsAPI
 		hr *health.HealthAggregator
 	)
@@ -310,7 +310,7 @@ var _ = Describe("CloudWatch Reporter health verification", func() {
 			cl = testutil.NewMockedCloudWatchLogsClient(logGroupName)
 			cd = NewCloudWatchDispatcher(logGroupName, logStreamName, 7, cl)
 			hr = health.NewHealthAggregator()
-			ds := map[string]FlowLogDispatcher{CWDispatcher: cd}
+			ds := map[string]LogDispatcher{CWDispatcher: cd}
 			cr = NewFlowLogsReporter(ds, flushInterval, hr, false)
 			cr.timeNowFn = mt.getMockTime
 			cr.Start()
@@ -326,7 +326,7 @@ var _ = Describe("CloudWatch Reporter health verification", func() {
 			cl = &timingoutCWFLMockClient{timeout: time.Second}
 			cd = NewCloudWatchDispatcher(logGroupName, logStreamName, 7, cl)
 			hr = health.NewHealthAggregator()
-			ds := map[string]FlowLogDispatcher{CWDispatcher: cd}
+			ds := map[string]LogDispatcher{CWDispatcher: cd}
 			cr = NewFlowLogsReporter(ds, flushInterval, hr, false)
 			cr.timeNowFn = mt.getMockTime
 			cr.Start()
@@ -342,7 +342,7 @@ var _ = Describe("CloudWatch Reporter health verification", func() {
 var _ = Describe("FlowLog per minute verification", func() {
 	var (
 		cr *FlowLogsReporter
-		cd FlowLogDispatcher
+		cd LogDispatcher
 		ca FlowLogAggregator
 		cl cloudwatchlogsiface.CloudWatchLogsAPI
 	)
@@ -354,7 +354,7 @@ var _ = Describe("FlowLog per minute verification", func() {
 			By("Triggering report right away before flushIntervalDuration")
 			cd = NewCloudWatchDispatcher(logGroupName, logStreamName, 7, cl)
 			ca = NewFlowLogAggregator()
-			ds := map[string]FlowLogDispatcher{CWDispatcher: cd}
+			ds := map[string]LogDispatcher{CWDispatcher: cd}
 			mockFlushInterval := 600 * time.Second
 			cr = NewFlowLogsReporter(ds, mockFlushInterval, nil, false)
 			cr.AddAggregator(ca, []string{CWDispatcher})
@@ -369,7 +369,7 @@ var _ = Describe("FlowLog per minute verification", func() {
 			cd = NewCloudWatchDispatcher(logGroupName, logStreamName, 7, cl)
 			ca = NewFlowLogAggregator()
 			ca.IncludePolicies(true)
-			ds := map[string]FlowLogDispatcher{CWDispatcher: cd}
+			ds := map[string]LogDispatcher{CWDispatcher: cd}
 			cr = NewFlowLogsReporter(ds, flushInterval, nil, false)
 			cr.AddAggregator(ca, []string{CWDispatcher})
 			cr.timeNowFn = mt.getMockTime

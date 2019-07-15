@@ -17,12 +17,13 @@ package intdataplane_test
 import (
 	"net"
 
+	"github.com/google/gopacket/layers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/felix/config"
-	"github.com/projectcalico/felix/dataplane/linux"
+	intdataplane "github.com/projectcalico/felix/dataplane/linux"
 	"github.com/projectcalico/felix/ifacemonitor"
 	"github.com/projectcalico/felix/ipsets"
 	"github.com/projectcalico/felix/proto"
@@ -37,6 +38,10 @@ func (_ *mockCollector) ReportingChannel() chan<- *proto.DataplaneStats { return
 func (_ *mockCollector) SubscribeToNflog() {}
 
 func (_ *mockCollector) Start() {}
+
+func (_ *mockCollector) LogDNS(src, dst net.IP, dns *layers.DNS) {}
+
+func (_ *mockCollector) SetDNSLogReporter(reporter *collector.DNSLogReporter) {}
 
 var _ = Describe("Constructor test", func() {
 	var configParams *config.Config
@@ -90,6 +95,10 @@ var _ = Describe("Constructor test", func() {
 			IPIPMTU:          configParams.IpInIpMtu,
 			HealthAggregator: healthAggregator,
 			Collector:        col,
+
+			LookPathOverride: func(file string) (string, error) {
+				return file, nil
+			},
 		}
 	})
 

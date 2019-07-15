@@ -266,11 +266,16 @@ func (w *Workload) ExecOutput(args ...string) (string, error) {
 	return w.C.ExecOutput(args...)
 }
 
+func (w *Workload) ExecCombinedOutput(args ...string) (string, error) {
+	args = append([]string{"ip", "netns", "exec", w.NamespaceID()}, args...)
+	return w.C.ExecCombinedOutput(args...)
+}
+
 var (
 	rttRegexp = regexp.MustCompile(`rtt=(.*) ms`)
 )
 
-func (w *Workload) LatencyTo(ip, port string) time.Duration {
+func (w *Workload) LatencyTo(ip, port string) (time.Duration, string) {
 	if strings.Contains(ip, ":") {
 		ip = fmt.Sprintf("[%s]", ip)
 	}
@@ -295,7 +300,7 @@ func (w *Workload) LatencyTo(ip, port string) time.Duration {
 		rttSum += time.Duration(rttMsec * float64(time.Millisecond))
 	}
 	meanRtt := rttSum / time.Duration(len(lines))
-	return meanRtt
+	return meanRtt, out
 }
 
 func (w *Workload) SendPacketsTo(ip string, count int, size int) (error, string) {

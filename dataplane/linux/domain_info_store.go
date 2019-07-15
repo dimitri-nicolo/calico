@@ -30,6 +30,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/nfnetlink"
 
+	"github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
@@ -81,6 +82,7 @@ type domainInfoStore struct {
 
 	// Channel for domain mapping expiry signals.
 	mappingExpiryChannel chan *domainMappingExpired
+	expiryTimePassed     func(time.Time) bool
 
 	// Persistence.
 	saveFile     string
@@ -89,6 +91,9 @@ type domainInfoStore struct {
 	// Reclaiming memory for mappings that are now useless.
 	gcTrigger  bool
 	gcInterval time.Duration
+
+	// Activity logging.
+	collector collector.Collector
 }
 
 // Signal sent by the domain info store to the ipsets manager when the information for a given
@@ -105,7 +110,13 @@ type domainMappingExpired struct {
 	name, value string
 }
 
-func newDomainInfoStore(domainInfoChanges chan *domainInfoChanged, saveFile string, saveInterval time.Duration) *domainInfoStore {
+func newDomainInfoStore(domainInfoChanges chan *domainInfoChanged, config *Config) *domainInfoStore {
+	return newDomainInfoStoreWithShims(domainInfoChanges, config, func(expiryTime time.Time) bool {
+		return expiryTime.Before(time.Now())
+	})
+}
+
+func newDomainInfoStoreWithShims(domainInfoChanges chan *domainInfoChanged, config *Config, expiryTimePassed func(time.Time) bool) *domainInfoStore {
 	log.Info("Creating domain info store")
 	s := &domainInfoStore{
 		domainInfoChanges:    domainInfoChanges,
@@ -113,9 +124,11 @@ func newDomainInfoStore(domainInfoChanges chan *domainInfoChanged, saveFile stri
 		wildcards:            make(map[string]*regexp.Regexp),
 		resultsCache:         make(map[string][]string),
 		mappingExpiryChannel: make(chan *domainMappingExpired),
-		saveFile:             saveFile,
-		saveInterval:         saveInterval,
+		expiryTimePassed:     expiryTimePassed,
+		saveFile:             config.DNSCacheFile,
+		saveInterval:         config.DNSCacheSaveInterval,
 		gcInterval:           13 * time.Second,
+		collector:            config.Collector,
 	}
 	return s
 }
@@ -154,9 +167,19 @@ func (s *domainInfoStore) loop(saveTimerC, gcTimerC <-chan time.Time) {
 	for {
 		select {
 		case msg := <-s.msgChannel:
+			// TODO: Test and fix handling of DNS over IPv6.  The `layers.LayerTypeIPv4`
+			// in the next line is clearly a v4 assumption, and some of the code inside
+			// `nfnetlink.SubscribeDNS` also looks v4-specific.
 			packet := gopacket.NewPacket(msg, layers.LayerTypeIPv4, gopacket.Default)
 			if dnsLayer := packet.Layer(layers.LayerTypeDNS); dnsLayer != nil {
 				dns, _ := dnsLayer.(*layers.DNS)
+				if s.collector != nil {
+					if ipv4, ok := packet.Layer(layers.LayerTypeIPv4).(*layers.IPv4); ok {
+						s.collector.LogDNS(ipv4.SrcIP, ipv4.DstIP, dns)
+					} else {
+						log.Warning("Not logging non-IPv4 DNS packet")
+					}
+				}
 				s.processDNSPacket(dns)
 			}
 		case expiry := <-s.mappingExpiryChannel:
@@ -310,7 +333,7 @@ func (s *domainInfoStore) processMappingExpiry(name, value string) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	if nameData := s.mappings[name]; nameData != nil {
-		if valueData := nameData.values[value]; (valueData != nil) && valueData.expiryTime.Before(time.Now()) {
+		if valueData := nameData.values[value]; (valueData != nil) && s.expiryTimePassed(valueData.expiryTime) {
 			log.Debugf("Mapping expiry for %v -> %v", name, value)
 			delete(nameData.values, value)
 			s.gcTrigger = true
@@ -368,6 +391,24 @@ func (s *domainInfoStore) storeDNSRecordInfo(rec *layers.DNSResourceRecord, sect
 }
 
 func (s *domainInfoStore) storeInfo(name, value string, ttl time.Duration, isName bool) {
+	// Impose a minimum TTL of 2 seconds - i.e. ensure that the mapping that we store here will
+	// not expire for at least 2 seconds.  Otherwise TCP connections that should succeed will
+	// fail if they involve a DNS response with TTL 1.  In detail:
+	//
+	// a. A client does a DNS lookup for an allowed domain.
+	// b. DNS response comes back, and is copied here for processing.
+	// c. Client sees DNS response and immediately connects to the IP.
+	// d. Felix's ipset programming isn't in place yet, so the first connection packet is
+	//    dropped.
+	// e. TCP sends a retry connection packet after 1 second.
+	// f. 1 second should be plenty long enough for Felix's ipset programming, so the retry
+	//    connection packet should go through.
+	//
+	// However, if the mapping learnt from (c) expires after 1 second, the retry connection
+	// packet may be dropped as well.  Imposing a minimum expiry of 2 seconds avoids that.
+	if int64(ttl) < int64(2*time.Second) {
+		ttl = 2 * time.Second
+	}
 	makeTimer := func() *time.Timer {
 		return time.AfterFunc(ttl, func() {
 			s.mappingExpiryChannel <- &domainMappingExpired{name: name, value: value}
@@ -422,7 +463,13 @@ func (s *domainInfoStore) GetDomainIPs(domain string) []string {
 	ips := s.resultsCache[domain]
 	if ips == nil {
 		var collectIPsForName func(string)
+		collectedNames := set.New()
 		collectIPsForName = func(name string) {
+			if collectedNames.Contains(name) {
+				log.Warningf("%v has a CNAME loop back to itself", name)
+				return
+			}
+			collectedNames.Add(name)
 			nameData := s.mappings[name]
 			log.WithFields(log.Fields{
 				"name":     name,

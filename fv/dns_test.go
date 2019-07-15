@@ -57,17 +57,32 @@ var _ = Describe("DNS Policy", func() {
 		// (Whereas dnsDir is the directory outside the container.)
 		saveFile                       string
 		saveFileMappedOutsideContainer bool
+
+		disableLogs bool
 	)
 
 	BeforeEach(func() {
 		saveFile = "/dnsinfo/dnsinfo.txt"
 		saveFileMappedOutsideContainer = true
+		disableLogs = false
 	})
 
 	wgetMicrosoftErr := func() error {
-		out, err := w[0].ExecOutput("wget", "-T", "10", "microsoft.com")
+		// Need to allow a timeout of more than 1 second here so that wget has time for the
+		// initial TCP connection packet at t=0s and the first retry packet at t=1s.
+		out, err := w[0].ExecCombinedOutput("wget", "-T", "2", "microsoft.com")
 		log.WithError(err).Infof("wget said:\n%v", out)
 		return err
+	}
+
+	canWgetMicrosoft := func() {
+		Eventually(wgetMicrosoftErr, "10s", "1s").ShouldNot(HaveOccurred())
+		Consistently(wgetMicrosoftErr, "4s", "1s").ShouldNot(HaveOccurred())
+	}
+
+	cannotWgetMicrosoft := func() {
+		Eventually(wgetMicrosoftErr, "10s", "1s").Should(HaveOccurred())
+		Consistently(wgetMicrosoftErr, "4s", "1s").Should(HaveOccurred())
 	}
 
 	Context("with save file in initially non-existent directory", func() {
@@ -77,7 +92,33 @@ var _ = Describe("DNS Policy", func() {
 		})
 
 		It("can wget microsoft.com", func() {
-			Eventually(wgetMicrosoftErr, "5s", "1s").ShouldNot(HaveOccurred())
+			canWgetMicrosoft()
+		})
+	})
+
+	Context("after wget microsoft.com", func() {
+		JustBeforeEach(func() {
+			time.Sleep(time.Second)
+			canWgetMicrosoft()
+		})
+
+		It("should emit DNS logs", func() {
+			logFile := path.Join(dnsDir, "dns.log")
+			Eventually(logFile, "10s", "1s").Should(BeARegularFile())
+			logs, err := ioutil.ReadFile(logFile)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(logs).To(ContainSubstring(`"qname":"microsoft.com"`))
+			Expect(logs).To(ContainSubstring(`"qtype":"A"`))
+		})
+
+		Context("with DNS logs disabled", func() {
+			BeforeEach(func() {
+				disableLogs = true
+			})
+
+			It("should not emit DNS logs", func() {
+				Consistently(path.Join(dnsDir, "dns.log"), "5s", "1s").ShouldNot(BeARegularFile())
+			})
 		})
 	})
 
@@ -94,6 +135,12 @@ var _ = Describe("DNS Policy", func() {
 		opts.ExtraEnvVars["FELIX_DNSCACHESAVEINTERVAL"] = "3600"
 		opts.ExtraEnvVars["FELIX_DNSTRUSTEDSERVERS"] = strings.Join(GetLocalNameservers(), ",")
 		opts.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico"
+		opts.ExtraEnvVars["FELIX_DNSLOGSFILEDIRECTORY"] = "/dnsinfo"
+		opts.ExtraEnvVars["FELIX_DNSLOGSFLUSHINTERVAL"] = "1"
+		if disableLogs {
+			// Default for this is true.  Set "false" to disable.
+			opts.ExtraEnvVars["FELIX_DNSLOGSFILEENABLED"] = "false"
+		}
 		felix, etcd, client = infrastructure.StartSingleNodeEtcdTopology(opts)
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")
 
@@ -136,7 +183,7 @@ var _ = Describe("DNS Policy", func() {
 	})
 
 	It("can wget microsoft.com", func() {
-		Eventually(wgetMicrosoftErr, "5s", "1s").ShouldNot(HaveOccurred())
+		canWgetMicrosoft()
 	})
 
 	Context("with default-deny egress policy", func() {
@@ -152,7 +199,7 @@ var _ = Describe("DNS Policy", func() {
 		})
 
 		It("cannot wget microsoft.com", func() {
-			Eventually(wgetMicrosoftErr, "5s", "1s").Should(HaveOccurred())
+			cannotWgetMicrosoft()
 		})
 
 		Context("with domain-allow egress policy", func() {
@@ -181,7 +228,7 @@ var _ = Describe("DNS Policy", func() {
 			})
 
 			It("can wget microsoft.com", func() {
-				Eventually(wgetMicrosoftErr, "5s", "1s").ShouldNot(HaveOccurred())
+				canWgetMicrosoft()
 			})
 		})
 
@@ -211,7 +258,7 @@ var _ = Describe("DNS Policy", func() {
 			})
 
 			It("can wget microsoft.com", func() {
-				Eventually(wgetMicrosoftErr, "5s", "1s").ShouldNot(HaveOccurred())
+				canWgetMicrosoft()
 			})
 		})
 
@@ -250,7 +297,7 @@ var _ = Describe("DNS Policy", func() {
 			})
 
 			It("can wget microsoft.com", func() {
-				Eventually(wgetMicrosoftErr, "5s", "1s").ShouldNot(HaveOccurred())
+				canWgetMicrosoft()
 			})
 
 			It("handles a domain set update", func() {
@@ -265,7 +312,7 @@ var _ = Describe("DNS Policy", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				time.Sleep(2 * time.Second)
-				Eventually(wgetMicrosoftErr, "5s", "1s").ShouldNot(HaveOccurred())
+				canWgetMicrosoft()
 			})
 		})
 
@@ -304,7 +351,7 @@ var _ = Describe("DNS Policy", func() {
 			})
 
 			It("can wget microsoft.com", func() {
-				Eventually(wgetMicrosoftErr, "5s", "1s").ShouldNot(HaveOccurred())
+				canWgetMicrosoft()
 			})
 
 			It("handles a domain set update", func() {
@@ -319,7 +366,7 @@ var _ = Describe("DNS Policy", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				time.Sleep(2 * time.Second)
-				Eventually(wgetMicrosoftErr, "5s", "1s").ShouldNot(HaveOccurred())
+				canWgetMicrosoft()
 			})
 		})
 	})

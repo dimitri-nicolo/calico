@@ -136,6 +136,7 @@ type Config struct {
 	Ipv6Support    bool `config:"bool;true"`
 	IgnoreLooseRPF bool `config:"bool;false"`
 
+	IptablesBackend                    string        `config:"oneof(legacy,nft);legacy"`
 	RouteRefreshInterval               time.Duration `config:"seconds;90"`
 	IptablesRefreshInterval            time.Duration `config:"seconds;90"`
 	IptablesPostWriteCheckIntervalSecs time.Duration `config:"seconds;1"`
@@ -258,6 +259,14 @@ type Config struct {
 	FlowLogsFileEnabledForAllowed         bool   `config:"bool;true"`
 	FlowLogsFileEnabledForDenied          bool   `config:"bool;true"`
 
+	DNSLogsFlushInterval       time.Duration `config:"seconds;300"`
+	DNSLogsFileEnabled         bool          `config:"bool;true"`
+	DNSLogsFileDirectory       string        `config:"string;/var/log/calico/dnslogs"`
+	DNSLogsFileMaxFiles        int           `config:"int;5"`
+	DNSLogsFileMaxFileSizeMB   int           `config:"int;100"`
+	DNSLogsFileAggregationKind int           `config:"int(0:1);1"`
+	DNSLogsFileIncludeLabels   bool          `config:"bool;true"`
+
 	KubeNodePortRanges []numorstring.Port `config:"portrange-list;30000:32767"`
 	NATPortRange       numorstring.Port   `config:"portrange;"`
 	NATOutgoingAddress net.IP             `config:"ipv4;"`
@@ -316,7 +325,7 @@ type Config struct {
 	DNSTrustedServers    []string      `config:"server-list;k8s-service:kube-dns"`
 
 	SidecarAccelerationEnabled bool `config:"bool;false"`
-	XDPEnabled                 bool `config:"bool;true"`
+	XDPEnabled                 bool `config:"bool;false"`
 	GenericXDPEnabled          bool `config:"bool;false"`
 }
 

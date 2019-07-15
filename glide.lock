@@ -1,5 +1,5 @@
-hash: b1d5b19108e490477d5a22d975eb5fc4be92defc1132fb62318e2677f2db73de
-updated: 2019-07-02T21:21:05.03625315Z
+hash: ca2d4b6b4a0ed9960e398b22380d8cb921f43437e47f9c0fc0aeb1454b05eac5
+updated: 2019-07-10T13:40:54.252647103-07:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -50,7 +50,7 @@ imports:
   - autorest/azure
   - autorest/date
 - name: github.com/beorn7/perks
-  version: 4b2b341e8d7715fae06375aa633dbb6e91b3fb46
+  version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
   subpackages:
   - quantile
 - name: github.com/bronze1man/goStrongswanVici
@@ -83,7 +83,7 @@ imports:
 - name: github.com/docopt/docopt-go
   version: 784ddc588536785e7299f7272f39101f7faccc3f
 - name: github.com/emicklei/go-restful
-  version: b993709ae1a4f6dd19cfa475232614441b11c9d5
+  version: ff4f55a206334ef123e4f79bbf348980da81ca46
   subpackages:
   - log
 - name: github.com/gavv/monotime
@@ -93,46 +93,23 @@ imports:
 - name: github.com/go-ini/ini
   version: 3be5ad479f69d4e08d7fe25edf79bf3346bd658e
 - name: github.com/go-openapi/jsonpointer
-  version: a105a905c5e6ad147f08504784917f3e178e0ba5
+  version: 46af16f9f7b149af66e5d1bd010e3574dc06de98
 - name: github.com/go-openapi/jsonreference
-  version: 2903bfd4bfbaf188694f1edf731f2725a8fa344f
+  version: 8483a886a90412cd6858df4ea3483dce9c8e35a3
 - name: github.com/go-openapi/spec
   version: 384415f06ee238aae1df5caad877de6ceac3a5c4
 - name: github.com/go-openapi/swag
   version: becd2f08beafcca035645a8a101e0e3e18140458
 - name: github.com/go-playground/locales
-  version: 630ebbb602847eba93e75ae38bbc7bb7abcf1ff3
+  version: f63010822830b6fe52288ee52d5a1151088ce039
   subpackages:
   - currency
 - name: github.com/go-playground/universal-translator
   version: 71201497bace774495daed26a3874fd339e0b538
-- name: github.com/gobuffalo/envy
-  version: 043cb4b8af871b49563291e32c66bb84378a60ac
-- name: github.com/gobuffalo/genny
-  version: 91ad2e0610fbe8b6a8bffc967f3f22ea9d951809
-- name: github.com/gobuffalo/gogen
-  version: 21ca5640dbe2ce38e2fb0f2aac2ca0e84eaea512
-  subpackages:
-  - goimports
-  - gomods
-- name: github.com/gobuffalo/logger
-  version: 7c291b53e05b81d77bd43109b4a3c6f84e45c8e1
-- name: github.com/gobuffalo/mapi
-  version: b6d5eb97ba389d6c0ffb174be0c45fd971eabd88
-- name: github.com/gobuffalo/packd
-  version: 54ea459691466cfb630ccc276723fe3963f3e9d5
-  subpackages:
-  - internal/takeon/github.com/markbates/errx
 - name: github.com/gobuffalo/packr
   version: 68a5fdc58d980600c4622a82472ebe415048f141
   subpackages:
-  - v2
-  - v2/file
-  - v2/file/resolver
-  - v2/file/resolver/encoding/hex
-  - v2/jam/parser
   - v2/packr2
-  - v2/plog
 - name: github.com/gogo/protobuf
   version: c0656edd0d9eab7c66d1eb0c568f9039345796f7
   subpackages:
@@ -159,7 +136,7 @@ imports:
   subpackages:
   - layers
 - name: github.com/google/uuid
-  version: 0cd6bf5da1e1c83f8b45653022c74f71af0538a4
+  version: 8c31c18f31ede9fc8eae72290a7e7a8064e9b3e3
 - name: github.com/googleapis/gnostic
   version: 0c5108395e2debce0d731cf0287ddf7242066aba
   subpackages:
@@ -190,7 +167,7 @@ imports:
   subpackages:
   - simplelru
 - name: github.com/hpcloud/tail
-  version: a30252cb686a21eb2d0b98132633053ec2f7f1e5
+  version: a1dbeea552b7c8df4b542c66073e393de198a800
   subpackages:
   - ratelimiter
   - util
@@ -214,16 +191,12 @@ imports:
   - net
 - name: github.com/jmespath/go-jmespath
   version: 3433f3ea46d9f8019119e7dd41274e112a2359a9
-- name: github.com/joho/godotenv
-  version: 5c0e6c6ab1a0a9ef0a8822cba3a05d62f7dad941
 - name: github.com/json-iterator/go
   version: f2b4162afba35581b6d4a50d3b8f34e33c144682
 - name: github.com/kardianos/osext
   version: 2bc1f35cddc0cc527b4bc3dce8578fc2a6c11384
-- name: github.com/karrick/godirwalk
-  version: 73c17a9b9528eb3ce857b782a2816c0cda581e62
 - name: github.com/kelseyhightower/envconfig
-  version: 0b417c4ec4a8a82eecc22a1459a504aa55163d61
+  version: dd1402a4d99de9ac2f396cd6fcb957bc2c695ec1
 - name: github.com/leodido/go-urn
   version: a67a23e1c1af3c66528573bb86a87246477277c1
 - name: github.com/libp2p/go-reuseport
@@ -241,18 +214,14 @@ imports:
   - buffer
   - jlexer
   - jwriter
-- name: github.com/markbates/oncer
-  version: 74cf68f7e72ed26f7a701d975dbcee92cd324cbb
-- name: github.com/markbates/safe
-  version: 6fea05a5732486546a4836b7a1d596c5ec687b98
 - name: github.com/Masterminds/semver
   version: 59c29afe1a994eacb71c833025ca7acf874bb1da
 - name: github.com/Masterminds/sprig
   version: 544a9b1d90f323f6509491b389714fbbd126bee3
 - name: github.com/mattn/go-colorable
-  version: 8029fb3788e5a4a9c00e415f586a6d033f5d38b3
+  version: 3a70a971f94a22f2fa562ffcc7a0eb45f5daf045
 - name: github.com/mattn/go-isatty
-  version: 1311e847b0cb909da63b5fecfb5370aa66236465
+  version: c2a7a6ca930a4cd0bc33a3f298eb71960732a3a7
 - name: github.com/matttproud/golang_protobuf_extensions
   version: c12348ce28de40eed0136aa2b644d0ee0650e56c
   subpackages:
@@ -329,8 +298,6 @@ imports:
   version: ca53cad383cad2479bbba7f7a1a05797ec1386e4
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
-- name: github.com/pkg/errors
-  version: 645ef00459ed84a119197bfb8d8205042c6df63d
 - name: github.com/projectcalico/go-json
   version: 6219dc7339ba20ee4c57df0a8baac62317d19cb1
   subpackages:
@@ -340,7 +307,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: fe10f211caf00641500842123c9066584e9c16c3
+  version: c68fc5e8980136a5ed6e2ec66109d1064235a653
   repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib/apiconfig
@@ -386,7 +353,7 @@ imports:
   subpackages:
   - binder
 - name: github.com/projectcalico/typha
-  version: fe1566dc103495715e45c20730b41349cb5304f3
+  version: acd6accda3bab22293165f9f69c31b35a411a40e
   repo: git@github.com:tigera/typha-private
   subpackages:
   - pkg/syncclient
@@ -400,11 +367,11 @@ imports:
   - prometheus/promhttp
   - prometheus/push
 - name: github.com/prometheus/client_model
-  version: 5c3871d89910bfb32f5fcab2aa4b9ec68e65a99f
+  version: fa8ad6fec33561be4280a8f0514318c79d7f6cb6
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 4724e9255275ce38f7179b2478abeae4e28c904f
+  version: cfeb6f9992ffa54aaa4f2170ade4067ee478b250
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
@@ -414,17 +381,11 @@ imports:
   subpackages:
   - xfs
 - name: github.com/PuerkitoBio/purell
-  version: 44968752391892e1b0d0b821ee79e9a85fa13049
+  version: 8a290539e2e8629dbc4e6bad948158f790ec31f4
 - name: github.com/PuerkitoBio/urlesc
-  version: de5bf2ad457846296e2031421a34e2568e304e35
+  version: 5bd2802263f21d8788851d5305584c82a5c75d7e
 - name: github.com/robfig/cron
-  version: 61d93e07d1be270591d43ede700aa3ae69a2326f
-- name: github.com/rogpeppe/go-internal
-  version: 6f68bf1e81f8552c7dbd47f3bc4371c2db0941a6
-  subpackages:
-  - modfile
-  - module
-  - semver
+  version: b41be1df696709bb6395fe435af20370037c0b4c
 - name: github.com/satori/go.uuid
   version: f58768cc1a7a7e77a3bd49e98cdd21419399b6a3
 - name: github.com/sirupsen/logrus
@@ -496,6 +457,7 @@ imports:
 - name: golang.org/x/text
   version: b19bf474d317b857955b12035d2c5acb57ce8b01
   subpackages:
+  - cases
   - encoding
   - encoding/charmap
   - encoding/htmlindex
@@ -506,11 +468,13 @@ imports:
   - encoding/simplifiedchinese
   - encoding/traditionalchinese
   - encoding/unicode
+  - internal
   - internal/tag
   - internal/utf8internal
   - language
   - runes
   - secure/bidirule
+  - secure/precis
   - transform
   - unicode/bidi
   - unicode/norm
@@ -519,20 +483,6 @@ imports:
   version: f51c12702a4d776e4c1fa9b0fabab841babae631
   subpackages:
   - rate
-- name: golang.org/x/tools
-  version: aa82965741a9fecd12b026fbb3d3c6ed3231b8f8
-  subpackages:
-  - go/ast/astutil
-  - go/gcexportdata
-  - go/internal/cgo
-  - go/internal/gcimporter
-  - go/internal/packagesdriver
-  - go/packages
-  - imports
-  - internal/fastwalk
-  - internal/gopathwalk
-  - internal/module
-  - internal/semver
 - name: google.golang.org/appengine
   version: 54a98f90d1c46b7731eb8fb305d2a321c30ef610
   subpackages:
@@ -569,22 +519,22 @@ imports:
   - status
   - tap
   - transport
-- name: gopkg.in/fsnotify.v1
+- name: gopkg.in/fsnotify/fsnotify.v1
   version: c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9
 - name: gopkg.in/go-playground/validator.v9
-  version: 884d31b8cad6a1ec877f2400d555924cea03bbea
+  version: b199fa0642d29caca62b6a99d65cc981ba5edc3b
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: gopkg.in/natefinch/lumberjack.v2
   version: a96e63847dc3c67d17befa69c303767e2f84e54f
 - name: gopkg.in/square/go-jose.v2
-  version: e94fb177d3668d35ab39c61cbb2f311550557e83
+  version: 89060dee6a84df9a4dae49f676f0c755037834f1
   subpackages:
   - cipher
   - json
   - jwt
 - name: gopkg.in/tomb.v1
-  version: dd632973f1e7218eb1089048e0798ec9ae7dceb8
+  version: c131134a1947e9afd9cecfe11f4c6dff0732ae58
 - name: gopkg.in/yaml.v2
   version: 670d4cfef0544295bc27a114dbac37980d83185a
 - name: k8s.io/api
@@ -662,7 +612,7 @@ imports:
   - pkg/watch
   - third_party/forked/golang/reflect
 - name: k8s.io/apiserver
-  version: bf12d466f6282def0ab436ca052bb603cccbcfc6
+  version: f881eae9ec04b8c996ef0d24309c860ea188acd1
   subpackages:
   - pkg/apis/audit
 - name: k8s.io/client-go

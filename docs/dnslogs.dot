@@ -1,0 +1,56 @@
+digraph G {
+size="7.5,10"
+labeljust="l"
+fontname=Helvetica;
+node [fontname=Helvetica]
+edge [fontname=Helvetica,fontsize=10]
+
+domainInfoStore -> flCollector [label="srcIP, dstIP, dnsPacket"];
+
+subgraph {
+	 rank=same;
+         flCollector -> lookupCache [dir="both"];
+}
+
+flCollector -> dnsLogReporter [label="DNSUpdate"];
+
+dnsLogReporter -> fileAggregators [label="DNSUpdate"];
+fileAggregators -> fileDispatcher [label="DNSLog"];
+
+flCollector [label=<<table BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4">
+          <tr><td><font point-size="14">collector</font></td></tr>
+          <tr><td><font point-size="10">Central point for flow and DNS log data.<br/>
+</font></td></tr>
+        </table>>, shape=none, margin=0];
+
+dnsLogReporter [label=<<table BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4">
+          <tr><td><font point-size="14">DNSLogReporter</font></td></tr>
+          <tr><td><font point-size="10">Fan out to dispatchers, via aggregators<br/>
+</font></td></tr>
+        </table>>, shape=none, margin=0];
+
+fileAggregators [label=<<table BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4">
+          <tr><td><font point-size="14">DNSLogAggregator</font></td></tr>
+          <tr><td><font point-size="10">Aggregator for DNS logs.<br/>
+</font></td></tr>
+        </table>>, shape=none, margin=0];
+
+fileDispatcher [label=<<table BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4">
+          <tr><td><font point-size="14">FileDispatcher</font></td></tr>
+          <tr><td><font point-size="10">Writes logs to dns.log file.<br/>
+</font></td></tr>
+        </table>>, shape=none, margin=0];
+
+domainInfoStore [label=<<table BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4">
+          <tr><td><font point-size="14">Domain Info Store</font></td></tr>
+          <tr><td><font point-size="10">collector.LogDNS<br/>
+</font></td></tr>
+        </table>>, shape=none, margin=0];
+
+lookupCache [label=<<table BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4">
+          <tr><td><font point-size="14">Lookup Cache</font></td></tr>
+          <tr><td><font point-size="10">Maps IP to the endpoint (if any) with that IP<br/>
+</font></td></tr>
+        </table>>, shape=none, margin=0];
+
+}

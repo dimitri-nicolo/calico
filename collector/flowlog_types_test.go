@@ -101,7 +101,7 @@ var _ = Describe("Flow log types tests", func() {
 	Context("FlowMeta construction from MetricUpdate", func() {
 		It("generates the correct FlowMeta", func() {
 			By("aggregating on duration")
-			flowMeta, err = NewFlowMeta(muWithEndpointMeta, Default)
+			flowMeta, err = NewFlowMeta(muWithEndpointMeta, FlowDefault)
 			Expect(err).To(BeNil())
 			expectedFlowMeta = FlowMeta{
 				Tuple: Tuple{
@@ -128,7 +128,7 @@ var _ = Describe("Flow log types tests", func() {
 			}
 			Expect(flowMeta).Should(Equal(expectedFlowMeta))
 
-			flowMeta, err = NewFlowMeta(muWithoutSrcEndpointMeta, Default)
+			flowMeta, err = NewFlowMeta(muWithoutSrcEndpointMeta, FlowDefault)
 			Expect(err).To(BeNil())
 			expectedFlowMeta = FlowMeta{
 				Tuple: Tuple{
@@ -155,7 +155,7 @@ var _ = Describe("Flow log types tests", func() {
 			}
 			Expect(flowMeta).Should(Equal(expectedFlowMeta))
 
-			flowMeta, err = NewFlowMeta(muWithoutDstEndpointMeta, Default)
+			flowMeta, err = NewFlowMeta(muWithoutDstEndpointMeta, FlowDefault)
 			Expect(err).To(BeNil())
 			expectedFlowMeta = FlowMeta{
 				Tuple: Tuple{
@@ -183,7 +183,7 @@ var _ = Describe("Flow log types tests", func() {
 			Expect(flowMeta).Should(Equal(expectedFlowMeta))
 
 			By("aggregating on source port")
-			flowMeta, err = NewFlowMeta(muWithEndpointMeta, SourcePort)
+			flowMeta, err = NewFlowMeta(muWithEndpointMeta, FlowSourcePort)
 			Expect(err).To(BeNil())
 			expectedFlowMeta = FlowMeta{
 				Tuple: Tuple{
@@ -211,7 +211,7 @@ var _ = Describe("Flow log types tests", func() {
 			Expect(flowMeta).Should(Equal(expectedFlowMeta))
 
 			By("aggregating on prefix name")
-			flowMeta, err = NewFlowMeta(muWithEndpointMeta, PrefixName)
+			flowMeta, err = NewFlowMeta(muWithEndpointMeta, FlowPrefixName)
 			Expect(err).To(BeNil())
 			expectedFlowMeta = FlowMeta{
 				Tuple: Tuple{
@@ -238,7 +238,7 @@ var _ = Describe("Flow log types tests", func() {
 			}
 			Expect(flowMeta).Should(Equal(expectedFlowMeta))
 
-			flowMeta, err = NewFlowMeta(muWithoutSrcEndpointMeta, PrefixName)
+			flowMeta, err = NewFlowMeta(muWithoutSrcEndpointMeta, FlowPrefixName)
 			Expect(err).To(BeNil())
 			expectedFlowMeta = FlowMeta{
 				Tuple: Tuple{
@@ -267,7 +267,7 @@ var _ = Describe("Flow log types tests", func() {
 
 			muWithoutPublicDstEndpointMeta := muWithoutDstEndpointMeta
 			muWithoutPublicDstEndpointMeta.tuple.dst = ipStrTo16Byte("198.17.8.43")
-			flowMeta, err = NewFlowMeta(muWithoutPublicDstEndpointMeta, PrefixName)
+			flowMeta, err = NewFlowMeta(muWithoutPublicDstEndpointMeta, FlowPrefixName)
 			Expect(err).To(BeNil())
 			expectedFlowMeta = FlowMeta{
 				Tuple: Tuple{
@@ -296,7 +296,7 @@ var _ = Describe("Flow log types tests", func() {
 
 			muWithoutAWSMetaDstEndpointMeta := muWithoutDstEndpointMeta
 			muWithoutAWSMetaDstEndpointMeta.tuple.dst = ipStrTo16Byte("169.254.169.254")
-			flowMeta, err = NewFlowMeta(muWithoutAWSMetaDstEndpointMeta, PrefixName)
+			flowMeta, err = NewFlowMeta(muWithoutAWSMetaDstEndpointMeta, FlowPrefixName)
 			Expect(err).To(BeNil())
 			expectedFlowMeta = FlowMeta{
 				Tuple: Tuple{
@@ -333,7 +333,7 @@ var _ = Describe("Flow log types tests", func() {
 				},
 				Endpoint: &model.WorkloadEndpoint{GenerateName: "", Labels: map[string]string{"k8s-app": "true"}},
 			}
-			flowMeta, err = NewFlowMeta(muWithEndpointMetaWithoutGenerateName, PrefixName)
+			flowMeta, err = NewFlowMeta(muWithEndpointMetaWithoutGenerateName, FlowPrefixName)
 			Expect(err).To(BeNil())
 			expectedFlowMeta = FlowMeta{
 				Tuple: Tuple{
