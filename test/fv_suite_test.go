@@ -1,24 +1,19 @@
 package fv_test
 
 import (
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
 	"os"
 	"testing"
 
-	"github.com/onsi/ginkgo/reporters"
-	//"github.com/projectcalico/libcalico-go/lib/testutils"
+	"github.com/projectcalico/libcalico-go/lib/testutils"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
-func init() {
-	//testutils.HookLogrusForGinkgo()
-}
-
-func TestCommands(t *testing.T) {
+func TestXrefCache(t *testing.T) {
+	testutils.HookLogrusForGinkgo()
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../report/fv_suite.xml")
-	RunSpecsWithDefaultAndCustomReporters(t, "FV Suite", []Reporter{junitReporter})
+	RunSpecs(t, "FV Test Suite")
 }
 
 func getEnvOrDefaultString(key string, defaultValue string) string {

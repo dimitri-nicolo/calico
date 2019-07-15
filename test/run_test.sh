@@ -25,7 +25,8 @@ BOOTSTRAP_PASSWORD=$(cat /dev/urandom | LC_CTYPE=C tr -dc A-Za-z0-9 | head -c16)
 function run_fvs()
 {
 	local GINKGO_ARGS=$1
-	# Run test
+	# Run test - if this fails output the logs from the proxy container. Running ginkgo with the--failFast flag
+	# is useful if you are debugging issues since we do not correlate tests with output from the proxy container.
 	docker run \
 		--rm \
 		--net=host \
@@ -36,7 +37,7 @@ function run_fvs()
 		-e LOCAL_USER_ID=$(id -u) \
 		-w /${PACKAGE_NAME} \
 		${GO_BUILD_IMAGE} \
-		sh -c "ginkgo ${GINKGO_ARGS} ./test/"
+		sh -c "ginkgo ${GINKGO_ARGS} ./test/" || (docker logs ${TEST_CONTAINER_NAME} && false)
 }
 
 function run_elasticsearch()

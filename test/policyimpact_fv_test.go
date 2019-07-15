@@ -33,8 +33,6 @@ var _ = Describe("PolicyimpactFV Elasticsearch", func() {
 		}
 		client = &http.Client{Transport: tr}
 	})
-	AfterEach(func() {
-	})
 
 	// We only verify access from the clients point of view.
 	DescribeTable("Users can only preview policy changes they can perform ",
@@ -104,9 +102,13 @@ var _ = Describe("PolicyimpactFV Elasticsearch", func() {
 		Entry("Read Create user cannot preview Calico policy update in default", authReadCreateDefault, bodyUpdateDefaultCalico, http.StatusUnauthorized),
 		Entry("Read Create user cannot preview Calico policy delete in default", authReadCreateDefault, bodyDeleteDefaultCalico, http.StatusUnauthorized),
 
-		Entry("Read Update user cannot preview Calico policy create in default", authReadUpdateDefault, bodyCreateDefaultCalico, http.StatusUnauthorized),
-		Entry("Read Update user can preview Calico policy update in default", authReadUpdateDefault, bodyUpdateDefaultCalico, http.StatusOK),
-		Entry("Read Update user cannot preview Calico policy delete in default", authReadUpdateDefault, bodyDeleteDefaultCalico, http.StatusUnauthorized),
+		Entry("Read Update user cannot preview Calico policy 'default.p-name' create in default", authReadUpdateDefault, bodyCreateDefaultCalico, http.StatusUnauthorized),
+		Entry("Read Update user can preview Calico policy 'default.p-name' update in default", authReadUpdateDefault, bodyUpdateDefaultCalico, http.StatusOK),
+		Entry("Read Update user cannot preview Calico policy 'default.p-name' delete in default", authReadUpdateDefault, bodyDeleteDefaultCalico, http.StatusUnauthorized),
+
+		Entry("Read Update user cannot preview Calico policy 'default.different' create in default", authReadUpdateDefault, bodyCreateDefaultDifferentCalico, http.StatusUnauthorized),
+		Entry("Read Update user can preview Calico policy 'default.different' update in default", authReadUpdateDefault, bodyUpdateDefaultDifferentCalico, http.StatusUnauthorized),
+		Entry("Read Update user cannot preview Calico policy 'default.different' delete in default", authReadUpdateDefault, bodyDeleteDefaultDifferentCalico, http.StatusUnauthorized),
 
 		Entry("Read Delete user cannot preview Calico policy create in default", authReadDeleteDefault, bodyCreateDefaultCalico, http.StatusUnauthorized),
 		Entry("Read Delete user cannot preview Calico policy update in default", authReadDeleteDefault, bodyUpdateDefaultCalico, http.StatusUnauthorized),
@@ -140,7 +142,6 @@ var _ = Describe("PolicyimpactFV Elasticsearch", func() {
 		Entry("Read Delete user cannot preview Global policy update", authReadDeleteDefault, bodyUpdateDefaultGlobal, http.StatusUnauthorized),
 		Entry("Read Delete user can preview Global policy delete", authReadDeleteDefault, bodyDeleteDefaultGlobal, http.StatusOK),
 	)
-
 })
 
 func modBody(b string, act string, ns string) string {
@@ -176,16 +177,18 @@ var (
 	bodyCreateDefaultCalico = modBody(baseBodyCalico, "create", "default")
 	bodyUpdateDefaultCalico = modBody(baseBodyCalico, "update", "default")
 	bodyDeleteDefaultCalico = modBody(baseBodyCalico, "delete", "default")
-	bodyCreateAltNSCalico   = modBody(baseBodyCalico, "create", "alt-ns")
-	bodyUpdateAltNSCalico   = modBody(baseBodyCalico, "update", "alt-ns")
-	bodyDeleteAltNSCalico   = modBody(baseBodyCalico, "delete", "alt-ns")
+
+	bodyCreateDefaultDifferentCalico = strings.Replace(bodyCreateDefaultCalico, "default.p-name", "default.different", -1)
+	bodyUpdateDefaultDifferentCalico = strings.Replace(bodyUpdateDefaultCalico, "default.p-name", "default.different", -1)
+	bodyDeleteDefaultDifferentCalico = strings.Replace(bodyDeleteDefaultCalico, "default.p-name", "default.different", -1)
+
+	bodyCreateAltNSCalico = modBody(baseBodyCalico, "create", "alt-ns")
+	bodyUpdateAltNSCalico = modBody(baseBodyCalico, "update", "alt-ns")
+	bodyDeleteAltNSCalico = modBody(baseBodyCalico, "delete", "alt-ns")
 
 	bodyCreateDefaultGlobal = modBody(baseBodyGlobal, "create", "")
 	bodyUpdateDefaultGlobal = modBody(baseBodyGlobal, "update", "")
 	bodyDeleteDefaultGlobal = modBody(baseBodyGlobal, "delete", "")
-	bodyCreateAltNSGlobal   = modBody(baseBodyGlobal, "create", "")
-	bodyUpdateAltNSGlobal   = modBody(baseBodyGlobal, "update", "")
-	bodyDeleteAltNSGlobal   = modBody(baseBodyGlobal, "delete", "")
 )
 
 var (
@@ -203,7 +206,7 @@ var calicoPolicyActions = `"resourceActions":[{"resource":{
 	"apiVersion": "projectcalico.org/v3",
 	"kind":"NetworkPolicy",
 	"metadata":{
-		"name":"p-name",
+		"name":"default.p-name",
 		"generateName":"p-gen-name",
 		"namespace":"@@NAMESPACE@@",
 		"selfLink":"p-self-link",
@@ -226,7 +229,7 @@ var k8sPolicyActions = `"resourceActions":[{"resource":{
 		"uid": "7dfbb617-a1ea-11e9-bd43-001c42e3cabd",
 		"namespace": "@@NAMESPACE@@",
 		"resourceVersion": "758945",
-		 "creationTimestamp": null
+		"creationTimestamp": null
 	},
 	"spec": {
 		"podSelector": {},
@@ -244,7 +247,10 @@ var k8sPolicyActions = `"resourceActions":[{"resource":{
 var globalPolicyActions = `"resourceActions":[{"resource":{
 	"apiVersion": "projectcalico.org/v3",
 	"kind": "GlobalNetworkPolicy",
-	"metadata": { "creationTimestamp": null,"name": "test.a-global-policy"	},
+	"metadata": {
+		"name": "test.a-global-policy",
+		"creationTimestamp": null
+	},
 	"spec": {
 		"tier": "test",
 		"order": 100,

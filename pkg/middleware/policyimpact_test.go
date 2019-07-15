@@ -101,7 +101,7 @@ var calicoPolicyActions = `"resourceActions":[{"resource":{
 	"apiVersion": "projectcalico.org/v3",
 	"kind":"NetworkPolicy",
 	"metadata":{
-		"name":"p-name",
+		"name":"default.p-name",
 		"generateName":"p-gen-name",
 		"namespace":"p-name-space",
 		"selfLink":"p-self-link",
@@ -142,7 +142,10 @@ var k8sPolicyActions = `"resourceActions":[{"resource":{
 var globalPolicyActions = `"resourceActions":[{"resource":{
 	"apiVersion": "projectcalico.org/v3",
 	"kind": "GlobalNetworkPolicy",
-	"metadata": { "creationTimestamp": null,"name": "test.a-global-policy"	},
+	"metadata": {
+		"creationTimestamp": null,
+		"name": "test.a-global-policy"
+	},
 	"spec": {
 		"tier": "test",
 		"order": 100,
