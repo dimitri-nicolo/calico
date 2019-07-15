@@ -570,6 +570,9 @@ message DataplaneStats {
 
   // Whether the flow was allowed or denied
   Action action = 8;
+
+  // HTTPData is a collection of the metadata collected from HTTP headers.
+  repeated HTTPData http_data = 9;
 }
 
 // Action represents an action taken by a policy or rule.
@@ -603,6 +606,7 @@ message Statistic {
     PACKETS = 0;
     BYTES = 1;
     HTTP_REQUESTS = 2;
+    HTTP_DATA = 3;
   }
   Kind kind = 3;
 
@@ -639,4 +643,10 @@ message RuleTrace {
 
   // The numerical index of the rule that matched.
   int32 rule_num = 5;
+}
+
+// HTTPData provides HTTP header information.
+message HTTPData {
+  string x_forwarded_for = 1;
+  string x_real_ip = 2;
 }
