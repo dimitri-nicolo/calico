@@ -35,6 +35,8 @@ cluster's datastore type.
 - [etcd](../../getting-started/kubernetes/installation/calico#installing-with-federation-using-etcd)
 - [Kubernetes API datastore](../../getting-started/kubernetes/installation/calico#installing-with-federation-using-kubernetes-api-datastore)
 
+You will also need [calicoctl](../../getting-started/calicoctl/install) installed. `RemoteClusterConfiguration` is created with calicoctl.
+
 ### About adding a Remote Cluster Configuration resource
 
 Each instance of the [Remote Cluster Configuration](/{{page.version}}/reference/resources/remoteclusterconfiguration)
