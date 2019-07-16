@@ -210,7 +210,7 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 		voltron, err = server.New(
 			server.WithKeepClusterKeys(),
 			server.WithTunnelCreds(srvCert, srvPrivKey),
-			server.WithAuthentication(true, k8sAPI),
+			server.WithAuthentication(k8sAPI),
 		)
 		Expect(err).NotTo(HaveOccurred())
 

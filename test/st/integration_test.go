@@ -48,7 +48,7 @@ var _ = Describe("Integration Tests", func() {
 	})
 
 	It("Should configure the K8s client", func() {
-		_, k8s = bootstrap.ConfigureK8sClient(true, "./test/st/k8s-api-certs/kube.config")
+		k8s = bootstrap.ConfigureK8sClient("./test/st/k8s-api-certs/kube.config")
 	})
 
 	It("should set env variables pointing to docker-image/ for certs", func() {
@@ -58,11 +58,6 @@ var _ = Describe("Integration Tests", func() {
 		err = os.Setenv("VOLTRON_TEMPLATE_PATH", "docker-image/voltron/templates/guardian.yaml.tmpl")
 		Expect(err).ToNot(HaveOccurred())
 
-		// disable toggle for authentication
-		err = os.Setenv("VOLTRON_AUTHN_ON", "true")
-		Expect(err).ToNot(HaveOccurred())
-
-		// disable toggle for authentication
 		err = os.Setenv("VOLTRON_K8S_CONFIG_PATH", "./test/st/k8s-api-certs/kube.config")
 		Expect(err).ToNot(HaveOccurred())
 

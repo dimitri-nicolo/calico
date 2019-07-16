@@ -74,7 +74,6 @@ type Server struct {
 
 // toggles are the toggles that enable or disable a feature
 type toggles struct {
-	authNOn      bool
 	autoRegister bool
 }
 
@@ -347,16 +346,14 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 	// this as the destinatination has been decided by choosing the tunnel.
 	r.URL.Host = "voltron-tunnel"
 
-	if s.toggles.authNOn {
-		user, err := s.auth.Authenticate(r)
-		if err != nil {
-			log.Errorf("Could not authenticate user from request: %v", err)
-			http.Error(w, err.Error(), 401)
-			return
-		}
-		addImpersonationHeaders(r, user)
-		removeAuthHeaders(r)
+	user, err := s.auth.Authenticate(r)
+	if err != nil {
+		log.Errorf("Could not authenticate user from request: %v", err)
+		http.Error(w, err.Error(), 401)
+		return
 	}
+	addImpersonationHeaders(r, user)
+	removeAuthHeaders(r)
 
 	log.Debugf("tunneling %q from %q through %q", r.URL, r.RemoteAddr, clusterID)
 	r.Header.Del(ClusterHeaderField)

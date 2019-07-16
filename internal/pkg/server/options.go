@@ -97,12 +97,9 @@ func WithKeepClusterKeys() Option {
 }
 
 // WithAuthentication sets the kubernetes client that will be used to interact with its api
-func WithAuthentication(authNOn bool, k8sAPI kubernetes.Interface) Option {
+func WithAuthentication(k8sAPI kubernetes.Interface) Option {
 	return func(s *Server) error {
-		s.toggles.authNOn = authNOn
-		if authNOn {
-			s.auth = auth.NewIdentity(k8sAPI)
-		}
+		s.auth = auth.NewIdentity(k8sAPI)
 		return nil
 	}
 }

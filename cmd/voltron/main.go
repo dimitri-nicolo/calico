@@ -31,7 +31,6 @@ type config struct {
 	CertPath          string `default:"/certs" split_words:"true"`
 	TemplatePath      string `default:"/tmp/guardian.yaml.tmpl" split_words:"true"`
 	PublicIP          string `default:"127.0.0.1:32453" split_words:"true"`
-	AuthnOn           bool   `default:"true" split_words:"true"`
 	K8sConfigPath     string `split_words:"true"`
 	KeepAliveEnable   bool   `default:"true" split_words:"true"`
 	KeepAliveInterval int    `default:"100" split_words:"true"`
@@ -65,7 +64,7 @@ func main() {
 		server.WithPublicAddr(cfg.PublicIP),
 		server.WithKeepClusterKeys(),
 		server.WithTunnelCreds(tunnelCert, tunnelKey),
-		server.WithAuthentication(bootstrap.ConfigureK8sClient(cfg.AuthnOn, cfg.K8sConfigPath)),
+		server.WithAuthentication(bootstrap.ConfigureK8sClient(cfg.K8sConfigPath)),
 
 		// TODO: remove when voltron starts using k8s resources, probably by SAAS-178
 		server.WithAutoRegister(),

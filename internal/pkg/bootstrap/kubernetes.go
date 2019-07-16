@@ -10,16 +10,12 @@ import (
 
 // ConfigureK8sClient configures K8s client based on the configuration path. If no configuration is provided
 // it will default to run as a pod. It will return nil if authNOn flag is set to false
-func ConfigureK8sClient(authNOn bool, configPath string) (toggle bool, k8s *kubernetes.Clientset) {
-	if !authNOn {
-		return authNOn, nil
-	}
-
+func ConfigureK8sClient(configPath string) (k8s *kubernetes.Clientset) {
 	if len(configPath) == 0 {
-		return authNOn, inCluster()
+		return inCluster()
 	}
 
-	return authNOn, outOfCluster(configPath)
+	return outOfCluster(configPath)
 }
 
 func inCluster() (k8s *kubernetes.Clientset) {
