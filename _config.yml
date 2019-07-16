@@ -114,3 +114,5 @@ defaults:
       path: v2.5
     values:
       version: v2.5
+      # v2.5 builds will be pulled from GCR until the release is "published".
+      registry: gcr.io/unique-caldron-775/cnx/
