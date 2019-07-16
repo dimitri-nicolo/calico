@@ -13,10 +13,16 @@ import (
 	"sync"
 	"time"
 
+	"github.com/tigera/voltron/internal/pkg/bootstrap"
+
+	v1 "k8s.io/api/rbac/v1"
+	"k8s.io/client-go/kubernetes"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/voltron/internal/pkg/clusters"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func init() {
@@ -33,11 +39,16 @@ var _ = Describe("Integration Tests", func() {
 		voltronWg   sync.WaitGroup
 		guardianCmd *exec.Cmd
 		guardianWg  sync.WaitGroup
+		k8s         *kubernetes.Clientset
 	)
 
 	It("Should change directory to bin folder", func() {
 		err := os.Chdir("../../")
 		Expect(err).ToNot(HaveOccurred())
+	})
+
+	It("Should configure the K8s client", func() {
+		_, k8s = bootstrap.ConfigureK8sClient(true, "./test/st/k8s-api-certs/kube.config")
 	})
 
 	It("should set env variables pointing to docker-image/ for certs", func() {
@@ -48,7 +59,11 @@ var _ = Describe("Integration Tests", func() {
 		Expect(err).ToNot(HaveOccurred())
 
 		// disable toggle for authentication
-		err = os.Setenv("VOLTRON_AUTHN_ON", "false")
+		err = os.Setenv("VOLTRON_AUTHN_ON", "true")
+		Expect(err).ToNot(HaveOccurred())
+
+		// disable toggle for authentication
+		err = os.Setenv("VOLTRON_K8S_CONFIG_PATH", "./test/st/k8s-api-certs/kube.config")
 		Expect(err).ToNot(HaveOccurred())
 
 		// do not use the default proxy, not needed
@@ -199,6 +214,8 @@ var _ = Describe("Integration Tests", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		proxyTarget := fmt.Sprintf(`[{"path": "/api/", "url": "https://localhost:6443", ` +
+			`"tokenPath":"./test/st/tmp/token", "caBundlePath":"./test/st/k8s-api-certs/k8s.crt"},
+			{"path": "/apis/", "url": "https://localhost:6443", ` +
 			`"tokenPath":"./test/st/tmp/token", "caBundlePath":"./test/st/k8s-api-certs/k8s.crt"}]`)
 		err = os.Setenv("GUARDIAN_PROXY_TARGETS", proxyTarget)
 		Expect(err).NotTo(HaveOccurred())
@@ -227,11 +244,12 @@ var _ = Describe("Integration Tests", func() {
 	})
 
 	guardianTest := func() {
-		It("Should eventually send a request to test endpoint/target", func() {
+		It("Should eventually send a request to test endpoint/target using Jane's credentials", func() {
 			req, err := http.NewRequest("GET", "https://localhost:5555/api/v1/namespaces", nil)
 			Expect(err).NotTo(HaveOccurred())
 
 			req.Header.Add("x-cluster-id", "TestCluster")
+			req.Header.Add("Authorization", "Bearer tokenJane")
 			Eventually(func() bool {
 				resp, err := http.DefaultClient.Do(req)
 				if err != nil {
@@ -241,16 +259,38 @@ var _ = Describe("Integration Tests", func() {
 			}, "1s", "200ms").Should(BeTrue())
 		})
 
-		It("Should send a request to nonexistant endpoint/", func() {
+		It("Should send a request to nonexistant endpoint/ using Jane's credentials", func() {
+			req, err := http.NewRequest("GET", "https://localhost:5555/", nil)
+			Expect(err).NotTo(HaveOccurred())
+
+			req.Header.Add("x-cluster-id", "TestCluster")
+			req.Header.Add("Authorization", "Bearer tokenJane")
+
+			ExpectRequestResponse(req, expResponseCode(404))
+		})
+
+		It("Should send a request to nonexistant endpoint/ without authentication", func() {
 			req, err := http.NewRequest("GET", "https://localhost:5555/", nil)
 			Expect(err).NotTo(HaveOccurred())
 
 			req.Header.Add("x-cluster-id", "TestCluster")
 
-			ExpectRequestResponse(req, expResponseCode(404))
+			ExpectRequestResponse(req, expResponseCode(401))
 		})
 
-		It("Should send a request to wrong cluster id", func() {
+		It("Should send a request to wrong cluster id using Jane's credentials", func() {
+			req, err := http.NewRequest("GET", "https://localhost:5555/api/v1", nil)
+			Expect(err).NotTo(HaveOccurred())
+
+			req.Header.Add("x-cluster-id", "ClusterZ")
+			req.Header.Add("Authorization", "Bearer tokenJane")
+			resp, err := http.DefaultClient.Do(req)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.StatusCode).To(Equal(400))
+		})
+
+		It("Should send a request to wrong cluster id without authentication", func() {
 			req, err := http.NewRequest("GET", "https://localhost:5555/api/v1", nil)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -260,6 +300,139 @@ var _ = Describe("Integration Tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(400))
 		})
+
+		It("Should not allow Jane to access network policies", func() {
+			req, err := http.NewRequest("GET", "https://localhost:5555/apis/networking.k8s.io/v1/networkpolicies", nil)
+			Expect(err).NotTo(HaveOccurred())
+
+			req.Header.Add("x-cluster-id", "TestCluster")
+			req.Header.Add("Authorization", "Bearer tokenJane")
+
+			ExpectRequestResponse(req, expResponseCode(403))
+		})
+
+		It("Should define a role to read network policies", func() {
+			policy := v1.PolicyRule{
+				APIGroups: []string{"networking.k8s.io"},
+				Verbs:     []string{"get", "watch", "list"},
+				Resources: []string{"networkpolicies"},
+			}
+			role := &v1.ClusterRole{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "read-network-policies",
+				},
+				Rules: []v1.PolicyRule{policy},
+			}
+			_, err := k8s.RbacV1().ClusterRoles().Create(role)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("Should bind Jane to read-network-policies role", func() {
+			binding := &v1.ClusterRoleBinding{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "read-network-policies-jane-binding",
+				},
+				RoleRef: v1.RoleRef{
+					Kind: "ClusterRole",
+					Name: "read-network-policies",
+				},
+				Subjects: []v1.Subject{{Kind: "User", Name: "Jane"}},
+			}
+			_, err := k8s.RbacV1().ClusterRoleBindings().Create(binding)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("Should allow Jane to access network polices", func() {
+			req, err := http.NewRequest("GET", "https://localhost:5555/apis/networking.k8s.io/v1/networkpolicies", nil)
+			Expect(err).NotTo(HaveOccurred())
+
+			req.Header.Add("x-cluster-id", "TestCluster")
+			req.Header.Add("Authorization", "Bearer tokenJane")
+
+			ExpectRequestResponse(req, expResponseCode(200))
+		})
+
+		It("Should delete Jane's binding to read-network-policies role", func() {
+			err := k8s.RbacV1().ClusterRoleBindings().Delete("read-network-policies-jane-binding", &metav1.DeleteOptions{})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("Should not allow Jane to access network polices after deleting role", func() {
+			req, err := http.NewRequest("GET", "https://localhost:5555/apis/networking.k8s.io/v1/networkpolicies", nil)
+			Expect(err).NotTo(HaveOccurred())
+
+			req.Header.Add("x-cluster-id", "TestCluster")
+			req.Header.Add("Authorization", "Bearer tokenJane")
+
+			ExpectRequestResponse(req, expResponseCode(403))
+		})
+
+		It("Should bind developers to read-network-policies role", func() {
+			binding := &v1.ClusterRoleBinding{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "read-network-policies-developers-binding",
+				},
+				RoleRef: v1.RoleRef{
+					Kind: "ClusterRole",
+					Name: "read-network-policies",
+				},
+				Subjects: []v1.Subject{{Kind: "Group", Name: "developers"}},
+			}
+			_, err := k8s.RbacV1().ClusterRoleBindings().Create(binding)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("Should allow group developers to access network policies", func() {
+			req, err := http.NewRequest("GET", "https://localhost:5555/apis/networking.k8s.io/v1/networkpolicies", nil)
+			Expect(err).NotTo(HaveOccurred())
+
+			req.Header.Add("x-cluster-id", "TestCluster")
+			req.Header.Add("Authorization", "Bearer tokenDev")
+
+			ExpectRequestResponse(req, expResponseCode(200))
+		})
+
+		It("Should delete developers's binding to read-network-policies role", func() {
+			err := k8s.RbacV1().ClusterRoleBindings().Delete("read-network-policies-developers-binding", &metav1.DeleteOptions{})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("Should not allow group developers to access network policies after deleting binding", func() {
+			req, err := http.NewRequest("GET", "https://localhost:5555/apis/networking.k8s.io/v1/networkpolicies", nil)
+			Expect(err).NotTo(HaveOccurred())
+
+			req.Header.Add("x-cluster-id", "TestCluster")
+			req.Header.Add("Authorization", "Bearer tokenDev")
+
+			ExpectRequestResponse(req, expResponseCode(403))
+		})
+
+		It("Should not allow Bob to read namespaces", func() {
+			req, err := http.NewRequest("GET", "https://localhost:5555/apis/v1/namespaces", nil)
+			Expect(err).NotTo(HaveOccurred())
+
+			req.Header.Add("x-cluster-id", "TestCluster")
+			req.Header.Add("Authorization", "Bearer tokenBob")
+
+			ExpectRequestResponse(req, expResponseCode(401))
+		})
+
+		It("Should authenticate using Bearer in favour of Basic tokens", func() {
+			req, err := http.NewRequest("GET", "https://localhost:5555/apis/v1/namespaces", nil)
+			Expect(err).NotTo(HaveOccurred())
+
+			req.Header.Add("x-cluster-id", "TestCluster")
+			req.Header.Add("Authorization", "Bearer tokenBob")
+			req.Header.Add("Authorization", "Basic tokenJane")
+
+			ExpectRequestResponse(req, expResponseCode(401))
+		})
+
+		It("Should delete role read-network-policies ", func() {
+			err := k8s.RbacV1().ClusterRoles().Delete("read-network-policies", &metav1.DeleteOptions{})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
 	}
 
 	Context("While Guardian is running", guardianTest)
