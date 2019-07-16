@@ -25,6 +25,12 @@ spec:
 EOF
 
 kubectl apply -f voltron.yaml
+if [ $? -ne 0 ]; then
+    echo >&2 "Deploying voltron failed"
+    exit 1
+fi
+
+kubectl rollout status -n calico-monitoring deployment/cnx-voltron
 
 kubectl patch deployment -n calico-monitoring cnx-manager --patch \
     '{"spec": {"template": {"spec": {"containers": [{"name": "cnx-manager", "env": [{"name": "CNX_VOLTRON_API_URL", "value": "https://127.0.0.1:30003"}]}]}}}}'
@@ -36,3 +42,9 @@ kubectl patch deployment -n calico-monitoring cnx-manager --patch \
 kubectl patch deployment -n calico-monitoring cnx-manager --patch \
     '{"spec": {"template": {"spec": {"containers": [{"name": "cnx-manager-proxy", "image":"gcr.io/tigera-dev/cnx/tigera/cnx-manager-proxy:voltron-ssl-no-verify"}]}}}}'
 
+
+kubectl rollout status -n calico-monitoring deployment/cnx-manager
+if [ $? -ne 0 ]; then
+    echo >&2 "Patching cnx-manager deployment failed"
+    exit 1
+fi
