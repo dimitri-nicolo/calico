@@ -1,0 +1,7 @@
+---
+layout: null
+---
+{% helm --execute templates/cluster-role.yaml %}
+datastore: etcd
+osType: windows
+{% endhelm %}

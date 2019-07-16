@@ -1,0 +1,13 @@
+---
+layout: null
+---
+{% helm tigera-secure-ee --execute templates/manager.yaml --execute templates/compliance/compliance-server.yaml --execute templates/compliance/compliance-controller.yaml --execute templates/compliance/compliance-snapshotter.yaml --execute templates/compliance/compliance-reporter.yaml --execute templates/compliance/compliance-report-types.yaml --execute templates/compliance/compliance-benchmarker.yaml %}
+manager:
+  auth:
+    type: OAuth
+# Add the imagePullSecret calico-pull-secret since that is the pull secret our ansible scripts create in openshift-ansible
+imagePullSecrets:
+  calico-pull-secret: ""
+complianceBenchmarker:
+  runAsPrivileged: true
+{% endhelm %}

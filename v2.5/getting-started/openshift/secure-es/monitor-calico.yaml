@@ -1,0 +1,9 @@
+---
+layout: null
+---
+{% helm tigera-secure-ee secure-es --execute templates/monitor-calico.yaml %}
+fluentd:
+  runAsPrivileged: true
+  kubeAuditMountPath: /var/lib/origin
+createCustomResources: false
+{% endhelm %}

@@ -1,0 +1,128 @@
+bigheader: "Security"
+path: /security
+order: 3
+toc:
+- title: Security
+  path: /security/
+- title: Kubernetes network policy
+  path: /security/kubernetes-network-policy
+- title: Tigera Secure EE network policy
+  path: /security/calico-network-policy
+- title: Tigera Secure EE policy tutorial
+  path: /security/simple-policy-cnx
+- title: Stars policy tutorial
+  path: /security/stars-policy/
+- title: Tiered policy
+  path: /security/tiered-policy
+- title: Controlling ingress and egress traffic with network policy
+  path: /security/advanced-policy
+- title: Application layer tutorial
+  path: /security/app-layer-policy/
+- title: Using domain names in policy rules
+  path: /security/domain-based-policy
+- title: Host endpoints
+  section:
+  - title: Overview
+    path: /security/host-endpoints/
+  - title: Creating policy for basic connectivity
+    path: /security/host-endpoints/connectivity
+  - title: Creating host endpoint objects
+    path: /security/host-endpoints/objects
+  - title: Selector-based policies
+    path: /security/host-endpoints/selector
+  - title: Failsafe rules
+    path: /security/host-endpoints/failsafe
+  - title: Untracked policy
+    path: /security/host-endpoints/donottrack
+  - title: Pre-DNAT policy
+    path: /security/host-endpoints/pre-dnat
+  - title: Apply on forwarded traffic
+    path: /security/host-endpoints/forwarded
+  - title: Summary
+    path: /security/host-endpoints/summary
+  - title: Tutorial
+    path: /security/host-endpoints/tutorial
+  - title: Connection tracking
+    path: /security/host-endpoints/conntrack
+- title: Securing Tigera Secure EE component communications
+  section:
+  - title: Configuring encryption and authentication
+    path: /security/comms/crypto-auth
+  - title: Scheduling to well-known nodes
+    path: /security/comms/reduce-nodes
+  - title: Securing Tigera Secure EE Prometheus endpoints
+    path: /security/comms/secure-metrics
+- title: AWS security group integration
+  section:
+  - title: Overview
+    path: /security/aws-security-group-integration/
+  - title: Interconnecting your VPC and cluster
+    path: /security/aws-security-group-integration/interconnection
+  - title: Enabling pods to access VPC members
+    path: /security/aws-security-group-integration/pod-access
+  - title: Enabling VPC members to access pods
+    path: /security/aws-security-group-integration/vpc-member-access
+  - title: Enabling access to AWS metadata
+    path: /security/aws-security-group-integration/metadata-access
+  - title: Managing the tiers associated with security group integration
+    path: /security/aws-security-group-integration/tier-management
+  - title: Host endpoints
+    path: /security/aws-security-group-integration/host-endpoints
+- title: Flow audit and DNS logs
+  section:
+  - title: Elasticsearch
+    section:
+    - title: Overview
+      path: /security/logs/elastic/
+    - title: Flow logs
+      path: /security/logs/elastic/flow
+    - title: Audit logs
+      path: /security/logs/elastic/ee-audit
+    - title: DNS logs
+      path: /security/logs/elastic/dns
+    - title: Accessing logs
+      path: /security/logs/elastic/view
+    - title: Configuring Elasticsearch
+      path: /security/logs/configure-elastic
+    - title: Archiving logs to S3
+      path: /security/logs/elastic/s3-archive
+    - title: Archiving logs to syslog
+      path: /security/logs/elastic/syslog
+    - title: Filtering out flow logs
+      path: /security/logs/elastic/filtering
+    - title: Filtering out DNS logs
+      path: /security/logs/elastic/filtering-dns
+  - title: iptables
+    path: /security/logs/iptables
+- title: Metrics
+  section:
+  - title: Overview
+    path: /security/metrics/
+  - title: Policy metrics in Prometheus
+    path: /security/metrics/metrics
+  - title: Configuring Prometheus
+    path: /security/configuration/prometheus
+  - title: Configuring Alertmanager
+    path: /security/configuration/alertmanager
+- title: Threat detection and prevention
+  section:
+  - title: Anomaly detection
+    section:
+    - title: Overview
+      path: /security/threat-detection-and-prevention/anomaly-detection/
+    - title: Enabling anomaly detection
+      path: /security/threat-detection-and-prevention/anomaly-detection/enabling
+    - title: Viewing anomalies
+      path: /security/threat-detection-and-prevention/anomaly-detection/viewing-anomalies
+    - title: Job descriptions
+      path: /security/threat-detection-and-prevention/anomaly-detection/job-descriptions
+    - title: Customizing
+      path: /security/threat-detection-and-prevention/anomaly-detection/customizing
+  - title: Trace and block suspicious IPs
+    path: /security/threat-detection-and-prevention/suspicious-IPs
+- title: Tigera Secure EE compliance reports
+  path: /security/compliance-reports
+- title: Defend against DoS attacks
+  path: /security/defend-dos-attack
+- title: Apply policy to Kubernetes node ports
+  path: /security/kubernetes-node-ports

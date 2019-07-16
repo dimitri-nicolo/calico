@@ -1,0 +1,11 @@
+---
+layout: null
+---
+{% helm --execute templates/cnx-api.yaml %}
+datastore: etcd
+apiserver:
+  runAsPrivileged: true
+# Add the imagePullSecret calico-pull-secret since that is the pull secret our ansible scripts create in openshift-ansible
+imagePullSecrets:
+  calico-pull-secret: ""
+{% endhelm %}

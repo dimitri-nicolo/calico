@@ -1,0 +1,50 @@
+bigheader: "Networking"
+path: /networking
+order: 2
+toc:
+- title: Networking
+  path: /networking/
+- title: Connecting workloads across networks that you do not control
+  path: /networking/vxlan-ipip
+- title: Changing IP pools
+  path: /networking/changing-ip-pools
+- title: Route reflectors
+  path: /networking/routereflector
+- title: Configuring BGP peers
+  path: /networking/bgp
+- title: Enabling IPv6 support
+  path: /networking/ipv6
+- title: Enabling IPVS in Kubernetes
+  path: /networking/enabling-ipvs
+- title: External connectivity
+  path: /networking/external-connectivity
+- title: Configuring a node IP address and subnet
+  path: /networking/node
+- title: Configuring MTU
+  path: /networking/mtu
+- title: Advertising Kubernetes services
+  path: /networking/service-advertisement
+- title: Assigning IP addresses based on topology
+  path: /networking/assigning-ip-addresses-topology
+- title: Custom BGP configuration 
+  path: /networking/custom-bgp-config
+- title: Network design
+  section:
+    - title: Calico over Ethernet fabrics
+      path: /networking/design/l2-interconnect-fabric
+    - title: Calico over IP fabrics
+      path: /networking/design/l3-interconnect-fabric
+- title: Federation (Kubernetes only)
+  section:
+  - title: Overview
+    path: /networking/federation/
+  - title: Creating kubeconfig files
+    path: /networking/federation/kubeconfig
+  - title: Configuring access to remote clusters
+    path: /networking/federation/configure-rcc
+  - title: Configuring federated services
+    path: /networking/federation/services-controller
+  - title: Example AWS configuration
+    path: /networking/federation/aws
+  - title: Querying remote clusters with calicoq
+    path: /networking/federation/calicoq

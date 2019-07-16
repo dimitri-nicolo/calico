@@ -1,0 +1,116 @@
+{{- if .Values.federation.enabled -}}
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: tigera-federation-controller
+  namespace: kube-system
+  labels:
+    k8s-app: tigera-federation-controller
+  annotations:
+    scheduler.alpha.kubernetes.io/critical-pod: ''
+spec:
+  # The federation controller can only have a single active instance.
+  replicas: 1
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      name: tigera-federation-controller
+      namespace: kube-system
+      labels:
+        k8s-app: tigera-federation-controller
+    spec:
+      # The controllers must run in the host network namespace so that
+      # it isn't governed by policy that would prevent it from working.
+      hostNetwork: true
+      tolerations:
+        # Mark the pod as a critical add-on for rescheduling.
+        - key: CriticalAddonsOnly
+          operator: Exists
+        - key: node-role.kubernetes.io/master
+          effect: NoSchedule
+      serviceAccountName: tigera-federation-controller
+{{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+{{- range $key, $value := .Values.imagePullSecrets }}
+        - name: {{ $key }}
+{{- end }}
+{{- end }}
+      containers:
+        - name: tigera-federation-controller
+          image: {{.Values.kubeControllers.image}}:{{.Values.kubeControllers.tag}}
+{{ tuple .Values.federation.resources | include "calico.resourceLimits" | indent 10 -}}
+          env:
+            # Set log level to debug
+            - name: LOG_LEVEL
+              value: info
+            # No need to initialize the calico datastore since this only
+            # modifies kubernetes data types.
+            - name: DO_NOT_INITIALIZE_CALICO
+              value: "true"
+            # Do not run the compactor.
+            - name: COMPACTION_PERIOD
+              value: "0"
+{{- if eq .Values.datastore "etcd" }}
+            # The location of the etcd cluster.
+            - name: ETCD_ENDPOINTS
+              valueFrom:
+                configMapKeyRef:
+                  name: {{include "variant_name" . | lower}}-config
+                  key: etcd_endpoints
+            # Location of the CA certificate for etcd.
+            - name: ETCD_CA_CERT_FILE
+              valueFrom:
+                configMapKeyRef:
+                  name: {{include "variant_name" . | lower}}-config
+                  key: etcd_ca
+            # Location of the client key for etcd.
+            - name: ETCD_KEY_FILE
+              valueFrom:
+                configMapKeyRef:
+                  name: {{include "variant_name" . | lower}}-config
+                  key: etcd_key
+            # Location of the client certificate for etcd.
+            - name: ETCD_CERT_FILE
+              valueFrom:
+                configMapKeyRef:
+                  name: {{include "variant_name" . | lower}}-config
+                  key: etcd_cert
+{{- else if eq .Values.datastore "kubernetes" }}
+            # Use Kubernetes API as the backing datastore.
+            - name: DATASTORE_TYPE
+              value: "kubernetes"
+{{- end }}
+            # Choose which controllers to run.
+            - name: ENABLED_CONTROLLERS
+              value: federatedservices
+          volumeMounts:
+{{- if eq .Values.datastore "etcd" }}
+            # Mount in the etcd TLS secrets.
+            - name: etcd-certs
+              mountPath: /calico-secrets
+              readOnly: true
+{{- end }}
+            # These lines enable a secrets volume for use with federated endpoint identity. Add
+            # multiple entries if you are mounting in multiple secrets (e.g. one for each remote cluster)
+            - name: tigera-federation-remotecluster
+              mountPath: "/etc/tigera-federation-remotecluster"
+              readOnly: true
+      volumes:
+{{- if eq .Values.datastore "etcd" }}
+        # Mount in the etcd TLS secrets with mode 400.
+        # See https://kubernetes.io/docs/concepts/configuration/secret/
+        - name: etcd-certs
+          secret:
+            secretName: calico-etcd-secrets
+            defaultMode: 0400
+{{- end }}
+        # These lines enable a secrets volume for use with federated endpoint identity. Add
+        # multiple entries to the volumes if you are mounting in multiple secrets (e.g. one for each remote cluster)
+        # The secret should be created with: kubectl create secret generic tigera-federation-remotecluster --from-file=...
+        # These are the same secrets as configured in the calico-typha manifest.
+        - name: tigera-federation-remotecluster
+          secret:
+            secretName: tigera-federation-remotecluster
+            defaultMode: 0400
+{{- end -}}
