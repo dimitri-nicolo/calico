@@ -160,7 +160,7 @@ var _ = Context("Latency tests with initialized Felix and etcd datastore", func(
 		It("with allow-all should have good latency", func() {
 			meanRtt, out := w[0].LatencyTo(w[1].IP, w[1].DefaultPort)
 			_, err := fmt.Fprintf(resultsFile, "allow-all: %v\n", meanRtt)
-			Expect(meanRtt).To(BeNumerically("<", 100*time.Millisecond), "hping3 said:\n%v", out)
+			Expect(meanRtt).To(BeNumerically("<", 10*time.Millisecond), "hping3 said:\n%v", out)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -176,7 +176,7 @@ var _ = Context("Latency tests with initialized Felix and etcd datastore", func(
 			It("should have good latency", func() {
 				meanRtt, out := w[0].LatencyTo(w[1].IP, w[1].DefaultPort)
 				_, err := fmt.Fprintf(resultsFile, "all-selector: %v\n", meanRtt)
-				Expect(meanRtt).To(BeNumerically("<", 100*time.Millisecond), "hping3 said:\n%v", out)
+				Expect(meanRtt).To(BeNumerically("<", 10*time.Millisecond), "hping3 said:\n%v", out)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
@@ -203,7 +203,7 @@ var _ = Context("Latency tests with initialized Felix and etcd datastore", func(
 				It("should have good latency", func() {
 					meanRtt, out := w[0].LatencyTo(w[1].IP, w[1].DefaultPort)
 					_, err := fmt.Fprintf(resultsFile, "all-selector-10k: %v\n", meanRtt)
-					Expect(meanRtt).To(BeNumerically("<", 100*time.Millisecond), "hping3 said:\n%v", out)
+					Expect(meanRtt).To(BeNumerically("<", 10*time.Millisecond), "hping3 said:\n%v", out)
 					Expect(err).NotTo(HaveOccurred())
 				})
 			})

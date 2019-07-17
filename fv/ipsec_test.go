@@ -320,7 +320,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 			Eventually(felixes[0].GetFelixPID, "5s", "100ms").ShouldNot(Equal(felixPID))
 		})
 
-		PIt("should have no workload to workload connectivity until we restore the host IP", func() {
+		It("should have no workload to workload connectivity until we restore the host IP", func() {
 			By("Having no connectivity initially")
 			cc.ExpectNone(w[0], w[1])
 			cc.ExpectNone(w[1], w[0])
@@ -360,7 +360,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		PIt("felix should program bad policies and then restore the policies once we restore the IP", func() {
+		It("felix should program bad policies and then restore the policies once we restore the IP", func() {
 			Eventually(felixes[0].GetFelixPID, "5s", "100ms").ShouldNot(Equal(felixPID))
 
 			Eventually(func() int { return policyCount(felixes[0], felixes[0].IP) }, "5s", "100ms").Should(BeZero())
@@ -708,9 +708,13 @@ var _ = infrastructure.DatastoreDescribe("IPsec 3-node tests", []apiconfig.Datas
 			}
 
 			cc.ResetExpectations()
-			cc.ExpectLoss(w[0], w[1], 20*time.Second, 10, -1)
-			cc.ExpectLoss(hostW[0], w[1], 20*time.Second, 10, -1)
-			cc.ExpectLoss(w[0], hostW[1], 20*time.Second, 10, -1)
+			// We expect some loss here due to the way the Charon removes the IKE SAs.  We used to reliably see
+			// <2% packet loss here when using an Alpine base image.  For some reason, we see more loss after
+			// switching to the Debian base image (with same version of Strongswan).
+			const expectedLossPct = 5
+			cc.ExpectLoss(w[0], w[1], 20*time.Second, expectedLossPct, -1)
+			cc.ExpectLoss(hostW[0], w[1], 20*time.Second, expectedLossPct, -1)
+			cc.ExpectLoss(w[0], hostW[1], 20*time.Second, expectedLossPct, -1)
 			cc.CheckConnectivity()
 
 			wg.Wait()

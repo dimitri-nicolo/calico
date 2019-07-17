@@ -214,7 +214,7 @@ var _ = Describe("Charon", func() {
 									RekeyTime:     "10s",
 									Mode:          "tunnel",
 									InstallPolicy: "no",
-									//HWOffload:     "auto",
+									HWOffload:     "auto",
 								},
 							},
 							Mobike: "no",
