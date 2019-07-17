@@ -192,6 +192,7 @@ var (
 	}
 
 	// ReportDataSample is used by ReportTemplate validator.
+	five             = 5
 	ReportDataSample = api.ReportData{
 		StartTime: metav1.Unix(1554076800, 0),
 		EndTime:   metav1.Unix(1554112800, 0),
@@ -205,7 +206,7 @@ var (
 					Selector: "serviceaccount-selector",
 				},
 			},
-			CIS: &api.CISBenchmarkParams{NumFailedTests: 5},
+			CIS: &api.CISBenchmarkParams{NumFailedTests: &five},
 		},
 		EndpointsSummary: api.EndpointsSummary{
 			NumTotal:                     1,
@@ -475,10 +476,11 @@ func computeTopFailedCISBenchmarkTests(d *api.ReportData) SortableCISBenchmarkTe
 
 	// Avoid out of bounds error by capping numTests to be the length of sortedTests if needed.
 	numTests := d.ReportSpec.CIS.NumFailedTests
-	if numTests > len(sortedTests) {
-		numTests = len(sortedTests)
+	if *numTests > len(sortedTests) {
+		nTests := len(sortedTests)
+		numTests = &nTests
 	}
-	return sortedTests[:numTests]
+	return sortedTests[:*numTests]
 }
 
 // getFlowsLookupFuncs creates ReportData specific flow lookup functions to determine the
