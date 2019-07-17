@@ -1,12 +1,5 @@
 {{- $elasticMode := include "tigera-secure-ee.elasticsearch.mode" . }}
 ---
-# This manifest includes the following component versions:
-#   quay.io/prometheus/prometheus:{{.Values.prometheus.tag}}
-#   quay.io/prometheus/alertmanager:{{.Values.alertmanager.tag}}
-{{- if eq $elasticMode "operator" }}
-#   docker.elastic.co/elasticsearch/elasticsearch:{{.Values.elasticsearch.tag}}
-#   {{.Values.kibana.image}}:{{.Values.kibana.tag}}
-{{- end }}
 
 # This ConfigMap contains customizations for Elasticsearch and Curator.
 kind: ConfigMap
@@ -269,7 +262,7 @@ metadata:
   namespace: calico-monitoring
 spec:
   version: {{.Values.alertmanager.tag}}
-  baseImage: quay.io/prometheus/alertmanager
+  baseImage: {{.Values.alertmanager.image}}
   nodeSelector:
     beta.kubernetes.io/os: linux
     # If necessary, uncomment the line below and edit key:value pair with appropriate value for your environment.
@@ -371,7 +364,7 @@ spec:
     - name: cnx-pull-secret
   kibana:
     image: {{.Values.kibana.image}}:{{.Values.kibana.tag}}
-  elastic-search-image: docker.elastic.co/elasticsearch/elasticsearch:{{.Values.elasticsearch.tag}}
+  elastic-search-image: {{.Values.elasticsearch.image}}:{{.Values.elasticsearch.tag}}
   # For production deployments, modify the number of elasticsearch replicas accordingly
   client-node-replicas: 1
   master-node-replicas: 1
