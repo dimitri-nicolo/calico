@@ -1,76 +1,3 @@
-v2.5:
-- title: v2.5.0-pre
-  note: ""
-  components:
-    cnx-manager:
-      version: release-v2.5
-    cnx-manager-proxy:
-      version: release-v2.5
-    cnx-apiserver:
-      version: release-v2.5
-    cnx-queryserver:
-      version: release-v2.5
-    cnx-kube-controllers:
-      version: release-v2.5
-    calicoq:
-      version: release-v2.5
-    typha:
-      version: release-v2.5
-    calicoctl:
-      version: release-v2.5
-    cnx-node:
-      version: release-v2.5
-    calico/cni:
-      version: v3.8.0
-    calico/routereflector:
-      version: v0.6.1
-    calico:
-      version: v3.8.0
-      minor_version: v3.8
-    prometheus-operator:
-      version: v0.29.0
-    prometheus:
-      version: v2.7.1
-    alertmanager:
-      version: v0.16.1
-    prometheus-config-reloader:
-      version: v0.29.0
-    configmap-reload:
-      version: v0.0.1
-    dikastes:
-      version: release-v2.5
-    flexvol:
-      version: v3.8.0
-    fluentd:
-      version: release-v2.5
-    es-proxy:
-      version: release-v2.5
-    elasticsearch-operator:
-      version: 0.3.0
-    kibana:
-      version: release-v2.5
-    elasticsearch:
-      version: 6.4.3
-    cloud-controllers:
-      version: release-v2.5
-    elastic-tsee-installer:
-      version: release-v2.5
-    es-curator:
-      version: release-v2.5
-    intrusion-detection-controller:
-      version: release-v2.5
-    flannel:
-      version: v0.11.0
-    compliance-controller:
-      version: release-v2.5
-    compliance-reporter:
-      version: release-v2.5
-    compliance-snapshotter:
-      version: release-v2.5
-    compliance-server:
-      version: release-v2.5
-    compliance-benchmarker:
-      version: release-v2.5
 v2.4:
 - title: v2.4.2
   helmRelease: 0
@@ -1415,3 +1342,76 @@ master:
       version: master
     compliance-benchmarker:
       version: master
+v2.5:
+- title: v2.5.0-pre
+  note: ""
+  components:
+    cnx-manager:
+      version: release-v2.5
+    cnx-manager-proxy:
+      version: release-v2.5
+    cnx-apiserver:
+      version: release-v2.5
+    cnx-queryserver:
+      version: release-v2.5
+    cnx-kube-controllers:
+      version: release-v2.5
+    calicoq:
+      version: release-v2.5
+    typha:
+      version: release-v2.5
+    calicoctl:
+      version: release-v2.5
+    cnx-node:
+      version: release-v2.5
+    calico/cni:
+      version: v3.8.0
+    calico/routereflector:
+      version: v0.6.1
+    calico:
+      version: v3.8.0
+      minor_version: v3.8
+    prometheus-operator:
+      version: v0.29.0
+    prometheus:
+      version: v2.7.1
+    alertmanager:
+      version: v0.16.1
+    prometheus-config-reloader:
+      version: v0.29.0
+    configmap-reload:
+      version: v0.0.1
+    dikastes:
+      version: release-v2.5
+    flexvol:
+      version: v3.8.0
+    fluentd:
+      version: release-v2.5
+    es-proxy:
+      version: release-v2.5
+    elasticsearch-operator:
+      version: 0.3.0
+    kibana:
+      version: release-v2.5
+    elasticsearch:
+      version: 6.4.3
+    cloud-controllers:
+      version: release-v2.5
+    elastic-tsee-installer:
+      version: release-v2.5
+    es-curator:
+      version: release-v2.5
+    intrusion-detection-controller:
+      version: release-v2.5
+    flannel:
+      version: v0.11.0
+    compliance-controller:
+      version: release-v2.5
+    compliance-reporter:
+      version: release-v2.5
+    compliance-snapshotter:
+      version: release-v2.5
+    compliance-server:
+      version: release-v2.5
+    compliance-benchmarker:
+      version: release-v2.5
