@@ -73,7 +73,7 @@ PUSH_NONMANIFEST_IMAGES=$(filter-out $(PUSH_MANIFEST_IMAGES),$(PUSH_IMAGES))
 # location of docker credentials to push manifests
 DOCKER_CONFIG ?= $(HOME)/.docker/config.json
 
-GO_BUILD_VER?=master
+GO_BUILD_VER?=v0.22
 # For building, we use the go-build image for the *host* architecture, even if the target is different
 # the one for the host should contain all the necessary cross-compilation tools
 # we do not need to use the arch since go-build:v0.15 now is multi-arch manifest
@@ -138,7 +138,7 @@ MY_GID:=$(shell id -g)
 
 # SSH_AUTH_SOCK doesn't work with MacOS but we can optionally volume mount keys 
 ifdef SSH_AUTH_DIR
-	EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_DIR):/home/user/.ssh:ro 
+	EXTRA_DOCKER_ARGS += --tmpfs /home/user -v $(SSH_AUTH_DIR):/home/user/.ssh:ro  
 endif
 
 ifdef SSH_AUTH_SOCK
@@ -368,13 +368,16 @@ endif
 
 # Run fossa.io license checks
 foss-checks:
-	@echo temporarily skipping fossa checks
-	# @echo Running $@...
-	# @docker run --rm -v $(CURDIR)/:/code/es-proxy:rw \
-	#   -e LOCAL_USER_ID=$(MY_UID) \
-	#   -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
-	#   -w /code/es-proxy/ \
-	#   $(CALICO_BUILD) /usr/local/bin/fossa
+	@echo Running $@...
+	@docker run --rm -v $(CURDIR)/:/code/es-proxy:rw \
+	   -e LOCAL_USER_ID=$(MY_UID) \
+	   -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
+	    $(EXTRA_DOCKER_ARGS) \
+	   -w /code/es-proxy/ \
+	   $(CALICO_BUILD)  sh -c '\
+	   git config --global --add url."git@github.com:".insteadOf "https://github.com/"  &&\
+	   /usr/local/bin/fossa'
+
 
 ###############################################################################
 # Utilities
