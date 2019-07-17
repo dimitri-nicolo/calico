@@ -154,6 +154,9 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.LicenseKey":                     schema_libcalico_go_lib_apis_v3_LicenseKey(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.LicenseKeyList":                 schema_libcalico_go_lib_apis_v3_LicenseKeyList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.LicenseKeySpec":                 schema_libcalico_go_lib_apis_v3_LicenseKeySpec(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.ManagedCluster":                 schema_libcalico_go_lib_apis_v3_ManagedCluster(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.ManagedClusterList":             schema_libcalico_go_lib_apis_v3_ManagedClusterList(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.ManagedClusterSpec":             schema_libcalico_go_lib_apis_v3_ManagedClusterSpec(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.NamesAndLabelsMatch":            schema_libcalico_go_lib_apis_v3_NamesAndLabelsMatch(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkPolicy":                  schema_libcalico_go_lib_apis_v3_NetworkPolicy(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkPolicyList":              schema_libcalico_go_lib_apis_v3_NetworkPolicyList(ref),
@@ -5260,7 +5263,7 @@ func schema_libcalico_go_lib_apis_v3_GlobalThreatFeed(ref common.ReferenceCallba
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Specification of the NetworkSet.",
+							Description: "Specification of the GlobalThreatFeed.",
 							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeedSpec"),
 						},
 					},
@@ -5281,7 +5284,7 @@ func schema_libcalico_go_lib_apis_v3_GlobalThreatFeedList(ref common.ReferenceCa
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "GlobalThreatFeedList contains a list of NetworkSet resources.",
+				Description: "GlobalThreatFeedList contains a list of GlobalThreatFeed resources.",
 				Properties: map[string]spec.Schema{
 					"kind": {
 						SchemaProps: spec.SchemaProps{
@@ -6485,6 +6488,112 @@ func schema_libcalico_go_lib_apis_v3_LicenseKeySpec(ref common.ReferenceCallback
 					},
 				},
 				Required: []string{"token"},
+			},
+		},
+		Dependencies: []string{},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_ManagedCluster(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ManagedCluster represents a cluster that is being managed by the multi-cluster management plane. This object configures how Tigera multi-cluster management components communicate with the corresponding cluster.",
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Standard object's metadata.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Specification of the ManagedCluster.",
+							Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ManagedClusterSpec"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.ManagedClusterSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_ManagedClusterList(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ManagedClusterList contains a list of ManagedCluster resources.",
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						},
+					},
+					"items": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ManagedCluster"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"metadata", "items"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/projectcalico/libcalico-go/lib/apis/v3.ManagedCluster", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_ManagedClusterSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ManagedClusterSpec contains the specification of a ManagedCluster resource.",
+				Properties: map[string]spec.Schema{
+					"installationManifest": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Field to store dynamically generated manifest for installing component into the actual application cluster corresponding to this Managed Cluster",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
 			},
 		},
 		Dependencies: []string{},

@@ -172,6 +172,11 @@ func (c client) GlobalReports() GlobalReportInterface {
 	return globalReports{client: c}
 }
 
+// ManagedClusters returns an interface for managing managed cluster resources.
+func (c client) ManagedClusters() ManagedClusterInterface {
+	return managedClusters{client: c}
+}
+
 type poolAccessor struct {
 	client *client
 }
