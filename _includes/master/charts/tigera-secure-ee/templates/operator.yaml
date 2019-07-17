@@ -1,12 +1,4 @@
 {{- $elasticMode := include "tigera-secure-ee.elasticsearch.mode" . }}
-# This manifest includes the following component versions:
-#   quay.io/coreos/prometheus-operator:{{.Values.prometheusOperator.tag}}
-#   quay.io/coreos/prometheus-config-reloader:{{.Values.prometheusConfigReloader.tag}}
-#   quay.io/coreos/configmap-reload:{{.Values.configmapReload.tag}}
-{{- if eq $elasticMode "operator" }}
-#   upmcenterprises/elasticsearch-operator:{{.Values.elasticsearchOperator.tag}}
-{{- end }}
-
 kind: NetworkPolicy
 apiVersion: extensions/v1beta1
 metadata:
@@ -103,10 +95,10 @@ spec:
       serviceAccountName: calico-prometheus-operator
       containers:
       - name: calico-prometheus-operator
-        image: quay.io/coreos/prometheus-operator:{{.Values.prometheusOperator.tag}}
+        image: {{.Values.prometheusOperator.image}}:{{.Values.prometheusOperator.tag}}
         args:
-          - --prometheus-config-reloader=quay.io/coreos/prometheus-config-reloader:{{.Values.prometheusConfigReloader.tag}}
-          - --config-reloader-image=quay.io/coreos/configmap-reload:{{.Values.configmapReload.tag}}
+          - --prometheus-config-reloader={{.Values.prometheusConfigReloader.image}}:{{.Values.prometheusConfigReloader.tag}}
+          - --config-reloader-image={{.Values.configmapReload.image}}:{{.Values.configmapReload.tag}}
           - --config-reloader-memory=25Mi
           - --namespaces={{ .Release.Namespace }}
         resources:
@@ -203,11 +195,11 @@ spec:
         #node.role: infrastructure
       containers:
       - name: operator
-        image: upmcenterprises/elasticsearch-operator:{{.Values.elasticsearchOperator.tag}}
+        image: {{.Values.elasticsearchOperator.image}}:{{.Values.elasticsearchOperator.tag}}
         command: ["/usr/local/bin/elasticsearch-operator"]
         args:
           - -initDaemonsetNamespace=calico-monitoring
-          - -busybox-image=busybox:1.26.2
+          - -busybox-image={{.Values.busybox.image}}:{{.Values.busybox.tag}}
         imagePullPolicy: Always
         env:
         - name: NAMESPACE
