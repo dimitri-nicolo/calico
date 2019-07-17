@@ -41,7 +41,7 @@ func (_ *mockCollector) Start() {}
 
 func (_ *mockCollector) LogDNS(src, dst net.IP, dns *layers.DNS) {}
 
-func (_ *mockCollector) SetDNSLogReporter(reporter *collector.DNSLogReporter) {}
+func (_ *mockCollector) SetDNSLogReporter(reporter collector.DNSLogReporterInterface) {}
 
 var _ = Describe("Constructor test", func() {
 	var configParams *config.Config

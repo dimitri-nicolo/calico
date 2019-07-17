@@ -44,6 +44,8 @@ var (
 	localIp2DNAT = ipStrTo16Byte("192.168.0.2")
 	publicIP1Str = "1.0.0.1"
 	publicIP2Str = "2.0.0.2"
+	netSetIp1Str = "8.8.8.8"
+	netSetIp1    = ipStrTo16Byte(netSetIp1Str)
 )
 
 var (
@@ -164,6 +166,14 @@ var (
 	remoteHostEd1 = &calc.EndpointData{
 		Key:      remoteHostEpKey1,
 		Endpoint: remoteHostEp1,
+	}
+
+	netSetKey1 = model.NetworkSetKey{
+		Name: "dns-servers",
+	}
+	netSet1 = model.NetworkSet{
+		Nets:   []net.IPNet{mustParseNet(netSetIp1Str + "/32")},
+		Labels: map[string]string{"public": "true"},
 	}
 )
 
@@ -305,7 +315,7 @@ var _ = Describe("NFLOG Datasource", func() {
 				nflogMap[policyIDStrToRuleIDParts(rid)] = rid
 			}
 
-			lm := newMockLookupsCache(epMap, nflogMap)
+			lm := newMockLookupsCache(epMap, nflogMap, nil)
 			c = newCollector(lm, rm, conf).(*collector)
 			go c.startStatsCollectionAndReporting()
 		})
@@ -522,7 +532,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			nflogMap[policyIDStrToRuleIDParts(rid)] = rid
 		}
 
-		lm := newMockLookupsCache(epMap, nflogMap)
+		lm := newMockLookupsCache(epMap, nflogMap, nil)
 		c = newCollector(lm, rm, conf).(*collector)
 	})
 	Describe("Test local destination", func() {
@@ -810,7 +820,7 @@ var _ = Describe("Reporting Metrics", func() {
 			nflogMap[policyIDStrToRuleIDParts(rid)] = rid
 		}
 
-		lm := newMockLookupsCache(epMap, nflogMap)
+		lm := newMockLookupsCache(epMap, nflogMap, nil)
 		rm.Start()
 		c = newCollector(lm, rm, conf).(*collector)
 		go c.startStatsCollectionAndReporting()
@@ -891,11 +901,57 @@ var _ = Describe("Reporting Metrics", func() {
 	})
 })
 
+type mockDNSReporter struct {
+	updates []DNSUpdate
+}
+
+func (c *mockDNSReporter) Start() {}
+
+func (c *mockDNSReporter) Log(update DNSUpdate) error {
+	c.updates = append(c.updates, update)
+	return nil
+}
+
+var _ = Describe("DNS logging", func() {
+	var c *collector
+	var r *mockDNSReporter
+	BeforeEach(func() {
+		epMap := map[[16]byte]*calc.EndpointData{
+			localIp1:  localEd1,
+			localIp2:  localEd2,
+			remoteIp1: remoteEd1,
+		}
+		nflogMap := map[[64]byte]*calc.RuleID{}
+		lm := newMockLookupsCache(epMap, nflogMap, map[model.NetworkSetKey]*model.NetworkSet{netSetKey1: &netSet1})
+		c = newCollector(lm, nil, &Config{
+			AgeTimeout:               time.Duration(10) * time.Second,
+			ConntrackPollingInterval: time.Duration(1) * time.Second,
+			InitialReportingDelay:    time.Duration(5) * time.Second,
+			ExportingInterval:        time.Duration(1) * time.Second,
+		}).(*collector)
+		r = &mockDNSReporter{}
+		c.SetDNSLogReporter(r)
+	})
+	It("should get client and server endpoint data", func() {
+		c.LogDNS(net2.ParseIP(netSetIp1Str), net2.ParseIP(localIp1Str), nil)
+		Expect(r.updates).To(HaveLen(1))
+		update := r.updates[0]
+		Expect(update.ClientEP).NotTo(BeNil())
+		Expect(update.ClientEP.Endpoint).To(BeAssignableToTypeOf(&model.WorkloadEndpoint{}))
+		Expect(*(update.ClientEP.Endpoint.(*model.WorkloadEndpoint))).To(Equal(*localWlEp1))
+		Expect(update.ServerEP).NotTo(BeNil())
+		Expect(update.ServerEP.Networkset).To(BeAssignableToTypeOf(&model.NetworkSet{}))
+		Expect(*(update.ServerEP.Networkset.(*model.NetworkSet))).To(Equal(netSet1))
+	})
+})
+
 func newMockLookupsCache(
-	em map[[16]byte]*calc.EndpointData, nm map[[64]byte]*calc.RuleID,
+	em map[[16]byte]*calc.EndpointData,
+	nm map[[64]byte]*calc.RuleID,
+	ns map[model.NetworkSetKey]*model.NetworkSet,
 ) *calc.LookupsCache {
 	l := calc.NewLookupsCache()
-	l.SetMockData(em, nm)
+	l.SetMockData(em, nm, ns)
 	return l
 }
 
@@ -992,7 +1048,7 @@ func BenchmarkNflogPktToStat(b *testing.B) {
 		MaxOriginalSourceIPsIncluded: 5,
 	}
 	rm := NewReporterManager()
-	lm := newMockLookupsCache(epMap, nflogMap)
+	lm := newMockLookupsCache(epMap, nflogMap, nil)
 	c := newCollector(lm, rm, conf).(*collector)
 	b.ResetTimer()
 	b.ReportAllocs()
@@ -1025,7 +1081,7 @@ func BenchmarkApplyStatUpdate(b *testing.B) {
 		MaxOriginalSourceIPsIncluded: 5,
 	}
 	rm := NewReporterManager()
-	lm := newMockLookupsCache(epMap, nflogMap)
+	lm := newMockLookupsCache(epMap, nflogMap, nil)
 	c := newCollector(lm, rm, conf).(*collector)
 	var tuples []Tuple
 	MaxSrcPort := 1000

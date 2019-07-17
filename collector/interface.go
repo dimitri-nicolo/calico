@@ -14,6 +14,6 @@ type Collector interface {
 	Start()
 	ReportingChannel() chan<- *proto.DataplaneStats
 	SubscribeToNflog()
-	SetDNSLogReporter(reporter *DNSLogReporter)
+	SetDNSLogReporter(reporter DNSLogReporterInterface)
 	LogDNS(src, dst net.IP, dns *layers.DNS)
 }

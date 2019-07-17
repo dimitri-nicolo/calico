@@ -70,7 +70,7 @@ type collector struct {
 	dumpLog        *log.Logger
 	reporterMgr    *ReporterManager
 	ds             chan *proto.DataplaneStats
-	dnsLogReporter *DNSLogReporter
+	dnsLogReporter DNSLogReporterInterface
 }
 
 // newCollector instantiates a new collector. The StartDataplaneStatsCollector function is the only public
@@ -582,7 +582,7 @@ func (f *MessageOnlyFormatter) Format(entry *log.Entry) ([]byte, error) {
 }
 
 // DNS activity logging.
-func (c *collector) SetDNSLogReporter(reporter *DNSLogReporter) {
+func (c *collector) SetDNSLogReporter(reporter DNSLogReporterInterface) {
 	c.dnsLogReporter = reporter
 }
 
@@ -594,6 +594,9 @@ func (c *collector) LogDNS(src, dst net.IP, dns *layers.DNS) {
 	// the client.
 	serverEP, _ := c.luc.GetEndpoint(ipTo16Byte(src))
 	clientEP, _ := c.luc.GetEndpoint(ipTo16Byte(dst))
+	if serverEP == nil {
+		serverEP, _ = c.luc.GetNetworkset(ipTo16Byte(src))
+	}
 	log.Debugf("Src %v -> Server %v", src, serverEP)
 	log.Debugf("Dst %v -> Client %v", dst, clientEP)
 	update := DNSUpdate{

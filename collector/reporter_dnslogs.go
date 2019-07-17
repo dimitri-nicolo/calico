@@ -29,6 +29,11 @@ type dnsAggregatorRef struct {
 	d []LogDispatcher
 }
 
+type DNSLogReporterInterface interface {
+	Start()
+	Log(update DNSUpdate) error
+}
+
 type DNSLogReporter struct {
 	dispatchers  map[string]LogDispatcher
 	aggregators  []dnsAggregatorRef
