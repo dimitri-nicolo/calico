@@ -61,11 +61,6 @@ var (
 	// more restrictive naming requirements.
 	nameRegex = regexp.MustCompile("^" + nameSubdomainFmt + "$")
 
-	// Like the above, but also allowing a wildcard (*) instead of each name component.
-	wildNameLabelFmt     = "(" + nameLabelFmt + "|\\*)"
-	wildNameSubdomainFmt = wildNameLabelFmt + "(\\." + wildNameLabelFmt + ")*"
-	wildNameRegex        = regexp.MustCompile("^" + wildNameSubdomainFmt + "$")
-
 	// Tiers must have simple names with no dots, since they appear as sub-components of other
 	// names.
 	tierNameRegex = regexp.MustCompile("^" + nameLabelFmt + "$")
@@ -292,7 +287,19 @@ func validateName(fl validator.FieldLevel) bool {
 func ValidateWildName(fl validator.FieldLevel) bool {
 	s := fl.Field().String()
 	log.Debugf("Validate wild name: %s", s)
-	return wildNameRegex.MatchString(s)
+
+	// Allow the name to contain one wildcard at the end (x.y.*) or at the beginning (*.x.y) or
+	// in the middle (x.*.y).  The implementation in Felix currently supports more general cases
+	// than this - e.g. g*.com and *.thing.* - but allowing those through would make it harder
+	// to optimize the Felix code in future, if we needed to for performance.
+	if strings.HasSuffix(s, ".*") {
+		s = s[:len(s)-2] + ".example"
+	} else if strings.HasPrefix(s, "*.") {
+		s = "example." + s[2:]
+	} else if p := strings.Index(s, ".*."); p >= 0 {
+		s = s[:p] + ".example." + s[p+3:]
+	}
+	return nameRegex.MatchString(s)
 }
 
 func validateContainerID(fl validator.FieldLevel) bool {

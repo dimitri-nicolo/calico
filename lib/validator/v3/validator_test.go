@@ -361,6 +361,17 @@ func init() {
 			},
 			false,
 		),
+		Entry("should reject GlobalNetworkSet with mutiple wildcards in a single name",
+			api.GlobalNetworkSet{
+				ObjectMeta: v1.ObjectMeta{
+					Name: "test",
+				},
+				Spec: api.GlobalNetworkSetSpec{
+					AllowedEgressDomains: []string{"www.*.*.uk"},
+				},
+			},
+			false,
+		),
 		Entry("should accept NetworkSetSpec with CIDRs and IPs",
 			api.NetworkSetSpec{
 				Nets: []string{
