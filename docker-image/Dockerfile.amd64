@@ -28,7 +28,9 @@ RUN echo 'deb     http://ftp.debian.org/debian/    buster main contrib non-free'
 RUN apt-get update && apt-get install -y -t buster \
     ipset \
     iptables \
-    iproute2
+    iproute2 \
+    strongswan \
+    strongswan-swanctl
 
 # Default to the xtables backend of iptables.
 RUN update-alternatives --set iptables /usr/sbin/iptables-legacy
@@ -53,9 +55,7 @@ RUN apt-get update && apt-get install -y \
     procps \
     ca-certificates \
     # Felix FV tests require wget
-    wget \
-    strongswan \
-    strongswan-swanctl
+    wget
 
 ADD felix.cfg /etc/calico/felix.cfg
 ADD calico-felix-wrapper /usr/bin
