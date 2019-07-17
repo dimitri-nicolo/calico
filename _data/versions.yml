@@ -21,7 +21,7 @@ v2.5:
     cnx-node:
       version: release-v2.5
     calico/cni:
-      version: release-v2.5
+      version: v3.8.0
     calico/routereflector:
       version: v0.6.1
     calico:
@@ -40,7 +40,7 @@ v2.5:
     dikastes:
       version: release-v2.5
     flexvol:
-      version: release-v2.5
+      version: v3.8.0
     fluentd:
       version: release-v2.5
     es-proxy:
