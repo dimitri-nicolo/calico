@@ -67,7 +67,23 @@ supported in the Kibana web UI and can also be done with the Elasticsearch API, 
 curl 'http://10.111.1.235:9200/tigera_secure_ee_dns.cluster.20190711/_search?q=qname:example.com&pretty=true'
 ```
 
-or
+Please note that, to try this and the following examples in your own cluster:
+
+-  You should replace the IP address (here `10.111.1.235`) with the cluster IP of the Elasticsearch
+   API service in your cluster (which you can see with `kubectl get svc --all-namespaces -o wide`).
+
+-  You should replace the `cluster` and date parts of the full index name (here
+   `tigera_secure_ee_dns.cluster.20190711`) with the [configured cluster name in your cluster and
+   the date of the data that you want to search
+   through](../configure-elastic#customizing-the-index-names-when-sharing-elasticsearch-clusters).
+
+-  You will need to run curl from a host or pod that is allowed by {{site.prodname}} policy to
+   connect to the Elasticsearch API service.  In our non-production demo setup
+   (`monitor-calico.yaml`), the fluentd pods have such access, so you can use `kubectl get po -n
+   calico-monitoring` to find the name of a fluentd pod and then `kubectl exec <fluentd pod name> -n
+   calico-monitoring -- curl ...` to perform the query.
+
+Note that that query can also be written with a JSON body, like this:
 
 ```shell
 curl 'http://10.111.1.235:9200/tigera_secure_ee_dns.cluster.20190711/_search?pretty=true' \
