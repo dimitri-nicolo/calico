@@ -50,6 +50,14 @@ imageNames:
   compliance-reporter: tigera/compliance-reporter
   compliance-benchmarker: tigera/compliance-benchmarker
   kibana: tigera/kibana
+  prometheusConfigReloader: quay.io/coreos/prometheus-config-reloader
+  configMapReload: quay.io/coreos/configmap-reload
+  alertManager: quay.io/prometheus/alertmanager
+  prometheus: quay.io/prometheus/prometheus
+  elasticsearchOperator: upmcenterprises/elasticsearch-operator
+  elasticsearch: docker.elastic.co/elasticsearch/elasticsearch
+  prometheusOperator: coreos/prometheus-operator
+  busybox: busybox
 
 # List of files to exclude. These files won't get included in the deployed site.
 exclude:
