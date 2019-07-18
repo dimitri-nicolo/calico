@@ -146,10 +146,10 @@ func (ka *k8sauth) subjectAccessReview(resource *authzv1.ResourceAttributes, non
 		Spec: authzv1.SubjectAccessReviewSpec{
 			ResourceAttributes:    resource,
 			NonResourceAttributes: nonResource,
-			User:   user.Username,
-			Groups: user.Groups,
-			Extra:  make(map[string]authzv1.ExtraValue),
-			UID:    user.UID,
+			User:                  user.Username,
+			Groups:                user.Groups,
+			Extra:                 make(map[string]authzv1.ExtraValue),
+			UID:                   user.UID,
 		},
 	}
 	for k, v := range user.Extra {

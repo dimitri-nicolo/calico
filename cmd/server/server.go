@@ -23,7 +23,6 @@ func main() {
 		log.Warnf("Could not parse log level %v, setting log level to %v", logLevelStr, logLevel)
 	}
 	log.SetLevel(logLevel)
-	log.Info("Log level: ", string(log.GetLevel()))
 
 	config, err := server.NewConfigFromEnv()
 	if err != nil {

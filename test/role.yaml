@@ -12,18 +12,6 @@ rules:
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: tigera-access-networkpolicy
-rules:
-- apiGroups: ["projectcalico.org"]
-  resources: ["networkpolicy"]
-  resourceNames: ["*"]
-  verbs: ["get","put","post","delete"]   
-
----
-    
-kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
   name: tigera-elasticsearch-access-flowonly
 rules:
 - apiGroups: ["lma.tigera.io"]

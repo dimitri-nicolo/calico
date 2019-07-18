@@ -4,12 +4,10 @@ import (
 	"net/http"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
-
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
-	authzv1 "k8s.io/api/authorization/v1"
-
+	log "github.com/sirupsen/logrus"
 	"github.com/tigera/compliance/pkg/resources"
+	authzv1 "k8s.io/api/authorization/v1"
 )
 
 type PolicyImpactRbacHelperFactory interface {

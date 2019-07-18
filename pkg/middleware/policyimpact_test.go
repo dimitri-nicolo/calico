@@ -4,26 +4,23 @@ import (
 	"bytes"
 	"encoding/json"
 	"io/ioutil"
+	"net/http"
 	"strings"
-
-	"github.com/tigera/es-proxy/pkg/middleware"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-	log "github.com/sirupsen/logrus"
-
-	"net/http"
+	"github.com/tigera/es-proxy/pkg/middleware"
 )
 
 var _ = Describe("The PolicyImpactRequestProcessor properly modifies requests and extracts params", func() {
 
 	DescribeTable("Extracts the correct parameters from the request",
-		func(originalReqBody string, expectedModifiedBody string, expectedParams string) {
+		func(requestMethod string, originalReqBody string, expectedModifiedBody string, expectedParams string) {
 
 			//build the request
 			b := []byte(originalReqBody)
-			req, err := http.NewRequest(http.MethodPost, "", bytes.NewBuffer(b))
+			req, err := http.NewRequest(requestMethod, "", bytes.NewBuffer(b))
 			Expect(err).NotTo(HaveOccurred())
 
 			//pass it to the function under test
@@ -43,17 +40,15 @@ var _ = Describe("The PolicyImpactRequestProcessor properly modifies requests an
 				Expect(p).To(BeNil())
 			} else {
 				paramsJson := pipParamsToJson(*p)
-
-				log.Info("Params JSON", paramsJson)
-
 				Expect(paramsJson).To(MatchJSON(expectedParams))
 			}
 
 		},
-		Entry("Not a pip request", nullESQuery, nullESQuery, ""),
-		Entry("Calico pip request", pipCalicoRequestWithQuery, nullESQuery, pipCalicoExpectedParams),
-		Entry("Global pip request", pipGlobalRequestWithQuery, nullESQuery, pipGlobalExpectedParams),
-		Entry("K8s pip request", pipK8sRequestWithQuery, nullESQuery, pipK8sExpectedParams),
+		Entry("Get request is not processed", http.MethodGet, pipCalicoRequestWithQuery, pipCalicoRequestWithQuery, ""),
+		Entry("Not a pip request", http.MethodPost, nullESQuery, nullESQuery, ""),
+		Entry("Calico pip request", http.MethodPost, pipCalicoRequestWithQuery, nullESQuery, pipCalicoExpectedParams),
+		Entry("Global pip request", http.MethodPost, pipGlobalRequestWithQuery, nullESQuery, pipGlobalExpectedParams),
+		Entry("K8s pip request", http.MethodPost, pipK8sRequestWithQuery, nullESQuery, pipK8sExpectedParams),
 	)
 
 })

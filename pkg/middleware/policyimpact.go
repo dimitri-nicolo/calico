@@ -97,7 +97,7 @@ func PolicyImpactRequestProcessor(req *http.Request) (p *PolicyImpactParams, e e
 	if !ok {
 		return nil, nil
 	}
-	log.Debug("Policy Impact request found")
+	log.WithField("resourceActionsRaw", resourceActionsRaw).Debug("Policy Impact request found")
 
 	// Delete resourceActions param and rebuild the request body without it.
 	delete(query, "resourceActions")

@@ -8,18 +8,13 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/tigera/es-proxy/pkg/pip/policycalc"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-	v1 "k8s.io/api/networking/v1"
-
 	"github.com/tigera/es-proxy/pkg/pip"
+	"github.com/tigera/es-proxy/pkg/pip/policycalc"
+	v1 "k8s.io/api/networking/v1"
 )
-
-func init() {
-}
 
 var _ = Describe("Test pip response hook modify response", func() {
 
@@ -91,7 +86,7 @@ func (c mockCalc) Action(flow *policycalc.Flow) (processed bool, before, after p
 }
 
 // mockHttpResponse the response object returned here simulates the response
-// comming back from the round trip request to elastic search
+// coming back from the round trip request to elasticsearch
 // the provided string will become the body of the response
 // a dummy context containing a single empty policy change is inserted and
 // ensures that policy impact mutator will make the call to the
