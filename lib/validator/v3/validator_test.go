@@ -361,7 +361,7 @@ func init() {
 			},
 			false,
 		),
-		Entry("should reject GlobalNetworkSet with mutiple wildcards in a single name",
+		Entry("should reject GlobalNetworkSet with multiple wildcards in a single name",
 			api.GlobalNetworkSet{
 				ObjectMeta: v1.ObjectMeta{
 					Name: "test",
