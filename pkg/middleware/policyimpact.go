@@ -5,8 +5,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 
 	"github.com/tigera/es-proxy/pkg/pip"
 
@@ -124,6 +126,10 @@ func checkPolicyActionsPermissions(actions []pip.ResourceChange, req *http.Reque
 	factory := NewStandardPolicyImpactRbacHelperFactory(authz)
 	rbac := factory.NewPolicyImpactRbacHelper(req)
 	for i, _ := range actions {
+		err := validateAction(actions[i].Action)
+		if err != nil {
+			return false, err
+		}
 		ok, err := rbac.CanPreviewPolicyAction(actions[i].Action, actions[i].Resource)
 		if err != nil {
 			log.WithError(err).Debug("Unable to check permissions")
@@ -134,6 +140,18 @@ func checkPolicyActionsPermissions(actions []pip.ResourceChange, req *http.Reque
 		}
 	}
 	return true, nil
+}
+
+func validateAction(action string) error {
+	switch strings.ToLower(action) {
+	case "create":
+		fallthrough
+	case "update":
+		fallthrough
+	case "delete":
+		return nil
+	}
+	return fmt.Errorf("Invalid action: %v", action)
 }
 
 func NewContextWithPolicyImpactActions(ctx context.Context, params PolicyImpactParams) context.Context {

@@ -61,6 +61,10 @@ var _ = Describe("PolicyimpactFV Elasticsearch", func() {
 
 		},
 		Entry("Malformed request errors correctly", authFullCRUDDefault, badBody, http.StatusBadRequest),
+		Entry("Invalid action errors correctly", authReadCreateDefault, bodyInvalidAction, http.StatusBadRequest),
+		Entry("Missing action errors correctly", authReadCreateDefault, bodyMissingAction, http.StatusBadRequest),
+		Entry("Missing policy errors correctly", authReadCreateDefault, bodyMissingPolicy, http.StatusBadRequest),
+		Entry("Policy with no metadata errors correctly", authReadCreateDefault, bodyNoMetaPolicy, http.StatusUnauthorized),
 
 		Entry("Full CRUD user can preview k8s policy create in default", authFullCRUDDefault, bodyCreateDefaultK8s, http.StatusOK),
 		Entry("Full CRUD user can preview k8s policy update in default", authFullCRUDDefault, bodyUpdateDefaultK8s, http.StatusOK),
@@ -155,6 +159,7 @@ func patchVars(b string) string {
 	b = strings.Replace(b, "@@PA_CALICO@@", calicoPolicyActions, -1)
 	b = strings.Replace(b, "@@PA_K8S@@", k8sPolicyActions, -1)
 	b = strings.Replace(b, "@@PA_GLOBAL@@", globalPolicyActions, -1)
+	b = strings.Replace(b, "@@NO_META_POLICY@@", policyNoMetadata, -1)
 	return b
 }
 
@@ -189,6 +194,11 @@ var (
 	bodyCreateDefaultGlobal = modBody(baseBodyGlobal, "create", "")
 	bodyUpdateDefaultGlobal = modBody(baseBodyGlobal, "update", "")
 	bodyDeleteDefaultGlobal = modBody(baseBodyGlobal, "delete", "")
+
+	bodyMissingAction = modBody(strings.Replace(baseBodyCalico, ",\"action\":\"@@ACTION@@\"", "", -1), "", "")
+	bodyInvalidAction = modBody(baseBodyCalico, "foo", "")
+	bodyMissingPolicy = patchVars("{@@QUERY@@,\"resourceActions\":[\"action\":\"create\"}]  ")
+	bodyNoMetaPolicy  = patchVars("{@@QUERY@@,@@NO_META_POLICY@@}")
 )
 
 var (
@@ -201,6 +211,17 @@ var badBody = `{"query":{"bool":{"must":[{"match_all":{}}],"must_not":[],"should
 "resourceActions":[{"resource":{ "apiVersion": "projectcalico.org/v3","kind":"NetworkPolicy", "spec":{ "order":"xyz" } } ,"action":"create"}] }`
 
 var query = `"query":{"bool":{"must":[{"match_all":{}}],"must_not":[],"should":[]}},"from":0,"size":10,"sort":[],"aggs":{}`
+
+var policyNoMetadata = `"resourceActions":[{"resource":{
+	"apiVersion": "projectcalico.org/v3",
+	"kind":"NetworkPolicy",
+	"spec":{
+		"tier":"default",
+		"order":1,
+		"selector":"a|bogus|selector|string"
+	}
+}
+,"action":"create"}]`
 
 var calicoPolicyActions = `"resourceActions":[{"resource":{
 	"apiVersion": "projectcalico.org/v3",
