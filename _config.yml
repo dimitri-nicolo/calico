@@ -56,7 +56,7 @@ imageNames:
   prometheus: quay.io/prometheus/prometheus
   elasticsearchOperator: upmcenterprises/elasticsearch-operator
   elasticsearch: docker.elastic.co/elasticsearch/elasticsearch
-  prometheusOperator: coreos/prometheus-operator
+  prometheusOperator: quay.io/coreos/prometheus-operator
   busybox: busybox
 
 # List of files to exclude. These files won't get included in the deployed site.

@@ -19,13 +19,20 @@ def gen_values_v2_4(versions, imageNames, imageRegistry, chart, forDocs)
       tag: #{versions["intrusion-detection-controller"]}
 
     prometheusOperator:
+      image: #{imageNames["prometheusOperator"]}
       tag: #{versions["prometheus-operator"]}
     prometheusConfigReloader:
+      image: #{imageNames["prometheusConfigReloader"]}
       tag: #{versions["prometheus-config-reloader"]}
     configmapReload:
+      image: #{imageNames["configMapReload"]}
       tag: #{versions["configmap-reload"]}
     elasticsearchOperator:
+      image: #{imageNames["elasticsearchOperator"]}
       tag: #{versions["elasticsearch-operator"]}
+    busybox:
+      image: #{imageNames["busybox"]}
+      tag: 1.26.2
     EOF
 end
 
@@ -248,7 +255,7 @@ def gen_chart_specific_values_v2_4(versions, imageNames, imageRegistry, chart)
           memory: #"1024Mi"
     
     alertmanager:
-      image: #{imageNames["alertmanager"]}
+      image: #{imageNames["alertManager"]}
       tag: #{versions["alertmanager"]}
       # Configuration for the service which exposes the Prometheus alertmanager.
       service:
@@ -285,6 +292,7 @@ def gen_chart_specific_values_v2_4(versions, imageNames, imageRegistry, chart)
         clusterIP:
     
     elasticsearch:
+      image: #{imageNames["elasticsearch"]}
       tag: #{versions["elasticsearch"]}
       # Information for configuring connections to a BYO elasticsearch cluster.
       # Leave all fields blank to deploy a self-hosted elasticsearch instance.

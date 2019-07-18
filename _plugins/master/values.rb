@@ -285,7 +285,7 @@ def gen_chart_specific_values_master(versions, imageNames, imageRegistry, chart,
           memory: #"1024Mi"
     
     alertmanager:
-      image: #{imageNames["alertmanager"]}
+      image: #{imageNames["alertManager"]}
       tag: #{versions["alertmanager"]}
       # Configuration for the service which exposes the Prometheus alertmanager.
       service:
