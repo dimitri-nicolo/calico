@@ -72,7 +72,7 @@
 1. Retag the images with the name of your private registry.
 
    ```bash
-   docker tag docker.elastic.co/elasticsearch/elasticsearch:{{site.data.versions[page.version].first.components["elasticsearch"].version}} <YOUR-REGISTRY>/docker.elastic.co/elasticsearch/elasticsearch:{{site.data.versions[page.version].first.components["elasticsearch"].version}}
+   docker tag docker.elastic.co/elasticsearch/elasticsearch:{{site.data.versions[page.version].first.components["elasticsearch"].version}} <YOUR-REGISTRY>/elasticsearch/elasticsearch:{{site.data.versions[page.version].first.components["elasticsearch"].version}}
    docker tag {{page.registry}}{{site.imageNames["kibana"]}}:{{site.data.versions[page.version].first.components["kibana"].version}} <YOUR-REGISTRY>/tigera/kibana:{{site.data.versions[page.version].first.components["kibana"].version}}
    docker tag {{page.registry}}{{site.imageNames["calicoctl"]}}:{{site.data.versions[page.version].first.components["calicoctl"].version}} <YOUR-REGISTRY>/{{site.imageNames["calicoctl"]}}:{{site.data.versions[page.version].first.components["calicoctl"].version}}
    docker tag {{page.registry}}{{site.imageNames["calicoq"]}}:{{site.data.versions[page.version].first.components["calicoq"].version}} <YOUR-REGISTRY>/{{site.imageNames["calicoq"]}}:{{site.data.versions[page.version].first.components["calicoq"].version}}
@@ -108,7 +108,7 @@
 1. Push the images to your private registry.
 
    ```bash
-   docker push <YOUR-REGISTRY>/docker.elastic.co/elasticsearch/elasticsearch:{{site.data.versions[page.version].first.components["elasticsearch"].version}}
+   docker push <YOUR-REGISTRY>/elasticsearch/elasticsearch:{{site.data.versions[page.version].first.components["elasticsearch"].version}}
    docker push <YOUR-REGISTRY>/tigera/kibana:{{site.data.versions[page.version].first.components["kibana"].version}}
    docker push <YOUR-REGISTRY>/tigera/calicoctl:{{site.data.versions[page.version].first.components["calicoctl"].version}}
    docker push <YOUR-REGISTRY>/tigera/calicoq:{{site.data.versions[page.version].first.components["calicoq"].version}}
