@@ -1,5 +1,5 @@
-hash: cc1b6b68f7462a98aee0a3b52f6aa9f76c6bb14915ad9f6512c94b39c377d0d1
-updated: 2019-07-02T23:43:48.372243955Z
+hash: 3e115f87305bcd3c97943b0f86649136c1c3bd420f247577e177818417bee412
+updated: 2019-07-18T09:37:06.593129-07:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -133,7 +133,7 @@ imports:
 - name: github.com/kelseyhightower/envconfig
   version: 0b417c4ec4a8a82eecc22a1459a504aa55163d61
 - name: github.com/kubernetes/repo-infra
-  version: 1b2ddaf3fb8775a5d0f4e28085cf846f915977a8
+  version: f85734f673056977d8ba04b0386394b684ca2acb
 - name: github.com/leodido/go-urn
   version: a67a23e1c1af3c66528573bb86a87246477277c1
 - name: github.com/mailru/easyjson
@@ -167,7 +167,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: fe10f211caf00641500842123c9066584e9c16c3
+  version: 9bef69d2b882bf782daed36d772fbe048e7662a3
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
@@ -296,7 +296,7 @@ imports:
   subpackages:
   - rate
 - name: golang.org/x/tools
-  version: 44aeb8b7c377f1eed68ac06f687821c6658c65a2
+  version: 128ec6dfca091cc7d4fe6d18d97911f37c95a590
   subpackages:
   - import
 - name: google.golang.org/appengine
@@ -337,7 +337,7 @@ imports:
   - tap
   - transport
 - name: gopkg.in/go-playground/validator.v9
-  version: 884d31b8cad6a1ec877f2400d555924cea03bbea
+  version: 556b9da3c05f2a935bc086fb5a0bb55dd8112d2d
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: gopkg.in/natefinch/lumberjack.v2
