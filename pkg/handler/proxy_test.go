@@ -50,22 +50,6 @@ var _ = Describe("Proxy Handler", func() {
 		return testmux
 	}
 
-	assertsWhenTestHeaderHasBeenAdded := func() {
-		It("should respond with a header inserted by the response modifier", func() {
-			By("Requesting an available resource should include inserted header.")
-			resp := requestResult("/test200")
-			Expect(resp.Header.Get("X-TestResponseModified")).Should(Equal(insertedHeaderValue))
-		})
-	}
-
-	assertsWhenTestHeaderHasNotBeenAdded := func() {
-		It("should respond without a header inserted by the response modifier", func() {
-			By("Requesting an available resource should not include the inserted header.")
-			resp := requestResult("/test200")
-			Expect(resp.Header.Get("X-TestResponseModified")).Should(Equal(""))
-		})
-	}
-
 	assertsWhenTargetAvailable := func(startTLSTarget bool) {
 		It("should forward requests to the target server when the target is available", func() {
 
@@ -101,17 +85,7 @@ var _ = Describe("Proxy Handler", func() {
 		})
 	}
 
-	nilResponseModifier := func(r *http.Response) error {
-		//does not modify the response
-		return nil
-	}
-
-	insertingResponseModifier := func(r *http.Response) error {
-		r.Header.Add("X-TestResponseModified", insertedHeaderValue)
-		return nil
-	}
-
-	setupServers := func(tlsTarget bool, responseModifier handler.ResponseModifier) {
+	setupServers := func(tlsTarget bool) {
 		testmux := getTestMux()
 
 		var tc *tls.Config
@@ -139,25 +113,21 @@ var _ = Describe("Proxy Handler", func() {
 		}
 		proxy := handler.NewProxy(pc)
 
-		proxy.AddResponseModifier(responseModifier)
-
 		proxyServer = httptest.NewServer(proxy)
 	}
 
 	Context("No TLS", func() {
 		BeforeEach(func() {
-			setupServers(false, nilResponseModifier)
+			setupServers(false)
 		})
 		assertsWhenTargetAvailable(false)
-		assertsWhenTestHeaderHasNotBeenAdded()
 		assertsWhenTargetDown(false)
 	})
 	Context("TLS", func() {
 		BeforeEach(func() {
-			setupServers(true, insertingResponseModifier)
+			setupServers(true)
 		})
 		assertsWhenTargetAvailable(true)
-		assertsWhenTestHeaderHasBeenAdded()
 		assertsWhenTargetDown(true)
 	})
 	AfterEach(func() {

@@ -17,10 +17,9 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/tigera/compliance/pkg/datastore"
-
 	"github.com/tigera/es-proxy/pkg/handler"
 	"github.com/tigera/es-proxy/pkg/middleware"
-	pipinit "github.com/tigera/es-proxy/pkg/pip/installer"
+	"github.com/tigera/es-proxy/pkg/pip"
 	"github.com/tigera/es-proxy/pkg/pip/policycalc"
 )
 
@@ -59,19 +58,20 @@ func Start(config *Config) error {
 	//install pip mutator
 	clientset := datastore.MustGetClientSet()
 	policyCalcConfig := policycalc.MustLoadConfig()
-	pipinit.InstallPolicyImpactReponseHook(proxy, policyCalcConfig, clientset)
+
+	p := pip.New(policyCalcConfig, clientset)
 
 	sm.Handle("/version", http.HandlerFunc(handler.VersionHandler))
 
 	switch config.AccessMode {
 	case InsecureMode:
 		sm.Handle("/", middleware.RequestToResource(
-			middleware.PolicyImpactParamsHandler(k8sAuth,
+			middleware.PolicyImpactHandler(k8sAuth, p,
 				k8sAuth.KubernetesAuthnAuthz(proxy))))
 	case ServiceUserMode:
 		sm.Handle("/", middleware.RequestToResource(
 			k8sAuth.KubernetesAuthnAuthz(
-				middleware.PolicyImpactParamsHandler(k8sAuth,
+				middleware.PolicyImpactHandler(k8sAuth, p,
 					middleware.BasicAuthHeaderInjector(config.ElasticUsername, config.ElasticPassword, proxy)))))
 	case PassThroughMode:
 		log.Fatal("PassThroughMode not implemented yet")

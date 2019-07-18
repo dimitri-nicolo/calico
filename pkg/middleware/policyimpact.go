@@ -15,13 +15,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// PolicyImpactParamsHandler is a middleware http handler that moves
-// policy actions request params, "resourceActions:...", from the request body
-// into a custom context value.
-// This custom context value is picked up by the the policy impact mutator after
-// the es proxy request has completed and passed to the primary pip function
-func PolicyImpactParamsHandler(authz K8sAuthInterface, h http.Handler) http.Handler {
-
+// PolicyImpactHandler is a middleware http handler that extracts PIP arguments from the request
+// if they exist and uses them to execute a PIP request. It also checks that the user
+// has the necessary permissions to execute this PIP request.
+func PolicyImpactHandler(authz K8sAuthInterface, p pip.PIP, h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 
 		params, err := PolicyImpactRequestProcessor(req)
@@ -53,8 +50,15 @@ func PolicyImpactParamsHandler(authz K8sAuthInterface, h http.Handler) http.Hand
 			log.Debug("Policy Impact Permissions OK")
 		}
 
+		_, err = p.GetPolicyCalculator(context.TODO(), params.ResourceActions)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusOK)
+		}
+
+		w.Write([]byte("TODO: fill this with flow logs"))
+
 		//add the policy actions to the context
-		h.ServeHTTP(w, req.WithContext(NewContextWithPolicyImpactActions(req.Context(), *params)))
+		h.ServeHTTP(w, req)
 
 	})
 
@@ -152,11 +156,6 @@ func validateAction(action string) error {
 		return nil
 	}
 	return fmt.Errorf("Invalid action: %v", action)
-}
-
-func NewContextWithPolicyImpactActions(ctx context.Context, params PolicyImpactParams) context.Context {
-
-	return context.WithValue(ctx, pip.PolicyImpactContextKey, params.ResourceActions)
 }
 
 type PolicyImpactParams struct {

@@ -63,16 +63,13 @@ func (lt *LoggingTransport) RoundTrip(req *http.Request) (*http.Response, error)
 	return resp, respErr
 }
 
-type ResponseModifier func(*http.Response) error
-
 // Proxy is a HTTP Handler that proxies HTTP requests a target URL.
 // TODO(doublek):
 //  - Check liveness of backend.
 //  - Support multiple backends.
 type Proxy struct {
-	proxy     http.Handler
-	config    *ProxyConfig
-	modifiers []ResponseModifier
+	proxy  http.Handler
+	config *ProxyConfig
 }
 
 func NewProxy(proxyConfig *ProxyConfig) *Proxy {
@@ -113,30 +110,9 @@ func NewProxy(proxyConfig *ProxyConfig) *Proxy {
 		config: proxyConfig,
 	}
 
-	// Init and connect the response modifiers
-	nProxy.modifiers = make([]ResponseModifier, 0)
-	p.ModifyResponse = nProxy.modifyResponse
-
 	return nProxy
 }
 
 func (p *Proxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	p.proxy.ServeHTTP(rw, req)
-}
-
-// Iterates over the defined response modifiers calling each in turn
-func (p *Proxy) modifyResponse(resp *http.Response) error {
-
-	for _, fm := range p.modifiers {
-		err := fm(resp)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// Adds a ResponseModifier to the proxy
-func (p *Proxy) AddResponseModifier(rm ResponseModifier) {
-	p.modifiers = append(p.modifiers, rm)
 }
