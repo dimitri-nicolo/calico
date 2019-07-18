@@ -2,43 +2,9 @@ package policycalc
 
 import (
 	"github.com/kelseyhightower/envconfig"
+
 	log "github.com/sirupsen/logrus"
-
-	corev1 "k8s.io/api/core/v1"
-
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
-
-	"github.com/tigera/compliance/pkg/resources"
 )
-
-// ------
-// This file contains all of the struct definitions that are used as input when instantiating a new policy calculator.
-// ------
-
-// The tiers containing the ordered set of Calico v3 resource types.
-type Tier []resources.Resource
-type Tiers []Tier
-
-// The consistent set of configuration used for calculating policy impact.
-type ResourceData struct {
-	Tiers           Tiers
-	Namespaces      []*corev1.Namespace
-	ServiceAccounts []*corev1.ServiceAccount
-}
-
-// ModifiedResources is essentially a set of resource IDs used to track which resources were modified in the proposed
-// update.
-type ModifiedResources map[v3.ResourceID]bool
-
-// Add adds a resource to the set of modified resources.
-func (m ModifiedResources) Add(r resources.Resource) {
-	m[resources.GetResourceID(r)] = true
-}
-
-// IsModified returns true if the specified resource is one of the resources that was modified in the proposed update.
-func (m ModifiedResources) IsModified(r resources.Resource) bool {
-	return m[resources.GetResourceID(r)]
-}
 
 // Config contain environment based configuration for the policy calculator.
 type Config struct {

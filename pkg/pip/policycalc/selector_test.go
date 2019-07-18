@@ -29,7 +29,7 @@ var _ = Describe("Selector handler tests", func() {
 
 		By("matching endpoint against the two selectors (both successfully)")
 		ed := &FlowEndpointData{
-			Type: EndpointTypeNs,
+			Type: EndpointTypeHep,
 			Labels: map[string]string{
 				"vegetable": "turnip",
 			},

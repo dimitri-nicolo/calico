@@ -7,17 +7,28 @@ import (
 )
 
 var (
+	ProtoICMP    uint8 = 1
+	ProtoIPIP    uint8 = 4
+	ProtoTCP     uint8 = 6
+	ProtoUDP     uint8 = 17
+	ProtoESP     uint8 = 50
+	ProtoICMPv6  uint8 = 58
+	ProtoSCTP    uint8 = 132
+	ProtoUDPLite uint8 = 136
+)
+
+var (
 	// These string values are the superset of FlowLog definitions and v3 API definitions.
 	protovals = map[string]uint8{
-		"icmp":    1,
-		"ipip":    4,
-		"tcp":     6,
-		"udp":     17,
-		"esp":     50,
-		"icmp6":   58,
-		"icmpv6":  58,
-		"sctp":    132,
-		"udplite": 136,
+		"icmp":    ProtoICMP,
+		"ipip":    ProtoIPIP,
+		"tcp":     ProtoTCP,
+		"udp":     ProtoUDP,
+		"esp":     ProtoESP,
+		"icmp6":   ProtoICMPv6,
+		"icmpv6":  ProtoICMPv6,
+		"sctp":    ProtoSCTP,
+		"udplite": ProtoUDPLite,
 	}
 )
 

@@ -31,3 +31,13 @@ func (a ActionFlag) Deny() bool {
 func (a ActionFlag) Allow() bool {
 	return a&ActionFlagsAllowAndDeny == ActionFlagAllow
 }
+
+// ToAction() converts the final calculated action flags to the equivalent Action.
+func (a ActionFlag) ToAction() Action {
+	if a.Deny() {
+		return ActionDeny
+	} else if a.Indeterminate() {
+		return ActionIndeterminate
+	}
+	return ActionAllow
+}

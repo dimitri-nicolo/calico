@@ -28,6 +28,9 @@ const (
 	ActionAllow   = "allow"
 	ActionDeny    = "deny"
 	ActionUnknown = "unknown"
+
+	ReporterSrc = "src"
+	ReporterDst = "dst"
 )
 
 var (
@@ -159,6 +162,7 @@ func flowFromEs(flowData map[string]interface{}, esKey map[string]interface{}) p
 	}
 
 	return policycalc.Flow{
+		Reporter: getReporterField(esKey, "reporter"),
 		Source: policycalc.FlowEndpointData{
 			Type:      getEndpointType(esKey, "source_type"),
 			Namespace: getStringField(esKey, "source_namespace"),
@@ -318,6 +322,19 @@ func getActionField(esKey map[string]interface{}, field string) policycalc.Actio
 		return policycalc.ActionDeny
 	default:
 		return policycalc.ActionUnknown
+	}
+}
+
+// getReporterField extracts the reporter string and converts to the policycalc equivalent.
+func getReporterField(esKey map[string]interface{}, field string) policycalc.ReporterType {
+	a := getStringField(esKey, field)
+	switch a {
+	case ReporterSrc:
+		return policycalc.ReporterTypeSource
+	case ReporterDst:
+		return policycalc.ReporterTypeDestination
+	default:
+		return policycalc.ReporterTypeUnknown
 	}
 }
 

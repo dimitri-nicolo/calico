@@ -78,64 +78,40 @@ type CompiledTiersAndPolicies struct {
 // Flows that are not selected cannot be impacted by the policy updates and therefore do not need to be run through
 // the policy calculator.
 func (c *CompiledTiersAndPolicies) FlowSelectedByModifiedPolicies(flow *Flow) bool {
-	// If source is a Calico managed endpoint then check if flow matches impacted egress policies.
-	if flow.Source.Labels != nil {
+	// Check the flow against egress or ingress modified policies depending on who the reporter for this flow was.
+	if flow.Reporter == ReporterTypeSource {
 		for i := range c.ModifiedEgressPolicies {
 			if c.ModifiedEgressPolicies[i].Applies(flow) == MatchTypeTrue {
 				return true
 			}
 		}
-	}
-
-	// If destination is a Calico managed endpoint then check if flow matches impacted ingress policies.
-	if flow.Destination.Labels != nil {
+	} else if flow.Reporter == ReporterTypeDestination {
 		for i := range c.ModifiedIngressPolicies {
 			if c.ModifiedIngressPolicies[i].Applies(flow) == MatchTypeTrue {
 				return true
 			}
 		}
 	}
+
 	return false
 }
 
 // Action returns the calculated action for a specific flow on this compiled set of tiers and policies.
 func (c *CompiledTiersAndPolicies) Action(flow *Flow) Action {
-	// Assume ingress/egress are allowed by default.
-	ingress, egress := ActionFlagAllow, ActionFlagAllow
-
-	// If source is a Calico managed endpoint then calculate egress action.
-	if flow.Source.isCalicoEndpoint() {
+	// Check egress or ingress action depending on the reporter of the flow.
+	if flow.Reporter == ReporterTypeSource {
 		log.Debug("Checking egress action")
-		egress = c.EgressTiers.Action(flow)
+		return c.EgressTiers.Action(flow, &flow.Source)
 	}
-
-	// If destination is a Calico managed endpoint then calculate ingress action.
-	if flow.Destination.isCalicoEndpoint() {
-		log.Debug("Checking ingress action")
-		ingress = c.IngressTiers.Action(flow)
-	}
-
-	// If either ingress or egress actions are deny then the flow is denied.
-	if ingress.Deny() || egress.Deny() {
-		log.Debug("Flow denied")
-		return ActionDeny
-	}
-
-	// Otherwise, if either of the ingress or egress actions is indeterminate then the flow is indeterminate.
-	if ingress.Indeterminate() || egress.Indeterminate() {
-		log.Debug("Flow indeterminate")
-		return ActionIndeterminate
-	}
-	// If not denied or indeterminate, then the flow must be allowed.
-	log.Debug("Flow allowed")
-	return ActionAllow
+	log.Debug("Checking ingress action")
+	return c.IngressTiers.Action(flow, &flow.Destination)
 }
 
 // CompiledTiers contains a set of compiled tiers and policies for either ingress or egress.
 type CompiledTiers []CompiledTier
 
 // Action returns the calculated action from the tiers for the supplied flow.
-func (ts CompiledTiers) Action(flow *Flow) ActionFlag {
+func (ts CompiledTiers) Action(flow *Flow, ep *FlowEndpointData) Action {
 	var af ActionFlag
 	for i := range ts {
 		// Calculate the set of action flags for the tier.
@@ -143,23 +119,28 @@ func (ts CompiledTiers) Action(flow *Flow) ActionFlag {
 
 		if af.Indeterminate() {
 			// The flags now indicate the action is indeterminate, exit immediately.
-			return af
+			return ActionIndeterminate
 		}
 
 		if af&ActionFlagNextTier == 0 {
 			// The next tier flag was not set, so we are now done. Since the action is not unknown, then we should
 			// have a concrete allow or deny action at this point. Note that whilst the uncertain flag may be set
 			// all of the possible paths have resulted in the same action.
-			return af
+			return af.ToAction()
 		}
 
 		// Clear the pass flag before we skip to the next tier.
 		af &^= ActionFlagNextTier
 	}
 
-	// -- END OF TIERS ALLOW? --
-	af |= ActionFlagAllow
-	return af
+	// -- END OF TIERS --
+	// This is Allow for Pods, and Deny for HEPs.
+	if ep.Type == EndpointTypeWep {
+		af |= ActionFlagAllow
+	} else {
+		af |= ActionFlagDeny
+	}
+	return af.ToAction()
 }
 
 // CompiledTier contains a set of compiled policies for a specific tier, for either ingress _or_ egress.
@@ -179,7 +160,7 @@ func (tier CompiledTier) Action(flow *Flow, af ActionFlag) ActionFlag {
 			log.Debugf("Policy does not apply - skipping")
 			continue
 		}
-		// Track that at least one policy in this tier matched.
+		// Track that at least one policy in this tier matched. This influences end-of-tier behavior (see below).
 		log.Debugf("Policy applies - matches tier")
 		matchedTier = true
 
@@ -193,7 +174,7 @@ func (tier CompiledTier) Action(flow *Flow, af ActionFlag) ActionFlag {
 		}
 	}
 
-	// -- END OF TIER DROP --
+	// -- END OF TIER --
 	if matchedTier {
 		// We matched at least one policy in the tier, but matched no rules. Set to deny.
 		log.Debug("Hit end of tier drop")

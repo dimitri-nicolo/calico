@@ -99,10 +99,21 @@ func (m *MatcherFactory) ICMP(icmp *v3.ICMPFields) FlowMatcher {
 		return nil
 	}
 
-	// Flows will not contain ICMP data.
+	// Flows will not contain ICMP data, the best we can do is check the protocol and set match type to false if not
+	// ICMP.
 	return func(flow *Flow) MatchType {
-		log.Debugf("ICMP: %s (unknown)", MatchTypeUncertain)
-		return MatchTypeUncertain
+		if flow.Proto == nil {
+			log.Debugf("ICMP: %s (protocol unknown)", MatchTypeUncertain)
+			return MatchTypeUncertain
+		}
+		switch *flow.Proto {
+		case ProtoICMP, ProtoICMPv6:
+			log.Debugf("ICMP: %s (ICMP parameters unknown)", MatchTypeUncertain)
+			return MatchTypeUncertain
+		default:
+			log.Debugf("ICMP: %s (protocol is not ICMP or ICMPv6)", MatchTypeFalse)
+			return MatchTypeFalse
+		}
 	}
 }
 

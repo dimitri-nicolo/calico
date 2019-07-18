@@ -55,7 +55,29 @@ func (e EndpointType) String() string {
 	}
 }
 
+type ReporterType byte
+
+const (
+	ReporterTypeUnknown ReporterType = iota
+	ReporterTypeSource
+	ReporterTypeDestination
+)
+
+func (r ReporterType) String() string {
+	switch r {
+	case ReporterTypeSource:
+		return "ReportedBySource"
+	case ReporterTypeDestination:
+		return "ReportedByDestination"
+	default:
+		return "-"
+	}
+}
+
 type Flow struct {
+	// Reporter
+	Reporter ReporterType
+
 	// Source endpoint data for the flow.
 	Source FlowEndpointData
 
@@ -64,9 +86,6 @@ type Flow struct {
 
 	// Original action for the flow.
 	Action Action
-
-	// The policies originally applied to the flow.
-	Policies []FlowPolicy
 
 	// The protocol of the flow. Nil if unknown.
 	Proto *uint8
@@ -106,16 +125,11 @@ type FlowEndpointData struct {
 // isCalicoEndpoint returns if the endpoint is managed by Calico.
 func (e *FlowEndpointData) isCalicoEndpoint() bool {
 	switch e.Type {
-	case EndpointTypeHep, EndpointTypeWep, EndpointTypeNs:
+	// Only HEPs and WEPs are calico-managed endpoints.  NetworkSets are handled by Calico, but are not endpoints in
+	// the sense that policy is not applied directly to them.
+	case EndpointTypeHep, EndpointTypeWep:
 		return true
 	default:
 		return false
 	}
-}
-
-type FlowPolicy struct {
-	Order  int64
-	Tier   string
-	Name   string
-	Action string
 }
