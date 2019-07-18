@@ -32,6 +32,8 @@ type Interface interface {
 	IPPools() IPPoolInformer
 	// LicenseKeys returns a LicenseKeyInformer.
 	LicenseKeys() LicenseKeyInformer
+	// ManagedClusters returns a ManagedClusterInformer.
+	ManagedClusters() ManagedClusterInformer
 	// NetworkPolicies returns a NetworkPolicyInformer.
 	NetworkPolicies() NetworkPolicyInformer
 	// Profiles returns a ProfileInformer.
@@ -106,6 +108,11 @@ func (v *version) IPPools() IPPoolInformer {
 // LicenseKeys returns a LicenseKeyInformer.
 func (v *version) LicenseKeys() LicenseKeyInformer {
 	return &licenseKeyInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// ManagedClusters returns a ManagedClusterInformer.
+func (v *version) ManagedClusters() ManagedClusterInformer {
+	return &managedClusterInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // NetworkPolicies returns a NetworkPolicyInformer.

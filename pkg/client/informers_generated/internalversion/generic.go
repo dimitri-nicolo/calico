@@ -61,6 +61,8 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Projectcalico().InternalVersion().IPPools().Informer()}, nil
 	case projectcalico.SchemeGroupVersion.WithResource("licensekeys"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Projectcalico().InternalVersion().LicenseKeys().Informer()}, nil
+	case projectcalico.SchemeGroupVersion.WithResource("managedclusters"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Projectcalico().InternalVersion().ManagedClusters().Informer()}, nil
 	case projectcalico.SchemeGroupVersion.WithResource("networkpolicies"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Projectcalico().InternalVersion().NetworkPolicies().Informer()}, nil
 	case projectcalico.SchemeGroupVersion.WithResource("profiles"):

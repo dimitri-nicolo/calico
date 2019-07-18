@@ -35,6 +35,7 @@ import (
 	calicohostendpoint "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/hostendpoint"
 	calicoippool "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/ippool"
 	calicolicensekey "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/licensekey"
+	calicomanagedcluster "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/managedcluster"
 	calicopolicy "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/networkpolicy"
 	calicoprofile "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/profile"
 	calicoremoteclusterconfig "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/remoteclusterconfig"
@@ -371,6 +372,27 @@ func (p RESTStorageProvider) NewV3Storage(
 		authorizer,
 	)
 
+	managedClusterRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("managedclusters"))
+	if err != nil {
+		return nil, err
+	}
+	managedClusterOpts := server.NewOptions(
+		etcd.Options{
+			RESTOptions:   managedClusterRESTOptions,
+			Capacity:      1000,
+			ObjectType:    calicomanagedcluster.EmptyObject(),
+			ScopeStrategy: calicomanagedcluster.NewStrategy(scheme),
+			NewListFunc:   calicomanagedcluster.NewList,
+			GetAttrsFunc:  calicomanagedcluster.GetAttrs,
+			Trigger:       storage.NoTriggerPublisher,
+		},
+		calicostorage.Options{
+			RESTOptions: managedClusterRESTOptions,
+		},
+		p.StorageType,
+		authorizer,
+	)
+
 	storage := map[string]rest.Storage{}
 	storage["networkpolicies"] = calicopolicy.NewREST(scheme, *policyOpts)
 	storage["tiers"] = calicotier.NewREST(scheme, *tierOpts)
@@ -395,6 +417,8 @@ func (p RESTStorageProvider) NewV3Storage(
 	storage["profiles"] = calicoprofile.NewREST(scheme, *profileOpts)
 	storage["remoteclusterconfigurations"] = calicoremoteclusterconfig.NewREST(scheme, *remoteclusterconfigOpts)
 	storage["felixconfigurations"] = calicofelixconfig.NewREST(scheme, *felixConfigOpts)
+
+	storage["managedclusters"] = calicomanagedcluster.NewREST(scheme, *managedClusterOpts)
 
 	return storage, nil
 }

@@ -43,6 +43,8 @@ func NewStorage(opts Options) (storage.Interface, factory.DestroyFunc) {
 		return NewRemoteClusterConfigurationStorage(opts)
 	case "projectcalico.org/felixconfigurations":
 		return NewFelixConfigurationStorage(opts)
+	case "projectcalico.org/managedclusters":
+		return NewManagedClusterStorage(opts)
 	default:
 		glog.Fatalf("Unable to create storage for resource %v", opts.RESTOptions.ResourcePrefix)
 		return nil, nil

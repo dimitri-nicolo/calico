@@ -26,6 +26,8 @@ type IPPoolExpansion interface{}
 
 type LicenseKeyExpansion interface{}
 
+type ManagedClusterExpansion interface{}
+
 type NetworkPolicyExpansion interface{}
 
 type ProfileExpansion interface{}

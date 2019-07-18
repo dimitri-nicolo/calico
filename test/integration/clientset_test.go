@@ -512,7 +512,7 @@ func TestLicenseKeyClient(t *testing.T) {
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &projectcalico.GlobalNetworkSet{}
+				return &projectcalico.LicenseKey{}
 			})
 			defer shutdownServer()
 			if err := testLicenseKeyClient(client, name); err != nil {
@@ -1619,6 +1619,135 @@ func testFelixConfigurationClient(client calicoclient.Interface, name string) er
 	err = felixConfigClient.Delete(name, &metav1.DeleteOptions{})
 	if nil != err {
 		return fmt.Errorf("felixConfig should be deleted (%s)", err)
+	}
+
+	return nil
+}
+
+// TestManagedClusterClient exercises the ManagedCluster client.
+func TestManagedClusterClient(t *testing.T) {
+	const name = "test-managedcluster"
+	rootTestFunc := func() func(t *testing.T) {
+		return func(t *testing.T) {
+			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+				return &projectcalico.ManagedCluster{}
+			})
+			defer shutdownServer()
+			if err := testManagedClusterClient(client, name); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	if !t.Run(name, rootTestFunc()) {
+		t.Errorf("test-managedcluster test failed")
+	}
+}
+
+func testManagedClusterClient(client calicoclient.Interface, name string) error {
+	managedClusterClient := client.ProjectcalicoV3().ManagedClusters()
+	managedCluster := &v3.ManagedCluster{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Spec: calico.ManagedClusterSpec{
+			InstallationManifest: "manifest v1",
+		},
+	}
+
+	// start from scratch
+	managedClusters, err := managedClusterClient.List(metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing managedClusters (%s)", err)
+	}
+	if managedClusters.Items == nil {
+		return fmt.Errorf("Items field should not be set to nil")
+	}
+
+	// ------------------------------------------------------------------------------------------
+	managedClusterServer, err := managedClusterClient.Create(managedCluster)
+	if nil != err {
+		return fmt.Errorf("error creating the managedCluster '%v' (%v)", managedCluster, err)
+	}
+	if name != managedClusterServer.Name {
+		return fmt.Errorf("didn't get the same managedCluster back from the server \n%+v\n%+v", managedCluster, managedClusterServer)
+	}
+
+	// ------------------------------------------------------------------------------------------
+	managedClusters, err = managedClusterClient.List(metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing managedClusters (%s)", err)
+	}
+	if len(managedClusters.Items) != 1 {
+		return fmt.Errorf("expected 1 managedCluster got %d", len(managedClusters.Items))
+	}
+
+	// ------------------------------------------------------------------------------------------
+	managedClusterServer, err = managedClusterClient.Get(name, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("error getting managedCluster %s (%s)", name, err)
+	}
+	if name != managedClusterServer.Name &&
+		managedCluster.ResourceVersion == managedClusterServer.ResourceVersion {
+		return fmt.Errorf("didn't get the same managedCluster back from the server \n%+v\n%+v", managedCluster, managedClusterServer)
+	}
+
+	// ------------------------------------------------------------------------------------------
+	managedClusterUpdate := managedClusterServer.DeepCopy()
+	managedClusterUpdate.Spec.InstallationManifest = "manifest v2"
+	managedClusterServer, err = managedClusterClient.Update(managedClusterUpdate)
+	if err != nil {
+		return fmt.Errorf("error updating managedCluster %s (%s)", name, err)
+	}
+	if managedClusterServer.Spec.InstallationManifest != managedClusterUpdate.Spec.InstallationManifest {
+		return errors.New("didn't update spec.installationManifest")
+	}
+
+	// ------------------------------------------------------------------------------------------
+	err = managedClusterClient.Delete(name, &metav1.DeleteOptions{})
+	if nil != err {
+		return fmt.Errorf("managedCluster should be deleted (%s)", err)
+	}
+
+	// Test watch
+	w, err := client.ProjectcalicoV3().ManagedClusters().Watch(v1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error watching ManagedClusters (%s)", err)
+	}
+	var events []watch.Event
+	done := sync.WaitGroup{}
+	done.Add(1)
+	timeout := time.After(500 * time.Millisecond)
+	var timeoutErr error
+	// watch for 2 events
+	go func() {
+		defer done.Done()
+		for i := 0; i < 2; i++ {
+			select {
+			case e := <-w.ResultChan():
+				events = append(events, e)
+			case <-timeout:
+				timeoutErr = fmt.Errorf("timed out wating for events")
+				return
+			}
+		}
+		return
+	}()
+
+	// Create two ManagedClusters
+	for i := 0; i < 2; i++ {
+		mc := &v3.ManagedCluster{
+			ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("mc%d", i)},
+		}
+		_, err = managedClusterClient.Create(mc)
+		if err != nil {
+			return fmt.Errorf("error creating the managedCluster '%v' (%v)", mc, err)
+		}
+	}
+	done.Wait()
+	if timeoutErr != nil {
+		return timeoutErr
+	}
+	if len(events) != 2 {
+		return fmt.Errorf("expected 2 watch events got %d", len(events))
 	}
 
 	return nil
