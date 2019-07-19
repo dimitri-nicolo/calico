@@ -7,8 +7,11 @@ Note: [How to Manage Multiple Terraforms](#how-to-manage-multiple-terraforms).
 
 1. install a [calico ready cluster](https://github.com/tigera/calico-ready-clusters)
 1. [install vanilla TSEE](https://tigera.atlassian.net/wiki/spaces/ENG/pages/46759954/Install+CNX+with+CRC+calico-ready-clusters)
-1. run `kubectl get nodes -o wide` and grab the INTERNAL-IP of _any_ node
-1. from this repo, run `make manifests BRANCH_NAME=master -B`
+1. voltron needs to be accessible from where the guardians run; you need an IP:PORT combination with appropriate firewall rules that
+reaches voltron:
+   - in tigera-dev GCP, with all clusters in the same account, run `kubectl get nodes -o wide` and grab the INTERNAL-IP of _any_ node  
+   (consider your firewall rules if that doesn't work)
+1. from this repo, run `make manifests BRANCH_NAME=master`
 1. edit `manifests/voltron.yaml`, change `cnx-voltron.public-ip` to the node IP, keep the port to `30449`
 1. scp the following files, from this repo, to the master node:  
    - install-scripts/post-cnx.bash
