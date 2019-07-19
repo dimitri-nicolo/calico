@@ -12,7 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/x-cray/logrus-prefixed-formatter"
 
-	esprox "github.com/tigera/es-proxy-image/pkg/middleware"
+	esprox "github.com/tigera/es-proxy/pkg/middleware"
 
 	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/datastore"
