@@ -60,13 +60,13 @@ data:
   tigera.elasticsearch.dns-filtering: "false"
   # DNS filtering additional fluentd configuration.  This field is only used when
   # tigera.elasticsearch-dns-filtering is set to "true".  The example here filters
-  # out DNS lookups from the dev namespace.
+  # out DNS lookups for cluster-internal domain names.
   tigera.elasticsearch.dns-filters.conf: |-
     <filter dns>
       @type grep
       <exclude>
-        key client_namespace
-        pattern dev
+        key qname
+        pattern /\.cluster\.local$/
       </exclude>
     </filter>
 {{- if eq $elasticMode "external" }}

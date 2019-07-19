@@ -36,9 +36,9 @@ that the config file is properly indented in the ConfigMap.
 
 ### Example 1: filter out cluster-internal lookups
 
-This example filters out all flows whose source or destination namespace is "dev".
-Additional namespaces could be filtered by adjusting the regular expression "pattern"s,
-or by adding additional `exclude` blocks.
+This example filters out lookups for domain names ending with ".cluster.local".  More
+logs could be filtered by adjusting the regular expression "pattern", or by adding
+additional `exclude` blocks.
 
 ```
 <filter dns>
