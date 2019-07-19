@@ -296,6 +296,12 @@ var _ = Describe("Integration Tests", func() {
 			Expect(resp.StatusCode).To(Equal(400))
 		})
 
+		It("Should send a request to the health endpoint", func() {
+			resp, err := http.Get("http://localhost:9080/health")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.StatusCode).To(Equal(200))
+		})
+
 		It("Should not allow Jane to access network policies", func() {
 			req, err := http.NewRequest("GET", "https://localhost:5555/apis/networking.k8s.io/v1/networkpolicies", nil)
 			Expect(err).NotTo(HaveOccurred())

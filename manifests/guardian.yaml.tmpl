@@ -145,20 +145,18 @@ spec:
             - mountPath: /certs/
               name: cnx-guardian-certs
               readOnly: true
-#          livenessProbe:
-#            httpGet:
-#              path: /health
-#              port: 9443
-#              scheme: HTTPS
-#            initialDelaySeconds: 90
-#            periodSeconds: 10
-#          readinessProbe:
-#            httpGet:
-#              path: /health
-#              port: 9443
-#              scheme: HTTPS
-#            initialDelaySeconds: 10
-#            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 9080
+            initialDelaySeconds: 90
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 9080
+            initialDelaySeconds: 10
+            periodSeconds: 5
       volumes:
         - name: cnx-guardian-certs
           secret:

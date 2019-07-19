@@ -68,6 +68,12 @@ func main() {
 		log.Fatalf("Failed to fill targets: %s", err)
 	}
 
+	health, err := client.NewHealth()
+
+	if err != nil {
+		log.Fatalf("Failed to create health server: %s", err)
+	}
+
 	client, err := client.New(
 		cfg.VoltronURL,
 		client.WithKeepAliveSettings(cfg.KeepAliveEnable, cfg.KeepAliveInterval),
@@ -78,6 +84,13 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to create server: %s", err)
 	}
+
+	go func() {
+		// Health checks start meaning everything before has worked.
+		if err = health.ListenAndServeHTTP(); err != nil {
+			log.Fatalf("Health exited with error: %s", err)
+		}
+	}()
 
 	if err := client.ServeTunnelHTTP(); err != nil {
 		log.Fatalf("Tunnel exited with error: %s", err)
