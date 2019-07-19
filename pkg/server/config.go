@@ -29,6 +29,10 @@ const (
 	elasticInsecureSkipVerifyEnv = "ELASTIC_INSECURE_SKIP_VERIFY"
 	elasticUsernameEnv           = "ELASTIC_USERNAME"
 	elasticPasswordEnv           = "ELASTIC_PASSWORD"
+	elasticIndexSuffixEnv        = "ELASTIC_INDEX_SUFFIX"
+	elasticConnRetriesEnv        = "ELASTIC_CONN_RETRIES"
+	elasticConnRetryIntervalEnv  = "ELASTIC_CONN_RETRY_INTERVAL"
+	elasticEnableTraceEnv        = "ELASTIC_ENABLE_TRACE"
 )
 
 const (
@@ -36,6 +40,11 @@ const (
 	defaultConnectTimeout  = 30 * time.Second
 	defaultKeepAlivePeriod = 30 * time.Second
 	defaultIdleConnTimeout = 90 * time.Second
+
+	defaultIndexSuffix       = "cluster"
+	defaultConnRetryInterval = 500 * time.Millisecond
+	defaultConnRetries       = 30
+	defaultEnableTrace       = false
 )
 
 type ElasticAccessMode string
@@ -98,6 +107,11 @@ type Config struct {
 	ElasticUsername string
 	ElasticPassword string
 
+	ElasticIndexSuffix       string
+	ElasticConnRetries       int
+	ElasticConnRetryInterval time.Duration
+	ElasticEnableTrace       bool
+
 	// Various proxy timeouts. Used when creating a http.Transport RoundTripper.
 	ProxyConnectTimeout  time.Duration
 	ProxyKeepAlivePeriod time.Duration
@@ -132,6 +146,20 @@ func NewConfigFromEnv() (*Config, error) {
 	elasticUsername := getEnv(elasticUsernameEnv)
 	elasticPassword := getEnv(elasticPasswordEnv)
 
+	elasticIndexSuffix := getEnvOrDefaultString(elasticIndexSuffixEnv, defaultIndexSuffix)
+	elasticConnRetries, err := getEnvOrDefaultInt(elasticConnRetriesEnv, defaultConnRetries)
+	if err != nil {
+		return nil, err
+	}
+	elasticConnRetryInterval, err := getEnvOrDefaultDuration(elasticConnRetryIntervalEnv, defaultConnRetryInterval)
+	if err != nil {
+		return nil, err
+	}
+	elasticEnableTrace, err := getEnvOrDefaultBool(elasticEnableTraceEnv, defaultEnableTrace)
+	if err != nil {
+		elasticEnableTrace = false
+	}
+
 	connectTimeout, err := getEnvOrDefaultDuration("PROXY_CONNECT_TIMEOUT", defaultConnectTimeout)
 	if err != nil {
 		return nil, err
@@ -157,6 +185,10 @@ func NewConfigFromEnv() (*Config, error) {
 		ElasticInsecureSkipVerify: elasticInsecureSkipVerify,
 		ElasticUsername:           elasticUsername,
 		ElasticPassword:           elasticPassword,
+		ElasticIndexSuffix:        elasticIndexSuffix,
+		ElasticConnRetryInterval:  elasticConnRetryInterval,
+		ElasticEnableTrace:        elasticEnableTrace,
+		ElasticConnRetries:        int(elasticConnRetries),
 		ProxyConnectTimeout:       connectTimeout,
 		ProxyKeepAlivePeriod:      keepAlivePeriod,
 		ProxyIdleConnTimeout:      idleConnTimeout,
@@ -181,6 +213,27 @@ func getEnvOrDefaultDuration(key string, defaultValue time.Duration) (time.Durat
 	} else {
 		return time.ParseDuration(val)
 	}
+}
+
+func getEnvOrDefaultInt(key string, defaultValue int) (int, error) {
+	val := getEnv(key)
+	if val == "" {
+		return defaultValue, nil
+	}
+
+	i, err := strconv.ParseInt(getEnv(val), 10, 0)
+	if err != nil {
+		return 0, err
+	}
+
+	return int(i), nil
+}
+
+func getEnvOrDefaultBool(key string, defaultValue bool) (bool, error) {
+	if val := getEnv(key); val == "" {
+		return defaultValue, nil
+	}
+	return strconv.ParseBool(key)
 }
 
 func parseAccessMode(am string) (ElasticAccessMode, error) {

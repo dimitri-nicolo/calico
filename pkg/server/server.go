@@ -17,6 +17,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/tigera/compliance/pkg/datastore"
+	"github.com/tigera/compliance/pkg/elastic"
 	"github.com/tigera/es-proxy/pkg/handler"
 	"github.com/tigera/es-proxy/pkg/middleware"
 	"github.com/tigera/es-proxy/pkg/pip"
@@ -61,17 +62,35 @@ func Start(config *Config) error {
 
 	p := pip.New(policyCalcConfig, clientset)
 
+	// initialize the esclient for pip
+	h := &http.Client{}
+	if config.ElasticCAPath != "" {
+		h.Transport = &http.Transport{TLSClientConfig: &tls.Config{RootCAs: rootCAs}}
+	}
+	esClient, err := elastic.New(h,
+		config.ElasticURL,
+		config.ElasticUsername,
+		config.ElasticPassword,
+		config.ElasticIndexSuffix,
+		config.ElasticConnRetries,
+		config.ElasticConnRetryInterval,
+		config.ElasticEnableTrace,
+	)
+	if err != nil {
+		return err
+	}
+
 	sm.Handle("/version", http.HandlerFunc(handler.VersionHandler))
 
 	switch config.AccessMode {
 	case InsecureMode:
 		sm.Handle("/", middleware.RequestToResource(
-			middleware.PolicyImpactHandler(k8sAuth, p,
+			middleware.PolicyImpactHandler(k8sAuth, p, esClient,
 				k8sAuth.KubernetesAuthnAuthz(proxy))))
 	case ServiceUserMode:
 		sm.Handle("/", middleware.RequestToResource(
 			k8sAuth.KubernetesAuthnAuthz(
-				middleware.PolicyImpactHandler(k8sAuth, p,
+				middleware.PolicyImpactHandler(k8sAuth, p, esClient,
 					middleware.BasicAuthHeaderInjector(config.ElasticUsername, config.ElasticPassword, proxy)))))
 	case PassThroughMode:
 		log.Fatal("PassThroughMode not implemented yet")

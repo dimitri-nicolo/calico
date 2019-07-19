@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/tigera/compliance/pkg/elastic"
+
 	"github.com/tigera/es-proxy/pkg/pip"
 
 	log "github.com/sirupsen/logrus"
@@ -18,7 +20,7 @@ import (
 // PolicyImpactHandler is a middleware http handler that extracts PIP arguments from the request
 // if they exist and uses them to execute a PIP request. It also checks that the user
 // has the necessary permissions to execute this PIP request.
-func PolicyImpactHandler(authz K8sAuthInterface, p pip.PIP, h http.Handler) http.Handler {
+func PolicyImpactHandler(authz K8sAuthInterface, p pip.PIP, esClient elastic.Client, h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 
 		params, err := PolicyImpactRequestProcessor(req)
