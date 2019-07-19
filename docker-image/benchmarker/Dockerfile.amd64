@@ -1,8 +1,8 @@
 FROM debian
 WORKDIR /opt
 RUN apt-get update && apt-get install -y curl tar procps
-RUN curl -OL https://github.com/aquasecurity/kube-bench/releases/download/v0.0.29/kube-bench_0.0.29_linux_amd64.tar.gz 
-RUN tar -xf kube-bench_0.0.29_linux_amd64.tar.gz
+RUN curl -OL https://github.com/aquasecurity/kube-bench/releases/download/v0.0.33/kube-bench_0.0.33_linux_amd64.tar.gz 
+RUN tar -xf kube-bench_0.0.33_linux_amd64.tar.gz
 RUN mv kube-bench /bin
 COPY cfg cfg
 
