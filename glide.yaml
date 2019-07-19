@@ -29,7 +29,7 @@ import:
   version: 48f513106b849dd5da67b25acd93231d0831594a
   repo: git@github.com:tigera/calico-k8sapiserver.git
   vcs: git
-- package: github.com/tigera/es-proxy-image
+- package: github.com/tigera/es-proxy
   version: ad8d517e8d6431c9429be735766e7b971efdad80
   repo: git@github.com:tigera/es-proxy-image
   vcs: git

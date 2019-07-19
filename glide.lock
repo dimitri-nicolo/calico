@@ -1,5 +1,5 @@
-hash: e82c56a162427379af554e7d079a6b85e4324ae3dbe0654ed0210c174e1f5889
-updated: 2019-06-27T13:37:21.052191-07:00
+hash: 16e7921eeafbbf955ce1543aa702058ae405b285d9d8d41114bfa80bcc061be1
+updated: 2019-07-19T14:59:32.247142242-07:00
 imports:
 - name: github.com/aquasecurity/kube-bench
   version: 331d64b2946f2c775e7b6aba591aa2ed457e858e
@@ -228,9 +228,10 @@ imports:
   - lib/validator/v3
   - lib/watch
 - name: github.com/prometheus/client_golang
-  version: e7e903064f5e9eb5da98208bae10b475d4db0f8c
+  version: 505eaef017263e299324067d40ca2c48f6a2cf50
   subpackages:
   - prometheus
+  - prometheus/internal
 - name: github.com/prometheus/client_model
   version: fa8ad6fec33561be4280a8f0514318c79d7f6cb6
   subpackages:
@@ -271,7 +272,7 @@ imports:
   - pkg/client/clientset_generated/clientset/scheme
   - pkg/client/clientset_generated/clientset/typed/projectcalico/v3
   - pkg/client/clientset_generated/clientset/typed/projectcalico/v3/fake
-- name: github.com/tigera/es-proxy-image
+- name: github.com/tigera/es-proxy
   version: ad8d517e8d6431c9429be735766e7b971efdad80
   repo: git@github.com:tigera/es-proxy-image
   vcs: git

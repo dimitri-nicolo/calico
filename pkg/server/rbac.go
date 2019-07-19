@@ -7,7 +7,7 @@ import (
 
 	authzv1 "k8s.io/api/authorization/v1"
 
-	esprox "github.com/tigera/es-proxy-image/pkg/middleware"
+	esprox "github.com/tigera/es-proxy/pkg/middleware"
 )
 
 type ReportRbacHelper interface {
