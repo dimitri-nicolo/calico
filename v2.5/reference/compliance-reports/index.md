@@ -6,6 +6,7 @@ The {{ site.prodname }} compliance reporting feature provides the following comp
 -  [Inventory](./inventory)
 -  [Network Access](./network-access)
 -  [Policy Audit](./policy-audit)
+-  [CIS Benchmark](./cis-benchmark)
 
 Create a [`GlobalReport`](../resources/globalreport) resource to automatically schedule report generation, and  specify the report scope (resources to include in the report).
 

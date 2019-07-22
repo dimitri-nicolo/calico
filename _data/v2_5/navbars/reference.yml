@@ -134,6 +134,8 @@ toc:
       path: /reference/compliance-reports/network-access
     - title: Policy Audit Report
       path: /reference/compliance-reports/policy-audit
+    - title: CIS Benchmark
+      path: /reference/compliance-reports/cis-benchmark
 - title: Tigera Secure EE CNI plugins
   path: /reference/cni-plugin/configuration
 - title: Tigera Secure EE Kubernetes controllers

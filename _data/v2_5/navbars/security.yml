@@ -120,8 +120,12 @@ toc:
       path: /security/threat-detection-and-prevention/anomaly-detection/customizing
   - title: Trace and block suspicious IPs
     path: /security/threat-detection-and-prevention/suspicious-IPs
-- title: Tigera Secure EE compliance reports
-  path: /security/compliance-reports
+- title: Compliance reports
+  section:
+  - title: Inventory auditing
+    path: /security/compliance-reports
+  - title: CIS benchmarks
+    path: /security/compliance-reports-cis
 - title: Defend against DoS attacks
   path: /security/defend-dos-attack
 - title: Apply policy to Kubernetes node ports

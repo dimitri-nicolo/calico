@@ -23,10 +23,12 @@ spec:
     image: {{page.registry}}{{site.imageNames["compliance-reporter"]}}:{{site.data.versions[page.version].first.components["compliance-reporter"].version}}
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     env:
-      # Modify these values with the report name and start and end time of the report
+      # Modify this value with name of an existing globalreport resource.
       # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     - name: TIGERA_COMPLIANCE_REPORT_NAME
       value: <report name e.g. weekly-full-inventory>
+      # Modify these values with the start and end time frame that should be reported on.
+      # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     - name: TIGERA_COMPLIANCE_REPORT_START_TIME
       value: <report start time in UTC RFC3339 format, e.g.  2019-03-23T14:20:00Z>
     - name: TIGERA_COMPLIANCE_REPORT_END_TIME
