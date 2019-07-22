@@ -36,15 +36,17 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 	var rd *ResourceData
 	var modified ModifiedResources
 	var sel *EndpointSelectorHandler
-	var compute func() Action
+	var compute func() EndpointResponse
 
 	setup := func(cfg *Config) {
 		np = &v3.NetworkPolicy{
 			TypeMeta: resources.TypeCalicoGlobalNetworkPolicies,
 			ObjectMeta: v1.ObjectMeta{
-				Name: "default.policy",
+				Name:      "meh.policy",
+				Namespace: "ns1",
 			},
 			Spec: v3.NetworkPolicySpec{
+				Tier:     "meh",
 				Selector: "all()",
 				Types:    typesEgress,
 				Ingress: []v3.Rule{{
@@ -75,23 +77,47 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 			},
 		}
 
-		compute = func() Action {
+		compute = func() EndpointResponse {
 			compiled := newCompiledTiersAndPolicies(cfg, rd, modified, sel)
 
 			// Tweak our flow reporter to match the policy type.
-			if np.Spec.Types[0] == v3.PolicyTypeIngress {
-				f.Reporter = ReporterTypeDestination
-			} else {
-				f.Reporter = ReporterTypeSource
-			}
 			f.Source.cachedSelectorResults = sel.CreateSelectorCache()
 			f.Destination.cachedSelectorResults = sel.CreateSelectorCache()
-			return compiled.Action(f)
+			if np.Spec.Types[0] == v3.PolicyTypeIngress {
+				f.Reporter = ReporterTypeDestination
+				return compiled.Calculate(f).Destination
+			}
+			f.Reporter = ReporterTypeSource
+			return compiled.Calculate(f).Source
 		}
 	}
 
 	BeforeEach(func() {
 		setup(&Config{})
+	})
+
+	// ---- No tier match ----
+
+	It("checking policy in different namespace - end of tiers allow through profile", func() {
+		f.Proto = &ProtoICMP
+		f.Source.Namespace = "ns2"
+		f.Source.Type = EndpointTypeWep
+		np.Spec.Types = typesEgress
+		np.Spec.Ingress = nil
+		r := compute()
+		Expect(r.Action).To(Equal(ActionAllow))
+		Expect(r.Include).To(BeTrue())
+		Expect(r.Policies).To(Equal([]string{"0|__PROFILE__|__PROFILE__.kns.ns2|allow"}))
+	})
+
+	It("HEP does not match namespaced policy - end of tiers deny (implicit deny through felix)", func() {
+		f.Proto = &ProtoICMP
+		f.Source.Type = EndpointTypeHep
+		np.Spec.Ingress = nil
+		r := compute()
+		Expect(r.Action).To(Equal(ActionDeny))
+		Expect(r.Include).To(BeTrue())
+		Expect(r.Policies).To(Equal([]string{"0|__PROFILE__|__PROFILE__.__NO_MATCH__|allow"}))
 	})
 
 	// ---- ICMP/NotICMP matcher ----
@@ -103,7 +129,10 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Types = typesEgress
 		np.Spec.Ingress = nil
 		np.Spec.Egress[0].ICMP = &v3.ICMPFields{}
-		Expect(compute()).To(Equal(ActionDeny))
+		r := compute()
+		Expect(r.Action).To(Equal(ActionDeny))
+		Expect(r.Include).To(BeTrue())
+		Expect(r.Policies).To(Equal([]string{"0|meh|ns1/meh.policy|deny"}))
 	})
 
 	It("checking dest ingress deny exact match deny when ICMP is non-nil and protocol is ICMP", func() {
@@ -113,7 +142,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Types = typesIngress
 		np.Spec.Egress = nil
 		np.Spec.Ingress[0].ICMP = &v3.ICMPFields{}
-		Expect(compute()).To(Equal(ActionDeny))
+		Expect(compute().Action).To(Equal(ActionDeny))
 	})
 
 	It("checking source egress deny inexact match when ICMP.Code is non-nil and protocol is ICMP", func() {
@@ -123,8 +152,12 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Types = typesEgress
 		np.Spec.Ingress = nil
 		np.Spec.Egress[0].ICMP = &v3.ICMPFields{Code: &int_1}
-		// Inexact deny and exact end of tier deny means overall a deny.
-		Expect(compute()).To(Equal(ActionDeny))
+		// Inexact deny and exact end of tier deny means overall a deny. The policies will contain a repeated entry
+		// for the policy (once for end of tier deny).
+		r := compute()
+		Expect(r.Action).To(Equal(ActionDeny))
+		Expect(r.Include).To(BeTrue())
+		Expect(r.Policies).To(Equal([]string{"0|meh|ns1/meh.policy|deny", "0|meh|ns1/meh.policy|deny"}))
 	})
 
 	It("checking dest ingress deny inexact match when ICMP.Code is non-nil and protocol is ICMP", func() {
@@ -135,7 +168,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Egress = nil
 		np.Spec.Ingress[0].ICMP = &v3.ICMPFields{Code: &int_1}
 		// Inexact deny and exact end of tier deny means overall a deny.
-		Expect(compute()).To(Equal(ActionDeny))
+		Expect(compute().Action).To(Equal(ActionDeny))
 	})
 
 	It("checking source egress deny inexact match when ICMP.Code is non-nil and protocol is ICMP", func() {
@@ -146,8 +179,12 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Ingress = nil
 		np.Spec.Egress[0].Action = v3.Allow
 		np.Spec.Egress[0].ICMP = &v3.ICMPFields{Code: &int_1}
-		// Inexact allow and exact end of tier deny means overall indeterminate.
-		Expect(compute()).To(Equal(ActionIndeterminate))
+		// Inexact allow and exact end of tier deny means overall indeterminate. We'll have an entry for the same
+		// policy once for allow and once for deny (end of tier implicit drop).
+		r := compute()
+		Expect(r.Action).To(Equal(ActionUnknown))
+		Expect(r.Include).To(BeTrue())
+		Expect(r.Policies).To(Equal([]string{"0|meh|ns1/meh.policy|allow", "0|meh|ns1/meh.policy|deny"}))
 	})
 
 	It("checking source egress deny inexact match when ICMP.Code is non-nil and protocol is unknown", func() {
@@ -158,7 +195,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Egress[0].Action = v3.Allow
 		np.Spec.Egress[0].ICMP = &v3.ICMPFields{Code: &int_1}
 		// Inexact allow and exact end of tier deny means overall indeterminate.
-		Expect(compute()).To(Equal(ActionIndeterminate))
+		Expect(compute().Action).To(Equal(ActionUnknown))
 	})
 
 	It("checking source egress deny exact non-match when ICMP.Code is non-nil and protocol is not ICMP", func() {
@@ -169,7 +206,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Ingress = nil
 		np.Spec.Egress[0].Action = v3.Allow
 		np.Spec.Egress[0].ICMP = &v3.ICMPFields{Code: &int_1}
-		Expect(compute()).To(Equal(ActionDeny))
+		Expect(compute().Action).To(Equal(ActionDeny))
 	})
 
 	It("checking dest ingress deny inexact match when ICMP.Code is non-nil and protocol is ICMP", func() {
@@ -181,7 +218,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Ingress[0].Action = v3.Allow
 		np.Spec.Ingress[0].ICMP = &v3.ICMPFields{Code: &int_1}
 		// Inexact allow and exact end of tier deny means overall indeterminate.
-		Expect(compute()).To(Equal(ActionIndeterminate))
+		Expect(compute().Action).To(Equal(ActionUnknown))
 	})
 
 	It("checking source egress allow inexact match when ICMP.Type is non-nil and protocol is ICMP", func() {
@@ -193,7 +230,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Egress[0].Action = v3.Allow
 		np.Spec.Egress[0].ICMP = &v3.ICMPFields{Type: &int_1}
 		// Inexact allow and exact end of tier deny means overall indeterminate.
-		Expect(compute()).To(Equal(ActionIndeterminate))
+		Expect(compute().Action).To(Equal(ActionUnknown))
 	})
 
 	It("checking dest ingress allow inexact match when ICMP.Type is non-nil and protocol is ICMP", func() {
@@ -205,7 +242,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Ingress[0].Action = v3.Allow
 		np.Spec.Ingress[0].ICMP = &v3.ICMPFields{Type: &int_1}
 		// Inexact allow and exact end of tier deny means overall indeterminate.
-		Expect(compute()).To(Equal(ActionIndeterminate))
+		Expect(compute().Action).To(Equal(ActionUnknown))
 	})
 
 	It("checking dest ingress allow inexact match when NotICMP.Type is non-nil and protocol is ICMP", func() {
@@ -217,7 +254,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Ingress[0].Action = v3.Allow
 		np.Spec.Ingress[0].NotICMP = &v3.ICMPFields{Type: &int_1}
 		// Inexact allow and exact end of tier deny means overall indeterminate.
-		Expect(compute()).To(Equal(ActionIndeterminate))
+		Expect(compute().Action).To(Equal(ActionUnknown))
 	})
 
 	// ---- HTTP matcher ----
@@ -228,7 +265,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Types = typesEgress
 		np.Spec.Ingress = nil
 		np.Spec.Egress[0].HTTP = &v3.HTTPMatch{}
-		Expect(compute()).To(Equal(ActionDeny))
+		Expect(compute().Action).To(Equal(ActionDeny))
 	})
 
 	It("checking dest ingress deny exact match deny when HTTP is non-nil", func() {
@@ -237,7 +274,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Types = typesIngress
 		np.Spec.Egress = nil
 		np.Spec.Ingress[0].HTTP = &v3.HTTPMatch{}
-		Expect(compute()).To(Equal(ActionDeny))
+		Expect(compute().Action).To(Equal(ActionDeny))
 	})
 
 	It("checking source egress deny inexact match when HTTP.Methods is non-nil", func() {
@@ -247,7 +284,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Ingress = nil
 		np.Spec.Egress[0].HTTP = &v3.HTTPMatch{Methods: []string{"post"}}
 		// Inexact deny and exact end of tier deny means overall a deny.
-		Expect(compute()).To(Equal(ActionDeny))
+		Expect(compute().Action).To(Equal(ActionDeny))
 	})
 
 	It("checking dest ingress deny inexact match when HTTP.Methods is non-nil", func() {
@@ -257,7 +294,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Egress = nil
 		np.Spec.Ingress[0].HTTP = &v3.HTTPMatch{Methods: []string{"post"}}
 		// Inexact deny and exact end of tier deny means overall a deny.
-		Expect(compute()).To(Equal(ActionDeny))
+		Expect(compute().Action).To(Equal(ActionDeny))
 	})
 
 	It("checking source egress deny inexact match when HTTP.Methods is non-nil", func() {
@@ -268,7 +305,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Egress[0].Action = v3.Allow
 		np.Spec.Egress[0].HTTP = &v3.HTTPMatch{Methods: []string{"post"}}
 		// Inexact allow and exact end of tier deny means overall indeterminate.
-		Expect(compute()).To(Equal(ActionIndeterminate))
+		Expect(compute().Action).To(Equal(ActionUnknown))
 	})
 
 	It("checking dest ingress deny inexact match when HTTP.Methods is non-nil", func() {
@@ -279,7 +316,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Ingress[0].Action = v3.Allow
 		np.Spec.Ingress[0].HTTP = &v3.HTTPMatch{Methods: []string{"post"}}
 		// Inexact allow and exact end of tier deny means overall indeterminate.
-		Expect(compute()).To(Equal(ActionIndeterminate))
+		Expect(compute().Action).To(Equal(ActionUnknown))
 	})
 
 	It("checking source egress allow inexact match when HTTP.Paths is non-nil", func() {
@@ -290,7 +327,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Egress[0].Action = v3.Allow
 		np.Spec.Egress[0].HTTP = &v3.HTTPMatch{Paths: []v3.HTTPPath{{Exact: "/url"}}}
 		// Inexact allow and exact end of tier deny means overall indeterminate.
-		Expect(compute()).To(Equal(ActionIndeterminate))
+		Expect(compute().Action).To(Equal(ActionUnknown))
 	})
 
 	It("checking dest ingress allow inexact match when HTTP.Paths is non-nil", func() {
@@ -301,7 +338,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Ingress[0].Action = v3.Allow
 		np.Spec.Ingress[0].HTTP = &v3.HTTPMatch{Paths: []v3.HTTPPath{{Exact: "/url"}}}
 		// Inexact allow and exact end of tier deny means overall indeterminate.
-		Expect(compute()).To(Equal(ActionIndeterminate))
+		Expect(compute().Action).To(Equal(ActionUnknown))
 	})
 
 	// ---- Protocol/NotProtocol matcher ----
@@ -315,7 +352,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		p := numorstring.ProtocolFromString("UDP")
 		np.Spec.Egress[0].Action = v3.Allow
 		np.Spec.Egress[0].Protocol = &p
-		Expect(compute()).To(Equal(ActionAllow))
+		Expect(compute().Action).To(Equal(ActionAllow))
 	})
 
 	It("checking source ingress allow exact match when Protocol is non-nil", func() {
@@ -327,7 +364,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		p := numorstring.ProtocolFromInt(17)
 		np.Spec.Ingress[0].Action = v3.Allow
 		np.Spec.Ingress[0].Protocol = &p
-		Expect(compute()).To(Equal(ActionAllow))
+		Expect(compute().Action).To(Equal(ActionAllow))
 	})
 
 	It("checking source egress allow non-match when Protocol is non-nil", func() {
@@ -339,7 +376,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		p := numorstring.ProtocolFromString("TCP")
 		np.Spec.Egress[0].Action = v3.Allow
 		np.Spec.Egress[0].Protocol = &p
-		Expect(compute()).To(Equal(ActionDeny))
+		Expect(compute().Action).To(Equal(ActionDeny))
 	})
 
 	It("checking source ingress allow inexact match when Protocol is non-nil", func() {
@@ -350,7 +387,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		p := numorstring.ProtocolFromInt(17)
 		np.Spec.Ingress[0].Action = v3.Allow
 		np.Spec.Ingress[0].Protocol = &p
-		Expect(compute()).To(Equal(ActionIndeterminate))
+		Expect(compute().Action).To(Equal(ActionUnknown))
 	})
 
 	It("checking source ingress allow exact non-match when NotProtocol is non-nil", func() {
@@ -362,7 +399,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		p := numorstring.ProtocolFromInt(17)
 		np.Spec.Ingress[0].Action = v3.Allow
 		np.Spec.Ingress[0].NotProtocol = &p
-		Expect(compute()).To(Equal(ActionDeny))
+		Expect(compute().Action).To(Equal(ActionDeny))
 	})
 
 	// ---- IPVersion matcher ----
@@ -375,7 +412,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Ingress = nil
 		np.Spec.Egress[0].Action = v3.Allow
 		np.Spec.Egress[0].IPVersion = &int_4
-		Expect(compute()).To(Equal(ActionAllow))
+		Expect(compute().Action).To(Equal(ActionAllow))
 	})
 
 	It("checking source ingress allow exact match when IPVersion is non-nil", func() {
@@ -386,7 +423,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Egress = nil
 		np.Spec.Ingress[0].Action = v3.Allow
 		np.Spec.Ingress[0].IPVersion = &int_4
-		Expect(compute()).To(Equal(ActionAllow))
+		Expect(compute().Action).To(Equal(ActionAllow))
 	})
 
 	It("checking source egress allow non-match when IPVersion is non-nil", func() {
@@ -397,7 +434,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Ingress = nil
 		np.Spec.Egress[0].Action = v3.Allow
 		np.Spec.Egress[0].IPVersion = &int_6
-		Expect(compute()).To(Equal(ActionDeny))
+		Expect(compute().Action).To(Equal(ActionDeny))
 	})
 
 	It("checking source ingress allow inexact match when IPVersion is non-nil", func() {
@@ -407,7 +444,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Egress = nil
 		np.Spec.Ingress[0].Action = v3.Allow
 		np.Spec.Ingress[0].IPVersion = &int_4
-		Expect(compute()).To(Equal(ActionIndeterminate))
+		Expect(compute().Action).To(Equal(ActionUnknown))
 	})
 
 	// ---- Source.Nets / Source.NotNets ----
@@ -421,7 +458,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Egress = nil
 		np.Spec.Ingress[0].Action = v3.Allow
 		np.Spec.Ingress[0].Source.Nets = []string{"10.0.0.0/16"}
-		Expect(compute()).To(Equal(ActionAllow))
+		Expect(compute().Action).To(Equal(ActionAllow))
 	})
 
 	It("checking source egress allow exact match when Source.Nets is non-nil", func() {
@@ -433,7 +470,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Ingress = nil
 		np.Spec.Egress[0].Action = v3.Allow
 		np.Spec.Egress[0].Source.Nets = []string{"10.0.0.0/16"}
-		Expect(compute()).To(Equal(ActionAllow))
+		Expect(compute().Action).To(Equal(ActionAllow))
 	})
 
 	It("checking source egress allow inexact match when Source.Nets is non-nil", func() {
@@ -444,7 +481,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Egress[0].Action = v3.Allow
 		np.Spec.Egress[0].Source.Nets = []string{"10.0.0.0/16"}
 		// Inexact allow and exact end of tier deny means overall indeterminate.
-		Expect(compute()).To(Equal(ActionIndeterminate))
+		Expect(compute().Action).To(Equal(ActionUnknown))
 	})
 
 	It("checking source egress allow non-match when Source.Nets is non-nil", func() {
@@ -456,7 +493,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Ingress = nil
 		np.Spec.Egress[0].Action = v3.Allow
 		np.Spec.Egress[0].Source.Nets = []string{"10.0.0.0/16"}
-		Expect(compute()).To(Equal(ActionDeny))
+		Expect(compute().Action).To(Equal(ActionDeny))
 	})
 
 	It("checking source egress allow non-match when Source.NotNets is non-nil", func() {
@@ -468,7 +505,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Ingress = nil
 		np.Spec.Egress[0].Action = v3.Allow
 		np.Spec.Egress[0].Source.NotNets = []string{"10.0.0.0/16"}
-		Expect(compute()).To(Equal(ActionAllow))
+		Expect(compute().Action).To(Equal(ActionAllow))
 	})
 
 	// ---- Destination.Nets / Destination.NotNets ----
@@ -482,7 +519,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Egress = nil
 		np.Spec.Ingress[0].Action = v3.Allow
 		np.Spec.Ingress[0].Destination.Nets = []string{"10.0.0.0/16"}
-		Expect(compute()).To(Equal(ActionAllow))
+		Expect(compute().Action).To(Equal(ActionAllow))
 	})
 
 	It("checking source egress allow exact match when Destination.Nets is non-nil", func() {
@@ -494,7 +531,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Ingress = nil
 		np.Spec.Egress[0].Action = v3.Allow
 		np.Spec.Egress[0].Destination.Nets = []string{"10.0.0.0/16"}
-		Expect(compute()).To(Equal(ActionAllow))
+		Expect(compute().Action).To(Equal(ActionAllow))
 	})
 
 	It("checking source egress allow inexact match when Destination.Nets is non-nil", func() {
@@ -506,7 +543,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Egress[0].Action = v3.Allow
 		np.Spec.Egress[0].Destination.Nets = []string{"10.0.0.0/16"}
 		// Inexact allow and exact end of tier deny means overall indeterminate.
-		Expect(compute()).To(Equal(ActionIndeterminate))
+		Expect(compute().Action).To(Equal(ActionUnknown))
 	})
 
 	It("checking source egress allow non-match when Destination.Nets is non-nil", func() {
@@ -518,7 +555,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Ingress = nil
 		np.Spec.Egress[0].Action = v3.Allow
 		np.Spec.Egress[0].Destination.Nets = []string{"10.0.0.0/16"}
-		Expect(compute()).To(Equal(ActionDeny))
+		Expect(compute().Action).To(Equal(ActionDeny))
 	})
 
 	It("checking source egress allow non-match when Destination.NotNets is non-nil", func() {
@@ -530,7 +567,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Ingress = nil
 		np.Spec.Egress[0].Action = v3.Allow
 		np.Spec.Egress[0].Destination.NotNets = []string{"10.0.0.0/16"}
-		Expect(compute()).To(Equal(ActionAllow))
+		Expect(compute().Action).To(Equal(ActionAllow))
 	})
 
 	// ---- Source.Nets / Source.NotNets ----
@@ -544,7 +581,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Egress = nil
 		np.Spec.Ingress[0].Action = v3.Allow
 		np.Spec.Ingress[0].Source.Nets = []string{"10.0.0.0/16"}
-		Expect(compute()).To(Equal(ActionAllow))
+		Expect(compute().Action).To(Equal(ActionAllow))
 	})
 
 	It("checking source egress allow exact match when Source.Nets is non-nil", func() {
@@ -556,7 +593,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Ingress = nil
 		np.Spec.Egress[0].Action = v3.Allow
 		np.Spec.Egress[0].Source.Nets = []string{"10.0.0.0/16"}
-		Expect(compute()).To(Equal(ActionAllow))
+		Expect(compute().Action).To(Equal(ActionAllow))
 	})
 
 	It("checking source egress allow inexact match when Source.Nets is non-nil", func() {
@@ -567,7 +604,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Egress[0].Action = v3.Allow
 		np.Spec.Egress[0].Source.Nets = []string{"10.0.0.0/16"}
 		// Inexact allow and exact end of tier deny means overall indeterminate.
-		Expect(compute()).To(Equal(ActionIndeterminate))
+		Expect(compute().Action).To(Equal(ActionUnknown))
 	})
 
 	It("checking dest egress allow non-match when Source.Nets is non-nil", func() {
@@ -579,7 +616,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Ingress = nil
 		np.Spec.Egress[0].Action = v3.Allow
 		np.Spec.Egress[0].Source.Nets = []string{"10.0.0.0/16"}
-		Expect(compute()).To(Equal(ActionDeny))
+		Expect(compute().Action).To(Equal(ActionDeny))
 	})
 
 	It("checking dest egress allow non-match when Source.NotNets is non-nil", func() {
@@ -591,7 +628,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Ingress = nil
 		np.Spec.Egress[0].Action = v3.Allow
 		np.Spec.Egress[0].Source.NotNets = []string{"10.0.0.0/16"}
-		Expect(compute()).To(Equal(ActionAllow))
+		Expect(compute().Action).To(Equal(ActionAllow))
 	})
 
 	// ---- Destination.Ports / Destination.NotPorts ----
@@ -605,7 +642,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Ingress[0].Action = v3.Allow
 		p, _ := numorstring.PortFromRange(999, 1000)
 		np.Spec.Ingress[0].Destination.Ports = []numorstring.Port{p}
-		Expect(compute()).To(Equal(ActionAllow))
+		Expect(compute().Action).To(Equal(ActionAllow))
 	})
 
 	It("checking dest egress allow exact match when Destination.Ports is non-nil (contains named port plus exact numerical port match)", func() {
@@ -618,7 +655,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		p1, _ := numorstring.PortFromRange(1000, 10000)
 		p2, _ := numorstring.PortFromString("myport")
 		np.Spec.Egress[0].Destination.Ports = []numorstring.Port{p1, p2}
-		Expect(compute()).To(Equal(ActionAllow))
+		Expect(compute().Action).To(Equal(ActionAllow))
 	})
 
 	It("checking dest egress allow inexact match when Destination.Ports is non-nil and contains a named port only", func() {
@@ -631,7 +668,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		p, _ := numorstring.PortFromString("myport")
 		np.Spec.Egress[0].Destination.Ports = []numorstring.Port{p}
 		// Inexact allow and exact end of tier deny means overall indeterminate.
-		Expect(compute()).To(Equal(ActionIndeterminate))
+		Expect(compute().Action).To(Equal(ActionUnknown))
 	})
 
 	It("checking dest egress allow inexact match when Destination.Ports is non-nil and flow contains no port", func() {
@@ -643,7 +680,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		p, _ := numorstring.PortFromRange(1000, 10000)
 		np.Spec.Egress[0].Destination.Ports = []numorstring.Port{p}
 		// Inexact allow and exact end of tier deny means overall indeterminate.
-		Expect(compute()).To(Equal(ActionIndeterminate))
+		Expect(compute().Action).To(Equal(ActionUnknown))
 	})
 
 	It("checking dest egress allow non-match when Destination.Ports is non-nil", func() {
@@ -654,7 +691,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Ingress = nil
 		p, _ := numorstring.PortFromRange(1001, 10000)
 		np.Spec.Egress[0].Destination.Ports = []numorstring.Port{p}
-		Expect(compute()).To(Equal(ActionDeny))
+		Expect(compute().Action).To(Equal(ActionDeny))
 	})
 
 	It("checking dest egress allow non-match when Destination.NotPorts is non-nil", func() {
@@ -666,7 +703,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Egress[0].Action = v3.Allow
 		p, _ := numorstring.PortFromRange(1001, 10000)
 		np.Spec.Egress[0].Destination.NotPorts = []numorstring.Port{p}
-		Expect(compute()).To(Equal(ActionAllow))
+		Expect(compute().Action).To(Equal(ActionAllow))
 	})
 
 	// ---- Source.Ports / Source.NotPorts ----
@@ -680,7 +717,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Egress[0].Action = v3.Allow
 		p, _ := numorstring.PortFromRange(999, 1000)
 		np.Spec.Egress[0].Source.Ports = []numorstring.Port{p}
-		Expect(compute()).To(Equal(ActionAllow))
+		Expect(compute().Action).To(Equal(ActionAllow))
 	})
 
 	It("checking source ingress allow exact match when Source.Ports is non-nil (contains named port plus exact numerical port match)", func() {
@@ -693,7 +730,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		p1, _ := numorstring.PortFromRange(1000, 10000)
 		p2, _ := numorstring.PortFromString("myport")
 		np.Spec.Ingress[0].Source.Ports = []numorstring.Port{p1, p2}
-		Expect(compute()).To(Equal(ActionAllow))
+		Expect(compute().Action).To(Equal(ActionAllow))
 	})
 
 	It("checking source ingress allow inexact match when Source.Ports is non-nil and contains a named port only", func() {
@@ -706,7 +743,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		p, _ := numorstring.PortFromString("myport")
 		np.Spec.Ingress[0].Source.Ports = []numorstring.Port{p}
 		// Inexact allow and exact end of tier deny means overall indeterminate.
-		Expect(compute()).To(Equal(ActionIndeterminate))
+		Expect(compute().Action).To(Equal(ActionUnknown))
 	})
 
 	It("checking source ingress allow inexact match when Source.Ports is non-nil and flow contains no port", func() {
@@ -718,7 +755,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		p, _ := numorstring.PortFromRange(1000, 10000)
 		np.Spec.Ingress[0].Source.Ports = []numorstring.Port{p}
 		// Inexact allow and exact end of tier deny means overall indeterminate.
-		Expect(compute()).To(Equal(ActionIndeterminate))
+		Expect(compute().Action).To(Equal(ActionUnknown))
 	})
 
 	It("checking source ingress allow non-match when Source.Ports is non-nil", func() {
@@ -729,7 +766,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Egress = nil
 		p, _ := numorstring.PortFromRange(1001, 10000)
 		np.Spec.Ingress[0].Source.Ports = []numorstring.Port{p}
-		Expect(compute()).To(Equal(ActionDeny))
+		Expect(compute().Action).To(Equal(ActionDeny))
 	})
 
 	It("checking source ingress allow non-match when Source.NotPorts is non-nil", func() {
@@ -741,7 +778,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Ingress[0].Action = v3.Allow
 		p, _ := numorstring.PortFromRange(1001, 10000)
 		np.Spec.Ingress[0].Source.NotPorts = []numorstring.Port{p}
-		Expect(compute()).To(Equal(ActionAllow))
+		Expect(compute().Action).To(Equal(ActionAllow))
 	})
 
 	// ---- Destination.Domains ----
@@ -753,7 +790,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Ingress = nil
 		np.Spec.Egress[0].Action = v3.Allow
 		np.Spec.Egress[0].Destination.Domains = []string{}
-		Expect(compute()).To(Equal(ActionAllow))
+		Expect(compute().Action).To(Equal(ActionAllow))
 	})
 
 	It("checking source egress deny inexact match when Source.Domains has domains", func() {
@@ -764,7 +801,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Egress[0].Action = v3.Deny
 		np.Spec.Egress[0].Destination.Domains = []string{"thing.com"}
 		// Inexact deny and exact end of tier deny means overall a deny.
-		Expect(compute()).To(Equal(ActionDeny))
+		Expect(compute().Action).To(Equal(ActionDeny))
 	})
 
 	It("checking source egress allow inexact match when Source.Domains has domains", func() {
@@ -775,7 +812,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Egress[0].Action = v3.Allow
 		np.Spec.Egress[0].Destination.Domains = []string{"thing.com"}
 		// Inexact allow and exact end of tier deny means overall indeterminate.
-		Expect(compute()).To(Equal(ActionIndeterminate))
+		Expect(compute().Action).To(Equal(ActionUnknown))
 	})
 
 	It("checking dest ingress allow exact match when Source.Domains is non-nil but empty", func() {
@@ -785,7 +822,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Egress = nil
 		np.Spec.Ingress[0].Action = v3.Allow
 		np.Spec.Ingress[0].Destination.Domains = []string{}
-		Expect(compute()).To(Equal(ActionAllow))
+		Expect(compute().Action).To(Equal(ActionAllow))
 	})
 
 	It("checking dest ingress deny inexact match when Source.Domains has domains", func() {
@@ -796,7 +833,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Ingress[0].Action = v3.Deny
 		np.Spec.Ingress[0].Destination.Domains = []string{"thing.com"}
 		// Inexact deny and exact end of tier deny means overall a deny.
-		Expect(compute()).To(Equal(ActionDeny))
+		Expect(compute().Action).To(Equal(ActionDeny))
 	})
 
 	It("checking dest ingress allow inexact match when Source.Domains has domains", func() {
@@ -807,7 +844,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Ingress[0].Action = v3.Allow
 		np.Spec.Ingress[0].Destination.Domains = []string{"thing.com"}
 		// Inexact allow and exact end of tier deny means overall indeterminate.
-		Expect(compute()).To(Equal(ActionIndeterminate))
+		Expect(compute().Action).To(Equal(ActionUnknown))
 	})
 
 	// ---- Source.Domains ----
@@ -819,7 +856,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Egress = nil
 		np.Spec.Ingress[0].Action = v3.Allow
 		np.Spec.Ingress[0].Source.Domains = []string{}
-		Expect(compute()).To(Equal(ActionAllow))
+		Expect(compute().Action).To(Equal(ActionAllow))
 	})
 
 	It("checking dest ingress deny inexact match when Destination.Domains has domains", func() {
@@ -830,7 +867,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Ingress[0].Action = v3.Deny
 		np.Spec.Ingress[0].Source.Domains = []string{"thing.com"}
 		// Inexact deny and exact end of tier deny means overall a deny.
-		Expect(compute()).To(Equal(ActionDeny))
+		Expect(compute().Action).To(Equal(ActionDeny))
 	})
 
 	It("checking dest ingress allow inexact match when Destination.Domains has domains", func() {
@@ -841,7 +878,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Ingress[0].Action = v3.Allow
 		np.Spec.Ingress[0].Source.Domains = []string{"thing.com"}
 		// Inexact allow and exact end of tier deny means overall indeterminate.
-		Expect(compute()).To(Equal(ActionIndeterminate))
+		Expect(compute().Action).To(Equal(ActionUnknown))
 	})
 
 	It("checking source egress allow exact match when Destination.Domains is non-nil but empty", func() {
@@ -851,7 +888,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Ingress = nil
 		np.Spec.Egress[0].Action = v3.Allow
 		np.Spec.Egress[0].Source.Domains = []string{}
-		Expect(compute()).To(Equal(ActionAllow))
+		Expect(compute().Action).To(Equal(ActionAllow))
 	})
 
 	It("checking source egress deny inexact match when Destination.Domains has domains", func() {
@@ -862,7 +899,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Egress[0].Action = v3.Deny
 		np.Spec.Egress[0].Source.Domains = []string{"thing.com"}
 		// Inexact deny and exact end of tier deny means overall a deny.
-		Expect(compute()).To(Equal(ActionDeny))
+		Expect(compute().Action).To(Equal(ActionDeny))
 	})
 
 	It("checking source egress allow inexact match when Destination.Domains has domains", func() {
@@ -873,7 +910,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Egress[0].Action = v3.Allow
 		np.Spec.Egress[0].Source.Domains = []string{"thing.com"}
 		// Inexact allow and exact end of tier deny means overall indeterminate.
-		Expect(compute()).To(Equal(ActionIndeterminate))
+		Expect(compute().Action).To(Equal(ActionUnknown))
 	})
 
 	// ---- Destination.ServiceAccounts ----
@@ -885,7 +922,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Egress = nil
 		np.Spec.Ingress[0].Action = v3.Allow
 		np.Spec.Ingress[0].Destination.ServiceAccounts = &v3.ServiceAccountMatch{}
-		Expect(compute()).To(Equal(ActionAllow))
+		Expect(compute().Action).To(Equal(ActionAllow))
 	})
 
 	It("checking dest ingress allow exact match when Destination.ServiceAccounts is non-nil", func() {
@@ -897,7 +934,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Egress = nil
 		np.Spec.Ingress[0].Action = v3.Allow
 		np.Spec.Ingress[0].Destination.ServiceAccounts = &v3.ServiceAccountMatch{Names: []string{"sa1"}}
-		Expect(compute()).To(Equal(ActionAllow))
+		Expect(compute().Action).To(Equal(ActionAllow))
 	})
 
 	It("checking source egress allow exact match when Destination.ServiceAccounts is non-nil", func() {
@@ -910,7 +947,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Ingress = nil
 		np.Spec.Egress[0].Action = v3.Allow
 		np.Spec.Egress[0].Destination.ServiceAccounts = &v3.ServiceAccountMatch{Names: []string{"sa1"}}
-		Expect(compute()).To(Equal(ActionAllow))
+		Expect(compute().Action).To(Equal(ActionAllow))
 	})
 
 	It("checking source egress allow inexact match when Destination.ServiceAccounts is non-nil", func() {
@@ -922,7 +959,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Egress[0].Action = v3.Allow
 		np.Spec.Egress[0].Destination.ServiceAccounts = &v3.ServiceAccountMatch{Names: []string{"sa1"}}
 		// Inexact allow and exact end of tier deny means overall indeterminate.
-		Expect(compute()).To(Equal(ActionIndeterminate))
+		Expect(compute().Action).To(Equal(ActionUnknown))
 	})
 
 	It("checking source egress allow non-match when Destination.ServiceAccounts is non-nil", func() {
@@ -935,7 +972,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Ingress = nil
 		np.Spec.Egress[0].Action = v3.Allow
 		np.Spec.Egress[0].Destination.ServiceAccounts = &v3.ServiceAccountMatch{Names: []string{"sa1"}}
-		Expect(compute()).To(Equal(ActionDeny))
+		Expect(compute().Action).To(Equal(ActionDeny))
 	})
 
 	// ---- Source.ServiceAccounts ----
@@ -947,7 +984,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Ingress = nil
 		np.Spec.Egress[0].Action = v3.Allow
 		np.Spec.Egress[0].Source.ServiceAccounts = &v3.ServiceAccountMatch{}
-		Expect(compute()).To(Equal(ActionAllow))
+		Expect(compute().Action).To(Equal(ActionAllow))
 	})
 
 	It("checking source egress allow exact match when Source.ServiceAccounts is non-nil", func() {
@@ -959,7 +996,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Ingress = nil
 		np.Spec.Egress[0].Action = v3.Allow
 		np.Spec.Egress[0].Source.ServiceAccounts = &v3.ServiceAccountMatch{Names: []string{"sa1"}}
-		Expect(compute()).To(Equal(ActionAllow))
+		Expect(compute().Action).To(Equal(ActionAllow))
 	})
 
 	It("checking dest ingress allow exact match when Source.ServiceAccounts is non-nil", func() {
@@ -972,7 +1009,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Egress = nil
 		np.Spec.Ingress[0].Action = v3.Allow
 		np.Spec.Ingress[0].Source.ServiceAccounts = &v3.ServiceAccountMatch{Names: []string{"sa1"}}
-		Expect(compute()).To(Equal(ActionAllow))
+		Expect(compute().Action).To(Equal(ActionAllow))
 	})
 
 	It("checking dest ingress allow inexact match when Source.ServiceAccounts is non-nil", func() {
@@ -984,7 +1021,7 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Ingress[0].Action = v3.Allow
 		np.Spec.Ingress[0].Source.ServiceAccounts = &v3.ServiceAccountMatch{Names: []string{"sa1"}}
 		// Inexact allow and exact end of tier deny means overall indeterminate.
-		Expect(compute()).To(Equal(ActionIndeterminate))
+		Expect(compute().Action).To(Equal(ActionUnknown))
 	})
 
 	It("checking dest ingress allow non-match when Source.ServiceAccounts is non-nil", func() {
@@ -997,6 +1034,6 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Egress = nil
 		np.Spec.Ingress[0].Action = v3.Allow
 		np.Spec.Ingress[0].Source.ServiceAccounts = &v3.ServiceAccountMatch{Names: []string{"sa1"}}
-		Expect(compute()).To(Equal(ActionDeny))
+		Expect(compute().Action).To(Equal(ActionDeny))
 	})
 })

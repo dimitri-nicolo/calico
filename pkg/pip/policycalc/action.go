@@ -9,6 +9,7 @@ const (
 	ActionFlagAllow ActionFlag = 1 << iota
 	ActionFlagDeny
 	ActionFlagNextTier
+	ActionFlagDidNotMatchTier
 )
 
 const ActionFlagsAllowAndDeny = ActionFlagAllow | ActionFlagDeny
@@ -37,7 +38,7 @@ func (a ActionFlag) ToAction() Action {
 	if a.Deny() {
 		return ActionDeny
 	} else if a.Indeterminate() {
-		return ActionIndeterminate
+		return ActionUnknown
 	}
 	return ActionAllow
 }

@@ -167,6 +167,7 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 
 		By("Checking a flow not in namespace ns1 is unaffected")
 		f := &policycalc.Flow{
+			Reporter: policycalc.ReporterTypeSource,
 			Source: policycalc.FlowEndpointData{
 				Type:      policycalc.EndpointTypeWep,
 				Namespace: "ns2",
@@ -180,10 +181,9 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 			Action: policycalc.ActionAllow,
 		}
 
-		processed, before, after := pc.Action(f)
-		Expect(processed).To(BeFalse())
-		Expect(before).To(Equal(policycalc.ActionAllow))
-		Expect(after).To(Equal(policycalc.ActionAllow))
+		before, after := pc.Calculate(f)
+		Expect(before.Source.Action).To(Equal(policycalc.ActionAllow))
+		Expect(after.Source.Action).To(Equal(policycalc.ActionAllow))
 
 		By("Checking a flow with source in namespace ns1 is recalculated")
 		f = &policycalc.Flow{
@@ -197,10 +197,9 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 			Action:      policycalc.ActionDeny,
 		}
 
-		processed, before, after = pc.Action(f)
-		Expect(processed).To(BeTrue())
-		Expect(before).To(Equal(policycalc.ActionAllow))
-		Expect(after).To(Equal(policycalc.ActionDeny))
+		before, after = pc.Calculate(f)
+		Expect(before.Source.Action).To(Equal(policycalc.ActionAllow))
+		Expect(after.Source.Action).To(Equal(policycalc.ActionDeny))
 
 		By("Checking a flow with destination in namespace ns1 is recalculated")
 		f = &policycalc.Flow{
@@ -214,10 +213,9 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 			Action: policycalc.ActionDeny,
 		}
 
-		processed, before, after = pc.Action(f)
-		Expect(processed).To(BeTrue())
-		Expect(before).To(Equal(policycalc.ActionAllow))
-		Expect(after).To(Equal(policycalc.ActionDeny))
+		before, after = pc.Calculate(f)
+		Expect(before.Destination.Action).To(Equal(policycalc.ActionAllow))
+		Expect(after.Destination.Action).To(Equal(policycalc.ActionDeny))
 	})
 
 	It("handles: single policy selecting ns1 with no rules -> next policy ingress allows all for ns1", func() {
@@ -260,16 +258,14 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 			Action: policycalc.ActionAllow,
 		}
 
-		processed, before, after := pc.Action(f)
-		Expect(processed).To(BeFalse())
-		Expect(before).To(Equal(policycalc.ActionAllow))
-		Expect(after).To(Equal(policycalc.ActionAllow))
+		before, after := pc.Calculate(f)
+		Expect(before.Source.Action).To(Equal(policycalc.ActionAllow))
+		Expect(after.Source.Action).To(Equal(policycalc.ActionAllow))
 
 		f.Reporter = policycalc.ReporterTypeDestination
-		processed, before, after = pc.Action(f)
-		Expect(processed).To(BeFalse())
-		Expect(before).To(Equal(policycalc.ActionAllow))
-		Expect(after).To(Equal(policycalc.ActionAllow))
+		before, after = pc.Calculate(f)
+		Expect(before.Destination.Action).To(Equal(policycalc.ActionAllow))
+		Expect(after.Destination.Action).To(Equal(policycalc.ActionAllow))
 
 		By("Checking a flow with dest in namespace ns1 is recalculated")
 		f = &policycalc.Flow{
@@ -283,10 +279,9 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 			Action: policycalc.ActionAllow,
 		}
 
-		processed, before, after = pc.Action(f)
-		Expect(processed).To(BeTrue())
-		Expect(before).To(Equal(policycalc.ActionDeny))
-		Expect(after).To(Equal(policycalc.ActionAllow))
+		before, after = pc.Calculate(f)
+		Expect(before.Destination.Action).To(Equal(policycalc.ActionDeny))
+		Expect(after.Destination.Action).To(Equal(policycalc.ActionAllow))
 	})
 
 	It("handles: single policy selecting ns1 with no rules -> next policy egress allows all for ns1", func() {
@@ -329,16 +324,14 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 			Action: policycalc.ActionAllow,
 		}
 
-		processed, before, after := pc.Action(f)
-		Expect(processed).To(BeFalse())
-		Expect(before).To(Equal(policycalc.ActionAllow))
-		Expect(after).To(Equal(policycalc.ActionAllow))
+		before, after := pc.Calculate(f)
+		Expect(before.Source.Action).To(Equal(policycalc.ActionAllow))
+		Expect(after.Source.Action).To(Equal(policycalc.ActionAllow))
 
 		f.Reporter = policycalc.ReporterTypeDestination
-		processed, before, after = pc.Action(f)
-		Expect(processed).To(BeFalse())
-		Expect(before).To(Equal(policycalc.ActionAllow))
-		Expect(after).To(Equal(policycalc.ActionAllow))
+		before, after = pc.Calculate(f)
+		Expect(before.Destination.Action).To(Equal(policycalc.ActionAllow))
+		Expect(after.Destination.Action).To(Equal(policycalc.ActionAllow))
 
 		By("Checking a flow with source in namespace ns1 is recalculated")
 		f = &policycalc.Flow{
@@ -352,10 +345,9 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 			Action:      policycalc.ActionAllow,
 		}
 
-		processed, before, after = pc.Action(f)
-		Expect(processed).To(BeTrue())
-		Expect(before).To(Equal(policycalc.ActionDeny))
-		Expect(after).To(Equal(policycalc.ActionAllow))
+		before, after = pc.Calculate(f)
+		Expect(before.Source.Action).To(Equal(policycalc.ActionDeny))
+		Expect(after.Source.Action).To(Equal(policycalc.ActionAllow))
 	})
 
 	It("handles: multiple tiers", func() {
@@ -400,16 +392,14 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 			Action: policycalc.ActionDeny,
 		}
 
-		processed, before, after := pc.Action(f)
-		Expect(processed).To(BeTrue())
-		Expect(before).To(Equal(policycalc.ActionDeny))
-		Expect(after).To(Equal(policycalc.ActionAllow))
+		before, after := pc.Calculate(f)
+		Expect(before.Source.Action).To(Equal(policycalc.ActionDeny))
+		Expect(after.Source.Action).To(Equal(policycalc.ActionAllow))
 
 		f.Reporter = policycalc.ReporterTypeDestination
-		processed, before, after = pc.Action(f)
-		Expect(processed).To(BeTrue())
-		Expect(before).To(Equal(policycalc.ActionDeny))
-		Expect(after).To(Equal(policycalc.ActionAllow))
+		before, after = pc.Calculate(f)
+		Expect(before.Destination.Action).To(Equal(policycalc.ActionDeny))
+		Expect(after.Destination.Action).To(Equal(policycalc.ActionAllow))
 
 		By("Checking a red->blue flow is denied")
 		f = &policycalc.Flow{
@@ -427,16 +417,14 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 			Action: policycalc.ActionAllow,
 		}
 
-		processed, before, after = pc.Action(f)
-		Expect(processed).To(BeTrue())
-		Expect(before).To(Equal(policycalc.ActionAllow))
-		Expect(after).To(Equal(policycalc.ActionAllow))
+		before, after = pc.Calculate(f)
+		Expect(before.Source.Action).To(Equal(policycalc.ActionAllow))
+		Expect(after.Source.Action).To(Equal(policycalc.ActionAllow))
 
 		f.Reporter = policycalc.ReporterTypeDestination
-		processed, before, after = pc.Action(f)
-		Expect(processed).To(BeTrue())
-		Expect(before).To(Equal(policycalc.ActionAllow))
-		Expect(after).To(Equal(policycalc.ActionDeny))
+		before, after = pc.Calculate(f)
+		Expect(before.Destination.Action).To(Equal(policycalc.ActionAllow))
+		Expect(after.Destination.Action).To(Equal(policycalc.ActionDeny))
 
 		By("Checking a blue->red flow is denied")
 		f = &policycalc.Flow{
@@ -454,16 +442,14 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 			Action: policycalc.ActionAllow,
 		}
 
-		processed, before, after = pc.Action(f)
-		Expect(processed).To(BeTrue())
-		Expect(before).To(Equal(policycalc.ActionAllow))
-		Expect(after).To(Equal(policycalc.ActionDeny))
+		before, after = pc.Calculate(f)
+		Expect(before.Source.Action).To(Equal(policycalc.ActionAllow))
+		Expect(after.Source.Action).To(Equal(policycalc.ActionDeny))
 
 		f.Reporter = policycalc.ReporterTypeDestination
-		processed, before, after = pc.Action(f)
-		Expect(processed).To(BeTrue())
-		Expect(before).To(Equal(policycalc.ActionAllow))
-		Expect(after).To(Equal(policycalc.ActionAllow))
+		before, after = pc.Calculate(f)
+		Expect(before.Destination.Action).To(Equal(policycalc.ActionAllow))
+		Expect(after.Destination.Action).To(Equal(policycalc.ActionInvalid))
 
 		By("Checking a net->purple flow is denied")
 		f = &policycalc.Flow{
@@ -477,10 +463,9 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 			Action: policycalc.ActionAllow,
 		}
 
-		processed, before, after = pc.Action(f)
-		Expect(processed).To(BeTrue())
-		Expect(before).To(Equal(policycalc.ActionAllow))
-		Expect(after).To(Equal(policycalc.ActionDeny))
+		before, after = pc.Calculate(f)
+		Expect(before.Destination.Action).To(Equal(policycalc.ActionAllow))
+		Expect(after.Destination.Action).To(Equal(policycalc.ActionDeny))
 
 		By("Checking a purple->net flow is denied")
 		f = &policycalc.Flow{
@@ -494,9 +479,8 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 			Action:      policycalc.ActionDeny,
 		}
 
-		processed, before, after = pc.Action(f)
-		Expect(processed).To(BeTrue())
-		Expect(before).To(Equal(policycalc.ActionDeny))
-		Expect(after).To(Equal(policycalc.ActionAllow))
+		before, after = pc.Calculate(f)
+		Expect(before.Source.Action).To(Equal(policycalc.ActionDeny))
+		Expect(after.Source.Action).To(Equal(policycalc.ActionAllow))
 	})
 })

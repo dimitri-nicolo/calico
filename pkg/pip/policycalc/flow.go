@@ -11,20 +11,20 @@ import (
 type Action byte
 
 const (
-	ActionUnknown Action = iota
-	ActionIndeterminate
+	ActionInvalid Action = iota
+	ActionUnknown
 	ActionAllow
 	ActionDeny
 )
 
 func (a Action) String() string {
 	switch a {
-	case ActionIndeterminate:
-		return "Indeterminate"
+	case ActionUnknown:
+		return "unknown"
 	case ActionAllow:
-		return "Allow"
+		return "allow"
 	case ActionDeny:
-		return "Deny"
+		return "deny"
 	default:
 		return "-"
 	}
@@ -33,7 +33,7 @@ func (a Action) String() string {
 type EndpointType byte
 
 const (
-	EndpointTypeUnknown EndpointType = iota
+	EndpointTypeInvalid EndpointType = iota
 	EndpointTypeWep
 	EndpointTypeHep
 	EndpointTypeNs
@@ -43,13 +43,13 @@ const (
 func (e EndpointType) String() string {
 	switch e {
 	case EndpointTypeWep:
-		return "WorkloadEndpoint/Pod"
+		return "wep"
 	case EndpointTypeHep:
-		return "HostEndpoint"
+		return "hep"
 	case EndpointTypeNs:
-		return "NetworkSet"
+		return "ns"
 	case EndpointTypeNet:
-		return "Network"
+		return "net"
 	default:
 		return "-"
 	}
@@ -58,7 +58,7 @@ func (e EndpointType) String() string {
 type ReporterType byte
 
 const (
-	ReporterTypeUnknown ReporterType = iota
+	ReporterTypeInvalid ReporterType = iota
 	ReporterTypeSource
 	ReporterTypeDestination
 )
@@ -66,9 +66,9 @@ const (
 func (r ReporterType) String() string {
 	switch r {
 	case ReporterTypeSource:
-		return "ReportedBySource"
+		return "src"
 	case ReporterTypeDestination:
-		return "ReportedByDestination"
+		return "dst"
 	default:
 		return "-"
 	}
@@ -92,6 +92,23 @@ type Flow struct {
 
 	// The IP version of the flow. Nil if unknown.
 	IPVersion *int
+
+	// The set of policies applied to this endpoint.
+	Policies []string
+}
+
+// getUnchangedResponse returns a policy calculation Response based on the original flow data.
+func (f Flow) getUnchangedResponse() *Response {
+	r := &Response{}
+	if f.Reporter == ReporterTypeSource {
+		r.Source.Action = f.Action
+		r.Source.Policies = f.Policies
+	} else {
+		r.Source.Action = ActionAllow
+		r.Destination.Action = f.Action
+		r.Destination.Policies = f.Policies
+	}
+	return r
 }
 
 // FlowEndpointData can be used to describe the source or destination
