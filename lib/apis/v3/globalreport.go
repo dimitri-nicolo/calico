@@ -96,12 +96,12 @@ type CISBenchmarkFilter struct {
 	BenchmarkSelection *CISBenchmarkSelection `json:"benchmarkSelection,omitempty" validate:"omitempty"`
 
 	// Exclude is an array of test indices to exclude from the report.
-	Exclude []string `json:"exclude"`
+	Exclude []string `json:"exclude,omitempty"`
 
 	// Include is an array of test indices to show in the report.
 	// Is additive if IncludeUnscoredTests is true.
 	// Takes precedence over Exclude.
-	Include []string `json:"include"`
+	Include []string `json:"include,omitempty"`
 }
 
 // CISBenchmarkSelection selects a particular set of benchmarks.

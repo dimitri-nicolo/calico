@@ -2602,7 +2602,6 @@ func schema_libcalico_go_lib_apis_v3_CISBenchmarkFilter(ref common.ReferenceCall
 						},
 					},
 				},
-				Required: []string{"exclude", "include"},
 			},
 		},
 		Dependencies: []string{
