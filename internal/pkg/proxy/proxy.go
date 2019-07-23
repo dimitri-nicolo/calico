@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"regexp"
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -19,6 +20,11 @@ type Target struct {
 	Dest  *url.URL
 	Token string
 	CA    *x509.Certificate
+
+	// PathRegexp, if not nil, check if Regexp matches the path
+	PathRegexp *regexp.Regexp
+	// PathReplace if not nil will be used to replace PathRegexp matches
+	PathReplace []byte
 
 	// Transport to use for this target. If nil, Proxy will provide one
 	Transport http.RoundTripper
@@ -97,9 +103,21 @@ func newTargetHandler(tgt Target) func(http.ResponseWriter, *http.Request) {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Debugf("Received request %+v will proxy to %s", r, tgt.Dest)
+
+		if tgt.PathRegexp != nil {
+			if !tgt.PathRegexp.MatchString(r.URL.Path) {
+				http.Error(w, "Not found", 404)
+				return
+			}
+			if tgt.PathReplace != nil {
+				r.URL.Path = tgt.PathRegexp.ReplaceAllString(r.URL.Path, string(tgt.PathReplace))
+			}
+		}
+
 		if token != "" {
 			r.Header.Set("Authorization", token)
 		}
+
 		p.ServeHTTP(w, r)
 	}
 }

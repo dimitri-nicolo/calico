@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"regexp"
 	"strings"
 
 	. "github.com/onsi/ginkgo"
@@ -135,6 +136,101 @@ var _ = Describe("Proxy", func() {
 
 			res := w.Result()
 			Expect(res.StatusCode).To(Equal(404))
+		})
+	})
+
+	Describe("When target has a regexp", func() {
+		t := &transport{
+			func(*http.Request) (*http.Response, error) {
+				return &http.Response{StatusCode: 200, Body: body("")}, nil
+			},
+		}
+
+		p, _ := proxy.New([]proxy.Target{
+			{
+				Path: "/path/",
+				Dest: &url.URL{
+					Scheme: "http",
+					Host:   "some",
+				},
+				PathRegexp: regexp.MustCompile("must.*match"),
+				Transport:  t,
+			},
+		})
+
+		It("should reach a sub tree with a refined match", func() {
+			r, err := http.NewRequest("GET", "http://host/path/sub/tree/must/contain/match", nil)
+			Expect(err).NotTo(HaveOccurred())
+			w := httptest.NewRecorder()
+			p.ServeHTTP(w, r)
+
+			res := w.Result()
+			Expect(res.StatusCode).To(Equal(200))
+		})
+
+		It("should fail to reach if not a precise match", func() {
+			r, err := http.NewRequest("GET", "http://host/path/no/match", nil)
+			Expect(err).NotTo(HaveOccurred())
+			w := httptest.NewRecorder()
+			p.ServeHTTP(w, r)
+
+			res := w.Result()
+			Expect(res.StatusCode).To(Equal(404))
+		})
+
+		Describe("When it also has a replace", func() {
+			t := &transport{
+				func(r *http.Request) (*http.Response, error) {
+					if r.URL.Path == "/the/right/result" {
+						return &http.Response{StatusCode: 200, Body: body("")}, nil
+					}
+					log.Errorf("bad path: %q", r.URL.Path)
+					return &http.Response{StatusCode: 404, Body: body("")}, nil
+				},
+			}
+
+			p, _ := proxy.New([]proxy.Target{
+				{
+					Path: "/path/the/remove/right/remove/result",
+					Dest: &url.URL{
+						Scheme: "http",
+						Host:   "some",
+					},
+					PathRegexp:  regexp.MustCompile("(path|remove)/"),
+					PathReplace: []byte(""),
+					Transport:   t,
+				},
+				{
+					Path: "/result/the/right",
+					Dest: &url.URL{
+						Scheme: "http",
+						Host:   "some",
+					},
+					PathRegexp:  regexp.MustCompile("(result)/(.*)/(right)"),
+					PathReplace: []byte("$2/$3/$1"),
+					Transport:   t,
+				},
+			})
+
+			It("should reach target with removed path bits", func() {
+				r, err := http.NewRequest("GET", "http://host/path/the/remove/right/remove/result", nil)
+				Expect(err).NotTo(HaveOccurred())
+				w := httptest.NewRecorder()
+				p.ServeHTTP(w, r)
+
+				res := w.Result()
+				Expect(res.StatusCode).To(Equal(200))
+			})
+
+			It("should reach target with rewritten path bits", func() {
+				r, err := http.NewRequest("GET", "http://host/result/the/right", nil)
+				Expect(err).NotTo(HaveOccurred())
+				w := httptest.NewRecorder()
+				p.ServeHTTP(w, r)
+
+				res := w.Result()
+				Expect(res.StatusCode).To(Equal(200))
+			})
 		})
 	})
 
