@@ -1,5 +1,5 @@
-hash: 3e115f87305bcd3c97943b0f86649136c1c3bd420f247577e177818417bee412
-updated: 2019-07-18T09:37:06.593129-07:00
+hash: a4748c049a7fa8b6d0c4ce55e57e2cc43d2e73ff4ebf5f65d131b8b42ec4e6d6
+updated: 2019-07-23T15:08:53.534326-07:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -76,7 +76,7 @@ imports:
 - name: github.com/go-openapi/swag
   version: f3f9494671f93fcff853e3c6e9e948b3eb71e590
 - name: github.com/go-playground/locales
-  version: 630ebbb602847eba93e75ae38bbc7bb7abcf1ff3
+  version: f63010822830b6fe52288ee52d5a1151088ce039
   subpackages:
   - currency
 - name: github.com/go-playground/universal-translator
@@ -131,9 +131,9 @@ imports:
 - name: github.com/json-iterator/go
   version: 13f86432b882000a51c6e610c620974462691a97
 - name: github.com/kelseyhightower/envconfig
-  version: 0b417c4ec4a8a82eecc22a1459a504aa55163d61
+  version: dd1402a4d99de9ac2f396cd6fcb957bc2c695ec1
 - name: github.com/kubernetes/repo-infra
-  version: f85734f673056977d8ba04b0386394b684ca2acb
+  version: 1b2ddaf3fb8775a5d0f4e28085cf846f915977a8
 - name: github.com/leodido/go-urn
   version: a67a23e1c1af3c66528573bb86a87246477277c1
 - name: github.com/mailru/easyjson
@@ -147,7 +147,7 @@ imports:
 - name: github.com/Masterminds/semver
   version: 59c29afe1a994eacb71c833025ca7acf874bb1da
 - name: github.com/Masterminds/sprig
-  version: 8e5f7788fea6472ca71d5ad92887798a54b4b0f9
+  version: 9f8fceff796fb9f4e992cd2bece016be0121ab74
 - name: github.com/matttproud/golang_protobuf_extensions
   version: fc2b8d3a73c4867e51861bbdd5ae3c1f0869dd6a
   subpackages:
@@ -167,7 +167,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 9bef69d2b882bf782daed36d772fbe048e7662a3
+  version: 583a383311d03a54bb37d22f0c78f18689e880ec
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
@@ -296,11 +296,11 @@ imports:
   subpackages:
   - rate
 - name: golang.org/x/tools
-  version: 128ec6dfca091cc7d4fe6d18d97911f37c95a590
+  version: 5a8dccf5b48ae388eebac31f4077f14adda4dbc6
   subpackages:
   - import
 - name: google.golang.org/appengine
-  version: b2f4a3cf3c67576a2ee09e1fe62656a5086ce880
+  version: 54a98f90d1c46b7731eb8fb305d2a321c30ef610
   subpackages:
   - internal
   - internal/app_identity
@@ -337,7 +337,7 @@ imports:
   - tap
   - transport
 - name: gopkg.in/go-playground/validator.v9
-  version: 556b9da3c05f2a935bc086fb5a0bb55dd8112d2d
+  version: b199fa0642d29caca62b6a99d65cc981ba5edc3b
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: gopkg.in/natefinch/lumberjack.v2
