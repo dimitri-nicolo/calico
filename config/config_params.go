@@ -267,6 +267,7 @@ type Config struct {
 	DNSLogsFileMaxFileSizeMB   int           `config:"int;100"`
 	DNSLogsFileAggregationKind int           `config:"int(0:1);1"`
 	DNSLogsFileIncludeLabels   bool          `config:"bool;true"`
+	DNSLogsFilePerNodeLimit    int           `config:"int;0"`
 
 	KubeNodePortRanges []numorstring.Port `config:"portrange-list;30000:32767"`
 	NATPortRange       numorstring.Port   `config:"portrange;"`

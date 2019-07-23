@@ -6,6 +6,8 @@ import (
 	"sync"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/projectcalico/felix/rules"
 )
 
@@ -31,7 +33,9 @@ type dnsLogAggregator struct {
 	dnsMutex             sync.Mutex
 	includeLabels        bool
 	aggregationStartTime time.Time
+	perNodeLimit         int
 	handledAction        rules.RuleAction
+	numUnloggedUpdates   int
 }
 
 // NewDNSLogAggregator constructs a DNSLogAggregator
@@ -53,6 +57,11 @@ func (d *dnsLogAggregator) AggregateOver(k DNSAggregationKind) DNSLogAggregator 
 	return d
 }
 
+func (d *dnsLogAggregator) PerNodeLimit(l int) DNSLogAggregator {
+	d.perNodeLimit = l
+	return d
+}
+
 func (d *dnsLogAggregator) FeedUpdate(update DNSUpdate) error {
 	meta, spec, err := NewDNSMetaSpecFromUpdate(update, d.kind)
 
@@ -69,8 +78,10 @@ func (d *dnsLogAggregator) FeedUpdate(update DNSUpdate) error {
 		existing := d.dnsStore[meta]
 		existing.Merge(spec)
 		d.dnsStore[meta] = existing
-	} else {
+	} else if (d.perNodeLimit == 0) || (len(d.dnsStore) < d.perNodeLimit) {
 		d.dnsStore[meta] = spec
+	} else {
+		d.numUnloggedUpdates++
 	}
 
 	return nil
@@ -93,7 +104,15 @@ func (d *dnsLogAggregator) Get() []*DNSLog {
 			d.includeLabels,
 		))
 	}
+	if d.numUnloggedUpdates > 0 {
+		log.Warningf(
+			"%v DNS responses were not logged, because of DNSLogsFilePerNodeLimit being set to %v",
+			d.numUnloggedUpdates,
+			d.perNodeLimit,
+		)
+	}
 	d.dnsStore = make(map[DNSMeta]DNSSpec)
 	d.aggregationStartTime = aggregationEndTime
+	d.numUnloggedUpdates = 0
 	return dnsLogs
 }

@@ -54,6 +54,12 @@ var _ = Describe("DNS log aggregator", func() {
 			Expect(l.AggregateOver(DNSDefault)).Should(Equal(l))
 			Expect(l.kind).Should(Equal(DNSDefault))
 		})
+
+		It("per-node limit", func() {
+			Expect(l.perNodeLimit).Should(BeNumerically("==", 0))
+			Expect(l.PerNodeLimit(579)).Should(Equal(l))
+			Expect(l.perNodeLimit).Should(BeNumerically("==", 579))
+		})
 	})
 
 	Describe("feed update", func() {
@@ -224,6 +230,30 @@ var _ = Describe("DNS log aggregator", func() {
 					}
 				})
 			}
+		})
+	})
+
+	Describe("with per-node limit of 5", func() {
+		BeforeEach(func() {
+			l.PerNodeLimit(5)
+		})
+
+		It("should only buffer 5 logs", func() {
+			for i := 0; i < 10; i++ {
+				uniqueClientIP := net.ParseIP(fmt.Sprintf("10.9.8.%v", i))
+				err := l.FeedUpdate(DNSUpdate{ClientIP: uniqueClientIP, ServerIP: serverIP, ClientEP: clientEP, ServerEP: serverEP, DNS: &layers.DNS{
+					ResponseCode: layers.DNSResponseCodeNoErr,
+					Questions: []layers.DNSQuestion{
+						{Name: []byte("tigera.io."), Type: layers.DNSTypeA, Class: layers.DNSClassIN},
+					},
+					Answers: []layers.DNSResourceRecord{
+						{Name: []byte("tigera.io."), Type: layers.DNSTypeA, Class: layers.DNSClassIN, IP: net.ParseIP("127.0.0.1")},
+					},
+				}})
+				Expect(err).ShouldNot(HaveOccurred())
+			}
+			Expect(l.dnsStore).Should(HaveLen(5))
+			Expect(l.Get()).Should(HaveLen(5))
 		})
 	})
 })
