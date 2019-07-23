@@ -28,7 +28,7 @@ const (
 type dnsLogAggregator struct {
 	kind                 DNSAggregationKind
 	dnsStore             map[DNSMeta]DNSSpec
-	dnsMutex             sync.RWMutex
+	dnsMutex             sync.Mutex
 	includeLabels        bool
 	aggregationStartTime time.Time
 	handledAction        rules.RuleAction
@@ -39,7 +39,6 @@ func NewDNSLogAggregator() DNSLogAggregator {
 	return &dnsLogAggregator{
 		kind:                 DNSDefault,
 		dnsStore:             make(map[DNSMeta]DNSSpec),
-		dnsMutex:             sync.RWMutex{},
 		aggregationStartTime: time.Now(),
 	}
 }
