@@ -159,6 +159,7 @@ The Kubernetes API datastore driver reads its configuration from Kubernetes-prov
 | `DNSLogsFlushInterval`       | `FELIX_DNSLOGSFLUSHINTERVAL`      	| `300`   | The period, in seconds, at which Felix exports DNS logs. |
 | `DNSLogsFileAggregationKind` | `FELIX_DNSLOGSFILEAGGREGATIONKIND` | `1` | How much to aggregate DNS logs.  Bear in mind that changing this value may have a dramatic impact on the volume of flow logs sent to Elasticsearch.  `0` means no aggregation, `1` means aggregate similar DNS logs from workloads in the same ReplicaSet. |
 | `DNSLogsFileIncludeLabels`   | `FELIX_DNSLOGSFILEINCLUDELABELS`   | `true` | Whether to include client and server workload labels in DNS logs. |
+| `DNSLogsFilePerNodeLimit`    | `FELIX_DNSLOGSFILEPERNODELIMIT`    | `0` (no limit) | Limit on the number of DNS logs that can be emitted within each flush interval.  When this limit has been reached, Felix counts the number of unloggable DNS responses within the flush interval, and emits a WARNING log with that count at the same time as it flushes the buffered DNS logs. |
 
 DropActionOverride controls what happens to each packet that is denied by
 the current {{site.prodname}} policy - i.e. by the ordered combination of all the

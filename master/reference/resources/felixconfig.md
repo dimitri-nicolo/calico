@@ -116,6 +116,7 @@ spec:
 | dnsLogsFlushInterval               | The period, in seconds, at which Felix exports DNS logs. | int | int | `300` |
 | dnsLogsFileAggregationKind         | How much to aggregate DNS logs.  Bear in mind that changing this value may have a dramatic impact on the volume of flow logs sent to Elasticsearch.  `0` means no aggregation, `1` means aggregate similar DNS logs from workloads in the same ReplicaSet. | `0`,`1` | int | `1` |
 | dnsLogsFileIncludeLabels           | Whether to include client and server workload labels in DNS logs. | `true`, `false` | boolean | `true` |
+| dnsLogsFilePerNodeLimit            | Limit on the number of DNS logs that can be emitted within each flush interval.  When this limit has been reached, Felix counts the number of unloggable DNS responses within the flush interval, and emits a WARNING log with that count at the same time as it flushes the buffered DNS logs. | int | int | `0` (no limit) |
 
 
 \* When `dropActionOverride` is set to `LogAndDrop` or `LogAndAccept`, the `syslog` entries look something like the following.
