@@ -4657,6 +4657,13 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							Format:      "int32",
 						},
 					},
+					"dnsLogsFilePerNodeLimit": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Limit on the number of DNS logs that can be emitted within each flush interval.  When this limit has been reached, Felix counts the number of unloggable DNS responses within the flush interval, and emits a WARNING log with that count at the same time as it flushes the buffered DNS logs.  [Default: 0, meaning no limit]",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
 					"windowsNetworkName": {
 						SchemaProps: spec.SchemaProps{
 							Description: "WindowsNetworkName specifies which Windows HNS networks Felix should operate on.  The default is to match networks that start with \"calico\".  Supports regular expression syntax.",
