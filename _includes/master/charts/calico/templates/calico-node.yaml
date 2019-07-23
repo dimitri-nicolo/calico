@@ -352,6 +352,11 @@ spec:
             # Enable processing network sets in EE Flow Logs
             - name: FELIX_FLOWLOGSENABLENETWORKSETS
               value: "true"
+            # Enable Tigera Secure EE DNS Log generation, with a limit of 1000 logs per node per 5 minutes
+            - name: FELIX_DNSLOGSFILEENABLED
+              value: "true"
+            - name: FELIX_DNSLOGSFILEPERNODELIMIT
+              value: "1000"
 {{- if .Values.typha.enabled }}
             # Location of the CA bundle Felix uses to authenticate Typha; volume mount
             - name: FELIX_TYPHACAFILE
