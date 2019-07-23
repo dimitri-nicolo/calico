@@ -28,7 +28,7 @@ const (
 type dnsLogAggregator struct {
 	kind                 DNSAggregationKind
 	dnsStore             map[DNSMeta]DNSSpec
-	flMutex              sync.RWMutex
+	dnsMutex             sync.Mutex
 	includeLabels        bool
 	aggregationStartTime time.Time
 	handledAction        rules.RuleAction
@@ -39,7 +39,6 @@ func NewDNSLogAggregator() DNSLogAggregator {
 	return &dnsLogAggregator{
 		kind:                 DNSDefault,
 		dnsStore:             make(map[DNSMeta]DNSSpec),
-		flMutex:              sync.RWMutex{},
 		aggregationStartTime: time.Now(),
 	}
 }
@@ -61,6 +60,11 @@ func (d *dnsLogAggregator) FeedUpdate(update DNSUpdate) error {
 		return err
 	}
 
+	// Ensure that we can't add or aggregate new logs into the store at the
+	// same time as existing logs are being flushed out.
+	d.dnsMutex.Lock()
+	defer d.dnsMutex.Unlock()
+
 	if _, ok := d.dnsStore[meta]; ok {
 		existing := d.dnsStore[meta]
 		existing.Merge(spec)
@@ -75,6 +79,12 @@ func (d *dnsLogAggregator) FeedUpdate(update DNSUpdate) error {
 func (d *dnsLogAggregator) Get() []*DNSLog {
 	var dnsLogs []*DNSLog
 	aggregationEndTime := time.Now()
+
+	// Ensure that we can't add or aggregate new logs into the store at the
+	// same time as existing logs are being flushed out.
+	d.dnsMutex.Lock()
+	defer d.dnsMutex.Unlock()
+
 	for meta, spec := range d.dnsStore {
 		dnsData := DNSData{meta, spec}
 		dnsLogs = append(dnsLogs, dnsData.ToDNSLog(
