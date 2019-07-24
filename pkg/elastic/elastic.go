@@ -36,6 +36,7 @@ type Client interface {
 	report.ReportStorer
 	list.Destination
 	event.Fetcher
+	ClusterIndex(string, string) string
 	Backend() *elastic.Client
 }
 
