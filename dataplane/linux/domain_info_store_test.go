@@ -226,6 +226,16 @@ var _ = Describe("Domain Info Store", func() {
 		Expect(domainStore.GetDomainIPs("a.com")).To(BeEmpty())
 	})
 
+	It("0.0.0.0 is ignored", func() {
+		domainStoreCreate()
+		// 0.0.0.0 should be ignored.
+		programDNSAnswer(domainStore, testutils.MakeA("a.com", "0.0.0.0"))
+		Expect(domainStore.GetDomainIPs("a.com")).To(BeEmpty())
+		// But not any other IP.
+		programDNSAnswer(domainStore, testutils.MakeA("a.com", "0.0.0.1"))
+		Expect(domainStore.GetDomainIPs("a.com")).To(HaveLen(1))
+	})
+
 	DescribeTable("it should identify wildcards",
 		func(domain string, expectedIsWildcard bool) {
 			Expect(isWildcard(domain)).To(Equal(expectedIsWildcard))

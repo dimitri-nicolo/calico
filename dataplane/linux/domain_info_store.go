@@ -391,6 +391,15 @@ func (s *domainInfoStore) storeDNSRecordInfo(rec *layers.DNSResourceRecord, sect
 }
 
 func (s *domainInfoStore) storeInfo(name, value string, ttl time.Duration, isName bool) {
+	if value == "0.0.0.0" {
+		// DNS records sometimes contain 0.0.0.0, but it's not a real routable IP and we
+		// must avoid passing it on to ipsets, because ipsets complains with "ipset v6.38:
+		// Error in line 1: Null-valued element, cannot be stored in a hash type of set".
+		// We don't need to record 0.0.0.0 mappings for any other purpose, so just log and
+		// bail out early here.
+		log.Debugf("Ignoring zero IP (%v -> %v TTL %v)", name, value, ttl)
+		return
+	}
 	// Impose a minimum TTL of 2 seconds - i.e. ensure that the mapping that we store here will
 	// not expire for at least 2 seconds.  Otherwise TCP connections that should succeed will
 	// fail if they involve a DNS response with TTL 1.  In detail:
