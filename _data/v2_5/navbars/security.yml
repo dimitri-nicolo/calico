@@ -20,6 +20,8 @@ toc:
   path: /security/app-layer-policy/
 - title: Using domain names in policy rules
   path: /security/domain-based-policy
+- title: Previewing the Impact of Policy Changes
+  path: /security/policy-impact-preview
 - title: Host endpoints
   section:
   - title: Overview
