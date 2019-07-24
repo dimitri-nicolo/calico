@@ -6,10 +6,10 @@
 	"mappings": {
 		"_default_": {
 			"properties": {
-				"apiVersion": { "type": "text" },
-				"auditID": { "type": "text" },
-				"kind": { "type": "text" },
-				"level": { "type": "text" },
+				"apiVersion": { "type": "keyword" },
+				"auditID": { "type": "keyword" },
+				"kind": { "type": "keyword" },
+				"level": { "type": "keyword" },
 				"metadata": { "type": "object", "enabled": false },
 				"name": { "type": "keyword" },
 				"objectRef": {
@@ -23,7 +23,7 @@
 				},
 				"requestObject": { "type": "object", "enabled": false },
 				"requestReceivedTimestamp": { "type": "date" },
-				"requestURI": { "type": "text" },
+				"requestURI": { "type": "keyword" },
 				"responseObject": {
 					"properties": {
 						"apiVersion": { "type": "keyword" },
@@ -45,11 +45,11 @@
 				"timestamp": { "type": "date" },
 				"user": {
 					"properties": {
-						"groups": { "type": "text" },
-						"username": { "type": "text" }
+						"groups": { "type": "keyword" },
+						"username": { "type": "keyword" }
 					}
 				},
-				"verb": { "type": "text" }
+				"verb": { "type": "keyword" }
 			}
 		}
 	}
