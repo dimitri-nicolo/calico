@@ -1,5 +1,5 @@
-hash: 32ce31d8dadc768e442eb70077b8de4d64b0385fdfe65d84c1cc8cbad6c501ba
-updated: 2019-07-24T05:05:46.196606122Z
+hash: 6d1a866ca8eafbccc80f6d54740418f01640cf9a4efca595d1d77c8f4fd9aeb5
+updated: 2019-07-24T11:58:59.659224567Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -130,7 +130,7 @@ imports:
 - name: github.com/go-openapi/swag
   version: becd2f08beafcca035645a8a101e0e3e18140458
 - name: github.com/go-playground/locales
-  version: 630ebbb602847eba93e75ae38bbc7bb7abcf1ff3
+  version: f63010822830b6fe52288ee52d5a1151088ce039
   subpackages:
   - currency
 - name: github.com/go-playground/universal-translator
@@ -325,7 +325,7 @@ imports:
   - pkg/types
   - pkg/upgrade
 - name: github.com/projectcalico/felix
-  version: efb14d00cb7e353be8436f295ef48e1be0b42dc3
+  version: 8a652cd8676dd1ec966b8e681ecfc3f759070f9b
   repo: git@github.com:tigera/felix-private.git
   subpackages:
   - bpf
@@ -375,7 +375,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 583a383311d03a54bb37d22f0c78f18689e880ec
+  version: ca59d48f491b2a61344cebca3f20f7426f57bfd1
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
