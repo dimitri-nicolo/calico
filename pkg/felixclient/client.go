@@ -99,7 +99,7 @@ func (fc *felixClient) batchAndConvertIngressLogs(info collector.IngressInfo) ma
 		// Add the count statistics
 		httpStat := &proto.Statistic{
 			Direction:  proto.Statistic_IN,
-			Relativity: proto.Statistic_ABSOLUTE,
+			Relativity: proto.Statistic_DELTA,
 			Kind:       proto.Statistic_HTTP_DATA,
 			Action:     proto.Action_ALLOWED,
 			Value:      int64(info.Connections[tupleKey]),
@@ -116,7 +116,7 @@ func (fc *felixClient) batchAndConvertIngressLogs(info collector.IngressInfo) ma
 			// Add the count statistics
 			httpStat := &proto.Statistic{
 				Direction:  proto.Statistic_IN,
-				Relativity: proto.Statistic_ABSOLUTE,
+				Relativity: proto.Statistic_DELTA,
 				Kind:       proto.Statistic_HTTP_DATA,
 				Action:     proto.Action_ALLOWED,
 				Value:      int64(count),
