@@ -137,7 +137,8 @@ func StartDataplaneStatsCollector(configParams *config.Config, lookupsCache *cal
 		dnsLogReporter.AddAggregator(
 			NewDNSLogAggregator().
 				AggregateOver(DNSAggregationKind(configParams.DNSLogsFileAggregationKind)).
-				IncludeLabels(configParams.DNSLogsFileIncludeLabels),
+				IncludeLabels(configParams.DNSLogsFileIncludeLabels).
+				PerNodeLimit(configParams.DNSLogsFilePerNodeLimit),
 			[]string{DNSLogsFileDispatcherName},
 		)
 		statsCollector.SetDNSLogReporter(dnsLogReporter)

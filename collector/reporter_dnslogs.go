@@ -21,6 +21,7 @@ type DNSLogAggregator interface {
 	DNSLogGetter
 	IncludeLabels(bool) DNSLogAggregator
 	AggregateOver(DNSAggregationKind) DNSLogAggregator
+	PerNodeLimit(int) DNSLogAggregator
 	FeedUpdate(DNSUpdate) error
 }
 
