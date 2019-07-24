@@ -462,9 +462,8 @@ func (s *domainInfoStore) GetDomainIPs(domain string) []string {
 	defer s.mutex.Unlock()
 	ips := s.resultsCache[domain]
 	if ips == nil {
-		var collectIPsForName func(string)
-		collectedNames := set.New()
-		collectIPsForName = func(name string) {
+		var collectIPsForName func(string, set.Set)
+		collectIPsForName = func(name string, collectedNames set.Set) {
 			if collectedNames.Contains(name) {
 				log.Warningf("%v has a CNAME loop back to itself", name)
 				return
@@ -481,7 +480,7 @@ func (s *domainInfoStore) GetDomainIPs(domain string) []string {
 					if valueData.isName {
 						// The RHS of the mapping is another name, so we recurse to pick up
 						// its IPs.
-						collectIPsForName(value)
+						collectIPsForName(value, collectedNames)
 					} else {
 						// The RHS of the mapping is an IP, so add it to the list that we
 						// will return.
@@ -504,11 +503,11 @@ func (s *domainInfoStore) GetDomainIPs(domain string) []string {
 			}
 			for name := range s.mappings {
 				if regex.MatchString(name) {
-					collectIPsForName(name)
+					collectIPsForName(name, set.New())
 				}
 			}
 		} else {
-			collectIPsForName(domain)
+			collectIPsForName(domain, set.New())
 		}
 		s.resultsCache[domain] = ips
 	}
