@@ -1,5 +1,5 @@
-hash: 1d04646d4263631503720c8a2f8023d956cf09fa25d57ecdc382781e81c76c2b
-updated: 2019-07-13T10:26:45.855591-07:00
+hash: 53f16be9b068ca2375caf9845134c0931a5be8ba9d4bd6a5af493c20e89571d6
+updated: 2019-07-24T10:33:10.802809408Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -167,7 +167,7 @@ imports:
   subpackages:
   - simplelru
 - name: github.com/hpcloud/tail
-  version: a1dbeea552b7c8df4b542c66073e393de198a800
+  version: a30252cb686a21eb2d0b98132633053ec2f7f1e5
   subpackages:
   - ratelimiter
   - util
@@ -307,7 +307,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: d49a1c8f7699924e3593c64cc2a47a1ba87a9995
+  version: ca59d48f491b2a61344cebca3f20f7426f57bfd1
   repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib/apiconfig
@@ -353,7 +353,7 @@ imports:
   subpackages:
   - binder
 - name: github.com/projectcalico/typha
-  version: 936d22ea6aa66155c0b9939c1c0886373a4c7c04
+  version: 61672c825899c1ca7e27ed37fd5dbb7b39bffc77
   repo: git@github.com:tigera/typha-private
   subpackages:
   - pkg/syncclient
@@ -396,7 +396,7 @@ imports:
 - name: github.com/spf13/pflag
   version: 583c0c0531f06d5278b7d917446061adc344b5cd
 - name: github.com/tigera/licensing
-  version: 8231bc0944780772f74f934d8982d22b6eea4b6f
+  version: dfdb79a3a5ea334709e709ae10bb52cc9f34982a
   repo: git@github.com:tigera/licensing
   vcs: git
   subpackages:
@@ -416,7 +416,7 @@ imports:
   subpackages:
   - nl
 - name: github.com/vishvananda/netns
-  version: 54f0e4339ce73702a0607f49922aaa1e749b418d
+  version: 8ba1072b58e0c2a240eb5f6120165c7776c3e7b8
 - name: github.com/whyrusleeping/go-logging
   version: 0457bb6b88fc1973573aaf6b5145d8d3ae972390
 - name: golang.org/x/crypto
@@ -519,10 +519,10 @@ imports:
   - status
   - tap
   - transport
-- name: gopkg.in/fsnotify/fsnotify.v1
-  version: c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9
+- name: gopkg.in/fsnotify.v1
+  version: 7be54206639f256967dd82fa767397ba5f8f48f5
 - name: gopkg.in/go-playground/validator.v9
-  version: b199fa0642d29caca62b6a99d65cc981ba5edc3b
+  version: 46b4b1e301c24cac870ffcb4ba5c8a703d1ef475
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: gopkg.in/natefinch/lumberjack.v2
