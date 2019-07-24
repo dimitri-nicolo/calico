@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	auditLogIndex = "tigera_secure_ee_audit_*"
+	AuditLogIndex = "tigera_secure_ee_audit_*"
 	pageSize      = 100
 )
 
@@ -29,7 +29,7 @@ func (c *client) GetAuditEvents(ctx context.Context, start, end *time.Time) <-ch
 // Query for audit events in a paginated fashion
 func (c *client) SearchAuditEvents(ctx context.Context, filter *v3.AuditEventsSelection, start, end *time.Time) <-chan *event.AuditEventResult {
 	ch := make(chan *event.AuditEventResult, pageSize)
-	searchIndex := c.clusterIndex(auditLogIndex, "*")
+	searchIndex := c.ClusterIndex(AuditLogIndex, "*")
 	go func() {
 		defer close(ch)
 		// Make search query with scroll

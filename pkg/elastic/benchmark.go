@@ -19,7 +19,7 @@ import (
 func (c *client) GetBenchmarks(cxt context.Context, id string) (*benchmark.Benchmarks, error) {
 	clog := log.WithField("id", id)
 
-	searchIndex := c.clusterIndex(benchmarksIndex, "*")
+	searchIndex := c.ClusterIndex(BenchmarksIndex, "*")
 
 	// Execute query.
 	res, err := c.Search().
@@ -62,7 +62,7 @@ func (c *client) GetBenchmarks(cxt context.Context, id string) (*benchmark.Bench
 
 // StoreBenchmarks stores the supplied benchmarks.
 func (c *client) StoreBenchmarks(ctx context.Context, b *benchmark.Benchmarks) error {
-	index := c.clusterIndex(benchmarksIndex, b.Timestamp.Format(IndexTimeFormat))
+	index := c.ClusterIndex(BenchmarksIndex, b.Timestamp.Format(IndexTimeFormat))
 	if err := c.ensureIndexExistsWithRetry(index, benchmarksMapping); err != nil {
 		return err
 	}
@@ -86,7 +86,7 @@ func (c *client) StoreBenchmarks(ctx context.Context, b *benchmark.Benchmarks) e
 // Filters are OR'd together. Options within the filter are ANDed.
 func (c *client) RetrieveLatestBenchmarks(ctx context.Context, ct benchmark.BenchmarkType, filters []benchmark.Filter, start, end time.Time) <-chan benchmark.BenchmarksResult {
 	ch := make(chan benchmark.BenchmarksResult, pageSize)
-	searchIndex := c.clusterIndex(benchmarksIndex, "*")
+	searchIndex := c.ClusterIndex(BenchmarksIndex, "*")
 
 	// Keep track of the latest results set from each node.
 	go func() {

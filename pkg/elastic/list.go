@@ -28,7 +28,7 @@ func (c *client) RetrieveList(kind metav1.TypeMeta, from, to *time.Time, ascendi
 		rangeQuery = rangeQuery.To(*to)
 	}
 
-	searchIndex := c.clusterIndex(snapshotsIndex, "*")
+	searchIndex := c.ClusterIndex(SnapshotsIndex, "*")
 	// Execute query.
 	res, err := c.Search().
 		Index(searchIndex).
@@ -75,7 +75,7 @@ func (c *client) RetrieveList(kind metav1.TypeMeta, from, to *time.Time, ascendi
 
 func (c *client) StoreList(_ metav1.TypeMeta, l *list.TimestampedResourceList) error {
 	dateSuffix := l.RequestCompletedTimestamp.Format(IndexTimeFormat)
-	index := c.clusterIndex(snapshotsIndex, dateSuffix)
+	index := c.ClusterIndex(SnapshotsIndex, dateSuffix)
 	if err := c.ensureIndexExistsWithRetry(index, snapshotsMapping); err != nil {
 		return err
 	}
