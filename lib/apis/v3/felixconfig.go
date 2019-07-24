@@ -404,7 +404,7 @@ type FelixConfigurationSpec struct {
 	// [Default: 300s]
 	DNSLogsFlushInterval *metav1.Duration `json:"dnsLogsFlushInterval,omitempty" configv1timescale:"seconds"`
 	// DNSLogsFileEnabled controls logging DNS logs to a file. If false no DNS logging to file will occur.
-	// [Default: true]
+	// [Default: false]
 	DNSLogsFileEnabled *bool `json:"dnsLogsFileEnabled,omitempty"`
 	// DNSLogsFileMaxFiles sets the number of DNS log files to keep.
 	// [Default: 5]
@@ -424,6 +424,11 @@ type FelixConfigurationSpec struct {
 	// 0 - No aggregation
 	// 1 - Aggregate over clients with the same name prefix
 	DNSLogsFileAggregationKind *int `json:"dnsLogsFileAggregationKind,omitempty" validate:"omitempty,dnsAggregationKind"`
+	// Limit on the number of DNS logs that can be emitted within each flush interval.  When
+	// this limit has been reached, Felix counts the number of unloggable DNS responses within
+	// the flush interval, and emits a WARNING log with that count at the same time as it
+	// flushes the buffered DNS logs.  [Default: 0, meaning no limit]
+	DNSLogsFilePerNodeLimit *int `json:"dnsLogsFilePerNodeLimit,omitempty"`
 
 	// WindowsNetworkName specifies which Windows HNS networks Felix should operate on.  The default is to match
 	// networks that start with "calico".  Supports regular expression syntax.

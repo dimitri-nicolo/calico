@@ -4617,7 +4617,7 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 					},
 					"dnsLogsFileEnabled": {
 						SchemaProps: spec.SchemaProps{
-							Description: "DNSLogsFileEnabled controls logging DNS logs to a file. If false no DNS logging to file will occur. [Default: true]",
+							Description: "DNSLogsFileEnabled controls logging DNS logs to a file. If false no DNS logging to file will occur. [Default: false]",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
@@ -4653,6 +4653,13 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 					"dnsLogsFileAggregationKind": {
 						SchemaProps: spec.SchemaProps{
 							Description: "DNSLogsFileAggregationKind is used to choose the type of aggregation for DNS log entries. [Default: 1 - client name prefix aggregation]. Accepted values are 0 and 1. 0 - No aggregation 1 - Aggregate over clients with the same name prefix",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"dnsLogsFilePerNodeLimit": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Limit on the number of DNS logs that can be emitted within each flush interval.  When this limit has been reached, Felix counts the number of unloggable DNS responses within the flush interval, and emits a WARNING log with that count at the same time as it flushes the buffered DNS logs.  [Default: 0, meaning no limit]",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},

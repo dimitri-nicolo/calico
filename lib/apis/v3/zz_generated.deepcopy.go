@@ -1406,6 +1406,11 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 		*out = new(int)
 		**out = **in
 	}
+	if in.DNSLogsFilePerNodeLimit != nil {
+		in, out := &in.DNSLogsFilePerNodeLimit, &out.DNSLogsFilePerNodeLimit
+		*out = new(int)
+		**out = **in
+	}
 	if in.WindowsNetworkName != nil {
 		in, out := &in.WindowsNetworkName, &out.WindowsNetworkName
 		*out = new(string)
