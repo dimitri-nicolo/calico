@@ -25,7 +25,7 @@ var (
 func (c *client) RetrieveArchivedReport(id string) (*report.ArchivedReportData, error) {
 	clog := log.WithField("id", id)
 
-	searchIndex := c.clusterIndex(reportsIndex, "*")
+	searchIndex := c.ClusterIndex(ReportsIndex, "*")
 
 	// Execute query.
 	res, err := c.Search().
@@ -67,7 +67,7 @@ func (c *client) RetrieveArchivedReport(id string) (*report.ArchivedReportData, 
 }
 
 func (c *client) StoreArchivedReport(r *report.ArchivedReportData, t time.Time) error {
-	index := c.clusterIndex(reportsIndex, t.Format(IndexTimeFormat))
+	index := c.ClusterIndex(ReportsIndex, t.Format(IndexTimeFormat))
 	if err := c.ensureIndexExistsWithRetry(index, reportsMapping); err != nil {
 		return err
 	}
@@ -89,7 +89,7 @@ func (c *client) StoreArchivedReport(r *report.ArchivedReportData, t time.Time) 
 func (c *client) RetrieveArchivedReportSummaries() ([]*report.ArchivedReportData, error) {
 	reps := []*report.ArchivedReportData{}
 
-	searchIndex := c.clusterIndex(reportsIndex, "*")
+	searchIndex := c.ClusterIndex(ReportsIndex, "*")
 	// Query for raw report data in a paginated fashion.
 	//TODO(rlb): We will need to add pagination options for the UI.... and also sort options.
 	exit := false
@@ -162,7 +162,7 @@ func (c *client) RetrieveLastArchivedReportSummary(reportName string) (*report.A
 func (c *client) retrieveArchivedReportSummary(queries []elastic.Query, includeReverseSort bool) (*report.ArchivedReportData, error) {
 	rep := new(report.ArchivedReportData)
 
-	searchIndex := c.clusterIndex(reportsIndex, "*")
+	searchIndex := c.ClusterIndex(ReportsIndex, "*")
 
 	q := c.Search().
 		Index(searchIndex).

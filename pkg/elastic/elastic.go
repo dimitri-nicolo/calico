@@ -172,7 +172,7 @@ func (c *client) ensureIndexExists(index, mapping string) error {
 	return nil
 }
 
-func (c *client) clusterIndex(index, postfix string) string {
+func (c *client) ClusterIndex(index, postfix string) string {
 	return fmt.Sprintf("%s.%s.%s", index, c.indexSuffix, postfix)
 }
 
@@ -182,9 +182,9 @@ func (c *client) Backend() *elastic.Client {
 
 func (c *client) Reset() {
 	_, _ = c.Client.DeleteIndex(
-		c.clusterIndex(reportsIndex, "*"),
-		c.clusterIndex(snapshotsIndex, "*"),
-		c.clusterIndex(auditLogIndex, "*"),
-		c.clusterIndex(benchmarksIndex, "*"),
+		c.ClusterIndex(ReportsIndex, "*"),
+		c.ClusterIndex(SnapshotsIndex, "*"),
+		c.ClusterIndex(AuditLogIndex, "*"),
+		c.ClusterIndex(BenchmarksIndex, "*"),
 	).Do(context.Background())
 }

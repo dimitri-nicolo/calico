@@ -3,7 +3,7 @@ package elastic
 
 const (
 	IndexTimeFormat  = "20060102"
-	snapshotsIndex   = "tigera_secure_ee_snapshots"
+	SnapshotsIndex   = "tigera_secure_ee_snapshots"
 	snapshotsMapping = `{
   "mappings": {
     "_doc": {
@@ -19,7 +19,7 @@ const (
   }
 }`
 
-	reportsIndex   = "tigera_secure_ee_compliance_reports"
+	ReportsIndex   = "tigera_secure_ee_compliance_reports"
 	reportsMapping = `{
   "mappings": {
     "_doc": {
@@ -41,7 +41,7 @@ const (
   }
 }`
 
-	benchmarksIndex   = "tigera_secure_ee_benchmark_results"
+	BenchmarksIndex   = "tigera_secure_ee_benchmark_results"
 	benchmarksMapping = `{
   "mappings": {
     "_doc": {

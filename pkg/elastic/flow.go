@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	flowLogIndex              = "tigera_secure_ee_flows"
+	FlowLogIndex              = "tigera_secure_ee_flows"
 	resultBucketSize          = 1000
 	noResultsSize             = 0
 	endTimeField              = "end_time"
@@ -102,7 +102,7 @@ func NewFlowEndpointFromElasticResult(key map[string]interface{}) *apiv3.Endpoin
 // have to be specified in the Elasticsearch Terms query.
 func (c *client) SearchFlowLogs(ctx context.Context, namespaces []string, start, end *time.Time) <-chan *flow.FlowLogResult {
 	resultChan := make(chan *flow.FlowLogResult, resultBucketSize)
-	flogSearchIndex := c.clusterIndex(flowLogIndex, "*")
+	flogSearchIndex := c.ClusterIndex(FlowLogIndex, "*")
 
 	log.Debugf("Searching across namespaces %+v", namespaces)
 
