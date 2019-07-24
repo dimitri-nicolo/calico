@@ -30,8 +30,11 @@ data:
       "caBundlePath": "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
     },
     {
-          "path": "/tigera-elasticseach/",
-          "url": "https://locahost:8002"
+      "path": "/tigera-elasticsearch/",
+      "url": "https://cnx-es-proxy-local.calico-monitoring.svc.cluster.local:30843",
+      "pathRegexp": "^/tigera-elasticsearch/?",
+      "pathReplace": "/",
+      "tokenPath": "/var/run/secrets/kubernetes.io/serviceaccount/token"
     }]'
   # This tells Guardian how to reach Voltron
   cnx-guardian.voltron-url: {{.VoltronURL}}

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/url"
+	"regexp"
 
 	"github.com/pkg/errors"
 
@@ -22,6 +23,10 @@ type Target struct {
 	// CABundlePath is where we read the CA bundle from to authenticate the
 	// destination (if non-empty)
 	CABundlePath string `json:"caBundlePath,omitempty"`
+	// PathRegexp, if not nil, checks if Regexp matches the path
+	PathRegexp strAsByteSlice `json:"pathRegexp,omitempty"`
+	// PathReplace if not nil will be used to replace PathRegexp matches
+	PathReplace strAsByteSlice `json:"pathReplace,omitempty"`
 }
 
 // Targets allows unmarshal the json array
@@ -34,6 +39,14 @@ func (pt *Targets) Decode(envVar string) error {
 		return err
 	}
 
+	return nil
+}
+
+type strAsByteSlice []byte
+
+func (b *strAsByteSlice) UnmarshalJSON(j []byte) error {
+	// strip the enclosing ""
+	*b = j[1 : len(j)-1]
 	return nil
 }
 
@@ -67,6 +80,20 @@ func ProxyTargets(tgts Targets) ([]proxy.Target, error) {
 				return nil, errors.WithMessage(err, "LoadX509FromFile")
 			}
 		}
+
+		if t.PathReplace != nil && t.PathRegexp == nil {
+			return nil, errors.Errorf("PathReplace specified but PathRegexp is not")
+		}
+
+		if t.PathRegexp != nil {
+			r, err := regexp.Compile(string(t.PathRegexp))
+			if err != nil {
+				return nil, errors.Errorf("PathRegexp failed: %s", err)
+			}
+			pt.PathRegexp = r
+		}
+
+		pt.PathReplace = t.PathReplace
 
 		ret = append(ret, pt)
 	}

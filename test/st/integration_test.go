@@ -210,6 +210,9 @@ var _ = Describe("Integration Tests", func() {
 
 		proxyTarget := fmt.Sprintf(`[{"path": "/api/", "url": "https://localhost:6443", ` +
 			`"tokenPath":"./test/st/tmp/token", "caBundlePath":"./test/st/k8s-api-certs/k8s.crt"},
+			{"path": "/REWRITE/", "url": "https://localhost:6443", ` +
+			`"pathRegexp":"REWRITE", "pathReplace":"api", ` +
+			`"tokenPath":"./test/st/tmp/token", "caBundlePath":"./test/st/k8s-api-certs/k8s.crt"},
 			{"path": "/apis/", "url": "https://localhost:6443", ` +
 			`"tokenPath":"./test/st/tmp/token", "caBundlePath":"./test/st/k8s-api-certs/k8s.crt"}]`)
 		err = os.Setenv("GUARDIAN_PROXY_TARGETS", proxyTarget)
@@ -254,7 +257,17 @@ var _ = Describe("Integration Tests", func() {
 			}, "1s", "200ms").Should(BeTrue())
 		})
 
-		It("Should send a request to nonexistant endpoint/ using Jane's credentials", func() {
+		It("Should send a request through a REWRITE target", func() {
+			req, err := http.NewRequest("GET", "https://localhost:5555/REWRITE/v1/namespaces", nil)
+			Expect(err).NotTo(HaveOccurred())
+
+			req.Header.Add("x-cluster-id", "TestCluster")
+			req.Header.Add("Authorization", "Bearer tokenJane")
+
+			ExpectRequestResponse(req, expResponseCode(200))
+		})
+
+		It("Should send a request to nonexistent endpoint/ using Jane's credentials", func() {
 			req, err := http.NewRequest("GET", "https://localhost:5555/", nil)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -264,7 +277,7 @@ var _ = Describe("Integration Tests", func() {
 			ExpectRequestResponse(req, expResponseCode(404))
 		})
 
-		It("Should send a request to nonexistant endpoint/ without authentication", func() {
+		It("Should send a request to nonexistent endpoint/ without authentication", func() {
 			req, err := http.NewRequest("GET", "https://localhost:5555/", nil)
 			Expect(err).NotTo(HaveOccurred())
 
