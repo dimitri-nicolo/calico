@@ -224,11 +224,11 @@ Grant users permission to access the Tigera Secure EE Manager in your cluster. R
 
 **User manager**
 
-The `tigera-manager-user`  role grants permission to use the Tigera Secure EE Manager UI, view flow logs, audit logs, and network statistics, and access the default policy tier.
+The `tigera-ui-user` role grants permission to use the Tigera Secure EE Manager UI, view flow logs, audit logs, and network statistics, and access the default policy tier.
 
 ```
 kubectl create clusterrolebinding <USER>-tigera \
-  --clusterrole=tigera-manager-user \
+  --clusterrole=tigera-ui-user \
   --user=<USER>
 ```
 
