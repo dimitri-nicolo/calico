@@ -64,7 +64,7 @@ var _ = Describe("PolicyimpactFV Elasticsearch", func() {
 		Entry("Invalid action errors correctly", authReadCreateDefault, bodyInvalidAction, http.StatusBadRequest),
 		Entry("Missing action errors correctly", authReadCreateDefault, bodyMissingAction, http.StatusBadRequest),
 		Entry("Missing policy errors correctly", authReadCreateDefault, bodyMissingPolicy, http.StatusBadRequest),
-		Entry("Policy with no metadata errors correctly", authReadCreateDefault, bodyNoMetaPolicy, http.StatusUnauthorized),
+		Entry("Policy with no metadata errors correctly", authReadCreateDefault, bodyNoMetaPolicy, http.StatusBadRequest),
 
 		Entry("Full CRUD user can preview k8s policy create in default", authFullCRUDDefault, bodyCreateDefaultK8s, http.StatusOK),
 		Entry("Full CRUD user can preview k8s policy update in default", authFullCRUDDefault, bodyUpdateDefaultK8s, http.StatusOK),
@@ -207,12 +207,11 @@ var (
 	baseBodyGlobal = patchVars("{@@QUERY@@,@@PA_GLOBAL@@}")
 )
 
-var badBody = `{"query":{"bool":{"must":[{"match_all":{}}],"must_not":[],"should":[]}},"from":0,"size":10,"sort":[],"aggs":{},
+const (
+	badBody = `{"query":{"bool":{"must":[{"match_all":{}}],"must_not":[],"should":[]}},"from":0,"size":10,"sort":[],"aggs":{},
 "resourceActions":[{"resource":{ "apiVersion": "projectcalico.org/v3","kind":"NetworkPolicy", "spec":{ "order":"xyz" } } ,"action":"create"}] }`
 
-var query = `"query":{"bool":{"must":[{"match_all":{}}],"must_not":[],"should":[]}},"from":0,"size":10,"sort":[],"aggs":{}`
-
-var policyNoMetadata = `"resourceActions":[{"resource":{
+	policyNoMetadata = `"resourceActions":[{"resource":{
 	"apiVersion": "projectcalico.org/v3",
 	"kind":"NetworkPolicy",
 	"spec":{
@@ -223,7 +222,7 @@ var policyNoMetadata = `"resourceActions":[{"resource":{
 }
 ,"action":"create"}]`
 
-var calicoPolicyActions = `"resourceActions":[{"resource":{
+	calicoPolicyActions = `"resourceActions":[{"resource":{
 	"apiVersion": "projectcalico.org/v3",
 	"kind":"NetworkPolicy",
 	"metadata":{
@@ -242,7 +241,7 @@ var calicoPolicyActions = `"resourceActions":[{"resource":{
 }
 ,"action":"@@ACTION@@"}]`
 
-var k8sPolicyActions = `"resourceActions":[{"resource":{
+	k8sPolicyActions = `"resourceActions":[{"resource":{
 	"apiVersion": "networking.k8s.io/v1",
 	"kind": "NetworkPolicy",
 	"metadata": {
@@ -265,7 +264,7 @@ var k8sPolicyActions = `"resourceActions":[{"resource":{
 }
 ,"action":"@@ACTION@@"}]`
 
-var globalPolicyActions = `"resourceActions":[{"resource":{
+	globalPolicyActions = `"resourceActions":[{"resource":{
 	"apiVersion": "projectcalico.org/v3",
 	"kind": "GlobalNetworkPolicy",
 	"metadata": {
@@ -285,3 +284,177 @@ var globalPolicyActions = `"resourceActions":[{"resource":{
 	}
 }
 ,"action":"@@ACTION@@"}]`
+
+	// query JSON - we don't add time query for the FVs at the moment.
+	query = `"query": {
+    "bool": {
+      "must": [
+        {
+          "terms": {
+            "source_type": [
+              "net",
+              "ns",
+              "wep",
+              "hep"
+            ]
+          }
+        },
+        {
+          "terms": {
+            "dest_type": [
+              "net",
+              "ns",
+              "wep",
+              "hep"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "size": 0,
+  "aggs": {
+    "flog_buckets": {
+      "composite": {
+        "size": 1000,
+        "sources": [
+          {
+            "source_type": {
+              "terms": {
+                "field": "source_type"
+              }
+            }
+          },
+          {
+            "source_namespace": {
+              "terms": {
+                "field": "source_namespace"
+              }
+            }
+          },
+          {
+            "source_name": {
+              "terms": {
+                "field": "source_name_aggr"
+              }
+            }
+          },
+          {
+            "dest_type": {
+              "terms": {
+                "field": "dest_type"
+              }
+            }
+          },
+          {
+            "dest_namespace": {
+              "terms": {
+                "field": "dest_namespace"
+              }
+            }
+          },
+          {
+            "dest_name": {
+              "terms": {
+                "field": "dest_name_aggr"
+              }
+            }
+          },
+          {
+            "reporter": {
+              "terms": {
+                "field": "reporter"
+              }
+            }
+          },
+          {
+            "action": {
+              "terms": {
+                "field": "action"
+              }
+            }
+          }
+        ]
+      },
+      "aggs": {
+        "policies": {
+          "nested": {
+            "path": "policies"
+          },
+          "aggs": {
+            "by_tiered_policy": {
+              "terms": {
+                "field": "policies.all_policies"
+              }
+            }
+          }
+        },
+        "source_labels": {
+          "nested": {
+            "path": "source_labels"
+          },
+          "aggs": {
+            "by_kvpair": {
+              "terms": {
+                "field": "source_labels.labels"
+              }
+            }
+          }
+        },
+        "dest_labels": {
+          "nested": {
+            "path": "dest_labels"
+          },
+          "aggs": {
+            "by_kvpair": {
+              "terms": {
+                "field": "dest_labels.labels"
+              }
+            }
+          }
+        },
+        "sum_num_flows_started": {
+          "sum": {
+            "field": "num_flows_started"
+          }
+        },
+        "sum_num_flows_completed": {
+          "sum": {
+            "field": "num_flows_completed"
+          }
+        },
+        "sum_packets_in": {
+          "sum": {
+            "field": "packets_in"
+          }
+        },
+        "sum_bytes_in": {
+          "sum": {
+            "field": "bytes_in"
+          }
+        },
+        "sum_packets_out": {
+          "sum": {
+            "field": "packets_out"
+          }
+        },
+        "sum_bytes_out": {
+          "sum": {
+            "field": "bytes_out"
+          }
+        },
+        "sum_http_requests_allowed_in": {
+          "sum": {
+            "field": "http_requests_allowed_in"
+          }
+        },
+        "sum_http_requests_denied_in": {
+          "sum": {
+            "field": "http_requests_denied_in"
+          }
+        }
+      }
+    }
+  }
+`
+)

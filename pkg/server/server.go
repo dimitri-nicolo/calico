@@ -16,14 +16,14 @@ import (
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
-	compconfig "github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/datastore"
-	"github.com/tigera/compliance/pkg/elastic"
+	celastic "github.com/tigera/compliance/pkg/elastic"
 
 	"github.com/tigera/es-proxy/pkg/handler"
 	"github.com/tigera/es-proxy/pkg/middleware"
 	"github.com/tigera/es-proxy/pkg/pip"
 	pipcfg "github.com/tigera/es-proxy/pkg/pip/config"
+	"github.com/tigera/es-proxy/pkg/pip/elastic"
 )
 
 var (
@@ -62,15 +62,12 @@ func Start(cfg *Config) error {
 	k8sClientSet := datastore.MustGetClientSet()
 	policyCalcConfig := pipcfg.MustLoadConfig()
 
-	esClient := elastic.MustGetElasticClient(compconfig.MustLoadConfig())
-	p := pip.New(policyCalcConfig, k8sClientSet, esClient, esClient)
-
 	// initialize the esclient for pip
 	h := &http.Client{}
 	if cfg.ElasticCAPath != "" {
 		h.Transport = &http.Transport{TLSClientConfig: &tls.Config{RootCAs: rootCAs}}
 	}
-	esClient, err := elastic.New(h,
+	cesClient, err := celastic.New(h,
 		cfg.ElasticURL,
 		cfg.ElasticUsername,
 		cfg.ElasticPassword,
@@ -83,6 +80,9 @@ func Start(cfg *Config) error {
 		return err
 	}
 
+	esClient := elastic.NewFromComplianceClient(cesClient)
+	p := pip.New(policyCalcConfig, k8sClientSet, esClient)
+
 	sm.Handle("/version", http.HandlerFunc(handler.VersionHandler))
 
 	switch cfg.AccessMode {
@@ -90,12 +90,12 @@ func Start(cfg *Config) error {
 		sm.Handle("/",
 			middleware.RequestToResource(
 				k8sAuth.KubernetesAuthnAuthz(
-					middleware.PolicyImpactHandler(k8sAuth, p, esClient, proxy))))
+					middleware.PolicyImpactHandler(k8sAuth, p, proxy))))
 	case ServiceUserMode:
 		sm.Handle("/",
 			middleware.RequestToResource(
 				k8sAuth.KubernetesAuthnAuthz(
-					middleware.PolicyImpactHandler(k8sAuth, p, esClient,
+					middleware.PolicyImpactHandler(k8sAuth, p,
 						middleware.BasicAuthHeaderInjector(cfg.ElasticUsername, cfg.ElasticPassword, proxy)))))
 	case PassThroughMode:
 		log.Fatal("PassThroughMode not implemented yet")

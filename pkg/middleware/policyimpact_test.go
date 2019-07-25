@@ -16,7 +16,7 @@ import (
 	"github.com/tigera/es-proxy/pkg/pip"
 )
 
-var _ = Describe("The PolicyImpactRequestProcessor properly modifies requests and extracts params", func() {
+var _ = Describe("ExtractPolicyImpactParamsFromRequest properly modifies requests and extracts params", func() {
 	DescribeTable("Extracts the correct parameters from the request",
 		func(requestMethod string, originalReqBody string, expectedModifiedBody string, expectedParams string) {
 
@@ -26,7 +26,7 @@ var _ = Describe("The PolicyImpactRequestProcessor properly modifies requests an
 			Expect(err).NotTo(HaveOccurred())
 
 			//pass it to the function under test
-			p, err := middleware.PolicyImpactRequestProcessor(req)
+			p, err := middleware.ExtractPolicyImpactParamsFromRequest("", req)
 			Expect(err).NotTo(HaveOccurred())
 
 			//read the request body after the call
@@ -46,7 +46,6 @@ var _ = Describe("The PolicyImpactRequestProcessor properly modifies requests an
 			}
 
 		},
-		Entry("Get request is not processed", http.MethodGet, pipCalicoRequestWithQuery, pipCalicoRequestWithQuery, ""),
 		Entry("Not a pip request", http.MethodPost, nullESQuery, nullESQuery, ""),
 		Entry("Calico pip request", http.MethodPost, pipCalicoRequestWithQuery, nullESQuery, pipCalicoExpectedParams),
 		Entry("Global pip request", http.MethodPost, pipGlobalRequestWithQuery, nullESQuery, pipGlobalExpectedParams),
@@ -58,7 +57,8 @@ var _ = Describe("Time parsing works", func() {
 	It("Parses now without error", func() {
 		now := time.Now()
 		s := "now"
-		t := middleware.ParseElasticsearchTime(now, &s)
+		t, err := middleware.ParseElasticsearchTime(now, &s)
+		Expect(err).NotTo(HaveOccurred())
 		Expect(t).NotTo(BeNil())
 		Expect(t.Sub(now)).To(BeZero())
 	})
@@ -66,7 +66,8 @@ var _ = Describe("Time parsing works", func() {
 	It("Parses now-10m without error", func() {
 		now := time.Now()
 		s := "now-10m"
-		t := middleware.ParseElasticsearchTime(now, &s)
+		t, err := middleware.ParseElasticsearchTime(now, &s)
+		Expect(err).NotTo(HaveOccurred())
 		Expect(t).NotTo(BeNil())
 		Expect(now.Sub(*t)).To(Equal(10 * time.Minute))
 	})
@@ -74,14 +75,16 @@ var _ = Describe("Time parsing works", func() {
 	It("Does not parse now-xxx", func() {
 		now := time.Now()
 		s := "now-xxx"
-		t := middleware.ParseElasticsearchTime(now, &s)
+		t, err := middleware.ParseElasticsearchTime(now, &s)
+		Expect(err).To(HaveOccurred())
 		Expect(t).To(BeNil())
 	})
 
 	It("Parses an RFC3339 format time", func() {
 		now := time.Now().UTC()
 		s := now.Add(-5 * time.Second).UTC().Format(time.RFC3339)
-		t := middleware.ParseElasticsearchTime(now, &s)
+		t, err := middleware.ParseElasticsearchTime(now, &s)
+		Expect(err).NotTo(HaveOccurred())
 		Expect(t).NotTo(BeNil())
 		Expect(now.Sub(*t) / time.Second).To(BeEquivalentTo(5)) // Avoids ms accuracy in `now` but not in `t`.
 	})

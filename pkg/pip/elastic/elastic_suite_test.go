@@ -1,4 +1,4 @@
-package pip_test
+package elastic
 
 import (
 	"testing"
@@ -12,5 +12,5 @@ import (
 func TestPolicyCalc(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "PIP Suite")
+	RunSpecs(t, "Elastic Suite")
 }

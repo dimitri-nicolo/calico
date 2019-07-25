@@ -1,5 +1,8 @@
 package elastic
 
+// This package contains an extension to the compliance ES client that can be used to handle composite aggregation
+// queries.
+
 // response.json contains a sample JSON response that the UI might receive.
 //
 // Two new fields added:

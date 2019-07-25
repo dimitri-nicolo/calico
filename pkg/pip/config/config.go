@@ -1,12 +1,21 @@
 package config
 
 import (
+	"errors"
+	"time"
+
 	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
 )
 
 // Config contain environment based configuration for the policy calculator.
 type Config struct {
+	// Maximum allowable length of time that a PIP request may take to complete. After this time, the results that have
+	// been gathered so far will be returned to the user. The results will be incomplete (in that we won't have gathered
+	// the required number, but the results will be self-consistent). The ES response object will have the TimedOut
+	// flag set to true.
+	MaxCalculationTime time.Duration `envconfig:"TIGERA_PIP_MAX_CALCULATION_TIME" default:"10s"`
+
 	// Whether or not the original action should be calculated. If this is false, the Action in the flow data will
 	// be unchanged from the original value. If this is true, the Action in the flow log will be calculated by
 	// passing the flow through the original set of policy resources.
@@ -30,6 +39,10 @@ type Config struct {
 	// or k8s can be used to augment the flow log data. This can work in conjunction with the
 	// `AugmentFlowLogDataWithAuditLogData` option, and this is always applied last.
 	AugmentFlowLogDataWithCurrentConfiguration bool `envconfig:"TIGERA_PIP_AUGMENT_FLOW_WITH_CURRENT"`
+
+	// Whether we are running functional verification tests. When set to true we disable functionality and features that
+	// will not work in the FV environment (primarily anything that accesses the Calico AAPIS).
+	RunningFunctionalVerification bool `envconfig:"TIGERA_INTERNAL_RUNNING_FUNCTIONAL_VERIFICATION"`
 }
 
 // MustLoadConfig loads the configuration from the environment variables. It panics if there is an error in the config.
@@ -49,6 +62,8 @@ func LoadConfig() (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	if config.MaxCalculationTime == 0 {
+		return nil, errors.New("TIGERA_PIP_MAX_CALCULATION_TIME cannot be 0")
+	}
 	return config, nil
 }

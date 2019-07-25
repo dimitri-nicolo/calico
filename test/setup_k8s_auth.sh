@@ -1,6 +1,5 @@
 #!/bin/bash -e
 
-
 docker exec st-apiserver kubectl apply -f /test/role.yaml
 docker exec st-apiserver kubectl apply -f /test/basic-binding.yaml
 docker exec st-apiserver kubectl apply -f /test/token-binding.yaml

@@ -255,7 +255,8 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 			Action: policycalc.ActionAllow,
 		}
 
-		before, after := pc.Calculate(f)
+		processed, before, after := pc.Calculate(f)
+		Expect(processed).To(BeFalse())
 		Expect(before.Source.Action).To(Equal(policycalc.ActionAllow))
 		Expect(after.Source.Action).To(Equal(policycalc.ActionAllow))
 
@@ -271,7 +272,8 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 			Action:      policycalc.ActionDeny,
 		}
 
-		before, after = pc.Calculate(f)
+		processed, before, after = pc.Calculate(f)
+		Expect(processed).To(BeTrue())
 		Expect(before.Source.Action).To(Equal(policycalc.ActionAllow))
 		Expect(after.Source.Action).To(Equal(policycalc.ActionDeny))
 
@@ -287,7 +289,8 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 			Action: policycalc.ActionDeny,
 		}
 
-		before, after = pc.Calculate(f)
+		processed, before, after = pc.Calculate(f)
+		Expect(processed).To(BeTrue())
 		Expect(before.Destination.Action).To(Equal(policycalc.ActionAllow))
 		Expect(after.Destination.Action).To(Equal(policycalc.ActionDeny))
 	})
@@ -332,12 +335,13 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 			Action: policycalc.ActionAllow,
 		}
 
-		before, after := pc.Calculate(f)
+		processed, before, after := pc.Calculate(f)
+		Expect(processed).To(BeFalse())
 		Expect(before.Source.Action).To(Equal(policycalc.ActionAllow))
 		Expect(after.Source.Action).To(Equal(policycalc.ActionAllow))
 
 		f.Reporter = policycalc.ReporterTypeDestination
-		before, after = pc.Calculate(f)
+		processed, before, after = pc.Calculate(f)
 		Expect(before.Destination.Action).To(Equal(policycalc.ActionAllow))
 		Expect(after.Destination.Action).To(Equal(policycalc.ActionAllow))
 
@@ -353,7 +357,8 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 			Action: policycalc.ActionAllow,
 		}
 
-		before, after = pc.Calculate(f)
+		processed, before, after = pc.Calculate(f)
+		Expect(processed).To(BeTrue())
 		Expect(before.Destination.Action).To(Equal(policycalc.ActionDeny))
 		Expect(after.Destination.Action).To(Equal(policycalc.ActionAllow))
 	})
@@ -398,12 +403,14 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 			Action: policycalc.ActionAllow,
 		}
 
-		before, after := pc.Calculate(f)
+		processed, before, after := pc.Calculate(f)
+		Expect(processed).To(BeFalse())
 		Expect(before.Source.Action).To(Equal(policycalc.ActionAllow))
 		Expect(after.Source.Action).To(Equal(policycalc.ActionAllow))
 
 		f.Reporter = policycalc.ReporterTypeDestination
-		before, after = pc.Calculate(f)
+		processed, before, after = pc.Calculate(f)
+		Expect(processed).To(BeFalse())
 		Expect(before.Destination.Action).To(Equal(policycalc.ActionAllow))
 		Expect(after.Destination.Action).To(Equal(policycalc.ActionAllow))
 
@@ -419,7 +426,8 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 			Action:      policycalc.ActionAllow,
 		}
 
-		before, after = pc.Calculate(f)
+		processed, before, after = pc.Calculate(f)
+		Expect(processed).To(BeTrue())
 		Expect(before.Source.Action).To(Equal(policycalc.ActionDeny))
 		Expect(after.Source.Action).To(Equal(policycalc.ActionAllow))
 	})
@@ -466,12 +474,13 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 			Action: policycalc.ActionDeny,
 		}
 
-		before, after := pc.Calculate(f)
+		processed, before, after := pc.Calculate(f)
+		Expect(processed).To(BeTrue())
 		Expect(before.Source.Action).To(Equal(policycalc.ActionDeny))
 		Expect(after.Source.Action).To(Equal(policycalc.ActionAllow))
 
 		f.Reporter = policycalc.ReporterTypeDestination
-		before, after = pc.Calculate(f)
+		processed, before, after = pc.Calculate(f)
 		Expect(before.Destination.Action).To(Equal(policycalc.ActionDeny))
 		Expect(after.Destination.Action).To(Equal(policycalc.ActionAllow))
 
@@ -491,12 +500,14 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 			Action: policycalc.ActionAllow,
 		}
 
-		before, after = pc.Calculate(f)
+		processed, before, after = pc.Calculate(f)
+		Expect(processed).To(BeTrue())
 		Expect(before.Source.Action).To(Equal(policycalc.ActionAllow))
 		Expect(after.Source.Action).To(Equal(policycalc.ActionAllow))
 
 		f.Reporter = policycalc.ReporterTypeDestination
-		before, after = pc.Calculate(f)
+		processed, before, after = pc.Calculate(f)
+		Expect(processed).To(BeTrue())
 		Expect(before.Destination.Action).To(Equal(policycalc.ActionAllow))
 		Expect(after.Destination.Action).To(Equal(policycalc.ActionDeny))
 
@@ -516,12 +527,14 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 			Action: policycalc.ActionAllow,
 		}
 
-		before, after = pc.Calculate(f)
+		processed, before, after = pc.Calculate(f)
+		Expect(processed).To(BeTrue())
 		Expect(before.Source.Action).To(Equal(policycalc.ActionAllow))
 		Expect(after.Source.Action).To(Equal(policycalc.ActionDeny))
 
 		f.Reporter = policycalc.ReporterTypeDestination
-		before, after = pc.Calculate(f)
+		processed, before, after = pc.Calculate(f)
+		Expect(processed).To(BeTrue())
 		Expect(before.Destination.Action).To(Equal(policycalc.ActionAllow))
 		Expect(after.Destination.Action).To(Equal(policycalc.ActionInvalid))
 
@@ -537,7 +550,8 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 			Action: policycalc.ActionAllow,
 		}
 
-		before, after = pc.Calculate(f)
+		processed, before, after = pc.Calculate(f)
+		Expect(processed).To(BeTrue())
 		Expect(before.Destination.Action).To(Equal(policycalc.ActionAllow))
 		Expect(after.Destination.Action).To(Equal(policycalc.ActionDeny))
 
@@ -553,7 +567,8 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 			Action:      policycalc.ActionDeny,
 		}
 
-		before, after = pc.Calculate(f)
+		processed, before, after = pc.Calculate(f)
+		Expect(processed).To(BeTrue())
 		Expect(before.Source.Action).To(Equal(policycalc.ActionDeny))
 		Expect(after.Source.Action).To(Equal(policycalc.ActionAllow))
 	})
@@ -651,7 +666,8 @@ var _ = Describe("Policy calculator tests - tier/policy/rule/profile enumeration
 			Proto:  &namedPortProtocolNumber,
 			Action: policycalc.ActionDeny,
 		}
-		before, after := pc.Calculate(f)
+		processed, before, after := pc.Calculate(f)
+		Expect(processed).To(BeTrue())
 
 		By("Checking before flow is unchanged")
 		Expect(before.Source.Action).To(Equal(policycalc.ActionDeny))

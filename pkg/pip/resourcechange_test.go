@@ -17,10 +17,11 @@ import (
 )
 
 var (
+	// NP and GNP with no spec.Tier specified
 	r1 = &v3.NetworkPolicy{
 		TypeMeta: resources.TypeCalicoNetworkPolicies,
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "np",
+			Name: "default.np",
 		},
 		Spec: v3.NetworkPolicySpec{
 			Selector: "foobarbaz",
@@ -29,13 +30,35 @@ var (
 	r2 = &v3.GlobalNetworkPolicy{
 		TypeMeta: resources.TypeCalicoGlobalNetworkPolicies,
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "gnp",
+			Name: "default.gnp",
 		},
 		Spec: v3.GlobalNetworkPolicySpec{
 			Selector: "foobazbar",
 		},
 	}
-	r3 = &networkingv1.NetworkPolicy{
+	// NP and GNP with matching spec.Tier specified
+	r3 = &v3.NetworkPolicy{
+		TypeMeta: resources.TypeCalicoNetworkPolicies,
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "tier1.np",
+		},
+		Spec: v3.NetworkPolicySpec{
+			Tier:     "tier1",
+			Selector: "foobarbaz",
+		},
+	}
+	r4 = &v3.GlobalNetworkPolicy{
+		TypeMeta: resources.TypeCalicoGlobalNetworkPolicies,
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "tier2.gnp",
+		},
+		Spec: v3.GlobalNetworkPolicySpec{
+			Tier:     "tier2",
+			Selector: "foobazbar",
+		},
+	}
+	// k8s resources.
+	r5 = &networkingv1.NetworkPolicy{
 		TypeMeta: resources.TypeK8sNetworkPolicies,
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "k8s-np",
@@ -44,7 +67,7 @@ var (
 			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress},
 		},
 	}
-	r4 = &corev1.Namespace{
+	r6 = &corev1.Namespace{
 		TypeMeta: resources.TypeK8sNamespaces,
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "namespace",
@@ -54,14 +77,16 @@ var (
 
 var _ = Describe("Test resourcechange unmarshaling and marshaling", func() {
 	It("handles flag checks correctly", func() {
+		r1Copy := r1.DeepCopy()
+		r2Copy := r2.DeepCopy()
 		test := []pip.ResourceChange{
 			{
 				Action:   "update",
-				Resource: r1,
+				Resource: r1Copy,
 			},
 			{
 				Action:   "create",
-				Resource: r2,
+				Resource: r2Copy,
 			},
 			{
 				Action:   "delete",
@@ -70,6 +95,14 @@ var _ = Describe("Test resourcechange unmarshaling and marshaling", func() {
 			{
 				Action:   "exterminate",
 				Resource: r4,
+			},
+			{
+				Action:   "exterminate",
+				Resource: r5,
+			},
+			{
+				Action:   "exterminate",
+				Resource: r6,
 			},
 		}
 
@@ -82,7 +115,30 @@ var _ = Describe("Test resourcechange unmarshaling and marshaling", func() {
 		err = json.Unmarshal(j, &output)
 		Expect(err).NotTo(HaveOccurred())
 
-		By("Comparing the data")
+		By("Setting the undefaulted tiers in the test data and then comparing to the parsed data")
+		r1Copy.Spec.Tier = "default"
+		r2Copy.Spec.Tier = "default"
 		Expect(output).To(Equal(test))
+	})
+
+	It("errors if the tier name and policy name do not align", func() {
+		r1Copy := r1.DeepCopy()
+		r1Copy.Spec.Tier = "tier1"
+		r1.Name = "tier2.policy"
+		test := []pip.ResourceChange{
+			{
+				Action:   "update",
+				Resource: r1Copy,
+			},
+		}
+
+		By("Marshalling a slice of ResourceChange structs")
+		j, err := json.Marshal(test)
+		Expect(err).NotTo(HaveOccurred())
+
+		By("Unmarshalling the json output and expecting an error")
+		var output []pip.ResourceChange
+		err = json.Unmarshal(j, &output)
+		Expect(err).To(HaveOccurred())
 	})
 })

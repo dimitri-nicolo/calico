@@ -42,7 +42,7 @@ func (m ModifiedResources) IsModified(r resources.Resource) bool {
 
 // PolicyCalculator is used to determine the calculated behavior from a configuration change for a given flow.
 type PolicyCalculator interface {
-	Calculate(flow *Flow) (before, after *Response)
+	Calculate(flow *Flow) (processed bool, before, after *Response)
 }
 
 type Response struct {
@@ -79,7 +79,7 @@ type EndpointResponse struct {
 	// -  <tierIdx>|__PROFILE__|__PROFILE__.kns.<namespaceName>|allow
 	//
 	// End of tiers drop for HostEndpoints:
-	// -  <tierIdx>|__PROFILE__|__PROFILE__.__NO_MACH__|allow
+	// -  <tierIdx>|__PROFILE__|__PROFILE__.__NO_MACH__|deny
 	Policies []string
 }
 
@@ -117,7 +117,7 @@ func NewPolicyCalculator(
 
 // Calculate calculates the action before and after the configuration change for a specific flow.
 // This method may be called simultaneously from multiple go routines for different flows if required.
-func (fp *policyCalculator) Calculate(flow *Flow) (before, after *Response) {
+func (fp *policyCalculator) Calculate(flow *Flow) (processed bool, before, after *Response) {
 	clog := log.WithFields(log.Fields{
 		"flowSrc":        flow.Source.Name,
 		"flowDest":       flow.Destination.Name,
@@ -174,7 +174,7 @@ func (fp *policyCalculator) Calculate(flow *Flow) (before, after *Response) {
 	if !fp.Before.FlowSelectedByModifiedPolicies(flow) && !fp.After.FlowSelectedByModifiedPolicies(flow) {
 		log.Debug("Flow unaffected")
 		pcr := flow.getUnchangedResponse()
-		return pcr, pcr
+		return false, pcr, pcr
 	}
 
 	// If we want to calculate the original action from the initial config rather than using the value in the flow log
@@ -218,7 +218,7 @@ func (fp *policyCalculator) Calculate(flow *Flow) (before, after *Response) {
 		}
 	}
 
-	return before, after
+	return true, before, after
 }
 
 // CreateSelectorCache creates the match type slice used to cache selector calculations for a particular flow

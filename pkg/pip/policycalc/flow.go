@@ -8,71 +8,32 @@ import (
 // This file contains all of the struct definitions that are used as input when calculating the action for flow.
 // ------
 
-type Action byte
+type Action string
 
 const (
-	ActionInvalid Action = iota
-	ActionUnknown
-	ActionAllow
-	ActionDeny
+	ActionInvalid Action = ""
+	ActionUnknown Action = "unknown"
+	ActionAllow   Action = "allow"
+	ActionDeny    Action = "deny"
 )
 
-func (a Action) String() string {
-	switch a {
-	case ActionUnknown:
-		return "unknown"
-	case ActionAllow:
-		return "allow"
-	case ActionDeny:
-		return "deny"
-	default:
-		return "-"
-	}
-}
-
-type EndpointType byte
+type EndpointType string
 
 const (
-	EndpointTypeInvalid EndpointType = iota
-	EndpointTypeWep
-	EndpointTypeHep
-	EndpointTypeNs
-	EndpointTypeNet
+	EndpointTypeInvalid EndpointType = ""
+	EndpointTypeWep     EndpointType = "wep"
+	EndpointTypeHep     EndpointType = "hep"
+	EndpointTypeNs      EndpointType = "ns"
+	EndpointTypeNet     EndpointType = "net"
 )
 
-func (e EndpointType) String() string {
-	switch e {
-	case EndpointTypeWep:
-		return "wep"
-	case EndpointTypeHep:
-		return "hep"
-	case EndpointTypeNs:
-		return "ns"
-	case EndpointTypeNet:
-		return "net"
-	default:
-		return "-"
-	}
-}
-
-type ReporterType byte
+type ReporterType string
 
 const (
-	ReporterTypeInvalid ReporterType = iota
-	ReporterTypeSource
-	ReporterTypeDestination
+	ReporterTypeInvalid     ReporterType = ""
+	ReporterTypeSource      ReporterType = "src"
+	ReporterTypeDestination ReporterType = "dst"
 )
-
-func (r ReporterType) String() string {
-	switch r {
-	case ReporterTypeSource:
-		return "src"
-	case ReporterTypeDestination:
-		return "dst"
-	default:
-		return "-"
-	}
-}
 
 type Flow struct {
 	// Reporter
@@ -92,9 +53,6 @@ type Flow struct {
 
 	// The IP version of the flow. Nil if unknown.
 	IPVersion *int
-
-	// The set of policies applied to this endpoint.
-	Policies []string
 }
 
 // getUnchangedResponse returns a policy calculation Response based on the original flow data.
@@ -103,12 +61,12 @@ func (f Flow) getUnchangedResponse() *Response {
 	if f.Reporter == ReporterTypeSource {
 		r.Source.Include = true
 		r.Source.Action = f.Action
-		r.Source.Policies = f.Policies
+		r.Source.Policies = nil
 	} else {
 		r.Source.Action = ActionAllow
 		r.Destination.Include = true
 		r.Destination.Action = f.Action
-		r.Destination.Policies = f.Policies
+		r.Destination.Policies = nil
 	}
 	return r
 }

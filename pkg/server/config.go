@@ -8,6 +8,8 @@ import (
 	"os"
 	"strconv"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // Used only when overriding config tests.
@@ -157,6 +159,7 @@ func NewConfigFromEnv() (*Config, error) {
 	}
 	elasticEnableTrace, err := getEnvOrDefaultBool(elasticEnableTraceEnv, defaultEnableTrace)
 	if err != nil {
+		log.WithError(err).Error("Failed to parse " + elasticEnableTraceEnv)
 		elasticEnableTrace = false
 	}
 
@@ -230,10 +233,11 @@ func getEnvOrDefaultInt(key string, defaultValue int) (int, error) {
 }
 
 func getEnvOrDefaultBool(key string, defaultValue bool) (bool, error) {
-	if val := getEnv(key); val == "" {
-		return defaultValue, nil
+	log.Error(key + " " + getEnv(key))
+	if val := getEnv(key); val != "" {
+		return strconv.ParseBool(val)
 	}
-	return strconv.ParseBool(key)
+	return defaultValue, nil
 }
 
 func parseAccessMode(am string) (ElasticAccessMode, error) {

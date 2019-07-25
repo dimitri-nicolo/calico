@@ -30,7 +30,7 @@ require (
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/leodido/go-urn v1.1.0 // indirect
-	github.com/olivere/elastic v6.2.21+incompatible // indirect
+	github.com/olivere/elastic v6.2.21+incompatible
 	github.com/onsi/ginkgo v1.8.0
 	github.com/onsi/gomega v1.5.0
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
@@ -46,7 +46,7 @@ require (
 	github.com/smartystreets/goconvey v0.0.0-20190710185942-9d28bd7c0945 // indirect
 	github.com/spf13/pflag v0.0.0-20171106142849-4c012f6dcd95 // indirect
 	github.com/tigera/calico-k8sapiserver v0.0.0-20190503214445-0e5924229478
-	github.com/tigera/compliance v0.0.0-20190708180936-7285e770f61c
+	github.com/tigera/compliance v2.6.0-0.dev.0.20190724223002-62a3b783fee8+incompatible
 	github.com/tigera/licensing v2.2.3+incompatible // indirect
 	golang.org/x/crypto v0.0.0-20190611184440-5c40567a22f8 // indirect
 	golang.org/x/text v0.3.1-0.20180807135948-17ff2d5776d2 // indirect

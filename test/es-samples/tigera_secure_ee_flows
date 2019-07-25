@@ -1,0 +1,50 @@
+{
+  "start_time": 1564190129,
+  "end_time": 1564190433,
+  "source_ip": null,
+  "source_name": "-",
+  "source_name_aggr": "tigera-fluentd-node-*",
+  "source_namespace": "calico-monitoring",
+  "source_port": null,
+  "source_type": "wep",
+  "source_labels": {
+    "labels": [
+      "controller-revision-hash=8fdd9c546",
+      "k8s-app=tigera-fluentd-node",
+      "pod-template-generation=1"
+    ]
+  },
+  "dest_ip": null,
+  "dest_name": "-",
+  "dest_name_aggr": "es-client-tigera-elasticsearch-68c4646c5d-*",
+  "dest_namespace": "calico-monitoring",
+  "dest_port": 9200,
+  "dest_type": "wep",
+  "dest_labels": {
+    "labels": [
+      "pod-template-hash=68c4646c5d",
+      "role=client",
+      "cluster=tigera-elasticsearch",
+      "component=elasticsearch-tigera-elasticsearch",
+      "name=es-client-tigera-elasticsearch"
+    ]
+  },
+  "proto": "tcp",
+  "action": "allow",
+  "reporter": "src",
+  "policies": {
+    "all_policies": [
+      "1|__PROFILE__|__PROFILE__.kns.calico-monitoring|allow"
+    ]
+  },
+  "bytes_in": 8791,
+  "bytes_out": 36934,
+  "num_flows": 1,
+  "num_flows_started": 1,
+  "num_flows_completed": 1,
+  "packets_in": 9,
+  "packets_out": 11,
+  "http_requests_allowed_in": 0,
+  "http_requests_denied_in": 0,
+  "host": "tigera-fluentd-node-qxdr7"
+}

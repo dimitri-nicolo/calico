@@ -2,13 +2,14 @@ package policycalc
 
 import (
 	log "github.com/sirupsen/logrus"
-	"github.com/tigera/compliance/pkg/resources"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
 	pcv3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
+	"github.com/tigera/compliance/pkg/resources"
 	"github.com/tigera/compliance/pkg/syncer"
 )
 
@@ -29,7 +30,7 @@ type EndpointData struct {
 
 	// The labels configured on the endpoint.
 	//TODO(rlb): When using the cached endpoint labels rather than the flow log labels, we should be able to cache the
-	//           selector values associated with these labels.
+	//           selector values associated with these labels for the duration of the entire eumeration.
 	Labels map[string]string
 
 	// ---- Internal data ----
@@ -103,10 +104,12 @@ func (e *EndpointCache) OnStatusUpdate(status syncer.StatusUpdate) {
 func (e *EndpointCache) addOrUpdate(key string, r resources.Resource) {
 	// Add or update and entry for this resource.
 	if ed := e.endpoints[key]; ed == nil {
+		log.Infof("Adding resource to endpoint cache: %s", key)
 		e.endpoints[key] = &EndpointData{
 			resource: r,
 		}
 	} else {
+		log.Debugf("Updating resource in endpoint cache: %s", key)
 		ed.resource = r
 	}
 }

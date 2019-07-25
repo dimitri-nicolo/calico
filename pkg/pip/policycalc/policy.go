@@ -71,7 +71,7 @@ func (c *CompiledPolicy) Action(flow *Flow, af ActionFlag, tierIdx int, r *Endpo
 			// match - we track that we would use this rules action, but continue enumerating until we either get
 			// conflicting possible actions (at which point we deem the impact to be indeterminate), or we end up with
 			// same action through all possible match paths.
-			log.Debug("Rule is indeterminate")
+			log.Debug("Ruel match is uncertain")
 			flagsThisPolicy |= c.Rules[i].Action
 			af |= c.Rules[i].Action
 
