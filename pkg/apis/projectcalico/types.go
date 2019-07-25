@@ -338,3 +338,25 @@ type FelixConfiguration struct {
 
 	Spec calico.FelixConfigurationSpec
 }
+
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// ManagedClusterList is a list of ManagedCluster objects (used for multi-cluster management).
+type ManagedClusterList struct {
+	metav1.TypeMeta
+	metav1.ListMeta
+
+	Items []ManagedCluster
+}
+
+// +genclient
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type ManagedCluster struct {
+	metav1.TypeMeta
+	metav1.ObjectMeta
+
+	Spec calico.ManagedClusterSpec
+}

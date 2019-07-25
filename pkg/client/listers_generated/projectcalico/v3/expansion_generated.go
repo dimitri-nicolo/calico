@@ -48,6 +48,10 @@ type IPPoolListerExpansion interface{}
 // LicenseKeyLister.
 type LicenseKeyListerExpansion interface{}
 
+// ManagedClusterListerExpansion allows custom methods to be added to
+// ManagedClusterLister.
+type ManagedClusterListerExpansion interface{}
+
 // NetworkPolicyListerExpansion allows custom methods to be added to
 // NetworkPolicyLister.
 type NetworkPolicyListerExpansion interface{}

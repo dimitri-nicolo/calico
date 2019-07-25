@@ -2394,7 +2394,6 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							},
 						},
 					},
-					Required: []string{"includeUnscoredTests", "numFailedTests", "resultsFilters", "highThreshold", "medThreshold"},
 				},
 			},
 			Dependencies: []string{
@@ -3440,6 +3439,13 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Format: "int32",
 							},
 						},
+						"iptablesBackend": {
+							SchemaProps: spec.SchemaProps{
+								Description: "IptablesBackend specifies which backend of iptables will be used. The default is legacy.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
 						"XDPRefreshInterval": {
 							SchemaProps: spec.SchemaProps{
 								Description: "XDPRefreshInterval is the period at which Felix re-checks all XDP state to ensure that no other process has accidentally broken Calico's BPF maps or attached programs. Set to 0 to disable XDP refresh. [Default: 90s]",
@@ -3963,6 +3969,13 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Format:      "",
 							},
 						},
+						"flowLogsMaxOriginalIPsIncluded": {
+							SchemaProps: spec.SchemaProps{
+								Description: "FlowLogsMaxOriginalIPsIncluded specifies the number of unique IP addresses (if relevant) that should be included in Flow logs.",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
+						},
 						"cloudWatchLogsReporterEnabled": {
 							SchemaProps: spec.SchemaProps{
 								Description: "Enable Flow logs reporting to AWS CloudWatch.",
@@ -4167,6 +4180,54 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							SchemaProps: spec.SchemaProps{
 								Description: "The periodic interval at which Felix saves learnt DNS information to the cache file. [Default: 60s].",
 								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+							},
+						},
+						"dnsLogsFlushInterval": {
+							SchemaProps: spec.SchemaProps{
+								Description: "DNSLogsFlushInterval configures the interval at which Felix exports DNS logs. [Default: 300s]",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+							},
+						},
+						"dnsLogsFileEnabled": {
+							SchemaProps: spec.SchemaProps{
+								Description: "DNSLogsFileEnabled controls logging DNS logs to a file. If false no DNS logging to file will occur. [Default: true]",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
+						},
+						"dnsLogsFileMaxFiles": {
+							SchemaProps: spec.SchemaProps{
+								Description: "DNSLogsFileMaxFiles sets the number of DNS log files to keep. [Default: 5]",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
+						},
+						"dnsLogsFileMaxFileSizeMB": {
+							SchemaProps: spec.SchemaProps{
+								Description: "DNSLogsFileMaxFileSizeMB sets the max size in MB of DNS log files before rotation. [Default: 100]",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
+						},
+						"dnsLogsFileDirectory": {
+							SchemaProps: spec.SchemaProps{
+								Description: "DNSLogsFileDirectory sets the directory where DNS log files are stored. [Default: /var/log/calico/dnslogs]",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"dnsLogsFileIncludeLabels": {
+							SchemaProps: spec.SchemaProps{
+								Description: "DNSLogsFileIncludeLabels is used to configure if endpoint labels are included in a DNS log entry written to file. [Default: true]",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
+						},
+						"dnsLogsFileAggregationKind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "DNSLogsFileAggregationKind is used to choose the type of aggregation for DNS log entries. [Default: 1 - client name prefix aggregation]. Accepted values are 0 and 1. 0 - No aggregation 1 - Aggregate over clients with the same name prefix",
+								Type:        []string{"integer"},
+								Format:      "int32",
 							},
 						},
 						"windowsNetworkName": {
@@ -4726,7 +4787,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 						},
 						"spec": {
 							SchemaProps: spec.SchemaProps{
-								Description: "Specification of the NetworkSet.",
+								Description: "Specification of the GlobalThreatFeed.",
 								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeedSpec"),
 							},
 						},
@@ -4744,7 +4805,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalThreatFeedList": {
 			Schema: spec.Schema{
 				SchemaProps: spec.SchemaProps{
-					Description: "GlobalThreatFeedList contains a list of NetworkSet resources.",
+					Description: "GlobalThreatFeedList contains a list of GlobalThreatFeed resources.",
 					Properties: map[string]spec.Schema{
 						"kind": {
 							SchemaProps: spec.SchemaProps{
@@ -5864,6 +5925,103 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 						},
 					},
 					Required: []string{"token"},
+				},
+			},
+			Dependencies: []string{},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.ManagedCluster": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "ManagedCluster represents a cluster that is being managed by the multi-cluster management plane. This object configures how Tigera multi-cluster management components communicate with the corresponding cluster.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Standard object's metadata.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							},
+						},
+						"spec": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Specification of the ManagedCluster.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ManagedClusterSpec"),
+							},
+						},
+					},
+				},
+			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.ManagedClusterSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.ManagedClusterList": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "ManagedClusterList contains a list of ManagedCluster resources.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+							},
+						},
+						"items": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ManagedCluster"),
+										},
+									},
+								},
+							},
+						},
+					},
+					Required: []string{"metadata", "items"},
+				},
+			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.ManagedCluster", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.ManagedClusterSpec": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "ManagedClusterSpec contains the specification of a ManagedCluster resource.",
+					Properties: map[string]spec.Schema{
+						"installationManifest": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Field to store dynamically generated manifest for installing component into the actual application cluster corresponding to this Managed Cluster",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+					},
 				},
 			},
 			Dependencies: []string{},
@@ -8413,6 +8571,83 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 			},
 			Dependencies: []string{
 				"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3.LicenseKey", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+		},
+		"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3.ManagedCluster": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							},
+						},
+						"spec": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.ManagedClusterSpec"),
+							},
+						},
+					},
+				},
+			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.ManagedClusterSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+		},
+		"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3.ManagedClusterList": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "ManagedClusterList is a list of ManagedCluster objects (used for multi-cluster management).",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+							},
+						},
+						"items": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3.ManagedCluster"),
+										},
+									},
+								},
+							},
+						},
+					},
+					Required: []string{"items"},
+				},
+			},
+			Dependencies: []string{
+				"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3.ManagedCluster", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
 		},
 		"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3.NetworkPolicy": {
 			Schema: spec.Schema{

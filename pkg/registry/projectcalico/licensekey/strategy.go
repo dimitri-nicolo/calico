@@ -90,7 +90,7 @@ func MatchLicenseKey(label labels.Selector, field fields.Selector) storage.Selec
 	}
 }
 
-// NetworkSetToSelectableFields returns a field set that represents the object.
+// LicenseKeyToSelectableFields returns a field set that represents the object.
 func LicenseKeyToSelectableFields(obj *calico.LicenseKey) fields.Set {
 	return generic.ObjectMetaFieldsSet(&obj.ObjectMeta, false)
 }

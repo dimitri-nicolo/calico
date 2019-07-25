@@ -107,6 +107,11 @@ func convertToAAPI(libcalicoObject runtime.Object) (res runtime.Object) {
 		aapi := &aapi.FelixConfiguration{}
 		FelixConfigurationConverter{}.convertToAAPI(lcg, aapi)
 		return aapi
+	case *libcalicoapi.ManagedCluster:
+		lcg := libcalicoObject.(*libcalicoapi.ManagedCluster)
+		aapi := &aapi.ManagedCluster{}
+		ManagedClusterConverter{}.convertToAAPI(lcg, aapi)
+		return aapi
 	default:
 		glog.Infof("Unrecognized libcalico object (type %v)", reflect.TypeOf(libcalicoObject))
 		return nil

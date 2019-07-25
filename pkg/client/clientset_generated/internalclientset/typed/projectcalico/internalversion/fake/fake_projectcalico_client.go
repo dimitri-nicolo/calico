@@ -58,6 +58,10 @@ func (c *FakeProjectcalico) LicenseKeys() internalversion.LicenseKeyInterface {
 	return &FakeLicenseKeys{c}
 }
 
+func (c *FakeProjectcalico) ManagedClusters() internalversion.ManagedClusterInterface {
+	return &FakeManagedClusters{c}
+}
+
 func (c *FakeProjectcalico) NetworkPolicies(namespace string) internalversion.NetworkPolicyInterface {
 	return &FakeNetworkPolicies{c, namespace}
 }
