@@ -899,6 +899,53 @@ var _ = Describe("Reporting Metrics", func() {
 			})
 		})
 	})
+	Context("With HTTP Data", func() {
+		Describe("Report Allowed Packets (ingress)", func() {
+			It("should receive metric", func() {
+				By("Sending a NFLOG packet update")
+				c.nfIngressC <- ingressPktAllow
+				tmuIngress := testMetricUpdate{
+					updateType:   UpdateTypeReport,
+					tuple:        *ingressPktAllowTuple,
+					srcEp:        remoteEd1,
+					dstEp:        localEd1,
+					ruleIDs:      []*calc.RuleID{defTierPolicy1AllowIngressRuleID},
+					isConnection: false,
+				}
+				Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmuIngress)))
+				By("Sending a dataplane stats update with HTTP Data")
+				c.ds <- &dpStatsEntryWithFwdFor
+				tmuOrigIP := testMetricUpdate{
+					updateType:    UpdateTypeReport,
+					tuple:         *ingressPktAllowTuple,
+					srcEp:         remoteEd1,
+					dstEp:         localEd1,
+					ruleIDs:       []*calc.RuleID{defTierPolicy1AllowIngressRuleID},
+					origSourceIPs: NewBoundedSetFromSliceWithTotalCount(c.config.MaxOriginalSourceIPsIncluded, []net2.IP{net2.ParseIP(publicIP1Str)}, dpStatsHTTPDataValue),
+					isConnection:  true,
+				}
+				Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmuOrigIP)))
+			})
+		})
+		Describe("Report HTTP Data only", func() {
+			unknownRuleID := calc.NewRuleID(calc.UnknownStr, calc.UnknownStr, calc.UnknownStr, calc.RuleIDIndexUnknown, rules.RuleDirIngress, rules.RuleActionAllow)
+			It("should receive metric", func() {
+				By("Sending a dataplane stats update with HTTP Data")
+				c.ds <- &dpStatsEntryWithFwdFor
+				tmuOrigIP := testMetricUpdate{
+					updateType:    UpdateTypeReport,
+					tuple:         *ingressPktAllowTuple,
+					srcEp:         nil,
+					dstEp:         nil,
+					ruleIDs:       nil,
+					origSourceIPs: NewBoundedSetFromSliceWithTotalCount(c.config.MaxOriginalSourceIPsIncluded, []net2.IP{net2.ParseIP(publicIP1Str)}, dpStatsHTTPDataValue),
+					unknownRuleID: unknownRuleID,
+					isConnection:  true,
+				}
+				Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmuOrigIP)))
+			})
+		})
+	})
 })
 
 type mockDNSReporter struct {
@@ -963,12 +1010,20 @@ type testMetricUpdate struct {
 	// Tuple key
 	tuple Tuple
 
+	origSourceIPs *boundedSet
+
 	// Endpoint information.
 	srcEp *calc.EndpointData
 	dstEp *calc.EndpointData
 
 	// Rules identification
 	ruleIDs []*calc.RuleID
+
+	// Sometimes we may need to send updates without having all the rules
+	// in place. This field will help aggregators determine if they need
+	// to handle this update or not. Typically this is used when we receive
+	// HTTP Data updates after the connection itself has closed.
+	unknownRuleID *calc.RuleID
 
 	// isConnection is true if this update is from an active connection (i.e. a conntrack
 	// update compared to an NFLOG update).
@@ -992,12 +1047,14 @@ func (mr *mockReporter) Start() {
 
 func (mr *mockReporter) Report(mu MetricUpdate) error {
 	mr.reportChan <- testMetricUpdate{
-		updateType:   UpdateTypeReport,
-		tuple:        mu.tuple,
-		srcEp:        mu.srcEp,
-		dstEp:        mu.dstEp,
-		ruleIDs:      mu.ruleIDs,
-		isConnection: mu.isConnection,
+		updateType:    UpdateTypeReport,
+		tuple:         mu.tuple,
+		srcEp:         mu.srcEp,
+		dstEp:         mu.dstEp,
+		ruleIDs:       mu.ruleIDs,
+		unknownRuleID: mu.unknownRuleID,
+		origSourceIPs: mu.origSourceIPs,
+		isConnection:  mu.isConnection,
 	}
 	return nil
 }

@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 
 package calc
 
@@ -245,10 +245,12 @@ const (
 	GlobalNamespaceStr        = "__GLOBAL__"
 	ProfileTierStr            = "__PROFILE__"
 	NoMatchNameStr            = "__NO_MATCH__"
+	UnknownStr                = "__UNKNOWN__"
 
 	// Special rule index that specifies that a policy has selected traffic that
 	// has implicitly denied traffic.
 	RuleIDIndexImplicitDrop int = -1
+	RuleIDIndexUnknown      int = -2
 )
 
 // RuleID contains the complete identifiers for a particular rule. This is a breakdown of the

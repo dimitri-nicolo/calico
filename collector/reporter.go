@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -65,6 +65,12 @@ type MetricUpdate struct {
 	// Rules identification
 	ruleIDs []*calc.RuleID
 
+	// Sometimes we may need to send updates without having all the rules
+	// in place. This field will help aggregators determine if they need
+	// to handle this update or not. Typically this is used when we receive
+	// HTTP Data updates after the connection itself has closed.
+	unknownRuleID *calc.RuleID
+
 	// Inbound/Outbound packet/byte counts.
 	inMetric  MetricValue
 	outMetric MetricValue
@@ -90,15 +96,17 @@ func (mu MetricUpdate) String() string {
 	} else {
 		origSrcIPsLen = 0
 	}
-	return fmt.Sprintf("MetricUpdate: type=%s tuple={%v}, srcEp={%v} dstEp={%v} isConnection={%v}, ruleID={%v}, inMetric={%s} outMetric={%s} len(origSourceIPs)={%d}",
-		mu.updateType, &(mu.tuple), srcName, dstName, mu.isConnection, mu.ruleIDs, mu.inMetric, mu.outMetric, origSrcIPsLen)
+	return fmt.Sprintf("MetricUpdate: type=%s tuple={%v}, srcEp={%v} dstEp={%v} isConnection={%v}, ruleID={%v}, unknownRuleID={%v} inMetric={%s} outMetric={%s} len(origSourceIPs)={%d}",
+		mu.updateType, &(mu.tuple), srcName, dstName, mu.isConnection, mu.ruleIDs, mu.unknownRuleID, mu.inMetric, mu.outMetric, origSrcIPsLen)
 }
 
 func (mu MetricUpdate) GetLastRuleID() *calc.RuleID {
-	if mu.ruleIDs == nil || len(mu.ruleIDs) == 0 {
-		return nil
+	if mu.ruleIDs != nil && len(mu.ruleIDs) > 0 {
+		return mu.ruleIDs[len(mu.ruleIDs)-1]
+	} else if mu.unknownRuleID != nil {
+		return mu.unknownRuleID
 	}
-	return mu.ruleIDs[len(mu.ruleIDs)-1]
+	return nil
 }
 
 type MetricsReporter interface {
@@ -134,6 +142,7 @@ func (r *ReporterManager) startManaging() {
 		// TODO(doublek): Channel for stopping the reporter.
 		select {
 		case mu := <-r.ReportChan:
+			log.Debugf("Received metric update %v", mu)
 			for _, reporter := range r.reporters {
 				reporter.Report(mu)
 			}

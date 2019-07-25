@@ -9,6 +9,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/felix/calc"
+	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 )
 
@@ -121,6 +122,27 @@ var (
 			deltaPackets: 1,
 			deltaBytes:   20,
 		},
+	}
+
+	muWithOrigSourceIPsUnknownRuleID = MetricUpdate{
+		updateType: UpdateTypeReport,
+		tuple:      tuple1,
+
+		srcEp: nil,
+		dstEp: nil,
+
+		origSourceIPs: NewBoundedSetFromSlice(testMaxBoundedSetSize, []net.IP{net.ParseIP(publicIP1Str)}),
+
+		unknownRuleID: &calc.RuleID{
+			Tier:      "__UNKNOWN__",
+			Name:      "__UNKNOWN__",
+			Namespace: "__UNKNOWN__",
+			Index:     -2,
+			IndexStr:  "-2",
+			Action:    rules.RuleActionAllow,
+			Direction: rules.RuleDirIngress,
+		},
+		isConnection: false,
 	}
 
 	muWithMultipleOrigSourceIPs = MetricUpdate{

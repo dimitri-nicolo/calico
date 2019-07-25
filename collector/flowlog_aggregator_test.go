@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -541,6 +541,20 @@ var _ = Describe("Flow log aggregator tests", func() {
 			Expect(flowLog.NumFlowsStarted).Should(Equal(1))
 
 			flowExtras := extractFlowExtras(muWithOrigSourceIPs, muWithMultipleOrigSourceIPs)
+			Expect(flowLog.FlowExtras.OriginalSourceIPs).To(ConsistOf(flowExtras.OriginalSourceIPs))
+			Expect(flowLog.FlowExtras.NumOriginalSourceIPs).To(Equal(flowExtras.NumOriginalSourceIPs))
+		})
+		It("Aggregates original source IPs with unknown rule ID", func() {
+			By("Feeding in update containing HTTP request counts and unknown RuleID")
+			ca := NewFlowLogAggregator().ForAction(rules.RuleActionAllow).(*flowLogAggregator)
+			ca.FeedUpdate(muWithOrigSourceIPsUnknownRuleID)
+			messages := ca.Get()
+			Expect(len(messages)).Should(Equal(1))
+			// StartedFlowRefs count should be 1
+			flowLog := messages[0]
+			Expect(flowLog.NumFlowsStarted).Should(Equal(1))
+
+			flowExtras := extractFlowExtras(muWithOrigSourceIPsUnknownRuleID)
 			Expect(flowLog.FlowExtras.OriginalSourceIPs).To(ConsistOf(flowExtras.OriginalSourceIPs))
 			Expect(flowLog.FlowExtras.NumOriginalSourceIPs).To(Equal(flowExtras.NumOriginalSourceIPs))
 		})
