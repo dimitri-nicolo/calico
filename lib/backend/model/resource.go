@@ -161,6 +161,11 @@ func init() {
 		"globalreports",
 		reflect.TypeOf(apiv3.GlobalReport{}),
 	)
+	registerResourceInfo(
+		apiv3.KindManagedCluster,
+		"managedclusters",
+		reflect.TypeOf(apiv3.ManagedCluster{}),
+	)
 }
 
 type ResourceKey struct {

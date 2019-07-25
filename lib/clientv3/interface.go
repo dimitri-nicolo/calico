@@ -61,6 +61,8 @@ type Interface interface {
 	GlobalReportTypes() GlobalReportTypeInterface
 	// GlobalReports returns an interface for managing the report resources.
 	GlobalReports() GlobalReportInterface
+	// ManagedClusters returns an interface for managing the managed cluster resources.
+	ManagedClusters() ManagedClusterInterface
 
 	// EnsureInitialized is used to ensure the backend datastore is correctly
 	// initialized for use by Calico.  This method may be called multiple times, and

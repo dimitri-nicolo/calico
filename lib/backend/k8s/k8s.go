@@ -98,6 +98,8 @@ func init() {
 				&apiv3.GlobalReportList{},
 				&apiv3.GlobalReportType{},
 				&apiv3.GlobalReportTypeList{},
+				&apiv3.ManagedCluster{},
+				&apiv3.ManagedClusterList{},
 			)
 			metav1.AddToGroupVersion(scheme, ver)
 			return nil
@@ -263,6 +265,12 @@ func NewKubeClient(ca *apiconfig.CalicoAPIConfigSpec) (api.Client, error) {
 		reflect.TypeOf(model.ResourceListOptions{}),
 		apiv3.KindGlobalReportType,
 		resources.NewGlobalReportTypeClient(cs, crdClientV1),
+	)
+	kubeClient.registerResourceClient(
+		reflect.TypeOf(model.ResourceKey{}),
+		reflect.TypeOf(model.ResourceListOptions{}),
+		apiv3.KindManagedCluster,
+		resources.NewManagedClusterClient(cs, crdClientV1),
 	)
 
 	if ca.K8sUsePodCIDR {
@@ -457,6 +465,7 @@ func (c *KubeClient) Clean() error {
 		apiv3.KindGlobalThreatFeed,
 		apiv3.KindGlobalReport,
 		apiv3.KindGlobalReportType,
+		apiv3.KindManagedCluster,
 	}
 	ctx := context.Background()
 	for _, k := range kinds {
