@@ -1,5 +1,5 @@
-hash: 6d1a866ca8eafbccc80f6d54740418f01640cf9a4efca595d1d77c8f4fd9aeb5
-updated: 2019-07-24T11:58:59.659224567Z
+hash: d1799afc8c3cfff29bbedde1aca93c345c6bcd9a4e1a37a495bcf1338f28a69f
+updated: 2019-07-25T16:28:15.439258777Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -188,7 +188,7 @@ imports:
   subpackages:
   - simplelru
 - name: github.com/hpcloud/tail
-  version: a30252cb686a21eb2d0b98132633053ec2f7f1e5
+  version: a1dbeea552b7c8df4b542c66073e393de198a800
   subpackages:
   - ratelimiter
   - util
@@ -325,7 +325,7 @@ imports:
   - pkg/types
   - pkg/upgrade
 - name: github.com/projectcalico/felix
-  version: 8a652cd8676dd1ec966b8e681ecfc3f759070f9b
+  version: 1fd903b8178eabbcd1a7e9f901d036f0709fd270
   repo: git@github.com:tigera/felix-private.git
   subpackages:
   - bpf
@@ -601,10 +601,10 @@ imports:
   - status
   - tap
   - transport
-- name: gopkg.in/fsnotify.v1
-  version: 7be54206639f256967dd82fa767397ba5f8f48f5
+- name: gopkg.in/fsnotify/fsnotify.v1
+  version: c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9
 - name: gopkg.in/go-playground/validator.v9
-  version: 46b4b1e301c24cac870ffcb4ba5c8a703d1ef475
+  version: b199fa0642d29caca62b6a99d65cc981ba5edc3b
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: gopkg.in/natefinch/lumberjack.v2
