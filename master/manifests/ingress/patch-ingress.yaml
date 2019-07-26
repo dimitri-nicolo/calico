@@ -1,0 +1,31 @@
+---
+layout: null
+---
+
+spec:
+  template:
+    spec:
+      containers:
+      - name: <INGRESS_CONTROLLER_NAME>
+        volumeMounts:
+        - name: ingress-logs
+          mountPath: /var/log/calico/ingress
+      - name: ingress-collector
+        image: {{page.registry}}{{site.imageNames["ingress-collector"]}}:{{site.data.versions[page.version].first.components["ingress-collector"].version}}
+        imagePullPolicy: Always
+        env:
+        - name: FELIX_DIAL_TARGET
+          value: "/var/run/felix/nodeagent/socket"
+        volumeMounts:
+        - name: ingress-logs
+          mountPath: /var/log/calico/ingress
+        - name: felix-sync
+          mountPath: /var/run/felix
+      imagePullSecrets:
+      - name: calico-pull-secret
+      volumes:
+      - name: ingress-logs
+        emptyDir: {}
+      - name: felix-sync
+        flexVolume:
+          driver: nodeagent/uds

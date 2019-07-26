@@ -1342,6 +1342,8 @@ master:
       version: master
     compliance-benchmarker:
       version: master
+    ingress-collector:
+      version: master
 v2.5:
 - title: v2.5.0-pre
   note: ""
@@ -1414,4 +1416,6 @@ v2.5:
     compliance-server:
       version: release-v2.5
     compliance-benchmarker:
+      version: release-v2.5
+    ingress-collector:
       version: release-v2.5
