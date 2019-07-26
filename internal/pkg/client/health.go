@@ -24,7 +24,7 @@ func NewHealth() (*Health, error) {
 	// Both readiness and liveness should both be healthy. In other words, if the endpoints
 	// are accessible, the service is live and ready.
 	health.httpServeMux.HandleFunc("/health", func(resp http.ResponseWriter, req *http.Request) {
-		log.Debug("GET /health")
+		log.Trace("GET /health")
 		resp.Write([]byte("OK"))
 	})
 
