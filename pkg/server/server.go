@@ -84,14 +84,23 @@ func Start(config *Config) error {
 
 	switch config.AccessMode {
 	case InsecureMode:
-		sm.Handle("/", middleware.RequestToResource(
-			middleware.PolicyImpactHandler(k8sAuth, p, esClient,
-				k8sAuth.KubernetesAuthnAuthz(proxy))))
+		sm.Handle("/",
+			middleware.RequestToResource(
+				k8sAuth.KubernetesAuthnAuthz(proxy)))
+		sm.Handle("/tigera_secure_ee_flows*/_search",
+			middleware.RequestToResource(
+				k8sAuth.KubernetesAuthnAuthz(
+					middleware.PolicyImpactHandler(k8sAuth, p, esClient, proxy))))
 	case ServiceUserMode:
-		sm.Handle("/", middleware.RequestToResource(
-			k8sAuth.KubernetesAuthnAuthz(
-				middleware.PolicyImpactHandler(k8sAuth, p, esClient,
-					middleware.BasicAuthHeaderInjector(config.ElasticUsername, config.ElasticPassword, proxy)))))
+		sm.Handle("/",
+			middleware.RequestToResource(
+				k8sAuth.KubernetesAuthnAuthz(
+					middleware.BasicAuthHeaderInjector(config.ElasticUsername, config.ElasticPassword, proxy))))
+		sm.Handle("/tigera_secure_ee_flows*/_search",
+			middleware.RequestToResource(
+				k8sAuth.KubernetesAuthnAuthz(
+					middleware.PolicyImpactHandler(k8sAuth, p, esClient,
+						middleware.BasicAuthHeaderInjector(config.ElasticUsername, config.ElasticPassword, proxy)))))
 	case PassThroughMode:
 		log.Fatal("PassThroughMode not implemented yet")
 	default:
