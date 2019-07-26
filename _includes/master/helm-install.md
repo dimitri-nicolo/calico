@@ -204,7 +204,7 @@ manager:
 ```yaml
 manager:
   auth:
-    type: oidc
+    type: OIDC
     authority: "https://accounts.google.com"
     clientID: "<oidc-client-id>"
 ```
