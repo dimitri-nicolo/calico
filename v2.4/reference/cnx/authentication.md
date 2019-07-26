@@ -40,8 +40,8 @@ serving on port 30003, but you may wish to set up connectivity differently.
     ```
 
 3. Configure {{site.prodname}} Manager to use it
-   - Set the client ID in the `tigera-cnx-manager-config` ConfigMap (referenced
-     in the installation instructions).
+   - Set the client ID in the tigera-cnx-manager-config ConfigMap (referenced
+     in the installation instructions) and authentication-type to OIDC.
 
 4. If {{site.prodname}} Manager has already been deployed, restart the web server (achieved by deleting the pod).
 
