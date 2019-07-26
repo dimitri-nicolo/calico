@@ -49,6 +49,7 @@ imageNames:
   compliance-snapshotter: tigera/compliance-snapshotter
   compliance-reporter: tigera/compliance-reporter
   compliance-benchmarker: tigera/compliance-benchmarker
+  ingress-collector: tigera/ingress-collector
   kibana: tigera/kibana
   prometheusConfigReloader: quay.io/coreos/prometheus-config-reloader
   configMapReload: quay.io/coreos/configmap-reload

@@ -92,6 +92,8 @@ toc:
       path: /security/logs/elastic/filtering
     - title: Filtering out DNS logs
       path: /security/logs/elastic/filtering-dns
+    - title: Trace and Block External IP Addresses
+      path: /security/logs/elastic/ingress
   - title: iptables
     path: /security/logs/iptables
 - title: Metrics
