@@ -114,5 +114,11 @@ func NewProxy(proxyConfig *ProxyConfig) *Proxy {
 }
 
 func (p *Proxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	p.clean(req)
 	p.proxy.ServeHTTP(rw, req)
+}
+
+func (p *Proxy) clean(req *http.Request) {
+	req.Header.Del("Impersonate-User")
+	req.Header.Del("Impersonate-Group")
 }

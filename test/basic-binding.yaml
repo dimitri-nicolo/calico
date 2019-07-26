@@ -80,3 +80,29 @@ roleRef:
   kind: ClusterRole
   name: tigera-path-to-something
   apiGroup: rbac.authorization.k8s.io
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: tigera-elasticsearch-access-for-impuser
+subjects:
+  - kind: User
+    name: impuser
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: tigera-elasticsearch-access-all
+  apiGroup: rbac.authorization.k8s.io
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: tigera-elasticsearch-access-for-grp
+subjects:
+  - kind: Group
+    name: impgrp
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: tigera-elasticsearch-access-all
+  apiGroup: rbac.authorization.k8s.io

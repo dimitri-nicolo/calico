@@ -56,7 +56,7 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 
 		dhh = &DummyHttpHandler{serveCalled: false}
 		rr = httptest.NewRecorder()
-		k8sAuth = middleware.NewK8sAuth(k8sClient, &k8sConfig)
+		k8sAuth = middleware.NewK8sAuth(k8sClient, &k8sConfig, true)
 	})
 	AfterEach(func() {
 	})
@@ -95,6 +95,116 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 		})
 	})
 
+	It("Should cause StatusForbidden for an user that does not exist", func() {
+		By("impersonating an user that does not exists", func() {
+			req := &http.Request{
+				Header: http.Header{
+					"Impersonate-User": []string{"janedoe"},
+				},
+				URL: &url.URL{Path: tigera_flow_path},
+			}
+
+			uut := middleware.RequestToResource(k8sAuth.KubernetesAuthnAuthz(dhh))
+			uut.ServeHTTP(rr, req)
+
+			Expect(rr.Code).To(Equal(http.StatusForbidden),
+				fmt.Sprintf("Status unexpected with msg: %s", rr.Body.String()))
+			Expect(rr.Header().Get("Impersonate-User")).NotTo(Equal("janedoe"))
+			Expect(dhh.serveCalled).To(BeFalse())
+		})
+	})
+
+	It("Should cause StatusForbidden for impersonating only a group", func() {
+		By("impersonating only a group", func() {
+			req := &http.Request{
+				Header: http.Header{
+					"Impersonate-Group": []string{"anonymousgroup"},
+				},
+				URL: &url.URL{Path: tigera_flow_path},
+			}
+
+			uut := middleware.RequestToResource(k8sAuth.KubernetesAuthnAuthz(dhh))
+			uut.ServeHTTP(rr, req)
+
+			Expect(rr.Code).To(Equal(http.StatusUnauthorized),
+				fmt.Sprintf("Status unexpected with msg: %s", rr.Body.String()))
+			Expect(rr.Header().Get("Impersonate-Group")).NotTo(Equal("anonymousgroup"))
+			Expect(dhh.serveCalled).To(BeFalse())
+		})
+	})
+
+	DescribeTable("Using impersonation when multicluster is not enabled causes StatusForbidden ",
+		func(req *http.Request) {
+			k8sAuth = middleware.NewK8sAuth(k8sClient, &k8sConfig, false)
+			uut := middleware.RequestToResource(k8sAuth.KubernetesAuthnAuthz(dhh))
+			uut.ServeHTTP(rr, req)
+
+			Expect(rr.Code).To(Equal(http.StatusUnauthorized),
+				fmt.Sprintf("Message in response writer: %s", rr.Body.String()))
+			Expect(rr.Header().Get("Impersonate-User")).To(Equal(""))
+			Expect(rr.Header().Get("Impersonate-Group")).To(Equal(""))
+			Expect(dhh.serveCalled).To(BeFalse())
+		},
+
+		Entry("Impersonating a valid user when multi-cluster is not enabled",
+			&http.Request{
+				Header: http.Header{
+					"Impersonate-User": []string{"deadbeef"},
+				},
+				URL: &url.URL{Path: tigera_flow_path},
+			}),
+
+		Entry("Mixing impersonation and bearer tokens when multi-cluster is not enabled",
+			&http.Request{
+				Header: http.Header{
+					"Impersonate-User": []string{"deadbeef"},
+					"Authorization":    []string{"Bearer tokenuserall"},
+				},
+				URL: &url.URL{Path: tigera_flow_path},
+			}),
+
+		Entry("Mixing impersonation and basic tokens when multi-cluster is not enabled",
+			&http.Request{
+				Header: http.Header{
+					"Impersonate-User": []string{"basicuserall"},
+					"Authorization": []string{fmt.Sprintf("Basic %s",
+						base64.StdEncoding.EncodeToString([]byte("basicuserall:basicpw")))},
+				},
+				URL: &url.URL{Path: tigera_flow_path},
+			}),
+	)
+
+	DescribeTable("Mixing mixing impersonation and authorization headers causes StatusUnauthorized",
+		func(req *http.Request) {
+			uut := middleware.RequestToResource(k8sAuth.KubernetesAuthnAuthz(dhh))
+			uut.ServeHTTP(rr, req)
+
+			Expect(rr.Code).To(Equal(http.StatusUnauthorized),
+				fmt.Sprintf("Message in response writer: %s", rr.Body.String()))
+			Expect(rr.Header().Get("Impersonate-User")).To(Equal(""))
+			Expect(rr.Header().Get("Impersonate-Group")).To(Equal(""))
+			Expect(dhh.serveCalled).To(BeFalse())
+		},
+
+		Entry("Rbac is enforced by basic token and not impersonation headers",
+			&http.Request{
+				Header: http.Header{
+					"Impersonate-User": []string{"impuser"},
+					"Authorization": []string{
+						fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte("basicusernone:basicpw0"))),
+					}},
+				URL: &url.URL{Path: tigera_flow_path},
+			}),
+		Entry("Rbac is enforced by bearer token and not impersonation headers",
+			&http.Request{
+				Header: http.Header{
+					"Impersonate-User": []string{"impuser"},
+					"Authorization":    []string{"Bearer deadbeefaa"},
+				},
+				URL: &url.URL{Path: tigera_flow_path},
+			}),
+	)
+
 	DescribeTable("Invalid login causes StatusUnauthorized",
 		func(req *http.Request) {
 			uut := middleware.RequestToResource(k8sAuth.KubernetesAuthnAuthz(dhh))
@@ -130,6 +240,8 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 
 			Expect(rr.Code).To(Equal(http.StatusOK),
 				fmt.Sprintf("Should get OK status, message: %s", rr.Body.String()))
+			Expect(rr.Header().Get("Impersonate-User")).To(Equal(""))
+			Expect(rr.Header().Get("Impersonate-Group")).To(Equal(""))
 			Expect(dhh.serveCalled).To(BeTrue())
 		},
 
@@ -233,6 +345,16 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 					"Authorization": []string{fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte("basicuserallgrp:basicpwgrp")))}},
 				URL: &url.URL{Path: tigera_flow_path},
 			}),
+		Entry("Allow all access flow for impersonating user",
+			&http.Request{
+				Header: http.Header{"Impersonate-User": []string{"impuser"}},
+				URL:    &url.URL{Path: tigera_flow_path},
+			}),
+		Entry("Allow all access flow for impersonating user and group",
+			&http.Request{
+				Header: http.Header{"Impersonate-User": []string{"impusergrp"}, "Impersonate-Group" : []string{"impgrp"}},
+				URL:    &url.URL{Path: tigera_flow_path},
+			}),
 	)
 
 	DescribeTable("Test valid Authorization Headers to unauthorzied resource causes Forbidden",
@@ -243,6 +365,8 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 			Expect(rr.Code).To(Equal(http.StatusForbidden),
 				fmt.Sprintf("Should get %d status, message: %s",
 					http.StatusForbidden, rr.Body.String()))
+			Expect(rr.Header().Get("Impersonate-User")).To(Equal(""))
+			Expect(rr.Header().Get("Impersonate-Group")).To(Equal(""))
 			Expect(dhh.serveCalled).To(BeFalse())
 		},
 
@@ -300,6 +424,16 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 						fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte("basicuserauditkubeonly:basicpwak"))),
 					}},
 				URL: &url.URL{Path: genPath("tigera_secure_ee_audit_ee*")},
+			}),
+		Entry("User tokenuserauditonly try to access flows via impersonation",
+			&http.Request{
+				Header: http.Header{"Impersonate-User": []string{"tokenuserauditonly"}},
+				URL:    &url.URL{Path: tigera_flow_path},
+			}),
+		Entry("Basic auth with audit* access try to access flows via impersonation",
+			&http.Request{
+				Header: http.Header{"Impersonate-User": []string{"basicuserauditonly"}},
+				URL: &url.URL{Path: tigera_flow_path},
 			}),
 	)
 

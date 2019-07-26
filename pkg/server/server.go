@@ -55,7 +55,7 @@ func Start(cfg *Config) error {
 	proxy := handler.NewProxy(pc)
 
 	k8sClient, k8sConfig := getKubernetestClientAndConfig()
-	k8sAuth := middleware.NewK8sAuth(k8sClient, k8sConfig)
+	k8sAuth := middleware.NewK8sAuth(k8sClient, k8sConfig, cfg.DelegateAuthentication)
 
 	// Install pip mutator
 	k8sClientSet := datastore.MustGetClientSet()

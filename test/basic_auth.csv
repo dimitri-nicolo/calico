@@ -11,3 +11,5 @@ polcrudpw,basicpolicycrud,bpolcrudid
 polreadcreatepw,basicpolicyreadcreate,bpolrcid
 polreadupdatepw,basicpolicyreadupdate,bpolruid
 polreaddeletepw,basicpolicyreaddelete,bpolrdid
+basicpwd0,impusergrp,impuidgrp,impgroup
+basicpwd1,impuser,impuid

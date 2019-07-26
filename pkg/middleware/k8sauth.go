@@ -4,6 +4,7 @@ package middleware
 import (
 	"fmt"
 	"net/http"
+	"net/textproto"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -22,10 +23,11 @@ type K8sAuthInterface interface {
 type k8sauth struct {
 	k8sApi k8s.Interface
 	config *restclient.Config
+	delegateAuthentication bool
 }
 
-func NewK8sAuth(k k8s.Interface, cfg *restclient.Config) K8sAuthInterface {
-	return &k8sauth{k8sApi: k, config: cfg}
+func NewK8sAuth(k k8s.Interface, cfg *restclient.Config, delegateAuthentication bool) K8sAuthInterface {
+	return &k8sauth{k8sApi: k, config: cfg, delegateAuthentication: delegateAuthentication}
 }
 
 // The handler returned by this will authenticate and authorize the request
@@ -51,19 +53,48 @@ func (ka *k8sauth) KubernetesAuthnAuthz(h http.Handler) http.Handler {
 // With Basic authorization we create a k8s client object with the Basic credentials
 // and then issue a SelfSubjectAccessReview, this is because there is not a way
 // to obtain the groups needed for a SubjectAccessReview.
+// If delegateAuthentication is enabled, we expect the request to have populate the impersonation
+// headers and we we only perform authorization. This means that authentication was delegated
+// at a higher level. This is available for multi cluster mode where the authentication is performed
+// at management cluster.
 
 // Authorize a request and return status and error, if error is nil then the
 // request is authorized, otherwise an http Status code is returned and an error
 // describing the cause.
 func (ka *k8sauth) Authorize(req *http.Request) (status int, err error) {
-	token := getAuthToken(req)
-	if token != "" {
+	if hasMixedAuthentication(req) {
+		log.Debugf("Detected a request with both impersonation and authorization headers. Will deny access")
+		return http.StatusUnauthorized, fmt.Errorf("Invalid or no user authentication credentials")
+	}
+
+	if canDelegateAuthentication(req, ka.delegateAuthentication) {
+		log.Debugf("Will authorize user based on impersonation headers")
+		user, groups := getImpersonationHeaders(req)
+		userInfo := &authnv1.UserInfo{}
+		userInfo.Username = user
+		userInfo.Groups = groups
+		return ka.authorizeUser(req, userInfo)
+	} else if getAuthToken(req) != "" {
+		log.Debugf("Will authorize user based on bearer token")
 		return ka.TokenAuthorize(req)
 	} else if _, _, found := req.BasicAuth(); found {
+		log.Debugf("Will authorize user based on basic token")
 		return ka.BasicAuthorize(req)
 	}
 
 	return http.StatusUnauthorized, fmt.Errorf("Invalid or no user authentication credentials")
+}
+
+func hasMixedAuthentication(request *http.Request) bool {
+	return request.Header.Get("Impersonate-User") != "" && request.Header.Get("Authorization") != ""
+}
+
+func canDelegateAuthentication(request *http.Request, enableDelegation bool) bool {
+	return enableDelegation && request.Header.Get("Impersonate-User") != "" && request.Header.Get("Authorization") == ""
+}
+
+func getImpersonationHeaders(request *http.Request) (username string, groups []string) {
+	return request.Header.Get("Impersonate-User"), request.Header[textproto.CanonicalMIMEHeaderKey("Impersonate-Group")]
 }
 
 func getAuthToken(req *http.Request) string {
