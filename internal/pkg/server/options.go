@@ -13,7 +13,6 @@ import (
 	"github.com/tigera/voltron/internal/pkg/proxy"
 
 	"github.com/pkg/errors"
-	"k8s.io/client-go/kubernetes"
 )
 
 // Option is a common format for New() options
@@ -97,9 +96,12 @@ func WithKeepClusterKeys() Option {
 }
 
 // WithAuthentication sets the kubernetes client that will be used to interact with its api
-func WithAuthentication(k8sAPI kubernetes.Interface) Option {
+func WithAuthentication() Option {
 	return func(s *Server) error {
-		s.auth = auth.NewIdentity(k8sAPI)
+		if s.k8s == nil {
+			return errors.Errorf("WithAuthentication requires the k8s.Interface to be set")
+		}
+		s.auth = auth.NewIdentity(s.k8s)
 		return nil
 	}
 }

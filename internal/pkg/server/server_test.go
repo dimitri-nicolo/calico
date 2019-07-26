@@ -65,6 +65,7 @@ var _ = Describe("Server", func() {
 
 	It("should fail to use invalid path", func() {
 		_, err := server.New(
+			nil,
 			server.WithCredsFiles("dog/gopher.crt", "dog/gopher.key"),
 		)
 		Expect(err).To(HaveOccurred())
@@ -76,9 +77,10 @@ var _ = Describe("Server", func() {
 		Expect(e).NotTo(HaveOccurred())
 
 		srv, err = server.New(
+			client,
 			server.WithKeepClusterKeys(),
 			server.WithTunnelCreds(srvCert, srvPrivKey),
-			server.WithAuthentication(client),
+			server.WithAuthentication(),
 		)
 		Expect(err).NotTo(HaveOccurred())
 		wg.Add(1)
@@ -217,11 +219,12 @@ var _ = Describe("Server Proxy to tunnel", func() {
 		opts = append(opts,
 			server.WithKeepClusterKeys(),
 			server.WithTunnelCreds(srvCert, srvPrivKey),
-			server.WithAuthentication(client),
+			server.WithAuthentication(),
 			server.WithDefaultProxy(defaultProxy),
 		)
 
 		srv, err = server.New(
+			client,
 			opts...,
 		)
 		Expect(err).NotTo(HaveOccurred())
@@ -535,9 +538,10 @@ var _ = Describe("Server authenticates requests", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		srv, err = server.New(
+			k8sAPI,
 			server.WithKeepClusterKeys(),
 			server.WithTunnelCreds(srvCert, srvPrivKey),
-			server.WithAuthentication(k8sAPI),
+			server.WithAuthentication(),
 		)
 		Expect(err).NotTo(HaveOccurred())
 

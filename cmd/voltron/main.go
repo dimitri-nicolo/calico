@@ -64,7 +64,7 @@ func main() {
 		server.WithPublicAddr(cfg.PublicIP),
 		server.WithKeepClusterKeys(),
 		server.WithTunnelCreds(tunnelCert, tunnelKey),
-		server.WithAuthentication(bootstrap.ConfigureK8sClient(cfg.K8sConfigPath)),
+		server.WithAuthentication(),
 
 		// TODO: remove when voltron starts using k8s resources, probably by SAAS-178
 		server.WithAutoRegister(),
@@ -95,7 +95,10 @@ func main() {
 		opts = append(opts, server.WithDefaultProxy(defaultK8sProxy))
 	}
 
-	srv, err := server.New(opts...)
+	srv, err := server.New(
+		bootstrap.ConfigureK8sClient(cfg.K8sConfigPath),
+		opts...,
+	)
 
 	if err != nil {
 		log.Fatalf("Failed to create server: %s", err)

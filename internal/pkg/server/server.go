@@ -15,11 +15,11 @@ import (
 	"net/textproto"
 	"time"
 
-	"github.com/tigera/voltron/internal/pkg/auth"
-
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	"k8s.io/client-go/kubernetes"
 
+	"github.com/tigera/voltron/internal/pkg/auth"
 	jclust "github.com/tigera/voltron/internal/pkg/clusters"
 	"github.com/tigera/voltron/internal/pkg/proxy"
 	"github.com/tigera/voltron/internal/pkg/utils"
@@ -43,6 +43,8 @@ type Server struct {
 	cancel   context.CancelFunc
 	http     *http.Server
 	proxyMux *http.ServeMux
+
+	k8s kubernetes.Interface
 
 	defaultProxy *proxy.Proxy
 
@@ -77,9 +79,11 @@ type toggles struct {
 	autoRegister bool
 }
 
-// New returns a new Server
-func New(opts ...Option) (*Server, error) {
+// New returns a new Server. k8s may be nil and options must check if it is nil
+// or not if they set its user and return an error if it is nil
+func New(k8s kubernetes.Interface, opts ...Option) (*Server, error) {
 	srv := &Server{
+		k8s:  k8s,
 		http: new(http.Server),
 		clusters: &clusters{
 			clusters: make(map[string]*cluster),
