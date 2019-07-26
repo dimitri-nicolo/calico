@@ -233,7 +233,7 @@ The path can be either of the following:
 
 After identifying the path, run the following command.
 ```
-curl <path to access service> --header "X-Forwarded-For: 1.1.1.1” --header “X-Real-Ip: 2.2.2.2"
+curl <path to access service> --header "X-Forwarded-For: 1.1.1.1" --header "X-Real-Ip: 2.2.2.2"
 ```
 
 Now when viewing the flow logs in Kibana, you should be able to see the `original_source_ip` field
