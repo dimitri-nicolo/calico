@@ -299,7 +299,7 @@ metadata:
   name: calico-node-prometheus
   namespace: calico-monitoring
 spec:
-  baseImage: quay.io/prometheus/prometheus
+  baseImage: {{.Values.prometheus.image}}
   nodeSelector:
     beta.kubernetes.io/os: linux
     # If necessary, uncomment the line below and edit key:value pair with appropriate value for your environment.
