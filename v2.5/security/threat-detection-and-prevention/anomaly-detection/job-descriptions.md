@@ -28,7 +28,7 @@ compares pods both with other pods in their replica set, and with other pods in 
 ### Outlier IP Activity - Pods 
 **Job ID**: `pod_outlier_ip_activity`
 
-Looks for pods that connect to anomalous or rare destination IP addresses. This may indicate a compromised pod
+Looks for pods that connect to rare destination IP addresses. This may indicate a compromised pod
 exfiltrating data, or contacting a malicious command-and-control server. 
 
 ### Port Scan - External
