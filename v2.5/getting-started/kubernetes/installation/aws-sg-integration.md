@@ -97,7 +97,7 @@ We've provided info below on how to gather the above info in common Kubernetes e
 
     * Verify TSEE has been installed by confirming that cnx-manager is running:
        ```bash
-       kubectl get pod -n kube-system -l k8s-app=cnx-manager
+       kubectl get pod -n calico-monitoring -l k8s-app=cnx-manager
        ```
 
     * Verify that no Host Endpoints have been created by verifying that no entries are returned by:
