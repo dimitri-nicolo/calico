@@ -89,17 +89,10 @@ func Start(cfg *Config) error {
 	case InsecureMode:
 		sm.Handle("/",
 			middleware.RequestToResource(
-				k8sAuth.KubernetesAuthnAuthz(proxy)))
-		sm.Handle("/tigera_secure_ee_flows*/_search",
-			middleware.RequestToResource(
 				k8sAuth.KubernetesAuthnAuthz(
 					middleware.PolicyImpactHandler(k8sAuth, p, esClient, proxy))))
 	case ServiceUserMode:
 		sm.Handle("/",
-			middleware.RequestToResource(
-				k8sAuth.KubernetesAuthnAuthz(
-					middleware.BasicAuthHeaderInjector(cfg.ElasticUsername, cfg.ElasticPassword, proxy))))
-		sm.Handle("/tigera_secure_ee_flows*/_search",
 			middleware.RequestToResource(
 				k8sAuth.KubernetesAuthnAuthz(
 					middleware.PolicyImpactHandler(k8sAuth, p, esClient,

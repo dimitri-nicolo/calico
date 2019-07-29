@@ -18,11 +18,18 @@ import (
 	"github.com/tigera/es-proxy/pkg/pip"
 )
 
+const esFlowPrefix = "/tigera_secure_ee_flows"
+
 // PolicyImpactHandler is a middleware http handler that extracts PIP arguments from the request
 // if they exist and uses them to execute a PIP request. It also checks that the user
 // has the necessary permissions to execute this PIP request.
 func PolicyImpactHandler(authz K8sAuthInterface, p pip.PIP, esClient elastic.Client, h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		if !strings.HasPrefix(req.URL.Path, esFlowPrefix) {
+			// not a request for flow logs. skipping
+			h.ServeHTTP(w, req)
+			return
+		}
 
 		params, err := PolicyImpactRequestProcessor(req)
 		if err != nil {
