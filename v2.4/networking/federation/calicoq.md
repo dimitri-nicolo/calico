@@ -29,7 +29,7 @@ Endpoints matching selector all():
 If a remote cluster is inaccessible, for example due to network failure or due to a misconfiguration,
 the `calicoq` output includes details about the error. For example, the following output describes
 an error indicating the kubeconfig file configured in the Remote Cluster Configuration resource
-`remote-cluster-1` has not been mounted correctly into the `calicoq` pod.
+`remote-cluster-1` has not been mounted correctly into the `calicoq` pod. The `calicoq.yaml` has instructions on how to mount in the corresponding remote cluster secret.
 
 ```bash
 Endpoints matching selector all():
