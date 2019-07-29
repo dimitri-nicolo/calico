@@ -13,6 +13,12 @@ domain names, when the GlobalNetworkSet is matched by the destination selector o
 with action Allow.  Domain names have no effect in ingress rules, or in a rule whose action is not
 Allow.
 
+> **Note**: {{site.prodname}} implements policy for domain names by learning the
+> corresponding IPs from DNS, then programming rules to allow those IPs.  This means that
+> if multiple domain names A, B and C all map to the same IP, and there is domain-based
+> policy to allow A, traffic to B and C will be allowed as well.
+{: .alert .alert-info}
+
 The metadata for each network set includes a set of labels.  When {{site.prodname}} is calculating the set of
 IPs that should match a source/destination selector within a
 [global network policy]({{site.url}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy) rule, it includes
@@ -25,13 +31,13 @@ the CIDRs from any network sets that match the selector.
 > policy will see the kube-proxy's host's IP as the source instead of the real source.
 {: .alert .alert-danger}
 
-For `calicoctl` [commands]({{site.url}}/{{page.version}}/reference/calicoctl/commands/), the following case-insensitive aliases 
+For `calicoctl` [commands]({{site.url}}/{{page.version}}/reference/calicoctl/commands/), the following case-insensitive aliases
 may be used to specify the resource type on the CLI:
 `globalnetworkset`, `globalnetworksets`.
 
-For `kubectl` [commands](https://kubernetes.io/docs/reference/kubectl/overview/), the following case-insensitive aliases 
+For `kubectl` [commands](https://kubernetes.io/docs/reference/kubectl/overview/), the following case-insensitive aliases
 may be used to specify the resource type on the CLI:
-`globalnetworkset.projectcalico.org`, `globalnetworksets.projectcalico.org` and abbreviations such as 
+`globalnetworkset.projectcalico.org`, `globalnetworksets.projectcalico.org` and abbreviations such as
 `globalnetworkset.p` and `globalnetworksets.p`.
 
 ### Sample YAML

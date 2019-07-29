@@ -12,6 +12,12 @@ domain names, when the GlobalNetworkSet is matched by the destination selector o
 with action Allow.  Domain names have no effect in ingress rules, or in a rule whose action is not
 Allow.
 
+> **Note**: {{site.prodname}} implements policy for domain names by learning the
+> corresponding IPs from DNS, then programming rules to allow those IPs.  This means that
+> if multiple domain names A, B and C all map to the same IP, and there is domain-based
+> policy to allow A, traffic to B and C will be allowed as well.
+{: .alert .alert-info}
+
 The metadata for each network set includes a set of labels.  When {{site.prodname}} is calculating the set of
 IPs that should match a source/destination selector within a
 [global network policy]({{site.url}}/{{page.version}}/reference/resources/globalnetworkpolicy) rule, it includes
