@@ -1,4 +1,4 @@
-{{- if ne .Values.network "ecs" }}
+{{- if and (ne .Values.network "ecs") (ne .Values.network "aks") }}
 # as well as the CNI plugins and network config on
 {{- end }}
 # on each master and worker node in a Kubernetes cluster.
@@ -61,7 +61,7 @@ spec:
           - name: cni-bin-dir
             mountPath: /host
 {{- end }}
-{{- if and (ne .Values.network "ecs") (ne .Values.network "gke")  }}
+{{- if and (ne .Values.network "ecs") (ne .Values.network "gke") (ne .Values.network "aks")  }}
   {{- if and (eq .Values.network "calico") (eq .Values.datastore "kubernetes") }}
         # This container performs upgrade from host-local IPAM to calico-ipam.
         # It can be deleted if this is a fresh installation, or if you have already
@@ -285,6 +285,17 @@ spec:
               value: "k8s,ecs"
             - name: NO_DEFAULT_POOLS
               value: "true"
+{{- else if eq .Values.network "aks" }}
+            # Don't enable BGP.
+            - name: CALICO_NETWORKING_BACKEND
+              value: "none"
+            - name: FELIX_INTERFACEPREFIX
+              value: "azv"
+            # Cluster type to identify the deployment type
+            - name: CLUSTER_TYPE
+              value: "k8s,aks"
+            - name: NO_DEFAULT_POOLS
+              value: "true"
 {{- else if eq .Values.network "gke" }}
             # Don't enable BGP.  We're relying on native GKE CNI.
             - name: CALICO_NETWORKING_BACKEND
@@ -312,7 +323,7 @@ spec:
             - name: CLUSTER_TYPE
               value: "k8s"
 {{- end }}
-{{- if and (ne .Values.network "ecs") (ne .Values.network "gke") }}
+{{- if and (ne .Values.network "ecs") (ne .Values.network "gke") (ne .Values.network "aks") }}
             # The default IPv4 pool to create on startup if none exists. Pod IPs will be
             # chosen from this range. Changing this value after installation will have
             # no effect. This should fall within `--cluster-cidr`.
@@ -596,7 +607,7 @@ spec:
           hostPath:
             path: /etc/resolv.conf
 {{- end }}
-{{- if ne .Values.network "ecs" }}
+{{- if and (ne .Values.network "ecs") (ne .Values.network "aks") }}
         # Used to install CNI.
         - name: cni-bin-dir
           hostPath:
@@ -635,6 +646,8 @@ spec:
             type: DirectoryOrCreate
 {{- if eq .Values.platform "gke" }}
             path: /home/kubernetes/flexvolume/nodeagent~uds
+{{- else if eq .Values.platform "aks" }}
+            path: /etc/kubernetes/volumeplugins/nodeagent~uds
 {{- else }}
             path: /usr/libexec/kubernetes/kubelet-plugins/volume/exec/nodeagent~uds
 {{- end }}

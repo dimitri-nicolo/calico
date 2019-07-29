@@ -1,0 +1,7 @@
+---
+layout: null
+---
+{% helm --execute templates/cnx-api.yaml %}
+datastore: kubernetes
+platform: aks
+{% endhelm %}

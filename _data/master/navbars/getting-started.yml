@@ -42,6 +42,8 @@ toc:
         path: /getting-started/kubernetes/installation/eks
       - title: Installing Tigera Secure EE on Google GKE
         path: /getting-started/kubernetes/installation/gke
+      - title: Installing Tigera Secure EE on Azure AKS
+        path: /getting-started/kubernetes/installation/aks
   - title: Upgrade from Calico to Tigera Secure EE
     path: /getting-started/kubernetes/upgrade/upgrade-to-tsee
 

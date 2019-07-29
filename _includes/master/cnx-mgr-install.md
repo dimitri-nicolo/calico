@@ -9,6 +9,10 @@
   {% assign cli = "kubectl" %}
   {% assign cloudServiceInitials = "GKE" %}
   {% assign manifestPath = "manifests/gke" %}
+{% elsif include.platform == "aks" %}
+  {% assign cli = "kubectl" %}
+  {% assign cloudServiceInitials = "AKS" %}
+  {% assign manifestPath = "manifests/aks" %}
 {% else %}
   {% assign cli = "kubectl" %}
   {% assign manifestPath = "getting-started/kubernetes/installation/hosted/cnx/1.7" %}
@@ -35,7 +39,7 @@
    sed -i -e 's?tigera.cnx-manager.oauth-authority:.*$?tigera.cnx-manager.oauth-authority: "https://master.openshift.example.com:8443/oauth/authorize"?g' cnx.yaml
    ```
 
-{% elsif include.platform != "eks" and include.platform != "gke" %}
+{% elsif include.platform != "eks" and include.platform != "gke" and include.platform != "aks" %}
 
 1. Refer to the bullet that corresponds to your chosen authentication method.
 
@@ -73,7 +77,7 @@
    --from-file=key=/etc/origin/master/master.server.key -n calico-monitoring
    ```
 
-{% elsif include.platform == "eks" or include.platform == "gke" %}
+{% elsif include.platform == "eks" or include.platform == "gke" or include.platform == "aks" %}
 
 1. Create a secret containing a TLS certificate and the private key used to
    sign it. The following commands create a self-signed certificate and key.
@@ -129,12 +133,17 @@
      > instead, refer to [{{site.prodname}} Manager connections]({{site.baseurl}}/{{page.version}}/security/comms/crypto-auth#{{site.prodnamedash}}-manager-connections).
      {: .alert .alert-info}
 
+{% if include.platform == "aks" %}
+1. Expose {{site.prodname}} Manager via a LoadBalancer. Open the cnx.yaml file and
+   update the `Service` section named `cnx-manager` and replace `type: NodePort` with `type: LoadBalancer`.
+{% endif %}
+
 {% if include.platform != "docker-ee" %}
 1. Edit the Kibana URL to point to your Kibana. Open the cnx.yaml file and
    modify the `ConfigMap` named `tigera-cnx-manager-config` by setting the
    value of `tigera.cnx-manager.kibana-url`
 {% endif %}
-{% if include.elasticsearch != "external" %}
+{% if include.elasticsearch != "external" and include.platform != "aks" %}
    By default a NodePort is installed that serves Kibana on port 30601, so use
    the address of a node (for example a master).
 {% endif %}
@@ -203,7 +212,7 @@
 
    Wait until each pod has the `STATUS` of `Running`.
 
-{% if include.platform == "eks" or include.platform == "gke" %}
+{% if include.platform == "eks" or include.platform == "gke" or include.platform == "aks" %}
 
 1. To log into {{site.prodname}} Manager running in {{cloudServiceInitials}}, you'll need a token for a user
    with appropriate permissions on the cluster.
@@ -228,7 +237,14 @@
 {% include {{page.version}}/cnx-grant-user-manager-permissions.md %}
 {% endif %}
 
-
+{% if include.platform == "aks" %}
+1. Get `EXTERNAL-IP` of the LoadBalancer via which {{site.prodname}} Manager is exposed.
+   ```bash
+   kubectl get svc cnx-manager -n calico-monitoring
+   ```
+   
+   Sign in by navigating to `https://<{{site.prodname}} Manager LoadBalancer EXTERNAL-IP>:9443` and login.
+{% else %}
 {% if include.platform != "docker-ee" %}
 1. By default, {{site.prodname}} Manager is made accessible via a NodePort listening on port 30003.
    You can edit the `cnx.yaml` manifest if you want to change how {{site.prodname}} Manager is
@@ -251,7 +267,8 @@
    Sign in by navigating to `https://<address of a Kubernetes node or 127.0.0.1 for ssh tunnel>:30003` and login.
 {% endif %}
 {% endif %}
+{% endif %}
 
-{% if include.platform == "eks" or include.platform == "gke" %}
+{% if include.platform == "eks" or include.platform == "gke" or include.platform == "aks" %}
    Log in to {{site.prodname}} Manager using the token you created earlier in the process.
 {% endif %}

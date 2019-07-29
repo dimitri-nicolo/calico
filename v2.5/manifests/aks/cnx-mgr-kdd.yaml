@@ -1,0 +1,7 @@
+---
+layout: null
+---
+{% helm tigera-secure-ee --execute templates/manager.yaml %}
+datastore: kubernetes
+platform: aks
+{% endhelm %}
