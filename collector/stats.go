@@ -279,7 +279,11 @@ func NewData(tuple Tuple, duration time.Duration, maxOriginalIPsSize int) *Data 
 }
 
 func (d *Data) String() string {
-	var srcName, dstName string
+	var (
+		srcName, dstName string
+		osi              []net.IP
+		osiTc            int
+	)
 	if d.srcEp != nil {
 		srcName = endpointName(d.srcEp.Key)
 	} else {
@@ -290,12 +294,17 @@ func (d *Data) String() string {
 	} else {
 		dstName = "<unknown>"
 	}
+	if d.origSourceIPs != nil {
+		osi = d.origSourceIPs.ToIPSlice()
+		osiTc = d.origSourceIPs.TotalCount()
+	}
 	return fmt.Sprintf(
 		"tuple={%v}, srcEp={%v} dstEp={%v} connTrackCtr={packets=%v bytes=%v}, "+
-			"connTrackCtrReverse={packets=%v bytes=%v}, httpPkts={allowed=%v, denied=%v}, updatedAt=%v ingressRuleTrace={%v} egressRuleTrace={%v}",
+			"connTrackCtrReverse={packets=%v bytes=%v}, httpPkts={allowed=%v, denied=%v}, updatedAt=%v ingressRuleTrace={%v} egressRuleTrace={%v}, "+
+			"origSourceIPs={ips=%v totalCount=%v}",
 		&(d.Tuple), srcName, dstName, d.conntrackPktsCtr.Absolute(), d.conntrackBytesCtr.Absolute(),
 		d.conntrackPktsCtrReverse.Absolute(), d.conntrackBytesCtrReverse.Absolute(), d.httpReqAllowedCtr.Delta(),
-		d.httpReqDeniedCtr.Delta(), d.updatedAt, d.IngressRuleTrace, d.EgressRuleTrace)
+		d.httpReqDeniedCtr.Delta(), d.updatedAt, d.IngressRuleTrace, d.EgressRuleTrace, osi, osiTc)
 }
 
 func (d *Data) touch() {
@@ -465,6 +474,9 @@ func (d *Data) ReplaceRuleID(ruleID *calc.RuleID, tierIdx, numPkts, numBytes int
 
 func (d *Data) AddOriginalSourceIPs(bs *boundedSet) {
 	d.origSourceIPs.Combine(bs)
+	d.isConnection = true
+	d.touch()
+	d.setDirtyFlag()
 }
 
 func (d *Data) OriginalSourceIps() []net.IP {
@@ -498,12 +510,18 @@ func (d *Data) Report(c chan<- MetricUpdate, expired bool) {
 				c <- d.metricUpdateIngressConn(ut)
 			}
 
+			// We may receive HTTP Request data after we've flushed the connection counters.
+			if d.NumUniqueOriginalSourceIPs() != 0 {
+				c <- d.metricUpdateOrigSourceIPs(ut)
+			}
+
 			// Clear the connection dirty flag once the stats have been reported. Note that we also clear the
 			// rule trace stats here too since any data stored in them has been superceded by the connection
 			// stats.
 			d.clearConnDirtyFlag()
 			d.EgressRuleTrace.ClearDirtyFlag()
 			d.IngressRuleTrace.ClearDirtyFlag()
+
 		}
 	} else {
 		// Report rule trace stats.
@@ -515,6 +533,10 @@ func (d *Data) Report(c chan<- MetricUpdate, expired bool) {
 			c <- d.metricUpdateIngressNoConn(ut)
 			d.IngressRuleTrace.ClearDirtyFlag()
 		}
+		// We may receive HTTP Request data after we've flushed the connection counters.
+		if d.NumUniqueOriginalSourceIPs() != 0 {
+			c <- d.metricUpdateOrigSourceIPs(ut)
+		}
 
 		// We do not need to clear the connection stats here. Connection stats are fully reset if the Data moves
 		// from a connection to non-connection state.
@@ -524,13 +546,12 @@ func (d *Data) Report(c chan<- MetricUpdate, expired bool) {
 // metricUpdateIngressConn creates a metric update for Inbound connection traffic
 func (d *Data) metricUpdateIngressConn(ut UpdateType) MetricUpdate {
 	return MetricUpdate{
-		updateType:    ut,
-		tuple:         d.Tuple,
-		origSourceIPs: d.origSourceIPs,
-		srcEp:         d.srcEp,
-		dstEp:         d.dstEp,
-		ruleIDs:       d.IngressRuleTrace.Path(),
-		isConnection:  d.isConnection,
+		updateType:   ut,
+		tuple:        d.Tuple,
+		srcEp:        d.srcEp,
+		dstEp:        d.dstEp,
+		ruleIDs:      d.IngressRuleTrace.Path(),
+		isConnection: d.isConnection,
 		inMetric: MetricValue{
 			deltaPackets:             d.conntrackPktsCtr.Delta(),
 			deltaBytes:               d.conntrackBytesCtr.Delta(),
@@ -547,13 +568,12 @@ func (d *Data) metricUpdateIngressConn(ut UpdateType) MetricUpdate {
 // metricUpdateEgressConn creates a metric update for Outbound connection traffic
 func (d *Data) metricUpdateEgressConn(ut UpdateType) MetricUpdate {
 	return MetricUpdate{
-		updateType:    ut,
-		tuple:         d.Tuple,
-		origSourceIPs: d.origSourceIPs,
-		srcEp:         d.srcEp,
-		dstEp:         d.dstEp,
-		ruleIDs:       d.EgressRuleTrace.Path(),
-		isConnection:  d.isConnection,
+		updateType:   ut,
+		tuple:        d.Tuple,
+		srcEp:        d.srcEp,
+		dstEp:        d.dstEp,
+		ruleIDs:      d.EgressRuleTrace.Path(),
+		isConnection: d.isConnection,
 		inMetric: MetricValue{
 			deltaPackets: d.conntrackPktsCtrReverse.Delta(),
 			deltaBytes:   d.conntrackBytesCtrReverse.Delta(),
@@ -568,13 +588,12 @@ func (d *Data) metricUpdateEgressConn(ut UpdateType) MetricUpdate {
 // metricUpdateIngressNoConn creates a metric update for Inbound non-connection traffic
 func (d *Data) metricUpdateIngressNoConn(ut UpdateType) MetricUpdate {
 	return MetricUpdate{
-		updateType:    ut,
-		tuple:         d.Tuple,
-		origSourceIPs: d.origSourceIPs,
-		srcEp:         d.srcEp,
-		dstEp:         d.dstEp,
-		ruleIDs:       d.IngressRuleTrace.Path(),
-		isConnection:  d.isConnection,
+		updateType:   ut,
+		tuple:        d.Tuple,
+		srcEp:        d.srcEp,
+		dstEp:        d.dstEp,
+		ruleIDs:      d.IngressRuleTrace.Path(),
+		isConnection: d.isConnection,
 		inMetric: MetricValue{
 			deltaPackets: d.IngressRuleTrace.pktsCtr.Delta(),
 			deltaBytes:   d.IngressRuleTrace.bytesCtr.Delta(),
@@ -585,17 +604,38 @@ func (d *Data) metricUpdateIngressNoConn(ut UpdateType) MetricUpdate {
 // metricUpdateEgressNoConn creates a metric update for Outbound non-connection traffic
 func (d *Data) metricUpdateEgressNoConn(ut UpdateType) MetricUpdate {
 	return MetricUpdate{
-		updateType:    ut,
-		tuple:         d.Tuple,
-		origSourceIPs: d.origSourceIPs,
-		srcEp:         d.srcEp,
-		dstEp:         d.dstEp,
-		ruleIDs:       d.EgressRuleTrace.Path(),
-		isConnection:  d.isConnection,
+		updateType:   ut,
+		tuple:        d.Tuple,
+		srcEp:        d.srcEp,
+		dstEp:        d.dstEp,
+		ruleIDs:      d.EgressRuleTrace.Path(),
+		isConnection: d.isConnection,
 		outMetric: MetricValue{
 			deltaPackets: d.EgressRuleTrace.pktsCtr.Delta(),
 			deltaBytes:   d.EgressRuleTrace.bytesCtr.Delta(),
 		},
+	}
+}
+
+// metricUpdateOrigSourceIPs creates a metric update for HTTP Data (original source ips).
+func (d *Data) metricUpdateOrigSourceIPs(ut UpdateType) MetricUpdate {
+	// We send Original Source IP updates as standalone metric updates.
+	// If however we can't find out the rule trace then we also include
+	// an unknown rule ID that the rest of the  metric pipeline uses to
+	// extract action and direction.
+	var unknownRuleID *calc.RuleID
+	if !d.IngressRuleTrace.FoundVerdict() {
+		unknownRuleID = calc.NewRuleID(calc.UnknownStr, calc.UnknownStr, calc.UnknownStr, calc.RuleIDIndexUnknown, rules.RuleDirIngress, rules.RuleActionAllow)
+	}
+	return MetricUpdate{
+		updateType:    ut,
+		tuple:         d.Tuple,
+		srcEp:         d.srcEp,
+		dstEp:         d.dstEp,
+		origSourceIPs: d.origSourceIPs,
+		ruleIDs:       d.IngressRuleTrace.Path(),
+		unknownRuleID: unknownRuleID,
+		isConnection:  d.isConnection,
 	}
 }
 
