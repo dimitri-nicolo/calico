@@ -1,8 +1,8 @@
-hash: 16e7921eeafbbf955ce1543aa702058ae405b285d9d8d41114bfa80bcc061be1
-updated: 2019-07-19T14:59:32.247142242-07:00
+hash: b769cb97ef7699994005cefdf14f5375308b6c7e4641b039ebcb3534f9716bdf
+updated: 2019-07-29T13:09:38.611991-07:00
 imports:
 - name: github.com/aquasecurity/kube-bench
-  version: 331d64b2946f2c775e7b6aba591aa2ed457e858e
+  version: b649588f46c54c84cd9c88510680b5a651f12d46
   subpackages:
   - check
 - name: github.com/beorn7/perks
@@ -24,7 +24,7 @@ imports:
 - name: github.com/ghodss/yaml
   version: 73d445a93680fa1a78ae23a5839bad48f32ba1ee
 - name: github.com/go-ini/ini
-  version: 3be5ad479f69d4e08d7fe25edf79bf3346bd658e
+  version: 8659100d2d9ecf3760a41838b1886db49426d001
 - name: github.com/go-openapi/jsonpointer
   version: ef5f0afec364d3b9396b7b77b43dbe26bf1f8004
 - name: github.com/go-openapi/jsonreference
@@ -110,9 +110,9 @@ imports:
 - name: github.com/Masterminds/sprig
   version: 9f8fceff796fb9f4e992cd2bece016be0121ab74
 - name: github.com/mattn/go-colorable
-  version: 3a70a971f94a22f2fa562ffcc7a0eb45f5daf045
+  version: c52ace132bf44798a21f16fdafaaafbf329519e2
 - name: github.com/mattn/go-isatty
-  version: c2a7a6ca930a4cd0bc33a3f298eb71960732a3a7
+  version: da60ac76bf7019a8b005f8dd1ad9d1a0e6434155
 - name: github.com/matttproud/golang_protobuf_extensions
   version: c12348ce28de40eed0136aa2b644d0ee0650e56c
   subpackages:
@@ -168,7 +168,7 @@ imports:
 - name: github.com/pkg/errors
   version: 27936f6d90f9c8e1145f11ed52ffffbfdb9e0af7
 - name: github.com/projectcalico/felix
-  version: c00322e56455b84a9c099feee8004b7cc02dc9ef
+  version: 0daef9e3814f952f1e59748df748437febb27237
   repo: git@github.com:tigera/felix-private.git
   vcs: git
   subpackages:
@@ -185,6 +185,7 @@ imports:
   - proto
   - rules
   - stringutils
+  - versionparse
 - name: github.com/projectcalico/go-json
   version: 6219dc7339ba20ee4c57df0a8baac62317d19cb1
   subpackages:
@@ -228,10 +229,9 @@ imports:
   - lib/validator/v3
   - lib/watch
 - name: github.com/prometheus/client_golang
-  version: 505eaef017263e299324067d40ca2c48f6a2cf50
+  version: e7e903064f5e9eb5da98208bae10b475d4db0f8c
   subpackages:
   - prometheus
-  - prometheus/internal
 - name: github.com/prometheus/client_model
   version: fa8ad6fec33561be4280a8f0514318c79d7f6cb6
   subpackages:
@@ -260,7 +260,7 @@ imports:
 - name: github.com/spf13/cobra
   version: f2b07da1e2c38d5f12845a4f607e2e1018cbb1f5
 - name: github.com/spf13/pflag
-  version: 583c0c0531f06d5278b7d917446061adc344b5cd
+  version: 298182f68c66c05229eb03ac171abe6e309ee79a
 - name: github.com/tigera/calico-k8sapiserver
   version: 48f513106b849dd5da67b25acd93231d0831594a
   repo: git@github.com:tigera/calico-k8sapiserver.git
@@ -515,6 +515,7 @@ imports:
   - rest
   - rest/watch
   - testing
+  - third_party/forked/golang/template
   - tools/auth
   - tools/clientcmd
   - tools/clientcmd/api
@@ -530,6 +531,7 @@ imports:
   - util/flowcontrol
   - util/homedir
   - util/integer
+  - util/jsonpath
 - name: k8s.io/kube-openapi
   version: 91cfa479c814065e420cee7ed227db0f63a5854e
   subpackages:
