@@ -132,6 +132,6 @@ spec:
 To change the default DNS trusted servers, use the [DNSTrustedServers parameter]({{site.baseurl}}/{{page.version}}/reference/felix/configuration).
 
 For more detail about the relevant resources, see
-[GlobalNetworkSet]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkset)
+[GlobalNetworkSet]({{site.baseurl}}/{{page.version}}/reference/resources/globalnetworkset)
 and
-[GlobalNetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy)
+[GlobalNetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/resources/globalnetworkpolicy)
