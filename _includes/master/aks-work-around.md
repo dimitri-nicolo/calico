@@ -1,8 +1,8 @@
 
 ## Create cluster
 
-> **Note**: AKS will support creating cluster with Azure CNI plugin in transparent mode in future release.  This section demostrate manual steps required in order to work around this limitation. 
-Replace command parameters for each azure CLI command with your own set of values.
+> **Note**: AKS will support cluster creation with the Azure CNI plugin in transparent mode in a future release. This section demonstrates the manual steps required in order to work around this limitation. 
+Replace command parameters for each azure CLI command below with your own set of values.
 {: .alert .alert-info}
 
 1. Create an AKS cluster with Azure CNI without network policy support.
@@ -29,7 +29,7 @@ Replace command parameters for each azure CLI command with your own set of value
    kubectl get node
    ```   
 
-1. Create bridge2trasparent daemonset to set Azure CNI plugin operating in transparent mode. 
+1. Create `bridge2transparent` daemonset to set Azure CNI plugin operating in transparent mode. 
 
 
    **Example**

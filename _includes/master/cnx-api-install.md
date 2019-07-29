@@ -126,7 +126,7 @@
 {% elsif include.platform == "aks" %}
 
 1. Download the AKS {{site.prodname}} manifest and save the file
-   as cnx-api.yaml for use in subsequent steps. That is how we will refer to it in later steps.
+   as cnx-api.yaml for use in subsequent steps.
 
    ```bash
    curl --compressed -o cnx-api.yaml \
