@@ -119,5 +119,7 @@ For debugging, it's sometimes useful to run Felix manually and tell it
 to emit its logs to screen. You can do that with the following command.
 
 ```bash
-FELIX_LOGSEVERITYSCREEN=INFO /usr/local/bin/{{site.nodecontainer}} -felix
+ETCD_ENDPOINTS=http://<YOUR_ECTD_HOST_IP>:2379 FELIX_LOGSEVERITYSCREEN=INFO /usr/local/bin/{{site.nodecontainer}} -felix
 ```
+> **Note**: Add the `ETCD_ENDPOINTS` Env and replace `<ETCD_IP>:<ETCD_PORT>` with your etcd configuration when etcd isn't running locally.
+{: .alert .alert-info}

@@ -70,10 +70,10 @@ toc:
     section:
     - title: Overview
       path: /getting-started/bare-metal/installation/
-    - title: Binary install
-      path: /getting-started/bare-metal/installation/binary
     - title: Container install
       path: /getting-started/bare-metal/installation/container
+    - title: Binary install
+      path: /getting-started/bare-metal/installation/binary
 
 - title: Running cnx/node with an init system
   path: /getting-started/as-service
