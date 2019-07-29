@@ -184,6 +184,9 @@ spec:
   {{- if eq .Values.network "ecs" }}
           - name: FELIX_INTERFACEPREFIX
             value: "eni"
+  {{- else if eq .Values.network "aks" }}
+          - name: FELIX_INTERFACEPREFIX
+            value: "azv"
   {{- else if eq .Values.network "gke" }}
           - name: FELIX_INTERFACEPREFIX
             value: "gke"
