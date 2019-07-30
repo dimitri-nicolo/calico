@@ -7,8 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/projectcalico/libcalico-go/lib/options"
 	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
+
+	"github.com/projectcalico/libcalico-go/lib/options"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -32,9 +33,9 @@ func TestWatchList(t *testing.T) {
 // - update should trigger Modified event
 // - update that gets filtered should trigger Deleted event
 func testWatch(t *testing.T, list bool) {
-	ctx, store := testSetup(t)
+	ctx, store, gnpStore := testSetup(t)
 	defer func() {
-		testCleanup(t, ctx, store)
+		testCleanup(t, ctx, store, gnpStore)
 		store.client.NetworkPolicies().Delete(ctx, "default", "default.foo", options.DeleteOptions{})
 		store.client.NetworkPolicies().Delete(ctx, "default", "default.bar", options.DeleteOptions{})
 	}()

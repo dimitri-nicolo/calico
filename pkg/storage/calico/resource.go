@@ -13,11 +13,6 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/golang/glog"
-	"github.com/projectcalico/libcalico-go/lib/apiconfig"
-	"github.com/projectcalico/libcalico-go/lib/clientv3"
-	"github.com/projectcalico/libcalico-go/lib/errors"
-	"github.com/projectcalico/libcalico-go/lib/options"
-	calicowatch "github.com/projectcalico/libcalico-go/lib/watch"
 	aapierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,6 +22,12 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	k8swatch "k8s.io/apimachinery/pkg/watch"
 	"k8s.io/apiserver/pkg/storage"
+
+	"github.com/projectcalico/libcalico-go/lib/apiconfig"
+	"github.com/projectcalico/libcalico-go/lib/clientv3"
+	"github.com/projectcalico/libcalico-go/lib/errors"
+	"github.com/projectcalico/libcalico-go/lib/options"
+	calicowatch "github.com/projectcalico/libcalico-go/lib/watch"
 )
 
 type resourceObject interface {
@@ -104,9 +105,10 @@ func validationError(err error, qualifiedKind schema.GroupKind, name string) *aa
 	calErrors := err.(errors.ErrorValidation)
 	for _, calErr := range calErrors.ErroredFields {
 		err := &field.Error{
-			Type:   field.ErrorTypeInvalid,
-			Field:  calErr.Name,
-			Detail: calErr.Reason,
+			Type:     field.ErrorTypeInvalid,
+			Field:    calErr.Name,
+			Detail:   calErr.Reason,
+			BadValue: calErr.Value,
 		}
 		errs = append(errs, err)
 	}
