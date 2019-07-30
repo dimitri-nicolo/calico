@@ -15,7 +15,7 @@ import:
   - pkg/run
 - package: github.com/projectcalico/felix
   repo: git@github.com:tigera/felix-private.git
-  version: 1ee6fe29d357a9a937260dfb3227a24516384fd3
+  version: 0f6dad809385dc75d85fd1909bac50d4400c92b8
   subpackages:
   - daemon
 - package: github.com/projectcalico/cni-plugin
