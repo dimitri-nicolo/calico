@@ -285,7 +285,7 @@ func validateName(fl validator.FieldLevel) bool {
 
 // Public because also useful for the v1 validator.
 func ValidateWildName(fl validator.FieldLevel) bool {
-	s := fl.Field().String()
+	s := strings.ToLower(fl.Field().String())
 	log.Debugf("Validate wild name: %s", s)
 
 	// Allow the name to contain one wildcard at the end (x.y.*) or at the beginning (*.x.y) or
