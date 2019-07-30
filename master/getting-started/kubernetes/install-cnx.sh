@@ -1588,7 +1588,7 @@ restartAwsConfigDependentPods() {
     runIgnoreErrors kubectl -n kube-system delete pod -l k8s-app=$podLabel
   done
 
-  blockUntilPodIsReady "k8s-app in (calico-typha, cnx-apiserver, calico-node)" 120 AWSConfigDependentPods
+  blockUntilPodIsReady "k8s-app in (calico-typha, cnx-apiserver, calico-node)" 300 AWSConfigDependentPods
 }
 
 #
