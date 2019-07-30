@@ -11,3 +11,5 @@ spec:
   downloadTemplates:
     - name: all-tests.csv
     - name: failed-tests.csv
+    - name: node-summary.csv
+    - name: total-summary.csv
