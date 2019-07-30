@@ -145,6 +145,56 @@ subjects:
 
 ---
 
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRole
+metadata:
+  name: cnx-manager-pip
+rules:
+- apiGroups: ["projectcalico.org"]
+  resources:
+    - globalnetworksets
+    - globalnetworkpolicies
+    - tier.globalnetworkpolicies
+    - networkpolicies
+    - tier.networkpolicies
+  verbs:
+    - list
+- apiGroups: ["projectcalico.org"]
+  resources:
+    - tiers
+  verbs:
+    - get
+    - list
+- apiGroups: ["networking.k8s.io"]
+  resources:
+    - networkpolicies
+  verbs:
+    - list
+    - get
+- apiGroups: [""]
+  resources:
+  - serviceaccounts
+  - namespaces
+  verbs:
+    - list
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: cnx-manager-pip
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cnx-manager-pip
+subjects:
+- kind: ServiceAccount
+  name: cnx-manager
+  namespace: calico-monitoring
+
+---
+
 kind: ServiceAccount
 apiVersion: v1
 metadata:
