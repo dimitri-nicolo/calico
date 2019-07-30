@@ -148,48 +148,39 @@ kubectl patch deployment <name of ingress controller deployment> -n <namespace> 
 To read out the correct information to correlate Ingress source IPs with flow logs, add
 the appropriate information to the ingress controller logs.
 
-1. Add the appropriate json template to the logging format for the ingress controller/router
+1. Add the following json template to the logging format for your chosen ingress
+   controller/router:
+
+   ```
+   tigera_secure_ee_ingress: {"source_port": $realip_remote_port, "destination_ip": "$server_addr", "destination_port": $server_port, "source_ip": "$realip_remote_addr", "x-forwarded-for": "$http_x_forwarded_for", "x-real-ip": "$http_x_real_ip"}
+   ```
 
    **Kubernetes community-maintained NGINX ingress controller**
    Set the [log-format-upstream](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/#log-format-upstream)
    variable in your ingress controller configuration configmap (see the
    [Kubernetes community maintained NGINX ingress controller documentation](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/)
-   for more details) to include the following:
-   ```
-   tigera_secure_ee_ingress: {"source_port": $realip_remote_port, "destination_ip": "$server_addr", "destination_port": $server_port, "source_ip": "$realip_remote_addr", "x-forwarded-for": "$http_x_forwarded_for", "x-real-ip": "$the_real_ip"}
-   ```
+   for more details).
 
    **NGINX Inc-maintained NGINX ingress controller**
    Set the [log-format](https://github.com/nginxinc/kubernetes-ingress/blob/master/docs/configmap-and-annotations.md#logging)
    variable in your ingress controller configuration configmap (see the
    [NGINX Inc. ingress controller documentation](https://github.com/nginxinc/kubernetes-ingress/blob/master/docs/configmap-and-annotations.md)
-   for more details) to include the following:
-   ```
-   tigera_secure_ee_ingress: {"source_port": $realip_remote_port, "destination_ip": "$server_addr", "destination_port": $server_port, "source_ip": "$realip_remote_addr", "x-forwarded-for": "$http_x_forwarded_for", "x-real-ip": "$http_x_real_ip"}
-   ```
+   for more details).
 
    **OpenShift router**
-   In order to view OpenShift router logs, you will need to set up a syslog server (See the
+   In order to view OpenShift router logs, set up a syslog server (See the
    [OpenShift documentation](https://docs.okd.io/3.11/admin_guide/router.html#viewing-logs)
-   for more details). Once that is set up appropriately, you will need to add the following to
-   the `ROUTER_SYSLOG_FORMAT` environment variable on your router.
-   ```
-   tigera_secure_ee_ingress: {"source_port": $realip_remote_port, "destination_ip": "$server_addr", "destination_port": $server_port, "source_ip": "$realip_remote_addr", "x-forwarded-for": "$http_x_forwarded_for", "x-real-ip": "$http_x_real_ip"}
-   ```
+   for more details). Once that is set up appropriately, add the above json
+   template to the `ROUTER_SYSLOG_FORMAT` environment variable on your router.
 
    > **Note**: The variable values for `source_ip`, `destination_ip`, `x-forwarded-for`, and `x-real-ip`
    > should be quoted.
    {: .alert .alert-info}
 
-   > **Note**: In Kubernetes, setting `x-real-ip` with `$the_real_ip` makes setting a value for
-   > `x-forwarded-for` unnecessary since it will pull its value from the `X-Forwarded-For` HTTP
-   > header if the `X-Real-Ip` header does not exist.
-   {: .alert .alert-info}
-
 1. Set the log file path to `/var/log/calico/ingress/ingress.log`.
 
    **Kubernetes community-maintained NGINX ingress controller**
-   If you are using the community maintained ingress controller, you will need to set
+   If you are using the community maintained ingress controller, set
    [access-log-path](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/#access-log-path)
    in your configmap. Set this value to `/var/log/calico/ingress/ingress.log`
 
@@ -204,8 +195,8 @@ the appropriate information to the ingress controller logs.
    > [Kubernetes community-maintained ingress controller documentation](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/custom-template/).
 
    **NGINX Inc-maintained NGINX ingress controller**
-   If you are using the NGINX Inc maintained ingress controller, you will need to create a custom
-   NGINX template in order to tell NGINX to log to a file. To do this, you will need to set
+   If you are using the NGINX Inc maintained ingress controller, create a custom
+   NGINX template in order to tell NGINX to log to a file. To do this, set
    [main-template](https://github.com/nginxinc/kubernetes-ingress/blob/1f4ad601f8b94ce6767c43a3ae66e7caf00963bc/docs/configmap-and-annotations.md#snippets-and-custom-templates)
    in your configmap. Your new template should probably look similar to the
    [mounted template](https://github.com/nginxinc/kubernetes-ingress/blob/8986c96331f3806172aa10ec6a0f773a630eee9c/internal/configs/version1/nginx.tmpl).
@@ -219,7 +210,7 @@ the appropriate information to the ingress controller logs.
    ```
 
    **OpenShift router**
-   If you are using the OpenShift router, you will need to configure your syslog server to write
+   If you are using the OpenShift router, configure your syslog server to write
    log files to `/var/log/calico/ingress/ingress.log`. See the
    [OpenShift documentation](https://docs.okd.io/3.11/admin_guide/router.html#viewing-logs)
    for more details.
