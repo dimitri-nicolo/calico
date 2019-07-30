@@ -438,6 +438,31 @@ func (c *collector) convertDataplaneStatsAndApplyUpdate(d *proto.DataplaneStats)
 	// from the dataplane before nflogs or conntrack).
 	data := c.getData(t, true)
 
+	// Add the endpoint and networkset data for the Dataplane stats so that if it misses the
+	// timing window for aggregating with the connection stats, the information will still be
+	// populated.
+	dstEp, ok := c.luc.GetEndpoint(t.dst)
+	srcEp, _ := c.luc.GetEndpoint(t.src)
+
+	if c.config.EnableNetworkSets && srcEp == nil {
+		srcEp, _ = c.luc.GetNetworkset(t.src)
+	}
+
+	if c.config.EnableNetworkSets && dstEp == nil {
+		dstEp, _ = c.luc.GetNetworkset(t.dst)
+	}
+
+	if !ok {
+		return
+	}
+
+	if srcEp != nil {
+		data.SetSourceEndpointData(srcEp)
+	}
+	if dstEp != nil {
+		data.SetDestinationEndpointData(dstEp)
+	}
+
 	var httpDataCount int
 	for _, s := range d.Stats {
 		if s.Relativity != proto.Statistic_DELTA {
