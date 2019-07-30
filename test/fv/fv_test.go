@@ -2,11 +2,9 @@
 package fv_test
 
 import (
-	"bytes"
 	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
@@ -23,7 +21,6 @@ import (
 	"golang.org/x/net/http2"
 
 	"github.com/tigera/voltron/internal/pkg/client"
-	"github.com/tigera/voltron/internal/pkg/clusters"
 	"github.com/tigera/voltron/internal/pkg/proxy"
 	"github.com/tigera/voltron/internal/pkg/server"
 	"github.com/tigera/voltron/internal/pkg/test"
@@ -53,24 +50,6 @@ type testClient struct {
 	http         *http.Client
 	voltronHTTPS string
 	voltronHTTP  string
-}
-
-func (c *testClient) addCluster(id string) error {
-	cluster, err := json.Marshal(&clusters.Cluster{ID: id, DisplayName: id})
-	Expect(err).NotTo(HaveOccurred())
-
-	req, err := http.NewRequest("PUT",
-		"https://"+c.voltronHTTPS+"/voltron/api/clusters?", bytes.NewBuffer(cluster))
-	Expect(err).NotTo(HaveOccurred())
-
-	resp, err := c.http.Do(req)
-	Expect(err).NotTo(HaveOccurred())
-
-	if resp.StatusCode != 200 {
-		return errors.Errorf("addCluster: StatusCode %d", resp.StatusCode)
-	}
-
-	return nil
 }
 
 func (c *testClient) doRequest(clusterID string) (string, error) {
@@ -145,8 +124,9 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 	clusterID := "cluster"
 	clusterID2 := "other-cluster"
 
-	k8sAPI := test.NewK8sSimpleFakeClient(nil)
+	k8sAPI := test.NewK8sSimpleFakeClient(nil, nil)
 	k8sAPI.AddJaneIdentity()
+	watchSync := make(chan error)
 
 	// client to be used to interact with voltron (mimic UI)
 	ui := &testClient{
@@ -232,16 +212,22 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 			voltron.ServeTunnelsTLS(lisTun)
 		}()
 
+		wgSrvCnlt.Add(1)
+		go func() {
+			defer wgSrvCnlt.Done()
+			voltron.WatchK8sWithSync(watchSync)
+		}()
+
 		ui.voltronHTTPS = lisHTTP2.Addr().String()
 		ui.voltronHTTP = lisHTTP11.Addr().String()
 	})
 
 	It("should register 2 clusters", func() {
-		err := ui.addCluster(clusterID)
-		Expect(err).NotTo(HaveOccurred())
+		k8sAPI.AddCluster(clusterID, clusterID)
+		Expect(<-watchSync).NotTo(HaveOccurred())
 
-		err = ui.addCluster(clusterID2)
-		Expect(err).NotTo(HaveOccurred())
+		k8sAPI.AddCluster(clusterID2, clusterID2)
+		Expect(<-watchSync).NotTo(HaveOccurred())
 	})
 
 	It("should start guardian", func() {

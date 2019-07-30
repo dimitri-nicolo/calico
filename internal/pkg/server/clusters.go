@@ -22,7 +22,10 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/http2"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/watch"
 
+	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	jclust "github.com/tigera/voltron/internal/pkg/clusters"
 	"github.com/tigera/voltron/pkg/tunnel"
 )
@@ -158,6 +161,8 @@ func (cs *clusters) remove(jc *jclust.Cluster) error {
 		c.tunnel.Close()
 	}
 	c.RUnlock()
+
+	log.Infof("Cluster id %q removed", jc.ID)
 
 	return nil
 }
@@ -343,6 +348,52 @@ func (cs *clusters) get(id string) *cluster {
 	}
 
 	return c
+}
+
+func (cs *clusters) watchK8s(ctx context.Context, k8s K8sInterface, syncC chan<- error) error {
+	watcher, err := k8s.ManagedClusters().Watch(metav1.ListOptions{})
+	if err != nil {
+		return errors.Errorf("failed to create k8s watch: %s", err)
+	}
+
+	for {
+		select {
+		case r, ok := <-watcher.ResultChan():
+			if !ok {
+				return errors.Errorf("watcher stopped unexpectedly")
+			}
+
+			mc := r.Object.(*apiv3.ManagedCluster)
+			jc := &jclust.Cluster{
+				ID:          string(mc.ObjectMeta.UID),
+				DisplayName: mc.ObjectMeta.Name,
+			}
+
+			log.Debugf("WatchK8s: %s %+v", r.Type, jc)
+
+			var err error
+
+			switch r.Type {
+			case watch.Added, watch.Modified:
+				_, err = cs.update(jc)
+			case watch.Deleted:
+				err = cs.remove(jc)
+			default:
+				err = errors.Errorf("watch event %s unsupported", r.Type)
+			}
+
+			if err != nil {
+				log.Errorf("ManagedClusters watch event %s failed: %s", r.Type, err)
+			}
+
+			if syncC != nil {
+				syncC <- err
+			}
+		case <-ctx.Done():
+			watcher.Stop()
+			return errors.Errorf("watcher exiting: %s", ctx.Err())
+		}
+	}
 }
 
 func (c *cluster) checkTunnelState() {

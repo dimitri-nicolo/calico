@@ -19,6 +19,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 
+	clientv3 "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 	"github.com/tigera/voltron/internal/pkg/auth"
 	jclust "github.com/tigera/voltron/internal/pkg/clusters"
 	"github.com/tigera/voltron/internal/pkg/proxy"
@@ -39,6 +40,7 @@ var ClusterHeaderFieldCanon = textproto.CanonicalMIMEHeaderKey(ClusterHeaderFiel
 // K8sInterface represent the interface server needs to access all k8s resources
 type K8sInterface interface {
 	kubernetes.Interface
+	clientv3.ProjectcalicoV3Interface
 }
 
 // Server is the voltron server that accepts tunnels from the app clusters. It
@@ -443,4 +445,19 @@ func (s *Server) ClusterCreds(id string) ([]byte, []byte, error) {
 	}
 
 	return cPem, pem, nil
+}
+
+// WatchK8s starts watching k8s resources, always exits with an error
+func (s *Server) WatchK8s() error {
+	return s.WatchK8sWithSync(nil)
+}
+
+// WatchK8sWithSync is a variant of WatchK8s for testing. Every time a watch
+// event is handled its result is posted on the syncC channel
+func (s *Server) WatchK8sWithSync(syncC chan<- error) error {
+	if s.k8s == nil {
+		return errors.Errorf("no k8s interface")
+	}
+
+	return s.clusters.watchK8s(s.ctx, s.k8s, syncC)
 }

@@ -20,7 +20,7 @@ var _ = Describe("Authenticator", func() {
 	Describe("authenticates Bearer token", func() {
 		Context("against k8s api", func() {
 
-			client := test.NewK8sSimpleFakeClient(nil)
+			client := test.NewK8sSimpleFakeClient(nil, nil)
 			authenticator := auth.NewBearerAuthenticator(client)
 
 			It("should not authenticate empty token ", func() {
