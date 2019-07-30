@@ -94,7 +94,9 @@ def gen_chart_specific_values_v2_5(versions, imageNames, imageRegistry, chart, f
         limits:
           cpu: #"2000m"
           memory: #"1024Mi"
-    
+      # kibanaURL is used to populate a link to Kibana from the Manager web UI.
+      kibanaURL: http://127.0.0.1:5601
+ 
     # Configuration for the manager UI proxy.
     managerProxy:
       image: #{imageRegistry}#{imageNames["cnxManagerProxy"]}
