@@ -592,7 +592,7 @@ var policyDNSBasic = Policy{
 }
 
 // Two GlobalNetworkSets, one for microsoft.com and one for google.com.
-var allowedEgressDomains = []string{"microsoft.com", "www.microsoft.com"}
+var allowedEgressDomains = []string{"microsoft.com", "www.MicroSoft.com"}
 var allowedEgressDomains2 = []string{"google.com", "www.google.com"}
 
 var netSetDNSKey = NetworkSetKey{Name: "netset-domains"}

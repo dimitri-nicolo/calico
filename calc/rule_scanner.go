@@ -243,7 +243,7 @@ func (rs *RuleScanner) updateRules(key interface{}, inbound, outbound []model.Ru
 			// Also emit the IP set membership, in the directly specified domains case.
 			for _, domain := range currentUIDToDomains[uid] {
 				log.Infof("Domain %v", domain)
-				rs.OnIPSetMemberAdded(uid, labelindex.IPSetMember{Domain: domain})
+				rs.OnIPSetMemberAdded(uid, labelindex.IPSetMember{Domain: strings.ToLower(domain)})
 			}
 		}
 		rs.uidsToRulesIDs.Put(uid, key)

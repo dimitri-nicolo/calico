@@ -452,6 +452,7 @@ func (idx *SelectorAndNamedPortIndex) UpdateEndpointOrSet(
 		"CIDRs":           cidrsToLog,
 		"ports":           ports,
 		"parentIDs":       parentIDs,
+		"domains":         domains,
 	})
 	logCxt.Debug("Updating endpoint/network set")
 
@@ -686,7 +687,7 @@ func (idx *SelectorAndNamedPortIndex) CalculateEndpointContribution(d *endpointD
 	} else if ipSetData.isDomainSet {
 		for _, domain := range d.domains {
 			contrib = append(contrib, IPSetMember{
-				Domain: domain,
+				Domain: strings.ToLower(domain),
 			})
 		}
 	} else {
