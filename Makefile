@@ -242,7 +242,7 @@ ut:
 ifdef LOCAL
 	$(CMD)
 else
-	$(DOCKER_GO_BUILD) sh -c '$(CMD)'
+	$(DOCKER_GO_BUILD) sh -c 'git config --global url."git@github.com:tigera".insteadOf "https://github.com/tigera" && $(CMD)'
 endif
 
 #############################################
@@ -254,7 +254,7 @@ fv:
 ifdef LOCAL
 	$(CMD)
 else
-	$(DOCKER_GO_BUILD) sh -c '$(CMD)'
+	$(DOCKER_GO_BUILD) sh -c 'git config --global url."git@github.com:tigera".insteadOf "https://github.com/tigera" && $(CMD)'
 endif
 
 #############################################
@@ -265,7 +265,7 @@ st: CMD = go mod download && $(GINKGO) -r test/st/
 ifdef LOCAL
 st: export TEST_CMD=$(CMD)
 else
-st: export TEST_CMD=$(DOCKER_GO_BUILD) sh -c '$(CMD)'
+st: export TEST_CMD=$(DOCKER_GO_BUILD) sh -c 'git config --global url."git@github.com:tigera".insteadOf "https://github.com/tigera" && $(CMD)'
 endif
 st: $(MANIFESTS) $(COMPONENTS)
 	sh test/st/run.sh
