@@ -935,8 +935,8 @@ var _ = Describe("Reporting Metrics", func() {
 				tmuOrigIP := testMetricUpdate{
 					updateType:    UpdateTypeReport,
 					tuple:         *ingressPktAllowTuple,
-					srcEp:         nil,
-					dstEp:         nil,
+					srcEp:         remoteEd1,
+					dstEp:         localEd1,
 					ruleIDs:       nil,
 					origSourceIPs: NewBoundedSetFromSliceWithTotalCount(c.config.MaxOriginalSourceIPsIncluded, []net2.IP{net2.ParseIP(publicIP1Str)}, dpStatsHTTPDataValue),
 					unknownRuleID: unknownRuleID,
