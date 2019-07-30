@@ -339,6 +339,17 @@ func init() {
 			},
 			true,
 		),
+		Entry("should accept GlobalNetworkSet with uppercase domain names",
+			api.GlobalNetworkSet{
+				ObjectMeta: v1.ObjectMeta{
+					Name: "test",
+				},
+				Spec: api.GlobalNetworkSetSpec{
+					AllowedEgressDomains: []string{"MICROSOFT.COM", "WWW.MICROSOFT.COM"},
+				},
+			},
+			true,
+		),
 		Entry("should accept GlobalNetworkSet with wildcard domain names",
 			api.GlobalNetworkSet{
 				ObjectMeta: v1.ObjectMeta{
