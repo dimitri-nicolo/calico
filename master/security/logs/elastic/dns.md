@@ -13,7 +13,7 @@ This information should assist you in constructing queries.
 | `start_time`          | date              | When the collection of the log began in UNIX timestamp format. |
 | `end_time`            | date              | When the collection of the log concluded in UNIX timestamp format. |
 | `count`               | long              | How many DNS lookups there were, during the log collection interval, with details matching this log.  |
-| `client_ip`           | ip                | The IP address of the client pod. A hyphen indicates aggregation. |
+| `client_ip`           | ip                | The IP address of the client pod. A null value indicates aggregation. |
 | `client_name`         | keyword           | {::nomarkdown}<p>This field contains one of the following values:<br>&#x25cf;&nbsp;The name of the client pod.<br>&#x25cf;&nbsp;<code>-</code>: the name of the pod was aggregated. Check <code>client_name_aggr</code> for the pod name prefix.</p>{:/} |
 | `client_name_aggr`    | keyword           | The aggregated name of the client pod. |
 | `client_namespace`    | keyword           | Namespace of the client pod. |
