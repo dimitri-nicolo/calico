@@ -30,7 +30,6 @@ import (
 	"github.com/tigera/voltron/internal/pkg/test"
 	"github.com/tigera/voltron/internal/pkg/utils"
 	"github.com/tigera/voltron/pkg/tunnel"
-	"k8s.io/client-go/kubernetes/fake"
 )
 
 var (
@@ -60,8 +59,8 @@ var _ = Describe("Server", func() {
 		lis net.Listener
 	)
 
-	client := fake.NewSimpleClientset()
-	test.AddJaneIdentity(client)
+	client := test.NewK8sSimpleFakeClient(nil)
+	client.AddJaneIdentity()
 
 	It("should fail to use invalid path", func() {
 		_, err := server.New(
@@ -181,8 +180,8 @@ var _ = Describe("Server Proxy to tunnel", func() {
 		cert   []byte
 	)
 
-	client := fake.NewSimpleClientset()
-	test.AddJaneIdentity(client)
+	client := test.NewK8sSimpleFakeClient(nil)
+	client.AddJaneIdentity()
 
 	defaultServer := httptest.NewServer(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
@@ -498,7 +497,6 @@ var _ = Describe("Server Proxy to tunnel", func() {
 
 var _ = Describe("Server authenticates requests", func() {
 
-	k8sAPI := fake.NewSimpleClientset()
 	var wg sync.WaitGroup
 	var srv *server.Server
 	var tun *tunnel.Tunnel
@@ -506,6 +504,8 @@ var _ = Describe("Server authenticates requests", func() {
 	var lisHTTP net.Listener
 	var lisTun net.Listener
 	var xCert tls.Certificate
+
+	k8sAPI := test.NewK8sSimpleFakeClient(nil)
 
 	By("Creating credentials for server", func() {
 		srvCert, _ = test.CreateSelfSignedX509Cert("voltron", true)
@@ -589,7 +589,7 @@ var _ = Describe("Server authenticates requests", func() {
 	})
 
 	It("should authenticate Jane", func() {
-		test.AddJaneIdentity(k8sAPI)
+		k8sAPI.AddJaneIdentity()
 
 		var wg sync.WaitGroup
 
@@ -611,7 +611,7 @@ var _ = Describe("Server authenticates requests", func() {
 		Expect(resp.StatusCode).To(Equal(200))
 	})
 	It("should not authenticate Bob", func() {
-		test.AddBobIdentity(k8sAPI)
+		k8sAPI.AddBobIdentity()
 
 		var wg sync.WaitGroup
 

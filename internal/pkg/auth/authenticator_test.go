@@ -14,14 +14,13 @@ import (
 	auth "github.com/tigera/voltron/internal/pkg/auth"
 	authn "k8s.io/api/authentication/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/kubernetes/fake"
 )
 
 var _ = Describe("Authenticator", func() {
 	Describe("authenticates Bearer token", func() {
 		Context("against k8s api", func() {
 
-			client := fake.NewSimpleClientset()
+			client := test.NewK8sSimpleFakeClient(nil)
 			authenticator := auth.NewBearerAuthenticator(client)
 
 			It("should not authenticate empty token ", func() {
@@ -30,16 +29,17 @@ var _ = Describe("Authenticator", func() {
 			})
 
 			It("should not authenticate invalid token ", func() {
-				client.Fake.PrependReactor("create", "tokenreviews", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
-					review := &authn.TokenReview{}
-					return true, review, nil
-				})
+				client.K8sFake().PrependReactor("create", "tokenreviews",
+					func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
+						review := &authn.TokenReview{}
+						return true, review, nil
+					})
 				_, err := authenticator.Authenticate("$#%")
 				Expect(err).To(HaveOccurred())
 			})
 
 			It("should authenticate a valid token for jane", func() {
-				test.AddJaneIdentity(client)
+				client.AddJaneIdentity()
 				user, err := authenticator.Authenticate("jane's token")
 				Expect(user.Name).To(Equal("jane"))
 				Expect(user.Groups).To(Equal([]string{"developers"}))
@@ -47,17 +47,18 @@ var _ = Describe("Authenticator", func() {
 			})
 
 			It("should not authenticate a valid token for bob", func() {
-				client.Fake.PrependReactor("create", "tokenreviews", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
-					review := &authn.TokenReview{
-						Spec: authn.TokenReviewSpec{
-							Token: "bob's token",
-						},
-						Status: authn.TokenReviewStatus{
-							Authenticated: false,
-						},
-					}
-					return true, review, nil
-				})
+				client.K8sFake().PrependReactor("create", "tokenreviews",
+					func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
+						review := &authn.TokenReview{
+							Spec: authn.TokenReviewSpec{
+								Token: "bob's token",
+							},
+							Status: authn.TokenReviewStatus{
+								Authenticated: false,
+							},
+						}
+						return true, review, nil
+					})
 
 				_, err := authenticator.Authenticate("bob's token")
 				Expect(err).To(HaveOccurred())

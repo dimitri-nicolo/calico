@@ -21,7 +21,6 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/http2"
-	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/tigera/voltron/internal/pkg/client"
 	"github.com/tigera/voltron/internal/pkg/clusters"
@@ -146,8 +145,8 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 	clusterID := "cluster"
 	clusterID2 := "other-cluster"
 
-	k8sAPI := fake.NewSimpleClientset()
-	test.AddJaneIdentity(k8sAPI)
+	k8sAPI := test.NewK8sSimpleFakeClient(nil)
+	k8sAPI.AddJaneIdentity()
 
 	// client to be used to interact with voltron (mimic UI)
 	ui := &testClient{

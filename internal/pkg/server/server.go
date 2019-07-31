@@ -36,6 +36,11 @@ const (
 // cluster to proxy for (Canonical)
 var ClusterHeaderFieldCanon = textproto.CanonicalMIMEHeaderKey(ClusterHeaderField)
 
+// K8sInterface represent the interface server needs to access all k8s resources
+type K8sInterface interface {
+	kubernetes.Interface
+}
+
 // Server is the voltron server that accepts tunnels from the app clusters. It
 // serves HTTP requests and proxies them to the tunnels.
 type Server struct {
@@ -44,7 +49,7 @@ type Server struct {
 	http     *http.Server
 	proxyMux *http.ServeMux
 
-	k8s kubernetes.Interface
+	k8s K8sInterface
 
 	defaultProxy *proxy.Proxy
 
@@ -81,7 +86,7 @@ type toggles struct {
 
 // New returns a new Server. k8s may be nil and options must check if it is nil
 // or not if they set its user and return an error if it is nil
-func New(k8s kubernetes.Interface, opts ...Option) (*Server, error) {
+func New(k8s K8sInterface, opts ...Option) (*Server, error) {
 	srv := &Server{
 		k8s:  k8s,
 		http: new(http.Server),

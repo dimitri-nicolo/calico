@@ -13,16 +13,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/tigera/voltron/internal/pkg/bootstrap"
-
-	v1 "k8s.io/api/rbac/v1"
-	"k8s.io/client-go/kubernetes"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
-	"github.com/tigera/voltron/internal/pkg/clusters"
+	v1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/tigera/voltron/internal/pkg/bootstrap"
+	"github.com/tigera/voltron/internal/pkg/clusters"
 )
 
 func init() {
@@ -39,7 +37,7 @@ var _ = Describe("Integration Tests", func() {
 		voltronWg   sync.WaitGroup
 		guardianCmd *exec.Cmd
 		guardianWg  sync.WaitGroup
-		k8s         *kubernetes.Clientset
+		k8s         *bootstrap.K8sClient
 	)
 
 	It("Should change directory to bin folder", func() {

@@ -20,40 +20,64 @@ const (
 	BobBearerToken = "Bearer bob'sToken"
 )
 
+type k8sFake = fake.Clientset
+
+// K8sFakeClient is the actual client
+type K8sFakeClient struct {
+	*k8sFake
+}
+
+// NewK8sSimpleFakeClient returns a new aggregated fake client that satisfies
+// server.K8sClient interface to access k8s
+func NewK8sSimpleFakeClient(k8sObj []runtime.Object) *K8sFakeClient {
+	return &K8sFakeClient{
+		k8sFake: fake.NewSimpleClientset(k8sObj...),
+	}
+}
+
+// K8sFake returns the Fake struct to acces k8s (re)actions
+func (c *K8sFakeClient) K8sFake() *k8stesting.Fake {
+	return &c.k8sFake.Fake
+}
+
 // AddJaneIdentity mocks k8s authentication response for Jane
 // Expect username to match Jane and groups to match Developers
-func AddJaneIdentity(client *fake.Clientset) {
-	client.Fake.PrependReactor("create", "tokenreviews", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
-		review := &authn.TokenReview{
-			Spec: authn.TokenReviewSpec{
-				Token: JaneBearerToken,
-			},
-			Status: authn.TokenReviewStatus{
-				Authenticated: true,
-				User: authn.UserInfo{
-					Username: Jane,
-					Groups:   []string{Developers},
+func (c *K8sFakeClient) AddJaneIdentity() {
+	c.k8sFake.PrependReactor(
+		"create", "tokenreviews",
+		func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
+			review := &authn.TokenReview{
+				Spec: authn.TokenReviewSpec{
+					Token: JaneBearerToken,
 				},
-			},
-		}
-		return true, review, nil
-	})
+				Status: authn.TokenReviewStatus{
+					Authenticated: true,
+					User: authn.UserInfo{
+						Username: Jane,
+						Groups:   []string{Developers},
+					},
+				},
+			}
+			return true, review, nil
+		})
 }
 
 // AddBobIdentity mocks k8s authentication response for Bob
 // Expect user not be authenticated
-func AddBobIdentity(client *fake.Clientset) {
-	client.Fake.PrependReactor("create", "tokenreviews", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
-		review := &authn.TokenReview{
-			Spec: authn.TokenReviewSpec{
-				Token: BobBearerToken,
-			},
-			Status: authn.TokenReviewStatus{
-				Authenticated: false,
-			},
-		}
-		return true, review, nil
-	})
+func (c *K8sFakeClient) AddBobIdentity() {
+	c.k8sFake.PrependReactor(
+		"create", "tokenreviews",
+		func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
+			review := &authn.TokenReview{
+				Spec: authn.TokenReviewSpec{
+					Token: BobBearerToken,
+				},
+				Status: authn.TokenReviewStatus{
+					Authenticated: false,
+				},
+			}
+			return true, review, nil
+		})
 }
 
 // AddJaneToken adds JaneBearerToken on the request
