@@ -56,8 +56,8 @@ GO_BUILD_VER?=v0.20
 CALICO_BUILD=calico/go-build:$(GO_BUILD_VER)
 
 
-#This is a version with known container with compatible versions of sed/grep etc. 
-TOOLING_BUILD?=calico/go-build:v0.20	
+#This is a version with known container with compatible versions of sed/grep etc.
+TOOLING_BUILD?=calico/go-build:v0.20
 
 
 
@@ -143,11 +143,12 @@ DOCKER_RUN := mkdir -p .go-pkg-cache && \
 				 --net=host \
 				 $(EXTRA_DOCKER_ARGS) \
 				 -e LOCAL_USER_ID=$(MY_UID) \
+				 -v $(HOME)/.glide:/home/user/.glide:rw \
 				 -v $${PWD}:/go/src/github.com/tigera/calico-k8sapiserver:rw \
 				 -v $${PWD}/.go-pkg-cache:/go/pkg:rw \
 				 -v $${PWD}/hack/boilerplate:/go/src/k8s.io/kubernetes/hack/boilerplate:rw \
 				 -w /go/src/github.com/tigera/calico-k8sapiserver \
-				 -e GOARCH=$(ARCH) 
+				 -e GOARCH=$(ARCH)
 
 # Update the vendored dependencies with the latest upstream versions matching
 # our glide.yaml.  If there area any changes, this updates glide.lock
@@ -199,7 +200,7 @@ PIN_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
 ###############################################################################
 ## libcalico
 
-## Set the default LIBCALICO source for this project 
+## Set the default LIBCALICO source for this project
 LIBCALICO_PROJECT_DEFAULT=tigera/libcalico-go-private.git
 LIBCALICO_GLIDE_LABEL=projectcalico/libcalico-go
 
@@ -208,8 +209,8 @@ LIBCALICO_REPO?=github.com/$(LIBCALICO_PROJECT_DEFAULT)
 LIBCALICO_VERSION?=$(shell git ls-remote git@github.com:$(LIBCALICO_PROJECT_DEFAULT) $(LIBCALICO_BRANCH) 2>/dev/null | cut -f 1)
 
 ## Guard to ensure LIBCALICO repo and branch are reachable
-guard-git-libcalico: 
-	@_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ; 
+guard-git-libcalico:
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ;
 	@_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "$(LIBCALICO_BRANCH)" "Ensure the branch exists, or set LIBCALICO_BRANCH variable";
 	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
 	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LIBCALICO_PROJECT_DEFAULT) "$(LIBCALICO_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
@@ -234,7 +235,7 @@ update-libcalico-pin: guard-ssh-forwarding-bug guard-git-libcalico
 ###############################################################################
 ## licensing
 
-## Set the default LICENSING source for this project 
+## Set the default LICENSING source for this project
 LICENSING_PROJECT_DEFAULT=tigera/licensing
 LICENSING_GLIDE_LABEL=tigera/licensing
 
@@ -243,8 +244,8 @@ LICENSING_REPO?=github.com/$(LICENSING_PROJECT_DEFAULT)
 LICENSING_VERSION?=$(shell git ls-remote git@github.com:$(LICENSING_PROJECT_DEFAULT) $(LICENSING_BRANCH) 2>/dev/null | cut -f 1)
 
 ## Guard to ensure LICENSING repo and branch are reachable
-guard-git-licensing: 
-	@_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ; 
+guard-git-licensing:
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ;
 	@_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "$(LICENSING_BRANCH)" "Ensure the branch exists, or set LICENSING_BRANCH variable";
 	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
 	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(LICENSING_PROJECT_DEFAULT) "$(LICENSING_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
@@ -353,9 +354,9 @@ ifndef IMAGETAG
 	$(error IMAGETAG is undefined - run using make <target> IMAGETAG=X.Y.Z)
 endif
 
-tag-image: imagetag tigera/cnx-apiserver 
+tag-image: imagetag tigera/cnx-apiserver
 	docker tag tigera/cnx-apiserver:latest $(CONTAINER_NAME):$(IMAGETAG)
-	
+
 push-image: imagetag tag-image
 	docker push $(CONTAINER_NAME):$(IMAGETAG)
 
