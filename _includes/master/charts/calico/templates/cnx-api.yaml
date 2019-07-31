@@ -234,6 +234,12 @@ rules:
       - globalthreatfeeds
       - globalreporttypes
       - globalreports
+      - bgpconfigurations
+      - bgppeers
+      - felixconfigurations
+      - ippools
+      - managedclusters
+      - remoteclusterconfigurations
     verbs:
       - "*"
 
