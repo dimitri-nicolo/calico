@@ -337,7 +337,7 @@ In a report, the job status types are:
 - **lastSuccessfulReportJobs**:
   Default = keeps the 2 most recent successful jobs and deletes older ones.
 
-##### Change the default report generation time
+#### Change the default report generation time
 
 By default, reports are generated 30 minutes after the end of the report, to ensure all of the audit data is archived.
 (However, this gap does not affect the data collected “start/end time” for a report.)

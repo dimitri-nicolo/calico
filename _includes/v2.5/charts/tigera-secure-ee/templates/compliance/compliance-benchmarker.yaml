@@ -197,7 +197,7 @@ requiredDropCapabilities: null
 runAsUser:
   type: RunAsAny
 seLinuxContext:
-  type: MustRunAs
+  type: RunAsAny
 supplementalGroups:
   type: RunAsAny
 users:

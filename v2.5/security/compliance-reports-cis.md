@@ -163,6 +163,15 @@ To manually run a report:
 >**Note**: Manually-generated reports do not appear in GlobalReport status.
 {: .alert .alert-info}
 
+
+#### Troubleshooting
+
+Any issues found with this report type would likely be due to a failure in the `compliance-benchmarker` component which
+executes the CIS benchmark tests. A common cause of failure is that it is unable to locate either the kubelet
+or the kubectl binaries necessary to determine the version of Kubernetes running on the cluster. If a node is not running kubelet
+as a binary, i.e. is running within a hyperkube container, then the kubectl binary will have to be available in the `/usr/bin`
+directory in order to execute the benchmark tests.
+
 ### Above and beyond
 
 - For details on configuring and scheduling reports, see [Global Reports](/{{page.version}}/reference/resources/globalreport).

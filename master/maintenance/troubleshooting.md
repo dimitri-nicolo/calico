@@ -178,3 +178,11 @@ happen if you run a lot of workloads on a given host, or if your workloads creat
 
     sysctl -w net.netfilter.nf_conntrack_max=1000000
     echo "net.netfilter.nf_conntrack_max=1000000" >> /etc/sysctl.conf
+
+### Compliance report is not generating at expected time
+
+By design, reports are scheduled to generate 30 minutes after the specified end time. The reason for this is to allow a certain amount of
+time to pass for all the relevant data within the specified start and end time to be fully processed and stored. This delay can be modified 
+by setting the `TIGERA_COMPLIANCE_JOB_START_DELAY` environment variable on the `compliance-controller` deployment to the 
+desired [Golang duration](https://godoc.org/time#Duration).
+
