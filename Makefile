@@ -290,8 +290,11 @@ clean-build-image:
 .PHONY: static-checks
 static-checks:
 	docker run --rm -v $(CURDIR):/build-dir/$(PACKAGE_NAME):rw \
+		$(EXTRA_DOCKER_ARGS) \
 		-e LOCAL_USER_ID=$(MY_UID) \
-		$(CALICO_BUILD) sh -c 'cd /build-dir/$(PACKAGE_NAME); ./static-checks.sh'
+		$(CALICO_BUILD) \
+	    sh -c 'git config --global url."git@github.com:tigera".insteadOf "https://github.com/tigera" && \
+		       cd /build-dir/$(PACKAGE_NAME); ./static-checks.sh'
 
 # Always install the git hooks to prevent publishing closed source code to a non-private repo.
 hooks_installed := $(shell ./install-git-hooks.sh)
