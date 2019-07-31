@@ -70,11 +70,13 @@ func NewBatchIngressLog(size int) *BatchIngressLog {
 	}
 }
 
-func (b BatchIngressLog) Insert(log IngressLog) {
+func (b BatchIngressLog) Insert(log IngressLog) bool {
 	logKey := IngressLogKey(log)
 	if !b.Full() {
 		b.logs[logKey] = log
+		return true
 	}
+	return false
 }
 
 func (b BatchIngressLog) Full() bool {
