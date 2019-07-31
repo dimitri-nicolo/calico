@@ -308,7 +308,7 @@ optionally Elasticsearch and Kibana{% endif %} in order to enable logs.
    `elasticsearch-operator-sysctl.yaml`.
 
    ```
-   oc get ds elasticsearch-operator-sysctl -n default -o yaml --export > elasticsearch-operator-sysctl.yaml
+   oc get ds elasticsearch-operator-sysctl -n calico-monitoring -o yaml --export > elasticsearch-operator-sysctl.yaml
    ```
 
    Run the following command which will fix the configuration for pods to start properly in OpenShift.
@@ -320,7 +320,7 @@ optionally Elasticsearch and Kibana{% endif %} in order to enable logs.
    Replace the running DaemonSet
 
    ```
-   oc replace -n default -f elasticsearch-operator-sysctl.yaml
+   oc replace -n calico-monitoring -f elasticsearch-operator-sysctl.yaml
    ```
 
 {% endif %}
