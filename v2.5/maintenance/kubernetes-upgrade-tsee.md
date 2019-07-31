@@ -5,8 +5,8 @@ canonical_url: https://docs.tigera.io/v2.4/maintenance/kubernetes-upgrade-tsee
 
 ## Prerequisite
 
-Ensure that your Kubernetes cluster is already running version 2.3 of {{site.prodname}}. If your cluster is on a version
-earlier than 2.3, [first upgrade to 2.3](/v2.3/getting-started/kubernetes/upgrade/upgrade-tsee), then follow these instructions
+Ensure that your Kubernetes cluster is already running version 2.4 of {{site.prodname}}. If your cluster is on a version
+earlier than 2.4, [first upgrade to 2.4](/v2.4/maintenance/kubernetes-upgrade-tsee), then follow these instructions
 to upgrade to {{page.version}}.
 
 If your cluster has a Calico installation, follow the [Upgrading a Kubernetes cluster with Calico to {{site.prodname}} guide]({{site.url}}/{{page.version}}/getting-started/kubernetes/upgrade/upgrade-to-tsee)
