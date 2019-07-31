@@ -35,7 +35,7 @@ imports:
   - pkg/types
   - version
 - name: github.com/coreos/go-semver
-  version: 568e959cd89871e61434c1143528d9162da89ef2
+  version: e214231b295a8ea9479f11b70b35d5acf3556d9b
   subpackages:
   - semver
 - name: github.com/davecgh/go-spew
