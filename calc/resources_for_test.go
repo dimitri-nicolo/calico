@@ -591,10 +591,15 @@ var policyDNSBasic = Policy{
 	},
 }
 
-// Two GlobalNetworkSets, one for microsoft.com and one for google.com.
-var allowedEgressDomains = []string{"microsoft.com", "www.MicroSoft.com"}
+// A set of allowed egress domains, including names that are duplicates once normalized to
+// lowercase.  Note, this set of domain names is used both in GlobalNetworkSet definitions, and
+// directly as the DstDomains in a policy rule.
+var allowedEgressDomains = []string{"microsoft.com", "www.MicroSoft.com", "WWW.MICROSOFT.COM"}
+
+// A second set of allowed domain names.
 var allowedEgressDomains2 = []string{"google.com", "www.google.com"}
 
+// Two GlobalNetworkSets, one for microsoft.com and one for google.com.
 var netSetDNSKey = NetworkSetKey{Name: "netset-domains"}
 var netSetDNSKey2 = NetworkSetKey{Name: "netset-domains-2"}
 
