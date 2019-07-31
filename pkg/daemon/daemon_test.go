@@ -361,6 +361,10 @@ func (b *mockDatastore) GlobalReports() clientv3.GlobalReportInterface {
 	panic("not implemented")
 }
 
+func (b *mockDatastore) ManagedClusters() clientv3.ManagedClusterInterface {
+	panic("not implemented")
+}
+
 func (b *mockDatastore) Backend() bapi.Client {
 	panic("not implemented")
 }
