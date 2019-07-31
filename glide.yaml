@@ -13,7 +13,7 @@ import:
 - package: github.com/mipearson/rfw
 - package: github.com/projectcalico/libcalico-go
   repo: git@github.com:tigera/libcalico-go-private
-  version: ca59d48f491b2a61344cebca3f20f7426f57bfd1
+  version: d35062fca862802cc007d98f3451929215865c0c
   subpackages:
   - lib/apiconfig
   - lib/backend/api
