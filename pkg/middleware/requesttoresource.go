@@ -8,6 +8,7 @@ import (
 	"regexp"
 
 	log "github.com/sirupsen/logrus"
+
 	authzv1 "k8s.io/api/authorization/v1"
 )
 
@@ -20,7 +21,6 @@ import (
 // status and a message with details.
 func RequestToResource(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-
 		name, err := getResourceNameFromReq(req)
 		if err != nil {
 			log.WithError(err).Debugf("Unable to convert request URL '%+v' to resource", req.URL)
@@ -74,7 +74,7 @@ func getResourceAttributes(resourceName string) *authzv1.ResourceAttributes {
 
 // getResourceNameFromReq parses the req.URL.Path, converting the indexes
 // into the resource name used in RBAC.
-// This implementes the table located in
+// This implements the table located in
 // https://docs.google.com/document/d/1wFrbjLydsdz0NfxVk-_iW7eqx4ZIZWfgj5SzcsRmTwo/edit#heading=h.pva3ex6ffysc
 func getResourceNameFromReq(req *http.Request) (string, error) {
 	if req.URL == nil {

@@ -6,3 +6,8 @@ basicpwgrp,basicuserallgrp,basicuidgrp,selfgroup
 basicpw0,basicusernone,noneuid
 basicpwnos,basicusernoselfaccess,noselfuid
 basicpwnru,basicusernonresourceurl,nruuid
+polreadonlypw,basicpolicyreadonly,bpolroid
+polcrudpw,basicpolicycrud,bpolcrudid
+polreadcreatepw,basicpolicyreadcreate,bpolrcid
+polreadupdatepw,basicpolicyreadupdate,bpolruid
+polreaddeletepw,basicpolicyreaddelete,bpolrdid

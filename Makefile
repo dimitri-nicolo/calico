@@ -73,7 +73,7 @@ PUSH_NONMANIFEST_IMAGES=$(filter-out $(PUSH_MANIFEST_IMAGES),$(PUSH_IMAGES))
 # location of docker credentials to push manifests
 DOCKER_CONFIG ?= $(HOME)/.docker/config.json
 
-GO_BUILD_VER?=v0.21
+GO_BUILD_VER?=v0.22
 # For building, we use the go-build image for the *host* architecture, even if the target is different
 # the one for the host should contain all the necessary cross-compilation tools
 # we do not need to use the arch since go-build:v0.15 now is multi-arch manifest
@@ -135,9 +135,16 @@ RELEASE_LDFLAGS=-ldflags "$(VERSION_FLAGS) -s -w"
 MY_UID:=$(shell id -u)
 MY_GID:=$(shell id -g)
 
+
+# SSH_AUTH_SOCK doesn't work with MacOS but we can optionally volume mount keys 
+ifdef SSH_AUTH_DIR
+	EXTRA_DOCKER_ARGS += --tmpfs /home/user -v $(SSH_AUTH_DIR):/home/user/.ssh:ro  
+endif
+
 ifdef SSH_AUTH_SOCK
   EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
 endif
+
 
 DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
                    mkdir -p .go-build-cache && \
@@ -148,7 +155,6 @@ DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
                               -e GOARCH=$(ARCH) \
                               -v $(CURDIR):/$(PACKAGE_NAME):rw \
                               -v $(CURDIR)/.go-pkg-cache:/go/pkg:rw \
-                              -v $(CURDIR)/.go-build-cache:/home/user/.cache/go-build:rw \
                               -v $(CURDIR)/report:/report:rw \
                               -w /$(PACKAGE_NAME) \
                               $(CALICO_BUILD)
@@ -174,8 +180,12 @@ else
 endif
 	@echo Building es-proxy...
 	mkdir -p bin
+	# configure git to use ssh instead of https so that go mod can pull private libraries.
+	# note this will require the user have their SSH agent running and configured with valid private keys
+	# but the Makefile logic here will load the local SSH agent into the container automatically.
 	$(DOCKER_GO_BUILD) \
-	    sh -c 'go build -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/server" && \
+		sh -c 'git config --global url.ssh://git@github.com.insteadOf https://github.com && \
+			go build -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/server" && \
                ( ldd $(BINDIR)/es-proxy-$(ARCH) 2>&1 | grep -q "Not a valid dynamic program" || \
 	             ( echo "Error: $(BINDIR)/es-proxy-$(ARCH) was not statically linked"; false ) )'
 
@@ -256,11 +266,12 @@ report-dir:
 .PHONY: ut
 ut: report-dir
 	$(DOCKER_GO_BUILD) \
-		sh -c 'go test $(UNIT_TEST_FLAGS) \
+		sh -c 'git config --global url.ssh://git@github.com.insteadOf https://github.com && \
+			go test $(UNIT_TEST_FLAGS) \
 			$(addprefix $(PACKAGE_NAME)/,$(TEST_DIRS))'
 
 .PHONY: fv
-fv: image report-dir run-k8s-apiserver
+fv: signpost image report-dir run-k8s-apiserver
 	$(MAKE) fv-no-setup
 
 ## Developer friendly target to only run fvs and skip other
@@ -281,6 +292,11 @@ clean-build-image:
 
 clean-bin:
 	rm -rf $(BINDIR) bin
+
+
+.PHONY: signpost
+signpost: 
+	@echo "------------------------------------------------------------------------------"
 
 ###############################################################################
 # CI/CD
@@ -354,10 +370,14 @@ endif
 foss-checks:
 	@echo Running $@...
 	@docker run --rm -v $(CURDIR)/:/code/es-proxy:rw \
-	  -e LOCAL_USER_ID=$(MY_UID) \
-	  -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
-	  -w /code/es-proxy/ \
-	  $(CALICO_BUILD) /usr/local/bin/fossa
+	   -e LOCAL_USER_ID=$(MY_UID) \
+	   -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
+	    $(EXTRA_DOCKER_ARGS) \
+	   -w /code/es-proxy/ \
+	   $(CALICO_BUILD)  sh -c '\
+	   git config --global --add url."git@github.com:".insteadOf "https://github.com/"  &&\
+	   /usr/local/bin/fossa'
+
 
 ###############################################################################
 # Utilities

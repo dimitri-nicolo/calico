@@ -8,6 +8,8 @@ import (
 	"os"
 	"strconv"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // Used only when overriding config tests.
@@ -19,6 +21,8 @@ const (
 	certFilePathEnv = "CERT_FILE_PATH"
 	keyFilePathEnv  = "KEY_FILE_PATH"
 
+	keyCertGenPathEnv = "KEY_CERT_GEN_PATH"
+
 	elasticAccessModeEnv         = "ELASTIC_ACCESS_MODE"
 	elasticSchemeEnv             = "ELASTIC_SCHEME"
 	elasticHostEnv               = "ELASTIC_HOST"
@@ -27,6 +31,10 @@ const (
 	elasticInsecureSkipVerifyEnv = "ELASTIC_INSECURE_SKIP_VERIFY"
 	elasticUsernameEnv           = "ELASTIC_USERNAME"
 	elasticPasswordEnv           = "ELASTIC_PASSWORD"
+	elasticIndexSuffixEnv        = "ELASTIC_INDEX_SUFFIX"
+	elasticConnRetriesEnv        = "ELASTIC_CONN_RETRIES"
+	elasticConnRetryIntervalEnv  = "ELASTIC_CONN_RETRY_INTERVAL"
+	elasticEnableTraceEnv        = "ELASTIC_ENABLE_TRACE"
 )
 
 const (
@@ -34,6 +42,11 @@ const (
 	defaultConnectTimeout  = 30 * time.Second
 	defaultKeepAlivePeriod = 30 * time.Second
 	defaultIdleConnTimeout = 90 * time.Second
+
+	defaultIndexSuffix       = "cluster"
+	defaultConnRetryInterval = 500 * time.Millisecond
+	defaultConnRetries       = 30
+	defaultEnableTrace       = false
 )
 
 type ElasticAccessMode string
@@ -53,6 +66,15 @@ const (
 	InsecureMode = "insecure"
 )
 
+// Certificate file paths. If explicit certificates aren't provided
+// then self-signed certificates are generated and stored on these
+// paths.
+const (
+	defaultKeyCertGenPath = "/etc/es-proxy/ssl/"
+	defaultCertFileName   = "cert"
+	defaultKeyFileName    = "key"
+)
+
 // Config stores various configuration information for the es-proxy
 // server.
 type Config struct {
@@ -65,6 +87,13 @@ type Config struct {
 	// for serving requests over TLS.
 	CertFile string
 	KeyFile  string
+
+	// If specific a CertFile and KeyFile are not provided this is the
+	// location to autogenerate the files
+	DefaultSSLPath string
+	// Default cert and key file paths calculated from the DefaultSSLPath
+	DefaultCertFile string
+	DefaultKeyFile  string
 
 	// AccessMode controls how we access es-proxy is configured to enforce
 	// Elasticsearch access.
@@ -80,6 +109,11 @@ type Config struct {
 	ElasticUsername string
 	ElasticPassword string
 
+	ElasticIndexSuffix       string
+	ElasticConnRetries       int
+	ElasticConnRetryInterval time.Duration
+	ElasticEnableTrace       bool
+
 	// Various proxy timeouts. Used when creating a http.Transport RoundTripper.
 	ProxyConnectTimeout  time.Duration
 	ProxyKeepAlivePeriod time.Duration
@@ -90,6 +124,10 @@ func NewConfigFromEnv() (*Config, error) {
 	listenAddr := getEnvOrDefaultString(listenAddrEnv, defaultListenAddr)
 	certFilePath := getEnv(certFilePathEnv)
 	keyFilePath := getEnv(keyFilePathEnv)
+	keyCertGenPath := getEnvOrDefaultString(keyCertGenPathEnv, defaultKeyCertGenPath)
+
+	defaultCertFile := keyCertGenPath + defaultCertFileName
+	defaultKeyFile := keyCertGenPath + defaultKeyFileName
 
 	accessMode, err := parseAccessMode(getEnv(elasticAccessModeEnv))
 	if err != nil {
@@ -110,6 +148,21 @@ func NewConfigFromEnv() (*Config, error) {
 	elasticUsername := getEnv(elasticUsernameEnv)
 	elasticPassword := getEnv(elasticPasswordEnv)
 
+	elasticIndexSuffix := getEnvOrDefaultString(elasticIndexSuffixEnv, defaultIndexSuffix)
+	elasticConnRetries, err := getEnvOrDefaultInt(elasticConnRetriesEnv, defaultConnRetries)
+	if err != nil {
+		return nil, err
+	}
+	elasticConnRetryInterval, err := getEnvOrDefaultDuration(elasticConnRetryIntervalEnv, defaultConnRetryInterval)
+	if err != nil {
+		return nil, err
+	}
+	elasticEnableTrace, err := getEnvOrDefaultBool(elasticEnableTraceEnv, defaultEnableTrace)
+	if err != nil {
+		log.WithError(err).Error("Failed to parse " + elasticEnableTraceEnv)
+		elasticEnableTrace = false
+	}
+
 	connectTimeout, err := getEnvOrDefaultDuration("PROXY_CONNECT_TIMEOUT", defaultConnectTimeout)
 	if err != nil {
 		return nil, err
@@ -126,12 +179,19 @@ func NewConfigFromEnv() (*Config, error) {
 		ListenAddr:                listenAddr,
 		CertFile:                  certFilePath,
 		KeyFile:                   keyFilePath,
+		DefaultSSLPath:            keyCertGenPath,
+		DefaultCertFile:           defaultCertFile,
+		DefaultKeyFile:            defaultKeyFile,
 		AccessMode:                accessMode,
 		ElasticURL:                elasticURL,
 		ElasticCAPath:             elasticCAPath,
 		ElasticInsecureSkipVerify: elasticInsecureSkipVerify,
 		ElasticUsername:           elasticUsername,
 		ElasticPassword:           elasticPassword,
+		ElasticIndexSuffix:        elasticIndexSuffix,
+		ElasticConnRetryInterval:  elasticConnRetryInterval,
+		ElasticEnableTrace:        elasticEnableTrace,
+		ElasticConnRetries:        int(elasticConnRetries),
 		ProxyConnectTimeout:       connectTimeout,
 		ProxyKeepAlivePeriod:      keepAlivePeriod,
 		ProxyIdleConnTimeout:      idleConnTimeout,
@@ -158,6 +218,28 @@ func getEnvOrDefaultDuration(key string, defaultValue time.Duration) (time.Durat
 	}
 }
 
+func getEnvOrDefaultInt(key string, defaultValue int) (int, error) {
+	val := getEnv(key)
+	if val == "" {
+		return defaultValue, nil
+	}
+
+	i, err := strconv.ParseInt(getEnv(val), 10, 0)
+	if err != nil {
+		return 0, err
+	}
+
+	return int(i), nil
+}
+
+func getEnvOrDefaultBool(key string, defaultValue bool) (bool, error) {
+	log.Error(key + " " + getEnv(key))
+	if val := getEnv(key); val != "" {
+		return strconv.ParseBool(val)
+	}
+	return defaultValue, nil
+}
+
 func parseAccessMode(am string) (ElasticAccessMode, error) {
 	switch am {
 	case "serviceuser":
@@ -167,7 +249,7 @@ func parseAccessMode(am string) (ElasticAccessMode, error) {
 	case "insecure":
 		return InsecureMode, nil
 	default:
-		return ElasticAccessMode(""), fmt.Errorf("Unknown access mode %v", am)
+		return ElasticAccessMode(""), fmt.Errorf("Indeterminate access mode %v", am)
 	}
 }
 

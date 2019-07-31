@@ -11,12 +11,19 @@ import (
 	"sync"
 
 	log "github.com/sirupsen/logrus"
+
 	k8s "k8s.io/client-go/kubernetes"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
+	"github.com/tigera/compliance/pkg/datastore"
+	celastic "github.com/tigera/compliance/pkg/elastic"
+
 	"github.com/tigera/es-proxy/pkg/handler"
 	"github.com/tigera/es-proxy/pkg/middleware"
+	"github.com/tigera/es-proxy/pkg/pip"
+	pipcfg "github.com/tigera/es-proxy/pkg/pip/config"
+	"github.com/tigera/es-proxy/pkg/pip/elastic"
 )
 
 var (
@@ -24,58 +31,87 @@ var (
 	wg     sync.WaitGroup
 )
 
-func Start(config *Config) error {
+func Start(cfg *Config) error {
 	sm := http.NewServeMux()
 
 	var rootCAs *x509.CertPool
-	if config.ElasticCAPath != "" {
-		rootCAs = addCertToCertPool(config.ElasticCAPath)
+	if cfg.ElasticCAPath != "" {
+		rootCAs = addCertToCertPool(cfg.ElasticCAPath)
 	}
 	var tlsConfig *tls.Config
 	if rootCAs != nil {
 		tlsConfig = &tls.Config{
 			RootCAs:            rootCAs,
-			InsecureSkipVerify: config.ElasticInsecureSkipVerify,
+			InsecureSkipVerify: cfg.ElasticInsecureSkipVerify,
 		}
 	}
 
 	pc := &handler.ProxyConfig{
-		TargetURL:       config.ElasticURL,
+		TargetURL:       cfg.ElasticURL,
 		TLSConfig:       tlsConfig,
-		ConnectTimeout:  config.ProxyConnectTimeout,
-		KeepAlivePeriod: config.ProxyKeepAlivePeriod,
-		IdleConnTimeout: config.ProxyIdleConnTimeout,
+		ConnectTimeout:  cfg.ProxyConnectTimeout,
+		KeepAlivePeriod: cfg.ProxyKeepAlivePeriod,
+		IdleConnTimeout: cfg.ProxyIdleConnTimeout,
 	}
 	proxy := handler.NewProxy(pc)
 
 	k8sClient, k8sConfig := getKubernetestClientAndConfig()
 	k8sAuth := middleware.NewK8sAuth(k8sClient, k8sConfig)
 
+	// Install pip mutator
+	k8sClientSet := datastore.MustGetClientSet()
+	policyCalcConfig := pipcfg.MustLoadConfig()
+
+	// initialize the esclient for pip
+	h := &http.Client{}
+	if cfg.ElasticCAPath != "" {
+		h.Transport = &http.Transport{TLSClientConfig: &tls.Config{RootCAs: rootCAs}}
+	}
+	cesClient, err := celastic.New(h,
+		cfg.ElasticURL,
+		cfg.ElasticUsername,
+		cfg.ElasticPassword,
+		cfg.ElasticIndexSuffix,
+		cfg.ElasticConnRetries,
+		cfg.ElasticConnRetryInterval,
+		cfg.ElasticEnableTrace,
+	)
+	if err != nil {
+		return err
+	}
+
+	esClient := elastic.NewFromComplianceClient(cesClient)
+	p := pip.New(policyCalcConfig, k8sClientSet, esClient)
+
 	sm.Handle("/version", http.HandlerFunc(handler.VersionHandler))
 
-	switch config.AccessMode {
+	switch cfg.AccessMode {
 	case InsecureMode:
-		sm.Handle("/", middleware.RequestToResource(
-			k8sAuth.KubernetesAuthnAuthz(proxy)))
+		sm.Handle("/",
+			middleware.RequestToResource(
+				k8sAuth.KubernetesAuthnAuthz(
+					middleware.PolicyImpactHandler(k8sAuth, p, proxy))))
 	case ServiceUserMode:
-		sm.Handle("/", middleware.RequestToResource(
-			k8sAuth.KubernetesAuthnAuthz(
-				middleware.BasicAuthHeaderInjector(config.ElasticUsername, config.ElasticPassword, proxy))))
+		sm.Handle("/",
+			middleware.RequestToResource(
+				k8sAuth.KubernetesAuthnAuthz(
+					middleware.PolicyImpactHandler(k8sAuth, p,
+						middleware.BasicAuthHeaderInjector(cfg.ElasticUsername, cfg.ElasticPassword, proxy)))))
 	case PassThroughMode:
 		log.Fatal("PassThroughMode not implemented yet")
 	default:
-		log.WithField("AccessMode", config.AccessMode).Fatal("Unknown Elasticsearch access mode.")
+		log.WithField("AccessMode", cfg.AccessMode).Fatal("Indeterminate Elasticsearch access mode.")
 	}
 
 	server = &http.Server{
-		Addr:    config.ListenAddr,
+		Addr:    cfg.ListenAddr,
 		Handler: middleware.LogRequestHeaders(sm),
 	}
 
 	wg.Add(1)
 	go func() {
-		log.Infof("Starting server on %v", config.ListenAddr)
-		err := server.ListenAndServeTLS(config.CertFile, config.KeyFile)
+		log.Infof("Starting server on %v", cfg.ListenAddr)
+		err := server.ListenAndServeTLS(cfg.CertFile, cfg.KeyFile)
 		if err != nil {
 			log.WithError(err).Error("Error when starting server")
 		}
@@ -90,7 +126,9 @@ func Wait() {
 }
 
 func Stop() {
-	server.Shutdown(context.Background())
+	if err := server.Shutdown(context.Background()); err != nil {
+		log.WithError(err).Error("Error when stopping server")
+	}
 }
 
 func addCertToCertPool(caPath string) *x509.CertPool {

@@ -1,15 +1,16 @@
 package middleware_test
 
 import (
-	. "github.com/onsi/ginkgo"
-	"github.com/onsi/ginkgo/reporters"
-	. "github.com/onsi/gomega"
-
 	"testing"
+
+	"github.com/projectcalico/libcalico-go/lib/testutils"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
-func TestMiddleware(t *testing.T) {
+func TestPolicyCalc(t *testing.T) {
+	testutils.HookLogrusForGinkgo()
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../report/middleware_suite.xml")
-	RunSpecsWithDefaultAndCustomReporters(t, "Middleware Suite", []Reporter{junitReporter})
+	RunSpecs(t, "Middleware Suite")
 }

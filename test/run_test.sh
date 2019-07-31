@@ -25,7 +25,8 @@ BOOTSTRAP_PASSWORD=$(cat /dev/urandom | LC_CTYPE=C tr -dc A-Za-z0-9 | head -c16)
 function run_fvs()
 {
 	local GINKGO_ARGS=$1
-	# Run test
+	# Run test - if this fails output the logs from the proxy container. Running ginkgo with the--failFast flag
+	# is useful if you are debugging issues since we do not correlate tests with output from the proxy container.
 	docker run \
 		--rm \
 		--net=host \
@@ -36,7 +37,7 @@ function run_fvs()
 		-e LOCAL_USER_ID=$(id -u) \
 		-w /${PACKAGE_NAME} \
 		${GO_BUILD_IMAGE} \
-		sh -c "ginkgo ${GINKGO_ARGS} ./test/"
+		sh -c "ginkgo ${GINKGO_ARGS} ./test/" || (docker logs ${TEST_CONTAINER_NAME} && false)
 }
 
 function run_elasticsearch()
@@ -104,7 +105,9 @@ function run_proxy()
 		-e ELASTIC_PORT=${ELASTIC_PORT} \
 		-e ELASTIC_USERNAME=${ELASTIC_USERNAME} \
 		-e ELASTIC_PASSWORD=${ELASTIC_PASSWORD} \
+		-e ELASTIC_ENABLE_TRACE=true \
 		-e KUBECONFIG=/test/test-apiserver-kubeconfig.conf \
+		-e TIGERA_INTERNAL_RUNNING_FUNCTIONAL_VERIFICATION=true \
 		--name ${TEST_CONTAINER_NAME} \
 		${FV_ES_PROXY_TEST_IMAGE}
 }
@@ -122,3 +125,4 @@ run_elasticsearch "http" "serviceuser"
 run_proxy "http" "serviceuser" "127.0.0.1" "9200" "elastic" ${BOOTSTRAP_PASSWORD}
 run_fvs "-focus Elasticsearch"
 # TODO(doublek): Enable TLS for TLS backend tests.
+

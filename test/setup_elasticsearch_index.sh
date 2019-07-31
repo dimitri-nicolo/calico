@@ -20,7 +20,25 @@ function create_index()
 {
   local INDEX_NAME=$1
 
-  curl --insecure -f --retry ${RETRY_TIMES} -X PUT "${ELASTIC_SCHEME}://${ELASTIC_HOST}:9200/${INDEX_NAME}.${CLUSTER_NAME}.${DATE_SUFFIX}" ${EXTRA_CURL_ARGS}
+  # Create the index template first if we have one. Do this before we create the corresponding index.
+  if [ -f "/test/es-templates/$INDEX_NAME" ]; then
+    TEMPLATE=$(cat "/test/es-templates/$INDEX_NAME")
+    curl --insecure -f --retry ${RETRY_TIMES} -X PUT \
+      "${ELASTIC_SCHEME}://${ELASTIC_HOST}:9200/_template/${INDEX_NAME}*" ${EXTRA_CURL_ARGS} \
+      -H 'Content-Type: application/json' -d "$TEMPLATE"
+  fi
+
+  # Create the index.
+  curl --insecure -f --retry ${RETRY_TIMES} -X PUT \
+    "${ELASTIC_SCHEME}://${ELASTIC_HOST}:9200/${INDEX_NAME}.${CLUSTER_NAME}.${DATE_SUFFIX}" ${EXTRA_CURL_ARGS}
+
+  # Create a document if there is one.
+  if [ -f "/test/es-samples/$INDEX_NAME" ]; then
+    SAMPLE=$(cat "/test/es-samples/$INDEX_NAME")
+    curl --insecure -f --retry ${RETRY_TIMES} -X POST \
+      "${ELASTIC_SCHEME}://${ELASTIC_HOST}:9200/${INDEX_NAME}.${CLUSTER_NAME}.${DATE_SUFFIX}/_doc" ${EXTRA_CURL_ARGS} \
+      -H 'Content-Type: application/json' -d "$SAMPLE"
+  fi
 }
 
 create_index ${FLOW_INDEX}

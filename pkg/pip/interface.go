@@ -1,5 +1,34 @@
 package pip
 
+import (
+	"context"
+	"time"
+
+	"github.com/olivere/elastic"
+
+	pelastic "github.com/tigera/es-proxy/pkg/pip/elastic"
+	"github.com/tigera/es-proxy/pkg/pip/policycalc"
+)
+
 type PIP interface {
-	CalculateFlowImpact(oldPolicy, newPolicy Policy, flows []Flow) []Flow
+	// This is the main entrypoint into PIP.
+	GetFlows(ctx context.Context, params *PolicyImpactParams) (*FlowLogResults, error)
+
+	// The following public interface methods are here more for convenience than anything else. The PIPHandler
+	// should just use GetFlows().
+	GetPolicyCalculator(ctx context.Context, r *PolicyImpactParams) (policycalc.PolicyCalculator, error)
+	SearchAndProcessFlowLogs(
+		ctx context.Context,
+		query *pelastic.CompositeAggregationQuery,
+		startAfterKey pelastic.CompositeAggregationKey,
+		calc policycalc.PolicyCalculator,
+	) (<-chan ProcessedFlows, <-chan error)
+}
+
+type PolicyImpactParams struct {
+	ResourceActions []ResourceChange `json:"resourceActions"`
+	FromTime        *time.Time       `json:"-"`
+	ToTime          *time.Time       `json:"-"`
+	Query           elastic.Query    `json:"-"`
+	DocumentIndex   string           `json:"-"`
 }
