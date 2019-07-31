@@ -10,9 +10,6 @@ import (
 	"testing"
 
 	"github.com/golang/glog"
-	"github.com/projectcalico/libcalico-go/lib/apiconfig"
-	"github.com/projectcalico/libcalico-go/lib/clientv3"
-	"github.com/projectcalico/libcalico-go/lib/options"
 	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
 	calicov3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	apitesting "k8s.io/apimachinery/pkg/api/testing"
@@ -22,6 +19,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/watch"
+
+	"github.com/projectcalico/libcalico-go/lib/apiconfig"
+	"github.com/projectcalico/libcalico-go/lib/clientv3"
+	"github.com/projectcalico/libcalico-go/lib/options"
 
 	"k8s.io/apiserver/pkg/registry/generic"
 	"k8s.io/apiserver/pkg/storage"
@@ -42,8 +43,8 @@ func init() {
 }
 
 func TestNetworkPolicyCreate(t *testing.T) {
-	ctx, store := testSetup(t)
-	defer testCleanup(t, ctx, store)
+	ctx, store, gnpStore := testSetup(t)
+	defer testCleanup(t, ctx, store, gnpStore)
 
 	key := "projectcalico.org/networkpolicies/default/default.foo"
 	out := &calico.NetworkPolicy{}
@@ -78,8 +79,8 @@ func TestNetworkPolicyCreate(t *testing.T) {
 }
 
 func TestNetworkPolicyCreateWithTTL(t *testing.T) {
-	ctx, store := testSetup(t)
-	defer testCleanup(t, ctx, store)
+	ctx, store, gnpStore := testSetup(t)
+	defer testCleanup(t, ctx, store, gnpStore)
 
 	input := &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "default.foo"}}
 	key := "projectcalico.org/networkpolicies/default/default.foo"
@@ -96,8 +97,8 @@ func TestNetworkPolicyCreateWithTTL(t *testing.T) {
 }
 
 func TestNetworkPolicyCreateWithKeyExist(t *testing.T) {
-	ctx, store := testSetup(t)
-	defer testCleanup(t, ctx, store)
+	ctx, store, gnpStore := testSetup(t)
+	defer testCleanup(t, ctx, store, gnpStore)
 
 	obj := &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "default.foo"}}
 	key, _ := testPropogateStore(ctx, t, store, obj)
@@ -109,8 +110,8 @@ func TestNetworkPolicyCreateWithKeyExist(t *testing.T) {
 }
 
 func TestNetworkPolicyCreateDisallowK8sPrefix(t *testing.T) {
-	ctx, store := testSetup(t)
-	defer testCleanup(t, ctx, store)
+	ctx, store, gnpStore := testSetup(t)
+	defer testCleanup(t, ctx, store, gnpStore)
 	name := "knp.default.foo"
 	ns := "default"
 
@@ -130,8 +131,8 @@ func TestNetworkPolicyCreateDisallowK8sPrefix(t *testing.T) {
 }
 
 func TestNetworkPolicyGet(t *testing.T) {
-	ctx, store := testSetup(t)
-	defer testCleanup(t, ctx, store)
+	ctx, store, gnpStore := testSetup(t)
+	defer testCleanup(t, ctx, store, gnpStore)
 
 	key, storedObj := testPropogateStore(ctx, t, store, &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo"}})
 
@@ -175,8 +176,8 @@ func TestNetworkPolicyGet(t *testing.T) {
 }
 
 func TestNetworkPolicyUnconditionalDelete(t *testing.T) {
-	ctx, store := testSetup(t)
-	defer testCleanup(t, ctx, store)
+	ctx, store, gnpStore := testSetup(t)
+	defer testCleanup(t, ctx, store, gnpStore)
 
 	key, storedObj := testPropogateStore(ctx, t, store, &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo"}})
 
@@ -213,8 +214,8 @@ func TestNetworkPolicyUnconditionalDelete(t *testing.T) {
 }
 
 func TestNetworkPolicyConditionalDelete(t *testing.T) {
-	ctx, store := testSetup(t)
-	defer testCleanup(t, ctx, store)
+	ctx, store, gnpStore := testSetup(t)
+	defer testCleanup(t, ctx, store, gnpStore)
 
 	key, storedObj := testPropogateStore(ctx, t, store, &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo", UID: "A"}})
 
@@ -249,8 +250,8 @@ func TestNetworkPolicyConditionalDelete(t *testing.T) {
 }
 
 func TestNetworkPolicyDeleteDisallowK8sPrefix(t *testing.T) {
-	ctx, store := testSetup(t)
-	defer testCleanup(t, ctx, store)
+	ctx, store, gnpStore := testSetup(t)
+	defer testCleanup(t, ctx, store, gnpStore)
 	name := "knp.default.foo"
 	ns := "default"
 
@@ -263,8 +264,8 @@ func TestNetworkPolicyDeleteDisallowK8sPrefix(t *testing.T) {
 }
 
 func TestNetworkPolicyGetToList(t *testing.T) {
-	ctx, store := testSetup(t)
-	defer testCleanup(t, ctx, store)
+	ctx, store, gnpStore := testSetup(t)
+	defer testCleanup(t, ctx, store, gnpStore)
 
 	key, storedObj := testPropogateStore(ctx, t, store, &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo"}})
 
@@ -313,9 +314,9 @@ func TestNetworkPolicyGetToList(t *testing.T) {
 }
 
 func TestNetworkPolicyGuaranteedUpdate(t *testing.T) {
-	ctx, store := testSetup(t)
+	ctx, store, gnpStore := testSetup(t)
 	defer func() {
-		testCleanup(t, ctx, store)
+		testCleanup(t, ctx, store, gnpStore)
 		store.client.NetworkPolicies().Delete(ctx, "default", "default.non-existing", options.DeleteOptions{})
 	}()
 	key, storeObj := testPropogateStore(ctx, t, store, &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo", UID: "A"}})
@@ -436,8 +437,8 @@ func TestNetworkPolicyGuaranteedUpdate(t *testing.T) {
 }
 
 func TestNetworkPolicyGuaranteedUpdateWithTTL(t *testing.T) {
-	ctx, store := testSetup(t)
-	defer testCleanup(t, ctx, store)
+	ctx, store, gnpStore := testSetup(t)
+	defer testCleanup(t, ctx, store, gnpStore)
 
 	input := &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "default.foo"}}
 	input.SetCreationTimestamp(metav1.Time{time.Now()})
@@ -462,8 +463,8 @@ func TestNetworkPolicyGuaranteedUpdateWithTTL(t *testing.T) {
 }
 
 func TestNetworkPolicyGuaranteedUpdateWithConflict(t *testing.T) {
-	ctx, store := testSetup(t)
-	defer testCleanup(t, ctx, store)
+	ctx, store, gnpStore := testSetup(t)
+	defer testCleanup(t, ctx, store, gnpStore)
 	key, _ := testPropogateStore(ctx, t, store, &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "default.foo"}})
 
 	errChan := make(chan error, 1)
@@ -509,7 +510,7 @@ func TestNetworkPolicyGuaranteedUpdateWithConflict(t *testing.T) {
 }
 
 func TestNetworkPolicyList(t *testing.T) {
-	ctx, store := testSetup(t)
+	ctx, store, _ := testSetup(t)
 	defer func() {
 		store.client.NetworkPolicies().Delete(ctx, "default", "foo", options.DeleteOptions{})
 		store.client.NetworkPolicies().Delete(ctx, "default1", "foo", options.DeleteOptions{})
@@ -587,7 +588,7 @@ func TestNetworkPolicyList(t *testing.T) {
 	}
 }
 
-func testSetup(t *testing.T) (context.Context, *resourceStore) {
+func testSetup(t *testing.T) (context.Context, *resourceStore, *resourceStore) {
 	codec := apitesting.TestCodec(codecs, calicov3.SchemeGroupVersion)
 	cfg, err := apiconfig.LoadClientConfig("")
 	if err != nil {
@@ -611,15 +612,20 @@ func testSetup(t *testing.T) (context.Context, *resourceStore) {
 		},
 	}
 	store, _ := NewNetworkPolicyStorage(opts)
+	gnpStore, _ := NewGlobalNetworkPolicyStorage(opts)
 	ctx := context.Background()
 
-	return ctx, store.(*resourceStore)
+	return ctx, store.(*resourceStore), gnpStore.(*resourceStore)
 }
 
-func testCleanup(t *testing.T, ctx context.Context, store *resourceStore) {
+func testCleanup(t *testing.T, ctx context.Context, store, gnpStore *resourceStore) {
 	np, _ := store.client.NetworkPolicies().Get(ctx, "default", "default.foo", options.GetOptions{})
 	if np != nil {
 		store.client.NetworkPolicies().Delete(ctx, "default", "default.foo", options.DeleteOptions{})
+	}
+	gnp, _ := gnpStore.client.GlobalNetworkPolicies().Get(ctx, "default.foo", options.GetOptions{})
+	if gnp != nil {
+		gnpStore.client.GlobalNetworkPolicies().Delete(ctx, "default.foo", options.DeleteOptions{})
 	}
 }
 
