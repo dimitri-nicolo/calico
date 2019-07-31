@@ -62,7 +62,7 @@ func determineOpenshiftArgs(nodename string) ([]string, error) {
 		return []string{"master", versionFlag}, nil
 	}
 
-	return []string{"worker", versionFlag}, nil
+	return []string{"node", versionFlag}, nil
 }
 
 func isRunningOpenshift(podClient corev1Client.PodInterface) (string, error) {
