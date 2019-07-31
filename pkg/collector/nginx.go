@@ -90,11 +90,13 @@ func (nc *nginxCollector) ReadLogs(ctx context.Context) {
 			}
 
 			// Add this ingress log to the batch
-			nc.batch.Insert(ingressLog)
-
-			// Count the requests per connection
-			tupleKey := TupleKeyFromIngressLog(ingressLog)
-			nc.seen[tupleKey] = nc.seen[tupleKey] + 1
+			// If the insertion is successful(IP has not been seen
+			// before), increment the count of unique IPs.
+			if success := nc.batch.Insert(ingressLog); success {
+				// Count the unique IPs per connection
+				tupleKey := TupleKeyFromIngressLog(ingressLog)
+				nc.seen[tupleKey] = nc.seen[tupleKey] + 1
+			}
 		case <-ctx.Done():
 			log.Info("Collector shut down")
 			return
