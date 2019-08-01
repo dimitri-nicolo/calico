@@ -70,13 +70,11 @@ func NewBatchIngressLog(size int) *BatchIngressLog {
 	}
 }
 
-func (b BatchIngressLog) Insert(log IngressLog) bool {
+func (b BatchIngressLog) Insert(log IngressLog) {
 	logKey := IngressLogKey(log)
 	if !b.Full() {
 		b.logs[logKey] = log
-		return true
 	}
-	return false
 }
 
 func (b BatchIngressLog) Full() bool {
@@ -103,7 +101,7 @@ func (b BatchIngressLog) Logs() []IngressLog {
 
 func IngressLogKey(log IngressLog) string {
 	// Only use 1 IP as the key
-	if log.XRealIp != "" {
+	if log.XRealIp != "" && log.XRealIp != "-" {
 		return log.XRealIp
 	}
 	return log.XForwardedFor
