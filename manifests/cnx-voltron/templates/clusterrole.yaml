@@ -1,0 +1,30 @@
+{{- if .Values.rbac.create }}
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+    name: {{ include "cnx-voltron.name" . }}-role
+rules:
+    - apiGroups: ["authentication.k8s.io"]
+      resources:
+          - tokenreviews
+      verbs:
+          - create
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+    name: tigera-mcm-no-crd
+rules:
+    - apiGroups: ["projectcalico.org"]
+      resources: ["managedclusters"]
+      verbs: ["*"]
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+    name: tigera-mcm
+rules:
+    - apiGroups: ["crd.projectcalico.org"]
+      resources: ["managedclusters"]
+      verbs: ["*"]
+{{- end -}}

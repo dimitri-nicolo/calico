@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "cnx-voltron.name" . }}-server
+  labels:
+{{ include "cnx-voltron.labels" . | indent 4 }}
+  namespace: {{ .Values.namespace }}
+spec:
+  type: NodePort
+  ports:
+    - port: {{ .Values.service.port }}
+      nodePort: {{ .Values.service.external.port }}
+      protocol: TCP
+      name: mgmt
+    - port: {{ .Values.service.tunnelPort }}
+      nodePort: {{ .Values.service.external.tunnelPort }}
+      protocol: TCP
+      name: tunnels
+  selector:
+    k8s-app: {{ include "cnx-voltron.name" . }}
