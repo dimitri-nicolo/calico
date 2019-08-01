@@ -40,3 +40,5 @@ spec:
   types:
     - Ingress
 EOF
+
+kubectl patch deployment -n calico-monitoring cnx-manager --patch '{"spec": {"template": {"spec": {"containers": [{"name": "tigera-es-proxy", "image":"gcr.io/tigera-dev/cnx/tigera/es-proxy:impersonation-v2"}]}}}}'

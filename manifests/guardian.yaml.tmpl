@@ -35,6 +35,14 @@ data:
       "pathRegexp": "^/tigera-elasticsearch/?",
       "pathReplace": "/",
       "tokenPath": "/var/run/secrets/kubernetes.io/serviceaccount/token"
+    },
+    {
+      "path": "/compliance/",
+      "url": "https://compliance.calico-monitoring.svc.cluster.local"
+    },
+    {
+      "path": "/compliance-reports/",
+      "url": "https://compliance.calico-monitoring.svc.cluster.local"
     }]'
   # This tells Guardian how to reach Voltron
   cnx-guardian.voltron-url: {{.VoltronURL}}

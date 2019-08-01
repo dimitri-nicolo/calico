@@ -15,9 +15,11 @@ reaches voltron:
 1. edit `manifests/voltron.yaml`, change `cnx-voltron.public-ip` to the node IP, keep the port to `30449`
 1. scp the following files, from this repo, to the master node:  
    - install-scripts/post-cnx.bash
+   - install-scripts/fixup-compliance.bash
+   - install-scripts/fixup-es-proxy.bash
    - install-scripts/register-guardian.bash
    - manifests/voltron.yaml
-1. on the master node, run `bash post-cnx.bash`
+1. on the master node, run `bash post-cnx.bash`, `bash fixup-compliance.bash` and `bash fixup-es-proxy.bash`
 1. wait for voltron pod to be running, `kubectl get pods -n calico-monitoring`
 1. run `bash register-guardian.bash "mgmt" "Local cluster - Mgmt"`
 1. run `kubectl apply -f guardian-mgmt.yaml`
