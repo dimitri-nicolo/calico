@@ -5,8 +5,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -255,16 +257,46 @@ func ParseElasticsearchTime(now time.Time, tstr *string) (*time.Time, error) {
 			return &now, nil
 		}
 
-		// Time string has section after the subtraction sign. Parse it as a duration.
+		// Time string has section after the subtraction sign. We currently support minutes (m), hours (h) and days (d).
 		clog.Debugf("Time string in now-x format; x=%s", parts[1])
-		sub, err := time.ParseDuration(strings.TrimSpace(parts[1]))
-		if err != nil {
+		dur := strings.TrimSpace(parts[1])
+		if dur == "0" {
+			// 0 does not need units, so this also means now.
+			clog.Debug("Zero delta - time is now")
+			return &now, nil
+		} else if len(dur) < 2 {
+			// We need at least two values for the unit and the value
+			clog.Debug("Error parsing duration string, unrecognised unit of time")
+			return nil, errors.New("error parsing time in query - not a supported format")
+		}
+
+		// Last letter indicates the units.
+		var mul time.Duration
+		switch dur[len(dur)-1:] {
+		case "m":
+			mul = time.Minute
+		case "h":
+			mul = time.Hour
+		case "d":
+			// A day isn't necessarily 24hr, but this should be a good enough approximation for now.
+			//TODO(rlb): If we really want to support the ES date math format then this'll need more work.
+			mul = 24 * time.Hour
+		default:
+			clog.Debug("Error parsing duration string, unrecognised unit of time")
+			return nil, errors.New("error parsing time in query - not a supported format")
+		}
+
+		// First digits indicates the multiplier.
+		if val, err := strconv.ParseUint(strings.TrimSpace(dur[:len(dur)-1]), 10, 64); err != nil {
 			clog.WithError(err).Debug("Error parsing duration string")
 			return nil, err
+		} else {
+			t := now.Add(-(time.Duration(val) * mul))
+			return &t, nil
 		}
-		t := now.Add(-sub)
-		return &t, nil
 	}
+
+	// Not now-X format, parse as RFC3339.
 	if t, err := time.Parse(time.RFC3339, *tstr); err == nil {
 		clog.Debug("Time is in valid RFC3339 format")
 		return &t, nil
