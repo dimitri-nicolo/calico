@@ -18,18 +18,20 @@ import (
 const INGRESSLOGJSONPREFIX = "tigera_secure_ee_ingress:"
 
 type nginxCollector struct {
-	collectedLogs chan IngressInfo
-	config        *config.Config
-	batch         *BatchIngressLog
-	seen          map[TupleKey]int
+	collectedLogs    chan IngressInfo
+	config           *config.Config
+	batch            *BatchIngressLog
+	seen             map[string]struct{}
+	connectionCounts map[TupleKey]int
 }
 
 func NewNginxCollector(cfg *config.Config) IngressCollector {
 	return &nginxCollector{
-		collectedLogs: make(chan IngressInfo),
-		config:        cfg,
-		batch:         NewBatchIngressLog(cfg.IngressRequestsPerInterval),
-		seen:          make(map[TupleKey]int),
+		collectedLogs:    make(chan IngressInfo),
+		config:           cfg,
+		batch:            NewBatchIngressLog(cfg.IngressRequestsPerInterval),
+		connectionCounts: make(map[TupleKey]int),
+		seen:             make(map[string]struct{}),
 	}
 }
 
@@ -90,12 +92,14 @@ func (nc *nginxCollector) ReadLogs(ctx context.Context) {
 			}
 
 			// Add this ingress log to the batch
-			// If the insertion is successful(IP has not been seen
-			// before), increment the count of unique IPs.
-			if success := nc.batch.Insert(ingressLog); success {
-				// Count the unique IPs per connection
+			nc.batch.Insert(ingressLog)
+
+			// Count the unique IPs per connection
+			logKey := IngressLogKey(ingressLog)
+			if _, exists := nc.seen[logKey]; !exists {
 				tupleKey := TupleKeyFromIngressLog(ingressLog)
-				nc.seen[tupleKey] = nc.seen[tupleKey] + 1
+				nc.connectionCounts[tupleKey] = nc.connectionCounts[tupleKey] + 1
+				nc.seen[logKey] = struct{}{}
 			}
 		case <-ctx.Done():
 			log.Info("Collector shut down")
@@ -106,14 +110,15 @@ func (nc *nginxCollector) ReadLogs(ctx context.Context) {
 
 func (nc *nginxCollector) ingestLogs() {
 	intervalBatch := nc.batch
-	intervalSeen := nc.seen
+	intervalCounts := nc.connectionCounts
 	nc.batch = NewBatchIngressLog(nc.config.IngressRequestsPerInterval)
-	nc.seen = make(map[TupleKey]int)
+	nc.connectionCounts = make(map[TupleKey]int)
+	nc.seen = make(map[string]struct{})
 
 	// Send a batch if there is data.
 	logs := intervalBatch.Logs()
 	if len(logs) != 0 {
-		nc.collectedLogs <- IngressInfo{Logs: logs, Connections: intervalSeen}
+		nc.collectedLogs <- IngressInfo{Logs: logs, Connections: intervalCounts}
 	}
 }
 
