@@ -10,6 +10,7 @@ AUDIT_EE_INDEX=${AUDIT_EE_INDEX:-"tigera_secure_ee_audit_ee"}
 AUDIT_KUBE_INDEX=${AUDIT_KUBE_INDEX:-"tigera_secure_ee_audit_kube"}
 EVENTS_INDEX=${EVENTS_INDEX:-"tigera_secure_ee_events"}
 
+
 if [ -n ${ELASTIC_PASSWORD} ]; then
   EXTRA_CURL_ARGS="-u elastic:${ELASTIC_PASSWORD}"
 fi
@@ -41,7 +42,22 @@ function create_index()
   fi
 }
 
+function create_index_pattern()
+{
+    local INDEX_NAME=$1
+	
+	curl -XPOST "${ELASTIC_SCHEME}://${ELASTIC_HOST}:9200/.kibana/doc/index-pattern:$INDEX_NAME"  -H 'Content-Type: application/json' -d' {  "type" : "index-pattern",  "index-pattern" : {    "title": "${INDEX_NAME}*"  }}'
+}
+
+
 create_index ${FLOW_INDEX}
 create_index ${AUDIT_KUBE_INDEX}
 create_index ${AUDIT_EE_INDEX}
 create_index ${EVENTS_INDEX}
+
+create_index_pattern ${FLOW_INDEX}
+create_index_pattern ${AUDIT_EE_INDEX}
+create_index_pattern ${EVENTS_INDEX}
+
+
+

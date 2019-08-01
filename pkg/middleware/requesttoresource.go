@@ -72,14 +72,29 @@ func getResourceAttributes(resourceName string) *authzv1.ResourceAttributes {
 	}
 }
 
-// getResourceNameFromReq parses the req.URL.Path, converting the indexes
-// into the resource name used in RBAC.
-// This implements the table located in
-// https://docs.google.com/document/d/1wFrbjLydsdz0NfxVk-_iW7eqx4ZIZWfgj5SzcsRmTwo/edit#heading=h.pva3ex6ffysc
+// getResourceNameFromReq parses the req.URL.Path, returns the name used in RBAC
 func getResourceNameFromReq(req *http.Request) (string, error) {
 	if req.URL == nil {
 		return "", fmt.Errorf("No URL in request")
 	}
+
+	re := regexp.MustCompile(`/([_a-z]*)[.*].*/_search`)
+
+	match := re.FindStringSubmatch(req.URL.Path)
+	if len(match) != 2 {
+		return "", fmt.Errorf("Invalid resource in path, '%s' had %d matches", req.URL.Path, len(match))
+	}
+	resource, ok := queryToResource(match[1])
+	if !ok {
+		return "", fmt.Errorf("Invalid resource '%s' in path", match[1])
+	}
+	return resource, nil
+}
+
+// queryToResource maps indexes into resource names used in RBAC
+// implements the table located in
+// https://docs.google.com/document/d/1wFrbjLydsdz0NfxVk-_iW7eqx4ZIZWfgj5SzcsRmTwo/edit#heading=h.pva3ex6ffysc
+func queryToResource(query string) (string, bool) {
 	queryResourceMap := map[string]string{
 		"tigera_secure_ee_flows":      "flows",
 		"tigera_secure_ee_audit_":     "audit*", // support both audit_*
@@ -88,15 +103,6 @@ func getResourceNameFromReq(req *http.Request) (string, error) {
 		"tigera_secure_ee_audit_kube": "audit_kube",
 		"tigera_secure_ee_events":     "events",
 	}
-	re := regexp.MustCompile(`/([_a-z]*)[.*].*/_search`)
-
-	match := re.FindStringSubmatch(req.URL.Path)
-	if len(match) != 2 {
-		return "", fmt.Errorf("Invalid resource in path, '%s' had %d matches", req.URL.Path, len(match))
-	}
-	resource, ok := queryResourceMap[match[1]]
-	if !ok {
-		return "", fmt.Errorf("Invalid resource '%s' in path", match[1])
-	}
-	return resource, nil
+	str, ok := queryResourceMap[query]
+	return str, ok
 }

@@ -87,11 +87,18 @@ func Start(cfg *Config) error {
 
 	switch cfg.AccessMode {
 	case InsecureMode:
+		sm.Handle("/.kibana/_search",
+			middleware.KibanaIndexPatern(
+				k8sAuth.KubernetesAuthnAuthz(proxy)))
 		sm.Handle("/",
 			middleware.RequestToResource(
 				k8sAuth.KubernetesAuthnAuthz(
 					middleware.PolicyImpactHandler(k8sAuth, p, proxy))))
 	case ServiceUserMode:
+		sm.Handle("/.kibana/_search",
+			middleware.KibanaIndexPatern(
+				k8sAuth.KubernetesAuthnAuthz(
+					middleware.BasicAuthHeaderInjector(cfg.ElasticUsername, cfg.ElasticPassword, proxy))))
 		sm.Handle("/",
 			middleware.RequestToResource(
 				k8sAuth.KubernetesAuthnAuthz(
@@ -159,6 +166,7 @@ func getKubernetestClientAndConfig() (k8s.Interface, *restclient.Config) {
 	)
 	kubeconfig := os.Getenv("KUBECONFIG")
 	if kubeconfig != "" {
+		log.WithField("kubeconfig", kubeconfig).Info("Using kubeconfig")
 		// Create client with provided kubeconfig
 		k8sConfig, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
 		if err != nil {
