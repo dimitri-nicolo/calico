@@ -71,6 +71,8 @@ v2.4:
       version: v2.4.2
     compliance-server:
       version: v2.4.2
+    busybox:
+      version: 1.26.2
 
 - title: v2.4.1
   helmRelease: 0
@@ -144,6 +146,8 @@ v2.4:
       version: v2.4.0
     compliance-server:
       version: v2.4.0
+    busybox:
+      version: 1.26.2
 
 - title: v2.4.0
   helmRelease: 0
@@ -217,7 +221,8 @@ v2.4:
       version: v2.4.0
     compliance-server:
       version: v2.4.0
-
+    busybox:
+      version: 1.26.2
 
 v2.3:
 - title: v2.3.3
@@ -1344,6 +1349,9 @@ master:
       version: master
     ingress-collector:
       version: master
+    busybox:
+      version: 1.26.2
+
 v2.5:
 - title: v2.5.0-pre
   note: ""
@@ -1419,3 +1427,6 @@ v2.5:
       version: release-v2.5
     ingress-collector:
       version: release-v2.5
+    busybox:
+      version: 1.26.2
+
