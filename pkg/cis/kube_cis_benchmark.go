@@ -47,7 +47,7 @@ func (b *Benchmarker) executeKubeBenchmark(ctx context.Context, nodename string)
 	cmd := exec.Command("kube-bench", args...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		log.WithError(err).Error("Failed to execute kubernetes benchmarker")
+		log.WithField("output", string(out)).WithError(err).Error("Failed to execute kubernetes benchmarker")
 		return nil, err
 	}
 	res := bytes.Split(out, []byte("\n"))
