@@ -705,7 +705,7 @@ var _ = Describe("Test unmarshaling of sample ES response", func() {
 		Expect(buckets_slice).To(HaveLen(1))
 		bucket := buckets_slice[0]
 
-		By("Marshaling and unmarshaling the bucket (this allows us to compare against the one unmarshaled from raw JSON")
+		By("Marshaling the bucket")
 		marshaledbucket, err := json.Marshal(bucket)
 		Expect(err).NotTo(HaveOccurred())
 
