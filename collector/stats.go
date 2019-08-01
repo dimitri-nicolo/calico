@@ -483,6 +483,13 @@ func (d *Data) OriginalSourceIps() []net.IP {
 	return d.origSourceIPs.ToIPSlice()
 }
 
+func (d *Data) IncreaseNumUniqueOriginalSourceIPs(deltaNum int) {
+	d.origSourceIPs.IncreaseTotalCount(deltaNum)
+	d.isConnection = true
+	d.touch()
+	d.setDirtyFlag()
+}
+
 func (d *Data) NumUniqueOriginalSourceIPs() int {
 	return d.origSourceIPs.TotalCount()
 }
@@ -503,15 +510,22 @@ func (d *Data) Report(c chan<- MetricUpdate, expired bool) {
 	if d.isConnection {
 		// Report connection stats.
 		if expired || d.IsDirty() {
+			// Track if we need to send a seprate expire metric update. This is required when we've only
+			// are reporting Original IP metric updates and want to send a corresponding expiration metric
+			// update. When they are correlated with regular metric updates and connection metrics, we don't
+			// need to send this.
+			sendOrigIPExpire := true
 			if d.EgressRuleTrace.FoundVerdict() {
+				sendOrigIPExpire = false
 				c <- d.metricUpdateEgressConn(ut)
 			}
 			if d.IngressRuleTrace.FoundVerdict() {
+				sendOrigIPExpire = false
 				c <- d.metricUpdateIngressConn(ut)
 			}
 
 			// We may receive HTTP Request data after we've flushed the connection counters.
-			if d.NumUniqueOriginalSourceIPs() != 0 {
+			if d.NumUniqueOriginalSourceIPs() != 0 || (expired && sendOrigIPExpire) {
 				c <- d.metricUpdateOrigSourceIPs(ut)
 			}
 
@@ -534,8 +548,9 @@ func (d *Data) Report(c chan<- MetricUpdate, expired bool) {
 			d.IngressRuleTrace.ClearDirtyFlag()
 		}
 		// We may receive HTTP Request data after we've flushed the connection counters.
-		if d.NumUniqueOriginalSourceIPs() != 0 {
+		if (expired || d.IsDirty()) && d.NumUniqueOriginalSourceIPs() != 0 {
 			c <- d.metricUpdateOrigSourceIPs(ut)
+			d.dirty = false
 		}
 
 		// We do not need to clear the connection stats here. Connection stats are fully reset if the Data moves
@@ -627,16 +642,18 @@ func (d *Data) metricUpdateOrigSourceIPs(ut UpdateType) MetricUpdate {
 	if !d.IngressRuleTrace.FoundVerdict() {
 		unknownRuleID = calc.NewRuleID(calc.UnknownStr, calc.UnknownStr, calc.UnknownStr, calc.RuleIDIndexUnknown, rules.RuleDirIngress, rules.RuleActionAllow)
 	}
-	return MetricUpdate{
+	mu := MetricUpdate{
 		updateType:    ut,
 		tuple:         d.Tuple,
 		srcEp:         d.srcEp,
 		dstEp:         d.dstEp,
-		origSourceIPs: d.origSourceIPs,
+		origSourceIPs: d.origSourceIPs.Copy(),
 		ruleIDs:       d.IngressRuleTrace.Path(),
 		unknownRuleID: unknownRuleID,
 		isConnection:  d.isConnection,
 	}
+	d.origSourceIPs.Reset()
+	return mu
 }
 
 // endpointName is a convenience function to return a printable name for an endpoint.

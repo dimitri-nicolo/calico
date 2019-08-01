@@ -692,6 +692,13 @@ var _ = Describe("Conntrack Datasource", func() {
 			c.convertDataplaneStatsAndApplyUpdate(&updatedDpStatsEntryWithFwdFor)
 			Expect(data.OriginalSourceIps()).Should(ConsistOf(expectedOrigSourceIPs))
 			Expect(data.NumUniqueOriginalSourceIPs()).Should(Equal(2*dpStatsHTTPDataValue - 1))
+
+			By("Sending in another dataplane stats update with only counts and check for updated tracked data")
+			updatedDpStatsEntryWithOnlyHttpStats := dpStatsEntryWithFwdFor
+			updatedDpStatsEntryWithOnlyHttpStats.HttpData = []*proto.HTTPData{}
+			c.convertDataplaneStatsAndApplyUpdate(&updatedDpStatsEntryWithOnlyHttpStats)
+			Expect(data.OriginalSourceIps()).Should(ConsistOf(expectedOrigSourceIPs))
+			Expect(data.NumUniqueOriginalSourceIPs()).Should(Equal(3*dpStatsHTTPDataValue - 1))
 		})
 		It("should process DataplaneStat update with X-Real-IP HTTP Data", func() {
 			By("Sending a conntrack update and a dataplane stats update and checking for combined values")
@@ -728,6 +735,13 @@ var _ = Describe("Conntrack Datasource", func() {
 			c.convertDataplaneStatsAndApplyUpdate(&updatedDpStatsEntryWithRealIP)
 			Expect(data.OriginalSourceIps()).Should(ConsistOf(expectedOrigSourceIPs))
 			Expect(data.NumUniqueOriginalSourceIPs()).Should(Equal(2*dpStatsHTTPDataValue - 1))
+
+			By("Sending in another dataplane stats update with only counts and check for updated tracked data")
+			updatedDpStatsEntryWithOnlyHttpStats := dpStatsEntryWithRealIP
+			updatedDpStatsEntryWithOnlyHttpStats.HttpData = []*proto.HTTPData{}
+			c.convertDataplaneStatsAndApplyUpdate(&updatedDpStatsEntryWithOnlyHttpStats)
+			Expect(data.OriginalSourceIps()).Should(ConsistOf(expectedOrigSourceIPs))
+			Expect(data.NumUniqueOriginalSourceIPs()).Should(Equal(3*dpStatsHTTPDataValue - 1))
 		})
 		It("should process DataplaneStat update with X-Real-IP and X-Forwarded-For HTTP Data", func() {
 			By("Sending a conntrack update and a dataplane stats update and checking for combined values")

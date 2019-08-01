@@ -4,6 +4,7 @@ package collector
 
 import (
 	"fmt"
+	"net"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -79,7 +80,8 @@ type MetricUpdate struct {
 func (mu MetricUpdate) String() string {
 	var (
 		srcName, dstName string
-		origSrcIPsLen    int
+		numOrigIPs       int
+		origIPs          []net.IP
 	)
 	if mu.srcEp != nil {
 		srcName = endpointName(mu.srcEp.Key)
@@ -92,12 +94,14 @@ func (mu MetricUpdate) String() string {
 		dstName = "<unknown>"
 	}
 	if mu.origSourceIPs != nil {
-		origSrcIPsLen = mu.origSourceIPs.TotalCount()
+		numOrigIPs = mu.origSourceIPs.TotalCount()
+		origIPs = mu.origSourceIPs.ToIPSlice()
 	} else {
-		origSrcIPsLen = 0
+		numOrigIPs = 0
+		origIPs = []net.IP{}
 	}
-	return fmt.Sprintf("MetricUpdate: type=%s tuple={%v}, srcEp={%v} dstEp={%v} isConnection={%v}, ruleID={%v}, unknownRuleID={%v} inMetric={%s} outMetric={%s} len(origSourceIPs)={%d}",
-		mu.updateType, &(mu.tuple), srcName, dstName, mu.isConnection, mu.ruleIDs, mu.unknownRuleID, mu.inMetric, mu.outMetric, origSrcIPsLen)
+	return fmt.Sprintf("MetricUpdate: type=%s tuple={%v}, srcEp={%v} dstEp={%v} isConnection={%v}, ruleID={%v}, unknownRuleID={%v} inMetric={%s} outMetric={%s} origIPs={%v} numOrigIPs={%d}",
+		mu.updateType, &(mu.tuple), srcName, dstName, mu.isConnection, mu.ruleIDs, mu.unknownRuleID, mu.inMetric, mu.outMetric, origIPs, numOrigIPs)
 }
 
 func (mu MetricUpdate) GetLastRuleID() *calc.RuleID {
