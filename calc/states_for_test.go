@@ -98,6 +98,11 @@ var withDNSPolicy = initialisedStore.withKVUpdates(
 	"10.0.0.2/32",
 }).withIPSet(selectorIdDNSExternal, allowedEgressDomains).withIPSet(selectorIdDNSEmpty, []string{}).withName("with DNS Policy")
 
+// Same as withDNSPolicy, but with no duplication in the network set domain names.
+var withDNSPolicyNoDupe = withDNSPolicy.withKVUpdates(
+	KVPair{Key: netSetDNSKey, Value: &netSetDNSNoDupe},
+).withIPSet(selectorIdDNSExternal, allowedEgressDomainsNoDupe)
+
 // withDNSPolicy2 verifies that when two GlobalNetworkSets, each with its own allowedEgressDomains, are selected by an appropriate
 // GlobalNetworkPolicy, the resulting IPSet will contain the domain names from both Sets.
 var withDNSPolicy2 = initialisedStore.withKVUpdates(

@@ -267,6 +267,8 @@ func (d *MockDataplane) OnEvent(event interface{}) {
 	case *proto.IPSetUpdate:
 		newMembers := set.New()
 		for _, ip := range event.Members {
+			Expect(newMembers.Contains(ip)).To(BeFalse(),
+				"Initial IP set update contained duplicates")
 			newMembers.Add(ip)
 		}
 		d.ipSets[event.Id] = newMembers
