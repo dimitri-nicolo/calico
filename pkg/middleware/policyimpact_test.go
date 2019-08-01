@@ -60,7 +60,25 @@ var _ = Describe("Time parsing works", func() {
 		t, err := middleware.ParseElasticsearchTime(now, &s)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(t).NotTo(BeNil())
-		Expect(t.Sub(now)).To(BeZero())
+		Expect(now.Sub(*t)).To(BeZero())
+	})
+
+	It("Parses now - 0 without error", func() {
+		now := time.Now()
+		s := "now - 0"
+		t, err := middleware.ParseElasticsearchTime(now, &s)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(t).NotTo(BeNil())
+		Expect(now.Sub(*t)).To(BeZero())
+	})
+
+	It("Parses now - 15m without error", func() {
+		now := time.Now()
+		s := "now - 15m"
+		t, err := middleware.ParseElasticsearchTime(now, &s)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(t).NotTo(BeNil())
+		Expect(now.Sub(*t)).To(Equal(15 * time.Minute))
 	})
 
 	It("Parses now-10m without error", func() {
@@ -70,6 +88,32 @@ var _ = Describe("Time parsing works", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(t).NotTo(BeNil())
 		Expect(now.Sub(*t)).To(Equal(10 * time.Minute))
+	})
+
+	It("Parses now-100h without error", func() {
+		now := time.Now()
+		s := "now-100h"
+		t, err := middleware.ParseElasticsearchTime(now, &s)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(t).NotTo(BeNil())
+		Expect(now.Sub(*t)).To(Equal(100 * time.Hour))
+	})
+
+	It("Parses now-3d without error", func() {
+		now := time.Now()
+		s := "now-3d"
+		t, err := middleware.ParseElasticsearchTime(now, &s)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(t).NotTo(BeNil())
+		Expect(now.Sub(*t)).To(Equal(3 * 24 * time.Hour))
+	})
+
+	It("Does not parse now-32", func() {
+		now := time.Now()
+		s := "now-32"
+		t, err := middleware.ParseElasticsearchTime(now, &s)
+		Expect(err).To(HaveOccurred())
+		Expect(t).To(BeNil())
 	})
 
 	It("Does not parse now-xxx", func() {
