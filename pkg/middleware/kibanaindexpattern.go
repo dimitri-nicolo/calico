@@ -6,13 +6,14 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"regexp"
 
 	log "github.com/sirupsen/logrus"
 )
 
 // The handler returned by this will add a ResourceAttribute to the context
 // of the request based on the content of the kibana query index-pattern
-// ( query.bool.filter.term.index-pattern.title)
+// (query.bool.filter.match.index-pattern.title)
 func KibanaIndexPatern(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 
@@ -27,7 +28,7 @@ func KibanaIndexPatern(h http.Handler) http.Handler {
 	})
 }
 
-// getResourceNameFromKibanaIndexPatern parses the query.bool.filter.term.index-pattern.title
+// getResourceNameFromKibanaIndexPatern parses the query.bool.filter.match.index-pattern.title
 // from a kibana query request body and returns the RBAC resource
 func getResourceNameFromKibanaIndexPatern(req *http.Request) (string, error) {
 
@@ -50,9 +51,16 @@ func getResourceNameFromKibanaIndexPatern(req *http.Request) (string, error) {
 	}
 
 	// extract the index pattern title
-	title := k.Query.Bool.Filter[0].Term.IndexPatternTitle
+	title := k.Query.Bool.Filter[0].Match.IndexPatternTitle
 
-	resource, ok := queryToResource(title)
+	re := regexp.MustCompile(`([_a-z]*)`)
+
+	titleMatch := re.FindStringSubmatch(title)
+	if len(titleMatch) != 2 {
+		return "", fmt.Errorf("Invalid index pattern in title, '%s' had %d matches", title, len(titleMatch))
+	}
+
+	resource, ok := queryToResource(titleMatch[0])
 	if !ok {
 		return "", fmt.Errorf("Invalid resource '%s' in kibana index-pattern", title)
 	}
@@ -60,13 +68,13 @@ func getResourceNameFromKibanaIndexPatern(req *http.Request) (string, error) {
 	return resource, nil
 }
 
-// kibanaReq and kibanaReqTerm are for parseing a json doc formatted like this:
+// kibanaReq and kibanaReqMatch are for parsing a json doc formatted like this:
 // {
 //     "query": {
 //         "bool": {
 //             "filter": [
 //                 {
-//                     "term": {
+//                     "match": {
 //                         "index-pattern.title": "tigera_secure_ee_flows"
 //                     }
 //                 }
@@ -78,13 +86,13 @@ func getResourceNameFromKibanaIndexPatern(req *http.Request) (string, error) {
 type kibanaReq struct {
 	Query struct {
 		Bool struct {
-			Filter []kibanaReqTerm `json:"filter"`
+			Filter []kibanaReqMatch `json:"filter"`
 		} `json:"bool"`
 	} `json:"query"`
 }
 
-type kibanaReqTerm struct {
-	Term struct {
+type kibanaReqMatch struct {
+	Match struct {
 		IndexPatternTitle string `json:"index-pattern.title"`
-	} `json:"term"`
+	} `json:"match"`
 }

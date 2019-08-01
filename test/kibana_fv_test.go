@@ -78,7 +78,7 @@ func kibanaBody(indexPattern string) string {
 	return strings.Replace(kibanaReqBody, "{{.IndexPatternTitle}}", indexPattern, -1)
 }
 
-const kibanaReqBody = `{ "query": { "bool": { "filter": [ { "term": { "index-pattern.title":"{{.IndexPatternTitle}}" } } ] } } }`
+const kibanaReqBody = `{ "query": { "bool": { "filter": [ { "match": { "index-pattern.title":"{{.IndexPatternTitle}}" } } ] } } }`
 
 var (
 	basciUserAll       = basicAuthMech{"basicuserall", "basicpw"}

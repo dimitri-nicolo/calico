@@ -30,7 +30,8 @@ var _ = Describe("Test extracting resource from kibana request", func() {
 		},
 		Entry("flows", "tigera_secure_ee_flows", true, "flows"),
 		Entry("audit_", "tigera_secure_ee_audit_", true, "audit*"),
-		Entry("audit", "tigera_secure_ee_audit", true, "audit*"),
+		Entry("audit_*", "tigera_secure_ee_audit_*", true, "audit*"),
+		Entry("audit", "tigera_secure_ee_audit*", true, "audit*"),
 		Entry("audit_ee", "tigera_secure_ee_audit_ee", true, "audit_ee"),
 		Entry("audit_kube", "tigera_secure_ee_audit_kube", true, "audit_kube"),
 		Entry("events", "tigera_secure_ee_events", true, "events"),
@@ -40,4 +41,4 @@ var _ = Describe("Test extracting resource from kibana request", func() {
 
 })
 
-const kibanaReqBody = `{"query": { "bool": {	"filter": [{ "term": {	"index-pattern.title": "{{.IndexPatternTitle}}" } }] } } }`
+const kibanaReqBody = `{"query": { "bool": {	"filter": [{ "match": {	"index-pattern.title": "{{.IndexPatternTitle}}" } }] } } }`
