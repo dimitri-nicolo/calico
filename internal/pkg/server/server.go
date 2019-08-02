@@ -105,6 +105,15 @@ func New(k8s kubernetes.Interface, opts ...Option) (*Server, error) {
 	srv.http.Handler = srv.proxyMux
 
 	srv.proxyMux.HandleFunc("/", srv.clusterMuxer)
+	// Special case: For POST request on ManagedCluster resource we want to intercept the response before
+	// it gets sent back to client. The interception allows us to generate the manifest for Guardian that
+	// corresponds to the ManagedCluster that was just created.
+	// We accomplish this using a middlewares that wraps the clusterMux handler.
+	srv.proxyMux.Handle(
+		"/apis/projectcalico.org/v3/managedclusters",
+		srv.clusters.managedClusterHandler(http.HandlerFunc(srv.clusterMuxer)),
+	)
+
 	srv.proxyMux.HandleFunc("/voltron/api/health", srv.health.apiHandle)
 	srv.proxyMux.HandleFunc("/voltron/api/clusters", srv.clusters.apiHandle)
 

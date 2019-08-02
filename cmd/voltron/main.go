@@ -35,6 +35,7 @@ type config struct {
 	KeepAliveEnable   bool   `default:"true" split_words:"true"`
 	KeepAliveInterval int    `default:"100" split_words:"true"`
 	DefaultK8sProxy   bool   `default:"true" split_words:"true"`
+	DefaultK8sDest    string `default:"https://kubernetes.default" split_words:"true"`
 }
 
 func main() {
@@ -74,12 +75,12 @@ func main() {
 		tgts, err := bootstrap.ProxyTargets([]bootstrap.Target{
 			{
 				Path:         "/api/",
-				Dest:         "https://kubernetes.default",
+				Dest:         cfg.DefaultK8sDest,
 				CABundlePath: "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
 			},
 			{
 				Path:         "/apis/",
-				Dest:         "https://kubernetes.default",
+				Dest:         cfg.DefaultK8sDest,
 				CABundlePath: "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
 			},
 		})

@@ -13,8 +13,10 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"net/http/httputil"
 	"sort"
+	"strconv"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -232,6 +234,99 @@ func (cs *clusters) apiHandle(w http.ResponseWriter, r *http.Request) {
 	default:
 		http.NotFound(w, r)
 	}
+}
+
+// Determine which handler to execute based on HTTP method.
+func (cs *clusters) managedClusterHandler(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		// Special case: We intercept the handling for a create ManagedCluster request
+		case http.MethodPost:
+			cs.interceptCreateManagedCluster(h, w, r)
+		// All other requests for ManagedCluster resource do not need interception
+		default:
+			h.ServeHTTP(w, r)
+		}
+	})
+}
+
+// Intercept the request and response for the given handler (assumed to be for create ManagedCluster),
+// so that we can generate the Guardian manifest for the corresponding ManagedCluster and inject it
+// into the response body.
+func (cs *clusters) interceptCreateManagedCluster(h http.Handler, w http.ResponseWriter, r *http.Request) {
+	// Use a recorder to capture the response from the proxied request
+	recorder := httptest.NewRecorder()
+
+	// Execute the actual handler
+	h.ServeHTTP(recorder, r)
+
+	recordedData := recorder.Body.Bytes()
+
+	// Copy the recorded response headers first
+	for k, v := range recorder.Header() {
+		w.Header()[k] = v
+	}
+
+	// Do not modify the response for any response type other than HTTP 201 Created
+	// (error related or otherwise).
+	if recorder.Code != 201 {
+		w.WriteHeader(recorder.Code)
+		w.Write(recordedData)
+		return
+	}
+
+	// Perform interception with manifest generation if the proxied request had
+	// a HTTP 201 Created response.
+
+	// Set up data structure and buffer to manipulate recorded response body
+	var data map[string]interface{}
+	var dataBuffer bytes.Buffer // A Buffer needs no initialization.
+
+	if err := json.Unmarshal(recordedData, &data); err != nil {
+		log.Errorf("managedClusterHandler: Could not decode JSON %s", recordedData)
+		http.Error(w, "ManagedCluster was created, but unable to decode resource entity", 500)
+		return
+	}
+
+	log.Debugf("managedClusterHandler: Decoded object %+v", data)
+
+	// New cluster used to generate manifest
+	metadataObj := data["metadata"].(map[string]interface{})
+	jc := jclust.Cluster{
+		ID:          metadataObj["uid"].(string),
+		DisplayName: metadataObj["name"].(string),
+	}
+
+	renderedManifest, err := cs.update(&jc)
+	if err != nil {
+		log.Errorf("managedClusterHandler: Manifest generation failed %s", err.Error())
+		http.Error(w, "ManagedCluster was created, but installation manifest could not be generated", 500)
+		return
+	}
+
+	// Create object for the spec including the generated manifest
+	data["spec"] = struct {
+		InstallationManifest string `json:"installationManifest"`
+	}{
+		renderedManifest.String(),
+	}
+
+	if err := json.NewEncoder(&dataBuffer).Encode(data); err != nil {
+		log.Errorf("managedClusterHandler: Error while encoding data for response %#v: err %s", data, err.Error())
+		http.Error(w, "ManagedCluster was created, but unable to encode resource entity", 500)
+		return
+	}
+
+	// Set the correct content length corresponding to our modified version of the response data.
+	w.Header().Set("Content-Length", strconv.Itoa(dataBuffer.Len()))
+
+	// Only write the status code after headers, as this call writes out the headers
+	w.WriteHeader(recorder.Code)
+
+	log.Debugf("managedClusterHandler: Encoded object %s", dataBuffer.String())
+
+	// Finally write the modified response output
+	w.Write(dataBuffer.Bytes())
 }
 
 // get returns the cluster read-locked so that nobody can modify it while its

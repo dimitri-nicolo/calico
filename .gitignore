@@ -18,12 +18,15 @@ go.sum
 go.mod.png
 
 # Below binaries are generated when you use debugger in VS Code
-cmd/guardian/debug
-cmd/voltron/debug
+cmd/**/*debug*
 
 # Generated Manifests
 **/voltron.yaml
 **/guardian.yaml
+
+scripts/certs/*.crt
+scripts/certs/*.key
+scripts/certs/*.key.pub
 
 # Docker image folders
 docker-image/scripts
