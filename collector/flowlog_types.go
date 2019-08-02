@@ -141,10 +141,7 @@ func (f FlowSpec) reset() FlowSpec {
 	f.FlowReportedStats = FlowReportedStats{
 		NumFlows: f.flowsRefs.Len(),
 	}
-	if f.flowExtrasRef.originalSourceIPs != nil {
-		f.flowExtrasRef.originalSourceIPs.Reset()
-	}
-
+	f.flowExtrasRef.reset()
 	return f
 }
 
@@ -248,6 +245,13 @@ func (fer *flowExtrasRef) aggregateFlowExtrasRef(mu MetricUpdate) {
 	if mu.origSourceIPs != nil {
 		fer.originalSourceIPs.Combine(mu.origSourceIPs)
 	}
+}
+
+func (fer *flowExtrasRef) reset() {
+	if fer.originalSourceIPs != nil {
+		fer.originalSourceIPs.Reset()
+	}
+
 }
 
 // FlowExtras contains some additional useful information for flows.

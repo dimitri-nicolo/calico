@@ -427,6 +427,7 @@ func (c *collector) convertNflogPktAndApplyUpdate(dir rules.RuleDir, nPktAggr *n
 // convertDataplaneStatsAndApplyUpdate merges the proto.DataplaneStatistics into the current
 // data stored for the specific connection tuple.
 func (c *collector) convertDataplaneStatsAndApplyUpdate(d *proto.DataplaneStats) {
+	log.Debugf("Received dataplane stats update %+v", d)
 	// Create a Tuple representing the DataplaneStats.
 	t, err := extractTupleFromDataplaneStats(d)
 	if err != nil {
@@ -503,12 +504,14 @@ func (c *collector) convertDataplaneStatsAndApplyUpdate(d *proto.DataplaneStats)
 		}
 		ips = append(ips, sip)
 	}
-	if len(ips) > 0 {
+	if len(ips) != 0 {
 		if httpDataCount == 0 {
 			httpDataCount = len(ips)
 		}
 		bs := NewBoundedSetFromSliceWithTotalCount(c.config.MaxOriginalSourceIPsIncluded, ips, httpDataCount)
 		data.AddOriginalSourceIPs(bs)
+	} else if httpDataCount != 0 {
+		data.IncreaseNumUniqueOriginalSourceIPs(httpDataCount)
 	}
 }
 

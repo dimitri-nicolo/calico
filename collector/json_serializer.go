@@ -137,12 +137,16 @@ func toOutput(l *FlowLog) FlowLogJSONOutput {
 		}
 	}
 
-	if l.FlowExtras.OriginalSourceIPs == nil || len(l.FlowExtras.OriginalSourceIPs) == 0 {
+	if l.FlowExtras.OriginalSourceIPs == nil {
 		out.OrigSourceIPs = nil
 		out.NumOrigSourceIPs = int64(0)
 	} else {
-		out.OrigSourceIPs = l.FlowExtras.OriginalSourceIPs
 		out.NumOrigSourceIPs = int64(l.FlowExtras.NumOriginalSourceIPs)
+		if len(l.FlowExtras.OriginalSourceIPs) == 0 {
+			out.OrigSourceIPs = nil
+		} else {
+			out.OrigSourceIPs = l.FlowExtras.OriginalSourceIPs
+		}
 	}
 
 	out.BytesIn = int64(l.BytesIn)
@@ -267,10 +271,10 @@ func (o FlowLogJSONOutput) ToFlowLog() (FlowLog, error) {
 		fl.FlowExtras = FlowExtras{}
 	} else {
 		fl.FlowExtras = FlowExtras{
-			OriginalSourceIPs:    o.OrigSourceIPs,
-			NumOriginalSourceIPs: int(o.NumOrigSourceIPs),
+			OriginalSourceIPs: o.OrigSourceIPs,
 		}
 	}
+	fl.FlowExtras.NumOriginalSourceIPs = int(o.NumOrigSourceIPs)
 
 	return fl, nil
 }

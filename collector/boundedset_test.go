@@ -19,16 +19,35 @@ var _ = Describe("Bounded set", func() {
 		bs = NewBoundedSet(testMaxSize)
 	})
 	It("should be contain the correct elements", func() {
-		By("checking the length when there are no elements")
-		Expect(bs.TotalCount()).To(BeZero())
+		expectedTotalCount := 0
+		expectedDeltaCount := 0
+
+		By("checking the lengths when there are no elements")
+		Expect(bs.TotalCount()).To(Equal(expectedTotalCount))
+		Expect(bs.TotalCountDelta()).To(Equal(expectedDeltaCount))
+		bs.ResetDeltaCount()
 
 		By("adding items")
 		bs.Add(net.ParseIP(localIp1Str))
 		bs.Add(net.ParseIP(localIp2Str))
 		bs.Add(net.ParseIP(localIp2Str)) // Duplicate should have no effect
+		expectedDeltaCount = 2
+		expectedTotalCount += expectedDeltaCount
 
 		By("checking the length")
-		Expect(bs.TotalCount()).Should(Equal(2))
+		Expect(bs.TotalCount()).To(Equal(expectedTotalCount))
+		Expect(bs.TotalCountDelta()).To(Equal(expectedDeltaCount))
+		bs.ResetDeltaCount()
+
+		By("increasing the total count")
+		bs.IncreaseTotalCount(2)
+		expectedDeltaCount = 2
+		expectedTotalCount += expectedDeltaCount
+
+		By("checking the length")
+		Expect(bs.TotalCount()).To(Equal(expectedTotalCount))
+		Expect(bs.TotalCountDelta()).To(Equal(expectedDeltaCount))
+		bs.ResetDeltaCount()
 
 		By("checking the contents")
 		Expect(bs.Contains(net.ParseIP(localIp1Str))).To(BeTrue())
@@ -37,7 +56,11 @@ var _ = Describe("Bounded set", func() {
 
 		By("adding an extra element and the total count changes but not the contents")
 		bs.Add(net.ParseIP(remoteIp1Str))
-		Expect(bs.TotalCount()).Should(Equal(3))
+		expectedDeltaCount = 1
+		expectedTotalCount += expectedDeltaCount
+		Expect(bs.TotalCount()).To(Equal(expectedTotalCount))
+		Expect(bs.TotalCountDelta()).To(Equal(expectedDeltaCount))
+		bs.ResetDeltaCount()
 		Expect(bs.Contains(net.ParseIP(localIp1Str))).To(BeTrue())
 		Expect(bs.Contains(net.ParseIP(localIp2Str))).To(BeTrue())
 		Expect(bs.Contains(net.ParseIP(remoteIp1Str))).To(BeFalse())
@@ -48,7 +71,11 @@ var _ = Describe("Bounded set", func() {
 
 		By("copying the set and checking the contents")
 		newBs := bs.Copy()
-		Expect(newBs.TotalCount()).Should(Equal(2))
+		newExpectedDeltaCount := bs.TotalCount()
+		newExpectedTotalCount := bs.TotalCount()
+		Expect(newBs.TotalCount()).To(Equal(newExpectedTotalCount))
+		Expect(newBs.TotalCountDelta()).To(Equal(newExpectedDeltaCount))
+		newBs.ResetDeltaCount()
 		Expect(newBs.Contains(net.ParseIP(localIp1Str))).To(BeTrue())
 		Expect(newBs.Contains(net.ParseIP(localIp2Str))).To(BeTrue())
 		Expect(newBs.Contains(net.ParseIP(remoteIp1Str))).To(BeFalse())
@@ -56,12 +83,24 @@ var _ = Describe("Bounded set", func() {
 		By("Updating the copy, the copy is updated, the original set isn't")
 		newBs.Add(net.ParseIP(remoteIp1Str))
 		newBs.Add(net.ParseIP(remoteIp2Str))
-		Expect(newBs.TotalCount()).Should(Equal(4))
-		Expect(bs.TotalCount()).Should(Equal(3))
+		newExpectedDeltaCount = 2
+		newExpectedTotalCount += newExpectedDeltaCount
+		Expect(newBs.TotalCount()).To(Equal(newExpectedTotalCount))
+		Expect(newBs.TotalCountDelta()).To(Equal(newExpectedDeltaCount))
+		newBs.ResetDeltaCount()
+		// No updates since the last time we checked.
+		expectedDeltaCount = 0
+		Expect(bs.TotalCount()).To(Equal(expectedTotalCount))
+		Expect(bs.TotalCountDelta()).To(Equal(expectedDeltaCount))
+		bs.ResetDeltaCount()
 
 		By("Resetting the set")
 		bs.Reset()
-		Expect(bs.TotalCount()).Should(Equal(0))
+		expectedDeltaCount = 0
+		expectedTotalCount = 0
+		Expect(bs.TotalCount()).To(Equal(expectedTotalCount))
+		Expect(bs.TotalCountDelta()).To(Equal(expectedDeltaCount))
+		bs.ResetDeltaCount()
 		Expect(bs.Contains(net.ParseIP(localIp1Str))).To(BeFalse())
 		Expect(bs.Contains(net.ParseIP(localIp2Str))).To(BeFalse())
 	})
