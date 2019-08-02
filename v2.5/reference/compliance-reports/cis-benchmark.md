@@ -15,6 +15,7 @@ metadata:
 spec:
   reportType: cis-benchmark
   schedule: 0 0 * * *
+EOF
 ```
 
 ## Openshift
