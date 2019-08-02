@@ -23,9 +23,9 @@ const (
 	// Developers is a generic group name to be used in testing
 	Developers = "developers"
 	// JaneBearerToken is the Bearer token associated with Jane
-	JaneBearerToken = "Bearer jane'sToken"
+	JaneBearerToken = "jane'sToken"
 	// BobBearerToken is the Bearer token associated with Jane
-	BobBearerToken = "Bearer bob'sToken"
+	BobBearerToken = "bob'sToken"
 )
 
 type k8sFake = fake.Clientset
@@ -39,6 +39,7 @@ type K8sFakeClient struct {
 	calicoFakeCtrl *k8stesting.Fake
 
 	clusters managedClusters
+	reviews  tokenReviews
 }
 
 // NewK8sSimpleFakeClient returns a new aggregated fake client that satisfies
@@ -50,6 +51,9 @@ func NewK8sSimpleFakeClient(k8sObj []runtime.Object, calicoObj []runtime.Object)
 		k8sFake:        fake.NewSimpleClientset(k8sObj...),
 		calicoFake:     calico.ProjectcalicoV3(),
 		calicoFakeCtrl: &calico.Fake,
+		reviews: tokenReviews{
+			reviews: make(map[string]*authn.TokenReview),
+		},
 	}
 
 	fake.clusters.cs = make(map[string]*cluster)
@@ -57,6 +61,8 @@ func NewK8sSimpleFakeClient(k8sObj []runtime.Object, calicoObj []runtime.Object)
 
 	calico.Fake.PrependWatchReactor("managedclusters",
 		k8stesting.DefaultWatchReactor(fake.clusters.watcher, nil))
+
+	fake.k8sFake.PrependReactor("create", "tokenreviews", fake.reviews.Reactor)
 
 	return fake
 }
@@ -74,40 +80,32 @@ func (c *K8sFakeClient) CalicoFake() *k8stesting.Fake {
 // AddJaneIdentity mocks k8s authentication response for Jane
 // Expect username to match Jane and groups to match Developers
 func (c *K8sFakeClient) AddJaneIdentity() {
-	c.k8sFake.PrependReactor(
-		"create", "tokenreviews",
-		func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
-			review := &authn.TokenReview{
-				Spec: authn.TokenReviewSpec{
-					Token: JaneBearerToken,
+	c.reviews.Add(JaneBearerToken,
+		&authn.TokenReview{
+			Spec: authn.TokenReviewSpec{
+				Token: JaneBearerToken,
+			},
+			Status: authn.TokenReviewStatus{
+				Authenticated: true,
+				User: authn.UserInfo{
+					Username: Jane,
+					Groups:   []string{Developers},
 				},
-				Status: authn.TokenReviewStatus{
-					Authenticated: true,
-					User: authn.UserInfo{
-						Username: Jane,
-						Groups:   []string{Developers},
-					},
-				},
-			}
-			return true, review, nil
+			},
 		})
 }
 
 // AddBobIdentity mocks k8s authentication response for Bob
 // Expect user not be authenticated
 func (c *K8sFakeClient) AddBobIdentity() {
-	c.k8sFake.PrependReactor(
-		"create", "tokenreviews",
-		func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
-			review := &authn.TokenReview{
-				Spec: authn.TokenReviewSpec{
-					Token: BobBearerToken,
-				},
-				Status: authn.TokenReviewStatus{
-					Authenticated: false,
-				},
-			}
-			return true, review, nil
+	c.reviews.Add(BobBearerToken,
+		&authn.TokenReview{
+			Spec: authn.TokenReviewSpec{
+				Token: BobBearerToken,
+			},
+			Status: authn.TokenReviewStatus{
+				Authenticated: false,
+			},
 		})
 }
 
@@ -175,10 +173,39 @@ func (c *K8sFakeClient) DeleteCluster(id string) error {
 
 // AddJaneToken adds JaneBearerToken on the request
 func AddJaneToken(req *http.Request) {
-	req.Header.Add("Authorization", JaneBearerToken)
+	req.Header.Add("Authorization", "Bearer "+JaneBearerToken)
 }
 
 // AddBobToken adds BobBearerToken on the request
 func AddBobToken(req *http.Request) {
-	req.Header.Add("Authorization", BobBearerToken)
+	req.Header.Add("Authorization", "Bearer "+BobBearerToken)
+}
+
+type tokenReviews struct {
+	sync.Mutex
+	reviews map[string]*authn.TokenReview
+}
+
+func (rw *tokenReviews) Get(token string) *authn.TokenReview {
+	rw.Lock()
+	defer rw.Unlock()
+
+	return rw.reviews[token]
+}
+
+func (rw *tokenReviews) Add(token string, review *authn.TokenReview) {
+	rw.Lock()
+	defer rw.Unlock()
+
+	rw.reviews[token] = review
+}
+
+func (rw *tokenReviews) Reactor(action k8stesting.Action) (bool, runtime.Object, error) {
+	token := action.(k8stesting.CreateActionImpl).Object.(*authn.TokenReview).Spec.Token
+	r := rw.Get(token)
+	if r != nil {
+		return true, r, nil
+	}
+
+	return true, &authn.TokenReview{}, errors.Errorf("token %q does not exist", token)
 }

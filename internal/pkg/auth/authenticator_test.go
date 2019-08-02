@@ -9,11 +9,8 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	k8stesting "k8s.io/client-go/testing"
 
 	auth "github.com/tigera/voltron/internal/pkg/auth"
-	authn "k8s.io/api/authentication/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 var _ = Describe("Authenticator", func() {
@@ -29,38 +26,21 @@ var _ = Describe("Authenticator", func() {
 			})
 
 			It("should not authenticate invalid token ", func() {
-				client.K8sFake().PrependReactor("create", "tokenreviews",
-					func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
-						review := &authn.TokenReview{}
-						return true, review, nil
-					})
 				_, err := authenticator.Authenticate("$#%")
 				Expect(err).To(HaveOccurred())
 			})
 
 			It("should authenticate a valid token for jane", func() {
 				client.AddJaneIdentity()
-				user, err := authenticator.Authenticate("jane's token")
+				user, err := authenticator.Authenticate(test.JaneBearerToken)
+				Expect(err).NotTo(HaveOccurred())
 				Expect(user.Name).To(Equal("jane"))
 				Expect(user.Groups).To(Equal([]string{"developers"}))
-				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("should not authenticate a valid token for bob", func() {
-				client.K8sFake().PrependReactor("create", "tokenreviews",
-					func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
-						review := &authn.TokenReview{
-							Spec: authn.TokenReviewSpec{
-								Token: "bob's token",
-							},
-							Status: authn.TokenReviewStatus{
-								Authenticated: false,
-							},
-						}
-						return true, review, nil
-					})
-
-				_, err := authenticator.Authenticate("bob's token")
+				client.AddBobIdentity()
+				_, err := authenticator.Authenticate(test.BobBearerToken)
 				Expect(err).To(HaveOccurred())
 			})
 		})
