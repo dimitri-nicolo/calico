@@ -18,7 +18,7 @@ spec:
 ```
 
 ## Openshift
-While there is no extra setup configuration required by the user to generate a benchmark report for Openshift, the result sets will be different than a report generated for regular Kubernetes clusters. Use the [Openshift Container Platform security guide](https://docs.openshift.com/container-platform/3.11/security/securing_container_platform.html) to cross-reference the benchmark results.
+While there is no extra setup configuration required by the user to generate a benchmark report for Openshift, the result sets will be different than a report generated for regular Kubernetes clusters. Use the [Openshift Container Platform security guide](https://static.open-scap.org/ssg-guides/ssg-ocp3-guide-default.html) to cross-reference the benchmark results.
 
 ## Security Note
 Executing the CIS benchmarks requires running a pod with some elevated privileges. This includes access to the host’s process space, and volume mounting certain directories (/var/lib, /etc/systemd, /etc/kubernetes, /usr/bin) as read-only. If this is not considered an acceptable risk to your security organization, you can disable this feature by running the following command:
