@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -75,6 +75,28 @@ var _ = Describe("SelectorAndNamedPortIndex", func() {
 			set, ok := recorder.ipsets["villains"]
 			Expect(ok).To(BeTrue())
 			Expect(set).To(HaveLen(1))
+		})
+	})
+
+	Describe("NetworkSet domains", func() {
+		It("should normalize domain names to lowercase", func() {
+			uut.OnUpdate(api.Update{
+				KVPair: model.KVPair{
+					Key: model.NetworkSetKey{Name: "blinky"},
+					Value: &model.NetworkSet{
+						AllowedEgressDomains: []string{"MICROSOFT.COM", "MiXeD.orG"},
+						Labels:               map[string]string{"villain": "ghost"},
+					},
+				},
+			})
+			s, err := selector.Parse("villain == 'ghost'")
+			Expect(err).ToNot(HaveOccurred())
+			uut.UpdateIPSet("dvillains", s, ProtocolNone, "")
+			set, ok := recorder.ipsets["dvillains"]
+			Expect(ok).To(BeTrue())
+			Expect(set).To(HaveLen(2))
+			Expect(set).To(HaveKey(IPSetMember{Domain: "microsoft.com"}))
+			Expect(set).To(HaveKey(IPSetMember{Domain: "mixed.org"}))
 		})
 	})
 })

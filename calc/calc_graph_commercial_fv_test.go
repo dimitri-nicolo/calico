@@ -803,7 +803,7 @@ var commercialTests = []StateList{
 		remoteEpsWithPolicyAndTier},
 
 	// DNS Policy unit tests.
-	{withDNSPolicy, withDNSPolicy2, withDNSPolicy3},
+	{withDNSPolicy, withDNSPolicyNoDupe, withDNSPolicy2, withDNSPolicy3},
 
 	// TODO(smc): Test config calculation
 	// TODO(smc): Test mutation of endpoints
