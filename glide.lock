@@ -1,5 +1,5 @@
-hash: a463079bacedd0ed401189568042a53e817acff4a6a5e50393e76e008200a4f7
-updated: 2019-08-01T05:07:17.003237909Z
+hash: 050cb969ea6b26ecaa1624b2b9358d4675d5eb057b7eb5a09026047096f856e9
+updated: 2019-08-02T10:40:11.61664695+01:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -211,7 +211,7 @@ imports:
 - name: github.com/kardianos/osext
   version: 2bc1f35cddc0cc527b4bc3dce8578fc2a6c11384
 - name: github.com/kelseyhightower/confd
-  version: 5bacee1cb82ed53eebbb5cda9afaf4f3c97030c0
+  version: 1096f44327e156adf3f326482f8ef3e56d6434ff
   repo: git@github.com:tigera/confd-private.git
   subpackages:
   - pkg/backends
@@ -325,7 +325,7 @@ imports:
   - pkg/types
   - pkg/upgrade
 - name: github.com/projectcalico/felix
-  version: 06189245ee5349729db34440862cc23cd26aded6
+  version: 87fcddd7d8c3a0d0e06e7315b2a904e20acf5d7d
   repo: git@github.com:tigera/felix-private.git
   subpackages:
   - bpf
@@ -430,7 +430,7 @@ imports:
   subpackages:
   - binder
 - name: github.com/projectcalico/typha
-  version: acd6accda3bab22293165f9f69c31b35a411a40e
+  version: 60c84e38365a0b9b686fdd534131c7868d69cfb3
   repo: git@github.com:tigera/typha-private.git
   subpackages:
   - pkg/syncclient
