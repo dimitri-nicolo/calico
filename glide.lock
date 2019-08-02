@@ -1,11 +1,13 @@
-hash: a97b8b8e798e7309372528a8eaa1f0fb0cd7f0fb897f0ddfd2896725db5ab9e5
-updated: 2019-07-18T11:18:08.998499868Z
+hash: b93c11b14c45ca0f4083cac95b9a6c4843cb819b870533d446c0349aae6e2cdb
+updated: 2019-08-02T10:42:12.233647324+01:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
   subpackages:
   - compute/metadata
   - internal
+- name: github.com/aokoli/goutils
+  version: 41ac8693c5c10a92ea1ff5ac3a7f95646f6123b0
 - name: github.com/armon/go-radix
   version: 1a2de0c21c94309923825da3df33a4381872c795
 - name: github.com/Azure/go-autorest
@@ -157,12 +159,10 @@ imports:
   - buffer
   - jlexer
   - jwriter
-- name: github.com/Masterminds/goutils
-  version: 41ac8693c5c10a92ea1ff5ac3a7f95646f6123b0
 - name: github.com/Masterminds/semver
   version: 59c29afe1a994eacb71c833025ca7acf874bb1da
 - name: github.com/Masterminds/sprig
-  version: 9f8fceff796fb9f4e992cd2bece016be0121ab74
+  version: 544a9b1d90f323f6509491b389714fbbd126bee3
 - name: github.com/mattn/go-runewidth
   version: 703b5e6b11ae25aeb2af9ebb5d5fdf8fa2575211
 - name: github.com/matttproud/golang_protobuf_extensions
@@ -242,7 +242,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 9bef69d2b882bf782daed36d772fbe048e7662a3
+  version: d35062fca862802cc007d98f3451929215865c0c
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
@@ -458,7 +458,7 @@ imports:
   - tap
   - transport
 - name: gopkg.in/go-playground/validator.v9
-  version: 46b4b1e301c24cac870ffcb4ba5c8a703d1ef475
+  version: b199fa0642d29caca62b6a99d65cc981ba5edc3b
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: gopkg.in/square/go-jose.v2
