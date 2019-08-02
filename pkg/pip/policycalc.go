@@ -48,7 +48,7 @@ func (s *pip) GetPolicyCalculator(ctx context.Context, params *PolicyImpactParam
 	// We just use the xref cache to determine the ordered set of tiers and policies before and after the updates. Set
 	// in-sync immediately since we aren't interested in callbacks.
 	xc := xrefcache.NewXrefCache(&compcfg.Config{}, func() {})
-	xc.OnStatusUpdate(syncer.NewStatusUpdateComplete())
+	xc.OnStatusUpdate(syncer.NewStatusUpdateInSync())
 
 	// Populate the endpoint cache. Run this on a go-routine so we can double up with the other queries.
 	// Depending on configuration, the endpoint cache may be populated from historical data (snapshots and audit logs),
@@ -75,7 +75,7 @@ func (s *pip) GetPolicyCalculator(ctx context.Context, params *PolicyImpactParam
 	}
 
 	// Extract the current set of config from the xrefcache.
-	resourceDataBefore := s.resourceDataFromXrefCache(xc)
+	resourceDataBefore := resourceDataFromXrefCache(xc)
 
 	// Apply the preview changes to the xref cache. This also constructs the set of modified resources for use by the
 	// policy calculator.
@@ -85,7 +85,7 @@ func (s *pip) GetPolicyCalculator(ctx context.Context, params *PolicyImpactParam
 	}
 
 	// Extract the updated set of config from the xrefcache.
-	resourceDataAfter := s.resourceDataFromXrefCache(xc)
+	resourceDataAfter := resourceDataFromXrefCache(xc)
 
 	// Wait for the archived endpoint query to complete. We don't track if the endpoint cache population errors since
 	// we can still do a PIP query without it, however, chance of indeterminate calculations will be higher.
@@ -128,33 +128,6 @@ func (s *pip) applyPolicyChanges(xc xrefcache.XrefCache, rs []ResourceChange) (p
 		}
 	}
 	return modified, nil
-}
-
-// resourceDataFromXrefCache creates the policy configuration from the data stored in the xrefcache.
-func (s *pip) resourceDataFromXrefCache(xc xrefcache.XrefCache) *policycalc.ResourceData {
-	// Create an empty config.
-	rd := &policycalc.ResourceData{}
-
-	// Grab the ordered tiers and policies from the xrefcache and convert to the required type.
-	xrefTiers := xc.GetOrderedTiersAndPolicies()
-	rd.Tiers = make(policycalc.Tiers, len(xrefTiers))
-	for i := range xrefTiers {
-		for _, t := range xrefTiers[i].OrderedPolicies {
-			rd.Tiers[i] = append(rd.Tiers[i], t.GetCalicoV3())
-		}
-	}
-
-	// Grab the namespaces and the service accounts.
-	_ = xc.EachCacheEntry(resources.TypeK8sNamespaces, func(ce xrefcache.CacheEntry) error {
-		rd.Namespaces = append(rd.Namespaces, ce.GetPrimary().(*corev1.Namespace))
-		return nil
-	})
-	_ = xc.EachCacheEntry(resources.TypeK8sServiceAccounts, func(ce xrefcache.CacheEntry) error {
-		rd.ServiceAccounts = append(rd.ServiceAccounts, ce.GetPrimary().(*corev1.ServiceAccount))
-		return nil
-	})
-
-	return rd
 }
 
 // syncFromArchive will load archived configuration and invoke the syncer callbacks.
@@ -233,4 +206,31 @@ func (s *pip) syncFromDatastore(ctx context.Context, types []metav1.TypeMeta, cb
 		log.Info("Loaded configuration from datastore")
 		return nil
 	}
+}
+
+// resourceDataFromXrefCache creates the policy configuration from the data stored in the xrefcache.
+func resourceDataFromXrefCache(xc xrefcache.XrefCache) *policycalc.ResourceData {
+	// Create an empty config.
+	rd := &policycalc.ResourceData{}
+
+	// Grab the ordered tiers and policies from the xrefcache and convert to the required type.
+	xrefTiers := xc.GetOrderedTiersAndPolicies()
+	rd.Tiers = make(policycalc.Tiers, len(xrefTiers))
+	for i := range xrefTiers {
+		for _, t := range xrefTiers[i].OrderedPolicies {
+			rd.Tiers[i] = append(rd.Tiers[i], t.GetCalicoV3())
+		}
+	}
+
+	// Grab the namespaces and the service accounts.
+	_ = xc.EachCacheEntry(resources.TypeK8sNamespaces, func(ce xrefcache.CacheEntry) error {
+		rd.Namespaces = append(rd.Namespaces, ce.GetPrimary().(*corev1.Namespace))
+		return nil
+	})
+	_ = xc.EachCacheEntry(resources.TypeK8sServiceAccounts, func(ce xrefcache.CacheEntry) error {
+		rd.ServiceAccounts = append(rd.ServiceAccounts, ce.GetPrimary().(*corev1.ServiceAccount))
+		return nil
+	})
+
+	return rd
 }

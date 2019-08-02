@@ -1,6 +1,7 @@
 package policycalc
 
 import (
+	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/net"
 )
 
@@ -117,6 +118,23 @@ func (e *FlowEndpointData) isCalicoEndpoint() bool {
 	default:
 		return false
 	}
+}
+
+// Implement the label Get method for use with the selector processing. This allows us to inject additional labels
+// without having to update the dictionary.
+func (e *FlowEndpointData) Get(labelName string) (value string, present bool) {
+	switch labelName {
+	case v3.LabelNamespace:
+		return e.Namespace, e.Namespace != ""
+	case v3.LabelOrchestrator:
+		return v3.OrchestratorKubernetes, e.Namespace != ""
+	default:
+		if e.Labels != nil {
+			val, ok := e.Labels[labelName]
+			return val, ok
+		}
+	}
+	return "", false
 }
 
 // EndpointNamedPort encapsulates details about a named port on an endpoint.

@@ -32,7 +32,19 @@ type ModifiedResources map[v3.ResourceID]bool
 
 // Add adds a resource to the set of modified resources.
 func (m ModifiedResources) Add(r resources.Resource) {
-	m[resources.GetResourceID(r)] = true
+	rid := resources.GetResourceID(r)
+	m[rid] = true
+
+	// For K8s NP, also add the equivalent Calico NP resource ID.
+	//TODO(rlb): This is hacky af. Need to rethink how we handle converted resources and the modified resources map.
+	if rid.TypeMeta == resources.TypeK8sNetworkPolicies {
+		rid = v3.ResourceID{
+			TypeMeta:  resources.TypeCalicoNetworkPolicies,
+			Namespace: rid.Namespace,
+			Name:      "knp.default." + rid.Name,
+		}
+		m[rid] = true
+	}
 }
 
 // IsModified returns true if the specified resource is one of the resources that was modified in the proposed update.
