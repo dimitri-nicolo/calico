@@ -100,8 +100,8 @@ collected logs. The installation of the ingress log collector will be done in a 
 1. Modify patch-ingress.yaml so that the ingress controller container name appropriately
    reflects the container name in your ingress controller installation. Replace
    `<ingress-controller-name>` with the name of the ingress controller **container** in your pod.
-   If you are running a router in OpenShift, replace <ingress-controller-name> with the name
-   of the router **container** in the below command.
+   If you are running a router in OpenShift, replace `<ingress-controller-name>` with the name
+   of the syslog **container** you have set up to receive the router logs in the below command.
    ```
    sed -i -e "s?<INGRESS_CONTROLLER_NAME>?<ingress-controller-name>?g" patch-ingress.yaml
    ```
@@ -138,9 +138,19 @@ the directions based on your orchestrator.
 
 #### Step 3: Install the ingress log collector
 
-Now that Felix has been configured, apply the customized `patch-ingress.yaml`.
+Now that Felix has been configured, apply the customized `patch-ingress.yaml`. If you are running
+a router in OpenShift, replace the resource (`deployment` and `deploymentconfig` in the below
+examples) and `<name of ingress controller deployment>` with the resource type and name of your
+syslog server resource respectively.
+
+Example Kubernetes command:
 ```
 kubectl patch deployment <name of ingress controller deployment> -n <namespace> --patch "$(cat patch-ingress.yaml)"
+```
+
+Example OpenShift command:
+```
+oc patch deploymentconfig <name of syslog server resource> -n <namespace> --patch "$(cat patch-ingress.yaml)"
 ```
 
 #### Step 4: Configure your ingress controller/router
@@ -211,9 +221,7 @@ the appropriate information to the ingress controller logs.
 
    **OpenShift router**
    If you are using the OpenShift router, configure your syslog server to write
-   log files to `/var/log/calico/ingress/ingress.log`. See the
-   [OpenShift documentation](https://docs.okd.io/3.11/admin_guide/router.html#viewing-logs)
-   for more details.
+   log files to `/var/log/calico/ingress/ingress.log`.
 
 #### Step 5: Test your installation
 
