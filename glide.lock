@@ -1,5 +1,5 @@
-hash: a4748c049a7fa8b6d0c4ce55e57e2cc43d2e73ff4ebf5f65d131b8b42ec4e6d6
-updated: 2019-07-23T15:08:53.534326-07:00
+hash: b0b13a2751ebe2d2f99d4093bcccbb69bd03bd4cdd37c7ee89a3e76074a32455
+updated: 2019-08-02T13:32:46.009966608+01:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -9,6 +9,8 @@ imports:
   subpackages:
   - compute/metadata
   - internal
+- name: github.com/aokoli/goutils
+  version: 41ac8693c5c10a92ea1ff5ac3a7f95646f6123b0
 - name: github.com/Azure/go-autorest
   version: d4e6b95c12a08b4de2d48b45d5b4d594e5d32fab
   subpackages:
@@ -133,7 +135,7 @@ imports:
 - name: github.com/kelseyhightower/envconfig
   version: dd1402a4d99de9ac2f396cd6fcb957bc2c695ec1
 - name: github.com/kubernetes/repo-infra
-  version: 1b2ddaf3fb8775a5d0f4e28085cf846f915977a8
+  version: f85734f673056977d8ba04b0386394b684ca2acb
 - name: github.com/leodido/go-urn
   version: a67a23e1c1af3c66528573bb86a87246477277c1
 - name: github.com/mailru/easyjson
@@ -142,12 +144,10 @@ imports:
   - buffer
   - jlexer
   - jwriter
-- name: github.com/Masterminds/goutils
-  version: 41ac8693c5c10a92ea1ff5ac3a7f95646f6123b0
 - name: github.com/Masterminds/semver
   version: 59c29afe1a994eacb71c833025ca7acf874bb1da
 - name: github.com/Masterminds/sprig
-  version: 9f8fceff796fb9f4e992cd2bece016be0121ab74
+  version: 544a9b1d90f323f6509491b389714fbbd126bee3
 - name: github.com/matttproud/golang_protobuf_extensions
   version: fc2b8d3a73c4867e51861bbdd5ae3c1f0869dd6a
   subpackages:
@@ -167,7 +167,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: f7c1bd330983c7a0277dfe929ba6475ad0ebfe27
+  version: d35062fca862802cc007d98f3451929215865c0c
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
