@@ -20,6 +20,8 @@ This How-to guide uses the following {{ site.prodname }} features:
 
 You must have a running kubernetes cluster with {{ site.prodname }} installed.
 
+You must have permissions to make policy changes. Users can only preview a change if RBAC allows them to make the change. Note that the `tigera-ui-user` role does not have permission to modify policy, and therefore will not allow users to preview changes.
+
 ### How to
 
 1. From the Edit Policy page on the Manager, modify any attribute of the policy. 
