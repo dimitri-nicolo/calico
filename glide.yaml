@@ -38,7 +38,7 @@ import:
   - networking/v1
 - package: k8s.io/apimachinery
 - package: github.com/projectcalico/felix
-  version: 7d4ef43953ca7627f9bbb5ae3afe2472718eee62
+  version: 87fcddd7d8c3a0d0e06e7315b2a904e20acf5d7d
   repo: git@github.com:tigera/felix-private.git
   vcs: git
 - package: k8s.io/apiserver
