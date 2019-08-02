@@ -356,6 +356,8 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	defer c.RUnlock()
+
 	// We proxy through a secure tunnel, therefore we only enforce https for HTTP/2
 	// XXX What if we set http2.Transport.AllowHTTP = true ?
 	r.URL.Scheme = "http"
@@ -379,7 +381,6 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 	r.Header.Del(ClusterHeaderField)
 
 	c.ServeHTTP(w, r)
-	c.RUnlock()
 }
 
 func removeAuthHeaders(r *http.Request) {

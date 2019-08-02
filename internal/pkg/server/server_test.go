@@ -3,7 +3,6 @@
 package server_test
 
 import (
-	"bytes"
 	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
@@ -519,6 +518,7 @@ var _ = Describe("Server authenticates requests", func() {
 	var xCert tls.Certificate
 
 	k8sAPI := test.NewK8sSimpleFakeClient(nil, nil)
+	watchSync := make(chan error)
 
 	By("Creating credentials for server", func() {
 		srvCert, _ = test.CreateSelfSignedX509Cert("voltron", true)
@@ -573,17 +573,21 @@ var _ = Describe("Server authenticates requests", func() {
 			defer wg.Done()
 			_ = srv.ServeTunnelsTLS(lisTun)
 		}()
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_ = srv.WatchK8sWithSync(watchSync)
+		}()
 	})
 
 	It("Should add cluster A", func() {
-		Eventually(func() bool {
-			cluster, _ := json.Marshal(&clusters.Cluster{ID: "clusterA", DisplayName: "ClusterA"})
-			req, _ := http.NewRequest("PUT",
-				"http://"+lisHTTP.Addr().String()+"/voltron/api/clusters?", bytes.NewBuffer(cluster))
-			resp, err := http.DefaultClient.Do(req)
-			return err == nil && resp.StatusCode == 200
-		}).Should(Equal(true))
+		k8sAPI.AddCluster("clusterA", "ClusterA")
+		Expect(<-watchSync).NotTo(HaveOccurred())
 	})
+
+	var bin *test.HTTPSBin
+	binC := make(chan struct{}, 1)
 
 	It("Should open a tunnel for cluster A", func() {
 		certPem, keyPem, _ := srv.ClusterCreds("clusterA")
@@ -599,21 +603,17 @@ var _ = Describe("Server authenticates requests", func() {
 			tun, err = tunnel.DialTLS(lisTun.Addr().String(), cfg)
 			return err
 		}).ShouldNot(HaveOccurred())
-	})
 
-	It("should authenticate Jane", func() {
-		k8sAPI.AddJaneIdentity()
-
-		var wg sync.WaitGroup
-
-		wg.Add(1)
-		bin := test.NewHTTPSBin(tun, xCert, func(r *http.Request) {
-			defer wg.Done()
+		bin = test.NewHTTPSBin(tun, xCert, func(r *http.Request) {
 			Expect(r.Header.Get("Impersonate-User")).To(Equal(test.Jane))
 			Expect(r.Header.Get("Impersonate-Group")).To(Equal(test.Developers))
 			Expect(r.Header.Get("Authorization")).NotTo(Equal(test.JaneBearerToken))
+			binC <- struct{}{}
 		})
 
+	})
+
+	authJane := func() {
 		clnt := configureHTTPSClient()
 		req := requestToClusterA(lisHTTPS.Addr().String())
 		test.AddJaneToken(req)
@@ -622,16 +622,29 @@ var _ = Describe("Server authenticates requests", func() {
 		Expect(resp.StatusCode).To(Equal(200))
 
 		// would timeout the test if the reply is not from the serve and the test were not executed
-		wg.Wait()
+		<-binC
+	}
 
-		bin.Close()
+	It("should authenticate Jane", func() {
+		k8sAPI.AddJaneIdentity()
+		authJane()
 	})
 
-	It("should not authenticate Bob", func() {
+	It("should not authenticate Bob - Bob exists, does not have rights", func() {
 		k8sAPI.AddBobIdentity()
 		clnt := configureHTTPSClient()
 		req := requestToClusterA(lisHTTPS.Addr().String())
 		test.AddBobToken(req)
+		resp, err := clnt.Do(req)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(resp.StatusCode).To(Equal(401))
+	})
+
+	It("should not authenticate user that does not exist", func() {
+		k8sAPI.AddBobIdentity()
+		clnt := configureHTTPSClient()
+		req := requestToClusterA(lisHTTPS.Addr().String())
+		req.Header.Add("Authorization", "Bearer "+"someRandomTokenThatShouldNotMatch")
 		resp, err := clnt.Do(req)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(401))
@@ -645,10 +658,20 @@ var _ = Describe("Server authenticates requests", func() {
 		Expect(resp.StatusCode).To(Equal(401))
 	})
 
+	It("should authenticate Jane again after errors", func() {
+		authJane()
+	})
+
+	It("should be able to delete a cluster - test race SAAS-226", func() {
+		k8sAPI.DeleteCluster("clusterA")
+		Expect(<-watchSync).NotTo(HaveOccurred())
+	})
+
 	It("should stop the server", func(done Done) {
 		err := srv.Close()
 		Expect(err).NotTo(HaveOccurred())
 		wg.Wait()
+		bin.Close()
 		close(done)
 	})
 })
