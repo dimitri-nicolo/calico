@@ -29,6 +29,35 @@ kubectl delete daemonset -n calico-monitoring compliance-benchmarker
 
 ### Downloadable reports
 
+### total-summary.csv
+
+A textual representation of the dashboard.
+
+| Heading | Description | Format |
+|----|----|----|
+| startTime | The report interval start time. | RFC3339 string |
+| endTime   | The report interval start time. | RFC3339 string |
+| type      | The type of benchmark report | string |
+| hiPercentageThreshold  | The percentage of passing tests required to rate a node as high | int |
+| medPercentageThreshold | The percentage of passing tests required to rate a node as medium | int |
+| hiNodeCount  | The number of nodes rated as high | int |
+| medNodeCount | The number of nodes rated as medium | int |
+| lowNodeCount | The number of nodes rated as low | int |
+
+### node-summary.csv
+
+A .csv file of test result summaries per node.
+
+| Heading | Description | Format |
+|----|----|----|
+| node | The name of the node. | string |
+| version | The version of the platform. | string |
+| status | The rating of the node based on percentage of tests passing. | string |
+| testsPassing | The number of tests passing. | int |
+| testsFailing | The number of tests failing. | int |
+| testsUnknown | The number of tests whose results are undetermined due to automation restrictions. | int |
+| testsTotal | The total number of tests executed. | int |
+
 #### failed-tests.csv
 
 A .csv file of tests that have failed. 
@@ -42,4 +71,4 @@ A .csv file of tests that have failed.
 
 #### all-tests.csv
 
- .csv file with tests that were executed on all nodes. Format remains the same as above.
+A .csv file with tests that were executed on all nodes. Format remains the same as above.

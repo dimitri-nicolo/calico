@@ -36,6 +36,7 @@ To complete the following procedure, you'll need:
 - A `tigera-ee-installer` user with permission to install machine learning jobs, and configure Kibana dashboards (see below).
 - A `tigera-ee-curator` user with permission to delete indices in Elasticsearch (see below).
 - A `tigera-ee-intrusion-detection` user with permission to process threat feeds, flow logs and security events (see below). 
+- A `tigera-ee-compliance-benchmarker` user with permission to issue queries to Elasticsearch (see below).
 - A `tigera-ee-compliance-controller` user with permission to issue queries to Elasticsearch (see below).
 - A `tigera-ee-compliance-reporter` user with permission to query and send documents to Elasticsearch (see below).
 - A `tigera-ee-compliance-snapshotter` user with permission to query and send documents to Elasticsearch (see below).
@@ -149,7 +150,23 @@ They may also be useful as a reference for defining alternative security configu
    ```
 
 1. {{site.prodname}} compliance report and dashboard for assessing the compliance posture of the cluster.
-    
+
+    1. Compliance benchmarker role for storing benchmark results  (`tigera-ee-compliance-benchmarker`)
+
+       ```json
+       {
+         "elasticsearch": {
+           "cluster": [ "monitor", "manage_index_templates"],
+           "indices": [
+             {
+               "names": [ "tigera_secure_ee_benchmark_results.*" ],
+               "privileges": [ "create_index", "write", "view_index_metadata", "read" ]
+             }
+           ]
+         }
+       }
+       ```
+
     1. Compliance controller role for querying last archived reports  (`tigera-ee-compliance-controller`)
     
        ```json
@@ -179,6 +196,10 @@ They may also be useful as a reference for defining alternative security configu
              },
              {
                "names": [ "tigera_secure_ee_snapshots.*" ],
+               "privileges": [ "read" ]
+             },
+             {
+               "names": [ "tigera_secure_ee_benchmark_results.*" ],
                "privileges": [ "read" ]
              },
              {

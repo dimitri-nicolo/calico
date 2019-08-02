@@ -34,9 +34,11 @@
 
 1. Set up secret with username and passwords for {{site.prodname}} compliance report and dashboard to authenticate with Elasticsearch.
    Replace `<compliance-elasticsearch-controller-password>`, `<compliance-elasticsearch-reporter-password>`,
-   `<compliance-elasticsearch-snapshotter-password>` and `<compliance-elasticsearch-server-password>` with the approrpiate passwords.
+   `<compliance-elasticsearch-snapshotter-password>` and `<compliance-elasticsearch-server-password>` with the appropriate passwords.
    ```
    {{cli}} create secret generic elastic-compliance-user \
+   --from-literal=benchmarker.username=tigera-ee-compliance-benchmarker \
+   --from-literal=benchmarker.password=<compliance-benchmarker-elasticsearch-password> \
    --from-literal=controller.username=tigera-ee-compliance-controller \
    --from-literal=controller.password=<compliance-controller-elasticsearch-password> \
    --from-literal=reporter.username=tigera-ee-compliance-reporter \
