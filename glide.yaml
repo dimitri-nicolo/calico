@@ -4,7 +4,7 @@ import:
 - package: github.com/docopt/docopt-go
 - package: github.com/projectcalico/felix
   vcs: git
-  version: d71555588ae60e00c96fa79d4ab7be1067631abc
+  version: 87fcddd7d8c3a0d0e06e7315b2a904e20acf5d7d
   repo: git@github.com:tigera/felix-private.git
 - package: github.com/projectcalico/libcalico-go
   vcs: git
