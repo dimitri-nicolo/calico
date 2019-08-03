@@ -84,14 +84,20 @@ type CompiledTiersAndPolicies struct {
 // Flows that are not selected cannot be impacted by the policy updates and therefore do not need to be run through
 // the policy calculator.
 func (c *CompiledTiersAndPolicies) FlowSelectedByModifiedPolicies(flow *Flow) bool {
-	// Check the flow against egress or ingress modified policies depending on who the reporter for this flow was.
-	if flow.Reporter == ReporterTypeSource {
+	// If the source is a calico-managed endpoint, check whether egress policies were modified. We do this for both
+	// source and dest reported flows - it's possible a flow is now denied at source which means the the dest-reported
+	// flow should no longer be included.
+	if flow.Source.isCalicoEndpoint() {
 		for i := range c.ModifiedEgressPolicies {
 			if c.ModifiedEgressPolicies[i].Applies(flow) == MatchTypeTrue {
 				return true
 			}
 		}
-	} else if flow.Reporter == ReporterTypeDestination {
+	}
+
+	// For dest-reported flows, we check the ingress policies were modified. No need to check if the destination is a
+	// calico-managed endpoint, it has to have been for it to be reported.
+	if flow.Reporter == ReporterTypeDestination {
 		for i := range c.ModifiedIngressPolicies {
 			if c.ModifiedIngressPolicies[i].Applies(flow) == MatchTypeTrue {
 				return true
