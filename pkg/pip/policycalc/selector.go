@@ -47,14 +47,14 @@ func (c *EndpointSelectorHandler) GetSelectorEndpointMatcher(selStr string) Endp
 		}
 		val := ep.cachedSelectorResults[cacheIdx]
 		if val == MatchTypeUnknown {
-			if parsedSel.Evaluate(ep.Labels) {
+			if parsedSel.EvaluateLabels(ep) {
 				val = MatchTypeTrue
 			} else {
 				val = MatchTypeFalse
 			}
 			ep.cachedSelectorResults[cacheIdx] = val
 		}
-		log.Debugf("Endpoint selector: %s", val)
+		log.Debugf("Endpoint selector: %s = %s", selStr, val)
 
 		return val
 	}
