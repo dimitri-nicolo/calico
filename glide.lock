@@ -1,5 +1,5 @@
-hash: 050cb969ea6b26ecaa1624b2b9358d4675d5eb057b7eb5a09026047096f856e9
-updated: 2019-08-02T10:40:11.61664695+01:00
+hash: 94f83503387725ce9ee1b257fd32896e77867523def88f549f2345a7795e88d8
+updated: 2019-08-03T04:55:15.751818483Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -211,7 +211,7 @@ imports:
 - name: github.com/kardianos/osext
   version: 2bc1f35cddc0cc527b4bc3dce8578fc2a6c11384
 - name: github.com/kelseyhightower/confd
-  version: 1096f44327e156adf3f326482f8ef3e56d6434ff
+  version: 650fd08ca1163521802eeb526470f5736194c1a9
   repo: git@github.com:tigera/confd-private.git
   subpackages:
   - pkg/backends
@@ -313,7 +313,7 @@ imports:
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
 - name: github.com/projectcalico/cni-plugin
-  version: 052b52c35c74abfd4a7839da0e8cf63d0aae4cbd
+  version: 285c971470177f8e49c694ee18c6bf4d49582a4e
   repo: git@github.com:tigera/cni-plugin-private.git
   subpackages:
   - internal/pkg/azure
@@ -325,7 +325,7 @@ imports:
   - pkg/types
   - pkg/upgrade
 - name: github.com/projectcalico/felix
-  version: 87fcddd7d8c3a0d0e06e7315b2a904e20acf5d7d
+  version: c908079c22ed5e232a564d77f6c70980506ca42e
   repo: git@github.com:tigera/felix-private.git
   subpackages:
   - bpf
@@ -375,7 +375,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: d35062fca862802cc007d98f3451929215865c0c
+  version: 305e59133073585defad84f5ae9e8d0a18ac88ec
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
