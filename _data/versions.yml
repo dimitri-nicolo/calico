@@ -1353,33 +1353,35 @@ master:
       version: 1.26.2
 
 v2.5:
-- title: v2.5.0-pre
-  note: ""
+- title: v2.5.0
+  helmRelease: 0
+  note: |
+    05 August 2019
   components:
     cnx-manager:
-      version: release-v2.5
+      version: v2.5.0
     cnx-manager-proxy:
-      version: release-v2.5
+      version: v2.5.0
     cnx-apiserver:
-      version: release-v2.5
+      version: v2.5.0
     cnx-queryserver:
-      version: release-v2.5
+      version: v2.5.0
     cnx-kube-controllers:
-      version: release-v2.5
+      version: v2.5.0
     calicoq:
-      version: release-v2.5
+      version: v2.5.0
     typha:
-      version: release-v2.5
+      version: v2.5.0
     calicoctl:
-      version: release-v2.5
+      version: v2.5.0
     cnx-node:
-      version: release-v2.5
+      version: v2.5.0
     calico/cni:
-      version: v3.8.0
+      version: v3.8.1
     calico/routereflector:
       version: v0.6.1
     calico:
-      version: v3.8.0
+      version: v3.8.1
       minor_version: v3.8
     prometheus-operator:
       version: v0.29.0
@@ -1392,41 +1394,40 @@ v2.5:
     configmap-reload:
       version: v0.0.1
     dikastes:
-      version: release-v2.5
+      version: v2.5.0
     flexvol:
-      version: v3.8.0
+      version: v3.8.1
     fluentd:
-      version: release-v2.5
+      version: v2.5.0
     es-proxy:
-      version: release-v2.5
+      version: v2.5.0
     elasticsearch-operator:
       version: 0.3.0
     kibana:
-      version: release-v2.5
+      version: v2.5.0
     elasticsearch:
       version: 6.4.3
     cloud-controllers:
-      version: release-v2.5
+      version: v2.5.0
     elastic-tsee-installer:
-      version: release-v2.5
+      version: v2.5.0
     es-curator:
-      version: release-v2.5
+      version: v2.5.0
     intrusion-detection-controller:
-      version: release-v2.5
+      version: v2.5.0
     flannel:
       version: v0.11.0
     compliance-controller:
-      version: release-v2.5
+      version: v2.5.0
     compliance-reporter:
-      version: release-v2.5
+      version: v2.5.0
     compliance-snapshotter:
-      version: release-v2.5
+      version: v2.5.0
     compliance-server:
-      version: release-v2.5
+      version: v2.5.0
     compliance-benchmarker:
-      version: release-v2.5
+      version: v2.5.0
     ingress-collector:
-      version: release-v2.5
+      version: v2.5.0
     busybox:
       version: 1.26.2
-
