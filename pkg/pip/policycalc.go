@@ -28,6 +28,7 @@ var (
 		resources.TypeCalicoNetworkPolicies,
 		resources.TypeCalicoGlobalNetworkPolicies,
 		resources.TypeCalicoGlobalNetworkSets,
+		resources.TypeK8sNetworkPolicies,
 		resources.TypeK8sNamespaces,
 		resources.TypeK8sServiceAccounts,
 	}
@@ -112,7 +113,6 @@ func (s *pip) applyPolicyChanges(xc xrefcache.XrefCache, rs []ResourceChange) (p
 				Resource:   r.Resource,
 				ResourceID: id,
 			}})
-
 		case "delete":
 			xc.OnUpdates([]syncer.Update{{
 				Type:       syncer.UpdateTypeDeleted,
