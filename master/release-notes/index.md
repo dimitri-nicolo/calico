@@ -10,15 +10,14 @@ Use the version selector at the top-right of this page to view a different relea
 
 {% for release in site.data.versions[page.version] %}
 ## {{ release.title }}
-{% unless release.title == "master" %}
-[Release archive](https://github.com/projectcalico/calico/releases/download/{{ release.title }}/release-{{ release.title }}.tgz) with Kubernetes manifests, Docker images and binaries.
-{% endunless %}
 
 {% if release.note %}
 {{ release.note }}
 {% else %}
 {% include {{page.version}}/release-notes/{{release.title}}-release-notes.md %}
 {% endif %}
+
+## Component Versions
 
 | Component              | Version |
 |------------------------|---------|
