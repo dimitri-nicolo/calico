@@ -96,7 +96,7 @@ Install the AWS VPC CNI plugin in your Kubernetes cluster as follows.
 
    ```bash
    curl \
-   https://raw.githubusercontent.com/aws/amazon-vpc-cni-k8s/release-1.1/config/v1.1/aws-k8s-cni.yaml \
+   https://raw.githubusercontent.com/aws/amazon-vpc-cni-k8s/master/config/v1.3/aws-k8s-cni.yaml \
    -O
    ```
 
@@ -112,7 +112,8 @@ Install the AWS VPC CNI plugin in your Kubernetes cluster as follows.
 
    ```yaml
    kind: DaemonSet
-   apiVersion: extensions/v1beta1
+   apiVersion: apps/v1
+   # kubernetes versions before 1.9.0 should use extensions/v1beta1
    metadata:
      name: aws-node
      namespace: kube-system
@@ -136,7 +137,11 @@ Install the AWS VPC CNI plugin in your Kubernetes cluster as follows.
          tolerations:
          - operator: Exists
          containers:
-         - image: 602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon-k8s-cni:1.1.0
+         - image: 602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon-k8s-cni:v1.3.4
+           imagePullPolicy: Always
+           ports:
+           - containerPort: 61678
+             name: metrics
            name: aws-node
            env:
              - name: AWS_VPC_K8S_CNI_LOGLEVEL
