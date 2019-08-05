@@ -4,6 +4,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"sync"
 
 	"github.com/tigera/ingress-collector/pkg/collector"
@@ -13,6 +14,15 @@ import (
 )
 
 func main() {
+	var ver bool
+	flag.BoolVar(&ver, "version", false, "Print version information")
+	flag.Parse()
+
+	if ver {
+		Version()
+		return
+	}
+
 	// Create/read config
 	// Load environment config.
 	cfg := config.MustLoadConfig()
