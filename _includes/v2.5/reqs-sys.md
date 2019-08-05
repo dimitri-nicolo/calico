@@ -1,6 +1,6 @@
 ## Node requirements
 
-- AMD64 processor with at least 2 cores
+- AMD64 processor with at least 2 cores, 7.5GB RAM and 20 GB free disk space
 
 - Linux kernel 3.10 or later with [required dependencies](#kernel-dependencies).
   The following distributions have the required kernel, its dependencies, and are
