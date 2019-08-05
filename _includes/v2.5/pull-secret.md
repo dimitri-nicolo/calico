@@ -1,7 +1,12 @@
+{% if include.orch != "openshift" %}
+  {% assign cli = "kubectl" %}
+{% else %}
+  {% assign cli = "oc" %}
+{% endif %}
 1. Issue the following command to create the `calico-monitoring` namespace.
 
    ```bash
-   kubectl create namespace calico-monitoring
+   {{cli}} create namespace calico-monitoring
    ```
 
 1. Strip the spaces, tabs, carriage returns, and newlines from the `config.json`
@@ -40,7 +45,7 @@
 1. Use the following command to add the secret to Kubernetes.
 
    ```bash
-   kubectl create -f cnx-pull-secret.yml
+   {{cli}} create -f cnx-pull-secret.yml
    ```
 
    It should return the following.
@@ -53,7 +58,7 @@
 
 {% if include.platform == "docker-ee" %}
 1. Continue to [Docker Enterprise/UCP Installation](#install-docker-ucp).
-{% else %}
+{% elsif include.orch != "openshift" %}
 
 1. Continue to [Installing {{site.prodname}}](#install-cnx).
 {% endif %}
