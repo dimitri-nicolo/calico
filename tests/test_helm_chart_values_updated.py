@@ -51,15 +51,20 @@ with open('%s/../_data/versions.yml' % PATH) as f:
 
 def test_core_chart_values_updated():
     req_url = EE_CORE_URL.format(S3_BASE_URL, RELEASE_VERSION, HELM_RELEASE)
-    req = requests.get(req_url, stream=True)
-    assert req.status_code == 200
 
-    # download/create a .tgz locally
-    with open("core.tgz", 'wb') as f:
-        f.write(req.raw.read())
+    if os.environ.get('HELM_CORE_TGZ_OVERRIDE'):
+        CORE_TGZ_FILE = os.environ.get('HELM_CORE_TGZ_OVERRIDE')
+    else:
+        req = requests.get(req_url, stream=True)
+        assert req.status_code == 200
+
+        # download/create a .tgz locally
+        CORE_TGZ_FILE = 'core.tgz'
+        with open(CORE_TGZ_FILE, 'wb') as f:
+            f.write(req.raw.read())
 
     # load the values.yaml file
-    tar = tarfile.open('core.tgz')
+    tar = tarfile.open(CORE_TGZ_FILE)
     values = tar.extractfile('tigera-secure-ee-core/values.yaml').read()
     core_values = yaml.safe_load(values)
 
@@ -82,15 +87,20 @@ def test_core_chart_values_updated():
 
 def test_ee_chart_values_updated():
     req_url = EE_URL.format(S3_BASE_URL, RELEASE_VERSION, HELM_RELEASE)
-    req = requests.get(req_url, stream=True)
-    assert req.status_code == 200
 
-    # download/create a .tgz locally
-    with open("ee.tgz", 'wb') as f:
-        f.write(req.raw.read())
+    if os.environ.get('HELM_EE_TGZ_OVERRIDE'):
+        EE_TGZ_FILE = os.environ.get('HELM_EE_TGZ_OVERRIDE')
+    else:
+        req = requests.get(req_url, stream=True)
+        assert req.status_code == 200
+
+        # download/create a .tgz locally
+        EE_TGZ_FILE = 'ee.tgz'
+        with open(EE_TGZ_FILE, 'wb') as f:
+            f.write(req.raw.read())
 
     # load the values.yaml file
-    tar = tarfile.open('ee.tgz')
+    tar = tarfile.open(EE_TGZ_FILE)
     values = tar.extractfile('tigera-secure-ee/values.yaml').read()
     core_values = yaml.safe_load(values)
 
