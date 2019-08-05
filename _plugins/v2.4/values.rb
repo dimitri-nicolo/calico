@@ -32,7 +32,7 @@ def gen_values_v2_4(versions, imageNames, imageRegistry, chart, forDocs)
       tag: #{versions["elasticsearch-operator"]}
     busybox:
       image: #{imageNames["busybox"]}
-      tag: 1.26.2
+      tag: #{versions["busybox"]}
     EOF
 end
 
