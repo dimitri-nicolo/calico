@@ -1,13 +1,14 @@
 ---
 title: Upgrading Tigera Secure EE from an earlier release using Helm
-canonical_url: https://docs.tigera.io/v2.4/maintenance/helm-upgrade-tsee
+canonical_url: https://docs.tigera.io/master/maintenance/helm-upgrade-tsee
 ---
 
 ## Prerequisites
 
 Ensure that your Kubernetes cluster is already running version 2.4.2 of
-{{site.prodname}} that was installed using helm. Upgrade from earlier versions 
-to {{page.version}} is not supported.
+{{site.prodname}} and that {{site.prodname}} was installed using helm charts.
+Upgrades from earlier versions to {{page.version}} is not supported. 
+Upgrades from install methods other than helm charts is also not supported.
 
 ## Preparing your cluster for the helm upgrade
 
@@ -24,8 +25,8 @@ steps to upgrade.
 
 > **Note**: The following instructions assume that Tiller is still installed on
 > your cluster.
-> 
-> **Note**: For additional helm documentation, please refer to our 
+>
+> **Note**: For additional helm documentation, please refer to our
 > [**helm installation docs**]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/helm/).
 {: .alert .alert-info}
 
