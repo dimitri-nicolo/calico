@@ -8,14 +8,22 @@ PATH = os.path.abspath(os.path.dirname(__file__))
 RELEASE_STREAM = tests.RELEASE_STREAM
 QUAY_API_TOKEN = tests.QUAY_API_TOKEN
 
-# images not tied to a release
+# images not tied to a release, in _config.yml
 EXCLUDED_IMAGES = ['calico-upgrade',
                    'calicoKubeControllers',
+                   'configMapReload',
                    'flexvol',
                    'cni',
                    'flannel',
                    'felix',
-                   'dikastes']
+                   'dikastes',
+                   'alertManager',
+                   'busybox',
+                   'elasticsearchOperator',
+                   'elasticsearch',
+                   'prometheusOperator',
+                   'prometheusConfigReloader',
+                   'prometheus']
 
 # _config.yml contains latest images, need to exclude newer
 # images from old releases
@@ -60,6 +68,6 @@ def test_release_tag_present():
         else:
             expected_ver = versions[RELEASE_STREAM][0]['components'][image]['version']
 
-        print '[INFO] checking quay.io/%s:%s' % (images['imageNames'][image], expected_ver)
+        print '[INFO] checking %s:%s' % (images['imageNames'][image], expected_ver)
         req = requests.get("https://quay.io/api/v1/repository/%s/tag/%s/images" % (images['imageNames'][image], expected_ver), headers=headers)
         assert req.status_code == 200
