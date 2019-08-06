@@ -1,7 +1,0 @@
-bigheader: Releases
-abstract: Versioning information for Tigera Secure EE components
-path: /releases
-order: 6
-toc:
-- title: Releases
-  path: /releases/
