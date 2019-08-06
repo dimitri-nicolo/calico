@@ -850,12 +850,12 @@ st-checks:
 ## Get the kubeadm-dind-cluster script
 K8ST_VERSION?=v1.12
 DIND_SCR?=dind-cluster-$(K8ST_VERSION).sh
-GCR_IO_PULL_SECRET?=${HOME}/gcr-pull-secret.json
+GCR_IO_PULL_SECRET?=${HOME}/.docker/config.json
 TSEE_TEST_LICENSE?=${HOME}/new-test-customer-license.yaml
 
 .PHONY: k8s-test
 ## Run the k8s tests
-k8s-test:
+k8s-test: cnx-node.tar $(NODE_CONTAINER_CREATED)
 	$(MAKE) k8s-stop
 	$(MAKE) k8s-start
 	$(MAKE) k8s-check-setup

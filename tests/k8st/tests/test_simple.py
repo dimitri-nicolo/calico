@@ -32,10 +32,6 @@ class TestAllRunning(TestBase):
         with DiagsCollector():
             self.check_pod_status('default')
 
-    def test_calico_monitoring_pods_running(self):
-        with DiagsCollector():
-            self.check_pod_status('calico-monitoring')
-
 
 class TestSimplePolicy(TestBase):
     def setUp(self):

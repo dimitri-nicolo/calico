@@ -55,7 +55,7 @@ def start_external_node_with_bgp(name, config):
         "--privileged "
         "--name %s "
         "--network kubeadm-dind-net "
-        "mirantis/kubeadm-dind-cluster:v1.10" % name)
+        "mirantis/kubeadm-dind-cluster:v1.12" % name)
 
     # Check how much space there is inside the container.  We may need
     # to retry this, as it may take a while for the image to download

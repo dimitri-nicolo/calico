@@ -1,0 +1,27 @@
+version: v1.0
+name: node-private
+agent:
+  machine:
+    type: e1-standard-2
+    os_image: ubuntu1804
+blocks:
+  - name: Run k8s-tests
+    task:
+      secrets:
+        # Mount the github SSH secret for pulling private repositories.
+        - name: private-repo
+        # Moutn a secret for pulling images from GCR.
+        - name: tigera-dev-ci-pull-credentials
+      jobs:
+      - name: Download code and run tests
+        commands:
+          # Correct permissions since they are too open by default:
+          - chmod 0600 ~/.keys/*
+          # Add the key to the ssh agent:
+          - ssh-add ~/.keys/*
+          # Login to docker in order to pull images.
+          - docker login --username casey@tigera.io -u _json_key -p "$(cat /home/semaphore/tigera-dev-ci.json)" https://gcr.io
+          # Checkout the code and run the Kubernetes tests.
+          - checkout
+          - make k8s-test
+
