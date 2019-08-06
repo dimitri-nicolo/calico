@@ -1,6 +1,5 @@
 ---
 title: calicoctl label
-redirect_from: latest/reference/calicoctl/commands/label
 canonical_url: ""
 ---
 

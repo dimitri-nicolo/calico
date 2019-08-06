@@ -1,6 +1,5 @@
 ---
 title: calicoq and selectors
-redirect_from: latest/reference/calicoq/selectors
 canonical_url: https://docs.tigera.io/v2.3/reference/calicoq/selectors
 ---
 

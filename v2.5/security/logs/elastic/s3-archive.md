@@ -1,5 +1,6 @@
 ---
 title: Archiving logs to S3
+redirect_from: latest/security/logs/elastic/s3-archive
 canonical_url: https://docs.tigera.io/v2.3/usage/logs/elastic/s3-archive
 ---
 

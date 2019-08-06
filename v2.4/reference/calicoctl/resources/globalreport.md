@@ -1,6 +1,5 @@
 ---
 title: Global Report Resource (GlobalReport)
-redirect_from: latest/reference/calicoctl/resources/globalreport
 ---
 
 A global report resource is a configuration for generating compliance reports. A global report configuration in {{ site.prodname }} lets you:

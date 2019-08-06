@@ -1,5 +1,6 @@
 ---
 title: Overview
+redirect_from: latest/security/metrics/index
 canonical_url: https://docs.tigera.io/v2.3/usage/metrics/
 ---
 

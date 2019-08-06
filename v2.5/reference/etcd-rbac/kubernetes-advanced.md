@@ -1,5 +1,6 @@
 ---
 title: Segmenting etcd on Kubernetes (advanced)
+redirect_from: latest/reference/etcd-rbac/kubernetes-advanced
 canonical_url: 'https://docs.tigera.io/v2.3/reference/advanced/etcd-rbac/kubernetes-advanced'
 ---
 

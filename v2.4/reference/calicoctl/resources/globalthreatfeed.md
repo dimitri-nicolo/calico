@@ -1,6 +1,5 @@
 ---
 title: Global Threat Feed Resource (GlobalThreatFeed)
-redirect_from: latest/reference/calicoctl/resources/globalthreatfeed
 ---
 
 A global threat feed resource (GlobalThreatFeed) represents a feed of threat intelligence used for

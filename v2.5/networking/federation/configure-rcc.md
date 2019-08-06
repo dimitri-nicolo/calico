@@ -1,5 +1,6 @@
 ---
 title: Configuring access to remote clusters
+redirect_from: latest/networking/federation/configure-rcc
 canonical_url: https://docs.tigera.io/v2.3/usage/federation/configure-rcc
 ---
 

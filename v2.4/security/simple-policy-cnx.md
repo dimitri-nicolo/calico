@@ -1,6 +1,5 @@
 ---
 title: Tigera Secure EE for Kubernetes Demo
-redirect_from: latest/security/simple-policy-cnx
 canonical_url: https://docs.tigera.io/v2.3/getting-started/cnx/simple-policy-cnx/
 ---
 

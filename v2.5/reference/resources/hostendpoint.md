@@ -1,5 +1,6 @@
 ---
 title: Host endpoint
+redirect_from: latest/reference/resources/hostendpoint
 canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/resources/hostendpoint
 ---
 

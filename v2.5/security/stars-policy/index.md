@@ -1,5 +1,6 @@
 ---
 title: Stars policy tutorial
+redirect_from: latest/security/stars-policy/index
 canonical_url: 'https://docs.tigera.io/v2.3/getting-started/kubernetes/tutorials/stars-policy'
 ---
 

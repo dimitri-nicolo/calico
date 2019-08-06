@@ -1,5 +1,6 @@
 ---
 title: Generating certificates
+redirect_from: latest/reference/etcd-rbac/certificate-generation
 canonical_url: 'https://docs.tigera.io/v2.3/reference/advanced/etcd-rbac/certificate-generation'
 ---
 

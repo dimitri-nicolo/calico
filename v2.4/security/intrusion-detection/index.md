@@ -1,6 +1,5 @@
 ---
 title: Intrusion detection overview
-redirect_from: latest/security/intrusion-detection/index
 canonical_url: https://docs.tigera.io/v2.3/usage/intrusion-detection
 ---
 

@@ -1,6 +1,5 @@
 ---
 title: Archiving logs to syslog
-redirect_from: latest/security/logs/elastic/syslog
 ---
 
 ## Archiving logs to syslog

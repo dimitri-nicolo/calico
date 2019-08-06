@@ -1,6 +1,5 @@
 ---
 title: Remote Cluster Configuration Resource (RemoteClusterConfiguration)
-redirect_from: latest/reference/calicoctl/resources/remoteclusterconfiguration
 canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/resources/remoteclusterconfiguration
 ---
 

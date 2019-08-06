@@ -1,5 +1,6 @@
 ---
 title: calicoctl label
+redirect_from: latest/reference/calicoctl/label
 ---
 
 This section describes the `calicoctl label` command.

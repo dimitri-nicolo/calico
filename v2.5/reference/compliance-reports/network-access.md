@@ -1,5 +1,6 @@
 ---
 title: Network Access report (network-access)
+redirect_from: latest/reference/compliance-reports/network-access
 ---
 
 To create an Inventory report, create a [`GlobalReport`](../resources/globalreport) with the `reportType`

@@ -1,6 +1,5 @@
 ---
 title: calicoctl node
-redirect_from: latest/reference/calicoctl/commands/node/index
 canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/commands/node/
 ---
 

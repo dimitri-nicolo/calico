@@ -1,6 +1,5 @@
 ---
 title: Upgrading Tigera Secure EE from an earlier release using Helm
-redirect_from: latest/maintenance/helm-upgrade-tsee
 canonical_url: https://docs.tigera.io/v2.4/maintenance/helm-upgrade-tsee
 ---
 
