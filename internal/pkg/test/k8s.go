@@ -6,13 +6,15 @@ import (
 
 	"github.com/pkg/errors"
 	authn "k8s.io/api/authentication/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes/fake"
 	k8stesting "k8s.io/client-go/testing"
 
-	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	calicov3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	apiv3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	calicofake "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset/fake"
 	clientv3 "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 )
@@ -128,17 +130,31 @@ func (mc *managedClusters) Add(id, name string) {
 		name: name,
 	}
 
-	cl := apiv3.NewManagedCluster()
-	cl.ObjectMeta.Name = name
-	cl.ObjectMeta.UID = k8stypes.UID(id)
+	cl := &apiv3.ManagedCluster{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       calicov3.KindManagedCluster,
+			APIVersion: calicov3.GroupVersionCurrent,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+			UID:  k8stypes.UID(id),
+		},
+	}
 
 	mc.watcher.Add(cl)
 }
 
 func (mc *managedClusters) Delete(id string) {
-	cl := apiv3.NewManagedCluster()
-	cl.ObjectMeta.Name = mc.cs[id].name
-	cl.ObjectMeta.UID = k8stypes.UID(id)
+	cl := &apiv3.ManagedCluster{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       calicov3.KindManagedCluster,
+			APIVersion: calicov3.GroupVersionCurrent,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: mc.cs[id].name,
+			UID:  k8stypes.UID(id),
+		},
+	}
 
 	delete(mc.cs, id)
 
