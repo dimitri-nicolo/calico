@@ -2,6 +2,8 @@
 title: Release notes
 redirect_from: latest/release-notes/index
 ---
+<div class="git-hash" id="{{site.data['hash']}}">
+</div>
 
 The following table shows component versioning for {{site.prodname}}  **{{ page.version }}**.
 
