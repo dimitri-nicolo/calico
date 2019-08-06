@@ -10,19 +10,31 @@ import (
 	"github.com/tigera/voltron/pkg/tunnel"
 )
 
-// HTTPSBin is a bin server that listens on the other end of the tunnel. Its parameters can be used to inspect
+// HTTPSBin is a bin server that listens on the other end of the tunnel.
+type HTTPSBin struct {
+	srv *http.Server
+	wg  sync.WaitGroup
+}
+
+// Close stops the HTTPSBin
+func (h *HTTPSBin) Close() {
+	h.srv.Close()
+	h.wg.Wait()
+}
+
+// NewHTTPSBin starts a new HTTPSBin. Its parameters can be used to inspect
 // the requests and make assertion on it. HTTPSBin will return 200 OK for every request
-func HTTPSBin(t *tunnel.Tunnel, xCert tls.Certificate, inspectRequest func(r *http.Request)) {
+func NewHTTPSBin(t *tunnel.Tunnel, xCert tls.Certificate,
+	inspectRequest func(r *http.Request)) *HTTPSBin {
+
 	mux := http.NewServeMux()
-	srv := &http.Server{
-		Handler: mux,
+	bin := &HTTPSBin{
+		srv: &http.Server{
+			Handler: mux,
+		},
 	}
 
-	var reqWg sync.WaitGroup
-	reqWg.Add(1)
-
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		defer reqWg.Done()
 		defer ginkgo.GinkgoRecover()
 		log.Infof("Received request %v", r)
 		inspectRequest(r)
@@ -33,14 +45,11 @@ func HTTPSBin(t *tunnel.Tunnel, xCert tls.Certificate, inspectRequest func(r *ht
 		NextProtos:   []string{"h2"},
 	})
 
-	var wg sync.WaitGroup
-
-	wg.Add(1)
+	bin.wg.Add(1)
 	go func() {
-		defer wg.Done()
-		_ = srv.Serve(lisTLS)
+		defer bin.wg.Done()
+		_ = bin.srv.Serve(lisTLS)
 	}()
 
-	reqWg.Wait()
-	wg.Wait()
+	return bin
 }

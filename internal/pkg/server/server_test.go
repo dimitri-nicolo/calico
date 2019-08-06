@@ -607,14 +607,12 @@ var _ = Describe("Server authenticates requests", func() {
 		var wg sync.WaitGroup
 
 		wg.Add(1)
-		go func() {
+		bin := test.NewHTTPSBin(tun, xCert, func(r *http.Request) {
 			defer wg.Done()
-			test.HTTPSBin(tun, xCert, func(r *http.Request) {
-				Expect(r.Header.Get("Impersonate-User")).To(Equal(test.Jane))
-				Expect(r.Header.Get("Impersonate-Group")).To(Equal(test.Developers))
-				Expect(r.Header.Get("Authorization")).NotTo(Equal(test.JaneBearerToken))
-			})
-		}()
+			Expect(r.Header.Get("Impersonate-User")).To(Equal(test.Jane))
+			Expect(r.Header.Get("Impersonate-Group")).To(Equal(test.Developers))
+			Expect(r.Header.Get("Authorization")).NotTo(Equal(test.JaneBearerToken))
+		})
 
 		clnt := configureHTTPSClient()
 		req := requestToClusterA(lisHTTPS.Addr().String())
@@ -622,22 +620,15 @@ var _ = Describe("Server authenticates requests", func() {
 		resp, err := clnt.Do(req)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(200))
+
+		// would timeout the test if the reply is not from the serve and the test were not executed
+		wg.Wait()
+
+		bin.Close()
 	})
+
 	It("should not authenticate Bob", func() {
 		k8sAPI.AddBobIdentity()
-
-		var wg sync.WaitGroup
-
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			test.HTTPSBin(tun, xCert, func(r *http.Request) {
-				Expect(r.Header.Get("Impersonate-User")).To(Equal(""))
-				Expect(r.Header.Get("Impersonate-Group")).To(Equal(""))
-				Expect(r.Header.Get("Authorization")).To(Equal(""))
-			})
-		}()
-
 		clnt := configureHTTPSClient()
 		req := requestToClusterA(lisHTTPS.Addr().String())
 		test.AddBobToken(req)
@@ -645,19 +636,8 @@ var _ = Describe("Server authenticates requests", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(401))
 	})
+
 	It("should return 401 on missing tokens", func() {
-		var wg sync.WaitGroup
-
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			test.HTTPSBin(tun, xCert, func(r *http.Request) {
-				Expect(r.Header.Get("Impersonate-User")).To(Equal(""))
-				Expect(r.Header.Get("Impersonate-Group")).To(Equal(""))
-				Expect(r.Header.Get("Authorization")).To(Equal(""))
-			})
-		}()
-
 		clnt := configureHTTPSClient()
 		req := requestToClusterA(lisHTTPS.Addr().String())
 		resp, err := clnt.Do(req)
