@@ -2,7 +2,7 @@ CALICO_DIR=$(shell git rev-parse --show-toplevel)
 GIT_HASH=$(shell git rev-parse --short=9 HEAD)
 VERSIONS_FILE?=$(CALICO_DIR)/_data/versions.yml
 IMAGES_FILE=
-JEKYLL_VERSION=pages
+JEKYLL_VERSION=latest
 HP_VERSION=v0.2
 DEV?=false
 CONFIG=--config _config.yml
@@ -217,6 +217,7 @@ test: docs_test.created
         -v $(PWD):/code \
         -e RELEASE_STREAM=$(RELEASE_STREAM) \
 	-e QUAY_API_TOKEN=$(QUAY_API_TOKEN) \
+	-e DOCS_URL=$(DOCS_URL) \
 	-e GIT_HASH=$(GIT_HASH) \
 	$(DOCS_TEST_CONTAINER) sh -c \
 	"nosetests . $(EXCLUDE_PARAMS) -v --nocapture --with-xunit \
