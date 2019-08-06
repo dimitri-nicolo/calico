@@ -16,7 +16,7 @@ with open('%s/../_data/versions.yml' % PATH) as f:
 
 
 def test_updated_docs_deployed():
-    req = requests.get("%s/master/releases" % DOCS_URL)
+    req = requests.get("%s/master/release-notes" % DOCS_URL)
     assert req.status_code == 200
 
     git_hash = BeautifulSoup(req.content, features="html.parser").find("div", {"class":"git-hash"})
@@ -31,19 +31,9 @@ def test_latest_redirects_correctly():
     assert redirect['href'] == "%s/%s/" % (DOCS_URL, RELEASE_STREAM)
 
 
-def test_latest_releases_redirects_correctly():
-    req = requests.get("%s/latest/releases" % DOCS_URL)
+def test_latest_release_notes_redirects_correctly():
+    req = requests.get("%s/latest/release-notes" % DOCS_URL)
     assert req.status_code == 200
 
     redirect = BeautifulSoup(req.content, features="html.parser").find('a', href=True)
-    assert redirect['href'] == "%s/%s/releases/" % (DOCS_URL, RELEASE_STREAM)
-
-
-def test_release_notes_updated():
-    req = requests.get("%s/%s/releases" % (DOCS_URL, RELEASE_STREAM))
-    assert req.status_code == 200
-
-    headings_txt = []
-    headings = BeautifulSoup(req.content, features="html.parser").find_all('h2')
-    [headings_txt.append(x.text) for x in headings]
-    assert "Tigera Secure Enterprise Edition %s" % RELEASE_VERSION in headings_txt
+    assert redirect['href'] == "%s/%s/release-notes/" % (DOCS_URL, RELEASE_STREAM)
