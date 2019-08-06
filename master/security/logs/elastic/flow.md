@@ -40,3 +40,5 @@ This information should assist you in constructing queries.
 | `source_port`         | long              | The source port. |
 | `source_type`         | keyword           | Source endpoint type:wep: podnet: not a pod |
 | `source_labels`       | array of keywords | Labels applied to the source pod. A hyphen indicates aggregation. |
+| `original_source_ips` | array of ips      | List of external IP addresses collected from requests made to the cluster through an ingress resource. This field is only available if capturing external IP addresses is configured. See the [documentation]({{site.url}}/{{page.version}}/security/logs/elastic/ingress) for more details. |
+| `num_original_source_ips` | long          | Number of unique external IP addresses collected from requests made to the cluster through an ingress resource. This count includes the IP addresses included in the `original_source_ips` field. This field is only available if capturing external IP addresses is configured. See the [documentation]({{site.url}}/{{page.version}}/security/logs/elastic/ingress) for more details. |
