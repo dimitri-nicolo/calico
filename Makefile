@@ -217,6 +217,7 @@ test: docs_test.created
         -v $(PWD):/code \
         -e RELEASE_STREAM=$(RELEASE_STREAM) \
 	-e QUAY_API_TOKEN=$(QUAY_API_TOKEN) \
+	-e DOCS_URL=$(DOCS_URL) \
 	-e GIT_HASH=$(GIT_HASH) \
 	$(DOCS_TEST_CONTAINER) sh -c \
 	"nosetests . $(EXCLUDE_PARAMS) -v --nocapture --with-xunit \
