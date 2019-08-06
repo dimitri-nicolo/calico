@@ -363,7 +363,12 @@ func (cs *clusters) watchK8s(ctx context.Context, k8s K8sInterface, syncC chan<-
 				return errors.Errorf("watcher stopped unexpectedly")
 			}
 
-			mc := r.Object.(*apiv3.ManagedCluster)
+			mc, ok := r.Object.(*apiv3.ManagedCluster)
+			if !ok {
+				log.Errorf("Unexpected object type %T value %+v", r.Object, r.Object)
+				continue
+			}
+
 			jc := &jclust.Cluster{
 				ID:          string(mc.ObjectMeta.UID),
 				DisplayName: mc.ObjectMeta.Name,
