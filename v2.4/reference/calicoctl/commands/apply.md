@@ -1,6 +1,5 @@
 ---
 title: calicoctl apply
-redirect_from: latest/reference/calicoctl/commands/apply
 canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/commands/apply
 ---
 

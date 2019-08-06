@@ -1,5 +1,6 @@
 ---
 title: Deploying Tigera Secure EE on Azure
+redirect_from: latest/reference/public-cloud/azure
 canonical_url: https://docs.tigera.io/v2.3/reference/public-cloud/azure
 ---
 

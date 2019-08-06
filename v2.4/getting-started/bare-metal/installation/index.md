@@ -1,6 +1,5 @@
 ---
 title: Installing Tigera Secure EE on host endpoints
-redirect_from: latest/getting-started/bare-metal/installation/index
 canonical_url: https://docs.tigera.io/v2.3/getting-started/bare-metal/installation/
 ---
 

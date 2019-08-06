@@ -1,5 +1,6 @@
 ---
 title: calicoq
+redirect_from: latest/reference/calicoq/index
 canonical_url: https://docs.tigera.io/v2.3/reference/calicoq/
 ---
 

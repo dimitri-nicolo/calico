@@ -1,5 +1,6 @@
 ---
 title: Container install
+redirect_from: latest/getting-started/bare-metal/installation/container
 canonical_url: https://docs.tigera.io/v2.3/getting-started/bare-metal/installation/container
 ---
 

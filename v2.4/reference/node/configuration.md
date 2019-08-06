@@ -1,6 +1,5 @@
 ---
 title: Configuring cnx-node
-redirect_from: latest/reference/node/configuration
 canonical_url: https://docs.tigera.io/v2.3/reference/node/configuration
 ---
 

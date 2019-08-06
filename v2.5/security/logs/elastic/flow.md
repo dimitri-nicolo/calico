@@ -1,5 +1,6 @@
 ---
 title: Flow logs
+redirect_from: latest/security/logs/elastic/flow
 canonical_url: https://docs.tigera.io/v2.3/usage/logs/elastic/flow
 ---
 

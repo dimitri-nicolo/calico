@@ -1,6 +1,5 @@
 ---
 title: calicoq endpoint
-redirect_from: latest/reference/calicoq/endpoint
 canonical_url: https://docs.tigera.io/v2.3/reference/calicoq/endpoint
 ---
 

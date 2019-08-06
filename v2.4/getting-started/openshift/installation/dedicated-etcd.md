@@ -1,6 +1,5 @@
 ---
 title: Installing Tigera Secure EE on OpenShift with a dedicated etcd cluster
-redirect_from: latest/getting-started/openshift/installation/dedicated-etcd
 canonical_url: https://docs.tigera.io/v2.3/getting-started/openshift/installation/dedicated-etcd
 ---
 

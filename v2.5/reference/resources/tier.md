@@ -1,5 +1,6 @@
 ---
 title: Tier
+redirect_from: latest/reference/resources/tier
 canonical_url: https://docs.tigera.io/v2.3/reference/calicoctl/resources/tier
 no_canonical: true
 ---

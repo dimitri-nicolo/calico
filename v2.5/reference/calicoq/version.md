@@ -1,5 +1,6 @@
 ---
 title: calicoq version
+redirect_from: latest/reference/calicoq/version
 canonical_url: https://docs.tigera.io/v2.3/reference/calicoq/version
 ---
 

@@ -1,5 +1,6 @@
 ---
 title: Managing the tiers associated with security group integration
+redirect_from: latest/security/aws-security-group-integration/tier-management
 canonical_url: https://docs.tigera.io/v2.3/usage/aws-security-group-integration/tier-management
 ---
 

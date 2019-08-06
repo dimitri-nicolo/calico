@@ -1,6 +1,5 @@
 ---
 title: calicoq eval
-redirect_from: latest/reference/calicoq/eval
 canonical_url: https://docs.tigera.io/v2.3/reference/calicoq/eval
 ---
 

@@ -1,6 +1,5 @@
 ---
 title: 'The Tigera Secure EE Data Path: IP Routing and iptables'
-redirect_from: latest/reference/architecture/data-path
 canonical_url: https://docs.tigera.io/v2.3/reference/architecture/data-path
 ---
 

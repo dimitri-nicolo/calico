@@ -1,6 +1,5 @@
 ---
 title: Calico key and path prefixes
-redirect_from: latest/reference/etcd-rbac/calico-etcdv3-paths
 canonical_url: 'https://docs.tigera.io/v2.3/reference/advanced/etcd-rbac/calico-etcdv3-paths'
 ---
 

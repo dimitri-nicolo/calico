@@ -1,5 +1,6 @@
 ---
 title: Creating kubeconfig files
+redirect_from: latest/networking/federation/kubeconfig
 canonical_url: https://docs.tigera.io/v2.3/usage/federation/kubeconfig
 ---
 
