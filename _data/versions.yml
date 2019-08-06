@@ -1355,8 +1355,6 @@ master:
 v2.5:
 - title: v2.5.0
   helmRelease: 0
-  note: |
-    05 August 2019
   components:
     cnx-manager:
       version: v2.5.0
