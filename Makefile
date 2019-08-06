@@ -78,10 +78,21 @@ TOOLING_BUILD?=calico/go-build:v0.20
 
 
 # Get version from git - used for releases.
-GIT_VERSION?=$(shell git describe --tags --dirty --always)
+INGRESS_GIT_VERSION?=$(shell git describe --tags --dirty --always)
+INGRESS_BUILD_DATE?=$(shell date -u +'%FT%T%z')
+INGRESS_GIT_REVISION?=$(shell git rev-parse --short HEAD)
+INGRESS_GIT_DESCRIPTION?=$(shell git describe --tags)
+
 ifeq ($(LOCAL_BUILD),true)
-	GIT_VERSION = $(shell git describe --tags --dirty --always)-dev-build
+	INGRESS_GIT_VERSION = $(shell git describe --tags --dirty --always)-dev-build
 endif
+
+VERSION_FLAGS=-X main.VERSION=$(INGRESS_GIT_VERSION) \
+	-X main.BUILD_DATE=$(INGRESS_BUILD_DATE) \
+	-X main.GIT_DESCRIPTION=$(INGRESS_GIT_DESCRIPTION) \
+	-X main.GIT_REVISION=$(INGRESS_GIT_REVISION)
+BUILD_LDFLAGS=-ldflags "$(VERSION_FLAGS)"
+RELEASE_LDFLAGS=-ldflags "$(VERSION_FLAGS) -s -w"
 
 # Figure out the users UID/GID.  These are needed to run docker containers
 # as the current user and ensure that files built inside containers are
@@ -188,6 +199,11 @@ bin/ingress-collector-arm64: ARCH=arm64
 bin/ingress-collector-ppc64le: ARCH=ppc64le
 bin/ingress-collector-s390x: ARCH=s390x
 bin/ingress-collector-%: vendor proto $(SRC_FILES)
+ifndef VERSION
+	$(eval LDFLAGS:=$(RELEASE_LDFLAGS))
+else
+	$(eval LDFLAGS:=$(BUILD_LD_FLAGS))
+endif
 	mkdir -p bin
 	-mkdir -p .go-pkg-cache
 	docker run --rm -ti \
@@ -199,7 +215,7 @@ bin/ingress-collector-%: vendor proto $(SRC_FILES)
 	  -e GOCACHE=/go-cache \
 	  -w /go/src/$(PACKAGE_NAME) \
 	  $(EXTRA_DOCKER_ARGS) \
-	  $(CALICO_BUILD) go build -ldflags "-X main.VERSION=$(GIT_VERSION) -s -w" -v -o bin/ingress-collector-$(ARCH) ./cmd/ingress-collector
+	  $(CALICO_BUILD) go build $(LDFLAGS) -v -o bin/ingress-collector-$(ARCH) ./cmd/ingress-collector
 
 # We use gogofast for protobuf compilation.  Regular gogo is incompatible with
 # gRPC, since gRPC uses golang/protobuf for marshalling/unmarshalling in that
@@ -468,8 +484,8 @@ release-tag: release-prereqs release-notes
 ## Produces a clean build of release artifacts at the specified version.
 release-build: release-prereqs clean
 # Check that the correct code is checked out.
-ifneq ($(VERSION), $(GIT_VERSION))
-	$(error Attempt to build $(VERSION) from $(GIT_VERSION))
+ifneq ($(VERSION), $(INGRESS_GIT_VERSION))
+	$(error Attempt to build $(VERSION) from $(INGRESS_GIT_VERSION))
 endif
 
 	$(MAKE) image-all
