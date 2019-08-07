@@ -8,7 +8,7 @@ Ensure that you have the following:
 
 {%- if include.method == "full" %}
 
-- Tiller is running, and your local helm CLI tool is configured to speak to it.
+- Tiller **v2.14+** is running, and your local helm CLI tool is configured to speak to it.
 
 {% endif %}
 
@@ -223,24 +223,13 @@ manager:
 
 ### Install {{ site.prodname }}
 
-0. Pre-install the CRDs.
+Install the tigera-secure-ee helm chart with custom resource provisioning disabled:
 
-   Due to [a bug in helm](https://github.com/helm/helm/issues/4925), it is possible for the CRDs that are created by this chart to fail to get fully deployed before Helm attempts to create resources that require them. This affects all versions of Helm with a potential fix pending. In order to work around this issue when installing the chart you will need to make sure all CRDs exist in the cluster first:
-
-   ```
-   kubectl apply -f {{ site.url }}/{{ page.version }}/getting-started/kubernetes/installation/helm/tigera-secure-ee/operator-crds.yaml
-   ```
-
-   >[Click to view this manifest directly]({{ site.baseurl }}/{{ page.version }}/getting-started/kubernetes/installation/helm/tigera-secure-ee/operator-crds.yaml)
-
-1. Install the tigera-secure-ee helm chart with custom resource provisioning disabled:
-
-   ```
-   helm install ./tigera-secure-ee-{% include chart_version_name %}.tgz \
-     --namespace calico-monitoring \
-     --set createCustomResources=false \
-     --set-file imagePullSecrets.cnx-pull-secret=./config.json
-   ```
+```
+helm install ./tigera-secure-ee-{% include chart_version_name %}.tgz \
+  --namespace calico-monitoring \
+  --set-file imagePullSecrets.cnx-pull-secret=./config.json
+```
 
    >Note: This version of the Tigera Secure EE Helm chart **must** be installed with `--namespace calico-monitoring`.
 
@@ -280,3 +269,21 @@ kubectl port-forward -n calico-monitoring svc/cnx-manager 9443 & \
 ```
 
 Sign in by navigating to https://localhost:9443 and login.
+
+### FAQ - Helm v2.13
+
+Due to [a bug in helm v2.13 and below](https://github.com/helm/helm/issues/4925), it is possible for the CRDs that are created by this chart to fail to register before Helm attempts to create resources that require them, producing the following error:
+
+```
+Error: validation failed: [unable to recognize "": no matches for kind "Alertmanager" in version "monitoring.coreos.com/v1", unable to recognize "": no matches for kind "ElasticsearchCluster" in version "enterprises.upmc.com/v1", unable to recognize "": no matches for kind "Prometheus" in version "monitoring.coreos.com/v1", unable to recognize "": no matches for kind "PrometheusRule" in version "monitoring.coreos.com/v1", unable to recognize "": no matches for kind "ServiceMonitor" in version "monitoring.coreos.com/v1"]
+```
+
+To remedy this, either upgrade helm to v2.14+, or pre-install the CRDs:
+
+```
+kubectl apply -f {{ site.url }}/{{ page.version }}/getting-started/kubernetes/installation/helm/tigera-secure-ee/operator-crds.yaml
+```
+
+Then install with `createCustomResources=false`.
+
+>[Click to view this manifest directly]({{ site.baseurl }}/{{ page.version }}/getting-started/kubernetes/installation/helm/tigera-secure-ee/operator-crds.yaml)
