@@ -14,6 +14,7 @@ We test {{site.prodname}} {{page.version}} against the following Kubernetes vers
 - v1.12
 - v1.13
 - v1.14
+- v1.15
 
 Helm installation requires Kubernetes v1.12 or later.
 
