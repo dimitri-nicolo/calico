@@ -110,6 +110,15 @@ func (d *dnsLogAggregator) Get() []*DNSLog {
 			d.numUnloggedUpdates,
 			d.perNodeLimit,
 		)
+		// Emit an Elastic log to alert about the unlogged updates.  This log has no content
+		// except for the time period and the number of updates that could not be fully
+		// logged.
+		excessLog := &DNSLog{
+			StartTime: d.aggregationStartTime,
+			EndTime:   aggregationEndTime,
+			Count:     uint(d.numUnloggedUpdates),
+		}
+		dnsLogs = append(dnsLogs, excessLog)
 	}
 	d.dnsStore = make(map[DNSMeta]DNSSpec)
 	d.aggregationStartTime = aggregationEndTime
