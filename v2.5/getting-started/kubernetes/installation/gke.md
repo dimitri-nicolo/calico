@@ -8,6 +8,10 @@ canonical_url: https://docs.tigera.io/v2.3/getting-started/kubernetes/installati
 
 This guide covers installing {{site.prodname}} for policy enforcement on Google GKE.
 
+> **Note**: GKE support on {{site.prodname}} is currently in technical preview
+   and is suitable for non-production clusters only.
+{: .alert .alert-info}
+
 ## Before you begin
 
 - Create a GKE cluster with the following settings:
