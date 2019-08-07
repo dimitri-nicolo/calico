@@ -15,6 +15,7 @@
 package v3_test
 
 import (
+	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	k8sv1 "k8s.io/api/core/v1"
@@ -2780,6 +2781,21 @@ func init() {
 			false,
 		),
 	)
+
+	Describe("particular error string checking", func() {
+		It("should not say wildname in the message for domain name validation", func() {
+			err := v3.Validate(api.GlobalNetworkSet{
+				ObjectMeta: v1.ObjectMeta{
+					Name: "test",
+				},
+				Spec: api.GlobalNetworkSetSpec{
+					AllowedEgressDomains: []string{"*example.com"},
+				},
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).NotTo(ContainSubstring("wildname"))
+		})
+	})
 }
 
 func strPtr(s string) *string {
