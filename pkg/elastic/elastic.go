@@ -109,6 +109,7 @@ func New(
 		if c, err = elastic.NewClient(options...); err == nil {
 			return &client{c, indexSuffix}, nil
 		}
+		log.WithError(err).WithField("attempts", retries-i).Warning("Elastic connect failed, retrying")
 		time.Sleep(retryInterval)
 	}
 	log.Errorf("Unable to connect to Elastic after %d retries", retries)
