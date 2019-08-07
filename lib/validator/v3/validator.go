@@ -236,6 +236,12 @@ func extractReason(e validator.FieldError) string {
 	if strings.HasPrefix(e.Tag(), reasonString) {
 		return strings.TrimPrefix(e.Tag(), reasonString)
 	}
+	switch e.Tag() {
+	case "wildname":
+		return fmt.Sprintf("%s must be a domain name, optionally with one wildcard at the end (x.y.*), at the beginning (*.x.y), or in the middle (x.*.y)",
+			e.Field(),
+		)
+	}
 	return fmt.Sprintf("%sfailed to validate Field: %s because of Tag: %s ",
 		reasonString,
 		e.Field(),
