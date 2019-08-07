@@ -7,7 +7,8 @@ canonical_url: https://docs.tigera.io/master/getting-started/kubernetes/installa
 
 This guide covers installing {{site.prodname}} for policy enforcement on Azure AKS.
 
-> **Note**: {{site.prodname}} support on Azure AKS is currently in technical preview only.
+> **Note**: AKS support on {{site.prodname}} is currently in technical preview
+   and is suitable for non-production clusters only.
 {: .alert .alert-info}
 
 ## Before you begin
