@@ -27,6 +27,7 @@ type config struct {
 	ProxyTargets      bootstrap.Targets `required:"true" split_words:"true"`
 	KeepAliveEnable   bool              `default:"true" split_words:"true"`
 	KeepAliveInterval int               `default:"100" split_words:"true"`
+	PProf             bool              `default:"false"`
 }
 
 func main() {
@@ -42,6 +43,13 @@ func main() {
 
 	bootstrap.ConfigureLogging(cfg.LogLevel)
 	log.Infof("Starting %s with configuration %+v", EnvConfigPrefix, cfg)
+
+	if cfg.PProf {
+		go func() {
+			err := bootstrap.StartPprof()
+			log.Fatalf("PProf exited: %s", err)
+		}()
+	}
 
 	cert := fmt.Sprintf("%s/guardian.crt", cfg.CertPath)
 	key := fmt.Sprintf("%s/guardian.key", cfg.CertPath)

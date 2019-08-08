@@ -36,6 +36,7 @@ type config struct {
 	KeepAliveInterval int    `default:"100" split_words:"true"`
 	DefaultK8sProxy   bool   `default:"true" split_words:"true"`
 	DefaultK8sDest    string `default:"https://kubernetes.default" split_words:"true"`
+	PProf             bool   `default:"false"`
 }
 
 func main() {
@@ -46,6 +47,13 @@ func main() {
 
 	bootstrap.ConfigureLogging(cfg.LogLevel)
 	log.Infof("Starting %s with configuration %+v", EnvConfigPrefix, cfg)
+
+	if cfg.PProf {
+		go func() {
+			err := bootstrap.StartPprof()
+			log.Fatalf("PProf exited: %s", err)
+		}()
+	}
 
 	cert := fmt.Sprintf("%s/voltron.crt", cfg.CertPath)
 	key := fmt.Sprintf("%s/voltron.key", cfg.CertPath)

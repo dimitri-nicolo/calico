@@ -29,11 +29,4 @@ func ConfigureLogging(logLevel string) {
 	}
 
 	logrus.SetLevel(level)
-
-	if logrus.IsLevelEnabled(logrus.DebugLevel) || logrus.IsLevelEnabled(logrus.TraceLevel) {
-		go func() {
-			err := StartPprof()
-			logrus.Fatalf("PProf exited: %s", err)
-		}()
-	}
 }
