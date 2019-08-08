@@ -473,13 +473,13 @@ func (c *client) SearchCompositeAggregations(
 				errs <- TimedOutError(fmt.Sprintf("timed out querying %s", query.DocumentIndex))
 			}
 
-			// Extract the buckets from the search results.
+			// Extract the buckets from the search results. If there are no results the buckets item will not be
+			// present.
 			//TODO(rlb): If this processing proves to be too slow we may need to use a streaming json unserializer and
 			//           hook directly into the HTTP client.
 			rawResults, ok := searchResult.Aggregations.Composite(query.Name)
 			if !ok {
-				log.Errorf("Error fetching composite results for %s", query.DocumentIndex)
-				errs <- fmt.Errorf("error fetching composite results for %s: %s missing from response", query.DocumentIndex, query.Name)
+				log.Infof("No results for composite query of %s", query.DocumentIndex)
 				return
 			}
 
