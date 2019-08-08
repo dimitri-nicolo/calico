@@ -352,7 +352,7 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 	if c == nil {
 		msg := fmt.Sprintf("Unknown target cluster %q", clusterID)
 		log.Errorf("clusterMuxer: %s", msg)
-		http.Error(w, msg, 400)
+		writeHTTPError(w, clusterNotFoundError(clusterID))
 		return
 	}
 

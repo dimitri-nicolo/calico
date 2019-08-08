@@ -282,7 +282,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 		It("should not be able to proxy to a cluster without a tunnel", func() {
 			k8sAPI.AddCluster("clusterA", "A")
 			Expect(<-watchSync).NotTo(HaveOccurred())
-			clientHelloReq(lis.Addr().String(), "clusterA", 503)
+			clientHelloReq(lis.Addr().String(), "clusterA", 400)
 		})
 
 		It("Should proxy to default if no header", func() {

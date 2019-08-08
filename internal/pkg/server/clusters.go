@@ -429,7 +429,7 @@ func (c *cluster) DialTLS2(network, addr string, cfg *tls.Config) (net.Conn, err
 func (c *cluster) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if c.proxy == nil {
 		log.Debugf("Cannot proxy to cluster %s, no tunnel", c.DisplayName)
-		http.Error(w, fmt.Sprintf("Cluster %s unreachable, no connection", c.DisplayName), 503)
+		writeHTTPError(w, clusterNotConnectedError(c.DisplayName))
 		return
 	}
 
