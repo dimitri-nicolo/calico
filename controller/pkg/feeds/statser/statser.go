@@ -21,6 +21,7 @@ const (
 	GarbageCollectionFailed    = "GarbageCollectionFailed"
 	PullFailed                 = "PullFailed"
 	SearchFailed               = "SearchFailed"
+	MaxErrors                  = 10
 )
 
 type Statser interface {
@@ -34,10 +35,15 @@ type Statser interface {
 }
 
 func NewStatser(name string, globalThreatFeedClient v32.GlobalThreatFeedInterface) Statser {
+	l, err := NewErrorConditions(MaxErrors)
+	if err != nil {
+		panic(err)
+	}
+
 	return &statser{
 		name:                   name,
 		globalThreatFeedClient: globalThreatFeedClient,
-		errorConditions:        make(map[string][]v3.ErrorCondition),
+		errorConditions:        l,
 	}
 }
 
@@ -46,7 +52,7 @@ type statser struct {
 	globalThreatFeedClient v32.GlobalThreatFeedInterface
 	lastSuccessfulSync     time.Time
 	lastSuccessfulSearch   time.Time
-	errorConditions        map[string][]v3.ErrorCondition
+	errorConditions        *ErrorConditions
 	lock                   sync.RWMutex
 	once                   sync.Once
 	cancel                 context.CancelFunc
@@ -81,11 +87,7 @@ func (s *statser) status() v3.GlobalThreatFeedStatus {
 	res := v3.GlobalThreatFeedStatus{
 		LastSuccessfulSync:   v1.Time{Time: s.lastSuccessfulSync},
 		LastSuccessfulSearch: v1.Time{Time: s.lastSuccessfulSearch},
-		ErrorConditions:      make([]v3.ErrorCondition, 0),
-	}
-
-	for _, conditions := range s.errorConditions {
-		res.ErrorConditions = append(res.ErrorConditions, conditions...)
+		ErrorConditions:      s.errorConditions.Errors(),
 	}
 
 	return res
@@ -108,14 +110,14 @@ func (s *statser) SuccessfulSearch() {
 func (s *statser) Error(t string, err error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	s.errorConditions[t] = append(s.errorConditions[t], v3.ErrorCondition{Type: t, Message: err.Error()})
+	s.errorConditions.Add(t, err)
 	s.enqueue(s.status())
 }
 
 func (s *statser) ClearError(t string) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	delete(s.errorConditions, t)
+	s.errorConditions.Clear(t)
 	s.enqueue(s.status())
 }
 

@@ -88,8 +88,7 @@ func TestStatser_Error_ClearError(t *testing.T) {
 	g.Consistently(func() time.Time { return gtf.GlobalThreatFeed.Status.LastSuccessfulSync.Time }).Should(Equal(time.Time{}))
 	g.Consistently(func() time.Time { return gtf.GlobalThreatFeed.Status.LastSuccessfulSearch.Time }).Should(Equal(time.Time{}))
 
-	g.Expect(st.errorConditions).Should(HaveLen(1))
-	g.Expect(st.errorConditions[ElasticSyncFailed]).Should(ConsistOf(v32.ErrorCondition{ElasticSyncFailed, errStr1}))
+	g.Expect(st.errorConditions.TypedErrors(ElasticSyncFailed)).Should(ConsistOf(v32.ErrorCondition{ElasticSyncFailed, errStr1}))
 	g.Eventually(func() []v32.ErrorCondition { return gtf.GlobalThreatFeed.Status.ErrorConditions }).Should(HaveLen(1))
 
 	errStr2 := "test2"
@@ -100,8 +99,7 @@ func TestStatser_Error_ClearError(t *testing.T) {
 	g.Consistently(func() time.Time { return gtf.GlobalThreatFeed.Status.LastSuccessfulSync.Time }).Should(Equal(time.Time{}))
 	g.Consistently(func() time.Time { return gtf.GlobalThreatFeed.Status.LastSuccessfulSearch.Time }).Should(Equal(time.Time{}))
 
-	g.Expect(st.errorConditions).Should(HaveLen(1))
-	g.Expect(st.errorConditions[ElasticSyncFailed]).Should(ConsistOf(
+	g.Expect(st.errorConditions.TypedErrors(ElasticSyncFailed)).Should(ConsistOf(
 		v32.ErrorCondition{ElasticSyncFailed, errStr1},
 		v32.ErrorCondition{ElasticSyncFailed, errStr2},
 	))
@@ -110,25 +108,23 @@ func TestStatser_Error_ClearError(t *testing.T) {
 	errStr3 := "test3"
 	st.Error(PullFailed, errors.New(errStr3))
 
-	g.Expect(st.errorConditions).Should(HaveLen(2))
-	g.Expect(st.errorConditions[ElasticSyncFailed]).Should(ConsistOf(
+	g.Expect(st.errorConditions.TypedErrors(ElasticSyncFailed)).Should(ConsistOf(
 		v32.ErrorCondition{ElasticSyncFailed, errStr1},
 		v32.ErrorCondition{ElasticSyncFailed, errStr2},
 	))
-	g.Expect(st.errorConditions[PullFailed]).Should(ConsistOf(
+	g.Expect(st.errorConditions.TypedErrors(PullFailed)).Should(ConsistOf(
 		v32.ErrorCondition{PullFailed, errStr3},
 	))
 	g.Eventually(func() []v32.ErrorCondition { return gtf.GlobalThreatFeed.Status.ErrorConditions }).Should(HaveLen(3))
 
 	st.ClearError(ElasticSyncFailed)
-	g.Expect(st.errorConditions).Should(HaveLen(1))
-	g.Expect(st.errorConditions[PullFailed]).Should(ConsistOf(
+	g.Expect(st.errorConditions.TypedErrors(PullFailed)).Should(ConsistOf(
 		v32.ErrorCondition{PullFailed, errStr3},
 	))
 	g.Eventually(func() []v32.ErrorCondition { return gtf.GlobalThreatFeed.Status.ErrorConditions }).Should(HaveLen(1))
 
 	st.ClearError(PullFailed)
-	g.Expect(st.errorConditions).Should(HaveLen(0))
+	g.Expect(st.errorConditions.Errors()).Should(HaveLen(0))
 	g.Eventually(func() []v32.ErrorCondition { return gtf.GlobalThreatFeed.Status.ErrorConditions }).Should(HaveLen(0))
 }
 
@@ -153,7 +149,7 @@ func TestStatser_Status(t *testing.T) {
 	status := st.Status()
 	g.Expect(st.lastSuccessfulSync).Should(Equal(time.Time{}), "lastSuccessfulSync was not modified")
 	g.Expect(st.lastSuccessfulSearch).Should(Equal(time.Time{}), "lastSuccessfulSearch was not modified")
-	g.Expect(st.errorConditions).Should(HaveLen(0), "No errors were created")
+	g.Expect(st.errorConditions.Errors()).Should(HaveLen(0), "No errors were created")
 
 	g.Expect(status.LastSuccessfulSync.Time).Should(Equal(time.Time{}))
 	g.Expect(status.LastSuccessfulSearch.Time).Should(Equal(time.Time{}))
@@ -164,16 +160,9 @@ func TestStatser_Status(t *testing.T) {
 	// Try again with some members set
 	st.lastSuccessfulSearch = time.Now().Add(-time.Hour)
 	st.lastSuccessfulSync = time.Now()
-	st.errorConditions = map[string][]v32.ErrorCondition{
-		ElasticSyncFailed: {
-			{Type: ElasticSyncFailed, Message: "test1"},
-		},
-		GarbageCollectionFailed: {},
-		PullFailed: {
-			{PullFailed, "test2"},
-			{PullFailed, "test3"},
-		},
-	}
+	st.errorConditions.Add(ElasticSyncFailed, errors.New("test1"))
+	st.errorConditions.Add(PullFailed, errors.New("test2"))
+	st.errorConditions.Add(PullFailed, errors.New("test3"))
 
 	status = st.Status()
 	g.Expect(status.LastSuccessfulSync.Time).Should(BeTemporally("==", st.lastSuccessfulSync))
@@ -217,11 +206,11 @@ func TestStatser_updateStatus(t *testing.T) {
 
 	st.lastSuccessfulSync = time.Now().Add(-time.Hour)
 	st.lastSuccessfulSearch = time.Now()
-	st.errorConditions[ElasticSyncFailed] = []v32.ErrorCondition{{ElasticSyncFailed, "test error"}}
+	st.errorConditions.Add(ElasticSyncFailed, errors.New("test error"))
 
 	st.updateStatus(st.status())
 
 	g.Expect(gtf.GlobalThreatFeed.Status.LastSuccessfulSync.Time).Should(BeTemporally("==", st.lastSuccessfulSync))
 	g.Expect(gtf.GlobalThreatFeed.Status.LastSuccessfulSearch.Time).Should(BeTemporally("==", st.lastSuccessfulSearch))
-	g.Expect(gtf.GlobalThreatFeed.Status.ErrorConditions).Should(ConsistOf(st.errorConditions[ElasticSyncFailed]))
+	g.Expect(gtf.GlobalThreatFeed.Status.ErrorConditions).Should(ConsistOf(st.errorConditions.TypedErrors(ElasticSyncFailed)))
 }
