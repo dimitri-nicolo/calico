@@ -148,6 +148,9 @@ func (a DNSName) Less(b DNSName) bool {
 
 type DNSResponseCode layers.DNSResponseCode
 
+// Invent a DNSReponseCode value to represent unlogged activity.
+const DNSResponseCodeUnlogged DNSResponseCode = 255
+
 func (d DNSResponseCode) String() string {
 	if res, ok := dnsResponseCodeTable[d]; ok {
 		return res
@@ -187,6 +190,8 @@ var dnsResponseCodeTable = map[DNSResponseCode]string{
 	21: "BADALG",
 	22: "BADTRUNC",
 	23: "BADCOOKIE",
+
+	DNSResponseCodeUnlogged: "Unlogged",
 }
 
 type DNSClass layers.DNSClass

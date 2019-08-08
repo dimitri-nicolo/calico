@@ -117,6 +117,7 @@ func (d *dnsLogAggregator) Get() []*DNSLog {
 			StartTime: d.aggregationStartTime,
 			EndTime:   aggregationEndTime,
 			Count:     uint(d.numUnloggedUpdates),
+			RCode:     DNSResponseCodeUnlogged,
 		}
 		dnsLogs = append(dnsLogs, excessLog)
 	}

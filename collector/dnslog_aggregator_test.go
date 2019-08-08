@@ -261,6 +261,7 @@ var _ = Describe("DNS log aggregator", func() {
 			found := false
 			for _, lg := range emitted {
 				if (lg.Count == 5) && (lg.Servers == nil) && (lg.RRSets == nil) {
+					Expect(lg.RCode).To(Equal(DNSResponseCodeUnlogged))
 					found = true
 					break
 				}
