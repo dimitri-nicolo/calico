@@ -52,7 +52,7 @@ IP ranges in your network, including:
 ## Application layer policy requirements
 
 - [MutatingAdmissionWebhook](https://kubernetes.io/docs/admin/admission-controllers/#mutatingadmissionwebhook) enabled
-- [Istio v1.0](https://istio.io/about/notes/1.0/)
+- [Istio v1.0](https://istio.io/about/notes/1.0/) or [Istio v1.1](https://istio.io/about/notes/1.1/)
 
 {% include {{page.version}}/reqs-kernel.md %}
 
