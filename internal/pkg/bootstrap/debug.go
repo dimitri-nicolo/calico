@@ -23,9 +23,9 @@ func StartPprofAt(l net.Listener) error {
 	return srv.Serve(l)
 }
 
-// StartPprof starts a pprof server using a random available port
+// StartPprof starts a pprof server on localhost:56060
 func StartPprof() error {
-	l, err := net.Listen("tcp", ":0")
+	l, err := net.Listen("tcp", "localhost:56060")
 	if err != nil {
 		return err
 	}
