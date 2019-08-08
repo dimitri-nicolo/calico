@@ -103,42 +103,65 @@ func (cs *clusters) List() []jclust.Cluster {
 	return clusterList
 }
 
-func (cs *clusters) update(jc *jclust.Cluster) (*bytes.Buffer, error) {
-	cs.Lock()
-	defer cs.Unlock()
+func (cs *clusters) addNew(jc *jclust.Cluster) (*bytes.Buffer, error) {
+	log.Infof("Adding cluster ID: %q DisplayName: %q", jc.ID, jc.DisplayName)
 
 	resp := new(bytes.Buffer)
 
+	cert, key, err := cs.generateCreds(jc)
+	if err != nil {
+		return nil, errors.WithMessage(err, "Failed to generate cluster credentials")
+	}
+
+	c := &cluster{
+		Cluster: *jc,
+		cert:    cert,
+	}
+	if cs.keepKeys {
+		c.key = key
+	}
+
+	cs.add(jc.ID, c)
+	err = cs.renderManifest(resp, cert, key)
+	if err != nil {
+		return nil, errors.WithMessage(err, "could not renderer manifest")
+	}
+
+	return resp, nil
+}
+
+func (cs *clusters) addRecovered(jc *jclust.Cluster) error {
+	log.Infof("Recovering cluster ID: %q DisplayName: %q", jc.ID, jc.DisplayName)
+	c := &cluster{
+		Cluster: *jc,
+	}
+
+	cs.add(jc.ID, c)
+
+	return nil
+}
+
+func (cs *clusters) update(jc *jclust.Cluster) (*bytes.Buffer, error) {
+	cs.Lock()
+	defer cs.Unlock()
+	return cs.updateLocked(jc, false)
+}
+
+func (cs *clusters) updateLocked(jc *jclust.Cluster, recovery bool) (*bytes.Buffer, error) {
 	if c, ok := cs.clusters[jc.ID]; ok {
 		c.Lock()
 		log.Infof("Updating cluster ID: %q DisplayName: %q", c.ID, c.DisplayName)
 		c.Cluster = *jc
 		log.Infof("New cluster ID: %q DisplayName: %q", c.ID, c.DisplayName)
 		c.Unlock()
-	} else {
-		log.Infof("Adding cluster ID: %q DisplayName: %q", jc.ID, jc.DisplayName)
-
-		cert, key, err := cs.generateCreds(jc)
-		if err != nil {
-			return nil, errors.WithMessage(err, "Failed to generate cluster credentials")
-		}
-
-		c := &cluster{
-			Cluster: *jc,
-			cert:    cert,
-		}
-		if cs.keepKeys {
-			c.key = key
-		}
-
-		cs.add(jc.ID, c)
-		err = cs.renderManifest(resp, cert, key)
-		if err != nil {
-			return nil, errors.WithMessage(err, "could not renderer manifest")
-		}
+		return nil, nil
 	}
 
-	return resp, nil
+	if recovery {
+		return nil, cs.addRecovered(jc)
+	}
+
+	return cs.addNew(jc)
 }
 
 func (cs *clusters) remove(jc *jclust.Cluster) error {
@@ -156,14 +179,7 @@ func (cs *clusters) remove(jc *jclust.Cluster) error {
 	// keep doing so
 	delete(cs.clusters, jc.ID)
 	cs.Unlock()
-	// close the tunnel to disconnect. Closing is thread save, but we need
-	// to hold the RLock to access the tunnel
-	c.RLock()
-	if c.tunnel != nil {
-		c.tunnel.Close()
-	}
-	c.RUnlock()
-
+	c.stop()
 	log.Infof("Cluster id %q removed", jc.ID)
 
 	return nil
@@ -343,8 +359,11 @@ func (cs *clusters) get(id string) *cluster {
 	return cs.clusters[id]
 }
 
-func (cs *clusters) watchK8s(ctx context.Context, k8s K8sInterface, syncC chan<- error) error {
-	watcher, err := k8s.ManagedClusters().Watch(metav1.ListOptions{})
+func (cs *clusters) watchK8sFrom(ctx context.Context, k8s K8sInterface,
+	syncC chan<- error, last string) error {
+	watcher, err := k8s.ManagedClusters().Watch(metav1.ListOptions{
+		ResourceVersion: last,
+	})
 	if err != nil {
 		return errors.Errorf("failed to create k8s watch: %s", err)
 	}
@@ -367,7 +386,7 @@ func (cs *clusters) watchK8s(ctx context.Context, k8s K8sInterface, syncC chan<-
 				DisplayName: mc.ObjectMeta.Name,
 			}
 
-			log.Debugf("WatchK8s: %s %+v", r.Type, jc)
+			log.Debugf("watchK8s: %s %+v", r.Type, jc)
 
 			var err error
 
@@ -395,6 +414,68 @@ func (cs *clusters) watchK8s(ctx context.Context, k8s K8sInterface, syncC chan<-
 		case <-ctx.Done():
 			watcher.Stop()
 			return errors.Errorf("watcher exiting: %s", ctx.Err())
+		}
+	}
+}
+
+func (cs *clusters) resyncWithK8s(ctx context.Context, k8s K8sInterface) (string, error) {
+	list, err := k8s.ManagedClusters().List(metav1.ListOptions{})
+	if err != nil {
+		return "", errors.Errorf("failed to get k8s list: %s", err)
+	}
+
+	known := make(map[string]struct{})
+
+	cs.Lock()
+	defer cs.Unlock()
+
+	for _, mc := range list.Items {
+		id := string(mc.ObjectMeta.UID)
+
+		jc := &jclust.Cluster{
+			ID:          id,
+			DisplayName: mc.ObjectMeta.Name,
+		}
+
+		known[id] = struct{}{}
+
+		log.Debugf("resyncWithK8s: %+v", jc)
+		_, err = cs.updateLocked(jc, true)
+		if err != nil {
+			log.Errorf("ManagedClusters listing failed: %s", err)
+		}
+	}
+
+	// remove all the active clusters not in the list since we must have missed
+	// the DELETE watch event
+	for id, c := range cs.clusters {
+		if _, ok := known[id]; ok {
+			continue
+		}
+		delete(cs.clusters, id)
+		c.stop()
+		log.Infof("Cluster id %q removed", id)
+	}
+
+	return list.ListMeta.ResourceVersion, nil
+}
+
+func (cs *clusters) watchK8s(ctx context.Context, k8s K8sInterface, syncC chan<- error) error {
+	for {
+		last, err := cs.resyncWithK8s(ctx, k8s)
+		if err == nil {
+			err = cs.watchK8sFrom(ctx, k8s, syncC, last)
+			if err != nil {
+				err = errors.WithMessage(err, "k8s watch failed")
+			}
+		} else {
+			err = errors.WithMessage(err, "k8s list failed")
+		}
+		log.Errorf("ManagedClusters: %s", err)
+		select {
+		case <-ctx.Done():
+			return errors.Errorf("watcher exiting: %s", ctx.Err())
+		default:
 		}
 	}
 }
@@ -459,6 +540,16 @@ func (c *cluster) assignTunnel(t *tunnel.Tunnel) {
 
 	// will clean up the tunnel if it breaks, will exit once the tunnel is gone
 	go c.checkTunnelState()
+}
+
+func (c *cluster) stop() {
+	// close the tunnel to disconnect. Closing is thread save, but we need
+	// to hold the RLock to access the tunnel
+	c.RLock()
+	if c.tunnel != nil {
+		c.tunnel.Close()
+	}
+	c.RUnlock()
 }
 
 func proxyVoidDirector(*http.Request) {

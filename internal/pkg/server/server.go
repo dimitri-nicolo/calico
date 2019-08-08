@@ -271,6 +271,11 @@ func (s *Server) acceptTunnels(opts ...tunnel.Option) {
 			// reused, etc.) so we need to double check the cert
 			idChecker = func(c *cluster) error {
 				if c.cert == nil {
+					if s.toggles.autoRegister {
+						// TODO remove this case when SAAS-222 lands, check the
+						// cert or fingerprint
+						return nil
+					}
 					return errors.Errorf("no cert assigned to cluster")
 				}
 				if !c.cert.Equal(id) {
@@ -285,20 +290,9 @@ func (s *Server) acceptTunnels(opts ...tunnel.Option) {
 		c := s.clusters.get(clusterID)
 
 		if c == nil {
-
-			if s.toggles.autoRegister {
-				var err error
-				c, err = s.autoRegister(clusterID, t.Identity())
-				if err != nil {
-					log.Errorf("auto-registration of %q failed: %s", clusterID, err)
-					t.Close()
-					continue
-				}
-			} else {
-				log.Errorf("cluster %q does not exist", clusterID)
-				t.Close()
-				continue
-			}
+			log.Errorf("cluster %q does not exist", clusterID)
+			t.Close()
+			continue
 		}
 
 		c.RLock()

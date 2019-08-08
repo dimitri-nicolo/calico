@@ -131,12 +131,10 @@ func main() {
 		log.Fatalf("Tunnel server exited: %s", err)
 	}()
 
-	/*
-		go func() {
-			err := srv.WatchK8s()
-			log.Fatalf("K8s watcher exited: %s", err)
-		}()
-	*/
+	go func() {
+		err := srv.WatchK8s()
+		log.Fatalf("K8s watcher exited: %s", err)
+	}()
 
 	log.Infof("Voltron listens for tunnels at %s", lisTun.Addr().String())
 

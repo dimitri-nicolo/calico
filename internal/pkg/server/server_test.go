@@ -570,6 +570,42 @@ var _ = Describe("Server Proxy to tunnel", func() {
 			})
 		})
 
+		It("should delete clusterA", func() {
+			k8sAPI.DeleteCluster("clusterA")
+			Expect(<-watchSync).NotTo(HaveOccurred())
+		})
+
+		It("should stop the servers again", func(done Done) {
+			err := srv.Close()
+			Expect(err).NotTo(HaveOccurred())
+			wg.Wait()
+			close(done)
+		})
+
+		It("should re-start a server again", func() {
+			startServer(server.WithAutoRegister())
+		})
+
+		Context("When clusterA was previously deleted", func() {
+			It("should be possible to open a tunnel with certs for clusterA", func() {
+				cert, err := tls.X509KeyPair(certPemA, keyPemA)
+				Expect(err).NotTo(HaveOccurred())
+
+				cfg := &tls.Config{
+					Certificates: []tls.Certificate{cert},
+					RootCAs:      rootCAs,
+				}
+
+				clnT, err = tunnel.DialTLS(lisTun.Addr().String(), cfg)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("eventually accepting connections fails as the tunnel is rejected", func() {
+				_, err := clnT.Accept()
+				Expect(err).Should(HaveOccurred())
+			})
+
+		})
 	})
 
 	It("should stop the servers", func(done Done) {
@@ -653,6 +689,8 @@ var _ = Describe("Server authenticates requests", func() {
 			defer wg.Done()
 			_ = srv.WatchK8sWithSync(watchSync)
 		}()
+
+		k8sAPI.WaitForManagedClustersWatched()
 	})
 
 	It("Should add cluster A", func() {

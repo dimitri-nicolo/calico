@@ -1,10 +1,12 @@
 package test
 
 import (
+	"fmt"
 	"net/http"
 	"sync"
 
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 	authn "k8s.io/api/authentication/v1"
 	authz "k8s.io/api/authorization/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -140,16 +142,24 @@ func NewK8sSimpleFakeClient(k8sObj []runtime.Object, calicoObj []runtime.Object)
 		k8sFake:        fake.NewSimpleClientset(k8sObj...),
 		calicoFake:     calico.ProjectcalicoV3(),
 		calicoFakeCtrl: &calico.Fake,
+		clusters: managedClusters{
+			cs:      make(map[string]*cluster),
+			watched: make(chan struct{}, 1000), // large enough to accomodate many watch restarts
+		},
 		reviews: tokenReviews{
 			reviews: make(map[string]*authn.TokenReview),
 		},
 	}
 
-	fake.clusters.cs = make(map[string]*cluster)
-	fake.clusters.watcher = watch.NewFake()
-
 	calico.Fake.PrependWatchReactor("managedclusters",
-		k8stesting.DefaultWatchReactor(fake.clusters.watcher, nil))
+		func(action k8stesting.Action) (bool, watch.Interface, error) {
+			defer func() { fake.clusters.watched <- struct{}{} }()
+			fake.clusters.block.Lock()
+			defer fake.clusters.block.Unlock()
+			watcher := fake.clusters.newWatcher()
+			return k8stesting.DefaultWatchReactor(watcher, nil)(action)
+		})
+	calico.Fake.PrependReactor("list", "managedclusters", fake.clusters.listReactor)
 
 	fake.k8sFake.PrependReactor("create", "tokenreviews", fake.reviews.Reactor)
 
@@ -204,8 +214,40 @@ type cluster struct {
 
 type managedClusters struct {
 	sync.Mutex
+	block   sync.Mutex
+	version int
 	cs      map[string]*cluster
-	watcher *watch.FakeWatcher
+	watcher *mcWatcher
+	watched chan struct{}
+}
+
+type mcWatcher struct {
+	*watch.FakeWatcher
+	stop func()
+}
+
+func (w *mcWatcher) Stop() {
+	w.stop()
+}
+
+func (mc *managedClusters) newWatcher() watch.Interface {
+	mc.Lock()
+	defer mc.Unlock()
+
+	mc.watcher = &mcWatcher{
+		FakeWatcher: watch.NewFakeWithChanSize(100, true),
+		stop: func() {
+			mc.Lock()
+			defer mc.Unlock()
+			mc.watcher = nil
+		},
+	}
+
+	return mc.watcher
+}
+
+func (mc *managedClusters) versionStr() string {
+	return fmt.Sprintf("%d", mc.version)
 }
 
 func (mc *managedClusters) Get(id string) *cluster {
@@ -217,18 +259,23 @@ func (mc *managedClusters) Add(id, name string) {
 		name: name,
 	}
 
+	mc.version++
+
 	cl := &apiv3.ManagedCluster{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       calicov3.KindManagedCluster,
 			APIVersion: calicov3.GroupVersionCurrent,
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-			UID:  k8stypes.UID(id),
+			Name:            name,
+			UID:             k8stypes.UID(id),
+			ResourceVersion: mc.versionStr(),
 		},
 	}
 
-	mc.watcher.Add(cl)
+	if mc.watcher != nil {
+		mc.watcher.Add(cl)
+	}
 }
 
 func (mc *managedClusters) Update(id string) {
@@ -260,7 +307,60 @@ func (mc *managedClusters) Delete(id string) {
 
 	delete(mc.cs, id)
 
-	mc.watcher.Delete(cl)
+	if mc.watcher != nil {
+		mc.watcher.Delete(cl)
+	}
+}
+
+func (mc *managedClusters) StopWatcher() {
+	if mc.watcher != nil {
+		w := mc.watcher
+		mc.watcher = nil
+		w.FakeWatcher.Stop()
+	}
+}
+
+func (mc *managedClusters) listReactor(action k8stesting.Action) (
+	handled bool, ret runtime.Object, err error) {
+
+	list := &apiv3.ManagedClusterList{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       calicov3.KindManagedClusterList,
+			APIVersion: calicov3.GroupVersionCurrent,
+		},
+		ListMeta: metav1.ListMeta{
+			ResourceVersion: mc.versionStr(),
+		},
+	}
+
+	mc.Lock()
+	defer mc.Unlock()
+
+	for id, c := range mc.cs {
+		list.Items = append(list.Items, apiv3.ManagedCluster{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       calicov3.KindManagedCluster,
+				APIVersion: calicov3.GroupVersionCurrent,
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: c.name,
+				UID:  k8stypes.UID(id),
+			},
+		})
+	}
+
+	log.Infof("list: %+v", list)
+
+	return true, list, nil
+}
+
+// WaitForManagedClustersWatched returns when the ManagedClusters start being
+// watched to sync with tests
+func (c *K8sFakeClient) WaitForManagedClustersWatched() {
+	c.clusters.Lock()
+	w := c.clusters.watched
+	c.clusters.Unlock()
+	<-w
 }
 
 // AddCluster adds a cluster resource
@@ -303,6 +403,26 @@ func (c *K8sFakeClient) DeleteCluster(id string) error {
 
 	c.clusters.Delete(id)
 	return nil
+}
+
+// BlockWatches sync clients Watch call until UnblockWatches is called
+func (c *K8sFakeClient) BlockWatches() {
+	c.clusters.block.Lock()
+}
+
+// UnblockWatches allows clients Watch call to proceed
+func (c *K8sFakeClient) UnblockWatches() {
+	c.clusters.block.Unlock()
+}
+
+// BreakWatcher stops the watcher so that the client sees the event channel to
+// close
+func (c *K8sFakeClient) BreakWatcher() {
+	c.clusters.Lock()
+	defer c.clusters.Unlock()
+
+	c.clusters.watched = make(chan struct{}, 1000)
+	c.clusters.StopWatcher()
 }
 
 // AddJaneToken adds JaneBearerToken on the request

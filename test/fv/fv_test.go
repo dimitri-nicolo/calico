@@ -226,6 +226,7 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 	})
 
 	It("should register 2 clusters", func() {
+		k8sAPI.WaitForManagedClustersWatched()
 		k8sAPI.AddCluster(clusterID, clusterID)
 		Expect(<-watchSync).NotTo(HaveOccurred())
 
