@@ -83,7 +83,7 @@ spec:
 
 | Field           | Description                                    | Required | Accepted Values | Schema    |
 |-----------------|------------------------------------------------|----------|-----------------|-----------|
-| reportType      | The type of report to produce.  This field controls the content of the report - see the links for each type for more details. | Yes | [inventory](/{{page.version}}/reference/compliance-reports/inventory), [network-access](/{{page.version}}/reference/compliance-reports/network-access), [policy-audit](/{{page.version}}/reference/compliance-reports/policy-audit) | string |
+| reportType      | The type of report to produce.  This field controls the content of the report - see the links for each type for more details. | Yes | [cis&#8209;benchmark](/{{page.version}}/reference/compliance-reports/cis-benchmark), [inventory](/{{page.version}}/reference/compliance-reports/inventory), [network&#8209;access](/{{page.version}}/reference/compliance-reports/network-access), [policy&#8209;audit](/{{page.version}}/reference/compliance-reports/policy-audit) | string |
 | endpoints       | Specify which endpoints are in scope. If omitted, selects everything. ||| [EndpointsSelection](#endpointsselection) |
 | schedule        | Configure report frequency by specifying start and end time in [cron-format][cron-format]. Reports are started 30 minutes (configurable) after the scheduled value to allow enough time for data archival. A maximum limit of 12 schedules per hour is enforced (an average of one report every 5 minutes). | Yes || string |
 | jobNodeSelector | Specify the node(s) for scheduling the report jobs using selectors. ||| map |
