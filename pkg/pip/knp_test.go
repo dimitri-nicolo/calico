@@ -303,7 +303,7 @@ var _ = Describe("Kubernetes Network Policy PIP tests", func() {
 		By("Creating the policy calculators which calculates before and after")
 		pc := policycalc.NewPolicyCalculator(cfgCalcActionBefore, ep, rdBefore, rdAfter, modified)
 
-		By("Checking a flow with dest in ns1 is unaffected")
+		By("Checking a flow with src in ns1 goes allow->deny")
 		f := &policycalc.Flow{
 			Reporter: policycalc.ReporterTypeSource,
 			Source: policycalc.FlowEndpointData{
@@ -316,6 +316,7 @@ var _ = Describe("Kubernetes Network Policy PIP tests", func() {
 				Type:      policycalc.EndpointTypeWep,
 				Name:      "wep2-*",
 				Namespace: "ns1",
+				Labels:    map[string]string{},
 			},
 			Action: policycalc.ActionAllow,
 		}

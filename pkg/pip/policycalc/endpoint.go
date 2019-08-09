@@ -124,6 +124,12 @@ func (e *EndpointCache) populateEndpointData(ed *EndpointData) {
 	case *pcv3.HostEndpoint:
 		e.populateEndpointDataHEP(&r.ObjectMeta, &r.Spec, ed)
 	}
+
+	// If our labels are nil, set them to be an empty map. We use nil to mean "unknown", but in this case we know that
+	// the labels are just empty.
+	if ed.Labels == nil {
+		ed.Labels = make(map[string]string)
+	}
 }
 
 // populateEndpointDataPod populates the calculated endpoint data fields from a pod.
