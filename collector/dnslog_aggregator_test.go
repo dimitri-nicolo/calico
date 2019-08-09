@@ -253,7 +253,20 @@ var _ = Describe("DNS log aggregator", func() {
 				Expect(err).ShouldNot(HaveOccurred())
 			}
 			Expect(l.dnsStore).Should(HaveLen(5))
-			Expect(l.Get()).Should(HaveLen(5))
+
+			// l.Get() will return the 5 stored logs, plus an extra one to say
+			// that there were 5 more updates that could not be fully logged.
+			emitted := l.Get()
+			Expect(emitted).To(HaveLen(6))
+			found := false
+			for _, lg := range emitted {
+				if (lg.Count == 5) && (lg.Servers == nil) && (lg.RRSets == nil) {
+					Expect(lg.Type).To(Equal(DNSLogTypeUnlogged))
+					found = true
+					break
+				}
+			}
+			Expect(found).To(BeTrue())
 		})
 	})
 })

@@ -356,9 +356,17 @@ type DNSData struct {
 	DNSSpec
 }
 
+type DNSLogType string
+
+const (
+	DNSLogTypeLog      DNSLogType = "log"
+	DNSLogTypeUnlogged DNSLogType = "unlogged"
+)
+
 type DNSLog struct {
 	StartTime       time.Time         `json:"start_time"`
 	EndTime         time.Time         `json:"end_time"`
+	Type            DNSLogType        `json:"type"`
 	Count           uint              `json:"count"`
 	ClientName      string            `json:"client_name"`
 	ClientNameAggr  string            `json:"client_name_aggr"`
@@ -373,12 +381,20 @@ type DNSLog struct {
 	RRSets          DNSRRSets         `json:"rrsets"`
 }
 
+type DNSExcessLog struct {
+	StartTime time.Time  `json:"start_time"`
+	EndTime   time.Time  `json:"end_time"`
+	Type      DNSLogType `json:"type"`
+	Count     uint       `json:"count"`
+}
+
 func (d *DNSData) ToDNSLog(startTime, endTime time.Time, includeLabels bool) *DNSLog {
 	e := d.DNSSpec.Encode()
 
 	res := &DNSLog{
 		StartTime:       startTime,
 		EndTime:         endTime,
+		Type:            DNSLogTypeLog,
 		Count:           d.Count,
 		ClientName:      d.ClientMeta.Name,
 		ClientNameAggr:  d.ClientMeta.AggregatedName,
