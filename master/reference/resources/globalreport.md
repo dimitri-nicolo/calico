@@ -95,8 +95,8 @@ spec:
 | Field           | Description                                  | Schema              |
 |-----------------|----------------------------------------------|---------------------|
 | selector        | Endpoint label selector to restrict endpoint selection. | string              |
-| namespaces      | Namespace name and label selector to restrict endpoints by selected namespaces. | NamesAndLabelsMatch |
-| serviceAccounts | Service account name and label selector to restrict endpoints by selected service accounts. | NamesAndLabelsMatch |
+| namespaces      | Namespace name and label selector to restrict endpoints by selected namespaces. | [NamesAndLabelsMatch](#namesandlabelsmatch) |
+| serviceAccounts | Service account name and label selector to restrict endpoints by selected service accounts. | [NamesAndLabelsMatch](#namesandlabelsmatch) |
 
 #### CISBenchmarkParams
 
@@ -112,15 +112,15 @@ spec:
 
 | Fields | Description | Required | Schema |
 | ------ | ----------- | -------- | ------ |
-| BenchmarkSelection | Specify which set of benchmarks that this filter should apply to. Selects all benchmark types. | No | CISBenchmarkSelection |
-| Exclude | Specify which benchmark tests to exclude | No | array of strings |
-| Include | Specify which benchmark tests to include only (higher precedence than exclude) | No | array of strings |
+| benchmarkSelection | Specify which set of benchmarks that this filter should apply to. Selects all benchmark types. | No | [CISBenchmarkSelection](#cisbenchmarkselection) |
+| exclude | Specify which benchmark tests to exclude | No | array of strings |
+| include | Specify which benchmark tests to include only (higher precedence than exclude) | No | array of strings |
 
 #### CISBenchmarkSelection
 
 | Fields | Description | Required | Schema |
 | ------ | ----------- | -------- | ------ |
-| KubernetesVersion | Specifies a version of the benchmarks. | Yes | string |
+| kubernetesVersion | Specifies a version of the benchmarks. | Yes | string |
 
 #### NamesAndLabelsMatch
 
