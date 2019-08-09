@@ -26,11 +26,6 @@ spec:
 EOF
 ```
 
-> **Note**: There is a known issue that audit logs do not contain deletion events for resources that were
-> deleted implicitly as part of a namespace deletion event. Currently, this means policies and pods that have been 
-> deleted in this way may still appear in the reports that cover any period within the next day.
-{: .alert .alert-danger}
-
 ### Downloadable reports
 
 #### summary.csv

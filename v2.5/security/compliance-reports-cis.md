@@ -25,7 +25,7 @@ This how-to guide uses the following {{ site.prodname }} features:
 
 #### Kubernetes CIS benchmarks 
 
-As part of {{ site.prodname }} installation, each node runs a pod named compliance-benchmarker that executes Kubernetes CIS benchmarks every hour (default). We recommend that you review the CIS benchmark best practices for securing cluster component configurations here: [CIS benchmarks downloads](https://downloads.cisecurity.org/#/).
+As part of {{ site.prodname }} installation, each node runs a pod named compliance-benchmarker that executes Kubernetes CIS benchmarks every hour (default). We recommend that you review the CIS benchmark best practices for securing cluster component configurations here: [CIS benchmarks downloads](https://learn.cisecurity.org/benchmarks).
 
 #### Configure Global Report 
 
