@@ -24,6 +24,10 @@
         "end_time": {
           "type": "date"
         },
+        "type": {
+          "type": "keyword",
+          "normalizer": "uppercase"
+        },
         "count": {
           "type": "long"
         },
