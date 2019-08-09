@@ -3,6 +3,8 @@ package server
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/tigera/compliance/pkg/report"
+
 	clientv3 "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 )
 
@@ -13,6 +15,28 @@ const (
 	UrlGet      = "/compliance/reports/:report"
 	UrlDownload = "/compliance/reports/:report/download"
 	UrlVersion  = "/compliance/version"
+
+	UrlParamReportTypeName = "reportTypeName"
+	UrlParamReportName     = "reportName"
+	UrlParamPage           = "page"
+	UrlParamFromTime       = "fromTime"
+	UrlParamToTime         = "toTime"
+	UrlParamMaxItems       = "maxItems"
+	UrlParamSortBy         = "sortBy"
+	AllResults             = "all"
+	DefaultMaxItems        = 100
+	SortAscendingSuffix    = "/ascending"
+	SortDescendingSuffix   = "/descending"
+)
+
+var (
+	ValidSortBy = []string{
+		"reportName", "reportTypeName", "generationTime", "startTime", "endTime",
+	}
+
+	DefaultSortBy = []report.SortBy{
+		{"startTime", false}, {"reportTypeName", true}, {"reportName", true},
+	}
 )
 
 // ServerControl is the interface used to control the state of the compliance server.
@@ -31,6 +55,8 @@ type ReportConfigurationGetter interface {
 // ReportList is a list of reports. This is serialized as json when returned over http.
 type ReportList struct {
 	Reports []Report `json:"reports"`
+	Page    int      `json:"page"`
+	Count   int      `json:"count"`
 }
 
 // Report is a single rendered report (summary). This is serialized as json when returned over http.

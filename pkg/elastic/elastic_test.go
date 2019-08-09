@@ -23,14 +23,16 @@ type Resetable interface {
 	Reset()
 }
 
-var _ = Describe("Elastic", func() {
+var _ = Describe("Compliance elasticsearch integration tests", func() {
 	var (
 		elasticClient Client
 		ts            = time.Date(2019, 4, 15, 15, 0, 0, 0, time.UTC)
 	)
 	BeforeEach(func() {
-		os.Setenv("ELASTIC_HOST", "localhost")
-		os.Setenv("ELASTIC_INDEX_SUFFIX", "test_cluster")
+		err := os.Setenv("ELASTIC_HOST", "localhost")
+		Expect(err).NotTo(HaveOccurred())
+		err = os.Setenv("ELASTIC_INDEX_SUFFIX", "test_cluster")
+		Expect(err).NotTo(HaveOccurred())
 		cfg := config.MustLoadConfig()
 		elasticClient = MustGetElasticClient(cfg)
 		elasticClient.(Resetable).Reset()
@@ -89,7 +91,11 @@ var _ = Describe("Elastic", func() {
 
 		By("retrieving report summaries")
 		get := func() ([]*report.ArchivedReportData, error) {
-			return elasticClient.RetrieveArchivedReportSummaries()
+			s, err := elasticClient.RetrieveArchivedReportSummaries(context.Background(), report.QueryParams{})
+			if err != nil {
+				return nil, err
+			}
+			return s.Reports, nil
 		}
 		Eventually(get, "5s", "0.1s").Should(HaveLen(1))
 
