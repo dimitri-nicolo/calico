@@ -88,7 +88,18 @@ func (d *fileDispatcher) Dispatch(logSlice interface{}) error {
 	case []*DNSLog:
 		log.Info("Dispatching DNS logs to file")
 		for _, l := range fl {
-			b, err := json.Marshal(l)
+			var b []byte
+			var err error
+			if l.Type == DNSLogTypeUnlogged {
+				b, err = json.Marshal(&DNSExcessLog{
+					StartTime: l.StartTime,
+					EndTime:   l.EndTime,
+					Type:      l.Type,
+					Count:     l.Count,
+				})
+			} else {
+				b, err = json.Marshal(l)
+			}
 			if err != nil {
 				// This indicates a bug, not a runtime error since we should always
 				// be able to serialize.

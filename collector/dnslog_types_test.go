@@ -392,6 +392,7 @@ var _ = Describe("DNS log type tests", func() {
 			l = &DNSLog{
 				StartTime:       t,
 				EndTime:         t.Add(time.Minute),
+				Type:            DNSLogTypeLog,
 				Count:           5,
 				ClientName:      "test-1",
 				ClientNameAggr:  "test-*",
@@ -442,7 +443,7 @@ var _ = Describe("DNS log type tests", func() {
 			It("marshals correctly", func() {
 				b, err := json.Marshal(l)
 				Expect(err).ShouldNot(HaveOccurred())
-				Expect(string(b)).Should(Equal(`{"start_time":"2019-07-02T00:00:00Z","end_time":"2019-07-02T00:01:00Z","count":5,"client_name":"test-1","client_name_aggr":"test-*","client_namespace":"test-ns","client_ip":"127.0.0.1","client_labels":{"t1":"a"},"servers":[{"name":"test-2","name_aggr":"test-*","namespace":"test2-ns","ip":"192.168.0.1"}],"qname":"tigera.io","qclass":"IN","qtype":"A","rcode":"NoError","rrsets":[{"name":"tigera.io","class":"IN","type":"A","rdata":["127.0.0.1","127.0.0.2"]}]}`))
+				Expect(string(b)).Should(Equal(`{"start_time":"2019-07-02T00:00:00Z","end_time":"2019-07-02T00:01:00Z","type":"log","count":5,"client_name":"test-1","client_name_aggr":"test-*","client_namespace":"test-ns","client_ip":"127.0.0.1","client_labels":{"t1":"a"},"servers":[{"name":"test-2","name_aggr":"test-*","namespace":"test2-ns","ip":"192.168.0.1"}],"qname":"tigera.io","qclass":"IN","qtype":"A","rcode":"NoError","rrsets":[{"name":"tigera.io","class":"IN","type":"A","rdata":["127.0.0.1","127.0.0.2"]}]}`))
 			})
 		})
 
@@ -454,7 +455,7 @@ var _ = Describe("DNS log type tests", func() {
 			It("marshals correctly", func() {
 				b, err := json.Marshal(l)
 				Expect(err).ShouldNot(HaveOccurred())
-				Expect(string(b)).Should(Equal(`{"start_time":"2019-07-02T00:00:00Z","end_time":"2019-07-02T00:01:00Z","count":5,"client_name":"test-1","client_name_aggr":"test-*","client_namespace":"test-ns","client_ip":null,"client_labels":{"t1":"a"},"servers":[{"name":"test-2","name_aggr":"test-*","namespace":"test2-ns","ip":"192.168.0.1"}],"qname":"tigera.io","qclass":"IN","qtype":"A","rcode":"NoError","rrsets":[{"name":"tigera.io","class":"IN","type":"A","rdata":["127.0.0.1","127.0.0.2"]}]}`))
+				Expect(string(b)).Should(Equal(`{"start_time":"2019-07-02T00:00:00Z","end_time":"2019-07-02T00:01:00Z","type":"log","count":5,"client_name":"test-1","client_name_aggr":"test-*","client_namespace":"test-ns","client_ip":null,"client_labels":{"t1":"a"},"servers":[{"name":"test-2","name_aggr":"test-*","namespace":"test2-ns","ip":"192.168.0.1"}],"qname":"tigera.io","qclass":"IN","qtype":"A","rcode":"NoError","rrsets":[{"name":"tigera.io","class":"IN","type":"A","rdata":["127.0.0.1","127.0.0.2"]}]}`))
 			})
 		})
 	})
