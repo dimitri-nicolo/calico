@@ -515,14 +515,17 @@ endif
 ifeq ($(RELEASE_STREAM), master)
 # For master, helm requires semantic versioning, so use v0.0.0
 chartVersion:=v0.0.0
+appVersion:=master-$(GIT_HASH)
 else ifdef CHART_RELEASE
 # When cutting a final package, use CHART_RELEASE to append a increasing integer.
 # eg. 'make charts.yaml RELEASE_STREAM=v2.4 CHART_RELEASE=0' would produce v2.4.0-0
 chartVersion=$(CALICO_VER)-$(CHART_RELEASE)
+appVersion:=$(CALICO_VER)
 else
 # Lastly, for builds of the master branch, we want to append a '-pre',
 # but not to any release name that already has one.
 chartVersion:=$(subst -pre,,$(CALICO_VER))-pre
+appVersion=$(CALICO_VER)-$(GIT_HASH)
 endif
 
 charts: values.yaml chart/tigera-secure-ee-core chart/tigera-secure-ee
@@ -535,7 +538,7 @@ endif
 	--save=false \
 	--destination ./bin/ \
 	--version $(chartVersion) \
-	--app-version $(CALICO_VER)
+	--app-version $(appVersion)
 
  ## Create the vendor directory
 vendor: glide.yaml
