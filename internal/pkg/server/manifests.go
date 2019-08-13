@@ -11,8 +11,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/tigera/voltron/internal/pkg/utils"
-
-	log "github.com/sirupsen/logrus"
 )
 
 type manifestConfig struct {
@@ -22,15 +20,18 @@ type manifestConfig struct {
 	GuardianTLSCert string
 }
 
-// Renderer renders manifest based on a predefined template
-type Renderer struct {
+// renderer renders manifest based on a predefined template
+type renderer struct {
 	template      *template.Template
 	serverCert    string
 	serverAddress string
 }
 
-// NewRenderer creates a new Renderer for manifests
-func NewRenderer(content string, serverAddress string, serverCert *x509.Certificate) (*Renderer, error) {
+type manifestRenderer func(wr io.Writer, cert *x509.Certificate, key crypto.Signer) error
+
+// newRenderer creates a new Renderer for manifests
+func newRenderer(content string, serverAddress string,
+	serverCert *x509.Certificate) (manifestRenderer, error) {
 	funcMap := template.FuncMap{
 		"base64": encodeBase64,
 	}
@@ -41,7 +42,13 @@ func NewRenderer(content string, serverAddress string, serverCert *x509.Certific
 	}
 
 	pemCert := string(utils.CertPEMEncode(serverCert))
-	return &Renderer{template: t, serverCert: pemCert, serverAddress: serverAddress}, nil
+	r := &renderer{
+		template:      t,
+		serverCert:    pemCert,
+		serverAddress: serverAddress,
+	}
+
+	return r.RenderManifest, nil
 }
 
 func encodeBase64(text string) string {
@@ -49,12 +56,11 @@ func encodeBase64(text string) string {
 }
 
 // RenderManifest writes the manifest by filling out the macros from the template
-func (r *Renderer) RenderManifest(wr io.Writer, cert *x509.Certificate, key crypto.Signer) bool {
+func (r *renderer) RenderManifest(wr io.Writer, cert *x509.Certificate, key crypto.Signer) error {
 	keyStr, err := utils.KeyPEMEncode(key)
 
 	if err != nil {
-		log.Warnf("Could not extract key to apply to template %v", err)
-		return false
+		return errors.WithMessage(err, "could not extract key to apply to template")
 	}
 
 	m := manifestConfig{
@@ -66,9 +72,8 @@ func (r *Renderer) RenderManifest(wr io.Writer, cert *x509.Certificate, key cryp
 
 	err = r.template.Execute(wr, m)
 	if err != nil {
-		log.Warnf("Could not apply template %v", err)
-		return false
+		return errors.Errorf("could not apply template: %s", err)
 	}
 
-	return true
+	return nil
 }

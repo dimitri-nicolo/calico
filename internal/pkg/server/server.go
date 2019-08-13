@@ -156,7 +156,7 @@ func New(k8s K8sInterface, opts ...Option) (*Server, error) {
 	go srv.acceptTunnels(
 		tunnel.WithKeepAliveSettings(srv.tunnelEnableKeepAlive, srv.tunnelKeepAliveInterval),
 	)
-	srv.clusters.renderer, err = NewRenderer(srv.template, srv.publicAddress, srv.tunnelCert)
+	srv.clusters.renderManifest, err = newRenderer(srv.template, srv.publicAddress, srv.tunnelCert)
 	if err != nil {
 		return nil, errors.WithMessage(err, "Could not create a template to render manifests")
 	}

@@ -51,8 +51,8 @@ type clusters struct {
 	generateCreds func(*jclust.Cluster) (*x509.Certificate, crypto.Signer, error)
 
 	// keep the generated keys, only for testing and debugging
-	keepKeys bool
-	renderer *Renderer
+	keepKeys       bool
+	renderManifest manifestRenderer
 
 	watchAdded bool
 }
@@ -132,9 +132,9 @@ func (cs *clusters) update(jc *jclust.Cluster) (*bytes.Buffer, error) {
 		}
 
 		cs.add(jc.ID, c)
-		ok := cs.renderer.RenderManifest(resp, cert, key)
-		if !ok {
-			return nil, errors.Errorf("could not renderer manifest")
+		err = cs.renderManifest(resp, cert, key)
+		if err != nil {
+			return nil, errors.WithMessage(err, "could not renderer manifest")
 		}
 	}
 
