@@ -1,39 +1,5 @@
 def gen_values_v2_5(versions, imageNames, imageRegistry, chart, forDocs)
-    versionsYml = gen_chart_specific_values_v2_5(versions, imageNames, imageRegistry, chart, forDocs)
-    versionsYml += <<~EOF
-    calicoctl:
-      image: #{imageRegistry}#{imageNames["calicoctl"]}
-      tag: #{versions["calicoctl"]}
-    dikastes:
-      image: #{imageRegistry}#{imageNames["dikastes"]}
-      tag: #{versions["dikastes"]}
-    flexvol:
-      # flexvol does not use imageRegistry as it is an external OS image
-      image: #{imageNames["flexvol"]}
-      tag: #{versions["flexvol"]}
-    EOF
-
-    versionsYml += <<~EOF
-    intrusionDetectionController:
-      image: #{imageRegistry}#{imageNames["intrusion-detection-controller"]}
-      tag: #{versions["intrusion-detection-controller"]}
-
-    prometheusOperator:
-      image: #{imageNames["prometheusOperator"]}
-      tag: #{versions["prometheus-operator"]}
-    prometheusConfigReloader:
-      image: #{imageNames["prometheusConfigReloader"]}
-      tag: #{versions["prometheus-config-reloader"]}
-    configmapReload:
-      image: #{imageNames["configMapReload"]}
-      tag: #{versions["configmap-reload"]}
-    elasticsearchOperator:
-      image: #{imageNames["elasticsearchOperator"]}
-      tag: #{versions["elasticsearch-operator"]}
-    busybox:
-      image: #{imageNames["busybox"]}
-      tag: #{versions["busybox"]}
-    EOF
+    return gen_chart_specific_values_v2_5(versions, imageNames, imageRegistry, chart, forDocs)
 end
 
 
@@ -378,6 +344,30 @@ def gen_chart_specific_values_v2_5(versions, imageNames, imageRegistry, chart, f
         username: tigera-ee-installer
         password: ""
     
+    intrusionDetectionController:
+      image: #{imageRegistry}#{imageNames["intrusion-detection-controller"]}
+      tag: #{versions["intrusion-detection-controller"]}
+
+    prometheusOperator:
+      image: #{imageNames["prometheusOperator"]}
+      tag: #{versions["prometheus-operator"]}
+
+    prometheusConfigReloader:
+      image: #{imageNames["prometheusConfigReloader"]}
+      tag: #{versions["prometheus-config-reloader"]}
+
+    configmapReload:
+      image: #{imageNames["configMapReload"]}
+      tag: #{versions["configmap-reload"]}
+
+    elasticsearchOperator:
+      image: #{imageNames["elasticsearchOperator"]}
+      tag: #{versions["elasticsearch-operator"]}
+
+    busybox:
+      image: #{imageNames["busybox"]}
+      tag: #{versions["busybox"]}
+
     # Optionally specify docker configuration to be used for imagePullSecrets. 
     # Default to an empty list. 
     #
@@ -583,6 +573,19 @@ def gen_chart_specific_values_v2_5(versions, imageNames, imageRegistry, chart, f
         limits:
           cpu: #"2000m"
           memory: #"1024Mi"
+
+    calicoctl:
+      image: #{imageRegistry}#{imageNames["calicoctl"]}
+      tag: #{versions["calicoctl"]}
+
+    dikastes:
+      image: #{imageRegistry}#{imageNames["dikastes"]}
+      tag: #{versions["dikastes"]}
+
+    flexvol:
+      # flexvol does not use imageRegistry as it is an external OS image
+      image: #{imageNames["flexvol"]}
+      tag: #{versions["flexvol"]}
 
     # Optional configuration for setting custom BGP templates
     bgp:
