@@ -14,7 +14,6 @@ Replace command parameters for each azure CLI command below with your own set of
    --name myCluster \
    --node-count 2 \
    --node-vm-size Standard_D2s_v3 \
-   --enable-addons monitoring \
    --generate-ssh-keys \
    --service-principal ${USER} \
    --client-secret ${PASS} \
