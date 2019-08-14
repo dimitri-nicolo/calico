@@ -352,7 +352,17 @@ spec:
         args:
           - "--secure-port=5443"
 {{- if eq .Values.platform "eks" }}
+          # API servers normally look for authentication information in the configmap
+          # extension-apiserver-authentication.  EKS doesn't include all the values that
+          # an API server would normally expect, so we disable this lookup. The only
+          # value we actually need from this configmap is requestheader-client-ca-file
+          # which *is* present, so we just volume-mount the config map and set it via
+          # the next flag.
           - "--authentication-skip-lookup=true"
+          # This CA is the root of trust for the certificate that the main Kube API server
+          # uses when it proxies requests *to* this extension API server.  This is how we
+          # know we are getting requests from the real API server and can believe that it
+          # has already handled authenticating the end user.
           - "--requestheader-client-ca-file=/code/certificates/requestheader-client-ca-file"
 {{- end }}
           - "--audit-policy-file=/etc/tigera/audit/policy.conf"
