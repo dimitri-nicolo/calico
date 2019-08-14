@@ -134,3 +134,12 @@ func WithAutoRegister() Option {
 		return nil
 	}
 }
+
+// WithWatchAdded lets server to watch k8s for added clusters and register them
+// this way. This is useful for testing.
+func WithWatchAdded() Option {
+	return func(s *Server) error {
+		s.clusters.watchAdded = true
+		return nil
+	}
+}

@@ -191,6 +191,7 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 			server.WithKeepClusterKeys(),
 			server.WithTunnelCreds(srvCert, srvPrivKey),
 			server.WithAuthentication(),
+			server.WithWatchAdded(),
 		)
 		Expect(err).NotTo(HaveOccurred())
 

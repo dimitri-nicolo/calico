@@ -80,6 +80,7 @@ var _ = Describe("Server", func() {
 			server.WithKeepClusterKeys(),
 			server.WithTunnelCreds(srvCert, srvPrivKey),
 			server.WithAuthentication(),
+			server.WithWatchAdded(),
 		)
 		Expect(err).NotTo(HaveOccurred())
 		wg.Add(1)
@@ -222,6 +223,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 			server.WithTunnelCreds(srvCert, srvPrivKey),
 			server.WithAuthentication(),
 			server.WithDefaultProxy(defaultProxy),
+			server.WithWatchAdded(),
 		)
 
 		srv, err = server.New(
@@ -555,6 +557,7 @@ var _ = Describe("Server authenticates requests", func() {
 			server.WithKeepClusterKeys(),
 			server.WithTunnelCreds(srvCert, srvPrivKey),
 			server.WithAuthentication(),
+			server.WithWatchAdded(),
 		)
 		Expect(err).NotTo(HaveOccurred())
 

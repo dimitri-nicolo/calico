@@ -53,6 +53,8 @@ type clusters struct {
 	// keep the generated keys, only for testing and debugging
 	keepKeys bool
 	renderer *Renderer
+
+	watchAdded bool
 }
 
 func returnJSON(w http.ResponseWriter, data interface{}) {
@@ -379,7 +381,12 @@ func (cs *clusters) watchK8s(ctx context.Context, k8s K8sInterface, syncC chan<-
 			var err error
 
 			switch r.Type {
-			case watch.Added, watch.Modified:
+			case watch.Added:
+				if !cs.watchAdded {
+					break
+				}
+				fallthrough
+			case watch.Modified:
 				_, err = cs.update(jc)
 			case watch.Deleted:
 				err = cs.remove(jc)
