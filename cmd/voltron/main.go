@@ -83,6 +83,13 @@ func main() {
 				Dest:         cfg.DefaultK8sDest,
 				CABundlePath: "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
 			},
+			// This fixes https://tigera.atlassian.net/browse/SAAS-240
+			{
+				Path:        "/tigera-elasticsearch/",
+				Dest:        "https://cnx-es-proxy-local.calico-monitoring.svc.cluster.local:8443",
+				PathRegexp:  []byte("^/tigera-elasticsearch/?"),
+				PathReplace: []byte("/"),
+			},
 		})
 
 		if err != nil {
