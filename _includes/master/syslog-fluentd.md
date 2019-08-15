@@ -11,10 +11,15 @@ In order to direct the flow/audit logs to syslog(along with elastic search), the
     --from-literal=port=<destination port> \
     --from-literal=protocol=<udp or tcp> \
     --from-literal=flush-interval=<interval> \
+    --from-literal=packet-size=1024 \
     -n calico-monitoring
     ```
 
     > **Note**: `flush-interval` should be specified as `10s` for 10 seconds.
+    {: .alert .alert-info}
+
+    > **Note**: `packet-size` should only need to be changed if you notice
+    > long logs being truncated.
     {: .alert .alert-info}
 
 1. Force a rolling update of fluentd by patching the DaemonSet.
