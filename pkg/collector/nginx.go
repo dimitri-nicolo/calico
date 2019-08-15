@@ -43,7 +43,7 @@ func (nc *nginxCollector) ReadLogs(ctx context.Context) {
 		Follow: true,
 		ReOpen: true,
 		Location: &tail.SeekInfo{
-			Whence: 2,
+			Whence: nc.config.TailWhence,
 		},
 	})
 	defer t.Stop()

@@ -5,7 +5,7 @@ default: build
 all: build
 
 ## Run the tests for the current platform/architecture
-test: ut
+test: ut fv
 
 ###############################################################################
 # Both native and cross architecture builds are supported.
@@ -431,7 +431,16 @@ ut: proto
 		$(LOCAL_BUILD_MOUNTS) \
 		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
 		-w /go/src/$(PACKAGE_NAME) \
-		$(CALICO_BUILD) /bin/bash -c "ginkgo -r  --skipPackage vendor -focus="$(GINKGO_FOCUS)" $(GINKGO_ARGS) $(WHAT)"
+		$(CALICO_BUILD) /bin/bash -c "ginkgo -r --skipPackage vendor --skipPackage fv -focus='$(GINKGO_FOCUS)'	$(GINKGO_ARGS) $(WHAT)"
+
+.PHONY: fv
+fv: proto
+	mkdir -p report
+	docker run --rm -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
+		$(LOCAL_BUILD_MOUNTS) \
+		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+		-w /go/src/$(PACKAGE_NAME) \
+		$(CALICO_BUILD) /bin/bash -c "ginkgo fv -r  --skipPackage vendor -focus='$(GINKGO_FOCUS)' $(GINKGO_ARGS) $(WHAT)"
 
 ###############################################################################
 # CI

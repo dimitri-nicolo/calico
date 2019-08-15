@@ -24,6 +24,11 @@ type Config struct {
 	// A negative number will return as many requests as possible.
 	IngressRequestsPerInterval int `envconfig:"INGRESS_LOG_REQUESTS_PER_INTERVAL"`
 
+	// Configuration for tests
+	// Sets where the log file should be read from.
+	// Defaulted to 2 (end of the file).
+	TailWhence int
+
 	// Parsed values
 	ParsedLogLevel log.Level
 }
@@ -61,6 +66,9 @@ func LoadConfig() (*Config, error) {
 	if config.IngressRequestsPerInterval == 0 {
 		config.IngressRequestsPerInterval = 10
 	}
+
+	// Make sure that the tail reads from the end of the ingress log.
+	config.TailWhence = 2
 
 	return config, nil
 }
