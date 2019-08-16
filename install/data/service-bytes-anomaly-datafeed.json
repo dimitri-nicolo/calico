@@ -17,6 +17,12 @@
         "lang": "painless",
         "source": "doc['dest_namespace'].value + '/' + doc['dest_name_aggr'].value"
       }
+    },
+    "namespace_source_name_aggr": {
+      "script": {
+        "lang": "painless",
+        "source": "doc['source_namespace'].value + '/' + doc['source_name_aggr'].value"
+      }
     }
   },
   "scroll_size": 1000,

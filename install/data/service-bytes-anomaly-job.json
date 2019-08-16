@@ -28,22 +28,25 @@
         "detector_description": "Output bytes spike for a pod within a replica set",
         "function": "high_sum",
         "field_name": "bytes_out",
-        "over_field_name": "dest_name",
-        "partition_field_name": "namespace_dest_name_aggr",
+        "over_field_name": "source_name",
+        "partition_field_name": "namespace_source_name_aggr",
         "detector_index": 2
       },
       {
         "detector_description": "Output bytes spike over a whole replica set",
         "function": "high_non_null_sum",
         "field_name": "bytes_out",
-        "partition_field_name": "namespace_dest_name_aggr",
+        "partition_field_name": "namespace_source_name_aggr",
         "detector_index": 3
       }
     ],
     "influencers": [
       "dest_name",
       "dest_name_aggr",
-      "dest_namespace"
+      "dest_namespace",
+      "source_name",
+      "source_name_aggr",
+      "source_namespace"
     ]
   },
   "analysis_limits": {
