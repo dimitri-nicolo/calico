@@ -111,6 +111,9 @@ mkdir -p $TMPDIR
 # get the service account token so that we can fake mounting it into a pod
 kubectl -s 127.0.0.1:8080 get secret `kubectl  -s 127.0.0.1:8080 get secrets | grep guardian | awk '{print $1}'` -o jsonpath='{.data.token}' | base64 -d - > $TMPDIR/token
 eval $TEST_CMD
+TEST_EXIT=$?
 
 docker rm -f st-controller-manager st-apiserver k8s-etcd
 rm -rf $TMPDIR/*
+
+exit $TEST_EXIT
