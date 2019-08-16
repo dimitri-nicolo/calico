@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"k8s.io/client-go/rest"
+
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	k8s "k8s.io/client-go/kubernetes"
@@ -32,10 +34,10 @@ type Identity struct {
 }
 
 // NewIdentity creates a new Identity using the in-cluster config for K8S
-func NewIdentity(k8sAPI k8s.Interface) *Identity {
+func NewIdentity(k8sAPI k8s.Interface, config *rest.Config) *Identity {
 	// creates the authenticators Basic and Bearer
 	authenticators := make(map[Token]Authenticator)
-	authenticators[Basic] = &BasicAuthenticator{}
+	authenticators[Basic] = NewBasicAuthenticator(&k8sClientGenerator{config: config})
 	authenticators[Bearer] = NewBearerAuthenticator(k8sAPI)
 
 	return &Identity{authenticators}

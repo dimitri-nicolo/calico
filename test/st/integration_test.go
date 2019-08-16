@@ -46,7 +46,7 @@ var _ = Describe("Integration Tests", func() {
 	})
 
 	It("Should configure the K8s client", func() {
-		k8s = bootstrap.ConfigureK8sClient("./test/st/k8s-api-certs/kube.config")
+		k8s, _ = bootstrap.ConfigureK8sClient("./test/st/k8s-api-certs/kube.config")
 	})
 
 	It("should set env variables pointing to docker-image/ for certs", func() {

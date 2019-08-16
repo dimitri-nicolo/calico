@@ -17,6 +17,8 @@ import (
 	"sync"
 	"time"
 
+	"k8s.io/client-go/rest"
+
 	"golang.org/x/net/http2"
 
 	. "github.com/onsi/ginkgo"
@@ -79,7 +81,7 @@ var _ = Describe("Server", func() {
 			k8sAPI,
 			server.WithKeepClusterKeys(),
 			server.WithTunnelCreds(srvCert, srvPrivKey),
-			server.WithAuthentication(),
+			server.WithAuthentication(&rest.Config{}),
 			server.WithWatchAdded(),
 		)
 		Expect(err).NotTo(HaveOccurred())
@@ -221,7 +223,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 		opts = append(opts,
 			server.WithKeepClusterKeys(),
 			server.WithTunnelCreds(srvCert, srvPrivKey),
-			server.WithAuthentication(),
+			server.WithAuthentication(&rest.Config{}),
 			server.WithDefaultProxy(defaultProxy),
 			server.WithWatchAdded(),
 		)
@@ -556,7 +558,7 @@ var _ = Describe("Server authenticates requests", func() {
 			k8sAPI,
 			server.WithKeepClusterKeys(),
 			server.WithTunnelCreds(srvCert, srvPrivKey),
-			server.WithAuthentication(),
+			server.WithAuthentication(&rest.Config{}),
 			server.WithWatchAdded(),
 		)
 		Expect(err).NotTo(HaveOccurred())

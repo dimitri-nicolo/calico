@@ -19,7 +19,7 @@ type K8sClient struct {
 
 // ConfigureK8sClient configures K8s client based on the configuration path. If no configuration is provided
 // it will default to run as a pod. It will return nil if authNOn flag is set to false
-func ConfigureK8sClient(configPath string) *K8sClient {
+func ConfigureK8sClient(configPath string) (*K8sClient, *rest.Config) {
 	var (
 		config *rest.Config
 		err    error
@@ -48,5 +48,5 @@ func ConfigureK8sClient(configPath string) *K8sClient {
 	return &K8sClient{
 		Interface:                k8s,
 		ProjectcalicoV3Interface: calicoClient.ProjectcalicoV3(),
-	}
+	}, config
 }

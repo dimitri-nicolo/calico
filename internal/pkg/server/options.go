@@ -9,6 +9,8 @@ import (
 	"os"
 	"time"
 
+	"k8s.io/client-go/rest"
+
 	"github.com/tigera/voltron/internal/pkg/auth"
 	"github.com/tigera/voltron/internal/pkg/proxy"
 
@@ -96,12 +98,12 @@ func WithKeepClusterKeys() Option {
 }
 
 // WithAuthentication sets the kubernetes client that will be used to interact with its api
-func WithAuthentication() Option {
+func WithAuthentication(k8sConfig *rest.Config) Option {
 	return func(s *Server) error {
 		if s.k8s == nil {
 			return errors.Errorf("WithAuthentication requires the k8s.Interface to be set")
 		}
-		s.auth = auth.NewIdentity(s.k8s)
+		s.auth = auth.NewIdentity(s.k8s, k8sConfig)
 		return nil
 	}
 }

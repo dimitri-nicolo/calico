@@ -10,7 +10,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	auth "github.com/tigera/voltron/internal/pkg/auth"
+	"github.com/tigera/voltron/internal/pkg/auth"
 )
 
 var _ = Describe("Authenticator", func() {
@@ -34,8 +34,8 @@ var _ = Describe("Authenticator", func() {
 				client.AddJaneIdentity()
 				user, err := authenticator.Authenticate(test.JaneBearerToken)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(user.Name).To(Equal("jane"))
-				Expect(user.Groups).To(Equal([]string{"developers"}))
+				Expect(user.Name).To(Equal(test.Jane))
+				Expect(user.Groups).To(Equal([]string{test.Developers}))
 			})
 
 			It("should not authenticate a valid token for bob", func() {
@@ -48,7 +48,8 @@ var _ = Describe("Authenticator", func() {
 
 	Describe("authenticates Basic token", func() {
 		Context("against k8s api", func() {
-			authenticator := auth.BasicAuthenticator{}
+			apiGen := test.NewFakeK8sClientGenerator()
+			authenticator := auth.NewBasicAuthenticator(apiGen)
 
 			It("should not authenticate empty token ", func() {
 				_, err := authenticator.Authenticate("")
@@ -71,10 +72,28 @@ var _ = Describe("Authenticator", func() {
 			})
 
 			It("should authenticate a valid token jane:password", func() {
-				user, err := authenticator.Authenticate(base64.StdEncoding.EncodeToString([]byte("jane:password")))
+				apiGen.AddJaneAccessReview()
+				user, err := authenticator.Authenticate(base64.StdEncoding.EncodeToString([]byte(test.JanePassword)))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(user.Name).To(Equal("jane"))
-				Expect(user.Groups).To(Equal([]string{}))
+				Expect(user.Groups).To(Equal([]string{"system:authenticated"}))
+			})
+
+			It("should not authenticate an unknown user bob", func() {
+				apiGen.AddBobAccessReview()
+				_, err := authenticator.Authenticate(base64.StdEncoding.EncodeToString([]byte(test.BobPassword)))
+				Expect(err).To(HaveOccurred())
+			})
+
+			It("should not authenticate an user if K8s cannot respond", func() {
+				apiGen.AddErrorAccessReview()
+				_, err := authenticator.Authenticate(base64.StdEncoding.EncodeToString([]byte(test.AnyUserPassword)))
+				Expect(err).To(HaveOccurred())
+			})
+
+			It("should not authenticate an user if K8s Api cannot be tailored per user", func() {
+				_, err := authenticator.Authenticate(base64.StdEncoding.EncodeToString([]byte("missingUser:password")))
+				Expect(err).To(HaveOccurred())
 			})
 		})
 	})

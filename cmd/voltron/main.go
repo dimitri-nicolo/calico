@@ -65,6 +65,7 @@ func main() {
 	pemKey, _ := utils.LoadPEMFromFile(key)
 	tunnelCert, tunnelKey, _ := utils.LoadX509KeyPairFromPEM(pemCert, pemKey)
 
+	k8s, config := bootstrap.ConfigureK8sClient(cfg.K8sConfigPath)
 	opts := []server.Option{
 		server.WithDefaultAddr(addr),
 		server.WithKeepAliveSettings(cfg.KeepAliveEnable, cfg.KeepAliveInterval),
@@ -73,7 +74,7 @@ func main() {
 		server.WithPublicAddr(cfg.PublicIP),
 		server.WithKeepClusterKeys(),
 		server.WithTunnelCreds(tunnelCert, tunnelKey),
-		server.WithAuthentication(),
+		server.WithAuthentication(config),
 
 		// TODO: remove when voltron starts using k8s resources, probably by SAAS-178
 		server.WithAutoRegister(),
@@ -112,7 +113,7 @@ func main() {
 	}
 
 	srv, err := server.New(
-		bootstrap.ConfigureK8sClient(cfg.K8sConfigPath),
+		k8s,
 		opts...,
 	)
 

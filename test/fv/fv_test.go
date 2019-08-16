@@ -14,6 +14,8 @@ import (
 	"strings"
 	"sync"
 
+	"k8s.io/client-go/rest"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
@@ -190,7 +192,7 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 			k8sAPI,
 			server.WithKeepClusterKeys(),
 			server.WithTunnelCreds(srvCert, srvPrivKey),
-			server.WithAuthentication(),
+			server.WithAuthentication(&rest.Config{}),
 			server.WithWatchAdded(),
 		)
 		Expect(err).NotTo(HaveOccurred())
