@@ -40,7 +40,8 @@ EE_MAPPED_IMAGES = {'intrusion-detection-controller': 'intrusionDetectionControl
                     'compliance-controller': 'complianceController',
                     'compliance-server': 'complianceServer',
                     'compliance-snapshotter': 'complianceSnapshotter',
-                    'compliance-reporter': 'complianceReporter'}
+                    'compliance-reporter': 'complianceReporter',
+                    'compliance-benchmarker': 'complianceBenchmarker'}
 
 with open('%s/../_data/versions.yml' % PATH) as f:
     versions = yaml.safe_load(f)

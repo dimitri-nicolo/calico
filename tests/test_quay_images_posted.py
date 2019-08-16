@@ -32,7 +32,9 @@ EXCLUDED_IMAGES_BY_VER = {'v2.3': ['compliance-snapshotter',
                       'compliance-server',
                       'compliance-controller',
                       'compliance-reporter',
-                      'kibana']}
+                      'compliance-benchmarker',
+                      'kibana'],
+                      'v2.4': ['compliance-benchmarker']}
 
 # _config.yml and _data/versions.yml have diff names
 VERSIONS_MAPPED_IMAGES = {'node': 'cnx-node',
