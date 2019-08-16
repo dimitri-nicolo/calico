@@ -1,0 +1,59 @@
+[
+  {
+    "expected": "Possible port scan by pod default/basic-hr2v9e: 1024 >> 1.7794882042577096 unique destination ports as compared to all pods",
+    "input": {
+      "type": "anomaly_detection",
+      "time": 1564685400,
+      "description": "Port Scan - Pods: Count of destination ports compared with all pods",
+      "severity": 100,
+      "bucket_span": 600,
+      "causes": [
+        {
+          "actual": [
+            1024
+          ],
+          "field_name": "dest_port",
+          "function": "high_distinct_count",
+          "function_description": "distinct_count",
+          "over_field_name": "source_name",
+          "over_field_value": "basic-hr2v9e",
+          "probability": 2.593616340937895e-118,
+          "typical": [
+            1.7794882042577096
+          ]
+        }
+      ],
+      "field_name": "dest_port",
+      "function": "high_distinct_count",
+      "function_description": "distinct_count",
+      "influencers": [
+        {
+          "influencer_field_name": "source_namespace",
+          "influencer_field_values": [
+            "default"
+          ]
+        },
+        {
+          "influencer_field_name": "source_name_aggr",
+          "influencer_field_values": [
+            "basic-*"
+          ]
+        },
+        {
+          "influencer_field_name": "source_name",
+          "influencer_field_values": [
+            "basic-hr2v9e"
+          ]
+        }
+      ],
+      "initial_record_score": 99.45330316758285,
+      "job_id": "port_scan_pods",
+      "over_field_name": "source_name",
+      "over_field_value": "basic-hr2v9e",
+      "probability": 2.5936163409377115e-118,
+      "record_score": 99.45330316758285,
+      "result_type": "record",
+      "timestamp": "2019-08-01T18:50:00Z"
+    }
+  }
+]

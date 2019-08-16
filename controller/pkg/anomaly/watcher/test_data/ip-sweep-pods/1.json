@@ -1,0 +1,73 @@
+[
+  {
+    "expected": "Possible IP sweep by pod sto-system/prometheus-k8s-0: 2 >> 1 unique destination IPs as compared to replica set sto-system/prometheus-k8s-*",
+    "input": {
+      "job_id": "ip_sweep_pods",
+      "result_type": "record",
+      "probability": 2.4985029420661006e-11,
+      "record_score": 99.45747233031878,
+      "initial_record_score": 99.45747233031878,
+      "bucket_span": 600,
+      "detector_index": 1,
+      "is_interim": false,
+      "timestamp": 1565135400000,
+      "partition_field_name": "namespace_source_name_aggr",
+      "partition_field_value": "sto-system/prometheus-k8s-*",
+      "function": "high_distinct_count",
+      "function_description": "distinct_count",
+      "field_name": "dest_ip",
+      "over_field_name": "source_name",
+      "over_field_value": "prometheus-k8s-0",
+      "causes": [
+        {
+          "probability": 2.498502942066106e-11,
+          "partition_field_name": "namespace_source_name_aggr",
+          "partition_field_value": "sto-system/prometheus-k8s-*",
+          "function": "high_distinct_count",
+          "function_description": "distinct_count",
+          "typical": [
+            1
+          ],
+          "actual": [
+            2
+          ],
+          "field_name": "dest_ip",
+          "over_field_name": "source_name",
+          "over_field_value": "prometheus-k8s-0"
+        }
+      ],
+      "influencers": [
+        {
+          "influencer_field_name": "source_namespace",
+          "influencer_field_values": [
+            "sto-system"
+          ]
+        },
+        {
+          "influencer_field_name": "source_name_aggr",
+          "influencer_field_values": [
+            "prometheus-k8s-*"
+          ]
+        },
+        {
+          "influencer_field_name": "source_name",
+          "influencer_field_values": [
+            "prometheus-k8s-0"
+          ]
+        }
+      ],
+      "source_name_aggr": [
+        "prometheus-k8s-*"
+      ],
+      "namespace_source_name_aggr": [
+        "sto-system/prometheus-k8s-*"
+      ],
+      "source_namespace": [
+        "sto-system"
+      ],
+      "source_name": [
+        "prometheus-k8s-0"
+      ]
+    }
+  }
+]

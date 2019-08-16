@@ -1,0 +1,52 @@
+[
+  {
+    "expected": "Inbound connection spike for replica set calico-monitoring/alertmanager-calico-node-alertmanager-*: 75 >> 53.38787082337713",
+    "input": {
+      "type": "anomaly_detection",
+      "time": 1564669800,
+      "description": "Inbound connection spike: Inbound connection spike over a whole replica set",
+      "severity": 100,
+      "actual": [
+        75
+      ],
+      "bucket_span": 600,
+      "detector_index": 1,
+      "field_name": "num_flows_started",
+      "function": "high_non_null_sum",
+      "function_description": "sum",
+      "influencers": [
+        {
+          "influencer_field_name": "dest_namespace",
+          "influencer_field_values": [
+            "calico-monitoring"
+          ]
+        },
+        {
+          "influencer_field_name": "dest_name_aggr",
+          "influencer_field_values": [
+            "alertmanager-calico-node-alertmanager-*"
+          ]
+        },
+        {
+          "influencer_field_name": "dest_name",
+          "influencer_field_values": [
+            "alertmanager-calico-node-alertmanager-1",
+            "alertmanager-calico-node-alertmanager-0",
+            "alertmanager-calico-node-alertmanager-2"
+          ]
+        }
+      ],
+      "initial_record_score": 94.97606951527302,
+      "job_id": "inbound_connection_spike",
+      "partition_field_name": "namespace_dest_name_aggr",
+      "partition_field_value": "calico-monitoring/alertmanager-calico-node-alertmanager-*",
+      "probability": 2.304603709121432e-07,
+      "record_score": 94.97606951527302,
+      "result_type": "record",
+      "timestamp": "2019-08-01T14:30:00Z",
+      "typical": [
+        53.38787082337713
+      ]
+    }
+  }
+]

@@ -1,0 +1,73 @@
+[
+  {
+    "expected": "Possible port scan by pod calico-monitoring/cnx-manager-67c8947958-2m6z4: 4 >> 1 unique destination ports as compared to replica set calico-monitoring/cnx-manager-67c8947958-*",
+    "input": {
+      "job_id": "port_scan_pods",
+      "result_type": "record",
+      "probability": 1.1484337717321831e-07,
+      "record_score": 99.29643654376075,
+      "initial_record_score": 99.29643654376075,
+      "bucket_span": 600,
+      "detector_index": 1,
+      "is_interim": false,
+      "timestamp": 1564569000000,
+      "partition_field_name": "namespace_source_name_aggr",
+      "partition_field_value": "calico-monitoring/cnx-manager-67c8947958-*",
+      "function": "high_distinct_count",
+      "function_description": "distinct_count",
+      "field_name": "dest_port",
+      "over_field_name": "source_name",
+      "over_field_value": "cnx-manager-67c8947958-2m6z4",
+      "causes": [
+        {
+          "probability": 1.1484337717321826e-07,
+          "partition_field_name": "namespace_source_name_aggr",
+          "partition_field_value": "calico-monitoring/cnx-manager-67c8947958-*",
+          "function": "high_distinct_count",
+          "function_description": "distinct_count",
+          "typical": [
+            1
+          ],
+          "actual": [
+            4
+          ],
+          "field_name": "dest_port",
+          "over_field_name": "source_name",
+          "over_field_value": "cnx-manager-67c8947958-2m6z4"
+        }
+      ],
+      "influencers": [
+        {
+          "influencer_field_name": "source_namespace",
+          "influencer_field_values": [
+            "calico-monitoring"
+          ]
+        },
+        {
+          "influencer_field_name": "source_name_aggr",
+          "influencer_field_values": [
+            "cnx-manager-67c8947958-*"
+          ]
+        },
+        {
+          "influencer_field_name": "source_name",
+          "influencer_field_values": [
+            "cnx-manager-67c8947958-2m6z4"
+          ]
+        }
+      ],
+      "source_name_aggr": [
+        "cnx-manager-67c8947958-*"
+      ],
+      "namespace_source_name_aggr": [
+        "calico-monitoring/cnx-manager-67c8947958-*"
+      ],
+      "source_namespace": [
+        "calico-monitoring"
+      ],
+      "source_name": [
+        "cnx-manager-67c8947958-2m6z4"
+      ]
+    }
+  }
+]

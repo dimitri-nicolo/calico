@@ -1,0 +1,73 @@
+[
+  {
+    "expected": "Output bytes spike for pod es-client-tigera-elasticsearch-68c4646c5d-cvfjh within replica set calico-monitoring/es-client-tigera-elasticsearch-68c4646c5d-*:1.21291012e+08 >> 1.5604951775965879e+07",
+    "input": {
+      "job_id": "service_bytes_anomaly",
+      "result_type": "record",
+      "probability": 2.854551091177904e-30,
+      "record_score": 94.85749,
+      "initial_record_score": 98.74117626649117,
+      "bucket_span": 600,
+      "detector_index": 2,
+      "is_interim": false,
+      "timestamp": 1564529400000,
+      "partition_field_name": "namespace_dest_name_aggr",
+      "partition_field_value": "calico-monitoring/es-client-tigera-elasticsearch-68c4646c5d-*",
+      "function": "high_sum",
+      "function_description": "sum",
+      "field_name": "bytes_out",
+      "over_field_name": "dest_name",
+      "over_field_value": "es-client-tigera-elasticsearch-68c4646c5d-cvfjh",
+      "causes": [
+        {
+          "probability": 2.8545510911779092e-30,
+          "partition_field_name": "namespace_dest_name_aggr",
+          "partition_field_value": "calico-monitoring/es-client-tigera-elasticsearch-68c4646c5d-*",
+          "function": "high_sum",
+          "function_description": "sum",
+          "typical": [
+            15604951.775965879
+          ],
+          "actual": [
+            121291012
+          ],
+          "field_name": "bytes_out",
+          "over_field_name": "dest_name",
+          "over_field_value": "es-client-tigera-elasticsearch-68c4646c5d-cvfjh"
+        }
+      ],
+      "influencers": [
+        {
+          "influencer_field_name": "dest_namespace",
+          "influencer_field_values": [
+            "calico-monitoring"
+          ]
+        },
+        {
+          "influencer_field_name": "dest_name_aggr",
+          "influencer_field_values": [
+            "es-client-tigera-elasticsearch-68c4646c5d-*"
+          ]
+        },
+        {
+          "influencer_field_name": "dest_name",
+          "influencer_field_values": [
+            "es-client-tigera-elasticsearch-68c4646c5d-cvfjh"
+          ]
+        }
+      ],
+      "dest_name": [
+        "es-client-tigera-elasticsearch-68c4646c5d-cvfjh"
+      ],
+      "dest_namespace": [
+        "calico-monitoring"
+      ],
+      "namespace_dest_name_aggr": [
+        "calico-monitoring/es-client-tigera-elasticsearch-68c4646c5d-*"
+      ],
+      "dest_name_aggr": [
+        "es-client-tigera-elasticsearch-68c4646c5d-*"
+      ]
+    }
+  }
+]

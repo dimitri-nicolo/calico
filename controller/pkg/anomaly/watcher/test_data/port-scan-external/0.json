@@ -1,0 +1,47 @@
+[
+  {
+    "expected": "Possible port scan by 10.162.0.5: 4 >> 1 unique destination ports",
+    "input": {
+      "type": "anomaly_detection",
+      "time": 1565764200,
+      "description": "Port Scan - External: Count of destination ports compared with all external IPs",
+      "severity": 100,
+      "bucket_span": 600,
+      "causes": [
+        {
+          "actual": [
+            4
+          ],
+          "field_name": "dest_port",
+          "function": "high_distinct_count",
+          "function_description": "distinct_count",
+          "over_field_name": "source_ip",
+          "over_field_value": "10.162.0.5",
+          "probability": 1.5291671281086456e-09,
+          "typical": [
+            1
+          ]
+        }
+      ],
+      "field_name": "dest_port",
+      "function": "high_distinct_count",
+      "function_description": "distinct_count",
+      "influencers": [
+        {
+          "influencer_field_name": "source_ip",
+          "influencer_field_values": [
+            "10.162.0.5"
+          ]
+        }
+      ],
+      "initial_record_score": 98.92144950208314,
+      "job_id": "port_scan_external",
+      "over_field_name": "source_ip",
+      "over_field_value": "10.162.0.5",
+      "probability": 1.5291671281086474e-09,
+      "record_score": 98.92144950208314,
+      "result_type": "record",
+      "timestamp": "2019-08-14T06:30:00Z"
+    }
+  }
+]

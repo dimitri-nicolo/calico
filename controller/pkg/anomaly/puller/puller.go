@@ -5,7 +5,9 @@ package puller
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
+	"text/template"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -28,6 +30,7 @@ const (
 
 	Severity        = 100
 	UnknownDetector = "unknown"
+	TemplateError   = "error processing template: %v"
 )
 
 var sem *semaphore.Weighted
@@ -42,24 +45,22 @@ type Puller interface {
 }
 
 type puller struct {
-	name        string
-	xPack       elastic.XPack
-	events      db.Events
-	filter      filters.Filter
-	description string
-	detectors   map[int]string
-	cancel      context.CancelFunc
-	once        sync.Once
+	name      string
+	xPack     elastic.XPack
+	events    db.Events
+	filter    filters.Filter
+	detectors map[int]*template.Template
+	cancel    context.CancelFunc
+	once      sync.Once
 }
 
-func NewPuller(name string, xPack elastic.XPack, events db.Events, filter filters.Filter, description string, detectors map[int]string) Puller {
+func NewPuller(name string, xPack elastic.XPack, events db.Events, filter filters.Filter, detectors map[int]*template.Template) Puller {
 	return &puller{
-		name:        name,
-		xPack:       xPack,
-		events:      events,
-		filter:      filter,
-		description: description,
-		detectors:   detectors,
+		name:      name,
+		xPack:     xPack,
+		events:    events,
+		filter:    filter,
+		detectors: detectors,
 	}
 }
 
@@ -135,13 +136,25 @@ func (p *puller) fetch(ctx context.Context) ([]elastic.RecordSpec, error) {
 }
 
 func (p *puller) generateEvent(r elastic.RecordSpec) events.XPackSecurityEvent {
-	detector, ok := p.detectors[r.DetectorIndex]
-	if !ok {
-		detector = UnknownDetector
-	}
 	return events.XPackSecurityEvent{
 		Severity:    Severity,
-		Description: fmt.Sprintf("%s: %s", p.description, detector),
+		Description: p.generateEventDescription(r),
 		Record:      r,
 	}
+}
+
+func (p *puller) generateEventDescription(r elastic.RecordSpec) string {
+	if t, ok := p.detectors[r.DetectorIndex]; ok {
+		b := &strings.Builder{}
+		if err := t.Execute(b, r); err != nil {
+			log.WithFields(log.Fields{
+				"name":           p.name,
+				"detector_index": r.DetectorIndex,
+			}).WithError(err).Error("Error applying template")
+			return fmt.Sprintf(TemplateError, err)
+		}
+		return b.String()
+	}
+
+	return UnknownDetector
 }

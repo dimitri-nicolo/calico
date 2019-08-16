@@ -1,0 +1,59 @@
+[
+  {
+    "expected": "Output bytes spike for replica set calico-monitoring/es-client-tigera-elasticsearch-68c4646c5d-*:1.42986761e+08 >> 1.5626098092021666e+07",
+    "input": {
+      "job_id": "service_bytes_anomaly",
+      "result_type": "record",
+      "probability": 9.974766829774427e-18,
+      "record_score": 99.37876,
+      "initial_record_score": 98.3045440084381,
+      "bucket_span": 600,
+      "detector_index": 3,
+      "is_interim": false,
+      "timestamp": 1564530000000,
+      "partition_field_name": "namespace_dest_name_aggr",
+      "partition_field_value": "calico-monitoring/es-client-tigera-elasticsearch-68c4646c5d-*",
+      "function": "high_non_null_sum",
+      "function_description": "sum",
+      "typical": [
+        15626098.092021666
+      ],
+      "actual": [
+        142986761
+      ],
+      "field_name": "bytes_out",
+      "influencers": [
+        {
+          "influencer_field_name": "dest_namespace",
+          "influencer_field_values": [
+            "calico-monitoring"
+          ]
+        },
+        {
+          "influencer_field_name": "dest_name_aggr",
+          "influencer_field_values": [
+            "es-client-tigera-elasticsearch-68c4646c5d-*"
+          ]
+        },
+        {
+          "influencer_field_name": "dest_name",
+          "influencer_field_values": [
+            "es-client-tigera-elasticsearch-68c4646c5d-cvfjh"
+          ]
+        }
+      ],
+      "dest_name": [
+        "es-client-tigera-elasticsearch-68c4646c5d-cvfjh"
+      ],
+      "dest_namespace": [
+        "calico-monitoring"
+      ],
+      "namespace_dest_name_aggr": [
+        "calico-monitoring/es-client-tigera-elasticsearch-68c4646c5d-*"
+      ],
+      "dest_name_aggr": [
+        "es-client-tigera-elasticsearch-68c4646c5d-*"
+      ]
+    }
+  }
+]

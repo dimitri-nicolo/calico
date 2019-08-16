@@ -5,7 +5,9 @@ package puller
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
+	"text/template"
 	"time"
 
 	. "github.com/onsi/gomega"
@@ -32,7 +34,7 @@ func TestPull(t *testing.T) {
 		ErrorIndex: -1,
 	}
 
-	p := NewPuller("test", xPack, e, &filters.NilFilter{}, "", map[int]string{}).(*puller)
+	p := NewPuller("test", xPack, e, &filters.NilFilter{}, map[int]*template.Template{}).(*puller)
 	st := statser.NewStatser("test")
 
 	ctx, cancel := context.WithTimeout(context.TODO(), time.Minute)
@@ -47,7 +49,8 @@ func TestPull(t *testing.T) {
 	g.Expect(st.Status().ErrorConditions).Should(HaveLen(0))
 
 	g.Expect(e.FlowLogs).Should(HaveLen(1))
-	g.Expect(e.FlowLogs[0]).Should(Equal(p.generateEvent(xPack.Records[0])))
+	event := p.generateEvent(xPack.Records[0])
+	g.Expect(e.FlowLogs[0]).Should(Equal(event))
 }
 
 func TestPull_RecordsFails(t *testing.T) {
@@ -60,7 +63,7 @@ func TestPull_RecordsFails(t *testing.T) {
 		ErrorIndex: -1,
 	}
 
-	p := NewPuller("test", xPack, e, &filters.NilFilter{}, "", map[int]string{}).(*puller)
+	p := NewPuller("test", xPack, e, &filters.NilFilter{}, map[int]*template.Template{}).(*puller)
 	st := statser.NewStatser("test")
 
 	ctx, cancel := context.WithTimeout(context.TODO(), time.Minute)
@@ -99,7 +102,7 @@ func TestPull_Filter(t *testing.T) {
 		},
 	}
 
-	p := NewPuller("test", xPack, e, flt, "", map[int]string{}).(*puller)
+	p := NewPuller("test", xPack, e, flt, map[int]*template.Template{}).(*puller)
 	st := statser.NewStatser("test")
 
 	ctx, cancel := context.WithTimeout(context.TODO(), time.Minute)
@@ -115,7 +118,8 @@ func TestPull_Filter(t *testing.T) {
 
 	expected := []events.XPackSecurityEvent{}
 	for _, r := range flt.RS {
-		expected = append(expected, p.generateEvent(r))
+		event := p.generateEvent(r)
+		expected = append(expected, event)
 	}
 	g.Expect(e.FlowLogs).Should(ConsistOf(expected))
 }
@@ -136,7 +140,7 @@ func TestPull_FilterFails(t *testing.T) {
 		Err: errors.New("fail"),
 	}
 
-	p := NewPuller("test", xPack, e, flt, "", map[int]string{}).(*puller)
+	p := NewPuller("test", xPack, e, flt, map[int]*template.Template{}).(*puller)
 	st := statser.NewStatser("test")
 
 	ctx, cancel := context.WithTimeout(context.TODO(), time.Minute)
@@ -167,7 +171,7 @@ func TestPull_PutFails(t *testing.T) {
 	}
 	e := &db.MockEvents{}
 
-	p := NewPuller("test", xPack, e, &filters.NilFilter{}, "", map[int]string{}).(*puller)
+	p := NewPuller("test", xPack, e, &filters.NilFilter{}, map[int]*template.Template{}).(*puller)
 	st := statser.NewStatser("test")
 
 	ctx, cancel := context.WithTimeout(context.TODO(), time.Minute)
@@ -196,7 +200,7 @@ func TestFetch(t *testing.T) {
 		},
 	}
 
-	p := NewPuller("test", xPack, &db.MockEvents{}, &filters.NilFilter{}, "", map[int]string{}).(*puller)
+	p := NewPuller("test", xPack, &db.MockEvents{}, &filters.NilFilter{}, map[int]*template.Template{}).(*puller)
 
 	ctx, cancel := context.WithTimeout(context.TODO(), time.Minute)
 	defer cancel()
@@ -210,11 +214,11 @@ func TestFetch(t *testing.T) {
 func TestGenerateEvent(t *testing.T) {
 	g := NewWithT(t)
 
-	description := "test anomaly detector"
-	detectors := map[int]string{
-		1: "detector 1",
+	tmpl := "detector 1"
+	detectors := map[int]*template.Template{
+		1: template.Must(template.New("test").Parse(tmpl)),
 	}
-	p := NewPuller("test", &elastic.MockXPack{}, &db.MockEvents{}, &filters.NilFilter{}, description, detectors).(*puller)
+	p := NewPuller("test", &elastic.MockXPack{}, &db.MockEvents{}, &filters.NilFilter{}, detectors).(*puller)
 
 	r1 := elastic.RecordSpec{
 		DetectorIndex: 1,
@@ -222,8 +226,7 @@ func TestGenerateEvent(t *testing.T) {
 	}
 	e1 := p.generateEvent(r1)
 
-	g.Expect(e1.Description).Should(HavePrefix(description))
-	g.Expect(e1.Description).Should(HaveSuffix(detectors[1]))
+	g.Expect(e1.Description).Should(Equal(tmpl))
 	g.Expect(e1.Severity).Should(BeNumerically(">=", 0))
 	g.Expect(e1.Severity).Should(BeNumerically("<=", 100))
 	g.Expect(e1.Record).Should(Equal(r1))
@@ -234,9 +237,29 @@ func TestGenerateEvent(t *testing.T) {
 	}
 	e2 := p.generateEvent(r2)
 
-	g.Expect(e2.Description).Should(HavePrefix(description))
 	g.Expect(e2.Description).Should(HaveSuffix(UnknownDetector))
 	g.Expect(e2.Severity).Should(BeNumerically(">=", 0))
 	g.Expect(e2.Severity).Should(BeNumerically("<=", 100))
 	g.Expect(e2.Record).Should(Equal(r2))
+}
+
+func TestGenerateEventDescription(t *testing.T) {
+	g := NewWithT(t)
+
+	detectors := map[int]*template.Template{
+		0: template.Must(template.New("test").Parse("{{.OverFieldName}}: {{.OverFieldValue}}")),
+		1: template.Must(template.New("test").Parse("{{.PartitionFieldName}}: {{.PartitionFieldValue}}")),
+	}
+	p := NewPuller("test", &elastic.MockXPack{}, &db.MockEvents{}, &filters.NilFilter{}, detectors).(*puller)
+
+	r := elastic.RecordSpec{
+		OverFieldName:       "foo",
+		OverFieldValue:      "bar",
+		PartitionFieldName:  "baz",
+		PartitionFieldValue: "bop",
+	}
+	g.Expect(p.generateEventDescription(r)).Should(Equal(fmt.Sprintf("%s: %s", r.OverFieldName, r.OverFieldValue)))
+
+	r.DetectorIndex = 1
+	g.Expect(p.generateEventDescription(r)).Should(Equal(fmt.Sprintf("%s: %s", r.PartitionFieldName, r.PartitionFieldValue)))
 }

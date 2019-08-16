@@ -1,0 +1,66 @@
+[
+  {
+    "expected": "Possible IP sweep by pod default/basic-qxn3ot: 255 >> 1.8932834641399547 unique destination IPs as compared to all pods",
+    "input": {
+      "job_id": "ip_sweep_pods",
+      "result_type": "record",
+      "probability": 3.8697194132869493e-69,
+      "record_score": 98.0948429860432,
+      "initial_record_score": 98.0948429860432,
+      "bucket_span": 600,
+      "detector_index": 0,
+      "is_interim": false,
+      "timestamp": 1564690800000,
+      "function": "high_distinct_count",
+      "function_description": "distinct_count",
+      "field_name": "dest_ip",
+      "over_field_name": "source_name",
+      "over_field_value": "basic-qxn3ot",
+      "causes": [
+        {
+          "probability": 3.8697194132870497e-69,
+          "function": "high_distinct_count",
+          "function_description": "distinct_count",
+          "typical": [
+            1.8932834641399547
+          ],
+          "actual": [
+            255
+          ],
+          "field_name": "dest_ip",
+          "over_field_name": "source_name",
+          "over_field_value": "basic-qxn3ot"
+        }
+      ],
+      "influencers": [
+        {
+          "influencer_field_name": "source_namespace",
+          "influencer_field_values": [
+            "default"
+          ]
+        },
+        {
+          "influencer_field_name": "source_name_aggr",
+          "influencer_field_values": [
+            "basic-*"
+          ]
+        },
+        {
+          "influencer_field_name": "source_name",
+          "influencer_field_values": [
+            "basic-qxn3ot"
+          ]
+        }
+      ],
+      "source_name_aggr": [
+        "basic-*"
+      ],
+      "source_namespace": [
+        "default"
+      ],
+      "source_name": [
+        "basic-qxn3ot"
+      ]
+    }
+  }
+]

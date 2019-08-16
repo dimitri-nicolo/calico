@@ -1,0 +1,50 @@
+[
+  {
+    "expected": "Inbound connection spike for replica set -/pub: 1026 >> 1.983517999941824",
+    "input": {
+      "type": "anomaly_detection",
+      "time": 1565808600,
+      "description": "Inbound connection spike: Inbound connection spike over a whole replica set",
+      "severity": 100,
+      "actual": [
+        1026
+      ],
+      "bucket_span": 600,
+      "detector_index": 1,
+      "field_name": "num_flows_started",
+      "function": "high_non_null_sum",
+      "function_description": "sum",
+      "influencers": [
+        {
+          "influencer_field_name": "dest_namespace",
+          "influencer_field_values": [
+            "-"
+          ]
+        },
+        {
+          "influencer_field_name": "dest_name_aggr",
+          "influencer_field_values": [
+            "pub"
+          ]
+        },
+        {
+          "influencer_field_name": "dest_name",
+          "influencer_field_values": [
+            "-"
+          ]
+        }
+      ],
+      "initial_record_score": 97.57114151325425,
+      "job_id": "inbound_connection_spike",
+      "partition_field_name": "namespace_dest_name_aggr",
+      "partition_field_value": "-/pub",
+      "probability": 1.0000000000000087e-50,
+      "record_score": 97.57114151325425,
+      "result_type": "record",
+      "timestamp": "2019-08-14T18:50:00Z",
+      "typical": [
+        1.983517999941824
+      ]
+    }
+  }
+]

@@ -1,0 +1,50 @@
+[
+  {
+    "expected": "Input bytes spike for replica set calico-monitoring/kibana-tigera-elasticsearch-654dcf58d-*: 124906 >> 18628.831365730086",
+    "input": {
+      "type": "anomaly_detection",
+      "time": 1565789400,
+      "description": "Service bytes anomaly: Input bytes spike over a whole replica set",
+      "severity": 100,
+      "actual": [
+        124906
+      ],
+      "bucket_span": 600,
+      "detector_index": 1,
+      "field_name": "bytes_in",
+      "function": "high_non_null_sum",
+      "function_description": "sum",
+      "influencers": [
+        {
+          "influencer_field_name": "dest_namespace",
+          "influencer_field_values": [
+            "calico-monitoring"
+          ]
+        },
+        {
+          "influencer_field_name": "dest_name_aggr",
+          "influencer_field_values": [
+            "kibana-tigera-elasticsearch-654dcf58d-*"
+          ]
+        },
+        {
+          "influencer_field_name": "dest_name",
+          "influencer_field_values": [
+            "kibana-tigera-elasticsearch-654dcf58d-2pns6"
+          ]
+        }
+      ],
+      "initial_record_score": 80.48836906430299,
+      "job_id": "service_bytes_anomaly",
+      "partition_field_name": "namespace_dest_name_aggr",
+      "partition_field_value": "calico-monitoring/kibana-tigera-elasticsearch-654dcf58d-*",
+      "probability": 1.2402932736465219e-06,
+      "record_score": 80.48836906430299,
+      "result_type": "record",
+      "timestamp": "2019-08-14T13:30:00Z",
+      "typical": [
+        18628.831365730086
+      ]
+    }
+  }
+]

@@ -1,0 +1,51 @@
+[
+  {
+    "expected": "Unexpected connection from pod cnx-manager-84995f965-g4fzh in replica set calico-monitoring/cnx-manager-84995f965-* to IP 192.168.253.192",
+    "input": {
+      "job_id": "pod_outlier_ip_activity",
+      "result_type": "record",
+      "probability": 0.0010527143661750516,
+      "record_score": 64.01608685324332,
+      "initial_record_score": 64.01608685324332,
+      "bucket_span": 600,
+      "detector_index": 0,
+      "is_interim": false,
+      "timestamp": 1565808600000,
+      "by_field_name": "dest_ip",
+      "by_field_value": "192.168.253.192",
+      "partition_field_name": "namespace_source_name_aggr",
+      "partition_field_value": "calico-monitoring/cnx-manager-84995f965-*",
+      "function": "rare",
+      "function_description": "rare",
+      "typical": [
+        0.0010527143661750516
+      ],
+      "actual": [
+        1
+      ],
+      "influencers": [
+        {
+          "influencer_field_name": "source_name",
+          "influencer_field_values": [
+            "cnx-manager-84995f965-g4fzh"
+          ]
+        },
+        {
+          "influencer_field_name": "dest_ip",
+          "influencer_field_values": [
+            "192.168.253.192"
+          ]
+        }
+      ],
+      "namespace_source_name_aggr": [
+        "calico-monitoring/cnx-manager-84995f965-*"
+      ],
+      "dest_ip": [
+        "192.168.253.192"
+      ],
+      "source_name": [
+        "cnx-manager-84995f965-g4fzh"
+      ]
+    }
+  }
+]

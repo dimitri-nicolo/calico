@@ -1,0 +1,73 @@
+[
+  {
+    "expected": "Input bytes spike for pod coredns-576cbf47c7-tm9hr within replica set kube-system/coredns-576cbf47c7-*:1.119264e+06 >> 650159.0870510652",
+    "input": {
+      "job_id": "service_bytes_anomaly",
+      "result_type": "record",
+      "probability": 1.4910228190476503e-19,
+      "record_score": 95.10879,
+      "initial_record_score": 98.74117626649117,
+      "bucket_span": 600,
+      "detector_index": 0,
+      "is_interim": false,
+      "timestamp": 1564529400000,
+      "partition_field_name": "namespace_dest_name_aggr",
+      "partition_field_value": "kube-system/coredns-576cbf47c7-*",
+      "function": "high_sum",
+      "function_description": "sum",
+      "field_name": "bytes_in",
+      "over_field_name": "dest_name",
+      "over_field_value": "coredns-576cbf47c7-tm9hr",
+      "causes": [
+        {
+          "probability": 1.4910228190476397e-19,
+          "partition_field_name": "namespace_dest_name_aggr",
+          "partition_field_value": "kube-system/coredns-576cbf47c7-*",
+          "function": "high_sum",
+          "function_description": "sum",
+          "typical": [
+            650159.0870510652
+          ],
+          "actual": [
+            1119264
+          ],
+          "field_name": "bytes_in",
+          "over_field_name": "dest_name",
+          "over_field_value": "coredns-576cbf47c7-tm9hr"
+        }
+      ],
+      "influencers": [
+        {
+          "influencer_field_name": "dest_namespace",
+          "influencer_field_values": [
+            "kube-system"
+          ]
+        },
+        {
+          "influencer_field_name": "dest_name_aggr",
+          "influencer_field_values": [
+            "coredns-576cbf47c7-*"
+          ]
+        },
+        {
+          "influencer_field_name": "dest_name",
+          "influencer_field_values": [
+            "coredns-576cbf47c7-tm9hr"
+          ]
+        }
+      ],
+      "dest_name": [
+        "coredns-576cbf47c7-tm9hr"
+      ],
+      "dest_namespace": [
+        "kube-system"
+      ],
+      "namespace_dest_name_aggr": [
+        "kube-system/coredns-576cbf47c7-*"
+      ],
+      "dest_name_aggr": [
+        "coredns-576cbf47c7-*"
+      ]
+    }
+  }
+]

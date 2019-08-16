@@ -61,7 +61,7 @@ func (w *watcher) Run(ctx context.Context) {
 					puller: puller.NewPuller(
 						jid, w.xPack, w.events,
 						filters.NewAuditLog(w.auditLog),
-						info.Description, info.Detectors),
+						info.Detectors),
 					statser: statser,
 				}
 

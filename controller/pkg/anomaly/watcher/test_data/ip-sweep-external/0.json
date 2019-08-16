@@ -1,0 +1,48 @@
+[
+  {
+    "expected": "Possible IP sweep by 10.162.0.5: 5 >> 1.0196238226623873 unique destination IPs",
+    "input": {
+      "job_id": "ip_sweep_external",
+      "result_type": "record",
+      "probability": 1.914076590316029e-24,
+      "record_score": 99.36115,
+      "initial_record_score": 98.32770286399457,
+      "bucket_span": 600,
+      "detector_index": 0,
+      "is_interim": false,
+      "timestamp": 1565271600000,
+      "function": "high_distinct_count",
+      "function_description": "distinct_count",
+      "field_name": "dest_ip",
+      "over_field_name": "source_ip",
+      "over_field_value": "10.162.0.5",
+      "causes": [
+        {
+          "probability": 1.9140765903160153e-24,
+          "function": "high_distinct_count",
+          "function_description": "distinct_count",
+          "typical": [
+            1.0196238226623873
+          ],
+          "actual": [
+            5
+          ],
+          "field_name": "dest_ip",
+          "over_field_name": "source_ip",
+          "over_field_value": "10.162.0.5"
+        }
+      ],
+      "influencers": [
+        {
+          "influencer_field_name": "source_ip",
+          "influencer_field_values": [
+            "10.162.0.5"
+          ]
+        }
+      ],
+      "source_ip": [
+        "10.162.0.5"
+      ]
+    }
+  }
+]
