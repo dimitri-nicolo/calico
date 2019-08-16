@@ -336,20 +336,11 @@ func (cs *clusters) interceptCreateManagedCluster(h http.Handler, w http.Respons
 	w.Write(dataBuffer.Bytes())
 }
 
-// get returns the cluster read-locked so that nobody can modify it while its
-// being used.
+// get returns the cluster
 func (cs *clusters) get(id string) *cluster {
 	cs.RLock()
 	defer cs.RUnlock()
-
-	// lock it while the cs.Lock is held to avoid a race with whoever would like
-	// to remove the cluster from the list
-	c := cs.clusters[id]
-	if c != nil {
-		c.RLock()
-	}
-
-	return c
+	return cs.clusters[id]
 }
 
 func (cs *clusters) watchK8s(ctx context.Context, k8s K8sInterface, syncC chan<- error) error {
@@ -421,11 +412,16 @@ func (c *cluster) checkTunnelState() {
 }
 
 func (c *cluster) DialContext(ctx context.Context, network, addr string) (net.Conn, error) {
+	c.RLock()
+	defer c.RUnlock()
 	return c.tunnel.Open()
 }
 
 func (c *cluster) DialTLS2(network, addr string, cfg *tls.Config) (net.Conn, error) {
+	c.RLock()
 	conn, err := c.tunnel.Open()
+	c.RUnlock()
+
 	if err != nil {
 		return nil, errors.WithMessage(err, "c.tunnel.Open")
 	}
@@ -434,16 +430,21 @@ func (c *cluster) DialTLS2(network, addr string, cfg *tls.Config) (net.Conn, err
 }
 
 func (c *cluster) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if c.proxy == nil {
+	c.RLock()
+	proxy := c.proxy
+	c.RUnlock()
+
+	if proxy == nil {
 		log.Debugf("Cannot proxy to cluster %s, no tunnel", c.DisplayName)
 		writeHTTPError(w, clusterNotConnectedError(c.DisplayName))
 		return
 	}
 
-	c.proxy.ServeHTTP(w, r)
+	proxy.ServeHTTP(w, r)
 }
 
 func (c *cluster) assignTunnel(t *tunnel.Tunnel) {
+	// called with RLock held
 	c.tunnel = t
 	c.proxy = &httputil.ReverseProxy{
 		Director:      proxyVoidDirector,

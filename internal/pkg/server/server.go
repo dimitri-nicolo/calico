@@ -301,6 +301,8 @@ func (s *Server) acceptTunnels(opts ...tunnel.Option) {
 			}
 		}
 
+		c.RLock()
+
 		// we call this function so that we can return and unlock on any failed
 		// check
 		func() {
@@ -355,8 +357,6 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 		writeHTTPError(w, clusterNotFoundError(clusterID))
 		return
 	}
-
-	defer c.RUnlock()
 
 	// We proxy through a secure tunnel, therefore we only enforce https for HTTP/2
 	// XXX What if we set http2.Transport.AllowHTTP = true ?
@@ -436,6 +436,7 @@ func (s *Server) ClusterCreds(id string) ([]byte, []byte, error) {
 		return nil, nil, errors.Errorf("cluster id %q does not exist", id)
 	}
 
+	c.RLock()
 	defer c.RUnlock()
 
 	cPem := utils.CertPEMEncode(c.cert)

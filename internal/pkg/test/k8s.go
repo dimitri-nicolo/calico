@@ -231,6 +231,21 @@ func (mc *managedClusters) Add(id, name string) {
 	mc.watcher.Add(cl)
 }
 
+func (mc *managedClusters) Update(id string) {
+	cl := &apiv3.ManagedCluster{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       calicov3.KindManagedCluster,
+			APIVersion: calicov3.GroupVersionCurrent,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: mc.cs[id].name,
+			UID:  k8stypes.UID(id),
+		},
+	}
+
+	mc.watcher.Modify(cl)
+}
+
 func (mc *managedClusters) Delete(id string) {
 	cl := &apiv3.ManagedCluster{
 		TypeMeta: metav1.TypeMeta{
@@ -258,6 +273,22 @@ func (c *K8sFakeClient) AddCluster(id, name string) error {
 	}
 
 	c.clusters.Add(id, name)
+	return nil
+}
+
+// UpdateCluster modifies a cluster resource
+//
+// its action is currently void, but will be used when it comes to cert rotation
+// etc.
+func (c *K8sFakeClient) UpdateCluster(id string) error {
+	c.clusters.Lock()
+	defer c.clusters.Unlock()
+
+	if c.clusters.Get(id) == nil {
+		return errors.Errorf("cluster id %s not present", id)
+	}
+
+	c.clusters.Update(id)
 	return nil
 }
 

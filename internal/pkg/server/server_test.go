@@ -471,6 +471,75 @@ var _ = Describe("Server Proxy to tunnel", func() {
 			})
 		})
 
+		When("long lasting connection is in progress", func() {
+			var slowTun *tunnel.Tunnel
+			var xCert tls.Certificate
+
+			It("should get some certs for test server", func() {
+				key, _ := utils.KeyPEMEncode(srvPrivKey)
+				cert := utils.CertPEMEncode(srvCert)
+
+				xCert, _ = tls.X509KeyPair(cert, key)
+			})
+
+			It("Should add cluster", func() {
+				k8sAPI.AddCluster("slow", "slow")
+				Expect(<-watchSync).NotTo(HaveOccurred())
+			})
+
+			var slow *test.HTTPSBin
+			slowC := make(chan struct{})
+			slowWaitC := make(chan struct{})
+
+			It("Should open a tunnel", func() {
+				certPem, keyPem, _ := srv.ClusterCreds("slow")
+				cert, _ := tls.X509KeyPair(certPem, keyPem)
+
+				cfg := &tls.Config{
+					Certificates: []tls.Certificate{cert},
+					RootCAs:      rootCAs,
+				}
+
+				Eventually(func() error {
+					var err error
+					slowTun, err = tunnel.DialTLS(lisTun.Addr().String(), cfg)
+					return err
+				}).ShouldNot(HaveOccurred())
+
+				slow = test.NewHTTPSBin(slowTun, xCert, func(r *http.Request) {
+					// the connection is set up, let the test proceed
+					close(slowWaitC)
+					// block here to emulate long lasting connection
+					<-slowC
+				})
+
+			})
+
+			It("should be able to update a cluster - test race SAAS-226", func() {
+				var wg sync.WaitGroup
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+					clnt := configureHTTPSClient()
+					req, err := http.NewRequest("GET",
+						"https://"+lis2.Addr().String()+"/some/path", strings.NewReader("HELLO"))
+					req.Header[server.ClusterHeaderField] = []string{"slow"}
+					test.AddJaneToken(req)
+					resp, err := clnt.Do(req)
+					log.Infof("resp = %+v\n", resp)
+					log.Infof("err = %+v\n", err)
+					Expect(err).NotTo(HaveOccurred())
+				}()
+
+				<-slowWaitC
+				k8sAPI.UpdateCluster("slow")
+				Expect(<-watchSync).NotTo(HaveOccurred())
+				close(slowC) // let the call handler exit
+				slow.Close()
+				wg.Wait()
+			})
+		})
+
 		It("should stop the servers", func(done Done) {
 			err := srv.Close()
 			Expect(err).NotTo(HaveOccurred())
