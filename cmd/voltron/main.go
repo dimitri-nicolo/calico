@@ -27,10 +27,13 @@ type config struct {
 	Host              string
 	TunnelPort        int    `default:"5566" split_words:"true"`
 	TunnelHost        string `split_words:"true"`
+	TunnelCert        string `default:"/certs/tunnel/cert" split_words:"true"`
+	TunnelKey         string `default:"/certs/tunnel/key" split_words:"true"`
 	LogLevel          string `default:"DEBUG"`
-	CertPath          string `default:"/certs" split_words:"true"`
 	TemplatePath      string `default:"/tmp/guardian.yaml.tmpl" split_words:"true"`
 	PublicIP          string `default:"127.0.0.1:32453" split_words:"true"`
+	HTTPSCert         string `default:"/certs/https/cert" split_words:"true"`
+	HTTPSKey          string `default:"/certs/https/key" split_words:"true"`
 	K8sConfigPath     string `split_words:"true"`
 	KeepAliveEnable   bool   `default:"true" split_words:"true"`
 	KeepAliveInterval int    `default:"100" split_words:"true"`
@@ -55,25 +58,32 @@ func main() {
 		}()
 	}
 
-	cert := fmt.Sprintf("%s/voltron.crt", cfg.CertPath)
-	key := fmt.Sprintf("%s/voltron.key", cfg.CertPath)
-
 	addr := fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)
 
-	//TODO: These should be different that the ones baked in
-	pemCert, _ := utils.LoadPEMFromFile(cert)
-	pemKey, _ := utils.LoadPEMFromFile(key)
-	tunnelCert, tunnelKey, _ := utils.LoadX509KeyPairFromPEM(pemCert, pemKey)
+	pemCert, err := utils.LoadPEMFromFile(cfg.TunnelCert)
+	if err != nil {
+		log.WithError(err).Fatal("couldn't load tunnel cert from file")
+	}
+
+	pemKey, err := utils.LoadPEMFromFile(cfg.TunnelKey)
+	if err != nil {
+		log.WithError(err).Fatal("couldn't load tunnel key from file")
+	}
+
+	tunnelX509Cert, tunnelX509Key, err := utils.LoadX509KeyPairFromPEM(pemCert, pemKey)
+	if err != nil {
+		log.WithError(err).Fatal("couldn't load tunnel X509 key pair")
+	}
 
 	k8s, config := bootstrap.ConfigureK8sClient(cfg.K8sConfigPath)
 	opts := []server.Option{
 		server.WithDefaultAddr(addr),
 		server.WithKeepAliveSettings(cfg.KeepAliveEnable, cfg.KeepAliveInterval),
-		server.WithCredsFiles(cert, key),
+		server.WithCredsFiles(cfg.HTTPSCert, cfg.HTTPSKey),
 		server.WithTemplate(cfg.TemplatePath),
 		server.WithPublicAddr(cfg.PublicIP),
 		server.WithKeepClusterKeys(),
-		server.WithTunnelCreds(tunnelCert, tunnelKey),
+		server.WithTunnelCreds(tunnelX509Cert, tunnelX509Key),
 		server.WithAuthentication(config),
 
 		// TODO: remove when voltron starts using k8s resources, probably by SAAS-178
@@ -123,7 +133,7 @@ func main() {
 
 	lisTun, err := net.Listen("tcp", fmt.Sprintf("%s:%d", cfg.TunnelHost, cfg.TunnelPort))
 	if err != nil {
-		log.Fatalf("Failedto create tunnel listener: %s", err)
+		log.Fatalf("Failed to create tunnel listener: %s", err)
 	}
 
 	go func() {

@@ -20,18 +20,27 @@ service:
     port: 30443
     tunnelPort: 30449
 
-secret:
-  name: cnx-voltron-tls
+tunnelSecret:
+  name: cnx-voltron-tunnel
+
+httpsSecret:
+  name: cnx-voltron-https
 
 certs:
-  create: false
   activeDeadlineSeconds: 600
   image: frapsoft/openssl
   imageTag: "latest"
   imagePullPolicy: "IfNotPresent"
-  provided:
-    crt:
-    key:
+  tunnel:
+    create: false
+    provided:
+      crt:
+      key:
+  https:
+    create: false
+    provided:
+      crt:
+      key:
 
 rbac:
   create: true

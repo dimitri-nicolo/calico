@@ -41,11 +41,20 @@ k8s-app: {{ include "cnx-voltron.name" . }}
 {{/*
 Generate certificates for voltron
 */}}
-{{- define "voltron.gen-certs" -}}
-{{- if or .Values.certs.provided.crt .Values.certs.provided.key -}}
-{{- $_ := required "Must specify both or neither of voltron_cert or voltron_key" .Values.certs.provided.crt -}}
-{{- $_ := required "Must specify both or neither of voltron_cert or voltron_key" .Values.certs.provided.key -}}
-voltron.crt: {{ .Values.certs.provided.crt| b64enc }}
-voltron.key: {{ .Values.certs.provided.key | b64enc }}
+{{- define "voltron.gen-tunnel-certs" -}}
+{{- if or .Values.certs.tunnel.provided.crt .Values.certs.tunnel.provided.key -}}
+{{- $_ := required "Must specify both or neither of voltron_cert or voltron_key" .Values.certs.tunnel.provided.crt -}}
+{{- $_ := required "Must specify both or neither of voltron_cert or voltron_key" .Values.certs.tunnel.provided.key -}}
+cert: {{ .Values.certs.tunnel.provided.crt| b64enc }}
+key: {{ .Values.certs.tunnel.provided.key | b64enc }}
+{{- end }}
+{{- end -}}
+
+{{- define "voltron.gen-https-certs" -}}
+{{- if or .Values.certs.https.provided.crt .Values.certs.https.provided.key -}}
+{{- $_ := required "Must specify both or neither of voltron_cert or voltron_key" .Values.certs.https.provided.crt -}}
+{{- $_ := required "Must specify both or neither of voltron_cert or voltron_key" .Values.certs.https.provided.key -}}
+cert: {{ .Values.certs.https.provided.crt| b64enc }}
+key: {{ .Values.certs.https.provided.key | b64enc }}
 {{- end }}
 {{- end -}}

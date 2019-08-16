@@ -67,14 +67,19 @@ spec:
             initialDelaySeconds: 10
             periodSeconds: 5
           volumeMounts:
-            - mountPath: /certs/
-              name: {{ .Values.secret.name }}
+            - mountPath: /certs/tunnel
+              name: {{ .Values.tunnelSecret.name }}
+            - mountPath: /certs/https
+              name: {{ .Values.httpsSecret.name }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       volumes:
-        - name: {{ .Values.secret.name }}
+        - name: {{ .Values.tunnelSecret.name }}
           secret:
-            secretName: {{ .Values.secret.name }}
+            secretName: {{ .Values.tunnelSecret.name }}
+        - name: {{ .Values.httpsSecret.name }}
+          secret:
+            secretName: {{ .Values.httpsSecret.name }}
       serviceAccountName: cnx-voltron
       {{- with .Values.nodeSelector }}
       nodeSelector:
