@@ -1284,8 +1284,8 @@ applyCNXManifest() {
   blockUntilPodIsReady "k8s-app=cnx-manager" 180 "cnx-manager"      # Block until cnx-manager pod is running & ready
   blockUntilPodIsReady "k8s-app=compliance-controller" 180 "compliance-controller"
   blockUntilPodIsReady "k8s-app=compliance-server" 180 "compliance-server"
-  #TODO: uncomment when snapshotter is working
-  #blockUntilPodIsReady "k8s-app=compliance-snapshotter" 180 "compliance-snapshotter"
+  blockUntilPodIsReady "k8s-app=compliance-snapshotter" 180 "compliance-snapshotter"
+  blockUntilPodIsReady "k8s-app=compliance-benchmarker" 180 "compliance-benchmarker"
   countDownSecs 10 "Waiting for cnx-manager to stabilize"         # Wait until cnx-manager starts to run.
 }
 

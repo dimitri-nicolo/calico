@@ -319,6 +319,10 @@ def gen_chart_specific_values_v2_5(versions, imageNames, imageRegistry, chart, f
         username: tigera-ee-curator
         password: ""
       compliance:
+        benchmarker:
+          # Username and password for the compliance benchmarker to authenticate with elasticsearch.
+          username: tigera-ee-compliance-benchmarker
+          password: ""
         controller:
           # Username and password for the compliance controller to authenticate with elasticsearch.
           username: tigera-ee-compliance-controller

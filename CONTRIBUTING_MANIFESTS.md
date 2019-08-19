@@ -111,6 +111,8 @@ elasticsearch:
       password: <>
     server:
       password: <>
+    benchmarker:
+      password: <>
   intrusionDetection:
     password: <>
   elasticInstaller:

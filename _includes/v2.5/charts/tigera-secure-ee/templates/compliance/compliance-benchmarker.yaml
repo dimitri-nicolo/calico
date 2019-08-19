@@ -110,13 +110,13 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: elastic-compliance-user
-                  key: snapshotter.username
+                  key: benchmarker.username
                   optional: true
             - name: ELASTIC_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: elastic-compliance-user
-                  key: snapshotter.password
+                  key: benchmarker.password
                   optional: true
             - name: ELASTIC_SSL_VERIFY
               value: "true"

@@ -1,6 +1,6 @@
 ---
 layout: null
 ---
-{% helm tigera-secure-ee --execute templates/manager.yaml --execute templates/compliance/compliance-server.yaml --execute templates/compliance/compliance-controller.yaml --execute templates/compliance/compliance-snapshotter.yaml --execute templates/compliance/compliance-reporter.yaml --execute templates/compliance/compliance-report-types.yaml %}
+{% helm tigera-secure-ee --execute templates/manager.yaml --execute templates/compliance/compliance-server.yaml --execute templates/compliance/compliance-controller.yaml --execute templates/compliance/compliance-snapshotter.yaml --execute templates/compliance/compliance-reporter.yaml --execute templates/compliance/compliance-report-types.yaml --execute templates/compliance/compliance-benchmarker.yaml %}
 platform: gke
 {% endhelm %}
