@@ -71,29 +71,7 @@ configuration.
 
 {% include {{page.version}}/cnx-cred-sed.md yaml="calico" %}
 
-1. Open the manifest in your favorite editor and modify the replica count in the
-   `Deployment` named `calico-typha` to the desired number of replicas.
-
-   ```yaml
-   apiVersion: apps/v1beta1
-   kind: Deployment
-   metadata:
-     name: calico-typha
-     ...
-   spec:
-     ...
-     replicas: <number of replicas>
-   ```
-   {: .no-select-button}
-
-   We recommend at least one replica for every 200 nodes and no more than
-   20 replicas. In production, we recommend a minimum of three replicas to reduce
-   the impact of rolling upgrades and failures.
-
-   > **Warning**: If you do not increase the replica
-   > count from its default of `0` Felix will try to connect to Typha, find no
-   > Typha instances to connect to, and fail to start.
-   {: .alert .alert-danger}
+{% include {{page.version}}/config-typha.md %}
 
 1. Apply the manifest using the following command.
 
@@ -154,31 +132,9 @@ for each [remote cluster](../../../networking/federation/index#terminology). Ens
      -O
      ```
 
-1. Open the manifest in your favorite editor and modify the replica count in the
-   `Deployment` named `calico-typha` to the desired number of replicas.
-
-   ```yaml
-   apiVersion: apps/v1beta1
-   kind: Deployment
-   metadata:
-     name: calico-typha
-     ...
-   spec:
-     ...
-     replicas: <number of replicas>
-   ```
-   {: .no-select-button}
-
-   We recommend at least one replica for every 200 nodes and no more than
-   20 replicas. In production, we recommend a minimum of three replicas to reduce
-   the impact of rolling upgrades and failures.
-
-   > **Warning**: If you do not increase the replica
-   > count from its default of `0` Felix will try to connect to Typha, find no
-   > Typha instances to connect to, and fail to start.
-   {: .alert .alert-danger}
-
 {% include {{page.version}}/cnx-cred-sed.md yaml="calico" %}
+
+{% include {{page.version}}/config-typha.md %}
 
 1. Apply the manifest using the following command.
 
