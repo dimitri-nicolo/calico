@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -51,8 +52,8 @@ func PolicyImpactHandler(authz K8sAuthInterface, p pip.PIP, h http.Handler) http
 		// Extract the PIP parameters from the request if present.
 		params, err := ExtractPolicyImpactParamsFromRequest(parts[1], req)
 		if err != nil {
-			log.Infof("Error extracting policy impact parameters (code=%d): %v", getErrorHTTPCode(err), err)
-			http.Error(w, err.Error(), getErrorHTTPCode(err))
+			log.Infof("Error extracting policy impact parameters: %v", err)
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		} else if params == nil {
 			// No params were returned this is not a PIP request, proxy the request  by calling directly through to the
@@ -63,9 +64,9 @@ func PolicyImpactHandler(authz K8sAuthInterface, p pip.PIP, h http.Handler) http
 		}
 
 		// Check permissions for the policy actions being previewed.
-		if err := checkPolicyActionsPermissions(params.ResourceActions, req, authz); err != nil {
-			log.Infof("Not permitting user actions (code=%d): %v", getErrorHTTPCode(err), err)
-			http.Error(w, err.Error(), getErrorHTTPCode(err))
+		if stat, err := checkPolicyActionsPermissions(params.ResourceActions, req, authz); err != nil {
+			log.Infof("Not permitting user actions (code=%d): %v", stat, err)
+			http.Error(w, err.Error(), stat)
 			return
 		}
 
@@ -93,7 +94,7 @@ func PolicyImpactHandler(authz K8sAuthInterface, p pip.PIP, h http.Handler) http
 // ExtractPolicyImpactParamsFromRequest will extract a PolicyImpactParams object if it exists
 // in the request (resourceActions) It will also modify the request removing the
 // resourceActions from the request body
-func ExtractPolicyImpactParamsFromRequest(index string, req *http.Request) (p *pip.PolicyImpactParams, e error) {
+func ExtractPolicyImpactParamsFromRequest(index string, req *http.Request) (p *pip.PolicyImpactParams, err error) {
 
 	// Read the body data.
 	b, err := ioutil.ReadAll(req.Body)
@@ -115,7 +116,7 @@ func ExtractPolicyImpactParamsFromRequest(index string, req *http.Request) (p *p
 	err = json.Unmarshal(b, &reqRaw)
 	if err != nil {
 		log.WithError(err).Info("Error unmarshaling query")
-		return nil, invalidRequestError("invalid elasticsearch query syntax: " + err.Error())
+		return nil, fmt.Errorf("invalid elasticsearch query syntax: %v", err)
 	}
 
 	// Extract and remove the resourceActions value if present, if not present just exit immediately.
@@ -130,7 +131,7 @@ func ExtractPolicyImpactParamsFromRequest(index string, req *http.Request) (p *p
 	q := query{}
 	if err = json.Unmarshal(queryRaw, &q); err != nil {
 		log.WithError(err).Info("Error unmarshaling query")
-		return nil, invalidRequestError("invalid elasticsearch query syntax: " + err.Error())
+		return nil, fmt.Errorf("invalid elasticsearch query syntax: %v", err)
 	}
 	log.Debugf("Extracted raw query: %s", string(queryRaw))
 
@@ -139,10 +140,10 @@ func ExtractPolicyImpactParamsFromRequest(index string, req *http.Request) (p *p
 	for _, e := range q.Bool.Must {
 		if e.Range.EndTime.GTE != nil && e.Range.EndTime.LTE != nil {
 			if fromTime, err = ParseElasticsearchTime(now, e.Range.EndTime.GTE); err != nil {
-				return nil, invalidRequestError("invalid time format in query: " + *e.Range.EndTime.GTE)
+				return nil, fmt.Errorf("invalid time format in query: %s", *e.Range.EndTime.GTE)
 			}
 			if toTime, err = ParseElasticsearchTime(now, e.Range.EndTime.LTE); err != nil {
-				return nil, invalidRequestError("invalid time format in query: " + *e.Range.EndTime.LTE)
+				return nil, fmt.Errorf("invalid time format in query: %s", *e.Range.EndTime.LTE)
 			}
 
 			log.Debugf("Extracted request time range: %v -> %v", fromTime, toTime)
@@ -170,28 +171,28 @@ func ExtractPolicyImpactParamsFromRequest(index string, req *http.Request) (p *p
 	err = json.Unmarshal([]byte(resourceActionsRaw), &pipParms.ResourceActions)
 	if err != nil {
 		log.WithError(err).Debug("Error unmarshaling pip actions")
-		return nil, invalidRequestError("invalid resource actions syntax: " + err.Error())
+		return nil, fmt.Errorf("invalid resource actions syntax: %v", err)
 	}
 
 	return pipParms, nil
 }
 
 // checkPolicyActionsPermissions checks whether the action in each resource update is allowed.
-func checkPolicyActionsPermissions(actions []pip.ResourceChange, req *http.Request, authz K8sAuthInterface) error {
+func checkPolicyActionsPermissions(actions []pip.ResourceChange, req *http.Request, authz K8sAuthInterface) (status int, err error) {
 	factory := NewStandardPolicyImpactRbacHelperFactory(authz)
 	rbac := factory.NewPolicyImpactRbacHelper(req)
-	for i, _ := range actions {
-		if actions[i].Resource == nil {
-			return invalidRequestError("invalid resource actions syntax: resource is missing from request")
+	for _, action := range actions {
+		if action.Resource == nil {
+			return http.StatusBadRequest, fmt.Errorf("invalid resource actions syntax: resource is missing from request")
 		}
-		if err := validateAction(actions[i].Action); err != nil {
-			return err
+		if err := validateAction(action.Action); err != nil {
+			return http.StatusBadRequest, err
 		}
-		if err := rbac.CheckCanPreviewPolicyAction(actions[i].Action, actions[i].Resource); err != nil {
-			return err
+		if stat, err := rbac.CheckCanPreviewPolicyAction(action.Action, action.Resource); err != nil {
+			return stat, err
 		}
 	}
-	return nil
+	return 0, nil
 }
 
 // validateAction checks that the action in a resource update is one of the expected actions. Any deviation from these
@@ -201,7 +202,7 @@ func validateAction(action string) error {
 	case "create", "update", "delete":
 		return nil
 	}
-	return invalidRequestError("invalid action '" + action + "' in preview request")
+	return fmt.Errorf("invalid action '%s' in preview request", action)
 }
 
 // Define structs to unpack the time query.
