@@ -18,6 +18,13 @@ operate.
 
 {% include {{page.version}}/enable-policy-sync-api.md %}
 
+In addition, the {{site.prodname}} Manager needs to have application layer policy support enabled:
+
+```bash
+kubectl patch configmap tigera-cnx-manager-config -n calico-monitoring -p '{"data":{"tigera.cnx-manager.alp-support":"true"}}'
+kubectl delete pod -n calico-monitoring -l "k8s-app=cnx-manager"
+```
+
 ## Installing Istio
 
 Application layer policy [requires Istio](../requirements#application-layer-policy-requirements).
