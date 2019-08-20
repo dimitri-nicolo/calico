@@ -84,6 +84,12 @@ IP addresses:
   router configuration. See the [OpenShift Documentation](https://docs.openshift.com/container-platform/3.11/admin_guide/router.html#viewing-logs)
   for more details.
 
+Create a Kubernetes pull secret in the namespace your ingress controller or router syslog
+server is running in. 
+```bash
+kubectl create secret generic cnx-pull-secret -n <ingress controller namespace> --from-file=.dockerconfigjson=$HOME/.docker/config.json --type kubernetes.io/dockerconfigjson
+```
+
 ## How to
 
 #### Step 1: Set up the ingress log collector
