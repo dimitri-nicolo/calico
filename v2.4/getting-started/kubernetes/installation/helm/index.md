@@ -33,10 +33,6 @@ curl -O -L https://s3.amazonaws.com/tigera-public/ee/charts/tigera-secure-ee-{% 
 
 In this step, you create a values.yaml file with your configuration values to build a running cluster.
 
-For the purposes of this install guide, we will cover options which must be set in order to achieve a functioning cluster. For a full reference of all available options, inspect the helm chart:
-
-    helm inspect tigera-secure-ee-core-{% include chart_version_name %}.tgz
-
 ### Configure your Datastore Connection
 
 **Kubernetes Datastore**
@@ -127,10 +123,6 @@ Now that the **{{ site.prodname }} Core** chart is installed, please move on to 
 ## Step 4: Create values.yaml for {{ site.prodname }}
 
 Before we install, we must build a helm values file to configure {{ site.prodname }} for your environment. We will refer to this values file as `values.yaml` at the time of installation.
-
-For the purposes of this install guide, we will cover options which must be set in order to achieve a functioning cluster. For a full reference of all available options, inspect the helm chart:
-
-    helm inspect tigera-secure-ee-{% include chart_version_name %}.tgz
 
 ### Connect to Elasticsearch & Kibana
 
