@@ -164,6 +164,13 @@ kibana:
   port: 5601
 ```
 
+If the address you use to connect to the kibana UI in your browser differs from the address it is accessible from in the Kubernetes cluster, also set kibanaURL:
+
+```yaml
+manager:
+  kibanaURL: https://www.my.kibana.co
+```
+
 Additionally, provide the CA and passwords for each of the roles:
 
 ```

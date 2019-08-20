@@ -73,3 +73,13 @@ resources:
 {{- end }}
 {{ end }}
 {{- end -}}
+
+{{- define "tigera-secure-ee.kibanaURL" }}
+{{- if .Values.manager.kibanaURL }}
+  {{- .Values.manager.kibanaURL }}
+{{- else if .Values.kibana.host -}}
+  https://{{ .Values.kibana.host }}:{{ .Values.kibana.port }}
+{{- else -}}
+  http://localhost:5601
+{{- end }}
+{{- end }}
