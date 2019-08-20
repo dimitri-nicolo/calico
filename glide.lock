@@ -1,5 +1,5 @@
-hash: bb93381f967ca779ce62bf0f4265c09b1b4c01746ee9f3a6f8878c771d249056
-updated: 2019-08-02T18:36:00.122933081Z
+hash: 4b094d7a773160967e0fa79123dd14fa4eee084837a141b7af3b0d59ac3c212d
+updated: 2019-08-23T18:16:02.392689857Z
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -133,7 +133,7 @@ imports:
 - name: github.com/kelseyhightower/envconfig
   version: dd1402a4d99de9ac2f396cd6fcb957bc2c695ec1
 - name: github.com/kubernetes/repo-infra
-  version: f85734f673056977d8ba04b0386394b684ca2acb
+  version: 9f4571ad7242bf3ec4b47365062498c2528f9a5f
 - name: github.com/leodido/go-urn
   version: a67a23e1c1af3c66528573bb86a87246477277c1
 - name: github.com/mailru/easyjson
@@ -167,7 +167,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 305e59133073585defad84f5ae9e8d0a18ac88ec
+  version: d50bfb6c7acc516f25ee8bcb04997d5f4d06889c
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
