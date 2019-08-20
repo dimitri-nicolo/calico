@@ -1416,19 +1416,14 @@ deleteMonitorCalicoManifest() {
 # createCNXManagerSecret()
 #
 createCNXManagerSecret() {
+  openssl req -x509 -newkey rsa:4096 \
+                  -keyout manager.key \
+                  -nodes \
+                  -out manager.crt \
+                  -subj "/CN=cnx-manager.calico-monitoring.svc" \
+                  -days 3650
 
-  if [ "$INSTALL_TYPE" == "KUBEADM" ]; then
-    local API_SERVER_CRT="/etc/kubernetes/pki/apiserver.crt"
-    local API_SERVER_KEY="/etc/kubernetes/pki/apiserver.key"
-  elif [ "$INSTALL_TYPE" == "KOPS" ]; then
-    local API_SERVER_CRT="/srv/kubernetes/server.cert"
-    local API_SERVER_KEY="/srv/kubernetes/server.key"
-  elif [ "$INSTALL_TYPE" == "ACS-ENGINE" ]; then
-    local API_SERVER_CRT="/etc/kubernetes/certs/apiserver.crt"
-    local API_SERVER_KEY="/etc/kubernetes/certs/apiserver.key"
-  fi
-
-  runAsRoot kubectl create secret generic cnx-manager-tls --from-file=cert="$API_SERVER_CRT" --from-file=key="$API_SERVER_KEY" -n calico-monitoring
+  runAsRoot kubectl create secret generic cnx-manager-tls --from-file=cert=./manager.crt --from-file=key=./manager.key -n calico-monitoring
   countDownSecs 5 "Creating cnx-manager-tls secret"
 }
 
