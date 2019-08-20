@@ -1,5 +1,5 @@
 hash: c79f9315242749b5ad3a035f6ded530e5464a858899decbbf9532d5b0819660c
-updated: 2019-08-10T05:14:54.666135507Z
+updated: 2019-08-20T05:06:43.217779405Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -274,7 +274,7 @@ imports:
 - name: github.com/natefinch/atomic
   version: a62ce929ffcc871a51e98c6eba7b20321e3ed62d
 - name: github.com/onsi/ginkgo
-  version: eea6ad008b96acdaa524f5b409513bf062b500ad
+  version: 7e8b50db0c6d0a15ac0eb015d4ca64e7e7e2c88c
   subpackages:
   - config
   - extensions/table
@@ -295,7 +295,7 @@ imports:
   - reporters/stenographer/support/go-isatty
   - types
 - name: github.com/onsi/gomega
-  version: 90e289841c1ed79b7a598a7cd9959750cb5e89e2
+  version: 27d50ea6455b212cf516609fa58b2b5dce1abc81
   subpackages:
   - format
   - internal/assertion
