@@ -105,26 +105,24 @@
 
 {% else %}
 
-1. Create a secret containing a TLS certificate and the private key used to
-   sign it. The following commands use a self-signed certificate and key
-   found in many deployments for a quick start.
+1. Generate TLS certificates for the Tigera Secure EE Manager to use. The following example creates a self-signed certificate using OpenSSL, but you may generate them using any X.509-compatible tool or obtain them from your organization’s Certificate Authority.
 
-   - **kubeadm deployments**
-     ```bash
-     kubectl create secret generic cnx-manager-tls \
-     --from-file=cert=/etc/kubernetes/pki/apiserver.crt \
-     --from-file=key=/etc/kubernetes/pki/apiserver.key -n calico-monitoring
-     ```
+   ```
+   openssl req -x509 -newkey rsa:4096 \
+                     -keyout manager.key \
+                     -nodes \
+                     -out manager.crt \
+                     -subj "/CN=cnx-manager.calico-monitoring.svc" \
+                     -days 3650
+   ```
 
-   - **kops deployments**
+   Run the following command on the master node.
 
-     Run the following command on the master node.
-
-     ```bash
-     kubectl create secret generic cnx-manager-tls \
-     --from-file=cert=/srv/kubernetes/server.cert \
-     --from-file=key=/srv/kubernetes/server.key -n calico-monitoring
-     ```
+   ```bash
+   kubectl create secret generic cnx-manager-tls \
+   --from-file=cert=./manager.cert \
+   --from-file=key=./manager.key -n calico-monitoring
+   ```
 
 {% endif %}
 
