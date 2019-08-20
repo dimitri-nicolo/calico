@@ -629,6 +629,12 @@ spec:
                   name: tigera-syslog-archiving
                   key: verify_mode
                   optional: true
+            - name: SYSLOG_PACKET_SIZE
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-syslog-archiving
+                  key: packet-size
+                  optional: true
             - name: SYSLOG_HOSTNAME
               valueFrom:
                 fieldRef:
