@@ -215,6 +215,7 @@ func init() {
 	registerStructValidator(validate, validateGlobalNetworkSet, api.GlobalNetworkSet{})
 	registerStructValidator(validate, validateNetworkSet, api.NetworkSet{})
 	registerStructValidator(validate, validatePull, api.Pull{})
+	registerStructValidator(validate, validateGlobalThreatFeedSpec, api.GlobalThreatFeedSpec{})
 	registerStructValidator(validate, validateHTTPHeader, api.HTTPHeader{})
 	registerStructValidator(validate, validateConfigMapKeyRef, k8sv1.ConfigMapKeySelector{})
 	registerStructValidator(validate, validateSecretKeyRef, k8sv1.SecretKeySelector{})
@@ -1377,6 +1378,19 @@ func validatePull(structLevel validator.StructLevel) {
 			"")
 	}
 	return
+}
+
+func validateGlobalThreatFeedSpec(structLevel validator.StructLevel) {
+	s := structLevel.Current().Interface().(api.GlobalThreatFeedSpec)
+	if s.Content == api.ThreatFeedContentDomainNameSet && s.GlobalNetworkSet != nil {
+		structLevel.ReportError(
+			reflect.ValueOf(s.Content),
+			"Content",
+			"",
+			reason(string(api.ThreatFeedContentDomainNameSet)+" does not support syncing with a GlobalNetworkSet"),
+			"",
+		)
+	}
 }
 
 func validateHTTPHeader(structLevel validator.StructLevel) {
