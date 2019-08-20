@@ -13,13 +13,32 @@ metadata:
   namespace: calico-monitoring
 data:
   # Authentication type.  Must be set to "OIDC", "Basic", "Token", or "OAuth".
-{{- if or (eq .Values.platform "eks") (eq .Values.platform "gke") (eq .Values.platform "aks") }}
+  {{- $authType := .Values.manager.auth.type | lower }}
+
+  {{- if eq $authType "token" }}
   tigera.cnx-manager.authentication-type: "Token"
-{{- else if .Values.manager.auth }}
-  tigera.cnx-manager.authentication-type: {{ .Values.manager.auth.type | default "Basic" | quote }}
-{{- else }}
+
+  {{- else if eq $authType "basic" }}
   tigera.cnx-manager.authentication-type: "Basic"
-{{- end }}
+
+  {{- else if eq $authType "oidc" }}
+  tigera.cnx-manager.authentication-type: "OIDC"
+
+  {{- else if eq $authType "oauth" }}
+  tigera.cnx-manager.authentication-type: "OAuth"
+
+  {{- else }}
+    {{ $errMsg := printf "invalid selection '%s' for manager.auth.type. Must be 'OIDC', 'Basic', 'Token', or 'OAuth'." .Values.manager.auth.type }}
+    {{ fail $errMsg }}
+  {{- end }}
+
+  {{- /* perform validation for auth type: must be set to Token if using any of the platforms.
+         Perform this validation after the above so that we don't show this error when auth.type is completely invalid */ -}}
+  {{- if and (ne $authType "token") (or (or (eq .Values.platform "eks") (eq .Values.platform "gke")) (eq .Values.platform "aks")) }}
+    {{ $errMsg := printf "invalid selection '%s' for manager.auth.type. Must use 'Token' for platform '%s'" .Values.manager.auth.type .Values.platform }}
+    {{ fail $errMsg }}
+  {{- end }}
+
   # The OIDC authority.  Required if authentication-type is OIDC, ignored otherwise.
 {{- if .Values.manager.auth }}
   tigera.cnx-manager.oidc-authority: {{ .Values.manager.auth.authority | default "https://accounts.google.com" | quote }}
