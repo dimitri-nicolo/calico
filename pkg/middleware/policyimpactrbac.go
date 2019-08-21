@@ -1,9 +1,11 @@
 package middleware
 
 import (
-	log "github.com/sirupsen/logrus"
+	"fmt"
 	"net/http"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 
 	authzv1 "k8s.io/api/authorization/v1"
 
@@ -31,7 +33,7 @@ func NewStandardPolicyImpactRbacHelperFactory(auth K8sAuthInterface) PolicyImpac
 }
 
 type PolicyImpactRbacHelper interface {
-	CheckCanPreviewPolicyAction(action string, policy resources.Resource) error
+	CheckCanPreviewPolicyAction(action string, policy resources.Resource) (status int, err error)
 }
 
 // policyImpactRbacHelper is used by a single API request to to determine if a user can
@@ -42,22 +44,13 @@ type policyImpactRbacHelper struct {
 }
 
 // CheckCanPreviewPolicyAction returns true if the user can perform the preview action on the requested
-// policy. Regardless of action ability to view the policy is also required. If the user is not permitted an
-// error detailing the reason is returned.
-func (h *policyImpactRbacHelper) CheckCanPreviewPolicyAction(action string, policy resources.Resource) error {
-
-	log.Debugf("Checking policy impact permissions %v %v", action, policy.GetObjectMeta().GetName())
-
-	// To preview anything we must be able to view the policy
-	if err := h.checkCanPerformPolicyAction("get", policy); err != nil {
-		return err
-	}
-
-	// We also must be able to perform the action we are attempting to preview.
+// policy. If the user is not permitted, an error detailing the reason is returned.
+func (h *policyImpactRbacHelper) CheckCanPreviewPolicyAction(action string, policy resources.Resource) (status int, err error) {
+	// We must be able to perform the action we are attempting to preview.
 	return h.checkCanPerformPolicyAction(action, policy)
 }
 
-func (h *policyImpactRbacHelper) checkCanPerformPolicyAction(verb string, res resources.Resource) error {
+func (h *policyImpactRbacHelper) checkCanPerformPolicyAction(verb string, res resources.Resource) (status int, err error) {
 	rid := resources.GetResourceID(res)
 	clog := log.WithFields(log.Fields{
 		"verb":     verb,
@@ -74,14 +67,14 @@ func (h *policyImpactRbacHelper) checkCanPerformPolicyAction(verb string, res re
 	if rh == nil {
 		// This is not a resource type we support, so deny the operation.
 		clog.Warning("Resource type is not supported for preview action")
-		return invalidRequestError("resource type '" + rid.Kind + "' is not supported for impact preview")
+		return http.StatusBadRequest, fmt.Errorf("resource type '" + rid.Kind + "' is not supported for impact preview")
 	}
 
 	// If this is a Calico tiered policy then extract the tier since we need that to perform some more complicated
 	// authz on top of the default authz that we'll perform for *all* resource types.
 	tier, err := getTier(rid, res)
 	if err != nil {
-		return err
+		return http.StatusBadRequest, err
 	}
 
 	// Always perform the default authorization check on the resource. We do this for *all* resource types. This checks
@@ -94,11 +87,9 @@ func (h *policyImpactRbacHelper) checkCanPerformPolicyAction(verb string, res re
 		Name:      rid.Name,
 		Namespace: rid.Namespace,
 	}
-	if auth, err := h.isAuthorized(*resAtr); err != nil {
-		return err
-	} else if !auth {
-		clog.Debug("Action not authorized")
-		return notAuthorizedError("not authorized to " + verb + " " + rid.String())
+
+	if stat, err := h.isAuthorized(*resAtr); err != nil {
+		return stat, fmt.Errorf("not authorized to " + verb + " " + rid.String())
 	}
 
 	if tier == "" {
@@ -106,7 +97,7 @@ func (h *policyImpactRbacHelper) checkCanPerformPolicyAction(verb string, res re
 		// NetworkPolicy nor GlobalNetworkPolicy). Since we have already performed authz checks on the resource above,
 		// there is nothing else to do here.
 		clog.Debug("Action authorized for non-tiered policy")
-		return nil
+		return 0, nil
 	}
 
 	// This is a Calico tiered policy. We need to perform three additional checks that can further restrict the users
@@ -126,11 +117,10 @@ func (h *policyImpactRbacHelper) checkCanPerformPolicyAction(verb string, res re
 		Resource: "tiers",
 		Name:     tier,
 	}
-	if auth, err := h.isAuthorized(*resAtr); err != nil {
-		return err
-	} else if !auth {
-		clog.Debug("Action not authorized for the tier")
-		return notAuthorizedError("not authorized to " + verb + " " + rid.String() + ": user cannot get tier " + tier)
+
+	if stat, err := h.isAuthorized(*resAtr); err != nil {
+		// return http.StatusForbidden, fmt.Errorf("not authorized to " + verb + " " + rid.String() + ": user cannot get tier " + tier)
+		return stat, err
 	}
 
 	// Authorized for tier access, check wildcard policy access in this tier.
@@ -141,14 +131,17 @@ func (h *policyImpactRbacHelper) checkCanPerformPolicyAction(verb string, res re
 		Name:      tier + ".*",
 		Namespace: rid.Namespace,
 	}
-	if auth, err := h.isAuthorized(*resAtr); err != nil {
-		return err
-	} else if auth {
+	if stat, err := h.isAuthorized(*resAtr); err != nil {
+		if stat != http.StatusForbidden {
+			return stat, err
+		}
+	} else {
 		clog.Debug("Action authorized for all policies of this type in this tier and namespace")
-		return nil
+		return 0, nil
 	}
 
-	// Not authorized for wildcard policy access in this tier, checking access for the specific policy.
+	// Not authorized for wildcard policy access in this tier.
+	// before we return 'unauthorized, check access for the specific policy.
 	resAtr = &authzv1.ResourceAttributes{
 		Verb:      verb,
 		Group:     v3.Group,
@@ -156,42 +149,26 @@ func (h *policyImpactRbacHelper) checkCanPerformPolicyAction(verb string, res re
 		Name:      rid.Name,
 		Namespace: rid.Namespace,
 	}
-	if auth, err := h.isAuthorized(*resAtr); err != nil {
-		return err
-	} else if auth {
-		clog.Debug("Action authorized for specific policy")
-		return nil
+	if stat, err := h.isAuthorized(*resAtr); err != nil {
+		return stat, err
+		// stat, fmt.Errorf("not authorized to " + verb + " " + rid.String())
 	}
-
 	// Action not authorized on this tiered policy.
 	clog.Debug("Action not authorized for tiered policy")
-	return notAuthorizedError("not authorized to " + verb + " " + rid.String())
+	return 0, nil
 }
 
 // isAuthorized returns true if the request is allowed for the resources decribed in the attributes
-func (h *policyImpactRbacHelper) isAuthorized(atr authzv1.ResourceAttributes) (bool, error) {
-
+func (h *policyImpactRbacHelper) isAuthorized(atr authzv1.ResourceAttributes) (int, error) {
 	ctx := NewContextWithReviewResource(h.Request.Context(), &atr)
 	req := h.Request.WithContext(ctx)
 
-	if stat, err := h.k8sAuth.Authorize(req); err == nil {
-		log.WithField("stat", stat).Info("Request authorized")
-		return true, nil
-	} else if stat == http.StatusForbidden {
-		// When the status is forbidden we will also have an error, but in this case we don't need to propagate it
-		// up.
-		log.WithField("stat", stat).WithError(err).Info("Forbidden - not authorized")
-		return false, nil
-	} else {
-		log.WithField("stat", stat).WithError(err).Info("Error authorizing")
-		return false, err
-	}
+	return h.k8sAuth.Authorize(req)
 }
 
 // getTier extracts the tier from a Calico tiered policy. If the resource is not a Calico tiered policy an empty string
 // and no error are returned. If an invalid tier is found then an error is returned.
-func getTier(rid v3.ResourceID, res resources.Resource) (string, error) {
-	var tier string
+func getTier(rid v3.ResourceID, res resources.Resource) (tier string, err error) {
 	switch np := res.(type) {
 	case *v3.NetworkPolicy:
 		tier = np.Spec.Tier
@@ -205,33 +182,7 @@ func getTier(rid v3.ResourceID, res resources.Resource) (string, error) {
 	// Sanity check the tier in the spec matches the tier in the name. This has already been done by the unmarshaling
 	// of the resource request, but better safe than sorry.
 	if tier == "" || strings.Contains(tier, ".") || !strings.HasPrefix(rid.Name, tier+".") {
-		return "", invalidRequestError("policy name " + rid.String() + " is not correct for the configured tier '" + tier + "'")
+		return "", fmt.Errorf("policy name " + rid.String() + " is not correct for the configured tier '" + tier + "'")
 	}
 	return tier, nil
-}
-
-// notAuthorizedError is an error type which we can recognize and return an appropriate http code.
-type notAuthorizedError string
-
-func (e notAuthorizedError) Error() string {
-	return string(e)
-}
-
-// invalidRequestError is an error type which we can recognize and return an appropriate http code.
-type invalidRequestError string
-
-func (e invalidRequestError) Error() string {
-	return string(e)
-}
-
-// getErrorHTTPCode converts an error to an appropriate HTTP code.
-func getErrorHTTPCode(err error) int {
-	switch err.(type) {
-	case notAuthorizedError:
-		return http.StatusUnauthorized
-	case invalidRequestError:
-		return http.StatusBadRequest
-	default:
-		return http.StatusInternalServerError
-	}
 }
