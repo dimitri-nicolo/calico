@@ -74,7 +74,7 @@ data:
   tigera.cnx-manager.elasticsearch-api-url: "/tigera-elasticsearch"
   # Path to Kibana.  The default is for a port forwarded to the NodePort included with the operator based install.
   # Replace this with the URL of your Kibana if you installed it yourself or are accessing it differently.
-  tigera.cnx-manager.kibana-url: {{ .Values.manager.kibanaURL }}
+  tigera.cnx-manager.kibana-url: {{ include "tigera-secure-ee.kibanaURL" . }}
   # Whether sentry.io automatic error reporting of client side UI bugs is enabled.
   tigera.cnx-manager.error-tracking: "false"
   # Enable ALP support in the UI
