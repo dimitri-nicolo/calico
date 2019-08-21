@@ -20,6 +20,9 @@ go.mod.png
 # Below binaries are generated when you use debugger in VS Code
 cmd/**/*debug*
 
+# Ignore Helm packages 
+*.tgz
+
 # Generated Manifests
 **/voltron.yaml
 **/guardian.yaml
