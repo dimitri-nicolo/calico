@@ -408,7 +408,7 @@ def gen_chart_specific_values_master(versions, imageNames, imageRegistry, chart,
       # no effect. This should fall within `--cluster-cidr`.
       cidr: "192.168.0.0/16"
     
-      # Can be "None", "CrossSubnet", or "Always"
+      # Can be "Never", "CrossSubnet", or "Always"
       ipIpMode: Always
     
     # Configuration for Canal config job 
