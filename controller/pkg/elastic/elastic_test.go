@@ -171,7 +171,7 @@ func TestElastic_QueryIPSet_Big(t *testing.T) {
 	g.Expect(itr.scrollers[3].terms).Should(HaveLen(256))
 }
 
-func TestElastic_ListIPSets(t *testing.T) {
+func TestElastic_ListSets(t *testing.T) {
 	g := NewGomegaWithT(t)
 
 	u, err := url2.Parse(baseURI)
@@ -189,13 +189,13 @@ func TestElastic_ListIPSets(t *testing.T) {
 
 	rt.listRespFile = "test_files/list.1.r.json"
 	rt.listStatus = 200
-	metas, err := e.ListIPSets(ctx)
+	metas, err := e.ListSets(ctx, db.KindIPSet)
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(metas).To(HaveLen(0))
 
 	rt.listRespFile = "test_files/list.2.r.json"
 	rt.listStatus = 404
-	metas, err = e.ListIPSets(ctx)
+	metas, err = e.ListSets(ctx, db.KindIPSet)
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(metas).To(HaveLen(0))
 }

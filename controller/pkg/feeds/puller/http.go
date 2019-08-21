@@ -21,7 +21,7 @@ import (
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/statser"
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/sync/elasticipsets"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/sync/elastic"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/sync/globalnetworksets"
 	"github.com/tigera/intrusion-detection/controller/pkg/runloop"
 	"github.com/tigera/intrusion-detection/controller/pkg/util"
@@ -35,7 +35,7 @@ const (
 
 // httpPuller is a feed that periodically pulls Puller sets from a URL
 type httpPuller struct {
-	ipSet               db.IPSet
+	ipSet               db.Sets
 	configMapClient     v1.ConfigMapInterface
 	secretsClient       v1.SecretInterface
 	client              *http.Client
@@ -45,7 +45,7 @@ type httpPuller struct {
 	header              http.Header
 	period              time.Duration
 	gnsController       globalnetworksets.Controller
-	elasticController   elasticipsets.Controller
+	elasticController   elastic.IPSetController
 	enqueueSyncFunction func()
 	syncFailFunction    SyncFailFunction
 	cancel              context.CancelFunc
@@ -55,12 +55,12 @@ type httpPuller struct {
 
 func NewHTTPPuller(
 	f *v3.GlobalThreatFeed,
-	ipSet db.IPSet,
+	ipSet db.Sets,
 	configMapClient v1.ConfigMapInterface,
 	secretsClient v1.SecretInterface,
 	client *http.Client,
 	gnsController globalnetworksets.Controller,
-	elasticController elasticipsets.Controller,
+	elasticController elastic.IPSetController,
 ) Puller {
 	p := &httpPuller{
 		ipSet:             ipSet,

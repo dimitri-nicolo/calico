@@ -22,7 +22,7 @@ import (
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/puller"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/searcher"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/statser"
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/sync/elasticipsets"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/sync/elastic"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/sync/globalnetworksets"
 	"github.com/tigera/intrusion-detection/controller/pkg/health"
 	"github.com/tigera/intrusion-detection/controller/pkg/util"
@@ -47,9 +47,9 @@ type watcher struct {
 	globalThreatFeedClient v32.GlobalThreatFeedInterface
 	globalNetworkSetClient v32.GlobalNetworkSetInterface
 	gnsController          globalnetworksets.Controller
-	elasticController      elasticipsets.Controller
+	elasticController      elastic.IPSetController
 	httpClient             *http.Client
-	ipSet                  db.IPSet
+	ipSet                  db.Sets
 	suspiciousIP           db.SuspiciousIP
 	events                 db.Events
 	feedWatchers           map[string]*feedWatcher
@@ -81,9 +81,9 @@ func NewWatcher(
 	secretsClient v1.SecretInterface,
 	globalThreatFeedInterface v32.GlobalThreatFeedInterface,
 	globalNetworkSetController globalnetworksets.Controller,
-	elasticController elasticipsets.Controller,
+	elasticController elastic.IPSetController,
 	httpClient *http.Client,
-	ipSet db.IPSet,
+	ipSet db.Sets,
 	suspiciousIP db.SuspiciousIP,
 	events db.Events,
 ) Watcher {

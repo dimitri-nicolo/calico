@@ -24,27 +24,29 @@ import (
 )
 
 const (
-	IPSetIndexPattern       = ".tigera.ipset.%s"
-	StandardType            = "_doc"
-	FlowLogIndexPattern     = "tigera_secure_ee_flows.%s.*"
-	EventIndexPattern       = "tigera_secure_ee_events.%s"
-	AuditIndexPattern       = "tigera_secure_ee_audit_*.%s.*"
-	QuerySize               = 1000
-	AuditQuerySize          = 0
-	MaxClauseCount          = 1024
-	CreateIndexFailureDelay = time.Second * 15
-	CreateIndexWaitTimeout  = time.Minute
-	PingTimeout             = time.Second * 5
-	PingPeriod              = time.Minute
-	Create                  = "create"
-	Delete                  = "delete"
+	IPSetIndexPattern         = ".tigera.ipset.%s"
+	DomainNameSetIndexPattern = ".tigera.domainnameset.%s"
+	StandardType              = "_doc"
+	FlowLogIndexPattern       = "tigera_secure_ee_flows.%s.*"
+	EventIndexPattern         = "tigera_secure_ee_events.%s"
+	AuditIndexPattern         = "tigera_secure_ee_audit_*.%s.*"
+	QuerySize                 = 1000
+	AuditQuerySize            = 0
+	MaxClauseCount            = 1024
+	CreateIndexFailureDelay   = time.Second * 15
+	CreateIndexWaitTimeout    = time.Minute
+	PingTimeout               = time.Second * 5
+	PingPeriod                = time.Minute
+	Create                    = "create"
+	Delete                    = "delete"
 )
 
 var (
-	IPSetIndex   string
-	EventIndex   string
-	FlowLogIndex string
-	AuditIndex   string
+	EventIndex    string
+	FlowLogIndex  string
+	AuditIndex    string
+	IndexByKind   map[db.Kind]string
+	MappingByKind map[db.Kind]string
 )
 
 func init() {
@@ -52,10 +54,19 @@ func init() {
 	if cluster == "" {
 		cluster = "cluster"
 	}
-	IPSetIndex = fmt.Sprintf(IPSetIndexPattern, cluster)
+	ipSetIndex := fmt.Sprintf(IPSetIndexPattern, cluster)
+	domainNameSetIndex := fmt.Sprintf(DomainNameSetIndexPattern, cluster)
 	EventIndex = fmt.Sprintf(EventIndexPattern, cluster)
 	FlowLogIndex = fmt.Sprintf(FlowLogIndexPattern, cluster)
 	AuditIndex = fmt.Sprintf(FlowLogIndexPattern, cluster)
+	IndexByKind = map[db.Kind]string{
+		db.KindIPSet:         ipSetIndex,
+		db.KindDomainNameSet: domainNameSetIndex,
+	}
+	MappingByKind = map[db.Kind]string{
+		db.KindIPSet:         ipSetMapping,
+		db.KindDomainNameSet: domainNameSetMapping,
+	}
 }
 
 type ipSetDoc struct {
@@ -63,11 +74,16 @@ type ipSetDoc struct {
 	IPs       db.IPSetSpec `json:"ips"`
 }
 
+type domainNameSetDoc struct {
+	CreatedAt time.Time            `json:"created_at"`
+	Names     db.DomainNameSetSpec `json:"names"`
+}
+
 type Elastic struct {
 	c                   *elastic.Client
 	url                 *url.URL
-	ipSetMappingCreated chan (struct{})
-	eventMappingCreated chan (struct{})
+	setMappingCreated   map[db.Kind]chan struct{}
+	eventMappingCreated chan struct{}
 	elasticIsAlive      bool
 	cancel              context.CancelFunc
 	once                sync.Once
@@ -93,8 +109,11 @@ func NewElastic(h *http.Client, url *url.URL, username, password string) (*Elast
 	e := &Elastic{
 		c:                   c,
 		url:                 url,
-		ipSetMappingCreated: make(chan (struct{})),
-		eventMappingCreated: make(chan (struct{})),
+		setMappingCreated:   make(map[db.Kind]chan struct{}),
+		eventMappingCreated: make(chan struct{}),
+	}
+	for k := range IndexByKind {
+		e.setMappingCreated[k] = make(chan struct{})
 	}
 
 	return e, nil
@@ -103,13 +122,15 @@ func NewElastic(h *http.Client, url *url.URL, username, password string) (*Elast
 func (e *Elastic) Run(ctx context.Context) {
 	e.once.Do(func() {
 		ctx, e.cancel = context.WithCancel(ctx)
-		go func() {
-			if err := e.createOrUpdateIndex(ctx, IPSetIndex, ipSetMapping, e.ipSetMappingCreated); err != nil {
-				log.WithError(err).WithFields(log.Fields{
-					"index": IPSetIndex,
-				}).Error("Could not create index")
-			}
-		}()
+		for k, i := range IndexByKind {
+			go func() {
+				if err := e.createOrUpdateIndex(ctx, i, MappingByKind[k], e.setMappingCreated[k]); err != nil {
+					log.WithError(err).WithFields(log.Fields{
+						"index": IndexByKind[k],
+					}).Error("Could not create index")
+				}
+			}()
+		}
 
 		go func() {
 			if err := e.createOrUpdateIndex(ctx, EventIndex, eventMapping, e.eventMappingCreated); err != nil {
@@ -154,19 +175,23 @@ func (e *Elastic) Ready() bool {
 		return false
 	}
 
-	select {
-	case <-e.ipSetMappingCreated:
-		return e.elasticIsAlive
-	default:
-		return false
+	for _, c := range e.setMappingCreated {
+		select {
+		case <-c:
+			break
+		default:
+			return false
+		}
 	}
+	return e.elasticIsAlive
 }
 
-func (e *Elastic) ListIPSets(ctx context.Context) ([]db.IPSetMeta, error) {
+func (e *Elastic) ListSets(ctx context.Context, kind db.Kind) ([]db.Meta, error) {
 	q := elastic.NewMatchAllQuery()
-	scroller := e.c.Scroll(IPSetIndex).Type(StandardType).Version(true).FetchSource(false).Query(q)
+	idx := IndexByKind[kind]
+	scroller := e.c.Scroll(idx).Type(StandardType).Version(true).FetchSource(false).Query(q)
 
-	var ids []db.IPSetMeta
+	var ids []db.Meta
 	for {
 		res, err := scroller.Do(ctx)
 		if err == io.EOF {
@@ -180,26 +205,35 @@ func (e *Elastic) ListIPSets(ctx context.Context) ([]db.IPSetMeta, error) {
 			return nil, err
 		}
 		for _, hit := range res.Hits.Hits {
-			ids = append(ids, db.IPSetMeta{Name: hit.Id, Version: hit.Version})
+			ids = append(ids, db.Meta{Name: hit.Id, Version: hit.Version, Kind: kind})
 		}
 	}
 }
 
-func (e *Elastic) PutIPSet(ctx context.Context, name string, set db.IPSetSpec) error {
-	// Wait for the IPSet Mapping to be created
+func (e *Elastic) PutSet(ctx context.Context, meta db.Meta, value interface{}) error {
+	var body interface{}
+	switch meta.Kind {
+	case db.KindIPSet:
+		body = ipSetDoc{CreatedAt: time.Now(), IPs: value.(db.IPSetSpec)}
+	case db.KindDomainNameSet:
+		body = domainNameSetDoc{CreatedAt: time.Now(), Names: value.(db.DomainNameSetSpec)}
+	default:
+		panic("unknown db.Meta kind " + string(meta.Kind))
+	}
+
+	// Wait for the Sets Mapping to be created
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
 	case <-time.After(CreateIndexWaitTimeout):
 		return errors.New("Timeout waiting for index creation")
-	case <-e.ipSetMappingCreated:
+	case <-e.setMappingCreated[meta.Kind]:
 		break
 	}
 
 	// Put document
-	body := ipSetDoc{CreatedAt: time.Now(), IPs: set}
-	_, err := e.c.Index().Index(IPSetIndex).Type(StandardType).Id(name).BodyJson(body).Do(ctx)
-	log.WithField("name", name).Info("IP set stored")
+	_, err := e.c.Index().Index(IndexByKind[meta.Kind]).Type(StandardType).Id(meta.Name).BodyJson(body).Do(ctx)
+	log.WithField("name", meta.Name).Info("IP set stored")
 
 	return err
 }
@@ -269,7 +303,8 @@ func (e *Elastic) ensureIndexExists(ctx context.Context, idx, mapping string) er
 }
 
 func (e *Elastic) GetIPSet(ctx context.Context, name string) (db.IPSetSpec, error) {
-	res, err := e.c.Get().Index(IPSetIndex).Type(StandardType).Id(name).Do(ctx)
+	idx := IndexByKind[db.KindIPSet]
+	res, err := e.c.Get().Index(idx).Type(StandardType).Id(name).Do(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -305,7 +340,8 @@ func (e *Elastic) GetIPSet(ctx context.Context, name string) (db.IPSetSpec, erro
 }
 
 func (e *Elastic) GetIPSetModified(ctx context.Context, name string) (time.Time, error) {
-	res, err := e.c.Get().Index(IPSetIndex).Type(StandardType).Id(name).FetchSourceContext(elastic.NewFetchSourceContext(true).Include("created_at")).Do(ctx)
+	idx := IndexByKind[db.KindIPSet]
+	res, err := e.c.Get().Index(idx).Type(StandardType).Id(name).FetchSourceContext(elastic.NewFetchSourceContext(true).Include("created_at")).Do(ctx)
 	if err != nil {
 		return time.Time{}, err
 	}
@@ -371,8 +407,9 @@ func splitIPSetToInterface(ipset db.IPSetSpec) [][]interface{} {
 	return terms
 }
 
-func (e *Elastic) DeleteIPSet(ctx context.Context, m db.IPSetMeta) error {
-	ds := e.c.Delete().Index(IPSetIndex).Type(StandardType).Id(m.Name)
+func (e *Elastic) DeleteSet(ctx context.Context, m db.Meta) error {
+	idx := IndexByKind[m.Kind]
+	ds := e.c.Delete().Index(idx).Type(StandardType).Id(m.Name)
 	if m.Version != nil {
 		ds = ds.Version(*m.Version)
 	}

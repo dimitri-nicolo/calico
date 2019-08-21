@@ -108,6 +108,7 @@ github.com/tigera/calico-k8sapiserver v2.4.0-0.dev.0.20190415231917-ffe2bbf68dd1
 github.com/tigera/calico-k8sapiserver v2.4.0-0.dev.0.20190415231917-ffe2bbf68dd1+incompatible/go.mod h1:+7LLjDxng2qt+QMos2PcEG6eD/niSnTcBRpTmEcXVgU=
 github.com/tigera/intrusion-detection v2.3.0+incompatible h1:CvZKd3UGwGDSFQiaDSB+PvfacS/RUqyGVjxFoBMF+g0=
 github.com/tigera/intrusion-detection v2.4.0+incompatible h1:biS85lcYmdUBgjvmy3FARWIy6uW13An05EvvD2GANz8=
+github.com/tigera/intrusion-detection v2.5.0+incompatible h1:kR2e5jpPqJR+Nh4iUXC+lcZ6RF4JRUN9+iZI2TnqfU0=
 github.com/tigera/libcalico-go-private v2.1.1-0.20190307140245-b57de3f3848a+incompatible h1:S94PCHMMhinNQW5cmhVs25x0jOYItyMJ09w0bErjTRM=
 github.com/tigera/libcalico-go-private v2.1.1-0.20190307140245-b57de3f3848a+incompatible/go.mod h1:PB1WZ4WFCQ6q6btBlnpFGzDF7arX6G1iTDeqTcAO6BU=
 github.com/tigera/libcalico-go-private v2.1.1-0.20190329214018-4d2335fc34e9+incompatible h1:sI9A2ZESgK/d+RzFnCQn6o3kIXLE4WcTA25vKTL1e30=

@@ -1,6 +1,6 @@
 // Copyright 2019 Tigera Inc. All rights reserved.
 
-package elasticipsets
+package elastic
 
 import (
 	"context"
@@ -16,12 +16,8 @@ import (
 )
 
 type Controller interface {
-	// Add, Delete, and NoGC alter the desired state the controller will attempt to
+	// Delete, and NoGC alter the desired state the controller will attempt to
 	// maintain, by syncing with the elastic database.
-
-	// Add or update a new Set including the spec. f is function the controller should call
-	// if we fail to update, and stat is the Statser we should report or clear errors on.
-	Add(ctx context.Context, name string, set db.IPSetSpec, f func(), stat statser.Statser)
 
 	// Delete removes a Set from the desired state.
 	Delete(ctx context.Context, name string)
@@ -42,10 +38,11 @@ type Controller interface {
 
 type controller struct {
 	once    sync.Once
-	ipSet   db.IPSet
 	dirty   map[string]update
 	noGC    map[string]struct{}
 	updates chan update
+	kind    db.Kind
+	db      db.Sets
 }
 
 type op int
@@ -60,7 +57,7 @@ const (
 type update struct {
 	name    string
 	op      op
-	set     db.IPSetSpec
+	value   interface{}
 	fail    func()
 	statser statser.Statser
 }
@@ -73,20 +70,11 @@ var NewTicker = func() *time.Ticker {
 	return tkr
 }
 
-func NewController(ipSet db.IPSet) Controller {
-	return &controller{
-		ipSet:   ipSet,
-		dirty:   make(map[string]update),
-		noGC:    make(map[string]struct{}),
-		updates: make(chan update, DefaultUpdateQueueLen),
-	}
-}
-
-func (c *controller) Add(ctx context.Context, name string, set db.IPSetSpec, f func(), stat statser.Statser) {
+func (c *controller) add(ctx context.Context, name string, value interface{}, f func(), stat statser.Statser) {
 	select {
 	case <-ctx.Done():
 		return
-	case c.updates <- update{name: name, op: opAdd, set: set, fail: f, statser: stat}:
+	case c.updates <- update{name: name, op: opAdd, value: value, fail: f, statser: stat}:
 		return
 	}
 }
@@ -178,37 +166,38 @@ func (c *controller) processUpdate(u update) {
 }
 
 func (c *controller) reconcile(ctx context.Context) {
-	ipSets, err := c.ipSet.ListIPSets(ctx)
+	metas, err := c.db.ListSets(ctx, c.kind)
 	if err != nil {
-		log.WithError(err).Error("failed to reconcile elastic IP sets")
+		log.WithError(err).Error("failed to reconcile elastic object")
 		for _, u := range c.dirty {
 			u.statser.Error(statser.ElasticSyncFailed, err)
 		}
 		return
 	}
 
-	for _, ipSetMeta := range ipSets {
+	for _, m := range metas {
 
-		if u, ok := c.dirty[ipSetMeta.Name]; ok {
-			// set already exists, but is dirty
-			c.updateElasticIPSet(ctx, u)
-		} else if _, ok := c.noGC[ipSetMeta.Name]; !ok {
+		if u, ok := c.dirty[m.Name]; ok {
+			// value already exists, but is dirty
+			c.updateObject(ctx, u)
+		} else if _, ok := c.noGC[m.Name]; !ok {
 			// Garbage collect
-			c.purgeElasticIPSet(ctx, ipSetMeta)
+			c.purgeObject(ctx, m)
 		} else {
-			log.WithField("name", ipSetMeta.Name).Debug("Retained Elastic IPSet")
+			log.WithField("name", m.Name).Debug("Retained elastic object")
 		}
 	}
 
 	for _, u := range c.dirty {
-		c.updateElasticIPSet(ctx, u)
+		c.updateObject(ctx, u)
 	}
 }
 
-func (c *controller) updateElasticIPSet(ctx context.Context, u update) {
-	err := c.ipSet.PutIPSet(ctx, u.name, u.set)
+func (c *controller) updateObject(ctx context.Context, u update) {
+	m := db.Meta{Name: u.name, Kind: c.kind}
+	err := c.db.PutSet(ctx, m, u.value)
 	if err != nil {
-		log.WithError(err).WithField("name", u.name).Error("failed to update ipset")
+		log.WithError(err).WithField("name", u.name).Error("failed to update elastic object")
 		u.fail()
 		u.statser.Error(statser.ElasticSyncFailed, err)
 		return
@@ -219,7 +208,7 @@ func (c *controller) updateElasticIPSet(ctx context.Context, u update) {
 	delete(c.dirty, u.name)
 }
 
-func (c *controller) purgeElasticIPSet(ctx context.Context, m db.IPSetMeta) {
+func (c *controller) purgeObject(ctx context.Context, m db.Meta) {
 	var fields log.Fields
 	if m.Version != nil {
 		fields = log.Fields{
@@ -233,14 +222,14 @@ func (c *controller) purgeElasticIPSet(ctx context.Context, m db.IPSetMeta) {
 		}
 	}
 
-	err := c.ipSet.DeleteIPSet(ctx, m)
+	err := c.db.DeleteSet(ctx, m)
 	if elastic.IsNotFound(err) {
 		return
 	}
 	if err != nil {
-		log.WithError(err).WithFields(fields).Error("Failed to purge Elastic IPSet")
+		log.WithError(err).WithFields(fields).Error("Failed to purge Elastic Sets")
 		return
 	}
-	log.WithFields(fields).Info("GC'd elastic IPSet")
+	log.WithFields(fields).Info("GC'd elastic Sets")
 	return
 }
