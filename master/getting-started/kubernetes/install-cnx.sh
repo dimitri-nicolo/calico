@@ -1737,8 +1737,8 @@ installCNX() {
   applyLicenseManifest            # If the user specified a license file, apply it
 
   applyCNXPolicyManifest          # Apply cnx-policy.yaml
-  applyOperatorManifest           # Apply operator.yaml
   applyElasticStorageManifest     # Apply elastic-storage.yaml
+  applyOperatorManifest           # Apply operator.yaml
   applyMonitorCalicoManifest      # Apply monitor-calico.yaml
   createCNXManagerSecret          # Create cnx-manager-tls to enable manager/apiserver communication
   applyCNXManifest                # Apply cnx.yaml
@@ -1756,8 +1756,8 @@ uninstallCNX() {
   deleteCNXManagerSecret         # Delete TLS secret
 
   deleteMonitorCalicoManifest    # Delete monitor-calico.yaml
-  deleteElasticStorageManifest   # Delete elastic-storage.yaml
   deleteOperatorManifest         # Delete operator.yaml
+  deleteElasticStorageManifest   # Delete elastic-storage.yaml
   deleteCNXPolicyManifest        # Delete cnx-policy.yaml
 
   deleteCNXAPIManifest           # Delete cnx-api-[etcd|kdd].yaml

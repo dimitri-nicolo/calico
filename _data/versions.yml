@@ -1483,7 +1483,11 @@ master:
       version: master
     kibana:
       image: tigera/kibana
-      version: master
+      version: 7.3.2
+    elasticsearch-operator:
+      version: 0.9.0
+    elasticsearch:
+      version: 7.3.2
     cloud-controllers:
       image: tigera/cloud-controllers
       version: master
@@ -1544,13 +1548,6 @@ master:
       image: calico/pod2daemon-flexvol
       version: master
       registry: quay.io
-    elasticsearch-operator:
-      image: upmcenterprises/elasticsearch-operator
-      version: 0.4.0
-    elasticsearch:
-      image: elasticsearch/elasticsearch
-      version: 6.4.3
-      registry: docker.elastic.co
     busybox:
       image: busybox
       version: 1.26.2

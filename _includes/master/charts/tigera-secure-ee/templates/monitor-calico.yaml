@@ -69,19 +69,20 @@ data:
         pattern /\.cluster\.local$/
       </exclude>
     </filter>
+  tigera.elasticsearch.access-mode: "serviceuser"
+  tigera.elasticsearch.scheme: "https"
 {{- if eq $elasticMode "external" }}
-  tigera.elasticsearch.access-mode: serviceuser
   tigera.elasticsearch.host: {{ .Values.elasticsearch.host | default "__ELASTICSEARCH_HOST__" | quote }}
   tigera.elasticsearch.port: {{ .Values.elasticsearch.port | default "__ELASTICSEARCH_PORT__" | quote }}
-  tigera.elasticsearch.scheme: "https"
   tigera.elasticsearch.ca.path: /etc/ssl/elastic/ca.pem
   tigera.kibana.host: {{ .Values.kibana.host | default "__KIBANA_HOST__" | quote }}
   tigera.kibana.port: {{ .Values.kibana.port | default "__KIBANA_PORT__" | quote }}
 {{- else }}
-  tigera.elasticsearch.access-mode: "insecure"
-  tigera.elasticsearch.scheme: "http"
-  tigera.elasticsearch.host: {{ .Values.elasticsearch.host | default "elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local" }}
+  tigera.elasticsearch.host: {{ .Values.elasticsearch.host | default "tigera-elasticsearch-es-http.calico-monitoring.svc.cluster.local" }}
   tigera.elasticsearch.port: {{ .Values.elasticsearch.port | default "9200" | quote }}
+  tigera.elasticsearch.ca.path: /etc/ssl/elastic/ca.pem
+  tigera.kibana.host: {{ .Values.kibana.host | default "tigera-elasticsearch-es-kibana" | quote }}
+  tigera.kibana.port: {{ .Values.kibana.port | default "5601" | quote }}
 {{- end }}
 
 ---
@@ -365,37 +366,7 @@ spec:
     prometheus: calico-node-prometheus
 
 {{- if eq $elasticMode "operator" }}
----
 
-# Set up the elasticsearch cluster parameters
-# These options can be modified for your deployment - see parameter list at https://github.com/upmc-enterprises/elasticsearch-operator
-apiVersion: enterprises.upmc.com/v1
-kind: ElasticsearchCluster
-metadata:
-  name: tigera-elasticsearch
-  namespace: calico-monitoring
-spec:
-  nodeSelector:
-    beta.kubernetes.io/os: linux
-    # If necessary, uncomment the line below and edit key:value pair with appropriate value for your environment.
-    #node.role: infrastructure
-  image-pull-secrets:
-    - name: cnx-pull-secret
-  kibana:
-    image: {{.Values.kibana.image}}:{{.Values.kibana.tag}}
-  elastic-search-image: {{.Values.elasticsearch.image}}:{{.Values.elasticsearch.tag}}
-  # For production deployments, modify the number of elasticsearch replicas accordingly
-  client-node-replicas: 1
-  master-node-replicas: 1
-  data-node-replicas: 1
-  network-host: 0.0.0.0
-  zones: []
-  use-ssl: false
-  # For production volumes, consider increasing volume sizes, memory and adding backups
-  data-volume-size: 40Gi
-  java-options: "-Xms1g -Xmx1g"
-  storage:
-    storage-class: elasticsearch-storage
 ---
 
 {{- if eq .Values.kibana.service.type "NodePort" }}
@@ -506,7 +477,6 @@ spec:
               value: /var/log/calico/flowlogs/flows.log
             - name: DNS_LOG_FILE
               value: /var/log/calico/dnslogs/dns.log
-{{- if eq $elasticMode "external" }}
             - name: ELASTIC_HOST
               valueFrom:
                 configMapKeyRef:
@@ -521,6 +491,7 @@ spec:
               value: "true"
             - name: ELASTIC_SSL_VERIFY
               value: "true" #ELASTIC_SSL_VERIFY
+{{- if eq $elasticMode "external" }}
             - name: ELASTIC_USER
               valueFrom:
                 secretKeyRef:
@@ -532,12 +503,13 @@ spec:
                   name: elastic-fluentd-user
                   key: password
 {{- else }}
-            - name: ELASTIC_HOST
-              value: elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local
-            - name: ELASTIC_PORT
-              value: "9200"
-            - name: FLUENTD_ES_SECURE
-              value: "false"
+            - name: ELASTIC_USER
+              value: "elastic"
+            - name: ELASTIC_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: tigera-elasticsearch-es-elastic-user
+                  key: elastic
 {{- end }}
             - name: AWS_KEY_ID
               valueFrom:
@@ -699,6 +671,7 @@ spec:
           configMap:
             name: tigera-es-config
         # Should be created during installation process.
+{{- if eq $elasticMode "external" }}
         - name: elastic-ca-cert-volume
           secret:
             optional: true
@@ -706,6 +679,15 @@ spec:
             - key: tigera.elasticsearch.ca
               path: ca.pem
             secretName: tigera-es-config
+{{- else }}
+        - name: elastic-ca-cert-volume
+          secret:
+            optional: true
+            items:
+            - key: tls.crt
+              path: ca.pem
+            secretName: tigera-elasticsearch-es-http-certs-public
+{{- end}}
         - name: syslog-config
           configMap:
             name: tigera-syslog-archiving
@@ -778,7 +760,6 @@ spec:
                     configMapKeyRef:
                       name: tigera-es-config
                       key: tigera.elasticsearch.dns-retention
-{{- if eq $elasticMode "external" }}
                 - name: ELASTIC_HOST
                   valueFrom:
                     configMapKeyRef:
@@ -789,28 +770,30 @@ spec:
                     configMapKeyRef:
                       name: tigera-es-config
                       key: tigera.elasticsearch.port
-                - name: ELASTIC_USER
-                  valueFrom:
-                    secretKeyRef:
-                      name: elastic-curator-user
-                      key: username
-                - name: ELASTIC_PASSWORD
-                  valueFrom:
-                    secretKeyRef:
-                      name: elastic-curator-user
-                      key: password
                 - name: ELASTIC_SSL_VERIFY
                   value: "true"
+{{- if eq $elasticMode "external" }}
+            - name: ELASTIC_USER
+              valueFrom:
+                secretKeyRef:
+                  name: elastic-curator-user
+                  key: username
+            - name: ELASTIC_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: elastic-curator-user
+                  key: password
+{{- else }}
+            - name: ELASTIC_USER
+              value: "elastic"
+            - name: ELASTIC_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: tigera-elasticsearch-es-elastic-user
+                  key: elastic
+{{- end }}
                 - name: ES_CURATOR_BACKEND_CERT
                   value: /etc/curator/elastic/ca.pem
-{{- else }}
-                - name: ELASTIC_HOST
-                  value: elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local
-                - name: ELASTIC_PORT
-                  value: "9200"
-                - name: ELASTIC_SSL_VERIFY
-                  value: "false"
-{{- end }}
 {{- if .Values.esCurator.env }}
 {{ toYaml .Values.esCurator.env | indent 16 }}
 {{- end }}
@@ -830,6 +813,7 @@ spec:
                 allowPrivilegeEscalation: false
           volumes:
             # Should be created during installation process.
+{{- if eq $elasticMode "external" }}
             - name: elastic-ca-cert-volume
               secret:
                 optional: true
@@ -837,6 +821,15 @@ spec:
                 - key: tigera.elasticsearch.ca
                   path: ca.pem
                 secretName: tigera-es-config
+{{- else }}
+            - name: elastic-ca-cert-volume
+              secret:
+                optional: true
+                items:
+                - key: tls.crt
+                  path: ca.pem
+                secretName: tigera-elasticsearch-es-http-certs-public
+{{- end}}
 ---
 {{- if .Values.elasticTseeInstaller.enable }}
 
@@ -864,6 +857,27 @@ spec:
 {{ tuple .Values.elasticTseeInstaller.resources | include "tigera-secure-ee.resourceLimits" | indent 8 -}}
         env:
 {{- if eq $elasticMode "external" }}
+          - name: USER
+            valueFrom:
+              secretKeyRef:
+                name: elastic-ee-installer
+                key: username
+          - name: PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: elastic-ee-installer
+                key: password
+{{- else }}
+          - name: USER
+            value: "elastic"
+          - name: PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: tigera-elasticsearch-es-elastic-user
+                key: elastic
+          - name: START_XPACK_TRIAL
+            value: "true"
+{{- end }}
           - name: ELASTIC_HOST
             valueFrom:
               configMapKeyRef:
@@ -879,6 +893,8 @@ spec:
               configMapKeyRef:
                 name: tigera-es-config
                 key: tigera.elasticsearch.scheme
+          - name: CA_CERT
+            value: /certs/ca.pem
           - name: KIBANA_HOST
             valueFrom:
               configMapKeyRef:
@@ -889,22 +905,11 @@ spec:
               configMapKeyRef:
                 name: tigera-es-config
                 key: tigera.kibana.port
-          - name: USER
-            valueFrom:
-              secretKeyRef:
-                name: elastic-ee-installer
-                key: username
-          - name: PASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: elastic-ee-installer
-                key: password
-          - name: CA_CERT
-            value: /certs/ca.pem
         volumeMounts:
           - name: certs
             mountPath: /certs
       volumes:
+{{- if eq $elasticMode "external" }}
         - name: certs
           secret:
             optional: true
@@ -913,21 +918,14 @@ spec:
               path: ca.pem
             secretName: tigera-es-config
 {{- else }}
-          - name: ELASTIC_HOST
-            value: elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local
-          - name: ELASTIC_PORT
-            value: "9200"
-          - name: KIBANA_HOST
-            value: kibana-tigera-elasticsearch.calico-monitoring.svc.cluster.local
-          - name: KIBANA_PORT
-            value: "80"
-          - name: ELASTIC_SCHEME
-            value: "http"
-          - name: KIBANA_SCHEME
-            value: "http"
-          - name: START_XPACK_TRIAL
-            value: "true"
-{{- end }}
+        - name: certs
+          secret:
+            optional: true
+            items:
+            - key: tls.crt
+              path: ca.pem
+            secretName: tigera-elasticsearch-es-http-certs-public
+{{- end}}
 {{- if .Values.elasticTseeInstaller.env }}
 {{ toYaml .Values.elasticTseeInstaller.env | indent 10 }}
 {{- end }}
@@ -1084,7 +1082,7 @@ spec:
             secretName: tigera-es-config
 {{- else }}
           - name: ELASTIC_HOST
-            value: elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local
+            value: tigera-elasticsearch-es-http.calico-monitoring.svc.cluster.local
           - name: ELASTIC_PORT
             value: "9200"
           - name: ELASTIC_SCHEME
@@ -1134,7 +1132,7 @@ metadata:
 spec:
   order: 1
   tier: allow-cnx
-  selector: name == 'es-client-tigera-elasticsearch'
+  selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-elasticsearch'
   types:
   - Ingress
   ingress:
@@ -1222,14 +1220,14 @@ metadata:
 spec:
   order: 1
   tier: allow-cnx
-  selector: cluster == 'tigera-elasticsearch'
+  selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-elasticsearch'
   types:
   - Ingress
   ingress:
   - action: Allow
     protocol: TCP
     source:
-      selector: cluster == 'tigera-elasticsearch'
+      selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-elasticsearch'
     destination:
       ports: [9300]
 
