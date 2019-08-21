@@ -77,13 +77,42 @@ Set the following flags to specify TLS certs to use when connecting to etcd:
 
 #### Network settings
 
+By default, {{ site.prodname }} runs with Calico networking.
+
+```yaml
+network: calico
+```
+
+**Azure Kubernetes Service (AKS)**
+
+```yaml
+platform: aks
+network: aks
+```
+
+**Google Kubernetes Engine (GKE)**
+
+```yaml
+platform: gke
+network: gke
+```
+
+**Amazon Elastic Kubernetes Service (EKS)**
+
+```yaml
+platform: eks
+network: ecs
+```
+
 **AWS VPC CNI plugin**
 
-By default, {{ site.prodname }} uses Calico networking. To run {{ site.prodname }} in policy-only mode using Elastic Network Interfaces on AWS via the AWS VPC CNI plugin, set:
+To run {{ site.prodname }} in policy-only mode using Elastic Network Interfaces on AWS via the AWS VPC CNI plugin outside of EKS, omit the `platform` flag:
 
 ```
 network: ecs
 ```
+
+**Policy-only Mode**
 
 To run Calico in policy-only mode for all other networking methods, set:
 
