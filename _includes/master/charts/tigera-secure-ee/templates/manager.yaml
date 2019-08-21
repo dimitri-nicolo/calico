@@ -32,13 +32,6 @@ data:
     {{ fail $errMsg }}
   {{- end }}
 
-  {{- /* perform validation for auth type: must be set to Token if using any of the platforms.
-         Perform this validation after the above so that we don't show this error when auth.type is completely invalid */ -}}
-  {{- if and (ne $authType "token") (or (or (eq .Values.platform "eks") (eq .Values.platform "gke")) (eq .Values.platform "aks")) }}
-    {{ $errMsg := printf "invalid selection '%s' for manager.auth.type. Must use 'Token' for platform '%s'" .Values.manager.auth.type .Values.platform }}
-    {{ fail $errMsg }}
-  {{- end }}
-
   # The OIDC authority.  Required if authentication-type is OIDC, ignored otherwise.
 {{- if .Values.manager.auth }}
   tigera.cnx-manager.oidc-authority: {{ .Values.manager.auth.authority | default "https://accounts.google.com" | quote }}
