@@ -32,7 +32,7 @@ var (
 			Namespace: util.FeedsNamespace,
 		},
 		Spec: v32.GlobalThreatFeedSpec{
-			Content: "Sets",
+			Content: "IPSets",
 			GlobalNetworkSet: &v32.GlobalNetworkSetSync{
 				Labels: map[string]string{
 					"level": "high",

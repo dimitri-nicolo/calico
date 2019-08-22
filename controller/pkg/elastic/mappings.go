@@ -26,7 +26,7 @@ const domainNameSetMapping = `{
             "type": "date",
             "format": "strict_date_optional_time"
         },
-        "names": {
+        "domains": {
             "type": "keyword"
         }
       }

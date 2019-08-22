@@ -76,7 +76,7 @@ type ipSetDoc struct {
 
 type domainNameSetDoc struct {
 	CreatedAt time.Time            `json:"created_at"`
-	Names     db.DomainNameSetSpec `json:"names"`
+	Domains   db.DomainNameSetSpec `json:"domains"`
 }
 
 type Elastic struct {
@@ -188,7 +188,10 @@ func (e *Elastic) Ready() bool {
 
 func (e *Elastic) ListSets(ctx context.Context, kind db.Kind) ([]db.Meta, error) {
 	q := elastic.NewMatchAllQuery()
-	idx := IndexByKind[kind]
+	idx, ok := IndexByKind[kind]
+	if !ok {
+		panic("unknown kind " + kind)
+	}
 	scroller := e.c.Scroll(idx).Type(StandardType).Version(true).FetchSource(false).Query(q)
 
 	var ids []db.Meta
@@ -211,31 +214,44 @@ func (e *Elastic) ListSets(ctx context.Context, kind db.Kind) ([]db.Meta, error)
 }
 
 func (e *Elastic) PutSet(ctx context.Context, meta db.Meta, value interface{}) error {
-	var body interface{}
-	switch meta.Kind {
-	case db.KindIPSet:
-		body = ipSetDoc{CreatedAt: time.Now(), IPs: value.(db.IPSetSpec)}
-	case db.KindDomainNameSet:
-		body = domainNameSetDoc{CreatedAt: time.Now(), Names: value.(db.DomainNameSetSpec)}
-	default:
-		panic("unknown db.Meta kind " + string(meta.Kind))
-	}
+	body := getBody(meta, value)
 
 	// Wait for the Sets Mapping to be created
+	c, ok := e.setMappingCreated[meta.Kind]
+	if !ok {
+		panic("unknown db.Meta kind" + meta.Kind)
+	}
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
 	case <-time.After(CreateIndexWaitTimeout):
 		return errors.New("Timeout waiting for index creation")
-	case <-e.setMappingCreated[meta.Kind]:
+	case <-c:
 		break
 	}
 
 	// Put document
-	_, err := e.c.Index().Index(IndexByKind[meta.Kind]).Type(StandardType).Id(meta.Name).BodyJson(body).Do(ctx)
+	idx, ok := IndexByKind[meta.Kind]
+	if !ok {
+		panic("unknown db.Meta kind " + meta.Kind)
+	}
+	_, err := e.c.Index().Index(idx).Type(StandardType).Id(meta.Name).BodyJson(body).Do(ctx)
 	log.WithField("name", meta.Name).Info("IP set stored")
 
 	return err
+}
+
+func getBody(meta db.Meta, value interface{}) interface{} {
+	var body interface{}
+	switch meta.Kind {
+	case db.KindIPSet:
+		body = ipSetDoc{CreatedAt: time.Now(), IPs: value.(db.IPSetSpec)}
+	case db.KindDomainNameSet:
+		body = domainNameSetDoc{CreatedAt: time.Now(), Domains: value.(db.DomainNameSetSpec)}
+	default:
+		panic("unknown db.Meta kind " + meta.Kind)
+	}
+	return body
 }
 
 func (e *Elastic) createOrUpdateIndex(ctx context.Context, index, mapping string, ch chan struct{}) error {
@@ -303,7 +319,10 @@ func (e *Elastic) ensureIndexExists(ctx context.Context, idx, mapping string) er
 }
 
 func (e *Elastic) GetIPSet(ctx context.Context, name string) (db.IPSetSpec, error) {
-	idx := IndexByKind[db.KindIPSet]
+	idx, ok := IndexByKind[db.KindIPSet]
+	if !ok {
+		panic("unknown kind " + db.KindIPSet)
+	}
 	res, err := e.c.Get().Index(idx).Type(StandardType).Id(name).Do(ctx)
 	if err != nil {
 		return nil, err
@@ -340,7 +359,10 @@ func (e *Elastic) GetIPSet(ctx context.Context, name string) (db.IPSetSpec, erro
 }
 
 func (e *Elastic) GetIPSetModified(ctx context.Context, name string) (time.Time, error) {
-	idx := IndexByKind[db.KindIPSet]
+	idx, ok := IndexByKind[db.KindIPSet]
+	if !ok {
+		panic("unknown kind " + db.KindIPSet)
+	}
 	res, err := e.c.Get().Index(idx).Type(StandardType).Id(name).FetchSourceContext(elastic.NewFetchSourceContext(true).Include("created_at")).Do(ctx)
 	if err != nil {
 		return time.Time{}, err
@@ -408,7 +430,10 @@ func splitIPSetToInterface(ipset db.IPSetSpec) [][]interface{} {
 }
 
 func (e *Elastic) DeleteSet(ctx context.Context, m db.Meta) error {
-	idx := IndexByKind[m.Kind]
+	idx, ok := IndexByKind[m.Kind]
+	if !ok {
+		panic("unknown db.Meta kind " + m.Kind)
+	}
 	ds := e.c.Delete().Index(idx).Type(StandardType).Id(m.Name)
 	if m.Version != nil {
 		ds = ds.Version(*m.Version)

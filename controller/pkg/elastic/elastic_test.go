@@ -226,6 +226,27 @@ func TestSplitIPSetToInterface(t *testing.T) {
 	}
 }
 
+func TestGetBody(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	meta := db.Meta{Name: "test", Kind: db.KindIPSet}
+	ipSet := db.IPSetSpec{"1.2.3.4"}
+	body := getBody(meta, ipSet)
+	g.Expect(body).To(BeAssignableToTypeOf(ipSetDoc{}))
+	isd := body.(ipSetDoc)
+	g.Expect(isd.IPs).To(Equal(ipSet))
+
+	meta.Kind = db.KindDomainNameSet
+	dnSet := db.DomainNameSetSpec{"evil.bad"}
+	body = getBody(meta, dnSet)
+	g.Expect(body).To(BeAssignableToTypeOf(domainNameSetDoc{}))
+	dnsd := body.(domainNameSetDoc)
+	g.Expect(dnsd.Domains).To(Equal(dnSet))
+
+	meta.Kind = ""
+	g.Expect(func() { getBody(meta, dnSet) }).To(Panic())
+}
+
 type testRoundTripper struct {
 	u            *url.URL
 	e            error
