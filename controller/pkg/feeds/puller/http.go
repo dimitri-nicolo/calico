@@ -35,7 +35,7 @@ const (
 
 // httpPuller is a feed that periodically pulls Puller sets from a URL
 type httpPuller struct {
-	ipSet               db.Sets
+	ipSet               db.IPSet
 	configMapClient     v1.ConfigMapInterface
 	secretsClient       v1.SecretInterface
 	client              *http.Client
@@ -55,7 +55,7 @@ type httpPuller struct {
 
 func NewHTTPPuller(
 	f *v3.GlobalThreatFeed,
-	ipSet db.Sets,
+	ipSet db.IPSet,
 	configMapClient v1.ConfigMapInterface,
 	secretsClient v1.SecretInterface,
 	client *http.Client,

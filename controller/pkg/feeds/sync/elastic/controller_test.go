@@ -23,23 +23,23 @@ import (
 // type it will accept on its Add method.
 
 type testCase struct {
-	kind    db.Kind
-	makeUUT func(ipSet db.Sets) reflect.Value
+	name    string
+	makeUUT func(d interface{}) reflect.Value
 	set     reflect.Value
 }
 
 var cases = []testCase{
 	{
-		kind: db.KindIPSet,
-		makeUUT: func(set db.Sets) reflect.Value {
-			return reflect.ValueOf(NewIPSetController(set))
+		name: "IPSet",
+		makeUUT: func(d interface{}) reflect.Value {
+			return reflect.ValueOf(NewIPSetController(d.(db.IPSet)))
 		},
 		set: reflect.ValueOf(db.IPSetSpec{"1.2.3.4"}),
 	},
 	{
-		kind: db.KindDomainNameSet,
-		makeUUT: func(set db.Sets) reflect.Value {
-			return reflect.ValueOf(NewDomainNameSetController(set))
+		name: "DomainNameSet",
+		makeUUT: func(d interface{}) reflect.Value {
+			return reflect.ValueOf(NewDomainNameSetController(d.(db.DomainNameSet)))
 		},
 		set: reflect.ValueOf(db.DomainNameSetSpec{"evilstuff.bad"}),
 	},
@@ -76,9 +76,9 @@ func noGC(uut reflect.Value, ctx context.Context, name string) {
 
 func TestController_Add_Success(t *testing.T) {
 	for _, tc := range cases {
-		t.Run(string(tc.kind), func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
-			dbm := &db.MockIPSet{}
+			dbm := &db.MockSets{}
 			tkr := mockNewTicker()
 			defer tkr.restoreNewTicker()
 			uut := tc.makeUUT(dbm)
@@ -98,14 +98,14 @@ func TestController_Add_Success(t *testing.T) {
 			tkr.reconcile(t, ctx)
 
 			g.Eventually(dbm.Calls).Should(ContainElement(
-				db.Call{Method: "PutSet", Name: name, Value: tc.set.Interface(), Kind: tc.kind}))
-			g.Expect(countMethod(dbm, "PutSet")()).To(Equal(1))
+				db.Call{Method: "Put" + tc.name, Name: name, Value: tc.set.Interface()}))
+			g.Expect(countMethod(dbm, "Put"+tc.name)()).To(Equal(1))
 
 			dbm.Metas = append(dbm.Metas, db.Meta{Name: name})
 
 			tkr.reconcile(t, ctx)
 
-			g.Consistently(countMethod(dbm, "PutSet")).
+			g.Consistently(countMethod(dbm, "Put"+tc.name)).
 				Should(Equal(1), "should not add a second time")
 		})
 	}
@@ -113,11 +113,11 @@ func TestController_Add_Success(t *testing.T) {
 
 func TestController_Delete_Success(t *testing.T) {
 	for _, tc := range cases {
-		t.Run(string(tc.kind), func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 
 			g := NewWithT(t)
 			name := "testdelete"
-			dbm := &db.MockIPSet{Metas: []db.Meta{{Name: name}}}
+			dbm := &db.MockSets{Metas: []db.Meta{{Name: name}}}
 			tkr := mockNewTicker()
 			defer tkr.restoreNewTicker()
 			uut := tc.makeUUT(dbm)
@@ -137,14 +137,14 @@ func TestController_Delete_Success(t *testing.T) {
 
 			tkr.reconcile(t, ctx)
 
-			g.Eventually(dbm.Calls).Should(ContainElement(db.Call{Method: "DeleteSet", Name: name}))
-			g.Expect(countMethod(dbm, "DeleteSet")()).To(Equal(1))
+			g.Eventually(dbm.Calls).Should(ContainElement(db.Call{Method: "Delete" + tc.name, Name: name}))
+			g.Expect(countMethod(dbm, "Delete"+tc.name)()).To(Equal(1))
 
 			dbm.Metas = nil
 
 			tkr.reconcile(t, ctx)
 
-			g.Consistently(countMethod(dbm, "DeleteSet")).
+			g.Consistently(countMethod(dbm, "Delete"+tc.name)).
 				Should(Equal(1), "should not delete a second time")
 		})
 	}
@@ -152,9 +152,9 @@ func TestController_Delete_Success(t *testing.T) {
 
 func TestController_GC_Success(t *testing.T) {
 	for _, tc := range cases {
-		t.Run(string(tc.kind), func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
-			dbm := &db.MockIPSet{}
+			dbm := &db.MockSets{}
 			tkr := mockNewTicker()
 			defer tkr.restoreNewTicker()
 			uut := tc.makeUUT(dbm)
@@ -173,19 +173,19 @@ func TestController_GC_Success(t *testing.T) {
 
 			tkr.reconcile(t, ctx)
 
-			g.Eventually(dbm.Calls).Should(ContainElement(db.Call{Method: "DeleteSet", Name: gcName, Version: &gcVer}))
-			g.Expect(countMethod(dbm, "DeleteSet")()).To(Equal(1), "should only GC one set")
+			g.Eventually(dbm.Calls).Should(ContainElement(db.Call{Method: "Delete" + tc.name, Name: gcName, Version: &gcVer}))
+			g.Expect(countMethod(dbm, "Delete"+tc.name)()).To(Equal(1), "should only GC one set")
 		})
 	}
 }
 
 func TestController_Update_Success(t *testing.T) {
 	for _, tc := range cases {
-		t.Run(string(tc.kind), func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
 			name := "test"
 			var version int64 = 10
-			dbm := &db.MockIPSet{Metas: []db.Meta{{Name: name, Version: &version}}}
+			dbm := &db.MockSets{Metas: []db.Meta{{Name: name, Version: &version}}}
 			tkr := mockNewTicker()
 			defer tkr.restoreNewTicker()
 			uut := tc.makeUUT(dbm)
@@ -204,12 +204,12 @@ func TestController_Update_Success(t *testing.T) {
 			tkr.reconcile(t, ctx)
 
 			g.Eventually(dbm.Calls).Should(ContainElement(
-				db.Call{Method: "PutSet", Name: name, Value: tc.set.Interface(), Kind: tc.kind}))
-			g.Expect(countMethod(dbm, "PutSet")()).To(Equal(1))
+				db.Call{Method: "Put" + tc.name, Name: name, Value: tc.set.Interface()}))
+			g.Expect(countMethod(dbm, "Put"+tc.name)()).To(Equal(1))
 
 			tkr.reconcile(t, ctx)
 
-			g.Consistently(countMethod(dbm, "PutSet")).
+			g.Consistently(countMethod(dbm, "Put"+tc.name)).
 				Should(Equal(1), "should not update a second time")
 		})
 	}
@@ -217,9 +217,9 @@ func TestController_Update_Success(t *testing.T) {
 
 func TestController_Reconcile_FailToList(t *testing.T) {
 	for _, tc := range cases {
-		t.Run(string(tc.kind), func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
-			dbm := &db.MockIPSet{Error: errors.New("test")}
+			dbm := &db.MockSets{Error: errors.New("test")}
 			tkr := mockNewTicker()
 			defer tkr.restoreNewTicker()
 			uut := tc.makeUUT(dbm)
@@ -250,9 +250,9 @@ func TestController_Reconcile_FailToList(t *testing.T) {
 
 func TestController_Add_FailToPut(t *testing.T) {
 	for _, tc := range cases {
-		t.Run(string(tc.kind), func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
-			dbm := &db.MockIPSet{PutError: errors.New("test")}
+			dbm := &db.MockSets{PutError: errors.New("test")}
 			tkr := mockNewTicker()
 			defer tkr.restoreNewTicker()
 			uut := tc.makeUUT(dbm)
@@ -273,8 +273,8 @@ func TestController_Add_FailToPut(t *testing.T) {
 			tkr.reconcile(t, ctx)
 
 			g.Eventually(dbm.Calls).Should(ContainElement(
-				db.Call{Method: "PutSet", Name: name, Value: tc.set.Interface(), Kind: tc.kind}))
-			g.Expect(countMethod(dbm, "PutSet")()).To(Equal(1))
+				db.Call{Method: "Put" + tc.name, Name: name, Value: tc.set.Interface()}))
+			g.Expect(countMethod(dbm, "Put"+tc.name)()).To(Equal(1))
 			g.Expect(stat.Status().ErrorConditions).To(HaveLen(1))
 			g.Expect(stat.Status().ErrorConditions[0].Type).To(Equal(statser.ElasticSyncFailed))
 			g.Expect(failed).To(BeTrue())
@@ -282,7 +282,7 @@ func TestController_Add_FailToPut(t *testing.T) {
 			dbm.PutError = nil
 			tkr.reconcile(t, ctx)
 
-			g.Eventually(countMethod(dbm, "PutSet")).
+			g.Eventually(countMethod(dbm, "Put"+tc.name)).
 				Should(Equal(2), "should retry put")
 			g.Eventually(func() []v3.ErrorCondition { return stat.Status().ErrorConditions }).Should(HaveLen(0), "should clear error on success")
 		})
@@ -291,9 +291,9 @@ func TestController_Add_FailToPut(t *testing.T) {
 
 func TestController_GC_NotFound(t *testing.T) {
 	for _, tc := range cases {
-		t.Run(string(tc.kind), func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
-			dbm := &db.MockIPSet{DeleteError: &elastic.Error{Status: http.StatusNotFound}}
+			dbm := &db.MockSets{DeleteError: &elastic.Error{Status: http.StatusNotFound}}
 			tkr := mockNewTicker()
 			defer tkr.restoreNewTicker()
 			uut := tc.makeUUT(dbm)
@@ -310,12 +310,12 @@ func TestController_GC_NotFound(t *testing.T) {
 
 			tkr.reconcile(t, ctx)
 
-			g.Eventually(dbm.Calls).Should(ContainElement(db.Call{Method: "DeleteSet", Name: gcName, Version: &gcVer}))
-			g.Expect(countMethod(dbm, "DeleteSet")()).To(Equal(1))
+			g.Eventually(dbm.Calls).Should(ContainElement(db.Call{Method: "Delete" + tc.name, Name: gcName, Version: &gcVer}))
+			g.Expect(countMethod(dbm, "Delete"+tc.name)()).To(Equal(1))
 
 			dbm.Metas = nil
 			tkr.reconcile(t, ctx)
-			g.Consistently(countMethod(dbm, "DeleteSet")).
+			g.Consistently(countMethod(dbm, "Delete"+tc.name)).
 				Should(Equal(1), "should not retry delete")
 		})
 	}
@@ -323,9 +323,9 @@ func TestController_GC_NotFound(t *testing.T) {
 
 func TestController_GC_Error(t *testing.T) {
 	for _, tc := range cases {
-		t.Run(string(tc.kind), func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
-			dbm := &db.MockIPSet{DeleteError: errors.New("test")}
+			dbm := &db.MockSets{DeleteError: errors.New("test")}
 			tkr := mockNewTicker()
 			defer tkr.restoreNewTicker()
 			uut := tc.makeUUT(dbm)
@@ -342,12 +342,12 @@ func TestController_GC_Error(t *testing.T) {
 
 			tkr.reconcile(t, ctx)
 
-			g.Eventually(dbm.Calls).Should(ContainElement(db.Call{Method: "DeleteSet", Name: gcName, Version: &gcVer}))
-			g.Expect(countMethod(dbm, "DeleteSet")()).To(Equal(1))
+			g.Eventually(dbm.Calls).Should(ContainElement(db.Call{Method: "Delete" + tc.name, Name: gcName, Version: &gcVer}))
+			g.Expect(countMethod(dbm, "Delete"+tc.name)()).To(Equal(1))
 
 			dbm.DeleteError = nil
 			tkr.reconcile(t, ctx)
-			g.Eventually(countMethod(dbm, "DeleteSet")).
+			g.Eventually(countMethod(dbm, "Delete"+tc.name)).
 				Should(Equal(2), "should retry delete")
 		})
 	}
@@ -355,8 +355,8 @@ func TestController_GC_Error(t *testing.T) {
 
 func TestController_NewTicker(t *testing.T) {
 	for _, tc := range cases {
-		t.Run(string(tc.kind), func(t *testing.T) {
-			dbm := &db.MockIPSet{}
+		t.Run(tc.name, func(t *testing.T) {
+			dbm := &db.MockSets{}
 			uut := tc.makeUUT(dbm)
 
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -381,9 +381,9 @@ func TestController_ContextExpiry(t *testing.T) {
 	// controller is not running.
 	cases := []testCase{
 		{
-			kind: db.KindIPSet,
-			makeUUT: func(set db.Sets) reflect.Value {
-				uut := NewIPSetController(set)
+			name: "IPSet",
+			makeUUT: func(d interface{}) reflect.Value {
+				uut := NewIPSetController(d.(db.IPSet))
 				ctrl := (*controller)(uut.(*ipSetController))
 				ctrl.updates = make(chan update)
 				return reflect.ValueOf(uut)
@@ -391,9 +391,9 @@ func TestController_ContextExpiry(t *testing.T) {
 			set: reflect.ValueOf(db.IPSetSpec{"1.2.3.4"}),
 		},
 		{
-			kind: db.KindDomainNameSet,
-			makeUUT: func(set db.Sets) reflect.Value {
-				uut := NewDomainNameSetController(set)
+			name: "DomainNameSet",
+			makeUUT: func(d interface{}) reflect.Value {
+				uut := NewDomainNameSetController(d.(db.DomainNameSet))
 				ctrl := (*controller)(uut.(*dnSetController))
 				ctrl.updates = make(chan update)
 				return reflect.ValueOf(uut)
@@ -402,9 +402,9 @@ func TestController_ContextExpiry(t *testing.T) {
 		},
 	}
 	for _, tc := range cases {
-		t.Run(string(tc.kind), func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
-			dbm := &db.MockIPSet{}
+			dbm := &db.MockSets{}
 			uut := tc.makeUUT(dbm)
 
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -482,7 +482,7 @@ func (m *mockTicker) reconcile(t *testing.T, ctx context.Context) {
 	}
 }
 
-func countMethod(client *db.MockIPSet, method string) func() int {
+func countMethod(client *db.MockSets, method string) func() int {
 	return func() int {
 		n := 0
 		for _, c := range client.Calls() {

@@ -49,7 +49,7 @@ type watcher struct {
 	gnsController          globalnetworksets.Controller
 	elasticController      elastic.IPSetController
 	httpClient             *http.Client
-	ipSet                  db.Sets
+	ipSet                  db.IPSet
 	suspiciousIP           db.SuspiciousIP
 	events                 db.Events
 	feedWatchers           map[string]*feedWatcher
@@ -83,7 +83,7 @@ func NewWatcher(
 	globalNetworkSetController globalnetworksets.Controller,
 	elasticController elastic.IPSetController,
 	httpClient *http.Client,
-	ipSet db.Sets,
+	ipSet db.IPSet,
 	suspiciousIP db.SuspiciousIP,
 	events db.Events,
 ) Watcher {

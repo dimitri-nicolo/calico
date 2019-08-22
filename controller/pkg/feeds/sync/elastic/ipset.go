@@ -22,13 +22,16 @@ type IPSetController interface {
 
 type ipSetController controller
 
-func NewIPSetController(ipSet db.Sets) IPSetController {
+type ipSetData struct {
+	ipSet db.IPSet
+}
+
+func NewIPSetController(ipSet db.IPSet) IPSetController {
 	return &ipSetController{
 		dirty:   make(map[string]update),
 		noGC:    make(map[string]struct{}),
 		updates: make(chan update, DefaultUpdateQueueLen),
-		kind:    db.KindIPSet,
-		db:      ipSet,
+		data:    ipSetData{ipSet},
 	}
 }
 
@@ -50,4 +53,16 @@ func (c *ipSetController) StartReconciliation(ctx context.Context) {
 
 func (c *ipSetController) Run(ctx context.Context) {
 	(*controller)(c).Run(ctx)
+}
+
+func (d ipSetData) put(ctx context.Context, name string, value interface{}) error {
+	return d.ipSet.PutIPSet(ctx, name, value.(db.IPSetSpec))
+}
+
+func (d ipSetData) list(ctx context.Context) ([]db.Meta, error) {
+	return d.ipSet.ListIPSets(ctx)
+}
+
+func (d ipSetData) delete(ctx context.Context, m db.Meta) error {
+	return d.ipSet.DeleteIPSet(ctx, m)
 }

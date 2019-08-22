@@ -36,13 +36,18 @@ type Controller interface {
 	Run(context.Context)
 }
 
+type data interface {
+	put(ctx context.Context, name string, value interface{}) error
+	list(ctx context.Context) ([]db.Meta, error)
+	delete(ctx context.Context, m db.Meta) error
+}
+
 type controller struct {
 	once    sync.Once
 	dirty   map[string]update
 	noGC    map[string]struct{}
 	updates chan update
-	kind    db.Kind
-	db      db.Sets
+	data    data
 }
 
 type op int
@@ -166,7 +171,7 @@ func (c *controller) processUpdate(u update) {
 }
 
 func (c *controller) reconcile(ctx context.Context) {
-	metas, err := c.db.ListSets(ctx, c.kind)
+	metas, err := c.data.list(ctx)
 	if err != nil {
 		log.WithError(err).Error("failed to reconcile elastic object")
 		for _, u := range c.dirty {
@@ -194,8 +199,7 @@ func (c *controller) reconcile(ctx context.Context) {
 }
 
 func (c *controller) updateObject(ctx context.Context, u update) {
-	m := db.Meta{Name: u.name, Kind: c.kind}
-	err := c.db.PutSet(ctx, m, u.value)
+	err := c.data.put(ctx, u.name, u.value)
 	if err != nil {
 		log.WithError(err).WithField("name", u.name).Error("failed to update elastic object")
 		u.fail()
@@ -222,7 +226,7 @@ func (c *controller) purgeObject(ctx context.Context, m db.Meta) {
 		}
 	}
 
-	err := c.db.DeleteSet(ctx, m)
+	err := c.data.delete(ctx, m)
 	if elastic.IsNotFound(err) {
 		return
 	}

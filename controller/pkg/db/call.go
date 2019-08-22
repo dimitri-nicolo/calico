@@ -12,5 +12,4 @@ type Call struct {
 	Name    string
 	Value   interface{}
 	Version *int64
-	Kind    Kind
 }

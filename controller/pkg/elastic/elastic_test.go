@@ -189,13 +189,13 @@ func TestElastic_ListSets(t *testing.T) {
 
 	rt.listRespFile = "test_files/list.1.r.json"
 	rt.listStatus = 200
-	metas, err := e.ListSets(ctx, db.KindIPSet)
+	metas, err := e.ListIPSets(ctx)
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(metas).To(HaveLen(0))
 
 	rt.listRespFile = "test_files/list.2.r.json"
 	rt.listStatus = 404
-	metas, err = e.ListSets(ctx, db.KindIPSet)
+	metas, err = e.ListIPSets(ctx)
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(metas).To(HaveLen(0))
 }
@@ -224,27 +224,6 @@ func TestSplitIPSetToInterface(t *testing.T) {
 	for idx, v := range output[mul] {
 		g.Expect(v).Should(Equal(fmt.Sprintf("%d", mul*MaxClauseCount+idx)))
 	}
-}
-
-func TestGetBody(t *testing.T) {
-	g := NewGomegaWithT(t)
-
-	meta := db.Meta{Name: "test", Kind: db.KindIPSet}
-	ipSet := db.IPSetSpec{"1.2.3.4"}
-	body := getBody(meta, ipSet)
-	g.Expect(body).To(BeAssignableToTypeOf(ipSetDoc{}))
-	isd := body.(ipSetDoc)
-	g.Expect(isd.IPs).To(Equal(ipSet))
-
-	meta.Kind = db.KindDomainNameSet
-	dnSet := db.DomainNameSetSpec{"evil.bad"}
-	body = getBody(meta, dnSet)
-	g.Expect(body).To(BeAssignableToTypeOf(domainNameSetDoc{}))
-	dnsd := body.(domainNameSetDoc)
-	g.Expect(dnsd.Domains).To(Equal(dnSet))
-
-	meta.Kind = ""
-	g.Expect(func() { getBody(meta, dnSet) }).To(Panic())
 }
 
 type testRoundTripper struct {

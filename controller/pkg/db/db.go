@@ -10,22 +10,20 @@ import (
 type Meta struct {
 	Name    string
 	Version *int64
-	Kind    Kind
 }
 
-type Kind string
-
-const (
-	KindIPSet         Kind = "IPSet"
-	KindDomainNameSet Kind = "DomainNameSet"
-)
-
-type Sets interface {
-	PutSet(ctx context.Context, meta Meta, value interface{}) error
+type IPSet interface {
+	PutIPSet(ctx context.Context, name string, set IPSetSpec) error
 	GetIPSet(ctx context.Context, name string) (IPSetSpec, error)
 	GetIPSetModified(ctx context.Context, name string) (time.Time, error)
-	ListSets(ctx context.Context, kind Kind) ([]Meta, error)
-	DeleteSet(ctx context.Context, m Meta) error
+	ListIPSets(ctx context.Context) ([]Meta, error)
+	DeleteIPSet(ctx context.Context, m Meta) error
+}
+
+type DomainNameSet interface {
+	PutDomainNameSet(ctx context.Context, name string, set DomainNameSetSpec) error
+	ListDomainNameSets(ctx context.Context) ([]Meta, error)
+	DeleteDomainNameSet(ctx context.Context, m Meta) error
 }
 
 type SuspiciousIP interface {

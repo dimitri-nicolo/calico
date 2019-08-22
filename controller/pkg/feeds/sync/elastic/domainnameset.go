@@ -22,13 +22,16 @@ type DomainNameSetController interface {
 
 type dnSetController controller
 
-func NewDomainNameSetController(sets db.Sets) DomainNameSetController {
+type dnSetData struct {
+	dnSet db.DomainNameSet
+}
+
+func NewDomainNameSetController(sets db.DomainNameSet) DomainNameSetController {
 	return &dnSetController{
 		dirty:   make(map[string]update),
 		noGC:    make(map[string]struct{}),
 		updates: make(chan update, DefaultUpdateQueueLen),
-		kind:    db.KindDomainNameSet,
-		db:      sets,
+		data:    dnSetData{sets},
 	}
 }
 
@@ -50,4 +53,16 @@ func (c *dnSetController) StartReconciliation(ctx context.Context) {
 
 func (c *dnSetController) Run(ctx context.Context) {
 	(*controller)(c).Run(ctx)
+}
+
+func (d dnSetData) put(ctx context.Context, name string, value interface{}) error {
+	return d.dnSet.PutDomainNameSet(ctx, name, value.(db.DomainNameSetSpec))
+}
+
+func (d dnSetData) list(ctx context.Context) ([]db.Meta, error) {
+	return d.dnSet.ListDomainNameSets(ctx)
+}
+
+func (d dnSetData) delete(ctx context.Context, m db.Meta) error {
+	return d.dnSet.DeleteDomainNameSet(ctx, m)
 }

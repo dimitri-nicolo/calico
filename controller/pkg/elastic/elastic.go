@@ -23,6 +23,13 @@ import (
 	"github.com/tigera/intrusion-detection/controller/pkg/runloop"
 )
 
+type kind string
+
+const (
+	kindIPSet         kind = "IPSet"
+	kindDomainNameSet kind = "DomainNameSet"
+)
+
 const (
 	IPSetIndexPattern         = ".tigera.ipset.%s"
 	DomainNameSetIndexPattern = ".tigera.domainnameset.%s"
@@ -45,8 +52,8 @@ var (
 	EventIndex    string
 	FlowLogIndex  string
 	AuditIndex    string
-	IndexByKind   map[db.Kind]string
-	MappingByKind map[db.Kind]string
+	indexByKind   map[kind]string
+	mappingByKind map[kind]string
 )
 
 func init() {
@@ -59,13 +66,13 @@ func init() {
 	EventIndex = fmt.Sprintf(EventIndexPattern, cluster)
 	FlowLogIndex = fmt.Sprintf(FlowLogIndexPattern, cluster)
 	AuditIndex = fmt.Sprintf(FlowLogIndexPattern, cluster)
-	IndexByKind = map[db.Kind]string{
-		db.KindIPSet:         ipSetIndex,
-		db.KindDomainNameSet: domainNameSetIndex,
+	indexByKind = map[kind]string{
+		kindIPSet:         ipSetIndex,
+		kindDomainNameSet: domainNameSetIndex,
 	}
-	MappingByKind = map[db.Kind]string{
-		db.KindIPSet:         ipSetMapping,
-		db.KindDomainNameSet: domainNameSetMapping,
+	mappingByKind = map[kind]string{
+		kindIPSet:         ipSetMapping,
+		kindDomainNameSet: domainNameSetMapping,
 	}
 }
 
@@ -82,7 +89,7 @@ type domainNameSetDoc struct {
 type Elastic struct {
 	c                   *elastic.Client
 	url                 *url.URL
-	setMappingCreated   map[db.Kind]chan struct{}
+	setMappingCreated   map[kind]chan struct{}
 	eventMappingCreated chan struct{}
 	elasticIsAlive      bool
 	cancel              context.CancelFunc
@@ -109,10 +116,10 @@ func NewElastic(h *http.Client, url *url.URL, username, password string) (*Elast
 	e := &Elastic{
 		c:                   c,
 		url:                 url,
-		setMappingCreated:   make(map[db.Kind]chan struct{}),
+		setMappingCreated:   make(map[kind]chan struct{}),
 		eventMappingCreated: make(chan struct{}),
 	}
-	for k := range IndexByKind {
+	for k := range indexByKind {
 		e.setMappingCreated[k] = make(chan struct{})
 	}
 
@@ -122,11 +129,11 @@ func NewElastic(h *http.Client, url *url.URL, username, password string) (*Elast
 func (e *Elastic) Run(ctx context.Context) {
 	e.once.Do(func() {
 		ctx, e.cancel = context.WithCancel(ctx)
-		for k, i := range IndexByKind {
+		for k, i := range indexByKind {
 			go func() {
-				if err := e.createOrUpdateIndex(ctx, i, MappingByKind[k], e.setMappingCreated[k]); err != nil {
+				if err := e.createOrUpdateIndex(ctx, i, mappingByKind[k], e.setMappingCreated[k]); err != nil {
 					log.WithError(err).WithFields(log.Fields{
-						"index": IndexByKind[k],
+						"index": indexByKind[k],
 					}).Error("Could not create index")
 				}
 			}()
@@ -186,12 +193,16 @@ func (e *Elastic) Ready() bool {
 	return e.elasticIsAlive
 }
 
-func (e *Elastic) ListSets(ctx context.Context, kind db.Kind) ([]db.Meta, error) {
+func (e *Elastic) ListIPSets(ctx context.Context) ([]db.Meta, error) {
+	return e.listSets(ctx, indexByKind[kindIPSet])
+}
+
+func (e *Elastic) ListDomainNameSets(ctx context.Context) ([]db.Meta, error) {
+	return e.listSets(ctx, indexByKind[kindDomainNameSet])
+}
+
+func (e *Elastic) listSets(ctx context.Context, idx string) ([]db.Meta, error) {
 	q := elastic.NewMatchAllQuery()
-	idx, ok := IndexByKind[kind]
-	if !ok {
-		panic("unknown kind " + kind)
-	}
 	scroller := e.c.Scroll(idx).Type(StandardType).Version(true).FetchSource(false).Query(q)
 
 	var ids []db.Meta
@@ -208,19 +219,28 @@ func (e *Elastic) ListSets(ctx context.Context, kind db.Kind) ([]db.Meta, error)
 			return nil, err
 		}
 		for _, hit := range res.Hits.Hits {
-			ids = append(ids, db.Meta{Name: hit.Id, Version: hit.Version, Kind: kind})
+			ids = append(ids, db.Meta{Name: hit.Id, Version: hit.Version})
 		}
 	}
 }
 
-func (e *Elastic) PutSet(ctx context.Context, meta db.Meta, value interface{}) error {
-	body := getBody(meta, value)
+func (e *Elastic) PutIPSet(ctx context.Context, name string, set db.IPSetSpec) error {
+	body := ipSetDoc{CreatedAt: time.Now(), IPs: set}
+	idx := indexByKind[kindIPSet]
+	c := e.setMappingCreated[kindIPSet]
+	return e.putSet(ctx, name, idx, c, body)
+}
+
+func (e *Elastic) PutDomainNameSet(ctx context.Context, name string, set db.DomainNameSetSpec) error {
+	body := domainNameSetDoc{CreatedAt: time.Now(), Domains: set}
+	idx := indexByKind[kindDomainNameSet]
+	c := e.setMappingCreated[kindDomainNameSet]
+	return e.putSet(ctx, name, idx, c, body)
+}
+
+func (e *Elastic) putSet(ctx context.Context, name string, idx string, c <-chan struct{}, body interface{}) error {
 
 	// Wait for the Sets Mapping to be created
-	c, ok := e.setMappingCreated[meta.Kind]
-	if !ok {
-		panic("unknown db.Meta kind" + meta.Kind)
-	}
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
@@ -231,27 +251,10 @@ func (e *Elastic) PutSet(ctx context.Context, meta db.Meta, value interface{}) e
 	}
 
 	// Put document
-	idx, ok := IndexByKind[meta.Kind]
-	if !ok {
-		panic("unknown db.Meta kind " + meta.Kind)
-	}
-	_, err := e.c.Index().Index(idx).Type(StandardType).Id(meta.Name).BodyJson(body).Do(ctx)
-	log.WithField("name", meta.Name).Info("IP set stored")
+	_, err := e.c.Index().Index(idx).Type(StandardType).Id(name).BodyJson(body).Do(ctx)
+	log.WithField("name", name).Info("set stored")
 
 	return err
-}
-
-func getBody(meta db.Meta, value interface{}) interface{} {
-	var body interface{}
-	switch meta.Kind {
-	case db.KindIPSet:
-		body = ipSetDoc{CreatedAt: time.Now(), IPs: value.(db.IPSetSpec)}
-	case db.KindDomainNameSet:
-		body = domainNameSetDoc{CreatedAt: time.Now(), Domains: value.(db.DomainNameSetSpec)}
-	default:
-		panic("unknown db.Meta kind " + meta.Kind)
-	}
-	return body
 }
 
 func (e *Elastic) createOrUpdateIndex(ctx context.Context, index, mapping string, ch chan struct{}) error {
@@ -319,9 +322,9 @@ func (e *Elastic) ensureIndexExists(ctx context.Context, idx, mapping string) er
 }
 
 func (e *Elastic) GetIPSet(ctx context.Context, name string) (db.IPSetSpec, error) {
-	idx, ok := IndexByKind[db.KindIPSet]
+	idx, ok := indexByKind[kindIPSet]
 	if !ok {
-		panic("unknown kind " + db.KindIPSet)
+		panic("unknown kind " + kindIPSet)
 	}
 	res, err := e.c.Get().Index(idx).Type(StandardType).Id(name).Do(ctx)
 	if err != nil {
@@ -359,9 +362,9 @@ func (e *Elastic) GetIPSet(ctx context.Context, name string) (db.IPSetSpec, erro
 }
 
 func (e *Elastic) GetIPSetModified(ctx context.Context, name string) (time.Time, error) {
-	idx, ok := IndexByKind[db.KindIPSet]
+	idx, ok := indexByKind[kindIPSet]
 	if !ok {
-		panic("unknown kind " + db.KindIPSet)
+		panic("unknown kind " + kindIPSet)
 	}
 	res, err := e.c.Get().Index(idx).Type(StandardType).Id(name).FetchSourceContext(elastic.NewFetchSourceContext(true).Include("created_at")).Do(ctx)
 	if err != nil {
@@ -429,11 +432,17 @@ func splitIPSetToInterface(ipset db.IPSetSpec) [][]interface{} {
 	return terms
 }
 
-func (e *Elastic) DeleteSet(ctx context.Context, m db.Meta) error {
-	idx, ok := IndexByKind[m.Kind]
-	if !ok {
-		panic("unknown db.Meta kind " + m.Kind)
-	}
+func (e *Elastic) DeleteIPSet(ctx context.Context, m db.Meta) error {
+	idx := indexByKind[kindIPSet]
+	return e.deleteSet(ctx, m, idx)
+}
+
+func (e *Elastic) DeleteDomainNameSet(ctx context.Context, m db.Meta) error {
+	idx := indexByKind[kindDomainNameSet]
+	return e.deleteSet(ctx, m, idx)
+}
+
+func (e *Elastic) deleteSet(ctx context.Context, m db.Meta, idx string) error {
 	ds := e.c.Delete().Index(idx).Type(StandardType).Id(m.Name)
 	if m.Version != nil {
 		ds = ds.Version(*m.Version)
