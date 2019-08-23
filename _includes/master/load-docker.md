@@ -70,6 +70,8 @@
    docker pull quay.io/prometheus/prometheus:{{site.data.versions[page.version].first.components["prometheus"].version}}
    docker pull upmcenterprises/elasticsearch-operator:{{site.data.versions[page.version].first.components["elasticsearch-operator"].version}}
    docker pull busybox:{{site.data.versions[page.version].first.components["busybox"].version}}
+   docker pull {{site.imageNames["cpVerticalAutoscaler"]}}:{{site.data.versions[page.version].first.components["cpVerticalAutoscaler"].version}}
+   docker pull {{site.imageNames["cpHorizontalAutoscaler"]}}:{{site.data.versions[page.version].first.components["cpHorizontalAutoscaler"].version}}
    ```
 
 1. Retag the images with the name of your private registry.
@@ -106,6 +108,8 @@
    docker tag quay.io/prometheus/prometheus:{{site.data.versions[page.version].first.components["prometheus"].version}} <YOUR-REGISTRY>/prometheus/prometheus:{{site.data.versions[page.version].first.components["prometheus"].version}}
    docker tag upmcenterprises/elasticsearch-operator:{{site.data.versions[page.version].first.components["elasticsearch-operator"].version}} <YOUR-REGISTRY>/upmcenterprises/elasticsearch-operator:{{site.data.versions[page.version].first.components["elasticsearch-operator"].version}}
    docker tag busybox:{{site.data.versions[page.version].first.components["busybox"].version}} <YOUR-REGISTRY>/busybox:{{site.data.versions[page.version].first.components["busybox"].version}}
+   docker tag {{site.imageNames["cpVerticalAutoscaler"]}}:{{site.data.versions[page.version].first.components["cpVerticalAutoscaler"].version}} <YOUR-REGISTRY>/{{site.imageNames["cpVerticalAutoscaler"]}}:{{site.data.versions[page.version].first.components["cpVerticalAutoscaler"].version}}
+   docker tag {{site.imageNames["cpHorizontalAutoscaler"]}}:{{site.data.versions[page.version].first.components["cpHorizontalAutoscaler"].version}} <YOUR-REGISTRY>/{{site.imageNames["cpHorizontalAutoscaler"]}}:{{site.data.versions[page.version].first.components["cpHorizontalAutoscaler"].version}}
    ```
    > **Note**: We recommend changing just the name of the registry (`<YOUR-REGISTRY>`)
    > when retagging the images, as shown above and below.
@@ -145,6 +149,8 @@
    docker push <YOUR-REGISTRY>/prometheus/prometheus:{{site.data.versions[page.version].first.components["prometheus"].version}}
    docker push <YOUR-REGISTRY>/upmcenterprises/elasticsearch-operator:{{site.data.versions[page.version].first.components["elasticsearch-operator"].version}}
    docker push <YOUR-REGISTRY>/busybox:{{site.data.versions[page.version].first.components["busybox"].version}}
+   docker push <YOUR-REGISTRY>/{{site.imageNames["cpVerticalAutoscaler"]}}:{{site.data.versions[page.version].first.components["cpVerticalAutoscaler"].version}}
+   docker push <YOUR-REGISTRY>/{{site.imageNames["cpHorizontalAutoscaler"]}}:{{site.data.versions[page.version].first.components["cpHorizontalAutoscaler"].version}}
    ```
 
    > **Important**: Do not push the private {{site.prodname}} images to a public registry.

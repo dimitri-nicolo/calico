@@ -59,6 +59,8 @@ imageNames:
   elasticsearch: docker.elastic.co/elasticsearch/elasticsearch
   prometheusOperator: quay.io/coreos/prometheus-operator
   busybox: busybox
+  cpHorizontalAutoscaler: k8s.gcr.io/cluster-proportional-autoscaler-amd64
+  cpVerticalAutoscaler: k8s.gcr.io/cpvpa-amd64
 
 # List of files to exclude. These files won't get included in the deployed site.
 exclude:

@@ -405,7 +405,7 @@ spec:
         scheduler.alpha.kubernetes.io/critical-pod: ''
     spec:
       containers:
-        - image: k8s.gcr.io/cluster-proportional-autoscaler-amd64:1.1.2-r2
+        - image: {{ .Values.cpHorizontalAutoscaler.image }}:{{ .Values.cpHorizontalAutoscaler.tag }}
           name: autoscaler
           command:
             - /cluster-proportional-autoscaler
@@ -504,7 +504,7 @@ spec:
         scheduler.alpha.kubernetes.io/critical-pod: ''
     spec:
       containers:
-        - image: k8s.gcr.io/cpvpa-amd64:v0.6.0
+        - image: {{ .Values.cpVerticalAutoscaler.image }}:{{ .Values.cpVerticalAutoscaler.tag }}
           name: autoscaler
           command:
             - /cpvpa
