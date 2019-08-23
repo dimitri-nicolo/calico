@@ -1,5 +1,7 @@
-FROM fluent/fluentd:v1.2-onbuild
+FROM fluent/fluentd:v1.7
 MAINTAINER spike@tigera.io
+
+USER root
 
 RUN apk add --update --virtual .build-deps \
         sudo build-base ruby-dev \
@@ -65,4 +67,5 @@ RUN mkdir /fluentd/etc/output_kube_audit
 
 EXPOSE 24284
 
-CMD exec /bin/ee_entrypoint.sh fluentd -c /fluentd/etc/${FLUENTD_CONF} -p /fluentd/plugins $FLUENTD_OPT
+ENTRYPOINT []
+CMD /bin/ee_entrypoint.sh fluentd -c /fluentd/etc/${FLUENTD_CONF} -p /fluentd/plugins $FLUENTD_OPT

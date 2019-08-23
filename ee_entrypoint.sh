@@ -1,4 +1,4 @@
-#!/usr/bin/dumb-init /bin/sh
+#!/bin/sh
 set -e
 
 # Set the number of shards for index tigera_secure_ee_flows
