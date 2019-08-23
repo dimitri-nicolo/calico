@@ -10,7 +10,7 @@ import:
   - pkg/transport
 - package: github.com/projectcalico/libcalico-go
   repo: git@github.com:tigera/libcalico-go-private.git
-  version: 305e59133073585defad84f5ae9e8d0a18ac88ec
+  version: d50bfb6c7acc516f25ee8bcb04997d5f4d06889c
   subpackages:
   - lib/apiconfig
   - lib/apis/v3
