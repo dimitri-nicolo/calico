@@ -228,12 +228,12 @@ func TestElastic_Put_Set(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
-	close(e.setMappingCreated[kindIPSet])
+	close(e.ipSetMappingCreated)
 
 	err = e.PutIPSet(ctx, "test1", db.IPSetSpec{"1.2.3.4"})
 	g.Expect(err).ToNot(HaveOccurred())
 
-	close(e.setMappingCreated[kindDomainNameSet])
+	close(e.domainNameSetMappingCreated)
 
 	err = e.PutDomainNameSet(ctx, "test1", db.DomainNameSetSpec{"hackers.and.badguys"})
 	g.Expect(err).ToNot(HaveOccurred())
