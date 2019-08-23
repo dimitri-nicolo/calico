@@ -63,7 +63,7 @@ Your `calico.yaml` file should resemble the following:
 
 ```
 kind: DaemonSet
-apiVersion: extensions/v1beta1
+apiVersion: networking.k8s.io/v1
 metadata:
   name: calico-node
   namespace: kube-system
