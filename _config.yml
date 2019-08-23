@@ -37,7 +37,7 @@ imageNames:
   calico-upgrade: calico/upgrade
   flannel: quay.io/coreos/flannel
   dikastes: tigera/dikastes
-  flexvol: quay.io/calico/pod2daemon-flexvol
+  flexvol: calico/pod2daemon-flexvol
   fluentd: tigera/fluentd
   es-proxy: tigera/es-proxy
   cloudControllers: tigera/cloud-controllers
