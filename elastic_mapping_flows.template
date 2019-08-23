@@ -4,7 +4,6 @@
     "number_of_shards": 5
   },
   "mappings": {
-    "_default_": {
       "properties" : {
         "start_time": {
             "type": "date",
@@ -119,7 +118,6 @@
         "num_original_source_ips": {
             "type": "long"
         }
-      }   
     }
   }
 }
