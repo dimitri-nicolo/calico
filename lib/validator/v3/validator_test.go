@@ -2093,6 +2093,13 @@ func init() {
 			},
 			false,
 		),
+		Entry("allow GlobalThreatFeed with Content DomainNameSet",
+			&api.GlobalThreatFeed{
+				ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
+				Spec:       api.GlobalThreatFeedSpec{Content: api.ThreatFeedContentDomainNameSet},
+			},
+			true,
+		),
 		Entry("allow GlobalThreatFeed with gns labels",
 			&api.GlobalThreatFeed{
 				ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
@@ -2112,6 +2119,18 @@ func init() {
 					Content: api.ThreatFeedContentIPset,
 					GlobalNetworkSet: &api.GlobalNetworkSetSync{
 						Labels: map[string]string{",,foo": "bar", "biz": "~baz"},
+					},
+				},
+			},
+			false,
+		),
+		Entry("disallow GlobalThreatFeed DomainNameSet with GlobalNetworkSet",
+			&api.GlobalThreatFeed{
+				ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
+				Spec: api.GlobalThreatFeedSpec{
+					Content: api.ThreatFeedContentDomainNameSet,
+					GlobalNetworkSet: &api.GlobalNetworkSetSync{
+						Labels: map[string]string{"foo": "bar", "biz": "baz"},
 					},
 				},
 			},
