@@ -349,7 +349,15 @@ func (e *Elastic) GetIPSet(ctx context.Context, name string) (db.IPSetSpec, erro
 }
 
 func (e *Elastic) GetIPSetModified(ctx context.Context, name string) (time.Time, error) {
-	res, err := e.c.Get().Index(IPSetIndex).Type(StandardType).Id(name).FetchSourceContext(elastic.NewFetchSourceContext(true).Include("created_at")).Do(ctx)
+	return e.getSetModified(ctx, name, IPSetIndex)
+}
+
+func (e *Elastic) GetDomainNameSetModified(ctx context.Context, name string) (time.Time, error) {
+	return e.getSetModified(ctx, name, DomainNameSetIndex)
+}
+
+func (e *Elastic) getSetModified(ctx context.Context, name, idx string) (time.Time, error) {
+	res, err := e.c.Get().Index(idx).Type(StandardType).Id(name).FetchSourceContext(elastic.NewFetchSourceContext(true).Include("created_at")).Do(ctx)
 	if err != nil {
 		return time.Time{}, err
 	}

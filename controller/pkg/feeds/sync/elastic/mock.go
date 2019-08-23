@@ -77,3 +77,71 @@ func (c *MockElasticIPSetController) Sets() map[string]db.IPSetSpec {
 	}
 	return out
 }
+
+type MockDomainNameSetsController struct {
+	m         sync.Mutex
+	sets      map[string]db.DomainNameSetSpec
+	failFuncs map[string]func()
+	statsers  map[string]statser.Statser
+	noGC      map[string]struct{}
+}
+
+func NewMockDomainNameSetsController() *MockDomainNameSetsController {
+	return &MockDomainNameSetsController{
+		sets:      make(map[string]db.DomainNameSetSpec),
+		failFuncs: make(map[string]func()),
+		statsers:  make(map[string]statser.Statser),
+		noGC:      make(map[string]struct{}),
+	}
+}
+
+func (c *MockDomainNameSetsController) Add(ctx context.Context, name string, set db.DomainNameSetSpec, f func(), stat statser.Statser) {
+	c.m.Lock()
+	defer c.m.Unlock()
+	c.sets[name] = set
+	c.failFuncs[name] = f
+	c.statsers[name] = stat
+}
+
+func (c *MockDomainNameSetsController) Delete(ctx context.Context, name string) {
+	c.m.Lock()
+	defer c.m.Unlock()
+	delete(c.sets, name)
+	delete(c.failFuncs, name)
+	delete(c.statsers, name)
+	delete(c.noGC, name)
+}
+
+func (c *MockDomainNameSetsController) NoGC(ctx context.Context, name string) {
+	c.m.Lock()
+	defer c.m.Unlock()
+	c.noGC[name] = struct{}{}
+}
+
+func (c *MockDomainNameSetsController) StartReconciliation(ctx context.Context) {
+	return
+}
+
+func (c *MockDomainNameSetsController) Run(ctx context.Context) {
+	return
+}
+
+func (c *MockDomainNameSetsController) NotGCable() map[string]struct{} {
+	out := make(map[string]struct{})
+	c.m.Lock()
+	defer c.m.Unlock()
+	for k, s := range c.noGC {
+		out[k] = s
+	}
+	return out
+}
+
+func (c *MockDomainNameSetsController) Sets() map[string]db.DomainNameSetSpec {
+	out := make(map[string]db.DomainNameSetSpec)
+	c.m.Lock()
+	defer c.m.Unlock()
+	for k, s := range c.sets {
+		out[k] = s
+	}
+	return out
+}

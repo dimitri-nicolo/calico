@@ -238,7 +238,7 @@ func (s *watcher) startFeedWatcher(ctx context.Context, f *v3.GlobalThreatFeed) 
 	s.setFeedWatcher(f.Name, &fw)
 
 	if fCopy.Spec.Pull != nil && fCopy.Spec.Pull.HTTP != nil {
-		fw.puller = puller.NewHTTPPuller(fCopy, s.ipSet, s.configMapClient, s.secretsClient, s.httpClient, s.gnsController, s.elasticController)
+		fw.puller = puller.NewIPSetHTTPPuller(fCopy, s.ipSet, s.configMapClient, s.secretsClient, s.httpClient, s.gnsController, s.elasticController)
 		fw.puller.Run(ctx, fw.statser)
 	} else {
 		fw.puller = nil
@@ -296,7 +296,7 @@ func (s *watcher) restartPuller(ctx context.Context, f *v3.GlobalThreatFeed) {
 	}
 
 	if fw.feed.Spec.Pull != nil && fw.feed.Spec.Pull.HTTP != nil {
-		fw.puller = puller.NewHTTPPuller(fw.feed, s.ipSet, s.configMapClient, s.secretsClient, s.httpClient, s.gnsController, s.elasticController)
+		fw.puller = puller.NewIPSetHTTPPuller(fw.feed, s.ipSet, s.configMapClient, s.secretsClient, s.httpClient, s.gnsController, s.elasticController)
 		fw.puller.Run(ctx, fw.statser)
 	} else {
 		fw.puller = nil
