@@ -591,6 +591,14 @@ def gen_chart_specific_values_v2_5(versions, imageNames, imageRegistry, chart, f
       image: #{imageNames["flexvol"]}
       tag: #{versions["flexvol"]}
 
+    cpHorizontalAutoscaler:
+      image: #{imageNames["cpHorizontalAutoscaler"]}
+      tag: #{versions["cpHorizontalAutoscaler"]}
+
+    cpVerticalAutoscaler:
+      image: #{imageNames["cpVerticalAutoscaler"]}
+      tag: #{versions["cpVerticalAutoscaler"]}
+
     # Optional configuration for setting custom BGP templates
     bgp:
       birdConfigTemplate:
