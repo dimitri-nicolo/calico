@@ -1,6 +1,6 @@
 // Copyright 2019 Tigera Inc. All rights reserved.
 
-package elasticipsets
+package elastic
 
 import (
 	"context"

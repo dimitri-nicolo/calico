@@ -24,7 +24,7 @@ import (
 
 	watcher2 "github.com/tigera/intrusion-detection/controller/pkg/anomaly/watcher"
 	"github.com/tigera/intrusion-detection/controller/pkg/elastic"
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/sync/elasticipsets"
+	syncElastic "github.com/tigera/intrusion-detection/controller/pkg/feeds/sync/elastic"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/sync/globalnetworksets"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/watcher"
 	"github.com/tigera/intrusion-detection/controller/pkg/health"
@@ -153,7 +153,7 @@ func main() {
 	defer e.Close()
 
 	gns := globalnetworksets.NewController(calicoClient.ProjectcalicoV3().GlobalNetworkSets())
-	eip := elasticipsets.NewController(e)
+	eip := syncElastic.NewIPSetController(e)
 
 	s := watcher.NewWatcher(
 		k8sClient.CoreV1().ConfigMaps(ConfigMapNamespace),

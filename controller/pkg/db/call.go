@@ -10,6 +10,6 @@ type Call struct {
 	Method  string
 	GNS     *v3.GlobalNetworkSet
 	Name    string
-	Set     IPSetSpec
+	Value   interface{}
 	Version *int64
 }

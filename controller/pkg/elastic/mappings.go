@@ -18,6 +18,22 @@ const ipSetMapping = `{
   }
 }`
 
+const domainNameSetMapping = `{
+  "mappings": {
+    "_doc": {
+      "properties": {
+        "created_at": {
+            "type": "date",
+            "format": "strict_date_optional_time"
+        },
+        "domains": {
+            "type": "keyword"
+        }
+      }
+    }
+  }
+}`
+
 const eventMapping = `{
   "mappings": {
     "_doc": {

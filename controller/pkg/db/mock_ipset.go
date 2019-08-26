@@ -8,11 +8,11 @@ import (
 	"time"
 )
 
-type MockIPSet struct {
+type MockSets struct {
 	Name          string
 	Version       interface{}
-	Metas         []IPSetMeta
-	Set           IPSetSpec
+	Metas         []Meta
+	Value         interface{}
 	Time          time.Time
 	Error         error
 	DeleteCalled  bool
@@ -25,11 +25,15 @@ type MockIPSet struct {
 	calls []Call
 }
 
-func (m *MockIPSet) ListIPSets(ctx context.Context) ([]IPSetMeta, error) {
+func (m *MockSets) ListIPSets(ctx context.Context) ([]Meta, error) {
 	return m.Metas, m.Error
 }
 
-func (m *MockIPSet) DeleteIPSet(ctx context.Context, meta IPSetMeta) error {
+func (m *MockSets) ListDomainNameSets(ctx context.Context) ([]Meta, error) {
+	return m.Metas, m.Error
+}
+
+func (m *MockSets) DeleteIPSet(ctx context.Context, meta Meta) error {
 	m.m.Lock()
 	defer m.m.Unlock()
 	m.calls = append(m.calls, Call{Method: "DeleteIPSet", Name: meta.Name, Version: meta.Version})
@@ -44,20 +48,38 @@ func (m *MockIPSet) DeleteIPSet(ctx context.Context, meta IPSetMeta) error {
 	return m.DeleteError
 }
 
-func (m *MockIPSet) GetIPSetModified(ctx context.Context, name string) (time.Time, error) {
+func (m *MockSets) DeleteDomainNameSet(ctx context.Context, meta Meta) error {
+	m.m.Lock()
+	defer m.m.Unlock()
+	m.calls = append(m.calls, Call{Method: "DeleteDomainNameSet", Name: meta.Name, Version: meta.Version})
+	m.DeleteCalled = true
+	m.DeleteName = meta.Name
+	if meta.Version == nil {
+		m.DeleteVersion = nil
+	} else {
+		i := struct{ i int64 }{*meta.Version}
+		m.DeleteVersion = &i.i
+	}
+	return m.DeleteError
+}
+
+func (m *MockSets) GetIPSetModified(ctx context.Context, name string) (time.Time, error) {
 	return m.Time, m.Error
 }
 
-func (m *MockIPSet) GetIPSet(ctx context.Context, name string) (IPSetSpec, error) {
-	return m.Set, m.Error
+func (m *MockSets) GetIPSet(ctx context.Context, name string) (IPSetSpec, error) {
+	if m.Value == nil {
+		return nil, m.Error
+	}
+	return m.Value.(IPSetSpec), m.Error
 }
 
-func (m *MockIPSet) PutIPSet(ctx context.Context, name string, set IPSetSpec) error {
+func (m *MockSets) PutIPSet(ctx context.Context, name string, set IPSetSpec) error {
 	m.m.Lock()
 	defer m.m.Unlock()
-	m.calls = append(m.calls, Call{Method: "PutIPSet", Name: name, Set: set})
+	m.calls = append(m.calls, Call{Method: "PutIPSet", Name: name, Value: set})
 	m.Name = name
-	m.Set = set
+	m.Value = set
 
 	if m.PutError == nil {
 		m.Time = time.Now()
@@ -66,7 +88,21 @@ func (m *MockIPSet) PutIPSet(ctx context.Context, name string, set IPSetSpec) er
 	return m.PutError
 }
 
-func (m *MockIPSet) Calls() []Call {
+func (m *MockSets) PutDomainNameSet(ctx context.Context, name string, set DomainNameSetSpec) error {
+	m.m.Lock()
+	defer m.m.Unlock()
+	m.calls = append(m.calls, Call{Method: "PutDomainNameSet", Name: name, Value: set})
+	m.Name = name
+	m.Value = set
+
+	if m.PutError == nil {
+		m.Time = time.Now()
+	}
+
+	return m.PutError
+}
+
+func (m *MockSets) Calls() []Call {
 	var out []Call
 	m.m.Lock()
 	defer m.m.Unlock()

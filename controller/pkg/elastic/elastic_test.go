@@ -171,7 +171,7 @@ func TestElastic_QueryIPSet_Big(t *testing.T) {
 	g.Expect(itr.scrollers[3].terms).Should(HaveLen(256))
 }
 
-func TestElastic_ListIPSets(t *testing.T) {
+func TestElastic_ListSets(t *testing.T) {
 	g := NewGomegaWithT(t)
 
 	u, err := url2.Parse(baseURI)
@@ -198,6 +198,45 @@ func TestElastic_ListIPSets(t *testing.T) {
 	metas, err = e.ListIPSets(ctx)
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(metas).To(HaveLen(0))
+
+	rt.listRespFile = "test_files/list.1.r.json"
+	rt.listStatus = 200
+	metas, err = e.ListDomainNameSets(ctx)
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(metas).To(HaveLen(0))
+
+	rt.listRespFile = "test_files/list.2.r.json"
+	rt.listStatus = 404
+	metas, err = e.ListDomainNameSets(ctx)
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(metas).To(HaveLen(0))
+}
+
+func TestElastic_Put_Set(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	u, err := url2.Parse(baseURI)
+	g.Expect(err).ShouldNot(HaveOccurred())
+	rt := &testRoundTripper{}
+	client := &http.Client{
+		Transport: http.RoundTripper(rt),
+	}
+
+	e, err := NewElastic(client, u, "", "")
+	g.Expect(err).Should(BeNil())
+
+	ctx, cancel := context.WithCancel(context.TODO())
+	defer cancel()
+
+	close(e.ipSetMappingCreated)
+
+	err = e.PutIPSet(ctx, "test1", db.IPSetSpec{"1.2.3.4"})
+	g.Expect(err).ToNot(HaveOccurred())
+
+	close(e.domainNameSetMappingCreated)
+
+	err = e.PutDomainNameSet(ctx, "test1", db.DomainNameSetSpec{"hackers.and.badguys"})
+	g.Expect(err).ToNot(HaveOccurred())
 }
 
 func TestSplitIPSetToInterface(t *testing.T) {
@@ -224,6 +263,30 @@ func TestSplitIPSetToInterface(t *testing.T) {
 	for idx, v := range output[mul] {
 		g.Expect(v).Should(Equal(fmt.Sprintf("%d", mul*MaxClauseCount+idx)))
 	}
+}
+
+func TestElastic_Delete_Set(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	u, err := url2.Parse(baseURI)
+	g.Expect(err).ShouldNot(HaveOccurred())
+	rt := &testRoundTripper{}
+	client := &http.Client{
+		Transport: http.RoundTripper(rt),
+	}
+
+	e, err := NewElastic(client, u, "", "")
+	g.Expect(err).Should(BeNil())
+
+	ctx, cancel := context.WithCancel(context.TODO())
+	defer cancel()
+
+	err = e.DeleteIPSet(ctx, db.Meta{Name: "test"})
+	g.Expect(err).ToNot(HaveOccurred())
+
+	two := int64(2)
+	err = e.DeleteDomainNameSet(ctx, db.Meta{Name: "test", Version: &two})
+	g.Expect(err).ToNot(HaveOccurred())
 }
 
 type testRoundTripper struct {
@@ -377,6 +440,52 @@ func (t *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 				StatusCode: t.listStatus,
 				Request:    req,
 				Body:       mustOpen(t.listRespFile),
+			}, nil
+		case baseURI + "/.tigera.domainnameset.cluster/_doc/_search?scroll=5m":
+			return &http.Response{
+				StatusCode: t.listStatus,
+				Request:    req,
+				Body:       mustOpen(t.listRespFile),
+			}, nil
+		}
+	case "PUT":
+		switch u := req.URL.String(); {
+		case strings.HasPrefix(u, baseURI+"/.tigera.ipset.cluster/_doc"):
+			return &http.Response{
+				StatusCode: 200,
+				Request:    req,
+				Body:       mustOpen("test_files/put.ipset.1.r.json"),
+			}, nil
+		case strings.HasPrefix(u, baseURI+"/.tigera.domainnameset.cluster/_doc"):
+			return &http.Response{
+				StatusCode: 200,
+				Request:    req,
+				Body:       mustOpen("test_files/put.domainnameset.1.r.json"),
+			}, nil
+		default:
+			return &http.Response{
+				StatusCode: 404,
+				Request:    req,
+			}, nil
+		}
+	case "DELETE":
+		switch u := req.URL.String(); {
+		case strings.HasPrefix(u, baseURI+"/.tigera.ipset.cluster/_doc"):
+			return &http.Response{
+				StatusCode: 200,
+				Request:    req,
+				Body:       mustOpen("test_files/delete.ipset.1.r.json"),
+			}, nil
+		case strings.HasPrefix(u, baseURI+"/.tigera.domainnameset.cluster/_doc"):
+			return &http.Response{
+				StatusCode: 200,
+				Request:    req,
+				Body:       mustOpen("test_files/delete.domainnameset.1.r.json"),
+			}, nil
+		default:
+			return &http.Response{
+				StatusCode: 404,
+				Request:    req,
 			}, nil
 		}
 	}
