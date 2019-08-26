@@ -108,6 +108,8 @@ github.com/tigera/calico-k8sapiserver v2.4.0-0.dev.0.20190415231917-ffe2bbf68dd1
 github.com/tigera/calico-k8sapiserver v2.4.0-0.dev.0.20190415231917-ffe2bbf68dd1+incompatible/go.mod h1:+7LLjDxng2qt+QMos2PcEG6eD/niSnTcBRpTmEcXVgU=
 github.com/tigera/calico-k8sapiserver v2.5.0-mcm0.1.0.20190820211333-7cf7e9ab7da4+incompatible h1:MZyxpnneAXY7iYyLpakC4S/m3Euxb005/luis7Iw110=
 github.com/tigera/calico-k8sapiserver v2.5.0-mcm0.1.0.20190820211333-7cf7e9ab7da4+incompatible/go.mod h1:+7LLjDxng2qt+QMos2PcEG6eD/niSnTcBRpTmEcXVgU=
+github.com/tigera/calico-k8sapiserver v2.5.0-mcm0.1.0.20190823195257-73c3459a781b+incompatible h1:K2DLMmNRefdDXUY6qf6+Udrggzy3MCwA3FCp3RZbhqw=
+github.com/tigera/calico-k8sapiserver v2.5.0-mcm0.1.0.20190823195257-73c3459a781b+incompatible/go.mod h1:+7LLjDxng2qt+QMos2PcEG6eD/niSnTcBRpTmEcXVgU=
 github.com/tigera/calico-k8sapiserver v2.5.0+incompatible h1:HFnKIuPz7jyqajkmslwK7LZk6BpYVzotv8oleQL28fU=
 github.com/tigera/calico-k8sapiserver v2.5.0+incompatible/go.mod h1:+7LLjDxng2qt+QMos2PcEG6eD/niSnTcBRpTmEcXVgU=
 github.com/tigera/intrusion-detection v2.3.0+incompatible h1:CvZKd3UGwGDSFQiaDSB+PvfacS/RUqyGVjxFoBMF+g0=
@@ -122,6 +124,8 @@ github.com/tigera/libcalico-go-private v2.1.1-0.20190415160840-12cc58937055+inco
 github.com/tigera/libcalico-go-private v2.3.0+incompatible h1:FBWwHxGX1hzSv1dIqHRXo+F/RubJcig1ySs/je5X6sI=
 github.com/tigera/libcalico-go-private v2.5.0-mcm0.1.0.20190820195151-15a88c964535+incompatible h1:HSENS1rWnuiQBPnyFeDYoGbqUc+LQlJHTG31Wa582gg=
 github.com/tigera/libcalico-go-private v2.5.0-mcm0.1.0.20190820195151-15a88c964535+incompatible/go.mod h1:PB1WZ4WFCQ6q6btBlnpFGzDF7arX6G1iTDeqTcAO6BU=
+github.com/tigera/libcalico-go-private v2.5.0-mcm0.1.0.20190823023104-d50bfb6c7acc+incompatible h1:CXU7/Q/mZ9BcxX0s0xngBuJlhhGgU+e55cEYPs/m4vA=
+github.com/tigera/libcalico-go-private v2.5.0-mcm0.1.0.20190823023104-d50bfb6c7acc+incompatible/go.mod h1:PB1WZ4WFCQ6q6btBlnpFGzDF7arX6G1iTDeqTcAO6BU=
 github.com/tigera/libcalico-go-private v2.5.0+incompatible h1:Vgae0MAak08p/UMnvhWGJAHSUp42KLs46TeFPiFgtsI=
 golang.org/x/crypto v0.0.0-20180904163835-0709b304e793 h1:u+LnwYTOOW7Ukr/fppxEb1Nwz0AtPflrblfvUudpo+I=
 golang.org/x/crypto v0.0.0-20180904163835-0709b304e793/go.mod h1:6SG95UA2DQfeDnfUPMdvaQW0Q7yPrPDi9nlGo2tz2b4=
