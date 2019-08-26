@@ -26,6 +26,10 @@ any policy.
 > implemented.
 {: .alert .alert-info}
 
+**Default behavior of external traffic to/from host**
+
+If a host endpoint is added and network policy is not in place, the {{ site.prodname }} default is to deny traffic to/from that endpoint (except for traffic allowed by failsafe rules). For host endpoints, {{ site.prodname }} blocks traffic only to/from interfaces that it’s been explicitly told about in network policy. Traffic to/from other interfaces is ignored.
+
 For `calicoctl` [commands]({{site.url}}/{{page.version}}/reference/calicoctl/), the following case-insensitive aliases
 may be used to specify the resource type on the CLI:
 `hostendpoint`, `hostendpoints`, `hep`, `heps`.
