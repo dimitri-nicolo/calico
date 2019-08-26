@@ -71,7 +71,7 @@ For example, to deploy Prometheus Operator in GKE infrastructure nodes,
 customize the manifest like so:
 
 ```
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: calico-prometheus-operator

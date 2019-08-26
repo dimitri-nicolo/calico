@@ -14,7 +14,7 @@
    monitor, adjusting the annotations and tolerations as needed.
 
    ```yaml
-   apiVersion: extensions/v1beta1
+   apiVersion: apps/v1
    kind: DaemonSet
    metadata:
      name: node-exporter
