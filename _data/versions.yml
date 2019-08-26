@@ -1399,7 +1399,7 @@ master:
     es-proxy:
       version: master
     elasticsearch-operator:
-      version: 0.3.0
+      version: 0.4.0
     kibana:
       version: master
     elasticsearch:
