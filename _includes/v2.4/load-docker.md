@@ -1,3 +1,4 @@
+{% comment %}NOTE: the #load-docker-CMD-cmds attrs are required to automate testing{% endcomment %}
 {% if include.yaml == "calico" %}
 ## Setting up access to the required images
 {% endif %}
@@ -69,6 +70,7 @@
    docker pull upmcenterprises/elasticsearch-operator:{{site.data.versions[page.version].first.components["elasticsearch-operator"].version}}
    docker pull busybox:{{site.data.versions[page.version].first.components["busybox"].version}}
    ```
+   {: #load-docker-pull-cmds}
 
 1. Retag the images with the name of your private registry.
 
@@ -103,6 +105,7 @@
    docker tag upmcenterprises/elasticsearch-operator:{{site.data.versions[page.version].first.components["elasticsearch-operator"].version}} <YOUR-REGISTRY>/upmcenterprises/elasticsearch-operator:{{site.data.versions[page.version].first.components["elasticsearch-operator"].version}}
    docker tag busybox:{{site.data.versions[page.version].first.components["busybox"].version}} <YOUR-REGISTRY>/busybox:{{site.data.versions[page.version].first.components["busybox"].version}}
    ```
+   {: #load-docker-tag-cmds}
    > **Note**: We recommend changing just the name of the registry (`<YOUR-REGISTRY>`)
    > when retagging the images, as shown above and below.
    {: .alert .alert-info}
@@ -140,6 +143,7 @@
    docker push <YOUR-REGISTRY>/upmcenterprises/elasticsearch-operator:{{site.data.versions[page.version].first.components["elasticsearch-operator"].version}}
    docker push <YOUR-REGISTRY>/busybox:{{site.data.versions[page.version].first.components["busybox"].version}}
    ```
+   {: #load-docker-push-cmds}
 
    > **Important**: Do not push the private {{site.prodname}} images to a public registry.
    {: .alert .alert-danger}
@@ -152,12 +156,14 @@
    ```bash
    docker pull {{page.registry}}{{site.imageNames[include.yaml]}}:{{site.data.versions[page.version].first.components[include.yaml].version}}
    ```
+   {: #load-docker-pull-cmds}
 
 1. Retag the image with the name of your private registry.
 
    ```bash
    docker tag {{site.imageNames[include.yaml]}}:{{site.data.versions[page.version].first.components[include.yaml].version}} <YOUR-REGISTRY>/tigera/{{include.yaml}}:{{site.data.versions[page.version].first.components[include.yaml].version}}
    ```
+   {: #load-docker-tag-cmds}
    > **Note**: We recommend changing just the name of the registry (`<YOUR-REGISTRY>`),
    > as shown above. This will make it easier to complete the instructions that follow.
    {: .alert .alert-info}
@@ -167,6 +173,7 @@
    ```bash
    docker push <YOUR-REGISTRY>/tigera/{{include.yaml}}:{{site.data.versions[page.version].first.components[include.yaml].version}}
    ```
+   {: #load-docker-push-cmds}
 
 {% endif %}
 
