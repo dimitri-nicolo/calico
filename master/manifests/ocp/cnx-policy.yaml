@@ -1,0 +1,4 @@
+---
+layout: null
+---
+{% include {{page.version}}/non-helm-manifests/cnx-policy.yaml installer="operator" %}

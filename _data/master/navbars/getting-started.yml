@@ -53,8 +53,10 @@ toc:
     path: /getting-started/openshift/requirements
   - title: Installation
     section:
-    - title: Installing Tigera Secure EE
+    - title: Installing Tigera Secure EE on OpenShift v3
       path: /getting-started/openshift/installation/
+    - title: Installing Tigera Secure EE on OpenShift v4
+      path: /getting-started/openshift/installation/operator
     - title: Connecting to a dedicated etcd cluster (optional)
       path: /getting-started/openshift/installation/dedicated-etcd
     - title: Using your own Elasticsearch for logs

@@ -107,7 +107,7 @@ spec:
             memory: 50Mi
           limits:
             cpu: 200m
-            memory: 100Mi
+            memory: {{.Values.prometheusOperator.memoryLimit | default "100Mi"}}
 
 {{- if eq $elasticMode "operator" }}
 ---

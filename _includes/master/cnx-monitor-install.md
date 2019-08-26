@@ -17,7 +17,7 @@
 ## Installing metrics and logs
 {% endunless %}
 
-{% if include.orch == "openshift" %}
+{% if include.orch == "openshift" and include.installer != "operator" %}
 
 ### Enable Metrics
 
@@ -83,11 +83,17 @@ optionally Elasticsearch and Kibana{% endif %} in order to enable logs.
 
 1. Apply the following manifest to set network policy that allows access to the {{site.prodname}} API server.
 
+{% if include.orch == "openshift" and include.installer == "operator" %}
+   ```bash
+   {{cli}} apply -f \
+   {{site.url}}/{{page.version}}/manifests/ocp/cnx-policy.yaml
+   ```
+{% else %}
    ```bash
    {{cli}} apply -f \
    {{site.url}}/{{page.version}}/manifests/cnx-policy.yaml
    ```
-
+{% endif %}
    > **Note**: You can also
    > [view the manifest in a new tab]({{site.url}}/{{page.version}}/manifests/cnx-policy.yaml){:target="_blank"}.
    {: .alert .alert-info}
@@ -103,6 +109,11 @@ optionally Elasticsearch and Kibana{% endif %} in order to enable logs.
    (privileged mode, host PID, and `IPC_LOCK` capability) which requires a `ClusterRoleBinding` with
    `cluster-admin` permissions with Docker Enterprise. See [UCP release notes](https://docs.docker.com/ee/ucp/release-notes/)
    {: .alert .alert-danger}
+{% elsif include.orch == "openshift" and include.installer == "operator" %}
+   ```bash
+   curl --compressed -o operator.yaml \
+   {{site.url}}/{{page.version}}/manifests/ocp/monitoring-operator.yaml
+   ```
 {% else %}
    ```bash
    curl --compressed -O \
@@ -142,7 +153,7 @@ optionally Elasticsearch and Kibana{% endif %} in order to enable logs.
    {{cli}} get customresourcedefinitions
    ```
 
-{% if include.orch == "openshift" %}
+{% if include.orch == "openshift" and include.installer != "operator" %}
 1. Allow the monitoring pods to be scheduled on the master node. This allows fluentd to be scheduled on master nodes to collect flow and audit logs.
 
    ```
@@ -161,6 +172,11 @@ optionally Elasticsearch and Kibana{% endif %} in order to enable logs.
     ```bash
     curl --compressed -o monitor-calico.yaml \
     {{docpath}}{{secure}}/monitor-calico-upgrade.yaml
+    ```
+{% elsif include.orch == "openshift" and include.installer == "operator" %}
+    ```bash
+    curl --compressed -O \
+    {{site.url}}/{{page.version}}/manifests/ocp/monitor-calico.yaml
     ```
 {% else %}
     ```bash
@@ -221,7 +237,7 @@ optionally Elasticsearch and Kibana{% endif %} in order to enable logs.
 {% endif %}
 
 {% if include.orch == "openshift" %}
-{% if include.elasticsearch == "operator" %}
+{% if include.elasticsearch == "operator" and include.installer != "operator" %}
 
 1. Reconfigure the Elasticsearch deployment. The following command will save the current configuration
    to `tigera-elasticsearch.yaml`.

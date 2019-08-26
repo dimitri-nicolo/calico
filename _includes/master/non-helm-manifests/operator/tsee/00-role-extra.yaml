@@ -1,0 +1,33 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: tigera-operator-extra
+rules:
+  - apiGroups:
+      - monitoring.coreos.com
+    resources:
+      - servicemonitors
+    verbs:
+      - get
+      - create
+    # When running TigeraSecureEnterprise, we need to manage APIServices.
+  - apiGroups:
+      - apiregistration.k8s.io
+    resources:
+      - apiservices
+    verbs:
+      - '*'
+    # When running TigeraSecureEnterprise, we need to manage jobs.
+  - apiGroups:
+      - "batch"
+    resources:
+      - jobs
+    verbs:
+      - '*'
+  # When running TigeraSecureEnterprise, we need to manage globalreportypes
+  - apiGroups:
+      - projectcalico.org
+    resources:
+      - globalreporttypes
+    verbs:
+      - '*'

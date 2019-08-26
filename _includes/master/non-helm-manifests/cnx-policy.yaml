@@ -2,6 +2,12 @@
 # This file contains Tigera Secure EE tiered security policy to control connectivity to Tigera Secure EE Manager and Tigera Secure EE API Server.
 # See the documentation for a full reference on tiered security policy.
 
+{% if include.installer == "operator" %}
+  {% assign ns = "tigera-system" %}
+{% else %}
+  {% assign ns = "kube-system" %}
+{% endif %}
+
 # Tier containing policies to allow access to Tigera Secure EE.
 apiVersion: projectcalico.org/v3
 kind: Tier
@@ -17,7 +23,7 @@ apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
   name: allow-cnx.cnx-apiserver-access
-  namespace: kube-system
+  namespace: {{ns}}
 spec:
   order: 1
   tier: allow-cnx

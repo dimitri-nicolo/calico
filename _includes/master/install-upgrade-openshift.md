@@ -1,5 +1,5 @@
 {% unless include.upgrade %}
-Installation of {{site.prodname}} in OpenShift is integrated in openshift-ansible.
+Installation of {{site.prodname}} in OpenShift v3 is integrated in openshift-ansible.
 The information below explains the variables which must be set during the standard
 [Advanced Installation](https://docs.openshift.org/latest/install_config/install/advanced_install.html#configuring-cluster-variables).
 
