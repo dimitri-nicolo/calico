@@ -75,6 +75,10 @@ v2.5:
       version: v2.5.0
     busybox:
       version: 1.26.2
+    cpHorizontalAutoscaler:
+      version: 1.1.2-r2
+    cpVerticalAutoscaler:
+      version: v0.6.0
 v2.4:
 - title: v2.4.2
   helmRelease: 2
