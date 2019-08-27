@@ -30,6 +30,11 @@ For OpenShift Container Platform 3.11 also specify the following variables:
   - `oreg_auth_user`
   - `oreg_auth_password`
 
+> **Note**: See the OpenShift
+> [documentation](https://docs.openshift.com/container-platform/3.11/install/configuring_inventory_file.html#advanced-install-configuring-registry-location)
+> for more details.
+{: .alert .alert-info}
+
 If your private registry requires a pull secret, specify the path on each host to your
 private registry credentials (typically a `~/.docker/config.json` file) in the following variable:
   - `calico_image_credentials`
@@ -45,6 +50,11 @@ nodes
 etcd
 
 [OSEv3:vars]
+# Authentication variables for OpenShift Container Platform 3.11
+oreg_auth_user=<Username for accessing your RedHat image registry>
+oreg_auth_password=<Password for accessing your RedHat image registry>
+
+# {{site.prodname}} OpenShift installation configuration
 ansible_become=true
 deployment_type=openshift-enterprise
 os_sdn_network_plugin_name=cni
