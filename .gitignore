@@ -38,3 +38,6 @@ docker-image/voltron/templates
 # Testing
 *.coverprofile
 
+# Secrets
+test/st-kind/config.json
+test/st-kind/docker_auth.json

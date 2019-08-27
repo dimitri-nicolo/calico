@@ -94,11 +94,17 @@ ifdef SSH_AUTH_SOCK
   EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
 endif
 
+# Mount Semaphore configuration files.
+ifdef ST_MODE
+  EXTRA_DOCKER_ARGS = -v /var/run/docker.sock:/var/run/docker.sock -v /home/runner/config:/home/runner/config:rw -v /home/runner/docker_auth.json:/home/runner/config/docker_auth.json:rw
+  
+endif
+
 # For building, we use the go-build image for the *host* architecture, even if the target is different
 # the one for the host should contain all the necessary cross-compilation tools
 # we do not need to use the arch since go-build:v0.15 now is multi-arch manifest
-GO_BUILD_VER ?= v0.22
-CALICO_BUILD  = calico/go-build:${GO_BUILD_VER}
+GO_BUILD_VER ?= v0.1
+CALICO_BUILD  = gcr.io/unique-caldron-775/cnx/tigera/voltron-go-build:${GO_BUILD_VER}
 
 DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
                    docker run --rm \
@@ -231,7 +237,7 @@ GINKGO_ARGS += -cover -timeout 10m
 GINKGO = ginkgo $(GINKGO_ARGS)
 
 #test: ut fv st
-test: ut fv
+test: ut fv st
 
 #############################################
 # Run unit level tests
@@ -259,17 +265,39 @@ else
 endif
 
 #############################################
+# Run old system integration tests
+#############################################
+.PHONY: st-old
+st-old: CMD = go mod download && $(GINKGO) -r test/st/
+ifdef LOCAL
+st-old: export TEST_CMD=$(CMD)
+else
+st-old: export TEST_CMD=$(DOCKER_GO_BUILD) sh -c 'git config --global url."git@github.com:tigera".insteadOf "https://github.com/tigera" && $(CMD)'
+endif
+st-old: $(MANIFESTS) $(COMPONENTS)
+	sh test/st/run.sh
+
+#############################################
 # Run system integration tests
 #############################################
 .PHONY: st
-st: CMD = go mod download && $(GINKGO) -r test/st/
+st:  $(COMPONENTS)
+	$(MAKE) images
+	$(MAKE) build_cmd ST_MODE=true
+
+.PHONY: build_cmd
+build_cmd: CMD = go mod download && $(GINKGO) -r test/st-kind $(EXTRA_GINKGO_ARGS)
+build_cmd:
 ifdef LOCAL
-st: export TEST_CMD=$(CMD)
+	$(CMD)
 else
-st: export TEST_CMD=$(DOCKER_GO_BUILD) sh -c 'git config --global url."git@github.com:tigera".insteadOf "https://github.com/tigera" && $(CMD)'
+	# Pull Images (Works because we are sharing the socket)
+	docker pull gcr.io/unique-caldron-775/cnx/tigera/cnx-node:master
+	docker pull gcr.io/unique-caldron-775/cnx/tigera/cnx-apiserver:master
+	docker pull gcr.io/unique-caldron-775/cnx/tigera/cnx-queryserver:master
+	docker pull gcr.io/unique-caldron-775/cnx/tigera/kube-controllers:master
+	$(DOCKER_GO_BUILD) sh -c 'git config --global url."git@github.com:tigera".insteadOf "https://github.com/tigera" && $(CMD)'
 endif
-st: $(MANIFESTS) $(COMPONENTS)
-	sh test/st/run.sh
 
 ##########################################################################################
 # CLEAN UP 
