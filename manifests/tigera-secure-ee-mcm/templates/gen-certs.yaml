@@ -1,5 +1,5 @@
 {{- if .Values.certs.create }}
-{{ $secretName :=  .Values.secret.name }}
+{{ $secretName :=  .Values.tunnelSecret.name }}
 {{ $namespace :=  .Release.Namespace }}
 apiVersion: batch/v1
 kind: Job
