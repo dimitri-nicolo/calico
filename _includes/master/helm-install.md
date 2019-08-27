@@ -174,7 +174,7 @@ manager:
 Additionally, provide the CA and passwords for each of the roles:
 
 ```
---set-file elasticsearch.tls.ca=./elastic.ca \
+--set-file elasticsearch.tls.ca=./ElasticSearchCA.pem \
 --set elasticsearch.fluentd.password=$FLUENTD_PASSWORD \
 --set elasticsearch.manager.password=$MANAGER_PASSWORD \
 --set elasticsearch.curator.password=$CURATOR_PASSWORD \
