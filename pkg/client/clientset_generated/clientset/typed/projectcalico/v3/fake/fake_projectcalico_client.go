@@ -22,6 +22,10 @@ func (c *FakeProjectcalicoV3) BGPPeers() v3.BGPPeerInterface {
 	return &FakeBGPPeers{c}
 }
 
+func (c *FakeProjectcalicoV3) ClusterInformations() v3.ClusterInformationInterface {
+	return &FakeClusterInformations{c}
+}
+
 func (c *FakeProjectcalicoV3) FelixConfigurations() v3.FelixConfigurationInterface {
 	return &FakeFelixConfigurations{c}
 }

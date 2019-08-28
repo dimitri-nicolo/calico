@@ -1752,3 +1752,45 @@ func testManagedClusterClient(client calicoclient.Interface, name string) error 
 
 	return nil
 }
+
+// TestClusterInformationClient exercises the ClusterInformation client.
+func TestClusterInformationClient(t *testing.T) {
+	const name = "default"
+	rootTestFunc := func() func(t *testing.T) {
+		return func(t *testing.T) {
+			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+				return &projectcalico.ClusterInformation{}
+			})
+			defer shutdownServer()
+			if err := testClusterInformationClient(client, name); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	if !t.Run(name, rootTestFunc()) {
+		t.Errorf("test-clusterinformation test failed")
+	}
+}
+
+func testClusterInformationClient(client calicoclient.Interface, name string) error {
+	clusterInformationClient := client.ProjectcalicoV3().ClusterInformations()
+
+	ci, err := clusterInformationClient.List(metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing ClusterInformation (%s)", err)
+	}
+	if ci.Items == nil {
+		return fmt.Errorf("items field should not be set to nil")
+	}
+
+    // Confirm it's not possible to create a clusterInformation obj with name other than "default"
+	validClusterInfo := &v3.ClusterInformation{ObjectMeta: metav1.ObjectMeta{Name: "test-clusterinformation"}}
+
+	_, err = clusterInformationClient.Create(validClusterInfo)
+	if err == nil {
+		return fmt.Errorf("expected error creating validClusterInfo with name other than \"default\"")
+	}
+
+	return nil
+}

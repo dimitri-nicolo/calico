@@ -8,6 +8,8 @@ type BGPConfigurationExpansion interface{}
 
 type BGPPeerExpansion interface{}
 
+type ClusterInformationExpansion interface{}
+
 type FelixConfigurationExpansion interface{}
 
 type GlobalNetworkPolicyExpansion interface{}

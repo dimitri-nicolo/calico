@@ -12,6 +12,10 @@ type BGPConfigurationListerExpansion interface{}
 // BGPPeerLister.
 type BGPPeerListerExpansion interface{}
 
+// ClusterInformationListerExpansion allows custom methods to be added to
+// ClusterInformationLister.
+type ClusterInformationListerExpansion interface{}
+
 // FelixConfigurationListerExpansion allows custom methods to be added to
 // FelixConfigurationLister.
 type FelixConfigurationListerExpansion interface{}

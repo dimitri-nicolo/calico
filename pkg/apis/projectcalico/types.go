@@ -360,3 +360,26 @@ type ManagedCluster struct {
 
 	Spec calico.ManagedClusterSpec
 }
+
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// ClusterInformationList is a list of ClusterInformation objects.
+type ClusterInformationList struct {
+	metav1.TypeMeta
+	metav1.ListMeta
+
+	Items []ClusterInformation
+}
+
+
+// +genclient
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type ClusterInformation struct {
+	metav1.TypeMeta
+	metav1.ObjectMeta
+
+	Spec calico.ClusterInformationSpec
+}
