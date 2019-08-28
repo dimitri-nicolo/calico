@@ -6,3 +6,4 @@ bin/calico-k8sapiserver
 vendor
 **.*.swp
 cscope.*
+.go-pkg-cache/

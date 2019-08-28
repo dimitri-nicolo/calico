@@ -49,7 +49,7 @@ VALIDARCHES = $(filter-out $(EXCLUDEARCH),$(ARCHES))
 CONTAINER_NAME=gcr.io/unique-caldron-775/cnx/tigera/cnx-apiserver
 PACKAGE_NAME?=github.com/tigera/calico-k8sapiserver
 
-GO_BUILD_VER?=v0.20
+GO_BUILD_VER?=v0.24
 # For building, we use the go-build image for the *host* architecture, even if the target is different
 # the one for the host should contain all the necessary cross-compilation tools
 # we do not need to use the arch since go-build:v0.15 now is multi-arch manifest
@@ -57,7 +57,7 @@ CALICO_BUILD=calico/go-build:$(GO_BUILD_VER)
 
 
 #This is a version with known container with compatible versions of sed/grep etc.
-TOOLING_BUILD?=calico/go-build:v0.20
+TOOLING_BUILD?=calico/go-build:v0.24
 
 
 
@@ -130,6 +130,19 @@ KUBECONFIG_DIR?=/etc/kubernetes/admin.conf
 MY_UID:=$(shell id -u)
 MY_GID:=$(shell id -g)
 
+# Volume-mount gopath into the build container to cache go module's packages. If the environment is using multiple
+# comma-separated directories for gopath, use the first one, as that is the default one used by go modules.
+ifneq ($(GOPATH),)
+	# If the environment is using multiple comma-separated directories for gopath, use the first one, as that
+	# is the default one used by go modules.
+	GOMOD_CACHE = $(shell echo $(GOPATH) | cut -d':' -f1)/pkg/mod
+else
+	# If gopath is empty, default to $(HOME)/go.
+	GOMOD_CACHE = $$HOME/go/pkg/mod
+endif
+
+EXTRA_DOCKER_ARGS += -v $(GOMOD_CACHE):/go/pkg/mod:rw
+
 # Allow libcalico-go and the ssh auth sock to be mapped into the build container.
 ifdef LIBCALICOGO_PATH
   EXTRA_DOCKER_ARGS += -v $(LIBCALICOGO_PATH):/go/src/github.com/projectcalico/libcalico-go:ro
@@ -138,14 +151,16 @@ ifdef SSH_AUTH_SOCK
   EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
 endif
 
-DOCKER_RUN := mkdir -p .go-pkg-cache && \
+DOCKER_RUN := mkdir -p .go-pkg-cache $(GOMOD_CACHE) && \
 			  docker run --rm \
 				 --net=host \
 				 $(EXTRA_DOCKER_ARGS) \
 				 -e LOCAL_USER_ID=$(MY_UID) \
+				 -e GOCACHE=/go-cache \
+				 -e GO111MODULE=off \
 				 -v $(HOME)/.glide:/home/user/.glide:rw \
 				 -v $${PWD}:/go/src/github.com/tigera/calico-k8sapiserver:rw \
-				 -v $${PWD}/.go-pkg-cache:/go/pkg:rw \
+				 -v $${PWD}/.go-pkg-cache:/go-cache:rw \
 				 -v $${PWD}/hack/boilerplate:/go/src/k8s.io/kubernetes/hack/boilerplate:rw \
 				 -w /go/src/github.com/tigera/calico-k8sapiserver \
 				 -e GOARCH=$(ARCH)
@@ -365,13 +380,13 @@ push-image: imagetag tag-image
 ###############################################################################
 .PHONY: static-checks
 ## Perform static checks on the code.
+# TODO: re-enable these linters !
+LINT_ARGS := --disable gosimple,govet,structcheck,errcheck,goimports,unused,ineffassign,staticcheck,deadcode,typecheck
+
 static-checks: vendor
-	docker run --rm \
-		-e LOCAL_USER_ID=$(MY_UID) \
-		-v $(CURDIR):/go/src/$(PACKAGE_NAME) \
-		$(CALICO_BUILD) sh -c '\
-			cd  /go/src/$(PACKAGE_NAME) && \
-			gometalinter --deadline=300s --disable-all --enable=goimports  --vendor ./...'
+	$(DOCKER_RUN) \
+	  $(CALICO_BUILD) \
+	  golangci-lint run --deadline 5m $(LINT_ARGS)
 
 ###############################################################################
 # CI/CD
