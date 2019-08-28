@@ -35,7 +35,7 @@ Edit the cluster name by following this procedure.  The two values must match fo
    {{site.prodname}} Manager to be able to read the correct logs from Elasticsearch.
 
 1. Edit the `tigera.cnx-manager.cluster-name` field in the `tigera-cnx-manager-config` ConfigMap.
-   This ConfigMap can be found in `cnx-[etcd|kdd].yaml`.
+   This ConfigMap can be found in `cnx.yaml`.
 
 1. Edit the `tigera.elasticsearch.cluster-name` field in `tigera-es-config` ConfigMap.  This ConfigMap
    can be found in the `monitor-calico.yaml`.
