@@ -130,7 +130,16 @@ mkdir keyfiles
 ../../scripts/certs/self-signed.sh keyfiles
 
 echo "INFO: Install voltron"
-helm install tigera/tigera-secure-ee-mcm --set-file certs.provided.crt=keyfiles/voltron.crt --set-file certs.provided.key=keyfiles/voltron.key --set image.pullPolicy=Never --set image.tag=st-image --set image.repository=tigera/voltron --namespace calico-monitoring
+helm install ../../manifests/tigera-secure-ee-mcm/ \
+--set-file certs.tunnel.provided.crt=keyfiles/cert \
+--set-file certs.tunnel.provided.key=keyfiles/key \
+--set-file certs.https.provided.crt=keyfiles/cert \
+--set-file certs.https.provided.key=keyfiles/key \
+--set image.pullPolicy=Never \
+--set image.tag=st-image \
+--set image.repository=tigera/voltron \
+--namespace calico-monitoring
+
 kubectl rollout status deployment/cnx-voltron -n calico-monitoring
 mkdir -p test-resources
 
