@@ -9,4 +9,5 @@ echo $OUT_DIR
 
 BASE=`dirname $0`
 
-rm -f $OUT_DIR/voltron.*
+rm -f $OUT_DIR/cert
+rm -f $OUT_DIR/key*

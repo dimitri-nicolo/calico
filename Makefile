@@ -210,8 +210,8 @@ endif
 manifests/voltron.yaml: manifests/voltron.yaml.tmpl
 	scripts/certs/clean-self-signed.sh scripts/certs
 	scripts/certs/self-signed.sh scripts/certs
-	CERT64=`base64 $(BASE64_ARGS) scripts/certs/voltron.crt` && \
-	 KEY64=`base64 $(BASE64_ARGS) scripts/certs/voltron.key` && \
+	CERT64=`base64 $(BASE64_ARGS) scripts/certs/cert` && \
+	 KEY64=`base64 $(BASE64_ARGS) scripts/certs/key` && \
 	 sed -e "s;{{VOLTRON_CRT_BASE64}};$$CERT64;" \
 	     -e "s;{{VOLTRON_KEY_BASE64}};$$KEY64;" \
 	     -e "s;{{VOLTRON_DOCKER_PUSH_REPO}};$(PUSH_REPO);" \
