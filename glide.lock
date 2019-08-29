@@ -1,5 +1,5 @@
 hash: 5f1393805e1f21a29ab27cd70622bb53329f2eef3f1afdd4ebb8baf70c8f5e1a
-updated: 2019-08-23T05:12:39.874377106Z
+updated: 2019-08-29T05:05:33.701905391Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -295,7 +295,7 @@ imports:
   - reporters/stenographer/support/go-isatty
   - types
 - name: github.com/onsi/gomega
-  version: 27d50ea6455b212cf516609fa58b2b5dce1abc81
+  version: bdebf9e0ece900259084cfa4121b97ce1a540939
   subpackages:
   - format
   - internal/assertion
