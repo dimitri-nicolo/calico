@@ -457,8 +457,9 @@ func convertFlow(b *elastic.CompositeAggregationBucket) *policycalc.Flow {
 			IP:        getFlowEndpointIP(k, PIPCompositeSourcesRawIdxDestIP),
 			Port:      getFlowEndpointPort(k, PIPCompositeSourcesRawIdxDestPort),
 		},
-		Action: getFlowAction(k, PIPCompositeSourcesRawIdxAction),
-		Proto:  getFlowProto(k, PIPCompositeSourcesRawIdxProto),
+		Action:   getFlowAction(k, PIPCompositeSourcesRawIdxAction),
+		Proto:    getFlowProto(k, PIPCompositeSourcesRawIdxProto),
+		Policies: getFlowPolicies(b.AggregatedTerms[PIPAggregatedTermsNamePolicies]),
 	}
 
 	// Assume IP version is 4 unless otherwise determined from actual IPs in the flow.
@@ -525,6 +526,20 @@ func getFlowEndpointLabels(t *elastic.AggregatedTerm) map[string]string {
 				l[key] = value
 				ranks[key] = rank
 			}
+		}
+	}
+	return l
+}
+
+// getFlowPolicies extracts the flow policies that were applied reporter-side from the composite aggregation key.
+func getFlowPolicies(t *elastic.AggregatedTerm) []string {
+	if t == nil {
+		return nil
+	}
+	var l []string
+	for k := range t.Buckets {
+		if s, ok := k.(string); ok {
+			l = append(l, s)
 		}
 	}
 	return l

@@ -2,6 +2,7 @@ package policycalc
 
 import (
 	"fmt"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 
@@ -24,6 +25,9 @@ type CompiledPolicy struct {
 
 	// Endpoint matchers for the policy.
 	Rules []CompiledRule
+
+	// Whether this policy was modified.
+	Modified bool
 }
 
 // Applies determines whether the policy applies to the flow.
@@ -55,41 +59,81 @@ func (c *CompiledPolicy) Action(flow *Flow, af ActionFlag, tierIdx int, r *Endpo
 		if flagsThisPolicy&ActionFlagDeny != 0 {
 			r.Policies = append(r.Policies, c.calculateFlowLogName(tierIdx, ActionFlagDeny))
 		}
+		if flagsThisPolicy&ActionFlagNextTier != 0 {
+			r.Policies = append(r.Policies, c.calculateFlowLogName(tierIdx, ActionFlagNextTier))
+		}
 	}()
 
+	nextPolicy := true
+	uncertain := false
 	for i := range c.Rules {
 		log.Debugf("Processing rule %d", i)
 		switch c.Rules[i].Match(flow) {
 		case MatchTypeTrue:
 			// This rule matches exactly, so store off the action type for this rule and exit. No need to enumerate the
-			// next policy since this was an exact match.
+			// next policy, or rule since this was an exact match.
 			log.Debug("Rule matches exactly")
 			flagsThisPolicy |= c.Rules[i].Action
-			return af | c.Rules[i].Action, false
+			nextPolicy = false
+			break
 		case MatchTypeUncertain:
 			// If the match type is unknown, then at this point we bifurcate by assuming we both matched and did not
 			// match - we track that we would use this rules action, but continue enumerating until we either get
 			// conflicting possible actions (at which point we deem the impact to be indeterminate), or we end up with
 			// same action through all possible match paths.
-			log.Debug("Ruel match is uncertain")
+			log.Debug("Rule match is uncertain")
 			flagsThisPolicy |= c.Rules[i].Action
-			af |= c.Rules[i].Action
+			uncertain = true
 
-			// If the action is now indeterminate then exit immediately.
-			if af.Indeterminate() {
-				return af, false
+			// If the action is now indeterminate then exit loop.
+			if (af | flagsThisPolicy).Indeterminate() {
+				nextPolicy = false
+				break
 			}
 		}
 	}
 
+	// If we hit an unknown rule match then check the original flow to see if there is a definitive match for this
+	// policy. We can only do this for policies that are not modified.
+	if uncertain && !c.Modified {
+		log.Debug("Check if flow contains exact match for this policy")
+		if flowPolicyFlags := c.policyActionFlagInFlowLog(flow); flowPolicyFlags&flagsThisPolicy != 0 {
+			// The flow contains a definitive match for this policy, and the policy flags match one of the enumerated
+			// uncertain flags that we calculated above.
+			log.Debug("Using exact match flags from flow log to break uncertainty")
+			flagsThisPolicy = flowPolicyFlags
+			nextPolicy = false
+		}
+	}
+
 	// We got to the end of the rules, so enumerate the next policy in the tier.
-	log.Debugf("Reached end of rules. ActionFlags=%v", af)
-	return af, true
+	log.Debugf("Reached end of rules. ActionFlags=%v; nextPolicy=%v", af, nextPolicy)
+	return af | flagsThisPolicy, nextPolicy
+}
+
+// policyActionFlagInFlowLog returns the policy action flag if present in the flow log.
+func (c *CompiledPolicy) policyActionFlagInFlowLog(flow *Flow) ActionFlag {
+	var af ActionFlag
+	for _, p := range flow.Policies {
+		// Split the flow log policy name by our policy name (which does not have the tier index or action). If this
+		// flow log policy represents our policy then we'll get two parts - the tier index and action.
+		parts := strings.Split(p, c.Name)
+		if len(parts) == 2 {
+			// We have found the policy
+			af |= ActionFlagFromAction(Action(parts[1]))
+		}
+	}
+
+	if af == ActionFlagAllow || af == ActionFlagDeny || af == ActionFlagNextTier {
+		// Only return the flag if we found a definitive (single) result for this policy.
+		return af
+	}
+	return 0
 }
 
 // compilePolicy compiles the Calico v3 policy resource into separate ingress and egress CompiledPolicy structs.
 // If the policy does not contain ingress or egress matches then the corresponding result will be nil.
-func compilePolicy(m *MatcherFactory, r resources.Resource) (ingressPol, egressPol *CompiledPolicy) {
+func compilePolicy(m *MatcherFactory, r resources.Resource, modified bool) (ingressPol, egressPol *CompiledPolicy) {
 	log.Debugf("Compiling policy %s", resources.GetResourceID(r))
 
 	// From the resource type, determine the namespace matcher, selector matcher and set of rules to use.
@@ -120,8 +164,9 @@ func compilePolicy(m *MatcherFactory, r resources.Resource) (ingressPol, egressP
 	// Handle ingress policy matchers
 	if policyTypesContains(types, v3.PolicyTypeIngress) {
 		ingressPol = &CompiledPolicy{
-			Name:  name,
-			Rules: compileRules(m, namespace, ingress),
+			Name:     name,
+			Rules:    compileRules(m, namespace, ingress),
+			Modified: modified,
 		}
 		ingressPol.add(m.Dst(namespace))
 		ingressPol.add(m.Dst(selector))
@@ -130,8 +175,9 @@ func compilePolicy(m *MatcherFactory, r resources.Resource) (ingressPol, egressP
 	// Handle egress policy matchers
 	if policyTypesContains(types, v3.PolicyTypeEgress) {
 		egressPol = &CompiledPolicy{
-			Name:  name,
-			Rules: compileRules(m, namespace, egress),
+			Name:     name,
+			Rules:    compileRules(m, namespace, egress),
+			Modified: modified,
 		}
 		egressPol.add(m.Src(namespace))
 		egressPol.add(m.Src(selector))

@@ -1058,6 +1058,20 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		Expect(compute().Action).To(Equal(ActionUnknown))
 	})
 
+	It("checking dest ingress pass inexact match when Source.ServiceAccounts is non-nil", func() {
+		f.Source.Type = EndpointTypeWep
+		f.Destination.Namespace = "ns1"
+		f.Destination.Type = EndpointTypeWep
+		np.Spec.Types = typesIngress
+		np.Spec.Egress = nil
+		np.Spec.Ingress[0].Action = v3.Pass // Pass shifts to profiles which will allow by default
+		np.Spec.Ingress[0].Source.ServiceAccounts = &v3.ServiceAccountMatch{Names: []string{"sa1"}}
+		// Inexact allow (through inexact pass) and exact end of tier deny means overall indeterminate.
+		r := compute()
+		Expect(r.Action).To(Equal(ActionUnknown))
+		Expect(r.Policies).To(Equal([]string{"0|meh|ns1/meh.policy|pass", "0|meh|ns1/meh.policy|deny", "1|__PROFILE__|__PROFILE__.kns.ns1|allow"}))
+	})
+
 	It("checking dest ingress allow non-match when Source.ServiceAccounts is non-nil", func() {
 		sa := "sa2"
 		f.Source.Type = EndpointTypeWep
@@ -1069,5 +1083,108 @@ var _ = Describe("Compiled tiers and policies tests", func() {
 		np.Spec.Ingress[0].Action = v3.Allow
 		np.Spec.Ingress[0].Source.ServiceAccounts = &v3.ServiceAccountMatch{Names: []string{"sa1"}}
 		Expect(compute().Action).To(Equal(ActionDeny))
+	})
+
+	It("checking dest ingress allow inexact match is fixed from flow data", func() {
+		f.Source.Type = EndpointTypeWep
+		f.Destination.Namespace = "ns1"
+		f.Destination.Type = EndpointTypeWep
+		f.Policies = []string{
+			"0|meh|ns1/meh.policy|allow",
+		}
+		np.Spec.Types = typesIngress
+		np.Spec.Egress = nil
+		np.Spec.Ingress[0].Action = v3.Allow
+		np.Spec.Ingress[0].Source.ServiceAccounts = &v3.ServiceAccountMatch{Names: []string{"sa1"}}
+		// Inexact allow and exact end of tier deny means overall indeterminate.
+		r := compute()
+		Expect(r.Action).To(Equal(ActionAllow))
+		Expect(r.Policies).To(Equal([]string{"0|meh|ns1/meh.policy|allow"}))
+	})
+
+	It("checking dest ingress pass inexact match is fixed from flow data", func() {
+		f.Source.Type = EndpointTypeWep
+		f.Destination.Namespace = "ns1"
+		f.Destination.Type = EndpointTypeWep
+		f.Policies = []string{
+			"0|meh|ns1/meh.policy|pass",
+		}
+		np.Spec.Types = typesIngress
+		np.Spec.Egress = nil
+		np.Spec.Ingress[0].Action = v3.Pass
+		np.Spec.Ingress[0].Source.ServiceAccounts = &v3.ServiceAccountMatch{Names: []string{"sa1"}}
+		// Inexact pass confirmed by flow and exact end-of-all-tiers allow.
+		r := compute()
+		Expect(r.Action).To(Equal(ActionAllow))
+		Expect(r.Policies).To(Equal([]string{"0|meh|ns1/meh.policy|pass", "1|__PROFILE__|__PROFILE__.kns.ns1|allow"}))
+	})
+
+	It("checking dest ingress allow inexact match is not fixed from flow data when action does not match", func() {
+		f.Source.Type = EndpointTypeWep
+		f.Destination.Namespace = "ns1"
+		f.Destination.Type = EndpointTypeWep
+		f.Policies = []string{
+			"0|meh|ns1/meh.policy|deny",
+		}
+		np.Spec.Types = typesIngress
+		np.Spec.Egress = nil
+		np.Spec.Ingress[0].Action = v3.Allow
+		np.Spec.Ingress[0].Source.ServiceAccounts = &v3.ServiceAccountMatch{Names: []string{"sa1"}}
+		// Inexact allow and exact end of tier deny means overall indeterminate. Flow data action does not match and
+		// cannot be used.
+		Expect(compute().Action).To(Equal(ActionUnknown))
+	})
+
+	It("checking dest ingress allow inexact match is not fixed from flow data when flow contains multiple actions for same policy", func() {
+		f.Source.Type = EndpointTypeWep
+		f.Destination.Namespace = "ns1"
+		f.Destination.Type = EndpointTypeWep
+		f.Policies = []string{
+			"0|meh|ns1/meh.policy|allow",
+			"0|meh|ns1/meh.policy|deny",
+		}
+		np.Spec.Types = typesIngress
+		np.Spec.Egress = nil
+		np.Spec.Ingress[0].Action = v3.Allow
+		np.Spec.Ingress[0].Source.ServiceAccounts = &v3.ServiceAccountMatch{Names: []string{"sa1"}}
+		// Inexact allow and exact end of tier deny means overall indeterminate. Flow data has multiple actions and
+		// cannot be used.
+		Expect(compute().Action).To(Equal(ActionUnknown))
+	})
+
+	It("checking dest ingress allow and deny inexact match", func() {
+		f.Source.Type = EndpointTypeWep
+		f.Destination.Namespace = "ns1"
+		f.Destination.Type = EndpointTypeWep
+		np.Spec.Types = typesIngress
+		np.Spec.Egress = nil
+		np.Spec.Ingress = make([]v3.Rule, 2)
+		np.Spec.Ingress[0].Action = v3.Allow
+		np.Spec.Ingress[0].Source.ServiceAccounts = &v3.ServiceAccountMatch{Names: []string{"sa1"}}
+		np.Spec.Ingress[1].Action = v3.Deny
+		np.Spec.Ingress[1].Source.ServiceAccounts = &v3.ServiceAccountMatch{Names: []string{"sa2"}}
+		// Inexact allow and inexact deny in same policy means overall indeterminate.
+		Expect(compute().Action).To(Equal(ActionUnknown))
+	})
+
+	It("checking dest ingress allow and deny inexact match is fixed from flow data", func() {
+		f.Source.Type = EndpointTypeWep
+		f.Destination.Namespace = "ns1"
+		f.Destination.Type = EndpointTypeWep
+		f.Policies = []string{
+			"0|meh|ns1/meh.policy|deny",
+		}
+		np.Spec.Types = typesIngress
+		np.Spec.Egress = nil
+		np.Spec.Ingress = make([]v3.Rule, 2)
+		np.Spec.Ingress[0].Action = v3.Allow
+		np.Spec.Ingress[0].Source.ServiceAccounts = &v3.ServiceAccountMatch{Names: []string{"sa1"}}
+		np.Spec.Ingress[1].Action = v3.Deny
+		np.Spec.Ingress[1].Source.ServiceAccounts = &v3.ServiceAccountMatch{Names: []string{"sa2"}}
+		// Inexact allow and inexact deny in same policy. Flow contains exact match which agrees with one of the
+		// possible values, so use that.
+		r := compute()
+		Expect(r.Action).To(Equal(ActionDeny))
+		Expect(r.Policies).To(Equal([]string{"0|meh|ns1/meh.policy|deny"}))
 	})
 })
