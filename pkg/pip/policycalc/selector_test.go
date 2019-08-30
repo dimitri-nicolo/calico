@@ -76,5 +76,28 @@ var _ = Describe("Selector handler tests", func() {
 		Expect(m3(nil, ed)).To(Equal(MatchTypeFalse))
 		Expect(ed.cachedSelectorResults[0]).To(Equal(MatchTypeTrue))
 		Expect(ed.cachedSelectorResults[1]).To(Equal(MatchTypeFalse))
+
+		By("matching endpoint where labels are unknown")
+		ed = &FlowEndpointData{
+			Type:                  EndpointTypeHep,
+			Labels:                nil,
+			cachedSelectorResults: sh.CreateSelectorCache(),
+		}
+
+		Expect(ed.cachedSelectorResults).To(HaveLen(2))
+		Expect(ed.cachedSelectorResults[0]).To(Equal(MatchTypeUnknown))
+		Expect(ed.cachedSelectorResults[1]).To(Equal(MatchTypeUnknown))
+
+		Expect(m1(nil, ed)).To(Equal(MatchTypeTrue))
+		Expect(ed.cachedSelectorResults[0]).To(Equal(MatchTypeTrue))
+		Expect(ed.cachedSelectorResults[1]).To(Equal(MatchTypeUnknown))
+
+		Expect(m2(nil, ed)).To(Equal(MatchTypeTrue))
+		Expect(ed.cachedSelectorResults[0]).To(Equal(MatchTypeTrue))
+		Expect(ed.cachedSelectorResults[1]).To(Equal(MatchTypeUnknown))
+
+		Expect(m3(nil, ed)).To(Equal(MatchTypeUncertain))
+		Expect(ed.cachedSelectorResults[0]).To(Equal(MatchTypeTrue))
+		Expect(ed.cachedSelectorResults[1]).To(Equal(MatchTypeUncertain))
 	})
 })
