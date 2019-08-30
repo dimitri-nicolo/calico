@@ -66,7 +66,7 @@ PUSH_NONMANIFEST_IMAGES=$(filter-out $(PUSH_MANIFEST_IMAGES),$(PUSH_IMAGES))
 # location of docker credentials to push manifests
 DOCKER_CONFIG ?= $(HOME)/.docker/config.json
 
-GO_BUILD_VER?=v0.21
+GO_BUILD_VER?=v0.24
 # For building, we use the go-build image for the *host* architecture, even if the target is different
 # the one for the host should contain all the necessary cross-compilation tools
 # we do not need to use the arch since go-build:v0.15 now is multi-arch manifest
@@ -135,10 +135,20 @@ RELEASE_LDFLAGS=-ldflags "$(VERSION_FLAGS) -s -w"
 MY_UID:=$(shell id -u)
 MY_GID:=$(shell id -g)
 
+# Figure out the GID of the docker group so that we can set the user inside the
+# container to be a member of that group. This, combined with mounting the
+# docker socket, allows the UTs to start docker containers.
+MY_DOCKER_GID=$(shell getent group docker | cut -d: -f3)
+
 ifdef SSH_AUTH_SOCK
   EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
 endif
 
+# A note on GOCACHE: the default directory for the build cache is
+# `/home/user/.cache/go-build`. However, if we ask Docker to volume mount this
+# directory, then the parent directory `/home/user` gets owned by root, meaning
+# our later attempts to set gitconfig will fail. So, we mount the cache in
+# `/go-build` and set the GOCACHE environment variable to use it.
 DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
                    mkdir -p .go-build-cache && \
                    docker run --rm \
@@ -149,7 +159,10 @@ DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
                               -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
                               -v $${PWD}/../:/intrusion-detection/:rw \
                               -v $${PWD}/.go-pkg-cache:/go/pkg:rw \
-                              -v $${PWD}/.go-build-cache:/home/user/.cache/go-build:rw \
+                              -v $${PWD}/.go-build-cache:/go-build:rw \
+                              -e GOCACHE=/go-build \
+                              -v /var/run/docker.sock:/var/run/docker.sock:rw \
+                              -e EXTRA_GROUP_ID=$(MY_DOCKER_GID) \
                               -w /intrusion-detection/controller \
                               $(CALICO_BUILD)
 

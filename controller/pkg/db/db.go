@@ -27,18 +27,12 @@ type DomainNameSet interface {
 	DeleteDomainNameSet(ctx context.Context, m Meta) error
 }
 
-type SuspiciousIP interface {
-	QueryIPSet(ctx context.Context, name string) (SecurityEventIterator, error)
+type SuspiciousSet interface {
+	QuerySet(ctx context.Context, name string) ([]SecurityEventInterface, error)
 }
 
 type SecurityEventInterface interface {
 	ID() string
-}
-
-type SecurityEventIterator interface {
-	Next() bool
-	Value() SecurityEventInterface
-	Err() error
 }
 
 type Events interface {

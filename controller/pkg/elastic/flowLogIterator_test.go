@@ -4,75 +4,51 @@ package elastic
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"io"
 	"testing"
 
 	"github.com/olivere/elastic"
 	. "github.com/onsi/gomega"
-
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/events"
-	"github.com/tigera/intrusion-detection/controller/pkg/util"
 )
 
 func TestElasticFlowLogIterator(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	input := [][]events.FlowLogJSONOutput{
+	input := [][]elastic.SearchHit{
 		{
 			{
-				SourceIP:   util.Sptr("1.2.3.4"),
-				SourceName: "source",
-				DestIP:     util.Sptr("2.3.4.5"),
-				DestName:   "dest",
+				Index: "idx1",
+				Id:    "id1",
 			},
 			{
-				SourceIP:   util.Sptr("5.6.7.8"),
-				SourceName: "source",
-				DestIP:     util.Sptr("2.3.4.5"),
-				DestName:   "dest",
+				Index: "idx2",
+				Id:    "id2",
 			},
 		},
 		{
 			{
-				SourceIP:   util.Sptr("9.10.11.12"),
-				SourceName: "source",
-				DestIP:     util.Sptr("2.3.4.5"),
-				DestName:   "dest",
+				Index: "idx3",
+				Id:    "id3",
 			},
 		},
 	}
-	var expected []events.FlowLogJSONOutput
+	var expected []elastic.SearchHit
 	var results []*elastic.SearchResult
-	for _, logs := range input {
+	for _, hits := range input {
 		r := &elastic.SearchResult{
 			Hits: &elastic.SearchHits{},
 		}
 
-		for _, flowLog := range logs {
-			expected = append(expected, flowLog)
-
-			b, err := json.Marshal(&flowLog)
-			g.Expect(err).ShouldNot(HaveOccurred())
-
-			raw := json.RawMessage(b)
-			hit := elastic.SearchHit{Source: &raw}
-			r.Hits.Hits = append(r.Hits.Hits, &hit)
+		for i, hit := range hits {
+			expected = append(expected, hit)
+			// Take the address of hits[i]; the address of hit is constant since
+			// hit is a local variable
+			r.Hits.Hits = append(r.Hits.Hits, &hits[i])
 		}
 
 		results = append(results, r)
 	}
-	junk := &elastic.SearchResult{
-		Hits: &elastic.SearchHits{
-			Hits: []*elastic.SearchHit{
-				{
-					Source: &json.RawMessage{byte('{')},
-				},
-			},
-		},
-	}
-	results = append(results, junk)
 
 	scroll := &mockScroller{
 		results: results,
@@ -82,20 +58,24 @@ func TestElasticFlowLogIterator(t *testing.T) {
 	defer cancel()
 
 	expectedKey := "source_ip"
-	i := flowLogIterator{
-		scrollers: []scrollerEntry{{expectedKey, scroll, nil}},
-		ctx:       ctx,
-	}
+	i := newQueryIterator(
+		ctx,
+		[]scrollerEntry{{expectedKey, scroll, nil}},
+		"test")
 
-	var actual []events.SuspiciousIPSecurityEvent
+	var actualHits []*elastic.SearchHit
+	var actualKeys []string
 	for i.Next() {
-		actual = append(actual, i.Value().(events.SuspiciousIPSecurityEvent))
+		k, h := i.Value()
+		actualKeys = append(actualKeys, k)
+		actualHits = append(actualHits, h)
 	}
 	g.Expect(i.Err()).ShouldNot(HaveOccurred())
 
-	g.Expect(actual).Should(HaveLen(len(expected)), "All events are retrieved.")
-	for idx := range actual {
-		g.Expect(actual[idx].SourceIP).Should(Equal(expected[idx].SourceIP), "Events are retrieved in order.")
+	g.Expect(actualHits).Should(HaveLen(len(expected)), "All events are retrieved.")
+	for idx := range actualHits {
+		g.Expect(*actualHits[idx]).Should(Equal(expected[idx]), "Events are retrieved in order.")
+		g.Expect(actualKeys[idx]).Should(Equal(expectedKey))
 	}
 }
 
@@ -120,7 +100,7 @@ func TestElasticFlowLogIteratorWithError(t *testing.T) {
 	defer cancel()
 
 	scroll := &mockScrollerError{}
-	i := flowLogIterator{
+	i := queryIterator{
 		scrollers: []scrollerEntry{{"dest_ip", scroll, nil}},
 		ctx:       ctx,
 	}
@@ -132,40 +112,21 @@ func TestElasticFlowLogIteratorWithError(t *testing.T) {
 func TestElasticFlowLogIteratorWithTwoScrollers(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	source_log := events.FlowLogJSONOutput{
-		SourceType: "wep",
-		SourceIP:   util.Sptr("1.2.3.4"),
-		SourceName: "source",
-		DestType:   "hep",
-		DestIP:     util.Sptr("2.3.4.5"),
-		DestName:   "dest",
+	sourceHit := elastic.SearchHit{
+		Index: "source",
+		Id:    "source",
 	}
-	b, err := json.Marshal(&source_log)
-	g.Expect(err).ShouldNot(HaveOccurred())
-	source_msg := json.RawMessage(b)
-
-	dest_log := events.FlowLogJSONOutput{
-		SourceType: "net",
-		SourceIP:   util.Sptr("3.4.5.6"),
-		SourceName: "source",
-		DestType:   "ns",
-		DestIP:     util.Sptr("4.5.6.7"),
-		DestName:   "dest",
+	destHit := elastic.SearchHit{
+		Index: "dest",
+		Id:    "dest",
 	}
-	b, err = json.Marshal(&dest_log)
-	g.Expect(err).ShouldNot(HaveOccurred())
-	dest_msg := json.RawMessage(b)
 
 	scrollers := []scrollerEntry{
 		{"source_ip", &mockScroller{
 			[]*elastic.SearchResult{
 				{
 					Hits: &elastic.SearchHits{
-						Hits: []*elastic.SearchHit{
-							{
-								Source: &source_msg,
-							},
-						},
+						Hits: []*elastic.SearchHit{&sourceHit},
 					},
 				},
 			},
@@ -174,11 +135,7 @@ func TestElasticFlowLogIteratorWithTwoScrollers(t *testing.T) {
 			[]*elastic.SearchResult{
 				{
 					Hits: &elastic.SearchHits{
-						Hits: []*elastic.SearchHit{
-							{
-								Source: &dest_msg,
-							},
-						},
+						Hits: []*elastic.SearchHit{&destHit},
 					},
 				},
 			},
@@ -188,27 +145,24 @@ func TestElasticFlowLogIteratorWithTwoScrollers(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
-	i := flowLogIterator{
-		scrollers: scrollers,
-		ctx:       ctx,
-		name:      "mock",
-	}
+	i := newQueryIterator(ctx, scrollers, "mock")
 
-	var results []events.SuspiciousIPSecurityEvent
+	var results []*elastic.SearchHit
 	for i.Next() {
-		results = append(results, i.Value().(events.SuspiciousIPSecurityEvent))
+		_, h := i.Value()
+		results = append(results, h)
 	}
 	g.Expect(i.Err()).ShouldNot(HaveOccurred(), "No errors from the iterator")
 	g.Expect(results).Should(HaveLen(2), "Should have gotten back two results")
-	g.Expect(results[0].SourceIP).ShouldNot(Equal(results[1].SourceIP), "Both have different source IPs")
+	g.Expect(*results[0]).ShouldNot(Equal(*results[1]), "Both have different source IPs")
 
 	// Order is random. Swap them to make the tests simpler.
-	if *results[0].SourceIP == *dest_log.SourceIP {
+	if results[0].Index == destHit.Index {
 		results[1], results[0] = results[0], results[1]
 	}
 
-	g.Expect(results[0].Description).Should(Equal("suspicious IP 1.2.3.4 from list mock connected to hep /dest"))
-	g.Expect(results[1].Description).Should(Equal("net /source connected to suspicious IP 4.5.6.7 from list mock"))
+	g.Expect(results[0].Index).Should(Equal(sourceHit.Index))
+	g.Expect(results[1].Index).Should(Equal(destHit.Index))
 }
 
 type mockScrollerError struct{}

@@ -162,7 +162,7 @@ func TestElastic_QueryIPSet_Big(t *testing.T) {
 	i, err := e.QueryIPSet(ctx, "test_big")
 	g.Expect(err).ShouldNot(HaveOccurred())
 
-	itr := i.(*flowLogIterator)
+	itr := i.(*queryIterator)
 
 	g.Expect(itr.scrollers).Should(HaveLen(4), "Input was split into 2x2 arrays")
 	g.Expect(itr.scrollers[0].terms).Should(HaveLen(MaxClauseCount))
@@ -400,6 +400,7 @@ func (t *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 		req.Body = ioutil.NopCloser(bytes.NewReader(b))
 
 		switch req.URL.String() {
+		// QueryIPSet
 		case baseURI + "/tigera_secure_ee_flows.cluster.%2A/_search?scroll=5m&size=1000":
 			switch body {
 			// QueryIPSet source_ip query
@@ -435,6 +436,7 @@ func (t *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 					Body:       mustOpen("test_files/3.4.r.json"),
 				}, nil
 			}
+
 		case baseURI + "/.tigera.ipset.cluster/_doc/_search?scroll=5m":
 			return &http.Response{
 				StatusCode: t.listStatus,

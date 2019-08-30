@@ -15,69 +15,66 @@ import (
 	"github.com/tigera/intrusion-detection/controller/pkg/runloop"
 )
 
-type FlowSearcher interface {
+type Searcher interface {
 	Run(context.Context, statser.Statser)
 	SetFeed(*v3.GlobalThreatFeed)
 	Close()
 }
 
-type flowSearcher struct {
-	feed         *v3.GlobalThreatFeed
-	period       time.Duration
-	suspiciousIP db.SuspiciousIP
-	events       db.Events
-	once         sync.Once
-	cancel       context.CancelFunc
+type searcher struct {
+	feed   *v3.GlobalThreatFeed
+	period time.Duration
+	q      db.SuspiciousSet
+	events db.Events
+	once   sync.Once
+	cancel context.CancelFunc
 }
 
-func NewFlowSearcher(feed *v3.GlobalThreatFeed, period time.Duration, suspiciousIP db.SuspiciousIP, events db.Events) FlowSearcher {
-	return &flowSearcher{feed: feed.DeepCopy(), period: period, suspiciousIP: suspiciousIP, events: events}
-}
-
-func (d *flowSearcher) Run(ctx context.Context, statser statser.Statser) {
+func (d *searcher) Run(ctx context.Context, statser statser.Statser) {
 	d.once.Do(func() {
 		ctx, d.cancel = context.WithCancel(ctx)
 		go func() {
 			defer d.cancel()
-			_ = runloop.RunLoop(ctx, func() { d.doIPSet(ctx, statser) }, d.period)
+			_ = runloop.RunLoop(ctx, func() { d.doSearch(ctx, statser) }, d.period)
 		}()
 	})
 }
 
-func (d *flowSearcher) SetFeed(f *v3.GlobalThreatFeed) {
+func (d *searcher) SetFeed(f *v3.GlobalThreatFeed) {
 	d.feed = f.DeepCopy()
 }
 
-func (d *flowSearcher) Close() {
+func (d *searcher) Close() {
 	d.cancel()
 }
 
-func (d *flowSearcher) doIPSet(ctx context.Context, st statser.Statser) {
-	flowIterator, err := d.suspiciousIP.QueryIPSet(ctx, d.feed.Name)
+func (d *searcher) doSearch(ctx context.Context, st statser.Statser) {
+	results, err := d.q.QuerySet(ctx, d.feed.Name)
 	if err != nil {
-		log.WithError(err).Error("suspicious IP query failed")
+		log.WithError(err).Error("query failed")
 		st.Error(statser.SearchFailed, err)
 		return
 	}
-	c := 0
 	var clean = true
-	for flowIterator.Next() {
-		c++
-		err := d.events.PutSecurityEvent(ctx, flowIterator.Value())
+	for _, result := range results {
+		err := d.events.PutSecurityEvent(ctx, result)
 		if err != nil {
 			clean = false
 			st.Error(statser.SearchFailed, err)
-			log.WithError(err).Error("failed to store suspicious flow")
+			log.WithError(err).Error("failed to store event")
 		}
-	}
-	log.WithField("num", c).Debug("got events")
-	if flowIterator.Err() != nil {
-		log.WithError(flowIterator.Err()).Error("suspicious IP iteration failed")
-		st.Error(statser.SearchFailed, flowIterator.Err())
-		return
 	}
 	if clean {
 		st.ClearError(statser.SearchFailed)
 		st.SuccessfulSearch()
+	}
+}
+
+func NewSearcher(feed *v3.GlobalThreatFeed, period time.Duration, suspiciousSet db.SuspiciousSet, events db.Events) Searcher {
+	return &searcher{
+		feed:   feed.DeepCopy(),
+		period: period,
+		q:      suspiciousSet,
+		events: events,
 	}
 }

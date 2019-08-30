@@ -99,6 +99,15 @@ const eventMapping = `{
         },
         "anomaly_record": {
             "type": "object"
+        },
+        "dns_log_index": {
+            "type": "keyword"
+        },
+        "dns_log_id": {
+            "type": "keyword"
+        },
+        "suspicious_domain": {
+            "type": "keyword"
         }
       }   
     }

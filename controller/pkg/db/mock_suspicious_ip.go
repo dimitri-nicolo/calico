@@ -4,40 +4,13 @@ package db
 
 import (
 	"context"
-	"errors"
 )
 
-type MockSuspiciousIP struct {
-	Error         error
-	ErrorIndex    int
-	ErrorReturned bool
-	FlowLogs      []SecurityEventInterface
-	value         SecurityEventInterface
+type MockSuspicious struct {
+	Error error
+	Hits  []SecurityEventInterface
 }
 
-func (m *MockSuspiciousIP) QueryIPSet(ctx context.Context, name string) (SecurityEventIterator, error) {
-	return m, m.Error
-}
-
-func (m *MockSuspiciousIP) Next() bool {
-	if len(m.FlowLogs) == m.ErrorIndex {
-		return false
-	}
-	if len(m.FlowLogs) > 0 {
-		m.value = m.FlowLogs[0]
-		m.FlowLogs = m.FlowLogs[1:]
-		return true
-	}
-	return false
-}
-
-func (m *MockSuspiciousIP) Value() SecurityEventInterface {
-	return m.value
-}
-
-func (m *MockSuspiciousIP) Err() error {
-	if m.ErrorIndex >= 0 {
-		return errors.New("Err error")
-	}
-	return nil
+func (m *MockSuspicious) QuerySet(ctx context.Context, name string) ([]SecurityEventInterface, error) {
+	return m.Hits, m.Error
 }

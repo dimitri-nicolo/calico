@@ -4,14 +4,10 @@ package elastic
 
 import (
 	"context"
-	"encoding/json"
 	"io"
 
 	"github.com/olivere/elastic"
 	log "github.com/sirupsen/logrus"
-
-	"github.com/tigera/intrusion-detection/controller/pkg/db"
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/events"
 )
 
 type Scroller interface {
@@ -24,17 +20,23 @@ type scrollerEntry struct {
 	terms    []interface{}
 }
 
-type flowLogIterator struct {
+type Iterator interface {
+	Next() bool
+	Value() (scrollerName string, hit *elastic.SearchHit)
+	Err() error
+}
+
+type queryIterator struct {
 	scrollers []scrollerEntry
 	ctx       context.Context
 	name      string
 	hits      []*elastic.SearchHit
 	key       string
-	val       events.SuspiciousIPSecurityEvent
+	val       *elastic.SearchHit
 	err       error
 }
 
-func (i *flowLogIterator) Next() bool {
+func (i *queryIterator) Next() bool {
 	for len(i.scrollers) > 0 {
 		if len(i.hits) == 0 {
 			entry := i.scrollers[0]
@@ -55,19 +57,9 @@ func (i *flowLogIterator) Next() bool {
 			i.hits = r.Hits.Hits
 		}
 
-		for len(i.hits) > 0 {
-			hit := i.hits[0]
+		if len(i.hits) > 0 {
+			i.val = i.hits[0]
 			i.hits = i.hits[1:]
-
-			var flowLog events.FlowLogJSONOutput
-			err := json.Unmarshal(*hit.Source, &flowLog)
-			if err != nil {
-				log.WithError(err).WithField("raw", *hit.Source).Error("could not unmarshal")
-				continue
-			}
-
-			i.val = events.ConvertFlowLog(flowLog, i.key, hit, i.name)
-
 			return true
 		}
 	}
@@ -75,10 +67,14 @@ func (i *flowLogIterator) Next() bool {
 	return false
 }
 
-func (i *flowLogIterator) Value() db.SecurityEventInterface {
-	return i.val
+func (i *queryIterator) Value() (string, *elastic.SearchHit) {
+	return i.key, i.val
 }
 
-func (i *flowLogIterator) Err() error {
+func (i *queryIterator) Err() error {
 	return i.err
+}
+
+func newQueryIterator(ctx context.Context, scrollers []scrollerEntry, name string) Iterator {
+	return &queryIterator{ctx: ctx, scrollers: scrollers, name: name}
 }
