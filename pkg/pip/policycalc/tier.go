@@ -25,24 +25,21 @@ func newCompiledTiersAndPolicies(cfg *pipcfg.Config, rd *ResourceData, modified 
 
 		// Iterate through the policies in a tier.
 		for _, pol := range tier {
-			// newCompiledTiersAndPolicies the policy to get the ingress and egress versions of the policy as appropriate.
-			ingressPol, egressPol := compilePolicy(matcherFactory, pol)
-
-			// Was this policy resource one of the resources modified in the proposed config change.
-			isModified := modified.IsModified(pol)
+			// Compile the policy to get the ingress and egress versions of the policy as appropriate.
+			ingressPol, egressPol := compilePolicy(matcherFactory, pol, modified.IsModified(pol))
 
 			// Add the ingress and egress policies to their respective slices. If this is a modified policy, also
 			// track it - we'll use this as a shortcut to determine if a flow is affected by the configuration change
 			// or not.
 			if ingressPol != nil {
 				ingressTier = append(ingressTier, ingressPol)
-				if isModified {
+				if ingressPol.Modified {
 					c.ModifiedIngressPolicies = append(c.ModifiedIngressPolicies, ingressPol)
 				}
 			}
 			if egressPol != nil {
 				egressTier = append(egressTier, egressPol)
-				if isModified {
+				if egressPol.Modified {
 					c.ModifiedEgressPolicies = append(c.ModifiedEgressPolicies, egressPol)
 				}
 			}

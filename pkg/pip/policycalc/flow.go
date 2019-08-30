@@ -12,10 +12,11 @@ import (
 type Action string
 
 const (
-	ActionInvalid Action = ""
-	ActionUnknown Action = "unknown"
-	ActionAllow   Action = "allow"
-	ActionDeny    Action = "deny"
+	ActionInvalid  Action = ""
+	ActionUnknown  Action = "unknown"
+	ActionAllow    Action = "allow"
+	ActionDeny     Action = "deny"
+	ActionNextTier Action = "pass"
 )
 
 type EndpointType string
@@ -54,6 +55,9 @@ type Flow struct {
 
 	// The IP version of the flow. Nil if unknown.
 	IPVersion *int
+
+	// Policies is the set of policies applied to the flow. This is used assist with uncertain calculations.
+	Policies []string
 }
 
 // getUnchangedResponse returns a policy calculation Response based on the original flow data.

@@ -12,7 +12,10 @@ const (
 	ActionFlagDidNotMatchTier
 )
 
-const ActionFlagsAllowAndDeny = ActionFlagAllow | ActionFlagDeny
+const (
+	ActionFlagsAllowAndDeny     = ActionFlagAllow | ActionFlagDeny
+	ActionFlagsAllPolicyActions = ActionFlagAllow | ActionFlagDeny | ActionFlagNextTier
+)
 
 // Indeterminate returns true if the compiled rule actions indicate the action is indeterminate. This is true when
 // a rule match is uncertain such that both Allow and Deny actions are possible with the limited available information
@@ -23,22 +26,30 @@ func (a ActionFlag) Indeterminate() bool {
 	return a&ActionFlagsAllowAndDeny == ActionFlagsAllowAndDeny
 }
 
-// Deny returns true if the bitwise values indicate a deny action and not allow.
-func (a ActionFlag) Deny() bool {
-	return a&ActionFlagsAllowAndDeny == ActionFlagDeny
-}
-
-// Allow returns true if the bitwise values indicate an allow action and not deny.
-func (a ActionFlag) Allow() bool {
-	return a&ActionFlagsAllowAndDeny == ActionFlagAllow
-}
-
 // ToAction() converts the final calculated action flags to the equivalent Action.
 func (a ActionFlag) ToAction() Action {
-	if a.Deny() {
+	switch a & ActionFlagsAllPolicyActions {
+	case ActionFlagAllow:
+		return ActionAllow
+	case ActionFlagDeny:
 		return ActionDeny
-	} else if a.Indeterminate() {
+	case ActionFlagNextTier:
+		return ActionNextTier
+	}
+	if a.Indeterminate() {
 		return ActionUnknown
 	}
-	return ActionAllow
+	return ActionInvalid
+}
+
+func ActionFlagFromAction(a Action) ActionFlag {
+	switch a {
+	case ActionDeny:
+		return ActionFlagDeny
+	case ActionNextTier:
+		return ActionFlagNextTier
+	case ActionAllow:
+		return ActionFlagAllow
+	}
+	return 0
 }
