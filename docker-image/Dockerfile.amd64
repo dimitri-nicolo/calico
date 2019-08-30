@@ -9,5 +9,11 @@ ADD bin/calico-k8sapiserver /code
 WORKDIR /code
 RUN ln -s /code/calico-k8sapiserver /usr/bin
 
+
+RUN addgroup -S apiserverusergroup
+RUN adduser -S -D 999 apiserverusergroup
+
+USER 999
+
 # Run apiserver by default
 ENTRYPOINT ["calico-k8sapiserver"]
