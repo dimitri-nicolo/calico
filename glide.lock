@@ -1,5 +1,5 @@
 hash: 5f1393805e1f21a29ab27cd70622bb53329f2eef3f1afdd4ebb8baf70c8f5e1a
-updated: 2019-08-30T05:10:46.488993705Z
+updated: 2019-08-31T04:58:35.639651429Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -274,7 +274,7 @@ imports:
 - name: github.com/natefinch/atomic
   version: a62ce929ffcc871a51e98c6eba7b20321e3ed62d
 - name: github.com/onsi/ginkgo
-  version: f90f37d87fa6b1dd9625e2b1e83c23ffae3de228
+  version: 974566c482abc93ffd3df6f4626e79076c7ed290
   subpackages:
   - config
   - extensions/table
