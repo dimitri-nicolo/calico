@@ -1,0 +1,34 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: calico-prometheus-operator
+  namespace: calico-monitoring
+  labels:
+    operator: prometheus
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        operator: prometheus
+    spec:
+      nodeSelector:
+        beta.kubernetes.io/os: linux
+        # If necessary, uncomment the line below and edit key:value pair with appropriate value for your environment.
+        #node.role: infrastructure
+      serviceAccountName: calico-prometheus-operator
+      containers:
+      - name: calico-prometheus-operator
+        image: quay.io/coreos/prometheus-operator:v0.29.0
+        args:
+          - --prometheus-config-reloader=quay.io/coreos/prometheus-config-reloader:v0.29.0
+          - --config-reloader-image=quay.io/coreos/configmap-reload:v0.0.1
+          - --config-reloader-memory=25Mi
+          - --namespaces=calico-monitoring
+        resources:
+          requests:
+            cpu: 100m
+            memory: 50Mi
+          limits:
+            cpu: 200m
+            memory: 100Mi

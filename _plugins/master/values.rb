@@ -380,7 +380,12 @@ def gen_chart_specific_values_master(versions, imageNames, imageRegistry, chart,
     #   <secret_name>: <.docker/config.json contents>
     imagePullSecrets: {}
     EOF
-  else
+  elsif chart == "tigera-operator"
+    versionsYml = <<~EOF
+    # Configuration for the tigera operator
+    imageRegistry: quay.io/tigera
+    EOF
+  else 
     versionsYml = <<~EOF
     # Configuration for federation controller
     federation:

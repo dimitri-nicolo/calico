@@ -1,0 +1,15 @@
+# Service for access to Kibana.
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    name: kibana-tigera-elasticsearch
+  name: tigera-kibana
+  namespace: calico-monitoring
+spec:
+  type: ClusterIP
+  selector:
+    name: kibana-tigera-elasticsearch
+  ports:
+    - port: 5601
+      targetPort: 5601

@@ -1,0 +1,58 @@
+# TODO: Remove this configmap onces fluentd and es-curator are installed by the Tigera operator.
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: tigera-es-config
+  namespace: calico-monitoring
+data:
+  # The name of the cluster.  This field is used as part of the index name of Elasticsearch logs, and is intended
+  # to allow multiple clusters to share one Elasticsearch cluster.  The value of this field must match that of
+  # tigera.cnx-manager.cluster-name in tigera-cnx-manager-config.
+  tigera.elasticsearch.cluster-name: "cluster"
+  # The number of shards for index tigera_secure_ee_flows.
+  tigera.elasticsearch.flows-index-shards: "5"
+  # The retention period for flow logs, in days.  Logs written on a day that started at least this long ago are
+  # removed.  To keep logs for at least x days, use a retention period of x+1.
+  tigera.elasticsearch.flow-retention: "8"
+  # The retention period for audit logs, in days.  Logs written on a day that started at least this long ago are
+  # removed.  To keep logs for at least x days, use a retention period of x+1.
+  tigera.elasticsearch.audit-retention: "367"
+  # The retention period for snapshots, in days. Snapshots are periodic captures
+  # of resources which along with audit events are used to generate reports.
+  # Consult the Compliance Reporting documentation for more details on snapshots.
+  # Logs written on a day that started at least this long ago are
+  # removed.  To keep logs for at least x days, use a retention period of x+1.
+  tigera.elasticsearch.snapshot-retention: "367"
+  # The retention period for compliance reports, in days. Reports are output
+  # from the analysis of the system state and audit events for compliance reporting.
+  # Consult the Compliance Reporting documentation for more details on reports.
+  # Logs written on a day that started at least this long ago are
+  # removed.  To keep logs for at least x days, use a retention period of x+1.
+  tigera.elasticsearch.compliance-report-retention: "367"
+  # Whether to include the custom flow filters defined below in the fluentd config
+  # file.  Value must be "true" or "false".
+  tigera.elasticsearch.flow-filtering: "false"
+  # Flow filtering additional fluentd configuration.  This field is only used when
+  # tigera.elasticsearch-flow-filtering is set to "true".  The example here filters
+  # out all flows to/from the dev namespace.
+  tigera.elasticsearch.flow-filters.conf: |-
+    <filter flows>
+      @type grep
+      <exclude>
+        key source_namespace
+        pattern dev
+      </exclude>
+      <exclude>
+        key dest_namespace
+        pattern dev
+      </exclude>
+    </filter>
+  tigera.elasticsearch.access-mode: "insecure"
+  tigera.elasticsearch.scheme: "http"
+  tigera.elasticsearch.host: elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local
+  tigera.elasticsearch.port: "9200"
+  tigera.kibana.host: kibana-tigera-elasticsearch.calico-monitoring.svc.cluster.local
+  tigera.kibana.port: "80"
+  tigera.kibana.scheme: "http"
+  tigera.elasticsearch.startXPackTrial: "true"
+  tigera.elasticsearch.ca.path: ""

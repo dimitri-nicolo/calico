@@ -23,6 +23,10 @@ module Jekyll
         @chart = "tigera-secure-ee"
         extra_args.slice! "tigera-secure-ee"
       end
+      if extra_args.start_with?("tigera-operator")
+        @chart = "tigera-operator"
+        extra_args.slice! "tigera-operator"
+      end
 
       @mock_es = false
       if extra_args.start_with?(" secure-es")
