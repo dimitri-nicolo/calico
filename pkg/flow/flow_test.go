@@ -15,7 +15,6 @@ const (
 	wep1   = "wep-1"
 	wep2   = "wep-2"
 	hep1   = "hep-1"
-	hep2   = "hep-2"
 	aggr1  = "wep-*"
 	noAggr = ""
 	node1  = "node1"
@@ -28,13 +27,13 @@ var (
 		NameIsAggregationPrefix: true,
 		Namespace:               ns1,
 	}
-	flowWEP2 = apiv3.FlowEndpoint{
+	_ = apiv3.FlowEndpoint{
 		Kind:                    "Pod",
 		Name:                    wep2,
 		NameIsAggregationPrefix: false,
 		Namespace:               ns2,
 	}
-	flowHEP1 = apiv3.FlowEndpoint{
+	_ = apiv3.FlowEndpoint{
 		Kind:                    "HostEndpoint",
 		Name:                    node1,
 		NameIsAggregationPrefix: true,
