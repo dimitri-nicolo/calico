@@ -273,6 +273,9 @@ type Config struct {
 	NATPortRange       numorstring.Port   `config:"portrange;"`
 	NATOutgoingAddress net.IP             `config:"ipv4;"`
 
+	// TSEE no longer does any usage reporting, but we still support the config fields
+	// so as not to break deployments that set them.  (In particular, not to break the
+	// case where a deployment sets UsageReportingEnabled to false.)
 	UsageReportingEnabled          bool          `config:"bool;true"`
 	UsageReportingInitialDelaySecs time.Duration `config:"seconds;300"`
 	UsageReportingIntervalSecs     time.Duration `config:"seconds;86400"`

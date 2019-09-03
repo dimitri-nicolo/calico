@@ -50,7 +50,6 @@ import (
 	"github.com/projectcalico/felix/policysync"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/felix/statusrep"
-	"github.com/projectcalico/felix/usagerep"
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend"
@@ -367,14 +366,7 @@ configRetry:
 
 	// Initialise the glue logic that connects the calculation graph to/from the dataplane driver.
 	log.Info("Connect to the dataplane driver.")
-
-	var connToUsageRepUpdChan chan map[string]string
-	if configParams.UsageReportingEnabled {
-		// Make a channel for the connector to use to send updates to the usage reporter.
-		// (Otherwise, we pass in a nil channel, which disables such updates.)
-		connToUsageRepUpdChan = make(chan map[string]string, 1)
-	}
-	dpConnector := newConnector(configParams, connToUsageRepUpdChan, backendClient, dpDriver, failureReportChan)
+	dpConnector := newConnector(configParams, backendClient, dpDriver, failureReportChan)
 
 	// If enabled, create a server for the policy sync API.  This allows clients to connect to
 	// Felix over a socket and receive policy updates.
@@ -452,56 +444,11 @@ configRetry:
 		lookupsCache,
 	)
 
-	if configParams.UsageReportingEnabled {
-		// Usage reporting enabled, add stats collector to graph.  When it detects an update
-		// to the stats, it makes a callback, which we use to send an update on a channel.
-		// We use a buffered channel here to avoid blocking the calculation graph.
-		statsChanIn := make(chan calc.StatsUpdate, 1)
-		statsCollector := calc.NewStatsCollector(func(stats calc.StatsUpdate) error {
-			statsChanIn <- stats
-			return nil
-		})
-		statsCollector.RegisterWith(asyncCalcGraph.CalcGraph)
-
-		// Rather than sending the updates directly to the usage reporting thread, we
-		// decouple with an extra goroutine.  This prevents blocking the calculation graph
-		// goroutine if the usage reporting goroutine is blocked on IO, for example.
-		// Using a buffered channel wouldn't work here because the usage reporting
-		// goroutine can block for a long time on IO so we could build up a long queue.
-		statsChanOut := make(chan calc.StatsUpdate)
-		go func() {
-			var statsChanOutOrNil chan calc.StatsUpdate
-			var stats calc.StatsUpdate
-			for {
-				select {
-				case stats = <-statsChanIn:
-					// Got a stats update, activate the output channel.
-					log.WithField("stats", stats).Debug("Buffer: stats update received")
-					statsChanOutOrNil = statsChanOut
-				case statsChanOutOrNil <- stats:
-					// Passed on the update, deactivate the output channel until
-					// the next update.
-					log.WithField("stats", stats).Debug("Buffer: stats update sent")
-					statsChanOutOrNil = nil
-				}
-			}
-		}()
-
-		usageRep := usagerep.New(
-			configParams.UsageReportingInitialDelaySecs,
-			configParams.UsageReportingIntervalSecs,
-			statsChanOut,
-			connToUsageRepUpdChan,
-		)
-		go usageRep.PeriodicallyReportUsage(context.Background())
-	} else {
-		// Usage reporting disabled, but we still want a stats collector for the
-		// felix_cluster_* metrics.  Register a no-op function as the callback.
-		statsCollector := calc.NewStatsCollector(func(stats calc.StatsUpdate) error {
-			return nil
-		})
-		statsCollector.RegisterWith(asyncCalcGraph.CalcGraph)
-	}
+	// Create a stats collector to generate felix_cluster_* metrics.
+	statsCollector := calc.NewStatsCollector(func(stats calc.StatsUpdate) error {
+		return nil
+	})
+	statsCollector.RegisterWith(asyncCalcGraph.CalcGraph)
 
 	// Create the validator, which sits between the syncer and the
 	// calculation graph.
@@ -1046,7 +993,6 @@ func getAndMergeConfig(
 
 type DataplaneConnector struct {
 	config                     *config.Config
-	configUpdChan              chan<- map[string]string
 	ToDataplane                chan interface{}
 	StatusUpdatesFromDataplane chan interface{}
 	InSync                     chan bool
@@ -1065,14 +1011,12 @@ type Startable interface {
 }
 
 func newConnector(configParams *config.Config,
-	configUpdChan chan<- map[string]string,
 	datastore bapi.Client,
 	dataplane dp.DataplaneDriver,
 	failureReportChan chan<- string,
 ) *DataplaneConnector {
 	felixConn := &DataplaneConnector{
 		config:                     configParams,
-		configUpdChan:              configUpdChan,
 		datastore:                  datastore,
 		ToDataplane:                make(chan interface{}),
 		StatusUpdatesFromDataplane: make(chan interface{}),
@@ -1223,11 +1167,6 @@ func (fc *DataplaneConnector) sendMessagesToDataplaneDriver() {
 			config = make(map[string]string)
 			for k, v := range msg.Config {
 				config[k] = v
-			}
-
-			if fc.configUpdChan != nil {
-				// Send the config over to the usage reporter.
-				fc.configUpdChan <- config
 			}
 		case *calc.DatastoreNotReady:
 			log.Warn("Datastore became unready, need to restart.")
