@@ -200,11 +200,11 @@ func (e *eventRecorder) Eventf(object runtime.Object, eventtype, reason, message
 }
 
 func (e *eventRecorder) PastEventf(object runtime.Object, timestamp metav1.Time, eventtype, reason, messageFmt string, args ...interface{}) {
-	e.Eventf(object, eventtype, reason, messageFmt, args)
+	e.Eventf(object, eventtype, reason, messageFmt, args...)
 }
 
 func (e *eventRecorder) AnnotatedEventf(object runtime.Object, annotations map[string]string, eventtype, reason, messageFmt string, args ...interface{}) {
-	e.Eventf(object, eventtype, reason, messageFmt, args)
+	e.Eventf(object, eventtype, reason, messageFmt, args...)
 }
 
 func getSummaryName(object runtime.Object) string {
