@@ -379,9 +379,6 @@ def gen_chart_specific_values_v2_5(versions, imageNames, imageRegistry, chart, f
     # imagePullSecrets:
     #   <secret_name>: <.docker/config.json contents>
     imagePullSecrets: {}
-    
-    # TODO: move to helpers
-    platform: ""
     EOF
   else
     versionsYml = <<~EOF
