@@ -68,13 +68,13 @@ EXCLUDEARCH ?= s390x
 VALIDARCHES = $(filter-out $(EXCLUDEARCH),$(ARCHES))
 
 ###############################################################################
-GO_BUILD_VER?=v0.20
+GO_BUILD_VER?=v0.24
 CALICO_BUILD?=calico/go-build:$(GO_BUILD_VER)
 PROTOC_VER?=v0.1
 PROTOC_CONTAINER?=calico/protoc:$(PROTOC_VER)-$(BUILDARCH)
 
 #This is a version with known container with compatible versions of sed/grep etc.
-TOOLING_BUILD?=calico/go-build:v0.20
+TOOLING_BUILD?=calico/go-build:v0.24
 
 
 # Get version from git - used for releases.
@@ -116,6 +116,19 @@ PUSH_NONMANIFEST_IMAGES=$(filter-out $(PUSH_MANIFEST_IMAGES),$(PUSH_IMAGES))
 # location of docker credentials to push manifests
 DOCKER_CONFIG ?= $(HOME)/.docker/config.json
 
+# Volume-mount gopath into the build container to cache go module's packages. If the environment is using multiple
+# comma-separated directories for gopath, use the first one, as that is the default one used by go modules.
+ifneq ($(GOPATH),)
+    # If the environment is using multiple comma-separated directories for gopath, use the first one, as that
+    # is the default one used by go modules.
+    GOMOD_CACHE = $(shell echo $(GOPATH) | cut -d':' -f1)/pkg/mod
+else
+    # If gopath is empty, default to $(HOME)/go.
+    GOMOD_CACHE = $$HOME/go/pkg/mod
+endif
+
+EXTRA_DOCKER_ARGS += -v $(GOMOD_CACHE):/go/pkg/mod:rw
+
 # Allow libcalico-go and the ssh auth sock to be mapped into the build container.
 ifdef LIBCALICOGO_PATH
   EXTRA_DOCKER_ARGS += -v $(LIBCALICOGO_PATH):/go/src/github.com/projectcalico/libcalico-go:ro
@@ -125,13 +138,15 @@ ifdef SSH_AUTH_SOCK
 endif
 
 
-DOCKER_RUN := mkdir -p .go-pkg-cache && \
+DOCKER_RUN := mkdir -p .go-pkg-cache $(GOMOD_CACHE) && \
               docker run --rm \
                          --net=host \
                          $(EXTRA_DOCKER_ARGS) \
                          -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+                         -e GOCACHE=/go-cache \
+                         -e GO111MODULE=off \
                          -v $${PWD}:/go/src/$(PACKAGE_NAME):rw \
-                         -v $${PWD}/.go-pkg-cache:/go/pkg:rw \
+                         -v $${PWD}/.go-pkg-cache:/go-cache:rw \
                          -w /go/src/$(PACKAGE_NAME)
 
  # Pre-configured docker run command that runs as this user with the repo
@@ -441,13 +456,14 @@ update-libcalico-pin: guard-ssh-forwarding-bug guard-git-libcalico
 # Static checks
 ###############################################################################
 ## Perform static checks on the code.
+# TODO: re-enable these linters !
+LINT_ARGS := --disable gosimple,govet,structcheck,errcheck,goimports,unused,ineffassign,staticcheck,deadcode,typecheck
+
 .PHONY: static-checks
 static-checks: guard-ssh-forwarding-bug vendor
-	docker run --rm \
-		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-		-v $(CURDIR):/go/src/$(PACKAGE_NAME) \
-		-w /go/src/$(PACKAGE_NAME) \
-		$(CALICO_BUILD) gometalinter --deadline=300s --disable-all --enable=goimports --vendor ./...
+	$(DOCKER_RUN) \
+	  $(CALICO_BUILD) \
+	  golangci-lint run --deadline 5m $(LINT_ARGS)
 
 .PHONY: fix
 ## Fix static checks
