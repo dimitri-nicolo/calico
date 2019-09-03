@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -29,6 +30,8 @@ import (
 var uut *elastic.Elastic
 var elasticClient *oElastic.Client
 
+const ElasticsearchImage = "docker.elastic.co/elasticsearch/elasticsearch:6.4.3"
+
 func TestMain(m *testing.M) {
 	d, err := client.NewEnvClient()
 	if err != nil {
@@ -38,15 +41,24 @@ func TestMain(m *testing.M) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	// Pull image
+	r, err := d.ImagePull(ctx, ElasticsearchImage, types.ImagePullOptions{})
+	if err != nil {
+		panic("could not pull image " + ElasticsearchImage + " " + err.Error())
+	}
+	defer func() { _ = r.Close() }()
+	_, err = io.Copy(os.Stdout, r)
+	if err != nil {
+		panic("could not read pull response: " + err.Error())
+	}
+
 	// Create Elastic
 	cfg := &container.Config{
 		Env:   []string{"discovery.type=single-node"},
-		Image: "docker.elastic.co/elasticsearch/elasticsearch:6.4.3",
+		Image: ElasticsearchImage,
 	}
 	result, err := d.ContainerCreate(ctx, cfg, nil, nil, "")
 	if err != nil {
-		fmt.Println(os.Geteuid())
-		fmt.Println(os.Getegid())
 		panic("could not create elastic container: " + err.Error())
 	}
 
