@@ -3,8 +3,9 @@
 package projectcalico
 
 import (
-	calico "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	calico "github.com/projectcalico/libcalico-go/lib/apis/v3"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -359,4 +360,26 @@ type ManagedCluster struct {
 	metav1.ObjectMeta
 
 	Spec calico.ManagedClusterSpec
+}
+
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// ClusterInformationList is a list of ClusterInformation objects.
+type ClusterInformationList struct {
+	metav1.TypeMeta
+	metav1.ListMeta
+
+	Items []ClusterInformation
+}
+
+// +genclient
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type ClusterInformation struct {
+	metav1.TypeMeta
+	metav1.ObjectMeta
+
+	Spec calico.ClusterInformationSpec
 }

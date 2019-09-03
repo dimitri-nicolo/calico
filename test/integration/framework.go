@@ -33,7 +33,7 @@ import (
 
 	"github.com/tigera/calico-k8sapiserver/cmd/apiserver/server"
 	_ "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/install"
-	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	"github.com/tigera/calico-k8sapiserver/pkg/apiserver"
 	calicoclient "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset"
 )

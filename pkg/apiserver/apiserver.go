@@ -13,9 +13,10 @@ import (
 	"k8s.io/apimachinery/pkg/version"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 
-	"github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/install"
+
+	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 )
 
 var (

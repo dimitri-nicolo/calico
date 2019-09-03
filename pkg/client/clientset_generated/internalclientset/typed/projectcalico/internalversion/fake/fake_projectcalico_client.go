@@ -22,6 +22,10 @@ func (c *FakeProjectcalico) BGPPeers() internalversion.BGPPeerInterface {
 	return &FakeBGPPeers{c}
 }
 
+func (c *FakeProjectcalico) ClusterInformations() internalversion.ClusterInformationInterface {
+	return &FakeClusterInformations{c}
+}
+
 func (c *FakeProjectcalico) FelixConfigurations() internalversion.FelixConfigurationInterface {
 	return &FakeFelixConfigurations{c}
 }

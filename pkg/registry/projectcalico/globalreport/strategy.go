@@ -16,8 +16,9 @@ import (
 	"k8s.io/apiserver/pkg/storage/names"
 	apivalidation "k8s.io/kubernetes/pkg/apis/core/validation"
 
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
+
+	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 )
 
 type apiServerStrategy struct {

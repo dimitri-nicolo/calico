@@ -66,6 +66,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&FelixConfigurationList{},
 		&ManagedCluster{},
 		&ManagedClusterList{},
+		&ClusterInformation{},
+		&ClusterInformationList{},
 	)
 	return nil
 }

@@ -4,7 +4,7 @@ package install
 
 import (
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
-	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	"k8s.io/apimachinery/pkg/apimachinery/announced"
 	"k8s.io/apimachinery/pkg/apimachinery/registered"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -16,7 +16,7 @@ func Install(groupFactoryRegistry announced.APIGroupFactoryRegistry, registry *r
 	if err := announced.NewGroupMetaFactory(
 		&announced.GroupMetaFactoryArgs{
 			GroupName:                  projectcalico.GroupName,
-			RootScopedKinds:            sets.NewString("Tier", "GlobalNetworkPolicy", "GlobalNetworkSet", "LicenseKey", "GlobalThreatFeed", "HostEndpoint", "GlobalReport", "GlobalReportType", "IPPool", "BGPConfiguration", "BGPPeer", "Profile", "RemoteClusterConfiguration", "FelixConfiguration", "ManagedCluster"),
+			RootScopedKinds:            sets.NewString("Tier", "GlobalNetworkPolicy", "GlobalNetworkSet", "LicenseKey", "GlobalThreatFeed", "HostEndpoint", "GlobalReport", "GlobalReportType", "IPPool", "BGPConfiguration", "BGPPeer", "Profile", "RemoteClusterConfiguration", "FelixConfiguration", "ManagedCluster", "ClusterInformation"),
 			VersionPreferenceOrder:     []string{v3.SchemeGroupVersion.Version},
 			AddInternalObjectsToScheme: projectcalico.AddToScheme,
 		},

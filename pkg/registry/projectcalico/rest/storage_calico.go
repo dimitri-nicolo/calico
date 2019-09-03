@@ -26,6 +26,7 @@ import (
 	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
 	calicobgpconfiguration "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/bgpconfiguration"
 	calicobgppeer "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/bgppeer"
+	calicoclusterinformation "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/clusterinformation"
 	calicofelixconfig "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/felixconfig"
 	calicognetworkset "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/globalnetworkset"
 	calicogpolicy "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/globalpolicy"
@@ -393,6 +394,27 @@ func (p RESTStorageProvider) NewV3Storage(
 		authorizer,
 	)
 
+	clusterInformationRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("clusterinformations"))
+	if err != nil {
+		return nil, err
+	}
+	clusterInformationOpts := server.NewOptions(
+		etcd.Options{
+			RESTOptions:   clusterInformationRESTOptions,
+			Capacity:      1000,
+			ObjectType:    calicoclusterinformation.EmptyObject(),
+			ScopeStrategy: calicoclusterinformation.NewStrategy(scheme),
+			NewListFunc:   calicoclusterinformation.NewList,
+			GetAttrsFunc:  calicoclusterinformation.GetAttrs,
+			Trigger:       storage.NoTriggerPublisher,
+		},
+		calicostorage.Options{
+			RESTOptions: clusterInformationRESTOptions,
+		},
+		p.StorageType,
+		authorizer,
+	)
+
 	storage := map[string]rest.Storage{}
 	storage["networkpolicies"] = calicopolicy.NewREST(scheme, *policyOpts)
 	storage["tiers"] = calicotier.NewREST(scheme, *tierOpts)
@@ -419,6 +441,8 @@ func (p RESTStorageProvider) NewV3Storage(
 	storage["felixconfigurations"] = calicofelixconfig.NewREST(scheme, *felixConfigOpts)
 
 	storage["managedclusters"] = calicomanagedcluster.NewREST(scheme, *managedClusterOpts)
+
+	storage["clusterinformations"] = calicoclusterinformation.NewREST(scheme, *clusterInformationOpts)
 
 	return storage, nil
 }

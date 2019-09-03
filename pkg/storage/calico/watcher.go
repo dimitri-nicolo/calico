@@ -5,13 +5,14 @@ package calico
 import (
 	"context"
 
-	"github.com/projectcalico/libcalico-go/lib/options"
-	cwatch "github.com/projectcalico/libcalico-go/lib/watch"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	k8swatch "k8s.io/apimachinery/pkg/watch"
 	"k8s.io/apiserver/pkg/storage"
+
+	"github.com/projectcalico/libcalico-go/lib/options"
+	cwatch "github.com/projectcalico/libcalico-go/lib/watch"
 )
 
 // watchChan implements watch.Interface.

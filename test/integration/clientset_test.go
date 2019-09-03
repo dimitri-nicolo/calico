@@ -28,18 +28,20 @@ import (
 	"testing"
 	"time"
 
-	calico "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 
-	"github.com/projectcalico/libcalico-go/lib/numorstring"
+	calico "github.com/projectcalico/libcalico-go/lib/apis/v3"
+
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
 	_ "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/install"
 	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset"
+
+	"github.com/projectcalico/libcalico-go/lib/numorstring"
 )
 
 // TestGroupVersion is trivial.
@@ -1748,6 +1750,48 @@ func testManagedClusterClient(client calicoclient.Interface, name string) error 
 	}
 	if len(events) != 2 {
 		return fmt.Errorf("expected 2 watch events got %d", len(events))
+	}
+
+	return nil
+}
+
+// TestClusterInformationClient exercises the ClusterInformation client.
+func TestClusterInformationClient(t *testing.T) {
+	const name = "default"
+	rootTestFunc := func() func(t *testing.T) {
+		return func(t *testing.T) {
+			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+				return &projectcalico.ClusterInformation{}
+			})
+			defer shutdownServer()
+			if err := testClusterInformationClient(client, name); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	if !t.Run(name, rootTestFunc()) {
+		t.Errorf("test-clusterinformation test failed")
+	}
+}
+
+func testClusterInformationClient(client calicoclient.Interface, name string) error {
+	clusterInformationClient := client.ProjectcalicoV3().ClusterInformations()
+
+	ci, err := clusterInformationClient.List(metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing ClusterInformation (%s)", err)
+	}
+	if ci.Items == nil {
+		return fmt.Errorf("items field should not be set to nil")
+	}
+
+	// Confirm it's not possible to create a clusterInformation obj with name other than "default"
+	validClusterInfo := &v3.ClusterInformation{ObjectMeta: metav1.ObjectMeta{Name: "test-clusterinformation"}}
+
+	_, err = clusterInformationClient.Create(validClusterInfo)
+	if err == nil {
+		return fmt.Errorf("expected error creating validClusterInfo with name other than \"default\"")
 	}
 
 	return nil
