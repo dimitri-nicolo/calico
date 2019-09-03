@@ -87,3 +87,12 @@ func TestGetStartupDelayDomainNameSet(t *testing.T) {
 
 	g.Expect(delay).Should(BeNumerically("~", puller.period-time.Hour, time.Minute))
 }
+
+func TestCanonicalizeDNSName(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	g.Expect(canonicalizeDNSName("tigera.io")).Should(Equal("tigera.io"))
+	g.Expect(canonicalizeDNSName(".tigera.io.")).Should(Equal("tigera.io"))
+	g.Expect(canonicalizeDNSName("..tigera..io..")).Should(Equal("tigera.io"))
+	g.Expect(canonicalizeDNSName("tIgeRa.Io")).Should(Equal("tigera.io"))
+}
