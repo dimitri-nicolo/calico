@@ -5,11 +5,16 @@ title: Global thread feed
 A global threat feed resource (GlobalThreatFeed) represents a feed of threat intelligence used for
 security purposes.
 
-At present, {{site.prodname}} supports threat feeds that give a set of IP addresses
-or IP prefixes, and automatically monitors flow logs for members of the set. These threat feeds
-have their content type set to IPSet.  IPSet threat feeds can also be configured to be synchronized to a
-[global network set](./globalnetworkset), allowing you to use them as a dynamically-updating
-blacklist by incorporating the global network set into network policy.
+{{site.prodname}} supports threat feeds that give either
+
+ * a set of IP addresses or IP prefixes, with content type IPSet, or
+ * a set of domain names, with content type DomainNameSet
+
+For each IPSet threat feed, {{site.prodname}} automatically monitors flow logs for members of the set. 
+IPSet threat feeds can also be configured to be synchronized to a [global network set](./globalnetworkset),
+allowing you to use them as a dynamically-updating blacklist by incorporating the global network set into network policy.
+
+For each DomainNameSet threat feed, {{site.prodname}} automatically monitors DNS logs for members of the set.
 
 For `calicoctl` [commands]({{site.url}}/{{page.version}}/reference/calicoctl/), the following case-insensitive aliases
 may be used to specify the resource type on the CLI:
@@ -58,7 +63,9 @@ the global threat feed spec.
 
 Alternately, you can have your threat feed push updates directly.  Leave out the `pull` stanza, and configure
 your threat feed to create or update the Elasticsearch document that corresponds to the global threat
-feed object.  This Elasticsearch document will be in the index `.tigera.ipset.<cluster_name>` and must have the ID set
+feed object.
+
+For IPSet threat feeds, this Elasticsearch document will be in the index `.tigera.ipset.<cluster_name>` and must have the ID set
 to the name of the global threat feed object. The doc should have a single field called `ips`, containing
 a list of IP prefixes.
 
@@ -68,6 +75,19 @@ For example:
 PUT .tigera.ipset.cluster01/_doc/sample-global-threat-feed
 {
     "ips" : ["99.99.99.99/32", "100.100.100.0/24"]
+}
+```
+
+For DomainNameSet threat feeds, this Elasticsearch document will be in the index `.tigera.domainnameset.<cluster_name>` and must
+have the ID set to the name of the global threat feed object. The doc should have a single field called `domains`, containing
+a list of domain names.
+
+For example:
+
+```
+PUT .tigera.domainnameset.cluster01/_doc/example-global-threat-feed
+{
+    "domains" : ["malware.badstuff", "hackers.r.us"]
 }
 ```
 
@@ -86,13 +106,12 @@ create and update documents in Elasticsearch.
 
 #### Spec
 
-| Field            | Description                                    | Accepted Values | Schema                                        | Default |
-|------------------|------------------------------------------------|-----------------|-----------------------------------------------|---------|
-| content          | What kind of threat intelligence is provided   | IPSet           | string                                        | IPSet   |
-| globalNetworkSet | Include to sync with a global network set      |                 | [GlobalNetworkSetSync](#globalnetworksetsync) |         |
-| pull             | Configure periodic pull of threat feed updates |                 | [Pull](#pull)                                 |         |
+| Field            | Description                                    | Accepted Values      | Schema                                        | Default |
+|------------------|------------------------------------------------|----------------------|-----------------------------------------------|---------|
+| content          | What kind of threat intelligence is provided   | IPSet, DomainNameSet | string                                        | IPSet   |
+| globalNetworkSet | Include to sync with a global network set      |                      | [GlobalNetworkSetSync](#globalnetworksetsync) |         |
+| pull             | Configure periodic pull of threat feed updates |                      | [Pull](#pull)                                 |         |
 
-`IPSet` is the only supported `content` type at present, and is a list of IP addresses or IP prefixes.
 
 #### Status
 
@@ -102,16 +121,17 @@ it processes global threat feeds.
 | Field                | Description                                                                      |
 |----------------------|----------------------------------------------------------------------------------|
 | lastSuccessfulSync   | Timestamp of the last successful update to the threat intelligence from the feed |
-| lastSuccessfulSearch | Timestamp of the last successful search of flow logs for threats                 |
+| lastSuccessfulSearch | Timestamp of the last successful search of logs for threats                      |
 | errorConditions      | List of errors preventing operation of the updates or search                     |
 
 #### GlobalNetworkSetSync
 
 When you include a `globalNetworkSet` stanza in a global threat feed, it triggers synchronization
 with a [global network set](./globalnetworkset). This global network set will have the name `threatfeed.<threat feed name>`
-where `<threat feed name>` is the name of the global threat feed it is synced with.
+where `<threat feed name>` is the name of the global threat feed it is synced with. This is only supported for
+threat feeds of type IPSet.
 
-> **NOTE**: If you include a `globalNetworkSet` stanza, you must also include a `pull` stanza.
+> **NOTE**: If you include a `globalNetworkSet` stanza, you must also include a `pull` stanza and must set the `content` to `IPSet`.
 {: .alert .alert-info}
 
 | Field  | Description                                               | Accepted Values | Schema |
@@ -142,8 +162,9 @@ Pull updates from the threat feed by doing an HTTP GET against the given URL.
 | headers | List of additional HTTP Headers to include on the request |                  | [HTTPHeader](#httpheader) |                  |
 
 The `format` must be set to `NewlineDelimited` or omitted.  The threat feed must return a list of
-newline-delimited IP addresses or IP prefixes. It may also include comments prefixed by `#`.  For
-example:
+newline-delimited entries. It may also include comments prefixed by `#`.
+
+IPSet threat feeds must contain IP addresses or IP prefixes. For example:
 
 ```
 # This is an IP Prefix
@@ -151,6 +172,17 @@ example:
 # This is an address
 99.99.99.99
 ```
+
+DomainNameSet threat feeds must contain domain names. For example:
+
+```
+# Suspicious domains
+malware.badstuff
+hackers.r.us
+```
+
+Internationalized domain names (IDNA) may be encoded either as Unicode in UTF-8 format, or as 
+ASCII-Compatible Encoding (ACE) according to [RFC 5890][idna].  
 
 #### HTTPHeader
 
@@ -186,3 +218,4 @@ KeyRef tells {{site.prodname}} where to get the value for a header.  The referen
 
 [elastic-document-apis]: https://www.elastic.co/guide/en/elasticsearch/reference/6.4/docs-update.html
 [parse-duration]: https://golang.org/pkg/time/#ParseDuration
+[idna]: https://tools.ietf.org/html/rfc5890
