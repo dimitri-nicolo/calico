@@ -36,7 +36,7 @@ import (
 //
 // Starting the fan-out proxy.
 //
-// Starting the usage reporting and prometheus metrics endpoint threads (if configured).
+// Starting the health reporting and prometheus metrics endpoint threads (if configured).
 //
 // Then, it defers to monitorAndManageShutdown(), which blocks until one of the components
 // fails, then attempts a graceful shutdown.  At that point, all the processing is in
