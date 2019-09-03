@@ -28,9 +28,10 @@ import (
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/names"
 
-	libcalicoapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
 	licClient "github.com/tigera/licensing/client"
+
+	libcalicoapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
 )
 
 type apiServerStrategy struct {

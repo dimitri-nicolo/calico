@@ -11,9 +11,6 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/projectcalico/libcalico-go/lib/apiconfig"
-	"github.com/projectcalico/libcalico-go/lib/clientv3"
-	"github.com/projectcalico/libcalico-go/lib/options"
 	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
 	calicov3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	apitesting "k8s.io/apimachinery/pkg/api/testing"
@@ -22,6 +19,10 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
+
+	"github.com/projectcalico/libcalico-go/lib/apiconfig"
+	"github.com/projectcalico/libcalico-go/lib/clientv3"
+	"github.com/projectcalico/libcalico-go/lib/options"
 
 	"k8s.io/apiserver/pkg/registry/generic"
 	"k8s.io/apiserver/pkg/storage"

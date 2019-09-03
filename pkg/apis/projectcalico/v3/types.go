@@ -3,8 +3,9 @@
 package v3
 
 import (
-	calico "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	calico "github.com/projectcalico/libcalico-go/lib/apis/v3"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

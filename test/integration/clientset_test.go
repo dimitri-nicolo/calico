@@ -28,18 +28,20 @@ import (
 	"testing"
 	"time"
 
-	calico "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 
-	"github.com/projectcalico/libcalico-go/lib/numorstring"
+	calico "github.com/projectcalico/libcalico-go/lib/apis/v3"
+
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
 	_ "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/install"
 	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset"
+
+	"github.com/projectcalico/libcalico-go/lib/numorstring"
 )
 
 // TestGroupVersion is trivial.
@@ -1784,7 +1786,7 @@ func testClusterInformationClient(client calicoclient.Interface, name string) er
 		return fmt.Errorf("items field should not be set to nil")
 	}
 
-    // Confirm it's not possible to create a clusterInformation obj with name other than "default"
+	// Confirm it's not possible to create a clusterInformation obj with name other than "default"
 	validClusterInfo := &v3.ClusterInformation{ObjectMeta: metav1.ObjectMeta{Name: "test-clusterinformation"}}
 
 	_, err = clusterInformationClient.Create(validClusterInfo)

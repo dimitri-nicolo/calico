@@ -388,6 +388,13 @@ static-checks: vendor
 	  $(CALICO_BUILD) \
 	  golangci-lint run --deadline 5m $(LINT_ARGS)
 
+# Run go fmt on all our go files.
+# .PHONY: go-fmt goimports fix
+fix go-fmt goimports:
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c 'glide nv -x | \
+	  grep -v -e "^\\.$$" | \
+	  xargs goimports -w -local github.com/projectcalico/'
+
 ###############################################################################
 # CI/CD
 ###############################################################################
