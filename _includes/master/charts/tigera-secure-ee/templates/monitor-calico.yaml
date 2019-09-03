@@ -84,7 +84,6 @@ data:
   tigera.kibana.host: {{ .Values.kibana.host | default "tigera-elasticsearch-es-kibana" | quote }}
   tigera.kibana.port: {{ .Values.kibana.port | default "5601" | quote }}
 {{- end }}
-
 ---
 
 # This manifest installs the Service which gets traffic to the calico-node metrics
@@ -773,24 +772,24 @@ spec:
                 - name: ELASTIC_SSL_VERIFY
                   value: "true"
 {{- if eq $elasticMode "external" }}
-            - name: ELASTIC_USER
-              valueFrom:
-                secretKeyRef:
-                  name: elastic-curator-user
-                  key: username
-            - name: ELASTIC_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: elastic-curator-user
-                  key: password
+                - name: ELASTIC_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: elastic-curator-user
+                      key: username
+                - name: ELASTIC_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: elastic-curator-user
+                      key: password
 {{- else }}
-            - name: ELASTIC_USER
-              value: "elastic"
-            - name: ELASTIC_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: tigera-elasticsearch-es-elastic-user
-                  key: elastic
+                - name: ELASTIC_USER
+                  value: "elastic"
+                - name: ELASTIC_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: tigera-elasticsearch-es-elastic-user
+                      key: elastic
 {{- end }}
                 - name: ES_CURATOR_BACKEND_CERT
                   value: /etc/curator/elastic/ca.pem
@@ -1027,7 +1026,6 @@ spec:
           exec:
             command: ["/healthz", "liveness"]
           initialDelaySeconds: 5
-        name: controller
         readinessProbe:
           exec:
             command: ["/healthz", "readiness"]
