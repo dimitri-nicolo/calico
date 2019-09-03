@@ -22,6 +22,7 @@ type IPSet interface {
 
 type DomainNameSet interface {
 	PutDomainNameSet(ctx context.Context, name string, set DomainNameSetSpec) error
+	GetDomainNameSetModified(ctx context.Context, name string) (time.Time, error)
 	ListDomainNameSets(ctx context.Context) ([]Meta, error)
 	DeleteDomainNameSet(ctx context.Context, m Meta) error
 }

@@ -67,6 +67,10 @@ func (m *MockSets) GetIPSetModified(ctx context.Context, name string) (time.Time
 	return m.Time, m.Error
 }
 
+func (m *MockSets) GetDomainNameSetModified(ctx context.Context, name string) (time.Time, error) {
+	return m.Time, m.Error
+}
+
 func (m *MockSets) GetIPSet(ctx context.Context, name string) (IPSetSpec, error) {
 	if m.Value == nil {
 		return nil, m.Error
