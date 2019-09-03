@@ -165,7 +165,6 @@ func (h *resourceHelper) getAuditResources() []apiv3.AuditResource {
 var (
 	resourceHelpersByTypeMap  = map[metav1.TypeMeta]*resourceHelper{}
 	resourceHelpersByAuditMap = map[apiv3.AuditResource]*resourceHelper{}
-	allAuditResources         = []apiv3.AuditResource{}
 	allTypeMeta               = []metav1.TypeMeta{}
 	resourceHelpers           = []*resourceHelper{
 		{
