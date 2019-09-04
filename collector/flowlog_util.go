@@ -9,10 +9,11 @@ import (
 	"strconv"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
-	log "github.com/sirupsen/logrus"
 )
 
 const (

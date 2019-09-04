@@ -16,7 +16,7 @@ import (
 	"github.com/projectcalico/felix/daemon"
 	"github.com/projectcalico/felix/fv/infrastructure"
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
-	"github.com/projectcalico/libcalico-go/lib/apis/v3"
+	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
 )

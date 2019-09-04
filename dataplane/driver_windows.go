@@ -10,7 +10,7 @@ import (
 
 	"github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/felix/config"
-	"github.com/projectcalico/felix/dataplane/windows"
+	windataplane "github.com/projectcalico/felix/dataplane/windows"
 	"github.com/projectcalico/felix/dataplane/windows/hns"
 	"github.com/projectcalico/libcalico-go/lib/health"
 )

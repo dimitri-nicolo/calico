@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -94,6 +94,11 @@ func GetMetric(ip string, port int, name, caFile, certFile, keyFile string) (met
 	}
 	log.WithField("resp", resp).Debug("Metric response")
 	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		err = fmt.Errorf("Bad response (%v) from metrics server", resp.StatusCode)
+		return
+	}
 
 	scanner := bufio.NewScanner(resp.Body)
 	for scanner.Scan() {

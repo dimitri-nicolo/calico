@@ -16,7 +16,7 @@ package daemon
 
 import (
 	lclient "github.com/tigera/licensing/client"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 
 	"github.com/projectcalico/felix/config"
 
