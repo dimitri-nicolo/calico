@@ -4,6 +4,7 @@ package elastic
 
 import (
 	"context"
+	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"io"
 
 	"github.com/olivere/elastic"
@@ -15,14 +16,14 @@ type Scroller interface {
 }
 
 type scrollerEntry struct {
-	name     string
+	key      db.QueryKey
 	scroller Scroller
 	terms    []interface{}
 }
 
 type Iterator interface {
 	Next() bool
-	Value() (scrollerName string, hit *elastic.SearchHit)
+	Value() (key db.QueryKey, hit *elastic.SearchHit)
 	Err() error
 }
 
@@ -31,7 +32,7 @@ type queryIterator struct {
 	ctx       context.Context
 	name      string
 	hits      []*elastic.SearchHit
-	key       string
+	key       db.QueryKey
 	val       *elastic.SearchHit
 	err       error
 }
@@ -40,7 +41,7 @@ func (i *queryIterator) Next() bool {
 	for len(i.scrollers) > 0 {
 		if len(i.hits) == 0 {
 			entry := i.scrollers[0]
-			i.key = entry.name
+			i.key = entry.key
 			scroller := entry.scroller
 
 			r, err := scroller.Do(i.ctx)
@@ -67,7 +68,7 @@ func (i *queryIterator) Next() bool {
 	return false
 }
 
-func (i *queryIterator) Value() (string, *elastic.SearchHit) {
+func (i *queryIterator) Value() (db.QueryKey, *elastic.SearchHit) {
 	return i.key, i.val
 }
 

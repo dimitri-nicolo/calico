@@ -71,7 +71,7 @@ func runTest(t *testing.T, successful bool, expected []events.SuspiciousIPSecuri
 	f := util.NewGlobalThreatFeedFromName("mock")
 	suspiciousIP := &db.MockSuspicious{Error: err}
 	for _, e := range expected {
-		suspiciousIP.Hits = append(suspiciousIP.Hits, e)
+		suspiciousIP.Events = append(suspiciousIP.Events, e)
 	}
 	eventsDB := &db.MockEvents{ErrorIndex: eventsErrorIdx, Events: []db.SecurityEventInterface{}}
 	uut := NewSearcher(f, 0, suspiciousIP, eventsDB).(*searcher)
@@ -116,82 +116,3 @@ func TestFlowSearcher_SetFeed(t *testing.T) {
 	g.Expect(searcher.feed).Should(Equal(f2))
 	g.Expect(searcher.feed).ShouldNot(BeIdenticalTo(f2))
 }
-
-//// TestDomainNameSetFilter tests filtering out repeated events with the same
-//// DNS Index and ID
-//func TestDomainNameSetFilter(t *testing.T) {
-//	found := []db.SecurityEventInterface{
-//		events.SuspiciousDomainSecurityEvent{
-//			DNSLogIndex:      "tigera_secure_ee_dns.cluster.20190827",
-//			DNSLogID:         "1",
-//			SourceIP:         util.Sptr("1.2.3.4"),
-//			SourceName:       "source",
-//			SourceNamespace:  "default",
-//			SuspiciousDomain: util.Sptr("xx.yy.zzz"),
-//		},
-//		events.SuspiciousDomainSecurityEvent{
-//			DNSLogIndex:      "tigera_secure_ee_dns.cluster.20190827",
-//			DNSLogID:         "2",
-//			SourceIP:         util.Sptr("5.6.7.8"),
-//			SourceName:       "source",
-//			SourceNamespace:  "default",
-//			SuspiciousDomain: util.Sptr("qq.ww.tt"),
-//		},
-//		// Repeated Index/ID
-//		events.SuspiciousDomainSecurityEvent{
-//			DNSLogIndex:      "tigera_secure_ee_dns.cluster.20190827",
-//			DNSLogID:         "2",
-//			SourceIP:         util.Sptr("5.6.7.8"),
-//			SourceName:       "source",
-//			SourceNamespace:  "default",
-//			SuspiciousDomain: util.Sptr("tt.rr.sss"),
-//		},
-//	}
-//	expected := []db.SecurityEventInterface{
-//		events.SuspiciousDomainSecurityEvent{
-//			DNSLogIndex:      "tigera_secure_ee_dns.cluster.20190827",
-//			DNSLogID:         "1",
-//			SourceIP:         util.Sptr("1.2.3.4"),
-//			SourceName:       "source",
-//			SourceNamespace:  "default",
-//			SuspiciousDomain: util.Sptr("xx.yy.zzz"),
-//		},
-//		events.SuspiciousDomainSecurityEvent{
-//			DNSLogIndex:      "tigera_secure_ee_dns.cluster.20190827",
-//			DNSLogID:         "2",
-//			SourceIP:         util.Sptr("5.6.7.8"),
-//			SourceName:       "source",
-//			SourceNamespace:  "default",
-//			SuspiciousDomain: util.Sptr("qq.ww.tt"),
-//		},
-//	}
-//	g := NewGomegaWithT(t)
-//
-//	f := util.NewGlobalThreatFeedFromName("mock")
-//	suspicious := &db.MockSuspicious{ErrorIndex: -1}
-//	suspicious.Hits = append(suspicious.Hits, found...)
-//	eventsDB := &db.MockEvents{ErrorIndex: -1}
-//	srchr := NewDNSSearcher(f, 0, suspicious, eventsDB).(*searcher)
-//	s := &statser.MockStatser{}
-//
-//	ctx, cancel := context.WithCancel(context.TODO())
-//	defer cancel()
-//
-//	srchr.doSearch(ctx, s)
-//
-//	g.Expect(eventsDB.Events).Should(ConsistOf(expected), "Logs in DB should match expected")
-//	g.Expect(suspicious.Hits).Should(HaveLen(0), "All flowLogs from suspicious were consumed")
-//
-//	status := s.Status()
-//	g.Expect(status.LastSuccessfulSync.Time).Should(Equal(time.Time{}), "Sync should not be marked as successful")
-//	g.Expect(status.LastSuccessfulSearch.Time).ShouldNot(Equal(time.Time{}), "Search should be marked as successful")
-//	g.Expect(status.ErrorConditions).Should(HaveLen(0), "No errors should be reported")
-//
-//	// Repeated search should *not* filter logs from last time
-//	suspicious.Hits = append(suspicious.Hits, found...)
-//	srchr.doSearch(ctx, s)
-//	// Should get two copies of expected pushed to db.  (In the real Elasticsearch, the fact
-//	// that they have the same document ID will make repeated puts idempotent.)
-//	g.Expect(eventsDB.Events).Should(ConsistOf(append(expected, expected...)))
-//	g.Expect(suspicious.Hits).Should(HaveLen(0), "All flowLogs from suspicious were consumed")
-//}

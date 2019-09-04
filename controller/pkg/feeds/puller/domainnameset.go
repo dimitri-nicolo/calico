@@ -22,7 +22,7 @@ import (
 
 var (
 	nameLabelFmt     = "[a-z0-9]([-a-z0-9]*[a-z0-9])?"
-	nameSubdomainFmt = nameLabelFmt + "(\\." + nameLabelFmt + ")*"
+	nameSubdomainFmt = nameLabelFmt + `(\.` + nameLabelFmt + ")*"
 
 	// All resource names must follow the subdomain name format.  Some resources we impose
 	// more restrictive naming requirements.

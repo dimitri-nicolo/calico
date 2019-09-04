@@ -4,6 +4,7 @@ package events
 
 import (
 	"fmt"
+	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"strings"
 
 	"github.com/olivere/elastic"
@@ -18,12 +19,12 @@ const (
 	Severity           = 100
 )
 
-func ConvertFlowLog(flowLog FlowLogJSONOutput, key string, hit *elastic.SearchHit, feeds ...string) SuspiciousIPSecurityEvent {
+func ConvertFlowLog(flowLog FlowLogJSONOutput, key db.QueryKey, hit *elastic.SearchHit, feeds ...string) SuspiciousIPSecurityEvent {
 	var description string
 	switch key {
-	case "source_ip":
+	case db.QueryKeyFlowLogSourceIP:
 		description = fmt.Sprintf("suspicious IP %s from list %s connected to %s %s/%s", util.StringPtrWrapper{S: flowLog.SourceIP}, strings.Join(feeds, ", "), flowLog.DestType, flowLog.DestNamespace, flowLog.DestName)
-	case "dest_ip":
+	case db.QueryKeyFlowLogDestIP:
 		description = fmt.Sprintf("%s %s/%s connected to suspicious IP %s from list %s", flowLog.SourceType, flowLog.SourceNamespace, flowLog.SourceName, util.StringPtrWrapper{S: flowLog.DestIP}, strings.Join(feeds, ", "))
 	default:
 		description = fmt.Sprintf("%s %s connected to %s %s", flowLog.SourceType, util.StringPtrWrapper{S: flowLog.SourceIP}, flowLog.DestType, util.StringPtrWrapper{S: flowLog.DestIP})
@@ -51,7 +52,7 @@ func ConvertFlowLog(flowLog FlowLogJSONOutput, key string, hit *elastic.SearchHi
 	}
 }
 
-func ConvertDNSLog(l DNSLog, key string, hit *elastic.SearchHit, domains map[string]struct{}, feeds ...string) SuspiciousDomainSecurityEvent {
+func ConvertDNSLog(l DNSLog, key db.QueryKey, hit *elastic.SearchHit, domains map[string]struct{}, feeds ...string) SuspiciousDomainSecurityEvent {
 	var sname string
 	if l.ClientName != "-" && l.ClientName != "" {
 		sname = l.ClientName
@@ -62,14 +63,14 @@ func ConvertDNSLog(l DNSLog, key string, hit *elastic.SearchHit, domains map[str
 	var desc string
 	var sDomains []string
 	switch key {
-	case "qname":
+	case db.QueryKeyDNSLogQName:
 		sDomains = []string{l.QName}
 		desc = fmt.Sprintf("%s/%s queried the domain name %s from global threat feed(s) %s",
 			l.ClientNamespace,
 			sname,
 			l.QName,
 			strings.Join(feeds, ", "))
-	case "rrsets.name":
+	case db.QueryKeyDNSLogRRSetsName:
 		// In this case, there might be more than one rrset, so we don't know which one(s) triggered
 		// the search hit a priori. So, look up the names one at time.
 		for _, rrset := range l.RRSets {
@@ -92,7 +93,7 @@ func ConvertDNSLog(l DNSLog, key string, hit *elastic.SearchHit, domains map[str
 			sname,
 			strings.Join(sDomains, ", "),
 			strings.Join(feeds, ", "))
-	case "rrsets.rdata":
+	case db.QueryKeyDNSLogRRSetsRData:
 		// In this case, there might be more than one rrset, so we don't know which one(s) triggered
 		// the search hit a priori. So, look up the rdatas one at time.
 		for _, rrset := range l.RRSets {

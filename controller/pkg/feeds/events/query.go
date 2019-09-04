@@ -13,12 +13,12 @@ import (
 )
 
 type ipSetQuerier struct {
-	q elastic.SetQuerier
+	elastic.SetQuerier
 }
 
 func (i ipSetQuerier) QuerySet(ctx context.Context, name string) ([]db.SecurityEventInterface, error) {
 	var results []db.SecurityEventInterface
-	iter, err := i.q.QueryIPSet(ctx, name)
+	iter, err := i.QueryIPSet(ctx, name)
 	if err != nil {
 		return nil, err
 	}
@@ -44,16 +44,16 @@ func NewSuspiciousIP(q elastic.SetQuerier) db.SuspiciousSet {
 }
 
 type domainNameSetQuerier struct {
-	q elastic.SetQuerier
+	elastic.SetQuerier
 }
 
 func (d domainNameSetQuerier) QuerySet(ctx context.Context, name string) ([]db.SecurityEventInterface, error) {
-	set, err := d.q.GetDomainNameSet(ctx, name)
+	set, err := d.GetDomainNameSet(ctx, name)
 	if err != nil {
 		return nil, err
 	}
 	var results []db.SecurityEventInterface
-	iter, err := d.q.QueryDomainNameSet(ctx, name, set)
+	iter, err := d.QueryDomainNameSet(ctx, name, set)
 	if err != nil {
 		return nil, err
 	}

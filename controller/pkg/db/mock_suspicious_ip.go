@@ -7,10 +7,10 @@ import (
 )
 
 type MockSuspicious struct {
-	Error error
-	Hits  []SecurityEventInterface
+	Error  error
+	Events []SecurityEventInterface
 }
 
 func (m *MockSuspicious) QuerySet(ctx context.Context, name string) ([]SecurityEventInterface, error) {
-	return m.Hits, m.Error
+	return m.Events, m.Error
 }

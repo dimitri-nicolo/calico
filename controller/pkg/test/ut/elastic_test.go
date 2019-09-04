@@ -5,123 +5,19 @@ package ut
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"io"
 	"io/ioutil"
-	"net/http"
-	"net/url"
 	"os"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/client"
 	oElastic "github.com/olivere/elastic"
 	. "github.com/onsi/gomega"
-	log "github.com/sirupsen/logrus"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/elastic"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/events"
 )
-
-var uut *elastic.Elastic
-var elasticClient *oElastic.Client
-
-const ElasticsearchImage = "docker.elastic.co/elasticsearch/elasticsearch:6.4.3"
-
-func TestMain(m *testing.M) {
-	d, err := client.NewEnvClient()
-	if err != nil {
-		panic("could not create Docker client: " + err.Error())
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	// Pull image
-	r, err := d.ImagePull(ctx, ElasticsearchImage, types.ImagePullOptions{})
-	if err != nil {
-		panic("could not pull image " + ElasticsearchImage + " " + err.Error())
-	}
-	defer func() { _ = r.Close() }()
-	_, err = io.Copy(os.Stdout, r)
-	if err != nil {
-		panic("could not read pull response: " + err.Error())
-	}
-
-	// Create Elastic
-	cfg := &container.Config{
-		Env:   []string{"discovery.type=single-node"},
-		Image: ElasticsearchImage,
-	}
-	result, err := d.ContainerCreate(ctx, cfg, nil, nil, "")
-	if err != nil {
-		panic("could not create elastic container: " + err.Error())
-	}
-
-	err = d.ContainerStart(ctx, result.ID, types.ContainerStartOptions{})
-	if err != nil {
-		panic("could not start elastic: " + err.Error())
-	}
-
-	// get IP
-	j, err := d.ContainerInspect(ctx, result.ID)
-	if err != nil {
-		panic("could not inspect elastic container: " + err.Error())
-	}
-	host := j.NetworkSettings.IPAddress
-
-	u := &url.URL{
-		Scheme: "http",
-		Host:   fmt.Sprintf("%s:9200", host),
-	}
-
-	// Wait for elastic to start responding
-	c := http.Client{}
-	to := time.After(1 * time.Minute)
-	for {
-		_, err := c.Get("http://" + u.Host)
-		if err == nil {
-			break
-		}
-		select {
-		case <-to:
-			panic("elasticsearch didn't come up")
-		default:
-			time.Sleep(10 * time.Millisecond)
-		}
-	}
-
-	options := []oElastic.ClientOptionFunc{
-		oElastic.SetURL(u.String()),
-		oElastic.SetErrorLog(log.StandardLogger()),
-		oElastic.SetSniff(false),
-		oElastic.SetHealthcheck(false),
-		//elastic.SetTraceLog(log.StandardLogger()),
-	}
-	elasticClient, err = oElastic.NewClient(options...)
-	if err != nil {
-		panic("could not create elasticClient: " + err.Error())
-	}
-
-	uut, err = elastic.NewElastic(&http.Client{}, u, "", "")
-	if err != nil {
-		panic("could not create unit under test: " + err.Error())
-	}
-
-	uut.Run(ctx)
-
-	rc := m.Run()
-
-	timeout := time.Second * 10
-	_ = d.ContainerStop(ctx, result.ID, &timeout)
-	_ = d.ContainerRemove(ctx, result.ID, types.ContainerRemoveOptions{Force: true})
-
-	os.Exit(rc)
-}
 
 func TestGetDomainNameSet_GetDomainNameSetModifed_Exist(t *testing.T) {
 	g := NewGomegaWithT(t)
@@ -265,7 +161,7 @@ func TestQueryDomainNameSet_Success(t *testing.T) {
 	g.Expect(err).ToNot(HaveOccurred())
 
 	var actual []events.DNSLog
-	var keys []string
+	var keys []db.QueryKey
 	for iter.Next() {
 		k, h := iter.Value()
 		keys = append(keys, k)
@@ -274,7 +170,11 @@ func TestQueryDomainNameSet_Success(t *testing.T) {
 		g.Expect(err).ToNot(HaveOccurred())
 		actual = append(actual, al)
 	}
-	g.Expect(keys).To(Equal([]string{"qname", "rrsets.name", "rrsets.name", "rrsets.rdata", "rrsets.rdata"}))
+	g.Expect(keys).To(Equal([]db.QueryKey{
+		db.QueryKeyDNSLogQName,
+		db.QueryKeyDNSLogRRSetsName, db.QueryKeyDNSLogRRSetsName,
+		db.QueryKeyDNSLogRRSetsRData, db.QueryKeyDNSLogRRSetsRData,
+	}))
 
 	// Qname query
 	g.Expect(actual[0].QName).To(Equal("xx.yy.zzz"))
@@ -322,7 +222,7 @@ func TestPutSecurityEvent_DomainName(t *testing.T) {
 	domains := map[string]struct{}{
 		"xx.yy.zzz": {},
 	}
-	e := events.ConvertDNSLog(l, "qname", h, domains, "my-feed", "my-other-feed")
+	e := events.ConvertDNSLog(l, db.QueryKeyDNSLogQName, h, domains, "my-feed", "my-other-feed")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

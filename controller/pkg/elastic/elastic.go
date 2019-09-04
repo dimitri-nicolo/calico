@@ -440,8 +440,8 @@ func (e *Elastic) QueryIPSet(ctx context.Context, name string) (Iterator, error)
 
 	var scrollers []scrollerEntry
 	for _, t := range queryTerms {
-		scrollers = append(scrollers, scrollerEntry{name: "source_ip", scroller: f(name, "source_ip", t), terms: t})
-		scrollers = append(scrollers, scrollerEntry{name: "dest_ip", scroller: f(name, "dest_ip", t), terms: t})
+		scrollers = append(scrollers, scrollerEntry{key: db.QueryKeyFlowLogSourceIP, scroller: f(name, "source_ip", t), terms: t})
+		scrollers = append(scrollers, scrollerEntry{key: db.QueryKeyFlowLogDestIP, scroller: f(name, "dest_ip", t), terms: t})
 	}
 
 	return newQueryIterator(ctx, scrollers, name), nil
@@ -464,7 +464,7 @@ func (e *Elastic) QueryDomainNameSet(ctx context.Context, name string, set db.Do
 			SortBy(elastic.SortByDoc{}).
 			Size(QuerySize).
 			Query(elastic.NewTermsQuery("qname", t...))
-		scrollers = append(scrollers, scrollerEntry{name: "qname", scroller: qname, terms: t})
+		scrollers = append(scrollers, scrollerEntry{key: db.QueryKeyDNSLogQName, scroller: qname, terms: t})
 	}
 
 	// RRSet.name scrollers
@@ -478,7 +478,7 @@ func (e *Elastic) QueryDomainNameSet(ctx context.Context, name string, set db.Do
 					elastic.NewTermsQuery("rrsets.name", t...),
 				),
 			)
-		scrollers = append(scrollers, scrollerEntry{name: "rrsets.name", scroller: rrsn, terms: t})
+		scrollers = append(scrollers, scrollerEntry{key: db.QueryKeyDNSLogRRSetsName, scroller: rrsn, terms: t})
 	}
 
 	// RRSet.rdata scrollers
@@ -492,7 +492,7 @@ func (e *Elastic) QueryDomainNameSet(ctx context.Context, name string, set db.Do
 					elastic.NewTermsQuery("rrsets.rdata", t...),
 				),
 			)
-		scrollers = append(scrollers, scrollerEntry{name: "rrsets.rdata", scroller: rrsrd, terms: t})
+		scrollers = append(scrollers, scrollerEntry{key: db.QueryKeyDNSLogRRSetsRData, scroller: rrsrd, terms: t})
 	}
 	return newQueryIterator(ctx, scrollers, name), nil
 }

@@ -5,6 +5,7 @@ package elastic
 import (
 	"context"
 	"errors"
+	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"io"
 	"testing"
 
@@ -57,14 +58,14 @@ func TestElasticFlowLogIterator(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
-	expectedKey := "source_ip"
+	expectedKey := db.QueryKeyFlowLogSourceIP
 	i := newQueryIterator(
 		ctx,
 		[]scrollerEntry{{expectedKey, scroll, nil}},
 		"test")
 
 	var actualHits []*elastic.SearchHit
-	var actualKeys []string
+	var actualKeys []db.QueryKey
 	for i.Next() {
 		k, h := i.Value()
 		actualKeys = append(actualKeys, k)
@@ -101,7 +102,7 @@ func TestElasticFlowLogIteratorWithError(t *testing.T) {
 
 	scroll := &mockScrollerError{}
 	i := queryIterator{
-		scrollers: []scrollerEntry{{"dest_ip", scroll, nil}},
+		scrollers: []scrollerEntry{{db.QueryKeyFlowLogDestIP, scroll, nil}},
 		ctx:       ctx,
 	}
 
@@ -122,7 +123,7 @@ func TestElasticFlowLogIteratorWithTwoScrollers(t *testing.T) {
 	}
 
 	scrollers := []scrollerEntry{
-		{"source_ip", &mockScroller{
+		{db.QueryKeyFlowLogSourceIP, &mockScroller{
 			[]*elastic.SearchResult{
 				{
 					Hits: &elastic.SearchHits{
@@ -131,7 +132,7 @@ func TestElasticFlowLogIteratorWithTwoScrollers(t *testing.T) {
 				},
 			},
 		}, nil},
-		{"dest_ip", &mockScroller{
+		{db.QueryKeyFlowLogDestIP, &mockScroller{
 			[]*elastic.SearchResult{
 				{
 					Hits: &elastic.SearchHits{

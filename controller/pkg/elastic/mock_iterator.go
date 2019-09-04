@@ -31,7 +31,7 @@ func (m *MockSetQuerier) QueryDomainNameSet(ctx context.Context, name string, se
 type MockIterator struct {
 	Error      error
 	ErrorIndex int
-	Keys       []string
+	Keys       []db.QueryKey
 	Hits       []*elastic.SearchHit
 	next       int
 }
@@ -42,7 +42,7 @@ func (m *MockIterator) Next() bool {
 	return cur < len(m.Hits) && cur != m.ErrorIndex
 }
 
-func (m *MockIterator) Value() (scrollerName string, hit *elastic.SearchHit) {
+func (m *MockIterator) Value() (key db.QueryKey, hit *elastic.SearchHit) {
 	cur := m.next - 1
 	return m.Keys[cur], m.Hits[cur]
 }

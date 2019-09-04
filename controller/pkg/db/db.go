@@ -49,3 +49,14 @@ type AuditLog interface {
 type IPSetSpec []string
 
 type DomainNameSetSpec []string
+
+type QueryKey int
+
+const (
+	QueryKeyUnknown QueryKey = iota
+	QueryKeyFlowLogSourceIP
+	QueryKeyFlowLogDestIP
+	QueryKeyDNSLogQName
+	QueryKeyDNSLogRRSetsName
+	QueryKeyDNSLogRRSetsRData
+)

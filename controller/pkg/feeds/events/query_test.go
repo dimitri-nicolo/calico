@@ -52,7 +52,7 @@ func TestSuspiciousIP_Success(t *testing.T) {
 	i := &elastic.MockIterator{
 		ErrorIndex: -1,
 		Hits:       hits,
-		Keys:       []string{"source_ip", "dest_ip", "junk"}}
+		Keys:       []db.QueryKey{db.QueryKeyFlowLogSourceIP, db.QueryKeyFlowLogDestIP, db.QueryKeyUnknown}}
 	q := &elastic.MockSetQuerier{Iterator: i}
 	uut := NewSuspiciousIP(q)
 	expected := []db.SecurityEventInterface{
@@ -118,7 +118,7 @@ func TestSuspiciousIP_IterationFails(t *testing.T) {
 		Error:      errors.New("test"),
 		ErrorIndex: 1,
 		Hits:       hits,
-		Keys:       []string{"source_ip", "dest_ip"}}
+		Keys:       []db.QueryKey{db.QueryKeyFlowLogSourceIP, db.QueryKeyFlowLogDestIP}}
 	q := &elastic.MockSetQuerier{Iterator: i}
 	uut := NewSuspiciousIP(q)
 
@@ -184,7 +184,7 @@ func TestSuspiciousDomain_Success(t *testing.T) {
 	i := &elastic.MockIterator{
 		ErrorIndex: -1,
 		Hits:       hits,
-		Keys:       []string{"qname", "qname", "qname", "junk"}}
+		Keys:       []db.QueryKey{db.QueryKeyDNSLogQName, db.QueryKeyDNSLogQName, db.QueryKeyDNSLogQName, db.QueryKeyUnknown}}
 	domains := db.DomainNameSetSpec{
 		"xx.yy.zzz",
 		"qq.rr.sss",
@@ -228,7 +228,7 @@ func TestSuspiciousDomain_IterationFails(t *testing.T) {
 		Error:      errors.New("iteration failed"),
 		ErrorIndex: 0,
 		Hits:       hits,
-		Keys:       []string{"qname"}}
+		Keys:       []db.QueryKey{db.QueryKeyDNSLogQName}}
 	domains := db.DomainNameSetSpec{
 		"xx.yy.zzz",
 		"qq.rr.sss",

@@ -3,6 +3,7 @@
 package events
 
 import (
+	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"testing"
 
 	"github.com/olivere/elastic"
@@ -76,7 +77,7 @@ func TestConvertFlowLogSourceIP(t *testing.T) {
 		SuspiciousPrefix: nil,
 	}
 
-	actual := ConvertFlowLog(tc, "source_ip", hit, expected.Feeds...)
+	actual := ConvertFlowLog(tc, db.QueryKeyFlowLogSourceIP, hit, expected.Feeds...)
 
 	g.Expect(actual).Should(Equal(expected), "Generated SecurityEvent matches expectations")
 	g.Expect(actual.ID()).Should(Equal("testfeed_123_tcp_1.2.3.4_443_2.3.4.5_80"))
@@ -147,7 +148,7 @@ func TestConvertFlowLogDestIP(t *testing.T) {
 		SuspiciousPrefix: nil,
 	}
 
-	actual := ConvertFlowLog(tc, "dest_ip", hit, expected.Feeds...)
+	actual := ConvertFlowLog(tc, db.QueryKeyFlowLogDestIP, hit, expected.Feeds...)
 
 	g.Expect(actual).Should(Equal(expected), "Generated SecurityEvent matches expectations")
 	g.Expect(actual.ID()).Should(Equal("testfeed_123_tcp_1.2.3.4_443_2.3.4.5_80"))
@@ -218,7 +219,7 @@ func TestConvertFlowLogUnknown(t *testing.T) {
 		SuspiciousPrefix: nil,
 	}
 
-	actual := ConvertFlowLog(tc, "unknown", hit, expected.Feeds...)
+	actual := ConvertFlowLog(tc, db.QueryKeyUnknown, hit, expected.Feeds...)
 
 	g.Expect(actual).Should(Equal(expected), "Generated SecurityEvent matches expectations")
 	g.Expect(actual.ID()).Should(Equal("testfeed_123_tcp_1.2.3.4_443_2.3.4.5_80"))
@@ -274,7 +275,7 @@ func TestConvertDNSLog_QName(t *testing.T) {
 		Feeds:             []string{"test-feed"},
 		SuspiciousDomains: []string{"www.badguys.co.uk"},
 	}
-	actual := ConvertDNSLog(tc, "qname", hit, map[string]struct{}{}, "test-feed")
+	actual := ConvertDNSLog(tc, db.QueryKeyDNSLogQName, hit, map[string]struct{}{}, "test-feed")
 	g.Expect(actual).To(Equal(expected))
 	g.Expect(actual.ID()).To(Equal("test-feed_1_20.21.22.23_www.badguys.co.uk"))
 }
@@ -338,7 +339,7 @@ func TestConvertDNSLog_RRSetName(t *testing.T) {
 	domains := map[string]struct{}{
 		"www1.badguys-backend.co.uk": {},
 	}
-	actual := ConvertDNSLog(tc, "rrsets.name", hit, domains, "test-feed", "my-feed")
+	actual := ConvertDNSLog(tc, db.QueryKeyDNSLogRRSetsName, hit, domains, "test-feed", "my-feed")
 	g.Expect(actual).To(Equal(expected))
 	g.Expect(actual.ID()).To(Equal("test-feed~my-feed_1_20.21.22.23_www1.badguys-backend.co.uk"))
 
@@ -346,14 +347,14 @@ func TestConvertDNSLog_RRSetName(t *testing.T) {
 	expected.Description = "default/client-8888-* got DNS query results including suspicious domain(s) www.badguys.co.uk, www1.badguys-backend.co.uk from global threat feed(s) test-feed, my-feed"
 	expected.SuspiciousDomains = []string{"www.badguys.co.uk", "www1.badguys-backend.co.uk"}
 	domains["www.badguys.co.uk"] = struct{}{}
-	actual = ConvertDNSLog(tc, "rrsets.name", hit, domains, "test-feed", "my-feed")
+	actual = ConvertDNSLog(tc, db.QueryKeyDNSLogRRSetsName, hit, domains, "test-feed", "my-feed")
 	g.Expect(actual).To(Equal(expected))
 	g.Expect(actual.ID()).To(Equal("test-feed~my-feed_1_20.21.22.23_www.badguys.co.uk~www1.badguys-backend.co.uk"))
 
 	// No matched domains
 	expected.Description = "default/client-8888-* got DNS query results including suspicious domain(s)  from global threat feed(s) test-feed, my-feed"
 	expected.SuspiciousDomains = nil
-	actual = ConvertDNSLog(tc, "rrsets.name", hit, map[string]struct{}{}, "test-feed", "my-feed")
+	actual = ConvertDNSLog(tc, db.QueryKeyDNSLogRRSetsName, hit, map[string]struct{}{}, "test-feed", "my-feed")
 	g.Expect(actual).To(Equal(expected))
 }
 
@@ -416,19 +417,19 @@ func TestConvertDNSLog_RRSetRData(t *testing.T) {
 	domains := map[string]struct{}{
 		"uef0.malh0st.io": {},
 	}
-	actual := ConvertDNSLog(tc, "rrsets.rdata", hit, domains, "test-feed")
+	actual := ConvertDNSLog(tc, db.QueryKeyDNSLogRRSetsRData, hit, domains, "test-feed")
 	g.Expect(actual).To(Equal(expected))
 
 	// Multiple matched domains
 	expected.Description = "default/client-8888-* got DNS query results including suspicious domain(s) www1.badguys-backend.co.uk, uef0.malh0st.io from global threat feed(s) test-feed"
 	expected.SuspiciousDomains = []string{"www1.badguys-backend.co.uk", "uef0.malh0st.io"}
 	domains["www1.badguys-backend.co.uk"] = struct{}{}
-	actual = ConvertDNSLog(tc, "rrsets.rdata", hit, domains, "test-feed")
+	actual = ConvertDNSLog(tc, db.QueryKeyDNSLogRRSetsRData, hit, domains, "test-feed")
 	g.Expect(actual).To(Equal(expected))
 
 	// No matched domains
 	expected.Description = "default/client-8888-* got DNS query results including suspicious domain(s)  from global threat feed(s) test-feed"
 	expected.SuspiciousDomains = nil
-	actual = ConvertDNSLog(tc, "rrsets.rdata", hit, map[string]struct{}{}, "test-feed")
+	actual = ConvertDNSLog(tc, db.QueryKeyDNSLogRRSetsRData, hit, map[string]struct{}{}, "test-feed")
 	g.Expect(actual).To(Equal(expected))
 }
