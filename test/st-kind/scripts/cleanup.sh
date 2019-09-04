@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
 kind delete cluster
-
-rm -R test-resources
+unset KUBECONFIG
+rm -rf $(pwd)/test-resources
+rm -rf /tmp/kind-configs

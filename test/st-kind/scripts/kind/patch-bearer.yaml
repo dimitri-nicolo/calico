@@ -1,0 +1,20 @@
+# this config file contains all config fields with comments
+kind: Cluster
+apiVersion: kind.sigs.k8s.io/v1alpha3
+# patch the generated kubeadm config with some extra settings
+kubeadmConfigPatches:
+- |
+  apiVersion: kubeadm.k8s.io/v1beta2
+  kind: ClusterConfiguration
+  metadata:
+    name: config
+  apiServer:
+    extraArgs:
+      token-auth-file: "/etc/kubernetes/pki/auth/tokens.csv"
+nodes:
+# the control plane node config
+- role: control-plane
+  extraMounts:
+  - containerPath: /etc/kubernetes/pki/auth/
+    hostPath: <REPLACE>/auth/
+    readOnly: true

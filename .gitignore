@@ -41,3 +41,4 @@ docker-image/voltron/templates
 # Secrets
 test/st-kind/config.json
 test/st-kind/docker_auth.json
+test/st-kind/test-resources/**

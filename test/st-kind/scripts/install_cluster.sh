@@ -9,6 +9,8 @@ alias gcloud=/root/google-cloud-sdk/bin/gcloud
 
 echo "INFO: Checking for the presence of the right credentials"
 
+token_type=${1-bearer}
+
 config_json="config.json"
 docker_auth="docker_auth.json"
 
@@ -58,8 +60,17 @@ fi
 # Create the kind cluster #
 ###########################
 
-echo "INFO: Creating a kind cluster to setup st tests."
-kind create cluster
+auth_dir=/tmp/kind-configs
+mkdir -p ${auth_dir}
+kind_config_template="$(pwd)/scripts/kind/patch-${token_type}.yaml"
+kind_config_path="${auth_dir}/patch-${token_type}.yaml"
+cp ${kind_config_template} ${kind_config_path}
+cp -r $(pwd)/scripts/auth ${auth_dir}/
+sed -i "s~<REPLACE>~$auth_dir~g" ${kind_config_path}
+
+echo "INFO: Creating a kind cluster to setup st tests with patch ${kind_config_path}"
+cat ${kind_config_path}
+kind create cluster --config ${kind_config_path}
 
 # Setup kubectl
 export KUBECONFIG="$(kind get kubeconfig-path --name="kind")"

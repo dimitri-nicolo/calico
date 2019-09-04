@@ -96,8 +96,7 @@ endif
 
 # Mount Semaphore configuration files.
 ifdef ST_MODE
-  EXTRA_DOCKER_ARGS = -v /var/run/docker.sock:/var/run/docker.sock -v /home/runner/config:/home/runner/config:rw -v /home/runner/docker_auth.json:/home/runner/config/docker_auth.json:rw
-  
+  EXTRA_DOCKER_ARGS = -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp:rw -v /home/runner/config:/home/runner/config:rw -v /home/runner/docker_auth.json:/home/runner/config/docker_auth.json:rw
 endif
 
 # For building, we use the go-build image for the *host* architecture, even if the target is different
@@ -283,7 +282,9 @@ st-old: $(MANIFESTS) $(COMPONENTS)
 .PHONY: st
 st:  $(COMPONENTS)
 	$(MAKE) images
-	$(MAKE) build_cmd ST_MODE=true
+	# TODO: to be updated in https://tigera.atlassian.net/browse/SAAS-283
+	# EXTRA_GINKGO_ARGS="-- -token-type=basic" $(MAKE) build_cmd ST_MODE=true &&
+	EXTRA_GINKGO_ARGS="-- -token-type=bearer" $(MAKE) build_cmd ST_MODE=true
 
 .PHONY: build_cmd
 build_cmd: CMD = go mod download && $(GINKGO) -r test/st-kind $(EXTRA_GINKGO_ARGS)
