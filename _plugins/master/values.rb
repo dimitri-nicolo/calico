@@ -585,7 +585,7 @@ def gen_chart_specific_values_master(versions, imageNames, imageRegistry, chart,
 
     flexvol:
       # flexvol does not use imageRegistry as it is an external OS image
-      image: #{imageNames["flexvol"]}
+      image: #{imageRegistry}#{imageNames["flexvol"]}
       tag: #{versions["flexvol"]}
 
     cpHorizontalAutoscaler:
