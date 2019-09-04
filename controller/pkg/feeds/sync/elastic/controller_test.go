@@ -275,9 +275,15 @@ func TestController_Add_FailToPut(t *testing.T) {
 			g.Eventually(dbm.Calls).Should(ContainElement(
 				db.Call{Method: "Put" + tc.name, Name: name, Value: tc.set.Interface()}))
 			g.Expect(countMethod(dbm, "Put"+tc.name)()).To(Equal(1))
-			g.Expect(stat.Status().ErrorConditions).To(HaveLen(1))
+
+			// Potential race condition between call to Put and recording the error, so we just
+			// need the error to eventually be recorded.
+			g.Eventually(func() int { return len(stat.Status().ErrorConditions) }).Should(Equal(1))
 			g.Expect(stat.Status().ErrorConditions[0].Type).To(Equal(statser.ElasticSyncFailed))
-			g.Expect(failed).To(BeTrue())
+
+			// Potential race condition on calling of the fail function, so we just need it to eventually
+			// have been called.
+			g.Eventually(failed).Should(BeTrue())
 
 			dbm.PutError = nil
 			tkr.reconcile(t, ctx)
