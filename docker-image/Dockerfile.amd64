@@ -10,8 +10,8 @@ WORKDIR /code
 RUN ln -s /code/calico-k8sapiserver /usr/bin
 
 
-RUN addgroup -S apiserverusergroup
-RUN adduser -S -D 999 apiserverusergroup
+RUN addgroup -S apiserver
+RUN adduser -S -D 999 apiserver
 
 USER 999
 
