@@ -21,15 +21,15 @@ This how-to guide uses the following {{site.prodname}} features:
 
 #### Pull or push threat feeds?
 
-{{site.prodname}} supports both push and pull methods for updating threat feeds. Pull method supports fully automated threat feed updates driven by {{site.prodname}} without user intervention. Push method can be used for manually updating a threat feed. The push method is useful for threat feeds that Tigera cannot pull updates from (for example, if they are not available over HTTP/HTTPS), or if you prefer to manually update threat feeds based on your own schedule.
+{{site.prodname}} supports both push and pull methods for updating threat feeds. Use the **pull method** for fully automated threat feed updates without user intervention. Use the **push method** for manually updating a threat feed; for example, threat feeds not available over HTTP/HTTPS), or to fit your own schedule.
 
 #### Domain name threat feeds
 
-The recommended best practice is to develop a whitelist of "known-good" domains that particular applications or services must access, and then [enforce this whitelist with network policy](/{{page.version}}/security/domain-based-policy).
+A best practice is to develop a whitelist of "known-good" domains that particular applications or services must access, and then [enforce this whitelist with network policy](/{{page.version}}/security/domain-based-policy).
 
-In addition to whitelists, you can use threat feeds to monitor your cluster for DNS queries to known-malicous or suspicious domain names. {{site.prodname}} monitors DNS queries and generates alerts for any that are listed in your threat feed.
+In addition to whitelists, you can use threat feeds to monitor your cluster for DNS queries to known malicious or suspicious domain names. {{site.prodname}} monitors DNS queries and generates alerts for any that are listed in your threat feed.
 
-You will get the most security value out of threat feeds for domain names associated with malicous egress activity, like command and control (C2) servers or data exfiltration.  Threat feeds that associate domain names with malicous ingress activity, like port scans or IP sweeps are less useful since these activities do not cause endpoints in your cluster to query DNS.  It is better to consider [IP-based threat feeds](./suspicious-IPs) for ingress activity.
+Threat feeds for domain names associated with malicious **egress** activity (e.g. command and control (C2) servers or data exfiltration), provide the most security value.  Threat feeds that associate domain names with malicious **ingress** activity (e.g. port scans or IP sweeps) are less useful since these activities do not cause endpoints in your cluster to query DNS.  It is better to consider [IP-based threat feeds](./suspicious-IPs) for ingress activity.
 
 ### Before you begin...
 
@@ -77,7 +77,7 @@ To add threat feeds to {{site.prodname}} for automatic updates (default is once 
 
 #### Push threat feed updates
 
-Use the push method if your threat feeds that are not in newline-delimited format and available over HTTP, or if you prefer to manually update threat feeds on your own schedule.
+Use the push method if your threat feeds that are not in newline-delimited format, not available over HTTP, or if you prefer to manually update threat feeds on your own schedule.
 
 1. Create the GlobalThreatFeed YAML and save it to file.
    Replace the **name** field with your own name. The name is important in the later steps so make note of it.
