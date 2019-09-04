@@ -1,0 +1,8 @@
+FROM calico/go-build:v0.24
+MAINTAINER Brendan Creane <brendan@tigera.io>
+
+RUN apk update && apk upgrade --available
+RUN apk add --no-cache docker
+RUN apk upgrade --no-cache
+
+ENTRYPOINT ["/sbin/tini", "--", "/usr/local/bin/entrypoint.sh"]

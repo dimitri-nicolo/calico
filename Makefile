@@ -11,14 +11,11 @@ PACKAGE_NAME?=github.com/tigera/calicoq
 LOCAL_USER_ID?=$(shell id -u $$USER)
 BINARY:=bin/calicoq
 
-GO_BUILD_VER?=latest
+GO_BUILD_VER?=v0.24
 CALICO_BUILD?=calico/go-build:$(GO_BUILD_VER)
 # Specific version for fossa license checks
 FOSSA_GO_BUILD_VER?=v0.18
 FOSSA_GO_BUILD?=calico/go-build:$(FOSSA_GO_BUILD_VER)
-
-#This is a version with known container with compatible versions of sed/grep etc. 
-TOOLING_BUILD?=calico/go-build:v0.20	
 
 CALICOQ_VERSION?=$(shell git describe --tags --dirty --always)
 CALICOQ_BUILD_DATE?=$(shell date -u +'%FT%T%z')
@@ -32,6 +29,28 @@ VERSION_FLAGS=-X $(PACKAGE_NAME)/calicoq/commands.VERSION=$(CALICOQ_VERSION) \
 BUILD_LDFLAGS=-ldflags "$(VERSION_FLAGS)"
 RELEASE_LDFLAGS=-ldflags "$(VERSION_FLAGS) -s -w"
 
+# Create an extended go-build image with docker binary installed for use with st-containerized target
+TOOLING_IMAGE?=calico/go-build-with-docker
+TOOLING_IMAGE_VERSION?=v0.24
+TOOLING_IMAGE_CREATED=.go-build-with-docker.created
+  
+$(TOOLING_IMAGE_CREATED): Dockerfile-testenv.amd64
+	docker build --cpuset-cpus 0 --pull -t $(TOOLING_IMAGE):$(TOOLING_IMAGE_VERSION) -f Dockerfile-testenv.amd64 .
+	touch $@
+
+# Volume-mount gopath into the build container to cache go module's packages. If the environment is using multiple
+# comma-separated directories for gopath, use the first one, as that is the default one used by go modules.
+ifneq ($(GOPATH),)
+    # If the environment is using multiple comma-separated directories for gopath, use the first one, as that
+    # is the default one used by go modules.
+    GOMOD_CACHE = $(shell echo $(GOPATH) | cut -d':' -f1)/pkg/mod
+else
+    # If gopath is empty, default to $(HOME)/go.
+    GOMOD_CACHE = $$HOME/go/pkg/mod
+endif
+
+EXTRA_DOCKER_ARGS += -v $(GOMOD_CACHE):/go/pkg/mod:rw
+
 # Allow libcalico-go and the ssh auth sock to be mapped into the build container.
 ifdef LIBCALICOGO_PATH
   EXTRA_DOCKER_ARGS += -v $(LIBCALICOGO_PATH):/go/src/github.com/projectcalico/libcalico-go:ro
@@ -40,13 +59,15 @@ ifdef SSH_AUTH_SOCK
   EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
 endif
 
-DOCKER_RUN := mkdir -p .go-pkg-cache && \
+DOCKER_RUN := mkdir -p .go-pkg-cache $(GOMOD_CACHE) && \
               docker run --rm \
                          --net=host \
                          $(EXTRA_DOCKER_ARGS) \
                          -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+                         -e GOCACHE=/go-cache \
+                         -e GO111MODULE=off \
                          -v $${PWD}:/go/src/$(PACKAGE_NAME):rw \
-                         -v $${PWD}/.go-pkg-cache:/go/pkg:rw \
+                         -v $${PWD}/.go-pkg-cache:/go-cache:rw \
                          -w /go/src/$(PACKAGE_NAME) 
 
 # Always install the git hooks to prevent publishing closed source code to a non-private repo.
@@ -124,14 +145,14 @@ st: bin/calicoq
 	CALICOQ=`pwd`/$^ st/run-test
 
 .PHONY: st-containerized
-st-containerized: build-image
+st-containerized: build-image $(TOOLING_IMAGE_CREATED)
 	docker run --net=host --privileged \
 		--rm -t \
 		--entrypoint '/bin/sh' \
 		-v $(CURDIR):/code/$(PACKAGE_NAME) \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-w /code/$(PACKAGE_NAME) \
-		$(CALICO_BUILD) \
+		$(TOOLING_IMAGE):$(TOOLING_IMAGE_VERSION) \
 		-c 'CALICOQ=`pwd`/$(BINARY) st/run-test'
 
 .PHONY: scale-test
@@ -274,7 +295,7 @@ guard-git-felix:
 
 ## Update libary pin in glide.yaml
 update-felix-pin: guard-ssh-forwarding-bug guard-git-felix
-	@$(DOCKER_RUN) $(TOOLING_BUILD) /bin/sh -c '\
+	@$(DOCKER_RUN) $(CALICO_BUILD) /bin/sh -c '\
 		LABEL="$(FELIX_GLIDE_LABEL)" \
 		REPO="$(FELIX_REPO)" \
 		VERSION="$(FELIX_VERSION)" \
@@ -307,7 +328,7 @@ guard-git-licensing:
 
 ## Update libary pin in glide.yaml
 update-licensing-pin: guard-ssh-forwarding-bug guard-git-licensing
-	@$(DOCKER_RUN) $(TOOLING_BUILD) /bin/sh -c '\
+	@$(DOCKER_RUN) $(CALICO_BUILD) /bin/sh -c '\
 		LABEL="$(LICENSING_GLIDE_LABEL)" \
 		REPO="$(LICENSING_REPO)" \
 		VERSION="$(LICENSING_VERSION)" \
@@ -321,15 +342,15 @@ update-licensing-pin: guard-ssh-forwarding-bug guard-git-licensing
 ###############################################################################
 # Static checks
 ###############################################################################
+# TODO: re-enable these linters !
+LINT_ARGS := --disable gosimple,govet,structcheck,errcheck,goimports,unused,ineffassign,staticcheck,deadcode,typecheck
+
 .PHONY: static-checks
 ## Perform static checks on the code.
 static-checks: vendor
-	docker run --rm \
-		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-		-v $(CURDIR):/go/src/$(PACKAGE_NAME) \
-		$(CALICO_BUILD) sh -c '\
-			cd  /go/src/$(PACKAGE_NAME) && \
-			gometalinter --deadline=300s --disable-all --enable=vet --enable=goimports  --vendor ./...'
+	$(DOCKER_RUN) \
+	  $(CALICO_BUILD) \
+	  golangci-lint run --deadline 5m $(LINT_ARGS)
 
 ###############################################################################
 # CI/CD
@@ -438,3 +459,5 @@ clean:
 	-docker rmi calico/build
 	-docker rmi $(BUILD_IMAGE) -f
 	-docker rmi calico/go-build -f
+	-docker rmi $(TOOLING_IMAGE):$(TOOLING_IMAGE_VERSION) -f
+	rm -f $(TOOLING_IMAGE_CREATED)
