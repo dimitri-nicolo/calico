@@ -33,24 +33,24 @@ var _ = Describe("Selector handler tests", func() {
 			Labels: map[string]string{
 				"vegetable": "turnip",
 			},
-			cachedSelectorResults: sh.CreateSelectorCache(),
 		}
+		epc := endpointCache{selectors: sh.CreateSelectorCache()}
 
-		Expect(ed.cachedSelectorResults).To(HaveLen(2))
-		Expect(ed.cachedSelectorResults[0]).To(Equal(MatchTypeUnknown))
-		Expect(ed.cachedSelectorResults[1]).To(Equal(MatchTypeUnknown))
+		Expect(epc.selectors).To(HaveLen(2))
+		Expect(epc.selectors[0]).To(Equal(MatchTypeUnknown))
+		Expect(epc.selectors[1]).To(Equal(MatchTypeUnknown))
 
-		Expect(m1(nil, ed)).To(Equal(MatchTypeTrue))
-		Expect(ed.cachedSelectorResults[0]).To(Equal(MatchTypeTrue))
-		Expect(ed.cachedSelectorResults[1]).To(Equal(MatchTypeUnknown))
+		Expect(m1(nil, ed, nil, &epc)).To(Equal(MatchTypeTrue))
+		Expect(epc.selectors[0]).To(Equal(MatchTypeTrue))
+		Expect(epc.selectors[1]).To(Equal(MatchTypeUnknown))
 
-		Expect(m2(nil, ed)).To(Equal(MatchTypeTrue))
-		Expect(ed.cachedSelectorResults[0]).To(Equal(MatchTypeTrue))
-		Expect(ed.cachedSelectorResults[1]).To(Equal(MatchTypeUnknown))
+		Expect(m2(nil, ed, nil, &epc)).To(Equal(MatchTypeTrue))
+		Expect(epc.selectors[0]).To(Equal(MatchTypeTrue))
+		Expect(epc.selectors[1]).To(Equal(MatchTypeUnknown))
 
-		Expect(m3(nil, ed)).To(Equal(MatchTypeTrue))
-		Expect(ed.cachedSelectorResults[0]).To(Equal(MatchTypeTrue))
-		Expect(ed.cachedSelectorResults[1]).To(Equal(MatchTypeTrue))
+		Expect(m3(nil, ed, nil, &epc)).To(Equal(MatchTypeTrue))
+		Expect(epc.selectors[0]).To(Equal(MatchTypeTrue))
+		Expect(epc.selectors[1]).To(Equal(MatchTypeTrue))
 
 		By("matching endpoint against the two selectors (only one successfully)")
 		ed = &FlowEndpointData{
@@ -58,46 +58,46 @@ var _ = Describe("Selector handler tests", func() {
 			Labels: map[string]string{
 				"vegetable": "parsnip",
 			},
-			cachedSelectorResults: sh.CreateSelectorCache(),
 		}
+		epc = endpointCache{selectors: sh.CreateSelectorCache()}
 
-		Expect(ed.cachedSelectorResults).To(HaveLen(2))
-		Expect(ed.cachedSelectorResults[0]).To(Equal(MatchTypeUnknown))
-		Expect(ed.cachedSelectorResults[1]).To(Equal(MatchTypeUnknown))
+		Expect(epc.selectors).To(HaveLen(2))
+		Expect(epc.selectors[0]).To(Equal(MatchTypeUnknown))
+		Expect(epc.selectors[1]).To(Equal(MatchTypeUnknown))
 
-		Expect(m1(nil, ed)).To(Equal(MatchTypeTrue))
-		Expect(ed.cachedSelectorResults[0]).To(Equal(MatchTypeTrue))
-		Expect(ed.cachedSelectorResults[1]).To(Equal(MatchTypeUnknown))
+		Expect(m1(nil, ed, nil, &epc)).To(Equal(MatchTypeTrue))
+		Expect(epc.selectors[0]).To(Equal(MatchTypeTrue))
+		Expect(epc.selectors[1]).To(Equal(MatchTypeUnknown))
 
-		Expect(m2(nil, ed)).To(Equal(MatchTypeTrue))
-		Expect(ed.cachedSelectorResults[0]).To(Equal(MatchTypeTrue))
-		Expect(ed.cachedSelectorResults[1]).To(Equal(MatchTypeUnknown))
+		Expect(m2(nil, ed, nil, &epc)).To(Equal(MatchTypeTrue))
+		Expect(epc.selectors[0]).To(Equal(MatchTypeTrue))
+		Expect(epc.selectors[1]).To(Equal(MatchTypeUnknown))
 
-		Expect(m3(nil, ed)).To(Equal(MatchTypeFalse))
-		Expect(ed.cachedSelectorResults[0]).To(Equal(MatchTypeTrue))
-		Expect(ed.cachedSelectorResults[1]).To(Equal(MatchTypeFalse))
+		Expect(m3(nil, ed, nil, &epc)).To(Equal(MatchTypeFalse))
+		Expect(epc.selectors[0]).To(Equal(MatchTypeTrue))
+		Expect(epc.selectors[1]).To(Equal(MatchTypeFalse))
 
 		By("matching endpoint where labels are unknown")
 		ed = &FlowEndpointData{
-			Type:                  EndpointTypeHep,
-			Labels:                nil,
-			cachedSelectorResults: sh.CreateSelectorCache(),
+			Type:   EndpointTypeHep,
+			Labels: nil,
 		}
+		epc = endpointCache{selectors: sh.CreateSelectorCache()}
 
-		Expect(ed.cachedSelectorResults).To(HaveLen(2))
-		Expect(ed.cachedSelectorResults[0]).To(Equal(MatchTypeUnknown))
-		Expect(ed.cachedSelectorResults[1]).To(Equal(MatchTypeUnknown))
+		Expect(epc.selectors).To(HaveLen(2))
+		Expect(epc.selectors[0]).To(Equal(MatchTypeUnknown))
+		Expect(epc.selectors[1]).To(Equal(MatchTypeUnknown))
 
-		Expect(m1(nil, ed)).To(Equal(MatchTypeTrue))
-		Expect(ed.cachedSelectorResults[0]).To(Equal(MatchTypeTrue))
-		Expect(ed.cachedSelectorResults[1]).To(Equal(MatchTypeUnknown))
+		Expect(m1(nil, ed, nil, &epc)).To(Equal(MatchTypeTrue))
+		Expect(epc.selectors[0]).To(Equal(MatchTypeTrue))
+		Expect(epc.selectors[1]).To(Equal(MatchTypeUnknown))
 
-		Expect(m2(nil, ed)).To(Equal(MatchTypeTrue))
-		Expect(ed.cachedSelectorResults[0]).To(Equal(MatchTypeTrue))
-		Expect(ed.cachedSelectorResults[1]).To(Equal(MatchTypeUnknown))
+		Expect(m2(nil, ed, nil, &epc)).To(Equal(MatchTypeTrue))
+		Expect(epc.selectors[0]).To(Equal(MatchTypeTrue))
+		Expect(epc.selectors[1]).To(Equal(MatchTypeUnknown))
 
-		Expect(m3(nil, ed)).To(Equal(MatchTypeUncertain))
-		Expect(ed.cachedSelectorResults[0]).To(Equal(MatchTypeTrue))
-		Expect(ed.cachedSelectorResults[1]).To(Equal(MatchTypeUncertain))
+		Expect(m3(nil, ed, nil, &epc)).To(Equal(MatchTypeUncertain))
+		Expect(epc.selectors[0]).To(Equal(MatchTypeTrue))
+		Expect(epc.selectors[1]).To(Equal(MatchTypeUncertain))
 	})
 })

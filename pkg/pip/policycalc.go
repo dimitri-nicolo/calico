@@ -2,18 +2,20 @@ package pip
 
 import (
 	"context"
+	"reflect"
 	"sync"
-
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
 	log "github.com/sirupsen/logrus"
 
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
+	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/resources"
+
 	compcfg "github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/replay"
 	"github.com/tigera/compliance/pkg/syncer"
@@ -25,16 +27,20 @@ import (
 var (
 	// These are the resource types that we need to query from the k8s API to populate our internal cache.
 	requiredPolicyTypes = []metav1.TypeMeta{
+		resources.TypeCalicoStagedKubernetesNetworkPolicies,
+		resources.TypeCalicoStagedGlobalNetworkPolicies,
+		resources.TypeCalicoStagedNetworkPolicies,
 		resources.TypeCalicoTiers,
 		resources.TypeCalicoNetworkPolicies,
 		resources.TypeCalicoGlobalNetworkPolicies,
-		resources.TypeCalicoGlobalNetworkSets,
 		resources.TypeK8sNetworkPolicies,
 		resources.TypeK8sNamespaces,
 		resources.TypeK8sServiceAccounts,
 	}
 	// These are the resource types that we need to query from the k8s API to populate our internal cache.
 	requiredEndpointTypes = []metav1.TypeMeta{
+		resources.TypeCalicoNetworkSets,
+		resources.TypeCalicoGlobalNetworkSets,
 		resources.TypeCalicoHostEndpoints,
 		resources.TypeK8sPods,
 	}
@@ -49,7 +55,7 @@ func (s *pip) GetPolicyCalculator(ctx context.Context, params *PolicyImpactParam
 	//
 	// We just use the xref cache to determine the ordered set of tiers and policies before and after the updates. Set
 	// in-sync immediately since we aren't interested in callbacks.
-	xc := xrefcache.NewXrefCache(&compcfg.Config{}, func() {})
+	xc := xrefcache.NewXrefCache(&compcfg.Config{IncludeStagedNetworkPolicies: true}, func() {})
 	xc.OnStatusUpdate(syncer.NewStatusUpdateInSync())
 
 	// Populate the endpoint cache. Run this on a go-routine so we can double up with the other queries.
@@ -79,9 +85,9 @@ func (s *pip) GetPolicyCalculator(ctx context.Context, params *PolicyImpactParam
 	// Extract the current set of config from the xrefcache.
 	resourceDataBefore := resourceDataFromXrefCache(xc)
 
-	// Apply the preview changes to the xref cache. This also constructs the set of modified resources for use by the
+	// Apply the preview changes to the xref cache. This also constructs the set of impacted resources for use by the
 	// policy calculator.
-	modified, err := ApplyPIPPolicyChanges(xc, params.ResourceActions)
+	impacted, err := ApplyPIPPolicyChanges(xc, params.ResourceActions)
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +100,7 @@ func (s *pip) GetPolicyCalculator(ctx context.Context, params *PolicyImpactParam
 	wgEps.Wait()
 
 	// Create the policy calculator.
-	calc := policycalc.NewPolicyCalculator(s.cfg, ec, resourceDataBefore, resourceDataAfter, modified)
+	calc := policycalc.NewPolicyCalculator(s.cfg, ec, resourceDataBefore, resourceDataAfter, impacted)
 
 	return calc, nil
 }
@@ -119,7 +125,7 @@ func (s *pip) syncFromArchive(cxt context.Context, params *PolicyImpactParams, c
 func (s *pip) syncFromDatastore(ctx context.Context, types []metav1.TypeMeta, cb syncer.SyncerCallbacks) error {
 	wg := sync.WaitGroup{}
 	lock := sync.Mutex{}
-	errs := make(chan error, len(requiredPolicyTypes))
+	errs := make(chan error, len(types))
 	defer close(errs)
 
 	for _, t := range types {
@@ -187,7 +193,10 @@ func resourceDataFromXrefCache(xc xrefcache.XrefCache) *policycalc.ResourceData 
 	rd.Tiers = make(policycalc.Tiers, len(xrefTiers))
 	for i := range xrefTiers {
 		for _, t := range xrefTiers[i].OrderedPolicies {
-			rd.Tiers[i] = append(rd.Tiers[i], t.GetCalicoV3())
+			rd.Tiers[i] = append(rd.Tiers[i], policycalc.Policy{
+				Policy: t.GetCalicoV3(),
+				Staged: t.IsStaged(),
+			})
 		}
 	}
 
@@ -204,66 +213,191 @@ func resourceDataFromXrefCache(xc xrefcache.XrefCache) *policycalc.ResourceData 
 	return rd
 }
 
-// ApplyPIPPolicyChanges applies the supplied resource updates on top of the loaded configuration in the xrefcache.
-func ApplyPIPPolicyChanges(xc xrefcache.XrefCache, rs []ResourceChange) (policycalc.ModifiedResources, error) {
-	modified := make(policycalc.ModifiedResources)
+// ApplyPolicyChanges applies the supplied resource updates on top of the loaded configuration in the xrefcache.
+func ApplyPIPPolicyChanges(xc xrefcache.XrefCache, rs []ResourceChange) (policycalc.ImpactedResources, error) {
+	impacted := make(policycalc.ImpactedResources)
 
 	for _, r := range rs {
+		// Get the resource ID.
+		id := resources.GetResourceID(r.Resource)
+
+		// Trace the input resource.
+		log.Debugf("Applying resource update: %s", id)
+
 		// Convert staged policies to non-staged/enforced policies. Note that we don't care about the ordering
 		// here since we're currently only passing one resource at a time, and that we skip "delete" actions
-		// for staged policies since they don't exist in the first place.
-		var enforced resources.Resource = nil
+		// for staged policies since we don't process staged policies in the "after" processing.
 		var stagedAction v3.StagedAction
 
-		switch np := r.Resource.(type) {
-		case *v3.StagedNetworkPolicy:
-			stagedAction, enforced = v3.ConvertStagedPolicyToEnforced(np)
-		case *v3.StagedGlobalNetworkPolicy:
-			stagedAction, enforced = v3.ConvertStagedGlobalPolicyToEnforced(np)
-		case *v3.StagedKubernetesNetworkPolicy:
-			stagedAction, enforced = v3.ConvertStagedKubernetesPolicyToK8SEnforced(np)
+		// Unless determined otherwise, the resource is neither modified nor enforced.
+		staged := false
+		modified := true
+
+		// Extract the resource. If this is a staged resource, convert to the enforced equivalent.
+		resource := r.Resource
+		action := r.Action
+
+		// Locate the resource in the xrefcache if it exists and work out if it has been modified.
+		existing := xc.Get(id)
+		if existing != nil {
+			modified = IsResourceModifiedForPIP(existing.GetPrimary(), resource)
 		}
 
-		// We use 'enforced' being set as a proxy for this being a staged policy so we can check whether it's a
-		// "delete" action (in which case we can ignore it).
-		if enforced != nil {
-			if r.Action == "delete" {
+		switch np := resource.(type) {
+		case *v3.StagedNetworkPolicy:
+			stagedAction, resource = v3.ConvertStagedPolicyToEnforced(np)
+			staged = true
+			modified = false
+		case *v3.StagedGlobalNetworkPolicy:
+			stagedAction, resource = v3.ConvertStagedGlobalPolicyToEnforced(np)
+			staged = true
+			modified = false
+		case *v3.StagedKubernetesNetworkPolicy:
+			stagedAction, resource = v3.ConvertStagedKubernetesPolicyToK8SEnforced(np)
+			staged = true
+			modified = false
+		}
+
+		if staged {
+			// Update and trace the resource ID.
+			id = resources.GetResourceID(resource)
+			log.Debugf("Converted resource update: %s", id)
+
+			if action == "delete" {
+				log.Debug("Staged policy deleted - no op")
 				continue
 			}
-			// type StagedAction currently only has "set" and "delete". We map "set" to a "update" in resource
-			// action terms as that is the same as a "create".
-			if stagedAction == v3.StagedActionDelete {
-				r.Action = "delete"
-			} else {
-				r.Action = "update"
+
+			switch stagedAction {
+			case v3.StagedActionDelete:
+				// If the staged action was delete then set the resource action to delete with the enforced resource.
+				action = "delete"
+			case v3.StagedActionSet, "":
+				// If the staged action was set then set the resource action update with the enforced resource. Note
+				// that update and create are handled identically.
+				action = "update"
+			default:
+				log.Warningf("Invalid staged action: %s", stagedAction)
+				continue
 			}
-		} else {
-			enforced = r.Resource
 		}
 
-		id := resources.GetResourceID(enforced)
-		modified.Add(enforced)
-
-		switch r.Action {
-		case "update":
+		switch action {
+		case "update", "create":
+			impacted.Add(id, policycalc.Impact{UseStaged: staged, Modified: modified, Deleted: false})
 			xc.OnUpdates([]syncer.Update{{
 				Type:       syncer.UpdateTypeSet,
-				Resource:   enforced,
+				Resource:   resource,
 				ResourceID: id,
 			}})
 		case "delete":
+			impacted.Add(id, policycalc.Impact{UseStaged: staged, Modified: false, Deleted: true})
 			xc.OnUpdates([]syncer.Update{{
 				Type:       syncer.UpdateTypeDeleted,
-				Resource:   enforced,
-				ResourceID: id,
-			}})
-		case "create":
-			xc.OnUpdates([]syncer.Update{{
-				Type:       syncer.UpdateTypeSet,
-				Resource:   enforced,
+				Resource:   resource,
 				ResourceID: id,
 			}})
 		}
 	}
-	return modified, nil
+
+	// Remove the actual staged resources - these are useful for the "before" calculation when we cache data from the
+	// flow logs, but we do not want them in the "after" calculation where we ignore staged policies except for those
+	// we are explicitly performing policy impact on - and in that case we convert the staged policies to the enforced
+	// equivalent.
+	DeleteStagedResources(xc)
+
+	return impacted, nil
+}
+
+// DeleteStagedResources removes all staged resources from the xref cache. We do this for the "after" processing
+// because we don't need to process staged resources in that case.
+func DeleteStagedResources(xc xrefcache.XrefCache) {
+	log.WithField("xc", xc).Debug("Deleting staged resources from xrefcache")
+	_ = xc.EachCacheEntry(resources.TypeCalicoStagedNetworkPolicies, func(ce xrefcache.CacheEntry) error {
+		log.WithField("ce", ce).Debug("Sending delete update")
+		xc.OnUpdates([]syncer.Update{
+			{Type: syncer.UpdateTypeDeleted, ResourceID: resources.GetResourceID(ce)},
+		})
+		return nil
+	})
+	_ = xc.EachCacheEntry(resources.TypeCalicoStagedGlobalNetworkPolicies, func(ce xrefcache.CacheEntry) error {
+		log.WithField("ce", ce).Debug("Sending delete update")
+		xc.OnUpdates([]syncer.Update{
+			{Type: syncer.UpdateTypeDeleted, ResourceID: resources.GetResourceID(ce)},
+		})
+		return nil
+	})
+	_ = xc.EachCacheEntry(resources.TypeCalicoStagedKubernetesNetworkPolicies, func(ce xrefcache.CacheEntry) error {
+		log.WithField("ce", ce).Debug("Sending delete update")
+		xc.OnUpdates([]syncer.Update{
+			{Type: syncer.UpdateTypeDeleted, ResourceID: resources.GetResourceID(ce)},
+		})
+		return nil
+	})
+}
+
+// IsResourceModifiedForPIP compares the before and after resource to determine if the settings have been modified in a
+// way that will impact the policy calculation of this specific resource. If modified then we cannot use historical data
+// in the flow log to augment the pip calculation.
+//
+// Note that for policies, we don't care about order changes because the order doesn't impact whether or not the policy
+// itself will match a flow. This is a minor finesse for the situation where we decrease the order of a policy but don't
+// change anything else - in this case we can still use the match data in the flow log for this policy (if we have any)
+// to augment the calculation.
+func IsResourceModifiedForPIP(r1, r2 resources.Resource) bool {
+	if reflect.TypeOf(r1) != reflect.TypeOf(r2) {
+		return false
+	}
+
+	// Copy the resources since we modify them to do the comparison.
+	r1 = r1.DeepCopyObject().(resources.Resource)
+	r2 = r2.DeepCopyObject().(resources.Resource)
+
+	switch rc1 := r1.(type) {
+	case *v3.NetworkPolicy:
+		rc2 := r2.(*v3.NetworkPolicy)
+
+		// For the purposes of PIP we don't care if the order changed since that doesn't impact the policy rule matches,
+		// so nil out the order before comparing.  We only need to compare the spec for policies.
+		rc1.Spec.Order = nil
+		rc2.Spec.Order = nil
+		return reflect.DeepEqual(rc1.Spec, rc2.Spec)
+	case *v3.StagedNetworkPolicy:
+		rc2 := r2.(*v3.StagedNetworkPolicy)
+
+		// For the purposes of PIP we don't care if the order changed since that doesn't impact the policy rule matches,
+		// so nil out the order.
+		rc1.Spec.Order = nil
+		rc2.Spec.Order = nil
+		return reflect.DeepEqual(rc1.Spec, rc2.Spec)
+	case *v3.GlobalNetworkPolicy:
+		rc2 := r2.(*v3.GlobalNetworkPolicy)
+
+		// For the purposes of PIP we don't care if the order changed since that doesn't impact the policy rule matches,
+		// so nil out the order before comparing.  We only need to compare the spec for policies.
+		rc1.Spec.Order = nil
+		rc2.Spec.Order = nil
+		return reflect.DeepEqual(rc1.Spec, rc2.Spec)
+	case *v3.StagedGlobalNetworkPolicy:
+		rc2 := r2.(*v3.StagedGlobalNetworkPolicy)
+
+		// For the purposes of PIP we don't care if the order changed since that doesn't impact the policy rule matches,
+		// so nil out the order before comparing.  We only need to compare the spec for policies.
+		rc1.Spec.Order = nil
+		rc2.Spec.Order = nil
+		return reflect.DeepEqual(rc1.Spec, rc2.Spec)
+	case *networkingv1.NetworkPolicy:
+		rc2 := r2.(*networkingv1.NetworkPolicy)
+
+		// We only need to compare the spec for policies. Kubernetes policies do not have an order.
+		return reflect.DeepEqual(rc1.Spec, rc2.Spec)
+	case *v3.StagedKubernetesNetworkPolicy:
+
+		// We only need to compare the spec for policies. Kubernetes policies do not have an order.
+		rc2 := r2.(*v3.StagedKubernetesNetworkPolicy)
+		return reflect.DeepEqual(rc1.Spec, rc2.Spec)
+	}
+
+	// Not a supported resource update type. Assume it changed.
+	return true
 }

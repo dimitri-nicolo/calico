@@ -12,18 +12,18 @@ type CompiledRule struct {
 	// - ActionFlagAllow
 	// - ActionFlagDeny, or
 	// - ActionFlagNextTier
-	Action ActionFlag
+	ActionFlag ActionFlag
 
 	// The matchers.
 	Matchers []FlowMatcher
 }
 
 // Match determines whether this rule matches the supplied flow.
-func (c *CompiledRule) Match(flow *Flow) MatchType {
+func (c *CompiledRule) Match(flow *Flow, cache *flowCache) MatchType {
 	mt := MatchTypeTrue
 	for i := range c.Matchers {
 		log.Debugf("Invoking matcher %d", i)
-		switch c.Matchers[i](flow) {
+		switch c.Matchers[i](flow, cache) {
 		case MatchTypeFalse:
 			// We did not match this matcher, so exit immediately returning no match.
 			log.Debug("No match")
@@ -57,11 +57,11 @@ func compileRule(m *MatcherFactory, namespace EndpointMatcher, in v3.Rule) *Comp
 	// Set the action
 	switch in.Action {
 	case v3.Allow:
-		c.Action = ActionFlagAllow
+		c.ActionFlag = ActionFlagAllow
 	case v3.Deny:
-		c.Action = ActionFlagDeny
+		c.ActionFlag = ActionFlagDeny
 	case v3.Pass:
-		c.Action = ActionFlagNextTier
+		c.ActionFlag = ActionFlagNextTier
 	default:
 		return nil
 	}

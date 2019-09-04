@@ -142,12 +142,12 @@ var _ = Describe("Kubernetes Network Policy PIP tests", func() {
 			ResourceID: resources.GetResourceID(knpAllowAllIngress),
 			Resource:   knpAllowAllIngress,
 		}})
-		modified := make(policycalc.ModifiedResources)
-		modified.Add(knpAllowAllIngress)
+		impacted := make(policycalc.ImpactedResources)
+		impacted.Add(resources.GetResourceID(knpAllowAllIngress), policycalc.Impact{Modified: true})
 		rdAfter := resourceDataFromXrefCache(xc)
 
 		By("Creating the policy calculators which calculates before and after")
-		pc := policycalc.NewPolicyCalculator(cfgCalcActionBefore, ep, rdBefore, rdAfter, modified)
+		pc := policycalc.NewPolicyCalculator(cfgCalcActionBefore, ep, rdBefore, rdAfter, impacted)
 
 		By("Checking a flow with dest in ns1 is unaffected")
 		f := &policycalc.Flow{
@@ -168,23 +168,29 @@ var _ = Describe("Kubernetes Network Policy PIP tests", func() {
 					"any": "value",
 				},
 			},
-			Action: policycalc.ActionAllow,
+			ActionFlag: policycalc.ActionFlagAllow,
 		}
 
-		processed, before, after := pc.Calculate(f)
+		processed, before, after := pc.CalculateSource(f)
 		Expect(processed).To(BeFalse())
-		Expect(before.Source.Action).To(Equal(policycalc.ActionAllow))
-		Expect(before.Source.Include).To(BeTrue())
-		Expect(after.Source.Action).To(Equal(policycalc.ActionAllow))
-		Expect(after.Source.Include).To(BeTrue())
+		Expect(before.Action).To(Equal(policycalc.ActionFlagAllow))
+		Expect(before.Include).To(BeTrue())
+		Expect(after.Action).To(Equal(policycalc.ActionFlagAllow))
+		Expect(after.Include).To(BeTrue())
 
 		f.Reporter = policycalc.ReporterTypeDestination
-		processed, before, after = pc.Calculate(f)
+		processed, before, after = pc.CalculateDest(f, policycalc.ActionFlagAllow, policycalc.ActionFlagAllow)
 		Expect(processed).To(BeTrue())
-		Expect(before.Destination.Action).To(Equal(policycalc.ActionDeny))
-		Expect(before.Destination.Include).To(BeTrue())
-		Expect(after.Destination.Action).To(Equal(policycalc.ActionAllow))
-		Expect(after.Destination.Include).To(BeTrue())
+		Expect(before.Action).To(Equal(policycalc.ActionFlagEndOfTierDeny))
+		Expect(before.Include).To(BeTrue())
+		Expect(after.Action).To(Equal(policycalc.ActionFlagAllow))
+		Expect(after.Include).To(BeTrue())
+
+		processed, before, after = pc.CalculateDest(f, policycalc.ActionFlagAllow, policycalc.ActionFlagDeny)
+		Expect(processed).To(BeTrue())
+		Expect(before.Action).To(Equal(policycalc.ActionFlagEndOfTierDeny))
+		Expect(before.Include).To(BeTrue())
+		Expect(after.Include).To(BeFalse())
 	})
 
 	It("handles kubernetes network policy default allow all ingress with default deny then deleting default allow", func() {
@@ -219,12 +225,12 @@ var _ = Describe("Kubernetes Network Policy PIP tests", func() {
 			Type:       syncer.UpdateTypeDeleted,
 			ResourceID: resources.GetResourceID(knpAllowAllIngress),
 		}})
-		modified := make(policycalc.ModifiedResources)
-		modified.Add(knpAllowAllIngress)
+		impacted := make(policycalc.ImpactedResources)
+		impacted.Add(resources.GetResourceID(knpAllowAllIngress), policycalc.Impact{Modified: true})
 		rdAfter := resourceDataFromXrefCache(xc)
 
 		By("Creating the policy calculators which calculates before and after")
-		pc := policycalc.NewPolicyCalculator(cfgCalcActionBefore, ep, rdBefore, rdAfter, modified)
+		pc := policycalc.NewPolicyCalculator(cfgCalcActionBefore, ep, rdBefore, rdAfter, impacted)
 
 		By("Checking a flow with dest in ns1 is unaffected")
 		f := &policycalc.Flow{
@@ -245,23 +251,23 @@ var _ = Describe("Kubernetes Network Policy PIP tests", func() {
 					"any": "value",
 				},
 			},
-			Action: policycalc.ActionAllow,
+			ActionFlag: policycalc.ActionFlagAllow,
 		}
 
-		processed, before, after := pc.Calculate(f)
-		Expect(processed).To(BeFalse())
-		Expect(before.Source.Action).To(Equal(policycalc.ActionAllow))
-		Expect(before.Source.Include).To(BeTrue())
-		Expect(after.Source.Action).To(Equal(policycalc.ActionAllow))
-		Expect(after.Source.Include).To(BeTrue())
+		modified, before, after := pc.CalculateSource(f)
+		Expect(modified).To(BeFalse())
+		Expect(before.Action).To(Equal(policycalc.ActionFlagAllow))
+		Expect(before.Include).To(BeTrue())
+		Expect(after.Action).To(Equal(policycalc.ActionFlagAllow))
+		Expect(after.Include).To(BeTrue())
 
 		f.Reporter = policycalc.ReporterTypeDestination
-		processed, before, after = pc.Calculate(f)
-		Expect(processed).To(BeTrue())
-		Expect(before.Destination.Action).To(Equal(policycalc.ActionAllow))
-		Expect(before.Destination.Include).To(BeTrue())
-		Expect(after.Destination.Action).To(Equal(policycalc.ActionDeny))
-		Expect(after.Destination.Include).To(BeTrue())
+		modified, before, after = pc.CalculateDest(f, policycalc.ActionFlagAllow, policycalc.ActionFlagAllow)
+		Expect(modified).To(BeTrue())
+		Expect(before.Action).To(Equal(policycalc.ActionFlagAllow))
+		Expect(before.Include).To(BeTrue())
+		Expect(after.Action).To(Equal(policycalc.ActionFlagEndOfTierDeny))
+		Expect(after.Include).To(BeTrue())
 	})
 
 	It("handles kubernetes network policy default allow all egress with default deny then deleting default allow", func() {
@@ -296,12 +302,12 @@ var _ = Describe("Kubernetes Network Policy PIP tests", func() {
 			Type:       syncer.UpdateTypeDeleted,
 			ResourceID: resources.GetResourceID(knpAllowAllEgress),
 		}})
-		modified := make(policycalc.ModifiedResources)
-		modified.Add(knpAllowAllEgress)
+		impacted := make(policycalc.ImpactedResources)
+		impacted.Add(resources.GetResourceID(knpAllowAllEgress), policycalc.Impact{Modified: true})
 		rdAfter := resourceDataFromXrefCache(xc)
 
 		By("Creating the policy calculators which calculates before and after")
-		pc := policycalc.NewPolicyCalculator(cfgCalcActionBefore, ep, rdBefore, rdAfter, modified)
+		pc := policycalc.NewPolicyCalculator(cfgCalcActionBefore, ep, rdBefore, rdAfter, impacted)
 
 		By("Checking a flow with src in ns1 goes allow->deny")
 		f := &policycalc.Flow{
@@ -318,22 +324,22 @@ var _ = Describe("Kubernetes Network Policy PIP tests", func() {
 				Namespace: "ns1",
 				Labels:    map[string]string{},
 			},
-			Action: policycalc.ActionAllow,
+			ActionFlag: policycalc.ActionFlagAllow,
 		}
 
-		processed, before, after := pc.Calculate(f)
-		Expect(processed).To(BeTrue())
-		Expect(before.Source.Action).To(Equal(policycalc.ActionAllow))
-		Expect(before.Source.Include).To(BeTrue())
-		Expect(after.Source.Action).To(Equal(policycalc.ActionDeny))
-		Expect(after.Source.Include).To(BeTrue())
+		modified, before, after := pc.CalculateSource(f)
+		Expect(modified).To(BeTrue())
+		Expect(before.Action).To(Equal(policycalc.ActionFlagAllow))
+		Expect(before.Include).To(BeTrue())
+		Expect(after.Action).To(Equal(policycalc.ActionFlagEndOfTierDeny))
+		Expect(after.Include).To(BeTrue())
 
 		f.Reporter = policycalc.ReporterTypeDestination
-		processed, before, after = pc.Calculate(f)
-		Expect(processed).To(BeTrue())
-		Expect(before.Destination.Action).To(Equal(policycalc.ActionAllow))
-		Expect(before.Destination.Include).To(BeTrue())
-		Expect(after.Destination.Action).To(Equal(policycalc.ActionInvalid))
-		Expect(after.Destination.Include).To(BeFalse())
+		modified, before, after = pc.CalculateDest(f, policycalc.ActionFlagAllow, policycalc.ActionFlagDeny)
+		Expect(modified).To(BeTrue())
+		Expect(before.Action).To(Equal(policycalc.ActionFlagAllow))
+		Expect(before.Include).To(BeTrue())
+		Expect(after.Action).To(BeEquivalentTo(0))
+		Expect(after.Include).To(BeFalse())
 	})
 })

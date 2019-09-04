@@ -208,76 +208,157 @@ func flow(reporter, action, protocol string, source, dest epData) string {
 // the after buckets.
 type alwaysAllowCalculator struct{}
 
-func (_ alwaysAllowCalculator) Calculate(flow *policycalc.Flow) (bool, *policycalc.Response, *policycalc.Response) {
-	var beforeSourceAction policycalc.Action
-	if flow.Reporter == policycalc.ReporterTypeDestination {
-		beforeSourceAction = policycalc.ActionAllow
-	} else {
-		beforeSourceAction = flow.Action
+func (c alwaysAllowCalculator) CalculateSource(flow *policycalc.Flow) (bool, policycalc.EndpointResponse, policycalc.EndpointResponse) {
+	before := policycalc.EndpointResponse{
+		Include: true,
+		Action:  flow.ActionFlag,
+		Policies: []policycalc.PolicyHit{{
+			MatchIndex: 0,
+			Tier:       "tier1",
+			Name:       "tier1.policy1",
+			Action:     policycalc.ActionFlagNextTier,
+		}, {
+			MatchIndex: 1,
+			Tier:       "default",
+			Name:       "default.policy1",
+			Action:     policycalc.ActionFlagAllow,
+		}},
 	}
-	before := &policycalc.Response{
-		Source: policycalc.EndpointResponse{
-			Include:  flow.Reporter == policycalc.ReporterTypeSource,
-			Action:   beforeSourceAction,
-			Policies: []string{"policy1", "policy2"},
-		},
-		Destination: policycalc.EndpointResponse{
-			Include:  flow.Reporter == policycalc.ReporterTypeDestination,
-			Action:   flow.Action,
-			Policies: []string{"policy1", "policy2"},
-		},
+	after := policycalc.EndpointResponse{
+		Include: true,
+		Action:  policycalc.ActionFlagAllow,
+		Policies: []policycalc.PolicyHit{{
+			MatchIndex: 0,
+			Tier:       "tier1",
+			Name:       "tier1.policy1",
+			Action:     policycalc.ActionFlagNextTier,
+		}, {
+			MatchIndex: 1,
+			Tier:       "default",
+			Name:       "default.policy1",
+			Action:     policycalc.ActionFlagAllow,
+		}},
 	}
-	after := &policycalc.Response{
-		Source: policycalc.EndpointResponse{
-			Include:  flow.Reporter == policycalc.ReporterTypeSource,
-			Action:   policycalc.ActionAllow,
-			Policies: []string{"policy1", "policy2"},
-		},
-		Destination: policycalc.EndpointResponse{
+	return flow.ActionFlag != policycalc.ActionFlagAllow, before, after
+}
+
+func (_ alwaysAllowCalculator) CalculateDest(
+	flow *policycalc.Flow, beforeSourceAction, afterSourceAction policycalc.ActionFlag,
+) (modified bool, before, after policycalc.EndpointResponse) {
+	if beforeSourceAction != policycalc.ActionFlagDeny {
+		before = policycalc.EndpointResponse{
+			Include: true,
+			Action:  flow.ActionFlag,
+			Policies: []policycalc.PolicyHit{{
+				MatchIndex: 0,
+				Tier:       "tier1",
+				Name:       "tier1.policy1",
+				Action:     policycalc.ActionFlagNextTier,
+			}, {
+				MatchIndex: 1,
+				Tier:       "default",
+				Name:       "default.policy1",
+				Action:     policycalc.ActionFlagAllow,
+			}},
+		}
+	}
+	if afterSourceAction != policycalc.ActionFlagDeny {
+		after = policycalc.EndpointResponse{
 			// Add a destination flow if the original src flow was Deny and now we allow.
-			Include:  flow.Reporter == policycalc.ReporterTypeDestination || flow.Action == policycalc.ActionDeny,
-			Action:   policycalc.ActionAllow,
-			Policies: []string{"policy1", "policy2"},
-		},
+			Include: true,
+			Action:  policycalc.ActionFlagAllow,
+			Policies: []policycalc.PolicyHit{{
+				MatchIndex: 0,
+				Tier:       "tier1",
+				Name:       "tier1.policy1",
+				Action:     policycalc.ActionFlagNextTier,
+			}, {
+				MatchIndex: 1,
+				Tier:       "default",
+				Name:       "default.policy1",
+				Action:     policycalc.ActionFlagAllow,
+			}},
+		}
 	}
-	return true, before, after
+	return flow.ActionFlag != policycalc.ActionFlagAllow, before, after
 }
 
 // alwaysDenyCalculator implements the policy calculator interface with an always deny source and dest response for the
 // after buckets.
 type alwaysDenyCalculator struct{}
 
-func (_ alwaysDenyCalculator) Calculate(flow *policycalc.Flow) (bool, *policycalc.Response, *policycalc.Response) {
-	var beforeSourceAction policycalc.Action
-	if flow.Reporter == policycalc.ReporterTypeDestination {
-		beforeSourceAction = policycalc.ActionAllow
-	} else {
-		beforeSourceAction = flow.Action
+func (c alwaysDenyCalculator) CalculateSource(flow *policycalc.Flow) (bool, policycalc.EndpointResponse, policycalc.EndpointResponse) {
+	before := policycalc.EndpointResponse{
+		Include: true,
+		Action:  flow.ActionFlag,
+		Policies: []policycalc.PolicyHit{{
+			MatchIndex: 0,
+			Tier:       "tier1",
+			Name:       "tier1.policy1",
+			Action:     policycalc.ActionFlagNextTier,
+		}, {
+			MatchIndex: 1,
+			Tier:       "default",
+			Name:       "default.policy1",
+			Action:     policycalc.ActionFlagAllow,
+		}},
 	}
-	before := &policycalc.Response{
-		Source: policycalc.EndpointResponse{
-			Include:  flow.Reporter == policycalc.ReporterTypeSource,
-			Action:   beforeSourceAction,
-			Policies: []string{"policy1", "policy2"},
-		},
-		Destination: policycalc.EndpointResponse{
-			Include:  flow.Reporter == policycalc.ReporterTypeDestination,
-			Action:   flow.Action,
-			Policies: []string{"policy1", "policy2"},
-		},
+	after := policycalc.EndpointResponse{
+		Include: true,
+		Action:  policycalc.ActionFlagDeny,
+		Policies: []policycalc.PolicyHit{{
+			MatchIndex: 0,
+			Tier:       "tier1",
+			Name:       "tier1.policy1",
+			Action:     policycalc.ActionFlagNextTier,
+		}, {
+			MatchIndex: 1,
+			Tier:       "default",
+			Name:       "default.policy1",
+			Action:     policycalc.ActionFlagAllow,
+		}},
 	}
-	after := &policycalc.Response{
-		Source: policycalc.EndpointResponse{
-			Include:  flow.Reporter == policycalc.ReporterTypeSource,
-			Action:   policycalc.ActionDeny,
-			Policies: []string{"policy1", "policy2"},
-		},
-		Destination: policycalc.EndpointResponse{
-			// Add a destination flow if the original src flow was Deny and now we allow.
-			Include: false,
-		},
+	return flow.ActionFlag != policycalc.ActionFlagDeny, before, after
+}
+
+func (_ alwaysDenyCalculator) CalculateDest(
+	flow *policycalc.Flow, beforeSourceAction, afterSourceAction policycalc.ActionFlag,
+) (modified bool, before, after policycalc.EndpointResponse) {
+	if beforeSourceAction != policycalc.ActionFlagDeny {
+		before = policycalc.EndpointResponse{
+			Include: true,
+			Action:  flow.ActionFlag,
+			Policies: []policycalc.PolicyHit{{
+				MatchIndex: 0,
+				Tier:       "tier1",
+				Name:       "tier1.policy1",
+				Action:     policycalc.ActionFlagDeny,
+			}, {
+				MatchIndex: 1,
+				Tier:       "default",
+				Name:       "default.policy1",
+				Action:     policycalc.ActionFlagDeny,
+			}},
+		}
 	}
-	return true, before, after
+	if afterSourceAction != policycalc.ActionFlagDeny {
+		before = policycalc.EndpointResponse{
+			Include: true,
+			Action:  policycalc.ActionFlagDeny,
+			Policies: []policycalc.PolicyHit{{
+				MatchIndex: 0,
+				Tier:       "tier1",
+				Name:       "tier1.policy1",
+				Action:     policycalc.ActionFlagNextTier,
+			}, {
+				MatchIndex: 1,
+				Tier:       "default",
+				Name:       "default.policy1",
+				Action:     policycalc.ActionFlagDeny,
+			}},
+		}
+	}
+	return flow.ActionFlag != policycalc.ActionFlagDeny, before, after
 }
 
 var _ = Describe("Test handling of aggregated ES response", func() {
@@ -543,14 +624,13 @@ var _ = Describe("Test handling of aggregated ES response", func() {
 	It("handles source flows changing from allow to deny", func() {
 		By("Creating an ES client with a mocked out ES results being a mixture of allow and deny")
 		client := pelastic.NewMockSearchClient([]interface{}{
-			// Dest flows.  All dest flows will be removed in after flows
-			flow("dst", "deny", "udp", hepd("hep1", 100), hepd("hep2", 200)),  //                // + Aggregated after
-			flow("dst", "allow", "tcp", hepd("hep1", 500), hepd("hep2", 600)), //                // +
-			// Source flows.
-			flow("src", "deny", "tcp", hepd("hep1", 100), hepd("hep2", 200)),  //                // + Aggregated after
-			flow("src", "allow", "udp", hepd("hep1", 100), hepd("hep2", 200)), // + Aggregated   // |
-			flow("src", "allow", "tcp", hepd("hep1", 500), hepd("hep2", 600)), // + before       // +
-			// WEP
+			flow("dst", "deny", "udp", hepd("hep1", 100), hepd("hep2", 200)),
+			flow("src", "allow", "udp", hepd("hep1", 100), hepd("hep2", 200)),
+			flow("src", "deny", "tcp", hepd("hep1", 100), hepd("hep2", 200)),
+
+			flow("dst", "allow", "tcp", hepd("hep1", 500), hepd("hep2", 600)),
+			flow("src", "allow", "tcp", hepd("hep1", 500), hepd("hep2", 600)),
+
 			flow("src", "allow", "tcp", wepd("hep1", "ns1", 100), hepd("hep2", 200)),
 		})
 

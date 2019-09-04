@@ -43,8 +43,8 @@ func (c *EndpointSelectorHandler) GetSelectorEndpointMatcher(selStr string) Endp
 
 	// Create a closure to perform the selector matching and the caching.
 	cacheIdx := len(c.selectorMatchers)
-	matcher := func(_ *Flow, ep *FlowEndpointData) MatchType {
-		val := ep.cachedSelectorResults[cacheIdx]
+	matcher := func(_ *Flow, ep *FlowEndpointData, _ *flowCache, epCache *endpointCache) MatchType {
+		val := epCache.selectors[cacheIdx]
 		if val == MatchTypeUnknown {
 			if isAll {
 				// This is an all() selector, so matches all endpoints - in this case it doesn't matter if we don't have
@@ -60,7 +60,7 @@ func (c *EndpointSelectorHandler) GetSelectorEndpointMatcher(selStr string) Endp
 				// Selector does not match labels, so match is false.
 				val = MatchTypeFalse
 			}
-			ep.cachedSelectorResults[cacheIdx] = val
+			epCache.selectors[cacheIdx] = val
 		}
 		log.Debugf("Endpoint selector: %s = %s", selStr, val)
 
