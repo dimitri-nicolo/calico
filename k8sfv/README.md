@@ -189,8 +189,7 @@ The test architecture involves:
 - a full Felix executable:
   - running in a container, so as to have its own network namespace
   - configured to use KDD
-  - other miscellaneous config for logging, prometheus, no usage reporting,
-    memory dumps etc.
+  - other miscellaneous config for logging, prometheus, memory dumps etc.
 
 Each of those containers has its own IP address, and they are all bridged
 together on the default 'docker0' bridge.
