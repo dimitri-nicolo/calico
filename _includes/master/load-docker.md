@@ -102,7 +102,7 @@
    docker tag {{page.registry}}{{site.imageNames["compliance-snapshotter"]}}:{{site.data.versions[page.version].first.components["compliance-snapshotter"].version}} <YOUR-REGISTRY>/{{site.imageNames["compliance-snapshotter"]}}:{{site.data.versions[page.version].first.components["compliance-snapshotter"].version}}
    docker tag {{page.registry}}{{site.imageNames["compliance-server"]}}:{{site.data.versions[page.version].first.components["compliance-server"].version}} <YOUR-REGISTRY>/{{site.imageNames["compliance-server"]}}:{{site.data.versions[page.version].first.components["compliance-server"].version}}
    docker tag quay.io/calico/cni:{{site.data.versions[page.version].first.components["calico/cni"].version}} <YOUR-REGISTRY>/calico/cni:{{site.data.versions[page.version].first.components["calico/cni"].version}}
-   docker tag quay.io/{{site.imageNames["flexvol"]}}:{{site.data.versions[page.version].first.components["flexvol"].version}} <YOUR-REGISTRY>/{{site.imageNames["flexvol"]}}:{{site.data.versions[page.version].first.components["flexvol"].version}}
+   docker tag quay.io/{{site.imageNames["flexvol"]}}:{{site.data.versions[page.version].first.components["flexvol"].version}} <YOUR-REGISTRY>/calico/pod2daemon-flexvol:{{site.data.versions[page.version].first.components["flexvol"].version}}
    docker tag quay.io/coreos/configmap-reload:{{site.data.versions[page.version].first.components["configmap-reload"].version}} <YOUR-REGISTRY>/coreos/configmap-reload:{{site.data.versions[page.version].first.components["configmap-reload"].version}}
    docker tag quay.io/coreos/prometheus-config-reloader:{{site.data.versions[page.version].first.components["prometheus-config-reloader"].version}} <YOUR-REGISTRY>/coreos/prometheus-config-reloader:{{site.data.versions[page.version].first.components["prometheus-config-reloader"].version}}
    docker tag quay.io/coreos/prometheus-operator:{{site.data.versions[page.version].first.components["prometheus-operator"].version}} <YOUR-REGISTRY>/coreos/prometheus-operator:{{site.data.versions[page.version].first.components["prometheus-operator"].version}}
@@ -145,7 +145,7 @@
    docker push <YOUR-REGISTRY>/{{site.imageNames["compliance-server"]}}:{{site.data.versions[page.version].first.components["compliance-server"].version}}
    docker push <YOUR-REGISTRY>/coreos/configmap-reload:{{site.data.versions[page.version].first.components["configmap-reload"].version}}
    docker push <YOUR-REGISTRY>/calico/cni:{{site.data.versions[page.version].first.components["calico/cni"].version}}
-   docker push <YOUR-REGISTRY>/{{site.imageNames["flexvol"]}}:{{site.data.versions[page.version].first.components["flexvol"].version}}
+   docker push <YOUR-REGISTRY>/calico/pod2daemon-flexvol:{{site.data.versions[page.version].first.components["flexvol"].version}}
    docker push <YOUR-REGISTRY>/coreos/prometheus-config-reloader:{{site.data.versions[page.version].first.components["prometheus-config-reloader"].version}}
    docker push <YOUR-REGISTRY>/coreos/prometheus-operator:{{site.data.versions[page.version].first.components["prometheus-operator"].version}}
    docker push <YOUR-REGISTRY>/prometheus/alertmanager:{{site.data.versions[page.version].first.components["alertmanager"].version}}
