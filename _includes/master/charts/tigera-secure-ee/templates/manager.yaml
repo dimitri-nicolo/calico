@@ -279,7 +279,6 @@ spec:
           initialDelaySeconds: 90
           periodSeconds: 10
         securityContext:
-          privileged: false
           runAsNonRoot: true
           allowPrivilegeEscalation: false
       - name: cnx-manager-proxy
@@ -325,7 +324,6 @@ spec:
           initialDelaySeconds: 90
           periodSeconds: 10
         securityContext:
-          privileged: false
           runAsNonRoot: true
           allowPrivilegeEscalation: false
       - name: tigera-es-proxy
