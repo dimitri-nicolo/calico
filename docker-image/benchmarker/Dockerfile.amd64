@@ -1,4 +1,4 @@
-FROM debian
+FROM debian:10
 WORKDIR /opt
 RUN apt-get update && apt-get install -y curl tar procps
 RUN curl -OL https://github.com/aquasecurity/kube-bench/releases/download/v0.0.33/kube-bench_0.0.33_linux_amd64.tar.gz 
