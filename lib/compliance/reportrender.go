@@ -474,13 +474,16 @@ func computeTopFailedCISBenchmarkTests(d *api.ReportData) SortableCISBenchmarkTe
 	}
 	sort.Sort(sortedTests)
 
-	// Avoid out of bounds error by capping numTests to be the length of sortedTests if needed.
-	numTests := d.ReportSpec.CIS.NumFailedTests
-	if *numTests > len(sortedTests) {
-		nTests := len(sortedTests)
-		numTests = &nTests
+	// https://<github-tigera-libcalico-go-repo>/blob/7c59755b40823ef3ce13ab10f7f37b46287710a1/lib/clientv3/globalreport.go#L56
+	numTests := five
+	if d.ReportSpec.CIS != nil && d.ReportSpec.CIS.NumFailedTests != nil {
+		numTests = *d.ReportSpec.CIS.NumFailedTests
 	}
-	return sortedTests[:*numTests]
+	// Avoid out of bounds error by capping numTests to be the length of sortedTests if needed.
+	if numTests > len(sortedTests) {
+		numTests = len(sortedTests)
+	}
+	return sortedTests[:numTests]
 }
 
 // getFlowsLookupFuncs creates ReportData specific flow lookup functions to determine the
