@@ -425,7 +425,12 @@ spec:
           periodSeconds: 10
 {{- if .Values.apiserver.runAsPrivileged }}
         securityContext:
+          runAsNonRoot: true
           privileged: true
+{{- else }}
+        securityContext:
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
 {{- end }}
       - name: cnx-queryserver
         image: {{.Values.queryserver.image}}:{{.Values.queryserver.tag}}
@@ -506,6 +511,9 @@ spec:
             scheme: HTTPS
           initialDelaySeconds: 90
           periodSeconds: 10
+        securityContext:
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
       volumes:
         # Volume for audit logs output
         - name: var-log-calico-audit
