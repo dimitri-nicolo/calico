@@ -5,11 +5,11 @@ canonical_url: https://docs.tigera.io/master/security/threat-detection-and-preve
 
 ### Big picture
 
-Add threat intelligence feeds to {{site.prodname}} to trace DNS queries to suspicious domains.
+Add threat intelligence feeds to {{site.prodname}} to trace DNS queries involving suspicious domains.
 
 ### Value
 
-{{site.prodname}} integrates with threat intelligence feeds so you can detect when endpoints in your Kubernetes clusters query DNS for suspicious domains. When queries are detected, an anomaly detection dashboard in the UI shows the full context, including which pod(s) were involved so you can analyze and remediate.
+{{site.prodname}} integrates with threat intelligence feeds so you can detect when endpoints in your Kubernetes clusters query DNS for suspicious domains, or receive answers with suspicious domains. When events are detected, an anomaly detection dashboard in the UI shows the full context, including which pod(s) were involved so you can analyze and remediate.
 
 ### Features
 
@@ -21,7 +21,7 @@ This how-to guide uses the following {{site.prodname}} features:
 
 #### Pull or push threat feeds?
 
-{{site.prodname}} supports both push and pull methods for updating threat feeds. Use the **pull method** for fully automated threat feed updates without user intervention. Use the **push method** for manually updating a threat feed; for example, threat feeds not available over HTTP/HTTPS), or to fit your own schedule.
+{{site.prodname}} supports both push and pull methods for updating threat feeds. Use the **pull method** for fully automated threat feed updates without user intervention. Use the **push method** to schedule your own updates or if your threat feed is not available over HTTP(S).
 
 #### Domain name threat feeds
 
@@ -77,7 +77,7 @@ To add threat feeds to {{site.prodname}} for automatic updates (default is once 
 
 #### Push threat feed updates
 
-Use the push method if your threat feeds that are not in newline-delimited format, not available over HTTP, or if you prefer to manually update threat feeds on your own schedule.
+Use the push method if your threat feeds that are not in newline-delimited format, not available over HTTP, or if you prefer to push updates as they become available.
 
 1. Create the GlobalThreatFeed YAML and save it to file.
    Replace the **name** field with your own name. The name is important in the later steps so make note of it.

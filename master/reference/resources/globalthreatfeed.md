@@ -14,7 +14,7 @@ For each IPSet threat feed, {{site.prodname}} automatically monitors flow logs f
 IPSet threat feeds can also be configured to be synchronized to a [global network set](./globalnetworkset),
 allowing you to use them as a dynamically-updating blacklist by incorporating the global network set into network policy.
 
-For each DomainNameSet threat feed, {{site.prodname}} automatically monitors DNS logs for members of the set.
+For each DomainNameSet threat feed, {{site.prodname}} automatically monitors DNS logs for queries (QNAME) or answers (RR NAME or RDATA) that contain members of the set. 
 
 For `calicoctl` [commands]({{site.url}}/{{page.version}}/reference/calicoctl/), the following case-insensitive aliases
 may be used to specify the resource type on the CLI:
@@ -131,7 +131,7 @@ with a [global network set](./globalnetworkset). This global network set will ha
 where `<threat feed name>` is the name of the global threat feed it is synced with. This is only supported for
 threat feeds of type IPSet.
 
-> **NOTE**: If you include a `globalNetworkSet` stanza, you must also include a `pull` stanza and must set the `content` to `IPSet`.
+> **NOTE**: A `globalNetworkSet` stanza only works for `IPSet` threat feeds, and you must also include a `pull` stanza.
 {: .alert .alert-info}
 
 | Field  | Description                                               | Accepted Values | Schema |

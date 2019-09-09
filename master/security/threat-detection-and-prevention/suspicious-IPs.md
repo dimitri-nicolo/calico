@@ -22,7 +22,7 @@ This how-to guide uses the following {{site.prodname}} features:
 
 #### Pull or push threat feeds?
 
-{{site.prodname}} supports both push and pull methods for updating threat feeds. Use the **pull method** for fully automated threat feed updates without user intervention. Use the **push method** for manually updating a threat feed; for example, threat feeds not available over HTTP/HTTPS), or to fit your own schedule.
+{{site.prodname}} supports both push and pull methods for updating threat feeds. Use the **pull method** for fully automated threat feed updates without user intervention. Use the **push method** to schedule your own updates or if your threat feed is not available over HTTP(S).
 
 #### Suspicious IPs: test before you block
 
@@ -75,7 +75,7 @@ To add threat feeds to {{site.prodname}} for automatic updates (default is once 
 
 #### Push threat feed updates
 
-Use the push method if your threat feeds that are not in newline-delimited format, not available over HTTP, or if you prefer to manually update threat feeds on your own schedule.
+Use the push method if your threat feeds that are not in newline-delimited format, not available over HTTP, or if you prefer to push updates as they become available.
 
 1. Create the GlobalThreatFeed YAML and save it to file.
    Replace the **name** field with your own name. The name is important in the later steps so make note of it.
