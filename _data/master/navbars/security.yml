@@ -124,6 +124,8 @@ toc:
       path: /security/threat-detection-and-prevention/anomaly-detection/customizing
   - title: Trace and block suspicious IPs
     path: /security/threat-detection-and-prevention/suspicious-IPs
+  - title: Trace and block suspicious domains
+    path: /security/threat-detection-and-prevention/suspicious-domains
 - title: Compliance reports
   section:
   - title: Inventory auditing
