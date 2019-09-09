@@ -278,6 +278,9 @@ spec:
             scheme: HTTPS
           initialDelaySeconds: 90
           periodSeconds: 10
+        securityContext:
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
       - name: cnx-manager-proxy
         image: {{.Values.managerProxy.image}}:{{.Values.managerProxy.tag}}
 {{ tuple .Values.managerProxy.resources | include "tigera-secure-ee.resourceLimits" | indent 8 -}}
@@ -320,6 +323,9 @@ spec:
             scheme: HTTPS
           initialDelaySeconds: 90
           periodSeconds: 10
+        securityContext:
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
       - name: tigera-es-proxy
         image: {{.Values.esProxy.image}}:{{.Values.esProxy.tag}}
 {{ tuple .Values.esProxy.resources | include "tigera-secure-ee.resourceLimits" | indent 8 -}}
