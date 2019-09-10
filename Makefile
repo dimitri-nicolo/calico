@@ -199,6 +199,7 @@ clean:
 	       docker-image/reporter/bin \
 	       docker-image/scaleloader/bin \
 	       docker-image/benchmarker/bin \
+	       docker-image/benchmarker/cfg \
 	       build \
 	       $(GENERATED_GO_FILES) \
 	       .glide \
