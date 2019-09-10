@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"regexp"
 	"time"
 
 	"github.com/aquasecurity/kube-bench/check"
@@ -54,7 +55,10 @@ func (b *Benchmarker) GetClosestConfig(dv string) (string, error) {
 	//   -- https://github.com/aquasecurity/kube-bench#cis-kubernetes-benchmark-support
 	kubeBenchBaseVersion := semver.New(leastKubeBenchSupportedVersion)
 
-	detectedVersion := semver.New(dv)
+	detectedVersion, err := semver.NewVersion(dv)
+	if err != nil {
+		return "", err
+	}
 	if detectedVersion.LessThan(*kubeBenchBaseVersion) {
 		return "", fmt.Errorf("CIS Kubernetes Benchmark doesn't support kubernetes version < v1.6")
 	}
@@ -89,12 +93,25 @@ func (b *Benchmarker) getClosestKubeBenchConfigVersion() (closestVersion string,
 	}
 
 	detectedVersion := fmt.Sprintf("%s.%s.%s", k8sversion.Major, k8sversion.Minor, patchNumber)
-	closestVersion, err = b.GetClosestConfig(detectedVersion)
+	log.Debug("server version received: ", detectedVersion)
+	detectedVersionFormatted := b.GetSemVerFormatted(detectedVersion)
+	log.Debug("server version formatted: ", detectedVersionFormatted)
+	closestVersion, err = b.GetClosestConfig(detectedVersionFormatted)
 	if err != nil {
 		return closestVersion, err
 	}
 
 	return
+}
+
+func (b *Benchmarker) GetSemVerFormatted(v string) string {
+	semVerRegExp := regexp.MustCompile(`(\d+).*?(\d+).+?(\d+).*`)
+	matches := semVerRegExp.FindStringSubmatch(v)
+	if len(matches) > 3 {
+		return fmt.Sprintf("%s.%s.%s", matches[1], matches[2], matches[3])
+	}
+
+	return leastKubeBenchSupportedVersion
 }
 
 // executeKubeBenchmark executes kube-bench.

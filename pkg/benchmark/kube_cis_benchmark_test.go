@@ -29,6 +29,25 @@ func configExists(cfgPath string) bool {
 var _ = Describe("CIS", func() {
 	b := &cis.Benchmarker{ConfigChecker: configExists}
 
+	It("should work for different server version formats", func() {
+		var sver, sverExpected string
+
+		By("checking basic case")
+		sver = "1.12.0"
+		sverExpected = "1.12.0"
+		Expect(b.GetSemVerFormatted(sver)).To(Equal(sverExpected))
+
+		By("checking docker-ee case")
+		sver = "1.12+.0"
+		sverExpected = "1.12.0"
+		Expect(b.GetSemVerFormatted(sver)).To(Equal(sverExpected))
+
+		By("checking default case")
+		sver = "1.12"
+		sverExpected = "1.6.0"
+		Expect(b.GetSemVerFormatted(sver)).To(Equal(sverExpected))
+	})
+
 	It("should work for differnt k8s versions", func() {
 		var ev, dv string
 
@@ -46,5 +65,10 @@ var _ = Describe("CIS", func() {
 		dv = "1.15.0"
 		ev = "1.15"
 		Expect(b.GetClosestConfig(dv)).To(Equal(ev))
+
+		By("making sure NewVersion doesn't panic() but throws error")
+		dv = "1.11+.0"
+		_, err := b.GetClosestConfig(dv)
+		Expect(err).Should(HaveOccurred())
 	})
 })
