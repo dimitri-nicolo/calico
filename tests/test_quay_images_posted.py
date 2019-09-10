@@ -23,7 +23,9 @@ EXCLUDED_IMAGES = ['calico-upgrade',
                    'elasticsearch',
                    'prometheusOperator',
                    'prometheusConfigReloader',
-                   'prometheus']
+                   'prometheus',
+                   'cpHorizontalAutoscaler',
+                   'cpVerticalAutoscaler']
 
 # _config.yml contains latest images, need to exclude newer
 # images from old releases
