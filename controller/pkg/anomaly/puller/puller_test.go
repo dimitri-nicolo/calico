@@ -48,9 +48,9 @@ func TestPull(t *testing.T) {
 	g.Expect(st.Status().LastSuccessfulSync.Time).Should(BeTemporally(">", time.Time{}))
 	g.Expect(st.Status().ErrorConditions).Should(HaveLen(0))
 
-	g.Expect(e.FlowLogs).Should(HaveLen(1))
+	g.Expect(e.Events).Should(HaveLen(1))
 	event := p.generateEvent(xPack.Records[0])
-	g.Expect(e.FlowLogs[0]).Should(Equal(event))
+	g.Expect(e.Events[0]).Should(Equal(event))
 }
 
 func TestPull_RecordsFails(t *testing.T) {
@@ -78,7 +78,7 @@ func TestPull_RecordsFails(t *testing.T) {
 	g.Expect(st.Status().ErrorConditions).Should(HaveLen(1))
 	g.Expect(st.Status().ErrorConditions[0].Type).Should(Equal(statser.XPackRecordsFailed))
 
-	g.Expect(e.FlowLogs).Should(HaveLen(0))
+	g.Expect(e.Events).Should(HaveLen(0))
 }
 
 func TestPull_Filter(t *testing.T) {
@@ -121,7 +121,7 @@ func TestPull_Filter(t *testing.T) {
 		event := p.generateEvent(r)
 		expected = append(expected, event)
 	}
-	g.Expect(e.FlowLogs).Should(ConsistOf(expected))
+	g.Expect(e.Events).Should(ConsistOf(expected))
 }
 
 func TestPull_FilterFails(t *testing.T) {
@@ -155,7 +155,7 @@ func TestPull_FilterFails(t *testing.T) {
 	g.Expect(st.Status().ErrorConditions).Should(HaveLen(1))
 	g.Expect(st.Status().ErrorConditions[0].Type).Should(Equal(statser.FilterFailed))
 
-	g.Expect(e.FlowLogs).Should(HaveLen(0))
+	g.Expect(e.Events).Should(HaveLen(0))
 }
 
 func TestPull_PutFails(t *testing.T) {
@@ -186,7 +186,7 @@ func TestPull_PutFails(t *testing.T) {
 	g.Expect(st.Status().ErrorConditions).Should(HaveLen(1))
 	g.Expect(st.Status().ErrorConditions[0].Type).Should(Equal(statser.StoreEventsFailed))
 
-	g.Expect(e.FlowLogs).Should(HaveLen(0))
+	g.Expect(e.Events).Should(HaveLen(0))
 }
 
 func TestFetch(t *testing.T) {

@@ -50,7 +50,7 @@ type watcher struct {
 	elasticController      elastic.IPSetController
 	httpClient             *http.Client
 	ipSet                  db.IPSet
-	suspiciousIP           db.SuspiciousIP
+	suspiciousIP           db.SuspiciousSet
 	events                 db.Events
 	feedWatchers           map[string]*feedWatcher
 	feedWatchersMutex      sync.RWMutex
@@ -72,7 +72,7 @@ type watcher struct {
 type feedWatcher struct {
 	feed     *v3.GlobalThreatFeed
 	puller   puller.Puller
-	searcher searcher.FlowSearcher
+	searcher searcher.Searcher
 	statser  statser.Statser
 }
 
@@ -84,7 +84,7 @@ func NewWatcher(
 	elasticController elastic.IPSetController,
 	httpClient *http.Client,
 	ipSet db.IPSet,
-	suspiciousIP db.SuspiciousIP,
+	suspiciousIP db.SuspiciousSet,
 	events db.Events,
 ) Watcher {
 	feedWatchers := map[string]*feedWatcher{}
@@ -231,7 +231,7 @@ func (s *watcher) startFeedWatcher(ctx context.Context, f *v3.GlobalThreatFeed) 
 
 	fw := feedWatcher{
 		feed:     fCopy,
-		searcher: searcher.NewFlowSearcher(fCopy, time.Minute, s.suspiciousIP, s.events),
+		searcher: searcher.NewSearcher(fCopy, time.Minute, s.suspiciousIP, s.events),
 		statser:  st,
 	}
 

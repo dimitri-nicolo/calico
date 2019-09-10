@@ -33,9 +33,11 @@ type SuspiciousIPSecurityEvent struct {
 func (s SuspiciousIPSecurityEvent) ID() string {
 	feed := "unknown"
 	if len(s.Feeds) > 0 {
-		feed = strings.Join(s.Feeds, "-")
+		// Use ~ as separator because it's allowed in URLs, but not in feed names (which are K8s names)
+		feed = strings.Join(s.Feeds, "~")
 	}
-	return fmt.Sprintf("%s-%d-%s-%s-%s-%s-%s",
+	// Use _ as a separator because it's allowed in URLs, but not in any of the components of this ID
+	return fmt.Sprintf("%s_%d_%s_%s_%s_%s_%s",
 		feed,
 		s.Time,
 		s.Protocol,
@@ -43,5 +45,39 @@ func (s SuspiciousIPSecurityEvent) ID() string {
 		util.Int64PtrWrapper{I: s.SourcePort},
 		util.StringPtrWrapper{S: s.DestIP},
 		util.Int64PtrWrapper{I: s.DestPort},
+	)
+}
+
+type SuspiciousDomainSecurityEvent struct {
+	Time              int64    `json:"time"`
+	Type              string   `json:"type"`
+	Description       string   `json:"description"`
+	Severity          int      `json:"severity"`
+	DNSLogIndex       string   `json:"dns_log_index"`
+	DNSLogID          string   `json:"dns_log_id"`
+	SourceIP          *string  `json:"source_ip"`
+	SourceNamespace   string   `json:"source_namespace"`
+	SourceName        string   `json:"source_name"`
+	Feeds             []string `json:"feeds,omitempty"`
+	SuspiciousDomains []string `json:"suspicious_domains"`
+}
+
+func (s SuspiciousDomainSecurityEvent) ID() string {
+	feed := "unknown"
+	if len(s.Feeds) > 0 {
+		// Use ~ as separator because it's allowed in URLs, but not in feed names (which are K8s names)
+		feed = strings.Join(s.Feeds, "~")
+	}
+	domains := "unknown"
+	if len(s.SuspiciousDomains) > 0 {
+		// Use ~ as a separator because it's allowed in URLs, but not in domain names
+		domains = strings.Join(s.SuspiciousDomains, "~")
+	}
+	// Use _ as a separator because it's allowed in URLs, but not in any of the components of this ID
+	return fmt.Sprintf("%s_%d_%s_%s",
+		feed,
+		s.Time,
+		util.StringPtrWrapper{S: s.SourceIP},
+		domains,
 	)
 }

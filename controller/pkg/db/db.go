@@ -27,18 +27,12 @@ type DomainNameSet interface {
 	DeleteDomainNameSet(ctx context.Context, m Meta) error
 }
 
-type SuspiciousIP interface {
-	QueryIPSet(ctx context.Context, name string) (SecurityEventIterator, error)
+type SuspiciousSet interface {
+	QuerySet(ctx context.Context, name string) ([]SecurityEventInterface, error)
 }
 
 type SecurityEventInterface interface {
 	ID() string
-}
-
-type SecurityEventIterator interface {
-	Next() bool
-	Value() SecurityEventInterface
-	Err() error
 }
 
 type Events interface {
@@ -55,3 +49,14 @@ type AuditLog interface {
 type IPSetSpec []string
 
 type DomainNameSetSpec []string
+
+type QueryKey int
+
+const (
+	QueryKeyUnknown QueryKey = iota
+	QueryKeyFlowLogSourceIP
+	QueryKeyFlowLogDestIP
+	QueryKeyDNSLogQName
+	QueryKeyDNSLogRRSetsName
+	QueryKeyDNSLogRRSetsRData
+)

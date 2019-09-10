@@ -28,6 +28,7 @@ const (
 	DomainNameSetIndexPattern = ".tigera.domainnameset.%s"
 	StandardType              = "_doc"
 	FlowLogIndexPattern       = "tigera_secure_ee_flows.%s.*"
+	DNSLogIndexPattern        = "tigera_secure_ee_dns.%s.*"
 	EventIndexPattern         = "tigera_secure_ee_events.%s"
 	AuditIndexPattern         = "tigera_secure_ee_audit_*.%s.*"
 	QuerySize                 = 1000
@@ -46,6 +47,7 @@ var (
 	DomainNameSetIndex string
 	EventIndex         string
 	FlowLogIndex       string
+	DNSLogIndex        string
 	AuditIndex         string
 )
 
@@ -58,6 +60,7 @@ func init() {
 	DomainNameSetIndex = fmt.Sprintf(DomainNameSetIndexPattern, cluster)
 	EventIndex = fmt.Sprintf(EventIndexPattern, cluster)
 	FlowLogIndex = fmt.Sprintf(FlowLogIndexPattern, cluster)
+	DNSLogIndex = fmt.Sprintf(DNSLogIndexPattern, cluster)
 	AuditIndex = fmt.Sprintf(FlowLogIndexPattern, cluster)
 }
 
@@ -313,7 +316,59 @@ func (e *Elastic) ensureIndexExists(ctx context.Context, idx, mapping string) er
 }
 
 func (e *Elastic) GetIPSet(ctx context.Context, name string) (db.IPSetSpec, error) {
-	res, err := e.c.Get().Index(IPSetIndex).Type(StandardType).Id(name).Do(ctx)
+	doc, err := e.get(ctx, IPSetIndex, name)
+	if err != nil {
+		return nil, err
+	}
+	i, ok := doc["ips"]
+	if !ok {
+		return nil, errors.New("document missing ips section")
+	}
+
+	ia, ok := i.([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("unknown type for %#v", i)
+	}
+	ips := db.IPSetSpec{}
+	for _, v := range ia {
+		s, ok := v.(string)
+		if !ok {
+			return nil, fmt.Errorf("unknown type for %#v", s)
+		}
+		ips = append(ips, s)
+	}
+
+	return ips, nil
+}
+
+func (e *Elastic) GetDomainNameSet(ctx context.Context, name string) (db.DomainNameSetSpec, error) {
+	doc, err := e.get(ctx, DomainNameSetIndex, name)
+	if err != nil {
+		return nil, err
+	}
+	domains, ok := doc["domains"]
+	if !ok {
+		return nil, errors.New("document missing domains section")
+	}
+
+	idomains, ok := domains.([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("unknown type for %#v", domains)
+	}
+	result := db.DomainNameSetSpec{}
+	for _, d := range idomains {
+		s, ok := d.(string)
+		if !ok {
+			return nil, fmt.Errorf("unknown type for %#v", d)
+		}
+		result = append(result, s)
+	}
+
+	return result, nil
+}
+
+func (e *Elastic) get(ctx context.Context, idx, name string) (map[string]interface{}, error) {
+	res, err := e.c.Get().Index(idx).Type(StandardType).Id(name).Do(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -324,28 +379,7 @@ func (e *Elastic) GetIPSet(ctx context.Context, name string) (db.IPSetSpec, erro
 
 	var doc map[string]interface{}
 	err = json.Unmarshal(*res.Source, &doc)
-	if err != nil {
-		return nil, err
-	}
-	i, ok := doc["ips"]
-	if !ok {
-		return nil, errors.New("Elastic document missing ips section")
-	}
-
-	ia, ok := i.([]interface{})
-	if !ok {
-		return nil, fmt.Errorf("Unknown type for %#v", i)
-	}
-	ips := db.IPSetSpec{}
-	for _, v := range ia {
-		s, ok := v.(string)
-		if !ok {
-			return nil, fmt.Errorf("Unknown type for %#v", s)
-		}
-		ips = append(ips, s)
-	}
-
-	return ips, nil
+	return doc, err
 }
 
 func (e *Elastic) GetIPSetModified(ctx context.Context, name string) (time.Time, error) {
@@ -386,7 +420,13 @@ func (e *Elastic) getSetModified(ctx context.Context, name, idx string) (time.Ti
 	}
 }
 
-func (e *Elastic) QueryIPSet(ctx context.Context, name string) (db.SecurityEventIterator, error) {
+type SetQuerier interface {
+	QueryIPSet(ctx context.Context, name string) (Iterator, error)
+	QueryDomainNameSet(ctx context.Context, name string, set db.DomainNameSetSpec) (Iterator, error)
+	GetDomainNameSet(ctx context.Context, name string) (db.DomainNameSetSpec, error)
+}
+
+func (e *Elastic) QueryIPSet(ctx context.Context, name string) (Iterator, error) {
 	ipset, err := e.GetIPSet(ctx, name)
 	if err != nil {
 		return nil, err
@@ -400,27 +440,82 @@ func (e *Elastic) QueryIPSet(ctx context.Context, name string) (db.SecurityEvent
 
 	var scrollers []scrollerEntry
 	for _, t := range queryTerms {
-		scrollers = append(scrollers, scrollerEntry{name: "source_ip", scroller: f(name, "source_ip", t), terms: t})
-		scrollers = append(scrollers, scrollerEntry{name: "dest_ip", scroller: f(name, "dest_ip", t), terms: t})
+		scrollers = append(scrollers, scrollerEntry{key: db.QueryKeyFlowLogSourceIP, scroller: f(name, "source_ip", t), terms: t})
+		scrollers = append(scrollers, scrollerEntry{key: db.QueryKeyFlowLogDestIP, scroller: f(name, "dest_ip", t), terms: t})
 	}
 
-	return &flowLogIterator{
-		scrollers: scrollers,
-		ctx:       ctx,
-		name:      name,
-	}, nil
+	return newQueryIterator(ctx, scrollers, name), nil
+}
+
+func (e *Elastic) QueryDomainNameSet(ctx context.Context, name string, set db.DomainNameSetSpec) (Iterator, error) {
+	queryTerms := splitDomainNameSetToInterface(set)
+
+	var scrollers []scrollerEntry
+
+	// Ordering is important for the scrollers, so that we get more relevant results earlier. The caller
+	// wants to de-duplicate events that point to the same DNS query. For example, a DNS query for www.example.com
+	// will create a DNS log with www.example.com in both the qname and one of the rrsets.name. We only want to emit
+	// one security event in this case, and the most relevant one is the one that says a pod queried directly for
+	// for a name on our threat list.
+
+	// QName scrollers
+	for _, t := range queryTerms {
+		qname := e.c.Scroll(DNSLogIndex).
+			SortBy(elastic.SortByDoc{}).
+			Size(QuerySize).
+			Query(elastic.NewTermsQuery("qname", t...))
+		scrollers = append(scrollers, scrollerEntry{key: db.QueryKeyDNSLogQName, scroller: qname, terms: t})
+	}
+
+	// RRSet.name scrollers
+	for _, t := range queryTerms {
+		rrsn := e.c.Scroll(DNSLogIndex).
+			SortBy(elastic.SortByDoc{}).
+			Size(QuerySize).
+			Query(
+				elastic.NewNestedQuery(
+					"rrsets",
+					elastic.NewTermsQuery("rrsets.name", t...),
+				),
+			)
+		scrollers = append(scrollers, scrollerEntry{key: db.QueryKeyDNSLogRRSetsName, scroller: rrsn, terms: t})
+	}
+
+	// RRSet.rdata scrollers
+	for _, t := range queryTerms {
+		rrsrd := e.c.Scroll(DNSLogIndex).
+			SortBy(elastic.SortByDoc{}).
+			Size(QuerySize).
+			Query(
+				elastic.NewNestedQuery(
+					"rrsets",
+					elastic.NewTermsQuery("rrsets.rdata", t...),
+				),
+			)
+		scrollers = append(scrollers, scrollerEntry{key: db.QueryKeyDNSLogRRSetsRData, scroller: rrsrd, terms: t})
+	}
+	return newQueryIterator(ctx, scrollers, name), nil
 }
 
 func splitIPSetToInterface(ipset db.IPSetSpec) [][]interface{} {
+	return splitStringSliceToInterface(ipset)
+}
+
+func splitDomainNameSetToInterface(set db.DomainNameSetSpec) [][]interface{} {
+	return splitStringSliceToInterface(set)
+}
+
+func splitStringSliceToInterface(set []string) [][]interface{} {
 	terms := make([][]interface{}, 1)
-	for _, ip := range ipset {
+	for _, t := range set {
 		if len(terms[len(terms)-1]) >= MaxClauseCount {
-			terms = append(terms, []interface{}{ip})
+			terms = append(terms, []interface{}{t})
 		} else {
-			terms[len(terms)-1] = append(terms[len(terms)-1], ip)
+			terms[len(terms)-1] = append(terms[len(terms)-1], t)
 		}
 	}
 	return terms
+
 }
 
 func (e *Elastic) DeleteIPSet(ctx context.Context, m db.Meta) error {
