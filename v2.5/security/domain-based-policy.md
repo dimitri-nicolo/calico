@@ -20,6 +20,7 @@ Domain names can include a wildcard (`*`), making it easier to manage large numb
 This how-to guide uses the following {{site.prodname}} features:
 
 - **GlobalNetworkPolicy** with exact or wildcard domain names
+- **NetworkPolicy** with exact or wildcard domain names
 - **GlobalNetworkSet** with exact or wildcard domain names, where the network set is referenced in a GlobalNetworkPolicy
 
 ### Concepts
@@ -48,10 +49,11 @@ standard Kubernetes installs, so normally you won’t change them.
 
 ### How to
 
-You can specify allowed domain names directly in a **global network policy**, or specify domain names in a **global network set** (and then
+You can specify allowed domain names directly in a **global network policy** or **namespaced network policy**, or specify domain names in a **global network set** (and then
 reference the global network set in a global network policy).
 
 - [Use domain names in a global network policy](#use-domain-names-in-a-global-network-policy)
+- [Use domain names in a namespaced network policy](#use-domain-names-in-a-namespaced-network-policy)
 - [Use domain names in a global network set, reference the set in a global network policy](#use-domain-names-in-a-global-network-set)
 
 #### Best practice
@@ -90,6 +92,40 @@ spec:
       - api.alice.com
       - "*.example.com"
 ```
+#### Use domain names in a namespaced network policy
+
+In this method, you create a **NetworkPolicy** with egress rules with `action: Allow` and a `destination.domains` field specifying the
+domain names to which egress traffic is allowed.
+
+In the following example, the first rule allows DNS traffic, and the second rule allows connections outside the cluster to domains
+**api.alice.com** and ***.example.com** (which means `<anything>.example.com`, such as **bob.example.com**).
+
+```
+apiVersion: projectcalico.org/v3
+kind: NetworkPolicy
+metadata:
+  name: allow-egress-to-domains
+  namespace: rollout-test
+spec:
+  order: 1
+  selector: my-pod-label == 'my-value'
+  types:
+  - Egress
+  egress:
+  - action: Allow
+    protocol: UDP
+    destination:
+      ports:
+      - 53
+  - action: Allow
+    destination:
+      domains:
+      - api.alice.com
+      - "*.example.com"
+```
+
+The difference between this and the **GlobalNetworkPolicy** example is that this namespaced NetworkPolicy can only grant egress access, to the specified domains, to workload endpoints in the `rollout-test` namespace.
+
 #### Use domain names in a global network set
 
 In this method, you create a **GlobalNetworkSet** with the allowed destination domain names in the `allowedEgressDomains` field. Then,
@@ -133,6 +169,7 @@ spec:
 To change the default DNS trusted servers, use the [DNSTrustedServers parameter]({{site.baseurl}}/{{page.version}}/reference/felix/configuration).
 
 For more detail about the relevant resources, see
-[GlobalNetworkSet]({{site.baseurl}}/{{page.version}}/reference/resources/globalnetworkset)
-and
+[GlobalNetworkSet]({{site.baseurl}}/{{page.version}}/reference/resources/globalnetworkset),
 [GlobalNetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/resources/globalnetworkpolicy)
+and
+[NetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/resources/networkpolicy).
