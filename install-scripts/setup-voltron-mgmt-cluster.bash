@@ -107,7 +107,7 @@ spec:
     - action: Allow
       protocol: TCP
       source:
-        selector: k8s-app == "cnx-manager"||k8s-app == "cnx-guardian"
+        selector: k8s-app == "cnx-manager"||k8s-app == "cnx-guardian"||k8s-app == "cnx-voltron"
       destination:
         ports:
           - '5443'

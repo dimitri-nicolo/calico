@@ -109,6 +109,10 @@ func main() {
 				PathRegexp:  []byte("^/tigera-elasticsearch/?"),
 				PathReplace: []byte("/"),
 			},
+			{
+				Path: "/compliance/",
+				Dest: "https://compliance.calico-monitoring.svc.cluster.local",
+			},
 		})
 
 		if err != nil {
