@@ -1,4 +1,4 @@
-// Copyright 2015 Tigera Inc
+// Copyright (c) 2015-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -89,7 +89,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 	if err != nil {
 		return fmt.Errorf("error getting ClusterInformation: %v", err)
 	}
-	if *ci.Spec.DatastoreReady != true {
+	if !*ci.Spec.DatastoreReady {
 		logrus.Info("Upgrade may be in progress, ready flag is not set")
 		return fmt.Errorf("Calico is currently not ready to process requests")
 	}
@@ -433,7 +433,7 @@ func cmdDel(args *skel.CmdArgs) error {
 	if err != nil {
 		return fmt.Errorf("error getting ClusterInformation: %v", err)
 	}
-	if *ci.Spec.DatastoreReady != true {
+	if !*ci.Spec.DatastoreReady {
 		logrus.Info("Upgrade may be in progress, ready flag is not set")
 		return fmt.Errorf("Calico is currently not ready to process requests")
 	}
