@@ -232,6 +232,68 @@ var _ = Describe("DNS Policy", func() {
 			})
 		})
 
+		Context("with namespaced domain-allow egress policy", func() {
+			JustBeforeEach(func() {
+				policy := api.NewNetworkPolicy()
+				policy.Name = "allow-microsoft"
+				policy.Namespace = "fv"
+				order := float64(20)
+				policy.Spec.Order = &order
+				policy.Spec.Selector = "all()"
+				udp := numorstring.ProtocolFromString(numorstring.ProtocolUDP)
+				policy.Spec.Egress = []api.Rule{
+					{
+						Action:      api.Allow,
+						Destination: api.EntityRule{Domains: []string{"microsoft.com", "www.microsoft.com"}},
+					},
+					{
+						Action:   api.Allow,
+						Protocol: &udp,
+						Destination: api.EntityRule{
+							Ports: []numorstring.Port{numorstring.SinglePort(53)},
+						},
+					},
+				}
+				_, err := client.NetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("can wget microsoft.com", func() {
+				canWgetMicrosoft()
+			})
+		})
+
+		Context("with namespaced domain-allow egress policy in wrong namespace", func() {
+			JustBeforeEach(func() {
+				policy := api.NewNetworkPolicy()
+				policy.Name = "allow-microsoft"
+				policy.Namespace = "wibbly-woo"
+				order := float64(20)
+				policy.Spec.Order = &order
+				policy.Spec.Selector = "all()"
+				udp := numorstring.ProtocolFromString(numorstring.ProtocolUDP)
+				policy.Spec.Egress = []api.Rule{
+					{
+						Action:      api.Allow,
+						Destination: api.EntityRule{Domains: []string{"microsoft.com", "www.microsoft.com"}},
+					},
+					{
+						Action:   api.Allow,
+						Protocol: &udp,
+						Destination: api.EntityRule{
+							Ports: []numorstring.Port{numorstring.SinglePort(53)},
+						},
+					},
+				}
+				_, err := client.NetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("cannot wget microsoft.com", func() {
+				cannotWgetMicrosoft()
+			})
+		})
+
 		Context("with wildcard domain-allow egress policy", func() {
 			JustBeforeEach(func() {
 				policy := api.NewGlobalNetworkPolicy()
