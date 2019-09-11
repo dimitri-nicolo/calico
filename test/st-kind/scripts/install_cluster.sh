@@ -100,6 +100,8 @@ kind load docker-image gcr.io/unique-caldron-775/cnx/tigera/cnx-node:master
 kind load docker-image gcr.io/unique-caldron-775/cnx/tigera/cnx-apiserver:master
 kind load docker-image gcr.io/unique-caldron-775/cnx/tigera/cnx-queryserver:master
 kind load docker-image gcr.io/unique-caldron-775/cnx/tigera/kube-controllers:master
+kind load docker-image gcr.io/unique-caldron-775/cnx/tigera/cnx-node:master
+kind load docker-image calico/pod2daemon-flexvol:master
 kind load docker-image tigera/voltron:st-image
 kind load docker-image tigera/guardian:st-image
 
@@ -122,6 +124,7 @@ kubectl rollout status deployment/coredns -n kube-system
 helm install tigera/tigera-secure-ee-core --set-file imagePullSecrets.cnx-pull-secret=${config_json}
 kubectl rollout status deployment/cnx-apiserver -n kube-system
 kubectl rollout status deployment/calico-kube-controllers -n kube-system
+kubectl rollout status daemonsets/calico-node -n kube-system
 
 
 ###########################

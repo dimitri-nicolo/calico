@@ -297,6 +297,8 @@ else
 	docker pull gcr.io/unique-caldron-775/cnx/tigera/cnx-apiserver:master
 	docker pull gcr.io/unique-caldron-775/cnx/tigera/cnx-queryserver:master
 	docker pull gcr.io/unique-caldron-775/cnx/tigera/kube-controllers:master
+	docker pull gcr.io/unique-caldron-775/cnx/tigera/cnx-node:master
+	docker pull calico/pod2daemon-flexvol:master
 	$(DOCKER_GO_BUILD) sh -c 'git config --global url."git@github.com:tigera".insteadOf "https://github.com/tigera" && $(CMD)'
 endif
 
