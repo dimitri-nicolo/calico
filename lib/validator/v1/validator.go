@@ -32,7 +32,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/scope"
 	"github.com/projectcalico/libcalico-go/lib/selector"
 	"github.com/projectcalico/libcalico-go/lib/selector/tokenizer"
-	"github.com/projectcalico/libcalico-go/lib/validator/v3"
+	v3 "github.com/projectcalico/libcalico-go/lib/validator/v3"
 )
 
 var validate *validator.Validate

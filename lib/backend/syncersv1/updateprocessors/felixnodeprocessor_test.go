@@ -181,7 +181,7 @@ var _ = Describe("Test the (Felix) Node update processor", func() {
 		Expect(err).To(HaveOccurred())
 		expected := map[string]interface{}{
 			hostIPMarker:          nil,
-			nodeMarker:         res,
+			nodeMarker:            res,
 			"IpInIpTunnelAddr":    "192.100.100.100",
 			"IPv4VXLANTunnelAddr": nil,
 			"NodeIP":              nil,
@@ -208,7 +208,7 @@ var _ = Describe("Test the (Felix) Node update processor", func() {
 		ip := net.MustParseIP("1.2.3.4")
 		expected = map[string]interface{}{
 			hostIPMarker:          &ip,
-			nodeMarker:         res,
+			nodeMarker:            res,
 			"IpInIpTunnelAddr":    nil,
 			"IPv4VXLANTunnelAddr": nil,
 			"NodeIP":              "1.2.3.4",
