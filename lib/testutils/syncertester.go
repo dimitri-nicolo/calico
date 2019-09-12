@@ -55,12 +55,17 @@ type SyncerTester struct {
 	statusBlocker sync.WaitGroup
 	updateBlocker sync.WaitGroup
 	lock          sync.Mutex
+	testNodeRes   bool
 
 	// Stored update information.
 	cache       map[string]model.KVPair
 	onUpdates   [][]api.Update
 	updates     []api.Update
 	parseErrors []parseError
+}
+
+func (st *SyncerTester) TestNodeResources() {
+	st.testNodeRes = true
 }
 
 // OnStatusUpdated updates the current status and then blocks until a call to
@@ -102,6 +107,14 @@ func (st *SyncerTester) OnUpdates(updates []api.Update) {
 		defer st.lock.Unlock()
 		st.onUpdates = append(st.onUpdates, updates)
 		for _, u := range updates {
+			// Skip Node resources, as they were recently added and most of
+			// the test code here doesn't expect them.
+			if rk, ok := u.Key.(model.ResourceKey); ok {
+				if rk.Kind == "Node" && !st.testNodeRes {
+					continue
+				}
+			}
+
 			// Append the updates to the total set of updates.
 			st.updates = append(st.updates, u)
 
