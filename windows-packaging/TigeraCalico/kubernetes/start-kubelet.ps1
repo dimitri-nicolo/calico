@@ -24,11 +24,9 @@ if ($NodeIp -EQ "") {
 $argList = @(`
     "--hostname-override=$env:NODENAME", `
     "--node-ip=$NodeIp", `
-    "--max-pods=60",`
     "--v=4",`
     "--pod-infra-container-image=kubeletwin/pause",`
     "--resolv-conf=""""",`
-    "--allow-privileged=true",`
     "--enable-debugging-handlers",`
     "--cluster-dns=10.96.0.10",`
     "--cluster-domain=cluster.local",`
@@ -43,6 +41,20 @@ $argList = @(`
     "--cni-conf-dir ""c:\k\cni\config""",`
     "--kubeconfig=""c:\k\config"""`
 )
+
+if (($kubeletVersionOutput = c:\k\kubelet.exe --version) -and $kubeletVersionOutput -match '^(?:kubernetes )?v?([0-9]+(?:\.[0-9]+){1,2})') {
+    $kubeletVersion = [System.Version]$matches[1]
+    Write-Host "Detected kubelet version $kubeletVersion"
+
+    if ($kubeletVersion -lt [System.Version]'1.15')
+    {
+        # this flag got deprecated in version 1.15
+        $argList += '--allow-privileged=true'
+    }
+} else {
+    Write-Host 'Unable to determine kubelet version'
+}
+
 Start-Process -FilePath c:\k\kubelet.exe `
     -ArgumentList $argList `
     -RedirectStandardOutput C:\k\kubelet.out.log `
