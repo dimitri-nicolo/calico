@@ -78,9 +78,9 @@ GENERATED_FILES:=./lib/apis/v3/zz_generated.deepcopy.go \
            ./lib/apis/v3/openapi_generated.go \
            ./lib/numorstring/openapi_generated.go
 
-$(BINDIR)/openapi-gen:
+$(BINDIR)/openapi-gen: vendor
 	$(DOCKER_GO_BUILD) \
-		sh -c 'go build -o $@ $(LIBCALICO-GO_PKG)/vendor/k8s.io/code-generator/cmd/openapi-gen'
+		sh -c 'go build -mod=vendor -o $@ $(LIBCALICO-GO_PKG)/vendor/k8s.io/code-generator/cmd/openapi-gen'
 
 .PHONY: gen-files
 ## Force rebuild generated go utilities (e.g. deepcopy-gen) and generated files
