@@ -10,9 +10,11 @@ import (
 	"net"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/gopacket/layers"
+	"golang.org/x/net/idna"
 
 	"github.com/projectcalico/felix/calc"
 )
@@ -99,7 +101,7 @@ func (d DNSName) MarshalJSON() ([]byte, error) {
 
 func (d DNSName) encodeDNSName() dnsNameEncoded {
 	n := dnsNameEncoded{
-		d.Name,
+		aNameToUName(d.Name),
 		layers.DNSClass(d.Class).String(),
 		layers.DNSType(d.Type).String(),
 	}
@@ -320,8 +322,33 @@ func (d DNSRData) String() string {
 	}
 }
 
+// IDNAString is like String() but decodes international domain names to unicode
+func (d DNSRData) IDNAString() string {
+	switch v := d.Decoded.(type) {
+	case net.IP:
+		return v.String()
+	case string:
+		return aNameToUName(v)
+	case []byte:
+		return base64.StdEncoding.EncodeToString(v)
+	case [][]byte:
+		// This might not be the right thing to do here. It depends on how gopacket interprets multiple
+		// TXT records.
+		return string(bytes.Join(v, []byte{}))
+	case layers.DNSSOA:
+		return fmt.Sprintf("%s %s %d %d %d %d %d",
+			aNameToUName(string(v.MName)), aNameToUName(string(v.RName)), v.Serial, v.Refresh, v.Retry, v.Expire, v.Minimum)
+	case layers.DNSSRV:
+		return fmt.Sprintf("%d %d %d %s", v.Priority, v.Weight, v.Port, aNameToUName(string(v.Name)))
+	case layers.DNSMX:
+		return fmt.Sprintf("%d %s", v.Preference, aNameToUName(string(v.Name)))
+	default:
+		return fmt.Sprintf("%#v", d.Decoded)
+	}
+}
+
 func (d DNSRData) MarshalJSON() ([]byte, error) {
-	return json.Marshal(d.String())
+	return json.Marshal(d.IDNAString())
 }
 
 type DNSServer struct {
@@ -374,11 +401,18 @@ type DNSLog struct {
 	ClientIP        *string           `json:"client_ip"`
 	ClientLabels    map[string]string `json:"client_labels"`
 	Servers         []DNSServer       `json:"servers"`
-	QName           string            `json:"qname"`
+	QName           QName             `json:"qname"`
 	QClass          DNSClass          `json:"qclass"`
 	QType           DNSType           `json:"qtype"`
 	RCode           DNSResponseCode   `json:"rcode"`
 	RRSets          DNSRRSets         `json:"rrsets"`
+}
+
+type QName string
+
+func (q QName) MarshalJSON() ([]byte, error) {
+	u := aNameToUName(string(q))
+	return json.Marshal(u)
 }
 
 type DNSExcessLog struct {
@@ -401,7 +435,7 @@ func (d *DNSData) ToDNSLog(startTime, endTime time.Time, includeLabels bool) *DN
 		ClientNamespace: d.ClientMeta.Namespace,
 		ClientLabels:    d.ClientLabels,
 		Servers:         e.Servers,
-		QName:           d.Question.Name,
+		QName:           QName(d.Question.Name),
 		QClass:          d.Question.Class,
 		QType:           d.Question.Type,
 		RCode:           d.ResponseCode,
@@ -422,4 +456,23 @@ func (d *DNSData) ToDNSLog(startTime, endTime time.Time, includeLabels bool) *DN
 	}
 
 	return res
+}
+
+var idnaProfile *idna.Profile
+var ipOnce sync.Once
+
+// aNameToUName takes an "A-Name" (ASCII encoded) and converts it to a "U-Name"
+// which is its unicode equivalent according to the International Domain Names
+// for Applications (IDNA) spec (https://tools.ietf.org/html/rfc5891)
+func aNameToUName(aname string) string {
+	ipOnce.Do(func() {
+		idnaProfile = idna.New()
+	})
+	u, err := idnaProfile.ToUnicode(aname)
+	if err != nil {
+		// If there was some problem converting, just return the name as we
+		// encountered it in the DNS protocol
+		return aname
+	}
+	return u
 }

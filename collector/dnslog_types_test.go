@@ -459,4 +459,140 @@ var _ = Describe("DNS log type tests", func() {
 			})
 		})
 	})
+
+	Describe("DNSLog Tests - IDNA", func() {
+		var l *DNSLog
+		var jl map[string]interface{}
+
+		BeforeEach(func() {
+			t := time.Date(2019, 07, 02, 0, 0, 0, 0, time.UTC)
+			clientIP := "10.10.11.1"
+			l = &DNSLog{
+				StartTime:       t,
+				EndTime:         t.Add(time.Minute),
+				Type:            DNSLogTypeLog,
+				Count:           5,
+				ClientName:      "test-1",
+				ClientNameAggr:  "test-*",
+				ClientNamespace: "test-ns",
+				ClientIP:        &clientIP,
+				ClientLabels: map[string]string{
+					"t1": "a",
+				},
+				Servers: []DNSServer{
+					{
+						EndpointMetadataWithIP: EndpointMetadataWithIP{
+							EndpointMetadata: EndpointMetadata{
+								Type:           "Pod",
+								Namespace:      "test2-ns",
+								Name:           "test-2",
+								AggregatedName: "test-*",
+							},
+							IP: "192.168.0.1",
+						},
+						Labels: map[string]string{
+							"t2": "b",
+						},
+					},
+				},
+				QName:  "www.xn--mlstrm-pua6k.com",
+				QClass: DNSClass(layers.DNSClassIN),
+				QType:  DNSType(layers.DNSTypeA),
+				RCode:  DNSResponseCode(layers.DNSResponseCodeNoErr),
+				RRSets: DNSRRSets{
+					{
+						Name:  "www.xn--mlstrm-pua6k.com",
+						Class: DNSClass(layers.DNSClassIN),
+						Type:  DNSType(layers.DNSTypeCNAME),
+					}: {{Decoded: "xn--mlmer-srensen-bnbg.gate"}},
+					{
+						Name:  "xn--mlmer-srensen-bnbg.gate",
+						Class: DNSClass(layers.DNSClassIN),
+						Type:  DNSType(layers.DNSTypeA),
+					}: {{Decoded: net.ParseIP("127.0.0.1")}},
+					{
+						Name:  "xn--mlmer-srensen-bnbg.gate",
+						Class: DNSClass(layers.DNSClassIN),
+						Type:  DNSType(layers.DNSTypeSOA),
+					}: {{Decoded: layers.DNSSOA{MName: []byte("xn--mlmer-srensen-bnbg.gate"), RName: []byte("xn--mlmer-srensen-bnbg.gate")}}},
+					{
+						Name:  "_sip._tcp.xn--mlmer-srensen-bnbg.gate",
+						Class: DNSClass(layers.DNSClassIN),
+						Type:  DNSType(layers.DNSTypeSRV),
+					}: {{Decoded: layers.DNSSRV{Name: []byte("sip.xn--mlmer-srensen-bnbg.gate")}}},
+					{
+						Name:  "www.xn--ggblaxu6ii5ec9ad.es",
+						Class: DNSClass(layers.DNSClassIN),
+						Type:  DNSType(layers.DNSTypeMX),
+					}: {{Decoded: layers.DNSMX{Name: []byte("mail.xn--ggblaxu6ii5ec9ad.es")}}},
+					{
+						Name:  "xn--mlmer-srensen-bnbg*.gate", // Not a real ACE label
+						Class: DNSClass(layers.DNSClassIN),
+						Type:  DNSType(layers.DNSTypeA),
+					}: {{Decoded: net.ParseIP("127.0.0.1")}},
+				},
+			}
+		})
+
+		Context("marshaled to JSON", func() {
+			BeforeEach(func() {
+				b, err := json.Marshal(l)
+				Expect(err).ToNot(HaveOccurred())
+				err = json.Unmarshal(b, &jl)
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			findRR := func(rrsets []interface{}, name, class, _type string) map[string]interface{} {
+				for _, s := range rrsets {
+					sobj := s.(map[string]interface{})
+					if sobj["name"] == name && sobj["class"] == class && sobj["type"] == _type {
+						return sobj
+					}
+				}
+				return nil
+			}
+
+			It("converts qname to unicode", func() {
+				Expect(jl["qname"]).To(Equal("www.mælström.com"))
+			})
+
+			It("converts rrset.name to unicode", func() {
+				rrs := jl["rrsets"].([]interface{})
+				rrs0 := findRR(rrs, "www.mælström.com", "IN", "CNAME")
+				Expect(rrs0).ToNot(BeNil())
+				rrs1 := findRR(rrs, "mølmer-sørensen.gate", "IN", "A")
+				Expect(rrs1).ToNot(BeNil())
+			})
+
+			It("converts rrset rdata cname to unicode", func() {
+				rrs := jl["rrsets"].([]interface{})
+				rrs0 := findRR(rrs, "www.mælström.com", "IN", "CNAME")
+				Expect(rrs0["rdata"]).To(Equal([]interface{}{"mølmer-sørensen.gate"}))
+			})
+
+			It("converts rrset rdata soa to unicode", func() {
+				rrs := jl["rrsets"].([]interface{})
+				rrs2 := findRR(rrs, "mølmer-sørensen.gate", "IN", "SOA")
+				Expect(rrs2["rdata"]).To(Equal([]interface{}{"mølmer-sørensen.gate mølmer-sørensen.gate 0 0 0 0 0"}))
+			})
+
+			It("converts rrset rdata srv to unicode", func() {
+				rrs := jl["rrsets"].([]interface{})
+				rrs3 := findRR(rrs, "_sip._tcp.mølmer-sørensen.gate", "IN", "SRV")
+				Expect(rrs3["rdata"]).To(Equal([]interface{}{"0 0 0 sip.mølmer-sørensen.gate"}))
+			})
+
+			It("converts rrset rdata mx to unicode", func() {
+				rrs := jl["rrsets"].([]interface{})
+				rrs3 := findRR(rrs, "www.الْحَمْرَاء.es", "IN", "MX")
+				Expect(rrs3["rdata"]).To(Equal([]interface{}{"0 mail.الْحَمْرَاء.es"}))
+			})
+
+			It("leaves malformed ACE labels as is", func() {
+				rrs := jl["rrsets"].([]interface{})
+				rrs4 := findRR(rrs, "xn--mlmer-srensen-bnbg*.gate", "IN", "A")
+				Expect(rrs4).ToNot(BeNil())
+			})
+		})
+	})
 })
