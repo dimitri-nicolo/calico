@@ -42,8 +42,10 @@ func (c *FelixNodeUpdateProcessor) Process(kvp *model.KVPair) ([]*model.KVPair, 
 	// the non=interface types in the KVPair.Value field instead of nil interface{} values (and we want nil
 	// interface{} values).
 	var ipv4, ipv4Tunl, ipv4Str, vxlanTunlIp, vxlanTunlMac interface{}
+	var node *apiv3.Node
+	var ok bool
 	if kvp.Value != nil {
-		node, ok := kvp.Value.(*apiv3.Node)
+		node, ok = kvp.Value.(*apiv3.Node)
 		if !ok {
 			return nil, errors.New("Incorrect value type - expecting resource of kind Node")
 		}
@@ -145,6 +147,14 @@ func (c *FelixNodeUpdateProcessor) Process(kvp *model.KVPair) ([]*model.KVPair, 
 				Name:     "VXLANTunnelMACAddr",
 			},
 			Value:    vxlanTunlMac,
+			Revision: kvp.Revision,
+		},
+		{
+			Key: model.ResourceKey{
+				Name: name,
+				Kind: apiv3.KindNode,
+			},
+			Value:    node,
 			Revision: kvp.Revision,
 		},
 	}, err

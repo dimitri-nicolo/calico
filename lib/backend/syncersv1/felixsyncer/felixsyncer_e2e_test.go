@@ -262,7 +262,8 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 					Key:   model.HostConfigKey{Hostname: "127.0.0.1", Name: "VXLANTunnelMACAddr"},
 					Value: "66:cf:23:df:22:07",
 				})
-				expectedCacheSize += 5
+				//add one for the node resource
+				expectedCacheSize += 6
 			}
 
 			// The HostIP will be added for the IPv4 address

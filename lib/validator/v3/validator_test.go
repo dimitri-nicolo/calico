@@ -954,6 +954,7 @@ func init() {
 		// (API) VXLANMode
 		Entry("should reject IPIP mode and VXLAN mode", api.IPPoolSpec{CIDR: "1.2.3.0/24", IPIPMode: "Always", VXLANMode: "Always"}, false),
 		Entry("should accept VXLAN mode Always", api.IPPoolSpec{CIDR: "1.2.3.0/24", VXLANMode: "Always"}, true),
+		Entry("should accept VXLAN mode CrossSubnet", api.IPPoolSpec{CIDR: "1.2.3.0/24", VXLANMode: api.VXLANModeCrossSubnet}, true),
 		Entry("should accept VXLAN mode Never ", api.IPPoolSpec{CIDR: "1.2.3.0/24", VXLANMode: "Never"}, true),
 		Entry("should reject VXLAN mode never", api.IPPoolSpec{CIDR: "1.2.3.0/24", VXLANMode: "never"}, false),
 		Entry("should reject VXLAN mode badVal", api.IPPoolSpec{CIDR: "1.2.3.0/24", VXLANMode: "badVal"}, false),
@@ -1454,6 +1455,10 @@ func init() {
 			NodeSelector: "has(mylabel)",
 			PeerSelector: "has(mylabel)",
 		}, true),
+
+		Entry("should reject invalid BGPPeerSpec (selector)", api.BGPPeerSpec{
+			NodeSelector: "kubernetes.io/hostname: == 'casey-crc-kadm-node-4'",
+		}, false),
 
 		// (API) NodeSpec
 		Entry("should accept node with IPv4 BGP", api.NodeSpec{BGP: &api.NodeBGPSpec{IPv4Address: netv4_1}}, true),
@@ -2798,6 +2803,22 @@ func init() {
 				},
 			},
 			false,
+		Entry("should accept a valid prometheusMetricsHost value 'localhost'", api.FelixConfigurationSpec{PrometheusMetricsHost: "localhost"}, true),
+		Entry("should accept a valid prometheusMetricsHost value '10.0.0.1'", api.FelixConfigurationSpec{PrometheusMetricsHost: "10.0.0.1"}, true),
+		Entry("should accept a valid prometheusMetricsHost value 'fe80::ea7a:70fa:cf74:25d5'", api.FelixConfigurationSpec{PrometheusMetricsHost: "fe80::ea7a:70fa:cf74:25d5"}, true),
+		Entry("should reject an invalid prometheusMetricsHost value 'localhost#'", api.FelixConfigurationSpec{PrometheusMetricsHost: "localhost#"}, false),
+		Entry("should reject an invalid prometheusMetricsHost value '0: 1::1'", api.FelixConfigurationSpec{PrometheusMetricsHost: "0: 1::1"}, false),
+		Entry("should accept a valid IPv4 address",
+			api.FelixConfigurationSpec{DeviceRouteSourceAddress: ipv4_1}, true,
+		),
+		Entry("should not accept a valid IPv6 address",
+			api.FelixConfigurationSpec{DeviceRouteSourceAddress: ipv6_1}, false,
+		),
+		Entry("should not accept an invalid IP address",
+			api.FelixConfigurationSpec{DeviceRouteSourceAddress: bad_ipv4_1}, false,
+		),
+		Entry("should not accept a masked IP address",
+			api.FelixConfigurationSpec{DeviceRouteSourceAddress: netv4_1}, false,
 		),
 	)
 
