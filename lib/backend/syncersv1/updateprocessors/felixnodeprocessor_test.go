@@ -17,7 +17,7 @@ var _ = Describe("Test the (Felix) Node update processor", func() {
 		Kind: apiv3.KindNode,
 		Name: "mynode",
 	}
-	numFelixConfigs := 5
+	numFelixConfigs := 6
 	up := updateprocessors.NewFelixNodeUpdateProcessor()
 
 	BeforeEach(func() {

@@ -2803,6 +2803,7 @@ func init() {
 				},
 			},
 			false,
+		),
 		Entry("should accept a valid prometheusMetricsHost value 'localhost'", api.FelixConfigurationSpec{PrometheusMetricsHost: "localhost"}, true),
 		Entry("should accept a valid prometheusMetricsHost value '10.0.0.1'", api.FelixConfigurationSpec{PrometheusMetricsHost: "10.0.0.1"}, true),
 		Entry("should accept a valid prometheusMetricsHost value 'fe80::ea7a:70fa:cf74:25d5'", api.FelixConfigurationSpec{PrometheusMetricsHost: "fe80::ea7a:70fa:cf74:25d5"}, true),
