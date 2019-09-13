@@ -505,7 +505,10 @@ func dumpHeapMemoryProfile(configParams *config.Config) {
 // TODO Typha: Share with Felix.
 func servePrometheusMetrics(configParams *config.Config) {
 	for {
-		log.WithField("port", configParams.PrometheusMetricsPort).Info("Starting prometheus metrics endpoint")
+		log.WithFields(log.Fields{
+			"host": configParams.PrometheusMetricsHost,
+			"port": configParams.PrometheusMetricsPort,
+		}).Info("Starting prometheus metrics endpoint")
 		if configParams.PrometheusGoMetricsEnabled && configParams.PrometheusProcessMetricsEnabled {
 			log.Info("Including Golang & Process metrics")
 		} else {
@@ -520,6 +523,7 @@ func servePrometheusMetrics(configParams *config.Config) {
 		}
 		err := security.ServePrometheusMetrics(
 			prometheus.DefaultGatherer,
+			configParams.PrometheusMetricsHost,
 			configParams.PrometheusMetricsPort,
 			configParams.PrometheusMetricsCertFile,
 			configParams.PrometheusMetricsKeyFile,
