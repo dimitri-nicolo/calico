@@ -143,6 +143,11 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 			if config.Spec.DatastoreType == apiconfig.Kubernetes {
 				// Kubernetes will have a bunch of resources that are pre-programmed in our e2e environment.
 				expectedCacheSize += len(defaultKubernetesResource)
+
+				// Add 1 for the Node resource passed over the felix syncer.
+				expectedCacheSize += 1
+				syncTester.ExpectPath("/calico/resources/v3/projectcalico.org/nodes/127.0.0.1")
+
 				for _, r := range defaultKubernetesResource {
 					syncTester.ExpectData(r)
 				}
@@ -239,6 +244,9 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 					options.SetOptions{},
 				)
 				Expect(err).NotTo(HaveOccurred())
+
+				// Add 1 for the Node resource passed over the felix syncer.
+				expectedCacheSize += 1
 
 				// Creating the node initialises the ClusterInformation as a side effect.
 				syncTester.ExpectData(model.KVPair{
