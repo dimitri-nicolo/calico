@@ -135,7 +135,8 @@ endif
 LOCAL_USER_ID:=$(shell id -u)
 LOCAL_GROUP_ID:=$(shell id -g)
 
-EXTRA_DOCKER_ARGS	+= -e GO111MODULE=on
+EXTRA_DOCKER_ARGS	+= -e GO111MODULE=on -e GOPRIVATE=github.com/tigera/*
+GIT_CONFIG_SSH		?= git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
 
 # Volume-mount gopath into the build container to cache go module's packages. If the environment is using multiple
 # comma-separated directories for gopath, use the first one, as that is the default one used by go modules.
@@ -180,7 +181,6 @@ local_build:
 	$(DOCKER_RUN) $(CALICO_BUILD) go mod edit -replace=github.com/projectcalico/libcalico-go=../libcalico-go
 else
 local_build:
-	-$(DOCKER_RUN) $(CALICO_BUILD) go mod edit -dropreplace=github.com/projectcalico/libcalico-go
 endif
 
 .PHONY: clean
@@ -212,10 +212,9 @@ LIBCALICO_OLDVER?=$(shell $(DOCKER_RUN) $(CALICO_BUILD) go list -m -f "{{.Versio
 
 ## Update libcalico pin in go.mod
 update-libcalico:
-	$(DOCKER_RUN) -i $(CALICO_BUILD) sh -c '\
+	$(DOCKER_RUN) -i $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) && \
 	if [[ ! -z "$(LIBCALICO_VERSION)" ]] && [[ "$(LIBCALICO_VERSION)" != "$(LIBCALICO_OLDVER)" ]]; then \
 		echo "Updating libcalico version $(LIBCALICO_OLDVER) to $(LIBCALICO_VERSION) from $(LIBCALICO_REPO)"; \
-		go mod edit -droprequire github.com/projectcalico/libcalico-go; \
 		go get $(LIBCALICO_REPO)@$(LIBCALICO_VERSION); \
 		if [ $(LIBCALICO_REPO) != "github.com/projectcalico/libcalico-go" ]; then \
 			go mod edit -replace github.com/projectcalico/libcalico-go=$(LIBCALICO_REPO)@$(LIBCALICO_VERSION); \
@@ -232,7 +231,7 @@ ifdef CONFIRM
 endif
 
 git-commit:
-	git diff-index --quiet HEAD || git commit -m "Semaphore Automatic Update" go.mod go.sum
+	git diff-index --quiet HEAD && git commit -m "Semaphore Automatic Update" go.mod go.sum
 
 git-push:
 	git push
@@ -245,8 +244,8 @@ bin/calico-typha: bin/calico-typha-$(ARCH)
 bin/calico-typha-$(ARCH): $(SRC_FILES) local_build
 	@echo Building typha...
 	mkdir -p bin
-	$(DOCKER_RUN) $(CALICO_BUILD) \
-	    sh -c 'go build -v -i -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/calico-typha" && \
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) && \
+		go build -v -i -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/calico-typha" && \
 		( ldd $@ 2>&1 | grep -q -e "Not a valid dynamic program" \
 		-e "not a dynamic executable" || \
 		( echo "Error: bin/calico-typha was not statically linked"; false ) )'
@@ -254,8 +253,8 @@ bin/calico-typha-$(ARCH): $(SRC_FILES) local_build
 bin/typha-client-$(ARCH): $(SRC_FILES) local_build
 	@echo Building typha client...
 	mkdir -p bin
-	$(DOCKER_RUN) $(CALICO_BUILD) \
-	    sh -c 'GO111MODULE=on go build -v -i -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/typha-client" && \
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) && \
+		GO111MODULE=on go build -v -i -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/typha-client" && \
 		( ldd $@ 2>&1 | grep -q -e "Not a valid dynamic program" \
 		-e "not a dynamic executable" || \
 		( echo "Error: bin/typha-client was not statically linked"; false ) )'
@@ -414,17 +413,11 @@ update-libcalico-pin: #guard-ssh-forwarding-bug guard-git-libcalico
 # Static checks
 ###############################################################################
 .PHONY: static-checks
-static-checks: vendor/.up-to-date
+static-checks:
 	$(DOCKER_RUN) $(CALICO_BUILD) golangci-lint run --deadline 5m --disable errcheck,structcheck,govet,gosimple,unused
 
 foss-checks:
-	@echo Running $@...
-	@docker run --rm -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
-	  -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-	  -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
-	  -e GO111MODULE=on \
-	  -w /go/src/$(PACKAGE_NAME) \
-	  $(CALICO_BUILD) /usr/local/bin/fossa
+	$(DOCKER_RUN) -e FOSSA_API_KEY=$(FOSSA_API_KEY) $(CALICO_BUILD) /usr/local/bin/fossa
 
 # Run go fmt on all our go files.
 .PHONY: go-fmt goimports fix
@@ -447,7 +440,7 @@ install-git-hooks:
 .PHONY: ut
 ut combined.coverprofile: $(SRC_FILES)
 	@echo Running Go UTs.
-	$(DOCKER_RUN) $(CALICO_BUILD) ./utils/run-coverage
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) && ./utils/run-coverage'
 
 ###############################################################################
 # CI/CD
