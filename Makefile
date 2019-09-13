@@ -38,13 +38,16 @@ ifeq ($(ARCH),x86_64)
 	override ARCH=amd64
 endif
 
+BIN=bin/$(ARCH)
+
 # Figure out the users UID/GID.  These are needed to run docker containers
 # as the current user and ensure that files built inside containers are
 # owned by the current user.
 LOCAL_USER_ID:=$(shell id -u)
 LOCAL_GROUP_ID:=$(shell id -g)
 
-EXTRA_DOCKER_ARGS	+= -e GO111MODULE=on
+EXTRA_DOCKER_ARGS	+= -e GO111MODULE=on -e GOPRIVATE=github.com/tigera/*
+GIT_CONFIG_SSH		?= git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
 
 # Volume-mount gopath into the build container to cache go module's packages. If the environment is using multiple
 # comma-separated directories for gopath, use the first one, as that is the default one used by go modules.
@@ -57,9 +60,15 @@ else
 	GOMOD_CACHE = $(HOME)/go/pkg/mod
 endif
 
-EXTRA_DOCKER_ARGS += -v $(GOMOD_CACHE):/go/pkg/mod:rw
+# Allow ssh auth sock to be mapped into the build container.
+ifdef SSH_AUTH_SOCK
+  EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
+endif
 
-DOCKER_RUN := mkdir -p .go-pkg-cache $(GOMOD_CACHE) && \
+EXTRA_DOCKER_ARGS += -v $(GOMOD_CACHE):/go/pkg/mod:rw
+PACKAGE_NAME?=github.com/projectcalico/cni-plugin
+
+DOCKER_RUN := mkdir -p .go-pkg-cache $(GOMOD_CACHE) $(BIN) && \
         docker run --rm \
                 --net=host \
                 $(EXTRA_DOCKER_ARGS) \
@@ -81,7 +90,7 @@ local_build:
 	$(DOCKER_RUN) $(CALICO_BUILD) go mod edit -replace=github.com/projectcalico/libcalico-go=../libcalico-go
 else
 local_build:
-	-$(DOCKER_RUN) $(CALICO_BUILD) go mod edit -dropreplace=github.com/projectcalico/libcalico-go
+	@echo 'This is not a local build'.
 endif
 
 # we want to be able to run the same recipe on multiple targets keyed on the image name
@@ -101,6 +110,11 @@ join_platforms = $(subst $(space),$(comma),$(call prefix_linux,$(strip $1)))
 
 ###############################################################################
 GO_BUILD_VER ?= v0.23
+
+# For building, we use the go-build image for the *host* architecture, even if the target is different
+# the one for the host should contain all the necessary cross-compilation tools
+# we do not need to use the arch since go-build:v0.15 now is multi-arch manifest
+CALICO_BUILD=calico/go-build:$(GO_BUILD_VER)
 
 SRC_FILES=$(shell find pkg cmd internal -name '*.go')
 TEST_SRC_FILES=$(shell find tests -name '*.go')
@@ -139,14 +153,11 @@ CALICO_BUILD?=$(BUILD_IMAGE_ORG)/go-build:$(GO_BUILD_VER)
 TOOLING_BUILD?=calico/go-build:v0.20
 
 
-PACKAGE_NAME?=github.com/projectcalico/cni-plugin
-
 BUILD_IMAGE?=tigera/cni
 DEPLOY_CONTAINER_MARKER=cni_deploy_container-$(ARCH).created
 
 PUSH_IMAGES?=gcr.io/unique-caldron-775/cnx/tigera/cni
 RELEASE_IMAGES?=
-PACKAGE_NAME?=github.com/projectcalico/cni-plugin
 
 # If this is a release, also tag and push additional images.
 ifeq ($(RELEASE),true)
@@ -173,29 +184,7 @@ ifeq ($(BUILDARCH),amd64)
 	ETCD_CONTAINER=quay.io/coreos/etcd:$(ETCD_VER)
 endif
 
-LIBCALICOGO_PATH?=none
-
 LOCAL_USER_ID?=$(shell id -u $$USER)
-
-
-
-# Allow libcalico-go and the ssh auth sock to be mapped into the build container.
-ifdef LIBCALICOGO_PATH
-  EXTRA_DOCKER_ARGS += -v $(LIBCALICOGO_PATH):/go/src/github.com/projectcalico/libcalico-go:ro
-endif
-ifdef SSH_AUTH_SOCK
-  EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
-endif
-
-DOCKER_RUN := mkdir -p .go-pkg-cache && \
-              docker run --rm \
-                         --net=host \
-                         $(EXTRA_DOCKER_ARGS) \
-                         -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-                         -v $${PWD}:/go/src/$(PACKAGE_NAME):rw \
-                         -v $${PWD}/.go-pkg-cache:/go/pkg:rw \
-                         -w /go/src/$(PACKAGE_NAME)
-
 
 .PHONY: clean
 clean:
@@ -215,61 +204,10 @@ build-all: $(addprefix sub-build-,$(VALIDARCHES))
 sub-build-%:
 	$(MAKE) build ARCH=$*
 
-<<<<<<< HEAD
-## Create the vendor directory
-vendor: glide.yaml
-	# Ensure that the glide cache directory exists.
-	mkdir -p $(HOME)/.glide
-
-	# To build without Docker just run "glide install -strip-vendor"
-	if [ "$(LIBCALICOGO_PATH)" != "none" ]; then \
-	  EXTRA_DOCKER_BIND="-v $(LIBCALICOGO_PATH):/go/src/github.com/projectcalico/libcalico-go:ro"; \
-	fi; \
-	if [ -n "$(SSH_AUTH_SOCK)" ]; then \
-		EXTRA_DOCKER_ARGS="-v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent"; \
-	fi; \
-    docker run --rm -i \
-	  $$EXTRA_DOCKER_ARGS \
-      -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw $$EXTRA_DOCKER_BIND \
-      -v $(HOME)/.glide:/home/user/.glide:rw \
-      -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-      -w /go/src/$(PACKAGE_NAME) \
-      $(CALICO_BUILD) glide install -strip-vendor
-
-
-GO_BUILD_ARGS:=-ldflags "-X main.VERSION=$(GIT_VERSION) -s -w"
-DOCKER_BUILD_ARGS:= \
-	 --rm \
-	-e ARCH=$(ARCH) \
-	-e GOARCH=$(ARCH) \
-	-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-	-v $(CURDIR):/go/src/$(PACKAGE_NAME):ro \
-	-v $(CURDIR)/$(BIN):/go/src/$(PACKAGE_NAME)/$(BIN):rw \
-	-v $(CURDIR)/.go-pkg-cache:/go-cache/:rw \
-	$(LOCAL_BUILD_MOUNTS) \
-	-w /go/src/$(PACKAGE_NAME) \
-	-e GOCACHE=/go-cache \
-
-## Build the Calico network plugin and ipam plugins
-$(BIN)/calico $(BIN)/calico-ipam: $(SRC_FILES) vendor
-	-mkdir -p .go-pkg-cache
-	-mkdir -p $(BIN)
-	docker run $(DOCKER_BUILD_ARGS) $(CALICO_BUILD) sh -c '\
-			go build -v -o $(BIN)/calico $(GO_BUILD_ARGS) ./cmd/calico && \
-            go build -v -o $(BIN)/calico-ipam $(GO_BUILD_ARGS) ./cmd/calico-ipam'
-
-## Build the Calico network plugin and ipam plugins for Windows
-$(BIN)/calico.exe $(BIN)/calico-ipam.exe: $(SRC_FILES) vendor
-	-mkdir -p .go-pkg-cache
-	-mkdir -p $(BIN)
-	docker run -e GOOS=windows $(DOCKER_BUILD_ARGS) $(CALICO_BUILD) sh -c '\
-	  go build -v -o $(BIN)/calico.exe $(GO_BUILD_ARGS) ./cmd/calico && \
-	  go build -v -o $(BIN)/calico-ipam.exe $(GO_BUILD_ARGS) ./cmd/calico-ipam'
-=======
 # Default the libcalico repo and version but allow them to be overridden
 LIBCALICO_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
-LIBCALICO_REPO?=github.com/projectcalico/libcalico-go
-LIBCALICO_VERSION?=$(shell git ls-remote git@github.com:projectcalico/libcalico-go $(LIBCALICO_BRANCH) 2>/dev/null | cut -f 1)
+LIBCALICO_REPO?=github.com/tigera/libcalico-go-private
+LIBCALICO_VERSION?=$(shell git ls-remote git@github.com:tigera/libcalico-go-private $(LIBCALICO_BRANCH) 2>/dev/null | cut -f 1)
 LIBCALICO_OLDVER?=$(shell $(DOCKER_RUN) $(CALICO_BUILD) go list -m -f "{{.Version}}" github.com/projectcalico/libcalico-go)
 
 ## Update libcalico pin in go.mod
@@ -277,9 +215,8 @@ update-libcalico:
 	$(DOCKER_RUN) -i $(CALICO_BUILD) sh -c '\
 	if [[ ! -z "$(LIBCALICO_VERSION)" ]] && [[ "$(LIBCALICO_VERSION)" != "$(LIBCALICO_OLDVER)" ]]; then \
 		echo "Updating libcalico version $(LIBCALICO_OLDVER) to $(LIBCALICO_VERSION) from $(LIBCALICO_REPO)"; \
-		go mod edit -droprequire github.com/projectcalico/libcalico-go; \
 		go get $(LIBCALICO_REPO)@$(LIBCALICO_VERSION); \
-		if [ $(LIBCALICO_REPO) != "github.com/projectcalico/libcalico-go" ]; then \
+		if [ $(LIBCALICO_REPO) != "github.com/tigera/libcalico-go-private" ]; then \
 			go mod edit -replace github.com/projectcalico/typha=$(LIBCALICO_REPO)@$(LIBCALICO_VERSION); \
 		fi;\
 	fi'
@@ -305,10 +242,18 @@ commit-pin-updates: update-libcalico git-status ci git-config git-commit git-pus
 $(BIN)/calico $(BIN)/calico-ipam: local_build $(SRC_FILES)
 	$(DOCKER_RUN) \
 	-v $(CURDIR)/$(BIN):/go/src/$(PACKAGE_NAME)/$(BIN):rw \
-	    $(CALICO_BUILD) sh -c '\
-		go build -v -o $(BIN)/calico -ldflags "-X main.VERSION=$(GIT_VERSION) -s -w" ./cmd/calico && \
-		go build -v -o $(BIN)/calico-ipam -ldflags "-X main.VERSION=$(GIT_VERSION) -s -w" ./cmd/calico-ipam'
->>>>>>> origin/release-v3.9
+	    $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) && \
+		go build -v -o $(BIN)/calico -ldflags "-X main.VERSION=$(GIT_VERSION) -s -w" $(PACKAGE_NAME)/cmd/calico && \
+		go build -v -o $(BIN)/calico-ipam -ldflags "-X main.VERSION=$(GIT_VERSION) -s -w" $(PACKAGE_NAME)/cmd/calico-ipam'
+
+## Build the Calico network plugin and ipam plugins for Windows
+$(BIN)/calico.exe $(BIN)/calico-ipam.exe: local_build $(SRC_FILES)
+	$(DOCKER_RUN) \
+	-e GOOS=windows \
+	-v $(CURDIR)/$(BIN):/go/src/$(PACKAGE_NAME)/$(BIN):rw \
+	    $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) && \
+		go build -v -o $(BIN)/calico.exe -ldflags "-X main.VERSION=$(GIT_VERSION) -s -w" $(PACKAGE_NAME)/cmd/calico && \
+		go build -v -o $(BIN)/calico-ipam.exe -ldflags "-X main.VERSION=$(GIT_VERSION) -s -w" $(PACKAGE_NAME)/cmd/calico-ipam'
 
 ###############################################################################
 # Building the image
@@ -468,7 +413,7 @@ update-libcalico-pin: guard-ssh-forwarding-bug guard-git-libcalico
 .PHONY: static-checks
 ## Perform static checks on the code.
 static-checks:
-	$(DOCKER_RUN) $(CALICO_BUILD) golangci-lint run --deadline 5m
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) && golangci-lint run --deadline 5m'
 
 .PHONY: fix
 ## Fix static checks
@@ -484,13 +429,7 @@ install-git-hooks:
 	./install-git-hooks
 
 foss-checks:
-	@echo Running $@...
-	@docker run --rm -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
-	  -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-	  -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
-	  -e GO111MODULE=on \
-	  -w /go/src/$(PACKAGE_NAME) \
-	  $(CALICO_BUILD) /usr/local/bin/fossa
+	$(DOCKER_RUN) -e FOSSA_API_KEY=$(FOSSA_API_KEY) $(CALICO_BUILD) /usr/local/bin/fossa
 
 ###############################################################################
 # Unit Tests
@@ -503,6 +442,7 @@ ut: run-k8s-controller build $(BIN)/host-local
 ut-datastore: local_build
 	# The tests need to run as root
 	docker run --rm -t --privileged --net=host \
+	$(EXTRA_DOCKER_ARGS) \
 	-e ETCD_IP=$(LOCAL_IP_ENV) \
 	-e LOCAL_USER_ID=0 \
 	-e ARCH=$(ARCH) \
@@ -512,7 +452,6 @@ ut-datastore: local_build
 	-e DATASTORE_TYPE=$(DATASTORE_TYPE) \
 	-e ETCD_ENDPOINTS=http://$(LOCAL_IP_ENV):2379 \
 	-e K8S_API_ENDPOINT=http://127.0.0.1:8080 \
-	-e GO111MODULE=on \
 	-v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
 	$(CALICO_BUILD) sh -c '\
 			cd  /go/src/$(PACKAGE_NAME) && \
@@ -599,7 +538,7 @@ stop-etcd:
 # We pre-build the test binary so that we can run it outside a container and allow it
 # to interact with docker.
 k8s-install/scripts/install_cni.test: k8s-install/scripts/*.go
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '\
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) && \
 		go test ./k8s-install/scripts -c --tags install_cni_test -o ./k8s-install/scripts/install_cni.test'
 
 .PHONY: test-install-cni
@@ -627,9 +566,8 @@ endif
 
 
 ## Build fv binary for Windows
-$(BIN)/win-fv.exe: $(WINFV_SRCFILES) vendor
-	docker run -e GOOS=windows $(DOCKER_BUILD_ARGS) $(CALICO_BUILD) sh -c '\
-	  go test ./win_tests -c -o $(BIN)/win-fv.exe'
+$(BIN)/win-fv.exe: local_build $(WINFV_SRCFILES)
+	$(DOCKER_RUN) -e GOOS=windows $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) && go test ./win_tests -c -o $(BIN)/win-fv.exe'
 
 ###############################################################################
 # Release

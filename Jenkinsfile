@@ -38,7 +38,7 @@ pipeline {
                 }
             }
         }
-        stage('Get vendored files') {
+        stage('Build windows binary') {
             when {
                 expression { env.RUN_WINDOWS_FV == "YES" }
             }
@@ -46,20 +46,9 @@ pipeline {
                 withCredentials([sshUserPrivateKey(credentialsId: 'marvin-tigera-ssh-key', keyFileVariable: 'SSH_KEY', passphraseVariable: '', usernameVariable: '')]) {
                     ansiColor('xterm') {
                         // Needed to allow checkout of private repos
-                        echo 'Getting vendored files..'
-                        sh 'if [ -z "$SSH_AUTH_SOCK" ] ; then eval `ssh-agent -s`; ssh-add $SSH_KEY || true; fi && make vendor'
+                        sh 'if [ -z "$SSH_AUTH_SOCK" ] ; then eval `ssh-agent -s`; ssh-add $SSH_KEY || true; fi && make build && make bin/amd64/win-fv.exe'
                     }
                 }
-            }
-        }
-        stage('Clean artifacts, build') {
-            when {
-                expression { env.RUN_WINDOWS_FV == "YES" }
-            }
-            steps {
-                echo 'build binary'
-                sh 'make build'
-                sh 'make bin/amd64/win-fv.exe'
             }
         }
         stage('Initialization') {
