@@ -10,10 +10,9 @@ package openapi
 
 import (
 	spec "github.com/go-openapi/spec"
+	numorstring "github.com/projectcalico/libcalico-go/lib/numorstring"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	common "k8s.io/kube-openapi/pkg/common"
-
-	numorstring "github.com/projectcalico/libcalico-go/lib/numorstring"
 )
 
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
