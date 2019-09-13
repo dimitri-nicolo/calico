@@ -1,9 +1,15 @@
 FROM alpine:3.9.3
 
-ADD bin/es-proxy-amd64 /es-proxy
+ADD bin/es-proxy-amd64 /usr/local/bin/es-proxy
+
+RUN addgroup -S esproxygroup
+RUN adduser -S -D 999 esproxygroup
 
 RUN chgrp -R 0 /etc && \
     chmod -R g=u /etc
 
-WORKDIR /
-ENTRYPOINT ["/es-proxy"]
+RUN chown -R 999 /etc
+
+USER 999
+
+ENTRYPOINT ["/usr/local/bin/es-proxy"]
