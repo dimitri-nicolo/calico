@@ -38,6 +38,11 @@ spec:
             mountPath: /certs
       volumes:
         - name: certs
-          configMap:
-            name: elastic-ca-config
+          secret:
+            optional: true
+            defaultMode: 420
+            items:
+              - key: tls.crt
+                path: ca.pem
+            secretName: tigera-elasticsearch-es-http-certs-public
 

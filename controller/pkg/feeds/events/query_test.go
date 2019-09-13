@@ -8,7 +8,7 @@ import (
 	"errors"
 	"testing"
 
-	oElastic "github.com/olivere/elastic"
+	oElastic "github.com/olivere/elastic/v7"
 	. "github.com/onsi/gomega"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"

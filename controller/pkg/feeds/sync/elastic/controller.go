@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/olivere/elastic"
+	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"

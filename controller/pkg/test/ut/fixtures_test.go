@@ -5,7 +5,6 @@ package ut
 import (
 	"context"
 	"fmt"
-	"github.com/tigera/intrusion-detection/controller/pkg/elastic"
 	"io"
 	"net/http"
 	"net/url"
@@ -13,10 +12,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/tigera/intrusion-detection/controller/pkg/elastic"
+
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
-	oElastic "github.com/olivere/elastic"
+	oElastic "github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 )
 

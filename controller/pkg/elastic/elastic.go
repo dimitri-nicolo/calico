@@ -16,7 +16,7 @@ import (
 	"time"
 
 	"github.com/araddon/dateparse"
-	"github.com/olivere/elastic"
+	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
@@ -176,7 +176,7 @@ func (e *Elastic) ListDomainNameSets(ctx context.Context) ([]db.Meta, error) {
 
 func (e *Elastic) listSets(ctx context.Context, idx string) ([]db.Meta, error) {
 	q := elastic.NewMatchAllQuery()
-	scroller := e.c.Scroll(idx).Type(StandardType).Version(true).FetchSource(false).Query(q)
+	scroller := e.c.Scroll(idx).Version(true).FetchSource(false).Query(q)
 
 	var ids []db.Meta
 	for {
@@ -272,19 +272,17 @@ func (e *Elastic) ensureIndexExists(ctx context.Context, idx, mapping string) er
 			return err
 		}
 
-		for k, v := range m["mappings"] {
-			b, err := json.Marshal(&v)
-			if err != nil {
-				return err
-			}
-
-			r, err := e.c.PutMapping().Index(idx).Type(k).BodyString(string(b)).Do(ctx)
-			if err != nil {
-				return err
-			}
-			if !r.Acknowledged {
-				return fmt.Errorf("not acknowledged index %s update", idx)
-			}
+		v := m["mappings"]
+		b, err := json.Marshal(&v)
+		if err != nil {
+			return err
+		}
+		r, err := e.c.PutMapping().Index(idx).BodyString(string(b)).Do(ctx)
+		if err != nil {
+			return err
+		}
+		if !r.Acknowledged {
+			return fmt.Errorf("not acknowledged index %s update", idx)
 		}
 	}
 	return nil
@@ -343,7 +341,7 @@ func (e *Elastic) GetDomainNameSet(ctx context.Context, name string) (db.DomainN
 }
 
 func (e *Elastic) get(ctx context.Context, idx, name string) (map[string]interface{}, error) {
-	res, err := e.c.Get().Index(idx).Type(StandardType).Id(name).Do(ctx)
+	res, err := e.c.Get().Index(idx).Id(name).Do(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -353,7 +351,7 @@ func (e *Elastic) get(ctx context.Context, idx, name string) (map[string]interfa
 	}
 
 	var doc map[string]interface{}
-	err = json.Unmarshal(*res.Source, &doc)
+	err = json.Unmarshal(res.Source, &doc)
 	return doc, err
 }
 
@@ -376,7 +374,7 @@ func (e *Elastic) getSetModified(ctx context.Context, name, idx string) (time.Ti
 	}
 
 	var doc map[string]interface{}
-	err = json.Unmarshal(*res.Source, &doc)
+	err = json.Unmarshal(res.Source, &doc)
 	if err != nil {
 		return time.Time{}, err
 	}
@@ -529,7 +527,7 @@ func (e *Elastic) GetDatafeeds(ctx context.Context, feedIDs ...string) ([]Datafe
 
 	resp, err := e.c.PerformRequest(ctx, elastic.PerformRequestOptions{
 		Method: "GET",
-		Path:   fmt.Sprintf("/_xpack/ml/datafeeds/%s", params),
+		Path:   fmt.Sprintf("/_ml/datafeeds/%s", params),
 	})
 	if err != nil {
 		return nil, err
@@ -549,7 +547,7 @@ func (e *Elastic) GetDatafeedStats(ctx context.Context, feedIDs ...string) ([]Da
 
 	resp, err := e.c.PerformRequest(ctx, elastic.PerformRequestOptions{
 		Method: "GET",
-		Path:   fmt.Sprintf("/_xpack/ml/datafeeds/%s/_stats", params),
+		Path:   fmt.Sprintf("/_ml/datafeeds/%s/_stats", params),
 	})
 	if err != nil {
 		return nil, err
@@ -567,7 +565,7 @@ func (e *Elastic) GetDatafeedStats(ctx context.Context, feedIDs ...string) ([]Da
 func (e *Elastic) StartDatafeed(ctx context.Context, feedID string, options *OpenDatafeedOptions) (bool, error) {
 	requestOptions := elastic.PerformRequestOptions{
 		Method: "POST",
-		Path:   fmt.Sprintf("/_xpack/ml/datafeeds/%s/_start", feedID),
+		Path:   fmt.Sprintf("/_ml/datafeeds/%s/_start", feedID),
 	}
 	if options != nil {
 		requestOptions.Body = options
@@ -589,7 +587,7 @@ func (e *Elastic) StartDatafeed(ctx context.Context, feedID string, options *Ope
 func (e *Elastic) StopDatafeed(ctx context.Context, feedID string, options *CloseDatafeedOptions) (bool, error) {
 	requestOptions := elastic.PerformRequestOptions{
 		Method: "POST",
-		Path:   fmt.Sprintf("/_xpack/ml/datafeeds/%s/_stop", feedID),
+		Path:   fmt.Sprintf("/_ml/datafeeds/%s/_stop", feedID),
 	}
 	if options != nil {
 		requestOptions.Body = options
@@ -613,7 +611,7 @@ func (e *Elastic) GetJobs(ctx context.Context, jobIDs ...string) ([]JobSpec, err
 
 	resp, err := e.c.PerformRequest(ctx, elastic.PerformRequestOptions{
 		Method: "GET",
-		Path:   fmt.Sprintf("/_xpack/ml/anomaly_detectors/%s", params),
+		Path:   fmt.Sprintf("/_ml/anomaly_detectors/%s", params),
 	})
 	if err != nil {
 		return nil, err
@@ -633,7 +631,7 @@ func (e *Elastic) GetJobStats(ctx context.Context, jobIDs ...string) ([]JobStats
 
 	resp, err := e.c.PerformRequest(ctx, elastic.PerformRequestOptions{
 		Method: "GET",
-		Path:   fmt.Sprintf("/_xpack/ml/anomaly_detectors/%s/_stats", params),
+		Path:   fmt.Sprintf("/_ml/anomaly_detectors/%s/_stats", params),
 	})
 	if err != nil {
 		return nil, err
@@ -651,7 +649,7 @@ func (e *Elastic) GetJobStats(ctx context.Context, jobIDs ...string) ([]JobStats
 func (e *Elastic) OpenJob(ctx context.Context, jobID string, options *OpenJobOptions) (bool, error) {
 	requestOptions := elastic.PerformRequestOptions{
 		Method: "POST",
-		Path:   fmt.Sprintf("/_xpack/ml/anomaly_detectors/%s/_open", jobID),
+		Path:   fmt.Sprintf("/_ml/anomaly_detectors/%s/_open", jobID),
 	}
 	if options != nil {
 		requestOptions.Body = options
@@ -673,7 +671,7 @@ func (e *Elastic) OpenJob(ctx context.Context, jobID string, options *OpenJobOpt
 func (e *Elastic) CloseJob(ctx context.Context, jobID string, options *CloseJobOptions) (bool, error) {
 	requestOptions := elastic.PerformRequestOptions{
 		Method: "POST",
-		Path:   fmt.Sprintf("/_xpack/ml/anomaly_detectors/%s/_close", jobID),
+		Path:   fmt.Sprintf("/_ml/anomaly_detectors/%s/_close", jobID),
 	}
 	if options != nil {
 		requestOptions.Body = options
@@ -700,7 +698,7 @@ func (e *Elastic) GetBuckets(ctx context.Context, jobID string, options *GetBuck
 
 	requestOptions := elastic.PerformRequestOptions{
 		Method: "POST",
-		Path:   fmt.Sprintf("/_xpack/ml/anomaly_detectors/%s/results/buckets%s", jobID, optTimestamp),
+		Path:   fmt.Sprintf("/_ml/anomaly_detectors/%s/results/buckets%s", jobID, optTimestamp),
 	}
 	if options != nil {
 		requestOptions.Body = options
@@ -722,7 +720,7 @@ func (e *Elastic) GetBuckets(ctx context.Context, jobID string, options *GetBuck
 func (e *Elastic) GetRecords(ctx context.Context, jobID string, options *GetRecordsOptions) ([]RecordSpec, error) {
 	requestOptions := elastic.PerformRequestOptions{
 		Method: "POST",
-		Path:   fmt.Sprintf("/_xpack/ml/anomaly_detectors/%s/results/records", jobID),
+		Path:   fmt.Sprintf("/_ml/anomaly_detectors/%s/results/records", jobID),
 	}
 	if options != nil {
 		requestOptions.Body = options

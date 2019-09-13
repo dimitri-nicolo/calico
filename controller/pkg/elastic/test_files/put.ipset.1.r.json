@@ -1,6 +1,5 @@
 {
   "_index":".tigera.ipset.cluster",
-  "_type":"_doc",
   "_id":"test1",
   "_version":1,
   "result":"created",

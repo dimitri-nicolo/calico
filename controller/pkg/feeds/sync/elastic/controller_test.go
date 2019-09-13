@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/olivere/elastic"
+	"github.com/olivere/elastic/v7"
 	. "github.com/onsi/gomega"
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
