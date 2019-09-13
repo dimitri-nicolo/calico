@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 
 package security
 
@@ -19,7 +19,7 @@ import (
 // client with a certificate signed by a trusted CA, and (b) data is
 // sent to that client encrypted, and cannot be snooped.  Otherwise it
 // is insecure (HTTP).
-func ServePrometheusMetrics(gatherer prometheus.Gatherer, port int, certFile, keyFile, caFile string) (err error) {
+func ServePrometheusMetrics(gatherer prometheus.Gatherer, host string, port int, certFile, keyFile, caFile string) (err error) {
 	mux := http.NewServeMux()
 	handler := promhttp.HandlerFor(gatherer, promhttp.HandlerOpts{})
 	mux.Handle("/metrics", handler)
@@ -36,13 +36,13 @@ func ServePrometheusMetrics(gatherer prometheus.Gatherer, port int, certFile, ke
 			ClientCAs:  caCertPool,
 		}
 		srv := &http.Server{
-			Addr:      fmt.Sprintf(":%v", port),
+			Addr:      fmt.Sprintf("[%v]:%v", host, port),
 			Handler:   handler,
 			TLSConfig: cfg,
 		}
 		err = srv.ListenAndServeTLS(certFile, keyFile)
 	} else {
-		err = http.ListenAndServe(fmt.Sprintf(":%v", port), handler)
+		err = http.ListenAndServe(fmt.Sprintf("[%v]:%v", host, port), handler)
 	}
 	return
 }
