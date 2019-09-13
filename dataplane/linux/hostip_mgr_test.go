@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017, 2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -38,7 +38,8 @@ var _ = Describe("Host ip manager", func() {
 				Name:  "eth0",
 				Addrs: set.From("10.0.0.1", "10.0.0.2"),
 			})
-			hostIPMgr.CompleteDeferredWork()
+			err := hostIPMgr.CompleteDeferredWork()
+			Expect(err).ToNot(HaveOccurred())
 		})
 		It("should create the IP set", func() {
 			Expect(ipSets.AddOrReplaceCalled).To(BeTrue())
@@ -54,7 +55,8 @@ var _ = Describe("Host ip manager", func() {
 				hostIPMgr.OnUpdate(&ifaceAddrsUpdate{
 					Name: "eth0",
 				})
-				hostIPMgr.CompleteDeferredWork()
+				err := hostIPMgr.CompleteDeferredWork()
+				Expect(err).ToNot(HaveOccurred())
 			})
 			It("should remove the IP set", func() {
 				Expect(ipSets.Members["this-host"]).To(Equal(set.New()))
@@ -68,7 +70,8 @@ var _ = Describe("Host ip manager", func() {
 					Name:  "cali1234",
 					Addrs: set.From("10.0.0.8", "10.0.0.9"),
 				})
-				hostIPMgr.CompleteDeferredWork()
+				err := hostIPMgr.CompleteDeferredWork()
+				Expect(err).ToNot(HaveOccurred())
 			})
 			It("should not create the IP set", func() {
 				Expect(ipSets.AddOrReplaceCalled).To(BeFalse())
@@ -87,7 +90,8 @@ var _ = Describe("Host ip manager", func() {
 					Name:  "eth1",
 					Addrs: set.From("10.0.0.8", "10.0.0.9"),
 				})
-				hostIPMgr.CompleteDeferredWork()
+				err := hostIPMgr.CompleteDeferredWork()
+				Expect(err).ToNot(HaveOccurred())
 			})
 			It("should not create the IP set", func() {
 				Expect(ipSets.AddOrReplaceCalled).To(BeTrue())
@@ -106,7 +110,8 @@ var _ = Describe("Host ip manager", func() {
 					Name:  "eth0",
 					Addrs: set.From("10.0.0.2", "10.0.0.3"),
 				})
-				hostIPMgr.CompleteDeferredWork()
+				err := hostIPMgr.CompleteDeferredWork()
+				Expect(err).ToNot(HaveOccurred())
 			})
 			It("should replace the IP set", func() {
 				Expect(ipSets.AddOrReplaceCalled).To(BeTrue())

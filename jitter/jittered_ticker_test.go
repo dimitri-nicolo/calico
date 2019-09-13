@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2017, 2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -47,7 +47,7 @@ var _ = Describe("Real 20ms + 10ms Ticker", func() {
 		for i := 0; i < 40; i++ {
 			<-ticker.C
 			now := time.Now()
-			duration := time.Now().Sub(lastTime)
+			duration := time.Since(lastTime)
 			logrus.WithField("duration", duration).Debug("Tick")
 			if duration < 25*time.Millisecond {
 				foundLT5 = true

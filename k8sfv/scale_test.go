@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017, 2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -116,11 +116,11 @@ var _ = Context("with a k8s clientset", func() {
 				if ii >= ignore {
 					heapInUseMeasurements = append(
 						heapInUseMeasurements,
-						leastsquares.Point{float64(ii) - iiAverage, heapInUse},
+						leastsquares.Point{X: float64(ii) - iiAverage, Y: heapInUse},
 					)
 					heapAllocMeasurements = append(
 						heapAllocMeasurements,
-						leastsquares.Point{float64(ii) - iiAverage, heapAlloc},
+						leastsquares.Point{X: float64(ii) - iiAverage, Y: heapAlloc},
 					)
 				}
 
@@ -316,6 +316,7 @@ func sumCalicoDeniedPackets(felixIP string) (sum int64) {
 }
 
 func triggerFelixGCAndMemoryDump() {
-	exec.Command("pkill", "-USR1", "calico-felix").Run()
+	err := exec.Command("pkill", "-USR1", "calico-felix").Run()
+	Expect(err).ToNot(HaveOccurred())
 	time.Sleep(2 * time.Second)
 }

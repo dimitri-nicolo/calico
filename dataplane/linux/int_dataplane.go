@@ -114,6 +114,9 @@ type Config struct {
 	IptablesBackend                string
 	IPSetsRefreshInterval          time.Duration
 	RouteRefreshInterval           time.Duration
+	DeviceRouteSourceAddress       net.IP
+	DeviceRouteProtocol            int
+	RemoveExternalRoutes           bool
 	IptablesRefreshInterval        time.Duration
 	IPSecPolicyRefreshInterval     time.Duration
 	IptablesPostWriteCheckInterval time.Duration
@@ -224,15 +227,13 @@ type InternalDataplane struct {
 	domainInfoStore   *domainInfoStore
 	domainInfoChanges chan *domainInfoChanged
 
-	allManagers []Manager
-
-	ruleRenderer rules.RuleRenderer
+	allManagers             []Manager
+	managersWithRouteTables []ManagerWithRouteTables
+	ruleRenderer            rules.RuleRenderer
 
 	lookupCache *calc.LookupsCache
 
 	interfacePrefixes []string
-
-	routeTables []*routetable.RouteTable
 
 	// dataplaneNeedsSync is set if the dataplane is dirty in some way, i.e. we need to
 	// call apply().
@@ -298,7 +299,6 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		stopChan:          stopChan,
 	}
 	dp.applyThrottle.Refill() // Allow the first apply() immediately.
-
 	dp.ifaceMonitor.Callback = dp.onIfaceStateChange
 	dp.ifaceMonitor.AddrCallback = dp.onIfaceAddrsChange
 
@@ -379,23 +379,17 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	dp.iptablesFilterTables = append(dp.iptablesFilterTables, filterTableV4)
 	dp.ipSets = append(dp.ipSets, ipSetsV4)
 
-	routeTableV4 := routetable.New(config.RulesConfig.WorkloadIfacePrefixes, 4, false, config.NetlinkTimeout)
-	dp.routeTables = append(dp.routeTables, routeTableV4)
-
 	if config.RulesConfig.VXLANEnabled {
-		routeTableVXLAN := routetable.New([]string{"vxlan.calico"}, 4, true, config.NetlinkTimeout)
-		dp.routeTables = append(dp.routeTables, routeTableVXLAN)
+		routeTableVXLAN := routetable.New([]string{"vxlan.calico"}, 4, true, config.NetlinkTimeout, config.DeviceRouteSourceAddress,
+			config.DeviceRouteProtocol, true)
+
 		vxlanManager := newVXLANManager(
 			ipSetsV4,
-			config.MaxIPSetSize,
-			config.Hostname,
 			routeTableVXLAN,
 			"vxlan.calico",
-			config.RulesConfig.VXLANVNI,
-			config.RulesConfig.VXLANPort,
-			config.ExternalNodesCidrs,
+			config,
 		)
-		go vxlanManager.KeepVXLANDeviceInSync(config.VXLANMTU)
+		go vxlanManager.KeepVXLANDeviceInSync(config.VXLANMTU, 10*time.Second)
 		dp.RegisterManager(vxlanManager)
 	} else {
 		// If VXLAN is not enabled, check to see if there is a VXLAN device and delete it if there is.
@@ -478,6 +472,9 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		ipSetsV4,
 		config.MaxIPSetSize))
 	dp.RegisterManager(newPolicyManager(rawTableV4, mangleTableV4, filterTableV4, ruleRenderer, 4, callbacks))
+
+	routeTableV4 := routetable.New(config.RulesConfig.WorkloadIfacePrefixes, 4, false, config.NetlinkTimeout,
+		config.DeviceRouteSourceAddress, config.DeviceRouteProtocol, config.RemoveExternalRoutes)
 	epManager := newEndpointManager(
 		rawTableV4,
 		mangleTableV4,
@@ -547,8 +544,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		dp.iptablesMangleTables = append(dp.iptablesMangleTables, mangleTableV6)
 		dp.iptablesFilterTables = append(dp.iptablesFilterTables, filterTableV6)
 
-		routeTableV6 := routetable.New(config.RulesConfig.WorkloadIfacePrefixes, 6, false, config.NetlinkTimeout)
-		dp.routeTables = append(dp.routeTables, routeTableV6)
+		routeTableV6 := routetable.New(config.RulesConfig.WorkloadIfacePrefixes, 6, false, config.NetlinkTimeout, config.DeviceRouteSourceAddress, config.DeviceRouteProtocol, config.RemoveExternalRoutes)
 
 		dp.RegisterManager(newIPSetsManager(ipSetsV6, config.MaxIPSetSize, dp.domainInfoStore, callbacks))
 		dp.RegisterManager(newHostIPManager(
@@ -573,18 +569,10 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		dp.RegisterManager(newMasqManager(ipSetsV6, natTableV6, ruleRenderer, config.MaxIPSetSize, 6))
 	}
 
-	for _, t := range dp.iptablesMangleTables {
-		dp.allIptablesTables = append(dp.allIptablesTables, t)
-	}
-	for _, t := range dp.iptablesNATTables {
-		dp.allIptablesTables = append(dp.allIptablesTables, t)
-	}
-	for _, t := range dp.iptablesFilterTables {
-		dp.allIptablesTables = append(dp.allIptablesTables, t)
-	}
-	for _, t := range dp.iptablesRawTables {
-		dp.allIptablesTables = append(dp.allIptablesTables, t)
-	}
+	dp.allIptablesTables = append(dp.allIptablesTables, dp.iptablesMangleTables...)
+	dp.allIptablesTables = append(dp.allIptablesTables, dp.iptablesNATTables...)
+	dp.allIptablesTables = append(dp.allIptablesTables, dp.iptablesFilterTables...)
+	dp.allIptablesTables = append(dp.allIptablesTables, dp.iptablesRawTables...)
 
 	// We always create the IPsec policy table (the component that manipulates the IPsec dataplane).  That ensures
 	// that we clean up our old policies if IPsec is disabled.
@@ -660,7 +648,26 @@ type Manager interface {
 	CompleteDeferredWork() error
 }
 
+type ManagerWithRouteTables interface {
+	Manager
+	GetRouteTables() []routeTable
+}
+
+func (d *InternalDataplane) routeTables() []routeTable {
+	var rts []routeTable
+	for _, mrts := range d.managersWithRouteTables {
+		rts = append(rts, mrts.GetRouteTables()...)
+	}
+
+	return rts
+}
+
 func (d *InternalDataplane) RegisterManager(mgr Manager) {
+	switch mgr.(type) {
+	case ManagerWithRouteTables:
+		log.WithField("manager", mgr).Debug("registering ManagerWithRouteTables")
+		d.managersWithRouteTables = append(d.managersWithRouteTables, mgr.(ManagerWithRouteTables))
+	}
 	d.allManagers = append(d.allManagers, mgr)
 }
 
@@ -743,14 +750,19 @@ func (d *InternalDataplane) doStaticDataplaneConfig() {
 	// Check/configure global kernel parameters.
 	d.configureKernel()
 
-	// Endure that the default value of rp_filter is set to "strict" for newly-created
+	// Ensure that the default value of rp_filter is set to "strict" for newly-created
 	// interfaces.  This is required to prevent a race between starting an interface and
 	// Felix being able to configure it.
-	writeProcSys("/proc/sys/net/ipv4/conf/default/rp_filter", "1")
+	err := writeProcSys("/proc/sys/net/ipv4/conf/default/rp_filter", "1")
+	if err != nil {
+		log.Warnf("failed to set rp_filter to '1': %v\n", err)
+	}
 
 	// Enable conntrack packet and byte accounting.
-	writeProcSys("/proc/sys/net/netfilter/nf_conntrack_acct", "1")
-
+	err = writeProcSys("/proc/sys/net/netfilter/nf_conntrack_acct", "1")
+	if err != nil {
+		log.Warnf("failed to enable conntrack packet and byte accounting: %v\n", err)
+	}
 	for _, t := range d.iptablesRawTables {
 		rawChains := d.ruleRenderer.StaticRawTableChains(t.IPVersion)
 		t.UpdateChains(rawChains)
@@ -950,8 +962,11 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 		for _, mgr := range d.allManagers {
 			mgr.OnUpdate(ifaceUpdate)
 		}
-		for _, routeTable := range d.routeTables {
-			routeTable.OnIfaceStateChanged(ifaceUpdate.Name, ifaceUpdate.State)
+
+		for _, mgr := range d.managersWithRouteTables {
+			for _, routeTable := range mgr.GetRouteTables() {
+				routeTable.OnIfaceStateChanged(ifaceUpdate.Name, ifaceUpdate.State)
+			}
 		}
 	}
 
@@ -1171,7 +1186,10 @@ func (d *InternalDataplane) configureKernel() {
 
 	// Make sure the default for new interfaces is set to strict checking so that there's no
 	// race when a new interface is added and felix hasn't configured it yet.
-	writeProcSys("/proc/sys/net/ipv4/conf/default/rp_filter", "1")
+	err = writeProcSys("/proc/sys/net/ipv4/conf/default/rp_filter", "1")
+	if err != nil {
+		log.Warnf("failed to set rp_filter to '1': %v\n", err)
+	}
 }
 
 func readRPFilter() (value int64, err error) {
@@ -1204,6 +1222,7 @@ func (d *InternalDataplane) apply() {
 	for _, mgr := range d.allManagers {
 		err := mgr.CompleteDeferredWork()
 		if err != nil {
+			log.WithField("manager", mgr).WithError(err).Debug("couldn't complete deferred work for manager, will try again later")
 			d.dataplaneNeedsSync = true
 		}
 	}
@@ -1231,7 +1250,7 @@ func (d *InternalDataplane) apply() {
 			d.xdpState.UpdateState()
 		}
 		if applyXDPError != nil {
-			log.WithError(applyXDPError).Error("failed to apply XDP actions, disabling XDP")
+			log.WithError(applyXDPError).Info("Applying XDP actions did not succeed, disabling XDP")
 			d.shutdownXDPCompletely()
 		}
 	}
@@ -1240,7 +1259,7 @@ func (d *InternalDataplane) apply() {
 
 	if d.forceRouteRefresh {
 		// Refresh timer popped.
-		for _, r := range d.routeTables {
+		for _, r := range d.routeTables() {
 			// Queue a resync on the next Apply().
 			r.QueueResync()
 		}
@@ -1270,9 +1289,9 @@ func (d *InternalDataplane) apply() {
 	// Update the routing table in parallel with the other updates.  We'll wait for it to finish
 	// before we return.
 	var routesWG sync.WaitGroup
-	for _, r := range d.routeTables {
+	for _, r := range d.routeTables() {
 		routesWG.Add(1)
-		go func(r *routetable.RouteTable) {
+		go func(r routeTable) {
 			err := r.Apply()
 			if err != nil {
 				log.Warn("Failed to synchronize routing table, will retry...")
@@ -1356,7 +1375,7 @@ func (d *InternalDataplane) applyXDPActions() error {
 		if err = d.xdpState.ApplyBPFActions(d.ipsetsSourceV4); err == nil {
 			return nil
 		} else {
-			log.WithError(err).Warning("Failed to apply XDP BPF actions, will retry with resync...")
+			log.WithError(err).Info("Applying XDP BPF actions did not succeed, will retry with resync...")
 		}
 	}
 	return err

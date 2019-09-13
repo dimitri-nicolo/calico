@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017, 2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,6 +17,9 @@ package intdataplane
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/projectcalico/felix/proto"
+	"github.com/projectcalico/libcalico-go/lib/set"
 
 	"errors"
 	"fmt"
@@ -58,7 +61,8 @@ var _ = Describe("IpipMgr (tunnel configuration)", func() {
 		}
 
 		BeforeEach(func() {
-			ipipMgr.configureIPIPDevice(1400, ip)
+			err = ipipMgr.configureIPIPDevice(1400, ip)
+			Expect(err).ToNot(HaveOccurred())
 		})
 
 		It("should create the interface", func() {
@@ -78,7 +82,8 @@ var _ = Describe("IpipMgr (tunnel configuration)", func() {
 		Describe("after second call with same params", func() {
 			BeforeEach(func() {
 				dataplane.ResetCalls()
-				ipipMgr.configureIPIPDevice(1400, ip)
+				err := ipipMgr.configureIPIPDevice(1400, ip)
+				Expect(err).ToNot(HaveOccurred())
 			})
 			It("should avoid creating the interface", func() {
 				Expect(dataplane.RunCmdCalled).To(BeFalse())
@@ -97,7 +102,9 @@ var _ = Describe("IpipMgr (tunnel configuration)", func() {
 		Describe("after second call with different params", func() {
 			BeforeEach(func() {
 				dataplane.ResetCalls()
-				ipipMgr.configureIPIPDevice(1500, ip2)
+				err = ipipMgr.configureIPIPDevice(1500, ip2)
+				Expect(err).ToNot(HaveOccurred())
+
 			})
 			It("should avoid creating the interface", func() {
 				Expect(dataplane.RunCmdCalled).To(BeFalse())
@@ -117,7 +124,8 @@ var _ = Describe("IpipMgr (tunnel configuration)", func() {
 		Describe("after second call with nil IP", func() {
 			BeforeEach(func() {
 				dataplane.ResetCalls()
-				ipipMgr.configureIPIPDevice(1500, nil)
+				err := ipipMgr.configureIPIPDevice(1500, nil)
+				Expect(err).ToNot(HaveOccurred())
 			})
 			It("should avoid creating the interface", func() {
 				Expect(dataplane.RunCmdCalled).To(BeFalse())
@@ -136,7 +144,8 @@ var _ = Describe("IpipMgr (tunnel configuration)", func() {
 
 	Describe("after calling configureIPIPDevice with no IP", func() {
 		BeforeEach(func() {
-			ipipMgr.configureIPIPDevice(1400, nil)
+			err := ipipMgr.configureIPIPDevice(1400, nil)
+			Expect(err).ToNot(HaveOccurred())
 		})
 
 		It("should create the interface", func() {
@@ -158,7 +167,8 @@ var _ = Describe("IpipMgr (tunnel configuration)", func() {
 	const expNumCalls = 8
 	It("a successful call should only call into dataplane expected number of times", func() {
 		// This spec is a sanity-check that we've got the expNumCalls constant correct.
-		ipipMgr.configureIPIPDevice(1400, ip)
+		err := ipipMgr.configureIPIPDevice(1400, ip)
+		Expect(err).ToNot(HaveOccurred())
 		Expect(dataplane.NumCalls).To(BeNumerically("==", expNumCalls))
 	})
 	for i := 1; i <= expNumCalls; i++ {
@@ -188,6 +198,148 @@ var _ = Describe("IpipMgr (tunnel configuration)", func() {
 			})
 		})
 	}
+})
+
+var _ = Describe("ipipManager IP set updates", func() {
+	var (
+		ipipMgr   *ipipManager
+		ipSets    *mockIPSets
+		dataplane *mockIPIPDataplane
+	)
+
+	const (
+		externalCIDR = "11.0.0.1/32"
+	)
+
+	BeforeEach(func() {
+		dataplane = &mockIPIPDataplane{}
+		ipSets = newMockIPSets()
+		ipipMgr = newIPIPManagerWithShim(ipSets, 1024, dataplane, []string{externalCIDR})
+	})
+
+	It("should not create the IP set until first call to CompleteDeferredWork()", func() {
+		Expect(ipSets.AddOrReplaceCalled).To(BeFalse())
+		err := ipipMgr.CompleteDeferredWork()
+		Expect(err).ToNot(HaveOccurred())
+		Expect(ipSets.AddOrReplaceCalled).To(BeTrue())
+	})
+
+	allHostsSet := func() set.Set {
+		log.Info(ipSets.Members)
+		Expect(ipSets.Members).To(HaveLen(1))
+		return ipSets.Members["all-hosts-net"]
+	}
+
+	Describe("after adding an IP for host1", func() {
+		BeforeEach(func() {
+			ipipMgr.OnUpdate(&proto.HostMetadataUpdate{
+				Hostname: "host1",
+				Ipv4Addr: "10.0.0.1",
+			})
+			err := ipipMgr.CompleteDeferredWork()
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("should add host1's IP to the IP set", func() {
+			Expect(allHostsSet()).To(Equal(set.From("10.0.0.1", externalCIDR)))
+		})
+
+		Describe("after adding an IP for host2", func() {
+			BeforeEach(func() {
+				ipipMgr.OnUpdate(&proto.HostMetadataUpdate{
+					Hostname: "host2",
+					Ipv4Addr: "10.0.0.2",
+				})
+				err := ipipMgr.CompleteDeferredWork()
+				Expect(err).ToNot(HaveOccurred())
+			})
+			It("should add the IP to the IP set", func() {
+				Expect(allHostsSet()).To(Equal(set.From("10.0.0.1", "10.0.0.2", externalCIDR)))
+			})
+		})
+
+		Describe("after adding a duplicate IP", func() {
+			BeforeEach(func() {
+				ipipMgr.OnUpdate(&proto.HostMetadataUpdate{
+					Hostname: "host2",
+					Ipv4Addr: "10.0.0.1",
+				})
+				err := ipipMgr.CompleteDeferredWork()
+				Expect(err).ToNot(HaveOccurred())
+			})
+			It("should tolerate the duplicate", func() {
+				Expect(allHostsSet()).To(Equal(set.From("10.0.0.1", externalCIDR)))
+			})
+
+			Describe("after removing a duplicate IP", func() {
+				BeforeEach(func() {
+					ipipMgr.OnUpdate(&proto.HostMetadataRemove{
+						Hostname: "host2",
+					})
+					err := ipipMgr.CompleteDeferredWork()
+					Expect(err).ToNot(HaveOccurred())
+				})
+				It("should keep the IP in the IP set", func() {
+					Expect(allHostsSet()).To(Equal(set.From("10.0.0.1", externalCIDR)))
+				})
+
+				Describe("after removing initial copy of IP", func() {
+					BeforeEach(func() {
+						ipipMgr.OnUpdate(&proto.HostMetadataRemove{
+							Hostname: "host1",
+						})
+						err := ipipMgr.CompleteDeferredWork()
+						Expect(err).ToNot(HaveOccurred())
+					})
+					It("should remove the IP", func() {
+						Expect(allHostsSet().Len()).To(Equal(1))
+					})
+				})
+			})
+		})
+
+		Describe("after adding/removing a duplicate IP in one batch", func() {
+			BeforeEach(func() {
+				ipipMgr.OnUpdate(&proto.HostMetadataUpdate{
+					Hostname: "host2",
+					Ipv4Addr: "10.0.0.1",
+				})
+				ipipMgr.OnUpdate(&proto.HostMetadataRemove{
+					Hostname: "host2",
+				})
+				err := ipipMgr.CompleteDeferredWork()
+				Expect(err).ToNot(HaveOccurred())
+			})
+			It("should keep the IP in the IP set", func() {
+				Expect(allHostsSet()).To(Equal(set.From("10.0.0.1", externalCIDR)))
+			})
+		})
+
+		Describe("after changing IP for host1", func() {
+			BeforeEach(func() {
+				ipipMgr.OnUpdate(&proto.HostMetadataUpdate{
+					Hostname: "host1",
+					Ipv4Addr: "10.0.0.2",
+				})
+				err := ipipMgr.CompleteDeferredWork()
+				Expect(err).ToNot(HaveOccurred())
+			})
+			It("should update the IP set", func() {
+				Expect(allHostsSet()).To(Equal(set.From("10.0.0.2", externalCIDR)))
+			})
+		})
+
+		Describe("after a no-op batch", func() {
+			BeforeEach(func() {
+				ipSets.AddOrReplaceCalled = false
+				err := ipipMgr.CompleteDeferredWork()
+				Expect(err).ToNot(HaveOccurred())
+			})
+			It("shouldn't rewrite the IP set", func() {
+				Expect(ipSets.AddOrReplaceCalled).To(BeFalse())
+			})
+		})
+	})
 })
 
 type mockIPIPDataplane struct {
@@ -304,6 +456,7 @@ func (d *mockIPIPDataplane) RunCmd(name string, args ...string) error {
 
 type mockLink struct {
 	attrs netlink.LinkAttrs
+	typ   string
 }
 
 func (l *mockLink) Attrs() *netlink.LinkAttrs {
@@ -311,5 +464,9 @@ func (l *mockLink) Attrs() *netlink.LinkAttrs {
 }
 
 func (l *mockLink) Type() string {
-	return "not implemented"
+	if l.typ == "" {
+		return "not implemented"
+	}
+
+	return l.typ
 }

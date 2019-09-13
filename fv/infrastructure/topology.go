@@ -41,7 +41,7 @@ type TopologyOptions struct {
 	TyphaLogSeverity          string
 	IPIPEnabled               bool
 	IPIPRoutesEnabled         bool
-	VXLANEnabled              bool
+	VXLANMode                 api.VXLANMode
 	InitialFelixConfiguration *api.FelixConfiguration
 	WithPrometheusPortTLS     bool
 	NATOutgoingEnabled        bool
@@ -154,6 +154,9 @@ func StartNNodeTopology(n int, opts TopologyOptions, infra DatastoreInfra) (feli
 		}
 	}()
 
+	if opts.VXLANMode == "" {
+		opts.VXLANMode = api.VXLANModeNever
+	}
 	// Get client.
 	client = infra.GetCalicoClient()
 	mustInitDatastore(client)
@@ -192,11 +195,9 @@ func StartNNodeTopology(n int, opts TopologyOptions, infra DatastoreInfra) (feli
 			} else {
 				ipPool.Spec.IPIPMode = api.IPIPModeNever
 			}
-			if opts.VXLANEnabled {
-				ipPool.Spec.VXLANMode = api.VXLANModeAlways
-			} else {
-				ipPool.Spec.VXLANMode = api.VXLANModeNever
-			}
+
+			ipPool.Spec.VXLANMode = opts.VXLANMode
+
 			_, err = client.IPPools().Create(ctx, ipPool, options.SetOptions{})
 			return err
 		}).ShouldNot(HaveOccurred())
@@ -216,7 +217,7 @@ func StartNNodeTopology(n int, opts TopologyOptions, infra DatastoreInfra) (feli
 		if opts.IPIPEnabled {
 			infra.SetExpectedIPIPTunnelAddr(felix, i, bool(n > 1))
 		}
-		if opts.VXLANEnabled {
+		if opts.VXLANMode != api.VXLANModeNever {
 			infra.SetExpectedVXLANTunnelAddr(felix, i, bool(n > 1))
 		}
 
@@ -250,7 +251,7 @@ func StartNNodeTopology(n int, opts TopologyOptions, infra DatastoreInfra) (feli
 			if opts.IPIPEnabled && opts.IPIPRoutesEnabled {
 				err := iFelix.ExecMayFail("ip", "route", "add", jBlock, "via", jFelix.IP, "dev", "tunl0", "onlink")
 				Expect(err).ToNot(HaveOccurred())
-			} else if !opts.VXLANEnabled {
+			} else if opts.VXLANMode == api.VXLANModeNever {
 				// If VXLAN is enabled, Felix will program these routes itself.
 				err := iFelix.ExecMayFail("ip", "route", "add", jBlock, "via", jFelix.IP, "dev", "eth0")
 				Expect(err).ToNot(HaveOccurred())
@@ -264,7 +265,8 @@ func StartNNodeTopology(n int, opts TopologyOptions, infra DatastoreInfra) (feli
 func mustInitDatastore(client client.Interface) {
 	Eventually(func() error {
 		log.Info("Initializing the datastore...")
-		ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+		ctx, cancelFun := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancelFun()
 		err := client.EnsureInitialized(
 			ctx,
 			"v3.0.0-test",

@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -109,7 +109,7 @@ func (eds *EtcdDatastoreInfra) AddNode(felix *Felix, idx int, needBGP bool) {
 	felixNode.Spec.IPv4VXLANTunnelAddr = felix.ExpectedVXLANTunnelAddr
 	if needBGP {
 		felixNode.Spec.BGP = &api.NodeBGPSpec{
-			IPv4Address:        felix.IP,
+			IPv4Address:        fmt.Sprintf("%s/%s", felix.IP, felix.IPPrefix),
 			IPv4IPIPTunnelAddr: felix.ExpectedIPIPTunnelAddr,
 		}
 	}
@@ -150,7 +150,6 @@ func (eds *EtcdDatastoreInfra) AddDefaultAllow() {
 	defaultProfile.Spec.Ingress = []api.Rule{{Action: api.Allow}}
 	_, err := eds.GetCalicoClient().Profiles().Create(utils.Ctx, defaultProfile, utils.NoOptions)
 	Expect(err).NotTo(HaveOccurred())
-	return
 }
 
 func (eds *EtcdDatastoreInfra) AddDefaultDeny() error {

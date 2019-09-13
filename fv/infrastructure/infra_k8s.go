@@ -183,7 +183,7 @@ func setupK8sDatastoreInfra() (*K8sDatastoreInfra, error) {
 		if err == nil {
 			break
 		}
-		if time.Since(start) > 120*time.Second && err != nil {
+		if time.Since(start) > 120*time.Second {
 			log.WithError(err).Error("Failed to create k8s client.")
 			TearDownK8sInfra(kds)
 			return nil, err
@@ -205,7 +205,7 @@ func setupK8sDatastoreInfra() (*K8sDatastoreInfra, error) {
 		if err == nil {
 			break
 		}
-		if time.Since(start) > 90*time.Second && err != nil {
+		if time.Since(start) > 90*time.Second {
 			log.WithError(err).Error("Failed to install role binding")
 			TearDownK8sInfra(kds)
 			return nil, err
@@ -220,7 +220,7 @@ func setupK8sDatastoreInfra() (*K8sDatastoreInfra, error) {
 		if err == nil {
 			break
 		}
-		if time.Since(start) > 15*time.Second && err != nil {
+		if time.Since(start) > 15*time.Second {
 			log.WithError(err).Error("Failed to list namespaces.")
 			TearDownK8sInfra(kds)
 			return nil, err
@@ -238,7 +238,7 @@ func setupK8sDatastoreInfra() (*K8sDatastoreInfra, error) {
 	log.Info("Started controller manager.")
 
 	// Copy CRD registration manifest into the API server container, and apply it.
-	err := kds.k8sApiContainer.CopyFileIntoContainer("../vendor/github.com/projectcalico/libcalico-go/test/crds.yaml", "/crds.yaml")
+	err := kds.k8sApiContainer.CopyFileIntoContainer("infrastructure/crds.yaml", "/crds.yaml")
 	if err != nil {
 		TearDownK8sInfra(kds)
 		return nil, err
@@ -257,7 +257,7 @@ func setupK8sDatastoreInfra() (*K8sDatastoreInfra, error) {
 		var resp *http.Response
 		resp, err = insecureHTTPClient.Get(kds.Endpoint + "/apis/crd.projectcalico.org/v1/globalfelixconfigs")
 		if resp.StatusCode != 200 {
-			err = errors.New(fmt.Sprintf("Bad status (%v) for CRD GET request", resp.StatusCode))
+			err = fmt.Errorf("Bad status (%v) for CRD GET request", resp.StatusCode)
 		}
 		if err != nil || resp.StatusCode != 200 {
 			log.WithError(err).WithField("status", resp.StatusCode).Warn("Waiting for API server to respond to requests")
@@ -266,7 +266,7 @@ func setupK8sDatastoreInfra() (*K8sDatastoreInfra, error) {
 		if err == nil {
 			break
 		}
-		if time.Since(start) > 120*time.Second && err != nil {
+		if time.Since(start) > 120*time.Second {
 			log.WithError(err).Error("API server is not responding to requests")
 			TearDownK8sInfra(kds)
 			return nil, err
@@ -287,7 +287,7 @@ func setupK8sDatastoreInfra() (*K8sDatastoreInfra, error) {
 		if err == nil {
 			break
 		}
-		if time.Since(start) > 120*time.Second && err != nil {
+		if time.Since(start) > 120*time.Second {
 			log.WithError(err).Error("Failed to get API server cert")
 			TearDownK8sInfra(kds)
 			return nil, err
@@ -334,7 +334,7 @@ func setupK8sDatastoreInfra() (*K8sDatastoreInfra, error) {
 		if err == nil {
 			break
 		}
-		if time.Since(start) > 20*time.Second && err != nil {
+		if time.Since(start) > 20*time.Second {
 			log.WithError(err).Error("Failed to get default service account.")
 			TearDownK8sInfra(kds)
 			return nil, err
@@ -448,7 +448,7 @@ func (kds *K8sDatastoreInfra) AddNode(felix *Felix, idx int, needBGP bool) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: felix.Hostname,
 			Annotations: map[string]string{
-				"projectcalico.org/IPv4Address": felix.IP,
+				"projectcalico.org/IPv4Address": fmt.Sprintf("%s/%s", felix.IP, felix.IPPrefix),
 			},
 		},
 		Spec: v1.NodeSpec{PodCIDR: fmt.Sprintf("10.65.%d.0/24", idx)},
@@ -555,7 +555,6 @@ func (kds *K8sDatastoreInfra) AddAllowToDatastore(selector string) error {
 }
 
 func (kds *K8sDatastoreInfra) AddDefaultAllow() {
-	return
 }
 
 func (kds *K8sDatastoreInfra) AddDefaultDeny() error {

@@ -62,8 +62,7 @@ var _ = Describe("Static", func() {
 					IptablesMarkEndpoint:        0xff000,
 					IptablesMarkNonCaliEndpoint: 0x1000,
 					KubeIPVSSupportEnabled:      kubeIPVSEnabled,
-					KubeNodePortRanges:          []numorstring.Port{{30030, 30040, ""}},
-					DNSTrustedServers:           []string{"1.2.3.4", "fd5f:83a5::34:2"},
+					KubeNodePortRanges:          []numorstring.Port{{MinPort: 30030, MaxPort: 30040, PortName: ""}},
 				}
 			})
 
@@ -894,15 +893,15 @@ var _ = Describe("Static", func() {
 				IptablesMarkDrop:            0x200,
 				KubeIPVSSupportEnabled:      true,
 				KubeNodePortRanges: []numorstring.Port{
-					{30030, 30040, ""},
-					{30130, 30140, ""},
-					{30230, 30240, ""},
-					{30330, 30340, ""},
-					{30430, 30440, ""},
-					{30530, 30540, ""},
-					{30630, 30640, ""},
-					{30730, 30740, ""},
-					{30830, 30840, ""},
+					{MinPort: 30030, MaxPort: 30040, PortName: ""},
+					{MinPort: 30130, MaxPort: 30140, PortName: ""},
+					{MinPort: 30230, MaxPort: 30240, PortName: ""},
+					{MinPort: 30330, MaxPort: 30340, PortName: ""},
+					{MinPort: 30430, MaxPort: 30440, PortName: ""},
+					{MinPort: 30530, MaxPort: 30540, PortName: ""},
+					{MinPort: 30630, MaxPort: 30640, PortName: ""},
+					{MinPort: 30730, MaxPort: 30740, PortName: ""},
+					{MinPort: 30830, MaxPort: 30840, PortName: ""},
 				},
 			}
 		})
@@ -912,18 +911,18 @@ var _ = Describe("Static", func() {
 			ipSetThisHost := fmt.Sprintf("cali%d0this-host", ipVersion)
 
 			portRanges1 := []*proto.PortRange{
-				{30030, 30040},
-				{30130, 30140},
-				{30230, 30240},
-				{30330, 30340},
-				{30430, 30440},
-				{30530, 30540},
-				{30630, 30640},
+				{First: 30030, Last: 30040},
+				{First: 30130, Last: 30140},
+				{First: 30230, Last: 30240},
+				{First: 30330, Last: 30340},
+				{First: 30430, Last: 30440},
+				{First: 30530, Last: 30540},
+				{First: 30630, Last: 30640},
 			}
 
 			portRanges2 := []*proto.PortRange{
-				{30730, 30740},
-				{30830, 30840},
+				{First: 30730, Last: 30740},
+				{First: 30830, Last: 30840},
 			}
 
 			expForwardCheck := &Chain{

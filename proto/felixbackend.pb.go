@@ -74,16 +74,21 @@
 */
 package proto
 
-import proto1 "github.com/gogo/protobuf/proto"
-import fmt "fmt"
-import math "math"
+import (
+	fmt "fmt"
 
-import context "golang.org/x/net/context"
-import grpc "google.golang.org/grpc"
+	proto1 "github.com/gogo/protobuf/proto"
 
-import binary "encoding/binary"
+	math "math"
 
-import io "io"
+	context "golang.org/x/net/context"
+
+	grpc "google.golang.org/grpc"
+
+	binary "encoding/binary"
+
+	io "io"
+)
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto1.Marshal
@@ -123,14 +128,17 @@ func (IPVersion) EnumDescriptor() ([]byte, []int) { return fileDescriptorFelixba
 type RouteType int32
 
 const (
-	RouteType_VXLAN RouteType = 0
+	RouteType_VXLAN   RouteType = 0
+	RouteType_NOENCAP RouteType = 1
 )
 
 var RouteType_name = map[int32]string{
 	0: "VXLAN",
+	1: "NOENCAP",
 }
 var RouteType_value = map[string]int32{
-	"VXLAN": 0,
+	"VXLAN":   0,
+	"NOENCAP": 1,
 }
 
 func (x RouteType) String() string {

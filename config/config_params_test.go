@@ -17,8 +17,11 @@ package config_test
 import (
 	"regexp"
 
+	"github.com/Workiva/go-datastructures/set"
+
 	. "github.com/projectcalico/felix/config"
-	"github.com/projectcalico/libcalico-go/lib/set"
+	"github.com/projectcalico/felix/testutils"
+	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 
 	"io/ioutil"
 	"net"
@@ -59,12 +62,18 @@ var _ = Describe("FelixConfigurationSpec vs ConfigParams parity", func() {
 		"IpInIpTunnelAddr",
 		"IPv4VXLANTunnelAddr",
 		"VXLANTunnelMACAddr",
+
 		"NodeIP",
 
 		// The rekey time is used by the IPsec tests but it isn't exposed in FelixConfiguration.
 		"IPSecRekeyTime",
 
 		"EnableNflogSize",
+
+		"loadClientConfigFromEnvironment",
+
+		"loadClientConfigFromEnvironment",
+		"useNodeResourceUpdates",
 	}
 	cpFieldNameToFC := map[string]string{
 		"IpInIpEnabled":                      "IPIPEnabled",
@@ -143,7 +152,7 @@ var nilStringSlice []string
 var _ = DescribeTable("Config parsing",
 	func(key, value string, expected interface{}, errorExpected ...bool) {
 		config := New()
-		config.UpdateFrom(map[string]string{key: value},
+		_, err := config.UpdateFrom(map[string]string{key: value},
 			EnvironmentVariable)
 		configPtr := reflect.ValueOf(config)
 		configElem := configPtr.Elem()
@@ -151,8 +160,10 @@ var _ = DescribeTable("Config parsing",
 		newVal := fieldRef.Interface()
 		Expect(newVal).To(Equal(expected))
 		if len(errorExpected) > 0 && errorExpected[0] {
+			Expect(err).To(HaveOccurred())
 			Expect(config.Err).To(HaveOccurred())
 		} else {
+			Expect(err).NotTo(HaveOccurred())
 			Expect(config.Err).NotTo(HaveOccurred())
 		}
 	},
@@ -301,6 +312,7 @@ var _ = DescribeTable("Config parsing",
 	Entry("HealthPort", "HealthPort", "1234", int(1234)),
 
 	Entry("PrometheusMetricsEnabled", "PrometheusMetricsEnabled", "true", true),
+	Entry("PrometheusMetricsHost", "PrometheusMetricsHost", "10.0.0.1", "10.0.0.1"),
 	Entry("PrometheusMetricsPort", "PrometheusMetricsPort", "1234", int(1234)),
 	Entry("PrometheusGoMetricsEnabled", "PrometheusGoMetricsEnabled", "false", false),
 	Entry("PrometheusProcessMetricsEnabled", "PrometheusProcessMetricsEnabled", "false", false),
@@ -391,14 +403,14 @@ var _ = DescribeTable("Config parsing",
 	),
 	Entry("KubeNodePortRanges empty", "KubeNodePortRanges", "",
 		[]numorstring.Port{
-			{30000, 32767, ""},
+			{MinPort: 30000, MaxPort: 32767, PortName: ""},
 		},
 	),
 	Entry("KubeNodePortRanges range", "KubeNodePortRanges", "30001:30002,30030:30040,30500:30600",
 		[]numorstring.Port{
-			{30001, 30002, ""},
-			{30030, 30040, ""},
-			{30500, 30600, ""},
+			{MinPort: 30001, MaxPort: 30002, PortName: ""},
+			{MinPort: 30030, MaxPort: 30040, PortName: ""},
+			{MinPort: 30500, MaxPort: 30600, PortName: ""},
 		},
 	),
 
@@ -516,6 +528,89 @@ var _ = Describe("DatastoreConfig tests", func() {
 			Expect(c.DatastoreConfig().Spec.K8sDisableNodePoll).To(BeTrue())
 		})
 	})
+
+	Describe("with the configuration set only from the common calico configuration", func() {
+		BeforeEach(func() {
+			c = New()
+			c.SetLoadClientConfigFromEnvironmentFunction(func() (*apiconfig.CalicoAPIConfig, error) {
+				return &apiconfig.CalicoAPIConfig{
+					Spec: apiconfig.CalicoAPIConfigSpec{
+						DatastoreType: apiconfig.EtcdV3,
+						EtcdConfig: apiconfig.EtcdConfig{
+							EtcdEndpoints:  "http://localhost:1234",
+							EtcdKeyFile:    testutils.TestDataFile("etcdkeyfile.key"),
+							EtcdCertFile:   testutils.TestDataFile("etcdcertfile.cert"),
+							EtcdCACertFile: testutils.TestDataFile("etcdcacertfile.cert"),
+						},
+					},
+				}, nil
+			})
+		})
+		It("sets the configuration options", func() {
+			spec := c.DatastoreConfig().Spec
+			Expect(spec.DatastoreType).To(Equal(apiconfig.EtcdV3))
+			Expect(spec.EtcdEndpoints).To(Equal("http://localhost:1234"))
+			Expect(spec.EtcdKeyFile).To(Equal(testutils.TestDataFile("etcdkeyfile.key")))
+			Expect(spec.EtcdCertFile).To(Equal(testutils.TestDataFile("etcdcertfile.cert")))
+			Expect(spec.EtcdCACertFile).To(Equal(testutils.TestDataFile("etcdcacertfile.cert")))
+		})
+	})
+	Describe("without setting the DatastoreType and setting the etcdv3 suboptions through the felix configuration", func() {
+		BeforeEach(func() {
+			c = New()
+			_, err := c.UpdateFrom(map[string]string{
+				"EtcdEndpoints": "http://localhost:1234",
+				"EtcdKeyFile":   testutils.TestDataFile("etcdkeyfile.key"),
+				"EtcdCertFile":  testutils.TestDataFile("etcdcertfile.cert"),
+				"EtcdCaFile":    testutils.TestDataFile("etcdcacertfile.cert"),
+			}, EnvironmentVariable)
+			Expect(err).NotTo(HaveOccurred())
+		})
+		It("sets the etcd suboptions", func() {
+			spec := c.DatastoreConfig().Spec
+			Expect(spec.DatastoreType).To(Equal(apiconfig.EtcdV3))
+			Expect(spec.EtcdEndpoints).To(Equal("http://localhost:1234/"))
+			Expect(spec.EtcdKeyFile).To(Equal(testutils.TestDataFile("etcdkeyfile.key")))
+			Expect(spec.EtcdCertFile).To(Equal(testutils.TestDataFile("etcdcertfile.cert")))
+			Expect(spec.EtcdCACertFile).To(Equal(testutils.TestDataFile("etcdcacertfile.cert")))
+		})
+	})
+	Describe("with the configuration set from the common calico configuration and the felix configuration", func() {
+		BeforeEach(func() {
+			c = New()
+
+			c.SetLoadClientConfigFromEnvironmentFunction(func() (*apiconfig.CalicoAPIConfig, error) {
+				return &apiconfig.CalicoAPIConfig{
+					Spec: apiconfig.CalicoAPIConfigSpec{
+						DatastoreType: apiconfig.Kubernetes,
+						EtcdConfig: apiconfig.EtcdConfig{
+							EtcdEndpoints:  "http://localhost:5432",
+							EtcdKeyFile:    testutils.TestDataFile("etcdkeyfileother.key"),
+							EtcdCertFile:   testutils.TestDataFile("etcdcertfileother.cert"),
+							EtcdCACertFile: testutils.TestDataFile("etcdcacertfileother.cert"),
+						},
+					},
+				}, nil
+			})
+
+			_, err := c.UpdateFrom(map[string]string{
+				"DatastoreType": "etcdv3",
+				"EtcdEndpoints": "http://localhost:1234",
+				"EtcdKeyFile":   testutils.TestDataFile("etcdkeyfile.key"),
+				"EtcdCertFile":  testutils.TestDataFile("etcdcertfile.cert"),
+				"EtcdCaFile":    testutils.TestDataFile("etcdcacertfile.cert"),
+			}, EnvironmentVariable)
+			Expect(err).NotTo(HaveOccurred())
+		})
+		It("sets the configuration to what the felix configuration is", func() {
+			spec := c.DatastoreConfig().Spec
+			Expect(spec.DatastoreType).To(Equal(apiconfig.EtcdV3))
+			Expect(spec.EtcdEndpoints).To(Equal("http://localhost:1234/"))
+			Expect(spec.EtcdKeyFile).To(Equal(testutils.TestDataFile("etcdkeyfile.key")))
+			Expect(spec.EtcdCertFile).To(Equal(testutils.TestDataFile("etcdcertfile.cert")))
+			Expect(spec.EtcdCACertFile).To(Equal(testutils.TestDataFile("etcdcacertfile.cert")))
+		})
+	})
 })
 
 var _ = DescribeTable("Config validation",
@@ -582,7 +677,8 @@ var _ = DescribeTable("Config validation",
 var _ = DescribeTable("Config InterfaceExclude",
 	func(excludeList string, expected []*regexp.Regexp) {
 		cfg := New()
-		cfg.UpdateFrom(map[string]string{"InterfaceExclude": excludeList}, EnvironmentVariable)
+		_, err := cfg.UpdateFrom(map[string]string{"InterfaceExclude": excludeList}, EnvironmentVariable)
+		Expect(err).NotTo(HaveOccurred())
 		regexps := cfg.InterfaceExclude
 		Expect(regexps).To(Equal(expected))
 	},

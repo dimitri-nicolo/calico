@@ -36,15 +36,17 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 	"github.com/aws/aws-sdk-go/service/cloudwatch/cloudwatchiface"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/rafaelvanoni/felix-private/config"
 	log "github.com/sirupsen/logrus"
 	lclient "github.com/tigera/licensing/client"
 	"github.com/tigera/licensing/client/features"
 	"github.com/tigera/licensing/monitor"
+	v1 "k8s.io/api/core/v1"
 
 	"github.com/projectcalico/felix/buildinfo"
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/collector"
-	"github.com/projectcalico/felix/config"
+	_ "github.com/projectcalico/felix/config"
 	dp "github.com/projectcalico/felix/dataplane"
 	"github.com/projectcalico/felix/logutils"
 	"github.com/projectcalico/felix/policysync"
@@ -66,16 +68,6 @@ import (
 	"github.com/projectcalico/pod2daemon/binder"
 	"github.com/projectcalico/typha/pkg/syncclient"
 )
-
-const usage = `Felix, the Calico per-host daemon.
-
-Usage:
-  calico-felix [options]
-
-Options:
-  -c --config-file=<filename>  Config file to load [default: /etc/calico/felix.cfg].
-  --version                    Print the version and exit.
-`
 
 const (
 	// Our default value for GOGC if it is not set.  This is the percentage that heap usage must
@@ -135,7 +127,7 @@ const (
 // To avoid having to maintain rarely-used code paths, Felix handles updates to its
 // main config parameters by exiting and allowing itself to be restarted by the init
 // daemon.
-func Run(configFile string) {
+func Run(configFile string, gitVersion string, buildDate string, gitRevision string) {
 	// Go's RNG is not seeded by default.  Do that now.
 	rand.Seed(time.Now().UTC().UnixNano())
 
@@ -153,11 +145,17 @@ func Run(configFile string) {
 		debug.SetGCPercent(defaultGCPercent)
 	}
 
+	if len(buildinfo.GitVersion) == 0 && len(gitVersion) != 0 {
+		buildinfo.GitVersion = gitVersion
+		buildinfo.BuildDate = buildDate
+		buildinfo.GitRevision = gitRevision
+	}
+
 	buildInfoLogCxt := log.WithFields(log.Fields{
 		"version":    buildinfo.GitVersion,
 		"release":    "CNX",
-		"buildDate":  buildinfo.BuildDate,
-		"gitCommit":  buildinfo.GitRevision,
+		"builddate":  buildinfo.BuildDate,
+		"gitcommit":  buildinfo.GitRevision,
 		"GOMAXPROCS": runtime.GOMAXPROCS(0),
 	})
 	buildInfoLogCxt.Info("Felix starting up")
@@ -210,16 +208,16 @@ configRetry:
 			continue configRetry
 		}
 		// Parse and merge the local config.
-		configParams.UpdateFrom(envConfig, config.EnvironmentVariable)
-		if configParams.Err != nil {
-			log.WithError(configParams.Err).WithField("configFile", configFile).Error(
+		_, err = configParams.UpdateFrom(envConfig, config.EnvironmentVariable)
+		if err != nil {
+			log.WithError(err).WithField("configFile", configFile).Error(
 				"Failed to parse configuration environment variable")
 			time.Sleep(1 * time.Second)
 			continue configRetry
 		}
-		configParams.UpdateFrom(fileConfig, config.ConfigFile)
-		if configParams.Err != nil {
-			log.WithError(configParams.Err).WithField("configFile", configFile).Error(
+		_, err = configParams.UpdateFrom(fileConfig, config.ConfigFile)
+		if err != nil {
+			log.WithError(err).WithField("configFile", configFile).Error(
 				"Failed to parse configuration file")
 			time.Sleep(1 * time.Second)
 			continue configRetry
@@ -255,14 +253,23 @@ configRetry:
 				time.Sleep(1 * time.Second)
 				continue configRetry
 			}
-			configParams.UpdateFrom(globalConfig, config.DatastoreGlobal)
-			configParams.UpdateFrom(hostConfig, config.DatastorePerHost)
+			_, err = configParams.UpdateFrom(globalConfig, config.DatastoreGlobal)
+			if err != nil {
+				log.WithError(err).Error("Failed update global config from datastore")
+				time.Sleep(1 * time.Second)
+				continue configRetry
+			}
+			_, err = configParams.UpdateFrom(hostConfig, config.DatastorePerHost)
+			if err != nil {
+				log.WithError(err).Error("Failed update host config from datastore")
+				time.Sleep(1 * time.Second)
+				continue configRetry
+			}
 			break
 		}
-		configParams.Validate()
-		if configParams.Err != nil {
-			log.WithError(configParams.Err).Error(
-				"Failed to parse/validate configuration from datastore.")
+		err = configParams.Validate()
+		if err != nil {
+			log.WithError(err).Error("Failed to parse/validate configuration from datastore.")
 			time.Sleep(1 * time.Second)
 			continue configRetry
 		}
@@ -356,17 +363,18 @@ configRetry:
 	configChangedRestartCallback := func() { failureReportChan <- reasonConfigChanged }
 	childExitedRestartCallback := func() { failureReportChan <- reasonChildExited }
 
-	dpDriver, dpDriverCmd, dpStopChan = dp.StartDataplaneDriver(
-		configParams,
-		healthAggregator,
-		dpStatsCollector,
-		configChangedRestartCallback,
-		childExitedRestartCallback,
-	)
+	dpDriver, dpDriverCmd = dp.StartDataplaneDriver(configParams, healthAggregator, configChangedRestartCallback)
 
 	// Initialise the glue logic that connects the calculation graph to/from the dataplane driver.
 	log.Info("Connect to the dataplane driver.")
-	dpConnector := newConnector(configParams, backendClient, dpDriver, failureReportChan)
+
+	var connToUsageRepUpdChan chan map[string]string
+	if configParams.UsageReportingEnabled {
+		// Make a channel for the connector to use to send updates to the usage reporter.
+		// (Otherwise, we pass in a nil channel, which disables such updates.)
+		connToUsageRepUpdChan = make(chan map[string]string, 1)
+	}
+	dpConnector := newConnector(configParams, connToUsageRepUpdChan, backendClient, dpDriver, failureReportChan)
 
 	// If enabled, create a server for the policy sync API.  This allows clients to connect to
 	// Felix over a socket and receive policy updates.
@@ -379,7 +387,7 @@ configRetry:
 			"Policy sync API enabled.  Creating the policy sync server.")
 		toPolicySync := make(chan interface{})
 		policySyncUIDAllocator := policysync.NewUIDAllocator()
-		policySyncProcessor = policysync.NewProcessor(configParams, toPolicySync)
+		policySyncProcessor = policysync.NewProcessor(toPolicySync)
 		policySyncServer = policysync.NewServer(
 			policySyncProcessor.JoinUpdates,
 			dpStatsCollector,
@@ -430,29 +438,11 @@ configRetry:
 	} else {
 		// Use the syncer locally.
 		syncer = felixsyncer.New(backendClient, datastoreConfig.Spec, syncerToValidator)
+
+		log.Info("using resource updates where applicable")
+		configParams.SetUseNodeResourceUpdates(true)
 	}
 	log.WithField("syncer", syncer).Info("Created Syncer")
-
-	// Create the ipsets/active policy calculation graph, which will
-	// do the dynamic calculation of ipset memberships and active policies
-	// etc.
-	asyncCalcGraph := calc.NewAsyncCalcGraph(
-		configParams,
-		licenseMonitor,
-		calcGraphClientChannels,
-		healthAggregator,
-		lookupsCache,
-	)
-
-	// Create a stats collector to generate felix_cluster_* metrics.
-	statsCollector := calc.NewStatsCollector(func(stats calc.StatsUpdate) error {
-		return nil
-	})
-	statsCollector.RegisterWith(asyncCalcGraph.CalcGraph)
-
-	// Create the validator, which sits between the syncer and the
-	// calculation graph.
-	validator := calc.NewValidationFilter(asyncCalcGraph)
 
 	// Start the background processing threads.
 	if syncer != nil {
@@ -481,11 +471,42 @@ configRetry:
 				healthAggregator.Report(healthName, &health.HealthReport{Live: true, Ready: true})
 			}
 		}
+
+		supportsNodeResourceUpdates, err := typhaConnection.SupportsNodeResourceUpdates(10 * time.Second)
+		if err != nil {
+			log.WithError(err).Error("Did not get hello message from Typha in time, assuming it does not support node resource updates")
+			return
+		}
+		log.Debugf("Typha supports node resource updates: %v", supportsNodeResourceUpdates)
+		configParams.SetUseNodeResourceUpdates(supportsNodeResourceUpdates)
+
 		go func() {
 			typhaConnection.Finished.Wait()
 			failureReportChan <- "Connection to Typha failed"
 		}()
 	}
+
+	// Create the ipsets/active policy calculation graph, which will
+	// do the dynamic calculation of ipset memberships and active policies
+	// etc.
+	asyncCalcGraph := calc.NewAsyncCalcGraph(
+		configParams,
+		licenseMonitor,
+		calcGraphClientChannels,
+		healthAggregator,
+		lookupsCache,
+	)
+
+	// Create a stats collector to generate felix_cluster_* metrics.
+	statsCollector := calc.NewStatsCollector(func(stats calc.StatsUpdate) error {
+		return nil
+	})
+	statsCollector.RegisterWith(asyncCalcGraph.CalcGraph)
+
+	// Create the validator, which sits between the syncer and the
+	// calculation graph.
+	validator := calc.NewValidationFilter(asyncCalcGraph)
+
 	go syncerToValidator.SendTo(validator)
 	asyncCalcGraph.Start()
 	log.Infof("Started the processing graph")
@@ -704,7 +725,10 @@ func newCloudWatchMetricsClient(cwAPI cloudwatchiface.CloudWatchAPI, healthAgg *
 
 func servePrometheusMetrics(configParams *config.Config) {
 	for {
-		log.WithField("port", configParams.PrometheusMetricsPort).Info("Starting prometheus metrics endpoint")
+		log.WithFields(log.Fields{
+			"host": configParams.PrometheusMetricsHost,
+			"port": configParams.PrometheusMetricsPort,
+		}).Info("Starting prometheus metrics endpoint")
 		if configParams.PrometheusGoMetricsEnabled && configParams.PrometheusProcessMetricsEnabled {
 			log.Info("Including Golang & Process metrics")
 		} else {
@@ -717,6 +741,7 @@ func servePrometheusMetrics(configParams *config.Config) {
 				prometheus.Unregister(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
 			}
 		}
+
 		err := security.ServePrometheusMetrics(
 			prometheus.DefaultGatherer,
 			configParams.PrometheusMetricsPort,
@@ -724,6 +749,11 @@ func servePrometheusMetrics(configParams *config.Config) {
 			configParams.PrometheusMetricsKeyFile,
 			configParams.PrometheusMetricsCAFile,
 		)
+
+		// TODO: Join the two host ports
+		// http.Handle("/metrics", promhttp.Handler())
+		// err := http.ListenAndServe(net.JoinHostPort(configParams.PrometheusMetricsHost, strconv.Itoa(configParams.PrometheusMetricsPort)), nil)
+
 		log.WithError(err).Error(
 			"Prometheus metrics endpoint failed, trying to restart it...")
 		time.Sleep(1 * time.Second)
@@ -799,6 +829,8 @@ func monitorAndManageShutdown(failureReportChan <-chan string, driverCmd *exec.C
 		logCxt.Warn("Subcomponent shut down timed out")
 	}
 
+	stopWG.Wait()
+
 	if !driverAlreadyStopped {
 		// Driver may still be running, just in case the driver is
 		// unresponsive, start a thread to kill this process if we
@@ -812,13 +844,16 @@ func monitorAndManageShutdown(failureReportChan <-chan string, driverCmd *exec.C
 			log.Fatal("Failed to wait for driver to exit, giving up.")
 		}()
 		// Signal to the driver to exit.
-		driverCmd.Process.Signal(syscall.SIGTERM)
+		err := driverCmd.Process.Signal(syscall.SIGTERM)
+		if err != nil {
+			logCxt.Error("failed to signal driver to exit")
+		}
 		select {
 		case <-driverStoppedC:
 			logCxt.Info("Driver shut down after SIGTERM")
 		case <-giveUpOnSigTerm:
 			logCxt.Error("Driver did not respond to SIGTERM, sending SIGKILL")
-			driverCmd.Process.Kill()
+			_ = driverCmd.Process.Kill()
 			<-driverStoppedC
 			logCxt.Info("Driver shut down after SIGKILL")
 		}

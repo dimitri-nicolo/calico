@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -50,7 +50,7 @@ var _ = Describe("Server", func() {
 				output = make(chan *proto.ToDataplane)
 				stream = &testSyncStream{output: output}
 				go func() {
-					uut.Sync(&proto.SyncRequest{}, stream)
+					_ = uut.Sync(&proto.SyncRequest{}, stream)
 					syncDone <- true
 				}()
 				j := <-joins
@@ -75,7 +75,6 @@ var _ = Describe("Server", func() {
 			})
 
 			Context("with unstreamed updates", func() {
-
 				BeforeEach(func(done Done) {
 					// Queue up 10 messages. This should not block because the updates channel should be buffered.
 					for i := 0; i < 10; i++ {
