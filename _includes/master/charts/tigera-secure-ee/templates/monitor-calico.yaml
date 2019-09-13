@@ -825,6 +825,9 @@ spec:
                     - /usr/bin/curator --config /curator/curator_config.yaml --dry-run /curator/curator_action.yaml
                 initialDelaySeconds: 60
                 periodSeconds: 60
+              securityContext:
+                runAsNonRoot: true
+                allowPrivilegeEscalation: false
           volumes:
             # Should be created during installation process.
             - name: elastic-ca-cert-volume
