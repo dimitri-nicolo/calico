@@ -732,7 +732,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		))
 
 		// There should be no Egress rules
-		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress)).To(Equal(0))
+		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress).To(HaveLen(0))
 
 		// Check that Types field exists and has only 'ingress'
 		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Types)).To(Equal(1))
@@ -850,10 +850,10 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		// Assert value fields are correct.
 		Expect(int(*pol.Value.(*apiv3.NetworkPolicy).Spec.Order)).To(Equal(1000))
 		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Selector).To(Equal("projectcalico.org/orchestrator == 'k8s' && label == 'value'"))
-		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Ingress)).To(Equal(0))
+		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Ingress).To(HaveLen(0))
 
 		// There should be no Egress rules
-		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress)).To(Equal(0))
+		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress).To(HaveLen(0))
 
 		// Check that Types field exists and has only 'ingress'
 		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Types)).To(Equal(1))
@@ -891,11 +891,11 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		})
 
 		By("generating no outbound rules", func() {
-			Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress)).To(Equal(0))
+			Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress).To(HaveLen(0))
 		})
 
 		By("generating no inbound rules", func() {
-			Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Ingress)).To(Equal(0))
+			Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Ingress).To(HaveLen(0))
 		})
 
 		By("generating the correct policy types", func() {
@@ -961,7 +961,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 			Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Ingress)).To(Equal(2))
 
 			// There should be no Egress rules.
-			Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress)).To(Equal(0))
+			Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress).To(HaveLen(0))
 
 			// Check that Types field exists and has only 'ingress'
 			Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Types)).To(Equal(1))
@@ -1049,7 +1049,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		))
 
 		// There should be no Egress rules
-		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress)).To(Equal(0))
+		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress).To(HaveLen(0))
 
 		// Check that Types field exists and has only 'ingress'
 		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Types)).To(Equal(1))
@@ -1127,7 +1127,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 			Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Ingress)).To(Equal(4))
 
 			// There should be no Egress rules.
-			Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress)).To(Equal(0))
+			Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress).To(HaveLen(0))
 
 			// Check that Types field exists and has only 'ingress'
 			Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Types)).To(Equal(1))
@@ -1169,10 +1169,10 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		// Assert value fields are correct.
 		Expect(int(*pol.Value.(*apiv3.NetworkPolicy).Spec.Order)).To(Equal(1000))
 		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Selector).To(Equal("projectcalico.org/orchestrator == 'k8s'"))
-		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Ingress)).To(Equal(0))
+		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Ingress).To(HaveLen(0))
 
 		// There should be no Egress rules.
-		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress)).To(Equal(0))
+		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress).To(HaveLen(0))
 
 		// Check that Types field exists and has only 'ingress'
 		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Types)).To(Equal(1))
@@ -1222,7 +1222,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Ingress[0].Source.NamespaceSelector).To(Equal("namespaceFoo == 'bar' && namespaceRole == 'dev'"))
 
 		// There should be no Egress rules.
-		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress)).To(Equal(0))
+		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress).To(HaveLen(0))
 
 		// Check that Types field exists and has only 'ingress'
 		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Types)).To(Equal(1))
@@ -1268,7 +1268,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Ingress[0].Source.NamespaceSelector).To(Equal(""))
 
 		// There should be no Egress rules.
-		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress)).To(Equal(0))
+		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress).To(HaveLen(0))
 
 		// Check that Types field exists and has only 'ingress'
 		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Types)).To(Equal(1))
@@ -1315,7 +1315,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Ingress[0].Source.NamespaceSelector).To(Equal("all()"))
 
 		// There should be no Egress rules.
-		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress)).To(Equal(0))
+		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress).To(HaveLen(0))
 
 		// Check that Types field exists and has only 'ingress'
 		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Types)).To(Equal(1))
@@ -1371,7 +1371,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Ingress[0].Source.NamespaceSelector).To(Equal("namespaceFoo == 'bar' && namespaceRole == 'dev'"))
 
 		// There should be no Egress rules.
-		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress)).To(Equal(0))
+		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress).To(HaveLen(0))
 
 		// Check that Types field exists and has only 'ingress'
 		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Types)).To(Equal(1))
@@ -1408,10 +1408,10 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		// Assert value fields are correct.
 		Expect(int(*pol.Value.(*apiv3.NetworkPolicy).Spec.Order)).To(Equal(1000))
 		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Selector).To(Equal("projectcalico.org/orchestrator == 'k8s' && k in { 'v1', 'v2' }"))
-		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Ingress)).To(Equal(0))
+		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Ingress).To(HaveLen(0))
 
 		// There should be no Egress rules.
-		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress)).To(Equal(0))
+		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress).To(HaveLen(0))
 
 		// Check that Types field exists and has only 'ingress'
 		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Types)).To(Equal(1))
@@ -1458,7 +1458,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Ingress[0].Destination.Ports[0].String()).To(Equal("80"))
 
 		// There should be no Egress rules.
-		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress)).To(Equal(0))
+		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress).To(HaveLen(0))
 
 		// Check that Types field exists and has only 'ingress'
 		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Types)).To(Equal(1))
@@ -1505,7 +1505,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress[0].Destination.Ports[0].String()).To(Equal("80"))
 
 		// There should be no Ingress rules
-		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Ingress)).To(Equal(0))
+		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Ingress).To(HaveLen(0))
 
 		// Check that Types field exists and has only 'egress'
 		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Types)).To(Equal(1))
@@ -1552,7 +1552,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Ingress[0].Source.NotNets[1]).To(Equal("192.168.4.0/24"))
 
 		// There should be no Egress rules.
-		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress)).To(Equal(0))
+		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress).To(HaveLen(0))
 
 		// Check that Types field exists and has only 'ingress'
 		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Types)).To(Equal(1))
@@ -1600,7 +1600,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress[0].Destination.NotNets[2]).To(Equal("192.168.5.0/24"))
 
 		// There should be no Ingress
-		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Ingress)).To(Equal(0))
+		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Ingress).To(HaveLen(0))
 
 		// Check that Types field exists and has only 'egress'
 		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Types)).To(Equal(1))
@@ -1673,11 +1673,74 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress[1].Destination.NotNets[2]).To(Equal("192.168.5.0/24"))
 
 		// There should be no Ingress
-		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Ingress)).To(Equal(0))
+		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Ingress).To(HaveLen(0))
 
 		// Check that Types field exists and has only 'egress'
 		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Types)).To(Equal(1))
 		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Types[0]).To(Equal(apiv3.PolicyTypeEgress))
+	})
+
+	It("should parse a NetworkPolicyPeer with an IPBlock Peer and no Except field", func() {
+		np := networkingv1.NetworkPolicyPeer{
+			IPBlock: &networkingv1.IPBlock{
+				CIDR: "192.168.0.0/16",
+			},
+		}
+
+		// Parse the policy.
+		podSel, nsSel, nets, notNets := c.k8sPeerToCalicoFields(&np, "default")
+
+		// Assert value fields are correct.
+		Expect(nets[0]).To(Equal("192.168.0.0/16"))
+		Expect(notNets).To(BeNil())
+
+		// As this is a IPBlock rule, podSel and nsSel should be empty (not nil!)
+		Expect(podSel).To(BeEmpty())
+		Expect(nsSel).To(BeEmpty())
+
+	})
+
+	It("should have empty and Nil NetworkPolicyPeerfields when an IPBlock is invalid", func() {
+		np := networkingv1.NetworkPolicyPeer{
+			IPBlock: &networkingv1.IPBlock{
+				CIDR: "192.168.0.0/55",
+			},
+		}
+
+		// Parse the policy.
+		podSel, nsSel, nets, notNets := c.k8sPeerToCalicoFields(&np, "default")
+
+		// Assert value fields are correct.
+		Expect(nets).To(BeNil())
+		Expect(notNets).To(BeNil())
+
+		// As this is a IPBlock rule, podSel and nsSel should be empty (not nil!)
+		Expect(podSel).To(BeEmpty())
+		Expect(nsSel).To(BeEmpty())
+
+	})
+
+	It("should parse a NetworkPolicyPeer with an CIDR and Except field", func() {
+		np := networkingv1.NetworkPolicyPeer{
+			IPBlock: &networkingv1.IPBlock{
+				CIDR:   "192.168.0.0/16",
+				Except: []string{"192.168.3.0/24", "192.168.4.0/24", "192.168.5.0/24"},
+			},
+		}
+
+		// Parse the policy.
+		podSel, nsSel, nets, notNets := c.k8sPeerToCalicoFields(&np, "default")
+
+		// Assert value fields are correct.
+		Expect(nets[0]).To(Equal("192.168.0.0/16"))
+		Expect(notNets[0]).To(Equal("192.168.3.0/24"))
+		Expect(notNets[1]).To(Equal("192.168.4.0/24"))
+		Expect(notNets[2]).To(Equal("192.168.5.0/24"))
+
+		// As this is a IPBlock rule, podSel and nsSel should be empty (not nil!)
+		Expect(podSel).To(BeEmpty())
+		Expect(nsSel).To(BeEmpty())
+
 	})
 
 	It("should parse a NetworkPolicy with both an Egress and an Ingress rule", func() {
@@ -1744,6 +1807,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Types[0]).To(Equal(apiv3.PolicyTypeIngress))
 		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Types[1]).To(Equal(apiv3.PolicyTypeEgress))
 	})
+
 })
 
 // This suite of tests is useful for ensuring we continue to support kubernetes apiserver
@@ -1812,7 +1876,7 @@ var _ = Describe("Test NetworkPolicy conversion (k8s <= 1.7, no policyTypes)", f
 		}))
 
 		// There should be no Egress rule.
-		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress)).To(Equal(0))
+		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress).To(HaveLen(0))
 
 		// Check that Types field exists and has only 'ingress'
 		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Types)).To(Equal(1))
@@ -1842,10 +1906,10 @@ var _ = Describe("Test NetworkPolicy conversion (k8s <= 1.7, no policyTypes)", f
 		// Assert value fields are correct.
 		Expect(int(*pol.Value.(*apiv3.NetworkPolicy).Spec.Order)).To(Equal(1000))
 		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Selector).To(Equal("projectcalico.org/orchestrator == 'k8s' && label == 'value'"))
-		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Ingress)).To(Equal(0))
+		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Ingress).To(HaveLen(0))
 
 		// There should be no Egress rule.
-		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress)).To(Equal(0))
+		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress).To(HaveLen(0))
 
 		// Check that Types field exists and has only 'ingress'
 		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Types)).To(Equal(1))
@@ -1908,7 +1972,7 @@ var _ = Describe("Test NetworkPolicy conversion (k8s <= 1.7, no policyTypes)", f
 			Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Ingress)).To(Equal(2))
 
 			// There should be no Egress rule.
-			Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress)).To(Equal(0))
+			Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress).To(HaveLen(0))
 
 			// Check that Types field exists and has only 'ingress'
 			Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Types)).To(Equal(1))
@@ -1989,7 +2053,7 @@ var _ = Describe("Test NetworkPolicy conversion (k8s <= 1.7, no policyTypes)", f
 			Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Ingress)).To(Equal(4))
 
 			// There should be no Egress rule.
-			Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress)).To(Equal(0))
+			Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress).To(HaveLen(0))
 
 			// Check that Types field exists and has only 'ingress'
 			Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Types)).To(Equal(1))
@@ -2030,10 +2094,10 @@ var _ = Describe("Test NetworkPolicy conversion (k8s <= 1.7, no policyTypes)", f
 		// Assert value fields are correct.
 		Expect(int(*pol.Value.(*apiv3.NetworkPolicy).Spec.Order)).To(Equal(1000))
 		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Selector).To(Equal("projectcalico.org/orchestrator == 'k8s'"))
-		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Ingress)).To(Equal(0))
+		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Ingress).To(HaveLen(0))
 
 		// There should be no Egress rule.
-		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress)).To(Equal(0))
+		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress).To(HaveLen(0))
 
 		// Check that Types field exists and has only 'ingress'
 		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Types)).To(Equal(1))
@@ -2069,10 +2133,10 @@ var _ = Describe("Test NetworkPolicy conversion (k8s <= 1.7, no policyTypes)", f
 		// Assert value fields are correct.
 		Expect(int(*pol.Value.(*apiv3.NetworkPolicy).Spec.Order)).To(Equal(1000))
 		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Selector).To(Equal("projectcalico.org/orchestrator == 'k8s' && k in { 'v1', 'v2' }"))
-		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Ingress)).To(Equal(0))
+		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Ingress).To(HaveLen(0))
 
 		// There should be no Egress rule.
-		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress)).To(Equal(0))
+		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress).To(HaveLen(0))
 
 		// Check that Types field exists and has only 'ingress'
 		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Types)).To(Equal(1))
@@ -2118,7 +2182,7 @@ var _ = Describe("Test NetworkPolicy conversion (k8s <= 1.7, no policyTypes)", f
 		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Ingress[0].Destination.Ports[0].String()).To(Equal("80"))
 
 		// There should be no Egress rule.
-		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress)).To(Equal(0))
+		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress).To(HaveLen(0))
 
 		// Check that Types field exists and has only 'ingress'
 		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Types)).To(Equal(1))

@@ -126,6 +126,24 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 						UpdateType: api.UpdateTypeKVNew,
 					})
 				}
+
+				// Add an expected event for the node object.
+				expectedEvents = append(expectedEvents, api.Update{
+					UpdateType: api.UpdateTypeKVNew,
+					KVPair: model.KVPair{
+						Key: model.ResourceKey{Name: "127.0.0.1", Kind: "Node"},
+						Value: &apiv3.Node{
+							Spec: apiv3.NodeSpec{
+								OrchRefs: []apiv3.OrchRef{
+									{
+										NodeName:     "127.0.0.1",
+										Orchestrator: "k8s",
+									},
+								},
+							},
+						},
+					},
+				})
 			}
 
 			// Sanitize the actual events received to remove revision info and to handle prefix matching of the
@@ -133,6 +151,13 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 			syncTester.ExpectUpdatesSanitized(expectedEvents, false, func(u *api.Update) *api.Update {
 				u.Revision = ""
 				u.TTL = 0
+
+				// We only support a single `model.Resource` over the syncer right now. The Node object
+				// that comes from the Felix syncer. We don't care about anything more than the spec.
+				if _, ok := u.KVPair.Key.(model.ResourceKey); ok {
+					cachedSpec := u.KVPair.Value.(*apiv3.Node).Spec
+					u.KVPair.Value = &apiv3.Node{Spec: cachedSpec}
+				}
 
 				if r, ok := u.Value.(*model.RemoteClusterStatus); ok {
 					if r.Error != "" && strings.HasPrefix(r.Error, errPrefix) {
@@ -283,6 +308,24 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 						UpdateType: api.UpdateTypeKVNew,
 					})
 				}
+
+				// Add an expected event for the node object.
+				expectedEvents = append(expectedEvents, api.Update{
+					UpdateType: api.UpdateTypeKVNew,
+					KVPair: model.KVPair{
+						Key: model.ResourceKey{Name: "127.0.0.1", Kind: "Node"},
+						Value: &apiv3.Node{
+							Spec: apiv3.NodeSpec{
+								OrchRefs: []apiv3.OrchRef{
+									{
+										NodeName:     "127.0.0.1",
+										Orchestrator: "k8s",
+									},
+								},
+							},
+						},
+					},
+				})
 			}
 
 			// Sanitize the actual events received to remove revision info and to handle prefix matching of the
@@ -290,6 +333,13 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 			syncTester.ExpectUpdatesSanitized(expectedEvents, false, func(u *api.Update) *api.Update {
 				u.Revision = ""
 				u.TTL = 0
+
+				// We only support a single `model.Resource` over the syncer right now. The Node object
+				// that comes from the Felix syncer. We don't care about anything more than the spec.
+				if _, ok := u.KVPair.Key.(model.ResourceKey); ok {
+					cachedSpec := u.KVPair.Value.(*apiv3.Node).Spec
+					u.KVPair.Value = &apiv3.Node{Spec: cachedSpec}
+				}
 
 				if r, ok := u.Value.(*model.RemoteClusterStatus); ok {
 					// Need to clip off the exact client error
@@ -368,6 +418,25 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 						UpdateType: api.UpdateTypeKVNew,
 					})
 				}
+
+				// Add an expected event for the node object.
+				expectedEvents = append(expectedEvents, api.Update{
+					UpdateType: api.UpdateTypeKVNew,
+					KVPair: model.KVPair{
+						Key: model.ResourceKey{Name: "127.0.0.1", Kind: "Node"},
+						Value: &apiv3.Node{
+							Spec: apiv3.NodeSpec{
+								OrchRefs: []apiv3.OrchRef{
+									{
+										NodeName:     "127.0.0.1",
+										Orchestrator: "k8s",
+									},
+								},
+							},
+						},
+					},
+				})
+
 				for _, n := range []string{"default", "kube-public", "kube-system", "namespace-1", "namespace-2", "kube-node-lease"} {
 					expectedEvents = append(expectedEvents, api.Update{
 						KVPair: model.KVPair{
@@ -386,6 +455,13 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 			syncTester.ExpectUpdatesSanitized(expectedEvents, false, func(u *api.Update) *api.Update {
 				u.Revision = ""
 				u.TTL = 0
+
+				// We only support a single `model.Resource` over the syncer right now. The Node object
+				// that comes from the Felix syncer. We don't care about anything more than the spec.
+				if _, ok := u.KVPair.Key.(model.ResourceKey); ok {
+					cachedSpec := u.KVPair.Value.(*apiv3.Node).Spec
+					u.KVPair.Value = &apiv3.Node{Spec: cachedSpec}
+				}
 
 				return u
 			})
@@ -653,12 +729,37 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests", testutils.
 						UpdateType: api.UpdateTypeKVNew,
 					})
 				}
+
+				// Add an expected event for the node object.
+				expectedEvents = append(expectedEvents, api.Update{
+					UpdateType: api.UpdateTypeKVNew,
+					KVPair: model.KVPair{
+						Key: model.ResourceKey{Name: "127.0.0.1", Kind: "Node"},
+						Value: &apiv3.Node{
+							Spec: apiv3.NodeSpec{
+								OrchRefs: []apiv3.OrchRef{
+									{
+										NodeName:     "127.0.0.1",
+										Orchestrator: "k8s",
+									},
+								},
+							},
+						},
+					},
+				})
 			}
 
 			// Sanitize the actual events received to remove revision info and compare against those expected.
 			syncTester.ExpectUpdatesSanitized(expectedEvents, false, func(u *api.Update) *api.Update {
 				u.Revision = ""
 				u.TTL = 0
+
+				// We only support a single `model.Resource` over the syncer right now. The Node object
+				// that comes from the Felix syncer. We don't care about anything more than the spec.
+				if _, ok := u.KVPair.Key.(model.ResourceKey); ok {
+					cachedSpec := u.KVPair.Value.(*apiv3.Node).Spec
+					u.KVPair.Value = &apiv3.Node{Spec: cachedSpec}
+				}
 
 				return u
 			})
@@ -784,12 +885,37 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests", testutils.
 						UpdateType: api.UpdateTypeKVNew,
 					})
 				}
+
+				// Add an expected event for the node object.
+				expectedEvents = append(expectedEvents, api.Update{
+					UpdateType: api.UpdateTypeKVNew,
+					KVPair: model.KVPair{
+						Key: model.ResourceKey{Name: "127.0.0.1", Kind: "Node"},
+						Value: &apiv3.Node{
+							Spec: apiv3.NodeSpec{
+								OrchRefs: []apiv3.OrchRef{
+									{
+										NodeName:     "127.0.0.1",
+										Orchestrator: "k8s",
+									},
+								},
+							},
+						},
+					},
+				})
 			}
 
 			// Sanitize the actual events received to remove revision info and compare against those expected.
 			syncTester.ExpectUpdatesSanitized(expectedEvents, false, func(u *api.Update) *api.Update {
 				u.Revision = ""
 				u.TTL = 0
+
+				// We only support a single `model.Resource` over the syncer right now. The Node object
+				// that comes from the Felix syncer. We don't care about anything more than the spec.
+				if _, ok := u.KVPair.Key.(model.ResourceKey); ok {
+					cachedSpec := u.KVPair.Value.(*apiv3.Node).Spec
+					u.KVPair.Value = &apiv3.Node{Spec: cachedSpec}
+				}
 
 				return u
 			})
@@ -814,6 +940,13 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests", testutils.
 			syncTester.ExpectUpdatesSanitized(expectedEvents, false, func(u *api.Update) *api.Update {
 				u.Revision = ""
 				u.TTL = 0
+
+				// We only support a single `model.Resource` over the syncer right now. The Node object
+				// that comes from the Felix syncer. We don't care about anything more than the spec.
+				if _, ok := u.KVPair.Key.(model.ResourceKey); ok {
+					cachedSpec := u.KVPair.Value.(*apiv3.Node).Spec
+					u.KVPair.Value = &apiv3.Node{Spec: cachedSpec}
+				}
 
 				return u
 			})
@@ -939,12 +1072,37 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests", testutils.
 						UpdateType: api.UpdateTypeKVNew,
 					})
 				}
+
+				// Add an expected event for the node object.
+				expectedEvents = append(expectedEvents, api.Update{
+					UpdateType: api.UpdateTypeKVNew,
+					KVPair: model.KVPair{
+						Key: model.ResourceKey{Name: "127.0.0.1", Kind: "Node"},
+						Value: &apiv3.Node{
+							Spec: apiv3.NodeSpec{
+								OrchRefs: []apiv3.OrchRef{
+									{
+										NodeName:     "127.0.0.1",
+										Orchestrator: "k8s",
+									},
+								},
+							},
+						},
+					},
+				})
 			}
 
 			// Sanitize the actual events received to remove revision info and compare against those expected.
 			syncTester.ExpectUpdatesSanitized(expectedEvents, false, func(u *api.Update) *api.Update {
 				u.Revision = ""
 				u.TTL = 0
+
+				// We only support a single `model.Resource` over the syncer right now. The Node object
+				// that comes from the Felix syncer. We don't care about anything more than the spec.
+				if _, ok := u.KVPair.Key.(model.ResourceKey); ok {
+					cachedSpec := u.KVPair.Value.(*apiv3.Node).Spec
+					u.KVPair.Value = &apiv3.Node{Spec: cachedSpec}
+				}
 
 				return u
 			})
