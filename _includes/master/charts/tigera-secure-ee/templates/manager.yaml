@@ -386,6 +386,9 @@ spec:
             scheme: HTTPS
           initialDelaySeconds: 90
           periodSeconds: 10
+        securityContext:
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
         volumeMounts:
         - mountPath: /etc/ssl/elastic/
           name: tigera-es-proxy-tls
