@@ -1,5 +1,5 @@
-hash: 4b094d7a773160967e0fa79123dd14fa4eee084837a141b7af3b0d59ac3c212d
-updated: 2019-08-23T18:16:02.392689857Z
+hash: d8822fed39880f1c2bcf48a97886283ece4b7c272f2dea9c9410074e2c5e0f35
+updated: 2019-09-13T17:28:40.917309584-07:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -72,11 +72,11 @@ imports:
 - name: github.com/go-openapi/jsonreference
   version: 13c6e3589ad90f49bd3e3bbe2c2cb3d7a4142272
 - name: github.com/go-openapi/spec
-  version: 1de3e0542de65ad8d75452a595886fdd0befb363
+  version: 2223ab324566e4ace63ab69b9c8fff1b81a40eeb
 - name: github.com/go-openapi/swag
   version: f3f9494671f93fcff853e3c6e9e948b3eb71e590
 - name: github.com/go-playground/locales
-  version: f63010822830b6fe52288ee52d5a1151088ce039
+  version: 630ebbb602847eba93e75ae38bbc7bb7abcf1ff3
   subpackages:
   - currency
 - name: github.com/go-playground/universal-translator
@@ -131,7 +131,7 @@ imports:
 - name: github.com/json-iterator/go
   version: 13f86432b882000a51c6e610c620974462691a97
 - name: github.com/kelseyhightower/envconfig
-  version: dd1402a4d99de9ac2f396cd6fcb957bc2c695ec1
+  version: 0b417c4ec4a8a82eecc22a1459a504aa55163d61
 - name: github.com/kubernetes/repo-infra
   version: 9f4571ad7242bf3ec4b47365062498c2528f9a5f
 - name: github.com/leodido/go-urn
@@ -145,9 +145,9 @@ imports:
 - name: github.com/Masterminds/goutils
   version: 41ac8693c5c10a92ea1ff5ac3a7f95646f6123b0
 - name: github.com/Masterminds/semver
-  version: 59c29afe1a994eacb71c833025ca7acf874bb1da
+  version: 805c489aa98f412e79eb308a37996bf9d8b1c91e
 - name: github.com/Masterminds/sprig
-  version: 9f8fceff796fb9f4e992cd2bece016be0121ab74
+  version: 385f7602702f504a4e0c1aea833c3c2498e1fed9
 - name: github.com/matttproud/golang_protobuf_extensions
   version: fc2b8d3a73c4867e51861bbdd5ae3c1f0869dd6a
   subpackages:
@@ -167,7 +167,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: d50bfb6c7acc516f25ee8bcb04997d5f4d06889c
+  version: 338f687c53eef69e88a8d2a0276f439836c96c45
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
@@ -296,11 +296,11 @@ imports:
   subpackages:
   - rate
 - name: golang.org/x/tools
-  version: 5a8dccf5b48ae388eebac31f4077f14adda4dbc6
+  version: 0240832f5c3d9ddcdcd51c66edbf8cd889a54108
   subpackages:
   - import
 - name: google.golang.org/appengine
-  version: 54a98f90d1c46b7731eb8fb305d2a321c30ef610
+  version: 5f2a59506353b8d5ba8cbbcd9f3c1f41f1eaf079
   subpackages:
   - internal
   - internal/app_identity
@@ -337,7 +337,7 @@ imports:
   - tap
   - transport
 - name: gopkg.in/go-playground/validator.v9
-  version: b199fa0642d29caca62b6a99d65cc981ba5edc3b
+  version: 556b9da3c05f2a935bc086fb5a0bb55dd8112d2d
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: gopkg.in/natefinch/lumberjack.v2
