@@ -218,7 +218,8 @@ endif
 LOCAL_USER_ID:=$(shell id -u)
 LOCAL_GROUP_ID:=$(shell id -g)
 
-EXTRA_DOCKER_ARGS	+= -e GO111MODULE=on
+EXTRA_DOCKER_ARGS	+= -e GO111MODULE=on -e GOPRIVATE=github.com/tigera/*
+GIT_CONFIG_SSH		?= git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
 
 # Allow libcalico-go and the ssh auth sock to be mapped into the build container.
 ifdef LIBCALICOGO_PATH
@@ -253,6 +254,7 @@ DOCKER_RUN := mkdir -p .go-pkg-cache $(GOMOD_CACHE) && \
 		-v $(CURDIR)/.go-pkg-cache:/go-cache:rw \
 		-w /go/src/$(PACKAGE_NAME)
 
+# TODO: re-enable local builds
 # Build mounts for running in "local build" mode. This allows an easy build using local development code,
 # assuming that there is a local checkout of libcalico in the same directory as this repo.
 PHONY:local_build
@@ -260,10 +262,10 @@ PHONY:local_build
 ifdef LOCAL_BUILD
 EXTRA_DOCKER_ARGS+=-v $(CURDIR)/../libcalico-go:/go/src/github.com/projectcalico/libcalico-go:rw
 local_build:
-	$(DOCKER_RUN) $(CALICO_BUILD) go mod edit -replace=github.com/projectcalico/libcalico-go=../libcalico-go
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); go mod edit -replace=github.com/projectcalico/libcalico-go=../libcalico-go'
 else
 local_build:
-	-$(DOCKER_RUN) $(CALICO_BUILD) go mod edit -dropreplace=github.com/projectcalico/libcalico-go
+	@echo This is not a local build.
 endif
 
 .PHONY: clean
@@ -276,10 +278,9 @@ clean:
 	       $(GENERATED_FILES) \
 	       go/docs/calc.pdf \
 	       release-notes-* \
-	       fv/infrastructure/crds.yaml
+	       fv/infrastructure/crds.yaml \
 	       docs/*.pdf \
-	       .go-pkg-cache \
-	       check-licenses/dependency-licenses.txt
+	       .go-pkg-cache
 	find . -name "junit.xml" -type f -delete
 	find . -name "*.coverprofile" -type f -delete
 	find . -name "coverage.xml" -type f -delete
@@ -302,7 +303,7 @@ TYPHA_OLDVER?=$(shell $(DOCKER_RUN) $(CALICO_BUILD) go list -m -f "{{.Version}}"
 
 ## Update typha pin in go.mod
 update-typha:
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '\
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) && \
 	if [[ ! -z "$(TYPHA_VERSION)" ]] && [[ "$(TYPHA_VERSION)" != "$(TYPHA_OLDVER)" ]]; then \
 		echo "Updating typha version $(TYPHA_OLDVER) to $(TYPHA_VERSION) from $(TYPHA_REPO)"; \
 		go get $(TYPHA_REPO)@$(TYPHA_VERSION); \
@@ -325,28 +326,28 @@ git-push:
 
 commit-pin-updates: update-typha git-status ci git-config git-commit git-push
 
-bin/calico-felix: bin/calico-felix-$(ARCH)
+bin/calico-felix: remote-deps bin/calico-felix-$(ARCH)
 	ln -f bin/calico-felix-$(ARCH) bin/calico-felix
 
 bin/calico-felix-$(ARCH): $(SRC_FILES) local_build
 	@echo Building felix for $(ARCH) on $(BUILDARCH)
 	mkdir -p bin
-	$(DOCKER_RUN) $(CALICO_BUILD) \
-	   sh -c 'go build -v -i -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/cmd/calico-felix" && \
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) && \
+		go build -v -i -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/cmd/calico-felix" && \
 		( ldd $@ 2>&1 | grep -q -e "Not a valid dynamic program" \
 		-e "not a dynamic executable" || \
 		( echo "Error: $@ was not statically linked"; false ) )'
 
 # Cross-compile Felix for Windows
-bin/calico-felix.exe: $(SRC_FILES) vendor/.up-to-date
+bin/calico-felix.exe: $(SRC_FILES)
 	@echo Building felix for Windows...
 	mkdir -p bin
-	$(DOCKER_RUN) $(LOCAL_BUILD_MOUNTS) $(CALICO_BUILD) \
-           sh -c 'GOOS=windows go build -v -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/calico-felix" && \
+	$(DOCKER_RUN) $(LOCAL_BUILD_MOUNTS) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) && \
+           	GOOS=windows go build -v -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/calico-felix" && \
 		( ldd $@ 2>&1 | grep -q "Not a valid dynamic program" || \
 		( echo "Error: $@ was not statically linked"; false ) )'
 
-bin/tigera-felix.exe: bin/calico-felix.exe
+bin/tigera-felix.exe: remote-deps bin/calico-felix.exe
 	cp $< $@
 
 %.url: % utils/make-azure-blob.sh
@@ -571,8 +572,6 @@ sub-base-tag-images-%:
 	docker tag $(BUILD_IMAGE):latest-$* $(call unescapefs,$(BUILD_IMAGE):$(VERSION)-$*)
 	docker tag $(BUILD_IMAGE):latest-$* $(call unescapefs,quay.io/$(BUILD_IMAGE):$(VERSION)-$*)
 
-
-
 ###############################################################################
 # Building OS Packages (debs/RPMS)
 ###############################################################################
@@ -642,9 +641,6 @@ calico-build/centos6:
 	  -f centos6-build.Dockerfile.$(ARCH) \
 	  -t calico-build/centos6 .
 
-
-
-
 ###############################################################################
 # Managing the upstream library pins
 #
@@ -659,13 +655,6 @@ calico-build/centos6:
 
 ## Update dependency pins in glide.yaml
 update-pins: update-licensing-pin update-typha-pin
-	docker run --rm \
-        -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw $$EXTRA_DOCKER_BIND \
-        -v $(HOME)/.glide:/home/user/.glide:rw \
-        -v $$SSH_AUTH_SOCK:/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent \
-        -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-        -w /go/src/$(PACKAGE_NAME) \
-        $(CALICO_BUILD) glide up --strip-vendor
 
 ## Guard so we don't run this on osx because of ssh-agent to docker forwarding bug
 guard-ssh-forwarding-bug:
@@ -746,15 +735,12 @@ update-licensing-pin: guard-ssh-forwarding-bug guard-git-licensing
 		GLIDE="glide.yaml" \
 		_scripts/update-pin.sh '
 
-
-
-
 ###############################################################################
-# Static checks
+# Static checks. Note disable golangci-lint for now.
 ###############################################################################
 .PHONY: static-checks
 static-checks:
-	$(MAKE) check-typha-pins golangci-lint check-licenses check-packr fix
+	$(MAKE) check-typha-pins check-packr fix
 
 # govet uses too much memory for Semaphore
 ifneq ($(CI),)
@@ -762,19 +748,8 @@ LINT_ARGS := --disable govet
 endif
 
 .PHONY: golangci-lint
-golangci-lint: vendor/.up-to-date $(GENERATED_FILES)
-	$(DOCKER_RUN) $(CALICO_BUILD) golangci-lint run --deadline 5m
-
-bin/check-licenses: $(SRC_FILES)
-	$(DOCKER_RUN) $(LOCAL_BUILD_MOUNTS) $(CALICO_BUILD) go build -v -i -o $@ "$(PACKAGE_NAME)/check-licenses"
-
-.PHONY: check-licenses
-check-licenses: check-licenses/dependency-licenses.txt bin/check-licenses
-	@echo Checking dependency licenses
-	$(DOCKER_RUN) $(CALICO_BUILD) bin/check-licenses
-
-check-licenses/dependency-licenses.txt: vendor/.up-to-date
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c 'licenses ./cmd/calico-felix > check-licenses/dependency-licenses.txt'
+golangci-lint: remote-deps $(GENERATED_FILES)
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); golangci-lint run --deadline 5m --max-issues-per-linter 0 --max-same-issues 0 $(LINT_ARGS)'
 
 .PHONY: check-packr
 check-packr: bpf/packrd/packed-packr.go
@@ -788,10 +763,10 @@ check-packr: bpf/packrd/packed-packr.go
 fix go-fmt goimports:
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -c 'find . -iname "*.go" ! -wholename "./vendor/*" | xargs goimports -w -local github.com/projectcalico/'
 
-LIBCALICO_FELIX?=$(shell $(DOCKER_RUN) $(CALICO_BUILD) go list -m -f "{{.Version}}" github.com/projectcalico/libcalico-go)
-TYPHA_GOMOD?=$(shell $(DOCKER_RUN) $(CALICO_BUILD) go list -m -f "{{.GoMod}}" github.com/projectcalico/typha)
+LIBCALICO_FELIX?=$(shell grep 'replace github.com/projectcalico/libcalico-go' go.mod | cut -d '>' -f2)
+TYPHA_GOMOD?=$(shell $(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); go list -m -f "{{.GoMod}}" github.com/projectcalico/typha')
 ifneq ($(TYPHA_GOMOD),)
-	LIBCALICO_TYPHA?=$(shell $(DOCKER_RUN) $(CALICO_BUILD) grep libcalico-go $(TYPHA_GOMOD) | cut -d' ' -f2)
+	LIBCALICO_TYPHA?=$(shell $(DOCKER_RUN) $(CALICO_BUILD) grep 'replace github.com/projectcalico/libcalico-go' $(TYPHA_GOMOD) | cut -d '>' -f2)
 endif
 
 .PHONY: check-typha-pins
@@ -819,13 +794,7 @@ install-git-hooks:
 	./install-git-hooks
 
 foss-checks:
-	@echo Running $@...
-	@docker run --rm -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
-	  -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-	  -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
-	  -e GO111MODULE=on \
-	  -w /go/src/$(PACKAGE_NAME) \
-	  $(CALICO_BUILD) /usr/local/bin/fossa
+	$(DOCKER_RUN) -e FOSSA_API_KEY=$(FOSSA_API_KEY) $(CALICO_BUILD) /usr/local/bin/fossa
 
 ###############################################################################
 # Unit Tests
@@ -841,11 +810,11 @@ ut combined.coverprofile: $(SRC_FILES)
 fv/fv.test: $(SRC_FILES)
 	# We pre-build the FV test binaries so that we can run them
 	# outside a container and allow them to interact with docker.
-	$(DOCKER_RUN) $(CALICO_BUILD) go test $(BUILD_FLAGS) ./$(shell dirname $@) -c --tags fvtests -o $@
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); go test $(BUILD_FLAGS) ./$(shell dirname $@) -c --tags fvtests -o $@'
 
 .PHONY: remote-deps
 remote-deps:
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c ' \
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); \
 	go list all; \
 	cp `go list -m -f "{{.Dir}}" github.com/projectcalico/libcalico-go`/test/crds.yaml fv/infrastructure/crds.yaml; \
 	chmod +w fv/infrastructure/crds.yaml'
@@ -928,8 +897,8 @@ k8sfv-test-existing-felix: remote-deps bin/k8sfv.test
 
 bin/k8sfv.test: $(K8SFV_GO_FILES) local_build
 	@echo Building $@...
-	$(DOCKER_RUN) $(CALICO_BUILD) \
-	    sh -c 'go test -c $(BUILD_FLAGS) -o $@ ./k8sfv && \
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) && \
+		go test -c $(BUILD_FLAGS) -o $@ ./k8sfv && \
 		( ldd $@ 2>&1 | grep -q -e "Not a valid dynamic program" \
 		-e "not a dynamic executable" || \
 		( echo "Error: $@ was not statically linked"; false ) )'
@@ -970,19 +939,19 @@ bin/iptables-locker: $(SRC_FILES) local_build
 	@echo Building iptables-locker...
 	mkdir -p bin
 	$(DOCKER_RUN) $(CALICO_BUILD) \
-	    sh -c 'go build -v -i -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/fv/iptables-locker"'
+	    sh -c '$(GIT_CONFIG_SSH) && go build -v -i -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/fv/iptables-locker"'
 
 bin/test-workload: $(SRC_FILES) local_build
 	@echo Building test-workload...
 	mkdir -p bin
 	$(DOCKER_RUN) $(CALICO_BUILD) \
-	    sh -c 'go build -v -i -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/fv/test-workload"'
+	    sh -c '$(GIT_CONFIG_SSH) && go build -v -i -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/fv/test-workload"'
 
 bin/test-connection: $(SRC_FILES) local_build
 	@echo Building test-connection...
 	mkdir -p bin
 	$(DOCKER_RUN) $(CALICO_BUILD) \
-	    sh -c 'go build -v -i -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/fv/test-connection"'
+	    sh -c '$(GIT_CONFIG_SSH) && go build -v -i -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/fv/test-connection"'
 
 ###############################################################################
 # CI/CD

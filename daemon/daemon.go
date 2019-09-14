@@ -36,16 +36,15 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 	"github.com/aws/aws-sdk-go/service/cloudwatch/cloudwatchiface"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/rafaelvanoni/felix-private/config"
 	log "github.com/sirupsen/logrus"
 	lclient "github.com/tigera/licensing/client"
 	"github.com/tigera/licensing/client/features"
 	"github.com/tigera/licensing/monitor"
-	v1 "k8s.io/api/core/v1"
 
 	"github.com/projectcalico/felix/buildinfo"
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/collector"
+	"github.com/projectcalico/felix/config"
 	_ "github.com/projectcalico/felix/config"
 	dp "github.com/projectcalico/felix/dataplane"
 	"github.com/projectcalico/felix/logutils"
@@ -363,18 +362,17 @@ configRetry:
 	configChangedRestartCallback := func() { failureReportChan <- reasonConfigChanged }
 	childExitedRestartCallback := func() { failureReportChan <- reasonChildExited }
 
-	dpDriver, dpDriverCmd = dp.StartDataplaneDriver(configParams, healthAggregator, configChangedRestartCallback)
+	dpDriver, dpDriverCmd, dpStopChan = dp.StartDataplaneDriver(
+		configParams,
+		healthAggregator,
+		dpStatsCollector,
+		configChangedRestartCallback,
+		childExitedRestartCallback,
+	)
 
 	// Initialise the glue logic that connects the calculation graph to/from the dataplane driver.
 	log.Info("Connect to the dataplane driver.")
-
-	var connToUsageRepUpdChan chan map[string]string
-	if configParams.UsageReportingEnabled {
-		// Make a channel for the connector to use to send updates to the usage reporter.
-		// (Otherwise, we pass in a nil channel, which disables such updates.)
-		connToUsageRepUpdChan = make(chan map[string]string, 1)
-	}
-	dpConnector := newConnector(configParams, connToUsageRepUpdChan, backendClient, dpDriver, failureReportChan)
+	dpConnector := newConnector(configParams, backendClient, dpDriver, failureReportChan)
 
 	// If enabled, create a server for the policy sync API.  This allows clients to connect to
 	// Felix over a socket and receive policy updates.
@@ -387,7 +385,7 @@ configRetry:
 			"Policy sync API enabled.  Creating the policy sync server.")
 		toPolicySync := make(chan interface{})
 		policySyncUIDAllocator := policysync.NewUIDAllocator()
-		policySyncProcessor = policysync.NewProcessor(toPolicySync)
+		policySyncProcessor = policysync.NewProcessor(configParams, toPolicySync)
 		policySyncServer = policysync.NewServer(
 			policySyncProcessor.JoinUpdates,
 			dpStatsCollector,
@@ -744,15 +742,12 @@ func servePrometheusMetrics(configParams *config.Config) {
 
 		err := security.ServePrometheusMetrics(
 			prometheus.DefaultGatherer,
+			"",
 			configParams.PrometheusMetricsPort,
 			configParams.PrometheusMetricsCertFile,
 			configParams.PrometheusMetricsKeyFile,
 			configParams.PrometheusMetricsCAFile,
 		)
-
-		// TODO: Join the two host ports
-		// http.Handle("/metrics", promhttp.Handler())
-		// err := http.ListenAndServe(net.JoinHostPort(configParams.PrometheusMetricsHost, strconv.Itoa(configParams.PrometheusMetricsPort)), nil)
 
 		log.WithError(err).Error(
 			"Prometheus metrics endpoint failed, trying to restart it...")

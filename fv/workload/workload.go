@@ -315,6 +315,20 @@ func (w *Workload) LatencyTo(ip, port string) (time.Duration, string) {
 	return meanRtt, out
 }
 
+func (w *Workload) SendPacketsTo(ip string, count int, size int) (error, string) {
+	if strings.Contains(ip, ":") {
+		ip = fmt.Sprintf("[%s]", ip)
+	}
+	c := fmt.Sprintf("%d", count)
+	s := fmt.Sprintf("%d", size)
+	_, err := w.ExecOutput("ping", "-c", c, "-W", "1", "-s", s, ip)
+	stderr := ""
+	if err, ok := err.(*exec.ExitError); ok {
+		stderr = string(err.Stderr)
+	}
+	return err, stderr
+}
+
 type SideService struct {
 	W       *Workload
 	Name    string
@@ -473,7 +487,10 @@ func startPermanentConnection(w *Workload, ip string, port, sourcePort int) (*Pe
 	}, nil
 }
 
-func (p *Port) CanConnectTo(ip, port, protocol string) bool {
+// Return if a connection is good and packet loss string "PacketLoss[xx]".
+// If it is not a packet loss test, packet loss string is "".
+func (p *Port) CanConnectTo(ip, port, protocol string, duration time.Duration) (bool, string) {
+
 	// Ensure that the host has the 'test-connection' binary.
 	p.C.EnsureBinary("test-connection")
 
@@ -481,7 +498,7 @@ func (p *Port) CanConnectTo(ip, port, protocol string) bool {
 		// If this is a retry then we may have stale conntrack entries and we don't want those
 		// to influence the connectivity check.  Only an issue for UDP due to the lack of a
 		// sequence number.
-		_ = p.C.ExecMayFail("conntrack", "-D", "-p", "udp", "-s", p.Workload.IP, "-d", ip)
+		p.C.ExecMayFail("conntrack", "-D", "-p", "udp", "-s", p.Workload.IP, "-d", ip)
 	}
 
 	// Run 'test-connection' to the target.
@@ -493,12 +510,6 @@ func (p *Port) CanConnectTo(ip, port, protocol string) bool {
 		args = append(args, fmt.Sprintf("--source-port=%d", p.Port))
 	}
 	connectionCmd := utils.Command("docker", args...)
-	outPipe, err := connectionCmd.StdoutPipe()
-	Expect(err).NotTo(HaveOccurred())
-	errPipe, err := connectionCmd.StderrPipe()
-	Expect(err).NotTo(HaveOccurred())
-	err = connectionCmd.Start()
-	Expect(err).NotTo(HaveOccurred())
 
 	return utils.RunConnectionCmd(connectionCmd)
 }

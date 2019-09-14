@@ -23,22 +23,58 @@ import (
 
 	"github.com/projectcalico/felix/ipsets"
 	"github.com/projectcalico/felix/proto"
+	"github.com/projectcalico/felix/rules"
+
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
-// ipipManager takes care of the configuration of the IPIP tunnel device.
+// ipipManager manages the all-hosts IP set, which is used by some rules in our static chains
+// when IPIP is enabled.  It doesn't actually program the rules, because they are part of the
+// top-level static chains.
+//
+// ipipManager also takes care of the configuration of the IPIP tunnel device.
 type ipipManager struct {
+	ipsetsDataplane ipsetsDataplane
+
+	// activeHostnameToIP maps hostname to string IP address.  We don't bother to parse into
+	// net.IPs because we're going to pass them directly to the IPSet API.
+	activeHostnameToIP map[string]string
+	ipSetInSync        bool
+
+	// Config for creating/refreshing the IP set.
+	ipSetMetadata ipsets.IPSetMetadata
+
 	// Dataplane shim.
 	dataplane ipipDataplane
+
+	// Configured list of external node ip cidr's to be added to the ipset.
+	externalNodeCIDRs []string
 }
 
-func newIPIPManager() *ipipManager {
-	return newIPIPManagerWithShim(realIPIPNetlink{})
+func newIPIPManager(
+	ipsetsDataplane ipsetsDataplane,
+	maxIPSetSize int,
+	externalNodeCidrs []string,
+) *ipipManager {
+	return newIPIPManagerWithShim(ipsetsDataplane, maxIPSetSize, realIPIPNetlink{}, externalNodeCidrs)
 }
 
-func newIPIPManagerWithShim(dataplane ipipDataplane) *ipipManager {
+func newIPIPManagerWithShim(
+	ipsetsDataplane ipsetsDataplane,
+	maxIPSetSize int,
+	dataplane ipipDataplane,
+	externalNodeCIDRs []string,
+) *ipipManager {
 	ipipMgr := &ipipManager{
-		dataplane: dataplane,
+		ipsetsDataplane:    ipsetsDataplane,
+		activeHostnameToIP: map[string]string{},
+		dataplane:          dataplane,
+		ipSetMetadata: ipsets.IPSetMetadata{
+			MaxSize: maxIPSetSize,
+			SetID:   rules.IPSetIDAllHostNets,
+			Type:    ipsets.IPSetTypeHashNet,
+		},
+		externalNodeCIDRs: externalNodeCIDRs,
 	}
 	return ipipMgr
 }

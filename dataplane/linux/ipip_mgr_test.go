@@ -18,15 +18,15 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/projectcalico/felix/proto"
-	"github.com/projectcalico/libcalico-go/lib/set"
-
 	"errors"
 	"fmt"
 	"net"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
+
+	"github.com/projectcalico/felix/proto"
+	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
 var (
@@ -37,6 +37,7 @@ var (
 var _ = Describe("IpipMgr (tunnel configuration)", func() {
 	var (
 		ipipMgr   *ipipManager
+		ipSets    *mockIPSets
 		dataplane *mockIPIPDataplane
 	)
 
@@ -51,7 +52,8 @@ var _ = Describe("IpipMgr (tunnel configuration)", func() {
 
 	BeforeEach(func() {
 		dataplane = &mockIPIPDataplane{}
-		ipipMgr = newIPIPManagerWithShim(dataplane)
+		ipSets = newMockIPSets()
+		ipipMgr = newIPIPManagerWithShim(ipSets, 1024, dataplane, nil)
 	})
 
 	Describe("after calling configureIPIPDevice", func() {

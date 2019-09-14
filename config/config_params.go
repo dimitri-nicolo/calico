@@ -159,7 +159,7 @@ type Config struct {
 	NetlinkTimeoutSecs time.Duration `config:"seconds;10"`
 
 	MetadataAddr string `config:"hostname;127.0.0.1;die-on-fail"`
-	MetadataPort int    `config:"int(0,65535);8775;die-on-fail"`
+	MetadataPort int    `config:"int(0:65535);8775;die-on-fail"`
 
 	OpenstackRegion string `config:"region;;die-on-fail"`
 
@@ -204,11 +204,11 @@ type Config struct {
 	EnableNflogSize bool `config:"bool;false"`
 
 	HealthEnabled                   bool   `config:"bool;false"`
-	HealthPort                      int    `config:"int(0,65535);9099"`
+	HealthPort                      int    `config:"int(0:65535);9099"`
 	HealthHost                      string `config:"host-address;localhost"`
 	PrometheusMetricsEnabled        bool   `config:"bool;false"`
 	PrometheusMetricsHost           string `config:"host-address;"`
-	PrometheusMetricsPort           int    `config:"int(0,65535);9091"`
+	PrometheusMetricsPort           int    `config:"int(0:65535);9091"`
 	PrometheusGoMetricsEnabled      bool   `config:"bool;true"`
 	PrometheusProcessMetricsEnabled bool   `config:"bool;true"`
 	PrometheusMetricsCertFile       string `config:"file(must-exist);"`
@@ -330,8 +330,13 @@ type Config struct {
 
 	IptablesNATOutgoingInterfaceFilter string `config:"iface-param;"`
 
+	// Config for DNS policy.
+	DNSCacheFile         string        `config:"file;/var/run/calico/felix-dns-cache.txt"`
+	DNSCacheSaveInterval time.Duration `config:"seconds;60"`
+	DNSTrustedServers    []string      `config:"server-list;k8s-service:kube-dns"`
+
 	SidecarAccelerationEnabled bool `config:"bool;false"`
-	XDPEnabled                 bool `config:"bool;true"`
+	XDPEnabled                 bool `config:"bool;false"`
 	GenericXDPEnabled          bool `config:"bool;false"`
 
 	loadClientConfigFromEnvironment func() (*apiconfig.CalicoAPIConfig, error)
@@ -492,7 +497,7 @@ func (config *Config) resolve() (changed bool, err error) {
 
 			log.Infof("Parsed value for %v: %v (from %v)",
 				name, value, source)
-			currentSource := nameToSource[name]
+			currentSource = nameToSource[name]
 			if source < currentSource {
 				log.Infof("Skipping config value for %v from %v; "+
 					"already have a value from %v", name,

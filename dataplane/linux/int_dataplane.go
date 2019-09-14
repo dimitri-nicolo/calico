@@ -299,6 +299,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		stopChan:          stopChan,
 	}
 	dp.applyThrottle.Refill() // Allow the first apply() immediately.
+
 	dp.ifaceMonitor.Callback = dp.onIfaceStateChange
 	dp.ifaceMonitor.AddrCallback = dp.onIfaceAddrsChange
 
@@ -493,7 +494,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	dp.RegisterManager(newMasqManager(ipSetsV4, natTableV4, ruleRenderer, config.MaxIPSetSize, 4))
 	if config.RulesConfig.IPIPEnabled {
 		// Create and maintain the IPIP tunnel device
-		dp.ipipManager = newIPIPManager()
+		dp.ipipManager = newIPIPManager(ipSetsV4, config.MaxIPSetSize, config.ExternalNodesCidrs)
 	}
 
 	if config.RulesConfig.IPIPEnabled || config.RulesConfig.IPSecEnabled {
@@ -755,14 +756,15 @@ func (d *InternalDataplane) doStaticDataplaneConfig() {
 	// Felix being able to configure it.
 	err := writeProcSys("/proc/sys/net/ipv4/conf/default/rp_filter", "1")
 	if err != nil {
-		log.Warnf("failed to set rp_filter to '1': %v\n", err)
+		log.Warnf("failed to set strict reverse path filtering: %v\n", err)
 	}
 
 	// Enable conntrack packet and byte accounting.
 	err = writeProcSys("/proc/sys/net/netfilter/nf_conntrack_acct", "1")
 	if err != nil {
-		log.Warnf("failed to enable conntrack packet and byte accounting: %v\n", err)
+		log.Warnf("failed to set enable conntrack packet and byte accounting: %v\n", err)
 	}
+
 	for _, t := range d.iptablesRawTables {
 		rawChains := d.ruleRenderer.StaticRawTableChains(t.IPVersion)
 		t.UpdateChains(rawChains)

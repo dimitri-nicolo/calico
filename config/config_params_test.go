@@ -17,7 +17,7 @@ package config_test
 import (
 	"regexp"
 
-	"github.com/Workiva/go-datastructures/set"
+	"github.com/projectcalico/libcalico-go/lib/set"
 
 	. "github.com/projectcalico/felix/config"
 	"github.com/projectcalico/felix/testutils"

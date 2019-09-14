@@ -354,8 +354,11 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 			n := l.Items[0]
 			log.WithField("node", n).Info("Replacing BGP IP with garbage")
 			savedBGPSpec = *n.Spec.BGP
-			Expect(n.Spec.BGP.IPv4Address).To(Equal(felixes[0].IP))
-			n.Spec.BGP.IPv4Address = "10.65.0.100" // Unused workload IP.
+
+			s := strings.Split(n.Spec.BGP.IPv4Address, "/") // split x.x.x.x/x
+			Expect(len(s)).To(Equal(2))
+			Expect(s[0]).To(Equal(felixes[0].IP))
+			n.Spec.BGP.IPv4Address = "10.65.0.100" + "/" + s[1] // Unused workload IP.
 			node, err = client.Nodes().Update(ctx, &n, options.SetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 		})

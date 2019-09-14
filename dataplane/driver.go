@@ -219,6 +219,9 @@ func StartDataplaneDriver(configParams *config.Config,
 			SidecarAccelerationEnabled:      configParams.SidecarAccelerationEnabled,
 			XDPEnabled:                      configParams.XDPEnabled,
 			XDPAllowGeneric:                 configParams.GenericXDPEnabled,
+			Collector:                       collector,
+			DNSCacheFile:                    configParams.DNSCacheFile,
+			DNSCacheSaveInterval:            configParams.DNSCacheSaveInterval,
 		}
 		stopChan := make(chan *sync.WaitGroup, 1)
 		intDP := intdataplane.NewIntDataplaneDriver(dpConfig, stopChan)
