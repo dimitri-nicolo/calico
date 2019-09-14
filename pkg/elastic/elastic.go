@@ -45,7 +45,8 @@ type client struct {
 
 // MustGetElasticClient returns the elastic Client, or panics if it's not possible.
 func MustGetElasticClient() Client {
-	c, err := NewFromConfig()
+	cfg := MustLoadConfig()
+	c, err := NewFromConfig(cfg)
 	if err != nil {
 		log.Panicf("Unable to connect to Elasticsearch: %v", err)
 	}
@@ -53,11 +54,7 @@ func MustGetElasticClient() Client {
 }
 
 // NewFromConfig returns a new elastic Client using the supplied configuration.
-func NewFromConfig() (Client, error) {
-	cfg, err := LoadConfig()
-	if err != nil {
-		return nil, err
-	}
+func NewFromConfig(cfg *Config) (Client, error) {
 	ca, err := x509.SystemCertPool()
 	if err != nil {
 		return nil, err
