@@ -13,7 +13,7 @@ import (
 	logrus "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/tigera/compliance/pkg/resources"
+	"github.com/projectcalico/libcalico-go/lib/resources"
 )
 
 type Play struct {

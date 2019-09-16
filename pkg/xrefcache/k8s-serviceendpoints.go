@@ -11,8 +11,8 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/libcalico-go/lib/set"
 
+	"github.com/projectcalico/libcalico-go/lib/resources"
 	"github.com/tigera/compliance/pkg/ips"
-	"github.com/tigera/compliance/pkg/resources"
 	"github.com/tigera/compliance/pkg/syncer"
 )
 

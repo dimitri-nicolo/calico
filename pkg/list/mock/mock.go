@@ -12,8 +12,8 @@ import (
 
 	"github.com/projectcalico/libcalico-go/lib/errors"
 
-	"github.com/tigera/compliance/pkg/list"
-	"github.com/tigera/compliance/pkg/resources"
+	"github.com/projectcalico/libcalico-go/lib/resources"
+	"github.com/tigera/lma/pkg/list"
 )
 
 func init() {
@@ -79,7 +79,7 @@ func (r *Source) RetrieveList(kind metav1.TypeMeta) (*list.TimestampedResourceLi
 	return r.retrieveList(kind, nil, nil, false)
 }
 
-// Destination implements pkg/list.Destination
+// Destination implements pkg/api.ListDestination
 type Destination struct {
 	mockLister
 	RetrieveCalls int
@@ -95,14 +95,14 @@ func NewDestination(tm *time.Time) *Destination {
 	return dest
 }
 
-// StoreList implements pkg/list.Destination.StoreList using mockLister.LoadList
+// StoreList implements pkg/api.ListDestination.StoreList using mockLister.LoadList
 func (r *Destination) StoreList(_ metav1.TypeMeta, list *list.TimestampedResourceList) error {
 	r.StoreCalls++
 	r.mockLister.LoadList(list)
 	return nil
 }
 
-// RetrieveList implements pkg/list.Source.RetrieveList using mockLister.retrieveList
+// RetrieveList implements pkg/api.ListDestination.RetrieveList using mockLister.retrieveList
 func (r *Destination) RetrieveList(tm metav1.TypeMeta, from *time.Time, to *time.Time, ascending bool) (*list.TimestampedResourceList, error) {
 	r.RetrieveCalls++
 	return r.retrieveList(tm, from, to, ascending)

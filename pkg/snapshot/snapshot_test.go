@@ -8,9 +8,9 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/projectcalico/libcalico-go/lib/resources"
 	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/list/mock"
-	"github.com/tigera/compliance/pkg/resources"
 )
 
 var (

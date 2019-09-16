@@ -13,8 +13,8 @@ import (
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
+	"github.com/projectcalico/libcalico-go/lib/resources"
 	"github.com/tigera/compliance/pkg/config"
-	"github.com/tigera/compliance/pkg/resources"
 	"github.com/tigera/compliance/pkg/syncer"
 	"github.com/tigera/compliance/pkg/xrefcache"
 )

@@ -7,6 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/tigera/compliance/pkg/config"
+	api "github.com/tigera/lma/pkg/api"
 )
 
 const (
@@ -15,7 +16,7 @@ const (
 	keepAliveInterval = 10 * time.Second
 )
 
-func Run(ctx context.Context, cfg *config.Config, executor BenchmarksExecutor, query BenchmarksQuery, store BenchmarksStore, healthy func(bool)) error {
+func Run(ctx context.Context, cfg *config.Config, executor api.BenchmarksExecutor, query api.BenchmarksQuery, store api.BenchmarksStore, healthy func(bool)) error {
 	return (&benchmarker{
 		ctx:      ctx,
 		cfg:      cfg,
@@ -30,10 +31,10 @@ type benchmarker struct {
 	ctx           context.Context
 	cfg           *config.Config
 	healthy       func(bool)
-	executor      BenchmarksExecutor
-	query         BenchmarksQuery
-	store         BenchmarksStore
-	lastBenchmark *Benchmarks
+	executor      api.BenchmarksExecutor
+	query         api.BenchmarksQuery
+	store         api.BenchmarksStore
+	lastBenchmark *api.Benchmarks
 }
 
 func (b *benchmarker) run() error {
@@ -50,7 +51,7 @@ func (b *benchmarker) run() error {
 		// Determine if time for benchmark.
 		prev, next := timeOfNextBenchmark()
 
-		for _, ct := range AllBenchmarkTypes {
+		for _, ct := range api.AllBenchmarkTypes {
 			// Execute benchmarks.
 			if err := b.maybeDoBenchmark(prev, next, ct); err != nil {
 				b.healthy(false)
@@ -70,11 +71,11 @@ func (b *benchmarker) run() error {
 	}
 }
 
-func (b *benchmarker) maybeDoBenchmark(prev, next time.Time, ct BenchmarkType) error {
+func (b *benchmarker) maybeDoBenchmark(prev, next time.Time, ct api.BenchmarkType) error {
 	// If time of last benchmark is not known, then populate from an elastic search query.
 	if b.lastBenchmark == nil {
 		now := time.Now()
-		filter := []Filter{Filter{NodeNames: []string{b.cfg.NodeName}}}
+		filter := []api.BenchmarkFilter{{NodeNames: []string{b.cfg.NodeName}}}
 		lastBench := <-b.query.RetrieveLatestBenchmarks(b.ctx, ct, filter, now.Add(-DayAndHalf), now)
 		if lastBench.Err != nil {
 			log.WithError(lastBench.Err).Error("Failed to retrieve most recent benchmark results")

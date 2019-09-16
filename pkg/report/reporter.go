@@ -12,15 +12,15 @@ import (
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/compliance"
 
-	"github.com/tigera/compliance/pkg/benchmark"
+	"github.com/projectcalico/libcalico-go/lib/resources"
 	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/event"
 	"github.com/tigera/compliance/pkg/flow"
-	"github.com/tigera/compliance/pkg/list"
 	"github.com/tigera/compliance/pkg/replay"
-	"github.com/tigera/compliance/pkg/resources"
 	"github.com/tigera/compliance/pkg/syncer"
 	"github.com/tigera/compliance/pkg/xrefcache"
+
+	api "github.com/tigera/lma/pkg/api"
 )
 
 const (
@@ -43,12 +43,12 @@ const (
 func Run(
 	ctx context.Context, cfg *config.Config,
 	healthy func(),
-	lister list.Destination,
-	eventer event.Fetcher,
-	auditer AuditLogReportHandler,
-	flowlogger FlowLogReportHandler,
-	archiver ReportStorer,
-	benchmarker benchmark.BenchmarksQuery,
+	lister api.ListDestination,
+	eventer api.EventFetcher,
+	auditer api.AuditLogReportHandler,
+	flowlogger api.FlowLogReportHandler,
+	archiver api.ReportStorer,
+	benchmarker api.BenchmarksQuery,
 ) error {
 	// Inidicate healthy.
 	healthy()
@@ -98,13 +98,13 @@ type reporter struct {
 	ctx         context.Context
 	cfg         *Config
 	clog        *logrus.Entry
-	listDest    list.Destination
+	listDest    api.ListDestination
 	xc          xrefcache.XrefCache
 	replayer    syncer.Starter
-	auditer     AuditLogReportHandler
-	benchmarker benchmark.BenchmarksQuery
-	flowlogger  FlowLogReportHandler
-	archiver    ReportStorer
+	auditer     api.AuditLogReportHandler
+	benchmarker api.BenchmarksQuery
+	flowlogger  api.FlowLogReportHandler
+	archiver    api.ReportStorer
 	healthy     func()
 
 	// Consolidate the tracked in-scope endpoint events into a local cache, which will get converted and copied into
@@ -212,7 +212,7 @@ func (r *reporter) run() error {
 	// Set the generation time and store the report data.
 	r.clog.Debug("Storing report into archiver")
 	r.data.GenerationTime = metav1.Now()
-	err = r.archiver.StoreArchivedReport(&ArchivedReportData{
+	err = r.archiver.StoreArchivedReport(&api.ArchivedReportData{
 		ReportData: r.data,
 		UISummary:  summary,
 	}, time.Now())
@@ -342,11 +342,11 @@ func (r *reporter) addAuditEvents() error {
 
 		// The audit event is being included. Update the stats and append the event log.
 		switch e.Verb {
-		case event.VerbCreate:
+		case api.EventVerbCreate:
 			r.data.AuditSummary.NumCreate++
-		case event.VerbPatch, event.VerbUpdate:
+		case api.EventVerbPatch, api.EventVerbUpdate:
 			r.data.AuditSummary.NumModify++
-		case event.VerbDelete:
+		case api.EventVerbDelete:
 			r.data.AuditSummary.NumDelete++
 		}
 		r.data.AuditEvents = append(r.data.AuditEvents, *e.Event)

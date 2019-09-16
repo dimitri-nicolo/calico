@@ -13,9 +13,9 @@ import (
 
 	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/datastore"
-	"github.com/tigera/compliance/pkg/elastic"
 	"github.com/tigera/compliance/pkg/snapshot"
 	"github.com/tigera/compliance/pkg/version"
+	"github.com/tigera/lma/pkg/elastic"
 )
 
 const (
@@ -49,10 +49,7 @@ func main() {
 	}
 
 	// Init elastic.
-	elasticClient, err := elastic.NewFromConfig(cfg)
-	if err != nil {
-		log.Panicf("Unable to connect to Elasticsearch: %v", err)
-	}
+	elasticClient := elastic.MustGetElasticClient()
 
 	// Create clientset.
 	datastoreClient := datastore.MustGetClientSet()

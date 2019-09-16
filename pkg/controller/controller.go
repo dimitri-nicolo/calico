@@ -38,7 +38,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	batchv1 "k8s.io/api/batch/v1"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -53,11 +53,11 @@ import (
 	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/jitter"
 
-	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/datastore"
 	"github.com/tigera/compliance/pkg/hashutils"
-	"github.com/tigera/compliance/pkg/report"
+	"github.com/tigera/lma/pkg/api"
 )
 
 // Utilities for dealing with Jobs and Reports and time.
@@ -103,7 +103,7 @@ type ComplianceController struct {
 }
 
 func NewComplianceController(
-	cfg *config.Config, clientSet datastore.ClientSet, reportRetriever report.ReportRetriever,
+	cfg *config.Config, clientSet datastore.ClientSet, reportRetriever api.ReportRetriever,
 	healthy func(),
 ) (*ComplianceController, error) {
 	recorderObj := &v1.Pod{

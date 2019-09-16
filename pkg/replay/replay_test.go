@@ -13,13 +13,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/apis/audit"
 
-	"github.com/tigera/compliance/pkg/event"
+	"github.com/projectcalico/libcalico-go/lib/resources"
 	mockEvent "github.com/tigera/compliance/pkg/event/mock"
-	"github.com/tigera/compliance/pkg/list"
 	mockList "github.com/tigera/compliance/pkg/list/mock"
 	. "github.com/tigera/compliance/pkg/replay"
-	"github.com/tigera/compliance/pkg/resources"
 	"github.com/tigera/compliance/pkg/syncer"
+	api "github.com/tigera/lma/pkg/api"
+	"github.com/tigera/lma/pkg/list"
 )
 
 func init() {
@@ -96,15 +96,15 @@ var _ = Describe("Replay", func() {
 		By("setting a network policy audit event before the start time")
 		np.TypeMeta = resources.TypeCalicoNetworkPolicies
 		np.Spec.Selector = `foo == "baz"`
-		eventer.LoadAuditEvent(event.VerbUpdate, audit.StageResponseComplete, np, np, baseTime.Add(30*time.Second), "101")
+		eventer.LoadAuditEvent(api.EventVerbUpdate, audit.StageResponseComplete, np, np, baseTime.Add(30*time.Second), "101")
 
 		By("setting a network policy audit event after the start time")
 		np.Spec.Selector = `foo == "barbaz"`
-		eventer.LoadAuditEvent(event.VerbUpdate, audit.StageResponseComplete, np, np, baseTime.Add(75*time.Second), "102")
+		eventer.LoadAuditEvent(api.EventVerbUpdate, audit.StageResponseComplete, np, np, baseTime.Add(75*time.Second), "102")
 
 		By("setting a network policy audit event after the start time but with a bad resource version")
 		np.Spec.Selector = `foo == "blah"`
-		eventer.LoadAuditEvent(event.VerbUpdate, audit.StageResponseComplete, np, np, baseTime.Add(90*time.Second), "100")
+		eventer.LoadAuditEvent(api.EventVerbUpdate, audit.StageResponseComplete, np, np, baseTime.Add(90*time.Second), "100")
 
 		// Make the replay call.
 		replayer.Start(ctx)
@@ -128,7 +128,7 @@ var _ = Describe("Replay", func() {
 		np := &apiv3.NetworkPolicy{TypeMeta: resources.TypeCalicoNetworkPolicies}
 
 		eventer.LoadAuditEvent(
-			event.VerbCreate, audit.StageResponseComplete, np,
+			api.EventVerbCreate, audit.StageResponseComplete, np,
 			&metav1.Status{TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "Status"}},
 			baseTime.Add(30*time.Second), "100",
 		)
@@ -143,7 +143,7 @@ var _ = Describe("Replay", func() {
 		replayer := New(baseTime.Add(time.Minute), baseTime.Add(2*time.Minute), lister, eventer, cb)
 		np := &apiv3.NetworkPolicy{TypeMeta: resources.TypeCalicoNetworkPolicies}
 
-		eventer.LoadAuditEvent(event.VerbUpdate, audit.StageResponseStarted, np, nil, baseTime.Add(75*time.Second), "102")
+		eventer.LoadAuditEvent(api.EventVerbUpdate, audit.StageResponseStarted, np, nil, baseTime.Add(75*time.Second), "102")
 
 		Expect(func() {
 			replayer.Start(ctx)

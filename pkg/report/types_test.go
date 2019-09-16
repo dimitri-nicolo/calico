@@ -6,6 +6,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	api "github.com/tigera/lma/pkg/api"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -28,6 +29,6 @@ func getUID(name string, seconds int64) string {
 		StartTime:      v1.NewTime(t),
 		EndTime:        v1.NewTime(t),
 	}
-	ard := NewArchivedReport(&rd, "UI Summary")
+	ard := api.NewArchivedReport(&rd, "UI Summary")
 	return ard.UID()
 }

@@ -10,16 +10,16 @@ import (
 
 	"github.com/caimeo/iniflags"
 	log "github.com/sirupsen/logrus"
-	"github.com/x-cray/logrus-prefixed-formatter"
+	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 
 	esprox "github.com/tigera/es-proxy/pkg/middleware"
 
 	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/datastore"
-	"github.com/tigera/compliance/pkg/elastic"
 	"github.com/tigera/compliance/pkg/server"
 	"github.com/tigera/compliance/pkg/tls"
 	"github.com/tigera/compliance/pkg/version"
+	"github.com/tigera/lma/pkg/elastic"
 )
 
 var (
@@ -39,7 +39,7 @@ func main() {
 	cfg.InitializeLogging()
 
 	// Create the elastic and Calico clients.
-	ec := elastic.MustGetElasticClient(cfg)
+	ec := elastic.MustGetElasticClient()
 	clientSet := datastore.MustGetCalicoClient()
 
 	// Set up tls certs

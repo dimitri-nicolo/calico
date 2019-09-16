@@ -9,17 +9,17 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	calicov3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
-	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
-	"github.com/tigera/compliance/pkg/report"
+	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	"github.com/tigera/compliance/pkg/server"
+	"github.com/tigera/lma/pkg/api"
 )
 
-func newArchivedReportData(reportName, reportTypeName string) *report.ArchivedReportData {
-	return &report.ArchivedReportData{
+func newArchivedReportData(reportName, reportTypeName string) *api.ArchivedReportData {
+	return &api.ArchivedReportData{
 		UISummary: `{"foobar":"hello-100-goodbye"}`,
 		ReportData: &calicov3.ReportData{
 			ReportName:     reportName,
@@ -87,7 +87,7 @@ var _ = Describe("List tests with Gettable Report and ReportType", func() {
 		t := startTester()
 
 		By("Setting responses")
-		t.summaries = []*report.ArchivedReportData{reportGetTypeGet, reportGetTypeNoGet, reportNoGetTypeNoGet}
+		t.summaries = []*api.ArchivedReportData{reportGetTypeGet, reportGetTypeNoGet, reportNoGetTypeNoGet}
 		t.reportTypeList = &v3.GlobalReportTypeList{
 			Items: []v3.GlobalReportType{reportTypeGettable, reportTypeNotGettable},
 		}
@@ -141,7 +141,7 @@ var _ = Describe("List tests with Gettable Report and ReportType but no List", f
 		t.listRBACControl = ""
 
 		By("Setting responses")
-		t.summaries = []*report.ArchivedReportData{reportGetTypeGet, reportGetTypeNoGet, reportNoGetTypeNoGet}
+		t.summaries = []*api.ArchivedReportData{reportGetTypeGet, reportGetTypeNoGet, reportNoGetTypeNoGet}
 		t.reportTypeList = &v3.GlobalReportTypeList{
 			Items: []v3.GlobalReportType{reportTypeGettable, reportTypeNotGettable},
 		}
@@ -160,7 +160,7 @@ var _ = Describe("List tests with Not Gettable ReportType", func() {
 		t := startTester()
 
 		By("Setting responses to")
-		t.summaries = []*report.ArchivedReportData{reportGetTypeGet, reportNoGetTypeNoGet, reportGetTypeNoGet}
+		t.summaries = []*api.ArchivedReportData{reportGetTypeGet, reportNoGetTypeNoGet, reportGetTypeNoGet}
 		t.reportTypeList = &v3.GlobalReportTypeList{
 			Items: []v3.GlobalReportType{reportTypeNotGettable, reportTypeGettable},
 		}
@@ -211,7 +211,7 @@ var _ = Describe("List tests with none available", func() {
 		t := startTester()
 
 		By("Setting responses to contain no items")
-		t.summaries = []*report.ArchivedReportData{reportNoGetTypeNoGet, reportNoGetTypeNoGet}
+		t.summaries = []*api.ArchivedReportData{reportNoGetTypeNoGet, reportNoGetTypeNoGet}
 		t.reportTypeList = &v3.GlobalReportTypeList{
 			Items: []v3.GlobalReportType{reportTypeGettable},
 		}
@@ -231,13 +231,13 @@ var _ = Describe("List query parameters", func() {
 		v, _ := url.ParseQuery("")
 		qp, err := server.GetListReportsQueryParams(v)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(qp).To(Equal(&report.QueryParams{
+		Expect(qp).To(Equal(&api.ReportQueryParams{
 			Reports:  nil,
 			FromTime: "",
 			ToTime:   "",
 			Page:     0,
 			MaxItems: &maxItems,
-			SortBy:   []report.SortBy{{"startTime", false}, {"reportTypeName", true}, {"reportName", true}},
+			SortBy:   []api.ReportSortBy{{"startTime", false}, {"reportTypeName", true}, {"reportName", true}},
 		}))
 
 		By("parsing all query params in the URL")
@@ -247,13 +247,13 @@ var _ = Describe("List query parameters", func() {
 		maxItems = 4
 		qp, err = server.GetListReportsQueryParams(v)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(qp).To(Equal(&report.QueryParams{
-			Reports:  []report.ReportTypeAndName{{"type1", ""}, {"type2", ""}, {"", "name1"}, {"", "name2"}},
+		Expect(qp).To(Equal(&api.ReportQueryParams{
+			Reports:  []api.ReportTypeAndName{{"type1", ""}, {"type2", ""}, {"", "name1"}, {"", "name2"}},
 			FromTime: "now-2d",
 			ToTime:   "now-4d",
 			Page:     2,
 			MaxItems: &maxItems,
-			SortBy:   []report.SortBy{{"endTime", false}, {"reportName", true}, {"reportTypeName", false}, {"startTime", false}},
+			SortBy:   []api.ReportSortBy{{"endTime", false}, {"reportName", true}, {"reportTypeName", false}, {"startTime", false}},
 		}))
 
 		By("parsing maxItems=all with page=0")
@@ -261,13 +261,13 @@ var _ = Describe("List query parameters", func() {
 		maxItems = 4
 		qp, err = server.GetListReportsQueryParams(v)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(qp).To(Equal(&report.QueryParams{
+		Expect(qp).To(Equal(&api.ReportQueryParams{
 			Reports:  nil,
 			FromTime: "",
 			ToTime:   "",
 			Page:     0,
 			MaxItems: nil,
-			SortBy:   []report.SortBy{{"startTime", false}, {"reportTypeName", true}, {"reportName", true}},
+			SortBy:   []api.ReportSortBy{{"startTime", false}, {"reportTypeName", true}, {"reportName", true}},
 		}))
 	})
 

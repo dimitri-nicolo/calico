@@ -13,12 +13,12 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/projectcalico/libcalico-go/lib/apis/v3"
+	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/compliance"
 	"github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/set"
 
-	"github.com/tigera/compliance/pkg/report"
+	"github.com/tigera/lma/pkg/api"
 )
 
 // handleDownloadReports sends one or multiple (via zip) reports to the client
@@ -112,7 +112,7 @@ func (s *server) handleDownloadReports(response http.ResponseWriter, request *ht
 }
 
 func (s *server) prepareReportForDownload(
-	r *report.ArchivedReportData, uid string, formats []string, rt *v3.ReportTypeSpec,
+	r *api.ArchivedReportData, uid string, formats []string, rt *v3.ReportTypeSpec,
 ) (*downloadContent, error) {
 	// Init the download content.
 	dc := &downloadContent{

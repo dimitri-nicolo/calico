@@ -8,11 +8,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	"github.com/tigera/compliance/pkg/list"
-	"github.com/tigera/compliance/pkg/resources"
+	"github.com/projectcalico/libcalico-go/lib/resources"
+
+	lmaL "github.com/tigera/lma/pkg/list"
 )
 
-func (cs *clientSet) RetrieveList(kind metav1.TypeMeta) (*list.TimestampedResourceList, error) {
+func (cs *clientSet) RetrieveList(kind metav1.TypeMeta) (*lmaL.TimestampedResourceList, error) {
 	log.WithField("type", kind).Debug("Listing resource")
 
 	// Use the resource helper to list the appropriate resource kind.
@@ -29,7 +30,7 @@ func (cs *clientSet) RetrieveList(kind metav1.TypeMeta) (*list.TimestampedResour
 		return nil, err
 	}
 
-	return &list.TimestampedResourceList{
+	return &lmaL.TimestampedResourceList{
 		ResourceList:              l,
 		RequestStartedTimestamp:   requestStartTime,
 		RequestCompletedTimestamp: requestCompletedTime,

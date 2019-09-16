@@ -22,16 +22,16 @@ import (
 	"sync"
 
 	batchv1 "k8s.io/api/batch/v1"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/record"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 
-	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	"github.com/tigera/compliance/pkg/datastore"
-	"github.com/tigera/compliance/pkg/report"
+	"github.com/tigera/lma/pkg/api"
 )
 
 const (
@@ -234,7 +234,7 @@ type archivedReportQueryInterface interface {
 
 // realArchivedReportQuery is the default implementation of archivedReportQueryInterface.
 type realArchivedReportQuery struct {
-	reportRetriever report.ReportRetriever
+	reportRetriever api.ReportRetriever
 }
 
 var _ archivedReportQueryInterface = &realArchivedReportQuery{}

@@ -18,15 +18,19 @@ import:
   - labelindex
   - calc
 - package: k8s.io/client-go
-  version: v8.0.0
+  version: 23781f4d6632d88e869066eaebb743857aa1ef9b 
+- package: k8s.io/api
+  version: 73d903622b7391f3312dcbac6483fed484e185f8
 - package: k8s.io/apiserver
-  version: f881eae9ec04b8c996ef0d24309c860ea188acd1
+  version: kubernetes-1.10.0
+- package: k8s.io/apimachinery
+  version: 302974c03f7e50f16561ba237db776ab93594ef6 
 - package: github.com/olivere/elastic
   version: v6.2.16
 - package: github.com/mailru/easyjson
-  version: 03f2033d19d5860aef995fe360ac7d395cd8ce65
+  version: 2f5df55504ebc322e4d52d34df6a1f5b503bf26d
 - package: github.com/tigera/calico-k8sapiserver
-  version: 48f513106b849dd5da67b25acd93231d0831594a
+  version: 8ba789c4fec19187dffa4439363b71c8bed1e2eb
   repo: git@github.com:tigera/calico-k8sapiserver.git
   vcs: git
 - package: github.com/tigera/es-proxy
@@ -42,3 +46,9 @@ import:
   version: ^v1.0.3
 - package: github.com/aquasecurity/kube-bench
   version: v0.0.33
+- package: github.com/tigera/lma
+  version: master
+  repo: git@github.com:tigera/lma.git
+  vcs: git
+- package: github.com/imdario/mergo
+  version: ~0.3.7

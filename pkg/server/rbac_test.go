@@ -74,12 +74,12 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 	var k8sConfig restclient.Config
 
 	var authHeaders = map[string][]string{
-		user_BasicUserAll:     []string{fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte("BasicUserAll:basicpw")))},
-		user_BasicUserLimited: []string{fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte("BasicUserLimited:basicpwl")))},
-		user_BasicUserInvOnly: []string{fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte("BasicUserInvOnly:basicpwio")))},
-		user_TokenUserAll:     []string{"bearer a012345"},
-		user_TokenUserLimited: []string{"bearer b2468AB"},
-		user_TokenUserInvOnly: []string{"bearer c345678"},
+		user_BasicUserAll:     {fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte("BasicUserAll:basicpw")))},
+		user_BasicUserLimited: {fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte("BasicUserLimited:basicpwl")))},
+		user_BasicUserInvOnly: {fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte("BasicUserInvOnly:basicpwio")))},
+		user_TokenUserAll:     {"bearer a012345"},
+		user_TokenUserLimited: {"bearer b2468AB"},
+		user_TokenUserInvOnly: {"bearer c345678"},
 	}
 
 	BeforeEach(func() {

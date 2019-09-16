@@ -14,22 +14,23 @@ import (
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
-	"github.com/tigera/compliance/pkg/benchmark"
+	"github.com/projectcalico/libcalico-go/lib/resources"
+	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/flow"
-	"github.com/tigera/compliance/pkg/resources"
 	"github.com/tigera/compliance/pkg/xrefcache"
+
+	api "github.com/tigera/lma/pkg/api"
 )
 
 var (
-	node1 = &benchmark.Benchmarks{
+	node1 = &api.Benchmarks{
 		Version:           "1.1.2",
 		KubernetesVersion: "1.13.1",
-		Type:              benchmark.TypeKubernetes,
+		Type:              api.TypeKubernetes,
 		NodeName:          "node-1",
 		Timestamp:         metav1.Now(),
-		Tests: []benchmark.Test{
+		Tests: []api.BenchmarkTest{
 			{
 				Section:     "2.0",
 				SectionDesc: "desc-2.0",
@@ -79,12 +80,12 @@ var (
 	}
 
 	// Node2 - all section1 is not scored
-	node2 = &benchmark.Benchmarks{
+	node2 = &api.Benchmarks{
 		Version:   "1.1.2",
-		Type:      benchmark.TypeKubernetes,
+		Type:      api.TypeKubernetes,
 		NodeName:  "node-2",
 		Timestamp: metav1.Now(),
-		Tests: []benchmark.Test{
+		Tests: []api.BenchmarkTest{
 			{
 				Section:     "1.0",
 				SectionDesc: "desc-1.0",
@@ -115,12 +116,12 @@ var (
 		},
 	}
 
-	node3 = &benchmark.Benchmarks{
+	node3 = &api.Benchmarks{
 		Version:   "1.1.2",
-		Type:      benchmark.TypeKubernetes,
+		Type:      api.TypeKubernetes,
 		NodeName:  "node-abc",
 		Timestamp: metav1.Now(),
-		Tests: []benchmark.Test{
+		Tests: []api.BenchmarkTest{
 			{
 				Section:     "1.0",
 				SectionDesc: "desc-1.0",
@@ -156,17 +157,17 @@ var (
 type fakeBenchmarker struct {
 	started bool
 	stopped bool
-	results []benchmark.BenchmarksResult
+	results []api.BenchmarksResult
 	start   time.Time
 	end     time.Time
 }
 
 func (b *fakeBenchmarker) RetrieveLatestBenchmarks(
-	ctx context.Context, ct benchmark.BenchmarkType, filters []benchmark.Filter, start, end time.Time,
-) <-chan benchmark.BenchmarksResult {
+	ctx context.Context, ct api.BenchmarkType, filters []api.BenchmarkFilter, start, end time.Time,
+) <-chan api.BenchmarksResult {
 	b.start = start
 	b.end = end
-	ch := make(chan benchmark.BenchmarksResult)
+	ch := make(chan api.BenchmarksResult)
 	go func() {
 		defer close(ch)
 		b.started = true
@@ -199,6 +200,7 @@ var _ = Describe("CIS report tests", func() {
 		// Create a config, by default include all CIS results.
 		baseCfg := config.MustLoadConfig()
 		baseCfg.ReportName = "report"
+		numFailedTests := 5
 		cfg = &Config{
 			Config: *baseCfg,
 			Report: &v3.GlobalReport{
@@ -212,7 +214,7 @@ var _ = Describe("CIS report tests", func() {
 						IncludeUnscoredTests: true,
 						HighThreshold:        nil,
 						MedThreshold:         nil,
-						NumFailedTests:       5,
+						NumFailedTests:       &numFailedTests,
 					},
 				},
 			},
@@ -305,7 +307,7 @@ var _ = Describe("CIS report tests", func() {
 
 	It("should handle a few reports with including all tests", func() {
 		By("Setting the results to return 3 nodes")
-		benchmarker.results = []benchmark.BenchmarksResult{
+		benchmarker.results = []api.BenchmarksResult{
 			{
 				Benchmarks: node3,
 			},
@@ -535,7 +537,7 @@ var _ = Describe("CIS report tests", func() {
 		cfg.Report.Spec.CIS.IncludeUnscoredTests = false
 
 		By("Setting the results to return 3 nodes")
-		benchmarker.results = []benchmark.BenchmarksResult{
+		benchmarker.results = []api.BenchmarksResult{
 			{
 				Benchmarks: node3,
 			},
@@ -686,7 +688,7 @@ var _ = Describe("CIS report tests", func() {
 
 	It("should handle a few reports with including all tests", func() {
 		By("Setting the results to return 3 nodes")
-		benchmarker.results = []benchmark.BenchmarksResult{
+		benchmarker.results = []api.BenchmarksResult{
 			{
 				Benchmarks: node3,
 			},
@@ -918,7 +920,7 @@ var _ = Describe("CIS report tests", func() {
 		}}
 
 		By("Setting the results to return 1 node")
-		benchmarker.results = []benchmark.BenchmarksResult{
+		benchmarker.results = []api.BenchmarksResult{
 			{
 				Benchmarks: node1,
 			},
@@ -1002,7 +1004,7 @@ var _ = Describe("CIS report tests", func() {
 		}}
 
 		By("Setting the results to return 1 node")
-		benchmarker.results = []benchmark.BenchmarksResult{
+		benchmarker.results = []api.BenchmarksResult{
 			{
 				Benchmarks: node1,
 			},
@@ -1077,7 +1079,7 @@ var _ = Describe("CIS report tests", func() {
 		}
 
 		By("Setting the results to return 1 node")
-		benchmarker.results = []benchmark.BenchmarksResult{
+		benchmarker.results = []api.BenchmarksResult{
 			{
 				Benchmarks: node1,
 			},
@@ -1154,7 +1156,7 @@ var _ = Describe("CIS report tests", func() {
 		}}
 
 		By("Setting the results to return 1 node")
-		benchmarker.results = []benchmark.BenchmarksResult{
+		benchmarker.results = []api.BenchmarksResult{
 			{
 				Benchmarks: node1,
 			},
@@ -1229,7 +1231,7 @@ var _ = Describe("CIS report tests", func() {
 		}}
 
 		By("Setting the results to return 1 node")
-		benchmarker.results = []benchmark.BenchmarksResult{
+		benchmarker.results = []api.BenchmarksResult{
 			{
 				Benchmarks: node1,
 			},
@@ -1291,14 +1293,14 @@ var _ = Describe("CIS report tests", func() {
 
 	It("should handle duplicate tests by only using the first", func() {
 		By("Setting the results to return 1 node with duplicate tests")
-		benchmarker.results = []benchmark.BenchmarksResult{
+		benchmarker.results = []api.BenchmarksResult{
 			{
-				Benchmarks: &benchmark.Benchmarks{
+				Benchmarks: &api.Benchmarks{
 					Version:   "1.1.2",
-					Type:      benchmark.TypeKubernetes,
+					Type:      api.TypeKubernetes,
 					NodeName:  "node-1",
 					Timestamp: metav1.Now(),
-					Tests: []benchmark.Test{
+					Tests: []api.BenchmarkTest{
 						{
 							Section:     "1.1",
 							SectionDesc: "desc-1.1",
@@ -1371,11 +1373,11 @@ var _ = Describe("CIS report tests", func() {
 
 	It("should handle an errored benchmark", func() {
 		By("Setting the results to return 1 node with an error")
-		benchmarker.results = []benchmark.BenchmarksResult{
+		benchmarker.results = []api.BenchmarksResult{
 			{
-				Benchmarks: &benchmark.Benchmarks{
+				Benchmarks: &api.Benchmarks{
 					Version:   "1.1.2",
-					Type:      benchmark.TypeKubernetes,
+					Type:      api.TypeKubernetes,
 					NodeName:  "node-1",
 					Timestamp: metav1.Now(),
 					Error:     "It didn't work",
@@ -1411,7 +1413,7 @@ var _ = Describe("CIS report tests", func() {
 
 	It("should handle an errored benchmark query", func() {
 		By("Setting the results to return 1 node with duplicate tests")
-		benchmarker.results = []benchmark.BenchmarksResult{
+		benchmarker.results = []api.BenchmarksResult{
 			{
 				Err: errors.New("This is an error"),
 			},
@@ -1429,14 +1431,14 @@ var _ = Describe("CIS report tests", func() {
 		cfg.Report.Spec.CIS.MedThreshold = &Threshold75
 
 		By("Setting results with one failed, one passed in different sections")
-		benchmarker.results = []benchmark.BenchmarksResult{
+		benchmarker.results = []api.BenchmarksResult{
 			{
-				Benchmarks: &benchmark.Benchmarks{
+				Benchmarks: &api.Benchmarks{
 					Version:   "1.1.2",
-					Type:      benchmark.TypeKubernetes,
+					Type:      api.TypeKubernetes,
 					NodeName:  "node-1",
 					Timestamp: metav1.Now(),
-					Tests: []benchmark.Test{
+					Tests: []api.BenchmarkTest{
 						{
 							Section:     "1.1",
 							SectionDesc: "desc-1.1",

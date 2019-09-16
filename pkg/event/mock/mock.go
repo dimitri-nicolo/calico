@@ -9,20 +9,20 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	auditv1 "k8s.io/apiserver/pkg/apis/audit"
 
-	"github.com/tigera/compliance/pkg/event"
-	"github.com/tigera/compliance/pkg/resources"
+	"github.com/projectcalico/libcalico-go/lib/resources"
+	api "github.com/tigera/lma/pkg/api"
 )
 
 type Fetcher struct {
-	data map[metav1.TypeMeta][]*event.AuditEventResult
+	data map[metav1.TypeMeta][]*api.AuditEventResult
 }
 
 func NewEventFetcher() *Fetcher {
-	return &Fetcher{data: make(map[metav1.TypeMeta][]*event.AuditEventResult)}
+	return &Fetcher{data: make(map[metav1.TypeMeta][]*api.AuditEventResult)}
 }
 
-func (f *Fetcher) GetAuditEvents(ctx context.Context, from, to *time.Time) <-chan *event.AuditEventResult {
-	ch := make(chan *event.AuditEventResult)
+func (f *Fetcher) GetAuditEvents(ctx context.Context, from, to *time.Time) <-chan *api.AuditEventResult {
+	ch := make(chan *api.AuditEventResult)
 	go func() {
 		defer close(ch)
 
@@ -69,5 +69,5 @@ func (f *Fetcher) LoadAuditEvent(verb string, stage auditv1.Stage, objRef resour
 	}
 
 	// Append to event array
-	f.data[tm] = append(f.data[tm], &event.AuditEventResult{ev, nil})
+	f.data[tm] = append(f.data[tm], &api.AuditEventResult{ev, nil})
 }
