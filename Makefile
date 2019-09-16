@@ -232,7 +232,7 @@ clean-manifests:
 # TESTING 
 ##########################################################################################
 
-GINKGO_ARGS += -cover -timeout 10m
+GINKGO_ARGS += -cover -timeout 20m
 GINKGO = ginkgo $(GINKGO_ARGS)
 
 #test: ut fv st
