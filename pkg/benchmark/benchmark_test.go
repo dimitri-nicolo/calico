@@ -10,6 +10,7 @@ import (
 	. "github.com/tigera/compliance/pkg/benchmark"
 	"github.com/tigera/compliance/pkg/benchmark/mock"
 	"github.com/tigera/compliance/pkg/config"
+	api "github.com/tigera/lma/pkg/api"
 )
 
 var _ = Describe("Benchmark", func() {
@@ -42,27 +43,27 @@ var _ = Describe("Benchmark", func() {
 
 	It("should properly compute Benchmarks equality", func() {
 		By("empty benchmarks")
-		Expect((Benchmarks{}).Equal(Benchmarks{})).To(BeTrue())
+		Expect((api.Benchmarks{}).Equal(api.Benchmarks{})).To(BeTrue())
 
 		By("error field")
-		Expect((Benchmarks{Error: "an error"}).Equal(Benchmarks{Error: "an error"})).To(BeTrue())
-		Expect((Benchmarks{Error: "an error"}).Equal(Benchmarks{Error: "diff error"})).To(BeFalse())
+		Expect((api.Benchmarks{Error: "an error"}).Equal(api.Benchmarks{Error: "an error"})).To(BeTrue())
+		Expect((api.Benchmarks{Error: "an error"}).Equal(api.Benchmarks{Error: "diff error"})).To(BeFalse())
 
 		By("metadata fields")
-		Expect((Benchmarks{Version: "1.1"}).Equal(Benchmarks{Version: "1.1"})).To(BeTrue())
-		Expect((Benchmarks{Version: "1.1"}).Equal(Benchmarks{Version: "1.1.1"})).To(BeFalse())
-		Expect((Benchmarks{Type: TypeKubernetes}).Equal(Benchmarks{Type: TypeKubernetes})).To(BeTrue())
-		Expect((Benchmarks{Type: TypeKubernetes}).Equal(Benchmarks{Type: "docker"})).To(BeFalse())
-		Expect((Benchmarks{NodeName: "kadm-ms"}).Equal(Benchmarks{NodeName: "kadm-ms"})).To(BeTrue())
-		Expect((Benchmarks{NodeName: "kadm-ms"}).Equal(Benchmarks{NodeName: "kadm-node-0"})).To(BeFalse())
+		Expect((api.Benchmarks{Version: "1.1"}).Equal(api.Benchmarks{Version: "1.1"})).To(BeTrue())
+		Expect((api.Benchmarks{Version: "1.1"}).Equal(api.Benchmarks{Version: "1.1.1"})).To(BeFalse())
+		Expect((api.Benchmarks{Type: api.TypeKubernetes}).Equal(api.Benchmarks{Type: api.TypeKubernetes})).To(BeTrue())
+		Expect((api.Benchmarks{Type: api.TypeKubernetes}).Equal(api.Benchmarks{Type: "docker"})).To(BeFalse())
+		Expect((api.Benchmarks{NodeName: "kadm-ms"}).Equal(api.Benchmarks{NodeName: "kadm-ms"})).To(BeTrue())
+		Expect((api.Benchmarks{NodeName: "kadm-ms"}).Equal(api.Benchmarks{NodeName: "kadm-node-0"})).To(BeFalse())
 
 		By("tests")
-		Expect((Benchmarks{Tests: []Test{{"section", "sectionDesc", "testNum", "testDesc", "testInfo", "status", true}}}).Equal(
-			Benchmarks{Tests: []Test{{"section", "sectionDesc", "testNum", "testDesc", "testInfo", "status", true}}},
+		Expect((api.Benchmarks{Tests: []api.BenchmarkTest{{"section", "sectionDesc", "testNum", "testDesc", "testInfo", "status", true}}}).Equal(
+			api.Benchmarks{Tests: []api.BenchmarkTest{{"section", "sectionDesc", "testNum", "testDesc", "testInfo", "status", true}}},
 		)).To(BeTrue())
 
-		Expect((Benchmarks{Tests: []Test{{"section", "sectionDesc", "testNum", "testDesc", "testInfo", "status", true}}}).Equal(
-			Benchmarks{Tests: []Test{{"section", "sectionDesc", "testNum", "testDesc", "testInfo", "status", false}}},
+		Expect((api.Benchmarks{Tests: []api.BenchmarkTest{{"section", "sectionDesc", "testNum", "testDesc", "testInfo", "status", true}}}).Equal(
+			api.Benchmarks{Tests: []api.BenchmarkTest{{"section", "sectionDesc", "testNum", "testDesc", "testInfo", "status", false}}},
 		)).To(BeFalse())
 	})
 })

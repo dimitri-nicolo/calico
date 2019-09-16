@@ -10,8 +10,8 @@ import (
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/set"
 
+	"github.com/projectcalico/libcalico-go/lib/resources"
 	"github.com/tigera/compliance/pkg/labelselector"
-	"github.com/tigera/compliance/pkg/resources"
 )
 
 var (

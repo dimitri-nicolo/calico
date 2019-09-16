@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"net/url"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
@@ -28,18 +27,6 @@ type Config struct {
 	HealthPort    int           `envconfig:"HEALTH_PORT" default:"9099"`
 	HealthHost    string        `envconfig:"HEALTH_HOST" default:"0.0.0.0"`
 	HealthTimeout time.Duration `envconfig:"HEALTH_TIMEOUT" default:"30s"`
-
-	// Elastic parameters
-	ElasticURI               string        `envconfig:"ELASTIC_URI"`
-	ElasticScheme            string        `envconfig:"ELASTIC_SCHEME" default:"http"`
-	ElasticHost              string        `envconfig:"ELASTIC_HOST" default:"elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local"`
-	ElasticPort              int           `envconfig:"ELASTIC_PORT" default:"9200"`
-	ElasticUser              string        `envconfig:"ELASTIC_USER" default:"elastic"`
-	ElasticPassword          string        `envconfig:"ELASTIC_PASSWORD"`
-	ElasticCA                string        `envconfig:"ELASTIC_CA"`
-	ElasticIndexSuffix       string        `envconfig:"ELASTIC_INDEX_SUFFIX" default:"cluster"`
-	ElasticConnRetries       int           `envconfig:"ELASTIC_CONN_RETRIES" default:"5"`
-	ElasticConnRetryInterval time.Duration `envconfig:"ELASTIC_CONN_RETRY_INTERVAL" default:"500ms"`
 
 	// Snapshotter specific data.
 	SnapshotHour int `envconfig:"TIGERA_COMPLIANCE_SNAPSHOT_HOUR" default:"0"`
@@ -69,7 +56,6 @@ type Config struct {
 	// Parsed values.
 	ParsedReportStart time.Time
 	ParsedReportEnd   time.Time
-	ParsedElasticURL  *url.URL
 	ParsedLogLevel    log.Level
 
 	// Nodename
@@ -121,20 +107,6 @@ func LoadConfig() (*Config, error) {
 			config.ParsedReportEnd.Format(time.RFC3339), config.ParsedReportStart.Format(time.RFC3339),
 		)
 	}
-
-	// Parse elastic parms
-	if config.ElasticURI != "" {
-		config.ParsedElasticURL, err = url.Parse(config.ElasticURI)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		config.ParsedElasticURL = &url.URL{
-			Scheme: config.ElasticScheme,
-			Host:   fmt.Sprintf("%s:%d", config.ElasticHost, config.ElasticPort),
-		}
-	}
-	log.WithField("url", config.ParsedElasticURL).Debug("Parsed elastic url")
 
 	// Parse log level.
 	config.ParsedLogLevel = logutils.SafeParseLogLevel(config.LogLevel)

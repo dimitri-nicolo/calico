@@ -7,8 +7,8 @@ import (
 
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
+	"github.com/projectcalico/libcalico-go/lib/resources"
 	"github.com/tigera/compliance/pkg/datastore"
-	"github.com/tigera/compliance/pkg/resources"
 )
 
 var _ = Describe("list typemeta", func() {

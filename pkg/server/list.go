@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/tigera/compliance/pkg/report"
+	"github.com/tigera/lma/pkg/api"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -44,7 +44,7 @@ func (s *server) handleListReports(response http.ResponseWriter, request *http.R
 	}
 
 	// Query elastic search to determine the set of reportTypeName/reportName that match the filter.
-	var filteredReportNameAndType []report.ReportTypeAndName
+	var filteredReportNameAndType []api.ReportTypeAndName
 	reportNameAndTypes, err := s.rr.RetrieveArchivedReportTypeAndNames(request.Context(), *qparams)
 	if err != nil {
 		log.WithError(err).Error("Unable to determine access permissions for request")
@@ -170,7 +170,7 @@ func (s *server) handleListReports(response http.ResponseWriter, request *http.R
 }
 
 // GetListReportsQueryParams extracts the query parameters for the report summary list.
-func GetListReportsQueryParams(vals url.Values) (*report.QueryParams, error) {
+func GetListReportsQueryParams(vals url.Values) (*api.ReportQueryParams, error) {
 	page, maxItems, err := getPageQueryParams(vals)
 	if err != nil {
 		return nil, err
@@ -180,7 +180,7 @@ func GetListReportsQueryParams(vals url.Values) (*report.QueryParams, error) {
 		return nil, err
 	}
 
-	return &report.QueryParams{
+	return &api.ReportQueryParams{
 		Reports:  getReportsQueryParams(vals),
 		FromTime: vals.Get(UrlParamFromTime), // elastic time syntax is complex - let ES deal with validating.
 		ToTime:   vals.Get(UrlParamToTime),   // elastic time syntax is complex - let ES deal with validating.
@@ -191,19 +191,19 @@ func GetListReportsQueryParams(vals url.Values) (*report.QueryParams, error) {
 }
 
 // getReportsQueryParams extracts the requested report types and reports from the query parameters.
-func getReportsQueryParams(vals url.Values) []report.ReportTypeAndName {
-	var reports []report.ReportTypeAndName
+func getReportsQueryParams(vals url.Values) []api.ReportTypeAndName {
+	var reports []api.ReportTypeAndName
 
 	// Add the report type name filters.
 	for _, val := range vals[UrlParamReportTypeName] {
-		reports = append(reports, report.ReportTypeAndName{
+		reports = append(reports, api.ReportTypeAndName{
 			ReportTypeName: val,
 		})
 	}
 
 	// Add the report name filters.
 	for _, val := range vals[UrlParamReportName] {
-		reports = append(reports, report.ReportTypeAndName{
+		reports = append(reports, api.ReportTypeAndName{
 			ReportName: val,
 		})
 	}
@@ -249,7 +249,7 @@ func getPageQueryParams(vals url.Values) (page int, maxItems *int, err error) {
 }
 
 // getSortQueryParams extracts the sortBy and reverseSort values from the query parameters.
-func getSortQueryParams(vals url.Values) (sortBy []report.SortBy, err error) {
+func getSortQueryParams(vals url.Values) (sortBy []api.ReportSortBy, err error) {
 	sortByFields := vals[UrlParamSortBy]
 	fields := make(map[string]bool)
 	for _, field := range sortByFields {
@@ -270,7 +270,7 @@ func getSortQueryParams(vals url.Values) (sortBy []report.SortBy, err error) {
 
 		// Track whether or not we have a start time sortBy field.
 		fields[field] = true
-		sortBy = append(sortBy, report.SortBy{
+		sortBy = append(sortBy, api.ReportSortBy{
 			Field:     field,
 			Ascending: ascending,
 		})

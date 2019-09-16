@@ -3,9 +3,8 @@ package server
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/tigera/compliance/pkg/report"
-
 	clientv3 "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
+	"github.com/tigera/lma/pkg/api"
 )
 
 const (
@@ -34,7 +33,7 @@ var (
 		"reportName", "reportTypeName", "generationTime", "startTime", "endTime",
 	}
 
-	DefaultSortBy = []report.SortBy{
+	DefaultSortBy = []api.ReportSortBy{
 		{"startTime", false}, {"reportTypeName", true}, {"reportName", true},
 	}
 )

@@ -16,11 +16,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	auditv1 "k8s.io/apiserver/pkg/apis/audit"
 
-	"github.com/tigera/compliance/pkg/event"
-	"github.com/tigera/compliance/pkg/list"
+	"github.com/projectcalico/libcalico-go/lib/resources"
 	. "github.com/tigera/compliance/pkg/replay"
-	"github.com/tigera/compliance/pkg/resources"
 	"github.com/tigera/compliance/pkg/syncer"
+	"github.com/tigera/lma/pkg/list"
+
+	api "github.com/tigera/lma/pkg/api"
 )
 
 var (
@@ -231,21 +232,21 @@ func (c *mockNamespaceTestClient) StoreList(tm metav1.TypeMeta, resourceList *li
 	panic(fmt.Errorf("StoreList should not be called from replayer: %v", tm))
 }
 
-func (c *mockNamespaceTestClient) GetAuditEvents(cxt context.Context, start *time.Time, end *time.Time) <-chan *event.AuditEventResult {
+func (c *mockNamespaceTestClient) GetAuditEvents(cxt context.Context, start *time.Time, end *time.Time) <-chan *api.AuditEventResult {
 	// We expect this to be called twice. Once to get determine the initial start of day snapshot and once to determine
 	// the changing events within the requested interval.
 	c.getAuditCalls++
 
 	Expect(c.getAuditCalls).To(BeNumerically("<", 3))
 
-	ch := make(chan *event.AuditEventResult, 2)
+	ch := make(chan *api.AuditEventResult, 2)
 
 	// Return a namespace deletion for namespace1 depending on when the test wants the delete sent.
 	if (c.getAuditCalls == 1 && c.deleteBeforeSync) || (c.getAuditCalls == 2 && !c.deleteBeforeSync) {
-		ch <- &event.AuditEventResult{
+		ch <- &api.AuditEventResult{
 			Event: &auditv1.Event{
 				Stage: auditv1.StageResponseComplete,
-				Verb:  event.VerbDelete,
+				Verb:  api.EventVerbDelete,
 				ObjectRef: &auditv1.ObjectReference{
 					Resource:        "namespaces",
 					Name:            namespace1,

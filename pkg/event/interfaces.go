@@ -1,39 +1,16 @@
 package event
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 	auditv1 "k8s.io/apiserver/pkg/apis/audit"
 
-	"github.com/tigera/compliance/pkg/resources"
+	"github.com/projectcalico/libcalico-go/lib/resources"
+	api "github.com/tigera/lma/pkg/api"
 )
-
-const (
-	VerbCreate = "create"
-	VerbUpdate = "update"
-	VerbPatch  = "patch"
-	VerbDelete = "delete"
-)
-
-var (
-	ConfigurationVerbs = []string{
-		VerbCreate, VerbUpdate, VerbPatch, VerbDelete,
-	}
-)
-
-type AuditEventResult struct {
-	*auditv1.Event
-	Err error
-}
-
-type Fetcher interface {
-	GetAuditEvents(context.Context, *time.Time, *time.Time) <-chan *AuditEventResult
-}
 
 // ExtractResourceFromAuditEvent determines the resource kind located within an audit event
 // and coerces the response object into the appropriate type. This may return a nil resource with
@@ -56,7 +33,7 @@ func ExtractResourceFromAuditEvent(event *auditv1.Event) (resources.Resource, er
 
 	// Check that the event is configuration event.
 	switch event.Verb {
-	case VerbCreate, VerbUpdate, VerbPatch, VerbDelete:
+	case api.EventVerbCreate, api.EventVerbUpdate, api.EventVerbPatch, api.EventVerbDelete:
 		log.Debug("Event is a configuration event - continue processing")
 	default:
 		log.Debugf("Event verb is %s - skipping", event.Verb)
@@ -88,7 +65,7 @@ func ExtractResourceFromAuditEvent(event *auditv1.Event) (resources.Resource, er
 	// Create a new resource to unmarshal the event into.
 	res := rh.NewResource()
 
-	if event.Verb == VerbDelete {
+	if event.Verb == api.EventVerbDelete {
 		// This is a delete event, the response object will not be extractable so just return what we can.
 		//
 		// Sanity check that we have a name specified. It must be specified in the ObjectRef for a delete event although

@@ -32,10 +32,10 @@ import (
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
+	"github.com/projectcalico/libcalico-go/lib/resources"
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/datastore"
-	"github.com/tigera/compliance/pkg/resources"
 )
 
 // Utilities for dealing with Jobs and GlobalReports and time.

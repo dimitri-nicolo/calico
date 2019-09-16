@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	public1  = net.MustParseCIDR("16.0.0.0/8")
+	public1 = net.MustParseCIDR("16.0.0.0/8")
 	//public2  = net.MustParseCIDR("128.0.2.0/24")
 	private1 = net.MustParseCIDR("10.5.0.0/16")
 	private2 = net.MustParseCIDR("172.16.0.1/32")

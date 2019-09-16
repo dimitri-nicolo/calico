@@ -6,7 +6,7 @@ import (
 	"github.com/olivere/elastic"
 	auditv1 "k8s.io/apiserver/pkg/apis/audit"
 
-	"github.com/tigera/compliance/pkg/list"
+	"github.com/tigera/lma/pkg/list"
 )
 
 func unmarshalSearch(str string) (*elastic.SearchResult, error) {

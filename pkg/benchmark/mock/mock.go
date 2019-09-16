@@ -6,52 +6,52 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/tigera/compliance/pkg/benchmark"
+	api "github.com/tigera/lma/pkg/api"
 )
 
 type DB struct {
-	storage                     map[string]*benchmark.Benchmarks
+	storage                     map[string]*api.Benchmarks
 	NStoreCalls, NRetrieveCalls int
 }
 
 func NewMockDB() *DB {
-	return &DB{storage: map[string]*benchmark.Benchmarks{}}
+	return &DB{storage: map[string]*api.Benchmarks{}}
 }
 
-func (db *DB) StoreBenchmarks(ctx context.Context, b *benchmark.Benchmarks) error {
+func (db *DB) StoreBenchmarks(ctx context.Context, b *api.Benchmarks) error {
 	db.NStoreCalls++
 	db.storage[b.UID()] = b
 	return nil
 }
 
-func (db *DB) RetrieveLatestBenchmarks(ctx context.Context, ct benchmark.BenchmarkType, filters []benchmark.Filter, start, end time.Time) <-chan benchmark.BenchmarksResult {
-	ch := make(chan benchmark.BenchmarksResult, 1)
+func (db *DB) RetrieveLatestBenchmarks(ctx context.Context, ct api.BenchmarkType, filters []api.BenchmarkFilter, start, end time.Time) <-chan api.BenchmarksResult {
+	ch := make(chan api.BenchmarksResult, 1)
 	go func() {
 		defer close(ch)
 
 		for _, b := range db.storage {
-			ch <- benchmark.BenchmarksResult{Benchmarks: b}
+			ch <- api.BenchmarksResult{Benchmarks: b}
 		}
 	}()
 	db.NRetrieveCalls++
 	return ch
 }
 
-func (db *DB) GetBenchmarks(ctx context.Context, id string) (*benchmark.Benchmarks, error) {
+func (db *DB) GetBenchmarks(ctx context.Context, id string) (*api.Benchmarks, error) {
 	return db.storage[id], nil
 }
 
 type Executor struct {
 }
 
-func (e *Executor) ExecuteBenchmarks(ctx context.Context, ct benchmark.BenchmarkType, nodename string) (*benchmark.Benchmarks, error) {
-	return &benchmark.Benchmarks{
+func (e *Executor) ExecuteBenchmarks(ctx context.Context, ct api.BenchmarkType, nodename string) (*api.Benchmarks, error) {
+	return &api.Benchmarks{
 		Version:   "1.4",
-		Type:      benchmark.TypeKubernetes,
+		Type:      api.TypeKubernetes,
 		NodeName:  nodename,
 		Timestamp: metav1.Time{time.Now()},
-		Tests: []benchmark.Test{
-			benchmark.Test{
+		Tests: []api.BenchmarkTest{
+			{
 				Section:     "1.1",
 				SectionDesc: "API Server",
 				TestNumber:  "1.1.1",

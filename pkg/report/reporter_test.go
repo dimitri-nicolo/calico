@@ -18,14 +18,14 @@ import (
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
-	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
+	"github.com/projectcalico/libcalico-go/lib/resources"
+	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	. "github.com/tigera/compliance/internal/testutils"
 	"github.com/tigera/compliance/pkg/config"
-	"github.com/tigera/compliance/pkg/event"
 	"github.com/tigera/compliance/pkg/flow"
-	"github.com/tigera/compliance/pkg/resources"
 	"github.com/tigera/compliance/pkg/syncer"
 	"github.com/tigera/compliance/pkg/xrefcache"
+	api "github.com/tigera/lma/pkg/api"
 )
 
 // Fake replayer
@@ -49,15 +49,15 @@ type fakeAuditer struct {
 	updated []resources.Resource
 }
 
-func (a *fakeAuditer) SearchAuditEvents(ctx context.Context, filter *apiv3.AuditEventsSelection, start, end *time.Time) <-chan *event.AuditEventResult {
-	ch := make(chan *event.AuditEventResult)
+func (a *fakeAuditer) SearchAuditEvents(ctx context.Context, filter *apiv3.AuditEventsSelection, start, end *time.Time) <-chan *api.AuditEventResult {
+	ch := make(chan *api.AuditEventResult)
 
 	send := func(verb string, rs []resources.Resource) {
 		for _, r := range rs {
 			var ro *runtime.Unknown
 			tm := resources.GetTypeMeta(r)
 			rh := resources.GetResourceHelperByTypeMeta(tm)
-			if verb != event.VerbDelete {
+			if verb != api.EventVerbDelete {
 				raw, _ := json.Marshal(r)
 				ro = &runtime.Unknown{
 					TypeMeta: runtime.TypeMeta{
@@ -67,7 +67,7 @@ func (a *fakeAuditer) SearchAuditEvents(ctx context.Context, filter *apiv3.Audit
 					Raw: raw,
 				}
 			}
-			ch <- &event.AuditEventResult{
+			ch <- &api.AuditEventResult{
 				Event: &auditv1.Event{
 					Stage: auditv1.StageResponseComplete,
 					Verb:  verb,
@@ -96,11 +96,11 @@ func (a *fakeAuditer) SearchAuditEvents(ctx context.Context, filter *apiv3.Audit
 }
 
 type fakeReportStorer struct {
-	data *ArchivedReportData
+	data *api.ArchivedReportData
 	time time.Time
 }
 
-func (r *fakeReportStorer) StoreArchivedReport(d *ArchivedReportData, t time.Time) error {
+func (r *fakeReportStorer) StoreArchivedReport(d *api.ArchivedReportData, t time.Time) error {
 	r.data = d
 	r.time = t
 	return nil
@@ -110,7 +110,7 @@ func (r *fakeReportStorer) StoreArchivedReport(d *ArchivedReportData, t time.Tim
 type fakeFlowReporter struct {
 }
 
-func (f *fakeFlowReporter) SearchFlowLogs(ctx context.Context, namespaces []string, start, end *time.Time) <-chan *flow.FlowLogResult {
+func (f *fakeFlowReporter) SearchFlowLogs(ctx context.Context, namespaces []string, start, end *time.Time) <-chan *api.FlowLogResult {
 	return nil
 }
 

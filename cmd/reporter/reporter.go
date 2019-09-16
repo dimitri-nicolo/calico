@@ -13,9 +13,9 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/health"
 
 	"github.com/tigera/compliance/pkg/config"
-	"github.com/tigera/compliance/pkg/elastic"
 	"github.com/tigera/compliance/pkg/report"
 	"github.com/tigera/compliance/pkg/version"
+	"github.com/tigera/lma/pkg/elastic"
 )
 
 const (
@@ -48,7 +48,7 @@ func main() {
 	}
 
 	// Init elastic.
-	elasticClient := elastic.MustGetElasticClient(cfg)
+	elasticClient := elastic.MustGetElasticClient()
 
 	// Setup signals.
 	sigs := make(chan os.Signal, 1)

@@ -4,16 +4,8 @@ import (
 	"fmt"
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
-)
 
-const (
-	FlowLogGlobalNamespace        = "-"
-	FlowLogEndpointTypeWEP        = "wep"
-	FlowLogEndpointTypeHEP        = "hep"
-	FlowLogEndpointTypeNetworkSet = "ns"
-	FlowLogEndpointTypeNetwork    = "net"
-	FlowLogNetworkPublic          = "pub"
-	FlowLogNetworkPrivate         = "pvt"
+	api "github.com/tigera/lma/pkg/api"
 )
 
 // Container type to hold the EndpointsReportFlow and/or an error.
@@ -34,7 +26,7 @@ type FlowLogFilter struct {
 // namespace.
 func NewFlowLogFilter() *FlowLogFilter {
 	namespaces := map[string]bool{
-		FlowLogGlobalNamespace: true,
+		api.FlowLogGlobalNamespace: true,
 	}
 	return &FlowLogFilter{
 		Namespaces:    namespaces,
@@ -46,7 +38,7 @@ func NewFlowLogFilter() *FlowLogFilter {
 // Adds namespace, endpoint name and aggregated endpoint name to the filter.
 func (f *FlowLogFilter) TrackNamespaceAndEndpoint(namespace, endpointName, aggrEndpointName string) {
 	if namespace == "" {
-		namespace = FlowLogGlobalNamespace
+		namespace = api.FlowLogGlobalNamespace
 	}
 	f.Namespaces[namespace] = true
 	if endpointName != "" {

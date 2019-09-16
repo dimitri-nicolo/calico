@@ -11,21 +11,21 @@ import (
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
+	"github.com/projectcalico/libcalico-go/lib/resources"
 	"github.com/tigera/compliance/pkg/event"
-	"github.com/tigera/compliance/pkg/list"
-	"github.com/tigera/compliance/pkg/resources"
 	"github.com/tigera/compliance/pkg/syncer"
+	api "github.com/tigera/lma/pkg/api"
 )
 
 type replayer struct {
 	resources  map[metav1.TypeMeta]map[apiv3.ResourceID]resources.Resource
 	start, end time.Time
-	lister     list.Destination
-	eventer    event.Fetcher
+	lister     api.ListDestination
+	eventer    api.EventFetcher
 	cb         syncer.SyncerCallbacks
 }
 
-func New(start, end time.Time, lister list.Destination, eventer event.Fetcher, callbacks syncer.SyncerCallbacks) syncer.Starter {
+func New(start, end time.Time, lister api.ListDestination, eventer api.EventFetcher, callbacks syncer.SyncerCallbacks) syncer.Starter {
 	return &replayer{
 		make(map[metav1.TypeMeta]map[apiv3.ResourceID]resources.Resource),
 		start, end, lister, eventer, callbacks,
@@ -155,7 +155,7 @@ func (r *replayer) replay(ctx context.Context, from, to *time.Time, notifyUpdate
 		update := syncer.Update{ResourceID: id, Resource: res}
 		clog = clog.WithFields(log.Fields{"resID": id, "kind": kind})
 		switch ev.Event.Verb {
-		case event.VerbCreate, event.VerbUpdate, event.VerbPatch:
+		case api.EventVerbCreate, api.EventVerbUpdate, api.EventVerbPatch:
 			clog.Debug("Set event")
 			update.Type = syncer.UpdateTypeSet
 
@@ -179,7 +179,7 @@ func (r *replayer) replay(ctx context.Context, from, to *time.Time, notifyUpdate
 				}
 			}
 			resMap[id] = res
-		case event.VerbDelete:
+		case api.EventVerbDelete:
 			clog.Debug("Delete event")
 
 			// Delete events will not actually contain the resource, so fix up the update from the cached value.

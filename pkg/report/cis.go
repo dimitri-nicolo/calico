@@ -9,8 +9,8 @@ import (
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
-	"github.com/tigera/compliance/pkg/benchmark"
 	"github.com/tigera/compliance/pkg/docindex"
+	api "github.com/tigera/lma/pkg/api"
 )
 
 const (
@@ -26,7 +26,7 @@ func (r *reporter) addBenchmarks() error {
 
 	// Track summary stats for this report.
 	r.data.CISBenchmarkSummary = apiv3.CISBenchmarkSummary{
-		Type: string(benchmark.TypeKubernetes),
+		Type: string(api.TypeKubernetes),
 	}
 
 	// Create a filter set from the report spec configuration.
@@ -62,7 +62,7 @@ func (r *reporter) addBenchmarks() error {
 	}
 	r.clog.Infof("Query benchmarks from %v to %v", start, end)
 	for b := range r.benchmarker.RetrieveLatestBenchmarks(
-		r.ctx, benchmark.TypeKubernetes, nil, start, end,
+		r.ctx, api.TypeKubernetes, nil, start, end,
 	) {
 		// If we received an error then log and exit.
 		if b.Err != nil {
@@ -289,7 +289,7 @@ type testFilters struct {
 }
 
 // getFilter returns the filter to use on a specific set of benchmarks.
-func (t *testFilters) getFilter(b *benchmark.Benchmarks) *testFilter {
+func (t *testFilters) getFilter(b *api.Benchmarks) *testFilter {
 	// We use the first matching filter, so loop through to find the match.
 	for _, f := range t.filters {
 		if f.matches(b) {
@@ -321,7 +321,7 @@ type testFilter struct {
 }
 
 // include returns whether or not a benchmark test should be included in the report.
-func (f *testFilter) include(t benchmark.Test) bool {
+func (f *testFilter) include(t api.BenchmarkTest) bool {
 	if f.includeUnscored && f.includes == nil {
 		// Short circuit including everything.
 		f.clog.Debugf("Include %s: including everything", t.TestNumber)
@@ -356,7 +356,7 @@ func (f *testFilter) include(t benchmark.Test) bool {
 }
 
 // matches returns whether or not the match critera match the supplied benchmarks.
-func (f *testFilter) matches(b *benchmark.Benchmarks) bool {
+func (f *testFilter) matches(b *api.Benchmarks) bool {
 	if f.k8sVersion != nil {
 		bv := docindex.New(b.KubernetesVersion)
 		if !f.k8sVersion.Contains(bv) {

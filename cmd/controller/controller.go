@@ -14,8 +14,8 @@ import (
 	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/controller"
 	"github.com/tigera/compliance/pkg/datastore"
-	"github.com/tigera/compliance/pkg/elastic"
 	"github.com/tigera/compliance/pkg/version"
+	"github.com/tigera/lma/pkg/elastic"
 )
 
 const (
@@ -51,7 +51,7 @@ func main() {
 	cs := datastore.MustGetClientSet()
 
 	// Create the elastic client. We only use this to determine the last recorded report.
-	rr := elastic.MustGetElasticClient(cfg)
+	rr := elastic.MustGetElasticClient()
 
 	// Indicate healthy.
 	healthy()

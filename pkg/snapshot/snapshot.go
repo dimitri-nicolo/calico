@@ -11,9 +11,10 @@ import (
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/projectcalico/libcalico-go/lib/resources"
 	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/list"
-	"github.com/tigera/compliance/pkg/resources"
+	api "github.com/tigera/lma/pkg/api"
 )
 
 const (
@@ -26,7 +27,7 @@ var (
 )
 
 // Run is the entrypoint to start running the snapshotter.
-func Run(ctx context.Context, cfg *config.Config, listSrc list.Source, listDest list.Destination, healthy func(bool)) error {
+func Run(ctx context.Context, cfg *config.Config, listSrc list.Source, listDest api.ListDestination, healthy func(bool)) error {
 	return (&snapshotter{
 		ctx:      ctx,
 		cfg:      cfg,
@@ -41,7 +42,7 @@ type snapshotter struct {
 	cfg      *config.Config
 	healthy  func(bool)
 	listSrc  list.Source
-	listDest list.Destination
+	listDest api.ListDestination
 }
 
 // Run aligns the current state with the last time a snapshot was made with the expected time of the next snapshot and
@@ -129,7 +130,7 @@ type resourceSnapshotter struct {
 	kind               metav1.TypeMeta
 	clog               *log.Entry
 	listSrc            list.Source
-	listDest           list.Destination
+	listDest           api.ListDestination
 	timeOfLastSnapshot *time.Time
 }
 

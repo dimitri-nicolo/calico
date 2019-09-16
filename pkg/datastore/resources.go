@@ -10,8 +10,8 @@ import (
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
+	"github.com/projectcalico/libcalico-go/lib/resources"
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
-	"github.com/tigera/compliance/pkg/resources"
 )
 
 type resourceHelper struct {

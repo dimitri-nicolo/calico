@@ -11,8 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/tigera/compliance/mockdata/scaleloader"
-	"github.com/tigera/compliance/pkg/config"
-	"github.com/tigera/compliance/pkg/elastic"
+	"github.com/tigera/lma/pkg/elastic"
 )
 
 type Scenario struct {
@@ -74,12 +73,8 @@ func main() {
 		log.Fatalf("Failed to load scenario %v", err)
 	}
 
-	cfg := config.MustLoadConfig()
 	// Initialize elastic.
-	es, err := elastic.NewFromConfig(cfg)
-	if err != nil {
-		log.WithError(err).Fatal("failed to initialize elastic client")
-	}
+	es := elastic.MustGetElasticClient()
 
 	var duration time.Duration
 	if scen.Duration == "" {

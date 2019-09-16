@@ -11,9 +11,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	"github.com/tigera/compliance/pkg/elastic"
-	"github.com/tigera/compliance/pkg/list"
-	"github.com/tigera/compliance/pkg/resources"
+	"github.com/projectcalico/libcalico-go/lib/resources"
+	"github.com/tigera/lma/pkg/elastic"
+	"github.com/tigera/lma/pkg/list"
 )
 
 //yaml "gopkg.in/yaml.v2"

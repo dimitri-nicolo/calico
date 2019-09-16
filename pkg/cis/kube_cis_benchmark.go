@@ -18,6 +18,7 @@ import (
 
 	"github.com/tigera/compliance/pkg/benchmark"
 	"github.com/tigera/compliance/pkg/datastore"
+	api "github.com/tigera/lma/pkg/api"
 )
 
 const (
@@ -31,13 +32,13 @@ type Benchmarker struct {
 }
 
 // NewBenchmarker returns a benchmark.Executor instance that can execute kubernetes cis benchmark tests
-func NewBenchmarker() benchmark.BenchmarksExecutor {
+func NewBenchmarker() api.BenchmarksExecutor {
 	return &Benchmarker{ConfigChecker: configExists}
 }
 
 // ExecuteBenchmarks determines the appropriate benchmarker to run for the given benchmark type.
-func (b *Benchmarker) ExecuteBenchmarks(ctx context.Context, ct benchmark.BenchmarkType, nodename string) (*benchmark.Benchmarks, error) {
-	if ct == benchmark.TypeKubernetes {
+func (b *Benchmarker) ExecuteBenchmarks(ctx context.Context, ct api.BenchmarkType, nodename string) (*api.Benchmarks, error) {
+	if ct == api.TypeKubernetes {
 		return b.executeKubeBenchmark(ctx, nodename)
 	}
 	return nil, fmt.Errorf("No handler found for benchmark type %s", ct)
@@ -53,7 +54,10 @@ func configExists(cfgPath string) bool {
 func (b *Benchmarker) GetClosestConfig(dv string) (string, error) {
 	// kube-bench CIS benchmark version starts from k8s version 1.6
 	//   -- https://github.com/aquasecurity/kube-bench#cis-kubernetes-benchmark-support
-	kubeBenchBaseVersion := semver.New(leastKubeBenchSupportedVersion)
+	kubeBenchBaseVersion, err := semver.NewVersion(leastKubeBenchSupportedVersion)
+	if err != nil {
+		return "", err
+	}
 
 	detectedVersion, err := semver.NewVersion(dv)
 	if err != nil {
@@ -67,7 +71,7 @@ func (b *Benchmarker) GetClosestConfig(dv string) (string, error) {
 	// the last version for which a configuration exists.
 	resultVersion := *kubeBenchBaseVersion
 	tempVersion := kubeBenchBaseVersion
-	for !detectedVersion.Equal(*tempVersion) {
+	for detectedVersion.String() != tempVersion.String() {
 		tempVersion.BumpMinor()
 		// Check if the matching kube-bench config exists.
 		if b.ConfigChecker(fmt.Sprintf("/opt/cfg/%d.%d", tempVersion.Major, tempVersion.Minor)) {
@@ -115,7 +119,7 @@ func (b *Benchmarker) GetSemVerFormatted(v string) string {
 }
 
 // executeKubeBenchmark executes kube-bench.
-func (b *Benchmarker) executeKubeBenchmark(ctx context.Context, nodename string) (*benchmark.Benchmarks, error) {
+func (b *Benchmarker) executeKubeBenchmark(ctx context.Context, nodename string) (*api.Benchmarks, error) {
 	// Determine Openshift args if any.
 	args, err := determineOpenshiftArgs(nodename)
 	if err != nil {
@@ -158,10 +162,10 @@ func (b *Benchmarker) executeKubeBenchmark(ctx context.Context, nodename string)
 		return nil, fmt.Errorf("No results found on benchmarker execution")
 	}
 
-	return &benchmark.Benchmarks{
+	return &api.Benchmarks{
 		Version:           ctrls[0].Version,
 		KubernetesVersion: ctrls[0].Version,
-		Type:              benchmark.TypeKubernetes,
+		Type:              api.TypeKubernetes,
 		NodeName:          nodename,
 		Timestamp:         metav1.Time{Time: ts},
 		Tests:             benchmark.TestsFromKubeBenchControls(ctrls),

@@ -17,15 +17,15 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	clientv3 "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 	"github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3/fake"
-	"github.com/tigera/compliance/pkg/report"
 	"github.com/tigera/compliance/pkg/server"
+	"github.com/tigera/lma/pkg/api"
 )
 
 // startTester starts and returns a server tester. This can be used to issue summary and report queries and to
@@ -76,11 +76,11 @@ type tester struct {
 	reportTypeListErr error
 
 	// Control parameters for the archived ReportData list summaries response.
-	summaries    []*report.ArchivedReportData
+	summaries    []*api.ArchivedReportData
 	summariesErr error
 
 	// Control parameters for the archived ReportData get summary response.
-	report    *report.ArchivedReportData
+	report    *api.ArchivedReportData
 	reportErr error
 
 	// Internal data for managing the server and client.
@@ -208,17 +208,17 @@ func (t *tester) downloadMulti(id string, expStatus int, forecasts []forecastFil
 }
 
 // RetrieveArchivedReport implements the ReportRetriever interface.
-func (t *tester) RetrieveArchivedReport(id string) (*report.ArchivedReportData, error) {
+func (t *tester) RetrieveArchivedReport(id string) (*api.ArchivedReportData, error) {
 	return t.report, t.reportErr
 }
 
-func (t *tester) RetrieveArchivedReportTypeAndNames(_ context.Context, q report.QueryParams) ([]report.ReportTypeAndName, error) {
+func (t *tester) RetrieveArchivedReportTypeAndNames(_ context.Context, q api.ReportQueryParams) ([]api.ReportTypeAndName, error) {
 	if t.summariesErr != nil {
 		return nil, t.summariesErr
 	}
-	var r []report.ReportTypeAndName
+	var r []api.ReportTypeAndName
 	for _, s := range t.summaries {
-		r = append(r, report.ReportTypeAndName{
+		r = append(r, api.ReportTypeAndName{
 			ReportTypeName: s.ReportTypeName,
 			ReportName:     s.ReportName,
 		})
@@ -227,20 +227,20 @@ func (t *tester) RetrieveArchivedReportTypeAndNames(_ context.Context, q report.
 }
 
 // RetrieveArchivedReportSummaries implements the ReportRetriever interface.
-func (t *tester) RetrieveArchivedReportSummaries(_ context.Context, q report.QueryParams) (*report.ArchivedReportSummaries, error) {
-	return &report.ArchivedReportSummaries{
+func (t *tester) RetrieveArchivedReportSummaries(_ context.Context, q api.ReportQueryParams) (*api.ArchivedReportSummaries, error) {
+	return &api.ArchivedReportSummaries{
 		Count:   len(t.summaries),
 		Reports: t.summaries,
 	}, t.summariesErr
 }
 
 // RetrieveArchivedReportSummary implements the ReportRetriever interface.
-func (t *tester) RetrieveArchivedReportSummary(id string) (*report.ArchivedReportData, error) {
+func (t *tester) RetrieveArchivedReportSummary(id string) (*api.ArchivedReportData, error) {
 	return t.summaries[0], t.summariesErr
 }
 
 // RetrieveLastArchivedReportSummary implements the ReportRetriever interface.
-func (t *tester) RetrieveLastArchivedReportSummary(name string) (*report.ArchivedReportData, error) {
+func (t *tester) RetrieveLastArchivedReportSummary(name string) (*api.ArchivedReportData, error) {
 	return t.summaries[0], t.summariesErr
 }
 

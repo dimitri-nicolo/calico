@@ -8,7 +8,7 @@ import (
 
 	"github.com/tigera/compliance/mockdata/replayer"
 	"github.com/tigera/compliance/pkg/config"
-	"github.com/tigera/compliance/pkg/elastic"
+	"github.com/tigera/lma/pkg/elastic"
 )
 
 const (
@@ -16,14 +16,9 @@ const (
 )
 
 func main() {
-	// Load config
-	cfg := config.MustLoadConfig()
 
 	// Initialize elastic.
-	client, err := elastic.NewFromConfig(cfg)
-	if err != nil {
-		log.WithError(err).Fatal("failed to initialize elastic client")
-	}
+	client := elastic.MustGetElasticClient()
 
 	// Retrieve the testdata.
 	eeEvents, err := replayer.GetEEAuditEventsDoc()

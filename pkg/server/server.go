@@ -12,11 +12,11 @@ import (
 
 	calicov3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
-	"github.com/tigera/compliance/pkg/report"
+	"github.com/tigera/lma/pkg/api"
 )
 
 // New creates a new server.
-func New(rr report.ReportRetriever, rcg ReportConfigurationGetter, rhf RbacHelperFactory, addr string, key string, cert string) ServerControl {
+func New(rr api.ReportRetriever, rcg ReportConfigurationGetter, rhf RbacHelperFactory, addr string, key string, cert string) ServerControl {
 	s := &server{
 		key:  key,
 		cert: cert,
@@ -49,7 +49,7 @@ type server struct {
 	key     string
 	cert    string
 	wg      sync.WaitGroup
-	rr      report.ReportRetriever
+	rr      api.ReportRetriever
 	rcg     ReportConfigurationGetter
 	rhf     RbacHelperFactory
 
