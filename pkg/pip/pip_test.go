@@ -2,6 +2,7 @@ package pip
 
 import (
 	"context"
+
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
 
 	. "github.com/onsi/ginkgo"
@@ -12,8 +13,8 @@ import (
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
 	"github.com/tigera/es-proxy/pkg/pip/config"
-	pelastic "github.com/tigera/es-proxy/pkg/pip/elastic"
 	"github.com/tigera/es-proxy/pkg/pip/policycalc"
+	pelastic "github.com/tigera/lma/pkg/elastic"
 )
 
 var _ = Describe("Test handling of flow splitting", func() {

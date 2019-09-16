@@ -10,7 +10,7 @@ import (
 	authzv1 "k8s.io/api/authorization/v1"
 
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
-	"github.com/tigera/compliance/pkg/resources"
+	"github.com/projectcalico/libcalico-go/lib/resources"
 )
 
 type PolicyImpactRbacHelperFactory interface {

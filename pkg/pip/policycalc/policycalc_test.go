@@ -9,7 +9,7 @@ import (
 
 	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
-	"github.com/tigera/compliance/pkg/resources"
+	"github.com/projectcalico/libcalico-go/lib/resources"
 	"github.com/tigera/compliance/pkg/syncer"
 
 	pipcfg "github.com/tigera/es-proxy/pkg/pip/config"
