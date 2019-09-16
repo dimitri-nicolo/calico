@@ -27,6 +27,10 @@ func TestQueryDomainNameSet(t *testing.T) {
 		"  hax4u.ru",
 		"com # a top-level-domain is technically a valid domain name",
 		"wWw.bOTnET..qQ. # should normalize case and dots",
+		"junk&stuff # not a valid domain name, but still possible to query for",
+		"-junk.com # also not a valid name, but still possible to query for",
+		"mølmer-sørensen.gate",
+		"xn--mlmer-srensen-bnbg.gate",
 	}
 	expected := db.IPSetSpec{
 		"www.badguys.co.uk",
@@ -35,12 +39,16 @@ func TestQueryDomainNameSet(t *testing.T) {
 		"hax4u.ru",
 		"com",
 		"www.botnet.qq",
+		"junk&stuff",
+		"-junk.com",
+		"mølmer-sørensen.gate",
+		"mølmer-sørensen.gate",
 	}
 
 	client := &http.Client{}
 	resp := &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(strings.NewReader(strings.Join(append(input, "# comment", "", " ", "junk&stuff", "-junk.com"), "\n"))),
+		Body:       ioutil.NopCloser(strings.NewReader(strings.Join(append(input, "# comment", "", " "), "\n"))),
 	}
 	client.Transport = &MockRoundTripper{
 		Response: resp,
@@ -95,4 +103,15 @@ func TestCanonicalizeDNSName(t *testing.T) {
 	g.Expect(canonicalizeDNSName(".tigera.io.")).Should(Equal("tigera.io"))
 	g.Expect(canonicalizeDNSName("..tigera..io..")).Should(Equal("tigera.io"))
 	g.Expect(canonicalizeDNSName("tIgeRa.Io")).Should(Equal("tigera.io"))
+	g.Expect(canonicalizeDNSName("xn--Mlmer-Srensen-bnbg.gate")).Should(Equal("mølmer-sørensen.gate"))
+	g.Expect(canonicalizeDNSName("mølmer-sørensen.gate")).Should(Equal("mølmer-sørensen.gate"))
+
+	// www.Æther.com --- with capital, should be normalized to lowercase
+	g.Expect(canonicalizeDNSName("www.xn--ther-9ja.com")).Should(Equal("www.æther.com"))
+
+	// Names already in unicode should be normalized to lowercase
+	g.Expect(canonicalizeDNSName("www.Æther.com")).Should(Equal("www.æther.com"))
+
+	// Names with corrupted punycode should just be normalized with case and dots
+	g.Expect(canonicalizeDNSName("xn--Mlmer-Srensen-bnb&..gate")).Should(Equal("xn--mlmer-srensen-bnb&.gate"))
 }
