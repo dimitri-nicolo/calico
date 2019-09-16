@@ -44,13 +44,9 @@ class TestGlobalPeers(TestBase):
             host2.start_calico_node("--backend=%s --as=%s" % (backend, LARGE_AS_NUM))
 
             # Create a network and a couple of workloads on each host.
-            network1 = host1.create_network("subnet1", subnet=DEFAULT_IPV4_POOL_CIDR)
-            workload_host1 = host1.create_workload("workload1",
-                                                   network=network1,
-                                                   ip=DEFAULT_IPV4_ADDR_1)
-            workload_host2 = host2.create_workload("workload2",
-                                                   network=network1,
-                                                   ip=DEFAULT_IPV4_ADDR_2)
+            network1 = host1.create_network("subnet1")
+            workload_host1 = host1.create_workload("workload1", network=network1, ip=DEFAULT_IPV4_ADDR_1)
+            workload_host2 = host2.create_workload("workload2", network=network1, ip=DEFAULT_IPV4_ADDR_2)
 
             # Allow network to converge
             self.assert_true(workload_host1.check_can_ping(DEFAULT_IPV4_ADDR_2, retries=10))

@@ -25,7 +25,7 @@ MAINTAINER David Wilder <wilder@us.ibm.com>
 
 ARG ARCH=ppc64le
 
-# Set the minimum Docker API version required for libnetwork.
+# Set the minimum required Docker API version.
 ENV DOCKER_API_VERSION 1.21
 
 # Enable non-native builds of this image on an amd64 hosts.
@@ -42,9 +42,6 @@ COPY --from=bird /bird* /bin/
 
 # Copy in the filesystem - this contains felix, calico-bgp-daemon etc...
 COPY filesystem/ /
-
-# Add in confd config and templates
-COPY vendor/github.com/kelseyhightower/confd/etc/calico/ /etc/calico/
 
 # Copy in the calico-node binary
 COPY dist/bin/calico-node-${ARCH} /bin/calico-node
