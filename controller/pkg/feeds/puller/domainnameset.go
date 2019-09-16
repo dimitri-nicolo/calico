@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
-	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -25,8 +24,7 @@ import (
 var (
 	redundantDots = regexp.MustCompile(`\.\.+`)
 
-	idnaProfile *idna.Profile
-	ipOnce      sync.Once
+	idnaProfile = idna.New()
 )
 
 type dnSetNewlineDelimited struct{}
@@ -100,9 +98,6 @@ func NewDomainNameSetHTTPPuller(
 }
 
 func canonicalizeDNSName(name string) string {
-	ipOnce.Do(func() {
-		idnaProfile = idna.New()
-	})
 	uname, err := idnaProfile.ToUnicode(name)
 	if err != nil {
 		return redundantDots.ReplaceAllString(strings.ToLower(strings.Trim(name, ".")), ".")
