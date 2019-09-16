@@ -530,6 +530,16 @@ var _ = Describe("DNS log type tests", func() {
 						Class: DNSClass(layers.DNSClassIN),
 						Type:  DNSType(layers.DNSTypeA),
 					}: {{Decoded: net.ParseIP("127.0.0.1")}},
+					{
+						Name:  "txt.txt.txt",
+						Class: DNSClass(layers.DNSClassIN),
+						Type:  DNSType(layers.DNSTypeTXT),
+					}: {{Decoded: [][]byte{[]byte("xn--mlmer-srensen-bnbg.gate")}}},
+					{
+						Name:  "wks.wks.wks",
+						Class: DNSClass(layers.DNSClassIN),
+						Type:  DNSType(layers.DNSTypeWKS),
+					}: {{Decoded: []byte("xn--mlmer-srensen-bnbg.gate")}},
 				},
 			}
 		})
@@ -592,6 +602,20 @@ var _ = Describe("DNS log type tests", func() {
 				rrs := jl["rrsets"].([]interface{})
 				rrs4 := findRR(rrs, "xn--mlmer-srensen-bnbg*.gate", "IN", "A")
 				Expect(rrs4).ToNot(BeNil())
+			})
+
+			It("leaves ACE labels in TXT records as is", func() {
+				rrs := jl["rrsets"].([]interface{})
+				rrs5 := findRR(rrs, "txt.txt.txt", "IN", "TXT")
+				Expect(rrs5).ToNot(BeNil())
+				Expect(rrs5["rdata"]).To(Equal([]interface{}{"xn--mlmer-srensen-bnbg.gate"}))
+			})
+
+			It("leaves ACE labels in unhandled records as base64 encoded", func() {
+				rrs := jl["rrsets"].([]interface{})
+				rrs6 := findRR(rrs, "wks.wks.wks", "IN", "WKS")
+				Expect(rrs6).ToNot(BeNil())
+				Expect(rrs6["rdata"]).To(Equal([]interface{}{"eG4tLW1sbWVyLXNyZW5zZW4tYm5iZy5nYXRl"}))
 			})
 		})
 	})
