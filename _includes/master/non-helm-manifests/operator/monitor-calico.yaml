@@ -95,27 +95,6 @@ spec:
 
 ---
 
-# This manifest installs the Service which gets traffic to the calico-node metrics
-# reporting endpoint.
-apiVersion: v1
-kind: Service
-metadata:
-  namespace: calico-system
-  name: calico-node-metrics
-  labels:
-    k8s-app: calico-node
-spec:
-  selector:
-    k8s-app: calico-node
-  type: ClusterIP
-  clusterIP: None
-  ports:
-    - name: calico-metrics-port
-      port: 9081
-      targetPort: 9081
-      protocol: TCP
----
-
 # This manifest creates a network policy to allow traffic to Alertmanager
 # (TCP port 9093).
 apiVersion: extensions/v1beta1
@@ -809,6 +788,14 @@ spec:
         namespaceSelector: name == 'tigera-console'
       destination:
         ports: [9200]
+    - action: Allow
+      destination:
+        ports:
+          - 9200
+      protocol: TCP
+      source:
+        selector: k8s-app == 'compliance-benchmarker'
+        namespaceSelector: name == 'tigera-compliance'
     - action: Allow
       destination:
         ports:
