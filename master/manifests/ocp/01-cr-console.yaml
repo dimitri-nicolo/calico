@@ -1,0 +1,10 @@
+# This section configures the Tigera web console.
+apiVersion: operator.tigera.io/v1
+kind: Console
+metadata:
+  name: tigera-secure
+spec:
+  # Authentication configuration for accessing the Tigera console.
+  # Default is to use token-based authentication.
+  auth:
+    type: Token

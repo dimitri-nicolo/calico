@@ -1,0 +1,5 @@
+# This section installs and configures Tigera Secure compliance functionality.
+apiVersion: operator.tigera.io/v1
+kind: Compliance
+metadata:
+  name: tigera-secure

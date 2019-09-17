@@ -16,7 +16,13 @@ def parse_versions(versions_yml, version)
   end
 
   components = versions_yml[version][0]["components"].clone
-  return components.each { |key,val| components[key] = val["version"] }
+  versionsYml = components.each { |key,val| components[key] = val["version"] }
+
+  unless versions_yml[version][0]["tigera-operator"].nil?
+          operator = versions_yml[version][0]["tigera-operator"]
+          versionsYml.merge!({"tigera-operator" => operator["version"]})
+  end
+  return versionsYml
 end
 
 

@@ -1,0 +1,11 @@
+# This section installs and configures Tigera Secure monitoring stack access.
+apiVersion: operator.tigera.io/v1
+kind: MonitoringConfiguration
+metadata:
+  name: tigera-secure
+spec:
+  clusterName: "cluster"
+  elasticsearch:
+    endpoint: http://elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local:9200
+  kibana:
+    endpoint: http://kibana-tigera-elasticsearch.calico-monitoring.svc.cluster.local:80

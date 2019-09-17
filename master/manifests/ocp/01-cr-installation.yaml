@@ -1,0 +1,16 @@
+# This section includes base Tigera Secure installation configuration.
+apiVersion: operator.tigera.io/v1
+kind: Installation
+metadata:
+  name: default
+spec:
+  # Install Tigera Secure
+  variant: TigeraSecureEnterprise
+
+  # List of image pull secrets to use when installing images from a container registry.
+  # If specified, secrets must be created in the `tigera-operator` namespace.
+  imagePullSecrets:
+    - name: tigera-pull-secret
+
+  # Registry to use for pulling Tigera Secure images.
+  # registry: <my-registry>

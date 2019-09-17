@@ -10,7 +10,7 @@ spec:
   # List of image pull secrets to use when installing images from a container registry.
   # If specified, secrets must be created in the `tigera-operator` namespace.
   imagePullSecrets:
-    - name: cnx-pull-secret
+    - name: tigera-pull-secret
 
   # Registry to use for pulling Tigera Secure images.
   # registry: <my-registry>
