@@ -19,7 +19,6 @@ import (
 	core "k8s.io/client-go/kubernetes/typed/core/v1"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/statser"
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/sync/globalnetworksets"
 	"github.com/tigera/intrusion-detection/controller/pkg/runloop"
 )
 
@@ -39,7 +38,7 @@ type httpPuller struct {
 	url                 *url.URL
 	header              http.Header
 	period              time.Duration
-	gnsController       globalnetworksets.Controller
+	gnsHandler          gnsHandler
 	persistence         persistence
 	enqueueSyncFunction func()
 	syncFailFunction    SyncFailFunction
@@ -52,19 +51,23 @@ type httpPuller struct {
 type persistence interface {
 	lastModified(ctx context.Context, name string) (time.Time, error)
 	add(ctx context.Context, name string, snapshot interface{}, f func(), st statser.Statser)
-	get(ctx context.Context, name string) (interface{}, error)
 }
 
 type content interface {
 	parse(r io.Reader, logContext *log.Entry) interface{}
-	makeGNS(name string, labels map[string]string, snapshot interface{}) *calico.GlobalNetworkSet
+}
+
+type gnsHandler interface {
+	setFeed(f *calico.GlobalThreatFeed) bool
+	handleSnapshot(ctx context.Context, snapshot interface{}, st statser.Statser, f SyncFailFunction)
+	syncFromDB(ctx context.Context, st statser.Statser)
 }
 
 func (h *httpPuller) SetFeed(f *calico.GlobalThreatFeed) {
 	h.lock.Lock()
 	defer h.lock.Unlock()
 
-	needsSync := h.feed.Spec.GlobalNetworkSet == nil && f.Spec.GlobalNetworkSet != nil
+	needsSync := h.gnsHandler.setFeed(f)
 
 	h.feed = f.DeepCopy()
 	h.needsUpdate = true
@@ -87,7 +90,7 @@ func (h *httpPuller) Run(ctx context.Context, s statser.Statser) {
 
 		syncRunFunc, enqueueSyncFunction := runloop.OnDemand()
 		go syncRunFunc(ctx, func(ctx context.Context, i interface{}) {
-			h.syncGNSFromDB(ctx, s)
+			h.gnsHandler.syncFromDB(ctx, s)
 		})
 		h.enqueueSyncFunction = func() {
 			enqueueSyncFunction(0)
@@ -99,7 +102,7 @@ func (h *httpPuller) Run(ctx context.Context, s statser.Statser) {
 			}
 
 			// Synchronize the GlobalNetworkSet on startup
-			h.syncGNSFromDB(ctx, s)
+			h.gnsHandler.syncFromDB(ctx, s)
 
 			delay := h.getStartupDelay(ctx)
 			if delay > 0 {
@@ -205,15 +208,8 @@ func (h *httpPuller) getStartupDelay(ctx context.Context) time.Duration {
 }
 
 // queryInfo gets the information required for a query in a threadsafe way
-func (h *httpPuller) queryInfo() (name string, u *url.URL, header http.Header, labels map[string]string, gns bool, err error) {
+func (h *httpPuller) queryInfo(s statser.Statser) (name string, u *url.URL, header http.Header, err error) {
 	h.lock.RLock()
-	name = h.feed.Name
-	u = h.url
-	header = h.header
-	if h.feed.Spec.GlobalNetworkSet != nil {
-		gns = true
-		labels = h.feed.Spec.GlobalNetworkSet.Labels
-	}
 
 	if h.needsUpdate {
 		h.lock.RUnlock()
@@ -230,21 +226,18 @@ func (h *httpPuller) queryInfo() (name string, u *url.URL, header http.Header, l
 		name = h.feed.Name
 		u = h.url
 		header = h.header
-		if h.feed.Spec.GlobalNetworkSet != nil {
-			gns = true
-			labels = h.feed.Spec.GlobalNetworkSet.Labels
-		} else {
-			gns = false
-		}
 		h.lock.Unlock()
 	} else {
+		name = h.feed.Name
+		u = h.url
+		header = h.header
 		h.lock.RUnlock()
 	}
 	return
 }
 
 func (h *httpPuller) query(ctx context.Context, st statser.Statser, attempts uint, delay time.Duration) error {
-	name, u, header, labels, gns, err := h.queryInfo()
+	name, u, header, err := h.queryInfo(st)
 	if err != nil {
 		log.WithError(err).Error("failed to query")
 		st.Error(statser.PullFailed, err)
@@ -310,30 +303,9 @@ func (h *httpPuller) query(ctx context.Context, st statser.Statser, attempts uin
 
 	snapshot := h.content.parse(resp.Body, log.WithField("feed", name))
 	h.persistence.add(ctx, name, snapshot, h.syncFailFunction, st)
-	if gns {
-		g := h.content.makeGNS(name, labels, snapshot)
-		h.gnsController.Add(g, h.syncFailFunction, st)
-	}
+	h.gnsHandler.handleSnapshot(ctx, snapshot, st, h.syncFailFunction)
 	st.ClearError(statser.PullFailed)
 	st.SuccessfulSync()
 
 	return nil
-}
-
-func (h *httpPuller) syncGNSFromDB(ctx context.Context, s statser.Statser) {
-	name, _, _, labels, gns, err := h.queryInfo()
-	if err != nil {
-		log.WithError(err).WithField("feed", name).Error("Failed to query")
-		s.Error(statser.GlobalNetworkSetSyncFailed, err)
-	} else if gns {
-		log.WithField("feed", name).Info("Synchronizing GlobalNetworkSet from cached feed contents")
-		ipSet, err := h.persistence.get(ctx, name)
-		if err != nil {
-			log.WithError(err).WithField("feed", name).Error("Failed to load cached feed contents")
-			s.Error(statser.GlobalNetworkSetSyncFailed, err)
-		} else {
-			g := h.content.makeGNS(name, labels, ipSet)
-			h.gnsController.Add(g, func() {}, s)
-		}
-	}
 }

@@ -4,6 +4,7 @@ package puller
 
 import (
 	"context"
+	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -80,6 +81,66 @@ func TestQueryDomainNameSet(t *testing.T) {
 	g.Expect(status.ErrorConditions).Should(HaveLen(0), "Statser errors were not reported")
 }
 
+func TestQueryDomainNameSet_WithGNS(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	input := db.DomainNameSetSpec{
+		"www.badguys.co.uk",
+		"we-love-malware.io ",
+	}
+	expected := db.IPSetSpec{
+		"www.badguys.co.uk",
+		"we-love-malware.io",
+	}
+
+	client := &http.Client{}
+	resp := &http.Response{
+		StatusCode: 200,
+		Body:       ioutil.NopCloser(strings.NewReader(strings.Join(input, "\n"))),
+	}
+	client.Transport = &MockRoundTripper{
+		Response: resp,
+	}
+	s := &statser.MockStatser{}
+	edn := elastic.NewMockDomainNameSetsController()
+
+	ctx, cancel := context.WithCancel(context.TODO())
+	defer cancel()
+
+	f := testGTFDomainNameSet.DeepCopy()
+	f.Spec.GlobalNetworkSet = &v3.GlobalNetworkSetSync{Labels: map[string]string{"key": "value"}}
+	puller := NewDomainNameSetHTTPPuller(f, &db.MockSets{}, &MockConfigMap{}, &MockSecrets{}, client, edn).(*httpPuller)
+
+	go func() {
+		err := puller.query(ctx, s, 1, 0)
+		g.Expect(err).ShouldNot(HaveOccurred())
+	}()
+
+	g.Eventually(edn.Sets).Should(HaveKey(testGTFDomainNameSet.Name))
+	dset, ok := edn.Sets()[testGTFDomainNameSet.Name]
+	g.Expect(ok).Should(BeTrue(), "Received a snapshot")
+	g.Expect(dset).Should(HaveLen(len(expected)))
+	for idx, actual := range dset {
+		g.Expect(actual).Should(Equal(expected[idx]))
+	}
+
+	status := s.Status()
+	// Pull should work as expected, but drop an error about GlobalNetworkSetSync
+	g.Expect(status.LastSuccessfulSync.Time).ShouldNot(Equal(time.Time{}), "Sync time was set")
+	g.Expect(status.LastSuccessfulSearch.Time).Should(Equal(time.Time{}), "Search time was not set")
+	g.Expect(status.ErrorConditions).
+		Should(ConsistOf([]v3.ErrorCondition{{Type: statser.GlobalNetworkSetSyncFailed, Message: "sync not supported for domain name set"}}))
+
+	// Update the feed to remove the GNS and re-query
+	puller.SetFeed(&testGTFDomainNameSet)
+	go func() {
+		err := puller.query(ctx, s, 1, 0)
+		g.Expect(err).ShouldNot(HaveOccurred())
+	}()
+
+	g.Eventually(func() []v3.ErrorCondition { return s.Status().ErrorConditions }).Should(HaveLen(0), "should clear GNS error")
+}
+
 func TestGetStartupDelayDomainNameSet(t *testing.T) {
 	g := NewGomegaWithT(t)
 
@@ -114,4 +175,30 @@ func TestCanonicalizeDNSName(t *testing.T) {
 
 	// Names with corrupted punycode should just be normalized with case and dots
 	g.Expect(canonicalizeDNSName("xn--Mlmer-Srensen-bnb&..gate")).Should(Equal("xn--mlmer-srensen-bnb&.gate"))
+}
+
+func TestSyncGNSFromDB_DomainNameSet(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	ctx, cancel := context.WithCancel(context.TODO())
+	defer cancel()
+
+	feed := testGTFDomainNameSet.DeepCopy()
+	feed.Spec.GlobalNetworkSet = &v3.GlobalNetworkSetSync{Labels: map[string]string{"key": "value"}}
+	dnSet := &db.MockSets{
+		Value: db.DomainNameSetSpec{"baddos.ooo"},
+	}
+	s := &statser.MockStatser{}
+
+	puller := NewDomainNameSetHTTPPuller(feed, dnSet, &MockConfigMap{ConfigMapData: configMapData}, &MockSecrets{SecretsData: secretsData}, nil, nil).(*httpPuller)
+
+	puller.gnsHandler.syncFromDB(ctx, s)
+
+	g.Expect(s.Status().ErrorConditions).
+		Should(ConsistOf([]v3.ErrorCondition{{Type: statser.GlobalNetworkSetSyncFailed, Message: "sync not supported for domain name set"}}))
+
+	// modify to remove GNS sync and resync
+	puller.SetFeed(&testGTFDomainNameSet)
+	puller.gnsHandler.syncFromDB(ctx, s)
+	g.Expect(s.Status().ErrorConditions).To(HaveLen(0))
 }
