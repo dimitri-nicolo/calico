@@ -16,7 +16,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/tigera/es-proxy/pkg/pip"
-	"github.com/tigera/es-proxy/pkg/pip/elastic"
+	"github.com/tigera/lma/pkg/elastic"
 )
 
 const (

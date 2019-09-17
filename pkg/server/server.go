@@ -17,13 +17,12 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/tigera/compliance/pkg/datastore"
-	celastic "github.com/tigera/compliance/pkg/elastic"
+	celastic "github.com/tigera/lma/pkg/elastic"
 
 	"github.com/tigera/es-proxy/pkg/handler"
 	"github.com/tigera/es-proxy/pkg/middleware"
 	"github.com/tigera/es-proxy/pkg/pip"
 	pipcfg "github.com/tigera/es-proxy/pkg/pip/config"
-	"github.com/tigera/es-proxy/pkg/pip/elastic"
 )
 
 var (
@@ -67,7 +66,7 @@ func Start(cfg *Config) error {
 	if cfg.ElasticCAPath != "" {
 		h.Transport = &http.Transport{TLSClientConfig: &tls.Config{RootCAs: rootCAs}}
 	}
-	cesClient, err := celastic.New(h,
+	esClient, err := celastic.New(h,
 		cfg.ElasticURL,
 		cfg.ElasticUsername,
 		cfg.ElasticPassword,
@@ -79,8 +78,6 @@ func Start(cfg *Config) error {
 	if err != nil {
 		return err
 	}
-
-	esClient := elastic.NewFromComplianceClient(cesClient)
 	p := pip.New(policyCalcConfig, k8sClientSet, esClient)
 
 	sm.Handle("/version", http.HandlerFunc(handler.VersionHandler))

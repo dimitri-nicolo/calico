@@ -3,14 +3,15 @@ package pip
 import (
 	"bytes"
 	"context"
+	"text/template"
+
 	"github.com/tigera/es-proxy/pkg/pip/config"
 	"github.com/tigera/es-proxy/pkg/pip/policycalc"
-	"text/template"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	pelastic "github.com/tigera/es-proxy/pkg/pip/elastic"
+	pelastic "github.com/tigera/lma/pkg/elastic"
 )
 
 // epData encapsulates endpoint data for these tests. It is not a full representation, merely enough to make the

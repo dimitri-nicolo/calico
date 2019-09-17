@@ -6,8 +6,8 @@ import (
 
 	"github.com/olivere/elastic"
 
-	pelastic "github.com/tigera/es-proxy/pkg/pip/elastic"
 	"github.com/tigera/es-proxy/pkg/pip/policycalc"
+	pelastic "github.com/tigera/lma/pkg/elastic"
 )
 
 type PIP interface {

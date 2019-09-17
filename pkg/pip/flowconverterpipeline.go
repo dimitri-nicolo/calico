@@ -10,8 +10,8 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
 
-	"github.com/tigera/es-proxy/pkg/pip/elastic"
 	"github.com/tigera/es-proxy/pkg/pip/policycalc"
+	"github.com/tigera/lma/pkg/elastic"
 )
 
 var (

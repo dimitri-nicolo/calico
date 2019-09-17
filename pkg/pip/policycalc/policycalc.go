@@ -6,7 +6,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/projectcalico/libcalico-go/lib/apis/v3"
-	"github.com/tigera/compliance/pkg/resources"
+	"github.com/projectcalico/libcalico-go/lib/resources"
 
 	pipcfg "github.com/tigera/es-proxy/pkg/pip/config"
 )

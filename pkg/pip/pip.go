@@ -9,7 +9,7 @@ import (
 	"github.com/tigera/compliance/pkg/list"
 
 	pipcfg "github.com/tigera/es-proxy/pkg/pip/config"
-	pelastic "github.com/tigera/es-proxy/pkg/pip/elastic"
+	pelastic "github.com/tigera/lma/pkg/elastic"
 )
 
 // New returns a new PIP instance.
