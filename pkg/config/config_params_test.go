@@ -74,6 +74,10 @@ var _ = DescribeTable("Config parsing",
 	Entry("HealthPort", "HealthPort", "1234", int(1234)),
 
 	Entry("PrometheusMetricsEnabled", "PrometheusMetricsEnabled", "true", true),
+	Entry("PrometheusMetricsHost", "PrometheusMetricsHost", "myhostname", "myhostname"),
+	Entry("PrometheusMetricsHost", "PrometheusMetricsHost", "127.0.0.1", "127.0.0.1"),
+	Entry("PrometheusMetricsHost", "PrometheusMetricsHost", "fe80::ea7a:70fa:cf74:25d5", "fe80::ea7a:70fa:cf74:25d5"),
+	Entry("PrometheusMetricsHost", "PrometheusMetricsHost", "my host name", ""),
 	Entry("PrometheusMetricsPort", "PrometheusMetricsPort", "1234", int(1234)),
 	Entry("PrometheusGoMetricsEnabled", "PrometheusGoMetricsEnabled", "false", false),
 	Entry("PrometheusProcessMetricsEnabled", "PrometheusProcessMetricsEnabled", "false", false),
@@ -82,8 +86,9 @@ var _ = DescribeTable("Config parsing",
 var _ = DescribeTable("Config validation",
 	func(settings map[string]string, ok bool) {
 		cfg := New()
-		cfg.UpdateFrom(settings, ConfigFile)
-		err := cfg.Validate()
+		_, err := cfg.UpdateFrom(settings, ConfigFile)
+		Expect(err).NotTo(HaveOccurred())
+		err = cfg.Validate()
 		log.WithError(err).Info("Validation result")
 		if !ok {
 			Expect(err).To(HaveOccurred())

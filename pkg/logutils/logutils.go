@@ -15,7 +15,6 @@
 package logutils
 
 import (
-	"flag"
 	"os"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -82,14 +81,6 @@ func ConfigureEarlyLogging() {
 	}
 	log.SetLevel(logLevelScreen)
 	log.Infof("Early screen log level set to %v", logLevelScreen)
-
-	// Disable to disk logging by glog - this will need to be updated if client-go is
-	// updated to a version making use of klog ( see https://github.com/projectcalico/kube-controllers/pull/362 for more info )
-	err := flag.Set("logtostderr", "true")
-	if err != nil {
-		log.WithError(err).Fatal("Failed to configure logging")
-	}
-	log.Infof("glog logging to disk disabled")
 }
 
 // ConfigureLogging uses the resolved configuration to complete the logging
@@ -161,10 +152,10 @@ func ConfigureLogging(configParams *config.Config) {
 		log.WithError(fileOpenErr).WithField("file", configParams.LogFilePath).
 			Fatal("Failed to open log file.")
 	}
+	// We don't bail out if we can't connect to syslog because our default is to try to
+	// connect but it's very common for syslog to be disabled when we're run in a
+	// container.
 	if sysErr != nil {
-		// We don't bail out if we can't connect to syslog because our default is to try to
-		// connect but it's very common for syslog to be disabled when we're run in a
-		// container.
 		log.WithError(sysErr).Error(
 			"Failed to connect to syslog. To prevent this error, either set config " +
 				"parameter LogSeveritySys=none or configure a local syslog service.")

@@ -410,12 +410,6 @@ func (s *Server) serve(cxt context.Context) {
 	}
 }
 
-func (s *Server) atConnLimit() bool {
-	s.connTrackingLock.Lock()
-	defer s.connTrackingLock.Unlock()
-	return len(s.connIDToConn) >= s.maxConns
-}
-
 func (s *Server) recordConnection(conn *connection) {
 	s.connTrackingLock.Lock()
 	s.connIDToConn[conn.ID] = conn
@@ -673,7 +667,8 @@ func (h *connection) doHandshake() error {
 		Version: buildinfo.GitVersion,
 		// Echo back the SyncerType so that up-level clients know that we understood their request.  Down-level
 		// clients will ignore.
-		SyncerType: syncerType,
+		SyncerType:                  syncerType,
+		SupportsNodeResourceUpdates: true,
 	})
 	if err != nil {
 		log.WithError(err).Warning("Failed to send hello to client")

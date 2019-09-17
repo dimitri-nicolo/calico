@@ -30,10 +30,11 @@ import (
 )
 
 var (
-	IfaceListRegexp = regexp.MustCompile(`^[a-zA-Z0-9_-]{1,15}(,[a-zA-Z0-9_-]{1,15})*$`)
-	AuthorityRegexp = regexp.MustCompile(`^[^:/]+:\d+$`)
-	HostnameRegexp  = regexp.MustCompile(`^[a-zA-Z0-9_.-]+$`)
-	StringRegexp    = regexp.MustCompile(`^.*$`)
+	IfaceListRegexp   = regexp.MustCompile(`^[a-zA-Z0-9_-]{1,15}(,[a-zA-Z0-9_-]{1,15})*$`)
+	AuthorityRegexp   = regexp.MustCompile(`^[^:/]+:\d+$`)
+	HostnameRegexp    = regexp.MustCompile(`^[a-zA-Z0-9_.-]+$`)
+	StringRegexp      = regexp.MustCompile(`^.*$`)
+	HostAddressRegexp = regexp.MustCompile(`^[a-zA-Z0-9:._+-]{1,64}$`)
 )
 
 const (
@@ -103,9 +104,10 @@ type Config struct {
 	LogSeveritySys    string `config:"oneof(DEBUG,INFO,WARNING,ERROR,CRITICAL);INFO"`
 
 	HealthEnabled                   bool   `config:"bool;false"`
-	HealthHost                      string `config:"string;localhost"`
+	HealthHost                      string `config:"host-address;localhost"`
 	HealthPort                      int    `config:"int(0,65535);9098"`
 	PrometheusMetricsEnabled        bool   `config:"bool;false"`
+	PrometheusMetricsHost           string `config:"host-address;"`
 	PrometheusMetricsPort           int    `config:"int(0,65535);9093"`
 	PrometheusGoMetricsEnabled      bool   `config:"bool;true"`
 	PrometheusProcessMetricsEnabled bool   `config:"bool;true"`
@@ -150,8 +152,6 @@ type Config struct {
 	// nameToSource tracks where we loaded each config param from.
 	sourceToRawConfig map[Source]map[string]string
 	rawValues         map[string]string
-
-	numIptablesBitsAllocated int
 }
 
 type ProtoPort struct {
@@ -432,6 +432,9 @@ func loadParams() {
 		case "string":
 			param = &RegexpParam{Regexp: StringRegexp,
 				Msg: "invalid string"}
+		case "host-address":
+			param = &RegexpParam{Regexp: HostAddressRegexp,
+				Msg: "invalid host address"}
 		default:
 			log.Panicf("Unknown type of parameter: %v", kind)
 		}
@@ -439,18 +442,18 @@ func loadParams() {
 		metadata := param.GetMetadata()
 		metadata.Name = field.Name
 		metadata.ZeroValue = reflect.ValueOf(config).FieldByName(field.Name).Interface()
-		if strings.Index(flags, "non-zero") > -1 {
+		if strings.Contains(flags, "non-zero") {
 			metadata.NonZero = true
 		}
-		if strings.Index(flags, "die-on-fail") > -1 {
+		if strings.Contains(flags, "die-on-fail") {
 			metadata.DieOnParseFailure = true
 		}
-		if strings.Index(flags, "local") > -1 {
+		if strings.Contains(flags, "local") {
 			metadata.Local = true
 		}
 
 		if defaultStr != "" {
-			if strings.Index(flags, "skip-default-validation") > -1 {
+			if strings.Contains(flags, "skip-default-validation") {
 				metadata.Default = defaultStr
 			} else {
 				// Parse the default value and save it in the metadata. Doing
