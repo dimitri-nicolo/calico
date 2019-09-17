@@ -193,6 +193,7 @@ var _ = Describe("RouteGenerator", func() {
 			err = rg.svcIndexer.Add(svc)
 			Expect(err).ToNot(HaveOccurred())
 			err = rg.svcIndexer.Add(svcInt)
+			Expect(err).ToNot(HaveOccurred())
 		})
 
 		It("should remove clusterIPs when endpoints are deleted", func() {

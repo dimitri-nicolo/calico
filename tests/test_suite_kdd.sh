@@ -17,6 +17,7 @@ PATH=$PATH:/calico/bin:/calico/bin-node
 # Get this script directory, and source the common testsuite (which contains the actual test)
 script_dir="$(dirname "$0")"
 source "$script_dir/test_suite_common.sh"
+git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
 
 # Set the log output directory and ensure the directory exists.
 export LOGPATH=/tests/logs/kdd

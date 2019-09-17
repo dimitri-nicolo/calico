@@ -89,7 +89,7 @@ endif
 
 EXTRA_DOCKER_ARGS += -v $(GOMOD_CACHE):/go/pkg/mod:rw
 
-DOCKER_RUN := mkdir -p .go-pkg-cache $(GOMOD_CACHE) $(BIN) && \
+DOCKER_RUN := mkdir -p .go-pkg-cache $(GOMOD_CACHE) $(BIN) tests/logs && \
 	docker run --rm \
 		--net=host \
 		$(EXTRA_DOCKER_ARGS) \
@@ -114,6 +114,12 @@ else
 local_build:
 	@echo This is not a local build.
 endif
+
+.PHONY: clean
+clean:
+	rm -rf vendor
+	rm -rf bin/*
+	rm -rf tests/logs
 
 .PHONY: install-git-hooks
 ## Install Git hooks
@@ -158,13 +164,45 @@ guard-ssh-forwarding-bug:
 ###############################################################################
 ## typha
 
+## Set the default upstream repo branch to the current repo's branch,
+## e.g. "master" or "release-vX.Y", but allow it to be overridden.
+PIN_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
+
+## Set the default TYPHA source for this project
+TYPHA_PROJECT_DEFAULT=tigera/typha-private.git
+TYPHA_GLIDE_LABEL=projectcalico/typha
+
+TYPHA_BRANCH?=$(PIN_BRANCH)
+TYPHA_REPO?=github.com/$(TYPHA_PROJECT_DEFAULT)
+TYPHA_VERSION?=$(shell git ls-remote git@github.com:$(TYPHA_PROJECT_DEFAULT) $(TYPHA_BRANCH) 2>/dev/null | cut -f 1)
+
+## Guard to ensure TYPHA repo and branch are reachable
+guard-git-typha:
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(TYPHA_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ;
+	@_scripts/functions.sh ensure_can_reach_repo_branch $(TYPHA_PROJECT_DEFAULT) "$(TYPHA_BRANCH)" "Ensure the branch exists, or set TYPHA_BRANCH variable";
+	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(TYPHA_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
+	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(TYPHA_PROJECT_DEFAULT) "$(TYPHA_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
+	@if [ "$(strip $(TYPHA_VERSION))" = "" ]; then \
+		echo "ERROR: TYPHA version could not be determined"; \
+		exit 1; \
+	fi;
+
 ## Update libary pin in glide.yaml
-update-typha-pin: guard-ssh-forwarding-bug
+update-typha-pin: guard-ssh-forwarding-bug guard-git-typha
+	@$(DOCKER_RUN) $(TOOLING_BUILD) /bin/sh -c '\
+		LABEL="$(TYPHA_GLIDE_LABEL)" \
+		REPO="$(TYPHA_REPO)" \
+		VERSION="$(TYPHA_VERSION)" \
+		DEFAULT_REPO="$(TYPHA_PROJECT_DEFAULT)" \
+		BRANCH="$(TYPHA_BRANCH)" \
+		GLIDE="glide.yaml" \
+		_scripts/update-pin.sh '
+
+###############################################################################
+## Update libary pin in go.mod
+update-typha-pin: guard-ssh-forwarding-bug commit-pin-updates
 
 # Default the typha repo and version but allow them to be overridden
-TYPHA_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
-TYPHA_REPO?=github.com/projectcalico/typha
-TYPHA_VERSION?=$(shell git ls-remote git@github.com:tigera/typha-private $(TYPHA_BRANCH) 2>/dev/null | cut -f 1)
 TYPHA_OLDVER?=$(shell $(DOCKER_RUN) $(CALICO_BUILD) go list -m -f "{{.Version}}" github.com/projectcalico/typha)
 
 ## Update typha pin in go.mod
@@ -172,7 +210,7 @@ update-typha:
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) && \
 	if [[ ! -z "$(TYPHA_VERSION)" ]] && [[ "$(TYPHA_VERSION)" != "$(TYPHA_OLDVER)" ]]; then \
         	echo "Updating typha version $(TYPHA_OLDVER) to $(TYPHA_VERSION) from $(TYPHA_REPO)"; \
-                go get $(TYPHA_REPO)@$(TYPHA_VERSION); \
+                go mod edit -replace github.com/projectcalico/typha=>$(TYPHA_REPO)@$(TYPHA_VERSION); \
 	fi'
 
 git-status:
@@ -197,7 +235,7 @@ commit-pin-updates: update-typha git-status ci git-config git-commit git-push
 ###############################################################################
 .PHONY: static-checks
 static-checks:
-	$(DOCKER_RUN) $(CALICO_BUILD) golangci-lint run --deadline 5m
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); golangci-lint run --deadline 5m'
 
 .PHONY: fix
 ## Fix static checks
@@ -233,7 +271,7 @@ test-kdd: bin/confd bin/kubectl bin/bird bin/bird6 bin/calico-node bin/calicoctl
 		-e UPDATE_EXPECTED_DATA=$(UPDATE_EXPECTED_DATA) \
 		-e GO111MODULE=on \
 		-w /go/src/$(PACKAGE_NAME) \
-		$(CALICO_BUILD) /tests/test_suite_kdd.sh || \
+		$(CALICO_BUILD) /bin/bash -c '$(GIT_CONFIG_SSH); /tests/test_suite_kdd.sh || \
 	{ \
 	    echo; \
 	    echo === confd single-shot log:; \
@@ -246,7 +284,7 @@ test-kdd: bin/confd bin/kubectl bin/bird bin/bird6 bin/calico-node bin/calicoctl
 	    cat tests/logs/kdd/typha || true; \
 	    echo; \
 	    false; \
-	}
+	}'
 	-git clean -fx etc/calico/confd
 
 .PHONY: test-etcd
@@ -263,7 +301,7 @@ test-etcd: bin/confd bin/etcdctl bin/bird bin/bird6 bin/calico-node bin/kubectl 
 		-v $$SSH_AUTH_SOCK:/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent \
 		-e UPDATE_EXPECTED_DATA=$(UPDATE_EXPECTED_DATA) \
 		-e GO111MODULE=on \
-		$(CALICO_BUILD) /tests/test_suite_etcd.sh
+		$(CALICO_BUILD) /bin/bash -c '$(GIT_CONFIG_SSH); /tests/test_suite_etcd.sh'
 	-git clean -fx etc/calico/confd
 
 .PHONY: ut
