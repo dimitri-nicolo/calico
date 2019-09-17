@@ -62,6 +62,163 @@ test_static_routes() {
     unset CALICO_ADVERTISE_CLUSTER_IPS
 }
 
+test_bgp_password() {
+    # Run confd as a background process.
+    echo "Running confd as background process"
+    NODENAME=node1 BGP_LOGSEVERITYSCREEN="debug" confd -confdir=/etc/calico/confd >$LOGPATH/logd1 2>&1 &
+    CONFD_PID=$!
+    echo "Running with PID " $CONFD_PID
+
+    # Turn the node-mesh off.
+    turn_mesh_off
+
+    # Create 4 nodes with various password peerings.
+    calicoctl apply -f - <<EOF
+kind: Node
+apiVersion: projectcalico.org/v3
+metadata:
+  name: node1
+  labels:
+    node: yes
+spec:
+  bgp:
+    ipv4Address: 10.24.0.1/24
+---
+kind: Node
+apiVersion: projectcalico.org/v3
+metadata:
+  name: node2
+  labels:
+    node: yes
+spec:
+  bgp:
+    ipv4Address: 10.24.0.2/24
+---
+kind: Node
+apiVersion: projectcalico.org/v3
+metadata:
+  name: node3
+  labels:
+    node: yes
+spec:
+  bgp:
+    ipv4Address: 10.24.0.3/24
+---
+kind: Node
+apiVersion: projectcalico.org/v3
+metadata:
+  name: node4
+  labels:
+    node: yes
+spec:
+  bgp:
+    ipv4Address: 10.24.0.4/24
+---
+kind: BGPPeer
+apiVersion: projectcalico.org/v3
+metadata:
+  name: bgppeer-1
+spec:
+  nodeSelector: has(node)
+  peerSelector: has(node)
+  password:
+    secretKeyRef:
+      name: my-secrets-1
+      key: a
+---
+kind: BGPPeer
+apiVersion: projectcalico.org/v3
+metadata:
+  name: bgppeer-2
+spec:
+  nodeSelector: has(node)
+  peerIP: 10.24.0.3
+  password:
+    secretKeyRef:
+      name: my-secrets-1
+      key: b
+---
+kind: BGPPeer
+apiVersion: projectcalico.org/v3
+metadata:
+  name: bgppeer-2
+spec:
+  node: node1
+  peerIP: 10.24.10.10
+  password:
+    secretKeyRef:
+      name: my-secrets-2
+      key: c
+EOF
+
+    # Expect 4 peerings, all with no password because we haven't
+    # created the secrets yet.
+    expect_peerings 4 ...
+
+    # Create my-secrets-1 secret with only one of the required keys.
+    kubectl create -f <<EOF
+apiVersion: v1
+kind: Secret
+metadata:
+  name: my-secrets-1
+  namespace: kube-system
+type: Opaque
+stringData:
+  b: password-b
+EOF
+
+    # Expect 4 peerings, all with no password because we haven't
+    # created the secrets yet.
+    expect_peerings 4
+
+    # Update my-secrets-1 secret with the other required key.
+    kubectl apply -f <<EOF
+apiVersion: v1
+kind: Secret
+metadata:
+  name: my-secrets-1
+  namespace: kube-system
+type: Opaque
+stringData:
+  b: password-b
+  a: password-a
+EOF
+
+    # Also create my-secrets-2 secret.
+    kubectl apply -f <<EOF
+apiVersion: v1
+kind: Secret
+metadata:
+  name: my-secrets-2
+  namespace: kube-system
+type: Opaque
+stringData:
+  c: password-c
+EOF
+
+    # Expect 4 peerings, all with no password because we haven't
+    # created the secrets yet.
+    expect_peerings 4
+
+    # Delete one of the nodes.
+    calicoctl delete node node3
+
+    # Expect just 2 peerings.
+    expect_peerings 2
+
+    # Kill confd.
+    kill -9 $CONFD_PID
+
+    # Turn the node-mesh back on.
+    turn_mesh_on
+
+    # Delete remaining resources.
+    calicoctl delete node node1
+    calicoctl delete node node2
+    calicoctl delete node node4
+    calicoctl delete bgppeer bgppeer-1
+}
+
 test_node_deletion() {
     # Run confd as a background process.
     echo "Running confd as background process"
