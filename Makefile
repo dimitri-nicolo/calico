@@ -235,8 +235,7 @@ clean-manifests:
 GINKGO_ARGS += -cover -timeout 20m
 GINKGO = ginkgo $(GINKGO_ARGS)
 
-#test: ut fv st
-test: ut fv st
+test: ut fv
 
 #############################################
 # Run unit level tests
