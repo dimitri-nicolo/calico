@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -35,12 +36,23 @@ type Client interface {
 	api.EventFetcher
 	ClusterIndex(string, string) string
 	Backend() *elastic.Client
+
+	SearchCompositeAggregations(
+		context.Context, *CompositeAggregationQuery, CompositeAggregationKey,
+	) (<-chan *CompositeAggregationBucket, <-chan error)
+
+	Do(ctx context.Context, s *elastic.SearchService) (*elastic.SearchResult, error)
 }
 
 // client implements the Client interface.
 type client struct {
 	*elastic.Client
 	indexSuffix string
+}
+
+// doFunc invokes the Do on the search service. This is added to allow us to mock out the client in test code.
+func (c *client) Do(ctx context.Context, s *elastic.SearchService) (*elastic.SearchResult, error) {
+	return s.Do(ctx)
 }
 
 // MustGetElasticClient returns the elastic Client, or panics if it's not possible.
@@ -187,4 +199,59 @@ func (c *client) Reset() {
 		c.ClusterIndex(AuditLogIndex, "*"),
 		c.ClusterIndex(BenchmarksIndex, "*"),
 	).Do(context.Background())
+}
+
+// NewMockClient creates a mock client used for testing.
+func NewMockClient(doFunc func(ctx context.Context, s *elastic.SearchService) (*elastic.SearchResult, error)) Client {
+	mc := mockComplianceClient{}
+	mc.DoFunc = doFunc
+	return &mc
+}
+
+type mockComplianceClient struct {
+	Client
+	DoFunc func(ctx context.Context, s *elastic.SearchService) (*elastic.SearchResult, error)
+}
+
+func (m mockComplianceClient) Backend() *elastic.Client {
+	return nil
+}
+
+func (m mockComplianceClient) ClusterIndex(string, string) string {
+	return "fake-index"
+}
+
+func (m mockComplianceClient) Do(ctx context.Context, s *elastic.SearchService) (*elastic.SearchResult, error) {
+	return m.DoFunc(ctx, s)
+}
+
+// NewMockSearchClient creates a mock client used for testing search results.
+func NewMockSearchClient(results []interface{}) Client {
+	idx := 0
+
+	doFunc := func(_ context.Context, _ *elastic.SearchService) (*elastic.SearchResult, error) {
+		if idx >= len(results) {
+			return nil, errors.New("Enumerated past end of results")
+		}
+		result := results[idx]
+		idx++
+
+		switch rt := result.(type) {
+		case *elastic.SearchResult:
+			return rt, nil
+		case elastic.SearchResult:
+			return &rt, nil
+		case error:
+			return nil, rt
+		case string:
+			result := new(elastic.SearchResult)
+			decoder := &elastic.DefaultDecoder{}
+			err := decoder.Decode([]byte(rt), result)
+			return result, err
+		}
+
+		return nil, errors.New("Unexpected result type")
+	}
+
+	return NewMockClient(doFunc)
 }
