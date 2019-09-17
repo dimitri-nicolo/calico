@@ -1,3 +1,4 @@
+// Copyright (c) 2015-2019 Tigera, Inc. All rights reserved.
 package utils_test
 
 import (
@@ -26,8 +27,7 @@ var _ = Describe("validate start/endRange of IPAMData", func() {
 	subnet := "10.10.0.0/24"
 
 	It("should return expected start/end range for empty IPAMData", func() {
-		var ipamData map[string]interface{}
-		ipamData = make(map[string]interface{})
+		ipamData := make(map[string]interface{})
 
 		err := utils.UpdateHostLocalIPAMDataForWindows(subnet, ipamData)
 

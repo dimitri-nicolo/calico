@@ -121,7 +121,6 @@ func (c *cniArgs) AsEnv() []string {
 
 func AddNode(c client.Interface, kc *kubernetes.Clientset, host string) error {
 	var err error
-	err = nil
 	if os.Getenv("DATASTORE_TYPE") == "kubernetes" {
 		// create the node in Kubernetes.
 		n := corev1.Node{
@@ -151,11 +150,10 @@ func AddNode(c client.Interface, kc *kubernetes.Clientset, host string) error {
 
 func DeleteNode(c client.Interface, kc *kubernetes.Clientset, host string) error {
 	var err error
-	err = nil
 	if os.Getenv("DATASTORE_TYPE") == "kubernetes" {
 		// delete the node in Kubernetes.
-		err := kc.CoreV1().Nodes().Delete(host, &metav1.DeleteOptions{})
-		log.WithError(err).Info("node deleted")
+		deleteErr := kc.CoreV1().Nodes().Delete(host, &metav1.DeleteOptions{})
+		log.WithError(deleteErr).Info("node deleted")
 	} else {
 		// Otherwise, delete it in Calico.
 		n := api.NewNode()

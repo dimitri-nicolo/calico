@@ -1,3 +1,16 @@
+// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 package scripts_test
 
 import (
@@ -9,6 +22,8 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 )
 
 var secretFile = "tmp/serviceaccount/token"
@@ -45,12 +60,13 @@ func runCniContainer(extraArgs ...string) error {
 		"-v", cwd + "/tmp/serviceaccount:/var/run/secrets/kubernetes.io/serviceaccount",
 	}
 	args = append(args, extraArgs...)
-	image := fmt.Sprintf("%s", os.Getenv("CONTAINER_NAME"))
-	args = append(args, image, "/install-cni.sh")
+	args = append(args, os.Getenv("CONTAINER_NAME"), "/install-cni.sh")
 
 	out, err = exec.Command("docker", args...).CombinedOutput()
-	GinkgoWriter.Write(out)
-
+	_, writeErr := GinkgoWriter.Write(out)
+	if writeErr != nil {
+		log.WithField("out", out).WithError(writeErr).Warn("GinkgoWriter failed to write output from command.")
+	}
 	return err
 }
 
@@ -71,7 +87,7 @@ func cleanup() {
 		"-v", cwd + "/tmp/bin:/host/opt/cni/bin",
 		"-v", cwd + "/tmp/net.d:/host/etc/cni/net.d",
 		"-v", cwd + "/tmp/serviceaccount:/var/run/secrets/kubernetes.io/serviceaccount",
-		fmt.Sprintf("%s", os.Getenv("CONTAINER_NAME")),
+		os.Getenv("CONTAINER_NAME"),
 		"sh", "-c", "rm -rf /host/opt/cni/bin/* /host/etc/cni/net.d/*",
 	}
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
 
 package testutils
 
@@ -164,8 +164,6 @@ func CreateContainer(netconf, podName, podNamespace, ip string) (containerID str
 }
 
 // Create container with the giving containerId when containerId is not empty
-//
-// Deprecated: Please call CreateContainerNamespace and then RunCNIPluginWithID directly.
 func CreateContainerWithId(netconf, podName, podNamespace, ip, overrideContainerID string) (containerID string, result *current.Result, contVeth netlink.Link, contAddr []netlink.Addr, contRoutes []netlink.Route, targetNs ns.NetNS, err error) {
 	targetNs, containerID, err = CreateContainerNamespace()
 	if err != nil {
@@ -398,13 +396,13 @@ func Cmd(cmd string) string {
 	_, _ = ginkgo.GinkgoWriter.Write([]byte(fmt.Sprintf("Running command [%s]\n", cmd)))
 	out, err := exec.Command("bash", "-c", cmd).Output()
 	if err != nil {
-		_, err = ginkgo.GinkgoWriter.Write(out)
-		if err != nil {
-			panic(err)
+		_, writeErr := ginkgo.GinkgoWriter.Write(out)
+		if writeErr != nil {
+			panic(writeErr)
 		}
-		_, err = ginkgo.GinkgoWriter.Write(err.(*exec.ExitError).Stderr)
-		if err != nil {
-			panic(err)
+		_, writeErr = ginkgo.GinkgoWriter.Write(err.(*exec.ExitError).Stderr)
+		if writeErr != nil {
+			panic(writeErr)
 		}
 		ginkgo.Fail("Command failed")
 	}
