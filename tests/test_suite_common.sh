@@ -2,6 +2,9 @@
 
 trap 'echo "\nCaught signal, exiting...\n"; exit 1' SIGINT SIGTERM
 
+# Tell git to ssh instead of https when contacting github
+git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
+
 : ${UPDATE_EXPECTED_DATA:=false}
 
 # Execute the suite of tests.  It is assumed the following environment variables will

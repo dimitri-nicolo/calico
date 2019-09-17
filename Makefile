@@ -22,10 +22,10 @@ BUILDOS ?= $(shell uname -s | tr A-Z a-z)
 
 # canonicalized names for host architecture
 ifeq ($(BUILDARCH),aarch64)
-        BUILDARCH=arm64
+	BUILDARCH=arm64
 endif
 ifeq ($(BUILDARCH),x86_64)
-        BUILDARCH=amd64
+	BUILDARCH=amd64
 endif
 
 # unless otherwise set, I am building for my own architecture, i.e. not cross-compiling
@@ -33,20 +33,16 @@ ARCH ?= $(BUILDARCH)
 
 # canonicalized names for target architecture
 ifeq ($(ARCH),aarch64)
-        override ARCH=arm64
+	override ARCH=arm64
 endif
 ifeq ($(ARCH),x86_64)
     override ARCH=amd64
 endif
 
-###############################################################################
-GO_BUILD_VER?=v0.20
+BIN=bin/$(ARCH)
 
+GO_BUILD_VER?=v0.24
 CALICO_BUILD = calico/go-build:$(GO_BUILD_VER)
-
-#This is a version with known container with compatible versions of sed/grep etc.
-TOOLING_BUILD?=calico/go-build:v0.20
-
 
 CALICOCTL_VER=master
 CALICOCTL_CONTAINER_NAME=gcr.io/unique-caldron-775/cnx/tigera/calicoctl:$(CALICOCTL_VER)-$(ARCH)
@@ -57,27 +53,20 @@ ETCD_VER?=v3.3.7
 BIRD_VER=v0.3.1
 LOCAL_IP_ENV?=$(shell ip route get 8.8.8.8 | head -1 | awk '{print $$7}')
 
-GIT_SHORT_COMMIT:=$(shell git rev-parse --short HEAD || echo '<unknown>')
 GIT_DESCRIPTION:=$(shell git describe --tags || echo '<unknown>')
 LDFLAGS=-ldflags "-X $(PACKAGE_NAME)/pkg/buildinfo.GitVersion=$(GIT_DESCRIPTION)"
-
-# Ensure that the bin directory is always created
-MAKE_SURE_BIN_EXIST := $(shell mkdir -p bin)
 
 # Figure out the users UID.  This is needed to run docker containers
 # as the current user and ensure that files built inside containers are
 # owned by the current user.
 LOCAL_USER_ID?=$(shell id -u $$USER)
 
-PACKAGE_NAME?=github.com/kelseyhightower/confd
+EXTRA_DOCKER_ARGS	+= -e GO111MODULE=on -e GOPRIVATE=github.com/tigera/*
+GIT_CONFIG_SSH		?= git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
+PACKAGE_NAME		?= github.com/kelseyhightower/confd
 
 # All go files.
 SRC_FILES:=$(shell find . -name '*.go' -not -path "./vendor/*" )
-
-# Files to include in the Windows ZIP archive.
-WINDOWS_BUILT_FILES := windows-packaging/tigera-confd.exe
-# Name of the Windows release ZIP archive.
-WINDOWS_ARCHIVE := dist/tigera-confd-windows-$(VERSION).zip
 
 # Allow libcalico-go and the ssh auth sock to be mapped into the build container.
 ifdef LIBCALICOGO_PATH
@@ -87,26 +76,44 @@ ifdef SSH_AUTH_SOCK
   EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
 endif
 
+# Volume-mount gopath into the build container to cache go module's packages. If the environment is using multiple
+# comma-separated directories for gopath, use the first one, as that is the default one used by go modules.
+ifneq ($(GOPATH),)
+	# If the environment is using multiple comma-separated directories for gopath, use the first one, as that
+	# is the default one used by go modules.
+	GOMOD_CACHE = $(shell echo $(GOPATH) | cut -d':' -f1)/pkg/mod
+else
+	# If gopath is empty, default to $(HOME)/go.
+	GOMOD_CACHE = $(HOME)/go/pkg/mod
+endif
 
-DOCKER_RUN := mkdir -p .go-pkg-cache && \
-                   docker run --rm \
-                              --net=host \
-                              $(EXTRA_DOCKER_ARGS) \
-                              -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-                              -v $(HOME)/.glide:/home/user/.glide:rw \
-                              -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
-                              -v $(CURDIR)/.go-pkg-cache:/go/pkg:rw \
-                              -w /go/src/$(PACKAGE_NAME) \
-                              -e GOARCH=$(ARCH)
+EXTRA_DOCKER_ARGS += -v $(GOMOD_CACHE):/go/pkg/mod:rw
 
+DOCKER_RUN := mkdir -p .go-pkg-cache $(GOMOD_CACHE) $(BIN) && \
+	docker run --rm \
+		--net=host \
+		$(EXTRA_DOCKER_ARGS) \
+		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+		-e GOCACHE=/go-cache \
+		-e GOARCH=$(ARCH) \
+		-e GOPATH=/go \
+		-v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
+		-v $(CURDIR)/.go-pkg-cache:/go-cache:rw \
+		-w /go/src/$(PACKAGE_NAME)
 
-.PHONY: clean
-clean:
-	rm -rf bin/*
-	rm -rf tests/logs
+# TODO: re-enable local builds
+# Build mounts for running in "local build" mode. This allows an easy build using local development code,
+# assuming that there is a local checkout of libcalico in the same directory as this repo.
+PHONY:local_build
 
-# Always install the git hooks to prevent publishing closed source code to a non-private repo.
-hooks_installed:=$(shell ./install-git-hooks)
+ifdef LOCAL_BUILD
+EXTRA_DOCKER_ARGS+=-v $(CURDIR)/../libcalico-go:/go/src/github.com/projectcalico/libcalico-go:rw
+local_build:
+	@echo Local builds are currently not supported.
+else
+local_build:
+	@echo This is not a local build.
+endif
 
 .PHONY: install-git-hooks
 ## Install Git hooks
@@ -121,19 +128,11 @@ build-all: $(addprefix sub-build-,$(VALIDARCHES))
 sub-build-%:
 	$(MAKE) build ARCH=$*
 
-## Create the vendor directory
-vendor: glide.lock
-	# Ensure that the glide cache directory exists.
-	mkdir -p $(HOME)/.glide
-	$(DOCKER_RUN) $(CALICO_BUILD) glide install -strip-vendor
-
-
-bin/confd-$(ARCH): $(SRC_FILES) vendor
-	$(DOCKER_RUN) $(CALICO_BUILD) \
-	    sh -c 'go build -v -i -o $@ $(LDFLAGS) "$(PACKAGE_NAME)" && \
-		( ldd bin/confd-$(ARCH) 2>&1 | grep -q -e "Not a valid dynamic program" \
-			-e "not a dynamic executable" || \
-	             ( echo "Error: bin/confd was not statically linked"; false ) )'
+bin/confd-$(ARCH): $(SRC_FILES)
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) && \
+		go build -v -i -o $@ $(LDFLAGS) "$(PACKAGE_NAME)" && \
+		( ldd bin/confd-$(ARCH) 2>&1 | grep -q -e "Not a valid dynamic program" -e "not a dynamic executable" || \
+		( echo "Error: bin/confd was not statically linked"; false ) )'
 
 bin/confd: bin/confd-$(ARCH)
 ifeq ($(ARCH),amd64)
@@ -141,37 +140,12 @@ ifeq ($(ARCH),amd64)
 endif
 
 # Cross-compile confd for Windows
-windows-packaging/tigera-confd.exe: $(SRC_FILES) vendor
+windows-packaging/tigera-confd.exe: $(SRC_FILES)
 	@echo Building confd for Windows...
-	mkdir -p bin
-	$(DOCKER_RUN) $(CALICO_BUILD) \
-           sh -c 'GOOS=windows go build -v -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)" && \
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) && \
+		GOOS=windows go build -v -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)" && \
 		( ldd $@ 2>&1 | grep -q "Not a valid dynamic program" || \
 		( echo "Error: $@ was not statically linked"; false ) )'
-
-
-
-###############################################################################
-# Managing the upstream library pins
-#
-# If you're updating the pins with a non-release branch checked out,
-# set PIN_BRANCH to the parent branch, e.g.:
-#
-#     PIN_BRANCH=release-v2.5 make update-pins
-#        - or -
-#     PIN_BRANCH=master make update-pins
-#
-###############################################################################
-
-## Update dependency pins in glide.yaml
-update-pins: update-typha-pin
-	docker run --rm \
-        -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw $$EXTRA_DOCKER_BIND \
-        -v $(HOME)/.glide:/home/user/.glide:rw \
-        -v $$SSH_AUTH_SOCK:/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent \
-        -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-        -w /go/src/$(PACKAGE_NAME) \
-        $(CALICO_BUILD) glide up --strip-vendor
 
 ## Guard so we don't run this on osx because of ssh-agent to docker forwarding bug
 guard-ssh-forwarding-bug:
@@ -182,62 +156,57 @@ guard-ssh-forwarding-bug:
 	fi;
 
 ###############################################################################
-## Set the default upstream repo branch to the current repo's branch,
-## e.g. "master" or "release-vX.Y", but allow it to be overridden.
-PIN_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
-
-
-###############################################################################
 ## typha
 
-## Set the default TYPHA source for this project
-TYPHA_PROJECT_DEFAULT=tigera/typha-private.git
-TYPHA_GLIDE_LABEL=projectcalico/typha
-
-TYPHA_BRANCH?=$(PIN_BRANCH)
-TYPHA_REPO?=github.com/$(TYPHA_PROJECT_DEFAULT)
-TYPHA_VERSION?=$(shell git ls-remote git@github.com:$(TYPHA_PROJECT_DEFAULT) $(TYPHA_BRANCH) 2>/dev/null | cut -f 1)
-
-## Guard to ensure TYPHA repo and branch are reachable
-guard-git-typha:
-	@_scripts/functions.sh ensure_can_reach_repo_branch $(TYPHA_PROJECT_DEFAULT) "master" "Ensure your ssh keys are correct and that you can access github" ;
-	@_scripts/functions.sh ensure_can_reach_repo_branch $(TYPHA_PROJECT_DEFAULT) "$(TYPHA_BRANCH)" "Ensure the branch exists, or set TYPHA_BRANCH variable";
-	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(TYPHA_PROJECT_DEFAULT) "master" "Build container error, ensure ssh-agent is forwarding the correct keys."';
-	@$(DOCKER_RUN) $(CALICO_BUILD) sh -c '_scripts/functions.sh ensure_can_reach_repo_branch $(TYPHA_PROJECT_DEFAULT) "$(TYPHA_BRANCH)" "Build container error, ensure ssh-agent is forwarding the correct keys."';
-	@if [ "$(strip $(TYPHA_VERSION))" = "" ]; then \
-		echo "ERROR: TYPHA version could not be determined"; \
-		exit 1; \
-	fi;
-
 ## Update libary pin in glide.yaml
-update-typha-pin: guard-ssh-forwarding-bug guard-git-typha
-	@$(DOCKER_RUN) $(TOOLING_BUILD) /bin/sh -c '\
-		LABEL="$(TYPHA_GLIDE_LABEL)" \
-		REPO="$(TYPHA_REPO)" \
-		VERSION="$(TYPHA_VERSION)" \
-		DEFAULT_REPO="$(TYPHA_PROJECT_DEFAULT)" \
-		BRANCH="$(TYPHA_BRANCH)" \
-		GLIDE="glide.yaml" \
-		_scripts/update-pin.sh '
+update-typha-pin: guard-ssh-forwarding-bug
 
+# Default the typha repo and version but allow them to be overridden
+TYPHA_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
+TYPHA_REPO?=github.com/projectcalico/typha
+TYPHA_VERSION?=$(shell git ls-remote git@github.com:tigera/typha-private $(TYPHA_BRANCH) 2>/dev/null | cut -f 1)
+TYPHA_OLDVER?=$(shell $(DOCKER_RUN) $(CALICO_BUILD) go list -m -f "{{.Version}}" github.com/projectcalico/typha)
+
+## Update typha pin in go.mod
+update-typha:
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) && \
+	if [[ ! -z "$(TYPHA_VERSION)" ]] && [[ "$(TYPHA_VERSION)" != "$(TYPHA_OLDVER)" ]]; then \
+        	echo "Updating typha version $(TYPHA_OLDVER) to $(TYPHA_VERSION) from $(TYPHA_REPO)"; \
+                go get $(TYPHA_REPO)@$(TYPHA_VERSION); \
+	fi'
+
+git-status:
+	git status --porcelain
+
+git-config:
+ifdef CONFIRM
+	git config --global user.name "Semaphore Automatic Update"
+	git config --global user.email "marvin@tigera.io"
+endif
+
+git-commit:
+	git diff-index --quiet HEAD || git commit -m "Semaphore Automatic Update" go.mod go.sum
+
+git-push:
+	git push
+
+commit-pin-updates: update-typha git-status ci git-config git-commit git-push
 
 ###############################################################################
 # Static checks
 ###############################################################################
 .PHONY: static-checks
-## Perform static checks on the code.
-static-checks: vendor
-	docker run --rm \
-		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-		-v $(CURDIR):/go/src/$(PACKAGE_NAME) \
-		-w /go/src/$(PACKAGE_NAME) \
-		$(CALICO_BUILD) \
-		gometalinter --deadline=300s --disable-all --enable=vet --enable=errcheck  --enable=goimports --vendor --exclude=vendor ./...
+static-checks:
+	$(DOCKER_RUN) $(CALICO_BUILD) golangci-lint run --deadline 5m
 
 .PHONY: fix
 ## Fix static checks
 fix:
 	goimports -w $(SRC_FILES)
+
+.PHONY: foss-checks
+foss-checks:
+	$(DOCKER_RUN) -e FOSSA_API_KEY=$(FOSSA_API_KEY) $(CALICO_BUILD) /usr/local/bin/fossa
 
 ###############################################################################
 # Unit Tests
@@ -253,14 +222,17 @@ test-kdd: bin/confd bin/kubectl bin/bird bin/bird6 bin/calico-node bin/calicoctl
 	-git clean -fx etc/calico/confd
 	docker run --rm --net=host \
 		-v $(CURDIR)/tests/:/tests/ \
-		-v $(CURDIR)/vendor:/vendor/ \
 		-v $(CURDIR)/bin:/calico/bin/ \
 		-v $(CURDIR)/etc/calico:/etc/calico/ \
+		-v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
+		-e GOPATH=/go \
 		-e LOCAL_USER_ID=0 \
 		-v $$SSH_AUTH_SOCK:/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent \
 		-e FELIX_TYPHAADDR=127.0.0.1:5473 \
 		-e FELIX_TYPHAREADTIMEOUT=50 \
 		-e UPDATE_EXPECTED_DATA=$(UPDATE_EXPECTED_DATA) \
+		-e GO111MODULE=on \
+		-w /go/src/$(PACKAGE_NAME) \
 		$(CALICO_BUILD) /tests/test_suite_kdd.sh || \
 	{ \
 	    echo; \
@@ -273,8 +245,8 @@ test-kdd: bin/confd bin/kubectl bin/bird bin/bird6 bin/calico-node bin/calicoctl
 	    echo === Typha log:; \
 	    cat tests/logs/kdd/typha || true; \
 	    echo; \
-            false; \
-        }
+	    false; \
+	}
 	-git clean -fx etc/calico/confd
 
 .PHONY: test-etcd
@@ -285,22 +257,19 @@ test-etcd: bin/confd bin/etcdctl bin/bird bin/bird6 bin/calico-node bin/kubectl 
 		-v $(CURDIR)/tests/:/tests/ \
 		-v $(CURDIR)/bin:/calico/bin/ \
 		-v $(CURDIR)/etc/calico:/etc/calico/ \
+		-v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
+		-e GOPATH=/go \
 		-e LOCAL_USER_ID=0 \
 		-v $$SSH_AUTH_SOCK:/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent \
 		-e UPDATE_EXPECTED_DATA=$(UPDATE_EXPECTED_DATA) \
+		-e GO111MODULE=on \
 		$(CALICO_BUILD) /tests/test_suite_etcd.sh
 	-git clean -fx etc/calico/confd
 
 .PHONY: ut
 ## Run the fast set of unit tests in a container.
-ut: vendor
-	-mkdir -p .go-pkg-cache
-	docker run --rm -t --privileged --net=host \
-		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-		-v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
-		-v $(CURDIR)/.go-pkg-cache:/go-cache/:rw \
-		-e GOCACHE=/go-cache \
-		$(CALICO_BUILD) sh -c 'cd /go/src/$(PACKAGE_NAME) && ginkgo -r --skipPackage vendor $(GINKGO_ARGS) .'
+ut:
+	$(DOCKER_RUN) --privileged $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) && cd /go/src/$(PACKAGE_NAME) && ginkgo -r .'
 
 ## Etcd is used by the kubernetes
 # NOTE: https://quay.io/repository/coreos/etcd is available *only* for the following archs with the following tags:
@@ -314,6 +283,7 @@ COREOS_ETCD = quay.io/coreos/etcd:$(ETCD_VER)
 endif
 run-etcd: stop-etcd
 	docker run --detach \
+	-e GO111MODULE=on \
 	--net=host \
 	--name calico-etcd $(COREOS_ETCD) \
 	etcd \
@@ -383,14 +353,6 @@ bin/typha:
 	  touch $@
 	-docker rm -f confd-typha
 
-foss-checks: vendor
-	@echo Running $@...
-	@docker run --rm -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
-	  -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-	  -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
-	  -w /go/src/$(PACKAGE_NAME) \
-	  $(CALICO_BUILD) /usr/local/bin/fossa
-
 ###############################################################################
 # CI
 ###############################################################################
@@ -429,9 +391,9 @@ release-publish: release-prereqs
 	# Push the git tag.
 	git push origin $(VERSION)
 
-	@echo "Finalize the GitHub release based on the pushed tag."
+	@echo "Confirm that the release was published at the following URL."
 	@echo ""
-	@echo "  https://github.com/projectcalico/confd/releases/tag/$(VERSION)"
+	@echo "  https://$(PACKAGE_NAME)/releases/tag/$(VERSION)"
 	@echo ""
 
 # release-prereqs checks that the environment is configured properly to create a release.
@@ -439,6 +401,11 @@ release-prereqs:
 ifndef VERSION
 	$(error VERSION is undefined - run using make release VERSION=vX.Y.Z)
 endif
+
+# Files to include in the Windows ZIP archive.
+WINDOWS_BUILT_FILES := windows-packaging/tigera-confd.exe
+# Name of the Windows release ZIP archive.
+WINDOWS_ARCHIVE := dist/tigera-confd-windows-$(VERSION).zip
 
 ## Produces the Windows ZIP archive for the release.
 release-windows-archive $(WINDOWS_ARCHIVE): release-prereqs $(WINDOWS_BUILT_FILES)
@@ -459,24 +426,20 @@ help:
 	@echo
 	@echo "  make build ARCH=arm64"
 	@echo
-	@echo "Initial set-up:"
-	@echo
-	@echo "  make vendor  Update/install the go build dependencies."
-	@echo
 	@echo "Builds:"
 	@echo
-	@echo "  make build           Build the binary."
+	@echo "  make build	Build the binary."
 	@echo
 	@echo "Tests:"
 	@echo
-	@echo "  make test                Run all tests."
-	@echo "  make test-kdd            Run kdd tests."
-	@echo "  make test-etcd           Run etcd tests."
+	@echo "  make test	Run all tests."
+	@echo "  make test-kdd	Run kdd tests."
+	@echo "  make test-etcd	Run etcd tests."
 	@echo
 	@echo "Maintenance:"
-	@echo "  make clean         Remove binary files and docker images."
+	@echo "  make clean	Remove binary files and docker images."
 	@echo "-----------------------------------------"
-	@echo "ARCH (target):          $(ARCH)"
-	@echo "BUILDARCH (host):       $(BUILDARCH)"
-	@echo "CALICO_BUILD:     $(CALICO_BUILD)"
+	@echo "ARCH (target):	$(ARCH)"
+	@echo "BUILDARCH (host):$(BUILDARCH)"
+	@echo "CALICO_BUILD:	$(CALICO_BUILD)"
 	@echo "-----------------------------------------"
