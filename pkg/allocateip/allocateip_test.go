@@ -568,6 +568,34 @@ func (c shimClient) ClusterInformation() client.ClusterInformationInterface {
 	return c.client.ClusterInformation()
 }
 
-func (c shimClient) EnsureInitialized(ctx context.Context, calicoVersion, clusterType string) error {
+func (c shimClient) EnsureInitialized(ctx context.Context, calicoVersion, cnxVersion string, clusterType string) error {
 	return nil
+}
+
+func (c shimClient) GlobalThreatFeeds() client.GlobalThreatFeedInterface {
+	panic("not implemented")
+}
+
+func (c shimClient) GlobalReportTypes() client.GlobalReportTypeInterface {
+	panic("not implemented")
+}
+
+func (c shimClient) GlobalReports() client.GlobalReportInterface {
+	panic("not implemented")
+}
+
+func (c shimClient) LicenseKey() client.LicenseKeyInterface {
+	panic("not implemented")
+}
+
+func (c shimClient) Tiers() client.TierInterface {
+	panic("not implemented")
+}
+
+func (c shimClient) RemoteClusterConfigurations() client.RemoteClusterConfigurationInterface {
+	panic("not implemented")
+}
+
+func (c shimClient) ManagedClusters() client.ManagedClusterInterface {
+	panic("not implemented")
 }

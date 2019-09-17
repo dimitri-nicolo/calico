@@ -195,7 +195,7 @@ class DockerHost(object):
         self.execute(cmd)
 
     def assert_is_live(self, felix=True):
-        cmd = "docker exec calico-node /bin/calico-node"
+        cmd = "docker exec cnx-node /bin/calico-node"
         if felix:
             cmd += " -felix-live"
 
@@ -484,7 +484,6 @@ class DockerHost(object):
             # For non Docker-in-Docker, we can only remove the containers we
             # created - so remove the workloads and delete the calico node.
             self.remove_workloads()
-            self.cleanup_networks()
             log_and_run("docker rm -f cnx-node || true")
 
         self._cleaned = True
