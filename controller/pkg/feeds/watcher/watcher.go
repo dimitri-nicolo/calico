@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	libcalicov3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	log "github.com/sirupsen/logrus"
 	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	v32 "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
@@ -47,10 +48,13 @@ type watcher struct {
 	globalThreatFeedClient v32.GlobalThreatFeedInterface
 	globalNetworkSetClient v32.GlobalNetworkSetInterface
 	gnsController          globalnetworksets.Controller
-	elasticController      elastic.IPSetController
+	ipsController          elastic.IPSetController
+	dnsController          elastic.DomainNameSetController
 	httpClient             *http.Client
 	ipSet                  db.IPSet
+	dnSet                  db.DomainNameSet
 	suspiciousIP           db.SuspiciousSet
+	suspiciousDomains      db.SuspiciousSet
 	events                 db.Events
 	feedWatchers           map[string]*feedWatcher
 	feedWatchersMutex      sync.RWMutex
@@ -81,10 +85,13 @@ func NewWatcher(
 	secretsClient v1.SecretInterface,
 	globalThreatFeedInterface v32.GlobalThreatFeedInterface,
 	globalNetworkSetController globalnetworksets.Controller,
-	elasticController elastic.IPSetController,
+	ipsController elastic.IPSetController,
+	dnsController elastic.DomainNameSetController,
 	httpClient *http.Client,
 	ipSet db.IPSet,
+	dnSet db.DomainNameSet,
 	suspiciousIP db.SuspiciousSet,
+	suspiciousDomains db.SuspiciousSet,
 	events db.Events,
 ) Watcher {
 	feedWatchers := map[string]*feedWatcher{}
@@ -102,10 +109,13 @@ func NewWatcher(
 		secretsClient:          secretsClient,
 		globalThreatFeedClient: globalThreatFeedInterface,
 		gnsController:          globalNetworkSetController,
-		elasticController:      elasticController,
+		ipsController:          ipsController,
+		dnsController:          dnsController,
 		httpClient:             httpClient,
 		ipSet:                  ipSet,
+		dnSet:                  dnSet,
 		suspiciousIP:           suspiciousIP,
+		suspiciousDomains:      suspiciousDomains,
 		events:                 events,
 		feedWatchers:           feedWatchers,
 		ping:                   make(chan struct{}),
@@ -139,11 +149,12 @@ func (s *watcher) Run(ctx context.Context) {
 			s.controller.Run(s.ctx.Done())
 		}()
 
-		// The elasticController can start running right away. It waits for
+		// The ipsController/dnsController can start running right away. It waits for
 		// StartGC() before it does reconciliation. Note that the gnsController
 		// should *not* be started before everything is synced, since it will
 		// start reconciliation as soon as we call Run() on it.
-		s.elasticController.Run(s.ctx)
+		s.ipsController.Run(s.ctx)
+		s.dnsController.Run(s.ctx)
 
 		// We need to wait until we sync all GlobalThreatFeeds before starting
 		// the GlobalNetworkSet controller. This is because the GlobalNetworkSet
@@ -159,7 +170,8 @@ func (s *watcher) Run(ctx context.Context) {
 			}
 			log.Debug("GlobalThreatFeed controller synced")
 			s.gnsController.Run(s.ctx)
-			s.elasticController.StartReconciliation(s.ctx)
+			s.ipsController.StartReconciliation(s.ctx)
+			s.dnsController.StartReconciliation(s.ctx)
 		}()
 
 	})
@@ -221,6 +233,17 @@ func (s *watcher) processQueue(obj interface{}) error {
 }
 
 func (s *watcher) startFeedWatcher(ctx context.Context, f *v3.GlobalThreatFeed) {
+	switch f.Spec.Content {
+	case libcalicov3.ThreatFeedContentIPset:
+		s.startFeedWatcherIP(ctx, f)
+	case libcalicov3.ThreatFeedContentDomainNameSet:
+		s.startFeedWatcherDomains(ctx, f)
+	default:
+		s.startFeedWatcherIP(ctx, f)
+	}
+}
+
+func (s *watcher) startFeedWatcherIP(ctx context.Context, f *v3.GlobalThreatFeed) {
 	if _, ok := s.getFeedWatcher(f.Name); ok {
 		panic(fmt.Sprintf("Feed %s already started", f.Name))
 	}
@@ -238,16 +261,44 @@ func (s *watcher) startFeedWatcher(ctx context.Context, f *v3.GlobalThreatFeed) 
 	s.setFeedWatcher(f.Name, &fw)
 
 	if fCopy.Spec.Pull != nil && fCopy.Spec.Pull.HTTP != nil {
-		fw.puller = puller.NewIPSetHTTPPuller(fCopy, s.ipSet, s.configMapClient, s.secretsClient, s.httpClient, s.gnsController, s.elasticController)
+		fw.puller = puller.NewIPSetHTTPPuller(fCopy, s.ipSet, s.configMapClient, s.secretsClient, s.httpClient, s.gnsController, s.ipsController)
 		fw.puller.Run(ctx, fw.statser)
 	} else {
 		fw.puller = nil
 	}
-	s.elasticController.NoGC(ctx, fCopy.Name)
+	s.ipsController.NoGC(ctx, fCopy.Name)
 
 	if fCopy.Spec.GlobalNetworkSet != nil {
 		s.gnsController.NoGC(util.NewGlobalNetworkSet(fCopy.Name))
 	}
+
+	fw.searcher.Run(ctx, fw.statser)
+}
+
+func (s *watcher) startFeedWatcherDomains(ctx context.Context, f *v3.GlobalThreatFeed) {
+	if _, ok := s.getFeedWatcher(f.Name); ok {
+		panic(fmt.Sprintf("Feed %s already started", f.Name))
+	}
+
+	fCopy := f.DeepCopy()
+	st := statser.NewStatser(f.Name, s.globalThreatFeedClient)
+	st.Run(ctx)
+
+	fw := feedWatcher{
+		feed:     fCopy,
+		searcher: searcher.NewSearcher(fCopy, time.Minute, s.suspiciousDomains, s.events),
+		statser:  st,
+	}
+
+	s.setFeedWatcher(f.Name, &fw)
+
+	if fCopy.Spec.Pull != nil && fCopy.Spec.Pull.HTTP != nil {
+		fw.puller = puller.NewDomainNameSetHTTPPuller(fCopy, s.dnSet, s.configMapClient, s.secretsClient, s.httpClient, s.dnsController)
+		fw.puller.Run(ctx, fw.statser)
+	} else {
+		fw.puller = nil
+	}
+	s.dnsController.NoGC(ctx, fCopy.Name)
 
 	fw.searcher.Run(ctx, fw.statser)
 }
@@ -259,6 +310,23 @@ func (s *watcher) updateFeedWatcher(ctx context.Context, oldFeed, newFeed *v3.Gl
 	}
 
 	fw.feed = newFeed.DeepCopy()
+
+	// Has it changed Content?
+	oldContent := libcalicov3.ThreatFeedContentIPset // the default
+	if oldFeed.Spec.Content != "" {
+		oldContent = oldFeed.Spec.Content
+	}
+	newContent := libcalicov3.ThreatFeedContentIPset
+	if newFeed.Spec.Content != "" {
+		newContent = newFeed.Spec.Content
+	}
+	if oldContent != newContent {
+		// It has changed content.  Stop the old and start the new.
+		s.stopFeedWatcher(ctx, newFeed.Name)
+		s.startFeedWatcher(ctx, newFeed)
+		return
+	}
+
 	if fw.feed.Spec.Pull != nil && fw.feed.Spec.Pull.HTTP != nil {
 		if util.FeedNeedsRestart(oldFeed, fw.feed) {
 			s.restartPuller(ctx, newFeed)
@@ -296,7 +364,14 @@ func (s *watcher) restartPuller(ctx context.Context, f *v3.GlobalThreatFeed) {
 	}
 
 	if fw.feed.Spec.Pull != nil && fw.feed.Spec.Pull.HTTP != nil {
-		fw.puller = puller.NewIPSetHTTPPuller(fw.feed, s.ipSet, s.configMapClient, s.secretsClient, s.httpClient, s.gnsController, s.elasticController)
+		switch fw.feed.Spec.Content {
+		case libcalicov3.ThreatFeedContentIPset:
+			fw.puller = puller.NewIPSetHTTPPuller(fw.feed, s.ipSet, s.configMapClient, s.secretsClient, s.httpClient, s.gnsController, s.ipsController)
+		case libcalicov3.ThreatFeedContentDomainNameSet:
+			fw.puller = puller.NewDomainNameSetHTTPPuller(fw.feed, s.dnSet, s.configMapClient, s.secretsClient, s.httpClient, s.dnsController)
+		default:
+			fw.puller = puller.NewIPSetHTTPPuller(fw.feed, s.ipSet, s.configMapClient, s.secretsClient, s.httpClient, s.gnsController, s.ipsController)
+		}
 		fw.puller.Run(ctx, fw.statser)
 	} else {
 		fw.puller = nil
@@ -316,7 +391,10 @@ func (s *watcher) stopFeedWatcher(ctx context.Context, name string) {
 	}
 	gns := util.NewGlobalNetworkSet(name)
 	s.gnsController.Delete(gns)
-	s.elasticController.Delete(ctx, name)
+	// Feeds have unique names and Delete is idempotent, so just delete from all
+	// set controllers.
+	s.ipsController.Delete(ctx, name)
+	s.dnsController.Delete(ctx, name)
 
 	fw.searcher.Close()
 	fw.statser.Close()

@@ -155,7 +155,9 @@ func main() {
 
 	gns := globalnetworksets.NewController(calicoClient.ProjectcalicoV3().GlobalNetworkSets())
 	eip := syncElastic.NewIPSetController(e)
+	edn := syncElastic.NewDomainNameSetController(e)
 	sIP := events.NewSuspiciousIP(e)
+	sDN := events.NewSuspiciousDomainNameSet(e)
 
 	s := watcher.NewWatcher(
 		k8sClient.CoreV1().ConfigMaps(ConfigMapNamespace),
@@ -163,8 +165,9 @@ func main() {
 		calicoClient.ProjectcalicoV3().GlobalThreatFeeds(),
 		gns,
 		eip,
+		edn,
 		&http.Client{},
-		e, sIP, e)
+		e, e, sIP, sDN, e)
 	s.Run(ctx)
 	defer s.Close()
 

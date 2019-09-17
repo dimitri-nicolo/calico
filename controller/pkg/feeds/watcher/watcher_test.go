@@ -33,11 +33,12 @@ func TestWatcher_processQueue(t *testing.T) {
 	ipSet := &db.MockSets{}
 	gns := globalnetworksets.NewMockGlobalNetworkSetController()
 	eip := elastic.NewMockElasticIPSetController()
+	edn := elastic.NewMockDomainNameSetsController()
 	gtf := &calico.MockGlobalThreatFeedInterface{
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
 
-	w := NewWatcher(nil, nil, gtf, gns, eip, testClient, ipSet, &db.MockSuspicious{}, &db.MockEvents{}).(*watcher)
+	w := NewWatcher(nil, nil, gtf, gns, eip, edn, testClient, ipSet, nil, &db.MockSuspicious{}, nil, &db.MockEvents{}).(*watcher)
 
 	g.Expect(w).ShouldNot(BeNil())
 
@@ -139,7 +140,7 @@ func TestWatcher_processQueue(t *testing.T) {
 	g.Expect(ok).Should(BeFalse())
 }
 
-func TestWatcher_startFeed_stopFeed(t *testing.T) {
+func TestWatcher_startFeed_stopFeed_IPSet(t *testing.T) {
 	g := NewGomegaWithT(t)
 
 	f := &v3.GlobalThreatFeed{
@@ -168,11 +169,12 @@ func TestWatcher_startFeed_stopFeed(t *testing.T) {
 	ipSet := &db.MockSets{}
 	gns := globalnetworksets.NewMockGlobalNetworkSetController()
 	eip := elastic.NewMockElasticIPSetController()
+	edn := elastic.NewMockDomainNameSetsController()
 	gtf := &calico.MockGlobalThreatFeedInterface{
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
 
-	w := NewWatcher(nil, nil, gtf, gns, eip, testClient, ipSet, &db.MockSuspicious{}, &db.MockEvents{}).(*watcher)
+	w := NewWatcher(nil, nil, gtf, gns, eip, edn, testClient, ipSet, nil, &db.MockSuspicious{}, nil, &db.MockEvents{}).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -198,7 +200,62 @@ func TestWatcher_startFeed_stopFeed(t *testing.T) {
 	g.Expect(eip.NotGCable()).ShouldNot(HaveKey(f.Name))
 }
 
-func TestWatcher_startFeed_NoPull(t *testing.T) {
+func TestWatcher_startFeed_stopFeed_DomainNameSet(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	f := &v3.GlobalThreatFeed{
+		ObjectMeta: v1.ObjectMeta{
+			Name:      "mock",
+			Namespace: util.FeedsNamespace,
+		},
+		Spec: v32.GlobalThreatFeedSpec{
+			Content: "DomainNameSet",
+			Pull: &v32.Pull{
+				Period: "12h",
+				HTTP: &v32.HTTPPull{
+					Format:  "NewlineDelimited",
+					URL:     "http://mock.feed/v1",
+					Headers: []v32.HTTPHeader{},
+				},
+			},
+		},
+	}
+
+	dnSet := &db.MockSets{}
+	gns := globalnetworksets.NewMockGlobalNetworkSetController()
+	eip := elastic.NewMockElasticIPSetController()
+	edn := elastic.NewMockDomainNameSetsController()
+	gtf := &calico.MockGlobalThreatFeedInterface{
+		GlobalThreatFeed: &v3.GlobalThreatFeed{},
+	}
+
+	w := NewWatcher(nil, nil, gtf, gns, eip, edn, testClient, nil, dnSet, nil, &db.MockSuspicious{}, &db.MockEvents{}).(*watcher)
+
+	ctx, cancel := context.WithCancel(context.TODO())
+	defer cancel()
+
+	w.startFeedWatcher(ctx, f)
+
+	fw, ok := w.getFeedWatcher(f.Name)
+	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
+	g.Expect(w.listFeedWatchers()).To(HaveLen(1), "Only one FeedWatcher")
+
+	g.Expect(fw.feed).Should(Equal(f))
+	g.Expect(fw.puller).ShouldNot(BeNil())
+	g.Expect(gns.NotGCable()).ShouldNot(HaveKey(util.GlobalNetworkSetNameFromThreatFeed(f.Name)))
+	g.Expect(edn.NotGCable()).Should(HaveKey(f.Name))
+	g.Expect(fw.statser).ShouldNot(BeNil())
+	g.Expect(fw.searcher).ShouldNot(BeNil())
+
+	w.stopFeedWatcher(ctx, f.Name)
+	_, ok = w.getFeedWatcher(f.Name)
+	g.Expect(ok).Should(BeFalse(), "FeedWatchers map does not contain feed")
+	g.Expect(w.listFeedWatchers()).To(HaveLen(0), "No FeedWatchers")
+	g.Expect(gns.NotGCable()).ShouldNot(HaveKey(util.GlobalNetworkSetNameFromThreatFeed(f.Name)))
+	g.Expect(edn.NotGCable()).ShouldNot(HaveKey(f.Name))
+}
+
+func TestWatcher_startFeed_NoPull_IPSet(t *testing.T) {
 	g := NewGomegaWithT(t)
 
 	f := &v3.GlobalThreatFeed{
@@ -223,7 +280,7 @@ func TestWatcher_startFeed_NoPull(t *testing.T) {
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
 
-	w := NewWatcher(nil, nil, gtf, gns, eip, testClient, ipSet, &db.MockSuspicious{}, &db.MockEvents{}).(*watcher)
+	w := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, ipSet, nil, &db.MockSuspicious{}, nil, &db.MockEvents{}).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -239,7 +296,7 @@ func TestWatcher_startFeed_NoPull(t *testing.T) {
 	g.Expect(fw.statser).ShouldNot(BeNil(), "Statser is not nil")
 }
 
-func TestWatcher_startFeed_NoPullHTTP(t *testing.T) {
+func TestWatcher_startFeed_NoPullHTTP_IPSet(t *testing.T) {
 	g := NewGomegaWithT(t)
 
 	f := &v3.GlobalThreatFeed{
@@ -265,7 +322,7 @@ func TestWatcher_startFeed_NoPullHTTP(t *testing.T) {
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
 
-	w := NewWatcher(nil, nil, gtf, gns, eip, testClient, ipSet, &db.MockSuspicious{}, &db.MockEvents{}).(*watcher)
+	w := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, ipSet, nil, &db.MockSuspicious{}, nil, &db.MockEvents{}).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -278,6 +335,79 @@ func TestWatcher_startFeed_NoPullHTTP(t *testing.T) {
 	g.Expect(fw.puller).Should(BeNil(), "MockPuller is nil")
 	g.Expect(gns.NotGCable()).Should(HaveKey(util.GlobalNetworkSetNameFromThreatFeed(f.Name)))
 	g.Expect(eip.NotGCable()).Should(HaveKey(f.Name))
+	g.Expect(fw.statser).ShouldNot(BeNil(), "Statser is not nil")
+}
+
+func TestWatcher_startFeed_NoPull_DomainNameSet(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	f := &v3.GlobalThreatFeed{
+		ObjectMeta: v1.ObjectMeta{
+			Name:      "mock",
+			Namespace: util.FeedsNamespace,
+		},
+		Spec: v32.GlobalThreatFeedSpec{
+			Content: "DomainNameSet",
+		},
+	}
+
+	dnSet := &db.MockSets{}
+	gns := globalnetworksets.NewMockGlobalNetworkSetController()
+	edn := elastic.NewMockDomainNameSetsController()
+	gtf := &calico.MockGlobalThreatFeedInterface{
+		GlobalThreatFeed: &v3.GlobalThreatFeed{},
+	}
+
+	w := NewWatcher(nil, nil, gtf, gns, nil, edn, testClient, nil, dnSet, nil, &db.MockSuspicious{}, &db.MockEvents{}).(*watcher)
+
+	ctx, cancel := context.WithCancel(context.TODO())
+	defer cancel()
+
+	w.startFeedWatcher(ctx, f)
+
+	fw, ok := w.getFeedWatcher(f.Name)
+	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
+	g.Expect(w.listFeedWatchers()).Should(HaveLen(1), "No FeedWatchers")
+	g.Expect(fw.puller).Should(BeNil(), "MockPuller is nil")
+	g.Expect(gns.NotGCable()).ShouldNot(HaveKey(util.GlobalNetworkSetNameFromThreatFeed(f.Name)))
+	g.Expect(edn.NotGCable()).Should(HaveKey(f.Name))
+	g.Expect(fw.statser).ShouldNot(BeNil(), "Statser is not nil")
+}
+
+func TestWatcher_startFeed_NoPullHTTP_DomainNameSet(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	f := &v3.GlobalThreatFeed{
+		ObjectMeta: v1.ObjectMeta{
+			Name:      "mock",
+			Namespace: util.FeedsNamespace,
+		},
+		Spec: v32.GlobalThreatFeedSpec{
+			Content: "DomainNameSet",
+			Pull:    &v32.Pull{},
+		},
+	}
+
+	dnSet := &db.MockSets{}
+	gns := globalnetworksets.NewMockGlobalNetworkSetController()
+	edn := elastic.NewMockDomainNameSetsController()
+	gtf := &calico.MockGlobalThreatFeedInterface{
+		GlobalThreatFeed: &v3.GlobalThreatFeed{},
+	}
+
+	w := NewWatcher(nil, nil, gtf, gns, nil, edn, testClient, nil, dnSet, nil, &db.MockSuspicious{}, &db.MockEvents{}).(*watcher)
+
+	ctx, cancel := context.WithCancel(context.TODO())
+	defer cancel()
+
+	w.startFeedWatcher(ctx, f)
+
+	fw, ok := w.getFeedWatcher(f.Name)
+	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
+	g.Expect(w.listFeedWatchers()).Should(HaveLen(1), "No FeedWatchers")
+	g.Expect(fw.puller).Should(BeNil(), "MockPuller is nil")
+	g.Expect(gns.NotGCable()).ShouldNot(HaveKey(util.GlobalNetworkSetNameFromThreatFeed(f.Name)))
+	g.Expect(edn.NotGCable()).Should(HaveKey(f.Name))
 	g.Expect(fw.statser).ShouldNot(BeNil(), "Statser is not nil")
 }
 
@@ -314,7 +444,7 @@ func TestWatcher_startFeed_Exists(t *testing.T) {
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
 
-	w := NewWatcher(nil, nil, gtf, gns, eip, testClient, ipSet, &db.MockSuspicious{}, &db.MockEvents{}).(*watcher)
+	w := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, ipSet, nil, &db.MockSuspicious{}, nil, &db.MockEvents{}).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -328,6 +458,52 @@ func TestWatcher_startFeed_Exists(t *testing.T) {
 	g.Expect(func() { w.startFeedWatcher(ctx, f) }).Should(Panic())
 }
 
+func TestWatcher_startFeed_DomainNameSetWithGNS(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	f := &v3.GlobalThreatFeed{
+		ObjectMeta: v1.ObjectMeta{
+			Name:      "mock",
+			Namespace: util.FeedsNamespace,
+		},
+		Spec: v32.GlobalThreatFeedSpec{
+			Content: "DomainNameSet",
+			GlobalNetworkSet: &v32.GlobalNetworkSetSync{
+				Labels: map[string]string{
+					"level": "high",
+				},
+			},
+			Pull: &v32.Pull{
+				Period: "12h",
+				HTTP: &v32.HTTPPull{
+					Format:  "NewlineDelimited",
+					URL:     "http://mock.feed/v1",
+					Headers: []v32.HTTPHeader{},
+				},
+			},
+		},
+	}
+
+	dnSet := &db.MockSets{}
+	gns := globalnetworksets.NewMockGlobalNetworkSetController()
+	edn := elastic.NewMockDomainNameSetsController()
+	gtf := &calico.MockGlobalThreatFeedInterface{
+		GlobalThreatFeed: &v3.GlobalThreatFeed{},
+	}
+
+	w := NewWatcher(nil, nil, gtf, gns, nil, edn, testClient, nil, dnSet, nil, &db.MockSuspicious{}, &db.MockEvents{}).(*watcher)
+
+	ctx, cancel := context.WithCancel(context.TODO())
+	defer cancel()
+
+	w.startFeedWatcher(ctx, f)
+
+	fw, ok := w.getFeedWatcher(f.Name)
+	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
+	g.Expect(w.listFeedWatchers()).Should(HaveLen(1))
+	g.Expect(fw.statser).ShouldNot(BeNil(), "Statser is not nil")
+}
+
 func TestWatcher_stopFeed_notExists(t *testing.T) {
 	g := NewGomegaWithT(t)
 
@@ -335,7 +511,7 @@ func TestWatcher_stopFeed_notExists(t *testing.T) {
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
 
-	w := NewWatcher(nil, nil, gtf, nil, nil, testClient, nil, nil, nil).(*watcher)
+	w := NewWatcher(nil, nil, gtf, nil, nil, nil, testClient, nil, nil, nil, nil, nil).(*watcher)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -375,7 +551,7 @@ func TestWatcher_updateFeed_NotStarted(t *testing.T) {
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
 
-	w := NewWatcher(nil, nil, gtf, gns, eip, testClient, ipSet, &db.MockSuspicious{}, &db.MockEvents{}).(*watcher)
+	w := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, ipSet, nil, &db.MockSuspicious{}, nil, &db.MockEvents{}).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -416,7 +592,7 @@ func TestWatcher_updateFeed_PullToPull(t *testing.T) {
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
 
-	w := NewWatcher(nil, nil, gtf, gns, eip, testClient, ipSet, &db.MockSuspicious{}, &db.MockEvents{}).(*watcher)
+	w := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, ipSet, nil, &db.MockSuspicious{}, nil, &db.MockEvents{}).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -481,7 +657,7 @@ func TestWatcher_updateFeed_PullToPush(t *testing.T) {
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
 
-	w := NewWatcher(nil, nil, gtf, gns, eip, testClient, ipSet, &db.MockSuspicious{}, &db.MockEvents{}).(*watcher)
+	w := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, ipSet, nil, &db.MockSuspicious{}, nil, &db.MockEvents{}).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -535,7 +711,7 @@ func TestWatcher_updateFeed_PushToPull(t *testing.T) {
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
 
-	w := NewWatcher(nil, nil, gtf, gns, eip, testClient, ipSet, &db.MockSuspicious{}, &db.MockEvents{}).(*watcher)
+	w := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, ipSet, nil, &db.MockSuspicious{}, nil, &db.MockEvents{}).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -596,7 +772,7 @@ func TestWatcher_updateFeed_PushToPush(t *testing.T) {
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
 
-	w := NewWatcher(nil, nil, gtf, gns, eip, testClient, ipSet, &db.MockSuspicious{}, &db.MockEvents{}).(*watcher)
+	w := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, ipSet, nil, &db.MockSuspicious{}, nil, &db.MockEvents{}).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -623,7 +799,80 @@ func TestWatcher_updateFeed_PushToPush(t *testing.T) {
 	g.Expect(searcher.Feed).ShouldNot(BeNil(), "SetFeed was called")
 }
 
-func TestWatcher_restartPuller(t *testing.T) {
+func TestWatcher_updateFeed_IPSetToDomainNameSet(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	f := &v3.GlobalThreatFeed{
+		ObjectMeta: v1.ObjectMeta{
+			Name:      "mock",
+			Namespace: util.FeedsNamespace,
+		},
+		Spec: v32.GlobalThreatFeedSpec{
+			Content: "IPSet",
+			GlobalNetworkSet: &v32.GlobalNetworkSetSync{
+				Labels: map[string]string{
+					"level": "high",
+				},
+			},
+			Pull: &v32.Pull{
+				Period: "12h",
+				HTTP: &v32.HTTPPull{
+					Format:  "NewlineDelimited",
+					URL:     "http://mock.feed/v1",
+					Headers: []v32.HTTPHeader{},
+				},
+			},
+		},
+	}
+
+	mockSet := &db.MockSets{}
+	gns := globalnetworksets.NewMockGlobalNetworkSetController()
+	eip := elastic.NewMockElasticIPSetController()
+	edn := elastic.NewMockDomainNameSetsController()
+	gtf := &calico.MockGlobalThreatFeedInterface{
+		GlobalThreatFeed: &v3.GlobalThreatFeed{},
+	}
+
+	w := NewWatcher(nil, nil, gtf, gns, eip, edn, testClient, mockSet, mockSet, &db.MockSuspicious{}, &db.MockSuspicious{}, &db.MockEvents{}).(*watcher)
+
+	ctx, cancel := context.WithCancel(context.TODO())
+	defer cancel()
+
+	w.startFeedWatcher(ctx, f)
+
+	fw, ok := w.getFeedWatcher(f.Name)
+	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
+	g.Expect(w.listFeedWatchers()).To(HaveLen(1), "Only one FeedWatcher")
+	g.Expect(gns.NotGCable()).Should(HaveKey(util.GlobalNetworkSetNameFromThreatFeed(f.Name)))
+	g.Expect(eip.NotGCable()).Should(HaveKey(f.Name))
+
+	// hack in some mocks so we can verify that the old puller/searcher are cleaned up
+	mockPuller := &MockPuller{}
+	mockSearcher := &MockSearcher{}
+	fw.puller = mockPuller
+	fw.searcher = mockSearcher
+
+	uf := f.DeepCopy()
+	uf.Spec.GlobalNetworkSet = nil
+	uf.Spec.Content = "DomainNameSet"
+	w.updateFeedWatcher(ctx, f, uf)
+
+	fw, ok = w.getFeedWatcher(f.Name)
+	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
+	g.Expect(w.listFeedWatchers()).To(HaveLen(1), "Only one FeedWatcher")
+	g.Expect(mockPuller.CloseCalled).Should(BeTrue(), "closed the old puller")
+	g.Expect(fw.puller).ShouldNot(BeIdenticalTo(mockPuller), "removed old puller")
+	g.Expect(gns.NotGCable()).ShouldNot(HaveKey(util.GlobalNetworkSetNameFromThreatFeed(f.Name)), "GC old GNS")
+	g.Expect(eip.NotGCable()).ShouldNot(HaveKey(f.Name), "GC old ipset")
+	g.Expect(mockSearcher.CloseCalled).Should((BeTrue()), "closed the old searcher")
+	g.Expect(fw.searcher).ShouldNot(BeIdenticalTo(mockSearcher), "removed old searcher")
+
+	g.Expect(edn.NotGCable()).Should(HaveKey(uf.Name))
+	g.Expect(fw.puller).ShouldNot(BeNil())
+	g.Expect(fw.searcher).ShouldNot(BeNil())
+}
+
+func TestWatcher_restartPuller_IPSet(t *testing.T) {
 	g := NewGomegaWithT(t)
 
 	f := &v3.GlobalThreatFeed{
@@ -656,7 +905,59 @@ func TestWatcher_restartPuller(t *testing.T) {
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
 
-	w := NewWatcher(nil, nil, gtf, gns, eip, testClient, ipSet, &db.MockSuspicious{}, &db.MockEvents{}).(*watcher)
+	w := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, ipSet, nil, &db.MockSuspicious{}, nil, &db.MockEvents{}).(*watcher)
+
+	ctx, cancel := context.WithCancel(context.TODO())
+	defer cancel()
+
+	w.startFeedWatcher(ctx, f)
+
+	fw, ok := w.getFeedWatcher(f.Name)
+	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
+	g.Expect(w.listFeedWatchers()).To(HaveLen(1), "Only one FeedWatcher")
+
+	g.Expect(fw.feed).Should(Equal(f))
+	g.Expect(fw.puller).ShouldNot(BeNil())
+	g.Expect(fw.statser).ShouldNot(BeNil())
+	g.Expect(fw.searcher).ShouldNot(BeNil())
+
+	oldPuller := fw.puller
+
+	w.restartPuller(ctx, f)
+	fw, ok = w.getFeedWatcher(f.Name)
+	g.Expect(ok).Should(BeTrue())
+	g.Expect(fw.puller).ShouldNot(Equal(oldPuller))
+}
+
+func TestWatcher_restartPuller_DomainNameSet(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	f := &v3.GlobalThreatFeed{
+		ObjectMeta: v1.ObjectMeta{
+			Name:      "mock",
+			Namespace: util.FeedsNamespace,
+		},
+		Spec: v32.GlobalThreatFeedSpec{
+			Content: "DomainNameSet",
+			Pull: &v32.Pull{
+				Period: "12h",
+				HTTP: &v32.HTTPPull{
+					Format:  "NewlineDelimited",
+					URL:     "http://mock.feed/v1",
+					Headers: []v32.HTTPHeader{},
+				},
+			},
+		},
+	}
+
+	dnSet := &db.MockSets{}
+	gns := globalnetworksets.NewMockGlobalNetworkSetController()
+	edn := elastic.NewMockDomainNameSetsController()
+	gtf := &calico.MockGlobalThreatFeedInterface{
+		GlobalThreatFeed: &v3.GlobalThreatFeed{},
+	}
+
+	w := NewWatcher(nil, nil, gtf, gns, nil, edn, testClient, nil, dnSet, nil, &db.MockSuspicious{}, &db.MockEvents{}).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -713,7 +1014,7 @@ func TestWatcher_restartPuller_NoPull(t *testing.T) {
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
 
-	w := NewWatcher(nil, nil, gtf, gns, eip, testClient, ipSet, &db.MockSuspicious{}, &db.MockEvents{}).(*watcher)
+	w := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, ipSet, nil, &db.MockSuspicious{}, nil, &db.MockEvents{}).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -770,7 +1071,7 @@ func TestWatcher_restartPuller_NoPullHTTP(t *testing.T) {
 		GlobalThreatFeed: &v3.GlobalThreatFeed{},
 	}
 
-	w := NewWatcher(nil, nil, gtf, gns, eip, testClient, ipSet, &db.MockSuspicious{}, &db.MockEvents{}).(*watcher)
+	w := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, ipSet, nil, &db.MockSuspicious{}, nil, &db.MockEvents{}).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -822,7 +1123,7 @@ func TestWatcher_restartPuller_notExists(t *testing.T) {
 		GlobalThreatFeed: globalThreatFeed,
 	}
 
-	w := NewWatcher(nil, nil, gtf, nil, nil, testClient, nil, nil, nil).(*watcher)
+	w := NewWatcher(nil, nil, gtf, nil, nil, nil, testClient, nil, nil, nil, nil, nil).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -837,7 +1138,8 @@ func TestWatcher_Ping(t *testing.T) {
 	gtf := &calico.MockGlobalThreatFeedInterface{GlobalThreatFeedList: &v3.GlobalThreatFeedList{}}
 	gns := globalnetworksets.NewMockGlobalNetworkSetController()
 	eip := elastic.NewMockElasticIPSetController()
-	uut := NewWatcher(nil, nil, gtf, gns, eip, testClient, nil, nil, nil)
+	edn := elastic.NewMockDomainNameSetsController()
+	uut := NewWatcher(nil, nil, gtf, gns, eip, edn, testClient, nil, nil, nil, nil, nil)
 
 	ch := make(chan struct{})
 	defer func() {
@@ -869,7 +1171,7 @@ func TestWatcher_PingFail(t *testing.T) {
 	gtf := &calico.MockGlobalThreatFeedInterface{GlobalThreatFeedList: &v3.GlobalThreatFeedList{}}
 	gns := globalnetworksets.NewMockGlobalNetworkSetController()
 	eip := elastic.NewMockElasticIPSetController()
-	uut := NewWatcher(nil, nil, gtf, gns, eip, testClient, nil, nil, nil)
+	uut := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, nil, nil, nil, nil, nil)
 
 	err := uut.Ping(ctx)
 	g.Expect(err).Should(MatchError(context.DeadlineExceeded), "Ping times out")
@@ -883,7 +1185,8 @@ func TestWatcher_Ready(t *testing.T) {
 	sIP := &db.MockSuspicious{}
 	gns := globalnetworksets.NewMockGlobalNetworkSetController()
 	eip := elastic.NewMockElasticIPSetController()
-	uut := NewWatcher(nil, nil, gtf, gns, eip, testClient, ipSet, sIP, &db.MockEvents{})
+	edn := elastic.NewMockDomainNameSetsController()
+	uut := NewWatcher(nil, nil, gtf, gns, eip, edn, testClient, ipSet, nil, sIP, nil, &db.MockEvents{})
 
 	g.Expect(uut.Ready()).To(BeFalse())
 
@@ -928,11 +1231,12 @@ func (p *MockPuller) SetFeed(f *v3.GlobalThreatFeed) {
 }
 
 type MockSearcher struct {
-	Feed *v3.GlobalThreatFeed
+	Feed        *v3.GlobalThreatFeed
+	CloseCalled bool
 }
 
-func (*MockSearcher) Close() {
-	panic("implement me")
+func (s *MockSearcher) Close() {
+	s.CloseCalled = true
 }
 
 func (*MockSearcher) Run(context.Context, statser.Statser) {
