@@ -13,7 +13,7 @@ pipeline {
         WAVETANK_SERVICE_ACCT = "wavetank@unique-caldron-775.iam.gserviceaccount.com"
         AWS_REGION="us-west-2"
 
-        NAME_PREFIX="win-${env.BRANCH_NAME}-${env.BUILD_NUMBER}"
+        NAME_PREFIX="wt-winfv-${env.BRANCH_NAME}-${env.BUILD_NUMBER}"
         KUBE_VERSION = "1.11.2"
         WINDOWS_KEYPAIR_NAME="wavetank"
         WINDOWS_PEM_FILE="/home/jenkins/.ssh/wavetank.pem"
