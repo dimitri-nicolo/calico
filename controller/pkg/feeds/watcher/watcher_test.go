@@ -255,6 +255,60 @@ func TestWatcher_startFeed_stopFeed_DomainNameSet(t *testing.T) {
 	g.Expect(edn.NotGCable()).ShouldNot(HaveKey(f.Name))
 }
 
+func TestWatcher_startFeed_defaultcontent(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	f := &v3.GlobalThreatFeed{
+		ObjectMeta: v1.ObjectMeta{
+			Name:      "mock",
+			Namespace: util.FeedsNamespace,
+		},
+		Spec: v32.GlobalThreatFeedSpec{
+			GlobalNetworkSet: &v32.GlobalNetworkSetSync{
+				Labels: map[string]string{
+					"level": "high",
+				},
+			},
+			Pull: &v32.Pull{
+				Period: "12h",
+				HTTP: &v32.HTTPPull{
+					Format:  "NewlineDelimited",
+					URL:     "http://mock.feed/v1",
+					Headers: []v32.HTTPHeader{},
+				},
+			},
+		},
+	}
+
+	ipSet := &db.MockSets{}
+	gns := globalnetworksets.NewMockGlobalNetworkSetController()
+	eip := elastic.NewMockElasticIPSetController()
+	edn := elastic.NewMockDomainNameSetsController()
+	gtf := &calico.MockGlobalThreatFeedInterface{
+		GlobalThreatFeed: &v3.GlobalThreatFeed{},
+	}
+
+	w := NewWatcher(nil, nil, gtf, gns, eip, edn, testClient, ipSet, nil, &db.MockSuspicious{}, nil, &db.MockEvents{}).(*watcher)
+
+	ctx, cancel := context.WithCancel(context.TODO())
+	defer cancel()
+
+	w.startFeedWatcher(ctx, f)
+
+	fw, ok := w.getFeedWatcher(f.Name)
+	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
+	g.Expect(w.listFeedWatchers()).To(HaveLen(1), "Only one FeedWatcher")
+
+	g.Expect(fw.feed).Should(Equal(f))
+	g.Expect(fw.puller).ShouldNot(BeNil())
+	g.Expect(gns.NotGCable()).Should(HaveKey(util.GlobalNetworkSetNameFromThreatFeed(f.Name)))
+	g.Expect(eip.NotGCable()).Should(HaveKey(f.Name))
+	g.Expect(edn.NotGCable()).ShouldNot(HaveKey(f.Name))
+	g.Expect(fw.statser).ShouldNot(BeNil())
+	g.Expect(fw.searcher).ShouldNot(BeNil())
+
+}
+
 func TestWatcher_startFeed_NoPull_IPSet(t *testing.T) {
 	g := NewGomegaWithT(t)
 
@@ -958,6 +1012,62 @@ func TestWatcher_restartPuller_DomainNameSet(t *testing.T) {
 	}
 
 	w := NewWatcher(nil, nil, gtf, gns, nil, edn, testClient, nil, dnSet, nil, &db.MockSuspicious{}, &db.MockEvents{}).(*watcher)
+
+	ctx, cancel := context.WithCancel(context.TODO())
+	defer cancel()
+
+	w.startFeedWatcher(ctx, f)
+
+	fw, ok := w.getFeedWatcher(f.Name)
+	g.Expect(ok).Should(BeTrue(), "FeedWatchers map contains feed")
+	g.Expect(w.listFeedWatchers()).To(HaveLen(1), "Only one FeedWatcher")
+
+	g.Expect(fw.feed).Should(Equal(f))
+	g.Expect(fw.puller).ShouldNot(BeNil())
+	g.Expect(fw.statser).ShouldNot(BeNil())
+	g.Expect(fw.searcher).ShouldNot(BeNil())
+
+	oldPuller := fw.puller
+
+	w.restartPuller(ctx, f)
+	fw, ok = w.getFeedWatcher(f.Name)
+	g.Expect(ok).Should(BeTrue())
+	g.Expect(fw.puller).ShouldNot(Equal(oldPuller))
+}
+
+func TestWatcher_restartPuller_defaultcontent(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	f := &v3.GlobalThreatFeed{
+		ObjectMeta: v1.ObjectMeta{
+			Name:      "mock",
+			Namespace: util.FeedsNamespace,
+		},
+		Spec: v32.GlobalThreatFeedSpec{
+			GlobalNetworkSet: &v32.GlobalNetworkSetSync{
+				Labels: map[string]string{
+					"level": "high",
+				},
+			},
+			Pull: &v32.Pull{
+				Period: "12h",
+				HTTP: &v32.HTTPPull{
+					Format:  "NewlineDelimited",
+					URL:     "http://mock.feed/v1",
+					Headers: []v32.HTTPHeader{},
+				},
+			},
+		},
+	}
+
+	ipSet := &db.MockSets{}
+	gns := globalnetworksets.NewMockGlobalNetworkSetController()
+	eip := elastic.NewMockElasticIPSetController()
+	gtf := &calico.MockGlobalThreatFeedInterface{
+		GlobalThreatFeed: &v3.GlobalThreatFeed{},
+	}
+
+	w := NewWatcher(nil, nil, gtf, gns, eip, nil, testClient, ipSet, nil, &db.MockSuspicious{}, nil, &db.MockEvents{}).(*watcher)
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()

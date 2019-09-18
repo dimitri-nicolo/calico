@@ -234,11 +234,10 @@ func (s *watcher) processQueue(obj interface{}) error {
 
 func (s *watcher) startFeedWatcher(ctx context.Context, f *v3.GlobalThreatFeed) {
 	switch f.Spec.Content {
-	case libcalicov3.ThreatFeedContentIPset:
-		s.startFeedWatcherIP(ctx, f)
 	case libcalicov3.ThreatFeedContentDomainNameSet:
 		s.startFeedWatcherDomains(ctx, f)
 	default:
+		// Note: ThreatFeedContentIPset is the default
 		s.startFeedWatcherIP(ctx, f)
 	}
 }
@@ -365,11 +364,10 @@ func (s *watcher) restartPuller(ctx context.Context, f *v3.GlobalThreatFeed) {
 
 	if fw.feed.Spec.Pull != nil && fw.feed.Spec.Pull.HTTP != nil {
 		switch fw.feed.Spec.Content {
-		case libcalicov3.ThreatFeedContentIPset:
-			fw.puller = puller.NewIPSetHTTPPuller(fw.feed, s.ipSet, s.configMapClient, s.secretsClient, s.httpClient, s.gnsController, s.ipsController)
 		case libcalicov3.ThreatFeedContentDomainNameSet:
 			fw.puller = puller.NewDomainNameSetHTTPPuller(fw.feed, s.dnSet, s.configMapClient, s.secretsClient, s.httpClient, s.dnsController)
 		default:
+			// Note: ThreatFeedContentIPset is the default
 			fw.puller = puller.NewIPSetHTTPPuller(fw.feed, s.ipSet, s.configMapClient, s.secretsClient, s.httpClient, s.gnsController, s.ipsController)
 		}
 		fw.puller.Run(ctx, fw.statser)
