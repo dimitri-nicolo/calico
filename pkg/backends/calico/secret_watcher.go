@@ -48,7 +48,7 @@ type secretWatcher struct {
 }
 
 func NewSecretWatcher(c *client) (*secretWatcher, error) {
-	sw = &secretWatcher{
+	sw := &secretWatcher{
 		client:  c,
 		watches: make(map[string]*secretWatchData),
 	}
@@ -117,11 +117,11 @@ func (sw *secretWatcher) GetSecret(name, key string) (string, error) {
 	if sw.watches[name].secret == nil {
 		return "", fmt.Errorf("No data available for secret %v", name)
 	}
-	if data, ok := sw.watches[name].secret.data[key]; ok {
-		if s, err := base64.StdEncoding.DecodeString(data); err != nil {
+	if data, ok := sw.watches[name].secret.Data[key]; ok {
+		if s, err := base64.StdEncoding.DecodeString(string(data)); err != nil {
 			return "", fmt.Errorf("Error decoding value for secret %v key %v: %v", name, key, err)
 		} else {
-			return s, nil
+			return string(s), nil
 		}
 	} else {
 		return "", fmt.Errorf("Secret %v does not have key %v", name, key)
@@ -165,5 +165,5 @@ func (sw *secretWatcher) updateSecret(secret *v1.Secret) {
 func (sw *secretWatcher) deleteSecret(secret *v1.Secret) {
 	sw.mutex.Lock()
 	defer sw.mutex.Unlock()
-	delete(sw.secrets, secret.Name)
+	delete(sw.watches, secret.Name)
 }

@@ -286,6 +286,9 @@ type client struct {
 
 	// This node's log level key.
 	nodeLogKey string
+
+	// Subcomponent for accessing and watching secrets (that hold BGP passwords).
+	secretWatcher *secretWatcher
 }
 
 // SetPrefixes is called from confd to notify this client of the full set of prefixes that will
