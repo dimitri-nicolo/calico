@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016, 2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -228,7 +228,6 @@ func executeConfigCommand(args map[string]interface{}, action action) commandRes
 				continue
 			default:
 				results.err = err
-				break
 			}
 		}
 
@@ -236,7 +235,7 @@ func executeConfigCommand(args map[string]interface{}, action action) commandRes
 		// Skip removing cluster specific metadata if this is is called as a "list"
 		// operation (no specific name is specified).
 		if export && nameSpecified {
-			for i, _ := range res {
+			for i := range res {
 				rom := res[i].(v1.ObjectMetaAccessor).GetObjectMeta()
 				rom.SetNamespace("")
 				rom.SetUID("")

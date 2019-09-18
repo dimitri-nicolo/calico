@@ -10,4 +10,4 @@ jobs:
     - run: make bin/calicoctl
     - store_artifacts:
         path: ~/projectcalico/calicoctl/bin
-  
+

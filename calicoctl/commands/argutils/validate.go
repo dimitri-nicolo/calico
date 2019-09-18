@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016, 2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ func ValidateIP(str string) cnet.IP {
 		fmt.Printf("Error executing command: invalid IP address specified: %s\n", str)
 		os.Exit(1)
 	}
-	return cnet.IP{ip}
+	return cnet.IP{IP: ip}
 }
 
 // ValidateASNumber takes a string as an input and makes sure it's a valid ASNumber.

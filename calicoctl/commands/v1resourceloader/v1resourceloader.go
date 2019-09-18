@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017, 2019 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,7 +15,6 @@
 package v1resourceloader
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -60,7 +59,7 @@ func populateResourceTypes() {
 func newResource(tm unversioned.TypeMetadata) (unversioned.Resource, error) {
 	rh, ok := resourceToType[tm]
 	if !ok {
-		return nil, errors.New(fmt.Sprintf("Unknown resource type (%s) and/or version (%s)", tm.Kind, tm.APIVersion))
+		return nil, fmt.Errorf("Unknown resource type (%s) and/or version (%s)", tm.Kind, tm.APIVersion)
 	}
 	log.Debugf("Found resource helper: %s", rh)
 
