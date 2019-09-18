@@ -17,6 +17,7 @@ PATH=$PATH:/calico/bin:/calico/bin-node
 # Get this script directory, and source the common testsuite (which contains the actual test)
 script_dir="$(dirname "$0")"
 source "$script_dir/test_suite_common.sh"
+git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
 
 # Set the log output directory and ensure the directory exists.
 export LOGPATH=/tests/logs/kdd
@@ -26,7 +27,7 @@ export DATASTORE_TYPE=kubernetes
 export KUBECONFIG=/tests/confd_kubeconfig
 
 # CRDs are pulled in from libcalico.
-CRDS_FILE=/vendor/github.com/projectcalico/libcalico-go/test/crds.yaml
+CRDS_FILE=`go mod download &> /dev/null; go list -m -f "{{.Dir}}" github.com/projectcalico/libcalico-go`/test/crds.yaml
 
 # Prepopulate k8s with data that cannot be populated through calicoctl.
 # All tests use the same set of nodes - for k8s these cannot be created through

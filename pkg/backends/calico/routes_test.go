@@ -7,6 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	v1 "k8s.io/api/core/v1"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
 )
@@ -192,6 +193,7 @@ var _ = Describe("RouteGenerator", func() {
 			err = rg.svcIndexer.Add(svc)
 			Expect(err).ToNot(HaveOccurred())
 			err = rg.svcIndexer.Add(svcInt)
+			Expect(err).ToNot(HaveOccurred())
 		})
 
 		It("should remove clusterIPs when endpoints are deleted", func() {
