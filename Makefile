@@ -299,7 +299,7 @@ sub-build-%:
 TYPHA_BRANCH?=$(shell git rev-parse --abbrev-ref HEAD)
 TYPHA_REPO?=github.com/projectcalico/typha
 TYPHA_VERSION?=$(shell git ls-remote git@github.com:projectcalico/typha $(TYPHA_BRANCH) 2>/dev/null | cut -f 1)
-TYPHA_OLDVER?=$(shell $(DOCKER_RUN) $(CALICO_BUILD) go list -m -f "{{.Version}}" github.com/projectcalico/typha)
+TYPHA_OLDVER?=$(shell $(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); go list -m -f "{{.Version}}" github.com/projectcalico/typha')
 
 ## Update typha pin in go.mod
 update-typha:
@@ -815,7 +815,7 @@ fv/fv.test: $(SRC_FILES)
 .PHONY: remote-deps
 remote-deps:
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH); \
-	go list all; \
+	go mod download; \
 	cp `go list -m -f "{{.Dir}}" github.com/projectcalico/libcalico-go`/test/crds.yaml fv/infrastructure/crds.yaml; \
 	chmod +w fv/infrastructure/crds.yaml'
 
