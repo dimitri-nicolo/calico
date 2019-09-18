@@ -1084,6 +1084,33 @@ spec:
           - name: ELASTIC_SCHEME
             value: "http"
 {{- end }}
+---
+apiVersion: projectcalico.org/v3
+kind: NetworkPolicy
+metadata:
+  name: allow-cnx.intrusion-detection-controller
+  namespace: calico-monitoring
+spec:
+  order: 1
+  tier: allow-cnx
+  selector: k8s-app == 'intrusion-detection-controller'
+  types:
+    - Ingress
+    - Egress
+  ingress:
+  # Intrusion detection controller doesn't listen on any external ports
+  - action: Deny
+  egress:
+  # Block any link local IPs, e.g. cloud metadata, which are often targets
+  # of server-side request forgery (SSRF) attacks
+  - action: Deny
+    protocol: TCP
+    destination:
+      nets:
+      - "169.254.0.0/16"
+      - "fe80::/10"
+  # Pass to subsequent tiers or profiles for further refinement
+  - action: Pass
 
 {{- if eq $elasticMode "operator" }}
 ---
