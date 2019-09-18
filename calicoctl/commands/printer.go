@@ -148,6 +148,9 @@ func (r resourcePrinterTable) print(client client.Interface, resources []runtime
 					return fmt.Errorf("LicenseKey is corrupted: %s", err)
 				}
 				err = tmpl.Execute(writer, claims)
+				if err != nil {
+					panic(err)
+				}
 			}
 		} else if resource.GetObjectKind().GroupVersionKind().Kind == "LicenseKey" {
 			claims, err := licClient.Decode(*resource.(*api.LicenseKey))
@@ -155,6 +158,9 @@ func (r resourcePrinterTable) print(client client.Interface, resources []runtime
 				return fmt.Errorf("LicenseKey is corrupted: %s", err)
 			}
 			err = tmpl.Execute(writer, claims)
+			if err != nil {
+				panic(err)
+			}
 		} else {
 			err = tmpl.Execute(writer, resource)
 			if err != nil {

@@ -185,7 +185,7 @@ update-libcalico:
 	$(DOCKER_RUN) -i $(CALICO_BUILD) sh -c '\
 	if [[ ! -z "$(LIBCALICO_VERSION)" ]] && [[ "$(LIBCALICO_VERSION)" != "$(LIBCALICO_OLDVER)" ]]; then \
 		echo "Updating libcalico version $(LIBCALICO_OLDVER) to $(LIBCALICO_VERSION) from $(LIBCALICO_REPO)"; \
-		go mod edit -replace github.com/projectcalico/libcalico-go $(LIBCALICO_REPO)@$(LIBCALICO_VERSION); \
+		go mod edit -replace github.com/projectcalico/libcalico-go=$(LIBCALICO_REPO)@$(LIBCALICO_VERSION); \
 		if [ $(LIBCALICO_REPO) != "github.com/projectcalico/libcalico-go" ]; then \
 			go mod edit -replace github.com/projectcalico/typha=$(LIBCALICO_REPO)@$(LIBCALICO_VERSION); \
 		fi;\
