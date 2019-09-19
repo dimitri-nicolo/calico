@@ -168,7 +168,7 @@ func TestController_AddDelete(t *testing.T) {
 	// Wait for queue to be processed
 	g.Eventually(q.Len).Should(Equal(0))
 
-	g.Expect(client.Calls()).To(HaveLen(0))
+	g.Consistently(client.Calls).Should(HaveLen(0))
 }
 
 func TestController_AddRetry(t *testing.T) {
@@ -220,8 +220,8 @@ func TestController_AddFail(t *testing.T) {
 
 	// Should be retried.
 	g.Eventually(countMethod(client, "Create")).Should(Equal(DefaultClientRetries + 1))
-	g.Expect(failed).To(BeTrue())
-	g.Expect(stat.Status().ErrorConditions).To(HaveLen(1))
+	g.Eventually(failed).Should(BeTrue())
+	g.Eventually(func() int { return len(stat.Status().ErrorConditions) }).Should(Equal(1))
 	g.Expect(stat.Status().ErrorConditions[0].Type).To(Equal(statser.GlobalNetworkSetSyncFailed))
 }
 
