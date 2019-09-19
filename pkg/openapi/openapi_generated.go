@@ -3653,14 +3653,21 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 						},
 						"prometheusMetricsEnabled": {
 							SchemaProps: spec.SchemaProps{
-								Description: "PrometheusMetricsEnabled enables the experimental Prometheus metrics server in Felix if set to true. [Default: false]",
+								Description: "PrometheusMetricsEnabled enables the Prometheus metrics server in Felix if set to true. [Default: false]",
 								Type:        []string{"boolean"},
+								Format:      "",
+							},
+						},
+						"prometheusMetricsHost": {
+							SchemaProps: spec.SchemaProps{
+								Description: "PrometheusMetricsHost is the host that the Prometheus metrics server should bind to. [Default: empty]",
+								Type:        []string{"string"},
 								Format:      "",
 							},
 						},
 						"prometheusMetricsPort": {
 							SchemaProps: spec.SchemaProps{
-								Description: "PrometheusMetricsPort is the TCP port that the experimental Prometheus metrics server should bind to. [Default:9091]",
+								Description: "PrometheusMetricsPort is the TCP port that the Prometheus metrics server should bind to. [Default: 9091]",
 								Type:        []string{"integer"},
 								Format:      "int32",
 							},
@@ -3773,6 +3780,27 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							SchemaProps: spec.SchemaProps{
 								Description: "NATOutgoingAddress specifies an address to use when performing source NAT for traffic in a natOutgoing pool that is leaving the network. By default the address used is an address on the interface the traffic is leaving on (ie it uses the iptables MASQUERADE target)",
 								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"deviceRouteSourceAddress": {
+							SchemaProps: spec.SchemaProps{
+								Description: "This is the source address to use on programmed device routes. By default the source address is left blank, leaving the kernel to choose the source address used.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"deviceRouteProtocol": {
+							SchemaProps: spec.SchemaProps{
+								Description: "This defines the route protocol added to programmed device routes, by default this will be RTPROT_BOOT when left blank.",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
+						},
+						"removeExternalRoutes": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Whether or not to remove device routes that have not been programmed by Felix. Disabling this will allow external applications to also add device routes. This is enabled by default which means we will remove externally added routes.",
+								Type:        []string{"boolean"},
 								Format:      "",
 							},
 						},

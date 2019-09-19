@@ -400,7 +400,7 @@ fix go-fmt goimports:
 ###############################################################################
 .PHONY: ci
 ## Run what CI runs
-ci: clean static-checks tigera/cnx-apiserver fv ut
+ci: clean static-checks tigera/cnx-apiserver fv ut check-generated-files
 
 ## Deploys images to registry
 cd:
@@ -411,6 +411,16 @@ ifndef BRANCH_NAME
 	$(error BRANCH_NAME is undefined - run using make <target> BRANCH_NAME=var or set an environment variable)
 endif
 	$(MAKE) push-image IMAGETAG=${BRANCH_NAME}
+
+## Check if generated files are out of date
+.PHONY: check-generated-files
+check-generated-files: clean-generated .generate_files
+	if (git describe --tags --dirty | grep -c dirty >/dev/null); then \
+	  echo "Generated files are out of date."; \
+	  false; \
+	else \
+	  echo "Generated files are up to date."; \
+	fi
 
 # This section builds the output binaries.
 # Some will have dedicated targets to make it easier to type, for example
