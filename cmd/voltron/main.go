@@ -23,22 +23,25 @@ const (
 
 // Config is a configuration used for Voltron
 type config struct {
-	Port              int `default:"5555"`
-	Host              string
-	TunnelPort        int    `default:"5566" split_words:"true"`
-	TunnelHost        string `split_words:"true"`
-	TunnelCert        string `default:"/certs/tunnel/cert" split_words:"true"`
-	TunnelKey         string `default:"/certs/tunnel/key" split_words:"true"`
-	LogLevel          string `default:"DEBUG"`
-	TemplatePath      string `default:"/tmp/guardian.yaml.tmpl" split_words:"true"`
-	PublicIP          string `default:"127.0.0.1:32453" split_words:"true"`
-	HTTPSCert         string `default:"/certs/https/cert" split_words:"true"`
-	HTTPSKey          string `default:"/certs/https/key" split_words:"true"`
-	K8sConfigPath     string `split_words:"true"`
-	KeepAliveEnable   bool   `default:"true" split_words:"true"`
-	KeepAliveInterval int    `default:"100" split_words:"true"`
-	DefaultK8sDest    string `default:"https://kubernetes.default" split_words:"true"`
-	PProf             bool   `default:"false"`
+	Port               int `default:"5555"`
+	Host               string
+	TunnelPort         int    `default:"5566" split_words:"true"`
+	TunnelHost         string `split_words:"true"`
+	TunnelCert         string `default:"/certs/tunnel/cert" split_words:"true"`
+	TunnelKey          string `default:"/certs/tunnel/key" split_words:"true"`
+	LogLevel           string `default:"DEBUG"`
+	TemplatePath       string `default:"/tmp/guardian.yaml.tmpl" split_words:"true"`
+	PublicIP           string `default:"127.0.0.1:32453" split_words:"true"`
+	HTTPSCert          string `default:"/certs/https/cert" split_words:"true"`
+	HTTPSKey           string `default:"/certs/https/key" split_words:"true"`
+	K8sConfigPath      string `split_words:"true"`
+	KeepAliveEnable    bool   `default:"true" split_words:"true"`
+	KeepAliveInterval  int    `default:"100" split_words:"true"`
+	K8sEndpoint        string `default:"https://kubernetes.default" split_words:"true"`
+	ComplianceEndpoint string `default:"https://compliance.calico-monitoring.svc.cluster.local" split_words:"true"`
+	ElasticEndpoint    string `default:"https://127.0.0.1:8443" split_words:"true"`
+	NginxEndpoint      string `default:"http://127.0.0.1:8080" split_words:"true"`
+	PProf              bool   `default:"false"`
 }
 
 func main() {
@@ -92,24 +95,27 @@ func main() {
 	targets, err := bootstrap.ProxyTargets([]bootstrap.Target{
 		{
 			Path:         "/api/",
-			Dest:         cfg.DefaultK8sDest,
+			Dest:         cfg.K8sEndpoint,
 			CABundlePath: "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
 		},
 		{
 			Path:         "/apis/",
-			Dest:         cfg.DefaultK8sDest,
+			Dest:         cfg.K8sEndpoint,
 			CABundlePath: "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
 		},
-		// This fixes https://tigera.atlassian.net/browse/SAAS-240
 		{
 			Path:        "/tigera-elasticsearch/",
-			Dest:        "https://cnx-es-proxy-local.calico-monitoring.svc.cluster.local:8443",
+			Dest:        cfg.ElasticEndpoint,
 			PathRegexp:  []byte("^/tigera-elasticsearch/?"),
 			PathReplace: []byte("/"),
 		},
 		{
 			Path: "/compliance/",
-			Dest: "https://compliance.calico-monitoring.svc.cluster.local",
+			Dest: cfg.ComplianceEndpoint,
+		},
+		{
+			Path: "/",
+			Dest: cfg.NginxEndpoint,
 		},
 	})
 

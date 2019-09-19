@@ -139,6 +139,53 @@ var _ = Describe("Proxy", func() {
 		})
 	})
 
+	Describe("When having a catch all path", func() {
+		t := &transport{
+			func(*http.Request) (*http.Response, error) {
+				return &http.Response{StatusCode: 200, Body: body("")}, nil
+			},
+		}
+
+		p, _ := proxy.New([]proxy.Target{
+			{
+				Path: "/path/",
+				Dest: &url.URL{
+					Scheme: "http",
+					Host:   "some",
+				},
+				Transport: t,
+			},
+			{
+				Path: "/",
+				Dest: &url.URL{
+					Scheme: "http",
+					Host:   "some",
+				},
+				Transport: t,
+			},
+		})
+
+		It("should return 200 to /path target ", func() {
+			r, err := http.NewRequest("GET", "http://host/path/", nil)
+			Expect(err).NotTo(HaveOccurred())
+			w := httptest.NewRecorder()
+			p.ServeHTTP(w, r)
+
+			res := w.Result()
+			Expect(res.StatusCode).To(Equal(200))
+		})
+
+		It("should return 200 to any requests", func() {
+			r, err := http.NewRequest("GET", "http://host/anyTarget/", nil)
+			Expect(err).NotTo(HaveOccurred())
+			w := httptest.NewRecorder()
+			p.ServeHTTP(w, r)
+
+			res := w.Result()
+			Expect(res.StatusCode).To(Equal(200))
+		})
+	})
+
 	Describe("When target has a regexp", func() {
 		t := &transport{
 			func(*http.Request) (*http.Response, error) {

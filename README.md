@@ -73,8 +73,12 @@ VOLTRON_CERT_PATH | Environment | /certs
 VOLTRON_TEMPLATE_PATH | Environment | /tmp/guardian.yaml
 VOLTRON_PUBLIC_IP | Environment | 127.0.0.1:32453
 VOLTRON_K8S_CONFIG_PATH | Environment | <empty string>
-VOLTRON_KEEP_ALIVE_ENABLE | Environment | true | no
-VOLTRON_KEEP_ALIVE_INTERVAL | Environment | 100 ms | no
+VOLTRON_KEEP_ALIVE_ENABLE | Environment | true
+VOLTRON_KEEP_ALIVE_INTERVAL | Environment | 100 ms
+VOLTRON_K8S_ENDPOINT | Environment | https://kubernetes.default
+VOLTRON_COMPLIANCE_ENDPOINT | Environment | https://compliance.calico-monitoring.svc.cluster.local
+VOLTRON_ELASTIC_ENDPOINT | Environment | https://127.0.0.1:8443
+VOLTRON_NGINX_ENDPOINT | Environment | http://127.0.0.1:8080
 
 ### Build and deploy
 
