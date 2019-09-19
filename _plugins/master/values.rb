@@ -384,9 +384,9 @@ def gen_chart_specific_values_master(versions, imageRegistry, chart, forDocs)
     versionsYml = <<~EOF
     # Configuration for the tigera operator
     tigeraOperator:
-      image: tigera/operator
-      registry: quay.io/
-      version: #{versions["tigera-operator"]}
+      image: #{versions["tigera-operator"].image}
+      registry: #{versions["tigera-operator"].registry}
+      version: #{versions["tigera-operator"].version}
 
     # Configuration for the tigera operator init container.
     tigeraOperatorInit:
