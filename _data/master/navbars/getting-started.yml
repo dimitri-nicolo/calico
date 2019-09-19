@@ -10,6 +10,10 @@ toc:
     path: /getting-started/kubernetes/
   - title: System requirements
     path: /getting-started/kubernetes/requirements
+  - title: Managed public cloud
+    section:
+    - title: Amazon Elastic Kubernetes Service (EKS)
+      path: /getting-started/kubernetes/managed-public-cloud/eks
   - title: Installation
     section:
     - title: Helm
