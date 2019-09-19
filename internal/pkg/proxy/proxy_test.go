@@ -128,8 +128,8 @@ var _ = Describe("Proxy", func() {
 			Expect(res.StatusCode).To(Equal(200))
 		})
 
-		It("should fail to reach unconfigured target", func() {
-			r, err := http.NewRequest("GET", "http://host/unconfigured", nil)
+		It("should fail to reach missing target", func() {
+			r, err := http.NewRequest("GET", "http://host/missing", nil)
 			Expect(err).NotTo(HaveOccurred())
 			w := httptest.NewRecorder()
 			p.ServeHTTP(w, r)
