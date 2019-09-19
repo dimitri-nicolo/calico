@@ -16,7 +16,6 @@ import (
 
 type Watcher interface {
 	health.Pinger
-	health.Readier
 
 	// Run starts the feed synchronization.
 	Run(ctx context.Context)
@@ -79,19 +78,4 @@ func (w *watcher) Close() {
 
 func (w *watcher) Ping(context.Context) error {
 	return nil
-}
-
-func (w *watcher) Ready() bool {
-	if !w.watching {
-		return false
-	}
-
-	for _, jw := range w.jobWatchers {
-		status := jw.statser.Status()
-		if len(status.ErrorConditions) > 0 {
-			return false
-		}
-	}
-
-	return true
 }

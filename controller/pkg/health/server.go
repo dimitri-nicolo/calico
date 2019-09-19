@@ -43,6 +43,10 @@ type readiness struct {
 	readier Readier
 }
 
+type AlwaysReady struct{}
+
+func (a AlwaysReady) Ready() bool { return true }
+
 func (r *readiness) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 	if r.readier.Ready() {
 		w.WriteHeader(http.StatusOK)

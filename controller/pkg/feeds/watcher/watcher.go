@@ -35,7 +35,6 @@ const DefaultResyncPeriod = 0
 // database
 type Watcher interface {
 	health.Pinger
-	health.Readier
 
 	// Run starts the feed synchronization.
 	Run(ctx context.Context)
@@ -460,21 +459,4 @@ func (s *watcher) pong() {
 	// which would allow us to wake up all pingers at once. However, sync.Cond
 	// doesn't allow timeouts, so we stick with channels and one pong() per ping.
 	s.ping <- struct{}{}
-}
-
-// Ready determines whether we are watching GlobalThreatFeeds and they are all
-// functioning correctly.
-func (s *watcher) Ready() bool {
-	if !s.watching {
-		return false
-	}
-
-	// Loop over all the active feedWatchers and return false if any have errors.
-	for _, fw := range s.listFeedWatchers() {
-		status := fw.statser.Status()
-		if len(status.ErrorConditions) > 0 {
-			return false
-		}
-	}
-	return true
 }
