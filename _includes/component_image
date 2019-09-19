@@ -1,0 +1,2 @@
+{%- assign c = site.data.versions[page.version].first.components[include.component] -%}
+{{- c.image -}}:{{- c.version -}}

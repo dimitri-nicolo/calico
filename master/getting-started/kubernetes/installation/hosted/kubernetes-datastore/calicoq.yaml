@@ -4,7 +4,7 @@ layout: null
 # {{site.prodname}} Version {{site.data.versions[page.version].first.title}}
 # https://docs.projectcalico.org/{{page.version}}/releases#{{site.data.versions[page.version].first.title}}
 # This manifest includes the following component versions:
-#   {{page.registry}}{{site.imageNames["calicoq"]}}:{{site.data.versions[page.version].first.components["calicoq"].version}}
+#   {{page.registry}}{% include component_image component="calicoq" %}
 
 apiVersion: v1
 kind: ServiceAccount
@@ -26,7 +26,7 @@ spec:
   serviceAccountName: calicoq
   containers:
   - name: calicoq
-    image: {{page.registry}}{{site.imageNames["calicoq"]}}:{{site.data.versions[page.version].first.components["calicoq"].version}}
+    image: {{page.registry}}{% include component_image component="calicoq" %}
     command: ["/bin/sh", "-c", "while true; do sleep 3600; done"]
     env:
     - name: DATASTORE_TYPE

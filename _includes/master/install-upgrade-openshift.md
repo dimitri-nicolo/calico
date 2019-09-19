@@ -22,10 +22,9 @@ inventory file:
   - `os_sdn_network_plugin_name=cni`
   - `openshift_use_calico=true`
   - `openshift_use_openshift_sdn=false`
-  - `calico_node_image=<YOUR-REGISTRY>/{{site.imageNames["cnx-node"]}}:{{site.data.versions[page.version].first.components["cnx-node"].version}}`
-  - `calico_url_policy_controller=<YOUR-REGISTRY>/{{site.imageNames["kubeControllers"]}}:{{site.data.versions[page.version].first.components["cnx-kube-controllers"].version}}`
-  - `calico_cni_image={{site.imageNames["cni"]}}:{{site.data.versions[page.version].first.components["calico/cni"].version}}`
-
+  - `calico_node_image=<YOUR-REGISTRY>/{% include component_image component="cnx-node" %}`
+  - `calico_url_policy_controller=<YOUR-REGISTRY>/{% include component_image component="cnx-kube-controllers" %}`
+  - `calico_cni_image={% include component_image component="calico/cni" %}`
 For OpenShift Container Platform 3.11 also specify the following variables:
   - `oreg_auth_user`
   - `oreg_auth_password`
@@ -60,9 +59,9 @@ deployment_type=openshift-enterprise
 os_sdn_network_plugin_name=cni
 openshift_use_openshift_sdn=false
 openshift_use_calico=true
-calico_node_image=<YOUR-REGISTRY>/{{site.imageNames["cnx-node"]}}:{{site.data.versions[page.version].first.components["cnx-node"].version}}
-calico_url_policy_controller=<YOUR-REGISTRY>/{{site.imageNames["kubeControllers"]}}:{{site.data.versions[page.version].first.components["cnx-kube-controllers"].version}}
-calico_cni_image={{site.imageNames["cni"]}}:{{site.data.versions[page.version].first.components["calico/cni"].version}}
+calico_node_image=<YOUR-REGISTRY>/{% include component_image component="cnx-node" %}
+calico_url_policy_controller=<YOUR-REGISTRY>/{% include component_image component="cnx-kube-controllers" %}
+calico_cni_image={% include component_image component="calico/cni" %}
 
 [masters]
 master1 ansible_host=127.0.0.1
