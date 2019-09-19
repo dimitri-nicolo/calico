@@ -34,14 +34,14 @@
    registry.
 
    ```bash
-   docker pull {{page.registry}}{{site.imageNames[include.cli]}}:{{site.data.versions[page.version].first.components[include.cli].version}}
+   docker pull {{page.registry}}{% include component_image component=include.cli %}
    ```
 
 1. Confirm that the image has loaded by typing `docker images`.
-
+{%- assign c = site.data.versions[page.version].first.components[include.cli] %}
    ```bash
    REPOSITORY                TAG               IMAGE ID       CREATED         SIZE
-   {{site.imageNames[include.cli]}}    {{site.data.versions[page.version].first.components[include.cli].version}}            e07d59b0eb8a   2 minutes ago   42MB
+   {{ c.image }}    {{ c.version }}            e07d59b0eb8a   2 minutes ago   42MB
    ```
    {: .no-select-button}
 
