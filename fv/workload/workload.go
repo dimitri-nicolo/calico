@@ -73,7 +73,10 @@ func (w *Workload) Stop() {
 		pid := strings.TrimSpace(string(outputBytes))
 		err = utils.Command("docker", "exec", w.C.Name, "kill", pid).Run()
 		Expect(err).NotTo(HaveOccurred())
-		w.runCmd.Process.Wait()
+		_, err = w.runCmd.Process.Wait()
+		if err != nil {
+			log.WithField("workload", w).Error("failed to wait for process")
+		}
 		log.WithField("workload", w).Info("Workload now stopped")
 	}
 }
@@ -288,6 +291,7 @@ func (w *Workload) LatencyTo(ip, port string) (time.Duration, string) {
 
 	lines := strings.Split(out, "\n")[1:] // Skip header line
 	var rttSum time.Duration
+	var numBuggyRTTs int
 	for _, line := range lines {
 		if len(line) == 0 {
 			continue
@@ -297,8 +301,16 @@ func (w *Workload) LatencyTo(ip, port string) (time.Duration, string) {
 		rttMsecStr := matches[1]
 		rttMsec, err := strconv.ParseFloat(rttMsecStr, 64)
 		Expect(err).ToNot(HaveOccurred())
+		if rttMsec > 1000 {
+			// There's a bug in hping where it occasionally reports RTT+1s instead of RTT.  Work around that
+			// but keep track of the number of workarounds and bail out if we see too many.
+			rttMsec -= 1000
+			numBuggyRTTs++
+		}
 		rttSum += time.Duration(rttMsec * float64(time.Millisecond))
 	}
+	Expect(numBuggyRTTs).To(BeNumerically("<", len(lines)/2),
+		"hping reported a large number of >1s RTTs; full output:\n"+out)
 	meanRtt := rttSum / time.Duration(len(lines))
 	return meanRtt, out
 }
@@ -341,7 +353,11 @@ func (s *SideService) stop() error {
 		log.WithField("pid", pid).WithError(err).Warn("Failed to kill a side service")
 		return err
 	}
-	s.RunCmd.Process.Wait()
+	_, err = s.RunCmd.Process.Wait()
+	if err != nil {
+		log.WithField("side service", s).Error("failed to wait for process")
+	}
+
 	log.WithField("SideService", s).Info("Side service now stopped")
 	return nil
 }
@@ -473,7 +489,6 @@ func startPermanentConnection(w *Workload, ip string, port, sourcePort int) (*Pe
 
 // Return if a connection is good and packet loss string "PacketLoss[xx]".
 // If it is not a packet loss test, packet loss string is "".
-
 func (p *Port) CanConnectTo(ip, port, protocol string, duration time.Duration) (bool, string) {
 
 	// Ensure that the host has the 'test-connection' binary.

@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2017, 2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,21 +20,61 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
+
+	"github.com/projectcalico/felix/ipsets"
+	"github.com/projectcalico/felix/proto"
+	"github.com/projectcalico/felix/rules"
+
+	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
-// ipipManager takes care of the configuration of the IPIP tunnel device.
+// ipipManager manages the all-hosts IP set, which is used by some rules in our static chains
+// when IPIP is enabled.  It doesn't actually program the rules, because they are part of the
+// top-level static chains.
+//
+// ipipManager also takes care of the configuration of the IPIP tunnel device.
 type ipipManager struct {
+	ipsetsDataplane ipsetsDataplane
+
+	// activeHostnameToIP maps hostname to string IP address.  We don't bother to parse into
+	// net.IPs because we're going to pass them directly to the IPSet API.
+	activeHostnameToIP map[string]string
+	ipSetInSync        bool
+
+	// Config for creating/refreshing the IP set.
+	ipSetMetadata ipsets.IPSetMetadata
+
 	// Dataplane shim.
 	dataplane ipipDataplane
+
+	// Configured list of external node ip cidr's to be added to the ipset.
+	externalNodeCIDRs []string
 }
 
-func newIPIPManager() *ipipManager {
-	return newIPIPManagerWithShim(realIPIPNetlink{})
+func newIPIPManager(
+	ipsetsDataplane ipsetsDataplane,
+	maxIPSetSize int,
+	externalNodeCidrs []string,
+) *ipipManager {
+	return newIPIPManagerWithShim(ipsetsDataplane, maxIPSetSize, realIPIPNetlink{}, externalNodeCidrs)
 }
 
-func newIPIPManagerWithShim(dataplane ipipDataplane) *ipipManager {
+func newIPIPManagerWithShim(
+	ipsetsDataplane ipsetsDataplane,
+	maxIPSetSize int,
+	dataplane ipipDataplane,
+	externalNodeCIDRs []string,
+) *ipipManager {
 	ipipMgr := &ipipManager{
-		dataplane: dataplane,
+		ipsetsDataplane:    ipsetsDataplane,
+		activeHostnameToIP: map[string]string{},
+		dataplane:          dataplane,
+		ipSetMetadata: ipsets.IPSetMetadata{
+			MaxSize: maxIPSetSize,
+			SetID:   rules.IPSetIDAllHostNets,
+			Type:    ipsets.IPSetTypeHashNet,
+		},
+		externalNodeCIDRs: externalNodeCIDRs,
 	}
 	return ipipMgr
 }
@@ -157,4 +197,47 @@ func (d *ipipManager) setLinkAddressV4(linkName string, address net.IP) error {
 	logCxt.Debug("Address set.")
 
 	return nil
+}
+
+func (d *ipipManager) OnUpdate(msg interface{}) {
+	switch msg := msg.(type) {
+	case *proto.HostMetadataUpdate:
+		log.WithField("hostanme", msg.Hostname).Debug("Host update/create")
+		d.activeHostnameToIP[msg.Hostname] = msg.Ipv4Addr
+		d.ipSetInSync = false
+	case *proto.HostMetadataRemove:
+		log.WithField("hostname", msg.Hostname).Debug("Host removed")
+		delete(d.activeHostnameToIP, msg.Hostname)
+		d.ipSetInSync = false
+	}
+}
+
+func (m *ipipManager) CompleteDeferredWork() error {
+	if !m.ipSetInSync {
+		// For simplicity (and on the assumption that host add/removes are rare) rewrite
+		// the whole IP set whenever we get a change.  To replace this with delta handling
+		// would require reference counting the IPs because it's possible for two hosts
+		// to (at least transiently) share an IP.  That would add occupancy and make the
+		// code more complex.
+		log.Info("All-hosts IP set out-of sync, refreshing it.")
+		members := make([]string, 0, len(m.activeHostnameToIP)+len(m.externalNodeCIDRs))
+		for _, ip := range m.activeHostnameToIP {
+			members = append(members, ip)
+		}
+		members = append(members, m.externalNodeCIDRs...)
+		m.ipsetsDataplane.AddOrReplaceIPSet(m.ipSetMetadata, members)
+		m.ipSetInSync = true
+	}
+	return nil
+}
+
+// ipsetsDataplane is a shim interface for mocking the IPSets object.
+type ipsetsDataplane interface {
+	AddOrReplaceIPSet(setMetadata ipsets.IPSetMetadata, members []string)
+	AddMembers(setID string, newMembers []string)
+	RemoveMembers(setID string, removedMembers []string)
+	RemoveIPSet(setID string)
+	GetIPFamily() ipsets.IPFamily
+	GetTypeOf(setID string) (ipsets.IPSetType, error)
+	GetMembers(setID string) (set.Set, error)
 }

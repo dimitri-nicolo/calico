@@ -46,6 +46,8 @@ var (
 	HostnameRegexp           = regexp.MustCompile(`^[a-zA-Z0-9_.-]+$`)
 	StringRegexp             = regexp.MustCompile(`^.*$`)
 	IfaceParamRegexp         = regexp.MustCompile(`^[a-zA-Z0-9:._+-]{1,15}$`)
+	// Hostname  have to be valid ipv4, ipv6 or strings up to 64 characters.
+	HostAddressRegexp = regexp.MustCompile(`^[a-zA-Z0-9:._+-]{1,64}$`)
 )
 
 const (
@@ -138,6 +140,9 @@ type Config struct {
 
 	IptablesBackend                    string        `config:"oneof(legacy,nft);legacy"`
 	RouteRefreshInterval               time.Duration `config:"seconds;90"`
+	DeviceRouteSourceAddress           net.IP        `config:"ipv4;"`
+	DeviceRouteProtocol                int           `config:"int;3"`
+	RemoveExternalRoutes               bool          `config:"bool;true"`
 	IptablesRefreshInterval            time.Duration `config:"seconds;90"`
 	IptablesPostWriteCheckIntervalSecs time.Duration `config:"seconds;1"`
 	IptablesLockFilePath               string        `config:"file;/run/xtables.lock"`
@@ -200,8 +205,9 @@ type Config struct {
 
 	HealthEnabled                   bool   `config:"bool;false"`
 	HealthPort                      int    `config:"int(0:65535);9099"`
-	HealthHost                      string `config:"string;localhost"`
+	HealthHost                      string `config:"host-address;localhost"`
 	PrometheusMetricsEnabled        bool   `config:"bool;false"`
+	PrometheusMetricsHost           string `config:"host-address;"`
 	PrometheusMetricsPort           int    `config:"int(0:65535);9091"`
 	PrometheusGoMetricsEnabled      bool   `config:"bool;true"`
 	PrometheusProcessMetricsEnabled bool   `config:"bool;true"`
@@ -332,6 +338,10 @@ type Config struct {
 	SidecarAccelerationEnabled bool `config:"bool;false"`
 	XDPEnabled                 bool `config:"bool;false"`
 	GenericXDPEnabled          bool `config:"bool;false"`
+
+	loadClientConfigFromEnvironment func() (*apiconfig.CalicoAPIConfig, error)
+
+	useNodeResourceUpdates bool
 }
 
 type ProtoPort struct {
@@ -427,9 +437,9 @@ func (config *Config) resolve() (changed bool, err error) {
 	for _, source := range SourcesInDescendingOrder {
 	valueLoop:
 		for rawName, rawValue := range config.sourceToRawConfig[source] {
+			currentSource := nameToSource[rawName]
 			param, ok := knownParams[strings.ToLower(rawName)]
 			if !ok {
-				currentSource := nameToSource[rawName]
 				if source >= currentSource {
 					// Stash the raw value in case it's useful for
 					// a plugin.  Since we don't know the canonical
@@ -487,7 +497,7 @@ func (config *Config) resolve() (changed bool, err error) {
 
 			log.Infof("Parsed value for %v: %v (from %v)",
 				name, value, source)
-			currentSource := nameToSource[name]
+			currentSource = nameToSource[name]
 			if source < currentSource {
 				log.Infof("Skipping config value for %v from %v; "+
 					"already have a value from %v", name,
@@ -557,31 +567,48 @@ func (config *Config) DatastoreConfig() apiconfig.CalicoAPIConfig {
 	// To achieve that, first build a CalicoAPIConfig using libcalico-go's
 	// LoadClientConfigFromEnvironment - which means incorporating defaults and CALICO_XXX_YYY
 	// and XXX_YYY variables.
-	cfg, err := apiconfig.LoadClientConfigFromEnvironment()
+	cfg, err := config.loadClientConfigFromEnvironment()
 	if err != nil {
 		log.WithError(err).Panic("Failed to create datastore config")
 	}
 
 	// Now allow FELIX_XXXYYY variables or XxxYyy config file settings to override that, in the
-	// etcd case.
-	if config.setByConfigFileOrEnvironment("DatastoreType") && config.DatastoreType == "etcdv3" {
-		cfg.Spec.DatastoreType = apiconfig.EtcdV3
-		// Endpoints.
-		if config.setByConfigFileOrEnvironment("EtcdEndpoints") && len(config.EtcdEndpoints) > 0 {
-			cfg.Spec.EtcdEndpoints = strings.Join(config.EtcdEndpoints, ",")
-		} else if config.setByConfigFileOrEnvironment("EtcdAddr") {
-			cfg.Spec.EtcdEndpoints = config.EtcdScheme + "://" + config.EtcdAddr
+	// etcd case. Note that that etcd options are set even if the DatastoreType isn't etcdv3.
+	// This allows the user to rely the default DatastoreType being etcdv3 and still being able
+	// to configure the other etcdv3 options. As of the time of this code change, the etcd options
+	// have no affect if the DatastoreType is not etcdv3.
+
+	// Datastore type, either etcdv3 or kubernetes
+	if config.setByConfigFileOrEnvironment("DatastoreType") {
+		log.Infof("Overriding DatastoreType from felix config to %s", config.DatastoreType)
+		if config.DatastoreType == string(apiconfig.EtcdV3) {
+			cfg.Spec.DatastoreType = apiconfig.EtcdV3
+		} else if config.DatastoreType == string(apiconfig.Kubernetes) {
+			cfg.Spec.DatastoreType = apiconfig.Kubernetes
 		}
-		// TLS.
-		if config.setByConfigFileOrEnvironment("EtcdKeyFile") {
-			cfg.Spec.EtcdKeyFile = config.EtcdKeyFile
-		}
-		if config.setByConfigFileOrEnvironment("EtcdCertFile") {
-			cfg.Spec.EtcdCertFile = config.EtcdCertFile
-		}
-		if config.setByConfigFileOrEnvironment("EtcdCaFile") {
-			cfg.Spec.EtcdCACertFile = config.EtcdCaFile
-		}
+	}
+
+	// Endpoints.
+	if config.setByConfigFileOrEnvironment("EtcdEndpoints") && len(config.EtcdEndpoints) > 0 {
+		log.Infof("Overriding EtcdEndpoints from felix config to %s", config.EtcdEndpoints)
+		cfg.Spec.EtcdEndpoints = strings.Join(config.EtcdEndpoints, ",")
+	} else if config.setByConfigFileOrEnvironment("EtcdAddr") {
+		etcdEndpoints := config.EtcdScheme + "://" + config.EtcdAddr
+		log.Infof("Overriding EtcdEndpoints from felix config to %s", etcdEndpoints)
+		cfg.Spec.EtcdEndpoints = etcdEndpoints
+	}
+	// TLS.
+	if config.setByConfigFileOrEnvironment("EtcdKeyFile") {
+		log.Infof("Overriding EtcdKeyFile from felix config to %s", config.EtcdKeyFile)
+		cfg.Spec.EtcdKeyFile = config.EtcdKeyFile
+	}
+	if config.setByConfigFileOrEnvironment("EtcdCertFile") {
+		log.Infof("Overriding EtcdCertFile from felix config to %s", config.EtcdCertFile)
+		cfg.Spec.EtcdCertFile = config.EtcdCertFile
+	}
+	if config.setByConfigFileOrEnvironment("EtcdCaFile") {
+		log.Infof("Overriding EtcdCaFile from felix config to %s", config.EtcdCaFile)
+		cfg.Spec.EtcdCACertFile = config.EtcdCaFile
 	}
 
 	if !config.IpInIpEnabled && !config.VXLANEnabled && !config.IPSecEnabled() {
@@ -783,6 +810,9 @@ func loadParams() {
 		case "hostname":
 			param = &RegexpParam{Regexp: HostnameRegexp,
 				Msg: "invalid hostname"}
+		case "host-address":
+			param = &RegexpParam{Regexp: HostAddressRegexp,
+				Msg: "invalid host address"}
 		case "region":
 			param = &RegionParam{}
 		case "oneof":
@@ -807,18 +837,18 @@ func loadParams() {
 		metadata := param.GetMetadata()
 		metadata.Name = field.Name
 		metadata.ZeroValue = reflect.ValueOf(config).FieldByName(field.Name).Interface()
-		if strings.Index(flags, "non-zero") > -1 {
+		if strings.Contains(flags, "non-zero") {
 			metadata.NonZero = true
 		}
-		if strings.Index(flags, "die-on-fail") > -1 {
+		if strings.Contains(flags, "die-on-fail") {
 			metadata.DieOnParseFailure = true
 		}
-		if strings.Index(flags, "local") > -1 {
+		if strings.Contains(flags, "local") {
 			metadata.Local = true
 		}
 
 		if defaultStr != "" {
-			if strings.Index(flags, "skip-default-validation") > -1 {
+			if strings.Contains(flags, "skip-default-validation") {
 				metadata.Default = defaultStr
 			} else {
 				// Parse the default value and save it in the metadata. Doing
@@ -836,8 +866,20 @@ func loadParams() {
 	}
 }
 
+func (config *Config) SetUseNodeResourceUpdates(b bool) {
+	config.useNodeResourceUpdates = b
+}
+
+func (config *Config) UseNodeResourceUpdates() bool {
+	return config.useNodeResourceUpdates
+}
+
 func (config *Config) RawValues() map[string]string {
 	return config.rawValues
+}
+
+func (config *Config) SetLoadClientConfigFromEnvironmentFunction(fnc func() (*apiconfig.CalicoAPIConfig, error)) {
+	config.loadClientConfigFromEnvironment = fnc
 }
 
 func New() *Config {
@@ -858,7 +900,8 @@ func New() *Config {
 		hostname = strings.ToLower(os.Getenv("HOSTNAME"))
 	}
 	p.FelixHostname = hostname
-	p.EnableNflogSize = isNflogSizeAvailable()
+	p.loadClientConfigFromEnvironment = apiconfig.LoadClientConfigFromEnvironment
+
 	return p
 }
 

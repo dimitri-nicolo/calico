@@ -130,6 +130,7 @@ var (
 	whitelistedPrefixes = []string{
 		// Standard golang BSD-like license.
 		"github.com/projectcalico/felix/vendor/golang.org/x/",
+		"github.com/projectcalico/felix/packrd",
 	}
 )
 

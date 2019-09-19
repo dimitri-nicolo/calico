@@ -28,10 +28,11 @@ import (
 	"time"
 
 	"github.com/containernetworking/cni/pkg/ns"
-	"github.com/docopt/docopt-go"
-	reuse "github.com/jbenet/go-reuseport"
-	uuid "github.com/satori/go.uuid"
+	docopt "github.com/docopt/docopt-go"
+	reuse "github.com/libp2p/go-reuseport"
 	log "github.com/sirupsen/logrus"
+
+	uuid "github.com/satori/go.uuid"
 
 	"github.com/projectcalico/felix/fv/utils"
 )

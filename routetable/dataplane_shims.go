@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017, 2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,7 +22,6 @@ import (
 
 	"github.com/vishvananda/netlink"
 
-	"github.com/projectcalico/felix/conntrack"
 	"github.com/projectcalico/felix/ip"
 )
 
@@ -38,10 +37,6 @@ type HandleIface interface {
 	RouteAdd(route *netlink.Route) error
 	RouteDel(route *netlink.Route) error
 	Delete()
-}
-
-type realDataplane struct {
-	conntrack *conntrack.Conntrack
 }
 
 func newNetlinkHandle() (HandleIface, error) {

@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016, 2017-2019 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ func mustParseMac(m string) *net.MAC {
 	if err != nil {
 		log.Panicf("Failed to parse MAC: %v; %v", m, err)
 	}
-	return &net.MAC{hwAddr}
+	return &net.MAC{HardwareAddr: hwAddr}
 }
 
 func mustParseNet(n string) net.IPNet {
@@ -40,5 +40,5 @@ func mustParseNet(n string) net.IPNet {
 
 func mustParseIP(s string) net.IP {
 	ip := net2.ParseIP(s)
-	return net.IP{ip}
+	return net.IP{IP: ip}
 }
